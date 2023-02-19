@@ -29,7 +29,7 @@ void FinishArrowArrayBuilders(
     std::vector<std::shared_ptr<arrow::ArrayBuilder>>& builders,
     std::vector<std::shared_ptr<arrow::Array>>& columns) {
   for (size_t i = 0; i < builders.size(); i++) {
-    builders[i]->Finish(&columns[i]);
+    ARROW_CHECK_OK(builders[i]->Finish(&columns[i]));
   }
 }
 

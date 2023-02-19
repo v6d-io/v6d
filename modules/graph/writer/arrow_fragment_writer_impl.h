@@ -33,18 +33,17 @@
 #include "boost/leaf/result.hpp"
 #include "gar/graph_info.h"
 #include "gar/writer/arrow_chunk_writer.h"
-
 #include "grape/worker/comm_spec.h"
 
 #include "basic/ds/arrow_utils.h"
 #include "client/client.h"
 #include "common/util/functions.h"
-#include "io/io/i_io_adaptor.h"
-#include "io/io/io_factory.h"
-
 #include "graph/loader/fragment_loader_utils.h"
 #include "graph/utils/partitioner.h"
+#include "graph/utils/thread_group.h"
 #include "graph/writer/arrow_fragment_writer.h"
+#include "io/io/i_io_adaptor.h"
+#include "io/io/io_factory.h"
 
 namespace vineyard {
 
@@ -262,118 +261,112 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::writeEdgeImpl(
     }
   }
 
-  int64_t thread_num =
-      (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
-      comm_spec_.local_num();
-  std::vector<std::thread> threads(thread_num);
-  std::atomic<int64_t> cur(0);
   label_id_t column_num = 2 + properties.size();  // src, dst and properties
-  for (int64_t i = 0; i < thread_num; ++i) {
-    threads[i] = std::thread([&]() {
-      std::vector<std::shared_ptr<arrow::Array>> column_arrays(column_num);
-      std::vector<std::shared_ptr<arrow::ArrayBuilder>> builders(column_num);
-      InitializeArrayArrayBuilders(builders, properties, edge_label_id,
-                                   graph_schema);
-      std::vector<std::shared_ptr<arrow::Array>> offset_columns(1);
-      arrow::Int64Builder offset_builder(arrow::default_memory_pool());
-      std::shared_ptr<arrow::Schema> table_schema = arrow::schema(fields);
-      auto main_builder =
-          std::dynamic_pointer_cast<arrow::Int64Builder>(builders[0]);
-      auto another_builder =
-          std::dynamic_pointer_cast<arrow::Int64Builder>(builders[1]);
+  auto fn = [&](const size_t index) -> Status {
+    std::vector<std::shared_ptr<arrow::Array>> column_arrays(column_num);
+    std::vector<std::shared_ptr<arrow::ArrayBuilder>> builders(column_num);
+    InitializeArrayArrayBuilders(builders, properties, edge_label_id,
+                                 graph_schema);
+    std::vector<std::shared_ptr<arrow::Array>> offset_columns(1);
+    arrow::Int64Builder offset_builder(arrow::default_memory_pool());
+    std::shared_ptr<arrow::Schema> table_schema = arrow::schema(fields);
+    auto main_builder =
+        std::dynamic_pointer_cast<arrow::Int64Builder>(builders[0]);
+    auto another_builder =
+        std::dynamic_pointer_cast<arrow::Int64Builder>(builders[1]);
 
-      while (true) {
-        int64_t index = cur.fetch_add(1);
-        if (index >= vertex_chunk_num) {
-          return;
-        }
+    // reset the builders
+    ResetArrowArrayBuilders(builders);
+    offset_builder.Reset();
 
-        // reset the builders
-        ResetArrowArrayBuilders(builders);
-        offset_builder.Reset();
-
-        int64_t vertex_chunk_index = main_start_chunk_index + index;
-        auto cur_begin = vertices.begin() + index * main_vertex_chunk_size;
-        auto cur_end =
-            std::min(cur_begin + main_vertex_chunk_size, vertices.end());
-        int64_t edge_offset = 0;
-        int64_t v_global_index = 0, distance = 0;
-        for (auto iter = cur_begin; iter != cur_end; ++iter) {
-          auto& vertex = *iter;
-          auto global_index =
-              vertex_chunk_index * main_vertex_chunk_size + distance;
-          ++distance;
-          adj_list_t edges;
-          if (adj_list_type == GraphArchive::AdjListType::ordered_by_source ||
-              adj_list_type == GraphArchive::AdjListType::unordered_by_source) {
-            edges = frag_->GetOutgoingAdjList(vertex, edge_label_id);
-          } else {
-            edges = frag_->GetIncomingAdjList(vertex, edge_label_id);
-          }
-          int64_t edge_cnt = 0;
-          for (auto& e : edges) {
-            auto v = e.neighbor();
-            if (vid_parser.GetLabelId(v.GetValue()) != another_label_id) {
-              continue;
-            }
-            if (frag_->IsInnerVertex(v)) {
-              v_global_index =
-                  another_start_chunk_index * another_vertex_chunk_size +
-                  vid_parser.GetOffset(v.GetValue());
-            } else {
-              auto gid = frag_->GetOuterVertexGid(v);
-              v_global_index =
-                  another_start_chunk_indices[vid_parser.GetFid(gid)] *
-                      another_vertex_chunk_size +
-                  vid_parser.GetOffset(gid);
-            }
-            main_builder->Append(global_index);
-            another_builder->Append(v_global_index);
-            if (!properties.empty()) {
-              appendPropertiesToArrowArrayBuilders(e, properties, edge_label_id,
-                                                   graph_schema, builders);
-            }
-            ++edge_cnt;
-          }
-          if (adj_list_type == GraphArchive::AdjListType::ordered_by_source ||
-              adj_list_type == GraphArchive::AdjListType::ordered_by_dest) {
-            offset_builder.Append(edge_offset);
-            edge_offset += edge_cnt;
-          }
-        }
-
-        // write the adj list chunks
-        FinishArrowArrayBuilders(builders, column_arrays);
-        auto table = arrow::Table::Make(table_schema, column_arrays);
-        auto st = writer.WriteTable(table, vertex_chunk_index);
-        if (!st.ok()) {
-          LOG(ERROR) << "write table failed: " << st.message();
-          return;
-        }
-
-        // write the offset chunks
-        if (adj_list_type == GraphArchive::AdjListType::ordered_by_source ||
-            adj_list_type == GraphArchive::AdjListType::ordered_by_dest) {
-          offset_builder.Append(edge_offset);  // append the last offset
-          offset_builder.Finish(&offset_columns[0]);
-          auto offset_table = arrow::Table::Make(
-              arrow::schema({arrow::field(
-                  GraphArchive::GeneralParams::kOffsetCol, arrow::int64())}),
-              offset_columns);
-          auto st = writer.WriteOffsetChunk(offset_table, vertex_chunk_index);
-          if (!st.ok()) {
-            LOG(ERROR) << "write offset table failed: " << st.message();
-            return;
-          }
-        }
+    int64_t vertex_chunk_index = main_start_chunk_index + index;
+    auto cur_begin = vertices.begin() + index * main_vertex_chunk_size;
+    auto cur_end = std::min(cur_begin + main_vertex_chunk_size, vertices.end());
+    int64_t edge_offset = 0;
+    int64_t v_global_index = 0, distance = 0;
+    for (auto iter = cur_begin; iter != cur_end; ++iter) {
+      auto& vertex = *iter;
+      auto global_index =
+          vertex_chunk_index * main_vertex_chunk_size + distance;
+      ++distance;
+      adj_list_t edges;
+      if (adj_list_type == GraphArchive::AdjListType::ordered_by_source ||
+          adj_list_type == GraphArchive::AdjListType::unordered_by_source) {
+        edges = frag_->GetOutgoingAdjList(vertex, edge_label_id);
+      } else {
+        edges = frag_->GetIncomingAdjList(vertex, edge_label_id);
       }
-    });
-  }
+      int64_t edge_cnt = 0;
+      for (auto& e : edges) {
+        auto v = e.neighbor();
+        if (vid_parser.GetLabelId(v.GetValue()) != another_label_id) {
+          continue;
+        }
+        if (frag_->IsInnerVertex(v)) {
+          v_global_index =
+              another_start_chunk_index * another_vertex_chunk_size +
+              vid_parser.GetOffset(v.GetValue());
+        } else {
+          auto gid = frag_->GetOuterVertexGid(v);
+          v_global_index = another_start_chunk_indices[vid_parser.GetFid(gid)] *
+                               another_vertex_chunk_size +
+                           vid_parser.GetOffset(gid);
+        }
+        RETURN_ON_ARROW_ERROR(main_builder->Append(global_index));
+        RETURN_ON_ARROW_ERROR(another_builder->Append(v_global_index));
+        if (!properties.empty()) {
+          appendPropertiesToArrowArrayBuilders(e, properties, edge_label_id,
+                                               graph_schema, builders);
+        }
+        ++edge_cnt;
+      }
+      if (adj_list_type == GraphArchive::AdjListType::ordered_by_source ||
+          adj_list_type == GraphArchive::AdjListType::ordered_by_dest) {
+        RETURN_ON_ARROW_ERROR(offset_builder.Append(edge_offset));
+        edge_offset += edge_cnt;
+      }
+    }
 
-  for (auto& thrd : threads) {
-    thrd.join();
-  }
+    // write the adj list chunks
+    FinishArrowArrayBuilders(builders, column_arrays);
+    auto table = arrow::Table::Make(table_schema, column_arrays);
+    auto s = writer.WriteTable(table, vertex_chunk_index);
+    if (!s.ok()) {
+      return Status::IOError(
+          "GAR error: " + std::to_string(static_cast<int>(s.code())) + ", " +
+          s.message());
+    }
 
+    // write the offset chunks
+    if (adj_list_type == GraphArchive::AdjListType::ordered_by_source ||
+        adj_list_type == GraphArchive::AdjListType::ordered_by_dest) {
+      RETURN_ON_ARROW_ERROR(
+          offset_builder.Append(edge_offset));  // append the last offset
+      RETURN_ON_ARROW_ERROR(offset_builder.Finish(&offset_columns[0]));
+      auto offset_table = arrow::Table::Make(
+          arrow::schema({arrow::field(GraphArchive::GeneralParams::kOffsetCol,
+                                      arrow::int64())}),
+          offset_columns);
+      auto st = writer.WriteOffsetChunk(offset_table, vertex_chunk_index);
+      if (!s.ok()) {
+        return Status::IOError(
+            "GAR error: " + std::to_string(static_cast<int>(s.code())) + ", " +
+            s.message());
+      }
+      return Status::OK();
+    }
+    return Status::OK();
+  };
+
+  ThreadGroup tg(comm_spec_);
+  for (size_t chunk_index = 0; chunk_index < vertex_chunk_num; ++chunk_index) {
+    tg.AddTask(fn, chunk_index);
+  }
+  Status status;
+  for (auto const& s : tg.TakeResults()) {
+    status += s;
+  }
+  VY_OK_OR_RAISE(status);
   return {};
 }
 
@@ -389,31 +382,33 @@ ArrowFragmentWriter<FRAG_T>::appendPropertiesToArrowArrayBuilders(
     if (arrow::boolean()->Equals(prop_type)) {
       auto builder =
           std::dynamic_pointer_cast<arrow::BooleanBuilder>(builders[col_id]);
-      builder->Append(edge.template get_data<bool>(pid));
+      ARROW_OK_OR_RAISE(builder->Append(edge.template get_data<bool>(pid)));
     } else if (arrow::int32()->Equals(prop_type)) {
       auto builder =
           std::dynamic_pointer_cast<arrow::Int32Builder>(builders[col_id]);
-      builder->Append(edge.template get_data<int32_t>(pid));
+      ARROW_OK_OR_RAISE(builder->Append(edge.template get_data<int32_t>(pid)));
     } else if (arrow::int64()->Equals(prop_type)) {
       auto builder =
           std::dynamic_pointer_cast<arrow::Int64Builder>(builders[col_id]);
-      builder->Append(edge.template get_data<int64_t>(pid));
+      ARROW_OK_OR_RAISE(builder->Append(edge.template get_data<int64_t>(pid)));
     } else if (arrow::float32()->Equals(prop_type)) {
       auto builder =
           std::dynamic_pointer_cast<arrow::FloatBuilder>(builders[col_id]);
-      builder->Append(edge.template get_data<float>(pid));
+      ARROW_OK_OR_RAISE(builder->Append(edge.template get_data<float>(pid)));
     } else if (arrow::float64()->Equals(prop_type)) {
       auto builder =
           std::dynamic_pointer_cast<arrow::DoubleBuilder>(builders[col_id]);
-      builder->Append(edge.template get_data<double>(pid));
+      ARROW_OK_OR_RAISE(builder->Append(edge.template get_data<double>(pid)));
     } else if (arrow::utf8()->Equals(prop_type)) {
       auto builder =
           std::dynamic_pointer_cast<arrow::StringBuilder>(builders[col_id]);
-      builder->Append(edge.template get_data<std::string>(pid));
+      ARROW_OK_OR_RAISE(
+          builder->Append(edge.template get_data<std::string>(pid)));
     } else if (arrow::large_utf8()->Equals(prop_type)) {
       auto builder = std::dynamic_pointer_cast<arrow::LargeStringBuilder>(
           builders[col_id]);
-      builder->Append(edge.template get_data<std::string>(pid));
+      ARROW_OK_OR_RAISE(
+          builder->Append(edge.template get_data<std::string>(pid)));
     }
     ++col_id;
   }

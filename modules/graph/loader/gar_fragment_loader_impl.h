@@ -33,12 +33,14 @@ limitations under the License.
 
 namespace vineyard {
 
+#ifndef RETURN_GS_ERROR_IF_NOT_OK
 #define RETURN_GS_ERROR_IF_NOT_OK(status)                          \
   do {                                                             \
     if (!status.ok()) {                                            \
       RETURN_GS_ERROR(ErrorCode::kGraphArError, status.message()); \
     }                                                              \
   } while (false);
+#endif
 
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
