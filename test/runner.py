@@ -437,6 +437,7 @@ def run_vineyard_cpp_tests(meta, endpoints, tests):
         run_test(tests, 'lru_test')
         run_test(tests, 'mutable_blob_test')
         run_test(tests, 'name_test')
+        run_test(tests, 'object_meta_test')
         run_test(tests, 'persist_test')
         run_test(tests, 'plasma_test')
         run_test(tests, 'release_test')

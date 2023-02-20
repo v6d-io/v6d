@@ -729,6 +729,12 @@ class ObjectMeta {
    */
   size_t MemoryUsage(json& usages, const bool pretty = true) const;
 
+  /**
+   * @brief Get the associate timestamp (in milliseconds) inside the metadata, 0
+   *        means unknown.
+   */
+  uint64_t Timestamp() const;
+
   std::string ToString() const;
 
   void PrintMeta() const;

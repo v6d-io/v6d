@@ -307,6 +307,10 @@ size_t ObjectMeta::MemoryUsage(json& usages, const bool pretty) const {
   return traverse(this->meta_, usages);
 }
 
+uint64_t ObjectMeta::Timestamp() const {
+  return meta_.value("__timestamp", static_cast<uint64_t>(0));
+}
+
 std::string ObjectMeta::ToString() const { return meta_.dump(4); }
 
 void ObjectMeta::PrintMeta() const { std::clog << meta_.dump(4) << std::endl; }
