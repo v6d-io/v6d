@@ -147,6 +147,12 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::CreateGPUBufferRequest;
   } else if (str_type == "get_gpu_buffers_request") {
     return CommandType::GetGPUBuffersRequest;
+  } else if (str_type == "evict_request") {
+    return CommandType::EvictRequest;
+  } else if (str_type == "load_request") {
+    return CommandType::LoadRequest;
+  } else if (str_type == "unpin_request") {
+    return CommandType::UnpinRequest;
   } else {
     return CommandType::NullCommand;
   }
@@ -1878,7 +1884,7 @@ void WriteIncreaseReferenceCountRequest(const std::vector<ObjectID>& ids,
                                         std::string& msg) {
   json root;
   root["type"] = "increase_reference_count_request";
-  root["ids"] = std::vector<ObjectID>{ids};
+  root["ids"] = ids;
   encode_msg(root, msg);
 }
 
@@ -1897,6 +1903,82 @@ void WriteIncreaseReferenceCountReply(std::string& msg) {
 
 Status ReadIncreaseReferenceCountReply(json const& root) {
   CHECK_IPC_ERROR(root, "increase_reference_count_reply");
+  return Status::OK();
+}
+
+void WriteEvictRequest(const std::vector<ObjectID>& ids, std::string& msg) {
+  json root;
+  root["type"] = "evict_request";
+  root["ids"] = ids;
+  encode_msg(root, msg);
+}
+
+Status ReadEvictRequest(json const& root, std::vector<ObjectID>& ids) {
+  RETURN_ON_ASSERT(root["type"] == "evict_request");
+  ids = root["ids"].get_to(ids);
+  return Status::OK();
+}
+
+void WriteEvictReply(std::string& msg) {
+  json root;
+  root["type"] = "evict_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadEvictReply(json const& root) {
+  CHECK_IPC_ERROR(root, "evict_reply");
+  return Status::OK();
+}
+
+void WriteLoadRequest(const std::vector<ObjectID>& ids, const bool pin,
+                      std::string& msg) {
+  json root;
+  root["type"] = "load_request";
+  root["ids"] = std::vector<ObjectID>{ids};
+  root["pin"] = pin;
+  encode_msg(root, msg);
+}
+
+Status ReadLoadRequest(json const& root, std::vector<ObjectID>& ids,
+                       bool& pin) {
+  RETURN_ON_ASSERT(root["type"] == "load_request");
+  ids = root["ids"].get_to(ids);
+  pin = root.value("pin", false);
+  return Status::OK();
+}
+
+void WriteLoadReply(std::string& msg) {
+  json root;
+  root["type"] = "load_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadLoadReply(json const& root) {
+  CHECK_IPC_ERROR(root, "load_reply");
+  return Status::OK();
+}
+
+void WriteUnpinRequest(const std::vector<ObjectID>& ids, std::string& msg) {
+  json root;
+  root["type"] = "unpin_request";
+  root["ids"] = ids;
+  encode_msg(root, msg);
+}
+
+Status ReadUnpinRequest(json const& root, std::vector<ObjectID>& ids) {
+  RETURN_ON_ASSERT(root["type"] == "unpin_request");
+  ids = root["ids"].get_to(ids);
+  return Status::OK();
+}
+
+void WriteUnpinReply(std::string& msg) {
+  json root;
+  root["type"] = "unpin_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadUnpinReply(json const& root) {
+  CHECK_IPC_ERROR(root, "unpin_reply");
   return Status::OK();
 }
 

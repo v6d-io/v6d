@@ -75,7 +75,7 @@ int main(int argc, char** argv) {
   // meta should contains name
   ObjectMeta meta;
   VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
-  CHECK(meta.Haskey("__name"));
+  CHECK(meta.HasKey("__name"));
   CHECK_EQ(meta.GetKeyValue<std::string>("__name"), "test_name");
 
   ObjectID id3 = 0;
@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
 
   // meta shouldn't contains name anymore
   VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
-  CHECK(!meta.Haskey("__name"));
+  CHECK(!meta.HasKey("__name"));
 
   {
     std::map<std::string, ObjectID> names;

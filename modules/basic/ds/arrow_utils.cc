@@ -397,10 +397,10 @@ Status CombineRecordBatches(
   RETURN_ON_ERROR(RecordBatchesToTable(batches, &table));
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       combined_table, table->CombineChunks(arrow::default_memory_pool()));
-  arrow::TableBatchReader tbreader(*combined_table);
-  RETURN_ON_ARROW_ERROR(tbreader.ReadNext(batch));
+  arrow::TableBatchReader reader(*combined_table);
+  RETURN_ON_ARROW_ERROR(reader.ReadNext(batch));
   std::shared_ptr<arrow::RecordBatch> test_batch;
-  RETURN_ON_ARROW_ERROR(tbreader.ReadNext(&test_batch));
+  RETURN_ON_ARROW_ERROR(reader.ReadNext(&test_batch));
   RETURN_ON_ASSERT(test_batch == nullptr);
   return Status::OK();
 }
@@ -422,13 +422,16 @@ Status TableToRecordBatches(
     return Status::OK();
   }
 
-  // chunks[rindex][cindex]
+  // chunks[row_index][column_index]
   std::vector<std::vector<std::shared_ptr<arrow::Array>>> chunks;
-  for (int64_t cindex = 0; cindex < fixed_table->num_columns(); ++cindex) {
-    for (int64_t rindex = 0; rindex < fixed_table->column(cindex)->num_chunks();
-         ++rindex) {
-      chunks.resize(fixed_table->column(cindex)->num_chunks());
-      chunks[rindex].push_back(fixed_table->column(cindex)->chunk(rindex));
+  for (int64_t column_index = 0; column_index < fixed_table->num_columns();
+       ++column_index) {
+    for (int64_t row_index = 0;
+         row_index < fixed_table->column(column_index)->num_chunks();
+         ++row_index) {
+      chunks.resize(fixed_table->column(column_index)->num_chunks());
+      chunks[row_index].push_back(
+          fixed_table->column(column_index)->chunk(row_index));
     }
   }
   batches->clear();
@@ -920,7 +923,7 @@ Status CastTableToSchema(const std::shared_ptr<arrow::Table>& table,
   return Status::OK();
 }
 
-inline bool IsDataTypeConsilidatable(std::shared_ptr<arrow::DataType> type) {
+inline bool IsDataTypeConsolidatable(std::shared_ptr<arrow::DataType> type) {
   if (type == nullptr) {
     return false;
   }
@@ -1028,7 +1031,7 @@ Status ConsolidateColumns(
   std::shared_ptr<arrow::DataType> dtype = nullptr;
   for (auto const& column : columns) {
     auto column_dtype = column->type();
-    if (!IsDataTypeConsilidatable(column_dtype)) {
+    if (!IsDataTypeConsolidatable(column_dtype)) {
       return Status::Invalid("column type '" + column->type()->ToString() +
                              "' is not a numeric type");
     }
@@ -1114,7 +1117,7 @@ Status ConsolidateColumns(const std::shared_ptr<arrow::Table>& table,
                              "' doesn't exist in the table");
     }
     auto column_dtype = schema->field(column_index)->type();
-    if (!IsDataTypeConsilidatable(column_dtype)) {
+    if (!IsDataTypeConsolidatable(column_dtype)) {
       return Status::Invalid("column '" + column_name +
                              "' is not a numeric type");
     }

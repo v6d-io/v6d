@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_SERVER_MEMORY_USAGE_H_
 #define SRC_SERVER_MEMORY_USAGE_H_
 
+#include <algorithm>
 #include <atomic>
 #include <list>
 #include <map>
@@ -24,7 +25,6 @@ limitations under the License.
 #include <set>
 #include <shared_mutex>
 #include <string>
-#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -73,14 +73,14 @@ class DependencyTracker
    * @param ids The blob IDs.
    * @param socket_connection The socket connection ID.
    */
-  Status AddDependency(std::unordered_set<ID> const& ids, int conn) {
+  Status AddDependency(std::unordered_set<ID> const& ids, const int conn) {
     for (auto const& id : ids) {
       RETURN_ON_ERROR(AddDependency(id, conn));
     }
     return Status::OK();
   }
 
-  Status AddDependency(ID const& id, int conn) {
+  Status AddDependency(const ID id, const int conn) {
     Status status;
     auto fn = [this, id, &status](ska::flat_hash_set<ID>& objects) -> bool {
       if (objects.find(id) == objects.end()) {
@@ -103,14 +103,14 @@ class DependencyTracker
    * @param ids The blob IDs.
    * @param socket_connection The socket connection ID.
    */
-  Status RemoveDependency(std::unordered_set<ID> const& ids, int conn) {
+  Status RemoveDependency(std::unordered_set<ID> const& ids, const int conn) {
     for (auto const& id : ids) {
       RETURN_ON_ERROR(RemoveDependency(id, conn));
     }
     return Status::OK();
   }
 
-  Status RemoveDependency(ID const& id, int conn) {
+  Status RemoveDependency(const ID id, const int conn) {
     Status status;
     bool accessed = dependency_.erase_fn(
         conn, [id, &status](ska::flat_hash_set<ID>& objects) -> bool {
@@ -141,7 +141,7 @@ class DependencyTracker
   /**
    * @brief Remove all the dependency of all objects in given socket connection.
    */
-  Status ReleaseConnection(int conn) {
+  Status ReleaseConnection(const int conn) {
     Status status;
     bool accessed = dependency_.erase_fn(
         conn, [this, &status](ska::flat_hash_set<ID>& objects) -> bool {
@@ -203,13 +203,13 @@ class ColdObjectTracker
    public:
     using value_t = std::pair<ID, std::shared_ptr<P>>;
     using lru_map_t =
-        std::unordered_map<ID, typename std::list<value_t>::iterator>;
+        ska::flat_hash_map<ID, typename std::list<value_t>::iterator>;
     using lru_list_t = std::list<value_t>;
 
     LRU() = default;
     ~LRU() = default;
 
-    void Ref(ID id, std::shared_ptr<P> payload) {
+    void Ref(const ID id, const std::shared_ptr<P>& payload) {
       std::lock_guard<decltype(mu_)> locked(mu_);
       auto it = map_.find(id);
       if (it == map_.end()) {
@@ -222,7 +222,7 @@ class ColdObjectTracker
       }
     }
 
-    bool CheckExist(ID id) const {
+    bool CheckExist(const ID id) const {
       std::lock_guard<decltype(mu_)> locked(mu_);
       return map_.find(id) != map_.end();
     }
@@ -236,21 +236,24 @@ class ColdObjectTracker
      * @param store_ptr is used for spill
      * @return * Status
      */
-    Status Unref(const ID& id, bool fast_delete,
-                 std::shared_ptr<Der> store_ptr) {
+    Status Unref(const ID id, const bool fast_delete,
+                 const std::shared_ptr<Der>& bulk_store) {
       std::lock_guard<decltype(mu_)> locked(mu_);
       auto it = map_.find(id);
       if (it == map_.end()) {
-        auto it = spilled_obj_.find(id);
-        if (it == spilled_obj_.end()) {
+        auto spilled = spilled_obj_.find(id);
+        if (spilled == spilled_obj_.end()) {
           return Status::OK();
         }
         if (!fast_delete) {
-          RETURN_ON_ERROR(store_ptr->ReloadPayload(id, it->second));
+          // NB: explicitly copy the std::shared_ptr as the iterator is not
+          // stable.
+          auto payload = spilled->second;
+          RETURN_ON_ERROR(bulk_store->ReloadPayload(id, payload));
         } else {
-          RETURN_ON_ERROR(store_ptr->DeletePayloadFile(id));
+          RETURN_ON_ERROR(bulk_store->DeletePayloadFile(id));
         }
-        spilled_obj_.erase(it);
+        spilled_obj_.erase(spilled);
         return Status::OK();
       } else {
         list_.erase(it->second);
@@ -259,33 +262,76 @@ class ColdObjectTracker
       }
     }
 
-    Status Spill(size_t sz, std::shared_ptr<Der> bulk_store_ptr) {
+    Status SpillFor(const size_t sz, const std::shared_ptr<Der>& bulk_store) {
       std::lock_guard<decltype(mu_)> locked(mu_);
       size_t spilled_sz = 0;
-      auto st = Status::OK();
+      auto status = Status::OK();
       auto it = list_.rbegin();
+      std::map<ObjectID, std::shared_ptr<Payload>> pinned_objects;
       while (it != list_.rend()) {
-        st = bulk_store_ptr->SpillPayload(it->second);
-        if (!st.ok()) {
-          VLOG(100) << "Error: failed to spill payload: " << st.ToString();
+        if (it->second->IsPinned()) {
+          // bypass pinned
+          pinned_objects.emplace(it->first, it->second);
+          it++;
+          continue;
+        }
+
+        auto s = this->spill(it->first, it->second, bulk_store);
+        if (s.ok()) {
+          spilled_sz += it->second->data_size;
+          map_.erase(it->first);
+        } else if (s.IsObjectSpilled()) {
+          map_.erase(it->first);
+        } else {
+          status += s;
           break;
         }
-        spilled_sz += it->second->data_size;
-        spilled_obj_.emplace(it->first, it->second);
-        map_.erase(it->first);
         it++;
         if (sz <= spilled_sz) {
           break;
         }
       }
-      auto poped_size = std::distance(list_.rbegin(), it);
-      while (poped_size-- > 0) {
+      auto popped_size = std::distance(list_.rbegin(), it);
+      while (popped_size-- > 0) {
         list_.pop_back();
       }
-      if (st.ok() && spilled_sz == 0) {
-        return Status::NotEnoughMemory("Nothing spilled");
+      // restore pinned objects
+      for (auto const& item : pinned_objects) {
+        Ref(item.first, item.second);
       }
-      return st;
+      if (!status.ok() || (status.ok() && spilled_sz == 0)) {
+        auto s =
+            Status::NotEnoughMemory("Still not enough memory after spilling");
+        s += status;
+        return s;
+      }
+      return Status::OK();
+    }
+
+    Status SpillObjects(
+        const std::map<ObjectID, std::shared_ptr<Payload>>& objects,
+        const std::shared_ptr<Der>& bulk_store) {
+      std::lock_guard<decltype(mu_)> locked(mu_);
+      auto status = Status::OK();
+      for (auto const& item : objects) {
+        if (item.second->IsPinned()) {
+          // bypass pinned objects
+          continue;
+        }
+        status += this->spill(item.first, item.second, bulk_store);
+      }
+      return status;
+    }
+
+    Status ReloadObjects(
+        const std::map<ObjectID, std::shared_ptr<Payload>>& objects,
+        const bool pin, const std::shared_ptr<Der>& bulk_store) {
+      std::lock_guard<decltype(mu_)> locked(mu_);
+      auto status = Status::OK();
+      for (auto const& item : objects) {
+        status += this->reload(item.first, item.second, pin, bulk_store);
+      }
+      return status;
     }
 
     bool CheckSpilled(const ID& id) {
@@ -294,11 +340,41 @@ class ColdObjectTracker
     }
 
    private:
+    Status spill(const ObjectID object_id,
+                 const std::shared_ptr<Payload>& payload,
+                 const std::shared_ptr<Der>& bulk_store) {
+      std::lock_guard<decltype(mu_)> locked(mu_);
+      if (payload->is_spilled) {
+        return Status::ObjectSpilled(object_id);
+      }
+      spilled_obj_.emplace(object_id, payload);
+      return bulk_store->SpillPayload(payload);
+    }
+
+    Status reload(const ObjectID object_id,
+                  const std::shared_ptr<Payload>& payload, const bool pin,
+                  const std::shared_ptr<Der>& bulk_store) {
+      std::lock_guard<decltype(mu_)> locked(mu_);
+      if (pin) {
+        payload->Pin();
+      }
+      if (!payload->is_spilled) {
+        return Status::OK();
+      }
+      {
+        auto loc = spilled_obj_.find(object_id);
+        if (loc != spilled_obj_.end()) {
+          spilled_obj_.erase(loc);
+        }
+      }
+      return bulk_store->ReloadPayload(object_id, payload);
+    }
+
     mutable std::recursive_mutex mu_;
     // protected by mu_
     lru_map_t map_;
     lru_list_t list_;
-    std::unordered_map<ID, std::shared_ptr<P>> spilled_obj_;
+    ska::flat_hash_map<ID, std::shared_ptr<P>> spilled_obj_;
   };
 
  public:
@@ -308,7 +384,7 @@ class ColdObjectTracker
   ColdObjectTracker() {}
   ~ColdObjectTracker() {
     if (!spill_path_.empty()) {
-      util::FileIOAdaptor io_adaptor(spill_path_);
+      io::FileIOAdaptor io_adaptor(spill_path_);
       DISCARD_ARROW_ERROR(io_adaptor.DeleteDir());
     }
   }
@@ -319,14 +395,14 @@ class ColdObjectTracker
    * @param id The object ID.
    * @param is_delete Indicates if is to delete or for later reference.
    */
-  Status RemoveFromColdList(ID const& id, bool is_delete) {
+  Status RemoveFromColdList(const ID id, const bool is_delete) {
     RETURN_ON_ERROR(cold_obj_lru_.Unref(id, is_delete, shared_from_self()));
     return Status::OK();
   }
 
   using base_t::RemoveDependency;
 
-  Status AddDependency(std::unordered_set<ID> const& ids, int conn) {
+  Status AddDependency(std::unordered_set<ID> const& ids, const int conn) {
     for (auto const& id : ids) {
       RETURN_ON_ERROR(AddDependency(id, conn));
     }
@@ -336,7 +412,7 @@ class ColdObjectTracker
   /**
    * @brief Remove this blob from cold object list if it accessed again.
    */
-  Status AddDependency(ID const& id, int conn) {
+  Status AddDependency(const ID id, const int conn) {
     RETURN_ON_ERROR(base_t::AddDependency(id, conn));
     RETURN_ON_ERROR(this->RemoveFromColdList(id, false));
     return Status::OK();
@@ -345,7 +421,7 @@ class ColdObjectTracker
   /**
    * @brief Add a blob to the cold object list.
    */
-  Status MarkAsCold(ID const& id, std::shared_ptr<P> payload) {
+  Status MarkAsCold(const ID id, const std::shared_ptr<P>& payload) {
     if (payload->IsSealed()) {
       cold_obj_lru_.Ref(id, payload);
     }
@@ -357,7 +433,7 @@ class ColdObjectTracker
   /**
    * @brief check if a blob is in-use. Return true if it is in-use.
    */
-  Status IsInUse(ID const& id, bool& is_in_use) {
+  Status IsInUse(const ID id, bool& is_in_use) {
     if (cold_obj_lru_.CheckExist(id)) {
       is_in_use = false;
     } else {
@@ -369,7 +445,7 @@ class ColdObjectTracker
   /**
    * @brief check if a blob is spilled out. Return true if it is spilled.
    */
-  Status IsSpilled(ID const& id, bool& is_spilled) {
+  Status IsSpilled(const ID id, bool& is_spilled) {
     if (cold_obj_lru_.CheckSpilled(id)) {
       is_spilled = true;
     } else {
@@ -383,11 +459,41 @@ class ColdObjectTracker
    * to disk till memory usage back to allowed watermark.
    * @param sz spilled size
    */
-  Status SpillColdObject(int64_t sz) {
-    if (sz <= 0) {
-      return Status::NotEnoughMemory("Nothing will be spilled");
+  Status SpillColdObjectFor(const int64_t sz) {
+    if (spill_path_.empty()) {
+      return Status::Invalid("Spill path is not set");
     }
-    return cold_obj_lru_.Spill(sz, shared_from_self());
+    if (sz == 0) {
+      return Status::OK();
+    } else if (sz < 0) {
+      return Status::Invalid("The expected spill size is invalid");
+    }
+    return cold_obj_lru_.SpillFor(sz, shared_from_self());
+  }
+
+  /**
+   * @brief Triggered when been requested to spill specified objects to disk.
+   * @param objects spilled blobs
+   */
+  Status SpillColdObjects(
+      const std::map<ObjectID, std::shared_ptr<Payload>>& objects) {
+    if (spill_path_.empty()) {
+      return Status::Invalid("Spill path is not set");
+    }
+    return cold_obj_lru_.SpillObjects(objects, shared_from_self());
+  }
+
+  /**
+   * @brief Triggered when been requested to spill specified objects to disk.
+   * @param objects reloaded blobs
+   */
+  Status ReloadColdObjects(
+      const std::map<ObjectID, std::shared_ptr<Payload>>& objects,
+      const bool pin) {
+    if (spill_path_.empty()) {
+      return Status::OK();  // bypass, as spill is not enabled
+    }
+    return cold_obj_lru_.ReloadObjects(objects, pin, shared_from_self());
   }
 
   /**
@@ -399,51 +505,70 @@ class ColdObjectTracker
    *  - If spill is allowed, then we shall conduct spilling and trying to give a
    * non-nullptr pointer
    */
-  uint8_t* AllocateMemoryWithSpill(size_t size, int* fd, int64_t* map_size,
-                                   ptrdiff_t* offset) {
+  uint8_t* AllocateMemoryWithSpill(const size_t size, int* fd,
+                                   int64_t* map_size, ptrdiff_t* offset) {
     uint8_t* pointer = nullptr;
     pointer = self().AllocateMemory(size, fd, map_size, offset);
     // no spill will be conducted
     if (spill_path_.empty()) {
       return pointer;
     }
-    if (pointer == nullptr ||
-        BulkAllocator::Allocated() >=
-            static_cast<int64_t>(self().mem_spill_upper_bound_)) {
-      std::unique_lock<std::mutex> locked(spill_mu_);
-      // if already got someone spilled, then we should allocate normally
-      if (pointer == nullptr)
-        pointer = self().AllocateMemory(size, fd, map_size, offset);
 
-      if (pointer == nullptr ||
-          BulkAllocator::Allocated() >=
-              static_cast<int64_t>(self().mem_spill_upper_bound_)) {
-        int64_t spill_size =
-            BulkAllocator::Allocated() - self().mem_spill_lower_bound_;
-        if (SpillColdObject(spill_size).ok()) {
-          pointer = pointer ? pointer
-                            : self().AllocateMemory(size, fd, map_size, offset);
-        }
+    // spill will be triggered when:
+    //
+    //  1. unable to allocate memory
+    //  2. memory usage is above upper bound
+    if (pointer == nullptr ||
+        BulkAllocator::Allocated() >= self().mem_spill_upper_bound_) {
+      std::unique_lock<std::mutex> locked(spill_mu_);
+
+      int64_t min_spill_size = 0;
+      if (pointer == nullptr) {
+        min_spill_size = size - (BulkAllocator::GetFootprintLimit() -
+                                 BulkAllocator::Allocated());
+      }
+      if (BulkAllocator::Allocated() > self().mem_spill_lower_bound_) {
+        min_spill_size =
+            std::max(min_spill_size, BulkAllocator::Allocated() -
+                                         self().mem_spill_lower_bound_);
+      }
+
+      auto s = SpillColdObjectFor(min_spill_size);
+      if (!s.ok()) {
+        DLOG(ERROR) << "Error during spilling cold object: " << s.ToString();
+      }
+
+      // try to allocate again if needed
+      if (pointer == nullptr) {
+        pointer = self().AllocateMemory(size, fd, map_size, offset);
       }
     }
     return pointer;
   }
 
  public:
-  Status FetchAndModify(ID const& id, int64_t& ref_cnt, int64_t changes) {
+  Status FetchAndModify(const ID id, int64_t& ref_cnt, int64_t changes) {
     return self().FetchAndModify(id, ref_cnt, changes);
   }
 
-  Status OnRelease(ID const& id) { return self().OnRelease(id); }
+  Status OnRelease(const ID id) { return self().OnRelease(id); }
 
-  Status OnDelete(ID const& id) { return self().OnDelete(id); }
+  Status OnDelete(const ID id) { return self().OnDelete(id); }
 
  protected:
-  Status SpillPayload(std::shared_ptr<P>& payload) {
-    assert(payload->is_sealed);
-    util::SpillWriteFile write_file(spill_path_);
-    RETURN_ON_ERROR(write_file.Write(payload));
-    RETURN_ON_ERROR(write_file.Sync());
+  Status SpillPayload(const std::shared_ptr<P>& payload) {
+    if (!payload->is_sealed) {
+      return Status::ObjectNotSealed(
+          "payload is not sealed and cannot be spilled");
+    }
+    if (payload->is_spilled) {
+      return Status::ObjectSpilled(payload->object_id);
+    }
+    {
+      io::SpillFileWriter writer(spill_path_);
+      RETURN_ON_ERROR(writer.Write(payload));
+      RETURN_ON_ERROR(writer.Sync());
+    }
     BulkAllocator::Free(payload->pointer, payload->data_size);
     payload->store_fd = -1;
     payload->pointer = nullptr;
@@ -451,15 +576,19 @@ class ColdObjectTracker
     return Status::OK();
   }
 
-  Status ReloadPayload(const ID& id, std::shared_ptr<P>& payload) {
-    assert(payload->is_spilled == true);
-    util::SpillReadFile read_file(spill_path_);
-    RETURN_ON_ERROR(read_file.Read(payload, shared_from_self()));
-    return Status::OK();
+  Status ReloadPayload(const ID id, const std::shared_ptr<P>& payload) {
+    if (!payload->is_spilled) {
+      return Status::ObjectNotSpilled(payload->object_id);
+    }
+    {
+      io::SpillFileReader reader(spill_path_);
+      RETURN_ON_ERROR(reader.Read(payload, shared_from_self()));
+    }
+    return this->DeletePayloadFile(id);
   }
 
-  Status DeletePayloadFile(const ID& id) {
-    util::FileIOAdaptor io_adaptor(spill_path_);
+  Status DeletePayloadFile(const ID id) {
+    io::FileIOAdaptor io_adaptor(spill_path_);
     RETURN_ON_ERROR(io_adaptor.RemoveFile(spill_path_ + std::to_string(id)));
     return Status::OK();
   }
@@ -473,13 +602,14 @@ class ColdObjectTracker
     if (spill_path.back() != '/') {
       spill_path_.push_back('/');
     }
-    util::FileIOAdaptor io_adaptor(spill_path_ + "test");
+    io::FileIOAdaptor io_adaptor(spill_path_ + "test");
     if (io_adaptor.Open("w").ok()) {
       DISCARD_ARROW_ERROR(io_adaptor.RemoveFile(spill_path_ + "test"));
     } else {
       LOG(WARNING)
-          << "Disabling spilling as the specified spill directory doesn't "
-             "exist, or vineyardd doesn't have the permission to write it";
+          << "Disabling spilling as the specified spill directory '"
+          << spill_path_
+          << "' doesn't exist, or vineyardd doesn't have the write permission";
       spill_path_.clear();
     }
   }

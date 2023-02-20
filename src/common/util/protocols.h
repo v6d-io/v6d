@@ -91,6 +91,9 @@ enum class CommandType {
   GetGPUBuffersRequest = 57,
   CreateDiskBufferRequest = 58,
   ListNameRequest = 59,
+  EvictRequest = 80,
+  LoadRequest = 81,  // = {load, load + pin}
+  UnpinRequest = 82,
 };
 
 enum class StoreType {
@@ -645,6 +648,31 @@ Status ReadIncreaseReferenceCountRequest(json const& root,
 void WriteIncreaseReferenceCountReply(std::string& msg);
 
 Status ReadIncreaseReferenceCountReply(json const& root);
+
+void WriteEvictRequest(const std::vector<ObjectID>& ids, std::string& msg);
+
+Status ReadEvictRequest(json const& root, std::vector<ObjectID>& ids);
+
+void WriteEvictReply(std::string& msg);
+
+Status ReadEvictReply(json const& root);
+
+void WriteLoadRequest(const std::vector<ObjectID>& ids, const bool pin,
+                      std::string& msg);
+
+Status ReadLoadRequest(json const& root, std::vector<ObjectID>& ids, bool& pin);
+
+void WriteLoadReply(std::string& msg);
+
+Status ReadLoadReply(json const& root);
+
+void WriteUnpinRequest(const std::vector<ObjectID>& ids, std::string& msg);
+
+Status ReadUnpinRequest(json const& root, std::vector<ObjectID>& ids);
+
+void WriteUnpinReply(std::string& msg);
+
+Status ReadUnpinReply(json const& root);
 
 }  // namespace vineyard
 

@@ -22,8 +22,8 @@ limitations under the License.
 #include "arrow/filesystem/filesystem.h"
 #include "common/util/arrow.h"
 
-namespace util {
-using vineyard::Status;
+namespace vineyard {
+namespace io {
 
 FileIOAdaptor::FileIOAdaptor(const std::string& location) {
   // TODO(ZjuYTW): Maybe we should check the validation of dir_path
@@ -113,15 +113,19 @@ Status FileIOAdaptor::CreateDir(const std::string& path) {
 }
 
 Status FileIOAdaptor::DeleteDir() {
-  return Status::ArrowError(fs_->DeleteDir(location_));
+  auto _ = fs_->DeleteDir(location_);  // discard the deletion error
+  return Status::OK();
 }
 
 Status FileIOAdaptor::RemoveFiles(const std::vector<std::string>& paths) {
-  return Status::ArrowError(fs_->DeleteFiles(paths));
+  auto _ = fs_->DeleteFiles(paths);  // discard the deletion error
+  return Status::OK();
 }
 
 Status FileIOAdaptor::RemoveFile(const std::string& path) {
-  return Status::ArrowError(fs_->DeleteFile(path));
+  auto _ = fs_->DeleteFile(path);  // discard the deletion error
+  return Status::OK();
 }
 
-}  // namespace util
+}  // namespace io
+}  // namespace vineyard

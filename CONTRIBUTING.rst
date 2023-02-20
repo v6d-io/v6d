@@ -234,6 +234,7 @@ The vineyard python package is built using the `manylinux1`_ environments. The
 release version is built with Docker. The description of the base image can be
 found at `docker/pypa/Dockerfile.manylinux1`_.
 
+.. _pre-commit: https://pre-commit.com/
 .. _file an issue: https://github.com/v6d-io/v6d/issues/new/new
 .. _manylinux1: https://github.com/pypa/manylinux
 .. _search: https://github.com/v6d-io/v6d/pulls

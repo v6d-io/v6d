@@ -31,10 +31,10 @@ void GlobalTensor::Construct(const ObjectMeta& meta) {
   this->meta_ = meta;
   this->id_ = meta.GetId();
 
-  if (meta.Haskey("shape_")) {
+  if (meta.HasKey("shape_")) {
     meta.GetKeyValue("shape_", this->shape_);
   }
-  if (meta.Haskey("partition_shape_")) {
+  if (meta.HasKey("partition_shape_")) {
     meta.GetKeyValue("partition_shape_", this->partition_shape_);
   }
   for (size_t __idx = 0; __idx < meta.GetKeyValue<size_t>("partitions_-size");

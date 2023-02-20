@@ -20,6 +20,99 @@ limitations under the License.
 
 namespace vineyard {
 
+Payload::Payload()
+    : object_id(EmptyBlobID()),
+      store_fd(-1),
+      arena_fd(-1),
+      data_offset(0),
+      data_size(0),
+      map_size(0),
+      ref_cnt(0),
+      pointer(nullptr),
+      is_sealed(false),
+      is_owner(true),
+      is_spilled(false),
+      is_gpu(false) {
+  pinned.store(0);
+}
+
+Payload::Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd,
+                 int64_t msize, ptrdiff_t offset)
+    : object_id(object_id),
+      store_fd(fd),
+      arena_fd(-1),
+      data_offset(offset),
+      data_size(size),
+      map_size(msize),
+      ref_cnt(0),
+      pointer(ptr),
+      is_sealed(false),
+      is_owner(true),
+      is_spilled(false),
+      is_gpu(false) {
+  pinned.store(0);
+}
+
+Payload::Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd,
+                 int arena_fd, int64_t msize, ptrdiff_t offset)
+    : object_id(object_id),
+      store_fd(fd),
+      arena_fd(arena_fd),
+      data_offset(offset),
+      data_size(size),
+      map_size(msize),
+      ref_cnt(0),
+      pointer(ptr),
+      is_sealed(false),
+      is_owner(true),
+      is_spilled(false),
+      is_gpu(false) {
+  pinned.store(0);
+}
+
+Payload::Payload(const Payload& payload) {
+  object_id = payload.object_id;
+  store_fd = payload.store_fd;
+  arena_fd = payload.arena_fd;
+  data_offset = payload.data_offset;
+  data_size = payload.data_size;
+  map_size = payload.map_size;
+  ref_cnt = payload.ref_cnt;
+  pointer = payload.pointer;
+  is_sealed = payload.is_sealed;
+  is_owner = payload.is_owner;
+  is_spilled = payload.is_spilled;
+  is_gpu = payload.is_gpu;
+  pinned.store(payload.pinned.load());
+}
+
+Payload& Payload::operator=(const Payload& payload) {
+  object_id = payload.object_id;
+  store_fd = payload.store_fd;
+  arena_fd = payload.arena_fd;
+  data_offset = payload.data_offset;
+  data_size = payload.data_size;
+  map_size = payload.map_size;
+  ref_cnt = payload.ref_cnt;
+  pointer = payload.pointer;
+  is_sealed = payload.is_sealed;
+  is_owner = payload.is_owner;
+  is_spilled = payload.is_spilled;
+  is_gpu = payload.is_gpu;
+  pinned.store(payload.pinned.load());
+  return *this;
+}
+
+std::shared_ptr<Payload> Payload::MakeEmpty() {
+  static std::shared_ptr<Payload> payload = std::make_shared<Payload>();
+  return payload;
+}
+
+bool Payload::operator==(const Payload& other) const {
+  return ((object_id == other.object_id) && (store_fd == other.store_fd) &&
+          (data_offset == other.data_offset) && (data_size == other.data_size));
+}
+
 json Payload::ToJSON() const {
   json payload;
   this->ToJSON(payload);

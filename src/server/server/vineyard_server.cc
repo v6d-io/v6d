@@ -438,7 +438,6 @@ Status validate_metadata(const json& tree, json& result, Signature& signature) {
   // Check if instance_id information available
   RETURN_ON_ASSERT(tree.contains("instance_id"),
                    "The instance_id filed must be presented");
-
   result = tree;
   signature = GenerateSignature();
   if (result.find("signature") != result.end()) {
@@ -918,6 +917,107 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
         }
       });
   return Status::OK();
+}
+
+namespace detail {
+static void traverse_local_blobs(const json& tree, const InstanceID instance,
+                                 std::set<ObjectID>& objects) {
+  if (!tree.is_object() || tree.empty()) {
+    return;
+  }
+  std::string invalid_object_id = ObjectIDToString(InvalidObjectID());
+  ObjectID member_id = ObjectIDFromString(tree.value("id", invalid_object_id));
+  if (IsBlob(member_id)) {
+    if (instance == UnspecifiedInstanceID() ||
+        instance == tree.value("instance_id", UnspecifiedInstanceID())) {
+      objects.emplace(member_id);
+    }
+  } else {
+    for (auto const& item : tree) {
+      if (item.is_object()) {
+        traverse_local_blobs(item, instance, objects);
+      }
+    }
+  }
+}
+}  // namespace detail
+
+Status VineyardServer::EvictObjects(const std::vector<ObjectID>& ids,
+                                    callback_t<> callback) {
+  auto self(shared_from_this());
+  return GetData(
+      ids, false, false,
+      [self]() -> bool {
+        return self->ready_ == kReady && (!self->stopped_.load());
+      },
+      [self](const Status& status, const json& tree) {
+        std::set<ObjectID> objects;
+        for (auto const& item : tree) {
+          if (item.is_object()) {
+            detail::traverse_local_blobs(item, self->instance_id_, objects);
+          }
+        }
+        std::map<ObjectID, std::shared_ptr<Payload>> payloads;
+        for (auto const& id : objects) {
+          std::shared_ptr<Payload> payload;
+          if (self->bulk_store_->Get(id, payload).ok()) {
+            payloads.emplace(id, payload);
+          }
+        }
+        return self->bulk_store_->SpillColdObjects(payloads);
+      });
+}
+
+Status VineyardServer::LoadObjects(const std::vector<ObjectID>& ids,
+                                   const bool pin, callback_t<> callback) {
+  auto self(shared_from_this());
+  return GetData(
+      ids, false, false,
+      [self]() -> bool {
+        return self->ready_ == kReady && (!self->stopped_.load());
+      },
+      [self, pin](const Status& status, const json& tree) {
+        std::set<ObjectID> objects;
+        for (auto const& item : tree) {
+          if (item.is_object()) {
+            detail::traverse_local_blobs(item, self->instance_id_, objects);
+          }
+        }
+        std::map<ObjectID, std::shared_ptr<Payload>> payloads;
+        for (auto const& id : objects) {
+          std::shared_ptr<Payload> payload;
+          if (self->bulk_store_->Get(id, payload).ok()) {
+            payloads.emplace(id, payload);
+          }
+        }
+        return self->bulk_store_->ReloadColdObjects(payloads, pin);
+      });
+}
+
+Status VineyardServer::UnpinObjects(const std::vector<ObjectID>& ids,
+                                    callback_t<> callback) {
+  auto self(shared_from_this());
+  return GetData(
+      ids, false, false,
+      [self]() -> bool {
+        return self->ready_ == kReady && (!self->stopped_.load());
+      },
+      [self](const Status& status, const json& tree) {
+        std::set<ObjectID> objects;
+        for (auto const& item : tree) {
+          if (item.is_object()) {
+            detail::traverse_local_blobs(item, self->instance_id_, objects);
+          }
+        }
+        std::map<ObjectID, std::shared_ptr<Payload>> payloads;
+        for (auto const& id : objects) {
+          std::shared_ptr<Payload> payload;
+          if (self->bulk_store_->Get(id, payload).ok()) {
+            payload->Unpin();
+          }
+        }
+        return Status::OK();
+      });
 }
 
 Status VineyardServer::ClusterInfo(callback_t<const json&> callback) {

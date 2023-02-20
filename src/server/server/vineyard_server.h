@@ -161,6 +161,13 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   Status MigrateObject(const ObjectID object_id,
                        callback_t<const ObjectID&> callback);
 
+  Status EvictObjects(const std::vector<ObjectID>& ids, callback_t<> callback);
+
+  Status LoadObjects(const std::vector<ObjectID>& ids, const bool pin,
+                     callback_t<> callback);
+
+  Status UnpinObjects(const std::vector<ObjectID>& ids, callback_t<> callback);
+
   Status ClusterInfo(callback_t<const json&> callback);
 
   Status InstanceStatus(callback_t<const json&> callback);

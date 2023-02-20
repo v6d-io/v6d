@@ -18,7 +18,6 @@ limitations under the License.
 
 #include <memory>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 #include "arrow/api.h"
@@ -26,9 +25,10 @@ limitations under the License.
 #include "arrow/io/api.h"
 #include "arrow/io/interfaces.h"
 #include "common/util/status.h"
-#include "common/util/uuid.h"
 
-namespace util {
+namespace vineyard {
+namespace io {
+
 /**
  * @brief A customized adaptor for spilling and reloading file,
  * especailly implement `RemoveFile` for garbage collection
@@ -38,24 +38,26 @@ class FileIOAdaptor {
   FileIOAdaptor() = delete;
   explicit FileIOAdaptor(const std::string& dir_path);
   ~FileIOAdaptor();
-  vineyard::Status Open();
-  vineyard::Status Open(const char* mode);
-  vineyard::Status Write(const char* buf, size_t size);
-  vineyard::Status Flush();
-  vineyard::Status Read(void* buffer, size_t size);
-  vineyard::Status Close();
-  vineyard::Status RemoveFile(const std::string& path);
-  vineyard::Status RemoveFiles(const std::vector<std::string>& paths);
-  vineyard::Status DeleteDir();
+  Status Open();
+  Status Open(const char* mode);
+  Status Write(const char* buf, size_t size);
+  Status Flush();
+  Status Read(void* buffer, size_t size);
+  Status Close();
+  Status RemoveFile(const std::string& path);
+  Status RemoveFiles(const std::vector<std::string>& paths);
+  Status DeleteDir();
 
  private:
-  vineyard::Status CreateDir(const std::string& path);
+  Status CreateDir(const std::string& path);
 
   std::string location_;
   std::shared_ptr<arrow::fs::FileSystem> fs_;
   std::shared_ptr<arrow::io::RandomAccessFile> ifp_;
   std::shared_ptr<arrow::io::OutputStream> ofp_;
 };
-}  // namespace util
+
+}  // namespace io
+}  // namespace vineyard
 
 #endif  // SRC_SERVER_UTIL_FILE_IO_ADAPTOR_H_

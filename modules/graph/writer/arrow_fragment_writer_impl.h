@@ -238,7 +238,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::writeEdgeImpl(
 
   GraphArchive::EdgeChunkWriter writer(edge_info, graph_info_.GetPrefix(),
                                        adj_list_type);
-  int64_t vertex_chunk_num =
+  size_t vertex_chunk_num =
       std::ceil(vertices.size() / static_cast<double>(main_vertex_chunk_size));
 
   // collect properties

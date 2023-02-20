@@ -426,6 +426,29 @@ class ClientBase {
   Status Clear();
 
   /**
+   * @brief Evict objects from the vineyardd server.
+   *
+   * @param objects Objects to be evicted.
+   */
+  Status Evict(std::vector<ObjectID> const& objects);
+
+  /**
+   * @brief Load objects to ensure they resident in vineyardd server's memory,
+   *        with an optional arguments to pin these objects to prevent from
+   *        being spilled.
+   *
+   * @param objects Objects to be reloaded, and possibly pinned.
+   */
+  Status Load(std::vector<ObjectID> const& objects, const bool pin = false);
+
+  /**
+   * @brief Unpin objects from the vineyardd server's memory
+   *
+   * @param objects Objects to be unpinned.
+   */
+  Status Unpin(std::vector<ObjectID> const& objects);
+
+  /**
    * @brief Check if the client still connects to the vineyard server.
    *
    * @return True when the connection is still alive, otherwise false.

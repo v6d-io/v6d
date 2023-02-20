@@ -48,7 +48,7 @@ void CompressSingleBlobTest() {
   // compression
   {
     std::shared_ptr<Compressor> compressor = std::make_shared<Compressor>();
-    compressor->Compress(data.data(), length);
+    VINEYARD_CHECK_OK(compressor->Compress(data.data(), length));
 
     while (true) {
       void* data = nullptr;

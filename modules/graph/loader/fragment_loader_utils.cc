@@ -285,9 +285,9 @@ EdgeTableInfo FlattenTableInfos(const std::vector<EdgeTableInfo>& edge_tables) {
 std::pair<int64_t, int64_t> BinarySearchChunkPair(
     const std::vector<int64_t>& agg_num, int64_t got) {
   // binary search;
-  int64_t low = 0, high = agg_num.size() - 1;
+  size_t low = 0, high = agg_num.size() - 1;
   while (low <= high) {
-    int64_t mid = (low + high) / 2;
+    size_t mid = (low + high) / 2;
     if (agg_num[mid] <= got &&
         (mid == agg_num.size() - 1 || agg_num[mid + 1] > got)) {
       return std::make_pair(mid, got - agg_num[mid]);

@@ -1464,7 +1464,7 @@ ObjectID SharedMemoryManager::resolveObjectID(const uintptr_t target,
   // if (key <= target && target < key + data_size) {
   if (key == target) {
 #if defined(WITH_VERBOSE)
-    std::clog << "[trace] resuing blob " << ObjectIDToString(object_id)
+    std::clog << "[trace] reusing blob " << ObjectIDToString(object_id)
               << " for pointer " << reinterpret_cast<void*>(target)
               << " (size is " << data_size << ")" << std::endl;
 #endif
