@@ -445,6 +445,12 @@ Status validate_metadata(const json& tree, json& result, Signature& signature) {
   } else {
     result["signature"] = signature;
   }
+
+  // generate timestamp, in milliseconds.
+  result["__timestamp"] =
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          std::chrono::system_clock::now().time_since_epoch())
+          .count();
   return Status::OK();
 }
 
