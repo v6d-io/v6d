@@ -70,6 +70,146 @@ class ArrowProjectedFragment;
 
 namespace vineyard {
 
+template <typename VID_T, typename EID_T>
+struct GRIN_Nbr {
+ private:
+  using vid_t = VID_T;
+  using eid_t = EID_T;
+  using prop_id_t = property_graph_types::PROP_ID_TYPE;
+
+ public:
+  GRIN_Nbr(void* g, void* edge_label, void* adj_list, size_t current) {
+    g_ = g;
+    edge_label_ = edge_label;
+    adj_list_ = adj_list;
+    current_ = current;
+    if (current_ == 0) {
+      adj_list_iter_ = get_adjacent_list_begin(adj_list_);
+      property_list_ = get_all_edge_properties_from_label(edge_label_);
+    } else {
+      adj_list_iter_ = nullptr;
+    }
+  }
+
+  grape::Vertex<VID_T> neighbor() const {
+    return grape::Vertex<VID_T>(neighbor_);
+  }
+
+  grape::Vertex<VID_T> get_neighbor() const {
+    return grape::Vertex<VID_T>(neighbor_);
+  }
+
+  EID_T edge_id() const { return eid_; }
+
+  void* get_data(prop_id_t prop_id) const {
+    void* _row = get_edge_row(g_, edge_, property_list_);
+    void* _property = get_edge_property_from_id(edge_label_, prop_id);
+    return get_property_value_from_row(_row, _property);
+  }
+
+  template <typename T>
+  T get_data(prop_id_t prop_id) const {
+    void* _data = get_data(prop_id);
+    return *(static_cast<T*>(_data));
+  }
+
+  std::string get_str(prop_id_t prop_id) const {
+    void* _data = get_data(prop_id);
+    return *(static_cast<std::string*>(_data));
+  }
+
+  double get_double(prop_id_t prop_id) const {
+    void* _data = get_data(prop_id);
+    return *(static_cast<double*>(_data));
+  }
+
+  int64_t get_int(prop_id_t prop_id) const {
+    void* _data = get_data(prop_id);
+    return *(static_cast<int64_t*>(_data));
+  }
+
+  inline const GRIN_Nbr& operator++() const {
+    ++current_;
+    add_current_value();
+    return *this;
+  }
+
+  inline bool operator==(const GRIN_Nbr& rhs) const { 
+    return (current_ == rhs.current_) && (adj_list_ == rhs.adj_list_); 
+  }
+
+  inline bool operator!=(const GRIN_Nbr& rhs) const { 
+    return (current_ != rhs.current_) || (adj_list_ != rhs.adj_list_); 
+  }
+
+  inline bool operator<(const GRIN_Nbr& rhs) const {
+    return (current_ < rhs.current_) && (adj_list_ == rhs.adj_list_);;
+  }
+
+  inline const GRIN_Nbr& operator*() const { return *this; }
+
+ private:
+  void add_current_value() {
+    adj_list_iter_ = get_next_adjacent_iter(adj_list_, adj_list_iter_);
+    void* _v = get_neighbor_from_iter(adj_list_, adj_list_iter_);
+    void* _vid = get_vertex_id(_v); 
+    neighbor_ = *(static_cast<VID_T*>(_vid));
+    edge_ = get_edge_from_iter(adj_list_, adj_list_iter);
+  }
+
+  void* g_;
+  void* edge_label_;
+  void* property_list_;
+  void* adj_list_;
+  void* adj_list_iter_;
+  size_t current_;
+  VID_T neighbor_;
+  void* edge_;
+};
+
+template <typename VID_T>
+using GRIN_NbrDefault = GRIN_Nbr<VID_T, property_graph_types::EID_TYPE>;
+
+template <typename VID_T, typename EID_T>
+class GRIN_AdjList {
+ public:
+  GRIN_AdjList() : g_(NULL), edge_label_(NULL), adj_list_(NULL), sz_(0), begin_(0), end_(0) {}
+  GRIN_AdjList(void* g, void* edge_label, void* adj_list, size_t sz) 
+    : g_(g), edge_label_(edge_label), adj_list_(adj_list), sz_(sz), begin_(0), end_(sz) {}
+
+  inline GRIN_Nbr<VID_T, EID_T> begin() const {
+    return GRIN_Nbr<VID_T, EID_T>(g_, edge_label_, adj_list_, begin_);
+  }
+
+  inline GRIN_Nbr<VID_T, EID_T> end() const {
+    return GRIN_Nbr<VID_T, EID_T>(g_, edge_label_, adj_list_, end_);
+  }
+
+  inline size_t Size() const { return sz_; }
+
+  inline bool Empty() const { return sz_ == 0; }
+
+  inline bool NotEmpty() const { return sz_ > 0; }
+
+  size_t size() const { return sz_; }
+
+  //inline const NbrUnit<VID_T, EID_T>* begin_unit() const { return begin_; }
+
+  //inline const NbrUnit<VID_T, EID_T>* end_unit() const { return end_; }
+
+ private:
+  const void* g_;
+  const void* edge_label_;
+  const void* adj_list_;
+  const size_t sz_;
+  const size_t begin_;
+  const size_t end_;
+};
+
+template <typename VID_T>
+using GRIN_AdjListDefault = AdjList<VID_T, property_graph_types::EID_TYPE>;
+
+
 inline std::string generate_name_with_suffix(
     const std::string& prefix, property_graph_types::LABEL_ID_TYPE label) {
   return prefix + "_" + std::to_string(label);
@@ -87,7 +227,7 @@ class ArrowFragmentBaseBuilder;
 template <typename OID_T, typename VID_T,
           typename VERTEX_MAP_T =
               ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>>
-class __attribute__((annotate("vineyard"))) ArrowFragment
+class __attribute__((annotate("vineyard"))) GRIN_ArrowFragment
     : public ArrowFragmentBase,
       public vineyard::BareRegistered<
           ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>> {
@@ -221,7 +361,7 @@ public:
       grape::LoadStrategy::kBothOutIn;
 
  public:
-  ~ArrowFragment() = default;
+  ~GRIN_ArrowFragment() = default;
  // hide vertex_map
  // vineyard::ObjectID vertex_map_id() const override { return vm_ptr_->id(); }
 

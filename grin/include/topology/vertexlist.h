@@ -49,6 +49,8 @@ Vertex get_vertex_from_iter(VertexListIterator);
 #endif
 
 #ifdef CONTINUOUS_VERTEX_ID_TRAIT
+bool is_vertex_list_continuous(const VertexList);
+
 VertexID get_begin_vertex_id_from_list(const VertexList);
 
 VertexID get_end_vertex_id_from_list(const VertexList);

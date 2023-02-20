@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "grin/include/predefine.h"
-#include "grape/fragment/immutable_edgecut_fragment.h"
+#include "modules/graph/fragment/arrow_fragment.h"
 
 #include "arrow/api.h"
 
@@ -96,44 +96,70 @@ std::string GetDataTypeName(DataType type) {
   }
 }
 
+#define G_OID_T int
+#define G_VID_T unsigned
+
 /* The following data types shall be defined through typedef. */
-// local graph
-typedef grape::ImmutableEdgecutFragment<G_OID_T, G_VID_T, G_VDATA_T, G_EDATA_T>
-    Graph_T;
+typedef vineyard::ArrowFragment<G_OID_T, G_VID_T> Graph_T;                      
+typedef Graph_T::vertex_t Vertex_T;     
+struct Edge_T {
+    Vertex src;
+    Vertex dst;
+    Direction dir;
+    unsigned elabel;
+    Graph_T::eid_t eid;
+};                     
 
-// vertex
-typedef Graph_T::vertex_t Vertex_T;
-typedef Graph_T::vid_t VertexID_T;
-typedef Graph_T::vdata_t VertexData_T;
-
-// vertex list
+#ifdef WITH_VERTEX_ORIGIN_ID
+typedef Graph_T::oid_t OriginID_T;                   
+#endif
 #ifdef ENABLE_VERTEX_LIST
-typedef Graph_T::vertex_range_t VertexList_T;
-typedef Graph_T::vid_t VertexListIterator_T;
+typedef std::vector<Graph_T::vertices_t> VertexList_T;                 
 #endif
-
-// indexed vertex list
-#ifdef ENABLE_INDEXED_VERTEX_LIST
-typedef Graph_T::vid_t VertexIndex_T;
+#ifdef CONTINUOUS_VERTEX_ID_TRAIT
+typedef Graph_T::vid_t VertexID_T;                   
 #endif
-
-// adjacent list
 #ifdef ENABLE_ADJACENT_LIST
-typedef Graph_T::adj_list_t AdjacentList_T;
-typedef Graph_T::nbr_t AdjacentListIterator_T;
+struct AdjacentList_T {
+    Vertex v;
+    Direction dir;
+    unsigned elabel;
+    std::vector<Graph_T::raw_adj_list_t> data;
+};    
 #endif
 
-// edge
-typedef Graph_T::edge_t Edge_T;
-typedef Graph_T::edata_t EdgeData_T;
-
-// partitioned graph
+#ifdef ENABLE_GRAPH_PARTITION
 typedef Graph_T PartitionedGraph_T;
+typedef unsigned Partition_T;
+typedef std::vector<unsigned> PartitionList_T;
+typedef Graph_T::vid_t VertexRef_T;
+typedef Edge_T EdgeRef_T;
+#endif
 
-// remote vertex
-typedef Vertex_T RemoteVertex_T;
+#ifdef WITH_VERTEX_LABEL
+typedef unsigned VertexLabel_T;
+typedef std::vector<unsigned> VertexLabelList_T;
+#endif
 
-// remote edge
-typedef Edge_T RemoteEdge_T;
+#ifdef WITH_EDGE_LABEL
+typedef unsigned EdgeLabel_T;
+typedef std::vector<unsigned> EdgeLabelList_T;
+#endif
+
+#ifdef WITH_VERTEX_PROPERTY
+typedef std::pair<unsigned, unsigned> VertexProperty_T;
+typedef std::vector<VertexProperty_T> VertexPropertyList_T;
+#ifdef COLUMN_STORE
+typedef std::vector<VertexProperty_T> VertexColumn_T;
+#endif
+#endif
+
+#ifdef WITH_EDGE_PROPERTY
+typedef std::pair<unsigned, unsigned> EdgeProperty_T;
+typedef std::vector<EdgeProperty_T> EdgePropertyList_T;
+#ifdef COLUMN_STORE
+typedef std::vector<EdgeProperty_T> EdgeColumn_T;
+#endif
+#endif
 
 #endif  // GRIN_SRC_PREDEFINE_H_
