@@ -80,73 +80,62 @@ AdjacentList get_adjacent_mirror_list_by_partition(const Graph, const Direction,
 
 
 // Vertex ref refers to the same vertex referred in other partitions,
-// while edge ref is likewise. And both can be serialized to char* for
-// message transporting nd deserialized on the other end.
+// while edge ref is likewise. Both can be serialized to char* for
+// message transporting and deserialized on the other end.
 VertexRef get_vertex_ref_for_vertex(const Graph, const Partition, const Vertex);
 
-VertexRef get_master_vertex_ref_for_vertex(const Graph, const Vertex);
+Vertex get_vertex_from_vertex_ref(const Graph, const VertexRef);
+
+Partition get_master_partition_from_vertex_ref(const Graph, const VertexRef);
 
 char* serialize_vertex_ref(const Graph, const VertexRef);
 
-Vertex get_vertex_from_deserialization(const Graph, const Partition, const char*);
+VertexRef deserialize_to_vertex_ref(const Graph, const char*);
 
 EdgeRef get_edge_ref_for_edge(const Graph, const Partition, const Edge);
 
-EdgeRef get_master_edge_ref_for_edge(const Graph, const Edge);
+Edge get_edge_from_edge_ref(const Graph, const EdgeRef);
+
+Partition get_master_partition_from_edge_ref(const Graph, const EdgeRef);
 
 char* serialize_edge_ref(const Graph, const EdgeRef);
 
-Edge get_edge_from_deserialization(const Graph, const Partition, const char*);
-
+EdgeRef deserialize_to_edge_ref(const Graph, const char*);
 
 // The concept of local_complete refers to whether we can get complete data or properties
 // locally in the partition. It is orthogonal to the concept of master/mirror which
 // is mainly designed for data aggregation. In some extremely cases, master vertices
 // may NOT contain all the data or properties locally.
+bool is_vertex_neighbor_local_complete(const Graph, const Vertex);
+
+PartitionList vertex_neighbor_complete_partitions(const Graph, const Vertex);
+
+#ifdef WITH_VERTEX_DATA
 bool is_vertex_data_local_complete(const Graph, const Vertex);
 
+PartitionList vertex_data_complete_partitions(const Graph, const Vertex);
+#endif
+
+#ifdef WITH_VERTEX_PROPERTY
 bool is_vertex_property_local_complete(const Graph, const Vertex);
 
+PartitionList vertex_property_complete_partitions(const Graph, const Vertex);
+#endif
+
+#ifdef WITH_EDGE_DATA
 bool is_edge_data_local_complete(const Graph, const Edge);
 
+PartitionList edge_data_complete_partitions(const Graph, const Edge);
+#endif
+
+#ifdef WITH_EDGE_PROPERTY
 bool is_edge_property_local_complete(const Graph, const Edge);
 
-// use valid vertex refs of vertex v (i.e., vertex v refered in other partitions)
-// to help aggregate data/property when v is NOT local_complete
-#ifdef ENABLE_VALID_VERTEX_REF_LIST
-VertexRefList get_all_valid_vertex_ref_list_for_vertex(const Graph, const Vertex);
-
-void destroy_vertex_ref_list(VertexRefList);
-
-size_t get_vertex_ref_list_size(const VertexRefList);
-
-VertexRef get_vertex_ref_from_list(const VertexRefList, size_t);
+PartitionList edge_data_complete_partitions(const Graph, const Edge);
 #endif
 
-#ifdef ENABLE_VALID_VERTEX_REF_LIST_ITERATOR
-VertexRefListIterator get_all_valid_vertex_ref_list_begin_for_vertex(const Graph, const Vertex);
-
-bool get_next_vertex_ref_list_iter(VertexRefListIterator);
-
-VertexRef get_vertex_ref_from_iter(VertexRefListIterator);
-#endif
-
-#ifdef ENABLE_VALID_EDGE_REF_LIST
-EdgeRefList get_all_valid_edge_ref_list_for_edge(const Graph, const Edge);
-
-void destroy_edge_ref_list(EdgeRefList);
-
-size_t get_edge_ref_list_size(const EdgeRefList);
-
-EdgeRef get_edge_ref_from_list(const EdgeRefList, size_t);
-#endif
-
-#ifdef ENABLE_VALID_EDGE_REF_LIST_ITERATOR
-EdgeRefListIterator get_all_valid_edge_ref_list_begin_for_edge(const Graph, const Edge);
-
-bool get_next_edge_ref_list_iter(EdgeRefListIterator);
-
-EdgeRef get_edge_ref_from_iter(EdgeRefListIterator);
+#ifndef EDGECUT_PARTITION_TRAIT
+PartitionList vertex_complete_partitions(const Graph, const Vertex);
 #endif
 
 #endif

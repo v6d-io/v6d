@@ -17,33 +17,34 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#if defined(WITH_VERTEX_PROPERTY) || defined(WITH_EDGE_PROPERTY)
-#ifdef WITH_PROPERTY_NAME
-char* get_property_name(const Graph, const Property);
-
-Property get_property_by_name(const Graph, char* name);
-#endif
-
-DataType get_property_type(const Graph, const Property);
-
-void* get_property_value_from_row(const Row, const Property);
-
-size_t get_row_list_size(const RowList);
-
-Row get_row_from_list(const RowList, size_t);
-
-void* get_property_value_from_row(const Row, const Property);
-
 #ifdef WITH_VERTEX_PROPERTY
-RowList get_vertex_row_list(const Graph, const VertexList, const PropertyList);
+void destroy_vertex_property(VertexProperty);
 
-Row get_vertex_row_from_list(const RowList, const Vertex);
+#ifdef WITH_VERTEX_PROPERTY_NAME
+char* get_vertex_property_name(const Graph, const VertexProperty);
+
+#ifdef COLUMN_STORE
+VertexColumn get_vertex_column_by_name(const Graph, char* name);
+#endif
 #endif
 
-#ifdef WITH_EDGE_PROPERTY
-RowList get_edge_row_list(const Graph, const EdgeList, const PropertyList);
+DataType get_vertex_property_type(const Graph, const VertexProperty);
 
-Row get_edge_row_from_list(const RowList, const Edge);
+#ifdef COLUMN_STORE
+void destroy_vertex_column(VertexColumn);
+#ifdef ENABLE_VERTEX_LIST
+VertexColumn get_vertex_column_by_list(const Graph, const VertexList, const VertexProperty);
+#endif
+#ifdef WITH_VERTEX_LABEL
+VertexColumn get_vertex_column_by_label(const Graph, const VertexLabel, const VertexProperty);
+#endif
+void* get_value_from_vertex_column(const VertexColumn, const Vertex);
+#else
+void destroy_vertex_row(VertexRow);
+VertexRow get_vertex_row_by_list(const Graph, const Vertex, const VertexPropertyList);
+#ifdef WITH_VERTEX_LABEL
+VertexRow get_vertex_row_by_label(const Graph, const Vertex, const VertexLabel);
+#endif
 #endif
 
 #endif

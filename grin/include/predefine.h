@@ -15,6 +15,7 @@ limitations under the License.
 #ifndef GRIN_INCLUDE_PREDEFINE_H_
 #define GRIN_INCLUDE_PREDEFINE_H_
 
+#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -53,24 +54,27 @@ typedef enum {
 
 // partitioned graph
 #define ENABLE_GRAPH_PARTITION            // Enable partitioned graph.
+#define EDGECUT_PARTITION_TRAIT           // Use edgecut partition strategy.
 #define NATURAL_PARTITION_ID_TRAIT        // Partition has natural continuous id from 0. 
 // #define ENABLE_VALID_VERTEX_REF_LIST       // There is valid vertex ref list for vertex
 // #define ENABLE_VALID_VERTEX_REF_LIST_ITERATOR // There is valid vertex ref list iterator for vertex
 // #define ENABLE_VALID_EDGE_REF_LIST         // There is valid edge ref list for edge
 // #define ENABLE_VALID_EDGE_REF_LIST_ITERATOR   // There is valid edge ref list iterator for vertex
-
+#ifdef EDGECUT_PARTITION_TRAIT
+#undef ENABLE_EDGE_LIST
+#endif
 
 // propertygraph
 #define WITH_VERTEX_LABEL                 // There are labels on vertices.
 #define WITH_VERTEX_PROPERTY              // There is any property on vertices.
 // #define WITH_VERTEX_PRIMARTY_KEYS         // There are primary keys for vertex.
 #define NATURAL_VERTEX_LABEL_ID_TRAIT     // Vertex label has natural continuous id from 0.
+#define NATURAL_VERTEX_PROPERTY_ID_TRAIT  // Vertex property has natural continuous id from 0.
 #define WITH_EDGE_LABEL                   // There are labels for edges.
 #define WITH_EDGE_PROPERTY                // There is any property for edges.
 #define NATURAL_EDGE_LABEL_ID_TRAIT       // Edge label has natural continuous id from 0.
+#define NATURAL_EDGE_PROPERTY_ID_TRAIT    // Edge property has natural continuous id from 0.
 #define COLUMN_STORE                      // Column-oriented storage for properties.
-#define NATURAL_PROPERTY_ID_TRAIT         // Property has natural continuous id from 0.
-#define ENABLE_ROW_LIST                   // Enable row list to access property value 
 
 
 // predicate
@@ -90,6 +94,7 @@ typedef enum {
 #define NULL_EDGE_LABEL NULL              // Null edge label handle (invalid return value).
 #define NULL_PROPERTY NULL                // Null property handle (invalid return value).
 #define NULL_ROW NULL                     // Null row handle (invalid return value).
+#define NULL_NATURAL_ID UINT_MAX          // Null natural id (invalid return value).
 
 /* The following data types shall be defined through typedef. */
 typedef void* Graph;                      
@@ -154,14 +159,30 @@ typedef unsigned EdgeLabelID;
 #endif
 #endif
 
-#if defined(WITH_VERTEX_PROPERTY) || defined(WITH_EDGE_PROPERTY)
-typedef void* Property;
-typedef void* PropertyList;
-#ifdef NATURAL_PROPERTY_ID_TRAIT
-typedef unsigned PropertyID;
+#ifdef WITH_VERTEX_PROPERTY
+typedef void* VertexProperty;
+typedef void* VertexPropertyList;
+#ifdef NATURAL_VERTEX_PROPERTY_ID_TRAIT
+typedef unsigned VertexPropertyID;
 #endif
-typedef void* Row;
-typedef void* RowList;
+#ifdef COLUMN_STORE
+typedef void* VertexColumn;
+#else
+typedef void* VertexRow;
+#endif
+#endif
+
+#ifdef WITH_EDGE_PROPERTY
+typedef void* EdgeProperty;
+typedef void* EdgePropertyList;
+#ifdef NATURAL_EDGE_PROPERTY_ID_TRAIT
+typedef unsigned EdgePropertyID;
+#endif
+#ifdef COLUMN_STORE
+typedef void* EdgeColumn;
+#else
+typedef void* EdgeRow;
+#endif
 #endif
 
 #endif  // GRIN_INCLUDE_PREDEFINE_H_

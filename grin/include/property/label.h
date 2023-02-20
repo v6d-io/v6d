@@ -23,6 +23,8 @@ VertexLabel get_vertex_label(const Graph, const Vertex);
 
 char* get_vertex_label_name(const Graph, const VertexLabel);
 
+VertexLabel get_vertex_label_by_name(const Graph, char*);
+
 #ifdef NATURAL_VERTEX_LABEL_ID_TRAIT
 VertexLabelID get_vertex_label_id(const VertexLabel);
 
@@ -49,6 +51,8 @@ EdgeLabel get_edge_label(const Graph, const Edge);
 
 char* get_edge_label_name(const Graph, const EdgeLabel);
 
+EdgeLabel get_edge_label_by_name(const Graph, char*);
+
 #ifdef NATURAL_EDGE_LABEL_ID_TRAIT
 EdgeLabelID get_edge_label_id(const EdgeLabel);
 
@@ -74,14 +78,6 @@ EdgeLabel get_edge_label_from_list(const EdgeLabelList, const size_t);
 VertexLabel get_src_label_from_edge_label(const Graph, const EdgeLabel);
 
 VertexLabel get_dst_label_from_edge_label(const Graph, const EdgeLabel);
-#endif
-
-#if defined(WITH_VERTEX_LABEL) && defined(ENABLE_VERTEX_LIST)
-VertexList get_vertex_list_by_label(const Graph, const VertexLabel);
-#endif
-
-#if defined(WITH_EDGE_LABEL) && defined(ENABLE_EDGE_LIST)
-EdgeList get_edge_list_by_label(const Graph, const EdgeLabel);
 #endif
 
 #endif  // GRIN_INCLUDE_PROPERTY_LABEL_H_

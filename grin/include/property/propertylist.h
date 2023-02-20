@@ -19,41 +19,50 @@ limitations under the License.
 
 // Property list
 #ifdef WITH_VERTEX_PROPERTY
-PropertyList get_all_vertex_properties(const Graph);
+VertexPropertyList get_all_vertex_properties(const Graph);
+
+size_t get_vertex_property_list_size(const VertexPropertyList);
+
+VertexProperty get_vertex_property_from_list(const VertexPropertyList, const size_t);
+
+VertexPropertyList create_vertex_property_list();
+
+void destroy_vertex_property_list(VertexPropertyList);
+
+bool insert_vertex_property_to_list(VertexPropertyList, const VertexProperty);
+
+#ifdef WITH_VERTEX_LABEL
+VertexPropertyList get_all_vertex_properties_by_label(const Graph, const VertexLabel);
+
+#ifdef NATURAL_VERTEX_PROPERTY_ID_TRAIT
+VertexProperty get_vertex_property_from_id(const VertexLabel, const VertexPropertyID);
+
+VertexPropertyID get_vertex_property_id(const VertexLabel, const VertexProperty);
+#endif
+#endif
 #endif
 
 #ifdef WITH_EDGE_PROPERTY
-PropertyList get_all_edge_properties(const Graph);
+EdgePropertyList get_all_edge_properties(const Graph);
+
+size_t get_edge_property_list_size(const EdgePropertyList);
+
+EdgeProperty get_edge_property_from_list(const EdgePropertyList, const size_t);
+
+EdgePropertyList create_edge_property_list();
+
+void destroy_edge_property_list(EdgePropertyList);
+
+bool insert_edge_property_to_list(EdgePropertyList, const EdgeProperty);
+
+#ifdef WITH_EDGE_LABEL
+EdgePropertyList get_all_edge_properties_by_label(const Graph, const EdgeLabel);
+
+#ifdef NATURAL_EDGE_PROPERTY_ID_TRAIT
+EdgeProperty get_edge_property_from_id(const EdgeLabel, const EdgePropertyID);
+
+EdgePropertyID get_edge_property_id(const EdgeLabel, const EdgeProperty);
 #endif
-
-size_t get_property_list_size(const PropertyList);
-
-Property get_property_from_list(const PropertyList, const size_t);
-
-PropertyList create_property_list();
-
-void destroy_property_list(PropertyList);
-
-bool insert_property_to_list(PropertyList, const Property);
-
-
-#if defined(WITH_VERTEX_LABEL) && defined(WITH_VERTEX_PROPERTY)
-PropertyList get_all_vertex_properties_by_label(const Graph, const VertexLabel);
-
-#ifdef NATURAL_PROPERTY_ID_TRAIT
-Property get_vertex_property_from_id(const VertexLabel, const PropertyID);
-
-PropertyID get_vertex_property_id(const VertexLabel, const Property);
-#endif
-#endif
-
-#if defined(WITH_EDGE_LABEL) && defined(WITH_EDGE_PROPERTY)
-PropertyList get_all_edge_properties_by_label(const Graph, const EdgeLabel);
-
-#ifdef NATURAL_PROPERTY_ID_TRAIT
-Property get_edge_property_from_id(const EdgeLabel, const PropertyID);
-
-PropertyID get_edge_property_id(const EdgeLabel, const Property);
 #endif
 #endif
 
@@ -66,23 +75,10 @@ Vertex get_vertex_by_primary_keys_and_label(const Graph, const Row,
 
 // graph projection
 #if defined(WITH_VERTEX_PROPERTY) && defined(COLUMN_STORE)
-Graph select_vertex_properties(const Graph, const PropertyList);
+Graph select_vertex_properties(const Graph, const VertexPropertyList);
 #endif
-
 #if defined(WITH_EDGE_PROPERTY) && defined(COLUMN_STORE)
-Graph select_edge_properteis(const Graph, const PropertyList);
-#endif
-
-#if defined(WITH_VERTEX_LABEL) && defined(WITH_VERTEX_PROPERTY) && \
-    defined(COLUMN_STORE)
-Graph select_vertex_properties_for_label(const Graph, const VertexLabel,
-                                         const PropertyList);
-#endif
-
-#if defined(WITH_EDGE_LABEL) && defined(WITH_EDGE_PROPERTY) && \
-    defined(COLUMN_STORE)
-Graph select_edge_properties_for_label(const Graph, const EdgeLabel,
-                                       const PropertyList);
+Graph select_edge_properteis(const Graph, const EdgePropertyList);
 #endif
 
 #endif  // GRIN_INCLUDE_PROPERTY_PROPERTY_LIST_H_
