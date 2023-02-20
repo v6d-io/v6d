@@ -37,6 +37,7 @@
 
 #include "common/util/json.h"
 #include "common/util/macros.h"
+#include "common/util/uuid.h"
 
 // raise a std::runtime_error (inherits std::exception), don't FATAL
 #ifndef VINEYARD_CHECK_OK
@@ -234,6 +235,8 @@ enum class StatusCode : unsigned char {
   kObjectNotSealed = 14,
   kObjectIsBlob = 15,
   kObjectTypeError = 16,
+  kObjectSpilled = 13,
+  kObjectNotSpilled = 14,
 
   kMetaTreeInvalid = 21,
   kMetaTreeTypeInvalid = 22,
@@ -412,7 +415,21 @@ class VINEYARD_MUST_USE_TYPE Status {
   static Status ObjectTypeError(std::string const& expect,
                                 std::string const& actual) {
     return Status(StatusCode::kObjectTypeError,
-                  "expect " + expect + ", but got " + actual);
+                  "expect '" + expect + "', but got '" + actual + "'");
+  }
+
+  /// Return an error when the object has already been spilled.
+  static Status ObjectSpilled(const ObjectID& object_id) {
+    return Status(StatusCode::kObjectSpilled, "object '" +
+                                                  ObjectIDToString(object_id) +
+                                                  "' has already been spilled");
+  }
+
+  /// Return an error when the object is not spilled yet.
+  static Status ObjectNotSpilled(const ObjectID& object_id) {
+    return Status(
+        StatusCode::kObjectNotSpilled,
+        "object '" + ObjectIDToString(object_id) + "' hasn't been spilled yet");
   }
 
   /// Return an error when metatree related error occurs.
@@ -512,7 +529,7 @@ class VINEYARD_MUST_USE_TYPE Status {
   }
 
   /// Return an error when the vineyard server meets an etcd related error, with
-  /// etcd error code embeded.
+  /// etcd error code embedded.
   static Status EtcdError(int error_code, std::string const& error_message) {
     if (error_code == 0) {
       return Status::OK();
@@ -527,7 +544,7 @@ class VINEYARD_MUST_USE_TYPE Status {
   }
 
   /// Return an error when the vineyard server meets an redis related error,
-  /// with redis error code embeded.
+  /// with redis error code embedded.
   static Status RedisError(int error_code, std::string const& error_message) {
     if (error_code == 0) {
       return Status::OK();
@@ -537,7 +554,7 @@ class VINEYARD_MUST_USE_TYPE Status {
   }
 
   /// Return an error when the vineyard server meets an redis related error,
-  /// with redis error code embeded, with redis error type embeded.
+  /// with redis error code embedded, with redis error type embedded.
   static Status RedisError(int error_code, std::string const& error_message,
                            std::string const& error_type) {
     if (error_code == 0) {
@@ -632,6 +649,12 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// Return true iff the status indicates object type mismatch.
   bool IsObjectTypeError() const {
     return code() == StatusCode::kObjectTypeError;
+  }
+  /// Return true iff the status indicates object has already been spilled.
+  bool IsObjectSpilled() const { return code() == StatusCode::kObjectSpilled; }
+  /// Return true iff the status indicates object is not spilled yet.
+  bool IsObjectNotSpilled() const {
+    return code() == StatusCode::kObjectNotSpilled;
   }
   /// Return true iff the status indicates subtree not found in metatree.
   bool IsMetaTreeSubtreeNotExists() const {
@@ -739,17 +762,17 @@ class VINEYARD_MUST_USE_TYPE Status {
   void MergeFrom(const Status& s);
 };
 
-static inline std::ostream& operator<<(std::ostream& os, const Status& x) {
+inline std::ostream& operator<<(std::ostream& os, const Status& x) {
   os << x.ToString();
   return os;
 }
 
-static inline std::ostream& operator<<(std::ostream& os, const StatusCode& x) {
+inline std::ostream& operator<<(std::ostream& os, const StatusCode& x) {
   os << (unsigned char) x;
   return os;
 }
 
-static inline std::istream& operator>>(std::istream& is, StatusCode& x) {
+inline std::istream& operator>>(std::istream& is, StatusCode& x) {
   unsigned char c;
   is >> c;
   x = static_cast<StatusCode>(c);

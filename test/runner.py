@@ -403,15 +403,16 @@ def run_invalid_client_test(tests, host, port):
     send_garbage_bytes(b'\xFF' * 100000)
 
 
-def run_single_vineyardd_tests(meta, endpoints, tests):
+def run_vineyard_cpp_tests(meta, endpoints, tests):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
     with start_vineyardd(
         metadata_settings,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
-        # enable when USE_GPU is defined
-        # run_test(tests, 'gpumalloc_test')
+        # test invalid inputs from client
+        run_invalid_client_test(tests, '127.0.0.1', rpc_socket_port)
+
         run_test(tests, 'array_test')
         run_test(tests, 'array_two_clients_test')
         # FIXME: cannot be safely dtor after #350 and #354.
@@ -426,6 +427,8 @@ def run_single_vineyardd_tests(meta, endpoints, tests):
         run_test(tests, 'get_blob_disk_test')
         run_test(tests, 'get_object_test')
         run_test(tests, 'global_object_test')
+        # enable when USE_GPU is defined
+        # run_test(tests, 'gpumalloc_test')
         run_test(tests, 'hashmap_test')
         run_test(tests, 'id_test')
         run_test(tests, 'invalid_connect_test', '127.0.0.1:%d' % rpc_socket_port)
@@ -454,9 +457,10 @@ def run_single_vineyardd_tests(meta, endpoints, tests):
         run_test(tests, 'version_test')
         run_test(tests, 'hosseinmoein_dataframe_test')
 
-        # test invalid inputs from client
-        run_invalid_client_test(tests, '127.0.0.1', rpc_socket_port)
 
+def run_vineyard_spill_tests(meta, endpoints, tests):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
     with start_vineyardd(
         metadata_settings,
         size=2048,
@@ -790,15 +794,14 @@ def run_io_adaptor_distributed_tests(meta, endpoints, tests, with_migration):
 
 
 def parse_sys_args():
-    default_builder_dir = os.path.join(
+    file_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         '..',
+    )
+    default_builder_dir = os.path.join(
+        file_path,
         'build',
     )
-    if os.path.exists('shared-lib'):
-        default_builder_dir = '.'
-    if os.path.exists('build'):
-        default_builder_dir = 'build'
 
     arg_parser = ArgumentParser()
 
@@ -880,7 +883,8 @@ def parse_sys_args():
 def execute_tests(args):
     if args.with_cpp:
         with start_metadata_engine(args.meta) as (_, endpoints):
-            run_single_vineyardd_tests(args.meta, endpoints, args.tests)
+            run_vineyard_cpp_tests(args.meta, endpoints, args.tests)
+            run_vineyard_spill_tests(args.meta, endpoints, args.tests)
 
         if args.with_deployment:
             with start_metadata_engine(args.meta) as (_, endpoints):

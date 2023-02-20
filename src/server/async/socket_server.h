@@ -174,6 +174,12 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doGetGPUBuffers(json const& root);
 
+  bool doEvictObjects(json const& root);
+
+  bool doLoadObjects(json const& root);
+
+  bool doUnpinObjects(json const& root);
+
  protected:
   template <typename FROM, typename TO>
   Status MoveBuffers(std::map<FROM, TO> mapping,

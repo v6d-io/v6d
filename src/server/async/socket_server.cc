@@ -179,17 +179,17 @@ void SocketConnection::doReadBody() {
 #endif  // TRY_READ_REQUEST
 
 #ifndef RESPONSE_ON_ERROR
-#define RESPONSE_ON_ERROR(status)                                       \
-  do {                                                                  \
-    auto exec_status = (status);                                        \
-    if (!exec_status.ok()) {                                            \
-      LOG(ERROR) << "Unexpected error occurs during message handling: " \
-                 << exec_status.ToString();                             \
-      std::string error_message_out;                                    \
-      WriteErrorReply(exec_status, error_message_out);                  \
-      self->doWrite(error_message_out);                                 \
-      return false;                                                     \
-    }                                                                   \
+#define RESPONSE_ON_ERROR(status)                                             \
+  do {                                                                        \
+    auto exec_status = (status);                                              \
+    if (!exec_status.ok()) {                                                  \
+      VLOG(100) << "Error: unexpected error occurs during message handling: " \
+                << exec_status.ToString();                                    \
+      std::string error_message_out;                                          \
+      WriteErrorReply(exec_status, error_message_out);                        \
+      self->doWrite(error_message_out);                                       \
+      return false;                                                           \
+    }                                                                         \
   } while (0)
 #endif  // RESPONSE_ON_ERROR
 
@@ -357,6 +357,15 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::GetGPUBuffersRequest: {
     return doGetGPUBuffers(root);
   }
+  case CommandType::EvictRequest: {
+    return doEvictObjects(root);
+  }
+  case CommandType::LoadRequest: {
+    return doLoadObjects(root);
+  }
+  case CommandType::UnpinRequest: {
+    return doUnpinObjects(root);
+  }
   default: {
     LOG(WARNING) << "Got unexpected command: " << type;
     return false;
@@ -459,8 +468,8 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
     SendRemoteBuffers(
         self->socket_, objects, 0, compress, [self](const Status& status) {
           if (!status.ok()) {
-            LOG(ERROR) << "Failed to send buffers to remote client: "
-                       << status.ToString();
+            VLOG(100) << "Failed to send buffers to remote client: "
+                      << status.ToString();
           }
           return Status::OK();
         });
@@ -1215,6 +1224,70 @@ bool SocketConnection::doDeleteSession(const json& root) {
   socket_server_ptr_->Close();
   this->doWrite(message_out);
   return true;
+}
+
+bool SocketConnection::doEvictObjects(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadEvictRequest, root, ids);
+  RESPONSE_ON_ERROR(
+      server_ptr_->EvictObjects(ids, [self](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteEvictReply(message_out);
+        } else {
+          VLOG(100) << "Error: " << status;
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doLoadObjects(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  bool pin = false;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadLoadRequest, root, ids, pin);
+  RESPONSE_ON_ERROR(
+      server_ptr_->LoadObjects(ids, pin, [self](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteLoadReply(message_out);
+        } else {
+          VLOG(100) << "Error: " << status;
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doUnpinObjects(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadUnpinRequest, root, ids);
+  RESPONSE_ON_ERROR(
+      server_ptr_->UnpinObjects(ids, [self](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteUnpinReply(message_out);
+        } else {
+          VLOG(100) << "Error: " << status;
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
 }
 
 bool SocketConnection::doCreateBufferByPlasma(json const& root) {

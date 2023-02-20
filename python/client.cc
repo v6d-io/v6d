@@ -413,6 +413,25 @@ void bind_client(py::module& mod) {
           },
           "object_id"_a)
       .def("clear", [](ClientBase* self) { throw_on_error(self->Clear()); })
+      .def(
+          "evict",
+          [](ClientBase* self, std::vector<ObjectID> const& objects) -> void {
+            throw_on_error(self->Evict(objects));
+          },
+          "objects"_a)
+      .def(
+          "load",
+          [](ClientBase* self, std::vector<ObjectID> const& objects,
+             const bool pin) -> void {
+            throw_on_error(self->Load(objects, pin));
+          },
+          "objects"_a, py::arg("pin") = false)
+      .def(
+          "unpin",
+          [](ClientBase* self, std::vector<ObjectID> const& objects) -> void {
+            throw_on_error(self->Unpin(objects));
+          },
+          "objects"_a)
       .def("reset", [](ClientBase* self) { throw_on_error(self->Clear()); })
       .def_property_readonly("connected", &Client::Connected)
       .def_property_readonly("instance_id", &Client::instance_id)

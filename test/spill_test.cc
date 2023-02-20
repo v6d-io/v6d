@@ -52,11 +52,11 @@ vector<T> InitArray(int size, std::function<T(int n)> init_func) {
 
 void BasicTest(Client& client) {
   auto double_array = InitArray<double>(250, [](int i) { return i; });
-  ArrayBuilder<double> builder(client, double_array);
-  auto sealed_double_array =
-      std::dynamic_pointer_cast<Array<double>>(builder.Seal(client));
-  ObjectID id1 = sealed_double_array->id();
-  auto blob_id = GetObjectID(sealed_double_array);
+  ArrayBuilder<double> builder1(client, double_array);
+  auto sealed_double_array1 =
+      std::dynamic_pointer_cast<Array<double>>(builder1.Seal(client));
+  ObjectID id1 = sealed_double_array1->id();
+  auto blob_id = GetObjectID(sealed_double_array1);
   CHECK(blob_id != InvalidObjectID());
   {
     bool is_in_use{false};
@@ -76,21 +76,22 @@ void BasicTest(Client& client) {
   VINEYARD_CHECK_OK(client.Release({id1, blob_id}));
   VINEYARD_CHECK_OK(client.IsInUse(blob_id, is_in_use));
   CHECK(!is_in_use);
-  ArrayBuilder<double> builder3(client, double_array);
-  auto sealed_double_array3 =
-      std::dynamic_pointer_cast<Array<double>>(builder3.Seal(client));
-  auto id2 = sealed_double_array3->id();
-  auto blob_id2 = GetObjectID(sealed_double_array3);
+
+  ArrayBuilder<double> builder2(client, double_array);
+  auto sealed_double_array2 =
+      std::dynamic_pointer_cast<Array<double>>(builder2.Seal(client));
+  auto id2 = sealed_double_array2->id();
+  auto blob_id2 = GetObjectID(sealed_double_array2);
   VINEYARD_CHECK_OK(client.IsSpilled(blob_id, is_spilled));
   CHECK(is_spilled);
   VINEYARD_CHECK_OK(client.IsInUse(blob_id2, is_in_use));
   CHECK(is_in_use);
   VINEYARD_CHECK_OK(client.Release({id2, blob_id2}));
-  LOG(INFO) << "Finish Basic Test...";
+
+  LOG(INFO) << "Finish basic test ...";
 }
 
 void ReloadTest(Client& client) {
-  LOG(INFO) << "Start Reload Test...";
   auto double_array = InitArray<double>(10, [](int i) { return i; });
   auto string_array1 =
       InitArray<std::string>(50, [](int i) { return to_string(i + 100000); });
@@ -98,6 +99,7 @@ void ReloadTest(Client& client) {
       50, [](int i) { return to_string(20 + i + 100000); });
   auto string_array3 = InitArray<std::string>(
       50, [](int i) { return to_string(40 + i + 100000); });
+
   ObjectID id, bid, id1, bid1, id2, bid2, id3, bid3;
   {
     ArrayBuilder<double> builder(client, double_array);
@@ -110,6 +112,7 @@ void ReloadTest(Client& client) {
     VINEYARD_CHECK_OK(client.IsInUse(bid, is_in_use));
     CHECK(is_in_use);
     VINEYARD_CHECK_OK(client.Release({id, bid}));
+    LOG(INFO) << "Finish reload test, case 1 ...";
   }
   {
     ArrayBuilder<std::string> builder(client, string_array1);
@@ -122,6 +125,7 @@ void ReloadTest(Client& client) {
     VINEYARD_CHECK_OK(client.IsInUse(bid1, is_in_use));
     CHECK(is_in_use);
     VINEYARD_CHECK_OK(client.Release({id1, bid1}));
+    LOG(INFO) << "Finish reload test, case 2 ...";
   }
   {
     ArrayBuilder<std::string> builder(client, string_array2);
@@ -134,6 +138,7 @@ void ReloadTest(Client& client) {
     VINEYARD_CHECK_OK(client.IsInUse(bid2, is_in_use));
     CHECK(is_in_use);
     VINEYARD_CHECK_OK(client.Release({id2, bid2}));
+    LOG(INFO) << "Finish reload test, case 3 ...";
   }
   {
     ArrayBuilder<std::string> builder(client, string_array3);
@@ -146,7 +151,9 @@ void ReloadTest(Client& client) {
     VINEYARD_CHECK_OK(client.IsInUse(bid3, is_in_use));
     CHECK(is_in_use);
     VINEYARD_CHECK_OK(client.Release({id3, bid3}));
+    LOG(INFO) << "Finish reload test, case 4 ...";
   }
+
   // now check for double_array
   {
     bool is_spilled{false};
@@ -157,6 +164,7 @@ void ReloadTest(Client& client) {
     for (size_t i = 0; i < double_array.size(); i++) {
       CHECK(abs(double_array[i] - (*double_array_copy)[i]) < delta);
     }
+    LOG(INFO) << "Finish reload test, case 5 ...";
   }
   {
     bool is_spilled{false};
@@ -167,7 +175,10 @@ void ReloadTest(Client& client) {
     for (size_t i = 0; i < string_array1.size(); i++) {
       CHECK_EQ(string_array1[i], (*str_array_copy)[i]);
     }
+    LOG(INFO) << "Finish reload test, case 6 ...";
   }
+
+  LOG(INFO) << "Finish reload test ...";
 }
 
 int main(int argc, char** argv) {
@@ -184,10 +195,9 @@ int main(int argc, char** argv) {
 
   BasicTest(client1);
   ReloadTest(client2);
-  // TODO(ZjuYTW): add more complex tests...
-
-  LOG(INFO) << "Passed spill tests ...";
 
   client1.Disconnect();
   client2.Disconnect();
+
+  LOG(INFO) << "Passed spill tests ...";
 }

@@ -19,6 +19,7 @@ limitations under the License.
 #include <memory>
 
 #include "common/util/json.h"
+#include "common/util/likely.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
@@ -40,7 +41,9 @@ struct Payload {
   bool is_sealed;
   bool is_owner;
   bool is_spilled;
-  bool is_gpu;  // indicate if the Object is on the GPU
+  bool is_gpu;  // indicate if the blob is on the GPU
+
+  std::atomic_int pinned;  // indicate if the blob is spillable
 
   enum class Kind {
     kMalloc = 0,
@@ -49,60 +52,21 @@ struct Payload {
   };
   Kind kind = Kind::kMalloc;
 
-  Payload()
-      : object_id(EmptyBlobID()),
-        store_fd(-1),
-        arena_fd(-1),
-        data_offset(0),
-        data_size(0),
-        map_size(0),
-        ref_cnt(0),
-        pointer(nullptr),
-        is_sealed(false),
-        is_owner(true),
-        is_spilled(false),
-        is_gpu(false) {}
+  Payload();
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int64_t msize,
-          ptrdiff_t offset)
-      : object_id(object_id),
-        store_fd(fd),
-        arena_fd(-1),
-        data_offset(offset),
-        data_size(size),
-        map_size(msize),
-        ref_cnt(0),
-        pointer(ptr),
-        is_sealed(false),
-        is_owner(true),
-        is_spilled(false),
-        is_gpu(false) {}
+          ptrdiff_t offset);
 
   Payload(ObjectID object_id, int64_t size, uint8_t* ptr, int fd, int arena_fd,
-          int64_t msize, ptrdiff_t offset)
-      : object_id(object_id),
-        store_fd(fd),
-        arena_fd(arena_fd),
-        data_offset(offset),
-        data_size(size),
-        map_size(msize),
-        ref_cnt(0),
-        pointer(ptr),
-        is_sealed(false),
-        is_owner(true),
-        is_spilled(false),
-        is_gpu(false) {}
+          int64_t msize, ptrdiff_t offset);
 
-  static std::shared_ptr<Payload> MakeEmpty() {
-    static std::shared_ptr<Payload> payload = std::make_shared<Payload>();
-    return payload;
-  }
+  Payload(const Payload& payload);
 
-  bool operator==(const Payload& other) const {
-    return ((object_id == other.object_id) && (store_fd == other.store_fd) &&
-            (data_offset == other.data_offset) &&
-            (data_size == other.data_size));
-  }
+  Payload& operator=(const Payload& payload);
+
+  static std::shared_ptr<Payload> MakeEmpty();
+
+  bool operator==(const Payload& other) const;
 
   inline void Reset() { is_sealed = false, is_owner = true; }
 
@@ -117,6 +81,29 @@ struct Payload {
   bool IsSpilled() { return is_spilled; }
 
   inline bool IsGPU() { return is_gpu; }
+
+  /**
+   * @brief Pin the payload, return true is the payload is already pinned.
+   */
+  inline bool Pin() { return pinned.fetch_add(1); }
+
+  /**
+   * @brief Unpin the payload, return true if the payload becomes unpinned
+   * after this operation.
+   */
+  inline bool Unpin() {
+    int value = pinned.fetch_sub(1);
+    if (unlikely(value <= 0)) {
+      std::cerr << "[error] Unpin an unpinned payload: " << object_id
+                << std::endl;
+    }
+    return value == 1;
+  }
+
+  /**
+   * @brief Return true if the payload is pinned.
+   */
+  inline bool IsPinned() { return pinned.load() > 0; }
 
   json ToJSON() const;
 

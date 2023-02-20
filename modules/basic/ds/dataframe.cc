@@ -181,10 +181,10 @@ void GlobalDataFrame::Construct(const ObjectMeta& meta) {
   this->meta_ = meta;
   this->id_ = meta.GetId();
 
-  if (meta.Haskey("partition_shape_row_")) {
+  if (meta.HasKey("partition_shape_row_")) {
     meta.GetKeyValue("partition_shape_row_", this->partition_shape_row_);
   }
-  if (meta.Haskey("partition_shape_column_")) {
+  if (meta.HasKey("partition_shape_column_")) {
     meta.GetKeyValue("partition_shape_column_", this->partition_shape_column_);
   }
 

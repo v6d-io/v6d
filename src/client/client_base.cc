@@ -366,6 +366,36 @@ Status ClientBase::Clear() {
   return Status::OK();
 }
 
+Status ClientBase::Evict(std::vector<ObjectID> const& objects) {
+  std::string message_out;
+  WriteEvictRequest(objects, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadEvictReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::Load(std::vector<ObjectID> const& objects, const bool pin) {
+  std::string message_out;
+  WriteLoadRequest(objects, pin, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadLoadReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::Unpin(std::vector<ObjectID> const& objects) {
+  std::string message_out;
+  WriteUnpinRequest(objects, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadUnpinReply(message_in));
+  return Status::OK();
+}
+
 bool ClientBase::Connected() const {
   if (connected_ &&
       recv(vineyard_conn_, NULL, 1, MSG_PEEK | MSG_DONTWAIT) != -1) {
