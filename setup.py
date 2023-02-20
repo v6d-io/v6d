@@ -213,6 +213,7 @@ setup(
     packages=find_core_packages('python'),
     package_data={
         'vineyard': [
+            'vineyardctl',
             'vineyardd',
             '**/*.yaml',
             '**/*.yaml.tpl',

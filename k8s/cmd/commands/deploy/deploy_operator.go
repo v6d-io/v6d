@@ -55,7 +55,8 @@ vineyardctl -n test -k /home/gsbot/.kube/config deploy operator -v 0.12.2
 vineyardctl -k /home/gsbot/.kube/config deploy operator --local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("deploy operator", args); err != nil {
-			log.Fatal("failed to validate deploy operator args and flags: ", err)
+			log.Fatal("failed to validate deploy operator args and flags: ", err,
+				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()

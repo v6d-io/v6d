@@ -38,7 +38,8 @@ For example:
 vineyardctl delete backup`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("delete backup", args); err != nil {
-			log.Fatal("failed to validate delete backup args and flags: ", err)
+			log.Fatal("failed to validate delete backup args and flags: ", err,
+				"the extra args are: ", args)
 		}
 		scheme, err := util.GetOperatorScheme()
 		if err != nil {

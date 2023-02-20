@@ -42,7 +42,8 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config drydelete vineyardd
 vineyardctl -n vineyard-system -k /home/gsbot/.kube/config drydelete vineyardd --name vineyardd-0`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("drydelete vineyardd", args); err != nil {
-			log.Fatal("failed to validate drydelete vineyardd command args and flags: ", err)
+			log.Fatal("failed to validate drydelete vineyardd command args and flags: ", err,
+				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetClientgoScheme()

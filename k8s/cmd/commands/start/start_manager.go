@@ -62,7 +62,8 @@ vineyardctl start manager --enable-scheduler false
 vineyarctl start manager --enable-webhook false --enable-scheduler false`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("start manager", args); err != nil {
-			log.Fatal("failed to validate start manager command args and flags: ", err)
+			log.Fatal("failed to validate start manager command args and flags: ", err,
+				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()

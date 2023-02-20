@@ -38,7 +38,8 @@ For example:
 vineyardctl delete recover`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("delete recover", args); err != nil {
-			log.Fatal("failed to validate delete recover args and flags: ", err)
+			log.Fatal("failed to validate delete recover args and flags: ", err,
+				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()

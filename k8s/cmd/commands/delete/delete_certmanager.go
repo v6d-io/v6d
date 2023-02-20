@@ -38,7 +38,8 @@ vineyardctl -k /home/gsbot/.kube/config delete cert-manager
 vineyardctl -k /home/gsbot/.kube/config delete cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("delete cert-manager", args); err != nil {
-			log.Fatal("failed to validate delete cert-manager args and flags: ", err)
+			log.Fatal("failed to validate delete cert-manager args and flags: ", err,
+				"the extra args are: ", args)
 		}
 		scheme, err := util.GetCertManagerScheme()
 		if err != nil {

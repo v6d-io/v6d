@@ -65,13 +65,11 @@ For example:
 vineyardctl -n vineyard-system -k /home/gsbot/.kube/config dryapply vineyardd
 
 # deploy the vineyardd with customized image
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config dryapply vineyardd --image vineyardd:v0.12.2
-
-# deploy the customized vineyardd from file on kubernetes
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config dryapply vineyardd --file vineyardd.yaml`,
+vineyardctl -n vineyard-system -k /home/gsbot/.kube/config dryapply vineyardd --image vineyardd:v0.12.2`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("dryapply vineyardd", args); err != nil {
-			log.Fatal("failed to validate dryapply vineyardd command args and flags: ", err)
+			log.Fatal("failed to validate dryapply vineyardd command args and flags: ", err,
+				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetClientgoScheme()
@@ -232,14 +230,16 @@ func GetObjsFromTemplate() ([]*unstructured.Unstructured, error) {
 // applyVineyarddFromTemplate creates kubernetes resources from template fir
 func applyVineyarddFromTemplate(c client.Client) error {
 	objs, err := GetObjsFromTemplate()
+
 	if err != nil {
 		return fmt.Errorf("failed to get vineyardd resources from template: %v", err)
 	}
+
 	for _, o := range objs {
 		if err := c.Get(context.Background(), types.NamespacedName{Name: o.GetName(),
 			Namespace: o.GetNamespace()}, o); err != nil {
 			if apierrors.IsNotFound(err) {
-				if err := c.Create(context.Background(), o); err != nil {
+				if err := c.Create(context.TODO(), o); err != nil {
 					return fmt.Errorf("failed to create object %s: %v", o.GetName(), err)
 				}
 			} else {

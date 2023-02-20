@@ -44,7 +44,8 @@ For example:
 vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("create recover", args); err != nil {
-			log.Fatal("failed to validate create recover command args and flags: ", err)
+			log.Fatal("failed to validate create recover command args and flags: ", err,
+				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()

@@ -45,7 +45,8 @@ vineyardctl delete vineyardd
 vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("delete vineyardd", args); err != nil {
-			log.Fatal("failed to validate delete vineyardd command args and flags: ", err)
+			log.Fatal("failed to validate delete vineyardd command args and flags: ", err,
+				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()

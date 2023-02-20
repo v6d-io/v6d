@@ -106,9 +106,9 @@ func NewMetricContainerOpts(cmd *cobra.Command) {
 
 // NewPluginImageOpts represents the option of plugin image configuration
 func NewPluginImageOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.BackupImage, "plugin.backupimage", "",
+	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.BackupImage, "plugin.backupImage", "",
 		"ghcr.io/v6d-io/v6d/backup-job", "the backup image of vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.RecoverImage, "plugin.recoverimage", "",
+	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.RecoverImage, "plugin.recoverImage", "",
 		"ghcr.io/v6d-io/v6d/recover-job", "the recover image of vineyardd")
 	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.DaskRepartitionImage,
 		"plugin.daskRepartitionImage", "", "ghcr.io/v6d-io/v6d/dask-repartition",

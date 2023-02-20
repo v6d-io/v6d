@@ -47,7 +47,8 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator -v 0.
 vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator --local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("delete operator", args); err != nil {
-			log.Fatal("failed to validate delete operator args and flags: ", err)
+			log.Fatal("failed to validate delete operator args and flags: ", err,
+				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()

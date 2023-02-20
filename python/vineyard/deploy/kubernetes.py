@@ -280,7 +280,6 @@ def delete_kubernetes_object(
             logger.info(msg)
         return resp
 
-
 __all__ = [
     'start_vineyardd',
     'delete_kubernetes_object',
