@@ -30,43 +30,65 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 void testGlobalTensor(Client& client) {
   // make a tensor
-  ObjectID tensor_id = InvalidObjectID();
+  ObjectID tensor_id1 = InvalidObjectID(), tensor_id2 = InvalidObjectID();
   {
     TensorBuilder<double> builder(client, {2, 3});
     double* data = builder.data();
     for (int i = 0; i < 6; ++i) {
       data[i] = i;
     }
-    auto sealed =
-        std::dynamic_pointer_cast<Tensor<double>>(builder.Seal(client));
-    VINEYARD_CHECK_OK(client.Persist(sealed->id()));
-    tensor_id = sealed->id();
+    std::shared_ptr<Object> sealed;
+    VINEYARD_CHECK_OK(builder.Seal(client, sealed));
+    tensor_id1 = sealed->id();
+  }
+
+  {
+    TensorBuilder<double> builder(client, {2, 3});
+    double* data = builder.data();
+    for (int i = 0; i < 6; ++i) {
+      data[i] = i;
+    }
+    std::shared_ptr<Object> sealed;
+    VINEYARD_CHECK_OK(builder.Seal(client, sealed));
+    tensor_id2 = sealed->id();
   }
 
   // make a global tensor
   ObjectID global_tensor_id = InvalidObjectID();
   {
     GlobalTensorBuilder builder(client);
-    builder.set_partition_shape({1, 1});
+    builder.set_partition_shape({1, 2});
     builder.set_shape({2, 3});
-    builder.AddPartition(tensor_id);
-    global_tensor_id = builder.Seal(client)->id();
+    builder.AddMember(tensor_id1);
+    builder.AddMember(tensor_id2);
+    builder.SetGlobal(true);
+    std::shared_ptr<Object> sealed;
+    VINEYARD_CHECK_OK(builder.Seal(client, sealed));
+    global_tensor_id = sealed->id();
   }
 
   {
-    std::shared_ptr<Tensor<double>> tensor;
     std::shared_ptr<GlobalTensor> global_tensor;
-    tensor = client.GetObject<Tensor<double>>(tensor_id);
-    global_tensor = client.GetObject<GlobalTensor>(global_tensor_id);
+    VINEYARD_CHECK_OK(client.GetObject(global_tensor_id, global_tensor));
+    // global_tensor = client.GetObject<GlobalTensor>(global_tensor_id);
 
-    CHECK(!tensor->meta().IsGlobal());
+    std::vector<ObjectID> chunks{tensor_id1, tensor_id2};
+
+    size_t local_index = 0;
+    for (auto iter = global_tensor->LocalBegin();
+         iter != global_tensor->LocalEnd(); iter.NextLocal()) {
+      CHECK_EQ(chunks[local_index++], iter->id());
+      CHECK(iter->meta().IsLocal());
+      CHECK(!iter->meta().IsGlobal());
+    }
+
     CHECK(global_tensor->meta().IsGlobal());
   }
 }
 
 void testGlobalDataFrame(Client& client) {
   // make a dataframe
-  ObjectID dataframe_id = InvalidObjectID();
+  ObjectID dataframe_id1 = InvalidObjectID(), dataframe_id2 = InvalidObjectID();
   {
     DataFrameBuilder builder(client);
     {
@@ -74,27 +96,51 @@ void testGlobalDataFrame(Client& client) {
           client, std::vector<int64_t>{100});
       builder.AddColumn("a", tb);
     }
-    auto sealed = std::dynamic_pointer_cast<DataFrame>(builder.Seal(client));
+    std::shared_ptr<Object> sealed;
+    VINEYARD_CHECK_OK(builder.Seal(client, sealed));
     VINEYARD_CHECK_OK(client.Persist(sealed->id()));
-    dataframe_id = sealed->id();
+    dataframe_id1 = sealed->id();
+  }
+
+  {
+    DataFrameBuilder builder(client);
+    {
+      auto tb = std::make_shared<TensorBuilder<double>>(
+          client, std::vector<int64_t>{100});
+      builder.AddColumn("a", tb);
+    }
+    std::shared_ptr<Object> sealed;
+    VINEYARD_CHECK_OK(builder.Seal(client, sealed));
+    VINEYARD_CHECK_OK(client.Persist(sealed->id()));
+    dataframe_id2 = sealed->id();
   }
 
   // make a global dataframe
   ObjectID global_dataframe_id = InvalidObjectID();
   {
     GlobalDataFrameBuilder builder(client);
-    builder.set_partition_shape(1, 1);
-    builder.AddPartition(dataframe_id);
-    global_dataframe_id = builder.Seal(client)->id();
+    builder.set_partition_shape(2, 1);
+    builder.AddMember(dataframe_id1);
+    builder.AddMember(dataframe_id2);
+    builder.SetGlobal(true);
+    std::shared_ptr<Object> sealed;
+    VINEYARD_CHECK_OK(builder.Seal(client, sealed));
+    global_dataframe_id = sealed->id();
   }
 
   {
-    std::shared_ptr<DataFrame> dataframe;
     std::shared_ptr<GlobalDataFrame> global_dataframe;
-    dataframe = client.GetObject<DataFrame>(dataframe_id);
     global_dataframe = client.GetObject<GlobalDataFrame>(global_dataframe_id);
 
-    CHECK(!dataframe->meta().IsGlobal());
+    std::vector<ObjectID> chunks{dataframe_id1, dataframe_id2};
+    size_t chunk_index = 0;
+    for (auto iter = global_dataframe->LocalBegin();
+         iter != global_dataframe->LocalEnd(); iter.NextLocal()) {
+      CHECK_EQ(chunks[chunk_index++], iter->id());
+      CHECK(iter->meta().IsLocal());
+      CHECK(!iter->meta().IsGlobal());
+    }
+
     CHECK(global_dataframe->meta().IsGlobal());
   }
 }
@@ -111,7 +157,8 @@ void testDelete(Client& client) {
           client, std::vector<int64_t>{100});
       builder.AddColumn("a", tb);
     }
-    auto sealed = std::dynamic_pointer_cast<DataFrame>(builder.Seal(client));
+    std::shared_ptr<Object> sealed;
+    VINEYARD_CHECK_OK(builder.Seal(client, sealed));
     VINEYARD_CHECK_OK(client.Persist(sealed->id()));
     dataframe_id = sealed->id();
   }
@@ -120,8 +167,11 @@ void testDelete(Client& client) {
   {
     GlobalDataFrameBuilder builder(client);
     builder.set_partition_shape(1, 1);
-    builder.AddPartition(dataframe_id);
-    global_dataframe_id = builder.Seal(client)->id();
+    builder.AddMember(dataframe_id);
+    builder.SetGlobal(true);
+    std::shared_ptr<Object> sealed;
+    VINEYARD_CHECK_OK(builder.Seal(client, sealed));
+    global_dataframe_id = sealed->id();
   }
 
   {
@@ -148,7 +198,8 @@ void testDelete(Client& client) {
           client, std::vector<int64_t>{100});
       builder.AddColumn("a", tb);
     }
-    auto sealed = std::dynamic_pointer_cast<DataFrame>(builder.Seal(client));
+    std::shared_ptr<Object> sealed;
+    VINEYARD_CHECK_OK(builder.Seal(client, sealed));
     VINEYARD_CHECK_OK(client.Persist(sealed->id()));
     dataframe_id = sealed->id();
   }
@@ -157,8 +208,11 @@ void testDelete(Client& client) {
   {
     GlobalDataFrameBuilder builder(client);
     builder.set_partition_shape(1, 1);
-    builder.AddPartition(dataframe_id);
-    global_dataframe_id = builder.Seal(client)->id();
+    builder.AddMember(dataframe_id);
+    builder.SetGlobal(true);
+    std::shared_ptr<Object> sealed;
+    VINEYARD_CHECK_OK(builder.Seal(client, sealed));
+    global_dataframe_id = sealed->id();
   }
 
   {

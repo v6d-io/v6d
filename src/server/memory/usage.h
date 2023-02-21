@@ -196,7 +196,7 @@ class ColdObjectTracker
    *    implementation, we will overwrite the previous one.
    * - `Unref(ID id)` Remove the designated id from lru.
    * - `PopLeastUsed()` Get the least used blob id. If no object in structure,
-   * then statu will be Invalids.
+   * then status will be Invalids.
    * - `CheckExist(ID id)` Check the existence of id.
    */
   class LRU {

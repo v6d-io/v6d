@@ -122,7 +122,8 @@ class GlobalDataFrameBaseBuilder;
  * @brief GlobalDataFrame is a DataFrame that refers a set of dataframe chunks
  * in many vineyardd nodes.
  */
-class GlobalDataFrame : public Registered<GlobalDataFrame>, GlobalObject {
+class GlobalDataFrame : public BareRegistered<GlobalDataFrame>,
+                        public Collection<DataFrame> {
  public:
   static std::unique_ptr<Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<Object>(
@@ -139,96 +140,26 @@ class GlobalDataFrame : public Registered<GlobalDataFrame>, GlobalObject {
    */
   const std::pair<size_t, size_t> partition_shape() const;
 
-  /**
-   * @brief Get the local partitions of the vineyard instance that is
-   * connected from the client.
-   *
-   * @param client The client connected to a vineyard instance.
-   * @return The vector of pointers to the local partitions.
-   */
-  const std::vector<std::shared_ptr<DataFrame>>& LocalPartitions(
-      Client& client) const;
-
-  /**
-   * @brief Get the local partitions stored in the given vineyard instance.
-   *
-   * @param instance_id The given ID of the vineyard instance.
-   * @return The vector of pointers to the local partitions.
-   */
-  const std::vector<std::shared_ptr<DataFrame>>& LocalPartitions(
-      const InstanceID instance_id) const;
-
  private:
   size_t partition_shape_row_;
   size_t partition_shape_column_;
 
-  mutable std::map<InstanceID, std::vector<std::shared_ptr<DataFrame>>>
-      partitions_;
-
-  friend class Client;
-  friend class GlobalDataFrameBaseBuilder;
+  friend class GlobalDataFrameBuilder;
 };
 
-class GlobalDataFrameBaseBuilder : public ObjectBuilder {
- public:
-  explicit GlobalDataFrameBaseBuilder(Client& client) {}
-
-  explicit GlobalDataFrameBaseBuilder(GlobalDataFrame const& __value) {
-    this->set_partition_shape_row_(__value.partition_shape_row_);
-    this->set_partition_shape_column_(__value.partition_shape_column_);
-
-    for (auto const& __partitions__items : __value.partitions_) {
-      for (auto const& __partition : __partitions__items.second) {
-        this->add_partitions_(__partition->id());
-      }
-    }
-  }
-
-  explicit GlobalDataFrameBaseBuilder(
-      std::shared_ptr<GlobalDataFrame> const& __value)
-      : GlobalDataFrameBaseBuilder(*__value) {}
-
-  std::shared_ptr<Object> _Seal(Client& client) override;
-
-  Status Build(Client& client) override { return Status::OK(); }
-
- protected:
-  size_t partition_shape_row_;
-  size_t partition_shape_column_;
-  std::vector<ObjectID> partitions_;
-
-  void set_partition_shape_row_(size_t const& partition_shape_row__) {
-    this->partition_shape_row_ = partition_shape_row__;
-  }
-
-  void set_partition_shape_column_(size_t const& partition_shape_column__) {
-    this->partition_shape_column_ = partition_shape_column__;
-  }
-
-  void set_partitions_(std::vector<ObjectID> const& partitions__) {
-    this->partitions_ = partitions__;
-  }
-  void set_partitions_(size_t const idx, ObjectID const& partitions__) {
-    if (idx >= this->partitions_.size()) {
-      this->partitions_.resize(idx + 1);
-    }
-    this->partitions_[idx] = partitions__;
-  }
-  void add_partitions_(ObjectID const& partitions__) {
-    this->partitions_.emplace_back(partitions__);
-  }
+template <>
+struct collection_type<DataFrame> {
+  using type = GlobalDataFrame;
 };
 
 /**
  * @brief GlobalDataFrameBuilder is designed for building global dataframes
  *
  */
-class GlobalDataFrameBuilder : public GlobalDataFrameBaseBuilder {
+class GlobalDataFrameBuilder : public CollectionBuilder<DataFrame> {
  public:
   explicit GlobalDataFrameBuilder(Client& client)
-      : GlobalDataFrameBaseBuilder(client) {}
-
-  ~GlobalDataFrameBuilder() = default;
+      : CollectionBuilder<DataFrame>(client) {}
 
   /**
    * @brief Get the partition shape of the global dataframe.
@@ -244,46 +175,12 @@ class GlobalDataFrameBuilder : public GlobalDataFrameBaseBuilder {
    * @param partition_shape_row The number of partitions on rows.
    * @param partition_shape_column The number of partitions on columns.
    */
-  void set_partition_shape(size_t partition_shape_row,
-                           size_t partition_shape_column);
+  void set_partition_shape(const size_t partition_shape_row,
+                           const size_t partition_shape_column);
 
-  /**
-   * @brief Add a partition in the vineyard instance to the global dataframe.
-   *
-   * @param instance_id The ID of the vineyard instance.
-   * @param partition_id The ObjectID of the partition to added.
-   *
-   */
-  void AddPartition(ObjectID const partition_id);
-
-  /**
-   * @brief Add a group of partitions in the vineyard instance
-   * to the global dataframe.
-   *
-   * @param instance_id The ID of the vineyard instance.
-   * @param partition_id The vector of ObjectIDs for the
-   * group of partitions to added.
-   *
-   */
-  void AddPartitions(const std::vector<ObjectID>& partition_ids);
-
-  /**
-   * @brief Seal the meta data of the global dataframe.
-   * When creating a global dataframe, clients from different
-   * machines that are connected
-   * to different vineyard instances will sync the partition info
-   * to seal the meta data for the global dataframe.
-   *
-   * @param client The client connected to the vineyard server.
-   */
-  std::shared_ptr<Object> _Seal(Client& client) override;
-
-  /**
-   * @brief Build the global dataframe object.
-   *
-   * @param client The client connected to the vineyard server.
-   */
-  Status Build(Client& client) override;
+ private:
+  size_t partition_shape_row_;
+  size_t partition_shape_column_;
 };
 
 }  // namespace vineyard
