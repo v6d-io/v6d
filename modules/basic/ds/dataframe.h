@@ -130,7 +130,7 @@ class GlobalDataFrame : public BareRegistered<GlobalDataFrame>,
         std::unique_ptr<GlobalDataFrame>{new GlobalDataFrame()});
   }
 
-  void Construct(const ObjectMeta& meta) override;
+  void PostConstruct(const ObjectMeta& meta) override;
 
   /**
    * @brief Set the partition shape of the global dataframe.

@@ -427,7 +427,7 @@ class RecordBatchConsolidator : public RecordBatchBaseBuilder {
  * of top-level named, equal length Arrow arrays
  *
  */
-class TableBuilder : public TableBaseBuilder {
+class TableBuilder : public CollectionBuilder<RecordBatch> {
  public:
   TableBuilder(Client& client, const std::shared_ptr<arrow::Table> table,
                const bool merge_chunks = false);
@@ -438,6 +438,24 @@ class TableBuilder : public TableBaseBuilder {
 
   Status Build(Client& client) override;
 
+  void set_num_rows(const size_t num_rows);
+  // for backward compatibility
+  void set_num_rows_(const size_t num_rows);
+
+  void set_num_columns(const size_t num_columns);
+  // for backward compatibility
+  void set_num_columns_(const size_t num_columns);
+
+  void set_batch_num(const size_t batch_num);
+  // for backward compatibility
+  void set_batch_num_(const size_t batch_num);
+
+  Status set_schema(const std::shared_ptr<arrow::Schema>& schema);
+
+  Status set_schema(const std::shared_ptr<ObjectBuilder>& schema);
+  // for backward compatibility
+  Status set_schema_(const std::shared_ptr<ObjectBuilder>& schema);
+
  private:
   std::vector<std::shared_ptr<arrow::Table>> tables_;
   bool merge_chunks_ = false;
@@ -447,7 +465,7 @@ class TableBuilder : public TableBaseBuilder {
  * @brief TableExtender is used for extending tables
  *
  */
-class TableExtender : public TableBaseBuilder {
+class TableExtender : public TableBuilder {
  public:
   TableExtender(Client& client, std::shared_ptr<Table> table);
 
@@ -468,7 +486,7 @@ class TableExtender : public TableBaseBuilder {
   std::vector<std::shared_ptr<RecordBatchExtender>> record_batch_extenders_;
 };
 
-class TableConsolidator : public TableBaseBuilder {
+class TableConsolidator : public TableBuilder {
  public:
   TableConsolidator(Client& client, std::shared_ptr<Table> table);
 

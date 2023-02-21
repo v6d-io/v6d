@@ -27,7 +27,6 @@ option(USE_STATIC_BOOST_LIBS "Build with static-linked boost libraries" OFF)
 option(USE_EXTERNAL_ETCD_LIBS "Build with external etcd-cpp-apiv3 library rather than the submodule one" OFF)
 option(USE_EXTERNAL_REDIS_LIBS "Build with external redis-plus-plus library rather than the submodule one" ON)
 option(USE_EXTERNAL_HIREDIS_LIBS "Build with external hiredis library rather than the submodule one" ON)
-option(USE_EXTERNAL_NLOHMANN_JSON_LIBS "Build with external nlohmann-json library rather than the submodule one" ON)
 option(VINEYARD_USE_ASAN "Using address sanitizer to check memory accessing" OFF)
 option(VINEYARD_USE_LTO "Using IPO/LTO support for link-time optimization" OFF)
 option(USE_LIBUNWIND "Using libunwind to retrieve the stack backtrace when exception occurs" ON)
@@ -426,26 +425,23 @@ endmacro()
 
 macro(find_nlohmann_json)
     # include nlohmann/json
-    set(JSON_BuildTests OFF CACHE INTERNAL "")
+    add_definitions(-DJSON_USE_GLOBAL_UDLS=1)
+    add_definitions(-DJSON_USE_IMPLICIT_CONVERSIONS=0)
+    add_definitions(-DJSON_DISABLE_ENUM_SERIALIZATION=0)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND USE_JSON_DIAGNOSTICS)
-        set(JSON_Diagnostics ON CACHE INTERNAL "")
+        add_definitions(-DJSON_DIAGNOSTICS=1)
     else()
-        set(JSON_Diagnostics OFF CACHE INTERNAL "")
+        add_definitions(-DJSON_DIAGNOSTICS=0)
     endif()
-    set(JSON_Install ON CACHE INTERNAL "")
-    set(JSON_MultipleHeaders ON CACHE INTERNAL "")
-    set(JSON_ImplicitConversions OFF CACHE INTERNAL "")
-    if(NOT TARGET nlohmann_json AND NOT TARGET nlohmann_json::nlohmann_json)
-        if(USE_EXTERNAL_NLOHMANN_JSON_LIBS)
-            find_package(nlohmann_json 3.10.5 QUIET)
-            if(NOT TARGET nlohmann_json AND NOT TARGET nlohmann_json::nlohmann_json)
-                message(WARNING "nlohmann-json not found, will use the bundled one from git submodules.")
-                add_subdirectory_static(thirdparty/nlohmann-json)
-            endif()
-        else()
-            add_subdirectory_static(thirdparty/nlohmann-json)
-        endif()
-    endif()
+    add_definitions(-DJSON_USE_LEGACY_DISCARDED_VALUE_COMPARISON=0)
+    install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/nlohmann-json/single_include/nlohmann"
+            DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
+            PATTERN "*.hpp"
+    )
+    include_directories(BEFORE SYSTEM
+                        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/nlohmann-json/single_include>
+                        $<INSTALL_INTERFACE:include/vineyard/contrib>
+    )
 endmacro()
 
 macro(find_openssl_libraries)
@@ -666,7 +662,6 @@ if(BUILD_VINEYARD_SERVER)
                                             ${OPENSSL_LIBRARIES}
                                             libzstd_static
                                             mimalloc-static
-                                            nlohmann_json::nlohmann_json
     )
     if(ARROW_SHARED_LIB)
         target_link_libraries(vineyardd PRIVATE ${ARROW_SHARED_LIB})
@@ -775,7 +770,6 @@ if(BUILD_VINEYARD_CLIENT)
     target_add_debuginfo(vineyard_client)
     target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
                                                  Threads::Threads
-                                                 nlohmann_json::nlohmann_json
     )
     if(USE_GPU)
         find_package(CUDA REQUIRED)

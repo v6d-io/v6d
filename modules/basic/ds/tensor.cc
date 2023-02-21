@@ -17,9 +17,7 @@ limitations under the License.
 
 namespace vineyard {
 
-void GlobalTensor::Construct(const ObjectMeta& meta) {
-  Collection<ITensor>::Construct(meta);
-
+void GlobalTensor::PostConstruct(const ObjectMeta& meta) {
   if (meta.HasKey("shape_")) {
     meta.GetKeyValue("shape_", this->shape_);
   }

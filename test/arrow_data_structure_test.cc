@@ -46,8 +46,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<arrow::Int64Array> a1;
     CHECK_ARROW_ERROR(b1.Finish(&a1));
     NumericArrayBuilder<int64_t> array_builder(client, a1);
-    auto r1 = std::dynamic_pointer_cast<NumericArray<int64_t>>(
-        array_builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(array_builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<NumericArray<int64_t>>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -68,8 +69,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<arrow::Int64Array> a1;
     CHECK_ARROW_ERROR(b1.Finish(&a1));
     NumericArrayBuilder<int64_t> array_builder(client, a1);
-    auto r1 = std::dynamic_pointer_cast<NumericArray<int64_t>>(
-        array_builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(array_builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<NumericArray<int64_t>>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -85,8 +87,8 @@ int main(int argc, char** argv) {
     auto a3 = std::dynamic_pointer_cast<arrow::Int64Array>(a1->Slice(2, 2));
     CHECK_EQ(a3->length(), 2);
     NumericArrayBuilder<int64_t> sliced_array_builder(client, a3);
-    auto r3 = std::dynamic_pointer_cast<NumericArray<int64_t>>(
-        sliced_array_builder.Seal(client));
+    VINEYARD_CHECK_OK(sliced_array_builder.Seal(client, object));
+    auto r3 = std::dynamic_pointer_cast<NumericArray<int64_t>>(object);
     auto sliced_internal_array = r3->GetArray();
     CHECK_EQ(sliced_internal_array->length(), a3->length());
     for (int64_t i = 0; i < a3->length(); ++i) {
@@ -105,8 +107,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<arrow::DoubleArray> a1;
     CHECK_ARROW_ERROR(b1.Finish(&a1));
     NumericArrayBuilder<double> array_builder(client, a1);
-    auto r1 = std::dynamic_pointer_cast<NumericArray<double>>(
-        array_builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(array_builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<NumericArray<double>>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -141,8 +144,9 @@ int main(int argc, char** argv) {
     CHECK_ARROW_ERROR(b1.Finish(&a1));
 
     FixedSizeBinaryArrayBuilder array_builder(client, a1);
-    auto r1 = std::dynamic_pointer_cast<FixedSizeBinaryArray>(
-        array_builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(array_builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<FixedSizeBinaryArray>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -156,8 +160,8 @@ int main(int argc, char** argv) {
         std::dynamic_pointer_cast<arrow::FixedSizeBinaryArray>(a1->Slice(2, 2));
     CHECK_EQ(a3->length(), 2);
     FixedSizeBinaryArrayBuilder sliced_array_builder(client, a3);
-    auto r3 = std::dynamic_pointer_cast<FixedSizeBinaryArray>(
-        sliced_array_builder.Seal(client));
+    VINEYARD_CHECK_OK(sliced_array_builder.Seal(client, object));
+    auto r3 = std::dynamic_pointer_cast<FixedSizeBinaryArray>(object);
     auto sliced_internal_array = r3->GetArray();
     CHECK(sliced_internal_array->Equals(a3));
 
@@ -190,8 +194,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<arrow::StringArray> a1;
     CHECK_ARROW_ERROR(b1.Finish(&a1));
     StringArrayBuilder array_builder(client, a1);
-    auto r1 =
-        std::dynamic_pointer_cast<StringArray>(array_builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(array_builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<StringArray>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -203,8 +208,8 @@ int main(int argc, char** argv) {
     auto a3 = std::dynamic_pointer_cast<arrow::StringArray>(a1->Slice(2, 2));
     CHECK_EQ(a3->length(), 2);
     StringArrayBuilder sliced_array_builder(client, a3);
-    auto r3 = std::dynamic_pointer_cast<StringArray>(
-        sliced_array_builder.Seal(client));
+    VINEYARD_CHECK_OK(sliced_array_builder.Seal(client, object));
+    auto r3 = std::dynamic_pointer_cast<StringArray>(object);
     auto sliced_internal_array = r3->GetArray();
     CHECK(sliced_internal_array->Equals(a3));
 
@@ -220,8 +225,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<arrow::LargeStringArray> a1;
     CHECK_ARROW_ERROR(b1.Finish(&a1));
     LargeStringArrayBuilder array_builder(client, a1);
-    auto r1 =
-        std::dynamic_pointer_cast<LargeStringArray>(array_builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(array_builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<LargeStringArray>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -234,8 +240,8 @@ int main(int argc, char** argv) {
         std::dynamic_pointer_cast<arrow::LargeStringArray>(a1->Slice(2, 2));
     CHECK_EQ(a3->length(), 2);
     LargeStringArrayBuilder sliced_array_builder(client, a3);
-    auto r3 = std::dynamic_pointer_cast<LargeStringArray>(
-        sliced_array_builder.Seal(client));
+    VINEYARD_CHECK_OK(sliced_array_builder.Seal(client, object));
+    auto r3 = std::dynamic_pointer_cast<LargeStringArray>(object);
     auto sliced_internal_array = r3->GetArray();
     CHECK(sliced_internal_array->Equals(a3));
 
@@ -252,8 +258,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<arrow::BooleanArray> a1;
     CHECK_ARROW_ERROR(b1.Finish(&a1));
     BooleanArrayBuilder array_builder(client, a1);
-    auto r1 =
-        std::dynamic_pointer_cast<BooleanArray>(array_builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(array_builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<BooleanArray>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -268,8 +275,8 @@ int main(int argc, char** argv) {
     auto a3 = std::dynamic_pointer_cast<arrow::BooleanArray>(a1->Slice(2, 2));
     CHECK_EQ(a3->length(), 2);
     BooleanArrayBuilder sliced_array_builder(client, a3);
-    auto r3 = std::dynamic_pointer_cast<BooleanArray>(
-        sliced_array_builder.Seal(client));
+    VINEYARD_CHECK_OK(sliced_array_builder.Seal(client, object));
+    auto r3 = std::dynamic_pointer_cast<BooleanArray>(object);
     auto sliced_internal_array = r3->GetArray();
     CHECK_EQ(sliced_internal_array->length(), a3->length());
     for (int64_t i = 0; i < a3->length(); ++i) {
@@ -293,7 +300,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<arrow::ListArray> a1;
     CHECK_ARROW_ERROR(b1.Finish(&a1));
     ListArrayBuilder array_builder(client, a1);
-    auto r1 = std::dynamic_pointer_cast<ListArray>(array_builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(array_builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<ListArray>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -305,8 +314,8 @@ int main(int argc, char** argv) {
     auto a3 = std::dynamic_pointer_cast<arrow::ListArray>(a1->Slice(1, 2));
     CHECK_EQ(a3->length(), 2);
     ListArrayBuilder sliced_array_builder(client, a3);
-    auto r3 =
-        std::dynamic_pointer_cast<ListArray>(sliced_array_builder.Seal(client));
+    VINEYARD_CHECK_OK(sliced_array_builder.Seal(client, object));
+    auto r3 = std::dynamic_pointer_cast<ListArray>(object);
     auto sliced_internal_array = r3->GetArray();
     CHECK(sliced_internal_array->Equals(a3));
 
@@ -327,8 +336,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<arrow::LargeListArray> a1;
     CHECK_ARROW_ERROR(b1.Finish(&a1));
     LargeListArrayBuilder array_builder(client, a1);
-    auto r1 =
-        std::dynamic_pointer_cast<LargeListArray>(array_builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(array_builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<LargeListArray>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -340,8 +350,8 @@ int main(int argc, char** argv) {
     auto a3 = std::dynamic_pointer_cast<arrow::LargeListArray>(a1->Slice(1, 2));
     CHECK_EQ(a3->length(), 2);
     LargeListArrayBuilder sliced_array_builder(client, a3);
-    auto r3 = std::dynamic_pointer_cast<LargeListArray>(
-        sliced_array_builder.Seal(client));
+    VINEYARD_CHECK_OK(sliced_array_builder.Seal(client, object));
+    auto r3 = std::dynamic_pointer_cast<LargeListArray>(object);
     auto sliced_internal_array = r3->GetArray();
     CHECK(sliced_internal_array->Equals(a3));
 
@@ -384,7 +394,9 @@ int main(int argc, char** argv) {
     std::shared_ptr<arrow::RecordBatch> batch = arrow::RecordBatch::Make(
         arrowSchema, array1->length(), {array1, array2, array3, array4});
     RecordBatchBuilder builder(client, batch);
-    auto r1 = std::dynamic_pointer_cast<RecordBatch>(builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<RecordBatch>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -398,7 +410,8 @@ int main(int argc, char** argv) {
     VINEYARD_CHECK_OK(extender.AddColumn(client, "f8", array2));
     VINEYARD_CHECK_OK(extender.AddColumn(client, "f9", array3));
     VINEYARD_CHECK_OK(extender.AddColumn(client, "f10", array4));
-    auto r3 = std::dynamic_pointer_cast<RecordBatch>(extender.Seal(client));
+    VINEYARD_CHECK_OK(extender.Seal(client, object));
+    auto r3 = std::dynamic_pointer_cast<RecordBatch>(object);
     VINEYARD_CHECK_OK(client.Persist(r3->id()));
     ObjectID id3 = r3->id();
 
@@ -418,7 +431,8 @@ int main(int argc, char** argv) {
     RecordBatchConsolidator consolidator(client, r3);
     VINEYARD_CHECK_OK(consolidator.ConsolidateColumns(
         client, std::vector<std::string>{"f2", "f8"}, "merged"));
-    auto r5 = std::dynamic_pointer_cast<RecordBatch>(consolidator.Seal(client));
+    VINEYARD_CHECK_OK(consolidator.Seal(client, object));
+    auto r5 = std::dynamic_pointer_cast<RecordBatch>(object);
     VINEYARD_CHECK_OK(client.Persist(r5->id()));
     ObjectID id5 = r5->id();
 
@@ -452,7 +466,9 @@ int main(int argc, char** argv) {
     CHECK_ARROW_ERROR(arrow::stl::TableFromTupleRange(
         arrow::default_memory_pool(), rows, names, &table));
     TableBuilder builder(client, table);
-    auto r1 = std::dynamic_pointer_cast<Table>(builder.Seal(client));
+    std::shared_ptr<Object> object;
+    VINEYARD_CHECK_OK(builder.Seal(client, object));
+    auto r1 = std::dynamic_pointer_cast<Table>(object);
     VINEYARD_CHECK_OK(client.Persist(r1->id()));
     ObjectID id = r1->id();
 
@@ -464,7 +480,8 @@ int main(int argc, char** argv) {
     TableExtender extender(client, r2);
     VINEYARD_CHECK_OK(extender.AddColumn(client, "f7", array1));
     VINEYARD_CHECK_OK(extender.AddColumn(client, "f8", array2));
-    auto r3 = std::dynamic_pointer_cast<Table>(extender.Seal(client));
+    VINEYARD_CHECK_OK(extender.Seal(client, object));
+    auto r3 = std::dynamic_pointer_cast<Table>(object);
     VINEYARD_CHECK_OK(client.Persist(r3->id()));
     ObjectID id3 = r3->id();
 
@@ -483,7 +500,8 @@ int main(int argc, char** argv) {
     TableConsolidator consolidator(client, r3);
     VINEYARD_CHECK_OK(consolidator.ConsolidateColumns(
         client, std::vector<std::string>{"f1", "f8"}, "merged"));
-    auto r5 = std::dynamic_pointer_cast<Table>(consolidator.Seal(client));
+    VINEYARD_CHECK_OK(consolidator.Seal(client, object));
+    auto r5 = std::dynamic_pointer_cast<Table>(object);
     VINEYARD_CHECK_OK(client.Persist(r5->id()));
     ObjectID id5 = r5->id();
 

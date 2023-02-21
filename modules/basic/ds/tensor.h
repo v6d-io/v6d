@@ -313,7 +313,7 @@ class GlobalTensor : public BareRegistered<GlobalTensor>,
         std::unique_ptr<GlobalTensor>{new GlobalTensor()});
   }
 
-  void Construct(const ObjectMeta& meta) override;
+  void PostConstruct(const ObjectMeta& meta) override;
 
   std::vector<int64_t> const& shape() const;
 
