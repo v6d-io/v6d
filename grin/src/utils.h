@@ -13,14 +13,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 #include "grin/include/predefine.h"
-
+#include "src/client/client.h"
+#include "modules/graph/fragment/arrow_fragment.h"
 
 
 #ifndef GRIN_SRC_UTILS_H_
 #define GRIN_SRC_UTILS_H_
 
-vineyard::Client get_client();
-
-Graph get_graph_by_object_id(vineyard::Client&, vineyard::ObjectID);
+Graph get_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
+    auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragment<uint32_t, uint32_t>>(client.GetObject(object_id));
+    return frag.get();
+}
 
 #endif // GRIN_SRC_UTILS_H_

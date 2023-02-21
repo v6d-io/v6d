@@ -170,7 +170,21 @@ EdgeLabel get_edge_label_from_list(const EdgeLabelList ell, const size_t idx) {
 
 
 #if defined(WITH_VERTEX_LABEL) && defined(WITH_EDGE_LABEL)
-VertexLabel get_src_label_from_edge_label(const Graph, const EdgeLabel);
+VertexLabel get_src_label_from_edge_label(const Graph g, const EdgeLabel elabel) {
+    auto _g = static_cast<Graph_T*>(g);
+    auto _elabel = static_cast<EdgeLabel_T*>(elabel);
+    auto entry = _g->schema().GetEntry(*_elabel, "EDGE");
+    auto pair = entry.relations[0];
+    auto vlabel = new VertexLabel_T(_g->schema().GetVertexLabelId(pair.first));
+    return vlabel;
+}
 
-VertexLabel get_dst_label_from_edge_label(const Graph, const EdgeLabel);
+VertexLabel get_dst_label_from_edge_label(const Graph g, const EdgeLabel elabel) {
+    auto _g = static_cast<Graph_T*>(g);
+    auto _elabel = static_cast<EdgeLabel_T*>(elabel);
+    auto entry = _g->schema().GetEntry(*_elabel, "EDGE");
+    auto pair = entry.relations[0];
+    auto vlabel = new VertexLabel_T(_g->schema().GetVertexLabelId(pair.second));
+    return vlabel;
+}
 #endif

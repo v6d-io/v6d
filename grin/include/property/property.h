@@ -17,34 +17,59 @@ limitations under the License.
 
 #include "../predefine.h"
 
+// Vertex Property
 #ifdef WITH_VERTEX_PROPERTY
 void destroy_vertex_property(VertexProperty);
 
+DataType get_vertex_property_type(VertexProperty);
+
+// Vertex Property Name
 #ifdef WITH_VERTEX_PROPERTY_NAME
 char* get_vertex_property_name(const Graph, const VertexProperty);
 
-#ifdef COLUMN_STORE
-VertexColumn get_vertex_column_by_name(const Graph, char* name);
-#endif
+VertexProperty get_vertex_property_by_name(const Graph, const VertexLabel, const char*);
 #endif
 
-DataType get_vertex_property_type(const Graph, const VertexProperty);
+// Vertex Property Table
+void destroy_vertex_property_table(VertexPropertyTable);
+
+void* get_value_from_vertex_property_table(const VertexPropertyTable, const Vertex, const VertexProperty);
+
+VertexPropertyTable get_vertex_property_table_by_label(const Graph, const VertexLabel);
 
 #ifdef COLUMN_STORE
-void destroy_vertex_column(VertexColumn);
-#ifdef ENABLE_VERTEX_LIST
-VertexColumn get_vertex_column_by_list(const Graph, const VertexList, const VertexProperty);
-#endif
-#ifdef WITH_VERTEX_LABEL
-VertexColumn get_vertex_column_by_label(const Graph, const VertexLabel, const VertexProperty);
-#endif
-void* get_value_from_vertex_column(const VertexColumn, const Vertex);
+VertexPropertyTable get_vertex_property_table_for_property(const Graph, const VertexProperty);
 #else
-void destroy_vertex_row(VertexRow);
-VertexRow get_vertex_row_by_list(const Graph, const Vertex, const VertexPropertyList);
-#ifdef WITH_VERTEX_LABEL
-VertexRow get_vertex_row_by_label(const Graph, const Vertex, const VertexLabel);
+VertexPropertyTable get_vertex_property_table_for_vertex(const Graph, const Vertex);
 #endif
+
+#endif
+
+
+// Edge Property
+#ifdef WITH_EDGE_PROPERTY
+void destroy_edge_property(EdgeProperty);
+
+DataType get_edge_property_type(EdgeProperty);
+
+// Edge Property Name
+#ifdef WITH_EDGE_PROPERTY_NAME
+char* get_edge_property_name(const Graph, const EdgeProperty);
+
+EdgeProperty get_edge_property_by_name(const Graph, const EdgeLabel, const char*);
+#endif
+
+// Edge Property Table
+void destroy_edge_property_table(EdgePropertyTable);
+
+void* get_value_from_edge_property_table(const EdgePropertyTable, const Edge, const EdgeProperty);
+
+EdgePropertyTable get_edge_property_table_by_label(const Graph, const EdgeLabel);
+
+#ifdef COLUMN_STORE
+EdgePropertyTable get_edge_property_table_for_property(const Graph, const EdgeProperty);
+#else
+EdgePropertyTable get_edge_property_table_for_edge(const Graph, const Edge);
 #endif
 
 #endif

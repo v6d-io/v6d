@@ -19,15 +19,8 @@ limitations under the License.
 #include "../predefine.h"
 
 #ifdef ENABLE_GRAPH_PARTITION
-// basic partition informations
 size_t get_total_partitions_number(const PartitionedGraph);
 
-size_t get_total_vertices_number(const PartitionedGraph);
-
-size_t get_total_edges_number(const PartitionedGraph);
-
-
-// partition list
 PartitionList get_local_partition_list(const PartitionedGraph);
 
 void destroy_partition_list(PartitionList);

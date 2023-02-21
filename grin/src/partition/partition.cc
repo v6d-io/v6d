@@ -14,44 +14,75 @@ limitations under the License.
 */
 
 #include "grin/src/predefine.h"
+#include "grin/src/utils.h"
 #include "grin/include/partition/partition.h"
 #include "modules/graph/fragment/property_graph_types.h"
+#include "src/client/client.h"
+
 
 #ifdef ENABLE_GRAPH_PARTITION
-// basic partition informations
 size_t get_total_partitions_number(const PartitionedGraph pg) {
-    // auto _pg = static_cast<PartitionedGraph_T*>(pg);
-    // return _pg->fnum();
+    auto _pg = static_cast<PartitionedGraph_T*>(pg);
+    return _pg->total_frag_num();
 }
 
-size_t get_total_vertices_number(const PartitionedGraph pg) {
-    // auto _pg = static_cast<PartitionedGraph_T*>(pg);
-    // return _pg->GetTotalVerticesNum();
-}
-
-// partition list
 PartitionList get_local_partition_list(const PartitionedGraph pg) {
-    // auto _pg = static_cast<PartitionedGraph_T*>(pg);
-    // auto pl = new PartitionList_T();
-    // pl->push_back(_pg->fid());
-    // return pl;
+    auto _pg = static_cast<PartitionedGraph_T*>(pg);
+    auto pl = new PartitionList_T();
+    vineyard::Client client;
+    client.Connect();
+    for (const auto & [fid, location] : _pg->FragmentLocations()) {
+        if (location == client.instance_id()) {
+            pl->push_back(fid);
+        }
+    }
+    return pl;
 }
 
-void destroy_partition_list(PartitionList);
+void destroy_partition_list(PartitionList pl) {
+    auto _pl = static_cast<PartitionList_T*>(pl);
+    delete _pl;
+}
 
-PartitionList create_partition_list();
+PartitionList create_partition_list() {
+    auto pl = new PartitionList_T();
+    return pl;
+}
 
-bool insert_partition_to_list(PartitionList, const Partition);
+bool insert_partition_to_list(PartitionList pl, const Partition p) {
+    auto _pl = static_cast<PartitionList_T*>(pl);
+    auto _p = static_cast<Partition_T*>(p);
+    _pl->push_back(*_p);
+    return true;
+}
 
-size_t get_partition_list_size(const PartitionList);
+size_t get_partition_list_size(const PartitionList pl) {
+    auto _pl = static_cast<PartitionList_T*>(pl);
+    return _pl->size();
+}
 
-Partition get_partition_from_list(const PartitionList, const size_t);
+Partition get_partition_from_list(const PartitionList pl, const size_t idx) {
+    auto _pl = static_cast<PartitionList_T*>(pl);
+    auto p = new Partition_T((*_pl)[idx]);
+    return p;
+}
 
-void destroy_partition(Partition);
+void destroy_partition(Partition p) {
+    auto _p = static_cast<Partition_T*>(p);
+    delete _p;
+}
 
-void* get_partition_info(const PartitionedGraph, const Partition);
+void* get_partition_info(const PartitionedGraph pg, const Partition p) {
+    return NULL;
+}
 
-Graph get_local_graph_from_partition(const PartitionedGraph, const Partition);
+Graph get_local_graph_from_partition(const PartitionedGraph pg, const Partition p) {
+    auto _pg = static_cast<PartitionedGraph_T*>(pg);
+    auto _p = static_cast<Partition_T*>(p);
+    vineyard::Client client;
+    client.Connect();
+    return get_graph_by_object_id(client, _pg->Fragments().at(*_p));
+}
 
 #ifdef NATURAL_PARTITION_ID_TRAIT
 Partition get_partition_from_id(const PartitionID pid) {
@@ -137,7 +168,7 @@ VertexRef get_vertex_ref_for_vertex(const Graph g, const Partition p, const Vert
     auto _g = static_cast<Graph_T*>(g);
     auto _v = static_cast<Vertex_T*>(v);
     auto gid = _g->Vertex2Gid(*_v);
-    auto vr = new VertexRef(gid);
+    auto vr = new VertexRef_T(gid);
     return vr;
 }
 
@@ -156,7 +187,8 @@ Partition get_master_partition_from_vertex_ref(const Graph g, const VertexRef vr
     auto _vr = static_cast<VertexRef_T*>(vr);
     auto id_parser = vineyard::IdParser<VertexRef_T>();
     id_parser.Init(_g->fnum(), _g->vertex_label_num());
-    return id_parser.GetFid(*_vr);
+    auto p = new Partition_T(id_parser.GetFid(*_vr));
+    return p;
 }
 
 char* serialize_vertex_ref(const Graph g, const VertexRef vr) {

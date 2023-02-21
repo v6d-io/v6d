@@ -67,15 +67,17 @@ typedef enum {
 // propertygraph
 #define WITH_VERTEX_LABEL                 // There are labels on vertices.
 #define WITH_VERTEX_PROPERTY              // There is any property on vertices.
+#define WITH_VERTEX_PROPERTY_NAME         // There is cross-label property name.
 // #define WITH_VERTEX_PRIMARTY_KEYS         // There are primary keys for vertex.
 #define NATURAL_VERTEX_LABEL_ID_TRAIT     // Vertex label has natural continuous id from 0.
 #define NATURAL_VERTEX_PROPERTY_ID_TRAIT  // Vertex property has natural continuous id from 0.
 #define WITH_EDGE_LABEL                   // There are labels for edges.
 #define WITH_EDGE_PROPERTY                // There is any property for edges.
+#define WITH_EDGE_PROPERTY_NAME           // There is cross-label property name.
 #define NATURAL_EDGE_LABEL_ID_TRAIT       // Edge label has natural continuous id from 0.
 #define NATURAL_EDGE_PROPERTY_ID_TRAIT    // Edge property has natural continuous id from 0.
 #define COLUMN_STORE                      // Column-oriented storage for properties.
-
+#define ENABLE_VERTEX_ROW_LIST_ITERATOR   // Enable vertex row list iterator.
 
 // predicate
 // #define ENABLE_PREDICATE                  // Enable predicates for vertices and edges.
@@ -161,28 +163,20 @@ typedef unsigned EdgeLabelID;
 
 #ifdef WITH_VERTEX_PROPERTY
 typedef void* VertexProperty;
-typedef void* VertexPropertyList;
 #ifdef NATURAL_VERTEX_PROPERTY_ID_TRAIT
 typedef unsigned VertexPropertyID;
 #endif
-#ifdef COLUMN_STORE
-typedef void* VertexColumn;
-#else
-typedef void* VertexRow;
-#endif
+typedef void* VertexPropertyList;
+typedef void* VertexPropertyTable;
 #endif
 
 #ifdef WITH_EDGE_PROPERTY
 typedef void* EdgeProperty;
-typedef void* EdgePropertyList;
 #ifdef NATURAL_EDGE_PROPERTY_ID_TRAIT
 typedef unsigned EdgePropertyID;
 #endif
-#ifdef COLUMN_STORE
-typedef void* EdgeColumn;
-#else
-typedef void* EdgeRow;
-#endif
+typedef void* EdgePropertyList;
+typedef void* EdgePropertyTable;
 #endif
 
 #endif  // GRIN_INCLUDE_PREDEFINE_H_

@@ -813,6 +813,62 @@ const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array) {
   }
 }
 
+const void* get_arrow_array_data_element(std::shared_ptr<arrow::Array> const& array, unsigned offset) {
+  if (array->type()->Equals(arrow::int8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int8Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::uint8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt8Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::int16())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int16Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::uint16())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt16Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::int32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int32Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::uint32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt32Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::int64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int64Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::uint64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt64Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::float32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::FloatArray>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::float64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::DoubleArray>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::utf8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::StringArray>(array).get() + offset);
+  } else if (array->type()->Equals(arrow::large_utf8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get() + offset);
+  } else if (array->type()->id() == arrow::Type::LIST) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::ListArray>(array).get() + offset);
+  } else if (array->type()->id() == arrow::Type::LARGE_LIST) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::LargeListArray>(array).get() + offset);
+  } else if (array->type()->id() == arrow::Type::FIXED_SIZE_LIST) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::FixedSizeListArray>(array).get() + offset);
+  } else if (array->type()->Equals(arrow::null())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::NullArray>(array).get() + offset);
+  } else {
+    LOG(ERROR) << "Unsupported arrow array type '" << array->type()->ToString()
+               << "', type id: " << array->type()->id();
+    return NULL;
+  }
+}
+
 Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Schema>>& schemas,
                   std::shared_ptr<arrow::Schema>& schema) {
   int field_num = -1;
