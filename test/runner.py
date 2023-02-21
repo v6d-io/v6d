@@ -426,7 +426,7 @@ def run_vineyard_cpp_tests(meta, endpoints, tests):
         run_test(tests, 'get_blob_test')
         run_test(tests, 'get_blob_disk_test')
         run_test(tests, 'get_object_test')
-        # run_test(tests, 'global_object_test')
+        run_test(tests, 'global_object_test')
         # enable when USE_GPU is defined
         # run_test(tests, 'gpumalloc_test')
         run_test(tests, 'hashmap_test')

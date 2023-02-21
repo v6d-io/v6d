@@ -795,10 +795,11 @@ Status Client::OnDelete(ObjectID const& id) {
 }
 
 Status Client::Release(std::vector<ObjectID> const& ids) {
+  auto s = Status::OK();
   for (auto id : ids) {
-    RETURN_ON_ERROR(Release(id));
+    s += Release(id);
   }
-  return Status::OK();
+  return s;
 }
 
 // Released by users.

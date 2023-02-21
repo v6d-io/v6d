@@ -122,7 +122,11 @@ Status ReadRecordBatchesFromVineyardDataFrame(
     Client& client, std::shared_ptr<GlobalDataFrame>& gdf,
     std::vector<std::shared_ptr<arrow::RecordBatch>>& batches, int part_id,
     int part_num) {
-  auto local_chunks = gdf->LocalPartitions(client);
+  std::vector<std::shared_ptr<DataFrame>> local_chunks;
+  for (auto iter = gdf->LocalBegin(); iter != gdf->LocalEnd();
+       iter.NextLocal()) {
+    local_chunks.emplace_back(*iter);
+  }
   size_t split_size = local_chunks.size() / part_num +
                       (local_chunks.size() % part_num == 0 ? 0 : 1);
   int start_to_read = part_id * split_size;
@@ -257,7 +261,11 @@ Status ReadTableFromVineyardDataFrame(Client& client,
                                       std::shared_ptr<GlobalDataFrame>& gdf,
                                       std::shared_ptr<arrow::Table>& table,
                                       int part_id, int part_num) {
-  auto local_chunks = gdf->LocalPartitions(client);
+  std::vector<std::shared_ptr<DataFrame>> local_chunks;
+  for (auto iter = gdf->LocalBegin(); iter != gdf->LocalEnd();
+       iter.NextLocal()) {
+    local_chunks.emplace_back(*iter);
+  }
   size_t split_size = local_chunks.size() / part_num +
                       (local_chunks.size() % part_num == 0 ? 0 : 1);
   int start_to_read = part_id * split_size;
