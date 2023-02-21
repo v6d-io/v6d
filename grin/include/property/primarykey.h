@@ -19,7 +19,7 @@ limitations under the License.
 
 #ifdef WITH_VERTEX_PRIMARTY_KEYS
 
-PropertyList get_primary_keys(const Graph);
+VertexPropertyList get_primary_keys(const Graph);
 
 Vertex get_vertex_from_primay_keys(const Graph, const Row);
 

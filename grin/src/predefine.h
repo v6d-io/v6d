@@ -14,6 +14,7 @@ limitations under the License.
 */
 #include "grin/include/predefine.h"
 #include "modules/graph/fragment/arrow_fragment.h"
+#include "modules/graph/fragment/arrow_fragment_group.h"
 
 #include "arrow/api.h"
 
@@ -96,6 +97,29 @@ std::string GetDataTypeName(DataType type) {
   }
 }
 
+DataType ArrowToDataType(std::shared_ptr<arrow::DataType> type) {
+  if (type == nullptr) {
+    return DataType::Undefined;
+  } else if (arrow::int32()->Equals(type)) {
+    return DataType::Int32;
+  } else if (arrow::int64()->Equals(type)) {
+    return DataType::Int64;
+  } else if (arrow::float32()->Equals(type)) {
+    return DataType::Float;
+  } else if (arrow::uint32()->Equals(type)) {
+    return DataType::UInt32;
+  } else if (arrow::uint64()->Equals(type)) {
+    return DataType::UInt64;
+  } else if (arrow::float64()->Equals(type)) {
+    return DataType::Double;
+  } else if (arrow::utf8()->Equals(type)) {
+    return DataType::String;
+  } else if (arrow::large_utf8()->Equals(type)) {
+    return DataType::String;
+  } 
+  return DataType::Undefined;
+}
+
 #define G_OID_T int
 #define G_VID_T unsigned
 
@@ -129,7 +153,7 @@ struct AdjacentList_T {
 #endif
 
 #ifdef ENABLE_GRAPH_PARTITION
-typedef Graph_T PartitionedGraph_T;
+typedef vineyard::ArrowFragmentGroup PartitionedGraph_T;
 typedef unsigned Partition_T;
 typedef std::vector<unsigned> PartitionList_T;
 typedef Graph_T::vid_t VertexRef_T;
@@ -149,17 +173,13 @@ typedef std::vector<unsigned> EdgeLabelList_T;
 #ifdef WITH_VERTEX_PROPERTY
 typedef std::pair<unsigned, unsigned> VertexProperty_T;
 typedef std::vector<VertexProperty_T> VertexPropertyList_T;
-#ifdef COLUMN_STORE
-typedef std::vector<VertexProperty_T> VertexColumn_T;
-#endif
+typedef std::pair<unsigned, Graph_T::vertices_t> VertexPropertyTable_T;
 #endif
 
 #ifdef WITH_EDGE_PROPERTY
 typedef std::pair<unsigned, unsigned> EdgeProperty_T;
 typedef std::vector<EdgeProperty_T> EdgePropertyList_T;
-#ifdef COLUMN_STORE
-typedef std::vector<EdgeProperty_T> EdgeColumn_T;
-#endif
+typedef std::pair<unsigned, unsigned> EdgePropertyTable_T;
 #endif
 
 #endif  // GRIN_SRC_PREDEFINE_H_
