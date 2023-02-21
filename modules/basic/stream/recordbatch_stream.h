@@ -49,11 +49,11 @@ class RecordBatchStream : public BareRegistered<RecordBatchStream>,
 
   Status ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch,
                    bool const copy = false);
+};
 
- protected:
-  std::string GetTypeName() const override {
-    return type_name<RecordBatchStream>();
-  }
+template <>
+struct stream_type<RecordBatch> {
+  using type = RecordBatchStream;
 };
 
 }  // namespace vineyard

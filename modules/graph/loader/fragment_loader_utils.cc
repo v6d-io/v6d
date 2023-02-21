@@ -243,9 +243,9 @@ boost::leaf::result<ObjectID> ConstructFragmentGroup(
           gathered_instance_ids[comm_spec.FragToWorker(i)]);
     }
 
-    auto group_object =
-        std::dynamic_pointer_cast<ArrowFragmentGroup>(builder.Seal(client));
-    group_object_id = group_object->id();
+    std::shared_ptr<Object> fragment_group_object;
+    VY_OK_OR_RAISE(builder.Seal(client, fragment_group_object));
+    group_object_id = fragment_group_object->id();
     VY_OK_OR_RAISE(client.Persist(group_object_id));
 
     MPI_Bcast(&group_object_id, sizeof(ObjectID), MPI_CHAR, 0,

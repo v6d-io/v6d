@@ -193,10 +193,16 @@ class ObjectBuilder : public ObjectBase {
   virtual ~ObjectBuilder() {}
 
   Status Build(Client& client) override = 0;
+
   virtual std::shared_ptr<Object> Seal(Client& client);
 
+  virtual Status Seal(Client& client, std::shared_ptr<Object>& object);
+
   //  protected: FIXME
-  std::shared_ptr<Object> _Seal(Client& client) override = 0;
+  std::shared_ptr<Object> _Seal(Client& client) override;
+
+  //  protected: FIXME
+  virtual Status _Seal(Client& client, std::shared_ptr<Object>& object);
 
   bool sealed() const { return sealed_; }
 

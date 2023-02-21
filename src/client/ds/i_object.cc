@@ -58,9 +58,25 @@ bool const Object::IsPersist() const {
 bool const Object::IsGlobal() const { return meta_.IsGlobal(); }
 
 std::shared_ptr<Object> ObjectBuilder::Seal(Client& client) {
-  auto object = this->_Seal(client);
-  VINEYARD_CHECK_OK(client.PostSeal(object->meta()));
+  std::shared_ptr<Object> object;
+  VINEYARD_CHECK_OK(Seal(client, object));
   return object;
+}
+
+Status ObjectBuilder::Seal(Client& client, std::shared_ptr<Object>& object) {
+  RETURN_ON_ERROR(this->_Seal(client, object));
+  return client.PostSeal(object->meta());
+}
+
+std::shared_ptr<Object> ObjectBuilder::_Seal(Client& client) {
+  std::shared_ptr<Object> object;
+  VINEYARD_CHECK_OK(_Seal(client, object));
+  return object;
+}
+
+Status ObjectBuilder::_Seal(Client& client, std::shared_ptr<Object>& object) {
+  return Status::NotImplemented(
+      "The _Seal(client, object) not implemented, use _Seal(client) instead");
 }
 
 }  // namespace vineyard

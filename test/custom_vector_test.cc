@@ -43,8 +43,9 @@ class Vector : public vineyard::Registered<Vector<T>> {
   }
 
   void Construct(const ObjectMeta& meta) override {
-    this->size = meta.GetKeyValue<size_t>("size");
+    Object::Construct(meta);
 
+    this->size = meta.GetKeyValue<size_t>("size");
     auto buffer = std::dynamic_pointer_cast<Blob>(meta.GetMember("buffer"));
     this->data = reinterpret_cast<const T*>(buffer->data());
   }
@@ -76,17 +77,20 @@ class VectorBuilder : public vineyard::ObjectBuilder {
   }
 
   Status Build(Client& client) override {
-    VINEYARD_CHECK_OK(client.CreateBlob(size * sizeof(T), buffer_builder));
+    RETURN_ON_ERROR(client.CreateBlob(size * sizeof(T), buffer_builder));
     memcpy(buffer_builder->data(), data, size * sizeof(T));
     return Status::OK();
   }
 
-  std::shared_ptr<Object> _Seal(Client& client) override {
-    VINEYARD_CHECK_OK(this->Build(client));
+  Status _Seal(Client& client, std::shared_ptr<Object>& object) override {
+    RETURN_ON_ERROR(this->Build(client));
 
     auto vec = std::make_shared<Vector<int>>();
-    auto buffer = std::dynamic_pointer_cast<vineyard::Blob>(
-        this->buffer_builder->Seal(client));
+    object = vec;
+
+    std::shared_ptr<Object> buffer_object;
+    RETURN_ON_ERROR(this->buffer_builder->Seal(client, buffer_object));
+    auto buffer = std::dynamic_pointer_cast<Blob>(buffer_object);
     vec->size = size;
     vec->data = reinterpret_cast<const T*>(buffer->data());
 
@@ -94,9 +98,7 @@ class VectorBuilder : public vineyard::ObjectBuilder {
     vec->meta_.SetNBytes(size * sizeof(T));
     vec->meta_.AddKeyValue("size", size);
     vec->meta_.AddMember("buffer", buffer);
-    VINEYARD_CHECK_OK(client.CreateMetaData(vec->meta_, vec->id_));
-
-    return vec;
+    return client.CreateMetaData(vec->meta_, vec->id_);
   }
 
   T& operator[](size_t index) {

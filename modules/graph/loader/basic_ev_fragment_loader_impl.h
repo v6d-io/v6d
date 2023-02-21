@@ -359,14 +359,14 @@ boost::leaf::result<ObjectID> BasicEVFragmentLoader<
   VLOG(100) << "Finished fragment builder construction: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
-  auto frag =
-      std::dynamic_pointer_cast<ArrowFragment<oid_t, vid_t, vertex_map_t>>(
-          frag_builder.Seal(client_));
+  std::shared_ptr<Object> fragment_object;
+  VY_OK_OR_RAISE(frag_builder.Seal(client_, fragment_object));
+  auto frag = std::dynamic_pointer_cast<fragment_t>(fragment_object);
 
   VLOG(100) << "Finished fragment builder seal: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
-  VINEYARD_CHECK_OK(client_.Persist(frag->id()));
+  VY_OK_OR_RAISE(client_.Persist(frag->id()));
   return frag->id();
 }
 
@@ -635,8 +635,9 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
         client_, comm_spec_.fnum(), vertex_label_num_, std::move(oid_lists));
     // oid_lists.clear();
 
-    auto vm = vm_builder.Seal(client_);
-    new_vm_id = vm->id();
+    std::shared_ptr<Object> vm_object;
+    VY_OK_OR_RAISE(vm_builder.Seal(client_, vm_object));
+    new_vm_id = vm_object->id();
   } else {
     auto old_vm_ptr =
         std::dynamic_pointer_cast<vertex_map_t>(client_.GetObject(vm_id));
@@ -931,9 +932,9 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
   VLOG(100) << "Finish adding outer vertices mapping: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
 
-  auto vm = local_vm_builder_->_Seal(client_);
-  vm_ptr_ =
-      std::dynamic_pointer_cast<vertex_map_t>(client_.GetObject(vm->id()));
+  std::shared_ptr<Object> vm_object;
+  VY_OK_OR_RAISE(local_vm_builder_->Seal(client_, vm_object));
+  vm_ptr_ = std::dynamic_pointer_cast<vertex_map_t>(vm_object);
 
   // Concatenate and add metadata to final edge tables
   VLOG(100) << "Transforming ids of edge tables and concatenate them: "

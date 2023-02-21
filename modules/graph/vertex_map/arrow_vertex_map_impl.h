@@ -252,12 +252,13 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::addNewVertexLabels(
 
   auto fn = [this, &client, &oid_arrays, &vy_oid_arrays, &vy_o2g](
                 const label_id_t label, const fid_t fid) -> Status {
+    std::shared_ptr<Object> object;
     std::shared_ptr<vineyard_oid_array_t> varray;
     {
       typename InternalType<oid_t>::vineyard_builder_type array_builder(
           client, std::move(oid_arrays[label - label_num_][fid]));
-      varray = std::dynamic_pointer_cast<vineyard_oid_array_t>(
-          array_builder.Seal(client));
+      RETURN_ON_ERROR(array_builder.Seal(client, object));
+      varray = std::dynamic_pointer_cast<vineyard_oid_array_t>(object);
       vy_oid_arrays[fid][label - label_num_] = *varray;
 
       // release the reference
@@ -276,9 +277,9 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::addNewVertexLabels(
         builder.emplace(array->GetView(k), cur_gid);
         ++cur_gid;
       }
+      RETURN_ON_ERROR(builder.Seal(client, object));
       vy_o2g[fid][label - label_num_] =
-          *std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(
-              builder.Seal(client));
+          *std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(object);
     }
     return Status::OK();
   };
@@ -383,14 +384,16 @@ void ArrowVertexMapBuilder<OID_T, VID_T>::set_o2g(
 }
 
 template <typename OID_T, typename VID_T>
-std::shared_ptr<vineyard::Object> ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
-    vineyard::Client& client) {
+Status ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
+    vineyard::Client& client, std::shared_ptr<vineyard::Object>& object) {
   // ensure the builder hasn't been sealed yet.
   ENSURE_NOT_SEALED(this);
 
-  VINEYARD_CHECK_OK(this->Build(client));
+  RETURN_ON_ERROR(this->Build(client));
 
   auto vertex_map = std::make_shared<ArrowVertexMap<oid_t, vid_t>>();
+  object = vertex_map;
+
   vertex_map->fnum_ = fnum_;
   vertex_map->label_num_ = label_num_;
   vertex_map->id_parser_.Init(fnum_, label_num_);
@@ -428,14 +431,13 @@ std::shared_ptr<vineyard::Object> ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
 
   vertex_map->meta_.SetNBytes(nbytes);
 
-  VINEYARD_CHECK_OK(client.CreateMetaData(vertex_map->meta_, vertex_map->id_));
+  RETURN_ON_ERROR(client.CreateMetaData(vertex_map->meta_, vertex_map->id_));
   VLOG(100) << "vertex map memory usage: "
             << prettyprint_memory_size(vertex_map->meta_.MemoryUsage());
 
   // mark the builder as sealed
   this->set_sealed(true);
-
-  return std::static_pointer_cast<vineyard::Object>(vertex_map);
+  return Status::OK();
 }
 
 template <typename OID_T, typename VID_T>
@@ -487,12 +489,13 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
   this->set_fnum_label_num(fnum_, label_num_);
 
   auto fn = [&](const label_id_t label, const fid_t fid) -> Status {
+    std::shared_ptr<Object> object;
     std::shared_ptr<vineyard_oid_array_t> varray;
     {
       typename InternalType<oid_t>::vineyard_builder_type array_builder(
           client, std::move(oid_arrays_[label][fid]));
-      varray = std::dynamic_pointer_cast<vineyard_oid_array_t>(
-          array_builder.Seal(client));
+      RETURN_ON_ERROR(array_builder.Seal(client, object));
+      varray = std::dynamic_pointer_cast<vineyard_oid_array_t>(object);
       this->set_oid_array(fid, label, varray);
 
       // release the reference
@@ -510,9 +513,10 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
         builder.emplace(array->GetView(k), cur_gid);
         ++cur_gid;
       }
-      this->set_o2g(fid, label,
-                    std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(
-                        builder.Seal(client)));
+      RETURN_ON_ERROR(builder.Seal(client, object));
+      this->set_o2g(
+          fid, label,
+          std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(object));
     }
     return Status::OK();
   };

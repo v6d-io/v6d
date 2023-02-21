@@ -247,7 +247,7 @@ class BlobWriter : public ObjectBuilder {
   void Dump() const;
 
  protected:
-  std::shared_ptr<Object> _Seal(Client& client) override;
+  Status _Seal(Client& client, std::shared_ptr<Object>& object) override;
 
  private:
   BlobWriter(ObjectID const object_id, const Payload& payload,

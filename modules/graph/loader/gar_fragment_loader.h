@@ -59,7 +59,7 @@ class GARFragmentLoader {
   using oid_array_t = ArrowArrayType<oid_t>;
   using vid_array_t = ArrowArrayType<vid_t>;
   using vertex_map_t = VERTEX_MAP_T<internal_oid_t, vid_t>;
-  using fragment_t = ArrowFragment<OID_T, VID_T, vertex_map_t>;
+  using fragment_t = ArrowFragment<oid_t, vid_t, vertex_map_t>;
   using gar_id_t = GraphArchive::IdType;
 
   using table_vec_t = std::vector<std::shared_ptr<arrow::Table>>;

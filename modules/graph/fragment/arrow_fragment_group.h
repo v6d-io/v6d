@@ -81,7 +81,8 @@ class ArrowFragmentGroupBuilder : public ObjectBuilder {
 
   vineyard::Status Build(vineyard::Client& client) override;
 
-  std::shared_ptr<vineyard::Object> _Seal(vineyard::Client& client) override;
+  Status _Seal(vineyard::Client& client,
+               std::shared_ptr<vineyard::Object>& object) override;
 
  private:
   fid_t total_frag_num_;

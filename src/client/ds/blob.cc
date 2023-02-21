@@ -247,12 +247,12 @@ void BlobWriter::Dump() const {
 #endif
 }
 
-std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
-  VINEYARD_ASSERT(!this->sealed(), "The blob writer has been already sealed.");
+Status BlobWriter::_Seal(Client& client, std::shared_ptr<Object>& object) {
+  RETURN_ON_ASSERT(!this->sealed(), "The blob writer has been already sealed.");
   // get blob and re-map
   uint8_t *mmapped_ptr = nullptr, *dist = nullptr;
   if (payload_.data_size > 0) {
-    VINEYARD_CHECK_OK(client.shm_->Mmap(
+    RETURN_ON_ERROR(client.shm_->Mmap(
         payload_.store_fd, payload_.object_id, payload_.map_size,
         payload_.data_size, payload_.data_offset,
         payload_.pointer - payload_.data_offset, false, true, &mmapped_ptr));
@@ -261,6 +261,7 @@ std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   auto buffer = arrow::Buffer::Wrap(dist, payload_.data_size);
 
   std::shared_ptr<Blob> blob(new Blob());
+  object = blob;
 
   blob->id_ = object_id_;
   blob->size_ = size();
@@ -274,16 +275,16 @@ std::shared_ptr<Object> BlobWriter::_Seal(Client& client) {
   blob->meta_.AddKeyValue("transient", true);
 
   blob->buffer_ = buffer;  // assign the readonly buffer.
-  VINEYARD_CHECK_OK(blob->meta_.buffer_set_->EmplaceBuffer(object_id_));
-  VINEYARD_CHECK_OK(blob->meta_.buffer_set_->EmplaceBuffer(object_id_, buffer));
+  RETURN_ON_ERROR(blob->meta_.buffer_set_->EmplaceBuffer(object_id_));
+  RETURN_ON_ERROR(blob->meta_.buffer_set_->EmplaceBuffer(object_id_, buffer));
 
-  VINEYARD_CHECK_OK(client.Seal(object_id_));
+  RETURN_ON_ERROR(client.Seal(object_id_));
   // associate extra key-value metadata
   for (auto const& kv : metadata_) {
     blob->meta_.AddKeyValue(kv.first, kv.second);
   }
   this->set_sealed(true);
-  return blob;
+  return Status::OK();
 }
 
 Status BufferSet::EmplaceBuffer(ObjectID const id) {
