@@ -57,14 +57,16 @@ vineyard::Status ArrowFragmentGroupBuilder::Build(vineyard::Client& client) {
   return vineyard::Status::OK();
 }
 
-std::shared_ptr<vineyard::Object> ArrowFragmentGroupBuilder::_Seal(
-    vineyard::Client& client) {
+Status ArrowFragmentGroupBuilder::_Seal(
+    vineyard::Client& client, std::shared_ptr<vineyard::Object>& object) {
   // ensure the builder hasn't been sealed yet.
   ENSURE_NOT_SEALED(this);
 
-  VINEYARD_CHECK_OK(this->Build(client));
+  RETURN_ON_ERROR(this->Build(client));
 
   auto fg = std::make_shared<ArrowFragmentGroup>();
+  object = fg;
+
   fg->total_frag_num_ = total_frag_num_;
   fg->vertex_label_num_ = vertex_label_num_;
   fg->edge_label_num_ = edge_label_num_;
@@ -86,11 +88,10 @@ std::shared_ptr<vineyard::Object> ArrowFragmentGroupBuilder::_Seal(
     idx += 1;
   }
 
-  VINEYARD_CHECK_OK(client.CreateMetaData(fg->meta_, fg->id_));
+  RETURN_ON_ERROR(client.CreateMetaData(fg->meta_, fg->id_));
   // mark the builder as sealed
   this->set_sealed(true);
-
-  return std::static_pointer_cast<vineyard::Object>(fg);
+  return Status::OK();
 }
 
 }  // namespace vineyard

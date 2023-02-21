@@ -50,12 +50,15 @@ class ByteStream : public BareRegistered<ByteStream>, public Stream<Blob> {
   Status ReadLine(std::string& line);
 
  protected:
-  std::string GetTypeName() const override { return type_name<ByteStream>(); }
-
   size_t buffer_size_limit_ = 1024 * 1024 * 256;  // 256Mi
 
   arrow::BufferBuilder builder_;  // for write
   std::stringstream ss_;          // for read
+};
+
+template <>
+struct stream_type<Blob> {
+  using type = ByteStream;
 };
 
 }  // namespace vineyard

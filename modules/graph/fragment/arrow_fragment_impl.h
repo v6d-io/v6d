@@ -130,8 +130,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVertexColumnsImpl(
         auto status = extender.AddColumn(client, pair.first, pair.second);
         CHECK(status.ok());
       }
-      auto new_table =
-          std::dynamic_pointer_cast<vineyard::Table>(extender.Seal(client));
+      std::shared_ptr<Object> table_sealed;
+      VY_OK_OR_RAISE(extender.Seal(client, table_sealed));
+      auto new_table = std::dynamic_pointer_cast<vineyard::Table>(table_sealed);
       builder.set_vertex_tables_(label_id, new_table);
       auto& entry =
           schema.GetMutableEntry(schema.GetVertexLabelName(label_id), "VERTEX");
@@ -147,7 +148,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVertexColumnsImpl(
     RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
   }
   builder.set_schema_json_(schema.ToJSON());
-  return builder.Seal(client)->id();
+  std::shared_ptr<Object> fragment_sealed;
+  VY_OK_OR_RAISE(builder.Seal(client, fragment_sealed));
+  return fragment_sealed->id();
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
@@ -206,8 +209,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddEdgeColumnsImpl(
         auto status = extender.AddColumn(client, pair.first, pair.second);
         CHECK(status.ok());
       }
-      auto new_table =
-          std::dynamic_pointer_cast<vineyard::Table>(extender.Seal(client));
+      std::shared_ptr<Object> table_sealed;
+      VY_OK_OR_RAISE(extender.Seal(client, table_sealed));
+      auto new_table = std::dynamic_pointer_cast<vineyard::Table>(table_sealed);
       builder.set_edge_tables_(label_id, new_table);
       auto& entry =
           schema.GetMutableEntry(schema.GetEdgeLabelName(label_id), "EDGE");
@@ -223,7 +227,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddEdgeColumnsImpl(
     RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
   }
   builder.set_schema_json_(schema.ToJSON());
-  return builder.Seal(client)->id();
+  std::shared_ptr<Object> fragment_sealed;
+  VY_OK_OR_RAISE(builder.Seal(client, fragment_sealed));
+  return fragment_sealed->id();
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
@@ -314,7 +320,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
     RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
   }
   builder.set_schema_json_(schema.ToJSON());
-  return builder.Seal(client)->id();
+  std::shared_ptr<Object> fragment_sealed;
+  VY_OK_OR_RAISE(builder.Seal(client, fragment_sealed));
+  return fragment_sealed->id();
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
@@ -348,7 +356,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::TransformDirection(
     builder.set_is_multigraph_(is_multigraph);
   }
 
-  return builder.Seal(client)->id();
+  std::shared_ptr<Object> fragment_sealed;
+  VY_OK_OR_RAISE(builder.Seal(client, fragment_sealed));
+  return fragment_sealed->id();
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
@@ -382,8 +392,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::ConsolidateVertexColumns(
   VY_OK_OR_RAISE(consolidator.ConsolidateColumns(
       client, std::vector<int64_t>{props.begin(), props.end()},
       consolidate_name));
-  auto new_table =
-      std::dynamic_pointer_cast<vineyard::Table>(consolidator.Seal(client));
+  std::shared_ptr<Object> table_sealed;
+  VY_OK_OR_RAISE(consolidator.Seal(client, table_sealed));
+  auto new_table = std::dynamic_pointer_cast<vineyard::Table>(table_sealed);
   builder.set_vertex_tables_(vlabel, new_table);
   auto& entry = schema.GetMutableEntry(vlabel, "VERTEX");
 
@@ -401,7 +412,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::ConsolidateVertexColumns(
     RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
   }
   builder.set_schema_json_(schema.ToJSON());
-  return builder.Seal(client)->id();
+  std::shared_ptr<Object> fragment_sealed;
+  VY_OK_OR_RAISE(builder.Seal(client, fragment_sealed));
+  return fragment_sealed->id();
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
@@ -435,8 +448,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::ConsolidateEdgeColumns(
   VY_OK_OR_RAISE(consolidator.ConsolidateColumns(
       client, std::vector<int64_t>{props.begin(), props.end()},
       consolidate_name));
-  auto new_table =
-      std::dynamic_pointer_cast<vineyard::Table>(consolidator.Seal(client));
+  std::shared_ptr<Object> table_sealed;
+  VY_OK_OR_RAISE(consolidator.Seal(client, table_sealed));
+  auto new_table = std::dynamic_pointer_cast<vineyard::Table>(table_sealed);
   builder.set_edge_tables_(elabel, new_table);
   auto& entry = schema.GetMutableEntry(elabel, "EDGE");
 
@@ -454,7 +468,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::ConsolidateEdgeColumns(
     RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
   }
   builder.set_schema_json_(schema.ToJSON());
-  return builder.Seal(client)->id();
+  std::shared_ptr<Object> fragment_sealed;
+  VY_OK_OR_RAISE(builder.Seal(client, fragment_sealed));
+  return fragment_sealed->id();
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>

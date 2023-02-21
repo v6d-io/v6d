@@ -35,37 +35,19 @@ limitations under the License.
 namespace vineyard {
 
 template <typename T>
-class StreamBuilder;
+class Stream;
+
+template <typename T>
+struct stream_type {
+  using type = Stream<T>;
+};
+
+template <typename T>
+using stream_type_t = typename stream_type<T>::type;
 
 template <typename T>
 class Stream : public Object {
  public:
-  template <typename S>
-  static ObjectID Make(Client& client,
-                       std::map<std::string, std::string> const& params) {
-    static_assert(std::is_base_of<Object, S>::value,
-                  "Not a vineyard object type");
-
-    ObjectID id = InvalidObjectID();
-    ObjectMeta meta;
-
-    meta.SetTypeName(type_name<S>());
-    meta.AddKeyValue("params_", params);
-    meta.SetNBytes(0);
-
-    VINEYARD_CHECK_OK(client.CreateMetaData(meta, id));
-    VINEYARD_CHECK_OK(client.CreateStream(id));
-    return id;
-  }
-
-  template <typename S>
-  static ObjectID Make(
-      Client& client,
-      std::unordered_map<std::string, std::string> const& params) {
-    return Make<S>(client, std::map<std::string, std::string>(params.begin(),
-                                                              params.end()));
-  }
-
   Status Next(std::shared_ptr<T>& chunk) {
     RETURN_ON_ASSERT(client_ != nullptr && readonly_ == true,
                      "Expect a readonly stream");
@@ -132,13 +114,12 @@ class Stream : public Object {
   }
 
   void Construct(const ObjectMeta& meta) override {
-    std::string __type_name = this->GetTypeName();
+    std::string __type_name = type_name<stream_type_t<T>>();
     VINEYARD_ASSERT(meta.GetTypeName() == __type_name,
                     "Expect typename '" + __type_name + "', but got '" +
                         meta.GetTypeName() + "'");
-    this->meta_ = meta;
-    this->id_ = meta.GetId();
-    meta.GetKeyValue("params_", this->params_);
+    Object::Construct(meta);
+    this->meta_.GetKeyValue("params_", this->params_);
   }
 
   std::map<std::string, std::string> const& GetParams() {
@@ -176,12 +157,73 @@ class Stream : public Object {
   bool readonly_ = false;
   std::map<std::string, std::string> params_;
 
-  virtual std::string GetTypeName() const { return type_name<Stream<T>>(); }
-
  private:
   bool stoped_;  // an optimization: avoid repeated idempotent requests.
+};
 
-  friend class StreamBuilder<T>;
+/**
+ * @brief StreamBuilder is the builder for stream objects.
+ *
+ * @tparam T The type of the underlying stream type, e.g.,
+ *
+ *       auto id = StreamBuilder<ByteStream>::Make(client, params);
+ */
+template <typename T>
+class StreamBuilder {
+ public:
+  static_assert(std::is_base_of<Object, T>::value,
+                "Stream: not a vineyard object type");
+
+  explicit StreamBuilder(Client& client) : client_(client) {
+    meta_.SetTypeName(type_name<T>());
+    meta_.SetNBytes(0);
+  }
+
+  template <typename Value>
+  void AddKeyValue(const std::string& key, const Value& value) {
+    meta_.AddKeyValue(key, value);
+  }
+
+  Status Finish(ObjectID& id) {
+    RETURN_ON_ERROR(client_.CreateMetaData(meta_, id));
+    RETURN_ON_ERROR(client_.CreateStream(id));
+    return Status::OK();
+  }
+
+  static Status Make(Client& client,
+                     std::map<std::string, std::string> const& params,
+                     ObjectID& id) {
+    StreamBuilder<T> builder(client);
+    builder.AddKeyValue("params_", params);
+    return builder.Finish(id);
+  }
+
+  static ObjectID Make(Client& client,
+                       std::map<std::string, std::string> const& params) {
+    ObjectID id = InvalidObjectID();
+    VINEYARD_CHECK_OK(Make(client, params, id));
+    return id;
+  }
+
+  static Status Make(Client& client,
+                     std::unordered_map<std::string, std::string> const& params,
+                     ObjectID& id) {
+    return Make(
+        client,
+        std::map<std::string, std::string>(params.begin(), params.end()), id);
+  }
+
+  static ObjectID Make(
+      Client& client,
+      std::unordered_map<std::string, std::string> const& params) {
+    ObjectID id = InvalidObjectID();
+    VINEYARD_CHECK_OK(Make(client, params, id));
+    return id;
+  }
+
+ private:
+  Client& client_;
+  ObjectMeta meta_;
 };
 
 }  // namespace vineyard

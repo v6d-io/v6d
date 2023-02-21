@@ -47,7 +47,9 @@ Status RecordBatchStream::WriteTable(
 Status RecordBatchStream::WriteBatch(
     std::shared_ptr<arrow::RecordBatch> const& batch) {
   RecordBatchBuilder builder(*client_, batch);
-  return this->Push(builder.Seal(*client_));
+  std::shared_ptr<Object> chunk;
+  RETURN_ON_ERROR(builder.Seal(*client_, chunk));
+  return this->Push(chunk);
 }
 
 Status RecordBatchStream::WriteDataframe(std::shared_ptr<DataFrame> const& df) {

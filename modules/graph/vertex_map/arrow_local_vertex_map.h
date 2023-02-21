@@ -152,9 +152,10 @@ class ArrowLocalVertexMapBuilder : public vineyard::ObjectBuilder {
   explicit ArrowLocalVertexMapBuilder(vineyard::Client& client, fid_t fnum,
                                       fid_t fid, label_id_t label_num);
 
-  vineyard::Status Build(vineyard::Client& client);
+  vineyard::Status Build(vineyard::Client& client) override;
 
-  std::shared_ptr<vineyard::Object> _Seal(vineyard::Client& client);
+  Status _Seal(vineyard::Client& client,
+               std::shared_ptr<vineyard::Object>& object) override;
 
   vineyard::Status AddLocalVertices(
       grape::CommSpec& comm_spec,

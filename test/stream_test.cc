@@ -35,7 +35,7 @@ void testByteStream(Client& client, std::string const& ipc_socket) {
   {
     std::unordered_map<std::string, std::string> params{
         {"kind", "test"}, {"test_name", "stream_test"}};
-    stream_id = ByteStream::Make<ByteStream>(client, params);
+    stream_id = StreamBuilder<ByteStream>::Make(client, params);
     CHECK(stream_id != InvalidObjectID());
   }
 
@@ -110,7 +110,7 @@ void testByteStreamFailed(Client& client, std::string const& ipc_socket) {
   {
     std::unordered_map<std::string, std::string> params{
         {"kind", "test"}, {"test_name", "stream_test"}};
-    stream_id = ByteStream::Make<ByteStream>(client, params);
+    stream_id = StreamBuilder<ByteStream>::Make(client, params);
     CHECK(stream_id != InvalidObjectID());
   }
 
@@ -131,7 +131,7 @@ void testEmptyStream(Client& client, std::string const& ipc_socket) {
   {
     std::unordered_map<std::string, std::string> params{
         {"kind", "test"}, {"test_name", "stream_test"}};
-    stream_id = ByteStream::Make<ByteStream>(client, params);
+    stream_id = StreamBuilder<ByteStream>::Make(client, params);
     CHECK(stream_id != InvalidObjectID());
   }
 
@@ -164,7 +164,7 @@ void testRecordBatchStream(Client& client, std::string const& ipc_socket) {
   {
     std::unordered_map<std::string, std::string> params{
         {"kind", "test"}, {"test_name", "stream_test"}};
-    stream_id = RecordBatchStream::Make<RecordBatchStream>(client, params);
+    stream_id = StreamBuilder<RecordBatchStream>::Make(client, params);
     CHECK(stream_id != InvalidObjectID());
   }
 

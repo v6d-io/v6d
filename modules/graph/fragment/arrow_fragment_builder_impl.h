@@ -453,9 +453,13 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
       vineyard::ArrayBuilder<vid_t> ivnums_builder(*client, ivnums);
       vineyard::ArrayBuilder<vid_t> ovnums_builder(*client, ovnums);
       vineyard::ArrayBuilder<vid_t> tvnums_builder(*client, tvnums);
-      builder.set_ivnums_(ivnums_builder.Seal(*client));
-      builder.set_ovnums_(ovnums_builder.Seal(*client));
-      builder.set_tvnums_(tvnums_builder.Seal(*client));
+      std::shared_ptr<Object> object;
+      RETURN_ON_ERROR(ivnums_builder.Seal(*client, object));
+      builder.set_ivnums_(object);
+      RETURN_ON_ERROR(ovnums_builder.Seal(*client, object));
+      builder.set_ovnums_(object);
+      RETURN_ON_ERROR(tvnums_builder.Seal(*client, object));
+      builder.set_tvnums_(object);
       return Status::OK();
     };
     tg.AddTask(fn, &client);
@@ -482,7 +486,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
       if (i >= vertex_label_num_ || !ovg2l_maps[i].empty()) {
         vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
             *client, std::move(ovg2l_maps[i]));
-        builder.set_ovg2l_maps_(i, ovg2l_builder.Seal(*client));
+        std::shared_ptr<Object> ovg2l_map;
+        RETURN_ON_ERROR(ovg2l_builder.Seal(*client, ovg2l_map));
+        builder.set_ovg2l_maps_(i, ovg2l_map);
       }
       return Status::OK();
     };
@@ -530,7 +536,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
 
   builder.set_vm_ptr_(vm_ptr);
 
-  return builder.Seal(client)->id();
+  std::shared_ptr<Object> object;
+  VY_OK_OR_RAISE(builder.Seal(client, object));
+  return object->id();
 }
 
 /// Add a set of new vertex labels to graph. Vertex label id started from
@@ -601,9 +609,13 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
   vineyard::ArrayBuilder<vid_t> ovnums_builder(client, ovnums);
   vineyard::ArrayBuilder<vid_t> tvnums_builder(client, tvnums);
 
-  builder.set_ivnums_(ivnums_builder.Seal(client));
-  builder.set_ovnums_(ovnums_builder.Seal(client));
-  builder.set_tvnums_(tvnums_builder.Seal(client));
+  std::shared_ptr<Object> object;
+  VY_OK_OR_RAISE(ivnums_builder.Seal(client, object));
+  builder.set_ivnums_(object);
+  VY_OK_OR_RAISE(ovnums_builder.Seal(client, object));
+  builder.set_ovnums_(object);
+  VY_OK_OR_RAISE(tvnums_builder.Seal(client, object));
+  builder.set_tvnums_(object);
 
   // Assign additional meta for new vertex labels
   std::vector<std::vector<std::shared_ptr<vineyard::FixedSizeBinaryArray>>>
@@ -627,7 +639,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
       if (directed_) {
         vineyard::FixedSizeBinaryArrayBuilder ie_builder(
             client, arrow::fixed_size_binary(sizeof(nbr_unit_t)));
-        builder.set_ie_lists_(vertex_label_id, j, ie_builder.Seal(client));
+        std::shared_ptr<Object> ie_object;
+        ARROW_OK_OR_RAISE(ie_builder.Seal(client, ie_object));
+        builder.set_ie_lists_(vertex_label_id, j, ie_object);
 
         arrow::Int64Builder int64_builder;
         // Offset vector's length is tvnum + 1
@@ -638,13 +652,16 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
 
         vineyard::NumericArrayBuilder<int64_t> ie_offset_builder(
             client, ie_offset_array);
-        builder.set_ie_offsets_lists_(vertex_label_id, j,
-                                      ie_offset_builder.Seal(client));
+        std::shared_ptr<Object> ie_offset_object;
+        ARROW_OK_OR_RAISE(ie_offset_builder.Seal(client, ie_offset_object));
+        builder.set_ie_offsets_lists_(vertex_label_id, j, ie_offset_object);
       }
 
       vineyard::FixedSizeBinaryArrayBuilder oe_builder(
           client, arrow::fixed_size_binary(sizeof(nbr_unit_t)));
-      builder.set_oe_lists_(vertex_label_id, j, oe_builder.Seal(client));
+      std::shared_ptr<Object> oe_object;
+      ARROW_OK_OR_RAISE(oe_builder.Seal(client, oe_object));
+      builder.set_oe_lists_(vertex_label_id, j, oe_object);
 
       arrow::Int64Builder int64_builder;
       // Offset vector's length is tvnum + 1
@@ -654,8 +671,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
       ARROW_OK_OR_RAISE(int64_builder.Finish(&oe_offset_array));
       vineyard::NumericArrayBuilder<int64_t> oe_offset_builder(client,
                                                                oe_offset_array);
-      builder.set_oe_offsets_lists_(vertex_label_id, j,
-                                    oe_offset_builder.Seal(client));
+      std::shared_ptr<Object> oe_offset_object;
+      ARROW_OK_OR_RAISE(oe_offset_builder.Seal(client, oe_offset_object));
+      builder.set_oe_offsets_lists_(vertex_label_id, j, oe_offset_object);
     }
   }
 
@@ -663,7 +681,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   builder.set_vm_ptr_(vm_ptr);
-  return builder.Seal(client)->id();
+  std::shared_ptr<Object> vm_object;
+  VY_OK_OR_RAISE(builder.Seal(client, vm_object));
+  return vm_object->id();
 }
 
 /// Add a set of new edge labels to graph. Edge label id started from
@@ -896,8 +916,11 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
     auto fn = [&builder, &ovnums, &tvnums](Client* client) -> Status {
       vineyard::ArrayBuilder<vid_t> ovnums_builder(*client, ovnums);
       vineyard::ArrayBuilder<vid_t> tvnums_builder(*client, tvnums);
-      builder.set_ovnums_(ovnums_builder.Seal(*client));
-      builder.set_tvnums_(tvnums_builder.Seal(*client));
+      std::shared_ptr<Object> object;
+      RETURN_ON_ERROR(ovnums_builder.Seal(*client, object));
+      builder.set_ovnums_(object);
+      RETURN_ON_ERROR(tvnums_builder.Seal(*client, object));
+      builder.set_tvnums_(object);
       return Status::OK();
     };
     tg.AddTask(fn, &client);
@@ -922,7 +945,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
       if (!ovg2l_maps[i].empty()) {
         vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
             *client, std::move(ovg2l_maps[i]));
-        builder.set_ovg2l_maps_(i, ovg2l_builder.Seal(*client));
+        std::shared_ptr<Object> ovg2l_map_object;
+        RETURN_ON_ERROR(ovg2l_builder.Seal(*client, ovg2l_map_object));
+        builder.set_ovg2l_maps_(i, ovg2l_map_object);
       }
       return Status::OK();
     };
@@ -978,7 +1003,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
 
   VLOG(100) << "Add new edges: after building into vineyard: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
-  return builder.Seal(client)->id();
+  std::shared_ptr<Object> fragment_object;
+  VY_OK_OR_RAISE(builder.Seal(client, fragment_object));
+  return fragment_object->id();
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
@@ -993,12 +1020,13 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
       vineyard::ArrayBuilder<vid_t> ivnums_builder(*client, ivnums_);
       vineyard::ArrayBuilder<vid_t> ovnums_builder(*client, ovnums_);
       vineyard::ArrayBuilder<vid_t> tvnums_builder(*client, tvnums_);
-      this->set_ivnums_(std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
-          ivnums_builder.Seal(*client)));
-      this->set_ovnums_(std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
-          ovnums_builder.Seal(*client)));
-      this->set_tvnums_(std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
-          tvnums_builder.Seal(*client)));
+      std::shared_ptr<Object> object;
+      RETURN_ON_ERROR(ivnums_builder.Seal(*client, object));
+      this->set_ivnums_(object);
+      RETURN_ON_ERROR(ovnums_builder.Seal(*client, object));
+      this->set_ovnums_(object);
+      RETURN_ON_ERROR(tvnums_builder.Seal(*client, object));
+      this->set_tvnums_(object);
       return Status::OK();
     };
 
@@ -1017,15 +1045,15 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
 
       vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(
           *client, std::move(ovgid_lists_[i]));
-      this->set_ovgid_lists_(
-          i, std::dynamic_pointer_cast<vineyard::NumericArray<vid_t>>(
-                 ovgid_list_builder.Seal(*client)));
+      std::shared_ptr<Object> ovgid_list_object;
+      RETURN_ON_ERROR(ovgid_list_builder.Seal(*client, ovgid_list_object));
+      this->set_ovgid_lists_(i, ovgid_list_object);
 
       vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
           *client, std::move(ovg2l_maps_[i]));
-      this->set_ovg2l_maps_(
-          i, std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, vid_t>>(
-                 ovg2l_builder.Seal(*client)));
+      std::shared_ptr<Object> ovg2l_map_object;
+      RETURN_ON_ERROR(ovg2l_builder.Seal(*client, ovg2l_map_object));
+      this->set_ovg2l_maps_(i, ovg2l_map_object);
       return Status::OK();
     };
     tg.AddTask(fn, &client);
@@ -1057,15 +1085,18 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
     Base::oe_offsets_lists_[i].resize(this->edge_label_num_);
     for (label_id_t j = 0; j < this->edge_label_num_; ++j) {
       auto fn = [this, i, j](Client* client) -> Status {
+        std::shared_ptr<Object> object;
         if (this->directed_) {
-          this->set_ie_lists_(i, j, ie_lists_[i][j]->Seal(*client));
-          this->set_ie_offsets_lists_(i, j,
-                                      ie_offsets_lists_[i][j]->Seal(*client));
+          RETURN_ON_ERROR(ie_lists_[i][j]->Seal(*client, object));
+          this->set_ie_lists_(i, j, object);
+          RETURN_ON_ERROR(ie_offsets_lists_[i][j]->Seal(*client, object));
+          this->set_ie_offsets_lists_(i, j, object);
         }
         {
-          this->set_oe_lists_(i, j, oe_lists_[i][j]->Seal(*client));
-          this->set_oe_offsets_lists_(i, j,
-                                      oe_offsets_lists_[i][j]->Seal(*client));
+          RETURN_ON_ERROR(oe_lists_[i][j]->Seal(*client, object));
+          this->set_oe_lists_(i, j, object);
+          RETURN_ON_ERROR(oe_offsets_lists_[i][j]->Seal(*client, object));
+          this->set_oe_offsets_lists_(i, j, object);
         }
         return Status::OK();
       };

@@ -82,6 +82,7 @@ class HDataFrame : public vineyard::Registered<HDataFrame<T>> {
   }
 
   void Construct(const ObjectMeta& meta) override {
+    Object::Construct(meta);
     this->vineyard_df_id = meta.GetKeyValue<uint64_t>("vineyard_df_id");
   }
 

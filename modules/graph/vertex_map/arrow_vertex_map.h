@@ -149,7 +149,8 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
   void set_o2g(fid_t fid, label_id_t label,
                const std::shared_ptr<vineyard::Hashmap<oid_t, vid_t>>& rm);
 
-  std::shared_ptr<vineyard::Object> _Seal(vineyard::Client& client);
+  Status _Seal(vineyard::Client& client,
+               std::shared_ptr<vineyard::Object>& object) override;
 
  private:
   fid_t fnum_;

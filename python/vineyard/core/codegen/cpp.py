@@ -98,8 +98,7 @@ construct_meth_tpl = '''
         VINEYARD_ASSERT(
             meta.GetTypeName() == __type_name,
             "Expect typename '" + __type_name + "', but got '" + meta.GetTypeName() + "'");
-        this->meta_ = meta;
-        this->id_ = meta.GetId();
+        Object::Construct(meta);
 
         {construct_body}
 
@@ -269,17 +268,14 @@ class {class_name}BaseBuilder{type_params}: public ObjectBuilder {{
         return __value->meta_;
     }}
 
-    std::shared_ptr<Object> _Seal(Client &client) override {{
+    Status _Seal(Client& client, std::shared_ptr<Object>& object) override {{
         // ensure the builder hasn't been sealed yet.
         ENSURE_NOT_SEALED(this);
 
-        VINEYARD_CHECK_OK(this->Build(client));
+        RETURN_ON_ERROR(this->Build(client));
         auto __value = std::make_shared<{class_name_elaborated}>();
+        object = __value;
 
-        return this->_Seal(client, __value);
-    }}
-
-    std::shared_ptr<Object> _Seal(Client &client, std::shared_ptr<{class_name_elaborated}> &__value) {{
         size_t __value_nbytes = 0;
 
         __value->meta_.SetTypeName(type_name<{class_name_elaborated}>());
@@ -291,13 +287,13 @@ class {class_name}BaseBuilder{type_params}: public ObjectBuilder {{
 
         __value->meta_.SetNBytes(__value_nbytes);
 
-        VINEYARD_CHECK_OK(client.CreateMetaData(__value->meta_, __value->id_));
+        RETURN_ON_ERROR(client.CreateMetaData(__value->meta_, __value->id_));
 
         // mark the builder as sealed
         this->set_sealed(true);
 
         {post_construct}
-        return std::static_pointer_cast<Object>(__value);
+        return Status::OK();
     }}
 
     Status Build(Client &client) override {{

@@ -203,12 +203,13 @@ vineyard::Status GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
       vineyard::ArrayBuilder<vid_t> ivnums_builder(*client, ivnums_);
       vineyard::ArrayBuilder<vid_t> ovnums_builder(*client, ovnums_);
       vineyard::ArrayBuilder<vid_t> tvnums_builder(*client, tvnums_);
-      this->set_ivnums_(std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
-          ivnums_builder.Seal(*client)));
-      this->set_ovnums_(std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
-          ovnums_builder.Seal(*client)));
-      this->set_tvnums_(std::dynamic_pointer_cast<vineyard::Array<vid_t>>(
-          tvnums_builder.Seal(*client)));
+      std::shared_ptr<Object> object;
+      RETURN_ON_ERROR(ivnums_builder.Seal(*client, object));
+      this->set_ivnums_(object);
+      RETURN_ON_ERROR(ovnums_builder.Seal(*client, object));
+      this->set_ovnums_(object);
+      RETURN_ON_ERROR(tvnums_builder.Seal(*client, object));
+      this->set_tvnums_(object);
       return Status::OK();
     };
 
@@ -227,15 +228,15 @@ vineyard::Status GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
 
       vineyard::NumericArrayBuilder<vid_t> ovgid_list_builder(
           *client, std::move(ovgid_lists_[i]));
-      this->set_ovgid_lists_(
-          i, std::dynamic_pointer_cast<vineyard::NumericArray<vid_t>>(
-                 ovgid_list_builder.Seal(*client)));
+      std::shared_ptr<Object> ovgid_object;
+      RETURN_ON_ERROR(ovgid_list_builder.Seal(*client, ovgid_object));
+      this->set_ovgid_lists_(i, ovgid_object);
 
       vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
           *client, std::move(ovg2l_maps_[i]));
-      this->set_ovg2l_maps_(
-          i, std::dynamic_pointer_cast<vineyard::Hashmap<vid_t, vid_t>>(
-                 ovg2l_builder.Seal(*client)));
+      std::shared_ptr<Object> ovg2l_map_object;
+      RETURN_ON_ERROR(ovg2l_builder.Seal(*client, ovg2l_map_object));
+      this->set_ovg2l_maps_(i, ovg2l_map_object);
       return Status::OK();
     };
     tg.AddTask(fn, &client);
@@ -267,17 +268,22 @@ vineyard::Status GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
     Base::oe_offsets_lists_[i].resize(this->edge_label_num_);
     for (label_id_t j = 0; j < this->edge_label_num_; ++j) {
       auto fn = [this, i, j](Client* client) -> Status {
+        std::shared_ptr<Object> object;
         if (this->directed_) {
-          this->set_ie_lists_(i, j, ie_lists_[i][j]->Seal(*client));
+          RETURN_ON_ERROR(ie_lists_[i][j]->Seal(*client, object));
+          this->set_ie_lists_(i, j, object);
           vineyard::NumericArrayBuilder<int64_t> ieo(
               *client, std::move(ie_offsets_lists_[i][j]));
-          this->set_ie_offsets_lists_(i, j, ieo.Seal(*client));
+          RETURN_ON_ERROR(ieo.Seal(*client, object));
+          this->set_ie_offsets_lists_(i, j, object);
         }
         {
-          this->set_oe_lists_(i, j, oe_lists_[i][j]->Seal(*client));
+          RETURN_ON_ERROR(oe_lists_[i][j]->Seal(*client, object));
+          this->set_oe_lists_(i, j, object);
           vineyard::NumericArrayBuilder<int64_t> oeo(
               *client, std::move(oe_offsets_lists_[i][j]));
-          this->set_oe_offsets_lists_(i, j, oeo.Seal(*client));
+          RETURN_ON_ERROR(oeo.Seal(*client, object));
+          this->set_oe_offsets_lists_(i, j, object);
         }
         return Status::OK();
       };

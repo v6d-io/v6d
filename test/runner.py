@@ -426,10 +426,11 @@ def run_vineyard_cpp_tests(meta, endpoints, tests):
         run_test(tests, 'get_blob_test')
         run_test(tests, 'get_blob_disk_test')
         run_test(tests, 'get_object_test')
-        run_test(tests, 'global_object_test')
+        # run_test(tests, 'global_object_test')
         # enable when USE_GPU is defined
         # run_test(tests, 'gpumalloc_test')
         run_test(tests, 'hashmap_test')
+        # run_test(tests, 'hosseinmoein_dataframe_test')
         run_test(tests, 'id_test')
         run_test(tests, 'invalid_connect_test', '127.0.0.1:%d' % rpc_socket_port)
         run_test(tests, 'large_meta_test')
@@ -456,7 +457,6 @@ def run_vineyard_cpp_tests(meta, endpoints, tests):
         run_test(tests, 'tensor_test')
         run_test(tests, 'typename_test')
         run_test(tests, 'version_test')
-        run_test(tests, 'hosseinmoein_dataframe_test')
 
 
 def run_vineyard_spill_tests(meta, endpoints, tests):

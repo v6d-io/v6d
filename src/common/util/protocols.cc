@@ -287,7 +287,7 @@ void WriteGetDataRequest(const std::vector<ObjectID>& ids,
 Status ReadGetDataRequest(const json& root, std::vector<ObjectID>& ids,
                           bool& sync_remote, bool& wait) {
   RETURN_ON_ASSERT(root["type"] == "get_data_request");
-  ids = root["id"].get_to(ids);
+  root["id"].get_to(ids);
   sync_remote = root.value("sync_remote", false);
   wait = root.value("wait", false);
   return Status::OK();
@@ -890,7 +890,7 @@ void WriteDelDataRequest(const std::vector<ObjectID>& ids, const bool force,
 Status ReadDelDataRequest(const json& root, std::vector<ObjectID>& ids,
                           bool& force, bool& deep, bool& fastpath) {
   RETURN_ON_ASSERT(root["type"] == "del_data_request");
-  ids = root["id"].get_to(ids);
+  root["id"].get_to(ids);
   force = root.value("force", false);
   deep = root.value("deep", false);
   fastpath = root.value("fastpath", false);
@@ -1803,7 +1803,7 @@ Status ReadDelDataWithFeedbacksRequest(json const& root,
                                        std::vector<ObjectID>& ids, bool& force,
                                        bool& deep, bool& fastpath) {
   RETURN_ON_ASSERT(root["type"] == "del_data_with_feedbacks_request");
-  ids = root["id"].get_to(ids);
+  root["id"].get_to(ids);
   force = root.value("force", false);
   deep = root.value("deep", false);
   fastpath = root.value("fastpath", false);
@@ -1822,7 +1822,7 @@ void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
 Status ReadDelDataWithFeedbacksReply(json const& root,
                                      std::vector<ObjectID>& deleted_bids) {
   CHECK_IPC_ERROR(root, "del_data_with_feedbacks_reply");
-  deleted_bids = root["deleted_bids"].get_to(deleted_bids);
+  root["deleted_bids"].get_to(deleted_bids);
   return Status::OK();
 }
 
@@ -1891,7 +1891,7 @@ void WriteIncreaseReferenceCountRequest(const std::vector<ObjectID>& ids,
 Status ReadIncreaseReferenceCountRequest(json const& root,
                                          std::vector<ObjectID>& ids) {
   RETURN_ON_ASSERT(root["type"] == "increase_reference_count_request");
-  ids = root["ids"].get_to(ids);
+  root["ids"].get_to(ids);
   return Status::OK();
 }
 
@@ -1915,7 +1915,7 @@ void WriteEvictRequest(const std::vector<ObjectID>& ids, std::string& msg) {
 
 Status ReadEvictRequest(json const& root, std::vector<ObjectID>& ids) {
   RETURN_ON_ASSERT(root["type"] == "evict_request");
-  ids = root["ids"].get_to(ids);
+  root["ids"].get_to(ids);
   return Status::OK();
 }
 
@@ -1942,7 +1942,7 @@ void WriteLoadRequest(const std::vector<ObjectID>& ids, const bool pin,
 Status ReadLoadRequest(json const& root, std::vector<ObjectID>& ids,
                        bool& pin) {
   RETURN_ON_ASSERT(root["type"] == "load_request");
-  ids = root["ids"].get_to(ids);
+  root["ids"].get_to(ids);
   pin = root.value("pin", false);
   return Status::OK();
 }
@@ -1967,7 +1967,7 @@ void WriteUnpinRequest(const std::vector<ObjectID>& ids, std::string& msg) {
 
 Status ReadUnpinRequest(json const& root, std::vector<ObjectID>& ids) {
   RETURN_ON_ASSERT(root["type"] == "unpin_request");
-  ids = root["ids"].get_to(ids);
+  root["ids"].get_to(ids);
   return Status::OK();
 }
 

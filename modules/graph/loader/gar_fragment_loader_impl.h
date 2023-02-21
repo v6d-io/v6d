@@ -161,11 +161,11 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::ConstructFragment() {
                         std::move(vertex_tables_), std::move(csr_edge_tables_),
                         std::move(csc_edge_tables_), directed_, thread_num));
 
-  auto frag =
-      std::dynamic_pointer_cast<ArrowFragment<oid_t, vid_t, vertex_map_t>>(
-          frag_builder.Seal(client_));
+  std::shared_ptr<Object> fragment_object;
+  VY_OK_OR_RAISE(frag_builder.Seal(client_, fragment_object));
+  auto frag = std::dynamic_pointer_cast<fragment_t>(fragment_object);
 
-  VINEYARD_CHECK_OK(client_.Persist(frag->id()));
+  VY_OK_OR_RAISE(client_.Persist(frag->id()));
   return frag->id();
 }
 
@@ -249,13 +249,11 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::constructVertexMap() {
     VY_OK_OR_RAISE(status);
   }
 
-  ObjectID vm_id = InvalidObjectID();
   BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
       client_, comm_spec_.fnum(), vertex_label_num_, std::move(oid_lists));
-  auto vm = vm_builder.Seal(client_);
-  vm_id = vm->id();
-  vm_ptr_ = std::dynamic_pointer_cast<ArrowVertexMap<internal_oid_t, vid_t>>(
-      client_.GetObject(vm_id));
+  std::shared_ptr<Object> vm_object;
+  VY_OK_OR_RAISE(vm_builder.Seal(client_, vm_object));
+  vm_ptr_ = std::dynamic_pointer_cast<vertex_map_t>(vm_object);
   VLOG(100) << "Constructing after constructing vertex map: "
             << get_rss_pretty() << ", peak = " << get_peak_rss_pretty();
   return {};

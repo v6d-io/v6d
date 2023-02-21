@@ -399,7 +399,14 @@ void bind_core(py::module& mod) {
   py::class_<ObjectBuilder, std::shared_ptr<ObjectBuilder>>(mod,
                                                             "ObjectBuilder")
       // NB: don't expose the "Build" method to python.
-      .def("seal", &ObjectBuilder::Seal, "client"_a)
+      .def(
+          "seal",
+          [](ObjectBuilder* self, Client* client) {
+            std::shared_ptr<Object> object;
+            throw_on_error(self->Seal(*client, object));
+            return object;
+          },
+          "client"_a)
       .def_property_readonly("issealed", &ObjectBuilder::sealed);
 }
 
