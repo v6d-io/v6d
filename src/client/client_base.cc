@@ -366,6 +366,28 @@ Status ClientBase::Clear() {
   return Status::OK();
 }
 
+Status ClientBase::Label(const ObjectID object, std::string const& key,
+                         std::string const& value) {
+  std::string message_out;
+  WriteLabelRequest(object, key, value, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadLabelReply(message_in));
+  return Status::OK();
+}
+
+Status ClientBase::Label(const ObjectID object,
+                         std::map<std::string, std::string> const& labels) {
+  std::string message_out;
+  WriteLabelRequest(object, labels, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadLabelReply(message_in));
+  return Status::OK();
+}
+
 Status ClientBase::Evict(std::vector<ObjectID> const& objects) {
   std::string message_out;
   WriteEvictRequest(objects, message_out);

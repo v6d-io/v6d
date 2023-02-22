@@ -735,6 +735,10 @@ class ObjectMeta {
    */
   uint64_t Timestamp() const;
 
+  json Labels() const;
+
+  const std::string Label(const std::string& key) const;
+
   std::string ToString() const;
 
   void PrintMeta() const;

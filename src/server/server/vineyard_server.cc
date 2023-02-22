@@ -221,8 +221,9 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
                                std::function<bool()> alive,
                                callback_t<const json&> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
   meta_service_ptr_->RequestToGetData(
-      sync_remote, [this, ids, wait, alive, callback](const Status& status,
+      sync_remote, [self, ids, wait, alive, callback](const Status& status,
                                                       const json& meta) {
         if (status.ok()) {
       // When object not exists, we return an empty json, rather than
@@ -240,11 +241,11 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
             DVLOG(100) << "=========================================";
           }
 #endif
-          auto test_task = [this, ids](const json& meta) -> bool {
+          auto test_task = [self, ids](const json& meta) -> bool {
             for (auto const& id : ids) {
               bool exists = false;
               if (IsBlob(id)) {
-                exists = this->bulk_store_->Exists(id);
+                exists = self->bulk_store_->Exists(id);
               } else {
                 Status status;
                 CATCH_JSON_ERROR(status, meta_tree::Exists(meta, id, exists));
@@ -256,20 +257,20 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
             }
             return true;
           };
-          auto eval_task = [this, ids, callback](const json& meta) -> Status {
+          auto eval_task = [self, ids, callback](const json& meta) -> Status {
             json sub_tree_group;
             for (auto const& id : ids) {
               json sub_tree;
               if (IsBlob(id)) {
                 std::shared_ptr<Payload> object;
-                auto status = this->bulk_store_->Get(id, object);
+                auto status = self->bulk_store_->Get(id, object);
                 if (status.ok()) {
                   sub_tree["id"] = ObjectIDToString(id);
                   sub_tree["typename"] = "vineyard::Blob";
                   sub_tree["length"] = object->data_size;
                   sub_tree["nbytes"] = object->data_size;
                   sub_tree["transient"] = true;
-                  sub_tree["instance_id"] = this->instance_id();
+                  sub_tree["instance_id"] = self->instance_id();
                 } else {
                   VLOG(10) << "Failed to find payload for blob: "
                            << ObjectIDToString(id)
@@ -278,8 +279,8 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
               } else {
                 Status s;
                 CATCH_JSON_ERROR(
-                    s, meta_tree::GetData(meta, this->instance_name(), id,
-                                          sub_tree, instance_id_));
+                    s, meta_tree::GetData(meta, self->instance_name(), id,
+                                          sub_tree, self->instance_id_));
                 if (s.IsMetaTreeInvalid()) {
                   LOG(WARNING) << "Found errors in metadata: " << s;
                 }
@@ -300,7 +301,7 @@ Status VineyardServer::GetData(const std::vector<ObjectID>& ids,
           if (!wait || test_task(meta)) {
             return eval_task(meta);
           } else {
-            this->deferred_.emplace_back(alive, test_task, eval_task);
+            self->deferred_.emplace_back(alive, test_task, eval_task);
             return Status::OK();
           }
         } else {
@@ -315,15 +316,16 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
                                 size_t const limit,
                                 callback_t<const json&> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
   meta_service_ptr_->RequestToGetData(
       false,  // no need for sync from etcd
-      [this, pattern, regex, limit, callback](const Status& status,
+      [self, pattern, regex, limit, callback](const Status& status,
                                               const json& meta) {
         if (status.ok()) {
           json sub_tree_group;
           Status s;
           CATCH_JSON_ERROR(
-              s, meta_tree::ListData(meta, this->instance_name(), pattern,
+              s, meta_tree::ListData(meta, self->instance_name(), pattern,
                                      regex, limit, sub_tree_group));
           if (!s.ok()) {
             return callback(s, sub_tree_group);
@@ -332,7 +334,7 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
           if (current < limit &&
               meta_tree::MatchTypeName(false, pattern, "vineyard::Blob")) {
             // consider returns blob when not reach the limit
-            auto& blobs = bulk_store_->List();
+            auto& blobs = self->bulk_store_->List();
             {
               auto locked = blobs.lock_table();
               for (auto const& item : locked) {
@@ -357,7 +359,7 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
                   sub_tree["length"] = item.second->data_size;
                   sub_tree["nbytes"] = item.second->data_size;
                   sub_tree["transient"] = true;
-                  sub_tree["instance_id"] = this->instance_id();
+                  sub_tree["instance_id"] = self->instance_id();
                 }
                 sub_tree_group[sub_tree_key] = sub_tree;
                 current += 1;
@@ -376,9 +378,10 @@ Status VineyardServer::ListData(std::string const& pattern, bool const regex,
 Status VineyardServer::ListAllData(
     callback_t<std::vector<ObjectID> const&> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
   meta_service_ptr_->RequestToGetData(
       false,  // no need for sync from etcd
-      [this, callback](const Status& status, const json& meta) {
+      [self, callback](const Status& status, const json& meta) {
         if (status.ok()) {
           std::vector<ObjectID> objects;
           Status s;
@@ -386,7 +389,7 @@ Status VineyardServer::ListAllData(
           if (!s.ok()) {
             return callback(s, objects);
           }
-          auto& blobs = bulk_store_->List();
+          auto& blobs = self->bulk_store_->List();
           {
             auto locked = blobs.lock_table();
             for (auto const& item : locked) {
@@ -406,6 +409,7 @@ Status VineyardServer::ListName(
     std::string const& pattern, bool const regex, size_t const limit,
     callback_t<const std::map<std::string, ObjectID>&> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
   meta_service_ptr_->RequestToGetData(
       true, [pattern, regex, limit, callback](const Status& status,
                                               const json& meta) {
@@ -497,10 +501,10 @@ Status VineyardServer::CreateData(
     const json& tree, bool recursive,
     callback_t<const ObjectID, const Signature, const InstanceID> callback) {
   ENSURE_VINEYARDD_READY();
-
+  auto self(shared_from_this());
   // update meta into json
   meta_service_ptr_->RequestToBulkUpdate(
-      [this, tree, recursive](const Status& status, const json& meta,
+      [self, tree, recursive](const Status& status, const json& meta,
                               std::vector<meta_tree::op_t>& ops, ObjectID& id,
                               Signature& signature,
                               InstanceID& computed_instance_id) {
@@ -512,12 +516,13 @@ Status VineyardServer::CreateData(
           // expand trees: for putting many metadatas in a single call
           if (recursive) {
             RETURN_ON_ERROR(detail::put_members_recursively(
-                meta_service_ptr_, meta, decorated_tree, instance_name_));
+                self->meta_service_ptr_, meta, decorated_tree,
+                self->instance_name_));
           }
 
           Status s;
           id = GenerateObjectID();
-          CATCH_JSON_ERROR(s, meta_tree::PutDataOps(meta, this->instance_name(),
+          CATCH_JSON_ERROR(s, meta_tree::PutDataOps(meta, self->instance_name(),
                                                     id, decorated_tree, ops,
                                                     computed_instance_id));
           return s;
@@ -532,23 +537,24 @@ Status VineyardServer::CreateData(
 
 Status VineyardServer::Persist(const ObjectID id, callback_t<> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
   RETURN_ON_ASSERT(!IsBlob(id), "The blobs cannot be persisted");
   meta_service_ptr_->RequestToPersist(
-      [this, id](const Status& status, const json& meta,
+      [self, id](const Status& status, const json& meta,
                  std::vector<meta_tree::op_t>& ops) {
         if (status.ok()) {
           Status s;
           CATCH_JSON_ERROR(
-              s, meta_tree::PersistOps(meta, this->instance_name(), id, ops));
+              s, meta_tree::PersistOps(meta, self->instance_name(), id, ops));
           if (status.ok() && !ops.empty() &&
-              this->spec_["sync_crds"].get<bool>()) {
+              self->spec_["sync_crds"].get<bool>()) {
             json tree;
             Status s;
             CATCH_JSON_ERROR(
-                s, meta_tree::GetData(meta, this->instance_name(), id, tree));
+                s, meta_tree::GetData(meta, self->instance_name(), id, tree));
             VINEYARD_SUPPRESS(s);
             if (tree.is_object() && !tree.empty()) {
-              auto kube = std::make_shared<Kubectl>(this->GetMetaContext());
+              auto kube = std::make_shared<Kubectl>(self->GetMetaContext());
               kube->ApplyObject(meta["instances"], tree);
               kube->Finish();
             }
@@ -566,6 +572,7 @@ Status VineyardServer::Persist(const ObjectID id, callback_t<> callback) {
 Status VineyardServer::IfPersist(const ObjectID id,
                                  callback_t<const bool> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
   // How to decide if an object (an id) is persist:
   //
   // 1. every object has a `persist` field in meta
@@ -604,6 +611,7 @@ Status VineyardServer::Exists(const ObjectID id,
     });
     return Status::OK();
   }
+  auto self(shared_from_this());
   meta_service_ptr_->RequestToGetData(
       true, [id, callback](const Status& status, const json& meta) {
         if (status.ok()) {
@@ -623,6 +631,7 @@ Status VineyardServer::ShallowCopy(const ObjectID id,
                                    const json& extra_metadata,
                                    callback_t<const ObjectID> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
   RETURN_ON_ASSERT(!IsBlob(id), "The blobs cannot be shallow copied");
   ObjectID target_id = GenerateObjectID();
   meta_service_ptr_->RequestToShallowCopy(
@@ -661,6 +670,7 @@ Status VineyardServer::DelData(
     const std::vector<ObjectID>& ids, const bool force, const bool deep,
     const bool fastpath, callback_t<std::vector<ObjectID> const&> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
   if (fastpath) {
     // forcely delete the given blobs: used for allocators
     for (auto const id : ids) {
@@ -711,19 +721,20 @@ Status VineyardServer::DeleteAllAt(const json& meta,
   CATCH_JSON_ERROR(status, meta_tree::FilterAtInstance(meta, instance_id,
                                                        objects_to_cleanup));
   RETURN_ON_ERROR(status);
-  return this->DelData(objects_to_cleanup, true, true, false /* fastpath */,
-                       [](Status const& status) -> Status {
-                         if (!status.ok()) {
-                           VLOG(100) << "Error: failed during cleanup: "
-                                     << status.ToString();
-                         }
-                         return Status::OK();
-                       });
+  return DelData(objects_to_cleanup, true, true, false /* fastpath */,
+                 [](Status const& status) -> Status {
+                   if (!status.ok()) {
+                     VLOG(100) << "Error: failed during cleanup: "
+                               << status.ToString();
+                   }
+                   return Status::OK();
+                 });
 }
 
 Status VineyardServer::PutName(const ObjectID object_id,
                                const std::string& name, callback_t<> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
   meta_service_ptr_->RequestToPersist(
       [object_id, name](const Status& status, const json& meta,
                         std::vector<meta_tree::op_t>& ops) {
@@ -778,7 +789,8 @@ Status VineyardServer::GetName(const std::string& name, const bool wait,
                                DeferredReq::alive_t alive,
                                callback_t<const ObjectID&> callback) {
   ENSURE_VINEYARDD_READY();
-  meta_service_ptr_->RequestToGetData(true, [this, name, wait, alive, callback](
+  auto self(shared_from_this());
+  meta_service_ptr_->RequestToGetData(true, [self, name, wait, alive, callback](
                                                 const Status& status,
                                                 const json& meta) {
     if (status.ok()) {
@@ -803,7 +815,7 @@ Status VineyardServer::GetName(const std::string& name, const bool wait,
       if (!wait || test_task(meta)) {
         return eval_task(meta);
       } else {
-        deferred_.emplace_back(alive, test_task, eval_task);
+        self->deferred_.emplace_back(alive, test_task, eval_task);
         return Status::OK();
       }
     } else {
@@ -817,6 +829,7 @@ Status VineyardServer::GetName(const std::string& name, const bool wait,
 Status VineyardServer::DropName(const std::string& name,
                                 callback_t<> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
   meta_service_ptr_->RequestToPersist(
       [name](const Status& status, const json& meta,
              std::vector<meta_tree::op_t>& ops) {
@@ -925,6 +938,74 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
   return Status::OK();
 }
 
+Status VineyardServer::LabelObjects(const ObjectID object_id,
+                                    const std::vector<std::string>& keys,
+                                    const std::vector<std::string>& values,
+                                    callback_t<> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+  return GetData(
+      std::vector<ObjectID>{object_id}, false, false,
+      [self]() -> bool {
+        return self->ready_ == kReady && (!self->stopped_.load());
+      },
+      [self, callback, object_id, keys, values](const Status& status,
+                                                const json& tree) {
+        if (!status.ok()) {
+          return callback(status);
+        }
+        if (!tree.contains(ObjectIDToString(object_id))) {
+          return callback(Status::ObjectNotExists(
+              "object " + ObjectIDToString(object_id) + " doesn't exist"));
+        }
+        auto const& metadata = tree[ObjectIDToString(object_id)];
+        bool is_transient = metadata.value("transient", true);
+        const std::string labels = metadata.value("__labels", "{}");
+        json labels_object;
+        Status s;
+        CATCH_JSON_ERROR(labels_object, s, json::parse(labels));
+        if (!s.ok()) {
+          return callback(s);
+        }
+        for (size_t i = 0; i < keys.size(); ++i) {
+          labels_object[keys[i]] = values[i];
+        }
+        std::string label_string = meta_tree::EncodeValue(labels_object.dump());
+        if (is_transient) {
+          self->meta_service_ptr_->RequestToBulkUpdate(
+              [callback, object_id, label_string](
+                  const Status& status, const json&,
+                  std::vector<meta_tree::op_t>& ops, ObjectID&, Signature&,
+                  InstanceID&) {
+                if (!status.ok()) {
+                  return callback(status);
+                }
+                ops.emplace_back(meta_tree::op_t::Put(
+                    "/data/" + ObjectIDToString(object_id) + "/__labels",
+                    label_string));
+                return Status::OK();
+              },
+              [callback](const Status& status, const ObjectID, const Signature,
+                         const InstanceID) { return callback(status); });
+        } else {
+          self->meta_service_ptr_->RequestToPersist(
+              [callback, object_id, label_string](
+                  const Status& status, const json&,
+                  std::vector<meta_tree::op_t>& ops) {
+                if (!status.ok()) {
+                  return callback(status);
+                }
+                ops.emplace_back(meta_tree::op_t::Put(
+                    "/data/" + ObjectIDToString(object_id) + "/__labels",
+                    label_string));
+                return Status::OK();
+              },
+              [callback](const Status& status) { return callback(status); });
+        }
+        return Status::OK();
+      });
+}
+
 namespace detail {
 static void traverse_local_blobs(const json& tree, const InstanceID instance,
                                  std::set<ObjectID>& objects) {
@@ -1028,6 +1109,7 @@ Status VineyardServer::UnpinObjects(const std::vector<ObjectID>& ids,
 
 Status VineyardServer::ClusterInfo(callback_t<const json&> callback) {
   ENSURE_VINEYARDD_READY();
+  auto self = shared_from_this();
   meta_service_ptr_->RequestToGetData(
       true, [callback](const Status& status, const json& meta) {
         if (status.ok()) {

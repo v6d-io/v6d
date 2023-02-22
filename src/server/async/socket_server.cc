@@ -357,6 +357,9 @@ bool SocketConnection::processMessage(const std::string& message_in) {
   case CommandType::GetGPUBuffersRequest: {
     return doGetGPUBuffers(root);
   }
+  case CommandType::LabelRequest: {
+    return doLabelObject(root);
+  }
   case CommandType::EvictRequest: {
     return doEvictObjects(root);
   }
@@ -1224,6 +1227,29 @@ bool SocketConnection::doDeleteSession(const json& root) {
   socket_server_ptr_->Close();
   this->doWrite(message_out);
   return true;
+}
+
+bool SocketConnection::doLabelObject(const json& root) {
+  auto self(shared_from_this());
+  ObjectID object_id = InvalidObjectID();
+  std::vector<std::string> keys;
+  std::vector<std::string> values;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadLabelRequest, root, object_id, keys, values);
+  RESPONSE_ON_ERROR(server_ptr_->LabelObjects(
+      object_id, keys, values, [self](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteLabelReply(message_out);
+        } else {
+          VLOG(100) << "Error: " << status;
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
 }
 
 bool SocketConnection::doEvictObjects(const json& root) {

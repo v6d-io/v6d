@@ -147,6 +147,8 @@ CommandType ParseCommandType(const std::string& str_type) {
     return CommandType::CreateGPUBufferRequest;
   } else if (str_type == "get_gpu_buffers_request") {
     return CommandType::GetGPUBuffersRequest;
+  } else if (str_type == "label_request") {
+    return CommandType::LabelRequest;
   } else if (str_type == "evict_request") {
     return CommandType::EvictRequest;
   } else if (str_type == "load_request") {
@@ -1903,6 +1905,64 @@ void WriteIncreaseReferenceCountReply(std::string& msg) {
 
 Status ReadIncreaseReferenceCountReply(json const& root) {
   CHECK_IPC_ERROR(root, "increase_reference_count_reply");
+  return Status::OK();
+}
+
+void WriteLabelRequest(const ObjectID id, const std::string& key,
+                       const std::string& value, std::string& msg) {
+  json root;
+  root["type"] = "label_request";
+  root["id"] = id;
+  root["keys"] = std::vector<std::string>{key};
+  root["values"] = std::vector<std::string>{value};
+  encode_msg(root, msg);
+}
+
+void WriteLabelRequest(const ObjectID id, const std::vector<std::string>& keys,
+                       const std::vector<std::string>& values,
+                       std::string& msg) {
+  json root;
+  root["type"] = "label_request";
+  root["id"] = id;
+  root["keys"] = keys;
+  root["values"] = values;
+  encode_msg(root, msg);
+}
+
+void WriteLabelRequest(const ObjectID id,
+                       const std::map<std::string, std::string>& kvs,
+                       std::string& msg) {
+  json root;
+  std::vector<std::string> keys, values;
+  for (auto const& item : kvs) {
+    keys.push_back(item.first);
+    values.push_back(item.second);
+  }
+  root["type"] = "label_request";
+  root["id"] = id;
+  root["keys"] = keys;
+  root["values"] = values;
+  encode_msg(root, msg);
+}
+
+Status ReadLabelRequest(json const& root, ObjectID& id,
+                        std::vector<std::string>& keys,
+                        std::vector<std::string>& values) {
+  RETURN_ON_ASSERT(root["type"] == "label_request");
+  id = root["id"].get<ObjectID>();
+  root["keys"].get_to(keys);
+  root["values"].get_to(values);
+  return Status::OK();
+}
+
+void WriteLabelReply(std::string& msg) {
+  json root;
+  root["type"] = "label_reply";
+  encode_msg(root, msg);
+}
+
+Status ReadLabelReply(json const& root) {
+  CHECK_IPC_ERROR(root, "label_reply");
   return Status::OK();
 }
 
