@@ -41,7 +41,7 @@ class LocalLock : public ILock {
 
 /**
  * @brief LocalMetaService provides meta services in regards to local, e.g.
- * requesting and committing udpates
+ * requesting and committing updates
  *
  */
 class LocalMetaService : public IMetaService {

@@ -81,7 +81,7 @@ def _resolve_vineyard_xcom_options():
             raise RuntimeError(
                 "Failed to find vineyard IPC socket configuration, "
                 "please configure it using the environment variable "
-                "$VINEYARD_IPC_SOCKET, or via airfow's vineyard.ipc_socket"
+                "$VINEYARD_IPC_SOCKET, or via airflow's vineyard.ipc_socket"
                 "configuration."
             )
     return options
@@ -92,7 +92,7 @@ class VineyardXCom(BaseXCom):
     Custom Backend Serving to use Vineyard.
 
     Setup your airflow environment by specifying the following
-    the environment varable:
+    the environment variable:
 
         export AIRFLOW__CORE__XCOM_BACKEND=vineyard.contrib.airflow.xcom.VineyardXCom
     """

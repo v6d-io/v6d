@@ -93,8 +93,7 @@ DEFINE_bool(metrics, false,
 DEFINE_bool(coredump, false, "Enable core dump when been aborted");
 
 // auth
-DEFINE_string(htpasswd, "",
-              "Localtion of htpasswd database for authentication");
+DEFINE_string(htpasswd, "", "Location of htpasswd database for authentication");
 
 const Resolver& Resolver::get(std::string name) {
   static auto server_resolver = ServerSpecResolver();

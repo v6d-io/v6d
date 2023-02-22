@@ -40,14 +40,14 @@ def pytest_addoption(parser):
         "--vineyard-ipc-sockets",
         action="store",
         default='/tmp/vineyard.sock',
-        help='Location of vineyard IPC sockets, seperated by ","',
+        help='Location of vineyard IPC sockets, separated by ","',
     )
 
     parser.addoption(
         "--vineyard-endpoints",
         action="store",
         default='127.0.0.1:9600',
-        help='Address of vineyard RPC endpoints, seperated by ","',
+        help='Address of vineyard RPC endpoints, separated by ","',
     )
 
 

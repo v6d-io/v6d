@@ -98,20 +98,20 @@ class TablePipeline : public ITablePipeline {
 class ConcatTablePipeline : public ITablePipeline {
  public:
   explicit ConcatTablePipeline(
-      std::vector<std::shared_ptr<ITablePipeline>> froms,
+      std::vector<std::shared_ptr<ITablePipeline>> sources,
       const std::shared_ptr<arrow::Schema> schema = nullptr) {
     if (schema == nullptr) {
-      schema_ = froms[0]->schema();
+      schema_ = sources[0]->schema();
     } else {
       schema_ = schema;
     }
     length_ = 0;
     num_batches_ = 0;
-    for (auto const& pipe : froms) {
+    for (auto const& pipe : sources) {
       if (pipe == nullptr) {
         continue;
       }
-      froms_.push_back(pipe);
+      sources_.push_back(pipe);
       length_ += pipe->length();
       num_batches_ += pipe->num_batches();
     }
@@ -133,11 +133,11 @@ class ConcatTablePipeline : public ITablePipeline {
     std::pair<int, std::shared_ptr<ITablePipeline>>& current =
         currentloc->second;
     if (current.second == nullptr) {
-      if (current.first >= static_cast<int>(froms_.size()) - 1) {
+      if (current.first >= static_cast<int>(sources_.size()) - 1) {
         return Status::StreamDrained();
       }
       current.first += 1;
-      current.second = froms_[current.first];
+      current.second = sources_[current.first];
     }
     auto status = current.second->Next(batch);
     if (status.ok()) {
@@ -150,7 +150,7 @@ class ConcatTablePipeline : public ITablePipeline {
   }
 
  private:
-  std::vector<std::shared_ptr<ITablePipeline>> froms_;
+  std::vector<std::shared_ptr<ITablePipeline>> sources_;
   // poor man's thread local
   std::mutex current_mutex_;
   using thread_local_item_t =

@@ -63,7 +63,7 @@ class StreamStore {
   Status Open(ObjectID const stream_id, int64_t const mode);
 
   /**
-   * @brief This is called by the producer of the steram and it makes current
+   * @brief This is called by the producer of the stream and it makes current
    * chunk available for the consumer to read
    *
    * @return the next chunk to write

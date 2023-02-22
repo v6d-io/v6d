@@ -46,7 +46,7 @@ class Process : public std::enable_shared_from_this<Process> {
 
   void AsyncRead(boost::process::async_pipe& pipe, asio::streambuf& buffer,
                  callback_t<const std::string&> callback, bool once = true,
-                 bool processed = false, const char delimeter = '\n');
+                 bool processed = false, const char delimiter = '\n');
 
   void Finish();
 

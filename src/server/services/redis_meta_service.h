@@ -14,10 +14,10 @@ limitations under the License.
  * @brief Vineyard implements the metadata service using redis as the backend
  * now. Actually redis_meta_service takes etcd_meta_service as a reference.
  * But due to the differences of commands between redis and etcd and
- * the limits of the redis client API, threre are still some differences of
+ * the limits of the redis client API, there are still some differences of
  * implementing the metadata service. For example, we used a hash list to save
  * all changes of key-value(put or delete) from every vineyard server rather
- * than getting changes directly through etcd watch. In redis_meta_sevrice, we
+ * than getting changes directly through etcd watch. In redis_meta_service, we
  * used a key redis_revision to record every change after every commitUpdate by
  * increasing redis_revision. To further introduce the implementation of redis
  * metadata service, let's explain some important keys meaning first. They play
@@ -61,7 +61,7 @@ limitations under the License.
  * lock, which prevents the changes disappearing when other server tried to
  * commit it's changes. The reason why we used a lot of callbacks in
  * commitUpdates function is that redis client API now doesn't support txn for
- * async_clinet and we must ensure operations are already in hashlist when ops
+ * async_client and we must ensure operations are already in hashlist when ops
  * appear in opslist. So PUBLISH can notice other servers after all changes are
  * ready in redis.
  *
@@ -170,7 +170,7 @@ class RedisLock : public ILock {
 
 /**
  * @brief RedisMetaService provides meta services in regards to redis, e.g.
- * requesting and committing udpates
+ * requesting and committing updates
  */
 class RedisMetaService : public IMetaService {
  public:

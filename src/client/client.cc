@@ -461,7 +461,7 @@ std::vector<ObjectMeta> Client::ListObjectMeta(std::string const& pattern,
     return metas;
   }
 
-  // retrive blobs
+  // retrieve blobs
   std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
   VINEYARD_CHECK_OK(GetBuffers(blob_ids, buffers));
 
@@ -647,7 +647,7 @@ Status Client::CreateGPUBuffer(const size_t size, ObjectID& id,
 }
 
 Status Client::GetGPUBuffers(const std::set<ObjectID>& ids, const bool unsafe,
-                             std::map<ObjectID, GPUUnifiedAddress>& guas) {
+                             std::map<ObjectID, GPUUnifiedAddress>& GUAs) {
   if (ids.empty()) {
     return Status::OK();
   }
@@ -663,7 +663,7 @@ Status Client::GetGPUBuffers(const std::set<ObjectID>& ids, const bool unsafe,
   std::vector<GPUUnifiedAddress> gua_vec;
   RETURN_ON_ERROR(ReadGetGPUBuffersReply(message_in, payloads, gua_vec));
   for (size_t i = 0; i < payloads.size(); i++) {
-    guas.emplace(payloads[i].object_id, gua_vec[i]);
+    GUAs.emplace(payloads[i].object_id, gua_vec[i]);
   }
 
   return Status::OK();
@@ -1358,7 +1358,7 @@ Status SharedMemoryManager::Mmap(int fd, int64_t map_size, uint8_t* pointer,
     int client_fd = recv_fd(vineyard_conn_);
     if (fd <= 0) {
       return Status::IOError(
-          "Failed to receieve file descriptor from the socket");
+          "Failed to receive file descriptor from the socket");
     }
     auto mmap_entry = std::unique_ptr<MmapEntry>(
         new MmapEntry(client_fd, map_size, pointer, readonly, realign));
@@ -1459,7 +1459,7 @@ ObjectID SharedMemoryManager::resolveObjectID(const uintptr_t target,
                                               const uintptr_t key,
                                               const uintptr_t data_size,
                                               const ObjectID object_id) {
-  // With a more strict constraint: the target pointer must be starts froms the
+  // With a more strict constraint: the target pointer must be starts from the
   // given blob (key), as blob slicing is not supported yet.
   //
   // if (key <= target && target < key + data_size) {

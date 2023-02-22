@@ -282,7 +282,7 @@ int main(int argc, char** argv) {
   }
 
   // delete on complex data: and empty blob is quite special, since it cannot
-  // been truely deleted.
+  // been truly deleted.
   std::shared_ptr<InstanceStatus> status_before;
   VINEYARD_CHECK_OK(client.InstanceStatus(status_before));
 

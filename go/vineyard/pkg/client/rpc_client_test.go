@@ -22,10 +22,10 @@ func TestRPCServer_Connect(t *testing.T) {
 	var rpcServer RPCClient
 	err := rpcServer.Connect(ipcAddr)
 	if err != nil {
-		t.Error("conect to rpc server failed", err.Error())
+		t.Error("connect to rpc server failed", err.Error())
 	}
 	err = rpcServer.Disconnect()
 	if err != nil {
-		t.Error("discconect rpc server failed", err.Error())
+		t.Error("disconnect rpc server failed", err.Error())
 	}
 }

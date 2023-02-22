@@ -204,10 +204,10 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
     if (this->data_buffer_ != nullptr) {
       this->set_data_buffer_(
           reinterpret_cast<uintptr_t>(this->data_buffer_->data()));
-      this->set_data_buffer_mmaped_(this->data_buffer_);
+      this->set_data_buffer_mapped_(this->data_buffer_);
     } else {
       this->set_data_buffer_(reinterpret_cast<uintptr_t>(nullptr));
-      this->set_data_buffer_mmaped_(Blob::MakeEmpty(client));
+      this->set_data_buffer_mapped_(Blob::MakeEmpty(client));
     }
     return Status::OK();
   }

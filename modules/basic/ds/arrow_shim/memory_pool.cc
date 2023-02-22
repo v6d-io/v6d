@@ -99,7 +99,7 @@ arrow::Status VineyardMemoryPool::Reallocate(int64_t old_size, int64_t new_size,
     bytes_allocated_.fetch_add(new_size);
     buffers_.emplace(reinterpret_cast<uintptr_t>(*ptr), std::move(nsbuffer));
   }
-  // remove the orignal buffer
+  // remove the original buffer
   VINEYARD_CHECK_OK(sbuffer->Abort(client_));
   return arrow::Status::OK();
 }

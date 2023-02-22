@@ -176,7 +176,7 @@ void Kubectl::ApplyObject(const json& meta, const json& object) {
 void Kubectl::Finish() {
   proc_->Finish();
   for (auto const& line : Diagnostic()) {
-    VLOG(10) << "kubectl appy: " << line;
+    VLOG(10) << "kubectl apply: " << line;
   }
   proc_->Wait();
   VLOG(10) << "kubectl exit with: " << proc_->ExitCode();

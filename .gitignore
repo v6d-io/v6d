@@ -20,6 +20,10 @@ cmake-build-debug
 *.a
 *.pyc
 *.bin
+*.whl
+
+# coredump
+core.*.*
 
 # generated files
 *.vineyard.h

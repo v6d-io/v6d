@@ -241,7 +241,7 @@ class ClientBase {
 
   /**
    * @brief Push a chunk from a stream. When there's no more chunk available in
-   * the stream, i.e., the stream has been stoped, a status code
+   * the stream, i.e., the stream has been stopped, a status code
    * `kStreamDrained` or `kStreamFinish` will be returned, otherwise the reader
    * will be blocked until writer creates a new chunk in the stream.
    *
@@ -254,7 +254,7 @@ class ClientBase {
 
   /**
    * @brief Pull a chunk from a stream. When there's no more chunk available in
-   * the stream, i.e., the stream has been stoped, a status code
+   * the stream, i.e., the stream has been stopped, a status code
    * `kStreamDrained` or `kStreamFinish` will be returned, otherwise the reader
    * will be blocked until writer creates a new chunk in the stream.
    *
@@ -267,7 +267,7 @@ class ClientBase {
 
   /**
    * @brief Pull a chunk from a stream. When there's no more chunk available in
-   * the stream, i.e., the stream has been stoped, a status code
+   * the stream, i.e., the stream has been stopped, a status code
    * `kStreamDrained` or `kStreamFinish` will be returned, otherwise the reader
    * will be blocked until writer creates a new chunk in the stream.
    *
@@ -280,7 +280,7 @@ class ClientBase {
 
   /**
    * @brief Pull a chunk from a stream. When there's no more chunk available in
-   * the stream, i.e., the stream has been stoped, a status code
+   * the stream, i.e., the stream has been stopped, a status code
    * `kStreamDrained` or `kStreamFinish` will be returned, otherwise the reader
    * will be blocked until writer creates a new chunk in the stream.
    *
@@ -295,7 +295,7 @@ class ClientBase {
    * @brief Stop a stream, mark it as finished or aborted.
    *
    * @param id The id of the stream.
-   * @param failed Whether the stream is stoped at a successful state. True
+   * @param failed Whether the stream is stopped at a successful state. True
    * means the stream has been exited normally, otherwise false.
    *
    * @return Status that indicates whether the request has succeeded.
@@ -386,7 +386,7 @@ class ClientBase {
   Status PutName(const ObjectID id, std::string const& name);
 
   /**
-   * @brief Retrieve the object ID by assoicated name.
+   * @brief Retrieve the object ID by associated name.
    *
    * @param name The name of the requested object.
    * @param id The returned object ID.
@@ -399,7 +399,7 @@ class ClientBase {
                  const bool wait = false);
 
   /**
-   * @brief Deregister a name entry. The assoicated object will be kept and
+   * @brief Deregister a name entry. The associated object will be kept and
    * won't be deleted.
    *
    * @param name The name that will be deregistered.
@@ -546,7 +546,7 @@ class ClientBase {
   /**
    * @brief Return the status of connected vineyard instance.
    *
-   * If success, the `status` parameter will be reseted as an instance of
+   * If success, the `status` parameter will be reset as an instance of
    * InstanceStatus.
    *
    * @param status The result instance status.

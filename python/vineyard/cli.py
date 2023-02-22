@@ -680,10 +680,10 @@ def copy(client, args):
     """Utility to copy a vineyard object."""
     if args.shallow:
         object_id = client.shallow_copy(as_object_id(args.object_id))
-        print(f'The object({args.object_id}) was succesfully copied to {object_id}')
+        print(f'The object({args.object_id}) was successfully copied to {object_id}')
     elif args.deep:
         object_id = client.deep_copy(as_object_id(args.object_id))
-        print(f'The object({args.object_id}) was succesfully copied to {object_id}')
+        print(f'The object({args.object_id}) was successfully copied to {object_id}')
     else:
         exit_with_help()
 

@@ -60,7 +60,7 @@ You may find building and installation instructions for other platforms from our
 Run unittests
 -------------
 
-Vineyard has included a set of unittests in the continous integration process. Test cases can be
+Vineyard has included a set of unittests in the continuous integration process. Test cases can be
 built from the following command:
 
 .. code:: shell

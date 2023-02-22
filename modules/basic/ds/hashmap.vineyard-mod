@@ -124,12 +124,12 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
   void PostConstruct(const ObjectMeta& meta) override {
     hash_policy_.set_prime(num_slots_minus_one_ + 1);
 
-    if (data_buffer_mmaped_ != nullptr) {
-      // value in orignal string_view: k1 = data_buffer + offset
-      // value in mmap-ed string_view: k2 = data_buffer_mmaped_ + offset
+    if (data_buffer_mapped_ != nullptr) {
+      // value in original string_view: k1 = data_buffer + offset
+      // value in mmap-ed string_view: k2 = data_buffer_mapped_ + offset
       //
       // -> k2 = k1 + diff
-      diff_ = reinterpret_cast<uintptr_t>(data_buffer_mmaped_->data()) -
+      diff_ = reinterpret_cast<uintptr_t>(data_buffer_mapped_->data()) -
               data_buffer_;
     }
   }
@@ -274,7 +274,7 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
 
   /**
    * @brief Get the value by key.
-   * Here the existance of the key is checked.
+   * Here the existence of the key is checked.
    */
   const V& at(const K& key) const {
     auto found = this->find(key);
@@ -294,7 +294,7 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
 
   // used for std::hashmap<string_view, V> only.
   [[shared]] uintptr_t data_buffer_ = 0;
-  [[shared]] std::shared_ptr<Blob> data_buffer_mmaped_;
+  [[shared]] std::shared_ptr<Blob> data_buffer_mapped_;
   ptrdiff_t diff_ = 0;
 
   friend class Client;

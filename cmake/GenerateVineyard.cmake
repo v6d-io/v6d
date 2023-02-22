@@ -140,7 +140,7 @@ function(vineyard_generate)
       ARGS --build-directory "${vineyard_generate_CMAKE_BUILD_DIR}"
       ARGS --source ${_abs_file}
       ARGS --target ${_generated_srcs}
-      ARGS --langauge ${vineyard_generate_LANGUAGE}
+      ARGS --language ${vineyard_generate_LANGUAGE}
       WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/python/vineyard/core/"
       DEPENDS ${_codegen_scripts}
               ${_abs_file}

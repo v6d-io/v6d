@@ -107,7 +107,7 @@ struct backtrace_info {
                            : demangled_size;
       return demangled_name.get();
     } else {
-      // when failed, it is resetted to NULL, but there indeed a buffer that
+      // when failed, it is reset to NULL, but there indeed a buffer that
       // can be reused.
       demangled_name.reset(reuse_buffer);
       return symbol;

@@ -1,6 +1,6 @@
 apiVersion: v2
 name: vineyard-operator
-description: Vineyard Operator manages all relavant components about vineyard.
+description: Vineyard Operator manages all relevant components about vineyard.
 
 home: https://v6d.io
 

@@ -99,7 +99,7 @@ void EtcdWatchHandler::operator()(etcd::Response const& resp) {
 
   auto status = Status::EtcdError(resp.error_code(), resp.error_message());
 
-  // NB: update the `handled_rev_` after we have truely applied the update ops.
+  // NB: update the `handled_rev_` after we have truly applied the update ops.
   ctx_.post(boost::bind(
       callback_, status, ops, head_rev,
       [this, status](Status const&, unsigned rev) -> Status {
@@ -307,7 +307,7 @@ void EtcdMetaService::requestUpdates(
         return;
       }
       // We still choose to wait event there's no watchers, as if the watcher
-      // fails, a explict watch action will fail as well.
+      // fails, a explicit watch action will fail as well.
       self->registered_callbacks_.emplace(std::make_pair(head_rev, callback));
     }
   });

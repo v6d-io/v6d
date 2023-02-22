@@ -26,7 +26,7 @@ limitations under the License.
 namespace vineyard {
 
 /**
- * @brief ParallelStreamBuilder is desinged for building parallel stremas
+ * @brief ParallelStreamBuilder is designed for building parallel stremas
  *
  */
 class ParallelStreamBuilder : public ParallelStreamBaseBuilder {

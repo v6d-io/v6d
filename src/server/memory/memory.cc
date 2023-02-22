@@ -496,16 +496,16 @@ Status BulkStoreBase<ID, P>::MoveOwnership(
 
 template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::RemoveOwnership(
-    std::set<ID> const& ids, std::map<ID, P>& successed_id_to_size) {
+    std::set<ID> const& ids, std::map<ID, P>& succeeded_id_to_size) {
   for (auto id : ids) {
     if (id == EmptyBlobID<ID>() ||
         id == GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max())) {
       continue;
     }
     objects_.update_fn(
-        id, [id, &successed_id_to_size](std::shared_ptr<P>& object) -> void {
+        id, [id, &succeeded_id_to_size](std::shared_ptr<P>& object) -> void {
           object->RemoveOwner();
-          successed_id_to_size.emplace(id, *object);
+          succeeded_id_to_size.emplace(id, *object);
         });
   }
   return Status::OK();

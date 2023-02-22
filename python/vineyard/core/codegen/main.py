@@ -112,7 +112,7 @@ def parse_sys_args():
     )
     arg_parser.add_argument(
         '-l',
-        '--langauge',
+        '--language',
         type=str,
         default='cpp',
         help="Language interfaces to generate",
@@ -207,7 +207,7 @@ def main():
     else:
         codegen(
             args.root_directory,
-            args.langauge,
+            args.language,
             args.source,
             args.target,
             args.package,

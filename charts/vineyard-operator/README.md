@@ -2,7 +2,7 @@
 
 [![Artifact HUB](https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/vineyard)](https://artifacthub.io/packages/helm/vineyard/vineyard-operator)
 
-A helm chart for [vineyard operator][3], which manages all relavant components about vineyard.
+A helm chart for [vineyard operator][3], which manages all relevant components about vineyard.
 
 ## Install
 

@@ -226,22 +226,22 @@ def dia_matrix_resolver(obj, resolver):
 
 def dok_matrix_builder(client, value, **kw):
     # FIXME
-    raise NotImplementedError('sp.sparse.dok_matirx is not supported')
+    raise NotImplementedError('sp.sparse.dok_matrix is not supported')
 
 
 def dok_matrix_resolver(obj):
     # FIXME
-    raise NotImplementedError('sp.sparse.dok_matirx is not supported')
+    raise NotImplementedError('sp.sparse.dok_matrix is not supported')
 
 
 def lil_matrix_builder(client, value, builder, **kw):
     # FIXME
-    raise NotImplementedError('sp.sparse.lil_matirx is not supported')
+    raise NotImplementedError('sp.sparse.lil_matrix is not supported')
 
 
 def lil_matrix_resolver(obj):
     # FIXME
-    raise NotImplementedError('sp.sparse.lil_matirx is not supported')
+    raise NotImplementedError('sp.sparse.lil_matrix is not supported')
 
 
 def make_global_tensor(

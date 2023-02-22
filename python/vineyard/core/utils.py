@@ -39,7 +39,7 @@ def find_most_precise_match(typename, candidates):
 class ReprableString(str):
     """A special class that prevents `repr()` adding extra `""` to `str`.
 
-    It is used to optimize the user experiences to preseve `\n` when printing
+    It is used to optimize the user experiences to preserve `\n` when printing
     exceptions.
     """
 

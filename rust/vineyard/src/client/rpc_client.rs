@@ -92,7 +92,7 @@ impl Client for RPCClient {
             self.stream = Some(RefCell::new(rpc_stream));
             self.connected = true;
 
-            // TODO： Compatable server
+            // TODO： Compatible server
 
             Ok(())
         }

@@ -627,7 +627,7 @@ END OF TERMS AND CONDITIONS
 
 --------------------------------------------------------------------------------
 
-The files cmake/FindGperftools is reffered from omniscidb, which
+The files cmake/FindGperftools is referred from omniscidb, which
 are licensed under Apache-2.0 License.
 
                                  Apache License
@@ -897,7 +897,7 @@ comments, complaints, performance data, etc to dl@cs.oswego.edu
 
 --------------------------------------------------------------------------------
 
-The files src/common/memory/{fling.cc,fling.h} is reffered from flingfd, which
+The files src/common/memory/{fling.cc,fling.h} is referred from flingfd, which
 are licensed under Apache License, Version 2.0.
 
 Copyright 2013 Sharvil Nanavati
@@ -916,7 +916,7 @@ limitations under the License.
 
 --------------------------------------------------------------------------------
 
-The files modules/io/python/drivers/io/tests/test_ossfs.py is reffered from s3fs, which
+The files modules/io/python/drivers/io/tests/test_ossfs.py is referred from s3fs, which
 are licensed under BSD 3-Clause License.
 
 Copyright (c) 2016, Continuum Analytics, Inc. and contributors
@@ -950,7 +950,7 @@ THE POSSIBILITY OF SUCH DAMAGE.
 
 --------------------------------------------------------------------------------
 
-The files src/common/memory/memcpy.h is reffered from ClickHouse, which
+The files src/common/memory/memcpy.h is referred from ClickHouse, which
 are licensed under Apache-2.0 License.
 
 Copyright 2016-2022 ClickHouse, Inc.

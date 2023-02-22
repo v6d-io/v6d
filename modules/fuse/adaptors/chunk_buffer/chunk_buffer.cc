@@ -95,7 +95,7 @@ int64_t ChunkBuffer::readAt(int64_t position, int64_t nbytes, void* out) {
     {
       auto chunk_start = it->first.first;
       auto chunk_end = it->first.second;
-      // load the first bufer
+      // load the first buffer
       auto chunk = it->second;
       auto chunk_p = chunk->data();
       chunk_p += position - chunk_start;

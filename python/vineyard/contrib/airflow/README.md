@@ -156,7 +156,7 @@ The [values.yaml](./values.yaml) mainly tweaks the following settings:
 - Mounting the vineyardd's UNIX-domain socket and shared memory to the airflow worker pods
 
 Note that **the `values.yaml` may doesn't work in your environment**, as airflow requires
-other settings like postgresql database, presistance volumes, etc. You can combine
+other settings like postgresql database, persistence volumes, etc. You can combine
 the reference `values.yaml` with your own specific Airflow settings.
 
 The [values.yaml](./values.yaml) for Airflow's helm chart can be used as
