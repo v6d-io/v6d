@@ -69,7 +69,7 @@ inline int64_t index_from_key(const std::string& key) {
  * object.
  */
 template <typename T>
-class Collection : public Object, public GlobalObject {
+class Collection : public Registered<Collection<T>>, public GlobalObject {
  public:
   static std::unique_ptr<Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<Object>(
@@ -289,6 +289,10 @@ class CollectionBuilder : public ObjectBuilder {
     meta_.AddMember(detail::index_to_key(chunk_size_++), object);
   }
 
+  Status AddMember(const std::shared_ptr<ObjectBuilder>& builder) {
+    return this->AddMember(detail::index_to_key(chunk_size_++), builder);
+  }
+
   void AddMember(const size_t index, const ObjectID& id) {
     meta_.AddMember(detail::index_to_key(index), id);
     chunk_size_ = std::max(chunk_size_, index + 1);
@@ -302,6 +306,15 @@ class CollectionBuilder : public ObjectBuilder {
   void AddMember(const size_t index, const std::shared_ptr<Object>& object) {
     meta_.AddMember(detail::index_to_key(index), object);
     chunk_size_ = std::max(chunk_size_, index + 1);
+  }
+
+  Status AddMember(const size_t index,
+                   const std::shared_ptr<ObjectBuilder>& builder) {
+    std::shared_ptr<Object> object;
+    RETURN_ON_ERROR(builder->Seal(client_, object));
+    meta_.AddMember(detail::index_to_key(index), object);
+    chunk_size_ = std::max(chunk_size_, index + 1);
+    return Status::OK();
   }
 
   void AddMember(const std::string& key, const ObjectID& id) {
@@ -329,6 +342,18 @@ class CollectionBuilder : public ObjectBuilder {
     }
   }
 
+  Status AddMember(const std::string& key,
+                   const std::shared_ptr<ObjectBuilder>& builder) {
+    std::shared_ptr<Object> object;
+    RETURN_ON_ERROR(builder->Seal(client_, object));
+    meta_.AddMember(key, object);
+    int64_t index = -1;
+    if ((index = detail::index_from_key(key)) != -1) {
+      chunk_size_ = std::max(chunk_size_, static_cast<size_t>(index) + 1);
+    }
+    return Status::OK();
+  }
+
   template <typename Value>
   void AddKeyValue(const std::string& key, const Value& value) {
     meta_.AddKeyValue(key, value);
@@ -336,26 +361,26 @@ class CollectionBuilder : public ObjectBuilder {
 
   void SetGlobal(const bool global = true) { meta_.SetGlobal(global); }
 
-  Status Finish(ObjectID& id) {
+  Status Build(Client& client) override { return Status::OK(); }
+
+  Status _Seal(Client& client, std::shared_ptr<Object>& object) override {
+    ENSURE_NOT_SEALED(this);
+
+    RETURN_ON_ERROR(this->Build(client));
+
+    ObjectID id = InvalidObjectID();
     meta_.AddKeyValue("partitions_-size", chunk_size_);
     RETURN_ON_ERROR(client_.CreateMetaData(meta_, id));
     // mark the builder as sealed
     this->set_sealed(true);
-    return Status::OK();
-  }
-
-  Status Build(Client& client) override { return Status::OK(); }
-
-  Status _Seal(Client& client, std::shared_ptr<Object>& object) override {
-    ObjectID id = InvalidObjectID();
-    RETURN_ON_ERROR(Finish(id));
     return client_.GetObject(id, object);
   }
 
- private:
+ protected:
   Client& client_;
-  ObjectMeta meta_;
 
+ private:
+  ObjectMeta meta_;
   size_t chunk_size_ = 0;
 };
 

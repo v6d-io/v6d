@@ -235,7 +235,7 @@ const bool Registered<T>::registered = ObjectFactory::Register<T>();
  * inherits BareRegistered.
  */
 template <typename T>
-class BareRegistered {
+class __attribute__((visibility("default"))) BareRegistered {
  protected:
   __attribute__((visibility("default"))) BareRegistered() {
     FORCE_INSTANTIATE(registered);

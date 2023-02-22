@@ -1185,4 +1185,485 @@ Status ConsolidateColumns(const std::shared_ptr<arrow::Table>& table,
   return ConsolidateColumns(table, consolidate_columns_vec, "", out);
 }
 
+namespace arrow_shim {
+
+namespace detail {
+
+inline Status TimeUnitToJSON(arrow::TimeUnit::type const& unit, json& object) {
+  switch (unit) {
+  case arrow::TimeUnit::SECOND:
+    object = json{"s"};
+    return Status::OK();
+  case arrow::TimeUnit::MILLI:
+    object = json{"ms"};
+    return Status::OK();
+  case arrow::TimeUnit::MICRO:
+    object = json{"us"};
+    return Status::OK();
+  case arrow::TimeUnit::NANO:
+    object = json{"ns"};
+    return Status::OK();
+  default:
+    return Status::Invalid("invalid time unit: " + std::to_string(unit));
+  }
+}
+
+inline Status TimeUnitFromJSON(json const& object,
+                               arrow::TimeUnit::type& unit) {
+  if (object.is_string()) {
+    auto unit_str = object.get<std::string>();
+    if (unit_str == "s") {
+      unit = arrow::TimeUnit::SECOND;
+      return Status::OK();
+    } else if (unit_str == "ms") {
+      unit = arrow::TimeUnit::MILLI;
+      return Status::OK();
+    } else if (unit_str == "us") {
+      unit = arrow::TimeUnit::MICRO;
+      return Status::OK();
+    } else if (unit_str == "ns") {
+      unit = arrow::TimeUnit::NANO;
+      return Status::OK();
+    } else {
+      return Status::Invalid("invalid time unit: " + unit_str);
+    }
+  } else {
+    return Status::Invalid("invalid time unit: " + object.dump());
+  }
+}
+
+}  // namespace detail
+
+/**
+ * @brief Textual schema representation.
+ *
+ * @see
+ * https://github.com/apache/arrow-rs/blob/27f4762c8794ef1c5d042933562185980eb85ae5/arrow/src/datatypes/datatype.rs#L536
+ */
+Status SchemaToJSON(const std::shared_ptr<arrow::Schema>& schema,
+                    json& object) {
+  if (schema == nullptr) {
+    object = json{nullptr};
+    return Status::OK();
+  }
+  json fields;
+  for (int i = 0; i < schema->num_fields(); ++i) {
+    auto field = schema->field(i);
+    json field_object;
+    RETURN_ON_ERROR(FieldToJSON(field, field_object));
+    fields.push_back(field_object);
+  }
+  json metadata_object;
+  if (schema->metadata() != nullptr) {
+    for (int64_t i = 0; i < schema->metadata()->size(); ++i) {
+      metadata_object[schema->metadata()->key(i)] =
+          schema->metadata()->value(i);
+    }
+  }
+  object = json{{"fields", fields}, {"metadata", metadata_object}};
+  return Status::OK();
+}
+
+Status SchemaFromJSON(const json& object,
+                      std::shared_ptr<arrow::Schema>& schema) {
+  if (object.is_null()) {
+    schema = nullptr;
+    return Status::OK();
+  }
+  if (!object.is_object()) {
+    return Status::Invalid("invalid schema: " + object.dump());
+  }
+  auto fields_object = object.find("fields");
+  if (fields_object == object.end()) {
+    return Status::Invalid("invalid schema: " + object.dump());
+  }
+  if (!fields_object->is_array()) {
+    return Status::Invalid("invalid schema: " + object.dump());
+  }
+  std::vector<std::shared_ptr<arrow::Field>> fields;
+  for (auto& field_object : *fields_object) {
+    std::shared_ptr<arrow::Field> field;
+    RETURN_ON_ERROR(FieldFromJSON(field_object, field));
+    fields.push_back(field);
+  }
+  auto metadata_object = object.find("metadata");
+  if (metadata_object == object.end()) {
+    return Status::Invalid("invalid schema: " + object.dump());
+  }
+  if (!metadata_object->is_object()) {
+    return Status::Invalid("invalid schema: " + object.dump());
+  }
+  auto metadata = std::make_shared<arrow::KeyValueMetadata>();
+  for (auto& pair : metadata_object->items()) {
+    metadata->Append(pair.key(), pair.value().get<std::string>());
+  }
+  schema = arrow::schema(fields, metadata);
+  return Status::OK();
+}
+
+Status DataTypeToJSON(const std::shared_ptr<arrow::DataType>& datatype,
+                      json& object) {
+  if (datatype == nullptr) {
+    object = json{nullptr};
+  } else if (datatype->id() == arrow::Type::NA) {
+    object = json{{"name", "null"}};
+  } else if (datatype->id() == arrow::Type::BOOL) {
+    object = json{{"name", "bool"}};
+  } else if (datatype->id() == arrow::Type::INT8) {
+    object = json{{"name", "int"}, {"bit_width", 16}, {"signed", true}};
+  } else if (datatype->id() == arrow::Type::INT16) {
+    object = json{{"name", "int"}, {"bit_width", 16}, {"signed", true}};
+  } else if (datatype->id() == arrow::Type::INT32) {
+    object = json{{"name", "int"}, {"bit_width", 32}, {"signed", true}};
+  } else if (datatype->id() == arrow::Type::INT64) {
+    object = json{{"name", "int"}, {"bit_width", 64}, {"signed", true}};
+  } else if (datatype->id() == arrow::Type::UINT8) {
+    object = json{{"name", "int"}, {"bit_width", 16}, {"signed", false}};
+  } else if (datatype->id() == arrow::Type::UINT16) {
+    object = json{{"name", "int"}, {"bit_width", 16}, {"signed", false}};
+  } else if (datatype->id() == arrow::Type::UINT32) {
+    object = json{{"name", "int"}, {"bit_width", 32}, {"signed", false}};
+  } else if (datatype->id() == arrow::Type::UINT64) {
+    object = json{{"name", "int"}, {"bit_width", 64}, {"signed", false}};
+  } else if (datatype->id() == arrow::Type::HALF_FLOAT) {
+    object = json{{"name", "float"}, {"precision", "half"}};
+  } else if (datatype->id() == arrow::Type::FLOAT) {
+    object = json{{"name", "float"}, {"precision", "single"}};
+  } else if (datatype->id() == arrow::Type::DOUBLE) {
+    object = json{{"name", "float"}, {"precision", "double"}};
+  } else if (datatype->id() == arrow::Type::STRING) {
+    object = json{{"name", "utf8"}};
+  } else if (datatype->id() == arrow::Type::LARGE_STRING) {
+    object = json{{"name", "large_utf8"}};
+  } else if (datatype->id() == arrow::Type::BINARY) {
+    object = json{{"name", "binary"}};
+  } else if (datatype->id() == arrow::Type::LARGE_BINARY) {
+    object = json{{"name", "large_binary"}};
+  } else if (datatype->id() == arrow::Type::FIXED_SIZE_BINARY) {
+    auto fixed_size_binary_type =
+        std::dynamic_pointer_cast<arrow::FixedSizeBinaryType>(datatype);
+    object = json{{"name", "fixed_size_binary"},
+                  {"byte_width", fixed_size_binary_type->byte_width()}};
+  } else if (datatype->id() == arrow::Type::LIST) {
+    auto list_type = std::dynamic_pointer_cast<arrow::ListType>(datatype);
+    json list_type_object;
+    RETURN_ON_ERROR(DataTypeToJSON(list_type->value_type(), list_type_object));
+    object = json{{"name", "list"}, {"value_type", list_type_object}};
+  } else if (datatype->id() == arrow::Type::LARGE_LIST) {
+    auto list_type = std::dynamic_pointer_cast<arrow::LargeListType>(datatype);
+    json list_type_object;
+    RETURN_ON_ERROR(DataTypeToJSON(list_type->value_type(), list_type_object));
+    object = json{{"name", "large_list"}, {"value_type", list_type_object}};
+  } else if (datatype->id() == arrow::Type::FIXED_SIZE_LIST) {
+    auto list_type =
+        std::dynamic_pointer_cast<arrow::FixedSizeListType>(datatype);
+    json list_type_object;
+    RETURN_ON_ERROR(DataTypeToJSON(list_type->value_type(), list_type_object));
+    object = json{{"name", "fixed_size_list"},
+                  {"value_type", list_type_object},
+                  {"list_size", list_type->list_size()}};
+  } else if (datatype->id() == arrow::Type::TIME32) {
+    auto time32_type = std::dynamic_pointer_cast<arrow::Time32Type>(datatype);
+    json time_unit_object;
+    RETURN_ON_ERROR(
+        detail::TimeUnitToJSON(time32_type->unit(), time_unit_object));
+    object =
+        json{{"name", "time"}, {"unit", time_unit_object}, {"bit_width", 32}};
+  } else if (datatype->id() == arrow::Type::TIME64) {
+    auto time64_type = std::dynamic_pointer_cast<arrow::Time64Type>(datatype);
+    json time_unit_object;
+    RETURN_ON_ERROR(
+        detail::TimeUnitToJSON(time64_type->unit(), time_unit_object));
+    object =
+        json{{"name", "time"}, {"unit", time_unit_object}, {"bit_width", 64}};
+  } else if (datatype->id() == arrow::Type::DATE32) {
+    object = json{{"name", "date"}, {"unit", "day"}};
+  } else if (datatype->id() == arrow::Type::DATE64) {
+    object = json{{"name", "date"}, {"unit", "millisecond"}};
+  } else if (datatype->id() == arrow::Type::TIMESTAMP) {
+    auto timestamp_type =
+        std::dynamic_pointer_cast<arrow::TimestampType>(datatype);
+    json time_unit_object;
+    RETURN_ON_ERROR(
+        detail::TimeUnitToJSON(timestamp_type->unit(), time_unit_object));
+    object = json{{"name", "timestamp"},
+                  {"unit", time_unit_object},
+                  {"timezone", timestamp_type->timezone()}};
+  } else if (datatype->id() == arrow::Type::INTERVAL_MONTHS) {
+    object = json{{"name", "interval"}, {"unit", "month"}};
+  } else if (datatype->id() == arrow::Type::INTERVAL_DAY_TIME) {
+    object = json{{"name", "interval"}, {"unit", "day_time"}};
+  } else if (datatype->id() == arrow::Type::INTERVAL_MONTH_DAY_NANO) {
+    object = json{{"name", "interval"}, {"unit", "month_day_nano"}};
+  } else if (datatype->id() == arrow::Type::DURATION) {
+    auto duration_type =
+        std::dynamic_pointer_cast<arrow::DurationType>(datatype);
+    json time_unit_object;
+    RETURN_ON_ERROR(
+        detail::TimeUnitToJSON(duration_type->unit(), time_unit_object));
+    object = json{{"name", "duration"}, {"unit", time_unit_object}};
+  } else if (datatype->id() == arrow::Type::DECIMAL) {
+    auto decimal_type = std::dynamic_pointer_cast<arrow::DecimalType>(datatype);
+    object = json{{"name", "decimal"},
+                  {"precision", decimal_type->precision()},
+                  {"scale", decimal_type->scale()},
+                  {"bit_width", decimal_type->bit_width()}};
+  } else if (datatype->id() == arrow::Type::STRUCT) {
+    auto struct_type = std::dynamic_pointer_cast<arrow::StructType>(datatype);
+    json fields_object;
+    for (auto const& field : struct_type->fields()) {
+      json field_object;
+      RETURN_ON_ERROR(FieldToJSON(field, field_object));
+      fields_object.push_back(field_object);
+    }
+    object = json{{"name", "struct"}, {"fields", fields_object}};
+  } else if (datatype->id() == arrow::Type::DENSE_UNION) {
+    auto union_type = std::dynamic_pointer_cast<arrow::UnionType>(datatype);
+    json fields_object;
+    for (auto const& field : union_type->fields()) {
+      json field_object;
+      RETURN_ON_ERROR(FieldToJSON(field, field_object));
+      fields_object.push_back(field_object);
+    }
+    object =
+        json{{"name", "union"}, {"mode", "dense"}, {"fields", fields_object}};
+  } else if (datatype->id() == arrow::Type::SPARSE_UNION) {
+    auto union_type = std::dynamic_pointer_cast<arrow::UnionType>(datatype);
+    json fields_object;
+    for (auto const& field : union_type->fields()) {
+      json field_object;
+      RETURN_ON_ERROR(FieldToJSON(field, field_object));
+      fields_object.push_back(field_object);
+    }
+    object =
+        json{{"name", "union"}, {"mode", "sparse"}, {"fields", fields_object}};
+  } else if (datatype->id() == arrow::Type::DICTIONARY) {
+    auto dictionary_type =
+        std::dynamic_pointer_cast<arrow::DictionaryType>(datatype);
+    json index_type_object;
+    RETURN_ON_ERROR(
+        DataTypeToJSON(dictionary_type->index_type(), index_type_object));
+    json value_type_object;
+    RETURN_ON_ERROR(
+        DataTypeToJSON(dictionary_type->value_type(), value_type_object));
+    object = json{{"name", "dictionary"},
+                  {"index_type", index_type_object},
+                  {"value_type", value_type_object}};
+  } else {
+    return Status::Invalid("Not supported data type: '" + datatype->ToString() +
+                           "'");
+  }
+  return Status::OK();
+}
+
+Status DataTypeFromJSON(const json& object,
+                        std::shared_ptr<arrow::DataType>& datatype) {
+  if (!object.is_null() && !object.object()) {
+    return Status::Invalid("Invalid data type object: '" + object.dump() + "'");
+  }
+  if (object.is_null()) {
+    datatype = nullptr;
+    return Status::OK();
+  }
+  std::string name = object.value("name", "");
+  if (name == "null") {
+    datatype = arrow::null();
+  } else if (name == "bool") {
+    datatype = arrow::boolean();
+  } else if (name == "int") {
+    int bit_width = object.value("bit_width", -1);
+    bool issigned = object.value("signed", true);
+    if (bit_width == 8) {
+      datatype = issigned ? arrow::int8() : arrow::uint8();
+    } else if (bit_width == 16) {
+      datatype = issigned ? arrow::int16() : arrow::uint16();
+    } else if (bit_width == 32) {
+      datatype = issigned ? arrow::int32() : arrow::uint32();
+    } else if (bit_width == 64) {
+      datatype = issigned ? arrow::int64() : arrow::uint64();
+    } else {
+      return Status::Invalid("Invalid bit width: '" +
+                             std::to_string(bit_width) + "'");
+    }
+  } else if (name == "float") {
+    std::string precision = object.value("precision", "");
+    if (precision == "half") {
+      datatype = arrow::float16();
+    } else if (precision == "single") {
+      datatype = arrow::float32();
+    } else if (precision == "double") {
+      datatype = arrow::float64();
+    } else {
+      return Status::Invalid("Invalid precision: '" + precision + "'");
+    }
+  } else if (name == "utf8") {
+    datatype = arrow::utf8();
+  } else if (name == "large_utf8") {
+    datatype = arrow::large_utf8();
+  } else if (name == "binary") {
+    datatype = arrow::binary();
+  } else if (name == "large_binary") {
+    datatype = arrow::large_binary();
+  } else if (name == "fixed_size_binary") {
+    int byte_width = object.value("byte_width", -1);
+    datatype = arrow::fixed_size_binary(byte_width);
+  } else if (name == "list") {
+    json value_type_object = object.value("value_type", json());
+    std::shared_ptr<arrow::DataType> value_type;
+    RETURN_ON_ERROR(DataTypeFromJSON(value_type_object, value_type));
+    datatype = arrow::list(value_type);
+  } else if (name == "large_list") {
+    json value_type_object = object.value("value_type", json());
+    std::shared_ptr<arrow::DataType> value_type;
+    RETURN_ON_ERROR(DataTypeFromJSON(value_type_object, value_type));
+    datatype = arrow::large_list(value_type);
+  } else if (name == "fixed_size_list") {
+    json value_type_object = object.value("value_type", json());
+    std::shared_ptr<arrow::DataType> value_type;
+    RETURN_ON_ERROR(DataTypeFromJSON(value_type_object, value_type));
+    int list_size = object.value("list_size", -1);
+    datatype = arrow::fixed_size_list(value_type, list_size);
+  } else if (name == "time") {
+    json time_unit_object = object.value("unit", json());
+    arrow::TimeUnit::type time_unit;
+    RETURN_ON_ERROR(detail::TimeUnitFromJSON(time_unit_object, time_unit));
+    int bit_width = object.value("bit_width", -1);
+    if (bit_width == 32) {
+      datatype = arrow::time32(time_unit);
+    } else if (bit_width == 64) {
+      datatype = arrow::time64(time_unit);
+    } else {
+      return Status::Invalid("Invalid bit width: '" +
+                             std::to_string(bit_width) + "'");
+    }
+  } else if (name == "date") {
+    std::string unit = object.value("unit", "");
+    if (unit == "day") {
+      datatype = arrow::date32();
+    } else if (unit == "millisecond") {
+      datatype = arrow::date64();
+    } else {
+      return Status::Invalid("Invalid date unit: '" + unit + "'");
+    }
+  } else if (name == "timestamp") {
+    json time_unit_object = object.value("unit", json());
+    arrow::TimeUnit::type time_unit;
+    RETURN_ON_ERROR(detail::TimeUnitFromJSON(time_unit_object, time_unit));
+    std::string timezone = object.value("timezone", "");
+    if (timezone.empty()) {
+      datatype = arrow::timestamp(time_unit);
+    } else {
+      datatype = arrow::timestamp(time_unit, timezone);
+    }
+  } else if (name == "interval") {
+    std::string unit = object.value("unit", "");
+    if (unit == "month") {
+      datatype = arrow::month_interval();
+    } else if (unit == "day_time") {
+      datatype = arrow::day_time_interval();
+    } else if (unit == "month_day_nano") {
+      datatype = arrow::month_day_nano_interval();
+    } else {
+      return Status::Invalid("Invalid interval unit: '" + unit + "'");
+    }
+  } else if (name == "duration") {
+    json time_unit_object = object.value("unit", json());
+    arrow::TimeUnit::type time_unit;
+    RETURN_ON_ERROR(detail::TimeUnitFromJSON(time_unit_object, time_unit));
+    datatype = arrow::duration(time_unit);
+  } else if (name == "decimal") {
+    int precision = object.value("precision", -1);
+    int scale = object.value("scale", -1);
+    int bit_width = object.value("bit_width", -1);
+    if (bit_width == 128) {
+      datatype = arrow::decimal128(precision, scale);
+    } else if (bit_width == 256) {
+      datatype = arrow::decimal256(precision, scale);
+    } else {
+      return Status::Invalid("Invalid bit width: '" +
+                             std::to_string(bit_width) + "'");
+    }
+  } else if (name == "dictionary") {
+    json index_type_object = object.value("index_type", json());
+    std::shared_ptr<arrow::DataType> index_type;
+    RETURN_ON_ERROR(DataTypeFromJSON(index_type_object, index_type));
+    json value_type_object = object.value("value_type", json());
+    std::shared_ptr<arrow::DataType> value_type;
+    RETURN_ON_ERROR(DataTypeFromJSON(value_type_object, value_type));
+    datatype = arrow::dictionary(index_type, value_type);
+  } else if (name == "struct") {
+    json fields_object = object.value("fields", json());
+    if (!fields_object.is_array()) {
+      return Status::Invalid("Invalid fields object: '" + fields_object.dump() +
+                             "'");
+    }
+    std::vector<std::shared_ptr<arrow::Field>> fields;
+    for (const auto& field_object : fields_object) {
+      std::shared_ptr<arrow::Field> field;
+      RETURN_ON_ERROR(FieldFromJSON(field_object, field));
+      fields.push_back(field);
+    }
+    datatype = arrow::struct_(fields);
+  } else if (name == "union") {
+    std::string mode = object.value("mode", "");
+    json fields_object = object.value("fields", json());
+    if (!fields_object.is_array()) {
+      return Status::Invalid("Invalid fields object: '" + fields_object.dump() +
+                             "'");
+    }
+    std::vector<std::shared_ptr<arrow::Field>> fields;
+    for (const auto& field_object : fields_object) {
+      std::shared_ptr<arrow::Field> field;
+      RETURN_ON_ERROR(FieldFromJSON(field_object, field));
+      fields.push_back(field);
+    }
+    if (mode == "sparse") {
+      datatype = arrow::sparse_union(fields);
+    } else if (mode == "dense") {
+      datatype = arrow::dense_union(fields);
+    } else {
+      return Status::Invalid("Invalid union mode: '" + mode + "'");
+    }
+  } else {
+    return Status::Invalid("Invalid data type: '" + name + "'");
+  }
+  return Status::OK();
+}
+
+Status FieldToJSON(const std::shared_ptr<arrow::Field>& field, json& object) {
+  if (field == nullptr) {
+    return Status::Invalid("Invalid field object");
+  }
+  json type_object;
+  RETURN_ON_ERROR(DataTypeToJSON(field->type(), type_object));
+  object = json{{
+                    "name",
+                    field->name(),
+                },
+                {
+                    "type",
+                    type_object,
+                },
+                {
+                    "nullable",
+                    field->nullable(),
+                }};
+  return Status::OK();
+}
+
+Status FieldFromJSON(const json& object, std::shared_ptr<arrow::Field>& field) {
+  if (!object.is_object()) {
+    return Status::Invalid("Invalid field object: '" + object.dump() + "'");
+  }
+  std::string name = object.value("name", "");
+  json type_object = object.value("type", json());
+  std::shared_ptr<arrow::DataType> type;
+  RETURN_ON_ERROR(DataTypeFromJSON(type_object, type));
+  bool nullable = object.value("nullable", true);
+  field = arrow::field(name, type, nullable);
+  return Status::OK();
+}
+
+}  // namespace arrow_shim
+
 }  // namespace vineyard

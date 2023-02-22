@@ -173,9 +173,7 @@ Status DataFrameBuilder::Build(Client& client) {
   return Status::OK();
 }
 
-void GlobalDataFrame::Construct(const ObjectMeta& meta) {
-  Collection<DataFrame>::Construct(meta);
-
+void GlobalDataFrame::PostConstruct(const ObjectMeta& meta) {
   if (meta.HasKey("partition_shape_row_")) {
     meta.GetKeyValue("partition_shape_row_", this->partition_shape_row_);
   }

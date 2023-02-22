@@ -279,9 +279,6 @@ class {class_name}BaseBuilder{type_params}: public ObjectBuilder {{
         size_t __value_nbytes = 0;
 
         __value->meta_.SetTypeName(type_name<{class_name_elaborated}>());
-        if (std::is_base_of<GlobalObject, {class_name_elaborated}>::value) {{
-            __value->meta_.SetGlobal(true);
-        }}
 
         {assignments}
 
@@ -665,13 +662,13 @@ def codegen_field_get_assign(field_name, spec):
     return tpl.format(field_name=field_name)
 
 
-using_alia_tpl = '''
-    // using {alia}
+using_alias_tpl = '''
+    // using {alias}
     {extent};'''
 
 
-def codegen_using_alia(alia, extent):
-    return using_alia_tpl.format(alia=alia, extent=extent)
+def codegen_using_alias(alias, extent):
+    return using_alias_tpl.format(alias=alias, extent=extent)
 
 
 post_construct_in_seal_tpl = '''
@@ -695,9 +692,9 @@ def codegen_base_builder(
     setters = []
     using_alias_statements = []
 
-    # genreate using alias
-    for alia, extent in using_alias_values:
-        using_alias_statements.append(codegen_using_alia(alia, extent))
+    # generate using alias
+    for alias, extent in using_alias_values:
+        using_alias_statements.append(codegen_using_alias(alias, extent))
 
     # core field assignment
     for field in fields:

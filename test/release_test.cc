@@ -53,8 +53,8 @@ int main(int argc, char** argv) {
     // prepare data
     std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};
     ArrayBuilder<double> builder(client1, double_array);
-    auto sealed_double_array =
-        std::dynamic_pointer_cast<Array<double>>(builder.Seal(client1));
+    std::shared_ptr<Object> sealed_double_array;
+    VINEYARD_CHECK_OK(builder.Seal(client1, sealed_double_array));
     id = sealed_double_array->id();
     blob_id = ObjectIDFromString(sealed_double_array->meta()
                                      .MetaData()["buffer_"]["id"]

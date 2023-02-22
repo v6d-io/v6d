@@ -208,6 +208,32 @@ std::shared_ptr<ObjectBuilder> BuildArray(
   return builder;
 }
 
+std::shared_ptr<arrow::Array> CastToArray(std::shared_ptr<Object> object) {
+  if (auto arr = std::dynamic_pointer_cast<FixedSizeBinaryArray>(object)) {
+    return arr->GetArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<StringArray>(object)) {
+    return arr->GetArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<LargeStringArray>(object)) {
+    return arr->GetArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<FixedSizeBinaryArray>(object)) {
+    return arr->GetArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<NullArray>(object)) {
+    return arr->GetArray();
+  }
+  if (auto arr = std::dynamic_pointer_cast<ArrowArray>(object)) {
+    return arr->ToArray();
+  }
+  // Don't abort the program, the unresolvable array should be reported lazily.
+  //
+  // VINEYARD_ASSERT(nullptr != nullptr,
+  //                 "Unsupported array type: " + object->meta().GetTypeName());
+  return nullptr;
+}
+
 }  // namespace detail
 
 #ifndef TAKE_BUFFER_AND_APPLY
@@ -247,6 +273,25 @@ std::shared_ptr<ObjectBuilder> BuildArray(
     }                                                            \
   } while (0)
 #endif  // TAKE_NULL_BITMAP_AND_APPLY
+
+template <typename T>
+void NumericArray<T>::PostConstruct(const ObjectMeta& meta) {
+  this->array_ = std::make_shared<ArrayType>(
+      ConvertToArrowType<T>::TypeValue(), this->length_,
+      this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
+      this->null_count_, this->offset_);
+}
+
+template class NumericArray<int8_t>;
+template class NumericArray<int16_t>;
+template class NumericArray<int32_t>;
+template class NumericArray<int64_t>;
+template class NumericArray<uint8_t>;
+template class NumericArray<uint16_t>;
+template class NumericArray<uint32_t>;
+template class NumericArray<uint64_t>;
+template class NumericArray<float>;
+template class NumericArray<double>;
 
 template <typename T>
 NumericArrayBuilder<T>::NumericArrayBuilder(Client& client)
@@ -367,6 +412,13 @@ template class FixedNumericArrayBuilder<uint64_t>;
 template class FixedNumericArrayBuilder<float>;
 template class FixedNumericArrayBuilder<double>;
 
+void BooleanArray::PostConstruct(const ObjectMeta& meta) {
+  this->array_ = std::make_shared<ArrayType>(
+      ConvertToArrowType<bool>::TypeValue(), this->length_,
+      this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
+      this->null_count_, this->offset_);
+}
+
 BooleanArrayBuilder::BooleanArrayBuilder(Client& client)
     : BooleanArrayBaseBuilder(client) {
   std::shared_ptr<ArrayType> array;
@@ -416,6 +468,19 @@ Status BooleanArrayBuilder::Build(Client& client) {
   TAKE_NULL_BITMAP_AND_APPLY(this, client, pool, array_);
   return Status::OK();
 }
+
+template <typename ArrayType>
+void BaseBinaryArray<ArrayType>::PostConstruct(const ObjectMeta& meta) {
+  this->array_ = std::make_shared<ArrayType>(
+      this->length_, this->buffer_offsets_->BufferOrEmpty(),
+      this->buffer_data_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
+      this->null_count_, this->offset_);
+}
+
+template class BaseBinaryArray<arrow::BinaryArray>;
+template class BaseBinaryArray<arrow::LargeBinaryArray>;
+template class BaseBinaryArray<arrow::StringArray>;
+template class BaseBinaryArray<arrow::LargeStringArray>;
 
 template <typename ArrayType, typename BuilderType>
 GenericBinaryArrayBuilder<ArrayType, BuilderType>::GenericBinaryArrayBuilder(
@@ -485,6 +550,13 @@ template class GenericBinaryArrayBuilder<arrow::StringArray,
 template class GenericBinaryArrayBuilder<arrow::LargeStringArray,
                                          arrow::LargeStringBuilder>;
 
+void FixedSizeBinaryArray::PostConstruct(const ObjectMeta& meta) {
+  this->array_ = std::make_shared<arrow::FixedSizeBinaryArray>(
+      arrow::fixed_size_binary(this->byte_width_), this->length_,
+      this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
+      this->null_count_, this->offset_);
+}
+
 FixedSizeBinaryArrayBuilder::FixedSizeBinaryArrayBuilder(
     Client& client, const std::shared_ptr<arrow::DataType>& type)
     : FixedSizeBinaryArrayBaseBuilder(client) {
@@ -540,6 +612,10 @@ Status FixedSizeBinaryArrayBuilder::Build(Client& client) {
   return Status::OK();
 }
 
+void NullArray::PostConstruct(const ObjectMeta& meta) {
+  this->array_ = std::make_shared<arrow::NullArray>(this->length_);
+}
+
 NullArrayBuilder::NullArrayBuilder(Client& client)
     : NullArrayBaseBuilder(client) {
   std::shared_ptr<ArrayType> array;
@@ -578,6 +654,19 @@ Status NullArrayBuilder::Build(Client& client) {
   this->set_length_(array_->length());
   return Status::OK();
 }
+
+template <typename ArrayType>
+void BaseListArray<ArrayType>::PostConstruct(const ObjectMeta& meta) {
+  auto array = detail::CastToArray(values_);
+  auto list_type =
+      std::make_shared<typename ArrayType::TypeClass>(array->type());
+  this->array_ = std::make_shared<ArrayType>(
+      list_type, this->length_, this->buffer_offsets_->BufferOrEmpty(), array,
+      this->null_bitmap_->Buffer(), this->null_count_, this->offset_);
+}
+
+template class BaseListArray<arrow::ListArray>;
+template class BaseListArray<arrow::LargeListArray>;
 
 template <typename ArrayType>
 BaseListArrayBuilder<ArrayType>::BaseListArrayBuilder(
@@ -657,6 +746,13 @@ Status BaseListArrayBuilder<ArrayType>::Build(Client& client) {
 template class BaseListArrayBuilder<arrow::ListArray>;
 template class BaseListArrayBuilder<arrow::LargeListArray>;
 
+void FixedSizeListArray::PostConstruct(const ObjectMeta& meta) {
+  auto array = detail::CastToArray(values_);
+  this->array_ = std::make_shared<arrow::FixedSizeListArray>(
+      arrow::fixed_size_list(array->type(), this->list_size_), this->length_,
+      array);
+}
+
 FixedSizeListArrayBuilder::FixedSizeListArrayBuilder(
     Client& client, const std::shared_ptr<ArrayType> array)
     : FixedSizeListArrayBaseBuilder(client) {
@@ -704,6 +800,27 @@ Status FixedSizeListArrayBuilder::Build(Client& client) {
   return Status::OK();
 }
 
+void SchemaProxy::PostConstruct(const ObjectMeta& meta) {
+  std::shared_ptr<arrow::Buffer> wrapper;
+  // the binary value is not roundtrip, see also:
+  //   https://json.nlohmann.me/features/binary_values/#serialization
+  json::binary_t binary;
+  std::vector<uint8_t> binary_vec;
+  if (this->schema_binary_.is_binary()) {
+    binary = this->schema_binary_.get_binary();
+    wrapper = arrow::Buffer::Wrap(binary.data(), binary.size());
+  } else if (this->schema_binary_.contains("bytes")) {
+    this->schema_binary_["bytes"].get_to(binary_vec);
+    wrapper = arrow::Buffer::Wrap(binary_vec.data(), binary_vec.size());
+  }
+  if (wrapper == nullptr) {
+    LOG(ERROR) << "Invalid schema binary: " << this->schema_binary_.dump(4);
+  }
+  arrow::io::BufferReader reader(wrapper);
+  CHECK_ARROW_ERROR_AND_ASSIGN(this->schema_,
+                               arrow::ipc::ReadSchema(&reader, nullptr));
+}
+
 SchemaProxyBuilder::SchemaProxyBuilder(
     Client& client, const std::shared_ptr<arrow::Schema> schema)
     : SchemaProxyBaseBuilder(client), schema_(schema) {}
@@ -719,12 +836,31 @@ Status SchemaProxyBuilder::Build(Client& client) {
       schema_buffer,
       arrow::ipc::SerializeSchema(*schema_, arrow::default_memory_pool()));
 #endif
-  std::unique_ptr<BlobWriter> schema_writer;
-  RETURN_ON_ERROR(client.CreateBlob(schema_buffer->size(), schema_writer));
-  memcpy(schema_writer->data(), schema_buffer->data(), schema_buffer->size());
-
-  this->set_buffer_(std::shared_ptr<BlobWriter>(std::move(schema_writer)));
+  {
+    json textual;
+    RETURN_ON_ERROR(arrow_shim::SchemaToJSON(schema_, textual));
+    this->set_schema_textual_(textual);
+  }
+  {
+    std::vector<uint8_t> buffer(schema_buffer->size());
+    memcpy(buffer.data(), schema_buffer->data(), schema_buffer->size());
+    this->set_schema_binary_(json::binary(buffer));
+  }
   return Status::OK();
+}
+
+void RecordBatch::PostConstruct(const ObjectMeta& meta) {
+  for (size_t idx = 0; idx < columns_.size(); ++idx) {
+    arrow_columns_.emplace_back(detail::CastToArray(columns_[idx]));
+  }
+}
+
+std::shared_ptr<arrow::RecordBatch> RecordBatch::GetRecordBatch() const {
+  if (this->batch_ == nullptr) {
+    this->batch_ = arrow::RecordBatch::Make(this->schema_.GetSchema(),
+                                            this->row_num_, arrow_columns_);
+  }
+  return this->batch_;
 }
 
 RecordBatchBuilder::RecordBatchBuilder(
@@ -878,17 +1014,50 @@ Status RecordBatchConsolidator::Build(Client& client) {
   return Status::OK();
 }
 
+void Table::Construct(const ObjectMeta& meta) {
+  Collection<RecordBatch>::Construct(meta);
+  this->PostConstruct(meta);
+}
+
+void Table::PostConstruct(const ObjectMeta& meta) {
+  VINEYARD_CHECK_OK(this->meta_.GetMember("schema_", this->schema_));
+  this->meta_.GetKeyValue("num_rows_", this->num_rows_);
+  this->meta_.GetKeyValue("num_columns_", this->num_columns_);
+  this->meta_.GetKeyValue("batch_num_", this->batch_num_);
+  for (auto iter = this->LocalBegin(); iter != this->LocalEnd();
+       iter.NextLocal()) {
+    this->batches_.emplace_back(std::dynamic_pointer_cast<RecordBatch>(*iter));
+  }
+}
+
+std::shared_ptr<arrow::Table> Table::GetTable() const {
+  if (this->table_ == nullptr) {
+    if (batch_num_ > 0) {
+      arrow_batches_.resize(batch_num_);
+      for (size_t i = 0; i < batch_num_; ++i) {
+        arrow_batches_[i] = batches_[i]->GetRecordBatch();
+      }
+      VINEYARD_CHECK_OK(RecordBatchesToTable(arrow_batches_, &this->table_));
+    } else {
+      CHECK_ARROW_ERROR_AND_ASSIGN(
+          this->table_,
+          arrow::Table::FromRecordBatches(this->schema_->GetSchema(), {}));
+    }
+  }
+  return this->table_;
+}
+
 TableBuilder::TableBuilder(Client& client,
                            const std::shared_ptr<arrow::Table> table,
                            const bool merge_chunks)
-    : TableBaseBuilder(client), merge_chunks_(merge_chunks) {
+    : CollectionBuilder<RecordBatch>(client), merge_chunks_(merge_chunks) {
   this->tables_.emplace_back(table);
 }
 
 TableBuilder::TableBuilder(
     Client& client, const std::vector<std::shared_ptr<arrow::Table>>& tables,
     const bool merge_chunks)
-    : TableBaseBuilder(client), merge_chunks_(merge_chunks) {
+    : CollectionBuilder<RecordBatch>(client), merge_chunks_(merge_chunks) {
   VINEYARD_ASSERT(tables.size() > 0, "at least one batch is required");
   this->tables_ = std::move(tables);
 }
@@ -906,25 +1075,63 @@ Status TableBuilder::Build(Client& client) {
 
   this->set_num_rows_(num_rows);
   this->set_num_columns_(batches[0]->num_columns());
-  this->set_schema_(
-      std::make_shared<SchemaProxyBuilder>(client, batches[0]->schema()));
+  RETURN_ON_ERROR(this->set_schema(batches[0]->schema()));
 
   if (merge_chunks_) {
     this->set_batch_num_(1);
-    this->add_batches_(std::make_shared<RecordBatchBuilder>(client, batches));
+    RETURN_ON_ERROR(
+        this->AddMember(std::make_shared<RecordBatchBuilder>(client, batches)));
     batches.clear();  // release the reference
   } else {
     this->set_batch_num_(batches.size());
     for (auto const& batch : batches) {
-      this->add_batches_(std::make_shared<RecordBatchBuilder>(client, batch));
+      RETURN_ON_ERROR(
+          this->AddMember(std::make_shared<RecordBatchBuilder>(client, batch)));
     }
     batches.clear();  // release the reference
   }
   return Status::OK();
 }
 
+void TableBuilder::set_num_rows(const size_t num_rows) {
+  this->AddKeyValue("num_rows_", num_rows);
+}
+
+void TableBuilder::set_num_rows_(const size_t num_rows) {
+  this->set_num_rows(num_rows);
+}
+
+void TableBuilder::set_num_columns(const size_t num_columns) {
+  this->AddKeyValue("num_columns_", num_columns);
+}
+
+void TableBuilder::set_num_columns_(const size_t num_columns) {
+  this->set_num_columns(num_columns);
+}
+
+void TableBuilder::set_batch_num(const size_t batch_num) {
+  this->AddKeyValue("batch_num_", batch_num);
+}
+
+void TableBuilder::set_batch_num_(const size_t batch_num) {
+  this->set_batch_num(batch_num);
+}
+
+Status TableBuilder::set_schema(const std::shared_ptr<arrow::Schema>& schema) {
+  auto builder = std::make_shared<SchemaProxyBuilder>(client_, schema);
+  return this->AddMember("schema_", builder);
+}
+
+Status TableBuilder::set_schema(const std::shared_ptr<ObjectBuilder>& schema) {
+  return this->AddMember("schema_", schema);
+}
+
+Status TableBuilder::set_schema_(const std::shared_ptr<ObjectBuilder>& schema) {
+  return this->set_schema(schema);
+}
+
 TableExtender::TableExtender(Client& client, const std::shared_ptr<Table> table)
-    : TableBaseBuilder(client) {
+    : TableBuilder(client, nullptr) {
   row_num_ = table->num_rows();
   column_num_ = table->num_columns();
   schema_ = table->schema();
@@ -989,15 +1196,16 @@ Status TableExtender::Build(Client& client) {
   this->set_num_rows_(row_num_);
   this->set_num_columns_(column_num_);
   for (auto const& extender : record_batch_extenders_) {
-    this->add_batches_(extender);
+    RETURN_ON_ERROR(this->AddMember(extender));
   }
-  this->set_schema_(std::make_shared<SchemaProxyBuilder>(client, schema_));
+  RETURN_ON_ERROR(
+      this->set_schema_(std::make_shared<SchemaProxyBuilder>(client, schema_)));
   return Status::OK();
 }
 
 TableConsolidator::TableConsolidator(Client& client,
                                      const std::shared_ptr<Table> table)
-    : TableBaseBuilder(client) {
+    : TableBuilder(client, nullptr) {
   row_num_ = table->num_rows();
   column_num_ = table->num_columns();
   schema_ = table->schema();
@@ -1038,14 +1246,16 @@ Status TableConsolidator::Build(Client& client) {
   this->set_num_rows_(row_num_);
   this->set_num_columns_(column_num_);
   for (auto const& extender : record_batch_consolidators_) {
-    this->add_batches_(extender);
+    RETURN_ON_ERROR(this->AddMember(extender));
   }
+  std::shared_ptr<arrow::Schema> schema;
   if (record_batch_consolidators_.empty()) {
-    this->set_schema_(std::make_shared<SchemaProxyBuilder>(client, schema_));
+    schema = schema_;
   } else {
-    this->set_schema_(std::make_shared<SchemaProxyBuilder>(
-        client, record_batch_consolidators_[0]->schema()));
+    schema = record_batch_consolidators_[0]->schema();
   }
+  RETURN_ON_ERROR(
+      this->set_schema_(std::make_shared<SchemaProxyBuilder>(client, schema)));
   return Status::OK();
 }
 

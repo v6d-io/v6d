@@ -29,6 +29,7 @@ limitations under the License.
 #include "basic/ds/arrow_utils.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
+#include "client/ds/collection.h"
 #include "client/ds/core_types.h"
 #include "client/ds/stream.h"
 
@@ -47,6 +48,10 @@ class ArrowArray {
   virtual std::shared_ptr<arrow::Array> ToArray() const = 0;
 };
 
+namespace detail {
+std::shared_ptr<arrow::Array> CastToArray(std::shared_ptr<Object> object);
+}  // namespace detail
+
 class FlatArray : public ArrowArray {};
 
 /// Primitive array
@@ -64,12 +69,7 @@ class [[vineyard]] NumericArray : public PrimitiveArray,
  public:
   using ArrayType = ArrowArrayType<T>;
 
-  void PostConstruct(const ObjectMeta& meta) override {
-    this->array_ = std::make_shared<ArrayType>(
-        ConvertToArrowType<T>::TypeValue(), this->length_,
-        this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
-        this->null_count_, this->offset_);
-  }
+  void PostConstruct(const ObjectMeta& meta) override;
 
   std::shared_ptr<Blob> GetBuffer() const { return buffer_; }
 
@@ -93,6 +93,17 @@ class [[vineyard]] NumericArray : public PrimitiveArray,
   friend class NumericArrayBaseBuilder<T>;
 };
 
+using Int8Array = NumericArray<int8_t>;
+using Int16Array = NumericArray<int16_t>;
+using Int32Array = NumericArray<int32_t>;
+using Int64Array = NumericArray<int64_t>;
+using UInt8Array = NumericArray<uint8_t>;
+using UInt16Array = NumericArray<uint16_t>;
+using UInt32Array = NumericArray<uint32_t>;
+using UInt64Array = NumericArray<uint64_t>;
+using FloatArray = NumericArray<float>;
+using DoubleArray = NumericArray<double>;
+
 class BooleanArrayBaseBuilder;
 
 class [[vineyard]] BooleanArray : public PrimitiveArray,
@@ -100,12 +111,7 @@ class [[vineyard]] BooleanArray : public PrimitiveArray,
  public:
   using ArrayType = ArrowArrayType<bool>;
 
-  void PostConstruct(const ObjectMeta& meta) override {
-    this->array_ = std::make_shared<ArrayType>(
-        ConvertToArrowType<bool>::TypeValue(), this->length_,
-        this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
-        this->null_count_, this->offset_);
-  }
+  void PostConstruct(const ObjectMeta& meta) override;
 
   std::shared_ptr<Blob> GetBuffer() const { return buffer_; }
 
@@ -125,17 +131,6 @@ class [[vineyard]] BooleanArray : public PrimitiveArray,
   friend class BooleanArrayBaseBuilder;
 };
 
-using Int8Array = NumericArray<int8_t>;
-using Int16Array = NumericArray<int16_t>;
-using Int32Array = NumericArray<int32_t>;
-using Int64Array = NumericArray<int64_t>;
-using UInt8Array = NumericArray<uint8_t>;
-using UInt16Array = NumericArray<uint16_t>;
-using UInt32Array = NumericArray<uint32_t>;
-using UInt64Array = NumericArray<uint64_t>;
-using FloatArray = NumericArray<float>;
-using DoubleArray = NumericArray<double>;
-
 /// Binary array
 
 template <typename ArrayType>
@@ -146,12 +141,7 @@ class [[vineyard]] BaseBinaryArray
     : public FlatArray,
       public Registered<BaseBinaryArray<ArrayType>> {
  public:
-  void PostConstruct(const ObjectMeta& meta) override {
-    this->array_ = std::make_shared<ArrayType>(
-        this->length_, this->buffer_offsets_->BufferOrEmpty(),
-        this->buffer_data_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
-        this->null_count_, this->offset_);
-  }
+  void PostConstruct(const ObjectMeta& meta) override;
 
   std::shared_ptr<Blob> GetBuffer() const { return buffer_data_; }
 
@@ -185,12 +175,7 @@ class [[vineyard]] FixedSizeBinaryArray
     : public PrimitiveArray,
       public Registered<FixedSizeBinaryArray> {
  public:
-  void PostConstruct(const ObjectMeta& meta) override {
-    this->array_ = std::make_shared<arrow::FixedSizeBinaryArray>(
-        arrow::fixed_size_binary(this->byte_width_), this->length_,
-        this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
-        this->null_count_, this->offset_);
-  }
+  void PostConstruct(const ObjectMeta& meta) override;
 
   std::shared_ptr<Blob> GetBuffer() const { return buffer_; }
 
@@ -218,9 +203,7 @@ class NullArrayBaseBuilder;
 class [[vineyard]] NullArray : public FlatArray, public Registered<NullArray> {
  public:
   using ArrayType = arrow::NullArray;
-  void PostConstruct(const ObjectMeta& meta) override {
-    this->array_ = std::make_shared<arrow::NullArray>(this->length_);
-  }
+  void PostConstruct(const ObjectMeta& meta) override;
 
   std::shared_ptr<Blob> GetBuffer() const { return nullptr; }
 
@@ -237,37 +220,6 @@ class [[vineyard]] NullArray : public FlatArray, public Registered<NullArray> {
   friend class NullArrayBaseBuilder;
 };
 
-namespace detail {
-
-inline std::shared_ptr<arrow::Array> ConstructArray(
-    std::shared_ptr<Object> obj) {
-  if (auto arr = std::dynamic_pointer_cast<FixedSizeBinaryArray>(obj)) {
-    return arr->GetArray();
-  }
-  if (auto arr = std::dynamic_pointer_cast<StringArray>(obj)) {
-    return arr->GetArray();
-  }
-  if (auto arr = std::dynamic_pointer_cast<LargeStringArray>(obj)) {
-    return arr->GetArray();
-  }
-  if (auto arr = std::dynamic_pointer_cast<FixedSizeBinaryArray>(obj)) {
-    return arr->GetArray();
-  }
-  if (auto arr = std::dynamic_pointer_cast<NullArray>(obj)) {
-    return arr->GetArray();
-  }
-  if (auto arr = std::dynamic_pointer_cast<ArrowArray>(obj)) {
-    return arr->ToArray();
-  }
-  // Don't abort the program, the unresolvable array should be reported lazily.
-  //
-  // VINEYARD_ASSERT(nullptr != nullptr,
-  //                 "Unsupported array type: " + obj->meta().GetTypeName());
-  return nullptr;
-}
-
-}  // namespace detail
-
 /// Nested array
 
 template <typename ArrayType>
@@ -277,20 +229,13 @@ template <typename ArrayType>
 class [[vineyard]] BaseListArray : public ArrowArray,
                                    public Registered<BaseListArray<ArrayType>> {
  public:
-  void PostConstruct(const ObjectMeta& meta) override {
-    auto arr = detail::ConstructArray(values_);
-    auto list_type =
-        std::make_shared<typename ArrayType::TypeClass>(arr->type());
-    this->array_ = std::make_shared<ArrayType>(
-        list_type, this->length_, this->buffer_offsets_->BufferOrEmpty(), arr,
-        this->null_bitmap_->Buffer(), this->null_count_, this->offset_);
-  }
+  void PostConstruct(const ObjectMeta& meta) override;
 
   std::shared_ptr<ArrayType> GetArray() const { return array_; }
 
   std::shared_ptr<arrow::Array> ToArray() const override { return array_; }
 
-  const uint8_t* GetBase() const { return array_->value_data()->data(); }
+  std::shared_ptr<arrow::Array> GetBase() const { return array_->values(); }
 
  private:
   [[shared]] size_t length_;
@@ -312,12 +257,7 @@ class FixedSizeListArrayBaseBuilder;
 class [[vineyard]] FixedSizeListArray : public ArrowArray,
                                         public Registered<FixedSizeListArray> {
  public:
-  void PostConstruct(const ObjectMeta& meta) override {
-    auto arr = detail::ConstructArray(values_);
-    this->array_ = std::make_shared<arrow::FixedSizeListArray>(
-        arrow::fixed_size_list(arr->type(), this->list_size_), this->length_,
-        arr);
-  }
+  void PostConstruct(const ObjectMeta& meta) override;
 
   std::shared_ptr<arrow::FixedSizeListArray> GetArray() const { return array_; }
 
@@ -342,16 +282,13 @@ class SchemaProxyBaseBuilder;
 
 class [[vineyard]] SchemaProxy : public Registered<SchemaProxy> {
  public:
-  void PostConstruct(const ObjectMeta& meta) override {
-    arrow::io::BufferReader reader(this->buffer_->Buffer());
-    CHECK_ARROW_ERROR_AND_ASSIGN(this->schema_,
-                                 arrow::ipc::ReadSchema(&reader, nullptr));
-  }
+  void PostConstruct(const ObjectMeta& meta) override;
 
   std::shared_ptr<arrow::Schema> const& GetSchema() const { return schema_; }
 
  private:
-  [[shared]] std::shared_ptr<Blob> buffer_;
+  [[shared]] json schema_textual_;
+  [[shared]] json schema_binary_;
 
   std::shared_ptr<arrow::Schema> schema_;
 
@@ -363,19 +300,9 @@ class RecordBatchBaseBuilder;
 
 class [[vineyard(streamable)]] RecordBatch : public Registered<RecordBatch> {
  public:
-  void PostConstruct(const ObjectMeta& meta) override {
-    for (size_t idx = 0; idx < columns_.size(); ++idx) {
-      arrow_columns_.emplace_back(detail::ConstructArray(columns_[idx]));
-    }
-  }
+  void PostConstruct(const ObjectMeta& meta) override;
 
-  std::shared_ptr<arrow::RecordBatch> GetRecordBatch() const {
-    if (this->batch_ == nullptr) {
-      this->batch_ = arrow::RecordBatch::Make(this->schema_.GetSchema(),
-                                              this->row_num_, arrow_columns_);
-    }
-    return this->batch_;
-  }
+  std::shared_ptr<arrow::RecordBatch> GetRecordBatch() const;
 
   std::shared_ptr<arrow::Schema> schema() const { return schema_.GetSchema(); }
 
@@ -404,28 +331,18 @@ class [[vineyard(streamable)]] RecordBatch : public Registered<RecordBatch> {
   friend class RecordBatchBaseBuilder;
 };
 
-class TableBaseBuilder;
-
-class [[vineyard]] Table : public Registered<Table> {
+class Table : public BareRegistered<Table>, public Collection<RecordBatch> {
  public:
-  void PostConstruct(const ObjectMeta& meta) override {}
-
-  std::shared_ptr<arrow::Table> GetTable() const {
-    if (this->table_ == nullptr) {
-      if (batch_num_ > 0) {
-        arrow_batches_.resize(batch_num_);
-        for (size_t i = 0; i < batch_num_; ++i) {
-          arrow_batches_[i] = batches_[i]->GetRecordBatch();
-        }
-        VINEYARD_CHECK_OK(RecordBatchesToTable(arrow_batches_, &this->table_));
-      } else {
-        CHECK_ARROW_ERROR_AND_ASSIGN(
-            this->table_,
-            arrow::Table::FromRecordBatches(this->schema_->GetSchema(), {}));
-      }
-    }
-    return this->table_;
+  static std::unique_ptr<Object> Create() __attribute__((used)) {
+    return std::static_pointer_cast<Object>(
+        std::unique_ptr<Table>{new Table()});
   }
+
+  void Construct(const ObjectMeta& meta) override;
+
+  void PostConstruct(const ObjectMeta& meta) override;
+
+  std::shared_ptr<arrow::Table> GetTable() const;
 
   std::shared_ptr<arrow::ChunkedArray> column(int i) const {
     return GetTable()->column(i);
@@ -448,15 +365,20 @@ class [[vineyard]] Table : public Registered<Table> {
   }
 
  private:
-  [[shared]] size_t batch_num_, num_rows_, num_columns_;
-  [[shared]] Tuple<std::shared_ptr<RecordBatch>> batches_;
-  [[shared]] std::shared_ptr<SchemaProxy> schema_;
+  size_t batch_num_, num_rows_, num_columns_;
+  Tuple<std::shared_ptr<RecordBatch>> batches_;
+  std::shared_ptr<SchemaProxy> schema_;
 
   mutable std::vector<std::shared_ptr<arrow::RecordBatch>> arrow_batches_;
   mutable std::shared_ptr<arrow::Table> table_;
 
   friend class Client;
-  friend class TableBaseBuilder;
+  friend class TableBuilder;
+};
+
+template <>
+struct collection_type<RecordBatch> {
+  using type = Table;
 };
 
 #ifdef __GNUC__
