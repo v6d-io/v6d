@@ -174,6 +174,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doGetGPUBuffers(json const& root);
 
+  bool doLabelObject(json const& root);
+
   bool doEvictObjects(json const& root);
 
   bool doLoadObjects(json const& root);

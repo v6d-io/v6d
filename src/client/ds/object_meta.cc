@@ -311,6 +311,19 @@ uint64_t ObjectMeta::Timestamp() const {
   return meta_.value("__timestamp", static_cast<uint64_t>(0));
 }
 
+json ObjectMeta::Labels() const {
+  const std::string label_string = meta_.value("__labels", "{}");
+  Status s;
+  json labels;
+  CATCH_JSON_ERROR(labels, s, json::parse(label_string));
+  return labels;
+}
+
+const std::string ObjectMeta::Label(const std::string& key) const {
+  auto labels = Labels();
+  return labels.value(key, "");
+}
+
 std::string ObjectMeta::ToString() const { return meta_.dump(4); }
 
 void ObjectMeta::PrintMeta() const { std::clog << meta_.dump(4) << std::endl; }

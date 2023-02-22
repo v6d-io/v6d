@@ -296,6 +296,17 @@ void bind_core(py::module& mod) {
             return detail::from_json(usages);
           },
           py::arg("pretty") = true)
+      .def_property_readonly("timestamp", &ObjectMeta::Timestamp)
+      .def_property_readonly("labels",
+                             [](const ObjectMeta* self) -> py::object {
+                               return detail::from_json(self->Labels());
+                             })
+      .def(
+          "label",
+          [](const ObjectMeta* self, std::string const& key) -> std::string {
+            return self->Label(key);
+          },
+          "key"_a)
       .def("reset_key",
            [](ObjectMeta& meta, std::string const& key) { meta.ResetKey(key); })
       .def("reset_signature", [](ObjectMeta& meta) { meta.ResetSignature(); })

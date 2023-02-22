@@ -91,6 +91,7 @@ enum class CommandType {
   GetGPUBuffersRequest = 57,
   CreateDiskBufferRequest = 58,
   ListNameRequest = 59,
+  LabelRequest = 60,
   EvictRequest = 80,
   LoadRequest = 81,  // = {load, load + pin}
   UnpinRequest = 82,
@@ -648,6 +649,25 @@ Status ReadIncreaseReferenceCountRequest(json const& root,
 void WriteIncreaseReferenceCountReply(std::string& msg);
 
 Status ReadIncreaseReferenceCountReply(json const& root);
+
+void WriteLabelRequest(const ObjectID id, const std::string& key,
+                       const std::string& value, std::string& msg);
+
+void WriteLabelRequest(const ObjectID id, const std::vector<std::string>& keys,
+                       const std::vector<std::string>& values,
+                       std::string& msg);
+
+void WriteLabelRequest(const ObjectID id,
+                       const std::map<std::string, std::string>& kvs,
+                       std::string& msg);
+
+Status ReadLabelRequest(json const& root, ObjectID& id,
+                        std::vector<std::string>& keys,
+                        std::vector<std::string>& values);
+
+void WriteLabelReply(std::string& msg);
+
+Status ReadLabelReply(json const& root);
 
 void WriteEvictRequest(const std::vector<ObjectID>& ids, std::string& msg);
 

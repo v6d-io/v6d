@@ -426,6 +426,22 @@ class ClientBase {
   Status Clear();
 
   /**
+   * @brief Associate given labels to an existing object.
+   *
+   * @param object Object to be labeled.
+   */
+  Status Label(const ObjectID object, std::string const& key,
+               std::string const& value);
+
+  /**
+   * @brief Associate given labels to an existing object.
+   *
+   * @param object Object to be labeled.
+   */
+  Status Label(const ObjectID object,
+               std::map<std::string, std::string> const& labels);
+
+  /**
    * @brief Evict objects from the vineyardd server.
    *
    * @param objects Objects to be evicted.

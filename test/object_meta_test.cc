@@ -58,10 +58,33 @@ int main(int argc, char** argv) {
     VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
     CHECK_LE(t0, meta.Timestamp());
     CHECK_GE(t1, meta.Timestamp());
-    LOG(INFO) << "Passed object_meta timestamp tests...";
+    LOG(INFO) << "Passed object_meta timestamp tests ...";
   }
 
-  LOG(INFO) << "Passed object_meta tests...";
+  {
+    // check object meta's labels
+    ObjectMeta meta;
+    VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
+    CHECK_EQ(0, meta.Labels().size());
+
+    VINEYARD_CHECK_OK(client.Label(id, "label1", "value1"));
+    VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
+    CHECK_EQ(1, meta.Labels().size());
+    CHECK_EQ("value1", meta.Label("label1"));
+
+    VINEYARD_CHECK_OK(client.Label(id, "label2", "value2"));
+    VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
+    CHECK_EQ(2, meta.Labels().size());
+    CHECK_EQ("value2", meta.Label("label2"));
+
+    // override
+    VINEYARD_CHECK_OK(client.Label(id, "label1", "value3"));
+    VINEYARD_CHECK_OK(client.GetMetaData(id, meta));
+    CHECK_EQ(2, meta.Labels().size());
+    CHECK_EQ("value3", meta.Label("label1"));
+  }
+
+  LOG(INFO) << "Passed object_meta tests ...";
 
   client.Disconnect();
 

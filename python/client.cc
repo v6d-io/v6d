@@ -414,6 +414,20 @@ void bind_client(py::module& mod) {
           "object_id"_a)
       .def("clear", [](ClientBase* self) { throw_on_error(self->Clear()); })
       .def(
+          "label",
+          [](ClientBase* self, ObjectID id, std::string const& key,
+             std::string const& value) -> void {
+            throw_on_error(self->Label(id, key, value));
+          },
+          "object"_a, "key"_a, "value"_a)
+      .def(
+          "label",
+          [](ClientBase* self, ObjectID id,
+             std::map<std::string, std::string> const& labels) -> void {
+            throw_on_error(self->Label(id, labels));
+          },
+          "object"_a, "labels"_a)
+      .def(
           "evict",
           [](ClientBase* self, std::vector<ObjectID> const& objects) -> void {
             throw_on_error(self->Evict(objects));
