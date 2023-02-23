@@ -16,7 +16,7 @@ cmake_minimum_required(VERSION 3.3)
 
 project(vineyard-cmake-example LANGUAGES C CXX)
 
-find_package(vineyard)
+find_package(vineyard REQUIRED)
 
 add_executable(vineyard-cmake-example ${CMAKE_CURRENT_SOURCE_DIR}/example.cc)
 target_include_directories(vineyard-cmake-example PRIVATE ${VINEYARD_INCLUDE_DIRS})

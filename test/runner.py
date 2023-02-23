@@ -235,6 +235,7 @@ def start_vineyardd(
             str(spill_lower_rate),
             '--spill_upper_rate',
             str(spill_upper_rate),
+            "--coredump",  # enable core-dump
             verbose=True,
             **kw,
         )
