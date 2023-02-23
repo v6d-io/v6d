@@ -17,7 +17,6 @@ package delete
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -47,33 +46,33 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator -v 0.
 vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator --local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("delete operator", args); err != nil {
-			log.Fatal("failed to validate delete operator args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate delete operator args and flags: ", err,
 				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()
 		if err != nil {
-			log.Fatal("failed to get operator scheme: ", err)
+			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
-			log.Fatal("failed to get kubeclient: ", err)
+			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}
 
 		operatorManifests, err := util.BuildKustomizeDir(util.GetKustomizeDir())
 		if err != nil {
-			log.Fatal("failed to build kustomize dir", err)
+			util.ErrLogger.Fatal("failed to build kustomize dir", err)
 		}
 
 		if err := util.DeleteManifests(kubeClient, []byte(operatorManifests),
 			flags.GetDefaultVineyardNamespace(), scheme); err != nil {
-			log.Fatal("failed to delete operator manifests: ", err)
+			util.ErrLogger.Fatal("failed to delete operator manifests: ", err)
 		}
 
 		waitOperatorDeleted(kubeClient)
 
-		log.Println("Vineyard Operator is deleted.")
+		util.InfoLogger.Println("Vineyard Operator is deleted.")
 	},
 }
 

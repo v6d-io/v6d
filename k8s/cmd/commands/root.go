@@ -16,7 +16,6 @@ limitations under the License.
 package commands
 
 import (
-	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -25,8 +24,10 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/dryapply"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/drydelete"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/dryschedule"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/start"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 // GetDefaultKubeconfig return the default kubeconfig path
@@ -64,7 +65,7 @@ supports managing the vineyard relevant components such as vineyardd and pluggab
 drivers`,
 
 	Run: func(cmd *cobra.Command, args []string) {
-		log.Println("Welcome to vineyardctl")
+		util.ErrLogger.Println("Welcome to vineyardctl")
 	},
 }
 
@@ -72,7 +73,7 @@ drivers`,
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		log.Fatal("failed to execute root command: ", err)
+		util.ErrLogger.Fatal("failed to execute root command: ", err)
 	}
 }
 
@@ -84,6 +85,7 @@ func init() {
 	rootCmd.AddCommand(start.NewStartCmd())
 	rootCmd.AddCommand(dryapply.NewDryApplyCmd())
 	rootCmd.AddCommand(drydelete.NewDryDeleteCmd())
+	rootCmd.AddCommand(dryschedule.NewDryScheduleCmd())
 	//disable completion command
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }

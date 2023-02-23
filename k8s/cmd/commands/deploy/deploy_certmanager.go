@@ -17,7 +17,6 @@ package deploy
 
 import (
 	"context"
-	"log"
 	"time"
 
 	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -47,34 +46,34 @@ vineyardctl -k /home/gsbot/.kube/config deploy cert-manager
 vineyardctl -k /home/gsbot/.kube/config deploy cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("deploy cert-manager", args); err != nil {
-			log.Fatal("failed to validate deploy cert-manager args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate deploy cert-manager args and flags: ", err,
 				"the extra args are: ", args)
 		}
 		scheme, err := util.GetCertManagerScheme()
 		if err != nil {
-			log.Fatal("failed to get cert-manager scheme: ", err)
+			util.ErrLogger.Fatal("failed to get cert-manager scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
-			log.Fatal("failed to get kubeclient: ", err)
+			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}
 
 		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
 		if err != nil {
-			log.Fatal("failed to get cert-manager manifests: ", err)
+			util.ErrLogger.Fatal("failed to get cert-manager manifests: ", err)
 		}
 
 		if err := util.ApplyManifests(kubeClient, []byte(certManagerManifests),
 			"", scheme); err != nil {
-			log.Fatal("failed to apply cert-manager manifests: ", err)
+			util.ErrLogger.Fatal("failed to apply cert-manager manifests: ", err)
 		}
 
 		if err := waitCertManagerReady(kubeClient); err != nil {
-			log.Fatal("failed to wait cert-manager ready: ", err)
+			util.ErrLogger.Fatal("failed to wait cert-manager ready: ", err)
 		}
 
-		log.Println("Cert-Manager is ready.")
+		util.InfoLogger.Println("Cert-Manager is ready.")
 	},
 }
 

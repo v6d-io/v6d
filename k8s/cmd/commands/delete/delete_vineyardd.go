@@ -17,7 +17,6 @@ package delete
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -45,34 +44,34 @@ vineyardctl delete vineyardd
 vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("delete vineyardd", args); err != nil {
-			log.Fatal("failed to validate delete vineyardd command args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate delete vineyardd command args and flags: ", err,
 				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()
 		if err != nil {
-			log.Fatal("failed to get operator scheme: ", err)
+			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
-			log.Fatal("failed to get kubeclient: ", err)
+			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}
 
 		vineyardd := &vineyardV1alpha1.Vineyardd{}
 		if err := kubeClient.Get(context.Background(), types.NamespacedName{Name: flags.VineyarddName,
 			Namespace: flags.GetDefaultVineyardNamespace()},
 			vineyardd); err != nil && !apierrors.IsNotFound(err) {
-			log.Fatal("failed to get vineyardd: ", err)
+			util.ErrLogger.Fatal("failed to get vineyardd: ", err)
 		}
 
 		if err := kubeClient.Delete(context.Background(), vineyardd); err != nil {
-			log.Fatal("failed to delete vineyardd: ", err)
+			util.ErrLogger.Fatal("failed to delete vineyardd: ", err)
 		}
 
 		waitVineyardDeleted(kubeClient, vineyardd)
 
-		log.Println("Vineyardd is deleted.")
+		util.InfoLogger.Println("Vineyardd is deleted.")
 	},
 }
 

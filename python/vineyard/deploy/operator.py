@@ -28,6 +28,8 @@ def create_vineyardd_cluster_with_operator(
     namespace=None,
     kubeconfig=None,
     vineyard_replicas=3,
+    vineyard_create_serviceAccount=False,
+    vineyard_serviceAccount_name=None,
     vineyard_etcd_replicas=3,
     vineyard_name='vineyardd-sample',
     vineyard_container_image='vineyardcloudnative/vineyardd:latest',
@@ -70,6 +72,10 @@ def create_vineyardd_cluster_with_operator(
             the path to the kubeconfig file.
         vineyard_replicas: int
             the number of vineyardd instances.
+        vineyard_create_serviceAccount: bool
+            whether to create a service account for vineyard cluster.
+        vineyard_serviceAccount_name: str
+            the name of the service account for vineyard cluster.
         vineyard_etcd_replicas: int
             the number of etcd instances.
         vineyard_name: str
@@ -208,6 +214,10 @@ def create_vineyardd_cluster_with_operator(
         command.extend(['--namespace', namespace])
     if kubeconfig:
         command.extend(['--kubeconfig', kubeconfig])
+    if vineyard_create_serviceAccount:
+        command.extend(['--vineyard.create.serviceAccount'])
+    if vineyard_serviceAccount_name:
+        command.extend(['--vineyard.serviceAccount.name', vineyard_serviceAccount_name])
     if vineyard_container_envs:
         command.extend(['--envs', vineyard_container_envs])
     if vineyard_metric_enable:
@@ -231,7 +241,7 @@ def create_vineyardd_cluster_with_operator(
     try:
         subprocess.Popen(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise RuntimeError('Failed to create vineyard cluster with operator: %s' % e.stderr)
+        raise RuntimeError('Failed to create vineyard cluster with operator: %s' % e.stderr, flush=True)
 
 def delete_vineyardd_cluster_with_operator(
     vineyardctl_path=None,
@@ -265,6 +275,8 @@ def create_vineyardd_cluster_without_operator(
         kubeconfig=None,
         label=None,
         vineyard_replicas=3,
+        vineyard_create_serviceAccount=False,
+        vineyard_serviceAccount_name=None,
         vineyard_etcd_replicas=3,
         vineyard_name='vineyardd-sample',
         vineyard_container_image='vineyardcloudnative/vineyardd:latest',
@@ -306,6 +318,10 @@ def create_vineyardd_cluster_without_operator(
             multiple labels are "app=vineyard-cluster,demo=test".
         vineyard_replicas: int
             the number of vineyardd instances.
+        vineyard_create_serviceAccount: bool
+            whether to create a service account for vineyard cluster.
+        vineyard_serviceAccount_name: str
+            the name of the service account for vineyard cluster.
         vineyard_etcd_replicas: int
             the number of etcd instances.
         vineyard_name: str
@@ -430,6 +446,10 @@ def create_vineyardd_cluster_without_operator(
         command.extend(['--kubeconfig', kubeconfig])
     if label:
         command.extend(['--label', label])
+    if vineyard_create_serviceAccount:
+        command.extend(['--vineyard.create.serviceAccount'])
+    if vineyard_serviceAccount_name:
+        command.extend(['--vineyard.serviceAccount.name', vineyard_serviceAccount_name])
     if vineyard_container_envs:
         command.extend(['--envs', vineyard_container_envs])
     if vineyard_metric_enable:
@@ -453,7 +473,7 @@ def create_vineyardd_cluster_without_operator(
     try:
         subprocess.Popen(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise RuntimeError('Failed to create vineyard cluster without operator: %s' % e.stderr)
+        raise RuntimeError('Failed to create vineyard cluster with operator: %s' % e.stderr, flush=True)
 
 def delete_vineyardd_cluster_without_operator(
     vineyardctl_path=None,
@@ -481,9 +501,43 @@ def delete_vineyardd_cluster_without_operator(
     except subprocess.CalledProcessError as e:
         raise RuntimeError('Failed to delete vineyard cluster without operator: %s' % e)
 
+def schedule_workload_on_vineyardd_cluster(
+    vineyardctl_path=None,
+    kubeconfig=None,
+    workload=None,
+    vineyard_name=None,
+    vineyard_namespace=None,
+):
+    if vineyardctl_path is None:
+        vineyardctl_path = pkg_resources.resource_filename('vineyard','vineyardctl')
+    
+    if not vineyardctl_path:
+        raise RuntimeError('Unable to find the "vineyardctl" executable')
+
+    command = [
+        vineyardctl_path, 'dryschedule', 'workload',
+        '--resource', workload,
+        '--vineyardd-name', vineyard_name,
+        '--vineyardd-namespace', vineyard_namespace,
+    ]
+    if kubeconfig:
+        command.extend(['--kubeconfig', kubeconfig])
+
+    try:
+        p = subprocess.Popen(command, stdout = subprocess.PIPE,
+        stderr=subprocess.STDOUT)
+        output, err = p.communicate()
+        if err:
+            raise RuntimeError('Failed to get the scheduled workload on vineyard cluster: %s' % err)
+    except subprocess.CalledProcessError as e:
+        raise RuntimeError('Failed to schedule workload on vineyard cluster: %s' % e)
+
+    return output
+
 __all__ = [
     'create_vineyardd_cluster_with_operator',
     'delete_vineyardd_cluster_with_operator',
     'create_vineyardd_cluster_without_operator',
     'delete_vineyardd_cluster_without_operator',
+    'schedule_workload_on_vineyardd_cluster',
 ]

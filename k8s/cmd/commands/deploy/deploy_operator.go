@@ -17,7 +17,6 @@ package deploy
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -55,35 +54,35 @@ vineyardctl -n test -k /home/gsbot/.kube/config deploy operator -v 0.12.2
 vineyardctl -k /home/gsbot/.kube/config deploy operator --local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("deploy operator", args); err != nil {
-			log.Fatal("failed to validate deploy operator args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate deploy operator args and flags: ", err,
 				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()
 		if err != nil {
-			log.Fatal("failed to get operator scheme: ", err)
+			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
-			log.Fatal("failed to get kubeclient: ", err)
+			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}
 
 		operatorManifests, err := util.BuildKustomizeDir(util.GetKustomizeDir())
 		if err != nil {
-			log.Fatal("failed to build kustomize dir: ", err)
+			util.ErrLogger.Fatal("failed to build kustomize dir: ", err)
 		}
 
 		if err := util.ApplyManifests(kubeClient, []byte(operatorManifests),
 			flags.GetDefaultVineyardNamespace(), scheme); err != nil {
-			log.Fatal("failed to apply operator manifests: ", err)
+			util.ErrLogger.Fatal("failed to apply operator manifests: ", err)
 		}
 
 		if err := waitOperatorReady(kubeClient); err != nil {
-			log.Fatal("failed to wait operator ready: ", err)
+			util.ErrLogger.Fatal("failed to wait operator ready: ", err)
 		}
 
-		log.Println("Vineyard Operator is ready.")
+		util.InfoLogger.Println("Vineyard Operator is ready.")
 	},
 }
 

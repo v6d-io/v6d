@@ -203,6 +203,16 @@ type VineyarddSpec struct {
 	// +kubebuilder:default:=3
 	Replicas int `json:"replicas,omitempty"`
 
+	// whether to create the vineyardd's service account
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=false
+	CreateServiceAccount bool `json:"createServiceAccount,omitempty"`
+
+	// vineyardd's service account
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=""
+	ServiceAccountName string `json:"serviceAccountName,omitempty"`
+
 	// vineyardd's service
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={type: "ClusterIP", port: 9600, selector: "rpc.vineyardd.v6d.io/rpc=vineyard-rpc"}

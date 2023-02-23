@@ -35,7 +35,7 @@ For example:
 vineyardctl deploy vineyard-cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("deploy vineyardd", args); err != nil {
-			log.Fatal("failed to validate deploy vineyardd command args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate deploy vineyardd command args and flags: ", err,
 				"the extra args are: ", args)
 		}
 

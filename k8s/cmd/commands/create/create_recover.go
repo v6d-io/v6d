@@ -17,7 +17,6 @@ package create
 
 import (
 	"context"
-	"log"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -44,33 +43,33 @@ For example:
 vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("create recover", args); err != nil {
-			log.Fatal("failed to validate create recover command args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate create recover command args and flags: ", err,
 				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()
 		if err != nil {
-			log.Fatal("failed to get operator scheme: ", err)
+			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
-			log.Fatal("failed to get kubeclient: ", err)
+			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}
 
 		recover, err := buildRecoverJob()
 		if err != nil {
-			log.Fatal("failed to build recover job: ", err)
+			util.ErrLogger.Fatal("failed to build recover job: ", err)
 		}
 
 		if err := kubeClient.Create(context.TODO(), recover); err != nil {
-			log.Fatal("failed to create recover job: ", err)
+			util.ErrLogger.Fatal("failed to create recover job: ", err)
 		}
 
 		if err := waitRecoverJobDone(kubeClient, recover); err != nil {
-			log.Fatal("failed to wait backup job done: ", err)
+			util.ErrLogger.Fatal("failed to wait backup job done: ", err)
 		}
-		log.Println("Backup Job is ready.")
+		util.InfoLogger.Println("Backup Job is ready.")
 	},
 }
 

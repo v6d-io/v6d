@@ -24,6 +24,7 @@ import (
 	apiv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoScheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -111,9 +112,14 @@ func GetCertManagerScheme() (*runtime.Scheme, error) {
 
 // GetKubeClient return the kubernetes client
 func GetKubeClient(scheme *runtime.Scheme) (client.Client, error) {
+	cfg := &rest.Config{}
+
 	cfg, err := clientcmd.BuildConfigFromFlags("", flags.Kubeconfig)
 	if err != nil {
-		return nil, err
+		cfg, err = rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
 	}
 	client, _ := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {

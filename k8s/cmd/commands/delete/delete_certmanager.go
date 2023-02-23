@@ -16,8 +16,6 @@ limitations under the License.
 package delete
 
 import (
-	"log"
-
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
@@ -38,29 +36,29 @@ vineyardctl -k /home/gsbot/.kube/config delete cert-manager
 vineyardctl -k /home/gsbot/.kube/config delete cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("delete cert-manager", args); err != nil {
-			log.Fatal("failed to validate delete cert-manager args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate delete cert-manager args and flags: ", err,
 				"the extra args are: ", args)
 		}
 		scheme, err := util.GetCertManagerScheme()
 		if err != nil {
-			log.Fatal("failed to get cert-manager scheme: ", err)
+			util.ErrLogger.Fatal("failed to get cert-manager scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
-			log.Fatal("failed to get kubeclient: ", err)
+			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}
 
 		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
 		if err != nil {
-			log.Fatal("failed to get cert-manager manifests: ", err)
+			util.ErrLogger.Fatal("failed to get cert-manager manifests: ", err)
 		}
 
 		if err := util.DeleteManifests(kubeClient, []byte(certManagerManifests),
 			"", scheme); err != nil {
-			log.Fatal("failed to delete cert-manager manifests: ", err)
+			util.ErrLogger.Fatal("failed to delete cert-manager manifests: ", err)
 		}
-		log.Println("Cert-Manager is deleted.")
+		util.InfoLogger.Println("Cert-Manager is deleted.")
 	},
 }
 

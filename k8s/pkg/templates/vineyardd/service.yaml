@@ -20,6 +20,7 @@ metadata:
   name: {{ .Name }}-rpc
   namespace: {{ .Namespace }}
   labels:
+    app.kubernetes.io/name: {{ .Name }}
     {{- range $l }}
     {{.Key}}: "{{.Value}}"
     {{- end }}
@@ -30,6 +31,7 @@ spec:
       protocol: TCP
       name: vineyard-rpc
   selector:
+    app.kubernetes.io/name: {{ .Name }}
     {{- range $l }}
     {{.Key}}: "{{.Value}}"
     {{- end }}

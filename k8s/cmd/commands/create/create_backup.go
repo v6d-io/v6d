@@ -18,7 +18,6 @@ package create
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -48,32 +47,32 @@ vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespac
 --pvc-spec '{"storageClassName": "manual", "accessModes": ["ReadWriteOnce"], "resources": {"requests": {"storage": "1Gi"}}}'`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("create backup", args); err != nil {
-			log.Fatal("failed to validate create backup command args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate create backup command args and flags: ", err,
 				"the extra args are: ", args)
 		}
 		scheme, err := util.GetOperatorScheme()
 		if err != nil {
-			log.Fatal("failed to get operator scheme: ", err)
+			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
-			log.Fatal("failed to get kubeclient: ", err)
+			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}
 
 		backup, err := buildBackupJob()
 		if err != nil {
-			log.Fatal("failed to build backup job: ", err)
+			util.ErrLogger.Fatal("failed to build backup job: ", err)
 		}
 
 		if err := kubeClient.Create(context.TODO(), backup); err != nil {
-			log.Fatal("failed to create backup job: ", err)
+			util.ErrLogger.Fatal("failed to create backup job: ", err)
 		}
 
 		if err := waitBackupJobDone(kubeClient, backup); err != nil {
-			log.Fatal("failed to wait backup job done: ", err)
+			util.ErrLogger.Fatal("failed to wait backup job done: ", err)
 		}
-		log.Println("Backup Job is ready.")
+		util.InfoLogger.Println("Backup Job is ready.")
 	},
 }
 

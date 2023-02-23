@@ -18,7 +18,6 @@ package deploy
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -47,29 +46,29 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy vineyardd
 vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy vineyardd --image vineyardd:v0.12.2`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("deploy vineyardd", args); err != nil {
-			log.Fatal("failed to validate deploy vineyardd command args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate deploy vineyardd command args and flags: ", err,
 				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetOperatorScheme()
 		if err != nil {
-			log.Fatal("failed to get operator scheme: ", err)
+			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)
 		if err != nil {
-			log.Fatal("failed to get kubeclient: ", err)
+			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}
 
 		vineyardd, err := BuildVineyardManifest()
 		if err != nil {
-			log.Fatal("failed to build the vineyardd: ", err)
+			util.ErrLogger.Fatal("failed to build the vineyardd: ", err)
 		}
 		if err := waitVineyardReady(kubeClient, vineyardd); err != nil {
-			log.Fatal("failed to wait vineyardd ready: ", err)
+			util.ErrLogger.Fatal("failed to wait vineyardd ready: ", err)
 		}
 
-		log.Println("Vineyardd is ready.")
+		util.InfoLogger.Println("Vineyardd is ready.")
 	},
 }
 

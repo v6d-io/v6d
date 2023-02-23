@@ -18,7 +18,6 @@ package drydelete
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/dryapply"
@@ -42,25 +41,25 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config drydelete vineyardd
 vineyardctl -n vineyard-system -k /home/gsbot/.kube/config drydelete vineyardd --name vineyardd-0`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("drydelete vineyardd", args); err != nil {
-			log.Fatal("failed to validate drydelete vineyardd command args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate drydelete vineyardd command args and flags: ", err,
 				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetClientgoScheme()
 		if err != nil {
-			log.Fatal("failed to get client-go scheme: ", err)
+			util.ErrLogger.Fatal("failed to get client-go scheme: ", err)
 		}
 
 		kubeclient, err := util.GetKubeClient(scheme)
 		if err != nil {
-			log.Fatal("failed to get kube client: ", err)
+			util.ErrLogger.Fatal("failed to get kube client: ", err)
 		}
 
 		if err := deleteVineyarddFromTemplate(kubeclient); err != nil {
-			log.Fatal("failed to delete vineyardd resources from template: ", err)
+			util.ErrLogger.Fatal("failed to delete vineyardd resources from template: ", err)
 		}
 
-		log.Println("vineyard cluster deleted successfully")
+		util.InfoLogger.Println("vineyard cluster deleted successfully")
 	},
 }
 

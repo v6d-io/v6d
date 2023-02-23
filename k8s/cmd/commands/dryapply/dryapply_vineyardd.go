@@ -19,7 +19,6 @@ package dryapply
 import (
 	"context"
 	"fmt"
-	"log"
 	"strconv"
 	"strings"
 
@@ -68,25 +67,26 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config dryapply vineyardd
 vineyardctl -n vineyard-system -k /home/gsbot/.kube/config dryapply vineyardd --image vineyardd:v0.12.2`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := util.ValidateNoArgs("dryapply vineyardd", args); err != nil {
-			log.Fatal("failed to validate dryapply vineyardd command args and flags: ", err,
+			util.ErrLogger.Fatal("failed to validate dryapply vineyardd command args and flags: ", err,
 				"the extra args are: ", args)
 		}
 
 		scheme, err := util.GetClientgoScheme()
 		if err != nil {
-			log.Fatal("failed to get client-go scheme: ", err)
+			util.ErrLogger.Fatal("failed to get client-go scheme: ", err)
 		}
 
 		kubeclient, err := util.GetKubeClient(scheme)
 		if err != nil {
-			log.Fatal("failed to get kube client: ", err)
+			util.ErrLogger.Fatal("failed to get kube client: ", err)
 		}
 
+		util.InfoLogger.Println("applying vineyard template resources...")
 		if err := applyVineyarddFromTemplate(kubeclient); err != nil {
-			log.Fatal("failed to apply vineyardd resources from template: ", err)
+			util.ErrLogger.Fatal("failed to apply vineyardd resources from template: ", err)
 		}
 
-		log.Println("vineyard cluster deployed successfully")
+		util.InfoLogger.Println("vineyard cluster deployed successfully")
 	},
 }
 
@@ -184,7 +184,6 @@ func GetObjsFromTemplate() ([]*unstructured.Unstructured, error) {
 
 	// process the vineyard socket
 	v1alpha1.PreprocessVineyarddSocket(vineyardd)
-
 	for _, f := range vineyardManifests {
 		if _, ok := files[f]; !ok {
 			continue
@@ -193,6 +192,7 @@ func GetObjsFromTemplate() ([]*unstructured.Unstructured, error) {
 		if err != nil {
 			return objs, fmt.Errorf("failed to read manifest %s: %v", f, err)
 		}
+
 		obj := &unstructured.Unstructured{}
 		_, _ = swckkube.LoadTemplate(string(manifest), vineyardd, tmplFunc, obj)
 		if obj.GetKind() != "" {
