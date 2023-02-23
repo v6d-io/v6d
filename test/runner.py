@@ -218,6 +218,10 @@ def start_vineyardd(
         socket = '%s.%d' % (default_ipc_socket, idx)
     else:
         socket = default_ipc_socket
+    if not isinstance(metadata_settings, (list, tuple)):
+        metadata_settings = [metadata_settings]
+    if not isinstance(allocator_settings, (list, tuple)):
+        allocator_settings = [allocator_settings]
     with contextlib.ExitStack() as stack:
         proc = start_program(
             'vineyardd',
@@ -413,7 +417,7 @@ def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
     with start_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
         # test invalid inputs from client
@@ -470,7 +474,7 @@ def run_vineyard_spill_tests(meta, allocator, endpoints, tests):
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
     with start_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         size=2048,
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         spill_path='/tmp/spill_path',
@@ -483,14 +487,14 @@ def run_scale_in_out_tests(meta, allocator, endpoints, instance_size=4):
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
     with start_multiple_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
     ) as instances:
         time.sleep(5)
         with start_vineyardd(
             metadata_settings,
-            '--allocator=%s' % allocator,
+            ['--allocator', allocator],
             default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
             idx=instance_size,
         ):
@@ -501,7 +505,7 @@ def run_scale_in_out_tests(meta, allocator, endpoints, instance_size=4):
     # run with serious contention on etcd.
     with start_multiple_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
@@ -514,7 +518,7 @@ def run_graph_tests(meta, allocator, endpoints, tests):
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
     with start_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
         run_test(tests, 'arrow_fragment_test')
@@ -543,7 +547,7 @@ def run_fuse_test(meta, allocator, endpoints, tests):
 
     with start_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port), start_fuse() as _:
         start_time = time.time()
@@ -580,7 +584,7 @@ def run_python_tests(meta, allocator, endpoints, tests):
 
     with start_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
         start_time = time.time()
@@ -619,7 +623,7 @@ def run_python_contrib_ml_tests(meta, allocator, endpoints):
 
     with start_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
         start_time = time.time()
@@ -652,7 +656,7 @@ def run_python_contrib_dask_tests(meta, allocator, endpoints):
     instance_size = 4
     with start_multiple_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
@@ -692,7 +696,7 @@ def run_python_deploy_tests(meta, allocator, endpoints, tests, with_migration):
         extra_args.append('--with-migration')
     with start_multiple_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
@@ -735,7 +739,7 @@ def run_io_adaptor_tests(meta, allocator, endpoints, tests):
 
     with start_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
         start_time = time.time()
@@ -777,7 +781,7 @@ def run_io_adaptor_distributed_tests(meta, allocator, endpoints, tests, with_mig
         extra_args.append('--with-migration')
     with start_multiple_vineyardd(
         metadata_settings,
-        '--allocator=%s' % allocator,
+        ['--allocator', allocator],
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
         instance_size=instance_size,
         nowait=True,
