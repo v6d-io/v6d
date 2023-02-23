@@ -95,17 +95,17 @@ class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
   const ObjectMeta& meta() const;
 
   /**
-   * @brief The nbytes of this object, can be treat as the memory usage of this
-   * object.
+   * @brief The nbytes of this object, can be treated as the memory usage of
+   * this object.
    */
   size_t const nbytes() const;
 
   /**
-   * @brief Construct an object from metadata. The metadata `meta` should comes
+   * @brief Construct an object from metadata. The metadata `meta` should come
    * from client's GetMetaData method.
    *
    * The implementation of `Construct` method is usually boilerplate. Vineyard
-   * provides a code generator to help developers code there own data structures
+   * provides a code generator to help developers code their own data structures
    * and can be shared via vineyard.
    *
    * @param meta The metadata that be used to construct the object.
@@ -184,7 +184,7 @@ class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
 /**
  * Global object is an tag class to mark a type as a vineyard's GlobalObject.
  *
- * User-defined global object types should inherits this tag class.
+ * User-defined global object types should inherit this tag class.
  */
 struct GlobalObject {};
 
@@ -214,7 +214,7 @@ class ObjectBuilder : public ObjectBase {
 };
 
 /**
- * @brief Register a type as vineyard Object type by inherits Registered.
+ * @brief Register a type as vineyard Object type by inheriting Registered.
  */
 template <typename T>
 class __attribute__((visibility("default"))) Registered : public Object {
@@ -232,7 +232,7 @@ const bool Registered<T>::registered = ObjectFactory::Register<T>();
 
 /**
  * @brief Register a type as vineyard Object type, without inherits `Object`, by
- * inherits BareRegistered.
+ * inheriting BareRegistered.
  */
 template <typename T>
 class __attribute__((visibility("default"))) BareRegistered {

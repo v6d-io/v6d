@@ -1459,7 +1459,7 @@ ObjectID SharedMemoryManager::resolveObjectID(const uintptr_t target,
                                               const uintptr_t key,
                                               const uintptr_t data_size,
                                               const ObjectID object_id) {
-  // With a more strict constraint: the target pointer must be starts from the
+  // With a more strict constraint: the target pointer must start from the
   // given blob (key), as blob slicing is not supported yet.
   //
   // if (key <= target && target < key + data_size) {

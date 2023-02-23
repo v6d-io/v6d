@@ -42,7 +42,7 @@ class ObjectMeta;
 
 /**
  * @brief FORCE_INSTANTIATE is a tool to guarantee the argument not be optimized
- * by the compiler, even when it is unused. This trick is useful when we want
+ * by the compiler, even when it is unused. This trick is useful when we want to
  * hold a reference of static member in constructors.
  */
 template <typename T>
