@@ -44,7 +44,7 @@ class Object;
 
 /**
  * @brief ObjectMeta is the type for metadata of an Object. The ObjectMeta can
- * be treat as a *dict-like* type. If the the metadata if the metadata obtained
+ * be treated as a *dict-like* type. If the metadata obtained
  * from vineyard, the metadata is readonly. Otherwise *key-value* attributes or
  * object members could be associated with the metadata to construct a new
  * vineyard object.

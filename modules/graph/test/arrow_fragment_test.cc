@@ -69,7 +69,7 @@ void WriteOut(vineyard::Client& client, const grape::CommSpec& comm_spec,
     }
     for (LabelType elabel = 0; elabel < frag->edge_label_num(); ++elabel) {
       LOG(INFO) << "edge table: " << elabel << " -> "
-                << frag->vertex_data_table(elabel)->schema()->ToString();
+                << frag->edge_data_table(elabel)->schema()->ToString();
     }
 
     LOG(INFO) << "--------------- consolidate vertex/edge table columns ...";

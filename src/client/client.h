@@ -378,7 +378,8 @@ class Client final : public BasicIPCClient,
   /**
    * @brief Create a blob in vineyard server. When creating a blob, vineyard
    * server's bulk allocator will prepare a block of memory of the requested
-   * size, the map the memory to client's process to share the allocated memory.
+   * size, then map the memory to client's process to share the allocated
+   * memory.
    *
    * @param size The size of requested blob.
    * @param blob The result mutable blob will be set in `blob`.

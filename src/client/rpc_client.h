@@ -161,7 +161,7 @@ class RPCClient final : public ClientBase {
    * @brief Get an object from vineyard. The ObjectFactory will be used to
    * resolve the constructor of the object.
    *
-   * In RPCClient, all blob fields in the result object is unaccessible, access
+   * In RPCClient, all blob fields in the result object are unaccessible, access
    * those fields will trigger an `std::runtime_error`.
    *
    * @param id The object id to get.

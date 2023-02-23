@@ -359,7 +359,7 @@ class ClientBase {
 
   /**
    * @brief Make a shallow copy on the given object. A "shallow copy" means the
-   * result object has the same type with the source object and they shares all
+   * result object has the same type with the source object and they share all
    * member objects.
    *
    * @param id The object id to shallow copy.
