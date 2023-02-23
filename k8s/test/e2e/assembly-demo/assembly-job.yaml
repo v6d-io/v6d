@@ -54,7 +54,7 @@ spec:
             - name: JOB_NAME
               value: {{ (datasource "config").$job.jobName }}
             - name: METADATA_ID
-              # triky step: the value should be placed before running
+              # tricky step: the value should be placed before running
               value: METADATA_ID_VALUE
             {{- if (datasource "config").$job.required.dataName }}
             - name: REQUIRED_JOB_NAME

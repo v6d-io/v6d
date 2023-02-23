@@ -564,7 +564,7 @@ int main(int argc, char** argv) {
             std::make_shared<arrow::ChunkedArray>(std::move(column1)),
             std::make_shared<arrow::ChunkedArray>(std::move(column2))});
 
-    // test concatentate array
+    // test concatenate array
     LOG(INFO) << "before putting to vineyard: " << get_rss_pretty()
               << ", peak = " << get_peak_rss_pretty();
 

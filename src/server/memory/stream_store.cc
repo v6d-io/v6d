@@ -207,7 +207,7 @@ Status StreamStore::Pull(ObjectID const stream_id,
     stream->ready_chunks_.pop();
     return callback(Status::OK(), stream->current_reading_.get());
   } else {
-    // if stream has been stoped, return a proper status.
+    // if stream has been stopped, return a proper status.
     if (stream->drained) {
       return callback(Status::StreamDrained(), InvalidObjectID());
     } else if (stream->failed) {
@@ -229,7 +229,7 @@ Status StreamStore::Stop(ObjectID const stream_id, bool failed) {
   auto stream = streams_.at(stream_id);
   // the stream is still running
   if (stream->drained || stream->failed) {
-    return Status::InvalidStreamState("Stream already stoped");
+    return Status::InvalidStreamState("Stream already stopped");
   }
   // no pending writer
   if (stream->writer_) {

@@ -39,9 +39,9 @@ class ObjectBuilder;
  * @brief ObjectBase is the most base class for vineyard's Object and
  * ObjectBuilder.
  *
- * An ObjectBase instance is a builable value that it's `Build` method put blobs
- * into vineyard server, and it's `_Seal` method is responsible for creating
- * metadata in vineyard server for the object.
+ * An ObjectBase instance is a build-able value that it's `Build` method put
+ * blobs * into vineyard server, and it's `_Seal` method is responsible for
+ * creating metadata in vineyard server for the object.
  */
 class ObjectBase {
  public:
@@ -66,18 +66,18 @@ class ObjectBase {
 
 /**
  * @brief Object is the core concept in vineyard. Object can be a scalar, a
- * tuple, a vector, a tensor, or even a distrubted graph in vineyard. Objects
+ * tuple, a vector, a tensor, or even a distributed graph in vineyard. Objects
  * are stored in vineyard, and can be shared to process that connects to the
  * same vineyard cluster.
  *
  * Every object in vineyard has a unique identifier `ObjectID` that can be
  * passed back and forth in the computation pipeline. An object is composed by a
- * matadata, and a set of blobs.
+ * metadata, and a set of blobs.
  *
  * Object in vineyard is by-design to be hierarchical, and can have other Object
  * as members. For example, a tensor object may has a vector as its payload, and
  * a distributed dataframe has many dataframe objects as its chunks, and a
- * dataframe is composed by an aray of tensors as columns.
+ * dataframe is composed by an array of tensors as columns.
  */
 class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
   // NB: the std::enable_shared_from_this inheritance must be public
@@ -108,7 +108,7 @@ class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
    * provides a code generator to help developers code there own data structures
    * and can be shared via vineyard.
    *
-   * @param meta The metadata that be used to constrct the object.
+   * @param meta The metadata that be used to construct the object.
    */
   virtual void Construct(const ObjectMeta& meta);
 

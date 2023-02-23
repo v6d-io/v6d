@@ -31,7 +31,7 @@ namespace io {
 
 /**
  * @brief A customized adaptor for spilling and reloading file,
- * especailly implement `RemoveFile` for garbage collection
+ * especially implement `RemoveFile` for garbage collection
  */
 class FileIOAdaptor {
  public:

@@ -280,7 +280,7 @@ enum class StatusCode : unsigned char {
  * - `VINEYARD_ASSERT`: used for assert on a condition, if false, raise a
  * runtime exception.
  *
- *   It should be used where the function itself doens't return a `Status`, but
+ *   It should be used where the function itself doesn't return a `Status`, but
  *   we need to check on a condition.
  *
  * - `RETURN_ON_ERROR`: it looks like VINEYARD_CHECK_OK, but return the Status

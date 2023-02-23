@@ -70,7 +70,7 @@ endif()
 
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 if(APPLE)
-    # the LC_RPATH on Mac seems doesn't support multiple path (seperated with ':seperated with `:`)
+    # the LC_RPATH on Mac seems doesn't support multiple path (separated with `:`)
     # fortunately, we just need to take care `lib` on Mac.
     set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 else()

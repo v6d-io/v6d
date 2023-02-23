@@ -55,16 +55,16 @@ auto create_gpu_objects = [](Client& client, std::vector<std::string> const& dat
 
 auto get_gpu_objects = [](Client& client,std::vector<std::string> const& data,
                           std::vector<ObjectID>& _oids, bool check_seal) {
-    std::map<ObjectID, GPUUnifiedAddress> guas;
+    std::map<ObjectID, GPUUnifiedAddress> GUAs;
     std::set<ObjectID> oids;
     for(auto oid: _oids) {
       oids.emplace(oid);
     }
-    auto status = client.GetGPUBuffers(oids, true, guas);
+    auto status = client.GetGPUBuffers(oids, true, GUAs);
     for(auto oid : oids){
       LOG(INFO) << "get buffer, oid: " << oid  << std::endl;
       void *ptr = nullptr;
-      guas[oid].GPUData(&ptr);
+      GUAs[oid].GPUData(&ptr);
       printKernel<<<1, 1>>>(ptr);
       cudaDeviceSynchronize();
     } 

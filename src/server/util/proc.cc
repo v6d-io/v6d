@@ -106,11 +106,11 @@ void Process::AsyncWrite(std::string const& content, callback_t<> callback) {
 void Process::AsyncRead(boost::process::async_pipe& pipe,
                         asio::streambuf& buffer,
                         callback_t<const std::string&> callback, bool once,
-                        bool processed, const char delimeter) {
+                        bool processed, const char delimiter) {
   auto self(shared_from_this());
   asio::async_read_until(
-      pipe, buffer, delimeter,
-      [self, &pipe, &buffer, callback, delimeter, once, processed](
+      pipe, buffer, delimiter,
+      [self, &pipe, &buffer, callback, delimiter, once, processed](
           const boost::system::error_code& ec, std::size_t size) {
         Status status;
         std::string line;
@@ -118,7 +118,7 @@ void Process::AsyncRead(boost::process::async_pipe& pipe,
           status = Status::OK();
           line.reserve(size + 1);
           std::istream is(&buffer);
-          std::getline(is, line, delimeter);
+          std::getline(is, line, delimiter);
         } else {
           status = Status::IOError("Failed to read from pipe: " + ec.message());
         }
@@ -127,7 +127,7 @@ void Process::AsyncRead(boost::process::async_pipe& pipe,
         }
         // next round
         if (!ec) {
-          self->AsyncRead(pipe, buffer, callback, delimeter, once, true);
+          self->AsyncRead(pipe, buffer, callback, delimiter, once, true);
         }
       });
 }

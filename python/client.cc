@@ -90,11 +90,11 @@ class ClientManager {
     auto connect_status =
         this->ConnectImpl(client, endpoint, session_id, username, password);
     if (PyErr_CheckSignals() != 0) {
-      // The method `Connect` will keep retrying, we need to propogate
+      // The method `Connect` will keep retrying, we need to propagate
       // the Ctrl-C when during the C++ code run retries.
       throw py::error_already_set();
     }
-    // propogate the KeyboardInterrupt exception correctly before the
+    // propagate the KeyboardInterrupt exception correctly before the
     // RuntimeError
     throw_on_error(connect_status);
     client_set_.emplace(endpoint_key, client);

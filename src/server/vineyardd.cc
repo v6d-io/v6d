@@ -106,7 +106,7 @@ int main(int argc, char* argv[]) {
 
   LOG(INFO) << "Hello vineyard v" << vineyard::vineyard_version() << "!";
 
-  // Ignore SIGPIPE signals to avoid killing the server when writting to a lost
+  // Ignore SIGPIPE signals to avoid killing the server when writing to a lost
   // client connection.
   signal(SIGPIPE, SIG_IGN);
 

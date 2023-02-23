@@ -114,9 +114,9 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
     # Used when reading tables from external storage.
     # Usually for load a property graph
     #
-    # possbile values:
+    # possible values:
     #
-    #   - columns, seperated by ','
+    #   - columns, separated by ','
     for k, v in read_options.items():
         params[k] = v
 

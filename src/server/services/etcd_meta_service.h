@@ -117,7 +117,7 @@ class EtcdLock : public ILock {
 
 /**
  * @brief EtcdMetaService provides meta services in regards to etcd, e.g.
- * requesting and committing udpates
+ * requesting and committing updates
  *
  */
 class EtcdMetaService : public IMetaService {

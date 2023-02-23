@@ -114,7 +114,7 @@ class Launcher:
         raise NotImplementedError
 
     def parse(self, line):  # pylint: disable=too-many-return-statements
-        """Parse job message. The messages should statisfy the following spec:
+        """Parse job message. The messages should satisfy the following spec:
 
         ..code-block:
 
@@ -162,7 +162,7 @@ class Launcher:
         return None
 
     def on_return(self, return_content):
-        """The on-return handle, can be overrided to process events
+        """The on-return handle, can be overridden to process events
         with type "return".
         """
         with self._result_cv:
@@ -170,13 +170,13 @@ class Launcher:
             self._result_cv.notify()
 
     def on_error(self, error_content):
-        """The on-error handle, can be overrided to process events
+        """The on-error handle, can be overridden to process events
         with type "error".
         """
         self._diagnostics.append(error_content)
 
     def on_exit(self, exit_content):
-        """The on-exit handle, can be overrided to process events
+        """The on-exit handle, can be overridden to process events
         with type "exit".
         """
         if exit_content and exit_content.strip():

@@ -43,7 +43,7 @@ logger = logging.getLogger('vineyard')
 def envvars(key, value=None, append=False):
     """Create a context with specified environment variables set.
 
-    It is useful for settting the :code`VINEYARD_IPC_SOCKET` environment
+    It is useful for setting the :code`VINEYARD_IPC_SOCKET` environment
     variable to obtain a proper default vineyard client.
 
     This context macro can be used as

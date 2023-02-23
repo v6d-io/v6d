@@ -35,7 +35,7 @@ option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of met
 option(USE_GPU "Using gpu support" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
-option(BUILD_VINEYARD_SERVER_REDIS "Enable redis as the metadta backend" OFF)
+option(BUILD_VINEYARD_SERVER_REDIS "Enable redis as the metadata backend" OFF)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
 option(BUILD_VINEYARD_CLIENT_VERBOSE "Build vineyard's client with the most verbose logs" OFF)
 option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
@@ -135,8 +135,8 @@ if(USE_INCLUDE_WHAT_YOU_USE AND NOT CMAKE_CXX_INCLUDE_WHAT_YOU_USE)
     endif()
 endif()
 
-set(DEFAUTL_ALLOCATOR "dlmalloc")
-set(WITH_ALLOCATOR "${DEFAUTL_ALLOCATOR}" CACHE
+set(DEFAULT_ALLOCATOR "dlmalloc")
+set(WITH_ALLOCATOR "${DEFAULT_ALLOCATOR}" CACHE
     STRING "Choose the allocator for vineyard server (vineyardd)."
 )
 set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
@@ -165,7 +165,7 @@ endfunction()
 # reference: https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling#always-full-rpath
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
 if(APPLE)
-    # the LC_RPATH on Mac seems doesn't support multiple path (seperated with ':seperated with `:`)
+    # the LC_RPATH on Mac seems doesn't support multiple path (separated with `:`)
     # fortunately, we just need to take care `lib` on Mac.
     set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib")
 else()
@@ -549,7 +549,7 @@ endmacro()
 
 macro(target_enable_sanitizer target visibility)
     if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND VINEYARD_USE_ASAN)
-        message(STATUS "Vineyardd will be bulit with -fsanitize=address")
+        message(STATUS "Vineyardd will be built with -fsanitize=address")
         target_compile_options(${target} ${visibility} -fsanitize=address)
         target_add_link_options(${target} ${visibility} OPTIONS -fsanitize=address)
     endif()

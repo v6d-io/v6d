@@ -202,6 +202,7 @@ jobs:
           make -C k8s/test/e2e e2e-tests-workflow
 
       - name: e2e-tests-mars-examples
-        if: ${{ matrix.job == 'e2e-tests-mars-examples' }}
+        if: false  # temporarily disabled, we need some changes in mars
+        # if: ${{ matrix.job == 'e2e-tests-mars-examples' }}
         run: |
           make -C k8s/test/e2e e2e-tests-mars-examples

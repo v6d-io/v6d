@@ -22,7 +22,7 @@ for direct access shared memory backed by vineyard across processes.
 
 The API is kept consistent with multiprocessing.shared_memory but the semantics is
 slightly different. For vineyard, to make the shared memory visible for other process,
-a explictly ``seal`` or ``close`` operation is needed.
+a explicitly ``seal`` or ``close`` operation is needed.
 
 Refer to the documentation of multiprocessing.shared_memory for details.
 '''

@@ -680,7 +680,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
     std::set<ObjectID> blobs_to_delete;
 
     std::vector<op_t> add_sigs, drop_sigs;
-    std::vector<op_t> add_datas, drop_datas;
+    std::vector<op_t> add_objects, drop_objects;
     std::vector<op_t> add_others, drop_others;
 
     // group-by all changes
@@ -725,11 +725,11 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
         }
       } else if (boost::algorithm::starts_with(op.kv.key, "/data/")) {
         if (op.op == op_t::op_type_t::kPut) {
-          add_datas.emplace_back(op);
+          add_objects.emplace_back(op);
         } else if (op.op == op_t::op_type_t::kDel) {
-          drop_datas.emplace_back(op);
+          drop_objects.emplace_back(op);
         } else {
-          LOG(ERROR) << "warn: unknown op type for datas: " << op.op;
+          LOG(ERROR) << "warn: unknown op type for objects: " << op.op;
         }
       } else {
         if (op.op == op_t::op_type_t::kPut) {
@@ -752,17 +752,17 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
       putVal(op.kv, from_remote);
     }
 
-    // apply adding datas
-    for (const op_t& op : add_datas) {
+    // apply adding objects
+    for (const op_t& op : add_objects) {
       putVal(op.kv, from_remote);
     }
 
-    // apply drop datas
+    // apply drop objects
     {
       // 1. collect all ids
       std::set<ObjectID> initial_delete_set;
       std::vector<std::string> vs;
-      for (const op_t& op : drop_datas) {
+      for (const op_t& op : drop_objects) {
         vs.clear();
         boost::algorithm::split(vs, op.kv.key,
                                 [](const char c) { return c == '/'; });

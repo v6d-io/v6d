@@ -142,7 +142,7 @@ impl Client for IPCClient {
             self.stream = Some(RefCell::new(ipc_stream));
             self.connected = true;
 
-            // TODO： Compatable server
+            // TODO： Compatible server
 
             Ok(())
         }

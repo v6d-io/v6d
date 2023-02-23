@@ -1259,7 +1259,7 @@ def test_change_defaults_only_subsequent(oss):
     systems created after the change.
     """
     try:
-        OSSFileSystem.cachable = False  # don't reuse instances with same pars
+        OSSFileSystem.cacheable = False  # don't reuse instances with same pars
 
         fs_default = OSSFileSystem(key=key, secret=secret, endpoint=endpoint)
         assert fs_default.default_block_size == 5 * (1024**2)
@@ -1284,7 +1284,7 @@ def test_change_defaults_only_subsequent(oss):
         assert fs_default.default_block_size == 5 * (1024**2)
     finally:
         OSSFileSystem.default_block_size = 5 * (1024**2)
-        OSSFileSystem.cachable = True
+        OSSFileSystem.cacheable = True
 
 
 def test_cache_after_copy(oss):

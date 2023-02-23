@@ -106,7 +106,7 @@ class BulkStoreBase {
   Status MoveOwnership(std::map<ID, P> const& to_process_ids);
 
   Status RemoveOwnership(std::set<ID> const& ids,
-                         std::map<ID, P>& successed_ids);
+                         std::map<ID, P>& succeeded_ids);
 
   void SetMemSpillUpBound(const size_t mem_spill_upper_bound) {
     mem_spill_upper_bound_ = static_cast<int64_t>(mem_spill_upper_bound);

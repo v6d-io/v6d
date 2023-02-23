@@ -152,7 +152,7 @@ def test_concurrent_blob(vineyard_ipc_sockets):
         vineyard_ipc_sockets, 4
     )
 
-    # FIXME: test concurrent blob creation and destory
+    # FIXME: test concurrent blob creation and destroy
     print(client1)
     print(client2)
     print(client3)

@@ -306,7 +306,7 @@ def dump_ast(
         saw = Counter()
 
     k: "CursorKind" = node.kind
-    # skip printting UNEXPOSED_*
+    # skip printing UNEXPOSED_*
     if not k.is_unexposed():
         tpl = '{indent}{kind}{name}{type_name}'
         if node.spelling:
@@ -639,9 +639,9 @@ def generate_parsing_flags(
 
     # prepare flags
     flags = None
-    compliation_db = parse_compilation_database(build_directory)
-    if compliation_db is not None:
-        commands = compliation_db.getCompileCommands(source)
+    compilation_db = parse_compilation_database(build_directory)
+    if compilation_db is not None:
+        commands = compilation_db.getCompileCommands(source)
         if commands is not None and len(commands) > 0:
             # strip flags
             flags = strip_flags(list(commands[0].arguments)[1:-1])

@@ -109,7 +109,7 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
 #if defined(ARROW_VERSION) && ARROW_VERSION >= 3000000
   location_ = arrow::internal::UriUnescape(location_);
 #else
-  // Refered https://stackoverflow.com/questions/154536/encode-decode-urls-in-c
+  // Referred https://stackoverflow.com/questions/154536/encode-decode-urls-in-c
   auto urlDecode = [](std::string& src) -> std::string {
     std::string ret;
     char ch;

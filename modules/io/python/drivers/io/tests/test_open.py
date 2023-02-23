@@ -31,7 +31,7 @@
                 --vineyard-endpoint=127.0.0.1:9600 \
                 --test-dataset=<directory of gstest>
 
-    If you want to run those HDFS tests, add the following paramters:
+    If you want to run those HDFS tests, add the following parameters:
 
     .. code:: console
 

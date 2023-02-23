@@ -70,7 +70,7 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
       break;
     }
   }
-  // If there are non-ascii charaters, we shall pre-encode the location,
+  // If there are non-ascii characters, we shall pre-encode the location,
   // as the arrow::internal::Uri will fail.
   auto encoded_location =
       location_to_parse.substr(0, i) +

@@ -186,7 +186,7 @@ struct typename_t<uint64_t> {
 
 }  // namespace vineyard
 
-// for backwards compatiblity.
+// for backwards compatibility.
 using vineyard::type_name;
 
 #endif  // SRC_COMMON_UTIL_TYPENAME_H_

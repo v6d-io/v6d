@@ -138,7 +138,7 @@ function(vineyard_generate_java)
       ARGS --build-directory "${vineyard_generate_java_CMAKE_BUILD_DIR}"
       ARGS --source ${_abs_file}
       ARGS --target ${_generated_srcs}
-      ARGS --langauge java
+      ARGS --language java
       ARGS --package ${vineyard_generate_java_PACKAGE_DIR}/src/main/java
       ARGS --package-name ${vineyard_generate_java_ROOT_PACKAGE}
       ARGS --ffilibrary-name ${vineyard_generate_java_FFI_LIBRARY_NAME}

@@ -61,7 +61,7 @@ def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
     use_header_row = instream.params.get("header_row", None) == "1"
     delimiter = instream.params.get("delimiter", ",")
 
-    # process parsing and coverting options
+    # process parsing and converting options
 
     columns = []
     column_types = []

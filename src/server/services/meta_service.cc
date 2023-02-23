@@ -195,13 +195,13 @@ void IMetaService::traverseToDelete(std::set<ObjectID>& initial_delete_set,
   }
   // process the "initial_delete_set" in topo-sort order.
   auto sup_target_range = supobjects_.equal_range(object_id);
-  std::set<ObjectID> sup_traget_to_preprocess;
+  std::set<ObjectID> sup_target_to_preprocess;
   for (auto it = sup_target_range.first; it != sup_target_range.second; ++it) {
     if (initial_delete_set.find(it->second) != initial_delete_set.end()) {
-      sup_traget_to_preprocess.emplace(it->second);
+      sup_target_to_preprocess.emplace(it->second);
     }
   }
-  for (ObjectID const& sup_target : sup_traget_to_preprocess) {
+  for (ObjectID const& sup_target : sup_target_to_preprocess) {
     traverseToDelete(initial_delete_set, delete_set, depth + 1, depthes,
                      sup_target, force, deep);
   }
@@ -329,7 +329,8 @@ void IMetaService::printDepsGraph() {
     ss << ObjectIDToString(kv.first) << " <- " << ObjectIDToString(kv.second)
        << std::endl;
   }
-  VLOG(100) << "Depenencies graph on " << server_ptr_->instance_name() << ": \n"
+  VLOG(100) << "Dependencies graph on " << server_ptr_->instance_name()
+            << ": \n"
             << ss.str();
 }
 
@@ -348,7 +349,7 @@ void IMetaService::putVal(const kv_t& kv, bool const from_remote) {
         }
       }
     }
-    // NB: inserting (with `operator[]`) using json pointer is truely unsafe.
+    // NB: inserting (with `operator[]`) using json pointer is truly unsafe.
     Status status;
     CATCH_JSON_ERROR_STATEMENT(status,
                                meta_[json::json_pointer(kv.key)] = value);

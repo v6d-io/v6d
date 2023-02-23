@@ -152,20 +152,20 @@ inline SessionID SessionIDFromString(const char* s) {
 }
 
 [[deprecated(
-    "For backwards-compatiblity, will be removed in 1.0.")]] inline const std::
+    "For backwards-compatibility, will be removed in 1.0.")]] inline const std::
     string
     VYObjectIDToString(const ObjectID id) {
   return ObjectIDToString(id);
 }
 
 [[deprecated(
-    "For backwards-compatiblity, will be removed in 1.0.")]] inline ObjectID
+    "For backwards-compatibility, will be removed in 1.0.")]] inline ObjectID
 VYObjectIDFromString(const std::string& s) {
   return ObjectIDFromString(s);
 }
 
 [[deprecated(
-    "For backwards-compatiblity, will be removed in 1.0.")]] inline ObjectID
+    "For backwards-compatibility, will be removed in 1.0.")]] inline ObjectID
 VYObjectIDFromString(const char* s) {
   return ObjectIDFromString(s);
 }

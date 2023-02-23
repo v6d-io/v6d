@@ -91,20 +91,20 @@ class Stream : public Object {
   Status Abort() {
     RETURN_ON_ASSERT(client_ != nullptr && readonly_ == false,
                      "Expect a writeable stream");
-    if (stoped_) {
+    if (stopped_) {
       return Status::OK();
     }
-    stoped_ = true;
+    stopped_ = true;
     return client_->ClientBase::StopStream(this->id_, true);
   }
 
   Status Finish() {
     RETURN_ON_ASSERT(client_ != nullptr && readonly_ == false,
                      "Expect a writeable stream");
-    if (stoped_) {
+    if (stopped_) {
       return Status::OK();
     }
-    stoped_ = true;
+    stopped_ = true;
     return client_->ClientBase::StopStream(this->id_, false);
   }
 
@@ -158,7 +158,7 @@ class Stream : public Object {
   std::map<std::string, std::string> params_;
 
  private:
-  bool stoped_;  // an optimization: avoid repeated idempotent requests.
+  bool stopped_;  // an optimization: avoid repeated idempotent requests.
 };
 
 /**

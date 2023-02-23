@@ -60,7 +60,7 @@ class ObjectFactory {
   using object_initializer_t = std::unique_ptr<Object> (*)();
 
   /**
-   * @brief Register tht type `T` to the factory. A registrable type must have
+   * @brief Register the type `T` to the factory. A registrable type must have
    * a static method `Create` that accepts no arguments and returns an instance
    * of type `T`.
    *
@@ -102,7 +102,7 @@ class ObjectFactory {
    * @brief Initialize an instance by looking up the `type_name` in the factory,
    * and construct the object using the metadata.
    *
-   * We keep this variant with explicit `typename` for fine-grained controll of
+   * We keep this variant with explicit `typename` for fine-grained control of
    * the resolver.
    *
    * @param type_name The type to be instantiated.

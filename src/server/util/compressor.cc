@@ -140,7 +140,7 @@ Status Decompressor::Buffer(void*& data, size_t& size) {
   if (!finished_) {
     return Status::Invalid(
         "Decompressor: the zstd stream is not finished yet, the next input "
-        "cannot be feeded");
+        "cannot be fed");
   }
   data = const_cast<void*>(input_.src);
   size = input_.size;
