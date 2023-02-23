@@ -30,16 +30,23 @@ limitations under the License.
 namespace vineyard {
 
 namespace memory {
+
+class Mimalloc;
+
 namespace detail {
 
 // avoid requires mimalloc's headers in the public interfaces of vineyard
 
 Status _initialize(Client& client, int& fd, size_t& size, uintptr_t& base,
-                   uintptr_t& space, size_t requested_size);
-void* _allocate(size_t size);
-void* _reallocate(void* pointer, size_t size);
-void _deallocate(void* pointer, size_t size);
-size_t _allocated_size(void* pointer);
+                   uintptr_t& space, const size_t requested_size,
+                   std::shared_ptr<Mimalloc>& allocator);
+void* _allocate(const std::shared_ptr<Mimalloc>& allocator, size_t size);
+void* _reallocate(const std::shared_ptr<Mimalloc>& allocator, void* pointer,
+                  size_t size);
+void _deallocate(const std::shared_ptr<Mimalloc>& allocator, void* pointer,
+                 size_t size);
+size_t _allocated_size(const std::shared_ptr<Mimalloc>& allocator,
+                       void* pointer);
 
 }  // namespace detail
 }  // namespace memory
@@ -67,19 +74,20 @@ struct VineyardMimallocAllocator {
   VineyardMimallocAllocator(const VineyardMimallocAllocator<U>&) noexcept {}
 
   T* allocate(size_t size, const void* hint = nullptr) {
-    return reinterpret_cast<T*>(memory::detail::_allocate(size));
+    return reinterpret_cast<T*>(memory::detail::_allocate(allocator_, size));
   }
 
   T* reallocate(void* pointer, size_t size) {
-    return reinterpret_cast<T*>(memory::detail::_reallocate(pointer, size));
+    return reinterpret_cast<T*>(
+        memory::detail::_reallocate(allocator_, pointer, size));
   }
 
   void deallocate(T* ptr, size_t size = 0) {
-    memory::detail::_deallocate(ptr, size);
+    memory::detail::_deallocate(allocator_, ptr, size);
   }
 
   std::shared_ptr<Blob> Freeze(T* ptr) {
-    size_t size = memory::detail::_allocated_size(ptr);
+    size_t size = memory::detail::_allocated_size(allocator_, ptr);
     std::clog << "freezing the pointer " << ptr << " of size " << size
               << std::endl;
     offsets_.emplace_back(reinterpret_cast<uintptr_t>(ptr) - space_);
@@ -110,12 +118,13 @@ struct VineyardMimallocAllocator {
   std::vector<size_t> offsets_;
   std::vector<size_t> sizes_;
   std::set<uintptr_t> freezed_;
+  std::shared_ptr<memory::Mimalloc> allocator_;
 
   explicit VineyardMimallocAllocator(
       Client& client, const size_t size = std::numeric_limits<size_t>::max())
       : client_(client) {
-    VINEYARD_CHECK_OK(
-        memory::detail::_initialize(client_, fd_, size_, base_, space_, size));
+    VINEYARD_CHECK_OK(memory::detail::_initialize(client_, fd_, size_, base_,
+                                                  space_, size, allocator_));
 
     // reset the context
     offsets_.clear();

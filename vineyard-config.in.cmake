@@ -36,9 +36,6 @@ find_package(Threads)
 # for finding dependencies
 include(CMakeFindDependencyMacro)
 
-# find nlohmann/json
-find_dependency(nlohmann_json)
-
 # find apache-arrow
 find_package(Arrow QUIET)
 if(NOT Arrow_FOUND)

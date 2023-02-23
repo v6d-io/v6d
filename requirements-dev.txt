@@ -11,6 +11,7 @@ pygments>=2.4.1
 pytest
 pytest-benchmark
 pytest-datafiles
+pytest-timeout
 sphinx>=3.0.2,<6
 sphinx-copybutton
 sphinx-panels

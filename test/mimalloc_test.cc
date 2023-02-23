@@ -40,22 +40,24 @@ int main(int argc, char** argv) {
   void* base = malloc(reserved_size);
   LOG(INFO) << "initializing mimalloc with preallocated pointer " << base;
 
-  void* space = memory::Mimalloc::Init(base, reserved_size);
+  std::shared_ptr<memory::Mimalloc> allocator =
+      std::make_shared<memory::Mimalloc>(base, reserved_size);
+  void* space = allocator->AlignedAddress();
   if (nullptr == space) {
     LOG(FATAL) << "failed to initialize mimalloc";
     return -1;
   }
 
   for (int k = 1; k <= 16; k *= 2) {
-    void* pointer = memory::Mimalloc::Allocate(k * 1024 * 1024);
+    void* pointer = allocator->Allocate(k * 1024 * 1024);
     LOG(INFO) << "pointer " << pointer << ", of size "
-              << memory::Mimalloc::GetAllocatedSize(pointer);
+              << allocator->GetAllocatedSize(pointer);
     if (pointer == nullptr) {
       LOG(FATAL) << "failed to allocate (" << k << ") " << k * 1024 * 1024
                  << " bytes";
       return -1;
     }
-    memory::Mimalloc::Free(pointer);
+    allocator->Free(pointer);
   }
 
 #endif  // WITH_MIMALLOC

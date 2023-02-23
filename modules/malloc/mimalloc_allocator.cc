@@ -29,27 +29,36 @@ namespace memory {
 namespace detail {
 
 Status _initialize(Client& client, int& fd, size_t& size, uintptr_t& base,
-                   uintptr_t& space, size_t requested_size) {
+                   uintptr_t& space, const size_t requested_size,
+                   std::shared_ptr<Mimalloc>& allocator) {
   std::clog << "making arena: " << size << std::endl;
   RETURN_ON_ERROR(client.CreateArena(requested_size, fd, size, base, space));
 
-  Mimalloc::Init(reinterpret_cast<void*>(space), size);
+  allocator =
+      std::make_shared<memory::Mimalloc>(reinterpret_cast<void*>(space), size);
   std::clog << "mimalloc arena initialized: " << size << ", at "
             << reinterpret_cast<void*>(space) << std::endl;
 
   return Status::OK();
 }
 
-void* _allocate(size_t size) { return Mimalloc::Allocate(size); }
-
-void* _reallocate(void* pointer, size_t size) {
-  return Mimalloc::Reallocate(pointer, size);
+void* _allocate(const std::shared_ptr<Mimalloc>& allocator, size_t size) {
+  return allocator->Allocate(size);
 }
 
-void _deallocate(void* pointer, size_t size) { Mimalloc::Free(pointer, size); }
+void* _reallocate(const std::shared_ptr<Mimalloc>& allocator, void* pointer,
+                  size_t size) {
+  return allocator->Reallocate(pointer, size);
+}
 
-size_t _allocated_size(void* pointer) {
-  return Mimalloc::GetAllocatedSize(pointer);
+void _deallocate(const std::shared_ptr<Mimalloc>& allocator, void* pointer,
+                 size_t size) {
+  allocator->Free(pointer, size);
+}
+
+size_t _allocated_size(const std::shared_ptr<Mimalloc>& allocator,
+                       void* pointer) {
+  return allocator->GetAllocatedSize(pointer);
 }
 
 }  // namespace detail
