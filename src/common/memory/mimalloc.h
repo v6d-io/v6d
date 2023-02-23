@@ -39,58 +39,69 @@ namespace memory {
  */
 class Mimalloc {
  public:
-  Mimalloc();
-  ~Mimalloc();
-
   /**
    * @brief Manages a particular memory arena.
    */
-  static void* Init(void* addr, const size_t size,
-                    const bool is_committed = false,
-                    const bool is_zero = true) {
+  Mimalloc(void* addr, const size_t size, const bool is_committed = false,
+           const bool is_zero = true) {
     // does't consist of large OS pages
     bool is_large = false;
     // no associated numa node
     int numa_node = -1;
 
-    void* new_addr = addr;
-    size_t new_size = size;
-
+    aligned_size = size;
     // the addr must be 64MB aligned (required by mimalloc)
     if ((reinterpret_cast<uintptr_t>(addr) % MIMALLOC_SEGMENT_ALIGNED_SIZE) !=
         0) {
-      new_addr = reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(addr) +
-                                          MIMALLOC_SEGMENT_ALIGNED_SIZE - 1) &
-                                         ~(MIMALLOC_SEGMENT_ALIGNED_SIZE - 1));
-      new_size = size - ((size_t) new_addr - (size_t) addr);
+      aligned_address =
+          reinterpret_cast<void*>((reinterpret_cast<uintptr_t>(addr) +
+                                   MIMALLOC_SEGMENT_ALIGNED_SIZE - 1) &
+                                  ~(MIMALLOC_SEGMENT_ALIGNED_SIZE - 1));
+      aligned_size = size - ((size_t) aligned_address - (size_t) addr);
+    } else {
+      aligned_address = addr;
+    }
+
+    bool success =
+        mi_manage_os_memory_ex(aligned_address, aligned_size, is_committed,
+                               is_large, is_zero, numa_node, true, &arena_id);
+    if (!success) {
+      std::clog << "[error] mimalloc failed to create the arena at "
+                << aligned_address << std::endl;
+      aligned_address = nullptr;
+    }
+    heap = mi_heap_new_in_arena(arena_id);
+    if (heap == nullptr) {
+      std::clog << "[error] mimalloc failed to create the heap at "
+                << aligned_address << std::endl;
+      aligned_address = nullptr;
     }
 
     // do not use OS memory for allocation (but only pre-allocated arena)
     mi_option_set(mi_option_limit_os_alloc, 1);
-
-    bool success = mi_manage_os_memory(new_addr, new_size, is_committed,
-                                       is_large, is_zero, numa_node);
-    if (!success) {
-      std::clog << "[error] mimalloc failed to create the arena at " << new_addr
-                << std::endl;
-      return nullptr;
-    }
-    return new_addr;
   }
 
-  static void* Allocate(const size_t bytes, const size_t alignment = 0) {
+  ~Mimalloc() {
+    // leave it un-deleted to keep allocated blocks
+  }
+
+  size_t AlignedSize() const { return aligned_size; }
+
+  void* AlignedAddress() const { return aligned_address; }
+
+  void* Allocate(const size_t bytes, const size_t alignment = 0) {
     if (unlikely(alignment)) {
-      return mi_malloc_aligned(bytes, alignment);
+      return mi_heap_malloc_aligned(heap, bytes, alignment);
     } else {
-      return mi_malloc(bytes);
+      return mi_heap_malloc(heap, bytes);
     }
   }
 
-  static void* Reallocate(void* pointer, size_t size) {
-    return mi_realloc(pointer, size);
+  void* Reallocate(void* pointer, size_t size) {
+    return mi_heap_realloc(heap, pointer, size);
   }
 
-  static void Free(void* pointer, size_t size = 0) {
+  void Free(void* pointer, size_t size = 0) {
     if (likely(pointer)) {
       if (unlikely(size)) {
         mi_free_size(pointer, size);
@@ -100,9 +111,13 @@ class Mimalloc {
     }
   }
 
-  static size_t GetAllocatedSize(void* pointer) {
-    return mi_usable_size(pointer);
-  }
+  size_t GetAllocatedSize(void* pointer) { return mi_usable_size(pointer); }
+
+ private:
+  void* aligned_address = nullptr;
+  size_t aligned_size = 0;
+  mi_arena_id_t arena_id{};
+  mi_heap_t* heap = nullptr;
 };
 
 }  // namespace memory

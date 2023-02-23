@@ -31,6 +31,9 @@ class DLmallocAllocator {
   static void Free(void* pointer, size_t = 0);
 
   static void SetMallocGranularity(int value);
+
+ private:
+  static void* allocator_;
 };
 
 }  // namespace memory

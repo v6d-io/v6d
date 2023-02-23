@@ -219,7 +219,7 @@ endif()
 if(APPLE)
     set(CMAKE_MACOSX_RPATH ON)
 else()
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,$ORIGIN:$ORIGIN/../lib")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,$ORIGIN:$ORIGIN/../shared-lib")
 endif()
 
 if(CMAKE_VERSION VERSION_LESS "3.1")
@@ -829,9 +829,6 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
                                          thirdparty/pybind11/include)
     target_compile_options(_C PRIVATE -Wno-unused-value)
     set_target_properties(_C PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/shared-lib")
-    target_add_link_options(_C PRIVATE
-                            OPTIONS -Wl,-rpath,.:$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64
-    )
     if(UNIX AND NOT APPLE)
         target_add_link_options(_C PRIVATE OPTIONS -Wl,--exclude-libs=ALL)
     endif()
@@ -841,6 +838,20 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
     else()
         target_compile_options(_C PRIVATE -Os)
         target_add_link_options(_C PRIVATE OPTIONS -Os)
+    endif()
+
+    file(RELATIVE_PATH RELATIVE_BUILD_PATH "${PROJECT_SOURCE_DIR}/python/vineyard" "${CMAKE_BINARY_DIR}/shared-lib")
+    if(UNIX AND NOT APPLE)
+        set_target_properties(_C PROPERTIES
+                              BUILD_WITH_INSTALL_RPATH TRUE
+                              INSTALL_RPATH_USE_LINK_PATH TRUE
+                              INSTALL_RPATH ".:\$ORIGIN:\$ORIGIN/${RELATIVE_BUILD_PATH}/:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64:${INSTALL_RPATH}")
+    endif()
+    if(APPLE)
+        set_target_properties(_C PROPERTIES
+                              BUILD_WITH_INSTALL_RPATH TRUE
+                              INSTALL_RPATH_USE_LINK_PATH TRUE
+                              INSTALL_RPATH ".:@loader_path:@loader_path/${RELATIVE_BUILD_PATH}/:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64:${INSTALL_RPATH}")
     endif()
 
     add_custom_target(vineyard_client_python

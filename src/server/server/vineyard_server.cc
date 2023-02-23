@@ -19,6 +19,7 @@ limitations under the License.
 #include <limits>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <string>
 #include <thread>
@@ -107,9 +108,18 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
   auto memory_limit = spec_["bulkstore_spec"]["memory_size"].get<size_t>();
   auto allocator = spec_["bulkstore_spec"]["allocator"].get<std::string>();
 
+  // the allocator behind `BulkAllocator` is a singleton
+  static std::once_flag allocator_init_flag;
+  Status allocator_init_error;
+
   if (bulk_store_type_ == StoreType::kPlasma) {
     plasma_bulk_store_ = std::make_shared<PlasmaBulkStore>();
-    RETURN_ON_ERROR(plasma_bulk_store_->PreAllocate(memory_limit, allocator));
+    std::call_once(allocator_init_flag,
+                   [this, memory_limit, allocator, &allocator_init_error]() {
+                     allocator_init_error = plasma_bulk_store_->PreAllocate(
+                         memory_limit, allocator);
+                   });
+    RETURN_ON_ERROR(allocator_init_error);
 
     // TODO(mengke.mk): Currently we do not allow streaming in plasma
     // bulkstore, anyway, we can templatize stream store to solve this.
@@ -120,7 +130,11 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
         spec_["bulkstore_spec"]["spill_lower_bound_rate"].get<double>();
     auto spill_upper_bound_rate =
         spec_["bulkstore_spec"]["spill_upper_bound_rate"].get<double>();
-    RETURN_ON_ERROR(bulk_store_->PreAllocate(memory_limit, allocator));
+    std::call_once(allocator_init_flag, [this, memory_limit, allocator,
+                                         &allocator_init_error]() {
+      allocator_init_error = bulk_store_->PreAllocate(memory_limit, allocator);
+    });
+    RETURN_ON_ERROR(allocator_init_error);
 
     // setup spill
     bulk_store_->SetMemSpillUpBound(memory_limit * spill_upper_bound_rate);

@@ -15,7 +15,7 @@ limitations under the License.
 
 #include "server/memory/mimalloc.h"
 
-#include <stdio.h>
+#include <mutex>
 
 #include "common/util/status.h"
 #include "server/memory/malloc.h"
@@ -26,15 +26,35 @@ namespace vineyard {
 
 namespace memory {
 
+std::shared_ptr<Mimalloc> MimallocAllocator::allocator_ = nullptr;
+
 void* MimallocAllocator::Init(const size_t size) {
-  // create memory using mmap
-  bool is_committed = false;
-  bool is_zero = true;
-  void* space = mmap_buffer(size, &is_committed, &is_zero);
-  if (space == nullptr) {
-    return space;
+  static std::once_flag init_flag;
+  std::call_once(init_flag, [size]() -> void {
+    // create memory using mmap
+    bool is_committed = false;
+    bool is_zero = true;
+    void* space = mmap_buffer(size, &is_committed, &is_zero);
+    if (space == nullptr) {
+      allocator_ = nullptr;
+    } else {
+      allocator_ =
+          std::make_shared<Mimalloc>(space, size, is_committed, is_zero);
+    }
+  });
+  if (allocator_ == nullptr) {
+    return nullptr;
+  } else {
+    return allocator_->AlignedAddress();
   }
-  return Mimalloc::Init(space, size, is_committed, is_zero);
+}
+
+void* MimallocAllocator::Allocate(const size_t bytes, const size_t alignment) {
+  return allocator_->Allocate(bytes, alignment);
+}
+
+void MimallocAllocator::Free(void* pointer, size_t) {
+  allocator_->Free(pointer);
 }
 
 }  // namespace memory

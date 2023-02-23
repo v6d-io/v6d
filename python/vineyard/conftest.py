@@ -84,3 +84,14 @@ pytest_plugins = []
 def pytest_sessionfinish(session, exitstatus):
     if exitstatus == 5:
         session.exitstatus = 0
+
+
+def pytest_collection_modifyitems(items):
+    for item in items:
+        timeout_marker = None
+        if hasattr(item, "get_closest_marker"):
+            timeout_marker = item.get_closest_marker("timeout")
+        elif hasattr(item, "get_marker"):
+            timeout_marker = item.get_marker("timeout")
+        if timeout_marker is None:
+            item.add_marker(pytest.mark.timeout(600))

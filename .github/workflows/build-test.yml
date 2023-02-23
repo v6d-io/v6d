@@ -31,17 +31,26 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
-        malloc: [dlmalloc, mimalloc]
-        metadata: [etcd]  # disable redis for now as it seems has some nondeterministic bugs
+        metadata: [local, etcd, redis]  # disable redis for now as it seems has some nondeterministic bugs
         exclude:
-          - malloc: mimalloc
-            metadata: redis
+          - metadata: local
+          - metadata: redis
     env:
       RUNNER_ARGS: "--meta=${{ matrix.metadata }}"
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
+
+      - uses: dorny/paths-filter@v2
+        id: changes
+        with:
+          filters: |
+            mimalloc:
+              - 'modules/malloc/**'
+              - 'src/common/memory/**'
+              - 'src/server/memory/**'
+              - 'thirdparty/mimalloc/**'
 
       - name: Generate Summary for Submodules
         run: |
@@ -52,9 +61,9 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.ccache
-          key: ${{ runner.os }}-${{ matrix.malloc }}-${{ matrix.metadata }}-ccache-${{ hashFiles('**/git-modules.txt') }}
+          key: ${{ runner.os }}-${{ matrix.metadata }}-ccache-${{ hashFiles('**/git-modules.txt') }}
           restore-keys: |
-            ${{ runner.os }}-${{ matrix.malloc }}-${{ matrix.metadata }}-ccache-
+            ${{ runner.os }}-${{ matrix.metadata }}-ccache-
 
       - name: Install Dependencies for Linux
         if: runner.os == 'Linux'
@@ -189,7 +198,6 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=Debug \
                    -DBUILD_SHARED_LIBS=ON \
                    -DUSE_ASAN=ON \
-                   -DWITH_ALLOCATOR=${{ matrix.malloc }} \
                    -DBUILD_VINEYARD_COVERAGE=ON \
                    -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
                    -DBUILD_VINEYARD_BASIC=ON \
@@ -322,35 +330,23 @@ jobs:
           rm -rf /dev/shm/etcd*
           python3 test/runner.py $RUNNER_ARGS --with-cpp --with-deployment
 
+      - name: Run tests with mimalloc
+        if: ${{ steps.changes.outputs.mimalloc == 'true' }}
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
+
+          export VINEYARD_DATA_DIR=`pwd`/gstest
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
+
+          rm -rf default.etcd
+          rm -rf /dev/shm/etcd*
+          python3 test/runner.py $RUNNER_ARGS --allocator=mimalloc --with-cpp --with-deployment
+
       - name: Setup tmate session
         if: false
         uses: mxschmitt/action-tmate@v3
 
-      - name: Run python tests with debug
-        if: ${{ github.event_name == 'push' }}
-        uses: sighingnow/action-tmate@master
-        with:
-          script-to-run: |
-            export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
-
-            # enable coredump for debugging
-            ulimit -c unlimited
-
-            export VINEYARD_DEVELOP=TRUE
-
-            export VINEYARD_DATA_DIR=`pwd`/gstest
-            export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
-
-            rm -rf default.etcd
-            rm -rf /dev/shm/etcd*
-            python3 test/runner.py $RUNNER_ARGS --with-python --with-migration --with-deployment
-
-            if [[ ! "$RUNNER_ARGS" =~ .*"$redis".* ]]; then
-              python3 test/runner.py $RUNNER_ARGS --with-contrib
-            fi
-
       - name: Run python tests
-        if: ${{ github.event_name == 'pull_request' }}
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
 
@@ -368,6 +364,26 @@ jobs:
 
           if [[ ! "$RUNNER_ARGS" =~ .*"$redis".* ]]; then
             python3 test/runner.py $RUNNER_ARGS --with-contrib
+          fi
+
+      - name: Run python tests with mimalloc
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
+
+          # enable coredump for debugging
+          ulimit -c unlimited
+
+          export VINEYARD_DEVELOP=TRUE
+
+          export VINEYARD_DATA_DIR=`pwd`/gstest
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
+
+          rm -rf default.etcd
+          rm -rf /dev/shm/etcd*
+          python3 test/runner.py $RUNNER_ARGS --allocator=mimalloc --with-python --with-migration --with-deployment
+
+          if [[ ! "$RUNNER_ARGS" =~ .*"$redis".* ]]; then
+            python3 test/runner.py $RUNNER_ARGS --allocator=mimalloc --with-contrib
           fi
 
       - name: Setup tmate session

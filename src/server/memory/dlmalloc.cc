@@ -29,6 +29,7 @@
 #if defined(WITH_DLMALLOC)
 
 #include <cstddef>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -82,16 +83,22 @@ void* fake_mmap(size_t size) {
 
 int fake_munmap(void* addr, int64_t size) { return munmap_buffer(addr, size); }
 
+void* DLmallocAllocator::allocator_ = nullptr;
+
 void* DLmallocAllocator::Init(const size_t size) {
-  // We are using a single memory-mapped file by mallocing and freeing a single
-  // large amount of space up front.
-  void* pointer = dlmemalign(kBlockSize, size - 256 * sizeof(size_t));
-  if (pointer != nullptr) {
-    // This will unmap the file, but the next one created will be as large
-    // as this one (this is an implementation detail of dlmalloc).
-    dlfree(pointer);
-  }
-  return pointer;
+  static std::once_flag init_flag;
+  std::call_once(init_flag, [size]() {
+    // We are using a single memory-mapped file by malloc-ing and freeing a
+    // single large amount of space up front.
+    void* pointer = dlmemalign(kBlockSize, size - 256 * sizeof(size_t));
+    if (pointer != nullptr) {
+      // This will unmap the file, but the next one created will be as large
+      // as this one (this is an implementation detail of dlmalloc).
+      dlfree(pointer);
+      DLmallocAllocator::allocator_ = pointer;
+    }
+  });
+  return DLmallocAllocator::allocator_;
 }
 
 void* DLmallocAllocator::Allocate(const size_t bytes, const size_t alignment) {

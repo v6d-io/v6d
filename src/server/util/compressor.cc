@@ -41,13 +41,16 @@ Compressor::Compressor() {
   in_size_ = ZSTD_CStreamInSize();
   out_size_ = ZSTD_CStreamOutSize();
   accumulated_ = 0;
+  input_ = ZSTD_inBuffer{nullptr, 0, 0};
   output_ = ZSTD_outBuffer{malloc(out_size_), out_size_, 0};
 }
 
 Compressor::~Compressor() {
   if (stream) {
-    ZSTD_compressStream2(stream, &output_, &input_,
-                         ZSTD_EndDirective::ZSTD_e_end);
+    if (input_.src != nullptr) {
+      ZSTD_compressStream2(stream, &output_, &input_,
+                           ZSTD_EndDirective::ZSTD_e_end);
+    }
     ZSTD_freeCStream(stream);
     if (output_.dst) {
       free(output_.dst);
@@ -123,6 +126,7 @@ Decompressor::Decompressor() {
   in_size_ = std::max(ZSTD_CStreamOutSize(), ZSTD_DStreamInSize());
   out_size_ = ZSTD_DStreamOutSize();
   input_ = ZSTD_inBuffer{malloc(in_size_), in_size_, 0};
+  output_ = ZSTD_outBuffer{nullptr, 0, 0};
 }
 
 Decompressor::~Decompressor() {
