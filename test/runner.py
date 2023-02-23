@@ -222,6 +222,10 @@ def start_vineyardd(
         metadata_settings = [metadata_settings]
     if not isinstance(allocator_settings, (list, tuple)):
         allocator_settings = [allocator_settings]
+    if spill_path:
+        spill_settings = ['--spill_path', spill_path]
+    else:
+        spill_settings = []
     with contextlib.ExitStack() as stack:
         proc = start_program(
             'vineyardd',
@@ -233,8 +237,7 @@ def start_vineyardd(
             str(rpc_socket_port),
             *metadata_settings,
             *allocator_settings,
-            '--spill_path',
-            spill_path,
+            *spill_settings,
             '--spill_lower_rate',
             str(spill_lower_rate),
             '--spill_upper_rate',

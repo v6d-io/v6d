@@ -62,9 +62,6 @@ class Mimalloc {
       aligned_address = addr;
     }
 
-    // do not use OS memory for allocation (but only pre-allocated arena)
-    mi_option_set(mi_option_limit_os_alloc, 1);
-
     bool success =
         mi_manage_os_memory_ex(aligned_address, aligned_size, is_committed,
                                is_large, is_zero, numa_node, true, &arena_id);
@@ -74,6 +71,14 @@ class Mimalloc {
       aligned_address = nullptr;
     }
     heap = mi_heap_new_in_arena(arena_id);
+    if (heap == nullptr) {
+      std::clog << "[error] mimalloc failed to create the heap at "
+                << aligned_address << std::endl;
+      aligned_address = nullptr;
+    }
+
+    // do not use OS memory for allocation (but only pre-allocated arena)
+    mi_option_set(mi_option_limit_os_alloc, 1);
   }
 
   ~Mimalloc() {
