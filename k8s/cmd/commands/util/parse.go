@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
@@ -54,11 +55,12 @@ func ParsePVSpec(pvspec string) (*corev1.PersistentVolumeSpec, error) {
 	// add the spec field to the pvspec string
 	pvspec = `{"spec":` + pvspec + `}`
 
-	scheme, err := GetClientScheme()
-	if err != nil {
+	s := runtime.NewScheme()
+	if err := AddClientGoScheme(s); err != nil {
 		return nil, err
 	}
-	decode := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode
+
+	decode := serializer.NewCodecFactory(s).UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(pvspec), &schema.GroupVersionKind{Group: "", Version: "v1", Kind: "PersistentVolume"}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode the pvspec string to PV Spec: %v", err)
@@ -73,11 +75,12 @@ func ParsePVCSpec(pvcspec string) (*corev1.PersistentVolumeClaimSpec, error) {
 	// add the spec field to the pvcspec string
 	pvcspec = `{"spec":` + pvcspec + `}`
 
-	scheme, err := GetClientScheme()
-	if err != nil {
+	s := runtime.NewScheme()
+	if err := AddClientGoScheme(s); err != nil {
 		return nil, err
 	}
-	decode := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode
+
+	decode := serializer.NewCodecFactory(s).UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(pvcspec), &schema.GroupVersionKind{Group: "", Version: "v1", Kind: "PersistentVolumeClaim"}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode the pvspec string to PV Spec: %v", err)
