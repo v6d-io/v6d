@@ -169,7 +169,7 @@ func SchedulingWorkload(c client.Client) (string, error) {
 	name := client.ObjectKey{Name: flags.VineyarddName, Namespace: flags.VineyarddNamespace}
 	deployment := appsv1.Deployment{}
 	if err := c.Get(context.TODO(), name, &deployment); err != nil {
-		return "", fmt.Errorf("failed to get the deployment: ", err)
+		return "", fmt.Errorf("failed to get the deployment: %s", err)
 	}
 	newPodAffinity := corev1.PodAffinity{
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -206,7 +206,7 @@ func SchedulingWorkload(c client.Client) (string, error) {
 		spec["affinity"] = make(map[string]interface{})
 	}
 
-	affinity := unstructuredObj.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})["affinity"].(map[string]interface{})
+	affinity := spec["affinity"].(map[string]interface{})
 	if affinity["podAffinity"] == nil {
 		affinity["podAffinity"] = newPodAffinity
 	} else {

@@ -16,6 +16,7 @@ limitations under the License.
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -48,6 +49,34 @@ func ParseEnvs(envArray []string) ([]corev1.EnvVar, error) {
 		})
 	}
 	return envs, nil
+}
+
+func ParsePVandPVCSpec(PvAndPvc string) (*corev1.PersistentVolumeSpec, *corev1.PersistentVolumeClaimSpec, error) {
+	var result map[string]interface{}
+	err := json.Unmarshal([]byte(PvAndPvc), &result)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pvSpecStr, err := json.Marshal(result["pv-spec"])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pvcSpecStr, err := json.Marshal(result["pvc-spec"])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pvSpec, err := ParsePVSpec(string(pvSpecStr))
+	if err != nil {
+		return nil, nil, err
+	}
+	pvcSpec, err := ParsePVCSpec(string(pvcSpecStr))
+	if err != nil {
+		return nil, nil, err
+	}
+	return pvSpec, pvcSpec, nil
 }
 
 // ParsePVSpec parse the json string to corev1.PersistentVolumeSpec

@@ -40,6 +40,33 @@ pv spec.
 
 For example:
 
+# the json format of pv spec and pvc spec is as follows:
+go run cmd/main.go create backup --pv-pvc-spec '{
+"pv-spec": {
+	"capacity": {
+	  "storage": "1Gi"
+	},
+	"accessModes": [
+	  "ReadWriteOnce"
+	],
+	"storageClassName": "manual",
+	"hostPath": {
+	  "path": "/var/vineyard/dump"
+	}
+},
+"pvc-spec": {
+	"storageClassName": "manual",
+	"accessModes": [
+	  "ReadWriteOnce"
+	],
+	"resources": {
+	  "requests": {
+		"storage": "1Gi"
+	  }
+	}
+}
+}'
+
 # create a backup job for the vineyard cluster on kubernetes
 vineyardctl create backup \
 --vineyardd-name vineyardd-sample \
@@ -97,10 +124,20 @@ vineyardctl create backup \
 }
 
 func buildBackupJob() (*v1alpha1.Backup, error) {
-	backupPV := flags.BackupPVSpec
-	backupPVC := flags.BackupPVCSpec
+	backupPVandPVC := flags.BackupPVandPVC
+	//backupPV := flags.BackupPVSpec
+	//backupPVC := flags.BackupPVCSpec
 	opts := &flags.BackupOpts
-	if backupPV != "" {
+
+	if backupPVandPVC != "" {
+		backupPVSpec, backupPVCSpec, err := util.ParsePVandPVCSpec(backupPVandPVC)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse the pv and pvc of backup: %v", err)
+		}
+		opts.PersistentVolumeSpec = *backupPVSpec
+		opts.PersistentVolumeClaimSpec = *backupPVCSpec
+	}
+	/*if backupPV != "" {
 		backupPV, err := util.ParsePVSpec(backupPV)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the pv of backup: %v", err)
@@ -114,7 +151,7 @@ func buildBackupJob() (*v1alpha1.Backup, error) {
 			return nil, fmt.Errorf("failed to parse the pvc of backup: %v", err)
 		}
 		opts.PersistentVolumeClaimSpec = *backupPVC
-	}
+	}*/
 
 	backup := &v1alpha1.Backup{
 		ObjectMeta: metav1.ObjectMeta{

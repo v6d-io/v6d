@@ -88,8 +88,6 @@ func AddSchemes(scheme *runtime.Scheme) error {
 
 // GetKubeClient return the kubernetes client
 func GetKubeClient(scheme *runtime.Scheme) (client.Client, error) {
-	cfg := &rest.Config{}
-
 	cfg, err := clientcmd.BuildConfigFromFlags("", flags.Kubeconfig)
 	if err != nil {
 		cfg, err = rest.InClusterConfig()

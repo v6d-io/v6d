@@ -32,6 +32,9 @@ var BackupPVCSpec string
 // BackupOpts holds all configuration of backup Spec
 var BackupOpts v1alpha1.BackupSpec
 
+// BackupPVandPVC is the string of PersistentVolume data and PersistentVolumeClaim data
+var BackupPVandPVC string
+
 func NewBackupNameOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&BackupName, "backup-name", "", "vineyard-backup", "the name of backup job")
 }
@@ -42,6 +45,7 @@ func NewBackupOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&BackupOpts.VineyarddNamespace, "vineyardd-namespace", "", "", "the namespace of vineyardd")
 	cmd.Flags().IntVarP(&BackupOpts.Limit, "limit", "", 1000, "the limit of objects to backup")
 	cmd.Flags().StringVarP(&BackupOpts.BackupPath, "path", "", "", "the path of the backup data")
+	cmd.Flags().StringVarP(&BackupPVandPVC, "pv-pvc-spec", "", "", "the PersistentVolume and PersistentVolumeClaim of the backup data")
 	cmd.Flags().StringVarP(&BackupPVSpec, "pv-spec", "", "", "the PersistentVolumeSpec of the backup data")
 	cmd.Flags().StringVarP(&BackupPVCSpec, "pvc-spec", "", "", "the PersistentVolumeClaimSpec of the backup data")
 
