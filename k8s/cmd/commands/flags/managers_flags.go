@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// MetricsAddr is the TCP address that the controller should bind to for serving prometheus metrics.
 var MetricsAddr string
 var ProbeAddr string
 var EnableLeaderElection bool

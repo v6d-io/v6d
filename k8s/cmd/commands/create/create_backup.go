@@ -46,10 +46,14 @@ vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespac
 --pv-spec '{"capacity": {"storage":"1Gi"}, "accessModes": ["ReadWriteOnce"], "storageClassName": "manual", "hostPath": {"path": "/var/vineyard/dump"}}'  \
 --pvc-spec '{"storageClassName": "manual", "accessModes": ["ReadWriteOnce"], "resources": {"requests": {"storage": "1Gi"}}}'`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("create backup", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate create backup command args and flags: ", err,
-				"the extra args are: ", args)
+		if len(args) != 0 {
+			util.ErrLogger.Fatal("no arguments are required")
 		}
+
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
+		}
+
 		scheme, err := util.GetOperatorScheme()
 		if err != nil {
 			util.ErrLogger.Fatal("failed to get operator scheme: ", err)

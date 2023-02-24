@@ -16,8 +16,6 @@ limitations under the License.
 package create
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 )
 
@@ -29,10 +27,10 @@ var createCmd = &cobra.Command{
 For example:
 
 # create the backup job on kubernetes
-vineyarctl -k /home/gsbot/.kube/config create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("create called")
-	},
+vineyarctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system
+
+# create the recover job on kubernetes
+vineyarctl create recover --backup-name vineyardd-sample -n vineyard-system`,
 }
 
 func NewCreateCmd() *cobra.Command {

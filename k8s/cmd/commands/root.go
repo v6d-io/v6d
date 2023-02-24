@@ -63,10 +63,6 @@ var rootCmd = &cobra.Command{
 It supports creating, deleting and checking status of Vineyard Operator. It also 
 supports managing the vineyard relevant components such as vineyardd and pluggable 
 drivers`,
-
-	Run: func(cmd *cobra.Command, args []string) {
-		util.ErrLogger.Println("Welcome to vineyardctl")
-	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.

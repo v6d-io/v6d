@@ -61,12 +61,13 @@ install-cert-manager:
 	@kubectl wait pods -n cert-manager --all --for condition=Ready --timeout=300s
 	@echo "Cert-Manager ready."
 
-# Build manager binary
-manager: generate fmt
-	go build -o bin/manager main.go
+# Build vineyardctl binary
+vineyardctl: generate fmt
+	go build -o vineyardctl cmd/main.go
 
+# Run vineyardctl binary
 run: generate fmt
-	go run ./main.go
+	go run cmd/main.go
 
 # Install CRDs into a cluster
 install: manifests kustomize
@@ -162,7 +163,7 @@ fmt: gofmt
 
 # Run go vet against code
 vet:
-	go vet main.go
+	go vet cmd/main.go
 	go vet $(modules)
 .PHONY: vet
 
