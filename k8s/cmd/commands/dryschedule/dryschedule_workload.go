@@ -207,6 +207,11 @@ func SchedulingWorkload(c client.Client) (string, error) {
 
 	unstructuredObj := &unstructured.Unstructured{Object: proto}
 
+	spec := unstructuredObj.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})
+	if spec["affinity"] == nil {
+		spec["affinity"] = make(map[string]interface{})
+	}
+
 	affinity := unstructuredObj.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})["affinity"].(map[string]interface{})
 	if affinity["podAffinity"] == nil {
 		affinity["podAffinity"] = newPodAffinity

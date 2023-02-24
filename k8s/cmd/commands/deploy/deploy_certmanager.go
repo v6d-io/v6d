@@ -34,9 +34,9 @@ import (
 var deployCertManagerCmd = &cobra.Command{
 	Use:   "cert-manager",
 	Short: "Deploy the cert-manager on kubernetes",
-	Long: `Deploy the cert-manager in the cert-manager namespace. You could specify 
+	Long: `Deploy the cert-manager in the cert-manager namespace. You could specify
 a stable or development version of the cert-manager and we suppose not to create a
-new namespace to install the cert-manager. The default version is v1.9.1. 
+new namespace to install the cert-manager. The default version is v1.9.1.
 For example:
 
 # install the default version(v1.9.1) in the cert-manager namespace
