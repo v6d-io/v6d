@@ -16,6 +16,19 @@
 # limitations under the License.
 #
 
+import sys
+
+from . import ctl
 from . import distributed
 from . import kubernetes
 from . import local
+
+
+# generate the `click` commands after import `.ctl`.
+def _init():
+    ctl._register()  # pylint: disable=no-member
+    setattr(sys.modules[__name__], 'vineyardctl', getattr(ctl, 'vineyardctl'))
+
+
+_init()
+del _init

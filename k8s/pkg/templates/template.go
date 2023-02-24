@@ -18,8 +18,9 @@ package templates
 
 import (
 	"embed"
-	"fmt"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 //go:embed vineyardd etcd operation sidecar backup recover
@@ -43,7 +44,7 @@ func (e *EmbedTemplate) GetFilesRecursive(dir string) ([]string, error) {
 	path := filepath.Join(filepath.Dir(dir), dir)
 	fd, err := fs.ReadDir(path)
 	if err != nil {
-		return []string{}, fmt.Errorf("ReadDir error: %v", err)
+		return []string{}, errors.Wrap(err, "ReadDir error")
 	}
 	files := []string{}
 	for _, f := range fd {

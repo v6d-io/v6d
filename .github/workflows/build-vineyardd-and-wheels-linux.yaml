@@ -109,8 +109,34 @@ jobs:
           name: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
           path: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
 
+  build-vineyardctl:
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      
+      - uses: actions/setup-go@v3
+        with:
+          go-version: '^1.19.0'
+      
+      - name: Build vineyardctl
+        run: |
+          go build -a -o vineyardctl k8s/cmd/main.go
+      
+      - name: Upload CI artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          path: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+
   build-wheels:
-    needs: [build-vineyardd]
+    needs: [build-vineyardd,build-vineyardctl]
     runs-on: ${{ matrix.os }}
     if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
@@ -145,6 +171,16 @@ jobs:
         run: |
           tar zxvf vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
           mv vineyardd python/vineyard/vineyardd
+      
+      - name: Download vineyardctl artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+
+      - name: Prepare vineyardctl binary
+        run: |
+          tar zxvf vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          mv vineyardctl python/vineyard/vineyardctl
 
       - name: Login docker registry
         run: |

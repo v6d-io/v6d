@@ -15,7 +15,7 @@
 # build vineyard-python-dev
 FROM vineyardcloudnative/vineyard-manylinux1:20220512 as wheel
 
-ENV python=cp310-cp310
+ENV python=cp38-cp38
 
 RUN for pylibs in /opt/_internal/tools/lib/*; do\
         sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py || true; \
@@ -98,7 +98,7 @@ RUN cd /work/v6d/build && \
     rm -rf /work/v6d
 
 # generate final image
-FROM python:3.10-slim-buster
+FROM python:3.8-slim-buster
 
 SHELL ["/bin/bash", "-l", "-c"]
 COPY --from=wheel /work/fixed_wheels/*.whl /tmp/

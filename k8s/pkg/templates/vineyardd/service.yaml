@@ -13,14 +13,17 @@
 # limitations under the License.
 #
 
-{{- $svcKV := getServiceLabelSelector }}
+{{- $l := getServiceLabelSelector }}
 apiVersion: v1
 kind: Service
 metadata:
   name: {{ .Name }}-rpc
   namespace: {{ .Namespace }}
   labels:
-    {{$svcKV.Key}}: {{$svcKV.Value}}
+    app.kubernetes.io/name: {{ .Name }}
+    {{- range $l }}
+    {{.Key}}: "{{.Value}}"
+    {{- end }}
 spec:
   type: {{ .Spec.Service.Type }}
   ports:
@@ -28,4 +31,7 @@ spec:
       protocol: TCP
       name: vineyard-rpc
   selector:
-    {{$svcKV.Key}}: {{$svcKV.Value}}
+    app.kubernetes.io/name: {{ .Name }}
+    {{- range $l }}
+    {{.Key}}: "{{.Value}}"
+    {{- end }}

@@ -1,5 +1,7 @@
 argcomplete
+click
 etcd-distro
+makefun
 numpy>=1.18.5
 pandas<1.0.0; python_version<"3.6"
 pandas<1.2.0; python_version<"3.7"
