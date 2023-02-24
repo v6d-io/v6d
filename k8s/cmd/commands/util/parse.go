@@ -54,7 +54,7 @@ func ParsePVSpec(pvspec string) (*corev1.PersistentVolumeSpec, error) {
 	// add the spec field to the pvspec string
 	pvspec = `{"spec":` + pvspec + `}`
 
-	scheme, err := GetClientgoScheme()
+	scheme, err := GetClientScheme()
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +73,7 @@ func ParsePVCSpec(pvcspec string) (*corev1.PersistentVolumeClaimSpec, error) {
 	// add the spec field to the pvcspec string
 	pvcspec = `{"spec":` + pvcspec + `}`
 
-	scheme, err := GetClientgoScheme()
+	scheme, err := GetClientScheme()
 	if err != nil {
 		return nil, err
 	}

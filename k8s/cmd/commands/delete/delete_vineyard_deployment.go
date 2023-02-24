@@ -13,44 +13,38 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package drydelete
+package delete
 
 import (
 	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/dryapply"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// dryDeleteVineyarddCmd delete the kubernetes resources without vineyard operator
-var dryDeleteVineyarddCmd = &cobra.Command{
-	Use:   "vineyardd",
-	Short: "Drydelete vineyardd delete the vineyardd resources without vineyard operator",
-	Long: `Drydelete vineyardd delete the vineyardd resources without vineyard operator.
+// deleteVineyardDeploymentCmd delete the vineyard deployment without vineyard operator
+var deleteVineyardDeploymentCmd = &cobra.Command{
+	Use:   "vineyard-deployment",
+	Short: "delete vineyard-deployment will delete the vineyard deployment without vineyard operator",
+	Long: `delete vineyard-deployment will delete the vineyard deployment without vineyard operator.
 For example:
 
-# delete the default vineyard resources in the vineyard-system namespace
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config drydelete vineyardd
+# delete the default vineyard deployment in the vineyard-system namespace
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete vineyard-deployment
 
-# delete the vineyard resources in the vineyard-system namespace with specific name
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config drydelete vineyardd --name vineyardd-0`,
+# delete the vineyard deployment with specific name in the vineyard-system namespace
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete vineyard-deployment --name vineyardd-0`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("drydelete vineyardd", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate drydelete vineyardd command args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
-		scheme, err := util.GetClientgoScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get client-go scheme: ", err)
-		}
-
-		kubeclient, err := util.GetKubeClient(scheme)
+		kubeclient, err := util.GetKubeClient(nil)
 		if err != nil {
 			util.ErrLogger.Fatal("failed to get kube client: ", err)
 		}
@@ -65,7 +59,7 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config drydelete vineyardd -
 
 // deleteVineyarddFromTemplate creates kubernetes resources from template fir
 func deleteVineyarddFromTemplate(c client.Client) error {
-	objs, err := dryapply.GetObjsFromTemplate()
+	objs, err := deploy.GetObjsFromTemplate()
 	if err != nil {
 		return fmt.Errorf("failed to get vineyardd resources from template: %v", err)
 	}
@@ -86,10 +80,10 @@ func deleteVineyarddFromTemplate(c client.Client) error {
 	return nil
 }
 
-func NewDryDeleteVineyarddCmd() *cobra.Command {
-	return dryDeleteVineyarddCmd
+func NewDeleteVineyardDeploymentCmd() *cobra.Command {
+	return deleteVineyardDeploymentCmd
 }
 
 func init() {
-	flags.NewVineyarddNameOpts(dryDeleteVineyarddCmd)
+	flags.NewVineyarddNameOpts(deleteVineyardDeploymentCmd)
 }

@@ -40,24 +40,18 @@ from stdin or file.
 For example:
 
 # deploy the default vineyard on kubernetes
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy vineyardd
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd
 
 # deploy the vineyardd with customized image
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy vineyardd --image vineyardd:v0.12.2`,
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd --image vineyardd:v0.12.2`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("deploy vineyardd", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate deploy vineyardd command args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
-		scheme, err := util.GetOperatorScheme()
+		kubeClient, err := util.GetKubeClient(nil)
 		if err != nil {
-			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
-		}
-
-		kubeClient, err := util.GetKubeClient(scheme)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
+			util.ErrLogger.Fatal("failed to get kube client: ", err)
 		}
 
 		vineyardd, err := BuildVineyardManifest()

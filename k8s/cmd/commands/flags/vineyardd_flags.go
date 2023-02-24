@@ -20,6 +20,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
+// DefaultVineyardSocket is the default vineyard socket path
 var DefaultVineyardSocket = "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}"
 
 // VineyarddName is the name of vineyardd

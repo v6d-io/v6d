@@ -61,14 +61,13 @@ vineyardctl start manager --enable-scheduler false
 # only start the controller
 vineyarctl start manager --enable-webhook false --enable-scheduler false`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("start manager", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate start manager command args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
-		scheme, err := util.GetOperatorScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
+		scheme := runtime.NewScheme()
+		if err := util.AddSchemes(scheme); err != nil {
+			util.ErrLogger.Fatal("failed to add client scheme: ", err)
 		}
 
 		opts := zap.Options{

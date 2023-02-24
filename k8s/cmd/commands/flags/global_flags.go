@@ -48,6 +48,6 @@ var Kubeconfig string
 var Namespace string
 
 func NewGlobalFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().StringVarP(&Kubeconfig, "kubeconfig", "k", GetDefaultKubeconfig(), "kubeconfig path for the kubernetes cluster")
+	cmd.PersistentFlags().StringVarP(&Kubeconfig, "kubeconfig", "", GetDefaultKubeconfig(), "kubeconfig path for the kubernetes cluster")
 	cmd.PersistentFlags().StringVarP(&Namespace, "namespace", "n", VineyardSystemNamespace, "the namespace for operation")
 }

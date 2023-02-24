@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package dryschedule
+package schedule
 
 import (
 	"context"
@@ -32,11 +32,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// dryScheduleWorkload schedules the workload to a vineyard cluster
-var dryScheduleWorkloadCmd = &cobra.Command{
+// scheduleWorkloadCmd schedules the workload to a vineyard cluster
+var scheduleWorkloadCmd = &cobra.Command{
 	Use:   "workload",
-	Short: "DryScheduleWorkload schedules the workload to a vineyard cluster",
-	Long: `DryScheduleWorkload schedules the workload to a vineyard cluster. It will
+	Short: "scheduleWorkload schedules the workload to a vineyard cluster",
+	Long: `scheduleWorkload schedules the workload to a vineyard cluster. It will
 add the podAffinity to the workload so that the workload will be scheduled to the
 vineyard cluster. For example:
 
@@ -110,26 +110,20 @@ vineyardctl dryschedule workload --resource '{
 	}
   }' --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("dryScheduleWorkloadCmd workload", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate dryScheduleWorkloadCmd workload command args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
 		if err := validateWorkload(flags.Resource); err != nil {
 			util.ErrLogger.Fatal("failed to validate the workload: ", err)
 		}
 
-		scheme, err := util.GetClientgoScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get client-go scheme: ", err)
-		}
-
-		kubeclient, err := util.GetKubeClient(scheme)
+		kubeClient, err := util.GetKubeClient(nil)
 		if err != nil {
 			util.ErrLogger.Fatal("failed to get kube client: ", err)
 		}
 
-		workload, err := SchedulingWorkload(kubeclient)
+		workload, err := SchedulingWorkload(kubeClient)
 		if err != nil {
 			util.ErrLogger.Fatal("failed to schedule workload: ", err)
 		}
@@ -139,11 +133,11 @@ vineyardctl dryschedule workload --resource '{
 }
 
 func NewScheduleWorkloadCmd() *cobra.Command {
-	return dryScheduleWorkloadCmd
+	return scheduleWorkloadCmd
 }
 
 func init() {
-	flags.NewDrySchedulerOpts(dryScheduleWorkloadCmd)
+	flags.NewDrySchedulerOpts(scheduleWorkloadCmd)
 }
 
 func validateWorkload(workload string) error {

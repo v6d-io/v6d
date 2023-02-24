@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package dryapply
+package deploy
 
 import (
 	"context"
@@ -25,7 +25,6 @@ import (
 	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
@@ -51,38 +50,31 @@ var etcdFileName []string = []string{
 	"etcd/service.yaml",
 }
 
-// dryapplyVineyarddCmd build and apply the yaml file of vineyardd from stdin or file
-var dryapplyVineyarddCmd = &cobra.Command{
-	Use:   "vineyardd",
-	Short: "Dryapply builds and apply the yaml file of vineyardd wihout vineyard operator",
-	Long: `Builds and apply the yaml file of vineyardd the vineyardd without vineyard operator. You could
+// deployVineyardDeploymentCmd build and deploy the yaml file of vineyardd from stdin or file
+var deployVineyardDeploymentCmd = &cobra.Command{
+	Use:   "vineyard-deployment",
+	Short: "DeployVineyardDeployment builds and deploy the yaml file of vineyardd wihout vineyard operator",
+	Long: `Builds and deploy the yaml file of vineyardd the vineyardd without vineyard operator. You could
 deploy a customized vineyardd from stdin or file.
 
 For example:
 
-# deploy the default vineyard on kubernetes
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config dryapply vineyardd
+# deploy the default vineyard deployment on kubernetes
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyard-deployment
 
-# deploy the vineyardd with customized image
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config dryapply vineyardd --image vineyardd:v0.12.2`,
+# deploy the vineyard deployment with customized image
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyard-deployment --image vineyardd:v0.12.2`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("dryapply vineyardd", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate dryapply vineyardd command args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
-		scheme, err := util.GetClientgoScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get client-go scheme: ", err)
-		}
-
-		kubeclient, err := util.GetKubeClient(scheme)
+		kubeClient, err := util.GetKubeClient(nil)
 		if err != nil {
 			util.ErrLogger.Fatal("failed to get kube client: ", err)
 		}
 
-		util.InfoLogger.Println("applying vineyard template resources...")
-		if err := applyVineyarddFromTemplate(kubeclient); err != nil {
+		if err := applyVineyarddFromTemplate(kubeClient); err != nil {
 			util.ErrLogger.Fatal("failed to apply vineyardd resources from template: ", err)
 		}
 
@@ -90,15 +82,15 @@ vineyardctl -n vineyard-system -k /home/gsbot/.kube/config dryapply vineyardd --
 	},
 }
 
-func NewDryApplyVineyarddCmd() *cobra.Command {
-	return dryapplyVineyarddCmd
+func NewDeployVineyardDeploymentCmd() *cobra.Command {
+	return deployVineyardDeploymentCmd
 }
 
 var label string
 
 func init() {
-	flags.NewVineyarddOpts(dryapplyVineyarddCmd)
-	dryapplyVineyarddCmd.Flags().StringVarP(&label, "label", "l", "", "label of the vineyardd")
+	flags.NewVineyarddOpts(deployVineyardDeploymentCmd)
+	deployVineyardDeploymentCmd.Flags().StringVarP(&label, "label", "l", "", "label of the vineyardd")
 }
 
 func getStorage(q resource.Quantity) string {
@@ -177,7 +169,7 @@ func GetObjsFromTemplate() ([]*unstructured.Unstructured, error) {
 	}
 
 	// build vineyardd
-	vineyardd, err := deploy.BuildVineyardManifest()
+	vineyardd, err := BuildVineyardManifest()
 	if err != nil {
 		return objs, fmt.Errorf("failed to build vineyardd: %v", err)
 	}

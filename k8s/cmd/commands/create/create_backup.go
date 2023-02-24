@@ -41,25 +41,41 @@ pv spec.
 For example:
 
 # create a backup job for the vineyard cluster on kubernetes
-vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system  \
+vineyardctl create backup \
+--vineyardd-name vineyardd-sample \
+--vineyardd-namespace vineyard-system  \
 --limit 1000 --path /var/vineyard/dump  \
---pv-spec '{"capacity": {"storage":"1Gi"}, "accessModes": ["ReadWriteOnce"], "storageClassName": "manual", "hostPath": {"path": "/var/vineyard/dump"}}'  \
---pvc-spec '{"storageClassName": "manual", "accessModes": ["ReadWriteOnce"], "resources": {"requests": {"storage": "1Gi"}}}'`,
+--pv-spec \
+'{
+	"capacity": {
+	  "storage": "1Gi"
+	},
+	"accessModes": [
+	  "ReadWriteOnce"
+	],
+	"storageClassName": "manual",
+	"hostPath": {
+	  "path": "/var/vineyard/dump"
+	}
+}' \
+--pvc-spec \
+'{
+	"storageClassName": "manual",
+	"accessModes": [
+	  "ReadWriteOnce"
+	],
+	"resources": {
+	  "requests": {
+		"storage": "1Gi"
+	  }
+	}
+}'`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) != 0 {
-			util.ErrLogger.Fatal("no arguments are required")
-		}
-
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
 
-		scheme, err := util.GetOperatorScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
-		}
-
-		kubeClient, err := util.GetKubeClient(scheme)
+		kubeClient, err := util.GetKubeClient(nil)
 		if err != nil {
 			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}

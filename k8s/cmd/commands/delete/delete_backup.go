@@ -36,16 +36,11 @@ For example:
 # delete the default backup job
 vineyardctl delete backup`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("delete backup", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate delete backup args and flags: ", err,
-				"the extra args are: ", args)
-		}
-		scheme, err := util.GetOperatorScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
-		kubeClient, err := util.GetKubeClient(scheme)
+		kubeClient, err := util.GetKubeClient(nil)
 		if err != nil {
 			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}

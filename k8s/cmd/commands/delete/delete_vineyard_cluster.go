@@ -34,9 +34,8 @@ For example:
 # delete the default vineyard cluster on kubernetes
 vineyardctl delete vineyard-cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("deploy vineyardd", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate delete vineyard-cluster command args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
 		// delete vineyardd

@@ -21,10 +21,20 @@ import (
 
 // MetricsAddr is the TCP address that the controller should bind to for serving prometheus metrics.
 var MetricsAddr string
+
+// ProbeAddr is the TCP address that the controller should bind to for serving health probes.
 var ProbeAddr string
+
+// EnableLeaderElection for controller manager. Enabling this will ensure there is only one active controller manager.
 var EnableLeaderElection bool
+
+// EnableWebhook will enable webhook for controller manager.
 var EnableWebhook bool
+
+// EnableScheduler will enable scheduler for controller manager.
 var EnableScheduler bool
+
+// SchedulerConfigFile is the location of scheduler plugin's configuration file.
 var SchedulerConfigFile string
 
 func NewManagersOpts(cmd *cobra.Command) {

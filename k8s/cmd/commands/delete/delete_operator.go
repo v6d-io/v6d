@@ -24,6 +24,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,19 +41,18 @@ For example:
 vineyardctl delete operator
 
 # delete the specific version of vineyard operator in the vineyard-system namespace
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator -v 0.12.2
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete operator -v 0.12.2
 
 # delete the vineyard operator from local kustomize dir in the vineyard-system namespace
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator --local ../config/default`,
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete operator --local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("delete operator", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate delete operator args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
-		scheme, err := util.GetOperatorScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
+		scheme := runtime.NewScheme()
+		if err := util.AddSchemes(scheme); err != nil {
+			util.ErrLogger.Fatal("failed to add client scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)

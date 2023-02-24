@@ -42,17 +42,11 @@ For example:
 # create a recover job for a backup job in the same namespace
 vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("create recover", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate create recover command args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
-		scheme, err := util.GetOperatorScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
-		}
-
-		kubeClient, err := util.GetKubeClient(scheme)
+		kubeClient, err := util.GetKubeClient(nil)
 		if err != nil {
 			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}

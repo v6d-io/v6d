@@ -14,29 +14,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package dryschedule contains the schedule command of vineyard operator
-package dryschedule
+// Package schedule contains the schedule command of vineyard operator
+package schedule
 
 import "github.com/spf13/cobra"
 
-var dryscheduleCmd = &cobra.Command{
-	Use:   "dryschedule",
-	Short: "Dryschedule return a nodeName for the workload to co-allocation with vineyard cluster",
-	Long: `Dryschedule return a nodeName for the workload to co-allocation with vineyard cluster.
+var scheduleCmd = &cobra.Command{
+	Use:   "schedule",
+	Short: "schedule return a nodeName for the workload to co-allocate with vineyard cluster",
+	Long: `schedule return a nodeName for the workload to co-allocate with vineyard cluster.
 For example:
 
 # Dryschedule a workload to a vineyard cluster
 # it will return a nodeName which is the node that 
 # the workload should be scheduled to
 vineyarctl dryschedule --workload=workloadName`,
-	Run: func(cmd *cobra.Command, args []string) {
-	},
 }
 
-func NewDryScheduleCmd() *cobra.Command {
-	return dryscheduleCmd
+func NewScheduleCmd() *cobra.Command {
+	return scheduleCmd
 }
 
 func init() {
-	dryscheduleCmd.AddCommand(NewScheduleWorkloadCmd())
+	scheduleCmd.AddCommand(NewScheduleWorkloadCmd())
 }
