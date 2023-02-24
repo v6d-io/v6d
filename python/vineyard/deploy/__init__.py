@@ -19,3 +19,4 @@
 from . import distributed
 from . import kubernetes
 from . import local
+from . import operator

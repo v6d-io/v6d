@@ -28,9 +28,10 @@ spec:
       containers:
       - name: manager
         command:
-        - /manager
+        - /vineyardctl
         args:
-        - --leader-elect
+        - start
+        - manager
         image: controller:latest
         imagePullPolicy: IfNotPresent
         livenessProbe:
