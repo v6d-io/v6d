@@ -41,9 +41,6 @@ jobs:
         os: [ubuntu-20.04]
         malloc: [mimalloc]
         metadata: [etcd]
-        exclude:
-          - malloc: mimalloc
-            metadata: redis
     env:
       RUNNER_ARGS: "--meta=${{ matrix.metadata }}"
     steps:
