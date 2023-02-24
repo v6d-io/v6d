@@ -1,0 +1,906 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="partition_8h" kind="file" language="C++">
+    <compoundname>partition.h</compoundname>
+    <includes refid="predefine_8h" local="yes">../predefine.h</includes>
+    <incdepgraph>
+      <node id="1">
+        <label>include/partition/partition.h</label>
+        <link refid="partition_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>../predefine.h</label>
+        <link refid="predefine_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>limits.h</label>
+      </node>
+      <node id="4">
+        <label>stdbool.h</label>
+      </node>
+      <node id="5">
+        <label>stddef.h</label>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="partition_8h_1ab4fc39de9c7b645b4a6d84c05da63e24" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>****add enable_vertex edge_ref macros ****size_t</type>
+        <definition>****add enable_vertex edge_ref macros ****size_t get_total_partitions_number</definition>
+        <argsstring>(const PartitionedGraph)</argsstring>
+        <name>get_total_partitions_number</name>
+        <param>
+          <type>const</type>
+          <declname>PartitionedGraph</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Copyright 2020 Alibaba Group Holding Limited.</para>
+<para>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); you may not use this file except in compliance with the License. You may obtain a copy of the License at <verbatim>http://www.apache.org/licenses/LICENSE-2.0
+</verbatim> Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="24" column="8" declfile="include/partition/partition.h" declline="24" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a347c9f91d03338706910ade75768e073" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PartitionList</type>
+        <definition>PartitionList get_local_partition_list</definition>
+        <argsstring>(const PartitionedGraph)</argsstring>
+        <name>get_local_partition_list</name>
+        <param>
+          <type>const</type>
+          <declname>PartitionedGraph</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="26" column="15" declfile="include/partition/partition.h" declline="26" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a5bc7bce03c688c0748b212d3164e4c53" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void destroy_partition_list</definition>
+        <argsstring>(PartitionList)</argsstring>
+        <name>destroy_partition_list</name>
+        <param>
+          <type>PartitionList</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="28" column="6" declfile="include/partition/partition.h" declline="28" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a9dc1dfe3822d2b6af2abb0468258e8f0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PartitionList</type>
+        <definition>PartitionList create_partition_list</definition>
+        <argsstring>()</argsstring>
+        <name>create_partition_list</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="30" column="15" declfile="include/partition/partition.h" declline="30" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a60b20dd7a535cd6dba639395dc4b8aa6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool insert_partition_to_list</definition>
+        <argsstring>(PartitionList, const Partition)</argsstring>
+        <name>insert_partition_to_list</name>
+        <param>
+          <type>PartitionList</type>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Partition</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="32" column="6" declfile="include/partition/partition.h" declline="32" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1abf872091ad1e7bd38b2811e9b2c94031" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t get_partition_list_size</definition>
+        <argsstring>(const PartitionList)</argsstring>
+        <name>get_partition_list_size</name>
+        <param>
+          <type>const</type>
+          <declname>PartitionList</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="34" column="8" declfile="include/partition/partition.h" declline="34" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1ad7db6215ae978296f5674f3b3ccd5917" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Partition</type>
+        <definition>Partition get_partition_from_list</definition>
+        <argsstring>(const PartitionList, const size_t)</argsstring>
+        <name>get_partition_from_list</name>
+        <param>
+          <type>const</type>
+          <declname>PartitionList</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>size_t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="36" column="11" declfile="include/partition/partition.h" declline="36" declcolumn="11"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a308a530ba5e984306899bada3558c09e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Partition</type>
+        <definition>Partition get_partition_from_id</definition>
+        <argsstring>(const PartitionID)</argsstring>
+        <name>get_partition_from_id</name>
+        <param>
+          <type>const</type>
+          <declname>PartitionID</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="39" column="11" declfile="include/partition/partition.h" declline="39" declcolumn="11"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a8f12f4a75ec716ab0382e633024d1e45" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PartitionID</type>
+        <definition>PartitionID get_partition_id</definition>
+        <argsstring>(const Partition)</argsstring>
+        <name>get_partition_id</name>
+        <param>
+          <type>const</type>
+          <declname>Partition</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="41" column="13" declfile="include/partition/partition.h" declline="41" declcolumn="13"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a38c5dab672f51f760a5f0cddc1b625ae" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void *</type>
+        <definition>void * get_partition_info</definition>
+        <argsstring>(const PartitionedGraph, const Partition)</argsstring>
+        <name>get_partition_info</name>
+        <param>
+          <type>const</type>
+          <declname>PartitionedGraph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Partition</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="44" column="6" declfile="include/partition/partition.h" declline="44" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1ad3939524ee684eca4a1f31fdd913a818" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Graph</type>
+        <definition>Graph get_local_graph_from_partition</definition>
+        <argsstring>(const PartitionedGraph, const Partition)</argsstring>
+        <name>get_local_graph_from_partition</name>
+        <param>
+          <type>const</type>
+          <declname>PartitionedGraph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Partition</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="46" column="7" declfile="include/partition/partition.h" declline="46" declcolumn="7"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a062f0e83e4de5763839ca11271a00b0b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList get_master_vertices</definition>
+        <argsstring>(const Graph)</argsstring>
+        <name>get_master_vertices</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="52" column="12" declfile="include/partition/partition.h" declline="52" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a9378db226cb68bb1184c2aae6cdb39ad" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList get_mirror_vertices</definition>
+        <argsstring>(const Graph)</argsstring>
+        <name>get_mirror_vertices</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="54" column="12" declfile="include/partition/partition.h" declline="54" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a05f9d57f5e41eecfb6972422a7f1cf81" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList get_mirror_vertices_by_partition</definition>
+        <argsstring>(const Graph, const Partition)</argsstring>
+        <name>get_mirror_vertices_by_partition</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Partition</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="56" column="12" declfile="include/partition/partition.h" declline="56" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1ae1462ac7a762519d0de14804e735a9c8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList get_master_vertices_by_type</definition>
+        <argsstring>(const Graph, const VertexType)</argsstring>
+        <name>get_master_vertices_by_type</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="59" column="12" declfile="include/partition/partition.h" declline="59" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1ae5ed63a3893356dada8d2ad18266f449" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList get_mirror_vertices_by_type</definition>
+        <argsstring>(const Graph, const VertexType)</argsstring>
+        <name>get_mirror_vertices_by_type</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="61" column="12" declfile="include/partition/partition.h" declline="61" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1ae82af9afdcdcb0305fdf4c310a2aba94" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList get_mirror_vertices_by_type_partition</definition>
+        <argsstring>(const Graph, const VertexType, const Partition)</argsstring>
+        <name>get_mirror_vertices_by_type_partition</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Partition</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="63" column="12" declfile="include/partition/partition.h" declline="63" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a65b0700486900e0a9df6192e4ed51141" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>AdjacentList</type>
+        <definition>AdjacentList get_adjacent_master_list</definition>
+        <argsstring>(const Graph, const Direction, const Vertex)</argsstring>
+        <name>get_adjacent_master_list</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Direction</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="68" column="14" declfile="include/partition/partition.h" declline="68" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1afe5ce548a67637255ddbdc8b881ffa98" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>AdjacentList</type>
+        <definition>AdjacentList get_adjacent_mirror_list</definition>
+        <argsstring>(const Graph, const Direction, const Vertex)</argsstring>
+        <name>get_adjacent_mirror_list</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Direction</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="70" column="14" declfile="include/partition/partition.h" declline="70" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1af3fc0901af623ed313195133fc4f518b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>AdjacentList</type>
+        <definition>AdjacentList get_adjacent_mirror_list_by_partition</definition>
+        <argsstring>(const Graph, const Direction, const Partition, const Vertex)</argsstring>
+        <name>get_adjacent_mirror_list_by_partition</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Direction</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Partition</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="72" column="14" declfile="include/partition/partition.h" declline="72" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a333791d4877d1b98dec30360602e555a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexRef</type>
+        <definition>VertexRef get_vertex_ref_for_vertex</definition>
+        <argsstring>(const Graph, const Partition, const Vertex)</argsstring>
+        <name>get_vertex_ref_for_vertex</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Partition</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="80" column="11" declfile="include/partition/partition.h" declline="80" declcolumn="11"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a8a264a87038d7e8e314468532b776880" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Vertex</type>
+        <definition>Vertex get_vertex_from_vertex_ref</definition>
+        <argsstring>(const Graph, const VertexRef)</argsstring>
+        <name>get_vertex_from_vertex_ref</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexRef</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="82" column="8" declfile="include/partition/partition.h" declline="82" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a24cdf714ddb798564d0cf0aec66cd797" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Partition</type>
+        <definition>Partition get_master_partition_from_vertex_ref</definition>
+        <argsstring>(const Graph, const VertexRef)</argsstring>
+        <name>get_master_partition_from_vertex_ref</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexRef</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="84" column="11" declfile="include/partition/partition.h" declline="84" declcolumn="11"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1aab4a710579fac22ee3bfd19f22c3fb7d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>char *</type>
+        <definition>char * serialize_vertex_ref</definition>
+        <argsstring>(const Graph, const VertexRef)</argsstring>
+        <name>serialize_vertex_ref</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexRef</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="86" column="6" declfile="include/partition/partition.h" declline="86" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a34100f62209aa7c2bfaebd463428a0e1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexRef</type>
+        <definition>VertexRef deserialize_to_vertex_ref</definition>
+        <argsstring>(const Graph, const char *)</argsstring>
+        <name>deserialize_to_vertex_ref</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const char *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="88" column="11" declfile="include/partition/partition.h" declline="88" declcolumn="11"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a86e2243dc89825e57552f5d9f68d489b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeRef</type>
+        <definition>EdgeRef get_edge_ref_for_edge</definition>
+        <argsstring>(const Graph, const Partition, const Edge)</argsstring>
+        <name>get_edge_ref_for_edge</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Partition</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Edge</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="90" column="9" declfile="include/partition/partition.h" declline="90" declcolumn="9"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1ac72fd5362a26b33d95d3cd6606878c20" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Edge</type>
+        <definition>Edge get_edge_from_edge_ref</definition>
+        <argsstring>(const Graph, const EdgeRef)</argsstring>
+        <name>get_edge_from_edge_ref</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeRef</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="92" column="6" declfile="include/partition/partition.h" declline="92" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1ac6b1ea046afe3ff1cfa729663f01d273" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Partition</type>
+        <definition>Partition get_master_partition_from_edge_ref</definition>
+        <argsstring>(const Graph, const EdgeRef)</argsstring>
+        <name>get_master_partition_from_edge_ref</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeRef</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="94" column="11" declfile="include/partition/partition.h" declline="94" declcolumn="11"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a131f1499d0a430cf6ff81ec256d112cb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>char *</type>
+        <definition>char * serialize_edge_ref</definition>
+        <argsstring>(const Graph, const EdgeRef)</argsstring>
+        <name>serialize_edge_ref</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeRef</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="96" column="6" declfile="include/partition/partition.h" declline="96" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1af4a250f802ed8e122f1fa1d04d5be74b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeRef</type>
+        <definition>EdgeRef deserialize_to_edge_ref</definition>
+        <argsstring>(const Graph, const char *)</argsstring>
+        <name>deserialize_to_edge_ref</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const char *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="98" column="9" declfile="include/partition/partition.h" declline="98" declcolumn="9"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1ad37ca84cc0a05a6e4b3f3f880fe2a4e9" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool is_vertex_neighbor_local_complete</definition>
+        <argsstring>(const Graph, const Vertex)</argsstring>
+        <name>is_vertex_neighbor_local_complete</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="104" column="6" declfile="include/partition/partition.h" declline="104" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a7ab3e8b48acee652625eef994d04d80f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PartitionList</type>
+        <definition>PartitionList vertex_neighbor_complete_partitions</definition>
+        <argsstring>(const Graph, const Vertex)</argsstring>
+        <name>vertex_neighbor_complete_partitions</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="106" column="15" declfile="include/partition/partition.h" declline="106" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a7da0b711af8d16d1b86576d89ccbaefb" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool is_vertex_property_local_complete</definition>
+        <argsstring>(const Graph, const Vertex)</argsstring>
+        <name>is_vertex_property_local_complete</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="115" column="6" declfile="include/partition/partition.h" declline="115" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1af5543117619cc2bba6a00091c34034d5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PartitionList</type>
+        <definition>PartitionList vertex_property_complete_partitions</definition>
+        <argsstring>(const Graph, const Vertex)</argsstring>
+        <name>vertex_property_complete_partitions</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="117" column="15" declfile="include/partition/partition.h" declline="117" declcolumn="15"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a49611dca2de57b2b2ce64f5605e5274f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool is_edge_property_local_complete</definition>
+        <argsstring>(const Graph, const Edge)</argsstring>
+        <name>is_edge_property_local_complete</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Edge</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="127" column="6" declfile="include/partition/partition.h" declline="127" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="partition_8h_1a6b02ff645dd36124330ada449f224757" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>PartitionList</type>
+        <definition>PartitionList edge_data_complete_partitions</definition>
+        <argsstring>(const Graph, const Edge)</argsstring>
+        <name>edge_data_complete_partitions</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Edge</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/partition/partition.h" line="129" column="15" declfile="include/partition/partition.h" declline="129" declcolumn="15"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>GRIN_INCLUDE_PARTITION_PARTITION_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>GRIN_INCLUDE_PARTITION_PARTITION_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../predefine.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal">****<sp/>add<sp/>enable_vertex/edge_ref<sp/>macros<sp/>****</highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_GRAPH_PARTITION</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>get_total_partitions_number(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>PartitionedGraph);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal">PartitionList<sp/>get_local_partition_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>PartitionedGraph);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>destroy_partition_list(PartitionList);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal">PartitionList<sp/>create_partition_list();</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>insert_partition_to_list(PartitionList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Partition);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>get_partition_list_size(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>PartitionList);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal">Partition<sp/>get_partition_from_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>PartitionList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>NATURAL_PARTITION_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal">Partition<sp/>get_partition_from_id(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>PartitionID);</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal">PartitionID<sp/>get_partition_id(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Partition);</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>get_partition_info(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>PartitionedGraph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Partition);</highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal">Graph<sp/>get_local_graph_from_partition(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>PartitionedGraph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Partition);</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight><highlight class="comment">//<sp/>master<sp/>&amp;<sp/>mirror<sp/>vertices<sp/>for<sp/>vertexcut<sp/>partition</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight><highlight class="comment">//<sp/>while<sp/>they<sp/>refer<sp/>to<sp/>inner<sp/>&amp;<sp/>outer<sp/>vertices<sp/>in<sp/>edgecut<sp/>partition</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(ENABLE_GRAPH_PARTITION)<sp/>&amp;&amp;<sp/>defined(ENABLE_VERTEX_LIST)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal">VertexList<sp/>get_master_vertices(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph);</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal">VertexList<sp/>get_mirror_vertices(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal">VertexList<sp/>get_mirror_vertices_by_partition(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Partition);</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal">VertexList<sp/>get_master_vertices_by_type(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType);</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal">VertexList<sp/>get_mirror_vertices_by_type(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType);</highlight></codeline>
+<codeline lineno="62"><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal">VertexList<sp/>get_mirror_vertices_by_type_partition(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Partition);</highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(ENABLE_GRAPH_PARTITION)<sp/>&amp;&amp;<sp/>defined(ENABLE_ADJACENT_LIST)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal">AdjacentList<sp/>get_adjacent_master_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aa" kindref="member">Direction</ref>,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal">AdjacentList<sp/>get_adjacent_mirror_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aa" kindref="member">Direction</ref>,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal">AdjacentList<sp/>get_adjacent_mirror_list_by_partition(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aa" kindref="member">Direction</ref>,</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Partition,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="74"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal"></highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Vertex<sp/>ref<sp/>refers<sp/>to<sp/>the<sp/>same<sp/>vertex<sp/>referred<sp/>in<sp/>other<sp/>partitions,</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight><highlight class="comment">//<sp/>while<sp/>edge<sp/>ref<sp/>is<sp/>likewise.<sp/>Both<sp/>can<sp/>be<sp/>serialized<sp/>to<sp/>char*<sp/>for</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight><highlight class="comment">//<sp/>message<sp/>transporting<sp/>and<sp/>deserialized<sp/>on<sp/>the<sp/>other<sp/>end.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal">VertexRef<sp/>get_vertex_ref_for_vertex(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Partition,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="82"><highlight class="normal">Vertex<sp/>get_vertex_from_vertex_ref(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexRef);</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84"><highlight class="normal">Partition<sp/>get_master_partition_from_vertex_ref(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexRef);</highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="86"><highlight class="normal"></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>serialize_vertex_ref(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexRef);</highlight></codeline>
+<codeline lineno="87"><highlight class="normal"></highlight></codeline>
+<codeline lineno="88"><highlight class="normal">VertexRef<sp/>deserialize_to_vertex_ref(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*);</highlight></codeline>
+<codeline lineno="89"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90"><highlight class="normal">EdgeRef<sp/>get_edge_ref_for_edge(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Partition,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Edge);</highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight></codeline>
+<codeline lineno="92"><highlight class="normal">Edge<sp/>get_edge_from_edge_ref(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeRef);</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="94"><highlight class="normal">Partition<sp/>get_master_partition_from_edge_ref(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeRef);</highlight></codeline>
+<codeline lineno="95"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>serialize_edge_ref(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeRef);</highlight></codeline>
+<codeline lineno="97"><highlight class="normal"></highlight></codeline>
+<codeline lineno="98"><highlight class="normal">EdgeRef<sp/>deserialize_to_edge_ref(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*);</highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight></codeline>
+<codeline lineno="100"><highlight class="normal"></highlight><highlight class="comment">//<sp/>The<sp/>concept<sp/>of<sp/>local_complete<sp/>refers<sp/>to<sp/>whether<sp/>we<sp/>can<sp/>get<sp/>complete<sp/>data<sp/>or<sp/>properties</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="101"><highlight class="normal"></highlight><highlight class="comment">//<sp/>locally<sp/>in<sp/>the<sp/>partition.<sp/>It<sp/>is<sp/>orthogonal<sp/>to<sp/>the<sp/>concept<sp/>of<sp/>master/mirror<sp/>which</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="102"><highlight class="normal"></highlight><highlight class="comment">//<sp/>is<sp/>mainly<sp/>designed<sp/>for<sp/>data<sp/>aggregation.<sp/>In<sp/>some<sp/>extremely<sp/>cases,<sp/>master<sp/>vertices</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight><highlight class="comment">//<sp/>may<sp/>NOT<sp/>contain<sp/>all<sp/>the<sp/>data<sp/>or<sp/>properties<sp/>locally.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="104"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>is_vertex_neighbor_local_complete(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="105"><highlight class="normal"></highlight></codeline>
+<codeline lineno="106"><highlight class="normal">PartitionList<sp/>vertex_neighbor_complete_partitions(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="107"><highlight class="normal"></highlight></codeline>
+<codeline lineno="108"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_DATA</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>is_vertex_data_local_complete(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="110"><highlight class="normal"></highlight></codeline>
+<codeline lineno="111"><highlight class="normal">PartitionList<sp/>vertex_data_complete_partitions(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"></highlight></codeline>
+<codeline lineno="114"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="115"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>is_vertex_property_local_complete(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="116"><highlight class="normal"></highlight></codeline>
+<codeline lineno="117"><highlight class="normal">PartitionList<sp/>vertex_property_complete_partitions(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="118"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="119"><highlight class="normal"></highlight></codeline>
+<codeline lineno="120"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_EDGE_DATA</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="121"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>is_edge_data_local_complete(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Edge);</highlight></codeline>
+<codeline lineno="122"><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal">PartitionList<sp/>edge_data_complete_partitions(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Edge);</highlight></codeline>
+<codeline lineno="124"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="125"><highlight class="normal"></highlight></codeline>
+<codeline lineno="126"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_EDGE_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="127"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>is_edge_property_local_complete(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Edge);</highlight></codeline>
+<codeline lineno="128"><highlight class="normal"></highlight></codeline>
+<codeline lineno="129"><highlight class="normal">PartitionList<sp/>edge_data_complete_partitions(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Edge);</highlight></codeline>
+<codeline lineno="130"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="131"><highlight class="normal"></highlight></codeline>
+<codeline lineno="132"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="133"><highlight class="normal"></highlight></codeline>
+<codeline lineno="134"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>GRIN_INCLUDE_PARTITION_PARTITION_H_</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="include/partition/partition.h"/>
+  </compounddef>
+</doxygen>

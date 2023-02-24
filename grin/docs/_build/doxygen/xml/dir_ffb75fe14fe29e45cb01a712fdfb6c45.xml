@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="dir_ffb75fe14fe29e45cb01a712fdfb6c45" kind="dir">
+    <compoundname>include/property</compoundname>
+    <innerfile refid="label_8h">label.h</innerfile>
+    <innerfile refid="primarykey_8h">primarykey.h</innerfile>
+    <innerfile refid="property_8h">property.h</innerfile>
+    <innerfile refid="propertylist_8h">propertylist.h</innerfile>
+    <innerfile refid="propertytable_8h">propertytable.h</innerfile>
+    <innerfile refid="type_8h">type.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="include/property/"/>
+  </compounddef>
+</doxygen>

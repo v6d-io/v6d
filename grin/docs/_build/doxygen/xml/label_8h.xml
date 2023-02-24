@@ -1,0 +1,358 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="label_8h" kind="file" language="C++">
+    <compoundname>label.h</compoundname>
+    <includes refid="predefine_8h" local="yes">../predefine.h</includes>
+    <incdepgraph>
+      <node id="2">
+        <label>../predefine.h</label>
+        <link refid="predefine_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>include/property/label.h</label>
+        <link refid="label_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>limits.h</label>
+      </node>
+      <node id="4">
+        <label>stdbool.h</label>
+      </node>
+      <node id="5">
+        <label>stddef.h</label>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="label_8h_1a85f3796e3e8c214f3b2bdd629950dec1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Label</type>
+        <definition>Label get_label_by_name</definition>
+        <argsstring>(const Graph, const char *)</argsstring>
+        <name>get_label_by_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const char *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/label.h" line="24" column="7" declfile="include/property/label.h" declline="24" declcolumn="7"/>
+      </memberdef>
+      <memberdef kind="function" id="label_8h_1a24c1f1c3471d1a545ca5f8216005601c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>char *</type>
+        <definition>char * get_label_name</definition>
+        <argsstring>(const Graph, const Label)</argsstring>
+        <name>get_label_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Label</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/label.h" line="26" column="6" declfile="include/property/label.h" declline="26" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="label_8h_1a10f520503ba07e56d8c5f218ad792c99" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void destroy_label</definition>
+        <argsstring>(Label)</argsstring>
+        <name>destroy_label</name>
+        <param>
+          <type>Label</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/label.h" line="28" column="6" declfile="include/property/label.h" declline="28" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="label_8h_1a083472e82c78bad784554641e979eede" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void destroy_label_list</definition>
+        <argsstring>(LabelList)</argsstring>
+        <name>destroy_label_list</name>
+        <param>
+          <type>LabelList</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/label.h" line="30" column="6" declfile="include/property/label.h" declline="30" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="label_8h_1aa81f933176e2b370dbd72a73dbb4481a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t get_label_list_size</definition>
+        <argsstring>(const LabelList)</argsstring>
+        <name>get_label_list_size</name>
+        <param>
+          <type>const</type>
+          <declname>LabelList</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/label.h" line="32" column="8" declfile="include/property/label.h" declline="32" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="label_8h_1a1a809de73eaa32647151a86cc8e02fcf" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Label</type>
+        <definition>Label get_label_from_list</definition>
+        <argsstring>(const LabelList, const size_t)</argsstring>
+        <name>get_label_from_list</name>
+        <param>
+          <type>const</type>
+          <declname>LabelList</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>size_t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/label.h" line="34" column="7" declfile="include/property/label.h" declline="34" declcolumn="7"/>
+      </memberdef>
+      <memberdef kind="function" id="label_8h_1a8091acf655961c1b66933945feac27f3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool assign_label_to_vertex</definition>
+        <argsstring>(const Graph, const Label, Vertex)</argsstring>
+        <name>assign_label_to_vertex</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Label</declname>
+        </param>
+        <param>
+          <type>Vertex</type>
+        </param>
+        <briefdescription>
+<para>assign a label to a vertex </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>Graph</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the graph </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Label</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the label </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Vertex</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the vertex </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+<simplesect kind="return"><para>whether succeed </para>
+</simplesect>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/label.h" line="43" column="6" declfile="include/property/label.h" declline="43" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="label_8h_1a34138b59b44f405f346a48fd4f72ff2c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>LabelList</type>
+        <definition>LabelList get_vertex_label_list</definition>
+        <argsstring>(const Graph, const Vertex)</argsstring>
+        <name>get_vertex_label_list</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+<para>get the label list of a vertex </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>Graph</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the graph </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Vertex</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the vertex </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/label.h" line="50" column="11" declfile="include/property/label.h" declline="50" declcolumn="11"/>
+      </memberdef>
+      <memberdef kind="function" id="label_8h_1a3644dc6bfcee62f9183bd89422e6c19e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList get_vertex_list_by_label</definition>
+        <argsstring>(const Graph, const Label)</argsstring>
+        <name>get_vertex_list_by_label</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Label</declname>
+        </param>
+        <briefdescription>
+<para>get the vertex list by label </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>Graph</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the graph </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Label</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the label </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/label.h" line="57" column="12" declfile="include/property/label.h" declline="57" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="label_8h_1a3a6da911bce12049c0d97d99883889b8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList filter_vertex_list_by_label</definition>
+        <argsstring>(const VertexList, const Label)</argsstring>
+        <name>filter_vertex_list_by_label</name>
+        <param>
+          <type>const</type>
+          <declname>VertexList</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Label</declname>
+        </param>
+        <briefdescription>
+<para>filtering an existing vertex list by label </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>VertexList</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the existing vertex list </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>Label</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the label </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/label.h" line="64" column="12" declfile="include/property/label.h" declline="64" declcolumn="12"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Define the label related APIs. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright 2020 Alibaba Group Holding Limited. Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); you may not use this file except in compliance with the License. You may obtain a copy of the License at <ulink url="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</ulink> Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. </para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>GRIN_INCLUDE_PROPERTY_LABEL_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>GRIN_INCLUDE_PROPERTY_LABEL_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../predefine.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_LABEL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal">Label<sp/>get_label_by_name(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>get_label_name(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Label);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>destroy_label(Label);</highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>destroy_label_list(LabelList);</highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>get_label_list_size(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>LabelList);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal">Label<sp/>get_label_from_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>LabelList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="43" refid="label_8h_1a8091acf655961c1b66933945feac27f3" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/><ref refid="label_8h_1a8091acf655961c1b66933945feac27f3" kindref="member">assign_label_to_vertex</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Label,<sp/>Vertex);</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50" refid="label_8h_1a34138b59b44f405f346a48fd4f72ff2c" refkind="member"><highlight class="normal">LabelList<sp/><ref refid="label_8h_1a34138b59b44f405f346a48fd4f72ff2c" kindref="member">get_vertex_label_list</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57" refid="label_8h_1a3644dc6bfcee62f9183bd89422e6c19e" refkind="member"><highlight class="normal">VertexList<sp/><ref refid="label_8h_1a3644dc6bfcee62f9183bd89422e6c19e" kindref="member">get_vertex_list_by_label</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Label);</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64" refid="label_8h_1a3a6da911bce12049c0d97d99883889b8" refkind="member"><highlight class="normal">VertexList<sp/><ref refid="label_8h_1a3a6da911bce12049c0d97d99883889b8" kindref="member">filter_vertex_list_by_label</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Label);</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/></highlight><highlight class="comment">//<sp/>GRIN_INCLUDE_PROPERTY_LABEL_H_</highlight></codeline>
+    </programlisting>
+    <location file="include/property/label.h"/>
+  </compounddef>
+</doxygen>

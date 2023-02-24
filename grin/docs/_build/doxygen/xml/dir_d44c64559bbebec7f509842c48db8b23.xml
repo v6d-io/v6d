@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="dir_d44c64559bbebec7f509842c48db8b23" kind="dir">
+    <compoundname>include</compoundname>
+    <innerdir refid="dir_85395b416142281e9b8cbaa2a4bb7bc5">include/partition</innerdir>
+    <innerdir refid="dir_ffb75fe14fe29e45cb01a712fdfb6c45">include/property</innerdir>
+    <innerdir refid="dir_f450b25d4e0d87eea6a09d028ca7ee7d">include/topology</innerdir>
+    <innerfile refid="predefine_8h">predefine.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="include/"/>
+  </compounddef>
+</doxygen>

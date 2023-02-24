@@ -22,8 +22,8 @@ limitations under the License.
 
 VertexList get_vertex_list(const Graph);
 
-#ifdef WITH_VERTEX_LABEL
-VertexList get_vertex_list_by_label(const Graph, const VertexLabel);
+#ifdef WITH_VERTEX_PROPERTY
+VertexList get_vertex_list_by_type(const Graph, const VertexType);
 #endif
 
 void destroy_vertex_list(VertexList);
@@ -39,8 +39,8 @@ Vertex get_vertex_from_list(const VertexList, const size_t);
 #ifdef ENABLE_VERTEX_LIST_ITERATOR
 VertexListIterator get_vertex_list_begin(const Graph);
 
-#ifdef WITH_VERTEX_LABEL
-VertexListIterator get_vertex_list_begin_by_label(const Graph, const VertexLabel);
+#ifdef WITH_VERTEX_PROPERTY
+VertexListIterator get_vertex_list_begin_by_type(const Graph, const VertexType);
 #endif
 
 bool get_next_vertex_list_iter(VertexListIterator);
@@ -48,21 +48,6 @@ bool get_next_vertex_list_iter(VertexListIterator);
 Vertex get_vertex_from_iter(VertexListIterator);
 #endif
 
-#ifdef CONTINUOUS_VERTEX_ID_TRAIT
-bool is_vertex_list_continuous(const VertexList);
-
-VertexID get_begin_vertex_id_from_list(const VertexList);
-
-VertexID get_end_vertex_id_from_list(const VertexList);
-
-DataType get_vertex_id_data_type(const Graph);
-
-VertexID get_vertex_id(const Vertex);
-
-Vertex get_vertex_from_id(const VertexID);
-
-void destroy_vertex_id(VertexID);
-#endif
 
 #endif
 

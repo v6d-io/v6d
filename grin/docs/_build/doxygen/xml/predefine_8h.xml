@@ -1,0 +1,1294 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="predefine_8h" kind="file" language="C++">
+    <compoundname>predefine.h</compoundname>
+    <includes local="no">limits.h</includes>
+    <includes local="no">stdbool.h</includes>
+    <includes local="no">stddef.h</includes>
+    <includedby refid="partition_8h" local="yes">include/partition/partition.h</includedby>
+    <includedby refid="label_8h" local="yes">include/property/label.h</includedby>
+    <includedby refid="primarykey_8h" local="yes">include/property/primarykey.h</includedby>
+    <includedby refid="property_8h" local="yes">include/property/property.h</includedby>
+    <includedby refid="propertylist_8h" local="yes">include/property/propertylist.h</includedby>
+    <includedby refid="propertytable_8h" local="yes">include/property/propertytable.h</includedby>
+    <includedby refid="type_8h" local="yes">include/property/type.h</includedby>
+    <includedby refid="adjacentlist_8h" local="yes">include/topology/adjacentlist.h</includedby>
+    <includedby refid="edgelist_8h" local="yes">include/topology/edgelist.h</includedby>
+    <includedby refid="structure_8h" local="yes">include/topology/structure.h</includedby>
+    <includedby refid="vertexlist_8h" local="yes">include/topology/vertexlist.h</includedby>
+    <incdepgraph>
+      <node id="1">
+        <label>include/predefine.h</label>
+        <link refid="predefine_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+      </node>
+      <node id="2">
+        <label>limits.h</label>
+      </node>
+      <node id="3">
+        <label>stdbool.h</label>
+      </node>
+      <node id="4">
+        <label>stddef.h</label>
+      </node>
+    </incdepgraph>
+    <invincdepgraph>
+      <node id="2">
+        <label>include/partition/partition.h</label>
+        <link refid="partition_8h_source"/>
+      </node>
+      <node id="1">
+        <label>include/predefine.h</label>
+        <link refid="predefine_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+        <childnode refid="6" relation="include">
+        </childnode>
+        <childnode refid="7" relation="include">
+        </childnode>
+        <childnode refid="8" relation="include">
+        </childnode>
+        <childnode refid="9" relation="include">
+        </childnode>
+        <childnode refid="10" relation="include">
+        </childnode>
+        <childnode refid="11" relation="include">
+        </childnode>
+        <childnode refid="12" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>include/property/label.h</label>
+        <link refid="label_8h"/>
+      </node>
+      <node id="4">
+        <label>include/property/primarykey.h</label>
+        <link refid="primarykey_8h"/>
+      </node>
+      <node id="5">
+        <label>include/property/property.h</label>
+        <link refid="property_8h"/>
+      </node>
+      <node id="6">
+        <label>include/property/propertylist.h</label>
+        <link refid="propertylist_8h"/>
+      </node>
+      <node id="7">
+        <label>include/property/propertytable.h</label>
+        <link refid="propertytable_8h"/>
+      </node>
+      <node id="8">
+        <label>include/property/type.h</label>
+        <link refid="type_8h"/>
+      </node>
+      <node id="9">
+        <label>include/topology/adjacentlist.h</label>
+        <link refid="adjacentlist_8h_source"/>
+      </node>
+      <node id="10">
+        <label>include/topology/edgelist.h</label>
+        <link refid="edgelist_8h_source"/>
+      </node>
+      <node id="11">
+        <label>include/topology/structure.h</label>
+        <link refid="structure_8h_source"/>
+      </node>
+      <node id="12">
+        <label>include/topology/vertexlist.h</label>
+        <link refid="vertexlist_8h_source"/>
+      </node>
+    </invincdepgraph>
+      <sectiondef kind="user-defined">
+      <header>TopologyMacros</header>
+      <description><para>Macros for basic graph topology features </para>
+</description>
+      <memberdef kind="define" id="predefine_8h_1adbd707ffa90aa7c694065aaacfdd1226" prot="public" static="no">
+        <name>WITH_VERTEX_ORIGINAL_ID</name>
+        <briefdescription>
+<para>There is original ID for a vertex. This facilitates queries starting from a specific vertex, since one can get the vertex handler directly using its original ID. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="62" column="9" bodyfile="include/predefine.h" bodystart="62" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a5511455528a5a200dd03335c2a553364" prot="public" static="no">
+        <name>WITH_VERTEX_DATA</name>
+        <briefdescription>
+<para>There is data on vertex. E.g., the PageRank value of a vertex. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="67" column="9" bodyfile="include/predefine.h" bodystart="67" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1aa195a26dc2d6e7b6a2b5692475ac0fd0" prot="public" static="no">
+        <name>WITH_EDGE_DATA</name>
+        <briefdescription>
+<para>There is data on edge. E.g., the weight of an edge. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="72" column="9" bodyfile="include/predefine.h" bodystart="72" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a24ab9b872487b91605b42c2c2d2d33bd" prot="public" static="no">
+        <name>ENABLE_VERTEX_LIST</name>
+        <briefdescription>
+<para>Enable the vertex list structure. The vertex list related APIs follow the design principle of GRIN List. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="78" column="9" bodyfile="include/predefine.h" bodystart="78" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a3047177510fa354ee7898825387289b7" prot="public" static="no">
+        <name>ENABLE_VERTEX_LIST_ITERATOR</name>
+        <briefdescription>
+<para>Enable the vertex list iterator. The vertex list iterator related APIs follow the design principle of GRIN Iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="84" column="9" bodyfile="include/predefine.h" bodystart="84" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1ac7521994bc76d45695c1f83ac9ebbe10" prot="public" static="no">
+        <name>ENABLE_EDGE_LIST</name>
+        <briefdescription>
+<para>Enable the edge list structure. The edge list related APIs follow the design principle of GRIN List. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="90" column="9" bodyfile="include/predefine.h" bodystart="90" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a193c9b2d09d52d6c9f2a18af75b70074" prot="public" static="no">
+        <name>ENABLE_EDGE_LIST_ITERATOR</name>
+        <briefdescription>
+<para>Enable the edge list iterator. The edge list iterator related APIs follow the design principle of GRIN Iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="96" column="9" bodyfile="include/predefine.h" bodystart="96" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a470cf7c92d8839bff02a0409d2b7db30" prot="public" static="no">
+        <name>ENABLE_ADJACENT_LIST</name>
+        <briefdescription>
+<para>Enable the adjacent list structure. The adjacent list related APIs follow the design principle of GRIN List. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="102" column="9" bodyfile="include/predefine.h" bodystart="102" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1ad4116d8ec1dc2f1cf553348f13b757a0" prot="public" static="no">
+        <name>ENABLE_ADJACENT_LIST_ITERATOR</name>
+        <briefdescription>
+<para>Enable the adjacent list iterator. The adjacent list iterator related APIs follow the design principle of GRIN Iterator. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="108" column="9" bodyfile="include/predefine.h" bodystart="108" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="user-defined">
+      <header>PartitionMacros</header>
+      <description><para>Macros for partitioned graph features </para>
+</description>
+      <memberdef kind="define" id="predefine_8h_1a152141205611e26882f23df7a5f69d0a" prot="public" static="no">
+        <name>ENABLE_GRAPH_PARTITION</name>
+        <briefdescription>
+<para>Enable partitioned graph. A partitioned graph usually contains several fragments (i.e., local graphs) that are distributedly stored in a cluster. In GRIN, Graph represents to a single fragment that can be locally accessed. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="129" column="9" bodyfile="include/predefine.h" bodystart="129" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a0705ed8c61f68b297c2bfee1ef9324f3" prot="public" static="no">
+        <name>NATURAL_PARTITION_ID_TRAIT</name>
+        <briefdescription>
+<para>The storage provides natural number IDs for partitions. It follows the design principle of natural number ID trait in GRIN. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="135" column="9" bodyfile="include/predefine.h" bodystart="135" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a79e38008004615608e283c5f575df82e" prot="public" static="no">
+        <name>ENABLE_VERTEX_REF</name>
+        <briefdescription>
+<para>The storage provides reference of vertex that can be recognized in other partitions where the vertex also appears. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="141" column="9" bodyfile="include/predefine.h" bodystart="141" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a947197070bcf936da983899370331286" prot="public" static="no">
+        <name>ENABLE_EDGE_REF</name>
+        <briefdescription>
+<para>The storage provides reference of edge that can be recognized in other partitions where the edge also appears. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="147" column="9" bodyfile="include/predefine.h" bodystart="147" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="user-defined">
+      <header>PropertyMacros</header>
+      <description><para>Macros for property graph features </para>
+</description>
+      <memberdef kind="define" id="predefine_8h_1ac2959315e70197f976d6b92ea2d0a315" prot="public" static="no">
+        <name>WITH_PROPERTY_NAME</name>
+        <briefdescription>
+<para>There are property names for properties. The relationship between property name and properties is one-to-many, because properties bound to different vertex/edge types are distinguished even they may share the same property name. Please refer to the design principle of Property for details. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="167" column="9" bodyfile="include/predefine.h" bodystart="167" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a18e45c40c5c01532d2705e583a898ddb" prot="public" static="no">
+        <name>WITH_VERTEX_PROPERTY</name>
+        <briefdescription>
+<para>There are properties bound to vertices. When vertices are typed, vertex properties are bound to vertex types, according to the definition of vertex type. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="173" column="9" bodyfile="include/predefine.h" bodystart="173" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a8a8fb8ef0bdeabf5e6f0b6b747b70a4f" prot="public" static="no">
+        <name>WITH_VERTEX_PRIMARTY_KEYS</name>
+        <briefdescription>
+<para>There are primary keys for vertices. Vertex primary keys is a set of vertex properties whose values can distinguish vertices. When vertices are typed, each vertex type has its own primary keys which distinguishes the vertices of that type. </para>
+        </briefdescription>
+        <detaileddescription>
+<para>With primary keys, one can get the vertex from the graph or a certain type by providing the values of the primary keys. The macro is unset if WITH_VERTEX_PROPERTY is NOT defined, in which case, one can use WITH_VERTEX_ORIGINAL_ID when vertices have no properties. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="186" column="9" bodyfile="include/predefine.h" bodystart="186" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a14e2e67fdc843840df342c5cc5d838ba" prot="public" static="no">
+        <name>NATURAL_VERTEX_TYPE_ID_TRAIT</name>
+        <briefdescription>
+<para>The storage provides natural number IDs for vertex types. It follows the design principle of natural ID trait in GRIN. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="192" column="9" bodyfile="include/predefine.h" bodystart="192" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a6274cf30a5a13b8a651e038a066d7b4b" prot="public" static="no">
+        <name>NATURAL_VERTEX_PROPERTY_ID_TRAIT</name>
+        <briefdescription>
+<para>The storage provides natural number IDs for properties bound to a certain vertex type. It follows the design principle of natural ID trait in GRIN. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="199" column="9" bodyfile="include/predefine.h" bodystart="199" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1aa2ae2ede8a2ed8ffe209e21e4f87cbaa" prot="public" static="no">
+        <name>WITH_EDGE_PROPERTY</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="202" column="9" bodyfile="include/predefine.h" bodystart="202" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a963401d4056ca8305292d1a2df8bb115" prot="public" static="no">
+        <name>WITH_EDGE_PRIMARTY_KEYS</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="203" column="9" bodyfile="include/predefine.h" bodystart="203" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a7f13c49a38939de4e5193869a25597df" prot="public" static="no">
+        <name>NATURAL_EDGE_TYPE_ID_TRAIT</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="204" column="9" bodyfile="include/predefine.h" bodystart="204" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a494818897c80134eaabd394afb4ba29d" prot="public" static="no">
+        <name>NATURAL_EDGE_PROPERTY_ID_TRAIT</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="205" column="9" bodyfile="include/predefine.h" bodystart="205" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a3c0bf1209e6c115197d23be31cc371e6" prot="public" static="no">
+        <name>WITH_LABEL</name>
+        <briefdescription>
+<para>There are labels assigned to vertices or edges. Labels are mainly used in filtering vertcies or edges. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="211" column="9" bodyfile="include/predefine.h" bodystart="211" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a408d94da6105b6a6c508726da065e8b7" prot="public" static="no">
+        <name>COLUMN_STORE_TRAIT</name>
+        <briefdescription>
+<para>The storage uses column store for properties. This enables efficient property selections for vertices and edges. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="217" column="9" bodyfile="include/predefine.h" bodystart="217" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="user-defined">
+      <header>PredicateMacros</header>
+      <description><para>Macros for predicate features </para>
+</description>
+      <memberdef kind="define" id="predefine_8h_1a0e931dc102cb72f9b6be1d65a5cf87e3" prot="public" static="no">
+        <name>ENABLE_PREDICATE</name>
+        <briefdescription>
+<para>Enable predicates on graph. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="247" column="9" bodyfile="include/predefine.h" bodystart="247" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="user-defined">
+      <header>NullValues</header>
+      <description><para>Macros for Null(invalid) values </para>
+</description>
+      <memberdef kind="define" id="predefine_8h_1a27a1fcb44e6a426c50b3a854ba584b78" prot="public" static="no">
+        <name>NULL_TYPE</name>
+        <initializer><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a18f893264a00711081b62de694f99db4" kindref="member">Undefined</ref></initializer>
+        <briefdescription>
+<para>Null type (undefined data type) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="256" column="9" bodyfile="include/predefine.h" bodystart="256" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1acf65bb3a1ad2164ea7eaa8829cb43420" prot="public" static="no">
+        <name>NULL_GRAPH</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Null graph (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="258" column="9" bodyfile="include/predefine.h" bodystart="258" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1ac3c33c45c396860b76e8aff4dd2b8158" prot="public" static="no">
+        <name>NULL_VERTEX</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Non-existing vertex (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="260" column="9" bodyfile="include/predefine.h" bodystart="260" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1af645ccbab4871128dbaed2a1828cdbef" prot="public" static="no">
+        <name>NULL_EDGE</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Non-existing edge (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="262" column="9" bodyfile="include/predefine.h" bodystart="262" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a29aa3c78422ac30f2619b7bd2e1ce3fa" prot="public" static="no">
+        <name>NULL_LIST</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Null list of any kind (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="264" column="9" bodyfile="include/predefine.h" bodystart="264" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1ae2067f14aabaa8ce09bc058bb9d75683" prot="public" static="no">
+        <name>NULL_PARTITION</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Non-existing partition (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="266" column="9" bodyfile="include/predefine.h" bodystart="266" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a926c85777b43e74bfbc11181a95ab41b" prot="public" static="no">
+        <name>NULL_VERTEX_REF</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Null vertex reference (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="268" column="9" bodyfile="include/predefine.h" bodystart="268" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1ac8dec862f065b60acf3e3f15b4fa97d4" prot="public" static="no">
+        <name>NULL_EDGE_REF</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Null edge reference (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="270" column="9" bodyfile="include/predefine.h" bodystart="270" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a0a429637d65deffeda136e37b8f39533" prot="public" static="no">
+        <name>NULL_VERTEX_TYPE</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Non-existing vertex type (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="272" column="9" bodyfile="include/predefine.h" bodystart="272" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1acbc160e12d961cf5bae4d0a65574b94c" prot="public" static="no">
+        <name>NULL_EDGE_TYPE</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Non-existing edge type (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="274" column="9" bodyfile="include/predefine.h" bodystart="274" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a1a12a4b9cde223311f79ab4d2237a947" prot="public" static="no">
+        <name>NULL_PROPERTY</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Non-existing property (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="276" column="9" bodyfile="include/predefine.h" bodystart="276" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1a49149212bd213f323ede9d8b2dcb22d0" prot="public" static="no">
+        <name>NULL_ROW</name>
+        <initializer>NULL</initializer>
+        <briefdescription>
+<para>Null row (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="278" column="9" bodyfile="include/predefine.h" bodystart="278" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="define" id="predefine_8h_1af80bb749627dfbcd7c693f7d3d288025" prot="public" static="no">
+        <name>NULL_NATURAL_ID</name>
+        <initializer>UINT_MAX</initializer>
+        <briefdescription>
+<para>Null natural id of any kind (invalid return value) </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="280" column="9" bodyfile="include/predefine.h" bodystart="280" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="enum">
+      <memberdef kind="enum" id="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aa" prot="public" static="no" strong="no">
+        <type></type>
+        <name>Direction</name>
+        <enumvalue id="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aaaf3180515f5867a29932df1dc207b31ad" prot="public">
+          <name>IN</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+<para>incoming </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aaac72cb4ba9e379a25e80f157177dbe2b8" prot="public">
+          <name>OUT</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+<para>outgoing </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aaa627abe5a430420baf29ebe1940a7f2fb" prot="public">
+          <name>BOTH</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+<para>incoming &amp; outgoing </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Enumerates the directions of edges with respect to a certain vertex. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="33" column="1" bodyfile="include/predefine.h" bodystart="33" bodyend="37"/>
+      </memberdef>
+      <memberdef kind="enum" id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6" prot="public" static="no" strong="no">
+        <type></type>
+        <name>DataType</name>
+        <enumvalue id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a18f893264a00711081b62de694f99db4" prot="public">
+          <name>Undefined</name>
+          <initializer>= 0</initializer>
+          <briefdescription>
+<para>other unknown types </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a788a72ddbf1bd572b3fcd7a5e7ec8cff" prot="public">
+          <name>Int32</name>
+          <initializer>= 1</initializer>
+          <briefdescription>
+<para>int </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a57352c749ab6266701ed87613213e299" prot="public">
+          <name>UInt32</name>
+          <initializer>= 2</initializer>
+          <briefdescription>
+<para>unsigned int </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ada475947399b8ab4d13d40fea50f950c" prot="public">
+          <name>Int64</name>
+          <initializer>= 3</initializer>
+          <briefdescription>
+<para>long int </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a0389a3fa2d3f7cb04de69cca4e9b1d95" prot="public">
+          <name>UInt64</name>
+          <initializer>= 4</initializer>
+          <briefdescription>
+<para>unsigned long int </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ad67b0ee7230dcecb610254e4e5e589cd" prot="public">
+          <name>Float</name>
+          <initializer>= 5</initializer>
+          <briefdescription>
+<para>float </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6afb7825ebed9ad96348ee8588d84db633" prot="public">
+          <name>Double</name>
+          <initializer>= 6</initializer>
+          <briefdescription>
+<para>double </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ade17ec82ff106e0c2b4417f5ca231eae" prot="public">
+          <name>String</name>
+          <initializer>= 7</initializer>
+          <briefdescription>
+<para>string </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a32e9f594d9d89533ffad18df5536423e" prot="public">
+          <name>Date32</name>
+          <initializer>= 8</initializer>
+          <briefdescription>
+<para>short date </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <enumvalue id="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ab51d5181af439511070862d786809269" prot="public">
+          <name>Date64</name>
+          <initializer>= 9</initializer>
+          <briefdescription>
+<para>long date </para>
+          </briefdescription>
+          <detaileddescription>
+          </detaileddescription>
+        </enumvalue>
+        <briefdescription>
+<para>Enumerates the datatype supported in the storage. </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="40" column="1" bodyfile="include/predefine.h" bodystart="40" bodyend="51"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="typedef">
+      <memberdef kind="typedef" id="predefine_8h_1a89a0781a580d3eb9d50922f68b106124" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* Graph</definition>
+        <argsstring></argsstring>
+        <name>Graph</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="285" column="14" bodyfile="include/predefine.h" bodystart="285" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1af6964328aaeb9d6893d17c03861e923b" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* Vertex</definition>
+        <argsstring></argsstring>
+        <name>Vertex</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="286" column="14" bodyfile="include/predefine.h" bodystart="286" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a8f4c0736c66565a4cd7e1c46f87b81a6" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* Edge</definition>
+        <argsstring></argsstring>
+        <name>Edge</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="287" column="14" bodyfile="include/predefine.h" bodystart="287" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a3f9838165eb7172cd816cfdbaef7f34b" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* OriginalID</definition>
+        <argsstring></argsstring>
+        <name>OriginalID</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="290" column="14" bodyfile="include/predefine.h" bodystart="290" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a1694bbb0e19f2a80f42e7f73cb2071a0" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* VertexList</definition>
+        <argsstring></argsstring>
+        <name>VertexList</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="298" column="14" bodyfile="include/predefine.h" bodystart="298" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a586bdb86fd7e2d0222c6faa17a2b1684" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* AdjacentList</definition>
+        <argsstring></argsstring>
+        <name>AdjacentList</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="306" column="14" bodyfile="include/predefine.h" bodystart="306" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1ad3f85bed76c32a1e9b781bd06e98f1e0" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* PartitionedGraph</definition>
+        <argsstring></argsstring>
+        <name>PartitionedGraph</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="326" column="14" bodyfile="include/predefine.h" bodystart="326" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a834b5058c037cfdcd13baea77ad75fc3" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* Partition</definition>
+        <argsstring></argsstring>
+        <name>Partition</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="327" column="14" bodyfile="include/predefine.h" bodystart="327" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a1de554795bb2753ca7cd08fec4b27702" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* PartitionList</definition>
+        <argsstring></argsstring>
+        <name>PartitionList</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="328" column="14" bodyfile="include/predefine.h" bodystart="328" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1ac9131bfc277aaee61560dfa181efa4c2" prot="public" static="no">
+        <type>unsigned</type>
+        <definition>typedef unsigned PartitionID</definition>
+        <argsstring></argsstring>
+        <name>PartitionID</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="332" column="18" bodyfile="include/predefine.h" bodystart="332" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1ad7582cc77e51b51892739e364a5c38a4" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* VertexRef</definition>
+        <argsstring></argsstring>
+        <name>VertexRef</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="336" column="14" bodyfile="include/predefine.h" bodystart="336" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a122c7a66a33869079e1ac27a7ea06d6b" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* VertexType</definition>
+        <argsstring></argsstring>
+        <name>VertexType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="345" column="14" bodyfile="include/predefine.h" bodystart="345" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a4500bb9ef349c78b4cea3a507755a5e5" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* VertexTypeList</definition>
+        <argsstring></argsstring>
+        <name>VertexTypeList</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="346" column="14" bodyfile="include/predefine.h" bodystart="346" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a62512b4f9ddb56752f6f23a022cafca5" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* VertexProperty</definition>
+        <argsstring></argsstring>
+        <name>VertexProperty</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="347" column="14" bodyfile="include/predefine.h" bodystart="347" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a9732d8b367bae26194257432c5f2aa23" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* VertexPropertyList</definition>
+        <argsstring></argsstring>
+        <name>VertexPropertyList</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="348" column="14" bodyfile="include/predefine.h" bodystart="348" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1aaede6dcd1d9e9495e8e7195d7f957320" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* VertexPropertyTable</definition>
+        <argsstring></argsstring>
+        <name>VertexPropertyTable</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="349" column="14" bodyfile="include/predefine.h" bodystart="349" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a87671c78cc87d9b4b957bdcce9039ac8" prot="public" static="no">
+        <type>unsigned</type>
+        <definition>typedef unsigned VertexTypeID</definition>
+        <argsstring></argsstring>
+        <name>VertexTypeID</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="353" column="18" bodyfile="include/predefine.h" bodystart="353" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a4408a9565678edf59eb349c522b5017f" prot="public" static="no">
+        <type>unsigned</type>
+        <definition>typedef unsigned VertexPropertyID</definition>
+        <argsstring></argsstring>
+        <name>VertexPropertyID</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="357" column="18" bodyfile="include/predefine.h" bodystart="357" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a8d45eebffb766608cce91f0267400e43" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* EdgeType</definition>
+        <argsstring></argsstring>
+        <name>EdgeType</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="361" column="14" bodyfile="include/predefine.h" bodystart="361" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1ab61eaf5746803197b2af3e307d0ec795" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* EdgeTypeList</definition>
+        <argsstring></argsstring>
+        <name>EdgeTypeList</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="362" column="14" bodyfile="include/predefine.h" bodystart="362" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a1e232818dd20d192fdb5109efe05c38a" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* EdgeProperty</definition>
+        <argsstring></argsstring>
+        <name>EdgeProperty</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="363" column="14" bodyfile="include/predefine.h" bodystart="363" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1ab28bfaa7afab300068fcb0178c6429ba" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* EdgePropertyList</definition>
+        <argsstring></argsstring>
+        <name>EdgePropertyList</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="364" column="14" bodyfile="include/predefine.h" bodystart="364" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1ad55105f3bfd032ab0a4ed040b1f1416b" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* EdgePropertyTable</definition>
+        <argsstring></argsstring>
+        <name>EdgePropertyTable</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="365" column="14" bodyfile="include/predefine.h" bodystart="365" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1af559e7212d39f9fddf124940f79a3d34" prot="public" static="no">
+        <type>unsigned</type>
+        <definition>typedef unsigned EdgeTypeID</definition>
+        <argsstring></argsstring>
+        <name>EdgeTypeID</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="369" column="18" bodyfile="include/predefine.h" bodystart="369" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1a2b990656a6d9faeed4bcebba46347f04" prot="public" static="no">
+        <type>unsigned</type>
+        <definition>typedef unsigned EdgePropertyID</definition>
+        <argsstring></argsstring>
+        <name>EdgePropertyID</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="373" column="18" bodyfile="include/predefine.h" bodystart="373" bodyend="-1"/>
+      </memberdef>
+      <memberdef kind="typedef" id="predefine_8h_1aee8a1c46baf78491dcf0accc312a5f04" prot="public" static="no">
+        <type>void *</type>
+        <definition>typedef void* Row</definition>
+        <argsstring></argsstring>
+        <name>Row</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/predefine.h" line="377" column="14" bodyfile="include/predefine.h" bodystart="377" bodyend="-1"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Pre-defined macros for storage features. Undefine the macros of features that the storage does NOT support, so that APIs under unsupported features will NOT be available to the callers to avoid ambiguity. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright 2020 Alibaba Group Holding Limited.</para>
+<para>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); you may not use this file except in compliance with the License. You may obtain a copy of the License at <verbatim>http://www.apache.org/licenses/LICENSE-2.0
+</verbatim> Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. </para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>GRIN_INCLUDE_PREDEFINE_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>GRIN_INCLUDE_PREDEFINE_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;limits.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;stdbool.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&lt;stddef.h&gt;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33" refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aa" refkind="member"><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="34" refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aaaf3180515f5867a29932df1dc207b31ad" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aaaf3180515f5867a29932df1dc207b31ad" kindref="member">IN</ref><sp/>=<sp/>0,<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="35" refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aaac72cb4ba9e379a25e80f157177dbe2b8" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aaac72cb4ba9e379a25e80f157177dbe2b8" kindref="member">OUT</ref><sp/>=<sp/>1,<sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="36" refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aaa627abe5a430420baf29ebe1940a7f2fb" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aaa627abe5a430420baf29ebe1940a7f2fb" kindref="member">BOTH</ref><sp/>=<sp/>2,<sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="37"><highlight class="normal">}<sp/><ref refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aa" kindref="member">Direction</ref>;</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6" refkind="member"><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keyword">enum</highlight><highlight class="normal"><sp/>{</highlight></codeline>
+<codeline lineno="41" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a18f893264a00711081b62de694f99db4" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a18f893264a00711081b62de694f99db4" kindref="member">Undefined</ref><sp/>=<sp/>0,<sp/><sp/></highlight></codeline>
+<codeline lineno="42" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a788a72ddbf1bd572b3fcd7a5e7ec8cff" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a788a72ddbf1bd572b3fcd7a5e7ec8cff" kindref="member">Int32</ref><sp/>=<sp/>1,<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="43" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a57352c749ab6266701ed87613213e299" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a57352c749ab6266701ed87613213e299" kindref="member">UInt32</ref><sp/>=<sp/>2,<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="44" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ada475947399b8ab4d13d40fea50f950c" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ada475947399b8ab4d13d40fea50f950c" kindref="member">Int64</ref><sp/>=<sp/>3,<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="45" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a0389a3fa2d3f7cb04de69cca4e9b1d95" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a0389a3fa2d3f7cb04de69cca4e9b1d95" kindref="member">UInt64</ref><sp/>=<sp/>4,<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="46" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ad67b0ee7230dcecb610254e4e5e589cd" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ad67b0ee7230dcecb610254e4e5e589cd" kindref="member">Float</ref><sp/>=<sp/>5,<sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="47" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6afb7825ebed9ad96348ee8588d84db633" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6afb7825ebed9ad96348ee8588d84db633" kindref="member">Double</ref><sp/>=<sp/>6,<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="48" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ade17ec82ff106e0c2b4417f5ca231eae" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ade17ec82ff106e0c2b4417f5ca231eae" kindref="member">String</ref><sp/>=<sp/>7,<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="49" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a32e9f594d9d89533ffad18df5536423e" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6a32e9f594d9d89533ffad18df5536423e" kindref="member">Date32</ref><sp/>=<sp/>8,<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="50" refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ab51d5181af439511070862d786809269" refkind="member"><highlight class="normal"><sp/><sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6ab51d5181af439511070862d786809269" kindref="member">Date64</ref><sp/>=<sp/>9,<sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="51"><highlight class="normal">}<sp/><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6" kindref="member">DataType</ref>;</highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62" refid="predefine_8h_1adbd707ffa90aa7c694065aaacfdd1226" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>WITH_VERTEX_ORIGINAL_ID</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="67" refid="predefine_8h_1a5511455528a5a200dd03335c2a553364" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>WITH_VERTEX_DATA</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72" refid="predefine_8h_1aa195a26dc2d6e7b6a2b5692475ac0fd0" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>WITH_EDGE_DATA</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="73"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78" refid="predefine_8h_1a24ab9b872487b91605b42c2c2d2d33bd" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>ENABLE_VERTEX_LIST</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="84" refid="predefine_8h_1a3047177510fa354ee7898825387289b7" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>ENABLE_VERTEX_LIST_ITERATOR</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight></codeline>
+<codeline lineno="90" refid="predefine_8h_1ac7521994bc76d45695c1f83ac9ebbe10" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>ENABLE_EDGE_LIST</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="91"><highlight class="normal"></highlight></codeline>
+<codeline lineno="96" refid="predefine_8h_1a193c9b2d09d52d6c9f2a18af75b70074" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>ENABLE_EDGE_LIST_ITERATOR</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="97"><highlight class="normal"></highlight></codeline>
+<codeline lineno="102" refid="predefine_8h_1a470cf7c92d8839bff02a0409d2b7db30" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>ENABLE_ADJACENT_LIST</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="103"><highlight class="normal"></highlight></codeline>
+<codeline lineno="108" refid="predefine_8h_1ad4116d8ec1dc2f1cf553348f13b757a0" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>ENABLE_ADJACENT_LIST_ITERATOR</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="109"><highlight class="normal"></highlight></codeline>
+<codeline lineno="110"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>WITH_VERTEX_DATA</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="111"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>WITH_EDGE_DATA</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="112"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>ENABLE_VERTEX_LIST_ITERATOR</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="113"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>ENABLE_EDGE_LIST</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="114"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>ENABLE_EDGE_LIST_ITERATOR</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="115"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>ENABLE_ADJACENT_LIST_ITERATOR</highlight></codeline>
+<codeline lineno="117"><highlight class="normal"></highlight></codeline>
+<codeline lineno="118"><highlight class="normal"></highlight></codeline>
+<codeline lineno="123"><highlight class="normal"></highlight></codeline>
+<codeline lineno="129" refid="predefine_8h_1a152141205611e26882f23df7a5f69d0a" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>ENABLE_GRAPH_PARTITION</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="130"><highlight class="normal"></highlight></codeline>
+<codeline lineno="135" refid="predefine_8h_1a0705ed8c61f68b297c2bfee1ef9324f3" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NATURAL_PARTITION_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="136"><highlight class="normal"></highlight></codeline>
+<codeline lineno="141" refid="predefine_8h_1a79e38008004615608e283c5f575df82e" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>ENABLE_VERTEX_REF</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="142"><highlight class="normal"></highlight></codeline>
+<codeline lineno="147" refid="predefine_8h_1a947197070bcf936da983899370331286" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>ENABLE_EDGE_REF</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="148"><highlight class="normal"></highlight></codeline>
+<codeline lineno="149"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>ENABLE_GRAPH_PARTITION</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="150"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>NATURAL_PARTITION_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="151"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="152"><highlight class="normal"></highlight></codeline>
+<codeline lineno="153"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>ENABLE_EDGE_REF</highlight></codeline>
+<codeline lineno="155"><highlight class="normal"></highlight></codeline>
+<codeline lineno="156"><highlight class="normal"></highlight></codeline>
+<codeline lineno="161"><highlight class="normal"></highlight></codeline>
+<codeline lineno="167" refid="predefine_8h_1ac2959315e70197f976d6b92ea2d0a315" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>WITH_PROPERTY_NAME</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="168"><highlight class="normal"></highlight></codeline>
+<codeline lineno="173" refid="predefine_8h_1a18e45c40c5c01532d2705e583a898ddb" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>WITH_VERTEX_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="174"><highlight class="normal"></highlight></codeline>
+<codeline lineno="186" refid="predefine_8h_1a8a8fb8ef0bdeabf5e6f0b6b747b70a4f" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>WITH_VERTEX_PRIMARTY_KEYS</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="187"><highlight class="normal"></highlight></codeline>
+<codeline lineno="192" refid="predefine_8h_1a14e2e67fdc843840df342c5cc5d838ba" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NATURAL_VERTEX_TYPE_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="193"><highlight class="normal"></highlight></codeline>
+<codeline lineno="199" refid="predefine_8h_1a6274cf30a5a13b8a651e038a066d7b4b" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NATURAL_VERTEX_PROPERTY_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="200"><highlight class="normal"></highlight></codeline>
+<codeline lineno="201"><highlight class="normal"></highlight></codeline>
+<codeline lineno="202"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>WITH_EDGE_PROPERTY<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>There<sp/>is<sp/>any<sp/>property<sp/>for<sp/>edges.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="203"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>WITH_EDGE_PRIMARTY_KEYS<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>There<sp/>is<sp/>cross-type<sp/>property<sp/>name.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="204"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NATURAL_EDGE_TYPE_ID_TRAIT<sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Edge<sp/>type<sp/>has<sp/>natural<sp/>continuous<sp/>id<sp/>from<sp/>0.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="205"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NATURAL_EDGE_PROPERTY_ID_TRAIT<sp/><sp/><sp/><sp/></highlight><highlight class="comment">//<sp/>Edge<sp/>property<sp/>has<sp/>natural<sp/>continuous<sp/>id<sp/>from<sp/>0.</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="206"><highlight class="normal"></highlight></codeline>
+<codeline lineno="211" refid="predefine_8h_1a3c0bf1209e6c115197d23be31cc371e6" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>WITH_LABEL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="212"><highlight class="normal"></highlight></codeline>
+<codeline lineno="217" refid="predefine_8h_1a408d94da6105b6a6c508726da065e8b7" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>COLUMN_STORE_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="218"><highlight class="normal"></highlight></codeline>
+<codeline lineno="219"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>!defined(WITH_VERTEX_PROPERTY)<sp/>&amp;&amp;<sp/>!defined(WITH_EDGE_PROPERTY)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="220"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>WITH_PROPERTY_NAME</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="221"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="222"><highlight class="normal"></highlight></codeline>
+<codeline lineno="223"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>WITH_VERTEX_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="224"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>WITH_VERTEX_PRIMARTY_KEYS</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="225"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>NATURAL_VERTEX_TYPE_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="226"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>NATURAL_VERTEX_PROPERTY_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="227"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="228"><highlight class="normal"></highlight></codeline>
+<codeline lineno="229"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>WITH_EDGE_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="230"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>WITH_EDGE_PRIMARTY_KEYS</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="231"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>NATURAL_EDGE_TYPE_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="232"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>NATURAL_EDGE_PROPERTY_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="233"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="234"><highlight class="normal"></highlight></codeline>
+<codeline lineno="235"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>WITH_VERTEX_PRIMARTY_KEYS</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="236"><highlight class="normal"></highlight></codeline>
+<codeline lineno="237"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>WITH_LABEL</highlight></codeline>
+<codeline lineno="239"></codeline>
+<codeline lineno="244"><highlight class="normal"></highlight></codeline>
+<codeline lineno="247" refid="predefine_8h_1a0e931dc102cb72f9b6be1d65a5cf87e3" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>ENABLE_PREDICATE</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="248"><highlight class="normal"></highlight><highlight class="preprocessor">#undef<sp/>ENABLE_PREDICATE</highlight></codeline>
+<codeline lineno="250"></codeline>
+<codeline lineno="255"><highlight class="normal"></highlight></codeline>
+<codeline lineno="256" refid="predefine_8h_1a27a1fcb44e6a426c50b3a854ba584b78" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_TYPE<sp/>Undefined</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="258" refid="predefine_8h_1acf65bb3a1ad2164ea7eaa8829cb43420" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_GRAPH<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="260" refid="predefine_8h_1ac3c33c45c396860b76e8aff4dd2b8158" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_VERTEX<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="262" refid="predefine_8h_1af645ccbab4871128dbaed2a1828cdbef" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_EDGE<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="264" refid="predefine_8h_1a29aa3c78422ac30f2619b7bd2e1ce3fa" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_LIST<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="266" refid="predefine_8h_1ae2067f14aabaa8ce09bc058bb9d75683" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_PARTITION<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="268" refid="predefine_8h_1a926c85777b43e74bfbc11181a95ab41b" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_VERTEX_REF<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="270" refid="predefine_8h_1ac8dec862f065b60acf3e3f15b4fa97d4" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_EDGE_REF<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="272" refid="predefine_8h_1a0a429637d65deffeda136e37b8f39533" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_VERTEX_TYPE<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="274" refid="predefine_8h_1acbc160e12d961cf5bae4d0a65574b94c" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_EDGE_TYPE<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="276" refid="predefine_8h_1a1a12a4b9cde223311f79ab4d2237a947" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_PROPERTY<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="278" refid="predefine_8h_1a49149212bd213f323ede9d8b2dcb22d0" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_ROW<sp/>NULL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="280" refid="predefine_8h_1af80bb749627dfbcd7c693f7d3d288025" refkind="member"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>NULL_NATURAL_ID<sp/>UINT_MAX</highlight></codeline>
+<codeline lineno="282"><highlight class="normal"></highlight></codeline>
+<codeline lineno="283"><highlight class="normal"></highlight></codeline>
+<codeline lineno="284"><highlight class="normal"></highlight><highlight class="comment">/*<sp/>Define<sp/>the<sp/>handlers<sp/>using<sp/>typedef<sp/>*/</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="285"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>Graph;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="286"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>Vertex;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="287"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>Edge;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="288"><highlight class="normal"></highlight></codeline>
+<codeline lineno="289"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_ORIGINAL_ID</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="290"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>OriginalID;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="291"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="292"><highlight class="normal"></highlight></codeline>
+<codeline lineno="293"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_DATA</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="294"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>VertexData;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="295"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="296"><highlight class="normal"></highlight></codeline>
+<codeline lineno="297"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_VERTEX_LIST</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="298"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>VertexList;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="299"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="300"><highlight class="normal"></highlight></codeline>
+<codeline lineno="301"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_VERTEX_LIST_ITERATOR</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="302"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>VertexListIterator;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="303"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="304"><highlight class="normal"></highlight></codeline>
+<codeline lineno="305"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_ADJACENT_LIST</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="306"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>AdjacentList;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="307"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="308"><highlight class="normal"></highlight></codeline>
+<codeline lineno="309"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_ADJACENT_LIST_ITERATOR</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="310"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>AdjacentListIterator;<sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="311"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="312"><highlight class="normal"></highlight></codeline>
+<codeline lineno="313"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_EDGE_DATA</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="314"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>EdgeData;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="315"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="316"><highlight class="normal"></highlight></codeline>
+<codeline lineno="317"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_EDGE_LIST</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="318"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>EdgeList;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="319"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="320"><highlight class="normal"></highlight></codeline>
+<codeline lineno="321"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_EDGE_LIST_ITERATOR</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="322"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>EdgeListIterator;<sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/><sp/></highlight></codeline>
+<codeline lineno="323"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="324"><highlight class="normal"></highlight></codeline>
+<codeline lineno="325"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_GRAPH_PARTITION</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="326"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>PartitionedGraph;</highlight></codeline>
+<codeline lineno="327"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>Partition;</highlight></codeline>
+<codeline lineno="328"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>PartitionList;</highlight></codeline>
+<codeline lineno="329"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="330"><highlight class="normal"></highlight></codeline>
+<codeline lineno="331"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>NATURAL_PARTITION_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="332"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/>PartitionID;</highlight></codeline>
+<codeline lineno="333"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="334"><highlight class="normal"></highlight></codeline>
+<codeline lineno="335"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_VERTEX_REF</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="336"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>VertexRef;</highlight></codeline>
+<codeline lineno="337"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="338"><highlight class="normal"></highlight></codeline>
+<codeline lineno="339"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_EDGE_REF</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="340"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>EdgeRef;</highlight></codeline>
+<codeline lineno="341"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="342"><highlight class="normal"></highlight></codeline>
+<codeline lineno="343"><highlight class="normal"></highlight></codeline>
+<codeline lineno="344"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="345"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>VertexType;</highlight></codeline>
+<codeline lineno="346"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>VertexTypeList;</highlight></codeline>
+<codeline lineno="347"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>VertexProperty;</highlight></codeline>
+<codeline lineno="348"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>VertexPropertyList;</highlight></codeline>
+<codeline lineno="349"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>VertexPropertyTable;</highlight></codeline>
+<codeline lineno="350"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="351"><highlight class="normal"></highlight></codeline>
+<codeline lineno="352"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>NATURAL_VERTEX_TYPE_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="353"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/>VertexTypeID;</highlight></codeline>
+<codeline lineno="354"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="355"><highlight class="normal"></highlight></codeline>
+<codeline lineno="356"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>NATURAL_VERTEX_PROPERTY_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="357"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/>VertexPropertyID;</highlight></codeline>
+<codeline lineno="358"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="359"><highlight class="normal"></highlight></codeline>
+<codeline lineno="360"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_EDGE_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="361"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>EdgeType;</highlight></codeline>
+<codeline lineno="362"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>EdgeTypeList;</highlight></codeline>
+<codeline lineno="363"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>EdgeProperty;</highlight></codeline>
+<codeline lineno="364"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>EdgePropertyList;</highlight></codeline>
+<codeline lineno="365"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>EdgePropertyTable;</highlight></codeline>
+<codeline lineno="366"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="367"><highlight class="normal"></highlight></codeline>
+<codeline lineno="368"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>NATURAL_EDGE_TYPE_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="369"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/>EdgeTypeID;</highlight></codeline>
+<codeline lineno="370"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="371"><highlight class="normal"></highlight></codeline>
+<codeline lineno="372"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>NATURAL_EDGE_PROPERTY_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="373"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">unsigned</highlight><highlight class="normal"><sp/>EdgePropertyID;</highlight></codeline>
+<codeline lineno="374"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="375"><highlight class="normal"></highlight></codeline>
+<codeline lineno="376"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(WITH_VERTEX_PROPERTY)<sp/>||<sp/>defined(WITH_EDGE_PROPERTY)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="377"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>Row;</highlight></codeline>
+<codeline lineno="378"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="379"><highlight class="normal"></highlight></codeline>
+<codeline lineno="380"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_LABEL</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="381"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>Label</highlight></codeline>
+<codeline lineno="382"><highlight class="normal"></highlight><highlight class="keyword">typedef</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">void</highlight><highlight class="normal">*<sp/>LabelList</highlight></codeline>
+<codeline lineno="383"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="384"><highlight class="normal"></highlight></codeline>
+<codeline lineno="385"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>GRIN_INCLUDE_PREDEFINE_H_</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="include/predefine.h"/>
+  </compounddef>
+</doxygen>

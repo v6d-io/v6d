@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="edgelist_8h" kind="file" language="C++">
+    <compoundname>edgelist.h</compoundname>
+    <includes refid="predefine_8h" local="yes">../predefine.h</includes>
+    <incdepgraph>
+      <node id="2">
+        <label>../predefine.h</label>
+        <link refid="predefine_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>include/topology/edgelist.h</label>
+        <link refid="edgelist_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>limits.h</label>
+      </node>
+      <node id="4">
+        <label>stdbool.h</label>
+      </node>
+      <node id="5">
+        <label>stddef.h</label>
+      </node>
+    </incdepgraph>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>GRIN_INCLUDE_TOPOLOGY_EDGELIST_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>GRIN_INCLUDE_TOPOLOGY_EDGELIST_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../predefine.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_EDGE_LIST</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal">EdgeList<sp/>get_edge_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/><ref refid="predefine_8h_1a224b9163917ac32fc95a60d8c1eec3aa" kindref="member">Direction</ref>);</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_EDGE_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal">EdgeList<sp/>get_edge_list_by_type(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>destroy_edge_list(EdgeList);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal">EdgeList<sp/>create_edge_list();</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>insert_edge_to_list(EdgeList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Edge);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>get_edge_list_size(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeList);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal">Edge<sp/>get_edge_from_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeList,<sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_EDGE_LIST_ITERATOR</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal">EdgeListIterator<sp/>get_edge_list_begin(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_EDGE_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="43"><highlight class="normal">EdgeListIterator<sp/>get_edge_list_begin_by_type(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType);</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>get_next_edge_list_iter(EdgeListIterator);</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal">Edge<sp/>get_edge_from_iter(EdgeListIterator);</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>GRIN_INCLUDE_TOPOLOGY_EDGELIST_H_</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="include/topology/edgelist.h"/>
+  </compounddef>
+</doxygen>

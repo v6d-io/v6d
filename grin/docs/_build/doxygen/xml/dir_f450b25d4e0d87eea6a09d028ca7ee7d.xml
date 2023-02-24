@@ -1,0 +1,15 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="dir_f450b25d4e0d87eea6a09d028ca7ee7d" kind="dir">
+    <compoundname>include/topology</compoundname>
+    <innerfile refid="adjacentlist_8h">adjacentlist.h</innerfile>
+    <innerfile refid="edgelist_8h">edgelist.h</innerfile>
+    <innerfile refid="structure_8h">structure.h</innerfile>
+    <innerfile refid="vertexlist_8h">vertexlist.h</innerfile>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <location file="include/topology/"/>
+  </compounddef>
+</doxygen>

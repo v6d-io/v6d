@@ -1,0 +1,80 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="indexpage" kind="page">
+    <compoundname>index</compoundname>
+    <title>GRIN</title>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+<para><anchor id="index_1md_docs_README"/></para>
+<sect1 id="index_1autotoc_md1">
+<title>Assumptions</title>
+<sect2 id="index_1autotoc_md2">
+<title>Property Graph</title>
+<para><itemizedlist>
+<listitem><para>Vertices have types, so as Edges.</para>
+</listitem><listitem><para>The relationship between edge type and pairs of vertex types is many-to-many.</para>
+</listitem><listitem><para>Properties are bound to vertex and edge types, but some may have the same name.</para>
+</listitem><listitem><para>Labels can be assigned to vertices and edges (NOT their types) primarily for query filtering, and labels have no properties. </para>
+</listitem></itemizedlist>
+</para>
+</sect2>
+</sect1>
+<sect1 id="index_1autotoc_md3">
+<title>Design Principles</title>
+<sect2 id="index_1autotoc_md4">
+<title>Handler</title>
+<para><itemizedlist>
+<listitem><para>GRIN provides a series of handlers for graph concepts, such as vertex, edge and graph itself.</para>
+</listitem><listitem><para>Since almost everything in GRIN are handlers except of only a few string names, the type for a graph concept and its handler is always mixed-used in GRIN.</para>
+</listitem><listitem><para>For example, we use the type Vertex to represent the type of a vertex handler, instead of using VertexHandler for clean code.</para>
+</listitem></itemizedlist>
+</para>
+</sect2>
+<sect2 id="index_1autotoc_md5">
+<title>List</title>
+<para><itemizedlist>
+<listitem><para>A list handler, no matter what kind of list it represents, is available to the user only if the storage can provide the size of the list, and an element retrieval API by position (i.e., index of array).</para>
+</listitem><listitem><para>For the instance of Vertex, when some GRIN API returns a <computeroutput>VertexList</computeroutput>(handler), the user can get the size of the <computeroutput>VertexList</computeroutput> by calling <computeroutput>get_vertex_list_size</computeroutput> to get the <computeroutput>size</computeroutput>, and <computeroutput>get_vertex_from_list</computeroutput> to get a <computeroutput>vertex</computeroutput> by providing an index value ranges from <computeroutput>0</computeroutput> to <computeroutput>size-1</computeroutput>. </para>
+</listitem></itemizedlist>
+</para>
+</sect2>
+<sect2 id="index_1autotoc_md6">
+<title>List Iterator</title>
+<para><itemizedlist>
+<listitem><para>A list iterator handler, no matter what kind of list it represents, is available to the user if the list size is unknown or for sequential scan efficiency.</para>
+</listitem><listitem><para>Take Vertex as example again, users can get the iterator at the beginning using APIs like <computeroutput>get_vertex_list_begin</computeroutput>, and keeps on using <computeroutput>get_next_vertex_list_iter</computeroutput> to update the iterator till the end of the list when a <computeroutput>false</computeroutput> is returned. APIs like <computeroutput>get_vertex_from_iter</computeroutput> will return the <computeroutput>Vertex</computeroutput> from the vertex iterator. </para>
+</listitem></itemizedlist>
+</para>
+</sect2>
+<sect2 id="index_1autotoc_md7">
+<title>Property</title>
+<para><itemizedlist>
+<listitem><para>Properties are bound to vertex and edge types. It means even some properties may have the same name, as long as they are bound to different vertex or edge types, GRIN will provide distinct handlers for these properties. This is because, although properties with the same name usually provide the same semantic in the graph, they may have different data types in the underlying storage for efficiency concerns (e.g., short date and long date).</para>
+</listitem><listitem><para>To avoid the incompatibility with storage engines, we made the design choice to bind properties under vertex and edge types. Meanwhile, GRIN provides an API to get all the property handlers with the (same) given property name. </para>
+</listitem></itemizedlist>
+</para>
+</sect2>
+<sect2 id="index_1autotoc_md8">
+<title>Reference</title>
+<para><itemizedlist>
+<listitem><para>GRIN introduces the reference concept in partitioned graph. It stands for the reference of an instance that can be recognized in partitions other than the current partition where the instance is accessed.</para>
+</listitem><listitem><para>For example, a <computeroutput>VertexRef</computeroutput> is a reference of a <computeroutput>Vertex</computeroutput> that can be recognized in other partitions.</para>
+</listitem></itemizedlist>
+</para>
+</sect2>
+</sect1>
+<sect1 id="index_1autotoc_md9">
+<title>Traits</title>
+<sect2 id="index_1autotoc_md10">
+<title>Natural ID Trait</title>
+<para><itemizedlist>
+<listitem><para>Concepts represent the schema of the graph, such as vertex type and properties bound to a certain edge type, are usually numbered naturally from <computeroutput>0</computeroutput> to its <computeroutput>num - 1</computeroutput> in many storage engines. To facilitate further optimizations in the upper computing engines, GRIN provides the natural number ID trait. A storage can provide such a trait if it also uses the natural numbering for graph schema concepts. </para>
+</listitem></itemizedlist>
+</para>
+</sect2>
+</sect1>
+    </detaileddescription>
+    <location file="docs/README.md"/>
+  </compounddef>
+</doxygen>
