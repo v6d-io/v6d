@@ -21,8 +21,8 @@ limitations under the License.
 #ifdef ENABLE_ADJACENT_LIST
 AdjacentList get_adjacent_list(const Graph, const Direction, Vertex);
 
-#ifdef WITH_EDGE_LABEL
-AdjacentList get_adjacent_list_by_edge_label(const Graph, const Direction, Vertex, EdgeLabel);
+#ifdef WITH_EDGE_PROPERTY
+AdjacentList get_adjacent_list_by_edge_type(const Graph, const Direction, Vertex, EdgeType);
 #endif
 
 void destroy_adjacent_list(AdjacentList);

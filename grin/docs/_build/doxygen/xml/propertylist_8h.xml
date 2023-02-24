@@ -1,0 +1,453 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="propertylist_8h" kind="file" language="C++">
+    <compoundname>propertylist.h</compoundname>
+    <includes refid="predefine_8h" local="yes">../predefine.h</includes>
+    <incdepgraph>
+      <node id="2">
+        <label>../predefine.h</label>
+        <link refid="predefine_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>include/property/propertylist.h</label>
+        <link refid="propertylist_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>limits.h</label>
+      </node>
+      <node id="4">
+        <label>stdbool.h</label>
+      </node>
+      <node id="5">
+        <label>stddef.h</label>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="user-defined">
+      <header>GraphProjection</header>
+      <description><para>Graph projection mainly works to shrink the properties into a subset in need to improve the retrieval efficiency. Note that only the vertex/edge type with at least one property left in the vertex/edge property list will be kept after the projection.</para>
+<para>The projection only works on column store systems. </para>
+</description>
+      <memberdef kind="function" id="propertylist_8h_1a7d70dbf74489c1a5f0f7f001c9682858" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Graph</type>
+        <definition>Graph select_vertex_properties</definition>
+        <argsstring>(const Graph, const VertexPropertyList)</argsstring>
+        <name>select_vertex_properties</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexPropertyList</declname>
+        </param>
+        <briefdescription>
+<para>project vertex properties </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="77" column="7" declfile="include/property/propertylist.h" declline="77" declcolumn="7"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1aa019e8824f19dbb563b5b1fdb091996e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Graph</type>
+        <definition>Graph select_edge_properteis</definition>
+        <argsstring>(const Graph, const EdgePropertyList)</argsstring>
+        <name>select_edge_properteis</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgePropertyList</declname>
+        </param>
+        <briefdescription>
+<para>project edge properties </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="82" column="7" declfile="include/property/propertylist.h" declline="82" declcolumn="7"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="propertylist_8h_1a811b69f9428f6fac5374159ea354b19b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexPropertyList</type>
+        <definition>VertexPropertyList get_vertex_property_list_by_type</definition>
+        <argsstring>(const Graph, const VertexType)</argsstring>
+        <name>get_vertex_property_list_by_type</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="25" column="20" declfile="include/property/propertylist.h" declline="25" declcolumn="20"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1a51ed20684827255349ca784045160492" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t get_vertex_property_list_size</definition>
+        <argsstring>(const VertexPropertyList)</argsstring>
+        <name>get_vertex_property_list_size</name>
+        <param>
+          <type>const</type>
+          <declname>VertexPropertyList</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="27" column="8" declfile="include/property/propertylist.h" declline="27" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1a8548e089fa1da7207ba98ea860cc037f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexProperty</type>
+        <definition>VertexProperty get_vertex_property_from_list</definition>
+        <argsstring>(const VertexPropertyList, const size_t)</argsstring>
+        <name>get_vertex_property_from_list</name>
+        <param>
+          <type>const</type>
+          <declname>VertexPropertyList</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>size_t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="29" column="16" declfile="include/property/propertylist.h" declline="29" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1a9f7fb0bb47a0145f2956373de3db21c6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexPropertyList</type>
+        <definition>VertexPropertyList create_vertex_property_list</definition>
+        <argsstring>()</argsstring>
+        <name>create_vertex_property_list</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="31" column="20" declfile="include/property/propertylist.h" declline="31" declcolumn="20"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1af497ad485e29768ce1c2c8b821ea5da5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void destroy_vertex_property_list</definition>
+        <argsstring>(VertexPropertyList)</argsstring>
+        <name>destroy_vertex_property_list</name>
+        <param>
+          <type>VertexPropertyList</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="33" column="6" declfile="include/property/propertylist.h" declline="33" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1a7f8143664b81997618dc613f21aeebe7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool insert_vertex_property_to_list</definition>
+        <argsstring>(VertexPropertyList, const VertexProperty)</argsstring>
+        <name>insert_vertex_property_to_list</name>
+        <param>
+          <type>VertexPropertyList</type>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexProperty</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="35" column="6" declfile="include/property/propertylist.h" declline="35" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1aeb3baefc90d95d708b2b3fd5d12e8fd6" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexProperty</type>
+        <definition>VertexProperty get_vertex_property_from_id</definition>
+        <argsstring>(const VertexType, const VertexPropertyID)</argsstring>
+        <name>get_vertex_property_from_id</name>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexPropertyID</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="39" column="16" declfile="include/property/propertylist.h" declline="39" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1a7d00a2c8aef1a873b127d18546f46c3d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexPropertyID</type>
+        <definition>VertexPropertyID get_vertex_property_id</definition>
+        <argsstring>(const VertexType, const VertexProperty)</argsstring>
+        <name>get_vertex_property_id</name>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexProperty</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="41" column="18" declfile="include/property/propertylist.h" declline="41" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1adb83cc409ba65e46b9e6e0aa639b1f7f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgePropertyList</type>
+        <definition>EdgePropertyList get_edge_property_list_by_type</definition>
+        <argsstring>(const Graph, const EdgeType)</argsstring>
+        <name>get_edge_property_list_by_type</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="46" column="18" declfile="include/property/propertylist.h" declline="46" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1a345d1295609a61c73ad3e996e621c779" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t get_edge_property_list_size</definition>
+        <argsstring>(const EdgePropertyList)</argsstring>
+        <name>get_edge_property_list_size</name>
+        <param>
+          <type>const</type>
+          <declname>EdgePropertyList</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="48" column="8" declfile="include/property/propertylist.h" declline="48" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1a69c5685afbcaf01a5313b0940b383fc5" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeProperty</type>
+        <definition>EdgeProperty get_edge_property_from_list</definition>
+        <argsstring>(const EdgePropertyList, const size_t)</argsstring>
+        <name>get_edge_property_from_list</name>
+        <param>
+          <type>const</type>
+          <declname>EdgePropertyList</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>size_t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="50" column="14" declfile="include/property/propertylist.h" declline="50" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1ac8b62dca9b38777a131e011d91e7a733" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgePropertyList</type>
+        <definition>EdgePropertyList create_edge_property_list</definition>
+        <argsstring>()</argsstring>
+        <name>create_edge_property_list</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="52" column="18" declfile="include/property/propertylist.h" declline="52" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1a27a96c0627dcc5ca074caf18c242276a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void destroy_edge_property_list</definition>
+        <argsstring>(EdgePropertyList)</argsstring>
+        <name>destroy_edge_property_list</name>
+        <param>
+          <type>EdgePropertyList</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="54" column="6" declfile="include/property/propertylist.h" declline="54" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1a0ac1ef4a8c722cc91ff2782c04506f22" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool insert_edge_property_to_list</definition>
+        <argsstring>(EdgePropertyList, const EdgeProperty)</argsstring>
+        <name>insert_edge_property_to_list</name>
+        <param>
+          <type>EdgePropertyList</type>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeProperty</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="56" column="6" declfile="include/property/propertylist.h" declline="56" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1a8e29fa1ae1a1c05067d5489e28bd923a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeProperty</type>
+        <definition>EdgeProperty get_edge_property_from_id</definition>
+        <argsstring>(const EdgeType, const EdgePropertyID)</argsstring>
+        <name>get_edge_property_from_id</name>
+        <param>
+          <type>const</type>
+          <declname>EdgeType</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgePropertyID</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="60" column="14" declfile="include/property/propertylist.h" declline="60" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="propertylist_8h_1ab031a876bdfaa5cae9038fda42bde196" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgePropertyID</type>
+        <definition>EdgePropertyID get_edge_property_id</definition>
+        <argsstring>(const EdgeType, const EdgeProperty)</argsstring>
+        <name>get_edge_property_id</name>
+        <param>
+          <type>const</type>
+          <declname>EdgeType</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeProperty</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/propertylist.h" line="62" column="16" declfile="include/property/propertylist.h" declline="62" declcolumn="16"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Define the property list related and graph projection APIs. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright 2020 Alibaba Group Holding Limited. Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); you may not use this file except in compliance with the License. You may obtain a copy of the License at <ulink url="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</ulink> Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. </para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>GRIN_INCLUDE_PROPERTY_PROPERTY_LIST_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>GRIN_INCLUDE_PROPERTY_PROPERTY_LIST_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../predefine.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Property<sp/>list</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal">VertexPropertyList<sp/>get_vertex_property_list_by_type(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>get_vertex_property_list_size(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexPropertyList);</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal">VertexProperty<sp/>get_vertex_property_from_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexPropertyList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal">VertexPropertyList<sp/>create_vertex_property_list();</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>destroy_vertex_property_list(VertexPropertyList);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>insert_vertex_property_to_list(VertexPropertyList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexProperty);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>NATURAL_VERTEX_PROPERTY_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal">VertexProperty<sp/>get_vertex_property_from_id(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexPropertyID);</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal">VertexPropertyID<sp/>get_vertex_property_id(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexProperty);</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_EDGE_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal">EdgePropertyList<sp/>get_edge_property_list_by_type(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType);</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>get_edge_property_list_size(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgePropertyList);</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal">EdgeProperty<sp/>get_edge_property_from_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgePropertyList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal">EdgePropertyList<sp/>create_edge_property_list();</highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>destroy_edge_property_list(EdgePropertyList);</highlight></codeline>
+<codeline lineno="55"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>insert_edge_property_to_list(EdgePropertyList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeProperty);</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>NATURAL_EDGE_PROPERTY_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal">EdgeProperty<sp/>get_edge_property_from_id(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgePropertyID);</highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal">EdgePropertyID<sp/>get_edge_property_id(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeProperty);</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="75"><highlight class="preprocessor">#if<sp/>defined(WITH_VERTEX_PROPERTY)<sp/>&amp;&amp;<sp/>defined(COLUMN_STORE_TRAIT)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="77" refid="propertylist_8h_1a7d70dbf74489c1a5f0f7f001c9682858" refkind="member"><highlight class="normal">Graph<sp/><ref refid="propertylist_8h_1a7d70dbf74489c1a5f0f7f001c9682858" kindref="member">select_vertex_properties</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexPropertyList);</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight><highlight class="preprocessor">#if<sp/>defined(WITH_EDGE_PROPERTY)<sp/>&amp;&amp;<sp/>defined(COLUMN_STORE_TRAIT)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="82" refid="propertylist_8h_1aa019e8824f19dbb563b5b1fdb091996e" refkind="member"><highlight class="normal">Graph<sp/><ref refid="propertylist_8h_1aa019e8824f19dbb563b5b1fdb091996e" kindref="member">select_edge_properteis</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgePropertyList);</highlight></codeline>
+<codeline lineno="83"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="84"><highlight class="normal"></highlight></codeline>
+<codeline lineno="85"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>GRIN_INCLUDE_PROPERTY_PROPERTY_LIST_H_</highlight></codeline>
+    </programlisting>
+    <location file="include/property/propertylist.h"/>
+  </compounddef>
+</doxygen>

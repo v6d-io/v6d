@@ -25,14 +25,14 @@ bool is_multigraph(const Graph);
 
 size_t get_vertex_num(const Graph);
 
-#ifdef WITH_VERTEX_LABEL
-size_t get_vertex_num_by_label(const Graph, const VertexLabel);
+#ifdef WITH_VERTEX_PROPERTY
+size_t get_vertex_num_by_type(const Graph, const VertexType);
 #endif
 
 size_t get_edge_num(const Graph);
 
-#ifdef WITH_EDGE_LABEL
-size_t get_edge_num_by_label(const Graph, const EdgeLabel);
+#ifdef WITH_EDGE_PROPERTY
+size_t get_edge_num_by_type(const Graph, const EdgeType);
 #endif
 
 
@@ -47,16 +47,16 @@ VertexData get_vertex_data_value(const Graph, const Vertex);
 void destroy_vertex_data(VertexData);
 #endif
 
-#ifdef WITH_VERTEX_ORIGIN_ID
-Vertex get_vertex_from_origin_id(const Graph, const OriginID);
+#ifdef WITH_VERTEX_ORIGINAL_ID
+Vertex get_vertex_from_original_id(const Graph, const OriginalID);
 
-#ifdef WITH_VERTEX_LABEL
-Vertex get_vertex_from_label_origin_id(const Graph, const VertexLabel, const OriginID);
+#ifdef WITH_VERTEX_PROPERTY
+Vertex get_vertex_from_type_original_id(const Graph, const VertexType, const OriginalID);
 #endif
 
-OriginID get_vertex_origin_id(const Graph, const Vertex);
+OriginalID get_vertex_original_id(const Graph, const Vertex);
 
-void destroy_vertex_origin_id(OriginID); 
+void destroy_vertex_original_id(OriginalID); 
 #endif
 
 

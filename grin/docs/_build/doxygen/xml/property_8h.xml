@@ -1,0 +1,382 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="property_8h" kind="file" language="C++">
+    <compoundname>property.h</compoundname>
+    <includes refid="predefine_8h" local="yes">../predefine.h</includes>
+    <incdepgraph>
+      <node id="2">
+        <label>../predefine.h</label>
+        <link refid="predefine_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>include/property/property.h</label>
+        <link refid="property_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>limits.h</label>
+      </node>
+      <node id="4">
+        <label>stdbool.h</label>
+      </node>
+      <node id="5">
+        <label>stddef.h</label>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="property_8h_1a1db8c5548754a9a0fa8d5d94b7de2351" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>char *</type>
+        <definition>char * get_vertex_property_name</definition>
+        <argsstring>(const Graph, const VertexProperty)</argsstring>
+        <name>get_vertex_property_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexProperty</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/property.h" line="24" column="6" declfile="include/property/property.h" declline="24" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="property_8h_1afb3122e6b577a4b2117aec43d6499f58" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexProperty</type>
+        <definition>VertexProperty get_vertex_property_by_name</definition>
+        <argsstring>(const Graph, const VertexType, const char *msg)</argsstring>
+        <name>get_vertex_property_by_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <param>
+          <type>const char *</type>
+          <declname>msg</declname>
+        </param>
+        <briefdescription>
+<para>get the vertex property with a given name under a specific vertex type </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>Graph</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the graph </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>VertexType</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the specific vertex type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>msg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the name </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/property.h" line="32" column="16" declfile="include/property/property.h" declline="32" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="property_8h_1a33bb22d6ad61e86d1963ef9710993537" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexPropertyList</type>
+        <definition>VertexPropertyList get_vertex_properties_by_name</definition>
+        <argsstring>(const Graph, const char *)</argsstring>
+        <name>get_vertex_properties_by_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const char *</type>
+        </param>
+        <briefdescription>
+<para>get all the vertex properties with a given name </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>Graph</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the graph </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>msg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the name </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/property.h" line="39" column="20" declfile="include/property/property.h" declline="39" declcolumn="20"/>
+      </memberdef>
+      <memberdef kind="function" id="property_8h_1ac9f66944e3643ed618d22e43d5b7bf72" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>char *</type>
+        <definition>char * get_edge_property_name</definition>
+        <argsstring>(const Graph, const EdgeProperty)</argsstring>
+        <name>get_edge_property_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeProperty</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/property.h" line="41" column="6" declfile="include/property/property.h" declline="41" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="property_8h_1a002d96d3a1733e075d5a66feb3ad5e02" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeProperty</type>
+        <definition>EdgeProperty get_edge_property_by_name</definition>
+        <argsstring>(const Graph, const EdgeType, const char *msg)</argsstring>
+        <name>get_edge_property_by_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeType</declname>
+        </param>
+        <param>
+          <type>const char *</type>
+          <declname>msg</declname>
+        </param>
+        <briefdescription>
+<para>get the edge property with a given name under a specific edge type </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>Graph</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the graph </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>EdgeType</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the specific edge type </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>msg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the name </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/property.h" line="49" column="14" declfile="include/property/property.h" declline="49" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="property_8h_1a55bf3fc271e09ec398a17364c7826784" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgePropertyList</type>
+        <definition>EdgePropertyList get_edge_properties_by_name</definition>
+        <argsstring>(const Graph, const char *)</argsstring>
+        <name>get_edge_properties_by_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const char *</type>
+        </param>
+        <briefdescription>
+<para>get all the edge properties with a given name </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>Graph</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the graph </para>
+</parameterdescription>
+</parameteritem>
+<parameteritem>
+<parameternamelist>
+<parametername>msg</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>the name </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/property.h" line="56" column="18" declfile="include/property/property.h" declline="56" declcolumn="18"/>
+      </memberdef>
+      <memberdef kind="function" id="property_8h_1a8e1467e6a4a322bb1761a17f779d0dbd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void destroy_vertex_property</definition>
+        <argsstring>(VertexProperty)</argsstring>
+        <name>destroy_vertex_property</name>
+        <param>
+          <type>VertexProperty</type>
+        </param>
+        <briefdescription>
+<para>destroy vertex property </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>VertexProperty</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>vertex property </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/property.h" line="65" column="6" declfile="include/property/property.h" declline="65" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="property_8h_1a7d1719a4d15cb72cf235dd6bc5701d25" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6" kindref="member">DataType</ref></type>
+        <definition>DataType get_vertex_property_data_type</definition>
+        <argsstring>(VertexProperty)</argsstring>
+        <name>get_vertex_property_data_type</name>
+        <param>
+          <type>VertexProperty</type>
+        </param>
+        <briefdescription>
+<para>get property data type </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>VertexProperty</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>vertex property </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/property.h" line="71" column="10" declfile="include/property/property.h" declline="71" declcolumn="10"/>
+      </memberdef>
+      <memberdef kind="function" id="property_8h_1a387695bec35c802bf4a7f6b7362f6e91" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexType</type>
+        <definition>VertexType get_vertex_property_vertex_type</definition>
+        <argsstring>(VertexProperty)</argsstring>
+        <name>get_vertex_property_vertex_type</name>
+        <param>
+          <type>VertexProperty</type>
+        </param>
+        <briefdescription>
+<para>get the vertex type that the property is bound to </para>
+        </briefdescription>
+        <detaileddescription>
+<para><parameterlist kind="param"><parameteritem>
+<parameternamelist>
+<parametername>VertexProperty</parametername>
+</parameternamelist>
+<parameterdescription>
+<para>vertex property </para>
+</parameterdescription>
+</parameteritem>
+</parameterlist>
+</para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/property.h" line="77" column="12" declfile="include/property/property.h" declline="77" declcolumn="12"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Define the property related APIs. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright 2020 Alibaba Group Holding Limited. Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); you may not use this file except in compliance with the License. You may obtain a copy of the License at <ulink url="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</ulink> Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. </para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>GRIN_INCLUDE_PROPERTY_PROPERTY_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>GRIN_INCLUDE_PROPERTY_PROPERTY_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../predefine.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_PROPERTY_NAME</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>get_vertex_property_name(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexProperty);</highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight></codeline>
+<codeline lineno="32" refid="property_8h_1afb3122e6b577a4b2117aec43d6499f58" refkind="member"><highlight class="normal">VertexProperty<sp/><ref refid="property_8h_1afb3122e6b577a4b2117aec43d6499f58" kindref="member">get_vertex_property_by_name</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>msg);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39" refid="property_8h_1a33bb22d6ad61e86d1963ef9710993537" refkind="member"><highlight class="normal">VertexPropertyList<sp/><ref refid="property_8h_1a33bb22d6ad61e86d1963ef9710993537" kindref="member">get_vertex_properties_by_name</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*);</highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>get_edge_property_name(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeProperty);</highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49" refid="property_8h_1a002d96d3a1733e075d5a66feb3ad5e02" refkind="member"><highlight class="normal">EdgeProperty<sp/><ref refid="property_8h_1a002d96d3a1733e075d5a66feb3ad5e02" kindref="member">get_edge_property_by_name</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>msg);</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="56" refid="property_8h_1a55bf3fc271e09ec398a17364c7826784" refkind="member"><highlight class="normal">EdgePropertyList<sp/><ref refid="property_8h_1a55bf3fc271e09ec398a17364c7826784" kindref="member">get_edge_properties_by_name</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*);</highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal"></highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="65" refid="property_8h_1a8e1467e6a4a322bb1761a17f779d0dbd" refkind="member"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/><ref refid="property_8h_1a8e1467e6a4a322bb1761a17f779d0dbd" kindref="member">destroy_vertex_property</ref>(VertexProperty);</highlight></codeline>
+<codeline lineno="66"><highlight class="normal"></highlight></codeline>
+<codeline lineno="71" refid="property_8h_1a7d1719a4d15cb72cf235dd6bc5701d25" refkind="member"><highlight class="normal"><ref refid="predefine_8h_1ad8ed01ff3ff33333d8e19db4d2818bb6" kindref="member">DataType</ref><sp/><ref refid="property_8h_1a7d1719a4d15cb72cf235dd6bc5701d25" kindref="member">get_vertex_property_data_type</ref>(VertexProperty);</highlight></codeline>
+<codeline lineno="72"><highlight class="normal"></highlight></codeline>
+<codeline lineno="77" refid="property_8h_1a387695bec35c802bf4a7f6b7362f6e91" refkind="member"><highlight class="normal">VertexType<sp/><ref refid="property_8h_1a387695bec35c802bf4a7f6b7362f6e91" kindref="member">get_vertex_property_vertex_type</ref>(VertexProperty);</highlight></codeline>
+<codeline lineno="78"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="81"><highlight class="normal"></highlight></codeline>
+<codeline lineno="82"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>GRIN_INCLUDE_PROPERTY_PROPERTY_H_</highlight></codeline>
+    </programlisting>
+    <location file="include/property/property.h"/>
+  </compounddef>
+</doxygen>

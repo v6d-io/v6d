@@ -22,8 +22,8 @@ limitations under the License.
 
 EdgeList get_edge_list(const Graph, const Direction);
 
-#ifdef WITH_EDGE_LABEL
-EdgeList get_edge_list_by_label(const Graph, const EdgeLabel);
+#ifdef WITH_EDGE_PROPERTY
+EdgeList get_edge_list_by_type(const Graph, const EdgeType);
 #endif
 
 void destroy_edge_list(EdgeList);
@@ -39,8 +39,8 @@ Edge get_edge_from_list(const EdgeList, size_t);
 #ifdef ENABLE_EDGE_LIST_ITERATOR
 EdgeListIterator get_edge_list_begin(const Graph);
 
-#ifdef WITH_EDGE_LABEL
-EdgeListIterator get_edge_list_begin_by_label(const Graph, const EdgeLabel);
+#ifdef WITH_EDGE_PROPERTY
+EdgeListIterator get_edge_list_begin_by_type(const Graph, const EdgeType);
 #endif
 
 bool get_next_edge_list_iter(EdgeListIterator);

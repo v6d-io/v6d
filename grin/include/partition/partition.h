@@ -18,6 +18,8 @@ limitations under the License.
 
 #include "../predefine.h"
 
+**** add enable_vertex/edge_ref macros ****
+
 #ifdef ENABLE_GRAPH_PARTITION
 size_t get_total_partitions_number(const PartitionedGraph);
 
@@ -53,12 +55,12 @@ VertexList get_mirror_vertices(const Graph);
 
 VertexList get_mirror_vertices_by_partition(const Graph, const Partition);
 
-#ifdef WITH_VERTEX_LABEL
-VertexList get_master_vertices_by_label(const Graph, const VertexLabel);
+#ifdef WITH_VERTEX_PROPERTY
+VertexList get_master_vertices_by_type(const Graph, const VertexType);
 
-VertexList get_mirror_vertices_by_label(const Graph, const VertexLabel);
+VertexList get_mirror_vertices_by_type(const Graph, const VertexType);
 
-VertexList get_mirror_vertices_by_label_partition(const Graph, const VertexLabel, const Partition);
+VertexList get_mirror_vertices_by_type_partition(const Graph, const VertexType, const Partition);
 #endif
 #endif
 
@@ -125,10 +127,6 @@ PartitionList edge_data_complete_partitions(const Graph, const Edge);
 bool is_edge_property_local_complete(const Graph, const Edge);
 
 PartitionList edge_data_complete_partitions(const Graph, const Edge);
-#endif
-
-#ifndef EDGECUT_PARTITION_TRAIT
-PartitionList vertex_complete_partitions(const Graph, const Vertex);
 #endif
 
 #endif

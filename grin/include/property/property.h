@@ -10,68 +10,91 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This header file is not available for libgrape-lite.
+/**
+ @file property.h
+ @brief Define the property related APIs
+*/
 
 #ifndef GRIN_INCLUDE_PROPERTY_PROPERTY_H_
 #define GRIN_INCLUDE_PROPERTY_PROPERTY_H_
 
 #include "../predefine.h"
 
-// Vertex Property
-#ifdef WITH_VERTEX_PROPERTY
-void destroy_vertex_property(VertexProperty);
-
-DataType get_vertex_property_type(VertexProperty);
-
-// Vertex Property Name
-#ifdef WITH_VERTEX_PROPERTY_NAME
+#ifdef WITH_PROPERTY_NAME
 char* get_vertex_property_name(const Graph, const VertexProperty);
 
-VertexProperty get_vertex_property_by_name(const Graph, const VertexLabel, const char*);
-#endif
+/**
+ * @brief get the vertex property with a given name under a specific vertex type
+ * @param Graph the graph
+ * @param VertexType the specific vertex type
+ * @param msg the name
+ */
+VertexProperty get_vertex_property_by_name(const Graph, const VertexType, const char* msg);
 
-// Vertex Property Table
-void destroy_vertex_property_table(VertexPropertyTable);
+/**
+ * @brief get all the vertex properties with a given name
+ * @param Graph the graph
+ * @param msg the name
+ */
+VertexPropertyList get_vertex_properties_by_name(const Graph, const char*);
 
-void* get_value_from_vertex_property_table(const VertexPropertyTable, const Vertex, const VertexProperty);
-
-VertexPropertyTable get_vertex_property_table_by_label(const Graph, const VertexLabel);
-
-#ifdef COLUMN_STORE
-VertexPropertyTable get_vertex_property_table_for_property(const Graph, const VertexProperty);
-#else
-VertexPropertyTable get_vertex_property_table_for_vertex(const Graph, const Vertex);
-#endif
-
-#endif
-
-
-// Edge Property
-#ifdef WITH_EDGE_PROPERTY
-void destroy_edge_property(EdgeProperty);
-
-DataType get_edge_property_type(EdgeProperty);
-
-// Edge Property Name
-#ifdef WITH_EDGE_PROPERTY_NAME
 char* get_edge_property_name(const Graph, const EdgeProperty);
 
-EdgeProperty get_edge_property_by_name(const Graph, const EdgeLabel, const char*);
+/**
+ * @brief get the edge property with a given name under a specific edge type
+ * @param Graph the graph
+ * @param EdgeType the specific edge type
+ * @param msg the name
+ */
+EdgeProperty get_edge_property_by_name(const Graph, const EdgeType, const char* msg);
+
+/**
+ * @brief get all the edge properties with a given name
+ * @param Graph the graph
+ * @param msg the name
+ */
+EdgePropertyList get_edge_properties_by_name(const Graph, const char*);
 #endif
 
-// Edge Property Table
-void destroy_edge_property_table(EdgePropertyTable);
 
-void* get_value_from_edge_property_table(const EdgePropertyTable, const Edge, const EdgeProperty);
+#ifdef WITH_VERTEX_PROPERTY
+/**
+ * @brief destroy vertex property
+ * @param VertexProperty vertex property
+ */
+void destroy_vertex_property(VertexProperty);
 
-EdgePropertyTable get_edge_property_table_by_label(const Graph, const EdgeLabel);
+/**
+ * @brief get property data type
+ * @param VertexProperty vertex property
+ */
+DataType get_vertex_property_data_type(VertexProperty);
 
-#ifdef COLUMN_STORE
-EdgePropertyTable get_edge_property_table_for_property(const Graph, const EdgeProperty);
-#else
-EdgePropertyTable get_edge_property_table_for_edge(const Graph, const Edge);
+/**
+ * @brief get the vertex type that the property is bound to
+ * @param VertexProperty vertex property
+ */
+VertexType get_vertex_property_vertex_type(VertexProperty);
 #endif
 
+#ifdef WITH_EDGE_PROPERTY
+/**
+ * @brief destroy edge property
+ * @param EdgeProperty edge property
+ */
+void destroy_edge_property(EdgeProperty);
+
+/**
+ * @brief get property data type
+ * @param EdgeProperty edge property
+ */
+DataType get_edge_property_data_type(EdgeProperty);
+
+/**
+ * @brief get the edge type that the property is bound to
+ * @param EdgeProperty edge property
+ */
+EdgeType get_edge_property_edge_type(EdgeProperty);
 #endif
 
 #endif  // GRIN_INCLUDE_PROPERTY_PROPERTY_H_

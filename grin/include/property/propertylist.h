@@ -10,7 +10,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// This header file is not available for libgrape-lite.
+/**
+ @file propertylist.h
+ @brief Define the property list related and graph projection APIs
+*/
 
 #ifndef GRIN_INCLUDE_PROPERTY_PROPERTY_LIST_H_
 #define GRIN_INCLUDE_PROPERTY_PROPERTY_LIST_H_
@@ -19,7 +22,7 @@ limitations under the License.
 
 // Property list
 #ifdef WITH_VERTEX_PROPERTY
-VertexPropertyList get_all_vertex_properties(const Graph);
+VertexPropertyList get_vertex_property_list_by_type(const Graph, const VertexType);
 
 size_t get_vertex_property_list_size(const VertexPropertyList);
 
@@ -30,20 +33,17 @@ VertexPropertyList create_vertex_property_list();
 void destroy_vertex_property_list(VertexPropertyList);
 
 bool insert_vertex_property_to_list(VertexPropertyList, const VertexProperty);
-
-#ifdef WITH_VERTEX_LABEL
-VertexPropertyList get_all_vertex_properties_by_label(const Graph, const VertexLabel);
+#endif
 
 #ifdef NATURAL_VERTEX_PROPERTY_ID_TRAIT
-VertexProperty get_vertex_property_from_id(const VertexLabel, const VertexPropertyID);
+VertexProperty get_vertex_property_from_id(const VertexType, const VertexPropertyID);
 
-VertexPropertyID get_vertex_property_id(const VertexLabel, const VertexProperty);
+VertexPropertyID get_vertex_property_id(const VertexType, const VertexProperty);
 #endif
-#endif
-#endif
+
 
 #ifdef WITH_EDGE_PROPERTY
-EdgePropertyList get_all_edge_properties(const Graph);
+EdgePropertyList get_edge_property_list_by_type(const Graph, const EdgeType);
 
 size_t get_edge_property_list_size(const EdgePropertyList);
 
@@ -54,30 +54,31 @@ EdgePropertyList create_edge_property_list();
 void destroy_edge_property_list(EdgePropertyList);
 
 bool insert_edge_property_to_list(EdgePropertyList, const EdgeProperty);
-
-#ifdef WITH_EDGE_LABEL
-EdgePropertyList get_all_edge_properties_by_label(const Graph, const EdgeLabel);
+#endif
 
 #ifdef NATURAL_EDGE_PROPERTY_ID_TRAIT
-EdgeProperty get_edge_property_from_id(const EdgeLabel, const EdgePropertyID);
+EdgeProperty get_edge_property_from_id(const EdgeType, const EdgePropertyID);
 
-EdgePropertyID get_edge_property_id(const EdgeLabel, const EdgeProperty);
-#endif
-#endif
+EdgePropertyID get_edge_property_id(const EdgeType, const EdgeProperty);
 #endif
 
-#if defined(WITH_VERTEX_LABEL) && defined(WITH_VERTEX_PRIMARTY_KEYS)
-PropertyList get_primary_keys_by_label(const Graph, const VertexLabel);
 
-Vertex get_vertex_by_primary_keys_and_label(const Graph, const Row,
-                                              const VertexLabel);
-#endif
-
-// graph projection
-#if defined(WITH_VERTEX_PROPERTY) && defined(COLUMN_STORE)
+/** @name GraphProjection
+ * Graph projection mainly works to shrink the properties into a subset
+ * in need to improve the retrieval efficiency. Note that only the vertex/edge
+ * type with at least one property left in the vertex/edge property list will
+ * be kept after the projection.
+ * 
+ * The projection only works on column store systems.
+ */
+///@{
+#if defined(WITH_VERTEX_PROPERTY) && defined(COLUMN_STORE_TRAIT)
+/** @brief project vertex properties */
 Graph select_vertex_properties(const Graph, const VertexPropertyList);
 #endif
-#if defined(WITH_EDGE_PROPERTY) && defined(COLUMN_STORE)
+
+#if defined(WITH_EDGE_PROPERTY) && defined(COLUMN_STORE_TRAIT)
+/** @brief project edge properties */
 Graph select_edge_properteis(const Graph, const EdgePropertyList);
 #endif
 

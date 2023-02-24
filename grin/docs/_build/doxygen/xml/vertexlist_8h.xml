@@ -1,0 +1,281 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="vertexlist_8h" kind="file" language="C++">
+    <compoundname>vertexlist.h</compoundname>
+    <includes refid="predefine_8h" local="yes">../predefine.h</includes>
+    <incdepgraph>
+      <node id="2">
+        <label>../predefine.h</label>
+        <link refid="predefine_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>include/topology/vertexlist.h</label>
+        <link refid="vertexlist_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>limits.h</label>
+      </node>
+      <node id="4">
+        <label>stdbool.h</label>
+      </node>
+      <node id="5">
+        <label>stddef.h</label>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="vertexlist_8h_1ac615cf8ff52262bf12ff5816bd62fe30" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList get_vertex_list</definition>
+        <argsstring>(const Graph)</argsstring>
+        <name>get_vertex_list</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+<para>Copyright 2020 Alibaba Group Holding Limited.</para>
+<para>Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); you may not use this file except in compliance with the License. You may obtain a copy of the License at <verbatim>http://www.apache.org/licenses/LICENSE-2.0
+</verbatim> Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. </para>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="23" column="12" declfile="include/topology/vertexlist.h" declline="23" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="vertexlist_8h_1aac08323c6110e59a8e0400a4b7bc38a8" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList get_vertex_list_by_type</definition>
+        <argsstring>(const Graph, const VertexType)</argsstring>
+        <name>get_vertex_list_by_type</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="26" column="12" declfile="include/topology/vertexlist.h" declline="26" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="vertexlist_8h_1a712e537ed86f9d60a75d7861666d508f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void destroy_vertex_list</definition>
+        <argsstring>(VertexList)</argsstring>
+        <name>destroy_vertex_list</name>
+        <param>
+          <type>VertexList</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="29" column="6" declfile="include/topology/vertexlist.h" declline="29" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="vertexlist_8h_1a360a401661f41389f1907aceb8d2e45c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexList</type>
+        <definition>VertexList create_vertex_list</definition>
+        <argsstring>()</argsstring>
+        <name>create_vertex_list</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="31" column="12" declfile="include/topology/vertexlist.h" declline="31" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="vertexlist_8h_1af8aff1143225547fca3d7677e4820420" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool insert_vertex_to_list</definition>
+        <argsstring>(VertexList, const Vertex)</argsstring>
+        <name>insert_vertex_to_list</name>
+        <param>
+          <type>VertexList</type>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="33" column="6" declfile="include/topology/vertexlist.h" declline="33" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="vertexlist_8h_1aa4d75cc207b4034057bda5177eb0e57c" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t get_vertex_list_size</definition>
+        <argsstring>(const VertexList)</argsstring>
+        <name>get_vertex_list_size</name>
+        <param>
+          <type>const</type>
+          <declname>VertexList</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="35" column="8" declfile="include/topology/vertexlist.h" declline="35" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="vertexlist_8h_1a6d6b20c8133a7cd8eb03e291cc55f9d7" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Vertex</type>
+        <definition>Vertex get_vertex_from_list</definition>
+        <argsstring>(const VertexList, const size_t)</argsstring>
+        <name>get_vertex_from_list</name>
+        <param>
+          <type>const</type>
+          <declname>VertexList</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>size_t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="37" column="8" declfile="include/topology/vertexlist.h" declline="37" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="vertexlist_8h_1a0b0afc6ebe5370082cd1bac9fbdb6271" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexListIterator</type>
+        <definition>VertexListIterator get_vertex_list_begin</definition>
+        <argsstring>(const Graph)</argsstring>
+        <name>get_vertex_list_begin</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="40" column="20" declfile="include/topology/vertexlist.h" declline="40" declcolumn="20"/>
+      </memberdef>
+      <memberdef kind="function" id="vertexlist_8h_1a10a3da5713bd207f6616c9fb43f88354" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexListIterator</type>
+        <definition>VertexListIterator get_vertex_list_begin_by_type</definition>
+        <argsstring>(const Graph, const VertexType)</argsstring>
+        <name>get_vertex_list_begin_by_type</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="43" column="20" declfile="include/topology/vertexlist.h" declline="43" declcolumn="20"/>
+      </memberdef>
+      <memberdef kind="function" id="vertexlist_8h_1aaf014474321d41ca0faa086ec514ca8e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool get_next_vertex_list_iter</definition>
+        <argsstring>(VertexListIterator)</argsstring>
+        <name>get_next_vertex_list_iter</name>
+        <param>
+          <type>VertexListIterator</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="46" column="6" declfile="include/topology/vertexlist.h" declline="46" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="vertexlist_8h_1a9c33acd8b4ba25d4a22be5fd04d0a084" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>Vertex</type>
+        <definition>Vertex get_vertex_from_iter</definition>
+        <argsstring>(VertexListIterator)</argsstring>
+        <name>get_vertex_from_iter</name>
+        <param>
+          <type>VertexListIterator</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/topology/vertexlist.h" line="48" column="8" declfile="include/topology/vertexlist.h" declline="48" declcolumn="8"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+    </briefdescription>
+    <detaileddescription>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="16"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>GRIN_INCLUDE_TOPOLOGY_VERTEXLIST_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="17"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>GRIN_INCLUDE_TOPOLOGY_VERTEXLIST_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../predefine.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_VERTEX_LIST</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal">VertexList<sp/>get_vertex_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph);</highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="26"><highlight class="normal">VertexList<sp/>get_vertex_list_by_type(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType);</highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>destroy_vertex_list(VertexList);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal">VertexList<sp/>create_vertex_list();</highlight></codeline>
+<codeline lineno="32"><highlight class="normal"></highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>insert_vertex_to_list(VertexList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>get_vertex_list_size(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexList);</highlight></codeline>
+<codeline lineno="36"><highlight class="normal"></highlight></codeline>
+<codeline lineno="37"><highlight class="normal">Vertex<sp/>get_vertex_from_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>ENABLE_VERTEX_LIST_ITERATOR</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal">VertexListIterator<sp/>get_vertex_list_begin(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="43"><highlight class="normal">VertexListIterator<sp/>get_vertex_list_begin_by_type(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType);</highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>get_next_vertex_list_iter(VertexListIterator);</highlight></codeline>
+<codeline lineno="47"><highlight class="normal"></highlight></codeline>
+<codeline lineno="48"><highlight class="normal">Vertex<sp/>get_vertex_from_iter(VertexListIterator);</highlight></codeline>
+<codeline lineno="49"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>GRIN_INCLUDE_TOPOLOGY_VERTEXLIST_H_</highlight><highlight class="normal"></highlight></codeline>
+    </programlisting>
+    <location file="include/topology/vertexlist.h"/>
+  </compounddef>
+</doxygen>

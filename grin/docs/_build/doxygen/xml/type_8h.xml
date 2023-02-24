@@ -1,0 +1,593 @@
+<?xml version='1.0' encoding='UTF-8' standalone='no'?>
+<doxygen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="compound.xsd" version="1.9.6" xml:lang="en-US">
+  <compounddef id="type_8h" kind="file" language="C++">
+    <compoundname>type.h</compoundname>
+    <includes refid="predefine_8h" local="yes">../predefine.h</includes>
+    <incdepgraph>
+      <node id="2">
+        <label>../predefine.h</label>
+        <link refid="predefine_8h"/>
+        <childnode refid="3" relation="include">
+        </childnode>
+        <childnode refid="4" relation="include">
+        </childnode>
+        <childnode refid="5" relation="include">
+        </childnode>
+      </node>
+      <node id="1">
+        <label>include/property/type.h</label>
+        <link refid="type_8h"/>
+        <childnode refid="2" relation="include">
+        </childnode>
+      </node>
+      <node id="3">
+        <label>limits.h</label>
+      </node>
+      <node id="4">
+        <label>stdbool.h</label>
+      </node>
+      <node id="5">
+        <label>stddef.h</label>
+      </node>
+    </incdepgraph>
+      <sectiondef kind="user-defined">
+      <header>VertexEdgeTypeRelation</header>
+      <description><para>GRIN assumes the relation between edge type and pairs of vertex types is many-to-many. Thus GRIN returns the pairs of vertex types related to an edge type as a pair of vertex type lists of the same size, and the src/dst vertex types are aligned with their positions in the lists. </para>
+</description>
+      <memberdef kind="function" id="type_8h_1acedf36dd7ba7c4af1b080de8ffa246d2" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexTypeList</type>
+        <definition>VertexTypeList get_src_types_from_edge_type</definition>
+        <argsstring>(const Graph, const EdgeType)</argsstring>
+        <name>get_src_types_from_edge_type</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeType</declname>
+        </param>
+        <briefdescription>
+<para>the src vertex type list </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="89" column="16" declfile="include/property/type.h" declline="89" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a00edf242478b7ddf519c24e318e5a61d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexTypeList</type>
+        <definition>VertexTypeList get_dst_types_from_edge_type</definition>
+        <argsstring>(const Graph, const EdgeType)</argsstring>
+        <name>get_dst_types_from_edge_type</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeType</declname>
+        </param>
+        <briefdescription>
+<para>get the dst vertex type list </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="92" column="16" declfile="include/property/type.h" declline="92" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a1705ee27fa9ec2a12d1a4d3700387c8f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeTypeList</type>
+        <definition>EdgeTypeList get_edge_types_from_vertex_type_pair</definition>
+        <argsstring>(const Graph, const VertexType, const VertexType)</argsstring>
+        <name>get_edge_types_from_vertex_type_pair</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <briefdescription>
+<para>get the edge type list related to a given pair of vertex types </para>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="95" column="14" declfile="include/property/type.h" declline="95" declcolumn="14"/>
+      </memberdef>
+      </sectiondef>
+      <sectiondef kind="func">
+      <memberdef kind="function" id="type_8h_1aa88357606ff6e427c0d4c2ebc959a0b3" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexType</type>
+        <definition>VertexType get_vertex_type</definition>
+        <argsstring>(const Graph, const Vertex)</argsstring>
+        <name>get_vertex_type</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Vertex</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="25" column="12" declfile="include/property/type.h" declline="25" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1af917b6771378965d71a743c2b909ba57" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>char *</type>
+        <definition>char * get_vertex_type_name</definition>
+        <argsstring>(const Graph, const VertexType)</argsstring>
+        <name>get_vertex_type_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="27" column="6" declfile="include/property/type.h" declline="27" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1aa9ef499a982a02c4901148ed74bbcd53" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexType</type>
+        <definition>VertexType get_vertex_type_by_name</definition>
+        <argsstring>(const Graph, char *)</argsstring>
+        <name>get_vertex_type_by_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>char *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="29" column="12" declfile="include/property/type.h" declline="29" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a427a7eb376474986d9608db1c3702abd" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexTypeList</type>
+        <definition>VertexTypeList get_vertex_type_list</definition>
+        <argsstring>(const Graph)</argsstring>
+        <name>get_vertex_type_list</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="32" column="16" declfile="include/property/type.h" declline="32" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1adfbaf1c75b89f9aa7093586a536ca093" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void destroy_vertex_type_list</definition>
+        <argsstring>(VertexTypeList)</argsstring>
+        <name>destroy_vertex_type_list</name>
+        <param>
+          <type>VertexTypeList</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="34" column="6" declfile="include/property/type.h" declline="34" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a8c8754e511f29e417f3d567625097658" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexTypeList</type>
+        <definition>VertexTypeList create_vertex_type_list</definition>
+        <argsstring>()</argsstring>
+        <name>create_vertex_type_list</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="36" column="16" declfile="include/property/type.h" declline="36" declcolumn="16"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1ace3b55023d7e595ead627aff9b3ef71e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool insert_vertex_type_to_list</definition>
+        <argsstring>(VertexTypeList, const VertexType)</argsstring>
+        <name>insert_vertex_type_to_list</name>
+        <param>
+          <type>VertexTypeList</type>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="38" column="6" declfile="include/property/type.h" declline="38" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1aaf40e022ea07ff97a18e811276aa728a" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t get_vertex_type_list_size</definition>
+        <argsstring>(const VertexTypeList)</argsstring>
+        <name>get_vertex_type_list_size</name>
+        <param>
+          <type>const</type>
+          <declname>VertexTypeList</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="40" column="8" declfile="include/property/type.h" declline="40" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a798fb8d0dec0875ed9fbbf2447ab795d" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexType</type>
+        <definition>VertexType get_vertex_type_from_list</definition>
+        <argsstring>(const VertexTypeList, const size_t)</argsstring>
+        <name>get_vertex_type_from_list</name>
+        <param>
+          <type>const</type>
+          <declname>VertexTypeList</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>size_t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="42" column="12" declfile="include/property/type.h" declline="42" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a879846aa46fda5ac3478f397e731af0f" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexTypeID</type>
+        <definition>VertexTypeID get_vertex_type_id</definition>
+        <argsstring>(const VertexType)</argsstring>
+        <name>get_vertex_type_id</name>
+        <param>
+          <type>const</type>
+          <declname>VertexType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="47" column="14" declfile="include/property/type.h" declline="47" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1ad2668334887d64f1e07abc01c4686674" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>VertexType</type>
+        <definition>VertexType get_vertex_type_from_id</definition>
+        <argsstring>(const VertexTypeID)</argsstring>
+        <name>get_vertex_type_from_id</name>
+        <param>
+          <type>const</type>
+          <declname>VertexTypeID</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="49" column="12" declfile="include/property/type.h" declline="49" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a100c174d06b12b436278b6e5a1b51437" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeType</type>
+        <definition>EdgeType get_edge_type</definition>
+        <argsstring>(const Graph, const Edge)</argsstring>
+        <name>get_edge_type</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>Edge</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="55" column="10" declfile="include/property/type.h" declline="55" declcolumn="10"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1ac7958d5eeec83c476930c467e9c5b1ac" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>char *</type>
+        <definition>char * get_edge_type_name</definition>
+        <argsstring>(const Graph, const EdgeType)</argsstring>
+        <name>get_edge_type_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="57" column="6" declfile="include/property/type.h" declline="57" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a733f2cabbeb9c4717edd58dc2a66fa4e" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeType</type>
+        <definition>EdgeType get_edge_type_by_name</definition>
+        <argsstring>(const Graph, char *)</argsstring>
+        <name>get_edge_type_by_name</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <param>
+          <type>char *</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="59" column="10" declfile="include/property/type.h" declline="59" declcolumn="10"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1af800435057494f7e8ee39b2ec8409b6b" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeTypeList</type>
+        <definition>EdgeTypeList get_edge_type_list</definition>
+        <argsstring>(const Graph)</argsstring>
+        <name>get_edge_type_list</name>
+        <param>
+          <type>const</type>
+          <declname>Graph</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="62" column="14" declfile="include/property/type.h" declline="62" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1ac270ba53fb5532b8921ba0f1e58c6c38" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>void</type>
+        <definition>void destroy_edge_type_list</definition>
+        <argsstring>(EdgeTypeList)</argsstring>
+        <name>destroy_edge_type_list</name>
+        <param>
+          <type>EdgeTypeList</type>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="64" column="6" declfile="include/property/type.h" declline="64" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a67ab77372cfcf0605173b7a606f4d9d0" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeTypeList</type>
+        <definition>EdgeTypeList create_edge_type_list</definition>
+        <argsstring>()</argsstring>
+        <name>create_edge_type_list</name>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="66" column="14" declfile="include/property/type.h" declline="66" declcolumn="14"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1aa5ec8aa6db09f3e9086220f99a4e79a1" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>bool</type>
+        <definition>bool insert_edge_type_to_list</definition>
+        <argsstring>(EdgeTypeList, const EdgeType)</argsstring>
+        <name>insert_edge_type_to_list</name>
+        <param>
+          <type>EdgeTypeList</type>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>EdgeType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="68" column="6" declfile="include/property/type.h" declline="68" declcolumn="6"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1ac841d94c500ff6348dd6286398583008" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>size_t</type>
+        <definition>size_t get_edge_type_list_size</definition>
+        <argsstring>(const EdgeTypeList)</argsstring>
+        <name>get_edge_type_list_size</name>
+        <param>
+          <type>const</type>
+          <declname>EdgeTypeList</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="70" column="8" declfile="include/property/type.h" declline="70" declcolumn="8"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a8a88e30d843724e549bff3892751ea21" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeType</type>
+        <definition>EdgeType get_edge_type_from_list</definition>
+        <argsstring>(const EdgeTypeList, const size_t)</argsstring>
+        <name>get_edge_type_from_list</name>
+        <param>
+          <type>const</type>
+          <declname>EdgeTypeList</declname>
+        </param>
+        <param>
+          <type>const</type>
+          <declname>size_t</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="72" column="10" declfile="include/property/type.h" declline="72" declcolumn="10"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a69a985bc446bd8fb2c2d00131b5345c4" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeTypeID</type>
+        <definition>EdgeTypeID get_edge_type_id</definition>
+        <argsstring>(const EdgeType)</argsstring>
+        <name>get_edge_type_id</name>
+        <param>
+          <type>const</type>
+          <declname>EdgeType</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="76" column="12" declfile="include/property/type.h" declline="76" declcolumn="12"/>
+      </memberdef>
+      <memberdef kind="function" id="type_8h_1a17d2caad525dc94c16b29559efb05bef" prot="public" static="no" const="no" explicit="no" inline="no" virt="non-virtual">
+        <type>EdgeType</type>
+        <definition>EdgeType get_edge_type_from_id</definition>
+        <argsstring>(const EdgeTypeID)</argsstring>
+        <name>get_edge_type_from_id</name>
+        <param>
+          <type>const</type>
+          <declname>EdgeTypeID</declname>
+        </param>
+        <briefdescription>
+        </briefdescription>
+        <detaileddescription>
+        </detaileddescription>
+        <inbodydescription>
+        </inbodydescription>
+        <location file="include/property/type.h" line="78" column="10" declfile="include/property/type.h" declline="78" declcolumn="10"/>
+      </memberdef>
+      </sectiondef>
+    <briefdescription>
+<para>Define the vertex/edge type related APIs. </para>
+    </briefdescription>
+    <detaileddescription>
+<para>Copyright 2020 Alibaba Group Holding Limited. Licensed under the Apache License, Version 2.0 (the &quot;License&quot;); you may not use this file except in compliance with the License. You may obtain a copy of the License at <ulink url="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</ulink> Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an &quot;AS IS&quot; BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License. </para>
+    </detaileddescription>
+    <programlisting>
+<codeline lineno="1"><highlight class="normal"></highlight></codeline>
+<codeline lineno="18"><highlight class="normal"></highlight><highlight class="preprocessor">#ifndef<sp/>GRIN_INCLUDE_PROPERTY_TYPE_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="19"><highlight class="normal"></highlight><highlight class="preprocessor">#define<sp/>GRIN_INCLUDE_PROPERTY_TYPE_H_</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="20"><highlight class="normal"></highlight></codeline>
+<codeline lineno="21"><highlight class="normal"></highlight><highlight class="preprocessor">#include<sp/>&quot;../predefine.h&quot;</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="22"><highlight class="normal"></highlight></codeline>
+<codeline lineno="23"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_VERTEX_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="24"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Vertex<sp/>type</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="25"><highlight class="normal">VertexType<sp/>get_vertex_type(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Vertex);</highlight></codeline>
+<codeline lineno="26"><highlight class="normal"></highlight></codeline>
+<codeline lineno="27"><highlight class="normal"></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>get_vertex_type_name(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType);</highlight></codeline>
+<codeline lineno="28"><highlight class="normal"></highlight></codeline>
+<codeline lineno="29"><highlight class="normal">VertexType<sp/>get_vertex_type_by_name(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*);</highlight></codeline>
+<codeline lineno="30"><highlight class="normal"></highlight></codeline>
+<codeline lineno="31"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Vertex<sp/>type<sp/>list</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="32"><highlight class="normal">VertexTypeList<sp/>get_vertex_type_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph);</highlight></codeline>
+<codeline lineno="33"><highlight class="normal"></highlight></codeline>
+<codeline lineno="34"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>destroy_vertex_type_list(VertexTypeList);</highlight></codeline>
+<codeline lineno="35"><highlight class="normal"></highlight></codeline>
+<codeline lineno="36"><highlight class="normal">VertexTypeList<sp/>create_vertex_type_list();</highlight></codeline>
+<codeline lineno="37"><highlight class="normal"></highlight></codeline>
+<codeline lineno="38"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>insert_vertex_type_to_list(VertexTypeList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType);</highlight></codeline>
+<codeline lineno="39"><highlight class="normal"></highlight></codeline>
+<codeline lineno="40"><highlight class="normal"></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>get_vertex_type_list_size(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexTypeList);</highlight></codeline>
+<codeline lineno="41"><highlight class="normal"></highlight></codeline>
+<codeline lineno="42"><highlight class="normal">VertexType<sp/>get_vertex_type_from_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexTypeList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="43"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="44"><highlight class="normal"></highlight></codeline>
+<codeline lineno="45"><highlight class="normal"></highlight></codeline>
+<codeline lineno="46"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>NATURAL_VERTEX_TYPE_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="47"><highlight class="normal">VertexTypeID<sp/>get_vertex_type_id(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType);</highlight></codeline>
+<codeline lineno="48"><highlight class="normal"></highlight></codeline>
+<codeline lineno="49"><highlight class="normal">VertexType<sp/>get_vertex_type_from_id(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexTypeID);</highlight></codeline>
+<codeline lineno="50"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="51"><highlight class="normal"></highlight></codeline>
+<codeline lineno="52"><highlight class="normal"></highlight></codeline>
+<codeline lineno="53"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>WITH_EDGE_PROPERTY</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="54"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Edge<sp/>type</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="55"><highlight class="normal">EdgeType<sp/>get_edge_type(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Edge);</highlight></codeline>
+<codeline lineno="56"><highlight class="normal"></highlight></codeline>
+<codeline lineno="57"><highlight class="normal"></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*<sp/>get_edge_type_name(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType);</highlight></codeline>
+<codeline lineno="58"><highlight class="normal"></highlight></codeline>
+<codeline lineno="59"><highlight class="normal">EdgeType<sp/>get_edge_type_by_name(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keywordtype">char</highlight><highlight class="normal">*);</highlight></codeline>
+<codeline lineno="60"><highlight class="normal"></highlight></codeline>
+<codeline lineno="61"><highlight class="normal"></highlight><highlight class="comment">//<sp/>Edge<sp/>type<sp/>list</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="62"><highlight class="normal">EdgeTypeList<sp/>get_edge_type_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph);</highlight></codeline>
+<codeline lineno="63"><highlight class="normal"></highlight></codeline>
+<codeline lineno="64"><highlight class="normal"></highlight><highlight class="keywordtype">void</highlight><highlight class="normal"><sp/>destroy_edge_type_list(EdgeTypeList);</highlight></codeline>
+<codeline lineno="65"><highlight class="normal"></highlight></codeline>
+<codeline lineno="66"><highlight class="normal">EdgeTypeList<sp/>create_edge_type_list();</highlight></codeline>
+<codeline lineno="67"><highlight class="normal"></highlight></codeline>
+<codeline lineno="68"><highlight class="normal"></highlight><highlight class="keywordtype">bool</highlight><highlight class="normal"><sp/>insert_edge_type_to_list(EdgeTypeList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType);</highlight></codeline>
+<codeline lineno="69"><highlight class="normal"></highlight></codeline>
+<codeline lineno="70"><highlight class="normal"></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal"><sp/>get_edge_type_list_size(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeTypeList);</highlight></codeline>
+<codeline lineno="71"><highlight class="normal"></highlight></codeline>
+<codeline lineno="72"><highlight class="normal">EdgeType<sp/>get_edge_type_from_list(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeTypeList,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/></highlight><highlight class="keywordtype">size_t</highlight><highlight class="normal">);</highlight></codeline>
+<codeline lineno="73"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="74"><highlight class="normal"></highlight></codeline>
+<codeline lineno="75"><highlight class="normal"></highlight><highlight class="preprocessor">#ifdef<sp/>NATURAL_EDGE_TYPE_ID_TRAIT</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="76"><highlight class="normal">EdgeTypeID<sp/>get_edge_type_id(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType);</highlight></codeline>
+<codeline lineno="77"><highlight class="normal"></highlight></codeline>
+<codeline lineno="78"><highlight class="normal">EdgeType<sp/>get_edge_type_from_id(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeTypeID);</highlight></codeline>
+<codeline lineno="79"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="80"><highlight class="normal"></highlight></codeline>
+<codeline lineno="87"><highlight class="preprocessor">#if<sp/>defined(WITH_VERTEX_PROPERTY)<sp/>&amp;&amp;<sp/>defined(WITH_EDGE_PROPERTY)</highlight><highlight class="normal"></highlight></codeline>
+<codeline lineno="89" refid="type_8h_1acedf36dd7ba7c4af1b080de8ffa246d2" refkind="member"><highlight class="normal">VertexTypeList<sp/><ref refid="type_8h_1acedf36dd7ba7c4af1b080de8ffa246d2" kindref="member">get_src_types_from_edge_type</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType);</highlight></codeline>
+<codeline lineno="90"><highlight class="normal"></highlight></codeline>
+<codeline lineno="92" refid="type_8h_1a00edf242478b7ddf519c24e318e5a61d" refkind="member"><highlight class="normal">VertexTypeList<sp/><ref refid="type_8h_1a00edf242478b7ddf519c24e318e5a61d" kindref="member">get_dst_types_from_edge_type</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>EdgeType);</highlight></codeline>
+<codeline lineno="93"><highlight class="normal"></highlight></codeline>
+<codeline lineno="95" refid="type_8h_1a1705ee27fa9ec2a12d1a4d3700387c8f" refkind="member"><highlight class="normal">EdgeTypeList<sp/><ref refid="type_8h_1a1705ee27fa9ec2a12d1a4d3700387c8f" kindref="member">get_edge_types_from_vertex_type_pair</ref>(</highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>Graph,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType,<sp/></highlight><highlight class="keyword">const</highlight><highlight class="normal"><sp/>VertexType);</highlight></codeline>
+<codeline lineno="96"><highlight class="normal"></highlight><highlight class="preprocessor">#endif</highlight></codeline>
+<codeline lineno="98"><highlight class="normal"></highlight></codeline>
+<codeline lineno="99"><highlight class="normal"></highlight><highlight class="preprocessor">#endif<sp/><sp/></highlight><highlight class="comment">//<sp/>GRIN_INCLUDE_PROPERTY_TYPE_H_</highlight></codeline>
+    </programlisting>
+    <location file="include/property/type.h"/>
+  </compounddef>
+</doxygen>
