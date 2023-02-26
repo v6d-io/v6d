@@ -55,6 +55,7 @@ else()
 endif()
 
 file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
+                                                                "modules/graph/grin/*.cc"
                                                                 "loader/*.cc"
                                                                 "utils/*.cc"
                                                                 "vertex_map/*.cc"
