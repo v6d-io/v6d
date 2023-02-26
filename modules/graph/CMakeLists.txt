@@ -42,6 +42,7 @@ add_custom_target(vineyard_graph_java_gen
 add_dependencies(vineyard_graph_gen vineyard_basic_gen)
 
 file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
+                                                                "modules/graph/grin/*.cc"
                                                                 "loader/*.cc"
                                                                 "utils/*.cc"
                                                                 "vertex_map/*.cc"
