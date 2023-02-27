@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "modules/graph/grin/src/predefine.h"
-#include "modules/graph/grin/include/topology/adjacentlist.h"
+#include "graph/grin/src/predefine.h"
+#include "graph/grin/include/topology/adjacentlist.h"
 
 #ifdef ENABLE_ADJACENT_LIST
 AdjacentList get_adjacent_list(const Graph g, const Direction d, const Vertex v) {

@@ -10,7 +10,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "modules/graph/grin/src/predefine.h"
+#include "graph/grin/src/predefine.h"
 
 #ifdef WITH_PROPERTY_NAME
 char* get_vertex_property_name(const Graph g, const VertexProperty vp) {

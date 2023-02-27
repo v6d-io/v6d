@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "modules/graph/grin/src/predefine.h"
-#include "modules/graph/grin/include/topology/vertexlist.h"
+#include "graph/grin/src/predefine.h"
+#include "graph/grin/include/topology/vertexlist.h"
 
 #ifdef ENABLE_VERTEX_LIST
 VertexList get_vertex_list(const Graph g) {

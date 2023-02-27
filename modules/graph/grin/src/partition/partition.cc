@@ -13,11 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "modules/graph/grin/src/predefine.h"
-#include "modules/graph/grin/src/utils.h"
-#include "modules/graph/grin/include/partition/partition.h"
-#include "modules/graph/fragment/property_graph_types.h"
-#include "src/client/client.h"
+#include "graph/grin/src/predefine.h"
+#include "graph/grin/include/partition/partition.h"
+#include "graph/fragment/property_graph_types.h"
+#include "client/client.h"
 
 
 #ifdef ENABLE_GRAPH_PARTITION
