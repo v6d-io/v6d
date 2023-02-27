@@ -18,16 +18,18 @@ package operation
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
-	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/pkg/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
 type ClientUtils struct {
@@ -36,12 +38,13 @@ type ClientUtils struct {
 
 // UpdateConfigmap will update the configmap when the assembly operation is done
 func (c *ClientUtils) UpdateConfigmap(ctx context.Context, target map[string]bool,
-	o *v1alpha1.Operation, prefix string, data *map[string]string) error {
+	o *v1alpha1.Operation, prefix string, data *map[string]string,
+) error {
 	globalObjectList := &v1alpha1.GlobalObjectList{}
 
 	// get all globalobjects which may need to be injected with the assembly job
 	if err := c.List(ctx, globalObjectList); err != nil {
-		return fmt.Errorf("failed to list the global objects: %v", err)
+		return errors.Wrap(err, "failed to list the global objects")
 	}
 	// build new global object
 	newObjList := []*v1alpha1.GlobalObject{}
@@ -108,7 +111,8 @@ func (c *ClientUtils) UpdateConfigmap(ctx context.Context, target map[string]boo
 
 func (c *ClientUtils) ResolveRequiredVineyarddSocket(
 	ctx context.Context,
-	name string, namespace string, objectNamespace string) (string, error) {
+	name string, namespace string, objectNamespace string,
+) (string, error) {
 	vineyardd := &v1alpha1.Vineyardd{}
 	namespacedName := types.NamespacedName{
 		Name:      name,

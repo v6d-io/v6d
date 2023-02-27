@@ -33,9 +33,7 @@ For example:
 # deploy the default vineyard cluster on kubernetes
 vineyardctl deploy vineyard-cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 
 		// deploy cert-manager
 		NewDeployCertManagerCmd().Run(cmd, args)

@@ -26,6 +26,7 @@ var (
 )
 
 func ApplyOperatorOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&OperatorVersion, "version", "v", "dev", "the version of kustomize dir from github repo")
+	cmd.Flags().
+		StringVarP(&OperatorVersion, "version", "v", "dev", "the version of kustomize dir from github repo")
 	cmd.Flags().StringVarP(&KustomizeDir, "local", "l", "", "the local kustomize dir")
 }

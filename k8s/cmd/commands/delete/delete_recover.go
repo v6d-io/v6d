@@ -16,11 +16,8 @@ limitations under the License.
 package delete
 
 import (
-	"context"
-
 	"github.com/spf13/cobra"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
@@ -38,24 +35,16 @@ For example:
 # delete the default recover job on kubernetes
 vineyardctl delete recover`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
 		recover := &v1alpha1.Recover{}
-		if err := client.Get(context.Background(), types.NamespacedName{
+		if err := util.Delete(client, types.NamespacedName{
 			Name:      flags.RecoverName,
 			Namespace: flags.GetDefaultVineyardNamespace(),
-		},
-			recover); err != nil && !apierrors.IsNotFound(err) {
-			util.ErrLogger.Fatal("failed to get recover job: ", err)
+		}, recover); err != nil {
+			util.ErrLogger.Fatalf("failed to delete recover job: %+v", err)
 		}
-
-		if err := client.Delete(context.Background(), recover); err != nil {
-			util.ErrLogger.Fatal("failed to delete recover job: ", err)
-		}
-
 		util.InfoLogger.Println("Recover Job is deleted.")
 	},
 }

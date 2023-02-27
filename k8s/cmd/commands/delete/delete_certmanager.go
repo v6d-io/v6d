@@ -36,19 +36,17 @@ vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager
 # delete the specific version of cert-manager
 vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
 		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
 		if err != nil {
-			util.ErrLogger.Fatal("failed to get cert-manager manifests: ", err)
+			util.ErrLogger.Fatalf("failed to get cert-manager manifests: %+v", err)
 		}
 
-		if err := util.DeleteManifests(client, []byte(certManagerManifests),
+		if err := util.DeleteManifests(client, certManagerManifests,
 			""); err != nil {
-			util.ErrLogger.Fatal("failed to delete cert-manager manifests: ", err)
+			util.ErrLogger.Fatalf("failed to delete cert-manager manifests: %+v", err)
 		}
 		util.InfoLogger.Println("Cert-Manager is deleted.")
 	},

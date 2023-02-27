@@ -16,16 +16,7 @@ limitations under the License.
 package delete
 
 import (
-	"context"
-	"time"
-
 	"github.com/spf13/cobra"
-
-	appsv1 "k8s.io/api/apps/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
@@ -47,23 +38,18 @@ vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator -
 # delete the vineyard operator from local kustomize dir in the vineyard-system namespace
 vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator --local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
-		operatorManifests, err := util.BuildKustomizeDir(util.GetKustomizeDir())
+		operatorManifests, err := util.BuildKustomizeInDir(util.GetKustomizeDir())
 		if err != nil {
-			util.ErrLogger.Fatal("failed to build kustomize dir", err)
+			util.ErrLogger.Fatalf("failed to build kustomize dir: %+v", err)
 		}
 
-		if err := util.DeleteManifests(client, []byte(operatorManifests),
+		if err := util.DeleteManifests(client, operatorManifests,
 			flags.GetDefaultVineyardNamespace()); err != nil {
-			util.ErrLogger.Fatal("failed to delete operator manifests: ", err)
+			util.ErrLogger.Fatalf("failed to delete operator manifests: %+v", err)
 		}
-
-		waitOperatorDeleted(client)
-
 		util.InfoLogger.Println("Vineyard Operator is deleted.")
 	},
 }
@@ -74,19 +60,4 @@ func NewDeleteOperatorCmd() *cobra.Command {
 
 func init() {
 	flags.ApplyOperatorOpts(deleteOperatorCmd)
-}
-
-// wait for the vineyard operator to be deleted
-func waitOperatorDeleted(c client.Client) {
-	_ = wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
-		deployment := &appsv1.Deployment{}
-		err := c.Get(context.TODO(), types.NamespacedName{
-			Name:      "vineyard-controller-manager",
-			Namespace: flags.GetDefaultVineyardNamespace(),
-		}, deployment)
-		if apierrors.IsNotFound(err) {
-			return true, nil
-		}
-		return false, nil
-	})
 }

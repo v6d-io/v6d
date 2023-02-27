@@ -16,9 +16,11 @@ limitations under the License.
 package util
 
 import (
-	"encoding/json"
-	"fmt"
 	"strings"
+
+	"github.com/goccy/go-json"
+
+	"github.com/pkg/errors"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -30,15 +32,15 @@ func ParseEnvs(envArray []string) ([]corev1.EnvVar, error) {
 	for _, env := range envArray {
 		i := strings.Index(env, "=")
 		if i == -1 {
-			return envs, fmt.Errorf("invalid env string")
+			return envs, errors.New("invalid env string")
 		}
 		name := env[:i]
 		value := env[i+1:]
 		if name == "" {
-			return envs, fmt.Errorf("the name of env can not be empty")
+			return envs, errors.New("the name of env can not be empty")
 		}
 		if value == "" {
-			return envs, fmt.Errorf("the value of env can not be empty")
+			return envs, errors.New("the value of env can not be empty")
 		}
 		envs = append(envs, corev1.EnvVar{
 			Name:  env,
@@ -48,7 +50,9 @@ func ParseEnvs(envArray []string) ([]corev1.EnvVar, error) {
 	return envs, nil
 }
 
-func ParsePVandPVCSpec(PvAndPvc string) (*corev1.PersistentVolumeSpec, *corev1.PersistentVolumeClaimSpec, error) {
+func ParsePVandPVCSpec(
+	PvAndPvc string,
+) (*corev1.PersistentVolumeSpec, *corev1.PersistentVolumeClaimSpec, error) {
 	var result map[string]interface{}
 	err := json.Unmarshal([]byte(PvAndPvc), &result)
 	if err != nil {
@@ -82,9 +86,13 @@ func ParsePVSpec(pvspec string) (*corev1.PersistentVolumeSpec, error) {
 	pvspec = `{"spec":` + pvspec + `}`
 
 	decoder := Deserializer()
-	obj, _, err := decoder.Decode([]byte(pvspec), &schema.GroupVersionKind{Group: "", Version: "v1", Kind: "PersistentVolume"}, nil)
+	obj, _, err := decoder.Decode(
+		[]byte(pvspec),
+		&schema.GroupVersionKind{Group: "", Version: "v1", Kind: "PersistentVolume"},
+		nil,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode the pvspec string to PV Spec: %v", err)
+		return nil, errors.Wrap(err, "failed to decode the pvspec string to PV Spec")
 	}
 
 	pv := obj.(*corev1.PersistentVolume)
@@ -97,9 +105,13 @@ func ParsePVCSpec(pvcspec string) (*corev1.PersistentVolumeClaimSpec, error) {
 	pvcspec = `{"spec":` + pvcspec + `}`
 
 	decoder := Deserializer()
-	obj, _, err := decoder.Decode([]byte(pvcspec), &schema.GroupVersionKind{Group: "", Version: "v1", Kind: "PersistentVolumeClaim"}, nil)
+	obj, _, err := decoder.Decode(
+		[]byte(pvcspec),
+		&schema.GroupVersionKind{Group: "", Version: "v1", Kind: "PersistentVolumeClaim"},
+		nil,
+	)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decode the pvspec string to PV Spec: %v", err)
+		return nil, errors.Wrap(err, "failed to decode the pvspec string to PV Spec")
 	}
 
 	pvc := obj.(*corev1.PersistentVolumeClaim)

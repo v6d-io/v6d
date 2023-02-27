@@ -18,17 +18,20 @@ package operation
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
-	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
-	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/pkg/errors"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
+
+	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 )
 
 const (
@@ -94,12 +97,12 @@ func GetDistributedAssemblyConfig() DistributedAssemblyConfig {
 // CreateJob creates the job for the operation
 func (ao *AssemblyOperation) CreateJob(ctx context.Context, o *v1alpha1.Operation) error {
 	if err := ao.applyLocalAssemblyJob(ctx, o); err != nil {
-		return fmt.Errorf("failed to apply the local assembly job: %v", err)
+		return errors.Wrap(err, "failed to apply the local assembly job")
 	}
 
 	done, err := ao.checkLocalAssemblyJob(ctx, o)
 	if err != nil {
-		return fmt.Errorf("failed to check the local assembly job: %v", err)
+		return errors.Wrap(err, "failed to check the local assembly job")
 	}
 
 	if done {
@@ -110,12 +113,12 @@ func (ao *AssemblyOperation) CreateJob(ctx context.Context, o *v1alpha1.Operatio
 
 		// all local assembly job done, then do distributed assembly job next
 		if err := ao.applyDistributedAssemblyJob(ctx, o.Spec.TimeoutSeconds); err != nil {
-			return fmt.Errorf("failed to apply the distributed assembly job: %v", err)
+			return errors.Wrap(err, "failed to apply the distributed assembly job")
 		}
 
 		distributedDone, err := ao.checkDistributedAssemblyJob(ctx, o)
 		if err != nil {
-			return fmt.Errorf("failed to check the distributed assembly job: %v", err)
+			return errors.Wrap(err, "failed to check the distributed assembly job")
 		}
 
 		// local assembly job and distributed assembly job all done, then the operation is done
@@ -127,7 +130,10 @@ func (ao *AssemblyOperation) CreateJob(ctx context.Context, o *v1alpha1.Operatio
 }
 
 // findNeedAssemblyPodByLocalObject finds the pod which need to be injected with the local assembly job
-func (ao *AssemblyOperation) findNeedAssemblyPodByLocalObject(ctx context.Context, labels *map[string]string) (*corev1.Pod, error) {
+func (ao *AssemblyOperation) findNeedAssemblyPodByLocalObject(
+	ctx context.Context,
+	labels *map[string]string,
+) (*corev1.Pod, error) {
 	podName := (*labels)[PodNameLabelKey]
 	podNamespace := (*labels)[PodNameSpaceLabelKey]
 	if podName != "" && podNamespace != "" {
@@ -136,7 +142,7 @@ func (ao *AssemblyOperation) findNeedAssemblyPodByLocalObject(ctx context.Contex
 			Name:      podName,
 			Namespace: podNamespace,
 		}, pod); err != nil {
-			return nil, fmt.Errorf("failed to get the pod: %v", err)
+			return nil, errors.Wrap(err, "failed to get the pod")
 		}
 		if v, ok := pod.Labels[NeedInjectedAssemblyKey]; ok && strings.ToLower(v) == "true" {
 			return pod, nil
@@ -146,7 +152,12 @@ func (ao *AssemblyOperation) findNeedAssemblyPodByLocalObject(ctx context.Contex
 }
 
 // buildLocalAssemblyJob build all configuration for the local assembly job
-func (ao *AssemblyOperation) buildLocalAssemblyJob(ctx context.Context, localObject *v1alpha1.LocalObject, pod *corev1.Pod, timeout int64) error {
+func (ao *AssemblyOperation) buildLocalAssemblyJob(
+	ctx context.Context,
+	localObject *v1alpha1.LocalObject,
+	pod *corev1.Pod,
+	timeout int64,
+) error {
 	podLabels := pod.Labels
 
 	vineyarddName := podLabels[labels.VineyarddName]
@@ -157,7 +168,7 @@ func (ao *AssemblyOperation) buildLocalAssemblyJob(ctx context.Context, localObj
 		Name:      vineyarddName,
 		Namespace: vineyarddNamespace,
 	}, vineyardd); err != nil {
-		return fmt.Errorf("failed to get the vineyardd: %v", err)
+		return errors.Wrap(err, "failed to get the vineyardd")
 	}
 
 	// When the pod which generated the stream is annotated, the assembly job will be created in the same pod
@@ -186,11 +197,14 @@ func (ao *AssemblyOperation) buildLocalAssemblyJob(ctx context.Context, localObj
 }
 
 // applyLocalAssemblyJob will apply the local assembly job
-func (ao *AssemblyOperation) applyLocalAssemblyJob(ctx context.Context, o *v1alpha1.Operation) error {
+func (ao *AssemblyOperation) applyLocalAssemblyJob(
+	ctx context.Context,
+	o *v1alpha1.Operation,
+) error {
 	localObjectList := &v1alpha1.LocalObjectList{}
 
 	if err := ao.Client.List(ctx, localObjectList); err != nil {
-		return fmt.Errorf("failed to list the local objects: %v", err)
+		return errors.Wrap(err, "failed to list the local objects")
 	}
 
 	for i := range localObjectList.Items {
@@ -199,14 +213,17 @@ func (ao *AssemblyOperation) applyLocalAssemblyJob(ctx context.Context, o *v1alp
 			if apierrors.IsNotFound(err) {
 				continue
 			}
-			return fmt.Errorf("failed to find the pod which needs to be injected with the assembly job: %v", err)
+			return errors.Wrap(
+				err,
+				"failed to find the pod which needs to be injected with the assembly job",
+			)
 		}
 		if pod != nil {
 			if err := ao.buildLocalAssemblyJob(ctx, &localObjectList.Items[i], pod, o.Spec.TimeoutSeconds); err != nil {
-				return fmt.Errorf("failed to build the local assembly job: %v", err)
+				return errors.Wrap(err, "failed to build the local assembly job")
 			}
 			if _, err := ao.app.Apply(ctx, "operation/local-assembly-job.yaml", ctrl.Log, false); err != nil {
-				return fmt.Errorf("failed to apply the local assembly job: %v", err)
+				return errors.Wrap(err, "failed to apply the local assembly job")
 			}
 		}
 	}
@@ -215,7 +232,10 @@ func (ao *AssemblyOperation) applyLocalAssemblyJob(ctx context.Context, o *v1alp
 }
 
 // checkLocalAssemblyJob will check the local assembly job's status
-func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alpha1.Operation) (bool, error) {
+func (ao *AssemblyOperation) checkLocalAssemblyJob(
+	ctx context.Context,
+	o *v1alpha1.Operation,
+) (bool, error) {
 	podList := &corev1.PodList{}
 	opts := []client.ListOption{
 		client.MatchingLabels{
@@ -224,14 +244,14 @@ func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alp
 	}
 
 	if err := ao.Client.List(ctx, podList, opts...); err != nil {
-		return false, fmt.Errorf("failed to list the pods: %v", err)
+		return false, errors.Wrap(err, "failed to list the pods")
 	}
 
 	localObjectList := &v1alpha1.LocalObjectList{}
 
 	// get all localobjects which may need to be injected with the assembly job
 	if err := ao.Client.List(ctx, localObjectList); err != nil {
-		return false, fmt.Errorf("failed to list the local objects: %v", err)
+		return false, errors.Wrap(err, "failed to list the local objects")
 	}
 
 	targetLocalObjects := map[string]bool{}
@@ -242,7 +262,7 @@ func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alp
 				Name:      AssemblyPrefix + localObjectList.Items[i].Spec.ObjectID,
 				Namespace: o.Namespace,
 			}, job); err != nil {
-				return false, fmt.Errorf("failed to get the job: %v", err)
+				return false, errors.Wrap(err, "failed to get the job")
 			}
 			targetLocalObjects[localObjectList.Items[i].Spec.ObjectID] = true
 			// if the job failed, then return false
@@ -253,7 +273,7 @@ func (ao *AssemblyOperation) checkLocalAssemblyJob(ctx context.Context, o *v1alp
 	}
 
 	if err := ao.UpdateConfigmap(ctx, targetLocalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
-		return false, fmt.Errorf("failed to update the configmap: %v", err)
+		return false, errors.Wrap(err, "failed to update the configmap")
 	}
 
 	return true, nil
@@ -264,7 +284,8 @@ func (ao *AssemblyOperation) buildDistributedAssemblyJob(
 	ctx context.Context,
 	globalObject *v1alpha1.GlobalObject,
 	pod *corev1.Pod,
-	timeout int64) (bool, error) {
+	timeout int64,
+) (bool, error) {
 	podLabels := pod.Labels
 	signatures := map[string]bool{}
 	for i := range globalObject.Spec.Members {
@@ -273,7 +294,7 @@ func (ao *AssemblyOperation) buildDistributedAssemblyJob(
 
 	localObjectList := &v1alpha1.LocalObjectList{}
 	if err := ao.Client.List(ctx, localObjectList); err != nil {
-		return false, fmt.Errorf("failed to list the local objects: %v", err)
+		return false, errors.Wrap(err, "failed to list the local objects")
 	}
 
 	sigToID := map[string]string{}
@@ -286,7 +307,7 @@ func (ao *AssemblyOperation) buildDistributedAssemblyJob(
 
 	globalObjectList := &v1alpha1.GlobalObjectList{}
 	if err := ao.Client.List(ctx, globalObjectList); err != nil {
-		return false, fmt.Errorf("failed to list the global objects: %v", err)
+		return false, errors.Wrap(err, "failed to list the global objects")
 	}
 
 	oldObjectToNewObject := map[string]string{}
@@ -309,7 +330,7 @@ func (ao *AssemblyOperation) buildDistributedAssemblyJob(
 		Name:      vineyarddName,
 		Namespace: vineyarddNamespace,
 	}, vineyardd); err != nil {
-		return false, fmt.Errorf("failed to get the vineyardd: %v", err)
+		return false, errors.Wrap(err, "failed to get the vineyardd")
 	}
 
 	// build the distributed assembly job
@@ -345,22 +366,30 @@ func (ao *AssemblyOperation) buildDistributedAssemblyJob(
 func (ao *AssemblyOperation) applyDistributedAssemblyJob(ctx context.Context, timeout int64) error {
 	globalObjectList := &v1alpha1.GlobalObjectList{}
 	if err := ao.Client.List(ctx, globalObjectList); err != nil {
-		return fmt.Errorf("failed to list the local objects: %v", err)
+		return errors.Wrap(err, "failed to list the local objects")
 	}
 
 	for i := range globalObjectList.Items {
 		pod, err := ao.findNeedAssemblyPodByLocalObject(ctx, &globalObjectList.Items[i].Labels)
 		if err != nil {
-			return fmt.Errorf("failed to find the pod which needs to be injected with the assembly job: %v", err)
+			return errors.Wrap(
+				err,
+				"failed to find the pod which needs to be injected with the assembly job",
+			)
 		}
 		if pod != nil {
-			needJob, err := ao.buildDistributedAssemblyJob(ctx, &globalObjectList.Items[i], pod, timeout)
+			needJob, err := ao.buildDistributedAssemblyJob(
+				ctx,
+				&globalObjectList.Items[i],
+				pod,
+				timeout,
+			)
 			if err != nil {
-				return fmt.Errorf("failed to build the distributed assembly job: %v", err)
+				return errors.Wrap(err, "failed to build the distributed assembly job")
 			}
 			if needJob {
 				if _, err := ao.app.Apply(ctx, "operation/distributed-assembly-job.yaml", ctrl.Log, false); err != nil {
-					return fmt.Errorf("failed to apply the global assembly job: %v", err)
+					return errors.Wrap(err, "failed to apply the global assembly job")
 				}
 			}
 		}
@@ -370,7 +399,10 @@ func (ao *AssemblyOperation) applyDistributedAssemblyJob(ctx context.Context, ti
 }
 
 // checkDistributedAssemblyJob will check the status of distributed assembly job and local assembly.
-func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o *v1alpha1.Operation) (bool, error) {
+func (ao *AssemblyOperation) checkDistributedAssemblyJob(
+	ctx context.Context,
+	o *v1alpha1.Operation,
+) (bool, error) {
 	required := o.Spec.Require
 	jobNames := strings.Split(required, ".")
 	jobNameToPodName := map[[2]string]bool{}
@@ -383,7 +415,7 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 		}
 
 		if err := ao.Client.List(ctx, podList, opts...); err != nil {
-			return false, fmt.Errorf("failed to list the pods: %v", err)
+			return false, errors.Wrap(err, "failed to list the pods")
 		}
 
 		for _, p := range podList.Items {
@@ -395,7 +427,7 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 
 	// get all globalobjects which may need to be injected with the assembly job
 	if err := ao.Client.List(ctx, globalObjectList); err != nil {
-		return false, fmt.Errorf("failed to list the global objects: %v", err)
+		return false, errors.Wrap(err, "failed to list the global objects")
 	}
 
 	if len(globalObjectList.Items) == 0 {
@@ -408,7 +440,7 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 		if jobNameToPodName[[2]string{labels[PodNameLabelKey], labels[PodNameSpaceLabelKey]}] &&
 			strings.Contains(strings.ToLower(globalObjectList.Items[i].Spec.Typename), "stream") {
 			if err := ao.Client.Get(ctx, client.ObjectKey{Name: AssemblyPrefix + globalObjectList.Items[i].Spec.ObjectID, Namespace: o.Namespace}, job); err != nil {
-				return false, fmt.Errorf("failed to get the job: %v", err)
+				return false, errors.Wrap(err, "failed to get the job")
 			}
 
 			targetGlobalObjects[globalObjectList.Items[i].Spec.ObjectID] = true
@@ -420,7 +452,7 @@ func (ao *AssemblyOperation) checkDistributedAssemblyJob(ctx context.Context, o 
 	}
 
 	if err := ao.UpdateConfigmap(ctx, targetGlobalObjects, o, AssemblyPrefix, &map[string]string{}); err != nil {
-		return false, fmt.Errorf("failed to update the configmap: %v", err)
+		return false, errors.Wrap(err, "failed to update the configmap")
 	}
 
 	return true, nil

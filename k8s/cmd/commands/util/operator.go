@@ -38,14 +38,13 @@ func GetKustomizeDir() string {
 	return defaultKustomizeDir
 }
 
-func BuildKustomizeDir(kustomizeDir string) (string, error) {
+func BuildKustomizeInDir(kustomizeDir string) (Manifests, error) {
 	fSys := filesys.MakeFsOnDisk()
 	buffy := new(bytes.Buffer)
 	cmd := build.NewCmdBuild(fSys, build.MakeHelp("", ""), buffy)
 
 	if err := cmd.RunE(cmd, []string{kustomizeDir}); err != nil {
-		return "", err
+		return nil, err
 	}
-
-	return buffy.String(), nil
+	return parseManifestsToObjects(buffy.Bytes())
 }

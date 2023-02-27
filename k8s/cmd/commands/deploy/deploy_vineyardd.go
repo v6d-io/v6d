@@ -17,14 +17,12 @@ package deploy
 
 import (
 	"context"
-	"fmt"
-	"time"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
@@ -47,9 +45,7 @@ vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
 # deploy the vineyardd with customized image
 vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd --image vineyardd:v0.12.2`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
 		vineyardd, err := BuildVineyardManifest()
@@ -72,7 +68,7 @@ func BuildVineyardManifest() (*v1alpha1.Vineyardd, error) {
 	if len(*envs) != 0 {
 		vineyardContainerEnvs, err := util.ParseEnvs(*envs)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse envs: %v", err)
+			return nil, errors.Wrap(err, "failed to parse envs")
 		}
 		opts.VineyardConfig.Env = append(opts.VineyardConfig.Env, vineyardContainerEnvs...)
 	}
@@ -80,7 +76,7 @@ func BuildVineyardManifest() (*v1alpha1.Vineyardd, error) {
 	if spillPV != "" {
 		vineyarddSpillPV, err := util.ParsePVSpec(spillPV)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the pv of vineyard spill: %v", err)
+			return nil, errors.Wrap(err, "failed to parse the pv of vineyard spill")
 		}
 		opts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *vineyarddSpillPV
 	}
@@ -88,7 +84,7 @@ func BuildVineyardManifest() (*v1alpha1.Vineyardd, error) {
 	if spillPVC != "" {
 		vineyardSpillPVC, err := util.ParsePVCSpec(spillPVC)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the pvc of vineyard spill: %v", err)
+			return nil, errors.Wrap(err, "failed to parse the pvc of vineyard spill")
 		}
 		opts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *vineyardSpillPVC
 	}
@@ -103,21 +99,21 @@ func BuildVineyardManifest() (*v1alpha1.Vineyardd, error) {
 	return vineyardd, nil
 }
 
-// wait for the vineyard cluster to be ready
-func waitVineyardReady(c client.Client, vineyardd *v1alpha1.Vineyardd) error {
-	return wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
-		err := c.Create(context.TODO(), vineyardd)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return false, nil
-		}
-		return true, nil
-	})
-}
-
 func NewDeployVineyarddCmd() *cobra.Command {
 	return deployVineyarddCmd
 }
 
 func init() {
 	flags.ApplyVineyarddOpts(deployVineyarddCmd)
+}
+
+// wait for the vineyard cluster to be ready
+func waitVineyardReady(c client.Client, vineyardd *v1alpha1.Vineyardd) error {
+	return util.Wait(func() (bool, error) {
+		err := c.Create(context.TODO(), vineyardd)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return false, nil
+		}
+		return true, nil
+	})
 }

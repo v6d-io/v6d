@@ -130,7 +130,10 @@ func getWaitCondition(kind string) (string, string) {
 }
 
 // wait for the workload to be ready
-func waitWorkload(c client.Client, kind, kubeconfig, condition, apiVersion, name, namespace string) error {
+func waitWorkload(
+	c client.Client,
+	kind, kubeconfig, condition, apiVersion, name, namespace string,
+) error {
 	command := "kubectl wait --for=condition=" + condition + " --timeout=120s " + apiVersion +
 		"/" + name + " -n " + namespace + " --kubeconfig=" + kubeconfig
 
@@ -155,7 +158,13 @@ func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubecon
 	}
 
 	// get template annotations
-	a, _, err := unstructured.NestedStringMap(obj.Object, "spec", "template", "metadata", "annotations")
+	a, _, err := unstructured.NestedStringMap(
+		obj.Object,
+		"spec",
+		"template",
+		"metadata",
+		"annotations",
+	)
 	if err != nil {
 		fmt.Println("failed to get annotations", err)
 		return false

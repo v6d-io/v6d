@@ -18,17 +18,19 @@ package schedule
 
 import (
 	"context"
-	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 // scheduleWorkloadCmd schedules the workload to a vineyard cluster
@@ -109,9 +111,7 @@ vineyardctl dryschedule workload --resource '{
 	}
   }' --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		if err := validateWorkload(flags.Resource); err != nil {
 			util.ErrLogger.Fatal("failed to validate the workload: ", err)
 		}
@@ -138,7 +138,7 @@ func validateWorkload(workload string) error {
 	decoder := util.Deserializer()
 	obj, _, err := decoder.Decode([]byte(workload), nil, nil)
 	if err != nil {
-		return fmt.Errorf("failed to decode the workload: %w", err)
+		return errors.Wrap(err, "failed to decode the workload")
 	}
 	kind := obj.GetObjectKind().GroupVersionKind().Kind
 	switch kind {
@@ -153,7 +153,7 @@ func validateWorkload(workload string) error {
 	case "CronJob":
 		return nil
 	}
-	return fmt.Errorf("the workload kind is not supported")
+	return errors.Wrap(err, "the workload kind is not supported")
 }
 
 // SchedulingWorkload is used to schedule the workload to the vineyard cluster
@@ -163,7 +163,7 @@ func SchedulingWorkload(c client.Client) (string, error) {
 	name := client.ObjectKey{Name: flags.VineyarddName, Namespace: flags.VineyarddNamespace}
 	deployment := appsv1.Deployment{}
 	if err := c.Get(context.TODO(), name, &deployment); err != nil {
-		return "", fmt.Errorf("failed to get the deployment: %s", err)
+		return "", errors.Wrap(err, "failed to get the deployment")
 	}
 	newPodAffinity := corev1.PodAffinity{
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
@@ -185,12 +185,12 @@ func SchedulingWorkload(c client.Client) (string, error) {
 	decoder := util.Deserializer()
 	obj, _, err := decoder.Decode([]byte(resource), nil, nil)
 	if err != nil {
-		return "", fmt.Errorf("failed to decode the workload: %w", err)
+		return "", errors.Wrap(err, "failed to decode the workload")
 	}
 
 	proto, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 	if err != nil {
-		return "", fmt.Errorf("failed to convert the workload to unstructured: %w", err)
+		return "", errors.Wrap(err, "failed to convert the workload to unstructured")
 	}
 
 	unstructuredObj := &unstructured.Unstructured{Object: proto}
@@ -216,7 +216,7 @@ func SchedulingWorkload(c client.Client) (string, error) {
 
 	ss, err := unstructuredObj.MarshalJSON()
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal the unstructuredObj: %w", err)
+		return "", errors.Wrap(err, "failed to marshal the unstructuredObj")
 	}
 	return string(ss), nil
 }

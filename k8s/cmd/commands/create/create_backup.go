@@ -16,14 +16,10 @@ limitations under the License.
 package create
 
 import (
-	"context"
-	"fmt"
-	"time"
-
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -99,22 +95,18 @@ vineyardctl create backup \
 	}
 }'`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
 		backup, err := buildBackupJob()
 		if err != nil {
-			util.ErrLogger.Fatal("failed to build backup job: ", err)
+			util.ErrLogger.Fatalf("failed to build backup job: %+v", err)
 		}
 
-		if err := client.Create(context.TODO(), backup); err != nil {
-			util.ErrLogger.Fatal("failed to create backup job: ", err)
-		}
-
-		if err := waitBackupJobDone(client, backup); err != nil {
-			util.ErrLogger.Fatal("failed to wait backup job done: ", err)
+		if err := util.Create(client, backup, func(backup *v1alpha1.Backup) bool {
+			return backup.Status.State != k8s.SucceedState
+		}); err != nil {
+			util.ErrLogger.Fatalf("failed to create/wait backup job: %+v", err)
 		}
 		util.InfoLogger.Println("Backup Job is ready.")
 	},
@@ -137,7 +129,7 @@ func buildBackupJob() (*v1alpha1.Backup, error) {
 	if backupPVandPVC != "" {
 		backupPVSpec, backupPVCSpec, err := util.ParsePVandPVCSpec(backupPVandPVC)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the pv and pvc of backup: %v", err)
+			return nil, errors.Wrap(err, "failed to parse the pv and pvc of backup")
 		}
 		opts.PersistentVolumeSpec = *backupPVSpec
 		opts.PersistentVolumeClaimSpec = *backupPVCSpec
@@ -145,7 +137,7 @@ func buildBackupJob() (*v1alpha1.Backup, error) {
 	/*if backupPV != "" {
 		backupPV, err := util.ParsePVSpec(backupPV)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the pv of backup: %v", err)
+			return nil, errors.Wrap(err, "failed to parse the pv of backup")
 		}
 		opts.PersistentVolumeSpec = *backupPV
 	}
@@ -153,7 +145,7 @@ func buildBackupJob() (*v1alpha1.Backup, error) {
 	if backupPVC != "" {
 		backupPVC, err := util.ParsePVCSpec(backupPVC)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse the pvc of backup: %v", err)
+			return nil, errors.Wrap(err, "failed to parse the pvc of backup")
 		}
 		opts.PersistentVolumeClaimSpec = *backupPVC
 	}*/
@@ -166,18 +158,4 @@ func buildBackupJob() (*v1alpha1.Backup, error) {
 		Spec: *opts,
 	}
 	return backup, nil
-}
-
-// wait for the backup job to be done
-func waitBackupJobDone(c client.Client, backup *v1alpha1.Backup) error {
-	return wait.PollImmediate(1*time.Second, 600*time.Second, func() (bool, error) {
-		err := c.Get(context.TODO(), client.ObjectKey{
-			Name:      backup.Name,
-			Namespace: backup.Namespace,
-		}, backup)
-		if err != nil || backup.Status.State != k8s.SucceedState {
-			return false, nil
-		}
-		return true, nil
-	})
 }

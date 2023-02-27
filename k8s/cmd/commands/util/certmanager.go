@@ -25,21 +25,23 @@ import (
 
 // GetCertManagerURL get the url of cert-manager
 func GetCertManagerURL() string {
-	return fmt.Sprintf("https://github.com/cert-manager/cert-manager/releases/download/v%s/cert-manager.yaml", flags.CertManagerVersion)
+	return fmt.Sprintf(
+		"https://github.com/cert-manager/cert-manager/releases/download/v%s/cert-manager.yaml",
+		flags.CertManagerVersion,
+	)
 }
 
 // GetCertManagerManifests get the manifests from the url
-func GetCertManagerManifests(certManagerManifestURL string) (string, error) {
+func GetCertManagerManifests(certManagerManifestURL string) (Manifests, error) {
 	resp, err := http.Get(certManagerManifestURL)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	manifests, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-
-	return string(manifests), nil
+	return parseManifestsToObjects(manifests)
 }

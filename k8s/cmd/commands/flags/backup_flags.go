@@ -38,18 +38,24 @@ var (
 )
 
 func ApplyBackupNameOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&BackupName, "backup-name", "", "vineyard-backup", "the name of backup job")
+	cmd.Flags().
+		StringVarP(&BackupName, "backup-name", "", "vineyard-backup", "the name of backup job")
 }
 
 func ApplyBackupOpts(cmd *cobra.Command) {
 	// the following flags are used to build the backup configurations
-	cmd.Flags().StringVarP(&BackupOpts.VineyarddName, "vineyardd-name", "", "", "the name of vineyardd")
-	cmd.Flags().StringVarP(&BackupOpts.VineyarddNamespace, "vineyardd-namespace", "", "", "the namespace of vineyardd")
+	cmd.Flags().
+		StringVarP(&BackupOpts.VineyarddName, "vineyardd-name", "", "", "the name of vineyardd")
+	cmd.Flags().
+		StringVarP(&BackupOpts.VineyarddNamespace, "vineyardd-namespace", "", "", "the namespace of vineyardd")
 	cmd.Flags().IntVarP(&BackupOpts.Limit, "limit", "", 1000, "the limit of objects to backup")
 	cmd.Flags().StringVarP(&BackupOpts.BackupPath, "path", "", "", "the path of the backup data")
-	cmd.Flags().StringVarP(&BackupPVandPVC, "pv-pvc-spec", "", "", "the PersistentVolume and PersistentVolumeClaim of the backup data")
-	cmd.Flags().StringVarP(&BackupPVSpec, "pv-spec", "", "", "the PersistentVolumeSpec of the backup data")
-	cmd.Flags().StringVarP(&BackupPVCSpec, "pvc-spec", "", "", "the PersistentVolumeClaimSpec of the backup data")
+	cmd.Flags().
+		StringVarP(&BackupPVandPVC, "pv-pvc-spec", "", "", "the PersistentVolume and PersistentVolumeClaim of the backup data")
+	cmd.Flags().
+		StringVarP(&BackupPVSpec, "pv-spec", "", "", "the PersistentVolumeSpec of the backup data")
+	cmd.Flags().
+		StringVarP(&BackupPVCSpec, "pvc-spec", "", "", "the PersistentVolumeClaimSpec of the backup data")
 
 	// the following flags are used to build the backup job
 	ApplyBackupNameOpts(cmd)

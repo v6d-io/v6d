@@ -31,7 +31,11 @@ type PluggableOperation interface {
 }
 
 // NewPluggableOperation returns a new pluggable operation according to the operation type
-func NewPluggableOperation(opName string, c client.Client, app *kubernetes.Application) PluggableOperation {
+func NewPluggableOperation(
+	opName string,
+	c client.Client,
+	app *kubernetes.Application,
+) PluggableOperation {
 	switch opName {
 	case "assembly":
 		return &AssemblyOperation{c, ClientUtils{c}, app, false}

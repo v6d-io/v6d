@@ -63,9 +63,7 @@ vineyardctl manager --enable-scheduler false
 # only start the controller
 vineyardctl manager --enable-webhook false --enable-scheduler false`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 
 		opts := zap.Options{
 			Development: true,
@@ -109,20 +107,37 @@ func init() {
 	flags.ApplyManagersOpts(managerCmd)
 }
 
-func startManager(mgr manager.Manager, metricsAddr string, probeAddr string, enableLeaderElection bool) {
+func startManager(
+	mgr manager.Manager,
+	metricsAddr string,
+	probeAddr string,
+	enableLeaderElection bool,
+) {
 	var err error
 
 	if err = (&controllers.LocalObjectReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal("unable to create controller", "controller", "LocalObject", "error: ", err)
+		util.ErrLogger.Fatal(
+			"unable to create controller",
+			"controller",
+			"LocalObject",
+			"error: ",
+			err,
+		)
 	}
 	if err = (&controllers.GlobalObjectReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal("unable to create controller", "controller", "GlobalObject", "error: ", err)
+		util.ErrLogger.Fatal(
+			"unable to create controller",
+			"controller",
+			"GlobalObject",
+			"error: ",
+			err,
+		)
 	}
 	if err = (&controllers.VineyarddReconciler{
 		Client:   mgr.GetClient(),
@@ -130,7 +145,13 @@ func startManager(mgr manager.Manager, metricsAddr string, probeAddr string, ena
 		Template: templates.NewEmbedTemplate(),
 		Recorder: mgr.GetEventRecorderFor("vineyardd-controller"),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal("unable to create controller", "controller", "Vineyardd", "error: ", err)
+		util.ErrLogger.Fatal(
+			"unable to create controller",
+			"controller",
+			"Vineyardd",
+			"error: ",
+			err,
+		)
 	}
 	if err = (&controllers.OperationReconciler{
 		Client:   mgr.GetClient(),
@@ -138,7 +159,13 @@ func startManager(mgr manager.Manager, metricsAddr string, probeAddr string, ena
 		Template: templates.NewEmbedTemplate(),
 		Recorder: mgr.GetEventRecorderFor("operation-controller"),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal("unable to create controller", "controller", "Operation", "error: ", err)
+		util.ErrLogger.Fatal(
+			"unable to create controller",
+			"controller",
+			"Operation",
+			"error: ",
+			err,
+		)
 	}
 
 	if err = (&controllers.SidecarReconciler{
@@ -169,10 +196,22 @@ func startManager(mgr manager.Manager, metricsAddr string, probeAddr string, ena
 	if !flags.EnableWebhook {
 		// register the webhooks of CRDs
 		if err = (&v1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook", "LocalObject", "error: ", err)
+			util.ErrLogger.Fatal(
+				"unable to create webhook",
+				"webhook",
+				"LocalObject",
+				"error: ",
+				err,
+			)
 		}
 		if err = (&v1alpha1.GlobalObject{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook", "GlobalObject", "error: ", err)
+			util.ErrLogger.Fatal(
+				"unable to create webhook",
+				"webhook",
+				"GlobalObject",
+				"error: ",
+				err,
+			)
 		}
 		if err = (&v1alpha1.Vineyardd{}).SetupWebhookWithManager(mgr); err != nil {
 			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Vineyardd", "error: ", err)
@@ -202,7 +241,10 @@ func startManager(mgr manager.Manager, metricsAddr string, probeAddr string, ena
 		log.Println("registering the sidecar webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod-sidecar",
 			&webhook.Admission{
-				Handler: &sidecar.Injector{Client: mgr.GetClient(), Template: templates.NewEmbedTemplate()},
+				Handler: &sidecar.Injector{
+					Client:   mgr.GetClient(),
+					Template: templates.NewEmbedTemplate(),
+				},
 			})
 		log.Println("the sidecar webhook is registered")
 
