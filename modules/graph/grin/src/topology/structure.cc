@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "modules/graph/grin/src/predefine.h"
-#include "modules/graph/grin/include/topology/structure.h"
+#include "graph/grin/src/predefine.h"
+#include "graph/grin/include/topology/structure.h"
 
 bool is_directed(const Graph g) {
     auto _g = static_cast<Graph_T*>(g);

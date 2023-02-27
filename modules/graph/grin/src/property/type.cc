@@ -10,8 +10,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "modules/graph/grin/src/predefine.h"
-#include "modules/graph/grin/include/property/type.h"
+#include "graph/grin/src/predefine.h"
+#include "graph/grin/include/property/type.h"
 
 #ifdef WITH_VERTEX_PROPERTY
 VertexType get_vertex_type(const Graph g, const Vertex v) {
@@ -24,7 +24,7 @@ VertexType get_vertex_type(const Graph g, const Vertex v) {
 char* get_vertex_type_name(const Graph g, const VertexType vt) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vt = static_cast<VertexType_T*>(vt);
-    auto s = std::move(_g->schema().GetVertexLabelName(*_vt));
+    auto s = _g->schema().GetVertexLabelName(*_vt);
     int len = s.length() + 1;
     char* out = new char[len];
     snprintf(out, len, "%s", s.c_str());
@@ -100,7 +100,7 @@ EdgeType get_edge_type(const Graph g, const Edge e) {
 char* get_edge_type_name(const Graph g, const EdgeType et) {
     auto _g = static_cast<Graph_T*>(g);
     auto _et = static_cast<EdgeType_T*>(et);
-    auto s = std::move(_g->schema().GetEdgeLabelName(*_et));
+    auto s = _g->schema().GetEdgeLabelName(*_et);
     int len = s.length() + 1;
     char* out = new char[len];
     snprintf(out, len, "%s", s.c_str());

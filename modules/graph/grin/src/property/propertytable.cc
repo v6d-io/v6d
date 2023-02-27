@@ -10,8 +10,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "modules/graph/grin/src/predefine.h"
-#include "modules/graph/grin/include/property/propertytable.h"
+#include "graph/grin/src/predefine.h"
+#include "graph/grin/include/property/propertytable.h"
 
 #if defined(WITH_VERTEX_PROPERTY) || defined(WITH_EDGE_PROPERTY)
 void destroy_row(Row r) {

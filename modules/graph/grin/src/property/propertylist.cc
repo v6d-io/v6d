@@ -10,9 +10,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "modules/graph/grin/src/predefine.h"
-#include "modules/graph/grin/src/utils.h"
-#include "modules/graph/grin/include/property/propertylist.h"
+#include "graph/grin/src/predefine.h"
+#include "graph/grin/include/property/propertylist.h"
 
 #ifdef WITH_VERTEX_PROPERTY
 VertexPropertyList get_all_vertex_properties_by_type(const Graph g, const VertexType vtype) {
@@ -132,13 +131,14 @@ EdgePropertyID get_edge_property_id(const EdgeType etype, const EdgeProperty ep)
 Graph select_vertex_properties(const Graph g, const VertexPropertyList vpl) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
-    std::map<unsigned, std::vector<unsigned>> vertices, edges;
+    std::map<int, std::vector<int>> vertices, edges;
     for (auto& p: *_vpl) {
-        if (vertices.find(p.first) == vertices.end()) {
-            vertices.insert(p.first, {p.second});
-        } else {
-            vertices[p.first].push_back(p.second);
+        int vtype = static_cast<int>(p.first);
+        int vp = static_cast<int>(p.second);
+        if (vertices.find(vtype) == vertices.end()) {
+            vertices[vtype].clear();
         }
+        vertices[vtype].push_back(vp);
     }
     vineyard::Client client;
     client.Connect();
@@ -151,13 +151,14 @@ Graph select_vertex_properties(const Graph g, const VertexPropertyList vpl) {
 Graph select_edge_properteis(const Graph g, const EdgePropertyList epl) {
     auto _g = static_cast<Graph_T*>(g);
     auto _epl = static_cast<VertexPropertyList_T*>(epl);
-    std::map<unsigned, std::vector<unsigned>> vertices, edges;
+    std::map<int, std::vector<int>> vertices, edges;
     for (auto& p: *_epl) {
-        if (edges.find(p.first) == edges.end()) {
-            edges.insert(p.first, {p.second});
-        } else {
-            edges[p.first].push_back(p.second);
+        int etype = static_cast<int>(p.first);
+        int ep = static_cast<int>(p.second);
+        if (edges.find(etype) == edges.end()) {
+            edges[etype].clear();
         }
+        edges[etype].push_back(ep);
     }
     vineyard::Client client;
     client.Connect();

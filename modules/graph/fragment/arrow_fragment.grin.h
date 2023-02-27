@@ -50,14 +50,14 @@ limitations under the License.
 #include "graph/vertex_map/arrow_vertex_map.h"
 
 extern "C" {
-#include "modules/graph/grin/include/topology/structure.h"
-#include "modules/graph/grin/include/topology/vertexlist.h"
-#include "modules/graph/grin/include/topology/edgelist.h"
-#include "modules/graph/grin/include/topology/adjacentlist.h"
-#include "modules/graph/grin/include/partition/partition.h"
-#include "modules/graph/grin/include/propertygraph/label.h"
-#include "modules/graph/grin/include/propertygraph/property.h"
-#include "modules/graph/grin/include/propertygraph/propertygraph.h"
+#include "graph/grin/include/topology/structure.h"
+#include "graph/grin/include/topology/vertexlist.h"
+#include "graph/grin/include/topology/edgelist.h"
+#include "graph/grin/include/topology/adjacentlist.h"
+#include "graph/grin/include/partition/partition.h"
+#include "graph/grin/include/propertygraph/label.h"
+#include "graph/grin/include/propertygraph/property.h"
+#include "graph/grin/include/propertygraph/propertygraph.h"
 }
 
 namespace gs {
