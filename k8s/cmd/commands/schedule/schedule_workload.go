@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientgoScheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -113,22 +112,17 @@ vineyardctl dryschedule workload --resource '{
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
-
 		if err := validateWorkload(flags.Resource); err != nil {
 			util.ErrLogger.Fatal("failed to validate the workload: ", err)
 		}
+		client := util.KubernetesClient()
 
-		kubeClient, err := util.GetKubeClient(nil)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kube client: ", err)
-		}
-
-		workload, err := SchedulingWorkload(kubeClient)
+		workload, err := SchedulingWorkload(client)
 		if err != nil {
 			util.ErrLogger.Fatal("failed to schedule workload: ", err)
 		}
 
-		fmt.Println(workload)
+		util.InfoLogger.Println(workload)
 	},
 }
 
@@ -137,12 +131,12 @@ func NewScheduleWorkloadCmd() *cobra.Command {
 }
 
 func init() {
-	flags.NewDrySchedulerOpts(scheduleWorkloadCmd)
+	flags.ApplySchedulerOpts(scheduleWorkloadCmd)
 }
 
 func validateWorkload(workload string) error {
-	decode := clientgoScheme.Codecs.UniversalDeserializer().Decode
-	obj, _, err := decode([]byte(workload), nil, nil)
+	decoder := util.Deserializer()
+	obj, _, err := decoder.Decode([]byte(workload), nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to decode the workload: %w", err)
 	}
@@ -188,8 +182,8 @@ func SchedulingWorkload(c client.Client) (string, error) {
 		},
 	}
 
-	decode := clientgoScheme.Codecs.UniversalDeserializer().Decode
-	obj, _, err := decode([]byte(resource), nil, nil)
+	decoder := util.Deserializer()
+	obj, _, err := decoder.Decode([]byte(resource), nil, nil)
 	if err != nil {
 		return "", fmt.Errorf("failed to decode the workload: %w", err)
 	}

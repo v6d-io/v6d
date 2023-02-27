@@ -17,46 +17,37 @@ package delete
 
 import (
 	"github.com/spf13/cobra"
+
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // deleteCertManagerCmd deletes the vineyard operator on kubernetes
 var deleteCertManagerCmd = &cobra.Command{
 	Use:   "cert-manager",
 	Short: "Delete the cert-manager on kubernetes",
-	Long: `Delete the cert-manager in the cert-manager namespace. You should specify 
-the version of deployed cert-manager and the default version is v1.9.1. 
+	Long: `Delete the cert-manager in the cert-manager namespace. You should specify
+the version of deployed cert-manager and the default version is v1.9.1.
 For example:
 
 # delete the default version(v1.9.1) of cert-manager
-vineyardctl --kubeconfig /home/gsbot/.kube/config delete cert-manager
+vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager
 
 # delete the specific version of cert-manager
-vineyardctl --kubeconfig /home/gsbot/.kube/config delete cert-manager -v 1.11.0`,
+vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
-
-		scheme := runtime.NewScheme()
-		if err := util.AddSchemes(scheme); err != nil {
-			util.ErrLogger.Fatal("failed to add client scheme: ", err)
-		}
-
-		kubeClient, err := util.GetKubeClient(scheme)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
-		}
+		client := util.KubernetesClient()
 
 		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
 		if err != nil {
 			util.ErrLogger.Fatal("failed to get cert-manager manifests: ", err)
 		}
 
-		if err := util.DeleteManifests(kubeClient, []byte(certManagerManifests),
-			"", scheme); err != nil {
+		if err := util.DeleteManifests(client, []byte(certManagerManifests),
+			""); err != nil {
 			util.ErrLogger.Fatal("failed to delete cert-manager manifests: ", err)
 		}
 		util.InfoLogger.Println("Cert-Manager is deleted.")
@@ -68,5 +59,5 @@ func NewDeleteCertManagerCmd() *cobra.Command {
 }
 
 func init() {
-	flags.NewCertManagerOpts(deleteCertManagerCmd)
+	flags.ApplyCertManagerOpts(deleteCertManagerCmd)
 }

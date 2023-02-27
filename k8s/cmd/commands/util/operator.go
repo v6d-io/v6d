@@ -17,21 +17,23 @@ package util
 
 import (
 	"bytes"
+	"fmt"
 
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"sigs.k8s.io/kustomize/kustomize/v4/commands/build"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
+
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 )
 
 // default kustomize dir from github repo
 var defaultKustomizeDir = "https://github.com/v6d-io/v6d/k8s/config/default?submodules=false"
 
 func GetKustomizeDir() string {
-	if flags.KustomzieDir != "" {
-		return flags.KustomzieDir
+	if flags.KustomizeDir != "" {
+		return flags.KustomizeDir
 	}
 	if flags.OperatorVersion != "dev" {
-		return defaultKustomizeDir + "&ref=v" + flags.OperatorVersion
+		return fmt.Sprintf("%s&ref=v%s", defaultKustomizeDir, flags.OperatorVersion)
 	}
 	return defaultKustomizeDir
 }
@@ -39,9 +41,9 @@ func GetKustomizeDir() string {
 func BuildKustomizeDir(kustomizeDir string) (string, error) {
 	fSys := filesys.MakeFsOnDisk()
 	buffy := new(bytes.Buffer)
-	kustomizecmd := build.NewCmdBuild(fSys, build.MakeHelp("", ""), buffy)
+	cmd := build.NewCmdBuild(fSys, build.MakeHelp("", ""), buffy)
 
-	if err := kustomizecmd.RunE(kustomizecmd, []string{kustomizeDir}); err != nil {
+	if err := cmd.RunE(cmd, []string{kustomizeDir}); err != nil {
 		return "", err
 	}
 

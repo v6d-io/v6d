@@ -20,14 +20,16 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	vineyardv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 // deleteVineyarddCmd deletes the vineyardd cluster on kubernetes
@@ -46,24 +48,22 @@ vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`,
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
+		client := util.KubernetesClient()
 
-		kubeClient, err := util.GetKubeClient(nil)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
-		}
-
-		vineyardd := &vineyardV1alpha1.Vineyardd{}
-		if err := kubeClient.Get(context.Background(), types.NamespacedName{Name: flags.VineyarddName,
-			Namespace: flags.GetDefaultVineyardNamespace()},
+		vineyardd := &vineyardv1alpha1.Vineyardd{}
+		if err := client.Get(context.Background(), types.NamespacedName{
+			Name:      flags.VineyarddName,
+			Namespace: flags.GetDefaultVineyardNamespace(),
+		},
 			vineyardd); err != nil && !apierrors.IsNotFound(err) {
 			util.ErrLogger.Fatal("failed to get vineyardd: ", err)
 		}
 
-		if err := kubeClient.Delete(context.Background(), vineyardd); err != nil {
+		if err := client.Delete(context.Background(), vineyardd); err != nil {
 			util.ErrLogger.Fatal("failed to delete vineyardd: ", err)
 		}
 
-		waitVineyardDeleted(kubeClient, vineyardd)
+		waitVineyardDeleted(client, vineyardd)
 
 		util.InfoLogger.Println("Vineyardd is deleted.")
 	},
@@ -72,8 +72,10 @@ vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`,
 // wait for the vineyardd to be deleted
 func waitVineyardDeleted(c client.Client, vineyardd *v1alpha1.Vineyardd) {
 	_ = wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
-		err := c.Get(context.TODO(), types.NamespacedName{Name: vineyardd.Name,
-			Namespace: vineyardd.Namespace}, vineyardd)
+		err := c.Get(context.TODO(), types.NamespacedName{
+			Name:      vineyardd.Name,
+			Namespace: vineyardd.Namespace,
+		}, vineyardd)
 		if apierrors.IsNotFound(err) {
 			return true, nil
 		}
@@ -86,5 +88,5 @@ func NewDeleteVineyarddCmd() *cobra.Command {
 }
 
 func init() {
-	flags.NewVineyarddNameOpts(deleteVineyarddCmd)
+	flags.ApplyVineyarddNameOpts(deleteVineyarddCmd)
 }

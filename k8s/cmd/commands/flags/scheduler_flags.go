@@ -17,13 +17,15 @@ package flags
 
 import "github.com/spf13/cobra"
 
-// Resource is the json string of kubernetes workload
-var Resource string
+var (
+	// Resource is the json string of kubernetes workload
+	Resource string
 
-// the namespace of vineyard cluster
-var VineyarddNamespace string
+	// the namespace of vineyard cluster
+	VineyarddNamespace string
+)
 
-func NewDrySchedulerOpts(cmd *cobra.Command) {
+func ApplySchedulerOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&Resource, "resource", "", "", "the json string of kubernetes workload")
 	cmd.Flags().StringVarP(&VineyarddName, "vineyardd-name", "", "vineyardd-sample", "the namespace of vineyard cluster")
 	cmd.Flags().StringVarP(&VineyarddNamespace, "vineyardd-namespace", "", "vineyard-system", "the namespace of vineyard cluster")

@@ -25,6 +25,7 @@ import (
 	"strconv"
 
 	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -70,7 +71,7 @@ func main() {
 	}
 
 	client, _ := client.New(cfg, client.Options{Scheme: scheme})
-	//read file from path
+	// read file from path
 	contents, err := os.ReadFile(workflow)
 	if err != nil {
 		fmt.Println("Error reading file:", err)
@@ -88,8 +89,8 @@ func parseManifests(c client.Client, manifests []byte, kubeconfig string) {
 		if resources[i][0] == '\r' {
 			resources[i] = resources[i][1:]
 		}
-		decode := clientgoScheme.Codecs.UniversalDeserializer().Decode
-		obj, _, err := decode(resources[i], nil, nil)
+		decoder := util.Deserializer()
+		obj, _, err := decoder.Decode(resources[i], nil, nil)
 		if err != nil {
 			fmt.Println("failed to decode resource", err)
 			os.Exit(1)

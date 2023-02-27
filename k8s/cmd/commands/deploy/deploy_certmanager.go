@@ -19,16 +19,18 @@ import (
 	"context"
 	"time"
 
-	cmapi "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	"github.com/spf13/cobra"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	certmanagerapiv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	certmanagermetav1 "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
+
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 // deployCertManagerCmd deploys the vineyard operator on kubernetes
@@ -41,35 +43,27 @@ new namespace to install the cert-manager. The default version is v1.9.1.
 For example:
 
 # install the default version(v1.9.1) in the cert-manager namespace
-vineyardctl --kubeconfig /home/gsbot/.kube/config deploy cert-manager
+vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager
 
 # install the specific version of cert-manager
-vineyardctl --kubeconfig /home/gsbot/.kube/config deploy cert-manager -v 1.11.0`,
+vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
-		scheme := runtime.NewScheme()
-		if err := util.AddSchemes(scheme); err != nil {
-			util.ErrLogger.Fatal("failed to add client scheme: ", err)
-		}
-
-		kubeClient, err := util.GetKubeClient(scheme)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
-		}
+		client := util.KubernetesClient()
 
 		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
 		if err != nil {
 			util.ErrLogger.Fatal("failed to get cert-manager manifests: ", err)
 		}
 
-		if err := util.ApplyManifests(kubeClient, []byte(certManagerManifests),
-			"", scheme); err != nil {
+		if err := util.ApplyManifests(client, []byte(certManagerManifests),
+			""); err != nil {
 			util.ErrLogger.Fatal("failed to apply cert-manager manifests: ", err)
 		}
 
-		if err := waitCertManagerReady(kubeClient); err != nil {
+		if err := waitCertManagerReady(client); err != nil {
 			util.ErrLogger.Fatal("failed to wait cert-manager ready: ", err)
 		}
 
@@ -77,31 +71,39 @@ vineyardctl --kubeconfig /home/gsbot/.kube/config deploy cert-manager -v 1.11.0`
 	},
 }
 
+func NewDeployCertManagerCmd() *cobra.Command {
+	return deployCertManagerCmd
+}
+
+func init() {
+	flags.ApplyCertManagerOpts(deployCertManagerCmd)
+}
+
 // wait cert-manager to be ready
 func waitCertManagerReady(c client.Client) error {
 	return wait.PollImmediate(10*time.Second, 300*time.Second, func() (bool, error) {
 		// create a dummy selfsigned issuer
-		dummyIssue := &cmapi.Issuer{
+		dummyIssue := &certmanagerapiv1.Issuer{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      string("selfsigned-issuer"),
 				Namespace: "default",
 			},
-			Spec: cmapi.IssuerSpec{
-				IssuerConfig: cmapi.IssuerConfig{
-					SelfSigned: &cmapi.SelfSignedIssuer{},
+			Spec: certmanagerapiv1.IssuerSpec{
+				IssuerConfig: certmanagerapiv1.IssuerConfig{
+					SelfSigned: &certmanagerapiv1.SelfSignedIssuer{},
 				},
 			},
 		}
 		// create a dummy selfsigned certificate
-		dummyCert := &cmapi.Certificate{
+		dummyCert := &certmanagerapiv1.Certificate{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      string("selfsigned-cert"),
 				Namespace: "default",
 			},
-			Spec: cmapi.CertificateSpec{
+			Spec: certmanagerapiv1.CertificateSpec{
 				DNSNames:   []string{"example.com"},
 				SecretName: "selfsigned-cert-tls",
-				IssuerRef: cmmeta.ObjectReference{
+				IssuerRef: certmanagermetav1.ObjectReference{
 					Name: "selfsigned-issuer",
 				},
 			},
@@ -122,12 +124,4 @@ func waitCertManagerReady(c client.Client) error {
 
 		return true, nil
 	})
-}
-
-func NewDeployCertManagerCmd() *cobra.Command {
-	return deployCertManagerCmd
-}
-
-func init() {
-	flags.NewCertManagerOpts(deployCertManagerCmd)
 }

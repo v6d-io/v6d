@@ -22,18 +22,21 @@ import (
 	"strconv"
 	"strings"
 
-	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 	"github.com/spf13/cobra"
-	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
-	"github.com/v6d-io/v6d/k8s/controllers/k8s"
-	"github.com/v6d-io/v6d/k8s/pkg/templates"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
+
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/controllers/k8s"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 var vineyarddFileName []string = []string{
@@ -60,21 +63,17 @@ deploy a customized vineyardd from stdin or file.
 For example:
 
 # deploy the default vineyard deployment on kubernetes
-vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyard-deployment
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyard-deployment
 
 # deploy the vineyard deployment with customized image
-vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyard-deployment --image vineyardd:v0.12.2`,
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyard-deployment --image vineyardd:v0.12.2`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
+		client := util.KubernetesClient()
 
-		kubeClient, err := util.GetKubeClient(nil)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kube client: ", err)
-		}
-
-		if err := applyVineyarddFromTemplate(kubeClient); err != nil {
+		if err := applyVineyarddFromTemplate(client); err != nil {
 			util.ErrLogger.Fatal("failed to apply vineyardd resources from template: ", err)
 		}
 
@@ -89,7 +88,7 @@ func NewDeployVineyardDeploymentCmd() *cobra.Command {
 var label string
 
 func init() {
-	flags.NewVineyarddOpts(deployVineyardDeploymentCmd)
+	flags.ApplyVineyarddOpts(deployVineyardDeploymentCmd)
 	deployVineyardDeploymentCmd.Flags().StringVarP(&label, "label", "l", "", "label of the vineyardd")
 }
 
@@ -222,14 +221,15 @@ func GetObjsFromTemplate() ([]*unstructured.Unstructured, error) {
 // applyVineyarddFromTemplate creates kubernetes resources from template fir
 func applyVineyarddFromTemplate(c client.Client) error {
 	objs, err := GetObjsFromTemplate()
-
 	if err != nil {
 		return fmt.Errorf("failed to get vineyardd resources from template: %v", err)
 	}
 
 	for _, o := range objs {
-		if err := c.Get(context.Background(), types.NamespacedName{Name: o.GetName(),
-			Namespace: o.GetNamespace()}, o); err != nil {
+		if err := c.Get(context.Background(), types.NamespacedName{
+			Name:      o.GetName(),
+			Namespace: o.GetNamespace(),
+		}, o); err != nil {
 			if apierrors.IsNotFound(err) {
 				if err := c.Create(context.TODO(), o); err != nil {
 					return fmt.Errorf("failed to create object %s: %v", o.GetName(), err)
@@ -238,7 +238,6 @@ func applyVineyarddFromTemplate(c client.Client) error {
 				return fmt.Errorf("failed to get object %s: %v", o.GetName(), err)
 			}
 		}
-
 	}
 	return nil
 }

@@ -15,13 +15,24 @@ limitations under the License.
 */
 
 // Package start contains the start command of vineyard operator
-package start
+package manager
 
 import (
 	"log"
 	"sync"
 
 	"github.com/spf13/cobra"
+	"go.uber.org/zap/zapcore"
+
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/kubernetes/cmd/kube-scheduler/app"
+	"k8s.io/kubernetes/pkg/scheduler/framework"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
@@ -31,43 +42,29 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/operation"
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/scheduling"
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/sidecar"
-	"go.uber.org/zap/zapcore"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/kubernetes/cmd/kube-scheduler/app"
-	"k8s.io/kubernetes/pkg/scheduler/framework"
-	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
-	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
-// startManagerCmd starts the manager of vineyard operator
-var startManagerCmd = &cobra.Command{
+// managerCmd starts the manager of vineyard operator
+var managerCmd = &cobra.Command{
 	Use:   "manager",
 	Short: "Start the manager of vineyard operator",
 	Long: `Start the manager of vineyard operator.
 For example:
 
 # start the manager of vineyard operator with default configuration(Enable the controller, webhooks and scheduler)
-vineyarctl start manager
+vineyardctl manager
 
 # start the manager of vineyard operator without webhooks
-vineyardctl start manager --enable-webhook false
+vineyardctl manager --enable-webhook false
 
 # start the manager of vineyard operator without scheduler
-vineyardctl start manager --enable-scheduler false
+vineyardctl manager --enable-scheduler false
 
 # only start the controller
-vineyarctl start manager --enable-webhook false --enable-scheduler false`,
+vineyardctl manager --enable-webhook false --enable-scheduler false`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
-		}
-
-		scheme := runtime.NewScheme()
-		if err := util.AddSchemes(scheme); err != nil {
-			util.ErrLogger.Fatal("failed to add client scheme: ", err)
 		}
 
 		opts := zap.Options{
@@ -79,7 +76,7 @@ vineyarctl start manager --enable-webhook false --enable-scheduler false`,
 
 		// start the controller
 		mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-			Scheme:                 scheme,
+			Scheme:                 util.Scheme(),
 			MetricsBindAddress:     flags.MetricsAddr,
 			Port:                   9443,
 			HealthProbeBindAddress: flags.ProbeAddr,
@@ -104,12 +101,12 @@ vineyarctl start manager --enable-webhook false --enable-scheduler false`,
 	},
 }
 
-func NewStartManagerCmd() *cobra.Command {
-	return startManagerCmd
+func NewManagerCmd() *cobra.Command {
+	return managerCmd
 }
 
 func init() {
-	flags.NewManagersOpts(startManagerCmd)
+	flags.ApplyManagersOpts(managerCmd)
 }
 
 func startManager(mgr manager.Manager, metricsAddr string, probeAddr string, enableLeaderElection bool) {
@@ -197,21 +194,24 @@ func startManager(mgr manager.Manager, metricsAddr string, probeAddr string, ena
 		log.Println("registering the assembly webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod",
 			&webhook.Admission{
-				Handler: &operation.AssemblyInjector{Client: mgr.GetClient()}})
+				Handler: &operation.AssemblyInjector{Client: mgr.GetClient()},
+			})
 		log.Println("the assembly webhook is registered")
 
 		// register the sidecar webhook
 		log.Println("registering the sidecar webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod-sidecar",
 			&webhook.Admission{
-				Handler: &sidecar.Injector{Client: mgr.GetClient(), Template: templates.NewEmbedTemplate()}})
+				Handler: &sidecar.Injector{Client: mgr.GetClient(), Template: templates.NewEmbedTemplate()},
+			})
 		log.Println("the sidecar webhook is registered")
 
 		// register the scheduling webhook
 		log.Println("registering the scheduling webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod-scheduling",
 			&webhook.Admission{
-				Handler: &scheduling.Injector{Client: mgr.GetClient()}})
+				Handler: &scheduling.Injector{Client: mgr.GetClient()},
+			})
 		log.Println("the scheduling webhook is registered")
 
 		if err := mgr.AddHealthzCheck("healthz", mgr.GetWebhookServer().StartedChecker()); err != nil {

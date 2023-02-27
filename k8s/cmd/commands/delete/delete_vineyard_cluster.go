@@ -19,6 +19,7 @@ import (
 	"log"
 
 	"github.com/spf13/cobra"
+
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
@@ -27,7 +28,7 @@ var deleteVineyardClusterCmd = &cobra.Command{
 	Use:   "vineyard-cluster",
 	Short: "Delete the vineyard cluster on kubernetes",
 	Long: `Delete the vineyardd on kubernetes. You could delete the vineyardd cluster
-on kubernetes quickly. 
+on kubernetes quickly.
 
 For example:
 

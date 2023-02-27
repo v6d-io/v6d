@@ -20,25 +20,27 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
-// DefaultVineyardSocket is the default vineyard socket path
-var DefaultVineyardSocket = "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}"
+var (
+	// DefaultVineyardSocket is the default vineyard socket path
+	DefaultVineyardSocket = "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}"
 
-// VineyarddName is the name of vineyardd
-var VineyarddName string
+	// VineyarddName is the name of vineyardd
+	VineyarddName string
 
-// VineyarddOpts holds all configuration of vineyardd Spec
-var VineyarddOpts v1alpha1.VineyarddSpec
+	// VineyarddOpts holds all configuration of vineyardd Spec
+	VineyarddOpts v1alpha1.VineyarddSpec
 
-// VineyardContainerEnvs holds all the environment variables for the vineyardd container
-var VineyardContainerEnvs []string
+	// VineyardContainerEnvs holds all the environment variables for the vineyardd container
+	VineyardContainerEnvs []string
 
-// VineyardSpillPVSpec represent the persistent volume spec of vineyard's spill mechnism
-var VineyardSpillPVSpec string
+	// VineyardSpillPVSpec represent the persistent volume spec of vineyard's spill mechnism
+	VineyardSpillPVSpec string
 
-// VineyardSpillPVCSpec represent the persistent volume claim spec of vineyard's spill mechnism
-var VineyardSpillPVCSpec string
+	// VineyardSpillPVCSpec represent the persistent volume claim spec of vineyard's spill mechnism
+	VineyardSpillPVCSpec string
+)
 
-func NewVineyardContainerOpts(cmd *cobra.Command) {
+func ApplyVineyardContainerOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.Image, "vineyard.image",
 		"", "vineyardcloudnative/vineyardd:latest", "the image of vineyardd")
 	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.ImagePullPolicy,
@@ -76,8 +78,8 @@ func NewVineyardContainerOpts(cmd *cobra.Command) {
 		"The json string of the persistent volume claim")
 }
 
-// NewServiceOpts represents the option of service
-func NewServiceOpts(cmd *cobra.Command) {
+// ApplyServiceOpts represents the option of service
+func ApplyServiceOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&VineyarddOpts.Service.Type, "vineyardd.service.type", "", "ClusterIP",
 		"the service type of vineyard service")
 	cmd.Flags().IntVarP(&VineyarddOpts.Service.Port, "vineyardd.service.port", "", 9600,
@@ -86,16 +88,16 @@ func NewServiceOpts(cmd *cobra.Command) {
 		"rpc.vineyardd.v6d.io/rpc=vineyard-rpc", "the service selector of vineyard service")
 }
 
-// NewVolumeOpts represents the option of pvc volume configuration
-func NewVolumeOpts(cmd *cobra.Command) {
+// ApplyVolumeOpts represents the option of pvc volume configuration
+func ApplyVolumeOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&VineyarddOpts.Volume.PvcName, "vineyard.volume.pvcname", "",
 		"", "Set the pvc name for storing the vineyard objects persistently, ")
 	cmd.Flags().StringVarP(&VineyarddOpts.Volume.MountPath, "vineyard.volume.mountPath", "",
 		"", "Set the mount path for the pvc")
 }
 
-// NewMetricContainerOpts represents the option of metric container configuration
-func NewMetricContainerOpts(cmd *cobra.Command) {
+// ApplyMetricContainerOpts represents the option of metric container configuration
+func ApplyMetricContainerOpts(cmd *cobra.Command) {
 	cmd.Flags().BoolVarP(&VineyarddOpts.MetricConfig.Enable, "metric.enable", "",
 		false, "enable metrics of vineyardd")
 	cmd.Flags().StringVarP(&VineyarddOpts.MetricConfig.Image, "metric.image",
@@ -105,8 +107,8 @@ func NewMetricContainerOpts(cmd *cobra.Command) {
 		"", "IfNotPresent", "the imagePullPolicy of the metric image")
 }
 
-// NewPluginImageOpts represents the option of plugin image configuration
-func NewPluginImageOpts(cmd *cobra.Command) {
+// ApplyPluginImageOpts represents the option of plugin image configuration
+func ApplyPluginImageOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.BackupImage, "plugin.backupImage", "",
 		"ghcr.io/v6d-io/v6d/backup-job", "the backup image of vineyardd")
 	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.RecoverImage, "plugin.recoverImage", "",
@@ -122,14 +124,14 @@ func NewPluginImageOpts(cmd *cobra.Command) {
 		"the distributed image of vineyard workflow")
 }
 
-// NewVineyarddNameOpts represents the option of vineyardd name
-func NewVineyarddNameOpts(cmd *cobra.Command) {
+// ApplyVineyarddNameOpts represents the option of vineyardd name
+func ApplyVineyarddNameOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&VineyarddName, "name", "", "vineyardd-sample",
 		"the name of vineyardd")
 }
 
-// NewVineyarddOpts represents the option of vineyardd configuration
-func NewVineyarddOpts(cmd *cobra.Command) {
+// ApplyVineyarddOpts represents the option of vineyardd configuration
+func ApplyVineyarddOpts(cmd *cobra.Command) {
 	// setup the vineyardd configuration
 	cmd.Flags().IntVarP(&VineyarddOpts.Replicas, "vineyard.replicas", "", 3,
 		"the number of vineyardd replicas")
@@ -140,15 +142,15 @@ func NewVineyarddOpts(cmd *cobra.Command) {
 	cmd.Flags().IntVarP(&VineyarddOpts.Etcd.Replicas, "vineyard.etcd.replicas",
 		"", 3, "the number of etcd replicas in a vineyard cluster")
 	// setup the vineyardd name
-	NewVineyarddNameOpts(cmd)
+	ApplyVineyarddNameOpts(cmd)
 	// setup the vineyard container configuration of vineyardd
-	NewVineyardContainerOpts(cmd)
+	ApplyVineyardContainerOpts(cmd)
 	// setup the metric container configuration of vineyardd
-	NewMetricContainerOpts(cmd)
+	ApplyMetricContainerOpts(cmd)
 	// setup the vineyard service configuration of vineyardd
-	NewServiceOpts(cmd)
+	ApplyServiceOpts(cmd)
 	// setup the vineyard volumes if needed
-	NewVolumeOpts(cmd)
+	ApplyVolumeOpts(cmd)
 	// setup the plugin images in a vineyard workflow
-	NewPluginImageOpts(cmd)
+	ApplyPluginImageOpts(cmd)
 }

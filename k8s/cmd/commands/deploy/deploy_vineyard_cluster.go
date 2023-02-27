@@ -16,9 +16,8 @@ limitations under the License.
 package deploy
 
 import (
-	"log"
-
 	"github.com/spf13/cobra"
+
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
@@ -27,7 +26,7 @@ var deployVineyardClusterCmd = &cobra.Command{
 	Use:   "vineyard-cluster",
 	Short: "Deploy the vineyard cluster on kubernetes",
 	Long: `Deploy the vineyardd on kubernetes. You could deploy a vineyardd cluster
-on kubernetes quickly. 
+on kubernetes quickly.
 
 For example:
 
@@ -47,7 +46,7 @@ vineyardctl deploy vineyard-cluster`,
 		// deploy vineyardd
 		NewDeployVineyarddCmd().Run(cmd, args)
 
-		log.Println("Vineyard Cluster is ready.")
+		util.InfoLogger.Println("Vineyard Cluster is ready.")
 	},
 }
 

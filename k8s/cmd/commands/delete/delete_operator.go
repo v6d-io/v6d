@@ -20,73 +20,52 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+
 	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 // deleteOperatorCmd deletes the vineyard operator on kubernetes
 var deleteOperatorCmd = &cobra.Command{
 	Use:   "operator",
 	Short: "Delete the vineyard operator on kubernetes",
-	Long: `Delete the vineyard operator on kubernetes. 
+	Long: `Delete the vineyard operator on kubernetes.
 For example:
 
 # delete the default vineyard operator in the vineyard-system namespace
 vineyardctl delete operator
 
 # delete the specific version of vineyard operator in the vineyard-system namespace
-vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete operator -v 0.12.2
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator -v 0.12.2
 
 # delete the vineyard operator from local kustomize dir in the vineyard-system namespace
-vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete operator --local ../config/default`,
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator --local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
-
-		scheme := runtime.NewScheme()
-		if err := util.AddSchemes(scheme); err != nil {
-			util.ErrLogger.Fatal("failed to add client scheme: ", err)
-		}
-
-		kubeClient, err := util.GetKubeClient(scheme)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
-		}
+		client := util.KubernetesClient()
 
 		operatorManifests, err := util.BuildKustomizeDir(util.GetKustomizeDir())
 		if err != nil {
 			util.ErrLogger.Fatal("failed to build kustomize dir", err)
 		}
 
-		if err := util.DeleteManifests(kubeClient, []byte(operatorManifests),
-			flags.GetDefaultVineyardNamespace(), scheme); err != nil {
+		if err := util.DeleteManifests(client, []byte(operatorManifests),
+			flags.GetDefaultVineyardNamespace()); err != nil {
 			util.ErrLogger.Fatal("failed to delete operator manifests: ", err)
 		}
 
-		waitOperatorDeleted(kubeClient)
+		waitOperatorDeleted(client)
 
 		util.InfoLogger.Println("Vineyard Operator is deleted.")
 	},
-}
-
-// wait for the vineyard operator to be deleted
-func waitOperatorDeleted(c client.Client) {
-	_ = wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
-		deployment := &appsv1.Deployment{}
-		err := c.Get(context.TODO(), types.NamespacedName{Name: "vineyard-controller-manager",
-			Namespace: flags.GetDefaultVineyardNamespace()}, deployment)
-		if apierrors.IsNotFound(err) {
-			return true, nil
-		}
-		return false, nil
-	})
 }
 
 func NewDeleteOperatorCmd() *cobra.Command {
@@ -94,5 +73,20 @@ func NewDeleteOperatorCmd() *cobra.Command {
 }
 
 func init() {
-	flags.NewOperatorOpts(deleteOperatorCmd)
+	flags.ApplyOperatorOpts(deleteOperatorCmd)
+}
+
+// wait for the vineyard operator to be deleted
+func waitOperatorDeleted(c client.Client) {
+	_ = wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
+		deployment := &appsv1.Deployment{}
+		err := c.Get(context.TODO(), types.NamespacedName{
+			Name:      "vineyard-controller-manager",
+			Namespace: flags.GetDefaultVineyardNamespace(),
+		}, deployment)
+		if apierrors.IsNotFound(err) {
+			return true, nil
+		}
+		return false, nil
+	})
 }
