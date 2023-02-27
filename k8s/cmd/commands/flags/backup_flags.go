@@ -20,26 +20,28 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
-// BackupName is the name of backup job
-var BackupName string
+var (
+	// BackupName is the name of backup job
+	BackupName string
 
-// BackupPVSpec is the PersistentVolumeSpec of the backup data
-var BackupPVSpec string
+	// BackupPVSpec is the PersistentVolumeSpec of the backup data
+	BackupPVSpec string
 
-// BackupPVCSpec is the PersistentVolumeClaimSpec of the backup data
-var BackupPVCSpec string
+	// BackupPVCSpec is the PersistentVolumeClaimSpec of the backup data
+	BackupPVCSpec string
 
-// BackupOpts holds all configuration of backup Spec
-var BackupOpts v1alpha1.BackupSpec
+	// BackupOpts holds all configuration of backup Spec
+	BackupOpts v1alpha1.BackupSpec
 
-// BackupPVandPVC is the string of PersistentVolume data and PersistentVolumeClaim data
-var BackupPVandPVC string
+	// BackupPVandPVC is the string of PersistentVolume data and PersistentVolumeClaim data
+	BackupPVandPVC string
+)
 
-func NewBackupNameOpts(cmd *cobra.Command) {
+func ApplyBackupNameOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&BackupName, "backup-name", "", "vineyard-backup", "the name of backup job")
 }
 
-func NewBackupOpts(cmd *cobra.Command) {
+func ApplyBackupOpts(cmd *cobra.Command) {
 	// the following flags are used to build the backup configurations
 	cmd.Flags().StringVarP(&BackupOpts.VineyarddName, "vineyardd-name", "", "", "the name of vineyardd")
 	cmd.Flags().StringVarP(&BackupOpts.VineyarddNamespace, "vineyardd-namespace", "", "", "the namespace of vineyardd")
@@ -50,5 +52,5 @@ func NewBackupOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&BackupPVCSpec, "pvc-spec", "", "", "the PersistentVolumeClaimSpec of the backup data")
 
 	// the following flags are used to build the backup job
-	NewBackupNameOpts(cmd)
+	ApplyBackupNameOpts(cmd)
 }

@@ -25,10 +25,10 @@ var scheduleCmd = &cobra.Command{
 	Long: `schedule return a nodeName for the workload to co-allocate with vineyard cluster.
 For example:
 
-# Dryschedule a workload to a vineyard cluster
+# Schedule a workload to a vineyard cluster
 # it will return a nodeName which is the node that 
 # the workload should be scheduled to
-vineyarctl dryschedule --workload=workloadName`,
+vineyardctl schedule --workload=workloadName`,
 }
 
 func NewScheduleCmd() *cobra.Command {

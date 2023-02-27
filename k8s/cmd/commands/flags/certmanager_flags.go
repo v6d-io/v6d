@@ -17,12 +17,13 @@ package flags
 
 import "github.com/spf13/cobra"
 
-// the default cert-manager manifest url
-var DefaultCertManagerManifestURL = "https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml"
+const (
+	defaultCertManagerVersion = "1.9.1"
+)
 
 // CertManagerVersion is the version of cert-manager
 var CertManagerVersion string
 
-func NewCertManagerOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&CertManagerVersion, "version", "v", "1.9.1", "the version of cert-manager")
+func ApplyCertManagerOpts(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&CertManagerVersion, "version", "v", defaultCertManagerVersion, "the version of cert-manager")
 }

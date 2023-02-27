@@ -20,13 +20,15 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // createRecoverCmd creates the recover job of vineyard cluster on kubernetes
@@ -45,26 +47,30 @@ vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
-
-		kubeClient, err := util.GetKubeClient(nil)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
-		}
+		client := util.KubernetesClient()
 
 		recover, err := buildRecoverJob()
 		if err != nil {
 			util.ErrLogger.Fatal("failed to build recover job: ", err)
 		}
 
-		if err := kubeClient.Create(context.TODO(), recover); err != nil {
+		if err := client.Create(context.TODO(), recover); err != nil {
 			util.ErrLogger.Fatal("failed to create recover job: ", err)
 		}
 
-		if err := waitRecoverJobDone(kubeClient, recover); err != nil {
+		if err := waitRecoverJobDone(client, recover); err != nil {
 			util.ErrLogger.Fatal("failed to wait backup job done: ", err)
 		}
 		util.InfoLogger.Println("Backup Job is ready.")
 	},
+}
+
+func NewCreateRecoverCmd() *cobra.Command {
+	return createRecoverCmd
+}
+
+func init() {
+	flags.ApplyRecoverOpts(createRecoverCmd)
 }
 
 func buildRecoverJob() (*v1alpha1.Recover, error) {
@@ -94,12 +100,4 @@ func waitRecoverJobDone(c client.Client, recover *v1alpha1.Recover) error {
 		}
 		return true, nil
 	})
-}
-
-func NewCreateRecoverCmd() *cobra.Command {
-	return createRecoverCmd
-}
-
-func init() {
-	flags.NewRecoverOpts(createRecoverCmd)
 }

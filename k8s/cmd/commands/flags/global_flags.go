@@ -21,8 +21,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// GetDefaultKubeconfig return the default kubeconfig path
-func GetDefaultKubeconfig() string {
+// defaultKubeConfig return the default kubeconfig path
+func defaultKubeConfig() string {
 	kubeconfig := os.Getenv("KUBECONFIG")
 	if kubeconfig == "" {
 		kubeconfig = os.Getenv("HOME") + "/.kube/config"
@@ -30,24 +30,24 @@ func GetDefaultKubeconfig() string {
 	return kubeconfig
 }
 
-var VineyardSystemNamespace = "vineyard-system"
+var defaultNamespace = "vineyard-system"
 
 // GetDefaultVineyardNamespace return the default vineyard namespace
 func GetDefaultVineyardNamespace() string {
 	// we don't use the default namespace for vineyard
 	if Namespace == "default" {
-		return VineyardSystemNamespace
+		return defaultNamespace
 	}
 	return Namespace
 }
 
 // kubeconfig path
-var Kubeconfig string
+var KubeConfig string
 
 // Namespace for operation
 var Namespace string
 
-func NewGlobalFlags(cmd *cobra.Command) {
-	cmd.PersistentFlags().StringVarP(&Kubeconfig, "kubeconfig", "", GetDefaultKubeconfig(), "kubeconfig path for the kubernetes cluster")
-	cmd.PersistentFlags().StringVarP(&Namespace, "namespace", "n", VineyardSystemNamespace, "the namespace for operation")
+func ApplyGlobalFlags(cmd *cobra.Command) {
+	cmd.PersistentFlags().StringVarP(&KubeConfig, "kubeconfig", "", defaultKubeConfig(), "kubeconfig path for the kubernetes cluster")
+	cmd.PersistentFlags().StringVarP(&Namespace, "namespace", "n", defaultNamespace, "the namespace for operation")
 }

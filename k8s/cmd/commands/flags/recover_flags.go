@@ -20,7 +20,7 @@ import "github.com/spf13/cobra"
 // RecoverName is the name of recover job
 var RecoverName string
 
-func NewRecoverOpts(cmd *cobra.Command) {
+func ApplyRecoverOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&BackupName, "backup-name", "", "vineyard-backup", "the name of backup job")
 	cmd.Flags().StringVarP(&RecoverName, "recover-name", "", "vineyard-recover", "the name of recover job")
 }

@@ -20,11 +20,13 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // deleteVineyardDeploymentCmd delete the vineyard deployment without vineyard operator
@@ -35,26 +37,30 @@ var deleteVineyardDeploymentCmd = &cobra.Command{
 For example:
 
 # delete the default vineyard deployment in the vineyard-system namespace
-vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete vineyard-deployment
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment
 
 # delete the vineyard deployment with specific name in the vineyard-system namespace
-vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete vineyard-deployment --name vineyardd-0`,
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment --name vineyardd-0`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
+		client := util.KubernetesClient()
 
-		kubeclient, err := util.GetKubeClient(nil)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kube client: ", err)
-		}
-
-		if err := deleteVineyarddFromTemplate(kubeclient); err != nil {
+		if err := deleteVineyarddFromTemplate(client); err != nil {
 			util.ErrLogger.Fatal("failed to delete vineyardd resources from template: ", err)
 		}
 
 		util.InfoLogger.Println("vineyard cluster deleted successfully")
 	},
+}
+
+func NewDeleteVineyardDeploymentCmd() *cobra.Command {
+	return deleteVineyardDeploymentCmd
+}
+
+func init() {
+	flags.ApplyVineyarddNameOpts(deleteVineyardDeploymentCmd)
 }
 
 // deleteVineyarddFromTemplate creates kubernetes resources from template fir
@@ -78,12 +84,4 @@ func deleteVineyarddFromTemplate(c client.Client) error {
 		}
 	}
 	return nil
-}
-
-func NewDeleteVineyardDeploymentCmd() *cobra.Command {
-	return deleteVineyardDeploymentCmd
-}
-
-func init() {
-	flags.NewVineyarddNameOpts(deleteVineyardDeploymentCmd)
 }

@@ -16,26 +16,16 @@ limitations under the License.
 package commands
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
+
 	"github.com/v6d-io/v6d/k8s/cmd/commands/create"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/manager"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/schedule"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/start"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
-
-// GetDefaultKubeconfig return the default kubeconfig path
-func GetDefaultKubeconfig() string {
-	kubeconfig := os.Getenv("KUBECONFIG")
-	if kubeconfig == "" {
-		kubeconfig = os.Getenv("HOME") + "/.kube/config"
-	}
-	return kubeconfig
-}
 
 var VineyardSystemNamespace = "vineyard-system"
 
@@ -57,9 +47,9 @@ var Namespace string
 var rootCmd = &cobra.Command{
 	Use:   "vineyardctl [command]",
 	Short: "vineyardctl is the command-line tool for working with the Vineyard Operator",
-	Long: `vineyardctl is the command-line tool for working with the Vineyard Operator. 
-It supports creating, deleting and checking status of Vineyard Operator. It also 
-supports managing the vineyard relevant components such as vineyardd and pluggable 
+	Long: `vineyardctl is the command-line tool for working with the Vineyard Operator.
+It supports creating, deleting and checking status of Vineyard Operator. It also
+supports managing the vineyard relevant components such as vineyardd and pluggable
 drivers`,
 }
 
@@ -72,12 +62,13 @@ func Execute() {
 }
 
 func init() {
-	flags.NewGlobalFlags(rootCmd)
+	flags.ApplyGlobalFlags(rootCmd)
+	// disable completion command
+	rootCmd.CompletionOptions.DisableDefaultCmd = true
+
 	rootCmd.AddCommand(deploy.NewDeployCmd())
 	rootCmd.AddCommand(create.NewCreateCmd())
 	rootCmd.AddCommand(delete.NewDeleteCmd())
-	rootCmd.AddCommand(start.NewStartCmd())
+	rootCmd.AddCommand(manager.NewManagerCmd())
 	rootCmd.AddCommand(schedule.NewScheduleCmd())
-	//disable completion command
-	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }

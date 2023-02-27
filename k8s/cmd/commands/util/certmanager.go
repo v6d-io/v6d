@@ -16,19 +16,16 @@ limitations under the License.
 package util
 
 import (
+	"fmt"
 	"io"
 	"net/http"
-	"strings"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 )
 
 // GetCertManagerURL get the url of cert-manager
 func GetCertManagerURL() string {
-	if flags.CertManagerVersion != "1.9.1" {
-		return strings.Replace(flags.DefaultCertManagerManifestURL, "v1.9.1", "v"+flags.CertManagerVersion, 1)
-	}
-	return flags.DefaultCertManagerManifestURL
+	return fmt.Sprintf("https://github.com/cert-manager/cert-manager/releases/download/v%s/cert-manager.yaml", flags.CertManagerVersion)
 }
 
 // GetCertManagerManifests get the manifests from the url

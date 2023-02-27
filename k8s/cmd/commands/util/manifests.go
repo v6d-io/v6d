@@ -23,11 +23,10 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func parseManifestsToObjects(manifests []byte, scheme *runtime.Scheme) ([]*unstructured.Unstructured, error) {
+func parseManifestsToObjects(manifests []byte) ([]*unstructured.Unstructured, error) {
 	// parse the kubernetes yaml file split by "---"
 	resources := bytes.Split(manifests, []byte("---"))
 	objects := []*unstructured.Unstructured{}
@@ -37,8 +36,8 @@ func parseManifestsToObjects(manifests []byte, scheme *runtime.Scheme) ([]*unstr
 			continue
 		}
 
-		decode := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode
-		obj, _, err := decode(f, nil, nil)
+		decoder := Deserializer()
+		obj, _, err := decoder.Decode(f, nil, nil)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode resource: %v", err)
 		}
@@ -55,8 +54,8 @@ func parseManifestsToObjects(manifests []byte, scheme *runtime.Scheme) ([]*unstr
 }
 
 // ApplyManifests create kubernetes resouces from manifests
-func ApplyManifests(c client.Client, manifests []byte, namespace string, scheme *runtime.Scheme) error {
-	objs, err := parseManifestsToObjects(manifests, scheme)
+func ApplyManifests(c client.Client, manifests []byte, namespace string) error {
+	objs, err := parseManifestsToObjects(manifests)
 	if err != nil {
 		return err
 	}
@@ -70,7 +69,7 @@ func ApplyManifests(c client.Client, manifests []byte, namespace string, scheme 
 		current := &unstructured.Unstructured{}
 		current.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
 		if err = c.Get(context.TODO(), key, current); err != nil {
-			// check whether the unstructed object exist
+			// check whether the un-structural object exist
 			if apierrors.IsNotFound(err) {
 				if err := c.Create(context.TODO(), obj); err != nil {
 					return fmt.Errorf("failed to create resource: %v", err)
@@ -82,8 +81,8 @@ func ApplyManifests(c client.Client, manifests []byte, namespace string, scheme 
 }
 
 // DeleteManifests delete kubernetes resources from manifests
-func DeleteManifests(c client.Client, manifests []byte, namespace string, scheme *runtime.Scheme) error {
-	objs, err := parseManifestsToObjects(manifests, scheme)
+func DeleteManifests(c client.Client, manifests []byte, namespace string) error {
+	objs, err := parseManifestsToObjects(manifests)
 	if err != nil {
 		return err
 	}

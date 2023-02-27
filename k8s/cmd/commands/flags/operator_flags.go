@@ -17,13 +17,15 @@ package flags
 
 import "github.com/spf13/cobra"
 
-// the version of operator
-var OperatorVersion string
+var (
+	// the version of operator
+	OperatorVersion string
 
-// the local path of operator kustomization directory
-var KustomzieDir string
+	// the local path of operator kustomization directory
+	KustomizeDir string
+)
 
-func NewOperatorOpts(cmd *cobra.Command) {
+func ApplyOperatorOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&OperatorVersion, "version", "v", "dev", "the version of kustomize dir from github repo")
-	cmd.Flags().StringVarP(&KustomzieDir, "local", "l", "", "the local kustomize dir")
+	cmd.Flags().StringVarP(&KustomizeDir, "local", "l", "", "the local kustomize dir")
 }

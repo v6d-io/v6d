@@ -19,7 +19,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// createCmd creates serveral vineyard jobs on kubernetes
+// createCmd creates several vineyard jobs on kubernetes
 var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Create the vineyard jobs on kubernetes",
@@ -27,10 +27,10 @@ var createCmd = &cobra.Command{
 For example:
 
 # create the backup job on kubernetes
-vineyarctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system
+vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system
 
 # create the recover job on kubernetes
-vineyarctl create recover --backup-name vineyardd-sample -n vineyard-system`,
+vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
 }
 
 func NewCreateCmd() *cobra.Command {

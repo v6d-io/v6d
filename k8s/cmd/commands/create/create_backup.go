@@ -21,20 +21,21 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/wait"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // createBackupCmd creates the backup job of vineyard cluster on kubernetes
 var createBackupCmd = &cobra.Command{
 	Use:   "backup",
 	Short: "Backup the current vineyard cluster on kubernetes",
-	Long: `Backup the current vineyard cluster on kubernetes. You could backup all objects of 
+	Long: `Backup the current vineyard cluster on kubernetes. You could backup all objects of
 the current vineyard cluster quickly. For persistent storage, you could specify the pv spec and
 pv spec.
 
@@ -101,32 +102,36 @@ vineyardctl create backup \
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
-
-		kubeClient, err := util.GetKubeClient(nil)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
-		}
+		client := util.KubernetesClient()
 
 		backup, err := buildBackupJob()
 		if err != nil {
 			util.ErrLogger.Fatal("failed to build backup job: ", err)
 		}
 
-		if err := kubeClient.Create(context.TODO(), backup); err != nil {
+		if err := client.Create(context.TODO(), backup); err != nil {
 			util.ErrLogger.Fatal("failed to create backup job: ", err)
 		}
 
-		if err := waitBackupJobDone(kubeClient, backup); err != nil {
+		if err := waitBackupJobDone(client, backup); err != nil {
 			util.ErrLogger.Fatal("failed to wait backup job done: ", err)
 		}
 		util.InfoLogger.Println("Backup Job is ready.")
 	},
 }
 
+func NewCreateBackupCmd() *cobra.Command {
+	return createBackupCmd
+}
+
+func init() {
+	flags.ApplyBackupOpts(createBackupCmd)
+}
+
 func buildBackupJob() (*v1alpha1.Backup, error) {
 	backupPVandPVC := flags.BackupPVandPVC
-	//backupPV := flags.BackupPVSpec
-	//backupPVC := flags.BackupPVCSpec
+	// backupPV := flags.BackupPVSpec
+	// backupPVC := flags.BackupPVCSpec
 	opts := &flags.BackupOpts
 
 	if backupPVandPVC != "" {
@@ -175,12 +180,4 @@ func waitBackupJobDone(c client.Client, backup *v1alpha1.Backup) error {
 		}
 		return true, nil
 	})
-}
-
-func NewCreateBackupCmd() *cobra.Command {
-	return createBackupCmd
-}
-
-func init() {
-	flags.NewBackupOpts(createBackupCmd)
 }

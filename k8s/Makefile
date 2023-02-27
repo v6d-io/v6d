@@ -48,7 +48,7 @@ GOLANGCI_LINT_VERSION ?= v1.49.0
 HELMIFY_VERSION ?= v0.3.18
 E2E_VERSION ?= 2631e76926604c4e30ca170bed916804c86980b6
 
-all: manager
+all: vineyardctl
 
 #check ci locally
 check: lint e2e-test
@@ -119,16 +119,17 @@ unsample:
 
 # Go modules
 modules	= ./apis/... \
+		  ./cmd/... \
 		  ./controllers/... \
 		  ./pkg/...
 
 # Run golangci-lint
-golint: 
+golint:
     ifeq (${GOLINT},)
 		@echo "golangci-lint not exist, installing it..."
 		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
     endif
-	${GOBIN}/golangci-lint run ./...
+	${GOBIN}/golangci-lint run $(modules)
 .PHONY: golint
 
 # Install helmify if not exist
@@ -154,7 +155,6 @@ lint: golint
 
 # Run go fmt against code
 gofmt:
-	go fmt cmd/main.go
 	go fmt $(modules)
 .PHONY: gofmt
 
@@ -163,7 +163,6 @@ fmt: gofmt
 
 # Run go vet against code
 vet:
-	go vet cmd/main.go
 	go vet $(modules)
 .PHONY: vet
 

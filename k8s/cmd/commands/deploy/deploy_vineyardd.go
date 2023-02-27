@@ -21,13 +21,15 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 // deployVineyarddCmd deploys the vineyardd on kubernetes
@@ -40,25 +42,21 @@ from stdin or file.
 For example:
 
 # deploy the default vineyard on kubernetes
-vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
 
 # deploy the vineyardd with customized image
-vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd --image vineyardd:v0.12.2`,
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd --image vineyardd:v0.12.2`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := cobra.NoArgs(cmd, args); err != nil {
 			util.ErrLogger.Fatal(err)
 		}
-
-		kubeClient, err := util.GetKubeClient(nil)
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get kube client: ", err)
-		}
+		client := util.KubernetesClient()
 
 		vineyardd, err := BuildVineyardManifest()
 		if err != nil {
 			util.ErrLogger.Fatal("failed to build the vineyardd: ", err)
 		}
-		if err := waitVineyardReady(kubeClient, vineyardd); err != nil {
+		if err := waitVineyardReady(client, vineyardd); err != nil {
 			util.ErrLogger.Fatal("failed to wait vineyardd ready: ", err)
 		}
 
@@ -121,5 +119,5 @@ func NewDeployVineyarddCmd() *cobra.Command {
 }
 
 func init() {
-	flags.NewVineyarddOpts(deployVineyarddCmd)
+	flags.ApplyVineyarddOpts(deployVineyarddCmd)
 }
