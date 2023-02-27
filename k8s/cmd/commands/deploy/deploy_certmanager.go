@@ -17,13 +17,11 @@ package deploy
 
 import (
 	"context"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	certmanagerapiv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -48,9 +46,7 @@ vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager
 # install the specific version of cert-manager
 vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
 		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
@@ -58,7 +54,7 @@ vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager -v 1.11.0`,
 			util.ErrLogger.Fatal("failed to get cert-manager manifests: ", err)
 		}
 
-		if err := util.ApplyManifests(client, []byte(certManagerManifests),
+		if err := util.ApplyManifests(client, certManagerManifests,
 			""); err != nil {
 			util.ErrLogger.Fatal("failed to apply cert-manager manifests: ", err)
 		}
@@ -81,7 +77,7 @@ func init() {
 
 // wait cert-manager to be ready
 func waitCertManagerReady(c client.Client) error {
-	return wait.PollImmediate(10*time.Second, 300*time.Second, func() (bool, error) {
+	return util.Wait(func() (bool, error) {
 		// create a dummy selfsigned issuer
 		dummyIssue := &certmanagerapiv1.Issuer{
 			ObjectMeta: metav1.ObjectMeta{

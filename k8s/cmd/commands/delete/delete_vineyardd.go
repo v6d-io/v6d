@@ -16,17 +16,10 @@ limitations under the License.
 package delete
 
 import (
-	"context"
-	"time"
-
 	"github.com/spf13/cobra"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	vineyardv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
@@ -36,7 +29,7 @@ import (
 var deleteVineyarddCmd = &cobra.Command{
 	Use:   "vineyardd",
 	Short: "Delete the vineyardd cluster on kubernetes",
-	Long: `Delete the vineyardd cluster on kubernetes. 
+	Long: `Delete the vineyardd cluster on kubernetes.
 For example:
 
 # delete the default vineyardd cluster(vineyardd-sample) in the default namespace
@@ -45,42 +38,18 @@ vineyardctl delete vineyardd
 # delete the specific vineyardd cluster in the vineyard-system namespace
 vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
 		vineyardd := &vineyardv1alpha1.Vineyardd{}
-		if err := client.Get(context.Background(), types.NamespacedName{
+		if err := util.Delete(client, types.NamespacedName{
 			Name:      flags.VineyarddName,
 			Namespace: flags.GetDefaultVineyardNamespace(),
-		},
-			vineyardd); err != nil && !apierrors.IsNotFound(err) {
-			util.ErrLogger.Fatal("failed to get vineyardd: ", err)
+		}, vineyardd); err != nil {
+			util.ErrLogger.Fatalf("failed to delete vineyardd: %+v", err)
 		}
-
-		if err := client.Delete(context.Background(), vineyardd); err != nil {
-			util.ErrLogger.Fatal("failed to delete vineyardd: ", err)
-		}
-
-		waitVineyardDeleted(client, vineyardd)
-
 		util.InfoLogger.Println("Vineyardd is deleted.")
 	},
-}
-
-// wait for the vineyardd to be deleted
-func waitVineyardDeleted(c client.Client, vineyardd *v1alpha1.Vineyardd) {
-	_ = wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
-		err := c.Get(context.TODO(), types.NamespacedName{
-			Name:      vineyardd.Name,
-			Namespace: vineyardd.Namespace,
-		}, vineyardd)
-		if apierrors.IsNotFound(err) {
-			return true, nil
-		}
-		return false, nil
-	})
 }
 
 func NewDeleteVineyarddCmd() *cobra.Command {

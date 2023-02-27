@@ -18,17 +18,20 @@ package operation
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 
-	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
-	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/goccy/go-json"
+
+	"github.com/pkg/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 )
 
 // nolint: lll
@@ -41,7 +44,11 @@ type AssemblyInjector struct {
 }
 
 // LabelRequiredPods labels the pods with the given label
-func (r *AssemblyInjector) LabelRequiredPods(ctx context.Context, pod *corev1.Pod, label string) error {
+func (r *AssemblyInjector) LabelRequiredPods(
+	ctx context.Context,
+	pod *corev1.Pod,
+	label string,
+) error {
 	if value, ok := pod.Labels[label]; ok && strings.ToLower(value) == "true" {
 		if requiredJob, ok := pod.Annotations[annotations.VineyardJobRequired]; ok {
 			jobs := strings.Split(requiredJob, ".")
@@ -54,14 +61,14 @@ func (r *AssemblyInjector) LabelRequiredPods(ctx context.Context, pod *corev1.Po
 					},
 				}
 				if err := r.Client.List(ctx, podList, opts...); err != nil {
-					return fmt.Errorf("Failed to list pods: %v", err)
+					return errors.Wrap(err, "Failed to list pods")
 				}
 				for i := range podList.Items {
 					// label the required pods that need to be injected with the assembly container
 					labels := &podList.Items[i].Labels
 					(*labels)["need-injected-"+label[:strings.Index(label, ".")]] = "true"
 					if err := r.Client.Update(ctx, &podList.Items[i], &client.UpdateOptions{}); err != nil {
-						return fmt.Errorf("Failed to update pod: %v", err)
+						return errors.Wrap(err, "Failed to update pod")
 					}
 				}
 			}
@@ -83,7 +90,10 @@ func (r *AssemblyInjector) Handle(ctx context.Context, req admission.Request) ad
 	// check all operation labels
 	for _, l := range operationLabels {
 		if err := r.LabelRequiredPods(ctx, pod, l); err != nil {
-			return admission.Errored(http.StatusBadRequest, fmt.Errorf("assembly label error: %v", err))
+			return admission.Errored(
+				http.StatusBadRequest,
+				errors.Wrap(err, "assembly label error"),
+			)
 		}
 	}
 

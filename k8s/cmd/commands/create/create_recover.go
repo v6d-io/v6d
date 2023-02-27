@@ -16,14 +16,9 @@ limitations under the License.
 package create
 
 import (
-	"context"
-	"time"
-
 	"github.com/spf13/cobra"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/wait"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -44,22 +39,18 @@ For example:
 # create a recover job for a backup job in the same namespace
 vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
 		recover, err := buildRecoverJob()
 		if err != nil {
-			util.ErrLogger.Fatal("failed to build recover job: ", err)
+			util.ErrLogger.Fatalf("failed to build recover job: %+v", err)
 		}
 
-		if err := client.Create(context.TODO(), recover); err != nil {
-			util.ErrLogger.Fatal("failed to create recover job: ", err)
-		}
-
-		if err := waitRecoverJobDone(client, recover); err != nil {
-			util.ErrLogger.Fatal("failed to wait backup job done: ", err)
+		if err := util.Create(client, recover, func(*v1alpha1.Recover) bool {
+			return recover.Status.State != k8s.SucceedState
+		}); err != nil {
+			util.ErrLogger.Fatalf("failed to create and wait recover job: %+v", err)
 		}
 		util.InfoLogger.Println("Backup Job is ready.")
 	},
@@ -86,18 +77,4 @@ func buildRecoverJob() (*v1alpha1.Recover, error) {
 		},
 	}
 	return recover, nil
-}
-
-// wait for the recover job to be done
-func waitRecoverJobDone(c client.Client, recover *v1alpha1.Recover) error {
-	return wait.PollImmediate(1*time.Second, 600*time.Second, func() (bool, error) {
-		err := c.Get(context.TODO(), client.ObjectKey{
-			Name:      recover.Name,
-			Namespace: recover.Namespace,
-		}, recover)
-		if err != nil || recover.Status.State != k8s.SucceedState {
-			return false, nil
-		}
-		return true, nil
-	})
 }

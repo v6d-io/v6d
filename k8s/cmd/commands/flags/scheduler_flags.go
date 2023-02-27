@@ -27,6 +27,8 @@ var (
 
 func ApplySchedulerOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&Resource, "resource", "", "", "the json string of kubernetes workload")
-	cmd.Flags().StringVarP(&VineyarddName, "vineyardd-name", "", "vineyardd-sample", "the namespace of vineyard cluster")
-	cmd.Flags().StringVarP(&VineyarddNamespace, "vineyardd-namespace", "", "vineyard-system", "the namespace of vineyard cluster")
+	cmd.Flags().
+		StringVarP(&VineyarddName, "vineyardd-name", "", "vineyardd-sample", "the namespace of vineyard cluster")
+	cmd.Flags().
+		StringVarP(&VineyarddNamespace, "vineyardd-namespace", "", "vineyard-system", "the namespace of vineyard cluster")
 }

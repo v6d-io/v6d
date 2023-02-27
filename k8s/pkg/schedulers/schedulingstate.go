@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/pkg/errors"
+
 	v1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -35,7 +37,7 @@ func (ss *SchedulerState) Append(job string, pod string, nodeName string) error 
 	slog.Info(fmt.Sprintf("assign job %v pod %v to node %v", job, pod, nodeName))
 	if s, ok := ss.state[job]; ok {
 		if _, ok := s[pod]; ok {
-			return fmt.Errorf("The pod has already been scheduled")
+			return errors.Errorf("The pod has already been scheduled")
 		}
 		s[pod] = nodeName
 		return nil
@@ -51,20 +53,23 @@ func (ss *SchedulerState) Append(job string, pod string, nodeName string) error 
 // then create the relavant operation CRD.
 // 3. Use Best-effort scheduling strategy to schedule the job.
 func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64, rank int64,
-	workernodes []string, requires []string, nodeName string, pod *v1.Pod) (int64, error) {
+	workernodes []string, requires []string, nodeName string, pod *v1.Pod,
+) (int64, error) {
 	// if requires no vineyard object, the job can be deployed in any nodes.
 	// use round-robin scheduling here
 	num := len(workernodes)
 	if len(requires) == 0 {
 		if workernodes[int(rank)%num] == nodeName {
-			slog.Info(fmt.Sprintf("nodeName: %v, workernodes: %v, rank: %v", nodeName, workernodes, rank))
+			slog.Info(
+				fmt.Sprintf("nodeName: %v, workernodes: %v, rank: %v", nodeName, workernodes, rank),
+			)
 			return 100, nil
 		}
 		return 1, nil
 	}
 	// if no replica, raise
 	if replica == 0 {
-		return 0, fmt.Errorf("No replica information in the job spec")
+		return 0, errors.Errorf("No replica information in the job spec")
 	}
 
 	// accumulates all local required objects
@@ -82,7 +87,7 @@ func (ss *SchedulerState) Compute(ctx context.Context, job string, replica int64
 		return 0, err
 	}
 	if len(localObjects) == 0 && len(globalObjects) != 0 {
-		return 0, fmt.Errorf("No local chunks found")
+		return 0, errors.Errorf("No local chunks found")
 	}
 
 	ownerReferences := pod.GetOwnerReferences()

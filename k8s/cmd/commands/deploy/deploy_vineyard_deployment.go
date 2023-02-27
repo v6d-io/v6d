@@ -17,17 +17,15 @@ limitations under the License.
 package deploy
 
 import (
-	"context"
 	"fmt"
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
@@ -68,9 +66,7 @@ vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyard-d
 # deploy the vineyard deployment with customized image
 vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyard-deployment --image vineyardd:v0.12.2`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
 		if err := applyVineyarddFromTemplate(client); err != nil {
@@ -89,7 +85,8 @@ var label string
 
 func init() {
 	flags.ApplyVineyarddOpts(deployVineyardDeploymentCmd)
-	deployVineyardDeploymentCmd.Flags().StringVarP(&label, "label", "l", "", "label of the vineyardd")
+	deployVineyardDeploymentCmd.Flags().
+		StringVarP(&label, "label", "l", "", "label of the vineyardd")
 }
 
 func getStorage(q resource.Quantity) string {
@@ -115,9 +112,12 @@ func parseLabel(l string) error {
 	for i := range str {
 		kv := strings.Split(str[i], "=")
 		if len(kv) != 2 {
-			return fmt.Errorf("invalid label: %s", str[i])
+			return errors.Errorf("invalid label: %s", str[i])
 		}
-		VineyarddLabelSelector = append(VineyarddLabelSelector, k8s.ServiceLabelSelector{Key: kv[0], Value: kv[1]})
+		VineyarddLabelSelector = append(
+			VineyarddLabelSelector,
+			k8s.ServiceLabelSelector{Key: kv[0], Value: kv[1]},
+		)
 	}
 
 	return nil
@@ -130,24 +130,24 @@ func getEtcdConfig() k8s.EtcdConfig {
 	return EtcdConfig
 }
 
-// GetObjsFromTemplate gets kubernetes resources from template for vineyardd
-func GetObjsFromTemplate() ([]*unstructured.Unstructured, error) {
-	objs := []*unstructured.Unstructured{}
+// GetObjectsFromTemplate gets kubernetes resources from template for vineyardd
+func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
+	objects := []*unstructured.Unstructured{}
 	t := templates.NewEmbedTemplate()
 	vineyardManifests, err := t.GetFilesRecursive("vineyardd")
 	if err != nil {
-		return objs, fmt.Errorf("failed to get vineyardd manifests: %v", err)
+		return objects, errors.Wrap(err, "failed to get vineyardd manifests")
 	}
 
 	etcdManifests, err := t.GetFilesRecursive("etcd")
 	if err != nil {
-		return objs, fmt.Errorf("failed to get etcd manifests: %v", err)
+		return objects, errors.Wrap(err, "failed to get etcd manifests")
 	}
 
 	if label != "" {
 		err = parseLabel(label)
 		if err != nil {
-			return objs, fmt.Errorf("failed to parse label: %v", err)
+			return objects, errors.Wrap(err, "failed to parse label")
 		}
 	}
 
@@ -170,7 +170,7 @@ func GetObjsFromTemplate() ([]*unstructured.Unstructured, error) {
 	// build vineyardd
 	vineyardd, err := BuildVineyardManifest()
 	if err != nil {
-		return objs, fmt.Errorf("failed to build vineyardd: %v", err)
+		return objects, errors.Wrap(err, "failed to build vineyardd")
 	}
 
 	// process the vineyard socket
@@ -181,13 +181,13 @@ func GetObjsFromTemplate() ([]*unstructured.Unstructured, error) {
 		}
 		manifest, err := t.ReadFile(f)
 		if err != nil {
-			return objs, fmt.Errorf("failed to read manifest %s: %v", f, err)
+			return objects, errors.Wrapf(err, "failed to read manifest %s", f)
 		}
 
 		obj := &unstructured.Unstructured{}
 		_, _ = swckkube.LoadTemplate(string(manifest), vineyardd, tmplFunc, obj)
 		if obj.GetKind() != "" {
-			objs = append(objs, obj)
+			objects = append(objects, obj)
 		}
 	}
 
@@ -196,7 +196,10 @@ func GetObjsFromTemplate() ([]*unstructured.Unstructured, error) {
 	etcdEndpoints := make([]string, 0, vineyardd.Spec.Etcd.Replicas)
 	replicas := vineyardd.Spec.Etcd.Replicas
 	for i := 0; i < replicas; i++ {
-		etcdEndpoints = append(etcdEndpoints, fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)))
+		etcdEndpoints = append(
+			etcdEndpoints,
+			fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)),
+		)
 	}
 	EtcdConfig.Endpoints = strings.Join(etcdEndpoints, ",")
 	// the etcd is built in the vineyardd image
@@ -206,37 +209,28 @@ func GetObjsFromTemplate() ([]*unstructured.Unstructured, error) {
 		for _, ef := range etcdManifests {
 			manifest, err := t.ReadFile(ef)
 			if err != nil {
-				return objs, fmt.Errorf("failed to read manifest %s: %v", ef, err)
+				return objects, errors.Wrapf(err, "failed to read manifest %s", ef)
 			}
 			obj := &unstructured.Unstructured{}
 			_, _ = swckkube.LoadTemplate(string(manifest), vineyardd, tmplFunc, obj)
 			if obj.GetKind() != "" {
-				objs = append(objs, obj)
+				objects = append(objects, obj)
 			}
 		}
 	}
-	return objs, nil
+	return objects, nil
 }
 
 // applyVineyarddFromTemplate creates kubernetes resources from template fir
 func applyVineyarddFromTemplate(c client.Client) error {
-	objs, err := GetObjsFromTemplate()
+	objects, err := GetObjectsFromTemplate()
 	if err != nil {
-		return fmt.Errorf("failed to get vineyardd resources from template: %v", err)
+		return errors.Wrap(err, "failed to get vineyardd resources from template")
 	}
 
-	for _, o := range objs {
-		if err := c.Get(context.Background(), types.NamespacedName{
-			Name:      o.GetName(),
-			Namespace: o.GetNamespace(),
-		}, o); err != nil {
-			if apierrors.IsNotFound(err) {
-				if err := c.Create(context.TODO(), o); err != nil {
-					return fmt.Errorf("failed to create object %s: %v", o.GetName(), err)
-				}
-			} else {
-				return fmt.Errorf("failed to get object %s: %v", o.GetName(), err)
-			}
+	for _, o := range objects {
+		if err := util.CreateIfNotExists(c, o); err != nil {
+			return errors.Wrapf(err, "failed to create object %s", o.GetName())
 		}
 	}
 	return nil

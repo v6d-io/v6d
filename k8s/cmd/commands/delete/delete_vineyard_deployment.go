@@ -16,12 +16,9 @@ limitations under the License.
 package delete
 
 import (
-	"context"
-	"fmt"
-
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
@@ -42,13 +39,11 @@ vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-d
 # delete the vineyard deployment with specific name in the vineyard-system namespace
 vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment --name vineyardd-0`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
 		if err := deleteVineyarddFromTemplate(client); err != nil {
-			util.ErrLogger.Fatal("failed to delete vineyardd resources from template: ", err)
+			util.ErrLogger.Fatalf("failed to delete vineyardd resources from template: %+v", err)
 		}
 
 		util.InfoLogger.Println("vineyard cluster deleted successfully")
@@ -65,22 +60,14 @@ func init() {
 
 // deleteVineyarddFromTemplate creates kubernetes resources from template fir
 func deleteVineyarddFromTemplate(c client.Client) error {
-	objs, err := deploy.GetObjsFromTemplate()
+	objects, err := deploy.GetObjectsFromTemplate()
 	if err != nil {
-		return fmt.Errorf("failed to get vineyardd resources from template: %v", err)
+		return errors.Wrap(err, "failed to get vineyardd resources from template")
 	}
 
-	for _, o := range objs {
-		if err := c.Get(context.Background(), client.ObjectKeyFromObject(o), o); err != nil {
-			if apierrors.IsNotFound(err) {
-				continue
-			} else {
-				return fmt.Errorf("failed to get object %s: %v", o.GetName(), err)
-			}
-		}
-
-		if err := c.Delete(context.Background(), o); err != nil {
-			return fmt.Errorf("failed to delete object %s: %v", o.GetName(), err)
+	for _, o := range objects {
+		if err := util.Delete(c, client.ObjectKeyFromObject(o), o); err != nil {
+			return errors.Wrapf(err, "failed to delete object: %s", o.GetName())
 		}
 	}
 	return nil

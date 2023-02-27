@@ -19,11 +19,12 @@ package k8s
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/pkg/errors"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -36,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
+
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/pkg/operation"
 	"k8s.io/client-go/kubernetes"
@@ -128,7 +130,12 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	Recover.VineyarddName = backup.Spec.VineyarddName
 	Recover.VineyarddNamespace = backup.Spec.VineyarddNamespace
 	utils := operation.ClientUtils{Client: r.Client}
-	socket, err := utils.ResolveRequiredVineyarddSocket(ctx, vineyardd.Name, vineyardd.Namespace, backup.Namespace)
+	socket, err := utils.ResolveRequiredVineyarddSocket(
+		ctx,
+		vineyardd.Name,
+		vineyardd.Namespace,
+		backup.Namespace,
+	)
 	if err != nil {
 		logger.Error(err, "unable to resolve vineyardd socket")
 		return ctrl.Result{}, err
@@ -165,12 +172,16 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// reconcile every minute
-	var duration, _ = time.ParseDuration("1m")
+	duration, _ := time.ParseDuration("1m")
 	return ctrl.Result{RequeueAfter: duration}, nil
 }
 
 // UpdateStateStatus updates the state status of the Recover.
-func (r *RecoverReconciler) UpdateStateStatus(ctx context.Context, backup *k8sv1alpha1.Backup, recover *k8sv1alpha1.Recover) error {
+func (r *RecoverReconciler) UpdateStateStatus(
+	ctx context.Context,
+	backup *k8sv1alpha1.Backup,
+	recover *k8sv1alpha1.Recover,
+) error {
 	name := client.ObjectKey{Name: "recover-" + backup.Name, Namespace: backup.Namespace}
 	job := batchv1.Job{}
 	if err := r.Client.Get(ctx, name, &job); err != nil {
@@ -187,13 +198,17 @@ func (r *RecoverReconciler) UpdateStateStatus(ctx context.Context, backup *k8sv1
 		State: state,
 	}
 	if err := r.applyStatusUpdate(ctx, recover, status); err != nil {
-		return fmt.Errorf("failed to update status: %w", err)
+		return errors.Wrap(err, "failed to update status")
 	}
 	return nil
 }
 
 // UpdateMappingStatus updates the mapping status of the Recover.
-func (r *RecoverReconciler) UpdateMappingStatus(ctx context.Context, backup *k8sv1alpha1.Backup, recover *k8sv1alpha1.Recover) error {
+func (r *RecoverReconciler) UpdateMappingStatus(
+	ctx context.Context,
+	backup *k8sv1alpha1.Backup,
+	recover *k8sv1alpha1.Recover,
+) error {
 	name := client.ObjectKey{Name: "recover-" + backup.Name, Namespace: backup.Namespace}
 	job := batchv1.Job{}
 	err := r.Client.Get(ctx, name, &job)
@@ -236,51 +251,54 @@ func (r *RecoverReconciler) UpdateMappingStatus(ctx context.Context, backup *k8s
 	}
 
 	if err := r.applyStatusUpdate(ctx, recover, status); err != nil {
-		return fmt.Errorf("failed to update status: %w", err)
+		return errors.Wrap(err, "failed to update status")
 	}
 	return nil
 }
 
 func (r *RecoverReconciler) applyStatusUpdate(ctx context.Context,
-	recover *k8sv1alpha1.Recover, status *k8sv1alpha1.RecoverStatus) error {
+	recover *k8sv1alpha1.Recover, status *k8sv1alpha1.RecoverStatus,
+) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		name := client.ObjectKey{Name: recover.Name, Namespace: recover.Namespace}
 		if err := r.Client.Get(ctx, name, recover); err != nil {
-			return fmt.Errorf("failed to get backup: %w", err)
+			return errors.Wrap(err, "failed to get backup")
 		}
 		recover.Status = *status
 		recover.Kind = "Recover"
 		if err := swckkube.ApplyOverlay(recover, &k8sv1alpha1.Recover{Status: *status}); err != nil {
-			return fmt.Errorf("failed to overlay recover's status: %w", err)
+			return errors.Wrap(err, "failed to overlay recover's status")
 		}
 		if err := r.Client.Status().Update(ctx, recover); err != nil {
-			return fmt.Errorf("failed to update recover's status: %w", err)
+			return errors.Wrap(err, "failed to update recover's status")
 		}
 		return nil
 	})
 }
 
-func (r *RecoverReconciler) getObjectMappingFromPodLogs(pod *corev1.Pod) (map[string]string, error) {
+func (r *RecoverReconciler) getObjectMappingFromPodLogs(
+	pod *corev1.Pod,
+) (map[string]string, error) {
 	mappingtable := make(map[string]string)
 	config, err := rest.InClusterConfig()
 	if err != nil {
-		return mappingtable, fmt.Errorf("failed to get in cluster config: %v", err)
+		return mappingtable, errors.Wrap(err, "failed to get in cluster config")
 	}
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
-		return mappingtable, fmt.Errorf("failed to get clientset: %v", err)
+		return mappingtable, errors.Wrap(err, "failed to get clientset")
 	}
 	req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
 	logs, err := req.Stream(context.Background())
 	if err != nil {
-		return mappingtable, fmt.Errorf("failed to open stream: %v", err)
+		return mappingtable, errors.Wrap(err, "failed to open stream")
 	}
 	defer logs.Close()
 
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, logs)
 	if err != nil {
-		return mappingtable, fmt.Errorf("failed to copy logs: %v", err)
+		return mappingtable, errors.Wrap(err, "failed to copy logs")
 	}
 	log := buf.String()
 

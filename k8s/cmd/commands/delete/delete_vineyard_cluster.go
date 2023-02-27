@@ -16,8 +16,6 @@ limitations under the License.
 package delete
 
 import (
-	"log"
-
 	"github.com/spf13/cobra"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
@@ -35,9 +33,7 @@ For example:
 # delete the default vineyard cluster on kubernetes
 vineyardctl delete vineyard-cluster`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 
 		// delete vineyardd
 		NewDeleteVineyarddCmd().Run(cmd, args)
@@ -48,7 +44,7 @@ vineyardctl delete vineyard-cluster`,
 		// delete cert-manager
 		NewDeleteCertManagerCmd().Run(cmd, args)
 
-		log.Println("Vineyard Cluster is deleted.")
+		util.InfoLogger.Println("Vineyard Cluster is deleted.")
 	},
 }
 

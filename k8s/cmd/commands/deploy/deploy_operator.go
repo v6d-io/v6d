@@ -17,13 +17,11 @@ package deploy
 
 import (
 	"context"
-	"time"
 
 	"github.com/spf13/cobra"
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -54,17 +52,15 @@ vineyardctl -n test --kubeconfig $HOME/.kube/config deploy operator -v 0.12.2
 # install the local kustomize dir
 vineyardctl --kubeconfig $HOME/.kube/config deploy operator --local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := cobra.NoArgs(cmd, args); err != nil {
-			util.ErrLogger.Fatal(err)
-		}
+		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
-		operatorManifests, err := util.BuildKustomizeDir(util.GetKustomizeDir())
+		operatorManifests, err := util.BuildKustomizeInDir(util.GetKustomizeDir())
 		if err != nil {
 			util.ErrLogger.Fatal("failed to build kustomize dir: ", err)
 		}
 
-		if err := util.ApplyManifests(client, []byte(operatorManifests),
+		if err := util.ApplyManifests(client, operatorManifests,
 			flags.GetDefaultVineyardNamespace()); err != nil {
 			util.ErrLogger.Fatal("failed to apply operator manifests: ", err)
 		}
@@ -87,7 +83,7 @@ func init() {
 
 // wait for the vineyard operator to be ready
 func waitOperatorReady(c client.Client) error {
-	return wait.PollImmediate(1*time.Second, 300*time.Second, func() (bool, error) {
+	return util.Wait(func() (bool, error) {
 		deployment := &appsv1.Deployment{}
 		if err := c.Get(context.TODO(), types.NamespacedName{
 			Name:      "vineyard-controller-manager",

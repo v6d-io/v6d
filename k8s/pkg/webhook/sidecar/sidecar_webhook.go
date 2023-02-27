@@ -19,17 +19,15 @@ package sidecar
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 	"sort"
 	"strings"
 
-	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
-	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
-	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/goccy/go-json"
+
+	"github.com/pkg/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,6 +35,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
+
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 )
 
 // nolint: lll
@@ -72,7 +76,10 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 			}
 		}
 		if len(keys) == 0 {
-			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("the pod doesn't contain a pod selector"))
+			return admission.Errored(
+				http.StatusInternalServerError,
+				errors.Errorf("the pod doesn't contain a pod selector"),
+			)
 		}
 
 		sort.Strings(keys)
@@ -80,7 +87,11 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 		sidecar.Name = selectorname + "-default-sidecar"
 		sidecar.Namespace = pod.Namespace
 
-		err := r.Client.Get(ctx, types.NamespacedName{Name: sidecar.Name, Namespace: sidecar.Namespace}, sidecar)
+		err := r.Client.Get(
+			ctx,
+			types.NamespacedName{Name: sidecar.Name, Namespace: sidecar.Namespace},
+			sidecar,
+		)
 		if err != nil && !apierrors.IsNotFound(err) {
 			logger.Info("Get sidecar cr failed", "error", err)
 			return admission.Errored(http.StatusInternalServerError, err)
@@ -135,7 +146,11 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 }
 
 // ApplyToSidecar applies the sidecar cr and pod to the sidecar
-func (r *Injector) ApplyToSidecar(sidecar *v1alpha1.Sidecar, pod *corev1.Pod, podWithSidecar *corev1.Pod) {
+func (r *Injector) ApplyToSidecar(
+	sidecar *v1alpha1.Sidecar,
+	pod *corev1.Pod,
+	podWithSidecar *corev1.Pod,
+) {
 	// add sleep to wait for the sidecar container to be ready
 	for i := range podWithSidecar.Spec.Containers {
 		command := podWithSidecar.Spec.Containers[i].Command
@@ -152,10 +167,13 @@ func (r *Injector) ApplyToSidecar(sidecar *v1alpha1.Sidecar, pod *corev1.Pod, po
 	if sidecar.Spec.Volume.PvcName == "" {
 		// add emptyDir volumeMount for every app container
 		for i := range podWithSidecar.Spec.Containers {
-			podWithSidecar.Spec.Containers[i].VolumeMounts = append(podWithSidecar.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
-				Name:      "vineyard-socket",
-				MountPath: "/var/run",
-			})
+			podWithSidecar.Spec.Containers[i].VolumeMounts = append(
+				podWithSidecar.Spec.Containers[i].VolumeMounts,
+				corev1.VolumeMount{
+					Name:      "vineyard-socket",
+					MountPath: "/var/run",
+				},
+			)
 		}
 	} else {
 		// add pvc volumeMount for every app container

@@ -17,90 +17,70 @@ package util
 
 import (
 	"bytes"
-	"context"
-	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"github.com/pkg/errors"
+
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func parseManifestsToObjects(manifests []byte) ([]*unstructured.Unstructured, error) {
+type Manifests []*unstructured.Unstructured
+
+func parseManifestsToObjects(manifests []byte) (Manifests, error) {
 	// parse the kubernetes yaml file split by "---"
 	resources := bytes.Split(manifests, []byte("---"))
-	objects := []*unstructured.Unstructured{}
+	objects := Manifests{}
 
+	decoder := Deserializer()
 	for _, f := range resources {
 		if string(f) == "\n" || string(f) == "" {
 			continue
 		}
-
-		decoder := Deserializer()
-		obj, _, err := decoder.Decode(f, nil, nil)
+		value, _, err := decoder.Decode(f, nil, nil)
 		if err != nil {
-			return nil, fmt.Errorf("failed to decode resource: %v", err)
+			return nil, errors.Wrap(err, "failed to decode resource")
 		}
-
-		proto, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
+		proto, err := runtime.DefaultUnstructuredConverter.ToUnstructured(value)
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert resource to unstructured: %v", err)
+			return nil, errors.Wrap(err, "failed to convert resource to unstructured")
 		}
-
-		unstructuredObj := &unstructured.Unstructured{Object: proto}
-		objects = append(objects, unstructuredObj)
+		object := &unstructured.Unstructured{Object: proto}
+		objects = append(objects, object)
 	}
 	return objects, nil
 }
 
 // ApplyManifests create kubernetes resouces from manifests
-func ApplyManifests(c client.Client, manifests []byte, namespace string) error {
-	objs, err := parseManifestsToObjects(manifests)
-	if err != nil {
-		return err
-	}
-	for _, obj := range objs {
+func ApplyManifests(c client.Client, manifests Manifests, namespace string) error {
+	for _, object := range manifests {
 		// setup the namespace
-		if obj.GetNamespace() != "" && namespace != "" {
-			obj.SetNamespace(namespace)
+		if object.GetNamespace() != "" && namespace != "" {
+			object.SetNamespace(namespace)
 		}
 
-		key := client.ObjectKeyFromObject(obj)
 		current := &unstructured.Unstructured{}
-		current.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-		if err = c.Get(context.TODO(), key, current); err != nil {
-			// check whether the un-structural object exist
-			if apierrors.IsNotFound(err) {
-				if err := c.Create(context.TODO(), obj); err != nil {
-					return fmt.Errorf("failed to create resource: %v", err)
-				}
-			}
+		current.SetGroupVersionKind(object.GetObjectKind().GroupVersionKind())
+		if err := CreateIfNotExists(c, current); err != nil {
+			return errors.Wrap(err, "Failed to create manifest resource")
 		}
 	}
 	return nil
 }
 
 // DeleteManifests delete kubernetes resources from manifests
-func DeleteManifests(c client.Client, manifests []byte, namespace string) error {
-	objs, err := parseManifestsToObjects(manifests)
-	if err != nil {
-		return err
-	}
-	for _, obj := range objs {
+func DeleteManifests(c client.Client, manifests Manifests, namespace string) error {
+	for _, object := range manifests {
 		// setup the namespace
-		if obj.GetNamespace() != "" {
-			obj.SetNamespace(namespace)
+		if object.GetNamespace() != "" {
+			object.SetNamespace(namespace)
 		}
 
-		key := client.ObjectKeyFromObject(obj)
+		key := client.ObjectKeyFromObject(object)
 		current := &unstructured.Unstructured{}
-		current.SetGroupVersionKind(obj.GetObjectKind().GroupVersionKind())
-
-		_ = c.Get(context.TODO(), key, current)
-		if current.GetName() != "" {
-			if err := c.Delete(context.TODO(), current); err != nil {
-				return fmt.Errorf("failed to delete resource: %v", err)
-			}
+		current.SetGroupVersionKind(object.GetObjectKind().GroupVersionKind())
+		if err := Delete(c, key, current); err != nil {
+			return errors.Wrap(err, "failed to delete manifest resource")
 		}
 	}
 	return nil

@@ -16,9 +16,40 @@ limitations under the License.
 package main
 
 import (
-	"github.com/v6d-io/v6d/k8s/cmd/commands"
+	"github.com/spf13/cobra"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/create"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/manager"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/schedule"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+var cmd = &cobra.Command{
+	Use:   "vineyardctl [command]",
+	Short: "vineyardctl is the command-line tool for working with the Vineyard Operator",
+	Long: `vineyardctl is the command-line tool for working with the Vineyard Operator.
+It supports creating, deleting and checking status of Vineyard Operator. It also
+supports managing the vineyard relevant components such as vineyardd and pluggable
+drivers`,
+}
+
+func init() {
+	flags.ApplyGlobalFlags(cmd)
+
+	// disable completion command
+	cmd.CompletionOptions.DisableDefaultCmd = true
+
+	cmd.AddCommand(deploy.NewDeployCmd())
+	cmd.AddCommand(create.NewCreateCmd())
+	cmd.AddCommand(delete.NewDeleteCmd())
+	cmd.AddCommand(manager.NewManagerCmd())
+	cmd.AddCommand(schedule.NewScheduleCmd())
+}
+
 func main() {
-	commands.Execute()
+	if err := cmd.Execute(); err != nil {
+		util.ErrLogger.Fatalf("failed to execute root command: %+v", err)
+	}
 }
