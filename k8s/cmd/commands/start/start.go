@@ -30,8 +30,6 @@ For example:
 
 # start the manager with default configuration(Enable the controller, webhooks and scheduler)
 vineyarctl start manager`,
-	Run: func(cmd *cobra.Command, args []string) {
-	},
 }
 
 func NewStartCmd() *cobra.Command {

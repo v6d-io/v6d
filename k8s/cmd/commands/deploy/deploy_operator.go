@@ -23,6 +23,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	appsv1 "k8s.io/api/apps/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 
@@ -48,19 +49,18 @@ vineyardctl deploy operator
 # install the stable version from github repo in the test namespace
 # the kustomize dir is 
 # (https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false&ref=v0.12.2)
-vineyardctl -n test -k /home/gsbot/.kube/config deploy operator -v 0.12.2
+vineyardctl -n test --kubeconfig /home/gsbot/.kube/config deploy operator -v 0.12.2
 
 # install the local kustomize dir
-vineyardctl -k /home/gsbot/.kube/config deploy operator --local ../config/default`,
+vineyardctl --kubeconfig /home/gsbot/.kube/config deploy operator --local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("deploy operator", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate deploy operator args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
-		scheme, err := util.GetOperatorScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
+		scheme := runtime.NewScheme()
+		if err := util.AddSchemes(scheme); err != nil {
+			util.ErrLogger.Fatal("failed to add client scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)

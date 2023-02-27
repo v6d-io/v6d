@@ -43,17 +43,11 @@ vineyardctl delete vineyardd
 # delete the specific vineyardd cluster in the vineyard-system namespace
 vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("delete vineyardd", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate delete vineyardd command args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
 
-		scheme, err := util.GetOperatorScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get operator scheme: ", err)
-		}
-
-		kubeClient, err := util.GetKubeClient(scheme)
+		kubeClient, err := util.GetKubeClient(nil)
 		if err != nil {
 			util.ErrLogger.Fatal("failed to get kubeclient: ", err)
 		}

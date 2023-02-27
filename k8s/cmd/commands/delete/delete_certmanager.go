@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // deleteCertManagerCmd deletes the vineyard operator on kubernetes
@@ -30,18 +31,18 @@ the version of deployed cert-manager and the default version is v1.9.1.
 For example:
 
 # delete the default version(v1.9.1) of cert-manager
-vineyardctl -k /home/gsbot/.kube/config delete cert-manager
+vineyardctl --kubeconfig /home/gsbot/.kube/config delete cert-manager
 
 # delete the specific version of cert-manager
-vineyardctl -k /home/gsbot/.kube/config delete cert-manager -v 1.11.0`,
+vineyardctl --kubeconfig /home/gsbot/.kube/config delete cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("delete cert-manager", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate delete cert-manager args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
-		scheme, err := util.GetCertManagerScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get cert-manager scheme: ", err)
+
+		scheme := runtime.NewScheme()
+		if err := util.AddSchemes(scheme); err != nil {
+			util.ErrLogger.Fatal("failed to add client scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)

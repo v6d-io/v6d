@@ -26,18 +26,16 @@ var deleteCmd = &cobra.Command{
 	Long: `Delete the vineyard components on kubernetes.  For example:
 
 # delete the default vineyard cluster on kubernetes
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete
 
 # delete the default vineyard operator on kubernetes
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete operator
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete operator
 
 # delete the default cert-manager on kubernetes
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete cert-manager
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete cert-manager
 
 # delete the default vineyardd on kubernetes
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config delete vineyardd`,
-	Run: func(cmd *cobra.Command, args []string) {
-	},
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config delete vineyardd`,
 }
 
 func NewDeleteCmd() *cobra.Command {
@@ -52,4 +50,5 @@ func init() {
 
 	deleteCmd.AddCommand(NewDeleteBackupCmd())
 	deleteCmd.AddCommand(NewDeleteRecoverCmd())
+	deleteCmd.AddCommand(NewDeleteVineyardDeploymentCmd())
 }

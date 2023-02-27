@@ -22,10 +22,8 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/create"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/dryapply"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/drydelete"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/dryschedule"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/schedule"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/start"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
@@ -79,9 +77,7 @@ func init() {
 	rootCmd.AddCommand(create.NewCreateCmd())
 	rootCmd.AddCommand(delete.NewDeleteCmd())
 	rootCmd.AddCommand(start.NewStartCmd())
-	rootCmd.AddCommand(dryapply.NewDryApplyCmd())
-	rootCmd.AddCommand(drydelete.NewDryDeleteCmd())
-	rootCmd.AddCommand(dryschedule.NewDryScheduleCmd())
+	rootCmd.AddCommand(schedule.NewScheduleCmd())
 	//disable completion command
 	rootCmd.CompletionOptions.DisableDefaultCmd = true
 }

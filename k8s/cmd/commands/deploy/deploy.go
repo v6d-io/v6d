@@ -27,18 +27,16 @@ var deployCmd = &cobra.Command{
 For example:
 
 # deploy the default vineyard cluster on kubernetes
-vineyarctl -k /home/gsbot/.kube/config deploy vineyard-cluster
+vineyarctl --kubeconfig /home/gsbot/.kube/config deploy vineyard-cluster
 
 # deploy the vineyard operator on kubernetes
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy operator
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy operator
 
 # deploy the cert-manager on kubernetes
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy cert-manager
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy cert-manager
 
 # deploy the vineyardd on kubernetes
-vineyardctl -n vineyard-system -k /home/gsbot/.kube/config deploy vineyardd`,
-	Run: func(cmd *cobra.Command, args []string) {
-	},
+vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd`,
 }
 
 func NewDeployCmd() *cobra.Command {
@@ -50,4 +48,5 @@ func init() {
 	deployCmd.AddCommand(NewDeployCertManagerCmd())
 	deployCmd.AddCommand(NewDeployVineyarddCmd())
 	deployCmd.AddCommand(NewDeployVineyardClusterCmd())
+	deployCmd.AddCommand(NewDeployVineyardDeploymentCmd())
 }

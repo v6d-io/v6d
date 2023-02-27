@@ -16,9 +16,11 @@ limitations under the License.
 package util
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 
@@ -49,16 +51,45 @@ func ParseEnvs(envArray []string) ([]corev1.EnvVar, error) {
 	return envs, nil
 }
 
+func ParsePVandPVCSpec(PvAndPvc string) (*corev1.PersistentVolumeSpec, *corev1.PersistentVolumeClaimSpec, error) {
+	var result map[string]interface{}
+	err := json.Unmarshal([]byte(PvAndPvc), &result)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pvSpecStr, err := json.Marshal(result["pv-spec"])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pvcSpecStr, err := json.Marshal(result["pvc-spec"])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pvSpec, err := ParsePVSpec(string(pvSpecStr))
+	if err != nil {
+		return nil, nil, err
+	}
+	pvcSpec, err := ParsePVCSpec(string(pvcSpecStr))
+	if err != nil {
+		return nil, nil, err
+	}
+	return pvSpec, pvcSpec, nil
+}
+
 // ParsePVSpec parse the json string to corev1.PersistentVolumeSpec
 func ParsePVSpec(pvspec string) (*corev1.PersistentVolumeSpec, error) {
 	// add the spec field to the pvspec string
 	pvspec = `{"spec":` + pvspec + `}`
 
-	scheme, err := GetClientgoScheme()
-	if err != nil {
+	s := runtime.NewScheme()
+	if err := AddClientGoScheme(s); err != nil {
 		return nil, err
 	}
-	decode := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode
+
+	decode := serializer.NewCodecFactory(s).UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(pvspec), &schema.GroupVersionKind{Group: "", Version: "v1", Kind: "PersistentVolume"}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode the pvspec string to PV Spec: %v", err)
@@ -73,11 +104,12 @@ func ParsePVCSpec(pvcspec string) (*corev1.PersistentVolumeClaimSpec, error) {
 	// add the spec field to the pvcspec string
 	pvcspec = `{"spec":` + pvcspec + `}`
 
-	scheme, err := GetClientgoScheme()
-	if err != nil {
+	s := runtime.NewScheme()
+	if err := AddClientGoScheme(s); err != nil {
 		return nil, err
 	}
-	decode := serializer.NewCodecFactory(scheme).UniversalDeserializer().Decode
+
+	decode := serializer.NewCodecFactory(s).UniversalDeserializer().Decode
 	obj, _, err := decode([]byte(pvcspec), &schema.GroupVersionKind{Group: "", Version: "v1", Kind: "PersistentVolumeClaim"}, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decode the pvspec string to PV Spec: %v", err)

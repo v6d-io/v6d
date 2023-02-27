@@ -30,9 +30,7 @@ import (
 )
 
 var (
-	ClientgoScheme    = runtime.NewScheme()
-	OperatorScheme    = runtime.NewScheme()
-	CertManagerScheme = runtime.NewScheme()
+	ClientScheme = runtime.NewScheme()
 )
 
 // AddClientGoScheme add client-go scheme to CmdScheme
@@ -71,49 +69,25 @@ func AddCertManagerScheme(scheme *runtime.Scheme) error {
 	return nil
 }
 
-// GetClientgoScheme return the client-go scheme
-func GetClientgoScheme() (*runtime.Scheme, error) {
-	if err := AddClientGoScheme(ClientgoScheme); err != nil {
-		return nil, err
+// AddSchemes add schemes(client-go,cert-manager,vineyard-v1alpha1,api-extensions) to the client
+func AddSchemes(scheme *runtime.Scheme) error {
+	if err := AddClientGoScheme(scheme); err != nil {
+		return err
 	}
-	return ClientgoScheme, nil
-}
-
-// GetOperatorScheme return the operator scheme
-func GetOperatorScheme() (*runtime.Scheme, error) {
-	if err := AddClientGoScheme(OperatorScheme); err != nil {
-		return nil, err
+	if err := AddCertManagerScheme(ClientScheme); err != nil {
+		return err
 	}
-	if err := AddCertManagerScheme(OperatorScheme); err != nil {
-		return nil, err
+	if err := AddVineyardV1alpha1Scheme(ClientScheme); err != nil {
+		return err
 	}
-	if err := AddVineyardV1alpha1Scheme(OperatorScheme); err != nil {
-		return nil, err
+	if err := AddApiExtensionsScheme(ClientScheme); err != nil {
+		return err
 	}
-	if err := AddApiExtensionsScheme(OperatorScheme); err != nil {
-		return nil, err
-	}
-	return OperatorScheme, nil
-}
-
-// GetCertManagerScheme return the cert-manager scheme
-func GetCertManagerScheme() (*runtime.Scheme, error) {
-	if err := AddClientGoScheme(CertManagerScheme); err != nil {
-		return nil, err
-	}
-	if err := AddCertManagerScheme(CertManagerScheme); err != nil {
-		return nil, err
-	}
-	if err := AddApiExtensionsScheme(CertManagerScheme); err != nil {
-		return nil, err
-	}
-	return CertManagerScheme, nil
+	return nil
 }
 
 // GetKubeClient return the kubernetes client
 func GetKubeClient(scheme *runtime.Scheme) (client.Client, error) {
-	cfg := &rest.Config{}
-
 	cfg, err := clientcmd.BuildConfigFromFlags("", flags.Kubeconfig)
 	if err != nil {
 		cfg, err = rest.InClusterConfig()
@@ -121,6 +95,14 @@ func GetKubeClient(scheme *runtime.Scheme) (client.Client, error) {
 			return nil, err
 		}
 	}
+
+	if scheme == nil {
+		scheme = runtime.NewScheme()
+		if err := AddSchemes(scheme); err != nil {
+			return nil, err
+		}
+	}
+
 	client, _ := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		return nil, err

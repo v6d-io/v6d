@@ -26,6 +26,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -40,18 +41,17 @@ new namespace to install the cert-manager. The default version is v1.9.1.
 For example:
 
 # install the default version(v1.9.1) in the cert-manager namespace
-vineyardctl -k /home/gsbot/.kube/config deploy cert-manager
+vineyardctl --kubeconfig /home/gsbot/.kube/config deploy cert-manager
 
 # install the specific version of cert-manager
-vineyardctl -k /home/gsbot/.kube/config deploy cert-manager -v 1.11.0`,
+vineyardctl --kubeconfig /home/gsbot/.kube/config deploy cert-manager -v 1.11.0`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := util.ValidateNoArgs("deploy cert-manager", args); err != nil {
-			util.ErrLogger.Fatal("failed to validate deploy cert-manager args and flags: ", err,
-				"the extra args are: ", args)
+		if err := cobra.NoArgs(cmd, args); err != nil {
+			util.ErrLogger.Fatal(err)
 		}
-		scheme, err := util.GetCertManagerScheme()
-		if err != nil {
-			util.ErrLogger.Fatal("failed to get cert-manager scheme: ", err)
+		scheme := runtime.NewScheme()
+		if err := util.AddSchemes(scheme); err != nil {
+			util.ErrLogger.Fatal("failed to add client scheme: ", err)
 		}
 
 		kubeClient, err := util.GetKubeClient(scheme)
