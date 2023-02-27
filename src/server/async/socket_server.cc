@@ -196,183 +196,130 @@ void SocketConnection::doReadBody() {
 bool SocketConnection::processMessage(const std::string& message_in) {
   json root;
   std::istringstream is(message_in);
+  auto self(shared_from_this());
 
   // DON'T let vineyardd crash when the client is malicious.
   TRY_READ_FROM_JSON(root = json::parse(message_in), message_in);
+  if (!root.contains("type")) {
+    RESPONSE_ON_ERROR(Status::Invalid("Invalid message: no 'type' field"));
+  }
 
-  std::string const& type = root["type"].get_ref<std::string const&>();
-  CommandType cmd = ParseCommandType(type);
-  if (!registered_.load() && cmd != CommandType::RegisterRequest) {
-    LOG(WARNING) << "The connection is not registered yet, command is " << type;
-    return false;
+  std::string const& cmd = root["type"].get_ref<std::string const&>();
+  if (!registered_.load() && cmd != command_t::REGISTER_REQUEST) {
+    RESPONSE_ON_ERROR(Status::Invalid(
+        "The connection is not registered yet, command is: " + cmd));
   }
-  switch (cmd) {
-  case CommandType::RegisterRequest: {
+  if (cmd == command_t::REGISTER_REQUEST) {
     return doRegister(root);
-  }
-  case CommandType::GetBuffersRequest: {
-    return doGetBuffers(root);
-  }
-  case CommandType::GetRemoteBuffersRequest: {
-    return doGetRemoteBuffers(root);
-  }
-  case CommandType::CreateBufferRequest: {
-    return doCreateBuffer(root);
-  }
-  case CommandType::CreateRemoteBufferRequest: {
-    return doCreateRemoteBuffer(root);
-  }
-  case CommandType::CreateDiskBufferRequest: {
-    return doCreateDiskBuffer(root);
-  }
-  case CommandType::DropBufferRequest: {
-    return doDropBuffer(root);
-  }
-  case CommandType::GetDataRequest: {
-    return doGetData(root);
-  }
-  case CommandType::ListDataRequest: {
-    return doListData(root);
-  }
-  case CommandType::ListNameRequest: {
-    return doListName(root);
-  }
-  case CommandType::CreateDataRequest: {
-    return doCreateData(root);
-  }
-  case CommandType::PersistRequest: {
-    return doPersist(root);
-  }
-  case CommandType::IfPersistRequest: {
-    return doIfPersist(root);
-  }
-  case CommandType::ExistsRequest: {
-    return doExists(root);
-  }
-  case CommandType::ShallowCopyRequest: {
-    return doShallowCopy(root);
-  }
-  case CommandType::DelDataRequest: {
-    return doDelData(root);
-  }
-  case CommandType::CreateStreamRequest: {
-    return doCreateStream(root);
-  }
-  case CommandType::OpenStreamRequest: {
-    return doOpenStream(root);
-  }
-  case CommandType::GetNextStreamChunkRequest: {
-    return doGetNextStreamChunk(root);
-  }
-  case CommandType::PushNextStreamChunkRequest: {
-    return doPushNextStreamChunk(root);
-  }
-  case CommandType::PullNextStreamChunkRequest: {
-    return doPullNextStreamChunk(root);
-  }
-  case CommandType::StopStreamRequest: {
-    return doStopStream(root);
-  }
-  case CommandType::DropStreamRequest: {
-    return doDropStream(root);
-  }
-  case CommandType::PutNameRequest: {
-    return doPutName(root);
-  }
-  case CommandType::GetNameRequest: {
-    return doGetName(root);
-  }
-  case CommandType::DropNameRequest: {
-    return doDropName(root);
-  }
-  case CommandType::MigrateObjectRequest: {
-    return doMigrateObject(root);
-  }
-  case CommandType::ClusterMetaRequest: {
-    return doClusterMeta(root);
-  }
-  case CommandType::InstanceStatusRequest: {
-    return doInstanceStatus(root);
-  }
-  case CommandType::MakeArenaRequest: {
-    return doMakeArena(root);
-  }
-  case CommandType::FinalizeArenaRequest: {
-    return doFinalizeArena(root);
-  }
-  case CommandType::ClearRequest: {
-    return doClear(root);
-  }
-  case CommandType::DebugCommand: {
-    return doDebug(root);
-  }
-  case CommandType::ExitRequest: {
+  } else if (cmd == command_t::EXIT_REQUEST) {
     return true;
-  }
-  case CommandType::NewSessionRequest: {
-    return doNewSession(root);
-  }
-  case CommandType::DeleteSessionRequest: {
-    return doDeleteSession(root);
-  }
-  case CommandType::CreateBufferByPlasmaRequest: {
-    return doCreateBufferByPlasma(root);
-  }
-  case CommandType::GetBuffersByPlasmaRequest: {
-    return doGetBuffersByPlasma(root);
-  }
-  case CommandType::SealRequest: {
-    return doSealBlob(root);
-  }
-  case CommandType::PlasmaSealRequest: {
-    return doSealPlasmaBlob(root);
-  }
-  case CommandType::PlasmaReleaseRequest: {
-    return doPlasmaRelease(root);
-  }
-  case CommandType::PlasmaDelDataRequest: {
-    return doPlasmaDelData(root);
-  }
-  case CommandType::MoveBuffersOwnershipRequest: {
-    return doMoveBuffersOwnership(root);
-  }
-  case CommandType::ReleaseRequest: {
-    return doRelease(root);
-  }
-  case CommandType::DelDataWithFeedbacksRequest: {
-    return doDelDataWithFeedbacks(root);
-  }
-  case CommandType::IsInUseRequest: {
-    return doIsInUse(root);
-  }
-  case CommandType::IncreaseReferenceCountRequest: {
-    return doIncreaseReferenceCount(root);
-  }
-  case CommandType::IsSpilledRequest: {
-    return doIsSpilled(root);
-  }
-  case CommandType::CreateGPUBufferRequest: {
+  } else if (cmd == command_t::CREATE_BUFFER_REQUEST) {
+    return doCreateBuffer(root);
+  } else if (cmd == command_t::CREATE_DISK_BUFFER_REQUEST) {
+    return doCreateDiskBuffer(root);
+  } else if (cmd == command_t::CREATE_GPU_BUFFER_REQUEST) {
     return doCreateGPUBuffer(root);
-  }
-  case CommandType::GetGPUBuffersRequest: {
+  } else if (cmd == command_t::SEAL_BUFFER_REQUEST) {
+    return doSealBlob(root);
+  } else if (cmd == command_t::GET_BUFFERS_REQUEST) {
+    return doGetBuffers(root);
+  } else if (cmd == command_t::GET_GPU_BUFFERS_REQUEST) {
     return doGetGPUBuffers(root);
-  }
-  case CommandType::LabelRequest: {
+  } else if (cmd == command_t::DROP_BUFFER_REQUEST) {
+    return doDropBuffer(root);
+  } else if (cmd == command_t::CREATE_REMOTE_BUFFER_REQUEST) {
+    return doCreateRemoteBuffer(root);
+  } else if (cmd == command_t::GET_REMOTE_BUFFERS_REQUEST) {
+    return doGetRemoteBuffers(root);
+  } else if (cmd == command_t::INCREASE_REFERENCE_COUNT_REQUEST) {
+    return doIncreaseReferenceCount(root);
+  } else if (cmd == command_t::RELEASE_REQUEST) {
+    return doRelease(root);
+  } else if (cmd == command_t::DEL_DATA_WITH_FEEDBACKS_REQUEST) {
+    return doDelDataWithFeedbacks(root);
+  } else if (cmd == command_t::CREATE_BUFFER_PLASMA_REQUEST) {
+    return doCreateBufferByPlasma(root);
+  } else if (cmd == command_t::GET_BUFFERS_PLASMA_REQUEST) {
+    return doGetBuffersByPlasma(root);
+  } else if (cmd == command_t::PLASMA_SEAL_REQUEST) {
+    return doSealPlasmaBlob(root);
+  } else if (cmd == command_t::PLASMA_RELEASE_REQUEST) {
+    return doPlasmaRelease(root);
+  } else if (cmd == command_t::PLASMA_DEL_DATA_REQUEST) {
+    return doPlasmaDelData(root);
+  } else if (cmd == command_t::CREATE_DATA_REQUEST) {
+    return doCreateData(root);
+  } else if (cmd == command_t::GET_DATA_REQUEST) {
+    return doGetData(root);
+  } else if (cmd == command_t::DELETE_DATA_REQUEST) {
+    return doDelData(root);
+  } else if (cmd == command_t::LIST_DATA_REQUEST) {
+    return doListData(root);
+  } else if (cmd == command_t::EXISTS_REQUEST) {
+    return doExists(root);
+  } else if (cmd == command_t::PERSIST_REQUEST) {
+    return doPersist(root);
+  } else if (cmd == command_t::IF_PERSIST_REQUEST) {
+    return doIfPersist(root);
+  } else if (cmd == command_t::LABEL_REQUEST) {
     return doLabelObject(root);
-  }
-  case CommandType::EvictRequest: {
+  } else if (cmd == command_t::CLEAR_REQUEST) {
+    return doClear(root);
+  } else if (cmd == command_t::CREATE_STREAM_REQUEST) {
+    return doCreateStream(root);
+  } else if (cmd == command_t::OPEN_STREAM_REQUEST) {
+    return doOpenStream(root);
+  } else if (cmd == command_t::GET_NEXT_STREAM_CHUNK_REQUEST) {
+    return doGetNextStreamChunk(root);
+  } else if (cmd == command_t::PUSH_NEXT_STREAM_CHUNK_REQUEST) {
+    return doPushNextStreamChunk(root);
+  } else if (cmd == command_t::PULL_NEXT_STREAM_CHUNK_REQUEST) {
+    return doPullNextStreamChunk(root);
+  } else if (cmd == command_t::STOP_STREAM_REQUEST) {
+    return doStopStream(root);
+  } else if (cmd == command_t::DROP_STREAM_REQUEST) {
+    return doDropStream(root);
+  } else if (cmd == command_t::PUT_NAME_REQUEST) {
+    return doPutName(root);
+  } else if (cmd == command_t::GET_NAME_REQUEST) {
+    return doGetName(root);
+  } else if (cmd == command_t::LIST_NAME_REQUEST) {
+    return doListName(root);
+  } else if (cmd == command_t::DROP_NAME_REQUEST) {
+    return doDropName(root);
+  } else if (cmd == command_t::MAKE_ARENA_REQUEST) {
+    return doMakeArena(root);
+  } else if (cmd == command_t::FINALIZE_ARENA_REQUEST) {
+    return doFinalizeArena(root);
+  } else if (cmd == command_t::NEW_SESSION_REQUEST) {
+    return doNewSession(root);
+  } else if (cmd == command_t::DELETE_SESSION_REQUEST) {
+    return doDeleteSession(root);
+  } else if (cmd == command_t::MOVE_BUFFERS_OWNERSHIP_REQUEST) {
+    return doMoveBuffersOwnership(root);
+  } else if (cmd == command_t::EVICT_REQUEST) {
     return doEvictObjects(root);
-  }
-  case CommandType::LoadRequest: {
+  } else if (cmd == command_t::LOAD_REQUEST) {
     return doLoadObjects(root);
-  }
-  case CommandType::UnpinRequest: {
+  } else if (cmd == command_t::UNPIN_REQUEST) {
     return doUnpinObjects(root);
-  }
-  default: {
-    LOG(WARNING) << "Got unexpected command: " << type;
+  } else if (cmd == command_t::IS_SPILLED_REQUEST) {
+    return doIsSpilled(root);
+  } else if (cmd == command_t::IS_IN_USE_REQUEST) {
+    return doIsInUse(root);
+  } else if (cmd == command_t::CLUSTER_META_REQUEST) {
+    return doClusterMeta(root);
+  } else if (cmd == command_t::INSTANCE_STATUS_REQUEST) {
+    return doInstanceStatus(root);
+  } else if (cmd == command_t::MIGRATE_OBJECT_REQUEST) {
+    return doMigrateObject(root);
+  } else if (cmd == command_t::SHALLOW_COPY_REQUEST) {
+    return doShallowCopy(root);
+  } else if (cmd == command_t::DEBUG_REQUEST) {
+    return doDebug(root);
+  } else {
+    RESPONSE_ON_ERROR(Status::Invalid("Got unexpected command: " + cmd));
     return false;
-  }
   }
 }
 
@@ -408,6 +355,117 @@ bool SocketConnection::doRegister(const json& root) {
         self->doWrite(message_out);
         return Status::OK();
       }));
+  return false;
+}
+
+bool SocketConnection::doCreateBuffer(const json& root) {
+  auto self(shared_from_this());
+  size_t size;
+  std::shared_ptr<Payload> object;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadCreateBufferRequest, root, size);
+  ObjectID object_id;
+  RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+
+  int fd_to_send = -1;
+  if (object->data_size > 0 &&
+      self->used_fds_.find(object->store_fd) == self->used_fds_.end()) {
+    this->used_fds_.emplace(object->store_fd);
+    fd_to_send = object->store_fd;
+  }
+
+  WriteCreateBufferReply(object_id, object, fd_to_send, message_out);
+
+  this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
+    if (fd_to_send != -1) {
+      send_fd(self->nativeHandle(), fd_to_send);
+    }
+    LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                bulk_store_->Footprint());
+    return Status::OK();
+  });
+  return false;
+}
+
+bool SocketConnection::doCreateDiskBuffer(const json& root) {
+  auto self(shared_from_this());
+  size_t size = 0;
+  std::string path;
+  std::shared_ptr<Payload> object;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadCreateDiskBufferRequest, root, size, path);
+
+  if (size == 0 && path.empty()) {
+    RESPONSE_ON_ERROR(Status::Invalid(
+        "create disk buffer: one of 'size' and 'path' must be specified"));
+  }
+
+  ObjectID object_id;
+  RESPONSE_ON_ERROR(bulk_store_->CreateDisk(size, path, object_id, object));
+
+  int fd_to_send = -1;
+  if (object->data_size > 0 &&
+      self->used_fds_.find(object->store_fd) == self->used_fds_.end()) {
+    this->used_fds_.emplace(object->store_fd);
+    fd_to_send = object->store_fd;
+  }
+
+  WriteCreateDiskBufferReply(object_id, object, fd_to_send, message_out);
+
+  this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
+    if (fd_to_send != -1) {
+      send_fd(self->nativeHandle(), fd_to_send);
+    }
+    LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                bulk_store_->Footprint());
+    return Status::OK();
+  });
+  return false;
+}
+
+bool SocketConnection::doCreateGPUBuffer(json const& root) {
+  auto self(shared_from_this());
+
+  size_t size;
+  std::shared_ptr<Payload> object;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadCreateGPUBufferRequest, root, size);
+
+#ifndef ENABLE_GPU
+  WriteErrorReply(Status::Invalid("GPU support is not enabled"), message_out);
+#else
+  ObjectID object_id;
+  RESPONSE_ON_ERROR(bulk_store_->CreateGPU(size, object_id, object));
+  if (!object->IsGPU() || object->pointer == nullptr) {
+    RESPONSE_ON_ERROR(Status::Invalid(
+        "Failed to create GPU buffer: invalid GPU memory pointer"));
+  }
+
+  // cudaIpcMemHandle_t cuda_handle;
+  GPUUnifiedAddress gua(true, reinterpret_cast<void*>(object->pointer));
+  WriteGPUCreateBufferReply(object_id, object, gua, message_out);
+#endif
+
+  this->doWrite(message_out, [this, self](const Status& status) {
+    LOG_SUMMARY("instances_gpu_memory_usage_bytes", server_ptr_->instance_id(),
+                bulk_store_->Footprint());
+    return Status::OK();
+  });
+  return false;
+}
+
+bool SocketConnection::doSealBlob(json const& root) {
+  auto self(shared_from_this());
+  ObjectID id;
+  TRY_READ_REQUEST(ReadSealRequest, root, id);
+  RESPONSE_ON_ERROR(bulk_store_->Seal(id));
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(id, getConnId()));
+  std::string message_out;
+  WriteSealReply(message_out);
+  this->doWrite(message_out);
   return false;
 }
 
@@ -453,64 +511,6 @@ bool SocketConnection::doGetBuffers(const json& root) {
   return false;
 }
 
-bool SocketConnection::doGetRemoteBuffers(const json& root) {
-  auto self(shared_from_this());
-  std::vector<ObjectID> ids;
-  bool unsafe = false;
-  bool compress = false;
-  std::vector<std::shared_ptr<Payload>> objects;
-  std::string message_out;
-
-  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress);
-  RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
-  RESPONSE_ON_ERROR(bulk_store_->AddDependency(
-      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
-  WriteGetBuffersReply(objects, {}, compress, message_out);
-
-  this->doWrite(message_out, [self, objects, compress](const Status& status) {
-    SendRemoteBuffers(
-        self->socket_, objects, 0, compress, [self](const Status& status) {
-          if (!status.ok()) {
-            VLOG(100) << "Failed to send buffers to remote client: "
-                      << status.ToString();
-          }
-          return Status::OK();
-        });
-    return Status::OK();
-  });
-  return false;
-}
-
-bool SocketConnection::doCreateBuffer(const json& root) {
-  auto self(shared_from_this());
-  size_t size;
-  std::shared_ptr<Payload> object;
-  std::string message_out;
-
-  TRY_READ_REQUEST(ReadCreateBufferRequest, root, size);
-  ObjectID object_id;
-  RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
-
-  int fd_to_send = -1;
-  if (object->data_size > 0 &&
-      self->used_fds_.find(object->store_fd) == self->used_fds_.end()) {
-    this->used_fds_.emplace(object->store_fd);
-    fd_to_send = object->store_fd;
-  }
-
-  WriteCreateBufferReply(object_id, object, fd_to_send, message_out);
-
-  this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
-    if (fd_to_send != -1) {
-      send_fd(self->nativeHandle(), fd_to_send);
-    }
-    LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-                bulk_store_->Footprint());
-    return Status::OK();
-  });
-  return false;
-}
-
 bool SocketConnection::doGetGPUBuffers(json const& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
@@ -542,35 +542,21 @@ bool SocketConnection::doGetGPUBuffers(json const& root) {
   return false;
 }
 
-bool SocketConnection::doCreateGPUBuffer(json const& root) {
+bool SocketConnection::doDropBuffer(const json& root) {
   auto self(shared_from_this());
-
-  size_t size;
-  std::shared_ptr<Payload> object;
+  ObjectID object_id = InvalidObjectID();
+  TRY_READ_REQUEST(ReadDropBufferRequest, root, object_id);
+  // Delete ignore reference count.
+  auto status = bulk_store_->OnDelete(object_id);
   std::string message_out;
-
-  TRY_READ_REQUEST(ReadCreateGPUBufferRequest, root, size);
-
-#ifndef ENABLE_GPU
-  WriteErrorReply(Status::Invalid("GPU support is not enabled"), message_out);
-#else
-  ObjectID object_id;
-  RESPONSE_ON_ERROR(bulk_store_->CreateGPU(size, object_id, object));
-  if (!object->IsGPU() || object->pointer == nullptr) {
-    RESPONSE_ON_ERROR(Status::Invalid(
-        "Failed to create GPU buffer: invalid GPU memory pointer"));
+  if (status.ok()) {
+    WriteDropBufferReply(message_out);
+  } else {
+    WriteErrorReply(status, message_out);
   }
-
-  // cudaIpcMemHandle_t cuda_handle;
-  GPUUnifiedAddress gua(true, reinterpret_cast<void*>(object->pointer));
-  WriteGPUCreateBufferReply(object_id, object, gua, message_out);
-#endif
-
-  this->doWrite(message_out, [this, self](const Status& status) {
-    LOG_SUMMARY("instances_gpu_memory_usage_bytes", server_ptr_->instance_id(),
-                bulk_store_->Footprint());
-    return Status::OK();
-  });
+  this->doWrite(message_out);
+  LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+              bulk_store_->Footprint());
   return false;
 }
 
@@ -605,58 +591,233 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   return false;
 }
 
-bool SocketConnection::doCreateDiskBuffer(const json& root) {
+bool SocketConnection::doGetRemoteBuffers(const json& root) {
   auto self(shared_from_this());
-  size_t size = 0;
-  std::string path;
-  std::shared_ptr<Payload> object;
+  std::vector<ObjectID> ids;
+  bool unsafe = false;
+  bool compress = false;
+  std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
 
-  TRY_READ_REQUEST(ReadCreateDiskBufferRequest, root, size, path);
+  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress);
+  RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(
+      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
+  WriteGetBuffersReply(objects, {}, compress, message_out);
 
-  if (size == 0 && path.empty()) {
-    RESPONSE_ON_ERROR(Status::Invalid(
-        "create disk buffer: one of 'size' and 'path' must be specified"));
+  this->doWrite(message_out, [self, objects, compress](const Status& status) {
+    SendRemoteBuffers(
+        self->socket_, objects, 0, compress, [self](const Status& status) {
+          if (!status.ok()) {
+            VLOG(100) << "Failed to send buffers to remote client: "
+                      << status.ToString();
+          }
+          return Status::OK();
+        });
+    return Status::OK();
+  });
+  return false;
+}
+
+bool SocketConnection::doIncreaseReferenceCount(json const& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  TRY_READ_REQUEST(ReadIncreaseReferenceCountRequest, root, ids);
+  RESPONSE_ON_ERROR(bulk_store_->AddDependency(
+      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
+  std::string message_out;
+  WriteIncreaseReferenceCountReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doRelease(json const& root) {
+  auto self(shared_from_this());
+  ObjectID id;  // Must be a blob id.
+  TRY_READ_REQUEST(ReadReleaseRequest, root, id);
+  RESPONSE_ON_ERROR(bulk_store_->Release(id, getConnId()));
+  std::string message_out;
+  WriteReleaseReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doDelDataWithFeedbacks(json const& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  bool force, deep, fastpath;
+  double startTime = GetCurrentTime();
+  TRY_READ_REQUEST(ReadDelDataWithFeedbacksRequest, root, ids, force, deep,
+                   fastpath);
+  RESPONSE_ON_ERROR(server_ptr_->DelData(
+      ids, force, deep, fastpath,
+      [self, startTime](const Status& status,
+                        std::vector<ObjectID> const& delete_ids) {
+        std::string message_out;
+        if (status.ok()) {
+          std::vector<ObjectID> deleted_bids;
+          for (auto id : delete_ids) {
+            if (IsBlob(id)) {
+              deleted_bids.emplace_back(id);
+            }
+          }
+          WriteDelDataWithFeedbacksReply(deleted_bids, message_out);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "delete",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "delete");
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doCreateBufferByPlasma(json const& root) {
+  auto self(shared_from_this());
+  PlasmaID plasma_id;
+  ObjectID object_id = InvalidObjectID();
+  size_t size, plasma_size;
+  std::shared_ptr<PlasmaPayload> plasma_object;
+
+  TRY_READ_REQUEST(ReadCreateBufferByPlasmaRequest, root, plasma_id, size,
+                   plasma_size);
+
+  std::string message_out;
+  RESPONSE_ON_ERROR(plasma_bulk_store_->Create(size, plasma_size, plasma_id,
+                                               object_id, plasma_object));
+
+  int store_fd = plasma_object->store_fd, fd_to_send = -1;
+  int data_size = plasma_object->data_size;
+
+  if (data_size > 0 &&
+      self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+    self->used_fds_.emplace(store_fd);
+    fd_to_send = store_fd;
   }
 
-  ObjectID object_id;
-  RESPONSE_ON_ERROR(bulk_store_->CreateDisk(size, path, object_id, object));
-
-  int fd_to_send = -1;
-  if (object->data_size > 0 &&
-      self->used_fds_.find(object->store_fd) == self->used_fds_.end()) {
-    this->used_fds_.emplace(object->store_fd);
-    fd_to_send = object->store_fd;
-  }
-
-  WriteCreateDiskBufferReply(object_id, object, fd_to_send, message_out);
+  WriteCreateBufferByPlasmaReply(object_id, plasma_object, fd_to_send,
+                                 message_out);
 
   this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
     if (fd_to_send != -1) {
       send_fd(self->nativeHandle(), fd_to_send);
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-                bulk_store_->Footprint());
+                plasma_bulk_store_->Footprint());
     return Status::OK();
   });
   return false;
 }
 
-bool SocketConnection::doDropBuffer(const json& root) {
+bool SocketConnection::doGetBuffersByPlasma(json const& root) {
   auto self(shared_from_this());
-  ObjectID object_id = InvalidObjectID();
-  TRY_READ_REQUEST(ReadDropBufferRequest, root, object_id);
-  // Delete ignore reference count.
-  auto status = bulk_store_->OnDelete(object_id);
+  std::vector<PlasmaID> plasma_ids;
+  bool unsafe = false;
+  std::vector<std::shared_ptr<PlasmaPayload>> plasma_objects;
   std::string message_out;
-  if (status.ok()) {
-    WriteDropBufferReply(message_out);
-  } else {
-    WriteErrorReply(status, message_out);
-  }
+
+  TRY_READ_REQUEST(ReadGetBuffersByPlasmaRequest, root, plasma_ids, unsafe);
+  RESPONSE_ON_ERROR(
+      plasma_bulk_store_->GetUnsafe(plasma_ids, unsafe, plasma_objects));
+  RESPONSE_ON_ERROR(plasma_bulk_store_->AddDependency(
+      std::unordered_set<PlasmaID>(plasma_ids.begin(), plasma_ids.end()),
+      getConnId()));
+  WriteGetBuffersByPlasmaReply(plasma_objects, message_out);
+
+  /* NOTE: Here we send the file descriptor after the objects.
+   *       We are using sendmsg to send the file descriptor
+   *       which is a sync method. In theory, this might cause
+   *       the server to block, but currently this seems to be
+   *       the only method that are widely used in practice, e.g.,
+   *       boost and Plasma, and actually the file descriptor is
+   *       a very short message.
+   *
+   *       We will examine other methods later, such as using
+   *       explicit file descriptors.
+   */
+  this->doWrite(message_out, [self, plasma_objects](const Status& status) {
+    for (auto object : plasma_objects) {
+      int store_fd = object->store_fd;
+      int data_size = object->data_size;
+      if (data_size > 0 &&
+          self->used_fds_.find(store_fd) == self->used_fds_.end()) {
+        self->used_fds_.emplace(store_fd);
+        send_fd(self->nativeHandle(), store_fd);
+      }
+    }
+    return Status::OK();
+  });
+  return false;
+}
+
+bool SocketConnection::doSealPlasmaBlob(json const& root) {
+  auto self(shared_from_this());
+  PlasmaID id;
+  TRY_READ_REQUEST(ReadPlasmaSealRequest, root, id);
+  RESPONSE_ON_ERROR(plasma_bulk_store_->Seal(id));
+  RESPONSE_ON_ERROR(plasma_bulk_store_->AddDependency(id, getConnId()));
+  std::string message_out;
+  WriteSealReply(message_out);
   this->doWrite(message_out);
-  LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-              bulk_store_->Footprint());
+  return false;
+}
+
+bool SocketConnection::doPlasmaRelease(json const& root) {
+  auto self(shared_from_this());
+  PlasmaID id;
+  TRY_READ_REQUEST(ReadPlasmaReleaseRequest, root, id);
+  RESPONSE_ON_ERROR(plasma_bulk_store_->Release(id, getConnId()));
+  std::string message_out;
+  WritePlasmaReleaseReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doPlasmaDelData(json const& root) {
+  auto self(shared_from_this());
+  PlasmaID id;
+  TRY_READ_REQUEST(ReadPlasmaDelDataRequest, root, id);
+
+  /// Plasma Data are not composable, so we do not have to wrestle with meta.
+  RESPONSE_ON_ERROR(plasma_bulk_store_->OnDelete(id));
+
+  std::string message_out;
+  WritePlasmaDelDataReply(message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doCreateData(const json& root) {
+  auto self(shared_from_this());
+  json tree;
+  double startTime = GetCurrentTime();
+  TRY_READ_REQUEST(ReadCreateDataRequest, root, tree);
+  RESPONSE_ON_ERROR(server_ptr_->CreateData(
+      tree, [tree, self, startTime](const Status& status, const ObjectID id,
+                                    const Signature signature,
+                                    const InstanceID instance_id) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteCreateDataReply(id, signature, instance_id, message_out);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "create",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "create");
+        LOG_SUMMARY("object",
+                    std::to_string(instance_id) + " " +
+                        tree.value("typename", json(nullptr)).dump(),
+                    1);
+        return Status::OK();
+      }));
   return false;
 }
 
@@ -708,54 +869,45 @@ bool SocketConnection::doListData(const json& root) {
   return false;
 }
 
-bool SocketConnection::doListName(const json& root) {
+bool SocketConnection::doDelData(const json& root) {
   auto self(shared_from_this());
-  std::string pattern;
-  bool regex;
-  size_t limit;
-  TRY_READ_REQUEST(ReadListNameRequest, root, pattern, regex, limit);
-  RESPONSE_ON_ERROR(server_ptr_->ListName(
-      pattern, regex, limit,
-      [self](const Status& status,
-             const std::map<std::string, ObjectID>& names) {
-        std::string message_out;
-        if (status.ok()) {
-          WriteListNameReply(names, message_out);
-        } else {
-          VLOG(100) << "Error: " << status.ToString();
-          WriteErrorReply(status, message_out);
-        }
-        self->doWrite(message_out);
-        return Status::OK();
-      }));
-  return false;
-}
-
-bool SocketConnection::doCreateData(const json& root) {
-  auto self(shared_from_this());
-  json tree;
+  std::vector<ObjectID> ids;
+  bool force, deep, fastpath;
   double startTime = GetCurrentTime();
-  TRY_READ_REQUEST(ReadCreateDataRequest, root, tree);
-  RESPONSE_ON_ERROR(server_ptr_->CreateData(
-      tree, [tree, self, startTime](const Status& status, const ObjectID id,
-                                    const Signature signature,
-                                    const InstanceID instance_id) {
+  TRY_READ_REQUEST(ReadDelDataRequest, root, ids, force, deep, fastpath);
+  RESPONSE_ON_ERROR(server_ptr_->DelData(
+      ids, force, deep, fastpath, [self, startTime](const Status& status) {
         std::string message_out;
         if (status.ok()) {
-          WriteCreateDataReply(id, signature, instance_id, message_out);
+          WriteDelDataReply(message_out);
         } else {
           VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
         double endTime = GetCurrentTime();
-        LOG_SUMMARY("data_request_duration_microseconds", "create",
+        LOG_SUMMARY("data_request_duration_microseconds", "delete",
                     (endTime - startTime) * 1000000);
-        LOG_COUNTER("data_requests_total", "create");
-        LOG_SUMMARY("object",
-                    std::to_string(instance_id) + " " +
-                        tree.value("typename", json(nullptr)).dump(),
-                    1);
+        LOG_COUNTER("data_requests_total", "delete");
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doExists(const json& root) {
+  auto self(shared_from_this());
+  ObjectID id;
+  TRY_READ_REQUEST(ReadExistsRequest, root, id);
+  RESPONSE_ON_ERROR(
+      server_ptr_->Exists(id, [self](const Status& status, bool const exists) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteExistsReply(exists, message_out);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
         return Status::OK();
       }));
   return false;
@@ -798,17 +950,21 @@ bool SocketConnection::doIfPersist(const json& root) {
   return false;
 }
 
-bool SocketConnection::doExists(const json& root) {
+bool SocketConnection::doLabelObject(const json& root) {
   auto self(shared_from_this());
-  ObjectID id;
-  TRY_READ_REQUEST(ReadExistsRequest, root, id);
-  RESPONSE_ON_ERROR(
-      server_ptr_->Exists(id, [self](const Status& status, bool const exists) {
+  ObjectID object_id = InvalidObjectID();
+  std::vector<std::string> keys;
+  std::vector<std::string> values;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadLabelRequest, root, object_id, keys, values);
+  RESPONSE_ON_ERROR(server_ptr_->LabelObjects(
+      object_id, keys, values, [self](const Status& status) {
         std::string message_out;
         if (status.ok()) {
-          WriteExistsReply(exists, message_out);
+          WriteLabelReply(message_out);
         } else {
-          VLOG(100) << "Error: " << status.ToString();
+          VLOG(100) << "Error: " << status;
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -817,46 +973,40 @@ bool SocketConnection::doExists(const json& root) {
   return false;
 }
 
-bool SocketConnection::doShallowCopy(const json& root) {
+bool SocketConnection::doClear(const json& root) {
   auto self(shared_from_this());
-  ObjectID id;
-  json extra_metadata;
-  TRY_READ_REQUEST(ReadShallowCopyRequest, root, id, extra_metadata);
-  RESPONSE_ON_ERROR(server_ptr_->ShallowCopy(
-      id, extra_metadata, [self](const Status& status, const ObjectID target) {
-        std::string message_out;
+  TRY_READ_REQUEST(ReadClearRequest, root);
+  // clear:
+  //    step 1: list
+  //    step 2: compute delete set
+  //    step 3: do delete
+  RESPONSE_ON_ERROR(server_ptr_->ListAllData(
+      [self](const Status& status, const std::vector<ObjectID>& objects) {
         if (status.ok()) {
-          WriteShallowCopyReply(target, message_out);
+          auto s = self->server_ptr_->DelData(
+              objects, true, true, false, [self](const Status& status) {
+                std::string message_out;
+                if (status.ok()) {
+                  WriteClearReply(message_out);
+                } else {
+                  VLOG(100) << "Error: " << status;
+                  WriteErrorReply(status, message_out);
+                }
+                self->doWrite(message_out);
+                return Status::OK();
+              });
+          if (!s.ok()) {
+            std::string message_out;
+            VLOG(100) << "Error: " << s;
+            WriteErrorReply(s, message_out);
+            self->doWrite(message_out);
+          }
         } else {
-          VLOG(100) << "Error: " << status.ToString();
+          std::string message_out;
+          VLOG(100) << "Error: " << status;
           WriteErrorReply(status, message_out);
+          self->doWrite(message_out);
         }
-        self->doWrite(message_out);
-        return Status::OK();
-      }));
-  return false;
-}
-
-bool SocketConnection::doDelData(const json& root) {
-  auto self(shared_from_this());
-  std::vector<ObjectID> ids;
-  bool force, deep, fastpath;
-  double startTime = GetCurrentTime();
-  TRY_READ_REQUEST(ReadDelDataRequest, root, ids, force, deep, fastpath);
-  RESPONSE_ON_ERROR(server_ptr_->DelData(
-      ids, force, deep, fastpath, [self, startTime](const Status& status) {
-        std::string message_out;
-        if (status.ok()) {
-          WriteDelDataReply(message_out);
-        } else {
-          VLOG(100) << "Error: " << status.ToString();
-          WriteErrorReply(status, message_out);
-        }
-        self->doWrite(message_out);
-        double endTime = GetCurrentTime();
-        LOG_SUMMARY("data_request_duration_microseconds", "delete",
-                    (endTime - startTime) * 1000000);
-        LOG_COUNTER("data_requests_total", "delete");
         return Status::OK();
       }));
   return false;
@@ -1038,6 +1188,29 @@ bool SocketConnection::doGetName(const json& root) {
   return false;
 }
 
+bool SocketConnection::doListName(const json& root) {
+  auto self(shared_from_this());
+  std::string pattern;
+  bool regex;
+  size_t limit;
+  TRY_READ_REQUEST(ReadListNameRequest, root, pattern, regex, limit);
+  RESPONSE_ON_ERROR(server_ptr_->ListName(
+      pattern, regex, limit,
+      [self](const Status& status,
+             const std::map<std::string, ObjectID>& names) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteListNameReply(names, message_out);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
 bool SocketConnection::doDropName(const json& root) {
   auto self(shared_from_this());
   std::string name;
@@ -1056,55 +1229,18 @@ bool SocketConnection::doDropName(const json& root) {
   return false;
 }
 
-bool SocketConnection::doMigrateObject(const json& root) {
+bool SocketConnection::doShallowCopy(const json& root) {
   auto self(shared_from_this());
-  ObjectID object_id;
-  TRY_READ_REQUEST(ReadMigrateObjectRequest, root, object_id);
-
-  RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
-      object_id, [self](const Status& status, const ObjectID& target) {
+  ObjectID id;
+  json extra_metadata;
+  TRY_READ_REQUEST(ReadShallowCopyRequest, root, id, extra_metadata);
+  RESPONSE_ON_ERROR(server_ptr_->ShallowCopy(
+      id, extra_metadata, [self](const Status& status, const ObjectID target) {
         std::string message_out;
         if (status.ok()) {
-          WriteMigrateObjectReply(target, message_out);
+          WriteShallowCopyReply(target, message_out);
         } else {
-          VLOG(100) << "Error: failed to migrate object: " << status.ToString();
-          WriteErrorReply(status, message_out);
-        }
-        self->doWrite(message_out);
-        return Status::OK();
-      }));
-  return false;
-}
-
-bool SocketConnection::doClusterMeta(const json& root) {
-  auto self(shared_from_this());
-  TRY_READ_REQUEST(ReadClusterMetaRequest, root);
-  RESPONSE_ON_ERROR(server_ptr_->ClusterInfo([self](const Status& status,
-                                                    const json& tree) {
-    std::string message_out;
-    if (status.ok()) {
-      WriteClusterMetaReply(tree, message_out);
-    } else {
-      VLOG(100) << "Error: failed to check cluster meta: " << status.ToString();
-      WriteErrorReply(status, message_out);
-    }
-    self->doWrite(message_out);
-    return Status::OK();
-  }));
-  return false;
-}
-
-bool SocketConnection::doInstanceStatus(const json& root) {
-  auto self(shared_from_this());
-  TRY_READ_REQUEST(ReadInstanceStatusRequest, root);
-  RESPONSE_ON_ERROR(server_ptr_->InstanceStatus(
-      [self](const Status& status, const json& tree) {
-        std::string message_out;
-        if (status.ok()) {
-          WriteInstanceStatusReply(tree, message_out);
-        } else {
-          VLOG(100) << "Error: failed to check instance status: "
-                    << status.ToString();
+          VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
@@ -1155,53 +1291,6 @@ bool SocketConnection::doFinalizeArena(const json& root) {
   return false;
 }
 
-bool SocketConnection::doClear(const json& root) {
-  auto self(shared_from_this());
-  TRY_READ_REQUEST(ReadClearRequest, root);
-  // clear:
-  //    step 1: list
-  //    step 2: compute delete set
-  //    step 3: do delete
-  RESPONSE_ON_ERROR(server_ptr_->ListAllData(
-      [self](const Status& status, const std::vector<ObjectID>& objects) {
-        if (status.ok()) {
-          auto s = self->server_ptr_->DelData(
-              objects, true, true, false, [self](const Status& status) {
-                std::string message_out;
-                if (status.ok()) {
-                  WriteClearReply(message_out);
-                } else {
-                  VLOG(100) << "Error: " << status;
-                  WriteErrorReply(status, message_out);
-                }
-                self->doWrite(message_out);
-                return Status::OK();
-              });
-          if (!s.ok()) {
-            std::string message_out;
-            VLOG(100) << "Error: " << s;
-            WriteErrorReply(s, message_out);
-            self->doWrite(message_out);
-          }
-        } else {
-          std::string message_out;
-          VLOG(100) << "Error: " << status;
-          WriteErrorReply(status, message_out);
-          self->doWrite(message_out);
-        }
-        return Status::OK();
-      }));
-  return false;
-}
-
-bool SocketConnection::doDebug(const json& root) {
-  std::string message_out;
-  json result;
-  WriteDebugReply(result, message_out);
-  this->doWrite(message_out);
-  return false;
-}
-
 bool SocketConnection::doNewSession(const json& root) {
   auto self(shared_from_this());
   StoreType bulk_store_type;
@@ -1227,220 +1316,6 @@ bool SocketConnection::doDeleteSession(const json& root) {
   socket_server_ptr_->Close();
   this->doWrite(message_out);
   return true;
-}
-
-bool SocketConnection::doLabelObject(const json& root) {
-  auto self(shared_from_this());
-  ObjectID object_id = InvalidObjectID();
-  std::vector<std::string> keys;
-  std::vector<std::string> values;
-  std::string message_out;
-
-  TRY_READ_REQUEST(ReadLabelRequest, root, object_id, keys, values);
-  RESPONSE_ON_ERROR(server_ptr_->LabelObjects(
-      object_id, keys, values, [self](const Status& status) {
-        std::string message_out;
-        if (status.ok()) {
-          WriteLabelReply(message_out);
-        } else {
-          VLOG(100) << "Error: " << status;
-          WriteErrorReply(status, message_out);
-        }
-        self->doWrite(message_out);
-        return Status::OK();
-      }));
-  return false;
-}
-
-bool SocketConnection::doEvictObjects(const json& root) {
-  auto self(shared_from_this());
-  std::vector<ObjectID> ids;
-  std::string message_out;
-
-  TRY_READ_REQUEST(ReadEvictRequest, root, ids);
-  RESPONSE_ON_ERROR(
-      server_ptr_->EvictObjects(ids, [self](const Status& status) {
-        std::string message_out;
-        if (status.ok()) {
-          WriteEvictReply(message_out);
-        } else {
-          VLOG(100) << "Error: " << status;
-          WriteErrorReply(status, message_out);
-        }
-        self->doWrite(message_out);
-        return Status::OK();
-      }));
-  return false;
-}
-
-bool SocketConnection::doLoadObjects(const json& root) {
-  auto self(shared_from_this());
-  std::vector<ObjectID> ids;
-  bool pin = false;
-  std::string message_out;
-
-  TRY_READ_REQUEST(ReadLoadRequest, root, ids, pin);
-  RESPONSE_ON_ERROR(
-      server_ptr_->LoadObjects(ids, pin, [self](const Status& status) {
-        std::string message_out;
-        if (status.ok()) {
-          WriteLoadReply(message_out);
-        } else {
-          VLOG(100) << "Error: " << status;
-          WriteErrorReply(status, message_out);
-        }
-        self->doWrite(message_out);
-        return Status::OK();
-      }));
-  return false;
-}
-
-bool SocketConnection::doUnpinObjects(const json& root) {
-  auto self(shared_from_this());
-  std::vector<ObjectID> ids;
-  std::string message_out;
-
-  TRY_READ_REQUEST(ReadUnpinRequest, root, ids);
-  RESPONSE_ON_ERROR(
-      server_ptr_->UnpinObjects(ids, [self](const Status& status) {
-        std::string message_out;
-        if (status.ok()) {
-          WriteUnpinReply(message_out);
-        } else {
-          VLOG(100) << "Error: " << status;
-          WriteErrorReply(status, message_out);
-        }
-        self->doWrite(message_out);
-        return Status::OK();
-      }));
-  return false;
-}
-
-bool SocketConnection::doCreateBufferByPlasma(json const& root) {
-  auto self(shared_from_this());
-  PlasmaID plasma_id;
-  ObjectID object_id = InvalidObjectID();
-  size_t size, plasma_size;
-  std::shared_ptr<PlasmaPayload> plasma_object;
-
-  TRY_READ_REQUEST(ReadCreateBufferByPlasmaRequest, root, plasma_id, size,
-                   plasma_size);
-
-  std::string message_out;
-  RESPONSE_ON_ERROR(plasma_bulk_store_->Create(size, plasma_size, plasma_id,
-                                               object_id, plasma_object));
-
-  int store_fd = plasma_object->store_fd, fd_to_send = -1;
-  int data_size = plasma_object->data_size;
-
-  if (data_size > 0 &&
-      self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-    self->used_fds_.emplace(store_fd);
-    fd_to_send = store_fd;
-  }
-
-  WriteCreateBufferByPlasmaReply(object_id, plasma_object, fd_to_send,
-                                 message_out);
-
-  this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
-    if (fd_to_send != -1) {
-      send_fd(self->nativeHandle(), fd_to_send);
-    }
-    LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
-                plasma_bulk_store_->Footprint());
-    return Status::OK();
-  });
-  return false;
-}
-
-bool SocketConnection::doGetBuffersByPlasma(json const& root) {
-  auto self(shared_from_this());
-  std::vector<PlasmaID> plasma_ids;
-  bool unsafe = false;
-  std::vector<std::shared_ptr<PlasmaPayload>> plasma_objects;
-  std::string message_out;
-
-  TRY_READ_REQUEST(ReadGetBuffersByPlasmaRequest, root, plasma_ids, unsafe);
-  RESPONSE_ON_ERROR(
-      plasma_bulk_store_->GetUnsafe(plasma_ids, unsafe, plasma_objects));
-  RESPONSE_ON_ERROR(plasma_bulk_store_->AddDependency(
-      std::unordered_set<PlasmaID>(plasma_ids.begin(), plasma_ids.end()),
-      getConnId()));
-  WriteGetBuffersByPlasmaReply(plasma_objects, message_out);
-
-  /* NOTE: Here we send the file descriptor after the objects.
-   *       We are using sendmsg to send the file descriptor
-   *       which is a sync method. In theory, this might cause
-   *       the server to block, but currently this seems to be
-   *       the only method that are widely used in practice, e.g.,
-   *       boost and Plasma, and actually the file descriptor is
-   *       a very short message.
-   *
-   *       We will examine other methods later, such as using
-   *       explicit file descriptors.
-   */
-  this->doWrite(message_out, [self, plasma_objects](const Status& status) {
-    for (auto object : plasma_objects) {
-      int store_fd = object->store_fd;
-      int data_size = object->data_size;
-      if (data_size > 0 &&
-          self->used_fds_.find(store_fd) == self->used_fds_.end()) {
-        self->used_fds_.emplace(store_fd);
-        send_fd(self->nativeHandle(), store_fd);
-      }
-    }
-    return Status::OK();
-  });
-  return false;
-}
-
-bool SocketConnection::doSealBlob(json const& root) {
-  auto self(shared_from_this());
-  ObjectID id;
-  TRY_READ_REQUEST(ReadSealRequest, root, id);
-  RESPONSE_ON_ERROR(bulk_store_->Seal(id));
-  RESPONSE_ON_ERROR(bulk_store_->AddDependency(id, getConnId()));
-  std::string message_out;
-  WriteSealReply(message_out);
-  this->doWrite(message_out);
-  return false;
-}
-
-bool SocketConnection::doSealPlasmaBlob(json const& root) {
-  auto self(shared_from_this());
-  PlasmaID id;
-  TRY_READ_REQUEST(ReadPlasmaSealRequest, root, id);
-  RESPONSE_ON_ERROR(plasma_bulk_store_->Seal(id));
-  RESPONSE_ON_ERROR(plasma_bulk_store_->AddDependency(id, getConnId()));
-  std::string message_out;
-  WriteSealReply(message_out);
-  this->doWrite(message_out);
-  return false;
-}
-
-bool SocketConnection::doPlasmaRelease(json const& root) {
-  auto self(shared_from_this());
-  PlasmaID id;
-  TRY_READ_REQUEST(ReadPlasmaReleaseRequest, root, id);
-  RESPONSE_ON_ERROR(plasma_bulk_store_->Release(id, getConnId()));
-  std::string message_out;
-  WritePlasmaReleaseReply(message_out);
-  this->doWrite(message_out);
-  return false;
-}
-
-bool SocketConnection::doPlasmaDelData(json const& root) {
-  auto self(shared_from_this());
-  PlasmaID id;
-  TRY_READ_REQUEST(ReadPlasmaDelDataRequest, root, id);
-
-  /// Plasma Data are not composable, so we do not have to wrestle with meta.
-  RESPONSE_ON_ERROR(plasma_bulk_store_->OnDelete(id));
-
-  std::string message_out;
-  WritePlasmaDelDataReply(message_out);
-  this->doWrite(message_out);
-  return false;
 }
 
 bool SocketConnection::doMoveBuffersOwnership(json const& root) {
@@ -1514,60 +1389,67 @@ Status SocketConnection::MoveBuffers(
   return Status::OK();
 }
 
-bool SocketConnection::doRelease(json const& root) {
-  auto self(shared_from_this());
-  ObjectID id;  // Must be a blob id.
-  TRY_READ_REQUEST(ReadReleaseRequest, root, id);
-  RESPONSE_ON_ERROR(bulk_store_->Release(id, getConnId()));
-  std::string message_out;
-  WriteReleaseReply(message_out);
-  this->doWrite(message_out);
-  return false;
-}
-
-bool SocketConnection::doDelDataWithFeedbacks(json const& root) {
+bool SocketConnection::doEvictObjects(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
-  bool force, deep, fastpath;
-  double startTime = GetCurrentTime();
-  TRY_READ_REQUEST(ReadDelDataWithFeedbacksRequest, root, ids, force, deep,
-                   fastpath);
-  RESPONSE_ON_ERROR(server_ptr_->DelData(
-      ids, force, deep, fastpath,
-      [self, startTime](const Status& status,
-                        std::vector<ObjectID> const& delete_ids) {
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadEvictRequest, root, ids);
+  RESPONSE_ON_ERROR(
+      server_ptr_->EvictObjects(ids, [self](const Status& status) {
         std::string message_out;
         if (status.ok()) {
-          std::vector<ObjectID> deleted_bids;
-          for (auto id : delete_ids) {
-            if (IsBlob(id)) {
-              deleted_bids.emplace_back(id);
-            }
-          }
-          WriteDelDataWithFeedbacksReply(deleted_bids, message_out);
+          WriteEvictReply(message_out);
         } else {
-          VLOG(100) << "Error: " << status.ToString();
+          VLOG(100) << "Error: " << status;
           WriteErrorReply(status, message_out);
         }
         self->doWrite(message_out);
-        double endTime = GetCurrentTime();
-        LOG_SUMMARY("data_request_duration_microseconds", "delete",
-                    (endTime - startTime) * 1000000);
-        LOG_COUNTER("data_requests_total", "delete");
         return Status::OK();
       }));
   return false;
 }
 
-bool SocketConnection::doIsInUse(json const& root) {
+bool SocketConnection::doLoadObjects(const json& root) {
   auto self(shared_from_this());
-  ObjectID id;  // Must be a blob id.
-  TRY_READ_REQUEST(ReadIsInUseRequest, root, id);
-  bool is_in_use = false;
-  RESPONSE_ON_ERROR(bulk_store_->IsInUse(id, is_in_use));
+  std::vector<ObjectID> ids;
+  bool pin = false;
   std::string message_out;
-  WriteIsInUseReply(is_in_use, message_out);
-  this->doWrite(message_out);
+
+  TRY_READ_REQUEST(ReadLoadRequest, root, ids, pin);
+  RESPONSE_ON_ERROR(
+      server_ptr_->LoadObjects(ids, pin, [self](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteLoadReply(message_out);
+        } else {
+          VLOG(100) << "Error: " << status;
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doUnpinObjects(const json& root) {
+  auto self(shared_from_this());
+  std::vector<ObjectID> ids;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadUnpinRequest, root, ids);
+  RESPONSE_ON_ERROR(
+      server_ptr_->UnpinObjects(ids, [self](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteUnpinReply(message_out);
+        } else {
+          VLOG(100) << "Error: " << status;
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
   return false;
 }
 
@@ -1583,14 +1465,79 @@ bool SocketConnection::doIsSpilled(json const& root) {
   return false;
 }
 
-bool SocketConnection::doIncreaseReferenceCount(json const& root) {
+bool SocketConnection::doIsInUse(json const& root) {
   auto self(shared_from_this());
-  std::vector<ObjectID> ids;
-  TRY_READ_REQUEST(ReadIncreaseReferenceCountRequest, root, ids);
-  RESPONSE_ON_ERROR(bulk_store_->AddDependency(
-      std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
+  ObjectID id;  // Must be a blob id.
+  TRY_READ_REQUEST(ReadIsInUseRequest, root, id);
+  bool is_in_use = false;
+  RESPONSE_ON_ERROR(bulk_store_->IsInUse(id, is_in_use));
   std::string message_out;
-  WriteIncreaseReferenceCountReply(message_out);
+  WriteIsInUseReply(is_in_use, message_out);
+  this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doClusterMeta(const json& root) {
+  auto self(shared_from_this());
+  TRY_READ_REQUEST(ReadClusterMetaRequest, root);
+  RESPONSE_ON_ERROR(server_ptr_->ClusterInfo([self](const Status& status,
+                                                    const json& tree) {
+    std::string message_out;
+    if (status.ok()) {
+      WriteClusterMetaReply(tree, message_out);
+    } else {
+      VLOG(100) << "Error: failed to check cluster meta: " << status.ToString();
+      WriteErrorReply(status, message_out);
+    }
+    self->doWrite(message_out);
+    return Status::OK();
+  }));
+  return false;
+}
+
+bool SocketConnection::doInstanceStatus(const json& root) {
+  auto self(shared_from_this());
+  TRY_READ_REQUEST(ReadInstanceStatusRequest, root);
+  RESPONSE_ON_ERROR(server_ptr_->InstanceStatus(
+      [self](const Status& status, const json& tree) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteInstanceStatusReply(tree, message_out);
+        } else {
+          VLOG(100) << "Error: failed to check instance status: "
+                    << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doMigrateObject(const json& root) {
+  auto self(shared_from_this());
+  ObjectID object_id;
+  TRY_READ_REQUEST(ReadMigrateObjectRequest, root, object_id);
+
+  RESPONSE_ON_ERROR(server_ptr_->MigrateObject(
+      object_id, [self](const Status& status, const ObjectID& target) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteMigrateObjectReply(target, message_out);
+        } else {
+          VLOG(100) << "Error: failed to migrate object: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doDebug(const json& root) {
+  std::string message_out;
+  json result;
+  WriteDebugReply(result, message_out);
   this->doWrite(message_out);
   return false;
 }

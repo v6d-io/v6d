@@ -230,22 +230,23 @@ template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::GetUnsafe(
     std::vector<ID> const& ids, const bool unsafe,
     std::vector<std::shared_ptr<P>>& objects) {
-  for (auto object_id : ids) {
-    if (object_id == EmptyBlobID<ID>()) {
+  for (auto id : ids) {
+    if (id == EmptyBlobID<ID>()) {
       objects.push_back(P::MakeEmpty());
     } else {
       Status status;
-      bool accessed =
-          objects_.find_fn(object_id,
-                           [unsafe, &objects,
-                            &status](const std::shared_ptr<P>& object) -> void {
-                             if (unsafe || object->IsSealed()) {
-                               objects.push_back(object);
-                             } else {
-                               objects.clear();
-                               status = Status::ObjectNotSealed();
-                             }
-                           });
+      bool accessed = objects_.find_fn(
+          id,
+          [id, unsafe, &objects,
+           &status](const std::shared_ptr<P>& object) -> void {
+            if (unsafe || object->IsSealed()) {
+              objects.push_back(object);
+            } else {
+              objects.clear();
+              status = Status::ObjectNotSealed("Failed to get blob with id " +
+                                               IDToString<ID>(id));
+            }
+          });
       if (accessed && !status.ok()) {
         return status;
       }

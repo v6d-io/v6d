@@ -32,77 +32,140 @@ limitations under the License.
 
 namespace vineyard {
 
-enum class CommandType {
-  DebugCommand = -1,
-  NullCommand = 0,
-  ExitRequest = 1,
-  ExitReply = 2,
-  RegisterRequest = 3,
-  RegisterReply = 4,
-  GetDataRequest = 5,
-  GetDataReply = 6,
-  PersistRequest = 8,
-  ExistsRequest = 9,
-  DelDataRequest = 10,
-  ClusterMetaRequest = 11,
-  ListDataRequest = 12,
-  CreateBufferRequest = 13,
-  GetBuffersRequest = 14,
-  CreateDataRequest = 15,
-  PutNameRequest = 16,
-  GetNameRequest = 17,
-  DropNameRequest = 18,
-  CreateStreamRequest = 19,
-  GetNextStreamChunkRequest = 20,
-  PullNextStreamChunkRequest = 21,
-  StopStreamRequest = 22,
-  DropStreamRequest = 23,
-  IfPersistRequest = 25,
-  InstanceStatusRequest = 26,
-  ShallowCopyRequest = 27,
-  OpenStreamRequest = 28,
-  MigrateObjectRequest = 29,
-  CreateRemoteBufferRequest = 30,
-  GetRemoteBuffersRequest = 31,
-  DropBufferRequest = 32,
-  MakeArenaRequest = 33,
-  FinalizeArenaRequest = 34,
-  ClearRequest = 36,
-  PushNextStreamChunkRequest = 37,
-  NewSessionRequest = 38,
-  NewSessionReply = 39,
-  DeleteSessionRequest = 40,
-  DeleteSessionReply = 41,
-  SealRequest = 42,
-  CreateBufferByPlasmaRequest = 43,
-  CreateBufferByPlasmaReply = 44,
-  GetBuffersByPlasmaRequest = 45,
-  GetBuffersByPlasmaReply = 46,
-  PlasmaSealRequest = 47,
-  PlasmaReleaseRequest = 48,
-  PlasmaDelDataRequest = 49,
-  MoveBuffersOwnershipRequest = 50,
-  ReleaseRequest = 51,
-  DelDataWithFeedbacksRequest = 52,
-  IsInUseRequest = 53,
-  IncreaseReferenceCountRequest = 54,
-  IsSpilledRequest = 55,
-  CreateGPUBufferRequest = 56,
-  GetGPUBuffersRequest = 57,
-  CreateDiskBufferRequest = 58,
-  ListNameRequest = 59,
-  LabelRequest = 60,
-  EvictRequest = 80,
-  LoadRequest = 81,  // = {load, load + pin}
-  UnpinRequest = 82,
+struct command_t {
+  // Connecting APIs
+  static const std::string REGISTER_REQUEST;
+  static const std::string REGISTER_REPLY;
+  static const std::string EXIT_REQUEST;
+  static const std::string EXIT_REPLY;
+
+  // Blobs APIs
+  static const std::string CREATE_BUFFER_REQUEST;
+  static const std::string CREATE_BUFFER_REPLY;
+  static const std::string CREATE_DISK_BUFFER_REQUEST;
+  static const std::string CREATE_DISK_BUFFER_REPLY;
+  static const std::string CREATE_GPU_BUFFER_REQUEST;
+  static const std::string CREATE_GPU_BUFFER_REPLY;
+  static const std::string SEAL_BUFFER_REQUEST;
+  static const std::string SEAL_BUFFER_REPLY;
+  static const std::string GET_BUFFERS_REQUEST;
+  static const std::string GET_BUFFERS_REPLY;
+  static const std::string GET_GPU_BUFFERS_REQUEST;
+  static const std::string GET_GPU_BUFFERS_REPLY;
+  static const std::string DROP_BUFFER_REQUEST;
+  static const std::string DROP_BUFFER_REPLY;
+
+  static const std::string CREATE_REMOTE_BUFFER_REQUEST;
+  static const std::string GET_REMOTE_BUFFERS_REQUEST;
+
+  static const std::string INCREASE_REFERENCE_COUNT_REQUEST;
+  static const std::string INCREASE_REFERENCE_COUNT_REPLY;
+  static const std::string RELEASE_REQUEST;
+  static const std::string RELEASE_REPLY;
+  static const std::string DEL_DATA_WITH_FEEDBACKS_REQUEST;
+  static const std::string DEL_DATA_WITH_FEEDBACKS_REPLY;
+
+  static const std::string CREATE_BUFFER_PLASMA_REQUEST;
+  static const std::string CREATE_BUFFER_PLASMA_REPLY;
+  static const std::string GET_BUFFERS_PLASMA_REQUEST;
+  static const std::string GET_BUFFERS_PLASMA_REPLY;
+  static const std::string PLASMA_SEAL_REQUEST;
+  static const std::string PLASMA_SEAL_REPLY;
+  static const std::string PLASMA_RELEASE_REQUEST;
+  static const std::string PLASMA_RELEASE_REPLY;
+  static const std::string PLASMA_DEL_DATA_REQUEST;
+  static const std::string PLASMA_DEL_DATA_REPLY;
+
+  // Metadata APIs
+  static const std::string CREATE_DATA_REQUEST;
+  static const std::string CREATE_DATA_REPLY;
+  static const std::string GET_DATA_REQUEST;
+  static const std::string GET_DATA_REPLY;
+  static const std::string LIST_DATA_REQUEST;
+  static const std::string LIST_DATA_REPLY;
+  static const std::string DELETE_DATA_REQUEST;
+  static const std::string DELETE_DATA_REPLY;
+  static const std::string EXISTS_REQUEST;
+  static const std::string EXISTS_REPLY;
+  static const std::string PERSIST_REQUEST;
+  static const std::string PERSIST_REPLY;
+  static const std::string IF_PERSIST_REQUEST;
+  static const std::string IF_PERSIST_REPLY;
+  static const std::string LABEL_REQUEST;
+  static const std::string LABEL_REPLY;
+  static const std::string CLEAR_REQUEST;
+  static const std::string CLEAR_REPLY;
+
+  // Stream APIs
+  static const std::string CREATE_STREAM_REQUEST;
+  static const std::string CREATE_STREAM_REPLY;
+  static const std::string OPEN_STREAM_REQUEST;
+  static const std::string OPEN_STREAM_REPLY;
+  static const std::string GET_NEXT_STREAM_CHUNK_REQUEST;
+  static const std::string GET_NEXT_STREAM_CHUNK_REPLY;
+  static const std::string PUSH_NEXT_STREAM_CHUNK_REQUEST;
+  static const std::string PUSH_NEXT_STREAM_CHUNK_REPLY;
+  static const std::string PULL_NEXT_STREAM_CHUNK_REQUEST;
+  static const std::string PULL_NEXT_STREAM_CHUNK_REPLY;
+  static const std::string STOP_STREAM_REQUEST;
+  static const std::string STOP_STREAM_REPLY;
+  static const std::string DROP_STREAM_REQUEST;
+  static const std::string DROP_STREAM_REPLY;
+
+  // Names APIs
+  static const std::string PUT_NAME_REQUEST;
+  static const std::string PUT_NAME_REPLY;
+  static const std::string GET_NAME_REQUEST;
+  static const std::string GET_NAME_REPLY;
+  static const std::string LIST_NAME_REQUEST;
+  static const std::string LIST_NAME_REPLY;
+  static const std::string DROP_NAME_REQUEST;
+  static const std::string DROP_NAME_REPLY;
+
+  // Arena APIs
+  static const std::string MAKE_ARENA_REQUEST;
+  static const std::string MAKE_ARENA_REPLY;
+  static const std::string FINALIZE_ARENA_REQUEST;
+  static const std::string FINALIZE_ARENA_REPLY;
+
+  // Session APIs
+  static const std::string NEW_SESSION_REQUEST;
+  static const std::string NEW_SESSION_REPLY;
+  static const std::string DELETE_SESSION_REQUEST;
+  static const std::string DELETE_SESSION_REPLY;
+
+  static const std::string MOVE_BUFFERS_OWNERSHIP_REQUEST;
+  static const std::string MOVE_BUFFERS_OWNERSHIP_REPLY;
+
+  // Spill APIs
+  static const std::string EVICT_REQUEST;
+  static const std::string EVICT_REPLY;
+  static const std::string LOAD_REQUEST;
+  static const std::string LOAD_REPLY;
+  static const std::string UNPIN_REQUEST;
+  static const std::string UNPIN_REPLY;
+  static const std::string IS_SPILLED_REQUEST;
+  static const std::string IS_SPILLED_REPLY;
+  static const std::string IS_IN_USE_REQUEST;
+  static const std::string IS_IN_USE_REPLY;
+
+  // Meta APIs
+  static const std::string CLUSTER_META_REQUEST;
+  static const std::string CLUSTER_META_REPLY;
+  static const std::string INSTANCE_STATUS_REQUEST;
+  static const std::string INSTANCE_STATUS_REPLY;
+  static const std::string MIGRATE_OBJECT_REQUEST;
+  static const std::string MIGRATE_OBJECT_REPLY;
+  static const std::string SHALLOW_COPY_REQUEST;
+  static const std::string SHALLOW_COPY_REPLY;
+  static const std::string DEBUG_REQUEST;
+  static const std::string DEBUG_REPLY;
 };
 
 enum class StoreType {
   kDefault = 1,
   kPlasma = 2,
 };
-
-CommandType ParseCommandType(const std::string& str_type);
 
 void WriteErrorReply(Status const& status, std::string& msg);
 
@@ -132,6 +195,215 @@ Status ReadRegisterReply(const json& msg, std::string& ipc_socket,
 
 void WriteExitRequest(std::string& msg);
 
+void WriteCreateBufferRequest(const size_t size, std::string& msg);
+
+Status ReadCreateBufferRequest(const json& root, size_t& size);
+
+void WriteCreateBufferReply(const ObjectID id,
+                            const std::shared_ptr<Payload>& object,
+                            const int fd_to_send, std::string& msg);
+
+Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object,
+                             int& fd_sent);
+
+void WriteCreateDiskBufferRequest(const size_t size, const std::string& path,
+                                  std::string& msg);
+
+Status ReadCreateDiskBufferRequest(const json& root, size_t& size,
+                                   std::string& path);
+
+void WriteCreateDiskBufferReply(const ObjectID id,
+                                const std::shared_ptr<Payload>& object,
+                                const int fd_to_send, std::string& msg);
+
+Status ReadCreateDiskBufferReply(const json& root, ObjectID& id,
+                                 Payload& object, int& fd_sent);
+
+void WriteCreateGPUBufferRequest(const size_t size, std::string& msg);
+
+Status ReadCreateGPUBufferRequest(const json& root, size_t& size);
+
+void WriteGPUCreateBufferReply(const ObjectID id,
+                               const std::shared_ptr<Payload>& object,
+                               GPUUnifiedAddress uva, std::string& msg);
+
+Status ReadGPUCreateBufferReply(
+    const json& root, ObjectID& id, Payload& Object,
+    std::shared_ptr<vineyard::GPUUnifiedAddress> uva);
+
+void WriteSealRequest(ObjectID const& object_id, std::string& message_out);
+
+Status ReadSealRequest(json const& root, ObjectID& object_id);
+
+void WriteSealReply(std::string& msg);
+
+Status ReadSealReply(json const& root);
+
+void WriteGetBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
+                            std::string& msg);
+
+void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
+                            const bool unsafe, std::string& msg);
+
+Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids,
+                             bool& unsafe);
+
+void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
+                          const std::vector<int>& fd_to_send,
+                          const bool compress, std::string& msg);
+
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
+                           std::vector<int>& fd_sent);
+
+Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
+                           std::vector<int>& fd_sent, bool& compress);
+
+void WriteGetGPUBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
+                               std::string& msg);
+
+Status ReadGetGPUBuffersRequest(const json& root, std::vector<ObjectID>& ids,
+                                bool& unsafe);
+
+void WriteGetGPUBuffersReply(
+    const std::vector<std::shared_ptr<Payload>>& objects,
+    const std::vector<std::vector<int64_t>>& handle_to_send, std::string& msg);
+
+Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
+                              std::vector<GPUUnifiedAddress>& uva_sent);
+
+void WriteDropBufferRequest(const ObjectID id, std::string& msg);
+
+Status ReadDropBufferRequest(const json& root, ObjectID& id);
+
+void WriteDropBufferReply(std::string& msg);
+
+Status ReadDropBufferReply(const json& root);
+
+void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg);
+
+void WriteCreateRemoteBufferRequest(const size_t size, const bool compress,
+                                    std::string& msg);
+
+Status ReadCreateRemoteBufferRequest(const json& root, size_t& size,
+                                     bool& compress);
+
+void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
+                                  const bool unsafe, std::string& msg);
+
+void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
+                                  const bool unsafe, std::string& msg);
+
+void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
+                                  const bool unsafe, const bool compress,
+                                  std::string& msg);
+
+void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
+                                  const bool unsafe, const bool compress,
+                                  std::string& msg);
+
+Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
+                                   bool& unsafe, bool& compress);
+
+void WriteIncreaseReferenceCountRequest(const std::vector<ObjectID>& ids,
+                                        std::string& msg);
+
+Status ReadIncreaseReferenceCountRequest(json const& root,
+                                         std::vector<ObjectID>& ids);
+
+void WriteIncreaseReferenceCountReply(std::string& msg);
+
+Status ReadIncreaseReferenceCountReply(json const& root);
+
+void WriteReleaseRequest(ObjectID const& object_id, std::string& msg);
+
+Status ReadReleaseRequest(json const& root, ObjectID& object_id);
+
+void WriteReleaseReply(std::string& msg);
+
+Status ReadReleaseReply(json const& root);
+
+void WriteDelDataWithFeedbacksRequest(const std::vector<ObjectID>& id,
+                                      const bool force, const bool deep,
+                                      const bool fastpath, std::string& msg);
+
+Status ReadDelDataWithFeedbacksRequest(json const& root,
+                                       std::vector<ObjectID>& id, bool& force,
+                                       bool& deep, bool& fastpath);
+
+void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
+                                    std::string& msg);
+
+Status ReadDelDataWithFeedbacksReply(json const& root,
+                                     std::vector<ObjectID>& deleted_bids);
+
+void WriteCreateBufferByPlasmaRequest(PlasmaID const plasma_id,
+                                      size_t const size,
+                                      size_t const plasma_size,
+                                      std::string& msg);
+
+Status ReadCreateBufferByPlasmaRequest(json const& root, PlasmaID& plasma_id,
+                                       size_t& size, size_t& plasma_size);
+
+void WriteCreateBufferByPlasmaReply(
+    ObjectID const object_id,
+    const std::shared_ptr<PlasmaPayload>& plasma_object, int fd_to_send,
+    std::string& msg);
+
+Status ReadCreateBufferByPlasmaReply(json const& root, ObjectID& object_id,
+                                     PlasmaPayload& plasma_object,
+                                     int& fd_sent);
+
+void WriteGetBuffersByPlasmaRequest(std::set<PlasmaID> const& plasma_ids,
+                                    const bool unsafe, std::string& msg);
+
+Status ReadGetBuffersByPlasmaRequest(json const& root,
+                                     std::vector<PlasmaID>& plasma_ids,
+                                     bool& unsafe);
+
+void WriteGetBuffersByPlasmaReply(
+    std::vector<std::shared_ptr<PlasmaPayload>> const& plasma_objects,
+    std::string& msg);
+
+Status ReadGetBuffersByPlasmaReply(json const& root,
+                                   std::vector<PlasmaPayload>& plasma_objects);
+
+void WritePlasmaSealRequest(PlasmaID const& plasma_id,
+                            std::string& message_out);
+
+Status ReadPlasmaSealRequest(json const& root, PlasmaID& plasma_id);
+
+void WritePlasmaReleaseRequest(PlasmaID const& plasma_id,
+                               std::string& message_out);
+
+Status ReadPlasmaReleaseRequest(json const& root, PlasmaID& plasma_id);
+
+void WritePlasmaReleaseReply(std::string& msg);
+
+Status ReadPlasmaReleaseReply(json const& root);
+
+void WritePlasmaReleaseReply(std::string& msg);
+
+Status ReadPlasmaReleaseReply(json const& root);
+
+void WritePlasmaDelDataRequest(PlasmaID const& plasma_id,
+                               std::string& message_out);
+
+Status ReadPlasmaDelDataRequest(json const& root, PlasmaID& plasma_id);
+
+void WritePlasmaDelDataReply(std::string& msg);
+
+Status ReadPlasmaDelDataReply(json const& root);
+
+void WriteCreateDataRequest(const json& content, std::string& msg);
+
+Status ReadCreateDataRequest(const json& root, json& content);
+
+void WriteCreateDataReply(const ObjectID& id, const Signature& signature,
+                          const InstanceID& instance_id, std::string& msg);
+
+Status ReadCreateDataReply(const json& root, ObjectID& id, Signature& signature,
+                           InstanceID& instance_id);
+
 void WriteGetDataRequest(const ObjectID id, const bool sync_remote,
                          const bool wait, std::string& msg);
 
@@ -155,27 +427,27 @@ void WriteListDataRequest(std::string const& pattern, bool const regex,
 Status ReadListDataRequest(const json& root, std::string& pattern, bool& regex,
                            size_t& limit);
 
-void WriteListNameRequest(std::string const& pattern, bool const regex,
-                          size_t const limit, std::string& msg);
+void WriteDelDataRequest(const ObjectID id, const bool force, const bool deep,
+                         const bool fastpath, std::string& msg);
 
-Status ReadListNameRequest(const json& root, std::string& pattern, bool& regex,
-                           size_t& limit);
+void WriteDelDataRequest(const std::vector<ObjectID>& id, const bool force,
+                         const bool deep, const bool fastpath,
+                         std::string& msg);
 
-void WriteListNameReply(std::map<std::string, ObjectID> const& names,
-                        std::string& msg);
+Status ReadDelDataRequest(const json& root, std::vector<ObjectID>& id,
+                          bool& force, bool& deep, bool& fastpath);
 
-Status ReadListNameReply(const json& root,
-                         std::map<std::string, ObjectID>& names);
+void WriteDelDataReply(std::string& msg);
 
-void WriteCreateDataRequest(const json& content, std::string& msg);
+Status ReadDelDataReply(const json& root);
 
-Status ReadCreateDataRequest(const json& root, json& content);
+void WriteExistsRequest(const ObjectID id, std::string& msg);
 
-void WriteCreateDataReply(const ObjectID& id, const Signature& signature,
-                          const InstanceID& instance_id, std::string& msg);
+Status ReadExistsRequest(const json& root, ObjectID& id);
 
-Status ReadCreateDataReply(const json& root, ObjectID& id, Signature& signature,
-                           InstanceID& instance_id);
+void WriteExistsReply(bool exists, std::string& msg);
+
+Status ReadExistsReply(const json& root, bool& exists);
 
 void WritePersistRequest(const ObjectID id, std::string& msg);
 
@@ -193,188 +465,32 @@ void WriteIfPersistReply(bool exists, std::string& msg);
 
 Status ReadIfPersistReply(const json& root, bool& persist);
 
-void WriteExistsRequest(const ObjectID id, std::string& msg);
+void WriteLabelRequest(const ObjectID id, const std::string& key,
+                       const std::string& value, std::string& msg);
 
-Status ReadExistsRequest(const json& root, ObjectID& id);
+void WriteLabelRequest(const ObjectID id, const std::vector<std::string>& keys,
+                       const std::vector<std::string>& values,
+                       std::string& msg);
 
-void WriteExistsReply(bool exists, std::string& msg);
+void WriteLabelRequest(const ObjectID id,
+                       const std::map<std::string, std::string>& kvs,
+                       std::string& msg);
 
-Status ReadExistsReply(const json& root, bool& exists);
+Status ReadLabelRequest(json const& root, ObjectID& id,
+                        std::vector<std::string>& keys,
+                        std::vector<std::string>& values);
 
-void WriteDelDataRequest(const ObjectID id, const bool force, const bool deep,
-                         const bool fastpath, std::string& msg);
+void WriteLabelReply(std::string& msg);
 
-void WriteDelDataRequest(const std::vector<ObjectID>& id, const bool force,
-                         const bool deep, const bool fastpath,
-                         std::string& msg);
+Status ReadLabelReply(json const& root);
 
-Status ReadDelDataRequest(const json& root, std::vector<ObjectID>& id,
-                          bool& force, bool& deep, bool& fastpath);
+void WriteClearRequest(std::string& msg);
 
-void WriteDelDataReply(std::string& msg);
+Status ReadClearRequest(const json& root);
 
-Status ReadDelDataReply(const json& root);
+void WriteClearReply(std::string& msg);
 
-void WriteClusterMetaRequest(std::string& msg);
-
-Status ReadClusterMetaRequest(const json& root);
-
-void WriteClusterMetaReply(const json& content, std::string& msg);
-
-Status ReadClusterMetaReply(const json& root, json& content);
-
-void WriteInstanceStatusRequest(std::string& msg);
-
-Status ReadInstanceStatusRequest(const json& root);
-
-void WriteInstanceStatusReply(const json& content, std::string& msg);
-
-Status ReadInstanceStatusReply(const json& root, json& content);
-
-void WriteCreateBufferRequest(const size_t size, std::string& msg);
-
-Status ReadCreateBufferRequest(const json& root, size_t& size);
-
-void WriteCreateBufferReply(const ObjectID id,
-                            const std::shared_ptr<Payload>& object,
-                            const int fd_to_send, std::string& msg);
-
-Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object,
-                             int& fd_sent);
-
-void WriteCreateGPUBufferRequest(const size_t size, std::string& msg);
-
-Status ReadCreateGPUBufferRequest(const json& root, size_t& size);
-
-void WriteGPUCreateBufferReply(const ObjectID id,
-                               const std::shared_ptr<Payload>& object,
-                               GPUUnifiedAddress uva, std::string& msg);
-
-Status ReadGPUCreateBufferReply(
-    const json& root, ObjectID& id, Payload& Object,
-    std::shared_ptr<vineyard::GPUUnifiedAddress> uva);
-
-void WriteCreateDiskBufferRequest(const size_t size, const std::string& path,
-                                  std::string& msg);
-
-Status ReadCreateDiskBufferRequest(const json& root, size_t& size,
-                                   std::string& path);
-
-void WriteCreateDiskBufferReply(const ObjectID id,
-                                const std::shared_ptr<Payload>& object,
-                                const int fd_to_send, std::string& msg);
-
-Status ReadCreateDiskBufferReply(const json& root, ObjectID& id,
-                                 Payload& object, int& fd_sent);
-
-void WriteGetGPUBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
-                               std::string& msg);
-
-Status ReadGetGPUBuffersRequest(const json& root, std::vector<ObjectID>& ids,
-                                bool& unsafe);
-
-void WriteGetGPUBuffersReply(
-    const std::vector<std::shared_ptr<Payload>>& objects,
-    const std::vector<std::vector<int64_t>>& handle_to_send, std::string& msg);
-
-Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
-                              std::vector<GPUUnifiedAddress>& uva_sent);
-
-void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg);
-
-void WriteCreateRemoteBufferRequest(const size_t size, const bool compress,
-                                    std::string& msg);
-
-Status ReadCreateRemoteBufferRequest(const json& root, size_t& size,
-                                     bool& compress);
-
-void WriteGetBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
-                            std::string& msg);
-
-void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                            const bool unsafe, std::string& msg);
-
-Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids,
-                             bool& unsafe);
-
-void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
-                          const std::vector<int>& fd_to_send,
-                          const bool compress, std::string& msg);
-
-Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
-                           std::vector<int>& fd_sent);
-
-Status ReadGetBuffersReply(const json& root, std::vector<Payload>& objects,
-                           std::vector<int>& fd_sent, bool& compress);
-
-void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
-                                  const bool unsafe, std::string& msg);
-
-void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                                  const bool unsafe, std::string& msg);
-
-void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
-                                  const bool unsafe, const bool compress,
-                                  std::string& msg);
-
-void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                                  const bool unsafe, const bool compress,
-                                  std::string& msg);
-
-Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
-                                   bool& unsafe, bool& compress);
-
-void WriteDropBufferRequest(const ObjectID id, std::string& msg);
-
-Status ReadDropBufferRequest(const json& root, ObjectID& id);
-
-void WriteDropBufferReply(std::string& msg);
-
-Status ReadDropBufferReply(const json& root);
-
-void WritePutNameRequest(const ObjectID object_id, const std::string& name,
-                         std::string& msg);
-
-Status ReadPutNameRequest(const json& root, ObjectID& object_id,
-                          std::string& name);
-
-void WritePutNameReply(std::string& msg);
-
-Status ReadPutNameReply(const json& root);
-
-void WriteGetNameRequest(const std::string& name, const bool wait,
-                         std::string& msg);
-
-Status ReadGetNameRequest(const json& root, std::string& name, bool& wait);
-
-void WriteGetNameReply(const ObjectID& object_id, std::string& msg);
-
-Status ReadGetNameReply(const json& root, ObjectID& object_id);
-
-void WriteDropNameRequest(const std::string& name, std::string& msg);
-
-Status ReadDropNameRequest(const json& root, std::string& name);
-
-void WriteDropNameReply(std::string& msg);
-
-Status ReadDropNameReply(const json& root);
-
-void WriteMigrateObjectRequest(const ObjectID object_id, std::string& msg);
-
-Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id);
-
-void WriteMigrateObjectRequest(const ObjectID object_id, const bool local,
-                               const bool is_stream, std::string const& peer,
-                               std::string const& peer_rpc_endpoint,
-                               std::string& msg);
-
-Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id,
-                                bool& local, bool& is_stream, std::string& peer,
-                                std::string& peer_rpc_endpoint);
-
-void WriteMigrateObjectReply(const ObjectID& object_id, std::string& msg);
-
-Status ReadMigrateObjectReply(const json& root, ObjectID& object_id);
+Status ReadClearReply(const json& root);
 
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg);
 
@@ -443,17 +559,44 @@ void WriteDropStreamReply(std::string& msg);
 
 Status ReadDropStreamReply(const json& root);
 
-void WriteShallowCopyRequest(const ObjectID id, std::string& msg);
+void WritePutNameRequest(const ObjectID object_id, const std::string& name,
+                         std::string& msg);
 
-void WriteShallowCopyRequest(const ObjectID id, json const& extra_metadata,
-                             std::string& msg);
+Status ReadPutNameRequest(const json& root, ObjectID& object_id,
+                          std::string& name);
 
-Status ReadShallowCopyRequest(const json& root, ObjectID& id,
-                              json& extra_metadata);
+void WritePutNameReply(std::string& msg);
 
-void WriteShallowCopyReply(const ObjectID target_id, std::string& msg);
+Status ReadPutNameReply(const json& root);
 
-Status ReadShallowCopyReply(const json& root, ObjectID& target_id);
+void WriteGetNameRequest(const std::string& name, const bool wait,
+                         std::string& msg);
+
+Status ReadGetNameRequest(const json& root, std::string& name, bool& wait);
+
+void WriteGetNameReply(const ObjectID& object_id, std::string& msg);
+
+Status ReadGetNameReply(const json& root, ObjectID& object_id);
+
+void WriteListNameRequest(std::string const& pattern, bool const regex,
+                          size_t const limit, std::string& msg);
+
+Status ReadListNameRequest(const json& root, std::string& pattern, bool& regex,
+                           size_t& limit);
+
+void WriteListNameReply(std::map<std::string, ObjectID> const& names,
+                        std::string& msg);
+
+Status ReadListNameReply(const json& root,
+                         std::map<std::string, ObjectID>& names);
+
+void WriteDropNameRequest(const std::string& name, std::string& msg);
+
+Status ReadDropNameRequest(const json& root, std::string& name);
+
+void WriteDropNameReply(std::string& msg);
+
+Status ReadDropNameReply(const json& root);
 
 void WriteMakeArenaRequest(const size_t size, std::string& msg);
 
@@ -477,22 +620,6 @@ void WriteFinalizeArenaReply(std::string& msg);
 
 Status ReadFinalizeArenaReply(const json& root);
 
-void WriteClearRequest(std::string& msg);
-
-Status ReadClearRequest(const json& root);
-
-void WriteClearReply(std::string& msg);
-
-Status ReadClearReply(const json& root);
-
-void WriteDebugRequest(const json& debug, std::string& msg);
-
-Status ReadDebugRequest(const json& root, json& debug);
-
-void WriteDebugReply(const json& result, std::string& msg);
-
-Status ReadDebugReply(const json& root, json& result);
-
 void WriteNewSessionRequest(std::string& msg, StoreType const& bulk_store_type);
 
 Status ReadNewSessionRequest(json const& root, StoreType& bulk_store_type);
@@ -505,92 +632,15 @@ void WriteDeleteSessionRequest(std::string& msg);
 
 void WriteDeleteSessionReply(std::string& msg);
 
-void WriteCreateBufferByPlasmaRequest(PlasmaID const plasma_id,
-                                      size_t const size,
-                                      size_t const plasma_size,
+template <typename From, typename To>
+void WriteMoveBuffersOwnershipRequest(std::map<From, To> const& id_to_id,
+                                      SessionID const session_id,
                                       std::string& msg);
 
-Status ReadCreateBufferByPlasmaRequest(json const& root, PlasmaID& plasma_id,
-                                       size_t& size, size_t& plasma_size);
-
-void WriteCreateBufferByPlasmaReply(
-    ObjectID const object_id,
-    const std::shared_ptr<PlasmaPayload>& plasma_object, int fd_to_send,
-    std::string& msg);
-
-Status ReadCreateBufferByPlasmaReply(json const& root, ObjectID& object_id,
-                                     PlasmaPayload& plasma_object,
-                                     int& fd_sent);
-
-void WriteGetBuffersByPlasmaRequest(std::set<PlasmaID> const& plasma_ids,
-                                    const bool unsafe, std::string& msg);
-
-Status ReadGetBuffersByPlasmaRequest(json const& root,
-                                     std::vector<PlasmaID>& plasma_ids,
-                                     bool& unsafe);
-
-void WriteGetBuffersByPlasmaReply(
-    std::vector<std::shared_ptr<PlasmaPayload>> const& plasma_objects,
-    std::string& msg);
-
-Status ReadGetBuffersByPlasmaReply(json const& root,
-                                   std::vector<PlasmaPayload>& plasma_objects);
-
-void WriteSealRequest(ObjectID const& object_id, std::string& message_out);
-
-Status ReadSealRequest(json const& root, ObjectID& object_id);
-
-void WritePlasmaSealRequest(PlasmaID const& plasma_id,
-                            std::string& message_out);
-
-Status ReadPlasmaSealRequest(json const& root, PlasmaID& plasma_id);
-
-void WriteSealReply(std::string& msg);
-
-Status ReadSealReply(json const& root);
-
-void WritePlasmaReleaseRequest(PlasmaID const& plasma_id,
-                               std::string& message_out);
-
-Status ReadPlasmaReleaseRequest(json const& root, PlasmaID& plasma_id);
-
-void WritePlasmaReleaseReply(std::string& msg);
-
-Status ReadPlasmaReleaseReply(json const& root);
-
-void WritePlasmaReleaseReply(std::string& msg);
-
-Status ReadPlasmaReleaseReply(json const& root);
-
-void WritePlasmaDelDataRequest(PlasmaID const& plasma_id,
-                               std::string& message_out);
-
-Status ReadPlasmaDelDataRequest(json const& root, PlasmaID& plasma_id);
-
-void WritePlasmaDelDataReply(std::string& msg);
-
-Status ReadPlasmaDelDataReply(json const& root);
-
 /// normal -> normal
-void WriteMoveBuffersOwnershipRequest(
-    std::map<ObjectID, ObjectID> const& id_to_id, SessionID const session_id,
-    std::string& msg);
-
 /// normal -> plasma
-void WriteMoveBuffersOwnershipRequest(
-    std::map<PlasmaID, ObjectID> const& pid_to_id, SessionID const session_id,
-    std::string& msg);
-
 /// plasma -> normal
-void WriteMoveBuffersOwnershipRequest(
-    std::map<ObjectID, PlasmaID> const& id_to_pid, SessionID const session_id,
-    std::string& msg);
-
 /// plasma -> plasma
-void WriteMoveBuffersOwnershipRequest(
-    std::map<PlasmaID, PlasmaID> const& pid_to_pid, SessionID const session_id,
-    std::string& msg);
-
 Status ReadMoveBuffersOwnershipRequest(json const& root,
                                        std::map<ObjectID, ObjectID>& id_to_id,
                                        std::map<PlasmaID, ObjectID>& pid_to_id,
@@ -601,73 +651,6 @@ Status ReadMoveBuffersOwnershipRequest(json const& root,
 void WriteMoveBuffersOwnershipReply(std::string& msg);
 
 Status ReadMoveBuffersOwnershipReply(json const& root);
-
-void WriteReleaseRequest(ObjectID const& object_id, std::string& msg);
-
-Status ReadReleaseRequest(json const& root, ObjectID& object_id);
-
-void WriteReleaseReply(std::string& msg);
-
-Status ReadReleaseReply(json const& root);
-
-void WriteDelDataWithFeedbacksRequest(const std::vector<ObjectID>& id,
-                                      const bool force, const bool deep,
-                                      const bool fastpath, std::string& msg);
-
-Status ReadDelDataWithFeedbacksRequest(json const& root,
-                                       std::vector<ObjectID>& id, bool& force,
-                                       bool& deep, bool& fastpath);
-
-void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
-                                    std::string& msg);
-
-Status ReadDelDataWithFeedbacksReply(json const& root,
-                                     std::vector<ObjectID>& deleted_bids);
-
-void WriteIsInUseRequest(const ObjectID& id, std::string& msg);
-
-Status ReadIsInUseRequest(json const& root, ObjectID& id);
-
-void WriteIsInUseReply(const bool is_in_use, std::string& msg);
-
-Status ReadIsInUseReply(json const& root, bool& is_in_use);
-
-void WriteIsSpilledRequest(const ObjectID& id, std::string& msg);
-
-Status ReadIsSpilledRequest(json const& root, ObjectID& id);
-
-void WriteIsSpilledReply(const bool is_spilled, std::string& msg);
-
-Status ReadIsSpilledReply(json const& root, bool& is_spilled);
-
-void WriteIncreaseReferenceCountRequest(const std::vector<ObjectID>& ids,
-                                        std::string& msg);
-
-Status ReadIncreaseReferenceCountRequest(json const& root,
-                                         std::vector<ObjectID>& ids);
-
-void WriteIncreaseReferenceCountReply(std::string& msg);
-
-Status ReadIncreaseReferenceCountReply(json const& root);
-
-void WriteLabelRequest(const ObjectID id, const std::string& key,
-                       const std::string& value, std::string& msg);
-
-void WriteLabelRequest(const ObjectID id, const std::vector<std::string>& keys,
-                       const std::vector<std::string>& values,
-                       std::string& msg);
-
-void WriteLabelRequest(const ObjectID id,
-                       const std::map<std::string, std::string>& kvs,
-                       std::string& msg);
-
-Status ReadLabelRequest(json const& root, ObjectID& id,
-                        std::vector<std::string>& keys,
-                        std::vector<std::string>& values);
-
-void WriteLabelReply(std::string& msg);
-
-Status ReadLabelReply(json const& root);
 
 void WriteEvictRequest(const std::vector<ObjectID>& ids, std::string& msg);
 
@@ -693,6 +676,75 @@ Status ReadUnpinRequest(json const& root, std::vector<ObjectID>& ids);
 void WriteUnpinReply(std::string& msg);
 
 Status ReadUnpinReply(json const& root);
+
+void WriteIsSpilledRequest(const ObjectID& id, std::string& msg);
+
+Status ReadIsSpilledRequest(json const& root, ObjectID& id);
+
+void WriteIsSpilledReply(const bool is_spilled, std::string& msg);
+
+Status ReadIsSpilledReply(json const& root, bool& is_spilled);
+
+void WriteIsInUseRequest(const ObjectID& id, std::string& msg);
+
+Status ReadIsInUseRequest(json const& root, ObjectID& id);
+
+void WriteIsInUseReply(const bool is_in_use, std::string& msg);
+
+Status ReadIsInUseReply(json const& root, bool& is_in_use);
+
+void WriteClusterMetaRequest(std::string& msg);
+
+Status ReadClusterMetaRequest(const json& root);
+
+void WriteClusterMetaReply(const json& content, std::string& msg);
+
+Status ReadClusterMetaReply(const json& root, json& content);
+
+void WriteInstanceStatusRequest(std::string& msg);
+
+Status ReadInstanceStatusRequest(const json& root);
+
+void WriteInstanceStatusReply(const json& content, std::string& msg);
+
+Status ReadInstanceStatusReply(const json& root, json& content);
+
+void WriteMigrateObjectRequest(const ObjectID object_id, std::string& msg);
+
+Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id);
+
+void WriteMigrateObjectRequest(const ObjectID object_id, const bool local,
+                               const bool is_stream, std::string const& peer,
+                               std::string const& peer_rpc_endpoint,
+                               std::string& msg);
+
+Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id,
+                                bool& local, bool& is_stream, std::string& peer,
+                                std::string& peer_rpc_endpoint);
+
+void WriteMigrateObjectReply(const ObjectID& object_id, std::string& msg);
+
+Status ReadMigrateObjectReply(const json& root, ObjectID& object_id);
+
+void WriteShallowCopyRequest(const ObjectID id, std::string& msg);
+
+void WriteShallowCopyRequest(const ObjectID id, json const& extra_metadata,
+                             std::string& msg);
+
+Status ReadShallowCopyRequest(const json& root, ObjectID& id,
+                              json& extra_metadata);
+
+void WriteShallowCopyReply(const ObjectID target_id, std::string& msg);
+
+Status ReadShallowCopyReply(const json& root, ObjectID& target_id);
+
+void WriteDebugRequest(const json& debug, std::string& msg);
+
+Status ReadDebugRequest(const json& root, json& debug);
+
+void WriteDebugReply(const json& result, std::string& msg);
+
+Status ReadDebugReply(const json& root, json& result);
 
 }  // namespace vineyard
 

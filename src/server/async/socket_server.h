@@ -70,15 +70,13 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
  protected:
   bool doRegister(json const& root);
 
-  bool doGetBuffers(json const& root);
-
-  /**
-   * @brief doGetRemoteBuffers differs from doGetRemoteBuffers, that the
-   * content of blob is in the response body, rather than via memory sharing.
-   */
-  bool doGetRemoteBuffers(json const& root);
-
   bool doCreateBuffer(json const& root);
+  bool doCreateDiskBuffer(json const& root);
+  bool doCreateGPUBuffer(json const& root);
+  bool doSealBlob(json const& root);
+  bool doGetBuffers(json const& root);
+  bool doGetGPUBuffers(json const& root);
+  bool doDropBuffer(json const& root);
 
   /**
    * @brief doCreateBuffer differs from doCreateRemoteBuffer, that the content
@@ -86,101 +84,64 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
    */
   bool doCreateRemoteBuffer(json const& root);
 
-  bool doCreateDiskBuffer(json const& root);
+  /**
+   * @brief doGetRemoteBuffers differs from doGetRemoteBuffers, that the
+   * content of blob is in the response body, rather than via memory sharing.
+   */
+  bool doGetRemoteBuffers(json const& root);
 
-  bool doDropBuffer(json const& root);
+  bool doIncreaseReferenceCount(json const& root);
+  bool doRelease(json const& root);
+  bool doDelDataWithFeedbacks(json const& root);
 
-  bool doGetData(json const& root);
-
-  bool doListData(json const& root);
-
-  bool doListName(json const& root);
+  bool doCreateBufferByPlasma(json const& root);
+  bool doGetBuffersByPlasma(json const& root);
+  bool doSealPlasmaBlob(json const& root);
+  bool doPlasmaRelease(json const& root);
+  bool doPlasmaDelData(json const& root);
 
   bool doCreateData(json const& root);
-
-  bool doPersist(json const& root);
-
-  bool doIfPersist(json const& root);
-
-  bool doExists(json const& root);
-
-  bool doShallowCopy(json const& root);
-
+  bool doGetData(json const& root);
+  bool doListData(json const& root);
   bool doDelData(json const& root);
+  bool doExists(json const& root);
+  bool doPersist(json const& root);
+  bool doIfPersist(json const& root);
+  bool doLabelObject(json const& root);
+  bool doClear(json const& root);
 
   bool doCreateStream(json const& root);
-
   bool doOpenStream(json const& root);
-
   bool doGetNextStreamChunk(json const& root);
-
   bool doPushNextStreamChunk(json const& root);
-
   bool doPullNextStreamChunk(json const& root);
-
   bool doStopStream(json const& root);
-
   bool doDropStream(json const& root);
 
   bool doPutName(json const& root);
-
   bool doGetName(json const& root);
-
+  bool doListName(json const& root);
   bool doDropName(json const& root);
 
-  bool doMigrateObject(json const& root);
-
-  bool doClusterMeta(json const& root);
-
-  bool doInstanceStatus(json const& root);
-
   bool doMakeArena(json const& root);
-
   bool doFinalizeArena(json const& root);
 
-  bool doClear(json const& root);
-
-  bool doDebug(json const& root);
-
   bool doNewSession(json const& root);
-
   bool doDeleteSession(json const& root);
-
-  bool doCreateBufferByPlasma(json const& root);
-
-  bool doGetBuffersByPlasma(json const& root);
-
-  bool doSealBlob(json const& root);
-
-  bool doSealPlasmaBlob(json const& root);
-
-  bool doPlasmaRelease(json const& root);
-
-  bool doPlasmaDelData(json const& root);
-
   bool doMoveBuffersOwnership(json const& root);
 
-  bool doRelease(json const& root);
-
-  bool doDelDataWithFeedbacks(json const& root);
-
+  bool doEvictObjects(json const& root);
+  bool doLoadObjects(json const& root);
+  bool doUnpinObjects(json const& root);
+  bool doIsSpilled(json const& root);
   bool doIsInUse(json const& root);
 
-  bool doIncreaseReferenceCount(json const& root);
+  bool doClusterMeta(json const& root);
+  bool doInstanceStatus(json const& root);
+  bool doMigrateObject(json const& root);
+  bool doShallowCopy(json const& root);
 
-  bool doIsSpilled(json const& root);
-
-  bool doCreateGPUBuffer(json const& root);
-
-  bool doGetGPUBuffers(json const& root);
-
-  bool doLabelObject(json const& root);
-
-  bool doEvictObjects(json const& root);
-
-  bool doLoadObjects(json const& root);
-
-  bool doUnpinObjects(json const& root);
+  bool doDebug(json const& root);
 
  protected:
   template <typename FROM, typename TO>
