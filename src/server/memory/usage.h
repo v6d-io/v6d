@@ -559,7 +559,8 @@ class ColdObjectTracker
   Status SpillPayload(const std::shared_ptr<P>& payload) {
     if (!payload->is_sealed) {
       return Status::ObjectNotSealed(
-          "payload is not sealed and cannot be spilled");
+          "payload is not sealed and cannot be spilled: " +
+          ObjectIDToString(payload->object_id));
     }
     if (payload->is_spilled) {
       return Status::ObjectSpilled(payload->object_id);
