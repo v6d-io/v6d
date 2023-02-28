@@ -17,6 +17,7 @@ package flags
 
 import (
 	"github.com/spf13/cobra"
+
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
@@ -33,86 +34,90 @@ var (
 	// VineyardContainerEnvs holds all the environment variables for the vineyardd container
 	VineyardContainerEnvs []string
 
-	// VineyardSpillPVSpec represent the persistent volume spec of vineyard's spill mechnism
-	VineyardSpillPVSpec string
-
-	// VineyardSpillPVCSpec represent the persistent volume claim spec of vineyard's spill mechnism
-	VineyardSpillPVCSpec string
+	// VineyardSpillPVandPVC is PersistentVolume data and PersistentVolumeClaim data of vineyardd's spill mechnism
+	VineyardSpillPVandPVC string
 )
 
-func ApplyVineyardContainerOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.Image, "vineyard.image",
+// ApplyVineyardContainerOpts applies the vineyard container options
+func ApplyVineyardContainerOpts(c *v1alpha1.VineyardContainerConfig,
+	prefix string, cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&c.Image, prefix+".image",
 		"", "vineyardcloudnative/vineyardd:latest", "the image of vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.ImagePullPolicy,
-		"vineyard.imagePullPolicy", "", "IfNotPresent", "the imagePullPolicy of vineyardd")
-	cmd.Flags().BoolVarP(&VineyarddOpts.VineyardConfig.SyncCRDs, "vineyard.syncCRDs",
+	cmd.Flags().StringVarP(&c.ImagePullPolicy,
+		prefix+".imagePullPolicy", "", "IfNotPresent",
+		"the imagePullPolicy of vineyardd")
+	cmd.Flags().BoolVarP(&c.SyncCRDs, prefix+".syncCRDs",
 		"", true, "enable metrics of vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.Socket, "vineyard.socket",
+	cmd.Flags().StringVarP(&c.Socket, prefix+".socket",
 		"", DefaultVineyardSocket,
 		"The directory on host for the IPC socket file. "+
 			"The namespace and name will be replaced with your vineyard config")
-	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.Size, "vineyard.size",
-		"", "256Mi", "The size of vineyardd. You can use the power-of-two equivalents: "+
+	cmd.Flags().StringVarP(&c.Size, prefix+".size",
+		"", "256Mi",
+		"The size of vineyardd. You can use the power-of-two equivalents: "+
 			"Ei, Pi, Ti, Gi, Mi, Ki. ")
-	cmd.Flags().Int64VarP(&VineyarddOpts.VineyardConfig.StreamThreshold, "vineyard.streamThreshold",
+	cmd.Flags().Int64VarP(&c.StreamThreshold, prefix+".streamThreshold",
 		"", 80, "memory threshold of streams (percentage of total memory)")
-	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.EtcdEndpoint, "vineyard.etcdEndpoint",
+	cmd.Flags().StringVarP(&c.EtcdEndpoint, prefix+".etcdEndpoint",
 		"", "http://etcd-for-vineyard:2379", "The etcd endpoint of vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.EtcdPrefix, "vineyard.etcdPrefix",
+	cmd.Flags().StringVarP(&c.EtcdPrefix, prefix+".etcdPrefix",
 		"", "/vineyard", "The etcd prefix of vineyardd")
-	cmd.Flags().StringSliceVarP(&VineyardContainerEnvs, "envs", "", []string{},
+	cmd.Flags().StringSliceVarP(&VineyardContainerEnvs, prefix+".envs", "", []string{},
 		"The environment variables of vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.SpillConfig.Name, "vineyard.spill.config",
-		"", "", "If you want to enable the spill mechnism, please set the name of spill config")
-	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.SpillConfig.Path, "vineyard.spill.path",
+	cmd.Flags().StringVarP(&c.SpillConfig.Name, prefix+".spill.config",
+		"", "",
+		"If you want to enable the spill mechnism, please set the name of spill config")
+	cmd.Flags().StringVarP(&c.SpillConfig.Path, prefix+".spill.path",
 		"", "", "The path of spill config")
-	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.SpillConfig.SpillLowerRate,
-		"vineyard.spill.spillLowerRate",
-		"", "0.3", "The low watermark of memory usage for spilling")
-	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.SpillConfig.SpillUpperRate,
-		"vineyard.spill.spillUpperRate",
-		"", "0.8", "The high watermark of memory usage for spilling")
-	cmd.Flags().StringVarP(&VineyardSpillPVSpec, "vineyard.spill.pv", "", "",
-		"The json string of the persistent volume")
-	cmd.Flags().StringVarP(&VineyardSpillPVCSpec, "vineyard.spill.pvc", "", "",
-		"The json string of the persistent volume claim")
+	cmd.Flags().StringVarP(&c.SpillConfig.SpillLowerRate,
+		prefix+".spill.spillLowerRate",
+		"", "0.3", "The low watermark of spilling memorys")
+	cmd.Flags().StringVarP(&c.SpillConfig.SpillUpperRate,
+		prefix+".spill.spillUpperRate",
+		"", "0.8", "The high watermark of spilling memorys")
+	cmd.Flags().StringVarP(&VineyardSpillPVandPVC, prefix+".spill.pv-pvc-spec", "", "",
+		"the json string of the persistent volume and persistent volume claim")
 }
 
 // ApplyServiceOpts represents the option of service
-func ApplyServiceOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&VineyarddOpts.Service.Type, "vineyardd.service.type", "", "ClusterIP",
+func ApplyServiceOpts(s *v1alpha1.ServiceConfig, prefix string, cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&s.Type, prefix+".service.type", "", "ClusterIP",
 		"the service type of vineyard service")
-	cmd.Flags().IntVarP(&VineyarddOpts.Service.Port, "vineyardd.service.port", "", 9600,
+	cmd.Flags().IntVarP(&s.Port, prefix+".service.port", "", 9600,
 		"the service port of vineyard service")
-	cmd.Flags().StringVarP(&VineyarddOpts.Service.Selector, "vineyardd.service.selector", "",
-		"rpc.vineyardd.v6d.io/rpc=vineyard-rpc", "the service selector of vineyard service")
+	cmd.Flags().StringVarP(&s.Selector, prefix+".service.selector", "",
+		"rpc.vineyardd.v6d.io/rpc=vineyard-rpc",
+		"the service selector of vineyard service")
 }
 
 // ApplyVolumeOpts represents the option of pvc volume configuration
-func ApplyVolumeOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&VineyarddOpts.Volume.PvcName, "vineyard.volume.pvcname", "",
+func ApplyVolumeOpts(v *v1alpha1.VolumeConfig, prefix string, cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&v.PvcName, prefix+".volume.pvcname", "",
 		"", "Set the pvc name for storing the vineyard objects persistently, ")
-	cmd.Flags().StringVarP(&VineyarddOpts.Volume.MountPath, "vineyard.volume.mountPath", "",
+	cmd.Flags().StringVarP(&v.MountPath, prefix+".volume.mountPath", "",
 		"", "Set the mount path for the pvc")
 }
 
 // ApplyMetricContainerOpts represents the option of metric container configuration
-func ApplyMetricContainerOpts(cmd *cobra.Command) {
-	cmd.Flags().BoolVarP(&VineyarddOpts.MetricConfig.Enable, "metric.enable", "",
+func ApplyMetricContainerOpts(m *v1alpha1.MetricContainerConfig,
+	prefix string, cmd *cobra.Command) {
+	cmd.Flags().BoolVarP(&m.Enable, prefix+".metric.enable", "",
 		false, "enable metrics of vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.MetricConfig.Image, "metric.image",
+	cmd.Flags().StringVarP(&m.Image, prefix+".metric.image",
 		"", "vineyardcloudnative/vineyard-grok-exporter:latest",
 		"the metic image of vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.MetricConfig.ImagePullPolicy, "metric.imagePullPolicy",
+	cmd.Flags().StringVarP(&m.ImagePullPolicy, prefix+".metric.imagePullPolicy",
 		"", "IfNotPresent", "the imagePullPolicy of the metric image")
 }
 
 // ApplyPluginImageOpts represents the option of plugin image configuration
 func ApplyPluginImageOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.BackupImage, "plugin.backupImage", "",
-		"ghcr.io/v6d-io/v6d/backup-job", "the backup image of vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.RecoverImage, "plugin.recoverImage", "",
-		"ghcr.io/v6d-io/v6d/recover-job", "the recover image of vineyardd")
+	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.BackupImage,
+		"plugin.backupImage", "", "ghcr.io/v6d-io/v6d/backup-job",
+		"the backup image of vineyardd")
+	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.RecoverImage,
+		"plugin.recoverImage", "", "ghcr.io/v6d-io/v6d/recover-job",
+		"the recover image of vineyardd")
 	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.DaskRepartitionImage,
 		"plugin.daskRepartitionImage", "", "ghcr.io/v6d-io/v6d/dask-repartition",
 		"the dask repartition image of vineyardd workflow")
@@ -135,22 +140,24 @@ func ApplyVineyarddOpts(cmd *cobra.Command) {
 	// setup the vineyardd configuration
 	cmd.Flags().IntVarP(&VineyarddOpts.Replicas, "vineyard.replicas", "", 3,
 		"the number of vineyardd replicas")
-	cmd.Flags().BoolVarP(&VineyarddOpts.CreateServiceAccount, "vineyard.create.serviceAccount",
-		"", false, "create service account for vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.ServiceAccountName, "vineyard.serviceAccount.name",
+	cmd.Flags().BoolVarP(&VineyarddOpts.CreateServiceAccount,
+		"vineyard.create.serviceAccount", "", false,
+		"create service account for vineyardd")
+	cmd.Flags().StringVarP(&VineyarddOpts.ServiceAccountName,
+		"vineyard.serviceAccount.name",
 		"", "", "the service account name of vineyardd")
 	cmd.Flags().IntVarP(&VineyarddOpts.Etcd.Replicas, "vineyard.etcd.replicas",
 		"", 3, "the number of etcd replicas in a vineyard cluster")
 	// setup the vineyardd name
 	ApplyVineyarddNameOpts(cmd)
 	// setup the vineyard container configuration of vineyardd
-	ApplyVineyardContainerOpts(cmd)
+	ApplyVineyardContainerOpts(&VineyarddOpts.VineyardConfig, "vineyardd", cmd)
 	// setup the metric container configuration of vineyardd
-	ApplyMetricContainerOpts(cmd)
+	ApplyMetricContainerOpts(&VineyarddOpts.MetricConfig, "vineyardd", cmd)
 	// setup the vineyard service configuration of vineyardd
-	ApplyServiceOpts(cmd)
+	ApplyServiceOpts(&VineyarddOpts.Service, "vineyardd", cmd)
 	// setup the vineyard volumes if needed
-	ApplyVolumeOpts(cmd)
+	ApplyVolumeOpts(&VineyarddOpts.Volume, "vineyardd", cmd)
 	// setup the plugin images in a vineyard workflow
 	ApplyPluginImageOpts(cmd)
 }

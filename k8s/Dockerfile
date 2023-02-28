@@ -30,4 +30,4 @@ COPY config/scheduler/config.yaml /etc/kubernetes/scheduler.yaml
 COPY --from=builder /workspace/vineyardctl .
 USER nonroot:nonroot
 
-ENTRYPOINT ["/vineyardctl","start","manager"]
+ENTRYPOINT ["/vineyardctl","manager"]

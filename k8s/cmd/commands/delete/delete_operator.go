@@ -36,7 +36,8 @@ vineyardctl delete operator
 vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator -v 0.12.2
 
 # delete the vineyard operator from local kustomize dir in the vineyard-system namespace
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator --local ../config/default`,
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator \
+--local ../config/default`,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()

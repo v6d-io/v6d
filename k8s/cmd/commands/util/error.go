@@ -13,22 +13,31 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package flags
+package util
 
-import "github.com/spf13/cobra"
+import "github.com/pkg/errors"
 
-var (
-	// the version of operator
-	OperatorVersion string
+// ErrorCollector collects errors and returns them as a single error.
+type ErrorCollector struct {
+	errlists []error
+}
 
-	// the local path of operator kustomization directory
-	KustomizeDir string
-)
+// Add a new error to the collector.
+func (e *ErrorCollector) Add(err error) {
+	if err != nil {
+		e.errlists = append(e.errlists, err)
+	}
+}
 
-func ApplyOperatorOpts(cmd *cobra.Command) {
-	cmd.Flags().
-		StringVarP(&OperatorVersion, "version", "v", "dev",
-			"the version of kustomize dir from github repo")
-	cmd.Flags().StringVarP(&KustomizeDir, "local", "l", "",
-		"the local kustomize dir")
+// Error returns the collected errors as a single error.
+func (e *ErrorCollector) Error() error {
+	errStr := ""
+	if len(e.errlists) == 0 {
+		return nil
+	}
+
+	for _, e := range e.errlists {
+		errStr += e.Error() + ";"
+	}
+	return errors.New(errStr)
 }

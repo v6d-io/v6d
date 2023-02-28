@@ -180,7 +180,7 @@ jobs:
       - name: Prepare vineyardctl binary
         run: |
           tar zxvf vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
-          mv vineyardctl python/vineyard/vineyarctl
+          mv vineyardctl python/vineyard/vineyardctl
 
       - name: Login docker registry
         run: |

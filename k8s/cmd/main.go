@@ -27,11 +27,11 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/create"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/manager"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/schedule"
-
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/sidecar"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util/usage"
 )
@@ -64,6 +64,7 @@ func init() {
 	cmd.AddCommand(deploy.NewDeployCmd())
 	cmd.AddCommand(manager.NewManagerCmd())
 	cmd.AddCommand(schedule.NewScheduleCmd())
+	cmd.AddCommand(sidecar.NewInjectCmd())
 }
 
 func main() {

@@ -16,12 +16,18 @@
 # limitations under the License.
 #
 
-import os
 import logging
+import os
 import subprocess
+
 import pkg_resources
 
-#logger = logging.getLogger('vineyardctl')
+backup_image = 'ghcr.io/v6d-io/v6d/backup-job'
+recover_image = 'ghcr.io/v6d-io/v6d/recover-job'
+dask_repartition_image = 'ghcr.io/v6d-io/v6d/dask-repartition'
+local_assembly_image = 'ghcr.io/v6d-io/v6d/local-assembly'
+distributed_assembly_image = 'ghcr.io/v6d-io/v6d/distributed-assembly'
+
 
 def create_vineyardd_cluster_with_operator(
     vineyardctl_path=None,
@@ -55,11 +61,11 @@ def create_vineyardd_cluster_with_operator(
     vineyardd_spill_pvc=None,
     vineyard_volume_pvcName=None,
     vineyard_volume_mountPath=None,
-    vineyard_operator_plugin_backupImage='ghcr.io/v6d-io/v6d/backup-job',
-    vineyard_operator_plugin_recoverImage='ghcr.io/v6d-io/v6d/recover-job',
-    vineyard_operator_plugin_daskRepartitionImage='ghcr.io/v6d-io/v6d/dask-repartition',
-    vineyard_operator_plugin_localAssemblyImage='ghcr.io/v6d-io/v6d/local-assembly',
-    vineyard_operator_plugin_distributedAssemblyImage='ghcr.io/v6d-io/v6d/distributed-assembly',
+    vineyard_operator_plugin_backupImage=backup_image,
+    vineyard_operator_plugin_recoverImage=recover_image,
+    vineyard_operator_plugin_daskRepartitionImage=dask_repartition_image,
+    vineyard_operator_plugin_localAssemblyImage=local_assembly_image,
+    vineyard_operator_plugin_distributedAssemblyImage=distributed_assembly_image,
 ):
     """Launch a vineyard cluster with vineyard operator on kubernetes.
 
@@ -101,7 +107,7 @@ def create_vineyardd_cluster_with_operator(
         vineyardd_size: str
             the memory size limit for vineyard's shared memory.
         vineyardd_socket: str
-            the UNIX domain socket socket path that vineyard 
+            the UNIX domain socket socket path that vineyard
             server will listen on.
         vineyardd_syncCRDS: bool
             whether to sync the CRDs for intermediate objects.
@@ -121,51 +127,51 @@ def create_vineyardd_cluster_with_operator(
         vineyardd_spill_upperRate: float
             the upper rate of the spilling memory.
         vineyardd_spill_pv: str
-            the name of the persistent volume for spilling. If you 
-            want to use the persistent volume for spilling, you need 
+            the name of the persistent volume for spilling. If you
+            want to use the persistent volume for spilling, you need
             to specify a persistent volume.
 
-            For example, a persistent volume is a json type of 
+            For example, a persistent volume is a json type of
             corev1.PersistentVolumeSpec as follows:
-            
+
             .. code::
 
             '{
-                "capacity": 
+                "capacity":
                 {
                     "storage":"1Gi"
-                }, 
-                "accessModes": ["ReadWriteOnce"], 
-                "storageClassName": "manual", 
+                },
+                "accessModes": ["ReadWriteOnce"],
+                "storageClassName": "manual",
                 "hostPath": {"path": "/var/vineyard/dump"}
             }'
 
         vineyardd_spill_pvc: str
-            the name of the persistent volume claim for spilling. If you 
-            want to use the persistent volume claim for spilling, you need 
+            the name of the persistent volume claim for spilling. If you
+            want to use the persistent volume claim for spilling, you need
             to specify a persistent volume claim.
 
-            For example, a persistent volume claim is a json type of 
+            For example, a persistent volume claim is a json type of
             corev1.PersistentVolumeClaimSpec as follows:
-            
+
             .. code::
 
             '{
-                "accessModes": ["ReadWriteOnce"], 
-                "resources": 
+                "accessModes": ["ReadWriteOnce"],
+                "resources":
                 {
-                    "requests": 
+                    "requests":
                     {
                         "storage": "1Gi"
                     }
                 }
             }'
-        
+
         vineyard_volume_pvcName: str
-            the name of the persistent volume claim for vineyardd 
+            the name of the persistent volume claim for vineyardd
             such as socket.
         vineyard_volume_mountPath: str
-            the mount path of the persistent volume claim for vineyardd 
+            the mount path of the persistent volume claim for vineyardd
             such as socket.
         vineyard_operator_plugin_backupImage: str
             the image of the backup plugin.
@@ -179,35 +185,59 @@ def create_vineyardd_cluster_with_operator(
             the image of the distributed assembly plugin.
     """
     if vineyardctl_path is None:
-        vineyardctl_path = pkg_resources.resource_filename('vineyard','vineyardctl')
+        vineyardctl_path = pkg_resources.resource_filename('vineyard', 'vineyardctl')
 
     if not vineyardctl_path:
         raise RuntimeError('Unable to find the "vineyardctl" executable')
 
     command = [
-        vineyardctl_path, 'deploy', 'vineyardd',
-        '--name', vineyard_name, 
-        '--vineyard.replicas', str(vineyard_replicas), 
-        '--vineyard.etcd.replicas', str(vineyard_etcd_replicas), 
-        '--vineyard.image', vineyard_container_image, 
-        '--vineyard.imagePullPolicy', vineyard_container_image_pull_policy, 
-        '--vineyardd.service.type', vineyard_service_type, 
-        '--vineyardd.service.port', str(vineyard_service_port), 
-        '--vineyardd.service.selector', vineyard_service_selector, 
-        '--metric.image', vineyard_metric_image, 
-        '--metric.imagePullPolicy', vineyard_metric_image_pull_policy, 
-        '--vineyard.size', vineyardd_size,
-        '--vineyard.socket', vineyardd_socket, 
-        '--vineyard.streamThreshold', str(vineyardd_streamThreshold),
-        '--vineyard.etcdEndpoint', vineyardd_etcdEndpoint,
-        '--vineyard.etcdPrefix', vineyardd_etcdPrefix,
-        '--vineyard.spill.spillLowerRate', str(vineyardd_spill_lowerRate),
-        '--vineyard.spill.spillUpperRate', str(vineyardd_spill_upperRate),
-        '--plugin.backupImage',vineyard_operator_plugin_backupImage,
-        '--plugin.recoverImage', vineyard_operator_plugin_recoverImage,
-        '--plugin.daskRepartitionImage', vineyard_operator_plugin_daskRepartitionImage,
-        '--plugin.localAssemblyImage', vineyard_operator_plugin_localAssemblyImage,
-        '--plugin.distributedAssemblyImage', vineyard_operator_plugin_distributedAssemblyImage
+        vineyardctl_path,
+        'deploy',
+        'vineyardd',
+        '--name',
+        vineyard_name,
+        '--vineyard.replicas',
+        str(vineyard_replicas),
+        '--vineyard.etcd.replicas',
+        str(vineyard_etcd_replicas),
+        '--vineyard.image',
+        vineyard_container_image,
+        '--vineyard.imagePullPolicy',
+        vineyard_container_image_pull_policy,
+        '--vineyardd.service.type',
+        vineyard_service_type,
+        '--vineyardd.service.port',
+        str(vineyard_service_port),
+        '--vineyardd.service.selector',
+        vineyard_service_selector,
+        '--metric.image',
+        vineyard_metric_image,
+        '--metric.imagePullPolicy',
+        vineyard_metric_image_pull_policy,
+        '--vineyard.size',
+        vineyardd_size,
+        '--vineyard.socket',
+        vineyardd_socket,
+        '--vineyard.streamThreshold',
+        str(vineyardd_streamThreshold),
+        '--vineyard.etcdEndpoint',
+        vineyardd_etcdEndpoint,
+        '--vineyard.etcdPrefix',
+        vineyardd_etcdPrefix,
+        '--vineyard.spill.spillLowerRate',
+        str(vineyardd_spill_lowerRate),
+        '--vineyard.spill.spillUpperRate',
+        str(vineyardd_spill_upperRate),
+        '--plugin.backupImage',
+        vineyard_operator_plugin_backupImage,
+        '--plugin.recoverImage',
+        vineyard_operator_plugin_recoverImage,
+        '--plugin.daskRepartitionImage',
+        vineyard_operator_plugin_daskRepartitionImage,
+        '--plugin.localAssemblyImage',
+        vineyard_operator_plugin_localAssemblyImage,
+        '--plugin.distributedAssemblyImage',
+        vineyard_operator_plugin_distributedAssemblyImage,
     ]
 
     if namespace:
@@ -237,11 +267,14 @@ def create_vineyardd_cluster_with_operator(
     if vineyard_volume_mountPath:
         command.extend(['--vineyard.volume.mountPath', vineyard_volume_mountPath])
 
-    print('command is:',command, flush=True)
+    print('command is:', command, flush=True)
     try:
         subprocess.Popen(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise RuntimeError('Failed to create vineyard cluster with operator: %s' % e.stderr, flush=True)
+        raise RuntimeError(
+            'Failed to create vineyard cluster with operator: %s' % e.stderr, flush=True
+        )
+
 
 def delete_vineyardd_cluster_with_operator(
     vineyardctl_path=None,
@@ -250,58 +283,64 @@ def delete_vineyardd_cluster_with_operator(
     vineyard_name='vineyardd-sample',
 ):
     if vineyardctl_path is None:
-        vineyardctl_path = pkg_resources.resource_filename('vineyard','vineyardctl')
+        vineyardctl_path = pkg_resources.resource_filename('vineyard', 'vineyardctl')
 
     if not vineyardctl_path:
         raise RuntimeError('Unable to find the "vineyardctl" executable')
 
     command = [
-        vineyardctl_path, 'delete', 'vineyardd',
-        '--name', vineyard_name,
+        vineyardctl_path,
+        'delete',
+        'vineyardd',
+        '--name',
+        vineyard_name,
     ]
     if namespace:
         command.extend(['--namespace', namespace])
     if kubeconfig:
         command.extend(['--kubeconfig', kubeconfig])
-    
+
     try:
         subprocess.Popen(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise RuntimeError('Failed to delete vineyard cluster with operator: %s' % e.stderr)
+        raise RuntimeError(
+            'Failed to delete vineyard cluster with operator: %s' % e.stderr
+        )
+
 
 def create_vineyardd_cluster_without_operator(
-        vineyardctl_path=None,
-        namespace=None,
-        kubeconfig=None,
-        label=None,
-        vineyard_replicas=3,
-        vineyard_create_serviceAccount=False,
-        vineyard_serviceAccount_name=None,
-        vineyard_etcd_replicas=3,
-        vineyard_name='vineyardd-sample',
-        vineyard_container_image='vineyardcloudnative/vineyardd:latest',
-        vineyard_container_image_pull_policy='IfNotPresent',
-        vineyard_container_envs=None,
-        vineyard_service_type='ClusterIP',
-        vineyard_service_port=9600,
-        vineyard_service_selector='rpc.vineyardd.v6d.io/rpc=vineyard-rpc',
-        vineyard_metric_enable=False,
-        vineyard_metric_image='vineyardcloudnative/vineyard-grok-exporter:latest',
-        vineyard_metric_image_pull_policy='IfNotPresent',
-        vineyardd_size='512Mi',
-        vineyardd_socket='/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}',
-        vineyardd_syncCRDs=True,
-        vineyardd_streamThreshold=80,
-        vineyardd_etcdEndpoint='http://etcd-for-vineyard:2379',
-        vineyardd_etcdPrefix='/vineyard',
-        vineyardd_spill_name=None,
-        vineyardd_spill_path=None,
-        vineyardd_spill_lowerRate=0.3,
-        vineyardd_spill_upperRate=0.8,
-        vineyardd_spill_pv=None,
-        vineyardd_spill_pvc=None,
-        vineyard_volume_pvcName=None,
-        vineyard_volume_mountPath=None,
+    vineyardctl_path=None,
+    namespace=None,
+    kubeconfig=None,
+    label=None,
+    vineyard_replicas=3,
+    vineyard_create_serviceAccount=False,
+    vineyard_serviceAccount_name=None,
+    vineyard_etcd_replicas=3,
+    vineyard_name='vineyardd-sample',
+    vineyard_container_image='vineyardcloudnative/vineyardd:latest',
+    vineyard_container_image_pull_policy='IfNotPresent',
+    vineyard_container_envs=None,
+    vineyard_service_type='ClusterIP',
+    vineyard_service_port=9600,
+    vineyard_service_selector='rpc.vineyardd.v6d.io/rpc=vineyard-rpc',
+    vineyard_metric_enable=False,
+    vineyard_metric_image='vineyardcloudnative/vineyard-grok-exporter:latest',
+    vineyard_metric_image_pull_policy='IfNotPresent',
+    vineyardd_size='512Mi',
+    vineyardd_socket='/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}',
+    vineyardd_syncCRDs=True,
+    vineyardd_streamThreshold=80,
+    vineyardd_etcdEndpoint='http://etcd-for-vineyard:2379',
+    vineyardd_etcdPrefix='/vineyard',
+    vineyardd_spill_name=None,
+    vineyardd_spill_path=None,
+    vineyardd_spill_lowerRate=0.3,
+    vineyardd_spill_upperRate=0.8,
+    vineyardd_spill_pv=None,
+    vineyardd_spill_pvc=None,
+    vineyard_volume_pvcName=None,
+    vineyard_volume_mountPath=None,
 ):
     """Launch a vineyard cluster with vineyard operator on kubernetes.
 
@@ -347,7 +386,7 @@ def create_vineyardd_cluster_without_operator(
         vineyardd_size: str
             the memory size limit for vineyard's shared memory.
         vineyardd_socket: str
-            the UNIX domain socket socket path that vineyard 
+            the UNIX domain socket socket path that vineyard
             server will listen on.
         vineyardd_syncCRDs: bool
             whether to sync the CRDs for intermediate objects.
@@ -367,78 +406,97 @@ def create_vineyardd_cluster_without_operator(
         vineyardd_spill_upperRate: float
             the upper rate of the spilling memory.
         vineyardd_spill_pv: str
-            the name of the persistent volume for spilling. If you 
-            want to use the persistent volume for spilling, you need 
+            the name of the persistent volume for spilling. If you
+            want to use the persistent volume for spilling, you need
             to specify a persistent volume.
 
-            For example, a persistent volume is a json type of 
+            For example, a persistent volume is a json type of
             corev1.PersistentVolumeSpec as follows:
-            
+
             .. code::
 
             '{
-                "capacity": 
+                "capacity":
                 {
                     "storage":"1Gi"
-                }, 
-                "accessModes": ["ReadWriteOnce"], 
-                "storageClassName": "manual", 
+                },
+                "accessModes": ["ReadWriteOnce"],
+                "storageClassName": "manual",
                 "hostPath": {"path": "/var/vineyard/dump"}
             }'
 
         vineyardd_spill_pvc: str
-            the name of the persistent volume claim for spilling. If you 
-            want to use the persistent volume claim for spilling, you need 
+            the name of the persistent volume claim for spilling. If you
+            want to use the persistent volume claim for spilling, you need
             to specify a persistent volume claim.
 
-            For example, a persistent volume claim is a json type of 
+            For example, a persistent volume claim is a json type of
             corev1.PersistentVolumeClaimSpec as follows:
-            
+
             .. code::
 
             '{
-                "accessModes": ["ReadWriteOnce"], 
-                "resources": 
+                "accessModes": ["ReadWriteOnce"],
+                "resources":
                 {
-                    "requests": 
+                    "requests":
                     {
                         "storage": "1Gi"
                     }
                 }
             }'
-        
+
         vineyard_volume_pvcName: str
-            the name of the persistent volume claim for vineyardd 
+            the name of the persistent volume claim for vineyardd
             such as socket.
         vineyard_volume_mountPath: str
-            the mount path of the persistent volume claim for vineyardd 
-            such as socket.      
+            the mount path of the persistent volume claim for vineyardd
+            such as socket.
     """
     if vineyardctl_path is None:
-        vineyardctl_path = pkg_resources.resource_filename('vineyard','vineyardctl')
+        vineyardctl_path = pkg_resources.resource_filename('vineyard', 'vineyardctl')
 
     if not vineyardctl_path:
         raise RuntimeError('Unable to find the "vineyardctl" executable')
 
     command = [
-        vineyardctl_path, 'dryapply', 'vineyardd',
-        '--name', vineyard_name, 
-        '--vineyard.replicas', str(vineyard_replicas), 
-        '--vineyard.etcd.replicas', str(vineyard_etcd_replicas), 
-        '--vineyard.image', vineyard_container_image, 
-        '--vineyard.imagePullPolicy', vineyard_container_image_pull_policy, 
-        '--vineyardd.service.type', vineyard_service_type, 
-        '--vineyardd.service.port', str(vineyard_service_port), 
-        '--vineyardd.service.selector', vineyard_service_selector, 
-        '--metric.image', vineyard_metric_image, 
-        '--metric.imagePullPolicy', vineyard_metric_image_pull_policy, 
-        '--vineyard.size', vineyardd_size,
-        '--vineyard.socket', vineyardd_socket, 
-        '--vineyard.streamThreshold', str(vineyardd_streamThreshold),
-        '--vineyard.etcdEndpoint', vineyardd_etcdEndpoint,
-        '--vineyard.etcdPrefix', vineyardd_etcdPrefix,
-        '--vineyard.spill.spillLowerRate', str(vineyardd_spill_lowerRate),
-        '--vineyard.spill.spillUpperRate', str(vineyardd_spill_upperRate),
+        vineyardctl_path,
+        'dryapply',
+        'vineyardd',
+        '--name',
+        vineyard_name,
+        '--vineyard.replicas',
+        str(vineyard_replicas),
+        '--vineyard.etcd.replicas',
+        str(vineyard_etcd_replicas),
+        '--vineyard.image',
+        vineyard_container_image,
+        '--vineyard.imagePullPolicy',
+        vineyard_container_image_pull_policy,
+        '--vineyardd.service.type',
+        vineyard_service_type,
+        '--vineyardd.service.port',
+        str(vineyard_service_port),
+        '--vineyardd.service.selector',
+        vineyard_service_selector,
+        '--metric.image',
+        vineyard_metric_image,
+        '--metric.imagePullPolicy',
+        vineyard_metric_image_pull_policy,
+        '--vineyard.size',
+        vineyardd_size,
+        '--vineyard.socket',
+        vineyardd_socket,
+        '--vineyard.streamThreshold',
+        str(vineyardd_streamThreshold),
+        '--vineyard.etcdEndpoint',
+        vineyardd_etcdEndpoint,
+        '--vineyard.etcdPrefix',
+        vineyardd_etcdPrefix,
+        '--vineyard.spill.spillLowerRate',
+        str(vineyardd_spill_lowerRate),
+        '--vineyard.spill.spillUpperRate',
+        str(vineyardd_spill_upperRate),
     ]
     if namespace:
         command.extend(['--namespace', namespace])
@@ -469,11 +527,14 @@ def create_vineyardd_cluster_without_operator(
     if vineyard_volume_mountPath:
         command.extend(['--vineyard.volume.mountPath', vineyard_volume_mountPath])
 
-    print('command is:', command,flush=True)
+    print('command is:', command, flush=True)
     try:
         subprocess.Popen(command, stderr=subprocess.STDOUT)
     except subprocess.CalledProcessError as e:
-        raise RuntimeError('Failed to create vineyard cluster with operator: %s' % e.stderr, flush=True)
+        raise RuntimeError(
+            'Failed to create vineyard cluster with operator: %s' % e.stderr, flush=True
+        )
+
 
 def delete_vineyardd_cluster_without_operator(
     vineyardctl_path=None,
@@ -482,14 +543,17 @@ def delete_vineyardd_cluster_without_operator(
     vineyard_name='vineyardd-sample',
 ):
     if vineyardctl_path is None:
-        vineyardctl_path = pkg_resources.resource_filename('vineyard','vineyardctl')
-    
+        vineyardctl_path = pkg_resources.resource_filename('vineyard', 'vineyardctl')
+
     if not vineyardctl_path:
         raise RuntimeError('Unable to find the "vineyardctl" executable')
 
     command = [
-        vineyardctl_path, 'drydelete', 'vineyardd',
-        '--name', vineyard_name,
+        vineyardctl_path,
+        'drydelete',
+        'vineyardd',
+        '--name',
+        vineyard_name,
     ]
     if namespace:
         command.extend(['--namespace', namespace])
@@ -501,6 +565,7 @@ def delete_vineyardd_cluster_without_operator(
     except subprocess.CalledProcessError as e:
         raise RuntimeError('Failed to delete vineyard cluster without operator: %s' % e)
 
+
 def schedule_workload_on_vineyardd_cluster(
     vineyardctl_path=None,
     kubeconfig=None,
@@ -509,30 +574,37 @@ def schedule_workload_on_vineyardd_cluster(
     vineyard_namespace=None,
 ):
     if vineyardctl_path is None:
-        vineyardctl_path = pkg_resources.resource_filename('vineyard','vineyardctl')
-    
+        vineyardctl_path = pkg_resources.resource_filename('vineyard', 'vineyardctl')
+
     if not vineyardctl_path:
         raise RuntimeError('Unable to find the "vineyardctl" executable')
 
     command = [
-        vineyardctl_path, 'dryschedule', 'workload',
-        '--resource', workload,
-        '--vineyardd-name', vineyard_name,
-        '--vineyardd-namespace', vineyard_namespace,
+        vineyardctl_path,
+        'dryschedule',
+        'workload',
+        '--resource',
+        workload,
+        '--vineyardd-name',
+        vineyard_name,
+        '--vineyardd-namespace',
+        vineyard_namespace,
     ]
     if kubeconfig:
         command.extend(['--kubeconfig', kubeconfig])
 
     try:
-        p = subprocess.Popen(command, stdout = subprocess.PIPE,
-        stderr=subprocess.STDOUT)
+        p = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
         output, err = p.communicate()
         if err:
-            raise RuntimeError('Failed to get the scheduled workload on vineyard cluster: %s' % err)
+            raise RuntimeError(
+                'Failed to get the scheduled workload on vineyard cluster: %s' % err
+            )
     except subprocess.CalledProcessError as e:
         raise RuntimeError('Failed to schedule workload on vineyard cluster: %s' % e)
 
     return output
+
 
 __all__ = [
     'create_vineyardd_cluster_with_operator',

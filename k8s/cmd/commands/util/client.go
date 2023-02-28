@@ -17,6 +17,7 @@ package util
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	defaultscheme "k8s.io/client-go/kubernetes/scheme"
@@ -95,11 +96,14 @@ func CreateWithContext[T client.Object](
 		if err == nil {
 			return nil
 		}
+		if apierrors.IsNotFound(err) {
+			err := c.Create(ctx, v)
+			if err != nil || len(until) == 0 {
+				return err
+			}
+		}
 	}
-	err := c.Create(ctx, v)
-	if err != nil || len(until) == 0 {
-		return err
-	}
+
 	return Wait(func() (bool, error) {
 		err := c.Get(ctx, client.ObjectKeyFromObject(v), v)
 		if err != nil {
@@ -126,13 +130,16 @@ func DeleteWithContext(
 	key types.NamespacedName,
 	v client.Object,
 ) error {
-	if err := c.Get(ctx, key, v); err != nil {
-		if !apierrors.IsNotFound(err) {
-			InfoLogger.Printf("object not exists: %v\n", key)
+	_ = c.Get(ctx, key, v)
+
+	if v.GetName() != "" {
+		err := c.Delete(ctx, v)
+		if err != nil {
+			fmt.Println("delete rror: ", err)
 			return err
 		}
-		return nil
 	}
+
 	return Wait(func() (bool, error) {
 		if err := c.Get(ctx, key, v); err != nil {
 			if apierrors.IsNotFound(err) {

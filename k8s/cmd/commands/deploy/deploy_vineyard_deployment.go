@@ -17,8 +17,6 @@ limitations under the License.
 package deploy
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -27,8 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -46,25 +42,23 @@ var vineyarddFileName []string = []string{
 	"vineyardd/spill-pvc.yaml",
 }
 
-var etcdFileName []string = []string{
-	"etcd/deployment.yaml",
-	"etcd/service.yaml",
-}
-
 // deployVineyardDeploymentCmd build and deploy the yaml file of vineyardd from stdin or file
 var deployVineyardDeploymentCmd = &cobra.Command{
-	Use:   "vineyard-deployment",
-	Short: "DeployVineyardDeployment builds and deploy the yaml file of vineyardd wihout vineyard operator",
-	Long: `Builds and deploy the yaml file of vineyardd the vineyardd without vineyard operator. You could
-deploy a customized vineyardd from stdin or file.
+	Use: "vineyard-deployment",
+	Short: "DeployVineyardDeployment builds and deploy the yaml file of " +
+		"vineyardd wihout vineyard operator",
+	Long: `Builds and deploy the yaml file of vineyardd the vineyardd without 
+vineyard operator. You could deploy a customized vineyardd from stdin or file.
 
 For example:
 
 # deploy the default vineyard deployment on kubernetes
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyard-deployment
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
+deploy vineyard-deployment
 
 # deploy the vineyard deployment with customized image
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyard-deployment --image vineyardd:v0.12.2`,
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
+deploy vineyard-deployment --image vineyardd:v0.12.2`,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
@@ -139,11 +133,6 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 		return objects, errors.Wrap(err, "failed to get vineyardd manifests")
 	}
 
-	etcdManifests, err := t.GetFilesRecursive("etcd")
-	if err != nil {
-		return objects, errors.Wrap(err, "failed to get etcd manifests")
-	}
-
 	if label != "" {
 		err = parseLabel(label)
 		if err != nil {
@@ -162,10 +151,6 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	for _, f := range vineyarddFileName {
 		files[f] = true
 	}
-	// add the etcd template files
-	for _, f := range etcdFileName {
-		files[f] = true
-	}
 
 	// build vineyardd
 	vineyardd, err := BuildVineyardManifest()
@@ -179,45 +164,20 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 		if _, ok := files[f]; !ok {
 			continue
 		}
-		manifest, err := t.ReadFile(f)
+		obj, err := util.RenderManifestAsObj(f, vineyardd, tmplFunc)
 		if err != nil {
-			return objects, errors.Wrapf(err, "failed to read manifest %s", f)
+			return objects, err
 		}
-
-		obj := &unstructured.Unstructured{}
-		_, _ = swckkube.LoadTemplate(string(manifest), vineyardd, tmplFunc, obj)
-		if obj.GetKind() != "" {
-			objects = append(objects, obj)
-		}
+		objects = append(objects, obj)
 	}
 
-	// set up the etcd
-	EtcdConfig.Namespace = vineyardd.Namespace
-	etcdEndpoints := make([]string, 0, vineyardd.Spec.Etcd.Replicas)
-	replicas := vineyardd.Spec.Etcd.Replicas
-	for i := 0; i < replicas; i++ {
-		etcdEndpoints = append(
-			etcdEndpoints,
-			fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)),
-		)
+	objs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Namespace,
+		vineyardd.Spec.Etcd.Replicas, vineyardd.Spec.VineyardConfig.Image, vineyardd,
+		tmplFunc)
+	if err != nil {
+		return objects, errors.Wrap(err, "failed to build etcd objects")
 	}
-	EtcdConfig.Endpoints = strings.Join(etcdEndpoints, ",")
-	// the etcd is built in the vineyardd image
-	EtcdConfig.Image = vineyardd.Spec.VineyardConfig.Image
-	for i := 0; i < replicas; i++ {
-		EtcdConfig.Rank = i
-		for _, ef := range etcdManifests {
-			manifest, err := t.ReadFile(ef)
-			if err != nil {
-				return objects, errors.Wrapf(err, "failed to read manifest %s", ef)
-			}
-			obj := &unstructured.Unstructured{}
-			_, _ = swckkube.LoadTemplate(string(manifest), vineyardd, tmplFunc, obj)
-			if obj.GetKind() != "" {
-				objects = append(objects, obj)
-			}
-		}
-	}
+	objects = append(objects, objs...)
 	return objects, nil
 }
 
@@ -229,6 +189,7 @@ func applyVineyarddFromTemplate(c client.Client) error {
 	}
 
 	for _, o := range objects {
+
 		if err := util.CreateIfNotExists(c, o); err != nil {
 			return errors.Wrapf(err, "failed to create object %s", o.GetName())
 		}

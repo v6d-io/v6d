@@ -22,7 +22,9 @@ var RecoverName string
 
 func ApplyRecoverOpts(cmd *cobra.Command) {
 	cmd.Flags().
-		StringVarP(&BackupName, "backup-name", "", "vineyard-backup", "the name of backup job")
+		StringVarP(&BackupName, "backup-name", "", "vineyard-backup",
+			"the name of backup job")
 	cmd.Flags().
-		StringVarP(&RecoverName, "recover-name", "", "vineyard-recover", "the name of recover job")
+		StringVarP(&RecoverName, "recover-name", "", "vineyard-recover",
+			"the name of recover job")
 }

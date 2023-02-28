@@ -78,8 +78,6 @@ COPY modules/io /work/v6d/modules/io
 
 COPY python/vineyard /work/v6d/python/vineyard
 
-COPY vineyardctl /work/v6d/python/vineyard/vineyardctl
-
 # make sure the library been copied
 RUN cd /work/v6d/build && \
     make vineyard_client_python -j$(nproc) && \

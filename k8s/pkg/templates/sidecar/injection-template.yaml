@@ -41,7 +41,7 @@ spec:
       ports:
       - containerPort: 9600
         name: vineyard-rpc
-        type: TCP
+        protocol: TCP
       volumeMounts:
       - name: vineyard-socket
       {{- if .Spec.Volume.MountPath }}
