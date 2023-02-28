@@ -20,6 +20,7 @@ import os
 import subprocess
 import sys
 import textwrap
+import warnings
 from distutils.cmd import Command
 from distutils.util import strtobool
 from typing import List
@@ -179,8 +180,25 @@ def load_requirements_txt(kind=""):
     return requirements
 
 
+def package_data():
+    artifacts = [
+        '**/*.yaml',
+        '**/*.yaml.tpl',
+        '**/**/*.sh',
+    ]
+    if os.path.exists(os.path.join(repo_root, 'python', 'vineyard', 'vineyardd')):
+        artifacts.append('vineyardd')
+    else:
+        warnings.warn('The artifact for `vineyardd` not found')
+    if os.path.exists(os.path.join(repo_root, 'python', 'vineyard', 'vineyardctl')):
+        artifacts.append('vineyardctl')
+    else:
+        warnings.warn('The artifact for `vineyardctl` not found')
+    return artifacts
+
+
 with open(
-    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'),
+    os.path.join(repo_root, 'README.rst'),
     encoding='utf-8',
     mode='r',
 ) as fp:
@@ -212,13 +230,7 @@ setup(
     package_dir={'': 'python'},
     packages=find_core_packages('python'),
     package_data={
-        'vineyard': [
-            'vineyardctl',
-            'vineyardd',
-            '**/*.yaml',
-            '**/*.yaml.tpl',
-            '**/**/*.sh',
-        ],
+        'vineyard': package_data(),
     },
     ext_modules=[
         CopyCMakeExtension('vineyard._C'),
@@ -232,7 +244,8 @@ setup(
     distclass=BinDistribution,
     zip_safe=False,
     entry_points={
-        'cli': ['vineyard-codegen=vineyard.cli:main'],
+        'vineyardcli': ['vineyard-codegen=vineyard.cli:main'],
+        'vineyardctl': ['vineyard-codegen=vineyard.deploy.ctl:_main'],
         'console_scripts': ['vineyard-codegen=vineyard.core.codegen:main'],
     },
     setup_requires=load_requirements_txt("-setup"),
@@ -258,6 +271,8 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
     project_urls={
         "Documentation": "https://v6d.io",
