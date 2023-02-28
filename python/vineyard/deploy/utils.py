@@ -143,13 +143,13 @@ def check_socket(address):
         return sock.connect_ex(address) == 0
 
 
-__vineyardd_path = None
-
-
 def _check_executable(path):
     if path and os.path.isfile(path) and os.access(path, os.R_OK | os.X_OK):
         return path
     return None
+
+
+__vineyardd_path = None
 
 
 def find_vineyardd_path():
@@ -161,29 +161,56 @@ def find_vineyardd_path():
     current_dir = os.path.dirname(__file__)
 
     # find vineyard in the package
-    vineyardd_path = pkg_resources.resource_filename('vineyard', 'vineyardd')
-    vineyardd_path = _check_executable(vineyardd_path)
+    vineyardd_path = _check_executable(
+        pkg_resources.resource_filename('vineyard', 'vineyardd')
+    )
 
     if vineyardd_path is None:
-        vineyardd_path = shutil.which('vineyardd')
-        vineyardd_path = _check_executable(vineyardd_path)
-
-    if vineyardd_path is None and 'VINEYARD_HOME' in os.environ:
-        vineyardd_path = os.path.expandvars('$VINEYARD_HOME/vineyardd')
-        vineyardd_path = _check_executable(vineyardd_path)
+        vineyardd_path = _check_executable(shutil.which('vineyardd'))
 
     if vineyardd_path is None:
-        vineyardd_path = os.path.join(current_dir, '..', 'vineyardd')
-        vineyardd_path = _check_executable(vineyardd_path)
-
-    if vineyardd_path is None:
-        vineyardd_path = os.path.join(
-            current_dir, '..', '..', '..', 'build', 'bin', 'vineyardd'
+        vineyardd_path = _check_executable(
+            os.path.join(current_dir, '..', '..', '..', 'build', 'bin', 'vineyardd')
         )
-        vineyardd_path = _check_executable(vineyardd_path)
+
+    if vineyardd_path is None:
+        vineyardd_path = _check_executable(os.path.join(current_dir, '..', 'vineyardd'))
 
     __vineyardd_path = vineyardd_path
     return vineyardd_path
+
+
+__vineyardctl_path = None
+
+
+def find_vineyardctl_path():
+    global __vineyardctl_path
+
+    if __vineyardctl_path is not None:
+        return __vineyardctl_path
+
+    current_dir = os.path.dirname(__file__)
+
+    # find vineyardctl in the package
+    vineyardctl_path = _check_executable(
+        pkg_resources.resource_filename('vineyard', 'vineyardctl')
+    )
+
+    if vineyardctl_path is None:
+        vineyardctl_path = _check_executable(shutil.which('vineyardctl'))
+
+    if vineyardctl_path is None:
+        vineyardctl_path = _check_executable(
+            os.path.join(current_dir, '..', '..', '..', 'k8s', 'vineyardctl')
+        )
+
+    if vineyardctl_path is None:
+        vineyardctl_path = _check_executable(
+            os.path.join(current_dir, '..', 'vineyardctl')
+        )
+
+    __vineyardctl_path = vineyardctl_path
+    return vineyardctl_path
 
 
 @contextlib.contextmanager

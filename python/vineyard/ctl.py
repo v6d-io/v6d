@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#! /usr/bin/env python
 # -*- coding: utf-8 -*-
 #
 # Copyright 2020-2023 Alibaba Group Holding Limited.
@@ -14,21 +14,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
 
 import sys
 
-from . import ctl
-from . import distributed
-from . import kubernetes
-from . import local
+from .deploy.ctl import _main
 
-
-# generate the `click` commands after import `.ctl`.
-def _init():
-    ctl._register()  # pylint: disable=no-member
-    setattr(sys.modules[__name__], 'vineyardctl', getattr(ctl, 'vineyardctl'))
-
-
-_init()
-del _init
+# use `vineyard.ctl` rather than `vineyard.deploy.ctl` to suppress a warning
+# like
+#
+#   runpy.py:127: RuntimeWarning: 'vineyard.deploy.local' found in sys.modules
+#   after import of package 'vineyard.deploy', but prior to execution of
+#   'vineyard.deploy.local'; this may result in unpredictable behavior
+#
+if __name__ == "__main__":
+    raise SystemExit(_main(sys.argv[1:]))

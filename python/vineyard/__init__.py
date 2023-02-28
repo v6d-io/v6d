@@ -134,7 +134,6 @@ from . import _vineyard_docs
 
 del _vineyard_docs
 
-from . import cli
 from . import core
 from . import data
 from . import deploy
