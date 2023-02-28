@@ -68,10 +68,10 @@ func ApplyVineyardContainerOpts(cmd *cobra.Command) {
 		"", "", "The path of spill config")
 	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.SpillConfig.SpillLowerRate,
 		"vineyard.spill.spillLowerRate",
-		"", "0.3", "The low watermark of spilling memorys")
+		"", "0.3", "The low watermark of memory usage for spilling")
 	cmd.Flags().StringVarP(&VineyarddOpts.VineyardConfig.SpillConfig.SpillUpperRate,
 		"vineyard.spill.spillUpperRate",
-		"", "0.8", "The high watermark of spilling memorys")
+		"", "0.8", "The high watermark of memory usage for spilling")
 	cmd.Flags().StringVarP(&VineyardSpillPVSpec, "vineyard.spill.pv", "", "",
 		"The json string of the persistent volume")
 	cmd.Flags().StringVarP(&VineyardSpillPVCSpec, "vineyard.spill.pvc", "", "",

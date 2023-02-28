@@ -18,10 +18,9 @@ package operation
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"strings"
-
-	"github.com/goccy/go-json"
 
 	"github.com/pkg/errors"
 

@@ -6,7 +6,6 @@ require (
 	github.com/apache/skywalking-swck/operator v0.0.0-20230223155451-06aeb614fca1
 	github.com/cert-manager/cert-manager v1.8.0
 	github.com/go-logr/logr v1.2.2
-	github.com/goccy/go-json v0.10.0
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.19.0
 	github.com/pkg/errors v0.9.1

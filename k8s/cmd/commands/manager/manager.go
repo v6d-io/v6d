@@ -113,9 +113,7 @@ func startManager(
 	probeAddr string,
 	enableLeaderElection bool,
 ) {
-	var err error
-
-	if err = (&controllers.LocalObjectReconciler{
+	if err := (&controllers.LocalObjectReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
@@ -127,7 +125,7 @@ func startManager(
 			err,
 		)
 	}
-	if err = (&controllers.GlobalObjectReconciler{
+	if err := (&controllers.GlobalObjectReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
@@ -139,7 +137,7 @@ func startManager(
 			err,
 		)
 	}
-	if err = (&controllers.VineyarddReconciler{
+	if err := (&controllers.VineyarddReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Template: templates.NewEmbedTemplate(),
@@ -153,7 +151,7 @@ func startManager(
 			err,
 		)
 	}
-	if err = (&controllers.OperationReconciler{
+	if err := (&controllers.OperationReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Template: templates.NewEmbedTemplate(),
@@ -168,7 +166,7 @@ func startManager(
 		)
 	}
 
-	if err = (&controllers.SidecarReconciler{
+	if err := (&controllers.SidecarReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Template: templates.NewEmbedTemplate(),
@@ -176,7 +174,7 @@ func startManager(
 	}).SetupWithManager(mgr); err != nil {
 		util.ErrLogger.Fatal("unable to create controller", "controller", "Sidecar", "error: ", err)
 	}
-	if err = (&controllers.BackupReconciler{
+	if err := (&controllers.BackupReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Template: templates.NewEmbedTemplate(),
@@ -185,7 +183,7 @@ func startManager(
 		util.ErrLogger.Fatal("unable to create controller", "controller", "Backup", "error: ", err)
 	}
 
-	if err = (&controllers.RecoverReconciler{
+	if err := (&controllers.RecoverReconciler{
 		Client:   mgr.GetClient(),
 		Scheme:   mgr.GetScheme(),
 		Template: templates.NewEmbedTemplate(),
@@ -195,7 +193,7 @@ func startManager(
 
 	if !flags.EnableWebhook {
 		// register the webhooks of CRDs
-		if err = (&v1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
+		if err := (&v1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			util.ErrLogger.Fatal(
 				"unable to create webhook",
 				"webhook",
@@ -204,7 +202,7 @@ func startManager(
 				err,
 			)
 		}
-		if err = (&v1alpha1.GlobalObject{}).SetupWebhookWithManager(mgr); err != nil {
+		if err := (&v1alpha1.GlobalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			util.ErrLogger.Fatal(
 				"unable to create webhook",
 				"webhook",
@@ -213,19 +211,19 @@ func startManager(
 				err,
 			)
 		}
-		if err = (&v1alpha1.Vineyardd{}).SetupWebhookWithManager(mgr); err != nil {
+		if err := (&v1alpha1.Vineyardd{}).SetupWebhookWithManager(mgr); err != nil {
 			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Vineyardd", "error: ", err)
 		}
-		if err = (&v1alpha1.Operation{}).SetupWebhookWithManager(mgr); err != nil {
+		if err := (&v1alpha1.Operation{}).SetupWebhookWithManager(mgr); err != nil {
 			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Operation", "error: ", err)
 		}
-		if err = (&v1alpha1.Sidecar{}).SetupWebhookWithManager(mgr); err != nil {
+		if err := (&v1alpha1.Sidecar{}).SetupWebhookWithManager(mgr); err != nil {
 			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Sidecar", "error: ", err)
 		}
-		if err = (&v1alpha1.Backup{}).SetupWebhookWithManager(mgr); err != nil {
+		if err := (&v1alpha1.Backup{}).SetupWebhookWithManager(mgr); err != nil {
 			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Backup", "error: ", err)
 		}
-		if err = (&v1alpha1.Recover{}).SetupWebhookWithManager(mgr); err != nil {
+		if err := (&v1alpha1.Recover{}).SetupWebhookWithManager(mgr); err != nil {
 			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Recover", "error: ", err)
 		}
 

@@ -23,7 +23,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
-	apiv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
@@ -47,7 +47,7 @@ var scheme = runtime.NewScheme()
 func init() {
 	_ = defaultscheme.AddToScheme(scheme)
 	_ = v1alpha1.AddToScheme(scheme)
-	_ = apiv1.AddToScheme(scheme)
+	_ = apiextensions.AddToScheme(scheme)
 	_ = certmanagerv1.AddToScheme(scheme)
 }
 
@@ -68,7 +68,7 @@ func KubernetesClient() client.Client {
 			ErrLogger.Fatalf("Failed to resolve the KUBECONFIG: %+v", err)
 		}
 	}
-	client, _ := client.New(cfg, client.Options{Scheme: scheme})
+	client, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		ErrLogger.Fatalf("failed to create the kubernetes API client: %+v", err)
 	}

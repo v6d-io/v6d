@@ -16,9 +16,8 @@ limitations under the License.
 package util
 
 import (
+	"encoding/json"
 	"strings"
-
-	"github.com/goccy/go-json"
 
 	"github.com/pkg/errors"
 

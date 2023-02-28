@@ -19,12 +19,11 @@ package sidecar
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"html/template"
 	"net/http"
 	"sort"
 	"strings"
-
-	"github.com/goccy/go-json"
 
 	"github.com/pkg/errors"
 
