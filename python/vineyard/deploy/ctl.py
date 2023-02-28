@@ -30,7 +30,7 @@ def _register():
         click(
             sys.modules[__name__],
             _vineyard_ctl,
-            exclude_args=['dump_usage', 'x_version'],
+            exclude_args=['dump_usage', 'x_version', 'help'],
         )
 
 

@@ -20,10 +20,13 @@ try:
     import ujson as json
 except ImportError:
     import json
+
 import subprocess
 import textwrap
 
 from makefun import with_signature
+
+from vineyard.data.utils import str_to_bool
 
 
 def infer_name(name):
@@ -39,15 +42,16 @@ def infer_name(name):
 
 
 def infer_argument(flag):
-    arg = infer_name(flag["Name"])
-    if flag["Default"]:
-        return arg, repr(flag["Default"])
-    else:
-        return arg, None
+    arg, defaults = infer_name(flag["Name"]), flag['Default']
+    if defaults:
+        # see: pflag's `Flag::Type()` methods.
+        if flag["Type"] != "string":
+            defaults = json.loads(defaults)
+    return arg, repr(defaults)
 
 
 def infer_signature(name, usage, exclude_args):
-    args, kwargs, arguments, argument_docs = [], [], {}, []
+    kwargs, arguments, argument_docs = [], {}, []
     for flag in usage["GlobalFlags"] + usage["Flags"]:
         argument_name, defaults = infer_argument(flag)
         if exclude_args and (
@@ -55,10 +59,7 @@ def infer_signature(name, usage, exclude_args):
         ):
             continue
         arguments[argument_name] = flag['Name']
-        if defaults:
-            kwargs.append(argument_name + "=" + defaults)
-        else:
-            args.append(argument_name)
+        kwargs.append(argument_name + "=" + defaults)
 
         argument_docs.append(argument_name + ":")
         argument_help = flag["Help"]
@@ -68,7 +69,7 @@ def infer_signature(name, usage, exclude_args):
         if defaults:
             argument_help += " Defaults to " + defaults + "."
         argument_docs.append(textwrap.indent(argument_help, "    "))
-    return name + "(" + ", ".join(args + kwargs) + ")", arguments, argument_docs
+    return name + "(" + ", ".join(kwargs) + ")", arguments, argument_docs
 
 
 def infer_docstring(name, usage, argument_docs):
@@ -117,9 +118,7 @@ def make_command(executable, usage, exclude_args, scope=None):
             #     command_and_args.append("--" + arg)
             for key, value in kwargs.items():
                 command_and_args.append("--" + arguments.get(key, key))
-                if not isinstance(value, str):
-                    value = json.dumps(value)
-                command_and_args.append(value)
+                command_and_args.append(json.dumps(value))
             return subprocess.check_call(
                 command_and_args,
                 universal_newlines=True,

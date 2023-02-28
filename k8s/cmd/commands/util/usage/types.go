@@ -8,6 +8,7 @@ import (
 type Flag struct {
 	Name       string
 	Shorthand  string
+	Type       string
 	Default    string
 	Help       string
 	Deprecated string
@@ -30,6 +31,7 @@ func FlagUsage(flag *pflag.Flag) Flag {
 	return Flag{
 		Name:       flag.Name,
 		Shorthand:  flag.Shorthand,
+		Type:       flag.Value.Type(),
 		Default:    flag.DefValue,
 		Help:       flag.Usage,
 		Deprecated: flag.Deprecated,
