@@ -121,7 +121,7 @@ func (r *VineyarddReconciler) Reconcile(
 		CR:       &vineyardd,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Vineyardd"),
 		Recorder: r.Recorder,
-		TmplFunc: map[string]interface{}{"getStorage": getStorage, "": getServiceLabelSelector},
+		TmplFunc: map[string]interface{}{"getStorage": getStorage, "getServiceLabelSelector": getServiceLabelSelector},
 	}
 	etcdApp := kubernetes.Application{
 		Client:   r.Client,

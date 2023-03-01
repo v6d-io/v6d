@@ -30,7 +30,6 @@ spec:
         command:
         - /vineyardctl
         args:
-        - start
         - manager
         image: controller:latest
         imagePullPolicy: IfNotPresent

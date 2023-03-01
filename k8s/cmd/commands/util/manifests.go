@@ -58,10 +58,7 @@ func ApplyManifests(c client.Client, manifests Manifests, namespace string) erro
 		if object.GetNamespace() != "" && namespace != "" {
 			object.SetNamespace(namespace)
 		}
-
-		current := &unstructured.Unstructured{}
-		current.SetGroupVersionKind(object.GetObjectKind().GroupVersionKind())
-		if err := CreateIfNotExists(c, current); err != nil {
+		if err := CreateIfNotExists(c, object); err != nil {
 			return errors.Wrap(err, "Failed to create manifest resource")
 		}
 	}
@@ -72,7 +69,7 @@ func ApplyManifests(c client.Client, manifests Manifests, namespace string) erro
 func DeleteManifests(c client.Client, manifests Manifests, namespace string) error {
 	for _, object := range manifests {
 		// setup the namespace
-		if object.GetNamespace() != "" {
+		if object.GetNamespace() != "" && namespace != "" {
 			object.SetNamespace(namespace)
 		}
 

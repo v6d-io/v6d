@@ -63,7 +63,7 @@ install-cert-manager:
 
 # Build vineyardctl binary
 vineyardctl: generate fmt
-	go build -o vineyardctl cmd/main.go
+	go build -a -o vineyardctl cmd/main.go
 
 # Copy the artifacts into the python directory for bdist_wheel.
 bdist_wheel:

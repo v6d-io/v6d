@@ -26,5 +26,6 @@ var CertManagerVersion string
 
 func ApplyCertManagerOpts(cmd *cobra.Command) {
 	cmd.Flags().
-		StringVarP(&CertManagerVersion, "version", "v", defaultCertManagerVersion, "the version of cert-manager")
+		StringVarP(&CertManagerVersion, "version", "v", defaultCertManagerVersion,
+			"the version of cert-manager")
 }

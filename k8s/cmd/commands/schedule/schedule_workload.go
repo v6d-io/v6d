@@ -42,7 +42,7 @@ add the podAffinity to the workload so that the workload will be scheduled to th
 vineyard cluster. For example:
 
 # Add the podAffinity to the workload for the specific vineyard cluster
-vineyardctl dryschedule workload --resource '{
+vineyardctl schedule workload --resource '{
 	"apiVersion": "apps/v1",
 	"kind": "Deployment",
 	"metadata": {
@@ -194,8 +194,8 @@ func SchedulingWorkload(c client.Client) (string, error) {
 	}
 
 	unstructuredObj := &unstructured.Unstructured{Object: proto}
-
-	spec := unstructuredObj.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})["spec"].(map[string]interface{})
+	template := unstructuredObj.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})
+	spec := template["spec"].(map[string]interface{})
 	if spec["affinity"] == nil {
 		spec["affinity"] = make(map[string]interface{})
 	}
@@ -206,10 +206,12 @@ func SchedulingWorkload(c client.Client) (string, error) {
 	} else {
 		podAffinity := affinity["podAffinity"].(map[string]interface{})
 		if podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] == nil {
-			podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] = newPodAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+			podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] =
+				newPodAffinity.RequiredDuringSchedulingIgnoredDuringExecution
 		} else {
 			required := podAffinity["requiredDuringSchedulingIgnoredDuringExecution"].([]interface{})
-			required = append(required, newPodAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
+			required = append(required,
+				newPodAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
 			podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] = required
 		}
 	}

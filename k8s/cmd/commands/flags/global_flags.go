@@ -55,7 +55,8 @@ func GetDefaultVineyardNamespace() string {
 
 func ApplyGlobalFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().
-		StringVarP(&KubeConfig, "kubeconfig", "", defaultKubeConfig(), "kubeconfig path for the kubernetes cluster")
+		StringVarP(&KubeConfig, "kubeconfig", "", defaultKubeConfig(),
+			"kubeconfig path for the kubernetes cluster")
 	cmd.PersistentFlags().
 		StringVarP(&Namespace, "namespace", "n", defaultNamespace, "the namespace for operation")
 	cmd.PersistentFlags().BoolVarP(&DumpUsage, "dump-usage", "j", false, "Dump usage in JSON")

@@ -76,8 +76,31 @@ setup:
         kubectl create ns backup
         go run k8s/cmd/main.go create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system  \
         --limit 1000 --path /var/vineyard/dump  \
-        --pv-spec '{"capacity": {"storage":"1Gi"}, "accessModes": ["ReadWriteOnce"], "storageClassName": "manual", "hostPath": {"path": "/var/vineyard/dump"}}'  \
-        --pvc-spec '{"storageClassName": "manual", "accessModes": ["ReadWriteOnce"], "resources": {"requests": {"storage": "1Gi"}}}'
+        --pv-pvc-spec '{
+        "pv-spec": {
+          "capacity": {
+            "storage": "1Gi"
+          },
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "storageClassName": "manual",
+          "hostPath": {
+            "path": "/var/vineyard/dump"
+          }
+        },
+        "pvc-spec": {
+          "storageClassName": "manual",
+          "accessModes": [
+            "ReadWriteOnce"
+          ],
+          "resources": {
+            "requests": {
+            "storage": "1Gi"
+            }
+          }
+        }
+        }'
     - name: simulate vineyard node fail
       command: |
         go run k8s/cmd/main.go delete vineyardd

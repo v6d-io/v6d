@@ -40,6 +40,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/v6d-io/v6d/k8s/pkg/injector"
 )
 
 // nolint: lll
@@ -131,7 +132,7 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		}
-		r.ApplyToSidecar(sidecar, templatePod, pod)
+		r.ApplyToSidecar(sidecar, templatePod, pod, true)
 	}
 
 	marshaledPod, err := json.Marshal(pod)
@@ -149,43 +150,19 @@ func (r *Injector) ApplyToSidecar(
 	sidecar *v1alpha1.Sidecar,
 	pod *corev1.Pod,
 	podWithSidecar *corev1.Pod,
+	addLabels bool,
 ) {
-	// add sleep to wait for the sidecar container to be ready
-	for i := range podWithSidecar.Spec.Containers {
-		command := podWithSidecar.Spec.Containers[i].Command
-		command[len(command)-1] = "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + command[len(command)-1]
-	}
+	injector.InjectSidecar(&podWithSidecar.Spec.Containers,
+		&podWithSidecar.Spec.Volumes, &pod.Spec.Containers,
+		&pod.Spec.Volumes, sidecar)
 
-	// add rpc labels to the podWithSidecar
-	labels := podWithSidecar.Labels
-	s := strings.Split(sidecar.Spec.Service.Selector, "=")
-	// add the rpc label selector to the podWithSidecar's labels
-	labels[s[0]] = s[1]
-
-	// add volumeMounts to the app container
-	if sidecar.Spec.Volume.PvcName == "" {
-		// add emptyDir volumeMount for every app container
-		for i := range podWithSidecar.Spec.Containers {
-			podWithSidecar.Spec.Containers[i].VolumeMounts = append(
-				podWithSidecar.Spec.Containers[i].VolumeMounts,
-				corev1.VolumeMount{
-					Name:      "vineyard-socket",
-					MountPath: "/var/run",
-				},
-			)
-		}
-	} else {
-		// add pvc volumeMount for every app container
-		for i := range podWithSidecar.Spec.Containers {
-			podWithSidecar.Spec.Containers[i].VolumeMounts = append(podWithSidecar.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
-				Name:      "vineyard-socket",
-				MountPath: sidecar.Spec.Volume.MountPath,
-			})
-		}
+	if addLabels {
+		// add rpc labels to the podWithSidecar
+		labels := podWithSidecar.Labels
+		s := strings.Split(sidecar.Spec.Service.Selector, "=")
+		// add the rpc label selector to the podWithSidecar's labels
+		labels[s[0]] = s[1]
 	}
-	// add the sidecar container
-	podWithSidecar.Spec.Containers = append(podWithSidecar.Spec.Containers, pod.Spec.Containers...)
-	podWithSidecar.Spec.Volumes = append(podWithSidecar.Spec.Volumes, pod.Spec.Volumes...)
 }
 
 // InjectDecoder injects the decoder.

@@ -20,13 +20,16 @@ import (
 )
 
 var (
-	// MetricsAddr is the TCP address that the controller should bind to for serving prometheus metrics.
+	// MetricsAddr is the TCP address that the controller should bind to
+	// for serving prometheus metrics.
 	MetricsAddr string
 
-	// ProbeAddr is the TCP address that the controller should bind to for serving health probes.
+	// ProbeAddr is the TCP address that the controller should bind to
+	// for serving health probes.
 	ProbeAddr string
 
-	// EnableLeaderElection for controller manager. Enabling this will ensure there is only one active controller manager.
+	// EnableLeaderElection for controller manager.
+	// Enabling this will ensure there is only one active controller manager.
 	EnableLeaderElection bool
 
 	// EnableWebhook will enable webhook for controller manager.
@@ -41,17 +44,22 @@ var (
 
 func ApplyManagersOpts(cmd *cobra.Command) {
 	cmd.Flags().
-		StringVarP(&MetricsAddr, "metrics-bind-address", "", "127.0.0.1:8080", "The address the metric endpoint binds to.")
+		StringVarP(&MetricsAddr, "metrics-bind-address", "", "127.0.0.1:8080",
+			"The address the metric endpoint binds to.")
 	cmd.Flags().
-		StringVarP(&ProbeAddr, "health-probe-bind-address", "", ":8081", "The address the probe endpoint binds to.")
+		StringVarP(&ProbeAddr, "health-probe-bind-address", "", ":8081",
+			"The address the probe endpoint binds to.")
 	cmd.Flags().BoolVarP(&EnableLeaderElection, "leader-elect", "", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
 	cmd.Flags().
-		BoolVarP(&EnableWebhook, "enable-webhook", "", true, "Enable webhook for controller manager.")
+		BoolVarP(&EnableWebhook, "enable-webhook", "", true,
+			"Enable webhook for controller manager.")
 	cmd.Flags().
-		BoolVarP(&EnableScheduler, "enable-scheduler", "", true, "Enable scheduler for controller manager.")
+		BoolVarP(&EnableScheduler, "enable-scheduler", "", true,
+			"Enable scheduler for controller manager.")
 	cmd.Flags().
-		StringVarP(&SchedulerConfigFile, "scheduler-config-file", "", "/etc/kubernetes/scheduler.yaml",
+		StringVarP(&SchedulerConfigFile, "scheduler-config-file", "",
+			"/etc/kubernetes/scheduler.yaml",
 			"The location of scheduler plugin's configuration file.")
 }

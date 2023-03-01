@@ -37,7 +37,8 @@ For example:
 vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment
 
 # delete the vineyard deployment with specific name in the vineyard-system namespace
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment --name vineyardd-0`,
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment \
+--name vineyardd-0`,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()

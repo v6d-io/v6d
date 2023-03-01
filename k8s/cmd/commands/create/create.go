@@ -30,7 +30,14 @@ For example:
 vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system
 
 # create the recover job on kubernetes
-vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
+vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system
+
+# create the operation job on kubernetes
+vineyardctl create operation --name assembly \
+--type local \
+--require job1 \
+--target job2 \
+--timeoutSeconds 600`,
 }
 
 func NewCreateCmd() *cobra.Command {
@@ -40,4 +47,5 @@ func NewCreateCmd() *cobra.Command {
 func init() {
 	createCmd.AddCommand(NewCreateBackupCmd())
 	createCmd.AddCommand(NewCreateRecoverCmd())
+	createCmd.AddCommand(NewCreateOperationCmd())
 }

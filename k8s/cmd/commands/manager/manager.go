@@ -51,7 +51,8 @@ var managerCmd = &cobra.Command{
 	Long: `Start the manager of vineyard operator.
 For example:
 
-# start the manager of vineyard operator with default configuration(Enable the controller, webhooks and scheduler)
+# start the manager of vineyard operator with default configuration
+# (Enable the controller, webhooks and scheduler)
 vineyardctl manager
 
 # start the manager of vineyard operator without webhooks
@@ -93,7 +94,8 @@ vineyardctl manager --enable-webhook false --enable-scheduler false`,
 		}
 
 		wg.Add(1)
-		go startManager(mgr, flags.MetricsAddr, flags.ProbeAddr, flags.EnableLeaderElection)
+		go startManager(mgr, flags.MetricsAddr, flags.ProbeAddr,
+			flags.EnableLeaderElection)
 
 		wg.Wait()
 	},
@@ -172,7 +174,8 @@ func startManager(
 		Template: templates.NewEmbedTemplate(),
 		Recorder: mgr.GetEventRecorderFor("sidecar-controller"),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal("unable to create controller", "controller", "Sidecar", "error: ", err)
+		util.ErrLogger.Fatal("unable to create controller", "controller", "Sidecar",
+			"error: ", err)
 	}
 	if err := (&controllers.BackupReconciler{
 		Client:   mgr.GetClient(),
@@ -180,7 +183,8 @@ func startManager(
 		Template: templates.NewEmbedTemplate(),
 		Recorder: mgr.GetEventRecorderFor("backup-controller"),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal("unable to create controller", "controller", "Backup", "error: ", err)
+		util.ErrLogger.Fatal("unable to create controller", "controller", "Backup",
+			"error: ", err)
 	}
 
 	if err := (&controllers.RecoverReconciler{
@@ -188,10 +192,11 @@ func startManager(
 		Scheme:   mgr.GetScheme(),
 		Template: templates.NewEmbedTemplate(),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal("unable to create controller", "controller", "Recover", "error: ", err)
+		util.ErrLogger.Fatal("unable to create controller", "controller", "Recover",
+			"error: ", err)
 	}
 
-	if !flags.EnableWebhook {
+	if flags.EnableWebhook {
 		// register the webhooks of CRDs
 		if err := (&v1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
 			util.ErrLogger.Fatal(
@@ -212,19 +217,24 @@ func startManager(
 			)
 		}
 		if err := (&v1alpha1.Vineyardd{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Vineyardd", "error: ", err)
+			util.ErrLogger.Fatal("unable to create webhook", "webhook",
+				"Vineyardd", "error: ", err)
 		}
 		if err := (&v1alpha1.Operation{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Operation", "error: ", err)
+			util.ErrLogger.Fatal("unable to create webhook", "webhook",
+				"Operation", "error: ", err)
 		}
 		if err := (&v1alpha1.Sidecar{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Sidecar", "error: ", err)
+			util.ErrLogger.Fatal("unable to create webhook", "webhook",
+				"Sidecar", "error: ", err)
 		}
 		if err := (&v1alpha1.Backup{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Backup", "error: ", err)
+			util.ErrLogger.Fatal("unable to create webhook", "webhook",
+				"Backup", "error: ", err)
 		}
 		if err := (&v1alpha1.Recover{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook", "Recover", "error: ", err)
+			util.ErrLogger.Fatal("unable to create webhook", "webhook",
+				"Recover", "error: ", err)
 		}
 
 		// register the assembly webhook

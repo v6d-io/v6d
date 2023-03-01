@@ -291,7 +291,9 @@ sidecar-job:
 		-t $(REGISTRY)/sidecar-job:$(TAG)
 .PHONY: sidecar-job
 
-e2e-tests-sidecar: prepare-e2e-test install-vineyard-cluster
+e2e-tests-sidecar: prepare-e2e-test build-local-cluster
+	@make -C ${K8S_DIR} install-cert-manager
+	@make -C ${E2E_DIR} install-vineyard-operator
 	@echo "Running sidecar e2e test..."
 	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/sidecar/e2e.yaml
 	@echo "sidecar e2e test passed."

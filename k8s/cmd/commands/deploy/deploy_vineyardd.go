@@ -17,6 +17,7 @@ package deploy
 
 import (
 	"context"
+	"log"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -43,9 +44,81 @@ For example:
 vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
 
 # deploy the vineyardd with customized image
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd --image vineyardd:v0.12.2`,
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+--image vineyardd:v0.12.2
+
+# deploy the vineyardd with spill mechnism on persistent storage from json string
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+--vineyard.spill.config spill-path \
+--vineyard.spill.path /var/vineyard/spill \
+--vineyard.spill.pv-pvc-spec '{
+	"pv-spec": {
+		"capacity": {
+		  "storage": "1Gi"
+		},
+		"accessModes": [
+		  "ReadWriteOnce"
+		],
+		"storageClassName": "manual",
+		"hostPath": {
+		  "path": "/var/vineyard/spill"
+		}
+	},
+	"pvc-spec": {
+		"storageClassName": "manual",
+		"accessModes": [
+		  "ReadWriteOnce"
+		],
+		"resources": {
+		  "requests": {
+			"storage": "512Mi"
+		  }
+		}
+	}
+}'
+
+# deploy the vineyardd with spill mechnism on persistent storage from yaml string
+vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+--vineyard.spill.config spill-path \
+--vineyard.spill.path /var/vineyard/spill \
+--vineyard.spill.pv-pvc-spec \
+'
+pv-spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+  - ReadWriteOnce
+  storageClassName: manual
+  hostPath:
+    path: "/var/vineyard/spill"
+pvc-spec:
+  storageClassName: manual
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 512Mi
+'
+
+# deploy the vineyardd with spill mechnism on persistent storage from json file
+# also you could use the yaml file
+cat pv-pvc.json | vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd \
+--vineyard.spill.config spill-path \
+--vineyard.spill.path /var/vineyard/spill \
+-`,
 	Run: func(cmd *cobra.Command, args []string) {
-		util.AssertNoArgs(cmd, args)
+		if len(args) > 0 && args[0] != "-" {
+			util.ErrLogger.Fatal("invalid argument: ", args)
+		}
+
+		// Check if the input is coming from stdin
+		str, err := util.ReadJsonFromStdin(args)
+		if err != nil {
+			log.Fatalf("failed to parse from stdin: %v", err)
+		}
+		if str != "" {
+			flags.VineyardSpillPVandPVC = str
+		}
 		client := util.KubernetesClient()
 
 		vineyardd, err := BuildVineyardManifest()
@@ -63,8 +136,8 @@ vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd 
 func BuildVineyardManifest() (*v1alpha1.Vineyardd, error) {
 	opts := &flags.VineyarddOpts
 	envs := &flags.VineyardContainerEnvs
-	spillPV := flags.VineyardSpillPVSpec
-	spillPVC := flags.VineyardSpillPVCSpec
+
+	spillPVandPVC := flags.VineyardSpillPVandPVC
 	if len(*envs) != 0 {
 		vineyardContainerEnvs, err := util.ParseEnvs(*envs)
 		if err != nil {
@@ -73,20 +146,17 @@ func BuildVineyardManifest() (*v1alpha1.Vineyardd, error) {
 		opts.VineyardConfig.Env = append(opts.VineyardConfig.Env, vineyardContainerEnvs...)
 	}
 
-	if spillPV != "" {
-		vineyarddSpillPV, err := util.ParsePVSpec(spillPV)
+	if spillPVandPVC != "" {
+		spillPVandPVCJson, err := util.ConvertToJson(spillPVandPVC)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to parse the pv of vineyard spill")
 		}
-		opts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *vineyarddSpillPV
-	}
-
-	if spillPVC != "" {
-		vineyardSpillPVC, err := util.ParsePVCSpec(spillPVC)
+		spillPVSpec, spillPVCSpec, err := util.ParsePVandPVCSpec(spillPVandPVCJson)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to parse the pvc of vineyard spill")
 		}
-		opts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *vineyardSpillPVC
+		opts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *spillPVSpec
+		opts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *spillPVCSpec
 	}
 
 	vineyardd := &v1alpha1.Vineyardd{

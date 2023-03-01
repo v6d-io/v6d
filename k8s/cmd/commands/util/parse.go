@@ -19,11 +19,37 @@ import (
 	"encoding/json"
 	"strings"
 
-	"github.com/pkg/errors"
+	"github.com/ghodss/yaml"
 
+	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
+
+// ConvertToJson check whether the string is json type and
+// converts the string to json type if not
+func ConvertToJson(str string) (string, error) {
+	result := make(map[string]interface{})
+	err := json.Unmarshal([]byte(str), &result)
+	if err != nil {
+		json, err := yaml.YAMLToJSON([]byte(str))
+		if err != nil {
+			return "", errors.Wrap(err, "failed to convert to json")
+		}
+		return string(json), nil
+	}
+	return str, nil
+}
+
+// ConvertToYaml converts the json string to yaml type
+func ConvertToYaml(str string) (string, error) {
+	y, err := yaml.JSONToYAML([]byte(str))
+	if err != nil {
+		return "", errors.Wrap(err, "failed to convert to yaml")
+	}
+
+	return string(y), nil
+}
 
 // ParseEnvs parse the string to container's environment variables
 func ParseEnvs(envArray []string) ([]corev1.EnvVar, error) {
