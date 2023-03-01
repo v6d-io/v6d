@@ -22,27 +22,32 @@ import sys
 from ._cobra import click
 from .utils import find_vineyardctl_path
 
-_vineyard_ctl = find_vineyardctl_path()
+_vineyardctl = find_vineyardctl_path()
 
 
 def _register():
-    if not hasattr(sys.modules[__name__], 'vineyardctl'):
-        click(
-            sys.modules[__name__],
-            _vineyard_ctl,
-            exclude_args=['dump_usage', 'x_version', 'help'],
-        )
+    if hasattr(sys.modules[__name__], 'vineyardctl'):
+        return
+    if _vineyardctl is None:
+
+        def cmd(*args, **kwargs):
+            raise RuntimeError("vineyardctl is not bundled")
+
+    else:
+        cmd = click(_vineyardctl, exclude_args=['dump_usage', 'x_version', 'help'])
+    setattr(sys.modules[__name__], 'vineyardctl', cmd)
 
 
 def _main(args):
-    prog = _vineyard_ctl
+    if _vineyardctl is None:
+        raise RuntimeError("vineyardctl is not bundled")
     if os.name == 'nt':
         try:
-            return subprocess.call([prog] + args)
+            return subprocess.call([_vineyardctl] + args)
         except KeyboardInterrupt:
             return 0
     else:
-        return os.execvp(prog, [prog] + args)
+        return os.execvp(_vineyardctl, [_vineyardctl] + args)
 
 
 __all__ = [  # noqa: F822

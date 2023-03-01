@@ -26,8 +26,6 @@ import textwrap
 
 from makefun import with_signature
 
-from vineyard.data.utils import str_to_bool
-
 
 def infer_name(name):
     cs = []
@@ -136,7 +134,7 @@ def make_command(executable, usage, exclude_args, scope=None):
     return name, cmd
 
 
-def click(module, executable, usage_args=None, exclude_args=None):
+def click(executable, usage_args=None, exclude_args=None):
     if usage_args is None:
         usage_args = ["-j"]
     if not isinstance(usage_args, (list, tuple)):
@@ -151,5 +149,5 @@ def click(module, executable, usage_args=None, exclude_args=None):
             stderr=subprocess.STDOUT,
         )
     )
-    name, command = make_command(executable, usage, exclude_args)
-    setattr(module, name, command)
+    _, cmd = make_command(executable, usage, exclude_args)
+    return cmd
