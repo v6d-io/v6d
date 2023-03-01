@@ -17,7 +17,7 @@ limitations under the License.
 #include "graph/grin/include/topology/vertexlist.h"
 
 #ifdef ENABLE_VERTEX_LIST
-VertexList get_vertex_list(const Graph g) {
+VertexList get_vertex_list(Graph g) {
     auto _g = static_cast<Graph_T*>(g);
     auto vl = new VertexList_T();
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
@@ -27,7 +27,7 @@ VertexList get_vertex_list(const Graph g) {
 }
 
 #ifdef WITH_VERTEX_PROPERTY
-VertexList get_vertex_list_by_type(const Graph g, const VertexType vtype) {
+VertexList get_vertex_list_by_type(Graph g, VertexType vtype) {
     auto _g = static_cast<Graph_T*>(g);
     auto vl = new VertexList_T();
     auto _vtype = static_cast<VertexType_T*>(vtype);
@@ -46,14 +46,14 @@ VertexList create_vertex_list() {
     return vl;
 }
 
-bool insert_vertex_to_list(VertexList vl, const Vertex v) {
+bool insert_vertex_to_list(VertexList vl, Vertex v) {
     auto _vl = static_cast<VertexList_T*>(vl);
     auto _v = static_cast<Vertex_T*>(v);
     _vl->push_back(Graph_T::vertex_range_t(_v->GetValue(), _v->GetValue()));
     return true;
 }
 
-size_t get_vertex_list_size(const VertexList vl) {
+size_t get_vertex_list_size(VertexList vl) {
     auto _vl = static_cast<VertexList_T*>(vl);
     size_t result = 0;
     for (auto &vr : *_vl) {
@@ -62,7 +62,7 @@ size_t get_vertex_list_size(const VertexList vl) {
     return result;
 }
 
-Vertex get_vertex_from_list(const VertexList vl, const size_t idx) {
+Vertex get_vertex_from_list(VertexList vl, size_t idx) {
     auto _vl = static_cast<VertexList_T*>(vl);
     size_t result = 0;
     for (auto &vr : *_vl) {

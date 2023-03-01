@@ -24,48 +24,48 @@ limitations under the License.
 #include "../predefine.h"
 
 #ifdef ENABLE_GRAPH_PARTITION
-size_t get_total_partitions_number(const PartitionedGraph);
+size_t get_total_partitions_number(PartitionedGraph);
 
-PartitionList get_local_partition_list(const PartitionedGraph);
+PartitionList get_local_partition_list(PartitionedGraph);
 
 void destroy_partition_list(PartitionList);
 
 PartitionList create_partition_list();
 
-bool insert_partition_to_list(PartitionList, const Partition);
+bool insert_partition_to_list(PartitionList, Partition);
 
-size_t get_partition_list_size(const PartitionList);
+size_t get_partition_list_size(PartitionList);
 
-Partition get_partition_from_list(const PartitionList, const size_t);
+Partition get_partition_from_list(PartitionList, size_t);
 
 void destroy_partition(Partition);
 
-void* get_partition_info(const PartitionedGraph, const Partition);
+void* get_partition_info(PartitionedGraph, Partition);
 
-Graph get_local_graph_from_partition(const PartitionedGraph, const Partition);
+Graph get_local_graph_from_partition(PartitionedGraph, Partition);
 #endif
 
 #ifdef NATURAL_PARTITION_ID_TRAIT
-Partition get_partition_from_id(const PartitionID);
+Partition get_partition_from_id(PartitionID);
 
-PartitionID get_partition_id(const Partition);
+PartitionID get_partition_id(Partition);
 #endif
 
 // master & mirror vertices for vertexcut partition
 // while they refer to inner & outer vertices in edgecut partition
 #if defined(ENABLE_GRAPH_PARTITION) && defined(ENABLE_VERTEX_LIST)
-VertexList get_master_vertices(const Graph);
+VertexList get_master_vertices(Graph);
 
-VertexList get_mirror_vertices(const Graph);
+VertexList get_mirror_vertices(Graph);
 
-VertexList get_mirror_vertices_by_partition(const Graph, const Partition);
+VertexList get_mirror_vertices_by_partition(Graph, Partition);
 
 #ifdef WITH_VERTEX_PROPERTY
-VertexList get_master_vertices_by_type(const Graph, const VertexType);
+VertexList get_master_vertices_by_type(Graph, VertexType);
 
-VertexList get_mirror_vertices_by_type(const Graph, const VertexType);
+VertexList get_mirror_vertices_by_type(Graph, VertexType);
 
-VertexList get_mirror_vertices_by_type_partition(const Graph, const VertexType, const Partition);
+VertexList get_mirror_vertices_by_type_partition(Graph, VertexType, Partition);
 #endif
 #endif
 
@@ -76,7 +76,7 @@ VertexList get_mirror_vertices_by_type_partition(const Graph, const VertexType, 
  * @param Direction incoming or outgoing
  * @param Vertex the vertex
  */
-AdjacentList get_adjacent_master_list(const Graph, const Direction, const Vertex);
+AdjacentList get_adjacent_master_list(Graph, Direction, Vertex);
 
 /**
  * @brief get the adjacentlist of a vertex where the neigbors are only mirror vertices
@@ -84,7 +84,7 @@ AdjacentList get_adjacent_master_list(const Graph, const Direction, const Vertex
  * @param Direction incoming or outgoing
  * @param Vertex the vertex
  */
-AdjacentList get_adjacent_mirror_list(const Graph, const Direction, const Vertex);
+AdjacentList get_adjacent_mirror_list(Graph, Direction, Vertex);
 
 /**
  * @brief get the adjacentlist of a vertex where the neigbors are only mirror vertices
@@ -94,16 +94,16 @@ AdjacentList get_adjacent_mirror_list(const Graph, const Direction, const Vertex
  * @param Paritition the specific partition
  * @param Vertex the vertex
  */
-AdjacentList get_adjacent_mirror_list_by_partition(const Graph, const Direction,
-                                                   const Partition, const Vertex);
+AdjacentList get_adjacent_mirror_list_by_partition(Graph, Direction,
+                                                   Partition, Vertex);
 #endif
 
 
 // Vertex ref refers to the same vertex referred in other partitions,
-// while edge ref is likewise. Both can be serialized to char* for
+// while edge ref is likewise. Both can be serialized to const char* for
 // message transporting and deserialized on the other end.
 #ifdef ENABLE_VERTEX_REF
-VertexRef get_vertex_ref_for_vertex(const Graph, const Partition, const Vertex);
+VertexRef get_vertex_ref_for_vertex(Graph, Partition, Vertex);
 
 /**
  * @brief get the local vertex from the vertex ref
@@ -111,7 +111,7 @@ VertexRef get_vertex_ref_for_vertex(const Graph, const Partition, const Vertex);
  * @param Graph the graph
  * @param VertexRef the vertex ref
  */
-Vertex get_vertex_from_vertex_ref(const Graph, const VertexRef);
+Vertex get_vertex_from_vertex_ref(Graph, VertexRef);
 
 /**
  * @brief get the master partition of a vertex ref.
@@ -120,30 +120,34 @@ Vertex get_vertex_from_vertex_ref(const Graph, const VertexRef);
  * @param Graph the graph
  * @param VertexRef the vertex ref
  */
-Partition get_master_partition_from_vertex_ref(const Graph, const VertexRef);
+bool is_master_vertex(Graph, Vertex);
 
-char* serialize_vertex_ref(const Graph, const VertexRef);
+bool is_mirror_vertex(Graph, Vertex);
 
-VertexRef deserialize_to_vertex_ref(const Graph, const char*);
+Partition get_master_partition_from_vertex_ref(Graph, VertexRef);
+
+const char* serialize_vertex_ref(Graph, VertexRef);
+
+VertexRef deserialize_to_vertex_ref(Graph, const char*);
 #endif
 
 #ifdef ENABLE_EDGE_REF
-EdgeRef get_edge_ref_for_edge(const Graph, const Partition, const Edge);
+EdgeRef get_edge_ref_for_edge(Graph, Partition, Edge);
 
-Edge get_edge_from_edge_ref(const Graph, const EdgeRef);
+Edge get_edge_from_edge_ref(Graph, EdgeRef);
 
-Partition get_master_partition_from_edge_ref(const Graph, const EdgeRef);
+Partition get_master_partition_from_edge_ref(Graph, EdgeRef);
 
-char* serialize_edge_ref(const Graph, const EdgeRef);
+const char* serialize_edge_ref(Graph, EdgeRef);
 
-EdgeRef deserialize_to_edge_ref(const Graph, const char*);
+EdgeRef deserialize_to_edge_ref(Graph, const char*);
 #endif
 
 // The concept of local_complete refers to whether we can get complete data or properties
 // locally in the partition. It is orthogonal to the concept of master/mirror which
 // is mainly designed for data aggregation. In some extremely cases, master vertices
 // may NOT contain all the data or properties locally.
-bool is_vertex_neighbor_local_complete(const Graph, const Vertex);
+bool is_vertex_neighbor_local_complete(Graph, Vertex);
 
 /**
  * @brief get the partitions whose combination can provide the complete
@@ -151,30 +155,30 @@ bool is_vertex_neighbor_local_complete(const Graph, const Vertex);
  * @param Graph the graph
  * @param Vertex the vertex
  */
-PartitionList vertex_neighbor_complete_partitions(const Graph, const Vertex);
+PartitionList vertex_neighbor_complete_partitions(Graph, Vertex);
 
 #ifdef WITH_VERTEX_DATA
-bool is_vertex_data_local_complete(const Graph, const Vertex);
+bool is_vertex_data_local_complete(Graph, Vertex);
 
-PartitionList vertex_data_complete_partitions(const Graph, const Vertex);
+PartitionList vertex_data_complete_partitions(Graph, Vertex);
 #endif
 
 #ifdef WITH_VERTEX_PROPERTY
-bool is_vertex_property_local_complete(const Graph, const Vertex);
+bool is_vertex_property_local_complete(Graph, Vertex);
 
-PartitionList vertex_property_complete_partitions(const Graph, const Vertex);
+PartitionList vertex_property_complete_partitions(Graph, Vertex);
 #endif
 
 #ifdef WITH_EDGE_DATA
-bool is_edge_data_local_complete(const Graph, const Edge);
+bool is_edge_data_local_complete(Graph, Edge);
 
-PartitionList edge_data_complete_partitions(const Graph, const Edge);
+PartitionList edge_data_complete_partitions(Graph, Edge);
 #endif
 
 #ifdef WITH_EDGE_PROPERTY
-bool is_edge_property_local_complete(const Graph, const Edge);
+bool is_edge_property_local_complete(Graph, Edge);
 
-PartitionList edge_data_complete_partitions(const Graph, const Edge);
+PartitionList edge_data_complete_partitions(Graph, Edge);
 #endif
 
 #endif  // GRIN_INCLUDE_PARTITION_PARTITION_H_

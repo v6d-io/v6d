@@ -19,24 +19,26 @@ limitations under the License.
 #include "../predefine.h"
 
 #ifdef ENABLE_ADJACENT_LIST
-AdjacentList get_adjacent_list(const Graph, const Direction, Vertex);
+AdjacentList get_adjacent_list(Graph, Direction, Vertex);
 
 #ifdef WITH_EDGE_PROPERTY
-AdjacentList get_adjacent_list_by_edge_type(const Graph, const Direction, Vertex, EdgeType);
+AdjacentList get_adjacent_list_by_edge_type(Graph, Direction, Vertex, EdgeType);
 #endif
 
 void destroy_adjacent_list(AdjacentList);
 
-size_t get_adjacent_list_size(const AdjacentList);
+size_t get_adjacent_list_size(AdjacentList);
 
-Vertex get_neighbor_from_adjacent_list(const AdjacentList, size_t);
+Vertex get_neighbor_from_adjacent_list(AdjacentList, size_t);
 
-Edge get_edge_from_adjacent_list(const AdjacentList, size_t);
+Edge get_edge_from_adjacent_list(AdjacentList, size_t);
 
 #ifdef ENABLE_ADJACENT_LIST_ITERATOR
-AdjacentListIterator get_adjacent_list_begin(const Graph);
+AdjacentListIterator get_adjacent_list_begin(Graph);
 
-bool get_next_adjacent_list_iter(AdjacentListIterator);
+AdjacentListIterator get_next_adjacent_list_iter(AdjacentListIterator);
+
+bool is_adjacent_list_end(AdjacentListIterator);
 
 Vertex get_neighbor_from_iter(AdjacentListIterator);
 

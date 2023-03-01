@@ -22,60 +22,60 @@ limitations under the License.
 
 #ifdef WITH_VERTEX_PROPERTY
 // Vertex type
-VertexType get_vertex_type(const Graph, const Vertex);
+VertexType get_vertex_type(Graph, Vertex);
 
-char* get_vertex_type_name(const Graph, const VertexType);
+const char* get_vertex_type_name(Graph, VertexType);
 
-VertexType get_vertex_type_by_name(const Graph, char*);
+VertexType get_vertex_type_by_name(Graph, const char*);
 
 // Vertex type list
-VertexTypeList get_vertex_type_list(const Graph);
+VertexTypeList get_vertex_type_list(Graph);
 
 void destroy_vertex_type_list(VertexTypeList);
 
 VertexTypeList create_vertex_type_list();
 
-bool insert_vertex_type_to_list(VertexTypeList, const VertexType);
+bool insert_vertex_type_to_list(VertexTypeList, VertexType);
 
-size_t get_vertex_type_list_size(const VertexTypeList);
+size_t get_vertex_type_list_size(VertexTypeList);
 
-VertexType get_vertex_type_from_list(const VertexTypeList, const size_t);
+VertexType get_vertex_type_from_list(VertexTypeList, size_t);
 #endif
 
 
 #ifdef NATURAL_VERTEX_TYPE_ID_TRAIT
-VertexTypeID get_vertex_type_id(const VertexType);
+VertexTypeID get_vertex_type_id(VertexType);
 
-VertexType get_vertex_type_from_id(const VertexTypeID);
+VertexType get_vertex_type_from_id(VertexTypeID);
 #endif
 
 
 #ifdef WITH_EDGE_PROPERTY
 // Edge type
-EdgeType get_edge_type(const Graph, const Edge);
+EdgeType get_edge_type(Graph, Edge);
 
-char* get_edge_type_name(const Graph, const EdgeType);
+const char* get_edge_type_name(Graph, EdgeType);
 
-EdgeType get_edge_type_by_name(const Graph, char*);
+EdgeType get_edge_type_by_name(Graph, const char*);
 
 // Edge type list
-EdgeTypeList get_edge_type_list(const Graph);
+EdgeTypeList get_edge_type_list(Graph);
 
 void destroy_edge_type_list(EdgeTypeList);
 
 EdgeTypeList create_edge_type_list();
 
-bool insert_edge_type_to_list(EdgeTypeList, const EdgeType);
+bool insert_edge_type_to_list(EdgeTypeList, EdgeType);
 
-size_t get_edge_type_list_size(const EdgeTypeList);
+size_t get_edge_type_list_size(EdgeTypeList);
 
-EdgeType get_edge_type_from_list(const EdgeTypeList, const size_t);
+EdgeType get_edge_type_from_list(EdgeTypeList, size_t);
 #endif
 
 #ifdef NATURAL_EDGE_TYPE_ID_TRAIT
-EdgeTypeID get_edge_type_id(const EdgeType);
+EdgeTypeID get_edge_type_id(EdgeType);
 
-EdgeType get_edge_type_from_id(const EdgeTypeID);
+EdgeType get_edge_type_from_id(EdgeTypeID);
 #endif
 
 /** @name VertexEdgeTypeRelation
@@ -86,13 +86,13 @@ EdgeType get_edge_type_from_id(const EdgeTypeID);
 ///@{
 #if defined(WITH_VERTEX_PROPERTY) && defined(WITH_EDGE_PROPERTY)
 /** @brief  the src vertex type list */
-VertexTypeList get_src_types_from_edge_type(const Graph, const EdgeType);
+VertexTypeList get_src_types_from_edge_type(Graph, EdgeType);
 
 /** @brief get the dst vertex type list */
-VertexTypeList get_dst_types_from_edge_type(const Graph, const EdgeType);
+VertexTypeList get_dst_types_from_edge_type(Graph, EdgeType);
 
 /** @brief get the edge type list related to a given pair of vertex types */
-EdgeTypeList get_edge_types_from_vertex_type_pair(const Graph, const VertexType, const VertexType);
+EdgeTypeList get_edge_types_from_vertex_type_pair(Graph, VertexType, VertexType);
 #endif
 ///@}
 

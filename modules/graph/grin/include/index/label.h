@@ -21,17 +21,17 @@ limitations under the License.
 #include "../predefine.h"
 
 #if defined(WITH_VERTEX_LABEL) || defined(WITH_EDGE_LABEL)
-Label get_label_by_name(const Graph, const char*);
+Label get_label_by_name(Graph, const char*);
 
-char* get_label_name(const Graph, const Label);
+const char* get_label_name(Graph, Label);
 
 void destroy_label(Label);
 
 void destroy_label_list(LabelList);
 
-size_t get_label_list_size(const LabelList);
+size_t get_label_list_size(LabelList);
 
-Label get_label_from_list(const LabelList, const size_t);
+Label get_label_from_list(LabelList, size_t);
 #endif
 
 #ifdef WITH_VERTEX_LABEL
@@ -42,28 +42,28 @@ Label get_label_from_list(const LabelList, const size_t);
  * @param Vertex the vertex
  * @return whether succeed
 */
-bool assign_label_to_vertex(const Graph, const Label, Vertex);
+bool assign_label_to_vertex(Graph, Label, Vertex);
 
 /** 
  * @brief get the label list of a vertex
  * @param Graph the graph
  * @param Vertex the vertex
 */
-LabelList get_vertex_label_list(const Graph, const Vertex);
+LabelList get_vertex_label_list(Graph, Vertex);
 
 /** 
  * @brief get the vertex list by label
  * @param Graph the graph
  * @param Label the label
 */
-VertexList get_vertex_list_by_label(const Graph, const Label);
+VertexList get_vertex_list_by_label(Graph, Label);
 
 /** 
  * @brief filtering an existing vertex list by label
  * @param VertexList the existing vertex list
  * @param Label the label
 */
-VertexList filter_vertex_list_by_label(const VertexList, const Label);
+VertexList filter_vertex_list_by_label(VertexList, Label);
 #endif
 
 #ifdef WITH_EDGE_LABEL
@@ -74,28 +74,28 @@ VertexList filter_vertex_list_by_label(const VertexList, const Label);
  * @param Edge the edge
  * @return whether succeed
 */
-bool assign_label_to_edge(const Graph, const Label, Edge);
+bool assign_label_to_edge(Graph, Label, Edge);
 
 /** 
  * @brief get the label list of a edge
  * @param Graph the graph
  * @param Edge the edge
 */
-LabelList get_edge_label_list(const Graph, const Edge);
+LabelList get_edge_label_list(Graph, Edge);
 
 /** 
  * @brief get the edge list by label
  * @param Graph the graph
  * @param Label the label
 */
-EdgeList get_edge_list_by_label(const Graph, const Label);
+EdgeList get_edge_list_by_label(Graph, Label);
 
 /** 
  * @brief filtering an existing edge list by label
  * @param EdgeList the existing edge list
  * @param Label the label
 */
-EdgeList filter_edge_list_by_label(const EdgeList, const Label);
+EdgeList filter_edge_list_by_label(EdgeList, Label);
 #endif
 
 #endif // GRIN_INCLUDE_INDEX_LABEL_H_

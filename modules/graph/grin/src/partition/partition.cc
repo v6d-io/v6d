@@ -20,17 +20,17 @@ limitations under the License.
 
 
 #ifdef ENABLE_GRAPH_PARTITION
-size_t get_total_partitions_number(const PartitionedGraph pg) {
+size_t get_total_partitions_number(PartitionedGraph pg) {
     auto _pg = static_cast<PartitionedGraph_T*>(pg);
     return _pg->total_frag_num();
 }
 
-PartitionList get_local_partition_list(const PartitionedGraph pg) {
+PartitionList get_local_partition_list(PartitionedGraph pg) {
     auto _pg = static_cast<PartitionedGraph_T*>(pg);
     auto pl = new PartitionList_T();
     vineyard::Client client;
     client.Connect();
-    for (const auto & [fid, location] : _pg->FragmentLocations()) {
+    for (auto & [fid, location] : _pg->FragmentLocations()) {
         if (location == client.instance_id()) {
             pl->push_back(fid);
         }
@@ -48,19 +48,19 @@ PartitionList create_partition_list() {
     return pl;
 }
 
-bool insert_partition_to_list(PartitionList pl, const Partition p) {
+bool insert_partition_to_list(PartitionList pl, Partition p) {
     auto _pl = static_cast<PartitionList_T*>(pl);
     auto _p = static_cast<Partition_T*>(p);
     _pl->push_back(*_p);
     return true;
 }
 
-size_t get_partition_list_size(const PartitionList pl) {
+size_t get_partition_list_size(PartitionList pl) {
     auto _pl = static_cast<PartitionList_T*>(pl);
     return _pl->size();
 }
 
-Partition get_partition_from_list(const PartitionList pl, const size_t idx) {
+Partition get_partition_from_list(PartitionList pl, size_t idx) {
     auto _pl = static_cast<PartitionList_T*>(pl);
     auto p = new Partition_T((*_pl)[idx]);
     return p;
@@ -71,11 +71,11 @@ void destroy_partition(Partition p) {
     delete _p;
 }
 
-void* get_partition_info(const PartitionedGraph pg, const Partition p) {
+void* get_partition_info(PartitionedGraph pg, Partition p) {
     return NULL;
 }
 
-Graph get_local_graph_from_partition(const PartitionedGraph pg, const Partition p) {
+Graph get_local_graph_from_partition(PartitionedGraph pg, Partition p) {
     auto _pg = static_cast<PartitionedGraph_T*>(pg);
     auto _p = static_cast<Partition_T*>(p);
     vineyard::Client client;
@@ -85,12 +85,12 @@ Graph get_local_graph_from_partition(const PartitionedGraph pg, const Partition 
 #endif
 
 #ifdef NATURAL_PARTITION_ID_TRAIT
-Partition get_partition_from_id(const PartitionID pid) {
+Partition get_partition_from_id(PartitionID pid) {
     auto p = new Partition_T(pid);
     return p;
 }
 
-PartitionID get_partition_id(const Partition p) {
+PartitionID get_partition_id(Partition p) {
     auto _p = static_cast<Partition_T*>(p);
     return *_p;
 }
@@ -98,7 +98,7 @@ PartitionID get_partition_id(const Partition p) {
 
 
 #if defined(ENABLE_GRAPH_PARTITION) && defined(ENABLE_VERTEX_LIST)
-VertexList get_master_vertices(const Graph g) {
+VertexList get_master_vertices(Graph g) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vl = new VertexList_T();
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
@@ -107,7 +107,7 @@ VertexList get_master_vertices(const Graph g) {
     return _vl;    
 }
 
-VertexList get_mirror_vertices(const Graph g) {
+VertexList get_mirror_vertices(Graph g) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vl = new VertexList_T();
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
@@ -116,12 +116,12 @@ VertexList get_mirror_vertices(const Graph g) {
     return _vl;
 }
 
-VertexList get_mirror_vertices_by_partition(const Graph g, const Partition p) {
+VertexList get_mirror_vertices_by_partition(Graph g, Partition p) {
     return NULL_LIST;
 }
 
 #ifdef WITH_VERTEX_PROPERTY
-VertexList get_master_vertices_by_type(const Graph g, const VertexType vtype) {
+VertexList get_master_vertices_by_type(Graph g, VertexType vtype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vtype = static_cast<VertexType_T*>(vtype);
     auto _vl = new VertexList_T();
@@ -129,7 +129,7 @@ VertexList get_master_vertices_by_type(const Graph g, const VertexType vtype) {
     return _vl;
 }
 
-VertexList get_mirror_vertices_by_type(const Graph g, const VertexType vtype) {
+VertexList get_mirror_vertices_by_type(Graph g, VertexType vtype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vtype = static_cast<VertexType_T*>(vtype);
     auto _vl = new VertexList_T();
@@ -137,31 +137,31 @@ VertexList get_mirror_vertices_by_type(const Graph g, const VertexType vtype) {
     return _vl;
 }
 
-VertexList get_mirror_vertices_by_type_partition(const Graph g, const VertexType vtype,
-                                                  const Partition p) {
+VertexList get_mirror_vertices_by_type_partition(Graph g, VertexType vtype,
+                                                  Partition p) {
     return NULL_LIST;
 }
 #endif
 #endif
 
 #if defined(ENABLE_GRAPH_PARTITION) && defined(ENABLE_ADJACENT_LIST)
-AdjacentList get_adjacent_master_list(const Graph g, const Direction d, const Vertex v) {
+AdjacentList get_adjacent_master_list(Graph g, Direction d, Vertex v) {
     return NULL_LIST;
 }
 
-AdjacentList get_adjacent_mirror_list(const Graph g, const Direction d, const Vertex v) {
+AdjacentList get_adjacent_mirror_list(Graph g, Direction d, Vertex v) {
     return NULL_LIST;
 }
 
-AdjacentList get_adjacent_mirror_list_by_partition(const Graph g, const Direction d,
-                                                   const Partition p, const Vertex v) {
+AdjacentList get_adjacent_mirror_list_by_partition(Graph g, Direction d,
+                                                   Partition p, Vertex v) {
     return NULL_LIST;
 }
 #endif
 
 
 #ifdef ENABLE_VERTEX_REF
-VertexRef get_vertex_ref_for_vertex(const Graph g, const Partition p, const Vertex v) {
+VertexRef get_vertex_ref_for_vertex(Graph g, Partition p, Vertex v) {
     auto _g = static_cast<Graph_T*>(g);
     auto _v = static_cast<Vertex_T*>(v);
     auto gid = _g->Vertex2Gid(*_v);
@@ -169,7 +169,7 @@ VertexRef get_vertex_ref_for_vertex(const Graph g, const Partition p, const Vert
     return vr;
 }
 
-Vertex get_vertex_from_vertex_ref(const Graph g, const VertexRef vr) {
+Vertex get_vertex_from_vertex_ref(Graph g, VertexRef vr) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vr = static_cast<VertexRef_T*>(vr);
     auto v = new Vertex_T();
@@ -179,7 +179,19 @@ Vertex get_vertex_from_vertex_ref(const Graph g, const VertexRef vr) {
     return NULL_VERTEX;
 }
 
-Partition get_master_partition_from_vertex_ref(const Graph g, const VertexRef vr) {
+bool is_master_vertex(Graph g, Vertex v) {
+    auto _g = static_cast<Graph_T*>(g);
+    auto _v = static_cast<Vertex_T*>(v);
+    return _g->IsInnerVertex(*_v);
+}
+
+bool is_mirror_vertex(Graph g, Vertex v) {
+    auto _g = static_cast<Graph_T*>(g);
+    auto _v = static_cast<Vertex_T*>(v);
+    return _g->IsOuterVertex(*_v);
+}
+
+Partition get_master_partition_from_vertex_ref(Graph g, VertexRef vr) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vr = static_cast<VertexRef_T*>(vr);
     auto id_parser = vineyard::IdParser<VertexRef_T>();
@@ -188,7 +200,7 @@ Partition get_master_partition_from_vertex_ref(const Graph g, const VertexRef vr
     return p;
 }
 
-char* serialize_vertex_ref(const Graph g, const VertexRef vr) {
+const char* serialize_vertex_ref(Graph g, VertexRef vr) {
     auto _vr = static_cast<VertexRef_T*>(vr);
     std::stringstream ss;
     ss << *_vr;
@@ -198,7 +210,7 @@ char* serialize_vertex_ref(const Graph g, const VertexRef vr) {
     return out;
 }
 
-VertexRef deserialize_to_vertex_ref(const Graph g, const char* msg) {
+VertexRef deserialize_to_vertex_ref(Graph g, const char* msg) {
     std::stringstream ss(msg);
     VertexRef_T gid;
     ss >> gid;
@@ -208,13 +220,13 @@ VertexRef deserialize_to_vertex_ref(const Graph g, const char* msg) {
 #endif
 
 #ifdef ENABLE_GRAPH_PARTITION
-bool is_vertex_neighbor_local_complete(const Graph g, const Vertex v) {
+bool is_vertex_neighbor_local_complete(Graph g, Vertex v) {
     auto _g = static_cast<Graph_T*>(g);
     auto _v = static_cast<Vertex_T*>(v);
     return _g->IsInnerVertex(*_v);
 }
 
-PartitionList vertex_neighbor_complete_partitions(const Graph g, const Vertex v) {
+PartitionList vertex_neighbor_complete_partitions(Graph g, Vertex v) {
     auto _g = static_cast<Graph_T*>(g);
     auto _v = static_cast<Vertex_T*>(v);
     auto pl = new PartitionList_T();
@@ -224,22 +236,22 @@ PartitionList vertex_neighbor_complete_partitions(const Graph g, const Vertex v)
 #endif
 
 #ifdef WITH_VERTEX_PROPERTY
-bool is_vertex_property_local_complete(const Graph g, const Vertex v) {
+bool is_vertex_property_local_complete(Graph g, Vertex v) {
     return is_vertex_neighbor_local_complete(g, v);
 }
 
-PartitionList vertex_property_complete_partitions(const Graph g, const Vertex v) {
+PartitionList vertex_property_complete_partitions(Graph g, Vertex v) {
     return vertex_neighbor_complete_partitions(g, v);
 }
 #endif
 
 
 #ifdef WITH_EDGE_PROPERTY
-bool is_edge_property_local_complete(const Graph g, const Edge e) {
+bool is_edge_property_local_complete(Graph g, Edge e) {
     return true;
 }
 
-PartitionList edge_property_complete_partitions(const Graph g, const Edge e) {
+PartitionList edge_property_complete_partitions(Graph g, Edge e) {
     return NULL_LIST;
 }
 #endif

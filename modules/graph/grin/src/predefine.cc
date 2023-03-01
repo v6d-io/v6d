@@ -15,60 +15,16 @@ limitations under the License.
 
 #include "graph/grin/src/predefine.h"
 
-Graph get_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
-    auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragment<G_OID_T, G_VID_T>>(client.GetObject(object_id));
-    return frag.get();
+
+PartitionedGraph get_partitioned_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
+  auto pg = std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(client.GetObject(object_id));
+  return pg.get();
 }
 
-template <typename T>
-struct DataTypeEnum {
-  static constexpr DataType value = DataType::Undefined;
-};
-
-template <>
-struct DataTypeEnum<int32_t> {
-  static constexpr DataType value = DataType::Int32;
-};
-
-template <>
-struct DataTypeEnum<uint32_t> {
-  static constexpr DataType value = DataType::UInt32;
-};
-
-template <>
-struct DataTypeEnum<int64_t> {
-  static constexpr DataType value = DataType::Int64;
-};
-
-template <>
-struct DataTypeEnum<uint64_t> {
-  static constexpr DataType value = DataType::UInt64;
-};
-
-template <>
-struct DataTypeEnum<float> {
-  static constexpr DataType value = DataType::Float;
-};
-
-template <>
-struct DataTypeEnum<double> {
-  static constexpr DataType value = DataType::Double;
-};
-
-template <>
-struct DataTypeEnum<std::string> {
-  static constexpr DataType value = DataType::String;
-};
-
-template <>
-struct DataTypeEnum<arrow::Date32Type> {
-  static constexpr DataType value = DataType::Date32;
-};
-
-template <>
-struct DataTypeEnum<arrow::Date64Type> {
-  static constexpr DataType value = DataType::Date64;
-};
+Graph get_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
+  auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragment<G_OID_T, G_VID_T>>(client.GetObject(object_id));
+  return frag.get();
+}
 
 std::string GetDataTypeName(DataType type) {
   switch (type) {

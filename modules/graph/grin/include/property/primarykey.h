@@ -25,14 +25,14 @@ limitations under the License.
  * @brief get the vertex types with primary keys
  * @param Graph the graph
 */
-VertexTypeList get_vertex_types_with_primary_keys(const Graph);
+VertexTypeList get_vertex_types_with_primary_keys(Graph);
 
 /** 
  * @brief get the primary keys (property list) of a specific vertex type
  * @param Graph the graph
  * @param VertexType the vertex type
 */
-VertexPropertyList get_primary_keys_by_vertex_type(const Graph, const VertexType);
+VertexPropertyList get_primary_keys_by_vertex_type(Graph, VertexType);
 
 /** 
  * @brief get the vertex with the given primary keys
@@ -40,7 +40,7 @@ VertexPropertyList get_primary_keys_by_vertex_type(const Graph, const VertexType
  * @param VertexPropertyList the primary keys
  * @param Row the values of primary keys
 */
-Vertex get_vertex_by_primay_keys(const Graph, const VertexPropertyList, const Row);
+Vertex get_vertex_by_primay_keys(Graph, VertexPropertyList, Row);
 #endif
 
 #ifdef WITH_EDGE_PRIMARY_KEYS
@@ -48,14 +48,14 @@ Vertex get_vertex_by_primay_keys(const Graph, const VertexPropertyList, const Ro
  * @brief get the edge types with primary keys
  * @param Graph the graph
 */
-EdgeTypeList get_edge_types_with_primary_keys(const Graph);
+EdgeTypeList get_edge_types_with_primary_keys(Graph);
 
 /** 
  * @brief get the primary keys (property list) of a specific edge type
  * @param Graph the graph
  * @param EdgeType the edge type
 */
-EdgePropertyList get_primary_keys_by_edge_type(const Graph, const EdgeType);
+EdgePropertyList get_primary_keys_by_edge_type(Graph, EdgeType);
 
 /** 
  * @brief get the edge with the given primary keys
@@ -63,7 +63,7 @@ EdgePropertyList get_primary_keys_by_edge_type(const Graph, const EdgeType);
  * @param EdgePropertyList the primary keys
  * @param Row the values of primary keys
 */
-Edge get_edge_by_primay_keys(const Graph, const EdgePropertyList, const Row);
+Edge get_edge_by_primay_keys(Graph, EdgePropertyList, Row);
 #endif
 
 #endif  // GRIN_INCLUDE_PROPERTY_PRIMARY_KEY_H_

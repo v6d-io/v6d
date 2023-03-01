@@ -20,30 +20,32 @@ limitations under the License.
 
 #ifdef ENABLE_EDGE_LIST
 
-EdgeList get_edge_list(const Graph, const Direction);
+EdgeList get_edge_list(Graph, Direction);
 
 #ifdef WITH_EDGE_PROPERTY
-EdgeList get_edge_list_by_type(const Graph, const EdgeType);
+EdgeList get_edge_list_by_type(Graph, EdgeType);
 #endif
 
 void destroy_edge_list(EdgeList);
 
 EdgeList create_edge_list();
 
-bool insert_edge_to_list(EdgeList, const Edge);
+bool insert_edge_to_list(EdgeList, Edge);
 
-size_t get_edge_list_size(const EdgeList);
+size_t get_edge_list_size(EdgeList);
 
-Edge get_edge_from_list(const EdgeList, size_t);
+Edge get_edge_from_list(EdgeList, size_t);
 
 #ifdef ENABLE_EDGE_LIST_ITERATOR
-EdgeListIterator get_edge_list_begin(const Graph);
+EdgeListIterator get_edge_list_begin(Graph);
 
 #ifdef WITH_EDGE_PROPERTY
-EdgeListIterator get_edge_list_begin_by_type(const Graph, const EdgeType);
+EdgeListIterator get_edge_list_begin_by_type(Graph, EdgeType);
 #endif
 
-bool get_next_edge_list_iter(EdgeListIterator);
+EdgeListIterator get_next_edge_list_iter(EdgeListIterator);
+
+bool is_edge_list_end(EdgeListIterator);
 
 Edge get_edge_from_iter(EdgeListIterator);
 #endif

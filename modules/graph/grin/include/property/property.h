@@ -20,50 +20,52 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#ifdef WITH_PROPERTY_NAME
+#if defined(WITH_PROPERTY_NAME) && defined(WITH_VERTEX_PROPERTY)
 /**
  * @brief get the vertex property name
  * @param Graph the graph
  * @param VertexProperty the vertex property
  */
-char* get_vertex_property_name(const Graph, const VertexProperty);
+const char* get_vertex_property_name(Graph, VertexProperty);
 
 /**
  * @brief get the vertex property with a given name under a specific vertex type
  * @param Graph the graph
  * @param VertexType the specific vertex type
- * @param msg the name
+ * @param name the name
  */
-VertexProperty get_vertex_property_by_name(const Graph, const VertexType, const char* msg);
+VertexProperty get_vertex_property_by_name(Graph, VertexType, const char* name);
 
 /**
  * @brief get all the vertex properties with a given name
  * @param Graph the graph
- * @param msg the name
+ * @param name the name
  */
-VertexPropertyList get_vertex_properties_by_name(const Graph, const char*);
+VertexPropertyList get_vertex_properties_by_name(Graph, const char* name);
+#endif
 
+#if defined(WITH_PROPERTY_NAME) && defined(WITH_EDGE_PROPERTY)
 /**
  * @brief get the edge property name
  * @param Graph the graph
  * @param EdgeProperty the edge property
  */
-char* get_edge_property_name(const Graph, const EdgeProperty);
+const char* get_edge_property_name(Graph, EdgeProperty);
 
 /**
  * @brief get the edge property with a given name under a specific edge type
  * @param Graph the graph
  * @param EdgeType the specific edge type
- * @param msg the name
+ * @param name the name
  */
-EdgeProperty get_edge_property_by_name(const Graph, const EdgeType, const char* msg);
+EdgeProperty get_edge_property_by_name(Graph, EdgeType, const char* name);
 
 /**
  * @brief get all the edge properties with a given name
  * @param Graph the graph
- * @param msg the name
+ * @param name the name
  */
-EdgePropertyList get_edge_properties_by_name(const Graph, const char*);
+EdgePropertyList get_edge_properties_by_name(Graph, const char* name);
 #endif
 
 
@@ -78,7 +80,7 @@ void destroy_vertex_property(VertexProperty);
  * @brief get property data type
  * @param VertexProperty vertex property
  */
-DataType get_vertex_property_data_type(VertexProperty);
+DataType get_vertex_property_data_type(Graph, VertexProperty);
 
 /**
  * @brief get the vertex type that the property is bound to
@@ -86,6 +88,7 @@ DataType get_vertex_property_data_type(VertexProperty);
  */
 VertexType get_vertex_property_vertex_type(VertexProperty);
 #endif
+
 
 #ifdef WITH_EDGE_PROPERTY
 /**
@@ -98,7 +101,7 @@ void destroy_edge_property(EdgeProperty);
  * @brief get property data type
  * @param EdgeProperty edge property
  */
-DataType get_edge_property_data_type(EdgeProperty);
+DataType get_edge_property_data_type(Graph, EdgeProperty);
 
 /**
  * @brief get the edge type that the property is bound to

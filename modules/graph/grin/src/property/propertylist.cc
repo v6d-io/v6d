@@ -14,7 +14,7 @@ limitations under the License.
 #include "graph/grin/include/property/propertylist.h"
 
 #ifdef WITH_VERTEX_PROPERTY
-VertexPropertyList get_all_vertex_properties_by_type(const Graph g, const VertexType vtype) {
+VertexPropertyList get_all_vertex_properties_by_type(Graph g, VertexType vtype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vtype = static_cast<VertexType_T*>(vtype);
     auto vpl = new VertexPropertyList_T();
@@ -24,12 +24,12 @@ VertexPropertyList get_all_vertex_properties_by_type(const Graph g, const Vertex
     return vpl;
 }
 
-size_t get_vertex_property_list_size(const VertexPropertyList vpl) {
+size_t get_vertex_property_list_size(VertexPropertyList vpl) {
     auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
     return _vpl->size();
 }
 
-VertexProperty get_vertex_property_from_list(const VertexPropertyList vpl, const size_t idx) {
+VertexProperty get_vertex_property_from_list(VertexPropertyList vpl, size_t idx) {
     auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
     auto vp = new VertexProperty_T((*_vpl)[idx]);
     return vp;
@@ -45,7 +45,7 @@ void destroy_vertex_property_list(VertexPropertyList vpl) {
     delete _vpl;
 }
 
-bool insert_vertex_property_to_list(VertexPropertyList vpl, const VertexProperty vp) {
+bool insert_vertex_property_to_list(VertexPropertyList vpl, VertexProperty vp) {
     auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
     auto _vp = static_cast<VertexProperty_T*>(vp);
     _vpl->push_back(*_vp);
@@ -55,13 +55,13 @@ bool insert_vertex_property_to_list(VertexPropertyList vpl, const VertexProperty
 
 
 #ifdef NATURAL_VERTEX_PROPERTY_ID_TRAIT
-VertexProperty get_vertex_property_from_id(const VertexType vtype, const VertexPropertyID vpi) {
+VertexProperty get_vertex_property_from_id(VertexType vtype, VertexPropertyID vpi) {
     auto _vtype = static_cast<VertexType_T*>(vtype);
     auto vp = new VertexProperty_T(*_vtype, vpi);
     return vp;
 }
 
-VertexPropertyID get_vertex_property_id(const VertexType vtype, const VertexProperty vp) {
+VertexPropertyID get_vertex_property_id(VertexType vtype, VertexProperty vp) {
     auto _vtype = static_cast<VertexType_T*>(vtype);
     auto _vp = static_cast<VertexProperty_T*>(vp);
     if (*_vtype != _vp->first) return NULL_NATURAL_ID;
@@ -71,7 +71,7 @@ VertexPropertyID get_vertex_property_id(const VertexType vtype, const VertexProp
 
 
 #ifdef WITH_EDGE_PROPERTY
-EdgePropertyList get_all_edge_properties_by_type(const Graph g, const EdgeType etype) {
+EdgePropertyList get_all_edge_properties_by_type(Graph g, EdgeType etype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _etype = static_cast<EdgeType_T*>(etype);
     auto epl = new EdgePropertyList_T();
@@ -81,12 +81,12 @@ EdgePropertyList get_all_edge_properties_by_type(const Graph g, const EdgeType e
     return epl;
 }
 
-size_t get_edge_property_list_size(const EdgePropertyList epl) {
+size_t get_edge_property_list_size(EdgePropertyList epl) {
     auto _epl = static_cast<EdgePropertyList_T*>(epl);
     return _epl->size();
 }
 
-EdgeProperty get_edge_property_from_list(const EdgePropertyList epl, const size_t idx) {
+EdgeProperty get_edge_property_from_list(EdgePropertyList epl, size_t idx) {
     auto _epl = static_cast<EdgePropertyList_T*>(epl);
     auto ep = new EdgeProperty_T((*_epl)[idx]);
     return ep;
@@ -102,7 +102,7 @@ void destroy_edge_property_list(EdgePropertyList epl) {
     delete _epl;
 }
 
-bool insert_edge_property_to_list(EdgePropertyList epl, const EdgeProperty ep) {
+bool insert_edge_property_to_list(EdgePropertyList epl, EdgeProperty ep) {
     auto _epl = static_cast<EdgePropertyList_T*>(epl);
     auto _ep = static_cast<EdgeProperty_T*>(ep);
     _epl->push_back(*_ep);
@@ -112,13 +112,13 @@ bool insert_edge_property_to_list(EdgePropertyList epl, const EdgeProperty ep) {
 
 
 #ifdef NATURAL_EDGE_PROPERTY_ID_TRAIT
-EdgeProperty get_edge_property_from_id(const EdgeType etype, const EdgePropertyID epi) {
+EdgeProperty get_edge_property_from_id(EdgeType etype, EdgePropertyID epi) {
     auto _etype = static_cast<EdgeType_T*>(etype);
     auto ep = new EdgeProperty_T(*_etype, epi);
     return ep;
 }
 
-EdgePropertyID get_edge_property_id(const EdgeType etype, const EdgeProperty ep) {
+EdgePropertyID get_edge_property_id(EdgeType etype, EdgeProperty ep) {
     auto _etype = static_cast<EdgeType_T*>(etype);
     auto _ep = static_cast<EdgeProperty_T*>(ep);
     if (*_etype != _ep->first) return NULL_NATURAL_ID;
@@ -128,7 +128,7 @@ EdgePropertyID get_edge_property_id(const EdgeType etype, const EdgeProperty ep)
 
 
 #if defined(WITH_VERTEX_PROPERTY) && defined(COLUMN_STORE_TRAIT)
-Graph select_vertex_properties(const Graph g, const VertexPropertyList vpl) {
+Graph select_vertex_properties(Graph g, VertexPropertyList vpl) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
     std::map<int, std::vector<int>> vertices, edges;
@@ -148,7 +148,7 @@ Graph select_vertex_properties(const Graph g, const VertexPropertyList vpl) {
 #endif
 
 #if defined(WITH_EDGE_PROPERTY) && defined(COLUMN_STORE_TRAIT)
-Graph select_edge_properteis(const Graph g, const EdgePropertyList epl) {
+Graph select_edge_properteis(Graph g, EdgePropertyList epl) {
     auto _g = static_cast<Graph_T*>(g);
     auto _epl = static_cast<VertexPropertyList_T*>(epl);
     std::map<int, std::vector<int>> vertices, edges;
