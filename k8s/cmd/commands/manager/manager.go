@@ -26,6 +26,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -45,25 +46,30 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/sidecar"
 )
 
+var (
+	managerLong = kubectlTemplate.LongDesc("Start the manager of vineyard operator")
+
+	managerExample = kubectlTemplate.Examples(`
+	# start the manager of vineyard operator with default configuration
+	# (Enable the controller, webhooks and scheduler)
+	vineyardctl manager
+
+	# start the manager of vineyard operator without webhooks
+	vineyardctl manager --enable-webhook false
+
+	# start the manager of vineyard operator without scheduler
+	vineyardctl manager --enable-scheduler false
+
+	# only start the controller
+	vineyardctl manager --enable-webhook false --enable-scheduler false`)
+)
+
 // managerCmd starts the manager of vineyard operator
 var managerCmd = &cobra.Command{
-	Use:   "manager",
-	Short: "Start the manager of vineyard operator",
-	Long: `Start the manager of vineyard operator.
-For example:
-
-# start the manager of vineyard operator with default configuration
-# (Enable the controller, webhooks and scheduler)
-vineyardctl manager
-
-# start the manager of vineyard operator without webhooks
-vineyardctl manager --enable-webhook false
-
-# start the manager of vineyard operator without scheduler
-vineyardctl manager --enable-scheduler false
-
-# only start the controller
-vineyardctl manager --enable-webhook false --enable-scheduler false`,
+	Use:     "manager",
+	Short:   "Start the manager of vineyard operator",
+	Long:    managerLong,
+	Example: managerExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 

@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -26,18 +27,22 @@ import (
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 )
 
+var (
+	createRecoverLong = kubectlTemplate.LongDesc(`Recover the current vineyard cluster 
+	on kubernetes. You could recover all objects from a backup of vineyard cluster. 
+	Usually, the recover job should be created in the same namespace of the backup job.`)
+
+	createRecoverExample = kubectlTemplate.Examples(`
+	# create a recover job for a backup job in the same namespace
+	vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`)
+)
+
 // createRecoverCmd creates the recover job of vineyard cluster on kubernetes
 var createRecoverCmd = &cobra.Command{
-	Use:   "recover",
-	Short: "Recover the current vineyard cluster on kubernetes",
-	Long: `Recover the current vineyard cluster on kubernetes. You could recover all objects from
-a backup of vineyard cluster. Usually, the recover job should be created in the same namespace of
-the backup job.
-
-For example:
-
-# create a recover job for a backup job in the same namespace
-vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`,
+	Use:     "recover",
+	Short:   "Recover the current vineyard cluster on kubernetes",
+	Long:    createRecoverLong,
+	Example: createRecoverExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()

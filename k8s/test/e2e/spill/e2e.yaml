@@ -21,11 +21,7 @@ setup:
       command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/spill; done
     - name: install vineyardd
       command: |
-        kubectl apply -f k8s/test/e2e/spill-demo/vineyardd-with-spill.yaml
-      wait:
-        - namespace: vineyard-system
-          resource: vineyardd/vineyardd-sample
-          for: condition=Available
+        go run k8s/cmd/main.go deploy vineyardd -f k8s/test/e2e/spill-demo/vineyardd-with-spill.yaml
     - name: install spill-demo
       command: |
         kubectl apply -f k8s/test/e2e/spill-demo/spill-demo.yaml

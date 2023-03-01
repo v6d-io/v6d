@@ -22,6 +22,7 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	certmanagerapiv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -31,20 +32,32 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+var (
+	deployCertManagerLong = kubectlTemplate.LongDesc(`Deploy the cert-manager in 
+	the cert-manager namespace. You could specify a stable or development version 
+	of the cert-manager and we suppose not to create a new namespace to install the 
+	cert-manager. The default version is v1.9.1.`)
+
+	deployCertManagerExample = kubectlTemplate.Examples(`
+	# install the default version(v1.9.1) in the cert-manager namespace
+	# wait for the cert-manager to be ready(default option)
+	vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager
+
+	# install the default version(v1.9.1) in the cert-manager namespace
+	# not to wait for the cert-manager to be ready
+	vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager \
+	--wait=false
+
+	# install the specific version of cert-manager
+	vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager -v 1.11.0`)
+)
+
 // deployCertManagerCmd deploys the vineyard operator on kubernetes
 var deployCertManagerCmd = &cobra.Command{
-	Use:   "cert-manager",
-	Short: "Deploy the cert-manager on kubernetes",
-	Long: `Deploy the cert-manager in the cert-manager namespace. You could specify
-a stable or development version of the cert-manager and we suppose not to create a
-new namespace to install the cert-manager. The default version is v1.9.1.
-For example:
-
-# install the default version(v1.9.1) in the cert-manager namespace
-vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager
-
-# install the specific version of cert-manager
-vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager -v 1.11.0`,
+	Use:     "cert-manager",
+	Short:   "Deploy the cert-manager on kubernetes",
+	Long:    deployCertManagerLong,
+	Example: deployCertManagerExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
@@ -59,8 +72,10 @@ vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager -v 1.11.0`,
 			util.ErrLogger.Fatal("failed to apply cert-manager manifests: ", err)
 		}
 
-		if err := waitCertManagerReady(client); err != nil {
-			util.ErrLogger.Fatal("failed to wait cert-manager ready: ", err)
+		if flags.WaitCertManager {
+			if err := waitCertManagerReady(client); err != nil {
+				util.ErrLogger.Fatal("failed to wait cert-manager ready: ", err)
+			}
 		}
 
 		util.InfoLogger.Println("Cert-Manager is ready.")

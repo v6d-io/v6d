@@ -21,11 +21,20 @@ const (
 	defaultCertManagerVersion = "1.9.1"
 )
 
-// CertManagerVersion is the version of cert-manager
-var CertManagerVersion string
+var (
+	// CertManagerVersion is the version of cert-manager
+	CertManagerVersion string
+
+	// WaitCertManager is the flag to indicate whether to wait for the cert-manager to be ready
+	WaitCertManager bool
+)
 
 func ApplyCertManagerOpts(cmd *cobra.Command) {
 	cmd.Flags().
 		StringVarP(&CertManagerVersion, "version", "v", defaultCertManagerVersion,
 			"the version of cert-manager")
+	// Always wait for the cert-manager to be ready by default
+	// to avoid errors caused by the cert-manager not ready
+	cmd.Flags().
+		BoolVarP(&WaitCertManager, "wait", "", true, "wait for the cert-manager to be ready")
 }

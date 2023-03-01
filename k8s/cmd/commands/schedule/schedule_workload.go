@@ -27,89 +27,98 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-// scheduleWorkloadCmd schedules the workload to a vineyard cluster
-var scheduleWorkloadCmd = &cobra.Command{
-	Use:   "workload",
-	Short: "scheduleWorkload schedules the workload to a vineyard cluster",
-	Long: `scheduleWorkload schedules the workload to a vineyard cluster. It will
-add the podAffinity to the workload so that the workload will be scheduled to the
-vineyard cluster. For example:
+var (
+	scheduleWorkloadLong = kubectlTemplate.LongDesc(`ScheduleWorkload schedules 
+	the workload to a vineyard cluster. It will add the podAffinity to the workload 
+	so that the workload will be scheduled to the vineyard cluster.`)
 
-# Add the podAffinity to the workload for the specific vineyard cluster
-vineyardctl schedule workload --resource '{
-	"apiVersion": "apps/v1",
-	"kind": "Deployment",
-	"metadata": {
+	scheduleWorkloadExample = `
+	# Add the podAffinity to the workload for the specific vineyard cluster
+  vineyardctl schedule workload --resource '{
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
 	  "name": "web-server"
-	},
-	"spec": {
+  },
+  "spec": {
 	  "selector": {
-		"matchLabels": {
+	  "matchLabels": {
 		  "app": "web-store"
-		}
+	  }
 	  },
 	  "replicas": 3,
 	  "template": {
-		"metadata": {
+	  "metadata": {
 		  "labels": {
-			"app": "web-store"
+		  "app": "web-store"
 		  }
-		},
-		"spec": {
+	  },
+	  "spec": {
 		  "affinity": {
-			"podAntiAffinity": {
+		  "podAntiAffinity": {
 			  "requiredDuringSchedulingIgnoredDuringExecution": [
-				{
+			  {
 				  "labelSelector": {
-					"matchExpressions": [
+				  "matchExpressions": [
 					  {
-						"key": "app",
-						"operator": "In",
-						"values": [
+					  "key": "app",
+					  "operator": "In",
+					  "values": [
 						  "web-store"
-						]
+					  ]
 					  }
-					]
+				  ]
 				  },
 				  "topologyKey": "kubernetes.io/hostname"
-				}
+			  }
 			  ]
-			},
-			"podAffinity": {
+		  },
+		  "podAffinity": {
 			  "requiredDuringSchedulingIgnoredDuringExecution": [
-				{
+			  {
 				  "labelSelector": {
-					"matchExpressions": [
+				  "matchExpressions": [
 					  {
-						"key": "app",
-						"operator": "In",
-						"values": [
+					  "key": "app",
+					  "operator": "In",
+					  "values": [
 						  "store"
-						]
+					  ]
 					  }
-					]
+				  ]
 				  },
 				  "topologyKey": "kubernetes.io/hostname"
-				}
+			  }
 			  ]
-			}
+		  }
 		  },
 		  "containers": [
-			{
+		  {
 			  "name": "web-app",
 			  "image": "nginx:1.16-alpine"
-			}
+		  }
 		  ]
-		}
 	  }
-	}
-  }' --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system`,
+	  }
+  }
+  }' \
+  --vineyardd-name vineyardd-sample \
+  --vineyardd-namespace vineyard-system`
+)
+
+// scheduleWorkloadCmd schedules the workload to a vineyard cluster
+var scheduleWorkloadCmd = &cobra.Command{
+	Use:     "workload",
+	Short:   "scheduleWorkload schedules the workload to a vineyard cluster",
+	Long:    scheduleWorkloadLong,
+	Example: scheduleWorkloadExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		if err := validateWorkload(flags.Resource); err != nil {

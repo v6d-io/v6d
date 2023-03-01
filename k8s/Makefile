@@ -103,6 +103,10 @@ predeploy: manifests kustomize
 unpredeploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 
+# update the operator image's registry to localhost
+update-registry:
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+
 # recover the operator image's registry to vineyardcloudnative
 recover-registry:
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}

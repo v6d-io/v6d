@@ -46,6 +46,7 @@ func ReadFromStdin(args []string) (string, error) {
 	return "", nil
 }
 
+// ReadJsonFromStdin read the stdin to json string
 func ReadJsonFromStdin(args []string) (string, error) {
 	// Check if the input is coming from '-'
 	input, err := ReadFromStdin(args)

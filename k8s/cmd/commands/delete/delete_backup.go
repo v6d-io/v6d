@@ -19,21 +19,28 @@ import (
 	"github.com/spf13/cobra"
 
 	"k8s.io/apimachinery/pkg/types"
+	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+var (
+	deleteBackupLong = kubectlTemplate.LongDesc(`
+	Delete the backup job on kubernetes.`)
+
+	deleteBackupExample = kubectlTemplate.Examples(`
+	# delete the default backup job
+	vineyardctl delete backup`)
+)
+
 // deleteBackupCmd deletes the backup job on kubernetes
 var deleteBackupCmd = &cobra.Command{
-	Use:   "backup",
-	Short: "Delete the backup job on kubernetes",
-	Long: `Delete the backup job on kubernetes.
-For example:
-
-# delete the default backup job
-vineyardctl delete backup`,
+	Use:     "backup",
+	Short:   "Delete the backup job on kubernetes",
+	Long:    deleteBackupLong,
+	Example: deleteBackupExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()

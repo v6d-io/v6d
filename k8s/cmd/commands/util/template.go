@@ -65,7 +65,6 @@ func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, namespace string,
 			fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)),
 		)
 	}
-	fmt.Println("EtcdConfig.Endpoints: ", EtcdConfig.Endpoints)
 	EtcdConfig.Endpoints = strings.Join(etcdEndpoints, ",")
 	// the etcd is built in the vineyardd image
 	EtcdConfig.Image = image

@@ -28,7 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	clientgoScheme "k8s.io/client-go/kubernetes/scheme"
+	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -38,8 +38,16 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
-// the following label is for vineyard rpc service
 var (
+	injectLong = kubectlTemplate.LongDesc(`Inject the vineyard sidecar container 
+	into a workload. You can get the injected workload yaml and some etcd yaml 
+	from the output.`)
+
+	injectExample = kubectlTemplate.Examples(`
+	# inject the default vineyard sidecar container into a workload
+	vineyardctl inject -f workload.yaml | kubectl apply -f -`)
+
+	// the following label is for vineyard rpc service
 	// DefaultSidecarLabelName is the default label name of the vineyard sidecar container
 	DefaultSidecarLabelName = "app.kubernetes.io/name"
 	// DefaultSidecarLabelValue = "vineyard-sidecar"
@@ -48,14 +56,10 @@ var (
 
 // injectCmd inject the vineyard sidecar container into a workload
 var injectCmd = &cobra.Command{
-	Use:   "inject",
-	Short: "Inject the vineyard sidecar container into a workload",
-	Long: `Inject the vineyard sidecar container into a workload. You can get the
-injected workload yaml and some etcd yaml from the output.
-For example:
-
-# inject the default vineyard sidecar container into a workload
-vineyardctl inject -f workload.yaml | kubectl apply -f -`,
+	Use:     "inject",
+	Short:   "Inject the vineyard sidecar container into a workload",
+	Long:    injectLong,
+	Example: injectExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 
@@ -81,8 +85,8 @@ func getEtcdConfig() k8s.EtcdConfig {
 }
 
 func GetWorkloadObj(workload string) (*unstructured.Unstructured, error) {
-	decode := clientgoScheme.Codecs.UniversalDeserializer().Decode
-	obj, _, err := decode([]byte(workload), nil, nil)
+	decoder := util.Deserializer()
+	obj, _, err := decoder.Decode([]byte(workload), nil, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to decode the workload")
 	}

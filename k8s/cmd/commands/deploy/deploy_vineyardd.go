@@ -16,96 +16,106 @@ limitations under the License.
 package deploy
 
 import (
-	"context"
 	"log"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+var (
+	deployVineyarddLong = kubectlTemplate.LongDesc(`Deploy the vineyardd on kubernetes. 
+	You could deploy a customized vineyardd from stdin or file.`)
+
+	deployVineyarddExample = `
+  # deploy the default vineyard on kubernetes
+  # wait for the vineyardd to be ready(default option)
+  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
+
+  # not to wait for the vineyardd to be ready
+  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+  --wait=false
+
+  # deploy the vineyardd from a yaml file
+  vineyardctl --kubeconfig $HOME/.kube/config deploy vineyardd --file vineyardd.yaml
+  
+  # deploy the vineyardd with customized image
+  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+  --image vineyardd:v0.12.2
+  
+  # deploy the vineyardd with spill mechnism on persistent storage from json string
+  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+  --vineyardd.spill.config spill-path \
+  --vineyardd.spill.path /var/vineyard/spill \
+  --vineyardd.spill.pv-pvc-spec '{
+	  "pv-spec": {
+		  "capacity": {
+		    "storage": "1Gi"
+		  },
+		  "accessModes": [
+		    "ReadWriteOnce"
+		  ],
+		  "storageClassName": "manual",
+		  "hostPath": {
+		    "path": "/var/vineyard/spill"
+		  }
+	  },
+	  "pvc-spec": {
+		  "storageClassName": "manual",
+		  "accessModes": [
+		    "ReadWriteOnce"
+		  ],
+		  "resources": {
+		    "requests": {
+			  "storage": "512Mi"
+  		    }
+		  }
+	  }
+  }'
+  
+  # deploy the vineyardd with spill mechnism on persistent storage from yaml string
+  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+  --vineyardd.spill.config spill-path \
+  --vineyardd.spill.path /var/vineyard/spill \
+  --vineyardd.spill.pv-pvc-spec \
+  '
+  pv-spec:
+    capacity:
+      storage: 1Gi
+    accessModes:
+    - ReadWriteOnce
+    storageClassName: manual
+    hostPath:
+      path: "/var/vineyard/spill"
+  pvc-spec:
+    storageClassName: manual
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 512Mi
+  '
+
+  # deploy the vineyardd with spill mechnism on persistent storage from json file
+  # also you could use the yaml file
+  cat pv-pvc.json | vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd \
+  --vineyardd.spill.config spill-path \
+  --vineyardd.spill.path /var/vineyard/spill \
+  -`
+)
+
 // deployVineyarddCmd deploys the vineyardd on kubernetes
 var deployVineyarddCmd = &cobra.Command{
-	Use:   "vineyardd",
-	Short: "Deploy the vineyardd on kubernetes",
-	Long: `Deploy the vineyardd on kubernetes. You could deploy a customized vineyardd 
-from stdin or file. 
-
-For example:
-
-# deploy the default vineyard on kubernetes
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
-
-# deploy the vineyardd with customized image
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
---image vineyardd:v0.12.2
-
-# deploy the vineyardd with spill mechnism on persistent storage from json string
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
---vineyard.spill.config spill-path \
---vineyard.spill.path /var/vineyard/spill \
---vineyard.spill.pv-pvc-spec '{
-	"pv-spec": {
-		"capacity": {
-		  "storage": "1Gi"
-		},
-		"accessModes": [
-		  "ReadWriteOnce"
-		],
-		"storageClassName": "manual",
-		"hostPath": {
-		  "path": "/var/vineyard/spill"
-		}
-	},
-	"pvc-spec": {
-		"storageClassName": "manual",
-		"accessModes": [
-		  "ReadWriteOnce"
-		],
-		"resources": {
-		  "requests": {
-			"storage": "512Mi"
-		  }
-		}
-	}
-}'
-
-# deploy the vineyardd with spill mechnism on persistent storage from yaml string
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
---vineyard.spill.config spill-path \
---vineyard.spill.path /var/vineyard/spill \
---vineyard.spill.pv-pvc-spec \
-'
-pv-spec:
-  capacity:
-    storage: 1Gi
-  accessModes:
-  - ReadWriteOnce
-  storageClassName: manual
-  hostPath:
-    path: "/var/vineyard/spill"
-pvc-spec:
-  storageClassName: manual
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 512Mi
-'
-
-# deploy the vineyardd with spill mechnism on persistent storage from json file
-# also you could use the yaml file
-cat pv-pvc.json | vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd \
---vineyard.spill.config spill-path \
---vineyard.spill.path /var/vineyard/spill \
--`,
+	Use:     "vineyardd",
+	Short:   "Deploy the vineyardd on kubernetes",
+	Long:    deployVineyarddLong,
+	Example: deployVineyarddExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 && args[0] != "-" {
 			util.ErrLogger.Fatal("invalid argument: ", args)
@@ -119,21 +129,46 @@ cat pv-pvc.json | vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/
 		if str != "" {
 			flags.VineyardSpillPVandPVC = str
 		}
+
 		client := util.KubernetesClient()
 
-		vineyardd, err := BuildVineyardManifest()
+		vineyardd, err := BuildVineyard()
 		if err != nil {
-			util.ErrLogger.Fatal("failed to build the vineyardd: ", err)
+			util.ErrLogger.Fatalf("failed to build vineyardd: %+v", err)
 		}
-		if err := waitVineyardReady(client, vineyardd); err != nil {
-			util.ErrLogger.Fatal("failed to wait vineyardd ready: ", err)
+
+		var waitVineyarddFuc func(vineyardd *v1alpha1.Vineyardd) bool
+		if flags.WaitVineyardd {
+			waitVineyarddFuc = func(vineyardd *v1alpha1.Vineyardd) bool {
+				return vineyardd.Status.ReadyReplicas == int32(vineyardd.Spec.Replicas)
+			}
+		}
+		if err := util.Create(client, vineyardd, waitVineyarddFuc); err != nil {
+			util.ErrLogger.Fatalf("failed to create/wait vineyardd: %+v", err)
 		}
 
 		util.InfoLogger.Println("Vineyardd is ready.")
 	},
 }
 
-func BuildVineyardManifest() (*v1alpha1.Vineyardd, error) {
+func BuildVineyard() (*v1alpha1.Vineyardd, error) {
+	// Use file as first priority
+	if flags.VineyarddFile != "" {
+		vineyardd, err := BuildVineyardManifestFromFile()
+		if err != nil {
+			util.ErrLogger.Fatal("failed to build the vineyardd from file: ", err)
+		}
+		return vineyardd, nil
+
+	}
+	vineyardd, err := BuildVineyardManifestFromInput()
+	if err != nil {
+		util.ErrLogger.Fatal("failed to build the vineyardd from input: ", err)
+	}
+	return vineyardd, nil
+}
+
+func BuildVineyardManifestFromInput() (*v1alpha1.Vineyardd, error) {
 	opts := &flags.VineyarddOpts
 	envs := &flags.VineyardContainerEnvs
 
@@ -169,21 +204,30 @@ func BuildVineyardManifest() (*v1alpha1.Vineyardd, error) {
 	return vineyardd, nil
 }
 
+// BuildVineyardManifestFromFile builds the vineyardd from file
+func BuildVineyardManifestFromFile() (*v1alpha1.Vineyardd, error) {
+	vineyardd := &v1alpha1.Vineyardd{}
+
+	manifest, err := util.ReadFromFile(flags.VineyarddFile)
+	if err != nil {
+		return nil, err
+	}
+	decoder := util.Deserializer()
+	gvk := vineyardd.GroupVersionKind()
+	_, _, err = decoder.Decode([]byte(manifest), &gvk, vineyardd)
+	if err != nil {
+		return nil, err
+	}
+	if vineyardd.Namespace == "" {
+		vineyardd.Namespace = flags.GetDefaultVineyardNamespace()
+	}
+	return vineyardd, err
+}
+
 func NewDeployVineyarddCmd() *cobra.Command {
 	return deployVineyarddCmd
 }
 
 func init() {
 	flags.ApplyVineyarddOpts(deployVineyarddCmd)
-}
-
-// wait for the vineyard cluster to be ready
-func waitVineyardReady(c client.Client, vineyardd *v1alpha1.Vineyardd) error {
-	return util.Wait(func() (bool, error) {
-		err := c.Create(context.TODO(), vineyardd)
-		if err != nil && !apierrors.IsAlreadyExists(err) {
-			return false, nil
-		}
-		return true, nil
-	})
 }

@@ -17,7 +17,6 @@ package util
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	defaultscheme "k8s.io/client-go/kubernetes/scheme"
@@ -96,23 +95,33 @@ func CreateWithContext[T client.Object](
 		if err == nil {
 			return nil
 		}
-		if apierrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) && v.GetName() != "" {
 			err := c.Create(ctx, v)
 			if err != nil || len(until) == 0 {
 				return err
 			}
 		}
+	} else {
+		err := c.Create(ctx, v)
+		if err != nil || len(until) == 0 {
+			return err
+		}
 	}
 
 	return Wait(func() (bool, error) {
-		err := c.Get(ctx, client.ObjectKeyFromObject(v), v)
+		name := "vineyardd-sample"
+		namespace := "vineyard-system"
+		err := c.Get(ctx, client.ObjectKey{
+			Name:      name,
+			Namespace: namespace,
+		}, v)
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				return true, err // early stop if error occurs
 			}
 		}
 		for _, fn := range until {
-			if fn(v) {
+			if fn == nil || fn(v) {
 				return true, nil
 			}
 		}
@@ -135,7 +144,6 @@ func DeleteWithContext(
 	if v.GetName() != "" {
 		err := c.Delete(ctx, v)
 		if err != nil {
-			fmt.Println("delete rror: ", err)
 			return err
 		}
 	}

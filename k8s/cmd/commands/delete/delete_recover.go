@@ -19,21 +19,28 @@ import (
 	"github.com/spf13/cobra"
 
 	"k8s.io/apimachinery/pkg/types"
+	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+var (
+	deleteRecoverLong = kubectlTemplate.LongDesc(`
+	Delete the recover job on kubernetes.`)
+
+	deleteRecoverExample = kubectlTemplate.Examples(`
+	# delete the default recover job on kubernetes
+	vineyardctl delete recover`)
+)
+
 // deleteRecoverCmd deletes the vineyard operator on kubernetes
 var deleteRecoverCmd = &cobra.Command{
-	Use:   "recover",
-	Short: "Delete the recover job on kubernetes",
-	Long: `Delete the recover job on kubernetes.
-For example:
-
-# delete the default recover job on kubernetes
-vineyardctl delete recover`,
+	Use:     "recover",
+	Short:   "Delete the recover job on kubernetes",
+	Long:    deleteRecoverLong,
+	Example: deleteRecoverExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()

@@ -22,35 +22,46 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/types"
+	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+var (
+	deployOperatorLong = kubectlTemplate.LongDesc(`Deploy the vineyard operator on kubernetes. 
+	You could specify a stable or development version of the operator. The default kustomize dir 
+	is development version from github repo. Also, you can install the stable version from github.
+	repo or a local kustomize dir. Besides, you can also deploy the vineyard operator in an existing 
+	namespace.`)
+
+	deployOperatorExample = kubectlTemplate.Examples(`
+	# install the development version in the vineyard-system namespace
+	# the default kustomize dir is the development version from github repo
+	# (https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false)
+	# and the default namespace is vineyard-system
+	# wait for the vineyard operator to be ready(default option)
+	vineyardctl deploy operator
+
+	# not to wait for the vineyard operator to be ready
+	vineyardctl deploy operator --wait=false
+
+	# install the stable version from github repo in the test namespace
+	# the kustomize dir is
+	# (https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false&ref=v0.12.2)
+	vineyardctl -n test --kubeconfig $HOME/.kube/config deploy operator -v 0.12.2
+
+	# install the local kustomize dir
+	vineyardctl --kubeconfig $HOME/.kube/config deploy operator --local ../config/default`)
+)
+
 // deployOperatorCmd deploys the vineyard operator on kubernetes
 var deployOperatorCmd = &cobra.Command{
-	Use:   "operator",
-	Short: "Deploy the vineyard operator on kubernetes",
-	Long: `Deploy the vineyard operator on kubernetes. You could specify a stable or
-development version of the operator. The default kustomize dir is development
-version from github repo. Also, you can install the stable version from github.
-repo or a local kustomize dir. Besides, you can also deploy the vineyard operator in
-an existing namespace. For example:
-
-# install the development version in the vineyard-system namespace
-# the default kustomize dir is the development version from github repo
-# (https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false)
-# and the default namespace is vineyard-system
-vineyardctl deploy operator
-
-# install the stable version from github repo in the test namespace
-# the kustomize dir is
-# (https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false&ref=v0.12.2)
-vineyardctl -n test --kubeconfig $HOME/.kube/config deploy operator -v 0.12.2
-
-# install the local kustomize dir
-vineyardctl --kubeconfig $HOME/.kube/config deploy operator --local ../config/default`,
+	Use:     "operator",
+	Short:   "Deploy the vineyard operator on kubernetes",
+	Long:    deployOperatorLong,
+	Example: deployOperatorExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
@@ -65,8 +76,10 @@ vineyardctl --kubeconfig $HOME/.kube/config deploy operator --local ../config/de
 			util.ErrLogger.Fatal("failed to apply operator manifests: ", err)
 		}
 
-		if err := waitOperatorReady(client); err != nil {
-			util.ErrLogger.Fatal("failed to wait operator ready: ", err)
+		if flags.WaitOperator {
+			if err := waitOperatorReady(client); err != nil {
+				util.ErrLogger.Fatal("failed to wait operator ready: ", err)
+			}
 		}
 
 		util.InfoLogger.Println("Vineyard Operator is ready.")
@@ -91,10 +104,9 @@ func waitOperatorReady(c client.Client) error {
 		}, deployment); err != nil {
 			return false, err
 		}
-		for _, cond := range deployment.Status.Conditions {
-			if cond.Type == appsv1.DeploymentAvailable {
-				return true, nil
-			}
+
+		if deployment.Status.ReadyReplicas == deployment.Status.Replicas {
+			return true, nil
 		}
 		return false, nil
 	})

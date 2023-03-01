@@ -23,6 +23,9 @@ var (
 
 	// the local path of operator kustomization directory
 	KustomizeDir string
+
+	// WaitOperator is the flag to indicate whether to wait for the cert-manager to be ready
+	WaitOperator bool
 )
 
 func ApplyOperatorOpts(cmd *cobra.Command) {
@@ -31,4 +34,6 @@ func ApplyOperatorOpts(cmd *cobra.Command) {
 			"the version of kustomize dir from github repo")
 	cmd.Flags().StringVarP(&KustomizeDir, "local", "l", "",
 		"the local kustomize dir")
+	cmd.Flags().
+		BoolVarP(&WaitOperator, "wait", "", true, "wait for the operator to be ready")
 }
