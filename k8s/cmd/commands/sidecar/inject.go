@@ -233,7 +233,8 @@ func buildSidecar(namespace string) (*v1alpha1.Sidecar, error) {
 
 // InjectSidecarConfig injects the sidecar config into the workload
 func InjectSidecarConfig(sidecar *v1alpha1.Sidecar, workloadObj,
-	sidecarObj *unstructured.Unstructured) error {
+	sidecarObj *unstructured.Unstructured,
+) error {
 	var errList error
 
 	// get the template spec of the workload
@@ -247,7 +248,7 @@ func InjectSidecarConfig(sidecar *v1alpha1.Sidecar, workloadObj,
 
 	workloadContainers, err := convertInterfaceToContainers(
 		templateSpec["containers"].([]interface{}))
-	multierr.Append(errList, err)
+	_ = multierr.Append(errList, err)
 
 	if templateSpec["volumes"] == nil {
 		templateSpec["volumes"] = []interface{}{}
@@ -255,17 +256,17 @@ func InjectSidecarConfig(sidecar *v1alpha1.Sidecar, workloadObj,
 
 	workloadVolumes, err := convertInterfaceToVolumes(
 		templateSpec["volumes"].([]interface{}))
-	multierr.Append(errList, err)
+	_ = multierr.Append(errList, err)
 
 	// get the containers and volumes of the sidecar
 	sidecarSpec := sidecarObj.Object["spec"].(map[string]interface{})
 	sidecarContainers, err := convertInterfaceToContainers(
 		sidecarSpec["containers"].([]interface{}))
-	multierr.Append(errList, err)
+	_ = multierr.Append(errList, err)
 
 	sidecarVolumes, err := convertInterfaceToVolumes(
 		sidecarSpec["volumes"].([]interface{}))
-	multierr.Append(errList, err)
+	_ = multierr.Append(errList, err)
 
 	injector.InjectSidecar(workloadContainers, workloadVolumes,
 		sidecarContainers, sidecarVolumes, sidecar)
