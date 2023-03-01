@@ -319,6 +319,10 @@ class GlobalTensor : public BareRegistered<GlobalTensor>,
 
   std::vector<int64_t> const& partition_shape() const;
 
+  /// backwards compatibility
+  const std::vector<std::shared_ptr<ITensor>> LocalPartitions(
+      Client& client) const;
+
  private:
   std::vector<int64_t> shape_;
   std::vector<int64_t> partition_shape_;
@@ -365,6 +369,10 @@ class GlobalTensorBuilder : public CollectionBuilder<ITensor> {
    *
    */
   void set_shape(std::vector<int64_t> const& shape);
+
+  /// Backwards compatibility
+  void AddPartition(const ObjectID partition_id);
+  void AddPartitions(const std::vector<ObjectID>& partition_ids);
 
  private:
   std::vector<int64_t> shape_;

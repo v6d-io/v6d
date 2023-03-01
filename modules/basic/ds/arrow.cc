@@ -812,6 +812,11 @@ void SchemaProxy::PostConstruct(const ObjectMeta& meta) {
   } else if (this->schema_binary_.contains("bytes")) {
     this->schema_binary_["bytes"].get_to(binary_vec);
     wrapper = arrow::Buffer::Wrap(binary_vec.data(), binary_vec.size());
+  } else if (this->meta_.HasKey("buffer_")) {
+    // for backward compatibility
+    std::shared_ptr<Blob> buffer;
+    VINEYARD_CHECK_OK(this->meta_.GetMember("buffer_", buffer));
+    wrapper = buffer->BufferOrEmpty();
   }
   if (wrapper == nullptr) {
     LOG(ERROR) << "Invalid schema binary: " << this->schema_binary_.dump(4);
