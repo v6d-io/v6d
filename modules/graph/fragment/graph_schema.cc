@@ -511,6 +511,22 @@ Entry& PropertyGraphSchema::GetMutableEntry(const LabelId label_id,
 }
 
 std::vector<Entry> PropertyGraphSchema::vertex_entries() const {
+  return ValidVertexEntries();
+}
+
+std::vector<Entry> PropertyGraphSchema::edge_entries() const {
+  return ValidEdgeEntries();
+}
+
+std::vector<Entry> PropertyGraphSchema::AllVertexEntries() const {
+  return vertex_entries_;
+}
+
+std::vector<Entry> PropertyGraphSchema::AllEdgeEntries() const {
+  return edge_entries_;
+}
+
+std::vector<Entry> PropertyGraphSchema::ValidVertexEntries() const {
   std::vector<Entry> res;
   for (size_t i = 0; i < valid_vertices_.size(); ++i) {
     if (valid_vertices_[i]) {
@@ -520,7 +536,7 @@ std::vector<Entry> PropertyGraphSchema::vertex_entries() const {
   return res;
 }
 
-std::vector<Entry> PropertyGraphSchema::edge_entries() const {
+std::vector<Entry> PropertyGraphSchema::ValidEdgeEntries() const {
   std::vector<Entry> res;
   for (size_t i = 0; i < valid_edges_.size(); ++i) {
     if (valid_edges_[i]) {
@@ -528,6 +544,14 @@ std::vector<Entry> PropertyGraphSchema::edge_entries() const {
     }
   }
   return res;
+}
+
+bool PropertyGraphSchema::IsVertexValid(const LabelId label_id) const {
+  return valid_vertices_[label_id];
+}
+
+bool PropertyGraphSchema::IsEdgeValid(const LabelId label_id) const {
+  return valid_edges_[label_id];
 }
 
 std::vector<std::string> PropertyGraphSchema::GetVertexLabels() const {

@@ -273,6 +273,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
           entry.relations = valid_relations;
         }
       };
+
   // Compute the set difference of reserved labels and all labels.
   auto invalidate_label = [&schema](const std::vector<label_id_t>& labels,
                                     std::string type, label_id_t label_num) {
@@ -307,13 +308,14 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
           }
         }
       };
+
   remove_invalid_relation(edge_labels, vertices);
+  invalidate_label(vertex_labels, "VERTEX",
+                   static_cast<label_id_t>(schema.AllVertexEntries().size()));
+  invalidate_label(edge_labels, "EDGE",
+                   static_cast<label_id_t>(schema.AllEdgeEntries().size()));
   invalidate_prop(vertex_labels, "VERTEX", vertex_properties);
   invalidate_prop(edge_labels, "EDGE", edge_properties);
-  invalidate_label(vertex_labels, "VERTEX",
-                   static_cast<label_id_t>(schema.vertex_entries().size()));
-  invalidate_label(edge_labels, "EDGE",
-                   static_cast<label_id_t>(schema.edge_entries().size()));
 
   std::string error_message;
   if (!schema.Validate(error_message)) {
