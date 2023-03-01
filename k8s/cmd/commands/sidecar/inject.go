@@ -22,6 +22,7 @@ import (
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"go.uber.org/multierr"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -233,7 +234,7 @@ func buildSidecar(namespace string) (*v1alpha1.Sidecar, error) {
 // InjectSidecarConfig injects the sidecar config into the workload
 func InjectSidecarConfig(sidecar *v1alpha1.Sidecar, workloadObj,
 	sidecarObj *unstructured.Unstructured) error {
-	errCollector := util.ErrorCollector{}
+	var errList error
 
 	// get the template spec of the workload
 	spec := workloadObj.Object["spec"].(map[string]interface{})
@@ -246,7 +247,7 @@ func InjectSidecarConfig(sidecar *v1alpha1.Sidecar, workloadObj,
 
 	workloadContainers, err := convertInterfaceToContainers(
 		templateSpec["containers"].([]interface{}))
-	errCollector.Add(err)
+	multierr.Append(errList, err)
 
 	if templateSpec["volumes"] == nil {
 		templateSpec["volumes"] = []interface{}{}
@@ -254,17 +255,17 @@ func InjectSidecarConfig(sidecar *v1alpha1.Sidecar, workloadObj,
 
 	workloadVolumes, err := convertInterfaceToVolumes(
 		templateSpec["volumes"].([]interface{}))
-	errCollector.Add(err)
+	multierr.Append(errList, err)
 
 	// get the containers and volumes of the sidecar
 	sidecarSpec := sidecarObj.Object["spec"].(map[string]interface{})
 	sidecarContainers, err := convertInterfaceToContainers(
 		sidecarSpec["containers"].([]interface{}))
-	errCollector.Add(err)
+	multierr.Append(errList, err)
 
 	sidecarVolumes, err := convertInterfaceToVolumes(
 		sidecarSpec["volumes"].([]interface{}))
-	errCollector.Add(err)
+	multierr.Append(errList, err)
 
 	injector.InjectSidecar(workloadContainers, workloadVolumes,
 		sidecarContainers, sidecarVolumes, sidecar)
@@ -273,7 +274,7 @@ func InjectSidecarConfig(sidecar *v1alpha1.Sidecar, workloadObj,
 	labels[DefaultSidecarLabelName] = DefaultSidecarLabelValue
 	templateSpec["containers"] = workloadContainers
 	templateSpec["volumes"] = workloadVolumes
-	return errCollector.Error()
+	return err
 }
 
 func convertInterfaceToContainers(v []interface{}) (*[]corev1.Container, error) {

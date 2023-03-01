@@ -16,8 +16,6 @@ limitations under the License.
 package create
 
 import (
-	"log"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -113,7 +111,7 @@ cat pv-pvc.json | vineyardctl create backup \
 		// Check if the input is coming from stdin
 		str, err := util.ReadJsonFromStdin(args)
 		if err != nil {
-			log.Fatalf("failed to parse from stdin: %v", err)
+			util.ErrLogger.Fatalf("failed to parse from stdin: %v", err)
 		}
 		if str != "" {
 			flags.BackupPVandPVC = str

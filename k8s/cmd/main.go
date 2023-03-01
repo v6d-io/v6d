@@ -68,11 +68,11 @@ func init() {
 }
 
 func main() {
-	if err := cmd.ParseFlags(os.Args); err != nil {
+	/*if err := cmd.ParseFlags(os.Args); err != nil {
 		_ = cmd.Usage()
 		cmd.PrintErrf("\nError xxx: %v\n", err)
 		os.Exit(-1)
-	}
+	} */
 
 	if flags.DumpUsage {
 		cmd.SetUsageFunc(usage.UsageJson)
