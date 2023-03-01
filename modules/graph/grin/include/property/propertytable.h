@@ -32,7 +32,7 @@ limitations under the License.
 void destroy_row(Row);
 
 /** @brief the value of a property from row by its position in row */
-const void* get_value_from_row(Row, const size_t);
+const void* get_value_from_row(Row, size_t);
 
 /** @brief create a row, usually to get vertex/edge by primary keys */
 Row create_row();
@@ -59,7 +59,7 @@ void destroy_vertex_property_table(VertexPropertyTable);
  * @param Graph the graph
  * @param VertexType the vertex type
  */
-VertexPropertyTable get_vertex_property_table_by_type(const Graph, const VertexType);
+VertexPropertyTable get_vertex_property_table_by_type(Graph, VertexType);
 
 /**
  * @brief get vertex property value from table
@@ -68,7 +68,7 @@ VertexPropertyTable get_vertex_property_table_by_type(const Graph, const VertexT
  * @param VertexProperty the vertex property which is the column index
  * @return can be casted to the property data type by the caller
  */
-const void* get_value_from_vertex_property_table(const VertexPropertyTable, const Vertex, const VertexProperty);
+const void* get_value_from_vertex_property_table(VertexPropertyTable, Vertex, VertexProperty);
 
 /**
  * @brief get vertex row from table
@@ -76,7 +76,7 @@ const void* get_value_from_vertex_property_table(const VertexPropertyTable, cons
  * @param Vertex the vertex which is the row index
  * @param VertexPropertyList the vertex property list as columns
  */
-Row get_row_from_vertex_property_table(const VertexPropertyTable, const Vertex, const VertexPropertyList);
+Row get_row_from_vertex_property_table(VertexPropertyTable, Vertex, VertexPropertyList);
 
 #ifndef COLUMN_STORE_TRAIT
 /**
@@ -85,7 +85,7 @@ Row get_row_from_vertex_property_table(const VertexPropertyTable, const Vertex, 
  * @param Vertex the vertex which is the row index
  * @param VertexPropertyList the vertex property list as columns
  */
-Row get_vertex_row(const Graph, const Vertex, const VertexPropertyList);
+Row get_vertex_row(Graph, Vertex, VertexPropertyList);
 #endif
 #endif
 
@@ -106,7 +106,7 @@ void destroy_edge_property_table(EdgePropertyTable);
  * @param Graph the graph
  * @param EdgeType the edge type
  */
-EdgePropertyTable get_edge_property_table_by_type(const Graph, const EdgeType);
+EdgePropertyTable get_edge_property_table_by_type(Graph, EdgeType);
 
 /**
  * @brief get edge property value from table
@@ -115,7 +115,7 @@ EdgePropertyTable get_edge_property_table_by_type(const Graph, const EdgeType);
  * @param EdgeProperty the edge property which is the column index
  * @return can be casted to the property data type by the caller
  */
-const void* get_value_from_edge_property_table(const EdgePropertyTable, const Edge, const EdgeProperty);
+const void* get_value_from_edge_property_table(EdgePropertyTable, Edge, EdgeProperty);
 
 /**
  * @brief get edge row from table
@@ -123,7 +123,7 @@ const void* get_value_from_edge_property_table(const EdgePropertyTable, const Ed
  * @param Edge the edge which is the row index
  * @param EdgePropertyList the edge property list as columns
  */
-Row get_row_from_edge_property_table(const EdgePropertyTable, const Edge, const EdgePropertyList);
+Row get_row_from_edge_property_table(EdgePropertyTable, Edge, EdgePropertyList);
 
 #ifndef COLUMN_STORE_TRAIT
 /**
@@ -132,7 +132,7 @@ Row get_row_from_edge_property_table(const EdgePropertyTable, const Edge, const 
  * @param Edge the edge which is the row index
  * @param EdgePropertyList the edge property list as columns
  */
-Row get_edge_row(const Graph, const Edge, const EdgePropertyList);
+Row get_edge_row(Graph, Edge, EdgePropertyList);
 #endif
 #endif
 

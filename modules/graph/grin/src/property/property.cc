@@ -13,7 +13,7 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 
 #ifdef WITH_PROPERTY_NAME
-char* get_vertex_property_name(const Graph g, const VertexProperty vp) {
+const char* get_vertex_property_name(Graph g, VertexProperty vp) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vp = static_cast<VertexProperty_T*>(vp);
     auto s = _g->schema().GetVertexPropertyName(_vp->first, _vp->second);
@@ -23,7 +23,7 @@ char* get_vertex_property_name(const Graph g, const VertexProperty vp) {
     return out;
 }
 
-VertexProperty get_vertex_property_by_name(const Graph g, const VertexType vtype,
+VertexProperty get_vertex_property_by_name(Graph g, VertexType vtype,
                                            const char* name) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vtype = static_cast<VertexType_T*>(vtype);
@@ -32,7 +32,7 @@ VertexProperty get_vertex_property_by_name(const Graph g, const VertexType vtype
     return vp;
 }
 
-VertexPropertyList get_vertex_properties_by_name(const Graph g, const char* name) {
+VertexPropertyList get_vertex_properties_by_name(Graph g, const char* name) {
     auto _g = static_cast<Graph_T*>(g);
     auto s = std::string(name);
     auto vpl = new VertexPropertyList_T();
@@ -42,7 +42,7 @@ VertexPropertyList get_vertex_properties_by_name(const Graph g, const char* name
     return vpl;
 }
 
-char* get_edge_property_name(const Graph g, const EdgeProperty ep) {
+const char* get_edge_property_name(Graph g, EdgeProperty ep) {
     auto _g = static_cast<Graph_T*>(g);
     auto _ep = static_cast<EdgeProperty_T*>(ep);
     auto s = _g->schema().GetEdgePropertyName(_ep->first, _ep->second);
@@ -52,7 +52,7 @@ char* get_edge_property_name(const Graph g, const EdgeProperty ep) {
     return out;
 }
 
-EdgeProperty get_edge_property_by_name(const Graph g, const EdgeType etype,
+EdgeProperty get_edge_property_by_name(Graph g, EdgeType etype,
                                            const char* name) {
     auto _g = static_cast<Graph_T*>(g);
     auto _etype = static_cast<EdgeType_T*>(etype);
@@ -61,7 +61,7 @@ EdgeProperty get_edge_property_by_name(const Graph g, const EdgeType etype,
     return ep;
 }
 
-EdgePropertyList get_edge_properties_by_name(const Graph g, const char* name) {
+EdgePropertyList get_edge_properties_by_name(Graph g, const char* name) {
     auto _g = static_cast<Graph_T*>(g);
     auto s = std::string(name);
     auto epl = new EdgePropertyList_T();
@@ -79,7 +79,7 @@ void destroy_vertex_property(VertexProperty vp) {
     delete _vp;
 }
 
-DataType get_vertex_property_data_type(const Graph g, const VertexProperty vp) {
+DataType get_vertex_property_data_type(Graph g, VertexProperty vp) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vp = static_cast<VertexProperty_T*>(vp);
     auto dt = _g->schema().GetVertexPropertyType(_vp->first, _vp->second);
@@ -100,7 +100,7 @@ void destroy_edge_property(EdgeProperty ep) {
     delete _ep;
 }
 
-DataType get_edge_property_type(const Graph g, const EdgeProperty ep) {
+DataType get_edge_property_type(Graph g, EdgeProperty ep) {
     auto _g = static_cast<Graph_T*>(g);
     auto _ep = static_cast<EdgeProperty_T*>(ep);
     auto dt = _g->schema().GetEdgePropertyType(_ep->first, _ep->second);

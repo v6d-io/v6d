@@ -19,20 +19,20 @@ limitations under the License.
 #include "../predefine.h"
 
 // Graph 
-bool is_directed(const Graph);
+bool is_directed(Graph);
 
-bool is_multigraph(const Graph);
+bool is_multigraph(Graph);
 
-size_t get_vertex_num(const Graph);
+size_t get_vertex_num(Graph);
 
 #ifdef WITH_VERTEX_PROPERTY
-size_t get_vertex_num_by_type(const Graph, const VertexType);
+size_t get_vertex_num_by_type(Graph, VertexType);
 #endif
 
-size_t get_edge_num(const Graph);
+size_t get_edge_num(Graph, Direction d);
 
 #ifdef WITH_EDGE_PROPERTY
-size_t get_edge_num_by_type(const Graph, const EdgeType);
+size_t get_edge_num_by_type(Graph, Direction d, EdgeType);
 #endif
 
 
@@ -40,37 +40,39 @@ size_t get_edge_num_by_type(const Graph, const EdgeType);
 void destroy_vertex(Vertex);
 
 #ifdef WITH_VERTEX_DATA
-DataType get_vertex_data_type(const Graph, const Vertex);
+DataType get_vertex_data_type(Graph, Vertex);
 
-VertexData get_vertex_data_value(const Graph, const Vertex);
+VertexData get_vertex_data_value(Graph, Vertex);
 
 void destroy_vertex_data(VertexData);
 #endif
 
 #ifdef WITH_VERTEX_ORIGINAL_ID
-Vertex get_vertex_from_original_id(const Graph, const OriginalID);
+Vertex get_vertex_from_original_id(Graph, OriginalID);
 
-OriginalID get_vertex_original_id(const Graph, const Vertex);
+DataType get_vertex_original_id_type(Graph);
+
+OriginalID get_vertex_original_id(Graph, Vertex);
 
 void destroy_vertex_original_id(OriginalID); 
 #endif
 
 #if defined(WITH_VERTEX_ORIGINAL_ID) && defined(WITH_VERTEX_PROPERTY)
-Vertex get_vertex_from_original_id_by_type(const Graph, const VertexType, const OriginalID);
+Vertex get_vertex_from_original_id_by_type(Graph, VertexType, OriginalID);
 #endif
 
 
 // Edge
 void destroy_edge(Edge);
 
-Vertex get_edge_src(const Graph, const Edge);
+Vertex get_edge_src(Graph, Edge);
 
-Vertex get_edge_dst(const Graph, const Edge);
+Vertex get_edge_dst(Graph, Edge);
 
 #ifdef WITH_EDGE_DATA
-DataType get_edge_data_type(const Graph, const Edge);
+DataType get_edge_data_type(Graph, Edge);
 
-EdgeData get_edge_data_value(const Graph, const Edge);
+EdgeData get_edge_data_value(Graph, Edge);
 
 void destroy_edge_data(EdgeData);
 #endif

@@ -24,6 +24,57 @@ limitations under the License.
 #include "client/client.h"
 #include "arrow/api.h"
 
+template <typename T>
+struct DataTypeEnum {
+  static constexpr DataType value = DataType::Undefined;
+};
+
+template <>
+struct DataTypeEnum<int32_t> {
+  static constexpr DataType value = DataType::Int32;
+};
+
+template <>
+struct DataTypeEnum<uint32_t> {
+  static constexpr DataType value = DataType::UInt32;
+};
+
+template <>
+struct DataTypeEnum<int64_t> {
+  static constexpr DataType value = DataType::Int64;
+};
+
+template <>
+struct DataTypeEnum<uint64_t> {
+  static constexpr DataType value = DataType::UInt64;
+};
+
+template <>
+struct DataTypeEnum<float> {
+  static constexpr DataType value = DataType::Float;
+};
+
+template <>
+struct DataTypeEnum<double> {
+  static constexpr DataType value = DataType::Double;
+};
+
+template <>
+struct DataTypeEnum<std::string> {
+  static constexpr DataType value = DataType::String;
+};
+
+template <>
+struct DataTypeEnum<arrow::Date32Type> {
+  static constexpr DataType value = DataType::Date32;
+};
+
+template <>
+struct DataTypeEnum<arrow::Date64Type> {
+  static constexpr DataType value = DataType::Date64;
+};
+
+PartitionedGraph get_partitioned_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id);
 Graph get_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id);
 std::string GetDataTypeName(DataType);
 DataType ArrowToDataType(std::shared_ptr<arrow::DataType>);

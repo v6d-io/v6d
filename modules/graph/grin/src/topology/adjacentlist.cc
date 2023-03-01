@@ -17,7 +17,7 @@ limitations under the License.
 #include "graph/grin/include/topology/adjacentlist.h"
 
 #ifdef ENABLE_ADJACENT_LIST
-AdjacentList get_adjacent_list(const Graph g, const Direction d, const Vertex v) {
+AdjacentList get_adjacent_list(Graph g, Direction d, Vertex v) {
     auto _g = static_cast<Graph_T*>(g);
     auto _v = static_cast<Vertex_T*>(v);
     auto al = new AdjacentList_T();
@@ -35,8 +35,8 @@ AdjacentList get_adjacent_list(const Graph g, const Direction d, const Vertex v)
 }
 
 #ifdef WITH_EDGE_PROPERTY
-AdjacentList get_adjacent_list_by_edge_type(const Graph g, const Direction d, 
-                                            const Vertex v, const EdgeType etype) {
+AdjacentList get_adjacent_list_by_edge_type(Graph g, Direction d, 
+                                            Vertex v, EdgeType etype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _v = static_cast<Vertex_T*>(v);
     auto _etype = static_cast<EdgeType_T*>(etype);
@@ -58,7 +58,7 @@ void destroy_adjacent_list(AdjacentList al) {
     delete _al;
 }
 
-size_t get_adjacent_list_size(const AdjacentList al) {
+size_t get_adjacent_list_size(AdjacentList al) {
     auto _al = static_cast<AdjacentList_T*>(al);
     size_t result = 0;
     for (auto &ral : _al->data) {
@@ -67,7 +67,7 @@ size_t get_adjacent_list_size(const AdjacentList al) {
     return result;
 }
 
-Vertex get_neighbor_from_adjacent_list(const AdjacentList al, size_t idx) {
+Vertex get_neighbor_from_adjacent_list(AdjacentList al, size_t idx) {
     auto _al = static_cast<AdjacentList_T*>(al);
     size_t result = 0;
     for (auto &ral : _al->data) {
@@ -82,7 +82,7 @@ Vertex get_neighbor_from_adjacent_list(const AdjacentList al, size_t idx) {
     return NULL_VERTEX;
 }
 
-Edge get_edge_from_adjacent_list(const AdjacentList al, size_t idx) {
+Edge get_edge_from_adjacent_list(AdjacentList al, size_t idx) {
     auto _al = static_cast<AdjacentList_T*>(al);
     size_t result = 0;
     for (auto i = 0; i < _al->data.size(); ++i) {

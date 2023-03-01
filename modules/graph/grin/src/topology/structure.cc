@@ -16,17 +16,17 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/topology/structure.h"
 
-bool is_directed(const Graph g) {
+bool is_directed(Graph g) {
     auto _g = static_cast<Graph_T*>(g);
     return _g->directed();
 }
 
-bool is_multigraph(const Graph g) {
+bool is_multigraph(Graph g) {
     auto _g = static_cast<Graph_T*>(g);
     return _g->is_multigraph();
 }
 
-size_t get_vertex_num(const Graph g) {
+size_t get_vertex_num(Graph g) {
     auto _g = static_cast<Graph_T*>(g);
     size_t result = 0;
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
@@ -36,20 +36,25 @@ size_t get_vertex_num(const Graph g) {
 }
 
 #ifdef WITH_VERTEX_PROPERTY
-size_t get_vertex_num_by_type(const Graph g, const VertexType vtype) {
+size_t get_vertex_num_by_type(Graph g, VertexType vtype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vtype = static_cast<VertexType_T*>(vtype);
     return _g->GetVerticesNum(*_vtype);
 }
 #endif
 
-size_t get_edge_num(const Graph g) {
+size_t get_edge_num(Graph g, Direction d) {
     auto _g = static_cast<Graph_T*>(g);
+    if (d == IN) {
+        return _g->GetInEdgeNum();
+    } else if (d == OUT) {
+        return _g->GetOutEdgeNum();
+    }
     return _g->GetEdgeNum();
 }
 
 #ifdef WITH_EDGE_PROPERTY
-size_t get_edge_num_by_type(const Graph g, const EdgeType etype) {
+size_t get_edge_num_by_type(Graph g, Direction d, EdgeType etype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _etype = static_cast<EdgeType_T*>(etype);
     return _g->edge_data_table(*_etype)->num_rows();
@@ -63,7 +68,7 @@ void destroy_vertex(Vertex v) {
 }
 
 #ifdef WITH_VERTEX_ORIGINAL_ID
-Vertex get_vertex_from_original_id(const Graph g, const OriginalID oid) {
+Vertex get_vertex_from_original_id(Graph g, OriginalID oid) {
     auto _g = static_cast<Graph_T*>(g);
     Vertex result;
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
@@ -75,7 +80,12 @@ Vertex get_vertex_from_original_id(const Graph g, const OriginalID oid) {
     return NULL_VERTEX;
 }
 
-OriginalID get_vertex_original_id(const Graph g, const Vertex v) {
+DataType get_vertex_original_id_type(Graph g) {
+    return DataTypeEnum<OriginalID_T>::value;
+}
+
+
+OriginalID get_vertex_original_id(Graph g, Vertex v) {
     auto _g = static_cast<Graph_T*>(g);
     auto _v = static_cast<Vertex_T*>(v);
     auto gid = _g->Vertex2Gid(*_v);
@@ -90,7 +100,7 @@ void destroy_vertex_original_id(OriginalID oid) {
 #endif
 
 #if defined(WITH_VERTEX_ORIGINAL_ID) && defined(WITH_VERTEX_PROPERTY)
-Vertex get_vertex_from_original_id_by_type(const Graph g, const VertexType vtype, const OriginalID oid) {
+Vertex get_vertex_from_original_id_by_type(Graph g, VertexType vtype, OriginalID oid) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vtype = static_cast<VertexType_T*>(vtype);
     auto _oid = static_cast<OriginalID_T*>(oid);
@@ -111,12 +121,12 @@ void destroy_edge(Edge e) {
     delete _e;
 }
 
-Vertex get_edge_src(const Graph g, const Edge e) {
+Vertex get_edge_src(Graph g, Edge e) {
     auto _e = static_cast<Edge_T*>(e);
     return _e->src;
 }
 
-Vertex get_edge_dst(const Graph g, const Edge e) {
+Vertex get_edge_dst(Graph g, Edge e) {
     auto _e = static_cast<Edge_T*>(e);
     return _e->dst;
 }

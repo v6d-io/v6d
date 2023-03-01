@@ -20,30 +20,32 @@ limitations under the License.
 
 #ifdef ENABLE_VERTEX_LIST
 
-VertexList get_vertex_list(const Graph);
+VertexList get_vertex_list(Graph);
 
 #ifdef WITH_VERTEX_PROPERTY
-VertexList get_vertex_list_by_type(const Graph, const VertexType);
+VertexList get_vertex_list_by_type(Graph, VertexType);
 #endif
 
 void destroy_vertex_list(VertexList);
 
 VertexList create_vertex_list();
 
-bool insert_vertex_to_list(VertexList, const Vertex);
+bool insert_vertex_to_list(VertexList, Vertex);
 
-size_t get_vertex_list_size(const VertexList);
+size_t get_vertex_list_size(VertexList);
 
-Vertex get_vertex_from_list(const VertexList, const size_t);
+Vertex get_vertex_from_list(VertexList, size_t);
 
 #ifdef ENABLE_VERTEX_LIST_ITERATOR
-VertexListIterator get_vertex_list_begin(const Graph);
+VertexListIterator get_vertex_list_begin(Graph);
 
 #ifdef WITH_VERTEX_PROPERTY
-VertexListIterator get_vertex_list_begin_by_type(const Graph, const VertexType);
+VertexListIterator get_vertex_list_begin_by_type(Graph, VertexType);
 #endif
 
-bool get_next_vertex_list_iter(VertexListIterator);
+VertexListIterator get_next_vertex_list_iter(VertexListIterator);
+
+bool is_vertex_list_end(VertexListIterator);
 
 Vertex get_vertex_from_iter(VertexListIterator);
 #endif

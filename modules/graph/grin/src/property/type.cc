@@ -14,14 +14,14 @@ limitations under the License.
 #include "graph/grin/include/property/type.h"
 
 #ifdef WITH_VERTEX_PROPERTY
-VertexType get_vertex_type(const Graph g, const Vertex v) {
+VertexType get_vertex_type(Graph g, Vertex v) {
     auto _g = static_cast<Graph_T*>(g);
     auto _v = static_cast<Vertex_T*>(v);
     auto vt = new VertexType_T(_g->vertex_label(*_v));
     return vt;
 }
 
-char* get_vertex_type_name(const Graph g, const VertexType vt) {
+const char* get_vertex_type_name(Graph g, VertexType vt) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vt = static_cast<VertexType_T*>(vt);
     auto s = _g->schema().GetVertexLabelName(*_vt);
@@ -31,14 +31,14 @@ char* get_vertex_type_name(const Graph g, const VertexType vt) {
     return out;
 }
 
-VertexType get_vertex_type_by_name(const Graph g, char* name) {
+VertexType get_vertex_type_by_name(Graph g, const char* name) {
     auto _g = static_cast<Graph_T*>(g);
     auto s = std::string(name);
     auto vt = new VertexType_T(_g->schema().GetVertexLabelId(s));
     return vt;
 }
 
-VertexTypeList get_vertex_type_list(const Graph g) {
+VertexTypeList get_vertex_type_list(Graph g) {
     auto _g = static_cast<Graph_T*>(g);
     auto vtl = new VertexTypeList_T();
     for (auto i = 0; i < _g->vertex_label_num(); ++i) {
@@ -57,19 +57,19 @@ VertexTypeList create_vertex_type_list() {
     return vtl;
 }
 
-bool insert_vertex_type_to_list(VertexTypeList vtl, const VertexType vt) {
+bool insert_vertex_type_to_list(VertexTypeList vtl, VertexType vt) {
     auto _vtl = static_cast<VertexTypeList_T*>(vtl);
     auto _vt = static_cast<VertexType_T*>(vt);
     _vtl->push_back(*_vt);
     return true;
 }
 
-size_t get_vertex_type_list_size(const VertexTypeList vtl) {
+size_t get_vertex_type_list_size(VertexTypeList vtl) {
     auto _vtl = static_cast<VertexTypeList_T*>(vtl);
     return _vtl->size();
 }
 
-VertexType get_vertex_type_from_list(const VertexTypeList vtl, const size_t idx) {
+VertexType get_vertex_type_from_list(VertexTypeList vtl, size_t idx) {
     auto _vtl = static_cast<VertexTypeList_T*>(vtl);
     auto vt = new VertexType_T((*_vtl)[idx]);
     return vt;
@@ -78,12 +78,12 @@ VertexType get_vertex_type_from_list(const VertexTypeList vtl, const size_t idx)
 
 
 #ifdef NATURAL_VERTEX_TYPE_ID_TRAIT
-VertexTypeID get_vertex_type_id(const VertexType vt) {
+VertexTypeID get_vertex_type_id(VertexType vt) {
     auto _vt = static_cast<VertexType_T*>(vt);
     return *_vt;
 }
 
-VertexType get_vertex_type_from_id(const VertexTypeID vti) {
+VertexType get_vertex_type_from_id(VertexTypeID vti) {
     auto vt = new VertexType_T(vti);
     return vt;
 }
@@ -91,13 +91,13 @@ VertexType get_vertex_type_from_id(const VertexTypeID vti) {
 
 
 #ifdef WITH_EDGE_PROPERTY
-EdgeType get_edge_type(const Graph g, const Edge e) {
+EdgeType get_edge_type(Graph g, Edge e) {
     auto _e = static_cast<Edge_T*>(e);
     auto et = new EdgeType_T(_e->etype);
     return et;
 }
 
-char* get_edge_type_name(const Graph g, const EdgeType et) {
+const char* get_edge_type_name(Graph g, EdgeType et) {
     auto _g = static_cast<Graph_T*>(g);
     auto _et = static_cast<EdgeType_T*>(et);
     auto s = _g->schema().GetEdgeLabelName(*_et);
@@ -107,14 +107,14 @@ char* get_edge_type_name(const Graph g, const EdgeType et) {
     return out;    
 }
 
-EdgeType get_edge_type_by_name(const Graph g, char* name) {
+EdgeType get_edge_type_by_name(Graph g, const char* name) {
     auto _g = static_cast<Graph_T*>(g);
     auto s = std::string(name);
     auto et = new EdgeType_T(_g->schema().GetEdgeLabelId(s));
     return et;
 }
 
-EdgeTypeList get_edge_type_list(const Graph g) {
+EdgeTypeList get_edge_type_list(Graph g) {
     auto _g = static_cast<Graph_T*>(g);
     auto etl = new EdgeTypeList_T();
     for (auto i = 0; i < _g->edge_label_num(); ++i) {
@@ -133,19 +133,19 @@ EdgeTypeList create_edge_type_list() {
     return etl;
 }
 
-bool insert_edge_type_to_list(EdgeTypeList etl, const EdgeType et) {
+bool insert_edge_type_to_list(EdgeTypeList etl, EdgeType et) {
     auto _etl = static_cast<EdgeTypeList_T*>(etl);
     auto _et = static_cast<EdgeType_T*>(et);
     _etl->push_back(*_et);
     return true;
 }
 
-size_t get_edge_type_list_size(const EdgeTypeList etl) {
+size_t get_edge_type_list_size(EdgeTypeList etl) {
     auto _etl = static_cast<EdgeTypeList_T*>(etl);
     return _etl->size();
 }
 
-EdgeType get_edge_type_from_list(const EdgeTypeList etl, const size_t idx) {
+EdgeType get_edge_type_from_list(EdgeTypeList etl, size_t idx) {
     auto _etl = static_cast<VertexTypeList_T*>(etl);
     auto et = new VertexType_T((*_etl)[idx]);
     return et;
@@ -154,12 +154,12 @@ EdgeType get_edge_type_from_list(const EdgeTypeList etl, const size_t idx) {
 
 
 #ifdef NATURAL_EDGE_TYPE_ID_TRAIT
-EdgeTypeID get_edge_type_id(const EdgeType et) {
+EdgeTypeID get_edge_type_id(EdgeType et) {
     auto _et = static_cast<EdgeType_T*>(et);
     return *_et;
 }
 
-EdgeType get_edge_type_from_id(const EdgeTypeID eti) {
+EdgeType get_edge_type_from_id(EdgeTypeID eti) {
     auto et = new EdgeType_T(eti);
     return et;
 }
@@ -167,7 +167,7 @@ EdgeType get_edge_type_from_id(const EdgeTypeID eti) {
 
 
 #if defined(WITH_VERTEX_PROPERTY) && defined(WITH_EDGE_PROPERTY)
-VertexTypeList get_src_types_from_edge_type(const Graph g, const EdgeType etype) {
+VertexTypeList get_src_types_from_edge_type(Graph g, EdgeType etype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _etype = static_cast<EdgeType_T*>(etype);
     auto entry = _g->schema().GetEntry(*_etype, "EDGE");
@@ -178,7 +178,7 @@ VertexTypeList get_src_types_from_edge_type(const Graph g, const EdgeType etype)
     return vtl;
 }
 
-VertexTypeList get_dst_types_from_edge_type(const Graph g, const EdgeType etype) {
+VertexTypeList get_dst_types_from_edge_type(Graph g, EdgeType etype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _etype = static_cast<EdgeType_T*>(etype);
     auto entry = _g->schema().GetEntry(*_etype, "EDGE");
@@ -189,8 +189,8 @@ VertexTypeList get_dst_types_from_edge_type(const Graph g, const EdgeType etype)
     return vtl;
 }
 
-EdgeTypeList get_edge_types_from_vertex_type_pair(const Graph g, const VertexType src_vt, 
-                                                  const VertexType dst_vt) {
+EdgeTypeList get_edge_types_from_vertex_type_pair(Graph g, VertexType src_vt, 
+                                                  VertexType dst_vt) {
     auto _g = static_cast<Graph_T*>(g);
     auto _v1 = static_cast<VertexType_T*>(src_vt);
     auto _v2 = static_cast<VertexType_T*>(dst_vt);

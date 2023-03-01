@@ -21,44 +21,44 @@ limitations under the License.
 #include "../predefine.h"
 
 #ifdef WITH_VERTEX_PROPERTY
-VertexPropertyList get_vertex_property_list_by_type(const Graph, const VertexType);
+VertexPropertyList get_vertex_property_list_by_type(Graph, VertexType);
 
-size_t get_vertex_property_list_size(const VertexPropertyList);
+size_t get_vertex_property_list_size(VertexPropertyList);
 
-VertexProperty get_vertex_property_from_list(const VertexPropertyList, const size_t);
+VertexProperty get_vertex_property_from_list(VertexPropertyList, size_t);
 
 VertexPropertyList create_vertex_property_list();
 
 void destroy_vertex_property_list(VertexPropertyList);
 
-bool insert_vertex_property_to_list(VertexPropertyList, const VertexProperty);
+bool insert_vertex_property_to_list(VertexPropertyList, VertexProperty);
 #endif
 
 #ifdef NATURAL_VERTEX_PROPERTY_ID_TRAIT
-VertexProperty get_vertex_property_from_id(const VertexType, const VertexPropertyID);
+VertexProperty get_vertex_property_from_id(VertexType, VertexPropertyID);
 
-VertexPropertyID get_vertex_property_id(const VertexType, const VertexProperty);
+VertexPropertyID get_vertex_property_id(VertexType, VertexProperty);
 #endif
 
 
 #ifdef WITH_EDGE_PROPERTY
-EdgePropertyList get_edge_property_list_by_type(const Graph, const EdgeType);
+EdgePropertyList get_edge_property_list_by_type(Graph, EdgeType);
 
-size_t get_edge_property_list_size(const EdgePropertyList);
+size_t get_edge_property_list_size(EdgePropertyList);
 
-EdgeProperty get_edge_property_from_list(const EdgePropertyList, const size_t);
+EdgeProperty get_edge_property_from_list(EdgePropertyList, size_t);
 
 EdgePropertyList create_edge_property_list();
 
 void destroy_edge_property_list(EdgePropertyList);
 
-bool insert_edge_property_to_list(EdgePropertyList, const EdgeProperty);
+bool insert_edge_property_to_list(EdgePropertyList, EdgeProperty);
 #endif
 
 #ifdef NATURAL_EDGE_PROPERTY_ID_TRAIT
-EdgeProperty get_edge_property_from_id(const EdgeType, const EdgePropertyID);
+EdgeProperty get_edge_property_from_id(EdgeType, EdgePropertyID);
 
-EdgePropertyID get_edge_property_id(const EdgeType, const EdgeProperty);
+EdgePropertyID get_edge_property_id(EdgeType, EdgeProperty);
 #endif
 
 
@@ -73,12 +73,12 @@ EdgePropertyID get_edge_property_id(const EdgeType, const EdgeProperty);
 ///@{
 #if defined(WITH_VERTEX_PROPERTY) && defined(COLUMN_STORE_TRAIT)
 /** @brief project vertex properties */
-Graph select_vertex_properties(const Graph, const VertexPropertyList);
+Graph select_vertex_properties(Graph, VertexPropertyList);
 #endif
 
 #if defined(WITH_EDGE_PROPERTY) && defined(COLUMN_STORE_TRAIT)
 /** @brief project edge properties */
-Graph select_edge_properteis(const Graph, const EdgePropertyList);
+Graph select_edge_properteis(Graph, EdgePropertyList);
 #endif
 
 #endif  // GRIN_INCLUDE_PROPERTY_PROPERTY_LIST_H_

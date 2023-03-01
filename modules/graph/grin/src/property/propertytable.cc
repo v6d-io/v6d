@@ -19,7 +19,7 @@ void destroy_row(Row r) {
     delete _r;
 }
 
-const void* get_value_from_row(Row r, const size_t idx) {
+const void* get_value_from_row(Row r, size_t idx) {
     auto _r = static_cast<Row_T*>(r);
     return (*_r)[idx];
 }
@@ -29,7 +29,7 @@ Row create_row() {
     return r;
 }
 
-bool insert_value_to_row(Row r, const void* value) {
+bool insert_value_to_row(Row r, void* value) {
     auto _r = static_cast<Row_T*>(r);
     _r->push_back(value);
     return true;
@@ -43,7 +43,7 @@ void destroy_vertex_property_table(VertexPropertyTable vpt) {
     delete _vpt;
 }
 
-VertexPropertyTable get_vertex_property_table_by_type(const Graph g, const VertexType vtype) {
+VertexPropertyTable get_vertex_property_table_by_type(Graph g, VertexType vtype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vtype = static_cast<VertexType_T*>(vtype);
     auto vpt = new VertexPropertyTable_T();
@@ -53,8 +53,8 @@ VertexPropertyTable get_vertex_property_table_by_type(const Graph g, const Verte
     return vpt;
 }
 
-const void* get_value_from_vertex_property_table(const VertexPropertyTable vpt,
-                                                 const Vertex v, const VertexProperty vp) {
+const void* get_value_from_vertex_property_table(VertexPropertyTable vpt,
+                                                 Vertex v, VertexProperty vp) {
     auto _vpt = static_cast<VertexPropertyTable_T*>(vpt);
     auto _v = static_cast<Vertex_T*>(v);
     auto _vp = static_cast<VertexProperty_T*>(vp);
@@ -65,8 +65,8 @@ const void* get_value_from_vertex_property_table(const VertexPropertyTable vpt,
     return result;
 }
 
-Row get_row_from_vertex_property_table(const VertexPropertyTable vpt, const Vertex v, 
-                                       const VertexPropertyList vpl) {
+Row get_row_from_vertex_property_table(VertexPropertyTable vpt, Vertex v, 
+                                       VertexPropertyList vpl) {
     auto _vpt = static_cast<VertexPropertyTable_T*>(vpt);
     auto _v = static_cast<Vertex_T*>(v);
     auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
@@ -90,7 +90,7 @@ void destroy_edge_property_table(EdgePropertyTable ept) {
     delete _ept;
 }
 
-EdgePropertyTable get_edge_property_table_by_type(const Graph g, const EdgeType etype) {
+EdgePropertyTable get_edge_property_table_by_type(Graph g, EdgeType etype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _etype = static_cast<EdgeType_T*>(etype);
     auto ept = new EdgePropertyTable_T();
@@ -100,8 +100,8 @@ EdgePropertyTable get_edge_property_table_by_type(const Graph g, const EdgeType 
     return ept;
 }
 
-const void* get_value_from_edge_property_table(const EdgePropertyTable ept,
-                                               const Edge e, const EdgeProperty ep) {
+const void* get_value_from_edge_property_table(EdgePropertyTable ept,
+                                               Edge e, EdgeProperty ep) {
     auto _ept = static_cast<EdgePropertyTable_T*>(ept);
     auto _e = static_cast<Edge_T*>(e);
     auto _ep = static_cast<EdgeProperty_T*>(ep);
@@ -112,8 +112,8 @@ const void* get_value_from_edge_property_table(const EdgePropertyTable ept,
     return result;
 }
 
-Row get_row_from_edge_property_table(const EdgePropertyTable ept, const Edge v, 
-                                       const EdgePropertyList epl) {
+Row get_row_from_edge_property_table(EdgePropertyTable ept, Edge v, 
+                                     EdgePropertyList epl) {
     auto _ept = static_cast<EdgePropertyTable_T*>(ept);
     auto _e = static_cast<Edge_T*>(v);
     auto _epl = static_cast<EdgePropertyList_T*>(epl);
