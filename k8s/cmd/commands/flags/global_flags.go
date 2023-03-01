@@ -70,11 +70,25 @@ func RemoveVersionFlag(f *pflag.FlagSet) {
 		if name == "version" /* the argument `f` should be pflag.CommandLine */ {
 			return pflag.NormalizedName("x-version")
 		}
-		return pflag.NormalizedName("version")
+		return pflag.NormalizedName(name)
 	})
 	// restore
 	f.SetNormalizeFunc(normalize)
 
 	// hidden it from the help/usage
 	f.Lookup("x-version").Hidden = true
+}
+
+func RestoreVersionFlag(f *pflag.FlagSet) {
+	// Restore the "version" flag in `verflag` package back to makes kube-scheduler
+	// work as expected.
+	normalize := f.GetNormalizeFunc()
+	f.SetNormalizeFunc(func(f *pflag.FlagSet, name string) pflag.NormalizedName {
+		if name == "x-version" /* the argument `f` should be pflag.CommandLine */ {
+			return pflag.NormalizedName("version")
+		}
+		return pflag.NormalizedName(name)
+	})
+	// restore
+	f.SetNormalizeFunc(normalize)
 }

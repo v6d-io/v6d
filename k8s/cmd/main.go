@@ -68,11 +68,21 @@ func init() {
 }
 
 func main() {
-	/*if err := cmd.ParseFlags(os.Args); err != nil {
-		_ = cmd.Usage()
-		cmd.PrintErrf("\nError xxx: %v\n", err)
+	tryDumpUsage()
+	if err := cmd.Execute(); err != nil {
+		util.ErrLogger.Fatalf("Failed to execute root command: %+v", err)
 		os.Exit(-1)
-	} */
+	}
+}
+
+func tryDumpUsage() {
+	cmd.FParseErrWhitelist.UnknownFlags = true
+	if err := cmd.ParseFlags(os.Args); err != nil {
+		_ = cmd.Usage()
+		cmd.PrintErrf("\nError when parsing flags: %v\n", err)
+		os.Exit(-1)
+	}
+	cmd.FParseErrWhitelist.UnknownFlags = false
 
 	if flags.DumpUsage {
 		cmd.SetUsageFunc(usage.UsageJson)
@@ -80,9 +90,5 @@ func main() {
 			cmd.PrintErrf("\nError: %+v\n", err)
 		}
 		os.Exit(0)
-	}
-	if err := cmd.Execute(); err != nil {
-		util.ErrLogger.Fatalf("failed to execute root command: %+v", err)
-		os.Exit(-1)
 	}
 }

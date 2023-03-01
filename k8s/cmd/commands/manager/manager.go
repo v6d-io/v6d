@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 	"go.uber.org/zap/zapcore"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -286,6 +287,9 @@ func startManager(
 }
 
 func startScheduler(mgr manager.Manager, schedulerConfigFile string) {
+	// restore the global "x-version" flag back to "version" in `verflag`
+	flags.RestoreVersionFlag(pflag.CommandLine)
+
 	command := app.NewSchedulerCommand(
 		app.WithPlugin(schedulers.Name,
 			func(obj runtime.Object, handle framework.Handle) (framework.Plugin, error) {
