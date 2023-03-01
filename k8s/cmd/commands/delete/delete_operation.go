@@ -16,11 +16,8 @@ limitations under the License.
 package delete
 
 import (
-	"context"
-
 	"github.com/spf13/cobra"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 
 	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
@@ -43,15 +40,11 @@ vineyardctl delete operation --name assembly-test`,
 		client := util.KubernetesClient()
 
 		operation := &vineyardV1alpha1.Operation{}
-		if err := client.Get(context.Background(),
-			types.NamespacedName{Name: flags.OperationName,
-				Namespace: flags.GetDefaultVineyardNamespace()},
-			operation); err != nil && !apierrors.IsNotFound(err) {
-			util.ErrLogger.Fatal("failed to get operation: ", err)
-		}
-
-		if err := client.Delete(context.Background(), operation); err != nil {
-			util.ErrLogger.Fatal("failed to delete operation: ", err)
+		if err := util.Delete(client, types.NamespacedName{
+			Name:      flags.OperationName,
+			Namespace: flags.GetDefaultVineyardNamespace(),
+		}, operation); err != nil {
+			util.ErrLogger.Fatalf("failed to delete operation: %+v", err)
 		}
 
 		util.InfoLogger.Println("Operation is deleted.")
