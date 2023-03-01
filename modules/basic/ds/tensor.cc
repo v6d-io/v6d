@@ -32,6 +32,15 @@ std::vector<int64_t> const& GlobalTensor::partition_shape() const {
   return partition_shape_;
 }
 
+const std::vector<std::shared_ptr<ITensor>> GlobalTensor::LocalPartitions(
+    Client& client) const {
+  std::vector<std::shared_ptr<ITensor>> local_chunks;
+  for (auto iter = LocalBegin(); iter != LocalEnd(); iter.NextLocal()) {
+    local_chunks.emplace_back(*iter);
+  }
+  return local_chunks;
+}
+
 std::vector<int64_t> const& GlobalTensorBuilder::partition_shape() const {
   return this->partition_shape_;
 }
@@ -49,6 +58,15 @@ std::vector<int64_t> const& GlobalTensorBuilder::shape() const {
 void GlobalTensorBuilder::set_shape(std::vector<int64_t> const& shape) {
   this->shape_ = shape;
   this->AddKeyValue("shape_", shape);
+}
+
+void GlobalTensorBuilder::AddPartition(const ObjectID partition_id) {
+  this->AddMember(partition_id);
+}
+
+void GlobalTensorBuilder::AddPartitions(
+    const std::vector<ObjectID>& partition_ids) {
+  this->AddMembers(partition_ids);
 }
 
 }  // namespace vineyard

@@ -182,6 +182,15 @@ void GlobalDataFrame::PostConstruct(const ObjectMeta& meta) {
   }
 }
 
+const std::vector<std::shared_ptr<DataFrame>> GlobalDataFrame::LocalPartitions(
+    Client& client) const {
+  std::vector<std::shared_ptr<DataFrame>> local_chunks;
+  for (auto iter = LocalBegin(); iter != LocalEnd(); iter.NextLocal()) {
+    local_chunks.emplace_back(*iter);
+  }
+  return local_chunks;
+}
+
 const std::pair<size_t, size_t> GlobalDataFrame::partition_shape() const {
   return std::make_pair(this->partition_shape_row_,
                         this->partition_shape_column_);
@@ -200,4 +209,14 @@ void GlobalDataFrameBuilder::set_partition_shape(
   this->AddKeyValue("partition_shape_row_", partition_shape_row_);
   this->AddKeyValue("partition_shape_column_", partition_shape_column_);
 }
+
+void GlobalDataFrameBuilder::AddPartition(const ObjectID partition_id) {
+  this->AddMember(partition_id);
+}
+
+void GlobalDataFrameBuilder::AddPartitions(
+    const std::vector<ObjectID>& partition_ids) {
+  this->AddMembers(partition_ids);
+}
+
 }  // namespace vineyard

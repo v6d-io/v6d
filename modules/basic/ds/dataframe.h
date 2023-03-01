@@ -140,6 +140,10 @@ class GlobalDataFrame : public BareRegistered<GlobalDataFrame>,
    */
   const std::pair<size_t, size_t> partition_shape() const;
 
+  /// backwards compatibility
+  const std::vector<std::shared_ptr<DataFrame>> LocalPartitions(
+      Client& client) const;
+
  private:
   size_t partition_shape_row_;
   size_t partition_shape_column_;
@@ -177,6 +181,10 @@ class GlobalDataFrameBuilder : public CollectionBuilder<DataFrame> {
    */
   void set_partition_shape(const size_t partition_shape_row,
                            const size_t partition_shape_column);
+
+  /// Backwards compatibility
+  void AddPartition(const ObjectID partition_id);
+  void AddPartitions(const std::vector<ObjectID>& partition_ids);
 
  private:
   size_t partition_shape_row_;
