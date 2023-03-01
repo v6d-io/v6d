@@ -132,9 +132,27 @@ class PropertyGraphSchema {
   void set_fnum(size_t fnum) { fnum_ = fnum; }
   size_t fnum() const { return fnum_; }
 
+  /**
+   * N.B.: only valid ones.
+   */
   std::vector<Entry> vertex_entries() const;
 
+  /**
+   * N.B.: only valid ones.
+   */
   std::vector<Entry> edge_entries() const;
+
+  std::vector<Entry> AllVertexEntries() const;
+
+  std::vector<Entry> AllEdgeEntries() const;
+
+  std::vector<Entry> ValidVertexEntries() const;
+
+  std::vector<Entry> ValidEdgeEntries() const;
+
+  bool IsVertexValid(const LabelId label_id) const;
+
+  bool IsEdgeValid(const LabelId label_id) const;
 
   std::vector<std::string> GetVertexLabels() const;
 
