@@ -12,7 +12,7 @@ limitations under the License.
 
 #include "graph/grin/src/predefine.h"
 
-#ifdef WITH_PROPERTY_NAME
+#if defined(WITH_PROPERTY_NAME) && defined(WITH_VERTEX_PROPERTY)
 const char* get_vertex_property_name(Graph g, VertexProperty vp) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vp = static_cast<VertexProperty_T*>(vp);
@@ -41,7 +41,9 @@ VertexPropertyList get_vertex_properties_by_name(Graph g, const char* name) {
     }
     return vpl;
 }
+#endif
 
+#if defined(WITH_PROPERTY_NAME) && defined(WITH_EDGE_PROPERTY)
 const char* get_edge_property_name(Graph g, EdgeProperty ep) {
     auto _g = static_cast<Graph_T*>(g);
     auto _ep = static_cast<EdgeProperty_T*>(ep);
@@ -74,6 +76,12 @@ EdgePropertyList get_edge_properties_by_name(Graph g, const char* name) {
 
 
 #ifdef WITH_VERTEX_PROPERTY
+bool equal_vertex_property(VertexProperty vp1, VertexProperty vp2) {
+    auto _vp1 = static_cast<VertexProperty_T*>(vp1);
+    auto _vp2 = static_cast<VertexProperty_T*>(vp2);
+    return (*_vp1 == *_vp2);
+}
+
 void destroy_vertex_property(VertexProperty vp) {
     auto _vp = static_cast<VertexProperty_T*>(vp);
     delete _vp;
@@ -95,12 +103,18 @@ VertexType get_vertex_property_vertex_type(VertexProperty vp) {
 
 
 #ifdef WITH_EDGE_PROPERTY
+bool equal_edge_property(EdgeProperty ep1, EdgeProperty ep2) {
+    auto _ep1 = static_cast<EdgeProperty_T*>(ep1);
+    auto _ep2 = static_cast<EdgeProperty_T*>(ep2);
+    return (*_ep1 == *_ep2);
+}
+
 void destroy_edge_property(EdgeProperty ep) {
     auto _ep = static_cast<EdgeProperty_T*>(ep);
     delete _ep;
 }
 
-DataType get_edge_property_type(Graph g, EdgeProperty ep) {
+DataType get_edge_property_data_type(Graph g, EdgeProperty ep) {
     auto _g = static_cast<Graph_T*>(g);
     auto _ep = static_cast<EdgeProperty_T*>(ep);
     auto dt = _g->schema().GetEdgePropertyType(_ep->first, _ep->second);

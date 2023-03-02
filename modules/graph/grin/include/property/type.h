@@ -22,6 +22,8 @@ limitations under the License.
 
 #ifdef WITH_VERTEX_PROPERTY
 // Vertex type
+bool equal_vertex_type(VertexType, VertexType);
+
 VertexType get_vertex_type(Graph, Vertex);
 
 const char* get_vertex_type_name(Graph, VertexType);
@@ -52,6 +54,8 @@ VertexType get_vertex_type_from_id(VertexTypeID);
 
 #ifdef WITH_EDGE_PROPERTY
 // Edge type
+bool equal_edge_type(EdgeType, EdgeType);
+
 EdgeType get_edge_type(Graph, Edge);
 
 const char* get_edge_type_name(Graph, EdgeType);

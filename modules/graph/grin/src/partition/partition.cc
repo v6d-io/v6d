@@ -66,6 +66,12 @@ Partition get_partition_from_list(PartitionList pl, size_t idx) {
     return p;
 }
 
+bool equal_partition(Partition p1, Partition p2) {
+    auto _p1 = static_cast<Partition_T*>(p1);
+    auto _p2 = static_cast<Partition_T*>(p2);
+    return (*_p1 == *_p2);
+}
+
 void destroy_partition(Partition p) {
     auto _p = static_cast<Partition_T*>(p);
     delete _p;
@@ -161,7 +167,7 @@ AdjacentList get_adjacent_mirror_list_by_partition(Graph g, Direction d,
 
 
 #ifdef ENABLE_VERTEX_REF
-VertexRef get_vertex_ref_for_vertex(Graph g, Partition p, Vertex v) {
+VertexRef get_vertex_ref_for_vertex(Graph g, Vertex v) {
     auto _g = static_cast<Graph_T*>(g);
     auto _v = static_cast<Vertex_T*>(v);
     auto gid = _g->Vertex2Gid(*_v);
