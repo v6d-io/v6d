@@ -15,10 +15,23 @@ limitations under the License.
 */
 package util
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+
+	"github.com/v6d-io/v6d/k8s/pkg/log"
+)
 
 func AssertNoArgs(cmd *cobra.Command, args []string) {
 	if err := cobra.NoArgs(cmd, args); err != nil {
-		ErrLogger.Fatalf("Expects no positional arguments: %+v", err)
+		log.Fatal(err, "Expects no positional arguments")
+	}
+}
+
+func AssertNoArgsOrInput(cmd *cobra.Command, args []string) {
+	if err := cobra.NoArgs(cmd, args); err != nil {
+		if args[0] == "-" {
+			return
+		}
+		log.Fatal(err, "Expects no positional arguments")
 	}
 }

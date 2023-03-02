@@ -32,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	listerv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
-	"k8s.io/klog/v2"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -42,7 +41,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var slog = log.Logger.WithName("vineyard-scheduler-in-cluster")
+var slog = log.Log.WithName("vineyard-scheduler-in-cluster")
 
 const (
 	// Name is the name of the plugin used in Registry and configurations.
@@ -193,7 +192,6 @@ func (vs *VineyardScheduling) getJobName(pod *v1.Pod) (string, error) {
 }
 
 func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int64, error) {
-	klog.V(5).Infof("analyzing job replica ...")
 	// infer from the ownership
 	ctx := context.TODO()
 	// ctx := context.Background()

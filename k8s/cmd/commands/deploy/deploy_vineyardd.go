@@ -16,8 +16,6 @@ limitations under the License.
 package deploy
 
 import (
-	"log"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -26,6 +24,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -116,14 +115,12 @@ var deployVineyarddCmd = &cobra.Command{
 	Long:    deployVineyarddLong,
 	Example: deployVineyarddExample,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) > 0 && args[0] != "-" {
-			util.ErrLogger.Fatal("invalid argument: ", args)
-		}
+		util.AssertNoArgsOrInput(cmd, args)
 
 		// Check if the input is coming from stdin
 		str, err := util.ReadJsonFromStdin(args)
 		if err != nil {
-			log.Fatalf("failed to parse from stdin: %v", err)
+			log.Fatal(err, "failed to parse from stdin")
 		}
 		if str != "" {
 			flags.VineyardSpillPVandPVC = str
@@ -133,7 +130,7 @@ var deployVineyarddCmd = &cobra.Command{
 
 		vineyardd, err := BuildVineyard()
 		if err != nil {
-			util.ErrLogger.Fatalf("failed to build vineyardd: %+v", err)
+			log.Fatal(err, "failed to build vineyardd")
 		}
 
 		var waitVineyarddFuc func(vineyardd *v1alpha1.Vineyardd) bool
@@ -143,10 +140,10 @@ var deployVineyarddCmd = &cobra.Command{
 			}
 		}
 		if err := util.Create(client, vineyardd, waitVineyarddFuc); err != nil {
-			util.ErrLogger.Fatalf("failed to create/wait vineyardd: %+v", err)
+			log.Fatal(err, "failed to create/wait vineyardd")
 		}
 
-		util.InfoLogger.Println("Vineyardd is ready.")
+		log.Info("Vineyardd is ready.")
 	},
 }
 
@@ -155,14 +152,14 @@ func BuildVineyard() (*v1alpha1.Vineyardd, error) {
 	if flags.VineyarddFile != "" {
 		vineyardd, err := BuildVineyardManifestFromFile()
 		if err != nil {
-			util.ErrLogger.Fatal("failed to build the vineyardd from file: ", err)
+			log.Fatal(err, "failed to build the vineyardd from file")
 		}
 		return vineyardd, nil
 
 	}
 	vineyardd, err := BuildVineyardManifestFromInput()
 	if err != nil {
-		util.ErrLogger.Fatal("failed to build the vineyardd from input: ", err)
+		log.Fatal(err, "failed to build the vineyardd from input")
 	}
 	return vineyardd, nil
 }

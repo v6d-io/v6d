@@ -28,21 +28,19 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-
 	"github.com/v6d-io/v6d/k8s/cmd/commands/manager"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/schedule"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/sidecar"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util/usage"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var (
-	cmdLong = util.LongDesc(`vineyardctl is the command-line
+var cmdLong = util.LongDesc(`vineyardctl is the command-line
 	tool for working with the Vineyard Operator. It supports creating,
 	deleting and checking status of Vineyard Operator. It also supports
 	managing the vineyard relevant components such as vineyardd and pluggable
 	drivers`)
-)
 
 var cmd = &cobra.Command{
 	Use:     "vineyardctl [command]",
@@ -75,8 +73,7 @@ func init() {
 func main() {
 	tryUsageAndDocs()
 	if err := cmd.Execute(); err != nil {
-		util.ErrLogger.Fatalf("Failed to execute root command: %+v", err)
-		os.Exit(-1)
+		log.Fatal(err, "Failed to execute root command")
 	}
 }
 

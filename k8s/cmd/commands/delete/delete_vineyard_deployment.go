@@ -24,6 +24,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -51,10 +52,10 @@ var deleteVineyardDeploymentCmd = &cobra.Command{
 		client := util.KubernetesClient()
 
 		if err := deleteVineyarddFromTemplate(client); err != nil {
-			util.ErrLogger.Fatalf("failed to delete vineyardd resources from template: %+v", err)
+			log.Fatal(err, "failed to delete vineyardd resources from template")
 		}
 
-		util.InfoLogger.Println("vineyard cluster deleted successfully")
+		log.Info("vineyard cluster deleted successfully")
 	},
 }
 

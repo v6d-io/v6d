@@ -32,11 +32,11 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
@@ -185,7 +185,7 @@ func (r *VineyarddReconciler) UpdateStatus(
 	name := client.ObjectKey{Name: vineyardd.Name, Namespace: vineyardd.Namespace}
 	deployment := appsv1.Deployment{}
 	if err := r.Get(ctx, name, &deployment); err != nil {
-		ctrl.Log.V(1).Error(err, "failed to get deployment")
+		log.V(1).Error(err, "failed to get deployment")
 	}
 
 	// get the running vineyardd

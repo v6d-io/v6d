@@ -33,11 +33,11 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/operation"
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 	"k8s.io/client-go/kubernetes"
@@ -185,7 +185,7 @@ func (r *RecoverReconciler) UpdateStateStatus(
 	name := client.ObjectKey{Name: "recover-" + backup.Name, Namespace: backup.Namespace}
 	job := batchv1.Job{}
 	if err := r.Get(ctx, name, &job); err != nil {
-		ctrl.Log.V(1).Error(err, "failed to get job")
+		log.V(1).Error(err, "failed to get job")
 	}
 
 	// get job state
@@ -213,7 +213,7 @@ func (r *RecoverReconciler) UpdateMappingStatus(
 	job := batchv1.Job{}
 	err := r.Get(ctx, name, &job)
 	if err != nil {
-		ctrl.Log.V(1).Error(err, "failed to get job")
+		log.V(1).Error(err, "failed to get job")
 	}
 	// if job completd and deleted after ttl
 	if apierrors.IsNotFound(err) {
@@ -230,14 +230,14 @@ func (r *RecoverReconciler) UpdateMappingStatus(
 		},
 	}
 	if err := r.List(ctx, podList, opts...); err != nil {
-		ctrl.Log.V(1).Error(err, "failed to list pod created by job")
+		log.V(1).Error(err, "failed to list pod created by job")
 		return err
 	}
 
 	for i := range podList.Items {
 		mapping, err := r.getObjectMappingFromPodLogs(&podList.Items[i])
 		if err != nil {
-			ctrl.Log.V(1).Error(err, "failed to get logs from pods")
+			log.V(1).Error(err, "failed to get logs from pods")
 			return err
 		}
 		for k, v := range mapping {

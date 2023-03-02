@@ -29,6 +29,7 @@ import (
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -65,21 +66,21 @@ var deployCertManagerCmd = &cobra.Command{
 
 		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
 		if err != nil {
-			util.ErrLogger.Fatal("failed to get cert-manager manifests: ", err)
+			log.Fatal(err, "failed to get cert-manager manifests")
 		}
 
 		if err := util.ApplyManifests(client, certManagerManifests,
 			""); err != nil {
-			util.ErrLogger.Fatal("failed to apply cert-manager manifests: ", err)
+			log.Fatal(err, "failed to apply cert-manager manifests")
 		}
 
 		if flags.Wait {
 			if err := waitCertManagerReady(client); err != nil {
-				util.ErrLogger.Fatal("failed to wait cert-manager ready: ", err)
+				log.Fatal(err, "failed to wait cert-manager ready")
 			}
 		}
 
-		util.InfoLogger.Println("Cert-Manager is ready.")
+		log.Info("Cert-Manager is ready.")
 	},
 }
 

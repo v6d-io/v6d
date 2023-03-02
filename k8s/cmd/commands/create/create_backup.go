@@ -25,6 +25,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -109,14 +110,12 @@ var createBackupCmd = &cobra.Command{
 	Long:    createBackupLong,
 	Example: createBackupExample,
 	Run: func(cmd *cobra.Command, args []string) {
-		if len(args) > 0 && args[0] != "-" {
-			util.ErrLogger.Fatal("invalid argument: ", args)
-		}
+		util.AssertNoArgsOrInput(cmd, args)
 
 		// Check if the input is coming from stdin
 		str, err := util.ReadJsonFromStdin(args)
 		if err != nil {
-			util.ErrLogger.Fatalf("failed to parse from stdin: %v", err)
+			log.Fatal(err, "failed to parse from stdin")
 		}
 		if str != "" {
 			flags.BackupPVandPVC = str
@@ -125,15 +124,15 @@ var createBackupCmd = &cobra.Command{
 
 		backup, err := buildBackupJob()
 		if err != nil {
-			util.ErrLogger.Fatalf("failed to build backup job: %+v", err)
+			log.Fatal(err, "failed to build backup job")
 		}
 
 		if err := util.Create(client, backup, func(backup *v1alpha1.Backup) bool {
 			return backup.Status.State != k8s.SucceedState
 		}); err != nil {
-			util.ErrLogger.Fatalf("failed to create/wait backup job: %+v", err)
+			log.Fatal(err, "failed to create/wait backup job")
 		}
-		util.InfoLogger.Println("Backup Job is ready.")
+		log.Info("Backup Job is ready.")
 	},
 }
 

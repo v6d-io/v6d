@@ -31,6 +31,7 @@ import (
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -121,16 +122,16 @@ var scheduleWorkloadCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		if err := validateWorkload(flags.Resource); err != nil {
-			util.ErrLogger.Fatal("failed to validate the workload: ", err)
+			log.Fatal(err, "failed to validate the workload")
 		}
 		client := util.KubernetesClient()
 
 		workload, err := SchedulingWorkload(client)
 		if err != nil {
-			util.ErrLogger.Fatal("failed to schedule workload: ", err)
+			log.Fatal(err, "failed to schedule workload")
 		}
 
-		util.InfoLogger.Println(workload)
+		log.Info(workload)
 	},
 }
 

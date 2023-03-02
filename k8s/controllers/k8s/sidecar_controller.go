@@ -31,11 +31,11 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
@@ -150,7 +150,7 @@ func (r *SidecarReconciler) UpdateStatus(ctx context.Context, sidecar *k8sv1alph
 		},
 	}
 	if err := r.List(ctx, podList, opts...); err != nil {
-		ctrl.Log.V(1).Error(err, "failed to list pod")
+		log.V(1).Error(err, "failed to list pod")
 		return err
 	}
 

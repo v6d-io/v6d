@@ -35,6 +35,7 @@ import (
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 const (
@@ -65,12 +66,12 @@ func KubernetesClient() client.Client {
 	if err != nil {
 		cfg, err = rest.InClusterConfig()
 		if err != nil {
-			ErrLogger.Fatalf("Failed to resolve the KUBECONFIG: %+v", err)
+			log.Fatal(err, "Failed to resolve the KUBECONFIG")
 		}
 	}
 	client, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
-		ErrLogger.Fatalf("failed to create the kubernetes API client: %+v", err)
+		log.Fatal(err, "failed to create the kubernetes API client")
 	}
 	return client
 }

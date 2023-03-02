@@ -234,7 +234,7 @@ func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubecon
 		return false
 	}
 
-	// use the previous workload as ownerreference
+	// use the previous workload as ownerReference
 	if err := c.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, obj); err != nil {
 		fmt.Println("failed to get workload", err)
 		return false

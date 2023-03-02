@@ -34,6 +34,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 	"github.com/v6d-io/v6d/k8s/pkg/injector"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
@@ -64,12 +65,12 @@ var injectCmd = &cobra.Command{
 
 		resource, err := util.ReadFromFile(flags.WorkloadYaml)
 		if err != nil {
-			util.ErrLogger.Fatal(err)
+			log.Fatal(err, "failed to read the YAML spec from file")
 		}
 
 		yamls, err := GetManifestFromTemplate(resource)
 		if err != nil {
-			util.ErrLogger.Fatal(err)
+			log.Fatal(err, "failed to load manifest from template")
 		}
 
 		fmt.Println(strings.Join(yamls, "---\n"))

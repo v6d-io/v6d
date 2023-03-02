@@ -26,6 +26,7 @@ import (
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -67,21 +68,21 @@ var deployOperatorCmd = &cobra.Command{
 
 		operatorManifests, err := util.BuildKustomizeInDir(util.GetKustomizeDir())
 		if err != nil {
-			util.ErrLogger.Fatal("failed to build kustomize dir: ", err)
+			log.Fatal(err, "failed to build kustomize dir")
 		}
 
 		if err := util.ApplyManifests(client, operatorManifests,
 			flags.GetDefaultVineyardNamespace()); err != nil {
-			util.ErrLogger.Fatal("failed to apply operator manifests: ", err)
+			log.Fatal(err, "failed to apply operator manifests")
 		}
 
 		if flags.Wait {
 			if err := waitOperatorReady(client); err != nil {
-				util.ErrLogger.Fatal("failed to wait operator ready: ", err)
+				log.Fatal(err, "failed to wait operator ready")
 			}
 		}
 
-		util.InfoLogger.Println("Vineyard Operator is ready.")
+		log.Info("Vineyard Operator is ready.")
 	},
 }
 

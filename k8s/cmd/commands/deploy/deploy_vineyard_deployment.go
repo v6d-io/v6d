@@ -30,6 +30,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
@@ -69,10 +70,10 @@ var deployVineyardDeploymentCmd = &cobra.Command{
 		client := util.KubernetesClient()
 
 		if err := applyVineyarddFromTemplate(client); err != nil {
-			util.ErrLogger.Fatal("failed to apply vineyardd resources from template: ", err)
+			log.Fatal(err, "failed to apply vineyardd resources from template")
 		}
 
-		util.InfoLogger.Println("vineyard cluster deployed successfully")
+		log.Info("vineyard cluster deployed successfully")
 	},
 }
 
