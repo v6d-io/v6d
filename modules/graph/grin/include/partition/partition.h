@@ -38,6 +38,8 @@ size_t get_partition_list_size(PartitionList);
 
 Partition get_partition_from_list(PartitionList, size_t);
 
+bool equal_partition(Partition, Partition);
+
 void destroy_partition(Partition);
 
 void* get_partition_info(PartitionedGraph, Partition);
@@ -103,7 +105,7 @@ AdjacentList get_adjacent_mirror_list_by_partition(Graph, Direction,
 // while edge ref is likewise. Both can be serialized to const char* for
 // message transporting and deserialized on the other end.
 #ifdef ENABLE_VERTEX_REF
-VertexRef get_vertex_ref_for_vertex(Graph, Partition, Vertex);
+VertexRef get_vertex_ref_for_vertex(Graph, Vertex);
 
 /**
  * @brief get the local vertex from the vertex ref

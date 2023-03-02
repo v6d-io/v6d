@@ -46,7 +46,6 @@ limitations under the License.
 #include "graph/vertex_map/arrow_local_vertex_map.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
-extern "C" {
 #include "graph/grin/include/topology/structure.h"
 #include "graph/grin/include/topology/vertexlist.h"
 #include "graph/grin/include/topology/adjacentlist.h"
@@ -55,7 +54,6 @@ extern "C" {
 #include "graph/grin/include/property/property.h"
 #include "graph/grin/include/property/propertylist.h"
 #include "graph/grin/include/property/propertytable.h"
-}
 
 #include "graph/grin/src/predefine.h"
 
@@ -307,12 +305,10 @@ class GRIN_ArrowFragment {
  public:
   ~GRIN_ArrowFragment() = default;
 
-  void init(void* partitioned_graph, size_t idx) {
+  void init(void* partitioned_graph, void* partition) {
     pg_ = partitioned_graph;
-    auto pl = get_local_partition_list(pg_);
-    assert(idx < get_partition_list_size(pl));
-    partition_ = get_partition_from_list(pl, idx);
-    g_ = get_local_graph_from_partition(pg_, partition_); 
+    partition_ = partition;
+    g_ = get_local_graph_from_partition(pg_, partition_);
   }
 
   bool directed() const {
@@ -417,7 +413,7 @@ class GRIN_ArrowFragment {
   }
 
   void* GetFragId(void* u) const {
-    auto vref = get_vertex_ref_for_vertex(g_, partition_, u);
+    auto vref = get_vertex_ref_for_vertex(g_, u);
     return get_master_partition_from_vertex_ref(g_, vref); 
   }
 

@@ -14,6 +14,12 @@ limitations under the License.
 #include "graph/grin/include/property/type.h"
 
 #ifdef WITH_VERTEX_PROPERTY
+bool equal_vertex_type(VertexType vt1, VertexType vt2) {
+    auto _vt1 = static_cast<VertexType_T*>(vt1);
+    auto _vt2 = static_cast<VertexType_T*>(vt2);
+    return (*_vt1 == *_vt2);
+}
+
 VertexType get_vertex_type(Graph g, Vertex v) {
     auto _g = static_cast<Graph_T*>(g);
     auto _v = static_cast<Vertex_T*>(v);
@@ -91,6 +97,12 @@ VertexType get_vertex_type_from_id(VertexTypeID vti) {
 
 
 #ifdef WITH_EDGE_PROPERTY
+bool equal_edge_type(EdgeType et1, EdgeType et2) {
+    auto _et1 = static_cast<EdgeType_T*>(et1);
+    auto _et2 = static_cast<EdgeType_T*>(et2);
+    return (*_et1 == *_et2);
+}
+
 EdgeType get_edge_type(Graph g, Edge e) {
     auto _e = static_cast<Edge_T*>(e);
     auto et = new EdgeType_T(_e->etype);

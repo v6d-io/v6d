@@ -70,6 +70,8 @@ EdgePropertyList get_edge_properties_by_name(Graph, const char* name);
 
 
 #ifdef WITH_VERTEX_PROPERTY
+bool equal_vertex_property(VertexProperty, VertexProperty);
+
 /**
  * @brief destroy vertex property
  * @param VertexProperty vertex property
@@ -91,6 +93,8 @@ VertexType get_vertex_property_vertex_type(VertexProperty);
 
 
 #ifdef WITH_EDGE_PROPERTY
+bool equal_edge_property(EdgeProperty, EdgeProperty);
+
 /**
  * @brief destroy edge property
  * @param EdgeProperty edge property

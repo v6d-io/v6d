@@ -25,21 +25,14 @@ limitations under the License.
 #include "graph/fragment/graph_schema.h"
 #include "graph/loader/arrow_fragment_loader.h"
 
-using namespace vineyard;  // NOLINT(build/namespaces)
-
-using GraphType = ArrowFragment<property_graph_types::OID_TYPE,
-                                property_graph_types::VID_TYPE>;
+using GraphType = vineyard::ArrowFragment<vineyard::property_graph_types::OID_TYPE,
+                                          vineyard::property_graph_types::VID_TYPE>;
 using LabelType = typename GraphType::label_id_t;
 
-void TraverseLocalGraph(vineyard::Client& client, const grape::CommSpec& comm_spec,
-                        vineyard::ObjectID fragment_group_id) {
-  LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
 
-  auto pg = get_partitioned_graph_by_object_id(client, fragment_group_id);
-
-  GRIN_ArrowFragment gaf;
-  gaf.init(pg, 0);
-
+void TraverseLocalGraph(void* partitioned_graph, void* partition) {
+  vineyard::GRIN_ArrowFragment gaf;
+  gaf.init(partitioned_graph, partition);
   auto g = gaf.get_graph();
 
   auto elabels = get_edge_type_list(g);
@@ -68,13 +61,27 @@ void TraverseLocalGraph(vineyard::Client& client, const grape::CommSpec& comm_sp
       }
     }
   }
+}
 
+
+void traverse(vineyard::Client& client, const grape::CommSpec& comm_spec,
+              vineyard::ObjectID fragment_group_id) {
+  LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
+
+  auto pg = get_partitioned_graph_by_object_id(client, fragment_group_id);
+  auto local_partitions = get_local_partition_list(pg);
+  size_t pnum = get_partition_list_size(local_partitions);
+  assert(pnum > 0);
+
+  // we only traverse the first partition for test
+  auto partition = get_partition_from_list(local_partitions, 0);
+  TraverseLocalGraph(pg, partition);
 }
 
 int main(int argc, char** argv) {
   if (argc < 6) {
     printf(
-        "usage: ./arrow_fragment_test <ipc_socket> <e_label_num> <efiles...> "
+        "usage: ./grin_arrow_fragment_test <ipc_socket> <e_label_num> <efiles...> "
         "<v_label_num> <vfiles...> [directed]\n");
     return 1;
   }
@@ -147,23 +154,23 @@ int main(int argc, char** argv) {
 #else
     {
       auto loader =
-          std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
-                                               property_graph_types::VID_TYPE>>(
+          std::make_unique<vineyard::ArrowFragmentLoader<vineyard::property_graph_types::OID_TYPE,
+                                                         vineyard::property_graph_types::VID_TYPE>>(
               client, comm_spec, efiles, vfiles, directed != 0);
       vineyard::ObjectID fragment_group_id =
           loader->LoadFragmentAsFragmentGroup().value();
-      TraverseLocalGraph(client, comm_spec, fragment_group_id);
+      traverse(client, comm_spec, fragment_group_id);
     }
 
     // Load from efiles
     {
       auto loader =
-          std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
-                                               property_graph_types::VID_TYPE>>(
+          std::make_unique<vineyard::ArrowFragmentLoader<vineyard::property_graph_types::OID_TYPE,
+                                                         vineyard::property_graph_types::VID_TYPE>>(
               client, comm_spec, efiles, directed != 0);
       vineyard::ObjectID fragment_group_id =
           loader->LoadFragmentAsFragmentGroup().value();
-      TraverseLocalGraph(client, comm_spec, fragment_group_id);
+      traverse(client, comm_spec, fragment_group_id);
     }
 #endif
   }

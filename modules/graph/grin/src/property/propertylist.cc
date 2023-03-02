@@ -14,7 +14,7 @@ limitations under the License.
 #include "graph/grin/include/property/propertylist.h"
 
 #ifdef WITH_VERTEX_PROPERTY
-VertexPropertyList get_all_vertex_properties_by_type(Graph g, VertexType vtype) {
+VertexPropertyList get_vertex_property_list_by_type(Graph g, VertexType vtype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _vtype = static_cast<VertexType_T*>(vtype);
     auto vpl = new VertexPropertyList_T();
@@ -71,7 +71,7 @@ VertexPropertyID get_vertex_property_id(VertexType vtype, VertexProperty vp) {
 
 
 #ifdef WITH_EDGE_PROPERTY
-EdgePropertyList get_all_edge_properties_by_type(Graph g, EdgeType etype) {
+EdgePropertyList get_edge_property_list_by_type(Graph g, EdgeType etype) {
     auto _g = static_cast<Graph_T*>(g);
     auto _etype = static_cast<EdgeType_T*>(etype);
     auto epl = new EdgePropertyList_T();
