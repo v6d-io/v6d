@@ -22,7 +22,8 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "nlohmann/json.hpp"
+// make sure bundled one is used
+#include "single_include/nlohmann/json.hpp"
 
 #include "common/util/macros.h"
 

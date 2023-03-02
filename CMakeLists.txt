@@ -434,12 +434,12 @@ macro(find_nlohmann_json)
         add_definitions(-DJSON_DIAGNOSTICS=0)
     endif()
     add_definitions(-DJSON_USE_LEGACY_DISCARDED_VALUE_COMPARISON=0)
-    install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/nlohmann-json/single_include/nlohmann"
+    install(DIRECTORY "${PROJECT_SOURCE_DIR}/thirdparty/nlohmann-json/single_include"
             DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
             PATTERN "*.hpp"
     )
     include_directories(BEFORE SYSTEM
-                        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/nlohmann-json/single_include>
+                        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/thirdparty/nlohmann-json>
                         $<INSTALL_INTERFACE:include/vineyard/contrib>
     )
 endmacro()
@@ -825,8 +825,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
     pybind11_add_module(_C MODULE ${PYTHON_BIND_FILES})
     target_add_debuginfo(_C)
     target_link_libraries(_C PRIVATE vineyard_client)
-    target_include_directories(_C PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
-                                         thirdparty/pybind11/include)
+    target_include_directories(_C PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/pybind11/include")
     target_compile_options(_C PRIVATE -Wno-unused-value)
     set_target_properties(_C PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/shared-lib")
     if(UNIX AND NOT APPLE)
