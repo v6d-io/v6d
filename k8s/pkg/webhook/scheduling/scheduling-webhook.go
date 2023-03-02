@@ -35,7 +35,7 @@ import (
 
 // Injector injects scheduling info into pods.
 type Injector struct {
-	Client  client.Client
+	client.Client
 	decoder *admission.Decoder
 }
 
@@ -67,7 +67,7 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 	kv := strings.Split(selector, "=")
 
 	podList := &corev1.PodList{}
-	if err := r.Client.List(ctx, podList, client.MatchingLabels{kv[0]: kv[1]}); err != nil {
+	if err := r.List(ctx, podList, client.MatchingLabels{kv[0]: kv[1]}); err != nil {
 		fmt.Println("faled to list pod", err)
 	}
 

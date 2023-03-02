@@ -36,6 +36,7 @@ import (
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/pkg/operation"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 // BackupConfig holds all configuration about backup
@@ -67,9 +68,8 @@ func getResourceStorage(q resource.Quantity) string {
 // BackupReconciler reconciles a Backup object
 type BackupReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Template kubernetes.Repo
-	Recorder record.EventRecorder
+	record.EventRecorder
+	Scheme *runtime.Scheme
 }
 
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=backups,verbs=get;list;watch;create;update;patch;delete
@@ -102,14 +102,14 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 
 	app := kubernetes.Application{
 		Client:   r.Client,
-		FileRepo: r.Template,
+		FileRepo: templates.Repo,
 		CR:       &backup,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Backup"),
 		TmplFunc: map[string]interface{}{
 			"getResourceStorage": getResourceStorage,
 			"getBackupConfig":    getBackupConfig,
 		},
-		Recorder: r.Recorder,
+		Recorder: r.EventRecorder,
 	}
 
 	Backup.Name = "backup-" + backup.Spec.VineyarddName + "-" + backup.Spec.VineyarddNamespace
@@ -173,7 +173,7 @@ func (r *BackupReconciler) UpdateStatus(ctx context.Context, backup *k8sv1alpha1
 		Namespace: backup.Namespace,
 	}
 	job := batchv1.Job{}
-	if err := r.Client.Get(ctx, name, &job); err != nil {
+	if err := r.Get(ctx, name, &job); err != nil {
 		ctrl.Log.V(1).Error(err, "failed to get job")
 	}
 
@@ -196,7 +196,7 @@ func (r *BackupReconciler) applyStatusUpdate(ctx context.Context,
 ) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		name := client.ObjectKey{Name: backup.Name, Namespace: backup.Namespace}
-		if err := r.Client.Get(ctx, name, backup); err != nil {
+		if err := r.Get(ctx, name, backup); err != nil {
 			return errors.Wrap(err, "failed to get backup")
 		}
 		backup.Status = *status
@@ -204,7 +204,7 @@ func (r *BackupReconciler) applyStatusUpdate(ctx context.Context,
 		if err := kubernetes.ApplyOverlay(backup, &k8sv1alpha1.Backup{Status: *status}); err != nil {
 			return errors.Wrap(err, "failed to overlay backup's status")
 		}
-		if err := r.Client.Status().Update(ctx, backup); err != nil {
+		if err := r.Status().Update(ctx, backup); err != nil {
 			return errors.Wrap(err, "failed to update backup's status")
 		}
 		return nil

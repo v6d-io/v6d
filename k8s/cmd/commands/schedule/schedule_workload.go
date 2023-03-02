@@ -34,8 +34,8 @@ import (
 )
 
 var (
-	scheduleWorkloadLong = util.LongDesc(`ScheduleWorkload schedules 
-	the workload to a vineyard cluster. It will add the podAffinity to the workload 
+	scheduleWorkloadLong = util.LongDesc(`ScheduleWorkload schedules
+	the workload to a vineyard cluster. It will add the podAffinity to the workload
 	so that the workload will be scheduled to the vineyard cluster.`)
 
 	scheduleWorkloadExample = util.Examples(`
@@ -134,7 +134,7 @@ var scheduleWorkloadCmd = &cobra.Command{
 	},
 }
 
-func NewScheduleWorkloadCmd() *cobra.Command {
+func newScheduleWorkloadCmd() *cobra.Command {
 	return scheduleWorkloadCmd
 }
 
@@ -214,8 +214,7 @@ func SchedulingWorkload(c client.Client) (string, error) {
 	} else {
 		podAffinity := affinity["podAffinity"].(map[string]interface{})
 		if podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] == nil {
-			podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] =
-				newPodAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+			podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] = newPodAffinity.RequiredDuringSchedulingIgnoredDuringExecution
 		} else {
 			required := podAffinity["requiredDuringSchedulingIgnoredDuringExecution"].([]interface{})
 			required = append(required,

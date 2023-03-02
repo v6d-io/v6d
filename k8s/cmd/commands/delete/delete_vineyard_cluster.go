@@ -41,18 +41,18 @@ var deleteVineyardClusterCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 
 		// delete vineyardd
-		NewDeleteVineyarddCmd().Run(cmd, args)
+		newDeleteVineyarddCmd().Run(cmd, args)
 
 		// delete vineyard operator
-		NewDeleteOperatorCmd().Run(cmd, args)
+		newDeleteOperatorCmd().Run(cmd, args)
 
 		// delete cert-manager
-		NewDeleteCertManagerCmd().Run(cmd, args)
+		newDeleteCertManagerCmd().Run(cmd, args)
 
 		util.InfoLogger.Println("Vineyard Cluster is deleted.")
 	},
 }
 
-func NewDeleteVineyardClusterCmd() *cobra.Command {
+func newDeleteVineyardClusterCmd() *cobra.Command {
 	return deleteVineyardClusterCmd
 }

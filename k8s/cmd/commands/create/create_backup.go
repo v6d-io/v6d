@@ -29,12 +29,12 @@ import (
 
 var (
 	createBackupLong = util.LongDesc(`
-	Backup the current vineyard cluster on kubernetes. You could backup all objects 
-	of the current vineyard cluster quickly. For persistent storage, you could specify 
+	Backup the current vineyard cluster on kubernetes. You could backup all objects
+	of the current vineyard cluster quickly. For persistent storage, you could specify
 	the pv spec and pv spec.`)
 
 	createBackupExample = util.Examples(`
-	# create a backup job for the vineyard cluster on kubernetes 
+	# create a backup job for the vineyard cluster on kubernetes
 	# you could define the pv and pvc spec from json string as follows
 	vineyardctl create backup \
 		--vineyardd-name vineyardd-sample \
@@ -66,8 +66,8 @@ var (
 				}
 			}
 			}'
-	
-	# create a backup job for the vineyard cluster on kubernetes 
+
+	# create a backup job for the vineyard cluster on kubernetes
 	# you could define the pv and pvc spec from yaml string as follows
 	vineyardctl create backup \
 		--vineyardd-name vineyardd-sample \
@@ -91,7 +91,7 @@ var (
 			requests:
 			storage: 1Gi
 		'
-	
+
 	# create a backup job for the vineyard cluster on kubernetes
 	# you could define the pv and pvc spec from json file as follows
 	# also you could use yaml file instead of json file
@@ -137,7 +137,7 @@ var createBackupCmd = &cobra.Command{
 	},
 }
 
-func NewCreateBackupCmd() *cobra.Command {
+func newCreateBackupCmd() *cobra.Command {
 	return createBackupCmd
 }
 

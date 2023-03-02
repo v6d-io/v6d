@@ -37,9 +37,9 @@ import (
 )
 
 var (
-	cmdLong = util.LongDesc(`vineyardctl is the command-line 
-	tool for working with the Vineyard Operator. It supports creating, 
-	deleting and checking status of Vineyard Operator. It also supports 
+	cmdLong = util.LongDesc(`vineyardctl is the command-line
+	tool for working with the Vineyard Operator. It supports creating,
+	deleting and checking status of Vineyard Operator. It also supports
 	managing the vineyard relevant components such as vineyardd and pluggable
 	drivers`)
 )

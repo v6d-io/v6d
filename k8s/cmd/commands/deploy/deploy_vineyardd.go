@@ -29,7 +29,7 @@ import (
 )
 
 var (
-	deployVineyarddLong = util.LongDesc(`Deploy the vineyardd on kubernetes. 
+	deployVineyarddLong = util.LongDesc(`Deploy the vineyardd on kubernetes.
 	You could deploy a customized vineyardd from stdin or file.`)
 
 	deployVineyarddExample = util.Examples(`
@@ -43,11 +43,11 @@ var (
 
 	# deploy the vineyardd from a yaml file
 	vineyardctl --kubeconfig $HOME/.kube/config deploy vineyardd --file vineyardd.yaml
-	
+
 	# deploy the vineyardd with customized image
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
 		--image vineyardd:v0.12.2
-	
+
 	# deploy the vineyardd with spill mechnism on persistent storage from json string
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
 		--vineyardd.spill.config spill-path \
@@ -77,7 +77,7 @@ var (
 				}
 			}
 		}'
-	
+
 	# deploy the vineyardd with spill mechnism on persistent storage from yaml string
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
 		--vineyardd.spill.config spill-path \
@@ -137,7 +137,7 @@ var deployVineyarddCmd = &cobra.Command{
 		}
 
 		var waitVineyarddFuc func(vineyardd *v1alpha1.Vineyardd) bool
-		if flags.NeedWait {
+		if flags.Wait {
 			waitVineyarddFuc = func(vineyardd *v1alpha1.Vineyardd) bool {
 				return vineyardd.Status.ReadyReplicas == int32(vineyardd.Spec.Replicas)
 			}
@@ -223,7 +223,7 @@ func BuildVineyardManifestFromFile() (*v1alpha1.Vineyardd, error) {
 	return vineyardd, err
 }
 
-func NewDeployVineyarddCmd() *cobra.Command {
+func newDeployVineyarddCmd() *cobra.Command {
 	return deployVineyarddCmd
 }
 

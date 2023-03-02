@@ -27,8 +27,8 @@ import (
 )
 
 var (
-	createRecoverLong = util.LongDesc(`Recover the current vineyard cluster 
-	on kubernetes. You could recover all objects from a backup of vineyard cluster. 
+	createRecoverLong = util.LongDesc(`Recover the current vineyard cluster
+	on kubernetes. You could recover all objects from a backup of vineyard cluster.
 	Usually, the recover job should be created in the same namespace of the backup job.`)
 
 	createRecoverExample = util.Examples(`
@@ -60,7 +60,7 @@ var createRecoverCmd = &cobra.Command{
 	},
 }
 
-func NewCreateRecoverCmd() *cobra.Command {
+func newCreateRecoverCmd() *cobra.Command {
 	return createRecoverCmd
 }
 

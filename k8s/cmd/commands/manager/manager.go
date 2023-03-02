@@ -26,6 +26,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -39,7 +40,6 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	controllers "github.com/v6d-io/v6d/k8s/controllers/k8s"
 	"github.com/v6d-io/v6d/k8s/pkg/schedulers"
-	"github.com/v6d-io/v6d/k8s/pkg/templates"
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/operation"
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/scheduling"
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/sidecar"
@@ -89,7 +89,7 @@ var managerCmd = &cobra.Command{
 			LeaderElectionID:       "5fa514f1.v6d.io",
 		})
 		if err != nil {
-			util.ErrLogger.Fatal("unbale to setup the manager:", err)
+			util.ErrLogger.Fatal("unable to setup the manager:", err)
 		}
 
 		wg := sync.WaitGroup{}
@@ -121,6 +121,11 @@ func startManager(
 	probeAddr string,
 	enableLeaderElection bool,
 ) {
+	clientset, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		util.ErrLogger.Fatal("unable to create REST client", err)
+	}
+
 	if err := (&controllers.LocalObjectReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
@@ -146,10 +151,9 @@ func startManager(
 		)
 	}
 	if err := (&controllers.VineyarddReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
-		Recorder: mgr.GetEventRecorderFor("vineyardd-controller"),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("vineyardd-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		util.ErrLogger.Fatal(
 			"unable to create controller",
@@ -160,10 +164,10 @@ func startManager(
 		)
 	}
 	if err := (&controllers.OperationReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
-		Recorder: mgr.GetEventRecorderFor("operation-controller"),
+		Client:        mgr.GetClient(),
+		Clientset:     clientset,
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("operation-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		util.ErrLogger.Fatal(
 			"unable to create controller",
@@ -175,28 +179,26 @@ func startManager(
 	}
 
 	if err := (&controllers.SidecarReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
-		Recorder: mgr.GetEventRecorderFor("sidecar-controller"),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("sidecar-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		util.ErrLogger.Fatal("unable to create controller", "controller", "Sidecar",
 			"error: ", err)
 	}
 	if err := (&controllers.BackupReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
-		Recorder: mgr.GetEventRecorderFor("backup-controller"),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("backup-controller"),
 	}).SetupWithManager(mgr); err != nil {
 		util.ErrLogger.Fatal("unable to create controller", "controller", "Backup",
 			"error: ", err)
 	}
 
 	if err := (&controllers.RecoverReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
+		Client:    mgr.GetClient(),
+		Clientset: clientset,
+		Scheme:    mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		util.ErrLogger.Fatal("unable to create controller", "controller", "Recover",
 			"error: ", err)
@@ -256,8 +258,7 @@ func startManager(
 		mgr.GetWebhookServer().Register("/mutate-v1-pod-sidecar",
 			&webhook.Admission{
 				Handler: &sidecar.Injector{
-					Client:   mgr.GetClient(),
-					Template: templates.NewEmbedTemplate(),
+					Client: mgr.GetClient(),
 				},
 			})
 		log.Println("the sidecar webhook is registered")

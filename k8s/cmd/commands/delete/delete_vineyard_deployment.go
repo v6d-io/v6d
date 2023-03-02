@@ -28,7 +28,7 @@ import (
 
 var (
 	deleteVineyardDeploymentLong = util.LongDesc(`
-	delete vineyard-deployment will delete the vineyard deployment 
+	delete vineyard-deployment will delete the vineyard deployment
 	without vineyard operator`)
 
 	deleteVineyardDeploymentExample = util.Examples(`
@@ -58,7 +58,7 @@ var deleteVineyardDeploymentCmd = &cobra.Command{
 	},
 }
 
-func NewDeleteVineyardDeploymentCmd() *cobra.Command {
+func newDeleteVineyardDeploymentCmd() *cobra.Command {
 	return deleteVineyardDeploymentCmd
 }
 

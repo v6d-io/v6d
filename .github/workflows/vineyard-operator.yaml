@@ -28,6 +28,7 @@ on:
   pull_request:
     branches:
       - main
+      - dev/kubernetes
     paths:
       - '.github/workflows/vineyard-operator.yaml'
       - 'k8s/**'
@@ -73,7 +74,7 @@ jobs:
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19
-  
+
       - name: Cache for golang
         uses: actions/cache@v3
         with:

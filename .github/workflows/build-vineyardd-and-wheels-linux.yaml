@@ -120,15 +120,15 @@ jobs:
       - uses: actions/checkout@v3
         with:
           submodules: true
-      
+
       - uses: actions/setup-go@v3
         with:
-          go-version: '^1.19.0'
-      
+          go-version: 1.19
+
       - name: Build vineyardctl
         run: |
           go build -a -o vineyardctl k8s/cmd/main.go
-      
+
       - name: Upload CI artifacts
         uses: actions/upload-artifact@v3
         with:
@@ -171,7 +171,7 @@ jobs:
         run: |
           tar zxvf vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
           mv vineyardd python/vineyard/vineyardd
-      
+
       - name: Download vineyardctl artifacts
         uses: actions/download-artifact@v3
         with:

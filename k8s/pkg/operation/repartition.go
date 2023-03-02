@@ -30,7 +30,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -51,6 +50,7 @@ const (
 // RepartitionOperation is the operation for the repartition
 type RepartitionOperation struct {
 	client.Client
+	*kubernetes.Clientset
 	ClientUtils
 	app  *swckkube.Application
 	done bool
@@ -328,15 +328,7 @@ func (ro *RepartitionOperation) checkDaskRepartitionJob(
 
 // getWorkerNameFromPodLogs get worker name from pod's logs
 func (ro *RepartitionOperation) getWorkerNameFromPodLogs(pod *corev1.Pod) (string, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get in cluster config")
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to get clientset")
-	}
-	req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
+	req := ro.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
 	logs, err := req.Stream(context.Background())
 	if err != nil {
 		return "", errors.Wrap(err, "failed to open stream")

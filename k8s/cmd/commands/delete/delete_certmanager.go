@@ -23,8 +23,8 @@ import (
 )
 
 var (
-	deleteCertManagerLong = util.LongDesc(`Delete the cert-manager in 
-	the cert-manager namespace. You should specify the version of deployed 
+	deleteCertManagerLong = util.LongDesc(`Delete the cert-manager in
+	the cert-manager namespace. You should specify the version of deployed
 	cert-manager and the default version is v1.9.1.`)
 
 	deleteCertManagerExample = util.Examples(`
@@ -58,7 +58,7 @@ var deleteCertManagerCmd = &cobra.Command{
 	},
 }
 
-func NewDeleteCertManagerCmd() *cobra.Command {
+func newDeleteCertManagerCmd() *cobra.Command {
 	return deleteCertManagerCmd
 }
 

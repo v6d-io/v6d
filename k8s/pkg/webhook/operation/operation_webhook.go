@@ -38,7 +38,7 @@ import (
 
 // AssemblyInjector injects assembly operation container into Pods
 type AssemblyInjector struct {
-	Client  client.Client
+	client.Client
 	decoder *admission.Decoder
 }
 
@@ -59,14 +59,14 @@ func (r *AssemblyInjector) LabelRequiredPods(
 						"app": job,
 					},
 				}
-				if err := r.Client.List(ctx, podList, opts...); err != nil {
+				if err := r.List(ctx, podList, opts...); err != nil {
 					return errors.Wrap(err, "Failed to list pods")
 				}
 				for i := range podList.Items {
 					// label the required pods that need to be injected with the assembly container
 					labels := &podList.Items[i].Labels
 					(*labels)["need-injected-"+label[:strings.Index(label, ".")]] = "true"
-					if err := r.Client.Update(ctx, &podList.Items[i], &client.UpdateOptions{}); err != nil {
+					if err := r.Update(ctx, &podList.Items[i], &client.UpdateOptions{}); err != nil {
 						return errors.Wrap(err, "Failed to update pod")
 					}
 				}

@@ -29,10 +29,10 @@ import (
 )
 
 var (
-	deployOperatorLong = util.LongDesc(`Deploy the vineyard operator on kubernetes. 
-	You could specify a stable or development version of the operator. The default kustomize dir 
+	deployOperatorLong = util.LongDesc(`Deploy the vineyard operator on kubernetes.
+	You could specify a stable or development version of the operator. The default kustomize dir
 	is development version from github repo. Also, you can install the stable version from github.
-	repo or a local kustomize dir. Besides, you can also deploy the vineyard operator in an existing 
+	repo or a local kustomize dir. Besides, you can also deploy the vineyard operator in an existing
 	namespace.`)
 
 	deployOperatorExample = util.Examples(`
@@ -75,7 +75,7 @@ var deployOperatorCmd = &cobra.Command{
 			util.ErrLogger.Fatal("failed to apply operator manifests: ", err)
 		}
 
-		if flags.NeedWait {
+		if flags.Wait {
 			if err := waitOperatorReady(client); err != nil {
 				util.ErrLogger.Fatal("failed to wait operator ready: ", err)
 			}
@@ -85,7 +85,7 @@ var deployOperatorCmd = &cobra.Command{
 	},
 }
 
-func NewDeployOperatorCmd() *cobra.Command {
+func newDeployOperatorCmd() *cobra.Command {
 	return deployOperatorCmd
 }
 

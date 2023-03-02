@@ -27,7 +27,7 @@ WORKDIR /
 
 COPY config/scheduler/config.yaml /etc/kubernetes/scheduler.yaml
 
-COPY --from=builder /workspace/vineyardctl .
+COPY --from=builder /workspace/vineyardctl /vineyardctl
 USER nonroot:nonroot
 
-ENTRYPOINT ["/vineyardctl","manager"]
+ENTRYPOINT ["/vineyardctl", "manager"]

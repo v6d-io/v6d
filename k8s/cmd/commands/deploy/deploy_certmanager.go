@@ -32,9 +32,9 @@ import (
 )
 
 var (
-	deployCertManagerLong = util.LongDesc(`Deploy the cert-manager in 
-	the cert-manager namespace. You could specify a stable or development version 
-	of the cert-manager and we suppose not to create a new namespace to install the 
+	deployCertManagerLong = util.LongDesc(`Deploy the cert-manager in
+	the cert-manager namespace. You could specify a stable or development version
+	of the cert-manager and we suppose not to create a new namespace to install the
 	cert-manager. The default version is v1.9.1.`)
 
 	deployCertManagerExample = util.Examples(`
@@ -44,7 +44,7 @@ var (
 
 	# install the default version(v1.9.1) in the cert-manager namespace
 	# not to wait for the cert-manager to be ready, but we does not recommend
-	# to do this, because there may be errors caused by the cert-manager 
+	# to do this, because there may be errors caused by the cert-manager
 	# not ready
 	vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager \
 		--wait=false
@@ -73,7 +73,7 @@ var deployCertManagerCmd = &cobra.Command{
 			util.ErrLogger.Fatal("failed to apply cert-manager manifests: ", err)
 		}
 
-		if flags.NeedWait {
+		if flags.Wait {
 			if err := waitCertManagerReady(client); err != nil {
 				util.ErrLogger.Fatal("failed to wait cert-manager ready: ", err)
 			}
@@ -83,7 +83,7 @@ var deployCertManagerCmd = &cobra.Command{
 	},
 }
 
-func NewDeployCertManagerCmd() *cobra.Command {
+func newDeployCertManagerCmd() *cobra.Command {
 	return deployCertManagerCmd
 }
 

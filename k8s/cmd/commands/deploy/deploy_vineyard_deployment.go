@@ -34,8 +34,8 @@ import (
 )
 
 var (
-	deployVineyardDeploymentLong = util.LongDesc(`Builds and deploy 
-	the yaml file of vineyardd the vineyardd without vineyard operator. You could 
+	deployVineyardDeploymentLong = util.LongDesc(`Builds and deploy
+	the yaml file of vineyardd the vineyardd without vineyard operator. You could
 	deploy a customized vineyardd from stdin or file.`)
 
 	deployVineyardDeploymentExample = util.Examples(`
@@ -76,7 +76,7 @@ var deployVineyardDeploymentCmd = &cobra.Command{
 	},
 }
 
-func NewDeployVineyardDeploymentCmd() *cobra.Command {
+func newDeployVineyardDeploymentCmd() *cobra.Command {
 	return deployVineyardDeploymentCmd
 }
 
@@ -132,8 +132,7 @@ func getEtcdConfig() k8s.EtcdConfig {
 // GetObjectsFromTemplate gets kubernetes resources from template for vineyardd
 func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	objects := []*unstructured.Unstructured{}
-	t := templates.NewEmbedTemplate()
-	vineyardManifests, err := t.GetFilesRecursive("vineyardd")
+	vineyardManifests, err := templates.GetFilesRecursive("vineyardd")
 	if err != nil {
 		return objects, errors.Wrap(err, "failed to get vineyardd manifests")
 	}

@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	deployVineyardClusterLong = util.LongDesc(`Deploy the vineyardd on kubernetes. 
+	deployVineyardClusterLong = util.LongDesc(`Deploy the vineyardd on kubernetes.
 	You could deploy a vineyardd cluster on kubernetes quickly.`)
 
 	deployVineyardClusterExample = util.Examples(`
@@ -40,18 +40,18 @@ var deployVineyardClusterCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 
 		// deploy cert-manager
-		NewDeployCertManagerCmd().Run(cmd, args)
+		newDeployCertManagerCmd().Run(cmd, args)
 
 		// deploy vineyard operator
-		NewDeployOperatorCmd().Run(cmd, args)
+		newDeployOperatorCmd().Run(cmd, args)
 
 		// deploy vineyardd
-		NewDeployVineyarddCmd().Run(cmd, args)
+		newDeployVineyarddCmd().Run(cmd, args)
 
 		util.InfoLogger.Println("Vineyard Cluster is ready.")
 	},
 }
 
-func NewDeployVineyardClusterCmd() *cobra.Command {
+func newDeployVineyardClusterCmd() *cobra.Command {
 	return deployVineyardClusterCmd
 }
