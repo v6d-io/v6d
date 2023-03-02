@@ -18,7 +18,7 @@ package deploy
 import (
 	"github.com/spf13/cobra"
 
-	util "k8s.io/kubectl/pkg/util/templates"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 var (

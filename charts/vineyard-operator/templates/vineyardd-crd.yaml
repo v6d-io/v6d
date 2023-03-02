@@ -5,7 +5,7 @@ metadata:
   annotations:
     cert-manager.io/inject-ca-from: '{{ .Release.Namespace }}/{{ include "vineyard-operator.fullname"
       . }}-serving-cert'
-    controller-gen.kubebuilder.io/version: v0.9.2
+    controller-gen.kubebuilder.io/version: v0.11.0
   labels:
   {{- include "vineyard-operator.labels" . | nindent 4 }}
 spec:
@@ -46,6 +46,9 @@ spec:
             type: object
           spec:
             properties:
+              createServiceAccount:
+                default: false
+                type: boolean
               etcd:
                 default:
                   replicas: 3
@@ -113,6 +116,9 @@ spec:
                     default: ClusterIP
                     type: string
                 type: object
+              serviceAccountName:
+                default: ""
+                type: string
               vineyardConfig:
                 default:
                   etcdEndpoint: http://etcd-for-vineyard:2379
