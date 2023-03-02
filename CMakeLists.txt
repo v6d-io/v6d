@@ -850,7 +850,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
         set_target_properties(_C PROPERTIES
                               BUILD_WITH_INSTALL_RPATH TRUE
                               INSTALL_RPATH_USE_LINK_PATH TRUE
-                              INSTALL_RPATH ".:@loader_path:@loader_path/${RELATIVE_BUILD_PATH}/:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64:${INSTALL_RPATH}")
+                              INSTALL_RPATH ".;@loader_path;@loader_path/${RELATIVE_BUILD_PATH}/;${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib64;${INSTALL_RPATH}")
     endif()
 
     add_custom_target(vineyard_client_python
