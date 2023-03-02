@@ -27,82 +27,87 @@ import (
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 )
 
+var (
+	createBackupLong = util.LongDesc(`
+	Backup the current vineyard cluster on kubernetes. You could backup all objects 
+	of the current vineyard cluster quickly. For persistent storage, you could specify 
+	the pv spec and pv spec.`)
+
+	createBackupExample = util.Examples(`
+	# create a backup job for the vineyard cluster on kubernetes 
+	# you could define the pv and pvc spec from json string as follows
+	vineyardctl create backup \
+		--vineyardd-name vineyardd-sample \
+		--vineyardd-namespace vineyard-system  \
+		--limit 1000 \
+		--path /var/vineyard/dump  \
+		--pv-pvc-spec '{
+			"pv-spec": {
+				"capacity": {
+					"storage": "1Gi"
+				},
+				"accessModes": [
+					"ReadWriteOnce"
+				],
+				"storageClassName": "manual",
+				"hostPath": {
+					"path": "/var/vineyard/dump"
+				}
+			},
+			"pvc-spec": {
+				"storageClassName": "manual",
+				"accessModes": [
+					"ReadWriteOnce"
+				],
+				"resources": {
+					"requests": {
+					"storage": "1Gi"
+					}
+				}
+			}
+			}'
+	
+	# create a backup job for the vineyard cluster on kubernetes 
+	# you could define the pv and pvc spec from yaml string as follows
+	vineyardctl create backup \
+		--vineyardd-name vineyardd-sample \
+		--vineyardd-namespace vineyard-system  \
+		--limit 1000 --path /var/vineyard/dump  \
+		--pv-pvc-spec  \
+		'
+		pv-spec:
+		capacity:
+			storage: 1Gi
+		accessModes:
+		- ReadWriteOnce
+		storageClassName: manual
+		hostPath:
+			path: "/var/vineyard/dump"
+		pvc-spec:
+		storageClassName: manual
+		accessModes:
+		- ReadWriteOnce
+		resources:
+			requests:
+			storage: 1Gi
+		'
+	
+	# create a backup job for the vineyard cluster on kubernetes
+	# you could define the pv and pvc spec from json file as follows
+	# also you could use yaml file instead of json file
+	cat pv-pvc.json | vineyardctl create backup \
+		--vineyardd-name vineyardd-sample \
+		--vineyardd-namespace vineyard-system  \
+		--limit 1000 --path /var/vineyard/dump  \
+		-`)
+)
+
 // createBackupCmd creates the backup job of vineyard cluster on kubernetes
 var createBackupCmd = &cobra.Command{
-	Use:   "backup",
-	Short: "Backup the current vineyard cluster on kubernetes",
-	Long: `Backup the current vineyard cluster on kubernetes. You could backup all objects of
-the current vineyard cluster quickly. For persistent storage, you could specify the pv spec and
-pv spec.
-
-For example:
-
-# create a backup job for the vineyard cluster on kubernetes 
-# you could define the pv and pvc spec from json string as follows
-vineyardctl create backup \
---vineyardd-name vineyardd-sample \
---vineyardd-namespace vineyard-system  \
---limit 1000 \
---path /var/vineyard/dump  \
---pv-pvc-spec '{
-"pv-spec": {
-	"capacity": {
-	  "storage": "1Gi"
-	},
-	"accessModes": [
-	  "ReadWriteOnce"
-	],
-	"storageClassName": "manual",
-	"hostPath": {
-	  "path": "/var/vineyard/dump"
-	}
-},
-"pvc-spec": {
-	"storageClassName": "manual",
-	"accessModes": [
-	  "ReadWriteOnce"
-	],
-	"resources": {
-	  "requests": {
-		"storage": "1Gi"
-	  }
-	}
-}
-}'
-
-# create a backup job for the vineyard cluster on kubernetes 
-# you could define the pv and pvc spec from yaml string as follows
-vineyardctl create backup \
---vineyardd-name vineyardd-sample \
---vineyardd-namespace vineyard-system  \
---limit 1000 --path /var/vineyard/dump  \
---pv-pvc-spec  \
-'
-pv-spec:
-  capacity:
-    storage: 1Gi
-  accessModes:
-  - ReadWriteOnce
-  storageClassName: manual
-  hostPath:
-    path: "/var/vineyard/dump"
-pvc-spec:
-  storageClassName: manual
-  accessModes:
-  - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi
-'
-
-# create a backup job for the vineyard cluster on kubernetes
-# you could define the pv and pvc spec from json file as follows
-# also you could use yaml file instead of json file
-cat pv-pvc.json | vineyardctl create backup \
---vineyardd-name vineyardd-sample \
---vineyardd-namespace vineyard-system  \
---limit 1000 --path /var/vineyard/dump  \
--`,
+	Use:     "backup",
+	Short:   "Backup the current vineyard cluster on kubernetes",
+	Long:    createBackupLong,
+	Example: createBackupExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) > 0 && args[0] != "-" {
 			util.ErrLogger.Fatal("invalid argument: ", args)

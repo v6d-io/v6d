@@ -33,32 +33,37 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
-var vineyarddFileName []string = []string{
-	"vineyardd/deployment.yaml",
-	"vineyardd/service.yaml",
-	"vineyardd/serviceaccount.yaml",
-	"vineyardd/etcd-service.yaml",
-	"vineyardd/spill-pv.yaml",
-	"vineyardd/spill-pvc.yaml",
-}
+var (
+	deployVineyardDeploymentLong = util.LongDesc(`Builds and deploy 
+	the yaml file of vineyardd the vineyardd without vineyard operator. You could 
+	deploy a customized vineyardd from stdin or file.`)
+
+	deployVineyardDeploymentExample = util.Examples(`
+	# deploy the default vineyard deployment on kubernetes
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
+	deploy vineyard-deployment
+
+	# deploy the vineyard deployment with customized image
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
+	deploy vineyard-deployment --image vineyardd:v0.12.2`)
+
+	vineyarddFileName []string = []string{
+		"vineyardd/deployment.yaml",
+		"vineyardd/service.yaml",
+		"vineyardd/serviceaccount.yaml",
+		"vineyardd/etcd-service.yaml",
+		"vineyardd/spill-pv.yaml",
+		"vineyardd/spill-pvc.yaml",
+	}
+)
 
 // deployVineyardDeploymentCmd build and deploy the yaml file of vineyardd from stdin or file
 var deployVineyardDeploymentCmd = &cobra.Command{
 	Use: "vineyard-deployment",
 	Short: "DeployVineyardDeployment builds and deploy the yaml file of " +
 		"vineyardd wihout vineyard operator",
-	Long: `Builds and deploy the yaml file of vineyardd the vineyardd without 
-vineyard operator. You could deploy a customized vineyardd from stdin or file.
-
-For example:
-
-# deploy the default vineyard deployment on kubernetes
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
-deploy vineyard-deployment
-
-# deploy the vineyard deployment with customized image
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
-deploy vineyard-deployment --image vineyardd:v0.12.2`,
+	Long:    deployVineyardDeploymentLong,
+	Example: deployVineyardDeploymentExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
@@ -153,7 +158,7 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	}
 
 	// build vineyardd
-	vineyardd, err := BuildVineyardManifest()
+	vineyardd, err := BuildVineyardManifestFromInput()
 	if err != nil {
 		return objects, errors.Wrap(err, "failed to build vineyardd")
 	}
@@ -168,7 +173,9 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 		if err != nil {
 			return objects, err
 		}
-		objects = append(objects, obj)
+		if obj.GetName() != "" {
+			objects = append(objects, obj)
+		}
 	}
 
 	objs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Namespace,
@@ -177,7 +184,11 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	if err != nil {
 		return objects, errors.Wrap(err, "failed to build etcd objects")
 	}
-	objects = append(objects, objs...)
+	for i := range objs {
+		if objs[i].GetName() != "" {
+			objects = append(objects, objs[i])
+		}
+	}
 	return objects, nil
 }
 
@@ -189,7 +200,6 @@ func applyVineyarddFromTemplate(c client.Client) error {
 	}
 
 	for _, o := range objects {
-
 		if err := util.CreateIfNotExists(c, o); err != nil {
 			return errors.Wrapf(err, "failed to create object %s", o.GetName())
 		}

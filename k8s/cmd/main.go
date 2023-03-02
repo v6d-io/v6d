@@ -36,14 +36,19 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util/usage"
 )
 
+var (
+	cmdLong = util.LongDesc(`vineyardctl is the command-line 
+	tool for working with the Vineyard Operator. It supports creating, 
+	deleting and checking status of Vineyard Operator. It also supports 
+	managing the vineyard relevant components such as vineyardd and pluggable
+	drivers`)
+)
+
 var cmd = &cobra.Command{
 	Use:     "vineyardctl [command]",
 	Version: "v0.11.2",
 	Short:   "vineyardctl is the command-line tool for working with the Vineyard Operator",
-	Long: `vineyardctl is the command-line tool for working with the Vineyard Operator.
-It supports creating, deleting and checking status of Vineyard Operator. It also
-supports managing the vineyard relevant components such as vineyardd and pluggable
-drivers`,
+	Long:    cmdLong,
 }
 
 func init() {
@@ -68,14 +73,14 @@ func init() {
 }
 
 func main() {
-	tryDumpUsage()
+	tryUsageAndDocs()
 	if err := cmd.Execute(); err != nil {
 		util.ErrLogger.Fatalf("Failed to execute root command: %+v", err)
 		os.Exit(-1)
 	}
 }
 
-func tryDumpUsage() {
+func tryUsageAndDocs() {
 	cmd.FParseErrWhitelist.UnknownFlags = true
 	if err := cmd.ParseFlags(os.Args); err != nil {
 		_ = cmd.Usage()
@@ -87,6 +92,12 @@ func tryDumpUsage() {
 	if flags.DumpUsage {
 		cmd.SetUsageFunc(usage.UsageJson)
 		if err := cmd.Usage(); err != nil {
+			cmd.PrintErrf("\nError: %+v\n", err)
+		}
+		os.Exit(0)
+	}
+	if flags.GenDoc {
+		if err := usage.GenerateReference(cmd, "references.md"); err != nil {
 			cmd.PrintErrf("\nError: %+v\n", err)
 		}
 		os.Exit(0)

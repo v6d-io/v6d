@@ -1,7 +1,8 @@
 E2E_DIR := $(shell pwd)
-TEST_DIR := ${E2E_DIR}/../
-K8S_DIR := ${E2E_DIR}/../../
-ROOT_DIR := ${E2E_DIR}/../../../
+TEST_DIR := ${E2E_DIR}/..
+K8S_DIR := ${E2E_DIR}/../..
+CMD_DIR := ${K8S_DIR}/cmd
+ROOT_DIR := ${E2E_DIR}/../../..
 
 ifeq (,$(shell go env GOBIN))
 GOBIN=$(shell go env GOPATH)/bin
@@ -61,8 +62,8 @@ install-vineyard-operator:
 	@echo "Installing vineyard-operator..."
 	@docker tag vineyardcloudnative/vineyard-operator:latest localhost:5001/vineyard-operator:latest
 	@docker push localhost:5001/vineyard-operator:latest
-	@export IMG=localhost:5001/vineyard-operator:latest && make -C ${K8S_DIR} deploy
-	@kubectl wait deployment/vineyard-controller-manager --for condition=Available -n vineyard-system --timeout=300s
+	@export IMG=localhost:5001/vineyard-operator:latest && make -C ${K8S_DIR} update-registry
+	@go run ${CMD_DIR}/main.go deploy operator --local ${K8S_DIR}/config/default
 	@echo "Vineyard-Operator Ready"
 
 # install the vineyardd and wait for ready
@@ -70,8 +71,7 @@ install-vineyardd:
 	@echo "Installing vineyard cluster..."
 	@docker tag vineyardcloudnative/vineyardd:alpine-latest localhost:5001/vineyardd:alpine-latest
 	@docker push localhost:5001/vineyardd:alpine-latest
-	@kubectl apply -f ${TEST_DIR}/e2e/vineyardd.yaml
-	@kubectl wait vineyardd/vineyardd-sample --for condition=Available -n vineyard-system --timeout=300s
+	@go run ${CMD_DIR}/main.go deploy vineyardd -f ${TEST_DIR}/e2e/vineyardd.yaml
 	@echo "Vineyard cluster Ready"
 
 # install the vineyard cluster (including several components: cert-manager, vineyard-operator and vineyardd)
@@ -346,8 +346,6 @@ e2e-tests-mars-examples: prepare-e2e-test install-vineyard-cluster
 
 e2e-tests-vineyardctl: prepare-e2e-test build-local-cluster
 	@echo "Running vineyardctl e2e test..."
-	@docker tag vineyardcloudnative/vineyardd:alpine-latest localhost:5001/vineyardd:alpine-latest
-	@docker push localhost:5001/vineyardd:alpine-latest
 	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/vineyardctl/e2e.yaml
 	@echo "vineyardctl e2e test passed."
 	@make delete-local-cluster

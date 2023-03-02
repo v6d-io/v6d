@@ -25,36 +25,41 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+var (
+	createOperationLong = util.LongDesc(`Insert an operation in a workflow 
+	based on vineyard cluster. You could create a assembly or repartition operation 
+	in a workflow. Usually, the operation should be created between the workloads: 
+	job1 -> operation -> job2.`)
+
+	createOperationExample = util.Examples(`
+	# create a local assembly operation between job1 and job2
+	vineyardctl create operation --name assembly \
+		--type local \
+		--require job1 \
+		--target job2 \
+		--timeoutSeconds 600
+
+	# create a distributed assembly operation between job1 and job2
+	vineyardctl create operation --name assembly \
+		--type distributed \
+		--require job1 \
+		--target job2 \
+		--timeoutSeconds 600
+
+	# create a dask repartition operation between job1 and job2
+	vineyardctl create operation --name repartition \
+		--type dask \
+		--require job1 \
+		--target job2 \
+		--timeoutSeconds 600`)
+)
+
 // createOperationCmd creates the specific operation in a workflow.
 var createOperationCmd = &cobra.Command{
-	Use:   "operation",
-	Short: "Insert an operation in a workflow based on vineyard cluster",
-	Long: `Insert an operation in a workflow based on vineyard cluster. You could create a 
-assembly or repartition operation in a workflow. Usually, the operation should be created between
-the workloads: job1 -> operation -> job2.
-
-For example:
-
-# create a local assembly operation between job1 and job2
-vineyardctl create operation --name assembly \
---type local \
---require job1 \
---target job2 \
---timeoutSeconds 600
-
-# create a distributed assembly operation between job1 and job2
-vineyardctl create operation --name assembly \
---type distributed \
---require job1 \
---target job2 \
---timeoutSeconds 600
-
-# create a dask repartition operation between job1 and job2
-vineyardctl create operation --name repartition \
---type dask \
---require job1 \
---target job2 \
---timeoutSeconds 600`,
+	Use:     "operation",
+	Short:   "Insert an operation in a workflow based on vineyard cluster",
+	Long:    createOperationLong,
+	Example: createOperationExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 

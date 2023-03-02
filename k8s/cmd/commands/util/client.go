@@ -17,7 +17,6 @@ package util
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	defaultscheme "k8s.io/client-go/kubernetes/scheme"
@@ -96,11 +95,16 @@ func CreateWithContext[T client.Object](
 		if err == nil {
 			return nil
 		}
-		if apierrors.IsNotFound(err) {
+		if apierrors.IsNotFound(err) && v.GetName() != "" {
 			err := c.Create(ctx, v)
 			if err != nil || len(until) == 0 {
 				return err
 			}
+		}
+	} else {
+		err := c.Create(ctx, v)
+		if err != nil || len(until) == 0 {
+			return err
 		}
 	}
 
@@ -112,7 +116,7 @@ func CreateWithContext[T client.Object](
 			}
 		}
 		for _, fn := range until {
-			if fn(v) {
+			if fn == nil || fn(v) {
 				return true, nil
 			}
 		}
@@ -135,7 +139,6 @@ func DeleteWithContext(
 	if v.GetName() != "" {
 		err := c.Delete(ctx, v)
 		if err != nil {
-			fmt.Println("delete rror: ", err)
 			return err
 		}
 	}

@@ -17,18 +17,26 @@ limitations under the License.
 // Package schedule contains the schedule command of vineyard operator
 package schedule
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
 
+	util "k8s.io/kubectl/pkg/util/templates"
+)
+
+var (
+	scheduleLong = util.LongDesc(`schedule return a 
+	nodeName for the workload to co-allocate with vineyard cluster.`)
+
+	scheduleExamples = util.Examples(`
+	# Schedule a workload to a vineyard cluster
+	# it will add PodAffinity to the workload
+	vineyardctl schedule --workload=workloadName`)
+)
 var scheduleCmd = &cobra.Command{
-	Use:   "schedule",
-	Short: "schedule return a nodeName for the workload to co-allocate with vineyard cluster",
-	Long: `schedule return a nodeName for the workload to co-allocate with vineyard cluster.
-For example:
-
-# Schedule a workload to a vineyard cluster
-# it will return a nodeName which is the node that 
-# the workload should be scheduled to
-vineyardctl schedule --workload=workloadName`,
+	Use:     "schedule",
+	Short:   "schedule return a nodeName for the workload to co-allocate with vineyard cluster",
+	Long:    scheduleLong,
+	Example: scheduleExamples,
 }
 
 func NewScheduleCmd() *cobra.Command {

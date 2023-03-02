@@ -25,15 +25,21 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+var (
+	deleteBackupLong = util.LongDesc(`
+	Delete the backup job on kubernetes.`)
+
+	deleteBackupExample = util.Examples(`
+	# delete the default backup job
+	vineyardctl delete backup`)
+)
+
 // deleteBackupCmd deletes the backup job on kubernetes
 var deleteBackupCmd = &cobra.Command{
-	Use:   "backup",
-	Short: "Delete the backup job on kubernetes",
-	Long: `Delete the backup job on kubernetes.
-For example:
-
-# delete the default backup job
-vineyardctl delete backup`,
+	Use:     "backup",
+	Short:   "Delete the backup job on kubernetes",
+	Long:    deleteBackupLong,
+	Example: deleteBackupExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()

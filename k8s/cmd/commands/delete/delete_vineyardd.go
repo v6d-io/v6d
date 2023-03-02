@@ -25,18 +25,24 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+var (
+	deleteVineyarddLong = util.LongDesc(`
+	Delete the vineyardd cluster on kubernetes.`)
+
+	deleteVineyarddExample = util.Examples(`
+	# delete the default vineyardd cluster(vineyardd-sample) in the default namespace
+	vineyardctl delete vineyardd
+
+	# delete the specific vineyardd cluster in the vineyard-system namespace
+	vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`)
+)
+
 // deleteVineyarddCmd deletes the vineyardd cluster on kubernetes
 var deleteVineyarddCmd = &cobra.Command{
-	Use:   "vineyardd",
-	Short: "Delete the vineyardd cluster on kubernetes",
-	Long: `Delete the vineyardd cluster on kubernetes.
-For example:
-
-# delete the default vineyardd cluster(vineyardd-sample) in the default namespace
-vineyardctl delete vineyardd
-
-# delete the specific vineyardd cluster in the vineyard-system namespace
-vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test`,
+	Use:     "vineyardd",
+	Short:   "Delete the vineyardd cluster on kubernetes",
+	Long:    deleteVineyarddLong,
+	Example: deleteVineyarddExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()

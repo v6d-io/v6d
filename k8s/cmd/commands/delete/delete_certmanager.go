@@ -22,19 +22,25 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+var (
+	deleteCertManagerLong = util.LongDesc(`Delete the cert-manager in 
+	the cert-manager namespace. You should specify the version of deployed 
+	cert-manager and the default version is v1.9.1.`)
+
+	deleteCertManagerExample = util.Examples(`
+	# delete the default version(v1.9.1) of cert-manager
+	vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager
+
+	# delete the specific version of cert-manager
+	vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager -v 1.11.0`)
+)
+
 // deleteCertManagerCmd deletes the vineyard operator on kubernetes
 var deleteCertManagerCmd = &cobra.Command{
-	Use:   "cert-manager",
-	Short: "Delete the cert-manager on kubernetes",
-	Long: `Delete the cert-manager in the cert-manager namespace. You should specify
-the version of deployed cert-manager and the default version is v1.9.1.
-For example:
-
-# delete the default version(v1.9.1) of cert-manager
-vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager
-
-# delete the specific version of cert-manager
-vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager -v 1.11.0`,
+	Use:     "cert-manager",
+	Short:   "Delete the cert-manager on kubernetes",
+	Long:    deleteCertManagerLong,
+	Example: deleteCertManagerExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()

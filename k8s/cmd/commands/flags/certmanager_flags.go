@@ -21,8 +21,10 @@ const (
 	defaultCertManagerVersion = "1.9.1"
 )
 
-// CertManagerVersion is the version of cert-manager
-var CertManagerVersion string
+var (
+	// CertManagerVersion is the version of cert-manager
+	CertManagerVersion string
+)
 
 func ApplyCertManagerOpts(cmd *cobra.Command) {
 	cmd.Flags().

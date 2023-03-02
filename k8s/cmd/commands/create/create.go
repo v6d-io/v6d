@@ -17,27 +17,33 @@ package create
 
 import (
 	"github.com/spf13/cobra"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+)
+
+var (
+	createLong = util.LongDesc(`Create a vineyard job on kubernetes.`)
+
+	createExample = util.Examples(`
+	# create the backup job on kubernetes
+	vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system
+		
+	# create the recover job on kubernetes
+	vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system
+		
+	# create the operation job on kubernetes
+	vineyardctl create operation --name assembly \
+		--type local \
+		--require job1 \
+		--target job2 \
+		--timeoutSeconds 600`)
 )
 
 // createCmd creates several vineyard jobs on kubernetes
 var createCmd = &cobra.Command{
-	Use:   "create",
-	Short: "Create the vineyard jobs on kubernetes",
-	Long: `Create a specific vineyard job on kubernetes.
-For example:
-
-# create the backup job on kubernetes
-vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system
-
-# create the recover job on kubernetes
-vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system
-
-# create the operation job on kubernetes
-vineyardctl create operation --name assembly \
---type local \
---require job1 \
---target job2 \
---timeoutSeconds 600`,
+	Use:     "create",
+	Short:   "Create the vineyard jobs on kubernetes",
+	Long:    createLong,
+	Example: createExample,
 }
 
 func NewCreateCmd() *cobra.Command {

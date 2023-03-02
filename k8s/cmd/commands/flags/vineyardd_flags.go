@@ -36,6 +36,9 @@ var (
 
 	// VineyardSpillPVandPVC is PersistentVolume data and PersistentVolumeClaim data of vineyardd's spill mechnism
 	VineyardSpillPVandPVC string
+
+	// VineyardFile is the path of vineyardd file
+	VineyarddFile string
 )
 
 // ApplyVineyardContainerOpts applies the vineyard container options
@@ -148,6 +151,7 @@ func ApplyVineyarddOpts(cmd *cobra.Command) {
 		"", "", "the service account name of vineyardd")
 	cmd.Flags().IntVarP(&VineyarddOpts.Etcd.Replicas, "vineyard.etcd.replicas",
 		"", 3, "the number of etcd replicas in a vineyard cluster")
+	cmd.Flags().StringVarP(&VineyarddFile, "file", "f", "", "the path of vineyardd")
 	// setup the vineyardd name
 	ApplyVineyarddNameOpts(cmd)
 	// setup the vineyard container configuration of vineyardd

@@ -17,25 +17,34 @@ package delete
 
 import (
 	"github.com/spf13/cobra"
+
+	util "k8s.io/kubectl/pkg/util/templates"
+)
+
+var (
+	deleteLong = util.LongDesc(`
+	Delete the vineyard components on kubernetes.`)
+
+	deleteExample = util.Examples(`
+	# delete the default vineyard cluster on kubernetes
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete
+	
+	# delete the default vineyard operator on kubernetes
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator
+	
+	# delete the default cert-manager on kubernetes
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete cert-manager
+	
+	# delete the default vineyardd on kubernetes
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyardd`)
 )
 
 // deleteCmd represents the delete command
 var deleteCmd = &cobra.Command{
-	Use:   "delete",
-	Short: "Delete the vineyard components on kubernetes",
-	Long: `Delete the vineyard components on kubernetes.  For example:
-
-# delete the default vineyard cluster on kubernetes
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete
-
-# delete the default vineyard operator on kubernetes
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator
-
-# delete the default cert-manager on kubernetes
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete cert-manager
-
-# delete the default vineyardd on kubernetes
-vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyardd`,
+	Use:     "delete",
+	Short:   "Delete the vineyard components on kubernetes",
+	Long:    deleteLong,
+	Example: deleteExample,
 }
 
 func NewDeleteCmd() *cobra.Command {
