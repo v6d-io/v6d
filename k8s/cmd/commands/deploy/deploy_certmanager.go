@@ -22,7 +22,6 @@ import (
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	certmanagerapiv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
@@ -33,20 +32,22 @@ import (
 )
 
 var (
-	deployCertManagerLong = kubectlTemplate.LongDesc(`Deploy the cert-manager in 
+	deployCertManagerLong = util.LongDesc(`Deploy the cert-manager in 
 	the cert-manager namespace. You could specify a stable or development version 
 	of the cert-manager and we suppose not to create a new namespace to install the 
 	cert-manager. The default version is v1.9.1.`)
 
-	deployCertManagerExample = kubectlTemplate.Examples(`
+	deployCertManagerExample = util.Examples(`
 	# install the default version(v1.9.1) in the cert-manager namespace
 	# wait for the cert-manager to be ready(default option)
 	vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager
 
 	# install the default version(v1.9.1) in the cert-manager namespace
-	# not to wait for the cert-manager to be ready
+	# not to wait for the cert-manager to be ready, but we does not recommend
+	# to do this, because there may be errors caused by the cert-manager 
+	# not ready
 	vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager \
-	--wait=false
+		--wait=false
 
 	# install the specific version of cert-manager
 	vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager -v 1.11.0`)
@@ -72,7 +73,7 @@ var deployCertManagerCmd = &cobra.Command{
 			util.ErrLogger.Fatal("failed to apply cert-manager manifests: ", err)
 		}
 
-		if flags.WaitCertManager {
+		if flags.NeedWait {
 			if err := waitCertManagerReady(client); err != nil {
 				util.ErrLogger.Fatal("failed to wait cert-manager ready: ", err)
 			}

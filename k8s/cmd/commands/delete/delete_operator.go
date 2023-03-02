@@ -18,17 +18,15 @@ package delete
 import (
 	"github.com/spf13/cobra"
 
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
-
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 var (
-	deleteOperatorLong = kubectlTemplate.LongDesc(`
+	deleteOperatorLong = util.LongDesc(`
 	Delete the vineyard operator on kubernetes.`)
 
-	deleteOperatorExample = kubectlTemplate.Examples(`
+	deleteOperatorExample = util.Examples(`
 	# delete the default vineyard operator in the vineyard-system namespace
 	vineyardctl delete operator
 
@@ -37,7 +35,7 @@ var (
 
 	# delete the vineyard operator from local kustomize dir in the vineyard-system namespace
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator \
-	--local ../config/default`)
+		--local ../config/default`)
 )
 
 // deleteOperatorCmd deletes the vineyard operator on kubernetes

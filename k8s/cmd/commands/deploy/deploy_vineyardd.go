@@ -22,7 +22,6 @@ import (
 	"github.com/spf13/cobra"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -30,84 +29,84 @@ import (
 )
 
 var (
-	deployVineyarddLong = kubectlTemplate.LongDesc(`Deploy the vineyardd on kubernetes. 
+	deployVineyarddLong = util.LongDesc(`Deploy the vineyardd on kubernetes. 
 	You could deploy a customized vineyardd from stdin or file.`)
 
-	deployVineyarddExample = `
-  # deploy the default vineyard on kubernetes
-  # wait for the vineyardd to be ready(default option)
-  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
+	deployVineyarddExample = util.Examples(`
+	# deploy the default vineyard on kubernetes
+	# wait for the vineyardd to be ready(default option)
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
 
-  # not to wait for the vineyardd to be ready
-  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
-  --wait=false
+	# not to wait for the vineyardd to be ready
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+		--wait=false
 
-  # deploy the vineyardd from a yaml file
-  vineyardctl --kubeconfig $HOME/.kube/config deploy vineyardd --file vineyardd.yaml
-  
-  # deploy the vineyardd with customized image
-  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
-  --image vineyardd:v0.12.2
-  
-  # deploy the vineyardd with spill mechnism on persistent storage from json string
-  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
-  --vineyardd.spill.config spill-path \
-  --vineyardd.spill.path /var/vineyard/spill \
-  --vineyardd.spill.pv-pvc-spec '{
-	  "pv-spec": {
-		  "capacity": {
-		    "storage": "1Gi"
-		  },
-		  "accessModes": [
-		    "ReadWriteOnce"
-		  ],
-		  "storageClassName": "manual",
-		  "hostPath": {
-		    "path": "/var/vineyard/spill"
-		  }
-	  },
-	  "pvc-spec": {
-		  "storageClassName": "manual",
-		  "accessModes": [
-		    "ReadWriteOnce"
-		  ],
-		  "resources": {
-		    "requests": {
-			  "storage": "512Mi"
-  		    }
-		  }
-	  }
-  }'
-  
-  # deploy the vineyardd with spill mechnism on persistent storage from yaml string
-  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
-  --vineyardd.spill.config spill-path \
-  --vineyardd.spill.path /var/vineyard/spill \
-  --vineyardd.spill.pv-pvc-spec \
-  '
-  pv-spec:
-    capacity:
-      storage: 1Gi
-    accessModes:
-    - ReadWriteOnce
-    storageClassName: manual
-    hostPath:
-      path: "/var/vineyard/spill"
-  pvc-spec:
-    storageClassName: manual
-    accessModes:
-    - ReadWriteOnce
-    resources:
-      requests:
-        storage: 512Mi
-  '
+	# deploy the vineyardd from a yaml file
+	vineyardctl --kubeconfig $HOME/.kube/config deploy vineyardd --file vineyardd.yaml
+	
+	# deploy the vineyardd with customized image
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+		--image vineyardd:v0.12.2
+	
+	# deploy the vineyardd with spill mechnism on persistent storage from json string
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+		--vineyardd.spill.config spill-path \
+		--vineyardd.spill.path /var/vineyard/spill \
+		--vineyardd.spill.pv-pvc-spec '{
+			"pv-spec": {
+				"capacity": {
+					"storage": "1Gi"
+				},
+				"accessModes": [
+					"ReadWriteOnce"
+				],
+				"storageClassName": "manual",
+				"hostPath": {
+					"path": "/var/vineyard/spill"
+				}
+			},
+			"pvc-spec": {
+				"storageClassName": "manual",
+				"accessModes": [
+					"ReadWriteOnce"
+				],
+				"resources": {
+					"requests": {
+					"storage": "512Mi"
+					}
+				}
+			}
+		}'
+	
+	# deploy the vineyardd with spill mechnism on persistent storage from yaml string
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
+		--vineyardd.spill.config spill-path \
+		--vineyardd.spill.path /var/vineyard/spill \
+		--vineyardd.spill.pv-pvc-spec \
+		'
+		pv-spec:
+			capacity:
+			storage: 1Gi
+			accessModes:
+			- ReadWriteOnce
+			storageClassName: manual
+			hostPath:
+			path: "/var/vineyard/spill"
+		pvc-spec:
+			storageClassName: manual
+			accessModes:
+			- ReadWriteOnce
+			resources:
+			requests:
+				storage: 512Mi
+		'
 
-  # deploy the vineyardd with spill mechnism on persistent storage from json file
-  # also you could use the yaml file
-  cat pv-pvc.json | vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd \
-  --vineyardd.spill.config spill-path \
-  --vineyardd.spill.path /var/vineyard/spill \
-  -`
+	# deploy the vineyardd with spill mechnism on persistent storage from json file
+	# also you could use the yaml file
+	cat pv-pvc.json | vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd \
+		--vineyardd.spill.config spill-path \
+		--vineyardd.spill.path /var/vineyard/spill \
+		-`)
 )
 
 // deployVineyarddCmd deploys the vineyardd on kubernetes
@@ -138,7 +137,7 @@ var deployVineyarddCmd = &cobra.Command{
 		}
 
 		var waitVineyarddFuc func(vineyardd *v1alpha1.Vineyardd) bool
-		if flags.WaitVineyardd {
+		if flags.NeedWait {
 			waitVineyarddFuc = func(vineyardd *v1alpha1.Vineyardd) bool {
 				return vineyardd.Status.ReadyReplicas == int32(vineyardd.Spec.Replicas)
 			}

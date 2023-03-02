@@ -28,7 +28,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -39,11 +38,11 @@ import (
 )
 
 var (
-	injectLong = kubectlTemplate.LongDesc(`Inject the vineyard sidecar container 
+	injectLong = util.LongDesc(`Inject the vineyard sidecar container 
 	into a workload. You can get the injected workload yaml and some etcd yaml 
 	from the output.`)
 
-	injectExample = kubectlTemplate.Examples(`
+	injectExample = util.Examples(`
 	# inject the default vineyard sidecar container into a workload
 	vineyardctl inject -f workload.yaml | kubectl apply -f -`)
 

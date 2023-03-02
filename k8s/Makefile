@@ -56,10 +56,7 @@ check: lint e2e-test
 
 # install the cert-manager and wait for ready
 install-cert-manager:
-	@echo "Installing cert-manager..."
-	@kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-	@kubectl wait pods -n cert-manager --all --for condition=Ready --timeout=300s
-	@echo "Cert-Manager ready."
+	@go run cmd/main.go deploy cert-manager
 
 # Build vineyardctl binary
 vineyardctl: generate fmt

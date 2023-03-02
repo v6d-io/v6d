@@ -21,7 +21,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 	// import as early as possible to introduce the "version" global flag
 	_ "k8s.io/component-base/version/verflag"
 
@@ -37,11 +36,13 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util/usage"
 )
 
-var cmdLong = kubectlTemplate.LongDesc(`vineyardctl is the command-line
-	tool for working with the Vineyard Operator. It supports creating,
-	deleting and checking status of Vineyard Operator. It also supports
+var (
+	cmdLong = util.LongDesc(`vineyardctl is the command-line 
+	tool for working with the Vineyard Operator. It supports creating, 
+	deleting and checking status of Vineyard Operator. It also supports 
 	managing the vineyard relevant components such as vineyardd and pluggable
 	drivers`)
+)
 
 var cmd = &cobra.Command{
 	Use:     "vineyardctl [command]",

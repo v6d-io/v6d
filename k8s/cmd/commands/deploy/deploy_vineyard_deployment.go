@@ -24,7 +24,6 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
@@ -35,11 +34,11 @@ import (
 )
 
 var (
-	deployVineyardDeploymentLong = kubectlTemplate.LongDesc(`Builds and deploy 
+	deployVineyardDeploymentLong = util.LongDesc(`Builds and deploy 
 	the yaml file of vineyardd the vineyardd without vineyard operator. You could 
 	deploy a customized vineyardd from stdin or file.`)
 
-	deployVineyardDeploymentExample = kubectlTemplate.Examples(`
+	deployVineyardDeploymentExample = util.Examples(`
 	# deploy the default vineyard deployment on kubernetes
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
 	deploy vineyard-deployment

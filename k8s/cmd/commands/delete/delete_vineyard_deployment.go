@@ -19,7 +19,6 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
@@ -28,17 +27,17 @@ import (
 )
 
 var (
-	deleteVineyardDeploymentLong = kubectlTemplate.LongDesc(`
+	deleteVineyardDeploymentLong = util.LongDesc(`
 	delete vineyard-deployment will delete the vineyard deployment 
 	without vineyard operator`)
 
-	deleteVineyardDeploymentExample = kubectlTemplate.Examples(`
+	deleteVineyardDeploymentExample = util.Examples(`
 	# delete the default vineyard deployment in the vineyard-system namespace
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment
 
 	# delete the vineyard deployment with specific name in the vineyard-system namespace
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment \
-	--name vineyardd-0`)
+		--name vineyardd-0`)
 )
 
 // deleteVineyardDeploymentCmd delete the vineyard deployment without vineyard operator

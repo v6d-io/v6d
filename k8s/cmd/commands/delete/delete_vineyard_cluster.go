@@ -18,17 +18,15 @@ package delete
 import (
 	"github.com/spf13/cobra"
 
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
-
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 var (
-	deleteVineyardClusterLong = kubectlTemplate.LongDesc(`
+	deleteVineyardClusterLong = util.LongDesc(`
 	Delete the vineyardd on kubernetes. You could delete the vineyardd cluster
 	on kubernetes quickly.`)
 
-	deleteVineyardClusterExample = kubectlTemplate.Examples(`
+	deleteVineyardClusterExample = util.Examples(`
 	# delete the default vineyard cluster on kubernetes
 	vineyardctl delete vineyard-cluster`)
 )

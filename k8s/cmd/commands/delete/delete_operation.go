@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"k8s.io/apimachinery/pkg/types"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -27,10 +26,10 @@ import (
 )
 
 var (
-	deleteOperationLong = kubectlTemplate.LongDesc(`
+	deleteOperationLong = util.LongDesc(`
 	Delete the operation on kubernetes.`)
 
-	deleteOperationExample = kubectlTemplate.Examples(`
+	deleteOperationExample = util.Examples(`
 	# delete the operation named "assembly-test" in the "vineyard-system" namespace
 	vineyardctl delete operation --name assembly-test`)
 )

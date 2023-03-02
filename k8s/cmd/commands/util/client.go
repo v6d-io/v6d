@@ -109,12 +109,7 @@ func CreateWithContext[T client.Object](
 	}
 
 	return Wait(func() (bool, error) {
-		name := "vineyardd-sample"
-		namespace := "vineyard-system"
-		err := c.Get(ctx, client.ObjectKey{
-			Name:      name,
-			Namespace: namespace,
-		}, v)
+		err := c.Get(ctx, client.ObjectKeyFromObject(v), v)
 		if err != nil {
 			if !apierrors.IsNotFound(err) {
 				return true, err // early stop if error occurs

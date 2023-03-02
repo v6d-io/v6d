@@ -26,7 +26,6 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"k8s.io/apimachinery/pkg/runtime"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -47,9 +46,9 @@ import (
 )
 
 var (
-	managerLong = kubectlTemplate.LongDesc("Start the manager of vineyard operator")
+	managerLong = util.LongDesc("Start the manager of vineyard operator")
 
-	managerExample = kubectlTemplate.Examples(`
+	managerExample = util.Examples(`
 	# start the manager of vineyard operator with default configuration
 	# (Enable the controller, webhooks and scheduler)
 	vineyardctl manager

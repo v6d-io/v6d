@@ -18,18 +18,16 @@ package delete
 import (
 	"github.com/spf13/cobra"
 
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
-
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 var (
-	deleteCertManagerLong = kubectlTemplate.LongDesc(`Delete the cert-manager in 
+	deleteCertManagerLong = util.LongDesc(`Delete the cert-manager in 
 	the cert-manager namespace. You should specify the version of deployed 
 	cert-manager and the default version is v1.9.1.`)
 
-	deleteCertManagerExample = kubectlTemplate.Examples(`
+	deleteCertManagerExample = util.Examples(`
 	# delete the default version(v1.9.1) of cert-manager
 	vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager
 

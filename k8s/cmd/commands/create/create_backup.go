@@ -20,7 +20,6 @@ import (
 	"github.com/spf13/cobra"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -29,78 +28,78 @@ import (
 )
 
 var (
-	createBackupLong = kubectlTemplate.LongDesc(`
+	createBackupLong = util.LongDesc(`
 	Backup the current vineyard cluster on kubernetes. You could backup all objects 
 	of the current vineyard cluster quickly. For persistent storage, you could specify 
 	the pv spec and pv spec.`)
 
-	createBackupExample = `
-  # create a backup job for the vineyard cluster on kubernetes 
-  # you could define the pv and pvc spec from json string as follows
-  vineyardctl create backup \
-  --vineyardd-name vineyardd-sample \
-  --vineyardd-namespace vineyard-system  \
-  --limit 1000 \
-  --path /var/vineyard/dump  \
-  --pv-pvc-spec '{
-  "pv-spec": {
-	  "capacity": {
-		  "storage": "1Gi"
-	  },
-	  "accessModes": [
-		  "ReadWriteOnce"
-	  ],
-	  "storageClassName": "manual",
-	  "hostPath": {
-		  "path": "/var/vineyard/dump"
-	  }
-  },
-  "pvc-spec": {
-	  "storageClassName": "manual",
-	  "accessModes": [
-		  "ReadWriteOnce"
-	  ],
-	  "resources": {
-		  "requests": {
-		  "storage": "1Gi"
-		  }
-	  }
-  }
-  }'
+	createBackupExample = util.Examples(`
+	# create a backup job for the vineyard cluster on kubernetes 
+	# you could define the pv and pvc spec from json string as follows
+	vineyardctl create backup \
+		--vineyardd-name vineyardd-sample \
+		--vineyardd-namespace vineyard-system  \
+		--limit 1000 \
+		--path /var/vineyard/dump  \
+		--pv-pvc-spec '{
+			"pv-spec": {
+				"capacity": {
+					"storage": "1Gi"
+				},
+				"accessModes": [
+					"ReadWriteOnce"
+				],
+				"storageClassName": "manual",
+				"hostPath": {
+					"path": "/var/vineyard/dump"
+				}
+			},
+			"pvc-spec": {
+				"storageClassName": "manual",
+				"accessModes": [
+					"ReadWriteOnce"
+				],
+				"resources": {
+					"requests": {
+					"storage": "1Gi"
+					}
+				}
+			}
+			}'
 	
-  # create a backup job for the vineyard cluster on kubernetes 
-  # you could define the pv and pvc spec from yaml string as follows
-  vineyardctl create backup \
-  --vineyardd-name vineyardd-sample \
-  --vineyardd-namespace vineyard-system  \
-  --limit 1000 --path /var/vineyard/dump  \
-  --pv-pvc-spec  \
-  '
-  pv-spec:
-	capacity:
-	  storage: 1Gi
-	accessModes:
-	- ReadWriteOnce
-	storageClassName: manual
-	hostPath:
-	  path: "/var/vineyard/dump"
-  pvc-spec:
-	storageClassName: manual
-	accessModes:
-	- ReadWriteOnce
-	resources:
-	  requests:
-		storage: 1Gi
-  '
+	# create a backup job for the vineyard cluster on kubernetes 
+	# you could define the pv and pvc spec from yaml string as follows
+	vineyardctl create backup \
+		--vineyardd-name vineyardd-sample \
+		--vineyardd-namespace vineyard-system  \
+		--limit 1000 --path /var/vineyard/dump  \
+		--pv-pvc-spec  \
+		'
+		pv-spec:
+		capacity:
+			storage: 1Gi
+		accessModes:
+		- ReadWriteOnce
+		storageClassName: manual
+		hostPath:
+			path: "/var/vineyard/dump"
+		pvc-spec:
+		storageClassName: manual
+		accessModes:
+		- ReadWriteOnce
+		resources:
+			requests:
+			storage: 1Gi
+		'
 	
-  # create a backup job for the vineyard cluster on kubernetes
-  # you could define the pv and pvc spec from json file as follows
-  # also you could use yaml file instead of json file
-  cat pv-pvc.json | vineyardctl create backup \
-  --vineyardd-name vineyardd-sample \
-  --vineyardd-namespace vineyard-system  \
-  --limit 1000 --path /var/vineyard/dump  \
-  -`
+	# create a backup job for the vineyard cluster on kubernetes
+	# you could define the pv and pvc spec from json file as follows
+	# also you could use yaml file instead of json file
+	cat pv-pvc.json | vineyardctl create backup \
+		--vineyardd-name vineyardd-sample \
+		--vineyardd-namespace vineyard-system  \
+		--limit 1000 --path /var/vineyard/dump  \
+		-`)
 )
 
 // createBackupCmd creates the backup job of vineyard cluster on kubernetes

@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"k8s.io/apimachinery/pkg/types"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	vineyardv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -27,10 +26,10 @@ import (
 )
 
 var (
-	deleteVineyarddLong = kubectlTemplate.LongDesc(`
+	deleteVineyarddLong = util.LongDesc(`
 	Delete the vineyardd cluster on kubernetes.`)
 
-	deleteVineyarddExample = kubectlTemplate.Examples(`
+	deleteVineyarddExample = util.Examples(`
 	# delete the default vineyardd cluster(vineyardd-sample) in the default namespace
 	vineyardctl delete vineyardd
 

@@ -31,7 +31,10 @@ var (
 	// Namespace for operation
 	Namespace string
 
-	// Usage and documentation
+	// NeedWait indicates whether to wait for the kubernetes resource to be ready
+	NeedWait bool
+
+	// DumpUsage
 	DumpUsage bool
 	GenDoc    bool
 )
@@ -60,6 +63,9 @@ func ApplyGlobalFlags(cmd *cobra.Command) {
 			"kubeconfig path for the kubernetes cluster")
 	cmd.PersistentFlags().
 		StringVarP(&Namespace, "namespace", "n", defaultNamespace, "the namespace for operation")
+	cmd.PersistentFlags().
+		BoolVarP(&NeedWait, "wait", "", true,
+			"wait for the kubernetes resource to be ready, default true")
 	cmd.Flags().BoolVarP(&DumpUsage, "dump-usage", "j", false, "Dump usage in JSON")
 	cmd.Flags().BoolVarP(&GenDoc, "gen-doc", "g", false, "Generate reference docs, e.g., './references.md'")
 }

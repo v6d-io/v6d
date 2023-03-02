@@ -27,7 +27,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -35,82 +34,82 @@ import (
 )
 
 var (
-	scheduleWorkloadLong = kubectlTemplate.LongDesc(`ScheduleWorkload schedules 
+	scheduleWorkloadLong = util.LongDesc(`ScheduleWorkload schedules 
 	the workload to a vineyard cluster. It will add the podAffinity to the workload 
 	so that the workload will be scheduled to the vineyard cluster.`)
 
-	scheduleWorkloadExample = `
+	scheduleWorkloadExample = util.Examples(`
 	# Add the podAffinity to the workload for the specific vineyard cluster
-  vineyardctl schedule workload --resource '{
-  "apiVersion": "apps/v1",
-  "kind": "Deployment",
-  "metadata": {
-	  "name": "web-server"
-  },
-  "spec": {
-	  "selector": {
-	  "matchLabels": {
-		  "app": "web-store"
-	  }
-	  },
-	  "replicas": 3,
-	  "template": {
-	  "metadata": {
-		  "labels": {
-		  "app": "web-store"
-		  }
-	  },
-	  "spec": {
-		  "affinity": {
-		  "podAntiAffinity": {
-			  "requiredDuringSchedulingIgnoredDuringExecution": [
-			  {
-				  "labelSelector": {
-				  "matchExpressions": [
-					  {
-					  "key": "app",
-					  "operator": "In",
-					  "values": [
-						  "web-store"
-					  ]
-					  }
-				  ]
-				  },
-				  "topologyKey": "kubernetes.io/hostname"
-			  }
-			  ]
-		  },
-		  "podAffinity": {
-			  "requiredDuringSchedulingIgnoredDuringExecution": [
-			  {
-				  "labelSelector": {
-				  "matchExpressions": [
-					  {
-					  "key": "app",
-					  "operator": "In",
-					  "values": [
-						  "store"
-					  ]
-					  }
-				  ]
-				  },
-				  "topologyKey": "kubernetes.io/hostname"
-			  }
-			  ]
-		  }
-		  },
-		  "containers": [
-		  {
-			  "name": "web-app",
-			  "image": "nginx:1.16-alpine"
-		  }
-		  ]
-	  }
-	  }
-  }
-  }' \
-  --vineyardd-name vineyardd-sample \
-  --vineyardd-namespace vineyard-system`
+	vineyardctl schedule workload --resource '{
+		"apiVersion": "apps/v1",
+		"kind": "Deployment",
+		"metadata": {
+			"name": "web-server"
+		},
+		"spec": {
+			"selector": {
+			"matchLabels": {
+				"app": "web-store"
+			}
+			},
+			"replicas": 3,
+			"template": {
+			"metadata": {
+				"labels": {
+				"app": "web-store"
+				}
+			},
+			"spec": {
+				"affinity": {
+				"podAntiAffinity": {
+					"requiredDuringSchedulingIgnoredDuringExecution": [
+					{
+						"labelSelector": {
+						"matchExpressions": [
+							{
+							"key": "app",
+							"operator": "In",
+							"values": [
+								"web-store"
+							]
+							}
+						]
+						},
+						"topologyKey": "kubernetes.io/hostname"
+					}
+					]
+				},
+				"podAffinity": {
+					"requiredDuringSchedulingIgnoredDuringExecution": [
+					{
+						"labelSelector": {
+						"matchExpressions": [
+							{
+							"key": "app",
+							"operator": "In",
+							"values": [
+								"store"
+							]
+							}
+						]
+						},
+						"topologyKey": "kubernetes.io/hostname"
+					}
+					]
+				}
+				},
+				"containers": [
+				{
+					"name": "web-app",
+					"image": "nginx:1.16-alpine"
+				}
+				]
+			}
+			}
+		}
+		}' \
+		--vineyardd-name vineyardd-sample \
+		--vineyardd-namespace vineyard-system`)
 )
 
 // scheduleWorkloadCmd schedules the workload to a vineyard cluster

@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"k8s.io/apimachinery/pkg/types"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -27,10 +26,10 @@ import (
 )
 
 var (
-	deleteBackupLong = kubectlTemplate.LongDesc(`
+	deleteBackupLong = util.LongDesc(`
 	Delete the backup job on kubernetes.`)
 
-	deleteBackupExample = kubectlTemplate.Examples(`
+	deleteBackupExample = util.Examples(`
 	# delete the default backup job
 	vineyardctl delete backup`)
 )

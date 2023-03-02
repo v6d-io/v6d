@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -27,32 +26,32 @@ import (
 )
 
 var (
-	createOperationLong = kubectlTemplate.LongDesc(`Insert an operation in a workflow 
+	createOperationLong = util.LongDesc(`Insert an operation in a workflow 
 	based on vineyard cluster. You could create a assembly or repartition operation 
 	in a workflow. Usually, the operation should be created between the workloads: 
 	job1 -> operation -> job2.`)
 
-	createOperationExample = kubectlTemplate.Examples(`
+	createOperationExample = util.Examples(`
 	# create a local assembly operation between job1 and job2
 	vineyardctl create operation --name assembly \
-	--type local \
-	--require job1 \
-	--target job2 \
-	--timeoutSeconds 600
+		--type local \
+		--require job1 \
+		--target job2 \
+		--timeoutSeconds 600
 
 	# create a distributed assembly operation between job1 and job2
 	vineyardctl create operation --name assembly \
-	--type distributed \
-	--require job1 \
-	--target job2 \
-	--timeoutSeconds 600
+		--type distributed \
+		--require job1 \
+		--target job2 \
+		--timeoutSeconds 600
 
 	# create a dask repartition operation between job1 and job2
 	vineyardctl create operation --name repartition \
-	--type dask \
-	--require job1 \
-	--target job2 \
-	--timeoutSeconds 600`)
+		--type dask \
+		--require job1 \
+		--target job2 \
+		--timeoutSeconds 600`)
 )
 
 // createOperationCmd creates the specific operation in a workflow.

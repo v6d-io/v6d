@@ -20,14 +20,14 @@ package schedule
 import (
 	"github.com/spf13/cobra"
 
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
+	util "k8s.io/kubectl/pkg/util/templates"
 )
 
 var (
-	scheduleLong = kubectlTemplate.LongDesc(`schedule return a 
+	scheduleLong = util.LongDesc(`schedule return a 
 	nodeName for the workload to co-allocate with vineyard cluster.`)
 
-	scheduleExamples = kubectlTemplate.Examples(`
+	scheduleExamples = util.Examples(`
 	# Schedule a workload to a vineyard cluster
 	# it will add PodAffinity to the workload
 	vineyardctl schedule --workload=workloadName`)

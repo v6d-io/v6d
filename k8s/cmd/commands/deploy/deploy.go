@@ -18,13 +18,13 @@ package deploy
 import (
 	"github.com/spf13/cobra"
 
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
+	util "k8s.io/kubectl/pkg/util/templates"
 )
 
 var (
-	deployLong = kubectlTemplate.LongDesc(`Deploy a vineyard component on kubernetes.`)
+	deployLong = util.LongDesc(`Deploy a vineyard component on kubernetes.`)
 
-	deployExample = kubectlTemplate.Examples(`
+	deployExample = util.Examples(`
 	# deploy the default vineyard cluster on kubernetes
 	vineyardctl --kubeconfig $HOME/.kube/config deploy vineyard-cluster
 

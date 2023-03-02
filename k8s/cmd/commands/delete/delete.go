@@ -18,14 +18,14 @@ package delete
 import (
 	"github.com/spf13/cobra"
 
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
+	util "k8s.io/kubectl/pkg/util/templates"
 )
 
 var (
-	deleteLong = kubectlTemplate.LongDesc(`
+	deleteLong = util.LongDesc(`
 	Delete the vineyard components on kubernetes.`)
 
-	deleteExample = kubectlTemplate.Examples(`
+	deleteExample = util.Examples(`
 	# delete the default vineyard cluster on kubernetes
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete
 	

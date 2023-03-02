@@ -19,7 +19,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"k8s.io/apimachinery/pkg/types"
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -27,10 +26,10 @@ import (
 )
 
 var (
-	deleteRecoverLong = kubectlTemplate.LongDesc(`
+	deleteRecoverLong = util.LongDesc(`
 	Delete the recover job on kubernetes.`)
 
-	deleteRecoverExample = kubectlTemplate.Examples(`
+	deleteRecoverExample = util.Examples(`
 	# delete the default recover job on kubernetes
 	vineyardctl delete recover`)
 )

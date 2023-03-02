@@ -69,42 +69,42 @@ setup:
       command: |
         kubectl create ns backup
         go run k8s/cmd/main.go -n backup create backup \
-        --vineyardd-name vineyardd-sample \
-        --vineyardd-namespace vineyard-system  \
-        --limit 1000 \
-        --path /var/vineyard/dump  \
-        --pv-pvc-spec '{
-        "pv-spec": {
-          "capacity": {
-            "storage": "1Gi"
+          --vineyardd-name vineyardd-sample \
+          --vineyardd-namespace vineyard-system  \
+          --limit 1000 \
+          --path /var/vineyard/dump  \
+          --pv-pvc-spec '{
+          "pv-spec": {
+            "capacity": {
+              "storage": "1Gi"
+            },
+            "accessModes": [
+              "ReadWriteOnce"
+            ],
+            "storageClassName": "manual",
+            "hostPath": {
+              "path": "/var/vineyard/dump"
+            }
           },
-          "accessModes": [
-            "ReadWriteOnce"
-          ],
-          "storageClassName": "manual",
-          "hostPath": {
-            "path": "/var/vineyard/dump"
-          }
-        },
-        "pvc-spec": {
-          "storageClassName": "manual",
-          "accessModes": [
-            "ReadWriteOnce"
-          ],
-          "resources": {
-            "requests": {
-            "storage": "1Gi"
+          "pvc-spec": {
+            "storageClassName": "manual",
+            "accessModes": [
+              "ReadWriteOnce"
+            ],
+            "resources": {
+              "requests": {
+              "storage": "1Gi"
+              }
             }
           }
-        }
-        }'
+          }'
     - name: simulate vineyard node fail
       command: |
         go run k8s/cmd/main.go delete vineyardd --name vineyardd-sample --namespace vineyard-system
         kubectl wait --for delete pod --timeout=60s --selector=app.kubernetes.io/name=vineyardd-sample -n vineyard-system
     - name: reinstall vineyardd
       command: |
-        go run k8s/cmd/main.go create vineyardd -f k8s/test/e2e/vineyardd.yaml
+        go run k8s/cmd/main.go deploy vineyardd -f k8s/test/e2e/vineyardd.yaml
     - name: install recover
       command: |
         go run k8s/cmd/main.go -n backup create recover

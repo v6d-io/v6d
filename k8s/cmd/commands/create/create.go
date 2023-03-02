@@ -17,26 +17,25 @@ package create
 
 import (
 	"github.com/spf13/cobra"
-
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 var (
-	createLong = kubectlTemplate.LongDesc(`Create a vineyard job on kubernetes.`)
+	createLong = util.LongDesc(`Create a vineyard job on kubernetes.`)
 
-	createExample = kubectlTemplate.Examples(`
+	createExample = util.Examples(`
 	# create the backup job on kubernetes
 	vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system
-	
+		
 	# create the recover job on kubernetes
 	vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system
-	
+		
 	# create the operation job on kubernetes
 	vineyardctl create operation --name assembly \
-	--type local \
-	--require job1 \
-	--target job2 \
-	--timeoutSeconds 600`)
+		--type local \
+		--require job1 \
+		--target job2 \
+		--timeoutSeconds 600`)
 )
 
 // createCmd creates several vineyard jobs on kubernetes

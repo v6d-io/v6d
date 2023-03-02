@@ -18,16 +18,14 @@ package deploy
 import (
 	"github.com/spf13/cobra"
 
-	kubectlTemplate "k8s.io/kubectl/pkg/util/templates"
-
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 var (
-	deployVineyardClusterLong = kubectlTemplate.LongDesc(`Deploy the vineyardd on kubernetes. 
+	deployVineyardClusterLong = util.LongDesc(`Deploy the vineyardd on kubernetes. 
 	You could deploy a vineyardd cluster on kubernetes quickly.`)
 
-	deployVineyardClusterExample = kubectlTemplate.Examples(`
+	deployVineyardClusterExample = util.Examples(`
 	# deploy the default vineyard cluster on kubernetes
 	vineyardctl deploy vineyard-cluster`)
 )

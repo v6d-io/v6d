@@ -39,9 +39,6 @@ var (
 
 	// VineyardFile is the path of vineyardd file
 	VineyarddFile string
-
-	// WaitVineyardd is the flag to indicate whether to wait for the vineyardd to be ready
-	WaitVineyardd bool
 )
 
 // ApplyVineyardContainerOpts applies the vineyard container options
@@ -154,8 +151,6 @@ func ApplyVineyarddOpts(cmd *cobra.Command) {
 		"", "", "the service account name of vineyardd")
 	cmd.Flags().IntVarP(&VineyarddOpts.Etcd.Replicas, "vineyard.etcd.replicas",
 		"", 3, "the number of etcd replicas in a vineyard cluster")
-	cmd.Flags().BoolVarP(&WaitVineyardd, "wait", "", true,
-		"wait for vineyardd to be ready")
 	cmd.Flags().StringVarP(&VineyarddFile, "file", "f", "", "the path of vineyardd")
 	// setup the vineyardd name
 	ApplyVineyarddNameOpts(cmd)
