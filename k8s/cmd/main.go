@@ -47,8 +47,6 @@ var (
 	deleting and checking status of Vineyard Operator. It also supports 
 	managing the vineyard relevant components such as vineyardd and pluggable
 	drivers`)
-
-	gendoc = false
 )
 
 var cmd = &cobra.Command{
