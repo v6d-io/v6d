@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import json
 import re
 
 import pyarrow as pa
@@ -43,6 +44,17 @@ def as_arrow_buffer(blob):
     if buffer is None:
         return None
     return pa.py_buffer(buffer)
+
+
+def json_to_arrow_buffer(value):
+    assert isinstance(value, str)
+    value = json.loads(value)
+    assert 'bytes' in value
+    return pa.py_buffer(bytearray(value['bytes']))
+
+
+def json_from_arrow_buffer(buffer):
+    return {"bytes": list(bytearray(buffer))}
 
 
 def numeric_array_builder(client, array, builder):
@@ -174,7 +186,7 @@ def schema_proxy_builder(client, schema, builder):
     resized_schema = pa.schema(fields, schema.metadata)
 
     serialized = resized_schema.serialize()
-    meta.add_member('buffer_', buffer_builder(client, serialized, builder))
+    meta['schema_binary_'] = json.dumps(json_from_arrow_buffer(serialized))
     meta['nbytes'] = len(serialized)
     return client.create_metadata(meta)
 
@@ -200,12 +212,12 @@ def table_builder(client, table, builder):
     meta['num_columns_'] = table.num_columns
     batches = table.to_batches()
     meta['batch_num_'] = len(batches)
-    meta['__batches_-size'] = len(batches)
+    meta['partitions_-size'] = len(batches)
 
     meta.add_member('schema_', schema_proxy_builder(client, table.schema, builder))
     for idx, batch in enumerate(batches):
         meta.add_member(
-            '__batches_-%d' % idx, record_batch_builder(client, batch, builder)
+            'partitions_-%d' % idx, record_batch_builder(client, batch, builder)
         )
     meta['nbytes'] = table.nbytes
     return client.create_metadata(meta)
@@ -217,11 +229,11 @@ def table_from_recordbatches(client, schema, batches, num_rows, num_columns, bui
     meta['num_rows_'] = num_rows
     meta['num_columns_'] = num_columns
     meta['batch_num_'] = len(batches)
-    meta['__batches_-size'] = len(batches)
+    meta['partitions_-size'] = len(batches)
 
     meta.add_member('schema_', schema_proxy_builder(client, schema, builder))
     for idx, batch in enumerate(batches):
-        meta.add_member('__batches_-%d' % idx, batch)
+        meta.add_member('partitions_-%d' % idx, batch)
     meta['nbytes'] = 0
     return client.create_metadata(meta)
 
@@ -317,7 +329,13 @@ def list_array_resolver(obj, resolver):
 
 
 def schema_proxy_resolver(obj):
-    buffer = as_arrow_buffer(obj.member('buffer_'))
+    meta = obj.meta
+    if 'buffer_' in meta:
+        buffer = as_arrow_buffer(meta.member('buffer_'))
+    elif 'schema_binary_' in meta:
+        buffer = json_to_arrow_buffer(meta['schema_binary_'])
+    else:
+        raise ValueError("not a valid schema: %s" % meta)
     return pa.ipc.read_schema(buffer)
 
 
@@ -335,7 +353,7 @@ def table_resolver(obj, resolver):
     batch_num = int(meta['batch_num_'])
     batches = []
     for idx in range(batch_num):
-        batches.append(resolver.run(obj.member('__batches_-%d' % idx)))
+        batches.append(resolver.run(obj.member('partitions_-%d' % idx)))
     return pa.Table.from_batches(batches)
 
 
