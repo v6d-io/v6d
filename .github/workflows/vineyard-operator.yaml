@@ -18,7 +18,6 @@ on:
   push:
     branches:
       - main
-      - 'dev/kubernetes'
     tags:
       - 'v*'
     paths:
@@ -29,7 +28,6 @@ on:
   pull_request:
     branches:
       - main
-      - 'dev/kubernetes'
     paths:
       - '.github/workflows/vineyard-operator.yaml'
       - 'k8s/**'

@@ -36,7 +36,7 @@ setup:
         make -C k8s/test/e2e publish-local-assembly-images REGISTRY=localhost:5001
     - name: install vineyardd
       command: |
-        run k8s/cmd/main.go deploy vineyardd -f k8s/test/e2e/vineyardd.yaml
+        go run k8s/cmd/main.go deploy vineyardd -f k8s/test/e2e/vineyardd.yaml
     - name: install job1
       command: |
         kubectl create namespace vineyard-job
