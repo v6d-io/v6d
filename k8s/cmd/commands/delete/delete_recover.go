@@ -56,6 +56,6 @@ var deleteRecoverCmd = &cobra.Command{
 	},
 }
 
-func newDeleteRecoverCmd() *cobra.Command {
+func NewDeleteRecoverCmd() *cobra.Command {
 	return deleteRecoverCmd
 }

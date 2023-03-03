@@ -77,7 +77,7 @@ var deployVineyardDeploymentCmd = &cobra.Command{
 	},
 }
 
-func newDeployVineyardDeploymentCmd() *cobra.Command {
+func NewDeployVineyardDeploymentCmd() *cobra.Command {
 	return deployVineyardDeploymentCmd
 }
 

@@ -24,7 +24,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,10 +34,11 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // GetVineyarddNodes returns all node names of vineyardd pods.
-func GetVineyarddNodes(c client.Client, log logr.Logger, name, namespace string) []string {
+func GetVineyarddNodes(c client.Client, log log.Logger, name, namespace string) []string {
 	nodes := []string{}
 
 	podList := v1.PodList{}
@@ -63,7 +63,7 @@ func GetVineyarddNodes(c client.Client, log logr.Logger, name, namespace string)
 }
 
 // GetRequiredJob get all required jobs name that separated by '.' from annotations
-func GetRequiredJob(log logr.Logger, anno map[string]string) ([]string, error) {
+func GetRequiredJob(log log.Logger, anno map[string]string) ([]string, error) {
 	objects, exists := anno[annotations.VineyardJobRequired]
 	if !exists {
 		return []string{}, errors.Errorf(
@@ -81,7 +81,7 @@ func GetRequiredJob(log logr.Logger, anno map[string]string) ([]string, error) {
 // GetLocalObjectsBySignatures returns the local objects by the given signatures.
 func GetLocalObjectsBySignatures(
 	c client.Client,
-	log logr.Logger,
+	log log.Logger,
 	signatures []string,
 ) ([]*v1alpha1.LocalObject, error) {
 	objects := make([]*v1alpha1.LocalObject, 0)
@@ -104,7 +104,7 @@ func GetLocalObjectsBySignatures(
 // GetGlobalObjectsByID returns the global objects by the given jobname.
 func GetGlobalObjectsByID(
 	c client.Client,
-	log logr.Logger,
+	log log.Logger,
 	jobNames []string,
 ) ([]*v1alpha1.GlobalObject, error) {
 	requiredJobs := make(map[string]bool)
@@ -127,7 +127,7 @@ func GetGlobalObjectsByID(
 }
 
 // CheckOperationLabels checks if the pod has operation labels and returns the operation name.
-func CheckOperationLabels(c client.Client, log logr.Logger, pod *v1.Pod) (int64, error) {
+func CheckOperationLabels(c client.Client, log log.Logger, pod *v1.Pod) (int64, error) {
 	operationLabels := []string{"assembly.v6d.io/enabled", "repartition.v6d.io/enabled"}
 	for _, label := range operationLabels {
 		if value, ok := pod.Labels[label]; ok && strings.ToLower(value) == "true" {
@@ -176,7 +176,7 @@ func CheckOperationLabels(c client.Client, log logr.Logger, pod *v1.Pod) (int64,
 // CreateConfigmapForID creates a configmap for the object id and the nodes.
 func CreateConfigmapForID(
 	c client.Client,
-	log logr.Logger,
+	log log.Logger,
 	jobname []string,
 	namespace string,
 	localobjects []*v1alpha1.LocalObject,
@@ -233,7 +233,7 @@ func CreateConfigmapForID(
 			}
 			cm.OwnerReferences = ownerReference
 			if err := c.Create(context.TODO(), &cm); err != nil {
-				log.Info(fmt.Sprintf("create configmap error: %v", err))
+				log.Error(err, "create configmap error")
 				return err
 			}
 		}

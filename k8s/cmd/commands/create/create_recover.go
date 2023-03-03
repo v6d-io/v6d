@@ -61,7 +61,7 @@ var createRecoverCmd = &cobra.Command{
 	},
 }
 
-func newCreateRecoverCmd() *cobra.Command {
+func NewCreateRecoverCmd() *cobra.Command {
 	return createRecoverCmd
 }
 

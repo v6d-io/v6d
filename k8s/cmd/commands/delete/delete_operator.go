@@ -62,7 +62,7 @@ var deleteOperatorCmd = &cobra.Command{
 	},
 }
 
-func newDeleteOperatorCmd() *cobra.Command {
+func NewDeleteOperatorCmd() *cobra.Command {
 	return deleteOperatorCmd
 }
 

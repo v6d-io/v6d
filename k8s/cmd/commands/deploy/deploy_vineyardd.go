@@ -220,7 +220,7 @@ func BuildVineyardManifestFromFile() (*v1alpha1.Vineyardd, error) {
 	return vineyardd, err
 }
 
-func newDeployVineyarddCmd() *cobra.Command {
+func NewDeployVineyarddCmd() *cobra.Command {
 	return deployVineyarddCmd
 }
 

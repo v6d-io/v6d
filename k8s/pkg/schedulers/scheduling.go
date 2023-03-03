@@ -32,16 +32,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	listerv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/component-helpers/scheduling/corev1"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"k8s.io/component-helpers/scheduling/corev1"
 
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var slog = log.Log.WithName("vineyard-scheduler-in-cluster")
+var slog = log.WithName("vineyard-scheduler-in-cluster")
 
 const (
 	// Name is the name of the plugin used in Registry and configurations.

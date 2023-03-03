@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -40,18 +41,18 @@ var deployVineyardClusterCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 
 		// deploy cert-manager
-		newDeployCertManagerCmd().Run(cmd, args)
+		NewDeployCertManagerCmd().Run(cmd, args)
 
 		// deploy vineyard operator
-		newDeployOperatorCmd().Run(cmd, args)
+		NewDeployOperatorCmd().Run(cmd, args)
 
 		// deploy vineyardd
-		newDeployVineyarddCmd().Run(cmd, args)
+		NewDeployVineyarddCmd().Run(cmd, args)
 
-		util.InfoLogger.Println("Vineyard Cluster is ready.")
+		log.Info("Vineyard Cluster is ready.")
 	},
 }
 
-func newDeployVineyardClusterCmd() *cobra.Command {
+func NewDeployVineyardClusterCmd() *cobra.Command {
 	return deployVineyardClusterCmd
 }

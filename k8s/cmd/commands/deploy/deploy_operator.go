@@ -86,7 +86,7 @@ var deployOperatorCmd = &cobra.Command{
 	},
 }
 
-func newDeployOperatorCmd() *cobra.Command {
+func NewDeployOperatorCmd() *cobra.Command {
 	return deployOperatorCmd
 }
 

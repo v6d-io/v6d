@@ -59,7 +59,7 @@ var deleteCertManagerCmd = &cobra.Command{
 	},
 }
 
-func newDeleteCertManagerCmd() *cobra.Command {
+func NewDeleteCertManagerCmd() *cobra.Command {
 	return deleteCertManagerCmd
 }
 

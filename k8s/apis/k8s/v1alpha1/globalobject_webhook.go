@@ -24,7 +24,7 @@ import (
 )
 
 // log is for logging in this package.
-var glog = log.Logger.WithName("webhook").WithName("globalobject")
+var glog = log.WithName("webhook").WithName("globalobject")
 
 // SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *GlobalObject) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -41,7 +41,6 @@ var _ webhook.Defaulter = &GlobalObject{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *GlobalObject) Default() {
 	glog.Info("default", "name", r.Name)
-
 }
 
 //nolint: lll

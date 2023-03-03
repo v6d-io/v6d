@@ -52,13 +52,13 @@ func NewDeleteCmd() *cobra.Command {
 }
 
 func init() {
-	deleteCmd.AddCommand(newDeleteCertManagerCmd())
-	deleteCmd.AddCommand(newDeleteOperatorCmd())
-	deleteCmd.AddCommand(newDeleteVineyarddCmd())
-	deleteCmd.AddCommand(newDeleteVineyardClusterCmd())
+	deleteCmd.AddCommand(NewDeleteCertManagerCmd())
+	deleteCmd.AddCommand(NewDeleteOperatorCmd())
+	deleteCmd.AddCommand(NewDeleteVineyarddCmd())
+	deleteCmd.AddCommand(NewDeleteVineyardClusterCmd())
 
-	deleteCmd.AddCommand(newDeleteBackupCmd())
-	deleteCmd.AddCommand(newDeleteRecoverCmd())
-	deleteCmd.AddCommand(newDeleteVineyardDeploymentCmd())
-	deleteCmd.AddCommand(newDeleteOperationCmd())
+	deleteCmd.AddCommand(NewDeleteBackupCmd())
+	deleteCmd.AddCommand(NewDeleteRecoverCmd())
+	deleteCmd.AddCommand(NewDeleteVineyardDeploymentCmd())
+	deleteCmd.AddCommand(NewDeleteOperationCmd())
 }

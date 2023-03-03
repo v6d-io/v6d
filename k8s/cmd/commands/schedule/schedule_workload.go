@@ -135,7 +135,7 @@ var scheduleWorkloadCmd = &cobra.Command{
 	},
 }
 
-func newScheduleWorkloadCmd() *cobra.Command {
+func NewScheduleWorkloadCmd() *cobra.Command {
 	return scheduleWorkloadCmd
 }
 

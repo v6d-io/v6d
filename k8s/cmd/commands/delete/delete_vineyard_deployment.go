@@ -59,7 +59,7 @@ var deleteVineyardDeploymentCmd = &cobra.Command{
 	},
 }
 
-func newDeleteVineyardDeploymentCmd() *cobra.Command {
+func NewDeleteVineyardDeploymentCmd() *cobra.Command {
 	return deleteVineyardDeploymentCmd
 }
 

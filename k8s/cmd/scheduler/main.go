@@ -24,16 +24,20 @@ import (
 	"os/exec"
 	"strconv"
 
-	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
-	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/pkg/errors"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	clientgoScheme "k8s.io/client-go/kubernetes/scheme"
+	defaultscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	vineyardv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -51,9 +55,9 @@ const (
 
 // add k8s apis scheme and apiextensions scheme
 func init() {
-	_ = clientgoScheme.AddToScheme(scheme)
+	_ = defaultscheme.AddToScheme(scheme)
 
-	_ = vineyardV1alpha1.AddToScheme(scheme)
+	_ = vineyardv1alpha1.AddToScheme(scheme)
 }
 
 func main() {
@@ -84,27 +88,27 @@ func main() {
 func parseManifests(c client.Client, manifests []byte, kubeconfig string) {
 	// parse the workflow yaml file
 	resources := bytes.Split(manifests, []byte("---"))
-	for i := range resources {
+	for _, res := range resources {
 		// parse each resource
-		if resources[i][0] == '\r' {
-			resources[i] = resources[i][1:]
+		if res[0] == '\r' {
+			res = res[1:]
 		}
 		decoder := util.Deserializer()
-		obj, _, err := decoder.Decode(resources[i], nil, nil)
+		obj, _, err := decoder.Decode(res, nil, nil)
 		if err != nil {
-			fmt.Println("failed to decode resource", err)
+			log.Error(err, "failed to decode resource")
 			os.Exit(1)
 		}
 
 		proto, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
 		if err != nil {
-			fmt.Println("failed to convert resource", err)
+			log.Error(err, "failed to convert resource")
 			os.Exit(1)
 		}
 
 		unstructuredObj := &unstructured.Unstructured{Object: proto}
-		if success := SchedulingWorkload(c, unstructuredObj, kubeconfig); !success {
-			fmt.Println("failed to schedule resource", err)
+		if err := SchedulingWorkload(c, unstructuredObj, kubeconfig); err != nil {
+			log.Error(err, "failed to schedule resource")
 			os.Exit(1)
 		}
 	}
@@ -149,12 +153,11 @@ func waitWorkload(
 }
 
 // SchedulingWorkload is used to schedule the workload
-func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubeconfig string) bool {
+func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubeconfig string) error {
 	// get template labels
 	l, _, err := unstructured.NestedStringMap(obj.Object, "spec", "template", "metadata", "labels")
 	if err != nil {
-		fmt.Println("failed to get labels", err)
-		return false
+		return errors.Wrap(err, "failed to get labels")
 	}
 
 	// get template annotations
@@ -166,27 +169,23 @@ func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubecon
 		"annotations",
 	)
 	if err != nil {
-		fmt.Println("failed to get annotations", err)
-		return false
+		return errors.Wrap(err, "failed to get annotations")
 	}
 
 	// get name and namespace
 	name, _, err := unstructured.NestedString(obj.Object, "metadata", "name")
 	if err != nil {
-		fmt.Println("failed to get the name of resource", err)
-		return false
+		return errors.Wrap(err, "failed to get the name of resource")
 	}
 	namespace, _, err := unstructured.NestedString(obj.Object, "metadata", "namespace")
 	if err != nil {
-		fmt.Println("failed to get the namespace of resource", err)
-		return false
+		return errors.Wrap(err, "failed to get the namespace of resource")
 	}
 
 	// get obj kind
 	kind, _, err := unstructured.NestedString(obj.Object, "kind")
 	if err != nil {
-		fmt.Println("failed to get the kind of resource", err)
-		return false
+		return errors.Wrap(err, "failed to get the kind of resource")
 	}
 
 	condition, apiVersion := getWaitCondition(kind)
@@ -194,61 +193,52 @@ func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubecon
 	// for non-workload resources
 	if condition == "" {
 		if err := c.Create(context.TODO(), obj); err != nil {
-			fmt.Println("failed to create non-workload resources", err)
-			return false
+			return errors.Wrap(err, "failed to create non-workload resources")
 		}
-		return true
+		return nil // skip scheduling for non-workload resources
 	}
 
 	// for workload resources
 	r := l[labels.WorkloadReplicas]
 	replicas, err := strconv.Atoi(r)
 	if err != nil {
-		fmt.Println("failed to get replicas", err)
-		return false
+		return errors.Wrap(err, "failed to get replicas")
 	}
 
 	str := Scheduling(c, a, l, replicas, namespace, ownerReferences)
 
 	// setup annotations and labels
-	l["scheduling.v6d.io/enabled"] = "true"
+	l[labels.SchedulingEnabledLabel] = "true"
 	if err := unstructured.SetNestedStringMap(obj.Object, l, "spec", "template", "metadata", "labels"); err != nil {
-		fmt.Println("failed to set labels", err)
-		return false
+		return errors.Wrap(err, "failed to set labels")
 	}
 
 	a["scheduledOrder"] = str
 	if err := unstructured.SetNestedStringMap(obj.Object, a, "spec", "template", "metadata", "annotations"); err != nil {
-		fmt.Println("failed to set annotations", err)
-		return false
+		return errors.Wrap(err, "failed to set annotations")
 	}
 
 	if err := c.Create(context.TODO(), obj); err != nil {
-		fmt.Println("failed to create workload", err)
-		return false
+		return errors.Wrap(err, "failed to create workload")
 	}
 
 	// wait for the workload to be ready
 	if err := waitWorkload(c, kind, kubeconfig, condition, apiVersion, name, namespace); err != nil {
-		fmt.Println("failed to wait workload", err)
-		return false
+		return errors.Wrap(err, "failed to wait workload")
 	}
 
 	// use the previous workload as ownerReference
 	if err := c.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, obj); err != nil {
-		fmt.Println("failed to get workload", err)
-		return false
+		return errors.Wrap(err, "failed to get workload")
 	}
 	version, _, err := unstructured.NestedString(obj.Object, "apiVersion")
 	if err != nil {
-		fmt.Println("failed to get apiVersion", err)
-		return false
+		return errors.Wrap(err, "failed to get apiVersion")
 	}
 
 	uid, _, err := unstructured.NestedString(obj.Object, "metadata", "uid")
 	if err != nil {
-		fmt.Println("failed to get uid", err)
-		return false
+		return errors.Wrap(err, "failed to get uid")
 	}
 	ownerReferences = []metav1.OwnerReference{
 		{
@@ -258,6 +248,5 @@ func SchedulingWorkload(c client.Client, obj *unstructured.Unstructured, kubecon
 			UID:        types.UID(uid),
 		},
 	}
-
-	return true
+	return nil
 }

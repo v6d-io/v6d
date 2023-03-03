@@ -149,7 +149,7 @@ func DeleteWithContext(
 			if apierrors.IsNotFound(err) {
 				return true, nil
 			}
-			ErrLogger.Printf("failed to check the status of deleted object: %v", err)
+			log.Error(err, "failed to check the status of deleted object")
 			return true, nil // early stop when error occurs, and ignore the error
 		}
 		return false, nil

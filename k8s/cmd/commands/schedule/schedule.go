@@ -45,5 +45,5 @@ func NewScheduleCmd() *cobra.Command {
 }
 
 func init() {
-	scheduleCmd.AddCommand(newScheduleWorkloadCmd())
+	scheduleCmd.AddCommand(NewScheduleWorkloadCmd())
 }

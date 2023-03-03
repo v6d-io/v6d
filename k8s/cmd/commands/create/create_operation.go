@@ -89,7 +89,7 @@ func buildOperation() *v1alpha1.Operation {
 	return operation
 }
 
-func newCreateOperationCmd() *cobra.Command {
+func NewCreateOperationCmd() *cobra.Command {
 	return createOperationCmd
 }
 

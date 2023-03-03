@@ -136,7 +136,7 @@ var createBackupCmd = &cobra.Command{
 	},
 }
 
-func newCreateBackupCmd() *cobra.Command {
+func NewCreateBackupCmd() *cobra.Command {
 	return createBackupCmd
 }
 

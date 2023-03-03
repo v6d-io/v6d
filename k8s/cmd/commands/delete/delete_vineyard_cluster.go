@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -41,18 +42,18 @@ var deleteVineyardClusterCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 
 		// delete vineyardd
-		newDeleteVineyarddCmd().Run(cmd, args)
+		NewDeleteVineyarddCmd().Run(cmd, args)
 
 		// delete vineyard operator
-		newDeleteOperatorCmd().Run(cmd, args)
+		NewDeleteOperatorCmd().Run(cmd, args)
 
 		// delete cert-manager
-		newDeleteCertManagerCmd().Run(cmd, args)
+		NewDeleteCertManagerCmd().Run(cmd, args)
 
-		util.InfoLogger.Println("Vineyard Cluster is deleted.")
+		log.Info("Vineyard Cluster is deleted.")
 	},
 }
 
-func newDeleteVineyardClusterCmd() *cobra.Command {
+func NewDeleteVineyardClusterCmd() *cobra.Command {
 	return deleteVineyardClusterCmd
 }

@@ -84,7 +84,7 @@ var deployCertManagerCmd = &cobra.Command{
 	},
 }
 
-func newDeployCertManagerCmd() *cobra.Command {
+func NewDeployCertManagerCmd() *cobra.Command {
 	return deployCertManagerCmd
 }
 

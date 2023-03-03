@@ -25,7 +25,7 @@ import (
 )
 
 // log is for logging in this package.
-var olog = log.Logger.WithName("webhook").WithName("operation")
+var olog = log.WithName("webhook").WithName("operation")
 
 // SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *Operation) SetupWebhookWithManager(mgr ctrl.Manager) error {

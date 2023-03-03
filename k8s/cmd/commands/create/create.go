@@ -51,7 +51,7 @@ func NewCreateCmd() *cobra.Command {
 }
 
 func init() {
-	createCmd.AddCommand(newCreateBackupCmd())
-	createCmd.AddCommand(newCreateRecoverCmd())
-	createCmd.AddCommand(newCreateOperationCmd())
+	createCmd.AddCommand(NewCreateBackupCmd())
+	createCmd.AddCommand(NewCreateRecoverCmd())
+	createCmd.AddCommand(NewCreateOperationCmd())
 }
