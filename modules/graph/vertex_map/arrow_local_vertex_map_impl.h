@@ -282,7 +282,10 @@ ArrowLocalVertexMapBuilder<OID_T, VID_T>::ArrowLocalVertexMapBuilder(
       i2o_index_[fid].resize(label_num_);
     }
   }
-  vertices_num_.resize(label_num_);
+  vertices_num_.resize(fnum_);
+  for (fid_t fid = 0; fid < fnum_; ++fid) {
+    vertices_num_[fid].resize(label_num_);
+  }
 
   id_parser_.Init(fnum_, label_num_);
 }
@@ -322,6 +325,7 @@ Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::_Seal(
   vertex_map->o2i_ = o2i_;
   vertex_map->i2o_ = i2o_;
   vertex_map->i2o_index_ = i2o_index_;
+  vertex_map->vertices_num_ = vertices_num_;
 
   vertex_map->meta_.SetTypeName(type_name<ArrowLocalVertexMap<oid_t, vid_t>>());
 
@@ -348,7 +352,7 @@ Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::_Seal(
         nbytes += i2o_index_[fid][label].nbytes();
       }
       vertex_map->meta_.AddKeyValue("vertices_num_" + suffix,
-                                    vertices_num_[label][fid]);
+                                    vertices_num_[fid][label]);
     }
   }
 
@@ -390,7 +394,6 @@ template <typename OID_T, typename VID_T>
 vineyard::Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::addLocalVertices(
     grape::CommSpec& comm_spec,
     std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays) {
-  vertices_num_.resize(label_num_);
   auto fn = [&](label_id_t label) -> Status {
     auto& arrays = oid_arrays[label];
     typename InternalType<oid_t>::vineyard_builder_type array_builder(client,
@@ -415,8 +418,7 @@ vineyard::Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::addLocalVertices(
     o2i_[fid_][label] =
         *std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(object);
 
-    vertices_num_[label].resize(fnum_);
-    vertices_num_[label][fid_] = vnum;
+    vertices_num_[fid_][label] = vnum;
     return Status::OK();
   };
 
@@ -433,7 +435,12 @@ vineyard::Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::addLocalVertices(
 
   // sync the vertices_num
   for (label_id_t label = 0; label < label_num_; ++label) {
-    grape::sync_comm::AllGather(vertices_num_[label], comm_spec.comm());
+    std::vector<vid_t> current_vertices_num(fnum_);
+    current_vertices_num[fid_] = vertices_num_[fid_][label];
+    grape::sync_comm::AllGather(current_vertices_num, comm_spec.comm());
+    for (fid_t fid = 0; fid < fnum_; ++fid) {
+      vertices_num_[fid][label] = current_vertices_num[fid];
+    }
   }
   return vineyard::Status::OK();
 }
