@@ -30,24 +30,24 @@ using GraphType = vineyard::ArrowFragment<vineyard::property_graph_types::OID_TY
 using LabelType = typename GraphType::label_id_t;
 
 
-void TraverseLocalGraph(void* partitioned_graph, void* partition) {
+void TraverseLocalGraph(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION partition) {
   vineyard::GRIN_ArrowFragment gaf;
   gaf.init(partitioned_graph, partition);
   auto g = gaf.get_graph();
 
-  auto elabels = get_edge_type_list(g);
-  auto e_label_num = get_edge_type_list_size(elabels);
-  auto vlabels = get_vertex_type_list(g);
-  auto v_label_num = get_vertex_type_list_size(vlabels);
+  auto elabels = grin_get_edge_type_list(g);
+  auto e_label_num = grin_get_edge_type_list_size(elabels);
+  auto vlabels = grin_get_vertex_type_list(g);
+  auto v_label_num = grin_get_vertex_type_list_size(vlabels);
 
   for (auto i = 0; i < e_label_num; ++i) {
-    auto elabel = get_edge_type_from_list(elabels, i);
-    auto props = get_edge_property_list_by_type(g, elabel);
-    auto prop = get_edge_property_from_list(props, 0);
-    auto prop_dt = get_edge_property_data_type(g, prop);
+    auto elabel = grin_get_edge_type_from_list(elabels, i);
+    auto props = grin_get_edge_property_list_by_type(g, elabel);
+    auto prop = grin_get_edge_property_from_list(props, 0);
+    auto prop_dt = grin_get_edge_property_data_type(g, prop);
     auto dt_name = GetDataTypeName(prop_dt);
     for (auto j = 0; j < v_label_num; ++j) {
-      auto vlabel = get_vertex_type_from_list(vlabels, j);
+      auto vlabel = grin_get_vertex_type_from_list(vlabels, j);
       auto iv = gaf.InnerVertices(vlabel);
       for (auto v: iv) {
         auto al = gaf.GetOutgoingAdjList(v, elabel);
@@ -69,12 +69,12 @@ void traverse(vineyard::Client& client, const grape::CommSpec& comm_spec,
   LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
 
   auto pg = get_partitioned_graph_by_object_id(client, fragment_group_id);
-  auto local_partitions = get_local_partition_list(pg);
-  size_t pnum = get_partition_list_size(local_partitions);
+  auto local_partitions = grin_get_local_partition_list(pg);
+  size_t pnum = grin_get_partition_list_size(pg, local_partitions);
   assert(pnum > 0);
 
   // we only traverse the first partition for test
-  auto partition = get_partition_from_list(local_partitions, 0);
+  auto partition = grin_get_partition_from_list(pg, local_partitions, 0);
   TraverseLocalGraph(pg, partition);
 }
 

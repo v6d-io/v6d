@@ -25,127 +25,127 @@ limitations under the License.
 #include "arrow/api.h"
 
 template <typename T>
-struct DataTypeEnum {
-  static constexpr DataType value = DataType::Undefined;
+struct GRIN_DATATYPE_ENUM {
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Undefined;
 };
 
 template <>
-struct DataTypeEnum<int32_t> {
-  static constexpr DataType value = DataType::Int32;
+struct GRIN_DATATYPE_ENUM<int32_t> {
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Int32;
 };
 
 template <>
-struct DataTypeEnum<uint32_t> {
-  static constexpr DataType value = DataType::UInt32;
+struct GRIN_DATATYPE_ENUM<uint32_t> {
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::UInt32;
 };
 
 template <>
-struct DataTypeEnum<int64_t> {
-  static constexpr DataType value = DataType::Int64;
+struct GRIN_DATATYPE_ENUM<int64_t> {
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Int64;
 };
 
 template <>
-struct DataTypeEnum<uint64_t> {
-  static constexpr DataType value = DataType::UInt64;
+struct GRIN_DATATYPE_ENUM<uint64_t> {
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::UInt64;
 };
 
 template <>
-struct DataTypeEnum<float> {
-  static constexpr DataType value = DataType::Float;
+struct GRIN_DATATYPE_ENUM<float> {
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Float;
 };
 
 template <>
-struct DataTypeEnum<double> {
-  static constexpr DataType value = DataType::Double;
+struct GRIN_DATATYPE_ENUM<double> {
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Double;
 };
 
 template <>
-struct DataTypeEnum<std::string> {
-  static constexpr DataType value = DataType::String;
+struct GRIN_DATATYPE_ENUM<std::string> {
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::String;
 };
 
 template <>
-struct DataTypeEnum<arrow::Date32Type> {
-  static constexpr DataType value = DataType::Date32;
+struct GRIN_DATATYPE_ENUM<arrow::Date32Type> {
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Date32;
 };
 
 template <>
-struct DataTypeEnum<arrow::Date64Type> {
-  static constexpr DataType value = DataType::Date64;
+struct GRIN_DATATYPE_ENUM<arrow::Date64Type> {
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Date64;
 };
 
-PartitionedGraph get_partitioned_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id);
-Graph get_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id);
-std::string GetDataTypeName(DataType);
-DataType ArrowToDataType(std::shared_ptr<arrow::DataType>);
+GRIN_PARTITIONED_GRAPH get_partitioned_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id);
+GRIN_GRAPH get_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id);
+std::string GetDataTypeName(GRIN_DATATYPE);
+GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType>);
 
-#define G_OID_T int64_t
-#define G_VID_T uint64_t
+#define GRIN_OID_T int64_t
+#define GRIN_VID_T uint64_t
 
 /* The following data types shall be defined through typedef. */
-typedef vineyard::ArrowFragment<G_OID_T, G_VID_T> Graph_T;                      
-typedef Graph_T::vertex_t Vertex_T;     
-struct Edge_T {
-    Vertex src;
-    Vertex dst;
-    Direction dir;
+typedef vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T> GRIN_GRAPH_T;                      
+typedef GRIN_GRAPH_T::vertex_t GRIN_VERTEX_T;     
+struct GRIN_EDGE_T {
+    GRIN_VERTEX src;
+    GRIN_VERTEX dst;
+    GRIN_DIRECTION dir;
     unsigned etype;
-    Graph_T::eid_t eid;
+    GRIN_GRAPH_T::eid_t eid;
 };                     
 
-#ifdef WITH_VERTEX_ORIGINAL_ID
-typedef Graph_T::oid_t OriginalID_T;                   
+#ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
+typedef GRIN_GRAPH_T::oid_t VERTEX_ORIGINAL_ID_T;                   
 #endif
 
-#ifdef ENABLE_VERTEX_LIST
-typedef std::vector<Graph_T::vertices_t> VertexList_T;                 
+#ifdef GRIN_ENABLE_VERTEX_LIST
+typedef std::vector<GRIN_GRAPH_T::vertices_t> GRIN_VERTEX_LIST_T;                 
 #endif
 
-#ifdef ENABLE_ADJACENT_LIST
-struct AdjacentList_T {
-    Vertex v;
-    Direction dir;
+#ifdef GRIN_ENABLE_ADJACENT_LIST
+struct GRIN_ADJACENT_LIST_T {
+    GRIN_VERTEX v;
+    GRIN_DIRECTION dir;
     unsigned etype;
-    std::vector<Graph_T::raw_adj_list_t> data;
+    std::vector<GRIN_GRAPH_T::raw_adj_list_t> data;
 };    
 #endif
 
-#ifdef ENABLE_GRAPH_PARTITION
-typedef vineyard::ArrowFragmentGroup PartitionedGraph_T;
-typedef unsigned Partition_T;
-typedef std::vector<unsigned> PartitionList_T;
+#ifdef GRIN_ENABLE_GRAPH_PARTITION
+typedef vineyard::ArrowFragmentGroup GRIN_PARTITIONED_GRAPH_T;
+typedef unsigned GRIN_PARTITION_T;
+typedef std::vector<unsigned> GRIN_PARTITION_LIST_T;
 #endif
 
-#ifdef ENABLE_VERTEX_REF
-typedef Graph_T::vid_t VertexRef_T;
+#ifdef GRIN_ENABLE_VERTEX_REF
+typedef GRIN_GRAPH_T::vid_t GRIN_VERTEX_REF_T;
 #endif
 
-#ifdef WITH_VERTEX_PROPERTY
-typedef unsigned VertexType_T;
-typedef std::vector<unsigned> VertexTypeList_T;
-typedef std::pair<unsigned, unsigned> VertexProperty_T;
-typedef std::vector<VertexProperty_T> VertexPropertyList_T;
-struct VertexPropertyTable_T {
-    Graph_T* g;
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+typedef unsigned GRIN_VERTEX_TYPE_T;
+typedef std::vector<unsigned> GRIN_VERTEX_TYPE_LIST_T;
+typedef std::pair<unsigned, unsigned> GRIN_VERTEX_PROPERTY_T;
+typedef std::vector<GRIN_VERTEX_PROPERTY_T> GRIN_VERTEX_PROPERTY_LIST_T;
+struct GRIN_VERTEX_PROPERTY_TABLE_T {
+    GRIN_GRAPH_T* g;
     unsigned vtype;
-    Graph_T::vertices_t vertices;
+    GRIN_GRAPH_T::vertices_t vertices;
 };
 #endif
 
-#ifdef WITH_EDGE_PROPERTY
-typedef unsigned EdgeType_T;
-typedef std::vector<unsigned> EdgeTypeList_T;
-typedef std::pair<unsigned, unsigned> EdgeProperty_T;
-typedef std::vector<EdgeProperty_T> EdgePropertyList_T;
-struct EdgePropertyTable_T {
-    Graph_T* g;
+#ifdef GRIN_WITH_EDGE_PROPERTY
+typedef unsigned GRIN_EDGE_TYPE_T;
+typedef std::vector<unsigned> GRIN_EDGE_TYPE_LIST_T;
+typedef std::pair<unsigned, unsigned> GRIN_EDGE_PROPERTY_T;
+typedef std::vector<GRIN_EDGE_PROPERTY_T> GRIN_EDGE_PROPERTY_LIST_T;
+struct GRIN_EDGE_PROPERTY_TABLE_T {
+    GRIN_GRAPH_T* g;
     unsigned etype;
     unsigned num;
 };
 #endif
 
-#if defined(WITH_VERTEX_PROPERTY) || defined(WITH_EDGE_PROPERTY)
-typedef std::vector<const void*> Row_T;
+#if defined(GRIN_WITH_VERTEX_PROPERTY) || defined(GRIN_WITH_EDGE_PROPERTY)
+typedef std::vector<const void*> GRIN_ROW_T;
 #endif
 
 #endif  // GRIN_SRC_PREDEFINE_H_

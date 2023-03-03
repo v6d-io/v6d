@@ -20,50 +20,50 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#ifdef WITH_VERTEX_PRIMARY_KEYS
+#ifdef GRIN_WITH_VERTEX_PRIMARY_KEYS
 /** 
  * @brief get the vertex types with primary keys
- * @param Graph the graph
+ * @param GRIN_GRAPH the graph
 */
-VertexTypeList get_vertex_types_with_primary_keys(Graph);
+GRIN_VERTEX_TYPE_LIST grin_get_vertex_types_with_primary_keys(GRIN_GRAPH);
 
 /** 
  * @brief get the primary keys (property list) of a specific vertex type
- * @param Graph the graph
- * @param VertexType the vertex type
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_VERTEX_TYPE the vertex type
 */
-VertexPropertyList get_primary_keys_by_vertex_type(Graph, VertexType);
+GRIN_VERTEX_PROPERTY_LIST grin_get_primary_keys_by_vertex_type(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 
 /** 
  * @brief get the vertex with the given primary keys
- * @param Graph the graph
- * @param VertexPropertyList the primary keys
- * @param Row the values of primary keys
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_VERTEX_PROPERTY_LIST the primary keys
+ * @param GRIN_ROW the values of primary keys
 */
-Vertex get_vertex_by_primay_keys(Graph, VertexPropertyList, Row);
+Vertex grin_get_vertex_by_primay_keys(GRIN_GRAPH, GRIN_VERTEX_PROPERTY_LIST, GRIN_ROW);
 #endif
 
-#ifdef WITH_EDGE_PRIMARY_KEYS
+#ifdef GRIN_WITH_EDGE_PRIMARY_KEYS
 /** 
  * @brief get the edge types with primary keys
- * @param Graph the graph
+ * @param GRIN_GRAPH the graph
 */
-EdgeTypeList get_edge_types_with_primary_keys(Graph);
+GRIN_EDGE_TYPE_LIST grin_get_edge_types_with_primary_keys(GRIN_GRAPH);
 
 /** 
  * @brief get the primary keys (property list) of a specific edge type
- * @param Graph the graph
- * @param EdgeType the edge type
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_EDGE_TYPE the edge type
 */
-EdgePropertyList get_primary_keys_by_edge_type(Graph, EdgeType);
+GRIN_EDGE_PROPERTY_LIST grin_get_primary_keys_by_edge_type(GRIN_GRAPH, GRIN_EDGE_TYPE);
 
 /** 
  * @brief get the edge with the given primary keys
- * @param Graph the graph
- * @param EdgePropertyList the primary keys
- * @param Row the values of primary keys
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_EDGE_PROPERTY_LIST the primary keys
+ * @param GRIN_ROW the values of primary keys
 */
-Edge get_edge_by_primay_keys(Graph, EdgePropertyList, Row);
+GRIN_EDGE grin_get_edge_by_primay_keys(GRIN_GRAPH, GRIN_EDGE_PROPERTY_LIST, GRIN_ROW);
 #endif
 
 #endif  // GRIN_INCLUDE_PROPERTY_PRIMARY_KEY_H_

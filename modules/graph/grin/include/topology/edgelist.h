@@ -18,36 +18,36 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#ifdef ENABLE_EDGE_LIST
+#ifdef GRIN_ENABLE_EDGE_LIST
 
-EdgeList get_edge_list(Graph, Direction);
+GRIN_EDGE_LIST grin_get_edge_list(GRIN_GRAPH, GRIN_DIRECTION);
 
-#ifdef WITH_EDGE_PROPERTY
-EdgeList get_edge_list_by_type(Graph, EdgeType);
+#ifdef GRIN_WITH_EDGE_PROPERTY
+GRIN_EDGE_LIST grin_get_edge_list_by_type(GRIN_GRAPH, EdgeType);
 #endif
 
-void destroy_edge_list(EdgeList);
+void grin_destroy_edge_list(GRIN_GRAPH, GRIN_EDGE_LIST);
 
-EdgeList create_edge_list();
+GRIN_EDGE_LIST grin_create_edge_list(GRIN_GRAPH);
 
-bool insert_edge_to_list(EdgeList, Edge);
+bool grin_insert_edge_to_list(GRIN_GRAPH, GRIN_EDGE_LIST, GRIN_EDGE);
 
-size_t get_edge_list_size(EdgeList);
+size_t grin_get_edge_list_size(GRIN_GRAPH, GRIN_EDGE_LIST);
 
-Edge get_edge_from_list(EdgeList, size_t);
+GRIN_EDGE grin_get_edge_from_list(GRIN_GRAPH, GRIN_EDGE_LIST, size_t);
 
-#ifdef ENABLE_EDGE_LIST_ITERATOR
-EdgeListIterator get_edge_list_begin(Graph);
+#ifdef GRIN_ENABLE_EDGE_LIST_ITERATOR
+GRIN_EDGE_LIST_ITERATOR grin_get_edge_list_begin(GRIN_GRAPH);
 
-#ifdef WITH_EDGE_PROPERTY
-EdgeListIterator get_edge_list_begin_by_type(Graph, EdgeType);
+#ifdef GRIN_WITH_EDGE_PROPERTY
+GRIN_EDGE_LIST_ITERATOR grin_get_edge_list_begin_by_type(GRIN_GRAPH, EdgeType);
 #endif
 
-EdgeListIterator get_next_edge_list_iter(EdgeListIterator);
+GRIN_EDGE_LIST_ITERATOR grin_get_next_edge_list_iter(GRIN_GRAPH, GRIN_EDGE_LIST_ITERATOR);
 
-bool is_edge_list_end(EdgeListIterator);
+bool grin_is_edge_list_end(GRIN_GRAPH, GRIN_EDGE_LIST_ITERATOR);
 
-Edge get_edge_from_iter(EdgeListIterator);
+GRIN_EDGE grin_get_edge_from_iter(GRIN_GRAPH, GRIN_EDGE_LIST_ITERATOR);
 #endif
 
 #endif

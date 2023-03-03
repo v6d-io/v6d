@@ -20,82 +20,82 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#if defined(WITH_VERTEX_LABEL) || defined(WITH_EDGE_LABEL)
-Label get_label_by_name(Graph, const char*);
+#if defined(GRIN_WITH_VERTEX_LABEL) || defined(GRIN_WITH_EDGE_LABEL)
+GRIN_LABEL grin_get_label_by_name(GRIN_GRAPH, const char*);
 
-const char* get_label_name(Graph, Label);
+const char* grin_get_label_name(GRIN_GRAPH, GRIN_LABEL);
 
-void destroy_label(Label);
+void grin_destroy_label(GRIN_GRAPH, GRIN_LABEL);
 
-void destroy_label_list(LabelList);
+void grin_destroy_label_list(GRIN_GRAPH, GRIN_LABEL_LIST);
 
-size_t get_label_list_size(LabelList);
+size_t grin_get_label_list_size(GRIN_GRAPH, GRIN_LABEL_LIST);
 
-Label get_label_from_list(LabelList, size_t);
+GRIN_LABEL grin_get_label_from_list(GRIN_GRAPH, GRIN_LABEL_LIST, size_t);
 #endif
 
-#ifdef WITH_VERTEX_LABEL
+#ifdef GRIN_WITH_VERTEX_LABEL
 /** 
  * @brief assign a label to a vertex
- * @param Graph the graph
- * @param Label the label
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_LABEL the label
  * @param Vertex the vertex
  * @return whether succeed
 */
-bool assign_label_to_vertex(Graph, Label, Vertex);
+bool grin_assign_label_to_vertex(GRIN_GRAPH, GRIN_LABEL, GRIN_VERTEX);
 
 /** 
  * @brief get the label list of a vertex
- * @param Graph the graph
+ * @param GRIN_GRAPH the graph
  * @param Vertex the vertex
 */
-LabelList get_vertex_label_list(Graph, Vertex);
+GRIN_LABEL_LIST grin_get_vertex_label_list(GRIN_GRAPH, GRIN_VERTEX);
 
 /** 
  * @brief get the vertex list by label
- * @param Graph the graph
- * @param Label the label
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_LABEL the label
 */
-VertexList get_vertex_list_by_label(Graph, Label);
+GRIN_VERTEX_LIST grin_get_vertex_list_by_label(GRIN_GRAPH, GRIN_LABEL);
 
 /** 
  * @brief filtering an existing vertex list by label
- * @param VertexList the existing vertex list
- * @param Label the label
+ * @param GRIN_VERTEX_LIST the existing vertex list
+ * @param GRIN_LABEL the label
 */
-VertexList filter_vertex_list_by_label(VertexList, Label);
+GRIN_VERTEX_LIST grin_filter_vertex_list_by_label(GRIN_GRAPH, GRIN_VERTEX_LIST, GRIN_LABEL);
 #endif
 
-#ifdef WITH_EDGE_LABEL
+#ifdef GRIN_WITH_EDGE_LABEL
 /** 
  * @brief assign a label to a edge
- * @param Graph the graph
- * @param Label the label
- * @param Edge the edge
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_LABEL the label
+ * @param GRIN_EDGE the edge
  * @return whether succeed
 */
-bool assign_label_to_edge(Graph, Label, Edge);
+bool grin_assign_label_to_edge(GRIN_GRAPH, GRIN_LABEL, GRIN_EDGE);
 
 /** 
  * @brief get the label list of a edge
- * @param Graph the graph
- * @param Edge the edge
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_EDGE the edge
 */
-LabelList get_edge_label_list(Graph, Edge);
+GRIN_LABEL_LIST grin_get_edge_label_list(GRIN_GRAPH, GRIN_EDGE);
 
 /** 
  * @brief get the edge list by label
- * @param Graph the graph
- * @param Label the label
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_LABEL the label
 */
-EdgeList get_edge_list_by_label(Graph, Label);
+GRIN_EDGE_LIST grin_get_edge_list_by_label(GRIN_GRAPH, GRIN_LABEL);
 
 /** 
  * @brief filtering an existing edge list by label
- * @param EdgeList the existing edge list
- * @param Label the label
+ * @param GRIN_EDGE_LIST the existing edge list
+ * @param GRIN_LABEL the label
 */
-EdgeList filter_edge_list_by_label(EdgeList, Label);
+GRIN_EDGE_LIST grin_filter_edge_list_by_label(GRIN_GRAPH, GRIN_EDGE_LIST, GRIN_LABEL);
 #endif
 
 #endif // GRIN_INCLUDE_INDEX_LABEL_H_

@@ -20,66 +20,66 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#ifdef WITH_VERTEX_PROPERTY
+#ifdef GRIN_WITH_VERTEX_PROPERTY
 // Vertex type
-bool equal_vertex_type(VertexType, VertexType);
+bool grin_equal_vertex_type(GRIN_VERTEX_TYPE, GRIN_VERTEX_TYPE);
 
-VertexType get_vertex_type(Graph, Vertex);
+GRIN_VERTEX_TYPE grin_get_vertex_type(GRIN_GRAPH, GRIN_VERTEX);
 
-const char* get_vertex_type_name(Graph, VertexType);
+const char* grin_get_vertex_type_name(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 
-VertexType get_vertex_type_by_name(Graph, const char*);
+GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH, const char*);
 
 // Vertex type list
-VertexTypeList get_vertex_type_list(Graph);
+GRIN_VERTEX_TYPE_LIST grin_get_vertex_type_list(GRIN_GRAPH);
 
-void destroy_vertex_type_list(VertexTypeList);
+void grin_destroy_vertex_type_list(GRIN_VERTEX_TYPE_LIST);
 
-VertexTypeList create_vertex_type_list();
+GRIN_VERTEX_TYPE_LIST grin_create_vertex_type_list();
 
-bool insert_vertex_type_to_list(VertexTypeList, VertexType);
+bool grin_insert_vertex_type_to_list(GRIN_VERTEX_TYPE_LIST, GRIN_VERTEX_TYPE);
 
-size_t get_vertex_type_list_size(VertexTypeList);
+size_t grin_get_vertex_type_list_size(GRIN_VERTEX_TYPE_LIST);
 
-VertexType get_vertex_type_from_list(VertexTypeList, size_t);
+GRIN_VERTEX_TYPE grin_get_vertex_type_from_list(GRIN_VERTEX_TYPE_LIST, size_t);
 #endif
 
 
-#ifdef NATURAL_VERTEX_TYPE_ID_TRAIT
-VertexTypeID get_vertex_type_id(VertexType);
+#ifdef GRIN_NATURAL_VERTEX_TYPE_ID_TRAIT
+GRIN_VERTEX_TYPE_ID grin_get_vertex_type_id(GRIN_VERTEX_TYPE);
 
-VertexType get_vertex_type_from_id(VertexTypeID);
+GRIN_VERTEX_TYPE grin_get_vertex_type_from_id(GRIN_VERTEX_TYPE_ID);
 #endif
 
 
-#ifdef WITH_EDGE_PROPERTY
-// Edge type
-bool equal_edge_type(EdgeType, EdgeType);
+#ifdef GRIN_WITH_EDGE_PROPERTY
+// GRIN_EDGE type
+bool grin_equal_edge_type(GRIN_EDGE_TYPE, GRIN_EDGE_TYPE);
 
-EdgeType get_edge_type(Graph, Edge);
+GRIN_EDGE_TYPE grin_get_edge_type(GRIN_GRAPH, GRIN_EDGE);
 
-const char* get_edge_type_name(Graph, EdgeType);
+const char* grin_get_edge_type_name(GRIN_GRAPH, GRIN_EDGE_TYPE);
 
-EdgeType get_edge_type_by_name(Graph, const char*);
+GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH, const char*);
 
-// Edge type list
-EdgeTypeList get_edge_type_list(Graph);
+// GRIN_EDGE type list
+GRIN_EDGE_TYPE_LIST grin_get_edge_type_list(GRIN_GRAPH);
 
-void destroy_edge_type_list(EdgeTypeList);
+void grin_destroy_edge_type_list(GRIN_EDGE_TYPE_LIST);
 
-EdgeTypeList create_edge_type_list();
+GRIN_EDGE_TYPE_LIST grin_create_edge_type_list();
 
-bool insert_edge_type_to_list(EdgeTypeList, EdgeType);
+bool grin_insert_edge_type_to_list(GRIN_EDGE_TYPE_LIST, GRIN_EDGE_TYPE);
 
-size_t get_edge_type_list_size(EdgeTypeList);
+size_t grin_get_edge_type_list_size(GRIN_EDGE_TYPE_LIST);
 
-EdgeType get_edge_type_from_list(EdgeTypeList, size_t);
+GRIN_EDGE_TYPE grin_get_edge_type_from_list(GRIN_EDGE_TYPE_LIST, size_t);
 #endif
 
-#ifdef NATURAL_EDGE_TYPE_ID_TRAIT
-EdgeTypeID get_edge_type_id(EdgeType);
+#ifdef GRIN_NATURAL_EDGE_TYPE_ID_TRAIT
+GRIN_EDGE_TYPE_ID grin_get_edge_type_id(GRIN_EDGE_TYPE);
 
-EdgeType get_edge_type_from_id(EdgeTypeID);
+GRIN_EDGE_TYPE grin_get_edge_type_from_id(GRIN_EDGE_TYPE_ID);
 #endif
 
 /** @name VertexEdgeTypeRelation
@@ -88,15 +88,15 @@ EdgeType get_edge_type_from_id(EdgeTypeID);
  * lists of the same size, and the src/dst vertex types are aligned with their positions in the lists.
  */
 ///@{
-#if defined(WITH_VERTEX_PROPERTY) && defined(WITH_EDGE_PROPERTY)
+#if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_WITH_EDGE_PROPERTY)
 /** @brief  the src vertex type list */
-VertexTypeList get_src_types_from_edge_type(Graph, EdgeType);
+GRIN_VERTEX_TYPE_LIST grin_get_src_types_from_edge_type(GRIN_GRAPH, GRIN_EDGE_TYPE);
 
 /** @brief get the dst vertex type list */
-VertexTypeList get_dst_types_from_edge_type(Graph, EdgeType);
+GRIN_VERTEX_TYPE_LIST grin_get_dst_types_from_edge_type(GRIN_GRAPH, GRIN_EDGE_TYPE);
 
 /** @brief get the edge type list related to a given pair of vertex types */
-EdgeTypeList get_edge_types_from_vertex_type_pair(Graph, VertexType, VertexType);
+GRIN_EDGE_TYPE_LIST grin_get_edge_types_from_vertex_type_pair(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_VERTEX_TYPE);
 #endif
 ///@}
 

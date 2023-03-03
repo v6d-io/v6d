@@ -20,50 +20,50 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#ifdef WITH_VERTEX_PROPERTY
-VertexPropertyList get_vertex_property_list_by_type(Graph, VertexType);
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_property_list_by_type(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 
-size_t get_vertex_property_list_size(VertexPropertyList);
+size_t grin_get_vertex_property_list_size(GRIN_VERTEX_PROPERTY_LIST);
 
-VertexProperty get_vertex_property_from_list(VertexPropertyList, size_t);
+GRIN_VERTEX_PROPERTY grin_get_vertex_property_from_list(GRIN_VERTEX_PROPERTY_LIST, size_t);
 
-VertexPropertyList create_vertex_property_list();
+GRIN_VERTEX_PROPERTY_LIST grin_create_vertex_property_list();
 
-void destroy_vertex_property_list(VertexPropertyList);
+void grin_destroy_vertex_property_list(GRIN_VERTEX_PROPERTY_LIST);
 
-bool insert_vertex_property_to_list(VertexPropertyList, VertexProperty);
+bool grin_insert_vertex_property_to_list(GRIN_VERTEX_PROPERTY_LIST, GRIN_VERTEX_PROPERTY);
 #endif
 
-#ifdef NATURAL_VERTEX_PROPERTY_ID_TRAIT
-VertexProperty get_vertex_property_from_id(VertexType, VertexPropertyID);
+#ifdef GRIN_NATURAL_VERTEX_PROPERTY_ID_TRAIT
+GRIN_VERTEX_PROPERTY grin_get_vertex_property_from_id(GRIN_VERTEX_TYPE, GRIN_VERTEX_PROPERTY_ID);
 
-VertexPropertyID get_vertex_property_id(VertexType, VertexProperty);
-#endif
-
-
-#ifdef WITH_EDGE_PROPERTY
-EdgePropertyList get_edge_property_list_by_type(Graph, EdgeType);
-
-size_t get_edge_property_list_size(EdgePropertyList);
-
-EdgeProperty get_edge_property_from_list(EdgePropertyList, size_t);
-
-EdgePropertyList create_edge_property_list();
-
-void destroy_edge_property_list(EdgePropertyList);
-
-bool insert_edge_property_to_list(EdgePropertyList, EdgeProperty);
-#endif
-
-#ifdef NATURAL_EDGE_PROPERTY_ID_TRAIT
-EdgeProperty get_edge_property_from_id(EdgeType, EdgePropertyID);
-
-EdgePropertyID get_edge_property_id(EdgeType, EdgeProperty);
+GRIN_VERTEX_PROPERTY_ID grin_get_vertex_property_id(GRIN_VERTEX_TYPE, GRIN_VERTEX_PROPERTY);
 #endif
 
 
-/** @name GraphProjection
- * Graph projection mainly works to shrink the properties into a subset
+#ifdef GRIN_WITH_EDGE_PROPERTY
+GRIN_EDGE_PROPERTY_LIST grin_get_edge_property_list_by_type(GRIN_GRAPH, GRIN_EDGE_TYPE);
+
+size_t grin_get_edge_property_list_size(GRIN_EDGE_PROPERTY_LIST);
+
+GRIN_EDGE_PROPERTY grin_get_edge_property_from_list(GRIN_EDGE_PROPERTY_LIST, size_t);
+
+GRIN_EDGE_PROPERTY_LIST grin_create_edge_property_list();
+
+void grin_destroy_edge_property_list(GRIN_EDGE_PROPERTY_LIST);
+
+bool grin_insert_edge_property_to_list(GRIN_EDGE_PROPERTY_LIST, GRIN_EDGE_PROPERTY);
+#endif
+
+#ifdef GRIN_NATURAL_EDGE_PROPERTY_ID_TRAIT
+GRIN_EDGE_PROPERTY grin_get_edge_property_from_id(GRIN_EDGE_TYPE, GRIN_EDGE_PROPERTY_ID);
+
+GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_EDGE_TYPE, GRIN_EDGE_PROPERTY);
+#endif
+
+
+/** @name Graph Projection
+ * GRIN_GRAPH projection mainly works to shrink the properties into a subset
  * in need to improve the retrieval efficiency. Note that only the vertex/edge
  * type with at least one property left in the vertex/edge property list will
  * be kept after the projection.
@@ -71,14 +71,14 @@ EdgePropertyID get_edge_property_id(EdgeType, EdgeProperty);
  * The projection only works on column store systems.
  */
 ///@{
-#if defined(WITH_VERTEX_PROPERTY) && defined(COLUMN_STORE_TRAIT)
+#if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_COLUMN_STORE_TRAIT)
 /** @brief project vertex properties */
-Graph select_vertex_properties(Graph, VertexPropertyList);
+GRIN_GRAPH grin_select_vertex_properties(GRIN_GRAPH, GRIN_VERTEX_PROPERTY_LIST);
 #endif
 
-#if defined(WITH_EDGE_PROPERTY) && defined(COLUMN_STORE_TRAIT)
+#if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_COLUMN_STORE_TRAIT)
 /** @brief project edge properties */
-Graph select_edge_properteis(Graph, EdgePropertyList);
+GRIN_GRAPH grin_select_edge_properteis(GRIN_GRAPH, GRIN_EDGE_PROPERTY_LIST);
 #endif
 
 #endif  // GRIN_INCLUDE_PROPERTY_PROPERTY_LIST_H_
