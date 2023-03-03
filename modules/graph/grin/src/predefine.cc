@@ -16,60 +16,60 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 
 
-PartitionedGraph get_partitioned_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
+GRIN_PARTITIONED_GRAPH get_partitioned_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
   auto pg = std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(client.GetObject(object_id));
   return pg.get();
 }
 
-Graph get_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
-  auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragment<G_OID_T, G_VID_T>>(client.GetObject(object_id));
+GRIN_GRAPH get_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
+  auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T>>(client.GetObject(object_id));
   return frag.get();
 }
 
-std::string GetDataTypeName(DataType type) {
+std::string GetDataTypeName(GRIN_DATATYPE type) {
   switch (type) {
-  case DataType::Int32:
+  case GRIN_DATATYPE::Int32:
     return "int32";
-  case DataType::UInt32:
+  case GRIN_DATATYPE::UInt32:
     return "uint32";
-  case DataType::Int64:
+  case GRIN_DATATYPE::Int64:
     return "int64";
-  case DataType::UInt64:
+  case GRIN_DATATYPE::UInt64:
     return "uint64";
-  case DataType::Float:
+  case GRIN_DATATYPE::Float:
     return "float";
-  case DataType::Double:
+  case GRIN_DATATYPE::Double:
     return "double";
-  case DataType::String:
+  case GRIN_DATATYPE::String:
     return "string";
-  case DataType::Date32:
+  case GRIN_DATATYPE::Date32:
     return "date32";
-  case DataType::Date64:
+  case GRIN_DATATYPE::Date64:
     return "date64";
   default:
     return "undefined";
   }
 }
 
-DataType ArrowToDataType(std::shared_ptr<arrow::DataType> type) {
+GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType> type) {
   if (type == nullptr) {
-    return DataType::Undefined;
+    return GRIN_DATATYPE::Undefined;
   } else if (arrow::int32()->Equals(type)) {
-    return DataType::Int32;
+    return GRIN_DATATYPE::Int32;
   } else if (arrow::int64()->Equals(type)) {
-    return DataType::Int64;
+    return GRIN_DATATYPE::Int64;
   } else if (arrow::float32()->Equals(type)) {
-    return DataType::Float;
+    return GRIN_DATATYPE::Float;
   } else if (arrow::uint32()->Equals(type)) {
-    return DataType::UInt32;
+    return GRIN_DATATYPE::UInt32;
   } else if (arrow::uint64()->Equals(type)) {
-    return DataType::UInt64;
+    return GRIN_DATATYPE::UInt64;
   } else if (arrow::float64()->Equals(type)) {
-    return DataType::Double;
+    return GRIN_DATATYPE::Double;
   } else if (arrow::utf8()->Equals(type)) {
-    return DataType::String;
+    return GRIN_DATATYPE::String;
   } else if (arrow::large_utf8()->Equals(type)) {
-    return DataType::String;
+    return GRIN_DATATYPE::String;
   } 
-  return DataType::Undefined;
+  return GRIN_DATATYPE::Undefined;
 }

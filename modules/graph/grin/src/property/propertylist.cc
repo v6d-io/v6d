@@ -13,124 +13,124 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/property/propertylist.h"
 
-#ifdef WITH_VERTEX_PROPERTY
-VertexPropertyList get_vertex_property_list_by_type(Graph g, VertexType vtype) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto _vtype = static_cast<VertexType_T*>(vtype);
-    auto vpl = new VertexPropertyList_T();
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_property_list_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
+    auto vpl = new GRIN_VERTEX_PROPERTY_LIST_T();
     for (auto p = 0; p < _g->vertex_property_num(*_vtype); ++p) {
-        vpl->push_back(VertexProperty_T(*_vtype, p));
+        vpl->push_back(GRIN_VERTEX_PROPERTY_T(*_vtype, p));
     }
     return vpl;
 }
 
-size_t get_vertex_property_list_size(VertexPropertyList vpl) {
-    auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
+size_t grin_get_vertex_property_list_size(GRIN_VERTEX_PROPERTY_LIST vpl) {
+    auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
     return _vpl->size();
 }
 
-VertexProperty get_vertex_property_from_list(VertexPropertyList vpl, size_t idx) {
-    auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
-    auto vp = new VertexProperty_T((*_vpl)[idx]);
+GRIN_VERTEX_PROPERTY grin_get_vertex_property_from_list(GRIN_VERTEX_PROPERTY_LIST vpl, size_t idx) {
+    auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
+    auto vp = new GRIN_VERTEX_PROPERTY_T((*_vpl)[idx]);
     return vp;
 }
 
-VertexPropertyList create_vertex_property_list() {
-    auto vpl = new VertexPropertyList_T();
+GRIN_VERTEX_PROPERTY_LIST grin_create_vertex_property_list() {
+    auto vpl = new GRIN_VERTEX_PROPERTY_LIST_T();
     return vpl;
 }
 
-void destroy_vertex_property_list(VertexPropertyList vpl) {
-    auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
+void grin_destroy_vertex_property_list(GRIN_VERTEX_PROPERTY_LIST vpl) {
+    auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
     delete _vpl;
 }
 
-bool insert_vertex_property_to_list(VertexPropertyList vpl, VertexProperty vp) {
-    auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
-    auto _vp = static_cast<VertexProperty_T*>(vp);
+bool grin_insert_vertex_property_to_list(GRIN_VERTEX_PROPERTY_LIST vpl, GRIN_VERTEX_PROPERTY vp) {
+    auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
+    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     _vpl->push_back(*_vp);
     return true;
 }
 #endif
 
 
-#ifdef NATURAL_VERTEX_PROPERTY_ID_TRAIT
-VertexProperty get_vertex_property_from_id(VertexType vtype, VertexPropertyID vpi) {
-    auto _vtype = static_cast<VertexType_T*>(vtype);
-    auto vp = new VertexProperty_T(*_vtype, vpi);
+#ifdef GRIN_NATURAL_VERTEX_PROPERTY_ID_TRAIT
+GRIN_VERTEX_PROPERTY grin_get_vertex_property_from_id(GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY_ID vpi) {
+    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
+    auto vp = new GRIN_VERTEX_PROPERTY_T(*_vtype, vpi);
     return vp;
 }
 
-VertexPropertyID get_vertex_property_id(VertexType vtype, VertexProperty vp) {
-    auto _vtype = static_cast<VertexType_T*>(vtype);
-    auto _vp = static_cast<VertexProperty_T*>(vp);
-    if (*_vtype != _vp->first) return NULL_NATURAL_ID;
+GRIN_VERTEX_PROPERTY_ID grin_get_vertex_property_id(GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY vp) {
+    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
+    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
+    if (*_vtype != _vp->first) return GRIN_NULL_NATURAL_ID;
     return _vp->second;
 }
 #endif
 
 
-#ifdef WITH_EDGE_PROPERTY
-EdgePropertyList get_edge_property_list_by_type(Graph g, EdgeType etype) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto _etype = static_cast<EdgeType_T*>(etype);
-    auto epl = new EdgePropertyList_T();
+#ifdef GRIN_WITH_EDGE_PROPERTY
+GRIN_EDGE_PROPERTY_LIST grin_get_edge_property_list_by_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
+    auto epl = new GRIN_EDGE_PROPERTY_LIST_T();
     for (auto p = 0; p < _g->edge_property_num(*_etype); ++p) {
-        epl->push_back(EdgeProperty_T(*_etype, p));
+        epl->push_back(GRIN_EDGE_PROPERTY_T(*_etype, p));
     }
     return epl;
 }
 
-size_t get_edge_property_list_size(EdgePropertyList epl) {
-    auto _epl = static_cast<EdgePropertyList_T*>(epl);
+size_t grin_get_edge_property_list_size(GRIN_EDGE_PROPERTY_LIST epl) {
+    auto _epl = static_cast<GRIN_EDGE_PROPERTY_LIST_T*>(epl);
     return _epl->size();
 }
 
-EdgeProperty get_edge_property_from_list(EdgePropertyList epl, size_t idx) {
-    auto _epl = static_cast<EdgePropertyList_T*>(epl);
-    auto ep = new EdgeProperty_T((*_epl)[idx]);
+GRIN_EDGE_PROPERTY grin_get_edge_property_from_list(GRIN_EDGE_PROPERTY_LIST epl, size_t idx) {
+    auto _epl = static_cast<GRIN_EDGE_PROPERTY_LIST_T*>(epl);
+    auto ep = new GRIN_EDGE_PROPERTY_T((*_epl)[idx]);
     return ep;
 }
 
-EdgePropertyList create_edge_property_list() {
-    auto epl = new EdgePropertyList_T();
+GRIN_EDGE_PROPERTY_LIST grin_create_edge_property_list() {
+    auto epl = new GRIN_EDGE_PROPERTY_LIST_T();
     return epl;
 }
 
-void destroy_edge_property_list(EdgePropertyList epl) {
-    auto _epl = static_cast<EdgePropertyList_T*>(epl);
+void grin_destroy_edge_property_list(GRIN_EDGE_PROPERTY_LIST epl) {
+    auto _epl = static_cast<GRIN_EDGE_PROPERTY_LIST_T*>(epl);
     delete _epl;
 }
 
-bool insert_edge_property_to_list(EdgePropertyList epl, EdgeProperty ep) {
-    auto _epl = static_cast<EdgePropertyList_T*>(epl);
-    auto _ep = static_cast<EdgeProperty_T*>(ep);
+bool grin_insert_edge_property_to_list(GRIN_EDGE_PROPERTY_LIST epl, GRIN_EDGE_PROPERTY ep) {
+    auto _epl = static_cast<GRIN_EDGE_PROPERTY_LIST_T*>(epl);
+    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     _epl->push_back(*_ep);
     return true;
 }
 #endif
 
 
-#ifdef NATURAL_EDGE_PROPERTY_ID_TRAIT
-EdgeProperty get_edge_property_from_id(EdgeType etype, EdgePropertyID epi) {
-    auto _etype = static_cast<EdgeType_T*>(etype);
-    auto ep = new EdgeProperty_T(*_etype, epi);
+#ifdef GRIN_NATURAL_EDGE_PROPERTY_ID_TRAIT
+GRIN_EDGE_PROPERTY grin_get_edge_property_from_id(GRIN_EDGE_TYPE etype, GRIN_EDGE_PROPERTY_ID epi) {
+    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
+    auto ep = new GRIN_EDGE_PROPERTY_T(*_etype, epi);
     return ep;
 }
 
-EdgePropertyID get_edge_property_id(EdgeType etype, EdgeProperty ep) {
-    auto _etype = static_cast<EdgeType_T*>(etype);
-    auto _ep = static_cast<EdgeProperty_T*>(ep);
-    if (*_etype != _ep->first) return NULL_NATURAL_ID;
+GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_EDGE_TYPE etype, GRIN_EDGE_PROPERTY ep) {
+    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
+    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
+    if (*_etype != _ep->first) return GRIN_NULL_NATURAL_ID;
     return _ep->second;
 }
 #endif
 
 
-#if defined(WITH_VERTEX_PROPERTY) && defined(COLUMN_STORE_TRAIT)
-Graph select_vertex_properties(Graph g, VertexPropertyList vpl) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto _vpl = static_cast<VertexPropertyList_T*>(vpl);
+#if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_COLUMN_STORE_TRAIT)
+GRIN_GRAPH grin_select_vertex_properties(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST vpl) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
     std::map<int, std::vector<int>> vertices, edges;
     for (auto& p: *_vpl) {
         int vtype = static_cast<int>(p.first);
@@ -147,10 +147,10 @@ Graph select_vertex_properties(Graph g, VertexPropertyList vpl) {
 }
 #endif
 
-#if defined(WITH_EDGE_PROPERTY) && defined(COLUMN_STORE_TRAIT)
-Graph select_edge_properteis(Graph g, EdgePropertyList epl) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto _epl = static_cast<VertexPropertyList_T*>(epl);
+#if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_COLUMN_STORE_TRAIT)
+GRIN_GRAPH grin_select_edge_properteis(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _epl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(epl);
     std::map<int, std::vector<int>> vertices, edges;
     for (auto& p: *_epl) {
         int etype = static_cast<int>(p.first);

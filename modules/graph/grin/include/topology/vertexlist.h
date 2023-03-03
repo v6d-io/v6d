@@ -18,36 +18,36 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#ifdef ENABLE_VERTEX_LIST
+#ifdef GRIN_ENABLE_VERTEX_LIST
 
-VertexList get_vertex_list(Graph);
+GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH);
 
-#ifdef WITH_VERTEX_PROPERTY
-VertexList get_vertex_list_by_type(Graph, VertexType);
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+GRIN_VERTEX_LIST grin_get_vertex_list_by_type(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 #endif
 
-void destroy_vertex_list(VertexList);
+void grin_destroy_vertex_list(GRIN_GRAPH, GRIN_VERTEX_LIST);
 
-VertexList create_vertex_list();
+GRIN_VERTEX_LIST grin_create_vertex_list(GRIN_GRAPH);
 
-bool insert_vertex_to_list(VertexList, Vertex);
+bool grin_insert_vertex_to_list(GRIN_GRAPH, GRIN_VERTEX_LIST, GRIN_VERTEX);
 
-size_t get_vertex_list_size(VertexList);
+size_t grin_get_vertex_list_size(GRIN_GRAPH, GRIN_VERTEX_LIST);
 
-Vertex get_vertex_from_list(VertexList, size_t);
+GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH, GRIN_VERTEX_LIST, size_t);
 
-#ifdef ENABLE_VERTEX_LIST_ITERATOR
-VertexListIterator get_vertex_list_begin(Graph);
+#ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
+GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH);
 
-#ifdef WITH_VERTEX_PROPERTY
-VertexListIterator get_vertex_list_begin_by_type(Graph, VertexType);
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin_by_type(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 #endif
 
-VertexListIterator get_next_vertex_list_iter(VertexListIterator);
+GRIN_VERTEX_LIST_ITERATOR grin_get_next_vertex_list_iter(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
 
-bool is_vertex_list_end(VertexListIterator);
+bool grin_is_vertex_list_end(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
 
-Vertex get_vertex_from_iter(VertexListIterator);
+Vertex grin_get_vertex_from_iter(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
 #endif
 
 

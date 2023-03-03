@@ -20,98 +20,98 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#if defined(WITH_PROPERTY_NAME) && defined(WITH_VERTEX_PROPERTY)
+#if defined(GRIN_WITH_PROPERTY_NAME) && defined(GRIN_WITH_VERTEX_PROPERTY)
 /**
  * @brief get the vertex property name
- * @param Graph the graph
- * @param VertexProperty the vertex property
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_VERTEX_PROPERTY the vertex property
  */
-const char* get_vertex_property_name(Graph, VertexProperty);
+const char* grin_get_vertex_property_name(GRIN_GRAPH, GRIN_VERTEX_PROPERTY);
 
 /**
  * @brief get the vertex property with a given name under a specific vertex type
- * @param Graph the graph
- * @param VertexType the specific vertex type
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_VERTEX_TYPE the specific vertex type
  * @param name the name
  */
-VertexProperty get_vertex_property_by_name(Graph, VertexType, const char* name);
+GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH, GRIN_VERTEX_TYPE, const char* name);
 
 /**
  * @brief get all the vertex properties with a given name
- * @param Graph the graph
+ * @param GRIN_GRAPH the graph
  * @param name the name
  */
-VertexPropertyList get_vertex_properties_by_name(Graph, const char* name);
+GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH, const char* name);
 #endif
 
-#if defined(WITH_PROPERTY_NAME) && defined(WITH_EDGE_PROPERTY)
+#if defined(GRIN_WITH_PROPERTY_NAME) && defined(GRIN_WITH_EDGE_PROPERTY)
 /**
  * @brief get the edge property name
- * @param Graph the graph
- * @param EdgeProperty the edge property
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_EDGE_PROPERTY the edge property
  */
-const char* get_edge_property_name(Graph, EdgeProperty);
+const char* grin_get_edge_property_name(GRIN_GRAPH, GRIN_EDGE_PROPERTY);
 
 /**
  * @brief get the edge property with a given name under a specific edge type
- * @param Graph the graph
- * @param EdgeType the specific edge type
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_EDGE_TYPE the specific edge type
  * @param name the name
  */
-EdgeProperty get_edge_property_by_name(Graph, EdgeType, const char* name);
+GRIN_EDGE_PROPERTY grin_get_edge_property_by_name(GRIN_GRAPH, GRIN_EDGE_TYPE, const char* name);
 
 /**
  * @brief get all the edge properties with a given name
- * @param Graph the graph
+ * @param GRIN_GRAPH the graph
  * @param name the name
  */
-EdgePropertyList get_edge_properties_by_name(Graph, const char* name);
+GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH, const char* name);
 #endif
 
 
-#ifdef WITH_VERTEX_PROPERTY
-bool equal_vertex_property(VertexProperty, VertexProperty);
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+bool grin_equal_vertex_property(GRIN_VERTEX_PROPERTY, GRIN_VERTEX_PROPERTY);
 
 /**
  * @brief destroy vertex property
- * @param VertexProperty vertex property
+ * @param GRIN_VERTEX_PROPERTY vertex property
  */
-void destroy_vertex_property(VertexProperty);
+void grin_destroy_vertex_property(GRIN_VERTEX_PROPERTY);
 
 /**
  * @brief get property data type
- * @param VertexProperty vertex property
+ * @param GRIN_VERTEX_PROPERTY vertex property
  */
-DataType get_vertex_property_data_type(Graph, VertexProperty);
+GRIN_DATATYPE grin_get_vertex_property_data_type(GRIN_GRAPH, GRIN_VERTEX_PROPERTY);
 
 /**
  * @brief get the vertex type that the property is bound to
- * @param VertexProperty vertex property
+ * @param GRIN_VERTEX_PROPERTY vertex property
  */
-VertexType get_vertex_property_vertex_type(VertexProperty);
+GRIN_VERTEX_TYPE grin_get_vertex_property_vertex_type(GRIN_VERTEX_PROPERTY);
 #endif
 
 
-#ifdef WITH_EDGE_PROPERTY
-bool equal_edge_property(EdgeProperty, EdgeProperty);
+#ifdef GRIN_WITH_EDGE_PROPERTY
+bool grin_equal_edge_property(GRIN_EDGE_PROPERTY, GRIN_EDGE_PROPERTY);
 
 /**
  * @brief destroy edge property
- * @param EdgeProperty edge property
+ * @param GRIN_EDGE_PROPERTY edge property
  */
-void destroy_edge_property(EdgeProperty);
+void grin_destroy_edge_property(GRIN_EDGE_PROPERTY);
 
 /**
  * @brief get property data type
- * @param EdgeProperty edge property
+ * @param GRIN_EDGE_PROPERTY edge property
  */
-DataType get_edge_property_data_type(Graph, EdgeProperty);
+GRIN_DATATYPE grin_get_edge_property_data_type(GRIN_GRAPH, GRIN_EDGE_PROPERTY);
 
 /**
  * @brief get the edge type that the property is bound to
- * @param EdgeProperty edge property
+ * @param GRIN_EDGE_PROPERTY edge property
  */
-EdgeType get_edge_property_edge_type(EdgeProperty);
+GRIN_EDGE_TYPE grin_get_edge_property_edge_type(GRIN_EDGE_PROPERTY);
 #endif
 
 #endif  // GRIN_INCLUDE_PROPERTY_PROPERTY_H_

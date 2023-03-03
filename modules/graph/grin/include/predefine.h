@@ -34,21 +34,21 @@ typedef enum {
   IN = 0,     ///< incoming
   OUT = 1,    ///< outgoing
   BOTH = 2,   ///< incoming & outgoing
-} Direction;
+} GRIN_DIRECTION;
 
 /// Enumerates the datatype supported in the storage
 typedef enum {
-  Undefined = 0,  ///< other unknown types
-  Int32 = 1,      ///< int
-  UInt32 = 2,     ///< unsigned int 
-  Int64 = 3,      ///< long int
-  UInt64 = 4,     ///< unsigned long int
-  Float = 5,      ///< float
-  Double = 6,     ///< double
-  String = 7,     ///< string
-  Date32 = 8,     ///< short date
-  Date64 = 9,     ///< long date
-} DataType;
+  Undefined = 0,      ///< other unknown types
+  Int32 = 1,          ///< int
+  UInt32 = 2,         ///< unsigned int 
+  Int64 = 3,          ///< long int
+  UInt64 = 4,         ///< unsigned long int
+  Float = 5,          ///< float
+  Double = 6,         ///< double
+  String = 7,         ///< string
+  Date32 = 8,         ///< short date
+  Date64 = 9,         ///< long date
+} GRIN_DATATYPE;
 
 /** @name TopologyMacros
  * @brief Macros for basic graph topology features
@@ -59,61 +59,61 @@ typedef enum {
  * This facilitates queries starting from a specific vertex,
  * since one can get the vertex handler directly using its original ID.
  */
-#define WITH_VERTEX_ORIGINAL_ID
+#define GRIN_WITH_VERTEX_ORIGINAL_ID
 
 /** @ingroup TopologyMacros 
  * @brief There is data on vertex. E.g., the PageRank value of a vertex.
  */
-#define WITH_VERTEX_DATA
+#define GRIN_WITH_VERTEX_DATA
 
 /** @ingroup TopologyMacros
  * @brief There is data on edge. E.g., the weight of an edge.
 */
-#define WITH_EDGE_DATA
+#define GRIN_WITH_EDGE_DATA
 
 /** @ingroup TopologyMacros
  * @brief Enable the vertex list structure. 
  * The vertex list related APIs follow the design principle of GRIN List.
 */
-#define ENABLE_VERTEX_LIST
+#define GRIN_ENABLE_VERTEX_LIST
 
 /** @ingroup TopologyMacros
  * @brief Enable the vertex list iterator. 
  * The vertex list iterator related APIs follow the design principle of GRIN Iterator.
 */
-#define ENABLE_VERTEX_LIST_ITERATOR
+#define GRIN_ENABLE_VERTEX_LIST_ITERATOR
 
 /** @ingroup TopologyMacros
  * @brief Enable the edge list structure. 
  * The edge list related APIs follow the design principle of GRIN List.
 */
-#define ENABLE_EDGE_LIST
+#define GRIN_ENABLE_EDGE_LIST
 
 /** @ingroup TopologyMacros
  * @brief Enable the edge list iterator. 
  * The edge list iterator related APIs follow the design principle of GRIN Iterator.
 */
-#define ENABLE_EDGE_LIST_ITERATOR
+#define GRIN_ENABLE_EDGE_LIST_ITERATOR
 
 /** @ingroup TopologyMacros
  * @brief Enable the adjacent list structure. 
  * The adjacent list related APIs follow the design principle of GRIN List.
 */
-#define ENABLE_ADJACENT_LIST
+#define GRIN_ENABLE_ADJACENT_LIST
 
 /** @ingroup TopologyMacros
  * @brief Enable the adjacent list iterator. 
  * The adjacent list iterator related APIs follow the design principle of GRIN Iterator.
 */
-#define ENABLE_ADJACENT_LIST_ITERATOR
+#define GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 
-#ifndef DOXYGEN_SKIP
-#undef WITH_VERTEX_DATA
-#undef WITH_EDGE_DATA
-#undef ENABLE_VERTEX_LIST_ITERATOR
-#undef ENABLE_EDGE_LIST
-#undef ENABLE_EDGE_LIST_ITERATOR
-#undef ENABLE_ADJACENT_LIST_ITERATOR
+#ifndef GRIN_DOXYGEN_SKIP
+#undef GRIN_WITH_VERTEX_DATA
+#undef GRIN_WITH_EDGE_DATA
+#undef GRIN_ENABLE_VERTEX_LIST_ITERATOR
+#undef GRIN_ENABLE_EDGE_LIST
+#undef GRIN_ENABLE_EDGE_LIST_ITERATOR
+#undef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 #endif
 ///@}
 
@@ -125,35 +125,35 @@ typedef enum {
 /** @ingroup PartitionMacros
  * @brief Enable partitioned graph. A partitioned graph usually contains
  * several fragments (i.e., local graphs) that are distributedly stored 
- * in a cluster. In GRIN, Graph represents to a single fragment that can
+ * in a cluster. In GRIN, GRIN_GRAPH represents to a single fragment that can
  * be locally accessed.
  */
-#define ENABLE_GRAPH_PARTITION
+#define GRIN_ENABLE_GRAPH_PARTITION
 
 /** @ingroup PartitionMacros
  * @brief The storage provides natural number IDs for partitions.
  * It follows the design principle of natural number ID trait in GRIN.
 */
-#define NATURAL_PARTITION_ID_TRAIT
+#define GRIN_NATURAL_PARTITION_ID_TRAIT
 
 /** @ingroup PartitionMacros
  * @brief The storage provides reference of vertex that can be
  * recognized in other partitions where the vertex also appears.
 */
-#define ENABLE_VERTEX_REF
+#define GRIN_ENABLE_VERTEX_REF
 
 /** @ingroup PartitionMacros
  * @brief The storage provides reference of edge that can be
  * recognized in other partitions where the edge also appears.
 */
-#define ENABLE_EDGE_REF
+#define GRIN_ENABLE_EDGE_REF
 
-#ifndef ENABLE_GRAPH_PARTITION
-#undef NATURAL_PARTITION_ID_TRAIT
+#ifndef GRIN_ENABLE_GRAPH_PARTITION
+#undef GRIN_NATURAL_PARTITION_ID_TRAIT
 #endif
 
-#ifndef DOXYGEN_SKIP
-#undef ENABLE_EDGE_REF
+#ifndef GRIN_DOXYGEN_SKIP
+#undef GRIN_ENABLE_EDGE_REF
 #endif
 ///@}
 
@@ -168,13 +168,13 @@ typedef enum {
  * types are distinguished even they may share the same property name. Please refer to
  * the design principle of Property for details.
 */
-#define WITH_PROPERTY_NAME
+#define GRIN_WITH_PROPERTY_NAME
 
 /** @ingroup PropertyMacros
  * @brief There are properties bound to vertices. When vertices are typed, vertex
  * properties are bound to vertex types, according to the definition of vertex type.
 */
-#define WITH_VERTEX_PROPERTY
+#define GRIN_WITH_VERTEX_PROPERTY
 
 /** @ingroup PropertyMacros
  * @brief There are primary keys for vertices. Vertex primary keys is
@@ -183,57 +183,57 @@ typedef enum {
  * that type. 
  * 
  * With primary keys, one can get the vertex from the graph or a certain type
- * by providing the values of the primary keys. The macro is unset if WITH_VERTEX_PROPERTY
- * is NOT defined, in which case, one can use WITH_VERTEX_ORIGINAL_ID when vertices have
+ * by providing the values of the primary keys. The macro is unset if GRIN_WITH_VERTEX_PROPERTY
+ * is NOT defined, in which case, one can use GRIN_WITH_VERTEX_ORIGINAL_ID when vertices have
  * no properties.
 */
-#define WITH_VERTEX_PRIMARY_KEYS
+#define GRIN_WITH_VERTEX_PRIMARY_KEYS
 
 /** @ingroup PropertyMacros
  * @brief The storage provides natural number IDs for vertex types.
  * It follows the design principle of natural ID trait in GRIN.
 */
-#define NATURAL_VERTEX_TYPE_ID_TRAIT
+#define GRIN_NATURAL_VERTEX_TYPE_ID_TRAIT
 
 /** @ingroup PropertyMacros
  * @brief The storage provides natural number IDs for properties bound to
  * a certain vertex type.
  * It follows the design principle of natural ID trait in GRIN.
 */
-#define NATURAL_VERTEX_PROPERTY_ID_TRAIT
+#define GRIN_NATURAL_VERTEX_PROPERTY_ID_TRAIT
 
 
-#define WITH_EDGE_PROPERTY                // There is any property for edges.
-#define WITH_EDGE_PRIMARY_KEYS           // There is cross-type property name.
-#define NATURAL_EDGE_TYPE_ID_TRAIT       // Edge type has natural continuous id from 0.
-#define NATURAL_EDGE_PROPERTY_ID_TRAIT    // Edge property has natural continuous id from 0.
+#define GRIN_WITH_EDGE_PROPERTY                // There is any property for edges.
+#define GRIN_WITH_EDGE_PRIMARY_KEYS           // There is cross-type property name.
+#define GRIN_NATURAL_EDGE_TYPE_ID_TRAIT       // Edge type has natural continuous id from 0.
+#define GRIN_NATURAL_EDGE_PROPERTY_ID_TRAIT    // Edge property has natural continuous id from 0.
 
 
 /** @ingroup PropertyMacros
  * @brief The storage uses column store for properties.
  * This enables efficient property selections for vertices and edges.
 */
-#define COLUMN_STORE_TRAIT
+#define GRIN_COLUMN_STORE_TRAIT
 
-#if !defined(WITH_VERTEX_PROPERTY) && !defined(WITH_EDGE_PROPERTY)
-#undef WITH_PROPERTY_NAME
+#if !defined(GRIN_WITH_VERTEX_PROPERTY) && !defined(GRIN_WITH_EDGE_PROPERTY)
+#undef GRIN_WITH_PROPERTY_NAME
 #endif
 
-#ifndef WITH_VERTEX_PROPERTY
-#undef WITH_VERTEX_PRIMARTY_KEYS
-#undef NATURAL_VERTEX_TYPE_ID_TRAIT
-#undef NATURAL_VERTEX_PROPERTY_ID_TRAIT
+#ifndef GRIN_WITH_VERTEX_PROPERTY
+#undef GRIN_WITH_VERTEX_PRIMARY_KEYS
+#undef GRIN_NATURAL_VERTEX_TYPE_ID_TRAIT
+#undef GRIN_NATURAL_VERTEX_PROPERTY_ID_TRAIT
 #endif
 
-#ifndef WITH_EDGE_PROPERTY
-#undef WITH_EDGE_PRIMARY_KEYS
-#undef NATURAL_EDGE_TYPE_ID_TRAIT
-#undef NATURAL_EDGE_PROPERTY_ID_TRAIT
+#ifndef GRIN_WITH_EDGE_PROPERTY
+#undef GRIN_WITH_EDGE_PRIMARY_KEYS
+#undef GRIN_NATURAL_EDGE_TYPE_ID_TRAIT
+#undef GRIN_NATURAL_EDGE_PROPERTY_ID_TRAIT
 #endif
 
-#ifndef DOXYGEN_SKIP
-#undef WITH_VERTEX_PRIMARY_KEYS
-#undef WITH_EDGE_PRIMARY_KEYS
+#ifndef GRIN_DOXYGEN_SKIP
+#undef GRIN_WITH_VERTEX_PRIMARY_KEYS
+#undef GRIN_WITH_EDGE_PRIMARY_KEYS
 #endif
 ///@}
 
@@ -244,8 +244,8 @@ typedef enum {
 /** @ingroup PredicateMacros
  * @brief Enable predicates on graph. 
 */
-#define ENABLE_PREDICATE
-#undef ENABLE_PREDICATE
+#define GRIN_ENABLE_PREDICATE
+#undef GRIN_ENABLE_PREDICATE
 ///@}
 
 /** @name IndexMacros
@@ -255,16 +255,16 @@ typedef enum {
 /** @ingroup IndexMacros
  * @brief Enable vertex label on graph. 
 */
-#define WITH_VERTEX_LABEL
+#define GRIN_WITH_VERTEX_LABEL
 
 /** @ingroup IndexMacros
  * @brief Enable edge label on graph. 
 */
-#define WITH_EDGE_LABEL
+#define GRIN_WITH_EDGE_LABEL
 
-#ifndef DOXYGEN_SKIP 
-#undef WITH_VERTEX_LABEL
-#undef WITH_EDGE_LABEL
+#ifndef GRIN_DOXYGEN_SKIP 
+#undef GRIN_WITH_VERTEX_LABEL
+#undef GRIN_WITH_EDGE_LABEL
 #endif
 ///@}
 
@@ -272,134 +272,136 @@ typedef enum {
  * Macros for Null(invalid) values
  */
 ///@{
-/** @brief Null type (undefined data type) */
-#define NULL_TYPE Undefined
+/** @brief Null data type (undefined data type) */
+#define GRIN_NULL_DATATYPE Undefined
 /** @brief Null graph (invalid return value) */
-#define NULL_GRAPH NULL
+#define GRIN_NULL_GRAPH NULL
 /** @brief Non-existing vertex (invalid return value) */
-#define NULL_VERTEX NULL
+#define GRIN_NULL_VERTEX NULL
 /** @brief Non-existing edge (invalid return value) */
-#define NULL_EDGE NULL
+#define GRIN_NULL_EDGE NULL
 /** @brief Null list of any kind (invalid return value) */
-#define NULL_LIST NULL
+#define GRIN_NULL_LIST NULL
 /** @brief Non-existing partition (invalid return value) */
-#define NULL_PARTITION NULL
+#define GRIN_NULL_PARTITION NULL
 /** @brief Null vertex reference (invalid return value) */
-#define NULL_VERTEX_REF NULL
+#define GRIN_NULL_VERTEX_REF NULL
 /** @brief Null edge reference (invalid return value) */
-#define NULL_EDGE_REF NULL
+#define GRIN_NULL_EDGE_REF NULL
 /** @brief Non-existing vertex type (invalid return value) */
-#define NULL_VERTEX_TYPE NULL
+#define GRIN_NULL_VERTEX_TYPE NULL
 /** @brief Non-existing edge type (invalid return value) */
-#define NULL_EDGE_TYPE NULL
-/** @brief Non-existing property (invalid return value) */
-#define NULL_PROPERTY NULL
+#define GRIN_NULL_EDGE_TYPE NULL
+/** @brief Non-existing vertex property (invalid return value) */
+#define GRIN_NULL_VERTEX_PROPERTY NULL
+/** @brief Non-existing vertex property (invalid return value) */
+#define GRIN_NULL_EDGE_PROPERTY NULL
 /** @brief Null row (invalid return value) */
-#define NULL_ROW NULL
+#define GRIN_NULL_ROW NULL
 /** @brief Null natural id of any kind (invalid return value) */
-#define NULL_NATURAL_ID UINT_MAX
+#define GRIN_NULL_NATURAL_ID UINT_MAX
 ///@}
 
 
 /* Define the handlers using typedef */
-typedef void* Graph;                      
-typedef void* Vertex;                     
-typedef void* Edge;                       
+typedef void* GRIN_GRAPH;                      
+typedef void* GRIN_VERTEX;                     
+typedef void* GRIN_EDGE;                       
 
-#ifdef WITH_VERTEX_ORIGINAL_ID
-typedef void* OriginalID;                   
+#ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
+typedef void* GRIN_VERTEX_ORIGINAL_ID;                   
 #endif
 
-#ifdef WITH_VERTEX_DATA
-typedef void* VertexData;                 
+#ifdef GRIN_WITH_VERTEX_DATA
+typedef void* GRIN_VERTEX_DATA;                 
 #endif
 
-#ifdef ENABLE_VERTEX_LIST
-typedef void* VertexList;                 
+#ifdef GRIN_ENABLE_VERTEX_LIST
+typedef void* GRIN_VERTEX_LIST;                 
 #endif
 
-#ifdef ENABLE_VERTEX_LIST_ITERATOR
-typedef void* VertexListIterator;         
+#ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
+typedef void* GRIN_VERTEX_LIST_ITERATOR;         
 #endif
 
-#ifdef ENABLE_ADJACENT_LIST
-typedef void* AdjacentList;               
+#ifdef GRIN_ENABLE_ADJACENT_LIST
+typedef void* GRIN_ADJACENT_LIST;               
 #endif
 
-#ifdef ENABLE_ADJACENT_LIST_ITERATOR
-typedef void* AdjacentListIterator;       
+#ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
+typedef void* GRIN_ADJACENT_LIST_ITERATOR;       
 #endif
 
-#ifdef WITH_EDGE_DATA
-typedef void* EdgeData;                   
+#ifdef GRIN_WITH_EDGE_DATA
+typedef void* GRIN_EDGE_DATA;                   
 #endif
 
-#ifdef ENABLE_EDGE_LIST
-typedef void* EdgeList;                   
+#ifdef GRIN_ENABLE_EDGE_LIST
+typedef void* GRIN_EDGE_LIST;                   
 #endif
 
-#ifdef ENABLE_EDGE_LIST_ITERATOR
-typedef void* EdgeListIterator;           
+#ifdef GRIN_ENABLE_EDGE_LIST_ITERATOR
+typedef void* GRIN_EDGE_LIST_ITERATOR;           
 #endif
 
-#ifdef ENABLE_GRAPH_PARTITION
-typedef void* PartitionedGraph;
-typedef void* Partition;
-typedef void* PartitionList;
+#ifdef GRIN_ENABLE_GRAPH_PARTITION
+typedef void* GRIN_PARTITIONED_GRAPH;
+typedef void* GRIN_PARTITION;
+typedef void* GRIN_PARTITION_LIST;
 #endif
 
-#ifdef NATURAL_PARTITION_ID_TRAIT
-typedef unsigned PartitionID;
+#ifdef GRIN_NATURAL_PARTITION_ID_TRAIT
+typedef unsigned GRIN_PARTITION_ID;
 #endif
 
-#ifdef ENABLE_VERTEX_REF
-typedef void* VertexRef;
+#ifdef GRIN_ENABLE_VERTEX_REF
+typedef void* GRIN_VERTEX_REF;
 #endif
 
-#ifdef ENABLE_EDGE_REF
-typedef void* EdgeRef;
+#ifdef GRIN_ENABLE_EDGE_REF
+typedef void* GRIN_EDGE_REF;
 #endif
 
 
-#ifdef WITH_VERTEX_PROPERTY
-typedef void* VertexType;
-typedef void* VertexTypeList;
-typedef void* VertexProperty;
-typedef void* VertexPropertyList;
-typedef void* VertexPropertyTable;
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+typedef void* GRIN_VERTEX_TYPE;
+typedef void* GRIN_VERTEX_TYPE_LIST;
+typedef void* GRIN_VERTEX_PROPERTY;
+typedef void* GRIN_VERTEX_PROPERTY_LIST;
+typedef void* GRIN_VERTEX_PROPERTY_TABLE;
 #endif
 
-#ifdef NATURAL_VERTEX_TYPE_ID_TRAIT
-typedef unsigned VertexTypeID;
+#ifdef GRIN_NATURAL_VERTEX_TYPE_ID_TRAIT
+typedef unsigned GRIN_VERTEX_TYPE_ID;
 #endif
 
-#ifdef NATURAL_VERTEX_PROPERTY_ID_TRAIT
-typedef unsigned VertexPropertyID;
+#ifdef GRIN_NATURAL_VERTEX_PROPERTY_ID_TRAIT
+typedef unsigned GRIN_VERTEX_PROPERTY_ID;
 #endif
 
-#ifdef WITH_EDGE_PROPERTY
-typedef void* EdgeType;
-typedef void* EdgeTypeList;
-typedef void* EdgeProperty;
-typedef void* EdgePropertyList;
-typedef void* EdgePropertyTable;
+#ifdef GRIN_WITH_EDGE_PROPERTY
+typedef void* GRIN_EDGE_TYPE;
+typedef void* GRIN_EDGE_TYPE_LIST;
+typedef void* GRIN_EDGE_PROPERTY;
+typedef void* GRIN_EDGE_PROPERTY_LIST;
+typedef void* GRIN_EDGE_PROPERTY_TABLE;
 #endif
 
-#ifdef NATURAL_EDGE_TYPE_ID_TRAIT
-typedef unsigned EdgeTypeID;
+#ifdef GRIN_NATURAL_EDGE_TYPE_ID_TRAIT
+typedef unsigned GRIN_EDGE_TYPE_ID;
 #endif
 
-#ifdef NATURAL_EDGE_PROPERTY_ID_TRAIT
-typedef unsigned EdgePropertyID;
+#ifdef GRIN_NATURAL_EDGE_PROPERTY_ID_TRAIT
+typedef unsigned GRIN_EDGE_PROPERTY_ID;
 #endif
 
-#if defined(WITH_VERTEX_PROPERTY) || defined(WITH_EDGE_PROPERTY)
-typedef void* Row;
+#if defined(GRIN_WITH_VERTEX_PROPERTY) || defined(GRIN_WITH_EDGE_PROPERTY)
+typedef void* GRIN_ROW;
 #endif
 
-#ifdef WITH_LABEL
-typedef void* Label
-typedef void* LabelList
+#if defined(GRIN_WITH_VERTEX_LABEL) || defined(GRIN_WITH_EDGE_LABEL)
+typedef void* GRIN_LABEL
+typedef void* GRIN_LABEL_LIST
 #endif
 
 #endif  // GRIN_INCLUDE_PREDEFINE_H_

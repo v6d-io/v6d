@@ -16,16 +16,16 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/topology/adjacentlist.h"
 
-#ifdef ENABLE_ADJACENT_LIST
-AdjacentList get_adjacent_list(Graph g, Direction d, Vertex v) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto _v = static_cast<Vertex_T*>(v);
-    auto al = new AdjacentList_T();
+#ifdef GRIN_ENABLE_ADJACENT_LIST
+GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_VERTEX v) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _v = static_cast<GRIN_VERTEX_T*>(v);
+    auto al = new GRIN_ADJACENT_LIST_T();
     al->v = v;
     al->dir = d;
     al->etype = _g->edge_label_num();
-    for (EdgeType_T etype = 0; etype < al->etype; ++etype) {
-        if (d == Direction::IN) {
+    for (GRIN_EDGE_TYPE_T etype = 0; etype < al->etype; ++etype) {
+        if (d == GRIN_DIRECTION::IN) {
             al->data.push_back(_g->GetIncomingRawAdjList(*_v, etype));
         } else {
             al->data.push_back(_g->GetOutgoingRawAdjList(*_v, etype));
@@ -34,17 +34,17 @@ AdjacentList get_adjacent_list(Graph g, Direction d, Vertex v) {
     return al;
 }
 
-#ifdef WITH_EDGE_PROPERTY
-AdjacentList get_adjacent_list_by_edge_type(Graph g, Direction d, 
-                                            Vertex v, EdgeType etype) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto _v = static_cast<Vertex_T*>(v);
-    auto _etype = static_cast<EdgeType_T*>(etype);
-    auto al = new AdjacentList_T();
+#ifdef GRIN_WITH_EDGE_PROPERTY
+GRIN_ADJACENT_LIST grin_get_adjacent_list_by_edge_type(GRIN_GRAPH g, GRIN_DIRECTION d, 
+                                            GRIN_VERTEX v, GRIN_EDGE_TYPE etype) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _v = static_cast<GRIN_VERTEX_T*>(v);
+    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
+    auto al = new GRIN_ADJACENT_LIST_T();
     al->v = v;
     al->dir = d;
     al->etype = *_etype;
-    if (d == Direction::IN) {
+    if (d == GRIN_DIRECTION::IN) {
         al->data.push_back(_g->GetIncomingRawAdjList(*_v, *_etype));
     } else {
         al->data.push_back(_g->GetOutgoingRawAdjList(*_v, *_etype));
@@ -53,13 +53,13 @@ AdjacentList get_adjacent_list_by_edge_type(Graph g, Direction d,
 }
 #endif
 
-void destroy_adjacent_list(AdjacentList al) {
-    auto _al = static_cast<AdjacentList_T*>(al);
+void grin_destroy_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
+    auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
     delete _al;
 }
 
-size_t get_adjacent_list_size(AdjacentList al) {
-    auto _al = static_cast<AdjacentList_T*>(al);
+size_t grin_get_adjacent_list_size(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
+    auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
     size_t result = 0;
     for (auto &ral : _al->data) {
         result += ral.Size();
@@ -67,31 +67,31 @@ size_t get_adjacent_list_size(AdjacentList al) {
     return result;
 }
 
-Vertex get_neighbor_from_adjacent_list(AdjacentList al, size_t idx) {
-    auto _al = static_cast<AdjacentList_T*>(al);
+GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
+    auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
     size_t result = 0;
     for (auto &ral : _al->data) {
         result += ral.Size();
         if (idx < result) {
             auto _idx = idx - (result - ral.size());
             auto _nbr = ral.begin() + _idx;
-            auto v = new Vertex_T(_nbr->vid);
+            auto v = new GRIN_VERTEX_T(_nbr->vid);
             return v;
         }
     }
-    return NULL_VERTEX;
+    return GRIN_NULL_VERTEX;
 }
 
-Edge get_edge_from_adjacent_list(AdjacentList al, size_t idx) {
-    auto _al = static_cast<AdjacentList_T*>(al);
+GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
+    auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
     size_t result = 0;
     for (auto i = 0; i < _al->data.size(); ++i) {
         result += _al->data[i].Size();
         if (idx < result) {
             auto _idx = idx - (result - _al->data[i].Size());
             auto _nbr = _al->data[i].begin() + _idx;
-            auto v = new Vertex_T(_nbr->vid);
-            auto e = new Edge_T();
+            auto v = new GRIN_VERTEX_T(_nbr->vid);
+            auto e = new GRIN_EDGE_T();
             e->src = _al->v;
             e->dst = v;
             e->dir = _al->dir;
@@ -100,6 +100,6 @@ Edge get_edge_from_adjacent_list(AdjacentList al, size_t idx) {
             return e;
         }
     }
-    return NULL_EDGE;
+    return GRIN_NULL_EDGE;
 }
 #endif

@@ -19,62 +19,62 @@ limitations under the License.
 #include "../predefine.h"
 
 // Graph 
-bool is_directed(Graph);
+bool grin_is_directed(GRIN_GRAPH);
 
-bool is_multigraph(Graph);
+bool grin_is_multigraph(GRIN_GRAPH);
 
-size_t get_vertex_num(Graph);
+size_t grin_get_vertex_num(GRIN_GRAPH);
 
-#ifdef WITH_VERTEX_PROPERTY
-size_t get_vertex_num_by_type(Graph, VertexType);
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+size_t grin_get_vertex_num_by_type(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 #endif
 
-size_t get_edge_num(Graph, Direction d);
+size_t grin_get_edge_num(GRIN_GRAPH, GRIN_DIRECTION);
 
-#ifdef WITH_EDGE_PROPERTY
-size_t get_edge_num_by_type(Graph, Direction d, EdgeType);
+#ifdef GRIN_WITH_EDGE_PROPERTY
+size_t grin_get_edge_num_by_type(GRIN_GRAPH, GRIN_DIRECTION, GRIN_EDGE_TYPE);
 #endif
 
 
 // Vertex
-void destroy_vertex(Vertex);
+void grin_destroy_vertex(GRIN_GRAPH, GRIN_VERTEX);
 
-#ifdef WITH_VERTEX_DATA
-DataType get_vertex_data_type(Graph, Vertex);
+#ifdef GRIN_WITH_VERTEX_DATA
+GRIN_DATATYPE grin_get_vertex_data_type(GRIN_GRAPH, Vertex);
 
-VertexData get_vertex_data_value(Graph, Vertex);
+GRIN_VERTEX_DATA grin_get_vertex_data_value(GRIN_GRAPH, Vertex);
 
-void destroy_vertex_data(VertexData);
+void grin_destroy_vertex_data(GRIN_GRAPH, GRIN_VERTEX_DATA);
 #endif
 
-#ifdef WITH_VERTEX_ORIGINAL_ID
-Vertex get_vertex_from_original_id(Graph, OriginalID);
+#ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
+GRIN_VERTEX grin_get_vertex_from_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
 
-DataType get_vertex_original_id_type(Graph);
+GRIN_DATATYPE grin_get_vertex_original_id_type(GRIN_GRAPH);
 
-OriginalID get_vertex_original_id(Graph, Vertex);
+GRIN_VERTEX_ORIGINAL_ID grin_get_vertex_original_id(GRIN_GRAPH, GRIN_VERTEX);
 
-void destroy_vertex_original_id(OriginalID); 
+void grin_destroy_vertex_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
 #endif
 
-#if defined(WITH_VERTEX_ORIGINAL_ID) && defined(WITH_VERTEX_PROPERTY)
-Vertex get_vertex_from_original_id_by_type(Graph, VertexType, OriginalID);
+#if defined(GRIN_WITH_VERTEX_ORIGINAL_ID) && defined(GRIN_WITH_VERTEX_PROPERTY)
+GRIN_VERTEX grin_get_vertex_from_original_id_by_type(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_VERTEX_ORIGINAL_ID);
 #endif
 
 
-// Edge
-void destroy_edge(Edge);
+// GRIN_EDGE
+void grin_destroy_edge(GRIN_GRAPH, GRIN_EDGE);
 
-Vertex get_edge_src(Graph, Edge);
+GRIN_VERTEX grin_get_edge_src(GRIN_GRAPH, GRIN_EDGE);
 
-Vertex get_edge_dst(Graph, Edge);
+GRIN_VERTEX grin_get_edge_dst(GRIN_GRAPH, GRIN_EDGE);
 
-#ifdef WITH_EDGE_DATA
-DataType get_edge_data_type(Graph, Edge);
+#ifdef GRIN_WITH_EDGE_DATA
+GRIN_DATATYPE grin_get_edge_data_type(GRIN_GRAPH, GRIN_EDGE);
 
-EdgeData get_edge_data_value(Graph, Edge);
+GRIN_EDGE_DATA grin_get_edge_data_value(GRIN_GRAPH, GRIN_EDGE);
 
-void destroy_edge_data(EdgeData);
+void grin_destroy_edge_data(GRIN_GRAPH, GRIN_EDGE_DATA);
 #endif
 
 #endif  // GRIN_INCLUDE_TOPOLOGY_STRUCTURE_H_

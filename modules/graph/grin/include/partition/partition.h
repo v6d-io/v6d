@@ -23,164 +23,164 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#ifdef ENABLE_GRAPH_PARTITION
-size_t get_total_partitions_number(PartitionedGraph);
+#ifdef GRIN_ENABLE_GRAPH_PARTITION
+size_t grin_get_total_partitions_number(GRIN_PARTITIONED_GRAPH);
 
-PartitionList get_local_partition_list(PartitionedGraph);
+GRIN_PARTITION_LIST grin_get_local_partition_list(GRIN_PARTITIONED_GRAPH);
 
-void destroy_partition_list(PartitionList);
+void grin_destroy_partition_list(GRIN_PARTITIONED_GRAPH, GRIN_PARTITION_LIST);
 
-PartitionList create_partition_list();
+GRIN_PARTITION_LIST grin_create_partition_list(GRIN_PARTITIONED_GRAPH);
 
-bool insert_partition_to_list(PartitionList, Partition);
+bool grin_insert_partition_to_list(GRIN_PARTITIONED_GRAPH, GRIN_PARTITION_LIST, GRIN_PARTITION);
 
-size_t get_partition_list_size(PartitionList);
+size_t grin_get_partition_list_size(GRIN_PARTITIONED_GRAPH, GRIN_PARTITION_LIST);
 
-Partition get_partition_from_list(PartitionList, size_t);
+GRIN_PARTITION grin_get_partition_from_list(GRIN_PARTITIONED_GRAPH, GRIN_PARTITION_LIST, size_t);
 
-bool equal_partition(Partition, Partition);
+bool grin_equal_partition(GRIN_PARTITIONED_GRAPH, GRIN_PARTITION, GRIN_PARTITION);
 
-void destroy_partition(Partition);
+void grin_destroy_partition(GRIN_PARTITIONED_GRAPH, GRIN_PARTITION);
 
-void* get_partition_info(PartitionedGraph, Partition);
+void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH, GRIN_PARTITION);
 
-Graph get_local_graph_from_partition(PartitionedGraph, Partition);
+GRIN_GRAPH grin_get_local_graph_from_partition(GRIN_PARTITIONED_GRAPH, GRIN_PARTITION);
 #endif
 
-#ifdef NATURAL_PARTITION_ID_TRAIT
-Partition get_partition_from_id(PartitionID);
+#ifdef GRIN_NATURAL_PARTITION_ID_TRAIT
+GRIN_PARTITION grin_get_partition_from_id(GRIN_PARTITIONED_GRAPH, GRIN_PARTITION_ID);
 
-PartitionID get_partition_id(Partition);
+GRIN_PARTITION_ID grin_get_partition_id(GRIN_PARTITIONED_GRAPH, GRIN_PARTITION);
 #endif
 
 // master & mirror vertices for vertexcut partition
 // while they refer to inner & outer vertices in edgecut partition
-#if defined(ENABLE_GRAPH_PARTITION) && defined(ENABLE_VERTEX_LIST)
-VertexList get_master_vertices(Graph);
+#if defined(GRIN_ENABLE_GRAPH_PARTITION) && defined(GRIN_ENABLE_VERTEX_LIST)
+GRIN_VERTEX_LIST grin_get_master_vertices(GRIN_GRAPH);
 
-VertexList get_mirror_vertices(Graph);
+GRIN_VERTEX_LIST grin_get_mirror_vertices(GRIN_GRAPH);
 
-VertexList get_mirror_vertices_by_partition(Graph, Partition);
+GRIN_VERTEX_LIST grin_get_mirror_vertices_by_partition(GRIN_GRAPH, GRIN_PARTITION);
 
-#ifdef WITH_VERTEX_PROPERTY
-VertexList get_master_vertices_by_type(Graph, VertexType);
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+GRIN_VERTEX_LIST grin_get_master_vertices_by_type(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 
-VertexList get_mirror_vertices_by_type(Graph, VertexType);
+GRIN_VERTEX_LIST grin_get_mirror_vertices_by_type(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 
-VertexList get_mirror_vertices_by_type_partition(Graph, VertexType, Partition);
+GRIN_VERTEX_LIST grin_get_mirror_vertices_by_type_partition(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_PARTITION);
 #endif
 #endif
 
-#if defined(ENABLE_GRAPH_PARTITION) && defined(ENABLE_ADJACENT_LIST)
+#if defined(GRIN_ENABLE_GRAPH_PARTITION) && defined(GRIN_ENABLE_ADJACENT_LIST)
 /**
  * @brief get the adjacentlist of a vertex where the neigbors are only master vertices
- * @param Graph the graph
- * @param Direction incoming or outgoing
- * @param Vertex the vertex
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_DIRECTION incoming or outgoing
+ * @param GRIN_VERTEX the vertex
  */
-AdjacentList get_adjacent_master_list(Graph, Direction, Vertex);
+GRIN_ADJACENT_LIST grin_get_adjacent_master_list(GRIN_GRAPH, GRIN_DIRECTION, GRIN_VERTEX);
 
 /**
  * @brief get the adjacentlist of a vertex where the neigbors are only mirror vertices
- * @param Graph the graph
- * @param Direction incoming or outgoing
- * @param Vertex the vertex
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_DIRECTION incoming or outgoing
+ * @param GRIN_VERTEX the vertex
  */
-AdjacentList get_adjacent_mirror_list(Graph, Direction, Vertex);
+GRIN_ADJACENT_LIST grin_get_adjacent_mirror_list(GRIN_GRAPH, GRIN_DIRECTION, GRIN_VERTEX);
 
 /**
  * @brief get the adjacentlist of a vertex where the neigbors are only mirror vertices
  * whose master vertices are in a specific partition
- * @param Graph the graph
- * @param Direction incoming or outgoing
- * @param Paritition the specific partition
- * @param Vertex the vertex
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_DIRECTION incoming or outgoing
+ * @param GRIN_PARTITION the specific partition
+ * @param GRIN_VERTEX the vertex
  */
-AdjacentList get_adjacent_mirror_list_by_partition(Graph, Direction,
-                                                   Partition, Vertex);
+GRIN_ADJACENT_LIST grin_get_adjacent_mirror_list_by_partition(GRIN_GRAPH, GRIN_DIRECTION,
+                                                              GRIN_PARTITION, GRIN_VERTEX);
 #endif
 
 
 // Vertex ref refers to the same vertex referred in other partitions,
 // while edge ref is likewise. Both can be serialized to const char* for
 // message transporting and deserialized on the other end.
-#ifdef ENABLE_VERTEX_REF
-VertexRef get_vertex_ref_for_vertex(Graph, Vertex);
+#ifdef GRIN_ENABLE_VERTEX_REF
+GRIN_VERTEX_REF grin_get_vertex_ref_for_vertex(GRIN_GRAPH, GRIN_VERTEX);
 
 /**
  * @brief get the local vertex from the vertex ref
  * if the vertex ref is not regconized, a null vertex is returned
- * @param Graph the graph
- * @param VertexRef the vertex ref
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_VERTEX_REF the vertex ref
  */
-Vertex get_vertex_from_vertex_ref(Graph, VertexRef);
+GRIN_VERTEX grin_get_vertex_from_vertex_ref(GRIN_GRAPH, GRIN_VERTEX_REF);
 
 /**
  * @brief get the master partition of a vertex ref.
  * Some storage can still provide the master partition of the vertex ref,
  * even if the vertex ref can NOT be recognized locally.
- * @param Graph the graph
- * @param VertexRef the vertex ref
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_VERTEX_REF the vertex ref
  */
-bool is_master_vertex(Graph, Vertex);
+bool grin_is_master_vertex(GRIN_GRAPH, GRIN_VERTEX);
 
-bool is_mirror_vertex(Graph, Vertex);
+bool grin_is_mirror_vertex(GRIN_GRAPH, GRIN_VERTEX);
 
-Partition get_master_partition_from_vertex_ref(Graph, VertexRef);
+GRIN_PARTITION grin_get_master_partition_from_vertex_ref(GRIN_GRAPH, GRIN_VERTEX_REF);
 
-const char* serialize_vertex_ref(Graph, VertexRef);
+const char* grin_serialize_vertex_ref(GRIN_GRAPH, GRIN_VERTEX_REF);
 
-VertexRef deserialize_to_vertex_ref(Graph, const char*);
+GRIN_VERTEX_REF grin_deserialize_to_vertex_ref(GRIN_GRAPH, const char*);
 #endif
 
-#ifdef ENABLE_EDGE_REF
-EdgeRef get_edge_ref_for_edge(Graph, Partition, Edge);
+#ifdef GRIN_ENABLE_EDGE_REF
+GRIN_EDGE_REF grin_get_edge_ref_for_edge(GRIN_GRAPH, GRIN_PARTITION, GRIN_EDGE);
 
-Edge get_edge_from_edge_ref(Graph, EdgeRef);
+GRIN_EDGE grin_get_edge_from_edge_ref(GRIN_GRAPH, GRIN_EDGE_REF);
 
-Partition get_master_partition_from_edge_ref(Graph, EdgeRef);
+Partition grin_get_master_partition_from_edge_ref(GRIN_GRAPH, GRIN_EDGE_REF);
 
-const char* serialize_edge_ref(Graph, EdgeRef);
+const char* grin_serialize_edge_ref(GRIN_GRAPH, GRIN_EDGE_REF);
 
-EdgeRef deserialize_to_edge_ref(Graph, const char*);
+GRIN_EDGE_REF grin_deserialize_to_edge_ref(GRIN_GRAPH, const char*);
 #endif
 
 // The concept of local_complete refers to whether we can get complete data or properties
 // locally in the partition. It is orthogonal to the concept of master/mirror which
 // is mainly designed for data aggregation. In some extremely cases, master vertices
 // may NOT contain all the data or properties locally.
-bool is_vertex_neighbor_local_complete(Graph, Vertex);
+bool grin_is_vertex_neighbor_local_complete(GRIN_GRAPH, GRIN_VERTEX);
 
 /**
  * @brief get the partitions whose combination can provide the complete
  * neighbors of a vertex.
- * @param Graph the graph
+ * @param GRIN_GRAPH the graph
  * @param Vertex the vertex
  */
-PartitionList vertex_neighbor_complete_partitions(Graph, Vertex);
+GRIN_PARTITION_LIST grin_vertex_neighbor_complete_partitions(GRIN_GRAPH, GRIN_VERTEX);
 
-#ifdef WITH_VERTEX_DATA
-bool is_vertex_data_local_complete(Graph, Vertex);
+#ifdef GRIN_WITH_VERTEX_DATA
+bool grin_is_vertex_data_local_complete(GRIN_GRAPH, Vertex);
 
-PartitionList vertex_data_complete_partitions(Graph, Vertex);
+GRIN_PARTITION_LIST grin_vertex_data_complete_partitions(GRIN_GRAPH, Vertex);
 #endif
 
-#ifdef WITH_VERTEX_PROPERTY
-bool is_vertex_property_local_complete(Graph, Vertex);
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+bool grin_is_vertex_property_local_complete(GRIN_GRAPH, GRIN_VERTEX);
 
-PartitionList vertex_property_complete_partitions(Graph, Vertex);
+GRIN_PARTITION_LIST grin_vertex_property_complete_partitions(GRIN_GRAPH, GRIN_VERTEX);
 #endif
 
-#ifdef WITH_EDGE_DATA
-bool is_edge_data_local_complete(Graph, Edge);
+#ifdef GRIN_WITH_EDGE_DATA
+bool grin_is_edge_data_local_complete(GRIN_GRAPH, GRIN_EDGE);
 
-PartitionList edge_data_complete_partitions(Graph, Edge);
+GRIN_PARTITION_LIST grin_edge_data_complete_partitions(GRIN_GRAPH, GRIN_EDGE);
 #endif
 
-#ifdef WITH_EDGE_PROPERTY
-bool is_edge_property_local_complete(Graph, Edge);
+#ifdef GRIN_WITH_EDGE_PROPERTY
+bool grin_is_edge_property_local_complete(GRIN_GRAPH, GRIN_EDGE);
 
-PartitionList edge_data_complete_partitions(Graph, Edge);
+GRIN_PARTITION_LIST grin_edge_data_complete_partitions(GRIN_GRAPH, GRIN_EDGE);
 #endif
 
 #endif  // GRIN_INCLUDE_PARTITION_PARTITION_H_

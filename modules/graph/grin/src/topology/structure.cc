@@ -16,18 +16,18 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/topology/structure.h"
 
-bool is_directed(Graph g) {
-    auto _g = static_cast<Graph_T*>(g);
+bool grin_is_directed(GRIN_GRAPH g) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
     return _g->directed();
 }
 
-bool is_multigraph(Graph g) {
-    auto _g = static_cast<Graph_T*>(g);
+bool grin_is_multigraph(GRIN_GRAPH g) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
     return _g->is_multigraph();
 }
 
-size_t get_vertex_num(Graph g) {
-    auto _g = static_cast<Graph_T*>(g);
+size_t grin_get_vertex_num(GRIN_GRAPH g) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
     size_t result = 0;
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
         result += _g->GetVerticesNum(vtype);
@@ -35,16 +35,16 @@ size_t get_vertex_num(Graph g) {
     return result;
 }
 
-#ifdef WITH_VERTEX_PROPERTY
-size_t get_vertex_num_by_type(Graph g, VertexType vtype) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto _vtype = static_cast<VertexType_T*>(vtype);
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+size_t grin_get_vertex_num_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     return _g->GetVerticesNum(*_vtype);
 }
 #endif
 
-size_t get_edge_num(Graph g, Direction d) {
-    auto _g = static_cast<Graph_T*>(g);
+size_t grin_get_edge_num(GRIN_GRAPH g, GRIN_DIRECTION d) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
     if (d == IN) {
         return _g->GetInEdgeNum();
     } else if (d == OUT) {
@@ -53,80 +53,80 @@ size_t get_edge_num(Graph g, Direction d) {
     return _g->GetEdgeNum();
 }
 
-#ifdef WITH_EDGE_PROPERTY
-size_t get_edge_num_by_type(Graph g, Direction d, EdgeType etype) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto _etype = static_cast<EdgeType_T*>(etype);
+#ifdef GRIN_WITH_EDGE_PROPERTY
+size_t grin_get_edge_num_by_type(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_EDGE_TYPE etype) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     return _g->edge_data_table(*_etype)->num_rows();
 }
 #endif
 
 // Vertex
-void destroy_vertex(Vertex v) {
-    auto _v = static_cast<Vertex_T*>(v);
+void grin_destroy_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
+    auto _v = static_cast<GRIN_VERTEX_T*>(v);
     delete _v;
 }
 
-#ifdef WITH_VERTEX_ORIGINAL_ID
-Vertex get_vertex_from_original_id(Graph g, OriginalID oid) {
-    auto _g = static_cast<Graph_T*>(g);
-    Vertex result;
+#ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
+GRIN_VERTEX grin_get_vertex_from_original_id(GRIN_GRAPH g, GRIN_VERTEX_ORIGINAL_ID oid) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    GRIN_VERTEX result;
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
-        result = get_vertex_from_original_id_by_type(g, &vtype, oid);
-        if (result != NULL_VERTEX) {
+        result = grin_get_vertex_from_original_id_by_type(g, &vtype, oid);
+        if (result != GRIN_NULL_VERTEX) {
             return result;
         }
     }
-    return NULL_VERTEX;
+    return GRIN_NULL_VERTEX;
 }
 
-DataType get_vertex_original_id_type(Graph g) {
-    return DataTypeEnum<OriginalID_T>::value;
+GRIN_DATATYPE grin_get_vertex_original_id_type(GRIN_GRAPH g) {
+    return GRIN_DATATYPE_ENUM<VERTEX_ORIGINAL_ID_T>::value;
 }
 
 
-OriginalID get_vertex_original_id(Graph g, Vertex v) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto _v = static_cast<Vertex_T*>(v);
+GRIN_VERTEX_ORIGINAL_ID grin_get_vertex_original_id(GRIN_GRAPH g, GRIN_VERTEX v) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto gid = _g->Vertex2Gid(*_v);
-    auto oid = new OriginalID_T(_g->Gid2Oid(gid));
+    auto oid = new VERTEX_ORIGINAL_ID_T(_g->Gid2Oid(gid));
     return oid;
 }
 
-void destroy_vertex_original_id(OriginalID oid) {
-    auto _oid = static_cast<OriginalID_T*>(oid);
+void grin_destroy_vertex_original_id(GRIN_GRAPH g, GRIN_VERTEX_ORIGINAL_ID oid) {
+    auto _oid = static_cast<VERTEX_ORIGINAL_ID_T*>(oid);
     delete _oid;
 } 
 #endif
 
-#if defined(WITH_VERTEX_ORIGINAL_ID) && defined(WITH_VERTEX_PROPERTY)
-Vertex get_vertex_from_original_id_by_type(Graph g, VertexType vtype, OriginalID oid) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto _vtype = static_cast<VertexType_T*>(vtype);
-    auto _oid = static_cast<OriginalID_T*>(oid);
-    Graph_T::vid_t gid;
-    auto v = new Vertex_T();
+#if defined(GRIN_WITH_VERTEX_ORIGINAL_ID) && defined(GRIN_WITH_VERTEX_PROPERTY)
+GRIN_VERTEX grin_get_vertex_from_original_id_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_ORIGINAL_ID oid) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
+    auto _oid = static_cast<VERTEX_ORIGINAL_ID_T*>(oid);
+    GRIN_GRAPH_T::vid_t gid;
+    auto v = new GRIN_VERTEX_T();
     if (_g->Oid2Gid(*_vtype, *_oid, gid)) {
         if (_g->Gid2Vertex(gid, *v)) {
             return v;
         }
     }
-    return NULL_VERTEX;
+    return GRIN_NULL_VERTEX;
 }
 #endif
 
-// Edge
-void destroy_edge(Edge e) {
-    auto _e = static_cast<Edge_T*>(e);
+// GRIN_EDGE
+void grin_destroy_edge(GRIN_GRAPH g, GRIN_EDGE e) {
+    auto _e = static_cast<GRIN_EDGE_T*>(e);
     delete _e;
 }
 
-Vertex get_edge_src(Graph g, Edge e) {
-    auto _e = static_cast<Edge_T*>(e);
+GRIN_VERTEX grin_get_edge_src(GRIN_GRAPH g, GRIN_EDGE e) {
+    auto _e = static_cast<GRIN_EDGE_T*>(e);
     return _e->src;
 }
 
-Vertex get_edge_dst(Graph g, Edge e) {
-    auto _e = static_cast<Edge_T*>(e);
+GRIN_VERTEX grin_get_edge_dst(GRIN_GRAPH g, GRIN_EDGE e) {
+    auto _e = static_cast<GRIN_EDGE_T*>(e);
     return _e->dst;
 }

@@ -16,45 +16,45 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/topology/vertexlist.h"
 
-#ifdef ENABLE_VERTEX_LIST
-VertexList get_vertex_list(Graph g) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto vl = new VertexList_T();
+#ifdef GRIN_ENABLE_VERTEX_LIST
+GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH g) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto vl = new GRIN_VERTEX_LIST_T();
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
         vl->push_back(_g->Vertices(vtype));
     }
     return vl;
 }
 
-#ifdef WITH_VERTEX_PROPERTY
-VertexList get_vertex_list_by_type(Graph g, VertexType vtype) {
-    auto _g = static_cast<Graph_T*>(g);
-    auto vl = new VertexList_T();
-    auto _vtype = static_cast<VertexType_T*>(vtype);
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+GRIN_VERTEX_LIST grin_get_vertex_list_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto vl = new GRIN_VERTEX_LIST_T();
+    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     vl->push_back(_g->Vertices(*_vtype));
     return vl;
 }
 #endif
 
-void destroy_vertex_list(VertexList vl) {
-    auto _vl = static_cast<VertexList_T*>(vl);
+void grin_destroy_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
+    auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     delete _vl;
 }
 
-VertexList create_vertex_list() {
-    auto vl = new VertexList_T();
+GRIN_VERTEX_LIST grin_create_vertex_list(GRIN_GRAPH g) {
+    auto vl = new GRIN_VERTEX_LIST_T();
     return vl;
 }
 
-bool insert_vertex_to_list(VertexList vl, Vertex v) {
-    auto _vl = static_cast<VertexList_T*>(vl);
-    auto _v = static_cast<Vertex_T*>(v);
-    _vl->push_back(Graph_T::vertex_range_t(_v->GetValue(), _v->GetValue()));
+bool grin_insert_vertex_to_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, GRIN_VERTEX v) {
+    auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
+    auto _v = static_cast<GRIN_VERTEX_T*>(v);
+    _vl->push_back(GRIN_GRAPH_T::vertex_range_t(_v->GetValue(), _v->GetValue()));
     return true;
 }
 
-size_t get_vertex_list_size(VertexList vl) {
-    auto _vl = static_cast<VertexList_T*>(vl);
+size_t grin_get_vertex_list_size(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
+    auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     size_t result = 0;
     for (auto &vr : *_vl) {
         result += vr.size();
@@ -62,17 +62,17 @@ size_t get_vertex_list_size(VertexList vl) {
     return result;
 }
 
-Vertex get_vertex_from_list(VertexList vl, size_t idx) {
-    auto _vl = static_cast<VertexList_T*>(vl);
+GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t idx) {
+    auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     size_t result = 0;
     for (auto &vr : *_vl) {
         result += vr.size();
         if (idx < result) {
             auto _idx = idx - (result - vr.size());
-            auto v = new Vertex_T(vr.begin_value() + _idx);
+            auto v = new GRIN_VERTEX_T(vr.begin_value() + _idx);
             return v;
         }
     }
-    return NULL_VERTEX;
+    return GRIN_NULL_VERTEX;
 }
 #endif
