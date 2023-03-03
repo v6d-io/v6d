@@ -32,10 +32,10 @@ import (
 
 // RenderManifestAsObj renders the manifest as an object
 func RenderManifestAsObj(path string, value interface{},
-	tmplFunc map[string]interface{}) (*unstructured.Unstructured, error) {
-	t := templates.NewEmbedTemplate()
+	tmplFunc map[string]interface{},
+) (*unstructured.Unstructured, error) {
 	obj := &unstructured.Unstructured{}
-	manifest, err := t.ReadFile(path)
+	manifest, err := templates.ReadFile(path)
 	if err != nil {
 		return obj, errors.Wrapf(err, "failed to read manifest %s", path)
 	}
@@ -49,10 +49,10 @@ func RenderManifestAsObj(path string, value interface{},
 // the template files are under the dir 'k8s/pkg/templates/etcd'
 func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, namespace string,
 	replicas int, image string, value interface{},
-	tmplFunc map[string]interface{}) ([]*unstructured.Unstructured, error) {
+	tmplFunc map[string]interface{},
+) ([]*unstructured.Unstructured, error) {
 	objs := []*unstructured.Unstructured{}
-	t := templates.NewEmbedTemplate()
-	etcdManifests, err := t.GetFilesRecursive("etcd")
+	etcdManifests, err := templates.GetFilesRecursive("etcd")
 	if err != nil {
 		return objs, errors.Wrap(err, "failed to get etcd manifests")
 	}

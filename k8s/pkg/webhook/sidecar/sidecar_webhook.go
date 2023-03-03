@@ -32,15 +32,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
-
-	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	"github.com/v6d-io/v6d/k8s/pkg/injector"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 // nolint: lll
@@ -48,9 +47,8 @@ import (
 
 // Injector injects vineyard sidecar container into Pods
 type Injector struct {
-	Client   client.Client
-	decoder  *admission.Decoder
-	Template kubernetes.Repo
+	client.Client
+	decoder *admission.Decoder
 }
 
 // Handle handles admission requests.
@@ -87,7 +85,7 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 		sidecar.Name = selectorname + "-default-sidecar"
 		sidecar.Namespace = pod.Namespace
 
-		err := r.Client.Get(
+		err := r.Get(
 			ctx,
 			types.NamespacedName{Name: sidecar.Name, Namespace: sidecar.Namespace},
 			sidecar,
@@ -102,20 +100,20 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 			// use default configurations
 			sidecar.Spec.Selector = keys[0] + "=" + l[keys[0]]
 
-			if err := r.Client.Create(ctx, sidecar); err != nil {
+			if err := r.Create(ctx, sidecar); err != nil {
 				logger.Error(err, "failed to create default sidecar cr")
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		} else {
 			// the default sidecar cr exists, update it
 			sidecar.Spec.Replicas++
-			if err := r.Client.Update(ctx, sidecar); err != nil {
+			if err := r.Update(ctx, sidecar); err != nil {
 				logger.Error(err, "failed to update default sidecar cr")
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		}
 
-		buf, err := r.Template.ReadFile("sidecar/injection-template.yaml")
+		buf, err := templates.ReadFile("sidecar/injection-template.yaml")
 		if err != nil {
 			logger.Error(err, "failed to read injection template")
 			return admission.Errored(http.StatusInternalServerError, err)

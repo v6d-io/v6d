@@ -23,6 +23,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -49,9 +50,9 @@ var deleteBackupCmd = &cobra.Command{
 			Name:      flags.BackupName,
 			Namespace: flags.GetDefaultVineyardNamespace(),
 		}, backup); err != nil {
-			util.ErrLogger.Fatalf("failed to delete backup job: %+v", err)
+			log.Fatal(err, "failed to delete backup job")
 		}
-		util.InfoLogger.Println("Backup Job is deleted.")
+		log.Info("Backup Job is deleted.")
 	},
 }
 

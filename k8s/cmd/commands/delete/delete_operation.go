@@ -23,6 +23,7 @@ import (
 	vineyardV1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -50,10 +51,10 @@ var deleteOperationCmd = &cobra.Command{
 			Name:      flags.OperationName,
 			Namespace: flags.GetDefaultVineyardNamespace(),
 		}, operation); err != nil {
-			util.ErrLogger.Fatalf("failed to delete operation: %+v", err)
+			log.Fatal(err, "failed to delete operation")
 		}
 
-		util.InfoLogger.Println("Operation is deleted.")
+		log.Info("Operation is deleted.")
 	},
 }
 

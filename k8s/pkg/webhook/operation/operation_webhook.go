@@ -26,11 +26,11 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // nolint: lll
@@ -38,7 +38,7 @@ import (
 
 // AssemblyInjector injects assembly operation container into Pods
 type AssemblyInjector struct {
-	Client  client.Client
+	client.Client
 	decoder *admission.Decoder
 }
 
@@ -59,14 +59,14 @@ func (r *AssemblyInjector) LabelRequiredPods(
 						"app": job,
 					},
 				}
-				if err := r.Client.List(ctx, podList, opts...); err != nil {
+				if err := r.List(ctx, podList, opts...); err != nil {
 					return errors.Wrap(err, "Failed to list pods")
 				}
 				for i := range podList.Items {
 					// label the required pods that need to be injected with the assembly container
 					labels := &podList.Items[i].Labels
 					(*labels)["need-injected-"+label[:strings.Index(label, ".")]] = "true"
-					if err := r.Client.Update(ctx, &podList.Items[i], &client.UpdateOptions{}); err != nil {
+					if err := r.Update(ctx, &podList.Items[i], &client.UpdateOptions{}); err != nil {
 						return errors.Wrap(err, "Failed to update pod")
 					}
 				}

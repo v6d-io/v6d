@@ -19,10 +19,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
-	deployVineyardClusterLong = util.LongDesc(`Deploy the vineyardd on kubernetes. 
+	deployVineyardClusterLong = util.LongDesc(`Deploy the vineyardd on kubernetes.
 	You could deploy a vineyardd cluster on kubernetes quickly.`)
 
 	deployVineyardClusterExample = util.Examples(`
@@ -48,7 +49,7 @@ var deployVineyardClusterCmd = &cobra.Command{
 		// deploy vineyardd
 		NewDeployVineyarddCmd().Run(cmd, args)
 
-		util.InfoLogger.Println("Vineyard Cluster is ready.")
+		log.Info("Vineyard Cluster is ready.")
 	},
 }
 

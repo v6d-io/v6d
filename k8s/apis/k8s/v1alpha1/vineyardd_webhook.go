@@ -24,7 +24,7 @@ import (
 )
 
 // log is for logging in this package.
-var vlog = log.Logger.WithName("webhook").WithName("vineyardd")
+var vlog = log.WithName("webhook").WithName("vineyardd")
 
 // SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *Vineyardd) SetupWebhookWithManager(mgr ctrl.Manager) error {

@@ -26,13 +26,14 @@ import (
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
-	deployOperatorLong = util.LongDesc(`Deploy the vineyard operator on kubernetes. 
-	You could specify a stable or development version of the operator. The default kustomize dir 
+	deployOperatorLong = util.LongDesc(`Deploy the vineyard operator on kubernetes.
+	You could specify a stable or development version of the operator. The default kustomize dir
 	is development version from github repo. Also, you can install the stable version from github.
-	repo or a local kustomize dir. Besides, you can also deploy the vineyard operator in an existing 
+	repo or a local kustomize dir. Besides, you can also deploy the vineyard operator in an existing
 	namespace.`)
 
 	deployOperatorExample = util.Examples(`
@@ -67,21 +68,21 @@ var deployOperatorCmd = &cobra.Command{
 
 		operatorManifests, err := util.BuildKustomizeInDir(util.GetKustomizeDir())
 		if err != nil {
-			util.ErrLogger.Fatal("failed to build kustomize dir: ", err)
+			log.Fatal(err, "failed to build kustomize dir")
 		}
 
 		if err := util.ApplyManifests(client, operatorManifests,
 			flags.GetDefaultVineyardNamespace()); err != nil {
-			util.ErrLogger.Fatal("failed to apply operator manifests: ", err)
+			log.Fatal(err, "failed to apply operator manifests")
 		}
 
-		if flags.NeedWait {
+		if flags.Wait {
 			if err := waitOperatorReady(client); err != nil {
-				util.ErrLogger.Fatal("failed to wait operator ready: ", err)
+				log.Fatal(err, "failed to wait operator ready")
 			}
 		}
 
-		util.InfoLogger.Println("Vineyard Operator is ready.")
+		log.Info("Vineyard Operator is ready.")
 	},
 }
 

@@ -29,12 +29,13 @@ import (
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
-	deployCertManagerLong = util.LongDesc(`Deploy the cert-manager in 
-	the cert-manager namespace. You could specify a stable or development version 
-	of the cert-manager and we suppose not to create a new namespace to install the 
+	deployCertManagerLong = util.LongDesc(`Deploy the cert-manager in
+	the cert-manager namespace. You could specify a stable or development version
+	of the cert-manager and we suppose not to create a new namespace to install the
 	cert-manager. The default version is v1.9.1.`)
 
 	deployCertManagerExample = util.Examples(`
@@ -44,7 +45,7 @@ var (
 
 	# install the default version(v1.9.1) in the cert-manager namespace
 	# not to wait for the cert-manager to be ready, but we does not recommend
-	# to do this, because there may be errors caused by the cert-manager 
+	# to do this, because there may be errors caused by the cert-manager
 	# not ready
 	vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager \
 		--wait=false
@@ -65,21 +66,21 @@ var deployCertManagerCmd = &cobra.Command{
 
 		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
 		if err != nil {
-			util.ErrLogger.Fatal("failed to get cert-manager manifests: ", err)
+			log.Fatal(err, "failed to get cert-manager manifests")
 		}
 
 		if err := util.ApplyManifests(client, certManagerManifests,
 			""); err != nil {
-			util.ErrLogger.Fatal("failed to apply cert-manager manifests: ", err)
+			log.Fatal(err, "failed to apply cert-manager manifests")
 		}
 
-		if flags.NeedWait {
+		if flags.Wait {
 			if err := waitCertManagerReady(client); err != nil {
-				util.ErrLogger.Fatal("failed to wait cert-manager ready: ", err)
+				log.Fatal(err, "failed to wait cert-manager ready")
 			}
 		}
 
-		util.InfoLogger.Println("Cert-Manager is ready.")
+		log.Info("Cert-Manager is ready.")
 	},
 }
 

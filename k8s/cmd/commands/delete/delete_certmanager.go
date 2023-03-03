@@ -20,11 +20,12 @@ import (
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
-	deleteCertManagerLong = util.LongDesc(`Delete the cert-manager in 
-	the cert-manager namespace. You should specify the version of deployed 
+	deleteCertManagerLong = util.LongDesc(`Delete the cert-manager in
+	the cert-manager namespace. You should specify the version of deployed
 	cert-manager and the default version is v1.9.1.`)
 
 	deleteCertManagerExample = util.Examples(`
@@ -47,14 +48,14 @@ var deleteCertManagerCmd = &cobra.Command{
 
 		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
 		if err != nil {
-			util.ErrLogger.Fatalf("failed to get cert-manager manifests: %+v", err)
+			log.Fatal(err, "failed to get cert-manager manifests")
 		}
 
 		if err := util.DeleteManifests(client, certManagerManifests,
 			""); err != nil {
-			util.ErrLogger.Fatalf("failed to delete cert-manager manifests: %+v", err)
+			log.Fatal(err, "failed to delete cert-manager manifests")
 		}
-		util.InfoLogger.Println("Cert-Manager is deleted.")
+		log.Info("Cert-Manager is deleted.")
 	},
 }
 

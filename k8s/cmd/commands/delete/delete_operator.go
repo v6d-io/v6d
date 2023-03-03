@@ -20,6 +20,7 @@ import (
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -50,14 +51,14 @@ var deleteOperatorCmd = &cobra.Command{
 
 		operatorManifests, err := util.BuildKustomizeInDir(util.GetKustomizeDir())
 		if err != nil {
-			util.ErrLogger.Fatalf("failed to build kustomize dir: %+v", err)
+			log.Fatal(err, "failed to build kustomize dir")
 		}
 
 		if err := util.DeleteManifests(client, operatorManifests,
 			flags.GetDefaultVineyardNamespace()); err != nil {
-			util.ErrLogger.Fatalf("failed to delete operator manifests: %+v", err)
+			log.Fatal(err, "failed to delete operator manifests")
 		}
-		util.InfoLogger.Println("Vineyard Operator is deleted.")
+		log.Info("Vineyard Operator is deleted.")
 	},
 }
 

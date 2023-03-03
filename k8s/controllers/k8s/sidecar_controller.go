@@ -31,11 +31,12 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 // SidecarEtcd contains the configuration about etcd of sidecar container
@@ -56,9 +57,8 @@ func getSidecarSvcLabelSelector() []ServiceLabelSelector {
 // SidecarReconciler reconciles a Sidecar object
 type SidecarReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Template kubernetes.Repo
-	Recorder record.EventRecorder
+	record.EventRecorder
+	Scheme *runtime.Scheme
 }
 
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=sidecars,verbs=get;list;watch;create;update;patch;delete
@@ -80,10 +80,10 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// deploy the sidecar service
 	sidecarApp := kubernetes.Application{
 		Client:   r.Client,
-		FileRepo: r.Template,
+		FileRepo: templates.Repo,
 		CR:       sidecar,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Sidecar"),
-		Recorder: r.Recorder,
+		Recorder: r.EventRecorder,
 		TmplFunc: map[string]interface{}{
 			"getEtcdConfig":           getSidecarEtcdConfig,
 			"getServiceLabelSelector": getSidecarSvcLabelSelector,
@@ -150,7 +150,7 @@ func (r *SidecarReconciler) UpdateStatus(ctx context.Context, sidecar *k8sv1alph
 		},
 	}
 	if err := r.List(ctx, podList, opts...); err != nil {
-		ctrl.Log.V(1).Error(err, "failed to list pod")
+		log.V(1).Error(err, "failed to list pod")
 		return err
 	}
 
@@ -179,7 +179,7 @@ func (r *SidecarReconciler) applyStatusUpdate(ctx context.Context,
 ) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		name := client.ObjectKey{Name: sidecar.Name, Namespace: sidecar.Namespace}
-		if err := r.Client.Get(ctx, name, sidecar); err != nil {
+		if err := r.Get(ctx, name, sidecar); err != nil {
 			return errors.Wrap(err, "failed to get sidecar")
 		}
 		sidecar.Status = *status
@@ -187,7 +187,7 @@ func (r *SidecarReconciler) applyStatusUpdate(ctx context.Context,
 		if err := kubernetes.ApplyOverlay(sidecar, &k8sv1alpha1.Sidecar{Status: *status}); err != nil {
 			return errors.Wrap(err, "failed to overlay sidecar's status")
 		}
-		if err := r.Client.Status().Update(ctx, sidecar); err != nil {
+		if err := r.Status().Update(ctx, sidecar); err != nil {
 			return errors.Wrap(err, "failed to update sidecar's status")
 		}
 		return nil

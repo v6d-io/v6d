@@ -22,17 +22,16 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
-var (
-	// SleepCommand is the command to wait for the sidecar container to be ready.
-	SleepCommand = "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;"
-)
+// SleepCommand is the command to wait for the sidecar container to be ready.
+var SleepCommand = "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;"
 
 // InjectSidecar injects the vineyard sidecar into the containers of workload.
 func InjectSidecar(workloadContainers *[]corev1.Container,
 	workloadVolumes *[]corev1.Volume,
 	sidecarContainers *[]corev1.Container,
 	sidecarVolumes *[]corev1.Volume,
-	sidecar *v1alpha1.Sidecar) {
+	sidecar *v1alpha1.Sidecar,
+) {
 	// add sleep to wait for the sidecar container to be ready
 	for i := range *workloadContainers {
 		if (*workloadContainers)[i].Command == nil {

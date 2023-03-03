@@ -23,12 +23,13 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
-	createOperationLong = util.LongDesc(`Insert an operation in a workflow 
-	based on vineyard cluster. You could create a assembly or repartition operation 
-	in a workflow. Usually, the operation should be created between the workloads: 
+	createOperationLong = util.LongDesc(`Insert an operation in a workflow
+	based on vineyard cluster. You could create a assembly or repartition operation
+	in a workflow. Usually, the operation should be created between the workloads:
 	job1 -> operation -> job2.`)
 
 	createOperationExample = util.Examples(`
@@ -69,10 +70,10 @@ var createOperationCmd = &cobra.Command{
 		if err := util.Create(client, operation, func(operation *v1alpha1.Operation) bool {
 			return operation.Status.State != v1alpha1.OperationSucceeded
 		}); err != nil {
-			util.ErrLogger.Fatal("failed to create/wait operation: ", err)
+			log.Fatal(err, "failed to create/wait operation")
 		}
 
-		util.InfoLogger.Println("operation executed successfully")
+		log.Info("operation executed successfully")
 	},
 }
 

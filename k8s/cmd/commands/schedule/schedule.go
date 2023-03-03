@@ -24,7 +24,7 @@ import (
 )
 
 var (
-	scheduleLong = util.LongDesc(`schedule return a 
+	scheduleLong = util.LongDesc(`schedule return a
 	nodeName for the workload to co-allocate with vineyard cluster.`)
 
 	scheduleExamples = util.Examples(`
@@ -32,6 +32,7 @@ var (
 	# it will add PodAffinity to the workload
 	vineyardctl schedule --workload=workloadName`)
 )
+
 var scheduleCmd = &cobra.Command{
 	Use:     "schedule",
 	Short:   "schedule return a nodeName for the workload to co-allocate with vineyard cluster",

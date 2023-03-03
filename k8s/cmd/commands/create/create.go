@@ -26,10 +26,10 @@ var (
 	createExample = util.Examples(`
 	# create the backup job on kubernetes
 	vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system
-		
+
 	# create the recover job on kubernetes
 	vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system
-		
+
 	# create the operation job on kubernetes
 	vineyardctl create operation --name assembly \
 		--type local \

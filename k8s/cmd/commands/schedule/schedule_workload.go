@@ -31,11 +31,12 @@ import (
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
-	scheduleWorkloadLong = util.LongDesc(`ScheduleWorkload schedules 
-	the workload to a vineyard cluster. It will add the podAffinity to the workload 
+	scheduleWorkloadLong = util.LongDesc(`ScheduleWorkload schedules
+	the workload to a vineyard cluster. It will add the podAffinity to the workload
 	so that the workload will be scheduled to the vineyard cluster.`)
 
 	scheduleWorkloadExample = util.Examples(`
@@ -121,16 +122,16 @@ var scheduleWorkloadCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		if err := validateWorkload(flags.Resource); err != nil {
-			util.ErrLogger.Fatal("failed to validate the workload: ", err)
+			log.Fatal(err, "failed to validate the workload")
 		}
 		client := util.KubernetesClient()
 
 		workload, err := SchedulingWorkload(client)
 		if err != nil {
-			util.ErrLogger.Fatal("failed to schedule workload: ", err)
+			log.Fatal(err, "failed to schedule workload")
 		}
 
-		util.InfoLogger.Println(workload)
+		log.Info(workload)
 	},
 }
 
@@ -214,8 +215,7 @@ func SchedulingWorkload(c client.Client) (string, error) {
 	} else {
 		podAffinity := affinity["podAffinity"].(map[string]interface{})
 		if podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] == nil {
-			podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] =
-				newPodAffinity.RequiredDuringSchedulingIgnoredDuringExecution
+			podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] = newPodAffinity.RequiredDuringSchedulingIgnoredDuringExecution
 		} else {
 			required := podAffinity["requiredDuringSchedulingIgnoredDuringExecution"].([]interface{})
 			required = append(required,

@@ -18,19 +18,17 @@ limitations under the License.
 package manager
 
 import (
-	"log"
 	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"go.uber.org/zap/zapcore"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
-	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
@@ -38,8 +36,8 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	controllers "github.com/v6d-io/v6d/k8s/controllers/k8s"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/schedulers"
-	"github.com/v6d-io/v6d/k8s/pkg/templates"
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/operation"
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/scheduling"
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/sidecar"
@@ -72,13 +70,7 @@ var managerCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 
-		opts := zap.Options{
-			Development: true,
-			TimeEncoder: zapcore.ISO8601TimeEncoder,
-		}
-
-		ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
-
+		ctrl.SetLogger(log.Log.Logger)
 		// start the controller
 		mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 			Scheme:                 util.Scheme(),
@@ -89,7 +81,7 @@ var managerCmd = &cobra.Command{
 			LeaderElectionID:       "5fa514f1.v6d.io",
 		})
 		if err != nil {
-			util.ErrLogger.Fatal("unbale to setup the manager:", err)
+			log.Fatal(err, "unable to setup the manager")
 		}
 
 		wg := sync.WaitGroup{}
@@ -121,173 +113,130 @@ func startManager(
 	probeAddr string,
 	enableLeaderElection bool,
 ) {
+	clientset, err := kubernetes.NewForConfig(mgr.GetConfig())
+	if err != nil {
+		log.Fatal(err, "unable to create REST client")
+	}
+
 	if err := (&controllers.LocalObjectReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal(
-			"unable to create controller",
-			"controller",
-			"LocalObject",
-			"error: ",
-			err,
-		)
+		log.Fatal(err, "unable to create local object controller")
 	}
 	if err := (&controllers.GlobalObjectReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal(
-			"unable to create controller",
-			"controller",
-			"GlobalObject",
-			"error: ",
-			err,
-		)
+		log.Fatal(err, "unable to create global object controller")
 	}
 	if err := (&controllers.VineyarddReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
-		Recorder: mgr.GetEventRecorderFor("vineyardd-controller"),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("vineyardd-controller"),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal(
-			"unable to create controller",
-			"controller",
-			"Vineyardd",
-			"error: ",
-			err,
-		)
+		log.Fatal(err, "unable to create vineyardd controller")
 	}
 	if err := (&controllers.OperationReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
-		Recorder: mgr.GetEventRecorderFor("operation-controller"),
+		Client:        mgr.GetClient(),
+		Clientset:     clientset,
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("operation-controller"),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal(
-			"unable to create controller",
-			"controller",
-			"Operation",
-			"error: ",
-			err,
-		)
+		log.Fatal(err, "unable to create operation controller")
 	}
 
 	if err := (&controllers.SidecarReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
-		Recorder: mgr.GetEventRecorderFor("sidecar-controller"),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("sidecar-controller"),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal("unable to create controller", "controller", "Sidecar",
-			"error: ", err)
+		log.Fatal(err, "unable to create sidecar controller")
 	}
 	if err := (&controllers.BackupReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
-		Recorder: mgr.GetEventRecorderFor("backup-controller"),
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("backup-controller"),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal("unable to create controller", "controller", "Backup",
-			"error: ", err)
+		log.Fatal(err, "unable to create backup controller")
 	}
 
 	if err := (&controllers.RecoverReconciler{
-		Client:   mgr.GetClient(),
-		Scheme:   mgr.GetScheme(),
-		Template: templates.NewEmbedTemplate(),
+		Client:    mgr.GetClient(),
+		Clientset: clientset,
+		Scheme:    mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
-		util.ErrLogger.Fatal("unable to create controller", "controller", "Recover",
-			"error: ", err)
+		log.Fatal(err, "unable to create recover controller")
 	}
 
 	if flags.EnableWebhook {
 		// register the webhooks of CRDs
 		if err := (&v1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal(
-				"unable to create webhook",
-				"webhook",
-				"LocalObject",
-				"error: ",
-				err,
-			)
+			log.Fatal(err, "unable to create local object webhook")
 		}
 		if err := (&v1alpha1.GlobalObject{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal(
-				"unable to create webhook",
-				"webhook",
-				"GlobalObject",
-				"error: ",
-				err,
-			)
+			log.Fatal(err, "unable to create global object webhook")
 		}
 		if err := (&v1alpha1.Vineyardd{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook",
-				"Vineyardd", "error: ", err)
+			log.Fatal(err, "unable to create vineyardd webhook")
 		}
 		if err := (&v1alpha1.Operation{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook",
-				"Operation", "error: ", err)
+			log.Fatal(err, "unable to create operator webhook")
 		}
 		if err := (&v1alpha1.Sidecar{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook",
-				"Sidecar", "error: ", err)
+			log.Fatal(err, "unable to create sidecar webhook")
 		}
 		if err := (&v1alpha1.Backup{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook",
-				"Backup", "error: ", err)
+			log.Fatal(err, "unable to create backup webhook")
 		}
 		if err := (&v1alpha1.Recover{}).SetupWebhookWithManager(mgr); err != nil {
-			util.ErrLogger.Fatal("unable to create webhook", "webhook",
-				"Recover", "error: ", err)
+			log.Fatal(err, "unable to create recover webhook")
 		}
 
 		// register the assembly webhook
-		log.Println("registering the assembly webhook")
+		log.Info("registering the assembly webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod",
 			&webhook.Admission{
 				Handler: &operation.AssemblyInjector{Client: mgr.GetClient()},
 			})
-		log.Println("the assembly webhook is registered")
+		log.Info("the assembly webhook is registered")
 
 		// register the sidecar webhook
-		log.Println("registering the sidecar webhook")
+		log.Info("registering the sidecar webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod-sidecar",
 			&webhook.Admission{
 				Handler: &sidecar.Injector{
-					Client:   mgr.GetClient(),
-					Template: templates.NewEmbedTemplate(),
+					Client: mgr.GetClient(),
 				},
 			})
-		log.Println("the sidecar webhook is registered")
+		log.Info("the sidecar webhook is registered")
 
 		// register the scheduling webhook
-		log.Println("registering the scheduling webhook")
+		log.Info("registering the scheduling webhook")
 		mgr.GetWebhookServer().Register("/mutate-v1-pod-scheduling",
 			&webhook.Admission{
 				Handler: &scheduling.Injector{Client: mgr.GetClient()},
 			})
-		log.Println("the scheduling webhook is registered")
+		log.Info("the scheduling webhook is registered")
 
 		if err := mgr.AddHealthzCheck("healthz", mgr.GetWebhookServer().StartedChecker()); err != nil {
-			util.ErrLogger.Fatal("unable to set up health check for webhook: ", err)
+			log.Fatal(err, "unable to set up health check for webhook")
 		}
 		if err := mgr.AddReadyzCheck("readyz", mgr.GetWebhookServer().StartedChecker()); err != nil {
-			util.ErrLogger.Fatal("unable to set up ready check for webhook: ", err)
+			log.Fatal(err, "unable to set up ready check for webhook")
 		}
 	} else {
 		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
-			util.ErrLogger.Fatal("unable to set up health check: ", err)
+			log.Fatal(err, "unable to set up health check")
 		}
 		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
-			util.ErrLogger.Fatal("unable to set up ready check: ", err)
+			log.Fatal(err, "unable to set up ready check")
 		}
 	}
 
-	log.Println("starting manager")
+	log.Info("starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
-		util.ErrLogger.Fatal("problem running manager: ", err)
+		log.Fatal(err, "problem running manager")
 	}
 }
 
@@ -312,6 +261,6 @@ func startScheduler(mgr manager.Manager, schedulerConfigFile string) {
 	args = append(args, flags.SchedulerConfigFile)
 	command.SetArgs(args)
 	if err := command.Execute(); err != nil {
-		util.ErrLogger.Fatal("problem running scheduler: ", err)
+		log.Fatal(err, "failed to execute scheduler")
 	}
 }

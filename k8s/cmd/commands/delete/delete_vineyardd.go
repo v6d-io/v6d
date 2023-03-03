@@ -23,6 +23,7 @@ import (
 	vineyardv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -52,9 +53,9 @@ var deleteVineyarddCmd = &cobra.Command{
 			Name:      flags.VineyarddName,
 			Namespace: flags.GetDefaultVineyardNamespace(),
 		}, vineyardd); err != nil {
-			util.ErrLogger.Fatalf("failed to delete vineyardd: %+v", err)
+			log.Fatal(err, "failed to delete vineyardd")
 		}
-		util.InfoLogger.Println("Vineyardd is deleted.")
+		log.Info("Vineyardd is deleted.")
 	},
 }
 

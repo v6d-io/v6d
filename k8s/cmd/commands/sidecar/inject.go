@@ -34,12 +34,13 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 	"github.com/v6d-io/v6d/k8s/pkg/injector"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 var (
-	injectLong = util.LongDesc(`Inject the vineyard sidecar container 
-	into a workload. You can get the injected workload yaml and some etcd yaml 
+	injectLong = util.LongDesc(`Inject the vineyard sidecar container
+	into a workload. You can get the injected workload yaml and some etcd yaml
 	from the output.`)
 
 	injectExample = util.Examples(`
@@ -64,12 +65,12 @@ var injectCmd = &cobra.Command{
 
 		resource, err := util.ReadFromFile(flags.WorkloadYaml)
 		if err != nil {
-			util.ErrLogger.Fatal(err)
+			log.Fatal(err, "failed to read the YAML spec from file")
 		}
 
 		yamls, err := GetManifestFromTemplate(resource)
 		if err != nil {
-			util.ErrLogger.Fatal(err)
+			log.Fatal(err, "failed to load manifest from template")
 		}
 
 		fmt.Println(strings.Join(yamls, "---\n"))
@@ -102,7 +103,10 @@ func GetWorkloadObj(workload string) (*unstructured.Unstructured, error) {
 		return nil, errors.Wrap(err, "failed to get the template of the workload")
 	}
 	if !found {
-		return nil, errors.Wrap(fmt.Errorf("failed to find the template of the workload"), "invalid workload")
+		return nil, errors.Wrap(
+			fmt.Errorf("failed to find the template of the workload"),
+			"invalid workload",
+		)
 	}
 
 	return unstructuredObj, nil
@@ -131,13 +135,12 @@ func GetManifestFromTemplate(workload string) ([]string, error) {
 		return nil, errors.Wrap(err, "failed to build sidecar")
 	}
 
-	t := templates.NewEmbedTemplate()
-	sidecarManifests, err := t.GetFilesRecursive("sidecar")
+	sidecarManifests, err := templates.GetFilesRecursive("sidecar")
 	if err != nil {
 		return manifests, errors.Wrap(err, "failed to get sidecar manifests")
 	}
 
-	vineyardManifests, err := t.GetFilesRecursive("vineyardd")
+	vineyardManifests, err := templates.GetFilesRecursive("vineyardd")
 	if err != nil {
 		return manifests, errors.Wrap(err, "failed to get vineyardd manifests")
 	}

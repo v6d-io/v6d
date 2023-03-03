@@ -30,12 +30,13 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 var (
-	deployVineyardDeploymentLong = util.LongDesc(`Builds and deploy 
-	the yaml file of vineyardd the vineyardd without vineyard operator. You could 
+	deployVineyardDeploymentLong = util.LongDesc(`Builds and deploy
+	the yaml file of vineyardd the vineyardd without vineyard operator. You could
 	deploy a customized vineyardd from stdin or file.`)
 
 	deployVineyardDeploymentExample = util.Examples(`
@@ -69,10 +70,10 @@ var deployVineyardDeploymentCmd = &cobra.Command{
 		client := util.KubernetesClient()
 
 		if err := applyVineyarddFromTemplate(client); err != nil {
-			util.ErrLogger.Fatal("failed to apply vineyardd resources from template: ", err)
+			log.Fatal(err, "failed to apply vineyardd resources from template")
 		}
 
-		util.InfoLogger.Println("vineyard cluster deployed successfully")
+		log.Info("vineyard cluster deployed successfully")
 	},
 }
 
@@ -132,8 +133,7 @@ func getEtcdConfig() k8s.EtcdConfig {
 // GetObjectsFromTemplate gets kubernetes resources from template for vineyardd
 func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	objects := []*unstructured.Unstructured{}
-	t := templates.NewEmbedTemplate()
-	vineyardManifests, err := t.GetFilesRecursive("vineyardd")
+	vineyardManifests, err := templates.GetFilesRecursive("vineyardd")
 	if err != nil {
 		return objects, errors.Wrap(err, "failed to get vineyardd manifests")
 	}

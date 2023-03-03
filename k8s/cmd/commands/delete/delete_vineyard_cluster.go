@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -49,7 +50,7 @@ var deleteVineyardClusterCmd = &cobra.Command{
 		// delete cert-manager
 		NewDeleteCertManagerCmd().Run(cmd, args)
 
-		util.InfoLogger.Println("Vineyard Cluster is deleted.")
+		log.Info("Vineyard Cluster is deleted.")
 	},
 }
 

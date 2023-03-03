@@ -19,15 +19,15 @@ package scheduling
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // nolint: lll
@@ -35,14 +35,9 @@ import (
 
 // Injector injects scheduling info into pods.
 type Injector struct {
-	Client  client.Client
+	client.Client
 	decoder *admission.Decoder
 }
-
-const (
-	// NeedSchedulingLabel is the label for scheduling
-	NeedSchedulingLabel = "scheduling.v6d.io/enabled"
-)
 
 // Handle handles admission requests.
 func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.Response {
@@ -67,8 +62,9 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 	kv := strings.Split(selector, "=")
 
 	podList := &corev1.PodList{}
-	if err := r.Client.List(ctx, podList, client.MatchingLabels{kv[0]: kv[1]}); err != nil {
-		fmt.Println("faled to list pod", err)
+	if err := r.List(ctx, podList, client.MatchingLabels{kv[0]: kv[1]}); err != nil {
+		log.Error(err, "failed to list pod")
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	for i := range podList.Items {

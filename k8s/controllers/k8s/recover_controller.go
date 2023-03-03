@@ -30,16 +30,16 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/rest"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/operation"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
 	"k8s.io/client-go/kubernetes"
 )
 
@@ -53,8 +53,8 @@ const (
 // RecoverReconciler reconciles a Recover object
 type RecoverReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Template swckkube.Repo
+	*kubernetes.Clientset
+	Scheme *runtime.Scheme
 }
 
 // RecoverConfig holds all configuration about recover
@@ -104,7 +104,7 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	app := swckkube.Application{
 		Client:   r.Client,
-		FileRepo: r.Template,
+		FileRepo: templates.Repo,
 		CR:       &recover,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Recover"),
 		TmplFunc: map[string]interface{}{"getRecoverConfig": getRecoverConfig},
@@ -184,8 +184,8 @@ func (r *RecoverReconciler) UpdateStateStatus(
 ) error {
 	name := client.ObjectKey{Name: "recover-" + backup.Name, Namespace: backup.Namespace}
 	job := batchv1.Job{}
-	if err := r.Client.Get(ctx, name, &job); err != nil {
-		ctrl.Log.V(1).Error(err, "failed to get job")
+	if err := r.Get(ctx, name, &job); err != nil {
+		log.V(1).Error(err, "failed to get job")
 	}
 
 	// get job state
@@ -211,9 +211,9 @@ func (r *RecoverReconciler) UpdateMappingStatus(
 ) error {
 	name := client.ObjectKey{Name: "recover-" + backup.Name, Namespace: backup.Namespace}
 	job := batchv1.Job{}
-	err := r.Client.Get(ctx, name, &job)
+	err := r.Get(ctx, name, &job)
 	if err != nil {
-		ctrl.Log.V(1).Error(err, "failed to get job")
+		log.V(1).Error(err, "failed to get job")
 	}
 	// if job completd and deleted after ttl
 	if apierrors.IsNotFound(err) {
@@ -230,14 +230,14 @@ func (r *RecoverReconciler) UpdateMappingStatus(
 		},
 	}
 	if err := r.List(ctx, podList, opts...); err != nil {
-		ctrl.Log.V(1).Error(err, "failed to list pod created by job")
+		log.V(1).Error(err, "failed to list pod created by job")
 		return err
 	}
 
 	for i := range podList.Items {
 		mapping, err := r.getObjectMappingFromPodLogs(&podList.Items[i])
 		if err != nil {
-			ctrl.Log.V(1).Error(err, "failed to get logs from pods")
+			log.V(1).Error(err, "failed to get logs from pods")
 			return err
 		}
 		for k, v := range mapping {
@@ -261,7 +261,7 @@ func (r *RecoverReconciler) applyStatusUpdate(ctx context.Context,
 ) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		name := client.ObjectKey{Name: recover.Name, Namespace: recover.Namespace}
-		if err := r.Client.Get(ctx, name, recover); err != nil {
+		if err := r.Get(ctx, name, recover); err != nil {
 			return errors.Wrap(err, "failed to get backup")
 		}
 		recover.Status = *status
@@ -269,7 +269,7 @@ func (r *RecoverReconciler) applyStatusUpdate(ctx context.Context,
 		if err := swckkube.ApplyOverlay(recover, &k8sv1alpha1.Recover{Status: *status}); err != nil {
 			return errors.Wrap(err, "failed to overlay recover's status")
 		}
-		if err := r.Client.Status().Update(ctx, recover); err != nil {
+		if err := r.Status().Update(ctx, recover); err != nil {
 			return errors.Wrap(err, "failed to update recover's status")
 		}
 		return nil
@@ -280,15 +280,7 @@ func (r *RecoverReconciler) getObjectMappingFromPodLogs(
 	pod *corev1.Pod,
 ) (map[string]string, error) {
 	mappingtable := make(map[string]string)
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return mappingtable, errors.Wrap(err, "failed to get in cluster config")
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return mappingtable, errors.Wrap(err, "failed to get clientset")
-	}
-	req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
+	req := r.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
 	logs, err := req.Stream(context.Background())
 	if err != nil {
 		return mappingtable, errors.Wrap(err, "failed to open stream")

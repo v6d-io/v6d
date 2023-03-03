@@ -21,18 +21,20 @@ import (
 	"strconv"
 	"strings"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/schedulers"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var slog = log.Logger.WithName("vineyard-scheduler-outside-cluster")
+var slog = log.WithName("vineyard-scheduler-outside-cluster")
 
 // Scheduling is used to schedule jobs to nodes
 func Scheduling(c client.Client, a, l map[string]string, replica int, namespace string,
-	ownerReferences []metav1.OwnerReference) string {
+	ownerReferences []metav1.OwnerReference,
+) string {
 	scheduledOrder := ""
 	jobToNode := make(map[string]int)
 	// get all nodes that have vineyardd
@@ -94,10 +96,10 @@ func Scheduling(c client.Client, a, l map[string]string, replica int, namespace 
 		}
 	}
 
-	fmt.Println("nodes: ", nodes)
-	fmt.Println("locations: ", locations)
-	fmt.Println("replica: ", replica)
-	fmt.Println("jobToNode: ", jobToNode)
+	log.Infof("nodes: %v", nodes)
+	log.Infof("locations: %v", locations)
+	log.Infof("replica: %v", replica)
+	log.Infof("jobToNode: %v", jobToNode)
 
 	s := make([]string, 0)
 	for n, v := range jobToNode {

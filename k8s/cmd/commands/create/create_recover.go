@@ -24,11 +24,12 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
-	createRecoverLong = util.LongDesc(`Recover the current vineyard cluster 
-	on kubernetes. You could recover all objects from a backup of vineyard cluster. 
+	createRecoverLong = util.LongDesc(`Recover the current vineyard cluster
+	on kubernetes. You could recover all objects from a backup of vineyard cluster.
 	Usually, the recover job should be created in the same namespace of the backup job.`)
 
 	createRecoverExample = util.Examples(`
@@ -48,15 +49,15 @@ var createRecoverCmd = &cobra.Command{
 
 		recover, err := buildRecoverJob()
 		if err != nil {
-			util.ErrLogger.Fatalf("failed to build recover job: %+v", err)
+			log.Fatal(err, "failed to build recover job")
 		}
 
 		if err := util.Create(client, recover, func(*v1alpha1.Recover) bool {
 			return recover.Status.State != k8s.SucceedState
 		}); err != nil {
-			util.ErrLogger.Fatalf("failed to create and wait recover job: %+v", err)
+			log.Fatal(err, "failed to create and wait recover job")
 		}
-		util.InfoLogger.Println("Backup Job is ready.")
+		log.Info("Backup Job is ready.")
 	},
 }
 
