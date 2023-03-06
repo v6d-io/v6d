@@ -228,6 +228,7 @@ jobs:
       - name: Build vineyardctl
         run: |
           go build -a -o vineyardctl k8s/cmd/main.go
+          strip ./vineyardctl || true
 
       - name: Package vineyardctl artifact on Linux
         run: |
