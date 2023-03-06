@@ -23,8 +23,9 @@ import (
 )
 
 var (
-	deployVineyardClusterLong = util.LongDesc(`Deploy the vineyardd on kubernetes.
-	You could deploy a vineyardd cluster on kubernetes quickly.`)
+	deployVineyardClusterLong = util.LongDesc(`
+	Deploy the vineyardd on kubernetes. You could deploy a vineyardd
+	cluster on kubernetes quickly.`)
 
 	deployVineyardClusterExample = util.Examples(`
 	# deploy the default vineyard cluster on kubernetes

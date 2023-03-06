@@ -44,7 +44,8 @@ import (
 )
 
 var (
-	managerLong = util.LongDesc("Start the manager of vineyard operator")
+	managerLong = util.LongDesc(`
+	Start the manager of vineyard operator.`)
 
 	managerExample = util.Examples(`
 	# start the manager of vineyard operator with default configuration

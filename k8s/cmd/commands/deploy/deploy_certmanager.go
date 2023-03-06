@@ -33,9 +33,10 @@ import (
 )
 
 var (
-	deployCertManagerLong = util.LongDesc(`Deploy the cert-manager in
-	the cert-manager namespace. You could specify a stable or development version
-	of the cert-manager and we suppose not to create a new namespace to install the
+	deployCertManagerLong = util.LongDesc(`
+	Deploy the cert-manager in the cert-manager namespace. You could
+	specify a stable or development version of the cert-manager and 
+	we suppose not to create a new namespace to install the 
 	cert-manager. The default version is v1.9.1.`)
 
 	deployCertManagerExample = util.Examples(`

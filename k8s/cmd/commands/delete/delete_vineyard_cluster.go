@@ -24,8 +24,8 @@ import (
 
 var (
 	deleteVineyardClusterLong = util.LongDesc(`
-	Delete the vineyardd on kubernetes. You could delete the vineyardd cluster
-	on kubernetes quickly.`)
+	Delete the vineyardd on kubernetes. You could delete the 
+	vineyardd cluster on kubernetes quickly.`)
 
 	deleteVineyardClusterExample = util.Examples(`
 	# delete the default vineyard cluster on kubernetes

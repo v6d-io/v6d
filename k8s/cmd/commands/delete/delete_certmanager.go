@@ -24,9 +24,10 @@ import (
 )
 
 var (
-	deleteCertManagerLong = util.LongDesc(`Delete the cert-manager in
-	the cert-manager namespace. You should specify the version of deployed
-	cert-manager and the default version is v1.9.1.`)
+	deleteCertManagerLong = util.LongDesc(`
+	Delete the cert-manager in the cert-manager namespace. You 
+	should specify the version of deployed cert-manager and the
+	default version is v1.9.1.`)
 
 	deleteCertManagerExample = util.Examples(`
 	# delete the default version(v1.9.1) of cert-manager
