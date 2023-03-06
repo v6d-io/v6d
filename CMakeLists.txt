@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.3)
 
 set(VINEYARD_MAJOR_VERSION 0)
-set(VINEYARD_MINOR_VERSION 12)
-set(VINEYARD_PATCH_VERSION 2)
+set(VINEYARD_MINOR_VERSION 13)
+set(VINEYARD_PATCH_VERSION 0)
 set(VINEYARD_VERSION ${VINEYARD_MAJOR_VERSION}.${VINEYARD_MINOR_VERSION}.${VINEYARD_PATCH_VERSION})
 
 message(STATUS "Configuring and building vineyard version '${VINEYARD_VERSION}'.")
@@ -161,6 +161,8 @@ function(message)
         _message(${ARGN})
     endif()
 endfunction()
+
+message(STATUS "Vineyard will be installed to: ${CMAKE_INSTALL_PREFIX}")
 
 # reference: https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling#always-full-rpath
 set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
@@ -716,24 +718,6 @@ if(BUILD_VINEYARD_SERVER)
     if(WITH_ALLOCATOR STREQUAL "mimalloc")
         target_compile_options(vineyardd PRIVATE -DDEFAULT_ALLOCATOR=mimalloc)
     endif()
-
-    file(GLOB_RECURSE VINEYARD_CLIENT_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/src"
-                                              "client/*.h")
-    if(BUILD_VINEYARD_JAVA AND VINEYARD_CLIENT_HEADERS)
-        vineyard_generate_java(
-            OUT_VAR VINEYARD_JAVA_GENERATES
-            VINEYARD_MODULES ${VINEYARD_CLIENT_HEADERS}
-        )
-    else()
-        set(VINEYARD_JAVA_GENERATES)
-    endif()
-    add_custom_target(vineyard_client_gen_java
-        DEPENDS ${VINEYARD_JAVA_GENERATES}
-        COMMENT "Running java code generation for vineyard_client."
-    )
-    if(VINEYARD_JAVA_GENERATES)
-        add_dependencies(vineyard_codegen_java vineyard_client_gen_java)
-    endif()
 endif()
 
 # build vineyard-client
@@ -803,6 +787,25 @@ if(BUILD_VINEYARD_CLIENT)
             target_compile_options(vineyard_client PRIVATE -fvisibility=hidden)
         endif()
     endif()
+
+    file(GLOB_RECURSE VINEYARD_CLIENT_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}/src"
+                                              "client/*.h")
+    if(BUILD_VINEYARD_JAVA AND VINEYARD_CLIENT_HEADERS)
+        vineyard_generate_java(
+            OUT_VAR VINEYARD_JAVA_GENERATES
+            VINEYARD_MODULES ${VINEYARD_CLIENT_HEADERS}
+        )
+    else()
+        set(VINEYARD_JAVA_GENERATES)
+    endif()
+    add_custom_target(vineyard_client_gen_java
+        DEPENDS ${VINEYARD_JAVA_GENERATES}
+        COMMENT "Running java code generation for vineyard_client."
+    )
+    if(VINEYARD_JAVA_GENERATES)
+        add_dependencies(vineyard_codegen_java vineyard_client_gen_java)
+    endif()
+
     install_vineyard_target(vineyard_client)
     install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/client")
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_client)
