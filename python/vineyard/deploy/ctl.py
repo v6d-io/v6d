@@ -34,7 +34,9 @@ def _register():
             raise RuntimeError("vineyardctl is not bundled")
 
     else:
-        cmd = click(_vineyardctl, exclude_args=['dump_usage', 'x_version', 'help'])
+        cmd = click(
+            _vineyardctl, exclude_args=['dump_usage', 'gen_doc', 'x_version', 'help']
+        )
     setattr(sys.modules[__name__], 'vineyardctl', cmd)
 
 
