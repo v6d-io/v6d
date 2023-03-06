@@ -47,6 +47,8 @@ var (
 	vineyardctl schedule workflow --file workflow.yaml`)
 
 	ownerReferences []metav1.OwnerReference
+
+	jobKind = "Job"
 )
 
 // scheduleWorkflowCmd schedules a workflow based on the vineyard cluster
@@ -65,6 +67,9 @@ var scheduleWorkflowCmd = &cobra.Command{
 		}
 
 		objs, err := util.ParseManifestsToObjects([]byte(manifests))
+		if err != nil {
+			log.Fatal(err, "failed to parse workflow file")
+		}
 
 		for _, obj := range objs {
 			if err := SchedulingWorkflow(client, obj); err != nil {
@@ -151,7 +156,8 @@ func SchedulingWorkflow(c client.Client, obj *unstructured.Unstructured) error {
 	}
 
 	var parallelism int64
-	if kind == "Job" {
+	// for the Job of Kubernetes resources, we need to get the parallelism
+	if kind == jobKind {
 		parallelism, _, err = unstructured.NestedInt64(obj.Object, "spec", "parallelism")
 		if err != nil {
 			return errors.Wrap(err, "failed to get completions of job")
