@@ -46,5 +46,5 @@ func BuildKustomizeInDir(kustomizeDir string) (Manifests, error) {
 	if err := cmd.RunE(cmd, []string{kustomizeDir}); err != nil {
 		return nil, err
 	}
-	return parseManifestsToObjects(buffy.Bytes())
+	return ParseManifestsToObjects(buffy.Bytes())
 }

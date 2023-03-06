@@ -121,7 +121,9 @@ var scheduleWorkloadCmd = &cobra.Command{
 	Example: scheduleWorkloadExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
-		if err := validateWorkload(flags.Resource); err != nil {
+
+		v, err := validateWorkload(flags.Resource)
+		if err != nil || !v {
 			log.Fatal(err, "failed to validate the workload")
 		}
 		client := util.KubernetesClient()
@@ -140,29 +142,34 @@ func NewScheduleWorkloadCmd() *cobra.Command {
 }
 
 func init() {
-	flags.ApplySchedulerOpts(scheduleWorkloadCmd)
+	flags.ApplySchedulerWorkloadOpts(scheduleWorkloadCmd)
 }
 
-func validateWorkload(workload string) error {
+func ValidateWorkloadKind(kind string) bool {
+	isWorkload := true
+	switch kind {
+	case "Deployment":
+		return isWorkload
+	case "StatefulSet":
+		return isWorkload
+	case "ReplicaSet":
+		return isWorkload
+	case "Job":
+		return isWorkload
+	case "CronJob":
+		return isWorkload
+	}
+	return !isWorkload
+}
+func validateWorkload(workload string) (bool, error) {
+	isWorkload := true
 	decoder := util.Deserializer()
 	obj, _, err := decoder.Decode([]byte(workload), nil, nil)
 	if err != nil {
-		return errors.Wrap(err, "failed to decode the workload")
+		return isWorkload, errors.Wrap(err, "failed to decode the workload")
 	}
 	kind := obj.GetObjectKind().GroupVersionKind().Kind
-	switch kind {
-	case "Deployment":
-		return nil
-	case "StatefulSet":
-		return nil
-	case "ReplicaSet":
-		return nil
-	case "Job":
-		return nil
-	case "CronJob":
-		return nil
-	}
-	return errors.Wrap(err, "the workload kind is not supported")
+	return ValidateWorkloadKind(kind), nil
 }
 
 // SchedulingWorkload is used to schedule the workload to the vineyard cluster

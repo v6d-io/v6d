@@ -4,16 +4,22 @@ vineyardctl is the command-line tool for working with the Vineyard Operator
 
 ### Synopsis
 
-vineyardctl is the command-line tool for working with the Vineyard Operator. It supports creating, deleting and checking status of Vineyard Operator. It also supports managing the vineyard relevant components such as vineyardd and pluggable drivers
+vineyardctl is the command-line tool for working with the 
+Vineyard Operator. It supports creating, deleting and checking
+status of Vineyard Operator. It also supports managing the 
+vineyard relevant components such as vineyardd and pluggable 
+drivers.
 
 ### Options
 
 ```
   -j, --dump-usage          Dump usage in JSON
+  -g, --gen-doc             Generate reference docs, e.g., './references.md'
   -h, --help                help for vineyardctl
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
   -v, --version             version for vineyardctl
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -38,16 +44,16 @@ Create a vineyard job on kubernetes.
 ```
   # create the backup job on kubernetes
   vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system
-  
+
   # create the recover job on kubernetes
   vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system
-  
+
   # create the operation job on kubernetes
   vineyardctl create operation --name assembly \
-  --type local \
-  --require job1 \
-  --target job2 \
-  --timeoutSeconds 600
+    --type local \
+    --require job1 \
+    --target job2 \
+    --timeoutSeconds 600
 ```
 
 ### Options
@@ -59,9 +65,9 @@ Create a vineyard job on kubernetes.
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -84,13 +90,13 @@ Delete the vineyard components on kubernetes.
 ```
   # delete the default vineyard cluster on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete
-  
+
   # delete the default vineyard operator on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator
-  
+
   # delete the default cert-manager on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete cert-manager
-  
+
   # delete the default vineyardd on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyardd
 ```
@@ -104,9 +110,9 @@ Delete the vineyard components on kubernetes.
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -134,13 +140,13 @@ Deploy a vineyard component on kubernetes.
 ```
   # deploy the default vineyard cluster on kubernetes
   vineyardctl --kubeconfig $HOME/.kube/config deploy vineyard-cluster
-  
+
   # deploy the vineyard operator on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy operator
-  
+
   # deploy the cert-manager on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy cert-manager
-  
+
   # deploy the vineyardd on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
 ```
@@ -154,9 +160,9 @@ Deploy a vineyard component on kubernetes.
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -174,7 +180,8 @@ Inject the vineyard sidecar container into a workload
 
 ### Synopsis
 
-Inject the vineyard sidecar container into a workload. You can get the injected workload yaml and some etcd yaml from the output.
+Inject the vineyard sidecar container into a workload. You can 
+get the injected workload yaml and some etcd yaml from the output.
 
 ```
 vineyardctl inject [flags]
@@ -220,9 +227,9 @@ vineyardctl inject [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -235,7 +242,7 @@ Start the manager of vineyard operator
 
 ### Synopsis
 
-Start the manager of vineyard operator
+Start the manager of vineyard operator.
 
 ```
 vineyardctl manager [flags]
@@ -247,13 +254,13 @@ vineyardctl manager [flags]
   # start the manager of vineyard operator with default configuration
   # (Enable the controller, webhooks and scheduler)
   vineyardctl manager
-  
+
   # start the manager of vineyard operator without webhooks
   vineyardctl manager --enable-webhook false
-  
+
   # start the manager of vineyard operator without scheduler
   vineyardctl manager --enable-scheduler false
-  
+
   # only start the controller
   vineyardctl manager --enable-webhook false --enable-scheduler false
 ```
@@ -273,9 +280,9 @@ vineyardctl manager [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -288,7 +295,7 @@ schedule return a nodeName for the workload to co-allocate with vineyard cluster
 
 ### Synopsis
 
-schedule return a nodeName for the workload to co-allocate with vineyard cluster.
+schedule a workload or a workerflow to a vineyard cluster.
 
 ### Examples
 
@@ -307,14 +314,15 @@ schedule return a nodeName for the workload to co-allocate with vineyard cluster
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
 
 * [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for working with the Vineyard Operator
+* [vineyardctl schedule workflow](#vineyardctl-schedule-workflow)	 - scheduleWorkflow schedules a workflow based on the vineyard cluster
 * [vineyardctl schedule workload](#vineyardctl-schedule-workload)	 - scheduleWorkload schedules the workload to a vineyard cluster
 
 ## vineyardctl create backup
@@ -323,7 +331,10 @@ Backup the current vineyard cluster on kubernetes
 
 ### Synopsis
 
-Backup the current vineyard cluster on kubernetes. You could backup all objects of the current vineyard cluster quickly. For persistent storage, you could specify the pv spec and pv spec.
+Backup the current vineyard cluster on kubernetes. You could 
+backup all objects of the current vineyard cluster quickly. 
+For persistent storage, you could specify the pv spec and pv
+spec.
 
 ```
 vineyardctl create backup [flags]
@@ -332,73 +343,72 @@ vineyardctl create backup [flags]
 ### Examples
 
 ```
-
-  # create a backup job for the vineyard cluster on kubernetes 
+  # create a backup job for the vineyard cluster on kubernetes
   # you could define the pv and pvc spec from json string as follows
   vineyardctl create backup \
-  --vineyardd-name vineyardd-sample \
-  --vineyardd-namespace vineyard-system  \
-  --limit 1000 \
-  --path /var/vineyard/dump  \
-  --pv-pvc-spec '{
-  "pv-spec": {
-	  "capacity": {
-		  "storage": "1Gi"
-	  },
-	  "accessModes": [
-		  "ReadWriteOnce"
-	  ],
-	  "storageClassName": "manual",
-	  "hostPath": {
-		  "path": "/var/vineyard/dump"
-	  }
-  },
-  "pvc-spec": {
-	  "storageClassName": "manual",
-	  "accessModes": [
-		  "ReadWriteOnce"
-	  ],
-	  "resources": {
-		  "requests": {
-		  "storage": "1Gi"
-		  }
-	  }
-  }
-  }'
-	
-  # create a backup job for the vineyard cluster on kubernetes 
+    --vineyardd-name vineyardd-sample \
+    --vineyardd-namespace vineyard-system  \
+    --limit 1000 \
+    --path /var/vineyard/dump  \
+    --pv-pvc-spec '{
+      "pv-spec": {
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "storageClassName": "manual",
+        "hostPath": {
+          "path": "/var/vineyard/dump"
+        }
+      },
+      "pvc-spec": {
+        "storageClassName": "manual",
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+          "storage": "1Gi"
+          }
+        }
+      }
+      }'
+
+  # create a backup job for the vineyard cluster on kubernetes
   # you could define the pv and pvc spec from yaml string as follows
   vineyardctl create backup \
-  --vineyardd-name vineyardd-sample \
-  --vineyardd-namespace vineyard-system  \
-  --limit 1000 --path /var/vineyard/dump  \
-  --pv-pvc-spec  \
-  '
-  pv-spec:
-	capacity:
-	  storage: 1Gi
-	accessModes:
-	- ReadWriteOnce
-	storageClassName: manual
-	hostPath:
-	  path: "/var/vineyard/dump"
-  pvc-spec:
-	storageClassName: manual
-	accessModes:
-	- ReadWriteOnce
-	resources:
-	  requests:
-		storage: 1Gi
-  '
-	
+    --vineyardd-name vineyardd-sample \
+    --vineyardd-namespace vineyard-system  \
+    --limit 1000 --path /var/vineyard/dump  \
+    --pv-pvc-spec  \
+    '
+    pv-spec:
+    capacity:
+      storage: 1Gi
+    accessModes:
+    - ReadWriteOnce
+    storageClassName: manual
+    hostPath:
+      path: "/var/vineyard/dump"
+    pvc-spec:
+    storageClassName: manual
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+      storage: 1Gi
+    '
+
   # create a backup job for the vineyard cluster on kubernetes
   # you could define the pv and pvc spec from json file as follows
   # also you could use yaml file instead of json file
   cat pv-pvc.json | vineyardctl create backup \
-  --vineyardd-name vineyardd-sample \
-  --vineyardd-namespace vineyard-system  \
-  --limit 1000 --path /var/vineyard/dump  \
-  -
+    --vineyardd-name vineyardd-sample \
+    --vineyardd-namespace vineyard-system  \
+    --limit 1000 --path /var/vineyard/dump  \
+    -
 ```
 
 ### Options
@@ -416,9 +426,9 @@ vineyardctl create backup [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -431,7 +441,10 @@ Insert an operation in a workflow based on vineyard cluster
 
 ### Synopsis
 
-Insert an operation in a workflow based on vineyard cluster. You could create a assembly or repartition operation in a workflow. Usually, the operation should be created between the workloads: job1 -> operation -> job2.
+Insert an operation in a workflow based on vineyard cluster. 
+You could create a assembly or repartition operation in a 
+workflow. Usually, the operation should be created between 
+the workloads: job1 -> operation -> job2.
 
 ```
 vineyardctl create operation [flags]
@@ -442,24 +455,24 @@ vineyardctl create operation [flags]
 ```
   # create a local assembly operation between job1 and job2
   vineyardctl create operation --name assembly \
-  --type local \
-  --require job1 \
-  --target job2 \
-  --timeoutSeconds 600
-  
+    --type local \
+    --require job1 \
+    --target job2 \
+    --timeoutSeconds 600
+
   # create a distributed assembly operation between job1 and job2
   vineyardctl create operation --name assembly \
-  --type distributed \
-  --require job1 \
-  --target job2 \
-  --timeoutSeconds 600
-  
+    --type distributed \
+    --require job1 \
+    --target job2 \
+    --timeoutSeconds 600
+
   # create a dask repartition operation between job1 and job2
   vineyardctl create operation --name repartition \
-  --type dask \
-  --require job1 \
-  --target job2 \
-  --timeoutSeconds 600
+    --type dask \
+    --require job1 \
+    --target job2 \
+    --timeoutSeconds 600
 ```
 
 ### Options
@@ -477,9 +490,9 @@ vineyardctl create operation [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -492,7 +505,10 @@ Recover the current vineyard cluster on kubernetes
 
 ### Synopsis
 
-Recover the current vineyard cluster on kubernetes. You could recover all objects from a backup of vineyard cluster. Usually, the recover job should be created in the same namespace of the backup job.
+Recover the current vineyard cluster on kubernetes. You could
+recover all objects from a backup of vineyard cluster. Usually, 
+the recover job should be created in the same namespace of 
+the backup job.
 
 ```
 vineyardctl create recover [flags]
@@ -516,9 +532,9 @@ vineyardctl create recover [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -554,9 +570,9 @@ vineyardctl delete backup [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -569,7 +585,9 @@ Delete the cert-manager on kubernetes
 
 ### Synopsis
 
-Delete the cert-manager in the cert-manager namespace. You should specify the version of deployed cert-manager and the default version is v1.9.1.
+Delete the cert-manager in the cert-manager namespace. You 
+should specify the version of deployed cert-manager and the
+default version is v1.9.1.
 
 ```
 vineyardctl delete cert-manager [flags]
@@ -580,7 +598,7 @@ vineyardctl delete cert-manager [flags]
 ```
   # delete the default version(v1.9.1) of cert-manager
   vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager
-  
+
   # delete the specific version of cert-manager
   vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager -v 1.11.0
 ```
@@ -590,15 +608,14 @@ vineyardctl delete cert-manager [flags]
 ```
   -h, --help             help for cert-manager
   -v, --version string   the version of cert-manager (default "1.9.1")
-      --wait             wait for the cert-manager to be ready (default true)
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -634,9 +651,9 @@ vineyardctl delete operation [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -660,13 +677,13 @@ vineyardctl delete operator [flags]
 ```
   # delete the default vineyard operator in the vineyard-system namespace
   vineyardctl delete operator
-  
+
   # delete the specific version of vineyard operator in the vineyard-system namespace
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator -v 0.12.2
-  
+
   # delete the vineyard operator from local kustomize dir in the vineyard-system namespace
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator \
-  --local ../config/default
+    --local ../config/default
 ```
 
 ### Options
@@ -675,15 +692,14 @@ vineyardctl delete operator [flags]
   -h, --help             help for operator
   -l, --local string     the local kustomize dir
   -v, --version string   the version of kustomize dir from github repo (default "dev")
-      --wait             wait for the operator to be ready (default true)
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -718,9 +734,9 @@ vineyardctl delete recover [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -733,7 +749,8 @@ Delete the vineyard cluster on kubernetes
 
 ### Synopsis
 
-Delete the vineyardd on kubernetes. You could delete the vineyardd cluster on kubernetes quickly.
+Delete the vineyardd on kubernetes. You could delete the 
+vineyardd cluster on kubernetes quickly.
 
 ```
 vineyardctl delete vineyard-cluster [flags]
@@ -755,9 +772,9 @@ vineyardctl delete vineyard-cluster [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -770,7 +787,8 @@ delete vineyard-deployment will delete the vineyard deployment without vineyard 
 
 ### Synopsis
 
-delete vineyard-deployment will delete the vineyard deployment without vineyard operator
+delete vineyard-deployment will delete the vineyard deployment
+without vineyard operator
 
 ```
 vineyardctl delete vineyard-deployment [flags]
@@ -781,10 +799,10 @@ vineyardctl delete vineyard-deployment [flags]
 ```
   # delete the default vineyard deployment in the vineyard-system namespace
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment
-  
+
   # delete the vineyard deployment with specific name in the vineyard-system namespace
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment \
-  --name vineyardd-0
+    --name vineyardd-0
 ```
 
 ### Options
@@ -797,9 +815,9 @@ vineyardctl delete vineyard-deployment [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -823,7 +841,7 @@ vineyardctl delete vineyardd [flags]
 ```
   # delete the default vineyardd cluster(vineyardd-sample) in the default namespace
   vineyardctl delete vineyardd
-  
+
   # delete the specific vineyardd cluster in the vineyard-system namespace
   vineyardctl -n vineyard-system delete vineyardd --name vineyardd-test
 ```
@@ -838,9 +856,9 @@ vineyardctl delete vineyardd [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -853,7 +871,10 @@ Deploy the cert-manager on kubernetes
 
 ### Synopsis
 
-Deploy the cert-manager in the cert-manager namespace. You could specify a stable or development version of the cert-manager and we suppose not to create a new namespace to install the cert-manager. The default version is v1.9.1.
+Deploy the cert-manager in the cert-manager namespace. You could
+specify a stable or development version of the cert-manager and 
+we suppose not to create a new namespace to install the 
+cert-manager. The default version is v1.9.1.
 
 ```
 vineyardctl deploy cert-manager [flags]
@@ -865,12 +886,14 @@ vineyardctl deploy cert-manager [flags]
   # install the default version(v1.9.1) in the cert-manager namespace
   # wait for the cert-manager to be ready(default option)
   vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager
-  
+
   # install the default version(v1.9.1) in the cert-manager namespace
-  # not to wait for the cert-manager to be ready
+  # not to wait for the cert-manager to be ready, but we does not recommend
+  # to do this, because there may be errors caused by the cert-manager
+  # not ready
   vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager \
-  --wait=false
-  
+    --wait=false
+
   # install the specific version of cert-manager
   vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager -v 1.11.0
 ```
@@ -880,15 +903,14 @@ vineyardctl deploy cert-manager [flags]
 ```
   -h, --help             help for cert-manager
   -v, --version string   the version of cert-manager (default "1.9.1")
-      --wait             wait for the cert-manager to be ready (default true)
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -901,7 +923,12 @@ Deploy the vineyard operator on kubernetes
 
 ### Synopsis
 
-Deploy the vineyard operator on kubernetes. You could specify a stable or development version of the operator. The default kustomize dir is development version from github repo. Also, you can install the stable version from github. repo or a local kustomize dir. Besides, you can also deploy the vineyard operator in an existing namespace.
+Deploy the vineyard operator on kubernetes. You could specify a 
+stable or development version of the operator. The default 
+kustomize dir is development version from github repo. Also, you
+can install the stable version from github repo or a local 
+kustomize dir. Besides, you can also  deploy the vineyard 
+operator in an existing namespace.
 
 ```
 vineyardctl deploy operator [flags]
@@ -916,15 +943,15 @@ vineyardctl deploy operator [flags]
   # and the default namespace is vineyard-system
   # wait for the vineyard operator to be ready(default option)
   vineyardctl deploy operator
-  
+
   # not to wait for the vineyard operator to be ready
   vineyardctl deploy operator --wait=false
-  
+
   # install the stable version from github repo in the test namespace
   # the kustomize dir is
   # (https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false&ref=v0.12.2)
   vineyardctl -n test --kubeconfig $HOME/.kube/config deploy operator -v 0.12.2
-  
+
   # install the local kustomize dir
   vineyardctl --kubeconfig $HOME/.kube/config deploy operator --local ../config/default
 ```
@@ -935,15 +962,14 @@ vineyardctl deploy operator [flags]
   -h, --help             help for operator
   -l, --local string     the local kustomize dir
   -v, --version string   the version of kustomize dir from github repo (default "dev")
-      --wait             wait for the operator to be ready (default true)
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -956,7 +982,8 @@ Deploy the vineyard cluster on kubernetes
 
 ### Synopsis
 
-Deploy the vineyardd on kubernetes. You could deploy a vineyardd cluster on kubernetes quickly.
+Deploy the vineyardd on kubernetes. You could deploy a vineyardd
+cluster on kubernetes quickly.
 
 ```
 vineyardctl deploy vineyard-cluster [flags]
@@ -978,9 +1005,9 @@ vineyardctl deploy vineyard-cluster [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -993,7 +1020,9 @@ DeployVineyardDeployment builds and deploy the yaml file of vineyardd wihout vin
 
 ### Synopsis
 
-Builds and deploy the yaml file of vineyardd the vineyardd without vineyard operator. You could deploy a customized vineyardd from stdin or file.
+Builds and deploy the yaml file of vineyardd the vineyardd 
+without vineyard operator. You could deploy a customized 
+vineyardd from stdin or file.
 
 ```
 vineyardctl deploy vineyard-deployment [flags]
@@ -1005,7 +1034,7 @@ vineyardctl deploy vineyard-deployment [flags]
   # deploy the default vineyard deployment on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
   deploy vineyard-deployment
-  
+
   # deploy the vineyard deployment with customized image
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
   deploy vineyard-deployment --image vineyardd:v0.12.2
@@ -1049,15 +1078,14 @@ vineyardctl deploy vineyard-deployment [flags]
       --vineyardd.syncCRDs                        enable metrics of vineyardd (default true)
       --vineyardd.volume.mountPath string         Set the mount path for the pvc
       --vineyardd.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently, 
-      --wait                                      wait for vineyardd to be ready (default true)
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
@@ -1070,7 +1098,8 @@ Deploy the vineyardd on kubernetes
 
 ### Synopsis
 
-Deploy the vineyardd on kubernetes. You could deploy a customized vineyardd from stdin or file.
+Deploy the vineyardd on kubernetes. You could deploy a 
+customized vineyardd from stdin or file.
 
 ```
 vineyardctl deploy vineyardd [flags]
@@ -1079,81 +1108,80 @@ vineyardctl deploy vineyardd [flags]
 ### Examples
 
 ```
-
   # deploy the default vineyard on kubernetes
   # wait for the vineyardd to be ready(default option)
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
 
   # not to wait for the vineyardd to be ready
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
-  --wait=false
+    --wait=false
 
   # deploy the vineyardd from a yaml file
   vineyardctl --kubeconfig $HOME/.kube/config deploy vineyardd --file vineyardd.yaml
-  
+
   # deploy the vineyardd with customized image
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
-  --image vineyardd:v0.12.2
-  
+    --image vineyardd:v0.12.2
+
   # deploy the vineyardd with spill mechnism on persistent storage from json string
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
-  --vineyardd.spill.config spill-path \
-  --vineyardd.spill.path /var/vineyard/spill \
-  --vineyardd.spill.pv-pvc-spec '{
-	  "pv-spec": {
-		  "capacity": {
-		    "storage": "1Gi"
-		  },
-		  "accessModes": [
-		    "ReadWriteOnce"
-		  ],
-		  "storageClassName": "manual",
-		  "hostPath": {
-		    "path": "/var/vineyard/spill"
-		  }
-	  },
-	  "pvc-spec": {
-		  "storageClassName": "manual",
-		  "accessModes": [
-		    "ReadWriteOnce"
-		  ],
-		  "resources": {
-		    "requests": {
-			  "storage": "512Mi"
-  		    }
-		  }
-	  }
-  }'
-  
+    --vineyardd.spill.config spill-path \
+    --vineyardd.spill.path /var/vineyard/spill \
+    --vineyardd.spill.pv-pvc-spec '{
+      "pv-spec": {
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "storageClassName": "manual",
+        "hostPath": {
+          "path": "/var/vineyard/spill"
+        }
+      },
+      "pvc-spec": {
+        "storageClassName": "manual",
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+          "storage": "512Mi"
+          }
+        }
+      }
+    }'
+
   # deploy the vineyardd with spill mechnism on persistent storage from yaml string
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
-  --vineyardd.spill.config spill-path \
-  --vineyardd.spill.path /var/vineyard/spill \
-  --vineyardd.spill.pv-pvc-spec \
-  '
-  pv-spec:
-    capacity:
+    --vineyardd.spill.config spill-path \
+    --vineyardd.spill.path /var/vineyard/spill \
+    --vineyardd.spill.pv-pvc-spec \
+    '
+    pv-spec:
+      capacity:
       storage: 1Gi
-    accessModes:
-    - ReadWriteOnce
-    storageClassName: manual
-    hostPath:
+      accessModes:
+      - ReadWriteOnce
+      storageClassName: manual
+      hostPath:
       path: "/var/vineyard/spill"
-  pvc-spec:
-    storageClassName: manual
-    accessModes:
-    - ReadWriteOnce
-    resources:
+    pvc-spec:
+      storageClassName: manual
+      accessModes:
+      - ReadWriteOnce
+      resources:
       requests:
         storage: 512Mi
-  '
+    '
 
   # deploy the vineyardd with spill mechnism on persistent storage from json file
   # also you could use the yaml file
   cat pv-pvc.json | vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd \
-  --vineyardd.spill.config spill-path \
-  --vineyardd.spill.path /var/vineyard/spill \
-  -
+    --vineyardd.spill.config spill-path \
+    --vineyardd.spill.path /var/vineyard/spill \
+    -
 ```
 
 ### Options
@@ -1193,20 +1221,59 @@ vineyardctl deploy vineyardd [flags]
       --vineyardd.syncCRDs                        enable metrics of vineyardd (default true)
       --vineyardd.volume.mountPath string         Set the mount path for the pvc
       --vineyardd.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently, 
-      --wait                                      wait for vineyardd to be ready (default true)
 ```
 
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
 
 * [vineyardctl deploy](#vineyardctl-deploy)	 - Deploy the vineyard components on kubernetes
+
+## vineyardctl schedule workflow
+
+scheduleWorkflow schedules a workflow based on the vineyard cluster
+
+### Synopsis
+
+ScheduleWorkflow schedules a workflow based on the vineyard cluster. 
+It will apply the workflow to kubernetes cluster and deploy the workload 
+of the workflow on the vineyard cluster with the best-fit strategy.
+
+```
+vineyardctl schedule workflow [flags]
+```
+
+### Examples
+
+```
+  # schedule a workflow to the vineyard cluster with the best-fit strategy
+  vineyardctl schedule workflow --file workflow.yaml
+```
+
+### Options
+
+```
+  -f, --file string   the path of workflow file
+  -h, --help          help for workflow
+```
+
+### Options inherited from parent commands
+
+```
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+  -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
+```
+
+### SEE ALSO
+
+* [vineyardctl schedule](#vineyardctl-schedule)	 - schedule return a nodeName for the workload to co-allocate with vineyard cluster
 
 ## vineyardctl schedule workload
 
@@ -1214,7 +1281,9 @@ scheduleWorkload schedules the workload to a vineyard cluster
 
 ### Synopsis
 
-ScheduleWorkload schedules the workload to a vineyard cluster. It will add the podAffinity to the workload so that the workload will be scheduled to the vineyard cluster.
+ScheduleWorkload schedules the workload to a vineyard cluster. 
+It will add the podAffinity to the workload so that the workload
+will be scheduled to the vineyard cluster.
 
 ```
 vineyardctl schedule workload [flags]
@@ -1223,78 +1292,77 @@ vineyardctl schedule workload [flags]
 ### Examples
 
 ```
-
-	# Add the podAffinity to the workload for the specific vineyard cluster
+  # Add the podAffinity to the workload for the specific vineyard cluster
   vineyardctl schedule workload --resource '{
-  "apiVersion": "apps/v1",
-  "kind": "Deployment",
-  "metadata": {
-	  "name": "web-server"
-  },
-  "spec": {
-	  "selector": {
-	  "matchLabels": {
-		  "app": "web-store"
-	  }
-	  },
-	  "replicas": 3,
-	  "template": {
-	  "metadata": {
-		  "labels": {
-		  "app": "web-store"
-		  }
-	  },
-	  "spec": {
-		  "affinity": {
-		  "podAntiAffinity": {
-			  "requiredDuringSchedulingIgnoredDuringExecution": [
-			  {
-				  "labelSelector": {
-				  "matchExpressions": [
-					  {
-					  "key": "app",
-					  "operator": "In",
-					  "values": [
-						  "web-store"
-					  ]
-					  }
-				  ]
-				  },
-				  "topologyKey": "kubernetes.io/hostname"
-			  }
-			  ]
-		  },
-		  "podAffinity": {
-			  "requiredDuringSchedulingIgnoredDuringExecution": [
-			  {
-				  "labelSelector": {
-				  "matchExpressions": [
-					  {
-					  "key": "app",
-					  "operator": "In",
-					  "values": [
-						  "store"
-					  ]
-					  }
-				  ]
-				  },
-				  "topologyKey": "kubernetes.io/hostname"
-			  }
-			  ]
-		  }
-		  },
-		  "containers": [
-		  {
-			  "name": "web-app",
-			  "image": "nginx:1.16-alpine"
-		  }
-		  ]
-	  }
-	  }
-  }
-  }' \
-  --vineyardd-name vineyardd-sample \
-  --vineyardd-namespace vineyard-system
+    "apiVersion": "apps/v1",
+    "kind": "Deployment",
+    "metadata": {
+      "name": "web-server"
+    },
+    "spec": {
+      "selector": {
+      "matchLabels": {
+        "app": "web-store"
+      }
+      },
+      "replicas": 3,
+      "template": {
+      "metadata": {
+        "labels": {
+        "app": "web-store"
+        }
+      },
+      "spec": {
+        "affinity": {
+        "podAntiAffinity": {
+          "requiredDuringSchedulingIgnoredDuringExecution": [
+          {
+            "labelSelector": {
+            "matchExpressions": [
+              {
+              "key": "app",
+              "operator": "In",
+              "values": [
+                "web-store"
+              ]
+              }
+            ]
+            },
+            "topologyKey": "kubernetes.io/hostname"
+          }
+          ]
+        },
+        "podAffinity": {
+          "requiredDuringSchedulingIgnoredDuringExecution": [
+          {
+            "labelSelector": {
+            "matchExpressions": [
+              {
+              "key": "app",
+              "operator": "In",
+              "values": [
+                "store"
+              ]
+              }
+            ]
+            },
+            "topologyKey": "kubernetes.io/hostname"
+          }
+          ]
+        }
+        },
+        "containers": [
+        {
+          "name": "web-app",
+          "image": "nginx:1.16-alpine"
+        }
+        ]
+      }
+      }
+    }
+    }' \
+    --vineyardd-name vineyardd-sample \
+    --vineyardd-namespace vineyard-system
 ```
 
 ### Options
@@ -1309,9 +1377,9 @@ vineyardctl schedule workload [flags]
 ### Options inherited from parent commands
 
 ```
-  -j, --dump-usage          Dump usage in JSON
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO

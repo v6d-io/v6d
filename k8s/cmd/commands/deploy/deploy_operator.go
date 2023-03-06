@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -107,8 +108,21 @@ func waitOperatorReady(c client.Client) error {
 			return false, err
 		}
 
-		if deployment.Status.ReadyReplicas == deployment.Status.Replicas {
-			return true, nil
+		if deployment.Status.ReadyReplicas == *deployment.Spec.Replicas {
+			// get the vineyard operator pods
+			podList := &corev1.PodList{}
+			ready := true
+			if err := c.List(context.TODO(), podList, client.InNamespace(flags.GetDefaultVineyardNamespace()),
+				client.MatchingLabels{"control-plane": "controller-manager"}); err != nil {
+				return false, err
+			}
+			for _, pod := range podList.Items {
+				if pod.Status.Phase != "Running" {
+					ready = false
+					break
+				}
+			}
+			return ready, nil
 		}
 		return false, nil
 	})

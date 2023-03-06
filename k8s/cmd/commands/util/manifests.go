@@ -27,7 +27,8 @@ import (
 
 type Manifests []*unstructured.Unstructured
 
-func parseManifestsToObjects(manifests []byte) (Manifests, error) {
+// ParseManifestsToObjects parse kubernetes manifests to objects
+func ParseManifestsToObjects(manifests []byte) (Manifests, error) {
 	// parse the kubernetes yaml file split by "---"
 	resources := bytes.Split(manifests, []byte("---"))
 	objects := Manifests{}
