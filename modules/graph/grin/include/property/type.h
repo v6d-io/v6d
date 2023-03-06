@@ -22,7 +22,7 @@ limitations under the License.
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 // Vertex type
-bool grin_equal_vertex_type(GRIN_VERTEX_TYPE, GRIN_VERTEX_TYPE);
+bool grin_equal_vertex_type(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_VERTEX_TYPE);
 
 GRIN_VERTEX_TYPE grin_get_vertex_type(GRIN_GRAPH, GRIN_VERTEX);
 
@@ -33,28 +33,28 @@ GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH, const char*);
 // Vertex type list
 GRIN_VERTEX_TYPE_LIST grin_get_vertex_type_list(GRIN_GRAPH);
 
-void grin_destroy_vertex_type_list(GRIN_VERTEX_TYPE_LIST);
+void grin_destroy_vertex_type_list(GRIN_GRAPH, GRIN_VERTEX_TYPE_LIST);
 
-GRIN_VERTEX_TYPE_LIST grin_create_vertex_type_list();
+GRIN_VERTEX_TYPE_LIST grin_create_vertex_type_list(GRIN_GRAPH);
 
-bool grin_insert_vertex_type_to_list(GRIN_VERTEX_TYPE_LIST, GRIN_VERTEX_TYPE);
+bool grin_insert_vertex_type_to_list(GRIN_GRAPH, GRIN_VERTEX_TYPE_LIST, GRIN_VERTEX_TYPE);
 
-size_t grin_get_vertex_type_list_size(GRIN_VERTEX_TYPE_LIST);
+size_t grin_get_vertex_type_list_size(GRIN_GRAPH, GRIN_VERTEX_TYPE_LIST);
 
-GRIN_VERTEX_TYPE grin_get_vertex_type_from_list(GRIN_VERTEX_TYPE_LIST, size_t);
+GRIN_VERTEX_TYPE grin_get_vertex_type_from_list(GRIN_GRAPH, GRIN_VERTEX_TYPE_LIST, size_t);
 #endif
 
 
 #ifdef GRIN_NATURAL_VERTEX_TYPE_ID_TRAIT
-GRIN_VERTEX_TYPE_ID grin_get_vertex_type_id(GRIN_VERTEX_TYPE);
+GRIN_VERTEX_TYPE_ID grin_get_vertex_type_id(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 
-GRIN_VERTEX_TYPE grin_get_vertex_type_from_id(GRIN_VERTEX_TYPE_ID);
+GRIN_VERTEX_TYPE grin_get_vertex_type_from_id(GRIN_GRAPH, GRIN_VERTEX_TYPE_ID);
 #endif
 
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
 // GRIN_EDGE type
-bool grin_equal_edge_type(GRIN_EDGE_TYPE, GRIN_EDGE_TYPE);
+bool grin_equal_edge_type(GRIN_GRAPH, GRIN_EDGE_TYPE, GRIN_EDGE_TYPE);
 
 GRIN_EDGE_TYPE grin_get_edge_type(GRIN_GRAPH, GRIN_EDGE);
 
@@ -65,21 +65,21 @@ GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH, const char*);
 // GRIN_EDGE type list
 GRIN_EDGE_TYPE_LIST grin_get_edge_type_list(GRIN_GRAPH);
 
-void grin_destroy_edge_type_list(GRIN_EDGE_TYPE_LIST);
+void grin_destroy_edge_type_list(GRIN_GRAPH, GRIN_EDGE_TYPE_LIST);
 
-GRIN_EDGE_TYPE_LIST grin_create_edge_type_list();
+GRIN_EDGE_TYPE_LIST grin_create_edge_type_list(GRIN_GRAPH);
 
-bool grin_insert_edge_type_to_list(GRIN_EDGE_TYPE_LIST, GRIN_EDGE_TYPE);
+bool grin_insert_edge_type_to_list(GRIN_GRAPH, GRIN_EDGE_TYPE_LIST, GRIN_EDGE_TYPE);
 
-size_t grin_get_edge_type_list_size(GRIN_EDGE_TYPE_LIST);
+size_t grin_get_edge_type_list_size(GRIN_GRAPH, GRIN_EDGE_TYPE_LIST);
 
-GRIN_EDGE_TYPE grin_get_edge_type_from_list(GRIN_EDGE_TYPE_LIST, size_t);
+GRIN_EDGE_TYPE grin_get_edge_type_from_list(GRIN_GRAPH, GRIN_EDGE_TYPE_LIST, size_t);
 #endif
 
 #ifdef GRIN_NATURAL_EDGE_TYPE_ID_TRAIT
-GRIN_EDGE_TYPE_ID grin_get_edge_type_id(GRIN_EDGE_TYPE);
+GRIN_EDGE_TYPE_ID grin_get_edge_type_id(GRIN_GRAPH, GRIN_EDGE_TYPE);
 
-GRIN_EDGE_TYPE grin_get_edge_type_from_id(GRIN_EDGE_TYPE_ID);
+GRIN_EDGE_TYPE grin_get_edge_type_from_id(GRIN_GRAPH, GRIN_EDGE_TYPE_ID);
 #endif
 
 /** @name VertexEdgeTypeRelation

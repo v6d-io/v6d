@@ -52,13 +52,13 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
   GRIN_VERTEX_TYPE_LIST src_vtypes = grin_get_src_types_from_edge_type(g, etype);  // get related source vertex type list
   GRIN_VERTEX_TYPE_LIST dst_vtypes = grin_get_dst_types_from_edge_type(g, etype);  // get related destination vertex type list
 
-  size_t src_vtypes_num = grin_get_vertex_type_list_size(src_vtypes);
-  size_t dst_vtypes_num = grin_get_vertex_type_list_size(dst_vtypes);
+  size_t src_vtypes_num = grin_get_vertex_type_list_size(g, src_vtypes);
+  size_t dst_vtypes_num = grin_get_vertex_type_list_size(g, dst_vtypes);
   assert(src_vtypes_num == dst_vtypes_num);  // the src & dst vertex type lists must be aligned
 
   for (size_t i = 0; i < src_vtypes_num; ++i) {  // iterate all pairs of src & dst vertex type
-    GRIN_VERTEX_TYPE src_vtype = grin_get_vertex_type_from_list(src_vtypes, i);  // get src type
-    GRIN_VERTEX_TYPE dst_vtype = grin_get_vertex_type_from_list(dst_vtypes, i);  // get dst type
+    GRIN_VERTEX_TYPE src_vtype = grin_get_vertex_type_from_list(g, src_vtypes, i);  // get src type
+    GRIN_VERTEX_TYPE dst_vtype = grin_get_vertex_type_from_list(g, dst_vtypes, i);  // get dst type
 
     GRIN_VERTEX_PROPERTY dst_vp = grin_get_vertex_property_by_name(g, dst_vtype, vertex_property_name);  // get the property called "features" under dst type
     if (dst_vp == GRIN_NULL_VERTEX_PROPERTY) continue;  // filter out the pairs whose dst type does NOT have such a property called "features"
@@ -84,10 +84,10 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
         if (check_flag) {
           GRIN_EDGE edge = grin_get_edge_from_adjacent_list(g, adj_list, k);
           GRIN_EDGE_TYPE edge_type = grin_get_edge_type(g, edge);
-          if (!grin_equal_edge_type(edge_type, etype)) continue;
+          if (!grin_equal_edge_type(g, edge_type, etype)) continue;
         }
         GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list(g, adj_list, k);  // get the dst vertex u
-        const void* value = grin_get_value_from_vertex_property_table(dst_vpt, u, dst_vp);  // get the property value of "features" of u
+        const void* value = grin_get_value_from_vertex_property_table(g, dst_vpt, u, dst_vp);  // get the property value of "features" of u
 
         GRIN_VERTEX_REF uref = grin_get_vertex_ref_for_vertex(g, u);  // get the reference of u that can be recoginized by other partitions
         GRIN_PARTITION u_master_partition = grin_get_master_partition_from_vertex_ref(g, uref);  // get the master partition for u

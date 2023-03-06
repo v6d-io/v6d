@@ -19,7 +19,6 @@ limitations under the License.
 #include "../predefine.h"
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
-
 GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH);
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
@@ -35,6 +34,7 @@ bool grin_insert_vertex_to_list(GRIN_GRAPH, GRIN_VERTEX_LIST, GRIN_VERTEX);
 size_t grin_get_vertex_list_size(GRIN_GRAPH, GRIN_VERTEX_LIST);
 
 GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH, GRIN_VERTEX_LIST, size_t);
+#endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
 GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH);
@@ -47,10 +47,7 @@ GRIN_VERTEX_LIST_ITERATOR grin_get_next_vertex_list_iter(GRIN_GRAPH, GRIN_VERTEX
 
 bool grin_is_vertex_list_end(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
 
-Vertex grin_get_vertex_from_iter(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
-#endif
-
-
+GRIN_VERTEX grin_get_vertex_from_iter(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
 #endif
 
 #endif  // GRIN_INCLUDE_TOPOLOGY_VERTEXLIST_H_

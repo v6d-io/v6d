@@ -107,6 +107,17 @@ typedef enum {
 */
 #define GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 
+/**
+ * 
+*/
+#define GRIN_GRANULA_ENALBE_VERTEX_LIST_BY_TYPE
+
+#define GRIN_GRANULA_ENABLE_ADJACENT_LIST_BY_PARTITION
+
+#define GRIN_GRANULA_ENABLE_ADJACENT_LIST_BY_TYPE
+
+#define GRIN_GRANULA_ENABLE_ADJACENT_LIST_BY_PARTITION_TYPE
+
 #ifndef GRIN_DOXYGEN_SKIP
 #undef GRIN_WITH_VERTEX_DATA
 #undef GRIN_WITH_EDGE_DATA
@@ -242,10 +253,9 @@ typedef enum {
  */
 ///@{
 /** @ingroup PredicateMacros
- * @brief Enable predicates on graph. 
+ * @brief Enable vertex ordering predicate
 */
-#define GRIN_ENABLE_PREDICATE
-#undef GRIN_ENABLE_PREDICATE
+#define GRIN_PREDICATE_ENABLE_VERTEX_ORDERING
 ///@}
 
 /** @name IndexMacros
@@ -400,8 +410,8 @@ typedef void* GRIN_ROW;
 #endif
 
 #if defined(GRIN_WITH_VERTEX_LABEL) || defined(GRIN_WITH_EDGE_LABEL)
-typedef void* GRIN_LABEL
-typedef void* GRIN_LABEL_LIST
+typedef void* GRIN_LABEL;
+typedef void* GRIN_LABEL_LIST;
 #endif
 
 #endif  // GRIN_INCLUDE_PREDEFINE_H_
