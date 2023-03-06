@@ -37,13 +37,13 @@ spec:
           httpGet:
             path: /healthz
             port: 8081
-          initialDelaySeconds: 20
-          periodSeconds: 10
+          initialDelaySeconds: 15
+          periodSeconds: 20
         readinessProbe:
           httpGet:
             path: /readyz
             port: 8081
-          initialDelaySeconds: 20
+          initialDelaySeconds: 5
           periodSeconds: 10
         resources:
           limits:
