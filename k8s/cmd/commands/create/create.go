@@ -21,7 +21,8 @@ import (
 )
 
 var (
-	createLong = util.LongDesc(`Create a vineyard job on kubernetes.`)
+	createLong = util.LongDesc(`
+	Create a vineyard job on kubernetes.`)
 
 	createExample = util.Examples(`
 	# create the backup job on kubernetes

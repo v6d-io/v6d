@@ -27,10 +27,11 @@ import (
 )
 
 var (
-	createOperationLong = util.LongDesc(`Insert an operation in a workflow
-	based on vineyard cluster. You could create a assembly or repartition operation
-	in a workflow. Usually, the operation should be created between the workloads:
-	job1 -> operation -> job2.`)
+	createOperationLong = util.LongDesc(`
+	Insert an operation in a workflow based on vineyard cluster. 
+	You could create a assembly or repartition operation in a 
+	workflow. Usually, the operation should be created between 
+	the workloads: job1 -> operation -> job2.`)
 
 	createOperationExample = util.Examples(`
 	# create a local assembly operation between job1 and job2

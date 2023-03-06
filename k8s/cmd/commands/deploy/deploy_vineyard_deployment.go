@@ -35,9 +35,10 @@ import (
 )
 
 var (
-	deployVineyardDeploymentLong = util.LongDesc(`Builds and deploy
-	the yaml file of vineyardd the vineyardd without vineyard operator. You could
-	deploy a customized vineyardd from stdin or file.`)
+	deployVineyardDeploymentLong = util.LongDesc(`
+	Builds and deploy the yaml file of vineyardd the vineyardd 
+	without vineyard operator. You could deploy a customized 
+	vineyardd from stdin or file.`)
 
 	deployVineyardDeploymentExample = util.Examples(`
 	# deploy the default vineyard deployment on kubernetes

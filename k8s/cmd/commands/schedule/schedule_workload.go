@@ -1,11 +1,10 @@
-/*
-* Copyright 2020-2023 Alibaba Group Holding Limited.
+/** Copyright 2020-2023 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-	http://www.apache.org/licenses/LICENSE-2.0
+    http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -35,9 +34,10 @@ import (
 )
 
 var (
-	scheduleWorkloadLong = util.LongDesc(`ScheduleWorkload schedules
-	the workload to a vineyard cluster. It will add the podAffinity to the workload
-	so that the workload will be scheduled to the vineyard cluster.`)
+	scheduleWorkloadLong = util.LongDesc(`
+	ScheduleWorkload schedules the workload to a vineyard cluster. 
+	It will add the podAffinity to the workload so that the workload
+	will be scheduled to the vineyard cluster.`)
 
 	scheduleWorkloadExample = util.Examples(`
 	# Add the podAffinity to the workload for the specific vineyard cluster

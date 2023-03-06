@@ -36,11 +36,12 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var cmdLong = util.LongDesc(`vineyardctl is the command-line
-	tool for working with the Vineyard Operator. It supports creating,
-	deleting and checking status of Vineyard Operator. It also supports
-	managing the vineyard relevant components such as vineyardd and pluggable
-	drivers`)
+var cmdLong = util.LongDesc(`
+	vineyardctl is the command-line tool for working with the 
+	Vineyard Operator. It supports creating, deleting and checking
+	status of Vineyard Operator. It also supports managing the 
+	vineyard relevant components such as vineyardd and pluggable 
+	drivers.`)
 
 var cmd = &cobra.Command{
 	Use:     "vineyardctl [command]",

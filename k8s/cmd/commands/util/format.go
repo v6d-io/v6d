@@ -24,7 +24,7 @@ var (
 )
 
 func LongDesc(long string) string {
-	return formater{long}.trim().string
+	return formater{long}.trim().doc().trim().string
 }
 
 func Examples(examples string) string {
@@ -45,10 +45,20 @@ func (f formater) tab() formater {
 	return f
 }
 
+func (f formater) doc() formater {
+	docString := []string{}
+	for _, line := range strings.Split(f.string, "\n") {
+		line = strings.Trim(line, "\t")
+		docString = append(docString, line)
+	}
+	f.string = strings.Join(docString, "\n")
+	return f
+}
+
 func (f formater) indent() formater {
 	indentedLines := []string{}
 	for _, line := range strings.Split(f.string, "\n") {
-		t := strings.Count(line, "	")
+		t := strings.Count(line, "\t")
 		// Replace the tab with two spaces
 		trimmed := strings.TrimSpace(line)
 		indentation := ""

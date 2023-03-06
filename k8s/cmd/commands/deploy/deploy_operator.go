@@ -30,11 +30,13 @@ import (
 )
 
 var (
-	deployOperatorLong = util.LongDesc(`Deploy the vineyard operator on kubernetes.
-	You could specify a stable or development version of the operator. The default kustomize dir
-	is development version from github repo. Also, you can install the stable version from github.
-	repo or a local kustomize dir. Besides, you can also deploy the vineyard operator in an existing
-	namespace.`)
+	deployOperatorLong = util.LongDesc(`
+	Deploy the vineyard operator on kubernetes. You could specify a 
+	stable or development version of the operator. The default 
+	kustomize dir is development version from github repo. Also, you
+	can install the stable version from github repo or a local 
+	kustomize dir. Besides, you can also  deploy the vineyard 
+	operator in an existing namespace.`)
 
 	deployOperatorExample = util.Examples(`
 	# install the development version in the vineyard-system namespace
