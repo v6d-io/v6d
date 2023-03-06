@@ -19,12 +19,13 @@ package v1alpha1
 import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
-	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // log is for logging in this package.
-var recoverlog = logf.Log.WithName("recover-resource")
+var recoverlog = log.WithName("recover-resource")
 
 // SetupWebhookWithManager implements the webhook.Defaulter so a webhook will be registered
 func (r *Recover) SetupWebhookWithManager(mgr ctrl.Manager) error {
@@ -41,7 +42,6 @@ var _ webhook.Defaulter = &Recover{}
 // Default implements webhook.Defaulter so a webhook will be registered for the type
 func (r *Recover) Default() {
 	recoverlog.Info("default", "name", r.Name)
-
 }
 
 //nolint: lll

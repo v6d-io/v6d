@@ -18,28 +18,32 @@ package k8s
 
 import (
 	"context"
-	"fmt"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
+	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
+
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/operation"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 // OperationReconciler reconciles a Operation object
 type OperationReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Template kubernetes.Repo
-	Recorder record.EventRecorder
+	*kubernetes.Clientset
+	record.EventRecorder
+	Scheme *runtime.Scheme
 }
 
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=operations,verbs=get;list;watch;create;update;patch;delete
@@ -58,26 +62,31 @@ type OperationReconciler struct {
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles the operation
-func (r *OperationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *OperationReconciler) Reconcile(
+	ctx context.Context,
+	req ctrl.Request,
+) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithName("controllers").WithName("Operation")
 
 	op := k8sv1alpha1.Operation{}
-	if err := r.Client.Get(ctx, req.NamespacedName, &op); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &op); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	logger.Info("Reconciling Operation", "operation", op)
 
-	app := kubernetes.Application{
+	app := swckkube.Application{
 		Client:   r.Client,
-		FileRepo: r.Template,
+		FileRepo: templates.Repo,
 		CR:       &op,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Operation"),
-		TmplFunc: map[string]interface{}{"getDistributedAssemblyConfig": operation.GetDistributedAssemblyConfig,
-			"getAssemblyConfig": operation.GetAssemblyConfig, "getDaskRepartitionConfig": operation.GetDaskRepartitionConfig},
-		Recorder: r.Recorder,
+		TmplFunc: map[string]interface{}{
+			"getDistributedAssemblyConfig": operation.GetDistributedAssemblyConfig,
+			"getAssemblyConfig":            operation.GetAssemblyConfig, "getDaskRepartitionConfig": operation.GetDaskRepartitionConfig,
+		},
+		Recorder: r.EventRecorder,
 	}
 
-	preOp := operation.NewPluggableOperation(op.Spec.Name, r.Client, &app)
+	preOp := operation.NewPluggableOperation(op.Spec.Name, r.Client, r.Clientset, &app)
 	if err := preOp.CreateJob(ctx, &op); err != nil {
 		logger.Error(err, "Failed to create the job", "Operation", op)
 		return ctrl.Result{}, err
@@ -88,12 +97,16 @@ func (r *OperationReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// reconcile every minute
-	var duration, _ = time.ParseDuration("1m")
+	duration, _ := time.ParseDuration("1m")
 	return ctrl.Result{RequeueAfter: duration}, nil
 }
 
 // UpdateStatus updates the status of the localobject
-func (r *OperationReconciler) UpdateStatus(ctx context.Context, op *v1alpha1.Operation, opDone bool) error {
+func (r *OperationReconciler) UpdateStatus(
+	ctx context.Context,
+	op *v1alpha1.Operation,
+	opDone bool,
+) error {
 	state := v1alpha1.OperationRunning
 	if opDone {
 		state = v1alpha1.OperationSucceeded
@@ -103,24 +116,28 @@ func (r *OperationReconciler) UpdateStatus(ctx context.Context, op *v1alpha1.Ope
 		State: state,
 	}
 	if err := r.applyStatusUpdate(ctx, op, status); err != nil {
-		return fmt.Errorf("failed to update status: %w", err)
+		return errors.Wrap(err, "failed to update status")
 	}
 	return nil
 }
 
-func (r *OperationReconciler) applyStatusUpdate(ctx context.Context, op *v1alpha1.Operation, status *v1alpha1.OperationStatus) error {
+func (r *OperationReconciler) applyStatusUpdate(
+	ctx context.Context,
+	op *v1alpha1.Operation,
+	status *v1alpha1.OperationStatus,
+) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := r.Client.Get(ctx, client.ObjectKey{Name: op.Name, Namespace: op.Namespace}, op); err != nil {
-			return fmt.Errorf("failed to get operation: %w", err)
+		if err := r.Get(ctx, client.ObjectKey{Name: op.Name, Namespace: op.Namespace}, op); err != nil {
+			return errors.Wrap(err, "failed to get operation")
 		}
 		op.Status = *status
 		op.Kind = "Operation"
 
-		if err := kubernetes.ApplyOverlay(op, &v1alpha1.Operation{Status: *status}); err != nil {
-			return fmt.Errorf("failed to overlay operation's status: %w", err)
+		if err := swckkube.ApplyOverlay(op, &v1alpha1.Operation{Status: *status}); err != nil {
+			return errors.Wrap(err, "failed to overlay operation's status")
 		}
-		if err := r.Client.Status().Update(ctx, op); err != nil {
-			return fmt.Errorf("failed to update operation's status: %w", err)
+		if err := r.Status().Update(ctx, op); err != nil {
+			return errors.Wrap(err, "failed to update operation's status")
 		}
 		return nil
 	})

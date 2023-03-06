@@ -22,20 +22,23 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/go-logr/logr"
-	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
-	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/pkg/errors"
+
 	v1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apilabels "k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // GetVineyarddNodes returns all node names of vineyardd pods.
-func GetVineyarddNodes(c client.Client, log logr.Logger, name, namespace string) []string {
+func GetVineyarddNodes(c client.Client, log log.Logger, name, namespace string) []string {
 	nodes := []string{}
 
 	podList := v1.PodList{}
@@ -60,10 +63,12 @@ func GetVineyarddNodes(c client.Client, log logr.Logger, name, namespace string)
 }
 
 // GetRequiredJob get all required jobs name that separated by '.' from annotations
-func GetRequiredJob(log logr.Logger, anno map[string]string) ([]string, error) {
+func GetRequiredJob(log log.Logger, anno map[string]string) ([]string, error) {
 	objects, exists := anno[annotations.VineyardJobRequired]
 	if !exists {
-		return []string{}, fmt.Errorf("Failed to get the required jobs, please set none if there is no required job")
+		return []string{}, errors.Errorf(
+			"Failed to get the required jobs, please set none if there is no required job",
+		)
 	}
 
 	log.Info(fmt.Sprintf("Get the required jobs: %v", objects))
@@ -74,7 +79,11 @@ func GetRequiredJob(log logr.Logger, anno map[string]string) ([]string, error) {
 }
 
 // GetLocalObjectsBySignatures returns the local objects by the given signatures.
-func GetLocalObjectsBySignatures(c client.Client, log logr.Logger, signatures []string) ([]*v1alpha1.LocalObject, error) {
+func GetLocalObjectsBySignatures(
+	c client.Client,
+	log log.Logger,
+	signatures []string,
+) ([]*v1alpha1.LocalObject, error) {
 	objects := make([]*v1alpha1.LocalObject, 0)
 	for _, sig := range signatures {
 		localObjects := &v1alpha1.LocalObjectList{}
@@ -93,7 +102,11 @@ func GetLocalObjectsBySignatures(c client.Client, log logr.Logger, signatures []
 }
 
 // GetGlobalObjectsByID returns the global objects by the given jobname.
-func GetGlobalObjectsByID(c client.Client, log logr.Logger, jobNames []string) ([]*v1alpha1.GlobalObject, error) {
+func GetGlobalObjectsByID(
+	c client.Client,
+	log log.Logger,
+	jobNames []string,
+) ([]*v1alpha1.GlobalObject, error) {
 	requiredJobs := make(map[string]bool)
 	for _, n := range jobNames {
 		requiredJobs[n] = true
@@ -114,13 +127,17 @@ func GetGlobalObjectsByID(c client.Client, log logr.Logger, jobNames []string) (
 }
 
 // CheckOperationLabels checks if the pod has operation labels and returns the operation name.
-func CheckOperationLabels(c client.Client, log logr.Logger, pod *v1.Pod) (int64, error) {
+func CheckOperationLabels(c client.Client, log log.Logger, pod *v1.Pod) (int64, error) {
 	operationLabels := []string{"assembly.v6d.io/enabled", "repartition.v6d.io/enabled"}
 	for _, label := range operationLabels {
 		if value, ok := pod.Labels[label]; ok && strings.ToLower(value) == "true" {
 			opName := label[:strings.Index(label, ".")]
 			op := &v1alpha1.Operation{}
-			err := c.Get(context.TODO(), types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace}, op)
+			err := c.Get(
+				context.TODO(),
+				types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace},
+				op,
+			)
 			if err != nil && !apierrors.IsNotFound(err) {
 				return 0, err
 			}
@@ -145,7 +162,11 @@ func CheckOperationLabels(c client.Client, log logr.Logger, pod *v1.Pod) (int64,
 				}
 			}
 			if op.Status.State != v1alpha1.OperationSucceeded {
-				return 0, fmt.Errorf("operation %v is not succeeded, state is: %v", opName, op.Status.State)
+				return 0, errors.Errorf(
+					"operation %v is not succeeded, state is: %v",
+					opName,
+					op.Status.State,
+				)
 			}
 		}
 	}
@@ -153,11 +174,22 @@ func CheckOperationLabels(c client.Client, log logr.Logger, pod *v1.Pod) (int64,
 }
 
 // CreateConfigmapForID creates a configmap for the object id and the nodes.
-func CreateConfigmapForID(c client.Client, log logr.Logger, jobname []string, namespace string,
-	localobjects []*v1alpha1.LocalObject, globalobjects []*v1alpha1.GlobalObject, ownerReference []metav1.OwnerReference) error {
+func CreateConfigmapForID(
+	c client.Client,
+	log log.Logger,
+	jobname []string,
+	namespace string,
+	localobjects []*v1alpha1.LocalObject,
+	globalobjects []*v1alpha1.GlobalObject,
+	ownerReference []metav1.OwnerReference,
+) error {
 	for i := range jobname {
 		configmap := &v1.ConfigMap{}
-		err := c.Get(context.TODO(), client.ObjectKey{Namespace: namespace, Name: jobname[i]}, configmap)
+		err := c.Get(
+			context.TODO(),
+			client.ObjectKey{Namespace: namespace, Name: jobname[i]},
+			configmap,
+		)
 		if err != nil && !apierrors.IsNotFound(err) {
 			log.Info(fmt.Sprintf("get configmap error:: %v", err))
 			return err
@@ -170,7 +202,10 @@ func CreateConfigmapForID(c client.Client, log logr.Logger, jobname []string, na
 			// hostname -> localobject id
 			for _, o := range localobjects {
 				if (*o).Labels["k8s.v6d.io/job"] == jobname[i] {
-					localObjList[(*o).Spec.Hostname] = append(localObjList[(*o).Spec.Hostname], (*o).Spec.ObjectID)
+					localObjList[(*o).Spec.Hostname] = append(
+						localObjList[(*o).Spec.Hostname],
+						(*o).Spec.ObjectID,
+					)
 				}
 			}
 			for nodeName, nodeObjs := range localObjList {
@@ -198,7 +233,7 @@ func CreateConfigmapForID(c client.Client, log logr.Logger, jobname []string, na
 			}
 			cm.OwnerReferences = ownerReference
 			if err := c.Create(context.TODO(), &cm); err != nil {
-				log.Info(fmt.Sprintf("create configmap error: %v", err))
+				log.Error(err, "create configmap error")
 				return err
 			}
 		}
@@ -209,7 +244,10 @@ func CreateConfigmapForID(c client.Client, log logr.Logger, jobname []string, na
 }
 
 // GetObjectInfo returns the local object info including the locations and average number of chunks per node.
-func GetObjectInfo(localObjects []*v1alpha1.LocalObject, replica int64) (map[string][]string, int64, []string) {
+func GetObjectInfo(
+	localObjects []*v1alpha1.LocalObject,
+	replica int64,
+) (map[string][]string, int64, []string) {
 	locations := make(map[string][]string)
 	for _, localObject := range localObjects {
 		host := localObject.Spec.Hostname

@@ -20,10 +20,7 @@ setup:
     - name: scheduling workload
       command: |
         kubectl create ns vineyard-job
-        go run k8s/cmd/main.go k8s/cmd/scheduler.go /tmp/e2e-k8s.config k8s/test/e2e/scheduling-outside-cluster-demo/test.yaml
-    - name: wait job completed
-      command: |
-        kubectl wait --for=condition=complete --timeout=5m job/v6d-workflow-demo-job2 -n vineyard-job
+        go run k8s/cmd/main.go schedule workflow -f k8s/test/e2e/scheduling-outside-cluster-demo/test.yaml
   timeout: 20m
 
 cleanup:

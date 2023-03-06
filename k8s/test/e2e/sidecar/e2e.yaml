@@ -24,14 +24,14 @@ setup:
     - name: install app with default sidecar
       command: |
         kubectl create namespace vineyard-job
-        kubectl label namespace vineyard-job sidecar-injection=enabled
-        kubectl apply -f k8s/test/e2e/sidecar-demo/sidecar-with-default-sidecar.yaml
+        go run k8s/cmd/main.go inject -f k8s/test/e2e/sidecar-demo/sidecar-with-default-sidecar.yaml | kubectl apply -f -
       wait:
         - namespace: vineyard-job
           resource: deployment/job-deployment-with-default-sidecar
           for: condition=Available
     - name: install app with custom sidecar
       command: |
+        kubectl label namespace vineyard-job sidecar-injection=enabled
         kubectl apply -f k8s/test/e2e/sidecar-demo/sidecar-with-custom-sidecar.yaml
       wait:
         - namespace: vineyard-job
@@ -52,7 +52,7 @@ verify:
     interval: 10s
   cases:
     - query: |
-        kubectl get pod -l app=job-deployment-with-custom-sidecar -n vineyard-job -oname | \
+        kubectl get pod -l app=job-deployment-with-default-sidecar -n vineyard-job -oname | \
           awk -F '/' '{print $2}' | \
           head -n 1 | \
           xargs kubectl logs -c job -n vineyard-job | \

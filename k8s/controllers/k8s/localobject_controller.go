@@ -21,9 +21,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // LocalObjectReconciler reconciles a LocalObject object
@@ -35,7 +35,10 @@ type LocalObjectReconciler struct {
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=localobjects,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=localobjects/status,verbs=get;update;patch
 
-func (r *LocalObjectReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *LocalObjectReconciler) Reconcile(
+	ctx context.Context,
+	req ctrl.Request,
+) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithName("controllers").WithName("LocalObject")
 
 	logger.V(1).Info("Reconciling LocalObject...")

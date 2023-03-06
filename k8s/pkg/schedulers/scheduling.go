@@ -22,26 +22,25 @@ import (
 	"strings"
 	"time"
 
-	"k8s.io/klog/v2"
+	"github.com/pkg/errors"
 
-	"github.com/v6d-io/v6d/k8s/pkg/log"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"k8s.io/component-helpers/scheduling/corev1"
-
-	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	listerv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/rest"
+	"k8s.io/component-helpers/scheduling/corev1"
 	"k8s.io/kubernetes/pkg/scheduler/framework"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var slog = log.Logger.WithName("vineyard-scheduler-in-cluster")
+var slog = log.WithName("vineyard-scheduler-in-cluster")
 
 const (
 	// Name is the name of the plugin used in Registry and configurations.
@@ -64,7 +63,12 @@ type VineyardScheduling struct {
 
 // New initializes a vineyard scheduler
 // func New(configuration *runtime.Unknown, handle framework.FrameworkHandle) (framework.Plugin, error) {
-func New(client client.Client, config *rest.Config, obj runtime.Object, handle framework.Handle) (framework.Plugin, error) {
+func New(
+	client client.Client,
+	config *rest.Config,
+	obj runtime.Object,
+	handle framework.Handle,
+) (framework.Plugin, error) {
 	slog.Info("Initializing the vineyard scheduler plugin ...")
 	timeout := Timeout * time.Second
 	state := make(map[string]*SchedulerState)
@@ -92,14 +96,26 @@ func (vs *VineyardScheduling) Less(pod1, pod2 *framework.PodInfo) bool {
 }
 
 // Score compute the score for a pod based on the status of required vineyard objects.
-func (vs *VineyardScheduling) Score(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (int64, *framework.Status) {
+func (vs *VineyardScheduling) Score(
+	ctx context.Context,
+	state *framework.CycleState,
+	pod *v1.Pod,
+	nodeName string,
+) (int64, *framework.Status) {
 	slog.Info(fmt.Sprintf("scoring for pod %v on node %v", GetNamespacedName(pod), nodeName))
 	job, replica, requires, vineyardd, err := vs.GetJobInfo(pod)
 	if err != nil {
 		return 0, framework.NewStatus(framework.Unschedulable, err.Error())
 	}
 
-	slog.Info(fmt.Sprintf("scoring for pod of job %v, with %v replicas, and requires %v", job, replica, requires))
+	slog.Info(
+		fmt.Sprintf(
+			"scoring for pod of job %v, with %v replicas, and requires %v",
+			job,
+			replica,
+			requires,
+		),
+	)
 
 	schedulerState := vs.MakeSchedulerStateForNamespace(VineyardSystemNamespace)
 	podRank := vs.GetPodRank(pod, replica)
@@ -122,18 +138,33 @@ func (vs *VineyardScheduling) ScoreExtensions() framework.ScoreExtensions {
 }
 
 // NormalizeScore normalizes the score of all nodes for a pod.
-func (vs *VineyardScheduling) NormalizeScore(ctx context.Context, state *framework.CycleState, pod *v1.Pod, scores framework.NodeScoreList) *framework.Status {
+func (vs *VineyardScheduling) NormalizeScore(
+	ctx context.Context,
+	state *framework.CycleState,
+	pod *v1.Pod,
+	scores framework.NodeScoreList,
+) *framework.Status {
 	// Find highest and lowest scores.
 	return framework.NewStatus(framework.Success, "")
 }
 
 // Permit only permit runs on the node that has vineyard installed.
-func (vs *VineyardScheduling) Permit(ctx context.Context, state *framework.CycleState, pod *v1.Pod, nodeName string) (*framework.Status, time.Duration) {
+func (vs *VineyardScheduling) Permit(
+	ctx context.Context,
+	state *framework.CycleState,
+	pod *v1.Pod,
+	nodeName string,
+) (*framework.Status, time.Duration) {
 	return framework.NewStatus(framework.Success, ""), 0
 }
 
 // PostBind prints the bind info
-func (vs *VineyardScheduling) PostBind(ctx context.Context, _ *framework.CycleState, pod *v1.Pod, nodeName string) {
+func (vs *VineyardScheduling) PostBind(
+	ctx context.Context,
+	_ *framework.CycleState,
+	pod *v1.Pod,
+	nodeName string,
+) {
 	slog.Info(fmt.Sprintf("Bind pod %v on node %v", GetNamespacedName(pod), nodeName))
 }
 
@@ -153,17 +184,16 @@ func (vs *VineyardScheduling) getJobName(pod *v1.Pod) (string, error) {
 	jobName, exists := pod.Labels[labels.VineyardJobName]
 	slog.Info(fmt.Sprintf("labels: %v", pod.Labels))
 	if !exists || jobName == "" {
-		return "", fmt.Errorf("Failed to get vineyard job name for %v", GetNamespacedName(pod))
+		return "", errors.Errorf("Failed to get vineyard job name for %v", GetNamespacedName(pod))
 	}
 	slog.Info(fmt.Sprintf("Get job's name: %v", jobName))
 	return jobName, nil
 }
 
 func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int64, error) {
-	klog.V(5).Infof("analyzing job replica ...")
 	// infer from the ownership
 	ctx := context.TODO()
-	//ctx := context.Background()
+	// ctx := context.Background()
 	for _, owner := range pod.GetOwnerReferences() {
 		name := types.NamespacedName{Namespace: pod.Namespace, Name: owner.Name}
 		switch owner.Kind {
@@ -202,7 +232,7 @@ func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int64, error) {
 		}
 	}
 
-	return -1, fmt.Errorf("Failed to get vineyard job name for %v", GetNamespacedName(pod))
+	return -1, errors.Errorf("Failed to get vineyard job name for %v", GetNamespacedName(pod))
 }
 
 // GetAllWorkerNodes records every worker node which deployed vineyardd.
@@ -275,10 +305,10 @@ func GetNamespacedName(object metav1.Object) string {
 func ParseNamespacedName(name string, defaultNamespace ...string) types.NamespacedName {
 	separator := string(types.Separator)
 	if strings.Contains(name, separator) {
-		split := strings.SplitN(name, separator, 2)
+		splitted := strings.SplitN(name, separator, 2)
 		return types.NamespacedName{
-			Namespace: split[0],
-			Name:      split[1],
+			Namespace: splitted[0],
+			Name:      splitted[1],
 		}
 	} else {
 		if len(defaultNamespace) > 0 {

@@ -18,12 +18,14 @@ package k8s
 import (
 	"crypto/rand"
 	"fmt"
+
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 func GenerateRandomName(length int) string {
 	bs := make([]byte, length)
 	if _, err := rand.Read(bs); err != nil {
-		fmt.Println("rand.Read false: ", err)
+		log.Fatal(err, "rand.Read failed")
 	}
 	return fmt.Sprintf("%x", bs)[:length]
 }

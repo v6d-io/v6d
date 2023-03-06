@@ -19,9 +19,12 @@ package operation
 import (
 	"context"
 
-	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
-	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
+
+	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
 // PluggableOperation is the interface for the operation
@@ -31,12 +34,17 @@ type PluggableOperation interface {
 }
 
 // NewPluggableOperation returns a new pluggable operation according to the operation type
-func NewPluggableOperation(opName string, c client.Client, app *kubernetes.Application) PluggableOperation {
+func NewPluggableOperation(
+	opName string,
+	client client.Client,
+	clientset *kubernetes.Clientset,
+	app *swckkube.Application,
+) PluggableOperation {
 	switch opName {
 	case "assembly":
-		return &AssemblyOperation{c, ClientUtils{c}, app, false}
+		return &AssemblyOperation{client, ClientUtils{client}, app, false}
 	case "repartition":
-		return &RepartitionOperation{c, ClientUtils{c}, app, false}
+		return &RepartitionOperation{client, clientset, ClientUtils{client}, app, false}
 	}
 	return nil
 }

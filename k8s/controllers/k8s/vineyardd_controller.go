@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
-	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/pkg/errors"
+
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -32,15 +32,19 @@ import (
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+
+	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
+
+	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 // VineyarddReconciler reconciles a Vineyardd object
 type VineyarddReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Template kubernetes.Repo
-	Recorder record.EventRecorder
+	record.EventRecorder
+	Scheme *runtime.Scheme
 }
 
 // EtcdConfig holds all configuration about etcd
@@ -54,7 +58,7 @@ type EtcdConfig struct {
 // Etcd contains the configuration about etcd
 var Etcd EtcdConfig
 
-// GetEtcdConfig get etcd configuratiin from Etcd
+// GetEtcdConfig get etcd configuration from Etcd
 func getEtcdConfig() EtcdConfig {
 	return Etcd
 }
@@ -70,9 +74,9 @@ type ServiceLabelSelector struct {
 }
 
 // SvcLabelSelector is the label selector of the service
-var SvcLabelSelector ServiceLabelSelector
+var SvcLabelSelector []ServiceLabelSelector
 
-func getServiceLabelSelector() ServiceLabelSelector {
+func getServiceLabelSelector() []ServiceLabelSelector {
 	return SvcLabelSelector
 }
 
@@ -88,7 +92,10 @@ func getServiceLabelSelector() ServiceLabelSelector {
 // +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles the Vineyardd.
-func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *VineyarddReconciler) Reconcile(
+	ctx context.Context,
+	req ctrl.Request,
+) (ctrl.Result, error) {
 	logger := log.FromContext(ctx).WithName("controllers").WithName("Vineyardd")
 
 	vineyardd := k8sv1alpha1.Vineyardd{}
@@ -97,7 +104,7 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 	logger.V(1).Info("Reconciling Vineyardd", "vineyardd", vineyardd)
 
-	vineyarddFile, err := r.Template.GetFilesRecursive("vineyardd")
+	vineyarddFile, err := templates.GetFilesRecursive("vineyardd")
 	if err != nil {
 		logger.Error(err, "failed to load vineyardd templates")
 		return ctrl.Result{}, err
@@ -110,15 +117,18 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// deploy the vineyardd
 	vineyarddApp := kubernetes.Application{
 		Client:   r.Client,
-		FileRepo: r.Template,
+		FileRepo: templates.Repo,
 		CR:       &vineyardd,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Vineyardd"),
-		Recorder: r.Recorder,
-		TmplFunc: map[string]interface{}{"getStorage": getStorage, "getServiceLabelSelector": getServiceLabelSelector},
+		Recorder: r.EventRecorder,
+		TmplFunc: map[string]interface{}{
+			"getStorage":              getStorage,
+			"getServiceLabelSelector": getServiceLabelSelector,
+		},
 	}
 	etcdApp := kubernetes.Application{
 		Client:   r.Client,
-		FileRepo: r.Template,
+		FileRepo: templates.Repo,
 		CR:       &vineyardd,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Vineyardd"),
 		TmplFunc: map[string]interface{}{"getEtcdConfig": getEtcdConfig},
@@ -128,7 +138,10 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	etcdEndpoints := make([]string, 0, vineyardd.Spec.Etcd.Replicas)
 	replicas := vineyardd.Spec.Etcd.Replicas
 	for i := 0; i < replicas; i++ {
-		etcdEndpoints = append(etcdEndpoints, fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)))
+		etcdEndpoints = append(
+			etcdEndpoints,
+			fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)),
+		)
 	}
 	Etcd.Endpoints = strings.Join(etcdEndpoints, ",")
 	// the etcd is built in the vineyardd image
@@ -146,8 +159,9 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 	}
 
-	SvcLabelSelector.Key = "app.v6d.io/service"
-	SvcLabelSelector.Value = "vineyardd-rpc"
+	SvcLabelSelector = make([]ServiceLabelSelector, 1)
+	SvcLabelSelector[0].Key = "app.v6d.io/service"
+	SvcLabelSelector[0].Value = "vineyardd-rpc"
 	if err := vineyarddApp.ApplyAll(ctx, vineyarddFile, logger); err != nil {
 		logger.Error(err, "failed to apply vineyardd resources")
 		return ctrl.Result{}, err
@@ -159,16 +173,19 @@ func (r *VineyarddReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// reconcile every minute
-	var duration, _ = time.ParseDuration("1m")
+	duration, _ := time.ParseDuration("1m")
 	return ctrl.Result{RequeueAfter: duration}, nil
 }
 
 // UpdateStatus updates the status of the Vineyardd.
-func (r *VineyarddReconciler) UpdateStatus(ctx context.Context, vineyardd *k8sv1alpha1.Vineyardd) error {
+func (r *VineyarddReconciler) UpdateStatus(
+	ctx context.Context,
+	vineyardd *k8sv1alpha1.Vineyardd,
+) error {
 	name := client.ObjectKey{Name: vineyardd.Name, Namespace: vineyardd.Namespace}
 	deployment := appsv1.Deployment{}
-	if err := r.Client.Get(ctx, name, &deployment); err != nil {
-		ctrl.Log.V(1).Error(err, "failed to get deployment")
+	if err := r.Get(ctx, name, &deployment); err != nil {
+		log.V(1).Error(err, "failed to get deployment")
 	}
 
 	// get the running vineyardd
@@ -177,25 +194,26 @@ func (r *VineyarddReconciler) UpdateStatus(ctx context.Context, vineyardd *k8sv1
 		Conditions:    deployment.Status.Conditions,
 	}
 	if err := r.applyStatusUpdate(ctx, vineyardd, status); err != nil {
-		return fmt.Errorf("failed to update status: %w", err)
+		return errors.Wrap(err, "failed to update status")
 	}
 	return nil
 }
 
 func (r *VineyarddReconciler) applyStatusUpdate(ctx context.Context,
-	vineyardd *k8sv1alpha1.Vineyardd, status *k8sv1alpha1.VineyarddStatus) error {
+	vineyardd *k8sv1alpha1.Vineyardd, status *k8sv1alpha1.VineyarddStatus,
+) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		name := client.ObjectKey{Name: vineyardd.Name, Namespace: vineyardd.Namespace}
-		if err := r.Client.Get(ctx, name, vineyardd); err != nil {
-			return fmt.Errorf("failed to get vineyardd: %w", err)
+		if err := r.Get(ctx, name, vineyardd); err != nil {
+			return errors.Wrap(err, "failed to get vineyardd")
 		}
 		vineyardd.Status = *status
 		vineyardd.Kind = "Vineyardd"
 		if err := kubernetes.ApplyOverlay(vineyardd, &k8sv1alpha1.Vineyardd{Status: *status}); err != nil {
-			return fmt.Errorf("failed to overlay vineyardd's status: %w", err)
+			return errors.Wrap(err, "failed to overlay vineyardd's status")
 		}
-		if err := r.Client.Status().Update(ctx, vineyardd); err != nil {
-			return fmt.Errorf("failed to update vineyardd's status: %w", err)
+		if err := r.Status().Update(ctx, vineyardd); err != nil {
+			return errors.Wrap(err, "failed to update vineyardd's status")
 		}
 		return nil
 	})

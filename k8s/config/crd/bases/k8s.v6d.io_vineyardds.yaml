@@ -34,6 +34,9 @@ spec:
             type: object
           spec:
             properties:
+              createServiceAccount:
+                default: false
+                type: boolean
               etcd:
                 default:
                   replicas: 3
@@ -101,6 +104,9 @@ spec:
                     default: ClusterIP
                     type: string
                 type: object
+              serviceAccountName:
+                default: ""
+                type: string
               vineyardConfig:
                 default:
                   etcdEndpoint: http://etcd-for-vineyard:2379
@@ -229,26 +235,13 @@ spec:
                                 type: string
                               name:
                                 type: string
-                              namespace:
-                                type: string
                             required:
                             - kind
                             - name
                             type: object
+                            x-kubernetes-map-type: atomic
                           resources:
                             properties:
-                              claims:
-                                items:
-                                  properties:
-                                    name:
-                                      type: string
-                                  required:
-                                  - name
-                                  type: object
-                                type: array
-                                x-kubernetes-list-map-keys:
-                                - name
-                                x-kubernetes-list-type: map
                               limits:
                                 additionalProperties:
                                   anyOf:
@@ -418,7 +411,7 @@ spec:
                               uid:
                                 type: string
                             type: object
-                            x-kubernetes-map-type: granular
+                            x-kubernetes-map-type: atomic
                           csi:
                             properties:
                               controllerExpandSecretRef:
@@ -441,14 +434,6 @@ spec:
                                 type: string
                               fsType:
                                 type: string
-                              nodeExpandSecretRef:
-                                properties:
-                                  name:
-                                    type: string
-                                  namespace:
-                                    type: string
-                                type: object
-                                x-kubernetes-map-type: atomic
                               nodePublishSecretRef:
                                 properties:
                                   name:

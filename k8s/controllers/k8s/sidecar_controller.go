@@ -23,16 +23,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/pkg/errors"
+
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
+
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 // SidecarEtcd contains the configuration about etcd of sidecar container
@@ -44,18 +48,17 @@ func getSidecarEtcdConfig() EtcdConfig {
 }
 
 // SidecarSvcLabelSelector contains the label selector of sidecar service
-var SidecarSvcLabelSelector ServiceLabelSelector
+var SidecarSvcLabelSelector []ServiceLabelSelector
 
-func getSidecarSvcLabelSelector() ServiceLabelSelector {
+func getSidecarSvcLabelSelector() []ServiceLabelSelector {
 	return SidecarSvcLabelSelector
 }
 
 // SidecarReconciler reconciles a Sidecar object
 type SidecarReconciler struct {
 	client.Client
-	Scheme   *runtime.Scheme
-	Template kubernetes.Repo
-	Recorder record.EventRecorder
+	record.EventRecorder
+	Scheme *runtime.Scheme
 }
 
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=sidecars,verbs=get;list;watch;create;update;patch;delete
@@ -77,12 +80,14 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// deploy the sidecar service
 	sidecarApp := kubernetes.Application{
 		Client:   r.Client,
-		FileRepo: r.Template,
+		FileRepo: templates.Repo,
 		CR:       sidecar,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Sidecar"),
-		Recorder: r.Recorder,
-		TmplFunc: map[string]interface{}{"getEtcdConfig": getSidecarEtcdConfig,
-			"getServiceLabelSelector": getSidecarSvcLabelSelector},
+		Recorder: r.EventRecorder,
+		TmplFunc: map[string]interface{}{
+			"getEtcdConfig":           getSidecarEtcdConfig,
+			"getServiceLabelSelector": getSidecarSvcLabelSelector,
+		},
 	}
 
 	// set up the etcd
@@ -90,15 +95,20 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	etcdEndpoints := make([]string, 0, sidecar.Spec.Replicas)
 	replicas := sidecar.Spec.Replicas
 	for i := 0; i < replicas; i++ {
-		etcdEndpoints = append(etcdEndpoints, fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)))
+		etcdEndpoints = append(
+			etcdEndpoints,
+			fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)),
+		)
 	}
 	SidecarEtcd.Endpoints = strings.Join(etcdEndpoints, ",")
 	// the etcd is built in the sidecar vineyardd image
 	SidecarEtcd.Image = sidecar.Spec.VineyardConfig.Image
 
 	s := strings.Split(sidecar.Spec.Service.Selector, "=")
-	SidecarSvcLabelSelector.Key = s[0]
-	SidecarSvcLabelSelector.Value = s[1]
+
+	SidecarSvcLabelSelector = make([]ServiceLabelSelector, 1)
+	SidecarSvcLabelSelector[0].Key = s[0]
+	SidecarSvcLabelSelector[0].Value = s[1]
 	for i := 0; i < replicas; i++ {
 		SidecarEtcd.Rank = i
 		if _, err := sidecarApp.Apply(ctx, "etcd/etcd.yaml", logger, false); err != nil {
@@ -125,7 +135,7 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// reconcile every minute
-	var duration, _ = time.ParseDuration("1m")
+	duration, _ := time.ParseDuration("1m")
 	return ctrl.Result{RequeueAfter: duration}, nil
 }
 
@@ -140,7 +150,7 @@ func (r *SidecarReconciler) UpdateStatus(ctx context.Context, sidecar *k8sv1alph
 		},
 	}
 	if err := r.List(ctx, podList, opts...); err != nil {
-		ctrl.Log.V(1).Error(err, "failed to list pod")
+		log.V(1).Error(err, "failed to list pod")
 		return err
 	}
 
@@ -159,25 +169,26 @@ func (r *SidecarReconciler) UpdateStatus(ctx context.Context, sidecar *k8sv1alph
 		Current: int32(current),
 	}
 	if err := r.applyStatusUpdate(ctx, sidecar, status); err != nil {
-		return fmt.Errorf("failed to update status: %w", err)
+		return errors.Wrap(err, "failed to update status")
 	}
 	return nil
 }
 
 func (r *SidecarReconciler) applyStatusUpdate(ctx context.Context,
-	sidecar *k8sv1alpha1.Sidecar, status *k8sv1alpha1.SidecarStatus) error {
+	sidecar *k8sv1alpha1.Sidecar, status *k8sv1alpha1.SidecarStatus,
+) error {
 	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
 		name := client.ObjectKey{Name: sidecar.Name, Namespace: sidecar.Namespace}
-		if err := r.Client.Get(ctx, name, sidecar); err != nil {
-			return fmt.Errorf("failed to get sidecar: %w", err)
+		if err := r.Get(ctx, name, sidecar); err != nil {
+			return errors.Wrap(err, "failed to get sidecar")
 		}
 		sidecar.Status = *status
 		sidecar.Kind = "Sidecar"
 		if err := kubernetes.ApplyOverlay(sidecar, &k8sv1alpha1.Sidecar{Status: *status}); err != nil {
-			return fmt.Errorf("failed to overlay sidecar's status: %w", err)
+			return errors.Wrap(err, "failed to overlay sidecar's status")
 		}
-		if err := r.Client.Status().Update(ctx, sidecar); err != nil {
-			return fmt.Errorf("failed to update sidecar's status: %w", err)
+		if err := r.Status().Update(ctx, sidecar); err != nil {
+			return errors.Wrap(err, "failed to update sidecar's status")
 		}
 		return nil
 	})

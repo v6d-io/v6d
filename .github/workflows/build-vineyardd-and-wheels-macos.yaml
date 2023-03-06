@@ -201,9 +201,50 @@ jobs:
           name: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
           path: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
 
+  build-vineyardctl:
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
+    strategy:
+      matrix:
+        os: [macos-10.15]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: false
+
+      - uses: actions/setup-go@v3
+        with:
+          go-version: 1.19
+
+      - name: Install dependencies for MacOS
+        run: |
+          pushd $(brew --repo homebrew/core)
+          git checkout ${{ env.HOMEBREW_REV }} || true
+          popd
+
+          brew install coreutils || true
+
+      - name: Build vineyardctl
+        run: |
+          go build -a -o vineyardctl k8s/cmd/main.go
+          strip ./vineyardctl || true
+
+      - name: Package vineyardctl artifact on Linux
+        run: |
+          sha512sum vineyardctl > vineyardctl.${{ github.sha }}.sha512sum
+          echo "Checksum is: "
+          cat ./*.sha512sum
+          tar zcvfh vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz ./vineyardctl vineyardctl.${{ github.sha }}.sha512sum
+
+      - name: Upload CI artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          path: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
 
   build-wheels:
-    needs: [build-vineyardd]
+    needs: [build-vineyardd, build-vineyardctl]
     runs-on: ${{ matrix.os }}
     if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
@@ -234,10 +275,18 @@ jobs:
         with:
           name: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
 
-      - name: Prepare vineyardd binary
+      - name: Download vineyardctl artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+
+      - name: Prepare binary
         run: |
           tar zxvf vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          tar zxvf vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+
           mv vineyardd python/vineyard/vineyardd
+          mv vineyardctl python/vineyard/vineyardctl
 
       - name: Install python for MacOS
         if: runner.os == 'macOS'

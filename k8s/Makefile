@@ -48,7 +48,7 @@ GOLANGCI_LINT_VERSION ?= v1.49.0
 HELMIFY_VERSION ?= v0.3.18
 E2E_VERSION ?= 2631e76926604c4e30ca170bed916804c86980b6
 
-all: manager
+all: vineyardctl
 
 #check ci locally
 check: lint e2e-test
@@ -56,17 +56,20 @@ check: lint e2e-test
 
 # install the cert-manager and wait for ready
 install-cert-manager:
-	@echo "Installing cert-manager..."
-	@kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-	@kubectl wait pods -n cert-manager --all --for condition=Ready --timeout=300s
-	@echo "Cert-Manager ready."
+	@go run cmd/main.go deploy cert-manager
 
-# Build manager binary
-manager: generate fmt
-	go build -o bin/manager main.go
+# Build vineyardctl binary
+vineyardctl: generate fmt
+	go build -a -o vineyardctl cmd/main.go
 
+# Copy the artifacts into the python directory for bdist_wheel.
+bdist_wheel:
+	@cp vineyardctl ../python/vineyard/vineyardctl
+	@strip vineyardctl
+
+# Run vineyardctl binary
 run: generate fmt
-	go run ./main.go
+	go run cmd/main.go
 
 # Install CRDs into a cluster
 install: manifests kustomize
@@ -97,6 +100,10 @@ predeploy: manifests kustomize
 unpredeploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 
+# update the operator image's registry to localhost
+update-registry:
+	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+
 # recover the operator image's registry to vineyardcloudnative
 recover-registry:
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
@@ -118,16 +125,17 @@ unsample:
 
 # Go modules
 modules	= ./apis/... \
+		  ./cmd/... \
 		  ./controllers/... \
 		  ./pkg/...
 
 # Run golangci-lint
-golint: 
+golint:
     ifeq (${GOLINT},)
 		@echo "golangci-lint not exist, installing it..."
 		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
     endif
-	${GOBIN}/golangci-lint run ./...
+	${GOBIN}/golangci-lint run $(modules)
 .PHONY: golint
 
 # Install helmify if not exist
@@ -153,7 +161,6 @@ lint: golint
 
 # Run go fmt against code
 gofmt:
-	go fmt main.go
 	go fmt $(modules)
 .PHONY: gofmt
 
@@ -162,7 +169,6 @@ fmt: gofmt
 
 # Run go vet against code
 vet:
-	go vet main.go
 	go vet $(modules)
 .PHONY: vet
 

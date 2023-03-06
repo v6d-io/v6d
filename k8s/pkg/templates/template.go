@@ -18,38 +18,50 @@ package templates
 
 import (
 	"embed"
-	"fmt"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 )
 
 //go:embed vineyardd etcd operation sidecar backup recover
 var fs embed.FS
 
-// EmbedTemplate is only used for implementing the interface
-type EmbedTemplate struct{}
-
-// NewEmbedTemplate returns a new EmbedTemplate
-func NewEmbedTemplate() *EmbedTemplate {
-	return &EmbedTemplate{}
-}
-
 // ReadFile reads a file from the embed.FS
-func (e *EmbedTemplate) ReadFile(path string) ([]byte, error) {
+func ReadFile(path string) ([]byte, error) {
 	return fs.ReadFile(path)
 }
 
 // GetFilesRecursive returns all files in a directory
-func (e *EmbedTemplate) GetFilesRecursive(dir string) ([]string, error) {
-	path := filepath.Join(filepath.Dir(dir), dir)
-	fd, err := fs.ReadDir(path)
+func GetFilesRecursive(path string) ([]string, error) {
+	dir := filepath.Join(filepath.Dir(path), path)
+	fd, err := fs.ReadDir(dir)
 	if err != nil {
-		return []string{}, fmt.Errorf("ReadDir error: %v", err)
+		return []string{}, errors.Wrap(err, "ReadDir error")
 	}
 	files := []string{}
 	for _, f := range fd {
-		if !f.IsDir() {
-			files = append(files, filepath.Join(path, f.Name()))
+		if f.IsDir() {
+			subFiles, err := GetFilesRecursive(filepath.Join(dir, f.Name()))
+			if err != nil {
+				return []string{}, errors.Wrap(err, "GetFilesRecursive error")
+			}
+			files = append(files, subFiles...)
+		} else {
+			files = append(files, filepath.Join(dir, f.Name()))
 		}
 	}
 	return files, nil
 }
+
+// Implement the `Repo` interface "skywalking-swck/operator/pkg/kubernetes"
+type embedRepo struct{}
+
+func (*embedRepo) ReadFile(path string) ([]byte, error) {
+	return ReadFile(path)
+}
+
+func (*embedRepo) GetFilesRecursive(path string) ([]string, error) {
+	return GetFilesRecursive(path)
+}
+
+var Repo = &embedRepo{}

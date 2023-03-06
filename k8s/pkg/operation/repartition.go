@@ -19,23 +19,25 @@ package operation
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"strconv"
 	"strings"
 	"unicode"
 
-	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
-	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
-	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/pkg/errors"
+
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
+
+	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 )
 
 const (
@@ -48,6 +50,7 @@ const (
 // RepartitionOperation is the operation for the repartition
 type RepartitionOperation struct {
 	client.Client
+	*kubernetes.Clientset
 	ClientUtils
 	app  *swckkube.Application
 	done bool
@@ -80,11 +83,11 @@ func (ro *RepartitionOperation) CreateJob(ctx context.Context, o *v1alpha1.Opera
 	switch o.Spec.Type {
 	case "dask":
 		if err := ro.applyDaskRepartitionJob(ctx, o); err != nil {
-			return fmt.Errorf("failed to apply dask repartition job: %w", err)
+			return errors.Wrap(err, "failed to apply dask repartition job")
 		}
 		daskRepartitionDone, err := ro.checkDaskRepartitionJob(ctx, o)
 		if err != nil {
-			return fmt.Errorf("failed to check dask repartition job: %w", err)
+			return errors.Wrap(err, "failed to check dask repartition job")
 		}
 		ro.done = daskRepartitionDone
 	}
@@ -92,8 +95,12 @@ func (ro *RepartitionOperation) CreateJob(ctx context.Context, o *v1alpha1.Opera
 }
 
 // buildDaskRepartitionJob builds the dask repartition job
-func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, globalObject *v1alpha1.GlobalObject,
-	pod *corev1.Pod, o *v1alpha1.Operation) error {
+func (ro *RepartitionOperation) buildDaskRepartitionJob(
+	ctx context.Context,
+	globalObject *v1alpha1.GlobalObject,
+	pod *corev1.Pod,
+	o *v1alpha1.Operation,
+) error {
 	require := o.Spec.Require
 	podList := &corev1.PodList{}
 	podOpts := []client.ListOption{
@@ -105,12 +112,12 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 	// get all instance's hostname
 	instanceToNode := make(map[int]string)
 	if err := ro.Client.List(ctx, podList, podOpts...); err != nil {
-		return fmt.Errorf("failed to list pods: %w", err)
+		return errors.Wrap(err, "failed to list pods")
 	}
 
 	localObjectList := &v1alpha1.LocalObjectList{}
 	if err := ro.Client.List(ctx, localObjectList); err != nil {
-		return fmt.Errorf("failed to list local objects: %w", err)
+		return errors.Wrap(err, "failed to list local objects")
 	}
 
 	for _, lo := range localObjectList.Items {
@@ -133,13 +140,13 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 		client.MatchingLabels(selector),
 	}
 	if err := ro.Client.List(ctx, daskWorkPodList, daskWorkPodOpts...); err != nil {
-		return fmt.Errorf("failed to list dask workers: %w", err)
+		return errors.Wrap(err, "failed to list dask workers")
 	}
 
 	for i := range daskWorkPodList.Items {
 		workerName, err := ro.getWorkerNameFromPodLogs(&daskWorkPodList.Items[i])
 		if err != nil {
-			return fmt.Errorf("failed to get worker name from pod logs: %w", err)
+			return errors.Wrap(err, "failed to get worker name from pod logs")
 		}
 		daskHostnameToName[daskWorkPodList.Items[i].Spec.NodeName] = workerName
 	}
@@ -149,7 +156,9 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 	for instance, hostname := range instanceToNode {
 		workerName, ok := daskHostnameToName[hostname]
 		if ok {
-			instanceToWorker = instanceToWorker + `"` + strconv.Itoa(instance) + `"` + ":" + `"` + workerName + `"` + ","
+			instanceToWorker = instanceToWorker + `"` + strconv.Itoa(
+				instance,
+			) + `"` + ":" + `"` + workerName + `"` + ","
 		}
 	}
 	instanceToWorker = instanceToWorker[:len(instanceToWorker)-1] + `}'`
@@ -167,11 +176,11 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 	}
 
 	if err := ro.Client.List(ctx, targetPodList, targetPodOpts...); err != nil {
-		return fmt.Errorf("failed to list target pods: %w", err)
+		return errors.Wrap(err, "failed to list target pods")
 	}
 	replicas, ok := targetPodList.Items[0].Labels[labels.WorkloadReplicas]
 	if !ok {
-		return fmt.Errorf("failed to get replicas from target jobs")
+		return errors.New("failed to get replicas from target jobs")
 	}
 
 	vineyarddName := pod.Labels[labels.VineyarddName]
@@ -182,7 +191,7 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 		Name:      vineyarddName,
 		Namespace: vineyarddNamespace,
 	}, vineyardd); err != nil {
-		return fmt.Errorf("failed to get the vineyardd: %v", err)
+		return errors.Wrap(err, "failed to get the vineyardd")
 	}
 
 	DaskRepartitionConfigTemplate.Replicas = "'" + replicas + "'"
@@ -208,44 +217,55 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(ctx context.Context, glo
 }
 
 // findNeedDaskRepartitionPodByGlobalObject finds the pod which needs the dask repartition from global objects
-func (ro *RepartitionOperation) findNeedDaskRepartitionPodByGlobalObject(ctx context.Context, labels *map[string]string) (*corev1.Pod, error) {
+func (ro *RepartitionOperation) findNeedDaskRepartitionPodByGlobalObject(
+	ctx context.Context,
+	labels *map[string]string,
+) (*corev1.Pod, error) {
 	podName := (*labels)[PodNameLabelKey]
 	podNamespace := (*labels)[PodNameSpaceLabelKey]
 	if podName != "" && podNamespace != "" {
 		pod := &corev1.Pod{}
 		if err := ro.Client.Get(ctx, client.ObjectKey{Name: podName, Namespace: podNamespace}, pod); err != nil {
-			return nil, fmt.Errorf("failed to get the pod: %v", err)
+			return nil, errors.Wrap(err, "failed to get the pod")
 		}
 		if v, ok := pod.Labels[NeedInjecteRepartitionKey]; ok && strings.ToLower(v) == "true" {
 			return pod, nil
 		}
 	}
 	return nil, nil
-
 }
 
 // applyDaskRepartitionJob applies the dask repartition job
-func (ro *RepartitionOperation) applyDaskRepartitionJob(ctx context.Context, o *v1alpha1.Operation) error {
+func (ro *RepartitionOperation) applyDaskRepartitionJob(
+	ctx context.Context,
+	o *v1alpha1.Operation,
+) error {
 	globalObjectList := &v1alpha1.GlobalObjectList{}
 
 	if err := ro.Client.List(ctx, globalObjectList); err != nil {
-		return fmt.Errorf("failed to list global objects: %w", err)
+		return errors.Wrap(err, "failed to list global objects")
 	}
 
 	for i := range globalObjectList.Items {
-		pod, err := ro.findNeedDaskRepartitionPodByGlobalObject(ctx, &globalObjectList.Items[i].Labels)
+		pod, err := ro.findNeedDaskRepartitionPodByGlobalObject(
+			ctx,
+			&globalObjectList.Items[i].Labels,
+		)
 		if err != nil {
 			if apierrors.IsNotFound(err) {
 				continue
 			}
-			return fmt.Errorf("failed to find the pod which needs to be injected with the repartition job: %v", err)
+			return errors.Wrap(
+				err,
+				"failed to find the pod which needs to be injected with the repartition job",
+			)
 		}
 		if pod != nil {
 			if err := ro.buildDaskRepartitionJob(ctx, &globalObjectList.Items[i], pod, o); err != nil {
-				return fmt.Errorf("failed to build dask repartition job: %v", err)
+				return errors.Wrap(err, "failed to build dask repartition job")
 			}
 			if _, err := ro.app.Apply(ctx, "operation/dask-repartition.yaml", ctrl.Log, false); err != nil {
-				return fmt.Errorf("failed to apply the dask repartition job: %v", err)
+				return errors.Wrap(err, "failed to apply the dask repartition job")
 			}
 		}
 	}
@@ -254,7 +274,10 @@ func (ro *RepartitionOperation) applyDaskRepartitionJob(ctx context.Context, o *
 }
 
 // checkDaskRepartitionJob checks whether the dask repartition job is ready
-func (ro *RepartitionOperation) checkDaskRepartitionJob(ctx context.Context, o *v1alpha1.Operation) (bool, error) {
+func (ro *RepartitionOperation) checkDaskRepartitionJob(
+	ctx context.Context,
+	o *v1alpha1.Operation,
+) (bool, error) {
 	// get all required pod
 	require := o.Spec.Require
 	allRequiredPods := map[string]bool{}
@@ -266,7 +289,7 @@ func (ro *RepartitionOperation) checkDaskRepartitionJob(ctx context.Context, o *
 	}
 
 	if err := ro.Client.List(ctx, podList, podOpts...); err != nil {
-		return false, fmt.Errorf("failed to list pods: %w", err)
+		return false, errors.Wrap(err, "failed to list pods")
 	}
 	for i := range podList.Items {
 		allRequiredPods[podList.Items[i].Name] = true
@@ -275,7 +298,7 @@ func (ro *RepartitionOperation) checkDaskRepartitionJob(ctx context.Context, o *
 	// get all globalobjects and check if the repartition job is done
 	globalObjectList := &v1alpha1.GlobalObjectList{}
 	if err := ro.Client.List(ctx, globalObjectList); err != nil {
-		return false, fmt.Errorf("failed to list global objects: %w", err)
+		return false, errors.Wrap(err, "failed to list global objects")
 	}
 
 	targetGlobalObjects := map[string]bool{}
@@ -285,7 +308,7 @@ func (ro *RepartitionOperation) checkDaskRepartitionJob(ctx context.Context, o *
 		if allRequiredPods[createdPod] {
 			job := &batchv1.Job{}
 			if err := ro.Client.Get(ctx, client.ObjectKey{Name: RepartitionPrefix + globalObjectList.Items[i].Name, Namespace: o.Namespace}, job); err != nil {
-				return false, fmt.Errorf("failed to get the repartition job: %v", err)
+				return false, errors.Wrap(err, "failed to get the repartition job")
 			}
 			targetGlobalObjects[globalObjectList.Items[i].Spec.ObjectID] = true
 			// if the job failed, then the dask repartition job is failed
@@ -298,32 +321,24 @@ func (ro *RepartitionOperation) checkDaskRepartitionJob(ctx context.Context, o *
 	data := map[string]string{}
 	data["InstanceToWorker"] = strings.Trim(DaskRepartitionConfigTemplate.InstanceToWorker, "'")
 	if err := ro.UpdateConfigmap(ctx, targetGlobalObjects, o, RepartitionPrefix, &data); err != nil {
-		return false, fmt.Errorf("failed to update the configmap: %v", err)
+		return false, errors.Wrap(err, "failed to update the configmap")
 	}
 	return true, nil
 }
 
 // getWorkerNameFromPodLogs get worker name from pod's logs
 func (ro *RepartitionOperation) getWorkerNameFromPodLogs(pod *corev1.Pod) (string, error) {
-	config, err := rest.InClusterConfig()
-	if err != nil {
-		return "", fmt.Errorf("failed to get in cluster config: %v", err)
-	}
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", fmt.Errorf("failed to get clientset: %v", err)
-	}
-	req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
+	req := ro.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
 	logs, err := req.Stream(context.Background())
 	if err != nil {
-		return "", fmt.Errorf("failed to open stream: %v", err)
+		return "", errors.Wrap(err, "failed to open stream")
 	}
 	defer logs.Close()
 
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, logs)
 	if err != nil {
-		return "", fmt.Errorf("failed to copy logs: %v", err)
+		return "", errors.Wrap(err, "failed to copy logs")
 	}
 	log := buf.String()
 

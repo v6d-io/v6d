@@ -28,6 +28,7 @@ on:
   pull_request:
     branches:
       - main
+      - dev/kubernetes
     paths:
       - '.github/workflows/vineyard-operator.yaml'
       - 'k8s/**'
@@ -64,6 +65,7 @@ jobs:
           - e2e-tests-spill
           - e2e-tests-workflow
           - e2e-tests-mars-examples
+          - e2e-tests-vineyardctl
     steps:
       - uses: actions/checkout@v3
         with:
@@ -71,7 +73,7 @@ jobs:
 
       - uses: actions/setup-go@v3
         with:
-          go-version: '^1.19.0'
+          go-version: 1.19
 
       - name: Cache for golang
         uses: actions/cache@v3
@@ -124,7 +126,7 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      
+
       - name: Build docker image
         run: |
           make -C k8s docker-build
@@ -206,3 +208,8 @@ jobs:
         # if: ${{ matrix.job == 'e2e-tests-mars-examples' }}
         run: |
           make -C k8s/test/e2e e2e-tests-mars-examples
+
+      - name: e2e-tests-vineyardctl
+        if: ${{ matrix.job == 'e2e-tests-vineyardctl' }}
+        run: |
+          make -C k8s/test/e2e e2e-tests-vineyardctl

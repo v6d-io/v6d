@@ -20,23 +20,26 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"net/http"
 	"sort"
 	"strings"
 
-	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
-	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
-	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/pkg/errors"
+
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/v6d-io/v6d/k8s/pkg/injector"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 // nolint: lll
@@ -44,9 +47,8 @@ import (
 
 // Injector injects vineyard sidecar container into Pods
 type Injector struct {
-	Client   client.Client
-	decoder  *admission.Decoder
-	Template kubernetes.Repo
+	client.Client
+	decoder *admission.Decoder
 }
 
 // Handle handles admission requests.
@@ -72,7 +74,10 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 			}
 		}
 		if len(keys) == 0 {
-			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("the pod doesn't contain a pod selector"))
+			return admission.Errored(
+				http.StatusInternalServerError,
+				errors.Errorf("the pod doesn't contain a pod selector"),
+			)
 		}
 
 		sort.Strings(keys)
@@ -80,7 +85,11 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 		sidecar.Name = selectorname + "-default-sidecar"
 		sidecar.Namespace = pod.Namespace
 
-		err := r.Client.Get(ctx, types.NamespacedName{Name: sidecar.Name, Namespace: sidecar.Namespace}, sidecar)
+		err := r.Get(
+			ctx,
+			types.NamespacedName{Name: sidecar.Name, Namespace: sidecar.Namespace},
+			sidecar,
+		)
 		if err != nil && !apierrors.IsNotFound(err) {
 			logger.Info("Get sidecar cr failed", "error", err)
 			return admission.Errored(http.StatusInternalServerError, err)
@@ -91,20 +100,20 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 			// use default configurations
 			sidecar.Spec.Selector = keys[0] + "=" + l[keys[0]]
 
-			if err := r.Client.Create(ctx, sidecar); err != nil {
+			if err := r.Create(ctx, sidecar); err != nil {
 				logger.Error(err, "failed to create default sidecar cr")
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		} else {
 			// the default sidecar cr exists, update it
 			sidecar.Spec.Replicas++
-			if err := r.Client.Update(ctx, sidecar); err != nil {
+			if err := r.Update(ctx, sidecar); err != nil {
 				logger.Error(err, "failed to update default sidecar cr")
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		}
 
-		buf, err := r.Template.ReadFile("sidecar/injection-template.yaml")
+		buf, err := templates.ReadFile("sidecar/injection-template.yaml")
 		if err != nil {
 			logger.Error(err, "failed to read injection template")
 			return admission.Errored(http.StatusInternalServerError, err)
@@ -121,7 +130,7 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		}
-		r.ApplyToSidecar(sidecar, templatePod, pod)
+		r.ApplyToSidecar(sidecar, templatePod, pod, true)
 	}
 
 	marshaledPod, err := json.Marshal(pod)
@@ -135,40 +144,23 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 }
 
 // ApplyToSidecar applies the sidecar cr and pod to the sidecar
-func (r *Injector) ApplyToSidecar(sidecar *v1alpha1.Sidecar, pod *corev1.Pod, podWithSidecar *corev1.Pod) {
-	// add sleep to wait for the sidecar container to be ready
-	for i := range podWithSidecar.Spec.Containers {
-		command := podWithSidecar.Spec.Containers[i].Command
-		command[len(command)-1] = "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + command[len(command)-1]
-	}
+func (r *Injector) ApplyToSidecar(
+	sidecar *v1alpha1.Sidecar,
+	pod *corev1.Pod,
+	podWithSidecar *corev1.Pod,
+	addLabels bool,
+) {
+	injector.InjectSidecar(&podWithSidecar.Spec.Containers,
+		&podWithSidecar.Spec.Volumes, &pod.Spec.Containers,
+		&pod.Spec.Volumes, sidecar)
 
-	// add rpc labels to the podWithSidecar
-	labels := podWithSidecar.Labels
-	s := strings.Split(sidecar.Spec.Service.Selector, "=")
-	// add the rpc label selector to the podWithSidecar's labels
-	labels[s[0]] = s[1]
-
-	// add volumeMounts to the app container
-	if sidecar.Spec.Volume.PvcName == "" {
-		// add emptyDir volumeMount for every app container
-		for i := range podWithSidecar.Spec.Containers {
-			podWithSidecar.Spec.Containers[i].VolumeMounts = append(podWithSidecar.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
-				Name:      "vineyard-socket",
-				MountPath: "/var/run",
-			})
-		}
-	} else {
-		// add pvc volumeMount for every app container
-		for i := range podWithSidecar.Spec.Containers {
-			podWithSidecar.Spec.Containers[i].VolumeMounts = append(podWithSidecar.Spec.Containers[i].VolumeMounts, corev1.VolumeMount{
-				Name:      "vineyard-socket",
-				MountPath: sidecar.Spec.Volume.MountPath,
-			})
-		}
+	if addLabels {
+		// add rpc labels to the podWithSidecar
+		labels := podWithSidecar.Labels
+		s := strings.Split(sidecar.Spec.Service.Selector, "=")
+		// add the rpc label selector to the podWithSidecar's labels
+		labels[s[0]] = s[1]
 	}
-	// add the sidecar container
-	podWithSidecar.Spec.Containers = append(podWithSidecar.Spec.Containers, pod.Spec.Containers...)
-	podWithSidecar.Spec.Volumes = append(podWithSidecar.Spec.Volumes, pod.Spec.Volumes...)
 }
 
 // InjectDecoder injects the decoder.
