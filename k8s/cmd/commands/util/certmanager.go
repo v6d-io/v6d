@@ -43,5 +43,5 @@ func GetCertManagerManifests(certManagerManifestURL string) (Manifests, error) {
 	if err != nil {
 		return nil, err
 	}
-	return parseManifestsToObjects(manifests)
+	return ParseManifestsToObjects(manifests)
 }

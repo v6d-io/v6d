@@ -18,20 +18,11 @@ package flags
 import "github.com/spf13/cobra"
 
 var (
-	// Resource is the json string of kubernetes workload
-	Resource string
-
-	// the namespace of vineyard cluster
-	VineyarddNamespace string
+	// WorkflowFile is the path of workflow file
+	WorkflowFile string
 )
 
-func ApplySchedulerOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&Resource, "resource", "", "",
-		"the json string of kubernetes workload")
-	cmd.Flags().
-		StringVarP(&VineyarddName, "vineyardd-name", "", "vineyardd-sample",
-			"the namespace of vineyard cluster")
-	cmd.Flags().
-		StringVarP(&VineyarddNamespace, "vineyardd-namespace", "", "vineyard-system",
-			"the namespace of vineyard cluster")
+func ApplySchedulerWorkflowOpts(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&WorkflowFile, "file", "f", "",
+		"the path of workflow file")
 }
