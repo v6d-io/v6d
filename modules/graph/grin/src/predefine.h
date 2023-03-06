@@ -98,7 +98,8 @@ typedef GRIN_GRAPH_T::oid_t VERTEX_ORIGINAL_ID_T;
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
-typedef std::vector<GRIN_GRAPH_T::vertices_t> GRIN_VERTEX_LIST_T;                 
+typedef std::pair<unsigned, GRIN_GRAPH_T::vertices_t> _GRIN_TYPED_VERTICES_T;
+typedef std::vector<_GRIN_TYPED_VERTICES_T> GRIN_VERTEX_LIST_T;                 
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
@@ -126,7 +127,6 @@ typedef std::vector<unsigned> GRIN_VERTEX_TYPE_LIST_T;
 typedef std::pair<unsigned, unsigned> GRIN_VERTEX_PROPERTY_T;
 typedef std::vector<GRIN_VERTEX_PROPERTY_T> GRIN_VERTEX_PROPERTY_LIST_T;
 struct GRIN_VERTEX_PROPERTY_TABLE_T {
-    GRIN_GRAPH_T* g;
     unsigned vtype;
     GRIN_GRAPH_T::vertices_t vertices;
 };
@@ -138,7 +138,6 @@ typedef std::vector<unsigned> GRIN_EDGE_TYPE_LIST_T;
 typedef std::pair<unsigned, unsigned> GRIN_EDGE_PROPERTY_T;
 typedef std::vector<GRIN_EDGE_PROPERTY_T> GRIN_EDGE_PROPERTY_LIST_T;
 struct GRIN_EDGE_PROPERTY_TABLE_T {
-    GRIN_GRAPH_T* g;
     unsigned etype;
     unsigned num;
 };

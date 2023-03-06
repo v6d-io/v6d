@@ -108,7 +108,7 @@ GRIN_VERTEX_LIST grin_get_master_vertices(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vl = new GRIN_VERTEX_LIST_T();
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
-        _vl->push_back(_g->InnerVertices(vtype));
+        _vl->push_back(_GRIN_TYPED_VERTICES_T(vtype, _g->InnerVertices(vtype)));
     }
     return _vl;    
 }
@@ -117,7 +117,7 @@ GRIN_VERTEX_LIST grin_get_mirror_vertices(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vl = new GRIN_VERTEX_LIST_T();
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
-        _vl->push_back(_g->OuterVertices(vtype));
+        _vl->push_back(_GRIN_TYPED_VERTICES_T(vtype, _g->OuterVertices(vtype)));
     }
     return _vl;
 }
@@ -131,7 +131,7 @@ GRIN_VERTEX_LIST grin_get_master_vertices_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto _vl = new GRIN_VERTEX_LIST_T();
-    _vl->push_back(_g->InnerVertices(*_vtype));
+    _vl->push_back(_GRIN_TYPED_VERTICES_T(*_vtype, _g->InnerVertices(*_vtype)));
     return _vl;
 }
 
@@ -139,7 +139,7 @@ GRIN_VERTEX_LIST grin_get_mirror_vertices_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto _vl = new GRIN_VERTEX_LIST_T();
-    _vl->push_back(_g->OuterVertices(*_vtype));
+    _vl->push_back(_GRIN_TYPED_VERTICES_T(*_vtype, _g->OuterVertices(*_vtype)));
     return _vl;
 }
 

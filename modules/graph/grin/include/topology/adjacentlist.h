@@ -32,6 +32,7 @@ size_t grin_get_adjacent_list_size(GRIN_GRAPH, GRIN_ADJACENT_LIST);
 GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH, GRIN_ADJACENT_LIST, size_t);
 
 GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH, GRIN_ADJACENT_LIST, size_t);
+#endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 GRIN_ADJACENT_LIST_ITERATOR grin_get_adjacent_list_begin(GRIN_GRAPH);
@@ -40,11 +41,9 @@ GRIN_ADJACENT_LIST_ITERATOR grin_get_next_adjacent_list_iter(GRIN_GRAPH, GRIN_AD
 
 bool grin_is_adjacent_list_end(GRIN_GRAPH, GRIN_ADJACENT_LIST_ITERATOR);
 
-Vertex grin_get_neighbor_from_iter(GRIN_GRAPH, GRIN_ADJACENT_LIST_ITERATOR);
+GRIN_VERTEX grin_get_neighbor_from_iter(GRIN_GRAPH, GRIN_ADJACENT_LIST_ITERATOR);
 
 GRIN_EDGE grin_get_edge_from_iter(GRIN_GRAPH, GRIN_ADJACENT_LIST_ITERATOR);
-#endif
-
 #endif
 
 #endif  // GRIN_INCLUDE_TOPOLOGY_ADJACENTLIST_H_

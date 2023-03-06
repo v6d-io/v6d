@@ -40,9 +40,9 @@ size_t grin_get_edge_num_by_type(GRIN_GRAPH, GRIN_DIRECTION, GRIN_EDGE_TYPE);
 void grin_destroy_vertex(GRIN_GRAPH, GRIN_VERTEX);
 
 #ifdef GRIN_WITH_VERTEX_DATA
-GRIN_DATATYPE grin_get_vertex_data_type(GRIN_GRAPH, Vertex);
+GRIN_DATATYPE grin_get_vertex_data_type(GRIN_GRAPH, GRIN_VERTEX);
 
-GRIN_VERTEX_DATA grin_get_vertex_data_value(GRIN_GRAPH, Vertex);
+GRIN_VERTEX_DATA grin_get_vertex_data_value(GRIN_GRAPH, GRIN_VERTEX);
 
 void grin_destroy_vertex_data(GRIN_GRAPH, GRIN_VERTEX_DATA);
 #endif

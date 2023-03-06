@@ -155,14 +155,14 @@ bool grin_is_vertex_neighbor_local_complete(GRIN_GRAPH, GRIN_VERTEX);
  * @brief get the partitions whose combination can provide the complete
  * neighbors of a vertex.
  * @param GRIN_GRAPH the graph
- * @param Vertex the vertex
+ * @param GRIN_VERTEX the vertex
  */
 GRIN_PARTITION_LIST grin_vertex_neighbor_complete_partitions(GRIN_GRAPH, GRIN_VERTEX);
 
 #ifdef GRIN_WITH_VERTEX_DATA
-bool grin_is_vertex_data_local_complete(GRIN_GRAPH, Vertex);
+bool grin_is_vertex_data_local_complete(GRIN_GRAPH, GRIN_VERTEX);
 
-GRIN_PARTITION_LIST grin_vertex_data_complete_partitions(GRIN_GRAPH, Vertex);
+GRIN_PARTITION_LIST grin_vertex_data_complete_partitions(GRIN_GRAPH, GRIN_VERTEX);
 #endif
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY

@@ -39,7 +39,7 @@ GRIN_LABEL grin_get_label_from_list(GRIN_GRAPH, GRIN_LABEL_LIST, size_t);
  * @brief assign a label to a vertex
  * @param GRIN_GRAPH the graph
  * @param GRIN_LABEL the label
- * @param Vertex the vertex
+ * @param GRIN_VERTEX the vertex
  * @return whether succeed
 */
 bool grin_assign_label_to_vertex(GRIN_GRAPH, GRIN_LABEL, GRIN_VERTEX);
@@ -47,7 +47,7 @@ bool grin_assign_label_to_vertex(GRIN_GRAPH, GRIN_LABEL, GRIN_VERTEX);
 /** 
  * @brief get the label list of a vertex
  * @param GRIN_GRAPH the graph
- * @param Vertex the vertex
+ * @param GRIN_VERTEX the vertex
 */
 GRIN_LABEL_LIST grin_get_vertex_label_list(GRIN_GRAPH, GRIN_VERTEX);
 

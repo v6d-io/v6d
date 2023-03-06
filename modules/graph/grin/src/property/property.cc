@@ -11,6 +11,7 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
+#include "graph/grin/include/property/property.h"
 
 #if defined(GRIN_WITH_PROPERTY_NAME) && defined(GRIN_WITH_VERTEX_PROPERTY)
 const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
@@ -76,13 +77,13 @@ GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const cha
 
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
-bool grin_equal_vertex_property(GRIN_VERTEX_PROPERTY vp1, GRIN_VERTEX_PROPERTY vp2) {
+bool grin_equal_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp1, GRIN_VERTEX_PROPERTY vp2) {
     auto _vp1 = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp1);
     auto _vp2 = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp2);
     return (*_vp1 == *_vp2);
 }
 
-void grin_destroy_vertex_property(GRIN_VERTEX_PROPERTY vp) {
+void grin_destroy_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
     auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     delete _vp;
 }
@@ -94,7 +95,7 @@ GRIN_DATATYPE grin_get_vertex_property_data_type(GRIN_GRAPH g, GRIN_VERTEX_PROPE
     return ArrowToDataType(dt);
 }
 
-GRIN_VERTEX_TYPE grin_get_vertex_property_vertex_type(GRIN_VERTEX_PROPERTY vp) {
+GRIN_VERTEX_TYPE grin_get_vertex_property_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
     auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto vt = new GRIN_VERTEX_TYPE_T(_vp->first);
     return vt;
@@ -103,13 +104,13 @@ GRIN_VERTEX_TYPE grin_get_vertex_property_vertex_type(GRIN_VERTEX_PROPERTY vp) {
 
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
-bool grin_equal_edge_property(GRIN_EDGE_PROPERTY ep1, GRIN_EDGE_PROPERTY ep2) {
+bool grin_equal_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep1, GRIN_EDGE_PROPERTY ep2) {
     auto _ep1 = static_cast<GRIN_EDGE_PROPERTY_T*>(ep1);
     auto _ep2 = static_cast<GRIN_EDGE_PROPERTY_T*>(ep2);
     return (*_ep1 == *_ep2);
 }
 
-void grin_destroy_edge_property(GRIN_EDGE_PROPERTY ep) {
+void grin_destroy_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
     auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     delete _ep;
 }
@@ -121,7 +122,7 @@ GRIN_DATATYPE grin_get_edge_property_data_type(GRIN_GRAPH g, GRIN_EDGE_PROPERTY 
     return ArrowToDataType(dt);
 }
 
-GRIN_EDGE_TYPE grin_get_edge_property_edge_type(GRIN_EDGE_PROPERTY ep) {
+GRIN_EDGE_TYPE grin_get_edge_property_edge_type(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
     auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto et = new GRIN_EDGE_TYPE_T(_ep->first);
     return et;

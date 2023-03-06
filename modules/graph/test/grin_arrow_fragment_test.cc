@@ -36,18 +36,18 @@ void TraverseLocalGraph(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION
   auto g = gaf.get_graph();
 
   auto elabels = grin_get_edge_type_list(g);
-  auto e_label_num = grin_get_edge_type_list_size(elabels);
+  auto e_label_num = grin_get_edge_type_list_size(g, elabels);
   auto vlabels = grin_get_vertex_type_list(g);
-  auto v_label_num = grin_get_vertex_type_list_size(vlabels);
+  auto v_label_num = grin_get_vertex_type_list_size(g, vlabels);
 
   for (auto i = 0; i < e_label_num; ++i) {
-    auto elabel = grin_get_edge_type_from_list(elabels, i);
+    auto elabel = grin_get_edge_type_from_list(g, elabels, i);
     auto props = grin_get_edge_property_list_by_type(g, elabel);
-    auto prop = grin_get_edge_property_from_list(props, 0);
+    auto prop = grin_get_edge_property_from_list(g, props, 0);
     auto prop_dt = grin_get_edge_property_data_type(g, prop);
     auto dt_name = GetDataTypeName(prop_dt);
     for (auto j = 0; j < v_label_num; ++j) {
-      auto vlabel = grin_get_vertex_type_from_list(vlabels, j);
+      auto vlabel = grin_get_vertex_type_from_list(g, vlabels, j);
       auto iv = gaf.InnerVertices(vlabel);
       for (auto v: iv) {
         auto al = gaf.GetOutgoingAdjList(v, elabel);

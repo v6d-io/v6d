@@ -125,25 +125,25 @@ struct GRIN_Nbr {
   template <typename T>
   T get_data(GRIN_EDGE_PROPERTY prop) const {
     auto _e = grin_get_edge_from_adjacent_list(g_, al_, cur_);
-    auto value = grin_get_value_from_edge_property_table(ept_, _e, prop);
+    auto value = grin_get_value_from_edge_property_table(g_, ept_, _e, prop);
     return property_graph_utils::ValueGetter<T>::Value(value, 0);
   }
 
   std::string get_str(GRIN_EDGE_PROPERTY prop) const {
     auto _e = grin_get_edge_from_adjacent_list(g_, al_, cur_);
-    auto value = grin_get_value_from_edge_property_table(ept_, _e, prop);
+    auto value = grin_get_value_from_edge_property_table(g_, ept_, _e, prop);
     return property_graph_utils::ValueGetter<std::string>::Value(value, 0);
   }
 
   double get_double(GRIN_EDGE_PROPERTY prop) const {
     auto _e = grin_get_edge_from_adjacent_list(g_, al_, cur_);
-    auto value = grin_get_value_from_edge_property_table(ept_, _e, prop);
+    auto value = grin_get_value_from_edge_property_table(g_, ept_, _e, prop);
     return property_graph_utils::ValueGetter<double>::Value(value, 0);
   }
 
   int64_t get_int(GRIN_EDGE_PROPERTY prop) const {
     auto _e = grin_get_edge_from_adjacent_list(g_, al_, cur_);
-    auto value = grin_get_value_from_edge_property_table(ept_, _e, prop);
+    auto value = grin_get_value_from_edge_property_table(g_, ept_, _e, prop);
     return property_graph_utils::ValueGetter<int64_t>::Value(value, 0);
   }
 
@@ -338,17 +338,17 @@ class GRIN_ArrowFragment {
 
   size_t vertex_label_num() const { 
     auto vtl = grin_get_vertex_type_list(g_);
-    return grin_get_vertex_type_list_size(vtl);
+    return grin_get_vertex_type_list_size(g_, vtl);
   }
 
   size_t edge_label_num() const { 
     auto etl = grin_get_edge_type_list(g_);
-    return grin_get_edge_type_list_size(etl);
+    return grin_get_edge_type_list_size(g_, etl);
   }
 
   size_t vertex_property_num(GRIN_VERTEX_TYPE label) const {
     auto vpl = grin_get_vertex_property_list_by_type(g_, label);
-    return grin_get_vertex_property_list_size(vpl);
+    return grin_get_vertex_property_list_size(g_, vpl);
   }
 
   std::shared_ptr<arrow::DataType> vertex_property_type(GRIN_VERTEX_PROPERTY prop) const {
@@ -358,7 +358,7 @@ class GRIN_ArrowFragment {
   
   size_t edge_property_num(GRIN_EDGE_TYPE label) const {
     auto epl = grin_get_edge_property_list_by_type(g_, label);
-    return grin_get_edge_property_list_size(epl);
+    return grin_get_edge_property_list_size(g_, epl);
   }
 
   std::shared_ptr<arrow::DataType> edge_property_type(GRIN_EDGE_PROPERTY prop) const {
@@ -447,7 +447,7 @@ class GRIN_ArrowFragment {
     if (GRIN_DATATYPE_ENUM<T>::value != grin_get_vertex_property_data_type(g_, prop)) return false;
     auto vtype = grin_get_vertex_type(g_, v);
     auto vpt = grin_get_vertex_property_table_by_type(g_, vtype);
-    auto _value = grin_get_value_from_vertex_property_table(vpt, v, prop);
+    auto _value = grin_get_value_from_vertex_property_table(g_, vpt, v, prop);
     if (_value != NULL) {
       value = *(static_cast<T*>(_value));
       return true;
@@ -458,7 +458,7 @@ class GRIN_ArrowFragment {
   template <typename T>
   bool GetData(GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY prop, T& value) const {
     if (GRIN_DATATYPE_ENUM<T>::value != grin_get_vertex_property_data_type(g_, prop)) return false;
-    auto _value = grin_get_value_from_vertex_property_table(vpt, v, prop);
+    auto _value = grin_get_value_from_vertex_property_table(g_, vpt, v, prop);
     if (_value != NULL) {
       value = *(static_cast<T*>(_value));
       return true;
