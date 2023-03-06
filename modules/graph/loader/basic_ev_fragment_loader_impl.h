@@ -103,6 +103,10 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
   ordered_vertex_tables_.resize(vertex_label_num_, nullptr);
 
   for (auto& pair : input_vertex_tables_) {
+    VLOG(100) << "[worker-" << comm_spec_.worker_id()
+              << "] un-shuffled vertex table size for label "
+              << vertex_label_to_index_[pair.first] << ": "
+              << pair.second->num_rows();
     ordered_vertex_tables_[vertex_label_to_index_[pair.first]] =
         std::make_shared<TablePipeline>(pair.second);
   }
@@ -197,6 +201,10 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
 
   for (auto& pair : input_edge_tables_) {
     for (auto const& item : pair.second) {
+      VLOG(100) << "[worker-" << comm_spec_.worker_id()
+                << "] un-shuffled edge table size for label "
+                << edge_label_to_index_[pair.first] << ": "
+                << item.second->num_rows();
       ordered_edge_tables_[edge_label_to_index_[pair.first]].push_back(
           std::make_pair(item.first,
                          std::make_shared<TablePipeline>(item.second)));
@@ -598,6 +606,9 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
         [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
       BOOST_LEAF_AUTO(table, ShufflePropertyVertexTable<partitioner_t>(
                                  comm_spec_, partitioner_, vertex_table));
+      VLOG(100) << "[worker-" << comm_spec_.worker_id()
+                << "] shuffled vertex table size for label " << v_label << ": "
+                << table->num_rows();
 
       std::vector<std::shared_ptr<arrow::ChunkedArray>> shuffled_oid_array;
       auto local_oid_array = table->column(id_column);
@@ -692,6 +703,9 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
         [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
       BOOST_LEAF_AUTO(table, ShufflePropertyVertexTable<partitioner_t>(
                                  comm_spec_, partitioner_, vertex_table));
+      VLOG(100) << "[worker-" << comm_spec_.worker_id()
+                << "] shuffled vertex table size for label " << v_label << ": "
+                << table->num_rows();
 
       local_oid_array[v_label] = table->column(id_column);
 
@@ -755,6 +769,9 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
       BOOST_LEAF_AUTO(
           table_out, ShufflePropertyEdgeTable<vid_t>(
                          comm_spec_, id_parser, src_column, dst_column, table));
+      VLOG(100) << "[worker-" << comm_spec_.worker_id()
+                << "] shuffled edge table size for label " << e_label << ": "
+                << table_out->num_rows();
       return table_out;
     };
     BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, shuffle_procedure));
@@ -797,6 +814,9 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
             table_out,
             ShufflePropertyEdgeTableByPartition<partitioner_t>(
                 comm_spec_, partitioner_, src_column, dst_column, item.second));
+        VLOG(100) << "[worker-" << comm_spec_.worker_id()
+                  << "] shuffled edge table size for label " << e_label << ": "
+                  << table_out->num_rows();
         return table_out;
       };
       BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, shuffle_procedure));
