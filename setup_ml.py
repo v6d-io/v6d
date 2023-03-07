@@ -86,7 +86,7 @@ setup(
     cmdclass={'bdist_wheel': bdist_wheel_plat, 'install': install_plat},
     zip_safe=False,
     install_requires=['vineyard'],
-    platform=['POSIX', 'MacOS'],
+    platforms=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[
         "Development Status :: 5 - Production/Stable",

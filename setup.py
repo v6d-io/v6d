@@ -20,7 +20,6 @@ import os
 import subprocess
 import sys
 import textwrap
-import warnings
 from distutils.cmd import Command
 from distutils.util import strtobool
 from typing import List
@@ -186,14 +185,6 @@ def package_data():
         '**/*.yaml.tpl',
         '**/**/*.sh',
     ]
-    if os.path.exists(os.path.join(repo_root, 'python', 'vineyard', 'vineyardd')):
-        artifacts.append('vineyardd')
-    else:
-        warnings.warn('The artifact for `vineyardd` not found')
-    if os.path.exists(os.path.join(repo_root, 'python', 'vineyard', 'vineyardctl')):
-        artifacts.append('vineyardctl')
-    else:
-        warnings.warn('The artifact for `vineyardctl` not found')
     return artifacts
 
 
@@ -249,12 +240,12 @@ setup(
         'console_scripts': ['vineyard-codegen=vineyard.core.codegen:main'],
     },
     setup_requires=load_requirements_txt("-setup"),
-    install_requires=load_requirements_txt(),
+    install_requires=load_requirements_txt() + ['vineyard-bdist'],
     extras_require={
         'dev': load_requirements_txt("-dev"),
         'kubernetes': load_requirements_txt("-kubernetes"),
     },
-    platform=["POSIX", "MacOS"],
+    platforms=["POSIX", "MacOS"],
     license="Apache License 2.0",
     classifiers=[
         "Development Status :: 5 - Production/Stable",

@@ -83,7 +83,7 @@ setup(
         'apache-airflow',
         'vineyard',
     ],
-    platform=['POSIX', 'MacOS'],
+    platforms=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[
         "Development Status :: 5 - Production/Stable",

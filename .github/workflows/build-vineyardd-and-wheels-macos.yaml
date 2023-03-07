@@ -285,8 +285,8 @@ jobs:
           tar zxvf vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
           tar zxvf vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
 
-          mv vineyardd python/vineyard/vineyardd
-          mv vineyardctl python/vineyard/vineyardctl
+          mv vineyardd python/vineyard/bdist/vineyardd
+          mv vineyardctl python/vineyard/bdist/vineyardctl
 
       - name: Install python for MacOS
         if: runner.os == 'macOS'
@@ -420,7 +420,15 @@ jobs:
                    -DPYTHON_EXECUTABLE=`which python`
           make vineyard_client_python -j`nproc`
           cd ..
+
+          rm -rf build/lib* build/bdist.*
           python setup.py bdist_wheel
+
+          if [[ "${{ matrix.python }}" == "3.11" ]]; then
+            rm -rf build/lib* build/bdist.*
+            python setup_bdist.py bdist_wheel
+          fi
+
           export LD_LIBRARY_PATH=`pwd`/build/lib:$LD_LIBRARY_PATH
           for wheel in `ls dist/*`; do delocate-wheel -w fixed_wheels -v $wheel; done
           ls -la ./fixed_wheels

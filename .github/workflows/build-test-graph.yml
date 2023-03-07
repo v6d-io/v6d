@@ -17,12 +17,12 @@ name: Vineyard Graph CI
 on:
   push:
     paths:
-      modules/graph
+      - modules/graph
   pull_request:
     branches:
       - "*"
     paths:
-      modules/graph
+      - modules/graph
 
 concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
@@ -227,8 +227,8 @@ jobs:
 
       - name: Get test data
         run: |
-          git clone https://github.com/7br/gstest.git --depth=1
-          git clone https://github.com/7br/gar-test.git --depth=1
+          git clone https://github.com/GraphScope/gstest.git --depth=1
+          git clone https://github.com/GraphScope/gar-test.git --depth=1
 
       - name: Setup tmate session
         if: false
