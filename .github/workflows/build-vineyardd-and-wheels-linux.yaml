@@ -211,7 +211,7 @@ jobs:
           if [[ "${{ matrix.python }}" == "cp311-cp311" ]];
           then
             python3 setup_bdist.py bdist_wheel
-            cp dist/*.whl fixed_wheels/ || true
+            sudo cp dist/*.whl fixed_wheels/ || true
           fi
 
       - name: Extract tag name
