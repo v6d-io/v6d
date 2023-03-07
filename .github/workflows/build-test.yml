@@ -302,7 +302,7 @@ jobs:
           rm -rf build/lib* build/bdist.*
           python3 setup.py bdist_wheel
 
-          for pkg in airflow dask io ml; do
+          for pkg in airflow bdist dask io ml; do
             rm -rf build/lib* build/bdist.*
             python3 setup_${pkg}.py bdist_wheel
           done
@@ -313,7 +313,7 @@ jobs:
 
       - name: Get test data
         run: |
-          git clone https://github.com/7br/gstest.git --depth=1
+          git clone https://github.com/GraphScope/gstest.git --depth=1
 
       - name: Setup tmate session
         if: false

@@ -18,11 +18,13 @@
 
 import os
 import textwrap
+import warnings
 
-from setuptools import find_packages
 from setuptools import setup
 from setuptools.command.install import install
 from wheel.bdist_wheel import bdist_wheel
+
+repo_root = os.path.dirname(os.path.abspath(__file__))
 
 
 class bdist_wheel_plat(bdist_wheel):
@@ -31,10 +33,9 @@ class bdist_wheel_plat(bdist_wheel):
         self.root_is_pure = False
 
     def get_tag(self):
-        self.root_is_pure = True
-        tag = bdist_wheel.get_tag(self)
         self.root_is_pure = False
-        return tag
+        _, _, plat = bdist_wheel.get_tag(self)
+        return ('py3', 'none', plat)
 
 
 class install_plat(install):
@@ -43,16 +44,21 @@ class install_plat(install):
         install.finalize_options(self)
 
 
-def find_ray_packages(root):
-    pkgs = []
-    for pkg in find_packages(root):
-        if 'contrib.ray' in pkg:
-            pkgs.append(pkg)
-    return pkgs
+def package_data():
+    artifacts = []
+    if os.path.exists(os.path.join(repo_root, 'python', 'vineyard', 'bdist', 'vineyardd')):
+        artifacts.append('vineyardd')
+    else:
+        warnings.warn('The artifact for `vineyardd` not found')
+    if os.path.exists(os.path.join(repo_root, 'python', 'vineyard', 'bdist', 'vineyardctl')):
+        artifacts.append('vineyardctl')
+    else:
+        warnings.warn('The artifact for `vineyardctl` not found')
+    return artifacts
 
 
 with open(
-    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'),
+    os.path.join(repo_root, 'README.rst'),
     encoding='utf-8',
     mode='r',
 ) as fp:
@@ -60,7 +66,7 @@ with open(
 
     # Github doesn't respect "align: center", and pypi disables `.. raw`.
     replacement = textwrap.dedent(
-        '''
+        """
         .. image:: https://v6d.io/_static/vineyard_logo.png
            :target: https://v6d.io
            :align: center
@@ -69,24 +75,26 @@ with open(
 
         vineyard: an in-memory immutable data manager
         ---------------------------------------------
-        '''
+        """
     )
     long_description = replacement + '\n'.join(long_description.split('\n')[8:])
 
 setup(
-    name='vineyard-ray',
+    name='vineyard-bdist',
     author='The vineyard team',
     author_email='developers@v6d.io',
-    description='Vineyard integration with Ray',
+    description='An in-memory immutable data manager',
     long_description=long_description,
     long_description_content_type='text/x-rst',
     url='https://v6d.io',
-    package_dir={'vineyard.contrib.ray': 'python/vineyard/contrib/ray'},
-    packages=find_ray_packages('python'),
-    cmdclass={'bdist_wheel': bdist_wheel_plat, "install": install_plat},
+    package_dir={'vineyard.bdist': 'python/vineyard/bdist'},
+    packages=['vineyard.bdist'],
+    package_data={
+        'vineyard.bdist': package_data(),
+    },
+    cmdclass={'bdist_wheel': bdist_wheel_plat, 'install': install_plat},
     zip_safe=False,
-    install_requires=['vineyard', 'ray[default]'],
-    platforms=['POSIX', 'MacOS'],
+    platforms=["POSIX", "MacOS"],
     license="Apache License 2.0",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
@@ -103,10 +111,12 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
     project_urls={
-        'Documentation': 'https://v6d.io',
-        'Source': 'https://github.com/v6d-io/v6d',
-        'Tracker': 'https://github.com/v6d-io/v6d/issues',
+        "Documentation": "https://v6d.io",
+        "Source": "https://github.com/v6d-io/v6d",
+        "Tracker": "https://github.com/v6d-io/v6d/issues",
     },
 )

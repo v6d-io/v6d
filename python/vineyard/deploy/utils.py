@@ -176,6 +176,11 @@ def find_vineyardd_path():
     if vineyardd_path is None:
         vineyardd_path = _check_executable(os.path.join(current_dir, '..', 'vineyardd'))
 
+    if vineyardd_path is None:
+        vineyardd_path = _check_executable(
+            os.path.join(current_dir, '..', 'bdist', 'vineyardd')
+        )
+
     __vineyardd_path = vineyardd_path
     return vineyardd_path
 
@@ -207,6 +212,11 @@ def find_vineyardctl_path():
     if vineyardctl_path is None:
         vineyardctl_path = _check_executable(
             os.path.join(current_dir, '..', 'vineyardctl')
+        )
+
+    if vineyardctl_path is None:
+        vineyardctl_path = _check_executable(
+            os.path.join(current_dir, '..', 'bdist', 'vineyardctl')
         )
 
     __vineyardctl_path = vineyardctl_path
