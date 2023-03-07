@@ -94,6 +94,14 @@ func (l Logger) Fatalf(err error, format string, v ...any) {
 	l.Fatal(err, fmt.Sprintf(format, v...))
 }
 
+func (l Logger) Output(msg string) {
+	fmt.Println(msg)
+}
+
+func (l Logger) Outputf(format string, v ...any) {
+	fmt.Printf(format, v...)
+}
+
 func Info(msg string, keysAndValues ...any) {
 	Log.Info(msg, keysAndValues...)
 }
@@ -116,4 +124,12 @@ func Errorf(err error, format string, v ...any) {
 
 func Fatalf(err error, format string, v ...any) {
 	Log.Fatalf(err, format, v...)
+}
+
+func Output(msg string) {
+	Log.Output(msg)
+}
+
+func Outputf(msg string, keysAndValues ...any) {
+	Log.Outputf(msg, keysAndValues...)
 }

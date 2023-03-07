@@ -64,8 +64,8 @@ vineyardctl: generate fmt
 
 # Copy the artifacts into the python directory for bdist_wheel.
 bdist_wheel:
-	@cp vineyardctl ../python/vineyard/vineyardctl
-	@strip vineyardctl
+	@cp vineyardctl ../python/vineyard/bdist/vineyardctl
+	@strip ../python/vineyard/bdist/vineyardctl
 
 # Run vineyardctl binary
 run: generate fmt
