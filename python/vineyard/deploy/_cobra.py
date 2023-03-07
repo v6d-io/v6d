@@ -16,15 +16,14 @@
 # limitations under the License.
 #
 
-try:
-    import ujson as json
-except ImportError:
-    import json
-
+import json
+import logging
 import subprocess
 import textwrap
 
 from makefun import with_signature
+
+logger = logging.getLogger('vineyard')
 
 
 def infer_name(name):
@@ -40,34 +39,35 @@ def infer_name(name):
 
 
 def infer_argument(flag):
-    arg, defaults = infer_name(flag["Name"]), flag['Default']
-    if defaults:
+    arg, default_value = infer_name(flag["Name"]), flag['Default']
+    if default_value:
         # see: pflag's `Flag::Type()` methods.
         if flag["Type"] != "string":
-            defaults = json.loads(defaults)
-    return arg, repr(defaults)
+            default_value = json.loads(default_value)
+    return arg, default_value, repr(default_value)
 
 
 def infer_signature(name, usage, exclude_args):
-    kwargs, arguments, argument_docs = [], {}, []
+    kwargs, arguments, defaults, argument_docs = [], {}, {}, []
     for flag in usage["GlobalFlags"] + usage["Flags"]:
-        argument_name, defaults = infer_argument(flag)
+        argument_name, default_value, default_value_rep = infer_argument(flag)
         if exclude_args and (
             argument_name in exclude_args or flag["Name"] in exclude_args
         ):
             continue
         arguments[argument_name] = flag['Name']
-        kwargs.append(argument_name + "=" + defaults)
+        kwargs.append(argument_name + "=" + default_value_rep)
+        defaults[argument_name] = default_value
 
         argument_docs.append(argument_name + ":")
         argument_help = flag["Help"]
         if argument_help:
             if argument_help[-1] != ".":
                 argument_help += "."
-        if defaults:
-            argument_help += " Defaults to " + defaults + "."
+        if default_value_rep:
+            argument_help += " Defaults to " + default_value_rep + "."
         argument_docs.append(textwrap.indent(argument_help, "    "))
-    return name + "(" + ", ".join(kwargs) + ")", arguments, argument_docs
+    return name + "(" + ", ".join(kwargs) + ")", arguments, defaults, argument_docs
 
 
 def infer_docstring(name, usage, argument_docs):
@@ -99,24 +99,26 @@ def infer_docstring(name, usage, argument_docs):
 
 def make_command(executable, usage, exclude_args, scope=None):
     name = infer_name(usage["Name"])
-    signature, arguments, argument_docs = infer_signature(name, usage, exclude_args)
+    signature, arguments, defaults, argument_docs = infer_signature(
+        name, usage, exclude_args
+    )
     doc = infer_docstring(name, usage, argument_docs)
 
     @with_signature(signature, func_name=name, doc=doc)
     def cmd(*args, **kwargs):
         if usage["Runnable"]:
             command_and_args = [executable]
-            if scope is None:  # noqa: F823
-                scope = [usage["Name"]]
-            else:
-                scope.append(usage["Name"])
             command_and_args.extend(scope)
             # FIXME: how to proceed with non-parameter arguments?
             # for arg in args:
             #     command_and_args.append("--" + arg)
             for key, value in kwargs.items():
+                # get(key, default...) won't work, as we cannot diff not exists and None
+                if key in defaults and value == defaults[key]:
+                    continue
                 command_and_args.append("--" + arguments.get(key, key))
                 command_and_args.append(json.dumps(value))
+            logger.debug('Executing: %s', ' '.join(command_and_args))
             return subprocess.check_call(
                 command_and_args,
                 universal_newlines=True,
@@ -127,8 +129,13 @@ def make_command(executable, usage, exclude_args, scope=None):
             )
 
     # generate subcommands
+    if scope is None:
+        scope = []
     for child in usage["Children"]:
-        child_name, child_command = make_command(executable, child, exclude_args, scope)
+        child_scope = scope + [infer_name(child['Name'])]
+        child_name, child_command = make_command(
+            executable, child, exclude_args, child_scope
+        )
         setattr(cmd, child_name, child_command)
 
     return name, cmd
