@@ -67,6 +67,7 @@ def infer_signature(name, usage, exclude_args):
         if default_value_rep:
             argument_help += " Defaults to " + default_value_rep + "."
         argument_docs.append(textwrap.indent(argument_help, "    "))
+    kwargs.append('capture=False')  # allow capturing the stdout
     return name + "(" + ", ".join(kwargs) + ")", arguments, defaults, argument_docs
 
 
@@ -105,7 +106,7 @@ def make_command(executable, usage, exclude_args, scope=None):
     doc = infer_docstring(name, usage, argument_docs)
 
     @with_signature(signature, func_name=name, doc=doc)
-    def cmd(*args, **kwargs):
+    def cmd(*args, capture=False, **kwargs):
         if usage["Runnable"]:
             command_and_args = [executable]
             command_and_args.extend(scope)
@@ -117,22 +118,36 @@ def make_command(executable, usage, exclude_args, scope=None):
                 if key in defaults and value == defaults[key]:
                     continue
                 command_and_args.append("--" + arguments.get(key, key))
-                command_and_args.append(json.dumps(value))
+                if not isinstance(value, str):
+                    value = json.dumps(value)
+                command_and_args.append(value)
             logger.debug('Executing: %s', ' '.join(command_and_args))
-            return subprocess.check_call(
-                command_and_args,
-                universal_newlines=True,
-                encoding="utf-8",
-                errors="ignore",
-                shell=False,
-                stderr=subprocess.STDOUT,
-            )
+            parameters = {
+                'args': command_and_args,
+                'universal_newlines': True,
+                'encoding': "utf-8",
+                'errors': "ignore",
+                'shell': False,
+            }
+            if capture:
+                output = subprocess.check_output(
+                    **parameters,
+                )
+                if output:
+                    output = output.strip()
+                return output
+            else:
+                return subprocess.check_call(
+                    **parameters,
+                    bufsize=1,
+                    stderr=subprocess.STDOUT,
+                )
 
     # generate subcommands
     if scope is None:
         scope = []
     for child in usage["Children"]:
-        child_scope = scope + [infer_name(child['Name'])]
+        child_scope = scope + [child['Name']]
         child_name, child_command = make_command(
             executable, child, exclude_args, child_scope
         )

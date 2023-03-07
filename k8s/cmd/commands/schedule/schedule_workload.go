@@ -133,7 +133,7 @@ var scheduleWorkloadCmd = &cobra.Command{
 			log.Fatal(err, "failed to schedule workload")
 		}
 
-		log.Info(workload)
+		log.Output(workload)
 	},
 }
 
@@ -161,6 +161,7 @@ func ValidateWorkloadKind(kind string) bool {
 	}
 	return !isWorkload
 }
+
 func validateWorkload(workload string) (bool, error) {
 	isWorkload := true
 	decoder := util.Deserializer()
