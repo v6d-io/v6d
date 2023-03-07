@@ -13,72 +13,106 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vineyard
+package client
 
 import (
-	"encoding/json"
 	"net"
 	"strconv"
 	"strings"
 
+	"github.com/v6d-io/v6d/go/vineyard/pkg/client/io"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common/types"
 )
 
 type RPCClient struct {
-	ClientBase
-	connected        bool
-	ipcSocket        string
-	conn             *net.UnixConn
-	instanceID       int
-	remoteInstanceID int
-	rpcEndpoint      string
+	*ClientBase
+	remoteInstanceID types.InstanceID
 }
 
-func (r *RPCClient) Connect(rpcEndpoint string) error {
-	if r.connected || r.rpcEndpoint == rpcEndpoint {
-		return nil
-	}
-	r.rpcEndpoint = rpcEndpoint
+func NewRPCClient(rpcEndpoint string) (*RPCClient, error) {
+	c := &RPCClient{}
+	c.ClientBase = &ClientBase{}
+	c.RPCEndpoint = rpcEndpoint
 
-	str := strings.Split(rpcEndpoint, ":")
-	host := str[0]
-	port := str[1]
-	if port == "" {
-		port = "9600"
+	addresses := strings.Split(rpcEndpoint, ":")
+	var port uint16
+	if addresses[1] == "" {
+		_, port = GetDefaultRPCHostAndPort()
+	} else {
+		if p, err := strconv.Atoi(addresses[1]); err != nil {
+			_, port = GetDefaultRPCHostAndPort()
+		} else {
+			port = uint16(p)
+		}
 	}
+
 	var conn net.Conn
-	portNum, err := strconv.Atoi(port)
-	if err != nil {
-		return err
+	if err := io.ConnectRPCSocketRetry(addresses[0], port, &conn); err != nil {
+		return nil, err
 	}
-	err = ConnectRPCSocketRetry(host, uint16(portNum), &conn)
-	if err != nil {
-		return err
+	c.conn = conn
+
+	messageOut := common.WriteRegisterRequest(common.VINEYARD_VERSION_STRING)
+	if err := c.doWrite(messageOut); err != nil {
+		return nil, err
+	}
+	var reply common.RegisterReply
+	if err := c.doReadReply(&reply); err != nil {
+		return nil, err
 	}
 
-	r.ClientBase.conn = conn
-	var messageOut string
-	common.WriteRegisterRequest(&messageOut)
-	if err := r.DoWrite(messageOut); err != nil {
-		return err
-	}
-	var messageIn string
-	err = r.DoRead(&messageIn)
-	if err != nil {
-		return err
-	}
-	var registerReply common.RegisterReply
-	err = json.Unmarshal([]byte(messageIn), &registerReply)
-	if err != nil {
-		return err
+	c.connected = true
+	c.IPCSocket = reply.IPCSocket
+	c.InstanceID = types.UnspecifiedInstanceID()
+	c.serverVersion = reply.Version
+
+	c.remoteInstanceID = reply.InstanceID
+	return c, nil
+}
+
+func (c *RPCClient) CreateMetaData(metadata *ObjectMeta) (id types.ObjectID, err error) {
+	if !c.connected {
+		return types.InvalidObjectID(), NOT_CONNECTED_ERR
 	}
 
-	r.connected = true
-	r.ipcSocket = registerReply.IPCSocket
-	r.remoteInstanceID = registerReply.InstanceID
-	// TODO: compatible server check
+	metadata.SetInstanceId(c.InstanceID)
+	metadata.SetTransient(true)
+	if !metadata.HasKey("nbytes") {
+		metadata.SetNBytes(0)
+	}
+	if metadata.InComplete() {
+		_ = c.SyncMetaData()
+	}
 
-	// r.instanceID = registerReply.InstanceID
-	// fmt.Println(messageIn)
-	return nil
+	id, signature, instanceId, err := c.CreateData(metadata.MetaData())
+	if err != nil {
+		return id, err
+	}
+
+	metadata.SetId(id)
+	metadata.SetSignature(signature)
+	metadata.SetInstanceId(instanceId)
+	if metadata.InComplete() {
+		if meta, err := c.GetMetaData(id, false); err != nil {
+			return types.InvalidObjectID(), err
+		} else {
+			*metadata = *meta
+		}
+	}
+	return id, nil
+}
+
+func (c *RPCClient) GetMetaData(id types.ObjectID, syncRemote bool) (meta *ObjectMeta, err error) {
+	if !c.connected {
+		return nil, NOT_CONNECTED_ERR
+	}
+	metadatas, err := c.GetData([]types.ObjectID{id}, syncRemote, false)
+	if err != nil {
+		return nil, err
+	}
+	meta = NewObjectMeta()
+	meta.Reset()
+	meta.SetMetaData(nil, metadatas[0])
+	return meta, nil
 }

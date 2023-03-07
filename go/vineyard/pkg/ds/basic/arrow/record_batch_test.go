@@ -13,31 +13,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vineyard
+package arrow
 
 import (
-	"net"
 	"testing"
+
+	"github.com/v6d-io/v6d/go/vineyard/pkg/client"
 )
 
-// need root permission to run
-func TestConnectIPCSocketRetry(t *testing.T) {
-	var pathname string = "/var/run/vineyard.sock"
-	conn := new(net.UnixConn)
-	err := ConnectIPCSocketRetry(pathname, &conn)
+func TestRecordBatch(t *testing.T) {
+	client, err := client.NewIPCClient(client.GetDefaultIPCSocket())
 	if err != nil {
-		t.Fatal("Connect to IPC socket failed", err.Error())
+		t.Fatalf("connect to ipc server failed: %+v", err)
 	}
-	conn.Close()
-}
+	defer client.Disconnect()
 
-func TestConnectRPCSocketRetry(t *testing.T) {
-	var host string = "127.0.0.1"
-	var port uint16 = 9600
-	var conn net.Conn
-	err := ConnectRPCSocketRetry(host, port, &conn)
-	if err != nil {
-		t.Fatal("Connect to IPC socket failed", err.Error())
-	}
-	conn.Close()
+	// TODO: add record batch test
 }

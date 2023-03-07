@@ -13,19 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vineyard
+package client
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
-func TestRPCServer_Connect(t *testing.T) {
-	ipcAddr := "0.0.0.0:9600"
-	var rpcServer RPCClient
-	err := rpcServer.Connect(ipcAddr)
+func TestRPCClientConnect(t *testing.T) {
+	host, port := GetDefaultRPCHostAndPort()
+	client, err := NewRPCClient(fmt.Sprintf("%s:%d", host, port))
 	if err != nil {
-		t.Error("connect to rpc server failed", err.Error())
+		t.Fatalf("connect to rpc server failed, +%v", err)
 	}
-	err = rpcServer.Disconnect()
-	if err != nil {
-		t.Error("disconnect rpc server failed", err.Error())
-	}
+	defer client.Disconnect()
 }
