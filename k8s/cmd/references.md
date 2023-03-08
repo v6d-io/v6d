@@ -16,7 +16,7 @@ drivers.
   -j, --dump-usage          Dump usage in JSON
   -g, --gen-doc             Generate reference docs, e.g., './references.md'
   -h, --help                help for vineyardctl
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
   -v, --version             version for vineyardctl
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -29,7 +29,7 @@ drivers.
 * [vineyardctl deploy](#vineyardctl-deploy)	 - Deploy the vineyard components on kubernetes
 * [vineyardctl inject](#vineyardctl-inject)	 - Inject the vineyard sidecar container into a workload
 * [vineyardctl manager](#vineyardctl-manager)	 - Start the manager of vineyard operator
-* [vineyardctl schedule](#vineyardctl-schedule)	 - schedule return a nodeName for the workload to co-allocate with vineyard cluster
+* [vineyardctl schedule](#vineyardctl-schedule)	 - schedule a workload or a workerflow.
 
 ## vineyardctl create
 
@@ -65,7 +65,7 @@ Create a vineyard job on kubernetes.
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -110,7 +110,7 @@ Delete the vineyard components on kubernetes.
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -160,7 +160,7 @@ Deploy a vineyard component on kubernetes.
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -227,7 +227,7 @@ vineyardctl inject [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -280,7 +280,7 @@ vineyardctl manager [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -291,7 +291,7 @@ vineyardctl manager [flags]
 
 ## vineyardctl schedule
 
-schedule return a nodeName for the workload to co-allocate with vineyard cluster
+schedule a workload or a workerflow.
 
 ### Synopsis
 
@@ -302,7 +302,10 @@ schedule a workload or a workerflow to a vineyard cluster.
 ```
   # Schedule a workload to a vineyard cluster
   # it will add PodAffinity to the workload
-  vineyardctl schedule --workload=workloadName
+  vineyardctl schedule workload --resource '{kubernetes workload json string}'
+  
+  # schedule a workflow to the vineyard cluster
+  vineyardctl schedule workflow --file workflow.yaml
 ```
 
 ### Options
@@ -314,7 +317,7 @@ schedule a workload or a workerflow to a vineyard cluster.
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -426,7 +429,7 @@ vineyardctl create backup [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -490,7 +493,7 @@ vineyardctl create operation [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -532,7 +535,7 @@ vineyardctl create recover [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -570,7 +573,7 @@ vineyardctl delete backup [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -613,7 +616,7 @@ vineyardctl delete cert-manager [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -651,7 +654,7 @@ vineyardctl delete operation [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -697,7 +700,7 @@ vineyardctl delete operator [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -734,7 +737,7 @@ vineyardctl delete recover [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -772,7 +775,7 @@ vineyardctl delete vineyard-cluster [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -815,7 +818,7 @@ vineyardctl delete vineyard-deployment [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -856,7 +859,7 @@ vineyardctl delete vineyardd [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -908,7 +911,7 @@ vineyardctl deploy cert-manager [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -967,7 +970,7 @@ vineyardctl deploy operator [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -1005,7 +1008,7 @@ vineyardctl deploy vineyard-cluster [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -1083,7 +1086,7 @@ vineyardctl deploy vineyard-deployment [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -1226,7 +1229,7 @@ vineyardctl deploy vineyardd [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -1266,14 +1269,14 @@ vineyardctl schedule workflow [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
 
-* [vineyardctl schedule](#vineyardctl-schedule)	 - schedule return a nodeName for the workload to co-allocate with vineyard cluster
+* [vineyardctl schedule](#vineyardctl-schedule)	 - schedule a workload or a workerflow.
 
 ## vineyardctl schedule workload
 
@@ -1377,12 +1380,12 @@ vineyardctl schedule workload [flags]
 ### Options inherited from parent commands
 
 ```
-      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/tmp/e2e-k8s.config")
+      --kubeconfig string   kubeconfig path for the kubernetes cluster (default "/opt/caoye/kubeconfig")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
 
 ### SEE ALSO
 
-* [vineyardctl schedule](#vineyardctl-schedule)	 - schedule return a nodeName for the workload to co-allocate with vineyard cluster
+* [vineyardctl schedule](#vineyardctl-schedule)	 - schedule a workload or a workerflow.
 

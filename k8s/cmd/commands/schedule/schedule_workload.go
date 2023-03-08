@@ -182,6 +182,7 @@ func SchedulingWorkload(c client.Client) (string, error) {
 	if err := c.Get(context.TODO(), name, &deployment); err != nil {
 		return "", errors.Wrap(err, "failed to get the deployment")
 	}
+	value := flags.VineyarddNamespace + flags.VineyarddName
 	newPodAffinity := corev1.PodAffinity{
 		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
 			{
@@ -190,7 +191,7 @@ func SchedulingWorkload(c client.Client) (string, error) {
 						{
 							Key:      "app.kubernetes.io/instance",
 							Operator: metav1.LabelSelectorOpIn,
-							Values:   []string{"vineyardd"},
+							Values:   []string{value},
 						},
 					},
 				},

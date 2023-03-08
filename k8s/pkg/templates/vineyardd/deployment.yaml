@@ -184,5 +184,5 @@ spec:
                   - key: app.kubernetes.io/instance
                     operator: In
                     values:
-                     - vineyardd
+                     - {{ .Namespace -}} - {{- .Name }}
               topologyKey: "kubernetes.io/hostname"

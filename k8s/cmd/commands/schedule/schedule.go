@@ -29,12 +29,15 @@ var (
 	scheduleExamples = util.Examples(`
 	# Schedule a workload to a vineyard cluster
 	# it will add PodAffinity to the workload
-	vineyardctl schedule --workload=workloadName`)
+	vineyardctl schedule workload --resource '{kubernetes workload json string}'
+	
+	# schedule a workflow to the vineyard cluster
+	vineyardctl schedule workflow --file workflow.yaml`)
 )
 
 var scheduleCmd = &cobra.Command{
 	Use:     "schedule",
-	Short:   "schedule return a nodeName for the workload to co-allocate with vineyard cluster",
+	Short:   "schedule a workload or a workerflow.",
 	Long:    scheduleLong,
 	Example: scheduleExamples,
 }
