@@ -117,9 +117,11 @@ func waitOperatorReady(c client.Client) error {
 				return false, err
 			}
 			for _, pod := range podList.Items {
-				if pod.Status.Phase != "Running" {
-					ready = false
-					break
+				for _, condition := range pod.Status.ContainerStatuses {
+					if condition.Ready == false {
+						ready = false
+						break
+					}
 				}
 			}
 			return ready, nil
