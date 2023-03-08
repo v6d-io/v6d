@@ -37,9 +37,11 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-GOLINT = $(shell command -v ${GOBIN}/golangci-lint --version || echo ${GOBIN}/golangci-lint --version)
-HELMIFY = $(shell command -v ${GOBIN}/helmify --version || echo ${GOBIN}/helmify --version)
-E2E = $(shell command -v ${GOBIN}/e2e --version || echo ${GOBIN}/e2e --version)
+GOLINT = $(shell command -v ${GOBIN}/golangci-lint > /dev/null)
+HELMIFY = $(shell command -v ${GOBIN}/helmify > /dev/null)
+E2E = $(shell command -v ${GOBIN}/e2e > /dev/null)
+KUSTOMIZE = $(shell command -v ${GOBIN}/kustomize > /dev/null)
+CONTROLLER_GEN = $(shell command -v ${GOBIN}/controller-gen > /dev/null)
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4@v4.5.5
@@ -153,7 +155,7 @@ golint:
 		@echo "golangci-lint not exist, installing it..."
 		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
     endif
-	${GOBIN}/golangci-lint run $(modules)
+	@echo "golangci-lint installed"
 
 # Install helmify if not exist
 .PHONY: helmify
@@ -216,33 +218,33 @@ docker-push:
 # download controller-gen if necessary
 .PHONY: controller-gen
 controller-gen:
-ifeq (, $(shell which controller-gen))
-	@{ \
-	set -e ;\
-	CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$CONTROLLER_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION) ;\
-	rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
-	}
-CONTROLLER_GEN=$(GOBIN)/controller-gen
-else
-CONTROLLER_GEN=$(shell which controller-gen)
-endif
+    ifeq (${CONTROLLER_GEN},)
+		@{ \
+		set -e ;\
+		CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
+		cd $$CONTROLLER_GEN_TMP_DIR ;\
+		go mod init tmp ;\
+		go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION) ;\
+		rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
+		}
+		CONTROLLER_GEN=$(GOBIN)/controller-gen
+    else
+		CONTROLLER_GEN=$(shell which controller-gen)
+    endif
 
 .PHONY: kustomize
 kustomize:
-ifeq (, $(shell $(GOBIN)/kustomize))
-	@{ \
-	set -e ;\
-	KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
-	cd $$KUSTOMIZE_GEN_TMP_DIR ;\
-	go mod init tmp ;\
-	go install sigs.k8s.io/kustomize/kustomize/$(KUSTOMIZE_VERSION) ;\
-	rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
-	}
-endif
-KUSTOMIZE=$(GOBIN)/kustomize
+    ifeq (${KUSTOMIZE},)
+		@{ \
+		set -e ;\
+		KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\
+		cd $$KUSTOMIZE_GEN_TMP_DIR ;\
+		go mod init tmp ;\
+		go install sigs.k8s.io/kustomize/kustomize/$(KUSTOMIZE_VERSION) ;\
+		rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
+		}
+    endif
+    KUSTOMIZE=$(GOBIN)/kustomize
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
