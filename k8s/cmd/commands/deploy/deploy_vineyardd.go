@@ -103,7 +103,7 @@ var (
 
 	# deploy the vineyardd with spill mechnism on persistent storage from json file
 	# also you could use the yaml file
-	cat pv-pvc.json | vineyardctl -n vineyard-system --kubeconfig /home/gsbot/.kube/config deploy vineyardd \
+	cat pv-pvc.json | vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
 		--vineyardd.spill.config spill-path \
 		--vineyardd.spill.path /var/vineyard/spill \
 		-`)
