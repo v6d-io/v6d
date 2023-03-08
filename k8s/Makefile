@@ -37,9 +37,9 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version || shell ${GOBIN}/golangci-lint --version)
-HELMIFY := $(shell command -v ${GOBIN}/helmify --version || shell ${GOBIN}/helmify --version)
-E2E := $(shell command -v ${GOBIN}/e2e --version || shell ${GOBIN}/e2e --version)
+GOLINT = $(shell command -v ${GOBIN}/golangci-lint --version || echo ${GOBIN}/golangci-lint --version)
+HELMIFY = $(shell command -v ${GOBIN}/helmify --version || echo ${GOBIN}/helmify --version)
+E2E = $(shell command -v ${GOBIN}/e2e --version || echo ${GOBIN}/e2e --version)
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4@v4.5.5
@@ -51,75 +51,92 @@ E2E_VERSION ?= 2631e76926604c4e30ca170bed916804c86980b6
 all: vineyardctl
 
 #check ci locally
-check: lint e2e-test
 .PHONY: check
+check: lint e2e-test
 
 # install the cert-manager and wait for ready
+.PHONY: install-cert-manager
 install-cert-manager:
 	@go run cmd/main.go deploy cert-manager
 
 # Build vineyardctl binary
+.PHONY: vineyardctl
 vineyardctl: generate fmt
 	go build -a -o vineyardctl cmd/main.go
 
 # Copy the artifacts into the python directory for bdist_wheel.
+.PHONY: bdist_wheel
 bdist_wheel:
 	@cp vineyardctl ../python/vineyard/bdist/vineyardctl
 	@strip ../python/vineyard/bdist/vineyardctl
 
 # Run vineyardctl binary
+.PHONY: run
 run: generate fmt
 	go run cmd/main.go
 
 # Install CRDs into a cluster
+.PHONY: install
 install: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 # Uninstall CRDs from a cluster
+.PHONY: uninstall
 uninstall: manifests kustomize
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
+.PHONY: deploy
 deploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Undeploy controller in the configured Kubernetes cluster in ~/.kube/config
+.PHONY: undeploy
 undeploy: kustomize
 	kubectl -n vineyard-system delete deployment vineyard-controller-manager
 
 # Undeploy controller and all created resources in the configured Kubernetes cluster in ~/.kube/config
+.PHONY: undeploy-all
 undeploy-all: kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 # Deploy namespace, CRDs, rbac, etc. except the controller in the configured Kubernetes cluster in ~/.kube/config
+.PHONY: predeploy
 predeploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 
+.PHONY: unpredeploy
 unpredeploy: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 
 # update the operator image's registry to localhost
+.PHONY: update-registry
 update-registry:
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 
 # recover the operator image's registry to vineyardcloudnative
+.PHONY: recover-registry
 recover-registry:
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 
 # dump the deployment configuration
+.PHONY: dry-run
 dry-run: manifests kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default > controller.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
+.PHONY: manifests
 manifests: controller-gen
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:maxDescLen=0 webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
+.PHONY: sample
 sample: predeploy
 	$(KUSTOMIZE) build config/samples | kubectl apply -f -
 
+.PHONY: unsample
 unsample:
 	$(KUSTOMIZE) build config/samples | kubectl delete -f -
 
@@ -130,69 +147,74 @@ modules	= ./apis/... \
 		  ./pkg/...
 
 # Run golangci-lint
+.PHONY: golint
 golint:
     ifeq (${GOLINT},)
 		@echo "golangci-lint not exist, installing it..."
 		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
     endif
 	${GOBIN}/golangci-lint run $(modules)
-.PHONY: golint
 
 # Install helmify if not exist
+.PHONY: helmify
 helmify:
     ifeq (${HELMIFY},)
 		@echo "helmify not exist, installing it..."
 		go install github.com/arttor/helmify/cmd/helmify@$(HELMIFY_VERSION)
     endif
 	@echo "helmify installed"
-.PHONY: helmify
 
 # Install e2e if not exist
+.PHONY: e2e
 e2e:
     ifeq (${E2E},)
 		@echo "e2e not exist, installing it..."
 		go install github.com/apache/skywalking-infra-e2e/cmd/e2e@$(E2E_VERSION)
     endif
 	@echo "e2e installed"
-.PHONY: e2e
 
-lint: golint
 .PHONY: lint
+lint: golint
 
 # Run go fmt against code
+.PHONY: gofmt
 gofmt:
 	go fmt $(modules)
-.PHONY: gofmt
 
-fmt: gofmt
 .PHONY: fmt
+fmt: gofmt
 
 # Run go vet against code
+.PHONY: vet
 vet:
 	go vet $(modules)
-.PHONY: vet
 
 # Generate code
+.PHONY: generate
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-.PHONY: generate
+
 
 # Vendor modules for code-generate
+.PHONY: vendor
 vendor:
 	go mod tidy
 	go mod vendor
-.PHONY: vendor
 
 # Build the docker image
+.PHONY: docker-build
 docker-build:
 	docker build . -t ${IMG}
 
+
 # Push the docker image
+.PHONY: docker-push
 docker-push:
 	docker push ${IMG}
 
 # find or download controller-gen
 # download controller-gen if necessary
+.PHONY: controller-gen
 controller-gen:
 ifeq (, $(shell which controller-gen))
 	@{ \
@@ -208,6 +230,7 @@ else
 CONTROLLER_GEN=$(shell which controller-gen)
 endif
 
+.PHONY: kustomize
 kustomize:
 ifeq (, $(shell $(GOBIN)/kustomize))
 	@{ \
