@@ -20,7 +20,7 @@ metadata:
   namespace: {{ .Namespace }}
   labels:
     app.kubernetes.io/name: {{ .Name }}
-    app.kubernetes.io/instance: vineyardd
+    app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}
     app.kubernetes.io/component: deployment
 spec:
   replicas: {{ .Spec.Replicas }}
@@ -30,7 +30,7 @@ spec:
       {{.Key}}: "{{.Value}}"
       {{- end }}
       app.kubernetes.io/name: {{ .Name }}
-      app.kubernetes.io/instance: vineyardd
+      app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}
   template:
     metadata:
       labels:
@@ -38,7 +38,7 @@ spec:
         {{.Key}}: "{{.Value}}"
         {{- end }}
         app.kubernetes.io/name: {{ .Name }}
-        app.kubernetes.io/instance: vineyardd
+        app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}
         app.kubernetes.io/component: deployment
       annotations:
         kubectl.kubernetes.io/default-container: "vineyardd"
