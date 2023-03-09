@@ -13,7 +13,7 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/property/propertytable.h"
 
-#if defined(GRIN_WITH_VERTEX_PROPERTY) || defined(GRIN_WITH_EDGE_PROPERTY)
+#ifdef GRIN_ENABLE_ROW
 void grin_destroy_row(GRIN_GRAPH g, GRIN_ROW r) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
     delete _r;
@@ -37,7 +37,7 @@ bool grin_insert_value_to_row(GRIN_GRAPH g, GRIN_ROW r, void* value) {
 #endif
 
 
-#ifdef GRIN_WITH_VERTEX_PROPERTY
+#ifdef GRIN_ENABLE_VERTEX_PROPERTY_TABLE
 void grin_destroy_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt) {
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     delete _vpt;
@@ -64,7 +64,9 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return result;
 }
+#endif
 
+#if defined(GRIN_ENABLE_VERTEX_PROPERTY_TABLE) && defined(GRIN_ENABLE_ROW)
 GRIN_ROW grin_get_row_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, 
                                        GRIN_VERTEX_PROPERTY_LIST vpl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
@@ -85,7 +87,17 @@ GRIN_ROW grin_get_row_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPE
 }
 #endif
 
-#ifdef GRIN_WITH_EDGE_PROPERTY
+#if !defined(GRIN_ASSUME_COLUMN_STORE) && defined(GRIN_ENABLE_ROW)
+/**
+ * @brief get vertex row directly from the graph, this API only works for row store system
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_VERTEX the vertex which is the row index
+ * @param GRIN_VERTEX_PROPERTY_LIST the vertex property list as columns
+ */
+GRIN_ROW grin_get_vertex_row(GRIN_GRAPH, GRIN_VERTEX, GRIN_VERTEX_PROPERTY_LIST);
+#endif
+
+#ifdef GRIN_ENABLE_EDGE_PROPERTY_TABLE
 void grin_destroy_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept) {
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     delete _ept;
@@ -112,7 +124,9 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return result;
 }
+#endif
 
+#if defined(GRIN_ENABLE_EDGE_PROPERTY_TABLE) && defined(GRIN_ENABLE_ROW)
 GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE v, 
                                      GRIN_EDGE_PROPERTY_LIST epl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
@@ -131,4 +145,14 @@ GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_
     }
     return r;
 }
+#endif
+
+#if !defined(GRIN_ASSUME_COLUMN_STORE) && defined(GRIN_ENABLE_ROW)
+/**
+ * @brief get edge row directly from the graph, this API only works for row store system
+ * @param GRIN_GRAPH the graph
+ * @param GRIN_EDGE the edge which is the row index
+ * @param GRIN_EDGE_PROPERTY_LIST the edge property list as columns
+ */
+GRIN_ROW grin_get_edge_row(GRIN_GRAPH, GRIN_EDGE, GRIN_EDGE_PROPERTY_LIST);
 #endif

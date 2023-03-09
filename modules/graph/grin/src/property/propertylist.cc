@@ -54,7 +54,7 @@ bool grin_insert_vertex_property_to_list(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST
 #endif
 
 
-#ifdef GRIN_NATURAL_VERTEX_PROPERTY_ID_TRAIT
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
 GRIN_VERTEX_PROPERTY grin_get_vertex_property_from_id(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY_ID vpi) {
     auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto vp = new GRIN_VERTEX_PROPERTY_T(*_vtype, vpi);
@@ -111,7 +111,7 @@ bool grin_insert_edge_property_to_list(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl
 #endif
 
 
-#ifdef GRIN_NATURAL_EDGE_PROPERTY_ID_TRAIT
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
 GRIN_EDGE_PROPERTY grin_get_edge_property_from_id(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_EDGE_PROPERTY_ID epi) {
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto ep = new GRIN_EDGE_PROPERTY_T(*_etype, epi);
@@ -127,7 +127,7 @@ GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_GRAPH g, GRIN_EDGE_TYPE ety
 #endif
 
 
-#if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_COLUMN_STORE_TRAIT)
+#if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_ASSUME_COLUMN_STORE)
 GRIN_GRAPH grin_select_vertex_properties(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST vpl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
@@ -147,7 +147,7 @@ GRIN_GRAPH grin_select_vertex_properties(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST
 }
 #endif
 
-#if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_COLUMN_STORE_TRAIT)
+#if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_ASSUME_COLUMN_STORE)
 GRIN_GRAPH grin_select_edge_properteis(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _epl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(epl);

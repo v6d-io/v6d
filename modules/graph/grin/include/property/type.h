@@ -26,10 +26,6 @@ bool grin_equal_vertex_type(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_VERTEX_TYPE);
 
 GRIN_VERTEX_TYPE grin_get_vertex_type(GRIN_GRAPH, GRIN_VERTEX);
 
-const char* grin_get_vertex_type_name(GRIN_GRAPH, GRIN_VERTEX_TYPE);
-
-GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH, const char*);
-
 // Vertex type list
 GRIN_VERTEX_TYPE_LIST grin_get_vertex_type_list(GRIN_GRAPH);
 
@@ -44,8 +40,13 @@ size_t grin_get_vertex_type_list_size(GRIN_GRAPH, GRIN_VERTEX_TYPE_LIST);
 GRIN_VERTEX_TYPE grin_get_vertex_type_from_list(GRIN_GRAPH, GRIN_VERTEX_TYPE_LIST, size_t);
 #endif
 
+#ifdef GRIN_WITH_VERTEX_TYPE_NAME
+const char* grin_get_vertex_type_name(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 
-#ifdef GRIN_NATURAL_VERTEX_TYPE_ID_TRAIT
+GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH, const char*);
+#endif
+
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
 GRIN_VERTEX_TYPE_ID grin_get_vertex_type_id(GRIN_GRAPH, GRIN_VERTEX_TYPE);
 
 GRIN_VERTEX_TYPE grin_get_vertex_type_from_id(GRIN_GRAPH, GRIN_VERTEX_TYPE_ID);
@@ -53,16 +54,12 @@ GRIN_VERTEX_TYPE grin_get_vertex_type_from_id(GRIN_GRAPH, GRIN_VERTEX_TYPE_ID);
 
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
-// GRIN_EDGE type
+// Edge type
 bool grin_equal_edge_type(GRIN_GRAPH, GRIN_EDGE_TYPE, GRIN_EDGE_TYPE);
 
 GRIN_EDGE_TYPE grin_get_edge_type(GRIN_GRAPH, GRIN_EDGE);
 
-const char* grin_get_edge_type_name(GRIN_GRAPH, GRIN_EDGE_TYPE);
-
-GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH, const char*);
-
-// GRIN_EDGE type list
+// Edge type list
 GRIN_EDGE_TYPE_LIST grin_get_edge_type_list(GRIN_GRAPH);
 
 void grin_destroy_edge_type_list(GRIN_GRAPH, GRIN_EDGE_TYPE_LIST);
@@ -76,7 +73,13 @@ size_t grin_get_edge_type_list_size(GRIN_GRAPH, GRIN_EDGE_TYPE_LIST);
 GRIN_EDGE_TYPE grin_get_edge_type_from_list(GRIN_GRAPH, GRIN_EDGE_TYPE_LIST, size_t);
 #endif
 
-#ifdef GRIN_NATURAL_EDGE_TYPE_ID_TRAIT
+#ifdef GRIN_WITH_EDGE_TYPE_NAME
+const char* grin_get_edge_type_name(GRIN_GRAPH, GRIN_EDGE_TYPE);
+
+GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH, const char*);
+#endif
+
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
 GRIN_EDGE_TYPE_ID grin_get_edge_type_id(GRIN_GRAPH, GRIN_EDGE_TYPE);
 
 GRIN_EDGE_TYPE grin_get_edge_type_from_id(GRIN_GRAPH, GRIN_EDGE_TYPE_ID);

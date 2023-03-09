@@ -27,23 +27,6 @@ GRIN_VERTEX_TYPE grin_get_vertex_type(GRIN_GRAPH g, GRIN_VERTEX v) {
     return vt;
 }
 
-const char* grin_get_vertex_type_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
-    auto _vt = static_cast<GRIN_VERTEX_TYPE_T*>(vt);
-    auto s = _g->schema().GetVertexLabelName(*_vt);
-    int len = s.length() + 1;
-    char* out = new char[len];
-    snprintf(out, len, "%s", s.c_str());
-    return out;
-}
-
-GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH g, const char* name) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
-    auto s = std::string(name);
-    auto vt = new GRIN_VERTEX_TYPE_T(_g->schema().GetVertexLabelId(s));
-    return vt;
-}
-
 GRIN_VERTEX_TYPE_LIST grin_get_vertex_type_list(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto vtl = new GRIN_VERTEX_TYPE_LIST_T();
@@ -82,8 +65,26 @@ GRIN_VERTEX_TYPE grin_get_vertex_type_from_list(GRIN_GRAPH g, GRIN_VERTEX_TYPE_L
 }
 #endif
 
+#ifdef GRIN_WITH_VERTEX_TYPE_NAME
+const char* grin_get_vertex_type_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _vt = static_cast<GRIN_VERTEX_TYPE_T*>(vt);
+    auto s = _g->schema().GetVertexLabelName(*_vt);
+    int len = s.length() + 1;
+    char* out = new char[len];
+    snprintf(out, len, "%s", s.c_str());
+    return out;
+}
 
-#ifdef GRIN_NATURAL_VERTEX_TYPE_ID_TRAIT
+GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH g, const char* name) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto s = std::string(name);
+    auto vt = new GRIN_VERTEX_TYPE_T(_g->schema().GetVertexLabelId(s));
+    return vt;
+}
+#endif
+
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
 GRIN_VERTEX_TYPE_ID grin_get_vertex_type_id(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
     auto _vt = static_cast<GRIN_VERTEX_TYPE_T*>(vt);
     return *_vt;
@@ -106,23 +107,6 @@ bool grin_equal_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE et1, GRIN_EDGE_TYPE et2) 
 GRIN_EDGE_TYPE grin_get_edge_type(GRIN_GRAPH g, GRIN_EDGE e) {
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     auto et = new GRIN_EDGE_TYPE_T(_e->etype);
-    return et;
-}
-
-const char* grin_get_edge_type_name(GRIN_GRAPH g, GRIN_EDGE_TYPE et) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
-    auto _et = static_cast<GRIN_EDGE_TYPE_T*>(et);
-    auto s = _g->schema().GetEdgeLabelName(*_et);
-    int len = s.length() + 1;
-    char* out = new char[len];
-    snprintf(out, len, "%s", s.c_str());
-    return out;    
-}
-
-GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH g, const char* name) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
-    auto s = std::string(name);
-    auto et = new GRIN_EDGE_TYPE_T(_g->schema().GetEdgeLabelId(s));
     return et;
 }
 
@@ -164,8 +148,27 @@ GRIN_EDGE_TYPE grin_get_edge_type_from_list(GRIN_GRAPH g, GRIN_EDGE_TYPE_LIST et
 }
 #endif
 
+#ifdef GRIN_WITH_EDGE_TYPE_NAME
+const char* grin_get_edge_type_name(GRIN_GRAPH g, GRIN_EDGE_TYPE et) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _et = static_cast<GRIN_EDGE_TYPE_T*>(et);
+    auto s = _g->schema().GetEdgeLabelName(*_et);
+    int len = s.length() + 1;
+    char* out = new char[len];
+    snprintf(out, len, "%s", s.c_str());
+    return out;    
+}
 
-#ifdef GRIN_NATURAL_EDGE_TYPE_ID_TRAIT
+GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH g, const char* name) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto s = std::string(name);
+    auto et = new GRIN_EDGE_TYPE_T(_g->schema().GetEdgeLabelId(s));
+    return et;
+}
+#endif
+
+
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
 GRIN_EDGE_TYPE_ID grin_get_edge_type_id(GRIN_GRAPH g, GRIN_EDGE_TYPE et) {
     auto _et = static_cast<GRIN_EDGE_TYPE_T*>(et);
     return *_et;

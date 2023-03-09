@@ -107,18 +107,8 @@ typedef enum {
 */
 #define GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 
-/**
- * 
-*/
-#define GRIN_GRANULA_ENALBE_VERTEX_LIST_BY_TYPE
 
-#define GRIN_GRANULA_ENABLE_ADJACENT_LIST_BY_PARTITION
-
-#define GRIN_GRANULA_ENABLE_ADJACENT_LIST_BY_TYPE
-
-#define GRIN_GRANULA_ENABLE_ADJACENT_LIST_BY_PARTITION_TYPE
-
-#ifndef GRIN_DOXYGEN_SKIP
+#ifndef GRIN_DOXYGEN_SKIP  // disabled by storage
 #undef GRIN_WITH_VERTEX_DATA
 #undef GRIN_WITH_EDGE_DATA
 #undef GRIN_ENABLE_VERTEX_LIST_ITERATOR
@@ -145,7 +135,7 @@ typedef enum {
  * @brief The storage provides natural number IDs for partitions.
  * It follows the design principle of natural number ID trait in GRIN.
 */
-#define GRIN_NATURAL_PARTITION_ID_TRAIT
+#define GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
 
 /** @ingroup PartitionMacros
  * @brief The storage provides reference of vertex that can be
@@ -158,34 +148,285 @@ typedef enum {
  * recognized in other partitions where the edge also appears.
 */
 #define GRIN_ENABLE_EDGE_REF
-
-#ifndef GRIN_ENABLE_GRAPH_PARTITION
-#undef GRIN_NATURAL_PARTITION_ID_TRAIT
-#endif
-
-#ifndef GRIN_DOXYGEN_SKIP
-#undef GRIN_ENABLE_EDGE_REF
-#endif
 ///@}
 
 
+
+/** @name PartitionStrategyMacros
+ * @brief Macros to define partition strategy assumptions, a partition strategy
+ * can be seen as a combination of detail partition assumptions which are defined after
+ * the strategies. Please refer to the documents for strategy details.
+*/
+///@{
+/** @ingroup PartitionStrategyMacros
+ * @brief The storage ONLY uses edge-cut partition strategy. This means the 
+ * storage's entire partition strategy complies with edge-cut strategy 
+ * definition in GRIN.
+*/
+#define GRIN_ASSUME_EDGE_CUT_PARTITION
+
+/** @ingroup PartitionStrategyMacros
+ * @brief The storage ONLY uses vertex-cut partition strategy. This means the 
+ * storage's entire partition strategy complies with vertex-cut strategy 
+ * definition in GRIN.
+*/
+#define GRIN_ASSUME_VERTEX_CUT_PARTITION
+///@}
+
+/** @name PartitionAssumptionMacros
+ * @brief Macros to define detailed partition assumptions with respect to the
+ * concept of local complete. Please refer to the documents for the meaning of
+ * local complete.
+*/
+///@{
+/** @ingroup PartitionAssumptionMacros
+ * @brief Assume the vertex data are local complete for all the vertices,
+ * thus there is no need to fetch vertex data from other partitions.
+*/
+#define GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE
+
+/** @ingroup PartitionAssumptionMacros
+ * @brief Assume the vertex data are local complete for master vertices,
+ * and the vertex data of a mirror vertex can be fetched from its master partition.
+*/
+#define GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+
+/** @ingroup PartitionAssumptionMacros
+ * @brief Assume the edge data are local complete for all the edges,
+ * thus there is no need to fetch edge data from other partitions.
+*/
+#define GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
+
+/** @ingroup PartitionAssumptionMacros
+ * @brief Assume the edge data are local complete for master edges,
+ * and the edge data of a mirror edge can be fetched from its master partition.
+*/
+#define GRIN_ASSUME_MASTER_EDGE_DATA_LOCAL_COMPLETE
+
+/** @ingroup PartitionAssumptionMacros
+ * @brief Assume neighbors of a vertex is always local complete for all vertices. 
+*/
+#define GRIN_ASSUME_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+
+/** @ingroup PartitionAssumptionMacros
+ * @brief Assume neighbors of a vertex is always local complete for master vertices. 
+*/
+#define GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+///@}
+
+/** @name TraitMirrorPartitionMacros
+ * @brief Macros for storage that provides the partition list where the mirror
+ * vertices are located. This trait is usually enabled by storages using vertex-cut
+ * partition strategy.
+*/
+///@{
+/** @ingroup TraitMirrorPartitionMacros
+ * @brief The storage provides the partition list where the mirror
+ * vertices are located of a local master vertex.
+*/
+#define GRIN_TRAIT_MASTER_VERTEX_MIRROR_PARTITION_LIST
+
+/** @ingroup TraitMirrorPartitionMacros
+ * @brief The storage provides the partition list where the mirror
+ * vertices are located of a local mirror vertex
+*/
+#define GRIN_TRAIT_MIRROR_VERTEX_MIRROR_PARTITION_LIST
+
+/** @ingroup TraitMirrorPartitionMacros
+ * @brief The storage provides the partition list where the mirror
+ * edges are located of a local master edge
+*/
+#define GRIN_TRAIT_MASTER_EDGE_MIRROR_PARTITION_LIST
+
+/** @ingroup TraitMirrorPartitionMacros
+ * @brief The storage provides the partition list where the mirror
+ * edges are located of a local mirror edge
+*/
+#define GRIN_TRAIT_MIRROR_EDGE_MIRROR_PARTITION_LIST
+///@}
+
+/** @name TraitFilterMacros
+ * @brief Macros for storage that provides filtering ability of partitions for structures
+ * like vertex list or adjacent list. This trait is usually enabled for efficient graph traversal.
+*/
+///@{
+/** @ingroup TraitFilterMacros
+ * @brief The storage provides a filtering predicate of master vertices
+ * for vertex list iterator. That means, the caller can use the predicate
+ * to make a master-only vertex list iterator from the original iterator.
+*/
+#define GRIN_TRAIT_FILTER_MASTER_FOR_VERTEX_LIST
+
+/** @ingroup TraitFilterMacros
+ * @brief The storage provides a filtering predicate of single partition vertices
+ * for vertex list iterator. That means, the caller can use the predicate
+ * to make a single-partition vertex list iterator from the original iterator.
+*/
+#define GRIN_TRAIT_FILTER_PARTITION_FOR_VERTEX_LIST
+
+/** @ingroup TraitFilterMacros
+ * @brief The storage provides a filtering predicate of master edges
+ * for edge list iterator. That means, the caller can use the predicate
+ * to make a master-only edge list iterator from the original iterator.
+*/
+#define GRIN_TRAIT_FILTER_MASTER_FOR_EDGE_LIST
+
+/** @ingroup TraitFilterMacros
+ * @brief The storage provides a filtering predicate of single partition edges
+ * for edge list iterator. That means, the caller can use the predicate
+ * to make a single-partition edge list iterator from the original iterator.
+*/
+#define GRIN_TRAIT_FILTER_PARTITION_FOR_EDGE_LIST
+
+/** @ingroup TraitFilterMacros
+ * @brief The storage provides a filtering predicate of master neighbors
+ * for adjacent list iterator. That means, the caller can use the predicate
+ * to make a master-only adjacent list iterator from the original iterator.
+*/
+#define GRIN_TRAIT_FILTER_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
+
+/** @ingroup TraitFilterMacros
+ * @brief The storage provides a filtering predicate of single-partition vertices
+ * for adjacent list iterator. That means, the caller can use the predicate
+ * to make a single-partition adjacent list iterator from the original iterator.
+*/
+#define GRIN_TRAIT_FILTER_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
+///@}
+
+#ifndef GRIN_DOXYGEN_SKIP 
+// disable GRIN_ASSUME by default
+#undef GRIN_ASSUME_EDGE_CUT_PARTITION
+#undef GRIN_ASSUME_VERTEX_CUT_PARTITION
+#undef GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+
+// diabled by storage
+#undef GRIN_ASSUME_VERTEX_CUT_PARTITION
+#undef GRIN_ENABLE_EDGE_REF
+#undef GRIN_TRAIT_MASTER_VERTEX_MIRROR_PARTITION_LIST
+#undef GRIN_TRAIT_MIRROR_VERTEX_MIRROR_PARTITION_LIST
+#undef GRIN_TRAIT_FILTER_PARTITION_FOR_VERTEX_LIST
+#undef GRIN_TRAIT_FILTER_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
+#undef GRIN_TRAIT_FILTER_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
+// enabled by storage
+#define GRIN_ASSUME_EDGE_CUT_PARTITION  
+
+#ifdef GRIN_ASSUME_EDGE_CUT_PARTITION
+#define GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#define GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
+#define GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_VERTEX_CUT_PARTITION
+#define GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#define GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
+#define GRIN_TRAIT_MASTER_VERTEX_MIRROR_PARTITION_LIST
+#endif
+
+#ifndef GRIN_ENABLE_GRAPH_PARTITION
+#undef GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
+#undef GRIN_ENABLE_VERTEX_REF
+#undef GRIN_ENABLE_EDGE_REF
+#undef GRIN_ASSUME_EDGE_CUT_PARTITION
+#undef GRIN_ASSUME_VERTEX_CUT_PARTITION
+#endif
+
+#ifndef GRIN_ENABLE_VERTEX_REF  // enable vertex pref is the prerequisite
+#undef GRIN_TRAIT_MASTER_VERTEX_MIRROR_PARTITION_LIST
+#undef GRIN_TRAIT_MIRROR_VERTEX_MIRROR_PARTITION_LIST
+#undef GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_TRAIT_FILTER_MASTER_FOR_VERTEX_LIST
+#endif
+
+#ifndef GRIN_ENABLE_EDGE_REF  // enable edge pref is the prerequisite
+#undef GRIN_TRAIT_MASTER_EDGE_MIRROR_PARTITION_LIST
+#undef GRIN_TRAIT_MIRROR_EDGE_MIRROR_PARTITION_LIST
+#undef GRIN_ASSUME_MASTER_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_TRAIT_FILTER_MASTER_FOR_EDGE_LIST
+#endif
+
+#ifndef GRIN_WITH_VERTEX_DATA  // enable vertex data is the prerequisite
+#undef GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#endif
+
+#ifndef GRIN_WITH_EDGE_DATA  // enable edge data is the prerequisite
+#undef GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_EDGE_DATA_LOCAL_COMPLETE
+#endif
+
+#ifndef GRIN_ENABLE_VERTEX_LIST  // enable vertex list iterator is the prerequisite
+#undef GRIN_TRAIT_FILTER_MASTER_FOR_VERTEX_LIST
+#undef GRIN_TRAIT_FILTER_PARTITION_FOR_VERTEX_LIST
+#endif
+
+#ifndef GRIN_ENABLE_EDGE_LIST  // enable edge list iterator is the prerequisite
+#undef GRIN_TRAIT_FILTER_MASTER_FOR_EDGE_LIST
+#undef GRIN_TRAIT_FILTER_PARTITION_FOR_EDGE_LIST
+#endif
+
+#ifndef GRIN_ENABLE_ADJACENT_LIST  // enable adjacent list iterator is the prerequisite
+#undef GRIN_TRAIT_FILTER_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
+#undef GRIN_TRAIT_FILTER_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
+#endif
+
+#ifdef GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_EDGE_DATA_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#endif
+#endif // GRIN_DOXY_SKIP
+
+
 /** @name PropertyMacros
- * @brief Macros for property graph features
+ * @brief Macros for basic property graph features
  */
 ///@{
 /** @ingroup PropertyMacros
- * @brief There are property names for properties. The relationship between property
- * name and properties is one-to-many, because properties bound to different vertex/edge
- * types are distinguished even they may share the same property name. Please refer to
- * the design principle of Property for details.
+ * @brief Enable the pure data structure Row, which is used in primary keys and tables.
 */
-#define GRIN_WITH_PROPERTY_NAME
+#define GRIN_ENABLE_ROW
 
 /** @ingroup PropertyMacros
  * @brief There are properties bound to vertices. When vertices are typed, vertex
  * properties are bound to vertex types, according to the definition of vertex type.
 */
 #define GRIN_WITH_VERTEX_PROPERTY
+
+/** @ingroup PropertyMacros
+ * @brief There are property names for vertex properties. The relationship between property
+ * name and properties is one-to-many, because properties bound to different vertex/edge
+ * types are distinguished even they may share the same property name. Please refer to
+ * the design principle of Property for details.
+*/
+#define GRIN_WITH_VERTEX_PROPERTY_NAME
+
+/** @ingroup PropertyMacros
+ * @brief There are unique names for each vertex type.
+*/
+#define GRIN_WITH_VERTEX_TYPE_NAME
+
+/** @ingroup PropertyMacros
+ * @brief The storage provides natural number IDs for vertex types.
+ * It follows the design principle of natural ID trait in GRIN.
+*/
+#define GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
+
+/** @ingroup PropertyMacros
+ * @brief Enable the vertex property table structure, from where the value of property
+ * can be fetched using vertex as row index and property as column index.
+*/
+#define GRIN_ENABLE_VERTEX_PROPERTY_TABLE
 
 /** @ingroup PropertyMacros
  * @brief There are primary keys for vertices. Vertex primary keys is
@@ -198,55 +439,369 @@ typedef enum {
  * is NOT defined, in which case, one can use GRIN_WITH_VERTEX_ORIGINAL_ID when vertices have
  * no properties.
 */
-#define GRIN_WITH_VERTEX_PRIMARY_KEYS
-
-/** @ingroup PropertyMacros
- * @brief The storage provides natural number IDs for vertex types.
- * It follows the design principle of natural ID trait in GRIN.
-*/
-#define GRIN_NATURAL_VERTEX_TYPE_ID_TRAIT
+#define GRIN_ENABLE_VERTEX_PRIMARY_KEYS
 
 /** @ingroup PropertyMacros
  * @brief The storage provides natural number IDs for properties bound to
  * a certain vertex type.
  * It follows the design principle of natural ID trait in GRIN.
 */
-#define GRIN_NATURAL_VERTEX_PROPERTY_ID_TRAIT
+#define GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
 
-
-#define GRIN_WITH_EDGE_PROPERTY                // There is any property for edges.
-#define GRIN_WITH_EDGE_PRIMARY_KEYS           // There is cross-type property name.
-#define GRIN_NATURAL_EDGE_TYPE_ID_TRAIT       // Edge type has natural continuous id from 0.
-#define GRIN_NATURAL_EDGE_PROPERTY_ID_TRAIT    // Edge property has natural continuous id from 0.
+/** @ingroup PropertyMacros
+ * @brief Assume the original id is ONLY unique under each vertex type. This means
+ * to get a vertex from the original id, the caller must also provide the vertex type.
+*/
+#define GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
 
 
 /** @ingroup PropertyMacros
+ * @brief There are properties bound to edges. When edges are typed, edge
+ * properties are bound to edge types, according to the definition of edge type.
+*/
+#define GRIN_WITH_EDGE_PROPERTY
+
+/** @ingroup PropertyMacros
+ * @brief There are property names for edge properties. The relationship between property
+ * name and properties is one-to-many, because properties bound to different vertex/edge
+ * types are distinguished even they may share the same property name. Please refer to
+ * the design principle of Property for details.
+*/
+#define GRIN_WITH_EDGE_PROPERTY_NAME
+
+/** @ingroup PropertyMacros
+ * @brief There are unique names for each edge type.
+*/
+#define GRIN_WITH_EDGE_TYPE_NAME
+
+/** @ingroup PropertyMacros
+ * @brief The storage provides natural number IDs for edge types.
+ * It follows the design principle of natural ID trait in GRIN.
+*/
+#define GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
+
+/** @ingroup PropertyMacros
+ * @brief Enable the edge property table structure, from where the value of property
+ * can be fetched using edge as row index and property as column index.
+*/
+#define GRIN_ENABLE_EDGE_PROPERTY_TABLE
+
+/** @ingroup PropertyMacros
+ * @brief There are primary keys for edges. Edge primary keys is
+ * a set of edge properties whose values can distinguish edges. When edges are
+ * typed, each edge type has its own primary keys which distinguishes the edges of
+ * that type. 
+ * 
+ * With primary keys, one can get the edge from the graph or a certain type
+ * by providing the values of the primary keys. The macro is unset if GRIN_WITH_EDGE_PROPERTY
+ * is NOT defined, in which case, one can use GRIN_WITH_EDGE_ORIGINAL_ID when edges have
+ * no properties.
+*/
+#define GRIN_ENABLE_EDGE_PRIMARY_KEYS
+
+/** @ingroup PropertyMacros
+ * @brief The storage provides natural number IDs for properties bound to
+ * a certain edge type.
+ * It follows the design principle of natural ID trait in GRIN.
+*/
+#define GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
+///@}
+
+/** @name TraitFilterTypeMacros
+ * @brief Macros of traits to filter vertex/edge type for
+ * structures like vertex list and adjacent list.
+ */
+///@{
+/** @ingroup TraitFilterTypeMacros
+ * @brief The storage provides a filtering predicate of single-type vertices
+ * for vertex list iterator. That means, the caller can use the predicate
+ * to make a vertex list iterator for a certain type of vertices from the 
+ * original iterator.
+*/
+#define GRIN_TRAIT_FILTER_TYPE_FOR_VERTEX_LIST
+
+/** @ingroup TraitFilterTypeMacros
+ * @brief The storage provides a filtering predicate of single-type edges
+ * for edge list iterator. That means, the caller can use the predicate
+ * to make an edge list iterator for a certain type of edges from the 
+ * original iterator.
+*/
+#define GRIN_TRAIT_FILTER_TYPE_FOR_EDGE_LIST
+
+/** @ingroup TraitFilterTypeMacros
+ * @brief The storage provides a filtering predicate of single-type neighbors
+ * for adjacent list iterator. That means, the caller can use the predicate
+ * to make an adjacent list iterator of neighbors with a certain type from 
+ * the original iterator.
+*/
+#define GRIN_TRAIT_FILTER_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
+
+/** @ingroup TraitFilterTypeMacros
+ * @brief The storage provides a filtering predicate of single-type edges
+ * for adjacent list iterator. That means, the caller can use the predicate
+ * to make an adjacent list iterator of edges with a certain type from 
+ * the original iterator.
+*/
+#define GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
+///@}
+
+
+/** @name PropetyAssumptionMacros
+ * @brief Macros of assumptions for property local complete, and particularly define
+ * the by type local complete assumptions for hybrid partiton strategy.
+ */
+///@{
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume property values of a vertex is always local complete for all vertices. 
+*/
+#define GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume property values of a vertex is ONLY local complete for master vertices. 
+*/
+#define GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume property values of a vertex is local complete for all vertices with a certain type. 
+*/
+#define GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume property values of a vertex is local complete for master vertices with a certain type. 
+*/
+#define GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume vertex data is local complete for all vertices with a certain type. 
+*/
+#define GRIN_ASSUME_BY_TYPE_ALL_VERTEX_DATA_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume vertex data is local complete for master vertices with a certain type. 
+*/
+#define GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume property values of a edge is always local complete for all edges. 
+*/
+#define GRIN_ASSUME_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume property values of a edge is ONLY local complete for master edges. 
+*/
+#define GRIN_ASSUME_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume property values of a edge is local complete for all edges with a certain type. 
+*/
+#define GRIN_ASSUME_BY_TYPE_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume property values of a edge is local complete for master edges with a certain type. 
+*/
+#define GRIN_ASSUME_BY_TYPE_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume edge data is local complete for all edges with a certain type. 
+*/
+#define GRIN_ASSUME_BY_TYPE_ALL_EDGE_DATA_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume edge data is local complete for master edges with a certain type. 
+*/
+#define GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume vertex neighbor is local complete for all vertices with a certain type. 
+*/
+#define GRIN_ASSUME_BY_TYPE_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief Assume vertex data is local complete for master vertices with a certain type. 
+*/
+#define GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+
+/** @ingroup PropetyAssumptionMacros
  * @brief The storage uses column store for properties.
  * This enables efficient property selections for vertices and edges.
 */
-#define GRIN_COLUMN_STORE_TRAIT
+#define GRIN_ASSUME_COLUMN_STORE
+///@}
 
-#if !defined(GRIN_WITH_VERTEX_PROPERTY) && !defined(GRIN_WITH_EDGE_PROPERTY)
-#undef GRIN_WITH_PROPERTY_NAME
+#ifndef GRIN_DOXYGEN_SKIP  
+// disable GRIN_ASSUME by default
+#undef GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
+#undef GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#undef GRIN_ASSUME_COLUMN_STORE
+
+// disabled by storage
+#undef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
+#undef GRIN_ENABLE_EDGE_PRIMARY_KEYS
+#undef GRIN_TRAIT_FILTER_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
+
+// enabled by storage
+#define GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
+#define GRIN_ASSUME_COLUMN_STORE
+
+#ifdef GRIN_ASSUME_EDGE_CUT_PARTITION
+#define GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#define GRIN_ASSUME_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_VERTEX_CUT_PARTITION
+#define GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+#define GRIN_ASSUME_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#endif
+
+#ifndef GRIN_ENABLE_ROW
+#undef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
+#undef GRIN_ENABLE_EDGE_PRIMARY_KEYS
 #endif
 
 #ifndef GRIN_WITH_VERTEX_PROPERTY
-#undef GRIN_WITH_VERTEX_PRIMARY_KEYS
-#undef GRIN_NATURAL_VERTEX_TYPE_ID_TRAIT
-#undef GRIN_NATURAL_VERTEX_PROPERTY_ID_TRAIT
+#undef GRIN_WITH_VERTEX_PROPERTY_NAME
+#undef GRIN_WITH_VERTEX_TYPE_NAME
+#undef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
+#undef GRIN_ENABLE_VERTEX_PROPERTY_TABLE
+#undef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
+#undef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
+#undef GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
+#undef GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_DATA_LOCAL_COMPLETE
 #endif
 
 #ifndef GRIN_WITH_EDGE_PROPERTY
-#undef GRIN_WITH_EDGE_PRIMARY_KEYS
-#undef GRIN_NATURAL_EDGE_TYPE_ID_TRAIT
-#undef GRIN_NATURAL_EDGE_PROPERTY_ID_TRAIT
+#undef GRIN_WITH_EDGE_PROPERTY_NAME
+#undef GRIN_WITH_EDGE_TYPE_NAME
+#undef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
+#undef GRIN_ENABLE_EDGE_PROPERTY_TABLE
+#undef GRIN_ENABLE_EDGE_PRIMARY_KEYS
+#undef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
+#undef GRIN_ASSUME_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE
 #endif
 
-#ifndef GRIN_DOXYGEN_SKIP
-#undef GRIN_WITH_VERTEX_PRIMARY_KEYS
-#undef GRIN_WITH_EDGE_PRIMARY_KEYS
+#ifndef GRIN_WITH_VERTEX_ORIGINAL_ID
+#undef GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
 #endif
-///@}
+
+#ifndef GRIN_WITH_VERTEX_DATA
+#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#endif
+
+#ifndef GRIN_WITH_EDGE_DATA
+#undef GRIN_ASSUME_BY_TYPE_ALL_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE
+#endif
+
+#ifndef GRIN_ENABLE_VERTEX_LIST  // enable vertex list iterator is the prerequisite
+#undef GRIN_TRAIT_FILTER_TYPE_FOR_VERTEX_LIST
+#endif
+
+#ifndef GRIN_ENABLE_EDGE_LIST  // enable edge list iterator is the prerequisite
+#undef GRIN_TRAIT_FILTER_TYPE_FOR_EDGE_LIST
+#endif
+
+#ifndef GRIN_ENABLE_ADJACENT_LIST // enable adjacent list iterator is the prerequisite
+#undef GRIN_TRAIT_FILTER_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
+#undef GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
+#endif
+
+// assumption on vertex property
+#ifdef GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#endif
+
+// assumption on vertex data
+#ifdef GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#endif
+
+// assumption on edge property
+#ifdef GRIN_ASSUME_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_BY_TYPE_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
+#endif
+
+// assumption on edge data
+#ifdef GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_MASTER_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_BY_TYPE_ALL_EDGE_DATA_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE
+#endif
+
+// assumption on vertex neighbor
+#ifdef GRIN_ASSUME_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#endif
+
+#ifdef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#endif
+#endif // GRIN_DOXY_SKIP
+
 
 /** @name PredicateMacros
  * @brief Macros for predicate features
@@ -255,7 +810,7 @@ typedef enum {
 /** @ingroup PredicateMacros
  * @brief Enable vertex ordering predicate
 */
-#define GRIN_PREDICATE_ENABLE_VERTEX_ORDERING
+#define GRIN_PREDICATE_VERTEX_ORDERING
 ///@}
 
 /** @name IndexMacros
@@ -292,6 +847,8 @@ typedef enum {
 #define GRIN_NULL_EDGE NULL
 /** @brief Null list of any kind (invalid return value) */
 #define GRIN_NULL_LIST NULL
+/** @brief Null list iterator of any kind (invalid return value) */
+#define GRIN_NULL_LIST_ITERATOR NULL
 /** @brief Non-existing partition (invalid return value) */
 #define GRIN_NULL_PARTITION NULL
 /** @brief Null vertex reference (invalid return value) */
@@ -360,7 +917,7 @@ typedef void* GRIN_PARTITION;
 typedef void* GRIN_PARTITION_LIST;
 #endif
 
-#ifdef GRIN_NATURAL_PARTITION_ID_TRAIT
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
 typedef unsigned GRIN_PARTITION_ID;
 #endif
 
@@ -381,11 +938,11 @@ typedef void* GRIN_VERTEX_PROPERTY_LIST;
 typedef void* GRIN_VERTEX_PROPERTY_TABLE;
 #endif
 
-#ifdef GRIN_NATURAL_VERTEX_TYPE_ID_TRAIT
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
 typedef unsigned GRIN_VERTEX_TYPE_ID;
 #endif
 
-#ifdef GRIN_NATURAL_VERTEX_PROPERTY_ID_TRAIT
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
 typedef unsigned GRIN_VERTEX_PROPERTY_ID;
 #endif
 
@@ -397,15 +954,15 @@ typedef void* GRIN_EDGE_PROPERTY_LIST;
 typedef void* GRIN_EDGE_PROPERTY_TABLE;
 #endif
 
-#ifdef GRIN_NATURAL_EDGE_TYPE_ID_TRAIT
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
 typedef unsigned GRIN_EDGE_TYPE_ID;
 #endif
 
-#ifdef GRIN_NATURAL_EDGE_PROPERTY_ID_TRAIT
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
 typedef unsigned GRIN_EDGE_PROPERTY_ID;
 #endif
 
-#if defined(GRIN_WITH_VERTEX_PROPERTY) || defined(GRIN_WITH_EDGE_PROPERTY)
+#ifdef GRIN_ENABLE_ROW
 typedef void* GRIN_ROW;
 #endif
 

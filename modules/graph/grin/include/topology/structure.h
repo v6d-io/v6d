@@ -25,19 +25,23 @@ bool grin_is_multigraph(GRIN_GRAPH);
 
 size_t grin_get_vertex_num(GRIN_GRAPH);
 
-#ifdef GRIN_WITH_VERTEX_PROPERTY
-size_t grin_get_vertex_num_by_type(GRIN_GRAPH, GRIN_VERTEX_TYPE);
-#endif
-
 size_t grin_get_edge_num(GRIN_GRAPH, GRIN_DIRECTION);
-
-#ifdef GRIN_WITH_EDGE_PROPERTY
-size_t grin_get_edge_num_by_type(GRIN_GRAPH, GRIN_DIRECTION, GRIN_EDGE_TYPE);
-#endif
 
 
 // Vertex
 void grin_destroy_vertex(GRIN_GRAPH, GRIN_VERTEX);
+
+#ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
+void grin_destroy_vertex_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
+
+GRIN_DATATYPE grin_get_vertex_original_id_type(GRIN_GRAPH);
+
+GRIN_VERTEX_ORIGINAL_ID grin_get_vertex_original_id(GRIN_GRAPH, GRIN_VERTEX);
+#endif
+
+#if defined(GRIN_WITH_VERTEX_ORIGINAL_ID) && !defined(GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID)
+GRIN_VERTEX grin_get_vertex_from_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
+#endif
 
 #ifdef GRIN_WITH_VERTEX_DATA
 GRIN_DATATYPE grin_get_vertex_data_type(GRIN_GRAPH, GRIN_VERTEX);
@@ -47,22 +51,7 @@ GRIN_VERTEX_DATA grin_get_vertex_data_value(GRIN_GRAPH, GRIN_VERTEX);
 void grin_destroy_vertex_data(GRIN_GRAPH, GRIN_VERTEX_DATA);
 #endif
 
-#ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
-GRIN_VERTEX grin_get_vertex_from_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
-
-GRIN_DATATYPE grin_get_vertex_original_id_type(GRIN_GRAPH);
-
-GRIN_VERTEX_ORIGINAL_ID grin_get_vertex_original_id(GRIN_GRAPH, GRIN_VERTEX);
-
-void grin_destroy_vertex_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
-#endif
-
-#if defined(GRIN_WITH_VERTEX_ORIGINAL_ID) && defined(GRIN_WITH_VERTEX_PROPERTY)
-GRIN_VERTEX grin_get_vertex_from_original_id_by_type(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_VERTEX_ORIGINAL_ID);
-#endif
-
-
-// GRIN_EDGE
+// Edge
 void grin_destroy_edge(GRIN_GRAPH, GRIN_EDGE);
 
 GRIN_VERTEX grin_get_edge_src(GRIN_GRAPH, GRIN_EDGE);

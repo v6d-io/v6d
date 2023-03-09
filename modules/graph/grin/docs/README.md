@@ -12,6 +12,33 @@ storage systems in a uniform way.
 - Properties are bound to vertex and edge types, but some may have the same name.
 - Labels can be assigned to vertices and edges (NOT their types) primarily for query filtering, and labels have no properties.
 
+### Partition Strategies
+#### Edge-cut Partition Strategy
+- Vertex data are local complete for master vertices
+- Edge data are local complete for all edges
+- Neighbors are local complete for master vertices
+- Vertex properties are local complete for master vertices
+- Edge properties are local complete for all edges
+
+#### Vertex-cut Partition Strategy
+- Vertex data are local complete for all vertices
+- Edge data are local complete for all edges
+- Mirror partition list is available for master vertices to broadcast messages
+- Vertex properties are local complete for all vertices
+- Edge properties are local complete for all edges
+
+### Assumption Macros
+- GRIN also provides granula assumption macros to describe storage assumptions.
+- Some assumptions may dominate others, so storage providers should take care when setting these assumptions.
+- Take assumptions on vertex property local complete as example, GRIN provides four macros:
+    1. GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+    2. GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+    3. GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+    4. GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+- Here 1. dominates others, 2. dominates 4., and 3. also dominates 4., that means 2. to 4. are undefined when 1. is defined.
+- Suppose only 3. is defined, it means vertices of certain types have all the properties locally complete, no matter the vertex is master or mirror. In this case, GRIN provides an API to return
+these vertex types.
+
 -----
 
 ## Design Principles
@@ -184,50 +211,53 @@ A mixed example with structure, partition and property
         the destination is a mirror vertex, given the context of "edge-cut" partition strategy that the underlying storage uses.
         Then for each of these vertices, we send the value of the "features" property to its master partition.
     */
-        auto g = get_local_graph_from_partition(partitioned_graph, partition);  // get local graph of partition
+        GRIN_GRAPH g = grin_get_local_graph_from_partition(partitioned_graph, partition);  // get local graph of partition
 
-        auto etype = get_edge_type_by_name(g, edge_type_name);  // get edge type from name
-        auto src_vtypes = get_src_types_from_edge_type(g, etype);  // get related source vertex type list
-        auto dst_vtypes = get_dst_types_from_edge_type(g, etype);  // get related destination vertex type list
+        GRIN_EDGE_TYPE etype = grin_get_edge_type_by_name(g, edge_type_name);  // get edge type from name
+        GRIN_VERTEX_TYPE_LIST src_vtypes = grin_get_src_types_from_edge_type(g, etype);  // get related source vertex type list
+        GRIN_VERTEX_TYPE_LIST dst_vtypes = grin_get_dst_types_from_edge_type(g, etype);  // get related destination vertex type list
 
-        auto src_vtypes_num = get_vertex_type_list_size(src_vtypes);
-        auto dst_vtypes_num = get_vertex_type_list_size(dst_vtypes);
+        size_t src_vtypes_num = grin_get_vertex_type_list_size(g, src_vtypes);
+        size_t dst_vtypes_num = grin_get_vertex_type_list_size(g, dst_vtypes);
         assert(src_vtypes_num == dst_vtypes_num);  // the src & dst vertex type lists must be aligned
 
-        for (auto i = 0; i < src_vtypes_num; ++i) {  // iterate all pairs of src & dst vertex type
-            auto src_vtype = get_vertex_type_from_list(src_vtypes, i);  // get src type
-            auto dst_vtype = get_vertex_type_from_list(dst_vtypes, i);  // get dst type
+        for (size_t i = 0; i < src_vtypes_num; ++i) {  // iterate all pairs of src & dst vertex type
+            GRIN_VERTEX_TYPE src_vtype = grin_get_vertex_type_from_list(g, src_vtypes, i);  // get src type
+            GRIN_VERTEX_TYPE dst_vtype = grin_get_vertex_type_from_list(g, dst_vtypes, i);  // get dst type
 
-            auto dst_vp = get_vertex_property_by_name(g, dst_vtype, vertex_property_name);  // get the property called "features" under dst type
-            if (dst_vp == NULL_PROPERTY) continue;  // filter out the pairs whose dst type does NOT have such a property called "features"
+            GRIN_VERTEX_PROPERTY dst_vp = grin_get_vertex_property_by_name(g, dst_vtype, vertex_property_name);  // get the property called "features" under dst type
+            if (dst_vp == GRIN_NULL_VERTEX_PROPERTY) continue;  // filter out the pairs whose dst type does NOT have such a property called "features"
             
-            auto dst_vpt = get_vertex_property_table_by_type(g, dst_vtype);  // prepare property table of dst vertex type for later use
-            auto dst_vp_dt = get_vertex_property_data_type(g, dst_vp); // prepare property type for later use
+            GRIN_VERTEX_PROPERTY_TABLE dst_vpt = grin_get_vertex_property_table_by_type(g, dst_vtype);  // prepare property table of dst vertex type for later use
+            GRIN_DATATYPE dst_vp_dt = grin_get_vertex_property_data_type(g, dst_vp); // prepare property type for later use
 
-            auto src_vl = get_master_vertices_by_type(g, src_vtype);  // we only need master vertices under source type
+            GRIN_VERTEX_LIST __src_vl = grin_get_vertex_list(g);  // get the vertex list
+            GRIN_VERTEX_LIST _src_vl = grin_filter_type_for_vertex_list(g, src_vtype, __src_vl);  // filter the vertex of source type
+            GRIN_VERTEX_LIST src_vl = grin_filter_master_for_vertex_list(g, _src_vl);  // filter master vertices under source type
             
-            auto src_vl_num = get_vertex_list_size(src_vl);
-            for (auto j = 0; j < src_vl_num; ++j) { // iterate the src vertex
-                auto v = get_vertex_from_list(src_vl, j);
-                auto adj_list = get_adjacent_list_by_edge_type(g, Direction::OUT, v, etype);  // get the adjacent list of v with edges under etype
-                bool check_flag = false;
-                if (adj_list == NULL_LIST) {  // NULL_LIST means the storage does NOT support getting adj_list by edge type, note that list with size 0 is NOT a NULL_LIST
-                    adj_list = get_adjacent_list(g, Direction::OUT, v);
-                    check_flag = true;  // Then we should scan the full adj list and filter edge type by ourselves.
-                }
+            size_t src_vl_num = grin_get_vertex_list_size(g, src_vl);
+            for (size_t j = 0; j < src_vl_num; ++j) { // iterate the src vertex
+                GRIN_VERTEX v = grin_get_vertex_from_list(g, src_vl, j);
 
-                auto al_sz = get_adjacent_list_size(adj_list);
-                for (auto k = 0; k < al_sz; ++k) {
-                    if (check_flag) {
-                        auto edge = get_edge_from_adjacent_list(adj_list, k);
-                        auto edge_type = get_edge_type(g, edge);
-                        if (!equal_edge_type(edge_type, etype)) continue;
-                    }
-                    auto u = get_neighbor_from_adjacent_list(adj_list, k);  // get the dst vertex u
-                    auto value = get_value_from_vertex_property_table(dst_vpt, u, dst_vp);  // get the property value of "features" of u
+            #ifdef GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
+                GRIN_ADJACENT_LIST _adj_list = grin_get_adjacent_list(g, GRIN_DIRECTION::OUT, v);  // get the outgoing adjacent list of v
+                GRIN_ADJACENT_LIST adj_list = grin_filter_edge_type_for_adjacent_list(g, etype, _adj_list);  // filter edges under etype
+            #else
+                GRIN_ADJACENT_LIST adj_lsit = grin_get_adjacent_list(g, GRIN_DIRECTION::OUT, v);  // get the outgoing adjacent list of v
+            #endif
 
-                    auto uref = get_vertex_ref_for_vertex(g, u);  // get the reference of u that can be recoginized by other partitions
-                    auto u_master_partition = get_master_partition_from_vertex_ref(g, uref);  // get the master partition for u
+                size_t al_sz = grin_get_adjacent_list_size(g, adj_list);
+                for (size_t k = 0; k < al_sz; ++k) {
+            #ifndef GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
+                    GRIN_EDGE edge = grin_get_edge_from_adjacent_list(g, adj_list, k);
+                    GRIN_EDGE_TYPE edge_type = grin_get_edge_type(g, edge);
+                    if (!grin_equal_edge_type(g, edge_type, etype)) continue;
+            #endif
+                    GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list(g, adj_list, k);  // get the dst vertex u
+                    const void* value = grin_get_value_from_vertex_property_table(g, dst_vpt, u, dst_vp);  // get the property value of "features" of u
+
+                    GRIN_VERTEX_REF uref = grin_get_vertex_ref_for_vertex(g, u);  // get the reference of u that can be recoginized by other partitions
+                    GRIN_PARTITION u_master_partition = grin_get_master_partition_from_vertex_ref(g, uref);  // get the master partition for u
 
                     send_value(u_master_partition, uref, dst_vp_dt, value);  // the value must be casted to the correct type based on dst_vp_dt before sending
                 }

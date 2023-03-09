@@ -56,6 +56,7 @@ void TraverseLocalGraph(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION
           auto edge = it.get_edge();
           if (dt_name == "double") {
             auto value = it.get_data<double>(prop);
+            std::cout << value << std::endl;
           }
         }
       }

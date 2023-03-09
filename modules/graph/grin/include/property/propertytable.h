@@ -28,7 +28,7 @@ limitations under the License.
  * property's data type.
  */
 ///@{
-#if defined(GRIN_WITH_VERTEX_PROPERTY) || defined(GRIN_WITH_EDGE_PROPERTY)
+#ifdef GRIN_ENABLE_ROW
 void grin_destroy_row(GRIN_GRAPH, GRIN_ROW);
 
 /** @brief the value of a property from row by its position in row */
@@ -42,7 +42,7 @@ bool grin_insert_value_to_row(GRIN_GRAPH, GRIN_ROW, void*);
 #endif
 ///@}
 
-#ifdef GRIN_WITH_VERTEX_PROPERTY
+#ifdef GRIN_ENABLE_VERTEX_PROPERTY_TABLE
 /**
  * @brief destroy vertex property table
  * @param GRIN_VERTEX_PROPERTY_TABLE vertex property table
@@ -54,7 +54,7 @@ void grin_destroy_vertex_property_table(GRIN_GRAPH, GRIN_VERTEX_PROPERTY_TABLE);
  * No matter column or row store strategy is used in the storage,
  * GRIN recommends to first get the property table of the vertex type,
  * and then fetch values(rows) by vertex and property(list). However,
- * GRIN does provide direct row fetching API when GRIN_COLUMN_STORE_TRAIT
+ * GRIN does provide direct row fetching API when GRIN_ASSUME_COLUMN_STORE
  * is NOT set.
  * @param GRIN_GRAPH the graph
  * @param GRIN_VERTEX_TYPE the vertex type
@@ -69,7 +69,9 @@ GRIN_VERTEX_PROPERTY_TABLE grin_get_vertex_property_table_by_type(GRIN_GRAPH, GR
  * @return can be casted to the property data type by the caller
  */
 const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH, GRIN_VERTEX_PROPERTY_TABLE, GRIN_VERTEX, GRIN_VERTEX_PROPERTY);
+#endif
 
+#if defined(GRIN_ENABLE_VERTEX_PROPERTY_TABLE) && defined(GRIN_ENABLE_ROW)
 /**
  * @brief get vertex row from table
  * @param GRIN_VERTEX_PROPERTY_TABLE vertex property table
@@ -77,8 +79,9 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH, GRIN_VERTEX_PR
  * @param GRIN_VERTEX_PROPERTY_LIST the vertex property list as columns
  */
 GRIN_ROW grin_get_row_from_vertex_property_table(GRIN_GRAPH, GRIN_VERTEX_PROPERTY_TABLE, GRIN_VERTEX, GRIN_VERTEX_PROPERTY_LIST);
+#endif
 
-#ifndef GRIN_COLUMN_STORE_TRAIT
+#if !defined(GRIN_ASSUME_COLUMN_STORE) && defined(GRIN_ENABLE_ROW)
 /**
  * @brief get vertex row directly from the graph, this API only works for row store system
  * @param GRIN_GRAPH the graph
@@ -87,9 +90,8 @@ GRIN_ROW grin_get_row_from_vertex_property_table(GRIN_GRAPH, GRIN_VERTEX_PROPERT
  */
 GRIN_ROW grin_get_vertex_row(GRIN_GRAPH, GRIN_VERTEX, GRIN_VERTEX_PROPERTY_LIST);
 #endif
-#endif
 
-#ifdef GRIN_WITH_EDGE_PROPERTY
+#ifdef GRIN_ENABLE_EDGE_PROPERTY_TABLE
 /**
  * @brief destroy edge property table
  * @param GRIN_EDGE_PROPERTY_TABLE edge property table
@@ -101,7 +103,7 @@ void grin_destroy_edge_property_table(GRIN_GRAPH, GRIN_EDGE_PROPERTY_TABLE);
  * No matter column or row store strategy is used in the storage,
  * GRIN recommends to first get the property table of the edge type,
  * and then fetch values(rows) by edge and property(list). However,
- * GRIN does provide direct row fetching API when GRIN_COLUMN_STORE_TRAIT
+ * GRIN does provide direct row fetching API when GRIN_ASSUME_COLUMN_STORE
  * is NOT set.
  * @param GRIN_GRAPH the graph
  * @param GRIN_EDGE_TYPE the edge type
@@ -116,7 +118,9 @@ GRIN_EDGE_PROPERTY_TABLE grin_get_edge_property_table_by_type(GRIN_GRAPH, GRIN_E
  * @return can be casted to the property data type by the caller
  */
 const void* grin_get_value_from_edge_property_table(GRIN_GRAPH, GRIN_EDGE_PROPERTY_TABLE, GRIN_EDGE, GRIN_EDGE_PROPERTY);
+#endif
 
+#if defined(GRIN_ENABLE_EDGE_PROPERTY_TABLE) && defined(GRIN_ENABLE_ROW)
 /**
  * @brief get edge row from table
  * @param GRIN_EDGE_PROPERTY_TABLE edge property table
@@ -124,8 +128,9 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH, GRIN_EDGE_PROPER
  * @param GRIN_EDGE_PROPERTY_LIST the edge property list as columns
  */
 GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH, GRIN_EDGE_PROPERTY_TABLE, GRIN_EDGE, GRIN_EDGE_PROPERTY_LIST);
+#endif
 
-#ifndef GRIN_COLUMN_STORE_TRAIT
+#if !defined(GRIN_ASSUME_COLUMN_STORE) && defined(GRIN_ENABLE_ROW)
 /**
  * @brief get edge row directly from the graph, this API only works for row store system
  * @param GRIN_GRAPH the graph
@@ -133,7 +138,6 @@ GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH, GRIN_EDGE_PROPERTY_TA
  * @param GRIN_EDGE_PROPERTY_LIST the edge property list as columns
  */
 GRIN_ROW grin_get_edge_row(GRIN_GRAPH, GRIN_EDGE, GRIN_EDGE_PROPERTY_LIST);
-#endif
 #endif
 
 #endif  // GRIN_INCLUDE_PROPERTY_PROPERTY_TABLE_H_

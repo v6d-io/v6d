@@ -20,7 +20,7 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#ifdef GRIN_PREDICATE_ENABLE_VERTEX_ORDERING
+#ifdef GRIN_PREDICATE_VERTEX_ORDERING
 /** 
  * @brief sort a vertex list
  * @param GRIN_GRAPH the graph

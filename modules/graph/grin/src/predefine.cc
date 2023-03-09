@@ -73,3 +73,49 @@ GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType> type) {
   } 
   return GRIN_DATATYPE::Undefined;
 }
+
+#ifdef GRIN_ENABLE_VERTEX_LIST
+void __grin_init_vertex_list(GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
+    vl->current = 0;
+    vl->type_current = vl->type_begin;
+    vl->offsets.clear();
+    vl->vrs.clear();
+    GRIN_GRAPH_T::vertices_t vr;
+    vl->offsets.push_back(0);
+    unsigned sum = 0;
+    for (auto vtype = vl->type_begin; vtype < vl->type_end; ++vtype) {
+        if (vl->all_master_mirror == 0) {
+            vr = g->Vertices(vtype);
+        } else if (vl->all_master_mirror == 1) {
+            vr = g->InnerVertices(vtype);
+        } else {
+            vr = g->OuterVertices(vtype);
+        }
+        sum += vr.size();
+        vl->offsets.push_back(sum);
+        vl->vrs.push_back(vr);
+    }
+}
+#endif
+
+#ifdef GRIN_ENABLE_ADJACENT_LIST
+void __grin_init_adjacent_list(GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
+    al->current = 0;
+    al->etype_current = al->etype_begin;
+    al->offsets.clear();
+    al->data.clear();
+    GRIN_GRAPH_T::raw_adj_list_t ral;
+    al->offsets.push_back(0);
+    unsigned sum = 0;
+    for (auto etype = al->etype_begin; etype < al->etype_end; ++etype) {
+        if (al->dir == GRIN_DIRECTION::IN) {
+            ral = g->GetIncomingRawAdjList(*(al->v), etype);
+        } else {
+            ral = g->GetOutgoingRawAdjList(*(al->v), etype);
+        }
+        sum += ral.size();
+        al->offsets.push_back(sum);
+        al->data.push_back(ral);
+    }
+}
+#endif

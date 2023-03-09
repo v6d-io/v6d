@@ -35,14 +35,6 @@ size_t grin_get_vertex_num(GRIN_GRAPH g) {
     return result;
 }
 
-#ifdef GRIN_WITH_VERTEX_PROPERTY
-size_t grin_get_vertex_num_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
-    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
-    return _g->GetVerticesNum(*_vtype);
-}
-#endif
-
 size_t grin_get_edge_num(GRIN_GRAPH g, GRIN_DIRECTION d) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     if (d == IN) {
@@ -53,13 +45,6 @@ size_t grin_get_edge_num(GRIN_GRAPH g, GRIN_DIRECTION d) {
     return _g->GetEdgeNum();
 }
 
-#ifdef GRIN_WITH_EDGE_PROPERTY
-size_t grin_get_edge_num_by_type(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_EDGE_TYPE etype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
-    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
-    return _g->edge_data_table(*_etype)->num_rows();
-}
-#endif
 
 // Vertex
 void grin_destroy_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
@@ -68,17 +53,10 @@ void grin_destroy_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
 }
 
 #ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
-GRIN_VERTEX grin_get_vertex_from_original_id(GRIN_GRAPH g, GRIN_VERTEX_ORIGINAL_ID oid) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
-    GRIN_VERTEX result;
-    for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
-        result = grin_get_vertex_from_original_id_by_type(g, &vtype, oid);
-        if (result != GRIN_NULL_VERTEX) {
-            return result;
-        }
-    }
-    return GRIN_NULL_VERTEX;
-}
+void grin_destroy_vertex_original_id(GRIN_GRAPH g, GRIN_VERTEX_ORIGINAL_ID oid) {
+    auto _oid = static_cast<VERTEX_ORIGINAL_ID_T*>(oid);
+    delete _oid;
+} 
 
 GRIN_DATATYPE grin_get_vertex_original_id_type(GRIN_GRAPH g) {
     return GRIN_DATATYPE_ENUM<VERTEX_ORIGINAL_ID_T>::value;
@@ -92,30 +70,21 @@ GRIN_VERTEX_ORIGINAL_ID grin_get_vertex_original_id(GRIN_GRAPH g, GRIN_VERTEX v)
     auto oid = new VERTEX_ORIGINAL_ID_T(_g->Gid2Oid(gid));
     return oid;
 }
-
-void grin_destroy_vertex_original_id(GRIN_GRAPH g, GRIN_VERTEX_ORIGINAL_ID oid) {
-    auto _oid = static_cast<VERTEX_ORIGINAL_ID_T*>(oid);
-    delete _oid;
-} 
 #endif
 
-#if defined(GRIN_WITH_VERTEX_ORIGINAL_ID) && defined(GRIN_WITH_VERTEX_PROPERTY)
-GRIN_VERTEX grin_get_vertex_from_original_id_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_ORIGINAL_ID oid) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
-    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
-    auto _oid = static_cast<VERTEX_ORIGINAL_ID_T*>(oid);
-    GRIN_GRAPH_T::vid_t gid;
-    auto v = new GRIN_VERTEX_T();
-    if (_g->Oid2Gid(*_vtype, *_oid, gid)) {
-        if (_g->Gid2Vertex(gid, *v)) {
-            return v;
-        }
-    }
-    return GRIN_NULL_VERTEX;
-}
+#if defined(GRIN_WITH_VERTEX_ORIGINAL_ID) && !defined(GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID)
+GRIN_VERTEX grin_get_vertex_from_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
 #endif
 
-// GRIN_EDGE
+#ifdef GRIN_WITH_VERTEX_DATA
+GRIN_DATATYPE grin_get_vertex_data_type(GRIN_GRAPH, GRIN_VERTEX);
+
+GRIN_VERTEX_DATA grin_get_vertex_data_value(GRIN_GRAPH, GRIN_VERTEX);
+
+void grin_destroy_vertex_data(GRIN_GRAPH, GRIN_VERTEX_DATA);
+#endif
+
+// Edge
 void grin_destroy_edge(GRIN_GRAPH g, GRIN_EDGE e) {
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     delete _e;
@@ -130,3 +99,11 @@ GRIN_VERTEX grin_get_edge_dst(GRIN_GRAPH g, GRIN_EDGE e) {
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     return _e->dst;
 }
+
+#ifdef GRIN_WITH_EDGE_DATA
+GRIN_DATATYPE grin_get_edge_data_type(GRIN_GRAPH, GRIN_EDGE);
+
+GRIN_EDGE_DATA grin_get_edge_data_value(GRIN_GRAPH, GRIN_EDGE);
+
+void grin_destroy_edge_data(GRIN_GRAPH, GRIN_EDGE_DATA);
+#endif
