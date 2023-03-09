@@ -20,7 +20,7 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#ifdef GRIN_WITH_VERTEX_PRIMARY_KEYS
+#ifdef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
 /** 
  * @brief get the vertex types with primary keys
  * @param GRIN_GRAPH the graph

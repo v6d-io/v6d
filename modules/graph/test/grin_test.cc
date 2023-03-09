@@ -66,26 +66,28 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
     GRIN_VERTEX_PROPERTY_TABLE dst_vpt = grin_get_vertex_property_table_by_type(g, dst_vtype);  // prepare property table of dst vertex type for later use
     GRIN_DATATYPE dst_vp_dt = grin_get_vertex_property_data_type(g, dst_vp); // prepare property type for later use
 
-    GRIN_VERTEX_LIST src_vl = grin_get_master_vertices_by_type(g, src_vtype);  // we only need master vertices under source type
+    GRIN_VERTEX_LIST __src_vl = grin_get_vertex_list(g);  // get the vertex list
+    GRIN_VERTEX_LIST _src_vl = grin_filter_type_for_vertex_list(g, src_vtype, __src_vl);  // filter the vertex of source type
+    GRIN_VERTEX_LIST src_vl = grin_filter_master_for_vertex_list(g, _src_vl);  // filter master vertices under source type
     
     size_t src_vl_num = grin_get_vertex_list_size(g, src_vl);
     for (size_t j = 0; j < src_vl_num; ++j) { // iterate the src vertex
       GRIN_VERTEX v = grin_get_vertex_from_list(g, src_vl, j);
-      GRIN_ADJACENT_LIST adj_list = grin_get_adjacent_list_by_edge_type(g, GRIN_DIRECTION::OUT, v, etype);  // get the adjacent list of v with edges under etype
-      bool check_flag = false;
-      if (adj_list == GRIN_NULL_LIST) {  // NULL_LIST means the storage does NOT support getting adj_list by edge type, note that list with size 0 is NOT a NULL_LIST
-        // Then we should scan the full adj list and filter edge type by ourselves.
-        adj_list = grin_get_adjacent_list(g, GRIN_DIRECTION::OUT, v);
-        check_flag = true;
-      }
+
+#ifdef GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
+      GRIN_ADJACENT_LIST _adj_list = grin_get_adjacent_list(g, GRIN_DIRECTION::OUT, v);  // get the outgoing adjacent list of v
+      GRIN_ADJACENT_LIST adj_list = grin_filter_edge_type_for_adjacent_list(g, etype, _adj_list);  // filter edges under etype
+#else
+      GRIN_ADJACENT_LIST adj_lsit = grin_get_adjacent_list(g, GRIN_DIRECTION::OUT, v);  // get the outgoing adjacent list of v
+#endif
 
       size_t al_sz = grin_get_adjacent_list_size(g, adj_list);
       for (size_t k = 0; k < al_sz; ++k) {
-        if (check_flag) {
-          GRIN_EDGE edge = grin_get_edge_from_adjacent_list(g, adj_list, k);
-          GRIN_EDGE_TYPE edge_type = grin_get_edge_type(g, edge);
-          if (!grin_equal_edge_type(g, edge_type, etype)) continue;
-        }
+#ifndef GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
+        GRIN_EDGE edge = grin_get_edge_from_adjacent_list(g, adj_list, k);
+        GRIN_EDGE_TYPE edge_type = grin_get_edge_type(g, edge);
+        if (!grin_equal_edge_type(g, edge_type, etype)) continue;
+#endif
         GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list(g, adj_list, k);  // get the dst vertex u
         const void* value = grin_get_value_from_vertex_property_table(g, dst_vpt, u, dst_vp);  // get the property value of "features" of u
 

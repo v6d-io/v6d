@@ -13,19 +13,8 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/predicate/order.h"
 
-#ifdef GRIN_PREDICATE_ENABLE_VERTEX_ORDERING
-struct less_than_key {
-    inline bool operator() (const _GRIN_TYPED_VERTICES_T& tv1, const _GRIN_TYPED_VERTICES_T& tv2) {
-        if (tv1.first == tv2.first) {
-            return tv1.second.begin_value() < tv2.second.begin_value();
-        }
-        return tv1.first < tv2.first;
-    }
-};
-
+#ifdef GRIN_PREDICATE_VERTEX_ORDERING
 bool grin_sort_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
-    auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    std::sort(_vl->begin(), _vl->end(), less_than_key());
     return true;
 };
 
@@ -34,18 +23,12 @@ bool grin_get_position_of_vertex_from_sorted_list(GRIN_GRAPH g, GRIN_VERTEX_LIST
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     auto vtype = _g->vertex_label(*_v);
+    if (vtype < _vl->type_begin || vtype >= _vl->type_end) return false;
     pos = 0;
-    for (auto &tv : *_vl) {
-        if (tv.first < vtype) pos += tv.second.size();
-        else if (tv.first > vtype) return false;
-        else {
-            if (tv.second.Contain(*_v)) {
-                pos += _v->GetValue() - tv.second.begin_value();
-                return true;
-            } else {
-                return false;
-            }
-        }
+    auto offset = _v->GetValue() - _vl->vrs[vtype - _vl->type_begin].begin_value();
+    if (offset < _vl->vrs[vtype - _vl->type_begin].size()) {
+        pos = _vl->offsets[vtype - _vl->type_begin] + offset;
+        return true;
     }
     return false;
 };

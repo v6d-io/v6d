@@ -34,7 +34,7 @@ void grin_destroy_vertex_property_list(GRIN_GRAPH, GRIN_VERTEX_PROPERTY_LIST);
 bool grin_insert_vertex_property_to_list(GRIN_GRAPH, GRIN_VERTEX_PROPERTY_LIST, GRIN_VERTEX_PROPERTY);
 #endif
 
-#ifdef GRIN_NATURAL_VERTEX_PROPERTY_ID_TRAIT
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
 GRIN_VERTEX_PROPERTY grin_get_vertex_property_from_id(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_VERTEX_PROPERTY_ID);
 
 GRIN_VERTEX_PROPERTY_ID grin_get_vertex_property_id(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_VERTEX_PROPERTY);
@@ -55,7 +55,7 @@ void grin_destroy_edge_property_list(GRIN_GRAPH, GRIN_EDGE_PROPERTY_LIST);
 bool grin_insert_edge_property_to_list(GRIN_GRAPH, GRIN_EDGE_PROPERTY_LIST, GRIN_EDGE_PROPERTY);
 #endif
 
-#ifdef GRIN_NATURAL_EDGE_PROPERTY_ID_TRAIT
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
 GRIN_EDGE_PROPERTY grin_get_edge_property_from_id(GRIN_GRAPH, GRIN_EDGE_TYPE, GRIN_EDGE_PROPERTY_ID);
 
 GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_GRAPH, GRIN_EDGE_TYPE, GRIN_EDGE_PROPERTY);
@@ -71,12 +71,12 @@ GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_GRAPH, GRIN_EDGE_TYPE, GRIN
  * The projection only works on column store systems.
  */
 ///@{
-#if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_COLUMN_STORE_TRAIT)
+#if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_ASSUME_COLUMN_STORE)
 /** @brief project vertex properties */
 GRIN_GRAPH grin_select_vertex_properties(GRIN_GRAPH, GRIN_VERTEX_PROPERTY_LIST);
 #endif
 
-#if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_COLUMN_STORE_TRAIT)
+#if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_ASSUME_COLUMN_STORE)
 /** @brief project edge properties */
 GRIN_GRAPH grin_select_edge_properteis(GRIN_GRAPH, GRIN_EDGE_PROPERTY_LIST);
 #endif

@@ -13,7 +13,7 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/property/property.h"
 
-#if defined(GRIN_WITH_PROPERTY_NAME) && defined(GRIN_WITH_VERTEX_PROPERTY)
+#ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
 const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
@@ -44,7 +44,7 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const
 }
 #endif
 
-#if defined(GRIN_WITH_PROPERTY_NAME) && defined(GRIN_WITH_EDGE_PROPERTY)
+#ifdef GRIN_WITH_EDGE_PROPERTY_NAME
 const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);

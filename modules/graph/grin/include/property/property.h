@@ -20,7 +20,7 @@ limitations under the License.
 
 #include "../predefine.h"
 
-#if defined(GRIN_WITH_PROPERTY_NAME) && defined(GRIN_WITH_VERTEX_PROPERTY)
+#ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
 /**
  * @brief get the vertex property name
  * @param GRIN_GRAPH the graph
@@ -44,7 +44,7 @@ GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH, GRIN_VERTEX_TY
 GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH, const char* name);
 #endif
 
-#if defined(GRIN_WITH_PROPERTY_NAME) && defined(GRIN_WITH_EDGE_PROPERTY)
+#ifdef GRIN_WITH_EDGE_PROPERTY_NAME
 /**
  * @brief get the edge property name
  * @param GRIN_GRAPH the graph

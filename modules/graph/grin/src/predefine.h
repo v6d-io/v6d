@@ -98,17 +98,53 @@ typedef GRIN_GRAPH_T::oid_t VERTEX_ORIGINAL_ID_T;
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
-typedef std::pair<unsigned, GRIN_GRAPH_T::vertices_t> _GRIN_TYPED_VERTICES_T;
-typedef std::vector<_GRIN_TYPED_VERTICES_T> GRIN_VERTEX_LIST_T;                 
+struct GRIN_VERTEX_LIST_T {
+    unsigned type_begin;
+    unsigned type_end;
+    unsigned all_master_mirror;
+    unsigned type_current;
+    unsigned current;
+    std::vector<unsigned> offsets;
+    std::vector<GRIN_GRAPH_T::vertices_t> vrs;
+};
+void __grin_init_vertex_list(GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl);
+#endif
+
+#ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
+struct GRIN_VERTEX_LIST_ITERATOR_T {
+    unsigned type_begin;
+    unsigned type_end;
+    unsigned all_master_mirror;
+    unsigned type_current;
+    unsigned current;
+    GRIN_GRAPH_T::vertices_t vr;
+};
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
 struct GRIN_ADJACENT_LIST_T {
-    GRIN_VERTEX v;
+    GRIN_VERTEX_T* v;
     GRIN_DIRECTION dir;
-    unsigned etype;
+    unsigned etype_begin;
+    unsigned etype_end;
+    unsigned etype_current;
+    unsigned current;
+    std::vector<unsigned> offsets;
     std::vector<GRIN_GRAPH_T::raw_adj_list_t> data;
-};    
+};
+void __grin_init_adjacent_list(GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al);
+#endif
+
+#ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
+struct GRIN_ADJACENT_LIST_ITERATOR_T {
+    GRIN_VERTEX_T* v;
+    GRIN_DIRECTION dir;
+    unsigned etype_begin;
+    unsigned etype_end;
+    unsigned etype_current;
+    unsigned current;
+    GRIN_GRAPH_T::raw_adj_list_t data;
+};  
 #endif
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION

@@ -18,40 +18,17 @@ limitations under the License.
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
 GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_VERTEX v) {
+    if (d == GRIN_DIRECTION::BOTH) return GRIN_NULL_LIST;
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto al = new GRIN_ADJACENT_LIST_T();
-    al->v = v;
+    al->v = _v;
     al->dir = d;
-    al->etype = _g->edge_label_num();
-    for (GRIN_EDGE_TYPE_T etype = 0; etype < al->etype; ++etype) {
-        if (d == GRIN_DIRECTION::IN) {
-            al->data.push_back(_g->GetIncomingRawAdjList(*_v, etype));
-        } else {
-            al->data.push_back(_g->GetOutgoingRawAdjList(*_v, etype));
-        }
-    }
+    al->etype_begin = 0;
+    al->etype_end = _g->edge_label_num();
+    __grin_init_adjacent_list(_g, al);
     return al;
 }
-
-#ifdef GRIN_WITH_EDGE_PROPERTY
-GRIN_ADJACENT_LIST grin_get_adjacent_list_by_edge_type(GRIN_GRAPH g, GRIN_DIRECTION d, 
-                                            GRIN_VERTEX v, GRIN_EDGE_TYPE etype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
-    auto al = new GRIN_ADJACENT_LIST_T();
-    al->v = v;
-    al->dir = d;
-    al->etype = *_etype;
-    if (d == GRIN_DIRECTION::IN) {
-        al->data.push_back(_g->GetIncomingRawAdjList(*_v, *_etype));
-    } else {
-        al->data.push_back(_g->GetOutgoingRawAdjList(*_v, *_etype));
-    }
-    return al;
-}
-#endif
 
 void grin_destroy_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
@@ -60,21 +37,15 @@ void grin_destroy_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
 
 size_t grin_get_adjacent_list_size(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    size_t result = 0;
-    for (auto &ral : _al->data) {
-        result += ral.Size();
-    }
-    return result;
+    return _al->offsets[_al->etype_end - _al->etype_begin];
 }
 
 GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    size_t result = 0;
-    for (auto &ral : _al->data) {
-        result += ral.Size();
-        if (idx < result) {
-            auto _idx = idx - (result - ral.size());
-            auto _nbr = ral.begin() + _idx;
+    for (auto i = 0; i < _al->etype_end - _al->etype_begin; ++i) {        
+        if (idx < _al->offsets[i+1]) {
+            auto _idx = idx - _al->offsets[i];
+            auto _nbr = _al->data[i].begin() + _idx;
             auto v = new GRIN_VERTEX_T(_nbr->vid);
             return v;
         }
@@ -83,23 +54,35 @@ GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIS
 }
 
 GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
-    auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    size_t result = 0;
-    for (auto i = 0; i < _al->data.size(); ++i) {
-        result += _al->data[i].Size();
-        if (idx < result) {
-            auto _idx = idx - (result - _al->data[i].Size());
+   auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
+    for (auto i = 0; i < _al->etype_end - _al->etype_begin; ++i) {        
+        if (idx < _al->offsets[i+1]) {
+            auto _idx = idx - _al->offsets[i];
             auto _nbr = _al->data[i].begin() + _idx;
             auto v = new GRIN_VERTEX_T(_nbr->vid);
             auto e = new GRIN_EDGE_T();
             e->src = _al->v;
             e->dst = v;
             e->dir = _al->dir;
-            e->etype = _al->data.size() > 1 ? i : _al->etype;
+            e->etype = _al->etype_begin + i;
             e->eid = _nbr->eid;
-            return e;
+            return e;        
         }
     }
     return GRIN_NULL_EDGE;
 }
+#endif
+
+#ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
+GRIN_ADJACENT_LIST_ITERATOR grin_get_adjacent_list_begin(GRIN_GRAPH, GRIN_DIRECTION, GRIN_VERTEX);
+
+void grin_destroy_adjacent_list_iter(GRIN_GRAPH, GRIN_ADJACENT_LIST_ITERATOR);
+
+GRIN_ADJACENT_LIST_ITERATOR grin_get_next_adjacent_list_iter(GRIN_GRAPH, GRIN_ADJACENT_LIST_ITERATOR);
+
+bool grin_is_adjacent_list_end(GRIN_GRAPH, GRIN_ADJACENT_LIST_ITERATOR);
+
+GRIN_VERTEX grin_get_neighbor_from_iter(GRIN_GRAPH, GRIN_ADJACENT_LIST_ITERATOR);
+
+GRIN_EDGE grin_get_edge_from_iter(GRIN_GRAPH, GRIN_ADJACENT_LIST_ITERATOR);
 #endif

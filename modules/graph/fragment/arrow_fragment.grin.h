@@ -50,10 +50,13 @@ limitations under the License.
 #include "graph/grin/include/topology/vertexlist.h"
 #include "graph/grin/include/topology/adjacentlist.h"
 #include "graph/grin/include/partition/partition.h"
+#include "graph/grin/include/partition/topology.h"
+#include "graph/grin/include/partition/reference.h"
 #include "graph/grin/include/property/type.h"
 #include "graph/grin/include/property/property.h"
 #include "graph/grin/include/property/propertylist.h"
 #include "graph/grin/include/property/propertytable.h"
+#include "graph/grin/include/property/topology.h"
 
 #include "graph/grin/src/predefine.h"
 
@@ -367,38 +370,44 @@ class GRIN_ArrowFragment {
   }
 
   vertex_range_t Vertices(GRIN_VERTEX_TYPE label) const {
-    auto vl = grin_get_vertex_list_by_type(g_, label);
-    auto sz = grin_get_vertex_list_size(g_, vl);
-    return vertex_range_t(g_, vl, 0, sz);
+    auto vl = grin_get_vertex_list(g_);
+    auto vl1 = grin_filter_type_for_vertex_list(g_, label, vl);
+    auto sz = grin_get_vertex_list_size(g_, vl1);
+    return vertex_range_t(g_, vl1, 0, sz);
   }
 
   vertex_range_t InnerVertices(GRIN_VERTEX_TYPE label) const {
-    auto vl = grin_get_master_vertices_by_type(g_, label);
-    auto sz = grin_get_vertex_list_size(g_, vl);
-    return vertex_range_t(g_, vl, 0, sz);
+    auto vl = grin_get_vertex_list(g_);
+    auto vl1 = grin_filter_type_for_vertex_list(g_, label, vl);
+    auto vl2 = grin_filter_master_for_vertex_list(g_, vl1);
+    auto sz = grin_get_vertex_list_size(g_, vl2);
+    return vertex_range_t(g_, vl2, 0, sz);
   }
 
   vertex_range_t OuterVertices(GRIN_VERTEX_TYPE label) const {
-    auto vl = grin_get_mirror_vertices_by_type(g_, label);
-    auto sz = grin_get_vertex_list_size(g_, vl);
-    return vertex_range_t(g_, vl, 0, sz);
+    auto vl = grin_get_vertex_list(g_);
+    auto vl1 = grin_filter_type_for_vertex_list(g_, label, vl);
+    auto vl2 = grin_filter_mirror_for_vertex_list(g_, vl1);
+    auto sz = grin_get_vertex_list_size(g_, vl2);
+    return vertex_range_t(g_, vl2, 0, sz);
   }
 
   vertex_range_t InnerVerticesSlice(GRIN_VERTEX_TYPE label, size_t start, size_t end)
       const {
-    auto vl = grin_get_master_vertices_by_type(g_, label);
-    auto _end = grin_get_vertex_list_size(g_, vl);
+    auto vl = grin_get_vertex_list(g_);
+    auto vl1 = grin_filter_type_for_vertex_list(g_, label, vl);
+    auto vl2 = grin_filter_master_for_vertex_list(g_, vl1);
+    auto _end = grin_get_vertex_list_size(g_, vl2);
     CHECK(start <= end && start <= _end);
     if (end <= _end) {
-      return vertex_range_t(g_, vl, start, end);
+      return vertex_range_t(g_, vl2, start, end);
     } else {
-      return vertex_range_t(g_, vl, start, _end);
+      return vertex_range_t(g_, vl2, start, _end);
     }
   }
 
   inline size_t GetVerticesNum(GRIN_VERTEX_TYPE label) const {
-    auto vl = grin_get_vertex_list_by_type(g_, label);
-    return grin_get_vertex_list_size(g_, vl);
+    return grin_get_vertex_num_by_type(g_, label);
   }
 
   template <typename T>
@@ -488,13 +497,15 @@ class GRIN_ArrowFragment {
 
 
   inline size_t GetInnerVerticesNum(GRIN_VERTEX_TYPE label) const {
-    auto vl = grin_get_master_vertices_by_type(g_, label);
-    return grin_get_vertex_list_size(g_, vl);
+    auto vl = grin_get_vertex_list(g_);
+    auto vl1 = grin_filter_type_for_vertex_list(g_, label, vl);
+    return grin_get_vertex_list_size(g_, vl1);
   }
 
   inline size_t GetOuterVerticesNum(GRIN_VERTEX_TYPE label) const {
-    auto vl = grin_get_mirror_vertices_by_type(g_, label);
-    return grin_get_vertex_list_size(g_, vl);
+    auto vl = grin_get_vertex_list(g_);
+    auto vl1 = grin_filter_type_for_vertex_list(g_, label, vl);
+    return grin_get_vertex_list_size(g_, vl1);
   }
 
   inline bool IsInnerVertex(GRIN_VERTEX v) const {
@@ -507,18 +518,20 @@ class GRIN_ArrowFragment {
 
   inline adj_list_t GetIncomingAdjList(GRIN_VERTEX v, GRIN_EDGE_TYPE e_label)
       const {
-    auto al = grin_get_adjacent_list_by_edge_type(g_, GRIN_DIRECTION::IN, v, e_label);
-    auto sz = grin_get_adjacent_list_size(g_, al);
+    auto al = grin_get_adjacent_list(g_, GRIN_DIRECTION::IN, v);
+    auto al1 = grin_filter_edge_type_for_adjacent_list(g_, e_label, al);
+    auto sz = grin_get_adjacent_list_size(g_, al1);
     auto ept = grin_get_edge_property_table_by_type(g_, e_label);
-    return adj_list_t(g_, al, ept, 0, sz);
+    return adj_list_t(g_, al1, ept, 0, sz);
   }
 
   inline adj_list_t GetOutgoingAdjList(GRIN_VERTEX v, GRIN_EDGE_TYPE e_label)
       const {
-    auto al = grin_get_adjacent_list_by_edge_type(g_, GRIN_DIRECTION::OUT, v, e_label);
-    auto sz = grin_get_adjacent_list_size(g_, al);
+    auto al = grin_get_adjacent_list(g_, GRIN_DIRECTION::OUT, v);
+    auto al1 = grin_filter_edge_type_for_adjacent_list(g_, e_label, al);
+    auto sz = grin_get_adjacent_list_size(g_, al1);
     auto ept = grin_get_edge_property_table_by_type(g_, e_label);
-    return adj_list_t(g_, al, ept, 0, sz);
+    return adj_list_t(g_, al1, ept, 0, sz);
   }
 
   GRIN_GRAPH get_graph() { return g_; }
