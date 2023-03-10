@@ -164,15 +164,13 @@ func Wait(condition wait.ConditionFunc) error {
 
 // CreateNamespaceIfNotExist creates namespace if it does not exist
 func CreateNamespaceIfNotExist(c client.Client) {
+    if !flags.CreateNamespace {
+        reutrn;
+    }
 	namespace := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: flags.GetDefaultVineyardNamespace(),
 		},
 	}
-
-	if flags.CreateNamespace {
-		if err := CreateIfNotExists(c, &namespace); err != nil {
-			log.Fatal(err, "Expects no positional arguments")
-		}
-	}
+    _ = CreateIfNotExists(c, &namespace)
 }
