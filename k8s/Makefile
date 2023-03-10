@@ -115,12 +115,12 @@ unpredeploy: manifests kustomize
 
 # update the operator image's registry to localhost
 .PHONY: update-registry
-update-registry:
+update-registry: kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 
 # recover the operator image's registry to vineyardcloudnative
 .PHONY: recover-registry
-recover-registry:
+recover-registry: kustomize
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 
 # dump the deployment configuration
@@ -135,11 +135,11 @@ manifests: controller-gen
 	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:maxDescLen=0 webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: sample
-sample: predeploy
+sample: predeploy kustomize
 	$(KUSTOMIZE) build config/samples | kubectl apply -f -
 
 .PHONY: unsample
-unsample:
+unsample: kustomize
 	$(KUSTOMIZE) build config/samples | kubectl delete -f -
 
 # Go modules
