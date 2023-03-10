@@ -48,6 +48,7 @@ var createRecoverCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
+		util.CreateNamespaceIfNotExist(client)
 
 		recover, err := buildRecoverJob()
 		if err != nil {

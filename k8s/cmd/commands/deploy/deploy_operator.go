@@ -68,6 +68,7 @@ var deployOperatorCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
+		util.CreateNamespaceIfNotExist(client)
 
 		operatorManifests, err := util.BuildKustomizeInDir(util.GetKustomizeDir())
 		if err != nil {

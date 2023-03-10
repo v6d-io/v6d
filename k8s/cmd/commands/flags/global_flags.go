@@ -34,9 +34,16 @@ var (
 	// Wait indicates whether to wait for the kubernetes resource to be ready
 	Wait bool
 
+	// CreateNamespace indicates whether to create the namespace if it does not exist
+	CreateNamespace bool
+
+	// DeleteNamespace indicates whether to delete the namespace
+	DeleteNamespace bool
+
 	// DumpUsage
 	DumpUsage bool
-	GenDoc    bool
+
+	GenDoc bool
 )
 
 // defaultKubeConfig return the default kubeconfig path
@@ -66,6 +73,9 @@ func ApplyGlobalFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().
 		BoolVarP(&Wait, "wait", "", true,
 			"wait for the kubernetes resource to be ready, default true")
+	cmd.PersistentFlags().
+		BoolVarP(&CreateNamespace, "create-namespace", "", false,
+			"create the namespace if it does not exist, default false")
 	cmd.Flags().BoolVarP(&DumpUsage, "dump-usage", "j", false, "Dump usage in JSON")
 	cmd.Flags().
 		BoolVarP(&GenDoc, "gen-doc", "g", false, "Generate reference docs, e.g., './references.md'")

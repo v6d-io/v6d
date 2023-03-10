@@ -13,6 +13,7 @@ drivers.
 ### Options
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
   -j, --dump-usage          Dump usage in JSON
   -g, --gen-doc             Generate reference docs, e.g., './references.md'
   -h, --help                help for vineyardctl
@@ -65,6 +66,7 @@ Create a vineyard job on kubernetes.
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -110,6 +112,7 @@ Delete the vineyard components on kubernetes.
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -160,6 +163,7 @@ Deploy a vineyard component on kubernetes.
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -227,6 +231,7 @@ vineyardctl inject [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -280,6 +285,7 @@ vineyardctl manager [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -317,6 +323,7 @@ schedule a workload or a workerflow to a vineyard cluster.
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -429,6 +436,7 @@ vineyardctl create backup [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -493,6 +501,7 @@ vineyardctl create operation [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -535,6 +544,7 @@ vineyardctl create recover [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -573,6 +583,7 @@ vineyardctl delete backup [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -616,6 +627,7 @@ vineyardctl delete cert-manager [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -654,6 +666,7 @@ vineyardctl delete operation [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -700,6 +713,7 @@ vineyardctl delete operator [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -737,6 +751,7 @@ vineyardctl delete recover [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -775,6 +790,7 @@ vineyardctl delete vineyard-cluster [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -818,6 +834,7 @@ vineyardctl delete vineyard-deployment [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -859,6 +876,7 @@ vineyardctl delete vineyardd [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -911,6 +929,7 @@ vineyardctl deploy cert-manager [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -970,6 +989,7 @@ vineyardctl deploy operator [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -1008,6 +1028,7 @@ vineyardctl deploy vineyard-cluster [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -1086,6 +1107,7 @@ vineyardctl deploy vineyard-deployment [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -1229,6 +1251,7 @@ vineyardctl deploy vineyardd [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -1269,6 +1292,7 @@ vineyardctl schedule workflow [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)
@@ -1380,6 +1404,7 @@ vineyardctl schedule workload [flags]
 ### Options inherited from parent commands
 
 ```
+      --create-namespace    create the namespace if it does not exist, default false
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
       --wait                wait for the kubernetes resource to be ready, default true (default true)

@@ -66,6 +66,7 @@ var createOperationCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 
 		client := util.KubernetesClient()
+		util.CreateNamespaceIfNotExist(client)
 		operation := buildOperation()
 
 		if err := util.Create(client, operation, func(operation *v1alpha1.Operation) bool {

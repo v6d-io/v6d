@@ -23,8 +23,10 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	corev1 "k8s.io/api/core/v1"
 	apiextensions "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"k8s.io/apimachinery/pkg/types"
@@ -158,4 +160,17 @@ func DeleteWithContext(
 
 func Wait(condition wait.ConditionFunc) error {
 	return wait.PollImmediate(defaultWaitInternal, defaultWaitTimeout, condition)
+}
+
+// CreateNamespaceIfNotExist creates namespace if it does not exist
+func CreateNamespaceIfNotExist(c client.Client) {
+	if !flags.CreateNamespace {
+		return
+	}
+	namespace := corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: flags.GetDefaultVineyardNamespace(),
+		},
+	}
+	_ = CreateIfNotExists(c, &namespace)
 }
