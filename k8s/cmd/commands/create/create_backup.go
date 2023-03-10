@@ -123,6 +123,8 @@ var createBackupCmd = &cobra.Command{
 		}
 		client := util.KubernetesClient()
 
+		util.CreateNamespaceIfNotExist(client)
+
 		backup, err := buildBackupJob()
 		if err != nil {
 			log.Fatal(err, "failed to build backup job")

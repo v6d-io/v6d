@@ -69,6 +69,7 @@ var deployVineyardDeploymentCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
+		util.CreateNamespaceIfNotExist(client)
 
 		if err := applyVineyarddFromTemplate(client); err != nil {
 			log.Fatal(err, "failed to apply vineyardd resources from template")

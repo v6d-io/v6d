@@ -117,7 +117,6 @@ var deployVineyarddCmd = &cobra.Command{
 	Example: deployVineyarddExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgsOrInput(cmd, args)
-
 		// Check if the input is coming from stdin
 		str, err := util.ReadJsonFromStdin(args)
 		if err != nil {
@@ -128,6 +127,7 @@ var deployVineyarddCmd = &cobra.Command{
 		}
 
 		client := util.KubernetesClient()
+		util.CreateNamespaceIfNotExist(client)
 
 		vineyardd, err := BuildVineyard()
 		if err != nil {
