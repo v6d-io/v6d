@@ -29,15 +29,17 @@ storage systems in a uniform way.
 
 ### Assumption Macros
 - GRIN also provides granula assumption macros to describe storage assumptions.
-- Some assumptions may dominate others, so storage providers should take care when setting these assumptions.
+- Some assumptions may dominate other. It means some assumption applies in a wider range than others. Hence, storage providers should take care when setting these assumptions.
 - Take assumptions on vertex property local complete as example, GRIN provides four macros:
     1. GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
     2. GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
     3. GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
     4. GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
-- Here 1. dominates others, 2. dominates 4., and 3. also dominates 4., that means 2. to 4. are undefined when 1. is defined.
-- Suppose only 3. is defined, it means vertices of certain types have all the properties locally complete, no matter the vertex is master or mirror. In this case, GRIN provides an API to return
-these vertex types.
+- Here 1. dominates others, which means 2. to 4. are undefined when 1. is defined. Also, there are 2. dominates 4., and 3. dominates 4., 
+- GRIN provides different API under different assumptions. 
+- Suppose only 3. is defined, it means vertices of certain types have all the properties locally complete, no matter the vertex is master or mirror. 
+In this case, GRIN provides an API to return these local complete vertex types. 
+- While in case that none of these four macros is defined, GRIN will provide a per-vertex API to tell whether the vertex property is local complete.
 
 -----
 
@@ -54,20 +56,20 @@ these vertex types.
     ```CPP
         /* grin/topology/vertexlist.h */
 
-        VertexList get_vertex_list(Graph g);  // get the vertexlist of a graph
+        GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH g);  // get the vertexlist of a graph
 
-        size_t get_vertex_list_size(VertexList vl);  // the storage must implement the API to return the size of vertexlist
+        size_t grin_get_vertex_list_size(GRIN_GRAPH g, GRIN_VERTEX_LIST vl);  // the storage must implement the API to return the size of vertexlist
 
-        Vertex get_vertex_from_list(VertexList vl, size_t idx);  // the storage must implement the API to return the element of vertexlist by position
+        GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t idx);  // the storage must implement the API to return the element of vertexlist by position
 
 
         /* run.cc */
         {
-            auto vertexlist = get_vertex_list(g); // with a graph (handler) g
-            auto sz = get_vertex_list_size(vertexlist);
+            auto vertexlist = grin_get_vertex_list(g); // with a graph (handler) g
+            auto sz = grin_get_vertex_list_size(g, vertexlist);
 
             for (auto i = 0; i < sz; ++i) {
-                auto v = get_vertex_from_list(vertexlist, i);
+                auto v = grin_get_vertex_from_list(g, vertexlist, i);
             }
         }
     ```
@@ -79,22 +81,22 @@ these vertex types.
     ```CPP
         /* grin/topology/vertexlist.h */
 
-        VertexListIterator get_vertex_list_begin(Graph g);  // get the begin iterator of the vertexlist
+        GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH g);  // get the begin iterator of the vertexlist
 
-        VertexListIterator get_next_vertex_list_iter(VertexListIterator);  // get next iterator
+        GRIN_VERTEX_LIST_ITERATOR grin_get_next_vertex_list_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli);  // get next iterator
 
-        bool is_vertex_list_end(VertexListIterator); // check if reaches the end
+        bool grin_is_vertex_list_end(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli); // check if reaches the end
 
-        Vertex get_vertex_from_iter(VertexListIterator vli); // get the vertex from the iterator
+        GRIN_VERTEX grin_get_vertex_from_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli); // get the vertex from the iterator
 
 
         /* run.cc */
         {
-            auto iter = get_vertex_list_begin(g); // with a graph (handler) g
+            auto iter = grin_get_vertex_list_begin(g); // with a graph (handler) g
 
-            while (!is_vertex_list_end(iter)) {
-                auto v = get_vertex_from_iter(iter);
-                iter = get_next_vertex_list_iter(iter);
+            while (!grin_is_vertex_list_end(g, iter)) {
+                auto v = grin_get_vertex_from_iter(g, iter);
+                iter = grin_get_next_vertex_list_iter(g, iter);
             }
         }
     ```
@@ -108,22 +110,22 @@ different data types in the underlying storage for efficiency concerns (e.g., sh
     ```CPP
         /* grin/property/type.h */
 
-        VertexType get_vertex_type_by_name(Graph g, const char* name);
+        GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH g, const char* name);
 
 
         /* grin/property/property.h */
 
-        VertexProperty get_vertex_property_by_name(Graph, VertexType, const char* name);
+        GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, const char* name);
 
-        VertexPropertyList get_vertex_properties_by_name(Graph, const char* name);
+        GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const char* name);
 
 
         /* run.cc */
         {
-            auto vtype = get_vertex_type_by_name(g, "Person");  // get the vertex type of Person
-            auto vprop = get_vertex_property_by_name(g, vtype, "Name");  // get the Name property bound to Person
+            auto vtype = grin_get_vertex_type_by_name(g, "Person");  // get the vertex type of Person
+            auto vprop = grin_get_vertex_property_by_name(g, vtype, "Name");  // get the Name property bound to Person
 
-            auto vpl = get_vertex_properties_by_name(g, "Name");  // get all the properties called Name under all the vertex types (e.g., Person, Company) in g
+            auto vpl = grin_get_vertex_properties_by_name(g, "Name");  // get all the properties called Name under all the vertex types (e.g., Person, Company) in g
         }
     ```
 
@@ -134,27 +136,25 @@ different data types in the underlying storage for efficiency concerns (e.g., sh
 ### Reference
 - GRIN introduces the reference concept in partitioned graph. It stands for the reference of an instance that can
 be recognized in partitions other than the current partition where the instance is accessed.
-- For example, a `VertexRef` is a reference of a `Vertex` that can be recognized in other partitions.
+- For example, a `GRIN_VERTEX_REF` is a reference of a `Vertex` that can be recognized in other partitions.
 
     ```CPP
         /* grin/partition/partition.h */
         
-        VertexRef get_vertex_ref_for_vertex(Graph, Partition, Vertex);
+        GRIN_VERTEX_REF grin_get_vertex_ref_for_vertex(GRIN_GRAPH, GRIN_VERTEX);
         
-        const char* serialize_vertex_ref(Graph, VertexRef);
+        const char* grin_serialize_vertex_ref(GRIN_GRAPH, GRIN_VERTEX_REF);
 
-        VertexRef deserialize_to_vertex_ref(Graph, const char*);
+        GRIN_VERTEX_REF grin_deserialize_to_vertex_ref(GRIN_GRAPH, const char*);
 
-        Vertex get_vertex_from_vertex_ref(Graph, VertexRef);
+        GRIN_VERTEX grin_get_vertex_from_vertex_ref(GRIN_GRAPH, GRIN_VERTEX_REF);
 
 
         /* run.cc in machine 1 */
         {
-            // p is the partition (handler) for the partition in machine 2
+            auto vref = grin_get_vertex_ref_for_vertex(g, v);  // get v's vertex ref which can be recgonized in machine 2
 
-            auto vref = get_vertex_ref_for_vertex(g, p, v);  // get v's vertex ref which can be recgonized in machine 2
-
-            const char* msg = serialize_vertex_ref(g, vref);  // serialize into a message
+            const char* msg = grin_serialize_vertex_ref(g, vref);  // serialize into a message
 
             // send the message to machine 2...
         }
@@ -164,9 +164,9 @@ be recognized in partitions other than the current partition where the instance 
         {
             // recieve the message from machine 1...
 
-            auto vref = deserialize_to_vertex_ref(g, msg);  // deserialize back to vertex ref
+            auto vref = grin_deserialize_to_vertex_ref(g, msg);  // deserialize back to vertex ref
 
-            auto v = get_vertex_from_vertex_ref(g, vref);  // cast to vertex if g can recognize the vertex ref
+            auto v = grin_get_vertex_from_vertex_ref(g, vref);  // cast to vertex if g can recognize the vertex ref
         }
     ```
 
