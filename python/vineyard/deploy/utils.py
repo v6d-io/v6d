@@ -162,11 +162,14 @@ def find_vineyardd_path():
 
     # find vineyard in the package
     vineyardd_path = _check_executable(
-        pkg_resources.resource_filename('vineyard', 'vineyardd')
+        pkg_resources.resource_filename('vineyard.bdist', 'vineyardd')
     )
-
     if vineyardd_path is None:
-        vineyardd_path = _check_executable(shutil.which('vineyardd'))
+        vineyardd_path = _check_executable(
+            os.path.join(current_dir, '..', 'bdist', 'vineyardd')
+        )
+    if vineyardd_path is None:
+        vineyardd_path = _check_executable(os.path.join(current_dir, '..', 'vineyardd'))
 
     if vineyardd_path is None:
         vineyardd_path = _check_executable(
@@ -174,12 +177,7 @@ def find_vineyardd_path():
         )
 
     if vineyardd_path is None:
-        vineyardd_path = _check_executable(os.path.join(current_dir, '..', 'vineyardd'))
-
-    if vineyardd_path is None:
-        vineyardd_path = _check_executable(
-            os.path.join(current_dir, '..', 'bdist', 'vineyardd')
-        )
+        vineyardd_path = _check_executable(shutil.which('vineyardd'))
 
     __vineyardd_path = vineyardd_path
     return vineyardd_path
@@ -198,17 +196,12 @@ def find_vineyardctl_path():
 
     # find vineyardctl in the package
     vineyardctl_path = _check_executable(
-        pkg_resources.resource_filename('vineyard', 'vineyardctl')
+        pkg_resources.resource_filename('vineyard.bdist', 'vineyardctl')
     )
-
-    if vineyardctl_path is None:
-        vineyardctl_path = _check_executable(shutil.which('vineyardctl'))
-
     if vineyardctl_path is None:
         vineyardctl_path = _check_executable(
-            os.path.join(current_dir, '..', '..', '..', 'k8s', 'vineyardctl')
+            os.path.join(current_dir, '..', 'bdist', 'vineyardctl')
         )
-
     if vineyardctl_path is None:
         vineyardctl_path = _check_executable(
             os.path.join(current_dir, '..', 'vineyardctl')
@@ -216,8 +209,11 @@ def find_vineyardctl_path():
 
     if vineyardctl_path is None:
         vineyardctl_path = _check_executable(
-            os.path.join(current_dir, '..', 'bdist', 'vineyardctl')
+            os.path.join(current_dir, '..', '..', '..', 'k8s', 'vineyardctl')
         )
+
+    if vineyardctl_path is None:
+        vineyardctl_path = _check_executable(shutil.which('vineyardctl'))
 
     __vineyardctl_path = vineyardctl_path
     return vineyardctl_path
