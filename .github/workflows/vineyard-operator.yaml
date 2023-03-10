@@ -83,7 +83,14 @@ jobs:
           restore-keys: |
             vineyard-kubernetes-go-
 
-      - name: Golang format and lint
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.49.0
+          working-directory: k8s
+          skip-pkg-cache: true
+
+      - name: Golang format
         run: |
           function prepend() { while read line; do echo "${1}${line}"; done; }
 
@@ -98,22 +105,6 @@ jobs:
               echo "| Run: "
               echo "|"
               echo "|    make -C k8s fmt"
-              echo "|"
-              echo "| to fix this error."
-              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-              exit -1
-          fi
-
-          function ec() { [[ "$1" == "-h" ]] && { shift && eval $* > /dev/null 2>&1; ec=$?; echo $ec; } || eval $*; ec=$?; }
-
-          ec make -C k8s lint
-          if [[ "$ec" != "0" ]]; then
-              echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
-              echo "| golangci-lint (golang format) failures found!"
-              echo "|"
-              echo "| Run: "
-              echo "|"
-              echo "|    ${GOPATH}/bin/golangci-lint run ./... --fix"
               echo "|"
               echo "| to fix this error."
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"

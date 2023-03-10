@@ -179,7 +179,7 @@ e2e:
 
 .PHONY: lint
 lint: golint
-	$(GOLINT) run ./...
+	$(GOLINT) run $(modules)
 
 # Run go fmt against code
 .PHONY: gofmt
