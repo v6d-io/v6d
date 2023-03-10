@@ -45,7 +45,7 @@ func GetVineyarddNodes(c client.Client, log log.Logger, name, namespace string) 
 	option := &client.ListOptions{
 		LabelSelector: apilabels.SelectorFromSet(apilabels.Set{
 			"app.kubernetes.io/name":     name,
-			"app.kubernetes.io/instance": "vineyardd",
+			"app.kubernetes.io/instance": namespace + "-" + name,
 		}),
 	}
 	if namespace != "" {
