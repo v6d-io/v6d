@@ -156,6 +156,7 @@ golint:
 		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
     endif
 	@echo "golangci-lint installed"
+	$(eval GOLINT = $(GOBIN)/golangci-lint)
 
 # Install helmify if not exist
 .PHONY: helmify
@@ -165,6 +166,7 @@ helmify:
 		go install github.com/arttor/helmify/cmd/helmify@$(HELMIFY_VERSION)
     endif
 	@echo "helmify installed"
+	$(eval HELMIFY = $(GOBIN)/helmify)
 
 # Install e2e if not exist
 .PHONY: e2e
@@ -177,6 +179,7 @@ e2e:
 
 .PHONY: lint
 lint: golint
+	$(GOLINT) run ./...
 
 # Run go fmt against code
 .PHONY: gofmt
@@ -195,7 +198,6 @@ vet:
 .PHONY: generate
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
-
 
 # Vendor modules for code-generate
 .PHONY: vendor
@@ -227,10 +229,8 @@ controller-gen:
 		go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION) ;\
 		rm -rf $$CONTROLLER_GEN_TMP_DIR ;\
 		}
-		CONTROLLER_GEN=$(GOBIN)/controller-gen
-    else
-		CONTROLLER_GEN=$(shell which controller-gen)
     endif
+	$(eval CONTROLLER_GEN = $(GOBIN)/controller-gen)
 
 .PHONY: kustomize
 kustomize:
@@ -244,7 +244,7 @@ kustomize:
 		rm -rf $$KUSTOMIZE_GEN_TMP_DIR ;\
 		}
     endif
-    KUSTOMIZE=$(GOBIN)/kustomize
+	$(eval KUSTOMIZE = $(GOBIN)/kustomize)
 
 # Generate bundle manifests and metadata, then validate generated files.
 .PHONY: bundle
@@ -261,7 +261,7 @@ bundle-build:
 
 # Build all bundle operator
 .PHONY: generate-helm-chart
-generate-helm-chart: helmify
-	cd ../charts && $(KUSTOMIZE) build ../k8s/config/default | ${GOBIN}/helmify vineyard-operator && \
+generate-helm-chart: helmify kustomize
+	cd ../charts && $(KUSTOMIZE) build ../k8s/config/default | $(HELMIFY) vineyard-operator && \
 	sed -i 's/\/var\/run\/vineyard-kubernetes\/{{.Namespace}}\/{{.Name}}/\/var\/run\/vineyard-kubernetes\/{{ \"{{.Namespace}}\/{{.Name}}\" }}/g' \
 	vineyard-operator/templates/vineyardd-crd.yaml

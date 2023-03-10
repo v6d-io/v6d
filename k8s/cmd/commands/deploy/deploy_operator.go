@@ -119,7 +119,7 @@ func waitOperatorReady(c client.Client) error {
 			}
 			for _, pod := range podList.Items {
 				for _, condition := range pod.Status.ContainerStatuses {
-					if condition.Ready == false {
+					if !condition.Ready {
 						ready = false
 						break
 					}

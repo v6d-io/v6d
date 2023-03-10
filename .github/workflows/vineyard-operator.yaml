@@ -106,7 +106,7 @@ jobs:
 
           function ec() { [[ "$1" == "-h" ]] && { shift && eval $* > /dev/null 2>&1; ec=$?; echo $ec; } || eval $*; ec=$?; }
 
-          ec make -C k8s golint
+          ec make -C k8s lint
           if [[ "$ec" != "0" ]]; then
               echo "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~"
               echo "| golangci-lint (golang format) failures found!"
