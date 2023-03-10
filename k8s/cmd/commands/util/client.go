@@ -165,7 +165,7 @@ func Wait(condition wait.ConditionFunc) error {
 // CreateNamespaceIfNotExist creates namespace if it does not exist
 func CreateNamespaceIfNotExist(c client.Client) {
 	if !flags.CreateNamespace {
-		return;
+		return
 	}
 	namespace := corev1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
