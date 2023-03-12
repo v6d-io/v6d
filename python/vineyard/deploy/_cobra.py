@@ -117,10 +117,16 @@ def make_command(executable, usage, exclude_args, scope=None):
                 # get(key, default...) won't work, as we cannot diff not exists and None
                 if key in defaults and value == defaults[key]:
                     continue
+                # for boolean flags, if the value is false, we should skip the flag part
+                if isinstance(value, bool) and not value:
+                    continue
                 command_and_args.append("--" + arguments.get(key, key))
-                if not isinstance(value, str):
-                    value = json.dumps(value)
-                command_and_args.append(value)
+                # if the value is true, we should skip the value part
+                # as the flag itself is enough
+                if not isinstance(value, bool):
+                    if not isinstance(value, str):
+                        value = json.dumps(value)
+                    command_and_args.append(value)
             logger.debug('Executing: %s', ' '.join(command_and_args))
             parameters = {
                 'args': command_and_args,
