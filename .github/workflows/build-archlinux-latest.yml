@@ -15,9 +15,6 @@
 name: Compatibility Build on Arch Linux Latest
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 concurrency:

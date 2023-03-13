@@ -39,7 +39,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
-        malloc: [mimalloc]
+        malloc: [dlmalloc]
         metadata: [etcd]
     env:
       RUNNER_ARGS: "--meta=${{ matrix.metadata }}"

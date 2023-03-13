@@ -526,9 +526,9 @@ int main(int argc, char** argv) {
 
     auto generator = [&column1, &column2, &pool](size_t chunk_index) {
       {
-        size_t size = (1L << 20) * 1L;
+        size_t size = (1L << 10) * 10L;
         {
-          std::vector<int64_t> vec(size / sizeof(int64_t), 0xff);
+          std::vector<int64_t> vec(size, 0xff);
           std::shared_ptr<arrow::Int64Array> a1;
           arrow::Int64Builder b1(pool);
           CHECK_ARROW_ERROR(b1.AppendValues(vec));
@@ -543,10 +543,15 @@ int main(int argc, char** argv) {
           }
           std::shared_ptr<arrow::LargeStringArray> a1;
           arrow::LargeStringBuilder b1(pool);
-          CHECK_ARROW_ERROR(b1.AppendValues({"a", "bb", "ccc", "dddd"}));
-          CHECK_ARROW_ERROR(b1.AppendNull());
-          CHECK_ARROW_ERROR(b1.AppendValues({"eeeee"}));
-          CHECK_ARROW_ERROR(b1.AppendValues({s}));
+
+          for (size_t i = 0; i < size / sizeof(int64_t); ++i) {
+            // sizeof(int64_t) elements
+            CHECK_ARROW_ERROR(b1.AppendValues({"a", "bb", "ccc", "dddd"}));
+            CHECK_ARROW_ERROR(b1.AppendNull());
+            CHECK_ARROW_ERROR(b1.AppendValues({"eeeee"}));
+            CHECK_ARROW_ERROR(b1.AppendValues({s}));
+            CHECK_ARROW_ERROR(b1.AppendNull());
+          }
           CHECK_ARROW_ERROR(b1.Finish(&a1));
           column2[chunk_index] = a1;
         }

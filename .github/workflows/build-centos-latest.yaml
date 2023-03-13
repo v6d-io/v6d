@@ -15,9 +15,6 @@
 name: Compatibility Build on CentOS Latest
 
 on:
-  push:
-    tags:
-      - 'v*'
   workflow_dispatch:
 
 concurrency:
