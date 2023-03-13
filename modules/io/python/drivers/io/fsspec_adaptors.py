@@ -54,7 +54,12 @@ class HDFSFileSystem(fsspec.implementations.arrow.HadoopFileSystem):
             raise ValueError(f"unsupported mode for Arrow filesystem: {mode!r}")
 
         _kwargs = {}
-        if fsspec.implementations.arrow.PYARROW_VERSION[0] >= 4:
+        pyarrow_version = fsspec.implementations.arrow.PYARROW_VERSION
+        if isinstance(pyarrow_version, str):
+            pyarrow_version_major = int(pyarrow_version.split(".")[0])
+        else:
+            pyarrow_version_major = pyarrow_version[0]
+        if pyarrow_version_major >= 4:
             # disable compression auto-detection
             _kwargs["compression"] = None
         if mode == 'rb':
