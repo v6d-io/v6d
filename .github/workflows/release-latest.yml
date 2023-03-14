@@ -34,7 +34,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: false
+          submodules: true
 
       - name: Cut a latest release
         uses: "marvinpinto/action-automatic-releases@latest"
@@ -60,19 +60,6 @@ jobs:
           draft: false
           prerelease: false
           title: "vineyard ${{ steps.tag.outputs.TAG }}"
-
-  build-repo-tarball:
-    needs: [release]
-    runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
-    strategy:
-      matrix:
-        os: [ubuntu-20.04]
-
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          submodules: true
 
       - name: Make the repository tarball
         run: |

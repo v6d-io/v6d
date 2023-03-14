@@ -16,6 +16,10 @@
 # limitations under the License.
 #
 
+# register customized HDFS implementation to make it seekable
+import pyarrow
+import pyarrow.fs
+
 import fsspec
 import fsspec.implementations.arrow
 
@@ -27,10 +31,6 @@ except ImportError:
 
 if ossfs:
     fsspec.register_implementation("oss", ossfs.OSSFileSystem, clobber=True)
-
-# register customized HDFS implementation to make it seekable
-import pyarrow
-import pyarrow.fs
 
 
 class ArrowFile(fsspec.implementations.arrow.ArrowFile):

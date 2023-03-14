@@ -220,7 +220,6 @@ jobs:
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
 
           pushd build
-          make -j`nproc`
           make vineyardd vineyard_graph_tests -j`nproc`
           make ccache-stats
           popd
@@ -245,10 +244,6 @@ jobs:
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
           python3 test/runner.py $RUNNER_ARGS --with-graph
-
-      - name: Setup tmate session
-        if: false
-        uses: mxschmitt/action-tmate@v3
 
       - name: Upload Coverage
         if: runner.os == 'Linux'

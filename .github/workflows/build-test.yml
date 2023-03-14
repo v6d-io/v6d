@@ -311,6 +311,9 @@ jobs:
           twine check dist/*.whl
           sudo pip3 install dist/*.whl -U
 
+          # don't upload incomplete vineyard_bdist to release
+          rm -rf dist/vineyard_bdist* || true
+
       - name: Get test data
         run: |
           git clone https://github.com/GraphScope/gstest.git --depth=1
