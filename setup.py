@@ -20,6 +20,7 @@ import os
 import subprocess
 import sys
 import textwrap
+from configparser import ConfigParser
 from distutils.cmd import Command
 from distutils.util import strtobool
 from typing import List
@@ -33,6 +34,15 @@ from setuptools.dist import Distribution
 from wheel.bdist_wheel import bdist_wheel
 
 repo_root = os.path.dirname(os.path.abspath(__file__))
+
+try:
+    cf = ConfigParser()
+    cf.read(os.path.join(repo_root, 'setup.cfg'))
+    __version__ = cf['metadata']['version']
+    vineyard_bdist = 'vineyard-bdist==%s' % __version__
+except:  # noqa: E722
+    __version__ = None
+    vineyard_bdist = 'vineyard-bdist'
 
 
 def value_to_bool(val):
@@ -240,7 +250,7 @@ setup(
         'console_scripts': ['vineyard-codegen=vineyard.core.codegen:main'],
     },
     setup_requires=load_requirements_txt("-setup"),
-    install_requires=load_requirements_txt() + ['vineyard-bdist'],
+    install_requires=load_requirements_txt() + [vineyard_bdist],
     extras_require={
         'dev': load_requirements_txt("-dev"),
         'kubernetes': load_requirements_txt("-kubernetes"),

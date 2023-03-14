@@ -87,7 +87,7 @@ if(BUILD_VINEYARD_GRAPH_WITH_GAR)
     else()
         # build and install gar
         message(STATUS "-- Building GraphAr from submodule: ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr")
-        add_subdirectory_static("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr"
+        add_subdirectory_static("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/GraphAr/cpp"
                                 "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/GraphAr"
         )
         # depends on gar
