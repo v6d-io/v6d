@@ -34,7 +34,7 @@ var (
 	// VineyardContainerEnvs holds all the environment variables for the vineyardd container
 	VineyardContainerEnvs []string
 
-	// VineyardSpillPVandPVC is PersistentVolume data and PersistentVolumeClaim data of vineyardd's spill mechnism
+	// VineyardSpillPVAndPVC is PersistentVolume data and PersistentVolumeClaim data of vineyardd's spill mechanism
 	VineyardSpillPVandPVC string
 
 	// VineyardFile is the path of vineyardd file
@@ -43,7 +43,8 @@ var (
 
 // ApplyVineyardContainerOpts applies the vineyard container options
 func ApplyVineyardContainerOpts(c *v1alpha1.VineyardContainerConfig,
-	prefix string, cmd *cobra.Command) {
+	prefix string, cmd *cobra.Command,
+) {
 	cmd.Flags().StringVarP(&c.Image, prefix+".image",
 		"", "vineyardcloudnative/vineyardd:latest", "the image of vineyardd")
 	cmd.Flags().StringVarP(&c.ImagePullPolicy,
@@ -69,15 +70,15 @@ func ApplyVineyardContainerOpts(c *v1alpha1.VineyardContainerConfig,
 		"The environment variables of vineyardd")
 	cmd.Flags().StringVarP(&c.SpillConfig.Name, prefix+".spill.config",
 		"", "",
-		"If you want to enable the spill mechnism, please set the name of spill config")
+		"If you want to enable the spill mechanism, please set the name of spill config")
 	cmd.Flags().StringVarP(&c.SpillConfig.Path, prefix+".spill.path",
 		"", "", "The path of spill config")
 	cmd.Flags().StringVarP(&c.SpillConfig.SpillLowerRate,
 		prefix+".spill.spillLowerRate",
-		"", "0.3", "The low watermark of spilling memorys")
+		"", "0.3", "The low watermark of spilling memory")
 	cmd.Flags().StringVarP(&c.SpillConfig.SpillUpperRate,
 		prefix+".spill.spillUpperRate",
-		"", "0.8", "The high watermark of spilling memorys")
+		"", "0.8", "The high watermark of spilling memory")
 	cmd.Flags().StringVarP(&VineyardSpillPVandPVC, prefix+".spill.pv-pvc-spec", "", "",
 		"the json string of the persistent volume and persistent volume claim")
 }
@@ -103,7 +104,8 @@ func ApplyVolumeOpts(v *v1alpha1.VolumeConfig, prefix string, cmd *cobra.Command
 
 // ApplyMetricContainerOpts represents the option of metric container configuration
 func ApplyMetricContainerOpts(m *v1alpha1.MetricContainerConfig,
-	prefix string, cmd *cobra.Command) {
+	prefix string, cmd *cobra.Command,
+) {
 	cmd.Flags().BoolVarP(&m.Enable, prefix+".metric.enable", "",
 		false, "enable metrics of vineyardd")
 	cmd.Flags().StringVarP(&m.Image, prefix+".metric.image",

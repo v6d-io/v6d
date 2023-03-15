@@ -27,25 +27,18 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var (
-	deleteVineyardDeploymentLong = util.LongDesc(`
-	delete vineyard-deployment will delete the vineyard deployment
-	without vineyard operator`)
-
-	deleteVineyardDeploymentExample = util.Examples(`
+var deleteVineyardDeploymentExample = util.Examples(`
 	# delete the default vineyard deployment in the vineyard-system namespace
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment
 
 	# delete the vineyard deployment with specific name in the vineyard-system namespace
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyard-deployment \
 		--name vineyardd-0`)
-)
 
 // deleteVineyardDeploymentCmd delete the vineyard deployment without vineyard operator
 var deleteVineyardDeploymentCmd = &cobra.Command{
 	Use:     "vineyard-deployment",
 	Short:   "delete vineyard-deployment will delete the vineyard deployment without vineyard operator",
-	Long:    deleteVineyardDeploymentLong,
 	Example: deleteVineyardDeploymentExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)

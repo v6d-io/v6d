@@ -40,7 +40,7 @@ import (
 
 var (
 	injectLong = util.LongDesc(`
-	Inject the vineyard sidecar container into a workload. You can 
+	Inject the vineyard sidecar container into a workload. You can
 	get the injected workload yaml and some etcd yaml from the output.`)
 
 	injectExample = util.Examples(`

@@ -29,7 +29,7 @@ import (
 
 var (
 	deployVineyarddLong = util.LongDesc(`
-	Deploy the vineyardd on kubernetes. You could deploy a 
+	Deploy the vineyardd on kubernetes. You could deploy a
 	customized vineyardd from stdin or file.`)
 
 	deployVineyarddExample = util.Examples(`
@@ -48,7 +48,7 @@ var (
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
 		--image vineyardd:v0.12.2
 
-	# deploy the vineyardd with spill mechnism on persistent storage from json string
+	# deploy the vineyardd with spill mechanism on persistent storage from json string
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
 		--vineyardd.spill.config spill-path \
 		--vineyardd.spill.path /var/vineyard/spill \
@@ -78,7 +78,7 @@ var (
 			}
 		}'
 
-	# deploy the vineyardd with spill mechnism on persistent storage from yaml string
+	# deploy the vineyardd with spill mechanism on persistent storage from yaml string
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
 		--vineyardd.spill.config spill-path \
 		--vineyardd.spill.path /var/vineyard/spill \
@@ -101,7 +101,7 @@ var (
 				storage: 512Mi
 		'
 
-	# deploy the vineyardd with spill mechnism on persistent storage from json file
+    # deploy the vineyardd with spill mechanism on persistent storage from json file
 	# also you could use the yaml file
 	cat pv-pvc.json | vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd \
 		--vineyardd.spill.config spill-path \

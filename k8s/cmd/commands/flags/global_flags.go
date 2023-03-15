@@ -78,7 +78,7 @@ func ApplyGlobalFlags(cmd *cobra.Command) {
 			"create the namespace if it does not exist, default false")
 	cmd.Flags().BoolVarP(&DumpUsage, "dump-usage", "j", false, "Dump usage in JSON")
 	cmd.Flags().
-		BoolVarP(&GenDoc, "gen-doc", "g", false, "Generate reference docs, e.g., './references.md'")
+		BoolVarP(&GenDoc, "gen-doc", "g", false, "Generate reference docs, e.g., \"./cmd/README.md\"")
 }
 
 func RemoveVersionFlag(f *pflag.FlagSet) {

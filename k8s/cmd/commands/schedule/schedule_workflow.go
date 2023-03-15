@@ -38,8 +38,8 @@ import (
 
 var (
 	scheduleWorkflowLong = util.LongDesc(`
-	ScheduleWorkflow schedules a workflow based on the vineyard cluster. 
-	It will apply the workflow to kubernetes cluster and deploy the workload 
+	Schedule a workflow based on the vineyard cluster.
+	It will apply the workflow to kubernetes cluster and deploy the workload
 	of the workflow on the vineyard cluster with the best-fit strategy.`)
 
 	scheduleWorkflowExample = util.Examples(`
@@ -54,7 +54,7 @@ var (
 // scheduleWorkflowCmd schedules a workflow based on the vineyard cluster
 var scheduleWorkflowCmd = &cobra.Command{
 	Use:     "workflow",
-	Short:   "scheduleWorkflow schedules a workflow based on the vineyard cluster",
+	Short:   "Schedule a workflow based on the vineyard cluster",
 	Long:    scheduleWorkflowLong,
 	Example: scheduleWorkflowExample,
 	Run: func(cmd *cobra.Command, args []string) {

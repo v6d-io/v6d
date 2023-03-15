@@ -22,21 +22,14 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var (
-	deployVineyardClusterLong = util.LongDesc(`
-	Deploy the vineyardd on kubernetes. You could deploy a vineyardd
-	cluster on kubernetes quickly.`)
-
-	deployVineyardClusterExample = util.Examples(`
+var deployVineyardClusterExample = util.Examples(`
 	# deploy the default vineyard cluster on kubernetes
 	vineyardctl deploy vineyard-cluster`)
-)
 
 // deployVineyardClusterCmd deploys the vineyard cluster on kubernetes
 var deployVineyardClusterCmd = &cobra.Command{
 	Use:     "vineyard-cluster",
-	Short:   "Deploy the vineyard cluster on kubernetes",
-	Long:    deployVineyardClusterLong,
+	Short:   "Deploy the vineyard cluster from kubernetes",
 	Example: deployVineyardClusterExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)

@@ -26,20 +26,14 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var (
-	deleteOperationLong = util.LongDesc(`
-	Delete the operation on kubernetes.`)
-
-	deleteOperationExample = util.Examples(`
+var deleteOperationExample = util.Examples(`
 	# delete the operation named "assembly-test" in the "vineyard-system" namespace
 	vineyardctl delete operation --name assembly-test`)
-)
 
 // deleteOperationCmd deletes the specific operation
 var deleteOperationCmd = &cobra.Command{
 	Use:     "operation",
-	Short:   "Delete the operation on kubernetes",
-	Long:    deleteOperationLong,
+	Short:   "Delete the operation from kubernetes",
 	Example: deleteOperationExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)

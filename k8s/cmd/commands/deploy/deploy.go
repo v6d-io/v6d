@@ -21,11 +21,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-var (
-	deployLong = util.LongDesc(`
-	Deploy a vineyard component on kubernetes.`)
-
-	deployExample = util.Examples(`
+var deployExample = util.Examples(`
 	# deploy the default vineyard cluster on kubernetes
 	vineyardctl --kubeconfig $HOME/.kube/config deploy vineyard-cluster
 
@@ -37,13 +33,11 @@ var (
 
 	# deploy the vineyardd on kubernetes
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd`)
-)
 
 // deployCmd deploys all vineyard components on kubernetes
 var deployCmd = &cobra.Command{
 	Use:     "deploy",
 	Short:   "Deploy the vineyard components on kubernetes",
-	Long:    deployLong,
 	Example: deployExample,
 }
 

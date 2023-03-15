@@ -21,11 +21,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-var (
-	deleteLong = util.LongDesc(`
-	Delete the vineyard components on kubernetes.`)
-
-	deleteExample = util.Examples(`
+var deleteExample = util.Examples(`
 	# delete the default vineyard cluster on kubernetes
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete
 
@@ -37,13 +33,11 @@ var (
 
 	# delete the default vineyardd on kubernetes
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyardd`)
-)
 
 // deleteCmd represents the delete command
 var deleteCmd = &cobra.Command{
 	Use:     "delete",
-	Short:   "Delete the vineyard components on kubernetes",
-	Long:    deleteLong,
+	Short:   "Delete the vineyard components from kubernetes",
 	Example: deleteExample,
 }
 

@@ -37,16 +37,16 @@ import (
 )
 
 var cmdLong = util.LongDesc(`
-	vineyardctl is the command-line tool for working with the 
+	vineyardctl is the command-line tool for working with the
 	Vineyard Operator. It supports creating, deleting and checking
-	status of Vineyard Operator. It also supports managing the 
-	vineyard relevant components such as vineyardd and pluggable 
+	status of Vineyard Operator. It also supports managing the
+	vineyard relevant components such as vineyardd and pluggable
 	drivers.`)
 
 var cmd = &cobra.Command{
 	Use:     "vineyardctl [command]",
 	Version: "v0.13.3",
-	Short:   "vineyardctl is the command-line tool for working with the Vineyard Operator",
+	Short:   "vineyardctl is the command-line tool for interact with the Vineyard Operator.",
 	Long:    cmdLong,
 }
 
@@ -95,7 +95,7 @@ func tryUsageAndDocs() {
 		os.Exit(0)
 	}
 	if flags.GenDoc {
-		if err := usage.GenerateReference(cmd, "references.md"); err != nil {
+		if err := usage.GenerateReference(cmd, "./cmd/README.md"); err != nil {
 			cmd.PrintErrf("\nError: %+v\n", err)
 		}
 		os.Exit(0)
