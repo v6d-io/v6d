@@ -52,6 +52,14 @@ void grin_destroy_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
     delete _v;
 }
 
+bool grin_equal_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _v1 = static_cast<GRIN_VERTEX_T*>(v1);
+    auto _v2 = static_cast<GRIN_VERTEX_T*>(v2);
+    return _g->Vertex2Gid(*_v1) == _g->Vertex2Gid(*_v2);
+}
+
+
 #ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
 void grin_destroy_vertex_original_id(GRIN_GRAPH g, GRIN_VERTEX_ORIGINAL_ID oid) {
     auto _oid = static_cast<VERTEX_ORIGINAL_ID_T*>(oid);

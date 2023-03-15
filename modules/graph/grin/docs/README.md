@@ -1,45 +1,69 @@
 
 # GRIN
-GRIN is a series of C-style Graph Retrieval INterfaces for graph computing engines to access different
-storage systems in a uniform way. 
+
+GRIN is a series of C-style Graph Retrieval INterfaces for graph computing engines to access different storage systems in a uniform way.
+
+The latest version of headers can be found in [v6d/dev/grin](https://github.com/v6d-io/v6d/tree/dev/grin/modules/graph/grin/include). Note that the predefine.h has been modified for v6d.
 
 -----
+## Implementation Guideline
+### For computing engine
+- Implement a wrapper class (normally grin_fragment or grin_graph) using GRIN APIs.
+- When you find some function is hard or inefficient to implement, discuss with GRIN designers.
+- Write or modify apps using the wrapper class (e.g., grin_fragment).
+- Find a storage implementation to setup an end-to-end test.
+
+### For storage engine
+- Copy header (source) files from documents.
+- Modify the StorageSpecific part in the predefine.h based on the features of the storage.
+- Implement the headers in another folder (e.g., src). If you find the time complexity of 
+some function is NOT sub-linear to the graph size, discuss with GRIN designers.
+- Write a storage-specific method to get a graph handler from your storage.
+- Run a graph traversal test.
+
 
 ## Assumptions
+
 ### Property Graph Model
-- Vertices have types, so as Edges. 
-- The relationship between edge type and pairs of vertex types is many-to-many.
-- Properties are bound to vertex and edge types, but some may have the same name.
+
+- Vertices have types, as do edges. 
+- The relationship between edge types and pairs of vertex types is many-to-many.
+- Properties are bound to vertex and edge types, but some properties may have the same name.
 - Labels can be assigned to vertices and edges (NOT their types) primarily for query filtering, and labels have no properties.
 
+
 ### Partition Strategies
+
 #### Edge-cut Partition Strategy
-- Vertex data are local complete for master vertices
-- Edge data are local complete for all edges
-- Neighbors are local complete for master vertices
-- Vertex properties are local complete for master vertices
-- Edge properties are local complete for all edges
+
+- Vertex data is locally complete for master vertices.
+- Edge data is locally complete for all edges.
+- Neighbors are locally complete for master vertices.
+- Vertex properties are locally complete for master vertices.
+- Edge properties are locally complete for all edges.
 
 #### Vertex-cut Partition Strategy
-- Vertex data are local complete for all vertices
-- Edge data are local complete for all edges
-- Mirror partition list is available for master vertices to broadcast messages
-- Vertex properties are local complete for all vertices
-- Edge properties are local complete for all edges
+
+- Vertex data is locally complete for all vertices.
+- Edge data is locally complete for all edges.
+- Mirror partition list is available for master vertices to broadcast messages.
+- Vertex properties are locally complete for all vertices.
+- Edge properties are locally complete for all edges.
 
 ### Assumption Macros
-- GRIN also provides granula assumption macros to describe storage assumptions.
-- Some assumptions may dominate other. It means some assumption applies in a wider range than others. Hence, storage providers should take care when setting these assumptions.
-- Take assumptions on vertex property local complete as example, GRIN provides four macros:
+
+- GRIN provides granularity assumption macros to describe storage assumptions.
+- Some assumptions may dominate others, which means that some assumptions apply in a wider range than others. Therefore, storage providers should be careful when setting these assumptions.
+- Taking the assumptions on vertex property local completeness as an example, GRIN provides four macros:
     1. GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
     2. GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
     3. GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
     4. GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
-- Here 1. dominates others, which means 2. to 4. are undefined when 1. is defined. Also, there are 2. dominates 4., and 3. dominates 4., 
-- GRIN provides different API under different assumptions. 
-- Suppose only 3. is defined, it means vertices of certain types have all the properties locally complete, no matter the vertex is master or mirror. 
-In this case, GRIN provides an API to return these local complete vertex types. 
-- While in case that none of these four macros is defined, GRIN will provide a per-vertex API to tell whether the vertex property is local complete.
+- Here, 1 dominates the others, which means that 2 to 4 are undefined when 1 is defined. Additionally, 2 dominates 4, and 3 dominates 4.
+- GRIN provides different APIs under different assumptions. 
+- Suppose only 3 is defined; it means that vertices of certain types have all the properties locally complete, regardless of whether the vertex is master or mirror. In this case, GRIN provides an API to return these locally complete vertex types. 
+- In the case that none of these four macros is defined, GRIN will provide a per-vertex API to tell whether the vertex property is locally complete.
+
 
 -----
 
@@ -50,18 +74,25 @@ In this case, GRIN provides an API to return these local complete vertex types.
 - For example, GRIN uses the type Vertex to represent the type of a vertex handler, instead of using VertexHandler for clean code.
 
 ### List
-- A list handler, no matter what kind of list it represents, is available to the user only if the storage can provide the size of the list, and an element retrieval API by position (i.e., index of array). Otherwise, the storage should provide a list iterator, see next section.
-- A vertex list example
+GRIN provides two alternative approaches, namely array-style retrieval and iterator, for list retrieval of GRIN_VERTEX_LIST, GRIN_EDGE_LIST, and GRIN_ADJACENT_LIST. 
+
+For other schema-level lists like GRIN_VERTEX_TYPE_LIST or GRIN_PARTITION_LIST, GRIN generally assume the array-style list retrieval, and does NOT provide a ENALBE_ macro for these lists.
+
+#### Array-style Retrieval
+- The array-style retrieval of a list handler is available to the user only if the storage can provide the size of the list, and an element retrieval API by position (i.e., index of array). Otherwise, the storage should provide a list iterator, see next section.
+- Usually the array-style retrieval is controlled by the macros ended with _LIST_ARRAY
+- A vertex list array-style retrieval example
 
     ```CPP
         /* grin/topology/vertexlist.h */
 
         GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH g);  // get the vertexlist of a graph
 
-        size_t grin_get_vertex_list_size(GRIN_GRAPH g, GRIN_VERTEX_LIST vl);  // the storage must implement the API to return the size of vertexlist
+    #ifdef GRIN_ENABLE_VERTEX_LIST_ARRAY
+        size_t grin_get_vertex_list_size(GRIN_GRAPH g, GRIN_VERTEX_LIST vl);  // implement the API to return the size of vertexlist
 
-        GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t idx);  // the storage must implement the API to return the element of vertexlist by position
-
+        GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t idx);  // implement the API to return the element of vertexlist by position
+    #endif
 
         /* run.cc */
         {
@@ -74,25 +105,27 @@ In this case, GRIN provides an API to return these local complete vertex types.
         }
     ```
 
-### List Iterator
-- A list iterator handler, no matter what kind of list it represents, is available to the user if the list size is unknown or for sequential scan efficiency. 
+#### List Iterator
+- A list iterator handler is provided to caller if the list size is unknown or for sequential scan efficiency. 
+- Usually the iterators are enabled by macros ended with _LIST_ITERATOR
 - A vertex list iterator example
 
     ```CPP
         /* grin/topology/vertexlist.h */
 
-        GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH g);  // get the begin iterator of the vertexlist
+    #ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
+        GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH g, GRIN_VERTEX_LIST vl);  // get the begin iterator of the vertexlist
 
         GRIN_VERTEX_LIST_ITERATOR grin_get_next_vertex_list_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli);  // get next iterator
 
         bool grin_is_vertex_list_end(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli); // check if reaches the end
 
         GRIN_VERTEX grin_get_vertex_from_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli); // get the vertex from the iterator
-
+    #endif
 
         /* run.cc */
         {
-            auto iter = grin_get_vertex_list_begin(g); // with a graph (handler) g
+            auto iter = grin_get_vertex_list_begin(g, vl); // with a graph (handler) g and vertexlist vl
 
             while (!grin_is_vertex_list_end(g, iter)) {
                 auto v = grin_get_vertex_from_iter(g, iter);
@@ -132,6 +165,11 @@ different data types in the underlying storage for efficiency concerns (e.g., sh
 ### Label
 - GRIN does NOT distinguish label on vertices and edges, that means a vertex and an edge may have a same label.
 - However the storage can tell GRIN whether labels are enabled in vertices or edges seperatedly with macros of `WITH_VERTEX_LABEL` and `WITH_EDGE_LABEL` respectively.
+
+### Order
+- GRIN provides sorted vertex list assumptions. 
+- GRIN also assumes that if a vertex list sorted, then there is complete ordering for the vertices from the list.
+- Sorted vertex list faciliates computations like vertex list join and data structures like vertex array which uses vertex as the index of the array.
 
 ### Reference
 - GRIN introduces the reference concept in partitioned graph. It stands for the reference of an instance that can
