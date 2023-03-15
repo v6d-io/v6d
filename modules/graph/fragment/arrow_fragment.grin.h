@@ -499,13 +499,15 @@ class GRIN_ArrowFragment {
   inline size_t GetInnerVerticesNum(GRIN_VERTEX_TYPE label) const {
     auto vl = grin_get_vertex_list(g_);
     auto vl1 = grin_filter_type_for_vertex_list(g_, label, vl);
-    return grin_get_vertex_list_size(g_, vl1);
+    auto vl2 = grin_filter_master_for_vertex_list(g_, vl1);
+    return grin_get_vertex_list_size(g_, vl2);
   }
 
   inline size_t GetOuterVerticesNum(GRIN_VERTEX_TYPE label) const {
     auto vl = grin_get_vertex_list(g_);
     auto vl1 = grin_filter_type_for_vertex_list(g_, label, vl);
-    return grin_get_vertex_list_size(g_, vl1);
+    auto vl2 = grin_filter_mirror_for_vertex_list(g_, vl1);
+    return grin_get_vertex_list_size(g_, vl2);
   }
 
   inline bool IsInnerVertex(GRIN_VERTEX v) const {
