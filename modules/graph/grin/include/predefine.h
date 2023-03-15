@@ -16,9 +16,13 @@ limitations under the License.
 /**
  * @file predefine.h
  * @brief Pre-defined macros for storage features.
- * Undefine the macros of features that the storage does NOT support,
- * so that APIs under unsupported features will NOT be available to 
- * the callers to avoid ambiguity.
+ * The macros are divided into several sections such as topology, partition,
+ * and so on. 
+ * In each section, the first part lists all available macros, and undefines
+ * all GRIN_ASSUME_ macros by default.
+ * After that is the MOST IMPORTANT part for storage implementors, i.e., the StorageSpecific area.
+ * Storage implementors should turn ON/OFF the macros in this area based the features of the storage.
+ * The final part is the rule part to handle dependencies between macros which should not be edited.
 */
 
 #ifndef GRIN_INCLUDE_PREDEFINE_H_
@@ -27,7 +31,6 @@ limitations under the License.
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
-
 
 /// Enumerates the directions of edges with respect to a certain vertex
 typedef enum {
@@ -49,6 +52,8 @@ typedef enum {
   Date32 = 8,         ///< short date
   Date64 = 9,         ///< long date
 } GRIN_DATATYPE;
+
+/* Section 1: Toplogy */
 
 /** @name TopologyMacros
  * @brief Macros for basic graph topology features
@@ -78,6 +83,12 @@ typedef enum {
 #define GRIN_ENABLE_VERTEX_LIST
 
 /** @ingroup TopologyMacros
+ * @brief Enable the vertex list array-style retrieval. 
+ * The vertex list related APIs follow the design principle of GRIN List.
+*/
+#define GRIN_ENABLE_VERTEX_LIST_ARRAY
+
+/** @ingroup TopologyMacros
  * @brief Enable the vertex list iterator. 
  * The vertex list iterator related APIs follow the design principle of GRIN Iterator.
 */
@@ -88,6 +99,12 @@ typedef enum {
  * The edge list related APIs follow the design principle of GRIN List.
 */
 #define GRIN_ENABLE_EDGE_LIST
+
+/** @ingroup TopologyMacros
+ * @brief Enable the edge list array-style retrieval. 
+ * The edge list related APIs follow the design principle of GRIN List.
+*/
+#define GRIN_ENABLE_EDGE_LIST_ARRAY
 
 /** @ingroup TopologyMacros
  * @brief Enable the edge list iterator. 
@@ -102,22 +119,55 @@ typedef enum {
 #define GRIN_ENABLE_ADJACENT_LIST
 
 /** @ingroup TopologyMacros
+ * @brief Enable the adjacent list array-style retrieval. 
+ * The adjacent list related APIs follow the design principle of GRIN List.
+*/
+#define GRIN_ENABLE_ADJACENT_LIST_ARRAY
+
+/** @ingroup TopologyMacros
  * @brief Enable the adjacent list iterator. 
  * The adjacent list iterator related APIs follow the design principle of GRIN Iterator.
 */
 #define GRIN_ENABLE_ADJACENT_LIST_ITERATOR
+///@}
 
 
-#ifndef GRIN_DOXYGEN_SKIP  // disabled by storage
+#ifndef GRIN_DOXYGEN_SKIP
+/* StorageSpecific */
+
+/* Disable the unsupported features */
 #undef GRIN_WITH_VERTEX_DATA
 #undef GRIN_WITH_EDGE_DATA
 #undef GRIN_ENABLE_VERTEX_LIST_ITERATOR
 #undef GRIN_ENABLE_EDGE_LIST
 #undef GRIN_ENABLE_EDGE_LIST_ITERATOR
 #undef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
-#endif
-///@}
+/* End of Disable */
 
+/* Enable the supported features */
+/* End of Enable */
+
+/* End of StorageSpecific */
+
+#ifndef GRIN_ENABLE_VERTEX_LIST
+#undef GRIN_ENABLE_VERTEX_LIST_ARRAY
+#undef GRIN_ENABLE_VERTEX_LIST_ITERATOR
+#endif
+
+#ifndef GRIN_ENABLE_EDGE_LIST
+#undef GRIN_ENABLE_EDGE_LIST_ARRAY
+#undef GRIN_ENABLE_EDGE_LIST_ITERATOR
+#endif
+
+#ifndef GRIN_ENABLE_ADJACENT_LIST
+#undef GRIN_ENABLE_ADJACENT_LIST_ARRAY
+#undef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
+#endif
+
+#endif  // GRIN_DOXYGEN_SKIP
+/* End of Section 1 */
+
+/* Section 2. Partition */
 
 /** @name PartitionMacros
  * @brief Macros for partitioned graph features
@@ -304,7 +354,9 @@ typedef enum {
 #undef GRIN_ASSUME_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
 #undef GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
 
-// diabled by storage
+/* StorageSpecific */
+
+/* Disable the unsupported features */
 #undef GRIN_ASSUME_VERTEX_CUT_PARTITION
 #undef GRIN_ENABLE_EDGE_REF
 #undef GRIN_TRAIT_MASTER_VERTEX_MIRROR_PARTITION_LIST
@@ -312,8 +364,13 @@ typedef enum {
 #undef GRIN_TRAIT_FILTER_PARTITION_FOR_VERTEX_LIST
 #undef GRIN_TRAIT_FILTER_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
 #undef GRIN_TRAIT_FILTER_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
-// enabled by storage
+/* End of Disable */
+
+/* Enable the supported features */
 #define GRIN_ASSUME_EDGE_CUT_PARTITION  
+/* End of Enable */
+
+/* End of StorageSpecific */
 
 #ifdef GRIN_ASSUME_EDGE_CUT_PARTITION
 #define GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
@@ -386,7 +443,9 @@ typedef enum {
 #undef GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
 #endif
 #endif // GRIN_DOXY_SKIP
+/* End of Section 2 */
 
+/* Section 3. Property */
 
 /** @name PropertyMacros
  * @brief Macros for basic property graph features
@@ -647,14 +706,20 @@ typedef enum {
 #undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
 #undef GRIN_ASSUME_COLUMN_STORE
 
-// disabled by storage
+/* StorageSpecific */
+
+/* Disable the unsupported features */
 #undef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
 #undef GRIN_ENABLE_EDGE_PRIMARY_KEYS
 #undef GRIN_TRAIT_FILTER_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
+/* End of Disable */
 
-// enabled by storage
+/* Enable the supported features */
 #define GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
 #define GRIN_ASSUME_COLUMN_STORE
+/* End of Enable */
+
+/* End of StorageSpecific */
 
 #ifdef GRIN_ASSUME_EDGE_CUT_PARTITION
 #define GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
@@ -801,37 +866,55 @@ typedef enum {
 #undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
 #endif
 #endif // GRIN_DOXY_SKIP
+/* End of Section 3 */
 
-
-/** @name PredicateMacros
- * @brief Macros for predicate features
+/* Section 4. Index */
+/** @name IndexLabelMacros
+ * @brief Macros for label features
  */
 ///@{
-/** @ingroup PredicateMacros
- * @brief Enable vertex ordering predicate
-*/
-#define GRIN_PREDICATE_VERTEX_ORDERING
-///@}
-
-/** @name IndexMacros
- * @brief Macros for index features
- */
-///@{
-/** @ingroup IndexMacros
+/** @ingroup IndexLabelMacros
  * @brief Enable vertex label on graph. 
 */
 #define GRIN_WITH_VERTEX_LABEL
 
-/** @ingroup IndexMacros
+/** @ingroup IndexLabelMacros
  * @brief Enable edge label on graph. 
 */
 #define GRIN_WITH_EDGE_LABEL
+///@}
 
-#ifndef GRIN_DOXYGEN_SKIP 
+/** @name IndexOrderMacros
+ * @brief Macros for ordering features.
+ * Please refer to the order section in the documents for details.
+ */
+///@{
+/** @ingroup IndexOrderMacros
+ * @brief assume all vertex list are sorted.
+ * We will expend the assumption to support master/mirror or
+ * by type in the future if needed.
+*/
+#define GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
+///@}
+
+#ifndef GRIN_DOXYGEN_SKIP
+// disable assumption by default
+#undef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
+
+/* StorageSpecific */
+
+/* Disable the unsupported features */
 #undef GRIN_WITH_VERTEX_LABEL
 #undef GRIN_WITH_EDGE_LABEL
-#endif
-///@}
+/* End of Disable */
+
+/* Enable the supported features */
+#define GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
+/* End of Enable */
+
+/* End of StorageSpecific */
+#endif  // GRIN_DOXYGEN_SKIP
+/* End of Section 4 */
 
 /** @name NullValues
  * Macros for Null(invalid) values

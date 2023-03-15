@@ -22,14 +22,16 @@ limitations under the License.
 GRIN_EDGE_LIST grin_get_edge_list(GRIN_GRAPH, GRIN_DIRECTION);
 
 void grin_destroy_edge_list(GRIN_GRAPH, GRIN_EDGE_LIST);
+#endif
 
+#ifdef GRIN_ENABLE_EDGE_LIST_ARRAY
 size_t grin_get_edge_list_size(GRIN_GRAPH, GRIN_EDGE_LIST);
 
 GRIN_EDGE grin_get_edge_from_list(GRIN_GRAPH, GRIN_EDGE_LIST, size_t);
 #endif
 
 #ifdef GRIN_ENABLE_EDGE_LIST_ITERATOR
-GRIN_EDGE_LIST_ITERATOR grin_get_edge_list_begin(GRIN_GRAPH);
+GRIN_EDGE_LIST_ITERATOR grin_get_edge_list_begin(GRIN_GRAPH, GRIN_EDGE_LIST);
 
 void grin_destroy_edge_list_iter(GRIN_GRAPH, GRIN_EDGE_LIST_ITERATOR);
 

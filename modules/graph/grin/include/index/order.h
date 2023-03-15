@@ -15,20 +15,26 @@ limitations under the License.
  @brief Define the vertex ordering predicate APIs
 */
 
-#ifndef GRIN_INCLUDE_PREDICATE_ORDER_H_
-#define GRIN_INCLUDE_PREDICATE_ORDER_H_
+#ifndef GRIN_INCLUDE_INDEX_ORDER_H_
+#define GRIN_INCLUDE_INDEX_ORDER_H_
 
 #include "../predefine.h"
 
-#ifdef GRIN_PREDICATE_VERTEX_ORDERING
+#ifndef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
 /** 
- * @brief sort a vertex list
+ * @brief check whether a vertex list is sorted
  * @param GRIN_GRAPH the graph
- * @param GRIN_VERTEX_LIST the vertex list to sort
- * @return whether succeed
+ * @param GRIN_VERTEX_LIST the vertex list
+ * @return whether sorted
 */
-bool grin_sort_vertex_list(GRIN_GRAPH, GRIN_VERTEX_LIST);
+bool grin_is_vertex_list_sorted(GRIN_GRAPH, GRIN_VERTEX_LIST);
+#endif
 
+#ifdef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
+bool grin_smaller_vertex(GRIN_GRAPH, GRIN_VERTEX, GRIN_VERTEX);
+#endif
+
+#if defined(GRIN_ASSUME_ALL_VERTEX_LIST_SORTED) && defined(GRIN_ENABLE_VERTEX_LIST_ARRAY)
 /** 
  * @brief get the position of a vertex in a sorted list
  * caller must guarantee the input vertex list is sorted to get the correct result
@@ -41,4 +47,4 @@ bool grin_sort_vertex_list(GRIN_GRAPH, GRIN_VERTEX_LIST);
 bool grin_get_position_of_vertex_from_sorted_list(GRIN_GRAPH, GRIN_VERTEX_LIST, GRIN_VERTEX, size_t& pos);
 #endif
 
-#endif // GRIN_INCLUDE_PREDICATE_ORDER_H_
+#endif // GRIN_INCLUDE_INDEX_ORDER_H_

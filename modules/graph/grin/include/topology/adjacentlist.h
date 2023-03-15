@@ -22,7 +22,9 @@ limitations under the License.
 GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH, GRIN_DIRECTION, GRIN_VERTEX);
 
 void grin_destroy_adjacent_list(GRIN_GRAPH, GRIN_ADJACENT_LIST);
+#endif
 
+#ifdef GRIN_ENABLE_ADJACENT_LIST_ARRAY
 size_t grin_get_adjacent_list_size(GRIN_GRAPH, GRIN_ADJACENT_LIST);
 
 GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH, GRIN_ADJACENT_LIST, size_t);
@@ -31,7 +33,7 @@ GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH, GRIN_ADJACENT_LIST, size_
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
-GRIN_ADJACENT_LIST_ITERATOR grin_get_adjacent_list_begin(GRIN_GRAPH, GRIN_DIRECTION, GRIN_VERTEX);
+GRIN_ADJACENT_LIST_ITERATOR grin_get_adjacent_list_begin(GRIN_GRAPH, GRIN_ADJACENT_LIST);
 
 void grin_destroy_adjacent_list_iter(GRIN_GRAPH, GRIN_ADJACENT_LIST_ITERATOR);
 

@@ -31,6 +31,8 @@ size_t grin_get_edge_num(GRIN_GRAPH, GRIN_DIRECTION);
 // Vertex
 void grin_destroy_vertex(GRIN_GRAPH, GRIN_VERTEX);
 
+bool grin_equal_vertex(GRIN_GRAPH, GRIN_VERTEX, GRIN_VERTEX);
+
 #ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
 void grin_destroy_vertex_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
 

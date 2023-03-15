@@ -22,14 +22,16 @@ limitations under the License.
 GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH);
 
 void grin_destroy_vertex_list(GRIN_GRAPH, GRIN_VERTEX_LIST);
+#endif
 
+#ifdef GRIN_ENABLE_VERTEX_LIST_ARRAY
 size_t grin_get_vertex_list_size(GRIN_GRAPH, GRIN_VERTEX_LIST);
 
 GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH, GRIN_VERTEX_LIST, size_t);
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
-GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH);
+GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH, GRIN_VERTEX_LIST);
 
 void grin_destroy_vertex_list_iter(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
 
