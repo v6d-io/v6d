@@ -52,7 +52,7 @@ func ParseManifestsToObjects(manifests []byte) (Manifests, error) {
 	return objects, nil
 }
 
-// ApplyManifests create kubernetes resouces from manifests
+// ApplyManifests create kubernetes resources from manifests
 func ApplyManifests(c client.Client, manifests Manifests, namespace string) error {
 	for _, object := range manifests {
 		// setup the namespace

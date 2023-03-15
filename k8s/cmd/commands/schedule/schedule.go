@@ -22,23 +22,17 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-var (
-	scheduleLong = util.LongDesc(`
-	schedule a workload or a workerflow to a vineyard cluster.`)
-
-	scheduleExamples = util.Examples(`
+var scheduleExamples = util.Examples(`
 	# Schedule a workload to a vineyard cluster
 	# it will add PodAffinity to the workload
 	vineyardctl schedule workload --resource '{kubernetes workload json string}'
-	
+
 	# schedule a workflow to the vineyard cluster
 	vineyardctl schedule workflow --file workflow.yaml`)
-)
 
 var scheduleCmd = &cobra.Command{
 	Use:     "schedule",
-	Short:   "schedule a workload or a workerflow.",
-	Long:    scheduleLong,
+	Short:   "Schedule a workload or a workflow to existing vineyard cluster.",
 	Example: scheduleExamples,
 }
 

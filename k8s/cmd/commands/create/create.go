@@ -20,11 +20,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-var (
-	createLong = util.LongDesc(`
-	Create a vineyard job on kubernetes.`)
-
-	createExample = util.Examples(`
+var createExample = util.Examples(`
 	# create the backup job on kubernetes
 	vineyardctl create backup --vineyardd-name vineyardd-sample --vineyardd-namespace vineyard-system
 
@@ -37,13 +33,11 @@ var (
 		--require job1 \
 		--target job2 \
 		--timeoutSeconds 600`)
-)
 
 // createCmd creates several vineyard jobs on kubernetes
 var createCmd = &cobra.Command{
 	Use:     "create",
-	Short:   "Create the vineyard jobs on kubernetes",
-	Long:    createLong,
+	Short:   "Create a vineyard jobs on kubernetes",
 	Example: createExample,
 }
 

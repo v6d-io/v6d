@@ -23,11 +23,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var (
-	deleteOperatorLong = util.LongDesc(`
-	Delete the vineyard operator on kubernetes.`)
-
-	deleteOperatorExample = util.Examples(`
+var deleteOperatorExample = util.Examples(`
 	# delete the default vineyard operator in the vineyard-system namespace
 	vineyardctl delete operator
 
@@ -37,13 +33,11 @@ var (
 	# delete the vineyard operator from local kustomize dir in the vineyard-system namespace
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator \
 		--local ../config/default`)
-)
 
 // deleteOperatorCmd deletes the vineyard operator on kubernetes
 var deleteOperatorCmd = &cobra.Command{
 	Use:     "operator",
-	Short:   "Delete the vineyard operator on kubernetes",
-	Long:    deleteOperatorLong,
+	Short:   "Delete the vineyard operator from kubernetes",
 	Example: deleteOperatorExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)

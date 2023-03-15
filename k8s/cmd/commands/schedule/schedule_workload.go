@@ -35,7 +35,7 @@ import (
 
 var (
 	scheduleWorkloadLong = util.LongDesc(`
-	ScheduleWorkload schedules the workload to a vineyard cluster. 
+	Schedule the workload to a vineyard cluster.
 	It will add the podAffinity to the workload so that the workload
 	will be scheduled to the vineyard cluster.`)
 
@@ -116,7 +116,7 @@ var (
 // scheduleWorkloadCmd schedules the workload to a vineyard cluster
 var scheduleWorkloadCmd = &cobra.Command{
 	Use:     "workload",
-	Short:   "scheduleWorkload schedules the workload to a vineyard cluster",
+	Short:   "Schedule the workload to a vineyard cluster",
 	Long:    scheduleWorkloadLong,
 	Example: scheduleWorkloadExample,
 	Run: func(cmd *cobra.Command, args []string) {

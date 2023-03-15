@@ -30,8 +30,8 @@ import (
 
 var (
 	createBackupLong = util.LongDesc(`
-	Backup the current vineyard cluster on kubernetes. You could 
-	backup all objects of the current vineyard cluster quickly. 
+	Backup the current vineyard cluster on kubernetes. You could
+	backup all objects of the current vineyard cluster quickly.
 	For persistent storage, you could specify the pv spec and pv
 	spec.`)
 

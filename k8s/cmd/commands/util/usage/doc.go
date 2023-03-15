@@ -21,41 +21,31 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/spf13/cobra/doc"
 )
+
+func flattenCommands(cmd *cobra.Command, commands *[]*cobra.Command) {
+	*commands = append(*commands, cmd)
+	if cmd.HasSubCommands() {
+		for _, c := range cmd.Commands() {
+			flattenCommands(c, commands)
+		}
+	}
+}
 
 func GenerateReference(root *cobra.Command, file string) error {
 	commands := []*cobra.Command{}
-	children := []*cobra.Command{root}
-	for len(children) > 0 {
-		c := children[0]
-		children = children[1:]
-		commands = append(commands, c)
-		if c.HasSubCommands() {
-			children = append(children, c.Commands()...)
-		}
-	}
+	flattenCommands(root, &commands)
 
-	// Check if the file exists
-	if _, err := os.Stat(file); os.IsNotExist(err) {
-		// Create the file
-		file, err := os.Create(file)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-	}
-
-	f, err := os.OpenFile(file, os.O_APPEND|os.O_WRONLY, 0o644)
+	f, err := os.OpenFile(file, os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
 	w := io.Writer(f)
-	for i := range commands {
-		commands[i].DisableAutoGenTag = true
-		if err := doc.GenMarkdownCustom(commands[i], w, func(s string) string {
+	for _, cmd := range commands {
+		cmd.DisableAutoGenTag = true
+		if err := GenMarkdownCustom(cmd, w, func(s string) string {
 			// the following code is to change the default
 			// markdown file title to the link title
 			s = strings.TrimSuffix(s, ".md")

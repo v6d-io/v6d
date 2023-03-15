@@ -19,33 +19,31 @@ import (
 	"strings"
 )
 
-var (
-	Indentation = "  "
-)
+var Indentation = "  "
 
 func LongDesc(long string) string {
-	return formater{long}.trim().doc().trim().string
+	return formatter{long}.trim().doc().trim().string
 }
 
 func Examples(examples string) string {
-	return formater{examples}.trim().tab().indent().string
+	return formatter{examples}.trim().tab().indent().string
 }
 
-type formater struct {
+type formatter struct {
 	string
 }
 
-func (f formater) trim() formater {
+func (f formatter) trim() formatter {
 	f.string = strings.TrimSpace(f.string)
 	return f
 }
 
-func (f formater) tab() formater {
+func (f formatter) tab() formatter {
 	f.string = "	" + f.string
 	return f
 }
 
-func (f formater) doc() formater {
+func (f formatter) doc() formatter {
 	docString := []string{}
 	for _, line := range strings.Split(f.string, "\n") {
 		line = strings.Trim(line, "\t")
@@ -55,7 +53,7 @@ func (f formater) doc() formater {
 	return f
 }
 
-func (f formater) indent() formater {
+func (f formatter) indent() formatter {
 	indentedLines := []string{}
 	for _, line := range strings.Split(f.string, "\n") {
 		t := strings.Count(line, "\t")

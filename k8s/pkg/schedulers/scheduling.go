@@ -305,10 +305,10 @@ func GetNamespacedName(object metav1.Object) string {
 func ParseNamespacedName(name string, defaultNamespace ...string) types.NamespacedName {
 	separator := string(types.Separator)
 	if strings.Contains(name, separator) {
-		splitted := strings.SplitN(name, separator, 2)
+		split := strings.SplitN(name, separator, 2)
 		return types.NamespacedName{
-			Namespace: splitted[0],
-			Name:      splitted[1],
+			Namespace: split[0],
+			Name:      split[1],
 		}
 	} else {
 		if len(defaultNamespace) > 0 {

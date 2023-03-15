@@ -43,11 +43,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/webhook/sidecar"
 )
 
-var (
-	managerLong = util.LongDesc(`
-	Start the manager of vineyard operator.`)
-
-	managerExample = util.Examples(`
+var managerExample = util.Examples(`
 	# start the manager of vineyard operator with default configuration
 	# (Enable the controller, webhooks and scheduler)
 	vineyardctl manager
@@ -60,13 +56,11 @@ var (
 
 	# only start the controller
 	vineyardctl manager --enable-webhook false --enable-scheduler false`)
-)
 
 // managerCmd starts the manager of vineyard operator
 var managerCmd = &cobra.Command{
 	Use:     "manager",
 	Short:   "Start the manager of vineyard operator",
-	Long:    managerLong,
 	Example: managerExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)

@@ -25,7 +25,7 @@ import (
 
 var (
 	deleteCertManagerLong = util.LongDesc(`
-	Delete the cert-manager in the cert-manager namespace. You 
+	Delete the cert-manager in the cert-manager namespace. You
 	should specify the version of deployed cert-manager and the
 	default version is v1.9.1.`)
 

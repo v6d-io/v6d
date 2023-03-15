@@ -36,8 +36,8 @@ import (
 
 var (
 	deployVineyardDeploymentLong = util.LongDesc(`
-	Builds and deploy the yaml file of vineyardd the vineyardd 
-	without vineyard operator. You could deploy a customized 
+	Builds and deploy the yaml file of vineyardd the vineyardd
+	without vineyard operator. You could deploy a customized
 	vineyardd from stdin or file.`)
 
 	deployVineyardDeploymentExample = util.Examples(`
@@ -63,7 +63,7 @@ var (
 var deployVineyardDeploymentCmd = &cobra.Command{
 	Use: "vineyard-deployment",
 	Short: "DeployVineyardDeployment builds and deploy the yaml file of " +
-		"vineyardd wihout vineyard operator",
+		"vineyardd without vineyard operator",
 	Long:    deployVineyardDeploymentLong,
 	Example: deployVineyardDeploymentExample,
 	Run: func(cmd *cobra.Command, args []string) {

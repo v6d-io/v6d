@@ -26,20 +26,14 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var (
-	deleteRecoverLong = util.LongDesc(`
-	Delete the recover job on kubernetes.`)
-
-	deleteRecoverExample = util.Examples(`
+var deleteRecoverExample = util.Examples(`
 	# delete the default recover job on kubernetes
 	vineyardctl delete recover`)
-)
 
 // deleteRecoverCmd deletes the vineyard operator on kubernetes
 var deleteRecoverCmd = &cobra.Command{
 	Use:     "recover",
-	Short:   "Delete the recover job on kubernetes",
-	Long:    deleteRecoverLong,
+	Short:   "Delete the recover job from kubernetes",
 	Example: deleteRecoverExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)

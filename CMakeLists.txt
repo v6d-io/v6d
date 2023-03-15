@@ -897,7 +897,6 @@ if(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_hosseinmoein_dataframe)
 endif()
 
-
 if(BUILD_VINEYARD_TESTS)
     add_subdirectory(test)
 endif()
