@@ -1,11 +1,132 @@
-
 # GRIN
+GRIN is a proposed standard graph retrieval interface in GraphScope. The goal of GRIN is to provide a common way for the graph computing engines to retrieve graph data stored in different storage engines in GraphScope, and to simplify the integration of these engines with each other.
 
-GRIN is a series of C-style Graph Retrieval INterfaces for graph computing engines to access different storage systems in a uniform way.
+GRIN is defined in C, which makes it portable to systems written in different programming languages, such as C++, Rust and Java. It provides a set of common operations and data structure handlers that can be used to access graph data, regardless of the underlying storage engine. 
+
+These operations include:
+* Traversal: navigating the graph structure to explore relationships between vertices
+* Retrieval: retrieving the data and properties of vertices and edges
+* Filter: filtering data structures with partitioning or property conditions
+
+GRIN is designed to be read-only, meaning that it does not provide operations for modifying the graph data. This decision was made to simplify the implementation of GRIN and ensure that it can be used safely with any storage engine.
 
 The latest version of headers can be found in [v6d/dev/grin](https://github.com/v6d-io/v6d/tree/dev/grin/modules/graph/grin/include). Note that the predefine.h has been modified for v6d.
 
 -----
+
+## Motivations
+The motivations behind GRIN are driven by the need for a common standard for accessing graph data for the computing engines of GraphScope. There are a number of factors that have contributed to this need:
+1. Complexity of integrating multiple graph computing engines and storage engines: GraphScope consists of many different graph computing engines and storage engines, each with their own data model, query language, and API. This can make it difficult to integrate these engines with each other, as each engine requires a separate integration effort.
+2. Need for interoperability and collaboration: To fully realize the potential of GraphScope, there is a need for greater interoperability and collaboration between the different components. A common standard for accessing graph data could help to accelerate the development of GraphScope and make it more accessible to a wider range of users.
+3. Growing demand for big graph processing: With the increasing amount of data being generated, there is a growing demand for big graph processing systems that can efficiently analyze large-scale graph data. A common standard for accessing graph data could help to accelerate the development of new features for engines in GraphScope.
+
+By defining the interfaces of GRIN in C, GRIN can be easily integrated with a variety of programming languages, including Java, Python, and Rust, using foreign function interfaces (FFIs) that allow these languages to call C functions. In addition, it becomes a language-agnostic standard that can be used across different programming environments, without requiring each environment to have its own implementation of the standard. This can greatly simplify the development and maintenance of graph computing systems that rely on GRIN, as it allows developers to use their preferred programming languages and tools, while still being able to access and process graph data using a common standard.
+
+
+## Unified Graph Retrieval
+
+As mentioned above, GRIN provides a set of common operations of graph traversal, data retrieval, and conditional filter for computing engines to access the graphs in different storage engines in a uniform way.
+These operations are defined as C functions while their return values and parameters are generally handlers of graph concepts, such as vertices and edges.
+
+Next is an example showing how to handle a graph query using GRIN APIs.
+The data types with prefix GRIN_ are handlers while the functions with prefix grin_ are
+the APIs in GRIN. Moreover, the macros started with GRIN_ are provided by GRIN to reflect
+the storage features. Each storage engine that implements GRIN APIs can set up these macros
+based on their own features, such as graph partition strategies and list retrieval styles.
+The storage provider of this example is [Vineyard](https://v6d.io).
+
+In particular, the example illustrates how to sync property values of vertices related to certain edge type.
+The input parameters are the partitioned_graph, the local partition,
+the edge_type_name (e.g., likes), the vertex_property_name (e.g., features).
+The task is to find all the destination vertices of "boundary edges" with type named "likes", and the vertices
+must have a property named "features". Here a boundary edge is an edge whose source vertex is a master vertex and
+the destination is a mirror vertex, given the context of "edge-cut" partition strategy that the underlying storage uses.
+Then for each of these vertices, we send the value of the "features" property to its master partition.
+
+```CPP
+    void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION partition, const char* edge_type_name, const char* vertex_property_name) {
+        GRIN_GRAPH g = grin_get_local_graph_from_partition(partitioned_graph, partition);  // get local graph of partition
+
+        GRIN_EDGE_TYPE etype = grin_get_edge_type_by_name(g, edge_type_name);  // get edge type from name
+        GRIN_VERTEX_TYPE_LIST src_vtypes = grin_get_src_types_from_edge_type(g, etype);  // get related source vertex type list
+        GRIN_VERTEX_TYPE_LIST dst_vtypes = grin_get_dst_types_from_edge_type(g, etype);  // get related destination vertex type list
+
+        size_t src_vtypes_num = grin_get_vertex_type_list_size(g, src_vtypes);
+        size_t dst_vtypes_num = grin_get_vertex_type_list_size(g, dst_vtypes);
+        assert(src_vtypes_num == dst_vtypes_num);  // the src & dst vertex type lists must be aligned
+
+        for (size_t i = 0; i < src_vtypes_num; ++i) {  // iterate all pairs of src & dst vertex type
+            GRIN_VERTEX_TYPE src_vtype = grin_get_vertex_type_from_list(g, src_vtypes, i);  // get src type
+            GRIN_VERTEX_TYPE dst_vtype = grin_get_vertex_type_from_list(g, dst_vtypes, i);  // get dst type
+
+            GRIN_VERTEX_PROPERTY dst_vp = grin_get_vertex_property_by_name(g, dst_vtype, vertex_property_name);  // get the property called "features" under dst type
+            if (dst_vp == GRIN_NULL_VERTEX_PROPERTY) continue;  // filter out the pairs whose dst type does NOT have such a property called "features"
+            
+            GRIN_VERTEX_PROPERTY_TABLE dst_vpt = grin_get_vertex_property_table_by_type(g, dst_vtype);  // prepare property table of dst vertex type for later use
+            GRIN_DATATYPE dst_vp_dt = grin_get_vertex_property_data_type(g, dst_vp); // prepare property type for later use
+
+            GRIN_VERTEX_LIST __src_vl = grin_get_vertex_list(g);  // get the vertex list
+            GRIN_VERTEX_LIST _src_vl = grin_filter_type_for_vertex_list(g, src_vtype, __src_vl);  // filter the vertex of source type
+            GRIN_VERTEX_LIST src_vl = grin_filter_master_for_vertex_list(g, _src_vl);  // filter master vertices under source type
+            
+            size_t src_vl_num = grin_get_vertex_list_size(g, src_vl);
+            for (size_t j = 0; j < src_vl_num; ++j) { // iterate the src vertex
+                GRIN_VERTEX v = grin_get_vertex_from_list(g, src_vl, j);
+
+            #ifdef GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
+                GRIN_ADJACENT_LIST _adj_list = grin_get_adjacent_list(g, GRIN_DIRECTION::OUT, v);  // get the outgoing adjacent list of v
+                GRIN_ADJACENT_LIST adj_list = grin_filter_edge_type_for_adjacent_list(g, etype, _adj_list);  // filter edges under etype
+            #else
+                GRIN_ADJACENT_LIST adj_lsit = grin_get_adjacent_list(g, GRIN_DIRECTION::OUT, v);  // get the outgoing adjacent list of v
+            #endif
+
+                size_t al_sz = grin_get_adjacent_list_size(g, adj_list);
+                for (size_t k = 0; k < al_sz; ++k) {
+            #ifndef GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
+                    GRIN_EDGE edge = grin_get_edge_from_adjacent_list(g, adj_list, k);
+                    GRIN_EDGE_TYPE edge_type = grin_get_edge_type(g, edge);
+                    if (!grin_equal_edge_type(g, edge_type, etype)) continue;
+            #endif
+                    GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list(g, adj_list, k);  // get the dst vertex u
+                    const void* value = grin_get_value_from_vertex_property_table(g, dst_vpt, u, dst_vp);  // get the property value of "features" of u
+
+                    GRIN_VERTEX_REF uref = grin_get_vertex_ref_for_vertex(g, u);  // get the reference of u that can be recoginized by other partitions
+                    GRIN_PARTITION u_master_partition = grin_get_master_partition_from_vertex_ref(g, uref);  // get the master partition for u
+
+                    send_value(u_master_partition, uref, dst_vp_dt, value);  // the value must be casted to the correct type based on dst_vp_dt before sending
+                }
+            }
+        }
+    }
+    
+    void run(vineyard::Client& client, const grape::CommSpec& comm_spec,
+             vineyard::ObjectID fragment_group_id) {
+        LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
+
+        auto pg = get_partitioned_graph_by_object_id(client, fragment_group_id);
+        auto local_partitions = get_local_partition_list(pg);
+        size_t pnum = get_partition_list_size(local_partitions);
+        assert(pnum > 0);
+
+        // we only sync the first partition as example
+        auto partition = get_partition_from_list(local_partitions, 0);
+        sync_property(pg, partition, "likes", "features");
+    }
+```
+
+## Design Principles
+
+### Assume System to describe storage features
+
+### Property Graph Model
+
+## Implementation Guideline
+### for computing engine
+### for storage engine
+
+
+ GRIN is a series of C-style Graph Retrieval INterfaces for graph computing engines to access different storage systems in a uniform way.
+
 ## Implementation Guideline
 ### For computing engine
 - Implement a wrapper class (normally grin_fragment or grin_graph) using GRIN APIs.
@@ -16,8 +137,8 @@ The latest version of headers can be found in [v6d/dev/grin](https://github.com/
 ### For storage engine
 - Copy header (source) files from documents.
 - Modify the StorageSpecific part in the predefine.h based on the features of the storage.
-- Implement the headers in another folder (e.g., src). If you find the time complexity of 
-some function is NOT sub-linear to the graph size, discuss with GRIN designers.
+- Implement the headers as much as possible in another folder (e.g., src). If you find the time 
+complexity of some function is NOT sub-linear to the graph size, discuss with GRIN designers.
 - Write a storage-specific method to get a graph handler from your storage.
 - Run a graph traversal test.
 

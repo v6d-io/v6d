@@ -60,6 +60,22 @@ typedef enum {
  */
 ///@{
 /** @ingroup TopologyMacros 
+ * @brief The storage only support directed graphs.
+ */
+#define GRIN_ASSUME_GRAPH_DIRECTED
+
+/** @ingroup TopologyMacros 
+ * @brief The storage only support undirected graphs.
+ */
+#define GRIN_ASSUME_GRAPH_UNDIRECTED
+
+/** @ingroup TopologyMacros 
+ * @brief The storage only support graphs with single
+ * edge between a pair of vertices.
+ */
+#define GRIN_ASSUME_GRAPH_SINGLE_EDGE
+
+/** @ingroup TopologyMacros 
  * @brief There is original ID for a vertex.
  * This facilitates queries starting from a specific vertex,
  * since one can get the vertex handler directly using its original ID.
@@ -136,6 +152,9 @@ typedef enum {
 /* StorageSpecific */
 
 /* Disable the unsupported features */
+#undef GRIN_ASSUME_GRAPH_DIRECTED
+#undef GRIN_ASSUME_GRAPH_UNDIRECTED
+#undef GRIN_ASSUME_GRAPH_SINGLE_EDGE
 #undef GRIN_WITH_VERTEX_DATA
 #undef GRIN_WITH_EDGE_DATA
 #undef GRIN_ENABLE_VERTEX_LIST_ITERATOR
@@ -950,6 +969,8 @@ typedef enum {
 #define GRIN_NULL_ROW NULL
 /** @brief Null natural id of any kind (invalid return value) */
 #define GRIN_NULL_NATURAL_ID UINT_MAX
+/** @brief Null size (invalid return value) */
+#define GRIN_NULL_SIZE UINT_MAX
 ///@}
 
 
