@@ -37,7 +37,7 @@ class bdist_wheel_plat(bdist_wheel):
         _, _, plat = bdist_wheel.get_tag(self)
         if plat.startswith('linux'):
             # Linux: make wheel has valid name without auditwheel
-            plat = 'manylinux2010' + plat[len('linux'):]
+            plat = 'manylinux2014' + plat[len('linux'):]
         return ('py3', 'none', plat)
 
 
