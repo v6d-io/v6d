@@ -383,7 +383,7 @@ int main(int argc, char** argv) {
 
     - or: ./vineyard-graph-loader [--socket <vineyard-ipc-socket>] --config <config.json>
 
-          The config is a json file and should look like
+          The `config.json` is a json file which should looks like
 
           {
               "vertices": [
