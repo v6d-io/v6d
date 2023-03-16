@@ -11,6 +11,8 @@ However there are still scenarios where users need to develop their
 own data structures and efficiently share the data with Vineyard. Custom
 C++ data types could be easily added by following this step-by-step tutorial.
 
+.. note::
+
     Note that this tutorial includes code that could be auto-generated for
     keeping clear about the design internals and helping developers get a whole
     picture about how vineyard client works.

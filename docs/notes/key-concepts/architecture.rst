@@ -147,7 +147,7 @@ routines reusing (e.g., I/O drivers). More specifically,
    SDKs of vineyard. Currently Python and C++ are officially supported and the Rust
    and Go SDKs are under heavily development.
 
-4. The **plugable drivers** assign specific functionalities to certain types of data
+4. The **pluggable drivers** assign specific functionalities to certain types of data
    in vineyard.
 
    In particular, I/O drivers sync with external storages such as databases and file

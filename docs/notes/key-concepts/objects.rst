@@ -1,7 +1,7 @@
 .. _vineyard-objects:
 
-Internals of Objects
-====================
+Objects
+=======
 
 Vineyard represents all kinds of data as vineyard objects. Vineyard adopts a
 metadata-payloads decoupled design and an object in vineyard consists of two folds:
@@ -11,8 +11,8 @@ metadata-payloads decoupled design and an object in vineyard consists of two fol
 
 .. _metadata-and-payloads:
 
-Metadata and payloads
----------------------
+Object = Metadata + payloads
+----------------------------
 
 There are some examples that explain the basic idea of metadata and payload that
 forms vineyard objects:
@@ -59,63 +59,65 @@ model and complex data objects can be composed from some simpler objects. Each o
 contains a set of blobs as the payload, and a metadata (in tree form) that describes
 the semantic and organizations of those blobs.
 
-.. code:: json
-   :caption: An example for the object metadata: a dataframe with two columns where each
-             column is a tensor.
+.. admonition:: An example for the object metadata: a dataframe with two columns where each
+                column is a tensor.
+   :class: admonition-details
 
-    {
-        "__values_-key-0": "1",
-        "__values_-key-1": "\"a\"",
-        "__values_-size": 2,
-        "__values_-value-0": {
-            "buffer_": {
-                "id": "o800527ecdf05cff9",
+   .. code:: json
+
+        {
+            "__values_-key-0": "1",
+            "__values_-key-1": "\"a\"",
+            "__values_-size": 2,
+            "__values_-value-0": {
+                "buffer_": {
+                    "id": "o800527ecdf05cff9",
+                    "instance_id": 39,
+                    "length": 0,
+                    "nbytes": 0,
+                    "transient": true,
+                    "typename": "vineyard::Blob"
+                },
+                "id": "o000527ecdffd95c4",
                 "instance_id": 39,
-                "length": 0,
-                "nbytes": 0,
-                "transient": true,
-                "typename": "vineyard::Blob"
+                "nbytes": 400,
+                "partition_index_": "[]",
+                "shape_": "[100]",
+                "signature": 1451273207424436,
+                "transient": false,
+                "typename": "vineyard::Tensor<float>",
+                "value_type_": "float"
             },
-            "id": "o000527ecdffd95c4",
-            "instance_id": 39,
-            "nbytes": 400,
-            "partition_index_": "[]",
-            "shape_": "[100]",
-            "signature": 1451273207424436,
-            "transient": false,
-            "typename": "vineyard::Tensor<float>",
-            "value_type_": "float"
-        },
-        "__values_-value-1": {
-            "buffer_": {
-                "id": "o800527ecdeaf1015",
+            "__values_-value-1": {
+                "buffer_": {
+                    "id": "o800527ecdeaf1015",
+                    "instance_id": 39,
+                    "length": 0,
+                    "nbytes": 0,
+                    "transient": true,
+                    "typename": "vineyard::Blob"
+                },
+                "id": "o000527ece12e4f0a",
                 "instance_id": 39,
-                "length": 0,
-                "nbytes": 0,
-                "transient": true,
-                "typename": "vineyard::Blob"
+                "nbytes": 800,
+                "partition_index_": "[]",
+                "shape_": "[100]",
+                "signature": 1451273227452968,
+                "transient": false,
+                "typename": "vineyard::Tensor<double>",
+                "value_type_": "double"
             },
-            "id": "o000527ece12e4f0a",
+            "columns_": "[\"a\",1]",
+            "id": "o000527ece15d374c",
             "instance_id": 39,
-            "nbytes": 800,
-            "partition_index_": "[]",
-            "shape_": "[100]",
-            "signature": 1451273227452968,
+            "nbytes": 1200,
+            "partition_index_column_": 0,
+            "partition_index_row_": 0,
+            "row_batch_index_": 0,
+            "signature": 1451273231074538,
             "transient": false,
-            "typename": "vineyard::Tensor<double>",
-            "value_type_": "double"
-        },
-        "columns_": "[\"a\",1]",
-        "id": "o000527ece15d374c",
-        "instance_id": 39,
-        "nbytes": 1200,
-        "partition_index_column_": 0,
-        "partition_index_row_": 0,
-        "row_batch_index_": 0,
-        "signature": 1451273231074538,
-        "transient": false,
-        "typename": "vineyard::DataFrame"
-    }
+            "typename": "vineyard::DataFrame"
+        }
 
 From the above example of an object metadata you can see that and object is composed
 by certain sub objects and forms a hierarchical data model. An object consists of
@@ -126,8 +128,8 @@ a set of blobs and a metadata tree that describes the semantic of those blobs.
     Without the metadata, the blob set is just some memory pieces that have no
     meaningful explanation.
 
-Decoupled design
-----------------
+Separating metadata and payload
+-------------------------------
 
 The decoupling design of data payload and data layout above brings three benefits:
 
@@ -157,8 +159,8 @@ design choices:
 2. The extensible design on methods of vineyard objects to enable flexible data sharing
    between different computation systems with nearly zero extra development cost.
 
-Design space of objects
------------------------
+Data model
+----------
 
 Composable design
 ^^^^^^^^^^^^^^^^^
@@ -265,8 +267,8 @@ vineyard also follows the same design.
     in accordance with specific data analytical tasks for further efficiency
     augmentation.
 
-Implementation details
-----------------------
+Implement your types
+--------------------
 
 Vineyard objects
 ^^^^^^^^^^^^^^^^
@@ -277,7 +279,7 @@ parts:
 1. The data payload stored in the corresponding vineyard instance locally
 2. The hierarchical meta data shared across the vineyard cluster
 
-In particualr, ``Blob`` is the unit where the data payload lives in a vineyard
+In particular, ``Blob`` is the unit where the data payload lives in a vineyard
 instance.
 A blob object holds a segment of memory in the bulk store of the vineyard
 instance, so that users can save their local buffer into a blob and
@@ -359,8 +361,8 @@ in the first vineyard instance.
 
 .. _divein-builder-resolver:
 
-Builder and resolver
-^^^^^^^^^^^^^^^^^^^^
+Builders and resolvers
+^^^^^^^^^^^^^^^^^^^^^^
 
 As we shown above, vineyard allows users to register builders/resolvers to build/resolve
 vineyard objects from/to the data types in the client side based on the computation

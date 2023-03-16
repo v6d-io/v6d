@@ -6,9 +6,8 @@ Key Concepts
    :caption: TOC
    :hidden:
 
-   key-concepts/architecture.rst
    key-concepts/objects.rst
-   key-concepts/code-generator.rst
+   key-concepts/vcdl.rst
    key-concepts/data-accessing.rst
    key-concepts/streams.rst
    key-concepts/io-drivers.rst
@@ -32,15 +31,6 @@ Concepts
    :header: text-center
    :column: col-lg-12 p-2
 
-   .. link-button:: key-concepts/architecture
-      :type: ref
-      :text: Architecture
-      :classes: btn-block stretched-link
-   ^^^^^^^^^^^^
-   Overview the motivation and architecture of vineyard.
-
-   ---
-
    .. link-button:: key-concepts/objects
       :type: ref
       :text: Vineyard Objects
@@ -48,12 +38,14 @@ Concepts
    ^^^^^^^^^^^^
    The design space of vineyard objects.
 
-   .. link-button:: key-concepts/code-generator
+   ---
+
+   .. link-button:: key-concepts/vcdl
       :type: ref
-      :text: Code Generator
+      :text: VCDL and Integration
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   The design space of vineyard objects.
+   VCDL and how to integration vineyard with computing systems.
 
    ---
 

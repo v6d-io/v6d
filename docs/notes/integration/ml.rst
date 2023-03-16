@@ -277,7 +277,7 @@ While the label is the values of column ``label``.
 Nvidia-DALI
 -----------
 
-Vineyard suports integration of ``Dali Pipelines``.
+Vineyard supports integration of ``Dali Pipelines``.
 
 .. code:: python
 

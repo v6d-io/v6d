@@ -106,7 +106,7 @@ in keras of Tensorflow.
         multi_worker_model.fit(train_dataset, epochs=3, steps_per_epoch=70)
 
 To use the preprocessed data, we register the resolvers that can resolve a **vineyard::GlobalDataFrame** distributedly
-by mulitple workers to the resolver_context. Then we can get the **tf.data.Dataset** directly from vineyard by the **get**
+by multiple workers to the resolver_context. Then we can get the **tf.data.Dataset** directly from vineyard by the **get**
 method.
 
 .. note::

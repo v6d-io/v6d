@@ -26,22 +26,22 @@ To stop running the vineyardd instance, you can press :code:`Ctrl-C` in the term
 
 .. tip::
 
-  If you encounter errors like ``cannot launch vineyardd on '/var/run/vineyard.sock':
-  Permission denied,``, that means **you don't have the permission** to create a UNIX-domain
-  socket at :code:`/var/run/vineyard.sock`, you could either
+   If you encounter errors like ``cannot launch vineyardd on '/var/run/vineyard.sock':
+   Permission denied,``, that means **you don't have the permission** to create a UNIX-domain
+   socket at :code:`/var/run/vineyard.sock`, you could either
 
-  - run vineyard as root, using ``sudo``:
+   - run vineyard as root, using ``sudo``:
 
-    .. code:: console
+     .. code:: console
 
-       $ sudo -E python3 -m vineyard
+        $ sudo -E python3 -m vineyard
 
-  - or, change the socket path to a writable location with the ``--socket`` command
-    line option:
+   - or, change the socket path to a writable location with the ``--socket`` command
+     line option:
 
-    .. code:: console
+     .. code:: console
 
-       $ python3 -m vineyard --socket /tmp/vineyard.sock
+        $ python3 -m vineyard --socket /tmp/vineyard.sock
 
 Connecting to vineyard
 ----------------------
@@ -51,152 +51,174 @@ from Python:
 
 .. code:: python
 
-     >>> import vineyard
-     >>> client = vineyard.connect('/var/run/vineyard.sock')
+   >>> import vineyard
+   >>> client = vineyard.connect('/var/run/vineyard.sock')
 
 Putting and getting Python objects
 ----------------------------------
 
 Vineyard is designed as an in-memory object store and provides two high-level APIs :code:`put` and
-:code:`get` for creating and accessing shared objects. The former will return a :code:`vineyard.ObjectID`
-when Succeed and can be further used to retrieve shared objects from vineyard by the latter.
+:code:`get` for creating and accessing shared objects to seamlessly interoperate with the Python
+ecosystem. The former returns a :code:`vineyard.ObjectID` when succeed and it can be further used
+to retrieve shared objects from vineyard by the latter.
 
-In following example, We first use :code:`client.put()` to build the vineyard object from the local
-variable ``arr``, which returns the ``object_id`` that is the unique id in vineyard to represent the object.
-
-Then given the ``object_id``, we can obtain a shared-memory object from vineyard
-with :code:`client.get()`.
-
+In following example, We first use :code:`client.put()` to build the vineyard object from the numpy
+ndarray ``arr``, which returns the ``object_id`` that is the unique id in vineyard to represent
+the object. Given the ``object_id``, we can obtain a shared-memory object from vineyard with method
+:code:`client.get()`.
 
 .. code:: python
 
-     >>> import numpy as np
-     >>>
-     >>> object_id = client.put(np.random.rand(2, 4))
-     >>> object_id
-     o0015c78883eddf1c
-     >>>
-     >>> shared_array = client.get(object_id)
-     >>> shared_array
-     ndarray([[0.39736989, 0.38047846, 0.01948815, 0.38332264],
-              [0.61671189, 0.48903213, 0.03875045, 0.5873005 ]])
+   >>> import numpy as np
+   >>>
+   >>> object_id = client.put(np.random.rand(2, 4))
+   >>> object_id
+   o0015c78883eddf1c
+   >>>
+   >>> shared_array = client.get(object_id)
+   >>> shared_array
+   ndarray([[0.39736989, 0.38047846, 0.01948815, 0.38332264],
+            [0.61671189, 0.48903213, 0.03875045, 0.5873005 ]])
 
 .. note::
 
    :code:`shared_array` doesn't allocate extra memory in the Python process; instead, it shares memory
-   with the vineyard server via `mmap`_.
+   with the vineyard server via `mmap`_ and the process is zero-copy.
 
-The sharable objects can be complex and nested, for example, a ``DataFrame`` from pandas:
-
-.. code:: python
-
-     >>> import pandas as pd
-     >>>
-     >>> df = pd.DataFrame({'u': [0, 0, 1, 2, 2, 3],
-     >>>                    'v': [1, 2, 3, 3, 4, 4],
-     >>>                    'weight': [1.5, 3.2, 4.7, 0.3, 0.8, 2.5]})
-     >>> object_id = client.put(df)
-     >>>
-     >>> shared_dataframe = client.get(object_id)
-     >>> shared_dataframe
-        u  v  weight
-     0  0  1     1.5
-     1  0  2     3.2
-     2  1  3     4.7
-     3  2  3     0.3
-     4  2  4     0.8
-     5  3  4     2.5
-
-
-We first build the vineyard dataframe object from pandas dataframe variable ``df``,
-then to further understand the ``client.get()`` method, we use ``client.get_object()``
-to get the vineyard object, and check its ``typename``.
-
-Actually, ``client.get()`` works in two steps, it first gets the vineyard object
-from vineyardd via ``client.get_object()``, and then resolves the vineyard object
-based on the registered resolver.
-
-In this case, when we ``import vineyard.dataframe``,
-a resolver that can resolve a vineyard dataframe object to a pandas dataframe is
-registered to the resolver factory under the vineyard type ``vineyard::DataFrame``,
-so that the client can automatically resolve the vineyard dataframe object.
-To further understand the registration design in vineyard, see :ref:`divein-driver-label`.
-
-Shared Memory
--------------
-
-Vineyard supports shared memory interface of :class:`SharedMemory` and :class:`ShareableList`
-like things in `multiprocessing.shared_memory <https://docs.python.org/3/library/multiprocessing.shared_memory.html>`_.
-
-The shared memory interface can be used in the following way:
+The sharable objects can be complex and nested. Like numpy ndarray, the pandas dataframe ``df`` can
+be seamlessly put into vineyard and get back with the ``.put()`` and ``.get()`` method as follows,
 
 .. code:: python
 
-     >>> from vineyard import shared_memory
-     >>> value = shared_memory.ShareableList(client, [b"a", "bb", 1234, 56.78, True])
-     >>> value
-     ShareableList([b'a', 'bb', 1234, 56.78, True], name='o8000000119aa10c0')
-     >>> value[4] = False
-     >>> value
-     ShareableList([b'a', 'bb', 1234, 56.78, False], name='o8000000119aa10c0')
+   >>> import pandas as pd
+   >>>
+   >>> df = pd.DataFrame({'u': [0, 0, 1, 2, 2, 3],
+   >>>                    'v': [1, 2, 3, 3, 4, 4],
+   >>>                    'weight': [1.5, 3.2, 4.7, 0.3, 0.8, 2.5]})
+   >>> object_id = client.put(df)
+   >>>
+   >>> shared_dataframe = client.get(object_id)
+   >>> shared_dataframe
+      u  v  weight
+   0  0  1     1.5
+   1  0  2     3.2
+   2  1  3     4.7
+   3  2  3     0.3
+   4  2  4     0.8
+   5  3  4     2.5
 
-.. caution::
+Under the hood, vineyard implements a builder/resolver mechanism to represent arbitrary
+data structure as *vineyard objects* and resolve back to native values in the corresponding
+programming languages and computing systems, see also :ref:`divein-driver-label`.
 
-   Note that the semantic of the vineyard's :code:`shared_memory` is slightly different
-   with the :code:`shared_memory` in python's multiprocessing module. Shared memory in
-   vineyard cannot be mutable after been visible to other clients.
+Sharing objects between tasks
+-----------------------------
 
-We have added a :code:`freeze` method to make such transformation happen:
-
-.. code:: python
-
-     >>> value.freeze()
-
-After being freezed, the shared memory (aka. the :code:`ShareableList` in this case)
-is available for other clients:
-
-.. code:: python
-
-     >>> value1 = shared_memory.ShareableList(client, name=value.shm.name)
-     >>> value1
-     ShareableList([b'a', 'bb', 1234, 56.78, False], name='o8000000119aa10c0')
-
-For more details, see :ref:`shared-memory`.
-
-Using streams
--------------
-
-Vineyard supports streaming to facilitate big data pipelining.
-
-Open a local file as a dataframe stream
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Vineyard is designed for sharing intermediate data between tasks. The following example
+demonstrates how dataframe can be passed between two **processes** using vineyard, namely
+producer and consumer in the following example:
 
 .. code:: python
 
-     >>> from vineyard.io.stream import open
-     >>> stream = open('file://twitter.e')
-     >>> stream.typename
-     vineyard::DataframeStream
+   import multiprocessing as mp
+   import vineyard
 
-In practice, the file may be stored in an NFS, and we want to read the file in
-parallel to further speed up the IO process.
+   import numpy as np
+   import pandas as pd
 
-To further understand the implementation of the driver ``open``, and the underlying
-registration mechanism for drivers in vineyard, see also :ref:`divein-driver-label`.
+   socket = '/var/run/vineyard.sock'
 
-Launching a multi-instance vineyard cluster
--------------------------------------------
+   def produce(name):
+      client = vineyard.connect(socket)
+      client.put(pd.DataFrame(np.random.randn(100, 4), columns=list('ABCD')),
+                 persist=True, name=name)
 
-A vineyard daemon server is a vineyard instance in a vineyard cluster. Thus, to
-start a vineyard cluster, we can simply start ``vineyardd`` over all the
-machines in the cluster, and make sure these vineyard instances can register to
-the same ``etcd_endpoint``. The default value of ``etcd_endpoint`` is
-``http://127.0.0.1:2379``, and ``vineyard`` will launch the ``etcd_endpoint``
-in case the etcd servers are not started on the cluster.
+   def consume(name):
+      client = vineyard.connect(socket)
+      print(client.get(name=name).sum())
 
-.. tip::
+   if __name__ == '__main__':
+      name = 'dataset'
 
-   Use ``python3 -m vineyard --help`` for other parameter settings.
+      producer = mp.Process(target=produce, args=(name,))
+      producer.start()
+      consumer = mp.Process(target=consume, args=(name,))
+      consumer.start()
+
+      producer.join()
+      consumer.join()
+
+Running the code above, you should see the following output:
+
+.. code:: python
+
+   A   -4.529080
+   B   -2.969152
+   C   -7.067356
+   D    4.003676
+   dtype: float64
+
+Next steps
+----------
+
+Beyond the core functionality of sharing objects between tasks, vineyard also provides
+
+- Distributed objects and stream abstraction over immutable chunks;
+- An IDL (VCDL) that helps integrate vineyard with other systems at the minimalist cost;
+- A mechanism of pluggable drivers for miscellaneous tasks that serve as the glue
+  between the core compute engine and the external world, e.g., data sources, data
+  sinks;
+- Integration with Kubernetes for sharing between tasks in workflows that deployed
+  on cloud-native infrastructures.
+
+Learn more about vineyard's key concepts from the following user guides:
+
+.. panels::
+   :header: text-center
+   :container: container-lg pb-4
+   :column: col-lg-4 col-md-4 col-sm-4 col-xs-12 p-2
+   :body: text-center
+
+   .. link-button:: key-concepts/architecture
+      :type: ref
+      :text: Vineyard Objects
+      :classes: btn-block stretched-link
+
+   Illustrate the design of object model in vineyard.
+
+   ---
+
+   .. link-button:: key-concepts/vcdl
+      :type: ref
+      :text: VCDL
+      :classes: btn-block stretched-link
+
+   How vineyard been integrated with other computing systems?
+
+   ---
+
+   .. link-button:: key-concepts/io-drivers
+      :type: ref
+      :text: I/O Drivers
+      :classes: btn-block stretched-link
+
+   Design and implementation of the pluggable routines for I/O, repartition, migration, etc.
+
+Vineyard is natural fit to cloud-native computing, where vineyard can be deployed and
+managed the *vineyard operator*, and provides data-aware scheduling for data analytical
+workflows to archive efficient data sharing on Kubernetes. More details about vineyard
+on Kubernetes can be found from
+
+.. panels::
+   :header: text-center
+   :column: col-lg-12 p-2
+
+   .. link-button:: cloud-native/deploy-kubernetes
+      :type: ref
+      :text: Cloud-Native
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   Deploy vineyard on Kubernetes and accelerating your big-data workflows.
 
 .. _Python package: https://pypi.org/project/vineyard
 .. _mmap: https://man7.org/linux/man-pages/man2/mmap.2.html

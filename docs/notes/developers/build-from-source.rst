@@ -174,7 +174,7 @@ Once installed, you could go to the `docs/` directory and build the documentatio
 Building on various platforms
 -----------------------------
 
-Vineyard is continously tested on various platforms and you may find building and installation steps
+Vineyard is continuously tested on various platforms and you may find building and installation steps
 from our CI:
 
 - `Ubuntu <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-compatibility.yml>`_

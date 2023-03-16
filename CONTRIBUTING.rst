@@ -112,7 +112,7 @@ documentation in the :code:`docs/` directory using:
     cd docs/
     make html
 
-The HTML documentation will be available under `docs/_build/html`:
+The HTML documentation will be available under :code:`docs/_build/html`:
 
 .. code:: bash
 
@@ -122,7 +122,7 @@ The latest version of online documentation can be found at https://v6d.io.
 
 Vineyard provides comprehensive documents to explain the underlying
 design and implementation details. The documentation follows the syntax
-of Doxygen and sphinx markup. If you find anything you can help, submit 
+of Doxygen and sphinx markup. If you find anything you can help, submit
 pull request to us. Thanks for your enthusiasm!
 
 Reporting bugs
@@ -132,7 +132,7 @@ Vineyard is hosted on Github, and use Github issues as the bug tracker.
 You can `file an issue`_ when you find anything that is expected to work
 with vineyard but it doesn't.
 
-Before creating a new bug entry, we recommend you first `search` among existing
+Before creating a new bug entry, we recommend you first `search`_ among existing
 vineyard bugs to see if it has already been resolved.
 
 When creating a new bug entry, please provide necessary information of your
@@ -150,7 +150,7 @@ Install pre-commit
 ^^^^^^^^^^^^^^^^^^
 
 Vineyard use `pre-commit`_ to ensure no secrets are accidentally committed
-into the Git repository, you could first install  `pre-commit`_ by
+into the Git repository, you could first install `pre-commit`_ by
 
 .. code:: bash
 
