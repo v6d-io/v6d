@@ -7,7 +7,7 @@
         an in-memory immutable data manager
     </p>
 
-|Vineyard CI| |Coverage| |Docs| |FAQ| |Docker HUB| |Artifact HUB| |License| |CII Best Practices| |FOSSA|
+|Vineyard CI| |Coverage| |Docs| |FAQ| |Discussion| |Slack| |Docker HUB| |Artifact HUB| |License| |CII Best Practices| |FOSSA|
 
 
 Vineyard (v6d) is an in-memory immutable data manager
@@ -20,14 +20,6 @@ computing (e.g., `Mars`_), and machine learning.
   :alt: Vineyard is a CNCF sandbox project
 
 Vineyard is a `CNCF sandbox project`_ and indeed made successful by its community.
-
-.. note::
-
-   1. Why bother
-   2. What is vineyard
-   3. 框架图
-   4. Features
-   5. Links to quick start, concepts (object, blob, metadata, etc), tutorials, etc.
 
 Table of Contents
 -----------------
@@ -248,6 +240,13 @@ Getting involved
 
 Thank you in advance for your contributions to vineyard!
 
+Publications
+------------
+
+- Wenyuan Yu, Tao He, Lei Wang, Ke Meng, Ye Cao, Diwen Zhu, Sanhong Li, Jingren Zhou.
+  Vineyard: Optimizing Data Sharing in Data-Intensive Analytics.
+  ACM SIG Conference on Management of Data (SIGMOD), industry, 2023.
+
 Acknowledgements
 ----------------
 
@@ -301,6 +300,10 @@ third-party libraries may not have the same license as vineyard.
    :target: https://v6d.io
 .. |FAQ| image:: https://img.shields.io/badge/-FAQ-blue?logo=Read%20The%20Docs
    :target: https://v6d.io/notes/faq.html
+.. |Discussion| image:: https://img.shields.io/badge/Discuss-Ask%20Questions-blue?logo=GitHub
+   :target: https://github.com/v6d-io/v6d/discussions
+.. |Slack| image:: https://img.shields.io/badge/Slack-Join%20%23vineyard-purple?logo=Slack
+   :target: https://slack.cncf.io/
 .. |Docker HUB| image:: https://img.shields.io/badge/docker-ready-blue.svg
    :target: https://hub.docker.com/u/vineyardcloudnative
 .. |Artifact HUB| image:: https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/vineyard

@@ -1,137 +1,30 @@
+.. _vineyard-operator:
+
 Vineyard Operator
 =================
 
-To manage all vineyard relevant components in Kubernetes cluster, we proposal the vineyard
-operator. With it, users can easily deploy vineyard components, and manage their lifecycle.
-The doc will show you all details about vineyard operator and how to use it to manage vineyard
-components.
+Architecture
+------------
+
+The following figure demonstrates the architecture of vineyard operator.
+
+.. figure:: ../../images/vineyard_operator_arch.png
+   :width: 75%
+   :alt: Architecture of vineyard operator
+
+   Architecture of vineyard operator
 
 .. contents:: Table of Contents
     :depth: 2
     :local:
     :class: this-will-duplicate-information-and-it-is-still-useful-here
 
-Architecture of vineyard operator
----------------------------------
-
-.. figure:: ../images/vineyard_operator_arch.jpg
-   :alt: Architecture of vineyard operator
-
-   Architecture of vineyard operator
-
-The figure above demonstrates the architecture of vineyard operator.
-
-Install vineyard-operator
+Create a vineyard Cluster
 -------------------------
 
-There are two ways to install vineyard operator, one is to install it from helm chart(recommended
-way), and the other is to install it from source code.
-
-.. note::
-
-    Before you install vineyard operator, you should have a Kubernetes cluster and kubectl
-    installed. Here we use `kind`_ to create a cluster.
-
-Install from helm chart
-^^^^^^^^^^^^^^^^^^^^^^^
-
-1. Install cert-manager:
-
-.. code:: bash
-
-    $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-
-.. note::
-  
-    Please wait the cert-manager for a while until it is ready. Then, install the
-    vineyard operator.
-
-2. Install vineyard operator:
-
-.. code:: bash
-
-    $ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
-    $ helm install vineyard-operator vineyard/vineyard-operator
-
-3. Check the vineyard operator:
-
-.. code:: bash
-
-    $ kubectl get all -n vineyard-system
-    NAME                                               READY   STATUS    RESTARTS   AGE
-    pod/vineyard-controller-manager-5c6f4bc454-8xm8q   2/2     Running   0          62m
-
-    NAME                                                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-    service/vineyard-controller-manager-metrics-service   ClusterIP   10.96.240.173   <none>        8443/TCP   62m
-    service/vineyard-webhook-service                      ClusterIP   10.96.41.132    <none>        443/TCP    62m
-
-    NAME                                          READY   UP-TO-DATE   AVAILABLE   AGE
-    deployment.apps/vineyard-controller-manager   1/1     1            1           62m
-
-    NAME                                                     DESIRED   CURRENT   READY   AGE
-    replicaset.apps/vineyard-controller-manager-5c6f4bc454   1         1         1       62m
-
-
-Install from source code
-^^^^^^^^^^^^^^^^^^^^^^^^
-
-1. Clone the vineyard repo:
-
-  .. code:: bash
-
-      $ git clone https://github.com/v6d-io/v6d.git
-
-2. Install cert-manager:
-
-  .. code:: bash
-
-      $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-
-3. Build the vineyard operator image and deploy it to your Kubernetes cluster:
-
-  .. code:: bash
-
-      $ cd k8s
-      $ make -C k8s docker-build
-
-  If you are working with kind, you need to first import the image into the kind cluster, and this step should
-  be skipped if you are working with other Kubernetes distribution:
-
-  .. code:: bash
-
-      $ kind load docker-image vineyardcloudnative/vineyard-operator:latest
-
-  Then, deploy the vineyard operator:
-
-  .. code:: bash
-
-      $ make -C k8s deploy
-
-4. Check the vineyard operator as below:
-
-  .. code:: bash
-
-      $ kubectl get all -n vineyard-system
-      NAME                                               READY   STATUS    RESTARTS   AGE
-      pod/vineyard-controller-manager-5c6f4bc454-8xm8q   2/2     Running   0          62m
-
-      NAME                                                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-      service/vineyard-controller-manager-metrics-service   ClusterIP   10.96.240.173   <none>        8443/TCP   62m
-      service/vineyard-webhook-service                      ClusterIP   10.96.41.132    <none>        443/TCP    62m
-
-      NAME                                          READY   UP-TO-DATE   AVAILABLE   AGE
-      deployment.apps/vineyard-controller-manager   1/1     1            1           62m
-
-      NAME                                                     DESIRED   CURRENT   READY   AGE
-      replicaset.apps/vineyard-controller-manager-5c6f4bc454   1         1         1       62m
-
-
-Creating a vineyard Cluster
----------------------------
-
-Once the vineyard operator is installed, you can create a vineyard cluster by creating a
-:code:`Vineyardd` CRD. The following is an example of creating a vineyard cluster with 3 daemon
-replicas:
+Once the vineyard operator is installed (see also :ref:`deploy-on-kubernetes`), you can create a
+vineyard cluster by creating a :code:`Vineyardd` CRD. The following is an example of creating a
+vineyard cluster with 3 daemon replicas:
 
 .. code:: yaml
 
@@ -161,415 +54,427 @@ you would see the following items created and managed by the vineyard operator:
 .. code:: bash
 
     $ kubectl get all -n vineyard-system
-    NAME                                               READY   STATUS    RESTARTS   AGE
-    pod/etcd0                                          1/1     Running   0          48s
-    pod/etcd1                                          1/1     Running   0          48s
-    pod/etcd2                                          1/1     Running   0          48s
-    pod/vineyard-controller-manager-5c6f4bc454-8xm8q   2/2     Running   0          72s
-    pod/vineyardd-sample-5cc797668f-9ggr9              1/1     Running   0          48s
-    pod/vineyardd-sample-5cc797668f-nhw7p              1/1     Running   0          48s
-    pod/vineyardd-sample-5cc797668f-r56h7              1/1     Running   0          48s
 
-    NAME                                                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)             AGE
-    service/etcd-for-vineyard                             ClusterIP   10.96.174.41    <none>        2379/TCP            48s
-    service/etcd0                                         ClusterIP   10.96.128.87    <none>        2379/TCP,2380/TCP   48s
-    service/etcd1                                         ClusterIP   10.96.72.116    <none>        2379/TCP,2380/TCP   48s
-    service/etcd2                                         ClusterIP   10.96.99.182    <none>        2379/TCP,2380/TCP   48s
-    service/vineyard-controller-manager-metrics-service   ClusterIP   10.96.240.173   <none>        8443/TCP            72s
-    service/vineyard-webhook-service                      ClusterIP   10.96.41.132    <none>        443/TCP             72s
-    service/vineyardd-sample-rpc                          ClusterIP   10.96.102.183   <none>        9600/TCP            48s
+.. admonition:: Expected output
+   :class: admonition-details
 
-    NAME                                          READY   UP-TO-DATE   AVAILABLE   AGE
-    deployment.apps/vineyard-controller-manager   1/1     1            1           72s
-    deployment.apps/vineyardd-sample              3/3     3            3           48s
+    .. code:: bash
 
-    NAME                                                     DESIRED   CURRENT   READY   AGE
-    replicaset.apps/vineyard-controller-manager-5c6f4bc454   1         1         1       72s
-    replicaset.apps/vineyardd-sample-5cc797668f              3         3         3       48s
+        NAME                                               READY   STATUS    RESTARTS   AGE
+        pod/etcd0                                          1/1     Running   0          48s
+        pod/etcd1                                          1/1     Running   0          48s
+        pod/etcd2                                          1/1     Running   0          48s
+        pod/vineyard-controller-manager-5c6f4bc454-8xm8q   2/2     Running   0          72s
+        pod/vineyardd-sample-5cc797668f-9ggr9              1/1     Running   0          48s
+        pod/vineyardd-sample-5cc797668f-nhw7p              1/1     Running   0          48s
+        pod/vineyardd-sample-5cc797668f-r56h7              1/1     Running   0          48s
+
+        NAME                                                  TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)             AGE
+        service/etcd-for-vineyard                             ClusterIP   10.96.174.41    <none>        2379/TCP            48s
+        service/etcd0                                         ClusterIP   10.96.128.87    <none>        2379/TCP,2380/TCP   48s
+        service/etcd1                                         ClusterIP   10.96.72.116    <none>        2379/TCP,2380/TCP   48s
+        service/etcd2                                         ClusterIP   10.96.99.182    <none>        2379/TCP,2380/TCP   48s
+        service/vineyard-controller-manager-metrics-service   ClusterIP   10.96.240.173   <none>        8443/TCP            72s
+        service/vineyard-webhook-service                      ClusterIP   10.96.41.132    <none>        443/TCP             72s
+        service/vineyardd-sample-rpc                          ClusterIP   10.96.102.183   <none>        9600/TCP            48s
+
+        NAME                                          READY   UP-TO-DATE   AVAILABLE   AGE
+        deployment.apps/vineyard-controller-manager   1/1     1            1           72s
+        deployment.apps/vineyardd-sample              3/3     3            3           48s
+
+        NAME                                                     DESIRED   CURRENT   READY   AGE
+        replicaset.apps/vineyard-controller-manager-5c6f4bc454   1         1         1       72s
+        replicaset.apps/vineyardd-sample-5cc797668f              3         3         3       48s
 
 The detailed configuration entries for creating a vineyard cluster are listed as follows,
 
-.. list-table:: Vineyardd Configurations
-   :widths: 15 10 60 15
-   :header-rows: 1
+.. admonition:: Vineyardd Configurations
+   :class: admonition-details
 
-   * - Option Name
-     - Type
-     - Description
-     - Default Value
+    .. list-table::
+       :widths: 15 10 60 15
+       :header-rows: 1
 
-   * - replicas
-     - int
-     - The replicas of vineyardd.
-     - 3
+       * - Option Name
+         - Type
+         - Description
+         - Default Value
 
-   * - | vineyardConfig.
-       | image
-     - string
-     - The image name of vineyardd container.
-     - | "vineyardcloudnative/
-       | vineyardd:latest"
+       * - replicas
+         - int
+         - The replicas of vineyardd.
+         - 3
 
-   * - | vineyardConfig.
-       | imagePullPolicy
-     - string
-     - The image pull policy of vineyardd image.
-     - nil
+       * - | vineyardConfig.
+           | image
+         - string
+         - The image name of vineyardd container.
+         - | "vineyardcloudnative/
+           | vineyardd:latest"
 
-   * - | vineyardConfig.
-       | syncCRDs
-     - bool
-     - Synchronize CRDs when persisting objects
-     - true
+       * - | vineyardConfig.
+           | imagePullPolicy
+         - string
+         - The image pull policy of vineyardd image.
+         - nil
 
-   * - | vineyardConfig.
-       | socket
-     - string
-     - The ipc socket file of vineyardd.
-     - nil
+       * - | vineyardConfig.
+           | syncCRDs
+         - bool
+         - Synchronize CRDs when persisting objects
+         - true
 
-   * - | vineyardConfig.
-       | size
-     - string
-     - The shared memory size for vineyardd.
-     - nil
+       * - | vineyardConfig.
+           | socket
+         - string
+         - The ipc socket file of vineyardd.
+         - nil
 
-   * - | vineyardConfig.
-       | streamThreshold
-     - int64
-     - The memory threshold of streams
-       (percentage of total memory)
-     - nil
+       * - | vineyardConfig.
+           | size
+         - string
+         - The shared memory size for vineyardd.
+         - nil
 
-   * - | vineyardConfig.
-       | etcdEndpoint
-     - string
-     - The endpoint of etcd.
-     - nil
+       * - | vineyardConfig.
+           | streamThreshold
+         - int64
+         - The memory threshold of streams
+           (percentage of total memory)
+         - nil
 
-   * - | vineyardConfig.
-       | etcdPrefix
-     - string
-     - The path prefix of etcd.
-     - nil
+       * - | vineyardConfig.
+           | etcdEndpoint
+         - string
+         - The endpoint of etcd.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | Name
-     - string
-     - The name of the spill config,
-       if set we'll enable the spill module.
-     - nil
+       * - | vineyardConfig.
+           | etcdPrefix
+         - string
+         - The path prefix of etcd.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | path
-     - string
-     - The path of spilling.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | Name
+         - string
+         - The name of the spill config,
+           if set we'll enable the spill module.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | spillLowerRate
-     - string
-     - The low watermark of spilling memory.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | path
+         - string
+         - The path of spilling.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | spillUpperRate
-     - string
-     - The high watermark of triggering spilling.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | spillLowerRate
+         - string
+         - The low watermark of spilling memory.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | persistent
-       | VolumeSpec
-     - | corev1.
-       | Persistent
-       | VolumeSpec
-     - The PV of the spilling for persistent storage.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | spillUpperRate
+         - string
+         - The high watermark of triggering spilling.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | persistent
-       | VolumeClaimSpec
-     - | corev1.
-       | Persistent
-       | VolumeClaimSpec
-     - The PVC of the spilling for the persistent storage.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | persistent
+           | VolumeSpec
+         - | corev1.
+           | Persistent
+           | VolumeSpec
+         - The PV of the spilling for persistent storage.
+         - nil
 
-   * - | vineyardConfig.
-       | env
-     - []corev1.EnvVar
-     - The environment of vineyardd.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | persistent
+           | VolumeClaimSpec
+         - | corev1.
+           | Persistent
+           | VolumeClaimSpec
+         - The PVC of the spilling for the persistent storage.
+         - nil
 
-   * - | vineyardConfig.
-       | env
-     - []corev1.EnvVar
-     - The environment of vineyardd.
-     - nil
+       * - | vineyardConfig.
+           | env
+         - []corev1.EnvVar
+         - The environment of vineyardd.
+         - nil
 
-   * - | pluginConfig.
-       | backupImage
-     - string
-     - The image of backup operation
-     - "ghcr.io/v6d-io/v6d/backup-job"
+       * - | vineyardConfig.
+           | env
+         - []corev1.EnvVar
+         - The environment of vineyardd.
+         - nil
 
-   * - | pluginConfig.
-       | recoverImage
-     - string
-     - The image of recover operation
-     - "ghcr.io/v6d-io/v6d/recover-job"
+       * - | pluginConfig.
+           | backupImage
+         - string
+         - The image of backup operation
+         - "ghcr.io/v6d-io/v6d/backup-job"
 
-   * - | pluginConfig.
-       | daskRepartitionImage
-     - string
-     - The image of dask repartition operation
-     - "ghcr.io/v6d-io/v6d/dask-repartition"
+       * - | pluginConfig.
+           | recoverImage
+         - string
+         - The image of recover operation
+         - "ghcr.io/v6d-io/v6d/recover-job"
 
-   * - | pluginConfig.
-       | localAssemblyImage
-     - string
-     - The image of local assembly operation
-     - "ghcr.io/v6d-io/v6d/local-assembly"
+       * - | pluginConfig.
+           | daskRepartitionImage
+         - string
+         - The image of dask repartition operation
+         - "ghcr.io/v6d-io/v6d/dask-repartition"
 
-   * - | pluginConfig.
-       | distributedAssemblyImage
-     - string
-     - The image of distributed assembly operation
-     - "ghcr.io/v6d-io/v6d/distributed-assembly"
+       * - | pluginConfig.
+           | localAssemblyImage
+         - string
+         - The image of local assembly operation
+         - "ghcr.io/v6d-io/v6d/local-assembly"
 
-   * - | metricConfig.
-       | image
-     - string
-     - The image name of metric.
-     - nil
+       * - | pluginConfig.
+           | distributedAssemblyImage
+         - string
+         - The image of distributed assembly operation
+         - "ghcr.io/v6d-io/v6d/distributed-assembly"
 
-   * - | metricConfig.
-       | imagePullPolicy
-     - string
-     - The image pull policy of metric.
-     - nil
+       * - | metricConfig.
+           | image
+         - string
+         - The image name of metric.
+         - nil
 
-   * - | service.
-       | type
-     - string
-     - The service type of vineyardd service.
-     - nil
+       * - | metricConfig.
+           | imagePullPolicy
+         - string
+         - The image pull policy of metric.
+         - nil
 
-   * - | service.
-       | port
-     - int
-     - The service port of vineyardd service
-     - nil
-  
-   * - | service.
-       | selector
-     - string
-     - The label selector of vineyardd service.
-     - nil
+       * - | service.
+           | type
+         - string
+         - The service type of vineyardd service.
+         - nil
 
-   * - | etcd.
-       | replicas
-     - int
-     - The etcd replicas of vineyard
-     - nil
-   
-   * - | volume.
-       | pvcName
-     - string
-     - The pvc name of vineyard socket.
-     - nil
-  
-   * - | volume.
-       | mountPath
-     - string
-     - The mount path of pvc.
-     - nil
+       * - | service.
+           | port
+         - int
+         - The service port of vineyardd service
+         - nil
+
+       * - | service.
+           | selector
+         - string
+         - The label selector of vineyardd service.
+         - nil
+
+       * - | etcd.
+           | replicas
+         - int
+         - The etcd replicas of vineyard
+         - nil
+
+       * - | volume.
+           | pvcName
+         - string
+         - The pvc name of vineyard socket.
+         - nil
+
+       * - | volume.
+           | mountPath
+         - string
+         - The mount path of pvc.
+         - nil
 
 Installing vineyard as sidecar
 ------------------------------
 
 Vineyard can be installed as a sidecar container in the pod. We provide CRD `Sidecar` for configuring
-and obervering the sidecar container. It is mostly the same as the `Vineyardd` CRD and the following 
+and obervering the sidecar container. It is mostly the same as the `Vineyardd` CRD and the following
 list shows all configurations.
 
-.. list-table:: Sidecar Configurations
-   :widths: 15 10 60 15
-   :header-rows: 1
+.. admonition:: Sidecar Configurations
+   :class: admonition-details
 
-   * - Option Name
-     - Type
-     - Description
-     - Default Value
+    .. list-table::
+       :widths: 15 10 60 15
+       :header-rows: 1
 
-   * - selector
-     - string
-     - The label selector of your app workload. Use '=' to separate key and value.
-     - ""
+       * - Option Name
+         - Type
+         - Description
+         - Default Value
 
-   * - replicas
-     - int
-     - The replicas of your workload that needs to injected with vineyard sidecar.
-     - 0
+       * - selector
+         - string
+         - The label selector of your app workload. Use '=' to separate key and value.
+         - ""
 
-   * - | vineyardConfig.
-       | image
-     - string
-     - The image name of vineyard sidecar container.
-     - | "vineyardcloudnative/
-       | vineyardd:latest"
+       * - replicas
+         - int
+         - The replicas of your workload that needs to injected with vineyard sidecar.
+         - 0
 
-   * - | vineyardConfig.
-       | imagePullPolicy
-     - string
-     - The image pull policy of vineyard sidecar image.
-     - nil
+       * - | vineyardConfig.
+           | image
+         - string
+         - The image name of vineyard sidecar container.
+         - | "vineyardcloudnative/
+           | vineyardd:latest"
 
-   * - | vineyardConfig.
-       | syncCRDs
-     - bool
-     - Synchronize CRDs when persisting objects
-     - true
+       * - | vineyardConfig.
+           | imagePullPolicy
+         - string
+         - The image pull policy of vineyard sidecar image.
+         - nil
 
-   * - | vineyardConfig.
-       | socket
-     - string
-     - The ipc socket file of vineyard sidecar.
-     - nil
+       * - | vineyardConfig.
+           | syncCRDs
+         - bool
+         - Synchronize CRDs when persisting objects
+         - true
 
-   * - | vineyardConfig.
-       | size
-     - string
-     - The shared memory size for vineyard sidecar.
-     - nil
+       * - | vineyardConfig.
+           | socket
+         - string
+         - The ipc socket file of vineyard sidecar.
+         - nil
 
-   * - | vineyardConfig.
-       | streamThreshold
-     - int64
-     - The memory threshold of streams
-       (percentage of total memory)
-     - nil
+       * - | vineyardConfig.
+           | size
+         - string
+         - The shared memory size for vineyard sidecar.
+         - nil
 
-   * - | vineyardConfig.
-       | etcdEndpoint
-     - string
-     - The endpoint of etcd.
-     - nil
+       * - | vineyardConfig.
+           | streamThreshold
+         - int64
+         - The memory threshold of streams
+           (percentage of total memory)
+         - nil
 
-   * - | vineyardConfig.
-       | etcdPrefix
-     - string
-     - The path prefix of etcd.
-     - nil
+       * - | vineyardConfig.
+           | etcdEndpoint
+         - string
+         - The endpoint of etcd.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | Name
-     - string
-     - The name of the spill config,
-       if set we'll enable the spill module.
-     - nil
+       * - | vineyardConfig.
+           | etcdPrefix
+         - string
+         - The path prefix of etcd.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | path
-     - string
-     - The path of spilling.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | Name
+         - string
+         - The name of the spill config,
+           if set we'll enable the spill module.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | spillLowerRate
-     - string
-     - The low watermark of spilling memory.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | path
+         - string
+         - The path of spilling.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | spillUpperRate
-     - string
-     - The high watermark of triggering spilling.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | spillLowerRate
+         - string
+         - The low watermark of spilling memory.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | persistent
-       | VolumeSpec
-     - | corev1.
-       | Persistent
-       | VolumeSpec
-     - The PV of the spilling for persistent storage.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | spillUpperRate
+         - string
+         - The high watermark of triggering spilling.
+         - nil
 
-   * - | vineyardConfig.
-       | spillConfig.
-       | persistent
-       | VolumeClaimSpec
-     - | corev1.
-       | Persistent
-       | VolumeClaimSpec
-     - The PVC of the spilling for the persistent storage.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | persistent
+           | VolumeSpec
+         - | corev1.
+           | Persistent
+           | VolumeSpec
+         - The PV of the spilling for persistent storage.
+         - nil
 
-   * - | vineyardConfig.
-       | env
-     - []corev1.EnvVar
-     - The environment of vineyard sidecar.
-     - nil
+       * - | vineyardConfig.
+           | spillConfig.
+           | persistent
+           | VolumeClaimSpec
+         - | corev1.
+           | Persistent
+           | VolumeClaimSpec
+         - The PVC of the spilling for the persistent storage.
+         - nil
 
-   * - | metricConfig.
-       | enable
-     - bool
-     - Enable the metrics in vineyard sidecar.
-     - false
+       * - | vineyardConfig.
+           | env
+         - []corev1.EnvVar
+         - The environment of vineyard sidecar.
+         - nil
 
-   * - | metricConfig.
-       | image
-     - string
-     - The image name of metric.
-     - nil
+       * - | metricConfig.
+           | enable
+         - bool
+         - Enable the metrics in vineyard sidecar.
+         - false
 
-   * - | metricConfig.
-       | imagePullPolicy
-     - string
-     - The image pull policy of metric.
-     - nil
+       * - | metricConfig.
+           | image
+         - string
+         - The image name of metric.
+         - nil
 
-   * - | service.
-       | type
-     - string
-     - The service type of vineyard sidecar service.
-     - nil
+       * - | metricConfig.
+           | imagePullPolicy
+         - string
+         - The image pull policy of metric.
+         - nil
 
-   * - | service.
-       | port
-     - int
-     - The service port of vineyard sidecar service
-     - nil
-  
-   * - | service.
-       | selector
-     - string
-     - The label selector of vineyard sidecar service.
-     - nil
-   
-   * - | volume.
-       | pvcName
-     - string
-     - The pvc name of vineyard socket.
-     - nil
-  
-   * - | volume.
-       | mountPath
-     - string
-     - The mount path of pvc.
-     - nil
+       * - | service.
+           | type
+         - string
+         - The service type of vineyard sidecar service.
+         - nil
+
+       * - | service.
+           | port
+         - int
+         - The service port of vineyard sidecar service
+         - nil
+
+       * - | service.
+           | selector
+         - string
+         - The label selector of vineyard sidecar service.
+         - nil
+
+       * - | volume.
+           | pvcName
+         - string
+         - The pvc name of vineyard socket.
+         - nil
+
+       * - | volume.
+           | mountPath
+         - string
+         - The mount path of pvc.
+         - nil
 
 Besides, We provide some labels and annotations to help users to use the sidecar in vineyard operator.
 The following is all labels that we provide:
@@ -592,17 +497,17 @@ The following is all labels that we provide:
 
 There two ways to install vineyard as sidecar:
 
-- Use the **default sidecar configuration**. Users add two annotations ``sidecar.v6d.io/enabled: true`` 
-and ``sidecar.v6d.io/name: default`` to app's YAML. Then the default sidecar cr will be created for 
-obervering.
+- Use the **default sidecar configuration**. Users add two annotations ``sidecar.v6d.io/enabled: true``
+  and ``sidecar.v6d.io/name: default`` to app's YAML. Then the default sidecar cr will be created for
+  obervering.
 
-- Use the **custom sidecar configuration**. Users create a custom sidecar cr ``sidecar-demo`` first 
-and then add two annotations ``sidecar.v6d.io/enabled: true`` and ``sidecar.v6d.io/name: sidecar-demo`` 
-to app's YAML.
+- Use the **custom sidecar configuration**. Users create a custom sidecar cr ``sidecar-demo`` first
+  and then add two annotations ``sidecar.v6d.io/enabled: true`` and ``sidecar.v6d.io/name: sidecar-demo``
+  to app's YAML.
 
 The following is an example of installing vineyard as a sidecar container in the pod.
-First, we should install the vineyard operator following the previous steps, and then 
-create a namepsace with specific label ``sidecar-injection: enabled`` to enable the sidecar.
+First, we should install the vineyard operator following the previous steps, and then
+create a namespace with specific label ``sidecar-injection: enabled`` to enable the sidecar.
 
 .. code:: bash
 
@@ -613,7 +518,7 @@ Then, we use the following YAML to inject default sidecar into the pod.
 
 .. note::
 
-    Please set up the command field of your app container and it should be 
+    Please set up the command field of your app container and it should be
     like ``["/bin/sh" or "/bin/bash", "-c", (your app command)]``. After injecting
     the vineyard sidecar, the command field will be changed to ``["/bin/sh" or "/bin/bash",
     "-c", "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + (your app command)]``
@@ -653,7 +558,7 @@ Then, we use the following YAML to inject default sidecar into the pod.
 Next you could see the sidecar container is injected into the pod.
 
 .. code:: yaml
-    
+
     # get the default sidecar cr
     $ kubectl get sidecar app-job-deployment-with-default-sidecar-default-sidecar -n vineyard-job -o yaml
     apiVersion: k8s.v6d.io/v1alpha1
@@ -717,8 +622,8 @@ Next you could see the sidecar container is injected into the pod.
         - -c
         - |
           /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.vineyard-job.svc.cluster.local:2379;
-          sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock 
-          --size 256Mi --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard 
+          sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock
+          --size 256Mi --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard
           --etcd_endpoint http://etcd-for-vineyard:2379
         env:
         - name: VINEYARDD_UID
@@ -741,11 +646,11 @@ Next you could see the sidecar container is injected into the pod.
       - emptyDir: {}
         name: vineyard-socket
     # get the number of injected sidecar
-    $ kubectl get sidecar -A       
+    $ kubectl get sidecar -A
     NAMESPACE      NAME                                                      CURRENT   DESIRED
     vineyard-job   app-job-deployment-with-default-sidecar-default-sidecar   2         2
 
-If you don't want to use the default sidecar configuration, you could create a custom 
+If you don't want to use the default sidecar configuration, you could create a custom
 sidecar cr as follows:
 
 .. note::
@@ -796,7 +701,7 @@ sidecar cr as follows:
               value: v6d-workflow-demo-job
     EOF
 
-For more details about how to use the sidecar, please refer to the `sidecar e2e test`_ for 
+For more details about how to use the sidecar, please refer to the `sidecar e2e test`_ for
 more inspiration.
 
 Objects in vineyard cluster
@@ -812,46 +717,49 @@ GlobalObject
 The **GlobalObject** custom resource definition (CRD) declaratively defines the global object
 in a vineyard cluster, it contains the following fields:
 
-.. list-table:: GlobalObject Properties
-   :widths: 15 10 60 15
-   :header-rows: 1
+.. admonition:: GlobalObject Properties
+   :class: admonition-details
 
-   * - Option Name
-     - Type
-     - Description
-     - Default Value
+    .. list-table::
+       :widths: 15 10 60 15
+       :header-rows: 1
 
-   * - id
-     - string
-     - The id of globalobject.
-     - nil
+       * - Option Name
+         - Type
+         - Description
+         - Default Value
 
-   * - name
-     - string
-     - The name of globalobject, the same as id.
-     - nil
+       * - id
+         - string
+         - The id of globalobject.
+         - nil
 
-   * - signature
-     - string
-     - The signature of the globalobject.
-     - nil
+       * - name
+         - string
+         - The name of globalobject, the same as id.
+         - nil
 
-   * - typename
-     - string
-     - The typename of globalobject,
-       including the vineyard's core type
-     - nil
+       * - signature
+         - string
+         - The signature of the globalobject.
+         - nil
 
-   * - members
-     - []string
-     - The signatures of all localobjects
-       contained in the globalobject
-     - 300
+       * - typename
+         - string
+         - The typename of globalobject,
+           including the vineyard's core type
+         - nil
 
-   * - metadata
-     - string
-     - The same as typename
-     - nil
+       * - members
+         - []string
+         - The signatures of all localobjects
+           contained in the globalobject
+         - 300
+
+       * - metadata
+         - string
+         - The same as typename
+         - nil
 
 In general, the GlobalObjects are created as intermediate objects when deploying
 users' applications. You could get them as follows.
@@ -869,50 +777,53 @@ LocalObject
 The **LocalObject** custom resource definition (CRD) declaratively defines the local object
 in a Kubernetes cluster, it contains the following fields:
 
-.. list-table:: LocalObject Properties
-   :widths: 15 10 60 15
-   :header-rows: 1
+.. admonition:: LocalObject Properties
+   :class: admonition-details
 
-   * - Option Name
-     - Type
-     - Description
-     - Default Value
+    .. list-table::
+       :widths: 15 10 60 15
+       :header-rows: 1
 
-   * - id
-     - string
-     - The id of localobject.
-     - nil
+       * - Option Name
+         - Type
+         - Description
+         - Default Value
 
-   * - name
-     - string
-     - The name of localobject, the same as id.
-     - nil
+       * - id
+         - string
+         - The id of localobject.
+         - nil
 
-   * - signature
-     - string
-     - The signature of localobjects
-     - nil
+       * - name
+         - string
+         - The name of localobject, the same as id.
+         - nil
 
-   * - typename
-     - string
-     - The typename of localobjects,
-       including the vineyard's core type
-     - nil
+       * - signature
+         - string
+         - The signature of localobjects
+         - nil
 
-   * - instance_id
-     - int
-     - The instance id created by vineyard daemon server
-     - nil
+       * - typename
+         - string
+         - The typename of localobjects,
+           including the vineyard's core type
+         - nil
 
-   * - hostname
-     - string
-     - The hostname of localobjects locations
-     - nil
+       * - instance_id
+         - int
+         - The instance id created by vineyard daemon server
+         - nil
 
-   * - metadata
-     - string
-     - The same as typename
-     - nil
+       * - hostname
+         - string
+         - The hostname of localobjects locations
+         - nil
+
+       * - metadata
+         - string
+         - The same as typename
+         - nil
 
 The LocalObjects are also intermediate objects just like the GlobalObjects, and you could
 get them as follows.
@@ -920,10 +831,16 @@ get them as follows.
 .. code:: bash
 
     $ kubectl get localobjects -A
-    NAMESPACE         NAME                ID                  NAME   SIGNATURE           TYPENAME              INSTANCE   HOSTNAME
-    vineyard-system   o001bcbce202ab390   o001bcbce202ab390          s001bcbce202aa6f6   vineyard::DataFrame   0          kind-worker2
-    vineyard-system   o001bcbce21d273e4   o001bcbce21d273e4          s001bcbce21d269c2   vineyard::DataFrame   1          kind-worker
-    vineyard-system   o001bcbce24606f6a   o001bcbce24606f6a          s001bcbce246067fc   vineyard::DataFrame   2          kind-worker3
+
+.. admonition:: Expected output
+   :class: admonition-details
+
+    .. code:: bash
+
+        NAMESPACE         NAME                ID                  NAME   SIGNATURE           TYPENAME              INSTANCE   HOSTNAME
+        vineyard-system   o001bcbce202ab390   o001bcbce202ab390          s001bcbce202aa6f6   vineyard::DataFrame   0          kind-worker2
+        vineyard-system   o001bcbce21d273e4   o001bcbce21d273e4          s001bcbce21d269c2   vineyard::DataFrame   1          kind-worker
+        vineyard-system   o001bcbce24606f6a   o001bcbce24606f6a          s001bcbce246067fc   vineyard::DataFrame   2          kind-worker3
 
 Vineyard Scheduler
 ------------------
@@ -964,36 +881,39 @@ We implemented the vineyard scheduler into the vineyard operator and deployed al
 vineyard operator. Vineyard scheduler plugin requires some annotations and labels as a hint
 for its required inputs and all required configurations are listed as follows:
 
-.. list-table:: Scheduler Plugin Configurations
-   :widths: 25 15 60
-   :header-rows: 1
+.. admonition:: Scheduler Plugin Configurations
+   :class: admonition-details
 
-   * - Name
-     - Yaml Fields
-     - Description
+    .. list-table::
+       :widths: 25 15 60
+       :header-rows: 1
 
-   * - "scheduling.k8s.v6d.io/required"
-     - annotations
-     - All jobs required by the job. If there are
-       more than two tasks, use the concatenator '.'
-       to concatenate them into a string.
-       E.g. `job1.job2.job3`.
-       If there is no required jobs, set `none`.
+       * - Name
+         - Yaml Fields
+         - Description
 
-   * - "scheduling.k8s.v6d.io/vineyardd"
-     - labels
-     - The name or namespaced name of vineyardd. e.g.,
-       `vineyard-sample` or
-       `vineyard-system/vineyard-sample`.
+       * - "scheduling.k8s.v6d.io/required"
+         - annotations
+         - All jobs required by the job. If there are
+           more than two tasks, use the concatenator '.'
+           to concatenate them into a string.
+           E.g. `job1.job2.job3`.
+           If there is no required jobs, set `none`.
 
-   * - "scheduling.k8s.v6d.io/job ""
-     - labels
-     - The job name.
+       * - "scheduling.k8s.v6d.io/vineyardd"
+         - labels
+         - The name or namespaced name of vineyardd. e.g.,
+           `vineyard-sample` or
+           `vineyard-system/vineyard-sample`.
 
-   * - "schedulerName"
-     - spec
-     - The vineyard scheduler's name, and the
-       default value is `vineyard-scheduler`.
+       * - "scheduling.k8s.v6d.io/job ""
+         - labels
+         - The job name.
+
+       * - "schedulerName"
+         - spec
+         - The vineyard scheduler's name, and the
+           default value is `vineyard-scheduler`.
 
 Next, we will show a complete example of how to use the vineyard scheduler. First, we should
 install the vineyard operator and vineyard daemon server following the previous steps,
@@ -1144,20 +1064,26 @@ Now you can see that both jobs has been scheduled and became running:
 .. code:: bash
 
     $ kubectl get all -n vineyard-job
-    NAME                                                     READY   STATUS    RESTARTS      AGE
-    pod/v6d-workflow-demo-job1-deployment-6f479d695b-698xb   1/1     Running   0             8m12s
-    pod/v6d-workflow-demo-job1-deployment-6f479d695b-7zrw6   1/1     Running   0             8m12s
-    pod/v6d-workflow-demo-job2-deployment-b5b58cbdc-4s7b2    1/1     Running   0             6m24s
-    pod/v6d-workflow-demo-job2-deployment-b5b58cbdc-cd5v2    1/1     Running   0             6m24s
-    pod/v6d-workflow-demo-job2-deployment-b5b58cbdc-n6zvm    1/1     Running   0             6m24s
 
-    NAME                                                READY   UP-TO-DATE   AVAILABLE   AGE
-    deployment.apps/v6d-workflow-demo-job1-deployment   2/2     2            2           8m12s
-    deployment.apps/v6d-workflow-demo-job2-deployment   3/3     3            3           6m24s
+.. admonition:: Expected output
+   :class: admonition-details
 
-    NAME                                                           DESIRED   CURRENT   READY   AGE
-    replicaset.apps/v6d-workflow-demo-job1-deployment-6f479d695b   2         2         2       8m12s
-    replicaset.apps/v6d-workflow-demo-job2-deployment-b5b58cbdc    3         3         3       6m24s
+    .. code:: bash
+
+      NAME                                                     READY   STATUS    RESTARTS      AGE
+      pod/v6d-workflow-demo-job1-deployment-6f479d695b-698xb   1/1     Running   0             8m12s
+      pod/v6d-workflow-demo-job1-deployment-6f479d695b-7zrw6   1/1     Running   0             8m12s
+      pod/v6d-workflow-demo-job2-deployment-b5b58cbdc-4s7b2    1/1     Running   0             6m24s
+      pod/v6d-workflow-demo-job2-deployment-b5b58cbdc-cd5v2    1/1     Running   0             6m24s
+      pod/v6d-workflow-demo-job2-deployment-b5b58cbdc-n6zvm    1/1     Running   0             6m24s
+
+      NAME                                                READY   UP-TO-DATE   AVAILABLE   AGE
+      deployment.apps/v6d-workflow-demo-job1-deployment   2/2     2            2           8m12s
+      deployment.apps/v6d-workflow-demo-job2-deployment   3/3     3            3           6m24s
+
+      NAME                                                           DESIRED   CURRENT   READY   AGE
+      replicaset.apps/v6d-workflow-demo-job1-deployment-6f479d695b   2         2         2       8m12s
+      replicaset.apps/v6d-workflow-demo-job2-deployment-b5b58cbdc    3         3         3       6m24s
 
 The above is the process of running the workload based on the vineyard scheduler, and it's same
 as the `vineyardd e2e test`_. What's more, you could refer to the
@@ -1170,43 +1096,46 @@ The **Operation** custom resource definition (CRD) declaratively defines the con
 pluggable drivers ( mainly `assembly` and `repartition` ) in a Kubernetes cluster,
 it contains the following fields:
 
-.. list-table:: Operation Configurations
-   :widths: 15 10 60 15
-   :header-rows: 1
+.. admonition:: Operation Configurations
+   :class: admonition-details
 
-   * - Option Name
-     - Type
-     - Description
-     - Default Value
+    .. list-table::
+       :widths: 15 10 60 15
+       :header-rows: 1
 
-   * - name
-     - string
-     - The name of vineyard pluggable drivers,
-       including `assembly` and `repartition`.
-     - nil
+       * - Option Name
+         - Type
+         - Description
+         - Default Value
 
-   * - type
-     - string
-     - the type of operation. For `assembly`,
-       it mainly contains `local (for localobject)` and
-       `distributed (for globalobject)`. For `repartition`,
-       it contains `dask (object built in dask)`.
-     - nil
+       * - name
+         - string
+         - The name of vineyard pluggable drivers,
+           including `assembly` and `repartition`.
+         - nil
 
-   * - require
-     - string
-     - The required job's name of the operation.
-     - nil
+       * - type
+         - string
+         - the type of operation. For `assembly`,
+           it mainly contains `local (for localobject)` and
+           `distributed (for globalobject)`. For `repartition`,
+           it contains `dask (object built in dask)`.
+         - nil
 
-   * - target
-     - string
-     - The target job's name of the operation.
-     - nil
+       * - require
+         - string
+         - The required job's name of the operation.
+         - nil
 
-   * - timeoutSeconds
-     - string
-     - The timeout of the operation.
-     - 300
+       * - target
+         - string
+         - The target job's name of the operation.
+         - nil
+
+       * - timeoutSeconds
+         - string
+         - The timeout of the operation.
+         - 300
 
 The operation CR is created by the vineyard scheduler while scheduling the vineyard jobs,
 and you could get them as follows.
@@ -1317,24 +1246,27 @@ has the label before using the assembly mechanism.
 We provide some labels to help users to use the assembly mechanism in vineyard operator.
 The following is all labels that we provide:
 
-.. list-table:: Assembly Drivers Configurations
-   :widths: 25 15 60
-   :header-rows: 1
+.. admonition:: Assembly Drivers Configurations
+   :class: admonition-details
 
-   * - Name
-     - Yaml Fields
-     - Description
+    .. list-table::
+       :widths: 25 15 60
+       :header-rows: 1
 
-   * - "assembly.v6d.io/enabled"
-     - labels
-     - If the job needs an assembly operation
-       before deploying it, then set `true`.
+       * - Name
+         - Yaml Fields
+         - Description
 
-   * - "assembly.v6d.io/type"
-     - labels
-     - There are two types in assembly operation,
-       `local` only for localobject(stream on the same node),
-       `distributed` for globalobject(stream on different nodes).
+       * - "assembly.v6d.io/enabled"
+         - labels
+         - If the job needs an assembly operation
+           before deploying it, then set `true`.
+
+       * - "assembly.v6d.io/type"
+         - labels
+         - There are two types in assembly operation,
+           `local` only for localobject(stream on the same node),
+           `distributed` for globalobject(stream on different nodes).
 
 Next, we will show how to use the assembly mechanism in vineyard operator. Assuming that
 we have a workflow that contains two workloads, the first workload is a stream workload and
@@ -1555,40 +1487,43 @@ For the workloads based on dask, we provide some annotations and labels to help 
 the assembly mechanism in vineyard operator. The following are all labels and annotations that
 we provide:
 
-.. list-table:: Dask Repartition Drivers Configurations
-   :widths: 25 15 60
-   :header-rows: 1
+.. admonition:: Dask Repartition Drivers Configurations
+   :class: admonition-details
 
-   * - Name
-     - Yaml Fields
-     - Description
+    .. list-table::
+       :widths: 25 15 60
+       :header-rows: 1
 
-   * - "scheduling.k8s.v6d.io/dask-scheduler"
-     - annotations
-     - The service of dask scheduler.
+       * - Name
+         - Yaml Fields
+         - Description
 
-   * - "scheduling.k8s.v6d.io/dask-worker-selector"
-     - annotations
-     - The label selector of dask worker pod.
+       * - "scheduling.k8s.v6d.io/dask-scheduler"
+         - annotations
+         - The service of dask scheduler.
 
-   * - "repartition.v6d.io/enabled"
-     - labels
-     - Enable the repartition.
+       * - "scheduling.k8s.v6d.io/dask-worker-selector"
+         - annotations
+         - The label selector of dask worker pod.
 
-   * - "repartition.v6d.io/type"
-     - labels
-     - The type of repartition, at present,
-       only support `dask`.
+       * - "repartition.v6d.io/enabled"
+         - labels
+         - Enable the repartition.
 
-   * - "scheduling.k8s.v6d.io/replicas"
-     - labels
-     - The replicas of the workload.
+       * - "repartition.v6d.io/type"
+         - labels
+         - The type of repartition, at present,
+           only support `dask`.
+
+       * - "scheduling.k8s.v6d.io/replicas"
+         - labels
+         - The replicas of the workload.
 
 The following is a demo of repartition based on dask. At first, we create a dask cluster
 with 3 workers.
 
-.. note:: 
-  
+.. note::
+
     Please make sure you have installed the vineyard operator and vineyardd before
     running the following yaml file.
 
@@ -1702,7 +1637,7 @@ Deploy the `repartition workload2`_ as follows:
 
 .. code:: bash
 
-  $ kubectl label namepsace vineyard-job operation-injection=enabled
+  $ kubectl label namespace vineyard-job operation-injection=enabled
 
 .. code:: yaml
 
@@ -1807,69 +1742,75 @@ please refer the `repartition directory`_ to get more details.
 Failover mechanism of vineyard cluster
 --------------------------------------
 
-If you want to back up data for the current vineyard cluster, you can create a Backup CR to 
+If you want to back up data for the current vineyard cluster, you can create a Backup CR to
 perform a backup operation. The main fields are described as follows.
 
-.. list-table:: Backup Configurations
-   :widths: 15 10 60 15
-   :header-rows: 1
+.. admonition:: Backup Configurations
+   :class: admonition-details
 
-   * - Option Name
-     - Type
-     - Description
-     - Default Value
+    .. list-table::
+       :widths: 15 10 60 15
+       :header-rows: 1
 
-   * - vineyarddName
-     - string
-     - The name of vineyardd cluster.
-     - nil
+       * - Option Name
+         - Type
+         - Description
+         - Default Value
 
-   * - vineyarddNamespace
-     - string
-     - The namespace of vineyardd cluster.
-     - nil
+       * - vineyarddName
+         - string
+         - The name of vineyardd cluster.
+         - nil
 
-   * - limit
-     - int
-     - The number of objects to be backed up
-     - nil
+       * - vineyarddNamespace
+         - string
+         - The namespace of vineyardd cluster.
+         - nil
 
-   * - backupPath
-     - string
-     - The path of backup data
-     - nil
+       * - limit
+         - int
+         - The number of objects to be backed up
+         - nil
 
-   * - persistentVolumeSpec
-     - corev1.PersistentVolumeSpec
-     - The PersistentVolumeSpec of the backup data
-     - nil
+       * - backupPath
+         - string
+         - The path of backup data
+         - nil
 
-   * - persistentVolumeClaimSpec
-     - corev1.PersistentVolumeClaimSpec
-     - The PersistentVolumeClaimSpec of the backup data
-     - nil
+       * - persistentVolumeSpec
+         - corev1.PersistentVolumeSpec
+         - The PersistentVolumeSpec of the backup data
+         - nil
+
+       * - persistentVolumeClaimSpec
+         - corev1.PersistentVolumeClaimSpec
+         - The PersistentVolumeClaimSpec of the backup data
+         - nil
 
 After data backup, you can create a Recover CR to restore a certain vineyard backup data.
 Its fields are as follows.
 
-.. list-table:: Recover Configurations
-   :widths: 15 10 60 15
-   :header-rows: 1
+.. admonition:: Recover Configurations
+   :class: admonition-details
 
-   * - Option Name
-     - Type
-     - Description
-     - Default Value
+    .. list-table::
+       :widths: 15 10 60 15
+       :header-rows: 1
 
-   * - backupName
-     - string
-     - The name of a backup.
-     - nil
+       * - Option Name
+         - Type
+         - Description
+         - Default Value
 
-   * - backupNamespace
-     - string
-     - The namespace of a backup.
-     - nil
+       * - backupName
+         - string
+         - The name of a backup.
+         - nil
+
+       * - backupNamespace
+         - string
+         - The namespace of a backup.
+         - nil
 
 Next, we will show how to use the failover mechanism in vineyard operator. Assuming that
 we have a vineyard cluster that contains some objects, then we create a backup cr to back
@@ -1910,7 +1851,7 @@ up the data. The following is the yaml file of the backup:
           storage: 1Gi
   EOF
 
-Assuming that the vineyard cluster crashes at some point, we create Recover CR to 
+Assuming that the vineyard cluster crashes at some point, we create Recover CR to
 restore the data in the vineyard cluster, and the recover yaml file is as follows:
 
 .. code:: yaml
@@ -1926,20 +1867,19 @@ restore the data in the vineyard cluster, and the recover yaml file is as follow
     backupNamespace: backup
   EOF
 
-Then you could get the Recover's status to get the mapping relationship between the 
+Then you could get the Recover's status to get the mapping relationship between the
 object ID during backup and the object ID during recovery as follows:
 
 .. code:: bash
 
-  $ kubectl get recover -A                                                                              
+  $ kubectl get recover -A
   NAMESPACE   NAME             MAPPING                                                                                                                     STATE
   backup      recover-sample   {"o000ef92379fd8850":"o000ef9ea5189718d","o000ef9237a3a5432":"o000ef9eb5d26ad5e","o000ef97a8289973f":"o000ef9ed586ef1d3"}   Succeed
 
-If you want to get more details about failover of vineyard cluster, please refer 
+If you want to get more details about failover of vineyard cluster, please refer
 the `failover e2e test`_.
 
 .. _kind: https://kind.sigs.k8s.io
-.. _CustomResouceDefinitions(CRDs): https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions
 .. _Kubernetes Scheduling Framework: https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/
 .. _workflow-job1: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/workflow-demo/job1.py
 .. _workflow-job2: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/workflow-demo/job2.py
@@ -1965,4 +1905,3 @@ the `failover e2e test`_.
 .. _dask repartition e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition/dask-repartition-e2e.yaml
 .. _repartition directory: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/repartition
 .. _failover e2e test: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/failover/e2e.yaml
-

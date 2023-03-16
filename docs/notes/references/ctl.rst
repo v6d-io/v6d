@@ -21,7 +21,7 @@ Connect to vineyard
 
       vineyard-ctl --ipc_socket /var/run/vineyard.sock
 
-+ Via vineyard configuraion file:
++ Via vineyard configuration file:
 
   This will pick IPC or RPC values from the vineyard configuration file or
   environment variables.

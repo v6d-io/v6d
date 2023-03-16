@@ -1,4 +1,4 @@
-Vineyard and Workflows
+Workflow orchestration
 ======================
 
 .. toctree::
