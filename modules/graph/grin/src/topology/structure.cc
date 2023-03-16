@@ -16,15 +16,19 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/topology/structure.h"
 
+#if !defined(GRIN_ASSUME_GRAPH_DIRECTED) && !defined(GRIN_ASSUME_GRAPH_UNDIRECTED)
 bool grin_is_directed(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     return _g->directed();
 }
+#endif
 
+#ifndef GRIN_ASSUME_GRAPH_SINGLE_EDGE
 bool grin_is_multigraph(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     return _g->is_multigraph();
 }
+#endif
 
 size_t grin_get_vertex_num(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
@@ -44,7 +48,6 @@ size_t grin_get_edge_num(GRIN_GRAPH g, GRIN_DIRECTION d) {
     }
     return _g->GetEdgeNum();
 }
-
 
 // Vertex
 void grin_destroy_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
