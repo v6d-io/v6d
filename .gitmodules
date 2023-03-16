@@ -54,3 +54,6 @@
 	path = modules/graph/thirdparty/libgrape-lite
 	url = https://github.com/alibaba/libgrape-lite.git
 	shallow = true
+[submodule "modules/graph/grin/include"]
+	path = modules/graph/grin/include
+	url = https://github.com/GraphScope/GRIN.git
