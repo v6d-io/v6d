@@ -7,6 +7,7 @@ Vineyard on Kubernetes
    :hidden:
 
    ./kubernetes/using-vineyard-operator.rst
+   ./kubernetes/ml-pipeline-mars-pytorch.rst
 
 Vineyard can be seamlessly deployed on Kubernetes, managed by the :ref:`vineyard-operator`,
 to enhance big-data workflows through its data-aware scheduling policy. This policy
@@ -24,3 +25,12 @@ with Kubernetes.
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
    The Vineyard operator serves as the central component for seamless integration with Kubernetes.
+
+   ---
+
+   .. link-button:: ./kubernetes/ml-pipeline-mars-pytorch
+      :type: ref
+      :text: ML with Vineyard
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   Vineyard functions as an efficient intermediate data storage solution for machine learning pipelines on Kubernetes.

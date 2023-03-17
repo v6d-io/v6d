@@ -251,7 +251,7 @@ Publications
 - Wenyuan Yu, Tao He, Lei Wang, Ke Meng, Ye Cao, Diwen Zhu, Sanhong Li, Jingren Zhou.
   Vineyard: Optimizing Data Sharing in Data-Intensive Analytics.
   ACM SIG Conference on Management of Data (SIGMOD), industry, 2023.
-  
+
 Acknowledgements
 ----------------
 
