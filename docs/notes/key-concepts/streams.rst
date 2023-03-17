@@ -22,7 +22,6 @@ Using streams
 
 We first import required packages:
 
-
 .. code:: python
 
     import threading
@@ -41,7 +40,10 @@ We first import required packages:
     :class:`vineyard.io.recordbatch.RecordBatchStream`. For other stream types,
     you could refer to :ref:`python-api-streams`.
 
-Then we define a producer which generate some random dataframe chunks and put into
+Producer and consumer
+---------------------
+
+We define a producer which generate some random dataframe chunks and put into
 the stream:
 
 .. code:: python
@@ -81,6 +83,9 @@ And a consumer which takes the chunks from the stream in a loop until receive a
                 break
             index += 1
 
+Streams between processes
+-------------------------
+
 Finally, we can test the producer and consumer using two thread:
 
 .. code:: python
@@ -115,4 +120,3 @@ Finally, we can test the producer and consumer using two thread:
         test_recordbatch_stream(vineyard_client, total_chunks=10)
 
 For more detailed API about the streams, please refer to :ref:`python-api-streams`.
-

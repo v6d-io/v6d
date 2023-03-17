@@ -1,19 +1,39 @@
+.. _vcdl:
+
 Code Generation for Boilerplate
 ===============================
 
 Sharing objects between engines consists of two basic steps, defining the
-data structure and defining the protocol of
+data structure and defining the protocol for formulating the data type
+as :ref:`vineyard-objects`. Vineyard provides an auto-generation mechanism
+to reduce the burden when integrating with custom data types. The mechanism,
+namely **VCDL**, is based on custom annotation :code:`[[shared]]` on C++
+classes.
 
-Vineyard has already support a set of efficient builtin data types in
-the C++ SDK, e.g., :code:`Vector`, :code:`HashMap`, :code:`Tensor`,
-:code:`DataFrame`, :code:`Table` and :code:`Graph`, (see :ref:`cpp-api`).
-However there are still scenarios where users need to develop their
-own data structures and efficiently share the data with Vineyard. Custom
-C++ data types could be easily added by following this step-by-step tutorial.
+Using the following C++ class :code:`Array` as example,
 
-.. note::
+.. code:: c++
 
-    Note that this tutorial includes code that could be auto-generated for
-    keeping clear about the design internals and helping developers get a whole
-    picture about how vineyard client works.
+    template <typename T>
+    class [[vineyard]] Array {
+      public:
+        [[shared]] const T& operator[](size_t loc) const { return data()[loc]; }
+        [[shared]] size_t size() const { return size_; }
+        [[shared]] const T* data() const {
+            return reinterpret_cast<const T*>(buffer_->data());
+        }
 
+      private:
+        [[shared]] size_t size_;
+        [[shared]] std::shared_ptr<Blob> buffer_;
+    };
+
+- When applied on classes: the class itself will be identified as shared vineyard
+  objects, a builder and resolver (see also :ref:`builder-resolver`) will be
+  synthesized.
+
+- When applied on data members: the data member will be treated as a metadata
+  field or sub members.
+
+- When applied on method members: the method member will be considered as
+  cross-language sharable and FFI wrappers will be automatically synthesized.

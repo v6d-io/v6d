@@ -7,7 +7,8 @@ Extending vineyard
    :caption: TOC
    :hidden:
 
-   ./extending/adding-custom-datatypes-cpp.rst
+   ./extending/define-datatypes-python.rst
+   ./extending/define-datatypes-cpp.rst
 
 Vineyard has implemented a set of efficient data structures that needed in common
 data-intensive jobs, e.g., tensors, data frames, tables and graphs. The data types can be
@@ -19,9 +20,18 @@ gain the benefits brought by vineyard.
    :header: text-center
    :column: col-lg-12 p-2
 
-   .. link-button:: ./extending/adding-custom-datatypes-cpp
+   .. link-button:: ./extending/define-datatypes-python
       :type: ref
-      :text: Adding Custom Types
+      :text: Define Python Types
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Adding new data types and register to vineyard's builder/resolver context.
+   Define builders and resolvers for Python types.
+
+   ---
+
+   .. link-button:: ./extending/define-datatypes-cpp
+      :type: ref
+      :text: Define C++ Types
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   Adding new data types and register to vineyard's context in C++.

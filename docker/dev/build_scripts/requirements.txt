@@ -1,6 +1,7 @@
 argcomplete
 black
 breathe
+click
 docutils==0.16
 etcd-distro
 flake8

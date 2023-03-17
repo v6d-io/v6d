@@ -8,22 +8,23 @@
       that provides **out-of-the-box high-level** abstraction and **zero-copy in-memory** sharing for
       distributed data in big data tasks, such as graph analytics (e.g., `GraphScope`_), numerical
       computing (e.g., `Mars`_), and machine learning.
-   :keywords: distributed-systems, distributed, shared-memory, graph-analytics, in-memory-storage, big-data-analytics, distributed-comp
+   :keywords: distributed-systems, distributed, shared-memory, graph-analytics, in-memory-storage,
+              big-data-analytics, distributed-comp
 
 .. figure:: images/vineyard-logo-rect.png
    :width: 397
    :alt: Vineyard: an in-memory immutable data manager
 
-   **an in-memory immutable data manager**
+   *an in-memory immutable data manager*
 
 |Vineyard CI| |FAQ| |Discussion| |Slack| |License|
 
 Why bother?
 -----------
 
-Sharing intermediate data between systems in modern big-data & AI workflows is often challenging
-and is often a significant bottleneck in such jobs. Considering the following fraud-detection
-pipeline,
+Sharing intermediate data between systems in modern big data and AI workflows
+can be challenging, often causing significant bottlenecks in such jobs. Let's
+consider the following fraud detection pipeline:
 
 .. figure:: images/fraud-detection-job.jpg
    :width: 397
@@ -31,34 +32,29 @@ pipeline,
 
    A real-life fraud detection job
 
-From the pipeline we observed
+From the pipeline, we observed:
 
-1. Users usually force to program with dedicated computing systems for different tasks in the
+1. Users usually prefer to program with dedicated computing systems for different tasks in the
    same applications For the same task, e.g., SQL and Python.
 
-   Introducing a new computing system into production environments requires high technical
-   effort to align with existing production environments I/O, failover,
+   **Introducing a new computing system into production environments requires high technical
+   effort to align with existing production environments in terms of I/O, failover, etc.**
 
 2. Data could be polymorphic. Non-relational data, such as tensors, dataframes (in Pandas) and
    graphs/networks (in `GraphScope`_) are becoming increasingly prevalent. Tables and SQL may
-   not be best way to store/exchange or process them.
+   not be best way to store, exchange or process them.
 
-   Having the data transformed from/to "tables" back and forth between different systems could
-   be a huge overhead.
+   **Having the data transformed back and forth between different systems as "tables" could
+   be a huge overhead.**
 
-3. Saving/loading the data to/from the external storage requires lots of memory-copies and IO costs.
-
-3. Saving/loading the data to/from the external storage
-   requires lots of memory-copies and IO costs.
+3. Saving/loading the data to/from the external storage requires lots of memory copies and IO costs.
 
 What is vineyard?
 -----------------
 
-Vineyard (v6d) is an in-memory immutable data manager that provides **out-of-the-box high-level**
-abstraction and **zero-copy in-memory** sharing for distributed data in big data tasks, such as
+Vineyard (v6d) is an **in-memory immutable data manager** that provides **out-of-the-box high-level**
+abstraction and **zero-copy sharing** for distributed data in big data tasks, such as
 graph analytics (e.g., `GraphScope`_), numerical computing (e.g., `Mars`_), and machine learning.
-
-
 
 Features
 ^^^^^^^^
@@ -77,19 +73,20 @@ Vineyard defines a metadata-payload separated data model to capture the payload-
 method-commonalities between sharable objects in different programming languages and different
 computing systems in an unified way.
 
-The interface description language **VCDL** is designed to annotate sharable members and methods
+The interface description language :ref:`VCDL` is designed to annotate sharable members and methods
 and boilerplate code will be automatically generated for minimalist integration effort.
 
 Pluggable I/O routines
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Many big data analytical tasks have lots of boilerplate routines for tasks that unrelated to the
-computation itself, e.g., various IO adaptors, data partition strategies and migration jobs. As
-the data structure abstraction usually differs between systems such routines cannot be easily reused.
+Many big data analytical tasks involve a significant amount of boilerplate routines for tasks
+unrelated to the computation itself, such as various IO adapters, data partition strategies,
+and migration jobs. Since the data structure abstraction often differs between systems, these
+routines cannot be easily reused.
 
-Vineyard provides such common manipulate routines on immutable data as drivers, which extends
-the capability of data structures by registering properly drivers, enabling out-of-the-box reusing
-for the boilerplate part between diverse computation jobs.
+Vineyard provides common manipulation routines for immutable data as drivers, which extend
+the capabilities of data structures by registering appropriate drivers. This enables out-of-the-box
+reuse of boilerplate components across diverse computation jobs.
 
 Data orchestration on Kubernetes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -195,8 +192,8 @@ Vineyard is a `CNCF sandbox project`_ and indeed made successful by its communit
    :hidden:
 
    notes/getting-started.rst
+   notes/architecture.rst
    notes/key-concepts.rst
-   notes/user-guides.rst
 
 .. toctree::
    :maxdepth: 1

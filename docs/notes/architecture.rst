@@ -1,84 +1,18 @@
+.. _architecture-of-vineyard:
+
 Architecture
 ============
-
-Motivation
-----------
-
-Existing big data practice usually adopts distributed databases or file systems as the
-intermediate storage to share **immutable** distributed data between heterogeneous
-computation systems that are involved in a big data task. This
-brings two significant overheads:
-
-1. The structural data is transformed from/to the external data storage format (e.g.,
-   tables in relational databases, files in HDFS) back and forth in the beginning/end
-   of each computation step, meanwhile, the structure and operations of the data are
-   dismissed.
-
-2. Saving/Loading the data to/from the external storage requires lots of memory-copies
-   and disk-IO costs, which becomes the bottleneck of the entire process in more and
-   more cases as the efficiency of the computation systems are growing rapidly these years.
-
-In addition, the lack of managing the data uniformly through the big data task obstructs
-the application of modern techniques such as data monitoring, data-aware
-optimization, and fault-tolerance, thus, further decreases the productive efficiency.
 
 Overview
 --------
 
-To address this issue, vineyard provides:
+The following figure demonstrates the architecture of vineyard.
 
-1. **In-memory** distributed data sharing in a **zero-copy** fashion to avoid
-   introducing extra I/O costs by exploiting a shared memory manager derived from plasma.
-
-   In general, vineyard servers are launched as daemons in every machine of the underlying
-   cluster to make up a **vineyard cluster**, and each vineyard instance will allocate
-   a shared memory pool to store the corresponding partition of the distributed data,
-   and the meta data of the distributed data will be shared across the vineyard cluster
-   via the backend key-value store, e.g., etcd or zookeeper.
-
-   .. figure:: ../../images/vineyard_deployment.jpg
-      :alt: Distributed data sharing in vineyard
-
-      Distributed data sharing in vineyard
-
-   For example, a distributed tensor is stored in the vineyard cluster as illustrated
-   above. Each partition is stored in the corresponding vineyard instance, while the
-   meta data, e.g., the shape of the tensor is stored in the backend key-value server
-   of vineyard, i.e., the etcd server.
-
-   To reuse the distributed tensor in parallel processing, each process will first
-   establish a vineyard client that is connected to the corresponding vineyard
-   instance on the same machine, and then get the meta data of the distributed tensor.
-   Finally based on the meta data, each process can get the corresponding partitions
-   of the distributed tensor from the vineyard instance via memory mapping in a
-   **zero-copy** fashion, and start to use the data for computation.
-
-2. Built-in **out-of-the-box high-level** abstraction to share the distributed data with
-   complex structures (e.g., distributed graphs)  with nearly zero extra development
-   cost, while the transformation costs are eliminated.
-
-   For example, a distributed graph is composed of fragments that are stored distributedly
-   over the vineyard cluster, and each fragment consists of vertices, edges, data on
-   vertices, data on edges, indices (e.g., the CSR indexing), vertex maps and so on.
-
-   Unlike the external storage approach where fragments are transformed into adjacent
-   matrix to fit into a table schema in the database, vineyard stores the fragment
-   with the structure, so that when we use the graph, the indices can be directly reused
-   to facilitate the graph traversal. Furthermore, the high-level abstracted graph
-   traversal operations are built-in with the vineyard distributed graph, as a result,
-   nearly zero extra development are required to reuse the data.
-
-.. _architecture-of-vineyard:
-
-Architecture of vineyard
-------------------------
-
-.. figure:: ../../images/vineyard_arch.jpg
+.. figure:: ../images/vineyard_arch.jpg
+   :width: 75%
    :alt: Architecture of vineyard
 
    Architecture of vineyard
-
-The figure above demonstrates the architecture of vineyard.
 
 Server side
 ^^^^^^^^^^^
@@ -175,6 +109,16 @@ routines reusing (e.g., I/O drivers). More specifically,
 Core features
 -------------
 
+Zero-cost in-memory data sharing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Vineyard provides zero-cost data sharing by memory-mapping, since data objects
+in vineyard are immutable. When the object is created, we allocate blobs in
+vineyard to store the data payload, on the other hand, when getting the object,
+we map the blob from the vineyard instance into the application process with
+inter-process memory mapping approaches, so that no memory copy is involved
+in sharing the data payload.
+
 Distributed data sharing in big data tasks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -186,7 +130,7 @@ and graph analysis carefully, we summarize that the data involved has four prope
 + With complex structure, e.g., graph in CSR format;
 + Required to share between different computation systems and programming languages.
 
-Thus vineyard is designed accordingly with:
+Vineyard is designed to address these challenges with:
 
 + Composable design on vineyard objects;
 + Immutable zero-cost in-memory data sharing via memory mapping;
@@ -197,8 +141,8 @@ Thus vineyard is designed accordingly with:
 In general, the design choices of vineyard are fully determined on coping
 the difficulties in handling large-scale distributed data in practice.
 
-Out-of-box high-level data abstraction
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Out-of-the-box high-level data abstraction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Vineyard objects are stored with structures, and high-level abstractions.
 For instance, a graph with CSR format in vineyard stores the index as long as
@@ -206,16 +150,6 @@ the vertices and edges, so that operations like edge iteration based on the
 index can be provided. Thus, users don't have to implement the index-building
 function and edge iterators by themselves, which is usually required in the
 existing big data practice.
-
-Zero-cost in-memory data sharing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Vineyard provides zero-cost data sharing by memory-mapping, since data objects
-in vineyard are immutable. When the object is created, we allocate blobs in
-vineyard to store the data payload, on the other hand, when getting the object,
-we map the blob from the vineyard instance into the application process with
-inter-process memory mapping approaches, so that no memory copy is involved
-in sharing the data payload.
 
 Convenient data integration
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -239,16 +173,16 @@ distributedly across the cluster.
 Non-goals and limitations
 -------------------------
 
-*NOT* for mutable objects
-^^^^^^^^^^^^^^^^^^^^^^^^^
+*NO* mutable objects
+^^^^^^^^^^^^^^^^^^^^
 
 Once a vineyard object is created and sealed in the vineyard instance, it
 becomes immutable and can NOT be modified anymore. Thus vineyard is not
 suitable to be utilized as a data cache to store mutable data that changes
 rapidly along the processing pipeline.
 
-*NOT* for instant remote data partition accessing
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+*NO* instant remote data accessing
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The partitions of a distributed data are stored distributedly in corresponding
 vineyard instances of the cluster. Only the client on the same machine can access

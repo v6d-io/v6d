@@ -20,7 +20,7 @@ Launching vineyard server
    $ python3 -m vineyard
 
 A vineyard daemon server will be launched with default settings. By default, :code:`/var/run/vineyard.sock`
-will be listened by vineyardd for serving incoming IPC connections.
+will be used by vineyardd to listen for incoming IPC connections.
 
 To stop running the vineyardd instance, you can press :code:`Ctrl-C` in the terminal.
 
@@ -164,12 +164,23 @@ Next steps
 Beyond the core functionality of sharing objects between tasks, vineyard also provides
 
 - Distributed objects and stream abstraction over immutable chunks;
-- An IDL (VCDL) that helps integrate vineyard with other systems at the minimalist cost;
+- An IDL (:ref:`vcdl`) that helps integrate vineyard with other systems at the minimalist cost;
 - A mechanism of pluggable drivers for miscellaneous tasks that serve as the glue
   between the core compute engine and the external world, e.g., data sources, data
   sinks;
 - Integration with Kubernetes for sharing between tasks in workflows that deployed
   on cloud-native infrastructures.
+
+.. panels::
+   :header: text-center
+   :column: col-lg-12 p-2
+
+   .. link-button:: architecture
+      :type: ref
+      :text: Architecture
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   Overview of vineyard.
 
 Learn more about vineyard's key concepts from the following user guides:
 
@@ -179,7 +190,7 @@ Learn more about vineyard's key concepts from the following user guides:
    :column: col-lg-4 col-md-4 col-sm-4 col-xs-12 p-2
    :body: text-center
 
-   .. link-button:: key-concepts/architecture
+   .. link-button:: key-concepts/objects
       :type: ref
       :text: Vineyard Objects
       :classes: btn-block stretched-link
@@ -215,7 +226,7 @@ on Kubernetes can be found from
 
    .. link-button:: cloud-native/deploy-kubernetes
       :type: ref
-      :text: Cloud-Native
+      :text: Kubernetes
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
    Deploy vineyard on Kubernetes and accelerating your big-data workflows.

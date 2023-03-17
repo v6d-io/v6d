@@ -22,14 +22,25 @@ or `post it to discussions`_.
   readers' processes via memory mapping. Thus it is safe to consume the objects by
   multiple readers at the same time.
 
-3. *Is Kubernetes a necessity for vineyard?*
+3. *how to launching a cluster with multiple vineyardd instance?*
+
+  A vineyard daemon server is a vineyard instance in a vineyard cluster. Thus, to
+  start a vineyard cluster, we can simply start ``vineyardd`` over all the
+  machines in the cluster, and make sure these vineyard instances can register to
+  the same ``etcd_endpoint``. The default value of ``etcd_endpoint`` is
+  ``http://127.0.0.1:2379``, and ``vineyard`` will launch the ``etcd_endpoint``
+  in case the etcd servers are not started on the cluster.
+
+  See also ``python3 -m vineyard --help`` for other parameter settings.
+
+4. *Is Kubernetes a necessity for vineyard?*
 
   No. But when deploying vineyard on Kubernetes, users can enjoy the flexibility of
   resource management provided by cloud-native deployments for the workloads of their
   applications. Meanwhile, the scheduler plugin will help co-locate the worker pods
   to the data for better data-work alignment.
 
-4. *How vineyard achieves IPC and memory sharing (i.e., zero-copy sharing) on Kubernetes?*
+5. *How vineyard achieves IPC and memory sharing (i.e., zero-copy sharing) on Kubernetes?*
 
   Inter-process memory sharing is tricky in Kubernetes, but it is doable. When
   deploying on Kubernetes, vineyard exposes its UNIX-domain socket as a :code:`PersistVolume`,
@@ -38,7 +49,7 @@ or `post it to discussions`_.
   by mounting a volume of medium :code:`Memory` into both vineyard daemon's pod and
   the job's pod.
 
-5. *How stream in vineyard differs from similar systems, e.g., Kafka?*
+6. *How stream in vineyard differs from similar systems, e.g., Kafka?*
 
   The stream in vineyard is the abstraction of a sequence of objects, where each object
   is generally a small part of the entire object (e.g., a mini-batch of a tensor).
@@ -53,14 +64,14 @@ or `post it to discussions`_.
   for stream processing applications and abstracts data as (low-level) messages. Using
   Kafka in the above scenario still incurs (de)serialization and memory copy costs.
 
-6. *Does vineyard support accessing remote objects?*
+7. *Does vineyard support accessing remote objects?*
 
   Yes. The RPC client can access the metadata of an object no matter the object is local
   or remote. This allows users as well as internal operators examine the information (e.g.,
   chunk axis, size) of an object to help make decisions on the management (e.g., do we
   need to repartition the object, how to launch the next workload) of the object.
 
-7. *How migration works in vineyard? Is it automatically triggered?*
+8. *How migration works in vineyard? Is it automatically triggered?*
 
   Support workload *A* produces a global object *O* and the next workload *B* will consume
   *O* as input. On a Kubernetes cluster with many hosts, namely *h1*, *h2*, *h3*, *h4*,

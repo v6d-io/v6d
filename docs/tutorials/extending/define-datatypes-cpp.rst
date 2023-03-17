@@ -1,5 +1,7 @@
-Adding Custom Data Types in C++
-===============================
+.. _define-cpp-types:
+
+Define Data Types in C++
+========================
 
 Vineyard has already support a set of efficient builtin data types in
 the C++ SDK, e.g., :code:`Vector`, :code:`HashMap`, :code:`Tensor`,
@@ -14,8 +16,8 @@ C++ data types could be easily added by following this step-by-step tutorial.
     keeping clear about the design internals and helping developers get a whole
     picture about how vineyard client works.
 
-Vineyard Objects
-----------------
+``Object`` and ``ObjectBuilder``
+--------------------------------
 
 Vineyard has a base class :code:`vineyard::Objects`, and a corresponding
 base class :code:`Vineyard::ObjectBuilder` for builders as follows,
@@ -44,8 +46,8 @@ and the builder
 Where the object is the base class for user-defined data types, and the
 builders is responsible for placing the data into vineyard.
 
-Adding Your Own Types
----------------------
+Define your type
+----------------
 
 We taking defining a custom :code:`Vector` type as example. Basically,
 a :code:`Vector` contains a :code:`vineyard::Blob` as payload, and metadata
@@ -77,8 +79,8 @@ The class for :code:`Vector` usually looks like
         }
     };
 
-Defining the data structure
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Register C++ types
+------------------
 
 We first migrate the existing :code:`Vector<T>` to vineyard's :code:`Object`,
 
@@ -150,8 +152,8 @@ without the cost of copying.
          ...
      }
 
-Implements the builder
-^^^^^^^^^^^^^^^^^^^^^^
+Builder
+-------
 
 Next, we go the builder part. The :code:`vineyard::ObjectBuilder` contains two
 part,
@@ -205,17 +207,19 @@ Now we adapts the builder above as a `ObjectBuilder` in vineyard,
          }
 
     +    Status Build(Client& client) override {
-    +      VINEYARD_CHECK_OK(client.CreateBlob(size * sizeof(T), buffer_builder));
+    +      RETURN_ON_ERROR(client.CreateBlob(size * sizeof(T), buffer_builder));
     +      memcpy(buffer_builder->data(), data, size * sizeof(T));
     +      return Status::OK();
     +    }
     +
-    +    std::shared_ptr<Object> _Seal(Client& client) override {
-    +      VINEYARD_CHECK_OK(this->Build(client));
+    +    Status _Seal(Client& client, std::shared_ptr<Object> &object) override {
+    +      RETURN_ON_ERROR(this->Build(client));
     +
     +      auto vec = std::make_shared<Vector<int>>();
-    +      auto buffer = std::dynamic_pointer_cast<vineyard::Blob>(
-    +        this->buffer_builder->Seal(client));
+           object = vec;
+    +      std::shared_ptr<Object> buffer_object;
+    +      RETURN_ON_ERROR(this->buffer_builder->Seal(client, buffer_object));
+    +      auto buffer = std::dynamic_pointer_cast<Blob>(buffer_object);
     +      vec->size = size;
     +      vec->data = reinterpret_cast<const T *>(buffer->data());
     +
@@ -223,9 +227,7 @@ Now we adapts the builder above as a `ObjectBuilder` in vineyard,
     +      vec->meta_.SetNBytes(size * sizeof(T));
     +      vec->meta_.AddKeyValue("size", size);
     +      vec->meta_.AddMember("buffer", buffer);
-    +      VINEYARD_CHECK_OK(client.CreateMetaData(vec->meta_, vec->id_));
-    +
-    +      return vec;
+    +      return client.CreateMetaData(vec->meta_, vec->id_);
     +    }
     +
          T& operator[](size_t index) {
@@ -260,8 +262,8 @@ As you can see in the above example, there are many boilerplate snippets
 in the builder and constructor. They are be auto-generated from the layout
 of class :code:`Vector<T>` based on the static analysis of user's source code.
 
-Now it should work!
-^^^^^^^^^^^^^^^^^^^
+Usage and examples
+------------------
 
 Finally we are able to build our custom data types into vineyard and retrieve
 it back, using vineyard client,
@@ -287,12 +289,12 @@ it back, using vineyard client,
         }
     }
 
-Builders and Resolvers in other Languages
------------------------------------------
+Cross-language
+--------------
 
 Vineyard keeps the same design principle for SDKs in other languages, e.g.,
 Java and Python. For an example in Python about the vineyard objects and its
-builders, see also :ref:`divein-builder-resolver`.
+builders, see also :ref:`builder-resolver`.
 
 As described in the example above, there are a lots of boilerplate code when
 defining the constructor and builder. To make the integration with vineyard

@@ -8,7 +8,6 @@ Big-data on Vineyard
 
    integration/dask.rst
    integration/ml.rst
-   integration/ray.rst
 
 Vineyard is designed for serving as the immediate data sharing engine and has
 been integrated with various big-data computing engines. Namely the machine
@@ -33,12 +32,3 @@ learning frameworks as well as the distributed data processing engine Dask.
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
    Using vineyard as the data source / sink of dask computations.
-
-   ---
-
-   .. link-button:: integration/dask
-      :type: ref
-      :text: Dask
-      :classes: btn-block stretched-link
-   ^^^^^^^^^^^^
-   Using vineyard as the data source / sink of Ray computations.

@@ -8,10 +8,10 @@ Workflow orchestration
 
    integration/airflow.rst
 
-Vineyard has integrated to the workflow orchestrating engines (apache airflow)
-to helps use adopt vineyard into their own workflows for the performance gains.
-Moreover, the airflow integration allows user operating on large Python objects
-of complex data types (e.g., :code:`pandas.DataFrame`) at low cost and avoid
+Vineyard has integrated with the workflow orchestration engine (Apache Airflow)
+to help users adopt Vineyard into their own workflows for performance gains.
+Furthermore, the Airflow integration allows users to operate on large Python objects
+with complex data types (e.g., :code:`pandas.DataFrame`) at a low cost and avoid
 the burden of :code:`pickle.dump/loads`.
 
 .. panels::
