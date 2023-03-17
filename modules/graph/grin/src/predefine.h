@@ -102,8 +102,6 @@ struct GRIN_VERTEX_LIST_T {
     unsigned type_begin;
     unsigned type_end;
     unsigned all_master_mirror;
-    unsigned type_current;
-    unsigned current;
     std::vector<unsigned> offsets;
     std::vector<GRIN_GRAPH_T::vertices_t> vrs;
 };
@@ -127,8 +125,6 @@ struct GRIN_ADJACENT_LIST_T {
     GRIN_DIRECTION dir;
     unsigned etype_begin;
     unsigned etype_end;
-    unsigned etype_current;
-    unsigned current;
     std::vector<unsigned> offsets;
     std::vector<GRIN_GRAPH_T::raw_adj_list_t> data;
 };

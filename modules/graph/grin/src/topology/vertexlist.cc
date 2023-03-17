@@ -50,13 +50,58 @@ GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t 
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
-GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH);
+GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
+    auto vli = new GRIN_VERTEX_LIST_ITERATOR_T();
+    vli->type_begin = _vl->type_begin;
+    vli->type_end = _vl->type_end;
+    vli->type_current = _vl->type_begin;
+    vli->current = 0;
+    vli->all_master_mirror = _vl->all_master_mirror;
+    if (vli->all_master_mirror == 0) {
+        vli->vr = _g->Vertices(vli->type_current);
+    } else if (vli->all_master_mirror == 1) {
+        vli->vr = _g->InnerVertices(vli->type_current);
+    } else {
+        vli->vr = _g->OuterVertices(vli->type_current);
+    }
+    return vli;
+}
 
-void grin_destroy_vertex_list_iter(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
+void grin_destroy_vertex_list_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
+    auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
+    delete _vli;
+}
 
-GRIN_VERTEX_LIST_ITERATOR grin_get_next_vertex_list_iter(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
+void grin_get_next_vertex_list_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
+    _vli->current++;
+    while (_vli->type_current < _vli->type_end) {
+        if (_vli->current < _vli->vr.size()) break;
+        _vli->type_current++;
+        _vli->current = 0;
+        if (_vli->type_current < _vli->type_end) {
+            if (_vli->all_master_mirror == 0) {
+                _vli->vr = _g->Vertices(_vli->type_current);
+            } else if (_vli->all_master_mirror == 1) {
+                _vli->vr = _g->InnerVertices(_vli->type_current);
+            } else {
+                _vli->vr = _g->OuterVertices(_vli->type_current);
+            }
+        }
+    }
+}
 
-bool grin_is_vertex_list_end(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
+bool grin_is_vertex_list_end(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
+    auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
+    return _vli->type_current >= _vli->type_end;
+}
 
-GRIN_VERTEX grin_get_vertex_from_iter(GRIN_GRAPH, GRIN_VERTEX_LIST_ITERATOR);
+GRIN_VERTEX grin_get_vertex_from_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
+    auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
+    auto v = new GRIN_VERTEX_T(_vli->vr.begin_value() + _vli->current);
+    return v;
+}
 #endif
