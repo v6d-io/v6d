@@ -3,11 +3,11 @@
 Objects
 =======
 
-Vineyard represents all kinds of data as vineyard objects. Vineyard adopts a
-metadata-payloads decoupled design and an object in vineyard consists of two folds:
+Vineyard represents various data types as vineyard objects. It employs a
+metadata-payloads decoupled design, where an object in vineyard comprises:
 
-1.  A set of blobs where the payload of the data lives in;
-2.  A hierarchical meta tree which describes the type, layout and properties of the data.
+1.  A collection of blobs containing the actual data payload;
+2.  A hierarchical meta tree that describes the data's type, layout, and properties.
 
 .. _metadata-and-payloads:
 
@@ -54,10 +54,10 @@ forms vineyard objects:
     - a set of :code:`pointer` in the member :code:`columns` (the member :code:`data` of
       of those :code:`Tensor` s)
 
-From the example above you could see that the objects naturally fit a hierarchical
-model and complex data objects can be composed from some simpler objects. Each object
-contains a set of blobs as the payload, and a metadata (in tree form) that describes
-the semantic and organizations of those blobs.
+From the example above, it is evident that objects naturally conform to a hierarchical
+model, allowing complex data objects to be composed of simpler ones. Each object
+consists of a set of blobs as the payload and a metadata tree that describes
+the semantics and organization of those blobs.
 
 .. admonition:: An example for the object metadata: a dataframe with two columns where each
                 column is a tensor.
@@ -119,48 +119,46 @@ the semantic and organizations of those blobs.
             "typename": "vineyard::DataFrame"
         }
 
-From the above example of an object metadata you can see that and object is composed
-by certain sub objects and forms a hierarchical data model. An object consists of
-a set of blobs and a metadata tree that describes the semantic of those blobs.
+From the above example of object metadata, it is evident that an object is composed
+of various sub-objects, forming a hierarchical data model. Each object consists of
+a set of blobs and a metadata tree that describes the semantics of those blobs.
 
 .. tip::
 
-    Without the metadata, the blob set is just some memory pieces that have no
-    meaningful explanation.
+    Without the metadata, the set of blobs would merely be a collection of memory
+    pieces without any meaningful interpretation.
 
-See also :ref:`using-objects-python` to how to put Python objects to vineyard and
-get it back using the IPC clients.
+Refer to :ref:`using-objects-python` for a demonstration of how to put Python objects
+into vineyard and retrieve them using IPC clients.
 
 Separating metadata and payload
 -------------------------------
 
-The decoupling design of data payload and data layout above brings three benefits:
+The decoupling of data payload and data layout in vineyard offers three key advantages:
 
-1. The payload is stored locally in each vineyard instance, while the meta data is shared
-   among all the vineyard instances across the cluster. This significantly reduces the costs
-   to keep the distributed data consistent.
+1. Payloads are stored locally within each vineyard instance, while metadata is shared
+   across all instances in the cluster. This significantly reduces the overhead of maintaining
+   consistency for distributed data.
 
-2. It makes vineyard objects self-interpreted, since the meta data fully determines how
-   the object should be resolved. This not only brings the consistency in semantics when
-   sharing vineyard objects between different systems and different programming languages,
-   but also allows users to store complex data structures in high-level abstraction, such
-   as graphs in CSR model directly in vineyard, without serializing/deserializing
-   the object every time saving/loading it from vineyard.
+2. Vineyard objects become self-descriptive, as the metadata fully determines how
+   the object should be resolved. This not only ensures semantic consistency when
+   sharing vineyard objects between different systems and programming languages,
+   but also allows users to store complex data structures with high-level abstractions, such
+   as graphs in CSR format directly in vineyard, without the need for serialization/deserialization
+   every time the object is saved or loaded.
 
-3. It facilitates the exploiting of data-aware scheduling techniques, e.g., when we process
-   a graph in vineyard, we can easily access the meta tree of the graph to see how large each
-   partitioned fragment is without touching the real vertices and edges of the graph, as such,
-   we can assign precise amount of computation resources for each fragment to achieve overall
-   performance enhancement.
+3. This design enables the exploitation of data-aware scheduling techniques. For example, when processing
+   a graph in vineyard, we can easily access the metadata tree of the graph to determine the size of each
+   partitioned fragment without accessing the actual vertices and edges. As a result,
+   we can allocate precise amounts of computational resources for each fragment, leading to overall
+   performance improvements.
 
-In particular, for the meta data and methods of vineyard objects, vineyard employs two
-design choices:
+Vineyard employs two design choices for the metadata and methods of its objects:
 
-1. The composable design on vineyard objects to
-   facilitate distributed data management;
+1. A composable design for vineyard objects, which facilitates distributed data management;
 
-2. The extensible design on methods of vineyard objects to enable flexible data sharing
-   between different computation systems with nearly zero extra development cost.
+2. An extensible design for object methods, enabling flexible data sharing
+   between different computation systems with minimal additional development cost.
 
 Data model
 ----------
@@ -168,10 +166,10 @@ Data model
 Composable
 ^^^^^^^^^^
 
-The composition mechanism applies as the hierarchical tree structure
-of the meta data of vineyard objects. The root meta data of a complex object
-stores the links to the root meta data of its components, and by traversing the
-links recursively, a complete meta tree is produced for the complex object.
+The composition mechanism in vineyard is based on the hierarchical tree structure of
+the metadata of its objects. The root metadata of a complex object stores references
+to the root metadata of its components. By recursively traversing these references,
+a complete metadata tree is constructed for the complex object.
 
 .. figure:: ../../images/vineyard_composable.jpg
    :width: 75%
@@ -179,26 +177,25 @@ links recursively, a complete meta tree is produced for the complex object.
 
    Vineyard objects are composable
 
-For example, a distributed dataframe is composed of partitioned dataframe chunks,
-while a dataframe is composed of column vectors. Recall the decoupling design of
-payload and layout of vineyard objects, inside the dataframe, blobs are stored
-in the corresponding vineyard instance's memory for each partition, and the
-metadata (e.g., chunk index, shape, column data types) are stored in the
-key-value store behind the metadata service.
+For instance, a distributed dataframe consists of partitioned dataframe chunks, while
+a dataframe is composed of column vectors. Considering the decoupling design of payload
+and layout in vineyard objects, the blobs are stored in the corresponding vineyard
+instance's memory for each partition, and the metadata (e.g., chunk index, shape,
+column data types) are stored in the key-value store behind the metadata service.
 
-To save a distributed graph, we first save the partitioned fragments in each
-vineyard instance, and share their meta data in the backend key-value store, and
-then we can create the distributed graph by creating the root meta data that
-contains the links to the root meta data of the fragments in an efficient fashion.
+To store a distributed graph, we first save the partitioned fragments in each vineyard
+instance and share their metadata in the backend key-value store. Then, we can create
+the distributed graph by generating the root metadata containing links to the root
+metadata of the fragments in an efficient manner.
 
 .. _distributed-objects:
 
 Distributed objects
 ^^^^^^^^^^^^^^^^^^^
 
-Vineyard supports store very large objects across many nodes in a cluster and allows
-user programs to treat those as a whole. Data are shaded to many machines and no
-replication happens.
+Vineyard is designed to store large objects across multiple nodes in a cluster, enabling
+user programs to seamlessly interact with these objects as a single entity. Data is
+sharded across multiple machines without replication.
 
 .. figure:: ../../images/vineyard_distributed_tensor.jpg
    :alt: Distributed objects in vineyard
@@ -206,87 +203,77 @@ replication happens.
 
    Distributed objects in vineyard
 
-Taking ``Tensor`` as an example, in real world cases the table may consists billions
-of columns and rows and cannot be fit into a single machine. Under such conditions,
-the tensor could be split along the index axis or column axis and every vineyard
-node holds a subset of chunks. Vineyard still provides a *logical view* about the
-complete tensor and allows distributed computation engines like Mars and GraphScope
-to process such data structures as a whole.
-
+For example, consider a "Tensor" object that contains billions of columns and rows, making
+it too large to fit into a single machine. In such cases, the tensor can be split along
+the index or column axis, with each vineyard node holding a subset of chunks. Vineyard
+provides a logical view of the complete tensor, allowing distributed computation engines
+like Mars and GraphScope to process the data structure as a whole.
 .. TODO: add the collection APIs
 
 .. tip::
 
-    See also the concepts of *persistent objects* in the following subsection.
+    See also the concepts of *persistent objects* in the following subsection. Refer to
+    the following subsection for more information on the concept of *persistent objects*.
 
-Transient vs. persistent
+Transient vs. Persistent
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-As described above, the metadata and payloads of vineyard objects are decomposed
-and managed by different components of vineyard server. The payloads are designed
-to be shared with computing engines using memory mapping locally. However, the
-metadata can be inspected by clients that connected to other vineyardd instances,
-e.g., when forming a distributed object, the distributed object consists of a set
-of chunks that placed on different vineyardd instances. When getting the distributed
-objects from vineyard, the computing engines may need to inspect the metadata of
-non-local pieces to obtain a sense of the distribution of whole dataset.
+As previously mentioned, vineyard objects' metadata and payloads are managed separately
+by different components of the vineyard server. Payloads are designed to be shared with
+computing engines using local memory mapping. However, metadata may need to be inspected
+by clients connected to other vineyard instances, such as when forming a distributed object.
+In this case, the distributed object consists of a set of chunks placed on different
+vineyard instances. When retrieving the distributed objects from vineyard, computing engines
+may need to inspect the metadata of non-local pieces to understand the distribution of the
+entire dataset.
 
-Such a requirements means that the metadata needs to be globally synchronized and
-can be accessed from clients that connects to other vineyardd instances. However,
-global synchronization is a costly operation and many tiny key-value pairs would
-dramatically increasing and burden of the key-value store backend of our metadata
-services. Thus we separate objects as the transient objects and persistent objects.
+This requirement implies that metadata must be globally synchronized and accessible from
+clients connected to other vineyard instances. However, global synchronization is a costly
+operation, and numerous small key-value pairs can significantly increase the burden on the
+key-value store backend of our metadata services. To address this issue, we categorize
+objects as transient or persistent.
 
-- *Transient objects* are designed for cases where the object is known that won't
-  be part of a distributed objects and never need to be inspected by clients on
-  other vineyardd instances. Short-live immediate value inside the progress of a
-  single computing engines is a common scenario that transient objects can help.
+- *Transient objects* are designed for cases where the object is known not to be part of a
+   distributed object and will never need to be inspected by clients on other vineyard instances.
+   Transient objects are useful for short-lived immediate values within the progress of a
+   single computing engine.
 
-- *Persistent objects* are designed for cases where the object chunk will be used
-  to form a larger distributed object and the metadata is needed when applications
-  inspect the distributed object. Intermediate data among two distributed engines
-  is a common scenario that persistent objects and distributed objects are needed
-  to pass the intermediate data between two distributed engines.
+- *Persistent objects* are designed for cases where the object chunk will be used to form
+  a larger distributed object, and the metadata is needed when applications inspect the
+  distributed object. Persistent objects and distributed objects are commonly used to pass
+  intermediate data between two distributed engines.
 
 .. caution::
 
-    By default, objects are **transient** and we have an API :code:`client.persist()`
-    that can explicitly persist the metadata of the target object to etcd and make
-    sure it visible by clients that connected to other instances in the cluster.
+    By default, objects are **transient**. We provide an API :code:`client.persist()` that
+    can explicitly persist the metadata of the target object to etcd, ensuring its visibility
+    by clients connected to other instances in the cluster.
 
 .. _builder-resolver:
 
 Builders and resolvers
 ^^^^^^^^^^^^^^^^^^^^^^
 
-Vineyard employs the extensible design concept of registry mechanism
-to facilitate users transplanting their data structures into vineyard.
-
-In particular, our extensible design on builders, resolvers and drivers,
-allows users to build, resolve and share their data structures easily
-through different systems and paradigms respectively, and the registry
-mechanism is so basic that even the core data structures and drivers in
-vineyard also follows the same design.
+Vineyard utilizes an extensible registry mechanism to enable users to easily integrate their
+data structures into the system. This design, which includes builders, resolvers, and drivers,
+allows users to create, resolve, and share their data structures across different systems and
+paradigms. Notably, even the core data structures and drivers in Vineyard follow this design.
 
 .. note::
 
-    **So what is the registry mechanism?**
+    **What is the registry mechanism?**
 
-    In general, the registry mechanism decouples the methods from the definition
-    of vineyard data types. For builders and resolvers, it means users can
-    flexibly register different implementations in different languages
-    to build and resolve the same vineyard data type, which makes the data
-    available to share between different systems and paradigms, and makes
-    it possible to exploit native language optimizations.
+    The registry mechanism decouples methods from the definition of Vineyard data types. For
+    builders and resolvers, this means users can flexibly register different implementations
+    in various languages to build and resolve the same Vineyard data type. This enables data
+    sharing between different systems and paradigms and allows for native language optimizations.
 
-    On the other hand, for drivers, the registry mechanism allows users
-    to flexibly plug-in functionality methods in different languages for
-    vineyard data types, which assigns required capability to the data types
-    along with the data analytical process.
+    For drivers, the registry mechanism permits users to flexibly plug in functionality methods
+    in different languages for Vineyard data types, providing the necessary capabilities for
+    data types during the data analysis process.
 
-    Further more, the registered methods can be implemented and optimized
-    in accordance with specific data analytical tasks for further efficiency
-    augmentation.
+    Moreover, the registered methods can be implemented and optimized according to specific
+    data analysis tasks, further enhancing efficiency.
 
-See also :ref:`define-python-types` and :ref:`define-cpp-types` for how the builders
+Refer to :ref:`define-python-types` and :ref:`define-cpp-types` for examples of how builders
 and resolvers are implemented in Python and C++, respectively.

@@ -11,10 +11,10 @@ Data processing
    ./data-processing/python-sharedmemory.rst
    ./data-processing/distributed-learning.rst
 
-We showcase step-by-step case studies of how to combine the functionalities of vineyard
-with existing data-intensive jobs. We show that vineyard can bring huge gains in both
-performance and conveniences when users have a complex workflow that involves multiple
-computing engines.
+In these comprehensive case studies, we demonstrate how to seamlessly integrate vineyard's
+capabilities with existing data-intensive tasks. By incorporating vineyard into complex
+workflows involving multiple computing engines, users can experience significant
+improvements in both performance and ease of use.
 
 .. panels::
    :header: text-center
@@ -25,7 +25,7 @@ computing engines.
       :text: Python Objects
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Sharing Python objects between processes using vineyard is as simple as 123.
+   Effortlessly share Python objects between processes using vineyard's intuitive and efficient approach.
 
    ---
 
@@ -34,7 +34,7 @@ computing engines.
       :text: SharedMemory in Python
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Using vineyard as using :code:`multiprocessing.shared_memory` in Python.
+   Utilize vineyard as an elegant alternative to :code:`multiprocessing.shared_memory` in Python.
 
    ---
 
@@ -43,5 +43,5 @@ computing engines.
       :text: Distributed Learning
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   How vineyard can help in a distributed machine learning training workflow where
-   various computing engine are involved.
+   Discover how vineyard enhances distributed machine learning training workflows by
+   seamlessly integrating with various computing engines for improved efficiency and elegance.

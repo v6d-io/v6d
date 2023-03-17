@@ -22,9 +22,10 @@ The following figure demonstrates the architecture of vineyard operator.
 Create a vineyard Cluster
 -------------------------
 
-Once the vineyard operator is installed (see also :ref:`deploy-on-kubernetes`), you can create a
-vineyard cluster by creating a :code:`Vineyardd` CRD. The following is an example of creating a
-vineyard cluster with 3 daemon replicas:
+After successfully installing the vineyard operator (refer to :ref:`deploy-on-kubernetes`
+for installation details), you can effortlessly create a vineyard cluster by utilizing
+the :code:`Vineyardd` CRD. The following example demonstrates the creation of a vineyard
+cluster with 3 daemon replicas:
 
 .. code:: yaml
 
@@ -47,9 +48,10 @@ vineyard cluster with 3 daemon replicas:
         imagePullPolicy: IfNotPresent
     EOF
 
-The vineyard-operator will created deployment for required metadata service backend (:code:`etcd`),
-establish proper services, and finally a deployment for 3-replicas vineyard servers. Once deployed,
-you would see the following items created and managed by the vineyard operator:
+The vineyard-operator orchestrates the creation of a deployment for the required metadata
+service backend (:code:`etcd`), sets up appropriate services, and ultimately establishes a
+deployment for 3-replica vineyard servers. Upon successful deployment, the following
+components will be created and managed by the vineyard operator:
 
 .. code:: bash
 
@@ -297,9 +299,10 @@ The detailed configuration entries for creating a vineyard cluster are listed as
 Installing vineyard as sidecar
 ------------------------------
 
-Vineyard can be installed as a sidecar container in the pod. We provide CRD `Sidecar` for configuring
-and obervering the sidecar container. It is mostly the same as the `Vineyardd` CRD and the following
-list shows all configurations.
+Vineyard can be seamlessly integrated as a sidecar container within a pod. We offer the `Sidecar`
+Custom Resource Definition (CRD) for configuring and managing the sidecar container. The `Sidecar`
+CRD shares many similarities with the `Vineyardd` CRD, and the following list presents all
+available configurations.
 
 .. admonition:: Sidecar Configurations
    :class: admonition-details
@@ -495,34 +498,34 @@ The following is all labels that we provide:
      - annotations
      - The name of sidecar cr. If the name is `default`, the default sidecar cr will be created.
 
-There two ways to install vineyard as sidecar:
+There are two methods to install vineyard as a sidecar:
 
-- Use the **default sidecar configuration**. Users add two annotations ``sidecar.v6d.io/enabled: true``
-  and ``sidecar.v6d.io/name: default`` to app's YAML. Then the default sidecar cr will be created for
-  obervering.
+- Utilize the **default sidecar configuration**. Users should add two annotations,
+  `sidecar.v6d.io/enabled: true` and `sidecar.v6d.io/name: default`, to their app's YAML.
+  This will create a default sidecar Custom Resource (CR) for observation.
 
-- Use the **custom sidecar configuration**. Users create a custom sidecar cr ``sidecar-demo`` first
-  and then add two annotations ``sidecar.v6d.io/enabled: true`` and ``sidecar.v6d.io/name: sidecar-demo``
-  to app's YAML.
+- Employ the **custom sidecar configuration**. Users must first create a custom sidecar CR,
+  such as `sidecar-demo`, and then add two annotations, `sidecar.v6d.io/enabled: true` and
+  `sidecar.v6d.io/name: sidecar-demo`, to their app's YAML.
 
-The following is an example of installing vineyard as a sidecar container in the pod.
-First, we should install the vineyard operator following the previous steps, and then
-create a namespace with specific label ``sidecar-injection: enabled`` to enable the sidecar.
+The following example demonstrates how to install vineyard as a sidecar container within a
+pod. First, install the vineyard operator according to the previous steps, and then create
+a namespace with the specific label `sidecar-injection: enabled` to enable the sidecar.
 
-.. code:: bash
+```bash
+$ kubectl create namespace vineyard-job
+$ kubectl label namespace vineyard-job sidecar-injection=enabled
+```
 
-    $ kubectl create namespace vineyard-job
-    $ kubectl label namespace vineyard-job sidecar-injection=enabled
-
-Then, we use the following YAML to inject default sidecar into the pod.
+Next, use the following YAML to inject the default sidecar into the pod.
 
 .. note::
 
-    Please set up the command field of your app container and it should be
-    like ``["/bin/sh" or "/bin/bash", "-c", (your app command)]``. After injecting
-    the vineyard sidecar, the command field will be changed to ``["/bin/sh" or "/bin/bash",
-    "-c", "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + (your app command)]``
-    to make sure the vineyard sidecar is ready before the app container starts.
+    Please configure the command field of your app container to be in the format
+    `["/bin/sh" or "/bin/bash", "-c", (your app command)]`. After injecting the vineyard
+    sidecar, the command field will be modified to `["/bin/sh" or "/bin/bash", "-c",
+    "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + (your app command)]` to
+    ensure that the vineyard sidecar is ready before the app container starts.
 
 .. code:: yaml
 
@@ -704,18 +707,18 @@ sidecar cr as follows:
 For more details about how to use the sidecar, please refer to the `sidecar e2e test`_ for
 more inspiration.
 
-Objects in vineyard cluster
----------------------------
+Objects in Vineyard
+-------------------
 
-Objects in vineyard is exposed to the Kubernetes control panel as CRDs (Custom Resource Definition).
-Vineyard abstracts objects as global objects and local objects (see also :ref:`vineyard-objects`),
-described by the :code:`GlobalObject` and :code:`LocalObject` CRDs in vineyard operator:
+Vineyard objects are exposed to the Kubernetes control panel as Custom Resource Definitions (CRDs).
+In vineyard, objects are abstracted as global objects and local objects (refer to :ref:`vineyard-objects`),
+which are represented by the `GlobalObject` and `LocalObject` CRDs in the vineyard operator:
 
 GlobalObject
 ^^^^^^^^^^^^
 
-The **GlobalObject** custom resource definition (CRD) declaratively defines the global object
-in a vineyard cluster, it contains the following fields:
+The `GlobalObject` custom resource definition (CRD) declaratively defines a global object
+within a vineyard cluster. It contains the following fields:
 
 .. admonition:: GlobalObject Properties
    :class: admonition-details
@@ -845,20 +848,22 @@ get them as follows.
 Vineyard Scheduler
 ------------------
 
-Vineyard operator includes a scheduler plugin to scheduling workload on vineyard to where
-its input are placed when possible to reduce the cost of data migration. The vineyard scheduler
-plugin is developed based on `Kubernetes Scheduling Framework`_ and the overall scheduling strategy
-is summarized as follows.
+The Vineyard operator includes a scheduler plugin designed to efficiently schedule workloads
+on Vineyard by placing them as close as possible to their input data, thereby reducing data
+migration costs. The Vineyard scheduler plugin is developed based on the `Kubernetes Scheduling
+Framework`_, and its overall scheduling strategy can be summarized as follows:
 
-- All vineyard workloads can only be deployed in the nodes that exists vineyard daemon server.
-- If a workload doesn't depend on any other workload, it will be scheduled by **round-robin**.
-  E.g. If a workload has 3 replicas and there are 3 nodes that exists vineyard daemon server,
-  the first replica will be scheduled on the first node, the second replica will be scheduled
-  on the second node, and so on.
-- If a workload depends on other workloads, it will be scheduled by **best-effort**.
-  Assuming a workload produces N chunks during its lifecycle, and there are M nodes that exists
-  vineyard daemon server, the best-effort policy will try to make the next workload consume :code:`M/N`:
-  chunks. E.g. Imaging a workload produces 12 chunks and their distributions are as follows:
+- All Vineyard workloads can only be deployed on nodes where the Vineyard daemon server is
+  present.
+- If a workload does not depend on any other workload, it will be scheduled using a
+  **round-robin** approach. For example, if a workload has 3 replicas and there are 3 nodes
+  with Vineyard daemon servers, the first replica will be scheduled on the first node, the
+  second replica on the second node, and so on.
+- If a workload depends on other workloads, it will be scheduled using a **best-effort** policy.
+  Assuming a workload produces N chunks during its lifecycle, and there are M nodes with
+  Vineyard daemon servers, the best-effort policy will attempt to make the next workload
+  consume :code:`M/N`: chunks. For instance, imagine a workload produces 12 chunks with the
+  following distribution:
 
   .. code::
 
@@ -874,12 +879,12 @@ is summarized as follows.
     replica2 -> node1 (consume 4-7 chunks)
     replica3 -> node2 (consume 9-11 chunks, the other chunks will be migrated to the node)
 
-Leveraging the vineyard scheduler
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Utilizing the Vineyard Scheduler
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-We implemented the vineyard scheduler into the vineyard operator and deployed along with the
-vineyard operator. Vineyard scheduler plugin requires some annotations and labels as a hint
-for its required inputs and all required configurations are listed as follows:
+The Vineyard scheduler is integrated into the Vineyard operator and deployed alongside it.
+This scheduler plugin relies on specific annotations and labels to provide necessary input
+information. The required configurations are listed below in a clear and comprehensive manner:
 
 .. admonition:: Scheduler Plugin Configurations
    :class: admonition-details
@@ -915,9 +920,10 @@ for its required inputs and all required configurations are listed as follows:
          - The vineyard scheduler's name, and the
            default value is `vineyard-scheduler`.
 
-Next, we will show a complete example of how to use the vineyard scheduler. First, we should
-install the vineyard operator and vineyard daemon server following the previous steps,
-then deploy `workflow-job1`_ as follows.
+In this section, we will demonstrate a comprehensive example of utilizing the Vineyard
+scheduler. To begin, ensure that the Vineyard operator and Vineyard daemon server are
+installed by following the steps outlined earlier. Then, proceed to deploy `workflow-job1`_
+as shown below.
 
 .. code:: bash
 
@@ -1092,9 +1098,9 @@ as the `vineyardd e2e test`_. What's more, you could refer to the
 Operations and drivers
 ----------------------
 
-The **Operation** custom resource definition (CRD) declaratively defines the configurable
-pluggable drivers ( mainly `assembly` and `repartition` ) in a Kubernetes cluster,
-it contains the following fields:
+The **Operation** custom resource definition (CRD) elegantly defines the configurable
+pluggable drivers, primarily `assembly` and `repartition`, within a Kubernetes cluster.
+It encompasses the following fields:
 
 .. admonition:: Operation Configurations
    :class: admonition-details
@@ -1137,8 +1143,8 @@ it contains the following fields:
          - The timeout of the operation.
          - 300
 
-The operation CR is created by the vineyard scheduler while scheduling the vineyard jobs,
-and you could get them as follows.
+The Operation Custom Resource (CR) is created by the vineyard scheduler while scheduling vineyard jobs.
+You can retrieve the created Operation CRs as follows:
 
 .. code:: bash
 
@@ -1146,30 +1152,30 @@ and you could get them as follows.
     NAMESPACE      NAME                                    OPERATION     TYPE   STATE
     vineyard-job   dask-repartition-job2-bbf596bf4-985vc   repartition   dask
 
-At present, vineyard operator contains three pluggable drivers: `checkpoint`, `assembly`, and
-`repartition`. Next is a brief introduction of them.
+Currently, the vineyard operator includes three pluggable drivers: `checkpoint`, `assembly`, and
+`repartition`. The following sections provide a brief introduction to each of these drivers.
 
 Checkpoint
 ^^^^^^^^^^
 
-Now there are two kinds of checkpoint drivers in vineyard.
+Vineyard currently supports two types of checkpoint drivers:
 
-1. Active checkpoint - **Serialization**. Users can store data in temporary/persistent storage
-for checkpoint by the API (`vineyard.io.serialize/deserialize`). *Notice*, the serialization is
-triggered by the user in the application image, and the volume is also created by the user,
-so it's not managed by the vineyard operator.
+1. Active checkpoint - **Serialization**: Users can store data in temporary or persistent storage
+   for checkpoint purposes using the API (`vineyard.io.serialize/deserialize`). *Note* that the
+   serialization process is triggered by the user within the application image, and the volume is
+   also created by the user. Therefore, it is not managed by the vineyard operator.
 
-2. Passive checkpoint - **Spill**. Now vineyard supports spilling data from memory to storage
-while the data is too large to be stored. There are two watermarks of spilling memory,
-the low watermark and the high watermark. When the data is larger than the high watermark,
-vineyardd will spill the extra data to the storage until it is at the low watermark.
+2. Passive checkpoint - **Spill**: Vineyard now supports spilling data from memory to storage
+   when the data size exceeds the available memory capacity. There are two watermarks for memory
+   spilling: the low watermark and the high watermark. When the data size surpasses the high watermark,
+   vineyardd will spill the excess data to storage until it reaches the low watermark.
 
 Triggering a checkpoint job
 """""""""""""""""""""""""""
 
-Now, the checkpoint driver(**Spill**) is configured in the `vineyardd` Custom Resource
-Definition (CRD). You could use the following yaml file to create a default vineyardd
-daemon server with spill mechanism:
+Now, the checkpoint driver (**Spill**) is configured within the `vineyardd` Custom Resource
+Definition (CRD). To create a default vineyardd daemon server with the spill mechanism enabled,
+use the following YAML file:
 
 .. note::
 
@@ -1220,31 +1226,30 @@ daemon server with spill mechanism:
                 storage: 512Mi
     EOF
 
-For more information about the checkpoint mechanism in vineyard operator, there
-are `checkpoint examples`_.
-Besides, you could refer to the `serialize e2e test`_ and the `spill e2e test`_ to get some
-inspiration on how to use the checkpoint mechanism in a workflow.
+For a comprehensive understanding of the checkpoint mechanism in the vineyard operator,
+please refer to the `checkpoint examples`_. Additionally, the `serialize e2e test`_ and
+the `spill e2e test`_ can provide valuable insights on how to effectively utilize the
+checkpoint mechanism within a workflow.
 
 Assembly
 ^^^^^^^^
 
-In actual usage scenarios, there are different kinds of computing engines in a workload.
-Some computing engines may support the stream types to speed up data processing, while
-some computing engines don't support the stream types. To make the workload work as expected,
-we need to add an assembly mechanism to transform the steam type to the chunk type so that
-the next computing engine which can't use the stream type could read the metadata produced by
-the previous engine.
+In real-world scenarios, workloads often involve various computing engines. Some of these
+engines support stream types to accelerate data processing, while others do not. To ensure
+the seamless operation of the workload, an assembly mechanism is required to convert the
+stream type into a chunk type. This conversion enables subsequent computing engines that
+do not support stream types to read the metadata generated by the previous engine.
 
 Triggering an assembly job
 """"""""""""""""""""""""""
 
-For reducing the stress of Kubernetes API Server, we provide the namespace selector for assembly.
-The assembly driver will only be applied in the namespace with the specific
-label `operation-injection: enabled`. Therefore, please make sure the applications' namespace
-has the label before using the assembly mechanism.
+To reduce the load on the Kubernetes API Server, we offer a namespace selector for assembly.
+The assembly driver will only be applied to namespaces with the specific label
+`operation-injection: enabled`. Therefore, ensure that the application's namespace has
+this label before using the assembly mechanism.
 
-We provide some labels to help users to use the assembly mechanism in vineyard operator.
-The following is all labels that we provide:
+We provide several labels to assist users in utilizing the assembly mechanism in the
+vineyard operator. The following are the available labels:
 
 .. admonition:: Assembly Drivers Configurations
    :class: admonition-details
@@ -1268,15 +1273,17 @@ The following is all labels that we provide:
            `local` only for localobject(stream on the same node),
            `distributed` for globalobject(stream on different nodes).
 
-Next, we will show how to use the assembly mechanism in vineyard operator. Assuming that
-we have a workflow that contains two workloads, the first workload is a stream workload and
-the second workload is a chunk workload. The following is the yaml file of the
-`assembly workload1`_:
+In this example, we demonstrate how to utilize the assembly mechanism in the
+vineyard operator. We have a workflow consisting of two workloads: the first
+workload processes a stream, and the second workload processes a chunk. The
+assembly mechanism is used to convert the stream output from the first workload
+into a chunk format that can be consumed by the second workload. The following
+YAML file represents the `assembly workload1`_:
 
 .. note::
 
-    Please make sure you have installed the vineyard operator and vineyardd before
-    running the following yaml file.
+    Ensure that the vineyard operator and vineyardd are installed before
+    executing the following YAML file.
 
 .. code:: bash
 
@@ -1327,9 +1334,9 @@ the second workload is a chunk workload. The following is the yaml file of the
     NAME                ID                  NAME   SIGNATURE           TYPENAME                      INSTANCE   HOSTNAME
     o001d1b280049b146   o001d1b280049b146          s001d1b280049a4d4   vineyard::RecordBatchStream   0          kind-worker2
 
-From the above output, we can see that the localobjects produced by the first workload is a
-stream type. Next, we deploy the second workload with the assembly mechanism.
-The following is the yaml file of the `assembly workload2`_:
+From the output above, it is evident that the localobjects generated by the first
+workload are of the stream type. Next, we will deploy the second workload utilizing
+the assembly mechanism. The following YAML file represents the `assembly workload2`_:
 
 .. code:: bash
 
@@ -1386,9 +1393,9 @@ The following is the yaml file of the `assembly workload2`_:
   EOF
 
 
-After the second workload is deployed, it is still pending, which means that the scheduler
-recognizes that the workload needs an assembly operation, so the following assembly operation
-CR will be created.
+Upon deploying the second workload, it remains in a pending state. This indicates that the scheduler
+has identified the need for an assembly operation, and consequently, the corresponding assembly
+operation Custom Resource (CR) will be created.
 
 .. code:: bash
 
@@ -1452,40 +1459,39 @@ to store the globalobject id as follows.
   kind: ConfigMap
   ...
 
-When the assembly operation is completed, the scheduler will reschedule the second workload
-and it will be deployed successfully as follows.
+Upon completion of the assembly operation, the scheduler will reschedule the second workload,
+allowing it to be successfully deployed as shown below:
 
 .. code:: bash
 
   $ kubectl get pod -n vineyard-job
   NAME                               READY   STATUS      RESTARTS   AGE
   assemble-o001d1b280049b146-fzws7   0/1     Completed   0          9m55s
-  assembly-job1-86c99c995f-nzns8     1/1     Punning     0          8m
-  assembly-job2-646b78f494-cvz2w     1/1     Punning     0          9m
+  assembly-job1-86c99c995f-nzns8     1/1     Running     0          8m
+  assembly-job2-646b78f494-cvz2w     1/1     Running     0          9m
 
-The above process of the assembly operation is shown in the `local assembly e2e test`_.
-You could refer `assembly demo`_ and `local assembly operation`_
-to get more details.
+The assembly operation process is demonstrated in the `local assembly e2e test`_. For more
+details, please refer to the `assembly demo`_ and `local assembly operation`_.
 
-Besides, we also support `distributed assembly operation`_, you could
-try the `distributed assembly e2e test` to get some inspiration.
+Additionally, we also support `distributed assembly operation`_. You can explore the
+`distributed assembly e2e test` for further insights.
 
-Repartition
-^^^^^^^^^^^
+Repartitioning
+^^^^^^^^^^^^^^
 
-Repartition is a mechanism to repartition the data in the vineyard cluster. It's useful when
-the number of workers can't meet the need for partitions. E.g. Assuming a workload creates 4
-partitions, but the number of workers in the next workload is only 3, the repartition mechanism
-will repartition the partitions from 4 to 3 so that the next workload can work as expected.
-At present, the vineyard operator only supports repartition based on `dask`_.
+Repartitioning is a mechanism that adjusts the distribution of data across the Vineyard
+cluster. It is particularly useful when the number of workers cannot accommodate the required
+number of partitions. For example, if a workload creates 4 partitions, but the subsequent
+workload has only 3 workers, the repartitioning mechanism will redistribute the partitions
+from 4 to 3, allowing the next workload to function as expected. Currently, the Vineyard
+operator supports repartitioning based on `dask`_.
 
+Initiating a Repartition Job
+""""""""""""""""""""""""""""
 
-Triggering an repartition job
-"""""""""""""""""""""""""""""
-
-For the workloads based on dask, we provide some annotations and labels to help users to use
-the assembly mechanism in vineyard operator. The following are all labels and annotations that
-we provide:
+For workloads based on Dask, we provide several annotations and labels to help users
+utilize the repartitioning mechanism in the Vineyard operator. The following list contains
+all the labels and annotations we offer:
 
 .. admonition:: Dask Repartition Drivers Configurations
    :class: admonition-details
@@ -1851,7 +1857,7 @@ up the data. The following is the yaml file of the backup:
           storage: 1Gi
   EOF
 
-Assuming that the vineyard cluster crashes at some point, we create Recover CR to
+Assuming that the vineyard cluster crashes at some point, we create :code:`Recover` CR to
 restore the data in the vineyard cluster, and the recover yaml file is as follows:
 
 .. code:: yaml

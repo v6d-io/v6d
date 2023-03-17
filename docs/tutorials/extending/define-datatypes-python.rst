@@ -6,18 +6,15 @@ Define Data Types in Python
 Objects
 ^^^^^^^
 
-As we mentioned in :ref:`vineyard-objects`, for each object in vineyard, it
-consists of two parts:
+As discussed in :ref:`vineyard-objects`, each object in vineyard comprises two components:
 
-1. The data payload stored in the corresponding vineyard instance locally
-2. The hierarchical meta data shared across the vineyard cluster
+1. The data payload, which is stored locally within the corresponding vineyard instance
+2. The hierarchical meta data, which is shared across the entire vineyard cluster
 
-In particular, ``Blob`` is the unit where the data payload lives in a vineyard
-instance.
-A blob object holds a segment of memory in the bulk store of the vineyard
-instance, so that users can save their local buffer into a blob and
-get the blob later in another process in a zero-copy fashion through
-memory mapping.
+Specifically, a ``Blob`` represents the unit where the data payload resides in a vineyard
+instance. A blob object contains a segment of memory in the bulk store of the vineyard
+instance, allowing users to save their local buffer into a blob and later retrieve the
+blob in another process using a zero-copy approach through memory mapping.
 
 .. code:: python
 
@@ -30,21 +27,21 @@ memory mapping.
 
     vineyard::Blob 28 Object <"o800000011cfa7040": vineyard::Blob>
 
-On the other hand, the hierarchical meta data of vineyard objects are
-shared across the cluster. In the following example, for simplicity,
-we launch a vineyard cluster with
-two vineyard instances in the same machine, although in practice,
-these vineyard instances are launched distributively on each machine of the cluster.
+On the other hand, vineyard objects' hierarchical meta data is shared across the entire
+cluster. In the following example, for the sake of simplicity, we will launch a vineyard
+cluster with two vineyard instances on the same machine. However, in real-world scenarios,
+these vineyard instances would typically be distributed across multiple machines within
+the cluster.
 
 .. code:: console
 
     $ python3 -m vineyard --socket /var/run/vineyard.sock1
     $ python3 -m vineyard --socket /var/run/vineyard.sock2
 
-Then we can create a distributed pair of arrays in vineyard with the
-first array stored in the first vineyard instance which listens to ipc_socket
-``/var/run/vineyard.sock1``, and the second array stored in the second instance
-listening to ipc_socket ``/var/run/vineyard.sock2``.
+With this setup, we can create a distributed pair of arrays in vineyard, where the first
+array is stored in the first vineyard instance (listening to ipc_socket at `/var/run/vineyard.sock1`),
+and the second array is stored in the second instance (listening to ipc_socket at
+`/var/run/vineyard.sock2`).
 
 .. code:: python
 
@@ -87,20 +84,21 @@ listening to ipc_socket ``/var/run/vineyard.sock2``.
 
     (None, [1, 1, 1, 1])
 
-Here we can get the meta data of the pair object from ``client2``
-though ``client1`` created it, but we can't get the payload of the
-first element of the pair from ``client2``, since it is stored locally
-in the first vineyard instance.
+In this example, we can access the metadata of the pair object from `client2` even
+though it was created by `client1`. However, we cannot retrieve the payload of the
+first element of the pair from `client2`, as it is stored locally within the first
+vineyard instance.
 
-Builders and resolvers
-^^^^^^^^^^^^^^^^^^^^^^
+Creating Builders and Resolvers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-As we shown in :ref:`builder-resolver`, vineyard allows users to register
-builders/resolvers to build/resolve vineyard objects from/to the data types
-in the client side based on the computation requirements.
+As demonstrated in :ref:`builder-resolver`, vineyard enables users to register
+builders and resolvers for constructing and resolving vineyard objects from/to
+client-side data types based on specific computational requirements.
 
-Suppose ``pyarrow`` types are employed in the context, then we can define the builder and
-resolver between ``vineyard::NumericArray`` and ``pyarrow.NumericArray`` as follows:
+For instance, if we use ``pyarrow`` types in our context, we can define the builder and
+resolver for the conversion between ``vineyard::NumericArray`` and ``pyarrow.NumericArray``
+as follows:
 
 .. code:: python
 
@@ -132,24 +130,22 @@ resolver between ``vineyard::NumericArray`` and ``pyarrow.NumericArray`` as foll
     >>>     return pa.lib.Array.from_buffers(dtype, length, [null_bitmap, buffer], null_count, offset)
 
 Finally, we register the builder and resolver for automatic building and resolving:
-
 .. code:: python
 
     >>> builder_ctx.register(pa.NumericArray, numeric_array_builder)
     >>> resolver_ctx.register('vineyard::NumericArray', numeric_array_resolver)
 
-There are cases where we have more than one resolvers or builders for a certain type,
-e.g., the :code:`vineyard::Tensor` object can be resolved as :code:`numpy.ndarray` or
-:code:`xgboost::DMatrix`. We could have
+In some cases, we may have multiple resolvers or builders for a specific type.
+For instance, the `vineyard::Tensor` object can be resolved as either `numpy.ndarray` or
+`xgboost::DMatrix`. To accommodate this, we could have:
 
 .. code:: python
 
-    def numpy_resolver(obj):
-        ...
+    >>> resolver_ctx.register('vineyard::Tensor', numpy_resolver)
+    >>> resolver_ctx.register('vineyard::Tensor', xgboost_resolver)
 
-    default_resolver_context.register('vineyard::Tensor', numpy_resolver)
-
-and
+This flexibility enables seamless integration with various libraries and frameworks by
+effectively handling different data types and their corresponding resolvers or builders.
 
 .. code:: python
 
@@ -165,9 +161,9 @@ at the same time. The stackable :code:`resolver_context` could help there,
     with resolver_context({'vineyard::Tensor', xgboost_resolver}):
         ...
 
-Assuming the default context resolves :code:`vineyard::Tensor` to :code:`numpy.ndarray`,
-inside the :code:`with resolver_context` the :code:`vineyard::Tensor` will be resolved
-to :code:`xgboost::DMatrix`, and after exiting the context the global environment
-will be restored back as default.
+Assuming the default context resolves `vineyard::Tensor` to `numpy.ndarray`, the
+`with resolver_context` allows for temporary resolution of `vineyard::Tensor` to
+`xgboost::DMatrix`. Upon exiting the context, the global environment reverts to
+its default state.
 
-The :code:`with resolver_context` is nestable as well.
+The `with resolver_context` can be nested for additional flexibility.

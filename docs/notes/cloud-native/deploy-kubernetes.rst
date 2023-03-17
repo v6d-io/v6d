@@ -8,16 +8,16 @@ Vineyard is managed by the :ref:`vineyard-operator` on Kubernetes.
 Install vineyard-operator
 -------------------------
 
-There are two ways to install vineyard operator: installing using Helm(recommended), or
-installing from source code.
+There are two recommended methods for installing the vineyard operator: using Helm (preferred) or
+installing directly from the source code.
 
 .. note::
 
-    Before you install vineyard operator, you should have a Kubernetes cluster and kubectl
-    installed. Here we use `kind`_ to create a cluster.
+    Prior to installing the vineyard operator, ensure that you have a Kubernetes cluster and kubectl
+    installed. In this guide, we will use `kind`_ to create a cluster.
 
-Before installing vineyard, you need ensure cert-manager is installed first to meet the
-requirements of the webhook components in vineyard operator:
+Before proceeding with the vineyard installation, it is essential to install cert-manager, as it is required
+by the webhook components within the vineyard operator:
 
 Install cert-manager
 ^^^^^^^^^^^^^^^^^^^^
@@ -65,7 +65,6 @@ Option #2: Install form source code
       $ kind load docker-image vineyardcloudnative/vineyard-operator:latest
 
 3. Next, deploy the vineyard operator:
-
    .. code:: bash
 
       $ make -C k8s deploy
@@ -125,9 +124,10 @@ replicas:
         imagePullPolicy: IfNotPresent
     EOF
 
-The vineyard-operator will create required dependencies (e.g., etcd) a :code:`Deployment`` for
-a 3-replicas vineyard servers. Once ready, you can inspect the components created and managed by
-vineyard-operator using :code:`kubectl`:
+The vineyard-operator efficiently creates the necessary dependencies, such as etcd, and establishes a
+:code:`Deployment` for a 3-replica vineyard server configuration. Once the setup is complete, you can
+conveniently inspect the components created and managed by the vineyard-operator using the :code:`kubectl`
+command.
 
 .. code:: bash
 
@@ -167,13 +167,12 @@ vineyard-operator using :code:`kubectl`:
 References
 ----------
 
-Besides deploying and managing vineyard cluster, the operator is responsible for scheduling workloads
-on vineyard to optimize the data sharing between tasks in workflows and triggering required data movement/
-transformation tasks as well, we list the detailed references and examples in :code:`vineyard-operator`.
+In addition to deploying and managing the vineyard cluster, the operator plays a crucial role in scheduling
+workloads on vineyard. This optimizes data sharing between tasks in workflows and triggers necessary data
+movement or transformation tasks. Detailed references and examples can be found in :code:`vineyard-operator`.
 
-To ease the interaction with vineyard on Kubernetes, we provide a command-line tool :code:`vineyardctl`
-which automate many boilerplate configuration that required during deploying workflows with vineyard
-on Kubernetes.
+To simplify interactions with vineyard on Kubernetes, we offer a command-line tool, :code:`vineyardctl`, which
+automates much of the boilerplate configuration required when deploying workflows with vineyard on Kubernetes.
 
 .. panels::
    :header: text-center

@@ -10,8 +10,8 @@ API Reference
    references/cpp-api.rst
    references/ctl.rst
 
-Vineyard currently is distributed with a Python SDK and a C++ SDK. You could find a
-detail API reference from in the following pages:
+Vineyard offers a comprehensive suite of SDKs, including Python and C++ versions.
+For detailed API references, please explore the following pages:
 
 .. panels::
    :header: text-center
@@ -33,8 +33,8 @@ detail API reference from in the following pages:
    ^^^^^^^^^^^^
    API reference for vineyard C++ SDK.
 
-Besides, a command-line tool `vineyard-ctl` is provided to ease the interaction
-with local :code:`vineyardd` instance for inspecting and debugging propose.
+In addition, the command-line tool `vineyard-ctl` is available to facilitate interactions
+with a local :code:`vineyardd` instance, making inspection and debugging tasks more efficient.
 
 .. panels::
    :header: text-center

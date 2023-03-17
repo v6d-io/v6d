@@ -1,22 +1,22 @@
 Use vineyard operator
 =====================
 
-We developed vineyard operator to manager vineyard components in Kubernetes. The tutorial
-shows show you how to use the vineyard operator step by step. See also :ref:`vineyard-operator`
-for references.
+Vineyard operator has been designed to manage vineyard components within Kubernetes.
+This tutorial provides a step-by-step guide on how to effectively utilize the vineyard
+operator. For more details, please refer to :ref:`vineyard-operator`.
 
-Step 0: (optional) Initialize kubernetes cluster
+Step 0: (optional) Initialize Kubernetes Cluster
 ------------------------------------------------
 
-If you don't have a kubernetes cluster by hand, we highly recommend to use `kind`_ to
-create a kubernetes cluster. Before creating the kubernetes cluster, please make sure
-you have the following tools already:
+If you don't have a Kubernetes cluster readily available, we highly recommend using `kind`_ to
+create one. Before setting up the Kubernetes cluster, please ensure you have the following
+tools installed:
 
 - kubectl: version >= 1.19.2
 - kind: version >= 0.14.0
 - docker: version >= 0.19.0
 
-Use kind (v0.14.0) to create a kubernetes cluster with 4 nodes(1 master nodes and 3
+Utilize kind (v0.14.0) to create a Kubernetes cluster consisting of 4 nodes (1 master node and 3
 worker nodes):
 
 .. code:: bash
@@ -102,10 +102,10 @@ Check all kubernetes nodes.
         kind-worker2         Ready    <none>          114s    v1.24.0
         kind-worker3         Ready    <none>          114s    v1.24.0
 
-Step 1: Deploy vineyard operator
---------------------------------
+Step 1: Deploy the Vineyard Operator
+-------------------------------------
 
-Create a namespace for vineyard operator.
+Create a dedicated namespace for the Vineyard Operator.
 
 .. code:: bash
 
@@ -236,11 +236,12 @@ Check the status of all vineyard resources created by helm:
         NAME                                         DESIRED   CURRENT   READY   AGE
         replicaset.apps/vineyard-operator-cbcd58cb   1         1         1       4m56s
 
-Step 2: Deploy vineyard cluster
--------------------------------
+Step 2: Deploy a Vineyard Cluster
+----------------------------------
 
-Once you have installed the vineyard operator following the steps above, then deploy
-a vineyard cluster with two vineyard instances by creating a ``Vineyardd`` CR as follows.
+After successfully installing the Vineyard operator as described in the previous step,
+you can now proceed to deploy a Vineyard cluster. To create a cluster with two Vineyard
+instances, simply create a `Vineyardd` Custom Resource (CR) as shown below.
 
 .. code:: bash
 
@@ -283,15 +284,16 @@ Check the status of all relevant resources managed by the ``vineyardd-sample`` c
         NAME                                         DESIRED   CURRENT   READY   AGE
         replicaset.apps/vineyardd-sample-879798cb6   2         2         2       2m59s
 
-Step 3: Connect to vineyard
----------------------------
+Step 3: Connect to Vineyard
+----------------------------
 
-Vineyard client support C++(mature)、python(mature)、java(immature)、golang(immature)
-and rust(immature) at present. Here for showing the feature conveniently, we use the
-python client as an example to access the vineyard cluster. Besides, vineyard provides
-two connection methods: `IPC and RPC`_. Next we will explain in turn.
+Vineyard currently supports clients in various languages, including mature support
+for C++ and Python, as well as experimental support for Java, Golang, and Rust. In
+this tutorial, we will demonstrate how to connect to a Vineyard cluster using the
+Python client. Vineyard provides two connection methods: `IPC and RPC`_. In the
+following sections, we will explore both methods.
 
-Deploy the python client on two vineyard nodes as follows.
+First, let's deploy the Python client on two Vineyard nodes as follows.
 
 .. code:: bash
 

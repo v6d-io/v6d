@@ -1,10 +1,10 @@
 :code:`multiprocessing.shared_memory` in Python
 ===============================================
 
-Vineyard supports shared memory interface of :class:`SharedMemory` and
-:class:`ShareableList` and the API is compatible with `multiprocessing.shared_memory`_.
+Vineyard offers a shared memory interface through :class:`SharedMemory` and
+:class:`ShareableList` classes, ensuring compatibility with Python's `multiprocessing.shared_memory`_.
 
-The shared memory interface can be used in the following way:
+Utilize the shared memory interface as demonstrated below:
 
 .. code:: python
 
@@ -18,9 +18,9 @@ The shared memory interface can be used in the following way:
 
 .. caution::
 
-   Note that the semantic of the vineyard's :code:`shared_memory` is slightly different
-   with the :code:`shared_memory` in python's multiprocessing module. Shared memory in
-   vineyard cannot be mutable after been visible to other clients.
+   Please be aware that the semantics of Vineyard's :code:`shared_memory` differ slightly
+   from those of Python's multiprocessing module's :code:`shared_memory`. In Vineyard,
+   shared memory cannot be modified once it becomes visible to other clients.
 
 We have added a :code:`freeze` method to make such transformation happen:
 

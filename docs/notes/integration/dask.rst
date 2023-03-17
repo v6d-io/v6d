@@ -1,10 +1,10 @@
 Dask on Vineyard
 ================
 
-The integration with Dask allows dask.array and dask.dataframe to be persisted on and loaded from Vineyard.
-In the following, we first demonstrate that, with Vineyard, it is much easier to implement the example that employs
-dask for data preprocessing and tensorflow for distributed learning,
-which was previously shown in the blog_.
+The integration with Dask enables dask.array and dask.dataframe to be seamlessly persisted in
+and retrieved from Vineyard. In the following sections, we demonstrate how Vineyard simplifies
+the implementation of an example that utilizes Dask for data preprocessing and TensorFlow for
+distributed learning, as previously showcased in the blog_.
 
 The Deployment
 --------------
@@ -12,17 +12,14 @@ The Deployment
 .. image:: ../../images/dask-tf.jpg
    :alt: Dask Tensorflow Workflow
 
-As shown in the figure above, we only use two machines for the distributed tasks
-as the purpose of demonstration.
-The vineyard damon processes are launched on both machines, so as the dask workers.
-The dask scheduler is launched in the first machine, and we also run the
-dask preprocess program here in the first step, since the dask scheduler handles the distribution
-of computation tasks among its workers.
+As illustrated in the figure above, we employ two machines for the distributed tasks for
+demonstration purposes. The Vineyard daemon processes are launched on both machines, along
+with the Dask workers. The Dask scheduler is initiated on the first machine, where we also
+run the Dask preprocessing program in the first step, as the Dask scheduler manages the
+distribution of computation tasks among its workers.
 
-Then in the second step, we will run the training program on both machines with different **TF_CONFIG**.
-For the detail of how to set up the config, please refer to documentation_.
-
-.. _documentation: https://www.tensorflow.org/tutorials/distribute/multi_worker_with_keras
+In the second step, we execute the training program on both machines with different **TF_CONFIG**
+settings. For details on configuring the setup, please refer to the `documentation`_.
 
 Preprocessing in Dask
 ---------------------
@@ -105,24 +102,27 @@ in keras of Tensorflow.
 
         multi_worker_model.fit(train_dataset, epochs=3, steps_per_epoch=70)
 
-To use the preprocessed data, we register the resolvers that can resolve a **vineyard::GlobalDataFrame** distributedly
-by multiple workers to the resolver_context. Then we can get the **tf.data.Dataset** directly from vineyard by the **get**
+To utilize the preprocessed data, we first register the resolvers capable of resolving a
+**vineyard::GlobalDataFrame** distributed across multiple workers within the resolver_context.
+Subsequently, we can directly obtain the **tf.data.Dataset** from Vineyard using the **get**
 method.
 
 .. note::
 
-   We should specify the column names for the data and label which were set in the last step.
+   It is essential to specify the column names for the data and label, as they were set in
+the previous step.
 
 Transfer Learning
 -----------------
 
-After the simple example above, now we demonstrate how the dask-vineyard integration can be leveraged in transfer learning.
-In a nutshell, transfer learning takes a pre-trained deep learning model to compute features for downstream models.
-Moreover, it's better to persist the features in memory, so that the fine-tuning of the downstream models
-will neither recompute the features nor incur too much I/O costs to read the features from disk again and again.
-In the following, we refer to the featurization_ example. We load the tf_flowers_ data as a **dask.array**;
-then use the pre-trained **ResNet50** model to generate the features; and finally save them in Vineyard.
-The global tensor in Vineyard will consists of 8 partitions, each with 400 data slots.
+In this section, we demonstrate how the dask-vineyard integration can be effectively utilized
+in transfer learning scenarios. Transfer learning is a technique where a pre-trained deep
+learning model is used to compute features for downstream models. Storing these features in
+memory is advantageous, as it eliminates the need to recompute features or incur significant
+I/O costs by repeatedly reading them from disk. We will refer to the featurization_ example
+and use the tf_flowers_ dataset as a **dask.array**. We will employ the pre-trained **ResNet50**
+model to generate features and subsequently store them in Vineyard. The resulting global
+tensor in Vineyard will consist of 8 partitions, each containing 400 data slots.
 
 .. code:: python
 
@@ -147,6 +147,7 @@ The global tensor in Vineyard will consists of 8 partitions, each with 400 data 
         global_tensor_id = vineyard.connect().put(res, dask_scheduler=dask_scheduler)
 
 
+.. _documentation: https://www.tensorflow.org/tutorials/distribute/multi_worker_with_keras
 .. _blog: http://matthewrocklin.com/blog/work/2017/02/11/dask-tensorflow
 .. _featurization: https://docs.databricks.com/_static/notebooks/deep-learning/deep-learning-transfer-learning-keras.html
 .. _tf_flowers: https://www.tensorflow.org/datasets/catalog/tf_flowers

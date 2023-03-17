@@ -35,24 +35,25 @@ consider the following fraud detection pipeline:
 From the pipeline, we observed:
 
 1. Users usually prefer to program with dedicated computing systems for different tasks in the
-   same applications For the same task, e.g., SQL and Python.
+   same applications, such as SQL and Python.
 
-   **Introducing a new computing system into production environments requires high technical
+   **Integrating a new computing system into production environments demands high technical
    effort to align with existing production environments in terms of I/O, failover, etc.**
 
 2. Data could be polymorphic. Non-relational data, such as tensors, dataframes (in Pandas) and
    graphs/networks (in `GraphScope`_) are becoming increasingly prevalent. Tables and SQL may
-   not be best way to store, exchange or process them.
+   not be the best way to store, exchange, or process them.
 
-   **Having the data transformed back and forth between different systems as "tables" could
-   be a huge overhead.**
+   **Transforming the data back and forth between different systems as "tables" could
+   result in a significant overhead.**
 
-3. Saving/loading the data to/from the external storage requires lots of memory copies and IO costs.
+3. Saving/loading the data to/from the external storage requires numerous memory copies and
+   incurs high IO costs.
 
-What is vineyard?
------------------
+What is Vineyard?
+----------------
 
-Vineyard (v6d) is an **in-memory immutable data manager** that provides **out-of-the-box high-level**
+Vineyard (v6d) is an **in-memory immutable data manager** that offers **out-of-the-box high-level**
 abstraction and **zero-copy sharing** for distributed data in big data tasks, such as
 graph analytics (e.g., `GraphScope`_), numerical computing (e.g., `Mars`_), and machine learning.
 
@@ -62,27 +63,28 @@ Features
 Efficient data sharing
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Vineyard shares immutable data across different systems via shared memory without extra overheads,
-eliminating the overhead of serialization/deserialization and IO during exchanging immutable
+Vineyard shares immutable data across different systems using shared memory without extra overheads,
+eliminating the overhead of serialization/deserialization and IO when exchanging immutable
 data between systems.
 
 Out-of-the-box data abstraction
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Vineyard defines a metadata-payload separated data model to capture the payload-commonalities and
-method-commonalities between sharable objects in different programming languages and different
-computing systems in an unified way.
+Vineyard defines a metadata-payload separated data model to capture the payload commonalities and
+method commonalities between sharable objects in different programming languages and different
+computing systems in a unified way.
 
-The interface description language :ref:`VCDL` is designed to annotate sharable members and methods
-and boilerplate code will be automatically generated for minimalist integration effort.
+The :ref:`VCDL` (Vineyard Component Description Language) is specifically designed to annotate
+sharable members and methods, enabling automatic generation of boilerplate code for minimal
+integration effort.
 
 Pluggable I/O routines
 ~~~~~~~~~~~~~~~~~~~~~~
 
-Many big data analytical tasks involve a significant amount of boilerplate routines for tasks
-unrelated to the computation itself, such as various IO adapters, data partition strategies,
-and migration jobs. Since the data structure abstraction often differs between systems, these
-routines cannot be easily reused.
+In many big data analytical tasks, a substantial portion of the workload consists of boilerplate
+routines that are unrelated to the core computation. These routines include various IO adapters,
+data partition strategies, and migration jobs. Due to differing data structure abstractions across
+systems, these routines are often not easily reusable, leading to increased complexity and redundancy.
 
 Vineyard provides common manipulation routines for immutable data as drivers, which extend
 the capabilities of data structures by registering appropriate drivers. This enables out-of-the-box
@@ -91,9 +93,9 @@ reuse of boilerplate components across diverse computation jobs.
 Data orchestration on Kubernetes
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Vineyard provides efficient distributed data sharing in cloud-native environment by embracing
-cloud-native big data processing and Kubernetes helps vineyard leverage the scale-in/out and
-scheduling ability of Kubernetes.
+Vineyard provides efficient distributed data sharing in cloud-native environments by embracing
+cloud-native big data processing. Kubernetes helps Vineyard leverage the scale-in/out and
+scheduling abilities of Kubernetes.
 
 Use cases
 ^^^^^^^^^
@@ -109,7 +111,7 @@ Use cases
       :text: Object Manager
       :classes: btn-block stretched-link
 
-   Putting and getting arbitrary objects using vineyard, in zero-copy way!
+   Put andget arbitrary objects using Vineyard, in a zero-copy way!
 
    ---
 
@@ -118,7 +120,7 @@ Use cases
       :text: Cross-system Sharing
       :classes: btn-block stretched-link
 
-   Sharing large objects across computing systems.
+   Share large objects across computing systems.
 
    ---
 
@@ -141,7 +143,7 @@ Get started now!
       :text: User Guides
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Getting started with vineyard.
+   Get started with Vineyard.
 
    ---
 
@@ -150,7 +152,7 @@ Get started now!
       :text: Deploy on Kubernetes
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Deploying vineyard on Kubernetes and accelerate big-data analytical workflows on cloud-native
+   Deploy Vineyard on Kubernetes and accelerate big-data analytical workflows on cloud-native
    infrastructures.
 
    ---
@@ -160,7 +162,7 @@ Get started now!
       :text: Tutorials
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Use cases and tutorials where vineyard can bring added-value.
+   Explore use cases and tutorials where Vineyard can bring added value.
 
    ---
 
@@ -169,7 +171,7 @@ Get started now!
       :text: Getting Involved
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Get involved and become part of the vineyard community.
+   Get involved and become part of the Vineyard community.
 
    ---
 
@@ -178,10 +180,9 @@ Get started now!
       :text: FAQ
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Frequently asked questions and discussion during adopting vineyard.
+   Frequently asked questions and discussions during the adoption of Vineyard.
 
-Vineyard is a `CNCF sandbox project`_ and indeed made successful by its community.
-
+Vineyard is a `CNCF sandbox project`_ and is made successful by its community.
 .. image:: https://v6d.io/_static/cncf-color.svg
    :width: 400
    :alt: Vineyard is a CNCF sandbox project
