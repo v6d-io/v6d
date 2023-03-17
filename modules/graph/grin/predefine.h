@@ -157,10 +157,8 @@ typedef enum {
 #undef GRIN_ASSUME_GRAPH_SINGLE_EDGE
 #undef GRIN_WITH_VERTEX_DATA
 #undef GRIN_WITH_EDGE_DATA
-#undef GRIN_ENABLE_VERTEX_LIST_ITERATOR
 #undef GRIN_ENABLE_EDGE_LIST
 #undef GRIN_ENABLE_EDGE_LIST_ITERATOR
-#undef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 /* End of Disable */
 
 /* Enable the supported features */
