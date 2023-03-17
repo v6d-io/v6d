@@ -58,7 +58,7 @@ routine reuse (e.g., I/O drivers). More specifically,
    to the UNIX domain socket.
 
    The IPC client is used to establish an IPC connection between the Vineyard server and
-the client, enabling memory-sharing (by :code:`mmap` and transferring the file descriptor)
+   the client, enabling memory-sharing (by :code:`mmap` and transferring the file descriptor)
    between the Vineyard server and the computing engines.
 
 2. The **RPC client** communicates with *remote* Vineyard instances by connecting

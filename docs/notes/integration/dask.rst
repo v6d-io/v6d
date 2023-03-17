@@ -110,7 +110,7 @@ method.
 .. note::
 
    It is essential to specify the column names for the data and label, as they were set in
-the previous step.
+   the previous step.
 
 Transfer Learning
 -----------------

@@ -80,6 +80,3 @@ We also have a public roadmap that outlines our future goals and highlights our 
        :type: ref
        :text: Our Roadmap
        :classes: btn-block stretched-link
-       :type: ref
-       :text: Our Roadmap
-       :classes: btn-block stretched-link

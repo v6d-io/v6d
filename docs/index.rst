@@ -51,7 +51,7 @@ From the pipeline, we observed:
    incurs high IO costs.
 
 What is Vineyard?
-----------------
+-----------------
 
 Vineyard (v6d) is an **in-memory immutable data manager** that offers **out-of-the-box high-level**
 abstraction and **zero-copy sharing** for distributed data in big data tasks, such as
@@ -183,6 +183,7 @@ Get started now!
    Frequently asked questions and discussions during the adoption of Vineyard.
 
 Vineyard is a `CNCF sandbox project`_ and is made successful by its community.
+
 .. image:: https://v6d.io/_static/cncf-color.svg
    :width: 400
    :alt: Vineyard is a CNCF sandbox project

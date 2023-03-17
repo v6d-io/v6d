@@ -233,12 +233,12 @@ operation, and numerous small key-value pairs can significantly increase the bur
 key-value store backend of our metadata services. To address this issue, we categorize
 objects as transient or persistent.
 
-- *Transient objects* are designed for cases where the object is known not to be part of a
-   distributed object and will never need to be inspected by clients on other vineyard instances.
-   Transient objects are useful for short-lived immediate values within the progress of a
-   single computing engine.
+- **Transient objects** are designed for cases where the object is known not to be part of a
+  distributed object and will never need to be inspected by clients on other vineyard instances.
+  Transient objects are useful for short-lived immediate values within the progress of a
+  single computing engine.
 
-- *Persistent objects* are designed for cases where the object chunk will be used to form
+- **Persistent objects** are designed for cases where the object chunk will be used to form
   a larger distributed object, and the metadata is needed when applications inspect the
   distributed object. Persistent objects and distributed objects are commonly used to pass
   intermediate data between two distributed engines.

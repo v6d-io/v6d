@@ -18,6 +18,7 @@ Airflow scheduler executes the tasks on workflows while adhering to the specifie
 dependencies.
 
 Consider the following ETL workflow as an example [1]_,
+
 .. code:: python
 
     @dag(schedule_interval=None, start_date=days_ago(2), tags=['example'])
