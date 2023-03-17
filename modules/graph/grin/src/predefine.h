@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef GRIN_SRC_PREDEFINE_H_
 #define GRIN_SRC_PREDEFINE_H_
 
-#include "graph/grin/include/predefine.h"
+#include "graph/grin/predefine.h"
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/arrow_fragment_group.h"
 #include "graph/fragment/arrow_fragment_impl.h"

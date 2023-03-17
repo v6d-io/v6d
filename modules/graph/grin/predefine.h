@@ -94,55 +94,55 @@ typedef enum {
 
 /** @ingroup TopologyMacros
  * @brief Enable the vertex list structure. 
- * The vertex list related APIs follow the design principle of GRIN List.
+ * The vertex list related APIs follow the design of GRIN List.
 */
 #define GRIN_ENABLE_VERTEX_LIST
 
 /** @ingroup TopologyMacros
  * @brief Enable the vertex list array-style retrieval. 
- * The vertex list related APIs follow the design principle of GRIN List.
+ * The vertex list related APIs follow the design of GRIN List.
 */
 #define GRIN_ENABLE_VERTEX_LIST_ARRAY
 
 /** @ingroup TopologyMacros
  * @brief Enable the vertex list iterator. 
- * The vertex list iterator related APIs follow the design principle of GRIN Iterator.
+ * The vertex list iterator related APIs follow the design of GRIN Iterator.
 */
 #define GRIN_ENABLE_VERTEX_LIST_ITERATOR
 
 /** @ingroup TopologyMacros
  * @brief Enable the edge list structure. 
- * The edge list related APIs follow the design principle of GRIN List.
+ * The edge list related APIs follow the design of GRIN List.
 */
 #define GRIN_ENABLE_EDGE_LIST
 
 /** @ingroup TopologyMacros
  * @brief Enable the edge list array-style retrieval. 
- * The edge list related APIs follow the design principle of GRIN List.
+ * The edge list related APIs follow the design of GRIN List.
 */
 #define GRIN_ENABLE_EDGE_LIST_ARRAY
 
 /** @ingroup TopologyMacros
  * @brief Enable the edge list iterator. 
- * The edge list iterator related APIs follow the design principle of GRIN Iterator.
+ * The edge list iterator related APIs follow the design of GRIN Iterator.
 */
 #define GRIN_ENABLE_EDGE_LIST_ITERATOR
 
 /** @ingroup TopologyMacros
  * @brief Enable the adjacent list structure. 
- * The adjacent list related APIs follow the design principle of GRIN List.
+ * The adjacent list related APIs follow the design of GRIN List.
 */
 #define GRIN_ENABLE_ADJACENT_LIST
 
 /** @ingroup TopologyMacros
  * @brief Enable the adjacent list array-style retrieval. 
- * The adjacent list related APIs follow the design principle of GRIN List.
+ * The adjacent list related APIs follow the design of GRIN List.
 */
 #define GRIN_ENABLE_ADJACENT_LIST_ARRAY
 
 /** @ingroup TopologyMacros
  * @brief Enable the adjacent list iterator. 
- * The adjacent list iterator related APIs follow the design principle of GRIN Iterator.
+ * The adjacent list iterator related APIs follow the design of GRIN Iterator.
 */
 #define GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 ///@}
@@ -202,7 +202,7 @@ typedef enum {
 
 /** @ingroup PartitionMacros
  * @brief The storage provides natural number IDs for partitions.
- * It follows the design principle of natural number ID trait in GRIN.
+ * It follows the design of natural number ID trait in GRIN.
 */
 #define GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
 
@@ -485,7 +485,7 @@ typedef enum {
  * @brief There are property names for vertex properties. The relationship between property
  * name and properties is one-to-many, because properties bound to different vertex/edge
  * types are distinguished even they may share the same property name. Please refer to
- * the design principle of Property for details.
+ * the design of Property for details.
 */
 #define GRIN_WITH_VERTEX_PROPERTY_NAME
 
@@ -496,7 +496,7 @@ typedef enum {
 
 /** @ingroup PropertyMacros
  * @brief The storage provides natural number IDs for vertex types.
- * It follows the design principle of natural ID trait in GRIN.
+ * It follows the design of natural ID trait in GRIN.
 */
 #define GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
 
@@ -522,7 +522,7 @@ typedef enum {
 /** @ingroup PropertyMacros
  * @brief The storage provides natural number IDs for properties bound to
  * a certain vertex type.
- * It follows the design principle of natural ID trait in GRIN.
+ * It follows the design of natural ID trait in GRIN.
 */
 #define GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
 
@@ -543,7 +543,7 @@ typedef enum {
  * @brief There are property names for edge properties. The relationship between property
  * name and properties is one-to-many, because properties bound to different vertex/edge
  * types are distinguished even they may share the same property name. Please refer to
- * the design principle of Property for details.
+ * the design of Property for details.
 */
 #define GRIN_WITH_EDGE_PROPERTY_NAME
 
@@ -554,7 +554,7 @@ typedef enum {
 
 /** @ingroup PropertyMacros
  * @brief The storage provides natural number IDs for edge types.
- * It follows the design principle of natural ID trait in GRIN.
+ * It follows the design of natural ID trait in GRIN.
 */
 #define GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
 
@@ -580,7 +580,7 @@ typedef enum {
 /** @ingroup PropertyMacros
  * @brief The storage provides natural number IDs for properties bound to
  * a certain edge type.
- * It follows the design principle of natural ID trait in GRIN.
+ * It follows the design of natural ID trait in GRIN.
 */
 #define GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
 ///@}
