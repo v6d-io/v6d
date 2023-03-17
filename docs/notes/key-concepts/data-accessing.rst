@@ -1,64 +1,65 @@
 Data Accessing
 ==============
 
-Vineyard supports distributed object sharing by-design, and provides both the IPCClient
-and RPCClient for data accessing. You would learn how accessing objects inside vineyard in
-various ways. For vineyard objects basics, please refer to :ref:`metadata-and-payloads`
-and :ref:`distributed-objects`.
+Vineyard is designed to support distributed object sharing and offers both IPCClient
+and RPCClient for efficient data access. This section will guide you through various
+methods of accessing objects within vineyard. For more information on vineyard object
+basics, please refer to :ref:`metadata-and-payloads` and :ref:`distributed-objects`.
 
 IPCClient vs. RPCClient
 -----------------------
 
-From the above figure, we can see that the data is partitioned across different vineyard
-instances. We have illustrated idea behind zero-copy sharing in :ref:`architecture-of-vineyard`.
-Memory mapping is only available from the clients on the same instance whereas the metadata
-is globally synchronized and available from clients that connect to instances on other hosts.
+As depicted in the above figure, data is partitioned across different vineyard
+instances. The concept of zero-copy sharing was explained in :ref:`architecture-of-vineyard`.
+Memory mapping is only available for clients on the same instance, while metadata
+is globally synchronized and accessible from clients connected to instances on other hosts.
 
-Vineyard provides two clients to support the IPC and RPC scenarios:
+Vineyard provides two clients to support IPC and RPC scenarios:
 
 - IPC Client
 
-  - Can only be connected to instances that deployed on the same hosts.
-  - Full support for local data accessing. Accessing local blobs can be done in a zero-copy
-    enabled by memory mapping.
+  - Can only connect to instances deployed on the same host.
+  - Offers full support for local data access. Accessing local blobs is enabled
+    by zero-copy memory mapping.
 
 - RPC Client
 
-  - Can be connected to any instance whose RPC endpoint is enabled
-  - Limited support for remote data accessing. Creating and fetching remote blobs yields a
-    considerable network transferring overhead.
+  - Can connect to any instance with an enabled RPC endpoint.
+  - Provides limited support for remote data access. Creating and fetching remote
+    blobs incurs considerable network transfer overhead.
 
 Local vs. Remote
 ^^^^^^^^^^^^^^^^
 
-The distributed shared objects are generally partitioned and each vineyard instance manages
-some chunks of the whole object. As shown in :ref:`distributed-objects`, a :code:`GlobalTensor`
-is partitioned into three chunks and each instance hold one chunk of type :code:`Tensor`.
+Distributed shared objects are typically partitioned, with each vineyard instance managing
+some chunks of the entire object. As shown in :ref:`distributed-objects`, a :code:`GlobalTensor`
+is partitioned into three chunks, and each instance holds one chunk of type :code:`Tensor`.
 
-**From the perspective of computing engines**, the distributed computing engines launches
-workers upon the vineyard instances. Each worker connects the co-located local instance and
-is responsible for processing chunks in the local instance. E.g., we start a Dask cluster on
-vineyard cluster illustrated in the picture above, and each Dask worker is responsible for
-executing computation on its local chunks. Some computing tasks require communication between
-workers, e.g., aggregation. In such cases the communication is performed by the computing
-engines itself (here the Dask cluster).
+**From the perspective of computing engines**, distributed computing engines launch
+workers on vineyard instances. Each worker connects to the co-located local instance and
+is responsible for processing chunks in that local instance. For example, when starting a Dask
+cluster on a vineyard cluster as illustrated in the picture above, each Dask worker is responsible
+for executing computations on its local chunks. Some computing tasks require communication between
+workers, such as aggregation. In these cases, the communication is performed by the computing
+engine itself (in this case, the Dask cluster).
 
 .. tip::
 
-    We assume the computing engines upon vineyard is responsible to schedule the tasks based
-    on the awareness of the underlying data partitioning inside the vineyard cluster.
+    We assume that the computing engines built upon vineyard are responsible for scheduling
+    tasks based on their awareness of the underlying data partitioning within the vineyard
+    cluster.
 
-    Such a design fits commonly-used modern computing engines, e.g., GraphScope, Spark, Presto,
-    Dask, Mars and Ray pretty well.
+    This design is well-suited for commonly-used modern computing engines,such as GraphScope,
+    Spark, Presto, Dask, Mars, and Ray.
 
 Local Objects
 -------------
 
-Creating and accessing local objects in vineyard is easy as :code:`put` and :code:`get` (see
+Creating and accessing local objects in vineyard can be easily achieved using :code:`put` and :code:`get` methods (see
 :meth:`vineyard.IPCClient.put` and :meth:`vineyard.IPCClient.get`).
 
 .. code:: python
-   :caption: Creating and accessing local objects is easy as :code:`put` and :code:`get` 
+   :caption: Effortlessly create and access local objects using :code:`put` and :code:`get`
 
     >>> import pandas as pd
     >>> import vineyard
@@ -76,8 +77,6 @@ Creating and accessing local objects in vineyard is easy as :code:`put` and :cod
     >>> # get object from vineyard using object id
     >>> data = vineyard_ipc_client.get(r)
     >>> data
-    In [10]: data
-    Out[10]:
               0         1
     0  0.534487  0.261941
     1  0.901056  0.441583
@@ -129,14 +128,14 @@ vineyard cluster, which returns a :class:`vineyard.ObjectMeta` value:
 Using blobs
 ^^^^^^^^^^^
 
-Vineyard also provides low level APIs to create and access local blobs,
+Vineyard offers low-level APIs for creating and accessing local blobs with enhanced efficiency:
 
-- :meth:`vineyard.IPCClient.create_blob`: create a empty blob builder :class:`vineyard.BlobBuilder`
-  and **then fill it**.
-- :meth:`vineyard.IPCClient.get_blob`: obtain a blob :class:`vineyard.Blob` from the vineyard
-  cluster in zero copy fashion.
-- :meth:`vineyard.IPCClient.get_blobs`: obtain a set of blobs :code:`List[vineyard.Blob]` from
-  the vineyard cluster in zero copy fashion.
+- :meth:`vineyard.IPCClient.create_blob`: creates an empty :class:`vineyard.BlobBuilder` for
+  you to fill with data.
+- :meth:`vineyard.IPCClient.get_blob`: retrieves a :class:`vineyard.Blob` from the vineyard
+  cluster using zero-copy techniques.
+- :meth:`vineyard.IPCClient.get_blobs`: fetches a list of :code:`List[vineyard.Blob]` from the
+  vineyard cluster, also utilizing zero-copy methods.
 
 .. code:: python
    :caption: Creating local blobs
@@ -171,15 +170,15 @@ Vineyard also provides low level APIs to create and access local blobs,
 Remote Objects
 --------------
 
-The RPC client can be used to inspect the remote object metadata and operate blobs on remote
-cluster with network transferring cost.
+The RPC client enables inspection of remote object metadata and facilitates operations on blobs
+within the remote cluster, while taking into account the associated network transfer costs.
 
 Inspecting metadata
 ^^^^^^^^^^^^^^^^^^^
 
-The method :meth:`vineyard.RPCClient.get_meta` can be used to access the object metadata,
-like :meth:`vineyard.IPCClient.get_meta`, but could be used over the connection to a remote
-instance,
+The method :meth:`vineyard.RPCClient.get_meta` allows you to access object metadata in a similar
+manner to :meth:`vineyard.IPCClient.get_meta`, but with the added capability of connecting to a
+remote instance.
 
 .. code:: python
    :caption: Metadata accessing using RPCClient
@@ -199,14 +198,14 @@ instance,
 Using remote blobs
 ^^^^^^^^^^^^^^^^^^
 
-However, as lacking of memory sharing between hosts, the zero-copy data sharing is not
-possible when connecting to a vineyard instance that isn't deployed on the same host with
-the client. Moving data over network yields considerable cost and vineyard requests the
-user to issue a :code:`migrate` command explicitly to move the data from the remote
-instance to the local instance, see also :ref:`Object Migration in Vineyard <client-side>`.
+However, due to the absence of memory sharing between hosts, zero-copy data sharing is not feasible when
+connecting to a vineyard instance that is not deployed on the same host as the client. Transferring data
+over the network incurs significant costs, and vineyard requires users to explicitly issue a :code:`migrate`
+command to move data from the remote instance to the local instance. For more details, please refer to
+:ref:`Object Migration in Vineyard <client-side>`.
 
-For convenience, we also provides APIs to fetch remote blobs to local client by transferring
-the payloads over network,
+For added convenience, we also provide APIs to fetch remote blobs to the local client by transferring
+payloads over the network.
 
 - :meth:`vineyard.RPCClient.create_remote_blob`: put a **filled** remote blob builder
   :class:`vineyard.RemoteBlobBuilder` to connected remote instance.
@@ -252,35 +251,34 @@ the payloads over network,
 
 .. warning::
 
-    The blob creation API on the :class:`vineyard.IPCClient` and :class:`vineyard.RPCClient`
-    differs slightly. The :meth:`vineyard.IPCClient.create_blob` creates a empty blob builder
-    by allocating a shared memory buffer first, then let the user to fill the buffer, and
-    finally seal the buffer. However the :meth:`vineyard.RPCClient.create_remote_blob` creates
-    a remote blob builder on-the-fly first, then let the user to fill the buffer, and finally
-    using the client API to send to buffer (the :code:`remote_buffer_builder`) to the remote
-    instance.
+    The APIs for creating blobs in :class:`vineyard.IPCClient` and :class:`vineyard.RPCClient`
+    have subtle differences. The :meth:`vineyard.IPCClient.create_blob` method first allocates
+    a shared memory buffer to create an empty blob builder, allowing the user to fill the buffer
+    and then seal it. In contrast, the :meth:`vineyard.RPCClient.create_remote_blob` method
+    creates a remote blob builder on-the-fly, enabling the user to fill the buffer and subsequently
+    use the client API to send the :code:`remote_buffer_builder` to the remote instance.
 
-Using distributed objects
--------------------------
+Utilizing Distributed Objects
+-----------------------------
 
-In the picture at the beginning of this section, we show that vineyard is capable to share
-distributed objects that partitioned across multiple hosts. Accessing the distributed objects
-in vineyard involves the following two different ways:
+In the illustration at the beginning of this section, we demonstrate that vineyard is capable of sharing
+distributed objects partitioned across multiple hosts. Accessing these distributed objects
+in vineyard can be achieved through two distinct approaches:
 
-- Accessing the metadata using the :code:`RPCClient`:
+- Inspecting metadata using the :code:`RPCClient`:
 
-  The metadata of global objects can be inspected using the :class:`vineyard.RPCClient`, i.e.,
-  the computing engines can know the distribution of partitions of global tensor using the
-  RPCClient, then schedule jobs over those chunks by respecting the distribution information.
+  The metadata of global objects can be examined using the :class:`vineyard.RPCClient`. This allows
+  computing engines to understand the distribution of partitions of global tensors using the
+  RPCClient, and subsequently schedule jobs over those chunks based on the distribution information.
 
-  Mars works in such a way to consume distributed tensors and dataframes in vineyard.
+  Mars employs this method to consume distributed tensors and dataframes in vineyard.
 
-- Accessing the local partitions of global objects using the :code:`IPCClient`:
+- Accessing local partitions of global objects using the :code:`IPCClient`:
 
-  Another common pattern of accessing shared global objects is launching a worker on each
-  instance where the global object is partitioned, and then using the :class:`vineyard.IPCClient`
-  to get the local partitions of the global object. Each worker is responsible to process
-  its local partitions.
+  Another prevalent pattern for accessing shared global objects involves launching a worker on each
+  instance where the global object is partitioned. Then, using the :class:`vineyard.IPCClient`,
+  workers can obtain the local partitions of the global object. Each worker is responsible for
+  processing its local partitions.
 
-  Such a pattern is commonly used in many computing engines that has been integrated with
-  vineyard, e.g., GraphScope and Presto.
+  This pattern is commonly utilized in many computing engines that have been integrated with
+  vineyard, such as GraphScope and Presto.

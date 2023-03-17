@@ -12,17 +12,17 @@ Key Concepts
    key-concepts/streams.rst
    key-concepts/io-drivers.rst
 
-The *User Guide* sections provides a comprehensive perspective of the design and
-implementation of vineyard. Including a detailed environment setup guidance, the
-architecture, as well as the core features inside the vineyard engine.
+The *User Guide* section offers an in-depth understanding of vineyard's design
+and implementation. It covers detailed environment setup instructions, the
+architecture, and the core features within the vineyard engine.
 
-*More details about the internals of vineyard will be added soon*.
+*Additional information on vineyard's internals will be provided soon*.
 
 .. tip::
 
-   If this is the first time using vineyard, checking out the
-   `Getting Started <https://v6d.io/notes/getting-started.html>`_ page first would
-   be better.
+   If you are new to vineyard, we recommend starting with the
+   `Getting Started <https://v6d.io/notes/getting-started.html>`_ page for a smoother
+   introduction.
 
 Concepts
 --------

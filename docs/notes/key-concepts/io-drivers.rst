@@ -27,10 +27,9 @@ registration examples.
     >>>         if r is not None:
     >>>             return r
     >>>     raise RuntimeError('Unable to find a proper IO driver for %s' % path)
-
+    >>>
     >>> # different driver functions are registered as follows
     >>> open.register('file', local_driver)
-    >>> open.register('kafka', kafka_driver)
 
 
 Most importantly, the registration design allows users to register their own  drivers

@@ -11,10 +11,10 @@ Getting Involved
    developers/troubleshooting.rst
    developers/roadmap.rst
 
-Vineyard is an open-source project and has been accepted by CNCF sandbox in April, 2021,
-and indeed made successfully by the open-source community. We are striving to engage
-people in the community to help us make vineyard better and you could find the community
-welcoming and responsible by join our Github discussion or Slack channel:
+Vineyard is an open-source project that was accepted into the CNCF sandbox in April 2021.
+It has been successfully developed and maintained by the open-source community. We are
+committed to engaging community members to help us improve Vineyard. You will find our
+community welcoming and responsive by joining our Github discussions or Slack channel:
 
 .. panels::
     :container: container-lg pb-4
@@ -37,8 +37,8 @@ welcoming and responsible by join our Github discussion or Slack channel:
 
     :fa:`slack`
 
-To edit the vineyard source code, you will need to prepare the environments and building
-from source, following the instructions below:
+To modify the Vineyard source code, you will need to set up the development environment
+and build the project from source. Follow the instructions below:
 
 .. panels::
     :container: container-lg pb-4
@@ -50,7 +50,7 @@ from source, following the instructions below:
        :text: Building from source
        :classes: btn-block stretched-link
 
-When encounter troubles during your journal of vineyard, you may find answers from:
+If you encounter any issues during your journey with Vineyard, you may find solutions in:
 
 .. panels::
     :container: container-lg pb-4
@@ -69,8 +69,7 @@ When encounter troubles during your journal of vineyard, you may find answers fr
        :text: Github Issues
        :classes: btn-block stretched-link
 
-Finally, we have a public roadmap that lists the directions we are striving towards and
-reflects our where ongoing efforts are happening:
+We also have a public roadmap that outlines our future goals and highlights our ongoing efforts:
 
 .. panels::
     :container: container-lg pb-4
@@ -78,6 +77,9 @@ reflects our where ongoing efforts are happening:
     :body: text-center card-body-less-padding
 
     .. link-button:: developers/roadmap
+       :type: ref
+       :text: Our Roadmap
+       :classes: btn-block stretched-link
        :type: ref
        :text: Our Roadmap
        :classes: btn-block stretched-link

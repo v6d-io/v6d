@@ -3,19 +3,19 @@
 Streams in Vineyard
 ===================
 
-Stream is an abstraction upon the immutable data sharing storage that allows
-convenient pipelining between computing engines. Like
-`pipe <https://man7.org/linux/man-pages/man2/pipe.2.html>`_, stream in vineyard
-enable efficiently inter-engine communication without introducing the overhead
-of data serialization/deserialization and copying.
+Streams in Vineyard serve as an abstraction over the immutable data sharing storage,
+facilitating seamless pipelining between computing engines. Similar to
+`pipe <https://man7.org/linux/man-pages/man2/pipe.2.html>`_, Vineyard's streams enable
+efficient inter-engine communication while minimizing the overhead associated with
+data serialization/deserialization and copying.
 
-A common use case of stream in vineyard is one process continues to producing
-data chunks (e.g., an IO reader) and another process can do some scan computing
-over the data (e.g., filtering and aggregation operators). A stream is consist
-of a sequence of immutable data chunks that produced by the former engine and
-consumed by the later engine.
+A typical use case for streams in Vineyard involves one process continuously producing
+data chunks (e.g., an IO reader) while another process performs scan computations
+on the data (e.g., filtering and aggregation operations). A stream consists of a
+sequence of immutable data chunks, produced by the former engine and consumed by the
+latter engine.
 
-This section will cover the usage of streams in vineyard.
+This section will explore the utilization of streams in Vineyard.
 
 Using streams
 -------------
@@ -43,8 +43,8 @@ We first import required packages:
 Producer and consumer
 ---------------------
 
-We define a producer which generate some random dataframe chunks and put into
-the stream:
+We define a producer that generates random dataframe chunks and inserts them
+into the stream:
 
 .. code:: python
    :caption: A producer of :code:`RecordBatchStream`
@@ -65,8 +65,8 @@ the stream:
             produced.append((chunk_id, chunk))
         writer.finish()
 
-And a consumer which takes the chunks from the stream in a loop until receive a
-:code:`StopIteration` exception:
+Additionally, we create a consumer that retrieves the chunks from the stream in a
+loop, continuing until it encounters a :code:`StopIteration` exception:
 
 .. code:: python
    :caption: A consumer of :code:`RecordBatchStream`

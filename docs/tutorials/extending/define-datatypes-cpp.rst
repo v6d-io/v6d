@@ -1,20 +1,21 @@
 .. _define-cpp-types:
 
-Define Data Types in C++
-========================
+Defining Custom Data Types in C++
+=================================
 
-Vineyard has already support a set of efficient builtin data types in
-the C++ SDK, e.g., :code:`Vector`, :code:`HashMap`, :code:`Tensor`,
-:code:`DataFrame`, :code:`Table` and :code:`Graph`, (see :ref:`cpp-api`).
-However there are still scenarios where users need to develop their
-own data structures and efficiently share the data with Vineyard. Custom
-C++ data types could be easily added by following this step-by-step tutorial.
+Vineyard provides an extensive set of efficient built-in data types in
+its C++ SDK, such as :code:`Vector`, :code:`HashMap`, :code:`Tensor`,
+:code:`DataFrame`, :code:`Table`, and :code:`Graph` (refer to :ref:`cpp-api`).
+However, there may be situations where users need to develop their
+own data structures and share the data efficiently with Vineyard. This
+step-by-step tutorial guides you through the process of adding custom
+C++ data types with ease.
 
 .. note::
 
-    Note that this tutorial includes code that could be auto-generated for
-    keeping clear about the design internals and helping developers get a whole
-    picture about how vineyard client works.
+    This tutorial includes code snippets that could be auto-generated to
+    provide a clear understanding of the design internals and to help
+    developers grasp the overall functionality of the Vineyard client.
 
 ``Object`` and ``ObjectBuilder``
 --------------------------------
@@ -46,14 +47,14 @@ and the builder
 Where the object is the base class for user-defined data types, and the
 builders is responsible for placing the data into vineyard.
 
-Define your type
-----------------
+Defining Your Custom Type
+-------------------------
 
-We taking defining a custom :code:`Vector` type as example. Basically,
-a :code:`Vector` contains a :code:`vineyard::Blob` as payload, and metadata
-like :code:`dtype` and :code:`size` as well.
+Let's take the example of defining a custom `Vector` type. Essentially,
+a `Vector` consists of a `vineyard::Blob` as its payload, along with
+metadata such as `dtype` and `size`.
 
-The class for :code:`Vector` usually looks like
+The class definition for the `Vector` type typically appears as follows:
 
 .. code:: cpp
 
@@ -79,10 +80,11 @@ The class for :code:`Vector` usually looks like
         }
     };
 
-Register C++ types
-------------------
+Registering C++ Types
+---------------------
 
-We first migrate the existing :code:`Vector<T>` to vineyard's :code:`Object`,
+First, we need to adapt the existing :code:`Vector<T>` to become a Vineyard
+:code:`Object`,
 
 .. code:: diff
 
@@ -108,32 +110,32 @@ We first migrate the existing :code:`Vector<T>` to vineyard's :code:`Object`,
          ...
      }
 
-Note the two changes above,
+Observe the two key modifications above:
 
-+ inherits from :code:`vineyard::Registered<Vector<T>>`:
++ Inheriting from :code:`vineyard::Registered<Vector<T>>`:
 
-  :code:`vineyard::Registered<T>` is a helper to generate some static
-  initialization stubs to register the data type :code:`T` to the type
-  resolving factory, and associate the type :code:`T` with its typename.
-  The typename is the auto-generated readable name for C++ types, e.g.,
+  :code:`vineyard::Registered<T>` serves as a helper to generate static
+  initialization stubs, registering the data type :code:`T` with the type
+  resolving factory and associating the type :code:`T` with its typename.
+  The typename is an auto-generated, human-readable name for C++ types, e.g.,
   :code:`"Vector<int32>"` for :code:`Vector<int32_t>`.
 
-+ The zero-parameter static constructor :code:`Create()`:
++ Implementing the zero-parameter static constructor :code:`Create()`:
 
-  :code:`Create()` is a static function that will be registered to
-  the resolving factory by helper :code:`vineyard::Registered<T>` and
-  used to construct a instance of type :code:`T` first when getting objects
-  from vineyard.
+  :code:`Create()` is a static function registered with the
+  resolving factory by the helper :code:`vineyard::Registered<T>`. It is
+  used to construct an instance of type :code:`T` when retrieving objects
+  from Vineyard.
 
-  Vineyard client looks up the static constructor by :code:`typename` in
-  the metadata of vineyard objects store in the daemon server.
+  The Vineyard client locates the static constructor using the :code:`typename`
+  found in the metadata of Vineyard objects stored in the daemon server.
 
-To obtain the object :code:`Vector<T>` from vineyard's metadata, we need to
-implements a `Construct` method as well. The :code:`Construct` method takes
-a :code:`vineyard::ObjectMeta` as input, and retrieve metadata as well as
-members from the metadata to fill its own data members. The memory in member
+To retrieve the object :code:`Vector<T>` from Vineyard's metadata, we need to
+implement a `Construct` method as well. The :code:`Construct` method takes
+a :code:`vineyard::ObjectMeta` as input and extracts metadata and
+members from it to populate its own data members. The memory in the member
 :code:`buffer` (a :code:`vineyard::Blob`) is shared using memory mapping,
-without the cost of copying.
+eliminating the need for copying.
 
 .. code:: diff
 
@@ -155,16 +157,15 @@ without the cost of copying.
 Builder
 -------
 
-Next, we go the builder part. The :code:`vineyard::ObjectBuilder` contains two
-part,
+Moving on to the builder section, the :code:`vineyard::ObjectBuilder` consists of two parts:
 
-+ :code:`Build()`: this method is responsible for storing blobs of custom data
-  structures into vineyard
++ :code:`Build()`: This method is responsible for storing the blobs of custom data
+  structures into Vineyard.
 
-+ :code:`_Seal()`: this method is responsible for generate the corresponding
-  metadata and putting the metadata into vineyard
++ :code:`_Seal()`: This method is responsible for generating the corresponding metadata
+  and inserting the metadata into Vineyard.
 
-For our :code:`Vector<T>` type, we first define a general vector builder,
+For our :code:`Vector<T>` type, let's first define a general vector builder:
 
 .. code:: cpp
 
@@ -186,10 +187,10 @@ For our :code:`Vector<T>` type, we first define a general vector builder,
         }
     };
 
-The builder allocate the required memory based on required :code:`size` to contain
-the elements, and a `[]` operator to fill the data in.
+The builder allocates the necessary memory based on the specified :code:`size` to accommodate
+the elements and provides a `[]` operator to populate the data.
 
-Now we adapts the builder above as a `ObjectBuilder` in vineyard,
+Next, we adapt the above builder as a `ObjectBuilder` in Vineyard,
 
 .. code:: diff
 
@@ -236,14 +237,14 @@ Now we adapts the builder above as a `ObjectBuilder` in vineyard,
          }
      };
 
-To accessing the private member fields and member methods, the builder may
-need to be added as a friend class of the original type declaration.
+To access private member fields and methods, the builder may need to be
+added as a friend class of the original type declaration.
 
 .. note::
 
-   The builder needs to directly access the private data member of
-   :code:`Vector<T>`, thus we need to makes the builder as a friend class of
-   our vector type,
+   Since the builder requires direct access to the private data members of
+   :code:`Vector<T>`, it is necessary to declare the builder as a friend class
+   of our vector type,
 
 .. code:: diff
 
@@ -258,15 +259,17 @@ need to be added as a friend class of the original type declaration.
     +  friend class VectorBuilder<T>;
      };
 
-As you can see in the above example, there are many boilerplate snippets
-in the builder and constructor. They are be auto-generated from the layout
-of class :code:`Vector<T>` based on the static analysis of user's source code.
+In the example above, you may notice that the builder and constructor contain numerous
+boilerplate snippets. These can be auto-generated based on the layout of the class
+:code:`Vector<T>` through static analysis of the user's source code, streamlining
+the process and enhancing readability.
 
-Usage and examples
-------------------
+Utilizing Custom Data Types with Vineyard
+-----------------------------------------
 
-Finally we are able to build our custom data types into vineyard and retrieve
-it back, using vineyard client,
+At this point, we have successfully defined our custom data types and integrated them
+with Vineyard. Now, we can demonstrate how to build these custom data types using the
+Vineyard client and retrieve them for further processing.
 
 .. code:: cpp
 
@@ -289,19 +292,20 @@ it back, using vineyard client,
         }
     }
 
-Cross-language
---------------
+Cross-Language Compatibility
+----------------------------
 
-Vineyard keeps the same design principle for SDKs in other languages, e.g.,
-Java and Python. For an example in Python about the vineyard objects and its
-builders, see also :ref:`builder-resolver`.
+Vineyard maintains consistent design principles across SDKs in various languages,
+such as Java and Python. For an example of Vineyard objects and their builders in
+Python, please refer to :ref:`builder-resolver`.
 
-As described in the example above, there are a lots of boilerplate code when
-defining the constructor and builder. To make the integration with vineyard
-easier, a code generator is already on the way to generate SDKs in different
-languages based on a C++-like DSL, just stay tuned!
+As demonstrated in the example above, there is a significant amount of boilerplate
+code involved in defining constructors and builders. To simplify the integration
+with Vineyard, we are developing a code generator that will automatically produce
+SDKs in different languages based on a C++-like Domain Specific Language (DSL).
+Stay tuned for updates!
 
-For a preview about how the code generator works, please refer to `array.vineyard-mod`_
+For a sneak peek at how the code generator works, please refer to `array.vineyard-mod`_
 and `arrow.vineyard-mod`_.
 
 .. _array.vineyard-mod: https://github.com/v6d-io/v6d/blob/main/modules/basic/ds/array.vineyard-mod

@@ -1,20 +1,17 @@
 .. _using-objects-python:
 
-Sharing Python objects with vineyard
+Sharing Python Objects with Vineyard
 ------------------------------------
 
-As we mentioned in :ref:`vineyard-objects`, for each object in vineyard, it
-consists of two parts:
+As discussed in :ref:`vineyard-objects`, each object in Vineyard consists of two parts:
 
-1. The data payload stored in the corresponding vineyard instance locally
-2. The hierarchical meta data shared across the vineyard cluster
+1. The data payload, which is stored locally in the corresponding Vineyard instance
+2. The hierarchical metadata, which is shared across the entire Vineyard cluster
 
-In particular, ``Blob`` is the unit where the data payload lives in a vineyard
-instance.
-A blob object holds a segment of memory in the bulk store of the vineyard
-instance, so that users can save their local buffer into a blob and
-get the blob later in another process in a zero-copy fashion through
-memory mapping.
+Specifically, a ``Blob`` represents the unit where the data payload resides within a
+Vineyard instance. A blob object holds a segment of memory in the bulk store of the
+Vineyard instance, allowing users to save their local buffer into a blob and later
+retrieve the blob in another process using a zero-copy approach through memory mapping.
 
 .. code:: python
 
@@ -27,21 +24,21 @@ memory mapping.
 
     vineyard::Blob 28 Object <"o800000011cfa7040": vineyard::Blob>
 
-On the other hand, the hierarchical meta data of vineyard objects are
-shared across the cluster. In the following example, for simplicity,
-we launch a vineyard cluster with
-two vineyard instances in the same machine, although in practice,
-these vineyard instances are launched distributively on each machine of the cluster.
+On the other hand, the hierarchical metadata of Vineyard objects is shared across
+the entire cluster. In the following example, for the sake of simplicity, we
+launch a Vineyard cluster consisting of two Vineyard instances on the same machine.
+However, in real-world scenarios, these Vineyard instances would be distributed
+across multiple machines within the cluster.
 
 .. code:: console
 
     $ python3 -m vineyard --socket /var/run/vineyard.sock1
     $ python3 -m vineyard --socket /var/run/vineyard.sock2
 
-Then we can create a distributed pair of arrays in vineyard with the
-first array stored in the first vineyard instance which listens to ipc_socket
-``/var/run/vineyard.sock1``, and the second array stored in the second instance
-listening to ipc_socket ``/var/run/vineyard.sock2``.
+With this setup, we can create a distributed pair of arrays in Vineyard, where
+the first array is stored in the first Vineyard instance listening to the IPC socket
+``/var/run/vineyard.sock1``, and the second array is stored in the second instance
+listening to the IPC socket ``/var/run/vineyard.sock2``.
 
 .. code:: python
 
@@ -84,7 +81,7 @@ listening to ipc_socket ``/var/run/vineyard.sock2``.
 
     (None, [1, 1, 1, 1])
 
-Here we can get the meta data of the pair object from ``client2``
-though ``client1`` created it, but we can't get the payload of the
-first element of the pair from ``client2``, since it is stored locally
-in the first vineyard instance.
+In this example, we can access the metadata of the pair object from ``client2``
+even though it was created by ``client1``. However, we cannot retrieve the payload
+of the first element of the pair from ``client2`` because it is stored locally
+in the first Vineyard instance.

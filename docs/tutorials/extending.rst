@@ -10,11 +10,11 @@ Extending vineyard
    ./extending/define-datatypes-python.rst
    ./extending/define-datatypes-cpp.rst
 
-Vineyard has implemented a set of efficient data structures that needed in common
-data-intensive jobs, e.g., tensors, data frames, tables and graphs. The data types can be
-extended as well in a fairly straightforward way. Once registered the user defined custom
-types into the vineyard type registry, computing engines run on top of vineyard can immediately
-gain the benefits brought by vineyard.
+Vineyard offers a collection of efficient data structures tailored for data-intensive tasks,
+such as tensors, data frames, tables, and graphs. These data types can be easily extended
+to accommodate custom requirements. By registering user-defined types in the vineyard type
+registry, computing engines built on top of vineyard can instantly leverage the advantages
+provided by these custom data structures.
 
 .. panels::
    :header: text-center
@@ -25,7 +25,7 @@ gain the benefits brought by vineyard.
       :text: Define Python Types
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Define builders and resolvers for Python types.
+   Craft builders and resolvers for custom Python data types.
 
    ---
 
@@ -34,4 +34,4 @@ gain the benefits brought by vineyard.
       :text: Define C++ Types
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Adding new data types and register to vineyard's context in C++.
+   Implement and register custom data types in C++ for seamless integration with vineyard's ecosystem.

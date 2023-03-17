@@ -6,7 +6,7 @@ Getting Started
 Installing vineyard
 -------------------
 
-Vineyard is distributed as a `Python package`_ and can be easily installed with :code:`pip`:
+Vineyard is distributed as a `Python package`_ and can be effortlessly installed using :code:`pip`:
 
 .. code:: console
 
@@ -22,21 +22,21 @@ Launching vineyard server
 A vineyard daemon server will be launched with default settings. By default, :code:`/var/run/vineyard.sock`
 will be used by vineyardd to listen for incoming IPC connections.
 
-To stop running the vineyardd instance, you can press :code:`Ctrl-C` in the terminal.
+To stop the running vineyardd instance, simply press :code:`Ctrl-C` in the terminal.
 
 .. tip::
 
    If you encounter errors like ``cannot launch vineyardd on '/var/run/vineyard.sock':
-   Permission denied,``, that means **you don't have the permission** to create a UNIX-domain
-   socket at :code:`/var/run/vineyard.sock`, you could either
+   Permission denied,``, it means **you don't have the permission** to create a UNIX-domain
+   socket at :code:`/var/run/vineyard.sock`. You can either:
 
-   - run vineyard as root, using ``sudo``:
+   - Run vineyard as root, using ``sudo``:
 
      .. code:: console
 
         $ sudo -E python3 -m vineyard
 
-   - or, change the socket path to a writable location with the ``--socket`` command
+   - Or, change the socket path to a writable location with the ``--socket`` command
      line option:
 
      .. code:: console
@@ -46,7 +46,7 @@ To stop running the vineyardd instance, you can press :code:`Ctrl-C` in the term
 Connecting to vineyard
 ----------------------
 
-Once launched, you could call :code:`vineyard.connect` with the socket name to start a vineyard client
+Once launched, you can call :code:`vineyard.connect` with the socket name to initiate a vineyard client
 from Python:
 
 .. code:: python
@@ -54,18 +54,17 @@ from Python:
    >>> import vineyard
    >>> client = vineyard.connect('/var/run/vineyard.sock')
 
-Putting and getting Python objects
-----------------------------------
+Storing and Retrieving Python Objects
+-------------------------------------
 
-Vineyard is designed as an in-memory object store and provides two high-level APIs :code:`put` and
-:code:`get` for creating and accessing shared objects to seamlessly interoperate with the Python
-ecosystem. The former returns a :code:`vineyard.ObjectID` when succeed and it can be further used
-to retrieve shared objects from vineyard by the latter.
+Vineyard is designed as an in-memory object store and offers two high-level APIs :code:`put` and
+:code:`get` for creating and accessing shared objects, enabling seamless interoperability with the Python
+ecosystem. The former returns a :code:`vineyard.ObjectID` upon success, which can be used
+to retrieve shared objects from vineyard using the latter.
 
-In following example, We first use :code:`client.put()` to build the vineyard object from the numpy
-ndarray ``arr``, which returns the ``object_id`` that is the unique id in vineyard to represent
-the object. Given the ``object_id``, we can obtain a shared-memory object from vineyard with method
-:code:`client.get()`.
+In the following example, we use :code:`client.put()` to build a vineyard object from the numpy
+ndarray ``arr``, which returns the ``object_id`` - a unique identifier in vineyard representing
+the object. Given the ``object_id``, we can obtain a shared-memory object from vineyard with the :code:`client.get()` method.
 
 .. code:: python
 
@@ -82,11 +81,11 @@ the object. Given the ``object_id``, we can obtain a shared-memory object from v
 
 .. note::
 
-   :code:`shared_array` doesn't allocate extra memory in the Python process; instead, it shares memory
-   with the vineyard server via `mmap`_ and the process is zero-copy.
+   :code:`shared_array` does not allocate extra memory in the Python process; instead, it shares memory
+   with the vineyard server via `mmap`_ in a zero-copy process.
 
 The sharable objects can be complex and nested. Like numpy ndarray, the pandas dataframe ``df`` can
-be seamlessly put into vineyard and get back with the ``.put()`` and ``.get()`` method as follows,
+be seamlessly stored in vineyard and retrieved with the ``.put()`` and ``.get()`` methods as follows:
 
 .. code:: python
 
@@ -108,15 +107,15 @@ be seamlessly put into vineyard and get back with the ``.put()`` and ``.get()`` 
    5  3  4     2.5
 
 Under the hood, vineyard implements a builder/resolver mechanism to represent arbitrary
-data structure as *vineyard objects* and resolve back to native values in the corresponding
-programming languages and computing systems, see also :ref:`divein-driver-label`.
+data structures as *vineyard objects* and resolve them back to native values in the corresponding
+programming languages and computing systems. See also :ref:`divein-driver-label` for more information.
 
 Sharing objects between tasks
 -----------------------------
 
 Vineyard is designed for sharing intermediate data between tasks. The following example
-demonstrates how dataframe can be passed between two **processes** using vineyard, namely
-producer and consumer in the following example:
+demonstrates how a dataframe can be passed between two **processes** using vineyard, namely
+the producer and consumer in the example below:
 
 .. code:: python
 
@@ -161,14 +160,14 @@ Running the code above, you should see the following output:
 Next steps
 ----------
 
-Beyond the core functionality of sharing objects between tasks, vineyard also provides
+Beyond the core functionality of sharing objects between tasks, vineyard also provides:
 
 - Distributed objects and stream abstraction over immutable chunks;
-- An IDL (:ref:`vcdl`) that helps integrate vineyard with other systems at the minimalist cost;
-- A mechanism of pluggable drivers for miscellaneous tasks that serve as the glue
+- An IDL (:ref:`vcdl`) that helps integrate vineyard with other systems at minimal cost;
+- A mechanism of pluggable drivers for various tasks that serve as the glue
   between the core compute engine and the external world, e.g., data sources, data
   sinks;
-- Integration with Kubernetes for sharing between tasks in workflows that deployed
+- Integration with Kubernetes for sharing between tasks in workflows deployed
   on cloud-native infrastructures.
 
 .. panels::
@@ -195,7 +194,7 @@ Learn more about vineyard's key concepts from the following user guides:
       :text: Vineyard Objects
       :classes: btn-block stretched-link
 
-   Illustrate the design of object model in vineyard.
+   Explore the design of the object model in vineyard.
 
    ---
 
@@ -204,7 +203,7 @@ Learn more about vineyard's key concepts from the following user guides:
       :text: VCDL
       :classes: btn-block stretched-link
 
-   How vineyard been integrated with other computing systems?
+   Discover how vineyard integrates with other computing systems.
 
    ---
 
@@ -213,12 +212,12 @@ Learn more about vineyard's key concepts from the following user guides:
       :text: I/O Drivers
       :classes: btn-block stretched-link
 
-   Design and implementation of the pluggable routines for I/O, repartition, migration, etc.
+   Understand the design and implementation of pluggable routines for I/O, repartition, migration, and more.
 
-Vineyard is natural fit to cloud-native computing, where vineyard can be deployed and
-managed the *vineyard operator*, and provides data-aware scheduling for data analytical
-workflows to archive efficient data sharing on Kubernetes. More details about vineyard
-on Kubernetes can be found from
+Vineyard is a natural fit for cloud-native computing, where it can be deployed and
+managed by the *vineyard operator*, providing data-aware scheduling for data analytical
+workflows to achieve efficient data sharing on Kubernetes. More details about vineyard
+on Kubernetes can be found here:
 
 .. panels::
    :header: text-center
@@ -229,7 +228,7 @@ on Kubernetes can be found from
       :text: Kubernetes
       :classes: btn-block stretched-link
    ^^^^^^^^^^^^
-   Deploy vineyard on Kubernetes and accelerating your big-data workflows.
+   Deploy vineyard on Kubernetes and accelerate your big-data workflows.
 
 .. _Python package: https://pypi.org/project/vineyard
 .. _mmap: https://man7.org/linux/man-pages/man2/mmap.2.html
