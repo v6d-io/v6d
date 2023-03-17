@@ -25,7 +25,7 @@ del vineyard
 # -- Project information -----------------------------------------------------
 
 project = 'vineyard'
-copyright = '2019-2022, The Vineyard Authors'
+copyright = '2020-2023, The Vineyard Authors'
 author = 'The Vineyard Authors'
 
 language = 'en'
@@ -37,6 +37,7 @@ language = 'en'
 # ones.
 extensions = [
     'breathe',
+    'myst_parser',
     'nbsphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
@@ -48,6 +49,7 @@ extensions = [
     'sphinxemoji.sphinxemoji',
     "sphinxext.opengraph",
 ]
+suppress_warnings = []
 
 # breathe
 breathe_projects = {
@@ -57,6 +59,25 @@ breathe_default_project = 'vineyard'
 breathe_debug_trace_directives = True
 breathe_debug_trace_doxygen_ids = True
 breathe_debug_trace_qualification = True
+
+# myst-parser
+myst_enable_extensions = [
+    "amsmath",
+    "attrs_inline",
+    "colon_fence",
+    "deflist",
+    "dollarmath",
+    "fieldlist",
+    "html_admonition",
+    "html_image",
+    "linkify",
+    "replacements",
+    "smartquotes",
+    "strikethrough",
+    "substitution",
+    "tasklist",
+]
+suppress_warnings.append('myst.xref_missing')
 
 # jupyter notebooks
 nbsphinx_execute = 'never'
@@ -128,3 +149,57 @@ html_last_updated = True
 
 # add copy button to code blocks, exclude the notebook (nbsphinx) prompts
 copybutton_selector = "div.notranslate:not(.prompt) div.highlight pre"
+
+# -- patch sphinx ---------------------------------------------------------
+
+try:
+    from docutils import nodes
+    from docutils.nodes import Element
+    from sphinx import __display_version__
+    from sphinx.builders.html import StandaloneHTMLBuilder
+    from sphinx.writers.html5 import HTML5Translator
+
+    # -- patch spinx-panels: allow link_button without URI ----------------
+    class HTML5TranslatorPatched(HTML5Translator):
+        def visit_reference(self, node: Element) -> None:
+            atts = {'class': 'reference'}
+            if node.get('internal') or 'refuri' not in node:
+                atts['class'] += ' internal'
+            else:
+                atts['class'] += ' external'
+            if 'refuri' in node:
+                atts['href'] = node['refuri'] or '#'
+                if self.settings.cloak_email_addresses and atts['href'].startswith('mailto:'):
+                    atts['href'] = self.cloak_mailto(atts['href'])
+                    self.in_mailto = True
+
+                # patch: erase empty refuri
+                if atts['href'] in ['', '""', '#']:
+                    del atts['href']
+            else:
+                assert 'refid' in node, \
+                    'References must have "refuri" or "refid" attribute.'
+                atts['href'] = '#' + node['refid']
+            if not isinstance(node.parent, nodes.TextElement):
+                assert len(node) == 1 and isinstance(node[0], nodes.image)
+                atts['class'] += ' image-reference'
+            if 'reftitle' in node:
+                atts['title'] = node['reftitle']
+            if 'target' in node:
+                atts['target'] = node['target']
+            self.body.append(self.starttag(node, 'a', '', **atts))
+
+            if node.get('secnumber'):
+                self.body.append(('%s' + self.secnumber_suffix) %
+                                '.'.join(map(str, node['secnumber'])))
+
+    class StandaloneHTMLBuilderPatched(StandaloneHTMLBuilder):
+        @property
+        def default_translator_class(self) -> "Type[nodes.NodeVisitor]":
+            return HTML5TranslatorPatched
+
+    def setup(app):
+        app.add_builder(StandaloneHTMLBuilderPatched, override=True)
+        return {'version': __display_version__, 'parallel_read_safe': True}
+except:
+    pass

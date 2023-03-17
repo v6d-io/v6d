@@ -1,11 +1,11 @@
 Contributing to vineyard
 ========================
 
-Vineyard has been developed by an active team of software engineers and
-researchers. Any contributions from the open-source community to improve this
-project are welcome!
+Vineyard is the product of a dedicated team of software engineers and
+researchers. We warmly welcome contributions from the open-source community to
+enhance and refine this project!
 
-Vineyard is licensed under `Apache License 2.0`_.
+Vineyard is licensed under the `Apache License 2.0`_.
 
 Install development dependencies
 --------------------------------
@@ -25,11 +25,11 @@ and the following python packages that can be easily installed using `pip`:
 - libclang
 - parsec
 
-Developing vineyard using Docker
+Developing Vineyard Using Docker
 --------------------------------
 
-To simplify the dependency installation process, we have provided a docker
-image with all requirements installed. The docker image can be found from
+To streamline the dependency installation process, we offer a pre-built Docker
+image containing all necessary requirements. You can find this image at
 `vineyardcloudnative/vineyard-dev <https://hub.docker.com/r/vineyardcloudnative/vineyard-dev/tags>`_.
 
 .. code:: shell
@@ -57,21 +57,21 @@ You may find building and installation instructions for other platforms from our
 - `CentOS <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-centos-latest.yaml>`_
 - `Arch Linux <https://github.com/v6d-io/v6d/blob/main/.github/workflows/build-archlinux-latest.yml>`_
 
-Run unittests
--------------
+Running Unit Tests
+------------------
 
-Vineyard has included a set of unittests in the continuous integration process. Test cases can be
-built from the following command:
+Vineyard incorporates a comprehensive set of unit tests within its continuous integration
+process. To build these test cases, execute the following command:
 
 .. code:: shell
 
     cd build
     make vineyard_tests -j$(nproc)
 
-Before running test cases, you need to ensure etcd is correctly installed, by `brew install etcd` on Mac or
-:code:`pip3 install etcd_distro` on Linux distributions.
+Before running the test cases, ensure that etcd is properly installed by executing
+``brew install etcd`` on macOS or ``pip3 install etcd_distro`` on Linux distributions.
 
-There's a script to setup required environments and run test cases:
+A dedicated script is provided to set up the required environments and execute the test cases:
 
 .. code:: shell
 
@@ -104,101 +104,103 @@ You could only run specified test case as well:
 Documentation
 -------------
 
-Documentation is generated using Doxygen and sphinx. Users can build vineyard's
-documentation in the :code:`docs/` directory using:
+Vineyard's documentation is generated using Doxygen and Sphinx. To build the
+documentation locally, navigate to the :code:`docs/` directory and execute the
+following commands:
 
 .. code:: bash
 
     cd docs/
     make html
 
-The HTML documentation will be available under `docs/_build/html`:
+Upon successful completion, the HTML documentation will be available under the
+:code:`docs/_build/html` directory:
 
 .. code:: bash
 
     open _build/html/index.html
 
-The latest version of online documentation can be found at https://v6d.io.
+For the most up-to-date version of the documentation, visit https://v6d.io.
 
-Vineyard provides comprehensive documents to explain the underlying
-design and implementation details. The documentation follows the syntax
-of Doxygen and sphinx markup. If you find anything you can help, submit 
-pull request to us. Thanks for your enthusiasm!
+Vineyard offers comprehensive documentation that delves into the design and
+implementation details of the project. The documentation adheres to the syntax
+conventions of Doxygen and Sphinx markup. If you identify areas for improvement
+or wish to contribute, feel free to submit a pull request. We appreciate your
+enthusiasm and support!
 
-Reporting bugs
+Reporting Bugs
 --------------
 
-Vineyard is hosted on Github, and use Github issues as the bug tracker.
-You can `file an issue`_ when you find anything that is expected to work
-with vineyard but it doesn't.
+Vineyard is hosted on GitHub and utilizes GitHub issues as its bug tracker.
+If you encounter any issues or unexpected behavior while using Vineyard, please `file an issue`_.
 
-Before creating a new bug entry, we recommend you first `search` among existing
-vineyard bugs to see if it has already been resolved.
+Before creating a new bug report, we recommend that you first `search`_ among existing
+Vineyard bugs to check if the issue has already been addressed.
 
-When creating a new bug entry, please provide necessary information of your
-problem in the description, such as operating system version, vineyard
-version, and other system configurations to help us diagnose the problem.
+When submitting a new bug report, kindly provide essential information regarding your
+problem in the description, such as the operating system version, Vineyard version,
+and any relevant system configurations. This will greatly assist us in diagnosing
+and resolving the issue.
 
-Submitting pull requests
+Submitting Pull Requests
 ------------------------
 
-We also welcome any help on vineyard from the community, including but not
-limited to fixing bugs and adding new features. Contributors can follow this
-section for how to submit pull requests to vineyard:
+We greatly appreciate contributions from the community, including bug fixes and new
+features. To submit a pull request to Vineyard, please follow the guidelines in this
+section:
 
-Install pre-commit
+Install Pre-commit
 ^^^^^^^^^^^^^^^^^^
 
-Vineyard use `pre-commit`_ to ensure no secrets are accidentally committed
-into the Git repository, you could first install  `pre-commit`_ by
+Vineyard uses `pre-commit`_ to prevent accidental inclusion of secrets in the Git
+repository. To install `pre-commit`_, run:
 
 .. code:: bash
 
     pip3 install pre-commit
 
-The configure the necessary pre-commit hooks with
+Next, configure the necessary pre-commit hooks with:
 
 .. code:: bash
 
     pre-commit install
 
-Sign-off your commits
+Sign Off Your Commits
 ^^^^^^^^^^^^^^^^^^^^^
 
-Our project vineyard has enabled
-`DCO`_ thus you will be asked to `sign-off`_ your commits that are included in
-your pull requests. Git has a :code:`-s` command line option that can `sign-off`_
-your commit automatically:
+Vineyard has enabled the `DCO`_, which requires you to `sign-off`_ your commits included
+in pull requests. Git provides a :code:`-s` command line option to `sign-off`_ your
+commit automatically:
 
 .. code:: shell
 
     git commit -s -m 'This is my commit message'
 
-Code format
-^^^^^^^^^^^
+Code Formatting
+^^^^^^^^^^^^^^^
 
-Vineyard follows the `Google C++ Style Guide`_. When submitting patches
-to vineyard, please format your code with clang-format by
-the Makefile command `make vineyard_clformat`, and make sure your code doesn't
-break the cpplint convention using the CMakefile command `make vineyard_cpplint`.
+Vineyard adheres to the `Google C++ Style Guide`_. When submitting patches, please format
+your code using clang-format with the Makefile command `make vineyard_clformat`, and
+ensure your code complies with the cpplint convention using the CMakefile command
+`make vineyard_cpplint`.
 
-Open a pull request
+Open a Pull Request
 ^^^^^^^^^^^^^^^^^^^
 
-When opening issues or submitting pull requests, we'll ask you to prefix the
-pull request title with the issue number and the kind of patch (`BUGFIX` or `FEATURE`)
-in brackets, for example, `[BUGFIX-1234] Fix crash in sealing vector to vineyard`
-or `[FEATURE-2345] Support seamless operability with PyTorch's tensors`.
+When opening issues or submitting pull requests, please prefix the pull request title
+with the issue number and the type of patch (`BUGFIX` or `FEATURE`) in brackets. For
+example, `[BUGFIX-1234] Fix crash in sealing vector to vineyard` or ``[FEATURE-2345]
+Support seamless operability with PyTorch's tensors``.
 
-Git workflow for newcomers
+Git Workflow for Newcomers
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-You generally do NOT need to rebase your pull requests unless there are merge
-conflicts with the main. When Github complaining that "Can’t automatically merge"
-on your pull request, you'll be asked to rebase your pull request on top of
-the latest main branch, using the following commands:
+Generally, you do NOT need to rebase your pull requests unless there are merge conflicts
+with the main branch. If GitHub indicates "Can’t automatically merge" on your pull
+request, you will be asked to rebase your pull request on top of the latest main branch
+using the following commands:
 
-+ First rebasing to the most recent main:
++ First, rebase to the most recent main:
 
   .. code:: shell
 
@@ -206,33 +208,32 @@ the latest main branch, using the following commands:
       git fetch upstream
       git rebase upstream/main
 
-+ Then git may show you some conflicts when it cannot merge, say `conflict.cpp`,
-  you need
++ If Git shows conflicts, such as in `conflict.cpp`,you need to:
   - Manually modify the file to resolve the conflicts
-  - After resolved, mark it as resolved by
+  - After resolving, mark it as resolved by
 
   .. code:: shell
 
       git add conflict.cpp
 
-+ Then you can continue rebasing by
++ Then, continue rebasing with:
 
   .. code:: shell
 
       git rebase --continue
 
-+ Finally push to your fork, then the pull request will be got updated:
++ Finally, push to your fork, and the pull request will be updated:
 
   .. code:: shell
 
       git push --force
 
-Cut a release
--------------
+Creating a Release
+------------------
 
-The vineyard python package is built using the `manylinux1`_ environments. The
-release version is built with Docker. The description of the base image can be
-found at `docker/pypa/Dockerfile.manylinux1`_.
+The Vineyard Python package is built using the `manylinux1`_ environment. To create
+a release version, we utilize Docker for a consistent and reliable build process.
+The base image's details can be found in the `docker/pypa/Dockerfile.manylinux1`_ file.
 
 .. _pre-commit: https://pre-commit.com/
 .. _file an issue: https://github.com/v6d-io/v6d/issues/new/new
