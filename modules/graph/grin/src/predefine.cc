@@ -17,13 +17,18 @@ limitations under the License.
 
 
 GRIN_PARTITIONED_GRAPH get_partitioned_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
-  auto pg = std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(client.GetObject(object_id));
-  return pg.get();
-}
-
-GRIN_GRAPH get_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
-  auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T>>(client.GetObject(object_id));
-  return frag.get();
+  auto _pg = std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(client.GetObject(object_id));
+  auto pg = new GRIN_PARTITIONED_GRAPH_T();
+  pg->pg = _pg.get();
+  pg->lgs.resize(_pg->total_frag_num(), nullptr);
+  for (auto & [fid, location] : _pg->FragmentLocations()) {
+      if (location == client.instance_id()) {
+          auto obj_id = _pg->Fragments().at(fid);
+          auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T>>(client.GetObject(obj_id));
+          pg->lgs[fid] = frag.get();
+      }
+  }
+  return pg;
 }
 
 std::string GetDataTypeName(GRIN_DATATYPE type) {

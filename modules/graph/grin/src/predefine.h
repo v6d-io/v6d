@@ -75,7 +75,6 @@ struct GRIN_DATATYPE_ENUM<arrow::Date64Type> {
 };
 
 GRIN_PARTITIONED_GRAPH get_partitioned_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id);
-GRIN_GRAPH get_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id);
 std::string GetDataTypeName(GRIN_DATATYPE);
 GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType>);
 
@@ -144,7 +143,10 @@ struct GRIN_ADJACENT_LIST_ITERATOR_T {
 #endif
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
-typedef vineyard::ArrowFragmentGroup GRIN_PARTITIONED_GRAPH_T;
+struct GRIN_PARTITIONED_GRAPH_T {
+  vineyard::ArrowFragmentGroup* pg;
+  std::vector<GRIN_GRAPH_T*> lgs;
+};
 typedef unsigned GRIN_PARTITION_T;
 typedef std::vector<unsigned> GRIN_PARTITION_LIST_T;
 #endif

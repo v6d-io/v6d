@@ -16,22 +16,19 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/partition/partition.h"
 #include "graph/fragment/property_graph_types.h"
-#include "client/client.h"
 
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
 size_t grin_get_total_partitions_number(GRIN_PARTITIONED_GRAPH pg) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
-    return _pg->total_frag_num();
+    return _pg->pg->total_frag_num();
 }
 
 GRIN_PARTITION_LIST grin_get_local_partition_list(GRIN_PARTITIONED_GRAPH pg) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto pl = new GRIN_PARTITION_LIST_T();
-    vineyard::Client client;
-    client.Connect();
-    for (auto & [fid, location] : _pg->FragmentLocations()) {
-        if (location == client.instance_id()) {
+    for (auto fid = 0; fid < _pg->pg->total_frag_num(); ++fid) {
+        if (_pg->lgs[fid] != nullptr) {
             pl->push_back(fid);
         }
     }
@@ -84,9 +81,7 @@ void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
 GRIN_GRAPH grin_get_local_graph_from_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto _p = static_cast<GRIN_PARTITION_T*>(p);
-    vineyard::Client client;
-    client.Connect();
-    return get_graph_by_object_id(client, _pg->Fragments().at(*_p));
+    return _pg->lgs[*_p];
 }
 #endif
 
