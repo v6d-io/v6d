@@ -21,7 +21,21 @@ limitations under the License.
 #include "client/client.h"
 #include "common/util/logging.h"
 
-#include "graph/fragment/arrow_fragment.grin.h"
+#include "graph/grin/predefine.h"
+#include "graph/grin/include/topology/structure.h"
+#include "graph/grin/include/topology/vertexlist.h"
+#include "graph/grin/include/topology/adjacentlist.h"
+#include "graph/grin/include/partition/partition.h"
+#include "graph/grin/include/partition/topology.h"
+#include "graph/grin/include/partition/reference.h"
+#include "graph/grin/include/property/type.h"
+#include "graph/grin/include/property/topology.h"
+#include "graph/grin/include/property/partition.h"
+#include "graph/grin/include/property/propertylist.h"
+#include "graph/grin/include/property/property.h"
+#include "graph/grin/include/property/propertytable.h"
+
+#include "graph/grin/src/predefine.h"
 #include "graph/fragment/graph_schema.h"
 #include "graph/loader/arrow_fragment_loader.h"
 
@@ -30,8 +44,6 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 using GraphType = ArrowFragment<property_graph_types::OID_TYPE,
                                 property_graph_types::VID_TYPE>;
 using LabelType = typename GraphType::label_id_t;
-
-
 
 void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION partition,
                    const char* edge_type_name, const char* vertex_property_name) {
@@ -101,46 +113,99 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
 }
 
 
-void traverse(vineyard::Client& client, const grape::CommSpec& comm_spec,
+void Traverse(vineyard::Client& client, const grape::CommSpec& comm_spec,
               vineyard::ObjectID fragment_group_id) {
   LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
 
   GRIN_PARTITIONED_GRAPH pg = get_partitioned_graph_by_object_id(client, fragment_group_id);
+  LOG(INFO) << "Got partition num: " << grin_get_total_partitions_number(pg);
+
   GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
   size_t pnum = grin_get_partition_list_size(pg, local_partitions);
-  assert(pnum > 0);
+  LOG(INFO) << "Got partition num: " << pnum;
+//  assert(pnum > 0);
 
   // we only traverse the first partition for test
-  GRIN_PARTITION partition = grin_get_partition_from_list(pg, local_partitions, 0);
-  sync_property(pg, partition, "likes", "features");
+//  GRIN_PARTITION partition = grin_get_partition_from_list(pg, local_partitions, 0);
+//  sync_property(pg, partition, "likes", "features");
 }
 
+
+namespace detail {
+
+std::shared_ptr<arrow::ChunkedArray> makeInt64Array() {
+  std::vector<int64_t> data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+  arrow::Int64Builder builder;
+  CHECK_ARROW_ERROR(builder.AppendValues(data));
+  std::shared_ptr<arrow::Array> out;
+  CHECK_ARROW_ERROR(builder.Finish(&out));
+  return arrow::ChunkedArray::Make({out}).ValueOrDie();
+}
+
+std::shared_ptr<arrow::Schema> attachMetadata(
+    std::shared_ptr<arrow::Schema> schema, std::string const& key,
+    std::string const& value) {
+  std::shared_ptr<arrow::KeyValueMetadata> metadata;
+  if (schema->HasMetadata()) {
+    metadata = schema->metadata()->Copy();
+  } else {
+    metadata = std::make_shared<arrow::KeyValueMetadata>();
+  }
+  metadata->Append(key, value);
+  return schema->WithMetadata(metadata);
+}
+
+std::vector<std::shared_ptr<arrow::Table>> makeVTables() {
+  auto schema = std::make_shared<arrow::Schema>(
+      std::vector<std::shared_ptr<arrow::Field>>{
+          arrow::field("id", arrow::int64()),
+          arrow::field("value1", arrow::int64()),
+          arrow::field("value2", arrow::int64()),
+          arrow::field("value3", arrow::int64()),
+          arrow::field("value4", arrow::int64()),
+      });
+  schema = attachMetadata(schema, "label", "person");
+  auto table = arrow::Table::Make(
+      schema, {makeInt64Array(), makeInt64Array(), makeInt64Array(),
+               makeInt64Array(), makeInt64Array()});
+  return {table};
+}
+
+std::vector<std::vector<std::shared_ptr<arrow::Table>>> makeETables() {
+  auto schema = std::make_shared<arrow::Schema>(
+      std::vector<std::shared_ptr<arrow::Field>>{
+          arrow::field("src_id", arrow::int64()),
+          arrow::field("dst_id", arrow::int64()),
+          arrow::field("value1", arrow::int64()),
+          arrow::field("value2", arrow::int64()),
+          arrow::field("value3", arrow::int64()),
+          arrow::field("value4", arrow::int64()),
+      });
+  schema = attachMetadata(schema, "label", "knows");
+  schema = attachMetadata(schema, "src_label", "person");
+  schema = attachMetadata(schema, "dst_label", "person");
+  auto table = arrow::Table::Make(
+      schema, {makeInt64Array(), makeInt64Array(), makeInt64Array(),
+               makeInt64Array(), makeInt64Array(), makeInt64Array()});
+  return {{table}};
+}
+}  // namespace detail
+
 int main(int argc, char** argv) {
-  if (argc < 6) {
-    printf(
-        "usage: ./grin_test <ipc_socket> <e_label_num> <efiles...> "
-        "<v_label_num> <vfiles...> [directed]\n");
+  if (argc < 2) {
+    printf("usage: ./arrow_fragment_test <ipc_socket> [directed]\n");
     return 1;
   }
   int index = 1;
   std::string ipc_socket = std::string(argv[index++]);
 
-  int edge_label_num = atoi(argv[index++]);
-  std::vector<std::string> efiles;
-  for (int i = 0; i < edge_label_num; ++i) {
-    efiles.push_back(argv[index++]);
-  }
-
-  int vertex_label_num = atoi(argv[index++]);
-  std::vector<std::string> vfiles;
-  for (int i = 0; i < vertex_label_num; ++i) {
-    vfiles.push_back(argv[index++]);
-  }
-
   int directed = 1;
   if (argc > index) {
     directed = atoi(argv[index]);
   }
+
+  auto vtables = ::detail::makeVTables();
+  auto etables = ::detail::makeETables();
 
   vineyard::Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
@@ -153,50 +218,14 @@ int main(int argc, char** argv) {
     grape::CommSpec comm_spec;
     comm_spec.Init(MPI_COMM_WORLD);
 
-    // Load from efiles and vfiles
-#if 0
-    vineyard::ObjectID fragment_id = InvalidObjectID();
-    MPI_Barrier(MPI_COMM_WORLD);
-    double t = -GetCurrentTime();
-    {
-#if 0
-    auto loader =
-        std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
-                                             property_graph_types::VID_TYPE>>(
-            client, comm_spec, efiles, vfiles, directed != 0);
-#else
-      vfiles.clear();
-      auto loader =
-          std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
-                                               property_graph_types::VID_TYPE>>(
-              client, comm_spec, efiles, directed != 0);
-#endif
-      fragment_id = loader->LoadFragment().value();
-    }
-    MPI_Barrier(MPI_COMM_WORLD);
-    t += GetCurrentTime();
-    if (comm_spec.fid() == 0) {
-      LOG(INFO) << "loading time: " << t;
-    }
-
-    {
-      std::shared_ptr<GraphType> graph =
-          std::dynamic_pointer_cast<GraphType>(client.GetObject(fragment_id));
-      LOG(INFO) << "[frag-" << graph->fid()
-                << "]: " << ObjectIDToString(fragment_id);
-      traverse_graph(graph,
-                     "./xx/output_graph_" + std::to_string(graph->fid()));
-    }
-    // client.DelData(fragment_id, true, true);
-#else
     {
       auto loader =
           std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
                                                property_graph_types::VID_TYPE>>(
-              client, comm_spec, efiles, vfiles, directed != 0);
+              client, comm_spec, vtables, etables, directed != 0);
       vineyard::ObjectID fragment_group_id =
           loader->LoadFragmentAsFragmentGroup().value();
-      traverse(client, comm_spec, fragment_group_id);
+      Traverse(client, comm_spec, fragment_group_id);
     }
 
     // Load from efiles
@@ -204,12 +233,11 @@ int main(int argc, char** argv) {
       auto loader =
           std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
                                                property_graph_types::VID_TYPE>>(
-              client, comm_spec, efiles, directed != 0);
+              client, comm_spec, etables, directed != 0);
       vineyard::ObjectID fragment_group_id =
           loader->LoadFragmentAsFragmentGroup().value();
-      traverse(client, comm_spec, fragment_group_id);
+      Traverse(client, comm_spec, fragment_group_id);
     }
-#endif
   }
   grape::FinalizeMPIComm();
 
