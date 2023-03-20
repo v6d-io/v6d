@@ -166,7 +166,7 @@ add_doc(
 Create an empty metadata, the metadata will be used to create a vineyard object.
 
 Parameters
-    global_: bool, if the object meta is for creating a global object.
+    ``global_``: bool, if the object meta is for creating a global object.
 ''',
 )
 

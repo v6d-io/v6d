@@ -20,9 +20,11 @@ import contextlib
 import copy
 import inspect
 import threading
+import warnings
 
 from .._C import IPCClient
 from .._C import Object
+from .._C import ObjectID
 from .._C import ObjectMeta
 from .._C import RPCClient
 
@@ -132,7 +134,7 @@ def builder_context(builders=None, base=None):
         _builder_context_local.default_builder = current_builder
 
 
-def put(client, value, builder=None, persist=False, **kwargs):
+def put(client, value, builder=None, persist=False, name=None, **kwargs):
     """Put python value to vineyard.
 
     .. code:: python
@@ -157,6 +159,9 @@ def put(client, value, builder=None, persist=False, **kwargs):
             used to select a proper builder.
         persist: bool, optional
             If true, persist the object after creation.
+        name: str, optional
+            If given, the name will be automatically associated with the resulted
+            object. Note that only take effect when the object is persisted.
         kw:
             User-specific argument that will be passed to the builder.
 
@@ -171,13 +176,22 @@ def put(client, value, builder=None, persist=False, **kwargs):
     # the builders is expected to return an :class:`ObjectMeta`, or an
     # :class:`Object` (in the `bytes_builder` and `memoryview` builder).
     if isinstance(meta, (ObjectMeta, Object)):
-        if persist:
-            client.persist(meta.id)
-        return meta.id
+        r = meta.id
     else:
+        r = meta  # None or ObjectID
+
+    if isinstance(r, ObjectID):
         if persist:
-            client.persist(meta)
-        return meta  # None or ObjectID
+            client.persist(r)
+        if name is not None:
+            if persist:
+                client.put_name(r, name)
+            else:
+                warnings.warn(
+                    "The object is not persisted, the name won't be associated.",
+                    UserWarning,
+                )
+    return r
 
 
 setattr(IPCClient, 'put', put)

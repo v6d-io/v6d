@@ -168,7 +168,7 @@ def resolver_context(resolvers=None, base=None):
         _resolver_context_local.default_resolver = current_resolver
 
 
-def get(client, object_id, resolver=None, fetch=False, **kw):
+def get(client, object_id=None, name=None, resolver=None, fetch=False, **kw):
     """Get vineyard object as python value.
 
     .. code:: python
@@ -183,12 +183,15 @@ def get(client, object_id, resolver=None, fetch=False, **kw):
             The vineyard client to use.
         object_id: ObjectID
             The object id that will be obtained from vineyard.
+        name: ObjectID
+            The object name that will be obtained from vineyard, ignored if
+            ``object_id`` is not None.
         resolver:
             When retrieving vineyard object, an optional *resolver* can be specified.
             If no resolver given, the default resolver context will be used.
         fetch:
-            Whether to trigger a migration when the target object is located on remote
-            instances.
+            Whether to trigger a migration when the target object is located on
+            remote instances.
         kw:
             User-specific argument that will be passed to the builder.
 
@@ -196,8 +199,11 @@ def get(client, object_id, resolver=None, fetch=False, **kw):
         A python object that return by the resolver, by resolving an vineyard object.
     """
     # wrap object_id
-    if isinstance(object_id, (int, str)):
-        object_id = ObjectID(object_id)
+    if object_id is not None:
+        if isinstance(object_id, (int, str)):
+            object_id = ObjectID(object_id)
+    elif name is not None:
+        object_id = client.get_name(name)
 
     # run resolver
     obj = client.get_object(object_id, fetch=fetch)

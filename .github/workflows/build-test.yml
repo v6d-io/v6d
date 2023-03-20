@@ -16,17 +16,17 @@ name: Vineyard CI
 
 on:
   push:
-    paths:
-      - '!docs/'
-      - '!**/*.rst'
-      - '!**/*.md'
-      - '!**/*.txt'
+    paths-ignore:
+      - 'docs/'
+      - '**/*.rst'
+      - '**/*.md'
+      - '**/*.txt'
   pull_request:
-    paths:
-      - '!docs/'
-      - '!**/*.rst'
-      - '!**/*.md'
-      - '!**/*.txt'
+    paths-ignore:
+      - 'docs/'
+      - '**/*.rst'
+      - '**/*.md'
+      - '**/*.txt'
 
 concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
