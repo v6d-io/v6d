@@ -127,11 +127,11 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
 #endif
 
 #if defined(GRIN_ENABLE_EDGE_PROPERTY_TABLE) && defined(GRIN_ENABLE_ROW)
-GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE v, 
-                                     GRIN_EDGE_PROPERTY_LIST epl) {
+GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, 
+                                               GRIN_EDGE_PROPERTY_LIST epl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(v);
+    auto _e = static_cast<GRIN_EDGE_T*>(e);
     auto _epl = static_cast<GRIN_EDGE_PROPERTY_LIST_T*>(epl);
     if (_e->eid >= _ept->num) return NULL;
     auto offset = _e->eid;

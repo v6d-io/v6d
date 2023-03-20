@@ -105,9 +105,9 @@ void __grin_init_adjacent_list(GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
     unsigned sum = 0;
     for (auto etype = al->etype_begin; etype < al->etype_end; ++etype) {
         if (al->dir == GRIN_DIRECTION::IN) {
-            ral = g->GetIncomingRawAdjList(*(al->v), etype);
+            ral = g->GetIncomingRawAdjList(GRIN_GRAPH_T::vertex_t(al->vid), etype);
         } else {
-            ral = g->GetOutgoingRawAdjList(*(al->v), etype);
+            ral = g->GetOutgoingRawAdjList(GRIN_GRAPH_T::vertex_t(al->vid), etype);
         }
         sum += ral.size();
         al->offsets.push_back(sum);

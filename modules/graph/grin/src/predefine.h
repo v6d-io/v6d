@@ -86,8 +86,8 @@ GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType>);
 typedef vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T> GRIN_GRAPH_T;                      
 typedef GRIN_GRAPH_T::vertex_t GRIN_VERTEX_T;     
 struct GRIN_EDGE_T {
-    GRIN_VERTEX src;
-    GRIN_VERTEX dst;
+    GRIN_GRAPH_T::vid_t src;
+    GRIN_GRAPH_T::vid_t dst;
     GRIN_DIRECTION dir;
     unsigned etype;
     GRIN_GRAPH_T::eid_t eid;
@@ -121,7 +121,7 @@ struct GRIN_VERTEX_LIST_ITERATOR_T {
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
 struct GRIN_ADJACENT_LIST_T {
-    GRIN_VERTEX_T* v;
+    GRIN_GRAPH_T::vid_t vid;
     GRIN_DIRECTION dir;
     unsigned etype_begin;
     unsigned etype_end;
@@ -133,7 +133,7 @@ void __grin_init_adjacent_list(GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al);
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 struct GRIN_ADJACENT_LIST_ITERATOR_T {
-    GRIN_VERTEX_T* v;
+    GRIN_GRAPH_T::vid_t vid;
     GRIN_DIRECTION dir;
     unsigned etype_begin;
     unsigned etype_end;
