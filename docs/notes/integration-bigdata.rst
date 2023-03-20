@@ -9,7 +9,7 @@ Big-data on Vineyard
    integration/dask.rst
    integration/ml.rst
 
-Vineyard serves as a powerful data sharing engine, seamlessly integrating with
+Vineyard serves as a powerful data-sharing engine, seamlessly integrating with
 a variety of big-data computing platforms. This includes machine learning
 frameworks and the distributed data processing engine, Dask.
 

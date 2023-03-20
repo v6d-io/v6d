@@ -184,7 +184,7 @@ rapidly along the processing pipeline.
 *NO* instant remote data accessing
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The partitions of a distributed data are stored distributedly in corresponding
+The partitions of distributed data are stored distributedly in corresponding
 Vineyard instances of the cluster. Only the client on the same machine can access
 the data partition. In order to access a remote partition, data migration APIs of
 Vineyard can be invoked to trigger the migration process, but not for instant accessing.

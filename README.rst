@@ -85,7 +85,7 @@ Vineyard addresses these issues by providing:
    data with complex structures (e.g., distributed graphs)
    with minimal extra development cost, while eliminating transformation costs.
 
-As depicted in the right side of the above figure, we demonstrate how to integrate
+As depicted on the right side of the above figure, we demonstrate how to integrate
 vineyard to address the task in a big data context.
 
 First, we utilize `Mars`_ (a tensor-based unified framework for large-scale data

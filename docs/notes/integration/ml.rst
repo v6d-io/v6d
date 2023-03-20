@@ -186,7 +186,7 @@ Using RecordBatch of Pyarrow
      >>> vin_data = vineyard_client.get(data_id, label='f2')
 
 The ``vin_data`` will be of the form ``ArrayDataset`` with the label as mentioned 
-with the label tag. In this case it is important to mention the label tag.
+with the label tag. In this case, it is important to mention the label tag.
 
 Using Tables of Pyarrow
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -288,7 +288,7 @@ Vineyard supports integration of ``Dali Pipelines``.
      >>> data_id = vineyard_client.put(pipe_out)
      >>> vin_pipe = vineyard_client.get(data_id)
 
-In this case the pipe is a ``pipeline_def`` function. The data received after executing pipe.run() can
+In this case, the pipe is a ``pipeline_def`` function. The data received after executing pipe.run() can
 be stored into vineyard. The Pipeline should only return two values, namely data and label. The return 
 type of the data and label values should be of type ``TensorList``. The ``vin_pipe`` object will be the 
 output of a simple in-built pipeline after executing the pipeline.build() and pipeline.run(). It will 

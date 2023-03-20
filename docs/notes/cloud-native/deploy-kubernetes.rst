@@ -31,7 +31,7 @@ Install cert-manager
     Please wait the cert-manager for a while until it is ready before installing the
     vineyard operator.
 
-Option #1: install from helm chart (recommended)
+Option #1: Install from helm chart (recommended)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: bash
@@ -39,7 +39,7 @@ Option #1: install from helm chart (recommended)
     $ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
     $ helm install vineyard-operator vineyard/vineyard-operator
 
-Wait the vineyard operator until ready:
+Wait for the vineyard operator until ready:
 
 Option #2: Install form source code
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -72,7 +72,7 @@ Option #2: Install form source code
 Wait vineyard-operator ready
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Once the operator installed, it's deployment can be checked using :code:`kubectl`:
+Once the operator is installed, its deployment can be checked using :code:`kubectl`:
 
 .. code:: bash
 
@@ -99,7 +99,7 @@ Once the operator installed, it's deployment can be checked using :code:`kubectl
 Create vineyard cluster
 -----------------------
 
-Once the vineyard operator become ready, you can create a vineyard cluster by creating a
+Once the vineyard operator becomes ready, you can create a vineyard cluster by creating a
 :code:`Vineyardd` `CRD`_. The following is an example of creating a vineyard cluster with 3 daemon
 replicas:
 
@@ -126,7 +126,7 @@ replicas:
 
 The vineyard-operator efficiently creates the necessary dependencies, such as etcd, and establishes a
 :code:`Deployment` for a 3-replica vineyard server configuration. Once the setup is complete, you can
-conveniently inspect the components created and managed by the vineyard-operator using the :code:`kubectl`
+conveniently inspect the components created and managed by the vineyard operator using the :code:`kubectl`
 command.
 
 .. code:: bash

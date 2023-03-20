@@ -69,7 +69,7 @@ Python SDK Error Scenarios
 
     To maintain consistency between Apache Arrow and Vineyard installations:
 
-    + For users, simply installing PyArrow and Vineyard using the :code:`pip` package
+    + For users, simply install PyArrow and Vineyard using the :code:`pip` package
       manager should suffice. You can install them with the following command:
 
       .. code::

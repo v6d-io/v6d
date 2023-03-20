@@ -83,7 +83,7 @@ Creating and accessing local objects in vineyard can be easily achieved using :c
     2  0.687568  0.671564
     ...
 
-Vineyard provides low level APIs to operate on metadatas and raw blobs as well.
+Vineyard provides low-level APIs to operate on metadatas and raw blobs as well.
 
 Accessing metadatas
 ^^^^^^^^^^^^^^^^^^^
@@ -216,7 +216,7 @@ payloads over the network.
 
 .. warning::
 
-    Note that the :code:`remote` in above APIs means the blob will be transferred using
+    Note that the :code:`remote` in the above APIs means the blob will be transferred using
     TCP network. For large blobs, it implies a significant cost of time.
 
 .. code:: python

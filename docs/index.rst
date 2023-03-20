@@ -83,7 +83,7 @@ Pluggable I/O routines
 
 In many big data analytical tasks, a substantial portion of the workload consists of boilerplate
 routines that are unrelated to the core computation. These routines include various IO adapters,
-data partition strategies, and migration jobs. Due to differing data structure abstractions across
+data partition strategies, and migration jobs. Due to different data structure abstractions across
 systems, these routines are often not easily reusable, leading to increased complexity and redundancy.
 
 Vineyard provides common manipulation routines for immutable data as drivers, which extend
