@@ -125,7 +125,7 @@ Distributed data sharing in big data tasks
 By examining the practices of big data tasks such as numeric computing, machine learning,
 and graph analysis, we have identified four key properties of the data involved:
 
-+ Distributed and each partitioned fragment usually fit into memory;
++ Distributed and each partitioned fragment usually fits into memory;
 + Immutable, i.e., never modified after creation;
 + With complex structure, e.g., graph in CSR format;
 + Required to share between different computation systems and programming languages.
@@ -187,4 +187,4 @@ rapidly along the processing pipeline.
 The partitions of distributed data are stored distributedly in corresponding
 Vineyard instances of the cluster. Only the client on the same machine can access
 the data partition. In order to access a remote partition, data migration APIs of
-Vineyard can be invoked to trigger the migration process, but not for instant access.
+Vineyard can be invoked to trigger the migration process, but not for instant accessing.

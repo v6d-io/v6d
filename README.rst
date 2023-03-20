@@ -80,7 +80,7 @@ Vineyard addresses these issues by providing:
 
 2. Built-in **out-of-the-box high-level** abstractions to share distributed
    data with complex structures (e.g., distributed graphs)
-   with minimal extra development costs, while eliminating transformation costs.
+   with minimal extra development cost, while eliminating transformation costs.
 
 As depicted on the right side of the above figure, we demonstrate how to integrate
 vineyard to address the task in a big data context.
@@ -184,7 +184,7 @@ Vineyard is available as a `python package`_ and can be effortlessly installed u
 For comprehensive and up-to-date documentation, please visit https://v6d.io.
 
 If you wish to build vineyard from source, please consult the `Installation`_ guide. For
-instructions on building and running unit tests locally, refer to the `Contributing`_ section.
+instructions on building and running unittests locally, refer to the `Contributing`_ section.
 
 After installation, you can initiate a vineyard instance using the following command:
 

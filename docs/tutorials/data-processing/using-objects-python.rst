@@ -9,7 +9,7 @@ As discussed in :ref:`vineyard-objects`, each object in Vineyard consists of two
 2. The hierarchical metadata, which is shared across the entire Vineyard cluster
 
 Specifically, a ``Blob`` represents the unit where the data payload resides within a
-Vineyard instance. A blob object holds a segment of memory in the bulk storage of the
+Vineyard instance. A blob object holds a segment of memory in the bulk store of the
 Vineyard instance, allowing users to save their local buffer into a blob and later
 retrieve the blob in another process using a zero-copy approach through memory mapping.
 

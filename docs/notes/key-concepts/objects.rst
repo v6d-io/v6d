@@ -195,7 +195,7 @@ Distributed objects
 
 Vineyard is designed to store large objects across multiple nodes in a cluster, enabling
 user programs to seamlessly interact with these objects as a single entity. Data is
-shared across multiple machines without replication.
+sharded across multiple machines without replication.
 
 .. figure:: ../../images/vineyard_distributed_tensor.jpg
    :alt: Distributed objects in vineyard
