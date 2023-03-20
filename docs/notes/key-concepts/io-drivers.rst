@@ -3,11 +3,11 @@
 I/O Drivers
 ===========
 
-As we shown in the getting-started, the ``open`` function in vineyard can open a local
+As we have shown in the getting-started, the ``open`` function in vineyard can open a local
 file as a stream  for consuming, and we notice that the path of the local file is headed
 with the scheme ``file://``.
 
-Actually, vineyard supports several different types of data  source, e.g., ``kafka://``
+Actually, vineyard supports several different types of data source, e.g., ``kafka://``
 for kafka topics. The functional methods to open different data sources as vineyard
 streams are called ``drivers`` in vineyard. They are registered to ``open`` for
 specific schemes, so that when ``open`` is invoked, it will dispatch the corresponding

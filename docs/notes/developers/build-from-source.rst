@@ -44,14 +44,14 @@ Vineyard requires the following software as dependencies to build and run:
 + glog
 + boost
 + mpi, for the graph data structure module
-+ gtest, for build test suites
++ gtest, for building test suites
 
 If you want to build the vineyard server, the following additional libraries are needed:
 
 + protobuf
 + grpc
 
-And the following python packages is required:
+And the following python packages are required:
 
 + libclang
 
@@ -99,7 +99,7 @@ Then install the apache-arrow (see also `https://arrow.apache.org/install <https
 Dependencies on MacOS
 ~~~~~~~~~~~~~~~~~~~~~
 
-Vineyard has been tests on MacOS as well, the dependencies can be installed using :code:`brew`:
+Vineyard has been tested on MacOS as well, the dependencies can be installed using :code:`brew`:
 
 .. code:: shell
 
@@ -132,7 +132,7 @@ Or, you need to disable the :code:`graph` module when building vineyard
 Building vineyard
 ^^^^^^^^^^^^^^^^^
 
-After the required dependencies being installed, you do a out-of-source build using **CMake**:
+After the required dependencies are installed, you do an out-of-source build using **CMake**:
 
 .. code:: shell
 
@@ -148,7 +148,7 @@ libraries will be placed under the ``lib-shared`` folder.
 Building python wheels
 ^^^^^^^^^^^^^^^^^^^^^^
 
-After building the vineyard library successfully, you can package a install wheel distribution by
+After building the vineyard library successfully, you can package an install wheel distribution by
 
 .. code:: shell
 

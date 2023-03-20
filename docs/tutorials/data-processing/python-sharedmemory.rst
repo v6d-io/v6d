@@ -28,7 +28,7 @@ We have added a :code:`freeze` method to make such transformation happen:
 
      >>> value.freeze()
 
-After being freezed, the shared memory (aka. the :code:`ShareableList` in this case)
+After being frozen, the shared memory (aka. the :code:`ShareableList` in this case)
 is available for other clients:
 
 .. code:: python

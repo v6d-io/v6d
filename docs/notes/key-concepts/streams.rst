@@ -86,7 +86,7 @@ loop, continuing until it encounters a :code:`StopIteration` exception:
 Streams between processes
 -------------------------
 
-Finally, we can test the producer and consumer using two thread:
+Finally, we can test the producer and consumer using two threads:
 
 .. code:: python
    :caption: Connect the producer and consumer threads using vineyard stream
