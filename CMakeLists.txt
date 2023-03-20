@@ -648,7 +648,6 @@ if(BUILD_VINEYARD_SERVER)
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
                                        "src/common/memory/gpu/*.cc"
-
     )
     if(BUILD_VINEYARD_SERVER_REDIS)
         list(APPEND SERVER_SRC_FILES "thirdparty/redis-plus-plus-shim/recipes/redlock.cpp")

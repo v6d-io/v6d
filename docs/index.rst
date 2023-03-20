@@ -17,7 +17,7 @@
 
    *an in-memory immutable data manager*
 
-|Vineyard CI| |FAQ| |Discussion| |Slack| |License|
+|PyPI| |FAQ| |Discussion| |Slack| |License|
 
 Why bother?
 -----------
@@ -27,7 +27,7 @@ can be challenging, often causing significant bottlenecks in such jobs. Let's
 consider the following fraud detection pipeline:
 
 .. figure:: images/fraud-detection-job.jpg
-   :width: 397
+   :width: 75%
    :alt: A real-life fraud detection job
 
    A real-life fraud detection job
@@ -108,16 +108,16 @@ Use cases
 
    .. link-button:: #
       :type: url
-      :text: Object Manager
+      :text: Object manager
       :classes: btn-block stretched-link
 
-   Put andget arbitrary objects using Vineyard, in a zero-copy way!
+   Put and get arbitrary objects using Vineyard, in a zero-copy way!
 
    ---
 
    .. link-button:: #
       :type: url
-      :text: Cross-system Sharing
+      :text: Cross-system sharing
       :classes: btn-block stretched-link
 
    Share large objects across computing systems.
@@ -242,8 +242,8 @@ Vineyard is a `CNCF sandbox project`_ and is made successful by its community.
 .. _GraphScope: https://github.com/alibaba/GraphScope
 .. _CNCF sandbox project: https://www.cncf.io/sandbox-projects/
 
-.. |Vineyard CI| image:: https://github.com/v6d-io/v6d/workflows/Vineyard%20CI/badge.svg
-   :target: https://github.com/v6d-io/v6d/actions?workflow=Vineyard%20CI
+.. |PyPI| image:: https://img.shields.io/pypi/v/vineyard?color=blue
+   :target: https://pypi.org/project/vineyard
 .. |FAQ| image:: https://img.shields.io/badge/-FAQ-blue?logo=Read%20The%20Docs
    :target: https://v6d.io/notes/faq.html
 .. |Discussion| image:: https://img.shields.io/badge/Discuss-Ask%20Questions-blue?logo=GitHub
