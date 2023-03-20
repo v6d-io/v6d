@@ -103,12 +103,14 @@ void grin_destroy_edge(GRIN_GRAPH g, GRIN_EDGE e) {
 
 GRIN_VERTEX grin_get_edge_src(GRIN_GRAPH g, GRIN_EDGE e) {
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    return _e->src;
+    auto v = new GRIN_VERTEX_T(_e->src);
+    return v;
 }
 
 GRIN_VERTEX grin_get_edge_dst(GRIN_GRAPH g, GRIN_EDGE e) {
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    return _e->dst;
+    auto v = new GRIN_VERTEX_T(_e->dst);
+    return v;
 }
 
 #ifdef GRIN_WITH_EDGE_DATA
