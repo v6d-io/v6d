@@ -204,6 +204,7 @@ Vineyard is a `CNCF sandbox project`_ and is made successful by its community.
 
    notes/cloud-native/deploy-kubernetes.rst
    notes/cloud-native/vineyard-operator.rst
+   notes/cloud-native/FAQs.rst
    Command-line tool <notes/cloud-native/vineyardctl.md>
 
 .. toctree::
