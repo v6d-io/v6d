@@ -1,0 +1,91 @@
+{% extends "!page.html" %}
+
+{% block footer %}
+<div class="related-pages">
+  {% if next -%}
+    <a class="next-page" href="{{ next.link }}">
+      <div class="page-info">
+        <div class="context">
+          <span>{{ _("Next") }}</span>
+        </div>
+        <div class="title">{{ next.title }}</div>
+      </div>
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+    </a>
+  {%- endif %}
+  {% if prev -%}
+    <a class="prev-page" href="{{ prev.link }}">
+      <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+      <div class="page-info">
+        <div class="context">
+          <span>{{ _("Previous") }}</span>
+        </div>
+        {% if prev.link == pathto(master_doc) %}
+        <div class="title">{{ _("Home") }}</div>
+        {% else %}
+        <div class="title">{{ prev.title }}</div>
+        {% endif %}
+      </div>
+    </a>
+  {%- endif %}
+</div>
+
+<!-- index page doesn't have prev -->
+{%- if prev %}
+  <hr/>
+
+  <script src="https://giscus.app/client.js"
+    data-repo="v6d-io/v6d"
+    data-repo-id="MDEwOlJlcG9zaXRvcnkzMDY2MzEyMTE="
+    data-category="General"
+    data-category-id="MDE4OkRpc2N1c3Npb25DYXRlZ29yeTMyNDA3MTg2"
+    data-mapping="pathname"
+    data-strict="1"
+    data-reactions-enabled="1"
+    data-emit-metadata="0"
+    data-input-position="bottom"
+    data-theme="light"
+    data-lang="en"
+    data-loading="lazy"
+    crossorigin="anonymous"
+    async>
+  </script>
+{%- endif %}
+
+<div class="bottom-of-page">
+  <div class="left-details">
+    {%- if show_copyright %}
+    <div class="copyright">
+      {%- if hasdoc('copyright') %}
+        {% trans path=pathto('copyright'), copyright=copyright|e -%}
+          <a href="{{ path }}">Copyright</a> &#169; {{ copyright }}
+        {%- endtrans %}
+      {%- else %}
+        {% trans copyright=copyright|e -%}
+          Copyright &#169; {{ copyright }}
+        {%- endtrans %}
+      {%- endif %}
+    </div>
+    {%- endif %}
+    {% trans %}Rendered with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/pradyunsg/furo">Furo</a>
+    {% endtrans -%}
+    <p>The Linux Foundation has registered trademarks and uses trademarks. For a list of trademarks of The Linux Foundation,
+       please see our <a href="https://www.linuxfoundation.org/trademark-usage/">Trademark Usage page</a>.
+    </p>
+  </div>
+  <div class="right-details">
+    <div class="icons">
+      {%- if github_user != "None" and github_repo != "None" -%}
+      <a class="muted-link" href="https://github.com/{{ github_user }}/{{ github_repo }}" aria-label="On GitHub">
+        <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 16 16">
+        <path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+        </svg>
+      </a>
+      {%- endif %}
+    </div>
+    <div>
+      <a href="https://www.cncf.io/sandbox-projects/"><img src="https://v6d.io/_static/cncf-color.svg" alt="CLOUD NATIVE COMPUTING FOUNDATION" width="100%" style="max-width: 200px;"/></p>
+    </div>
+  </div>
+</div>
+{% endblock %}
