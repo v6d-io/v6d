@@ -25,7 +25,7 @@ GRIN_PARTITIONED_GRAPH get_partitioned_graph_by_object_id(vineyard::Client& clie
       if (location == client.instance_id()) {
           auto obj_id = _pg->Fragments().at(fid);
           auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T>>(client.GetObject(obj_id));
-          pg->lgs[fid] = frag.get();
+          pg->lgs[fid] = frag;
       }
   }
   return pg;
