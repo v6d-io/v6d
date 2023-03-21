@@ -28,7 +28,9 @@
 #include "common/util/json.h"
 #include "common/util/logging.h"
 
+#include "graph/fragment/arrow_fragment_base.h"
 #include "graph/fragment/arrow_fragment_group.h"
+#include "graph/fragment/graph_schema.h"
 #include "graph/tools/graph_loader.h"
 
 namespace vineyard {
@@ -46,6 +48,30 @@ template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 class ArrowFragmentLoader;
 
 namespace detail {
+
+void dump_schema_to_file(Client& client, grape::CommSpec& comm_spec,
+                         const ObjectID fragment_group_id) {
+  if (comm_spec.local_id() != 0) {
+    return;
+  }
+
+  std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
+      std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
+          client.GetObject(fragment_group_id));
+
+  auto const& fragments = fg->Fragments();
+  for (const auto& item : fg->FragmentLocations()) {
+    if (item.second == client.instance_id()) {
+      auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragmentBase>(
+          client.GetObject(fragments.at(item.first)));
+      vineyard::MaxGraphSchema schema(frag->schema());
+      std::string ofile = "/tmp/" + std::to_string(fragment_group_id) + ".json";
+      schema.DumpToFile(ofile);
+      LOG(INFO) << "The schema json has been dumped to '" << ofile << "'";
+      break;
+    }
+  }
+}
 
 void print_graph_memory_usage(Client& client, grape::CommSpec& comm_spec,
                               const ObjectID fragment_group_id) {
@@ -316,6 +342,7 @@ static void loading_vineyard_graph(
 
   MPI_Barrier(comm_spec.comm());
   LOG(INFO) << "[fragment group id]: " << fragment_group_id;
+  detail::dump_schema_to_file(client, comm_spec, fragment_group_id);
   detail::print_graph_memory_usage(client, comm_spec, fragment_group_id);
   if (!options.dump.empty()) {
     if (options.local_vertex_map) {
