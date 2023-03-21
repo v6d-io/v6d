@@ -1,1 +1,1 @@
-../../../k8s/cmd/readme.md
+../../../k8s/cmd/README.md
