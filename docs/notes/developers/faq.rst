@@ -117,8 +117,7 @@ concerns, please feel free to `open an issue`_ or `post it to discussions`_.
   - `Through RPC`. Connect to the vineyard cluster through the RPC service exposed by the 
     vineyard operator. You could refer to the `guide`_ for more details.
 
-  Is there a way to install the vineyard cluster on Kubernetes quickly?
-  ----------------------------------------------------------------------
+12. *Is there a way to install the vineyard cluster on Kubernetes quickly?*
 
   To reduce the complexity of the installation, we provide a `command line tool`_
   to install the vineyard cluster on Kubernetes quickly.
