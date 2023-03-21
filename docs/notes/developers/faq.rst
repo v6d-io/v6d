@@ -112,8 +112,10 @@ concerns, please feel free to `open an issue`_ or `post it to discussions`_.
 11. *How to connect to the vineyard cluster deployed by the vineyard operator?*
 
   There are two ways to connect to the vineyard cluster deployed by the vineyard operator:
+
   - `Through IPC`. Create a pod with the specific labels so that the pod can be scheduled 
     to the node where the vineyard cluster is deployed.
+  
   - `Through RPC`. Connect to the vineyard cluster through the RPC service exposed by the 
     vineyard operator. You could refer to the `guide`_ for more details.
 
@@ -126,4 +128,4 @@ concerns, please feel free to `open an issue`_ or `post it to discussions`_.
 .. _post it to discussions: https://github.com/v6d-io/v6d/discussions/new
 .. _cert-manager: https://cert-manager.io/
 .. _guide: ../../tutorials/kubernetes/using-vineyard-operator.rst
-.. _command line tool: ../../../cloud-native/vineyardctl.md
+.. _command line tool: ../../notes/cloud-native/vineyardctl.md
