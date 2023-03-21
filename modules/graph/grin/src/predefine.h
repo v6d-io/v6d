@@ -145,7 +145,7 @@ struct GRIN_ADJACENT_LIST_ITERATOR_T {
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
 struct GRIN_PARTITIONED_GRAPH_T {
   vineyard::ArrowFragmentGroup* pg;
-  std::vector<GRIN_GRAPH_T*> lgs;
+  std::vector<std::shared_ptr<GRIN_GRAPH_T>> lgs;
 };
 typedef unsigned GRIN_PARTITION_T;
 typedef std::vector<unsigned> GRIN_PARTITION_LIST_T;

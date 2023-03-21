@@ -81,7 +81,7 @@ void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
 GRIN_GRAPH grin_get_local_graph_from_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto _p = static_cast<GRIN_PARTITION_T*>(p);
-    return _pg->lgs[*_p];
+    return _pg->lgs[*_p].get();
 }
 #endif
 

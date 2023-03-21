@@ -59,30 +59,49 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
     Then for each of these vertices, we send the value of the "features" property to its master partition.
   */
   GRIN_GRAPH g = grin_get_local_graph_from_partition(partitioned_graph, partition);  // get local graph of partition
+  auto _g = static_cast<GRIN_GRAPH_T*>(g);
+
+  LOG(INFO) << "Vnum: " << _g->GetTotalNodesNum() << " Enum: " << _g->GetEdgeNum();
+
+  LOG(INFO) << "Got graph: " << _g->vertex_label_num() << " " << _g->edge_label_num();
+
+  LOG(INFO) << "Got etype: " << edge_type_name << " " << _g->schema().GetEdgeLabelId(std::string(edge_type_name));
 
   GRIN_EDGE_TYPE etype = grin_get_edge_type_by_name(g, edge_type_name);  // get edge type from name
+  LOG(INFO) << "Etype: " << *(static_cast<unsigned*>(etype));
+
   GRIN_VERTEX_TYPE_LIST src_vtypes = grin_get_src_types_from_edge_type(g, etype);  // get related source vertex type list
   GRIN_VERTEX_TYPE_LIST dst_vtypes = grin_get_dst_types_from_edge_type(g, etype);  // get related destination vertex type list
 
   size_t src_vtypes_num = grin_get_vertex_type_list_size(g, src_vtypes);
   size_t dst_vtypes_num = grin_get_vertex_type_list_size(g, dst_vtypes);
-  assert(src_vtypes_num == dst_vtypes_num);  // the src & dst vertex type lists must be aligned
+  LOG(INFO) << src_vtypes_num << " " << dst_vtypes_num;
 
   for (size_t i = 0; i < src_vtypes_num; ++i) {  // iterate all pairs of src & dst vertex type
     GRIN_VERTEX_TYPE src_vtype = grin_get_vertex_type_from_list(g, src_vtypes, i);  // get src type
     GRIN_VERTEX_TYPE dst_vtype = grin_get_vertex_type_from_list(g, dst_vtypes, i);  // get dst type
 
+    LOG(INFO) << "Src Vtype: " << *(static_cast<unsigned*>(src_vtype)) << " Dst Vtype: " << *(static_cast<unsigned*>(dst_vtype));
+
+
     GRIN_VERTEX_PROPERTY dst_vp = grin_get_vertex_property_by_name(g, dst_vtype, vertex_property_name);  // get the property called "features" under dst type
     if (dst_vp == GRIN_NULL_VERTEX_PROPERTY) continue;  // filter out the pairs whose dst type does NOT have such a property called "features"
     
+    LOG(INFO) << "Dst VProp: " << grin_get_vertex_property_id(g, dst_vtype, dst_vp);
+
     GRIN_VERTEX_PROPERTY_TABLE dst_vpt = grin_get_vertex_property_table_by_type(g, dst_vtype);  // prepare property table of dst vertex type for later use
     GRIN_DATATYPE dst_vp_dt = grin_get_vertex_property_data_type(g, dst_vp); // prepare property type for later use
+
+    LOG(INFO) << "Dst VProp DT: " << GetDataTypeName(dst_vp_dt);
 
     GRIN_VERTEX_LIST __src_vl = grin_get_vertex_list(g);  // get the vertex list
     GRIN_VERTEX_LIST _src_vl = grin_filter_type_for_vertex_list(g, src_vtype, __src_vl);  // filter the vertex of source type
     GRIN_VERTEX_LIST src_vl = grin_filter_master_for_vertex_list(g, _src_vl);  // filter master vertices under source type
     
     size_t src_vl_num = grin_get_vertex_list_size(g, src_vl);
+
+    LOG(INFO) << "Vertex List Num: " << src_vl_num;
+
     for (size_t j = 0; j < src_vl_num; ++j) { // iterate the src vertex
       GRIN_VERTEX v = grin_get_vertex_from_list(g, src_vl, j);
 
@@ -105,6 +124,11 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
 
         GRIN_VERTEX_REF uref = grin_get_vertex_ref_for_vertex(g, u);  // get the reference of u that can be recoginized by other partitions
         GRIN_PARTITION u_master_partition = grin_get_master_partition_from_vertex_ref(g, uref);  // get the master partition for u
+        const char* uref_ser = grin_serialize_vertex_ref(g, uref);
+
+        if (dst_vp_dt == GRIN_DATATYPE::Int64) {
+          LOG(INFO) << "Message:" << uref_ser << *(static_cast<const int64_t*>(value));
+        }
 
         // send_value(u_master_partition, uref, dst_vp_dt, value);  // the value must be casted to the correct type based on dst_vp_dt before sending
       }
@@ -118,16 +142,15 @@ void Traverse(vineyard::Client& client, const grape::CommSpec& comm_spec,
   LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
 
   GRIN_PARTITIONED_GRAPH pg = get_partitioned_graph_by_object_id(client, fragment_group_id);
-  LOG(INFO) << "Got partition num: " << grin_get_total_partitions_number(pg);
 
   GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
   size_t pnum = grin_get_partition_list_size(pg, local_partitions);
   LOG(INFO) << "Got partition num: " << pnum;
-//  assert(pnum > 0);
 
   // we only traverse the first partition for test
-//  GRIN_PARTITION partition = grin_get_partition_from_list(pg, local_partitions, 0);
-//  sync_property(pg, partition, "likes", "features");
+  GRIN_PARTITION partition = grin_get_partition_from_list(pg, local_partitions, 0);
+  LOG(INFO) << "Partition: " << *(static_cast<unsigned*>(partition));
+  sync_property(pg, partition, "knows", "value3");
 }
 
 
