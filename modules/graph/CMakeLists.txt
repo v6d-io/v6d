@@ -42,7 +42,6 @@ add_custom_target(vineyard_graph_java_gen
 add_dependencies(vineyard_graph_gen vineyard_basic_gen)
 
 file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
-                                                                "grin/*.cc"
                                                                 "loader/*.cc"
                                                                 "utils/*.cc"
                                                                 "vertex_map/*.cc"
@@ -151,6 +150,7 @@ add_dependencies(vineyard_tests vineyard_graph_tests)
 if(BUILD_VINEYARD_TESTS)
     enable_testing()
     file(GLOB TEST_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/test" "${CMAKE_CURRENT_SOURCE_DIR}/test/*.cc")
+    list(REMOVE_ITEM TEST_FILES "grin_test.cc")
     foreach(f ${TEST_FILES})
         string(REGEX MATCH "^(.*)\\.[^.]*$" dummy ${f})
         set(T_NAME ${CMAKE_MATCH_1})
@@ -169,5 +169,35 @@ if(BUILD_VINEYARD_TESTS)
         endif()
         add_test(${T_NAME}, ${T_NAME})
         add_dependencies(vineyard_graph_tests ${T_NAME})
+    endforeach()
+endif()
+
+# grin lib
+file(GLOB_RECURSE GRIN_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "grin/*.cc")
+add_library(vineyard_grin ${GRIN_SRC_FILES})
+target_link_libraries(vineyard_grin PRIVATE vineyard_graph)
+
+# grin test
+if(BUILD_VINEYARD_TESTS)
+    enable_testing()
+    file(GLOB TEST_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}/test" "${CMAKE_CURRENT_SOURCE_DIR}/test/grin_*.cc")
+    foreach(f ${TEST_FILES})
+        string(REGEX MATCH "^(.*)\\.[^.]*$" dummy ${f})
+        set(T_NAME ${CMAKE_MATCH_1})
+        message(STATUS "Found unit_test - " ${T_NAME})
+        if(BUILD_VINEYARD_TESTS_ALL)
+            add_executable(${T_NAME} test/${T_NAME}.cc)
+        else()
+            add_executable(${T_NAME} EXCLUDE_FROM_ALL test/${T_NAME}.cc)
+        endif()
+        target_link_libraries(${T_NAME} PRIVATE
+                              vineyard_graph
+                              vineyard_grin
+                              ${ARROW_SHARED_LIB}
+                              ${MPI_CXX_LIBRARIES})
+        if(${LIBUNWIND_FOUND})
+            target_link_libraries(${T_NAME} PRIVATE ${LIBUNWIND_LIBRARIES})
+        endif()
+        add_test(${T_NAME}, ${T_NAME})
     endforeach()
 endif()
