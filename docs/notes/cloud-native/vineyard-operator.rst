@@ -36,16 +36,6 @@ cluster with 3 daemon replicas:
       name: vineyardd-sample
       # don't use default namespace
       namespace: vineyard-system
-    spec:
-      replicas: 2
-      etcd:
-        replicas: 3
-      service:
-        type: ClusterIP
-        port: 9600
-      vineyardConfig:
-        image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-        imagePullPolicy: IfNotPresent
     EOF
 
 The vineyard-operator orchestrates the creation of a deployment for the required metadata
@@ -106,6 +96,16 @@ The detailed configuration entries for creating a vineyard cluster are listed as
          - int
          - The replicas of vineyardd.
          - 3
+
+       * - createServiceAccount
+         - bool
+         - Whether to create a service account for vineyardd.
+         - false
+      
+       * - serviceAccountName
+         - string
+         - The name of vineyardd's service account.
+         - nil
 
        * - | vineyardConfig.
            | image
@@ -1192,16 +1192,7 @@ use the following YAML file:
       # don't use default namespace
       namespace: vineyard-system
     spec:
-      replicas: 2
-      etcd:
-        replicas: 3
-      service:
-        type: ClusterIP
-        port: 9600
       vineyardConfig:
-        image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-        imagePullPolicy: IfNotPresent
-        size: "2048"
         # spill configuration
         spillConfig:
           name: spill-path
