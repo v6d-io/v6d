@@ -51,10 +51,15 @@ GRIN_VERTEX_LIST grin_filter_type_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_TYPE
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    _vl->type_begin = *_vtype;
-    _vl->type_end = *_vtype + 1;
-    __grin_init_vertex_list(_g, _vl);
-    return _vl;
+
+    if (_vl->type_begin > *_vtype || _vl->type_end <= *_vtype) return GRIN_NULL_LIST;
+
+    auto fvl = new GRIN_VERTEX_LIST_T();
+    fvl->all_master_mirror = _vl->all_master_mirror;
+    fvl->type_begin = *_vtype;
+    fvl->type_end = *_vtype + 1;
+    __grin_init_vertex_list(_g, fvl);
+    return fvl;
 }
 #endif
 
@@ -71,9 +76,15 @@ GRIN_ADJACENT_LIST grin_filter_edge_type_for_adjacent_list(GRIN_GRAPH g, GRIN_ED
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    _al->etype_begin = *_etype;
-    _al->etype_end = *_etype + 1;
-    __grin_init_adjacent_list(_g, _al);
-    return _al;
+
+    if (_al->etype_begin > *_etype || _al->etype_end <= *_etype) return GRIN_NULL_LIST;
+
+    auto fal = new GRIN_ADJACENT_LIST_T();
+    fal->vid = _al->vid;
+    fal->dir = _al->dir;
+    fal->etype_begin = *_etype;
+    fal->etype_end = *_etype + 1;
+    __grin_init_adjacent_list(_g, fal);
+    return fal;
 }
 #endif

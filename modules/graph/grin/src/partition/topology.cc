@@ -41,17 +41,27 @@ GRIN_PARTITION_LIST grin_edge_data_complete_partitions(GRIN_GRAPH, GRIN_EDGE);
 GRIN_VERTEX_LIST grin_filter_master_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    _vl->all_master_mirror = 1;
-    __grin_init_vertex_list(_g, _vl);
-    return _vl;
+    if (_vl->all_master_mirror > 0) return GRIN_NULL_LIST;
+
+    auto fvl = new GRIN_VERTEX_LIST_T();
+    fvl->type_begin = _vl->type_begin;
+    fvl->type_end = _vl->type_end;
+    fvl->all_master_mirror = 1;
+    __grin_init_vertex_list(_g, fvl);
+    return fvl;
 }
 
 GRIN_VERTEX_LIST grin_filter_mirror_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    _vl->all_master_mirror = 2;
-    __grin_init_vertex_list(_g, _vl);
-    return _vl;
+    if (_vl->all_master_mirror > 0) return GRIN_NULL_LIST;
+
+    auto fvl = new GRIN_VERTEX_LIST_T();
+    fvl->type_begin = _vl->type_begin;
+    fvl->type_end = _vl->type_end;
+    fvl->all_master_mirror = 2;
+    __grin_init_vertex_list(_g, fvl);
+    return fvl;
 }
 #endif
 
