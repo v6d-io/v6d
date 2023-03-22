@@ -59,12 +59,17 @@ GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, 
         if (idx < _al->offsets[i+1]) {
             auto _idx = idx - _al->offsets[i];
             auto _nbr = _al->data[i].begin() + _idx;
-            auto e = new GRIN_EDGE_T();
-            e->src = _al->vid;
-            e->dst = _nbr->vid;
+            auto e = new GRIN_EDGE_T();        
             e->dir = _al->dir;
             e->etype = _al->etype_begin + i;
             e->eid = _nbr->eid;
+            if (_al->dir == GRIN_DIRECTION::OUT) {
+                e->src = _al->vid;
+                e->dst = _nbr->vid;
+            } else {
+                e->src = _nbr->vid;
+                e->dst = _al->vid;
+            }
             return e;        
         }
     }
@@ -128,11 +133,16 @@ GRIN_EDGE grin_get_edge_from_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali)
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
     auto _nbr = _ali->data.begin() + _ali->current;
     auto e = new GRIN_EDGE_T();
-    e->src = _ali->vid;
-    e->dst = _nbr->vid;
     e->dir = _ali->dir;
     e->etype = _ali->etype_current;
     e->eid = _nbr->eid;
+    if (_ali->dir == GRIN_DIRECTION::OUT) {
+        e->src = _ali->vid;
+        e->dst = _nbr->vid;
+    } else {
+        e->src = _nbr->vid;
+        e->dst = _ali->vid;
+    }
     return e;     
 }
 #endif
