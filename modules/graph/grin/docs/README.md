@@ -189,6 +189,9 @@ discuss with GRIN designers.
 - Since almost everything in GRIN are handlers except of only a few string names, the type for a graph concept and its handler is always mixed-used in GRIN.
 - For example, GRIN uses the type Vertex to represent the type of a vertex handler, instead of using VertexHandler for clean code.
 
+### Edge
+- For any directed edge (u, v) where the direction goes from u to v, u is the source vertex, whereas v is the destination vertex.
+
 ### List
 GRIN provides two alternative approaches, namely array-style retrieval and iterator, for list retrieval of GRIN_VERTEX_LIST, GRIN_EDGE_LIST, and GRIN_ADJACENT_LIST. 
 
