@@ -73,7 +73,7 @@ def read_byte_blocks(
         total_size = fp.size
     part_size = (total_size - offset) // proc_num
     begin = part_size * proc_index + offset
-    end = min(begin + part_size, total_size)
+    end = total_size if proc_index == proc_num - 1 else begin + part_size
 
     # See Note [Semantic of read_block with delimiter].
     if index == 0 and proc_index == 0:
