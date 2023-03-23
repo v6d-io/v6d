@@ -168,19 +168,6 @@ jobs:
             -DgRPC_SSL_PROVIDER=package
           sudo make install -j`nproc`
 
-      - name: Install libgrape-lite
-        run: |
-          # leverage ccache
-          export PATH=/usr/lib64/openmpi/bin/:$PATH
-
-          git clone https://github.com/alibaba/libgrape-lite.git --depth=1
-          cd libgrape-lite
-          mkdir build
-          cd build
-          cmake ..
-          make -j`nproc`
-          sudo make install
-
       - name: Setup tmate session
         if: false
         uses: mxschmitt/action-tmate@v3

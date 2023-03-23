@@ -4,19 +4,8 @@ Troubleshooting
 This page provides guidance for addressing common issues that may arise when
 working with Vineyard.
 
-Installation Errors
--------------------
-
-1. Package configuration file for :code:`libgrapelite` not found
-
-    During the installation of Vineyard from source, you may encounter this error.
-    The "graph" module in Vineyard, designed for distributed data structures, depends on
-    the `libgrape-lite library <https://github.com/alibaba/libgrape-lite>`_. To resolve this issue, you can either:
-
-    + Install the libgrape-lite library by following the instructions in
-      `Building libgrape-lite <https://github.com/alibaba/libgrape-lite#building-libgrape-lite>`_.
-    + Disable the graph module using the cmake option below:
-          cmake .. -DBUILD_VINEYARD_GRAPH=OFF
+.. Installation Errors
+.. -------------------
 
 Vineyard Fails to Start
 -----------------------

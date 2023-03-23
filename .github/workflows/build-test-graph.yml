@@ -129,23 +129,6 @@ jobs:
         if: false
         uses: mxschmitt/action-tmate@v3
 
-      - name: Install libgrape-lite
-        if: runner.os == 'Linux'
-        run: |
-          export PATH=/usr/lib/ccache:$PATH
-
-          git clone https://github.com/alibaba/libgrape-lite.git
-          cd libgrape-lite
-          mkdir build
-          cd build
-          cmake ..
-          make -j`nproc`
-          sudo make install
-
-      - name: Setup tmate session
-        if: false
-        uses: mxschmitt/action-tmate@v3
-
       - name: CMake
         run: |
           export PATH=/usr/lib/ccache:$PATH

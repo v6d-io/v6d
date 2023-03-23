@@ -8,7 +8,6 @@ file(GLOB_RECURSE VINEYARD_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}"
                                    "*.h")
 
 find_package(MPI REQUIRED)
-find_package(libgrapelite REQUIRED)
 
 if(VINEYARD_MOD_SRCS)
     vineyard_generate(
@@ -77,6 +76,24 @@ else()
     )
 endif()
 
+find_package(libgrapelite QUIET)
+if(LIBGRAPELITE_INCLUDE_DIRS)
+    message(STATUS "-- Found libgrape-lite: ${LIBGRAPELITE_INCLUDE_DIRS}")
+    target_include_directories(vineyard_graph PUBLIC ${LIBGRAPELITE_INCLUDE_DIRS})
+else()
+    # use bundled libgrape-lite
+    message(STATUS "-- Building libgrape-lite from submodule: ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libgrape-lite")
+    set(BUILD_LIBGRAPELITE_DOCS OFF CACHE BOOL "no libgrape-lite docs")
+    set(BUILD_LIBGRAPELITE_TESTS OFF CACHE BOOL "no libgrape-lite tests")
+    add_subdirectory_static("${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libgrape-lite"
+                            "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/libgrape-lite"
+    )
+    target_include_directories(vineyard_graph PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libgrape-lite>
+        $<INSTALL_INTERFACE:include>
+    )
+endif()
+
 if(BUILD_VINEYARD_GRAPH_WITH_GAR)
     target_compile_definitions(vineyard_graph PUBLIC -DENABLE_GAR)
     find_package(gar QUIET)
@@ -94,11 +111,6 @@ if(BUILD_VINEYARD_GRAPH_WITH_GAR)
         target_link_libraries(vineyard_graph PUBLIC gar)
     endif()
 endif()
-
-target_include_directories(vineyard_graph PUBLIC
-    $<BUILD_INTERFACE:${LIBGRAPELITE_INCLUDE_DIRS}>
-    $<INSTALL_INTERFACE:include>
-)
 
 target_link_libraries(vineyard_graph PUBLIC vineyard_client
                                             vineyard_basic

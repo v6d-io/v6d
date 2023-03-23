@@ -132,24 +132,12 @@ jobs:
           done
 
           # install python packages for codegen
-          
+
           python3 -m pip install -U pip
           python3 -m pip install libclang parsec setuptools wheel
 
           /usr/local/bin/python3 -m pip install -U pip
           /usr/local/bin/python3 -m pip install libclang parsec setuptools wheel
-
-      - name: Install libgrape-lite
-        run: |
-          export PATH=/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH
-
-          git clone https://github.com/alibaba/libgrape-lite.git
-          cd libgrape-lite
-          mkdir build
-          cd build
-          cmake ..
-          make -j`nproc`
-          sudo make install
 
       - name: Setup tmate session
         if: false

@@ -122,17 +122,6 @@ jobs:
           # linters
           sudo pip3 install black isort flake8
 
-      - name: Install libgrape-lite
-        if: runner.os == 'Linux'
-        run: |
-          git clone https://github.com/alibaba/libgrape-lite.git
-          cd libgrape-lite
-          mkdir build
-          cd build
-          cmake ..
-          make -j`nproc`
-          sudo make install
-
       - name: CMake
         run: |
           export PATH=/usr/lib/ccache:$PATH

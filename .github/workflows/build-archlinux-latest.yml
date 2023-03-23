@@ -74,16 +74,6 @@ jobs:
         with:
           submodules: true
 
-      - name: Install libgrape-lite
-        run: |
-          git clone https://github.com/alibaba/libgrape-lite.git
-          cd libgrape-lite
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_CXX_FLAGS="-Wno-dangling-pointer"
-          make -j`nproc`
-          sudo make install
-
       - name: Setup tmate session
         if: false
         uses: mxschmitt/action-tmate@v3
