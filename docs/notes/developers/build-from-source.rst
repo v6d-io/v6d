@@ -105,30 +105,6 @@ Vineyard has been tested on MacOS as well, the dependencies can be installed usi
 
     brew install apache-arrow boost gflags glog grpc protobuf mpich openssl zlib autoconf
 
-Install :code:`libgrape-lite`
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-:code:`libgrape-lite` is a C++ library for parallel graph processing and is used as the basis
-of the distributed graph data structure implementation.
-
-You need to install libgrape-lite properly before building vineyard if you need the graph module
-works,
-
-.. code:: shell
-
-    git clone https://github.com/alibaba/libgrape-lite.git
-    cd libgrape-lite
-    mkdir build
-    cd build
-    make -j$(nproc)
-    sudo make install
-
-Or, you need to disable the :code:`graph` module when building vineyard
-
-.. code:: shell
-
-    cmake .. -DBUILD_VINEYARD_GRAPH=OFF
-
 Building vineyard
 ^^^^^^^^^^^^^^^^^
 

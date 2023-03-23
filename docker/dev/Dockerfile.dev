@@ -13,7 +13,3 @@ RUN cd /workspace && bash ./build_scripts/install-arrow.sh
 COPY ./build_scripts/install-miscs.sh /workspace/build_scripts
 COPY ./build_scripts/requirements.txt /workspace/build_scripts
 RUN cd /workspace && bash ./build_scripts/install-miscs.sh
-
-COPY ./build_scripts/install-libgrape-lite.sh /workspace/build_scripts
-RUN cd /workspace && bash ./build_scripts/install-libgrape-lite.sh
-
