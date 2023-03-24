@@ -57,6 +57,7 @@ limitations under the License.
 #include "graph/grin/include/property/propertylist.h"
 #include "graph/grin/include/property/propertytable.h"
 #include "graph/grin/include/property/topology.h"
+#include "graph/grin/include/index/order.h"
 
 #include "graph/grin/src/predefine.h"
 
@@ -538,10 +539,144 @@ class GRIN_ArrowFragment {
 
   GRIN_GRAPH get_graph() { return g_; }
 
+  // pos means the vertex position in the inner vertex list under vertex type 
+  inline grape::DestList IEDests(GRIN_VERTEX_TYPE v_label, size_t pos, GRIN_EDGE_TYPE e_label) const {
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
+    auto vtype = static_cast<unsigned*>(v_label);
+#endif
+
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
+    auto etype = static_cast<unsigned*>(e_label);
+#endif
+
+    return grape::DestList(idoffset_[*vtype][*etype][pos],
+                           idoffset_[*vtype][*etype][pos + 1]);
+  }
+
+  inline grape::DestList OEDests(GRIN_VERTEX_TYPE v_label, size_t pos, GRIN_EDGE_TYPE e_label) const {
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
+    auto vtype = static_cast<unsigned*>(v_label);
+#endif
+
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
+    auto etype = static_cast<unsigned*>(e_label);
+#endif
+
+    return grape::DestList(odoffset_[*vtype][*etype][pos],
+                           odoffset_[*vtype][*etype][pos + 1]);
+  }
+
+  inline grape::DestList IOEDests(GRIN_VERTEX_TYPE v_label, size_t pos, GRIN_EDGE_TYPE e_label) const {
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
+    auto vtype = static_cast<unsigned*>(v_label);
+#endif
+
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
+    auto etype = static_cast<unsigned*>(e_label);
+#endif
+
+    return grape::DestList(iodoffset_[*vtype][*etype][pos],
+                           iodoffset_[*vtype][*etype][pos + 1]);
+  }
+
+  void initDestFidList(
+      bool in_edge, bool out_edge,
+      std::vector<std::vector<std::vector<fid_t>>>& fid_lists,
+      std::vector<std::vector<std::vector<fid_t*>>>& fid_lists_offset) {
+    auto vtl = grin_get_vertex_type_list(g_);
+    auto vtl_sz = grin_get_vertex_type_list_size(g_, vtl);
+    auto etl = grin_get_edge_type_list(g_);
+    auto etl_sz = grin_get_edge_type_list_size(g_, etl);
+
+    for (auto vti = 0; vti < vtl_sz; vti++) {
+      auto vtype = grin_get_vertex_type_from_list(g_, vtl, vti);
+      auto inner_vertices = InnerVertices(vtype);
+      auto ivnum_ = inner_vertices.size();
+
+      for (auto eti = 0; eti < etl_sz; eti++) {
+        std::vector<int> id_num(ivnum_, 0);
+        std::set<fid_t> dstset;
+
+        auto etype = grin_get_edge_type_from_list(g_, etl, eti);
+        auto v = inner_vertices.begin();
+        auto& fid_list = fid_lists[vti][eti];
+        auto& fid_list_offset = fid_lists_offset[vti][eti];
+
+        if (!fid_list_offset.empty()) {
+          return;
+        }
+        fid_list_offset.resize(ivnum_ + 1, NULL);
+        for (auto i = 0; i < ivnum_; ++i) {
+          dstset.clear();
+          
+          if (in_edge) {
+            auto es = GetIncomingAdjList(*v, etype);
+            for (auto& e : es) {
+              auto vref = grin_get_vertex_ref_for_vertex(g_, e.neighbor());
+              auto p = grin_get_master_partition_from_vertex_ref(g_, vref);
+
+              if (!grin_equal_partition(g_, p, partition_)) {
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
+                auto f = static_cast<unsigned*>(p);
+                dstset.insert(*f);
+#else
+                // todo 
+#endif
+              }
+            }
+          }
+          if (out_edge) {
+            auto es = GetOutgoingAdjList(*v, etype);
+            for (auto& e : es) {
+              auto vref = grin_get_vertex_ref_for_vertex(g_, e.neighbor());
+              auto p = grin_get_master_partition_from_vertex_ref(g_, vref);
+
+              if (!grin_equal_partition(g_, p, partition_)) {
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
+                auto f = static_cast<unsigned*>(p);
+                dstset.insert(*f);
+#else
+                // todo 
+#endif
+              }
+            }
+          }
+          id_num[i] = dstset.size();
+          for (auto fid : dstset) {
+            fid_list.push_back(fid);
+          }
+          ++v;
+        }
+
+        fid_list.shrink_to_fit();
+        fid_list_offset[0] = fid_list.data();
+        for (auto i = 0; i < ivnum_; ++i) {
+          fid_list_offset[i + 1] = fid_list_offset[i] + id_num[i];
+        }
+      }
+    }
+  }
+
+  void PrepareToRunApp(const grape::CommSpec& comm_spec, grape::PrepareConf conf) {
+    if (conf.message_strategy ==
+        grape::MessageStrategy::kAlongEdgeToOuterVertex) {
+      initDestFidList(true, true, iodst_, iodoffset_);
+    } else if (conf.message_strategy ==
+              grape::MessageStrategy::kAlongIncomingEdgeToOuterVertex) {
+      initDestFidList(true, false, idst_, idoffset_);
+    } else if (conf.message_strategy ==
+              grape::MessageStrategy::kAlongOutgoingEdgeToOuterVertex) {
+      initDestFidList(false, true, odst_, odoffset_);
+    }
+  }
+
  private:
   GRIN_PARTITIONED_GRAPH pg_;
   GRIN_GRAPH g_;
   GRIN_PARTITION partition_;
+  std::vector<std::vector<std::vector<fid_t>>> idst_, odst_, iodst_;
+  std::vector<std::vector<std::vector<fid_t*>>> idoffset_, odoffset_,
+    iodoffset_;
 };
 
 }  // namespace vineyard
