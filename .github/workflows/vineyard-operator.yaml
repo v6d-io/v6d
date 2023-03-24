@@ -40,6 +40,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  REGISTRY: ghcr.io/v6d-io/v6d
   IMG: vineyardcloudnative/vineyard-operator:latest
   NIGHTLY_IMG: ghcr.io/v6d-io/v6d/vineyard-operator:nightly
   LATEST_IMG: ghcr.io/v6d-io/v6d/vineyard-operator:latest
@@ -122,22 +123,23 @@ jobs:
         run: |
           make -C k8s docker-build
 
-      - name: Upload nightly docker image
-        if: ${{ matrix.job == 'release' && github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
-        run: |
-          docker tag ${IMG} ${NIGHTLY_IMG}
-          docker push ${NIGHTLY_IMG}
-
       - name: Extract tag name
         id: tag
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
         run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
+      - name: Set up qemu
+        if: ${{ matrix.job == 'release' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        if: ${{ matrix.job == 'release' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        uses: docker/setup-buildx-action@v2
+
       - name: Upload latest docker image
         if: ${{ matrix.job == 'release' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |
-          docker tag ${IMG} ${LATEST_IMG}
-          docker push ${LATEST_IMG}
+          make -C k8s docker-build-push-multi-arch REGISTER=$REGISTRY
 
       - name: Generate the python and vineyardd image for tests
         if: ${{ matrix.job != 'release' }}

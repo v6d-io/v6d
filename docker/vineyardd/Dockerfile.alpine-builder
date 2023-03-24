@@ -12,49 +12,65 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM quay.io/pypa/manylinux2010_x86_64_centos6_no_vsyscall
+ARG PLATFORM=x86_64
+ARG ARCH=amd64
+FROM amd64/centos:7 as base_x86_64
+FROM arm64v8/centos:7 as base_aarch64
 
-# target: ghcr.io/v6d-io/v6d/vineyardd-alpine-builder:builder-latest
+ARG PLATFORM
+FROM base_$PLATFORM
+
+# target: ghcr.io/v6d-io/v6d/vineyardd-alpine-builder:builder-latest_$PLATFORM
 
 SHELL ["/bin/bash", "-c"]
 
-ENV DEVTOOLSET_ROOTPATH="/opt/rh/devtoolset-8/root"
-ENV PATH="${DEVTOOLSET_ROOTPATH}/usr/bin:${PATH}"
+ARG PLATFORM
+ENV PLATFORM $PLATFORM
+ARG ARCH
+ENV ARCH $ARCH
+
+ENV DEVTOOLSET_ROOTPATH="/opt/rh/devtoolset-10/root"
 ENV LD_LIBRARY_PATH_ARG="${DEVTOOLSET_ROOTPATH}/usr/lib64:${DEVTOOLSET_ROOTPATH}/usr/lib:${DEVTOOLSET_ROOTPATH}/usr/lib64/dyninst:${DEVTOOLSET_ROOTPATH}/usr/lib/dyninst:/usr/local/lib64:/usr/local/lib"
 
 ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
 ENV LC_ALL=en_US.UTF-8 LANG=en_US.UTF-8 LANGUAGE=en_US.UTF-8
 
-COPY build_scripts/fixup-mirrors.sh /usr/local/sbin/fixup-mirrors
-
 # install base repo and deps
 RUN echo "multilib_policy=best" >> /etc/yum.conf && \
-    fixup-mirrors && \
-    yum -y update && \
-    yum -y install https://archives.fedoraproject.org/pub/archive/epel/6/x86_64/epel-release-6-8.noarch.rpm && \
-    fixup-mirrors && \
-    yum -y install centos-release-scl && \
-    fixup-mirrors && \
-    yum -y install devtoolset-8-binutils devtoolset-8-gcc devtoolset-8-gcc-c++ && \
+	echo "skip_missing_names_on_install=False" >> /etc/yum.conf \
+	sed -i '/^override_install_langs=/d' /etc/yum.conf \
+	echo "exclude = d36uatko69830t.cloudfront.net" >> /etc/yum/pluginconf.d/fastestmirror.conf \
+    yum -y install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm && \
+	yum-config-manager --enable extras && \
+	yum -y update && \
+	yum -y install yum-utils autoconf automake curl centos-release-scl-rh m4 make wget && \
+    yum -y install devtoolset-10-binutils devtoolset-10-gcc devtoolset-10-gcc-c++ && \
     localedef -i en_US -f UTF-8 en_US.UTF-8 && \
-    yum -y install curl git wget m4 && \
     yum clean all && \
 	rm -rf /var/cache/yum
 
+ENV BASH_ENV=/opt/rh/devtoolset-10/enable
+ENV ENV=/opt/rh/devtoolset-10/enable
+ENV PROMPT_COMMAND=". /opt/rh/devtoolset-10/enable"
+
 # install cmake
 RUN cd /tmp && \
-    wget https://cmake.org/files/v3.19/cmake-3.19.5-Linux-x86_64.sh && \
-    bash cmake-3.19.5-Linux-x86_64.sh --skip-license --prefix=/usr && \
-    rm cmake-3.19.5-Linux-x86_64.sh
+    wget -q https://cmake.org/files/v3.19/cmake-3.19.5-Linux-$PLATFORM.sh && \
+    bash cmake-3.19.5-Linux-$PLATFORM.sh --skip-license --prefix=/usr && \
+    rm cmake-3.19.5-Linux-$PLATFORM.sh
 
 # install apache-arrow
 RUN cd /tmp && \
-    git clone https://github.com/apache/arrow.git --depth=1 && \
-    cd arrow && \
+    wget -q https://github.com/apache/arrow/archive/refs/tags/apache-arrow-11.0.0.tar.gz && \
+    tar zxf apache-arrow-11.0.0.tar.gz && \
+    cd arrow-apache-arrow-11.0.0 && \
     mkdir build && \
     cd build && \
     cmake ../cpp \
+        -DCMAKE_BUILD_TYPE=MinSizeRel \
         -DARROW_COMPUTE=ON \
+        -DARROW_SIMD_LEVEL=NONE \
+        -DARROW_RUNTIME_SIMD_LEVEL=NONE \
         -DARROW_WITH_UTF8PROC=OFF \
         -DARROW_CSV=ON \
         -DARROW_CUDA=OFF \
@@ -63,21 +79,23 @@ RUN cd /tmp && \
         -DARROW_FLIGHT=OFF \
         -DARROW_GANDIVA=OFF \
         -DARROW_GANDIVA_JAVA=OFF \
-        -DARROW_HDFS=ON \
+        -DARROW_HDFS=OFF \
         -DARROW_HIVESERVER2=OFF \
         -DARROW_JSON=OFF \
-        -DARROW_ORC=ON \
-        -DARROW_PARQUET=ON \
+        -DARROW_ORC=OFF \
+        -DARROW_PARQUET=OFF \
         -DARROW_PLASMA=OFF \
         -DARROW_PLASMA_JAVA_CLIENT=OFF \
         -DARROW_PYTHON=OFF \
         -DARROW_S3=OFF \
-        -DARROW_WITH_BZ2=OFF \
-        -DARROW_WITH_ZLIB=OFF \
-        -DARROW_WITH_LZ4=OFF \
-        -DARROW_WITH_SNAPPY=OFF \
-        -DARROW_WITH_ZSTD=ON \
         -DARROW_WITH_BROTLI=OFF \
+        -DARROW_WITH_BZ2=OFF \
+        -DARROW_WITH_GRPC=OFF \
+        -DARROW_WITH_LZ4=OFF \
+        -DARROW_WITH_RE2=OFF \
+        -DARROW_WITH_SNAPPY=OFF \
+        -DARROW_WITH_ZLIB=OFF \
+        -DARROW_WITH_ZSTD=OFF \
         -DARROW_IPC=ON \
         -DARROW_BUILD_BENCHMARKS=OFF \
         -DARROW_BUILD_EXAMPLES=OFF \
@@ -94,7 +112,7 @@ RUN cd /tmp && \
         -DARROW_BUILD_STATIC=ON && \
     make install -j`nproc` && \
     cd /tmp && \
-    rm -rf arrow
+    rm -rf apache-arrow-11.0.0.tar.gz arrow-apache-arrow-11.0.0/
 
 # install boost
 RUN cd /tmp && \
@@ -120,7 +138,9 @@ RUN cd /tmp && \
     cd gflags-2.2.2 && \
     mkdir build && \
     cd build && \
-    cmake .. -DBUILD_SHARED_LIBS=OFF && \
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF \
+             -DBUILD_TESTING=OFF && \
     make install -j`nproc` && \
     cd /tmp && \
     rm -rf gflags-v2.2.2.tar.gz gflags-2.2.2
@@ -132,7 +152,10 @@ RUN cd /tmp && \
     cd glog-0.5.0/ && \
     mkdir build && \
     cd build && \
-    cmake .. -DBUILD_SHARED_LIBS=OFF && \
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF \
+             -DBUILD_TESTING=OFF \
+             -DWITH_GTEST=OFF && \
     make install -j`nproc` && \
     cd /tmp && \
     rm -rf glog-v0.5.0.tar.gz glog-0.5.0
@@ -146,7 +169,8 @@ RUN cd /tmp && \
     cd zlib-1.2.13 && \
     mkdir build && \
     cd build && \
-    cmake .. -DBUILD_SHARED_LIBS=OFF && \
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF && \
     make install -j`nproc` && \
     rm -rf /usr/local/lib/libz.so* && \
     cd /tmp && \
@@ -164,33 +188,25 @@ RUN cd /tmp && \
 
 # install protobuf & grpc: v1.36.x
 RUN cd /tmp && \
-    git clone https://github.com/grpc/grpc.git -b v1.36.x --depth=1 && \
-    cd grpc && \
-    git submodule update --init && \
+    wget -q https://github.com/unsafecoerce/git-submodules-tarball/releases/download/grpc%2Fgrpc-v1.36.x/grpc-grpc-1.36.x.tar.gz && \
+    tar zxf grpc-grpc-1.36.x.tar.gz && \
+    cd grpc-grpc-1.36.x && \
     mkdir build && \
     cd build && \
-    cmake .. -DBUILD_SHARED_LIBS=OFF \
-         -DgRPC_INSTALL=ON \
-         -DgRPC_BUILD_TESTS=OFF \
-         -DgRPC_BUILD_CSHARP_EXT=OFF \
-         -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF \
-         -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF \
-         -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
-         -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF \
-         -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF \
-         -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
-         -DgRPC_SSL_PROVIDER=package \
-         -DgRPC_ZLIB_PROVIDER=package \
-         -DgRPC_BACKWARDS_COMPATIBILITY_MODE=ON && \
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF \
+             -DgRPC_INSTALL=ON \
+             -DgRPC_BUILD_TESTS=OFF \
+             -DgRPC_BUILD_CSHARP_EXT=OFF \
+             -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
+             -DgRPC_SSL_PROVIDER=package \
+             -DgRPC_ZLIB_PROVIDER=package \
+             -DgRPC_BACKWARDS_COMPATIBILITY_MODE=ON && \
     make install -j`nproc` && \
     cd /tmp && \
-    rm -rf grpc/
-
-# install autoconf (requires 2.68)
-RUN cd /tmp && \
-    wget -q http://ftp.gnu.org/gnu/autoconf/autoconf-2.69.tar.gz && \
-    tar zxf autoconf-2.69.tar.gz && \
-    cd autoconf-2.69 && \
-    ./configure && \
-    make install -j`nproc` && \
-    rm -rf autoconf-2.69 autoconf-2.69.tar.gz
+    rm -rf grpc-grpc-1.36.x.tar.gz grpc-grpc-1.36.x/

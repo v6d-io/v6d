@@ -27,7 +27,8 @@ endif
 BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
-IMG ?= vineyardcloudnative/vineyard-operator:latest
+REGISTRY	:= vineyardcloudnative
+IMG 		?= $(REGISTRY)/vineyard-operator:latest
 
 temp=$(shell mktemp -d)
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -210,6 +211,8 @@ vendor:
 docker-build:
 	docker build . -t ${IMG}
 
+docker-build-push-multi-arch:
+	docker buildx build . -t ${IMG} --platform linux/amd64,linux/arm64 --push
 
 # Push the docker image
 .PHONY: docker-push

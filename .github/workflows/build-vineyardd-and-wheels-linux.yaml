@@ -31,83 +31,115 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
+        platform: [x86_64, aarch64]
 
     steps:
       - uses: actions/checkout@v3
         with:
           submodules: true
 
-      - name: Login docker registry
-        run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login https://ghcr.io -u $GITHUB_ACTOR --password-stdin
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up qemu
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
 
       - name: Build vineyardd on Linux
+        env:
+          ALPINE_VERSION: "${{ github.sha }}"
         run: |
-          sudo docker build . -f docker/Dockerfile.vineyardd -t ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
-          sudo docker run --rm -v `pwd`:/target ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} sh -c "cp /usr/local/bin/vineyardd /target/"
-          ldd ./vineyardd
+          make -C docker/ vineyardd ALPINE_VERSION=$ALPINE_VERSION PLATFORM=${{ matrix.platform }}
+          docker run --rm \
+               -v `pwd`:/target ghcr.io/v6d-io/v6d/vineyardd:alpine-${ALPINE_VERSION}_${{ matrix.platform }} \
+               sh -c "cp /usr/local/bin/vineyardd /target/"
+          # ldd ./vineyardd
 
       - name: Package vineyardd artifact on Linux
         run: |
-          sha512sum ./vineyardd > vineyardd.${{ github.sha }}.sha512sum
+          sha512sum ./vineyardd > vineyardd.${{ matrix.platform }}.${{ github.sha }}.sha512sum
           echo "Checksum is: "
           cat ./*.sha512sum
-          tar zcvfh vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz ./vineyardd vineyardd.${{ github.sha }}.sha512sum
+          tar zcvfh vineyardd.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz ./vineyardd vineyardd.${{ matrix.platform }}.${{ github.sha }}.sha512sum
 
       - name: Upload docker image as nightly
-        if: ${{ github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && && github.repository == 'v6d-io/v6d' }}
         run: |
-          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          ghcr.io/v6d-io/v6d/vineyardd:alpine-nightly
-          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          ghcr.io/v6d-io/v6d/vineyardd:nightly
-
-          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
-          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-nightly
-          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:nightly
+          docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}_${{ matrix.platform }}
 
       - name: Extract tag name
         id: tag
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Tag and upload docker for releases
         if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |
-          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
-          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          ghcr.io/v6d-io/v6d/vineyardd:${{ steps.tag.outputs.TAG }}
+          docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}_${{ matrix.platform }} \
+                     ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}_${{ matrix.platform }}
+          docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}_${{ matrix.platform }} \
+                     ghcr.io/v6d-io/v6d/vineyardd:${{ steps.tag.outputs.TAG }}_${{ matrix.platform }}
+          docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}_${{ matrix.platform }} \
+                     ghcr.io/v6d-io/v6d/vineyardd:alpine-latest_${{ matrix.platform }}
+          docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}_${{ matrix.platform }} \
+                     ghcr.io/v6d-io/v6d/vineyardd:latest_${{ matrix.platform }}
 
-          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
-          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:${{ steps.tag.outputs.TAG }}
-
-          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-          sudo docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }} \
-                          ghcr.io/v6d-io/v6d/vineyardd:latest
-
-          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
-          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
-          sudo docker push ghcr.io/v6d-io/v6d/vineyardd:latest
-
-      - name: Upload vineyardd to tagged release
-        uses: svenstaro/upload-release-action@v2
-        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
-          asset_name: vineyardd-${{ steps.tag.outputs.TAG }}-linux_x86-64.tar.gz
-          tag: ${{ steps.tag.outputs.TAG }}
-          prerelease: false
-          overwrite: true
-          body: "vineyard ${{ steps.tag.outputs.TAG }}"
+          docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}_${{ matrix.platform }}
+          docker push ghcr.io/v6d-io/v6d/vineyardd:${{ steps.tag.outputs.TAG }}_${{ matrix.platform }}
+          docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-latest_${{ matrix.platform }}
+          docker push ghcr.io/v6d-io/v6d/vineyardd:latest_${{ matrix.platform }}
 
       - name: Upload CI artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
-          path: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          name: vineyardd.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz
+          path: vineyardd.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz
+
+  build-vineyardd-manifest:
+    needs: [build-vineyardd]
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: false
+
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate multi-arch manifest
+        if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
+        run: |
+          make -C docker/ vineyardd-manifest ALPINE_VERSION=${{ github.sha }}
+          docker manifest push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}
+
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Tag and upload manifest for releases
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        run: |
+          make -C docker/ vineyardd-manifest ALPINE_VERSION=${{ steps.tag.outputs.TAG }}
+          docker manifest push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ steps.tag.outputs.TAG }}
+
+          make -C docker/ vineyardd-manifest ALPINE_MANIFEST_TAG=latest
+          docker manifest push ghcr.io/v6d-io/v6d/vineyardd:latest
 
   build-vineyardctl:
     runs-on: ${{ matrix.os }}
@@ -115,6 +147,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-20.04]
+        platform: [x86_64, aarch64]
 
     steps:
       - uses: actions/checkout@v3
@@ -127,92 +160,66 @@ jobs:
 
       - name: Build vineyardctl
         run: |
-          go build -a -o vineyardctl k8s/cmd/main.go
-          strip ./vineyardctl || true
+          export arch="${{ matrix.platform }}"
+          export arch="${arch/x86_64/amd64}"
+          export arch="${arch/aarch64/arm64}"
+          echo "arch = $arch"
+
+          env CGO_ENABLED=0 GOARCH=$arch go build -a -o vineyardctl k8s/cmd/main.go
+
+          sudo apt-get install binutils-x86-64-linux-gnu binutils-aarch64-linux-gnu
+          x86_64-linux-gnu-strip ./vineyardctl || true
+          aarch64-linux-gnu-strip ./vineyardctl || true
 
       - name: Package vineyardctl artifact on Linux
         run: |
-          sha512sum vineyardctl > vineyardctl.${{ github.sha }}.sha512sum
+          sha512sum vineyardctl > vineyardctl.${{ matrix.platform }}.${{ github.sha }}.sha512sum
           echo "Checksum is: "
           cat ./*.sha512sum
-          tar zcvfh vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz ./vineyardctl vineyardctl.${{ github.sha }}.sha512sum
+          tar zcvfh vineyardctl.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz ./vineyardctl vineyardctl.${{ matrix.platform }}.${{ github.sha }}.sha512sum
 
       - name: Upload CI artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
-          path: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          name: vineyardctl.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz
+          path: vineyardctl.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz
 
-  build-wheels:
+  build-bdist-wheels:
     needs: [build-vineyardd, build-vineyardctl]
     runs-on: ${{ matrix.os }}
     if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
-        python: [cp36-cp36m, cp37-cp37m, cp38-cp38, cp39-cp39, cp310-cp310, cp311-cp311]
+        platform: [x86_64, aarch64]
 
     steps:
       - uses: actions/checkout@v3
         with:
-          submodules: true
-
-      - name: Generate Summary for Submodules
-        run: |
-          git submodule > git-modules.txt
-          cat git-modules.txt
-
-      - name: Cache for cccahe
-        uses: actions/cache@v3
-        with:
-          path: ~/.ccache
-          key: ${{ matrix.os }}-${{ matrix.python }}-ccache-${{ hashFiles('**/git-modules.txt') }}
-          restore-keys: |
-            ${{ matrix.os }}-${{ matrix.python }}-ccache-
+          submodules: false
 
       - name: Download vineyardd artifacts
         uses: actions/download-artifact@v3
         with:
-          name: vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          name: vineyardd.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz
 
       - name: Download vineyardctl artifacts
         uses: actions/download-artifact@v3
         with:
-          name: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          name: vineyardctl.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz
 
       - name: Prepare binary
         run: |
-          tar zxvf vineyardd.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
-          tar zxvf vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
+          tar zxvf vineyardd.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz
+          tar zxvf vineyardctl.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz
 
           mv vineyardd python/vineyard/bdist/vineyardd
           mv vineyardctl python/vineyard/bdist/vineyardctl
 
-      - name: Login docker registry
-        run: |
-          echo ${{ secrets.GITHUB_TOKEN }} | sudo docker login https://ghcr.io -u $GITHUB_ACTOR --password-stdin
-
       - name: Build wheel package on Linux
         run: |
-          if [[ "${{ matrix.python }}" == "cp311-cp311" ]];
-          then
-            export base=manylinux2014:20230115
-          else
-            export base=manylinux1:20220512
-          fi
-
-          sudo docker build . -f docker/pypa/Dockerfile.manylinux1-wheel \
-                              -t ghcr.io/v6d-io/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} \
-                              --build-arg BASE=$base \
-                              --build-arg python=${{ matrix.python }}
-          sudo docker run --rm -v `pwd`:/target ghcr.io/v6d-io/v6d/vineyard-wheel:${{ matrix.python }}.${{ github.sha }} sh -c "cp -r /work/fixed_wheels/ /target/"
-          ls -la ./fixed_wheels/
-
-          if [[ "${{ matrix.python }}" == "cp311-cp311" ]];
-          then
-            python3 setup_bdist.py bdist_wheel
-            sudo cp dist/*.whl fixed_wheels/ || true
-          fi
+          python3 setup_bdist.py bdist_wheel --plat=manylinux2014_${{ matrix.platform }}
+          mv dist fixed_wheels
 
       - name: Extract tag name
         id: tag
@@ -234,5 +241,81 @@ jobs:
       - uses: actions/upload-artifact@v3
         if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
         with:
-          name: vineyard-linux-wheels-${{ matrix.python }}
+          name: vineyard-bdist-linux-${{ matrix.platform }}-wheels
+          path: fixed_wheels/*.whl
+
+  build-wheels:
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        platform: [x86_64, aarch64]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Generate Summary for Submodules
+        run: |
+          git submodule > git-modules.txt
+          cat git-modules.txt
+
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up qemu
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Cache for cccahe
+        uses: actions/cache@v3
+        with:
+          path: ~/.ccache
+          key: ${{ matrix.os }}-${{ matrix.python }}-ccache-${{ hashFiles('**/git-modules.txt') }}
+          restore-keys: |
+            ${{ matrix.os }}-${{ matrix.python }}-ccache-
+
+      - name: Build wheel package on Linux
+        env:
+          WHEEL_VERSION: "${{ github.sha }}"
+        run: |
+          mkdir -p fixed_wheels
+          for py in cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311; do
+            make -C docker/ python-wheel WHEEL_PYTHON=$py WHEEL_VERSION=$WHEEL_VERSION PLATFORM=${{ matrix.platform }}
+            docker run --rm \
+              -v `pwd`/fixed_wheels:/target \
+              ghcr.io/v6d-io/v6d/vineyard-wheel:${WHEEL_VERSION}_${py}_${{ matrix.platform }} \
+              sh -c "cp -r /work/fixed_wheels/* /target/"
+          done
+          ls -la ./fixed_wheels/
+
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Upload wheels to tagged release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: fixed_wheels/*.whl
+          file_glob: true
+          tag: ${{ steps.tag.outputs.TAG }}
+          prerelease: false
+          overwrite: true
+          body: "vineyard ${{ steps.tag.outputs.TAG }}"
+
+      - uses: actions/upload-artifact@v3
+        if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
+        with:
+          name: vineyard-linux-${{ matrix.platform }}-wheels
           path: fixed_wheels/*.whl
