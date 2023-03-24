@@ -30,6 +30,24 @@ size_t grin_get_edge_num_by_type(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_EDGE_TYPE 
 }
 #endif
 
+#if defined(GRIN_ENABLE_GRAPH_PARTITION) && defined(GRIN_WITH_VERTEX_PROPERTY)
+size_t grin_get_total_vertex_num_by_type(GRIN_PARTITIONED_GRAPH pg, GRIN_VERTEX_TYPE vtype) {
+    auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
+    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
+    if (_pg->lgs.size() == 0) return 0;
+    return _pg->lgs[0]->GetTotalVerticesNum(*_vtype);
+}
+#endif
+
+#if defined(GRIN_ENABLE_GRAPH_PARTITION) && defined(GRIN_WITH_EDGE_PROPERTY)
+size_t grin_get_total_edge_num_by_type(GRIN_PARTITIONED_GRAPH pg, GRIN_DIRECTION d, GRIN_EDGE_TYPE etype) {
+    auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
+    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
+    return _pg->pg->total_edge_num_by_type(*_etype);
+}
+#endif
+
+
 #ifdef GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
 GRIN_VERTEX grin_get_vertex_from_original_id_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_ORIGINAL_ID oid) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);

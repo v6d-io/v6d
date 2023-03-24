@@ -128,7 +128,9 @@ void Traverse(vineyard::Client& client, const grape::CommSpec& comm_spec,
 
   GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
   size_t pnum = grin_get_partition_list_size(pg, local_partitions);
-  LOG(INFO) << "Got partition num: " << pnum;
+  size_t vnum = grin_get_total_vertex_num(pg);
+  size_t enumber = grin_get_total_edge_num(pg, GRIN_DIRECTION::OUT);
+  LOG(INFO) << "Got partition num: " << pnum << " vertex num: " << vnum << " edge num: " << enumber;
 
   // we only traverse the first partition for test
   GRIN_PARTITION partition = grin_get_partition_from_list(pg, local_partitions, 0);
