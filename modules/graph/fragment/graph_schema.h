@@ -238,6 +238,7 @@ class MaxGraphSchema {
  private:
   size_t fnum_;
   std::vector<Entry> entries_;
+  std::vector<std::string> unique_property_names_;
 };
 
 }  // namespace vineyard
