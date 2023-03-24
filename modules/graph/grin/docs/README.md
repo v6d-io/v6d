@@ -90,12 +90,12 @@ The example demonstrates how to synchronize property values of vertices associat
         LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
 
         auto pg = get_partitioned_graph_by_object_id(client, fragment_group_id);
-        auto local_partitions = get_local_partition_list(pg);
-        size_t pnum = get_partition_list_size(local_partitions);
+        auto local_partitions = grin_get_local_partition_list(pg);
+        size_t pnum = grin_get_partition_list_size(local_partitions);
         assert(pnum > 0);
 
         // we only sync the first partition as example
-        auto partition = get_partition_from_list(local_partitions, 0);
+        auto partition = grin_get_partition_from_list(local_partitions, 0);
         sync_property(pg, partition, "likes", "features");
     }
 ```
