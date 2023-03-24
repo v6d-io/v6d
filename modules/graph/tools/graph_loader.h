@@ -56,6 +56,8 @@ struct loader_options {
   progressive_t progressive = NONE;
   bool catch_leaf_errors = true;
   std::string dump;
+  bool print_memory_usage = false;
+  bool print_normalized_schema = false;
 };
 
 template <typename OID_T, typename VID_T,

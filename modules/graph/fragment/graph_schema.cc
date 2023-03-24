@@ -730,9 +730,12 @@ MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
   }
 
   // Assign a id to each name.
+  unique_property_names_.assign(prop_names.begin(), prop_names.end());
   std::map<std::string, int> name_to_idx;
-  for (auto iter = prop_names.begin(); iter != prop_names.end(); ++iter) {
-    name_to_idx[*iter] = std::distance(prop_names.begin(), iter);
+  // mg's prop id: starts from 1
+  int maximum_possible_mg_prop_id = 1 + unique_property_names_.size();
+  for (size_t i = 0; i < unique_property_names_.size(); ++i) {
+    name_to_idx[unique_property_names_[i]] = 1 + i;  // starts from 1
   }
 
   // Assign generated id to property by name.
@@ -740,8 +743,8 @@ MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
     Entry new_entry = entry;
     std::fill(new_entry.valid_properties.begin(),
               new_entry.valid_properties.end(), 1);
-    new_entry.mapping.resize(prop_names.size());
-    new_entry.reverse_mapping.resize(prop_names.size());
+    new_entry.mapping.resize(maximum_possible_mg_prop_id, -1);
+    new_entry.reverse_mapping.resize(maximum_possible_mg_prop_id, 1);
     for (auto& prop : new_entry.props_) {
       new_entry.mapping[prop.id] = name_to_idx[prop.name];
       new_entry.reverse_mapping[name_to_idx[prop.name]] = prop.id;
@@ -755,8 +758,8 @@ MaxGraphSchema::MaxGraphSchema(const PropertyGraphSchema& schema) {
     std::fill(new_entry.valid_properties.begin(),
               new_entry.valid_properties.end(), 1);
     new_entry.id += vertex_label_num;
-    new_entry.mapping.resize(prop_names.size());
-    new_entry.reverse_mapping.resize(prop_names.size());
+    new_entry.mapping.resize(maximum_possible_mg_prop_id, -1);
+    new_entry.reverse_mapping.resize(maximum_possible_mg_prop_id, 1);
     for (auto& prop : new_entry.props_) {
       new_entry.mapping[prop.id] = name_to_idx[prop.name];
       new_entry.reverse_mapping[name_to_idx[prop.name]] = prop.id;
@@ -829,6 +832,7 @@ void MaxGraphSchema::ToJSON(json& root) const {
     types.emplace_back(entry.ToJSON());
   }
   root["types"] = types;
+  root["uniquePropertyNames"] = unique_property_names_;
 }
 
 void MaxGraphSchema::FromJSON(json const& root) {

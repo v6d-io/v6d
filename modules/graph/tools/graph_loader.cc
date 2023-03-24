@@ -49,8 +49,9 @@ class ArrowFragmentLoader;
 
 namespace detail {
 
-void dump_schema_to_file(Client& client, grape::CommSpec& comm_spec,
-                         const ObjectID fragment_group_id) {
+void dump_normalized_schemas(Client& client, grape::CommSpec& comm_spec,
+                             const ObjectID fragment_group_id,
+                             const bool print_normalized_schema) {
   if (comm_spec.local_id() != 0) {
     return;
   }
@@ -65,6 +66,11 @@ void dump_schema_to_file(Client& client, grape::CommSpec& comm_spec,
       auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragmentBase>(
           client.GetObject(fragments.at(item.first)));
       vineyard::MaxGraphSchema schema(frag->schema());
+      if (print_normalized_schema) {
+        json root;
+        schema.ToJSON(root);
+        std::clog << root.dump(2);
+      }
       std::string ofile = "/tmp/" + std::to_string(fragment_group_id) + ".json";
       schema.DumpToFile(ofile);
       LOG(INFO) << "The schema json has been dumped to '" << ofile << "'";
@@ -74,7 +80,8 @@ void dump_schema_to_file(Client& client, grape::CommSpec& comm_spec,
 }
 
 void print_graph_memory_usage(Client& client, grape::CommSpec& comm_spec,
-                              const ObjectID fragment_group_id) {
+                              const ObjectID fragment_group_id,
+                              const bool print_memory_usage) {
   if (comm_spec.local_id() != 0) {
     return;
   }
@@ -95,7 +102,9 @@ void print_graph_memory_usage(Client& client, grape::CommSpec& comm_spec,
                 << "\n\tuses memory: " << prettyprint_memory_size(memory_usage)
                 << "\n\tvertex map: "
                 << prettyprint_memory_size(vertexmap.MemoryUsage());
-      std::clog << usages.dump(2);
+      if (print_memory_usage) {
+        std::clog << usages.dump(2);
+      }
     }
   }
 }
@@ -263,6 +272,14 @@ static inline bool parse_options_from_config_json(
   if (config.contains("dump")) {
     options.dump = config["dump"].get<std::string>();
   }
+  if (config.contains("print_memory_usage")) {
+    options.print_memory_usage =
+        parse_boolean_value(config["print_memory_usage"]);
+  }
+  if (config.contains("print_normalized_schema")) {
+    options.print_normalized_schema =
+        parse_boolean_value(config["print_normalized_schema"]);
+  }
   return true;
 }
 
@@ -342,8 +359,11 @@ static void loading_vineyard_graph(
 
   MPI_Barrier(comm_spec.comm());
   LOG(INFO) << "[fragment group id]: " << fragment_group_id;
-  detail::dump_schema_to_file(client, comm_spec, fragment_group_id);
-  detail::print_graph_memory_usage(client, comm_spec, fragment_group_id);
+  detail::dump_normalized_schemas(client, comm_spec, fragment_group_id,
+                                  options.print_normalized_schema);
+  detail::print_graph_memory_usage(client, comm_spec, fragment_group_id,
+                                   options.print_memory_usage);
+
   if (!options.dump.empty()) {
     if (options.local_vertex_map) {
       if (options.large_vid) {
@@ -436,7 +456,8 @@ int main(int argc, char** argv) {
               "retain_oid": 1, # 0 or 1
               "string_oid": 0, # 0 or 1
               "local_vertex_map": 0 # 0 or 1
-          })r");
+          }
+)r");
     return 1;
   }
 
