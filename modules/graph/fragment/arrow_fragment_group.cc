@@ -36,7 +36,24 @@ void ArrowFragmentGroup::Construct(const vineyard::ObjectMeta& meta) {
       meta.GetKeyValue<property_graph_types::LABEL_ID_TYPE>("vertex_label_num");
   edge_label_num_ =
       meta.GetKeyValue<property_graph_types::LABEL_ID_TYPE>("edge_label_num");
+
+  tot_edge_num_by_type_.resize(edge_label_num_, 0);
+  tot_edge_num_ = 0;
+
   for (fid_t idx = 0; idx < total_frag_num_; ++idx) {
+    auto current_fragment_id = meta.GetMemberMeta("frag_object_id_" + std::to_string(idx)).GetId();
+    ObjectMeta tmp_meta;
+    meta.GetClient()->GetMetaData(current_fragment_id, tmp_meta);
+
+    for (size_t __idx = 0; __idx < this->vertex_label_num_; ++__idx) {
+      for (size_t __idy = 0; __idy < edge_label_num_; ++__idy) {
+        size_t sz = 0;
+        tmp_meta.GetMemberMeta("__oe_lists_-" + std::to_string(__idx) + "-" + std::to_string(__idy)).GetKeyValue("length_", sz);
+        tot_edge_num_by_type_[__idy] += sz;
+        tot_edge_num_ += sz;
+      }
+    }
+
     fragments_.emplace(
         meta.GetKeyValue<fid_t>("fid_" + std::to_string(idx)),
         meta.GetMemberMeta("frag_object_id_" + std::to_string(idx)).GetId());

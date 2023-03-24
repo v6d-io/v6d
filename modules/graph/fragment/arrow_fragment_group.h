@@ -49,6 +49,13 @@ class ArrowFragmentGroup : public Registered<ArrowFragmentGroup>, GlobalObject {
   const std::unordered_map<fid_t, uint64_t>& FragmentLocations() {
     return fragment_locations_;
   }
+  size_t total_edge_num_by_type(property_graph_types::LABEL_ID_TYPE etype) {
+    return tot_edge_num_by_type_[etype];
+  }
+
+  size_t total_edge_num() {
+    return tot_edge_num_;
+  }
 
   void Construct(const vineyard::ObjectMeta& meta) override;
 
@@ -58,6 +65,8 @@ class ArrowFragmentGroup : public Registered<ArrowFragmentGroup>, GlobalObject {
   property_graph_types::LABEL_ID_TYPE edge_label_num_;
   std::unordered_map<fid_t, vineyard::ObjectID> fragments_;
   std::unordered_map<fid_t, uint64_t> fragment_locations_;
+  std::vector<size_t> tot_edge_num_by_type_;
+  size_t tot_edge_num_;
 
   friend ArrowFragmentGroupBuilder;
 };

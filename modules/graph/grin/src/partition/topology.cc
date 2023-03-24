@@ -16,6 +16,19 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/partition/topology.h"
 
+#ifdef GRIN_ENABLE_GRAPH_PARTITION
+size_t grin_get_total_vertex_num(GRIN_PARTITIONED_GRAPH pg) {
+    auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
+    if (_pg->lgs.size() == 0) return 0;
+    return _pg->lgs[0]->GetTotalVerticesNum();
+}
+
+size_t grin_get_total_edge_num(GRIN_PARTITIONED_GRAPH pg, GRIN_DIRECTION d) {
+    auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
+    return _pg->pg->total_edge_num();
+}
+#endif
+
 #if defined(GRIN_WITH_VERTEX_DATA) && \
     !defined(GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE) && \
     !defined(GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE) && \
