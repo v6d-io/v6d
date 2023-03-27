@@ -28,7 +28,7 @@ from typing import Dict
 from typing import Tuple  # pylint: disable=unused-import
 
 import fsspec
-from fsspec.core import split_protocol
+from fsspec.core import get_fs_token_paths
 from fsspec.spec import AbstractFileSystem
 from fsspec.utils import read_block
 
@@ -177,8 +177,9 @@ def read_bytes_collection(
     """Read a set of files as a collection of ByteStreams."""
     client = vineyard.connect(vineyard_socket)
 
-    protocol, prefix_path = split_protocol(prefix)
-    fs = fsspec.filesystem(protocol, **storage_options)
+    # files would be empty if it's a glob pattern and globbed nothing.
+    fs, _, files = get_fs_token_paths(prefix, storage_options=storage_options)
+    prefix_path = files[0]
 
     worker_prefix = os.path.join(prefix_path, '%s-%s' % (proc_num, proc_index))
 

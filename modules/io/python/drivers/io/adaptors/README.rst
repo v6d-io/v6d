@@ -4,6 +4,22 @@ IO Adaptors
 Vineyard has a set of prebuilt IO adaptors, that can serve as common routines for
 various IO operations and can take place of boilerplate parts in computation tasks.
 
+Vineyard is capable of reading from and writing data to multiple file systems.
+Behind the scene, it leverage `fsspec` to delegate the workload to various file system implementations.
+
+Specifically, we can specify parameters to be passed to the file system, through the `storage_options` parameter.
+`storage_options` is a dict that pass additional keywords to the file system,
+For instance, we could combine `path` = `hdfs:///path/to/file` with `storage_options` = `{"host": "localhost", "port": 9600}`
+to read from a HDFS. 
+
+Note that you must encode the `storage_options` by base64 before passing it to the scripts.
+
+Alternatively, we can encode such information into the path,
+such as: `hdfs://<ip>:<port>/path/to/file`.
+
+To read from multiple files you can pass a glob string or a list of paths,
+with the caveat that they must all have the same protocol.
+
 Their functionality are described as follows:
 
 + :code:`read_bytes`
