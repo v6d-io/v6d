@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # build vineyard-python-dev
-FROM vineyardcloudnative/vineyard-manylinux1:20220512 as wheel
+FROM ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20230316 as wheel
 
 ENV python=cp310-cp310
 
@@ -69,6 +69,7 @@ RUN cd /work/v6d && \
 
 COPY README.rst /work/v6d/README.rst
 COPY setup.py /work/v6d/setup.py
+COPY setup_bdist.py /work/v6d/setup_bdist.py
 COPY setup_io.py /work/v6d/setup_io.py
 COPY requirements.txt /work/v6d/requirements.txt
 COPY requirements-dev.txt /work/v6d/requirements-dev.txt
@@ -85,14 +86,18 @@ RUN cd /work/v6d/build && \
     export LD_LIBRARY_PATH=/work/v6d/build/lib:$LD_LIBRARY_PATH && \
     mkdir -p fixed_wheels/ && \
     cd /work/v6d && \
-    rm -rf dist && \
+    rm -rf dist build/lib* && \
     /opt/python/$python/bin/python setup.py bdist_wheel && \
     for wheel in `ls dist/*`; do \
         auditwheel repair -w fixed_wheels $wheel; \
     done && \
     mv /work/v6d/fixed_wheels/* /work/fixed_wheels/ && \
     cd /work/v6d && \
-    rm -rf dist && \
+    rm -rf dist build/lib* && \
+    /opt/python/$python/bin/python setup_bdist.py bdist_wheel && \
+    mv /work/v6d/dist/*.whl /work/fixed_wheels/ && \
+    cd /work/v6d && \
+    rm -rf dist build/lib* && \
     /opt/python/$python/bin/python setup_io.py bdist_wheel && \
     mv /work/v6d/dist/*.whl /work/fixed_wheels/ && \
     rm -rf /work/v6d
