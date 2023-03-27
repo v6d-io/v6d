@@ -1,5 +1,5 @@
 # only run for releases
-only_if: $CIRRUS_TAG == 'v*' && $CIRRUS_PR == '' && $CIRRUS_BRANCH == 'main'
+only_if: $CIRRUS_TAG == 'v*' && $CIRRUS_PR == ''
 
 macosx_arm64_wheel_task:
   macos_instance:
@@ -94,7 +94,7 @@ macosx_arm64_wheel_task:
     - make -C k8s vineyardctl
 
   vineyardctl_artifacts:
-    - path: k8s/vineyardctl
+    path: k8s/vineyardctl
 
   build_vineyardd_script:
     - mkdir -p build
@@ -118,7 +118,7 @@ macosx_arm64_wheel_task:
     - make vineyardd -j$(sysctl -n hw.ncpu)
 
   vineyardd_artifacts:
-    - path: build/bin/vineyardd
+    path: build/bin/vineyardd
 
   build_vineyard_bdist_script:
     - cp k8s/vineyardctl ./python/vineyard/bdist/vineyardctl

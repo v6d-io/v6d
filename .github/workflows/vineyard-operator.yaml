@@ -139,7 +139,8 @@ jobs:
       - name: Upload latest docker image
         if: ${{ matrix.job == 'release' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |
-          make -C k8s docker-build-push-multi-arch REGISTER=$REGISTRY
+          make -C k8s docker-build-push-multi-arch REGISTRY=$REGISTRY VERSION=${{ steps.tag.outputs.TAG }}
+          make -C k8s docker-build-push-multi-arch REGISTRY=$REGISTRY VERSION=latest
 
       - name: Generate the python and vineyardd image for tests
         if: ${{ matrix.job != 'release' }}

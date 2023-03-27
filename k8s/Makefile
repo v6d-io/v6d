@@ -14,7 +14,7 @@
 #
 
 # Current Operator version
-VERSION ?= 0.0.1
+VERSION ?= latest
 # Default bundle image tag
 BUNDLE_IMG ?= controller-bundle:$(VERSION)
 # Options for 'bundle-build'
@@ -28,7 +28,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 
 # Image URL to use all building/pushing image targets
 REGISTRY	:= vineyardcloudnative
-IMG 		?= $(REGISTRY)/vineyard-operator:latest
+IMG 		?= $(REGISTRY)/vineyard-operator:$(VERSION)
 
 temp=$(shell mktemp -d)
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
