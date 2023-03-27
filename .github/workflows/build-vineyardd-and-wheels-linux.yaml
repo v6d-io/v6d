@@ -69,7 +69,7 @@ jobs:
           tar zcvfh vineyardd.${{ runner.os }}-${{ matrix.platform }}.${{ github.sha }}.tar.gz ./vineyardd vineyardd.${{ matrix.platform }}.${{ github.sha }}.sha512sum
 
       - name: Upload docker image as nightly
-        if: ${{ github.event_name == 'workflow_dispatch' && && github.repository == 'v6d-io/v6d' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
         run: |
           docker push ghcr.io/v6d-io/v6d/vineyardd:alpine-${{ github.sha }}_${{ matrix.platform }}
 
