@@ -101,7 +101,7 @@ class ParallelStreamLauncher(ScriptLauncher):
         """
         kwargs = kwargs.copy()
         self.vineyard_endpoint = kwargs.pop("vineyard_endpoint", None)
-        if ":" in self.vineyard_endpoint:
+        if self.vineyard_endpoint is not None and ":" in self.vineyard_endpoint:
             self.vineyard_endpoint = tuple(self.vineyard_endpoint.split(":"))
 
         hosts = kwargs.pop("hosts", ["localhost"])

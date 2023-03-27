@@ -24,7 +24,7 @@ import traceback
 from typing import Dict
 
 import fsspec
-from fsspec.core import split_protocol
+from fsspec.core import get_fs_token_paths
 from fsspec.utils import read_block
 
 import vineyard
@@ -148,24 +148,19 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
             params[k] = v
 
     try:
-        protocol = split_protocol(path)[0]
-        fs = fsspec.filesystem(protocol, **storage_options)
+        # files would be empty if it's a glob pattern and globbed nothing.
+        fs, _, files = get_fs_token_paths(path, storage_options=storage_options)
     except Exception:  # pylint: disable=broad-except
         report_error(
             f"Cannot initialize such filesystem for '{path}', "
             f"exception is:\n{traceback.format_exc()}"
         )
         sys.exit(-1)
-
-    if fs.isfile(path):
-        files = [path]
-    else:
-        try:
-            files = fs.glob(path + '*')
-            assert files, f"Cannot find such files: {path}"
-        except Exception:  # pylint: disable=broad-except
-            report_error(f"Cannot find such files for '{path}'")
-            sys.exit(-1)
+    try:
+        assert files
+    except Exception:  # pylint: disable=broad-except
+        report_error(f"Cannot find such files for '{path}'")
+        sys.exit(-1)
     files = sorted(files)
 
     stream, writer = None, None
