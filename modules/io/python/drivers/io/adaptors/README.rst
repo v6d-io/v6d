@@ -10,12 +10,14 @@ Behind the scene, it leverage `fsspec` to delegate the workload to various file 
 Specifically, we can specify parameters to be passed to the file system, through the `storage_options` parameter.
 `storage_options` is a dict that pass additional keywords to the file system,
 For instance, we could combine `path` = `hdfs:///path/to/file` with `storage_options` = `{"host": "localhost", "port": 9600}`
-to read from a HDFS.
+to read from a HDFS. 
 
-Alternatively, we can encode such information into the path by using methods,
+Note that you must encode the `storage_options` by base64 before passing it to the scripts.
+
+Alternatively, we can encode such information into the path,
 such as: `hdfs://<ip>:<port>/path/to/file`.
 
-To read from multiple files you can pass a globstring or a list of paths,
+To read from multiple files you can pass a glob string or a list of paths,
 with the caveat that they must all have the same protocol.
 
 Their functionality are described as follows:
