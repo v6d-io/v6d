@@ -14,6 +14,24 @@
 
 FROM ghcr.io/v6d-io/v6d/vineyardd-alpine-builder:builder-latest as builder
 
+RUN export arch="$PLATFORM" && \
+    export arch="${arch/x86_64/amd64}" && \
+    export arch="${arch/aarch64/arm64}" && \
+    echo "arch = $arch" && \
+    cd /tmp && \
+    curl -LO https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_$arch && \
+    chmod +x dumb-init_1.2.2_$arch && \
+    mv /tmp/dumb-init_1.2.2_$arch /usr/bin/dumb-init && \
+    curl -LO https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh && \
+    chmod +x wait-for-it.sh && \
+    mv /tmp/wait-for-it.sh /usr/bin/wait-for-it.sh && \
+    curl -LO https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-$arch.tar.gz && \
+    tar zxf etcd-v3.4.13-linux-$arch.tar.gz && \
+    mv /tmp/etcd-v3.4.13-linux-$arch/etcd /usr/bin/etcd && \
+    curl -LO https://dl.k8s.io/release/v1.24.0/bin/linux/$arch/kubectl && \
+    chmod +x kubectl && \
+    mv /tmp/kubectl /usr/bin/kubectl
+
 ADD . /work/v6d
 
 # FIXME It is still not clear why the first run of cmake will fail.
@@ -23,16 +41,7 @@ RUN cd /work/v6d && \
     sed -i 's/Boost::regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake && \
     sed -i 's/regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake
 
-RUN cd /tmp && \
-    curl -LO https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_amd64 && \
-    chmod +x dumb-init_1.2.2_amd64 && \
-    curl -LO https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh && \
-    chmod +x wait-for-it.sh && \
-    curl -LO https://github.com/etcd-io/etcd/releases/download/v3.4.13/etcd-v3.4.13-linux-amd64.tar.gz && \
-    tar zxvf etcd-v3.4.13-linux-amd64.tar.gz && \
-    curl -LO https://dl.k8s.io/release/v1.24.0/bin/linux/amd64/kubectl && \
-    chmod +x kubectl && \
-    cd /work/v6d && \
+RUN cd /work/v6d && \
     mkdir -p /work/v6d/build && \
     cd /work/v6d/build && \
     cmake .. -DCMAKE_BUILD_TYPE=Release \
@@ -52,14 +61,14 @@ RUN cd /tmp && \
     make -j`nproc` && \
     strip ./bin/vineyardd
 
-FROM frolvlad/alpine-glibc:alpine-3.12
+FROM pingcap/alpine-glibc:alpine-3.14.3
 
 RUN apk add --no-cache bash sudo
 
-COPY --from=builder /tmp/dumb-init_1.2.2_amd64 /usr/bin/dumb-init
-COPY --from=builder /tmp/wait-for-it.sh /usr/bin/wait-for-it.sh
-COPY --from=builder /tmp/etcd-v3.4.13-linux-amd64/etcd /usr/bin/etcd
-COPY --from=builder /tmp/kubectl /usr/bin/kubectl
+COPY --from=builder /usr/bin/dumb-init /usr/bin/dumb-init
+COPY --from=builder /usr/bin/wait-for-it.sh /usr/bin/wait-for-it.sh
+COPY --from=builder /usr/bin/etcd /usr/bin/etcd
+COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
 COPY --from=builder /work/v6d/build/bin/vineyardd /usr/local/bin/vineyardd
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]

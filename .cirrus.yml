@@ -1,13 +1,13 @@
-macos_instance:
-  image: ghcr.io/cirruslabs/macos-monterey-base:latest
-
-env:
-  MACOSX_DEPLOYMENT_TARGET: "10.15"
-
 # only run for releases
 only_if: $CIRRUS_TAG == 'v*' && $CIRRUS_PR == '' && $CIRRUS_BRANCH == 'main'
 
-task:
+macosx_arm64_wheel_task:
+  macos_instance:
+    image: ghcr.io/cirruslabs/macos-monterey-base:latest
+
+  env:
+    MACOSX_DEPLOYMENT_TARGET: "10.15"
+
   checkout_script:
     - git submodule init
     - git submodule update
@@ -93,6 +93,9 @@ task:
   build_vineyardctl_script:
     - make -C k8s vineyardctl
 
+  vineyardctl_artifacts:
+    - path: k8s/vineyardctl
+
   build_vineyardd_script:
     - mkdir -p build
     - cd build
@@ -113,6 +116,9 @@ task:
                -DBUILD_VINEYARD_TESTS_ALL=OFF \
                -DBUILD_VINEYARD_PROFILING=OFF
     - make vineyardd -j$(sysctl -n hw.ncpu)
+
+  vineyardd_artifacts:
+    - path: build/bin/vineyardd
 
   build_vineyard_bdist_script:
     - cp k8s/vineyardctl ./python/vineyard/bdist/vineyardctl
@@ -156,5 +162,5 @@ task:
       done
       ls -la ./fixed_wheels
 
-  artifacts:
+  macosx_arm64_wheel_artifacts:
     path: fixed_wheels/*.whl

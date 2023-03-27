@@ -12,54 +12,68 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG BASE=manylinux2014_x86_64:2023-01-14-103cb93
-FROM quay.io/pypa/$BASE
+ARG PLATFORM=x86_64
+FROM quay.io/pypa/manylinux2014_$PLATFORM:2023-01-14-103cb93
 
-# target: ghcr.io/v6d-io/v6d/vineyard-manylinux1:20220512
-# target: ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20230115
+# re-declare after FROM, reusing the default value
+ARG PLATFORM
+ENV PLATFORM $PLATFORM
 
-RUN export PATH=$PATH:/opt/python/cp310-cp310/bin && \
-    mkdir /deps && \
+# target: ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20230316_$PLATFORM
+
+ENV PATH=$PATH:/opt/python/cp310-cp310/bin
+
+RUN echo "Installing cmake ..." && \
+    mkdir -p /deps && \
     cd /deps && \
-    echo "Installing cmake ..." && \
-    curl -L https://cmake.org/files/v3.16/cmake-3.16.3-Linux-x86_64.sh --output cmake-3.16.3-Linux-x86_64.sh && \
-    bash ./cmake-3.16.3-Linux-x86_64.sh --skip-license --prefix=/usr && \
-    echo "Installing glog ..." && \
+    curl -L https://cmake.org/files/v3.19/cmake-3.19.5-Linux-$PLATFORM.sh --output cmake-3.19.5-Linux-$PLATFORM.sh && \
+    bash ./cmake-3.19.5-Linux-$PLATFORM.sh --skip-license --prefix=/usr && \
+    rm -rf /deps
+
+RUN echo "Installing glog ..." && \
+    mkdir -p /deps && \
     cd /deps && \
     curl -L https://github.com/google/glog/archive/v0.5.0.tar.gz --output glog-v0.5.0.tar.gz && \
     tar zxvf glog-v0.5.0.tar.gz && \
     cd glog-0.5.0 && \
     mkdir build-dir && \
     cd build-dir && \
-    cmake .. -DBUILD_SHARED_LIBS=OFF \
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF \
              -DBUILD_TESTING=OFF \
              -DWITH_GFLAGS=OFF \
              -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
     make install -j`nproc` && \
-    echo "Installing gflags ..." && \
+    rm -rf /deps
+
+RUN echo "Installing gflags ..." && \
+    mkdir -p /deps && \
     cd /deps && \
     curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz && \
     tar zxf gflags-v2.2.2.tar.gz && \
     cd gflags-2.2.2 && \
     mkdir -p build-dir && \
     cd build-dir && \
-    cmake .. -DBUILD_SHARED_LIBS=OFF && \
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF \
+             -DBUILD_TESTING=OFF && \
     make install -j`nproc` && \
-    echo "Installing boost header libraries ..." && \
+    rm -rf /deps
+
+RUN echo "Installing apache-arrow ..." && \
+    mkdir -p /deps && \
     cd /deps && \
-    curl -L https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.gz \
-        --output boost_1_77_0.tar.gz && \
-    tar zxvf boost_1_77_0.tar.gz --exclude="*.html" --exclude="*/docs/*" && \
-    cp -R boost_1_77_0/boost /usr/local/include/ && \
-    echo "Installing apache-arrow ..." && \
-    cd /deps && \
-    curl -L https://github.com/apache/arrow/archive/apache-arrow-6.0.1.tar.gz --output apache-arrow-6.0.1.tar.gz && \
-    tar zxvf apache-arrow-6.0.1.tar.gz && \
-    cd arrow-apache-arrow-6.0.1 && \
+    curl -L https://github.com/apache/arrow/archive/apache-arrow-11.0.0.tar.gz --output apache-arrow-11.0.0.tar.gz && \
+    tar zxvf apache-arrow-11.0.0.tar.gz && \
+    cd arrow-apache-arrow-11.0.0 && \
     mkdir build-dir && \
     cd build-dir && \
     cmake ../cpp \
+        -DCMAKE_BUILD_TYPE=MinSizeRel \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
         -DARROW_COMPUTE=ON \
+        -DARROW_SIMD_LEVEL=NONE \
+        -DARROW_RUNTIME_SIMD_LEVEL=NONE \
         -DARROW_WITH_UTF8PROC=OFF \
         -DARROW_CSV=ON \
         -DARROW_CUDA=OFF \
@@ -77,12 +91,14 @@ RUN export PATH=$PATH:/opt/python/cp310-cp310/bin && \
         -DARROW_PLASMA_JAVA_CLIENT=OFF \
         -DARROW_PYTHON=OFF \
         -DARROW_S3=OFF \
-        -DARROW_WITH_BZ2=OFF \
-        -DARROW_WITH_ZLIB=OFF \
-        -DARROW_WITH_LZ4=OFF \
-        -DARROW_WITH_SNAPPY=OFF \
-        -DARROW_WITH_ZSTD=OFF \
         -DARROW_WITH_BROTLI=OFF \
+        -DARROW_WITH_BZ2=OFF \
+        -DARROW_WITH_GRPC=OFF \
+        -DARROW_WITH_LZ4=OFF \
+        -DARROW_WITH_RE2=OFF \
+        -DARROW_WITH_SNAPPY=OFF \
+        -DARROW_WITH_ZLIB=OFF \
+        -DARROW_WITH_ZSTD=OFF \
         -DARROW_IPC=ON \
         -DARROW_BUILD_BENCHMARKS=OFF \
         -DARROW_BUILD_EXAMPLES=OFF \
@@ -96,8 +112,6 @@ RUN export PATH=$PATH:/opt/python/cp310-cp310/bin && \
         -DARROW_USE_UBSAN=OFF \
         -DARROW_JEMALLOC=OFF \
         -DARROW_BUILD_SHARED=OFF \
-        -DARROW_BUILD_STATIC=ON \
-        -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
+        -DARROW_BUILD_STATIC=ON && \
     make install -j`nproc` && \
-    echo "Done." && \
     rm -rf /deps
