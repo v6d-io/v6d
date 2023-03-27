@@ -84,6 +84,38 @@ def test_local_csv_with_header(
     )
 
 
+def test_local_csv_with_header_glob(
+    vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
+):
+    handlers = []
+    stream = vineyard.io.open(
+        # This would match `p2p-31.e`
+        "file://%s/p2p-*.e" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        read_options={"header_row": True, "delimiter": " "},
+        handlers=handlers,
+    )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": True, "delimiter": " "},
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    assert filecmp.cmp(
+        "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
+    )
+
+
 def test_local_csv_with_header_accumulate(
     vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
 ):
@@ -556,6 +588,23 @@ def test_hdfs_bytes(
     assert filecmp.cmp(
         "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
     )
+
+
+@pytest.mark.skip_without_hdfs()
+def test_hdfs_bytes_hosts_in_uri(
+    vineyard_ipc_socket,
+    vineyard_endpoint,
+    hdfs_endpoint,
+):
+    res = urlparse(hdfs_endpoint)
+    host, port = res.netloc.split(":")
+    hdfs_stream = vineyard.io.open(
+        "%s://%s:%s/tmp/p2p-31.out_0" % (res.scheme, host, port),
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        read_options={"header_row": True, "delimiter": " "},
+    )
+    assert hdfs_stream
 
 
 def test_vineyard_dataframe(
