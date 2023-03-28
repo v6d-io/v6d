@@ -77,6 +77,10 @@ Here is an example of the `config.json` file for the "modern graph":
        "vertices": [
            {
                "data_path": "modern_graph/person.csv",
+               // can also be absolute path or path with environment variables
+               //
+               // "data_path": "/datasets/modern_graph/person.csv",
+               // "data_path": "$DATASET/modern_graph/person.csv",
                "label": "person",
                "options": "header_row=true&delimiter=|"
            },
@@ -139,7 +143,17 @@ Each edges can have the following configurations:
 Data Sources
 ~~~~~~~~~~~~
 
-The support for various sources in :code:`data_path` can be archived in two approaches:
+The :code:`data_path` can be local files, S3 files, HDFS files, or vineyard streams.
+
+When it comes to local files, it can be a relative path, an absolute path, or a path
+with environment variables, e.g.,
+
+- :code:`data/person.csv`
+- :code:`/dataset/data/person.csv`
+- :code:`$HOME/data/person.csv`
+
+When it comes to S3 files and HDFS files, the support for various sources in :code:`data_path`
+can be archived in two approaches:
 
 - Option 1: use `vineyard.io <https://github.com/v6d-io/v6d/tree/main/modules/io/python/drivers/io/adaptors>`_
   to read the given sources as vineyard streams first, and pass the stream as :code:`vineyard://<object_id_string>`
@@ -165,6 +179,22 @@ should be separated by :code:`&` or :code:`#`, and are listed as follows:
   indicates the types will be inferred from the data. The `column_types` is a `,`
   separated list of data types, e.g., :code:`string,int64`. **If specified, the types
   of ALL columns must be specified and partial-specification won't work.**
+
+  The supported data types are listed as follows:
+
+  - :code:`bool`: boolean type.
+  - :code:`int8_t`, :code:`int8`, :code:`byte`: signed 8-bit integer type.
+  - :code:`uint8_t`, :code:`uint8`, :code:`char`: unsigned 8-bit integer type.
+  - :code:`int16_t`, :code:`int16`, :code:`half`: signed 16-bit integer type.
+  - :code:`uint16_t`, :code:`uint16`: unsigned 16-bit integer type.
+  - :code:`int32_t`, :code:`int32`, :code:`int`: signed 32-bit integer type.
+  - :code:`uint32_t`, :code:`uint32`: unsigned 32-bit integer type.
+  - :code:`int64_t`, :code:`int64`, :code:`long`: signed 64-bit integer type.
+  - :code:`uint64_t`, :code:`uint64`: unsigned 64-bit integer type.
+  - :code:`float`: 32-bit floating point type.
+  - :code:`double`: 64-bit floating point type.
+  - :code:`string`, :code:`std::string`, :code:`str`: string type.
+
 - :code:`include_all_columns`: whether to include all columns in the CSV file or not,
   default is :code:`0`. **If specified, the columns that exists in the data file,
   but not be listed in the `schema` option will be read as well.**
