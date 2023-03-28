@@ -29,7 +29,7 @@ GRIN_ROW grin_create_row(GRIN_GRAPH g) {
     return r;
 }
 
-bool grin_insert_value_to_row(GRIN_GRAPH g, GRIN_ROW r, void* value) {
+bool grin_insert_value_to_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, void* value) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
     _r->push_back(value);
     return true;
@@ -63,6 +63,10 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
     auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return result;
+}
+
+void grin_destroy_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_DATATYPE dt, const void* value) {
+    // do nothing
 }
 #endif
 
@@ -123,6 +127,10 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
     auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return result;
+}
+
+void grin_destroy_value_from_edge_property_table(GRIN_GRAPH g, GRIN_DATATYPE dt, const void* value) {
+    // do nothing
 }
 #endif
 

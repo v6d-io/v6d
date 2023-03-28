@@ -24,6 +24,10 @@ const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp)
     return out;
 }
 
+void destroy_vertex_property_name(GRIN_GRAPH g, const char* name) {
+    delete[] name;
+}
+
 GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype,
                                            const char* name) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
@@ -53,6 +57,10 @@ const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
     char* out = new char[len];
     snprintf(out, len, "%s", s.c_str());
     return out;
+}
+
+void destroy_edge_property_name(GRIN_GRAPH g, const char* name) {
+    delete[] name;
 }
 
 GRIN_EDGE_PROPERTY grin_get_edge_property_by_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype,
