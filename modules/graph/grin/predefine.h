@@ -322,42 +322,42 @@ typedef enum {
  * for vertex list iterator. That means, the caller can use the predicate
  * to make a master-only vertex list iterator from the original iterator.
 */
-#define GRIN_TRAIT_FILTER_MASTER_FOR_VERTEX_LIST
+#define GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST
 
 /** @ingroup TraitFilterMacros
  * @brief The storage provides a filtering predicate of single partition vertices
  * for vertex list iterator. That means, the caller can use the predicate
  * to make a single-partition vertex list iterator from the original iterator.
 */
-#define GRIN_TRAIT_FILTER_PARTITION_FOR_VERTEX_LIST
+#define GRIN_TRAIT_SELECT_PARTITION_FOR_VERTEX_LIST
 
 /** @ingroup TraitFilterMacros
  * @brief The storage provides a filtering predicate of master edges
  * for edge list iterator. That means, the caller can use the predicate
  * to make a master-only edge list iterator from the original iterator.
 */
-#define GRIN_TRAIT_FILTER_MASTER_FOR_EDGE_LIST
+#define GRIN_TRAIT_SELECT_MASTER_FOR_EDGE_LIST
 
 /** @ingroup TraitFilterMacros
  * @brief The storage provides a filtering predicate of single partition edges
  * for edge list iterator. That means, the caller can use the predicate
  * to make a single-partition edge list iterator from the original iterator.
 */
-#define GRIN_TRAIT_FILTER_PARTITION_FOR_EDGE_LIST
+#define GRIN_TRAIT_SELECT_PARTITION_FOR_EDGE_LIST
 
 /** @ingroup TraitFilterMacros
  * @brief The storage provides a filtering predicate of master neighbors
  * for adjacent list iterator. That means, the caller can use the predicate
  * to make a master-only adjacent list iterator from the original iterator.
 */
-#define GRIN_TRAIT_FILTER_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
+#define GRIN_TRAIT_SELECT_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
 
 /** @ingroup TraitFilterMacros
  * @brief The storage provides a filtering predicate of single-partition vertices
  * for adjacent list iterator. That means, the caller can use the predicate
  * to make a single-partition adjacent list iterator from the original iterator.
 */
-#define GRIN_TRAIT_FILTER_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
+#define GRIN_TRAIT_SELECT_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
 ///@}
 
 #ifndef GRIN_DOXYGEN_SKIP 
@@ -378,9 +378,9 @@ typedef enum {
 #undef GRIN_ENABLE_EDGE_REF
 #undef GRIN_TRAIT_MASTER_VERTEX_MIRROR_PARTITION_LIST
 #undef GRIN_TRAIT_MIRROR_VERTEX_MIRROR_PARTITION_LIST
-#undef GRIN_TRAIT_FILTER_PARTITION_FOR_VERTEX_LIST
-#undef GRIN_TRAIT_FILTER_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
-#undef GRIN_TRAIT_FILTER_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
+#undef GRIN_TRAIT_SELECT_PARTITION_FOR_VERTEX_LIST
+#undef GRIN_TRAIT_SELECT_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
+#undef GRIN_TRAIT_SELECT_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
 /* End of Disable */
 
 /* Enable the supported features */
@@ -413,14 +413,14 @@ typedef enum {
 #undef GRIN_TRAIT_MASTER_VERTEX_MIRROR_PARTITION_LIST
 #undef GRIN_TRAIT_MIRROR_VERTEX_MIRROR_PARTITION_LIST
 #undef GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
-#undef GRIN_TRAIT_FILTER_MASTER_FOR_VERTEX_LIST
+#undef GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST
 #endif
 
 #ifndef GRIN_ENABLE_EDGE_REF  // enable edge pref is the prerequisite
 #undef GRIN_TRAIT_MASTER_EDGE_MIRROR_PARTITION_LIST
 #undef GRIN_TRAIT_MIRROR_EDGE_MIRROR_PARTITION_LIST
 #undef GRIN_ASSUME_MASTER_EDGE_DATA_LOCAL_COMPLETE
-#undef GRIN_TRAIT_FILTER_MASTER_FOR_EDGE_LIST
+#undef GRIN_TRAIT_SELECT_MASTER_FOR_EDGE_LIST
 #endif
 
 #ifndef GRIN_WITH_VERTEX_DATA  // enable vertex data is the prerequisite
@@ -434,18 +434,18 @@ typedef enum {
 #endif
 
 #ifndef GRIN_ENABLE_VERTEX_LIST  // enable vertex list iterator is the prerequisite
-#undef GRIN_TRAIT_FILTER_MASTER_FOR_VERTEX_LIST
-#undef GRIN_TRAIT_FILTER_PARTITION_FOR_VERTEX_LIST
+#undef GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST
+#undef GRIN_TRAIT_SELECT_PARTITION_FOR_VERTEX_LIST
 #endif
 
 #ifndef GRIN_ENABLE_EDGE_LIST  // enable edge list iterator is the prerequisite
-#undef GRIN_TRAIT_FILTER_MASTER_FOR_EDGE_LIST
-#undef GRIN_TRAIT_FILTER_PARTITION_FOR_EDGE_LIST
+#undef GRIN_TRAIT_SELECT_MASTER_FOR_EDGE_LIST
+#undef GRIN_TRAIT_SELECT_PARTITION_FOR_EDGE_LIST
 #endif
 
 #ifndef GRIN_ENABLE_ADJACENT_LIST  // enable adjacent list iterator is the prerequisite
-#undef GRIN_TRAIT_FILTER_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
-#undef GRIN_TRAIT_FILTER_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
+#undef GRIN_TRAIT_SELECT_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
+#undef GRIN_TRAIT_SELECT_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
 #endif
 
 #ifdef GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE
@@ -594,7 +594,7 @@ typedef enum {
  * to make a vertex list iterator for a certain type of vertices from the 
  * original iterator.
 */
-#define GRIN_TRAIT_FILTER_TYPE_FOR_VERTEX_LIST
+#define GRIN_TRAIT_SELECT_TYPE_FOR_VERTEX_LIST
 
 /** @ingroup TraitFilterTypeMacros
  * @brief The storage provides a filtering predicate of single-type edges
@@ -602,7 +602,7 @@ typedef enum {
  * to make an edge list iterator for a certain type of edges from the 
  * original iterator.
 */
-#define GRIN_TRAIT_FILTER_TYPE_FOR_EDGE_LIST
+#define GRIN_TRAIT_SELECT_TYPE_FOR_EDGE_LIST
 
 /** @ingroup TraitFilterTypeMacros
  * @brief The storage provides a filtering predicate of single-type neighbors
@@ -610,7 +610,7 @@ typedef enum {
  * to make an adjacent list iterator of neighbors with a certain type from 
  * the original iterator.
 */
-#define GRIN_TRAIT_FILTER_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
+#define GRIN_TRAIT_SELECT_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
 
 /** @ingroup TraitFilterTypeMacros
  * @brief The storage provides a filtering predicate of single-type edges
@@ -618,7 +618,7 @@ typedef enum {
  * to make an adjacent list iterator of edges with a certain type from 
  * the original iterator.
 */
-#define GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
+#define GRIN_TRAIT_SELECT_EDGE_TYPE_FOR_ADJACENT_LIST
 ///@}
 
 
@@ -728,7 +728,7 @@ typedef enum {
 /* Disable the unsupported features */
 #undef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
 #undef GRIN_ENABLE_EDGE_PRIMARY_KEYS
-#undef GRIN_TRAIT_FILTER_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
+#undef GRIN_TRAIT_SELECT_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
 /* End of Disable */
 
 /* Enable the supported features */
@@ -799,16 +799,16 @@ typedef enum {
 #endif
 
 #ifndef GRIN_ENABLE_VERTEX_LIST  // enable vertex list iterator is the prerequisite
-#undef GRIN_TRAIT_FILTER_TYPE_FOR_VERTEX_LIST
+#undef GRIN_TRAIT_SELECT_TYPE_FOR_VERTEX_LIST
 #endif
 
 #ifndef GRIN_ENABLE_EDGE_LIST  // enable edge list iterator is the prerequisite
-#undef GRIN_TRAIT_FILTER_TYPE_FOR_EDGE_LIST
+#undef GRIN_TRAIT_SELECT_TYPE_FOR_EDGE_LIST
 #endif
 
 #ifndef GRIN_ENABLE_ADJACENT_LIST // enable adjacent list iterator is the prerequisite
-#undef GRIN_TRAIT_FILTER_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
-#undef GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
+#undef GRIN_TRAIT_SELECT_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
+#undef GRIN_TRAIT_SELECT_EDGE_TYPE_FOR_ADJACENT_LIST
 #endif
 
 // assumption on vertex property

@@ -39,13 +39,8 @@ size_t grin_get_vertex_num(GRIN_GRAPH g) {
     return result;
 }
 
-size_t grin_get_edge_num(GRIN_GRAPH g, GRIN_DIRECTION d) {
+size_t grin_get_edge_num(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
-    if (d == IN) {
-        return _g->GetInEdgeNum();
-    } else if (d == OUT) {
-        return _g->GetOutEdgeNum();
-    }
     return _g->GetEdgeNum();
 }
 

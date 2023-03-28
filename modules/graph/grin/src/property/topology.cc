@@ -23,7 +23,7 @@ size_t grin_get_vertex_num_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
 #endif
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
-size_t grin_get_edge_num_by_type(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_EDGE_TYPE etype) {
+size_t grin_get_edge_num_by_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     return _g->edge_data_table(*_etype)->num_rows();
@@ -40,7 +40,7 @@ size_t grin_get_total_vertex_num_by_type(GRIN_PARTITIONED_GRAPH pg, GRIN_VERTEX_
 #endif
 
 #if defined(GRIN_ENABLE_GRAPH_PARTITION) && defined(GRIN_WITH_EDGE_PROPERTY)
-size_t grin_get_total_edge_num_by_type(GRIN_PARTITIONED_GRAPH pg, GRIN_DIRECTION d, GRIN_EDGE_TYPE etype) {
+size_t grin_get_total_edge_num_by_type(GRIN_PARTITIONED_GRAPH pg, GRIN_EDGE_TYPE etype) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     return _pg->pg->total_edge_num_by_type(*_etype);
@@ -64,8 +64,8 @@ GRIN_VERTEX grin_get_vertex_from_original_id_by_type(GRIN_GRAPH g, GRIN_VERTEX_T
 }
 #endif
 
-#ifdef GRIN_TRAIT_FILTER_TYPE_FOR_VERTEX_LIST
-GRIN_VERTEX_LIST grin_filter_type_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_LIST vl) {
+#ifdef GRIN_TRAIT_SELECT_TYPE_FOR_VERTEX_LIST
+GRIN_VERTEX_LIST grin_select_type_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_LIST vl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
@@ -81,16 +81,16 @@ GRIN_VERTEX_LIST grin_filter_type_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_TYPE
 }
 #endif
 
-#ifdef GRIN_TRAIT_FILTER_TYPE_FOR_EDGE_LIST
-GRIN_EDGE_LIST grin_filter_type_for_edge_list(GRIN_GRAPH, GRIN_EDGE_TYPE, GRIN_EDGE_LIST);
+#ifdef GRIN_TRAIT_SELECT_TYPE_FOR_EDGE_LIST
+GRIN_EDGE_LIST grin_select_type_for_edge_list(GRIN_GRAPH, GRIN_EDGE_TYPE, GRIN_EDGE_LIST);
 #endif
 
-#ifdef GRIN_TRAIT_FILTER_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
-GRIN_ADJACENT_LIST grin_filter_neighbor_type_for_adjacent_list(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_ADJACENT_LIST);
+#ifdef GRIN_TRAIT_SELECT_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
+GRIN_ADJACENT_LIST grin_select_neighbor_type_for_adjacent_list(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_ADJACENT_LIST);
 #endif
 
-#ifdef GRIN_TRAIT_FILTER_EDGE_TYPE_FOR_ADJACENT_LIST
-GRIN_ADJACENT_LIST grin_filter_edge_type_for_adjacent_list(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_ADJACENT_LIST al) {
+#ifdef GRIN_TRAIT_SELECT_EDGE_TYPE_FOR_ADJACENT_LIST
+GRIN_ADJACENT_LIST grin_select_edge_type_for_adjacent_list(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_ADJACENT_LIST al) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
