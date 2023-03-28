@@ -26,6 +26,11 @@ GRIN_VERTEX_REF grin_get_vertex_ref_for_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
     return vr;
 }
 
+void grin_destroy_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
+    auto _vr = static_cast<GRIN_VERTEX_REF_T*>(vr);
+    delete _vr;
+}
+
 GRIN_VERTEX grin_get_vertex_from_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto _vr = static_cast<GRIN_VERTEX_REF_T*>(vr);
@@ -53,6 +58,10 @@ const char* grin_serialize_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
     char* out = new char[len];
     snprintf(out, len, "%s", ss.str().c_str());
     return out;
+}
+
+void grin_destroy_serialized_vertex_ref(GRIN_GRAPH g, const char* msg) {
+    delete[] msg;
 }
 
 GRIN_VERTEX_REF grin_deserialize_to_vertex_ref(GRIN_GRAPH g, const char* msg) {
@@ -87,11 +96,15 @@ GRIN_PARTITION_LIST grin_get_mirror_vertex_mirror_partition_list(GRIN_GRAPH, GRI
 #ifdef GRIN_ENABLE_EDGE_REF
 GRIN_EDGE_REF grin_get_edge_ref_for_edge(GRIN_GRAPH, GRIN_EDGE);
 
+void grin_destroy_edge_ref(GRIN_GRAPH, GRIN_EDGE_REF);
+
 GRIN_EDGE grin_get_edge_from_edge_ref(GRIN_GRAPH, GRIN_EDGE_REF);
 
 GRIN_PARTITION grin_get_master_partition_from_edge_ref(GRIN_GRAPH, GRIN_EDGE_REF);
 
 const char* grin_serialize_edge_ref(GRIN_GRAPH, GRIN_EDGE_REF);
+
+void grin_destroy_serialized_edge_ref(GRIN_GRAPH, const char*);
 
 GRIN_EDGE_REF grin_deserialize_to_edge_ref(GRIN_GRAPH, const char*);
 
