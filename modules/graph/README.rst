@@ -8,21 +8,22 @@ among graph computing engines.
 
   * `Usage <#usage>`_
 
-    * `Using command line arguments <#using-command-line-arguments>`_
-    * `Using a JSON configuration <#using-a-json-configuration>`_
+    * `Using Command-line Arguments <#using-command-line-arguments>`_
+    * `Using a JSON Configuration <#using-a-json-configuration>`_
 
   * `References <#references>`_
 
     * `Vertices <#vertices>`_
     * `Edges <#edges>`_
+    * `Data Sources <#data-sources>`_
     * `Read Options <#read-options>`_
     * `Global Options <#global-options>`_
 
 vineyard-graph-loader
 ---------------------
 
-:code:`vineyard-graph-loader` is a graph loader that can be used to loading
-graphs from the CSV format into vineyard.
+:code:`vineyard-graph-loader` is a graph loader used to load graphs from
+the CSV format into vineyard.
 
 Usage
 ^^^^^
@@ -38,14 +39,14 @@ Usage
 
        or: ./vineyard-graph-loader [--socket <vineyard-ipc-socket>] --config <config.json>
 
-The program :code:`vineyard-graph-loader` first accepts an option argument
-:code:`--socket <vineyard-ipc-socket>` which points the IPC docket that the loader will
-connected to. If the option is not provided, the loader will try to resolve the IPC socket
-from environment variable `VINEYARD_IPC_SOCKET`.
+The program :code:`vineyard-graph-loader` first accepts an optional argument
+:code:`--socket <vineyard-ipc-socket>` which specifies the IPC docket that the
+loader will connected to. If the option is not provided, the loader will try to
+resolve the IPC socket from the environment variable `VINEYARD_IPC_SOCKET`.
 
-The graph can be loaded from the following two approaches:
+The graph can be loaded either via command line arguments or a JSON configuration.
 
-Using command line arguments
+Using Command-line Arguments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The :code:`vineyard-graph-loader` accepts a sequence of command line arguments to
@@ -57,18 +58,18 @@ specify the edge files and vertex files, e.g.,
                              2 "modern_graph/person.csv#header_row=true&label=person&delimiter=|" \
                                "modern_graph/software.csv#header_row=true&label=software&delimiter=|"
 
-Using a JSON configuration
+Using a JSON Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The :code:`vineyard-graph-loader` can accept a config file (in JSON format) as well
-to tell the vertex files and edge files that would be loaded as well as global flags,
-e.g.,
+The :code:`vineyard-graph-loader` can also accept a config file (in JSON format) as well
+to specify the vertex files and edge files that would be loaded. as well as global
+flags, for example,
 
 .. code:: bash
 
    $ ./vineyard-graph-loader --config config.json
 
-The config file could be (using the "modern graph" as an example):
+Here is an example of the `config.json` file for the "modern graph":
 
 .. code:: json
 
@@ -104,7 +105,8 @@ The config file could be (using the "modern graph" as an example):
        "directed": 1,
        "generate_eid": 1,
        "string_oid": 0,
-       "local_vertex_map": 0
+       "local_vertex_map": 0,
+       "print_normalized_schema": 1
    }
 
 References
@@ -113,36 +115,38 @@ References
 Vertices
 ~~~~~~~~
 
-Each vertices could have the following configurations:
+Each vertices can have the following configurations:
 
-- :code:`data_path`: the path of the given sources (currently only CSV is supported),
-  environment variables are supported, e.g., :code:`$HOME/data/person.csv`.
-
-    Note that supported source kinds in :code:`data_path` depends on how the arrow dependencies
-    is configured and built. By default only local files are supported, and HDFS/S3/OSS
-    supported can be enabled by building arrow with extra configure flags.
-
+- :code:`data_path`: the path of the given sources, environment variables are supported,
+  e.g., :code:`$HOME/data/person.csv`. See also `Data Sources <#data-sources>`_.
 - :code:`label`: the label of the vertex, e.g., :code:`person`.
-- :code:`options`: the options how to read the the file, e.g., :code:`header_row=true&delimiter=|`.
+- :code:`options`: the options used to read the file, e.g., :code:`header_row=true&delimiter=|`.
   The detailed options are listed in `Read Options <#read-options>`_.
 
 Edges
 ~~~~~
 
-Each edges could have the following configurations:
+Each edges can have the following configurations:
 
-- :code:`data_path`: the path of the given sources (currently only CSV is supported),
-  environment variables are supported, e.g., :code:`$HOME/data/knows.csv`.
-
-    Note that supported source kinds in :code:`data_path` depends on how the arrow dependencies
-    is configured and built. By default only local files are supported, and HDFS/S3/OSS
-    supported can be enabled by building arrow with extra configure flags.
-
+- :code:`data_path`: the path of the given sources, environment variables are supported,
+  e.g., :code:`$HOME/data/knows.csv`. See also `Data Sources <#data-sources>`_.
 - :code:`label`: the label of the edge, e.g., :code:`knows`.
 - :code:`src_label`: the label of the source vertex, e.g., :code:`person`.
 - :code:`dst_label`: the label of the destination vertex, e.g., :code:`person`.
-- :code:`options`: the options how to read the the file, e.g., :code:`header_row=true&delimiter=|`.
+- :code:`options`: the options used to read the file, e.g., :code:`header_row=true&delimiter=|`.
   The detailed options are listed in `Read Options <#read-options>`_.
+
+Data Sources
+~~~~~~~~~~~~
+
+The support for various sources in :code:`data_path` can be archived in two approaches:
+
+- Option 1: use `vineyard.io <https://github.com/v6d-io/v6d/tree/main/modules/io/python/drivers/io/adaptors>`_
+  to read the given sources as vineyard streams first, and pass the stream as :code:`vineyard://<object_id_string>`
+  as :code:`data_path` to the loader.
+
+- Option 2: onfigure the arrow dependency that used to build the vineyard-graph-loader to support
+  S3 and HDFS with `extra cmake flags <https://arrow.apache.org/docs/developers/cpp/building.html#optional-components>`_.
 
 Read Options
 ~~~~~~~~~~~~
@@ -155,7 +159,7 @@ should be separated by :code:`&` or :code:`#`, and are listed as follows:
 - :code:`delimiter`: the delimiter of the CSV file, default is :code:`,`.
 
 - :code:`schema`: the columns to specify in the CSV file, default is empty that indicates
-  all columns will be included. The :code:`schema` is a :code:`,` separated list of column names
+  all columns will be included. The :code:`schema` is a :code:`,`-separated list of column names
   or column indices, e.g., :code:`name,age` or :code:`0,1`.
 - :code:`column_types`: specify the data type of each column, default is empty that
   indicates the types will be inferred from the data. The `column_types` is a `,`
@@ -167,7 +171,7 @@ should be separated by :code:`&` or :code:`#`, and are listed as follows:
 
   The combination of :code:`schema` and :code:`include_all_columns` is useful for scenarios
   where we need to specify the order the columns that not the same with the content of the
-  file, but don't want to tell all column names in detail. E.g., if the file contains
+  file, but do not want to tell all column names in detail. For example, if the file contains
   the ID column in the **third** column but we want to use it as the vertices IDs, we
   could have :code:`schema=2&include_all_columns=1` the all columns will be read, but the
   **third** column in the file will be placed at the **first** column in the result table.
