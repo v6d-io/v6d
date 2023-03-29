@@ -81,10 +81,6 @@ const char* grin_get_vertex_type_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
     return out;
 }
 
-void grin_destroy_vertex_type_name(GRIN_GRAPH g, const char* name) {
-    delete[] name;
-}
-
 GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH g, const char* name) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
     auto s = std::string(name);
@@ -171,10 +167,6 @@ const char* grin_get_edge_type_name(GRIN_GRAPH g, GRIN_EDGE_TYPE et) {
     char* out = new char[len];
     snprintf(out, len, "%s", s.c_str());
     return out;    
-}
-
-void grin_destroy_edge_type_name(GRIN_GRAPH g, const char* name) {
-    delete[] name;
 }
 
 GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH g, const char* name) {
