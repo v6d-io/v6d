@@ -19,6 +19,11 @@ limitations under the License.
 
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
+void grin_destroy_partitioned_graph(GRIN_PARTITIONED_GRAPH pg) {
+    auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
+    delete _pg;
+}
+
 size_t grin_get_total_partitions_number(GRIN_PARTITIONED_GRAPH pg) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     return _pg->pg->total_frag_num();
