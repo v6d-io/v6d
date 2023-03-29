@@ -82,12 +82,49 @@ GRIN_VERTEX_ORIGINAL_ID grin_get_vertex_original_id(GRIN_GRAPH g, GRIN_VERTEX v)
 GRIN_VERTEX grin_get_vertex_from_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
 #endif
 
+// Data
+void grin_destroy_value(GRIN_GRAPH g, GRIN_DATATYPE dt, void* value) {
+    switch (dt) {
+    case GRIN_DATATYPE::Int32:
+        delete static_cast<int32_t*>(value);
+        break;
+    case GRIN_DATATYPE::UInt32:
+        delete static_cast<uint32_t*>(value);
+        break;
+    case GRIN_DATATYPE::Int64:
+        delete static_cast<int64_t*>(value);
+        break;
+    case GRIN_DATATYPE::UInt64:
+        delete static_cast<uint64_t*>(value);
+        break;
+    case GRIN_DATATYPE::Float:
+        delete static_cast<float*>(value);
+        break;
+    case GRIN_DATATYPE::Double:
+        delete static_cast<double*>(value);
+        break;
+    case GRIN_DATATYPE::String:
+        delete static_cast<std::string*>(value);
+        break;
+    case GRIN_DATATYPE::Date32:
+        delete static_cast<int32_t*>(value);
+        break;
+    case GRIN_DATATYPE::Date64:
+        delete static_cast<int64_t*>(value);
+        break;
+    default:
+        break;
+    }
+}
+
+void grin_destroy_name(GRIN_GRAPH g, const char* name) {
+    delete[] name;
+}
+
 #ifdef GRIN_WITH_VERTEX_DATA
 GRIN_DATATYPE grin_get_vertex_data_type(GRIN_GRAPH, GRIN_VERTEX);
 
 GRIN_VERTEX_DATA grin_get_vertex_data_value(GRIN_GRAPH, GRIN_VERTEX);
-
-void grin_destroy_vertex_data(GRIN_GRAPH, GRIN_VERTEX_DATA);
 #endif
 
 // Edge
@@ -112,6 +149,4 @@ GRIN_VERTEX grin_get_edge_dst(GRIN_GRAPH g, GRIN_EDGE e) {
 GRIN_DATATYPE grin_get_edge_data_type(GRIN_GRAPH, GRIN_EDGE);
 
 GRIN_EDGE_DATA grin_get_edge_data_value(GRIN_GRAPH, GRIN_EDGE);
-
-void grin_destroy_edge_data(GRIN_GRAPH, GRIN_EDGE_DATA);
 #endif

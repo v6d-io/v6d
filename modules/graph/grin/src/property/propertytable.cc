@@ -19,9 +19,31 @@ void grin_destroy_row(GRIN_GRAPH g, GRIN_ROW r) {
     delete _r;
 }
 
-const void* grin_get_value_from_row(GRIN_GRAPH g, GRIN_ROW r, size_t idx) {
+const void* grin_get_value_from_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, size_t idx) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
-    return (*_r)[idx];
+    switch (dt) {
+    case GRIN_DATATYPE::Int32:
+        return new int32_t(*(const int32_t*)((*_r)[idx]));
+    case GRIN_DATATYPE::UInt32:
+        return new uint32_t(*(const uint32_t*)((*_r)[idx]));
+    case GRIN_DATATYPE::Int64:
+        return new int64_t(*(const int64_t*)((*_r)[idx]));
+    case GRIN_DATATYPE::UInt64:
+        return new uint64_t(*(const uint64_t*)((*_r)[idx]));
+    case GRIN_DATATYPE::Float:
+        return new float(*(const float*)((*_r)[idx]));
+    case GRIN_DATATYPE::Double:
+        return new double(*(const double*)((*_r)[idx]));
+    case GRIN_DATATYPE::String:
+        return new std::string(*(const std::string*)((*_r)[idx]));
+    case GRIN_DATATYPE::Date32:
+        return new int32_t(*(const int32_t*)((*_r)[idx]));
+    case GRIN_DATATYPE::Date64:
+        return new int64_t(*(const int64_t*)((*_r)[idx]));
+    default:
+        return NULL;
+    }
+    return NULL;
 }
 
 GRIN_ROW grin_create_row(GRIN_GRAPH g) {
@@ -31,7 +53,39 @@ GRIN_ROW grin_create_row(GRIN_GRAPH g) {
 
 bool grin_insert_value_to_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, void* value) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
-    _r->push_back(value);
+    void* _value = NULL;
+    switch (dt) {
+    case GRIN_DATATYPE::Int32:
+        _value = new int32_t(*static_cast<int32_t*>(value));
+        break;
+    case GRIN_DATATYPE::UInt32:
+        _value = new uint32_t(*static_cast<uint32_t*>(value));
+        break;
+    case GRIN_DATATYPE::Int64:
+        _value = new int64_t(*static_cast<int64_t*>(value));
+        break;
+    case GRIN_DATATYPE::UInt64:
+        _value = new uint64_t(*static_cast<uint64_t*>(value));
+        break;
+    case GRIN_DATATYPE::Float:
+        _value = new float(*static_cast<float*>(value));
+        break;
+    case GRIN_DATATYPE::Double:
+        _value = new double(*static_cast<double*>(value));
+        break;
+    case GRIN_DATATYPE::String:
+        _value = new std::string(*static_cast<std::string*>(value));
+        break;
+    case GRIN_DATATYPE::Date32:
+        _value = new int32_t(*static_cast<int32_t*>(value));
+        break;
+    case GRIN_DATATYPE::Date64:
+        _value = new int64_t(*static_cast<int64_t*>(value));
+        break;
+    default:
+        _value = NULL;
+    }    
+    _r->push_back(_value);
     return true;
 }
 #endif
@@ -63,10 +117,6 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
     auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return result;
-}
-
-void grin_destroy_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_DATATYPE dt, const void* value) {
-    // do nothing
 }
 #endif
 
@@ -127,10 +177,6 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
     auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return result;
-}
-
-void grin_destroy_value_from_edge_property_table(GRIN_GRAPH g, GRIN_DATATYPE dt, const void* value) {
-    // do nothing
 }
 #endif
 
