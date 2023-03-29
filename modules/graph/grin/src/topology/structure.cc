@@ -16,22 +16,40 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "graph/grin/include/topology/structure.h"
 
+GRIN_GRAPH grin_get_graph_from_storage(int argc, char** argv) {
+    if (argc < 2) {
+        return nullptr;
+    }
+    auto g = new GRIN_GRAPH_T();
+    g->client.Connect(argv[0]);
+    vineyard::ObjectID obj_id;
+    std::stringstream ss(argv[1]);
+    ss >> obj_id;
+    g->g = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(g->client.GetObject(obj_id));
+    return g;
+}
+
+void grin_destroy_graph(GRIN_GRAPH g) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    delete _g;
+}
+
 #if !defined(GRIN_ASSUME_GRAPH_DIRECTED) && !defined(GRIN_ASSUME_GRAPH_UNDIRECTED)
 bool grin_is_directed(GRIN_GRAPH g) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     return _g->directed();
 }
 #endif
 
 #ifndef GRIN_ASSUME_GRAPH_SINGLE_EDGE
 bool grin_is_multigraph(GRIN_GRAPH g) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     return _g->is_multigraph();
 }
 #endif
 
 size_t grin_get_vertex_num(GRIN_GRAPH g) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     size_t result = 0;
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
         result += _g->GetVerticesNum(vtype);
@@ -40,7 +58,7 @@ size_t grin_get_vertex_num(GRIN_GRAPH g) {
 }
 
 size_t grin_get_edge_num(GRIN_GRAPH g) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     return _g->GetEdgeNum();
 }
 
@@ -51,7 +69,7 @@ void grin_destroy_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
 }
 
 bool grin_equal_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _v1 = static_cast<GRIN_VERTEX_T*>(v1);
     auto _v2 = static_cast<GRIN_VERTEX_T*>(v2);
     return _g->Vertex2Gid(*_v1) == _g->Vertex2Gid(*_v2);
@@ -70,7 +88,7 @@ GRIN_DATATYPE grin_get_vertex_original_id_type(GRIN_GRAPH g) {
 
 
 GRIN_VERTEX_ORIGINAL_ID grin_get_vertex_original_id(GRIN_GRAPH g, GRIN_VERTEX v) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto gid = _g->Vertex2Gid(*_v);
     auto oid = new VERTEX_ORIGINAL_ID_T(_g->Gid2Oid(gid));
@@ -83,34 +101,34 @@ GRIN_VERTEX grin_get_vertex_from_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID
 #endif
 
 // Data
-void grin_destroy_value(GRIN_GRAPH g, GRIN_DATATYPE dt, void* value) {
+void grin_destroy_value(GRIN_GRAPH g, GRIN_DATATYPE dt, const void* value) {
     switch (dt) {
     case GRIN_DATATYPE::Int32:
-        delete static_cast<int32_t*>(value);
+        delete static_cast<const int32_t*>(value);
         break;
     case GRIN_DATATYPE::UInt32:
-        delete static_cast<uint32_t*>(value);
+        delete static_cast<const uint32_t*>(value);
         break;
     case GRIN_DATATYPE::Int64:
-        delete static_cast<int64_t*>(value);
+        delete static_cast<const int64_t*>(value);
         break;
     case GRIN_DATATYPE::UInt64:
-        delete static_cast<uint64_t*>(value);
+        delete static_cast<const uint64_t*>(value);
         break;
     case GRIN_DATATYPE::Float:
-        delete static_cast<float*>(value);
+        delete static_cast<const float*>(value);
         break;
     case GRIN_DATATYPE::Double:
-        delete static_cast<double*>(value);
+        delete static_cast<const double*>(value);
         break;
     case GRIN_DATATYPE::String:
-        delete static_cast<std::string*>(value);
+        delete static_cast<const std::string*>(value);
         break;
     case GRIN_DATATYPE::Date32:
-        delete static_cast<int32_t*>(value);
+        delete static_cast<const int32_t*>(value);
         break;
     case GRIN_DATATYPE::Date64:
-        delete static_cast<int64_t*>(value);
+        delete static_cast<const int64_t*>(value);
         break;
     default:
         break;

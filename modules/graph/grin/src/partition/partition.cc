@@ -19,6 +19,27 @@ limitations under the License.
 
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
+GRIN_PARTITIONED_GRAPH grin_get_partitioned_graph_from_storage(int argc, char** argv) {
+    if (argc < 2) {
+        return nullptr;
+    }
+    auto pg = new GRIN_PARTITIONED_GRAPH_T();
+    pg->client.Connect(argv[0]);
+    vineyard::ObjectID obj_id;
+    std::stringstream ss(argv[1]);
+    ss >> obj_id;
+    pg->pg = std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(pg->client.GetObject(obj_id));
+    pg->lgs.resize(pg->pg->total_frag_num(), nullptr);
+    for (auto & [fid, location] : pg->pg->FragmentLocations()) {
+        if (location == pg->client.instance_id()) {
+            auto obj_id = pg->pg->Fragments().at(fid);
+            auto frag = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(pg->client.GetObject(obj_id));
+            pg->lgs[fid] = frag;
+        }
+    }
+  return pg;
+}
+
 void grin_destroy_partitioned_graph(GRIN_PARTITIONED_GRAPH pg) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     delete _pg;
@@ -33,7 +54,7 @@ GRIN_PARTITION_LIST grin_get_local_partition_list(GRIN_PARTITIONED_GRAPH pg) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto pl = new GRIN_PARTITION_LIST_T();
     for (auto fid = 0; fid < _pg->pg->total_frag_num(); ++fid) {
-        if (_pg->lgs[fid] != nullptr) {
+        if (_pg->lgs[fid] != 0) {
             pl->push_back(fid);
         }
     }
@@ -79,14 +100,16 @@ void grin_destroy_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     delete _p;
 }
 
-void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
+const void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     return NULL;
 }
 
 GRIN_GRAPH grin_get_local_graph_from_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto _p = static_cast<GRIN_PARTITION_T*>(p);
-    return _pg->lgs[*_p].get();
+    auto g = new GRIN_GRAPH_T();
+    g->g = _pg->lgs[*_p];
+    return g;
 }
 #endif
 

@@ -15,7 +15,7 @@ limitations under the License.
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_property_list_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto vpl = new GRIN_VERTEX_PROPERTY_LIST_T();
     for (auto p = 0; p < _g->vertex_property_num(*_vtype); ++p) {
@@ -72,7 +72,7 @@ GRIN_VERTEX_PROPERTY_ID grin_get_vertex_property_id(GRIN_GRAPH g, GRIN_VERTEX_TY
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
 GRIN_EDGE_PROPERTY_LIST grin_get_edge_property_list_by_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto epl = new GRIN_EDGE_PROPERTY_LIST_T();
     for (auto p = 0; p < _g->edge_property_num(*_etype); ++p) {
@@ -127,9 +127,9 @@ GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_GRAPH g, GRIN_EDGE_TYPE ety
 #endif
 
 
-// #if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_ASSUME_COLUMN_STORE)
+// #if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY)
 // GRIN_GRAPH grin_select_vertex_properties(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST vpl) {
-//     auto _g = static_cast<GRIN_GRAPH_T*>(g);
+//     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
 //     auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
 //     std::map<int, std::vector<int>> vertices, edges;
 //     for (auto& p: *_vpl) {
@@ -147,9 +147,9 @@ GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_GRAPH g, GRIN_EDGE_TYPE ety
 // }
 // #endif
 
-// #if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_ASSUME_COLUMN_STORE)
+// #if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY)
 // GRIN_GRAPH grin_select_edge_properteis(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl) {
-//     auto _g = static_cast<GRIN_GRAPH_T*>(g);
+//     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
 //     auto _epl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(epl);
 //     std::map<int, std::vector<int>> vertices, edges;
 //     for (auto& p: *_epl) {

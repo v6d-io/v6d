@@ -15,22 +15,6 @@ limitations under the License.
 
 #include "graph/grin/src/predefine.h"
 
-
-GRIN_PARTITIONED_GRAPH get_partitioned_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id) {
-  auto _pg = std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(client.GetObject(object_id));
-  auto pg = new GRIN_PARTITIONED_GRAPH_T();
-  pg->pg = _pg.get();
-  pg->lgs.resize(_pg->total_frag_num(), nullptr);
-  for (auto & [fid, location] : _pg->FragmentLocations()) {
-      if (location == client.instance_id()) {
-          auto obj_id = _pg->Fragments().at(fid);
-          auto frag = std::dynamic_pointer_cast<vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T>>(client.GetObject(obj_id));
-          pg->lgs[fid] = frag;
-      }
-  }
-  return pg;
-}
-
 std::string GetDataTypeName(GRIN_DATATYPE type) {
   switch (type) {
   case GRIN_DATATYPE::Int32:
@@ -80,10 +64,10 @@ GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType> type) {
 }
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
-void __grin_init_vertex_list(GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
+void __grin_init_vertex_list(std::shared_ptr<_GRIN_GRAPH_T> g, GRIN_VERTEX_LIST_T* vl) {
     vl->offsets.clear();
     vl->vrs.clear();
-    GRIN_GRAPH_T::vertices_t vr;
+    _GRIN_GRAPH_T::vertices_t vr;
     vl->offsets.push_back(0);
     unsigned sum = 0;
     for (auto vtype = vl->type_begin; vtype < vl->type_end; ++vtype) {
@@ -102,17 +86,17 @@ void __grin_init_vertex_list(GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
-void __grin_init_adjacent_list(GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
+void __grin_init_adjacent_list(std::shared_ptr<_GRIN_GRAPH_T> g, GRIN_ADJACENT_LIST_T* al) {
     al->offsets.clear();
     al->data.clear();
-    GRIN_GRAPH_T::raw_adj_list_t ral;
+    _GRIN_GRAPH_T::raw_adj_list_t ral;
     al->offsets.push_back(0);
     unsigned sum = 0;
     for (auto etype = al->etype_begin; etype < al->etype_end; ++etype) {
         if (al->dir == GRIN_DIRECTION::IN) {
-            ral = g->GetIncomingRawAdjList(GRIN_GRAPH_T::vertex_t(al->vid), etype);
+            ral = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), etype);
         } else {
-            ral = g->GetOutgoingRawAdjList(GRIN_GRAPH_T::vertex_t(al->vid), etype);
+            ral = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), etype);
         }
         sum += ral.size();
         al->offsets.push_back(sum);

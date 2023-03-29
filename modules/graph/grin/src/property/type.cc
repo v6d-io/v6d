@@ -21,7 +21,7 @@ bool grin_equal_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt1, GRIN_VERTEX_TYPE
 }
 
 GRIN_VERTEX_TYPE grin_get_vertex_type(GRIN_GRAPH g, GRIN_VERTEX v) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto vt = new GRIN_VERTEX_TYPE_T(_g->vertex_label(*_v));
     return vt;
@@ -33,7 +33,7 @@ void grin_destroy_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
 }
 
 GRIN_VERTEX_TYPE_LIST grin_get_vertex_type_list(GRIN_GRAPH g) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto vtl = new GRIN_VERTEX_TYPE_LIST_T();
     for (auto i = 0; i < _g->vertex_label_num(); ++i) {
         vtl->push_back(i);
@@ -72,7 +72,7 @@ GRIN_VERTEX_TYPE grin_get_vertex_type_from_list(GRIN_GRAPH g, GRIN_VERTEX_TYPE_L
 
 #ifdef GRIN_WITH_VERTEX_TYPE_NAME
 const char* grin_get_vertex_type_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vt = static_cast<GRIN_VERTEX_TYPE_T*>(vt);
     auto s = _g->schema().GetVertexLabelName(*_vt);
     int len = s.length() + 1;
@@ -82,7 +82,7 @@ const char* grin_get_vertex_type_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
 }
 
 GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH g, const char* name) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto s = std::string(name);
     auto vt = new GRIN_VERTEX_TYPE_T(_g->schema().GetVertexLabelId(s));
     return vt;
@@ -121,7 +121,7 @@ void grin_destroy_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE et) {
 }
 
 GRIN_EDGE_TYPE_LIST grin_get_edge_type_list(GRIN_GRAPH g) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto etl = new GRIN_EDGE_TYPE_LIST_T();
     for (auto i = 0; i < _g->edge_label_num(); ++i) {
         etl->push_back(i);
@@ -160,7 +160,7 @@ GRIN_EDGE_TYPE grin_get_edge_type_from_list(GRIN_GRAPH g, GRIN_EDGE_TYPE_LIST et
 
 #ifdef GRIN_WITH_EDGE_TYPE_NAME
 const char* grin_get_edge_type_name(GRIN_GRAPH g, GRIN_EDGE_TYPE et) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _et = static_cast<GRIN_EDGE_TYPE_T*>(et);
     auto s = _g->schema().GetEdgeLabelName(*_et);
     int len = s.length() + 1;
@@ -170,7 +170,7 @@ const char* grin_get_edge_type_name(GRIN_GRAPH g, GRIN_EDGE_TYPE et) {
 }
 
 GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH g, const char* name) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto s = std::string(name);
     auto et = new GRIN_EDGE_TYPE_T(_g->schema().GetEdgeLabelId(s));
     return et;
@@ -193,7 +193,7 @@ GRIN_EDGE_TYPE grin_get_edge_type_from_id(GRIN_GRAPH g, GRIN_EDGE_TYPE_ID eti) {
 
 #if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_WITH_EDGE_PROPERTY)
 GRIN_VERTEX_TYPE_LIST grin_get_src_types_from_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto entry = _g->schema().GetEntry(*_etype, "EDGE");
     auto vtl = new GRIN_VERTEX_TYPE_LIST_T();
@@ -204,7 +204,7 @@ GRIN_VERTEX_TYPE_LIST grin_get_src_types_from_edge_type(GRIN_GRAPH g, GRIN_EDGE_
 }
 
 GRIN_VERTEX_TYPE_LIST grin_get_dst_types_from_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto entry = _g->schema().GetEntry(*_etype, "EDGE");
     auto vtl = new GRIN_VERTEX_TYPE_LIST_T();
@@ -216,7 +216,7 @@ GRIN_VERTEX_TYPE_LIST grin_get_dst_types_from_edge_type(GRIN_GRAPH g, GRIN_EDGE_
 
 GRIN_EDGE_TYPE_LIST grin_get_edge_types_from_vertex_type_pair(GRIN_GRAPH g, GRIN_VERTEX_TYPE src_vt, 
                                                   GRIN_VERTEX_TYPE dst_vt) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _v1 = static_cast<GRIN_VERTEX_TYPE_T*>(src_vt);
     auto _v2 = static_cast<GRIN_VERTEX_TYPE_T*>(dst_vt);
     auto str_v1 = _g->schema().GetVertexLabelName(*_v1);

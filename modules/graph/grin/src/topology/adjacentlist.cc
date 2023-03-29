@@ -19,7 +19,7 @@ limitations under the License.
 #ifdef GRIN_ENABLE_ADJACENT_LIST
 GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_VERTEX v) {
     if (d == GRIN_DIRECTION::BOTH) return GRIN_NULL_LIST;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto al = new GRIN_ADJACENT_LIST_T();
     al->vid = _v->GetValue();
@@ -79,7 +79,7 @@ GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, 
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 GRIN_ADJACENT_LIST_ITERATOR grin_get_adjacent_list_begin(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
     auto ali = new GRIN_ADJACENT_LIST_ITERATOR_T();
     ali->vid = _al->vid;
@@ -89,9 +89,9 @@ GRIN_ADJACENT_LIST_ITERATOR grin_get_adjacent_list_begin(GRIN_GRAPH g, GRIN_ADJA
     ali->etype_current = _al->etype_begin;
     ali->current = 0;
     if (ali->dir == GRIN_DIRECTION::IN) {
-        ali->data = _g->GetIncomingRawAdjList(GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
+        ali->data = _g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
     } else {
-        ali->data = _g->GetOutgoingRawAdjList(GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
+        ali->data = _g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
     }
     return ali;
 }
@@ -102,7 +102,7 @@ void grin_destroy_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR a
 }
 
 void grin_get_next_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
     _ali->current++;
     while (_ali->etype_current < _ali->etype_end) {
@@ -110,9 +110,9 @@ void grin_get_next_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR 
         _ali->etype_current++;
         _ali->current = 0;
         if (_ali->dir == GRIN_DIRECTION::IN) {
-            _ali->data = _g->GetIncomingRawAdjList(GRIN_GRAPH_T::vertex_t(_ali->vid), _ali->etype_current);
+            _ali->data = _g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(_ali->vid), _ali->etype_current);
         } else {
-            _ali->data = _g->GetOutgoingRawAdjList(GRIN_GRAPH_T::vertex_t(_ali->vid), _ali->etype_current);
+            _ali->data = _g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(_ali->vid), _ali->etype_current);
         }
     }
 }
