@@ -107,7 +107,7 @@ GRIN_VERTEX_PROPERTY_TABLE grin_get_vertex_property_table_by_type(GRIN_GRAPH g, 
 }
 
 const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt,
-                                                 GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+                                                      GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
@@ -116,7 +116,30 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
     auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return result;
+    auto _dt = _g->schema().GetVertexPropertyType(_vp->first, _vp->second);
+    auto dt = ArrowToDataType(_dt);
+    switch (dt) {
+    case GRIN_DATATYPE::Int32:
+        return new int32_t(*(const int32_t*)(result));
+    case GRIN_DATATYPE::UInt32:
+        return new uint32_t(*(const uint32_t*)(result));
+    case GRIN_DATATYPE::Int64:
+        return new int64_t(*(const int64_t*)(result));
+    case GRIN_DATATYPE::UInt64:
+        return new uint64_t(*(const uint64_t*)(result));
+    case GRIN_DATATYPE::Float:
+        return new float(*(const float*)(result));
+    case GRIN_DATATYPE::Double:
+        return new double(*(const double*)(result));
+    case GRIN_DATATYPE::String:
+        return new std::string(*(const std::string*)(result));
+    case GRIN_DATATYPE::Date32:
+        return new int32_t(*(const int32_t*)(result));
+    case GRIN_DATATYPE::Date64:
+        return new int64_t(*(const int64_t*)(result));
+    default:
+        return NULL;
+    }
 }
 #endif
 
@@ -176,7 +199,30 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
     auto offset = _e->eid;
     auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return result;
+    auto _dt = _g->schema().GetVertexPropertyType(_ep->first, _ep->second);
+    auto dt = ArrowToDataType(_dt);
+    switch (dt) {
+    case GRIN_DATATYPE::Int32:
+        return new int32_t(*(const int32_t*)(result));
+    case GRIN_DATATYPE::UInt32:
+        return new uint32_t(*(const uint32_t*)(result));
+    case GRIN_DATATYPE::Int64:
+        return new int64_t(*(const int64_t*)(result));
+    case GRIN_DATATYPE::UInt64:
+        return new uint64_t(*(const uint64_t*)(result));
+    case GRIN_DATATYPE::Float:
+        return new float(*(const float*)(result));
+    case GRIN_DATATYPE::Double:
+        return new double(*(const double*)(result));
+    case GRIN_DATATYPE::String:
+        return new std::string(*(const std::string*)(result));
+    case GRIN_DATATYPE::Date32:
+        return new int32_t(*(const int32_t*)(result));
+    case GRIN_DATATYPE::Date64:
+        return new int64_t(*(const int64_t*)(result));
+    default:
+        return NULL;
+    }
 }
 #endif
 
