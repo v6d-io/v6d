@@ -15,7 +15,7 @@ limitations under the License.
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
 const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto s = _g->schema().GetVertexPropertyName(_vp->first, _vp->second);
     int len = s.length() + 1;
@@ -26,7 +26,7 @@ const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp)
 
 GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype,
                                            const char* name) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto s = std::string(name);
     auto vp = new GRIN_VERTEX_PROPERTY_T(*_vtype, _g->schema().GetVertexPropertyId(*_vtype, s));
@@ -34,7 +34,7 @@ GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH g, GRIN_VERTEX_
 }
 
 GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const char* name) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto s = std::string(name);
     auto vpl = new GRIN_VERTEX_PROPERTY_LIST_T();
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
@@ -49,7 +49,7 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const
 
 #ifdef GRIN_WITH_EDGE_PROPERTY_NAME
 const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto s = _g->schema().GetEdgePropertyName(_ep->first, _ep->second);
     int len = s.length() + 1;
@@ -60,7 +60,7 @@ const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
 
 GRIN_EDGE_PROPERTY grin_get_edge_property_by_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype,
                                            const char* name) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto s = std::string(name);
     auto ep = new GRIN_EDGE_PROPERTY_T(*_etype, _g->schema().GetEdgePropertyId(*_etype, s));
@@ -68,7 +68,7 @@ GRIN_EDGE_PROPERTY grin_get_edge_property_by_name(GRIN_GRAPH g, GRIN_EDGE_TYPE e
 }
 
 GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const char* name) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto s = std::string(name);
     auto epl = new GRIN_EDGE_PROPERTY_LIST_T();
     for (auto etype = 0; etype < _g->edge_label_num(); ++etype) {
@@ -95,7 +95,7 @@ void grin_destroy_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
 }
 
 GRIN_DATATYPE grin_get_vertex_property_data_type(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto dt = _g->schema().GetVertexPropertyType(_vp->first, _vp->second);
     return ArrowToDataType(dt);
@@ -122,7 +122,7 @@ void grin_destroy_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
 }
 
 GRIN_DATATYPE grin_get_edge_property_data_type(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto dt = _g->schema().GetEdgePropertyType(_ep->first, _ep->second);
     return ArrowToDataType(dt);

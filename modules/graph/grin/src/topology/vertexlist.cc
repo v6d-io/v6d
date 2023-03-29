@@ -18,7 +18,7 @@ limitations under the License.
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
 GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH g) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto vl = new GRIN_VERTEX_LIST_T();
     vl->type_begin = 0;
     vl->type_end = _g->vertex_label_num();
@@ -51,7 +51,7 @@ GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t 
 
 #ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
 GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     auto vli = new GRIN_VERTEX_LIST_ITERATOR_T();
     vli->type_begin = _vl->type_begin;
@@ -75,7 +75,7 @@ void grin_destroy_vertex_list_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) 
 }
 
 void grin_get_next_vertex_list_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
     _vli->current++;
     while (_vli->type_current < _vli->type_end) {

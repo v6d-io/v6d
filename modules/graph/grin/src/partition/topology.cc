@@ -52,7 +52,7 @@ GRIN_PARTITION_LIST grin_edge_data_complete_partitions(GRIN_GRAPH, GRIN_EDGE);
 
 #ifdef GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST
 GRIN_VERTEX_LIST grin_select_master_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     if (_vl->all_master_mirror > 0) return GRIN_NULL_LIST;
 
@@ -65,7 +65,7 @@ GRIN_VERTEX_LIST grin_select_master_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LI
 }
 
 GRIN_VERTEX_LIST grin_select_mirror_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     if (_vl->all_master_mirror > 0) return GRIN_NULL_LIST;
 

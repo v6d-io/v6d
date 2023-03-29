@@ -74,7 +74,6 @@ struct GRIN_DATATYPE_ENUM<arrow::Date64Type> {
   static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Date64;
 };
 
-GRIN_PARTITIONED_GRAPH get_partitioned_graph_by_object_id(vineyard::Client& client, const vineyard::ObjectID& object_id);
 std::string GetDataTypeName(GRIN_DATATYPE);
 GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType>);
 
@@ -82,18 +81,22 @@ GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType>);
 #define GRIN_VID_T uint64_t
 
 /* The following data types shall be defined through typedef. */
-typedef vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T> GRIN_GRAPH_T;                      
-typedef GRIN_GRAPH_T::vertex_t GRIN_VERTEX_T;     
+typedef vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T> _GRIN_GRAPH_T;                 
+struct GRIN_GRAPH_T {
+    vineyard::Client client;
+    std::shared_ptr<_GRIN_GRAPH_T> g;
+};
+typedef _GRIN_GRAPH_T::vertex_t GRIN_VERTEX_T;     
 struct GRIN_EDGE_T {
-    GRIN_GRAPH_T::vid_t src;
-    GRIN_GRAPH_T::vid_t dst;
+    _GRIN_GRAPH_T::vid_t src;
+    _GRIN_GRAPH_T::vid_t dst;
     GRIN_DIRECTION dir;
     unsigned etype;
-    GRIN_GRAPH_T::eid_t eid;
+    _GRIN_GRAPH_T::eid_t eid;
 };                     
 
 #ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
-typedef GRIN_GRAPH_T::oid_t VERTEX_ORIGINAL_ID_T;                   
+typedef _GRIN_GRAPH_T::oid_t VERTEX_ORIGINAL_ID_T;                   
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
@@ -102,9 +105,9 @@ struct GRIN_VERTEX_LIST_T {
     unsigned type_end;
     unsigned all_master_mirror;
     std::vector<unsigned> offsets;
-    std::vector<GRIN_GRAPH_T::vertices_t> vrs;
+    std::vector<_GRIN_GRAPH_T::vertices_t> vrs;
 };
-void __grin_init_vertex_list(GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl);
+void __grin_init_vertex_list(std::shared_ptr<_GRIN_GRAPH_T> g, GRIN_VERTEX_LIST_T* vl);
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
@@ -114,45 +117,46 @@ struct GRIN_VERTEX_LIST_ITERATOR_T {
     unsigned all_master_mirror;
     unsigned type_current;
     unsigned current;
-    GRIN_GRAPH_T::vertices_t vr;
+    _GRIN_GRAPH_T::vertices_t vr;
 };
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
 struct GRIN_ADJACENT_LIST_T {
-    GRIN_GRAPH_T::vid_t vid;
+    _GRIN_GRAPH_T::vid_t vid;
     GRIN_DIRECTION dir;
     unsigned etype_begin;
     unsigned etype_end;
     std::vector<unsigned> offsets;
-    std::vector<GRIN_GRAPH_T::raw_adj_list_t> data;
+    std::vector<_GRIN_GRAPH_T::raw_adj_list_t> data;
 };
-void __grin_init_adjacent_list(GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al);
+void __grin_init_adjacent_list(std::shared_ptr<_GRIN_GRAPH_T> g, GRIN_ADJACENT_LIST_T* al);
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 struct GRIN_ADJACENT_LIST_ITERATOR_T {
-    GRIN_GRAPH_T::vid_t vid;
+    _GRIN_GRAPH_T::vid_t vid;
     GRIN_DIRECTION dir;
     unsigned etype_begin;
     unsigned etype_end;
     unsigned etype_current;
     unsigned current;
-    GRIN_GRAPH_T::raw_adj_list_t data;
+    _GRIN_GRAPH_T::raw_adj_list_t data;
 };  
 #endif
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
 struct GRIN_PARTITIONED_GRAPH_T {
-  vineyard::ArrowFragmentGroup* pg;
-  std::vector<std::shared_ptr<GRIN_GRAPH_T>> lgs;
+  vineyard::Client client;
+  std::shared_ptr<vineyard::ArrowFragmentGroup> pg;
+  std::vector<std::shared_ptr<_GRIN_GRAPH_T>> lgs;
 };
 typedef unsigned GRIN_PARTITION_T;
 typedef std::vector<unsigned> GRIN_PARTITION_LIST_T;
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_REF
-typedef GRIN_GRAPH_T::vid_t GRIN_VERTEX_REF_T;
+typedef _GRIN_GRAPH_T::vid_t GRIN_VERTEX_REF_T;
 #endif
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
@@ -162,7 +166,7 @@ typedef std::pair<unsigned, unsigned> GRIN_VERTEX_PROPERTY_T;
 typedef std::vector<GRIN_VERTEX_PROPERTY_T> GRIN_VERTEX_PROPERTY_LIST_T;
 struct GRIN_VERTEX_PROPERTY_TABLE_T {
     unsigned vtype;
-    GRIN_GRAPH_T::vertices_t vertices;
+    _GRIN_GRAPH_T::vertices_t vertices;
 };
 #endif
 

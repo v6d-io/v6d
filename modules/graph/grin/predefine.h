@@ -698,10 +698,16 @@ typedef enum {
 #define GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
 
 /** @ingroup PropetyAssumptionMacros
- * @brief The storage uses column store for properties.
- * This enables efficient property selections for vertices and edges.
+ * @brief The storage uses column store for vertex properties.
+ * This enables efficient property selections for vertices.
 */
-#define GRIN_ASSUME_COLUMN_STORE
+#define GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY
+
+/** @ingroup PropetyAssumptionMacros
+ * @brief The storage uses column store for edge properties.
+ * This enables efficient property selections for edges.
+*/
+#define GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY
 ///@}
 
 #ifndef GRIN_DOXYGEN_SKIP  
@@ -721,7 +727,8 @@ typedef enum {
 #undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE
 #undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
 #undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
-#undef GRIN_ASSUME_COLUMN_STORE
+#undef GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY
+#undef GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY
 
 /* StorageSpecific */
 
@@ -733,7 +740,8 @@ typedef enum {
 
 /* Enable the supported features */
 #define GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
-#define GRIN_ASSUME_COLUMN_STORE
+#define GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY
+#define GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY
 /* End of Enable */
 
 /* End of StorageSpecific */

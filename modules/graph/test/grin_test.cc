@@ -35,7 +35,6 @@ limitations under the License.
 #include "graph/grin/include/property/property.h"
 #include "graph/grin/include/property/propertytable.h"
 
-#include "graph/grin/src/predefine.h"
 #include "graph/fragment/graph_schema.h"
 #include "graph/loader/arrow_fragment_loader.h"
 
@@ -59,7 +58,6 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
     Then for each of these vertices, we send the value of the "features" property to its master partition.
   */
   GRIN_GRAPH g = grin_get_local_graph_from_partition(partitioned_graph, partition);  // get local graph of partition
-  auto _g = static_cast<GRIN_GRAPH_T*>(g);
 
   GRIN_EDGE_TYPE etype = grin_get_edge_type_by_name(g, edge_type_name);  // get edge type from name
 
@@ -120,11 +118,20 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
 }
 
 
-void Traverse(vineyard::Client& client, const grape::CommSpec& comm_spec,
+void Traverse(std::string ipc_socket, const grape::CommSpec& comm_spec,
               vineyard::ObjectID fragment_group_id) {
   LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
 
-  GRIN_PARTITIONED_GRAPH pg = get_partitioned_graph_by_object_id(client, fragment_group_id);
+  std::string fg_id_str = std::to_string(fragment_group_id);
+
+  char** argv = new char*[2];
+  argv[0] = new char[ipc_socket.length() + 1];
+  argv[1] = new char[fg_id_str.length() + 1];
+
+  strcpy(argv[0], ipc_socket.c_str());
+  strcpy(argv[1], fg_id_str.c_str());
+
+  GRIN_PARTITIONED_GRAPH pg = grin_get_partitioned_graph_from_storage(2, argv);
 
   GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
   size_t pnum = grin_get_partition_list_size(pg, local_partitions);
@@ -136,6 +143,10 @@ void Traverse(vineyard::Client& client, const grape::CommSpec& comm_spec,
   GRIN_PARTITION partition = grin_get_partition_from_list(pg, local_partitions, 0);
   LOG(INFO) << "Partition: " << *(static_cast<unsigned*>(partition));
   sync_property(pg, partition, "knows", "value3");
+
+  delete[] argv[0];
+  delete[] argv[1];
+  delete[] argv;
 }
 
 
@@ -233,7 +244,7 @@ int main(int argc, char** argv) {
               client, comm_spec, vtables, etables, directed != 0, true, true);
       vineyard::ObjectID fragment_group_id =
           loader->LoadFragmentAsFragmentGroup().value();
-      Traverse(client, comm_spec, fragment_group_id);
+      Traverse(ipc_socket, comm_spec, fragment_group_id);
     }
   }
   grape::FinalizeMPIComm();

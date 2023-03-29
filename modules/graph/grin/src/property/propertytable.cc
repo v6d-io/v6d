@@ -51,36 +51,36 @@ GRIN_ROW grin_create_row(GRIN_GRAPH g) {
     return r;
 }
 
-bool grin_insert_value_to_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, void* value) {
+bool grin_insert_value_to_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, const void* value) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
     void* _value = NULL;
     switch (dt) {
     case GRIN_DATATYPE::Int32:
-        _value = new int32_t(*static_cast<int32_t*>(value));
+        _value = new int32_t(*static_cast<const int32_t*>(value));
         break;
     case GRIN_DATATYPE::UInt32:
-        _value = new uint32_t(*static_cast<uint32_t*>(value));
+        _value = new uint32_t(*static_cast<const uint32_t*>(value));
         break;
     case GRIN_DATATYPE::Int64:
-        _value = new int64_t(*static_cast<int64_t*>(value));
+        _value = new int64_t(*static_cast<const int64_t*>(value));
         break;
     case GRIN_DATATYPE::UInt64:
-        _value = new uint64_t(*static_cast<uint64_t*>(value));
+        _value = new uint64_t(*static_cast<const uint64_t*>(value));
         break;
     case GRIN_DATATYPE::Float:
-        _value = new float(*static_cast<float*>(value));
+        _value = new float(*static_cast<const float*>(value));
         break;
     case GRIN_DATATYPE::Double:
-        _value = new double(*static_cast<double*>(value));
+        _value = new double(*static_cast<const double*>(value));
         break;
     case GRIN_DATATYPE::String:
-        _value = new std::string(*static_cast<std::string*>(value));
+        _value = new std::string(*static_cast<const std::string*>(value));
         break;
     case GRIN_DATATYPE::Date32:
-        _value = new int32_t(*static_cast<int32_t*>(value));
+        _value = new int32_t(*static_cast<const int32_t*>(value));
         break;
     case GRIN_DATATYPE::Date64:
-        _value = new int64_t(*static_cast<int64_t*>(value));
+        _value = new int64_t(*static_cast<const int64_t*>(value));
         break;
     default:
         _value = NULL;
@@ -98,7 +98,7 @@ void grin_destroy_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE
 }
 
 GRIN_VERTEX_PROPERTY_TABLE grin_get_vertex_property_table_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto vpt = new GRIN_VERTEX_PROPERTY_TABLE_T();
     vpt->vtype = *_vtype;
@@ -108,7 +108,7 @@ GRIN_VERTEX_PROPERTY_TABLE grin_get_vertex_property_table_by_type(GRIN_GRAPH g, 
 
 const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt,
                                                  GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
@@ -123,7 +123,7 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
 #if defined(GRIN_ENABLE_VERTEX_PROPERTY_TABLE) && defined(GRIN_ENABLE_ROW)
 GRIN_ROW grin_get_row_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, 
                                        GRIN_VERTEX_PROPERTY_LIST vpl) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
@@ -141,7 +141,7 @@ GRIN_ROW grin_get_row_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPE
 }
 #endif
 
-#if !defined(GRIN_ASSUME_COLUMN_STORE) && defined(GRIN_ENABLE_ROW)
+#if !defined(GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY) && defined(GRIN_ENABLE_ROW)
 /**
  * @brief get vertex row directly from the graph, this API only works for row store system
  * @param GRIN_GRAPH the graph
@@ -158,7 +158,7 @@ void grin_destroy_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept
 }
 
 GRIN_EDGE_PROPERTY_TABLE grin_get_edge_property_table_by_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto ept = new GRIN_EDGE_PROPERTY_TABLE_T();
     ept->etype = *_etype;
@@ -168,7 +168,7 @@ GRIN_EDGE_PROPERTY_TABLE grin_get_edge_property_table_by_type(GRIN_GRAPH g, GRIN
 
 const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept,
                                                GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
@@ -183,7 +183,7 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
 #if defined(GRIN_ENABLE_EDGE_PROPERTY_TABLE) && defined(GRIN_ENABLE_ROW)
 GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, 
                                                GRIN_EDGE_PROPERTY_LIST epl) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     auto _epl = static_cast<GRIN_EDGE_PROPERTY_LIST_T*>(epl);
@@ -201,7 +201,7 @@ GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_
 }
 #endif
 
-#if !defined(GRIN_ASSUME_COLUMN_STORE) && defined(GRIN_ENABLE_ROW)
+#if !defined(GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY) && defined(GRIN_ENABLE_ROW)
 /**
  * @brief get edge row directly from the graph, this API only works for row store system
  * @param GRIN_GRAPH the graph

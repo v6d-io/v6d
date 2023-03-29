@@ -15,7 +15,7 @@ limitations under the License.
 
 #ifdef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
 bool grin_smaller_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _v1 = static_cast<GRIN_VERTEX_T*>(v1);
     auto _v2 = static_cast<GRIN_VERTEX_T*>(v2);
     return _g->Vertex2Gid(*_v1) < _g->Vertex2Gid(*_v2);
@@ -24,7 +24,7 @@ bool grin_smaller_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
 
 #if defined(GRIN_ASSUME_ALL_VERTEX_LIST_SORTED) && defined(GRIN_ENABLE_VERTEX_LIST_ARRAY)
 bool grin_get_position_of_vertex_from_sorted_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, GRIN_VERTEX v, size_t& pos) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     auto vtype = _g->vertex_label(*_v);
