@@ -48,7 +48,7 @@ CONTROLLER_GEN = $(shell command -v ${GOBIN}/controller-gen > /dev/null)
 KUSTOMIZE_VERSION ?= v4@v4.5.5
 CONTROLLER_TOOLS_VERSION ?= v0.11.0
 GOLANGCI_LINT_VERSION ?= v1.49.0
-HELMIFY_VERSION ?= v0.3.18
+HELMIFY_VERSION ?= v0.3.34
 E2E_VERSION ?= 2631e76926604c4e30ca170bed916804c86980b6
 
 all: vineyardctl
@@ -265,6 +265,6 @@ bundle-build:
 # Build all bundle operator
 .PHONY: generate-helm-chart
 generate-helm-chart: helmify kustomize
-	cd ../charts && $(KUSTOMIZE) build ../k8s/config/default | $(HELMIFY) vineyard-operator && \
+	cd ../charts && $(KUSTOMIZE) build ../k8s/config/default | $(HELMIFY) --cert-manager-as-subchart vineyard-operator && \
 	sed -i 's/\/var\/run\/vineyard-kubernetes\/{{.Namespace}}\/{{.Name}}/\/var\/run\/vineyard-kubernetes\/{{ \"{{.Namespace}}\/{{.Name}}\" }}/g' \
 	vineyard-operator/templates/vineyardd-crd.yaml

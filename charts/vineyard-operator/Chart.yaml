@@ -31,3 +31,7 @@ version: 0.13.4
 # follow Semantic Versioning. They should reflect the version the application is using.
 appVersion: 0.13.4
 
+dependencies:
+  - name: cert-manager
+    repository: https://charts.jetstack.io
+    condition: certManager.enabled

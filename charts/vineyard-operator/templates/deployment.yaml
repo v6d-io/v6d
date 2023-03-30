@@ -34,10 +34,10 @@ spec:
         - /vineyardctl
         env:
         - name: KUBERNETES_CLUSTER_DOMAIN
-          value: {{ .Values.kubernetesClusterDomain }}
+          value: {{ quote .Values.kubernetesClusterDomain }}
         image: {{ .Values.controllerManager.manager.image.repository }}:{{ .Values.controllerManager.manager.image.tag
           | default .Chart.AppVersion }}
-        imagePullPolicy: IfNotPresent
+        imagePullPolicy: {{ .Values.controllerManager.manager.imagePullPolicy }}
         livenessProbe:
           httpGet:
             path: /healthz
@@ -68,7 +68,7 @@ spec:
         - --v=0
         env:
         - name: KUBERNETES_CLUSTER_DOMAIN
-          value: {{ .Values.kubernetesClusterDomain }}
+          value: {{ quote .Values.kubernetesClusterDomain }}
         image: {{ .Values.controllerManager.kubeRbacProxy.image.repository }}:{{ .Values.controllerManager.kubeRbacProxy.image.tag
           | default .Chart.AppVersion }}
         name: kube-rbac-proxy
@@ -78,11 +78,8 @@ spec:
           protocol: TCP
         resources: {{- toYaml .Values.controllerManager.kubeRbacProxy.resources | nindent
           10 }}
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
+        securityContext: {{- toYaml .Values.controllerManager.kubeRbacProxy.containerSecurityContext
+          | nindent 10 }}
       serviceAccountName: {{ include "vineyard-operator.fullname" . }}-manager
       terminationGracePeriodSeconds: 10
       volumes:
