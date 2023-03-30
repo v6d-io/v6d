@@ -1,5 +1,13 @@
+cert-manager:
+  enabled: true
+  installCRDs: true
 controllerManager:
   kubeRbacProxy:
+    containerSecurityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+        - ALL
     image:
       repository: gcr.io/kubebuilder/kube-rbac-proxy
       tag: v0.13.0
@@ -14,6 +22,7 @@ controllerManager:
     image:
       repository: vineyardcloudnative/vineyard-operator
       tag: latest
+    imagePullPolicy: IfNotPresent
     resources:
       limits:
         cpu: 500m

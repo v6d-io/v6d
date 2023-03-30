@@ -23,6 +23,7 @@ setup:
         docker push localhost:5001/vineyard-operator:latest
     - name: use helm chart to install the operator
       command: |
+        helm dep update charts/vineyard-operator
         helm install vineyard-operator charts/vineyard-operator \
             --namespace vineyard-system \
             --set controllerManager.manager.image.repository=localhost:5001/vineyard-operator \

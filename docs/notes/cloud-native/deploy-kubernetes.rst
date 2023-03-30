@@ -19,27 +19,16 @@ installing directly from the source code.
 Before proceeding with the vineyard installation, it is essential to install cert-manager, as it is required
 by the webhook components within the vineyard operator:
 
-Install cert-manager
-^^^^^^^^^^^^^^^^^^^^
-
-.. code:: bash
-
-    $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-
-.. note::
-
-    Please wait the cert-manager for a while until it is ready before installing the
-    vineyard operator.
-
 Option #1: Install from helm chart (recommended)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: bash
 
     $ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
+    $ helm repo update
     $ helm install vineyard-operator vineyard/vineyard-operator
 
-Wait for the vineyard operator until ready:
+Wait for the vineyard operator until ready.
 
 Option #2: Install form source code
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -64,7 +53,18 @@ Option #2: Install form source code
 
       $ kind load docker-image vineyardcloudnative/vineyard-operator:latest
 
-3. Next, deploy the vineyard operator:
+3. Install the cert-manager
+
+.. code:: bash
+
+    $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+
+.. note::
+
+    Please wait the cert-manager for a while until it is ready before installing the
+    vineyard operator.
+
+4. Next, deploy the vineyard operator:
    .. code:: bash
 
       $ make -C k8s deploy

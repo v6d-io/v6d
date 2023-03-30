@@ -119,39 +119,7 @@ Create a dedicated namespace for the Vineyard Operator.
         namespace/vineyard-system created
 
 The operator needs a certificate created by cert-manager for webhook(https),
-so we have to install the cert-manager(v1.9.1) at first.
-
-.. code:: bash
-
-    $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
-
-.. admonition:: Expected output
-   :class: admonition-details
-
-    .. code:: bash
-
-        namespace/cert-manager created
-        customresourcedefinition.apiextensions.k8s.io/certificaterequests.cert-manager.io created
-        customresourcedefinition.apiextensions.k8s.io/certificates.cert-manager.io created
-        ...
-        validatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook created
-
-Check whether all cert-manager pods are running.
-
-.. code:: bash
-
-    $ kubectl get pod -n cert-manager
-
-.. admonition:: Expected output
-   :class: admonition-details
-
-    .. code:: bash
-
-        NAME                                       READY   STATUS    RESTARTS   AGE
-        cert-manager-5dd59d9d9b-cwp8n              1/1     Running   0          58s
-        cert-manager-cainjector-8696fc9f89-tvftj   1/1     Running   0          58s
-        cert-manager-webhook-7d4b5b8c56-htchs      1/1     Running   0          58s
-
+and the cert-manager is a sub chart of the vineyard operator chart. Also, the
 Vineyard CRDs、Controllers、Webhooks and Scheduler are packaged by `helm`_, you could
 deploy all resources as follows.
 
@@ -181,11 +149,11 @@ Update the vineyard operator chart to the newest one.
          ...Successfully got an update from the "vineyard" chart repository
         Update Complete. ⎈Happy Helming!⎈
 
-Deploy the vineyard operator 0.11.4 in the namespace ``vineyard-system``.
+Deploy the vineyard operator in the namespace ``vineyard-system``.
 
 .. code:: bash
 
-    $ helm install vineyard-operator vineyard/vineyard-operator -n vineyard-system --version 0.11.4
+    $ helm install vineyard-operator vineyard/vineyard-operator -n vineyard-system
 
 .. admonition:: Expected output
    :class: admonition-details
@@ -199,7 +167,7 @@ Deploy the vineyard operator 0.11.4 in the namespace ``vineyard-system``.
         REVISION: 1
         TEST SUITE: None
         NOTES:
-        Thanks for installing VINEYARD-OPERATOR:0.11.4, release at namespace: vineyard-system, name: vineyard-operator.
+        Thanks for installing VINEYARD-OPERATOR, release at namespace: vineyard-system, name: vineyard-operator.
 
         To learn more about the release, try:
 
@@ -223,18 +191,29 @@ Check the status of all vineyard resources created by helm:
 
     .. code:: bash
 
-        NAME                                   READY   STATUS    RESTARTS   AGE
-        pod/vineyard-operator-cbcd58cb-5zs84   2/2     Running   0          4m56s
+        NAME                                                            READY   STATUS    RESTARTS   AGE
+        pod/vineyard-operator-cert-manager-cainjector-b865888cc-xj8x9   1/1     Running   0          2m30s
+        pod/vineyard-operator-cert-manager-d99dcb884-gq9j5              1/1     Running   0          2m30s
+        pod/vineyard-operator-cert-manager-webhook-5bc8fd5d48-vh4bg     1/1     Running   0          2m30s
+        pod/vineyard-operator-controller-manager-5bcbb75fb6-cfdpk       2/2     Running   0          2m30s
 
-        NAME                                        TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
-        service/vineyard-operator-metrics-service   ClusterIP   10.96.23.137   <none>        8443/TCP   4m56s
-        service/vineyard-operator-webhook-service   ClusterIP   10.96.215.18   <none>        443/TCP    4m56s
+        NAME                                                           TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
+        service/vineyard-operator-cert-manager                         ClusterIP   10.96.166.147   <none>        9402/TCP   2m30s
+        service/vineyard-operator-cert-manager-webhook                 ClusterIP   10.96.111.112   <none>        443/TCP    2m30s
+        service/vineyard-operator-controller-manager-metrics-service   ClusterIP   10.96.153.134   <none>        8443/TCP   2m30s
+        service/vineyard-operator-webhook-service                      ClusterIP   10.96.9.101     <none>        443/TCP    2m30s
 
-        NAME                                READY   UP-TO-DATE   AVAILABLE   AGE
-        deployment.apps/vineyard-operator   1/1     1            1           4m56s
+        NAME                                                        READY   UP-TO-DATE   AVAILABLE   AGE
+        deployment.apps/vineyard-operator-cert-manager              1/1     1            1           2m30s
+        deployment.apps/vineyard-operator-cert-manager-cainjector   1/1     1            1           2m30s
+        deployment.apps/vineyard-operator-cert-manager-webhook      1/1     1            1           2m30s
+        deployment.apps/vineyard-operator-controller-manager        1/1     1            1           2m30s
 
-        NAME                                         DESIRED   CURRENT   READY   AGE
-        replicaset.apps/vineyard-operator-cbcd58cb   1         1         1       4m56s
+        NAME                                                                  DESIRED   CURRENT   READY   AGE
+        replicaset.apps/vineyard-operator-cert-manager-cainjector-b865888cc   1         1         1       2m30s
+        replicaset.apps/vineyard-operator-cert-manager-d99dcb884              1         1         1       2m30s
+        replicaset.apps/vineyard-operator-cert-manager-webhook-5bc8fd5d48     1         1         1       2m30s
+        replicaset.apps/vineyard-operator-controller-manager-5bcbb75fb6       1         1         1       2m30s
 
 Step 2: Deploy a Vineyard Cluster
 ----------------------------------
