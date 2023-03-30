@@ -28,6 +28,7 @@ limitations under the License.
 
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
+#include "pybind11_docs.h"   // NOLINT(build/include_subdir)
 #include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 namespace py = pybind11;
@@ -147,8 +148,74 @@ class ClientManager {
 };
 
 void bind_client(py::module& mod) {
+  // InstanceStatus
+  py::class_<InstanceStatus, std::shared_ptr<InstanceStatus>>(
+      mod, "InstanceStatus", doc::InstanceStatus)
+      .def_property_readonly(
+          "instance_id",
+          [](InstanceStatus* status) { return status->instance_id; },
+          doc::InstanceStatus_instance_id)
+      .def_property_readonly(
+          "deployment",
+          [](InstanceStatus* status) { return status->deployment; },
+          doc::InstanceStatus_deployment)
+      .def_property_readonly(
+          "memory_usage",
+          [](InstanceStatus* status) { return status->memory_usage; },
+          doc::InstanceStatus_memory_usage)
+      .def_property_readonly(
+          "memory_limit",
+          [](InstanceStatus* status) { return status->memory_limit; },
+          doc::InstanceStatus_memory_limit)
+      .def_property_readonly(
+          "deferred_requests",
+          [](InstanceStatus* status) { return status->deferred_requests; },
+          doc::InstanceStatus_deferred_requests)
+      .def_property_readonly(
+          "ipc_connections",
+          [](InstanceStatus* status) { return status->ipc_connections; },
+          doc::InstanceStatus_ipc_connections)
+      .def_property_readonly(
+          "rpc_connections",
+          [](InstanceStatus* status) { return status->rpc_connections; },
+          doc::InstanceStatus_rpc_connections)
+      .def("__repr__",
+           [](InstanceStatus* status) {
+             std::stringstream ss;
+             ss << "{" << std::endl;
+             ss << "    instance_id: " << status->instance_id << ","
+                << std::endl;
+             ss << "    deployment: " << status->deployment << "," << std::endl;
+             ss << "    memory_usage: " << status->memory_usage << ","
+                << std::endl;
+             ss << "    memory_limit: " << status->memory_limit << ","
+                << std::endl;
+             ss << "    deferred_requests: " << status->deferred_requests << ","
+                << std::endl;
+             ss << "    ipc_connections: " << status->ipc_connections << ","
+                << std::endl;
+             ss << "    rpc_connections: " << status->rpc_connections
+                << std::endl;
+             ss << "}";
+             return ss.str();
+           })
+      .def("__str__", [](InstanceStatus* status) {
+        std::stringstream ss;
+        ss << "InstanceStatus:" << std::endl;
+        ss << "    instance_id: " << status->instance_id << std::endl;
+        ss << "    deployment: " << status->deployment << std::endl;
+        ss << "    memory_usage: " << status->memory_usage << std::endl;
+        ss << "    memory_limit: " << status->memory_limit << std::endl;
+        ss << "    deferred_requests: " << status->deferred_requests
+           << std::endl;
+        ss << "    ipc_connections: " << status->ipc_connections << std::endl;
+        ss << "    rpc_connections: " << status->rpc_connections;
+        return ss.str();
+      });
+
   // ClientBase
-  py::class_<ClientBase, std::shared_ptr<ClientBase>>(mod, "ClientBase")
+  py::class_<ClientBase, std::shared_ptr<ClientBase>>(mod, "ClientBase",
+                                                      doc::ClientBase)
       .def(
           "create_metadata",
           [](ClientBase* self, ObjectMeta& metadata) -> ObjectMeta& {
@@ -156,7 +223,7 @@ void bind_client(py::module& mod) {
             throw_on_error(self->CreateMetaData(metadata, object_id));
             return metadata;
           },
-          "metadata"_a)
+          "metadata"_a, doc::ClientBase_create_metadata)
       .def(
           "create_metadata",
           [](ClientBase* self, ObjectMeta& metadata,
@@ -173,7 +240,8 @@ void bind_client(py::module& mod) {
              const bool force, const bool deep) {
             throw_on_error(self->DelData(object_id, force, deep));
           },
-          "object_id"_a, py::arg("force") = false, py::arg("deep") = true)
+          "object_id"_a, py::arg("force") = false, py::arg("deep") = true,
+          doc::ClientBase_delete)
       .def(
           "delete",
           [](ClientBase* self, const std::vector<ObjectIDWrapper>& object_ids,
@@ -270,7 +338,7 @@ void bind_client(py::module& mod) {
           [](ClientBase* self, const ObjectIDWrapper object_id) {
             throw_on_error(self->Persist(object_id));
           },
-          "object_id"_a)
+          "object_id"_a, doc::ClientBase_persist)
       .def(
           "persist",
           [](ClientBase* self, const ObjectMeta& meta) {
@@ -290,7 +358,7 @@ void bind_client(py::module& mod) {
             throw_on_error(self->Exists(object_id, exists));
             return exists;
           },
-          "object_id"_a)
+          "object_id"_a, doc::ClientBase_exists)
       .def(
           "shallow_copy",
           [](ClientBase* self,
@@ -299,7 +367,7 @@ void bind_client(py::module& mod) {
             throw_on_error(self->ShallowCopy(object_id, target_id));
             return target_id;
           },
-          "object_id"_a)
+          "object_id"_a, doc::ClientBase_shallow_copy)
       .def(
           "shallow_copy",
           [](ClientBase* self, const ObjectIDWrapper object_id,
@@ -326,14 +394,15 @@ void bind_client(py::module& mod) {
             }
             return transformed_names;
           },
-          py::arg("pattern"), py::arg("regex") = false, py::arg("limit") = 5)
+          py::arg("pattern"), py::arg("regex") = false, py::arg("limit") = 5,
+          doc::ClientBase_list_names)
       .def(
           "put_name",
           [](ClientBase* self, const ObjectIDWrapper object_id,
              std::string const& name) {
             throw_on_error(self->PutName(object_id, name));
           },
-          "object_id"_a, "name"_a)
+          "object_id"_a, "name"_a, doc::ClientBase_put_name)
       .def(
           "put_name",
           [](ClientBase* self, const ObjectIDWrapper object_id,
@@ -377,7 +446,7 @@ void bind_client(py::module& mod) {
             return object_id;
           },
           "object_id"_a, py::arg("wait") = false,
-          py::call_guard<py::gil_scoped_release>())
+          py::call_guard<py::gil_scoped_release>(), doc::ClientBase_get_name)
       .def(
           "get_name",
           [](ClientBase* self, ObjectNameWrapper const& name,
@@ -393,17 +462,19 @@ void bind_client(py::module& mod) {
           [](ClientBase* self, std::string const& name) {
             throw_on_error(self->DropName(name));
           },
-          "name"_a)
+          "name"_a, doc::ClientBase_drop_name)
       .def(
           "drop_name",
           [](ClientBase* self, ObjectNameWrapper const& name) {
             throw_on_error(self->DropName(name));
           },
           "name"_a)
-      .def("sync_meta",
-           [](ClientBase* self) -> void {
-             VINEYARD_DISCARD(self->SyncMetaData());
-           })
+      .def(
+          "sync_meta",
+          [](ClientBase* self) -> void {
+            VINEYARD_DISCARD(self->SyncMetaData());
+          },
+          doc::ClientBase_sync_meta)
       .def(
           "migrate",
           [](ClientBase* self, const ObjectID object_id) -> ObjectIDWrapper {
@@ -412,7 +483,9 @@ void bind_client(py::module& mod) {
             return target_id;
           },
           "object_id"_a)
-      .def("clear", [](ClientBase* self) { throw_on_error(self->Clear()); })
+      .def(
+          "clear", [](ClientBase* self) { throw_on_error(self->Clear()); },
+          doc::ClientBase_clear)
       .def(
           "label",
           [](ClientBase* self, ObjectID id, std::string const& key,
@@ -446,9 +519,13 @@ void bind_client(py::module& mod) {
             throw_on_error(self->Unpin(objects));
           },
           "objects"_a)
-      .def("reset", [](ClientBase* self) { throw_on_error(self->Clear()); })
-      .def_property_readonly("connected", &Client::Connected)
-      .def_property_readonly("instance_id", &Client::instance_id)
+      .def(
+          "reset", [](ClientBase* self) { throw_on_error(self->Clear()); },
+          doc::ClientBase_reset)
+      .def_property_readonly("connected", &Client::Connected,
+                             doc::ClientBase_connected)
+      .def_property_readonly("instance_id", &Client::instance_id,
+                             doc::ClientBase_instance_id)
       .def_property_readonly(
           "meta",
           [](ClientBase* self)
@@ -468,84 +545,32 @@ void bind_client(py::module& mod) {
               meta_to_return.emplace(kv.first, std::move(element));
             }
             return meta_to_return;
-          })
+          },
+          doc::ClientBase_meta)
       .def_property_readonly(
           "status",
           [](ClientBase* self) -> std::shared_ptr<InstanceStatus> {
             std::shared_ptr<InstanceStatus> status;
             throw_on_error(self->InstanceStatus(status));
             return status;
-          })
+          },
+          doc::ClientBase_status)
       .def("debug",
            [](ClientBase* self, py::dict debug) {
              json result;
              throw_on_error(self->Debug(detail::to_json(debug), result));
              return detail::from_json(result);
            })
-      .def_property_readonly("ipc_socket", &ClientBase::IPCSocket)
-      .def_property_readonly("rpc_endpoint", &ClientBase::RPCEndpoint)
-      .def_property_readonly("version", &ClientBase::Version);
-
-  // InstanceStatus
-  py::class_<InstanceStatus, std::shared_ptr<InstanceStatus>>(mod,
-                                                              "InstanceStatus")
-      .def_property_readonly(
-          "instance_id",
-          [](InstanceStatus* status) { return status->instance_id; })
-      .def_property_readonly(
-          "deployment",
-          [](InstanceStatus* status) { return status->deployment; })
-      .def_property_readonly(
-          "memory_usage",
-          [](InstanceStatus* status) { return status->memory_usage; })
-      .def_property_readonly(
-          "memory_limit",
-          [](InstanceStatus* status) { return status->memory_limit; })
-      .def_property_readonly(
-          "deferred_requests",
-          [](InstanceStatus* status) { return status->deferred_requests; })
-      .def_property_readonly(
-          "ipc_connections",
-          [](InstanceStatus* status) { return status->ipc_connections; })
-      .def_property_readonly(
-          "rpc_connections",
-          [](InstanceStatus* status) { return status->rpc_connections; })
-      .def("__repr__",
-           [](InstanceStatus* status) {
-             std::stringstream ss;
-             ss << "{" << std::endl;
-             ss << "    instance_id: " << status->instance_id << ","
-                << std::endl;
-             ss << "    deployment: " << status->deployment << "," << std::endl;
-             ss << "    memory_usage: " << status->memory_usage << ","
-                << std::endl;
-             ss << "    memory_limit: " << status->memory_limit << ","
-                << std::endl;
-             ss << "    deferred_requests: " << status->deferred_requests << ","
-                << std::endl;
-             ss << "    ipc_connections: " << status->ipc_connections << ","
-                << std::endl;
-             ss << "    rpc_connections: " << status->rpc_connections
-                << std::endl;
-             ss << "}";
-             return ss.str();
-           })
-      .def("__str__", [](InstanceStatus* status) {
-        std::stringstream ss;
-        ss << "InstanceStatus:" << std::endl;
-        ss << "    instance_id: " << status->instance_id << std::endl;
-        ss << "    deployment: " << status->deployment << std::endl;
-        ss << "    memory_usage: " << status->memory_usage << std::endl;
-        ss << "    memory_limit: " << status->memory_limit << std::endl;
-        ss << "    deferred_requests: " << status->deferred_requests
-           << std::endl;
-        ss << "    ipc_connections: " << status->ipc_connections << std::endl;
-        ss << "    rpc_connections: " << status->rpc_connections;
-        return ss.str();
-      });
+      .def_property_readonly("ipc_socket", &ClientBase::IPCSocket,
+                             doc::ClientBase_ipc_socket)
+      .def_property_readonly("rpc_endpoint", &ClientBase::RPCEndpoint,
+                             doc::ClientBase_rpc_endpoint)
+      .def_property_readonly("version", &ClientBase::Version,
+                             doc::ClientBase_version);
 
   // Client
-  py::class_<Client, std::shared_ptr<Client>, ClientBase>(mod, "IPCClient")
+  py::class_<Client, std::shared_ptr<Client>, ClientBase>(mod, "IPCClient",
+                                                          doc::IPCClient)
       .def(
           "create_blob",
           [](Client* self, size_t size) {
@@ -553,11 +578,13 @@ void bind_client(py::module& mod) {
             throw_on_error(self->CreateBlob(size, blob));
             return std::shared_ptr<BlobWriter>(blob.release());
           },
-          py::return_value_policy::move, "size"_a)
-      .def("create_empty_blob",
-           [](Client* self) -> std::shared_ptr<Blob> {
-             return Blob::MakeEmpty(*self);
-           })
+          py::return_value_policy::move, "size"_a, doc::IPCClient_create_blob)
+      .def(
+          "create_empty_blob",
+          [](Client* self) -> std::shared_ptr<Blob> {
+            return Blob::MakeEmpty(*self);
+          },
+          doc::IPCClient_create_empty_blob)
       .def(
           "get_blob",
           [](Client* self, const ObjectIDWrapper object_id, const bool unsafe) {
@@ -565,7 +592,7 @@ void bind_client(py::module& mod) {
             throw_on_error(self->GetBlob(object_id, unsafe, blob));
             return blob;
           },
-          "object_id"_a, py::arg("unsafe") = false)
+          "object_id"_a, py::arg("unsafe") = false, doc::IPCClient_get_blob)
       .def(
           "get_blobs",
           [](Client* self, std::vector<ObjectIDWrapper> object_ids,
@@ -578,7 +605,7 @@ void bind_client(py::module& mod) {
             throw_on_error(self->GetBlobs(unwrapped_object_ids, unsafe, blobs));
             return blobs;
           },
-          "object_ids"_a, py::arg("unsafe") = false)
+          "object_ids"_a, py::arg("unsafe") = false, doc::IPCClient_get_blobs)
       .def(
           "get_object",
           [](Client* self, const ObjectIDWrapper object_id, bool const fetch) {
@@ -591,7 +618,7 @@ void bind_client(py::module& mod) {
             }
             return object;
           },
-          "object_id"_a, py::arg("fetch") = false)
+          "object_id"_a, py::arg("fetch") = false, doc::IPCClient_get_object)
       .def(
           "get_objects",
           [](Client* self, const std::vector<ObjectIDWrapper>& object_ids) {
@@ -601,7 +628,7 @@ void bind_client(py::module& mod) {
             }
             return self->GetObjects(unwrapped_object_ids);
           },
-          "object_ids"_a)
+          "object_ids"_a, doc::IPCClient_get_objects)
       .def(
           "get_meta",
           [](Client* self, ObjectIDWrapper const& object_id,
@@ -618,7 +645,7 @@ void bind_client(py::module& mod) {
             return meta;
           },
           "object_id"_a, py::arg("sync_remote") = false,
-          py::arg("fetch") = false)
+          py::arg("fetch") = false, doc::IPCClient_get_meta)
       .def(
           "get_metas",
           [](Client* self, std::vector<ObjectIDWrapper> const& object_ids,
@@ -634,12 +661,14 @@ void bind_client(py::module& mod) {
                 self->GetMetaData(unwrapped_object_ids, metas, sync_remote));
             return metas;
           },
-          "object_ids"_a, py::arg("sync_remote") = false)
+          "object_ids"_a, py::arg("sync_remote") = false,
+          doc::IPCClient_get_metas)
       .def("list_objects", &Client::ListObjects, "pattern"_a,
-           py::arg("regex") = false, py::arg("limit") = 5)
+           py::arg("regex") = false, py::arg("limit") = 5,
+           doc::IPCClient_list_objects)
       .def("list_metadatas", &Client::ListObjectMeta, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5,
-           py::arg("nobuffer") = false)
+           py::arg("nobuffer") = false, doc::IPCClient_list_metadatas)
       .def(
           "new_buffer_chunk",
           [](Client* self, ObjectID const stream_id,
@@ -674,7 +703,7 @@ void bind_client(py::module& mod) {
             throw_on_error(self->AllocatedSize(id, size));
             return size;
           },
-          "target"_a)
+          "target"_a, doc::IPCClient_allocated_size)
       .def(
           "allocated_size",
           [](Client* self, const Object* target) -> size_t {
@@ -685,25 +714,31 @@ void bind_client(py::module& mod) {
             return size;
           },
           "target"_a)
-      .def("is_shared_memory",
-           [](Client* self, const uintptr_t target) -> bool {
-             ObjectID object_id = InvalidObjectID();
-             return self->IsSharedMemory(target, object_id);
-           })
-      .def("find_shared_memory",
-           [](Client* self, const uintptr_t target) -> py::object {
-             ObjectID object_id = InvalidObjectID();
-             if (self->IsSharedMemory(target, object_id)) {
-               return py::cast(ObjectIDWrapper(object_id));
-             } else {
-               return py::none();
-             }
-           })
-      .def("close",
-           [](Client* self) {
-             return ClientManager<Client>::GetManager()->Disconnect(
-                 self->IPCSocket());
-           })
+      .def(
+          "is_shared_memory",
+          [](Client* self, const uintptr_t target) -> bool {
+            ObjectID object_id = InvalidObjectID();
+            return self->IsSharedMemory(target, object_id);
+          },
+          doc::IPCClient_is_shared_memory)
+      .def(
+          "find_shared_memory",
+          [](Client* self, const uintptr_t target) -> py::object {
+            ObjectID object_id = InvalidObjectID();
+            if (self->IsSharedMemory(target, object_id)) {
+              return py::cast(ObjectIDWrapper(object_id));
+            } else {
+              return py::none();
+            }
+          },
+          doc::IPCClient_find_shared_memory)
+      .def(
+          "close",
+          [](Client* self) {
+            return ClientManager<Client>::GetManager()->Disconnect(
+                self->IPCSocket());
+          },
+          doc::IPCClient_close)
       .def("fork",
            [](Client* self) {
              std::shared_ptr<Client> client(new Client());
@@ -716,8 +751,8 @@ void bind_client(py::module& mod) {
       });
 
   // RPCClient
-  py::class_<RPCClient, std::shared_ptr<RPCClient>, ClientBase>(mod,
-                                                                "RPCClient")
+  py::class_<RPCClient, std::shared_ptr<RPCClient>, ClientBase>(
+      mod, "RPCClient", doc::RPCClient)
       .def(
           "create_remote_blob",
           [](RPCClient* self,
@@ -728,7 +763,7 @@ void bind_client(py::module& mod) {
                 self->CreateRemoteBlob(remote_blob_builder, blob_id));
             return blob_id;
           },
-          "remote_blob_builder"_a)
+          "remote_blob_builder"_a, doc::RPCClient_create_remote_blob)
       .def(
           "get_remote_blob",
           [](RPCClient* self, const ObjectIDWrapper object_id,
@@ -737,7 +772,8 @@ void bind_client(py::module& mod) {
             throw_on_error(self->GetRemoteBlob(object_id, unsafe, remote_blob));
             return remote_blob;
           },
-          "object_id"_a, py::arg("unsafe") = false)
+          "object_id"_a, py::arg("unsafe") = false,
+          doc::RPCClient_get_remote_blob)
       .def(
           "get_remote_blobs",
           [](RPCClient* self, std::vector<ObjectIDWrapper> object_ids,
@@ -751,7 +787,8 @@ void bind_client(py::module& mod) {
                                                 remote_blobs));
             return remote_blobs;
           },
-          "object_ids"_a, py::arg("unsafe") = false)
+          "object_ids"_a, py::arg("unsafe") = false,
+          doc::RPCClient_get_remote_blobs)
       .def(
           "get_object",
           [](RPCClient* self, const ObjectIDWrapper object_id) {
@@ -760,7 +797,7 @@ void bind_client(py::module& mod) {
             throw_on_error(self->GetObject(object_id, object));
             return object;
           },
-          "object_id"_a)
+          "object_id"_a, doc::RPCClient_get_object)
       .def(
           "get_objects",
           [](RPCClient* self, std::vector<ObjectIDWrapper> const& object_ids) {
@@ -770,7 +807,7 @@ void bind_client(py::module& mod) {
             }
             return self->GetObjects(unwrapped_object_ids);
           },
-          "object_ids"_a)
+          "object_ids"_a, doc::RPCClient_get_objects)
       .def(
           "get_meta",
           [](RPCClient* self, ObjectIDWrapper const& object_id,
@@ -781,7 +818,8 @@ void bind_client(py::module& mod) {
           },
           "object_id"_a,
           py::arg("sync_remote") =
-              true /* rpc client will sync remote meta by default */)
+              true /* rpc client will sync remote meta by default */,
+          doc::RPCClient_get_meta)
       .def(
           "get_metas",
           [](RPCClient* self, std::vector<ObjectIDWrapper> const& object_ids,
@@ -797,17 +835,21 @@ void bind_client(py::module& mod) {
           },
           "object_ids"_a,
           py::arg("sync_remote") =
-              true /* rpc client will sync remote meta by default */)
+              true /* rpc client will sync remote meta by default */,
+          doc::RPCClient_get_metas)
       .def("list_objects", &RPCClient::ListObjects, "pattern"_a,
-           py::arg("regex") = false, py::arg("limit") = 5)
+           py::arg("regex") = false, py::arg("limit") = 5,
+           doc::RPCClient_list_objects)
       .def("list_metadatas", &RPCClient::ListObjectMeta, "pattern"_a,
            py::arg("regex") = false, py::arg("limit") = 5,
-           py::arg("nobuffer") = false)
-      .def("close",
-           [](RPCClient* self) {
-             return ClientManager<RPCClient>::GetManager()->Disconnect(
-                 self->RPCEndpoint(), self->session_id());
-           })
+           py::arg("nobuffer") = false, doc::RPCClient_list_metadatas)
+      .def(
+          "close",
+          [](RPCClient* self) {
+            return ClientManager<RPCClient>::GetManager()->Disconnect(
+                self->RPCEndpoint(), self->session_id());
+          },
+          doc::RPCClient_close)
       .def("fork",
            [](RPCClient* self) {
              std::shared_ptr<RPCClient> rpc_client(new RPCClient());
@@ -815,7 +857,8 @@ void bind_client(py::module& mod) {
              return rpc_client;
            })
       .def_property_readonly("remote_instance_id",
-                             &RPCClient::remote_instance_id)
+                             &RPCClient::remote_instance_id,
+                             doc::RPCClient_remote_instance_id)
       .def("__enter__", [](RPCClient* self) { return self; })
       .def("__exit__", [](RPCClient* self, py::object, py::object, py::object) {
         // DO NOTHING
@@ -840,7 +883,7 @@ void bind_client(py::module& mod) {
            return py::none();
          },
          py::arg("target") = py::none(), py::kw_only(),
-         py::arg("username") = "", py::arg("password") = "")
+         py::arg("username") = "", py::arg("password") = "", doc::connect)
       .def(
           "connect",
           [](std::string const& endpoint, const std::string& username,

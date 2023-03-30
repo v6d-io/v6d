@@ -382,6 +382,7 @@ jobs:
           fi
 
       - name: Run python tests with mimalloc
+        if: ${{ steps.changes.outputs.mimalloc == 'true' }}
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
 

@@ -40,8 +40,8 @@ logger = logging.getLogger('vineyard')
 
 try:
     from vineyard.drivers.io import fsspec_adaptors
-except Exception as e:  # pylint: disable=broad-except
-    logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc %s", e)
+except Exception:  # pylint: disable=broad-except
+    logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc.")
 
 
 def make_empty_batch(schema):

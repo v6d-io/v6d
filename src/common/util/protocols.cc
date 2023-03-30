@@ -492,7 +492,7 @@ void WriteGetBuffersReply(const std::vector<std::shared_ptr<Payload>>& objects,
     root[std::to_string(i)] = tree;
     payloads.push_back(tree);
   }
-  // store payloads twice for backwards compatiblity
+  // store payloads twice for backwards compatibility
   root["payloads"] = payloads;
   root["fds"] = fd_to_send;
   root["num"] = objects.size();

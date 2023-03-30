@@ -67,7 +67,7 @@ def start_vineyardd(
         socket: str
             The UNIX domain socket socket path that vineyard server will listen on.
         rpc_socket_port: int
-            The port that vineyard will use to privode RPC service.
+            The port that vineyard will use to provide RPC service.
         k8s_client: kubernetes.client.api.ApiClient
             A kubernetes client. If not specified, vineyard will try to resolve the
             kubernetes configuration from current context.
@@ -260,11 +260,8 @@ def delete_kubernetes_object(
                         getattr(k8s_api, "read_namespaced_{0}".format(kind))(**kwargs)
                     except kubernetes.client.rest.ApiException as ex:
                         if ex.status != 404:
-                            logger.error(
-                                "Deleting %s %s failed: %s",
-                                kind,
-                                target.metadata.name,
-                                str(ex),
+                            logger.exception(
+                                "Deleting %s %s failed", kind, target.metadata.name
                             )
                         break
                     else:

@@ -22,11 +22,11 @@ import inspect
 import threading
 import warnings
 
-from .._C import IPCClient
-from .._C import Object
-from .._C import ObjectID
-from .._C import ObjectMeta
-from .._C import RPCClient
+from vineyard._C import IPCClient
+from vineyard._C import Object
+from vineyard._C import ObjectID
+from vineyard._C import ObjectMeta
+from vineyard._C import RPCClient
 
 
 class BuilderContext:

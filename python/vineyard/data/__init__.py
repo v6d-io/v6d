@@ -16,7 +16,9 @@
 # limitations under the License.
 #
 
+from vineyard.core.builder import BuilderContext
 from vineyard.core.builder import default_builder_context
+from vineyard.core.resolver import ResolverContext
 from vineyard.core.resolver import default_resolver_context
 from vineyard.data.arrow import register_arrow_types
 from vineyard.data.base import register_base_types
@@ -28,7 +30,7 @@ from vineyard.data.series import register_series_types
 from vineyard.data.tensor import register_tensor_types
 
 
-def register_builtin_types(builder_ctx, resolver_ctx):
+def register_builtin_types(builder_ctx: BuilderContext, resolver_ctx: ResolverContext):
     register_default_types(builder_ctx, resolver_ctx)
     register_base_types(builder_ctx, resolver_ctx)
     register_arrow_types(builder_ctx, resolver_ctx)

@@ -82,10 +82,11 @@ import json
 from io import BytesIO
 from typing import Dict
 
-from .._C import ObjectID
-from .._C import ObjectMeta
-from .._C import StreamDrainedException
-from .._C import memory_copy
+from vineyard._C import ObjectID
+from vineyard._C import ObjectMeta
+from vineyard._C import StreamDrainedException
+from vineyard._C import memory_copy
+
 from .stream import BaseStream
 
 

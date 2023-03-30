@@ -18,15 +18,24 @@
 
 import json
 import re
+from typing import List
+from typing import Union
 
 import pyarrow as pa
 
+from vineyard._C import Blob
+from vineyard._C import IPCClient
+from vineyard._C import Object
 from vineyard._C import ObjectMeta
+from vineyard.core.builder import BuilderContext
+from vineyard.core.resolver import ResolverContext
 
 from .utils import normalize_dtype
 
 
-def buffer_builder(client, buffer, builder):
+def buffer_builder(
+    client: IPCClient, buffer: Union[bytes, memoryview], builder: BuilderContext
+):
     if buffer is None:
         return client.create_empty_blob()
     if len(buffer) == 0:
@@ -39,25 +48,27 @@ def buffer_builder(client, buffer, builder):
     return builder.seal(client)
 
 
-def as_arrow_buffer(blob):
+def as_arrow_buffer(blob: Blob):
     buffer = blob.buffer
     if buffer is None:
         return None
     return pa.py_buffer(buffer)
 
 
-def json_to_arrow_buffer(value):
+def json_to_arrow_buffer(value: str):
     assert isinstance(value, str)
     value = json.loads(value)
     assert 'bytes' in value
     return pa.py_buffer(bytearray(value['bytes']))
 
 
-def json_from_arrow_buffer(buffer):
+def json_from_arrow_buffer(buffer: pa.Buffer):
     return {"bytes": list(bytearray(buffer))}
 
 
-def numeric_array_builder(client, array, builder):
+def numeric_array_builder(
+    client: IPCClient, array: pa.NumericArray, builder: BuilderContext
+):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::NumericArray<%s>' % array.type
     meta['length_'] = len(array)
@@ -73,7 +84,9 @@ def numeric_array_builder(client, array, builder):
     return client.create_metadata(meta)
 
 
-def fixed_size_binary_array_builder(client, array, builder):
+def fixed_size_binary_array_builder(
+    client: IPCClient, array: pa.FixedSizeBinaryArray, builder: BuilderContext
+):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::FixedSizeBinaryArray'
     meta['length_'] = len(array)
@@ -90,7 +103,9 @@ def fixed_size_binary_array_builder(client, array, builder):
     return client.create_metadata(meta)
 
 
-def string_array_builder(client, array, builder):
+def string_array_builder(
+    client: IPCClient, array: pa.StringArray, builder: BuilderContext
+):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::BaseBinaryArray<arrow::LargeStringArray>'
     meta['length_'] = len(array)
@@ -116,7 +131,7 @@ def string_array_builder(client, array, builder):
     return client.create_metadata(meta)
 
 
-def list_array_builder(client, array, builder):
+def list_array_builder(client: IPCClient, array: pa.ListArray, builder: BuilderContext):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::LargeListArray'
     meta['length_'] = len(array)
@@ -139,7 +154,7 @@ def list_array_builder(client, array, builder):
     return client.create_metadata(meta)
 
 
-def null_array_builder(client, array):
+def null_array_builder(client: IPCClient, array: pa.NullArray):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::NullArray'
     meta['length_'] = len(array)
@@ -147,7 +162,9 @@ def null_array_builder(client, array):
     return client.create_metadata(meta)
 
 
-def boolean_array_builder(client, array, builder):
+def boolean_array_builder(
+    client: IPCClient, array: pa.BooleanArray, builder: BuilderContext
+):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::BooleanArray'
     meta['length_'] = len(array)
@@ -163,7 +180,7 @@ def boolean_array_builder(client, array, builder):
     return client.create_metadata(meta)
 
 
-def _resize_arrow_type(t):
+def _resize_arrow_type(t: pa.DataType):
     if t == pa.string():
         return pa.large_string()
     if t == pa.utf8():
@@ -175,7 +192,7 @@ def _resize_arrow_type(t):
     return t
 
 
-def schema_proxy_builder(client, schema, builder):
+def schema_proxy_builder(client: IPCClient, schema: pa.Schema, builder: BuilderContext):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::SchemaProxy'
 
@@ -191,7 +208,9 @@ def schema_proxy_builder(client, schema, builder):
     return client.create_metadata(meta)
 
 
-def record_batch_builder(client, batch, builder):
+def record_batch_builder(
+    client: IPCClient, batch: pa.RecordBatch, builder: BuilderContext
+):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::RecordBatch'
     meta['row_num_'] = batch.num_rows
@@ -205,7 +224,7 @@ def record_batch_builder(client, batch, builder):
     return client.create_metadata(meta)
 
 
-def table_builder(client, table, builder):
+def table_builder(client: IPCClient, table: pa.Table, builder: BuilderContext):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Table'
     meta['num_rows_'] = table.num_rows
@@ -223,7 +242,14 @@ def table_builder(client, table, builder):
     return client.create_metadata(meta)
 
 
-def table_from_recordbatches(client, schema, batches, num_rows, num_columns, builder):
+def table_from_recordbatches(
+    client: IPCClient,
+    schema: pa.Schema,
+    batches: List[pa.RecordBatch],
+    num_rows: int,
+    num_columns: int,
+    builder: BuilderContext,
+):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Table'
     meta['num_rows_'] = num_rows
@@ -238,7 +264,7 @@ def table_from_recordbatches(client, schema, batches, num_rows, num_columns, bui
     return client.create_metadata(meta)
 
 
-def numeric_array_resolver(obj):
+def numeric_array_resolver(obj: Union[Object, ObjectMeta]):
     meta = obj.meta
     typename = obj.typename
     value_type = normalize_dtype(
@@ -255,7 +281,7 @@ def numeric_array_resolver(obj):
     )
 
 
-def fixed_size_binary_array_resolver(obj):
+def fixed_size_binary_array_resolver(obj: Union[Object, ObjectMeta]):
     meta = obj.meta
     buffer = as_arrow_buffer(obj.member('buffer_'))
     null_bitmap = as_arrow_buffer(obj.member('null_bitmap_'))
@@ -268,7 +294,7 @@ def fixed_size_binary_array_resolver(obj):
     )
 
 
-def string_array_resolver(obj):
+def string_array_resolver(obj: Union[Object, ObjectMeta]):
     meta = obj.meta
     buffer_data = as_arrow_buffer(obj.member('buffer_data_'))
     buffer_offsets = as_arrow_buffer(obj.member('buffer_offsets_'))
@@ -285,7 +311,7 @@ def string_array_resolver(obj):
     )
 
 
-def null_array_resolver(obj):
+def null_array_resolver(obj: Union[Object, ObjectMeta]):
     length = int(obj.meta['length_'])
     return pa.lib.Array.from_buffers(
         pa.null(),
@@ -298,7 +324,7 @@ def null_array_resolver(obj):
     )
 
 
-def boolean_array_resolver(obj):
+def boolean_array_resolver(obj: Union[Object, ObjectMeta]):
     meta = obj.meta
     buffer = as_arrow_buffer(obj.member('buffer_'))
     null_bitmap = as_arrow_buffer(obj.member('null_bitmap_'))
@@ -310,7 +336,7 @@ def boolean_array_resolver(obj):
     )
 
 
-def list_array_resolver(obj, resolver):
+def list_array_resolver(obj: Union[Object, ObjectMeta], resolver: ResolverContext):
     meta = obj.meta
     buffer_offsets = as_arrow_buffer(obj.member('buffer_offsets_'))
     length = int(meta['length_'])
@@ -328,7 +354,7 @@ def list_array_resolver(obj, resolver):
     )
 
 
-def schema_proxy_resolver(obj):
+def schema_proxy_resolver(obj: Union[Object, ObjectMeta]):
     meta = obj.meta
     if 'buffer_' in meta:
         buffer = as_arrow_buffer(meta.member('buffer_'))
@@ -339,7 +365,7 @@ def schema_proxy_resolver(obj):
     return pa.ipc.read_schema(buffer)
 
 
-def record_batch_resolver(obj, resolver):
+def record_batch_resolver(obj: Union[Object, ObjectMeta], resolver: ResolverContext):
     meta = obj.meta
     schema = resolver.run(obj.member('schema_'))
     columns = []
@@ -348,7 +374,7 @@ def record_batch_resolver(obj, resolver):
     return pa.RecordBatch.from_arrays(columns, schema=schema)
 
 
-def table_resolver(obj, resolver):
+def table_resolver(obj: Union[Object, ObjectMeta], resolver: ResolverContext):
     meta = obj.meta
     batch_num = int(meta['batch_num_'])
     batches = []
@@ -357,7 +383,9 @@ def table_resolver(obj, resolver):
     return pa.Table.from_batches(batches)
 
 
-def register_arrow_types(builder_ctx=None, resolver_ctx=None):
+def register_arrow_types(
+    builder_ctx: BuilderContext = None, resolver_ctx: ResolverContext = None
+):
     if builder_ctx is not None:
         builder_ctx.register(pa.Buffer, buffer_builder)
         builder_ctx.register(pa.NumericArray, numeric_array_builder)

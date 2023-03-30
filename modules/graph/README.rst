@@ -159,7 +159,7 @@ can be archived in two approaches:
   to read the given sources as vineyard streams first, and pass the stream as :code:`vineyard://<object_id_string>`
   as :code:`data_path` to the loader.
 
-- Option 2: onfigure the arrow dependency that used to build the vineyard-graph-loader to support
+- Option 2: configure the arrow dependency that used to build the vineyard-graph-loader to support
   S3 and HDFS with `extra cmake flags <https://arrow.apache.org/docs/developers/cpp/building.html#optional-components>`_.
 
 Read Options

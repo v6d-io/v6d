@@ -17,11 +17,10 @@
 #
 
 import vineyard
-
-from ..._C import RemoteBlobBuilder
-from ...core import default_builder_context
-from ...core import default_resolver_context
-from ...data import register_builtin_types
+from vineyard._C import RemoteBlobBuilder
+from vineyard.core import default_builder_context
+from vineyard.core import default_resolver_context
+from vineyard.data import register_builtin_types
 
 register_builtin_types(default_builder_context, default_resolver_context)
 

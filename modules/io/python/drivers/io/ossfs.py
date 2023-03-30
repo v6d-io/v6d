@@ -284,11 +284,11 @@ class OSSFileSystem(AbstractFileSystem):
         for i in range(self.retries):
             try:
                 return caller(*args, **kwargs)
-            except RETRYABLE_ERRORS as e:
-                logger.debug("Retryable error: %s", e)
+            except RETRYABLE_ERRORS:
+                logger.debug("Retryable error", exc_info=True)
                 time.sleep(min(1.7**i * 0.1, 15))
-            except Exception as e:
-                logger.exception("Nonretryable error: %s", e)
+            except Exception:
+                logger.exception("NonRetryable error")
                 raise
 
     @staticmethod
@@ -678,7 +678,7 @@ class OSSFileSystem(AbstractFileSystem):
         prefix = prefix + "/" if prefix else ""
         if path not in self.dircache or refresh or not delimiter:
             try:
-                logger.debug("Get directory listing page for %s" % path)
+                logger.debug("Get directory listing page for %s", path)
                 bucket = self._make_bucket(bucket_name)
                 files = []
                 dircache = []
@@ -1310,7 +1310,7 @@ class OSSFile(AbstractBufferedFile):
         if self.autocommit and not self.append_block and self.tell() < self.blocksize:
             # only happens when closing small file, use on-shot PUT
             return
-        logger.debug("Initiate upload for %s" % self)
+        logger.debug("Initiate upload for %s", self)
         self.parts = []
         self.mpu = self._call_oss("init_multipart_upload", self.key)
 
@@ -1372,8 +1372,11 @@ class OSSFile(AbstractBufferedFile):
 
     def _upload_chunk(self, final=False):
         logger.debug(
-            "Upload for %s, final=%s, loc=%s, buffer loc=%s"
-            % (self, final, self.loc, self.buffer.tell())
+            "Upload for %s, final=%s, loc=%s, buffer loc=%s",
+            self,
+            final,
+            self.loc,
+            self.buffer.tell(),
         )
         if (
             self.autocommit
@@ -1402,7 +1405,7 @@ class OSSFile(AbstractBufferedFile):
                     (data0, data1) = (remainder[:partition], remainder[partition:])
 
             part = len(self.parts) + 1
-            logger.debug("Upload chunk %s, %s" % (self, part))
+            logger.debug("Upload chunk %s, %s", self, part)
             result = self._call_oss(
                 "upload_part", self.key, self.mpu.upload_id, part, data0
             )
@@ -1413,22 +1416,22 @@ class OSSFile(AbstractBufferedFile):
         return not final
 
     def commit(self):
-        logger.debug("Commit %s" % self)
+        logger.debug("Commit %s", self)
         if self.tell() == 0:
             if self.buffer is not None:
-                logger.debug("Empty file committed %s" % self)
+                logger.debug("Empty file committed %s", self)
                 self._abort_mpu()
                 result = self.fs.touch(self.path)
         elif not self.parts:
             if self.buffer is not None:
-                logger.debug("One-shot upload of %s" % self)
+                logger.debug("One-shot upload of %s", self)
                 self.buffer.seek(0)
                 data = self.buffer.read()
                 result = self._call_oss("put_object", self.key, data)
             else:
                 raise RuntimeError
         else:
-            logger.debug("Complete multi-part upload for %s " % self)
+            logger.debug("Complete multi-part upload for %s ", self)
             result = self._call_oss(
                 "complete_multipart_upload", self.key, self.mpu.upload_id, self.parts
             )
@@ -1463,7 +1466,7 @@ def _fetch_range(fs, bucket_name, key, version_id, start, end, params=None):
     params.update(version_id_kw(version_id))
     if start == end:
         logger.debug(
-            "skip fetch for negative range - bucket=%s,key=%s,start=%d,end=%d",
+            "skip fetch for negative range - bucket=%s, key=%s, start=%d, end=%d",
             bucket_name,
             key,
             start,

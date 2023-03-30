@@ -17,18 +17,24 @@
 #
 
 import re
+from typing import List
+from typing import Union
 
 import numpy as np
 
+from vineyard._C import Blob
+from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
+from vineyard.core.builder import BuilderContext
+from vineyard.core.resolver import ResolverContext
 
 from .tensor import ndarray
 from .utils import normalize_dtype
 
 
-def int_builder(client, value, **kwargs):
+def int_builder(client: IPCClient, value: int, **kwargs):
     meta = ObjectMeta(**kwargs)
     meta['typename'] = 'vineyard::Scalar<int>'
     meta['value_'] = value
@@ -37,7 +43,7 @@ def int_builder(client, value, **kwargs):
     return client.create_metadata(meta)
 
 
-def double_builder(client, value, **kwargs):
+def double_builder(client: IPCClient, value: float, **kwargs):
     meta = ObjectMeta(**kwargs)
     meta['typename'] = 'vineyard::Scalar<double>'
     meta['value_'] = value
@@ -46,7 +52,7 @@ def double_builder(client, value, **kwargs):
     return client.create_metadata(meta)
 
 
-def string_builder(client, value, **kwargs):
+def string_builder(client: IPCClient, value: str, **kwargs):
     meta = ObjectMeta(**kwargs)
     meta['typename'] = 'vineyard::Scalar<std::string>'
     meta['value_'] = value
@@ -55,19 +61,19 @@ def string_builder(client, value, **kwargs):
     return client.create_metadata(meta)
 
 
-def bytes_builder(client, value, **_kwargs):
+def bytes_builder(client: IPCClient, value: bytes, **_kwargs):
     buffer = client.create_blob(len(value))
     buffer.copy(0, value)
     return buffer.seal(client)
 
 
-def memoryview_builder(client, value, **_kwargs):
+def memoryview_builder(client: IPCClient, value: memoryview, **_kwargs):
     buffer = client.create_blob(len(value))
     buffer.copy(0, bytes(value))
     return buffer.seal(client)
 
 
-def sequence_builder(client, value, builder, **kwargs):
+def sequence_builder(client: IPCClient, value: List, builder: BuilderContext, **kwargs):
     meta = ObjectMeta(**kwargs)
     meta['typename'] = 'vineyard::Sequence'
     meta['size_'] = len(value)
@@ -80,7 +86,7 @@ def sequence_builder(client, value, builder, **kwargs):
     return client.create_metadata(meta)
 
 
-def scalar_resolver(obj):
+def scalar_resolver(obj: Union[Object, ObjectMeta]):
     meta = obj.meta
     typename = obj.typename
     if typename == 'vineyard::Scalar<std::string>':
@@ -92,11 +98,11 @@ def scalar_resolver(obj):
     return None
 
 
-def bytes_resolver(obj):
+def bytes_resolver(obj: Blob):
     return memoryview(obj)
 
 
-def sequence_resolver(obj, resolver):
+def sequence_resolver(obj: Union[Object, ObjectMeta], resolver: ResolverContext):
     meta = obj.meta
     elements = []
     for i in range(int(meta['__elements_-size'])):
@@ -104,7 +110,7 @@ def sequence_resolver(obj, resolver):
     return tuple(elements)
 
 
-def array_resolver(obj):
+def array_resolver(obj: Union[Object, ObjectMeta]):
     typename = obj.typename
     value_type = normalize_dtype(
         re.match(r'vineyard::Array<([^>]+)>', typename).groups()[0]
@@ -114,7 +120,9 @@ def array_resolver(obj):
     )
 
 
-def register_base_types(builder_ctx=None, resolver_ctx=None):
+def register_base_types(
+    builder_ctx: BuilderContext = None, resolver_ctx: ResolverContext = None
+):
     if builder_ctx is not None:
         builder_ctx.register(int, int_builder)
         builder_ctx.register(float, double_builder)

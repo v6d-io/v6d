@@ -28,8 +28,8 @@ void bind_stream(py::module& mod);
 
 PYBIND11_MODULE(_C, mod) {
   py::options options;
+  options.enable_user_defined_docstrings();
   options.disable_function_signatures();
-  options.disable_user_defined_docstrings();
 
   bind_error(mod);
   bind_core(mod);

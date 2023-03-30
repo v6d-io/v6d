@@ -40,7 +40,7 @@ logger = logging.getLogger('vineyard')
 
 
 @contextlib.contextmanager
-def envvars(key, value=None, append=False):
+def envvars(key: str, value: str = None, append: bool = False) -> None:
     """Create a context with specified environment variables set.
 
     It is useful for setting the :code`VINEYARD_IPC_SOCKET` environment
@@ -129,10 +129,6 @@ def _init_global_context():
 _init_global_context()
 del _init_global_context
 
-
-from . import _vineyard_docs
-
-del _vineyard_docs
 
 from . import core
 from . import data
@@ -227,18 +223,14 @@ def _init_vineyard_modules():  # noqa: C901
                 )
                 mod = importlib.util.module_from_spec(spec)
                 spec.loader.exec_module(mod)
-            except Exception as e:  # pylint: disable=broad-except
-                logger.debug(
-                    "Failed to load %s: %s\n%s", filepath, e, traceback.format_exc()
-                )
+            except Exception:  # pylint: disable=broad-except
+                logger.debug("Failed to load %s", filepath, exc_info=True)
 
     def _import_module_from_qualified_name(module):
         try:
             importlib.import_module(module)
-        except Exception as e:  # pylint: disable=broad-except
-            logger.debug(
-                'Failed to load module %s: %s\n%s', module, e, traceback.format_exc()
-            )
+        except Exception:  # pylint: disable=broad-except
+            logger.debug('Failed to load module %s', module, exc_info=True)
 
     _import_module_from_file('/etc/vineyard/config.py')
     _import_module_from_file(os.path.join(sys.prefix, '/etc/vineyard/config.py'))

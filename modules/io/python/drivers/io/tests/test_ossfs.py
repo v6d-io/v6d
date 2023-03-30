@@ -495,7 +495,7 @@ def test_oss_file_info(oss):
     assert not oss.exists(fn + "another")
     assert oss.info(fn)["Size"] == len(data)
     with pytest.raises(FileNotFoundError):
-        oss.info(fn + "another")
+        oss.info(fn + "another")  # noqa: G003
 
 
 def test_bucket_exists(oss):
@@ -820,7 +820,7 @@ def test_write_small(oss):
         f.write(b"hello")
     assert oss.cat(test_bucket_name + "/test") == b"hello"
     oss.open(test_bucket_name + "/test", "wb").close()
-    assert oss.info(test_bucket_name + "/test")["Size"] == 0
+    assert oss.info(test_bucket_name + "/test")["Size"] == 0  # noqa: G003
 
 
 def test_write_large(oss):
@@ -833,7 +833,7 @@ def test_write_large(oss):
         fd.write(payload)
 
     assert oss.cat(test_bucket_name + "/test") == payload
-    assert oss.info(test_bucket_name + "/test")["Size"] == payload_size
+    assert oss.info(test_bucket_name + "/test")["Size"] == payload_size  # noqa: G003
 
 
 def test_write_limit(oss):
@@ -848,7 +848,7 @@ def test_write_limit(oss):
 
     assert oss.cat(test_bucket_name + "/test") == payload
 
-    assert oss.info(test_bucket_name + "/test")["Size"] == payload_size
+    assert oss.info(test_bucket_name + "/test")["Size"] == payload_size  # noqa: G003
 
 
 def test_write_blocks(oss):
@@ -863,11 +863,11 @@ def test_write_blocks(oss):
         f.write(b"a" * 2 * 2**20)
         assert f.mpu
         assert f.parts
-    assert oss.info(test_bucket_name + "/temp")["Size"] == 6 * 2**20
+    assert oss.info(test_bucket_name + "/temp")["Size"] == 6 * 2**20  # noqa: G003
     with oss.open(test_bucket_name + "/temp", "wb", block_size=10 * 2**20) as f:
         f.write(b"a" * 15 * 2**20)
         assert f.buffer.tell() == 0
-    assert oss.info(test_bucket_name + "/temp")["Size"] == 15 * 2**20
+    assert oss.info(test_bucket_name + "/temp")["Size"] == 15 * 2**20  # noqa: G003
 
 
 def test_readline(oss):
@@ -967,7 +967,9 @@ def test_merge(oss):
     with oss.open(b, "wb") as f:
         f.write(b"a" * 10 * 2**20)
     oss.merge(test_bucket_name + "/joined", [a, b])
-    assert oss.info(test_bucket_name + "/joined")["Size"] == 2 * 10 * 2**20
+    assert (
+        oss.info(test_bucket_name + "/joined")["Size"] == 2 * 10 * 2**20  # noqa: G003
+    )
 
 
 def test_append(oss):

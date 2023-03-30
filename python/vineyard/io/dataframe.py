@@ -77,10 +77,11 @@ from typing import Dict
 import pyarrow as pa
 import pyarrow.ipc  # pylint: disable=unused-import
 
-from .._C import ObjectID
-from .._C import ObjectMeta
-from .._C import StreamDrainedException
-from .._C import memory_copy
+from vineyard._C import ObjectID
+from vineyard._C import ObjectMeta
+from vineyard._C import StreamDrainedException
+from vineyard._C import memory_copy
+
 from .stream import BaseStream
 
 
