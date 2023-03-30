@@ -23,23 +23,23 @@ const void* grin_get_value_from_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, 
     auto _r = static_cast<GRIN_ROW_T*>(r);
     switch (dt) {
     case GRIN_DATATYPE::Int32:
-        return new int32_t(*(const int32_t*)((*_r)[idx]));
+        return new int32_t(*static_cast<const int32_t*>((*_r)[idx]));
     case GRIN_DATATYPE::UInt32:
-        return new uint32_t(*(const uint32_t*)((*_r)[idx]));
+        return new uint32_t(*static_cast<const  uint32_t*>((*_r)[idx]));
     case GRIN_DATATYPE::Int64:
-        return new int64_t(*(const int64_t*)((*_r)[idx]));
+        return new int64_t(*static_cast<const int64_t*>((*_r)[idx]));
     case GRIN_DATATYPE::UInt64:
-        return new uint64_t(*(const uint64_t*)((*_r)[idx]));
+        return new uint64_t(*static_cast<const uint64_t*>((*_r)[idx]));
     case GRIN_DATATYPE::Float:
-        return new float(*(const float*)((*_r)[idx]));
+        return new float(*static_cast<const float*>((*_r)[idx]));
     case GRIN_DATATYPE::Double:
-        return new double(*(const double*)((*_r)[idx]));
+        return new double(*static_cast<const double*>((*_r)[idx]));
     case GRIN_DATATYPE::String:
-        return new std::string(*(const std::string*)((*_r)[idx]));
+        return new std::string(*static_cast<const std::string*>((*_r)[idx]));
     case GRIN_DATATYPE::Date32:
-        return new int32_t(*(const int32_t*)((*_r)[idx]));
+        return new int32_t(*static_cast<const int32_t*>((*_r)[idx]));
     case GRIN_DATATYPE::Date64:
-        return new int64_t(*(const int64_t*)((*_r)[idx]));
+        return new int64_t(*static_cast<const int64_t*>((*_r)[idx]));
     default:
         return NULL;
     }
@@ -120,23 +120,23 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
     auto dt = ArrowToDataType(_dt);
     switch (dt) {
     case GRIN_DATATYPE::Int32:
-        return new int32_t(*(const int32_t*)(result));
+        return new int32_t(*static_cast<const int32_t*>(result));
     case GRIN_DATATYPE::UInt32:
-        return new uint32_t(*(const uint32_t*)(result));
+        return new uint32_t(*static_cast<const uint32_t*>(result));
     case GRIN_DATATYPE::Int64:
-        return new int64_t(*(const int64_t*)(result));
+        return new int64_t(*static_cast<const int64_t*>(result));
     case GRIN_DATATYPE::UInt64:
-        return new uint64_t(*(const uint64_t*)(result));
+        return new uint64_t(*static_cast<const uint64_t*>(result));
     case GRIN_DATATYPE::Float:
-        return new float(*(const float*)(result));
+        return new float(*static_cast<const float*>(result));
     case GRIN_DATATYPE::Double:
-        return new double(*(const double*)(result));
+        return new double(*static_cast<const double*>(result));
     case GRIN_DATATYPE::String:
-        return new std::string(*(const std::string*)(result));
+        return new std::string(*static_cast<const std::string*>(result));
     case GRIN_DATATYPE::Date32:
-        return new int32_t(*(const int32_t*)(result));
+        return new int32_t(*static_cast<const int32_t*>(result));
     case GRIN_DATATYPE::Date64:
-        return new int64_t(*(const int64_t*)(result));
+        return new int64_t(*static_cast<const int64_t*>(result));
     default:
         return NULL;
     }
@@ -203,23 +203,23 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
     auto dt = ArrowToDataType(_dt);
     switch (dt) {
     case GRIN_DATATYPE::Int32:
-        return new int32_t(*(const int32_t*)(result));
+        return new int32_t(*static_cast<const int32_t*>(result));
     case GRIN_DATATYPE::UInt32:
-        return new uint32_t(*(const uint32_t*)(result));
+        return new uint32_t(*static_cast<const uint32_t*>(result));
     case GRIN_DATATYPE::Int64:
-        return new int64_t(*(const int64_t*)(result));
+        return new int64_t(*static_cast<const int64_t*>(result));
     case GRIN_DATATYPE::UInt64:
-        return new uint64_t(*(const uint64_t*)(result));
+        return new uint64_t(*static_cast<const uint64_t*>(result));
     case GRIN_DATATYPE::Float:
-        return new float(*(const float*)(result));
+        return new float(*static_cast<const float*>(result));
     case GRIN_DATATYPE::Double:
-        return new double(*(const double*)(result));
+        return new double(*static_cast<const double*>(result));
     case GRIN_DATATYPE::String:
-        return new std::string(*(const std::string*)(result));
+        return new std::string(*static_cast<const std::string*>(result));
     case GRIN_DATATYPE::Date32:
-        return new int32_t(*(const int32_t*)(result));
+        return new int32_t(*static_cast<const int32_t*>(result));
     case GRIN_DATATYPE::Date64:
-        return new int64_t(*(const int64_t*)(result));
+        return new int64_t(*static_cast<const int64_t*>(result));
     default:
         return NULL;
     }
