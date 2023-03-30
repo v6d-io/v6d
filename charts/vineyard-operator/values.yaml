@@ -1,4 +1,4 @@
-certManager:
+cert-manager:
   enabled: true
   installCRDs: true
 controllerManager:
