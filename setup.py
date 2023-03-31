@@ -123,7 +123,6 @@ class FormatAndLint(Command):
 
     linter_targets = [
         'python/',
-        'modules/io/python',
         'setup.py',
         'setup_airflow.py',
         'setup_dask.py',
@@ -170,8 +169,11 @@ class FormatAndLint(Command):
 def find_core_packages(root):
     pkgs = []
     for pkg in find_packages(root):
-        if 'contrib' not in pkg or pkg.endswith('.contrib'):
-            pkgs.append(pkg)
+        if 'contrib' in pkg and not pkg.endswith('.contrib'):
+            continue
+        if 'drivers' in pkg and not pkg.endswith('.drivers'):
+            continue
+        pkgs.append(pkg)
     return pkgs
 
 
@@ -191,9 +193,8 @@ def load_requirements_txt(kind=""):
 
 def package_data():
     artifacts = [
-        '**/*.yaml',
-        '**/*.yaml.tpl',
-        '**/**/*.sh',
+        'vineyard/deploy/*.yaml',
+        'vineyard/deploy/*.yaml.tpl',
     ]
     return artifacts
 

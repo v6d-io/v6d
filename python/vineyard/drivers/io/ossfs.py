@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# The file modules/io/python/drivers/io/ossfs.py is referred and derived
+# The file python/vineyard/drivers/io/ossfs.py is referred and derived
 # from project s3fs,
 #     https://github.com/dask/s3fs/blob/main/s3fs/core.py
 #

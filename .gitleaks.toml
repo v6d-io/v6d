@@ -46,8 +46,8 @@ keywords = [
 
 [rules.allowlist]
 paths = [
-  '''modules/io/python/drivers/io/tests/test_open.py''',
-  '''modules/io/python/drivers/io/tests/test_serialize.py''',
+  '''python/vineyard/drivers/io/tests/test_open.py''',
+  '''python/vineyard/drivers/io/tests/test_serialize.py''',
 ]
 
 [[rules]]
@@ -61,8 +61,8 @@ keywords = [
 
 [rules.allowlist]
 paths = [
-  '''modules/io/python/drivers/io/tests/test_open.py''',
-  '''modules/io/python/drivers/io/tests/test_serialize.py''',
+  '''python/vineyard/drivers/io/tests/test_open.py''',
+  '''python/vineyard/drivers/io/tests/test_serialize.py''',
 ]
 
 [[rules]]

@@ -21,6 +21,8 @@ import json
 import logging
 import sys
 
+import pyarrow as pa
+
 import fsspec
 
 import vineyard
@@ -35,7 +37,7 @@ except Exception:  # pylint: disable=broad-except
     logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc.")
 
 
-def write_parquet(
+def write_orc(
     vineyard_socket,
     path,
     stream_id,
@@ -62,32 +64,30 @@ def write_parquet(
                 writer.close()
                 break
             if writer is None:
-                import pyarrow.parquet
+                import pyarrow.orc
 
                 kwargs = dict()
-                if "version" in write_options:
-                    kwargs["version"] = write_options["version"]
-                if "data_page_size" in write_options:
-                    kwargs["data_page_size"] = write_options["data_page_size"]
-                if "data_page_version" in write_options:
-                    kwargs["data_page_version"] = write_options["data_page_version"]
-                if "write_batch_size" in write_options:
-                    kwargs["write_batch_size"] = write_options["write_batch_size"]
+                if "file_version" in write_options:
+                    kwargs["file_version"] = write_options["file_version"]
                 if "compression" in write_options:
                     kwargs["compression"] = write_options["compression"]
-                if "compression_level" in write_options:
-                    kwargs["compression_level"] = write_options["compression_level"]
+                if "batch_size" in write_options:
+                    kwargs["batch_size"] = write_options["batch_size"]
+                if "stripe_size" in write_options:
+                    kwargs["stripe_size"] = write_options["stripe_size"]
 
-                writer = pyarrow.parquet.ParquetWriter(fp, batch.schema, **kwargs)
+                writer = pyarrow.orc.ORCWriter(fp, **kwargs)
 
-            writer.write_batch(batch)
-        writer.close()
+            writer.write(pa.Table.from_batches([batch], batch.schema))
+
+        if writer is not None:
+            writer.close()
 
 
 def main():
     if len(sys.argv) < 7:
         print(
-            "usage: ./write_parquet <ipc_socket> <path> <stream id> "
+            "usage: ./write_orc <ipc_socket> <path> <stream id> "
             "<storage_options> <write_options> <proc_num> <proc_index>"
         )
         sys.exit(1)
@@ -102,7 +102,7 @@ def main():
     )
     proc_num = int(sys.argv[6])
     proc_index = int(sys.argv[7])
-    write_parquet(
+    write_orc(
         ipc_socket,
         path,
         stream_id,

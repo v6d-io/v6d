@@ -916,7 +916,7 @@ limitations under the License.
 
 --------------------------------------------------------------------------------
 
-The files modules/io/python/drivers/io/tests/test_ossfs.py is referred from s3fs, which
+The files python/vineyard/drivers/io/tests/test_ossfs.py is referred from s3fs, which
 are licensed under BSD 3-Clause License.
 
 Copyright (c) 2016, Continuum Analytics, Inc. and contributors

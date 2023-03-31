@@ -26,7 +26,7 @@
 
     .. code:: console
 
-        pytest modules/io/python/drivers/io/tests/test_open.py \
+        pytest python/vineyard/drivers/io/tests/test_open.py \
                 --vineyard-ipc-socket=/tmp/vineyard.sock \
                 --vineyard-endpoint=127.0.0.1:9600 \
                 --test-dataset=<directory of gstest>
@@ -35,7 +35,7 @@
 
     .. code:: console
 
-        pytest modules/io/python/drivers/io/tests/test_open.py \
+        pytest python/vineyard/drivers/io/tests/test_open.py \
                 --with-hdfs \
                 --hdfs-endpoint=hdfs://dev:9000 \
                 --hive-endpoint=hive://dev:9000

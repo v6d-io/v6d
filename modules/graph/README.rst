@@ -155,7 +155,7 @@ with environment variables, e.g.,
 When it comes to S3 files and HDFS files, the support for various sources in :code:`data_path`
 can be archived in two approaches:
 
-- Option 1: use `vineyard.io <https://github.com/v6d-io/v6d/tree/main/modules/io/python/drivers/io/adaptors>`_
+- Option 1: use `vineyard.io <https://github.com/v6d-io/v6d/tree/main/python/vineyard/drivers/io>`_
   to read the given sources as vineyard streams first, and pass the stream as :code:`vineyard://<object_id_string>`
   as :code:`data_path` to the loader.
 
