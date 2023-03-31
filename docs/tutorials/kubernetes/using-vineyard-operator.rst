@@ -289,8 +289,6 @@ First, let's deploy the Python client on two Vineyard nodes as follows.
     replicas: 2
     template:
         metadata:
-        annotations:
-            scheduling.k8s.v6d.io/required: none
         labels:
             app: vineyard-python-client
             # related to which vineyard cluster

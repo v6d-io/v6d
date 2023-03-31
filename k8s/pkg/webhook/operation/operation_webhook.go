@@ -50,7 +50,7 @@ func (r *AssemblyInjector) LabelRequiredPods(
 ) error {
 	if value, ok := pod.Labels[label]; ok && strings.ToLower(value) == "true" {
 		if requiredJob, ok := pod.Annotations[annotations.VineyardJobRequired]; ok {
-			jobs := strings.Split(requiredJob, ".")
+			jobs := strings.Split(requiredJob, ",")
 			for _, job := range jobs {
 				// get the required job
 				podList := &corev1.PodList{}

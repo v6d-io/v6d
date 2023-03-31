@@ -944,9 +944,6 @@ as shown below.
     replicas: 2
     template:
       metadata:
-        annotations:
-          # required jobs
-          scheduling.k8s.v6d.io/required: none
         labels:
           app: v6d-workflow-demo-job1
           # vineyardd's name
@@ -1295,8 +1292,6 @@ YAML file represents the `assembly workload1`_:
       replicas: 1
       template:
         metadata:
-          annotations:
-            scheduling.k8s.v6d.io/required: none
           labels:
             app: assembly-job1
             # this label represents the vineyardd's name that need to be used
@@ -1584,7 +1579,6 @@ Deploy the `repartition workload1`_ as follows:
     template:
       metadata:
         annotations:
-          scheduling.k8s.v6d.io/required: "none"
           scheduling.k8s.v6d.io/dask-scheduler: "tcp://my-release-dask-scheduler.default:8786"
           # use ',' to separate the different labels here
           scheduling.k8s.v6d.io/dask-worker-selector: "app:dask,component:worker"

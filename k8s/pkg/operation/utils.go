@@ -30,6 +30,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 )
 
 type ClientUtils struct {
@@ -65,7 +66,7 @@ func (c *ClientUtils) UpdateConfigmap(ctx context.Context, target map[string]boo
 		}
 		newObjStr = newObjStr[:len(newObjStr)-1]
 
-		name := newObjList[0].Labels["k8s.v6d.io/job"]
+		name := newObjList[0].Labels[labels.VineyardObjectJobLabel]
 		namespace := o.Namespace
 		// update the configmap
 		configmap := &corev1.ConfigMap{}

@@ -22,8 +22,6 @@ spec:
   parallelism: 3
   template:
     metadata:
-      annotations:
-        scheduling.k8s.v6d.io/required: none
       labels:
         app: prepare-data
         # this label represents the vineyardd's name that need to be used
