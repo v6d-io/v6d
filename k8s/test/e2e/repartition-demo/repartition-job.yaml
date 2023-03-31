@@ -27,7 +27,9 @@ spec:
   template:
     metadata:
       annotations:
+        {{- if (datasource "config").$job.required.jobName }}
         scheduling.k8s.v6d.io/required: "{{ (datasource "config").$job.required.jobName }}"
+        {{- end }}
         {{- if (datasource "config").$job.repartition.dask.daskScheduler }}
         scheduling.k8s.v6d.io/dask-scheduler: "{{ (datasource "config").$job.repartition.dask.daskScheduler }}"
         {{- end }}

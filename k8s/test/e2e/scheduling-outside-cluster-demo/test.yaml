@@ -8,7 +8,6 @@ spec:
   template:
     metadata:
       annotations:
-        scheduling.k8s.v6d.io/required: none
         workloadSelector: app=v6d-workflow-demo-job1
       labels:
         app: v6d-workflow-demo-job1

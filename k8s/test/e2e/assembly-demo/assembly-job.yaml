@@ -26,8 +26,10 @@ spec:
   replicas: 1
   template:
     metadata:
+      {{- if (datasource "config").$job.required.jobName }}
       annotations:
         scheduling.k8s.v6d.io/required: {{ (datasource "config").$job.required.jobName }}
+      {{- end }}
       labels:
         app: {{ (datasource "config").$job.jobName }}
         {{- if (datasource "config").$job.assembly.enabled }}

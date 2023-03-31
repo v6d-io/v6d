@@ -22,6 +22,9 @@ const (
 	// SchedulingEnabledLabel is the label key for enabling scheduling
 	SchedulingEnabledLabel = "scheduling.v6d.io/enabled"
 
+	// VineyardObjectJobLabel is the label key to indicate the job of the vineyard object
+	VineyardObjectJobLabel = "k8s.v6d.io/job"
+
 	// VineyardJobName is the pod group name
 	VineyardJobName = "scheduling.k8s.v6d.io/job"
 	// VineyardJobReplica is the replication of pods in this job.

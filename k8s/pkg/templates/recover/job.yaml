@@ -24,8 +24,6 @@ spec:
   ttlSecondsAfterFinished: 80
   template:
     metadata:
-      annotations:
-        scheduling.k8s.v6d.io/required: none
       labels:
         app.kubernetes.io/name: {{ .Name }}
         scheduling.k8s.v6d.io/vineyardd-namespace: {{ $config.VineyarddNamespace }}

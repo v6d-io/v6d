@@ -23,7 +23,7 @@ daskRepartitionJob1:
       daskScheduler: "tcp://my-release-dask-scheduler.default:8786"
       daskWorkerSelector: "app:dask,component:worker"
   required:
-    jobName: none
+    jobName: ""
     dataName: ""
   schedulerName: "vineyard-scheduler"
 

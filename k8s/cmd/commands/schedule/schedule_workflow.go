@@ -18,9 +18,7 @@ package schedule
 
 import (
 	"context"
-	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -142,7 +140,18 @@ func SchedulingWorkflow(c client.Client, obj *unstructured.Unstructured) error {
 		return errors.Wrap(err, "failed to get replicas")
 	}
 
-	str := Scheduling(c, a, l, replicas, namespace, ownerReferences)
+	scheduler := schedulers.NewVineyardSchedulerOutsideCluster(
+		c, a, l, namespace, ownerReferences)
+
+	err = scheduler.SetupConfig()
+	if err != nil {
+		return errors.Wrap(err, "failed to setup scheduler config")
+	}
+
+	result, err := scheduler.Schedule(replicas)
+	if err != nil {
+		return errors.Wrap(err, "failed to schedule workload")
+	}
 
 	// setup annotations and labels
 	l[labels.SchedulingEnabledLabel] = "true"
@@ -150,7 +159,7 @@ func SchedulingWorkflow(c client.Client, obj *unstructured.Unstructured) error {
 		return errors.Wrap(err, "failed to set labels")
 	}
 
-	a["scheduledOrder"] = str
+	a["scheduledOrder"] = result
 	if err := unstructured.SetNestedStringMap(obj.Object, a, "spec", "template", "metadata", "annotations"); err != nil {
 		return errors.Wrap(err, "failed to set annotations")
 	}
@@ -212,81 +221,4 @@ func SchedulingWorkflow(c client.Client, obj *unstructured.Unstructured) error {
 		},
 	}
 	return nil
-}
-
-// Scheduling is used to schedule jobs to nodes
-func Scheduling(c client.Client, a, l map[string]string, replica int, namespace string,
-	ownerReferences []metav1.OwnerReference,
-) string {
-	scheduledOrder := ""
-	jobToNode := make(map[string]int)
-	// get all nodes that have vineyardd
-	vineyarddName := l[labels.VineyarddName]
-	vineyarddNamespace := l[labels.VineyarddNamespace]
-	allNodes := schedulers.GetVineyarddNodes(c, log.Log, vineyarddName, vineyarddNamespace)
-	// use round-robin to schedule workload here
-	if a["scheduling.k8s.v6d.io/required"] == "none" {
-		l := len(allNodes)
-		for i := 0; i < replica; i++ {
-			jobToNode[allNodes[i%l]]++
-		}
-
-		s := make([]string, 0)
-		for n, v := range jobToNode {
-			s = append(s, n+"="+strconv.Itoa(v))
-		}
-		scheduledOrder = strings.Join(s, ",")
-		return scheduledOrder
-	}
-
-	// get required jobs
-	required, err := schedulers.GetRequiredJob(log.Log, a)
-	if err != nil {
-		log.Info(fmt.Sprintf("get required jobs failed: %v", err))
-		return ""
-	}
-	// get all global objects
-	globalObjects, err := schedulers.GetGlobalObjectsByID(c, log.Log, required)
-	if err != nil {
-		log.Info(fmt.Sprintf("get global objects failed: %v", err))
-		return ""
-	}
-
-	localsigs := make([]string, 0)
-	for _, globalObject := range globalObjects {
-		localsigs = append(localsigs, globalObject.Spec.Members...)
-	}
-	localObjects, err := schedulers.GetLocalObjectsBySignatures(c, log.Log, localsigs)
-	if err != nil {
-		log.Info(fmt.Sprintf("get local objects failed: %v", err))
-		return ""
-	}
-
-	locations, nchunks, nodes := schedulers.GetObjectInfo(localObjects, int64(replica))
-
-	var cnt int64
-
-	for i := 0; i < replica; i++ {
-		rank := int64(i)
-		for _, node := range nodes {
-			localfrags := int64(len(locations[node]))
-			if cnt+localfrags >= (nchunks*rank + (nchunks+1)/2) {
-				jobToNode[node]++
-				break
-			}
-			cnt += localfrags
-		}
-	}
-
-	s := make([]string, 0)
-	for n, v := range jobToNode {
-		s = append(s, n+"="+strconv.Itoa(v))
-	}
-	scheduledOrder = strings.Join(s, ",")
-
-	if err := schedulers.CreateConfigmapForID(c, log.Log, required, namespace, localObjects, globalObjects, ownerReferences); err != nil {
-		log.Info(fmt.Sprintf("can't create configmap for object ID %v", err))
-	}
-
-	return scheduledOrder
 }

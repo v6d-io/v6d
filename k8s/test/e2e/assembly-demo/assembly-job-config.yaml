@@ -19,7 +19,7 @@ job1:
     enabled: ""
     type: ""
   required:
-    jobName: none
+    jobName: ""
     dataName: ""
   schedulerName: "vineyard-scheduler"
   nodeName: ""
@@ -41,7 +41,7 @@ distributedJob1:
     enabled: ""
     type: ""
   required:
-    jobName: none
+    jobName: ""
     dataName: ""
   schedulerName: ""
   nodeName: kind-worker
@@ -53,7 +53,7 @@ distributedJob2:
     enabled: ""
     type: ""
   required:
-    jobName: none
+    jobName: ""
     dataName: ""
   schedulerName: ""
   nodeName: kind-worker2
@@ -64,7 +64,7 @@ distributedJob3:
     enabled: "true"
     type: "distributed"
   required:
-    jobName: distributed-assembly-job1.distributed-assembly-job2
+    jobName: distributed-assembly-job1,distributed-assembly-job2
     dataName: distributed-assembly-job2
   schedulerName: vineyard-scheduler
   nodeName: ""
