@@ -72,8 +72,12 @@ Status DataframeStream::ReadRecordBatches(
 Status DataframeStream::ReadTable(std::shared_ptr<arrow::Table>& table) {
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
   RETURN_ON_ERROR(this->ReadRecordBatches(batches));
-  RETURN_ON_ARROW_ERROR_AND_ASSIGN(table,
-                                   arrow::Table::FromRecordBatches(batches));
+  if (batches.empty()) {
+    table = nullptr;
+  } else {
+    RETURN_ON_ARROW_ERROR_AND_ASSIGN(table,
+                                     arrow::Table::FromRecordBatches(batches));
+  }
   return Status::OK();
 }
 

@@ -127,6 +127,16 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
     client = vineyard.connect(vineyard_socket)
     params = dict()
 
+    # Cut strings after # and read potential kvs
+    parts = path.split('#', 1)
+    path = parts[0]
+    if len(parts) > 1:
+        options = parts[1]
+        for split_by_hashtap in options.split('#'):
+            for split_by_ampersand in split_by_hashtap.split('&'):
+                k, v = split_by_ampersand.split('=')
+                read_options[k] = v
+
     read_block_delimiter = read_options.pop('read_block_delimiter', '\n')
     if read_block_delimiter is not None:
         read_block_delimiter = read_block_delimiter.encode('utf-8')
@@ -135,7 +145,7 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
     # Usually for load a property graph
 
     # header_row: each file has a header_row when reading from directories
-    header_row = read_options.get("header_row", False)
+    header_row = bool(read_options.get("header_row", False))
     # first_header_row: only the first file (alphabetical ordered) has a header_row
     # when reading from directories
     first_header_row = read_options.get("first_header_row", False)

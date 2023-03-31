@@ -197,10 +197,10 @@ static Status ReadTableFromVineyardStreamImpl(
       VLOG(10) << "table from stream is null.";
     } else {
       VLOG(10) << "table from stream: " << table->schema()->ToString();
-    }
-    {
-      std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
-      tables.emplace_back(table);
+      {
+        std::lock_guard<std::mutex> scoped_lock(mutex_for_results);
+        tables.emplace_back(table);
+      }
     }
     return Status::OK();
   };
