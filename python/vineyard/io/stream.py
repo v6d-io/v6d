@@ -23,11 +23,11 @@ from typing import Dict
 from typing import List
 from urllib.parse import urlparse
 
-from .._C import ObjectID
-from .._C import ObjectMeta
-from .._C import StreamDrainedException
-from ..core.driver import registerize
-from ..core.resolver import resolver_context
+from vineyard._C import ObjectID
+from vineyard._C import ObjectMeta
+from vineyard._C import StreamDrainedException
+from vineyard.core.driver import registerize
+from vineyard.core.resolver import resolver_context
 
 logger = logging.getLogger('vineyard')
 

@@ -822,6 +822,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
     set(PYTHON_BIND_FILES "python/client.cc"
                           "python/core.cc"
                           "python/error.cc"
+                          "python/pybind11_docs.cc"
                           "python/pybind11_utils.cc"
                           "python/vineyard.cc")
     pybind11_add_module(_C MODULE ${PYTHON_BIND_FILES})

@@ -109,7 +109,7 @@ class VineyardXCom(BaseXCom):
     def init_on_load(self):
         """
         Called by the ORM after the instance has been loaded from the DB or otherwise
-        reconstituted i.e automatically deserialize Xcom value when loading from DB.
+        reconstituted i.e automatically deserialize XCom value when loading from DB.
         """
         self.value = super().init_on_load()
 
@@ -203,8 +203,8 @@ class VineyardXCom(BaseXCom):
             try:
                 client = vineyard.connect(cls.options()['ipc_socket'])
                 client.delete(targets)
-            except Exception as e:  # pylint: disable=broad-except
-                logger.error('Failed to drop duplicates from vineyard: %s', e)
+            except Exception:  # pylint: disable=broad-except
+                logger.exception('Failed to drop duplicates from vineyard')
 
         # remove from the underlying xcom db
         query.delete()
@@ -262,8 +262,8 @@ class VineyardXCom(BaseXCom):
                 try:
                     client = vineyard.connect(cls.options()['ipc_socket'])
                     client.delete(targets)
-                except Exception as e:
-                    logger.error('Failed to drop duplicates from vineyard: %s', e)
+                except Exception:  # pylint: disable=broad-except
+                    logger.exception('Failed to drop duplicates from vineyard')
 
             # step 2: remove from the underlying xcom db
             query.delete()
@@ -350,8 +350,8 @@ class VineyardXCom(BaseXCom):
         try:
             client = vineyard.connect(cls.options()['ipc_socket'])
             client.delete(targets)
-        except Exception as e:
-            logger.error('Failed to drop from vineyard: %s', e)
+        except Exception:  # pylint: disable=broad-except
+            logger.exception('Failed to drop from vineyard')
         session.commit()
 
     @classmethod
@@ -409,8 +409,8 @@ class VineyardXCom(BaseXCom):
             try:
                 client = vineyard.connect(cls.options()['ipc_socket'])
                 client.delete(targets)
-            except Exception as e:
-                logger.error('Failed to drop from vineyard: %s', e)
+            except Exception:  # pylint: disable=broad-except
+                logger.exception('Failed to drop from vineyard')
 
         query.delete()
 

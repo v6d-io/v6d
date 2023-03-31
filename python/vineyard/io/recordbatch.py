@@ -22,7 +22,8 @@
 import json
 from typing import Dict
 
-from .._C import ObjectMeta
+from vineyard._C import ObjectMeta
+
 from .stream import BaseStream
 
 

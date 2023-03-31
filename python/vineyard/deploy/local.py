@@ -27,7 +27,8 @@ import tempfile
 import textwrap
 import time
 
-from .._C import connect
+from vineyard._C import connect
+
 from .etcd import start_etcd
 from .utils import check_socket
 from .utils import find_vineyardd_path

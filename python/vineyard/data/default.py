@@ -17,14 +17,19 @@
 #
 
 import pickle
+from typing import Any
 
+from vineyard._C import IPCClient
+from vineyard._C import Object
 from vineyard._C import ObjectMeta
+from vineyard.core.builder import BuilderContext
+from vineyard.core.resolver import ResolverContext
 
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle  # pylint: disable=import-error
 
 
-def default_builder(client, value, **kwargs):
+def default_builder(client: IPCClient, value: Any, **kwargs):
     '''Default builder: pickle (version 5), then build a blob object for it.'''
     payload = pickle.dumps(value, protocol=5)
     buffer = client.create_blob(len(payload))
@@ -38,12 +43,14 @@ def default_builder(client, value, **kwargs):
     return client.create_metadata(meta)
 
 
-def default_resolver(obj):
+def default_resolver(obj: Object):
     view = memoryview(obj.member('buffer_'))[0 : int(obj.meta['size_'])]
     return pickle.loads(view, fix_imports=True)
 
 
-def register_default_types(builder_ctx=None, resolver_ctx=None):
+def register_default_types(
+    builder_ctx: BuilderContext = None, resolver_ctx: ResolverContext = None
+):
     if builder_ctx is not None:
         builder_ctx.register(object, default_builder)
 

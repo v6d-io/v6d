@@ -19,7 +19,7 @@
 import logging
 from urllib.parse import urlparse
 
-from ..core.driver import registerize
+from vineyard.core.driver import registerize
 
 logger = logging.getLogger('vineyard')
 

@@ -28,6 +28,7 @@ limitations under the License.
 
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
+#include "pybind11_docs.h"   // NOLINT(build/include_subdir)
 #include "pybind11_utils.h"  // NOLINT(build/include_subdir)
 
 namespace py = pybind11;
@@ -49,7 +50,7 @@ struct metadata_iterator_state {
 
 void bind_core(py::module& mod) {
   // ObjectIDWrapper
-  py::class_<ObjectIDWrapper>(mod, "ObjectID")
+  py::class_<ObjectIDWrapper>(mod, "ObjectID", doc::ObjectID)
       .def(py::init<>())
       .def(py::init<ObjectID>(), "id"_a)
       .def(py::init<std::string const&>(), "id"_a)
@@ -93,7 +94,7 @@ void bind_core(py::module& mod) {
           }));
 
   // ObjectNameWrapper
-  py::class_<ObjectNameWrapper>(mod, "ObjectName")
+  py::class_<ObjectNameWrapper>(mod, "ObjectName", doc::ObjectName)
       .def(py::init<std::string const&>(), "name"_a)
       .def("__repr__",
            [](const ObjectNameWrapper& name) {
@@ -140,31 +141,44 @@ void bind_core(py::module& mod) {
           }));
 
   // ObjectMeta
-  py::class_<ObjectMeta>(mod, "ObjectMeta")
+  py::class_<ObjectMeta>(mod, "ObjectMeta", doc::ObjectMeta)
       .def(py::init<>([](bool global_, py::args,
                          py::kwargs) -> std::unique_ptr<ObjectMeta> {
              std::unique_ptr<ObjectMeta> meta(new ObjectMeta());
              meta->SetGlobal(global_);
              return meta;
            }),
-           py::arg("global_") = false)
+           py::arg("global_") = false, doc::ObjectMeta__init__)
       .def_property("_client", &ObjectMeta::GetClient, &ObjectMeta::SetClient)
       .def_property(
           "id",
           [](ObjectMeta* self) -> ObjectIDWrapper { return self->GetId(); },
-          [](ObjectMeta* self, ObjectIDWrapper const id) { self->SetId(id); })
-      .def_property_readonly("signature", &ObjectMeta::GetSignature)
+          [](ObjectMeta* self, ObjectIDWrapper const id) { self->SetId(id); },
+          doc::ObjectMeta_id)
+      .def_property_readonly("signature", &ObjectMeta::GetSignature,
+                             doc::ObjectMeta_signature)
       .def_property("typename", &ObjectMeta::GetTypeName,
-                    &ObjectMeta::SetTypeName)
-      .def_property("nbytes", &ObjectMeta::GetNBytes, &ObjectMeta::SetNBytes)
-      .def_property_readonly("instance_id", &ObjectMeta::GetInstanceId)
-      .def_property_readonly("islocal", &ObjectMeta::IsLocal)
-      .def_property_readonly("isglobal", &ObjectMeta::IsGlobal)
+                    &ObjectMeta::SetTypeName, doc::ObjectMeta_typename)
+      .def_property("nbytes", &ObjectMeta::GetNBytes, &ObjectMeta::SetNBytes,
+                    doc::ObjectMeta_nbyte)
+      .def_property_readonly("instance_id", &ObjectMeta::GetInstanceId,
+                             doc::ObjectMeta_instance_id)
+      .def_property_readonly("islocal", &ObjectMeta::IsLocal,
+                             doc::ObjectMeta_islocal)
+      .def_property_readonly("isglobal", &ObjectMeta::IsGlobal,
+                             doc::ObjectMeta_isglobal)
+      .def_property_readonly("meta",
+                             [](ObjectMeta* self) -> ObjectMeta* {
+                               // as an alias to unify some APIs on `Object` and
+                               // `ObjectMeta`.
+                               return self;
+                             })
       .def(
           "set_global",
           [](ObjectMeta* self, const bool global) { self->SetGlobal(global); },
-          py::arg("global") = true)
-      .def("__contains__", &ObjectMeta::HasKey, "key"_a)
+          py::arg("global_") = true, doc::ObjectMeta_set_global)
+      .def("__contains__", &ObjectMeta::HasKey, "key"_a,
+           doc::ObjectMeta__contains__)
       .def(
           "__getitem__",
           [](ObjectMeta* self, std::string const& key) -> py::object {
@@ -179,7 +193,7 @@ void bind_core(py::module& mod) {
               return py::cast(self->GetMemberMeta(key));
             }
           },
-          "key"_a)
+          "key"_a, doc::ObjectMeta__getitem__)
       .def(
           "get",
           [](ObjectMeta* self, std::string const& key,
@@ -195,18 +209,20 @@ void bind_core(py::module& mod) {
               return py::cast(self->GetMemberMeta(key));
             }
           },
-          "key"_a, py::arg("default") = py::none())
-      .def("get_member",
-           [](ObjectMeta* self, std::string const& key) -> py::object {
-             auto const& tree = self->MetaData();
-             auto iter = tree.find(key);
-             if (iter == tree.end()) {
-               return py::none();
-             }
-             VINEYARD_ASSERT(iter->is_object() && !iter->empty(),
-                             "The value is not a member, but a meta");
-             return py::cast(self->GetMember(key));
-           })
+          "key"_a, py::arg("default") = py::none(), doc::ObjectMeta_get)
+      .def(
+          "get_member",
+          [](ObjectMeta* self, std::string const& key) -> py::object {
+            auto const& tree = self->MetaData();
+            auto iter = tree.find(key);
+            if (iter == tree.end()) {
+              return py::none();
+            }
+            VINEYARD_ASSERT(iter->is_object() && !iter->empty(),
+                            "The value is not a member, but a meta");
+            return py::cast(self->GetMember(key));
+          },
+          doc::ObjectMeta_get_member)
       .def("get_buffer",
            [](ObjectMeta* self, const ObjectID key) -> py::memoryview {
              std::shared_ptr<arrow::Buffer> buffer;
@@ -218,9 +234,11 @@ void bind_core(py::module& mod) {
                    const_cast<uint8_t*>(buffer->data()), buffer->size(), true);
              }
            })
-      .def("__setitem__",
-           [](ObjectMeta* self, std::string const& key,
-              std::string const& value) { self->AddKeyValue(key, value); })
+      .def(
+          "__setitem__",
+          [](ObjectMeta* self, std::string const& key,
+             std::string const& value) { self->AddKeyValue(key, value); },
+          doc::ObjectMeta__setitem__)
       .def("__setitem__", [](ObjectMeta* self, std::string const& key,
                              bool value) { self->AddKeyValue(key, value); })
       .def("__setitem__", [](ObjectMeta* self, std::string const& key,
@@ -274,10 +292,12 @@ void bind_core(py::module& mod) {
            [](ObjectMeta* self, std::string const& key, py::dict const& value) {
              self->AddKeyValue(key, detail::to_json(value));
            })
-      .def("add_member",
-           [](ObjectMeta* self, std::string const& key, Object const* member) {
-             self->AddMember(key, member);
-           })
+      .def(
+          "add_member",
+          [](ObjectMeta* self, std::string const& key, Object const* member) {
+            self->AddMember(key, member);
+          },
+          doc::ObjectMeta_add_member)
       .def("add_member",
            [](ObjectMeta* self, std::string const& key,
               ObjectMeta const& member) { self->AddMember(key, member); })
@@ -287,7 +307,8 @@ void bind_core(py::module& mod) {
       .def("reset", [](ObjectMeta& meta) { meta.Reset(); })
       .def_property_readonly(
           "memory_usage",
-          [](ObjectMeta& meta) -> size_t { return meta.MemoryUsage(); })
+          [](ObjectMeta& meta) -> size_t { return meta.MemoryUsage(); },
+          doc::ObjectMeta_memory_usage)
       .def(
           "memory_usage_details",
           [](ObjectMeta& meta, const bool pretty) -> py::object {
@@ -372,30 +393,41 @@ void bind_core(py::module& mod) {
           }));
 
   // Object
-  py::class_<Object, std::shared_ptr<Object>>(mod, "Object")
+  py::class_<Object, std::shared_ptr<Object>>(mod, "Object", doc::Object)
       .def_property_readonly(
-          "id", [](Object* self) -> ObjectIDWrapper { return self->id(); })
+          "id", [](Object* self) -> ObjectIDWrapper { return self->id(); },
+          doc::Object_id)
       .def_property_readonly(
           "signature",
-          [](Object* self) -> Signature { return self->meta().GetSignature(); })
+          [](Object* self) -> Signature { return self->meta().GetSignature(); },
+          doc::Object_signature)
       .def_property_readonly("meta", &Object::meta,
-                             py::return_value_policy::reference_internal)
-      .def_property_readonly("nbytes", &Object::nbytes)
-      .def_property_readonly("typename",
-                             [](const Object* object) -> const std::string {
-                               return object->meta().GetTypeName();
-                             })
-      .def("member",
-           [](Object const* self, std::string const& name) {
-             return self->meta().GetMember(name);
-           })
-      .def("__getitem__",
-           [](Object const* self, std::string const& name) {
-             return self->meta().GetMember(name);
-           })
-      .def_property_readonly("islocal", &Object::IsLocal)
-      .def_property_readonly("ispersist", &Object::IsPersist)
-      .def_property_readonly("isglobal", &Object::IsGlobal)
+                             py::return_value_policy::reference_internal,
+                             doc::Object_meta)
+      .def_property_readonly("nbytes", &Object::nbytes, doc::Object_nbytes)
+      .def_property_readonly(
+          "typename",
+          [](const Object* object) -> const std::string {
+            return object->meta().GetTypeName();
+          },
+          doc::Object_typename)
+      .def(
+          "member",
+          [](Object const* self, std::string const& name) {
+            return self->meta().GetMember(name);
+          },
+          doc::Object_member)
+      .def(
+          "__getitem__",
+          [](Object const* self, std::string const& name) {
+            return self->meta().GetMember(name);
+          },
+          doc::ObjectMeta__getitem__)
+      .def_property_readonly("islocal", &Object::IsLocal, doc::Object_islocal)
+      .def_property_readonly("ispersist", &Object::IsPersist,
+                             doc::Object_ispersist)
+      .def_property_readonly("isglobal", &Object::IsGlobal,
+                             doc::Object_isglobal)
       .def("__repr__",
            [](const Object* self) {
              return "Object <\"" + ObjectIDToString(self->id()) +
@@ -423,13 +455,14 @@ void bind_core(py::module& mod) {
 
 void bind_blobs(py::module& mod) {
   // Blob
-  py::class_<Blob, std::shared_ptr<Blob>, Object>(mod, "Blob",
-                                                  py::buffer_protocol())
-      .def_property_readonly("size", &Blob::size)
+  py::class_<Blob, std::shared_ptr<Blob>, Object>(
+      mod, "Blob", py::buffer_protocol(), doc::Blob)
+      .def_property_readonly("size", &Blob::size, doc::Blob_size)
       .def_property_readonly(
-          "is_empty", [](Blob* self) { return self->allocated_size() == 0; })
-      .def_static("empty", &Blob::MakeEmpty)
-      .def("__len__", &Blob::size)
+          "is_empty", [](Blob* self) { return self->allocated_size() == 0; },
+          doc::Blob_is_empty)
+      .def_static("empty", &Blob::MakeEmpty, doc::Blob_empty)
+      .def("__len__", &Blob::size, doc::Blob__len__)
       .def("__iter__",
            [](Blob* self) {
              auto data = self->data();
@@ -446,18 +479,20 @@ void bind_blobs(py::module& mod) {
       .def("__dealloc__", [](Blob* self) {})
       .def_property_readonly(
           "address",
-          [](Blob* self) { return reinterpret_cast<uintptr_t>(self->data()); })
-      .def_property_readonly("buffer",
-                             [](Blob& blob) -> py::object {
-                               auto buffer = blob.Buffer();
-                               if (buffer == nullptr) {
-                                 return py::none();
-                               } else {
-                                 return py::memoryview::from_memory(
-                                     const_cast<uint8_t*>(buffer->data()),
-                                     buffer->size(), true);
-                               }
-                             })
+          [](Blob* self) { return reinterpret_cast<uintptr_t>(self->data()); },
+          doc::Blob_address)
+      .def_property_readonly(
+          "buffer",
+          [](Blob& blob) -> py::object {
+            auto buffer = blob.Buffer();
+            if (buffer == nullptr) {
+              return py::none();
+            } else {
+              return py::memoryview::from_memory(
+                  const_cast<uint8_t*>(buffer->data()), buffer->size(), true);
+            }
+          },
+          doc::Blob_buffer)
       .def_buffer([](Blob& blob) -> py::buffer_info {
         return py::buffer_info(const_cast<char*>(blob.data()), sizeof(int8_t),
                                py::format_descriptor<int8_t>::format(), 1,
@@ -466,10 +501,11 @@ void bind_blobs(py::module& mod) {
 
   // BlobBuilder
   py::class_<BlobWriter, std::shared_ptr<BlobWriter>, ObjectBuilder>(
-      mod, "BlobBuilder", py::buffer_protocol())
+      mod, "BlobBuilder", py::buffer_protocol(), doc::BlobBuilder)
       .def_property_readonly(
-          "id", [](BlobWriter* self) -> ObjectIDWrapper { return self->id(); })
-      .def_property_readonly("size", &BlobWriter::size)
+          "id", [](BlobWriter* self) -> ObjectIDWrapper { return self->id(); },
+          doc::BlobBuilder_id)
+      .def_property_readonly("size", &BlobWriter::size, doc::BlobBuilder__len__)
       .def("__len__", &BlobWriter::size)
       .def("__iter__",
            [](BlobWriter* self) {
@@ -504,7 +540,7 @@ void bind_blobs(py::module& mod) {
           [](BlobWriter* self, Client& client) {
             throw_on_error(self->Abort(client));
           },
-          "client"_a)
+          "client"_a, doc::BlobBuilder_abort)
       .def(
           "copy",
           [](BlobWriter* self, size_t const offset, uintptr_t ptr,
@@ -512,7 +548,7 @@ void bind_blobs(py::module& mod) {
             std::memcpy(self->data() + offset, reinterpret_cast<void*>(ptr),
                         size);
           },
-          "offset"_a, "address"_a, "size"_a)
+          "offset"_a, "address"_a, "size"_a, doc::BlobBuilder_copy)
       .def(
           "copy",
           [](BlobWriter* self, size_t offset, py::buffer const& buffer) {
@@ -538,21 +574,24 @@ void bind_blobs(py::module& mod) {
             std::memcpy(self->data() + offset, buffer, length);
           },
           "offset"_a, "bytes"_a)
-      .def_property_readonly("address",
-                             [](BlobWriter* self) {
-                               return reinterpret_cast<uintptr_t>(self->data());
-                             })
-      .def_property_readonly("buffer",
-                             [](BlobWriter& blob) -> py::object {
-                               auto buffer = blob.Buffer();
-                               if (buffer == nullptr) {
-                                 return py::none();
-                               } else {
-                                 return py::memoryview::from_memory(
-                                     buffer->mutable_data(), buffer->size(),
-                                     false);
-                               }
-                             })
+      .def_property_readonly(
+          "address",
+          [](BlobWriter* self) {
+            return reinterpret_cast<uintptr_t>(self->data());
+          },
+          doc::BlobBuilder_address)
+      .def_property_readonly(
+          "buffer",
+          [](BlobWriter& blob) -> py::object {
+            auto buffer = blob.Buffer();
+            if (buffer == nullptr) {
+              return py::none();
+            } else {
+              return py::memoryview::from_memory(buffer->mutable_data(),
+                                                 buffer->size(), false);
+            }
+          },
+          doc::BlobBuilder_buffer)
       .def_buffer([](BlobWriter& blob) -> py::buffer_info {
         return py::buffer_info(blob.data(), sizeof(int8_t),
                                py::format_descriptor<int8_t>::format(), 1,
@@ -560,19 +599,22 @@ void bind_blobs(py::module& mod) {
       });
 
   // RemoteBlob
-  py::class_<RemoteBlob, std::shared_ptr<RemoteBlob>>(mod, "RemoteBlob",
-                                                      py::buffer_protocol())
+  py::class_<RemoteBlob, std::shared_ptr<RemoteBlob>>(
+      mod, "RemoteBlob", py::buffer_protocol(), doc::RemoteBlob)
       .def_property_readonly(
-          "id", [](RemoteBlob* self) -> ObjectIDWrapper { return self->id(); })
+          "id", [](RemoteBlob* self) -> ObjectIDWrapper { return self->id(); },
+          doc::RemoteBlob_id)
       .def_property_readonly(
           "instance_id",
-          [](RemoteBlob* self) -> InstanceID { return self->instance_id(); })
-      .def_property_readonly("size", &RemoteBlob::size)
+          [](RemoteBlob* self) -> InstanceID { return self->instance_id(); },
+          doc::RemoteBlob_instance_id)
+      .def_property_readonly("size", &RemoteBlob::size, doc::RemoteBlob__len__)
       .def_property_readonly("allocated_size", &RemoteBlob::allocated_size)
       .def_property_readonly(
           "is_empty",
-          [](RemoteBlob* self) { return self->allocated_size() == 0; })
-      .def("__len__", &RemoteBlob::allocated_size)
+          [](RemoteBlob* self) { return self->allocated_size() == 0; },
+          doc::RemoteBlob_is_empty)
+      .def("__len__", &RemoteBlob::allocated_size, doc::RemoteBlob__len__)
       .def("__iter__",
            [](RemoteBlob* self) {
              auto data = self->data();
@@ -587,21 +629,24 @@ void bind_blobs(py::module& mod) {
           },
           "index"_a)
       .def("__dealloc__", [](RemoteBlob* self) {})
-      .def_property_readonly("address",
-                             [](RemoteBlob* self) {
-                               return reinterpret_cast<uintptr_t>(self->data());
-                             })
-      .def_property_readonly("buffer",
-                             [](RemoteBlob& blob) -> py::object {
-                               auto buffer = blob.Buffer();
-                               if (buffer == nullptr) {
-                                 return py::none();
-                               } else {
-                                 return py::memoryview::from_memory(
-                                     const_cast<uint8_t*>(buffer->data()),
-                                     buffer->size(), true);
-                               }
-                             })
+      .def_property_readonly(
+          "address",
+          [](RemoteBlob* self) {
+            return reinterpret_cast<uintptr_t>(self->data());
+          },
+          doc::RemoteBlob_address)
+      .def_property_readonly(
+          "buffer",
+          [](RemoteBlob& blob) -> py::object {
+            auto buffer = blob.Buffer();
+            if (buffer == nullptr) {
+              return py::none();
+            } else {
+              return py::memoryview::from_memory(
+                  const_cast<uint8_t*>(buffer->data()), buffer->size(), true);
+            }
+          },
+          doc::RemoteBlob_buffer)
       .def_buffer([](RemoteBlob& blob) -> py::buffer_info {
         return py::buffer_info(const_cast<char*>(blob.data()), sizeof(int8_t),
                                py::format_descriptor<int8_t>::format(), 1,
@@ -610,14 +655,15 @@ void bind_blobs(py::module& mod) {
 
   // RemoteBlobBuilder
   py::class_<RemoteBlobWriter, std::shared_ptr<RemoteBlobWriter>>(
-      mod, "RemoteBlobBuilder", py::buffer_protocol())
+      mod, "RemoteBlobBuilder", py::buffer_protocol(), doc::RemoteBlobBuilder)
       .def(py::init<>(
                [](const size_t size) -> std::unique_ptr<RemoteBlobWriter> {
                  return std::make_unique<RemoteBlobWriter>(size);
                }),
            py::arg("size"))
-      .def_property_readonly("size", &RemoteBlobWriter::size)
-      .def("__len__", &RemoteBlobWriter::size)
+      .def_property_readonly("size", &RemoteBlobWriter::size,
+                             doc::RemoteBlobBuilder_size)
+      .def("__len__", &RemoteBlobWriter::size, doc::RemoteBlobBuilder_size)
       .def("__iter__",
            [](RemoteBlobWriter* self) {
              auto data = self->data();
@@ -643,7 +689,7 @@ void bind_blobs(py::module& mod) {
           [](RemoteBlobWriter* self, Client& client) {
             throw_on_error(self->Abort());
           },
-          "client"_a)
+          "client"_a, doc::RemoteBlobBuilder_abort)
       .def(
           "copy",
           [](RemoteBlobWriter* self, size_t const offset, uintptr_t ptr,
@@ -651,7 +697,7 @@ void bind_blobs(py::module& mod) {
             std::memcpy(self->data() + offset, reinterpret_cast<void*>(ptr),
                         size);
           },
-          "offset"_a, "address"_a, "size"_a)
+          "offset"_a, "address"_a, "size"_a, doc::RemoteBlobBuilder_copy)
       .def(
           "copy",
           [](RemoteBlobWriter* self, size_t offset, py::buffer const& buffer) {
@@ -677,21 +723,24 @@ void bind_blobs(py::module& mod) {
             std::memcpy(self->data() + offset, buffer, length);
           },
           "offset"_a, "bytes"_a)
-      .def_property_readonly("address",
-                             [](RemoteBlobWriter* self) {
-                               return reinterpret_cast<uintptr_t>(self->data());
-                             })
-      .def_property_readonly("buffer",
-                             [](RemoteBlobWriter& blob) -> py::object {
-                               auto buffer = blob.Buffer();
-                               if (buffer == nullptr) {
-                                 return py::none();
-                               } else {
-                                 return py::memoryview::from_memory(
-                                     buffer->mutable_data(), buffer->size(),
-                                     false);
-                               }
-                             })
+      .def_property_readonly(
+          "address",
+          [](RemoteBlobWriter* self) {
+            return reinterpret_cast<uintptr_t>(self->data());
+          },
+          doc::RemoteBlobBuilder_address)
+      .def_property_readonly(
+          "buffer",
+          [](RemoteBlobWriter& blob) -> py::object {
+            auto buffer = blob.Buffer();
+            if (buffer == nullptr) {
+              return py::none();
+            } else {
+              return py::memoryview::from_memory(buffer->mutable_data(),
+                                                 buffer->size(), false);
+            }
+          },
+          doc::RemoteBlobBuilder_buffer)
       .def_buffer([](RemoteBlobWriter& blob) -> py::buffer_info {
         return py::buffer_info(blob.data(), sizeof(int8_t),
                                py::format_descriptor<int8_t>::format(), 1,
