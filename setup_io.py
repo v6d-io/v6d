@@ -40,24 +40,16 @@ class install_plat(install):
         install.finalize_options(self)
 
 
-def find_vineyard_io_packages():
-    packages = []
-
-    for pkg in find_packages('modules/io/python/drivers'):
-        packages.append('vineyard.drivers.%s' % pkg)
-
-    return packages
-
-
-def resolve_vineyard_io_package_dir():
-    package_dir = {
-        'vineyard.drivers': 'modules/io/python/drivers',
-    }
-    return package_dir
+def find_vineyard_io_packages(root):
+    pkgs = []
+    for pkg in find_packages(root):
+        if 'drivers.io' in pkg:
+            pkgs.append(pkg)
+    return pkgs
 
 
 with open(
-    'modules/io/README.rst',
+    'python/vineyard/drivers/io/README.rst',
     encoding='utf-8',
     mode='r',
 ) as fp:
@@ -71,11 +63,11 @@ setup(
     long_description=long_description,
     long_description_content_type='text/x-rst',
     url='https://v6d.io',
-    packages=find_vineyard_io_packages(),
-    package_dir=resolve_vineyard_io_package_dir(),
+    package_dir={'vineyard.drivers.io': 'python/vineyard/drivers/io'},
     package_data={
         'vineyard.drivers.io': ['*.sh'],
     },
+    packages=find_vineyard_io_packages('python'),
     include_package_data=True,
     zip_safe=False,
     cmdclass={'bdist_wheel': bdist_wheel_plat, "install": install_plat},

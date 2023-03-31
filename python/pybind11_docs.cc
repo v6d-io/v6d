@@ -1209,7 +1209,7 @@ The instance id of the connected remote vineyard server.
 )doc";
 
 const char* connect = R"doc(
-.. function:: connect(endpoint: str,
+.. function:: connect(socket: str,
                       username: str = None,
                       password: str = None) -> IPCClient
     :noindex:
@@ -1221,7 +1221,7 @@ const char* connect = R"doc(
         client = vineyard.connect('/var/run/vineyard.sock')
 
     Parameters:
-        endpoint: str
+        socket: str
             UNIX domain socket path to setup an IPC connection.
         username: str
             Username to login, default to None.

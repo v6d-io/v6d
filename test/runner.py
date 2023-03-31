@@ -86,7 +86,6 @@ def start_program(*args, **kwargs):
     binary_dir = os.environ.get(
         'VINEYARD_EXECUTABLE_DIR', os.path.join(build_artifact_directory, 'bin')
     )
-    print('binary_dir = ', binary_dir)
     return start_program_generic(*args, search_paths=[binary_dir], **kwargs)
 
 
@@ -760,7 +759,7 @@ def run_io_adaptor_tests(meta, allocator, endpoints, tests):
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
-                'modules/io/python/drivers/io/tests',
+                'python/vineyard/drivers/io/tests',
                 *test_args,
                 '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
                 '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
@@ -808,7 +807,7 @@ def run_io_adaptor_distributed_tests(meta, allocator, endpoints, tests, with_mig
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
-                'modules/io/python/drivers/io/tests/test_migrate_stream.py',
+                'python/vineyard/drivers/io/tests/test_migrate_stream.py',
                 *test_args,
                 '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
                 '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets,
