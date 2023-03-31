@@ -40,7 +40,7 @@ build-base-images:
 	@docker tag ghcr.io/v6d-io/v6d/vineyard-python-dev:latest_x86_64 ghcr.io/v6d-io/v6d/vineyard-python-dev:latest
 	@echo "Building the vineyardd image"
 	@make -C ${ROOT_DIR}/docker vineyardd
-	@docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-latest_x86_64 ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
+	@docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-latest_x86_64 vineyardcloudnative/vineyardd:alpine-latest
 
 # Build a 4-nodes(1 master and 3 workers) kind cluster with local registry
 build-local-cluster:
