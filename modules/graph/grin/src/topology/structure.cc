@@ -34,14 +34,14 @@ void grin_destroy_graph(GRIN_GRAPH g) {
     delete _g;
 }
 
-#if !defined(GRIN_ASSUME_GRAPH_DIRECTED) && !defined(GRIN_ASSUME_GRAPH_UNDIRECTED)
+#if defined(GRIN_ASSUME_HAS_DIRECTED_GRAPH) && defined(GRIN_ASSUME_HAS_UNDIRECTED_GRAPH)
 bool grin_is_directed(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     return _g->directed();
 }
 #endif
 
-#ifndef GRIN_ASSUME_GRAPH_SINGLE_EDGE
+#ifdef GRIN_ASSUME_HAS_MULTI_EDGE_GRAPH
 bool grin_is_multigraph(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     return _g->is_multigraph();
@@ -142,7 +142,7 @@ void grin_destroy_name(GRIN_GRAPH g, const char* name) {
 #ifdef GRIN_WITH_VERTEX_DATA
 GRIN_DATATYPE grin_get_vertex_data_type(GRIN_GRAPH, GRIN_VERTEX);
 
-GRIN_VERTEX_DATA grin_get_vertex_data_value(GRIN_GRAPH, GRIN_VERTEX);
+const void* grin_get_vertex_data_value(GRIN_GRAPH, GRIN_VERTEX);
 #endif
 
 // Edge
@@ -166,5 +166,5 @@ GRIN_VERTEX grin_get_edge_dst(GRIN_GRAPH g, GRIN_EDGE e) {
 #ifdef GRIN_WITH_EDGE_DATA
 GRIN_DATATYPE grin_get_edge_data_type(GRIN_GRAPH, GRIN_EDGE);
 
-GRIN_EDGE_DATA grin_get_edge_data_value(GRIN_GRAPH, GRIN_EDGE);
+const void* grin_get_edge_data_value(GRIN_GRAPH, GRIN_EDGE);
 #endif

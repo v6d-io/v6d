@@ -181,7 +181,7 @@ struct GRIN_EDGE_PROPERTY_TABLE_T {
 };
 #endif
 
-#if defined(GRIN_WITH_VERTEX_PROPERTY) || defined(GRIN_WITH_EDGE_PROPERTY)
+#ifdef GRIN_ENABLE_ROW
 typedef std::vector<const void*> GRIN_ROW_T;
 #endif
 
