@@ -217,8 +217,8 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadVertexTables() {
   table_vec_t v_tables;
   if (!vfiles_.empty()) {
     auto load_v_procedure = [&]() {
-      return loadVertexTables(vfiles_, comm_spec_.worker_id(),
-                              comm_spec_.worker_num());
+      return loadVertexTables(vfiles_, comm_spec_.local_id(),
+                              comm_spec_.local_num());
     };
     BOOST_LEAF_ASSIGN(v_tables,
                       vineyard::sync_gs_error(comm_spec_, load_v_procedure));
@@ -241,8 +241,8 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadEdgeTables() {
   std::vector<table_vec_t> e_tables;
   if (!efiles_.empty()) {
     auto load_e_procedure = [&]() {
-      return loadEdgeTables(efiles_, comm_spec_.worker_id(),
-                            comm_spec_.worker_num());
+      return loadEdgeTables(efiles_, comm_spec_.local_id(),
+                            comm_spec_.local_num());
     };
     BOOST_LEAF_ASSIGN(e_tables,
                       vineyard::sync_gs_error(comm_spec_, load_e_procedure));
