@@ -28,7 +28,6 @@ limitations under the License.
 #ifndef GRIN_INCLUDE_PREDEFINE_H_
 #define GRIN_INCLUDE_PREDEFINE_H_
 
-#include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -974,9 +973,9 @@ typedef enum {
 /** @brief Null row (invalid return value) */
 #define GRIN_NULL_ROW NULL
 /** @brief Null natural id of any kind (invalid return value) */
-#define GRIN_NULL_NATURAL_ID UINT_MAX
+#define GRIN_NULL_NATURAL_ID (unsigned)~0
 /** @brief Null size (invalid return value) */
-#define GRIN_NULL_SIZE UINT_MAX
+#define GRIN_NULL_SIZE (unsigned)~0
 ///@}
 
 
