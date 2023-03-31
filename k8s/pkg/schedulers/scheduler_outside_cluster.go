@@ -52,22 +52,22 @@ func NewVineyardSchedulerOutsideCluster(
 }
 
 // SetupConfig setups the scheduler config
-func (vsoc *VineyardSchedulerOutsideCluster) SetupConfig() error {
-	required := GetRequiredJob(vsoc.annotations)
+func (vs *VineyardSchedulerOutsideCluster) SetupConfig() error {
+	required := GetRequiredJob(vs.annotations)
 
-	vsoc.config.Required = required
+	vs.config.Required = required
 
-	nodes, err := GetVineyarddNodes(vsoc.Client, vsoc.labels)
+	nodes, err := GetVineyarddNodes(vs.Client, vs.labels)
 	if err != nil {
 		return err
 	}
-	vsoc.config.Nodes = nodes
+	vs.config.Nodes = nodes
 
 	return nil
 }
 
-// BuildSchedulerOrder builds the scheduler order from the job to node map
-func (vsoc *VineyardSchedulerOutsideCluster) BuildSchedulerOrder(jobToNode map[string]int) string {
+// buildSchedulerOrder builds the scheduler order from the job to node map
+func (vs *VineyardSchedulerOutsideCluster) buildSchedulerOrder(jobToNode map[string]int) string {
 	scheduledOrder := ""
 	s := make([]string, 0)
 	for n, v := range jobToNode {
@@ -78,26 +78,26 @@ func (vsoc *VineyardSchedulerOutsideCluster) BuildSchedulerOrder(jobToNode map[s
 }
 
 // Schedule reads the replica of workload and returns the scheduler order
-func (vsoc *VineyardSchedulerOutsideCluster) Schedule(replica int) (string, error) {
+func (vs *VineyardSchedulerOutsideCluster) Schedule(replica int) (string, error) {
 	jobToNode := make(map[string]int)
 	// if there are no required jobs, use round robin strategy
-	roundRobin := NewRoundRobinStrategy(vsoc.config.Nodes)
+	roundRobin := NewRoundRobinStrategy(vs.config.Nodes)
 
-	if len(vsoc.config.Required) == 0 {
+	if len(vs.config.Required) == 0 {
 		for i := 0; i < replica; i++ {
 			node, _ := roundRobin.Compute(i)
 			jobToNode[node]++
 		}
-		return vsoc.BuildSchedulerOrder(jobToNode), nil
+		return vs.buildSchedulerOrder(jobToNode), nil
 	}
 
 	// if there are required jobs, use best effort strategy
 	bestEffort := NewBestEffortStrategy(
-		vsoc.Client,
-		vsoc.config.Required,
+		vs.Client,
+		vs.config.Required,
 		replica,
-		vsoc.config.Namespace,
-		vsoc.config.OwnerReference,
+		vs.config.Namespace,
+		vs.config.OwnerReference,
 	)
 
 	for i := 0; i < replica; i++ {
@@ -108,5 +108,5 @@ func (vsoc *VineyardSchedulerOutsideCluster) Schedule(replica int) (string, erro
 		jobToNode[node]++
 	}
 
-	return vsoc.BuildSchedulerOrder(jobToNode), nil
+	return vs.buildSchedulerOrder(jobToNode), nil
 }

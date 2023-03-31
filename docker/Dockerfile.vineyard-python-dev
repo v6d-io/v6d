@@ -37,9 +37,9 @@ COPY src/client /work/v6d/src/client
 COPY python/client.cc /work/v6d/python/client.cc
 COPY python/core.cc /work/v6d/python/core.cc
 COPY python/error.cc /work/v6d/python/error.cc
-COPY python/pybind11_utils.cc /work/v6d/python/pybind11_utils.cc
 COPY python/pybind11_docs.cc /work/v6d/python/pybind11_docs.cc
 COPY python/pybind11_docs.h /work/v6d/python/pybind11_docs.h
+COPY python/pybind11_utils.cc /work/v6d/python/pybind11_utils.cc
 COPY python/pybind11_utils.h /work/v6d/python/pybind11_utils.h
 COPY python/vineyard.cc /work/v6d/python/vineyard.cc
 

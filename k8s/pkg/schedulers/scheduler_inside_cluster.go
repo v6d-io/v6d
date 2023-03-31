@@ -45,8 +45,8 @@ type SchedulerConfig struct {
 	OwnerReference *[]metav1.OwnerReference
 }
 
-// VineyardSchedulerOnKubernetes is the vineyard scheduler on kubernetes
-type VineyardSchedulerOnKubernetes struct {
+// VineyardSchedulerInsideCluster is the vineyard scheduler inside cluster
+type VineyardSchedulerInsideCluster struct {
 	client.Client
 	pod     *v1.Pod
 	rank    int
@@ -54,14 +54,14 @@ type VineyardSchedulerOnKubernetes struct {
 	config  SchedulerConfig
 }
 
-// NewVineyardSchedulerOnKubernetes returns a new vineyard scheduler on kubernetes
-func NewVineyardSchedulerOnKubernetes(
+// NewVineyardSchedulerInsideCluster returns a new vineyard scheduler inside cluster
+func NewVineyardSchedulerInsideCluster(
 	c client.Client,
 	pod *v1.Pod,
 	rank int,
 	replica int,
-) *VineyardSchedulerOnKubernetes {
-	return &VineyardSchedulerOnKubernetes{
+) *VineyardSchedulerInsideCluster {
+	return &VineyardSchedulerInsideCluster{
 		Client:  c,
 		pod:     pod,
 		rank:    rank,
@@ -70,33 +70,33 @@ func NewVineyardSchedulerOnKubernetes(
 }
 
 // SetupConfig setups the scheduler config
-func (vsok *VineyardSchedulerOnKubernetes) SetupConfig() error {
-	pod := vsok.pod
+func (vs *VineyardSchedulerInsideCluster) SetupConfig() error {
+	pod := vs.pod
 
 	required := GetRequiredJob(pod.Annotations)
 
-	vsok.config.Required = required
+	vs.config.Required = required
 
-	nodes, err := GetVineyarddNodes(vsok.Client, pod.Labels)
+	nodes, err := GetVineyarddNodes(vs.Client, pod.Labels)
 	if err != nil {
 		return err
 	}
-	vsok.config.Nodes = nodes
+	vs.config.Nodes = nodes
 
-	vsok.config.Namespace = pod.Namespace
-	vsok.config.OwnerReference = &pod.OwnerReferences
+	vs.config.Namespace = pod.Namespace
+	vs.config.OwnerReference = &pod.OwnerReferences
 	return nil
 }
 
-// CheckOperationLabels checks the operation labels and creates the operation if necessary
-func (vsok *VineyardSchedulerOnKubernetes) CheckOperationLabels() (int, error) {
-	pod := vsok.pod
-	operationLabels := []string{"assembly.v6d.io/enabled", "repartition.v6d.io/enabled"}
+// checkOperationLabels checks the operation labels and creates the operation if necessary
+func (vs *VineyardSchedulerInsideCluster) checkOperationLabels() (int, error) {
+	pod := vs.pod
+	operationLabels := []string{labels.AssemblyEnabledLabel, labels.RepartitionEnabledLabel}
 	for _, label := range operationLabels {
 		if value, ok := pod.Labels[label]; ok && strings.ToLower(value) == "true" {
 			opName := label[:strings.Index(label, ".")]
 			op := &v1alpha1.Operation{}
-			err := vsok.Get(
+			err := vs.Get(
 				context.TODO(),
 				types.NamespacedName{Name: pod.Name, Namespace: pod.Namespace},
 				op,
@@ -120,7 +120,7 @@ func (vsok *VineyardSchedulerOnKubernetes) CheckOperationLabels() (int, error) {
 						TimeoutSeconds: 300,
 					},
 				}
-				if err := vsok.Create(context.TODO(), operation); err != nil {
+				if err := vs.Create(context.TODO(), operation); err != nil {
 					return 0, err
 				}
 			}
@@ -137,12 +137,12 @@ func (vsok *VineyardSchedulerOnKubernetes) CheckOperationLabels() (int, error) {
 }
 
 // Schedule compute the score for the given node
-func (vsok *VineyardSchedulerOnKubernetes) Schedule(nodeName string) (int, error) {
+func (vs *VineyardSchedulerInsideCluster) Schedule(nodeName string) (int, error) {
 	// if there are no required jobs, use round robin strategy
-	roundRobin := NewRoundRobinStrategy(vsok.config.Nodes)
+	roundRobin := NewRoundRobinStrategy(vs.config.Nodes)
 
-	if len(vsok.config.Required) == 0 {
-		target, _ := roundRobin.Compute(vsok.rank)
+	if len(vs.config.Required) == 0 {
+		target, _ := roundRobin.Compute(vs.rank)
 		if target == nodeName {
 			return 100, nil
 		}
@@ -151,19 +151,19 @@ func (vsok *VineyardSchedulerOnKubernetes) Schedule(nodeName string) (int, error
 
 	// if there are required jobs, use best effort strategy
 	bestEffort := NewBestEffortStrategy(
-		vsok.Client,
-		vsok.config.Required,
-		vsok.replica,
-		vsok.config.Namespace,
-		vsok.config.OwnerReference,
+		vs.Client,
+		vs.config.Required,
+		vs.replica,
+		vs.config.Namespace,
+		vs.config.OwnerReference,
 	)
 
-	target, err := bestEffort.Compute(vsok.rank)
+	target, err := bestEffort.Compute(vs.rank)
 	if err != nil {
 		return 0, err
 	}
 
-	s, err := vsok.CheckOperationLabels()
+	s, err := vs.checkOperationLabels()
 	if err != nil {
 		return 0, err
 	}
@@ -173,7 +173,7 @@ func (vsok *VineyardSchedulerOnKubernetes) Schedule(nodeName string) (int, error
 
 	// make sure every pod will be deployed in a node
 	if target == "" {
-		if nodeName == vsok.config.Nodes[0] {
+		if nodeName == vs.config.Nodes[0] {
 			return 100, nil
 		}
 		return 1, nil

@@ -102,7 +102,7 @@ func (vs *VineyardScheduling) Score(
 	}
 
 	rank := vs.GetPodRank(pod, replica)
-	scheduler := NewVineyardSchedulerOnKubernetes(
+	scheduler := NewVineyardSchedulerInsideCluster(
 		vs.Client, pod, rank, replica,
 	)
 	err = scheduler.SetupConfig()
