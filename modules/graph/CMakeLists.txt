@@ -90,6 +90,7 @@ else()
     )
     target_include_directories(vineyard_graph PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libgrape-lite>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/libgrape-lite/thirdparty>
         $<INSTALL_INTERFACE:include>
     )
 endif()
