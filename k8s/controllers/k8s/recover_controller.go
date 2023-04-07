@@ -83,12 +83,12 @@ func getRecoverConfig() RecoverConfig {
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=recovers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;create;update;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;create;update;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=backups,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=backups/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="",resources=pods/status,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;create;update;delete
+// +kubebuilder:rbac:groups="",resources=pods/status,verbs=get;list;create;update;delete
 // +kubebuilder:rbac:groups="",resources=pods/log,verbs=get
 
 // Reconcile reconciles the Recover.

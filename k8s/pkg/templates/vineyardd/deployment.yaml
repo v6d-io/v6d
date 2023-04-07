@@ -44,9 +44,6 @@ spec:
         kubectl.kubernetes.io/default-container: "vineyardd"
         kubectl.kubernetes.io/default-logs-container: "vineyardd"
     spec:
-      {{- if .Spec.ServiceAccountName }}
-      serviceAccountName: {{ .Spec.ServiceAccountName }}
-      {{- end }}
       containers:
         - name: vineyardd
           image: {{ .Spec.VineyardConfig.Image }}

@@ -27,9 +27,12 @@ setup:
     - name: push examples images to local registry
       command: |
         make -C k8s/examples/vineyard-mars-pytorch docker-push REGISTRY=localhost:5001
+    - name: install vineyard cluster(with operator)
+      command: |
+        go run k8s/cmd/main.go deploy vineyard-cluster
     - name: run prepare-data job
       command: |
-        kubectl create ns vineyard-job
+        kubectl create namespace vineyard-job
 
         yq k8s/examples/vineyard-mars-pytorch/prepare-data/resources/* | \
         sed 's/vineyardcloudnative/localhost:5001/' | \

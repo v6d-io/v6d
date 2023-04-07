@@ -46,9 +46,6 @@ spec:
             type: object
           spec:
             properties:
-              createServiceAccount:
-                default: false
-                type: boolean
               etcd:
                 default:
                   replicas: 3
@@ -116,9 +113,6 @@ spec:
                     default: ClusterIP
                     type: string
                 type: object
-              serviceAccountName:
-                default: ""
-                type: string
               vineyardConfig:
                 default:
                   etcdEndpoint: http://etcd-for-vineyard:2379

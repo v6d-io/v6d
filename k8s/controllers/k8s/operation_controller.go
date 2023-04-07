@@ -53,12 +53,12 @@ type OperationReconciler struct {
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=localobjects/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=globalobjects,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=globalobjects/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="",resources=pods/status,verbs=get;list;watch;create;update;patch
+// +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;create;watch;update;list;delete
+// +kubebuilder:rbac:groups=batch,resources=jobs/status,verbs=get;create;update;list;delete
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;create;update;delete
+// +kubebuilder:rbac:groups="",resources=pods/status,verbs=get;list;create;update;delete
 // +kubebuilder:rbac:groups="",resources=pods/log,verbs=get
-// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile reconciles the operation

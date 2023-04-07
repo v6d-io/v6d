@@ -727,10 +727,8 @@ vineyardctl deploy vineyard-deployment [flags]
       --plugin.distributedAssemblyImage string    the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
       --plugin.localAssemblyImage string          the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
       --plugin.recoverImage string                the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
-      --vineyard.create.serviceAccount            create service account for vineyardd
       --vineyard.etcd.replicas int                the number of etcd replicas in a vineyard cluster (default 3)
       --vineyard.replicas int                     the number of vineyardd replicas (default 3)
-      --vineyard.serviceAccount.name string       the service account name of vineyardd
       --vineyardd.envs strings                    The environment variables of vineyardd
       --vineyardd.etcdEndpoint string             The etcd endpoint of vineyardd (default "http://etcd-for-vineyard:2379")
       --vineyardd.etcdPrefix string               The etcd prefix of vineyardd (default "/vineyard")
@@ -862,10 +860,8 @@ vineyardctl deploy vineyardd [flags]
       --plugin.distributedAssemblyImage string    the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
       --plugin.localAssemblyImage string          the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
       --plugin.recoverImage string                the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
-      --vineyard.create.serviceAccount            create service account for vineyardd
       --vineyard.etcd.replicas int                the number of etcd replicas in a vineyard cluster (default 3)
       --vineyard.replicas int                     the number of vineyardd replicas (default 3)
-      --vineyard.serviceAccount.name string       the service account name of vineyardd
       --vineyardd.envs strings                    The environment variables of vineyardd
       --vineyardd.etcdEndpoint string             The etcd endpoint of vineyardd (default "http://etcd-for-vineyard:2379")
       --vineyardd.etcdPrefix string               The etcd prefix of vineyardd (default "/vineyard")
@@ -1139,6 +1135,16 @@ vineyardctl schedule workload [flags]
 ```
 
 ### Options
+
+```
+  -h, --help                         help for workload
+      --resource string              the json string of kubernetes workload
+      --vineyardd-name string        the namespace of vineyard cluster (default "vineyardd-sample")
+      --vineyardd-namespace string   the namespace of vineyard cluster (default "vineyard-system")
+```
+
+
+ Options
 
 ```
   -h, --help                         help for workload

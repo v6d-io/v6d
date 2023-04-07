@@ -67,8 +67,7 @@ setup:
           for: condition=Available
     - name: install backup
       command: |
-        kubectl create ns backup
-        go run k8s/cmd/main.go -n backup create backup \
+        go run k8s/cmd/main.go create backup \
           --vineyardd-name vineyardd-sample \
           --vineyardd-namespace vineyard-system  \
           --limit 1000 \
@@ -107,7 +106,7 @@ setup:
         go run k8s/cmd/main.go deploy vineyardd -f k8s/test/e2e/vineyardd.yaml
     - name: install recover
       command: |
-        go run k8s/cmd/main.go -n backup create recover
+        go run k8s/cmd/main.go create recover
     - name: install get-local-object job
       command: |
         export newlocalobject_id=$(kubectl get recover -A | grep $localobjectid | sed 's/,/\n/g'| grep \"$localobjectid\" | sed 's/:/\n/g' | tail -n 1 | sed 's/}/\n/g' | head -n 1 | sed 's/"//g')

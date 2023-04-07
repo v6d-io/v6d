@@ -27,6 +27,12 @@ for installation details), you can effortlessly create a vineyard cluster by uti
 the :code:`Vineyardd` CRD. The following example demonstrates the creation of a vineyard
 cluster with 3 daemon replicas:
 
+.. note::
+
+    The namespace of the vineyard cluster must be the same as the namespace of the
+    vineyard operator, as the vineyard cluster will use the vineyard operator's
+    service account.
+
 .. code:: yaml
 
     $ cat <<EOF | kubectl apply -f -
@@ -34,7 +40,7 @@ cluster with 3 daemon replicas:
     kind: Vineyardd
     metadata:
       name: vineyardd-sample
-      # don't use default namespace
+      # use the same namespace as the vineyard operator
       namespace: vineyard-system
     EOF
 
@@ -96,16 +102,6 @@ The detailed configuration entries for creating a vineyard cluster are listed as
          - int
          - The replicas of vineyardd.
          - 3
-
-       * - createServiceAccount
-         - bool
-         - Whether to create a service account for vineyardd.
-         - false
-      
-       * - serviceAccountName
-         - string
-         - The name of vineyardd's service account.
-         - nil
 
        * - | vineyardConfig.
            | image
@@ -1186,7 +1182,7 @@ use the following YAML file:
     kind: Vineyardd
     metadata:
       name: vineyardd-sample
-      # don't use default namespace
+      # use the same namespace as the vineyard operator
       namespace: vineyard-system
     spec:
       vineyardConfig:
@@ -1734,7 +1730,9 @@ Failover mechanism of vineyard cluster
 --------------------------------------
 
 If you want to back up data for the current vineyard cluster, you can create a Backup CR to
-perform a backup operation. The main fields are described as follows.
+perform a backup operation. As the Backup CR will use the default service account of the 
+namespace the vineyard operator is deployed, you need to set up the same namespace as
+the vineyard operator. The main fields are described as follows.
 
 .. admonition:: Backup Configurations
    :class: admonition-details
@@ -1819,7 +1817,7 @@ up the data. The following is the yaml file of the backup:
   kind: Backup
   metadata:
     name: backup-sample
-    namespace: backup
+    namespace: vineyard-system
   spec:
     vineyarddName: vineyardd-sample
     vineyarddNamespace: vineyard-system
@@ -1852,10 +1850,10 @@ restore the data in the vineyard cluster, and the recover yaml file is as follow
   kind: Recover
   metadata:
     name: recover-sample
-    namespace: backup
+    namespace: vineyard-system
   spec:
     backupName: backup-sample
-    backupNamespace: backup
+    backupNamespace: vineyard-system
   EOF
 
 Then you could get the Recover's status to get the mapping relationship between the
@@ -1864,8 +1862,8 @@ object ID during backup and the object ID during recovery as follows:
 .. code:: bash
 
   $ kubectl get recover -A
-  NAMESPACE   NAME             MAPPING                                                                                                                     STATE
-  backup      recover-sample   {"o000ef92379fd8850":"o000ef9ea5189718d","o000ef9237a3a5432":"o000ef9eb5d26ad5e","o000ef97a8289973f":"o000ef9ed586ef1d3"}   Succeed
+  NAMESPACE            NAME             MAPPING                                                                                                                     STATE
+  vineyard-system      recover-sample   {"o000ef92379fd8850":"o000ef9ea5189718d","o000ef9237a3a5432":"o000ef9eb5d26ad5e","o000ef97a8289973f":"o000ef9ed586ef1d3"}   Succeed
 
 If you want to get more details about failover of vineyard cluster, please refer
 the `failover e2e test`_.
