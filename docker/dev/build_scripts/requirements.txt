@@ -1,34 +1,38 @@
 argcomplete
-black
+black>=22.3.0
 breathe
 click
 docutils==0.16
 etcd-distro
-flake8
+flake8>=4.0.1
+flake8-comprehensions
+flake8-logging-format
 furo        # sphinx theme
-isort
+isort>=5.10.1
 jinja2>=3.0.0
 libclang
+linkify-it-py
+makefun
+myst-parser>=0.13.0
 nbsphinx
 numpy>=1.18.5
-parsec
 pandas<1.0.0; python_version<"3.6"
-pandas<1.2.0; python_version<"3.7"
 pandas>=1.0.0; python_version>="3.7"
+pandas<1.2.0; python_version<"3.7"
 pickle5; python_version<="3.7"
-pygments>=2.4.1
 psutil
+pyarrow
+pygments>=2.4.1
 pytest
 pytest-benchmark
 pytest-datafiles
+pytest-timeout
 setuptools
 shared-memory38; python_version<="3.7"
 sortedcontainers
-sphinx>=3.0.2
+sphinx>=3.0.2,<6
 sphinx-copybutton
-sphinx-panels
 sphinxemoji
 sphinxext-opengraph
+sphinx-panels
 treelib
-wheel
-

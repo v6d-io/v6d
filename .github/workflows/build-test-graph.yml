@@ -19,8 +19,6 @@ on:
     paths:
       - modules/graph
   pull_request:
-    branches:
-      - "*"
     paths:
       - modules/graph
 

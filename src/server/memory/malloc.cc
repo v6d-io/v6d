@@ -84,11 +84,28 @@ int create_buffer(int64_t size, bool memory) {
 
 #else  // _WIN32
 
+  /**
+   * Notes [memfd_create vs. mkstemp]
+   *
+   * Use memfd_create(2) on Linux if available. Note that with `memfd_create`,
+   * the shared memory usage is accounted to the process that owns the file
+   * descriptor, i.e., to the process that creates the blob (which triggers the
+   * **anonymous** physical memory allocation), which is a bit counterintuitive
+   * (as the shared memory usage cannot be observed on the vineyardd process),
+   * but a natural fit for the use cases of vineyard, including on Kubernetes
+   * where we subject the memory limitation to the pod level and want to limits
+   * the memory usage of the compute process.
+   *
+   * The `memfd_create` syscall resolves the SIGBUS errors as well.
+   *
+   * [1]: https://dvdhrm.wordpress.com/2014/06/10/memfd_create2/
+   */
+
   // directory where to create the memory-backed file
 #ifdef __linux__
   std::string file_template;
   if (memory) {
-    file_template = "/dev/shm/vineyard-bulk-XXXXXX";
+    file_template = "vineyard-bulk-XXXXXX";
   } else {
     file_template = "/tmp/vineyard-bulk-XXXXXX";
   }
@@ -98,16 +115,22 @@ int create_buffer(int64_t size, bool memory) {
 #endif
   std::vector<char> file_name(file_template.begin(), file_template.end());
   file_name.push_back('\0');
+#ifdef __linux__  // see also: Notes [memfd_create vs. mkstemp]
+  fd = memfd_create(&file_name[0], 0);
+#else
   fd = mkstemp(&file_name[0]);
+#endif
   if (fd < 0) {
     LOG(ERROR) << "create_buffer failed to open file " << &file_name[0];
     return -1;
   }
   // Immediately unlink the file so we do not leave traces in the system.
+#ifndef __linux__  // see also: Notes [memfd_create vs. mkstemp]
   if (unlink(&file_name[0]) != 0) {
     LOG(ERROR) << "failed to unlink file " << &file_name[0];
     return -1;
   }
+#endif
   if (true) {
     // Increase the size of the file to the desired size. This seems not to be
     // needed for files that are backed by the huge page fs, see also
