@@ -29,8 +29,6 @@ limitations under the License.
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 
-#include "gar/graph_info.h"
-#include "gar/utils/general_params.h"
 #include "grape/worker/comm_spec.h"
 
 #include "client/client.h"
@@ -42,6 +40,12 @@ limitations under the License.
 #include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
+
+namespace GraphArchive {
+class GraphInfo;
+class EdgeInfo;
+enum class AdjListType : std::uint8_t;
+}  // namespace GraphArchive
 
 namespace vineyard {
 
@@ -59,19 +63,14 @@ class GARFragmentLoader {
   using oid_array_t = ArrowArrayType<oid_t>;
   using vid_array_t = ArrowArrayType<vid_t>;
   using vertex_map_t = VERTEX_MAP_T<internal_oid_t, vid_t>;
-  using fragment_t = ArrowFragment<oid_t, vid_t, vertex_map_t>;
-  using gar_id_t = GraphArchive::IdType;
+  using fragment_t = ArrowFragment<OID_T, VID_T, vertex_map_t>;
+  using gar_id_t = int64_t;
 
   using table_vec_t = std::vector<std::shared_ptr<arrow::Table>>;
   using oid_array_vec_t = std::vector<std::shared_ptr<oid_array_t>>;
   using vid_array_vec_t = std::vector<std::shared_ptr<vid_array_t>>;
 
  protected:
-  // These consts represent the key in the meta of the GAR.
-  static constexpr const char* SRC_COL_NAME =
-      GraphArchive::GeneralParams::kSrcIndexCol;
-  static constexpr const char* DST_COL_NAME =
-      GraphArchive::GeneralParams::kDstIndexCol;
   static constexpr const char* CONSOLIDATE_TAG = "consolidate";
   static constexpr const char* MARKER = "PROGRESS--GRAPH-LOADING-";
 
@@ -84,13 +83,8 @@ class GARFragmentLoader {
    * @param directed
    */
   GARFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
-                    const GraphArchive::GraphInfo& graph_info,
-                    bool directed = true, bool generate_eid = false)
-      : client_(client),
-        comm_spec_(comm_spec),
-        graph_info_(graph_info),
-        directed_(directed),
-        generate_eid_(generate_eid) {}
+                    const std::string& graph_info_yaml, bool directed = true,
+                    bool generate_eid = false);
 
   ~GARFragmentLoader() = default;
 
@@ -157,7 +151,7 @@ class GARFragmentLoader {
   Client& client_;
   grape::CommSpec comm_spec_;
   std::shared_ptr<vertex_map_t> vm_ptr_;
-  GraphArchive::GraphInfo graph_info_;
+  std::shared_ptr<GraphArchive::GraphInfo> graph_info_;
 
   std::map<std::string, std::vector<int64_t>> vertex_chunk_begin_of_frag_;
 
@@ -184,20 +178,20 @@ class GARFragmentLoader {
 namespace detail {
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
-struct rebind_arrow_fragment_loader;
+struct rebind_gar_fragment_loader;
 
 template <typename OID_T, typename VID_T>
-struct rebind_arrow_fragment_loader<OID_T, VID_T,
-                                    vineyard::ArrowVertexMap<OID_T, VID_T>> {
+struct rebind_gar_fragment_loader<OID_T, VID_T,
+                                  vineyard::ArrowVertexMap<OID_T, VID_T>> {
   using type = GARFragmentLoader<OID_T, VID_T, vineyard::ArrowVertexMap>;
 };
 
 }  // namespace detail
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
-using arrow_fragment_loader_t =
-    typename detail::rebind_arrow_fragment_loader<OID_T, VID_T,
-                                                  VERTEX_MAP_T>::type;
+using gar_fragment_loader_t =
+    typename detail::rebind_gar_fragment_loader<OID_T, VID_T,
+                                                VERTEX_MAP_T>::type;
 
 }  // namespace vineyard
 
