@@ -145,12 +145,6 @@ func ApplyVineyarddOpts(cmd *cobra.Command) {
 	// setup the vineyardd configuration
 	cmd.Flags().IntVarP(&VineyarddOpts.Replicas, "vineyard.replicas", "", 3,
 		"the number of vineyardd replicas")
-	cmd.Flags().BoolVarP(&VineyarddOpts.CreateServiceAccount,
-		"vineyard.create.serviceAccount", "", false,
-		"create service account for vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.ServiceAccountName,
-		"vineyard.serviceAccount.name",
-		"", "", "the service account name of vineyardd")
 	cmd.Flags().IntVarP(&VineyarddOpts.Etcd.Replicas, "vineyard.etcd.replicas",
 		"", 3, "the number of etcd replicas in a vineyard cluster")
 	cmd.Flags().StringVarP(&VineyarddFile, "file", "f", "", "the path of vineyardd")

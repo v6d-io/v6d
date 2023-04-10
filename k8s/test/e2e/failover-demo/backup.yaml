@@ -2,7 +2,7 @@ apiVersion: k8s.v6d.io/v1alpha1
 kind: Backup
 metadata:
   name: backup-sample
-  namespace: backup
+  namespace: vineyard-system
 spec:
   vineyarddName: vineyardd-sample
   vineyarddNamespace: vineyard-system

@@ -64,8 +64,8 @@ type SidecarReconciler struct {
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=sidecars,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=sidecars/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=sidecars/finalizers,verbs=update
-// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;create;delete
+// +kubebuilder:rbac:groups="",resources=services,verbs=get;create;update;delete
 
 // Reconcile the sidecar.
 func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

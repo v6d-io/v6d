@@ -13,14 +13,18 @@
 # limitations under the License.
 #
 
-{{- if .Spec.CreateServiceAccount }}
-apiVersion: v1
-kind: ServiceAccount
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
 metadata:
-  name: {{ .Name }}
-  namespace: {{ .Namespace }}
+  name: prepare-data-rolebinding
+  namespace: vineyard-job
   labels:
-    app.kubernetes.io/name: {{ .Name }}
-    app.kubernetes.io/instance: vineyardd
-    app.kubernetes.io/component: service-account
-{{- end }}
+    app.kubernetes.io/name: prepare-data
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: prepare-data-role
+subjects:
+- kind: ServiceAccount
+  name: prepare-data
+  namespace: vineyard-job

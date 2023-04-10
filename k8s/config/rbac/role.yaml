@@ -14,7 +14,6 @@ rules:
   - delete
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -35,7 +34,6 @@ rules:
   - list
   - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -47,7 +45,6 @@ rules:
   - list
   - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -57,9 +54,7 @@ rules:
   - delete
   - get
   - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -72,11 +67,10 @@ rules:
   - pods/status
   verbs:
   - create
+  - delete
   - get
   - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -86,10 +80,7 @@ rules:
   - create
   - delete
   - get
-  - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - ""
   resources:
@@ -98,22 +89,23 @@ rules:
   - create
   - delete
   - get
-  - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - apps
   resources:
   - deployments
   verbs:
   - create
-  - delete
   - get
   - list
-  - patch
   - update
   - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments/status
+  verbs:
+  - get
 - apiGroups:
   - batch
   resources:
@@ -123,7 +115,6 @@ rules:
   - delete
   - get
   - list
-  - patch
   - update
   - watch
 - apiGroups:
@@ -135,9 +126,7 @@ rules:
   - delete
   - get
   - list
-  - patch
   - update
-  - watch
 - apiGroups:
   - k8s.v6d.io
   resources:
@@ -296,10 +285,3 @@ rules:
   - get
   - patch
   - update
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
-  - clusterrolebindings
-  - clusterroles
-  verbs:
-  - '*'

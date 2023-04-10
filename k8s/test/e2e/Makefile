@@ -336,7 +336,7 @@ e2e-tests-scheduler-outside-cluster: prepare-e2e-test install-vineyard-cluster
 
 ############# mars showcase testing ################################################
 
-e2e-tests-mars-examples: prepare-e2e-test install-vineyard-cluster
+e2e-tests-mars-examples: prepare-e2e-test build-local-cluster
 	@echo "Running mars showcase e2e test..."
 	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/mars-examples/e2e.yaml
 	@echo "mars showcase e2e test passed."

@@ -14,16 +14,13 @@
 #
 
 apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
+kind: Role
 metadata:
-  name: prepare-data-rolebinding
-  labels:
-    app.kubernetes.io/name: prepare-data
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
   name: prepare-data-role
-subjects:
-  - kind: ServiceAccount
-    name: prepare-data
-    namespace: vineyard-job
+  namespace: vineyard-job
+  labels:
+    app.kubernetes.io/instance: prepare-data
+rules:
+- apiGroups: [""]
+  resources: ["pods", "pods/log", "pods/exec"]
+  verbs: ["get", "patch", "delete", "create", "watch", "list"]

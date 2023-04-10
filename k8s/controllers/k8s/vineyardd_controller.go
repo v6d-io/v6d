@@ -83,13 +83,13 @@ func getServiceLabelSelector() []ServiceLabelSelector {
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds/finalizers,verbs=update
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;watch;create;update;patch
-// +kubebuilder:rbac:groups="",resources=services;serviceaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update
+// +kubebuilder:rbac:groups=apps,resources=deployments/status,verbs=get
+// +kubebuilder:rbac:groups="",resources=pods,verbs=get;list;create;update;delete
+// +kubebuilder:rbac:groups="",resources=services;serviceaccounts,verbs=get;create;update;delete
 // +kubebuilder:rbac:groups="",resources=events,verbs=create;patch
-// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles;clusterrolebindings,verbs=*
-// +kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=persistentvolumes,verbs=get;list;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=persistentvolumeclaims,verbs=get;list;create;update;patch;delete
 
 // Reconcile reconciles the Vineyardd.
 func (r *VineyarddReconciler) Reconcile(
@@ -185,7 +185,7 @@ func (r *VineyarddReconciler) UpdateStatus(
 	name := client.ObjectKey{Name: vineyardd.Name, Namespace: vineyardd.Namespace}
 	deployment := appsv1.Deployment{}
 	if err := r.Get(ctx, name, &deployment); err != nil {
-		log.V(1).Error(err, "failed to get deployment")
+		return errors.Wrap(err, "failed to get deployment")
 	}
 
 	// get the running vineyardd
