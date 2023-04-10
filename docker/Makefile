@@ -28,6 +28,10 @@ WHEEL_IMAGE					:= vineyard-wheel
 WHEEL_MANIFEST_TAG 			:= $(WHEEL_VERSION)_$(WHEEL_PYTHON)
 WHEEL_TAG 					:= $(WHEEL_MANIFEST_TAG)_$(PLATFORM)
 
+DEV_REGISTRY				:= $(REGISTRY)
+DEV_IMAGE					:= vineyard-dev
+DEV_TAG						:= latest_$(PLATFORM)
+
 PYTHON_DEV_REGISTRY			:= $(REGISTRY)
 PYTHON_DEV_IMAGE			:= vineyard-python-dev
 PYTHON_DEV_TAG				:= latest_$(PLATFORM)
@@ -89,6 +93,13 @@ python-wheel:
 		--load \
 		--platform linux/$(ARCH)
 .PHONY: python-wheel
+
+# build dev image
+build-dev:
+	docker build ./dev/ \
+		-f ./dev/Dockerfile.dev \
+		-t $(DEV_REGISTRY)/$(DEV_IMAGE):$(DEV_TAG)
+.PHONY: build-dev
 
 # build python-dev image
 build-python-dev:

@@ -51,33 +51,6 @@ int64_t BulkAllocator::footprint_limit_ = 0;
 int64_t BulkAllocator::allocated_ = 0;
 
 void* BulkAllocator::Init(const size_t size, std::string const& allocator) {
-#if __linux__
-  // Seems that mac os doesn't respect the sysctl configuration.
-  //
-  // Vineyard actually can use shared memory larger than the the sysctl result,
-  // we disable the warning on mac for less inaccurate warnings.
-  int64_t shmmax = get_maximum_shared_memory();
-  LOG(INFO) << "shmax: " << shmmax;
-  if (shmmax < static_cast<float>(size)) {
-    LOG(WARNING)
-        << "The 'size' is greater than the maximum shared memory size ("
-        << shmmax << ")" << std::endl;
-    LOG(WARNING)
-        << "    If you are inside a Docker container, please pass the argument "
-           "'--shm-size' when 'docker run'."
-        << std::endl;
-
-    // try remount
-    //
-    // shm on /dev/shm type tmpfs (rw,nosuid,nodev,noexec,relatime,size=65536k)
-    std::string options = "size=" + std::to_string(size);
-    int flags = MS_REMOUNT | MS_NOSUID | MS_NODEV | MS_NOEXEC | MS_RELATIME;
-    if (mount("shm", "/dev/shm", "tmpfs", flags, options.c_str()) != 0) {
-      VLOG(2) << "Failed to remount: " << strerror(errno);
-    }
-  }
-#endif
-
   if (allocator == "dlmalloc") {
     use_mimalloc_ = false;
     return DLmallocAllocator::Init(size);
