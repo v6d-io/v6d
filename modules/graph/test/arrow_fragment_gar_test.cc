@@ -67,11 +67,11 @@ void traverse_graph(std::shared_ptr<GraphType> graph, const std::string& path) {
   }
 }
 
-boost::leaf::result<int> write_out_to_gar(
-    const grape::CommSpec& comm_spec, std::shared_ptr<GraphType> graph,
-    const GraphArchive::GraphInfo& graph_info) {
+boost::leaf::result<int> write_out_to_gar(const grape::CommSpec& comm_spec,
+                                          std::shared_ptr<GraphType> graph,
+                                          const std::string& graph_yaml_path) {
   auto writer = std::make_unique<ArrowFragmentWriter<GraphType>>(
-      graph, comm_spec, graph_info);
+      graph, comm_spec, graph_yaml_path);
   BOOST_LEAF_CHECK(writer->WriteFragment());
   LOG(INFO) << "[worker-" << comm_spec.worker_id() << "] generate GAR files...";
   return 0;
@@ -89,12 +89,6 @@ int main(int argc, char** argv) {
 
   std::string graph_yaml_path =
       vineyard::ExpandEnvironmentVariables(argv[index++]);
-  auto maybe_graph_info = GraphArchive::GraphInfo::Load(graph_yaml_path);
-  if (maybe_graph_info.has_error()) {
-    LOG(FATAL) << "Error: " << maybe_graph_info.status().message();
-  }
-  auto graph_info = maybe_graph_info.value();
-
   int directed = 1;
   if (argc > index) {
     directed = atoi(argv[index]);
@@ -116,7 +110,7 @@ int main(int argc, char** argv) {
       auto loader =
           std::make_unique<GARFragmentLoader<property_graph_types::OID_TYPE,
                                              property_graph_types::VID_TYPE>>(
-              client, comm_spec, graph_info, directed != 0);
+              client, comm_spec, graph_yaml_path, directed != 0);
       vineyard::ObjectID fragment_id = loader->LoadFragment().value();
 
       std::shared_ptr<GraphType> graph =
@@ -125,7 +119,7 @@ int main(int argc, char** argv) {
                 << "]: " << ObjectIDToString(fragment_id);
       traverse_graph(graph,
                      "./xx/output_graph_" + std::to_string(graph->fid()));
-      write_out_to_gar(comm_spec, graph, graph_info);
+      write_out_to_gar(comm_spec, graph, graph_yaml_path);
     }
   }
   grape::FinalizeMPIComm();

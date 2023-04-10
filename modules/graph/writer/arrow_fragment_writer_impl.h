@@ -48,6 +48,20 @@
 namespace vineyard {
 
 template <typename FRAG_T>
+ArrowFragmentWriter<FRAG_T>::ArrowFragmentWriter(
+    const std::shared_ptr<fragment_t>& frag, const grape::CommSpec& comm_spec,
+    const std::string& graph_info_yaml)
+    : frag_(frag), comm_spec_(comm_spec) {
+  // Load graph info.
+  auto maybe_graph_info = GraphArchive::GraphInfo::Load(graph_info_yaml);
+  if (!maybe_graph_info.status().ok()) {
+    LOG(ERROR) << "Failed to load graph info from " << graph_info_yaml;
+  }
+  graph_info_ = std::make_shared<GraphArchive::GraphInfo>(
+      std::move(maybe_graph_info.value()));
+}
+
+template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteFragment() {
   BOOST_LEAF_CHECK(WriteVertices());
   BOOST_LEAF_CHECK(WriteEdges());
@@ -56,7 +70,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteFragment() {
 
 template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertices() {
-  for (auto& item : graph_info_.GetVertexInfos()) {
+  for (auto& item : graph_info_->GetVertexInfos()) {
     std::string label = item.first;
     BOOST_LEAF_CHECK(WriteVertex(label));
   }
@@ -66,7 +80,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertices() {
 template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertex(
     const std::string& label) {
-  auto maybe_vertex_info = graph_info_.GetVertexInfo(label);
+  auto maybe_vertex_info = graph_info_->GetVertexInfo(label);
   if (maybe_vertex_info.has_error()) {
     RETURN_GS_ERROR(ErrorCode::kGraphArError,
                     maybe_vertex_info.status().message());
@@ -89,7 +103,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertex(
                   static_cast<double>(vertex_info.GetChunkSize())));
   }
   GraphArchive::VertexPropertyWriter writer(vertex_info,
-                                            graph_info_.GetPrefix());
+                                            graph_info_->GetPrefix());
   // write vertex data start from chunk index begin
   auto vertex_table = frag_->vertex_data_table(label_id);
   auto st = writer.WriteTable(vertex_table, chunk_index_begin);
@@ -110,7 +124,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertex(
 
 template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteEdges() {
-  for (auto& item : graph_info_.GetEdgeInfos()) {
+  for (auto& item : graph_info_->GetEdgeInfos()) {
     const auto src_label = item.second.GetSrcLabel();
     const auto edge_label = item.second.GetEdgeLabel();
     const auto dst_label = item.second.GetDstLabel();
@@ -124,7 +138,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteEdge(
     const std::string& src_label, const std::string& edge_label,
     const std::string& dst_label) {
   auto maybe_edge_info =
-      graph_info_.GetEdgeInfo(src_label, edge_label, dst_label);
+      graph_info_->GetEdgeInfo(src_label, edge_label, dst_label);
   if (maybe_edge_info.has_error()) {
     RETURN_GS_ERROR(ErrorCode::kGraphArError,
                     maybe_edge_info.status().message());
@@ -236,7 +250,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::writeEdgeImpl(
   auto main_start_chunk_index = main_start_chunk_indices[frag_->fid()];
   auto another_start_chunk_index = another_start_chunk_indices[frag_->fid()];
 
-  GraphArchive::EdgeChunkWriter writer(edge_info, graph_info_.GetPrefix(),
+  GraphArchive::EdgeChunkWriter writer(edge_info, graph_info_->GetPrefix(),
                                        adj_list_type);
   size_t vertex_chunk_num =
       std::ceil(vertices.size() / static_cast<double>(main_vertex_chunk_size));
@@ -340,6 +354,10 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::writeEdgeImpl(
     // write the offset chunks
     if (adj_list_type == GraphArchive::AdjListType::ordered_by_source ||
         adj_list_type == GraphArchive::AdjListType::ordered_by_dest) {
+      while (distance % main_vertex_chunk_size != 0) {
+        RETURN_ON_ARROW_ERROR(offset_builder.Append(edge_offset));
+        ++distance;
+      }
       RETURN_ON_ARROW_ERROR(
           offset_builder.Append(edge_offset));  // append the last offset
       RETURN_ON_ARROW_ERROR(offset_builder.Finish(&offset_columns[0]));

@@ -31,8 +31,6 @@ limitations under the License.
 
 #include "boost/leaf/error.hpp"
 #include "boost/leaf/result.hpp"
-#include "gar/graph_info.h"
-#include "gar/writer/arrow_chunk_writer.h"
 
 #include "grape/worker/comm_spec.h"
 
@@ -44,6 +42,12 @@ limitations under the License.
 
 #include "graph/loader/fragment_loader_utils.h"
 #include "graph/utils/partitioner.h"
+
+namespace GraphArchive {
+class GraphInfo;
+class EdgeInfo;
+enum class AdjListType : std::uint8_t;
+}  // namespace GraphArchive
 
 namespace vineyard {
 
@@ -81,8 +85,7 @@ class ArrowFragmentWriter {
  public:
   ArrowFragmentWriter(const std::shared_ptr<fragment_t>& frag,
                       const grape::CommSpec& comm_spec,
-                      const GraphArchive::GraphInfo& graph_info)
-      : frag_(frag), comm_spec_(comm_spec), graph_info_(graph_info) {}
+                      const std::string& graph_info_yaml);
 
   ~ArrowFragmentWriter() = default;
 
@@ -102,8 +105,8 @@ class ArrowFragmentWriter {
   boost::leaf::result<void> writeEdgeImpl(
       const GraphArchive::EdgeInfo& edge_info, label_id_t src_label_id,
       label_id_t edge_label_id, label_id_t dst_label_id,
-      const std::vector<GraphArchive::IdType>& main_start_chunk_indices,
-      const std::vector<GraphArchive::IdType>& another_start_chunk_indices,
+      const std::vector<int64_t>& main_start_chunk_indices,
+      const std::vector<int64_t>& another_start_chunk_indices,
       const vertex_range_t& vertices, GraphArchive::AdjListType adj_list_type);
 
   boost::leaf::result<void> appendPropertiesToArrowArrayBuilders(
@@ -114,7 +117,7 @@ class ArrowFragmentWriter {
  private:
   std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag_;
   grape::CommSpec comm_spec_;
-  GraphArchive::GraphInfo graph_info_;
+  std::shared_ptr<GraphArchive::GraphInfo> graph_info_;
 };
 
 }  // namespace vineyard

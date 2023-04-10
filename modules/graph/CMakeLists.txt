@@ -109,7 +109,7 @@ if(BUILD_VINEYARD_GRAPH_WITH_GAR)
                                 "${CMAKE_CURRENT_BINARY_DIR}/thirdparty/GraphAr"
         )
         # depends on gar
-        target_link_libraries(vineyard_graph PUBLIC gar)
+        target_link_libraries(vineyard_graph PRIVATE gar)
     endif()
 endif()
 

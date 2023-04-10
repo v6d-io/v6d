@@ -25,6 +25,7 @@ limitations under the License.
 #include <vector>
 
 #include "gar/reader/arrow_chunk_reader.h"
+#include "gar/utils/general_params.h"
 
 #include "graph/fragment/property_graph_utils.h"
 #include "graph/fragment/property_graph_utils_impl.h"
@@ -44,12 +45,21 @@ namespace vineyard {
 
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
-constexpr const char*
-    GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::SRC_COL_NAME;
-template <typename OID_T, typename VID_T,
-          template <typename, typename> class VERTEX_MAP_T>
-constexpr const char*
-    GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::DST_COL_NAME;
+GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::GARFragmentLoader(
+    Client& client, const grape::CommSpec& comm_spec,
+    const std::string& graph_info_yaml, bool directed, bool generate_eid)
+    : client_(client),
+      comm_spec_(comm_spec),
+      directed_(directed),
+      generate_eid_(generate_eid) {
+  // Load graph info.
+  auto maybe_graph_info = GraphArchive::GraphInfo::Load(graph_info_yaml);
+  if (!maybe_graph_info.status().ok()) {
+    LOG(ERROR) << "Failed to load graph info from " << graph_info_yaml;
+  }
+  graph_info_ = std::make_shared<GraphArchive::GraphInfo>(
+      std::move(maybe_graph_info.value()));
+}
 
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
@@ -112,7 +122,7 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadEdgeTables() {
   csr_edge_tables_with_label_.resize(edge_label_num_);
   csc_edge_tables_with_label_.resize(edge_label_num_);
   // read the adj list chunk tables
-  for (const auto& edge : graph_info_.GetEdgeInfos()) {
+  for (const auto& edge : graph_info_->GetEdgeInfos()) {
     const auto& edge_info = edge.second;
     if (edge_info.ContainAdjList(
             GraphArchive::AdjListType::ordered_by_source)) {
@@ -173,7 +183,7 @@ template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 boost::leaf::result<void>
 GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::distributeVertices() {
-  for (const auto& item : graph_info_.GetVertexInfos()) {
+  for (const auto& item : graph_info_->GetVertexInfos()) {
     const auto& label = item.first;
     const auto& vertex_info = item.second;
     if (std::find(vertex_labels_.begin(), vertex_labels_.end(), label) !=
@@ -183,7 +193,7 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::distributeVertices() {
     vertex_labels_.push_back(label);
     vertex_chunk_sizes_.push_back(vertex_info.GetChunkSize());
     auto chunk_num = GraphArchive::utils::GetVertexChunkNum(
-        graph_info_.GetPrefix(), vertex_info);
+        graph_info_->GetPrefix(), vertex_info);
     RETURN_GS_ERROR_IF_NOT_OK(chunk_num.status());
     int64_t bsize = chunk_num.value() / static_cast<int64_t>(comm_spec_.fnum());
     vertex_chunk_begin_of_frag_[label].resize(comm_spec_.fnum() + 1, 0);
@@ -198,7 +208,7 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::distributeVertices() {
     vertex_label_to_index_[vertex_labels_[i]] = i;
   }
 
-  for (const auto& item : graph_info_.GetEdgeInfos()) {
+  for (const auto& item : graph_info_->GetEdgeInfos()) {
     auto& edge_info = item.second;
     // record edge label
     const auto& edge_label = edge_info.GetEdgeLabel();
@@ -264,7 +274,7 @@ template <typename OID_T, typename VID_T,
 boost::leaf::result<void>
 GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadVertexTableOfLabel(
     const std::string& vertex_label) {
-  auto maybe_vertex_info = graph_info_.GetVertexInfo(vertex_label);
+  auto maybe_vertex_info = graph_info_->GetVertexInfo(vertex_label);
   RETURN_GS_ERROR_IF_NOT_OK(maybe_vertex_info.status());
   auto& vertex_info = maybe_vertex_info.value();
   const auto& label = vertex_info.GetLabel();
@@ -290,8 +300,8 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadVertexTableOfLabel(
     for (int64_t i = 0; i < thread_num; ++i) {
       threads[i] = std::thread([&]() -> boost::leaf::result<void> {
         auto maybe_reader =
-            GraphArchive::ConstructVertexPropertyArrowChunkReader(graph_info_,
-                                                                  label, pg);
+            GraphArchive::ConstructVertexPropertyArrowChunkReader(
+                *(graph_info_.get()), label, pg);
         RETURN_GS_ERROR_IF_NOT_OK(maybe_reader.status());
         auto& reader = maybe_reader.value();
         while (true) {
@@ -348,6 +358,7 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadEdgeTableOfLabel(
 
   int64_t vertex_chunk_begin = 0;
   int64_t vertex_chunk_num_of_fragment = 0;
+  int64_t edge_chunk_size = edge_info.GetChunkSize();
   int64_t vertex_chunk_size;
   if (adj_list_type == GraphArchive::AdjListType::ordered_by_source) {
     vertex_chunk_begin =
@@ -381,7 +392,8 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadEdgeTableOfLabel(
     threads[i] = std::thread([&]() -> boost::leaf::result<void> {
       auto maybe_offset_reader =
           GraphArchive::ConstructAdjListOffsetArrowChunkReader(
-              graph_info_, src_label, edge_label, dst_label, adj_list_type);
+              *(graph_info_.get()), src_label, edge_label, dst_label,
+              adj_list_type);
       RETURN_GS_ERROR_IF_NOT_OK(maybe_offset_reader.status());
       auto& offset_reader = maybe_offset_reader.value();
       while (true) {
@@ -401,11 +413,11 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadEdgeTableOfLabel(
           offset_arrays[iter] = std::dynamic_pointer_cast<arrow::Int64Array>(
               offset_result.value());
 
-          auto num = GraphArchive::utils::GetEdgeChunkNum(
-              graph_info_.GetPrefix(), edge_info, adj_list_type,
-              vertex_chunk_id);
-          RETURN_GS_ERROR_IF_NOT_OK(num.status());
-          agg_edge_chunk_num[iter] = num.value();
+          // get edge num of this vertex chunk from offset array
+          int64_t edge_num =
+              offset_arrays[iter]->GetView(offset_arrays[iter]->length() - 1);
+          agg_edge_chunk_num[iter] =
+              (edge_num + edge_chunk_size - 1) / edge_chunk_size;
           ++iter;
         }
       }
@@ -439,14 +451,15 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadEdgeTableOfLabel(
   for (int64_t i = 0; i < thread_num; ++i) {
     threads[i] = std::thread([&]() -> boost::leaf::result<void> {
       auto expect = GraphArchive::ConstructAdjListArrowChunkReader(
-          graph_info_, src_label, edge_label, dst_label, adj_list_type);
+          *(graph_info_.get()), src_label, edge_label, dst_label,
+          adj_list_type);
       RETURN_GS_ERROR_IF_NOT_OK(expect.status());
       auto& reader = expect.value();
       std::vector<GraphArchive::AdjListPropertyArrowChunkReader>
           property_readers;
       for (const auto& pg : property_groups) {
         property_readers.emplace_back(edge_info, pg, adj_list_type,
-                                      graph_info_.GetPrefix());
+                                      graph_info_->GetPrefix());
       }
       while (true) {
         int64_t begin = cur.fetch_add(batch_size);
@@ -576,7 +589,8 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::edgesId2Gid(
     std::shared_ptr<arrow::Table> adj_list_table, label_id_t src_label,
     label_id_t dst_label, GraphArchive::AdjListType adj_list_type) {
   std::shared_ptr<arrow::Field> src_gid_field = std::make_shared<arrow::Field>(
-      SRC_COL_NAME, vineyard::ConvertToArrowType<vid_t>::TypeValue());
+      GraphArchive::GeneralParams::kSrcIndexCol,
+      vineyard::ConvertToArrowType<vid_t>::TypeValue());
   std::shared_ptr<arrow::ChunkedArray> src_gid_array;
   bool all_be_local_in_src = false, all_be_local_in_dst = false;
   if (adj_list_type == GraphArchive::AdjListType::ordered_by_source) {
@@ -586,13 +600,16 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::edgesId2Gid(
     all_be_local_in_src = false;
     all_be_local_in_dst = true;
   }
-  auto src_id_array = adj_list_table->GetColumnByName(SRC_COL_NAME);
+  auto src_id_array = adj_list_table->GetColumnByName(
+      GraphArchive::GeneralParams::kSrcIndexCol);
   VY_OK_OR_RAISE(parseIdChunkedArray(src_label, src_id_array,
                                      all_be_local_in_src, src_gid_array));
   std::shared_ptr<arrow::Field> dst_gid_field = std::make_shared<arrow::Field>(
-      DST_COL_NAME, vineyard::ConvertToArrowType<vid_t>::TypeValue());
+      GraphArchive::GeneralParams::kDstIndexCol,
+      vineyard::ConvertToArrowType<vid_t>::TypeValue());
   std::shared_ptr<arrow::ChunkedArray> dst_gid_array;
-  auto dst_id_array = adj_list_table->GetColumnByName(DST_COL_NAME);
+  auto dst_id_array = adj_list_table->GetColumnByName(
+      GraphArchive::GeneralParams::kDstIndexCol);
   VY_OK_OR_RAISE(parseIdChunkedArray(dst_label, dst_id_array,
                                      all_be_local_in_dst, dst_gid_array));
 
