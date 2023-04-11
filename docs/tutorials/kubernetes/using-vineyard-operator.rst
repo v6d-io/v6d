@@ -123,6 +123,12 @@ and the cert-manager is a sub chart of the vineyard operator chart. Also, the
 Vineyard CRDs、Controllers、Webhooks and Scheduler are packaged by `helm`_, you could
 deploy all resources as follows.
 
+.. note::
+
+    The vineyard operator needs permission to create several CRDs and kubernetes
+    resources, before deploying the vineyard operator, please ensure you can create
+    the `clusterrole`_. 
+
 .. code:: bash
 
     $ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
@@ -472,3 +478,4 @@ Step 4: Cleanup
 .. _helm: https://helm.sh/docs/intro/install/
 .. _IPC and RPC: https://v6d.io/notes/data-accessing.html#ipcclient-vs-rpcclient
 .. _vineyard data accessing: https://v6d.io/notes/data-accessing.html
+.. _clusterrole: https://github.com/v6d-io/v6d/blob/main/k8s/config/rbac/role.yaml
