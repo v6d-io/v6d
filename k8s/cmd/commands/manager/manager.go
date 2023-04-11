@@ -49,13 +49,13 @@ var managerExample = util.Examples(`
 	vineyardctl manager
 
 	# start the manager of vineyard operator without webhooks
-	vineyardctl manager --enable-webhook false
+	vineyardctl manager --enable-webhook=false
 
 	# start the manager of vineyard operator without scheduler
-	vineyardctl manager --enable-scheduler false
+	vineyardctl manager --enable-scheduler=false
 
 	# only start the controller
-	vineyardctl manager --enable-webhook false --enable-scheduler false`)
+	vineyardctl manager --enable-webhook=false --enable-scheduler=false`)
 
 // managerCmd starts the manager of vineyard operator
 var managerCmd = &cobra.Command{

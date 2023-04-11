@@ -105,7 +105,9 @@ func (vs *VineyardSchedulerOutsideCluster) Schedule(replica int) (string, error)
 		if err != nil {
 			return "", err
 		}
-		jobToNode[node]++
+		if node != "" {
+			jobToNode[node]++
+		}
 	}
 
 	return vs.buildSchedulerOrder(jobToNode), nil
