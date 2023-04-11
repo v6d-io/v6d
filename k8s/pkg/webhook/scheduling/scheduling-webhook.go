@@ -52,11 +52,13 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 	order := anno["scheduledOrder"]
 
 	jobToNodes := make(map[string]int)
+	allNodes := 0
 
 	for _, o := range strings.Split(order, ",") {
 		n := strings.Split(o, "=")
 		i, _ := strconv.Atoi(n[1])
 		jobToNodes[n[0]] = i
+		allNodes += i
 	}
 
 	kv := strings.Split(selector, "=")
@@ -72,9 +74,26 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 		node := pod.Spec.NodeName
 		if node != "" {
 			jobToNodes[node]--
+			allNodes--
 		}
 	}
 
+	// use round-robin to schedule
+	if allNodes <= 0 {
+		// find the node with the least pods
+		max := -100000000
+		node := ""
+		for i := range jobToNodes {
+			if jobToNodes[i] > max {
+				max = jobToNodes[i]
+				// record the node
+				node = i
+			}
+		}
+		pod.Spec.NodeName = node
+	}
+
+	// use best-effort to schedule
 	for i := range jobToNodes {
 		if jobToNodes[i] > 0 {
 			pod.Spec.NodeName = i

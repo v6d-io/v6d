@@ -4,6 +4,7 @@ go 1.19
 
 require (
 	github.com/apache/skywalking-swck/operator v0.0.0-20230223155451-06aeb614fca1
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/cert-manager/cert-manager v1.8.0
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-logr/logr v1.2.2
@@ -39,7 +40,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/coreos/go-semver v0.3.0 // indirect
 	github.com/coreos/go-systemd/v22 v22.3.2 // indirect
-	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
 	github.com/emicklei/go-restful v2.16.0+incompatible // indirect
@@ -83,7 +83,6 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
-	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/spf13/cast v1.4.1 // indirect

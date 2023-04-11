@@ -248,24 +248,25 @@ e2e-tests-failover: prepare-e2e-test install-vineyard-cluster
 repartition-images: dask-repartition dask-repartition-job1 dask-repartition-job2 dask-worker-with-vineyard
 publish-repartition-images: push-dask-repartition push-dask-repartition-job1 push-dask-repartition-job2 push-dask-worker-with-vineyard
 
+# install a lower version of pandas to avoid the conflict with dask
 dask-repartition:
 	docker build repartition-demo/ -f Dockerfile \
 		--build-arg APP=dask-repartition.py \
-		--build-arg PYPI_DEPENDENCIES="dask==2022.8.1 distributed==2022.8.1 vineyard-dask" \
+		--build-arg PYPI_DEPENDENCIES="pandas==1.4.3 dask==2022.8.1 distributed==2022.8.1 vineyard-dask" \
 		-t $(REGISTRY)/dask-repartition:$(TAG)
 .PHONY: dask-repartition
 
 dask-repartition-job1:
 	docker build repartition-demo/ -f Dockerfile \
 		--build-arg APP=job1.py \
-		--build-arg PYPI_DEPENDENCIES="dask==2022.8.1 distributed==2022.8.1 lz4 vineyard-dask" \
+		--build-arg PYPI_DEPENDENCIES="pandas==1.4.3 dask==2022.8.1 distributed==2022.8.1 lz4 vineyard-dask" \
 		-t $(REGISTRY)/dask-repartition-job1:$(TAG)
 .PHONY: dask-repartition-job1
 
 dask-repartition-job2:
 	docker build repartition-demo/ -f Dockerfile \
 		--build-arg APP=job2.py \
-		--build-arg PYPI_DEPENDENCIES="dask==2022.8.1 distributed==2022.8.1 lz4 vineyard-dask" \
+		--build-arg PYPI_DEPENDENCIES="pandas==1.4.3 dask==2022.8.1 distributed==2022.8.1 lz4 vineyard-dask" \
 		-t $(REGISTRY)/dask-repartition-job2:$(TAG)
 .PHONY: dask-repartition-job2
 

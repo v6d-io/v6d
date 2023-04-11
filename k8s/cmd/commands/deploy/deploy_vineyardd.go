@@ -16,6 +16,10 @@ limitations under the License.
 package deploy
 
 import (
+	"strings"
+	"time"
+
+	"github.com/avast/retry-go"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -140,8 +144,21 @@ var deployVineyarddCmd = &cobra.Command{
 				return vineyardd.Status.ReadyReplicas == int32(vineyardd.Spec.Replicas)
 			}
 		}
-		if err := util.Create(client, vineyardd, waitVineyarddFuc); err != nil {
-			log.Fatal(err, "failed to create/wait vineyardd")
+		if err := retry.Do(
+			func() error {
+				err := util.Create(client, vineyardd, waitVineyarddFuc)
+				if err != nil {
+					return errors.Wrap(err, "failed to create vineyardd")
+				}
+				return nil
+			},
+			retry.RetryIf(func(err error) bool {
+				return strings.Contains(err.Error(), "connection refused") ||
+					strings.Contains(err.Error(), "EOF")
+			}),
+			retry.Delay(5*time.Second),
+		); err != nil {
+			log.Fatal(err, "failed to retry applying vineyardd")
 		}
 
 		log.Info("Vineyardd is ready.")

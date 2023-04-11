@@ -51,7 +51,7 @@ fi
 # install gomplate
 if ! command -v gomplate &> /dev/null; then
     @echo "installing gomplate..."
-    wget https://github.com/hairyhenderson/gomplate/releases/download/v3.11.3/gomplate_${OS}-${ARCH} &&  \
+    wget -q https://github.com/hairyhenderson/gomplate/releases/download/v3.11.3/gomplate_${OS}-${ARCH} &&  \
     chmod +x ./gomplate_${OS}-${ARCH} && mv ./gomplate_${OS}-${ARCH} ${INSTALL_DIR}/gomplate
     if [ $? -ne 0 ]; then
         @echo "unable to install gomplate, please check."
