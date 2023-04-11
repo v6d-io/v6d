@@ -146,9 +146,7 @@ var deployVineyarddCmd = &cobra.Command{
 		}
 		if err := retry.Do(
 			func() error {
-				if err := util.Create(client, vineyardd, waitVineyarddFuc); err != nil {
-					log.Fatal(err, "failed to create/wait vineyardd")
-				}
+				err := util.Create(client, vineyardd, waitVineyarddFuc)
 				if err != nil {
 					return errors.Wrap(err, "failed to create vineyardd")
 				}
