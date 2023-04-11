@@ -28,6 +28,7 @@
 
 #include "server/memory/malloc.h"
 
+#include <dlfcn.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 
@@ -71,6 +72,55 @@ static ptrdiff_t pointer_distance(void const* pfrom, void const* pto) {
   return (unsigned char const*) pto - (unsigned char const*) pfrom;
 }
 
+namespace detail {
+
+#ifdef __linux__
+struct memfd_create_compat {
+  memfd_create_compat() {
+    handle_ = dlopen(NULL, RTLD_NOW);
+    if (handle_) {
+      memfd_create_fn =
+          (int (*)(const char*, unsigned int)) dlsym(handle_, "memfd_create");
+    }
+  }
+
+  inline int operator()() {
+    if (memfd_create_fn) {
+      std::string file_template = "vineyard-bulk-XXXXXX";
+      std::vector<char> file_name(file_template.begin(), file_template.end());
+      file_name.push_back('\0');
+      return memfd_create_fn(&file_name[0], 0);
+    } else {
+      std::string file_template = "/dev/shm/vineyard-bulk-XXXXXX";
+      std::vector<char> file_name(file_template.begin(), file_template.end());
+      file_name.push_back('\0');
+      int fd = mkstemp(&file_name[0]);
+      if (fd < 0) {
+        return fd;
+      }
+      if (unlink(&file_name[0]) != 0) {
+        LOG(ERROR) << "failed to unlink file " << &file_name[0];
+        close(fd);
+        return -1;
+      }
+      return fd;
+    }
+  }
+
+  ~memfd_create_compat() {
+    if (handle_) {
+      dlclose(handle_);
+    }
+  }
+
+ private:
+  void* handle_ = nullptr;
+  int (*memfd_create_fn)(const char* name, unsigned int flags) = nullptr;
+};
+#endif
+
+}  // namespace detail
+
 // Create a buffer. This is creating a temporary file and then
 // immediately unlinking it so we do not leave traces in the system.
 int create_buffer(int64_t size, bool memory) {
@@ -82,7 +132,7 @@ int create_buffer(int64_t size, bool memory) {
     fd = -1;
   }
 
-#else  // _WIN32
+#else             // _WIN32
 
   /**
    * Notes [memfd_create vs. mkstemp]
@@ -101,36 +151,38 @@ int create_buffer(int64_t size, bool memory) {
    * [1]: https://dvdhrm.wordpress.com/2014/06/10/memfd_create2/
    */
 
-  // directory where to create the memory-backed file
-#ifdef __linux__
-  std::string file_template;
-  if (memory) {
-    file_template = "vineyard-bulk-XXXXXX";
-  } else {
-    file_template = "/tmp/vineyard-bulk-XXXXXX";
-  }
-#else
-  // macos: use `/tmp` directly
+  // directory where to create the memory-backed file:
+  // on macos or disk-backed on linux
   std::string file_template = "/tmp/vineyard-bulk-XXXXXX";
-#endif
+
   std::vector<char> file_name(file_template.begin(), file_template.end());
   file_name.push_back('\0');
 #ifdef __linux__  // see also: Notes [memfd_create vs. mkstemp]
-  fd = memfd_create(&file_name[0], 0);
+  if (memory) {
+    static detail::memfd_create_compat memfd_create_compat;
+    fd = memfd_create_compat();
+  } else {
+    fd = mkstemp(&file_name[0]);
+  }
 #else
   fd = mkstemp(&file_name[0]);
-#endif
+#endif            // __linux__
+
   if (fd < 0) {
     LOG(ERROR) << "create_buffer failed to open file " << &file_name[0];
     return -1;
   }
+
   // Immediately unlink the file so we do not leave traces in the system.
-#ifndef __linux__  // see also: Notes [memfd_create vs. mkstemp]
+#ifdef __linux__  // see also: Notes [memfd_create vs. mkstemp]
+  if (!memory && unlink(&file_name[0]) != 0) {
+#else
   if (unlink(&file_name[0]) != 0) {
+#endif
     LOG(ERROR) << "failed to unlink file " << &file_name[0];
     return -1;
   }
-#endif
+
   if (true) {
     // Increase the size of the file to the desired size. This seems not to be
     // needed for files that are backed by the huge page fs, see also

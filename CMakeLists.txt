@@ -656,6 +656,7 @@ if(BUILD_VINEYARD_SERVER)
     target_add_debuginfo(vineyardd)
     target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD)
     target_link_libraries(vineyardd PRIVATE ${Boost_LIBRARIES}
+                                            ${CMAKE_DL_LIBS}
                                             ${CPPREST_LIB}
                                             ${ETCD_CPP_LIBRARIES}
                                             ${GFLAGS_LIBRARIES}
