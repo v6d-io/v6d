@@ -15,7 +15,7 @@ their respective ``Feature`` vectors. Each record in the transaction table indic
 a user purchasing a product, with a ``Fraud`` label identifying whether the
 transaction is fraudulent. Additional features related to these transactions are also
 stored in the transaction table. You can find the three tables in the `dataset repo`_.
-Follow the steps below to reproduce the demonstration.First, create a vineyard cluster
+Follow the steps below to reproduce the demonstration. First, create a vineyard cluster
 with 3 worker nodes.
 
 .. code:: bash
@@ -179,6 +179,16 @@ The `prepare-data` job primarily reads the datasets and distributes them across 
 Vineyard nodes. For more information, please refer to the `prepare data code`_. To apply
 the job, follow the steps below:
 
+.. note::
+
+    The `prepare-data` job needs to exec into the other pods. Therefore, you need to
+    create a service account and bind it to the role under the namespace.
+    Please make sure you can have permission to create the following role.
+    
+    - apiGroups: [""]
+      resources: ["pods", "pods/log", "pods/exec"]
+      verbs: ["get", "patch", "delete", "create", "watch", "list"]
+
 .. code:: bash
 
     $ kubectl create ns vineyard-job && \
@@ -196,6 +206,31 @@ the job, follow the steps below:
         job.batch/prepare-data created
         serviceaccount/prepare-data created
         job.batch/prepare-data condition met
+
+.. note::
+
+    The `process-data` job needs to create a new namespace and deploy several kubernetes 
+    resources in it. Please make sure you can have permission to create the following role.
+
+    - apiGroups: [""]
+      resources: ["pods", "pods/exec", "pods/log", "endpoints", "services"]
+      verbs: ["get", "patch", "delete", "create", "watch", "list"]
+    - apiGroups: [""]
+      resources: ["namespaces"]
+      verbs: ["get", "create", "delete"]
+    - apiGroups: [""]
+      resources: ["nodes"]
+      verbs: ["get", "list"]
+    - apiGroups: ["rbac.authorization.k8s.io"]
+      resources: ["roles", "rolebindings"]
+      verbs: ["patch", "get", "create", "delete"]
+    - apiGroups: ["apps"]
+      resources: ["deployments"]
+      verbs: ["create"]
+
+    Notice, the `process-data` job will require lots of permissions to deal 
+    kubernetes resources, so please check the image of `process-data` job 
+    if it is an official one.
 
 The `prepare-data` job creates numerous dataframes in Vineyard. To combine these dataframes,
 we use the appropriate join method in `mars`_. For more details, refer to the `process data
