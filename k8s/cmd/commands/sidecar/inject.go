@@ -16,18 +16,14 @@ limitations under the License.
 package sidecar
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"go.uber.org/multierr"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -85,17 +81,10 @@ func getEtcdConfig() k8s.EtcdConfig {
 }
 
 func GetWorkloadObj(workload string) (*unstructured.Unstructured, error) {
-	decoder := util.Deserializer()
-	obj, _, err := decoder.Decode([]byte(workload), nil, nil)
+	unstructuredObj, err := util.ParseManifestToObject(workload)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode the workload")
+		return nil, errors.Wrap(err, "failed to parse the workload")
 	}
-
-	proto, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to convert the workload to unstructured")
-	}
-	unstructuredObj := &unstructured.Unstructured{Object: proto}
 
 	// check if the workload is valid
 	_, found, err := unstructured.NestedMap(unstructuredObj.Object, "spec", "template")
@@ -120,7 +109,7 @@ func getSidecarLabelSelector() []k8s.ServiceLabelSelector {
 }
 
 func GetManifestFromTemplate(workload string) ([]string, error) {
-	objects := []*unstructured.Unstructured{}
+	objects := make([]*unstructured.Unstructured, 0)
 	manifests := []string{}
 	yamls := []string{}
 
@@ -140,11 +129,6 @@ func GetManifestFromTemplate(workload string) ([]string, error) {
 		return manifests, errors.Wrap(err, "failed to get sidecar manifests")
 	}
 
-	vineyardManifests, err := templates.GetFilesRecursive("vineyardd")
-	if err != nil {
-		return manifests, errors.Wrap(err, "failed to get vineyardd manifests")
-	}
-
 	tmplFunc := map[string]interface{}{
 		"getEtcdConfig":           getEtcdConfig,
 		"getServiceLabelSelector": getSidecarLabelSelector,
@@ -158,16 +142,12 @@ func GetManifestFromTemplate(workload string) ([]string, error) {
 	objects = append(objects, objs...)
 
 	// set up the service for etcd
-	for _, vf := range vineyardManifests {
-		if vf == "vineyardd/etcd-service.yaml" || vf == "vineyardd/service.yaml" {
-			obj, err := util.RenderManifestAsObj(vf, sidecar, tmplFunc)
-			if err != nil {
-				return manifests, errors.Wrap(err,
-					fmt.Sprintf("failed to render manifest %s", vf))
-			}
-			objects = append(objects, obj)
-		}
+	files := []string{"vineyardd/etcd-service.yaml", "vineyardd/service.yaml"}
+	objs, err = util.BuildObjsFromVineyarddManifests(files, sidecar, tmplFunc)
+	if err != nil {
+		return manifests, errors.Wrap(err, "failed to build vineyardd objects")
 	}
+	objects = append(objects, objs...)
 
 	// set up the vineyard sidecar
 	for _, sf := range sidecarManifests {
@@ -203,7 +183,6 @@ func buildSidecar(namespace string) (*v1alpha1.Sidecar, error) {
 	opts := &flags.SidecarOpts
 	envs := &flags.VineyardContainerEnvs
 
-	spillPVandPVC := flags.VineyardSpillPVandPVC
 	if len(*envs) != 0 {
 		vineyardContainerEnvs, err := util.ParseEnvs(*envs)
 		if err != nil {
@@ -213,18 +192,14 @@ func buildSidecar(namespace string) (*v1alpha1.Sidecar, error) {
 			vineyardContainerEnvs...)
 	}
 
+	spillPVandPVC := flags.VineyardSpillPVandPVC
 	if spillPVandPVC != "" {
-		spillPVandPVCJson, err := util.ConvertToJson(spillPVandPVC)
+		pv, pvc, err := util.GetPVAndPVC(spillPVandPVC)
 		if err != nil {
-			return nil, errors.Wrap(err,
-				"failed to convert the pv and pvc of backup to json")
+			return nil, errors.Wrap(err, "failed to get pv and pvc of spill config")
 		}
-		spillPVSpec, spillPVCSpec, err := util.ParsePVandPVCSpec(spillPVandPVCJson)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse the pv and pvc of backup")
-		}
-		opts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *spillPVSpec
-		opts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *spillPVCSpec
+		opts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *pv
+		opts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *pvc
 	}
 
 	sidecar := &v1alpha1.Sidecar{
@@ -241,73 +216,13 @@ func buildSidecar(namespace string) (*v1alpha1.Sidecar, error) {
 func InjectSidecarConfig(sidecar *v1alpha1.Sidecar, workloadObj,
 	sidecarObj *unstructured.Unstructured,
 ) error {
-	var errList error
-
-	// get the template spec of the workload
-	spec := workloadObj.Object["spec"].(map[string]interface{})
-	template := spec["template"].(map[string]interface{})
-	templateSpec := template["spec"].(map[string]interface{})
-
-	// get the labels of the workload
-	metadata := template["metadata"].(map[string]interface{})
-	labels := metadata["labels"].(map[string]interface{})
-
-	workloadContainers, err := convertInterfaceToContainers(
-		templateSpec["containers"].([]interface{}))
-	_ = multierr.Append(errList, err)
-
-	if templateSpec["volumes"] == nil {
-		templateSpec["volumes"] = []interface{}{}
-	}
-
-	workloadVolumes, err := convertInterfaceToVolumes(
-		templateSpec["volumes"].([]interface{}))
-	_ = multierr.Append(errList, err)
-
-	// get the containers and volumes of the sidecar
-	sidecarSpec := sidecarObj.Object["spec"].(map[string]interface{})
-	sidecarContainers, err := convertInterfaceToContainers(
-		sidecarSpec["containers"].([]interface{}))
-	_ = multierr.Append(errList, err)
-
-	sidecarVolumes, err := convertInterfaceToVolumes(
-		sidecarSpec["volumes"].([]interface{}))
-	_ = multierr.Append(errList, err)
-
-	injector.InjectSidecar(workloadContainers, workloadVolumes,
-		sidecarContainers, sidecarVolumes, sidecar)
-
-	// add labels to the workload for vineyard rpc service
-	labels[DefaultSidecarLabelName] = DefaultSidecarLabelValue
-	templateSpec["containers"] = workloadContainers
-	templateSpec["volumes"] = workloadVolumes
-	return err
-}
-
-func convertInterfaceToContainers(v []interface{}) (*[]corev1.Container, error) {
-	containers := []corev1.Container{}
-	jsonBytes, err := json.Marshal(v)
+	selector := DefaultSidecarLabelName + "=" + DefaultSidecarLabelValue
+	err := injector.InjectSidecar(workloadObj, sidecarObj, sidecar, selector)
 	if err != nil {
-		return nil, err
+		return errors.Wrap(err, "failed to inject the sidecar")
 	}
 
-	if err = json.Unmarshal(jsonBytes, &containers); err != nil {
-		return nil, err
-	}
-	return &containers, nil
-}
-
-func convertInterfaceToVolumes(v []interface{}) (*[]corev1.Volume, error) {
-	volumes := []corev1.Volume{}
-	jsonBytes, err := json.Marshal(v)
-	if err != nil {
-		return nil, err
-	}
-
-	if err = json.Unmarshal(jsonBytes, &volumes); err != nil {
-		return nil, err
-	}
-	return &volumes, nil
+	return nil
 }
 
 func NewInjectCmd() *cobra.Command {

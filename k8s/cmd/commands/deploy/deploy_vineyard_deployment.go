@@ -31,7 +31,6 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
-	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
 var (
@@ -48,15 +47,6 @@ var (
 	# deploy the vineyard deployment with customized image
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
 	deploy vineyard-deployment --image vineyardd:v0.12.2`)
-
-	vineyarddFileName []string = []string{
-		"vineyardd/deployment.yaml",
-		"vineyardd/service.yaml",
-		"vineyardd/serviceaccount.yaml",
-		"vineyardd/etcd-service.yaml",
-		"vineyardd/spill-pv.yaml",
-		"vineyardd/spill-pvc.yaml",
-	}
 )
 
 // deployVineyardDeploymentCmd build and deploy the yaml file of vineyardd from stdin or file
@@ -135,10 +125,7 @@ func getEtcdConfig() k8s.EtcdConfig {
 // GetObjectsFromTemplate gets kubernetes resources from template for vineyardd
 func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	objects := []*unstructured.Unstructured{}
-	vineyardManifests, err := templates.GetFilesRecursive("vineyardd")
-	if err != nil {
-		return objects, errors.Wrap(err, "failed to get vineyardd manifests")
-	}
+	var err error
 
 	if label != "" {
 		err = parseLabel(label)
@@ -153,12 +140,6 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 		"getEtcdConfig":           getEtcdConfig,
 	}
 
-	files := map[string]bool{}
-	// add the vineyardd template files
-	for _, f := range vineyarddFileName {
-		files[f] = true
-	}
-
 	// build vineyardd
 	vineyardd, err := BuildVineyardManifestFromInput()
 	if err != nil {
@@ -167,30 +148,20 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 
 	// process the vineyard socket
 	v1alpha1.PreprocessVineyarddSocket(vineyardd)
-	for _, f := range vineyardManifests {
-		if _, ok := files[f]; !ok {
-			continue
-		}
-		obj, err := util.RenderManifestAsObj(f, vineyardd, tmplFunc)
-		if err != nil {
-			return objects, err
-		}
-		if obj.GetName() != "" {
-			objects = append(objects, obj)
-		}
-	}
 
-	objs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Namespace,
+	objs, err := util.BuildObjsFromVineyarddManifests([]string{}, vineyardd, tmplFunc)
+	if err != nil {
+		return objects, errors.Wrap(err, "failed to build vineyardd objects")
+	}
+	objects = append(objects, objs...)
+
+	objs, err = util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Namespace,
 		vineyardd.Spec.Etcd.Replicas, vineyardd.Spec.VineyardConfig.Image, vineyardd,
 		tmplFunc)
 	if err != nil {
 		return objects, errors.Wrap(err, "failed to build etcd objects")
 	}
-	for i := range objs {
-		if objs[i].GetName() != "" {
-			objects = append(objects, objs[i])
-		}
-	}
+	objects = append(objects, objs...)
 	return objects, nil
 }
 

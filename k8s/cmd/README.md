@@ -332,9 +332,8 @@ Delete the cert-manager on kubernetes
 
 ### Synopsis
 
-Delete the cert-manager in the cert-manager namespace. You
-should specify the version of deployed cert-manager and the
-default version is v1.9.1.
+Delete the cert-manager in the cert-manager namespace. 
+The default version of cert-manager is v1.9.1.
 
 ```
 vineyardctl delete cert-manager [flags]
@@ -349,16 +348,12 @@ vineyardctl delete cert-manager [flags]
 ```shell
   # delete the default version(v1.9.1) of cert-manager
   vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager
-
-  # delete the specific version of cert-manager
-  vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager -v 1.11.0
 ```
 
 ### Options
 
 ```
-  -h, --help             help for cert-manager
-  -v, --version string   the version of cert-manager (default "1.9.1")
+  -h, --help   help for cert-manager
 ```
 
 ## `vineyardctl delete operation`
@@ -571,10 +566,8 @@ Deploy the cert-manager on kubernetes
 
 ### Synopsis
 
-Deploy the cert-manager in the cert-manager namespace. You could
-specify a stable or development version of the cert-manager and
-we suppose not to create a new namespace to install the
-cert-manager. The default version is v1.9.1.
+Deploy the cert-manager in the cert-manager namespace. The default
+version of cert-manager is v1.9.1.
 
 ```
 vineyardctl deploy cert-manager [flags]
@@ -597,16 +590,12 @@ vineyardctl deploy cert-manager [flags]
   # not ready
   vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager \
     --wait=false
-
-  # install the specific version of cert-manager
-  vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager -v 1.11.0
 ```
 
 ### Options
 
 ```
-  -h, --help             help for cert-manager
-  -v, --version string   the version of cert-manager (default "1.9.1")
+  -h, --help   help for cert-manager
 ```
 
 ## `vineyardctl deploy operator`
@@ -960,13 +949,13 @@ vineyardctl manager [flags]
   vineyardctl manager
 
   # start the manager of vineyard operator without webhooks
-  vineyardctl manager --enable-webhook false
+  vineyardctl manager --enable-webhook=false
 
   # start the manager of vineyard operator without scheduler
-  vineyardctl manager --enable-scheduler false
+  vineyardctl manager --enable-scheduler=false
 
   # only start the controller
-  vineyardctl manager --enable-webhook false --enable-scheduler false
+  vineyardctl manager --enable-webhook=false --enable-scheduler=false
 ```
 
 ### Options
@@ -1135,16 +1124,6 @@ vineyardctl schedule workload [flags]
 ```
 
 ### Options
-
-```
-  -h, --help                         help for workload
-      --resource string              the json string of kubernetes workload
-      --vineyardd-name string        the namespace of vineyard cluster (default "vineyardd-sample")
-      --vineyardd-namespace string   the namespace of vineyard cluster (default "vineyard-system")
-```
-
-
- Options
 
 ```
   -h, --help                         help for workload

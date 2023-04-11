@@ -13,22 +13,23 @@
 # limitations under the License.
 #
 
-{{- $config := getRecoverConfig }}
+{{- $recoverConfig := getRecoverConfig }}
+{{- $failoverConfig := $recoverConfig.FailoverConfig }}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: {{ $config.Name }}
-  namespace: {{ $config.Namespace }}
+  name: {{ $recoverConfig.Name }}
+  namespace: {{ $failoverConfig.Namespace }}
 spec:
-  parallelism: {{ $config.Replicas }}
+  parallelism: {{ $failoverConfig.Replicas }}
   ttlSecondsAfterFinished: 80
   template:
     metadata:
       labels:
         app.kubernetes.io/name: {{ .Name }}
-        scheduling.k8s.v6d.io/vineyardd-namespace: {{ $config.VineyarddNamespace }}
-        scheduling.k8s.v6d.io/vineyardd: {{ $config.VineyarddName }}
-        scheduling.k8s.v6d.io/job: {{ $config.Name }}
+        scheduling.k8s.v6d.io/vineyardd-namespace: {{ $failoverConfig.VineyarddNamespace }}
+        scheduling.k8s.v6d.io/vineyardd: {{ $failoverConfig.VineyarddName }}
+        scheduling.k8s.v6d.io/job: {{ $recoverConfig.Name }}
     spec:
       schedulerName: vineyard-scheduler
       containers:
@@ -37,13 +38,13 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: RECOVER_PATH
-          value: {{  $config.RecoverPath }}
+          value: {{  $failoverConfig.Path }}
         - name: ENDPOINT
-          value: {{ $config.Endpoint  }}
+          value: {{ $failoverConfig.Endpoint  }}
         - name: SELECTOR
           value: {{ .Name }}
         - name: ALLINSTANCES
-          value: "{{ $config.Allinstances }}"
+          value: "{{ $failoverConfig.Allinstances }}"
         - name: POD_NAME
           valueFrom:
             fieldRef:
@@ -55,16 +56,16 @@ spec:
         volumeMounts:
         - mountPath: /var/run
           name: vineyard-sock
-        - mountPath: {{  $config.RecoverPath }}
+        - mountPath: {{  $failoverConfig.Path }}
           name: recover-path
       volumes:
       - name: vineyard-sock
         hostPath:
           # The path should be changed to the path provided by users.
-          path: {{ $config.VineyardSockPath }}
+          path: {{ $failoverConfig.VineyardSockPath }}
       - name: recover-path
         persistentVolumeClaim:
-          claimName: {{ $config.BackupPVCName }}
+          claimName: {{ $recoverConfig.BackupPVCName }}
       restartPolicy: Never
       affinity:
         podAntiAffinity:
@@ -74,5 +75,5 @@ spec:
                   - key: app.kubernetes.io/name
                     operator: In
                     values:
-                     - {{ $config.Name }}
+                     - {{ $recoverConfig.Name }}
               topologyKey: "kubernetes.io/hostname"

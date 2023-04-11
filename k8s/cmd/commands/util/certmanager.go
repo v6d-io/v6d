@@ -16,32 +16,26 @@ limitations under the License.
 package util
 
 import (
-	"fmt"
-	"io"
-	"net/http"
-
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
+	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
-// GetCertManagerURL get the url of cert-manager
-func GetCertManagerURL() string {
-	return fmt.Sprintf(
-		"https://github.com/cert-manager/cert-manager/releases/download/v%s/cert-manager.yaml",
-		flags.CertManagerVersion,
-	)
-}
-
-// GetCertManagerManifests get the manifests from the url
-func GetCertManagerManifests(certManagerManifestURL string) (Manifests, error) {
-	resp, err := http.Get(certManagerManifestURL)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	manifests, err := io.ReadAll(resp.Body)
+// getCertManagerManifestsFromLocal get the manifests from local
+func getCertManagerManifestsFromLocal() (Manifests, error) {
+	repo := templates.Repo
+	manifests, err := repo.ReadFile("certmanager/cert-manager.yaml")
 	if err != nil {
 		return nil, err
 	}
 	return ParseManifestsToObjects(manifests)
+}
+
+// GetCertManager get the cert-manager manifests
+func GetCertManager() (Manifests, error) {
+	certManagerManifests, err := getCertManagerManifestsFromLocal()
+	if err != nil {
+		log.Fatal(err, "failed to get cert-manager manifests from local")
+	}
+
+	return certManagerManifests, nil
 }

@@ -18,23 +18,18 @@ package delete
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
 	deleteCertManagerLong = util.LongDesc(`
-	Delete the cert-manager in the cert-manager namespace. You
-	should specify the version of deployed cert-manager and the
-	default version is v1.9.1.`)
+	Delete the cert-manager in the cert-manager namespace. 
+	The default version of cert-manager is v1.9.1.`)
 
 	deleteCertManagerExample = util.Examples(`
 	# delete the default version(v1.9.1) of cert-manager
-	vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager
-
-	# delete the specific version of cert-manager
-	vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager -v 1.11.0`)
+	vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager`)
 )
 
 // deleteCertManagerCmd deletes the vineyard operator on kubernetes
@@ -47,7 +42,7 @@ var deleteCertManagerCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
-		certManagerManifests, err := util.GetCertManagerManifests(util.GetCertManagerURL())
+		certManagerManifests, err := util.GetCertManager()
 		if err != nil {
 			log.Fatal(err, "failed to get cert-manager manifests")
 		}
@@ -62,8 +57,4 @@ var deleteCertManagerCmd = &cobra.Command{
 
 func NewDeleteCertManagerCmd() *cobra.Command {
 	return deleteCertManagerCmd
-}
-
-func init() {
-	flags.ApplyCertManagerOpts(deleteCertManagerCmd)
 }

@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -115,32 +114,21 @@ func (r *OperationReconciler) UpdateStatus(
 	status := &v1alpha1.OperationStatus{
 		State: state,
 	}
-	if err := r.applyStatusUpdate(ctx, op, status); err != nil {
+	if err := ApplyStatueUpdate(ctx, r.Client, op, r.Status(),
+		func(op *v1alpha1.Operation) (error, *v1alpha1.Operation) {
+			op.Status = *status
+			op.Kind = "Operation"
+
+			if err := swckkube.ApplyOverlay(op, &v1alpha1.Operation{Status: *status}); err != nil {
+				return errors.Wrap(err, "failed to overlay operation's status"), nil
+			}
+			return nil, op
+		},
+	); err != nil {
 		return errors.Wrap(err, "failed to update status")
 	}
+
 	return nil
-}
-
-func (r *OperationReconciler) applyStatusUpdate(
-	ctx context.Context,
-	op *v1alpha1.Operation,
-	status *v1alpha1.OperationStatus,
-) error {
-	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		if err := r.Get(ctx, client.ObjectKey{Name: op.Name, Namespace: op.Namespace}, op); err != nil {
-			return errors.Wrap(err, "failed to get operation")
-		}
-		op.Status = *status
-		op.Kind = "Operation"
-
-		if err := swckkube.ApplyOverlay(op, &v1alpha1.Operation{Status: *status}); err != nil {
-			return errors.Wrap(err, "failed to overlay operation's status")
-		}
-		if err := r.Status().Update(ctx, op); err != nil {
-			return errors.Wrap(err, "failed to update operation's status")
-		}
-		return nil
-	})
 }
 
 // SetupWithManager sets up the controller with the Manager.

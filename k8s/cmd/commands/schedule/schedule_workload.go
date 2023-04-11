@@ -22,10 +22,7 @@ import (
 	"github.com/spf13/cobra"
 
 	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -122,13 +119,13 @@ var scheduleWorkloadCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 
-		v, err := validateWorkload(flags.Resource)
+		obj, v, err := getWorkload(flags.Resource)
 		if err != nil || !v {
 			log.Fatal(err, "failed to validate the workload")
 		}
 		client := util.KubernetesClient()
 
-		workload, err := SchedulingWorkload(client)
+		workload, err := SchedulingWorkload(client, obj)
 		if err != nil {
 			log.Fatal(err, "failed to schedule workload")
 		}
@@ -162,75 +159,50 @@ func ValidateWorkloadKind(kind string) bool {
 	return !isWorkload
 }
 
-func validateWorkload(workload string) (bool, error) {
+func getWorkload(workload string) (*unstructured.Unstructured, bool, error) {
 	isWorkload := true
-	decoder := util.Deserializer()
-	obj, _, err := decoder.Decode([]byte(workload), nil, nil)
+	obj, err := util.ParseManifestToObject(workload)
 	if err != nil {
-		return isWorkload, errors.Wrap(err, "failed to decode the workload")
+		return obj, isWorkload, errors.Wrap(err, "failed to parse the workload")
 	}
 	kind := obj.GetObjectKind().GroupVersionKind().Kind
-	return ValidateWorkloadKind(kind), nil
+	return obj, ValidateWorkloadKind(kind), nil
 }
 
 // SchedulingWorkload is used to schedule the workload to the vineyard cluster
 // and add the podAffinity to the workload
-func SchedulingWorkload(c client.Client) (string, error) {
-	resource := flags.Resource
+func SchedulingWorkload(c client.Client,
+	unstructuredObj *unstructured.Unstructured) (string, error) {
 	name := client.ObjectKey{Name: flags.VineyarddName, Namespace: flags.VineyarddNamespace}
 	deployment := appsv1.Deployment{}
 	if err := c.Get(context.TODO(), name, &deployment); err != nil {
 		return "", errors.Wrap(err, "failed to get the deployment")
 	}
 	value := flags.VineyarddNamespace + "-" + flags.VineyarddName
-	newPodAffinity := corev1.PodAffinity{
-		RequiredDuringSchedulingIgnoredDuringExecution: []corev1.PodAffinityTerm{
-			{
-				LabelSelector: &metav1.LabelSelector{
-					MatchExpressions: []metav1.LabelSelectorRequirement{
-						{
-							Key:      "app.kubernetes.io/instance",
-							Operator: metav1.LabelSelectorOpIn,
-							Values:   []string{value},
-						},
+
+	requiredDuringSchedulingIgnoredDuringExecution := []interface{}{
+		map[string]interface{}{
+			"labelSelector": map[string]interface{}{
+				"matchExpressions": []interface{}{
+					map[string]interface{}{
+						"key":      "app.kubernetes.io/instance",
+						"operator": "In",
+						"values":   []interface{}{value},
 					},
 				},
-				TopologyKey: "kubernetes.io/hostname",
 			},
 		},
 	}
 
-	decoder := util.Deserializer()
-	obj, _, err := decoder.Decode([]byte(resource), nil, nil)
+	var required []interface{}
+	required, _, _ = unstructured.NestedSlice(unstructuredObj.Object,
+		"spec", "template", "spec", "affinity", "podAffinity", "requiredDuringSchedulingIgnoredDuringExecution")
+	required = append(required, requiredDuringSchedulingIgnoredDuringExecution...)
+
+	err := unstructured.SetNestedSlice(unstructuredObj.Object, required,
+		"spec", "template", "spec", "affinity", "podAffinity", "requiredDuringSchedulingIgnoredDuringExecution")
 	if err != nil {
-		return "", errors.Wrap(err, "failed to decode the workload")
-	}
-
-	proto, err := runtime.DefaultUnstructuredConverter.ToUnstructured(obj)
-	if err != nil {
-		return "", errors.Wrap(err, "failed to convert the workload to unstructured")
-	}
-
-	unstructuredObj := &unstructured.Unstructured{Object: proto}
-	template := unstructuredObj.Object["spec"].(map[string]interface{})["template"].(map[string]interface{})
-	spec := template["spec"].(map[string]interface{})
-	if spec["affinity"] == nil {
-		spec["affinity"] = make(map[string]interface{})
-	}
-
-	affinity := spec["affinity"].(map[string]interface{})
-	if affinity["podAffinity"] == nil {
-		affinity["podAffinity"] = newPodAffinity
-	} else {
-		podAffinity := affinity["podAffinity"].(map[string]interface{})
-		if podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] == nil {
-			podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] = newPodAffinity.RequiredDuringSchedulingIgnoredDuringExecution
-		} else {
-			required := podAffinity["requiredDuringSchedulingIgnoredDuringExecution"].([]interface{})
-			required = append(required,
-				newPodAffinity.RequiredDuringSchedulingIgnoredDuringExecution)
-			podAffinity["requiredDuringSchedulingIgnoredDuringExecution"] = required
-		}
+		return "", errors.Wrap(err, "failed to set the nested slice")
 	}
 
 	ss, err := unstructuredObj.MarshalJSON()

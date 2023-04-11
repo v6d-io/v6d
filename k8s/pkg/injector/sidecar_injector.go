@@ -17,28 +17,158 @@ limitations under the License.
 package injector
 
 import (
-	corev1 "k8s.io/api/core/v1"
+	"fmt"
+	"strings"
 
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/pkg/errors"
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 )
 
-// SleepCommand is the command to wait for the sidecar container to be ready.
-var SleepCommand = "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;"
+var (
+	// SleepCommand is the command to wait for the sidecar container to be ready.
+	SleepCommand = "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;"
 
-// InjectSidecar injects the vineyard sidecar into the containers of workload.
-func InjectSidecar(workloadContainers *[]corev1.Container,
-	workloadVolumes *[]corev1.Volume,
-	sidecarContainers *[]corev1.Container,
-	sidecarVolumes *[]corev1.Volume,
+	// PodKind is the kind of the kubernetes pod.
+	PodKind = "Pod"
+)
+
+// GetLabels returns the labels of the given unstructured kubernetes object.
+func GetLabels(obj *unstructured.Unstructured) (map[string]string, error) {
+	kind := obj.GetKind()
+	var (
+		labels map[string]string
+		err    error
+	)
+	if kind == PodKind {
+		labels, _, err = unstructured.NestedStringMap(obj.Object, "metadata", "labels")
+	} else {
+		labels, _, err = unstructured.NestedStringMap(obj.Object, "spec", "template", "metadata", "labels")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return labels, nil
+}
+
+// SetLabels sets the labels of the given unstructured kubernetes object.
+func SetLabels(obj *unstructured.Unstructured, labels map[string]string) error {
+	kind := obj.GetKind()
+	var err error
+	if kind == PodKind {
+		err = unstructured.SetNestedStringMap(obj.Object, labels, "metadata", "labels")
+	} else {
+		err = unstructured.SetNestedStringMap(obj.Object, labels, "spec", "template", "metadata", "labels")
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetContainer returns the container interface with the given unstructured kubernetes object.
+func GetContainer(obj *unstructured.Unstructured) ([]interface{}, error) {
+	kind := obj.GetKind()
+	var (
+		containers []interface{}
+		err        error
+	)
+	if kind == PodKind {
+		containers, _, err = unstructured.NestedSlice(obj.Object, "spec", "containers")
+	} else {
+		containers, _, err = unstructured.NestedSlice(obj.Object, "spec", "template", "spec", "containers")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return containers, nil
+}
+
+// SetContainer sets the container with the given unstructured kubernetes object.
+func SetContainer(obj *unstructured.Unstructured, containers []interface{}) error {
+	kind := obj.GetKind()
+	var err error
+	if kind == PodKind {
+		err = unstructured.SetNestedSlice(obj.Object, containers, "spec", "containers")
+	} else {
+		err = unstructured.SetNestedSlice(obj.Object, containers, "spec", "template", "spec", "containers")
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetVolume returns the volume interface with the given unstructured kubernetes object.
+func GetVolume(obj *unstructured.Unstructured) ([]interface{}, error) {
+	kind := obj.GetKind()
+	var (
+		volumes []interface{}
+		err     error
+	)
+	if kind == PodKind {
+		volumes, _, err = unstructured.NestedSlice(obj.Object, "spec", "volumes")
+	} else {
+		volumes, _, err = unstructured.NestedSlice(obj.Object, "spec", "template", "spec", "volumes")
+	}
+	if err != nil {
+		return nil, err
+	}
+	return volumes, nil
+}
+
+// SetVolume sets the volume with the given unstructured kubernetes object.
+func SetVolume(obj *unstructured.Unstructured, volumes []interface{}) error {
+	kind := obj.GetKind()
+	var err error
+	if kind == PodKind {
+		err = unstructured.SetNestedSlice(obj.Object, volumes, "spec", "volumes")
+	} else {
+		err = unstructured.SetNestedSlice(obj.Object, volumes, "spec", "template", "spec", "volumes")
+	}
+
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GetContainersAndVolumes returns the containers and volumes of the given unstructured kubernetes object.
+func GetContainersAndVolumes(obj *unstructured.Unstructured) ([]interface{}, []interface{}, error) {
+	containers, err := GetContainer(obj)
+	if err != nil {
+		return nil, nil, err
+	}
+	volumes, err := GetVolume(obj)
+	if err != nil {
+		return nil, nil, err
+	}
+	return containers, volumes, nil
+}
+
+// injectContainersAndVolumes injects the sidecar containers and volumes into the workload containers and volumes.
+func injectContainersAndVolumes(workloadContainers []interface{},
+	workloadVolumes []interface{},
+	sidecarContainers []interface{},
+	sidecarVolumes []interface{},
 	sidecar *v1alpha1.Sidecar,
-) {
+) ([]interface{}, []interface{}) {
+	var containers []interface{}
+	var volumes []interface{}
 	// add sleep to wait for the sidecar container to be ready
-	for i := range *workloadContainers {
-		if (*workloadContainers)[i].Command == nil {
-			(*workloadContainers)[i].Command = []string{"/bin/sh", "-c"}
+	for i := range workloadContainers {
+		c := workloadContainers[i].(map[string]interface{})
+		sleepCmd := []interface{}{SleepCommand}
+		var commands []interface{}
+		if c["command"] == nil {
+			commands = []interface{}{"/bin/sh", "-c"}
+			commands = append(commands, sleepCmd...)
+		} else {
+			commands = c["command"].([]interface{})
+			commands[len(commands)-1] = fmt.Sprintf("%s%s", SleepCommand, commands[len(commands)-1])
 		}
-		(*workloadContainers)[i].Command = append((*workloadContainers)[i].Command,
-			SleepCommand)
+		c["command"] = commands
 	}
 
 	pvcName := sidecar.Spec.Volume.PvcName
@@ -48,19 +178,66 @@ func InjectSidecar(workloadContainers *[]corev1.Container,
 		mountPath = sidecar.Spec.Volume.MountPath
 	}
 
-	for i := range *workloadContainers {
-		// add volumeMounts to the app container
-		(*workloadContainers)[i].VolumeMounts = append(
-			(*workloadContainers)[i].VolumeMounts,
-			corev1.VolumeMount{
-				Name:      "vineyard-socket",
-				MountPath: mountPath,
-			},
-		)
+	for i := range workloadContainers {
+		c := workloadContainers[i].(map[string]interface{})
+		var volumeMounts []interface{}
+		vm := map[string]interface{}{
+			"name":      "vineyard-socket",
+			"mountPath": mountPath,
+		}
+		if c["volumeMounts"] == nil {
+			volumeMounts = []interface{}{vm}
+		} else {
+			volumeMounts = c["volumeMounts"].([]interface{})
+			volumeMounts = append(volumeMounts, vm)
+		}
+		c["volumeMounts"] = volumeMounts
 	}
 
-	// add the sidecar container
-	*workloadContainers = append(*workloadContainers, (*sidecarContainers)...)
-	// add the sidecar volume
-	*workloadVolumes = append(*workloadVolumes, (*sidecarVolumes)...)
+	containers = append(workloadContainers, sidecarContainers...)
+	volumes = append(workloadVolumes, sidecarVolumes...)
+
+	return containers, volumes
+}
+
+// InjectSidecar injects the sidecar into the given unstructured kubernetes object.
+func InjectSidecar(workload, sidecar *unstructured.Unstructured, s *v1alpha1.Sidecar, selector string) error {
+	workloadContainers, workloadVolumes, err := GetContainersAndVolumes(workload)
+	if err != nil {
+		return errors.Wrap(err, "failed to get containers and volumes from workload")
+	}
+
+	sidecarContainers, sidecarVolumes, err := GetContainersAndVolumes(sidecar)
+	if err != nil {
+		return errors.Wrap(err, "failed to get containers and volumes from sidecar")
+	}
+
+	containers, volumes := injectContainersAndVolumes(workloadContainers,
+		workloadVolumes, sidecarContainers,
+		sidecarVolumes, s)
+
+	err = SetContainer(workload, containers)
+	if err != nil {
+		return err
+	}
+	err = SetVolume(workload, volumes)
+	if err != nil {
+		return err
+	}
+
+	// add selector to the workload
+	if selector != "" {
+		labels, err := GetLabels(workload)
+		if err != nil {
+			return err
+		}
+		s := strings.Split(selector, "=")
+		// add the rpc label selector to the workload
+		labels[s[0]] = s[1]
+		err = SetLabels(workload, labels)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

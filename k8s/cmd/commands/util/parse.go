@@ -75,36 +75,6 @@ func ParseEnvs(envArray []string) ([]corev1.EnvVar, error) {
 	return envs, nil
 }
 
-func ParsePVandPVCSpec(
-	PvAndPvc string,
-) (*corev1.PersistentVolumeSpec, *corev1.PersistentVolumeClaimSpec, error) {
-	var result map[string]interface{}
-	err := json.Unmarshal([]byte(PvAndPvc), &result)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pvSpecStr, err := json.Marshal(result["pv-spec"])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pvcSpecStr, err := json.Marshal(result["pvc-spec"])
-	if err != nil {
-		return nil, nil, err
-	}
-
-	pvSpec, err := ParsePVSpec(string(pvSpecStr))
-	if err != nil {
-		return nil, nil, err
-	}
-	pvcSpec, err := ParsePVCSpec(string(pvcSpecStr))
-	if err != nil {
-		return nil, nil, err
-	}
-	return pvSpec, pvcSpec, nil
-}
-
 // ParsePVSpec parse the json string to corev1.PersistentVolumeSpec
 func ParsePVSpec(pvspec string) (*corev1.PersistentVolumeSpec, error) {
 	// add the spec field to the pvspec string
@@ -141,4 +111,56 @@ func ParsePVCSpec(pvcspec string) (*corev1.PersistentVolumeClaimSpec, error) {
 
 	pvc := obj.(*corev1.PersistentVolumeClaim)
 	return &pvc.Spec, nil
+}
+
+// ParsePVandPVCSpec parse the json string to
+// corev1.PersistentVolumeSpec and corev1.PersistentVolumeClaimSpec
+func ParsePVandPVCSpec(
+	PvAndPvcJSON string,
+) (*corev1.PersistentVolumeSpec, *corev1.PersistentVolumeClaimSpec, error) {
+	var result map[string]interface{}
+	err := json.Unmarshal([]byte(PvAndPvcJSON), &result)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pvSpecStr, err := json.Marshal(result["pv-spec"])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pvcSpecStr, err := json.Marshal(result["pvc-spec"])
+	if err != nil {
+		return nil, nil, err
+	}
+
+	pvSpec, err := ParsePVSpec(string(pvSpecStr))
+	if err != nil {
+		return nil, nil, err
+	}
+	pvcSpec, err := ParsePVCSpec(string(pvcSpecStr))
+	if err != nil {
+		return nil, nil, err
+	}
+	return pvSpec, pvcSpec, nil
+}
+
+// GetPVAndPVC parse the pVAndPVC string to corev1.PersistentVolumeSpec
+// and corev1.PersistentVolumeClaimSpec, then return the relevant fields.
+func GetPVAndPVC(pVAndPVC string) (*corev1.PersistentVolumeSpec,
+	*corev1.PersistentVolumeClaimSpec, error) {
+	var pv *corev1.PersistentVolumeSpec
+	var pvc *corev1.PersistentVolumeClaimSpec
+	if pVAndPVC != "" {
+		json, err := ConvertToJson(pVAndPVC)
+		if err != nil {
+			return pv, pvc, errors.Wrap(err,
+				"failed to convert the pv and pvc to json")
+		}
+		pv, pvc, err = ParsePVandPVCSpec(json)
+		if err != nil {
+			return pv, pvc, errors.Wrap(err, "failed to parse the pv and pvc")
+		}
+	}
+	return pv, pvc, nil
 }

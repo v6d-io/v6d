@@ -27,7 +27,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -39,18 +38,23 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
-// BackupConfig holds all configuration about backup
-type BackupConfig struct {
-	Limit              string
-	Name               string
+// FailoverConfig contains the common configuration about backup and recover
+type FailoverConfig struct {
 	Namespace          string
 	Replicas           int
-	BackupPath         string
+	Path               string
 	VineyarddNamespace string
 	VineyarddName      string
 	Endpoint           string
 	VineyardSockPath   string
 	Allinstances       string
+}
+
+// BackupConfig holds all configuration about backup
+type BackupConfig struct {
+	Name  string
+	Limit string
+	FailoverConfig
 }
 
 // Backup contains the configuration about backup
@@ -92,13 +96,6 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 	logger.Info("Reconciling Backup", "backup", backup)
 
-	// get vineyardd
-	vineyardd := &k8sv1alpha1.Vineyardd{}
-	if err := r.Get(ctx, client.ObjectKey{Namespace: backup.Spec.VineyarddNamespace, Name: backup.Spec.VineyarddName}, vineyardd); err != nil {
-		logger.Error(err, "unable to fetch Vineyardd")
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
-
 	app := kubernetes.Application{
 		Client:   r.Client,
 		FileRepo: templates.Repo,
@@ -112,26 +109,13 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	Backup.Name = "backup-" + backup.Spec.VineyarddName + "-" + backup.Spec.VineyarddNamespace
-	Backup.Namespace = backup.Namespace
-	Backup.Replicas = vineyardd.Spec.Replicas
 	Backup.Limit = strconv.Itoa(backup.Spec.Limit)
-	Backup.VineyarddName = backup.Spec.VineyarddName
-	Backup.VineyarddNamespace = backup.Spec.VineyarddNamespace
-	Backup.BackupPath = backup.Spec.BackupPath
-	utils := operation.ClientUtils{Client: r.Client}
-	socket, err := utils.ResolveRequiredVineyarddSocket(
-		ctx,
-		vineyardd.Name,
-		vineyardd.Namespace,
-		backup.Namespace,
-	)
+	config, err := BuildFailoverConfig(r.Client, &backup)
 	if err != nil {
-		logger.Error(err, "unable to resolve vineyardd socket")
+		logger.Error(err, "unable to build failover config")
 		return ctrl.Result{}, err
 	}
-	Backup.VineyardSockPath = socket
-	Backup.Endpoint = backup.Spec.VineyarddName + "-rpc." + backup.Spec.VineyarddNamespace
-	Backup.Allinstances = strconv.Itoa(vineyardd.Spec.Replicas)
+	Backup.FailoverConfig = config
 
 	if backup.Status.State == "" || backup.Status.State == RunningState {
 		if _, err := app.Apply(ctx, "backup/job.yaml", logger, false); err != nil {
@@ -144,14 +128,6 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 		}
 		if _, err := app.Apply(ctx, "backup/backup-pvc.yaml", logger, false); err != nil {
 			logger.Error(err, "failed to apply backup pv")
-			return ctrl.Result{}, err
-		}
-		if _, err := app.Apply(ctx, "backup/cluster-role.yaml", logger, true); err != nil {
-			logger.Error(err, "failed to apply backup cluster role")
-			return ctrl.Result{}, err
-		}
-		if _, err := app.Apply(ctx, "backup/cluster-role-binding.yaml", logger, true); err != nil {
-			logger.Error(err, "failed to apply backup cluster role binding")
 			return ctrl.Result{}, err
 		}
 		if err := r.UpdateStatus(ctx, &backup); err != nil {
@@ -185,30 +161,19 @@ func (r *BackupReconciler) UpdateStatus(ctx context.Context, backup *k8sv1alpha1
 	status := &k8sv1alpha1.BackupStatus{
 		State: state,
 	}
-	if err := r.applyStatusUpdate(ctx, backup, status); err != nil {
+	if err := ApplyStatueUpdate(ctx, r.Client, backup, r.Status(),
+		func(backup *k8sv1alpha1.Backup) (error, *k8sv1alpha1.Backup) {
+			backup.Status = *status
+			backup.Kind = "Backup"
+			if err := kubernetes.ApplyOverlay(backup, &k8sv1alpha1.Backup{Status: *status}); err != nil {
+				return errors.Wrap(err, "failed to overlay backup's status"), nil
+			}
+			return nil, backup
+		},
+	); err != nil {
 		return errors.Wrap(err, "failed to update status")
 	}
 	return nil
-}
-
-func (r *BackupReconciler) applyStatusUpdate(ctx context.Context,
-	backup *k8sv1alpha1.Backup, status *k8sv1alpha1.BackupStatus,
-) error {
-	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		name := client.ObjectKey{Name: backup.Name, Namespace: backup.Namespace}
-		if err := r.Get(ctx, name, backup); err != nil {
-			return errors.Wrap(err, "failed to get backup")
-		}
-		backup.Status = *status
-		backup.Kind = "Backup"
-		if err := kubernetes.ApplyOverlay(backup, &k8sv1alpha1.Backup{Status: *status}); err != nil {
-			return errors.Wrap(err, "failed to overlay backup's status")
-		}
-		if err := r.Status().Update(ctx, backup); err != nil {
-			return errors.Wrap(err, "failed to update backup's status")
-		}
-		return nil
-	})
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -216,4 +181,38 @@ func (r *BackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&k8sv1alpha1.Backup{}).
 		Complete(r)
+}
+
+// BuildFailoverConfig builds the failover config from the backup
+func BuildFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup) (FailoverConfig, error) {
+	failoverConfig := FailoverConfig{}
+	// get vineyardd
+	vineyarddNamespace := backup.Spec.VineyarddNamespace
+	vineyarddName := backup.Spec.VineyarddName
+	vineyardd := &k8sv1alpha1.Vineyardd{}
+	if err := c.Get(context.Background(), client.ObjectKey{Namespace: vineyarddNamespace,
+		Name: vineyarddName}, vineyardd); err != nil {
+		return failoverConfig, errors.Wrap(err, "unable to fetch Vineyardd")
+	}
+
+	failoverConfig.Namespace = backup.Namespace
+	failoverConfig.Replicas = vineyardd.Spec.Replicas
+	failoverConfig.Path = backup.Spec.BackupPath
+	failoverConfig.VineyarddNamespace = vineyarddNamespace
+	failoverConfig.VineyarddName = vineyarddName
+	failoverConfig.Endpoint = vineyarddName + "-rpc." + vineyarddNamespace
+	utils := operation.ClientUtils{Client: c}
+	socket, err := utils.ResolveRequiredVineyarddSocket(
+		context.Background(),
+		vineyardd.Name,
+		vineyardd.Namespace,
+		backup.Namespace,
+	)
+	if err != nil {
+		return failoverConfig, errors.Wrap(err, "unable to resolve vineyardd socket")
+	}
+	failoverConfig.VineyardSockPath = socket
+	failoverConfig.Allinstances = strconv.Itoa(vineyardd.Spec.Replicas)
+
+	return failoverConfig, nil
 }
