@@ -116,36 +116,35 @@ The benefit is two-fold:
 
 2. On the storage engine side, the predefined macros can filter out a large number of unnecessary APIs to avoid developers implementing them with boilerplate or inefficient code, since the design of storage engines may differ enormously from each other.
 
-What follows is an example of predefined macros regarding the locally completeness of vertex properties.
+What follows is an example of predefined macros regarding the storage's partition strategy for vertices.
 
-- Four macros are provided:
-    1. GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
-    2. GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
-    3. GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
-    4. GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
-- Some assumptions may dominate others, which means that some assumptions apply in a wider range than others. Therefore, storage providers should be careful when setting these assumptions. Here, 1 dominates the others, which means that 2 to 4 are undefined when 1 is defined. Additionally, 2 dominates 4, and 3 dominates 4.
-- GRIN provides different APIs under different assumptions. Suppose only 3 is defined; it means that vertices of certain types have all the properties locally complete, regardless of whether the vertex is master or mirror. In this case, GRIN provides an API to return these locally complete vertex types. 
-- In the case that none of these four macros is defined, GRIN will provide a per-vertex API to tell whether the vertex property is locally complete.
+GRIN provides three predefined macros for whole graph partition strategies, namely:
+
+- GRIN_ASSUME_ALL_REPLICATE_PARTITION
+- GRIN_ASSUME_EDGE_CUT_PARTITION
+- GRIN_ASSUME_VERTEX_CUT_PARTITION
+
+If none of the three macros is predefined, GRIN assumes the storage supports hybrid graph partition strategy,
+which means different vertex partition strategies are applied to different vertex types.
+Then, to allow the storage to expose the details, GRIN provides a set of APIs as follows:
+
+- GRIN_VERTEX_TYPE_LIST grin_get_all_replicated_partition_vertex_types(GRIN_GRAPH);
+- GRIN_VERTEX_TYPE_LIST grin_get_disjoint_partition_vertex_types(GRIN_GRAPH);
+- GRIN_VERTEX_TYPE_LIST grin_get_follow_edge_partition_vertex_types(GRIN_GRAPH);
 
 
 ### Partition Strategy
-GRIN provides two types (i.e., edge-cut and vertex-cut) of predefined partition strategies. Each strategy can be seen as a set of granular predefined macros based on the common understanding of the partition strategy. For storages using hybrid partition strategy, developers can set up the granular macros one after another.
+As mentioned above, GRIN provides three types (i.e., all-replicate, edge-cut and vertex-cut) of predefined partition strategies. Each strategy can be seen as a set of granular predefined macros based on the common understanding of the partition strategy, and also infers some partition facts. For storages using hybrid partition strategy, developers can set up the granular macros one after another.
+Next, we present edge-cut partition strategy as an example.
 
 #### Edge-cut Partition Strategy
 
-- Vertex data is locally complete for master vertices.
-- Edge data is locally complete for all edges.
-- Neighbors are locally complete for master vertices.
-- Vertex properties are locally complete for master vertices.
-- Edge properties are locally complete for all edges.
+- Vertex data is partitioned following master vertices.
+- Edge data is partitioned following master & mirror edges.
+- (Infer) All neighbors can be found locally for master vertices.
+- Vertex properties are partitioned following for master vertices.
+- Edge properties are partitioned following master & mirror edges.
 
-#### Vertex-cut Partition Strategy
-
-- Vertex data is locally complete for all vertices.
-- Edge data is locally complete for all edges.
-- Mirror partition list is available for master vertices to broadcast messages.
-- Vertex properties are locally complete for all vertices.
-- Edge properties are locally complete for all edges.
 
 ### Property Graph Model
 GRIN makes the following assumptions for its property graph model.
@@ -332,14 +331,6 @@ be recognized in partitions other than the current partition where the instance 
 serveral partitions, GRIN refers one of them as the master vertex while others as mirrors. This is primarily for data
 aggregation purpose to share a common centural node for every one.
 - While in edgecut partition, the concept becomes inner & outer vertices. GRIN uses master & mirror vertices to represent inner & outer vertices respectively to unify these concepts.
-
-### Local Complete
-- The concept of local complete is with repect to whether a graph component adhere to a vertex or an edge is locally complete within the partition.
-- Take vertex and properties as example. GRIN considers the vertex is "property local complete" if it can get all the properties of the vertex locally in the partition.
-- There are concepts like "edge property local complete", "vertex neighbor local complete" and so on.
-- GRIN does NOT assume any local complete on master vertices. Since in some extremely cases, master vertices
-may NOT contain all the data or properties locally.
-- GRIN currently provides vertex-level/edge-level local complete judgement APIs, while the introduction of type-level judgement APIs is open for discussion.
 
 ### Natural ID Trait
 - Concepts represent the schema of the graph, such as vertex type and properties bound to a certain edge type, are usually numbered naturally from `0` to its `num - 1` in many storage engines. To facilitate further optimizations

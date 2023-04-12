@@ -29,27 +29,6 @@ size_t grin_get_total_edge_num(GRIN_PARTITIONED_GRAPH pg) {
 }
 #endif
 
-#if defined(GRIN_WITH_VERTEX_DATA) && \
-    !defined(GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE) && \
-    !defined(GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE) && \
-    !defined(GRIN_ASSUME_BY_TYPE_ALL_VERTEX_DATA_LOCAL_COMPLETE) && \
-    !defined(GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_DATA_LOCAL_COMPLETE)
-bool grin_is_vertex_data_local_complete(GRIN_GRAPH, GRIN_VERTEX);
-
-GRIN_PARTITION_LIST grin_vertex_data_complete_partitions(GRIN_GRAPH, GRIN_VERTEX);
-#endif
-
-#if defined(GRIN_WITH_EDGE_DATA) && \
-    !defined(GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE) && \
-    !defined(GRIN_ASSUME_MASTER_EDGE_DATA_LOCAL_COMPLETE) && \
-    !defined(GRIN_ASSUME_BY_TYPE_ALL_EDGE_DATA_LOCAL_COMPLETE) && \
-    !defined(GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE) 
-bool grin_is_edge_data_local_complete(GRIN_GRAPH, GRIN_EDGE);
-
-GRIN_PARTITION_LIST grin_edge_data_complete_partitions(GRIN_GRAPH, GRIN_EDGE);
-#endif
-
-
 #ifdef GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST
 GRIN_VERTEX_LIST grin_select_master_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
@@ -95,28 +74,6 @@ GRIN_EDGE_LIST grin_select_mirror_for_edge_list(GRIN_GRAPH, GRIN_EDGE_LIST);
 #ifdef GRIN_TRAIT_SELECT_PARTITION_FOR_EDGE_LIST
 GRIN_EDGE_LIST grin_select_partition_for_edge_list(GRIN_GRAPH, GRIN_PARTITION, GRIN_EDGE_LIST);
 #endif
-
-
-#if defined(GRIN_ENABLE_ADJACENT_LIST) && \
-    !defined(GRIN_ASSUME_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE) && \
-    !defined(GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE) && \
-    !defined(GRIN_ASSUME_BY_TYPE_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE) && \
-    !defined(GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE) 
-// The concept of local_complete refers to whether we can get complete data or properties
-// locally in the partition. It is orthogonal to the concept of master/mirror which
-// is mainly designed for data aggregation. In some extremely cases, master vertices
-// may NOT contain all the data or properties locally.
-bool grin_is_vertex_neighbor_local_complete(GRIN_GRAPH, GRIN_VERTEX);
-
-/**
- * @brief get the partitions whose combination can provide the complete
- * neighbors of a vertex.
- * @param GRIN_GRAPH the graph
- * @param GRIN_VERTEX the vertex
- */
-GRIN_PARTITION_LIST grin_vertex_neighbor_complete_partitions(GRIN_GRAPH, GRIN_VERTEX);
-#endif
-
 
 #ifdef GRIN_TRAIT_SELECT_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
 GRIN_ADJACENT_LIST grin_select_master_neighbor_for_adjacent_list(GRIN_GRAPH, GRIN_ADJACENT_LIST);
