@@ -227,6 +227,12 @@ typedef enum {
 */
 ///@{
 /** @ingroup PartitionStrategyMacros
+ * @brief The storage ONLY uses all-replicate partition strategy. This means the 
+ * storage's replicate the graph among all partitions.
+*/
+#define GRIN_ASSUME_ALL_REPLICATE_PARTITION
+
+/** @ingroup PartitionStrategyMacros
  * @brief The storage ONLY uses edge-cut partition strategy. This means the 
  * storage's entire partition strategy complies with edge-cut strategy 
  * definition in GRIN.
@@ -248,38 +254,24 @@ typedef enum {
 */
 ///@{
 /** @ingroup PartitionAssumptionMacros
- * @brief Assume the vertex data are local complete for all the vertices,
- * thus there is no need to fetch vertex data from other partitions.
+ * @brief Assume the vertex data are only stored together with master vertices.
 */
-#define GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_DATA
 
 /** @ingroup PartitionAssumptionMacros
- * @brief Assume the vertex data are local complete for master vertices,
- * and the vertex data of a mirror vertex can be fetched from its master partition.
+ * @brief Assume the vertex data are replicated on both master and mirror vertices.
 */
-#define GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_VERTEX_DATA
 
 /** @ingroup PartitionAssumptionMacros
- * @brief Assume the edge data are local complete for all the edges,
- * thus there is no need to fetch edge data from other partitions.
+ * @brief Assume the edge data are only stored together with master edges.
 */
-#define GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_EDGE_DATA
 
 /** @ingroup PartitionAssumptionMacros
- * @brief Assume the edge data are local complete for master edges,
- * and the edge data of a mirror edge can be fetched from its master partition.
+ * @brief Assume the edge data are replicated on both master and mirror edges.
 */
-#define GRIN_ASSUME_MASTER_EDGE_DATA_LOCAL_COMPLETE
-
-/** @ingroup PartitionAssumptionMacros
- * @brief Assume neighbors of a vertex is always local complete for all vertices. 
-*/
-#define GRIN_ASSUME_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
-
-/** @ingroup PartitionAssumptionMacros
- * @brief Assume neighbors of a vertex is always local complete for master vertices. 
-*/
-#define GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_DATA
 ///@}
 
 /** @name TraitMirrorPartitionMacros
@@ -367,14 +359,13 @@ typedef enum {
 #undef GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
 #undef GRIN_ENABLE_VERTEX_REF
 #undef GRIN_ENABLE_EDGE_REF
+#undef GRIN_ASSUME_ALL_REPLICATE_PARTITION
 #undef GRIN_ASSUME_EDGE_CUT_PARTITION
 #undef GRIN_ASSUME_VERTEX_CUT_PARTITION
-#undef GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE
-#undef GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
-#undef GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
-#undef GRIN_ASSUME_MASTER_EDGE_DATA_LOCAL_COMPLETE
-#undef GRIN_ASSUME_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
-#undef GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#undef GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_DATA
+#undef GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_VERTEX_DATA
+#undef GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_EDGE_DATA
+#undef GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_DATA
 #undef GRIN_TRAIT_MASTER_VERTEX_MIRROR_PARTITION_LIST
 #undef GRIN_TRAIT_MIRROR_VERTEX_MIRROR_PARTITION_LIST
 #undef GRIN_TRAIT_MASTER_EDGE_MIRROR_PARTITION_LIST
@@ -396,15 +387,19 @@ typedef enum {
 // GRIN_END
 
 // GRIN_FEATURE_DEPENDENCY
+#ifdef GRIN_ASSUME_ALL_REPLICATE_PARTITION
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_VERTEX_DATA
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_DATA
+#endif
+
 #ifdef GRIN_ASSUME_EDGE_CUT_PARTITION
-#define GRIN_ASSUME_MASTER_VERTEX_DATA_LOCAL_COMPLETE
-#define GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
-#define GRIN_ASSUME_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_DATA
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_DATA
 #endif
 
 #ifdef GRIN_ASSUME_VERTEX_CUT_PARTITION
-#define GRIN_ASSUME_ALL_VERTEX_DATA_LOCAL_COMPLETE
-#define GRIN_ASSUME_ALL_EDGE_DATA_LOCAL_COMPLETE
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_VERTEX_DATA
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_DATA
 #define GRIN_TRAIT_MASTER_VERTEX_MIRROR_PARTITION_LIST
 #endif
 // GRIN_END
@@ -569,6 +564,14 @@ typedef enum {
  * the original iterator.
 */
 #define GRIN_TRAIT_SELECT_EDGE_TYPE_FOR_ADJACENT_LIST
+
+/** @ingroup TraitFilterTypeMacros
+ * @brief The storage provides specific relationship description for each
+ * vertex-edge-vertex type traid. This means further optimizations can be
+ * applied by the callers for vev traid under certain relationships, such as
+ * one-to-one, one-to-many, or many-to-one.
+*/
+#define GRIN_TRAIT_SPECIFIC_VEV_RELATION
 ///@}
 
 
@@ -578,74 +581,34 @@ typedef enum {
  */
 ///@{
 /** @ingroup PropetyAssumptionMacros
- * @brief Assume property values of a vertex is always local complete for all vertices. 
+ * @brief Assume full property values of a vertex are ONLY stored with master vertices. 
 */
-#define GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_PROPERTY
 
 /** @ingroup PropetyAssumptionMacros
- * @brief Assume property values of a vertex is ONLY local complete for master vertices. 
+ * @brief Assume full property values of a vertex are replicated with master and mirror vertices. 
 */
-#define GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_VERTEX_PROPERTY
 
 /** @ingroup PropetyAssumptionMacros
- * @brief Assume property values of a vertex is local complete for all vertices with a certain type. 
+ * @brief Assume full property values of a vertex are split among master and mirror vertices. 
 */
-#define GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
+#define GRIN_ASSUME_SPLIT_MASTER_MIRROR_PARTITION_FOR_VERTEX_PROPERTY
 
 /** @ingroup PropetyAssumptionMacros
- * @brief Assume property values of a vertex is local complete for master vertices with a certain type. 
+ * @brief Assume full property values of an edge are ONLY stored with master edges. 
 */
-#define GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_EDGE_PROPERTY
 
 /** @ingroup PropetyAssumptionMacros
- * @brief Assume vertex data is local complete for all vertices with a certain type. 
+ * @brief Assume full property values of an edge are replicated with master and mirror edges. 
 */
-#define GRIN_ASSUME_BY_TYPE_ALL_VERTEX_DATA_LOCAL_COMPLETE
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
 
 /** @ingroup PropetyAssumptionMacros
- * @brief Assume vertex data is local complete for master vertices with a certain type. 
+ * @brief Assume full property values of an edge are split among master and mirror edges. 
 */
-#define GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_DATA_LOCAL_COMPLETE
-
-/** @ingroup PropetyAssumptionMacros
- * @brief Assume property values of a edge is always local complete for all edges. 
-*/
-#define GRIN_ASSUME_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
-
-/** @ingroup PropetyAssumptionMacros
- * @brief Assume property values of a edge is ONLY local complete for master edges. 
-*/
-#define GRIN_ASSUME_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
-
-/** @ingroup PropetyAssumptionMacros
- * @brief Assume property values of a edge is local complete for all edges with a certain type. 
-*/
-#define GRIN_ASSUME_BY_TYPE_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
-
-/** @ingroup PropetyAssumptionMacros
- * @brief Assume property values of a edge is local complete for master edges with a certain type. 
-*/
-#define GRIN_ASSUME_BY_TYPE_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
-
-/** @ingroup PropetyAssumptionMacros
- * @brief Assume edge data is local complete for all edges with a certain type. 
-*/
-#define GRIN_ASSUME_BY_TYPE_ALL_EDGE_DATA_LOCAL_COMPLETE
-
-/** @ingroup PropetyAssumptionMacros
- * @brief Assume edge data is local complete for master edges with a certain type. 
-*/
-#define GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE
-
-/** @ingroup PropetyAssumptionMacros
- * @brief Assume vertex neighbor is local complete for all vertices with a certain type. 
-*/
-#define GRIN_ASSUME_BY_TYPE_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
-
-/** @ingroup PropetyAssumptionMacros
- * @brief Assume vertex data is local complete for master vertices with a certain type. 
-*/
-#define GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#define GRIN_ASSUME_SPLIT_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
 
 /** @ingroup PropetyAssumptionMacros
  * @brief The storage uses column store for vertex properties.
@@ -682,20 +645,13 @@ typedef enum {
 #undef GRIN_TRAIT_SELECT_TYPE_FOR_EDGE_LIST
 #undef GRIN_TRAIT_SELECT_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
 #undef GRIN_TRAIT_SELECT_EDGE_TYPE_FOR_ADJACENT_LIST
-#undef GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
-#undef GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
-#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
-#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
-#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_DATA_LOCAL_COMPLETE
-#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_DATA_LOCAL_COMPLETE
-#undef GRIN_ASSUME_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
-#undef GRIN_ASSUME_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
-#undef GRIN_ASSUME_BY_TYPE_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
-#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_PROPERTY_LOCAL_COMPLETE
-#undef GRIN_ASSUME_BY_TYPE_ALL_EDGE_DATA_LOCAL_COMPLETE
-#undef GRIN_ASSUME_BY_TYPE_MASTER_EDGE_DATA_LOCAL_COMPLETE
-#undef GRIN_ASSUME_BY_TYPE_ALL_VERTEX_NEIGHBOR_LOCAL_COMPLETE
-#undef GRIN_ASSUME_BY_TYPE_MASTER_VERTEX_NEIGHBOR_LOCAL_COMPLETE
+#undef GRIN_TRAIT_SPECIFIC_VEV_RELATION
+#undef GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_PROPERTY
+#undef GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_VERTEX_PROPERTY
+#undef GRIN_ASSUME_SPLIT_MASTER_MIRROR_PARTITION_FOR_VERTEX_PROPERTY
+#undef GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_EDGE_PROPERTY
+#undef GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
+#undef GRIN_ASSUME_SPLIT_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
 #undef GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY
 #undef GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY
 // GRIN_END
@@ -722,14 +678,19 @@ typedef enum {
 // GRIN_END
 
 // GRIN_FEATURE_DEPENDENCY
+#ifdef GRIN_ASSUME_ALL_REPLICATE_PARTITION
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_VERTEX_PROPERTY
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
+#endif
+
 #ifdef GRIN_ASSUME_EDGE_CUT_PARTITION
-#define GRIN_ASSUME_MASTER_VERTEX_PROPERTY_LOCAL_COMPLETE
-#define GRIN_ASSUME_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_PROPERTY
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
 #endif
 
 #ifdef GRIN_ASSUME_VERTEX_CUT_PARTITION
-#define GRIN_ASSUME_ALL_VERTEX_PROPERTY_LOCAL_COMPLETE
-#define GRIN_ASSUME_ALL_EDGE_PROPERTY_LOCAL_COMPLETE
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_VERTEX_PROPERTY
+#define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
@@ -908,6 +869,8 @@ typedef unsigned GRIN_VERTEX_PROPERTY_ID;
 #ifdef GRIN_WITH_EDGE_PROPERTY
 typedef void* GRIN_EDGE_TYPE;
 typedef void* GRIN_EDGE_TYPE_LIST;
+typedef void* GRIN_VEV_TYPE;
+typedef void* GRIN_VEV_TYPE_LIST;
 typedef void* GRIN_EDGE_PROPERTY;
 typedef void* GRIN_EDGE_PROPERTY_LIST;
 typedef void* GRIN_EDGE_PROPERTY_TABLE;
