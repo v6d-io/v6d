@@ -27,27 +27,35 @@ import (
 
 type Manifests []*unstructured.Unstructured
 
+// ParseManifestToObject parse a kubernetes manifest to an object
+func ParseManifestToObject(manifest string) (*unstructured.Unstructured, error) {
+	decoder := Deserializer()
+	value, _, err := decoder.Decode([]byte(manifest), nil, nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to decode resource")
+	}
+	proto, err := runtime.DefaultUnstructuredConverter.ToUnstructured(value)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert resource to unstructured")
+	}
+	return &unstructured.Unstructured{Object: proto}, nil
+}
+
 // ParseManifestsToObjects parse kubernetes manifests to objects
 func ParseManifestsToObjects(manifests []byte) (Manifests, error) {
 	// parse the kubernetes yaml file split by "---"
 	resources := bytes.Split(manifests, []byte("---"))
 	objects := Manifests{}
 
-	decoder := Deserializer()
 	for _, f := range resources {
 		if string(f) == "\n" || string(f) == "" {
 			continue
 		}
-		value, _, err := decoder.Decode(f, nil, nil)
+		obj, err := ParseManifestToObject(string(f))
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to decode resource")
+			return nil, errors.Wrap(err, "failed to parse manifest to object")
 		}
-		proto, err := runtime.DefaultUnstructuredConverter.ToUnstructured(value)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert resource to unstructured")
-		}
-		object := &unstructured.Unstructured{Object: proto}
-		objects = append(objects, object)
+		objects = append(objects, obj)
 	}
 	return objects, nil
 }

@@ -29,7 +29,6 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -133,19 +132,10 @@ func (r *VineyarddReconciler) Reconcile(
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Vineyardd"),
 		TmplFunc: map[string]interface{}{"getEtcdConfig": getEtcdConfig},
 	}
-	// set up the etcd
-	Etcd.Namespace = vineyardd.Namespace
-	etcdEndpoints := make([]string, 0, vineyardd.Spec.Etcd.Replicas)
+
+	// set up the etcd configuration
 	replicas := vineyardd.Spec.Etcd.Replicas
-	for i := 0; i < replicas; i++ {
-		etcdEndpoints = append(
-			etcdEndpoints,
-			fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)),
-		)
-	}
-	Etcd.Endpoints = strings.Join(etcdEndpoints, ",")
-	// the etcd is built in the vineyardd image
-	Etcd.Image = vineyardd.Spec.VineyardConfig.Image
+	Etcd = BuildEtcdConfig(vineyardd.Namespace, replicas, vineyardd.Spec.VineyardConfig.Image)
 
 	for i := 0; i < replicas; i++ {
 		Etcd.Rank = i
@@ -193,30 +183,21 @@ func (r *VineyarddReconciler) UpdateStatus(
 		ReadyReplicas: deployment.Status.ReadyReplicas,
 		Conditions:    deployment.Status.Conditions,
 	}
-	if err := r.applyStatusUpdate(ctx, vineyardd, status); err != nil {
+
+	if err := ApplyStatueUpdate(ctx, r.Client, vineyardd, r.Status(),
+		func(vineyardd *k8sv1alpha1.Vineyardd) (error, *k8sv1alpha1.Vineyardd) {
+			vineyardd.Status = *status
+			vineyardd.Kind = "Vineyardd"
+			if err := kubernetes.ApplyOverlay(vineyardd, &k8sv1alpha1.Vineyardd{Status: *status}); err != nil {
+				return errors.Wrap(err, "failed to overlay vineyardd's status"), nil
+			}
+			return nil, vineyardd
+		},
+	); err != nil {
 		return errors.Wrap(err, "failed to update status")
 	}
-	return nil
-}
 
-func (r *VineyarddReconciler) applyStatusUpdate(ctx context.Context,
-	vineyardd *k8sv1alpha1.Vineyardd, status *k8sv1alpha1.VineyarddStatus,
-) error {
-	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		name := client.ObjectKey{Name: vineyardd.Name, Namespace: vineyardd.Namespace}
-		if err := r.Get(ctx, name, vineyardd); err != nil {
-			return errors.Wrap(err, "failed to get vineyardd")
-		}
-		vineyardd.Status = *status
-		vineyardd.Kind = "Vineyardd"
-		if err := kubernetes.ApplyOverlay(vineyardd, &k8sv1alpha1.Vineyardd{Status: *status}); err != nil {
-			return errors.Wrap(err, "failed to overlay vineyardd's status")
-		}
-		if err := r.Status().Update(ctx, vineyardd); err != nil {
-			return errors.Wrap(err, "failed to update vineyardd's status")
-		}
-		return nil
-	})
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -224,4 +205,22 @@ func (r *VineyarddReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&k8sv1alpha1.Vineyardd{}).
 		Complete(r)
+}
+
+// BuildEtcdConfig builds the etcd config.
+func BuildEtcdConfig(namespace string, replicas int, image string) EtcdConfig {
+	etcdConfig := EtcdConfig{}
+	etcdConfig.Namespace = namespace
+	etcdEndpoints := make([]string, 0, replicas)
+	for i := 0; i < replicas; i++ {
+		etcdEndpoints = append(
+			etcdEndpoints,
+			fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)),
+		)
+	}
+	etcdConfig.Endpoints = strings.Join(etcdEndpoints, ",")
+	// the etcd is built in the vineyardd image
+	etcdConfig.Image = image
+
+	return etcdConfig
 }

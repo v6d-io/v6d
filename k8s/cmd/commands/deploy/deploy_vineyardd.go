@@ -186,7 +186,6 @@ func BuildVineyardManifestFromInput() (*v1alpha1.Vineyardd, error) {
 	opts := &flags.VineyarddOpts
 	envs := &flags.VineyardContainerEnvs
 
-	spillPVandPVC := flags.VineyardSpillPVandPVC
 	if len(*envs) != 0 {
 		vineyardContainerEnvs, err := util.ParseEnvs(*envs)
 		if err != nil {
@@ -195,17 +194,14 @@ func BuildVineyardManifestFromInput() (*v1alpha1.Vineyardd, error) {
 		opts.VineyardConfig.Env = append(opts.VineyardConfig.Env, vineyardContainerEnvs...)
 	}
 
+	spillPVandPVC := flags.VineyardSpillPVandPVC
 	if spillPVandPVC != "" {
-		spillPVandPVCJson, err := util.ConvertToJson(spillPVandPVC)
+		pv, pvc, err := util.GetPVAndPVC(spillPVandPVC)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse the pv of vineyard spill")
+			return nil, errors.Wrap(err, "failed to get the pv and pvc of vineyard spill")
 		}
-		spillPVSpec, spillPVCSpec, err := util.ParsePVandPVCSpec(spillPVandPVCJson)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse the pvc of vineyard spill")
-		}
-		opts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *spillPVSpec
-		opts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *spillPVCSpec
+		opts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *pv
+		opts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *pvc
 	}
 
 	vineyardd := &v1alpha1.Vineyardd{

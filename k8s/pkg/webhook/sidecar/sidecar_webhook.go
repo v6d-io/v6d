@@ -29,6 +29,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -130,7 +132,10 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		}
-		r.ApplyToSidecar(sidecar, templatePod, pod, true)
+		if err := r.ApplyToSidecar(sidecar, templatePod, pod, true); err != nil {
+			logger.Error(err, "failed to apply sidecar cr to pod")
+			return admission.Errored(http.StatusInternalServerError, err)
+		}
 	}
 
 	marshaledPod, err := json.Marshal(pod)
@@ -149,18 +154,30 @@ func (r *Injector) ApplyToSidecar(
 	pod *corev1.Pod,
 	podWithSidecar *corev1.Pod,
 	addLabels bool,
-) {
-	injector.InjectSidecar(&podWithSidecar.Spec.Containers,
-		&podWithSidecar.Spec.Volumes, &pod.Spec.Containers,
-		&pod.Spec.Volumes, sidecar)
-
-	if addLabels {
-		// add rpc labels to the podWithSidecar
-		labels := podWithSidecar.Labels
-		s := strings.Split(sidecar.Spec.Service.Selector, "=")
-		// add the rpc label selector to the podWithSidecar's labels
-		labels[s[0]] = s[1]
+) error {
+	// Convert the podWithSidecar object to an unstructured object.
+	obj, err := runtime.DefaultUnstructuredConverter.ToUnstructured(podWithSidecar)
+	if err != nil {
+		return errors.Wrap(err, "failed to convert podWithSidecar to unstructured object")
 	}
+	unstructuredPodWithSidecar := &unstructured.Unstructured{Object: obj}
+
+	// Convert the Pod object to an unstructured object.
+	obj, err = runtime.DefaultUnstructuredConverter.ToUnstructured(pod)
+	if err != nil {
+		return errors.Wrap(err, "failed to convert pod to unstructured object")
+	}
+	unstructuredPod := &unstructured.Unstructured{Object: obj}
+
+	selector := ""
+	if addLabels {
+		selector = sidecar.Spec.Service.Selector
+	}
+	if err := injector.InjectSidecar(unstructuredPodWithSidecar, unstructuredPod, sidecar, selector); err != nil {
+		return errors.Wrap(err, "failed to inject sidecar")
+	}
+
+	return nil
 }
 
 // InjectDecoder injects the decoder.

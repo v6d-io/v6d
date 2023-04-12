@@ -16,10 +16,6 @@ limitations under the License.
 package util
 
 import (
-	"fmt"
-	"strconv"
-	"strings"
-
 	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -56,18 +52,9 @@ func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, namespace string,
 	if err != nil {
 		return objs, errors.Wrap(err, "failed to get etcd manifests")
 	}
-	// set up the etcd
-	EtcdConfig.Namespace = namespace
-	etcdEndpoints := make([]string, 0, replicas)
-	for i := 0; i < replicas; i++ {
-		etcdEndpoints = append(
-			etcdEndpoints,
-			fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)),
-		)
-	}
-	EtcdConfig.Endpoints = strings.Join(etcdEndpoints, ",")
-	// the etcd is built in the vineyardd image
-	EtcdConfig.Image = image
+	// set up the etcd config
+	*EtcdConfig = k8s.BuildEtcdConfig(namespace, replicas, image)
+
 	for i := 0; i < replicas; i++ {
 		EtcdConfig.Rank = i
 		for _, ef := range etcdManifests {
@@ -75,7 +62,39 @@ func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, namespace string,
 			if err != nil {
 				return objs, err
 			}
-			objs = append(objs, obj)
+			if obj.GetName() != "" {
+				objs = append(objs, obj)
+			}
+		}
+	}
+	return objs, nil
+}
+
+// BuildObjsFromVineyarddManifests builds a list of objects from the
+// vineyardd template files.
+func BuildObjsFromVineyarddManifests(files []string, value interface{},
+	tmplFunc map[string]interface{},
+) ([]*unstructured.Unstructured, error) {
+	objs := []*unstructured.Unstructured{}
+
+	fileExists := make(map[string]bool)
+	for _, f := range files {
+		fileExists[f] = true
+	}
+
+	vineyardManifests, err := templates.GetFilesRecursive("vineyardd")
+	if err != nil {
+		return objs, errors.Wrap(err, "failed to get vineyard manifests")
+	}
+	for _, vf := range vineyardManifests {
+		if _, ok := fileExists[vf]; len(files) == 0 || ok {
+			obj, err := RenderManifestAsObj(vf, value, tmplFunc)
+			if err != nil {
+				return objs, err
+			}
+			if obj.GetName() != "" {
+				objs = append(objs, obj)
+			}
 		}
 	}
 	return objs, nil

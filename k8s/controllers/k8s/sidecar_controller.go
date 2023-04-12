@@ -18,8 +18,6 @@ package k8s
 
 import (
 	"context"
-	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -28,7 +26,6 @@ import (
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/record"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -89,26 +86,10 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			"getServiceLabelSelector": getSidecarSvcLabelSelector,
 		},
 	}
-
-	// set up the etcd
-	SidecarEtcd.Namespace = sidecar.Namespace
-	etcdEndpoints := make([]string, 0, sidecar.Spec.Replicas)
+	// setup the etcd configuration
 	replicas := sidecar.Spec.Replicas
-	for i := 0; i < replicas; i++ {
-		etcdEndpoints = append(
-			etcdEndpoints,
-			fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)),
-		)
-	}
-	SidecarEtcd.Endpoints = strings.Join(etcdEndpoints, ",")
-	// the etcd is built in the sidecar vineyardd image
-	SidecarEtcd.Image = sidecar.Spec.VineyardConfig.Image
+	SidecarEtcd = BuildEtcdConfig(sidecar.Namespace, replicas, sidecar.Spec.VineyardConfig.Image)
 
-	s := strings.Split(sidecar.Spec.Service.Selector, "=")
-
-	SidecarSvcLabelSelector = make([]ServiceLabelSelector, 1)
-	SidecarSvcLabelSelector[0].Key = s[0]
-	SidecarSvcLabelSelector[0].Value = s[1]
 	for i := 0; i < replicas; i++ {
 		SidecarEtcd.Rank = i
 		if _, err := sidecarApp.Apply(ctx, "etcd/etcd.yaml", logger, false); err != nil {
@@ -120,6 +101,12 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			return ctrl.Result{}, err
 		}
 	}
+
+	s := strings.Split(sidecar.Spec.Service.Selector, "=")
+
+	SidecarSvcLabelSelector = make([]ServiceLabelSelector, 1)
+	SidecarSvcLabelSelector[0].Key = s[0]
+	SidecarSvcLabelSelector[0].Value = s[1]
 	if _, err := sidecarApp.Apply(ctx, "vineyardd/etcd-service.yaml", logger, true); err != nil {
 		logger.Error(err, "failed to apply etcd service")
 		return ctrl.Result{}, err
@@ -168,30 +155,19 @@ func (r *SidecarReconciler) UpdateStatus(ctx context.Context, sidecar *k8sv1alph
 	status := &k8sv1alpha1.SidecarStatus{
 		Current: int32(current),
 	}
-	if err := r.applyStatusUpdate(ctx, sidecar, status); err != nil {
+	if err := ApplyStatueUpdate(ctx, r.Client, sidecar, r.Status(),
+		func(sidecar *k8sv1alpha1.Sidecar) (error, *k8sv1alpha1.Sidecar) {
+			sidecar.Status = *status
+			sidecar.Kind = "Sidecar"
+			if err := kubernetes.ApplyOverlay(sidecar, &k8sv1alpha1.Sidecar{Status: *status}); err != nil {
+				return errors.Wrap(err, "failed to overlay sidecar's status"), nil
+			}
+			return nil, sidecar
+		},
+	); err != nil {
 		return errors.Wrap(err, "failed to update status")
 	}
 	return nil
-}
-
-func (r *SidecarReconciler) applyStatusUpdate(ctx context.Context,
-	sidecar *k8sv1alpha1.Sidecar, status *k8sv1alpha1.SidecarStatus,
-) error {
-	return retry.RetryOnConflict(retry.DefaultBackoff, func() error {
-		name := client.ObjectKey{Name: sidecar.Name, Namespace: sidecar.Namespace}
-		if err := r.Get(ctx, name, sidecar); err != nil {
-			return errors.Wrap(err, "failed to get sidecar")
-		}
-		sidecar.Status = *status
-		sidecar.Kind = "Sidecar"
-		if err := kubernetes.ApplyOverlay(sidecar, &k8sv1alpha1.Sidecar{Status: *status}); err != nil {
-			return errors.Wrap(err, "failed to overlay sidecar's status")
-		}
-		if err := r.Status().Update(ctx, sidecar); err != nil {
-			return errors.Wrap(err, "failed to update sidecar's status")
-		}
-		return nil
-	})
 }
 
 // SetupWithManager sets up the controller with the Manager.

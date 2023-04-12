@@ -148,20 +148,16 @@ func init() {
 }
 
 func buildBackupJob() (*v1alpha1.Backup, error) {
-	backupPVandPVC := flags.BackupPVandPVC
 	opts := &flags.BackupOpts
+	backupPVandPVC := flags.BackupPVandPVC
 
 	if backupPVandPVC != "" {
-		backupPVandPVCJson, err := util.ConvertToJson(backupPVandPVC)
+		pv, pvc, err := util.GetPVAndPVC(backupPVandPVC)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to convert the pv and pvc of backup to json")
+			return nil, errors.Wrap(err, "failed to get pv and pvc of backup job")
 		}
-		backupPVSpec, backupPVCSpec, err := util.ParsePVandPVCSpec(backupPVandPVCJson)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse the pv and pvc of backup")
-		}
-		opts.PersistentVolumeSpec = *backupPVSpec
-		opts.PersistentVolumeClaimSpec = *backupPVCSpec
+		opts.PersistentVolumeSpec = *pv
+		opts.PersistentVolumeClaimSpec = *pvc
 	}
 
 	backup := &v1alpha1.Backup{
