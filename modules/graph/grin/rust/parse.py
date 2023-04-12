@@ -80,13 +80,36 @@ def to_rust(deps):
         return any_format.format(", ".join(conds))
     else:
         assert False, f'unknown: {deps}'
+ 
+def snake_to_camel(s):
+    if s.startswith(('GRIN_DATATYPE_', 'GRIN_DIRECTION_')):
+        return s.upper()
+    return ''.join([w.capitalize() for w in s.split('_')])
+
+def snake_to_camel_line(line):
+    segs = line.split(' ')
+    return ' '.join([snake_to_camel(s) if s.startswith('GRIN_') else s for s in segs])
+
 
 def rewrite(file, r, strip=7):
     with open(file) as f:
         lines = f.readlines()
+    externc_flag = True
     with open(file, 'w') as f:
         for i, line in enumerate(lines):
             if i < strip:
+                continue
+            line = snake_to_camel_line(line)
+            if line.startswith('extern '):
+                if externc_flag:
+                    f.write('extern "C" {\n')
+                    externc_flag = False
+                continue
+            if line.startswith('}'):
+                if i < len(lines) - 1:
+                    f.write('\n')
+                else:
+                    f.write('}\n')
                 continue
             if line.find('pub fn') != -1:
                 func_name = line
