@@ -33,29 +33,54 @@ static const int64_t kConnectTimeoutMs = 1000;
 Status connect_ipc_socket(const std::string& pathname, int& socket_fd) {
   struct sockaddr_un socket_address;
 
-  if (access(pathname.c_str(), F_OK | W_OK) != 0) {
-    return Status::IOError("Cannot connect to " + pathname + ": " +
+  // vineyardd may use abstract socket address on Linux
+  bool use_abstract_socket_address = false;
+  std::string socket_pathname = pathname;
+#ifdef __linux__
+  if (pathname.size() > 0 && pathname[0] == '@') {
+    use_abstract_socket_address = true;
+  } else if (access(pathname.c_str(), F_OK | W_OK) != 0) {
+    use_abstract_socket_address = true;
+  }
+  if (socket_pathname.size() > 0 && use_abstract_socket_address) {
+    socket_pathname[0] = '@';
+  }
+#else
+  if (access(socket_pathname.c_str(), F_OK | W_OK) != 0) {
+    return Status::IOError("Cannot connect to " + socket_pathname + ": " +
                            strerror(errno));
   }
+#endif
 
   socket_fd = socket(AF_UNIX, SOCK_STREAM, 0);
   if (socket_fd < 0) {
-    return Status::IOError("socket() failed for pathname " + pathname);
+    return Status::IOError("socket() failed for pathname " + socket_pathname +
+                           ": " + strerror(errno));
   }
 
-  memset(&socket_address, 0, sizeof(socket_address));
+  memset(&socket_address, 0x00, sizeof(socket_address));
   socket_address.sun_family = AF_UNIX;
-  if (pathname.size() + 1 > sizeof(socket_address.sun_path)) {
+  if (socket_pathname.size() + 1 > sizeof(socket_address.sun_path)) {
     close(socket_fd);
-    return Status::IOError("Socket pathname is too long: " + pathname);
+    return Status::IOError("Socket pathname is too long: " + socket_pathname);
   }
 
-  strncpy(socket_address.sun_path, pathname.c_str(), pathname.size() + 1);
+  strncpy(socket_address.sun_path, socket_pathname.c_str(),
+          socket_pathname.size() + 1);
+
+  size_t socket_address_size = sizeof(socket_address);
+  if (use_abstract_socket_address) {
+    socket_address.sun_path[0] = '\0';
+    // see also: https://stackoverflow.com/a/65435074
+    socket_address_size =
+        offsetof(struct sockaddr_un, sun_path) + socket_pathname.size();
+  }
 
   if (connect(socket_fd, reinterpret_cast<struct sockaddr*>(&socket_address),
-              sizeof(socket_address)) != 0) {
+              socket_address_size) != 0) {
     close(socket_fd);
-    return Status::IOError("connect() failed for pathname " + pathname);
+    return Status::IOError("connect() failed for pathname " + socket_pathname +
+                           ": " + strerror(errno));
   }
 
   return Status::OK();

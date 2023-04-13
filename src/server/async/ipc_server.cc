@@ -44,14 +44,19 @@ IPCServer::~IPCServer() {
 }
 
 void IPCServer::Start() {
-  std::string const& ipc_socket =
-      ipc_spec_["socket"].get_ref<std::string const&>();
+  std::string ipc_socket = ipc_spec_["socket"].get_ref<std::string const&>();
+#ifdef __linux__
+  if (ipc_socket.size() > 0) {
+    ipc_socket[0] = '@';
+  }
+#else
   chmod(ipc_socket.c_str(),
         S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+#endif
 
   vs_ptr_->IPCReady();
   SocketServer::Start();
-  LOG(INFO) << "Vineyard will listen on " << ipc_spec_["socket"] << " for IPC";
+  LOG(INFO) << "Vineyard will listen on " << ipc_socket << " for IPC";
 }
 
 void IPCServer::Close() {
@@ -65,9 +70,8 @@ void IPCServer::Close() {
 
 asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
     asio::io_context& context) {
-  std::string const& ipc_socket =
-      ipc_spec_["socket"].get_ref<std::string const&>();
-  auto endpoint = asio::local::stream_protocol::endpoint(ipc_socket);
+  std::string ipc_socket = ipc_spec_["socket"].get_ref<std::string const&>();
+  // delete the socket file if it exists already and not connectable
   if (access(ipc_socket.c_str(), F_OK) == 0) {
     // first check if the socket file is writable
     if (access(ipc_socket.c_str(), W_OK) != 0) {
@@ -86,7 +90,7 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
     // it first, otherwise raise an exception.
     asio::local::stream_protocol::socket socket(context);
     boost::system::error_code ec;
-    socket.connect(endpoint, ec);
+    socket.connect(asio::local::stream_protocol::endpoint(ipc_socket), ec);
     if (!ec) {
       std::string message =
           "the UNIX-domain socket '" + ipc_socket +
@@ -97,8 +101,11 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
       throw boost::system::system_error(
           asio::error::make_error_code(asio::error::address_in_use), message);
     }
+    // unlink the existing unused socket file
+    ::unlink(ipc_socket.c_str());
   } else if (errno == ENOENT) {
-    // create parent directory
+#ifndef __linux__
+    // MacOS: create parent directory
     auto socket_path =
         boost::filesystem::absolute(boost::filesystem::path(ipc_socket));
     boost::system::error_code ec;
@@ -109,13 +116,19 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
                             "' for specific socket path";
       throw boost::system::system_error(ec, message);
     }
+#endif
   } else {
     throw boost::system::system_error(
         boost::system::errc::make_error_code(boost::system::errc::io_error),
         strerror(errno));
   }
-  ::unlink(ipc_socket.c_str());
-  return endpoint;
+
+#ifdef __linux__
+  // Use abstract socket on Linux to avoid creation of a file for
+  // the unix-domain socket.
+  ipc_socket[0] = '\0';
+#endif
+  return asio::local::stream_protocol::endpoint(ipc_socket);
 }
 
 Status IPCServer::Register(std::shared_ptr<SocketConnection> conn,
