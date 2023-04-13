@@ -446,7 +446,10 @@ Status DelDataOps(const json& tree, const std::set<ObjectID>& ids,
     auto s = DelDataOps(tree, id, ops, sync_remote);
     if (!s.ok() && !IsBlob(id)) {
       // here it might be a "remote" blobs.
-      return s;
+      if (!s.IsMetaTreeSubtreeNotExists()) {
+        // non-exists is not an error.
+        return s;
+      }
     }
   }
   return Status::OK();
@@ -458,7 +461,10 @@ Status DelDataOps(const json& tree, const std::vector<ObjectID>& ids,
     auto s = DelDataOps(tree, id, ops, sync_remote);
     if (!s.ok() && !IsBlob(id)) {
       // here it might be a "remote" blobs.
-      return s;
+      if (!s.IsMetaTreeSubtreeNotExists()) {
+        // non-exists is not an error.
+        return s;
+      }
     }
   }
   return Status::OK();

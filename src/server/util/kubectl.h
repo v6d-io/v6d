@@ -37,9 +37,9 @@ class Kubectl {
 
   ~Kubectl();
 
-  void Apply(const std::string& content, callback_t<> callback);
+  void CreateObject(const json& cluster_meta, const json& object);
 
-  void ApplyObject(const json& meta, const json& object);
+  void DeleteObject(const json& object);
 
   void Finish();
 
@@ -49,6 +49,10 @@ class Kubectl {
 
  private:
   std::shared_ptr<Process> proc_;
+
+  void Create(const std::string& content, callback_t<> callback);
+
+  void Delete(const std::string& content, callback_t<> callback);
 };
 
 }  // namespace vineyard
