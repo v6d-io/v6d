@@ -709,7 +709,8 @@ Status VineyardServer::DelData(
           CATCH_JSON_ERROR(
               s, meta_tree::DelDataOps(meta, ids_to_delete, ops, sync_remote));
           if (s.IsMetaTreeSubtreeNotExists()) {
-            return Status::ObjectNotExists("failed to delete: " + s.ToString());
+            // ignore non-exist objects
+            return Status::OK();
           }
           return s;
         } else {
