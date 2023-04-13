@@ -366,12 +366,19 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::writeEdgeImpl(
                                       arrow::int64())}),
           offset_columns);
       auto st = writer.WriteOffsetChunk(offset_table, vertex_chunk_index);
-      if (!s.ok()) {
+      if (!st.ok()) {
         return Status::IOError(
-            "GAR error: " + std::to_string(static_cast<int>(s.code())) + ", " +
-            s.message());
+            "GAR error: " + std::to_string(static_cast<int>(st.code())) + ", " +
+            st.message());
       }
-      return Status::OK();
+    }
+
+    // write edge num of vertex chunk
+    auto st = writer.WriteEdgesNum(vertex_chunk_index, edge_offset);
+    if (!st.ok()) {
+      return Status::IOError(
+          "GAR error: " + std::to_string(static_cast<int>(st.code())) + ", " +
+          st.message());
     }
     return Status::OK();
   };

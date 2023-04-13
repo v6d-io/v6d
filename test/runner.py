@@ -524,13 +524,11 @@ def run_graph_tests(meta, allocator, endpoints, tests):
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
         run_test(tests, 'arrow_fragment_test')
-        # CSV seems does't work, due to the timestamp data type
-        #
-        # run_test(
-        #     tests,
-        #     'arrow_fragment_gar_test',
-        #     '$GAR_DATA_DIR/ldbc_sample/csv/ldbc_sample.graph.yml',
-        # )
+        run_test(
+            tests,
+            'arrow_fragment_gar_test',
+            '$GAR_DATA_DIR/ldbc_sample/csv/ldbc_sample.graph.yml',
+        )
         run_test(
             tests,
             'arrow_fragment_gar_test',

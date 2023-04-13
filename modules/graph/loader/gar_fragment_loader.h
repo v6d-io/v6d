@@ -181,8 +181,10 @@ template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 struct rebind_gar_fragment_loader;
 
 template <typename OID_T, typename VID_T>
-struct rebind_gar_fragment_loader<OID_T, VID_T,
-                                  vineyard::ArrowVertexMap<OID_T, VID_T>> {
+struct rebind_gar_fragment_loader<
+    OID_T, VID_T,
+    vineyard::ArrowVertexMap<typename vineyard::InternalType<OID_T>::type,
+                             VID_T>> {
   using type = GARFragmentLoader<OID_T, VID_T, vineyard::ArrowVertexMap>;
 };
 
