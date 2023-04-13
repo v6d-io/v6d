@@ -8,6 +8,11 @@ file(GLOB_RECURSE VINEYARD_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}"
                                    "*.h")
 
 find_package(MPI REQUIRED)
+find_package(libgrapelite REQUIRED)
+find_package(Protobuf REQUIRED)
+include_directories(${Protobuf_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 
 if(VINEYARD_MOD_SRCS)
     vineyard_generate(
@@ -175,7 +180,7 @@ endif()
 # grin lib
 file(GLOB_RECURSE GRIN_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "grin/*.cc")
 add_library(vineyard_grin ${GRIN_SRC_FILES})
-target_link_libraries(vineyard_grin PRIVATE vineyard_graph)
+target_link_libraries(vineyard_grin PRIVATE vineyard_graph ${Protobuf_LIBRARIES})
 
 # grin test
 if(BUILD_VINEYARD_TESTS)
@@ -193,6 +198,7 @@ if(BUILD_VINEYARD_TESTS)
         target_link_libraries(${T_NAME} PRIVATE
                               vineyard_graph
                               vineyard_grin
+                              ${Protobuf_LIBRARIES}
                               ${ARROW_SHARED_LIB}
                               ${MPI_CXX_LIBRARIES})
         if(${LIBUNWIND_FOUND})
