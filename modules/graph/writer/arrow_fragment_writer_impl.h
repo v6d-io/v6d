@@ -371,7 +371,6 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::writeEdgeImpl(
             "GAR error: " + std::to_string(static_cast<int>(st.code())) + ", " +
             st.message());
       }
-      return Status::OK();
     }
 
     // write edge num of vertex chunk
