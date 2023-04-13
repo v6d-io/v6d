@@ -28,24 +28,9 @@ limitations under the License.
 
 namespace vineyard {
 
-Kubectl::Kubectl(asio::io_context& context) : proc_(new Process(context)) {
-  proc_->Start("kubectl", {"apply", "-f", "-"},
-               [](Status const&, const std::string&) { return Status::OK(); });
-}
+Kubectl::Kubectl(asio::io_context& context) : proc_(new Process(context)) {}
 
 Kubectl::~Kubectl() { proc_->Terminate(); }
-
-void Kubectl::Apply(const std::string& content, callback_t<> callback) {
-  proc_->AsyncWrite(content, [this, callback](Status const& status) {
-    // TODO: improve the error diagnostic
-    if (!status.ok()) {
-      for (auto const& line : Diagnostic()) {
-        VLOG(10) << "kubectl: " << line;
-      }
-    }
-    return callback(status);
-  });
-}
 
 static std::string generate_local_object(
     std::map<InstanceID, std::string> const& instances, const json& object) {
@@ -62,6 +47,11 @@ static std::string generate_local_object(
   std::string vineyardd_name = getenv("VINEYARDD_NAME");
   std::string namespace_ = getenv("VINEYARDD_NAMESPACE");
   std::string uid = getenv("VINEYARDD_UID");
+
+  std::string hostname = "0.0.0.0";
+  if (instances.find(instance_id) != instances.end()) {
+    hostname = instances.at(instance_id);
+  }
 
   /* clang-format off */
   std::string crd = "\n"
@@ -88,7 +78,7 @@ static std::string generate_local_object(
                     "\n  signature: " + signature +
                     "\n  typename: " + type_name +
                     "\n  instance_id: " + std::to_string(instance_id) +
-                    "\n  hostname: " + instances.at(instance_id) +
+                    "\n  hostname: " + hostname +
                     "\n  metadata: " + type_name +
                     "\n\n";
   /* clang-format on */
@@ -154,9 +144,9 @@ static std::string generate_global_object(
   return crd + crds;
 }
 
-void Kubectl::ApplyObject(const json& meta, const json& object) {
+void Kubectl::CreateObject(const json& cluster_meta, const json& object) {
   std::map<InstanceID, std::string> instances;
-  for (auto const& kv : meta.items()) {
+  for (auto const& kv : cluster_meta.items()) {
     InstanceID instance_id;
     std::stringstream(kv.key().substr(1)) >> instance_id;
     instances.emplace(instance_id,
@@ -170,7 +160,47 @@ void Kubectl::ApplyObject(const json& meta, const json& object) {
     crds = generate_local_object(instances, object);
   }
   VLOG(10) << "Apply CRDs: " << crds;
-  this->Apply(crds, [](const Status& status) { return status; });
+  this->Create(crds, [](const Status& status) { return status; });
+}
+
+void Kubectl::DeleteObject(const json& object) {
+  std::map<InstanceID, std::string> instances;
+  std::string crds;
+  if (object.value("global", false)) {
+    crds = generate_global_object(instances, object);
+  } else {
+    crds = generate_local_object(instances, object);
+  }
+  VLOG(10) << "Deleting CRDs: " << crds;
+  this->Delete(crds, [](const Status& status) { return status; });
+}
+
+void Kubectl::Create(const std::string& content, callback_t<> callback) {
+  proc_->Start("kubectl", {"apply", "-f", "-"},
+               [](Status const&, const std::string&) { return Status::OK(); });
+  proc_->AsyncWrite(content, [this, callback](Status const& status) {
+    // TODO: improve the error diagnostic
+    if (!status.ok()) {
+      for (auto const& line : Diagnostic()) {
+        VLOG(10) << "kubectl: " << line;
+      }
+    }
+    return callback(status);
+  });
+}
+
+void Kubectl::Delete(const std::string& content, callback_t<> callback) {
+  proc_->Start("kubectl", {"delete", "-f", "-"},
+               [](Status const&, const std::string&) { return Status::OK(); });
+  proc_->AsyncWrite(content, [this, callback](Status const& status) {
+    // TODO: improve the error diagnostic
+    if (!status.ok()) {
+      for (auto const& line : Diagnostic()) {
+        VLOG(10) << "kubectl: " << line;
+      }
+    }
+    return callback(status);
+  });
 }
 
 void Kubectl::Finish() {

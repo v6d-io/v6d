@@ -566,10 +566,9 @@ Status VineyardServer::Persist(const ObjectID id, callback_t<> callback) {
             Status s;
             CATCH_JSON_ERROR(
                 s, meta_tree::GetData(meta, self->instance_name(), id, tree));
-            VINEYARD_SUPPRESS(s);
-            if (tree.is_object() && !tree.empty()) {
+            if (s.ok() && tree.is_object() && !tree.empty()) {
               auto kube = std::make_shared<Kubectl>(self->GetMetaContext());
-              kube->ApplyObject(meta["instances"], tree);
+              kube->CreateObject(meta["instances"], tree);
               kube->Finish();
             }
           }
@@ -701,13 +700,31 @@ Status VineyardServer::DelData(
   }
   meta_service_ptr_->RequestToDelete(
       ids, force, deep,
-      [](const Status& status, const json& meta,
-         std::vector<ObjectID> const& ids_to_delete,
-         std::vector<meta_tree::op_t>& ops, bool& sync_remote) {
+      [self](const Status& status, const json& meta,
+             std::vector<ObjectID> const& ids_to_delete,
+             std::vector<meta_tree::op_t>& ops, bool& sync_remote) {
         if (status.ok()) {
           Status s;
           CATCH_JSON_ERROR(
               s, meta_tree::DelDataOps(meta, ids_to_delete, ops, sync_remote));
+          if (status.ok() && !ops.empty() &&
+              self->spec_["sync_crds"].get<bool>()) {
+            for (auto const& id : ids_to_delete) {
+              if (IsBlob(id)) {
+                continue;
+              }
+              json tree;
+              Status s;
+              CATCH_JSON_ERROR(
+                  s, meta_tree::GetData(meta, self->instance_name(), id, tree));
+              if (s.ok() && tree.is_object() && !tree.empty() &&
+                  tree.value("persist", false)) {
+                auto kube = std::make_shared<Kubectl>(self->GetMetaContext());
+                kube->DeleteObject(tree);
+                kube->Finish();
+              }
+            }
+          }
           if (s.IsMetaTreeSubtreeNotExists()) {
             // ignore non-exist objects
             return Status::OK();
