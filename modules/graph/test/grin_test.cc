@@ -34,9 +34,11 @@ limitations under the License.
 #include "graph/grin/include/property/propertylist.h"
 #include "graph/grin/include/property/property.h"
 #include "graph/grin/include/property/propertytable.h"
+#include "graph/grin/include/proto/message.h"
 
 #include "graph/fragment/graph_schema.h"
 #include "graph/loader/arrow_fragment_loader.h"
+
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
@@ -211,6 +213,8 @@ std::vector<std::vector<std::shared_ptr<arrow::Table>>> makeETables() {
 }  // namespace detail
 
 int main(int argc, char** argv) {
+  std::cout << grin_get_static_storage_feature_msg() << std::endl;
+  
   if (argc < 2) {
     printf("usage: ./arrow_fragment_test <ipc_socket> [directed]\n");
     return 1;
