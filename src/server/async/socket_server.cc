@@ -917,15 +917,22 @@ bool SocketConnection::doPersist(const json& root) {
   auto self(shared_from_this());
   ObjectID id;
   TRY_READ_REQUEST(ReadPersistRequest, root, id);
-  RESPONSE_ON_ERROR(server_ptr_->Persist(id, [self](const Status& status) {
+  RESPONSE_ON_ERROR(server_ptr_->Persist(id, [self, id](const Status& status) {
     std::string message_out;
     if (status.ok()) {
       WritePersistReply(message_out);
+      self->doWrite(message_out);
+    } else if (status.IsEtcdError()) {
+      // retry on etcd error: reprocess the message
+      VLOG(100) << "Warning: "
+                << "Retry persist on etcd error: " << status.ToString();
+      self->server_ptr_->GetIOContext().post(
+          [self, id]() { self->doPersist(id); });
     } else {
       VLOG(100) << "Error: " << status.ToString();
       WriteErrorReply(status, message_out);
+      self->doWrite(message_out);
     }
-    self->doWrite(message_out);
     return Status::OK();
   }));
   return false;

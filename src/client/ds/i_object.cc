@@ -46,7 +46,12 @@ bool const Object::IsLocal() const { return meta_.IsLocal(); }
 bool const Object::IsPersist() const {
   bool persist = !this->meta_.GetKeyValue<bool>("transient");
   if (!persist) {
-    VINEYARD_CHECK_OK(this->meta_.GetClient()->IfPersist(this->id_, persist));
+    auto s = this->meta_.GetClient()->IfPersist(this->id_, persist);
+    if (!s.ok()) {
+      std::cerr << "[error] failed to check if object " << this->id_
+                << " is persistent: " << s.ToString() << std::endl;
+      return false;
+    }
     // as an optimization: cache the query result
     if (persist) {
       this->meta_.AddKeyValue("transient", false);
