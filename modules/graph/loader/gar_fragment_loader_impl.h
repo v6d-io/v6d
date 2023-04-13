@@ -335,12 +335,17 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadVertexTableOfLabel(
   }
   std::shared_ptr<arrow::Table> concat_table;
   VY_OK_OR_RAISE(ConcatenateTablesColumnWise(pg_tables, concat_table));
+  // loosen the data type
+  std::shared_ptr<arrow::Schema> normalized_schema;
+  VY_OK_OR_RAISE(TypeLoosen({concat_table->schema()}, normalized_schema));
+  std::shared_ptr<arrow::Table> table_out;
+  VY_OK_OR_RAISE(CastTableToSchema(concat_table, normalized_schema, table_out));
   auto metadata = std::make_shared<arrow::KeyValueMetadata>();
   metadata->Append("label", label);
   metadata->Append("label_id", std::to_string(v_label));
   metadata->Append("type", "VERTEX");
   metadata->Append("retain_oid", std::to_string(false));
-  vertex_tables_[v_label] = concat_table->ReplaceSchemaMetadata(metadata);
+  vertex_tables_[v_label] = table_out->ReplaceSchemaMetadata(metadata);
   return {};
 }
 
@@ -524,8 +529,20 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadEdgeTableOfLabel(
   metadata->Append("label_id", std::to_string(label_id));
   metadata->Append("type", "EDGE");
   std::shared_ptr<arrow::Table> concat_property_table;
-  VY_OK_OR_RAISE(ConcatenateTablesColumnWise(property_table_of_groups,
-                                             concat_property_table));
+  if (!property_groups.empty()) {
+    VY_OK_OR_RAISE(ConcatenateTablesColumnWise(property_table_of_groups,
+                                               concat_property_table));
+    // loosen the data type
+    std::shared_ptr<arrow::Schema> normalized_schema;
+    VY_OK_OR_RAISE(
+        TypeLoosen({concat_property_table->schema()}, normalized_schema));
+    VY_OK_OR_RAISE(CastTableToSchema(concat_property_table, normalized_schema,
+                                     concat_property_table));
+  } else {
+    // create an empty arrow table
+    concat_property_table =
+        arrow::Table::MakeEmpty(arrow::schema({})).ValueOrDie();
+  }
   property_table = concat_property_table->ReplaceSchemaMetadata(metadata);
   label_id_t source_label_id = vertex_label_to_index_[src_label];
   label_id_t destination_label_id = vertex_label_to_index_[dst_label];
