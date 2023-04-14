@@ -487,7 +487,8 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T>::initSchema(
   schema.set_fnum(comm_spec_.fnum());
   for (label_id_t v_label = 0; v_label != vertex_label_num_; ++v_label) {
     std::string vertex_label = vertex_labels_[v_label];
-    auto entry = schema.CreateEntry(vertex_label, "VERTEX");
+    auto entry =
+        schema.CreateEntry(vertex_label, PropertyGraphSchema::VERTEX_TYPE_NAME);
 
     auto table = output_vertex_tables_[v_label];
 
@@ -503,7 +504,8 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T>::initSchema(
   }
   for (label_id_t e_label = 0; e_label != edge_label_num_; ++e_label) {
     std::string edge_label = edge_labels_[e_label];
-    auto entry = schema.CreateEntry(edge_label, "EDGE");
+    auto entry =
+        schema.CreateEntry(edge_label, PropertyGraphSchema::EDGE_TYPE_NAME);
 
     auto& relation_set = edge_relations_[e_label];
     for (auto& pair : relation_set) {
@@ -633,7 +635,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
     auto metadata = std::make_shared<arrow::KeyValueMetadata>();
     metadata->Append("label", vertex_labels_[v_label]);
     metadata->Append("label_id", std::to_string(v_label));
-    metadata->Append("type", "VERTEX");
+    metadata->Append("type", PropertyGraphSchema::VERTEX_TYPE_NAME);
     metadata->Append("retain_oid", std::to_string(retain_oid_));
     output_vertex_tables_[v_label] = table->ReplaceSchemaMetadata(metadata);
   }
@@ -726,7 +728,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
     auto metadata = std::make_shared<arrow::KeyValueMetadata>();
     metadata->Append("label", vertex_labels_[v_label]);
     metadata->Append("label_id", std::to_string(v_label));
-    metadata->Append("type", "VERTEX");
+    metadata->Append("type", PropertyGraphSchema::VERTEX_TYPE_NAME);
     metadata->Append("retain_oid", std::to_string(retain_oid_));
     output_vertex_tables_[v_label] = table->ReplaceSchemaMetadata(metadata);
   }
@@ -779,7 +781,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
     auto metadata = std::make_shared<arrow::KeyValueMetadata>();
     metadata->Append("label", edge_labels_[e_label]);
     metadata->Append("label_id", std::to_string(e_label));
-    metadata->Append("type", "EDGE");
+    metadata->Append("type", PropertyGraphSchema::EDGE_TYPE_NAME);
     output_edge_tables_[e_label] = table->ReplaceSchemaMetadata(metadata);
     ordered_edge_tables_[e_label].clear();
   }
@@ -985,7 +987,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
     auto metadata = std::make_shared<arrow::KeyValueMetadata>();
     metadata->Append("label", edge_labels_[e_label]);
     metadata->Append("label_id", std::to_string(e_label));
-    metadata->Append("type", "EDGE");
+    metadata->Append("type", PropertyGraphSchema::EDGE_TYPE_NAME);
     output_edge_tables_[e_label] = table->ReplaceSchemaMetadata(metadata);
   }
   return {};

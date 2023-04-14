@@ -105,7 +105,7 @@ void ArrowLocalVertexMap<OID_T, VID_T>::Construct(
   double i2o_load_factor =
       i2o_bucket_count == 0 ? 0
                             : static_cast<size_t>(i2o_size) / i2o_bucket_count;
-  VLOG(100) << "ArrowLocalVertexMap<int64_t, uint64_t> "
+  VLOG(100) << type_name<ArrowLocalVertexMap<oid_t, vid_t>>()
             << "\n\tmemory: " << prettyprint_memory_size(nbytes)
             << "\n\to2i size: " << o2i_size
             << ", load factor: " << o2i_load_factor

@@ -350,6 +350,9 @@ void Entry::FromJSON(const json& root) {
   }
 }
 
+const std::string PropertyGraphSchema::VERTEX_TYPE_NAME = "VERTEX";
+const std::string PropertyGraphSchema::EDGE_TYPE_NAME = "EDGE";
+
 PropertyGraphSchema::PropertyId PropertyGraphSchema::GetVertexPropertyId(
     LabelId label_id, const std::string& name) const {
   if (label_id >= 0 &&
@@ -446,7 +449,7 @@ std::string PropertyGraphSchema::GetEdgeLabelName(LabelId label_id) const {
 
 Entry* PropertyGraphSchema::CreateEntry(const std::string& name,
                                         const std::string& type) {
-  if (type == "VERTEX") {
+  if (type == VERTEX_TYPE_NAME) {
     vertex_entries_.emplace_back(
         Entry{.id = static_cast<int>(vertex_entries_.size()),
               .label = name,
@@ -464,7 +467,7 @@ Entry* PropertyGraphSchema::CreateEntry(const std::string& name,
 }
 
 void PropertyGraphSchema::AddEntry(const Entry& entry) {
-  if (entry.type == "VERTEX") {
+  if (entry.type == VERTEX_TYPE_NAME) {
     vertex_entries_.push_back(entry);
     valid_vertices_.push_back(1);
   } else {
@@ -475,7 +478,7 @@ void PropertyGraphSchema::AddEntry(const Entry& entry) {
 
 const Entry& PropertyGraphSchema::GetEntry(LabelId label_id,
                                            const std::string& type) const {
-  if (type == "VERTEX") {
+  if (type == VERTEX_TYPE_NAME) {
     return vertex_entries_[label_id];
   } else {
     return edge_entries_[label_id];
@@ -484,7 +487,7 @@ const Entry& PropertyGraphSchema::GetEntry(LabelId label_id,
 
 Entry& PropertyGraphSchema::GetMutableEntry(const std::string& label,
                                             const std::string& type) {
-  if (type == "VERTEX") {
+  if (type == VERTEX_TYPE_NAME) {
     for (auto& entry : vertex_entries_) {
       if (entry.label == label) {
         return entry;
@@ -503,7 +506,7 @@ Entry& PropertyGraphSchema::GetMutableEntry(const std::string& label,
 
 Entry& PropertyGraphSchema::GetMutableEntry(const LabelId label_id,
                                             const std::string& type) {
-  if (type == "VERTEX") {
+  if (type == VERTEX_TYPE_NAME) {
     return vertex_entries_[label_id];
   } else {
     return edge_entries_[label_id];
@@ -640,7 +643,7 @@ void PropertyGraphSchema::FromJSON(json const& root) {
   for (const auto& item : root["types"]) {
     Entry entry;
     entry.FromJSON(item);
-    if (entry.type == "VERTEX") {
+    if (entry.type == VERTEX_TYPE_NAME) {
       vertex_entries_.push_back(std::move(entry));
     } else {
       edge_entries_.push_back(std::move(entry));

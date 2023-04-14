@@ -156,7 +156,8 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteEdge(
   }
   if (is_valid_edge) {
     is_valid_edge = false;
-    auto& entry = schema.GetEntry(edge_label_id, "EDGE");
+    auto& entry =
+        schema.GetEntry(edge_label_id, PropertyGraphSchema::EDGE_TYPE_NAME);
     for (auto& relation : entry.relations) {
       if (relation.first == src_label && relation.second == dst_label) {
         is_valid_edge = true;

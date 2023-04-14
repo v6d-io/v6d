@@ -111,7 +111,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVertexColumnsImpl(
   if (replace) {
     for (auto& pair : columns) {
       auto label_id = pair.first;
-      auto& entry = schema.GetMutableEntry(label_id, "VERTEX");
+      auto& entry = schema.GetMutableEntry(
+          label_id, PropertyGraphSchema::VERTEX_TYPE_NAME);
       for (size_t i = 0; i < entry.props_.size(); ++i) {
         entry.InvalidateProperty(i);
       }
@@ -135,7 +136,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVertexColumnsImpl(
       auto new_table = std::dynamic_pointer_cast<vineyard::Table>(table_sealed);
       builder.set_vertex_tables_(label_id, new_table);
       auto& entry =
-          schema.GetMutableEntry(schema.GetVertexLabelName(label_id), "VERTEX");
+          schema.GetMutableEntry(schema.GetVertexLabelName(label_id),
+                                 PropertyGraphSchema::VERTEX_TYPE_NAME);
       for (size_t index = table->num_columns();
            index < new_table->num_columns(); ++index) {
         entry.AddProperty(new_table->field(index)->name(),
@@ -193,7 +195,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddEdgeColumnsImpl(
   if (replace) {
     for (auto& pair : columns) {
       auto label_id = pair.first;
-      auto& entry = schema.GetMutableEntry(label_id, "EDGE");
+      auto& entry =
+          schema.GetMutableEntry(label_id, PropertyGraphSchema::EDGE_TYPE_NAME);
       for (size_t i = 0; i < entry.props_.size(); ++i) {
         entry.InvalidateProperty(i);
       }
@@ -213,8 +216,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddEdgeColumnsImpl(
       VY_OK_OR_RAISE(extender.Seal(client, table_sealed));
       auto new_table = std::dynamic_pointer_cast<vineyard::Table>(table_sealed);
       builder.set_edge_tables_(label_id, new_table);
-      auto& entry =
-          schema.GetMutableEntry(schema.GetEdgeLabelName(label_id), "EDGE");
+      auto& entry = schema.GetMutableEntry(schema.GetEdgeLabelName(label_id),
+                                           PropertyGraphSchema::EDGE_TYPE_NAME);
       for (size_t index = table->num_columns();
            index < new_table->num_columns(); ++index) {
         entry.AddProperty(new_table->field(index)->name(),
@@ -257,9 +260,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
   auto remove_invalid_relation =
       [&schema](const std::vector<label_id_t>& edge_labels,
                 std::map<label_id_t, std::vector<label_id_t>> vertices) {
-        std::string type = "EDGE";
         for (size_t i = 0; i < edge_labels.size(); ++i) {
-          auto& entry = schema.GetMutableEntry(edge_labels[i], type);
+          auto& entry = schema.GetMutableEntry(
+              edge_labels[i], PropertyGraphSchema::EDGE_TYPE_NAME);
           auto& relations = entry.relations;
           std::vector<std::pair<std::string, std::string>> valid_relations;
           for (auto& pair : relations) {
@@ -280,7 +283,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
     auto it = labels.begin();
     for (label_id_t i = 0; i < label_num; ++i) {
       if (it == labels.end() || i < *it) {
-        if (type == "VERTEX") {
+        if (type == PropertyGraphSchema::VERTEX_TYPE_NAME) {
           schema.InvalidateVertex(i);
         } else {
           schema.InvalidateEdge(i);
@@ -310,12 +313,14 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
       };
 
   remove_invalid_relation(edge_labels, vertices);
-  invalidate_label(vertex_labels, "VERTEX",
+  invalidate_label(vertex_labels, PropertyGraphSchema::VERTEX_TYPE_NAME,
                    static_cast<label_id_t>(schema.AllVertexEntries().size()));
-  invalidate_label(edge_labels, "EDGE",
+  invalidate_label(edge_labels, PropertyGraphSchema::EDGE_TYPE_NAME,
                    static_cast<label_id_t>(schema.AllEdgeEntries().size()));
-  invalidate_prop(vertex_labels, "VERTEX", vertex_properties);
-  invalidate_prop(edge_labels, "EDGE", edge_properties);
+  invalidate_prop(vertex_labels, PropertyGraphSchema::VERTEX_TYPE_NAME,
+                  vertex_properties);
+  invalidate_prop(edge_labels, PropertyGraphSchema::EDGE_TYPE_NAME,
+                  edge_properties);
 
   std::string error_message;
   if (!schema.Validate(error_message)) {
@@ -398,7 +403,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::ConsolidateVertexColumns(
   VY_OK_OR_RAISE(consolidator.Seal(client, table_sealed));
   auto new_table = std::dynamic_pointer_cast<vineyard::Table>(table_sealed);
   builder.set_vertex_tables_(vlabel, new_table);
-  auto& entry = schema.GetMutableEntry(vlabel, "VERTEX");
+  auto& entry =
+      schema.GetMutableEntry(vlabel, PropertyGraphSchema::VERTEX_TYPE_NAME);
 
   // update schema: remove old props and add new merged props
   std::vector<prop_id_t> sorted_props = props;
@@ -454,7 +460,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::ConsolidateEdgeColumns(
   VY_OK_OR_RAISE(consolidator.Seal(client, table_sealed));
   auto new_table = std::dynamic_pointer_cast<vineyard::Table>(table_sealed);
   builder.set_edge_tables_(elabel, new_table);
-  auto& entry = schema.GetMutableEntry(elabel, "EDGE");
+  auto& entry =
+      schema.GetMutableEntry(elabel, PropertyGraphSchema::EDGE_TYPE_NAME);
 
   // update schema: remove old props and add new merged props
   std::vector<prop_id_t> sorted_props = props;

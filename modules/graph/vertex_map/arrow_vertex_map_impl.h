@@ -70,7 +70,7 @@ void ArrowVertexMap<OID_T, VID_T>::Construct(const vineyard::ObjectMeta& meta) {
   double o2g_load_factor =
       o2g_bucket_count == 0 ? 0
                             : static_cast<double>(o2g_size) / o2g_bucket_count;
-  VLOG(2) << "ArrowVertexMap<int64_t, uint64_t> "
+  VLOG(2) << type_name<ArrowVertexMap<oid_t, vid_t>>()
           << "\n\tmemory: " << prettyprint_memory_size(nbytes)
           << "\n\to2g size: " << o2g_size
           << ", load factor: " << o2g_load_factor

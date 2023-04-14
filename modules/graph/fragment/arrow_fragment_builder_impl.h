@@ -403,7 +403,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
     std::unordered_map<std::string, std::string> kvs;
     table->schema()->metadata()->ToUnorderedMap(&kvs);
 
-    auto entry = schema.CreateEntry(kvs["label"], "VERTEX");
+    auto entry =
+        schema.CreateEntry(kvs["label"], PropertyGraphSchema::VERTEX_TYPE_NAME);
     for (auto const& field : table->fields()) {
       entry->AddProperty(field->name(), field->type());
     }
@@ -427,7 +428,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
     // build schema entry for the new edge
     std::unordered_map<std::string, std::string> kvs;
     table->schema()->metadata()->ToUnorderedMap(&kvs);
-    auto entry = schema.CreateEntry(kvs["label"], "EDGE");
+    auto entry =
+        schema.CreateEntry(kvs["label"], PropertyGraphSchema::EDGE_TYPE_NAME);
     for (auto const& field : table->fields()) {
       entry->AddProperty(field->name(), field->type());
     }
@@ -585,7 +587,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
     std::unordered_map<std::string, std::string> kvs;
     table->schema()->metadata()->ToUnorderedMap(&kvs);
 
-    auto entry = schema.CreateEntry(kvs["label"], "VERTEX");
+    auto entry =
+        schema.CreateEntry(kvs["label"], PropertyGraphSchema::VERTEX_TYPE_NAME);
     for (auto const& field : table->fields()) {
       entry->AddProperty(field->name(), field->type());
     }
@@ -892,7 +895,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
     // build schema entry for the new edge
     std::unordered_map<std::string, std::string> kvs;
     table->schema()->metadata()->ToUnorderedMap(&kvs);
-    auto entry = schema.CreateEntry(kvs["label"], "EDGE");
+    auto entry =
+        schema.CreateEntry(kvs["label"], PropertyGraphSchema::EDGE_TYPE_NAME);
     for (auto const& field : table->fields()) {
       entry->AddProperty(field->name(), field->type());
     }
@@ -1108,8 +1112,8 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
 
   this->set_vm_ptr_(vm_ptr_);
 
-  this->set_oid_type(type_name<oid_t>());
-  this->set_vid_type(type_name<vid_t>());
+  this->set_oid_type_(type_name<oid_t>());
+  this->set_vid_type_(type_name<vid_t>());
 
   VLOG(100) << "Finish building into vineyard: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
