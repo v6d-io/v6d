@@ -103,11 +103,11 @@ def fixed_size_binary_array_builder(
     return client.create_metadata(meta)
 
 
-def string_array_builder(
-    client: IPCClient, array: pa.StringArray, builder: BuilderContext
+def binary_or_string_array_builder(
+    client: IPCClient, array: pa.StringArray, typename: str, builder: BuilderContext
 ):
     meta = ObjectMeta()
-    meta['typename'] = 'vineyard::BaseBinaryArray<arrow::LargeStringArray>'
+    meta['typename'] = typename
     meta['length_'] = len(array)
     meta['null_count_'] = array.null_count
     meta['offset_'] = array.offset
@@ -129,6 +129,22 @@ def string_array_builder(
     meta.add_member('null_bitmap_', null_bitmap)
     meta['nbytes'] = array.nbytes
     return client.create_metadata(meta)
+
+
+def binary_array_builder(
+    client: IPCClient, array: pa.StringArray, builder: BuilderContext
+):
+    return binary_or_string_array_builder(
+        client, array, 'vineyard::BaseBinaryArray<arrow::LargeBinaryArray>', builder
+    )
+
+
+def string_array_builder(
+    client: IPCClient, array: pa.StringArray, builder: BuilderContext
+):
+    return binary_or_string_array_builder(
+        client, array, 'vineyard::BaseBinaryArray<arrow::LargeStringArray>', builder
+    )
 
 
 def list_array_builder(client: IPCClient, array: pa.ListArray, builder: BuilderContext):
@@ -294,7 +310,7 @@ def fixed_size_binary_array_resolver(obj: Union[Object, ObjectMeta]):
     )
 
 
-def string_array_resolver(obj: Union[Object, ObjectMeta]):
+def binary_or_string_array_resolver(obj: Union[Object, ObjectMeta], dtype: pa.DataType):
     meta = obj.meta
     buffer_data = as_arrow_buffer(obj.member('buffer_data_'))
     buffer_offsets = as_arrow_buffer(obj.member('buffer_offsets_'))
@@ -303,12 +319,20 @@ def string_array_resolver(obj: Union[Object, ObjectMeta]):
     null_count = int(meta['null_count_'])
     offset = int(meta['offset_'])
     return pa.lib.Array.from_buffers(
-        pa.large_string(),
+        dtype,
         length,
         [null_bitmap, buffer_offsets, buffer_data],
         null_count,
         offset,
     )
+
+
+def binary_array_resolver(obj: Union[Object, ObjectMeta]):
+    return binary_or_string_array_resolver(obj, pa.large_binary())
+
+
+def string_array_resolver(obj: Union[Object, ObjectMeta]):
+    return binary_or_string_array_resolver(obj, pa.large_string())
 
 
 def null_array_resolver(obj: Union[Object, ObjectMeta]):
@@ -391,6 +415,7 @@ def register_arrow_types(
         builder_ctx.register(pa.NumericArray, numeric_array_builder)
         builder_ctx.register(pa.FixedSizeBinaryArray, fixed_size_binary_array_builder)
         builder_ctx.register(pa.StringArray, string_array_builder)
+        builder_ctx.register(pa.LargeBinaryArray, binary_array_builder)
         builder_ctx.register(pa.LargeStringArray, string_array_builder)
         builder_ctx.register(pa.NullArray, null_array_builder)
         builder_ctx.register(pa.BooleanArray, boolean_array_builder)
@@ -404,6 +429,7 @@ def register_arrow_types(
         resolver_ctx.register(
             'vineyard::FixedSizeBinaryArray', fixed_size_binary_array_resolver
         )
+        resolver_ctx.register('vineyard::LargeBinaryArray', binary_array_resolver)
         resolver_ctx.register('vineyard::LargeStringArray', string_array_resolver)
         resolver_ctx.register(
             'vineyard::BaseBinaryArray<arrow::LargeStringArray>', string_array_resolver
