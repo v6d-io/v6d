@@ -194,6 +194,10 @@ class PropertyGraphSchema {
 
   friend MaxGraphSchema;
 
+ public:
+  static const std::string VERTEX_TYPE_NAME;
+  static const std::string EDGE_TYPE_NAME;
+
  private:
   size_t fnum_;
   std::vector<Entry> vertex_entries_;

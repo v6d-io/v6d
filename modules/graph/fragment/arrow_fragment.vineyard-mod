@@ -128,9 +128,9 @@ class [[vineyard]] ArrowFragment
 
   bool is_multigraph() const override { return is_multigraph_; }
 
-  const std::string vid_typename() const override { return vid_type; }
+  const std::string vid_typename() const override { return vid_type_; }
 
-  const std::string oid_typename() const override { return oid_type; }
+  const std::string oid_typename() const override { return oid_type_; }
 
   void PostConstruct(const vineyard::ObjectMeta& meta) override {
     vid_parser_.Init(fnum_, vertex_label_num_);
@@ -169,8 +169,9 @@ class [[vineyard]] ArrowFragment
   label_id_t edge_label_num() const { return schema_.edge_label_num(); }
 
   prop_id_t vertex_property_num(label_id_t label) const {
-    std::string type = "VERTEX";
-    return static_cast<prop_id_t>(schema_.GetEntry(label, type).property_num());
+    return static_cast<prop_id_t>(
+        schema_.GetEntry(label, PropertyGraphSchema::VERTEX_TYPE_NAME)
+            .property_num());
   }
 
   std::shared_ptr<arrow::DataType> vertex_property_type(label_id_t label,
@@ -179,8 +180,9 @@ class [[vineyard]] ArrowFragment
   }
 
   prop_id_t edge_property_num(label_id_t label) const {
-    std::string type = "EDGE";
-    return static_cast<prop_id_t>(schema_.GetEntry(label, type).property_num());
+    return static_cast<prop_id_t>(
+        schema_.GetEntry(label, PropertyGraphSchema::EDGE_TYPE_NAME)
+            .property_num());
   }
 
   std::shared_ptr<arrow::DataType> edge_property_type(label_id_t label,
@@ -239,8 +241,8 @@ class [[vineyard]] ArrowFragment
         vid_parser_.GenerateId(0, label_id, tvnums_[label_id]));
   }
 
-  vertex_range_t InnerVerticesSlice(label_id_t label_id, vid_t start, vid_t end)
-      const {
+  vertex_range_t InnerVerticesSlice(label_id_t label_id, vid_t start,
+                                    vid_t end) const {
     CHECK(start <= end && start <= ivnums_[label_id]);
     if (end <= ivnums_[label_id]) {
       return vertex_range_t(vid_parser_.GenerateId(0, label_id, start),
@@ -431,8 +433,8 @@ class [[vineyard]] ArrowFragment
                                   vid_parser_.GetOffset(v.GetValue()));
   }
 
-  inline adj_list_t GetIncomingAdjList(const vertex_t& v, label_id_t e_label)
-      const {
+  inline adj_list_t GetIncomingAdjList(const vertex_t& v,
+                                       label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
@@ -454,8 +456,8 @@ class [[vineyard]] ArrowFragment
                           &ie[offset_array[v_offset + 1]]);
   }
 
-  inline adj_list_t GetOutgoingAdjList(const vertex_t& v, label_id_t e_label)
-      const {
+  inline adj_list_t GetOutgoingAdjList(const vertex_t& v,
+                                       label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
@@ -492,13 +494,13 @@ class [[vineyard]] ArrowFragment
     return oe_offsets_ptr_lists_[v_label][e_label];
   }
 
-  inline int64_t GetIncomingOffsetLength(label_id_t v_label, label_id_t e_label)
-      const {
+  inline int64_t GetIncomingOffsetLength(label_id_t v_label,
+                                         label_id_t e_label) const {
     return ie_offsets_lists_[v_label][e_label]->length();
   }
 
-  inline int64_t GetOutgoingOffsetLength(label_id_t v_label, label_id_t e_label)
-      const {
+  inline int64_t GetOutgoingOffsetLength(label_id_t v_label,
+                                         label_id_t e_label) const {
     return oe_offsets_lists_[v_label][e_label]->length();
   }
 
@@ -543,22 +545,22 @@ class [[vineyard]] ArrowFragment
                        grape::PrepareConf conf);
 
   boost::leaf::result<ObjectID> AddVerticesAndEdges(
-      Client & client,
-      std::map<label_id_t, std::shared_ptr<arrow::Table>> && vertex_tables_map,
-      std::map<label_id_t, std::shared_ptr<arrow::Table>> && edge_tables_map,
+      Client& client,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
       ObjectID vm_id,
       const std::vector<std::set<std::pair<std::string, std::string>>>&
           edge_relations,
       int concurrency);
 
   boost::leaf::result<ObjectID> AddVertices(
-      Client & client,
-      std::map<label_id_t, std::shared_ptr<arrow::Table>> && vertex_tables_map,
+      Client& client,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
       ObjectID vm_id);
 
   boost::leaf::result<ObjectID> AddEdges(
-      Client & client,
-      std::map<label_id_t, std::shared_ptr<arrow::Table>> && edge_tables_map,
+      Client& client,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
       const std::vector<std::set<std::pair<std::string, std::string>>>&
           edge_relations,
       int concurrency);
@@ -567,9 +569,9 @@ class [[vineyard]] ArrowFragment
   /// Vertex label id started from vertex_label_num_, and edge label id
   /// started from edge_label_num_.
   boost::leaf::result<ObjectID> AddNewVertexEdgeLabels(
-      Client & client,
-      std::vector<std::shared_ptr<arrow::Table>> && vertex_tables,
-      std::vector<std::shared_ptr<arrow::Table>> && edge_tables, ObjectID vm_id,
+      Client& client,
+      std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
+      std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, ObjectID vm_id,
       const std::vector<std::set<std::pair<std::string, std::string>>>&
           edge_relations,
       int concurrency);
@@ -577,21 +579,20 @@ class [[vineyard]] ArrowFragment
   /// Add a set of new vertex labels to graph. Vertex label id started from
   /// vertex_label_num_.
   boost::leaf::result<ObjectID> AddNewVertexLabels(
-      Client & client,
-      std::vector<std::shared_ptr<arrow::Table>> && vertex_tables,
+      Client& client,
+      std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
       ObjectID vm_id);
 
   /// Add a set of new edge labels to graph. Edge label id started from
   /// edge_label_num_.
   boost::leaf::result<ObjectID> AddNewEdgeLabels(
-      Client & client,
-      std::vector<std::shared_ptr<arrow::Table>> && edge_tables,
+      Client& client, std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
       const std::vector<std::set<std::pair<std::string, std::string>>>&
           edge_relations,
       int concurrency);
 
   boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
-      vineyard::Client & client,
+      vineyard::Client& client,
       const std::map<
           label_id_t,
           std::vector<std::pair<std::string, std::shared_ptr<arrow::Array>>>>
@@ -599,7 +600,7 @@ class [[vineyard]] ArrowFragment
       bool replace = false) override;
 
   boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
-      vineyard::Client & client,
+      vineyard::Client& client,
       const std::map<label_id_t,
                      std::vector<std::pair<
                          std::string, std::shared_ptr<arrow::ChunkedArray>>>>
@@ -608,7 +609,7 @@ class [[vineyard]] ArrowFragment
 
   template <typename ArrayType = arrow::Array>
   boost::leaf::result<vineyard::ObjectID> AddVertexColumnsImpl(
-      vineyard::Client & client,
+      vineyard::Client& client,
       const std::map<
           label_id_t,
           std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
@@ -616,7 +617,7 @@ class [[vineyard]] ArrowFragment
       bool replace = false);
 
   boost::leaf::result<vineyard::ObjectID> AddEdgeColumns(
-      vineyard::Client & client,
+      vineyard::Client& client,
       const std::map<
           label_id_t,
           std::vector<std::pair<std::string, std::shared_ptr<arrow::Array>>>>
@@ -624,7 +625,7 @@ class [[vineyard]] ArrowFragment
       bool replace = false) override;
 
   boost::leaf::result<vineyard::ObjectID> AddEdgeColumns(
-      vineyard::Client & client,
+      vineyard::Client& client,
       const std::map<label_id_t,
                      std::vector<std::pair<
                          std::string, std::shared_ptr<arrow::ChunkedArray>>>>
@@ -633,7 +634,7 @@ class [[vineyard]] ArrowFragment
 
   template <typename ArrayType = arrow::Array>
   boost::leaf::result<vineyard::ObjectID> AddEdgeColumnsImpl(
-      vineyard::Client & client,
+      vineyard::Client& client,
       const std::map<
           label_id_t,
           std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
@@ -641,29 +642,29 @@ class [[vineyard]] ArrowFragment
       bool replace = false);
 
   boost::leaf::result<vineyard::ObjectID> Project(
-      vineyard::Client & client,
+      vineyard::Client& client,
       std::map<label_id_t, std::vector<label_id_t>> vertices,
       std::map<label_id_t, std::vector<label_id_t>> edges);
 
   boost::leaf::result<vineyard::ObjectID> TransformDirection(
-      vineyard::Client & client, int concurrency);
+      vineyard::Client& client, int concurrency);
 
   boost::leaf::result<vineyard::ObjectID> ConsolidateVertexColumns(
-      vineyard::Client & client, const label_id_t vlabel,
+      vineyard::Client& client, const label_id_t vlabel,
       std::vector<std::string> const& prop_names,
       std::string const& consolidate_name);
 
   boost::leaf::result<vineyard::ObjectID> ConsolidateVertexColumns(
-      vineyard::Client & client, const label_id_t vlabel,
+      vineyard::Client& client, const label_id_t vlabel,
       std::vector<prop_id_t> const& props, std::string const& consolidate_name);
 
   boost::leaf::result<vineyard::ObjectID> ConsolidateEdgeColumns(
-      vineyard::Client & client, const label_id_t elabel,
+      vineyard::Client& client, const label_id_t elabel,
       std::vector<std::string> const& prop_names,
       std::string const& consolidate_name);
 
   boost::leaf::result<vineyard::ObjectID> ConsolidateEdgeColumns(
-      vineyard::Client & client, const label_id_t elabel,
+      vineyard::Client& client, const label_id_t elabel,
       std::vector<prop_id_t> const& props, std::string const& consolidate_name);
 
  private:
@@ -675,10 +676,10 @@ class [[vineyard]] ArrowFragment
       std::vector<std::vector<std::vector<fid_t*>>>& fid_lists_offset);
 
   void directedCSR2Undirected(
-      vineyard::Client & client,
-      std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>> &
+      vineyard::Client& client,
+      std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>&
           oe_lists,
-      std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>> &
+      std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
           oe_offsets_lists,
       int concurrency, bool& is_multigraph);
 
@@ -689,7 +690,7 @@ class [[vineyard]] ArrowFragment
   [[shared]] property_graph_types::LABEL_ID_TYPE edge_label_num_;
   size_t oenum_, ienum_;  // FIXME: should be pre-computable
 
-  [[shared]] String oid_type, vid_type;
+  [[shared]] String oid_type_, vid_type_;
 
   [[shared]] vineyard::Array<vid_t> ivnums_, ovnums_, tvnums_;
 
