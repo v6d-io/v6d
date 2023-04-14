@@ -49,6 +49,15 @@ spec:
       {{- else }}
         mountPath: /var/run
       {{- end }}
+      {{- if and .Spec.Vineyard.CPU .Spec.Vineyard.Memory }}
+      resources:
+        requests:
+          cpu: "{{ .Spec.Vineyard.CPU }}"
+          memory: "{{ .Spec.Vineyard.Memory }}"
+        limits:
+          cpu: "{{ .Spec.Vineyard.CPU }}"
+          memory: "{{ .Spec.Vineyard.Memory }}"
+      {{- end }}
     {{- if .Spec.Metric.Enable }}
     - name: metrics
       image : {{ .Spec.Metric.Image }}
@@ -56,9 +65,9 @@ spec:
       command: ["./grok_exporter"]
       args: ["-config", "grok_exporter.yml", "-disable-exporter-metrics", "&"]
       ports:
-        - name: exporter
-          containerPort: 9144
-          protocol: TCP
+      - name: exporter
+        containerPort: 9144
+        protocol: TCP
       volumeMounts:
       - name: log
         mountPath: /var/log/vineyard

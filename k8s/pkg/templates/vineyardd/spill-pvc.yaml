@@ -20,7 +20,7 @@ metadata:
   name: {{ .Spec.Vineyard.Spill.Name }}
   namespace: {{ .Namespace }}
   labels:
-    app.kubernetes.io/name: {{ .Name }}
+    app.vineyard.io/name: {{ .Name }}
     app.kubernetes.io/instance: vineyardd
     app.kubernetes.io/component: PersistentVolumeClaim
 spec:

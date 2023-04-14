@@ -44,19 +44,6 @@ func getSidecarEtcdConfig() EtcdConfig {
 	return SidecarEtcd
 }
 
-// sidecarSvcLabelSelector contains the label selector of sidecar service
-var sidecarSvcLabelSelector []ServiceLabelSelector
-
-func init() {
-	sidecarSvcLabelSelector = make([]ServiceLabelSelector, 1)
-	sidecarSvcLabelSelector[0].Key = "rpc.vineyardd.v6d.io/rpc"
-	sidecarSvcLabelSelector[0].Value = "vineyardd-rpc"
-}
-
-func getSidecarSvcLabelSelector() []ServiceLabelSelector {
-	return sidecarSvcLabelSelector
-}
-
 // SidecarReconciler reconciles a Sidecar object
 type SidecarReconciler struct {
 	client.Client
@@ -88,8 +75,7 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Sidecar"),
 		Recorder: r.EventRecorder,
 		TmplFunc: map[string]interface{}{
-			"getEtcdConfig":           getSidecarEtcdConfig,
-			"getServiceLabelSelector": getSidecarSvcLabelSelector,
+			"getEtcdConfig": getSidecarEtcdConfig,
 		},
 	}
 	// setup the etcd configuration

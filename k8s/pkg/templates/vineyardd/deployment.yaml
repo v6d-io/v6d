@@ -12,31 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-{{- $l := getServiceLabelSelector }}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
-    app.kubernetes.io/name: {{ .Name }}
+    app.vineyard.io/name: {{ .Name }}
     app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}
     app.kubernetes.io/component: deployment
 spec:
   replicas: {{ .Spec.Replicas }}
   selector:
     matchLabels:
-      {{- range $l }}
-      {{.Key}}: "{{.Value}}"
-      {{- end }}
+      app.vineyard.io/name: {{ .Name }}
       app.kubernetes.io/name: {{ .Name }}
       app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}
   template:
     metadata:
       labels:
-        {{- range $l }}
-        {{.Key}}: "{{.Value}}"
-        {{- end }}
+        app.vineyard.io/name: {{ .Name }}
         app.kubernetes.io/name: {{ .Name }}
         app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}
         app.kubernetes.io/component: deployment
@@ -139,6 +135,15 @@ spec:
               mountPath: /dev/shm
             - name: log
               mountPath: /var/log/vineyard
+          {{- if and .Spec.VineyardConfig.CPU .Spec.VineyardConfig.Memory }}
+          resources:
+            requests:
+              cpu: "{{ .Spec.VineyardConfig.CPU }}"
+              memory: "{{ .Spec.VineyardConfig.Memory }}"
+            limits:
+              cpu: "{{ .Spec.VineyardConfig.CPU }}"
+              memory: "{{ .Spec.VineyardConfig.Memory }}"
+          {{- end }}
         {{- if .Spec.Metric.Enable }}
         - name: metrics
           image : {{ .Spec.Metric.Image }}

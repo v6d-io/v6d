@@ -17,8 +17,6 @@ limitations under the License.
 package deploy
 
 import (
-	"strings"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -73,46 +71,12 @@ func NewDeployVineyardDeploymentCmd() *cobra.Command {
 	return deployVineyardDeploymentCmd
 }
 
-var label string
-
 func init() {
 	flags.ApplyVineyarddOpts(deployVineyardDeploymentCmd)
-	deployVineyardDeploymentCmd.Flags().
-		StringVarP(&label, "label", "l", "", "label of the vineyardd")
 }
 
 func getStorage(q resource.Quantity) string {
 	return q.String()
-}
-
-// VineyarddLabelSelector contains the label selector of vineyardd
-var VineyarddLabelSelector []k8s.ServiceLabelSelector
-
-func getVineyarddLabelSelector() []k8s.ServiceLabelSelector {
-	return VineyarddLabelSelector
-}
-
-func parseLabel(l string) error {
-	VineyarddLabelSelector = []k8s.ServiceLabelSelector{}
-	str := []string{}
-	if !strings.Contains(l, ",") {
-		str = append(str, label)
-	} else {
-		str = append(str, strings.Split(l, ",")...)
-	}
-
-	for i := range str {
-		kv := strings.Split(str[i], "=")
-		if len(kv) != 2 {
-			return errors.Errorf("invalid label: %s", str[i])
-		}
-		VineyarddLabelSelector = append(
-			VineyarddLabelSelector,
-			k8s.ServiceLabelSelector{Key: kv[0], Value: kv[1]},
-		)
-	}
-
-	return nil
 }
 
 // EtcdConfig holds the configuration of etcd
@@ -127,17 +91,9 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	objects := []*unstructured.Unstructured{}
 	var err error
 
-	if label != "" {
-		err = parseLabel(label)
-		if err != nil {
-			return objects, errors.Wrap(err, "failed to parse label")
-		}
-	}
-
 	tmplFunc := map[string]interface{}{
-		"getStorage":              getStorage,
-		"getServiceLabelSelector": getVineyarddLabelSelector,
-		"getEtcdConfig":           getEtcdConfig,
+		"getStorage":    getStorage,
+		"getEtcdConfig": getEtcdConfig,
 	}
 
 	// build vineyardd
@@ -155,13 +111,13 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	}
 	objects = append(objects, objs...)
 
-	objs, err = util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Namespace,
+	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Namespace,
 		vineyardd.Spec.EtcdReplicas, vineyardd.Spec.Vineyard.Image, vineyardd,
 		tmplFunc)
 	if err != nil {
 		return objects, errors.Wrap(err, "failed to build etcd objects")
 	}
-	objects = append(objects, objs...)
+	objects = append(objects, append(podObjs, svcObjs...)...)
 	return objects, nil
 }
 

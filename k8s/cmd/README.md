@@ -707,6 +707,7 @@ vineyardctl deploy vineyard-deployment [flags]
 ### Options
 
 ```
+<<<<<<< HEAD
   -f, --file string                                   the path of vineyardd
   -h, --help                                          help for vineyard-deployment
   -l, --label string                                  label of the vineyardd
@@ -737,6 +738,77 @@ vineyardctl deploy vineyard-deployment [flags]
       --vineyardd.syncCRDs                            enable metrics of vineyardd (default true)
       --vineyardd.volume.mountPath string             Set the mount path for the pvc
       --vineyardd.volume.pvcname string               Set the pvc name for storing the vineyard objects persistently, 
+||||||| constructed merge base
+  -f, --file string                               the path of vineyardd
+  -h, --help                                      help for vineyard-deployment
+  -l, --label string                              label of the vineyardd
+      --name string                               the name of vineyardd (default "vineyardd-sample")
+      --plugin.backupImage string                 the backup image of vineyardd (default "ghcr.io/v6d-io/v6d/backup-job")
+      --plugin.daskRepartitionImage string        the dask repartition image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/dask-repartition")
+      --plugin.distributedAssemblyImage string    the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
+      --plugin.localAssemblyImage string          the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
+      --plugin.recoverImage string                the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
+      --vineyard.etcd.replicas int                the number of etcd replicas in a vineyard cluster (default 3)
+      --vineyard.replicas int                     the number of vineyardd replicas (default 3)
+      --vineyardd.envs strings                    The environment variables of vineyardd
+      --vineyardd.etcdEndpoint string             The etcd endpoint of vineyardd (default "http://etcd-for-vineyard:2379")
+      --vineyardd.etcdPrefix string               The etcd prefix of vineyardd (default "/vineyard")
+      --vineyardd.image string                    the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
+      --vineyardd.imagePullPolicy string          the imagePullPolicy of vineyardd (default "IfNotPresent")
+      --vineyardd.metric.enable                   enable metrics of vineyardd
+      --vineyardd.metric.image string             the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
+      --vineyardd.metric.imagePullPolicy string   the imagePullPolicy of the metric image (default "IfNotPresent")
+      --vineyardd.service.port int                the service port of vineyard service (default 9600)
+      --vineyardd.service.selector string         the service selector of vineyard service (default "rpc.vineyardd.v6d.io/rpc=vineyard-rpc")
+      --vineyardd.service.type string             the service type of vineyard service (default "ClusterIP")
+      --vineyardd.size string                     The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.  (default "256Mi")
+      --vineyardd.socket string                   The directory on host for the IPC socket file. The namespace and name will be replaced with your vineyard config (default "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}")
+      --vineyardd.spill.config string             If you want to enable the spill mechanism, please set the name of spill config
+      --vineyardd.spill.path string               The path of spill config
+      --vineyardd.spill.pv-pvc-spec string        the json string of the persistent volume and persistent volume claim
+      --vineyardd.spill.spillLowerRate string     The low watermark of spilling memory (default "0.3")
+      --vineyardd.spill.spillUpperRate string     The high watermark of spilling memory (default "0.8")
+      --vineyardd.streamThreshold int             memory threshold of streams (percentage of total memory) (default 80)
+      --vineyardd.syncCRDs                        enable metrics of vineyardd (default true)
+      --vineyardd.volume.mountPath string         Set the mount path for the pvc
+      --vineyardd.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently, 
+=======
+  -f, --file string                               the path of vineyardd
+  -h, --help                                      help for vineyard-deployment
+  -l, --label string                              label of the vineyardd
+      --name string                               the name of vineyardd (default "vineyardd-sample")
+      --plugin.backupImage string                 the backup image of vineyardd (default "ghcr.io/v6d-io/v6d/backup-job")
+      --plugin.daskRepartitionImage string        the dask repartition image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/dask-repartition")
+      --plugin.distributedAssemblyImage string    the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
+      --plugin.localAssemblyImage string          the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
+      --plugin.recoverImage string                the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
+      --vineyard.etcd.replicas int                the number of etcd replicas in a vineyard cluster (default 3)
+      --vineyard.replicas int                     the number of vineyardd replicas (default 3)
+      --vineyardd.cpu string                      The cpu of vineyard container
+      --vineyardd.envs strings                    The environment variables of vineyardd
+      --vineyardd.etcdEndpoint string             The etcd endpoint of vineyardd (default "http://etcd-for-vineyard:2379")
+      --vineyardd.etcdPrefix string               The etcd prefix of vineyardd (default "/vineyard")
+      --vineyardd.image string                    the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
+      --vineyardd.imagePullPolicy string          the imagePullPolicy of vineyardd (default "IfNotPresent")
+      --vineyardd.memory string                   The memory of vineyard container
+      --vineyardd.metric.enable                   enable metrics of vineyardd
+      --vineyardd.metric.image string             the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
+      --vineyardd.metric.imagePullPolicy string   the imagePullPolicy of the metric image (default "IfNotPresent")
+      --vineyardd.service.port int                the service port of vineyard service (default 9600)
+      --vineyardd.service.selector string         the service selector of vineyard service (default "rpc.vineyardd.v6d.io/rpc=vineyard-rpc")
+      --vineyardd.service.type string             the service type of vineyard service (default "ClusterIP")
+      --vineyardd.size string                     The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.  (default "256Mi")
+      --vineyardd.socket string                   The directory on host for the IPC socket file. The namespace and name will be replaced with your vineyard config (default "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}")
+      --vineyardd.spill.config string             If you want to enable the spill mechanism, please set the name of spill config
+      --vineyardd.spill.path string               The path of spill config
+      --vineyardd.spill.pv-pvc-spec string        the json string of the persistent volume and persistent volume claim
+      --vineyardd.spill.spillLowerRate string     The low watermark of spilling memory (default "0.3")
+      --vineyardd.spill.spillUpperRate string     The high watermark of spilling memory (default "0.8")
+      --vineyardd.streamThreshold int             memory threshold of streams (percentage of total memory) (default 80)
+      --vineyardd.syncCRDs                        enable metrics of vineyardd (default true)
+      --vineyardd.volume.mountPath string         Set the mount path for the pvc
+      --vineyardd.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently, 
+>>>>>>> Improve the vineyardctl inject command.
 ```
 
 ## `vineyardctl deploy vineyardd`
@@ -838,6 +910,7 @@ vineyardctl deploy vineyardd [flags]
 ### Options
 
 ```
+<<<<<<< HEAD
   -f, --file string                                   the path of vineyardd
   -h, --help                                          help for vineyardd
       --name string                                   the name of vineyardd (default "vineyardd-sample")
@@ -867,6 +940,75 @@ vineyardctl deploy vineyardd [flags]
       --vineyardd.syncCRDs                            enable metrics of vineyardd (default true)
       --vineyardd.volume.mountPath string             Set the mount path for the pvc
       --vineyardd.volume.pvcname string               Set the pvc name for storing the vineyard objects persistently, 
+||||||| constructed merge base
+  -f, --file string                               the path of vineyardd
+  -h, --help                                      help for vineyardd
+      --name string                               the name of vineyardd (default "vineyardd-sample")
+      --plugin.backupImage string                 the backup image of vineyardd (default "ghcr.io/v6d-io/v6d/backup-job")
+      --plugin.daskRepartitionImage string        the dask repartition image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/dask-repartition")
+      --plugin.distributedAssemblyImage string    the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
+      --plugin.localAssemblyImage string          the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
+      --plugin.recoverImage string                the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
+      --vineyard.etcd.replicas int                the number of etcd replicas in a vineyard cluster (default 3)
+      --vineyard.replicas int                     the number of vineyardd replicas (default 3)
+      --vineyardd.envs strings                    The environment variables of vineyardd
+      --vineyardd.etcdEndpoint string             The etcd endpoint of vineyardd (default "http://etcd-for-vineyard:2379")
+      --vineyardd.etcdPrefix string               The etcd prefix of vineyardd (default "/vineyard")
+      --vineyardd.image string                    the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
+      --vineyardd.imagePullPolicy string          the imagePullPolicy of vineyardd (default "IfNotPresent")
+      --vineyardd.metric.enable                   enable metrics of vineyardd
+      --vineyardd.metric.image string             the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
+      --vineyardd.metric.imagePullPolicy string   the imagePullPolicy of the metric image (default "IfNotPresent")
+      --vineyardd.service.port int                the service port of vineyard service (default 9600)
+      --vineyardd.service.selector string         the service selector of vineyard service (default "rpc.vineyardd.v6d.io/rpc=vineyard-rpc")
+      --vineyardd.service.type string             the service type of vineyard service (default "ClusterIP")
+      --vineyardd.size string                     The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.  (default "256Mi")
+      --vineyardd.socket string                   The directory on host for the IPC socket file. The namespace and name will be replaced with your vineyard config (default "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}")
+      --vineyardd.spill.config string             If you want to enable the spill mechanism, please set the name of spill config
+      --vineyardd.spill.path string               The path of spill config
+      --vineyardd.spill.pv-pvc-spec string        the json string of the persistent volume and persistent volume claim
+      --vineyardd.spill.spillLowerRate string     The low watermark of spilling memory (default "0.3")
+      --vineyardd.spill.spillUpperRate string     The high watermark of spilling memory (default "0.8")
+      --vineyardd.streamThreshold int             memory threshold of streams (percentage of total memory) (default 80)
+      --vineyardd.syncCRDs                        enable metrics of vineyardd (default true)
+      --vineyardd.volume.mountPath string         Set the mount path for the pvc
+      --vineyardd.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently, 
+=======
+  -f, --file string                               the path of vineyardd
+  -h, --help                                      help for vineyardd
+      --name string                               the name of vineyardd (default "vineyardd-sample")
+      --plugin.backupImage string                 the backup image of vineyardd (default "ghcr.io/v6d-io/v6d/backup-job")
+      --plugin.daskRepartitionImage string        the dask repartition image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/dask-repartition")
+      --plugin.distributedAssemblyImage string    the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
+      --plugin.localAssemblyImage string          the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
+      --plugin.recoverImage string                the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
+      --vineyard.etcd.replicas int                the number of etcd replicas in a vineyard cluster (default 3)
+      --vineyard.replicas int                     the number of vineyardd replicas (default 3)
+      --vineyardd.cpu string                      The cpu of vineyard container
+      --vineyardd.envs strings                    The environment variables of vineyardd
+      --vineyardd.etcdEndpoint string             The etcd endpoint of vineyardd (default "http://etcd-for-vineyard:2379")
+      --vineyardd.etcdPrefix string               The etcd prefix of vineyardd (default "/vineyard")
+      --vineyardd.image string                    the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
+      --vineyardd.imagePullPolicy string          the imagePullPolicy of vineyardd (default "IfNotPresent")
+      --vineyardd.memory string                   The memory of vineyard container
+      --vineyardd.metric.enable                   enable metrics of vineyardd
+      --vineyardd.metric.image string             the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
+      --vineyardd.metric.imagePullPolicy string   the imagePullPolicy of the metric image (default "IfNotPresent")
+      --vineyardd.service.port int                the service port of vineyard service (default 9600)
+      --vineyardd.service.selector string         the service selector of vineyard service (default "rpc.vineyardd.v6d.io/rpc=vineyard-rpc")
+      --vineyardd.service.type string             the service type of vineyard service (default "ClusterIP")
+      --vineyardd.size string                     The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.  (default "256Mi")
+      --vineyardd.socket string                   The directory on host for the IPC socket file. The namespace and name will be replaced with your vineyard config (default "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}")
+      --vineyardd.spill.config string             If you want to enable the spill mechanism, please set the name of spill config
+      --vineyardd.spill.path string               The path of spill config
+      --vineyardd.spill.pv-pvc-spec string        the json string of the persistent volume and persistent volume claim
+      --vineyardd.spill.spillLowerRate string     The low watermark of spilling memory (default "0.3")
+      --vineyardd.spill.spillUpperRate string     The high watermark of spilling memory (default "0.8")
+      --vineyardd.streamThreshold int             memory threshold of streams (percentage of total memory) (default 80)
+      --vineyardd.syncCRDs                        enable metrics of vineyardd (default true)
+      --vineyardd.volume.mountPath string         Set the mount path for the pvc
+      --vineyardd.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently, 
+>>>>>>> Improve the vineyardctl inject command.
 ```
 
 ## `vineyardctl inject`
@@ -876,7 +1018,8 @@ Inject the vineyard sidecar container into a workload
 ### Synopsis
 
 Inject the vineyard sidecar container into a workload. You can
-get the injected workload yaml and some etcd yaml from the output.
+input a workload yaml or a workload json and then get the injected 
+workload yaml and some etcd yaml from the output.
 
 ```
 vineyardctl inject [flags]
@@ -890,18 +1033,40 @@ vineyardctl inject [flags]
 
 ```shell
   # inject the default vineyard sidecar container into a workload
+  # and deploy an external etcd cluster
   vineyardctl inject -f workload.yaml | kubectl apply -f -
+  
+  # inject the default vineyard sidecar container but use the
+  # internal etcd cluster instead of the external etcd cluster
+  vineyardctl inject -f workload.yaml --use-internal-etcd=true | \
+  kubectl apply -f -
+
+  # inject the default vineyard sidecar container and not to deploy
+  # the rpc service of the vineyard cluster
+  vineyardctl inject -f workload.yaml --use-internal-etcd=true \
+  --deploy-rpc-service=false | kubectl apply -f -
+
+  # use json format to output the injected workload
+  vineyardctl inject -f workload.yaml -o json
 ```
 
 ### Options
 
 ```
+      --deploy-etcd-service                     Whether to deploy service for etcd cluster (default true)
+      --deploy-rpc-service                      Whether to deploy service for vineyard cluster (default true)
       --etcd-replicas int                       the number of etcd replicas (default 1)
+      --etcd-service-name string                The name of etcd service (default "etcd-for-vineyard")
   -f, --file string                             The yaml of workload
   -h, --help                                    help for inject
+      --name string                             The name of sidecar (default "vineyard-sidecar")
+  -o, --output string                           The output format of the command, support yaml and json (default "yaml")
+      --resource string                         The resource of workload
+      --sidecar.cpu string                      The cpu of vineyard container
       --sidecar.envs strings                    The environment variables of vineyardd
       --sidecar.image string                    the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
       --sidecar.imagePullPolicy string          the imagePullPolicy of vineyardd (default "IfNotPresent")
+      --sidecar.memory string                   The memory of vineyard container
       --sidecar.metric.enable                   enable metrics of vineyardd
       --sidecar.metric.image string             the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
       --sidecar.metric.imagePullPolicy string   the imagePullPolicy of the metric image (default "IfNotPresent")
@@ -918,6 +1083,7 @@ vineyardctl inject [flags]
       --sidecar.syncCRDs                        enable metrics of vineyardd (default true)
       --sidecar.volume.mountPath string         Set the mount path for the pvc
       --sidecar.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently, 
+      --use-internal-etcd                       Whether to use the internal etcd
 ```
 
 ## `vineyardctl manager`

@@ -72,19 +72,6 @@ type ServiceLabelSelector struct {
 	Value string
 }
 
-// svcLabelSelector is the label selector of the service
-var svcLabelSelector []ServiceLabelSelector
-
-func init() {
-	svcLabelSelector = make([]ServiceLabelSelector, 1)
-	svcLabelSelector[0].Key = "rpc.vineyardd.v6d.io/rpc"
-	svcLabelSelector[0].Value = "vineyardd-rpc"
-}
-
-func getServiceLabelSelector() []ServiceLabelSelector {
-	return svcLabelSelector
-}
-
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds/finalizers,verbs=update
@@ -127,8 +114,7 @@ func (r *VineyarddReconciler) Reconcile(
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Vineyardd"),
 		Recorder: r.EventRecorder,
 		TmplFunc: map[string]interface{}{
-			"getStorage":              getStorage,
-			"getServiceLabelSelector": getServiceLabelSelector,
+			"getStorage": getStorage,
 		},
 	}
 	etcdApp := kubernetes.Application{
