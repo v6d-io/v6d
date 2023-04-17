@@ -240,6 +240,22 @@ typedef enum {
 #define GRIN_ASSUME_EDGE_CUT_PARTITION
 
 /** @ingroup PartitionStrategyMacros
+ * @brief The storage ONLY uses edge-cut partition & edges only follow src strategy. 
+ * This means the storage's entire partition strategy complies with edge-cut strategy 
+ * definition in GRIN, and edges are partitioned to the partition of the source vertex.
+*/
+#define GRIN_ASSUME_EDGE_CUT_FOLLOW_SRC_PARTITION
+
+
+/** @ingroup PartitionStrategyMacros
+ * @brief The storage ONLY uses edge-cut partition & edges only follow dst strategy. 
+ * This means the storage's entire partition strategy complies with edge-cut strategy 
+ * definition in GRIN, and edges are partitioned to the partition of the destination vertex.
+*/
+#define GRIN_ASSUME_EDGE_CUT_FOLLOW_DST_PARTITION
+
+
+/** @ingroup PartitionStrategyMacros
  * @brief The storage ONLY uses vertex-cut partition strategy. This means the 
  * storage's entire partition strategy complies with vertex-cut strategy 
  * definition in GRIN.
@@ -361,6 +377,8 @@ typedef enum {
 #undef GRIN_ENABLE_EDGE_REF
 #undef GRIN_ASSUME_ALL_REPLICATE_PARTITION
 #undef GRIN_ASSUME_EDGE_CUT_PARTITION
+#undef GRIN_ASSUME_EDGE_CUT_FOLLOW_SRC_PARTITION
+#undef GRIN_ASSUME_EDGE_CUT_FOLLOW_DST_PARTITION
 #undef GRIN_ASSUME_VERTEX_CUT_PARTITION
 #undef GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_DATA
 #undef GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_VERTEX_DATA
@@ -395,6 +413,16 @@ typedef enum {
 #ifdef GRIN_ASSUME_EDGE_CUT_PARTITION
 #define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_DATA
 #define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_DATA
+#endif
+
+#ifdef GRIN_ASSUME_EDGE_CUT_FOLLOW_SRC_PARTITION
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_DATA
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_EDGE_DATA
+#endif
+
+#ifdef GRIN_ASSUME_EDGE_CUT_FOLLOW_DST_PARTITION
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_DATA
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_EDGE_DATA
 #endif
 
 #ifdef GRIN_ASSUME_VERTEX_CUT_PARTITION
@@ -663,6 +691,7 @@ typedef enum {
 #define GRIN_WITH_VERTEX_TYPE_NAME
 #define GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
 #define GRIN_ENABLE_VERTEX_PROPERTY_TABLE
+#define GRIN_ENABLE_VERTEX_PRIMARY_KEYS
 #define GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
 #define GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
 #define GRIN_WITH_EDGE_PROPERTY
@@ -686,6 +715,16 @@ typedef enum {
 #ifdef GRIN_ASSUME_EDGE_CUT_PARTITION
 #define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_PROPERTY
 #define GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
+#endif
+
+#ifdef GRIN_ASSUME_EDGE_CUT_FOLLOW_SRC_PARTITION
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_PROPERTY
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_EDGE_PROPERTY
+#endif
+
+#ifdef GRIN_ASSUME_EDGE_CUT_FOLLOW_DST_PARTITION
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_PROPERTY
+#define GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_EDGE_PROPERTY
 #endif
 
 #ifdef GRIN_ASSUME_VERTEX_CUT_PARTITION
