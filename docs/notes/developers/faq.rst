@@ -44,7 +44,7 @@ concerns, please feel free to `open an issue`_ or `post it to discussions`_.
 5. *How does vineyard achieve IPC and memory sharing (i.e., zero-copy sharing) on Kubernetes?*
 
   Inter-process memory sharing can be challenging in Kubernetes, but it is achievable. When
-  deployed on Kubernetes, vineyard exposes its UNIX-domain socket as a :code:`PersistVolume`.
+  deployed on Kubernetes, vineyard exposes its UNIX-domain socket as a :code:`PersistentVolume`.
   This volume can be mounted into the job's pod, allowing the socket to be used for IPC
   connections to the vineyard daemon. Memory sharing is accomplished by mounting a volume of
   medium :code:`Memory` into both the vineyard daemon's pod and the job's pod.
