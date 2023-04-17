@@ -322,5 +322,9 @@ const char* grin_get_static_storage_feature_msg() {
 
   std::string graph_def;
   google::protobuf::util::MessageToJsonString(g, &graph_def);
-  return graph_def.c_str();
+  
+  int len = graph_def.length() + 1;
+  char* out = new char[len];
+  snprintf(out, len, "%s", graph_def.c_str());
+  return out;
 }

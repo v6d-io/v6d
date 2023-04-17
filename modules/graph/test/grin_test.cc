@@ -39,6 +39,10 @@ limitations under the License.
 #include "graph/fragment/graph_schema.h"
 #include "graph/loader/arrow_fragment_loader.h"
 
+#include "graph/grin/src/proto/gie_schema.pb.h"
+
+#include "google/protobuf/util/json_util.h"
+
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
@@ -120,21 +124,7 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
 }
 
 
-void Traverse(std::string ipc_socket, const grape::CommSpec& comm_spec,
-              vineyard::ObjectID fragment_group_id) {
-  LOG(INFO) << "Loaded graph to vineyard: " << fragment_group_id;
-
-  std::string fg_id_str = std::to_string(fragment_group_id);
-
-  char** argv = new char*[2];
-  argv[0] = new char[ipc_socket.length() + 1];
-  argv[1] = new char[fg_id_str.length() + 1];
-
-  strcpy(argv[0], ipc_socket.c_str());
-  strcpy(argv[1], fg_id_str.c_str());
-
-  GRIN_PARTITIONED_GRAPH pg = grin_get_partitioned_graph_from_storage(2, argv);
-
+void Traverse(GRIN_PARTITIONED_GRAPH pg) {
   GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
   size_t pnum = grin_get_partition_list_size(pg, local_partitions);
   size_t vnum = grin_get_total_vertex_num(pg);
@@ -144,91 +134,162 @@ void Traverse(std::string ipc_socket, const grape::CommSpec& comm_spec,
   // we only traverse the first partition for test
   GRIN_PARTITION partition = grin_get_partition_from_list(pg, local_partitions, 0);
   LOG(INFO) << "Partition: " << *(static_cast<unsigned*>(partition));
-  sync_property(pg, partition, "knows", "value3");
-
-  delete[] argv[0];
-  delete[] argv[1];
-  delete[] argv;
+  sync_property(pg, partition, "knows", "age");
 }
 
-
-namespace detail {
-
-std::shared_ptr<arrow::ChunkedArray> makeInt64Array() {
-  std::vector<int64_t> data = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
-  arrow::Int64Builder builder;
-  CHECK_ARROW_ERROR(builder.AppendValues(data));
-  std::shared_ptr<arrow::Array> out;
-  CHECK_ARROW_ERROR(builder.Finish(&out));
-  return arrow::ChunkedArray::Make({out}).ValueOrDie();
-}
-
-std::shared_ptr<arrow::Schema> attachMetadata(
-    std::shared_ptr<arrow::Schema> schema, std::string const& key,
-    std::string const& value) {
-  std::shared_ptr<arrow::KeyValueMetadata> metadata;
-  if (schema->HasMetadata()) {
-    metadata = schema->metadata()->Copy();
-  } else {
-    metadata = std::make_shared<arrow::KeyValueMetadata>();
+gie::DataType data_type_cast(GRIN_DATATYPE dt) {
+  switch (dt) {
+    case GRIN_DATATYPE::Undefined:
+      return gie::DataType::DT_UNKNOWN;
+    case GRIN_DATATYPE::Int32:
+      return gie::DataType::DT_SIGNED_INT32;
+    case GRIN_DATATYPE::UInt32:
+      return gie::DataType::DT_UNSIGNED_INT32;
+    case GRIN_DATATYPE::Int64:
+      return gie::DataType::DT_SIGNED_INT64;
+    case GRIN_DATATYPE::UInt64:
+      return gie::DataType::DT_UNSIGNED_INT64;
+    case GRIN_DATATYPE::Float:
+      return gie::DataType::DT_FLOAT;
+    case GRIN_DATATYPE::Double:
+      return gie::DataType::DT_DOUBLE;
+    case GRIN_DATATYPE::String:
+      return gie::DataType::DT_STRING;
+    case GRIN_DATATYPE::Date32:
+      return gie::DataType::DT_DATE;
+    case GRIN_DATATYPE::Date64:
+      return gie::DataType::DT_TIME;
+    default:
+      return gie::DataType::DT_UNKNOWN;
   }
-  metadata->Append(key, value);
-  return schema->WithMetadata(metadata);
 }
 
-std::vector<std::shared_ptr<arrow::Table>> makeVTables() {
-  auto schema = std::make_shared<arrow::Schema>(
-      std::vector<std::shared_ptr<arrow::Field>>{
-          arrow::field("id", arrow::int64()),
-          arrow::field("value1", arrow::int64()),
-          arrow::field("value2", arrow::int64()),
-          arrow::field("value3", arrow::int64()),
-          arrow::field("value4", arrow::int64()),
-      });
-  schema = attachMetadata(schema, "label", "person");
-  auto table = arrow::Table::Make(
-      schema, {makeInt64Array(), makeInt64Array(), makeInt64Array(),
-               makeInt64Array(), makeInt64Array()});
-  return {table};
-}
+std::string Convert(GRIN_PARTITIONED_GRAPH pg) {
+  gie::Schema schema;
+  // partition strategy
+  auto ps = schema.mutable_partition_strategy();
+  ps->set_topology(gie::GraphTopologyPartitionStrategy::GPS_EDGE_CUT_FOLLOW_BOTH);
+  auto gpps = ps->mutable_property();
+  auto item = gpps->mutable_by_entity();
+  item->set_vertex_property_partition_strategy(gie::PropertyPartitionStrategy::PPS_MASTER);
+  item->set_edge_property_partition_strategy(gie::PropertyPartitionStrategy::PPS_MASTER_MIRROR);
+  
+  // statistics
+  GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
+  auto stats = schema.mutable_statistics();
+  stats->set_num_partitions(grin_get_partition_list_size(pg, local_partitions));
+  stats->set_num_vertices(grin_get_total_vertex_num(pg));
+  stats->set_num_edges(grin_get_total_edge_num(pg));
 
-std::vector<std::vector<std::shared_ptr<arrow::Table>>> makeETables() {
-  auto schema = std::make_shared<arrow::Schema>(
-      std::vector<std::shared_ptr<arrow::Field>>{
-          arrow::field("src_id", arrow::int64()),
-          arrow::field("dst_id", arrow::int64()),
-          arrow::field("value1", arrow::int64()),
-          arrow::field("value2", arrow::int64()),
-          arrow::field("value3", arrow::int64()),
-          arrow::field("value4", arrow::int64()),
-      });
-  schema = attachMetadata(schema, "label", "knows");
-  schema = attachMetadata(schema, "src_label", "person");
-  schema = attachMetadata(schema, "dst_label", "person");
-  auto table = arrow::Table::Make(
-      schema, {makeInt64Array(), makeInt64Array(), makeInt64Array(),
-               makeInt64Array(), makeInt64Array(), makeInt64Array()});
-  return {{table}};
+  GRIN_PARTITION partition = grin_get_partition_from_list(pg, local_partitions, 0);
+  GRIN_GRAPH g = grin_get_local_graph_from_partition(pg, partition);
+
+  // vertex type
+  GRIN_VERTEX_TYPE_LIST vtl = grin_get_vertex_type_list(g);
+  size_t sz = grin_get_vertex_type_list_size(g, vtl);
+  for (size_t i = 0; i < sz; ++i) {
+    GRIN_VERTEX_TYPE vt = grin_get_vertex_type_from_list(g, vtl, i);
+    auto vtype = schema.add_vertex_types();
+
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
+    vtype->set_id(i);
+#endif
+
+#ifdef GRIN_WITH_VERTEX_TYPE_NAME
+    vtype->set_name(grin_get_vertex_type_name(g, vt));
+#endif
+
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+    GRIN_VERTEX_PROPERTY_LIST vptl = grin_get_vertex_property_list_by_type(g, vt);
+    size_t vpt_sz = grin_get_vertex_property_list_size(g, vptl);
+    for (size_t j = 0; j < vpt_sz; ++j) {
+      GRIN_VERTEX_PROPERTY vpt = grin_get_vertex_property_from_list(g, vptl, j);
+      auto vprop = vtype->add_properties();
+  
+  #ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
+      vprop->set_id(j);
+  #endif
+
+  #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
+      vprop->set_name(grin_get_vertex_property_name(g, vpt));
+  #endif
+
+      auto dt = data_type_cast(grin_get_vertex_property_data_type(g, vpt));
+      vprop->set_type(dt);
+    }
+#endif
+    vtype->add_primary_keys("id");
+    vtype->set_total_num(grin_get_vertex_num_by_type(g, vt));
+  }
+
+  // edge type
+  GRIN_EDGE_TYPE_LIST etl = grin_get_edge_type_list(g);
+  sz = grin_get_edge_type_list_size(g, etl);
+  for (size_t i = 0; i < sz; ++i) {
+    GRIN_EDGE_TYPE et = grin_get_edge_type_from_list(g, etl, i);
+    auto etype = schema.add_edge_types();
+
+#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
+    etype->set_id(i);
+#endif
+
+#ifdef GRIN_WITH_EDGE_TYPE_NAME
+    etype->set_name(grin_get_edge_type_name(g, et));
+#endif
+
+#ifdef GRIN_WITH_EDGE_PROPERTY
+    GRIN_EDGE_PROPERTY_LIST eptl = grin_get_edge_property_list_by_type(g, et);
+    size_t ept_sz = grin_get_edge_property_list_size(g, eptl);
+    for (size_t j = 1; j < ept_sz; ++j) {
+      GRIN_EDGE_PROPERTY ept = grin_get_edge_property_from_list(g, eptl, j);
+      auto eprop = etype->add_properties();
+  
+  #ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
+      eprop->set_id(j - 1);
+  #endif
+
+  #ifdef GRIN_WITH_EDGE_PROPERTY_NAME
+      eprop->set_name(grin_get_edge_property_name(g, ept));
+  #endif
+
+      auto dt = data_type_cast(grin_get_edge_property_data_type(g, ept));
+      eprop->set_type(dt);
+    }
+#endif
+
+#ifdef GRIN_WITH_VERTEX_PROPERTY
+    auto src_vtypes = grin_get_src_types_from_edge_type(g, et);
+    auto dst_vtypes = grin_get_dst_types_from_edge_type(g, et);
+    auto pair_sz = grin_get_vertex_type_list_size(g, src_vtypes);
+    for (size_t j = 0; j < pair_sz; ++j) {
+      auto src_vt = grin_get_vertex_type_from_list(g, src_vtypes, j);
+      auto dst_vt = grin_get_vertex_type_from_list(g, dst_vtypes, j);
+      auto pair = etype->add_src_dst_pairs();
+  #ifdef GRIN_WITH_VERTEX_TYPE_NAME
+      pair->set_src_type(grin_get_vertex_type_name(g, src_vt));
+      pair->set_dst_type(grin_get_vertex_type_name(g, dst_vt));
+  #endif
+    }
+#endif
+
+    etype->set_total_num(grin_get_edge_num_by_type(g, et));
+  }
+
+  std::string schema_def;
+  google::protobuf::util::MessageToJsonString(schema, &schema_def);
+  return schema_def;
 }
-}  // namespace detail
 
 int main(int argc, char** argv) {
   std::cout << grin_get_static_storage_feature_msg() << std::endl;
-  
-  if (argc < 2) {
-    printf("usage: ./arrow_fragment_test <ipc_socket> [directed]\n");
+
+  if (argc < 3) {
+    printf("usage: ./arrow_fragment_test <ipc_socket> <object_id>\n");
     return 1;
   }
-  int index = 1;
-  std::string ipc_socket = std::string(argv[index++]);
 
-  int directed = 1;
-  if (argc > index) {
-    directed = atoi(argv[index]);
-  }
-
-  auto vtables = ::detail::makeVTables();
-  auto etables = ::detail::makeETables();
+  std::string ipc_socket = std::string(argv[1]);
+  vineyard::ObjectID obj_id = std::stoull(argv[2]);
 
   vineyard::Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
@@ -241,19 +302,27 @@ int main(int argc, char** argv) {
     grape::CommSpec comm_spec;
     comm_spec.Init(MPI_COMM_WORLD);
 
-    {
-      auto loader =
-          std::make_unique<ArrowFragmentLoader<property_graph_types::OID_TYPE,
-                                               property_graph_types::VID_TYPE>>(
-              client, comm_spec, vtables, etables, directed != 0, true, true);
-      vineyard::ObjectID fragment_group_id =
-          loader->LoadFragmentAsFragmentGroup().value();
-      Traverse(ipc_socket, comm_spec, fragment_group_id);
-    }
+    LOG(INFO) << "Loaded graph to vineyard: " << obj_id;
+    std::string fg_id_str = std::to_string(obj_id);
+    char** argv = new char*[2];
+    argv[0] = new char[ipc_socket.length() + 1];
+    argv[1] = new char[fg_id_str.length() + 1];
+    strcpy(argv[0], ipc_socket.c_str());
+    strcpy(argv[1], fg_id_str.c_str());
+    GRIN_PARTITIONED_GRAPH pg = grin_get_partitioned_graph_from_storage(2, argv);
+
+    std::cout << Convert(pg) << std::endl;
+ 
+    Traverse(pg);
+
+    delete[] argv[0];
+    delete[] argv[1];
+    delete[] argv;
   }
+
   grape::FinalizeMPIComm();
 
-  LOG(INFO) << "Passed arrow fragment test...";
+  LOG(INFO) << "Passed grin test...";
 
   return 0;
 }
