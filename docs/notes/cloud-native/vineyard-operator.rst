@@ -497,30 +497,31 @@ The following are all labels that we provide:
 There are two methods to install vineyard as a sidecar:
 
 - Utilize the **default sidecar configuration**. Users should add two annotations,
-  `sidecar.v6d.io/enabled: true` and `sidecar.v6d.io/name: default`, to their app's YAML.
+  **sidecar.v6d.io/enabled: true** and **sidecar.v6d.io/name: default**, to their app's YAML.
   This will create a default sidecar Custom Resource (CR) for observation.
 
 - Employ the **custom sidecar configuration**. Users must first create a custom sidecar CR,
-  such as `sidecar-demo`, and then add two annotations, `sidecar.v6d.io/enabled: true` and
-  `sidecar.v6d.io/name: sidecar-demo`, to their app's YAML.
+  such as `sidecar-demo`, and then add two annotations, **sidecar.v6d.io/enabled: true** and
+  **sidecar.v6d.io/name: sidecar-demo**, to their app's YAML.
 
 The following example demonstrates how to install vineyard as a sidecar container within a
 pod. First, install the vineyard operator according to the previous steps, and then create
 a namespace with the specific label `sidecar-injection: enabled` to enable the sidecar.
 
-```bash
-$ kubectl create namespace vineyard-job
-$ kubectl label namespace vineyard-job sidecar-injection=enabled
-```
+.. code:: bash
+
+    $ kubectl create namespace vineyard-job
+    $ kubectl label namespace vineyard-job sidecar-injection=enabled
+
 
 Next, use the following YAML to inject the default sidecar into the pod.
 
 .. note::
 
     Please configure the command field of your app container to be in the format
-    `["/bin/sh" or "/bin/bash", "-c", (your app command)]`. After injecting the vineyard
-    sidecar, the command field will be modified to `["/bin/sh" or "/bin/bash", "-c",
-    "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + (your app command)]` to
+    **["/bin/sh" or "/bin/bash", "-c", (your app command)]**. After injecting the vineyard
+    sidecar, the command field will be modified to **["/bin/sh" or "/bin/bash", "-c",
+    while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;" + (your app command)]** to
     ensure that the vineyard sidecar is ready before the app container starts.
 
 .. code:: yaml
@@ -1002,7 +1003,7 @@ We can see the created job and the objects produced by it:
     kind: ConfigMap
     ...
 
-Then deploy the `workflow-job2`_ as follows,
+Then deploy the `workflow-job2`_ as follows.
 
 .. code:: yaml
 
@@ -1085,7 +1086,7 @@ Now you can see that both jobs have been scheduled and become running:
       replicaset.apps/v6d-workflow-demo-job2-deployment-b5b58cbdc    3         3         3       6m24s
 
 The above is the process of running the workload based on the vineyard scheduler, and it's same
-as the `vineyardd e2e test`_. What's more, you could refer to the
+as the `workflow e2e test`_. What's more, you could refer to the
 `workflow demo`_  to dig into what happens in the container.
 
 Operations and drivers
@@ -1523,7 +1524,8 @@ with 3 workers.
 
 .. code:: yaml
 
-  # the dask-worker's image is built with vineyard, please refer `dask-worker-with-vineyard`_.
+  # the dask-worker's image is built with vineyard, please refer
+  # https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition-demo/Dockerfile.dask-worker-with-vineyard.
   $ cat <<EOF | helm install dask-cluster dask/dask --values -
   scheduler:
     image:
@@ -1872,25 +1874,24 @@ the `failover e2e test`_.
 .. _Kubernetes Scheduling Framework: https://kubernetes.io/docs/concepts/scheduling-eviction/scheduling-framework/
 .. _workflow-job1: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/workflow-demo/job1.py
 .. _workflow-job2: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/workflow-demo/job2.py
-.. _vineyardd e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/vineyardd/e2e.yaml
+.. _workflow e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/workflow/e2e.yaml
 .. _workflow demo: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/workflow-demo
 .. _sidecar e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/sidecar/e2e.yaml
 .. _HostPath: https://kubernetes.io/docs/concepts/storage/volumes/#hostpath
 .. _PersistentVolume: https://kubernetes.io/docs/concepts/storage/persistent-volumes
-.. _checkpoint examples: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/checkpoint-demo
+.. _checkpoint examples: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/failover-demo
 .. _serialize e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/serialize/e2e.yaml
 .. _spill e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/spill/e2e.yaml
 .. _assembly workload1: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly-demo/assembly-job1.py
 .. _assembly workload2: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly-demo/assembly-job2.py
 .. _local assembly e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly/local-assembly-e2e.yaml
 .. _assembly demo: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/assembly-demo
-.. _local assembly operation: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/local-assembly-container
-.. _distributed assembly operation: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/distributed-assembly-container
+.. _local assembly operation: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly-demo/assembly-local.py
+.. _distributed assembly operation: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly-demo/assembly-distributed.py
 .. _distributed assembly e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/assembly/distributed-assembly-e2e.yaml
 .. _dask: https://www.dask.org/get-started
-.. _dask-worker-with-vineyard: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition/repartition-demo/Dockerfile.dask-worker-with-vineyard
-.. _repartition workload1: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition/repartition-demo/job1.py
-.. _repartition workload2: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition/repartition-demo/job2.py
+.. _repartition workload1: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition-demo/job1.py
+.. _repartition workload2: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition-demo/job2.py
 .. _dask repartition e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/repartition/dask-repartition-e2e.yaml
-.. _repartition directory: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/repartition
+.. _repartition directory: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/repartition-demo
 .. _failover e2e test: https://github.com/v6d-io/v6d/tree/main/k8s/test/e2e/failover/e2e.yaml

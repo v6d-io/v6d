@@ -476,6 +476,6 @@ Step 4: Cleanup
 
 .. _kind: https://kind.sigs.k8s.io
 .. _helm: https://helm.sh/docs/intro/install/
-.. _IPC and RPC: https://v6d.io/notes/data-accessing.html#ipcclient-vs-rpcclient
-.. _vineyard data accessing: https://v6d.io/notes/data-accessing.html
+.. _IPC and RPC: https://v6d.io/notes/key-concepts/data-accessing.html#ipcclient-vs-rpcclient
+.. _vineyard data accessing: https://v6d.io/notes/key-concepts/data-accessing.html#data-accessing
 .. _clusterrole: https://github.com/v6d-io/v6d/blob/main/k8s/config/rbac/role.yaml

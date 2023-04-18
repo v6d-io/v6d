@@ -3,7 +3,7 @@ Vineyard Operator
 
 To manage all vineyard relevant components in kubernetes cluster, we proposal the vineyard 
 operator. With it, users can easily deploy vineyard components, and manage their lifecycle. 
-For more details, please refer to [vineyard operator doc](https://v6d.io/notes/vineyard-operator.html). 
+For more details, please refer to [vineyard operator doc](https://v6d.io/notes/cloud-native/vineyard-operator.html). 
 At present, the vineyard operator is at the beginning stage, and the main milestones are as follows.
 
 ### Short milestones
