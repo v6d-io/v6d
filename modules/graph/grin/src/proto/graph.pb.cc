@@ -21,7 +21,7 @@ namespace _pb = ::PROTOBUF_NAMESPACE_ID;
 namespace _pbi = _pb::internal;
 
 namespace grin {
-PROTOBUF_CONSTEXPR TopologyTrait::TopologyTrait(
+PROTOBUF_CONSTEXPR TopologyFeature::TopologyFeature(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.vertex_list_retrievals_)*/{}
   , /*decltype(_impl_._vertex_list_retrievals_cached_byte_size_)*/{0}
@@ -36,34 +36,34 @@ PROTOBUF_CONSTEXPR TopologyTrait::TopologyTrait(
   , /*decltype(_impl_.grin_with_vertex_data_)*/false
   , /*decltype(_impl_.grin_with_edge_data_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
-struct TopologyTraitDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR TopologyTraitDefaultTypeInternal()
+struct TopologyFeatureDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR TopologyFeatureDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~TopologyTraitDefaultTypeInternal() {}
+  ~TopologyFeatureDefaultTypeInternal() {}
   union {
-    TopologyTrait _instance;
+    TopologyFeature _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TopologyTraitDefaultTypeInternal _TopologyTrait_default_instance_;
-PROTOBUF_CONSTEXPR MirrorPartitionListTrait::MirrorPartitionListTrait(
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 TopologyFeatureDefaultTypeInternal _TopologyFeature_default_instance_;
+PROTOBUF_CONSTEXPR MirrorPartitionListFeature::MirrorPartitionListFeature(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.grin_trait_master_vertex_mirror_partition_list_)*/false
   , /*decltype(_impl_.grin_trait_mirror_vertex_mirror_partition_list_)*/false
   , /*decltype(_impl_.grin_trait_master_edge_mirror_partition_list_)*/false
   , /*decltype(_impl_.grin_trait_mirror_edge_mirror_partition_list_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
-struct MirrorPartitionListTraitDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR MirrorPartitionListTraitDefaultTypeInternal()
+struct MirrorPartitionListFeatureDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR MirrorPartitionListFeatureDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~MirrorPartitionListTraitDefaultTypeInternal() {}
+  ~MirrorPartitionListFeatureDefaultTypeInternal() {}
   union {
-    MirrorPartitionListTrait _instance;
+    MirrorPartitionListFeature _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 MirrorPartitionListTraitDefaultTypeInternal _MirrorPartitionListTrait_default_instance_;
-PROTOBUF_CONSTEXPR PartitionTrait::PartitionTrait(
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 MirrorPartitionListFeatureDefaultTypeInternal _MirrorPartitionListFeature_default_instance_;
+PROTOBUF_CONSTEXPR PartitionFeature::PartitionFeature(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.mirror_partition_list_trait_)*/nullptr
+    /*decltype(_impl_.mirror_partition_list_feature_)*/nullptr
   , /*decltype(_impl_.graph_partition_strategy_)*/0
   , /*decltype(_impl_.grin_trait_natural_id_for_partition_)*/false
   , /*decltype(_impl_.grin_enable_vertex_ref_)*/false
@@ -77,16 +77,16 @@ PROTOBUF_CONSTEXPR PartitionTrait::PartitionTrait(
   , /*decltype(_impl_.grin_trait_select_master_neighbor_for_adjacent_list_)*/false
   , /*decltype(_impl_.grin_trait_select_neighbor_partition_for_adjacent_list_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
-struct PartitionTraitDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR PartitionTraitDefaultTypeInternal()
+struct PartitionFeatureDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR PartitionFeatureDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~PartitionTraitDefaultTypeInternal() {}
+  ~PartitionFeatureDefaultTypeInternal() {}
   union {
-    PartitionTrait _instance;
+    PartitionFeature _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PartitionTraitDefaultTypeInternal _PartitionTrait_default_instance_;
-PROTOBUF_CONSTEXPR VertexPropertyTrait::VertexPropertyTrait(
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PartitionFeatureDefaultTypeInternal _PartitionFeature_default_instance_;
+PROTOBUF_CONSTEXPR VertexPropertyFeature::VertexPropertyFeature(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.grin_with_vertex_property_)*/false
   , /*decltype(_impl_.grin_with_vertex_property_name_)*/false
@@ -97,16 +97,16 @@ PROTOBUF_CONSTEXPR VertexPropertyTrait::VertexPropertyTrait(
   , /*decltype(_impl_.grin_trait_natural_id_for_vertex_property_)*/false
   , /*decltype(_impl_.grin_assume_by_type_vertex_original_id_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
-struct VertexPropertyTraitDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR VertexPropertyTraitDefaultTypeInternal()
+struct VertexPropertyFeatureDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR VertexPropertyFeatureDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~VertexPropertyTraitDefaultTypeInternal() {}
+  ~VertexPropertyFeatureDefaultTypeInternal() {}
   union {
-    VertexPropertyTrait _instance;
+    VertexPropertyFeature _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 VertexPropertyTraitDefaultTypeInternal _VertexPropertyTrait_default_instance_;
-PROTOBUF_CONSTEXPR EdgePropertyTrait::EdgePropertyTrait(
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 VertexPropertyFeatureDefaultTypeInternal _VertexPropertyFeature_default_instance_;
+PROTOBUF_CONSTEXPR EdgePropertyFeature::EdgePropertyFeature(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.grin_with_edge_property_)*/false
   , /*decltype(_impl_.grin_with_edge_property_name_)*/false
@@ -116,19 +116,19 @@ PROTOBUF_CONSTEXPR EdgePropertyTrait::EdgePropertyTrait(
   , /*decltype(_impl_.grin_trait_natural_id_for_edge_type_)*/false
   , /*decltype(_impl_.grin_trait_natural_id_for_edge_property_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
-struct EdgePropertyTraitDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR EdgePropertyTraitDefaultTypeInternal()
+struct EdgePropertyFeatureDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR EdgePropertyFeatureDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~EdgePropertyTraitDefaultTypeInternal() {}
+  ~EdgePropertyFeatureDefaultTypeInternal() {}
   union {
-    EdgePropertyTrait _instance;
+    EdgePropertyFeature _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 EdgePropertyTraitDefaultTypeInternal _EdgePropertyTrait_default_instance_;
-PROTOBUF_CONSTEXPR PropertyTrait::PropertyTrait(
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 EdgePropertyFeatureDefaultTypeInternal _EdgePropertyFeature_default_instance_;
+PROTOBUF_CONSTEXPR PropertyFeature::PropertyFeature(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.vertex_property_trait_)*/nullptr
-  , /*decltype(_impl_.edge_property_trait_)*/nullptr
+    /*decltype(_impl_.vertex_property_feature_)*/nullptr
+  , /*decltype(_impl_.edge_property_feature_)*/nullptr
   , /*decltype(_impl_.vertex_property_)*/0
   , /*decltype(_impl_.edge_property_)*/0
   , /*decltype(_impl_.grin_enable_row_)*/false
@@ -140,55 +140,55 @@ PROTOBUF_CONSTEXPR PropertyTrait::PropertyTrait(
   , /*decltype(_impl_.grin_trait_select_edge_type_for_adjacent_list_)*/false
   , /*decltype(_impl_.grin_trait_specific_vev_relation_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
-struct PropertyTraitDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR PropertyTraitDefaultTypeInternal()
+struct PropertyFeatureDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR PropertyFeatureDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~PropertyTraitDefaultTypeInternal() {}
+  ~PropertyFeatureDefaultTypeInternal() {}
   union {
-    PropertyTrait _instance;
+    PropertyFeature _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PropertyTraitDefaultTypeInternal _PropertyTrait_default_instance_;
-PROTOBUF_CONSTEXPR IndexTrait::IndexTrait(
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PropertyFeatureDefaultTypeInternal _PropertyFeature_default_instance_;
+PROTOBUF_CONSTEXPR IndexFeature::IndexFeature(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.grin_with_vertex_label_)*/false
   , /*decltype(_impl_.grin_with_edge_label_)*/false
   , /*decltype(_impl_.grin_assume_all_vertex_list_sorted_)*/false
   , /*decltype(_impl_._cached_size_)*/{}} {}
-struct IndexTraitDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR IndexTraitDefaultTypeInternal()
+struct IndexFeatureDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR IndexFeatureDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~IndexTraitDefaultTypeInternal() {}
+  ~IndexFeatureDefaultTypeInternal() {}
   union {
-    IndexTrait _instance;
+    IndexFeature _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 IndexTraitDefaultTypeInternal _IndexTrait_default_instance_;
-PROTOBUF_CONSTEXPR PredicateTrait::PredicateTrait(
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 IndexFeatureDefaultTypeInternal _IndexFeature_default_instance_;
+PROTOBUF_CONSTEXPR PredicateFeature::PredicateFeature(
     ::_pbi::ConstantInitialized) {}
-struct PredicateTraitDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR PredicateTraitDefaultTypeInternal()
+struct PredicateFeatureDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR PredicateFeatureDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~PredicateTraitDefaultTypeInternal() {}
+  ~PredicateFeatureDefaultTypeInternal() {}
   union {
-    PredicateTrait _instance;
+    PredicateFeature _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PredicateTraitDefaultTypeInternal _PredicateTrait_default_instance_;
-PROTOBUF_CONSTEXPR StorageTrait::StorageTrait(
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 PredicateFeatureDefaultTypeInternal _PredicateFeature_default_instance_;
+PROTOBUF_CONSTEXPR StorageFeature::StorageFeature(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.specific_trait_)*/{}
+    /*decltype(_impl_.specific_feature_)*/{}
   , /*decltype(_impl_._cached_size_)*/{}
   , /*decltype(_impl_._oneof_case_)*/{}} {}
-struct StorageTraitDefaultTypeInternal {
-  PROTOBUF_CONSTEXPR StorageTraitDefaultTypeInternal()
+struct StorageFeatureDefaultTypeInternal {
+  PROTOBUF_CONSTEXPR StorageFeatureDefaultTypeInternal()
       : _instance(::_pbi::ConstantInitialized{}) {}
-  ~StorageTraitDefaultTypeInternal() {}
+  ~StorageFeatureDefaultTypeInternal() {}
   union {
-    StorageTrait _instance;
+    StorageFeature _instance;
   };
 };
-PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 StorageTraitDefaultTypeInternal _StorageTrait_default_instance_;
+PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 StorageFeatureDefaultTypeInternal _StorageFeature_default_instance_;
 PROTOBUF_CONSTEXPR Statistics::Statistics(
     ::_pbi::ConstantInitialized): _impl_{
     /*decltype(_impl_.vertex_count_)*/0
@@ -208,7 +208,7 @@ struct StatisticsDefaultTypeInternal {
 PROTOBUF_ATTRIBUTE_NO_DESTROY PROTOBUF_CONSTINIT PROTOBUF_ATTRIBUTE_INIT_PRIORITY1 StatisticsDefaultTypeInternal _Statistics_default_instance_;
 PROTOBUF_CONSTEXPR Graph::Graph(
     ::_pbi::ConstantInitialized): _impl_{
-    /*decltype(_impl_.traits_)*/{}
+    /*decltype(_impl_.features_)*/{}
   , /*decltype(_impl_.uri_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.grin_version_)*/{&::_pbi::fixed_address_empty_string, ::_pbi::ConstantInitialized{}}
   , /*decltype(_impl_.statistics_)*/nullptr
@@ -229,113 +229,113 @@ static constexpr ::_pb::ServiceDescriptor const** file_level_service_descriptors
 
 const uint32_t TableStruct_graph_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::grin::TopologyTrait, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::grin::TopologyFeature, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grin::TopologyTrait, _impl_.grin_assume_has_directed_graph_),
-  PROTOBUF_FIELD_OFFSET(::grin::TopologyTrait, _impl_.grin_assume_has_undirected_graph_),
-  PROTOBUF_FIELD_OFFSET(::grin::TopologyTrait, _impl_.grin_assume_has_multi_edge_graph_),
-  PROTOBUF_FIELD_OFFSET(::grin::TopologyTrait, _impl_.grin_with_vertex_original_id_),
-  PROTOBUF_FIELD_OFFSET(::grin::TopologyTrait, _impl_.grin_with_vertex_data_),
-  PROTOBUF_FIELD_OFFSET(::grin::TopologyTrait, _impl_.grin_with_edge_data_),
-  PROTOBUF_FIELD_OFFSET(::grin::TopologyTrait, _impl_.vertex_list_retrievals_),
-  PROTOBUF_FIELD_OFFSET(::grin::TopologyTrait, _impl_.edge_list_retrievals_),
-  PROTOBUF_FIELD_OFFSET(::grin::TopologyTrait, _impl_.adjacent_list_retrievals_),
+  PROTOBUF_FIELD_OFFSET(::grin::TopologyFeature, _impl_.grin_assume_has_directed_graph_),
+  PROTOBUF_FIELD_OFFSET(::grin::TopologyFeature, _impl_.grin_assume_has_undirected_graph_),
+  PROTOBUF_FIELD_OFFSET(::grin::TopologyFeature, _impl_.grin_assume_has_multi_edge_graph_),
+  PROTOBUF_FIELD_OFFSET(::grin::TopologyFeature, _impl_.grin_with_vertex_original_id_),
+  PROTOBUF_FIELD_OFFSET(::grin::TopologyFeature, _impl_.grin_with_vertex_data_),
+  PROTOBUF_FIELD_OFFSET(::grin::TopologyFeature, _impl_.grin_with_edge_data_),
+  PROTOBUF_FIELD_OFFSET(::grin::TopologyFeature, _impl_.vertex_list_retrievals_),
+  PROTOBUF_FIELD_OFFSET(::grin::TopologyFeature, _impl_.edge_list_retrievals_),
+  PROTOBUF_FIELD_OFFSET(::grin::TopologyFeature, _impl_.adjacent_list_retrievals_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::grin::MirrorPartitionListTrait, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::grin::MirrorPartitionListFeature, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grin::MirrorPartitionListTrait, _impl_.grin_trait_master_vertex_mirror_partition_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::MirrorPartitionListTrait, _impl_.grin_trait_mirror_vertex_mirror_partition_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::MirrorPartitionListTrait, _impl_.grin_trait_master_edge_mirror_partition_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::MirrorPartitionListTrait, _impl_.grin_trait_mirror_edge_mirror_partition_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::MirrorPartitionListFeature, _impl_.grin_trait_master_vertex_mirror_partition_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::MirrorPartitionListFeature, _impl_.grin_trait_mirror_vertex_mirror_partition_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::MirrorPartitionListFeature, _impl_.grin_trait_master_edge_mirror_partition_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::MirrorPartitionListFeature, _impl_.grin_trait_mirror_edge_mirror_partition_list_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.graph_partition_strategy_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.grin_trait_natural_id_for_partition_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.grin_enable_vertex_ref_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.grin_enable_edge_ref_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.vertex_data_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.edge_data_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.mirror_partition_list_trait_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.grin_trait_select_master_for_vertex_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.grin_trait_select_partition_for_vertex_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.grin_trait_select_master_for_edge_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.grin_trait_select_partition_for_edge_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.grin_trait_select_master_neighbor_for_adjacent_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::PartitionTrait, _impl_.grin_trait_select_neighbor_partition_for_adjacent_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.graph_partition_strategy_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.grin_trait_natural_id_for_partition_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.grin_enable_vertex_ref_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.grin_enable_edge_ref_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.vertex_data_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.edge_data_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.mirror_partition_list_feature_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.grin_trait_select_master_for_vertex_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.grin_trait_select_partition_for_vertex_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.grin_trait_select_master_for_edge_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.grin_trait_select_partition_for_edge_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.grin_trait_select_master_neighbor_for_adjacent_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, _impl_.grin_trait_select_neighbor_partition_for_adjacent_list_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyTrait, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyFeature, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyTrait, _impl_.grin_with_vertex_property_),
-  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyTrait, _impl_.grin_with_vertex_property_name_),
-  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyTrait, _impl_.grin_with_vertex_type_name_),
-  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyTrait, _impl_.grin_enable_vertex_property_table_),
-  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyTrait, _impl_.grin_enable_vertex_primary_keys_),
-  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyTrait, _impl_.grin_trait_natural_id_for_vertex_type_),
-  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyTrait, _impl_.grin_trait_natural_id_for_vertex_property_),
-  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyTrait, _impl_.grin_assume_by_type_vertex_original_id_),
+  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyFeature, _impl_.grin_with_vertex_property_),
+  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyFeature, _impl_.grin_with_vertex_property_name_),
+  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyFeature, _impl_.grin_with_vertex_type_name_),
+  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyFeature, _impl_.grin_enable_vertex_property_table_),
+  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyFeature, _impl_.grin_enable_vertex_primary_keys_),
+  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyFeature, _impl_.grin_trait_natural_id_for_vertex_type_),
+  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyFeature, _impl_.grin_trait_natural_id_for_vertex_property_),
+  PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyFeature, _impl_.grin_assume_by_type_vertex_original_id_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyTrait, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyFeature, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyTrait, _impl_.grin_with_edge_property_),
-  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyTrait, _impl_.grin_with_edge_property_name_),
-  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyTrait, _impl_.grin_with_edge_type_name_),
-  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyTrait, _impl_.grin_enable_edge_property_table_),
-  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyTrait, _impl_.grin_enable_edge_primary_keys_),
-  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyTrait, _impl_.grin_trait_natural_id_for_edge_type_),
-  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyTrait, _impl_.grin_trait_natural_id_for_edge_property_),
+  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyFeature, _impl_.grin_with_edge_property_),
+  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyFeature, _impl_.grin_with_edge_property_name_),
+  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyFeature, _impl_.grin_with_edge_type_name_),
+  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyFeature, _impl_.grin_enable_edge_property_table_),
+  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyFeature, _impl_.grin_enable_edge_primary_keys_),
+  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyFeature, _impl_.grin_trait_natural_id_for_edge_type_),
+  PROTOBUF_FIELD_OFFSET(::grin::EdgePropertyFeature, _impl_.grin_trait_natural_id_for_edge_property_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.grin_enable_row_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.vertex_property_trait_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.edge_property_trait_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.vertex_property_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.edge_property_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.grin_assume_column_store_for_vertex_property_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.grin_assume_column_store_for_edge_property_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.grin_trait_select_type_for_vertex_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.grin_trait_select_type_for_edge_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.grin_trait_select_neighbor_type_for_adjacent_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.grin_trait_select_edge_type_for_adjacent_list_),
-  PROTOBUF_FIELD_OFFSET(::grin::PropertyTrait, _impl_.grin_trait_specific_vev_relation_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.grin_enable_row_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.vertex_property_feature_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.edge_property_feature_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.vertex_property_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.edge_property_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.grin_assume_column_store_for_vertex_property_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.grin_assume_column_store_for_edge_property_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.grin_trait_select_type_for_vertex_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.grin_trait_select_type_for_edge_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.grin_trait_select_neighbor_type_for_adjacent_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.grin_trait_select_edge_type_for_adjacent_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PropertyFeature, _impl_.grin_trait_specific_vev_relation_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::grin::IndexTrait, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::grin::IndexFeature, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
-  PROTOBUF_FIELD_OFFSET(::grin::IndexTrait, _impl_.grin_with_vertex_label_),
-  PROTOBUF_FIELD_OFFSET(::grin::IndexTrait, _impl_.grin_with_edge_label_),
-  PROTOBUF_FIELD_OFFSET(::grin::IndexTrait, _impl_.grin_assume_all_vertex_list_sorted_),
+  PROTOBUF_FIELD_OFFSET(::grin::IndexFeature, _impl_.grin_with_vertex_label_),
+  PROTOBUF_FIELD_OFFSET(::grin::IndexFeature, _impl_.grin_with_edge_label_),
+  PROTOBUF_FIELD_OFFSET(::grin::IndexFeature, _impl_.grin_assume_all_vertex_list_sorted_),
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::grin::PredicateTrait, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::grin::PredicateFeature, _internal_metadata_),
   ~0u,  // no _extensions_
   ~0u,  // no _oneof_case_
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
   ~0u,  // no _has_bits_
-  PROTOBUF_FIELD_OFFSET(::grin::StorageTrait, _internal_metadata_),
+  PROTOBUF_FIELD_OFFSET(::grin::StorageFeature, _internal_metadata_),
   ~0u,  // no _extensions_
-  PROTOBUF_FIELD_OFFSET(::grin::StorageTrait, _impl_._oneof_case_[0]),
+  PROTOBUF_FIELD_OFFSET(::grin::StorageFeature, _impl_._oneof_case_[0]),
   ~0u,  // no _weak_field_map_
   ~0u,  // no _inlined_string_donated_
   ::_pbi::kInvalidFieldOffsetTag,
@@ -343,7 +343,7 @@ const uint32_t TableStruct_graph_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pr
   ::_pbi::kInvalidFieldOffsetTag,
   ::_pbi::kInvalidFieldOffsetTag,
   ::_pbi::kInvalidFieldOffsetTag,
-  PROTOBUF_FIELD_OFFSET(::grin::StorageTrait, _impl_.specific_trait_),
+  PROTOBUF_FIELD_OFFSET(::grin::StorageFeature, _impl_.specific_feature_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grin::Statistics, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -363,134 +363,135 @@ const uint32_t TableStruct_graph_2eproto::offsets[] PROTOBUF_SECTION_VARIABLE(pr
   ~0u,  // no _inlined_string_donated_
   PROTOBUF_FIELD_OFFSET(::grin::Graph, _impl_.uri_),
   PROTOBUF_FIELD_OFFSET(::grin::Graph, _impl_.grin_version_),
-  PROTOBUF_FIELD_OFFSET(::grin::Graph, _impl_.traits_),
+  PROTOBUF_FIELD_OFFSET(::grin::Graph, _impl_.features_),
   PROTOBUF_FIELD_OFFSET(::grin::Graph, _impl_.statistics_),
 };
 static const ::_pbi::MigrationSchema schemas[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) = {
-  { 0, -1, -1, sizeof(::grin::TopologyTrait)},
-  { 15, -1, -1, sizeof(::grin::MirrorPartitionListTrait)},
-  { 25, -1, -1, sizeof(::grin::PartitionTrait)},
-  { 44, -1, -1, sizeof(::grin::VertexPropertyTrait)},
-  { 58, -1, -1, sizeof(::grin::EdgePropertyTrait)},
-  { 71, -1, -1, sizeof(::grin::PropertyTrait)},
-  { 89, -1, -1, sizeof(::grin::IndexTrait)},
-  { 98, -1, -1, sizeof(::grin::PredicateTrait)},
-  { 104, -1, -1, sizeof(::grin::StorageTrait)},
+  { 0, -1, -1, sizeof(::grin::TopologyFeature)},
+  { 15, -1, -1, sizeof(::grin::MirrorPartitionListFeature)},
+  { 25, -1, -1, sizeof(::grin::PartitionFeature)},
+  { 44, -1, -1, sizeof(::grin::VertexPropertyFeature)},
+  { 58, -1, -1, sizeof(::grin::EdgePropertyFeature)},
+  { 71, -1, -1, sizeof(::grin::PropertyFeature)},
+  { 89, -1, -1, sizeof(::grin::IndexFeature)},
+  { 98, -1, -1, sizeof(::grin::PredicateFeature)},
+  { 104, -1, -1, sizeof(::grin::StorageFeature)},
   { 116, -1, -1, sizeof(::grin::Statistics)},
   { 127, -1, -1, sizeof(::grin::Graph)},
 };
 
 static const ::_pb::Message* const file_default_instances[] = {
-  &::grin::_TopologyTrait_default_instance_._instance,
-  &::grin::_MirrorPartitionListTrait_default_instance_._instance,
-  &::grin::_PartitionTrait_default_instance_._instance,
-  &::grin::_VertexPropertyTrait_default_instance_._instance,
-  &::grin::_EdgePropertyTrait_default_instance_._instance,
-  &::grin::_PropertyTrait_default_instance_._instance,
-  &::grin::_IndexTrait_default_instance_._instance,
-  &::grin::_PredicateTrait_default_instance_._instance,
-  &::grin::_StorageTrait_default_instance_._instance,
+  &::grin::_TopologyFeature_default_instance_._instance,
+  &::grin::_MirrorPartitionListFeature_default_instance_._instance,
+  &::grin::_PartitionFeature_default_instance_._instance,
+  &::grin::_VertexPropertyFeature_default_instance_._instance,
+  &::grin::_EdgePropertyFeature_default_instance_._instance,
+  &::grin::_PropertyFeature_default_instance_._instance,
+  &::grin::_IndexFeature_default_instance_._instance,
+  &::grin::_PredicateFeature_default_instance_._instance,
+  &::grin::_StorageFeature_default_instance_._instance,
   &::grin::_Statistics_default_instance_._instance,
   &::grin::_Graph_default_instance_._instance,
 };
 
 const char descriptor_table_protodef_graph_2eproto[] PROTOBUF_SECTION_VARIABLE(protodesc_cold) =
-  "\n\013graph.proto\022\004grin\"\214\003\n\rTopologyTrait\022&\n"
-  "\036grin_assume_has_directed_graph\030\001 \001(\010\022(\n"
-  " grin_assume_has_undirected_graph\030\002 \001(\010\022"
-  "(\n grin_assume_has_multi_edge_graph\030\003 \001("
-  "\010\022$\n\034grin_with_vertex_original_id\030\004 \001(\010\022"
-  "\035\n\025grin_with_vertex_data\030\005 \001(\010\022\033\n\023grin_w"
-  "ith_edge_data\030\006 \001(\010\0223\n\026vertex_list_retri"
-  "evals\030\007 \003(\0162\023.grin.ListRetrieval\0221\n\024edge"
-  "_list_retrievals\030\010 \003(\0162\023.grin.ListRetrie"
-  "val\0225\n\030adjacent_list_retrievals\030\t \003(\0162\023."
-  "grin.ListRetrieval\"\366\001\n\030MirrorPartitionLi"
-  "stTrait\0226\n.grin_trait_master_vertex_mirr"
-  "or_partition_list\030\001 \001(\010\0226\n.grin_trait_mi"
-  "rror_vertex_mirror_partition_list\030\002 \001(\010\022"
-  "4\n,grin_trait_master_edge_mirror_partiti"
-  "on_list\030\003 \001(\010\0224\n,grin_trait_mirror_edge_"
-  "mirror_partition_list\030\004 \001(\010\"\271\005\n\016Partitio"
-  "nTrait\022>\n\030graph_partition_strategy\030\001 \001(\016"
-  "2\034.grin.GraphPartitionStrategy\022+\n#grin_t"
-  "rait_natural_id_for_partition\030\002 \001(\010\022\036\n\026g"
-  "rin_enable_vertex_ref\030\003 \001(\010\022\034\n\024grin_enab"
-  "le_edge_ref\030\004 \001(\010\0228\n\013vertex_data\030\005 \001(\0162#"
-  ".grin.PropertyDataPartitionStrategy\0226\n\te"
-  "dge_data\030\006 \001(\0162#.grin.PropertyDataPartit"
-  "ionStrategy\022C\n\033mirror_partition_list_tra"
-  "it\030\007 \001(\0132\036.grin.MirrorPartitionListTrait"
-  "\0220\n(grin_trait_select_master_for_vertex_"
-  "list\030\010 \001(\010\0223\n+grin_trait_select_partitio"
-  "n_for_vertex_list\030\t \001(\010\022.\n&grin_trait_se"
-  "lect_master_for_edge_list\030\n \001(\010\0221\n)grin_"
-  "trait_select_partition_for_edge_list\030\013 \001"
-  "(\010\022;\n3grin_trait_select_master_neighbor_"
-  "for_adjacent_list\030\014 \001(\010\022>\n6grin_trait_se"
-  "lect_neighbor_partition_for_adjacent_lis"
-  "t\030\r \001(\010\"\352\002\n\023VertexPropertyTrait\022!\n\031grin_"
-  "with_vertex_property\030\001 \001(\010\022&\n\036grin_with_"
-  "vertex_property_name\030\002 \001(\010\022\"\n\032grin_with_"
-  "vertex_type_name\030\003 \001(\010\022)\n!grin_enable_ve"
-  "rtex_property_table\030\004 \001(\010\022\'\n\037grin_enable"
-  "_vertex_primary_keys\030\005 \001(\010\022-\n%grin_trait"
-  "_natural_id_for_vertex_type\030\006 \001(\010\0221\n)gri"
-  "n_trait_natural_id_for_vertex_property\030\007"
-  " \001(\010\022.\n&grin_assume_by_type_vertex_origi"
-  "nal_id\030\010 \001(\010\"\252\002\n\021EdgePropertyTrait\022\037\n\027gr"
-  "in_with_edge_property\030\001 \001(\010\022$\n\034grin_with"
-  "_edge_property_name\030\002 \001(\010\022 \n\030grin_with_e"
-  "dge_type_name\030\003 \001(\010\022\'\n\037grin_enable_edge_"
-  "property_table\030\004 \001(\010\022%\n\035grin_enable_edge"
-  "_primary_keys\030\005 \001(\010\022+\n#grin_trait_natura"
-  "l_id_for_edge_type\030\006 \001(\010\022/\n\'grin_trait_n"
-  "atural_id_for_edge_property\030\007 \001(\010\"\366\004\n\rPr"
-  "opertyTrait\022\027\n\017grin_enable_row\030\001 \001(\010\0228\n\025"
-  "vertex_property_trait\030\002 \001(\0132\031.grin.Verte"
-  "xPropertyTrait\0224\n\023edge_property_trait\030\003 "
-  "\001(\0132\027.grin.EdgePropertyTrait\022<\n\017vertex_p"
-  "roperty\030\004 \001(\0162#.grin.PropertyDataPartiti"
-  "onStrategy\022:\n\redge_property\030\005 \001(\0162#.grin"
-  ".PropertyDataPartitionStrategy\0224\n,grin_a"
-  "ssume_column_store_for_vertex_property\030\006"
-  " \001(\010\0222\n*grin_assume_column_store_for_edg"
-  "e_property\030\007 \001(\010\022.\n&grin_trait_select_ty"
-  "pe_for_vertex_list\030\010 \001(\010\022,\n$grin_trait_s"
-  "elect_type_for_edge_list\030\t \001(\010\0229\n1grin_t"
-  "rait_select_neighbor_type_for_adjacent_l"
-  "ist\030\n \001(\010\0225\n-grin_trait_select_edge_type"
-  "_for_adjacent_list\030\013 \001(\010\022(\n grin_trait_s"
-  "pecific_vev_relation\030\014 \001(\010\"v\n\nIndexTrait"
-  "\022\036\n\026grin_with_vertex_label\030\001 \001(\010\022\034\n\024grin"
-  "_with_edge_label\030\002 \001(\010\022*\n\"grin_assume_al"
-  "l_vertex_list_sorted\030\003 \001(\010\"\020\n\016PredicateT"
-  "rait\"\211\002\n\014StorageTrait\022-\n\016topology_trait\030"
-  "\001 \001(\0132\023.grin.TopologyTraitH\000\022/\n\017partitio"
-  "n_trait\030\002 \001(\0132\024.grin.PartitionTraitH\000\022-\n"
-  "\016property_trait\030\003 \001(\0132\023.grin.PropertyTra"
-  "itH\000\022\'\n\013index_trait\030\004 \001(\0132\020.grin.IndexTr"
-  "aitH\000\022/\n\017predicate_trait\030\005 \001(\0132\024.grin.Pr"
-  "edicateTraitH\000B\020\n\016specific_trait\"\203\001\n\nSta"
-  "tistics\022\024\n\014vertex_count\030\001 \001(\005\022\022\n\nedge_co"
-  "unt\030\002 \001(\005\022\027\n\017partition_count\030\003 \001(\005\022\031\n\021ve"
-  "rtex_type_count\030\004 \001(\005\022\027\n\017edge_type_count"
-  "\030\005 \001(\005\"t\n\005Graph\022\013\n\003uri\030\001 \001(\t\022\024\n\014grin_ver"
-  "sion\030\002 \001(\t\022\"\n\006traits\030\003 \003(\0132\022.grin.Storag"
-  "eTrait\022$\n\nstatistics\030\004 \001(\0132\020.grin.Statis"
-  "tics*>\n\rListRetrieval\022\t\n\005LR_NA\020\000\022\021\n\rLR_A"
-  "RRAY_LIKE\020\001\022\017\n\013LR_ITERATOR\020\002*u\n\026GraphPar"
-  "titionStrategy\022\n\n\006GPS_NA\020\000\022\025\n\021GPS_ALL_RE"
-  "PLICATE\020\001\022\020\n\014GPS_EDGE_CUT\020\002\022\022\n\016GPS_VERTE"
-  "X_CUT\020\003\022\022\n\016GPS_HYBRID_CUT\020\004*\202\001\n\035Property"
-  "DataPartitionStrategy\022\013\n\007PDPS_NA\020\000\022\024\n\020PD"
-  "PS_MASTER_ONLY\020\001\022 \n\034PDPS_REPLICATE_MASTE"
-  "R_MIRROR\020\002\022\034\n\030PDPS_SPLIT_MASTER_MIRROR\020\003"
-  "b\006proto3"
+  "\n\013graph.proto\022\004grin\"\216\003\n\017TopologyFeature\022"
+  "&\n\036grin_assume_has_directed_graph\030\001 \001(\010\022"
+  "(\n grin_assume_has_undirected_graph\030\002 \001("
+  "\010\022(\n grin_assume_has_multi_edge_graph\030\003 "
+  "\001(\010\022$\n\034grin_with_vertex_original_id\030\004 \001("
+  "\010\022\035\n\025grin_with_vertex_data\030\005 \001(\010\022\033\n\023grin"
+  "_with_edge_data\030\006 \001(\010\0223\n\026vertex_list_ret"
+  "rievals\030\007 \003(\0162\023.grin.ListRetrieval\0221\n\024ed"
+  "ge_list_retrievals\030\010 \003(\0162\023.grin.ListRetr"
+  "ieval\0225\n\030adjacent_list_retrievals\030\t \003(\0162"
+  "\023.grin.ListRetrieval\"\370\001\n\032MirrorPartition"
+  "ListFeature\0226\n.grin_trait_master_vertex_"
+  "mirror_partition_list\030\001 \001(\010\0226\n.grin_trai"
+  "t_mirror_vertex_mirror_partition_list\030\002 "
+  "\001(\010\0224\n,grin_trait_master_edge_mirror_par"
+  "tition_list\030\003 \001(\010\0224\n,grin_trait_mirror_e"
+  "dge_mirror_partition_list\030\004 \001(\010\"\277\005\n\020Part"
+  "itionFeature\022>\n\030graph_partition_strategy"
+  "\030\001 \001(\0162\034.grin.GraphPartitionStrategy\022+\n#"
+  "grin_trait_natural_id_for_partition\030\002 \001("
+  "\010\022\036\n\026grin_enable_vertex_ref\030\003 \001(\010\022\034\n\024gri"
+  "n_enable_edge_ref\030\004 \001(\010\0228\n\013vertex_data\030\005"
+  " \001(\0162#.grin.PropertyDataPartitionStrateg"
+  "y\0226\n\tedge_data\030\006 \001(\0162#.grin.PropertyData"
+  "PartitionStrategy\022G\n\035mirror_partition_li"
+  "st_feature\030\007 \001(\0132 .grin.MirrorPartitionL"
+  "istFeature\0220\n(grin_trait_select_master_f"
+  "or_vertex_list\030\010 \001(\010\0223\n+grin_trait_selec"
+  "t_partition_for_vertex_list\030\t \001(\010\022.\n&gri"
+  "n_trait_select_master_for_edge_list\030\n \001("
+  "\010\0221\n)grin_trait_select_partition_for_edg"
+  "e_list\030\013 \001(\010\022;\n3grin_trait_select_master"
+  "_neighbor_for_adjacent_list\030\014 \001(\010\022>\n6gri"
+  "n_trait_select_neighbor_partition_for_ad"
+  "jacent_list\030\r \001(\010\"\354\002\n\025VertexPropertyFeat"
+  "ure\022!\n\031grin_with_vertex_property\030\001 \001(\010\022&"
+  "\n\036grin_with_vertex_property_name\030\002 \001(\010\022\""
+  "\n\032grin_with_vertex_type_name\030\003 \001(\010\022)\n!gr"
+  "in_enable_vertex_property_table\030\004 \001(\010\022\'\n"
+  "\037grin_enable_vertex_primary_keys\030\005 \001(\010\022-"
+  "\n%grin_trait_natural_id_for_vertex_type\030"
+  "\006 \001(\010\0221\n)grin_trait_natural_id_for_verte"
+  "x_property\030\007 \001(\010\022.\n&grin_assume_by_type_"
+  "vertex_original_id\030\010 \001(\010\"\254\002\n\023EdgePropert"
+  "yFeature\022\037\n\027grin_with_edge_property\030\001 \001("
+  "\010\022$\n\034grin_with_edge_property_name\030\002 \001(\010\022"
+  " \n\030grin_with_edge_type_name\030\003 \001(\010\022\'\n\037gri"
+  "n_enable_edge_property_table\030\004 \001(\010\022%\n\035gr"
+  "in_enable_edge_primary_keys\030\005 \001(\010\022+\n#gri"
+  "n_trait_natural_id_for_edge_type\030\006 \001(\010\022/"
+  "\n\'grin_trait_natural_id_for_edge_propert"
+  "y\030\007 \001(\010\"\200\005\n\017PropertyFeature\022\027\n\017grin_enab"
+  "le_row\030\001 \001(\010\022<\n\027vertex_property_feature\030"
+  "\002 \001(\0132\033.grin.VertexPropertyFeature\0228\n\025ed"
+  "ge_property_feature\030\003 \001(\0132\031.grin.EdgePro"
+  "pertyFeature\022<\n\017vertex_property\030\004 \001(\0162#."
+  "grin.PropertyDataPartitionStrategy\022:\n\red"
+  "ge_property\030\005 \001(\0162#.grin.PropertyDataPar"
+  "titionStrategy\0224\n,grin_assume_column_sto"
+  "re_for_vertex_property\030\006 \001(\010\0222\n*grin_ass"
+  "ume_column_store_for_edge_property\030\007 \001(\010"
+  "\022.\n&grin_trait_select_type_for_vertex_li"
+  "st\030\010 \001(\010\022,\n$grin_trait_select_type_for_e"
+  "dge_list\030\t \001(\010\0229\n1grin_trait_select_neig"
+  "hbor_type_for_adjacent_list\030\n \001(\010\0225\n-gri"
+  "n_trait_select_edge_type_for_adjacent_li"
+  "st\030\013 \001(\010\022(\n grin_trait_specific_vev_rela"
+  "tion\030\014 \001(\010\"x\n\014IndexFeature\022\036\n\026grin_with_"
+  "vertex_label\030\001 \001(\010\022\034\n\024grin_with_edge_lab"
+  "el\030\002 \001(\010\022*\n\"grin_assume_all_vertex_list_"
+  "sorted\030\003 \001(\010\"\022\n\020PredicateFeature\"\241\002\n\016Sto"
+  "rageFeature\0221\n\020topology_feature\030\001 \001(\0132\025."
+  "grin.TopologyFeatureH\000\0223\n\021partition_feat"
+  "ure\030\002 \001(\0132\026.grin.PartitionFeatureH\000\0221\n\020p"
+  "roperty_feature\030\003 \001(\0132\025.grin.PropertyFea"
+  "tureH\000\022+\n\rindex_feature\030\004 \001(\0132\022.grin.Ind"
+  "exFeatureH\000\0223\n\021predicate_feature\030\005 \001(\0132\026"
+  ".grin.PredicateFeatureH\000B\022\n\020specific_fea"
+  "ture\"\203\001\n\nStatistics\022\024\n\014vertex_count\030\001 \001("
+  "\005\022\022\n\nedge_count\030\002 \001(\005\022\027\n\017partition_count"
+  "\030\003 \001(\005\022\031\n\021vertex_type_count\030\004 \001(\005\022\027\n\017edg"
+  "e_type_count\030\005 \001(\005\"x\n\005Graph\022\013\n\003uri\030\001 \001(\t"
+  "\022\024\n\014grin_version\030\002 \001(\t\022&\n\010features\030\003 \003(\013"
+  "2\024.grin.StorageFeature\022$\n\nstatistics\030\004 \001"
+  "(\0132\020.grin.Statistics*>\n\rListRetrieval\022\t\n"
+  "\005LR_NA\020\000\022\021\n\rLR_ARRAY_LIKE\020\001\022\017\n\013LR_ITERAT"
+  "OR\020\002*u\n\026GraphPartitionStrategy\022\n\n\006GPS_NA"
+  "\020\000\022\025\n\021GPS_ALL_REPLICATE\020\001\022\020\n\014GPS_EDGE_CU"
+  "T\020\002\022\022\n\016GPS_VERTEX_CUT\020\003\022\022\n\016GPS_HYBRID_CU"
+  "T\020\004*\202\001\n\035PropertyDataPartitionStrategy\022\013\n"
+  "\007PDPS_NA\020\000\022\024\n\020PDPS_MASTER_ONLY\020\001\022 \n\034PDPS"
+  "_REPLICATE_MASTER_MIRROR\020\002\022\034\n\030PDPS_SPLIT"
+  "_MASTER_MIRROR\020\003b\006proto3"
   ;
 static ::_pbi::once_flag descriptor_table_graph_2eproto_once;
 const ::_pbi::DescriptorTable descriptor_table_graph_2eproto = {
-    false, false, 3648, descriptor_table_protodef_graph_2eproto,
+    false, false, 3704, descriptor_table_protodef_graph_2eproto,
     "graph.proto",
     &descriptor_table_graph_2eproto_once, nullptr, 0, 11,
     schemas, file_default_instances, TableStruct_graph_2eproto::offsets,
@@ -555,19 +556,19 @@ bool PropertyDataPartitionStrategy_IsValid(int value) {
 
 // ===================================================================
 
-class TopologyTrait::_Internal {
+class TopologyFeature::_Internal {
  public:
 };
 
-TopologyTrait::TopologyTrait(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+TopologyFeature::TopologyFeature(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:grin.TopologyTrait)
+  // @@protoc_insertion_point(arena_constructor:grin.TopologyFeature)
 }
-TopologyTrait::TopologyTrait(const TopologyTrait& from)
+TopologyFeature::TopologyFeature(const TopologyFeature& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  TopologyTrait* const _this = this; (void)_this;
+  TopologyFeature* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.vertex_list_retrievals_){from._impl_.vertex_list_retrievals_}
     , /*decltype(_impl_._vertex_list_retrievals_cached_byte_size_)*/{0}
@@ -587,10 +588,10 @@ TopologyTrait::TopologyTrait(const TopologyTrait& from)
   ::memcpy(&_impl_.grin_assume_has_directed_graph_, &from._impl_.grin_assume_has_directed_graph_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.grin_with_edge_data_) -
     reinterpret_cast<char*>(&_impl_.grin_assume_has_directed_graph_)) + sizeof(_impl_.grin_with_edge_data_));
-  // @@protoc_insertion_point(copy_constructor:grin.TopologyTrait)
+  // @@protoc_insertion_point(copy_constructor:grin.TopologyFeature)
 }
 
-inline void TopologyTrait::SharedCtor(
+inline void TopologyFeature::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
@@ -611,8 +612,8 @@ inline void TopologyTrait::SharedCtor(
   };
 }
 
-TopologyTrait::~TopologyTrait() {
-  // @@protoc_insertion_point(destructor:grin.TopologyTrait)
+TopologyFeature::~TopologyFeature() {
+  // @@protoc_insertion_point(destructor:grin.TopologyFeature)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -620,19 +621,19 @@ TopologyTrait::~TopologyTrait() {
   SharedDtor();
 }
 
-inline void TopologyTrait::SharedDtor() {
+inline void TopologyFeature::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
   _impl_.vertex_list_retrievals_.~RepeatedField();
   _impl_.edge_list_retrievals_.~RepeatedField();
   _impl_.adjacent_list_retrievals_.~RepeatedField();
 }
 
-void TopologyTrait::SetCachedSize(int size) const {
+void TopologyFeature::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void TopologyTrait::Clear() {
-// @@protoc_insertion_point(message_clear_start:grin.TopologyTrait)
+void TopologyFeature::Clear() {
+// @@protoc_insertion_point(message_clear_start:grin.TopologyFeature)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -646,7 +647,7 @@ void TopologyTrait::Clear() {
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* TopologyTrait::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* TopologyFeature::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
@@ -759,9 +760,9 @@ failure:
 #undef CHK_
 }
 
-uint8_t* TopologyTrait::_InternalSerialize(
+uint8_t* TopologyFeature::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:grin.TopologyTrait)
+  // @@protoc_insertion_point(serialize_to_array_start:grin.TopologyFeature)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -832,12 +833,12 @@ uint8_t* TopologyTrait::_InternalSerialize(
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:grin.TopologyTrait)
+  // @@protoc_insertion_point(serialize_to_array_end:grin.TopologyFeature)
   return target;
 }
 
-size_t TopologyTrait::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:grin.TopologyTrait)
+size_t TopologyFeature::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grin.TopologyFeature)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
@@ -928,17 +929,17 @@ size_t TopologyTrait::ByteSizeLong() const {
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData TopologyTrait::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData TopologyFeature::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    TopologyTrait::MergeImpl
+    TopologyFeature::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*TopologyTrait::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*TopologyFeature::GetClassData() const { return &_class_data_; }
 
 
-void TopologyTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<TopologyTrait*>(&to_msg);
-  auto& from = static_cast<const TopologyTrait&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:grin.TopologyTrait)
+void TopologyFeature::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<TopologyFeature*>(&to_msg);
+  auto& from = static_cast<const TopologyFeature&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grin.TopologyFeature)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
@@ -967,32 +968,32 @@ void TopologyTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void TopologyTrait::CopyFrom(const TopologyTrait& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:grin.TopologyTrait)
+void TopologyFeature::CopyFrom(const TopologyFeature& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grin.TopologyFeature)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool TopologyTrait::IsInitialized() const {
+bool TopologyFeature::IsInitialized() const {
   return true;
 }
 
-void TopologyTrait::InternalSwap(TopologyTrait* other) {
+void TopologyFeature::InternalSwap(TopologyFeature* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   _impl_.vertex_list_retrievals_.InternalSwap(&other->_impl_.vertex_list_retrievals_);
   _impl_.edge_list_retrievals_.InternalSwap(&other->_impl_.edge_list_retrievals_);
   _impl_.adjacent_list_retrievals_.InternalSwap(&other->_impl_.adjacent_list_retrievals_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(TopologyTrait, _impl_.grin_with_edge_data_)
-      + sizeof(TopologyTrait::_impl_.grin_with_edge_data_)
-      - PROTOBUF_FIELD_OFFSET(TopologyTrait, _impl_.grin_assume_has_directed_graph_)>(
+      PROTOBUF_FIELD_OFFSET(TopologyFeature, _impl_.grin_with_edge_data_)
+      + sizeof(TopologyFeature::_impl_.grin_with_edge_data_)
+      - PROTOBUF_FIELD_OFFSET(TopologyFeature, _impl_.grin_assume_has_directed_graph_)>(
           reinterpret_cast<char*>(&_impl_.grin_assume_has_directed_graph_),
           reinterpret_cast<char*>(&other->_impl_.grin_assume_has_directed_graph_));
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata TopologyTrait::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata TopologyFeature::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_graph_2eproto_getter, &descriptor_table_graph_2eproto_once,
       file_level_metadata_graph_2eproto[0]);
@@ -1000,19 +1001,19 @@ void TopologyTrait::InternalSwap(TopologyTrait* other) {
 
 // ===================================================================
 
-class MirrorPartitionListTrait::_Internal {
+class MirrorPartitionListFeature::_Internal {
  public:
 };
 
-MirrorPartitionListTrait::MirrorPartitionListTrait(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+MirrorPartitionListFeature::MirrorPartitionListFeature(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:grin.MirrorPartitionListTrait)
+  // @@protoc_insertion_point(arena_constructor:grin.MirrorPartitionListFeature)
 }
-MirrorPartitionListTrait::MirrorPartitionListTrait(const MirrorPartitionListTrait& from)
+MirrorPartitionListFeature::MirrorPartitionListFeature(const MirrorPartitionListFeature& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  MirrorPartitionListTrait* const _this = this; (void)_this;
+  MirrorPartitionListFeature* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.grin_trait_master_vertex_mirror_partition_list_){}
     , decltype(_impl_.grin_trait_mirror_vertex_mirror_partition_list_){}
@@ -1024,10 +1025,10 @@ MirrorPartitionListTrait::MirrorPartitionListTrait(const MirrorPartitionListTrai
   ::memcpy(&_impl_.grin_trait_master_vertex_mirror_partition_list_, &from._impl_.grin_trait_master_vertex_mirror_partition_list_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.grin_trait_mirror_edge_mirror_partition_list_) -
     reinterpret_cast<char*>(&_impl_.grin_trait_master_vertex_mirror_partition_list_)) + sizeof(_impl_.grin_trait_mirror_edge_mirror_partition_list_));
-  // @@protoc_insertion_point(copy_constructor:grin.MirrorPartitionListTrait)
+  // @@protoc_insertion_point(copy_constructor:grin.MirrorPartitionListFeature)
 }
 
-inline void MirrorPartitionListTrait::SharedCtor(
+inline void MirrorPartitionListFeature::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
@@ -1040,8 +1041,8 @@ inline void MirrorPartitionListTrait::SharedCtor(
   };
 }
 
-MirrorPartitionListTrait::~MirrorPartitionListTrait() {
-  // @@protoc_insertion_point(destructor:grin.MirrorPartitionListTrait)
+MirrorPartitionListFeature::~MirrorPartitionListFeature() {
+  // @@protoc_insertion_point(destructor:grin.MirrorPartitionListFeature)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -1049,16 +1050,16 @@ MirrorPartitionListTrait::~MirrorPartitionListTrait() {
   SharedDtor();
 }
 
-inline void MirrorPartitionListTrait::SharedDtor() {
+inline void MirrorPartitionListFeature::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
 }
 
-void MirrorPartitionListTrait::SetCachedSize(int size) const {
+void MirrorPartitionListFeature::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void MirrorPartitionListTrait::Clear() {
-// @@protoc_insertion_point(message_clear_start:grin.MirrorPartitionListTrait)
+void MirrorPartitionListFeature::Clear() {
+// @@protoc_insertion_point(message_clear_start:grin.MirrorPartitionListFeature)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -1069,7 +1070,7 @@ void MirrorPartitionListTrait::Clear() {
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* MirrorPartitionListTrait::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* MirrorPartitionListFeature::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
@@ -1130,9 +1131,9 @@ failure:
 #undef CHK_
 }
 
-uint8_t* MirrorPartitionListTrait::_InternalSerialize(
+uint8_t* MirrorPartitionListFeature::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:grin.MirrorPartitionListTrait)
+  // @@protoc_insertion_point(serialize_to_array_start:grin.MirrorPartitionListFeature)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -1164,12 +1165,12 @@ uint8_t* MirrorPartitionListTrait::_InternalSerialize(
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:grin.MirrorPartitionListTrait)
+  // @@protoc_insertion_point(serialize_to_array_end:grin.MirrorPartitionListFeature)
   return target;
 }
 
-size_t MirrorPartitionListTrait::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:grin.MirrorPartitionListTrait)
+size_t MirrorPartitionListFeature::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grin.MirrorPartitionListFeature)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
@@ -1199,17 +1200,17 @@ size_t MirrorPartitionListTrait::ByteSizeLong() const {
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData MirrorPartitionListTrait::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData MirrorPartitionListFeature::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    MirrorPartitionListTrait::MergeImpl
+    MirrorPartitionListFeature::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*MirrorPartitionListTrait::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*MirrorPartitionListFeature::GetClassData() const { return &_class_data_; }
 
 
-void MirrorPartitionListTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<MirrorPartitionListTrait*>(&to_msg);
-  auto& from = static_cast<const MirrorPartitionListTrait&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:grin.MirrorPartitionListTrait)
+void MirrorPartitionListFeature::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<MirrorPartitionListFeature*>(&to_msg);
+  auto& from = static_cast<const MirrorPartitionListFeature&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grin.MirrorPartitionListFeature)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
@@ -1229,29 +1230,29 @@ void MirrorPartitionListTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_ms
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void MirrorPartitionListTrait::CopyFrom(const MirrorPartitionListTrait& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:grin.MirrorPartitionListTrait)
+void MirrorPartitionListFeature::CopyFrom(const MirrorPartitionListFeature& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grin.MirrorPartitionListFeature)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool MirrorPartitionListTrait::IsInitialized() const {
+bool MirrorPartitionListFeature::IsInitialized() const {
   return true;
 }
 
-void MirrorPartitionListTrait::InternalSwap(MirrorPartitionListTrait* other) {
+void MirrorPartitionListFeature::InternalSwap(MirrorPartitionListFeature* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(MirrorPartitionListTrait, _impl_.grin_trait_mirror_edge_mirror_partition_list_)
-      + sizeof(MirrorPartitionListTrait::_impl_.grin_trait_mirror_edge_mirror_partition_list_)
-      - PROTOBUF_FIELD_OFFSET(MirrorPartitionListTrait, _impl_.grin_trait_master_vertex_mirror_partition_list_)>(
+      PROTOBUF_FIELD_OFFSET(MirrorPartitionListFeature, _impl_.grin_trait_mirror_edge_mirror_partition_list_)
+      + sizeof(MirrorPartitionListFeature::_impl_.grin_trait_mirror_edge_mirror_partition_list_)
+      - PROTOBUF_FIELD_OFFSET(MirrorPartitionListFeature, _impl_.grin_trait_master_vertex_mirror_partition_list_)>(
           reinterpret_cast<char*>(&_impl_.grin_trait_master_vertex_mirror_partition_list_),
           reinterpret_cast<char*>(&other->_impl_.grin_trait_master_vertex_mirror_partition_list_));
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata MirrorPartitionListTrait::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata MirrorPartitionListFeature::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_graph_2eproto_getter, &descriptor_table_graph_2eproto_once,
       file_level_metadata_graph_2eproto[1]);
@@ -1259,26 +1260,26 @@ void MirrorPartitionListTrait::InternalSwap(MirrorPartitionListTrait* other) {
 
 // ===================================================================
 
-class PartitionTrait::_Internal {
+class PartitionFeature::_Internal {
  public:
-  static const ::grin::MirrorPartitionListTrait& mirror_partition_list_trait(const PartitionTrait* msg);
+  static const ::grin::MirrorPartitionListFeature& mirror_partition_list_feature(const PartitionFeature* msg);
 };
 
-const ::grin::MirrorPartitionListTrait&
-PartitionTrait::_Internal::mirror_partition_list_trait(const PartitionTrait* msg) {
-  return *msg->_impl_.mirror_partition_list_trait_;
+const ::grin::MirrorPartitionListFeature&
+PartitionFeature::_Internal::mirror_partition_list_feature(const PartitionFeature* msg) {
+  return *msg->_impl_.mirror_partition_list_feature_;
 }
-PartitionTrait::PartitionTrait(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+PartitionFeature::PartitionFeature(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:grin.PartitionTrait)
+  // @@protoc_insertion_point(arena_constructor:grin.PartitionFeature)
 }
-PartitionTrait::PartitionTrait(const PartitionTrait& from)
+PartitionFeature::PartitionFeature(const PartitionFeature& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  PartitionTrait* const _this = this; (void)_this;
+  PartitionFeature* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.mirror_partition_list_trait_){nullptr}
+      decltype(_impl_.mirror_partition_list_feature_){nullptr}
     , decltype(_impl_.graph_partition_strategy_){}
     , decltype(_impl_.grin_trait_natural_id_for_partition_){}
     , decltype(_impl_.grin_enable_vertex_ref_){}
@@ -1294,21 +1295,21 @@ PartitionTrait::PartitionTrait(const PartitionTrait& from)
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  if (from._internal_has_mirror_partition_list_trait()) {
-    _this->_impl_.mirror_partition_list_trait_ = new ::grin::MirrorPartitionListTrait(*from._impl_.mirror_partition_list_trait_);
+  if (from._internal_has_mirror_partition_list_feature()) {
+    _this->_impl_.mirror_partition_list_feature_ = new ::grin::MirrorPartitionListFeature(*from._impl_.mirror_partition_list_feature_);
   }
   ::memcpy(&_impl_.graph_partition_strategy_, &from._impl_.graph_partition_strategy_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.grin_trait_select_neighbor_partition_for_adjacent_list_) -
     reinterpret_cast<char*>(&_impl_.graph_partition_strategy_)) + sizeof(_impl_.grin_trait_select_neighbor_partition_for_adjacent_list_));
-  // @@protoc_insertion_point(copy_constructor:grin.PartitionTrait)
+  // @@protoc_insertion_point(copy_constructor:grin.PartitionFeature)
 }
 
-inline void PartitionTrait::SharedCtor(
+inline void PartitionFeature::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.mirror_partition_list_trait_){nullptr}
+      decltype(_impl_.mirror_partition_list_feature_){nullptr}
     , decltype(_impl_.graph_partition_strategy_){0}
     , decltype(_impl_.grin_trait_natural_id_for_partition_){false}
     , decltype(_impl_.grin_enable_vertex_ref_){false}
@@ -1325,8 +1326,8 @@ inline void PartitionTrait::SharedCtor(
   };
 }
 
-PartitionTrait::~PartitionTrait() {
-  // @@protoc_insertion_point(destructor:grin.PartitionTrait)
+PartitionFeature::~PartitionFeature() {
+  // @@protoc_insertion_point(destructor:grin.PartitionFeature)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -1334,32 +1335,32 @@ PartitionTrait::~PartitionTrait() {
   SharedDtor();
 }
 
-inline void PartitionTrait::SharedDtor() {
+inline void PartitionFeature::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  if (this != internal_default_instance()) delete _impl_.mirror_partition_list_trait_;
+  if (this != internal_default_instance()) delete _impl_.mirror_partition_list_feature_;
 }
 
-void PartitionTrait::SetCachedSize(int size) const {
+void PartitionFeature::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void PartitionTrait::Clear() {
-// @@protoc_insertion_point(message_clear_start:grin.PartitionTrait)
+void PartitionFeature::Clear() {
+// @@protoc_insertion_point(message_clear_start:grin.PartitionFeature)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  if (GetArenaForAllocation() == nullptr && _impl_.mirror_partition_list_trait_ != nullptr) {
-    delete _impl_.mirror_partition_list_trait_;
+  if (GetArenaForAllocation() == nullptr && _impl_.mirror_partition_list_feature_ != nullptr) {
+    delete _impl_.mirror_partition_list_feature_;
   }
-  _impl_.mirror_partition_list_trait_ = nullptr;
+  _impl_.mirror_partition_list_feature_ = nullptr;
   ::memset(&_impl_.graph_partition_strategy_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&_impl_.grin_trait_select_neighbor_partition_for_adjacent_list_) -
       reinterpret_cast<char*>(&_impl_.graph_partition_strategy_)) + sizeof(_impl_.grin_trait_select_neighbor_partition_for_adjacent_list_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* PartitionTrait::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* PartitionFeature::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
@@ -1416,10 +1417,10 @@ const char* PartitionTrait::_InternalParse(const char* ptr, ::_pbi::ParseContext
         } else
           goto handle_unusual;
         continue;
-      // .grin.MirrorPartitionListTrait mirror_partition_list_trait = 7;
+      // .grin.MirrorPartitionListFeature mirror_partition_list_feature = 7;
       case 7:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 58)) {
-          ptr = ctx->ParseMessage(_internal_mutable_mirror_partition_list_trait(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_mirror_partition_list_feature(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -1495,9 +1496,9 @@ failure:
 #undef CHK_
 }
 
-uint8_t* PartitionTrait::_InternalSerialize(
+uint8_t* PartitionFeature::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:grin.PartitionTrait)
+  // @@protoc_insertion_point(serialize_to_array_start:grin.PartitionFeature)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -1540,11 +1541,11 @@ uint8_t* PartitionTrait::_InternalSerialize(
       6, this->_internal_edge_data(), target);
   }
 
-  // .grin.MirrorPartitionListTrait mirror_partition_list_trait = 7;
-  if (this->_internal_has_mirror_partition_list_trait()) {
+  // .grin.MirrorPartitionListFeature mirror_partition_list_feature = 7;
+  if (this->_internal_has_mirror_partition_list_feature()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(7, _Internal::mirror_partition_list_trait(this),
-        _Internal::mirror_partition_list_trait(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(7, _Internal::mirror_partition_list_feature(this),
+        _Internal::mirror_partition_list_feature(this).GetCachedSize(), target, stream);
   }
 
   // bool grin_trait_select_master_for_vertex_list = 8;
@@ -1587,23 +1588,23 @@ uint8_t* PartitionTrait::_InternalSerialize(
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:grin.PartitionTrait)
+  // @@protoc_insertion_point(serialize_to_array_end:grin.PartitionFeature)
   return target;
 }
 
-size_t PartitionTrait::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:grin.PartitionTrait)
+size_t PartitionFeature::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grin.PartitionFeature)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .grin.MirrorPartitionListTrait mirror_partition_list_trait = 7;
-  if (this->_internal_has_mirror_partition_list_trait()) {
+  // .grin.MirrorPartitionListFeature mirror_partition_list_feature = 7;
+  if (this->_internal_has_mirror_partition_list_feature()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.mirror_partition_list_trait_);
+        *_impl_.mirror_partition_list_feature_);
   }
 
   // .grin.GraphPartitionStrategy graph_partition_strategy = 1;
@@ -1672,24 +1673,24 @@ size_t PartitionTrait::ByteSizeLong() const {
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData PartitionTrait::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData PartitionFeature::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    PartitionTrait::MergeImpl
+    PartitionFeature::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*PartitionTrait::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*PartitionFeature::GetClassData() const { return &_class_data_; }
 
 
-void PartitionTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<PartitionTrait*>(&to_msg);
-  auto& from = static_cast<const PartitionTrait&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:grin.PartitionTrait)
+void PartitionFeature::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<PartitionFeature*>(&to_msg);
+  auto& from = static_cast<const PartitionFeature&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grin.PartitionFeature)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_has_mirror_partition_list_trait()) {
-    _this->_internal_mutable_mirror_partition_list_trait()->::grin::MirrorPartitionListTrait::MergeFrom(
-        from._internal_mirror_partition_list_trait());
+  if (from._internal_has_mirror_partition_list_feature()) {
+    _this->_internal_mutable_mirror_partition_list_feature()->::grin::MirrorPartitionListFeature::MergeFrom(
+        from._internal_mirror_partition_list_feature());
   }
   if (from._internal_graph_partition_strategy() != 0) {
     _this->_internal_set_graph_partition_strategy(from._internal_graph_partition_strategy());
@@ -1730,29 +1731,29 @@ void PartitionTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const :
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void PartitionTrait::CopyFrom(const PartitionTrait& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:grin.PartitionTrait)
+void PartitionFeature::CopyFrom(const PartitionFeature& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grin.PartitionFeature)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool PartitionTrait::IsInitialized() const {
+bool PartitionFeature::IsInitialized() const {
   return true;
 }
 
-void PartitionTrait::InternalSwap(PartitionTrait* other) {
+void PartitionFeature::InternalSwap(PartitionFeature* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(PartitionTrait, _impl_.grin_trait_select_neighbor_partition_for_adjacent_list_)
-      + sizeof(PartitionTrait::_impl_.grin_trait_select_neighbor_partition_for_adjacent_list_)
-      - PROTOBUF_FIELD_OFFSET(PartitionTrait, _impl_.mirror_partition_list_trait_)>(
-          reinterpret_cast<char*>(&_impl_.mirror_partition_list_trait_),
-          reinterpret_cast<char*>(&other->_impl_.mirror_partition_list_trait_));
+      PROTOBUF_FIELD_OFFSET(PartitionFeature, _impl_.grin_trait_select_neighbor_partition_for_adjacent_list_)
+      + sizeof(PartitionFeature::_impl_.grin_trait_select_neighbor_partition_for_adjacent_list_)
+      - PROTOBUF_FIELD_OFFSET(PartitionFeature, _impl_.mirror_partition_list_feature_)>(
+          reinterpret_cast<char*>(&_impl_.mirror_partition_list_feature_),
+          reinterpret_cast<char*>(&other->_impl_.mirror_partition_list_feature_));
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata PartitionTrait::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata PartitionFeature::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_graph_2eproto_getter, &descriptor_table_graph_2eproto_once,
       file_level_metadata_graph_2eproto[2]);
@@ -1760,19 +1761,19 @@ void PartitionTrait::InternalSwap(PartitionTrait* other) {
 
 // ===================================================================
 
-class VertexPropertyTrait::_Internal {
+class VertexPropertyFeature::_Internal {
  public:
 };
 
-VertexPropertyTrait::VertexPropertyTrait(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+VertexPropertyFeature::VertexPropertyFeature(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:grin.VertexPropertyTrait)
+  // @@protoc_insertion_point(arena_constructor:grin.VertexPropertyFeature)
 }
-VertexPropertyTrait::VertexPropertyTrait(const VertexPropertyTrait& from)
+VertexPropertyFeature::VertexPropertyFeature(const VertexPropertyFeature& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  VertexPropertyTrait* const _this = this; (void)_this;
+  VertexPropertyFeature* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.grin_with_vertex_property_){}
     , decltype(_impl_.grin_with_vertex_property_name_){}
@@ -1788,10 +1789,10 @@ VertexPropertyTrait::VertexPropertyTrait(const VertexPropertyTrait& from)
   ::memcpy(&_impl_.grin_with_vertex_property_, &from._impl_.grin_with_vertex_property_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.grin_assume_by_type_vertex_original_id_) -
     reinterpret_cast<char*>(&_impl_.grin_with_vertex_property_)) + sizeof(_impl_.grin_assume_by_type_vertex_original_id_));
-  // @@protoc_insertion_point(copy_constructor:grin.VertexPropertyTrait)
+  // @@protoc_insertion_point(copy_constructor:grin.VertexPropertyFeature)
 }
 
-inline void VertexPropertyTrait::SharedCtor(
+inline void VertexPropertyFeature::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
@@ -1808,8 +1809,8 @@ inline void VertexPropertyTrait::SharedCtor(
   };
 }
 
-VertexPropertyTrait::~VertexPropertyTrait() {
-  // @@protoc_insertion_point(destructor:grin.VertexPropertyTrait)
+VertexPropertyFeature::~VertexPropertyFeature() {
+  // @@protoc_insertion_point(destructor:grin.VertexPropertyFeature)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -1817,16 +1818,16 @@ VertexPropertyTrait::~VertexPropertyTrait() {
   SharedDtor();
 }
 
-inline void VertexPropertyTrait::SharedDtor() {
+inline void VertexPropertyFeature::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
 }
 
-void VertexPropertyTrait::SetCachedSize(int size) const {
+void VertexPropertyFeature::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void VertexPropertyTrait::Clear() {
-// @@protoc_insertion_point(message_clear_start:grin.VertexPropertyTrait)
+void VertexPropertyFeature::Clear() {
+// @@protoc_insertion_point(message_clear_start:grin.VertexPropertyFeature)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -1837,7 +1838,7 @@ void VertexPropertyTrait::Clear() {
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* VertexPropertyTrait::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* VertexPropertyFeature::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
@@ -1930,9 +1931,9 @@ failure:
 #undef CHK_
 }
 
-uint8_t* VertexPropertyTrait::_InternalSerialize(
+uint8_t* VertexPropertyFeature::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:grin.VertexPropertyTrait)
+  // @@protoc_insertion_point(serialize_to_array_start:grin.VertexPropertyFeature)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -1988,12 +1989,12 @@ uint8_t* VertexPropertyTrait::_InternalSerialize(
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:grin.VertexPropertyTrait)
+  // @@protoc_insertion_point(serialize_to_array_end:grin.VertexPropertyFeature)
   return target;
 }
 
-size_t VertexPropertyTrait::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:grin.VertexPropertyTrait)
+size_t VertexPropertyFeature::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grin.VertexPropertyFeature)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
@@ -2043,17 +2044,17 @@ size_t VertexPropertyTrait::ByteSizeLong() const {
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData VertexPropertyTrait::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData VertexPropertyFeature::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    VertexPropertyTrait::MergeImpl
+    VertexPropertyFeature::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*VertexPropertyTrait::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*VertexPropertyFeature::GetClassData() const { return &_class_data_; }
 
 
-void VertexPropertyTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<VertexPropertyTrait*>(&to_msg);
-  auto& from = static_cast<const VertexPropertyTrait&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:grin.VertexPropertyTrait)
+void VertexPropertyFeature::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<VertexPropertyFeature*>(&to_msg);
+  auto& from = static_cast<const VertexPropertyFeature&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grin.VertexPropertyFeature)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
@@ -2085,29 +2086,29 @@ void VertexPropertyTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, co
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void VertexPropertyTrait::CopyFrom(const VertexPropertyTrait& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:grin.VertexPropertyTrait)
+void VertexPropertyFeature::CopyFrom(const VertexPropertyFeature& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grin.VertexPropertyFeature)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool VertexPropertyTrait::IsInitialized() const {
+bool VertexPropertyFeature::IsInitialized() const {
   return true;
 }
 
-void VertexPropertyTrait::InternalSwap(VertexPropertyTrait* other) {
+void VertexPropertyFeature::InternalSwap(VertexPropertyFeature* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(VertexPropertyTrait, _impl_.grin_assume_by_type_vertex_original_id_)
-      + sizeof(VertexPropertyTrait::_impl_.grin_assume_by_type_vertex_original_id_)
-      - PROTOBUF_FIELD_OFFSET(VertexPropertyTrait, _impl_.grin_with_vertex_property_)>(
+      PROTOBUF_FIELD_OFFSET(VertexPropertyFeature, _impl_.grin_assume_by_type_vertex_original_id_)
+      + sizeof(VertexPropertyFeature::_impl_.grin_assume_by_type_vertex_original_id_)
+      - PROTOBUF_FIELD_OFFSET(VertexPropertyFeature, _impl_.grin_with_vertex_property_)>(
           reinterpret_cast<char*>(&_impl_.grin_with_vertex_property_),
           reinterpret_cast<char*>(&other->_impl_.grin_with_vertex_property_));
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata VertexPropertyTrait::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata VertexPropertyFeature::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_graph_2eproto_getter, &descriptor_table_graph_2eproto_once,
       file_level_metadata_graph_2eproto[3]);
@@ -2115,19 +2116,19 @@ void VertexPropertyTrait::InternalSwap(VertexPropertyTrait* other) {
 
 // ===================================================================
 
-class EdgePropertyTrait::_Internal {
+class EdgePropertyFeature::_Internal {
  public:
 };
 
-EdgePropertyTrait::EdgePropertyTrait(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+EdgePropertyFeature::EdgePropertyFeature(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:grin.EdgePropertyTrait)
+  // @@protoc_insertion_point(arena_constructor:grin.EdgePropertyFeature)
 }
-EdgePropertyTrait::EdgePropertyTrait(const EdgePropertyTrait& from)
+EdgePropertyFeature::EdgePropertyFeature(const EdgePropertyFeature& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  EdgePropertyTrait* const _this = this; (void)_this;
+  EdgePropertyFeature* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.grin_with_edge_property_){}
     , decltype(_impl_.grin_with_edge_property_name_){}
@@ -2142,10 +2143,10 @@ EdgePropertyTrait::EdgePropertyTrait(const EdgePropertyTrait& from)
   ::memcpy(&_impl_.grin_with_edge_property_, &from._impl_.grin_with_edge_property_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.grin_trait_natural_id_for_edge_property_) -
     reinterpret_cast<char*>(&_impl_.grin_with_edge_property_)) + sizeof(_impl_.grin_trait_natural_id_for_edge_property_));
-  // @@protoc_insertion_point(copy_constructor:grin.EdgePropertyTrait)
+  // @@protoc_insertion_point(copy_constructor:grin.EdgePropertyFeature)
 }
 
-inline void EdgePropertyTrait::SharedCtor(
+inline void EdgePropertyFeature::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
@@ -2161,8 +2162,8 @@ inline void EdgePropertyTrait::SharedCtor(
   };
 }
 
-EdgePropertyTrait::~EdgePropertyTrait() {
-  // @@protoc_insertion_point(destructor:grin.EdgePropertyTrait)
+EdgePropertyFeature::~EdgePropertyFeature() {
+  // @@protoc_insertion_point(destructor:grin.EdgePropertyFeature)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -2170,16 +2171,16 @@ EdgePropertyTrait::~EdgePropertyTrait() {
   SharedDtor();
 }
 
-inline void EdgePropertyTrait::SharedDtor() {
+inline void EdgePropertyFeature::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
 }
 
-void EdgePropertyTrait::SetCachedSize(int size) const {
+void EdgePropertyFeature::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void EdgePropertyTrait::Clear() {
-// @@protoc_insertion_point(message_clear_start:grin.EdgePropertyTrait)
+void EdgePropertyFeature::Clear() {
+// @@protoc_insertion_point(message_clear_start:grin.EdgePropertyFeature)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -2190,7 +2191,7 @@ void EdgePropertyTrait::Clear() {
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* EdgePropertyTrait::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* EdgePropertyFeature::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
@@ -2275,9 +2276,9 @@ failure:
 #undef CHK_
 }
 
-uint8_t* EdgePropertyTrait::_InternalSerialize(
+uint8_t* EdgePropertyFeature::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:grin.EdgePropertyTrait)
+  // @@protoc_insertion_point(serialize_to_array_start:grin.EdgePropertyFeature)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -2327,12 +2328,12 @@ uint8_t* EdgePropertyTrait::_InternalSerialize(
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:grin.EdgePropertyTrait)
+  // @@protoc_insertion_point(serialize_to_array_end:grin.EdgePropertyFeature)
   return target;
 }
 
-size_t EdgePropertyTrait::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:grin.EdgePropertyTrait)
+size_t EdgePropertyFeature::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grin.EdgePropertyFeature)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
@@ -2377,17 +2378,17 @@ size_t EdgePropertyTrait::ByteSizeLong() const {
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData EdgePropertyTrait::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData EdgePropertyFeature::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    EdgePropertyTrait::MergeImpl
+    EdgePropertyFeature::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*EdgePropertyTrait::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*EdgePropertyFeature::GetClassData() const { return &_class_data_; }
 
 
-void EdgePropertyTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<EdgePropertyTrait*>(&to_msg);
-  auto& from = static_cast<const EdgePropertyTrait&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:grin.EdgePropertyTrait)
+void EdgePropertyFeature::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<EdgePropertyFeature*>(&to_msg);
+  auto& from = static_cast<const EdgePropertyFeature&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grin.EdgePropertyFeature)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
@@ -2416,29 +2417,29 @@ void EdgePropertyTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, cons
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void EdgePropertyTrait::CopyFrom(const EdgePropertyTrait& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:grin.EdgePropertyTrait)
+void EdgePropertyFeature::CopyFrom(const EdgePropertyFeature& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grin.EdgePropertyFeature)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool EdgePropertyTrait::IsInitialized() const {
+bool EdgePropertyFeature::IsInitialized() const {
   return true;
 }
 
-void EdgePropertyTrait::InternalSwap(EdgePropertyTrait* other) {
+void EdgePropertyFeature::InternalSwap(EdgePropertyFeature* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(EdgePropertyTrait, _impl_.grin_trait_natural_id_for_edge_property_)
-      + sizeof(EdgePropertyTrait::_impl_.grin_trait_natural_id_for_edge_property_)
-      - PROTOBUF_FIELD_OFFSET(EdgePropertyTrait, _impl_.grin_with_edge_property_)>(
+      PROTOBUF_FIELD_OFFSET(EdgePropertyFeature, _impl_.grin_trait_natural_id_for_edge_property_)
+      + sizeof(EdgePropertyFeature::_impl_.grin_trait_natural_id_for_edge_property_)
+      - PROTOBUF_FIELD_OFFSET(EdgePropertyFeature, _impl_.grin_with_edge_property_)>(
           reinterpret_cast<char*>(&_impl_.grin_with_edge_property_),
           reinterpret_cast<char*>(&other->_impl_.grin_with_edge_property_));
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata EdgePropertyTrait::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata EdgePropertyFeature::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_graph_2eproto_getter, &descriptor_table_graph_2eproto_once,
       file_level_metadata_graph_2eproto[4]);
@@ -2446,32 +2447,32 @@ void EdgePropertyTrait::InternalSwap(EdgePropertyTrait* other) {
 
 // ===================================================================
 
-class PropertyTrait::_Internal {
+class PropertyFeature::_Internal {
  public:
-  static const ::grin::VertexPropertyTrait& vertex_property_trait(const PropertyTrait* msg);
-  static const ::grin::EdgePropertyTrait& edge_property_trait(const PropertyTrait* msg);
+  static const ::grin::VertexPropertyFeature& vertex_property_feature(const PropertyFeature* msg);
+  static const ::grin::EdgePropertyFeature& edge_property_feature(const PropertyFeature* msg);
 };
 
-const ::grin::VertexPropertyTrait&
-PropertyTrait::_Internal::vertex_property_trait(const PropertyTrait* msg) {
-  return *msg->_impl_.vertex_property_trait_;
+const ::grin::VertexPropertyFeature&
+PropertyFeature::_Internal::vertex_property_feature(const PropertyFeature* msg) {
+  return *msg->_impl_.vertex_property_feature_;
 }
-const ::grin::EdgePropertyTrait&
-PropertyTrait::_Internal::edge_property_trait(const PropertyTrait* msg) {
-  return *msg->_impl_.edge_property_trait_;
+const ::grin::EdgePropertyFeature&
+PropertyFeature::_Internal::edge_property_feature(const PropertyFeature* msg) {
+  return *msg->_impl_.edge_property_feature_;
 }
-PropertyTrait::PropertyTrait(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+PropertyFeature::PropertyFeature(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:grin.PropertyTrait)
+  // @@protoc_insertion_point(arena_constructor:grin.PropertyFeature)
 }
-PropertyTrait::PropertyTrait(const PropertyTrait& from)
+PropertyFeature::PropertyFeature(const PropertyFeature& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  PropertyTrait* const _this = this; (void)_this;
+  PropertyFeature* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.vertex_property_trait_){nullptr}
-    , decltype(_impl_.edge_property_trait_){nullptr}
+      decltype(_impl_.vertex_property_feature_){nullptr}
+    , decltype(_impl_.edge_property_feature_){nullptr}
     , decltype(_impl_.vertex_property_){}
     , decltype(_impl_.edge_property_){}
     , decltype(_impl_.grin_enable_row_){}
@@ -2485,25 +2486,25 @@ PropertyTrait::PropertyTrait(const PropertyTrait& from)
     , /*decltype(_impl_._cached_size_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  if (from._internal_has_vertex_property_trait()) {
-    _this->_impl_.vertex_property_trait_ = new ::grin::VertexPropertyTrait(*from._impl_.vertex_property_trait_);
+  if (from._internal_has_vertex_property_feature()) {
+    _this->_impl_.vertex_property_feature_ = new ::grin::VertexPropertyFeature(*from._impl_.vertex_property_feature_);
   }
-  if (from._internal_has_edge_property_trait()) {
-    _this->_impl_.edge_property_trait_ = new ::grin::EdgePropertyTrait(*from._impl_.edge_property_trait_);
+  if (from._internal_has_edge_property_feature()) {
+    _this->_impl_.edge_property_feature_ = new ::grin::EdgePropertyFeature(*from._impl_.edge_property_feature_);
   }
   ::memcpy(&_impl_.vertex_property_, &from._impl_.vertex_property_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.grin_trait_specific_vev_relation_) -
     reinterpret_cast<char*>(&_impl_.vertex_property_)) + sizeof(_impl_.grin_trait_specific_vev_relation_));
-  // @@protoc_insertion_point(copy_constructor:grin.PropertyTrait)
+  // @@protoc_insertion_point(copy_constructor:grin.PropertyFeature)
 }
 
-inline void PropertyTrait::SharedCtor(
+inline void PropertyFeature::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.vertex_property_trait_){nullptr}
-    , decltype(_impl_.edge_property_trait_){nullptr}
+      decltype(_impl_.vertex_property_feature_){nullptr}
+    , decltype(_impl_.edge_property_feature_){nullptr}
     , decltype(_impl_.vertex_property_){0}
     , decltype(_impl_.edge_property_){0}
     , decltype(_impl_.grin_enable_row_){false}
@@ -2518,8 +2519,8 @@ inline void PropertyTrait::SharedCtor(
   };
 }
 
-PropertyTrait::~PropertyTrait() {
-  // @@protoc_insertion_point(destructor:grin.PropertyTrait)
+PropertyFeature::~PropertyFeature() {
+  // @@protoc_insertion_point(destructor:grin.PropertyFeature)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -2527,37 +2528,37 @@ PropertyTrait::~PropertyTrait() {
   SharedDtor();
 }
 
-inline void PropertyTrait::SharedDtor() {
+inline void PropertyFeature::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  if (this != internal_default_instance()) delete _impl_.vertex_property_trait_;
-  if (this != internal_default_instance()) delete _impl_.edge_property_trait_;
+  if (this != internal_default_instance()) delete _impl_.vertex_property_feature_;
+  if (this != internal_default_instance()) delete _impl_.edge_property_feature_;
 }
 
-void PropertyTrait::SetCachedSize(int size) const {
+void PropertyFeature::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void PropertyTrait::Clear() {
-// @@protoc_insertion_point(message_clear_start:grin.PropertyTrait)
+void PropertyFeature::Clear() {
+// @@protoc_insertion_point(message_clear_start:grin.PropertyFeature)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  if (GetArenaForAllocation() == nullptr && _impl_.vertex_property_trait_ != nullptr) {
-    delete _impl_.vertex_property_trait_;
+  if (GetArenaForAllocation() == nullptr && _impl_.vertex_property_feature_ != nullptr) {
+    delete _impl_.vertex_property_feature_;
   }
-  _impl_.vertex_property_trait_ = nullptr;
-  if (GetArenaForAllocation() == nullptr && _impl_.edge_property_trait_ != nullptr) {
-    delete _impl_.edge_property_trait_;
+  _impl_.vertex_property_feature_ = nullptr;
+  if (GetArenaForAllocation() == nullptr && _impl_.edge_property_feature_ != nullptr) {
+    delete _impl_.edge_property_feature_;
   }
-  _impl_.edge_property_trait_ = nullptr;
+  _impl_.edge_property_feature_ = nullptr;
   ::memset(&_impl_.vertex_property_, 0, static_cast<size_t>(
       reinterpret_cast<char*>(&_impl_.grin_trait_specific_vev_relation_) -
       reinterpret_cast<char*>(&_impl_.vertex_property_)) + sizeof(_impl_.grin_trait_specific_vev_relation_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* PropertyTrait::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* PropertyFeature::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
@@ -2571,18 +2572,18 @@ const char* PropertyTrait::_InternalParse(const char* ptr, ::_pbi::ParseContext*
         } else
           goto handle_unusual;
         continue;
-      // .grin.VertexPropertyTrait vertex_property_trait = 2;
+      // .grin.VertexPropertyFeature vertex_property_feature = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
-          ptr = ctx->ParseMessage(_internal_mutable_vertex_property_trait(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_vertex_property_feature(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // .grin.EdgePropertyTrait edge_property_trait = 3;
+      // .grin.EdgePropertyFeature edge_property_feature = 3;
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
-          ptr = ctx->ParseMessage(_internal_mutable_edge_property_trait(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_edge_property_feature(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -2684,9 +2685,9 @@ failure:
 #undef CHK_
 }
 
-uint8_t* PropertyTrait::_InternalSerialize(
+uint8_t* PropertyFeature::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:grin.PropertyTrait)
+  // @@protoc_insertion_point(serialize_to_array_start:grin.PropertyFeature)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -2696,18 +2697,18 @@ uint8_t* PropertyTrait::_InternalSerialize(
     target = ::_pbi::WireFormatLite::WriteBoolToArray(1, this->_internal_grin_enable_row(), target);
   }
 
-  // .grin.VertexPropertyTrait vertex_property_trait = 2;
-  if (this->_internal_has_vertex_property_trait()) {
+  // .grin.VertexPropertyFeature vertex_property_feature = 2;
+  if (this->_internal_has_vertex_property_feature()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(2, _Internal::vertex_property_trait(this),
-        _Internal::vertex_property_trait(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(2, _Internal::vertex_property_feature(this),
+        _Internal::vertex_property_feature(this).GetCachedSize(), target, stream);
   }
 
-  // .grin.EdgePropertyTrait edge_property_trait = 3;
-  if (this->_internal_has_edge_property_trait()) {
+  // .grin.EdgePropertyFeature edge_property_feature = 3;
+  if (this->_internal_has_edge_property_feature()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(3, _Internal::edge_property_trait(this),
-        _Internal::edge_property_trait(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(3, _Internal::edge_property_feature(this),
+        _Internal::edge_property_feature(this).GetCachedSize(), target, stream);
   }
 
   // .grin.PropertyDataPartitionStrategy vertex_property = 4;
@@ -2770,30 +2771,30 @@ uint8_t* PropertyTrait::_InternalSerialize(
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:grin.PropertyTrait)
+  // @@protoc_insertion_point(serialize_to_array_end:grin.PropertyFeature)
   return target;
 }
 
-size_t PropertyTrait::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:grin.PropertyTrait)
+size_t PropertyFeature::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grin.PropertyFeature)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // .grin.VertexPropertyTrait vertex_property_trait = 2;
-  if (this->_internal_has_vertex_property_trait()) {
+  // .grin.VertexPropertyFeature vertex_property_feature = 2;
+  if (this->_internal_has_vertex_property_feature()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.vertex_property_trait_);
+        *_impl_.vertex_property_feature_);
   }
 
-  // .grin.EdgePropertyTrait edge_property_trait = 3;
-  if (this->_internal_has_edge_property_trait()) {
+  // .grin.EdgePropertyFeature edge_property_feature = 3;
+  if (this->_internal_has_edge_property_feature()) {
     total_size += 1 +
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-        *_impl_.edge_property_trait_);
+        *_impl_.edge_property_feature_);
   }
 
   // .grin.PropertyDataPartitionStrategy vertex_property = 4;
@@ -2851,28 +2852,28 @@ size_t PropertyTrait::ByteSizeLong() const {
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData PropertyTrait::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData PropertyFeature::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    PropertyTrait::MergeImpl
+    PropertyFeature::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*PropertyTrait::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*PropertyFeature::GetClassData() const { return &_class_data_; }
 
 
-void PropertyTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<PropertyTrait*>(&to_msg);
-  auto& from = static_cast<const PropertyTrait&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:grin.PropertyTrait)
+void PropertyFeature::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<PropertyFeature*>(&to_msg);
+  auto& from = static_cast<const PropertyFeature&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grin.PropertyFeature)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  if (from._internal_has_vertex_property_trait()) {
-    _this->_internal_mutable_vertex_property_trait()->::grin::VertexPropertyTrait::MergeFrom(
-        from._internal_vertex_property_trait());
+  if (from._internal_has_vertex_property_feature()) {
+    _this->_internal_mutable_vertex_property_feature()->::grin::VertexPropertyFeature::MergeFrom(
+        from._internal_vertex_property_feature());
   }
-  if (from._internal_has_edge_property_trait()) {
-    _this->_internal_mutable_edge_property_trait()->::grin::EdgePropertyTrait::MergeFrom(
-        from._internal_edge_property_trait());
+  if (from._internal_has_edge_property_feature()) {
+    _this->_internal_mutable_edge_property_feature()->::grin::EdgePropertyFeature::MergeFrom(
+        from._internal_edge_property_feature());
   }
   if (from._internal_vertex_property() != 0) {
     _this->_internal_set_vertex_property(from._internal_vertex_property());
@@ -2907,29 +2908,29 @@ void PropertyTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void PropertyTrait::CopyFrom(const PropertyTrait& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:grin.PropertyTrait)
+void PropertyFeature::CopyFrom(const PropertyFeature& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grin.PropertyFeature)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool PropertyTrait::IsInitialized() const {
+bool PropertyFeature::IsInitialized() const {
   return true;
 }
 
-void PropertyTrait::InternalSwap(PropertyTrait* other) {
+void PropertyFeature::InternalSwap(PropertyFeature* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(PropertyTrait, _impl_.grin_trait_specific_vev_relation_)
-      + sizeof(PropertyTrait::_impl_.grin_trait_specific_vev_relation_)
-      - PROTOBUF_FIELD_OFFSET(PropertyTrait, _impl_.vertex_property_trait_)>(
-          reinterpret_cast<char*>(&_impl_.vertex_property_trait_),
-          reinterpret_cast<char*>(&other->_impl_.vertex_property_trait_));
+      PROTOBUF_FIELD_OFFSET(PropertyFeature, _impl_.grin_trait_specific_vev_relation_)
+      + sizeof(PropertyFeature::_impl_.grin_trait_specific_vev_relation_)
+      - PROTOBUF_FIELD_OFFSET(PropertyFeature, _impl_.vertex_property_feature_)>(
+          reinterpret_cast<char*>(&_impl_.vertex_property_feature_),
+          reinterpret_cast<char*>(&other->_impl_.vertex_property_feature_));
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata PropertyTrait::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata PropertyFeature::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_graph_2eproto_getter, &descriptor_table_graph_2eproto_once,
       file_level_metadata_graph_2eproto[5]);
@@ -2937,19 +2938,19 @@ void PropertyTrait::InternalSwap(PropertyTrait* other) {
 
 // ===================================================================
 
-class IndexTrait::_Internal {
+class IndexFeature::_Internal {
  public:
 };
 
-IndexTrait::IndexTrait(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+IndexFeature::IndexFeature(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:grin.IndexTrait)
+  // @@protoc_insertion_point(arena_constructor:grin.IndexFeature)
 }
-IndexTrait::IndexTrait(const IndexTrait& from)
+IndexFeature::IndexFeature(const IndexFeature& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  IndexTrait* const _this = this; (void)_this;
+  IndexFeature* const _this = this; (void)_this;
   new (&_impl_) Impl_{
       decltype(_impl_.grin_with_vertex_label_){}
     , decltype(_impl_.grin_with_edge_label_){}
@@ -2960,10 +2961,10 @@ IndexTrait::IndexTrait(const IndexTrait& from)
   ::memcpy(&_impl_.grin_with_vertex_label_, &from._impl_.grin_with_vertex_label_,
     static_cast<size_t>(reinterpret_cast<char*>(&_impl_.grin_assume_all_vertex_list_sorted_) -
     reinterpret_cast<char*>(&_impl_.grin_with_vertex_label_)) + sizeof(_impl_.grin_assume_all_vertex_list_sorted_));
-  // @@protoc_insertion_point(copy_constructor:grin.IndexTrait)
+  // @@protoc_insertion_point(copy_constructor:grin.IndexFeature)
 }
 
-inline void IndexTrait::SharedCtor(
+inline void IndexFeature::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
@@ -2975,8 +2976,8 @@ inline void IndexTrait::SharedCtor(
   };
 }
 
-IndexTrait::~IndexTrait() {
-  // @@protoc_insertion_point(destructor:grin.IndexTrait)
+IndexFeature::~IndexFeature() {
+  // @@protoc_insertion_point(destructor:grin.IndexFeature)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -2984,16 +2985,16 @@ IndexTrait::~IndexTrait() {
   SharedDtor();
 }
 
-inline void IndexTrait::SharedDtor() {
+inline void IndexFeature::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
 }
 
-void IndexTrait::SetCachedSize(int size) const {
+void IndexFeature::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void IndexTrait::Clear() {
-// @@protoc_insertion_point(message_clear_start:grin.IndexTrait)
+void IndexFeature::Clear() {
+// @@protoc_insertion_point(message_clear_start:grin.IndexFeature)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
@@ -3004,7 +3005,7 @@ void IndexTrait::Clear() {
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* IndexTrait::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* IndexFeature::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
@@ -3057,9 +3058,9 @@ failure:
 #undef CHK_
 }
 
-uint8_t* IndexTrait::_InternalSerialize(
+uint8_t* IndexFeature::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:grin.IndexTrait)
+  // @@protoc_insertion_point(serialize_to_array_start:grin.IndexFeature)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
@@ -3085,12 +3086,12 @@ uint8_t* IndexTrait::_InternalSerialize(
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:grin.IndexTrait)
+  // @@protoc_insertion_point(serialize_to_array_end:grin.IndexFeature)
   return target;
 }
 
-size_t IndexTrait::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:grin.IndexTrait)
+size_t IndexFeature::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grin.IndexFeature)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
@@ -3115,17 +3116,17 @@ size_t IndexTrait::ByteSizeLong() const {
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData IndexTrait::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData IndexFeature::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    IndexTrait::MergeImpl
+    IndexFeature::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*IndexTrait::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*IndexFeature::GetClassData() const { return &_class_data_; }
 
 
-void IndexTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<IndexTrait*>(&to_msg);
-  auto& from = static_cast<const IndexTrait&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:grin.IndexTrait)
+void IndexFeature::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<IndexFeature*>(&to_msg);
+  auto& from = static_cast<const IndexFeature&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grin.IndexFeature)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
@@ -3142,29 +3143,29 @@ void IndexTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PRO
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void IndexTrait::CopyFrom(const IndexTrait& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:grin.IndexTrait)
+void IndexFeature::CopyFrom(const IndexFeature& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grin.IndexFeature)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool IndexTrait::IsInitialized() const {
+bool IndexFeature::IsInitialized() const {
   return true;
 }
 
-void IndexTrait::InternalSwap(IndexTrait* other) {
+void IndexFeature::InternalSwap(IndexFeature* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(IndexTrait, _impl_.grin_assume_all_vertex_list_sorted_)
-      + sizeof(IndexTrait::_impl_.grin_assume_all_vertex_list_sorted_)
-      - PROTOBUF_FIELD_OFFSET(IndexTrait, _impl_.grin_with_vertex_label_)>(
+      PROTOBUF_FIELD_OFFSET(IndexFeature, _impl_.grin_assume_all_vertex_list_sorted_)
+      + sizeof(IndexFeature::_impl_.grin_assume_all_vertex_list_sorted_)
+      - PROTOBUF_FIELD_OFFSET(IndexFeature, _impl_.grin_with_vertex_label_)>(
           reinterpret_cast<char*>(&_impl_.grin_with_vertex_label_),
           reinterpret_cast<char*>(&other->_impl_.grin_with_vertex_label_));
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata IndexTrait::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata IndexFeature::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_graph_2eproto_getter, &descriptor_table_graph_2eproto_once,
       file_level_metadata_graph_2eproto[6]);
@@ -3172,31 +3173,31 @@ void IndexTrait::InternalSwap(IndexTrait* other) {
 
 // ===================================================================
 
-class PredicateTrait::_Internal {
+class PredicateFeature::_Internal {
  public:
 };
 
-PredicateTrait::PredicateTrait(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+PredicateFeature::PredicateFeature(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase(arena, is_message_owned) {
-  // @@protoc_insertion_point(arena_constructor:grin.PredicateTrait)
+  // @@protoc_insertion_point(arena_constructor:grin.PredicateFeature)
 }
-PredicateTrait::PredicateTrait(const PredicateTrait& from)
+PredicateFeature::PredicateFeature(const PredicateFeature& from)
   : ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase() {
-  PredicateTrait* const _this = this; (void)_this;
+  PredicateFeature* const _this = this; (void)_this;
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  // @@protoc_insertion_point(copy_constructor:grin.PredicateTrait)
+  // @@protoc_insertion_point(copy_constructor:grin.PredicateFeature)
 }
 
 
 
 
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData PredicateTrait::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData PredicateFeature::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::CopyImpl,
     ::PROTOBUF_NAMESPACE_ID::internal::ZeroFieldsBase::MergeImpl,
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*PredicateTrait::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*PredicateFeature::GetClassData() const { return &_class_data_; }
 
 
 
@@ -3204,7 +3205,7 @@ const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*PredicateTrait::GetClassData()
 
 
 
-::PROTOBUF_NAMESPACE_ID::Metadata PredicateTrait::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata PredicateFeature::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_graph_2eproto_getter, &descriptor_table_graph_2eproto_once,
       file_level_metadata_graph_2eproto[7]);
@@ -3212,173 +3213,173 @@ const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*PredicateTrait::GetClassData()
 
 // ===================================================================
 
-class StorageTrait::_Internal {
+class StorageFeature::_Internal {
  public:
-  static const ::grin::TopologyTrait& topology_trait(const StorageTrait* msg);
-  static const ::grin::PartitionTrait& partition_trait(const StorageTrait* msg);
-  static const ::grin::PropertyTrait& property_trait(const StorageTrait* msg);
-  static const ::grin::IndexTrait& index_trait(const StorageTrait* msg);
-  static const ::grin::PredicateTrait& predicate_trait(const StorageTrait* msg);
+  static const ::grin::TopologyFeature& topology_feature(const StorageFeature* msg);
+  static const ::grin::PartitionFeature& partition_feature(const StorageFeature* msg);
+  static const ::grin::PropertyFeature& property_feature(const StorageFeature* msg);
+  static const ::grin::IndexFeature& index_feature(const StorageFeature* msg);
+  static const ::grin::PredicateFeature& predicate_feature(const StorageFeature* msg);
 };
 
-const ::grin::TopologyTrait&
-StorageTrait::_Internal::topology_trait(const StorageTrait* msg) {
-  return *msg->_impl_.specific_trait_.topology_trait_;
+const ::grin::TopologyFeature&
+StorageFeature::_Internal::topology_feature(const StorageFeature* msg) {
+  return *msg->_impl_.specific_feature_.topology_feature_;
 }
-const ::grin::PartitionTrait&
-StorageTrait::_Internal::partition_trait(const StorageTrait* msg) {
-  return *msg->_impl_.specific_trait_.partition_trait_;
+const ::grin::PartitionFeature&
+StorageFeature::_Internal::partition_feature(const StorageFeature* msg) {
+  return *msg->_impl_.specific_feature_.partition_feature_;
 }
-const ::grin::PropertyTrait&
-StorageTrait::_Internal::property_trait(const StorageTrait* msg) {
-  return *msg->_impl_.specific_trait_.property_trait_;
+const ::grin::PropertyFeature&
+StorageFeature::_Internal::property_feature(const StorageFeature* msg) {
+  return *msg->_impl_.specific_feature_.property_feature_;
 }
-const ::grin::IndexTrait&
-StorageTrait::_Internal::index_trait(const StorageTrait* msg) {
-  return *msg->_impl_.specific_trait_.index_trait_;
+const ::grin::IndexFeature&
+StorageFeature::_Internal::index_feature(const StorageFeature* msg) {
+  return *msg->_impl_.specific_feature_.index_feature_;
 }
-const ::grin::PredicateTrait&
-StorageTrait::_Internal::predicate_trait(const StorageTrait* msg) {
-  return *msg->_impl_.specific_trait_.predicate_trait_;
+const ::grin::PredicateFeature&
+StorageFeature::_Internal::predicate_feature(const StorageFeature* msg) {
+  return *msg->_impl_.specific_feature_.predicate_feature_;
 }
-void StorageTrait::set_allocated_topology_trait(::grin::TopologyTrait* topology_trait) {
+void StorageFeature::set_allocated_topology_feature(::grin::TopologyFeature* topology_feature) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
-  clear_specific_trait();
-  if (topology_trait) {
+  clear_specific_feature();
+  if (topology_feature) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(topology_trait);
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(topology_feature);
     if (message_arena != submessage_arena) {
-      topology_trait = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, topology_trait, submessage_arena);
+      topology_feature = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, topology_feature, submessage_arena);
     }
-    set_has_topology_trait();
-    _impl_.specific_trait_.topology_trait_ = topology_trait;
+    set_has_topology_feature();
+    _impl_.specific_feature_.topology_feature_ = topology_feature;
   }
-  // @@protoc_insertion_point(field_set_allocated:grin.StorageTrait.topology_trait)
+  // @@protoc_insertion_point(field_set_allocated:grin.StorageFeature.topology_feature)
 }
-void StorageTrait::set_allocated_partition_trait(::grin::PartitionTrait* partition_trait) {
+void StorageFeature::set_allocated_partition_feature(::grin::PartitionFeature* partition_feature) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
-  clear_specific_trait();
-  if (partition_trait) {
+  clear_specific_feature();
+  if (partition_feature) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(partition_trait);
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(partition_feature);
     if (message_arena != submessage_arena) {
-      partition_trait = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, partition_trait, submessage_arena);
+      partition_feature = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, partition_feature, submessage_arena);
     }
-    set_has_partition_trait();
-    _impl_.specific_trait_.partition_trait_ = partition_trait;
+    set_has_partition_feature();
+    _impl_.specific_feature_.partition_feature_ = partition_feature;
   }
-  // @@protoc_insertion_point(field_set_allocated:grin.StorageTrait.partition_trait)
+  // @@protoc_insertion_point(field_set_allocated:grin.StorageFeature.partition_feature)
 }
-void StorageTrait::set_allocated_property_trait(::grin::PropertyTrait* property_trait) {
+void StorageFeature::set_allocated_property_feature(::grin::PropertyFeature* property_feature) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
-  clear_specific_trait();
-  if (property_trait) {
+  clear_specific_feature();
+  if (property_feature) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(property_trait);
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(property_feature);
     if (message_arena != submessage_arena) {
-      property_trait = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, property_trait, submessage_arena);
+      property_feature = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, property_feature, submessage_arena);
     }
-    set_has_property_trait();
-    _impl_.specific_trait_.property_trait_ = property_trait;
+    set_has_property_feature();
+    _impl_.specific_feature_.property_feature_ = property_feature;
   }
-  // @@protoc_insertion_point(field_set_allocated:grin.StorageTrait.property_trait)
+  // @@protoc_insertion_point(field_set_allocated:grin.StorageFeature.property_feature)
 }
-void StorageTrait::set_allocated_index_trait(::grin::IndexTrait* index_trait) {
+void StorageFeature::set_allocated_index_feature(::grin::IndexFeature* index_feature) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
-  clear_specific_trait();
-  if (index_trait) {
+  clear_specific_feature();
+  if (index_feature) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(index_trait);
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(index_feature);
     if (message_arena != submessage_arena) {
-      index_trait = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, index_trait, submessage_arena);
+      index_feature = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, index_feature, submessage_arena);
     }
-    set_has_index_trait();
-    _impl_.specific_trait_.index_trait_ = index_trait;
+    set_has_index_feature();
+    _impl_.specific_feature_.index_feature_ = index_feature;
   }
-  // @@protoc_insertion_point(field_set_allocated:grin.StorageTrait.index_trait)
+  // @@protoc_insertion_point(field_set_allocated:grin.StorageFeature.index_feature)
 }
-void StorageTrait::set_allocated_predicate_trait(::grin::PredicateTrait* predicate_trait) {
+void StorageFeature::set_allocated_predicate_feature(::grin::PredicateFeature* predicate_feature) {
   ::PROTOBUF_NAMESPACE_ID::Arena* message_arena = GetArenaForAllocation();
-  clear_specific_trait();
-  if (predicate_trait) {
+  clear_specific_feature();
+  if (predicate_feature) {
     ::PROTOBUF_NAMESPACE_ID::Arena* submessage_arena =
-      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(predicate_trait);
+      ::PROTOBUF_NAMESPACE_ID::Arena::InternalGetOwningArena(predicate_feature);
     if (message_arena != submessage_arena) {
-      predicate_trait = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
-          message_arena, predicate_trait, submessage_arena);
+      predicate_feature = ::PROTOBUF_NAMESPACE_ID::internal::GetOwnedMessage(
+          message_arena, predicate_feature, submessage_arena);
     }
-    set_has_predicate_trait();
-    _impl_.specific_trait_.predicate_trait_ = predicate_trait;
+    set_has_predicate_feature();
+    _impl_.specific_feature_.predicate_feature_ = predicate_feature;
   }
-  // @@protoc_insertion_point(field_set_allocated:grin.StorageTrait.predicate_trait)
+  // @@protoc_insertion_point(field_set_allocated:grin.StorageFeature.predicate_feature)
 }
-StorageTrait::StorageTrait(::PROTOBUF_NAMESPACE_ID::Arena* arena,
+StorageFeature::StorageFeature(::PROTOBUF_NAMESPACE_ID::Arena* arena,
                          bool is_message_owned)
   : ::PROTOBUF_NAMESPACE_ID::Message(arena, is_message_owned) {
   SharedCtor(arena, is_message_owned);
-  // @@protoc_insertion_point(arena_constructor:grin.StorageTrait)
+  // @@protoc_insertion_point(arena_constructor:grin.StorageFeature)
 }
-StorageTrait::StorageTrait(const StorageTrait& from)
+StorageFeature::StorageFeature(const StorageFeature& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
-  StorageTrait* const _this = this; (void)_this;
+  StorageFeature* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.specific_trait_){}
+      decltype(_impl_.specific_feature_){}
     , /*decltype(_impl_._cached_size_)*/{}
     , /*decltype(_impl_._oneof_case_)*/{}};
 
   _internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
-  clear_has_specific_trait();
-  switch (from.specific_trait_case()) {
-    case kTopologyTrait: {
-      _this->_internal_mutable_topology_trait()->::grin::TopologyTrait::MergeFrom(
-          from._internal_topology_trait());
+  clear_has_specific_feature();
+  switch (from.specific_feature_case()) {
+    case kTopologyFeature: {
+      _this->_internal_mutable_topology_feature()->::grin::TopologyFeature::MergeFrom(
+          from._internal_topology_feature());
       break;
     }
-    case kPartitionTrait: {
-      _this->_internal_mutable_partition_trait()->::grin::PartitionTrait::MergeFrom(
-          from._internal_partition_trait());
+    case kPartitionFeature: {
+      _this->_internal_mutable_partition_feature()->::grin::PartitionFeature::MergeFrom(
+          from._internal_partition_feature());
       break;
     }
-    case kPropertyTrait: {
-      _this->_internal_mutable_property_trait()->::grin::PropertyTrait::MergeFrom(
-          from._internal_property_trait());
+    case kPropertyFeature: {
+      _this->_internal_mutable_property_feature()->::grin::PropertyFeature::MergeFrom(
+          from._internal_property_feature());
       break;
     }
-    case kIndexTrait: {
-      _this->_internal_mutable_index_trait()->::grin::IndexTrait::MergeFrom(
-          from._internal_index_trait());
+    case kIndexFeature: {
+      _this->_internal_mutable_index_feature()->::grin::IndexFeature::MergeFrom(
+          from._internal_index_feature());
       break;
     }
-    case kPredicateTrait: {
-      _this->_internal_mutable_predicate_trait()->::grin::PredicateTrait::MergeFrom(
-          from._internal_predicate_trait());
+    case kPredicateFeature: {
+      _this->_internal_mutable_predicate_feature()->::grin::PredicateFeature::MergeFrom(
+          from._internal_predicate_feature());
       break;
     }
-    case SPECIFIC_TRAIT_NOT_SET: {
+    case SPECIFIC_FEATURE_NOT_SET: {
       break;
     }
   }
-  // @@protoc_insertion_point(copy_constructor:grin.StorageTrait)
+  // @@protoc_insertion_point(copy_constructor:grin.StorageFeature)
 }
 
-inline void StorageTrait::SharedCtor(
+inline void StorageFeature::SharedCtor(
     ::_pb::Arena* arena, bool is_message_owned) {
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.specific_trait_){}
+      decltype(_impl_.specific_feature_){}
     , /*decltype(_impl_._cached_size_)*/{}
     , /*decltype(_impl_._oneof_case_)*/{}
   };
-  clear_has_specific_trait();
+  clear_has_specific_feature();
 }
 
-StorageTrait::~StorageTrait() {
-  // @@protoc_insertion_point(destructor:grin.StorageTrait)
+StorageFeature::~StorageFeature() {
+  // @@protoc_insertion_point(destructor:grin.StorageFeature)
   if (auto *arena = _internal_metadata_.DeleteReturnArena<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>()) {
   (void)arena;
     return;
@@ -3386,110 +3387,110 @@ StorageTrait::~StorageTrait() {
   SharedDtor();
 }
 
-inline void StorageTrait::SharedDtor() {
+inline void StorageFeature::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  if (has_specific_trait()) {
-    clear_specific_trait();
+  if (has_specific_feature()) {
+    clear_specific_feature();
   }
 }
 
-void StorageTrait::SetCachedSize(int size) const {
+void StorageFeature::SetCachedSize(int size) const {
   _impl_._cached_size_.Set(size);
 }
 
-void StorageTrait::clear_specific_trait() {
-// @@protoc_insertion_point(one_of_clear_start:grin.StorageTrait)
-  switch (specific_trait_case()) {
-    case kTopologyTrait: {
+void StorageFeature::clear_specific_feature() {
+// @@protoc_insertion_point(one_of_clear_start:grin.StorageFeature)
+  switch (specific_feature_case()) {
+    case kTopologyFeature: {
       if (GetArenaForAllocation() == nullptr) {
-        delete _impl_.specific_trait_.topology_trait_;
+        delete _impl_.specific_feature_.topology_feature_;
       }
       break;
     }
-    case kPartitionTrait: {
+    case kPartitionFeature: {
       if (GetArenaForAllocation() == nullptr) {
-        delete _impl_.specific_trait_.partition_trait_;
+        delete _impl_.specific_feature_.partition_feature_;
       }
       break;
     }
-    case kPropertyTrait: {
+    case kPropertyFeature: {
       if (GetArenaForAllocation() == nullptr) {
-        delete _impl_.specific_trait_.property_trait_;
+        delete _impl_.specific_feature_.property_feature_;
       }
       break;
     }
-    case kIndexTrait: {
+    case kIndexFeature: {
       if (GetArenaForAllocation() == nullptr) {
-        delete _impl_.specific_trait_.index_trait_;
+        delete _impl_.specific_feature_.index_feature_;
       }
       break;
     }
-    case kPredicateTrait: {
+    case kPredicateFeature: {
       if (GetArenaForAllocation() == nullptr) {
-        delete _impl_.specific_trait_.predicate_trait_;
+        delete _impl_.specific_feature_.predicate_feature_;
       }
       break;
     }
-    case SPECIFIC_TRAIT_NOT_SET: {
+    case SPECIFIC_FEATURE_NOT_SET: {
       break;
     }
   }
-  _impl_._oneof_case_[0] = SPECIFIC_TRAIT_NOT_SET;
+  _impl_._oneof_case_[0] = SPECIFIC_FEATURE_NOT_SET;
 }
 
 
-void StorageTrait::Clear() {
-// @@protoc_insertion_point(message_clear_start:grin.StorageTrait)
+void StorageFeature::Clear() {
+// @@protoc_insertion_point(message_clear_start:grin.StorageFeature)
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  clear_specific_trait();
+  clear_specific_feature();
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
-const char* StorageTrait::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
+const char* StorageFeature::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
 #define CHK_(x) if (PROTOBUF_PREDICT_FALSE(!(x))) goto failure
   while (!ctx->Done(&ptr)) {
     uint32_t tag;
     ptr = ::_pbi::ReadTag(ptr, &tag);
     switch (tag >> 3) {
-      // .grin.TopologyTrait topology_trait = 1;
+      // .grin.TopologyFeature topology_feature = 1;
       case 1:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 10)) {
-          ptr = ctx->ParseMessage(_internal_mutable_topology_trait(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_topology_feature(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // .grin.PartitionTrait partition_trait = 2;
+      // .grin.PartitionFeature partition_feature = 2;
       case 2:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 18)) {
-          ptr = ctx->ParseMessage(_internal_mutable_partition_trait(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_partition_feature(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // .grin.PropertyTrait property_trait = 3;
+      // .grin.PropertyFeature property_feature = 3;
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
-          ptr = ctx->ParseMessage(_internal_mutable_property_trait(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_property_feature(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // .grin.IndexTrait index_trait = 4;
+      // .grin.IndexFeature index_feature = 4;
       case 4:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 34)) {
-          ptr = ctx->ParseMessage(_internal_mutable_index_trait(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_index_feature(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
         continue;
-      // .grin.PredicateTrait predicate_trait = 5;
+      // .grin.PredicateFeature predicate_feature = 5;
       case 5:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 42)) {
-          ptr = ctx->ParseMessage(_internal_mutable_predicate_trait(), ptr);
+          ptr = ctx->ParseMessage(_internal_mutable_predicate_feature(), ptr);
           CHK_(ptr);
         } else
           goto handle_unusual;
@@ -3517,173 +3518,173 @@ failure:
 #undef CHK_
 }
 
-uint8_t* StorageTrait::_InternalSerialize(
+uint8_t* StorageFeature::_InternalSerialize(
     uint8_t* target, ::PROTOBUF_NAMESPACE_ID::io::EpsCopyOutputStream* stream) const {
-  // @@protoc_insertion_point(serialize_to_array_start:grin.StorageTrait)
+  // @@protoc_insertion_point(serialize_to_array_start:grin.StorageFeature)
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  // .grin.TopologyTrait topology_trait = 1;
-  if (_internal_has_topology_trait()) {
+  // .grin.TopologyFeature topology_feature = 1;
+  if (_internal_has_topology_feature()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(1, _Internal::topology_trait(this),
-        _Internal::topology_trait(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(1, _Internal::topology_feature(this),
+        _Internal::topology_feature(this).GetCachedSize(), target, stream);
   }
 
-  // .grin.PartitionTrait partition_trait = 2;
-  if (_internal_has_partition_trait()) {
+  // .grin.PartitionFeature partition_feature = 2;
+  if (_internal_has_partition_feature()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(2, _Internal::partition_trait(this),
-        _Internal::partition_trait(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(2, _Internal::partition_feature(this),
+        _Internal::partition_feature(this).GetCachedSize(), target, stream);
   }
 
-  // .grin.PropertyTrait property_trait = 3;
-  if (_internal_has_property_trait()) {
+  // .grin.PropertyFeature property_feature = 3;
+  if (_internal_has_property_feature()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(3, _Internal::property_trait(this),
-        _Internal::property_trait(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(3, _Internal::property_feature(this),
+        _Internal::property_feature(this).GetCachedSize(), target, stream);
   }
 
-  // .grin.IndexTrait index_trait = 4;
-  if (_internal_has_index_trait()) {
+  // .grin.IndexFeature index_feature = 4;
+  if (_internal_has_index_feature()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(4, _Internal::index_trait(this),
-        _Internal::index_trait(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(4, _Internal::index_feature(this),
+        _Internal::index_feature(this).GetCachedSize(), target, stream);
   }
 
-  // .grin.PredicateTrait predicate_trait = 5;
-  if (_internal_has_predicate_trait()) {
+  // .grin.PredicateFeature predicate_feature = 5;
+  if (_internal_has_predicate_feature()) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
-      InternalWriteMessage(5, _Internal::predicate_trait(this),
-        _Internal::predicate_trait(this).GetCachedSize(), target, stream);
+      InternalWriteMessage(5, _Internal::predicate_feature(this),
+        _Internal::predicate_feature(this).GetCachedSize(), target, stream);
   }
 
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::_pbi::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
   }
-  // @@protoc_insertion_point(serialize_to_array_end:grin.StorageTrait)
+  // @@protoc_insertion_point(serialize_to_array_end:grin.StorageFeature)
   return target;
 }
 
-size_t StorageTrait::ByteSizeLong() const {
-// @@protoc_insertion_point(message_byte_size_start:grin.StorageTrait)
+size_t StorageFeature::ByteSizeLong() const {
+// @@protoc_insertion_point(message_byte_size_start:grin.StorageFeature)
   size_t total_size = 0;
 
   uint32_t cached_has_bits = 0;
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  switch (specific_trait_case()) {
-    // .grin.TopologyTrait topology_trait = 1;
-    case kTopologyTrait: {
+  switch (specific_feature_case()) {
+    // .grin.TopologyFeature topology_feature = 1;
+    case kTopologyFeature: {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-          *_impl_.specific_trait_.topology_trait_);
+          *_impl_.specific_feature_.topology_feature_);
       break;
     }
-    // .grin.PartitionTrait partition_trait = 2;
-    case kPartitionTrait: {
+    // .grin.PartitionFeature partition_feature = 2;
+    case kPartitionFeature: {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-          *_impl_.specific_trait_.partition_trait_);
+          *_impl_.specific_feature_.partition_feature_);
       break;
     }
-    // .grin.PropertyTrait property_trait = 3;
-    case kPropertyTrait: {
+    // .grin.PropertyFeature property_feature = 3;
+    case kPropertyFeature: {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-          *_impl_.specific_trait_.property_trait_);
+          *_impl_.specific_feature_.property_feature_);
       break;
     }
-    // .grin.IndexTrait index_trait = 4;
-    case kIndexTrait: {
+    // .grin.IndexFeature index_feature = 4;
+    case kIndexFeature: {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-          *_impl_.specific_trait_.index_trait_);
+          *_impl_.specific_feature_.index_feature_);
       break;
     }
-    // .grin.PredicateTrait predicate_trait = 5;
-    case kPredicateTrait: {
+    // .grin.PredicateFeature predicate_feature = 5;
+    case kPredicateFeature: {
       total_size += 1 +
         ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(
-          *_impl_.specific_trait_.predicate_trait_);
+          *_impl_.specific_feature_.predicate_feature_);
       break;
     }
-    case SPECIFIC_TRAIT_NOT_SET: {
+    case SPECIFIC_FEATURE_NOT_SET: {
       break;
     }
   }
   return MaybeComputeUnknownFieldsSize(total_size, &_impl_._cached_size_);
 }
 
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData StorageTrait::_class_data_ = {
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData StorageFeature::_class_data_ = {
     ::PROTOBUF_NAMESPACE_ID::Message::CopyWithSourceCheck,
-    StorageTrait::MergeImpl
+    StorageFeature::MergeImpl
 };
-const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*StorageTrait::GetClassData() const { return &_class_data_; }
+const ::PROTOBUF_NAMESPACE_ID::Message::ClassData*StorageFeature::GetClassData() const { return &_class_data_; }
 
 
-void StorageTrait::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
-  auto* const _this = static_cast<StorageTrait*>(&to_msg);
-  auto& from = static_cast<const StorageTrait&>(from_msg);
-  // @@protoc_insertion_point(class_specific_merge_from_start:grin.StorageTrait)
+void StorageFeature::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF_NAMESPACE_ID::Message& from_msg) {
+  auto* const _this = static_cast<StorageFeature*>(&to_msg);
+  auto& from = static_cast<const StorageFeature&>(from_msg);
+  // @@protoc_insertion_point(class_specific_merge_from_start:grin.StorageFeature)
   GOOGLE_DCHECK_NE(&from, _this);
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  switch (from.specific_trait_case()) {
-    case kTopologyTrait: {
-      _this->_internal_mutable_topology_trait()->::grin::TopologyTrait::MergeFrom(
-          from._internal_topology_trait());
+  switch (from.specific_feature_case()) {
+    case kTopologyFeature: {
+      _this->_internal_mutable_topology_feature()->::grin::TopologyFeature::MergeFrom(
+          from._internal_topology_feature());
       break;
     }
-    case kPartitionTrait: {
-      _this->_internal_mutable_partition_trait()->::grin::PartitionTrait::MergeFrom(
-          from._internal_partition_trait());
+    case kPartitionFeature: {
+      _this->_internal_mutable_partition_feature()->::grin::PartitionFeature::MergeFrom(
+          from._internal_partition_feature());
       break;
     }
-    case kPropertyTrait: {
-      _this->_internal_mutable_property_trait()->::grin::PropertyTrait::MergeFrom(
-          from._internal_property_trait());
+    case kPropertyFeature: {
+      _this->_internal_mutable_property_feature()->::grin::PropertyFeature::MergeFrom(
+          from._internal_property_feature());
       break;
     }
-    case kIndexTrait: {
-      _this->_internal_mutable_index_trait()->::grin::IndexTrait::MergeFrom(
-          from._internal_index_trait());
+    case kIndexFeature: {
+      _this->_internal_mutable_index_feature()->::grin::IndexFeature::MergeFrom(
+          from._internal_index_feature());
       break;
     }
-    case kPredicateTrait: {
-      _this->_internal_mutable_predicate_trait()->::grin::PredicateTrait::MergeFrom(
-          from._internal_predicate_trait());
+    case kPredicateFeature: {
+      _this->_internal_mutable_predicate_feature()->::grin::PredicateFeature::MergeFrom(
+          from._internal_predicate_feature());
       break;
     }
-    case SPECIFIC_TRAIT_NOT_SET: {
+    case SPECIFIC_FEATURE_NOT_SET: {
       break;
     }
   }
   _this->_internal_metadata_.MergeFrom<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(from._internal_metadata_);
 }
 
-void StorageTrait::CopyFrom(const StorageTrait& from) {
-// @@protoc_insertion_point(class_specific_copy_from_start:grin.StorageTrait)
+void StorageFeature::CopyFrom(const StorageFeature& from) {
+// @@protoc_insertion_point(class_specific_copy_from_start:grin.StorageFeature)
   if (&from == this) return;
   Clear();
   MergeFrom(from);
 }
 
-bool StorageTrait::IsInitialized() const {
+bool StorageFeature::IsInitialized() const {
   return true;
 }
 
-void StorageTrait::InternalSwap(StorageTrait* other) {
+void StorageFeature::InternalSwap(StorageFeature* other) {
   using std::swap;
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  swap(_impl_.specific_trait_, other->_impl_.specific_trait_);
+  swap(_impl_.specific_feature_, other->_impl_.specific_feature_);
   swap(_impl_._oneof_case_[0], other->_impl_._oneof_case_[0]);
 }
 
-::PROTOBUF_NAMESPACE_ID::Metadata StorageTrait::GetMetadata() const {
+::PROTOBUF_NAMESPACE_ID::Metadata StorageFeature::GetMetadata() const {
   return ::_pbi::AssignDescriptors(
       &descriptor_table_graph_2eproto_getter, &descriptor_table_graph_2eproto_once,
       file_level_metadata_graph_2eproto[8]);
@@ -3993,7 +3994,7 @@ Graph::Graph(const Graph& from)
   : ::PROTOBUF_NAMESPACE_ID::Message() {
   Graph* const _this = this; (void)_this;
   new (&_impl_) Impl_{
-      decltype(_impl_.traits_){from._impl_.traits_}
+      decltype(_impl_.features_){from._impl_.features_}
     , decltype(_impl_.uri_){}
     , decltype(_impl_.grin_version_){}
     , decltype(_impl_.statistics_){nullptr}
@@ -4027,7 +4028,7 @@ inline void Graph::SharedCtor(
   (void)arena;
   (void)is_message_owned;
   new (&_impl_) Impl_{
-      decltype(_impl_.traits_){arena}
+      decltype(_impl_.features_){arena}
     , decltype(_impl_.uri_){}
     , decltype(_impl_.grin_version_){}
     , decltype(_impl_.statistics_){nullptr}
@@ -4054,7 +4055,7 @@ Graph::~Graph() {
 
 inline void Graph::SharedDtor() {
   GOOGLE_DCHECK(GetArenaForAllocation() == nullptr);
-  _impl_.traits_.~RepeatedPtrField();
+  _impl_.features_.~RepeatedPtrField();
   _impl_.uri_.Destroy();
   _impl_.grin_version_.Destroy();
   if (this != internal_default_instance()) delete _impl_.statistics_;
@@ -4070,7 +4071,7 @@ void Graph::Clear() {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  _impl_.traits_.Clear();
+  _impl_.features_.Clear();
   _impl_.uri_.ClearToEmpty();
   _impl_.grin_version_.ClearToEmpty();
   if (GetArenaForAllocation() == nullptr && _impl_.statistics_ != nullptr) {
@@ -4106,13 +4107,13 @@ const char* Graph::_InternalParse(const char* ptr, ::_pbi::ParseContext* ctx) {
         } else
           goto handle_unusual;
         continue;
-      // repeated .grin.StorageTrait traits = 3;
+      // repeated .grin.StorageFeature features = 3;
       case 3:
         if (PROTOBUF_PREDICT_TRUE(static_cast<uint8_t>(tag) == 26)) {
           ptr -= 1;
           do {
             ptr += 1;
-            ptr = ctx->ParseMessage(_internal_add_traits(), ptr);
+            ptr = ctx->ParseMessage(_internal_add_features(), ptr);
             CHK_(ptr);
             if (!ctx->DataAvailable(ptr)) break;
           } while (::PROTOBUF_NAMESPACE_ID::internal::ExpectTag<26>(ptr));
@@ -4176,10 +4177,10 @@ uint8_t* Graph::_InternalSerialize(
         2, this->_internal_grin_version(), target);
   }
 
-  // repeated .grin.StorageTrait traits = 3;
+  // repeated .grin.StorageFeature features = 3;
   for (unsigned i = 0,
-      n = static_cast<unsigned>(this->_internal_traits_size()); i < n; i++) {
-    const auto& repfield = this->_internal_traits(i);
+      n = static_cast<unsigned>(this->_internal_features_size()); i < n; i++) {
+    const auto& repfield = this->_internal_features(i);
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::
         InternalWriteMessage(3, repfield, repfield.GetCachedSize(), target, stream);
   }
@@ -4207,9 +4208,9 @@ size_t Graph::ByteSizeLong() const {
   // Prevent compiler warnings about cached_has_bits being unused
   (void) cached_has_bits;
 
-  // repeated .grin.StorageTrait traits = 3;
-  total_size += 1UL * this->_internal_traits_size();
-  for (const auto& msg : this->_impl_.traits_) {
+  // repeated .grin.StorageFeature features = 3;
+  total_size += 1UL * this->_internal_features_size();
+  for (const auto& msg : this->_impl_.features_) {
     total_size +=
       ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::MessageSize(msg);
   }
@@ -4253,7 +4254,7 @@ void Graph::MergeImpl(::PROTOBUF_NAMESPACE_ID::Message& to_msg, const ::PROTOBUF
   uint32_t cached_has_bits = 0;
   (void) cached_has_bits;
 
-  _this->_impl_.traits_.MergeFrom(from._impl_.traits_);
+  _this->_impl_.features_.MergeFrom(from._impl_.features_);
   if (!from._internal_uri().empty()) {
     _this->_internal_set_uri(from._internal_uri());
   }
@@ -4283,7 +4284,7 @@ void Graph::InternalSwap(Graph* other) {
   auto* lhs_arena = GetArenaForAllocation();
   auto* rhs_arena = other->GetArenaForAllocation();
   _internal_metadata_.InternalSwap(&other->_internal_metadata_);
-  _impl_.traits_.InternalSwap(&other->_impl_.traits_);
+  _impl_.features_.InternalSwap(&other->_impl_.features_);
   ::PROTOBUF_NAMESPACE_ID::internal::ArenaStringPtr::InternalSwap(
       &_impl_.uri_, lhs_arena,
       &other->_impl_.uri_, rhs_arena
@@ -4304,41 +4305,41 @@ void Graph::InternalSwap(Graph* other) {
 // @@protoc_insertion_point(namespace_scope)
 }  // namespace grin
 PROTOBUF_NAMESPACE_OPEN
-template<> PROTOBUF_NOINLINE ::grin::TopologyTrait*
-Arena::CreateMaybeMessage< ::grin::TopologyTrait >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grin::TopologyTrait >(arena);
+template<> PROTOBUF_NOINLINE ::grin::TopologyFeature*
+Arena::CreateMaybeMessage< ::grin::TopologyFeature >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grin::TopologyFeature >(arena);
 }
-template<> PROTOBUF_NOINLINE ::grin::MirrorPartitionListTrait*
-Arena::CreateMaybeMessage< ::grin::MirrorPartitionListTrait >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grin::MirrorPartitionListTrait >(arena);
+template<> PROTOBUF_NOINLINE ::grin::MirrorPartitionListFeature*
+Arena::CreateMaybeMessage< ::grin::MirrorPartitionListFeature >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grin::MirrorPartitionListFeature >(arena);
 }
-template<> PROTOBUF_NOINLINE ::grin::PartitionTrait*
-Arena::CreateMaybeMessage< ::grin::PartitionTrait >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grin::PartitionTrait >(arena);
+template<> PROTOBUF_NOINLINE ::grin::PartitionFeature*
+Arena::CreateMaybeMessage< ::grin::PartitionFeature >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grin::PartitionFeature >(arena);
 }
-template<> PROTOBUF_NOINLINE ::grin::VertexPropertyTrait*
-Arena::CreateMaybeMessage< ::grin::VertexPropertyTrait >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grin::VertexPropertyTrait >(arena);
+template<> PROTOBUF_NOINLINE ::grin::VertexPropertyFeature*
+Arena::CreateMaybeMessage< ::grin::VertexPropertyFeature >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grin::VertexPropertyFeature >(arena);
 }
-template<> PROTOBUF_NOINLINE ::grin::EdgePropertyTrait*
-Arena::CreateMaybeMessage< ::grin::EdgePropertyTrait >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grin::EdgePropertyTrait >(arena);
+template<> PROTOBUF_NOINLINE ::grin::EdgePropertyFeature*
+Arena::CreateMaybeMessage< ::grin::EdgePropertyFeature >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grin::EdgePropertyFeature >(arena);
 }
-template<> PROTOBUF_NOINLINE ::grin::PropertyTrait*
-Arena::CreateMaybeMessage< ::grin::PropertyTrait >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grin::PropertyTrait >(arena);
+template<> PROTOBUF_NOINLINE ::grin::PropertyFeature*
+Arena::CreateMaybeMessage< ::grin::PropertyFeature >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grin::PropertyFeature >(arena);
 }
-template<> PROTOBUF_NOINLINE ::grin::IndexTrait*
-Arena::CreateMaybeMessage< ::grin::IndexTrait >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grin::IndexTrait >(arena);
+template<> PROTOBUF_NOINLINE ::grin::IndexFeature*
+Arena::CreateMaybeMessage< ::grin::IndexFeature >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grin::IndexFeature >(arena);
 }
-template<> PROTOBUF_NOINLINE ::grin::PredicateTrait*
-Arena::CreateMaybeMessage< ::grin::PredicateTrait >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grin::PredicateTrait >(arena);
+template<> PROTOBUF_NOINLINE ::grin::PredicateFeature*
+Arena::CreateMaybeMessage< ::grin::PredicateFeature >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grin::PredicateFeature >(arena);
 }
-template<> PROTOBUF_NOINLINE ::grin::StorageTrait*
-Arena::CreateMaybeMessage< ::grin::StorageTrait >(Arena* arena) {
-  return Arena::CreateMessageInternal< ::grin::StorageTrait >(arena);
+template<> PROTOBUF_NOINLINE ::grin::StorageFeature*
+Arena::CreateMaybeMessage< ::grin::StorageFeature >(Arena* arena) {
+  return Arena::CreateMessageInternal< ::grin::StorageFeature >(arena);
 }
 template<> PROTOBUF_NOINLINE ::grin::Statistics*
 Arena::CreateMaybeMessage< ::grin::Statistics >(Arena* arena) {
