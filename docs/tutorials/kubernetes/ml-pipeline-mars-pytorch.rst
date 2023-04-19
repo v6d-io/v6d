@@ -253,8 +253,8 @@ If any of the above steps fail, please refer to the `mars showcase e2e test`_ fo
 
 
 .. _mars: https://github.com/mars-project/mars
-.. _mars showcase e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/mars-showcase/e2e.yaml
+.. _mars showcase e2e test: https://github.com/v6d-io/v6d/blob/main/k8s/test/e2e/mars-examples/e2e.yaml
 .. _dataset repo: https://github.com/GraphScope/gstest/tree/master/vineyard-mars-showcase-dataset
-.. _prepare data code: https://github.com/v6d-io/v6d/blob/main/k8s/showcase/vineyard-mars-pytorch/prepare-data.py
-.. _process data code: https://github.com/v6d-io/v6d/blob/main/k8s/showcase/vineyard-mars-pytorch/process-data.py
-.. _train data code: https://github.com/v6d-io/v6d/blob/main/k8s/showcase/vineyard-mars-pytorch/train-data.py
+.. _prepare data code: https://github.com/v6d-io/v6d/blob/main/k8s/examples/vineyard-mars-pytorch/prepare-data/prepare-data.py
+.. _process data code: https://github.com/v6d-io/v6d/blob/main/k8s/examples/vineyard-mars-pytorch/process-data/process-data.py
+.. _train data code: https://github.com/v6d-io/v6d/blob/main/k8s/examples/vineyard-mars-pytorch/train-data/train-data.py

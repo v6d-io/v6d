@@ -71,7 +71,7 @@ More information about the helm chart could be found at [artifacthub][1] and [pa
 ## Values
 
 The following table lists the configurable parameters of the Vineyard Operator chart and their default values. 
-Besides, you can refer the [doc](https://v6d.io/notes/vineyard-operator.html) to get more detail about the vineyard operator.
+Besides, you can refer the [doc](https://v6d.io/notes/cloud-native/vineyard-operator.html) to get more detail about the vineyard operator.
 
 | Key                                              | Type   | Default                                                                   | Description                                  |
 |--------------------------------------------------|--------|---------------------------------------------------------------------------|----------------------------------------------|

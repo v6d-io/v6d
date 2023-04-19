@@ -9,4 +9,4 @@ To uninstall the release, try:
 
   $ helm uninstall {{ .Release.Name }} -n {{ .Release.Namespace }}
 
-You could get all details about vineyard operator in the doc [https://v6d.io/notes/vineyard-operator.html], just have fun with vineyard operator!
+You could get all details about vineyard operator in the doc [https://v6d.io/notes/cloud-native/vineyard-operator.html], just have fun with vineyard operator!
