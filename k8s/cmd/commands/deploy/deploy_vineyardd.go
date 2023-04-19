@@ -191,7 +191,7 @@ func BuildVineyardManifestFromInput() (*v1alpha1.Vineyardd, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to parse envs")
 		}
-		opts.VineyardConfig.Env = append(opts.VineyardConfig.Env, vineyardContainerEnvs...)
+		opts.Vineyard.Env = append(opts.Vineyard.Env, vineyardContainerEnvs...)
 	}
 
 	spillPVandPVC := flags.VineyardSpillPVandPVC
@@ -200,8 +200,8 @@ func BuildVineyardManifestFromInput() (*v1alpha1.Vineyardd, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get the pv and pvc of vineyard spill")
 		}
-		opts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *pv
-		opts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *pvc
+		opts.Vineyard.Spill.PersistentVolumeSpec = *pv
+		opts.Vineyard.Spill.PersistentVolumeClaimSpec = *pvc
 	}
 
 	vineyardd := &v1alpha1.Vineyardd{

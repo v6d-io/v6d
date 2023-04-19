@@ -36,8 +36,10 @@ func RenderManifestAsObj(path string, value interface{},
 		return obj, errors.Wrapf(err, "failed to read manifest %s", path)
 	}
 
-	_, _ = swckkube.LoadTemplate(string(manifest), value, tmplFunc, obj)
-
+	_, err = swckkube.LoadTemplate(string(manifest), value, tmplFunc, obj)
+	if err != nil {
+		return obj, errors.Wrapf(err, "failed to render manifest %s", path)
+	}
 	return obj, nil
 }
 

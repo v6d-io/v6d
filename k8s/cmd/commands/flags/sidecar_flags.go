@@ -31,9 +31,9 @@ var (
 
 func ApplySidecarOpts(cmd *cobra.Command) {
 	// setup the vineyard container configuration of vineyard sidecar
-	ApplyVineyardContainerOpts(&SidecarOpts.VineyardConfig, "sidecar", cmd)
+	ApplyVineyardContainerOpts(&SidecarOpts.Vineyard, "sidecar", cmd)
 	// setup the metric container configuration of vineyard sidecar
-	ApplyMetricContainerOpts(&SidecarOpts.MetricConfig, "sidecar", cmd)
+	ApplyMetricContainerOpts(&SidecarOpts.Metric, "sidecar", cmd)
 	// setup the vineyard service configuration of vineyard sidecar
 	ApplyServiceOpts(&SidecarOpts.Service, "sidecar", cmd)
 	// setup the vineyard volumes if needed

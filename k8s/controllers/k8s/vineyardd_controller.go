@@ -72,11 +72,17 @@ type ServiceLabelSelector struct {
 	Value string
 }
 
-// SvcLabelSelector is the label selector of the service
-var SvcLabelSelector []ServiceLabelSelector
+// svcLabelSelector is the label selector of the service
+var svcLabelSelector []ServiceLabelSelector
+
+func init() {
+	svcLabelSelector = make([]ServiceLabelSelector, 1)
+	svcLabelSelector[0].Key = "rpc.vineyardd.v6d.io/rpc"
+	svcLabelSelector[0].Value = "vineyardd-rpc"
+}
 
 func getServiceLabelSelector() []ServiceLabelSelector {
-	return SvcLabelSelector
+	return svcLabelSelector
 }
 
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
@@ -134,10 +140,10 @@ func (r *VineyarddReconciler) Reconcile(
 	}
 
 	// set up the etcd configuration
-	replicas := vineyardd.Spec.Etcd.Replicas
-	Etcd = BuildEtcdConfig(vineyardd.Namespace, replicas, vineyardd.Spec.VineyardConfig.Image)
+	etcdReplicas := vineyardd.Spec.EtcdReplicas
+	Etcd = BuildEtcdConfig(vineyardd.Namespace, etcdReplicas, vineyardd.Spec.Vineyard.Image)
 
-	for i := 0; i < replicas; i++ {
+	for i := 0; i < etcdReplicas; i++ {
 		Etcd.Rank = i
 		if _, err := etcdApp.Apply(ctx, "etcd/etcd.yaml", logger, true); err != nil {
 			logger.Error(err, "failed to apply etcd pod")
@@ -149,9 +155,6 @@ func (r *VineyarddReconciler) Reconcile(
 		}
 	}
 
-	SvcLabelSelector = make([]ServiceLabelSelector, 1)
-	SvcLabelSelector[0].Key = "app.v6d.io/service"
-	SvcLabelSelector[0].Value = "vineyardd-rpc"
 	if err := vineyarddApp.ApplyAll(ctx, vineyarddFile, logger); err != nil {
 		logger.Error(err, "failed to apply vineyardd resources")
 		return ctrl.Result{}, err
@@ -210,6 +213,8 @@ func (r *VineyarddReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // BuildEtcdConfig builds the etcd config.
 func BuildEtcdConfig(namespace string, replicas int, image string) EtcdConfig {
 	etcdConfig := EtcdConfig{}
+	// the etcd is built in the vineyardd image
+	etcdConfig.Image = image
 	etcdConfig.Namespace = namespace
 	etcdEndpoints := make([]string, 0, replicas)
 	for i := 0; i < replicas; i++ {
@@ -219,8 +224,5 @@ func BuildEtcdConfig(namespace string, replicas int, image string) EtcdConfig {
 		)
 	}
 	etcdConfig.Endpoints = strings.Join(etcdEndpoints, ",")
-	// the etcd is built in the vineyardd image
-	etcdConfig.Image = image
-
 	return etcdConfig
 }

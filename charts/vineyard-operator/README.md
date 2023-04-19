@@ -49,11 +49,10 @@ kind: Vineyardd
 metadata:
   name: vineyardd-sample
 spec:
-  image: vineyardcloudnative/vineyardd:latest
   replicas: 3
-  imagePullPolicy: IfNotPresent
-  etcd:
-    replicas: 3
+  vineyard:
+    image: vineyardcloudnative/vineyardd:latest
+    imagePullPolicy: IfNotPresent
 EOF
 ```
 

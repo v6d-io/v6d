@@ -17,7 +17,7 @@ setup:
   env: kind
   kubeconfig: /tmp/e2e-k8s.config
   steps:
-    - name: download the vineyard operator image
+    - name: push vineyard operator image
       command: |
         docker tag vineyardcloudnative/vineyard-operator:latest localhost:5001/vineyard-operator:latest
         docker push localhost:5001/vineyard-operator:latest
@@ -25,9 +25,9 @@ setup:
       command: |
         helm dep update charts/vineyard-operator
         helm install vineyard-operator charts/vineyard-operator \
+            --create-namespace \
             --namespace vineyard-system \
-            --set controllerManager.manager.image.repository=localhost:5001/vineyard-operator \
-            --create-namespace
+            --set controllerManager.manager.image.repository=localhost:5001/vineyard-operator
       wait:
         - namespace: vineyard-system
           resource: deployment/vineyard-operator-controller-manager

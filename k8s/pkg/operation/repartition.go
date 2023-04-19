@@ -202,7 +202,7 @@ func (ro *RepartitionOperation) buildDaskRepartitionJob(
 	DaskRepartitionConfigTemplate.JobName = pod.Labels[labels.VineyardJobName]
 	DaskRepartitionConfigTemplate.InstanceToWorker = instanceToWorker
 	DaskRepartitionConfigTemplate.TimeoutSeconds = o.Spec.TimeoutSeconds
-	DaskRepartitionConfigTemplate.DaskRepartitionImage = vineyardd.Spec.PluginConfig.DaskRepartitionImage
+	DaskRepartitionConfigTemplate.DaskRepartitionImage = vineyardd.Spec.PluginImage.DaskRepartitionImage
 	if socket, err := ro.ResolveRequiredVineyarddSocket(
 		ctx,
 		pod.Labels[labels.VineyarddName],

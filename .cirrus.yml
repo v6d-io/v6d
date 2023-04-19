@@ -1,5 +1,5 @@
 # only run for releases
-only_if: $CIRRUS_TAG == 'v*' && $CIRRUS_PR == ''
+only_if: $CIRRUS_TAG != ''
 
 macosx_arm64_wheel_task:
   macos_instance:

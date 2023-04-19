@@ -101,11 +101,11 @@ func GetWorkloadObj(workload string) (*unstructured.Unstructured, error) {
 	return unstructuredObj, nil
 }
 
-// SidecarLabelSelector contains the label selector of vineyard sidecar
-var SidecarLabelSelector []k8s.ServiceLabelSelector
+// sidecarLabelSelector contains the label selector of vineyard sidecar
+var sidecarLabelSelector []k8s.ServiceLabelSelector
 
 func getSidecarLabelSelector() []k8s.ServiceLabelSelector {
-	return SidecarLabelSelector
+	return sidecarLabelSelector
 }
 
 func GetManifestFromTemplate(workload string) ([]string, error) {
@@ -135,7 +135,7 @@ func GetManifestFromTemplate(workload string) ([]string, error) {
 	}
 
 	objs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig, namespace,
-		sidecar.Spec.Replicas, sidecar.Spec.VineyardConfig.Image, sidecar, tmplFunc)
+		sidecar.Spec.Replicas, sidecar.Spec.Vineyard.Image, sidecar, tmplFunc)
 	if err != nil {
 		return manifests, errors.Wrap(err, "failed to build etcd objects")
 	}
@@ -188,7 +188,7 @@ func buildSidecar(namespace string) (*v1alpha1.Sidecar, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to parse envs")
 		}
-		opts.VineyardConfig.Env = append(opts.VineyardConfig.Env,
+		opts.Vineyard.Env = append(opts.Vineyard.Env,
 			vineyardContainerEnvs...)
 	}
 
@@ -198,8 +198,8 @@ func buildSidecar(namespace string) (*v1alpha1.Sidecar, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get pv and pvc of spill config")
 		}
-		opts.VineyardConfig.SpillConfig.PersistentVolumeSpec = *pv
-		opts.VineyardConfig.SpillConfig.PersistentVolumeClaimSpec = *pvc
+		opts.Vineyard.Spill.PersistentVolumeSpec = *pv
+		opts.Vineyard.Spill.PersistentVolumeClaimSpec = *pvc
 	}
 
 	sidecar := &v1alpha1.Sidecar{

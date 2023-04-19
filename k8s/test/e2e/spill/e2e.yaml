@@ -19,6 +19,10 @@ setup:
   steps:
     - name: setup the serialize path
       command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/spill; done
+    - name: push vineyard operator image
+      command: |
+        docker tag vineyardcloudnative/vineyard-operator:latest localhost:5001/vineyard-operator:latest
+        docker push localhost:5001/vineyard-operator:latest
     - name: install vineyardd
       command: |
         go run k8s/cmd/main.go deploy vineyardd -f k8s/test/e2e/spill-demo/vineyardd-with-spill.yaml

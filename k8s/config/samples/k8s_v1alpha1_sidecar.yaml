@@ -6,5 +6,5 @@ metadata:
 spec:
   replicas: 2
   selector: app=sidecar-job-deployment
-  vineyardConfig:
+  vineyard:
     socket: /var/run/vineyard.sock

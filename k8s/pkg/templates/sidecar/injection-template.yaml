@@ -6,8 +6,8 @@ metadata:
 spec:
   containers:
     - name: vineyard-sidecar
-      image: {{ .Spec.VineyardConfig.Image }}
-      imagePullPolicy: {{ .Spec.VineyardConfig.ImagePullPolicy }}
+      image: {{ .Spec.Vineyard.Image }}
+      imagePullPolicy: {{ .Spec.Vineyard.ImagePullPolicy }}
       env:
       - name: VINEYARDD_UID
         value: {{ .UID }}
@@ -22,19 +22,19 @@ spec:
         /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.{{ .Namespace }}.svc.cluster.local:2379;
         sleep 1;
         /usr/local/bin/vineyardd
-        --sync_crds {{ .Spec.VineyardConfig.SyncCRDs }}
+        --sync_crds {{ .Spec.Vineyard.SyncCRDs }}
         --socket /var/run/vineyard.sock
-        --size {{ .Spec.VineyardConfig.Size }}
-        --stream_threshold {{ .Spec.VineyardConfig.StreamThreshold }}
+        --size {{ .Spec.Vineyard.Size }}
+        --stream_threshold {{ .Spec.Vineyard.StreamThreshold }}
         --etcd_cmd etcd
-        --etcd_prefix {{ .Spec.VineyardConfig.EtcdPrefix }}
-        --etcd_endpoint {{ .Spec.VineyardConfig.EtcdEndpoint }}
-        {{- if .Spec.VineyardConfig.SpillConfig.Path }}
-        --spill_path {{ .Spec.VineyardConfig.SpillConfig.Path }}
-        --spill_lower_rate {{ .Spec.VineyardConfig.SpillConfig.SpillLowerRate }}
-        --spill_upper_rate {{ .Spec.VineyardConfig.SpillConfig.SpillUpperRate }}
+        --etcd_prefix /vineyard
+        --etcd_endpoint http://etcd-for-vineyard:2379
+        {{- if .Spec.Vineyard.Spill.Path }}
+        --spill_path {{ .Spec.Vineyard.Spill.Path }}
+        --spill_lower_rate {{ .Spec.Vineyard.Spill.SpillLowerRate }}
+        --spill_upper_rate {{ .Spec.Vineyard.Spill.SpillUpperRate }}
         {{- end }}
-        {{- if .Spec.MetricConfig.Enable }}
+        {{- if .Spec.Metric.Enable }}
         --metrics
         -log_dir /var/log/vineyard/
         {{- end }}
@@ -49,10 +49,10 @@ spec:
       {{- else }}
         mountPath: /var/run
       {{- end }}
-    {{- if .Spec.MetricConfig.Enable }}
+    {{- if .Spec.Metric.Enable }}
     - name: metrics
-      image : {{ .Spec.MetricConfig.Image }}
-      imagePullPolicy: {{ .Spec.MetricConfig.ImagePullPolicy }}
+      image : {{ .Spec.Metric.Image }}
+      imagePullPolicy: {{ .Spec.Metric.ImagePullPolicy }}
       command: ["./grok_exporter"]
       args: ["-config", "grok_exporter.yml", "-disable-exporter-metrics", "&"]
       ports:
@@ -71,7 +71,7 @@ spec:
   {{- else }}
     emptyDir: {}
   {{- end }}
-  {{- if .Spec.MetricConfig.Enable }}
+  {{- if .Spec.Metric.Enable }}
   - name: log
     emptyDir: {}
   {{- end }}

@@ -156,7 +156,7 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	objects = append(objects, objs...)
 
 	objs, err = util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Namespace,
-		vineyardd.Spec.Etcd.Replicas, vineyardd.Spec.VineyardConfig.Image, vineyardd,
+		vineyardd.Spec.EtcdReplicas, vineyardd.Spec.Vineyard.Image, vineyardd,
 		tmplFunc)
 	if err != nil {
 		return objects, errors.Wrap(err, "failed to build etcd objects")
