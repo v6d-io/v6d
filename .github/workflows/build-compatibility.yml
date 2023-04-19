@@ -82,7 +82,6 @@ jobs:
                               libgoogle-glog-dev \
                               libgrpc-dev \
                               libgrpc++-dev \
-                              libgtest-dev \
                               liblz4-dev \
                               libmpich-dev \
                               libprotobuf-dev \

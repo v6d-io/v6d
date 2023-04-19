@@ -39,12 +39,11 @@ Dependencies
 
 Vineyard requires the following software as dependencies to build and run:
 
-+ apache-arrow >= 0.17.1
++ apache-arrow >= 3.0.0
 + gflags
 + glog
 + boost
 + mpi, for the graph data structure module
-+ gtest, for building test suites
 
 If you want to build the vineyard server, the following additional libraries are needed:
 
@@ -103,12 +102,22 @@ Vineyard has been tested on MacOS as well, the dependencies can be installed usi
 
 .. code:: shell
 
-    brew install apache-arrow boost gflags glog grpc protobuf mpich openssl zlib autoconf
+    brew install apache-arrow boost gflags glog grpc protobuf llvm mpich openssl zlib autoconf
 
 Building vineyard
 ^^^^^^^^^^^^^^^^^
 
 After the required dependencies are installed, you do an out-of-source build using **CMake**:
+
+.. tip::
+
+    We recommend to use the brew installed LLVM as the compiler for building vineyard on MacOS,
+    which can be accomplished by setting the environment variable :code:`CC` and :code:`CXX`:
+
+    .. code::
+
+        export CC=$(brew --prefix llvm)/bin/clang
+        export CXX=$(brew --prefix llvm)/bin/clang++
 
 .. code:: shell
 
