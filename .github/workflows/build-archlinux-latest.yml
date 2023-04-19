@@ -47,7 +47,6 @@ jobs:
                                      gflags \
                                      google-glog \
                                      grpc \
-                                     gtest \
                                      lz4 \
                                      m4 \
                                      make \

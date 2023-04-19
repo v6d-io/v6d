@@ -26,7 +26,6 @@ apt-get install -y \
   libgmock-dev \
   libgrpc-dev \
   libgrpc++-dev \
-  libgtest-dev \
   libkrb5-dev \
   libmpich-dev \
   libprotobuf-dev \

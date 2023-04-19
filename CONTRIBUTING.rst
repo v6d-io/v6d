@@ -16,7 +16,6 @@ Vineyard requires the following C++ packages for development:
 - gflags
 - glog
 - boost
-- gtest, for build test suites
 - protobuf
 - grpc
 
@@ -34,7 +33,7 @@ image containing all necessary requirements. You can find this image at
 
 .. code:: shell
 
-    docker pull vineyardcloudnative/vineyard-dev:latest 
+    docker pull vineyardcloudnative/vineyard-dev:latest
 
 Build the source
 ----------------

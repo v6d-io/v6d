@@ -287,7 +287,7 @@ third-party libraries may not have the same license as vineyard.
 
 .. _Mars: https://github.com/mars-project/mars
 .. _GraphScope: https://github.com/alibaba/GraphScope
-.. _Installation: https://github.com/v6d-io/v6d/blob/main/docs/notes/install.rst
+.. _Installation: https://github.com/v6d-io/v6d/blob/main/docs/notes/developers/build-from-source.rst
 .. _Contributing: https://github.com/v6d-io/v6d/blob/main/CONTRIBUTING.rst
 .. _Getting Started: https://v6d.io/notes/getting-started.html
 .. _Vineyard Operator: https://v6d.io/notes/cloud-native/vineyard-operator.html
