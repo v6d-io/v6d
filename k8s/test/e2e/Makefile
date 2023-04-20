@@ -166,6 +166,8 @@ e2e-tests-spill: prepare-e2e-test build-local-cluster
 	@make -C ${K8S_DIR} install-cert-manager
 	@make -C ${E2E_DIR} install-vineyard-operator
 	@echo "Running spill e2e test..."
+	@docker tag vineyardcloudnative/vineyardd:alpine-latest localhost:5001/vineyardd:alpine-latest
+	@docker push localhost:5001/vineyardd:alpine-latest
 	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/spill/e2e.yaml
 	@echo "spill e2e test passed."
 	@make delete-local-cluster
