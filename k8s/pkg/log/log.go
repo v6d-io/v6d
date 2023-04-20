@@ -17,11 +17,14 @@ limitations under the License.
 package log
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 
 	"github.com/go-logr/logr"
+	uberzap "go.uber.org/zap"
+	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
 
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -29,14 +32,47 @@ import (
 )
 
 var (
-	defaultLogger = zap.New(zap.UseFlagOptions(&zap.Options{
-		Development: true,
-		TimeEncoder: zapcore.ISO8601TimeEncoder,
-	}))
-	dlog = log.NewDelegatingLogSink(defaultLogger.GetSink())
+	defaultLogger = makeDefaultLogger()
+	dlog          = log.NewDelegatingLogSink(defaultLogger.GetSink())
 
 	Log = Logger{logr.New(dlog).WithName("vineyard")}
 )
+
+func makeDefaultLogger() logr.Logger {
+	zapOpts := &zap.Options{
+		Development: true,
+		TimeEncoder: zapcore.ISO8601TimeEncoder,
+	}
+	zapOpts.Encoder = &EscapeSeqJSONEncoder{
+		Encoder: zapcore.NewConsoleEncoder(uberzap.NewDevelopmentEncoderConfig()),
+	}
+	return zap.New(zap.UseFlagOptions(zapOpts))
+}
+
+type EscapeSeqJSONEncoder struct {
+	zapcore.Encoder
+}
+
+func (enc *EscapeSeqJSONEncoder) Clone() zapcore.Encoder {
+	return enc // TODO: change me
+}
+
+func (enc *EscapeSeqJSONEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
+	// call EncodeEntry on the embedded interface to get the
+	// original output
+	b, err := enc.Encoder.EncodeEntry(entry, fields)
+	bs := b.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	newb := buffer.NewPool().Get()
+
+	// then manipulate that output into what you need it to be
+	bs = bytes.Replace(bs, []byte("\\n"), []byte("\n"), -1)
+	bs = bytes.Replace(bs, []byte("\\t"), []byte("\t"), -1)
+	_, err = newb.Write(bs)
+	return newb, err
+}
 
 // Extends the logr's logger with Fatal support
 type Logger struct {
