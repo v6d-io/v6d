@@ -67,23 +67,10 @@ type ServiceConfig struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=9600
 	Port int `json:"port,omitempty"`
-
-	// service label selector
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="rpc.vineyardd.v6d.io/rpc=vineyard-rpc"
-	Selector string `json:"selector,omitempty"`
 }
 
-// Etcd holds all configuration about Etcd
-type EtcdConfig struct {
-	// Etcd replicas
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=3
-	Replicas int `json:"replicas,omitempty"`
-}
-
-// MetricContainerConfig holds the configuration about metric container
-type MetricContainerConfig struct {
+// MetricConfig holds the configuration about metric container
+type MetricConfig struct {
 	// Enable metrics
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
@@ -113,8 +100,8 @@ type VolumeConfig struct {
 	MountPath string `json:"mountPath,omitempty"`
 }
 
-// VineyardContainerConfig holds all configuration about vineyard container
-type VineyardContainerConfig struct {
+// VineyardConfig holds all configuration about vineyard container
+type VineyardConfig struct {
 	// represent the vineyardd's image
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:="vineyardcloudnative/vineyardd:latest"
@@ -146,20 +133,10 @@ type VineyardContainerConfig struct {
 	// +kubebuilder:default:=80
 	StreamThreshold int64 `json:"streamThreshold,omitempty"`
 
-	// endpoint of etcd
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="http://etcd-for-vineyard:2379"
-	EtcdEndpoint string `json:"etcdEndpoint,omitempty"`
-
-	// path prefix in etcd
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="/vineyard"
-	EtcdPrefix string `json:"etcdPrefix,omitempty"`
-
 	// the configuration of spilling
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={}
-	SpillConfig SpillConfig `json:"spillConfig,omitempty"`
+	Spill SpillConfig `json:"spill,omitempty"`
 
 	// vineyard environment configuration
 	// +kubebuilder:validation:Optional
@@ -203,32 +180,32 @@ type VineyarddSpec struct {
 	// +kubebuilder:default:=3
 	Replicas int `json:"replicas,omitempty"`
 
+	// EtcdReplicas describe the etcd replicas
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=3
+	EtcdReplicas int `json:"etcdReplicas,omitempty"`
+
 	// vineyardd's service
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={type: "ClusterIP", port: 9600, selector: "rpc.vineyardd.v6d.io/rpc=vineyard-rpc"}
+	// +kubebuilder:default:={type: "ClusterIP", port: 9600}
 	Service ServiceConfig `json:"service,omitempty"`
-
-	// Etcd describe the etcd replicas
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={replicas: 3}
-	Etcd EtcdConfig `json:"etcd,omitempty"`
 
 	// vineyard container configuration
 	// +kubebuilder:validation:Optional
 	//nolint: lll
-	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}", size: "256Mi", streamThreshold: 80, etcdEndpoint: "http://etcd-for-vineyard:2379", etcdPrefix: "/vineyard"}
-	VineyardConfig VineyardContainerConfig `json:"vineyardConfig,omitempty"`
+	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}", size: "256Mi", streamThreshold: 80}
+	Vineyard VineyardConfig `json:"vineyard,omitempty"`
 
 	// operation container configuration
 	// +kubebuilder:validation:Optional
 	//nolint: lll
 	// +kubebuilder:default={backupImage: "ghcr.io/v6d-io/v6d/backup-job", recoverImage: "ghcr.io/v6d-io/v6d/recover-job", daskRepartitionImage: "ghcr.io/v6d-io/v6d/dask-repartition", localAssemblyImage: "ghcr.io/v6d-io/v6d/local-assembly", distributedAssemblyImage: "ghcr.io/v6d-io/v6d/distributed-assembly"}
-	PluginConfig PluginImageConfig `json:"pluginConfig,omitempty"`
+	PluginImage PluginImageConfig `json:"pluginImage,omitempty"`
 
 	// metric container configuration
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={enable: false, image: "vineyardcloudnative/vineyard-grok-exporter:latest", imagePullPolicy: "IfNotPresent"}
-	MetricConfig MetricContainerConfig `json:"metricConfig,omitempty"`
+	Metric MetricConfig `json:"metric,omitempty"`
 
 	// Volume configuration
 	// +kubebuilder:validation:Optional
@@ -269,13 +246,13 @@ type VineyarddList struct {
 }
 
 func PreprocessVineyarddSocket(vineyardd *Vineyardd) {
-	if vineyardd.Spec.VineyardConfig.Socket == "" {
+	if vineyardd.Spec.Vineyard.Socket == "" {
 		return
 	}
-	if tpl, err := template.New("vineyardd").Parse(vineyardd.Spec.VineyardConfig.Socket); err == nil {
+	if tpl, err := template.New("vineyardd").Parse(vineyardd.Spec.Vineyard.Socket); err == nil {
 		var buf bytes.Buffer
 		if err := tpl.Execute(&buf, vineyardd); err == nil {
-			vineyardd.Spec.VineyardConfig.Socket = buf.String()
+			vineyardd.Spec.Vineyard.Socket = buf.String()
 		}
 	}
 }

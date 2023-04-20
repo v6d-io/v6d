@@ -34,7 +34,10 @@ spec:
             type: object
           spec:
             properties:
-              metricConfig:
+              etcdReplicas:
+                default: 3
+                type: integer
+              metric:
                 default:
                   enable: false
                   image: vineyardcloudnative/vineyard-grok-exporter:latest
@@ -59,23 +62,17 @@ spec:
               service:
                 default:
                   port: 9600
-                  selector: rpc.vineyardd.v6d.io/rpc=vineyard-rpc
                   type: ClusterIP
                 properties:
                   port:
                     default: 9600
                     type: integer
-                  selector:
-                    default: rpc.vineyardd.v6d.io/rpc=vineyard-rpc
-                    type: string
                   type:
                     default: ClusterIP
                     type: string
                 type: object
-              vineyardConfig:
+              vineyard:
                 default:
-                  etcdEndpoint: http://etcd-for-vineyard:2379
-                  etcdPrefix: /vineyard
                   image: vineyardcloudnative/vineyardd:latest
                   imagePullPolicy: IfNotPresent
                   size: 256Mi
@@ -147,12 +144,6 @@ spec:
                       - name
                       type: object
                     type: array
-                  etcdEndpoint:
-                    default: http://etcd-for-vineyard:2379
-                    type: string
-                  etcdPrefix:
-                    default: /vineyard
-                    type: string
                   image:
                     default: vineyardcloudnative/vineyardd:latest
                     type: string
@@ -165,7 +156,7 @@ spec:
                   socket:
                     default: /var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}
                     type: string
-                  spillConfig:
+                  spill:
                     properties:
                       name:
                         default: ""

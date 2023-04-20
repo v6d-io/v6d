@@ -103,87 +103,80 @@ The detailed configuration entries for creating a vineyard cluster are listed as
          - The replicas of vineyardd.
          - 3
 
-       * - | vineyardConfig.
+       * - | etcdReplicas
+         - int
+         - The etcd replicas of vineyard
+         - 3
+
+       * - | vineyard.
            | image
          - string
          - The image name of vineyardd container.
          - | "vineyardcloudnative/
            | vineyardd:latest"
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | imagePullPolicy
          - string
          - The image pull policy of vineyardd image.
          - nil
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | syncCRDs
          - bool
          - Synchronize CRDs when persisting objects
          - true
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | socket
          - string
          - The ipc socket file of vineyardd.
          - nil
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | size
          - string
          - The shared memory size for vineyardd.
          - nil
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | streamThreshold
          - int64
          - The memory threshold of streams
            (percentage of total memory)
          - nil
 
-       * - | vineyardConfig.
-           | etcdEndpoint
-         - string
-         - The endpoint of etcd.
-         - nil
-
-       * - | vineyardConfig.
-           | etcdPrefix
-         - string
-         - The path prefix of etcd.
-         - nil
-
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | Name
          - string
          - The name of the spill config,
            if set we'll enable the spill module.
          - nil
 
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | path
          - string
          - The path of spilling.
          - nil
 
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | spillLowerRate
          - string
          - The low watermark of spilling memory.
          - nil
 
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | spillUpperRate
          - string
          - The high watermark of triggering spilling.
          - nil
 
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | persistent
            | VolumeSpec
          - | corev1.
@@ -192,8 +185,8 @@ The detailed configuration entries for creating a vineyard cluster are listed as
          - The PV of the spilling for persistent storage.
          - nil
 
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | persistent
            | VolumeClaimSpec
          - | corev1.
@@ -202,55 +195,55 @@ The detailed configuration entries for creating a vineyard cluster are listed as
          - The PVC of the spilling for the persistent storage.
          - nil
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | env
          - []corev1.EnvVar
          - The environment of vineyardd.
          - nil
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | env
          - []corev1.EnvVar
          - The environment of vineyardd.
          - nil
 
-       * - | pluginConfig.
+       * - | pluginImage.
            | backupImage
          - string
          - The image of backup operation
          - "ghcr.io/v6d-io/v6d/backup-job"
 
-       * - | pluginConfig.
+       * - | pluginImage.
            | recoverImage
          - string
          - The image of recover operation
          - "ghcr.io/v6d-io/v6d/recover-job"
 
-       * - | pluginConfig.
+       * - | pluginImage.
            | daskRepartitionImage
          - string
          - The image of dask repartition operation
          - "ghcr.io/v6d-io/v6d/dask-repartition"
 
-       * - | pluginConfig.
+       * - | pluginImage.
            | localAssemblyImage
          - string
          - The image of local assembly operation
          - "ghcr.io/v6d-io/v6d/local-assembly"
 
-       * - | pluginConfig.
+       * - | pluginImage.
            | distributedAssemblyImage
          - string
          - The image of distributed assembly operation
          - "ghcr.io/v6d-io/v6d/distributed-assembly"
 
-       * - | metricConfig.
+       * - | metric.
            | image
          - string
          - The image name of metric.
          - nil
 
-       * - | metricConfig.
+       * - | metric.
            | imagePullPolicy
          - string
          - The image pull policy of metric.
@@ -266,18 +259,6 @@ The detailed configuration entries for creating a vineyard cluster are listed as
            | port
          - int
          - The service port of vineyardd service
-         - nil
-
-       * - | service.
-           | selector
-         - string
-         - The label selector of vineyardd service.
-         - nil
-
-       * - | etcd.
-           | replicas
-         - int
-         - The etcd replicas of vineyard
          - nil
 
        * - | volume.
@@ -322,87 +303,75 @@ available configurations.
          - The replicas of your workload that needs to injected with vineyard sidecar.
          - 0
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | image
          - string
          - The image name of vineyard sidecar container.
          - | "vineyardcloudnative/
            | vineyardd:latest"
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | imagePullPolicy
          - string
          - The image pull policy of vineyard sidecar image.
          - nil
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | syncCRDs
          - bool
          - Synchronize CRDs when persisting objects
          - true
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | socket
          - string
          - The ipc socket file of vineyard sidecar.
          - nil
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | size
          - string
          - The shared memory size for vineyard sidecar.
          - nil
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | streamThreshold
          - int64
          - The memory threshold of streams
            (percentage of total memory)
          - nil
 
-       * - | vineyardConfig.
-           | etcdEndpoint
-         - string
-         - The endpoint of etcd.
-         - nil
-
-       * - | vineyardConfig.
-           | etcdPrefix
-         - string
-         - The path prefix of etcd.
-         - nil
-
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | Name
          - string
          - The name of the spill config,
            if set we'll enable the spill module.
          - nil
 
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | path
          - string
          - The path of spilling.
          - nil
 
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | spillLowerRate
          - string
          - The low watermark of spilling memory.
          - nil
 
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | spillUpperRate
          - string
          - The high watermark of triggering spilling.
          - nil
 
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | persistent
            | VolumeSpec
          - | corev1.
@@ -411,8 +380,8 @@ available configurations.
          - The PV of the spilling for persistent storage.
          - nil
 
-       * - | vineyardConfig.
-           | spillConfig.
+       * - | vineyard.
+           | spill.
            | persistent
            | VolumeClaimSpec
          - | corev1.
@@ -421,25 +390,25 @@ available configurations.
          - The PVC of the spilling for the persistent storage.
          - nil
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | env
          - []corev1.EnvVar
          - The environment of vineyard sidecar.
          - nil
 
-       * - | metricConfig.
+       * - | metric.
            | enable
          - bool
          - Enable the metrics in vineyard sidecar.
          - false
 
-       * - | metricConfig.
+       * - | metric.
            | image
          - string
          - The image name of metric.
          - nil
 
-       * - | metricConfig.
+       * - | metric.
            | imagePullPolicy
          - string
          - The image pull policy of metric.
@@ -455,12 +424,6 @@ available configurations.
            | port
          - int
          - The service port of vineyard sidecar service
-         - nil
-
-       * - | service.
-           | selector
-         - string
-         - The label selector of vineyard sidecar service.
          - nil
 
        * - | volume.
@@ -568,7 +531,7 @@ Next, you could see the sidecar container injected into the pod.
       name: app-job-deployment-with-default-sidecar-default-sidecar
       namespace: vineyard-job
     spec:
-      metricConfig:
+      metric:
         enable: false
         image: vineyardcloudnative/vineyard-grok-exporter:latest
         imagePullPolicy: IfNotPresent
@@ -578,14 +541,12 @@ Next, you could see the sidecar container injected into the pod.
         port: 9600
         selector: rpc.vineyardd.v6d.io/rpc=vineyard-rpc
         type: ClusterIP
-      vineyardConfig:
-        etcdEndpoint: http://etcd-for-vineyard:2379
-        etcdPrefix: /vineyard
+      vineyard:
         image: vineyardcloudnative/vineyardd:latest
         imagePullPolicy: IfNotPresent
         size: 256Mi
         socket: /var/run/vineyard.sock
-        spillConfig:
+        spill:
           name: ""
           path: ""
           persistentVolumeClaimSpec:
@@ -669,7 +630,7 @@ sidecar cr as follows:
     spec:
       replicas: 2
       selector: app=job-deployment-with-custom-sidecar
-      vineyardConfig:
+      vineyard:
         socket: /var/run/vineyard.sock
         size: 1024Mi
     ---
@@ -1186,9 +1147,9 @@ use the following YAML file:
       # use the same namespace as the vineyard operator
       namespace: vineyard-system
     spec:
-      vineyardConfig:
+      vineyard:
         # spill configuration
-        spillConfig:
+        spill:
           name: spill-path
           # please make sure the path exists
           path: /var/vineyard/spill

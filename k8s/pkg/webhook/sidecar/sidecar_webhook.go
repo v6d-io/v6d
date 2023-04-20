@@ -171,7 +171,7 @@ func (r *Injector) ApplyToSidecar(
 
 	selector := ""
 	if addLabels {
-		selector = sidecar.Spec.Service.Selector
+		selector = "rpc.vineyardd.v6d.io/rpc=vineyardd-rpc"
 	}
 	if err := injector.InjectSidecar(unstructuredPodWithSidecar, unstructuredPod, sidecar, selector); err != nil {
 		return errors.Wrap(err, "failed to inject sidecar")

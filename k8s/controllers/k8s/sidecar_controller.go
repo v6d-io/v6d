@@ -44,11 +44,17 @@ func getSidecarEtcdConfig() EtcdConfig {
 	return SidecarEtcd
 }
 
-// SidecarSvcLabelSelector contains the label selector of sidecar service
-var SidecarSvcLabelSelector []ServiceLabelSelector
+// sidecarSvcLabelSelector contains the label selector of sidecar service
+var sidecarSvcLabelSelector []ServiceLabelSelector
+
+func init() {
+	sidecarSvcLabelSelector = make([]ServiceLabelSelector, 1)
+	sidecarSvcLabelSelector[0].Key = "rpc.vineyardd.v6d.io/rpc"
+	sidecarSvcLabelSelector[0].Value = "vineyardd-rpc"
+}
 
 func getSidecarSvcLabelSelector() []ServiceLabelSelector {
-	return SidecarSvcLabelSelector
+	return sidecarSvcLabelSelector
 }
 
 // SidecarReconciler reconciles a Sidecar object
@@ -87,10 +93,10 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		},
 	}
 	// setup the etcd configuration
-	replicas := sidecar.Spec.Replicas
-	SidecarEtcd = BuildEtcdConfig(sidecar.Namespace, replicas, sidecar.Spec.VineyardConfig.Image)
+	etcdReplicas := sidecar.Spec.EtcdReplicas
+	SidecarEtcd = BuildEtcdConfig(sidecar.Namespace, etcdReplicas, sidecar.Spec.Vineyard.Image)
 
-	for i := 0; i < replicas; i++ {
+	for i := 0; i < etcdReplicas; i++ {
 		SidecarEtcd.Rank = i
 		if _, err := sidecarApp.Apply(ctx, "etcd/etcd.yaml", logger, false); err != nil {
 			logger.Error(err, "failed to apply etcd pod")
@@ -102,11 +108,6 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 	}
 
-	s := strings.Split(sidecar.Spec.Service.Selector, "=")
-
-	SidecarSvcLabelSelector = make([]ServiceLabelSelector, 1)
-	SidecarSvcLabelSelector[0].Key = s[0]
-	SidecarSvcLabelSelector[0].Value = s[1]
 	if _, err := sidecarApp.Apply(ctx, "vineyardd/etcd-service.yaml", logger, true); err != nil {
 		logger.Error(err, "failed to apply etcd service")
 		return ctrl.Result{}, err

@@ -42,7 +42,7 @@ var (
 )
 
 // ApplyVineyardContainerOpts applies the vineyard container options
-func ApplyVineyardContainerOpts(c *v1alpha1.VineyardContainerConfig,
+func ApplyVineyardContainerOpts(c *v1alpha1.VineyardConfig,
 	prefix string, cmd *cobra.Command,
 ) {
 	cmd.Flags().StringVarP(&c.Image, prefix+".image",
@@ -62,21 +62,17 @@ func ApplyVineyardContainerOpts(c *v1alpha1.VineyardContainerConfig,
 			"Ei, Pi, Ti, Gi, Mi, Ki. ")
 	cmd.Flags().Int64VarP(&c.StreamThreshold, prefix+".streamThreshold",
 		"", 80, "memory threshold of streams (percentage of total memory)")
-	cmd.Flags().StringVarP(&c.EtcdEndpoint, prefix+".etcdEndpoint",
-		"", "http://etcd-for-vineyard:2379", "The etcd endpoint of vineyardd")
-	cmd.Flags().StringVarP(&c.EtcdPrefix, prefix+".etcdPrefix",
-		"", "/vineyard", "The etcd prefix of vineyardd")
 	cmd.Flags().StringSliceVarP(&VineyardContainerEnvs, prefix+".envs", "", []string{},
 		"The environment variables of vineyardd")
-	cmd.Flags().StringVarP(&c.SpillConfig.Name, prefix+".spill.config",
+	cmd.Flags().StringVarP(&c.Spill.Name, prefix+".spill.config",
 		"", "",
 		"If you want to enable the spill mechanism, please set the name of spill config")
-	cmd.Flags().StringVarP(&c.SpillConfig.Path, prefix+".spill.path",
+	cmd.Flags().StringVarP(&c.Spill.Path, prefix+".spill.path",
 		"", "", "The path of spill config")
-	cmd.Flags().StringVarP(&c.SpillConfig.SpillLowerRate,
+	cmd.Flags().StringVarP(&c.Spill.SpillLowerRate,
 		prefix+".spill.spillLowerRate",
 		"", "0.3", "The low watermark of spilling memory")
-	cmd.Flags().StringVarP(&c.SpillConfig.SpillUpperRate,
+	cmd.Flags().StringVarP(&c.Spill.SpillUpperRate,
 		prefix+".spill.spillUpperRate",
 		"", "0.8", "The high watermark of spilling memory")
 	cmd.Flags().StringVarP(&VineyardSpillPVandPVC, prefix+".spill.pv-pvc-spec", "", "",
@@ -89,9 +85,6 @@ func ApplyServiceOpts(s *v1alpha1.ServiceConfig, prefix string, cmd *cobra.Comma
 		"the service type of vineyard service")
 	cmd.Flags().IntVarP(&s.Port, prefix+".service.port", "", 9600,
 		"the service port of vineyard service")
-	cmd.Flags().StringVarP(&s.Selector, prefix+".service.selector", "",
-		"rpc.vineyardd.v6d.io/rpc=vineyard-rpc",
-		"the service selector of vineyard service")
 }
 
 // ApplyVolumeOpts represents the option of pvc volume configuration
@@ -103,7 +96,7 @@ func ApplyVolumeOpts(v *v1alpha1.VolumeConfig, prefix string, cmd *cobra.Command
 }
 
 // ApplyMetricContainerOpts represents the option of metric container configuration
-func ApplyMetricContainerOpts(m *v1alpha1.MetricContainerConfig,
+func ApplyMetricContainerOpts(m *v1alpha1.MetricConfig,
 	prefix string, cmd *cobra.Command,
 ) {
 	cmd.Flags().BoolVarP(&m.Enable, prefix+".metric.enable", "",
@@ -117,20 +110,20 @@ func ApplyMetricContainerOpts(m *v1alpha1.MetricContainerConfig,
 
 // ApplyPluginImageOpts represents the option of plugin image configuration
 func ApplyPluginImageOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.BackupImage,
-		"plugin.backupImage", "", "ghcr.io/v6d-io/v6d/backup-job",
+	cmd.Flags().StringVarP(&VineyarddOpts.PluginImage.BackupImage,
+		"pluginImage.backupImage", "", "ghcr.io/v6d-io/v6d/backup-job",
 		"the backup image of vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.RecoverImage,
-		"plugin.recoverImage", "", "ghcr.io/v6d-io/v6d/recover-job",
+	cmd.Flags().StringVarP(&VineyarddOpts.PluginImage.RecoverImage,
+		"pluginImage.recoverImage", "", "ghcr.io/v6d-io/v6d/recover-job",
 		"the recover image of vineyardd")
-	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.DaskRepartitionImage,
-		"plugin.daskRepartitionImage", "", "ghcr.io/v6d-io/v6d/dask-repartition",
+	cmd.Flags().StringVarP(&VineyarddOpts.PluginImage.DaskRepartitionImage,
+		"pluginImage.daskRepartitionImage", "", "ghcr.io/v6d-io/v6d/dask-repartition",
 		"the dask repartition image of vineyardd workflow")
-	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.LocalAssemblyImage,
-		"plugin.localAssemblyImage", "", "ghcr.io/v6d-io/v6d/local-assembly",
+	cmd.Flags().StringVarP(&VineyarddOpts.PluginImage.LocalAssemblyImage,
+		"pluginImage.localAssemblyImage", "", "ghcr.io/v6d-io/v6d/local-assembly",
 		"the local assembly image of vineyardd workflow")
-	cmd.Flags().StringVarP(&VineyarddOpts.PluginConfig.DistributedAssemblyImage,
-		"plugin.distributedAssemblyImage", "", "ghcr.io/v6d-io/v6d/distributed-assembly",
+	cmd.Flags().StringVarP(&VineyarddOpts.PluginImage.DistributedAssemblyImage,
+		"pluginImage.distributedAssemblyImage", "", "ghcr.io/v6d-io/v6d/distributed-assembly",
 		"the distributed image of vineyard workflow")
 }
 
@@ -145,15 +138,15 @@ func ApplyVineyarddOpts(cmd *cobra.Command) {
 	// setup the vineyardd configuration
 	cmd.Flags().IntVarP(&VineyarddOpts.Replicas, "vineyard.replicas", "", 3,
 		"the number of vineyardd replicas")
-	cmd.Flags().IntVarP(&VineyarddOpts.Etcd.Replicas, "vineyard.etcd.replicas",
+	cmd.Flags().IntVarP(&VineyarddOpts.EtcdReplicas, "vineyard.etcd.replicas",
 		"", 3, "the number of etcd replicas in a vineyard cluster")
 	cmd.Flags().StringVarP(&VineyarddFile, "file", "f", "", "the path of vineyardd")
 	// setup the vineyardd name
 	ApplyVineyarddNameOpts(cmd)
 	// setup the vineyard container configuration of vineyardd
-	ApplyVineyardContainerOpts(&VineyarddOpts.VineyardConfig, "vineyardd", cmd)
+	ApplyVineyardContainerOpts(&VineyarddOpts.Vineyard, "vineyardd", cmd)
 	// setup the metric container configuration of vineyardd
-	ApplyMetricContainerOpts(&VineyarddOpts.MetricConfig, "vineyardd", cmd)
+	ApplyMetricContainerOpts(&VineyarddOpts.Metric, "vineyardd", cmd)
 	// setup the vineyard service configuration of vineyardd
 	ApplyServiceOpts(&VineyarddOpts.Service, "vineyardd", cmd)
 	// setup the vineyard volumes if needed

@@ -26,7 +26,7 @@ Option #1: Install from helm chart (recommended)
 
     $ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
     $ helm repo update
-    $ helm install vineyard-operator vineyard/vineyard-operator
+    $ helm install vineyard-operator vineyard/vineyard-operator -n vineyard-system --create-namespace
 
 Wait for the vineyard operator until ready.
 
@@ -46,12 +46,13 @@ Option #2: Install form source code
       $ cd k8s
       $ make -C k8s docker-build
 
-   With `kind`_, you need to first import the image into the kind cluster (otherwise you
-   need to push the image to your registry first):
+   .. caution::
 
-   .. code:: bash
+      With `kind`_, you need to first import the image into the kind cluster:
 
-      $ kind load docker-image vineyardcloudnative/vineyard-operator:latest
+      .. code:: bash
+
+          $ kind load docker-image vineyardcloudnative/vineyard-operator:latest
 
 3. Install the cert-manager
 
@@ -113,14 +114,11 @@ replicas:
       # don't use default namespace
       namespace: vineyard-system
     spec:
-      replicas: 2
-      etcd:
-        replicas: 3
       service:
         type: ClusterIP
         port: 9600
-      vineyardConfig:
-        image: ghcr.io/v6d-io/v6d/vineyardd:alpine-latest
+      vineyard:
+        image: vineyardcloudnative/vineyardd:alpine-latest
         imagePullPolicy: IfNotPresent
     EOF
 

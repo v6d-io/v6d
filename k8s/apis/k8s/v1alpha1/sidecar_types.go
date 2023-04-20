@@ -32,25 +32,30 @@ type SidecarSpec struct {
 	// +kubebuilder:default:=0
 	Replicas int `json:"replicas,omitempty"`
 
+	// EtcdReplicas describe the etcd replicas
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=3
+	EtcdReplicas int `json:"etcdReplicas,omitempty"`
+
 	// vineyard container configuration
 	// +kububuilder:validation:Optional
 	//nolint: lll
-	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}", size: "256Mi", streamThreshold: 80, etcdEndpoint: "http://etcd-for-vineyard:2379", etcdPrefix: "/vineyard"}
-	VineyardConfig VineyardContainerConfig `json:"vineyardConfig,omitempty"`
+	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}", size: "256Mi", streamThreshold: 80}
+	Vineyard VineyardConfig `json:"vineyard,omitempty"`
 
 	// metric container configuration
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={enable: false, image: "vineyardcloudnative/vineyard-grok-exporter:latest", imagePullPolicy: "IfNotPresent"}
-	MetricConfig MetricContainerConfig `json:"metricConfig,omitempty"`
+	Metric MetricConfig `json:"metric,omitempty"`
 
-	// metric configuration
+	// metric configurations
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={}
 	Volume VolumeConfig `json:"volume,omitempty"`
 
 	// rpc service configuration
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:={type: "ClusterIP", port: 9600, selector: "rpc.vineyardd.v6d.io/rpc=vineyard-rpc"}
+	// +kubebuilder:default:={type: "ClusterIP", port: 9600}
 	Service ServiceConfig `json:"service,omitempty"`
 }
 

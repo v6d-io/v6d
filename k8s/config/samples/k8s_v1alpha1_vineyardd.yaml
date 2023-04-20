@@ -5,13 +5,14 @@ metadata:
   # don't use default namespace
   namespace: vineyard-system
 spec:
-  image: vineyardcloudnative/vineyardd:latest
   replicas: 2
-  imagePullPolicy: IfNotPresent
-  # vineyardd's configuration
-  size: 256Mi
-  syncCRDs: true
-  spillConfig:
+  vineyard:
+    image: vineyardcloudnative/vineyardd:latest
+    imagePullPolicy: IfNotPresent
+    # vineyardd's configuration
+    size: 256Mi
+    syncCRDs: true
+  spill:
     name: spill-path
     path: /var/checkpoint/spill
     persistentVolumeSpec:
@@ -29,8 +30,6 @@ spec:
       resources:
         requests:
           storage: 256Mi
-  etcd:
-    replicas: 3
   service:
     type: ClusterIP
     port: 9600
