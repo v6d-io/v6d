@@ -24,7 +24,8 @@ setup:
     - name: install app with default sidecar
       command: |
         kubectl create namespace vineyard-job
-        go run k8s/cmd/main.go inject -f k8s/test/e2e/sidecar-demo/sidecar-with-default-sidecar.yaml | kubectl apply -f -
+        go run k8s/cmd/main.go inject -f k8s/test/e2e/sidecar-demo/sidecar-with-default-sidecar.yaml --apply-resources\
+        | kubectl apply -f -
       wait:
         - namespace: vineyard-job
           resource: deployment/job-deployment-with-default-sidecar

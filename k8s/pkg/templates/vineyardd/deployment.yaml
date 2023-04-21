@@ -135,14 +135,14 @@ spec:
               mountPath: /dev/shm
             - name: log
               mountPath: /var/log/vineyard
-          {{- if and .Spec.VineyardConfig.CPU .Spec.VineyardConfig.Memory }}
+          {{- if and .Spec.Vineyard.CPU .Spec.Vineyard.Memory }}
           resources:
             requests:
-              cpu: "{{ .Spec.VineyardConfig.CPU }}"
-              memory: "{{ .Spec.VineyardConfig.Memory }}"
+              cpu: "{{ .Spec.Vineyard.CPU }}"
+              memory: "{{ .Spec.Vineyard.Memory }}"
             limits:
-              cpu: "{{ .Spec.VineyardConfig.CPU }}"
-              memory: "{{ .Spec.VineyardConfig.Memory }}"
+              cpu: "{{ .Spec.Vineyard.CPU }}"
+              memory: "{{ .Spec.Vineyard.Memory }}"
           {{- end }}
         {{- if .Spec.Metric.Enable }}
         - name: metrics
