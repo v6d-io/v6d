@@ -168,7 +168,14 @@ def resolver_context(resolvers=None, base=None):
         _resolver_context_local.default_resolver = current_resolver
 
 
-def get(client, object_id=None, name=None, resolver=None, fetch=False, **kw):
+def get(
+    client,
+    object_id: ObjectID = None,
+    name: str = None,
+    resolver: ResolverContext = None,
+    fetch: bool = False,
+    **kw
+):
     """Get vineyard object as python value.
 
     .. code:: python

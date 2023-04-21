@@ -107,6 +107,8 @@ int recv_fd(int conn) {
     ssize_t r = recvmsg(conn, &msg, 0);
     if (r == -1) {
       if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+        std::clog << "[warn] error occurred while looping in sending fd: "
+                  << strerror(errno) << std::endl;
         continue;
       } else {
         std::clog << "[error] Error in recv_fd (errno = " << errno << ")"

@@ -252,6 +252,7 @@ Status BlobWriter::_Seal(Client& client, std::shared_ptr<Object>& object) {
   // get blob and re-map
   uint8_t *mmapped_ptr = nullptr, *dist = nullptr;
   if (payload_.data_size > 0) {
+    std::lock_guard<std::recursive_mutex> __guard(client.client_mutex_);
     RETURN_ON_ERROR(client.shm_->Mmap(
         payload_.store_fd, payload_.object_id, payload_.map_size,
         payload_.data_size, payload_.data_offset,
