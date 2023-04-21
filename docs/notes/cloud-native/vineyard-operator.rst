@@ -396,23 +396,17 @@ available configurations.
          - The environment of vineyard sidecar.
          - nil
 
-<<<<<<< HEAD
-       * - | metric.
-||||||| constructed merge base
-       * - | metricConfig.
-=======
-       * - | vineyardConfig.
+       * - | vineyard.
            | memory
          - string
          - The requested memory of vineyard sidecar container.
 
-       * - | vineyardConfig.
+       * - | vineyard.
            | cpu
          - string
          - The requested cpu of vineyard sidecar container.
 
-       * - | metricConfig.
->>>>>>> Improve the vineyardctl inject command.
+       * - | metric.
            | enable
          - bool
          - Enable the metrics in vineyard sidecar.

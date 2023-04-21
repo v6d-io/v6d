@@ -49,10 +49,12 @@ type SpillConfig struct {
 
 	// the PersistentVolumeSpec of the spilling PV
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
 	PersistentVolumeSpec corev1.PersistentVolumeSpec `json:"persistentVolumeSpec,omitempty"`
 
 	// the PersistentVolumeClaimSpec of the spill file
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
 	PersistentVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaimSpec,omitempty"`
 }
 

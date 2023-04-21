@@ -21,8 +21,6 @@ metadata:
     etcd_node: etcd {{- $etcd.Rank }}
   name: etcd {{- $etcd.Rank }}
   namespace: {{ $etcd.Namespace }}
-  ownerReferences:
-    
 spec:
   ports:
   - name: client

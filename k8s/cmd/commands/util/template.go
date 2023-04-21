@@ -16,6 +16,8 @@ limitations under the License.
 package util
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -37,7 +39,7 @@ func RenderManifestAsObj(path string, value interface{},
 	}
 
 	_, err = swckkube.LoadTemplate(string(manifest), value, tmplFunc, obj)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "failed load anything from manifests") {
 		return obj, errors.Wrapf(err, "failed to render manifest %s", path)
 	}
 	return obj, nil
@@ -45,8 +47,8 @@ func RenderManifestAsObj(path string, value interface{},
 
 // BuildObjsFromEtcdManifests builds a list of objects from the etcd template files.
 // the template files are under the dir 'k8s/pkg/templates/etcd'
-func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, namespace string,
-	replicas int, image string, value interface{},
+func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, name string,
+	namespace string, replicas int, image string, value interface{},
 	tmplFunc map[string]interface{},
 ) ([]*unstructured.Unstructured, []*unstructured.Unstructured, error) {
 	podObjs := []*unstructured.Unstructured{}
@@ -57,7 +59,7 @@ func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, namespace string,
 		return podObjs, svcObjs, errors.Wrap(err, "failed to get etcd manifests")
 	}
 	// set up the etcd config
-	*EtcdConfig = k8s.BuildEtcdConfig(namespace, replicas, image)
+	*EtcdConfig = k8s.BuildEtcdConfig(name, namespace, replicas, image)
 
 	for i := 0; i < replicas; i++ {
 		EtcdConfig.Rank = i
@@ -101,6 +103,7 @@ func BuildObjsFromVineyarddManifests(files []string, value interface{},
 			if err != nil {
 				return objs, err
 			}
+
 			if obj.GetName() != "" {
 				objs = append(objs, obj)
 			}

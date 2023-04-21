@@ -24,9 +24,6 @@ import (
 var (
 	// the following label is for vineyard rpc service
 
-	// DefaultSidecarLabel is the default name of the vineyard sidecar container
-	DefaultSidecarLabel = "sidecar.v6d.io/name"
-
 	// SidecarName is the name of sidecar
 	// it is also the label selector value of sidecar
 	SidecarName string

@@ -48,7 +48,7 @@ spec:
           - /bin/bash
           - -c
           - >
-            /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.{{ .Namespace }}.svc.cluster.local:2379;
+            /usr/bin/wait-for-it.sh -t 60 {{ .Name }}-etcd-service.{{ .Namespace }}.svc.cluster.local:2379;
             sleep 1;
             /usr/local/bin/vineyardd
             --sync_crds {{ .Spec.Vineyard.SyncCRDs }}
@@ -57,7 +57,7 @@ spec:
             --stream_threshold {{ .Spec.Vineyard.StreamThreshold }}
             --etcd_cmd etcd
             --etcd_prefix /vineyard
-            --etcd_endpoint http://etcd-for-vineyard:2379
+            --etcd_endpoint http://{{ .Name }}-etcd-service:2379
             {{- if .Spec.Vineyard.Spill.Path }}
             --spill_path {{ .Spec.Vineyard.Spill.Path }}
             --spill_lower_rate {{ .Spec.Vineyard.Spill.SpillLowerRate }}

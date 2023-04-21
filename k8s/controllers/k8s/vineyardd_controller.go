@@ -48,6 +48,7 @@ type VineyarddReconciler struct {
 
 // EtcdConfig holds all configuration about etcd
 type EtcdConfig struct {
+	Name      string
 	Namespace string
 	Rank      int
 	Endpoints string
@@ -127,7 +128,8 @@ func (r *VineyarddReconciler) Reconcile(
 
 	// set up the etcd configuration
 	etcdReplicas := vineyardd.Spec.EtcdReplicas
-	Etcd = BuildEtcdConfig(vineyardd.Namespace, etcdReplicas, vineyardd.Spec.Vineyard.Image)
+	Etcd = BuildEtcdConfig(vineyardd.Name, vineyardd.Namespace,
+		etcdReplicas, vineyardd.Spec.Vineyard.Image)
 
 	for i := 0; i < etcdReplicas; i++ {
 		Etcd.Rank = i
@@ -197,9 +199,11 @@ func (r *VineyarddReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // BuildEtcdConfig builds the etcd config.
-func BuildEtcdConfig(namespace string, replicas int, image string) EtcdConfig {
+func BuildEtcdConfig(name string, namespace string,
+	replicas int, image string) EtcdConfig {
 	etcdConfig := EtcdConfig{}
 	// the etcd is built in the vineyardd image
+	etcdConfig.Name = name
 	etcdConfig.Image = image
 	etcdConfig.Namespace = namespace
 	etcdEndpoints := make([]string, 0, replicas)

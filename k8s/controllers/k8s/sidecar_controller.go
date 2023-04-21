@@ -80,7 +80,8 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	// setup the etcd configuration
 	etcdReplicas := sidecar.Spec.EtcdReplicas
-	SidecarEtcd = BuildEtcdConfig(sidecar.Namespace, etcdReplicas, sidecar.Spec.Vineyard.Image)
+	SidecarEtcd = BuildEtcdConfig(sidecar.Name, sidecar.Namespace,
+		etcdReplicas, sidecar.Spec.Vineyard.Image)
 
 	for i := 0; i < etcdReplicas; i++ {
 		SidecarEtcd.Rank = i

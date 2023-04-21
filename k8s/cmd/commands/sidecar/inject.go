@@ -30,6 +30,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	"github.com/v6d-io/v6d/k8s/pkg/injector"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
@@ -71,7 +72,102 @@ var (
 	injectLong = util.LongDesc(`
 	Inject the vineyard sidecar container into a workload. You can
 	input a workload yaml or a workload json and then get the injected 
-	workload yaml and some etcd yaml from the output.`)
+	workload and some etcd manifests from the output.
+	
+	The output is a set of manifests that includes the injected workload,
+	the rpc service, the etcd service and the etcd cluster(e.g. several
+	pods and services). Next, we will introduce a simple example to show
+	the injection.
+
+	Suppose you have the following workload yaml:
+
+	apiVersion: apps/v1
+	kind: Deployment
+	metadata:
+	  name: nginx-deployment
+	  # Notice, you must set the namespace here
+	  namespace: vineyard-job
+	spec:
+	  selector:
+	    matchLabels:
+	      app: nginx
+	  template:
+	    metadata:
+	      labels:
+	        app: nginx
+	    spec:
+	      containers:
+	      - name: nginx
+	        image: nginx:1.14.2
+	        ports:
+	        - containerPort: 80
+
+	Then, you can use the following command to inject the vineyard sidecar
+	
+	$ vineyardctl inject -f workload.yaml --apply-resources
+	
+	After running the command, the main output(removed some unnecessary fields)
+	is as follows:
+	
+	apiVersion: apps/v1
+	kind: Deployment
+	metadata:
+  	  creationTimestamp: null
+	  name: nginx-deployment
+      namespace: vineyard-job
+	spec:
+  	  selector:
+    	matchLabels:
+          app: nginx
+    template:
+      metadata:
+      labels:
+        app: nginx
+		# the default sidecar name is vineyard-sidecar
+        app.vineyard.io/name: vineyard-sidecar
+      spec:
+        containers:
+        - command: null
+          image: nginx:1.14.2
+          name: nginx
+          ports:
+          - containerPort: 80
+          volumeMounts:
+          - mountPath: /var/run
+            name: vineyard-socket
+        - command:
+          - /bin/bash
+          - -c
+          - |
+		    /usr/bin/wait-for-it.sh -t 60 vineyard-sidecar-etcd-service.vineyard-job.svc.cluster.local:2379; \
+		    sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock --size 256Mi \
+		    --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard \
+		    --etcd_endpoint http://vineyard-sidecar-etcd-service:2379
+          env:
+          - name: VINEYARDD_UID
+            value: null
+          - name: VINEYARDD_NAME
+            value: vineyard-sidecar
+          - name: VINEYARDD_NAMESPACE
+            value: vineyard-job
+          image: vineyardcloudnative/vineyardd:latest
+          imagePullPolicy: IfNotPresent
+          name: vineyard-sidecar
+          ports:
+          - containerPort: 9600
+            name: vineyard-rpc
+            protocol: TCP
+          volumeMounts:
+          - mountPath: /var/run
+            name: vineyard-socket
+        volumes:
+        - emptyDir: {}
+          name: vineyard-socket
+	
+	The sidecar template can be accessed from the following link:
+	https://github.com/v6d-io/v6d/blob/main/k8s/pkg/templates/sidecar/injection-template.yaml
+	also you can get some inspiration from the doc link:
+	https://v6d.io/notes/cloud-native/vineyard-operator.html#installing-vineyard-as-sidecar`)
 
 	injectExample = util.Examples(`
 	# use json format to output the injected workload
@@ -232,8 +328,9 @@ func GetManifestFromTemplate(workload string) (OutputManifests, error) {
 		"getEtcdConfig": getEtcdConfig,
 	}
 
-	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig, namespace,
-		sidecar.Spec.Replicas, sidecar.Spec.Vineyard.Image, sidecar, tmplFunc)
+	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig,
+		flags.SidecarName, namespace, sidecar.Spec.Replicas,
+		sidecar.Spec.Vineyard.Image, sidecar, tmplFunc)
 	if err != nil {
 		return om, errors.Wrap(err, "failed to build etcd objects")
 	}
@@ -443,7 +540,7 @@ func buildSidecar(namespace string) (*v1alpha1.Sidecar, error) {
 func InjectSidecarConfig(sidecar *v1alpha1.Sidecar, workloadObj,
 	sidecarObj *unstructured.Unstructured,
 ) error {
-	selector := flags.DefaultSidecarLabel + "=" + flags.SidecarName
+	selector := labels.VineyardAppLabel + "=" + flags.SidecarName
 	err := injector.InjectSidecar(workloadObj, sidecarObj, sidecar, selector)
 	if err != nil {
 		return errors.Wrap(err, "failed to inject the sidecar")
