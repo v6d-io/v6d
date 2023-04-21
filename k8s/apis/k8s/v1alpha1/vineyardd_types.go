@@ -49,10 +49,12 @@ type SpillConfig struct {
 
 	// the PersistentVolumeSpec of the spilling PV
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
 	PersistentVolumeSpec corev1.PersistentVolumeSpec `json:"persistentVolumeSpec,omitempty"`
 
 	// the PersistentVolumeClaimSpec of the spill file
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
 	PersistentVolumeClaimSpec corev1.PersistentVolumeClaimSpec `json:"persistentVolumeClaimSpec,omitempty"`
 }
 
@@ -142,6 +144,16 @@ type VineyardConfig struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={}
 	Env []corev1.EnvVar `json:"env,omitempty"`
+
+	// the memory resources of vineyard container
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	Memory string `json:"memory,omitempty"`
+
+	// the cpu resources of vineyard container
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	CPU string `json:"cpu,omitempty"`
 }
 
 // PluginImageConfig holds all image configuration about pluggable drivers(backup, recover,

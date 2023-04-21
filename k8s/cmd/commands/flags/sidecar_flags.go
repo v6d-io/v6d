@@ -22,8 +22,27 @@ import (
 )
 
 var (
+	// the following label is for vineyard rpc service
+
+	// SidecarName is the name of sidecar
+	// it is also the label selector value of sidecar
+	SidecarName string
+
 	// WorkloadYaml is the yaml of workload
 	WorkloadYaml string
+
+	// WorkloadResource is the resource of workload
+	WorkloadResource string
+
+	// OutputFormat is the output format of the command
+	OutputFormat string
+
+	// ApplyResources means whether to apply the resources
+	// including the etcd cluster and the rpc service
+	ApplyResources bool
+
+	// OwnerReference is the owner reference of the workload
+	OwnerReference string
 
 	// SidecarOpts holds all configuration of sidecar Spec
 	SidecarOpts v1alpha1.SidecarSpec
@@ -38,7 +57,18 @@ func ApplySidecarOpts(cmd *cobra.Command) {
 	ApplyServiceOpts(&SidecarOpts.Service, "sidecar", cmd)
 	// setup the vineyard volumes if needed
 	ApplyVolumeOpts(&SidecarOpts.Volume, "sidecar", cmd)
+	cmd.Flags().StringVarP(&SidecarName, "name", "", "vineyard-sidecar",
+		"The name of sidecar")
 	cmd.Flags().IntVarP(&SidecarOpts.Replicas, "etcd-replicas", "", 1,
-		"the number of etcd replicas")
+		"The number of etcd replicas")
 	cmd.Flags().StringVarP(&WorkloadYaml, "file", "f", "", "The yaml of workload")
+	cmd.Flags().StringVarP(&WorkloadResource, "resource", "", "", "The resource of workload")
+	cmd.Flags().StringVarP(&OwnerReference, "owner-references", "", "",
+		"The owner reference of all injectied resources")
+	cmd.Flags().BoolVarP(&ApplyResources, "apply-resources", "", false,
+		"Whether to apply the resources including the etcd cluster and the rpc service "+
+			"if you enable this flag, the etcd cluster and the rpc service will be created during "+
+			"the injection")
+	cmd.Flags().StringVarP(&OutputFormat, "output", "o", "yaml",
+		"The output format of the command, support yaml and json")
 }

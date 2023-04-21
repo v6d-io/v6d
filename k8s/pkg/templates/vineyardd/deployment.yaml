@@ -12,31 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-{{- $l := getServiceLabelSelector }}
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
-    app.kubernetes.io/name: {{ .Name }}
+    app.vineyard.io/name: {{ .Name }}
     app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}
     app.kubernetes.io/component: deployment
 spec:
   replicas: {{ .Spec.Replicas }}
   selector:
     matchLabels:
-      {{- range $l }}
-      {{.Key}}: "{{.Value}}"
-      {{- end }}
+      app.vineyard.io/name: {{ .Name }}
       app.kubernetes.io/name: {{ .Name }}
       app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}
   template:
     metadata:
       labels:
-        {{- range $l }}
-        {{.Key}}: "{{.Value}}"
-        {{- end }}
+        app.vineyard.io/name: {{ .Name }}
         app.kubernetes.io/name: {{ .Name }}
         app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}
         app.kubernetes.io/component: deployment
@@ -52,7 +48,7 @@ spec:
           - /bin/bash
           - -c
           - >
-            /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.{{ .Namespace }}.svc.cluster.local:2379;
+            /usr/bin/wait-for-it.sh -t 60 {{ .Name }}-etcd-service.{{ .Namespace }}.svc.cluster.local:2379;
             sleep 1;
             /usr/local/bin/vineyardd
             --sync_crds {{ .Spec.Vineyard.SyncCRDs }}
@@ -61,7 +57,7 @@ spec:
             --stream_threshold {{ .Spec.Vineyard.StreamThreshold }}
             --etcd_cmd etcd
             --etcd_prefix /vineyard
-            --etcd_endpoint http://etcd-for-vineyard:2379
+            --etcd_endpoint http://{{ .Name }}-etcd-service:2379
             {{- if .Spec.Vineyard.Spill.Path }}
             --spill_path {{ .Spec.Vineyard.Spill.Path }}
             --spill_lower_rate {{ .Spec.Vineyard.Spill.SpillLowerRate }}
@@ -139,6 +135,15 @@ spec:
               mountPath: /dev/shm
             - name: log
               mountPath: /var/log/vineyard
+          {{- if and .Spec.Vineyard.CPU .Spec.Vineyard.Memory }}
+          resources:
+            requests:
+              cpu: "{{ .Spec.Vineyard.CPU }}"
+              memory: "{{ .Spec.Vineyard.Memory }}"
+            limits:
+              cpu: "{{ .Spec.Vineyard.CPU }}"
+              memory: "{{ .Spec.Vineyard.Memory }}"
+          {{- end }}
         {{- if .Spec.Metric.Enable }}
         - name: metrics
           image : {{ .Spec.Metric.Image }}

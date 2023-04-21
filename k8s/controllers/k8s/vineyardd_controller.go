@@ -48,6 +48,7 @@ type VineyarddReconciler struct {
 
 // EtcdConfig holds all configuration about etcd
 type EtcdConfig struct {
+	Name      string
 	Namespace string
 	Rank      int
 	Endpoints string
@@ -70,19 +71,6 @@ func getStorage(q resource.Quantity) string {
 type ServiceLabelSelector struct {
 	Key   string
 	Value string
-}
-
-// svcLabelSelector is the label selector of the service
-var svcLabelSelector []ServiceLabelSelector
-
-func init() {
-	svcLabelSelector = make([]ServiceLabelSelector, 1)
-	svcLabelSelector[0].Key = "rpc.vineyardd.v6d.io/rpc"
-	svcLabelSelector[0].Value = "vineyardd-rpc"
-}
-
-func getServiceLabelSelector() []ServiceLabelSelector {
-	return svcLabelSelector
 }
 
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
@@ -127,8 +115,7 @@ func (r *VineyarddReconciler) Reconcile(
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Vineyardd"),
 		Recorder: r.EventRecorder,
 		TmplFunc: map[string]interface{}{
-			"getStorage":              getStorage,
-			"getServiceLabelSelector": getServiceLabelSelector,
+			"getStorage": getStorage,
 		},
 	}
 	etcdApp := kubernetes.Application{
@@ -141,7 +128,8 @@ func (r *VineyarddReconciler) Reconcile(
 
 	// set up the etcd configuration
 	etcdReplicas := vineyardd.Spec.EtcdReplicas
-	Etcd = BuildEtcdConfig(vineyardd.Namespace, etcdReplicas, vineyardd.Spec.Vineyard.Image)
+	Etcd = BuildEtcdConfig(vineyardd.Name, vineyardd.Namespace,
+		etcdReplicas, vineyardd.Spec.Vineyard.Image)
 
 	for i := 0; i < etcdReplicas; i++ {
 		Etcd.Rank = i
@@ -211,9 +199,11 @@ func (r *VineyarddReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // BuildEtcdConfig builds the etcd config.
-func BuildEtcdConfig(namespace string, replicas int, image string) EtcdConfig {
+func BuildEtcdConfig(name string, namespace string,
+	replicas int, image string) EtcdConfig {
 	etcdConfig := EtcdConfig{}
 	// the etcd is built in the vineyardd image
+	etcdConfig.Name = name
 	etcdConfig.Image = image
 	etcdConfig.Namespace = namespace
 	etcdEndpoints := make([]string, 0, replicas)

@@ -709,7 +709,6 @@ vineyardctl deploy vineyard-deployment [flags]
 ```
   -f, --file string                                   the path of vineyardd
   -h, --help                                          help for vineyard-deployment
-  -l, --label string                                  label of the vineyardd
       --name string                                   the name of vineyardd (default "vineyardd-sample")
       --pluginImage.backupImage string                the backup image of vineyardd (default "ghcr.io/v6d-io/v6d/backup-job")
       --pluginImage.daskRepartitionImage string       the dask repartition image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/dask-repartition")
@@ -876,7 +875,103 @@ Inject the vineyard sidecar container into a workload
 ### Synopsis
 
 Inject the vineyard sidecar container into a workload. You can
-get the injected workload yaml and some etcd yaml from the output.
+input a workload yaml or a workload json and then get the injected 
+workload and some etcd manifests from the output.
+
+The output is a set of manifests that includes the injected workload,
+the rpc service, the etcd service and the etcd cluster(e.g. several
+pods and services). Next, we will introduce a simple example to show
+the injection.
+
+Assume you have the following workload yaml:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+    # Notice, you must set the namespace here
+  namespace: vineyard-job
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
+```
+Then, you can use the following command to inject the vineyard sidecar
+
+$ vineyardctl inject -f workload.yaml --apply-resources
+
+After running the command, the main output(removed some unnecessary fields)
+is as follows:
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: nginx-deployment
+  namespace: vineyard-job
+spec:
+  selector:
+    matchLabels:
+      app: nginx
+template:
+  metadata:
+  labels:
+    app: nginx
+    # the default sidecar name is vineyard-sidecar
+    app.vineyard.io/name: vineyard-sidecar
+  spec:
+    containers:
+    - command: null
+      image: nginx:1.14.2
+      name: nginx
+      ports:
+      - containerPort: 80
+      volumeMounts:
+      - mountPath: /var/run
+        name: vineyard-socket
+    - command:
+      - /bin/bash
+      - -c
+      - |
+        /usr/bin/wait-for-it.sh -t 60 vineyard-sidecar-etcd-service.vineyard-job.svc.cluster.local:2379; \
+        sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock --size 256Mi \
+        --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard \
+        --etcd_endpoint http://vineyard-sidecar-etcd-service:2379
+      env:
+      - name: VINEYARDD_UID
+        value: null
+      - name: VINEYARDD_NAME
+        value: vineyard-sidecar
+      - name: VINEYARDD_NAMESPACE
+        value: vineyard-job
+      image: vineyardcloudnative/vineyardd:latest
+      imagePullPolicy: IfNotPresent
+      name: vineyard-sidecar
+      ports:
+      - containerPort: 9600
+        name: vineyard-rpc
+        protocol: TCP
+      volumeMounts:
+      - mountPath: /var/run
+        name: vineyard-socket
+    volumes:
+    - emptyDir: {}
+      name: vineyard-socket
+```
+The sidecar template can be accessed from the following link:
+https://github.com/v6d-io/v6d/blob/main/k8s/pkg/templates/sidecar/injection-template.yaml
+also you can get some inspiration from the doc link:
+https://v6d.io/notes/cloud-native/vineyard-operator.html#installing-vineyard-as-sidecar
 
 ```
 vineyardctl inject [flags]
@@ -889,16 +984,49 @@ vineyardctl inject [flags]
 ### Examples
 
 ```shell
+  # use json format to output the injected workload
+  # notice that the output is a json string of all manifests
+  # it looks like:
+  # {
+  #   "workload": "workload json string",
+  #   "rpc_service": "rpc service json string",
+  #   "etcd_service": "etcd service json string",
+  #   "etcd_internal_service": [
+  #     "etcd internal service json string 1",
+  #     "etcd internal service json string 2",
+  #     "etcd internal service json string 3"
+  #   ],
+  #   "etcd_pod": [
+  #     "etcd pod json string 1",
+  #     "etcd pod json string 2",
+  #     "etcd pod json string 3"
+  #   ]
+  # }
+  vineyardctl inject -f workload.yaml -o json
+
   # inject the default vineyard sidecar container into a workload
+  # output all injected manifests and then deploy them
   vineyardctl inject -f workload.yaml | kubectl apply -f -
+  
+  # if you only want to get the injected workload yaml rather than
+  # all manifests that includes the etcd cluster and the rpc service,
+  # you can enable the apply-resources and then the manifests will be
+  # created during the injection, finally you will get the injected
+  # workload yaml
+  vineyardctl inject -f workload.yaml --apply-resources
 ```
 
 ### Options
 
 ```
-      --etcd-replicas int                       the number of etcd replicas (default 1)
+      --apply-resources                         Whether to apply the resources including the etcd cluster and the rpc service if you enable this flag, the etcd cluster and the rpc service will be created during the injection
+      --etcd-replicas int                       The number of etcd replicas (default 1)
   -f, --file string                             The yaml of workload
   -h, --help                                    help for inject
+      --name string                             The name of sidecar (default "vineyard-sidecar")
+  -o, --output string                           The output format of the command, support yaml and json (default "yaml")
+      --owner-references string                 The owner reference of all injectied resources
+      --resource string                         The resource of workload
       --sidecar.envs strings                    The environment variables of vineyardd
       --sidecar.image string                    the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
       --sidecar.imagePullPolicy string          the imagePullPolicy of vineyardd (default "IfNotPresent")

@@ -16,6 +16,8 @@ limitations under the License.
 package util
 
 import (
+	"strings"
+
 	"github.com/pkg/errors"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -37,7 +39,7 @@ func RenderManifestAsObj(path string, value interface{},
 	}
 
 	_, err = swckkube.LoadTemplate(string(manifest), value, tmplFunc, obj)
-	if err != nil {
+	if err != nil && !strings.Contains(err.Error(), "failed load anything from manifests") {
 		return obj, errors.Wrapf(err, "failed to render manifest %s", path)
 	}
 	return obj, nil
@@ -45,31 +47,38 @@ func RenderManifestAsObj(path string, value interface{},
 
 // BuildObjsFromEtcdManifests builds a list of objects from the etcd template files.
 // the template files are under the dir 'k8s/pkg/templates/etcd'
-func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, namespace string,
-	replicas int, image string, value interface{},
+func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, name string,
+	namespace string, replicas int, image string, value interface{},
 	tmplFunc map[string]interface{},
-) ([]*unstructured.Unstructured, error) {
-	objs := []*unstructured.Unstructured{}
+) ([]*unstructured.Unstructured, []*unstructured.Unstructured, error) {
+	podObjs := []*unstructured.Unstructured{}
+	svcObjs := []*unstructured.Unstructured{}
+
 	etcdManifests, err := templates.GetFilesRecursive("etcd")
 	if err != nil {
-		return objs, errors.Wrap(err, "failed to get etcd manifests")
+		return podObjs, svcObjs, errors.Wrap(err, "failed to get etcd manifests")
 	}
 	// set up the etcd config
-	*EtcdConfig = k8s.BuildEtcdConfig(namespace, replicas, image)
+	*EtcdConfig = k8s.BuildEtcdConfig(name, namespace, replicas, image)
 
 	for i := 0; i < replicas; i++ {
 		EtcdConfig.Rank = i
 		for _, ef := range etcdManifests {
 			obj, err := RenderManifestAsObj(ef, value, tmplFunc)
 			if err != nil {
-				return objs, err
+				return podObjs, svcObjs, err
 			}
-			if obj.GetName() != "" {
-				objs = append(objs, obj)
+
+			if ef == "etcd/service.yaml" && obj.GetName() != "" {
+				svcObjs = append(svcObjs, obj)
+			}
+
+			if ef == "etcd/etcd.yaml" && obj.GetName() != "" {
+				podObjs = append(podObjs, obj)
 			}
 		}
 	}
-	return objs, nil
+	return podObjs, svcObjs, nil
 }
 
 // BuildObjsFromVineyarddManifests builds a list of objects from the
@@ -94,6 +103,7 @@ func BuildObjsFromVineyarddManifests(files []string, value interface{},
 			if err != nil {
 				return objs, err
 			}
+
 			if obj.GetName() != "" {
 				objs = append(objs, obj)
 			}

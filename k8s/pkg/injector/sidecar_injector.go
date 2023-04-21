@@ -27,9 +27,6 @@ import (
 )
 
 var (
-	// SleepCommand is the command to wait for the sidecar container to be ready.
-	SleepCommand = "while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;"
-
 	// PodKind is the kind of the kubernetes pod.
 	PodKind = "Pod"
 )
@@ -156,26 +153,29 @@ func injectContainersAndVolumes(workloadContainers []interface{},
 ) ([]interface{}, []interface{}) {
 	var containers []interface{}
 	var volumes []interface{}
+
+	mountPath := "/var/run"
+	pvcName := sidecar.Spec.Volume.PvcName
+	if pvcName != "" || sidecar.Spec.Volume.MountPath != "" {
+		mountPath = sidecar.Spec.Volume.MountPath
+	}
+
+	// sleepCommand is the command to wait for the sidecar container to be ready.
+	sleepCommand := fmt.Sprintf("while [ ! -e %s/vineyard.sock ]; do sleep 1; done;", mountPath)
+
 	// add sleep to wait for the sidecar container to be ready
 	for i := range workloadContainers {
 		c := workloadContainers[i].(map[string]interface{})
-		sleepCmd := []interface{}{SleepCommand}
 		var commands []interface{}
-		if c["command"] == nil {
-			commands = []interface{}{"/bin/sh", "-c"}
-			commands = append(commands, sleepCmd...)
-		} else {
+		// for the nil command, we can't add the sleep command
+		// because the added sleep command will overlay the entrypoint
+		// of the container.
+		// TODO: wait for the sidecar container to be ready and not overlay the entrypoint.
+		if c["command"] != nil {
 			commands = c["command"].([]interface{})
-			commands[len(commands)-1] = fmt.Sprintf("%s%s", SleepCommand, commands[len(commands)-1])
+			commands[len(commands)-1] = fmt.Sprintf("%s%s", sleepCommand, commands[len(commands)-1])
 		}
 		c["command"] = commands
-	}
-
-	pvcName := sidecar.Spec.Volume.PvcName
-	mountPath := "/var/run"
-
-	if pvcName != "" {
-		mountPath = sidecar.Spec.Volume.MountPath
 	}
 
 	for i := range workloadContainers {
@@ -220,6 +220,7 @@ func InjectSidecar(workload, sidecar *unstructured.Unstructured, s *v1alpha1.Sid
 	if err != nil {
 		return err
 	}
+
 	err = SetVolume(workload, volumes)
 	if err != nil {
 		return err

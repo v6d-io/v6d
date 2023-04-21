@@ -17,6 +17,11 @@ limitations under the License.
 package labels
 
 const (
+	/* following labels are used for speficifying the vineyard components */
+
+	// VineyardAppLabel is the special label key for vineyard application
+	VineyardAppLabel = "app.vineyard.io/name"
+
 	/* following labels are used for scheduling */
 
 	// SchedulingEnabledLabel is the label key for enabling scheduling

@@ -396,6 +396,16 @@ available configurations.
          - The environment of vineyard sidecar.
          - nil
 
+       * - | vineyard.
+           | memory
+         - string
+         - The requested memory of vineyard sidecar container.
+
+       * - | vineyard.
+           | cpu
+         - string
+         - The requested cpu of vineyard sidecar container.
+
        * - | metric.
            | enable
          - bool
