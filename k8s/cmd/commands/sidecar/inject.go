@@ -79,13 +79,13 @@ var (
 	pods and services). Next, we will introduce a simple example to show
 	the injection.
 
-	Suppose you have the following workload yaml:
-
+	Assume you have the following workload yaml:` +
+		"\n```yaml" + `
 	apiVersion: apps/v1
 	kind: Deployment
 	metadata:
 	  name: nginx-deployment
-	  # Notice, you must set the namespace here
+	    # Notice, you must set the namespace here
 	  namespace: vineyard-job
 	spec:
 	  selector:
@@ -100,70 +100,70 @@ var (
 	      - name: nginx
 	        image: nginx:1.14.2
 	        ports:
-	        - containerPort: 80
-
+	        - containerPort: 80` +
+		"\n```" + `
 	Then, you can use the following command to inject the vineyard sidecar
 	
 	$ vineyardctl inject -f workload.yaml --apply-resources
 	
 	After running the command, the main output(removed some unnecessary fields)
-	is as follows:
-	
+	is as follows:` +
+		"\n```yaml" + `
 	apiVersion: apps/v1
 	kind: Deployment
 	metadata:
-  	  creationTimestamp: null
+	  creationTimestamp: null
 	  name: nginx-deployment
-      namespace: vineyard-job
+	  namespace: vineyard-job
 	spec:
-  	  selector:
-    	matchLabels:
-          app: nginx
-    template:
-      metadata:
-      labels:
-        app: nginx
-		# the default sidecar name is vineyard-sidecar
-        app.vineyard.io/name: vineyard-sidecar
-      spec:
-        containers:
-        - command: null
-          image: nginx:1.14.2
-          name: nginx
-          ports:
-          - containerPort: 80
-          volumeMounts:
-          - mountPath: /var/run
-            name: vineyard-socket
-        - command:
-          - /bin/bash
-          - -c
-          - |
-		    /usr/bin/wait-for-it.sh -t 60 vineyard-sidecar-etcd-service.vineyard-job.svc.cluster.local:2379; \
-		    sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock --size 256Mi \
-		    --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard \
-		    --etcd_endpoint http://vineyard-sidecar-etcd-service:2379
-          env:
-          - name: VINEYARDD_UID
-            value: null
-          - name: VINEYARDD_NAME
-            value: vineyard-sidecar
-          - name: VINEYARDD_NAMESPACE
-            value: vineyard-job
-          image: vineyardcloudnative/vineyardd:latest
-          imagePullPolicy: IfNotPresent
-          name: vineyard-sidecar
-          ports:
-          - containerPort: 9600
-            name: vineyard-rpc
-            protocol: TCP
-          volumeMounts:
-          - mountPath: /var/run
-            name: vineyard-socket
-        volumes:
-        - emptyDir: {}
-          name: vineyard-socket
-	
+	  selector:
+	    matchLabels:
+	      app: nginx
+	template:
+	  metadata:
+	  labels:
+	    app: nginx
+	    # the default sidecar name is vineyard-sidecar
+	    app.vineyard.io/name: vineyard-sidecar
+	  spec:
+	    containers:
+	    - command: null
+	      image: nginx:1.14.2
+	      name: nginx
+	      ports:
+	      - containerPort: 80
+	      volumeMounts:
+	      - mountPath: /var/run
+	        name: vineyard-socket
+	    - command:
+	      - /bin/bash
+	      - -c
+	      - |
+	        /usr/bin/wait-for-it.sh -t 60 vineyard-sidecar-etcd-service.vineyard-job.svc.cluster.local:2379; \
+	        sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock --size 256Mi \
+	        --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard \
+	        --etcd_endpoint http://vineyard-sidecar-etcd-service:2379
+	      env:
+	      - name: VINEYARDD_UID
+	        value: null
+	      - name: VINEYARDD_NAME
+	        value: vineyard-sidecar
+	      - name: VINEYARDD_NAMESPACE
+	        value: vineyard-job
+	      image: vineyardcloudnative/vineyardd:latest
+	      imagePullPolicy: IfNotPresent
+	      name: vineyard-sidecar
+	      ports:
+	      - containerPort: 9600
+	        name: vineyard-rpc
+	        protocol: TCP
+	      volumeMounts:
+	      - mountPath: /var/run
+	        name: vineyard-socket
+	    volumes:
+	    - emptyDir: {}
+	      name: vineyard-socket` +
+		"\n```" + `
 	The sidecar template can be accessed from the following link:
 	https://github.com/v6d-io/v6d/blob/main/k8s/pkg/templates/sidecar/injection-template.yaml
 	also you can get some inspiration from the doc link:
