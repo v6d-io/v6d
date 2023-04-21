@@ -169,7 +169,6 @@ def test_concurrent_meta(vineyard_ipc_sockets):  # noqa: C901
                 client.delete(o.id)
         except Exception as e:  # pylint: disable=broad-except
             pytest.fail('failed: %s' % e)
-            return False
         return True
 
     def job2(client):
@@ -179,7 +178,6 @@ def test_concurrent_meta(vineyard_ipc_sockets):  # noqa: C901
                 client.delete(o.id)
         except Exception as e:  # pylint: disable=broad-except
             pytest.fail('failed: %s' % e)
-            return False
         return True
 
     def job3(client):
@@ -189,7 +187,6 @@ def test_concurrent_meta(vineyard_ipc_sockets):  # noqa: C901
                 client.delete(o.id)
         except Exception as e:  # pylint: disable=broad-except
             pytest.fail('failed: %s' % e)
-            return False
         return True
 
     def job4(client):
@@ -199,7 +196,6 @@ def test_concurrent_meta(vineyard_ipc_sockets):  # noqa: C901
                 client.delete(o.id)
         except Exception as e:  # pylint: disable=broad-except
             pytest.fail('failed: %s' % e)
-            return False
         return True
 
     def job5(client):
@@ -209,7 +205,6 @@ def test_concurrent_meta(vineyard_ipc_sockets):  # noqa: C901
                 client.delete(o.id)
         except Exception as e:  # pylint: disable=broad-except
             pytest.fail('failed: %s' % e)
-            return False
         return True
 
     jobs = [job1, job2, job3, job4, job5]
@@ -235,6 +230,7 @@ def test_concurrent_meta_mp(  # noqa: C901, pylint: disable=too-many-statements
     vineyard_ipc_sockets = generate_vineyard_ipc_sockets(vineyard_ipc_sockets, num_proc)
 
     def job1(rs, state, client):
+        o = None
         try:
             o = client.get_object(client.put(1))
             # client.persist(o.id)
@@ -249,10 +245,9 @@ def test_concurrent_meta_mp(  # noqa: C901, pylint: disable=too-many-statements
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
-        finally:
-            print('job finished', flush=True)
 
     def job2(rs, state, client):
+        o = None
         try:
             o = client.get_object(client.put(1.23456))
             # client.persist(o.id)
@@ -267,10 +262,9 @@ def test_concurrent_meta_mp(  # noqa: C901, pylint: disable=too-many-statements
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
-        finally:
-            print('job finished', flush=True)
 
     def job3(rs, state, client):
+        o = None
         try:
             o = client.get_object(client.put('xxxxabcd'))
             # client.persist(o.id)
@@ -285,10 +279,9 @@ def test_concurrent_meta_mp(  # noqa: C901, pylint: disable=too-many-statements
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
-        finally:
-            print('job finished', flush=True)
 
     def job4(rs, state, client):
+        o = None
         try:
             o = client.get_object(client.put((1, 1.2345)))
             # client.persist(o.id)
@@ -303,10 +296,9 @@ def test_concurrent_meta_mp(  # noqa: C901, pylint: disable=too-many-statements
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
-        finally:
-            print('job finished', flush=True)
 
     def job5(rs, state, client):
+        o = None
         try:
             o = client.get_object(client.put((1, 1.2345, 'xxxxabcd')))
             # client.persist(o.id)
@@ -321,8 +313,6 @@ def test_concurrent_meta_mp(  # noqa: C901, pylint: disable=too-many-statements
             rs.put((False, 'failed: %s' % e))
         else:
             rs.put((True, ''))
-        finally:
-            print('job finished', flush=True)
 
     def start_requests(rs, state, ipc_socket):
         jobs = [job1, job2, job3, job4, job5]
@@ -360,6 +350,7 @@ def test_concurrent_persist(  # noqa: C901, pylint: disable=too-many-statements
     clients = generate_vineyard_ipc_clients(vineyard_ipc_sockets, 4)
 
     def job1(client):
+        o = None
         try:
             o = client.get_object(client.put(1))
             client.persist(o.id)
@@ -369,10 +360,10 @@ def test_concurrent_persist(  # noqa: C901, pylint: disable=too-many-statements
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
             pytest.fail('failed: %s' % e)
-            return False
         return True
 
     def job2(client):
+        o = None
         try:
             o = client.get_object(client.put(1.23456))
             client.persist(o.id)
@@ -382,10 +373,10 @@ def test_concurrent_persist(  # noqa: C901, pylint: disable=too-many-statements
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
             pytest.fail('failed: %s' % e)
-            return False
         return True
 
     def job3(client):
+        o = None
         try:
             o = client.get_object(client.put('xxxxabcd'))
             client.persist(o.id)
@@ -395,10 +386,10 @@ def test_concurrent_persist(  # noqa: C901, pylint: disable=too-many-statements
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
             pytest.fail('failed: %s' % e)
-            return False
         return True
 
     def job4(client):
+        o = None
         try:
             o = client.get_object(client.put((1, 1.2345)))
             client.persist(o.id)
@@ -408,10 +399,10 @@ def test_concurrent_persist(  # noqa: C901, pylint: disable=too-many-statements
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
             pytest.fail('failed: %s' % e)
-            return False
         return True
 
     def job5(client):
+        o = None
         try:
             o = client.get_object(client.put((1, 1.2345, 'xxxxabcd')))
             client.persist(o.id)
@@ -421,7 +412,6 @@ def test_concurrent_persist(  # noqa: C901, pylint: disable=too-many-statements
                 client.sync_meta()
         except Exception as e:  # pylint: disable=broad-except
             pytest.fail('failed: %s' % e)
-            return False
         return True
 
     jobs = [job1, job2, job3, job4, job5]

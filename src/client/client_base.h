@@ -598,7 +598,7 @@ class ClientBase {
   std::string server_version_;
 
   // A mutex which protects the client.
-  std::recursive_mutex client_mutex_;
+  mutable std::recursive_mutex client_mutex_;
 };
 
 struct InstanceStatus {

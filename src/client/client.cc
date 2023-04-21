@@ -228,7 +228,6 @@ Status Client::GetMetaData(const std::vector<ObjectID>& ids,
 
 Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
   ENSURE_CONNECTED(this);
-
   ObjectID object_id = InvalidObjectID();
   Payload object;
   std::shared_ptr<arrow::MutableBuffer> buffer = nullptr;
@@ -287,7 +286,6 @@ Status Client::GetBlobs(std::vector<ObjectID> const ids, const bool unsafe,
 Status Client::CreateDiskBlob(size_t size, const std::string& path,
                               std::unique_ptr<BlobWriter>& blob) {
   ENSURE_CONNECTED(this);
-
   ObjectID object_id = InvalidObjectID();
   Payload payload;
 
@@ -536,6 +534,7 @@ bool Client::IsSharedMemory(const void* target, ObjectID& object_id) const {
 }
 
 bool Client::IsSharedMemory(const uintptr_t target, ObjectID& object_id) const {
+  std::lock_guard<std::recursive_mutex> __guard(this->client_mutex_);
   if (shm_->Exists(target, object_id)) {
     // verify that the blob is not deleted on the server side
     json tree;
@@ -1183,6 +1182,8 @@ Status PlasmaClient::GetBuffers(
 Status PlasmaClient::GetBuffers(
     std::set<PlasmaID> const& plasma_ids, const bool unsafe,
     std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers) {
+  ENSURE_CONNECTED(this);
+
   std::map<PlasmaID, PlasmaPayload> plasma_payloads;
   RETURN_ON_ERROR(GetPayloads(plasma_ids, unsafe, plasma_payloads));
 
@@ -1356,7 +1357,7 @@ Status SharedMemoryManager::Mmap(int fd, int64_t map_size, uint8_t* pointer,
   auto entry = mmap_table_.find(fd);
   if (entry == mmap_table_.end()) {
     int client_fd = recv_fd(vineyard_conn_);
-    if (fd <= 0) {
+    if (client_fd <= 0) {
       return Status::IOError(
           "Failed to receive file descriptor from the socket");
     }
@@ -1367,12 +1368,16 @@ Status SharedMemoryManager::Mmap(int fd, int64_t map_size, uint8_t* pointer,
   if (readonly) {
     *ptr = entry->second->map_readonly();
     if (*ptr == nullptr) {
-      return Status::IOError("Failed to mmap received fd as a readonly buffer");
+      return Status::IOError(
+          std::string("Failed to mmap received fd as a readonly buffer: ") +
+          strerror(errno));
     }
   } else {
     *ptr = entry->second->map_readwrite();
     if (*ptr == nullptr) {
-      return Status::IOError("Failed to mmap received fd as a writable buffer");
+      return Status::IOError(
+          std::string("Failed to mmap received fd as a writable buffer: ") +
+          strerror(errno));
     }
   }
   return Status::OK();

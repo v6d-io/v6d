@@ -21,6 +21,7 @@ import copy
 import inspect
 import threading
 import warnings
+from typing import Any
 
 from vineyard._C import IPCClient
 from vineyard._C import Object
@@ -134,7 +135,14 @@ def builder_context(builders=None, base=None):
         _builder_context_local.default_builder = current_builder
 
 
-def put(client, value, builder=None, persist=False, name=None, **kwargs):
+def put(
+    client,
+    value: Any,
+    builder: BuilderContext = None,
+    persist: bool = False,
+    name: str = None,
+    **kwargs
+):
     """Put python value to vineyard.
 
     .. code:: python

@@ -104,12 +104,20 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope='session')
 def vineyard_ipc_sockets(request):
-    return request.config.option.vineyard_ipc_sockets.split(',')
+    if request.config.option.vineyard_ipc_sockets:
+        return request.config.option.vineyard_ipc_sockets.split(',')
+    if request.config.option.vineyard_ipc_socket:
+        return [request.config.option.vineyard_ipc_socket]
+    return None
 
 
 @pytest.fixture(scope='session')
 def vineyard_endpoints(request):
-    return request.config.option.vineyard_endpoint.split(',')
+    if request.config.option.vineyard_endpoints:
+        return request.config.option.vineyard_endpoints.split(',')
+    if request.config.option.vineyard_endpoint:
+        return [request.config.option.vineyard_endpoint]
+    return None
 
 
 @pytest.fixture(scope='session')

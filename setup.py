@@ -193,8 +193,9 @@ def load_requirements_txt(kind=""):
 
 def package_data():
     artifacts = [
-        'vineyard/deploy/*.yaml',
-        'vineyard/deploy/*.yaml.tpl',
+        '*.pyi',
+        'deploy/*.yaml',
+        'deploy/*.yaml.tpl',
     ]
     return artifacts
 

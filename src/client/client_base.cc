@@ -357,6 +357,7 @@ Status ClientBase::MigrateObject(const ObjectID object_id,
 }
 
 Status ClientBase::Clear() {
+  ENSURE_CONNECTED(this);
   std::string message_out;
   WriteClearRequest(message_out);
   RETURN_ON_ERROR(doWrite(message_out));
@@ -368,6 +369,7 @@ Status ClientBase::Clear() {
 
 Status ClientBase::Label(const ObjectID object, std::string const& key,
                          std::string const& value) {
+  ENSURE_CONNECTED(this);
   std::string message_out;
   WriteLabelRequest(object, key, value, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
@@ -379,6 +381,7 @@ Status ClientBase::Label(const ObjectID object, std::string const& key,
 
 Status ClientBase::Label(const ObjectID object,
                          std::map<std::string, std::string> const& labels) {
+  ENSURE_CONNECTED(this);
   std::string message_out;
   WriteLabelRequest(object, labels, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
@@ -389,6 +392,7 @@ Status ClientBase::Label(const ObjectID object,
 }
 
 Status ClientBase::Evict(std::vector<ObjectID> const& objects) {
+  ENSURE_CONNECTED(this);
   std::string message_out;
   WriteEvictRequest(objects, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
@@ -399,6 +403,7 @@ Status ClientBase::Evict(std::vector<ObjectID> const& objects) {
 }
 
 Status ClientBase::Load(std::vector<ObjectID> const& objects, const bool pin) {
+  ENSURE_CONNECTED(this);
   std::string message_out;
   WriteLoadRequest(objects, pin, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
@@ -409,6 +414,7 @@ Status ClientBase::Load(std::vector<ObjectID> const& objects, const bool pin) {
 }
 
 Status ClientBase::Unpin(std::vector<ObjectID> const& objects) {
+  ENSURE_CONNECTED(this);
   std::string message_out;
   WriteUnpinRequest(objects, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
