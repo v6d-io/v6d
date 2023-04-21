@@ -13,7 +13,9 @@ limitations under the License.
 #include <google/protobuf/util/json_util.h>
 
 #include "graph/grin/src/predefine.h"
+extern "C" {
 #include "graph/grin/include/proto/message.h"
+}
 #include "graph.pb.h"
 
 

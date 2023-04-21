@@ -11,7 +11,9 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
+extern "C" {
 #include "graph/grin/include/property/type.h"
+}
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 bool grin_equal_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt1, GRIN_VERTEX_TYPE vt2) {

@@ -11,7 +11,9 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
+extern "C" {
 #include "graph/grin/include/index/order.h"
+}
 
 #ifdef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
 bool grin_smaller_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {

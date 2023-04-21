@@ -14,7 +14,9 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
+extern "C" {
 #include "graph/grin/include/topology/adjacentlist.h"
+}
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
 GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_VERTEX v) {
