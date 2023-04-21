@@ -11,8 +11,9 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
+extern "C" {
 #include "graph/grin/include/property/topology.h"
-
+}
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 size_t grin_get_vertex_num_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {

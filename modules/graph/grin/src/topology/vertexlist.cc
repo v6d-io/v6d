@@ -14,7 +14,9 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
+extern "C" {
 #include "graph/grin/include/topology/vertexlist.h"
+}
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
 GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH g) {

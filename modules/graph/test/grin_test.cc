@@ -21,6 +21,7 @@ limitations under the License.
 #include "client/client.h"
 #include "common/util/logging.h"
 
+extern "C" {
 #include "graph/grin/predefine.h"
 #include "graph/grin/include/topology/structure.h"
 #include "graph/grin/include/topology/vertexlist.h"
@@ -35,6 +36,7 @@ limitations under the License.
 #include "graph/grin/include/property/property.h"
 #include "graph/grin/include/property/propertytable.h"
 #include "graph/grin/include/proto/message.h"
+}
 
 #include "graph/fragment/graph_schema.h"
 #include "graph/loader/arrow_fragment_loader.h"

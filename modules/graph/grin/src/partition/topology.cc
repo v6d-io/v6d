@@ -14,7 +14,9 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
+extern "C" {
 #include "graph/grin/include/partition/topology.h"
+}
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
 size_t grin_get_total_vertex_num(GRIN_PARTITIONED_GRAPH pg) {
