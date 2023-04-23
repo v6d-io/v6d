@@ -255,6 +255,7 @@ setup(
     install_requires=load_requirements_txt() + [vineyard_bdist],
     extras_require={
         'dev': load_requirements_txt("-dev"),
+        'extra': load_requirements_txt("-extra"),
         'kubernetes': load_requirements_txt("-kubernetes"),
     },
     platforms=["POSIX", "MacOS"],

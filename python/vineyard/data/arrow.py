@@ -23,6 +23,11 @@ from typing import Union
 
 import pyarrow as pa
 
+try:
+    import polars
+except ImportError:
+    polars = None
+
 from vineyard._C import Blob
 from vineyard._C import IPCClient
 from vineyard._C import Object
@@ -240,7 +245,7 @@ def record_batch_builder(
     return client.create_metadata(meta)
 
 
-def table_builder(client: IPCClient, table: pa.Table, builder: BuilderContext):
+def table_builder(client: IPCClient, table: pa.Table, builder: BuilderContext, **kw):
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Table'
     meta['num_rows_'] = table.num_rows
@@ -249,6 +254,10 @@ def table_builder(client: IPCClient, table: pa.Table, builder: BuilderContext):
     meta['batch_num_'] = len(batches)
     meta['partitions_-size'] = len(batches)
 
+    # apply extra metadata, e.g., from_polars=True
+    for k, v in kw.items():
+        meta[k] = v
+
     meta.add_member('schema_', schema_proxy_builder(client, table.schema, builder))
     for idx, batch in enumerate(batches):
         meta.add_member(
@@ -256,6 +265,12 @@ def table_builder(client: IPCClient, table: pa.Table, builder: BuilderContext):
         )
     meta['nbytes'] = table.nbytes
     return client.create_metadata(meta)
+
+
+def polars_dataframe_builder(
+    client: IPCClient, dataframe: "polars.DataFrame", builder: BuilderContext
+):
+    return table_builder(client, dataframe.to_arrow(), builder, from_polars=True)
 
 
 def table_from_recordbatches(
@@ -407,6 +422,16 @@ def table_resolver(obj: Union[Object, ObjectMeta], resolver: ResolverContext):
     return pa.Table.from_batches(batches)
 
 
+def polars_dataframe_resolver(
+    obj: Union[Object, ObjectMeta], resolver: ResolverContext
+):
+    meta = obj.meta
+    table = table_resolver(obj, resolver)
+    if polars is not None and meta.get('from_polars', False):
+        return polars.DataFrame(table)
+    return table
+
+
 def register_arrow_types(
     builder_ctx: BuilderContext = None, resolver_ctx: ResolverContext = None
 ):
@@ -424,6 +449,9 @@ def register_arrow_types(
         builder_ctx.register(pa.Table, table_builder)
         builder_ctx.register(pa.ListArray, list_array_builder)
 
+        if polars is not None:
+            builder_ctx.register(polars.DataFrame, polars_dataframe_builder)
+
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::NumericArray', numeric_array_resolver)
         resolver_ctx.register(
@@ -440,3 +468,6 @@ def register_arrow_types(
         resolver_ctx.register('vineyard::RecordBatch', record_batch_resolver)
         resolver_ctx.register('vineyard::Table', table_resolver)
         resolver_ctx.register('vineyard::LargeListArray', list_array_resolver)
+
+        if polars is not None:
+            resolver_ctx.register('vineyard::Table', polars_dataframe_resolver)
