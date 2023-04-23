@@ -18,6 +18,13 @@
 
 import pyarrow as pa
 
+import pytest
+
+try:
+    import polars
+except ImportError:
+    polars = None
+
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
@@ -83,6 +90,24 @@ def test_table(vineyard_client):
     batches = [batch] * 5
     table = pa.Table.from_batches(batches)
     _object_id = vineyard_client.put(table)  # noqa: F841
+    # processing tables that contains string is not roundtrip, as StringArray
+    # will be transformed to LargeStringArray
+    #
+    # assert table.equals(vineyard_client.get(object_id))
+
+
+@pytest.mark.skipif(polars is None, reason='polars is not installed')
+def test_polars_dataframe(vineyard_client):
+    arrays = [
+        pa.array([1, 2, 3, 4]),
+        pa.array(['foo', 'bar', 'baz', None]),
+        pa.array([True, None, False, True]),
+    ]
+    batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'f2'])
+    batches = [batch] * 5
+    table = pa.Table.from_batches(batches)
+    dataframe = polars.DataFrame(table)
+    _object_id = vineyard_client.put(dataframe)  # noqa: F841
     # processing tables that contains string is not roundtrip, as StringArray
     # will be transformed to LargeStringArray
     #
