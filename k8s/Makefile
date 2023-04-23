@@ -209,7 +209,11 @@ vendor:
 # Build the docker image
 .PHONY: docker-build
 docker-build:
-	docker build . -t ${IMG}
+	if docker build --help | grep -q load; then \
+		docker build --load . -t ${IMG}; \
+	else \
+		docker build . -t ${IMG}; \
+	fi
 
 docker-build-push-multi-arch:
 	docker buildx build . -t ${IMG} --platform linux/amd64,linux/arm64 --push

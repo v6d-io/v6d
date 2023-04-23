@@ -67,12 +67,6 @@ func getStorage(q resource.Quantity) string {
 	return q.String()
 }
 
-// ServiceLabelSelector represents the label selector of the service
-type ServiceLabelSelector struct {
-	Key   string
-	Value string
-}
-
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds/finalizers,verbs=update

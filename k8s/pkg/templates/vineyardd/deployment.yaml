@@ -68,44 +68,44 @@ spec:
             -log_dir /var/log/vineyard/
             {{- end }}
           env:
-            - name: VINEYARDD_UID
-              value: {{ .UID }}
-            - name: VINEYARDD_NAME
-              value: {{ .Name }}
-            - name: VINEYARDD_NAMESPACE
-              value: {{ .Namespace }}
-            - name: MY_NODE_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: spec.nodeName
-            - name: MY_POD_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            - name: MY_POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
-            - name: MY_UID
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.uid
-            - name: MY_POD_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: MY_HOST_NAME
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.podIP
-            - name: USER
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.name
-            {{range .Spec.Vineyard.Env}}
-            - name: {{ .Name }}
-              value: {{ .Value }}
-            {{end}}
+          - name: VINEYARDD_UID
+            value: {{ .UID }}
+          - name: VINEYARDD_NAME
+            value: {{ .Name }}
+          - name: VINEYARDD_NAMESPACE
+            value: {{ .Namespace }}
+          - name: MY_NODE_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: spec.nodeName
+          - name: MY_POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          - name: MY_POD_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: MY_UID
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.uid
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: MY_HOST_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: USER
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          {{range .Spec.Vineyard.Env}}
+          - name: {{ .Name }}
+            value: {{ .Value }}
+          {{end}}
           ports:
             - name: rpc
               containerPort: 9600
@@ -120,21 +120,21 @@ spec:
               - ls
               - /var/run/vineyard.sock
           volumeMounts:
-            {{- if .Spec.Volume.MountPath }}
-            - name: vineyard-socket
-              mountPath: {{ .Spec.Volume.MountPath }}
-            {{- else }}
-            - name: vineyard-socket
-              mountPath: /var/run
-            {{- end }}
-            {{- if .Spec.Vineyard.Spill.Name }}
-            - name: {{ .Spec.Vineyard.Spill.Name }}
-              mountPath: {{ .Spec.Vineyard.Spill.Path }}
-            {{- end }}
-            - name: shm
-              mountPath: /dev/shm
-            - name: log
-              mountPath: /var/log/vineyard
+          {{- if .Spec.Volume.MountPath }}
+          - name: vineyard-socket
+            mountPath: {{ .Spec.Volume.MountPath }}
+          {{- else }}
+          - name: vineyard-socket
+            mountPath: /var/run
+          {{- end }}
+          {{- if .Spec.Vineyard.Spill.Name }}
+          - name: {{ .Spec.Vineyard.Spill.Name }}
+            mountPath: {{ .Spec.Vineyard.Spill.Path }}
+          {{- end }}
+          - name: shm
+            mountPath: /dev/shm
+          - name: log
+            mountPath: /var/log/vineyard
           {{- if and .Spec.Vineyard.CPU .Spec.Vineyard.Memory }}
           resources:
             requests:

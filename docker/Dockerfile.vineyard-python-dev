@@ -75,6 +75,7 @@ COPY setup_bdist.py /work/v6d/setup_bdist.py
 COPY setup_io.py /work/v6d/setup_io.py
 COPY requirements.txt /work/v6d/requirements.txt
 COPY requirements-dev.txt /work/v6d/requirements-dev.txt
+COPY requirements-extra.txt /work/v6d/requirements-extra.txt
 COPY requirements-kubernetes.txt /work/v6d/requirements-kubernetes.txt
 COPY requirements-setup.txt /work/v6d/requirements-setup.txt
 COPY modules/io /work/v6d/modules/io
