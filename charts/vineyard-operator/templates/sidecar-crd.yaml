@@ -92,6 +92,8 @@ spec:
                   streamThreshold: 80
                   syncCRDs: true
                 properties:
+                  cpu:
+                    type: string
                   env:
                     items:
                       properties:
@@ -161,6 +163,8 @@ spec:
                     type: string
                   imagePullPolicy:
                     default: IfNotPresent
+                    type: string
+                  memory:
                     type: string
                   size:
                     default: 256Mi
