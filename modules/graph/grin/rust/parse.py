@@ -44,7 +44,7 @@ def parse(path):
             prefix = ''
             if line.startswith(('GRIN_', 'void', 'bool', 'size_t', 'const')):
                 func_name = get_func_name(line)
-                res[func_name] = macros
+                res[func_name] = macros.copy()
             elif line.startswith('#ifdef'):
                 assert(len(macros) == 0)
                 macro_name = get_macro_name(line)
@@ -60,6 +60,8 @@ def parse(path):
     return res
 
 def to_rust(deps):
+    if len(deps) == 0:
+        return ''
     assert(len(deps) == 1)
     one_foramt = '#[cfg(feature = \"{}\")]'
     yes_format = 'feature = \"{}\"'
@@ -90,8 +92,18 @@ def snake_to_camel_line(line):
     segs = line.split(' ')
     return ' '.join([snake_to_camel(s) if s.startswith('GRIN_') else s for s in segs])
 
+def static_replace(line):
+    replaces = {
+        '::std::os::raw::c_uint': 'u32',
+        '::std::os::raw::c_int': 'i32',
+        '::std::os::raw::c_ulong': 'u64',
+        '::std::os::raw::c_long': 'i64',
+    }
+    for k in replaces:
+        line = line.replace(k, replaces[k])
+    return line
 
-def rewrite(file, r, strip=7):
+def rewrite(file, r, strip=49):
     with open(file) as f:
         lines = f.readlines()
     externc_flag = True
@@ -100,6 +112,7 @@ def rewrite(file, r, strip=7):
             if i < strip:
                 continue
             line = snake_to_camel_line(line)
+            line = static_replace(line)
             if line.startswith('extern '):
                 if externc_flag:
                     f.write('extern "C" {\n')
@@ -115,7 +128,7 @@ def rewrite(file, r, strip=7):
                 func_name = line
                 func_name = func_name[func_name.find('pub fn')+7:]
                 func_name = func_name.split('(')[0]
-                if func_name in r:
+                if func_name in r and r[func_name]:
                     f.write(f'    {r[func_name]}\n')
             f.write(line)
 

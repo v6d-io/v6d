@@ -5,7 +5,7 @@ pub const GRIN_DIRECTION_OUT: GrinDirection = 1;
 #[doc = "< incoming & outgoing"]
 pub const GRIN_DIRECTION_BOTH: GrinDirection = 2;
 #[doc = " Enumerates the directions of edges with respect to a certain vertex"]
-pub type GrinDirection = ::std::os::raw::c_uint;
+pub type GrinDirection = u32;
 #[doc = "< other unknown types"]
 pub const GRIN_DATATYPE_UNDEFINED: GrinDatatype = 0;
 #[doc = "< int"]
@@ -27,7 +27,7 @@ pub const GRIN_DATATYPE_DATE32: GrinDatatype = 8;
 #[doc = "< long date"]
 pub const GRIN_DATATYPE_DATE64: GrinDatatype = 9;
 #[doc = " Enumerates the datatype supported in the storage"]
-pub type GrinDatatype = ::std::os::raw::c_uint;
+pub type GrinDatatype = u32;
 #[doc = "@}"]
 pub type GrinGraph = *mut ::std::os::raw::c_void;
 pub type GrinVertex = *mut ::std::os::raw::c_void;
@@ -40,15 +40,15 @@ pub type GrinAdjacentListIterator = *mut ::std::os::raw::c_void;
 pub type GrinPartitionedGraph = *mut ::std::os::raw::c_void;
 pub type GrinPartition = *mut ::std::os::raw::c_void;
 pub type GrinPartitionList = *mut ::std::os::raw::c_void;
-pub type GrinPartitionId = ::std::os::raw::c_uint;
+pub type GrinPartitionId = u32;
 pub type GrinVertexRef = *mut ::std::os::raw::c_void;
 pub type GrinVertexType = *mut ::std::os::raw::c_void;
 pub type GrinVertexTypeList = *mut ::std::os::raw::c_void;
 pub type GrinVertexProperty = *mut ::std::os::raw::c_void;
 pub type GrinVertexPropertyList = *mut ::std::os::raw::c_void;
 pub type GrinVertexPropertyTable = *mut ::std::os::raw::c_void;
-pub type GrinVertexTypeId = ::std::os::raw::c_uint;
-pub type GrinVertexPropertyId = ::std::os::raw::c_uint;
+pub type GrinVertexTypeId = u32;
+pub type GrinVertexPropertyId = u32;
 pub type GrinEdgeType = *mut ::std::os::raw::c_void;
 pub type GrinEdgeTypeList = *mut ::std::os::raw::c_void;
 pub type GrinVevType = *mut ::std::os::raw::c_void;
@@ -56,8 +56,8 @@ pub type GrinVevTypeList = *mut ::std::os::raw::c_void;
 pub type GrinEdgeProperty = *mut ::std::os::raw::c_void;
 pub type GrinEdgePropertyList = *mut ::std::os::raw::c_void;
 pub type GrinEdgePropertyTable = *mut ::std::os::raw::c_void;
-pub type GrinEdgeTypeId = ::std::os::raw::c_uint;
-pub type GrinEdgePropertyId = ::std::os::raw::c_uint;
+pub type GrinEdgeTypeId = u32;
+pub type GrinEdgePropertyId = u32;
 pub type GrinRow = *mut ::std::os::raw::c_void;
 extern "C" {
     #[cfg(feature = "grin_enable_adjacent_list")]
@@ -114,13 +114,25 @@ extern "C" {
         arg2: GrinAdjacentListIterator,
     ) -> GrinEdge;
 
-    #[cfg(all(feature = "grin_assume_has_directed_graph", feature = "grin_assume_has_undirected_graph"))]
+    pub fn grin_get_int32(arg1: *mut ::std::os::raw::c_void) -> i32;
+
+    pub fn grin_get_uint32(arg1: *mut ::std::os::raw::c_void) -> u32;
+
+    pub fn grin_get_int64(arg1: *mut ::std::os::raw::c_void) -> i64;
+
+    pub fn grin_get_uint64(arg1: *mut ::std::os::raw::c_void) -> u64;
+
+    pub fn grin_get_float(arg1: *mut ::std::os::raw::c_void) -> f32;
+
+    pub fn grin_get_double(arg1: *mut ::std::os::raw::c_void) -> f64;
+
+    pub fn grin_get_string(arg1: *mut ::std::os::raw::c_void) -> *mut ::std::os::raw::c_char;
+
     pub fn grin_get_graph_from_storage(
-        arg1: ::std::os::raw::c_int,
+        arg1: i32,
         arg2: *mut *mut ::std::os::raw::c_char,
     ) -> GrinGraph;
 
-    #[cfg(all(feature = "grin_assume_has_directed_graph", feature = "grin_assume_has_undirected_graph"))]
     pub fn grin_destroy_graph(arg1: GrinGraph);
 
     #[cfg(all(feature = "grin_assume_has_directed_graph", feature = "grin_assume_has_undirected_graph"))]
@@ -129,16 +141,12 @@ extern "C" {
     #[cfg(feature = "grin_assume_has_multi_edge_graph")]
     pub fn grin_is_multigraph(arg1: GrinGraph) -> bool;
 
-    #[cfg(feature = "grin_with_vertex_original_id")]
     pub fn grin_get_vertex_num(arg1: GrinGraph) -> usize;
 
-    #[cfg(feature = "grin_with_vertex_original_id")]
     pub fn grin_get_edge_num(arg1: GrinGraph) -> usize;
 
-    #[cfg(feature = "grin_with_vertex_original_id")]
     pub fn grin_destroy_vertex(arg1: GrinGraph, arg2: GrinVertex);
 
-    #[cfg(feature = "grin_with_vertex_original_id")]
     pub fn grin_equal_vertex(arg1: GrinGraph, arg2: GrinVertex, arg3: GrinVertex) -> bool;
 
     #[cfg(feature = "grin_with_vertex_original_id")]
@@ -153,23 +161,18 @@ extern "C" {
         arg2: GrinVertex,
     ) -> GrinVertexOriginalId;
 
-    #[cfg(feature = "grin_with_vertex_data")]
     pub fn grin_destroy_value(
         arg1: GrinGraph,
         arg2: GrinDatatype,
         arg3: *const ::std::os::raw::c_void,
     );
 
-    #[cfg(feature = "grin_with_vertex_data")]
     pub fn grin_destroy_name(arg1: GrinGraph, arg2: *const ::std::os::raw::c_char);
 
-    #[cfg(feature = "grin_with_edge_data")]
     pub fn grin_destroy_edge(arg1: GrinGraph, arg2: GrinEdge);
 
-    #[cfg(feature = "grin_with_edge_data")]
     pub fn grin_get_edge_src(arg1: GrinGraph, arg2: GrinEdge) -> GrinVertex;
 
-    #[cfg(feature = "grin_with_edge_data")]
     pub fn grin_get_edge_dst(arg1: GrinGraph, arg2: GrinEdge) -> GrinVertex;
 
     #[cfg(feature = "grin_enable_vertex_list")]
@@ -211,7 +214,7 @@ extern "C" {
 
     #[cfg(feature = "grin_enable_graph_partition")]
     pub fn grin_get_partitioned_graph_from_storage(
-        arg1: ::std::os::raw::c_int,
+        arg1: i32,
         arg2: *mut *mut ::std::os::raw::c_char,
     ) -> GrinPartitionedGraph;
 
@@ -342,6 +345,25 @@ extern "C" {
         arg1: GrinGraph,
         arg2: GrinVertexList,
     ) -> GrinVertexList;
+
+    #[doc = " @brief get the vertex types with primary keys\n @param GrinGraph the graph"]
+    #[cfg(feature = "grin_enable_vertex_primary_keys")]
+    pub fn grin_get_vertex_types_with_primary_keys(arg1: GrinGraph) -> GrinVertexTypeList;
+
+    #[doc = " @brief get the primary keys (property list) of a specific vertex type\n @param GrinGraph the graph\n @param GrinVertexType the vertex type"]
+    #[cfg(feature = "grin_enable_vertex_primary_keys")]
+    pub fn grin_get_primary_keys_by_vertex_type(
+        arg1: GrinGraph,
+        arg2: GrinVertexType,
+    ) -> GrinVertexPropertyList;
+
+    #[doc = " @brief get the vertex with the given primary keys\n @param GrinGraph the graph\n @param GrinVertexType the vertex type which determines the property list for primary keys\n @param GrinRow the values of primary keys"]
+    #[cfg(feature = "grin_enable_vertex_primary_keys")]
+    pub fn grin_get_vertex_by_primary_keys(
+        arg1: GrinGraph,
+        arg2: GrinVertexType,
+        arg3: GrinRow,
+    ) -> GrinVertex;
 
     #[doc = " @brief get the vertex property name\n @param GrinGraph the graph\n @param GrinVertexProperty the vertex property"]
     #[cfg(feature = "grin_with_vertex_property_name")]
