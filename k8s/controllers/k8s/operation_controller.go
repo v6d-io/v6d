@@ -80,7 +80,8 @@ func (r *OperationReconciler) Reconcile(
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Operation"),
 		TmplFunc: map[string]interface{}{
 			"getDistributedAssemblyConfig": operation.GetDistributedAssemblyConfig,
-			"getAssemblyConfig":            operation.GetAssemblyConfig, "getDaskRepartitionConfig": operation.GetDaskRepartitionConfig,
+			"getAssemblyConfig":            operation.GetAssemblyConfig,
+			"getDaskRepartitionConfig":     operation.GetDaskRepartitionConfig,
 		},
 		Recorder: r.EventRecorder,
 	}

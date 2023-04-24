@@ -38,11 +38,11 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-GOLINT = $(shell command -v ${GOBIN}/golangci-lint > /dev/null)
-HELMIFY = $(shell command -v ${GOBIN}/helmify > /dev/null)
-E2E = $(shell command -v ${GOBIN}/e2e > /dev/null)
-KUSTOMIZE = $(shell command -v ${GOBIN}/kustomize > /dev/null)
-CONTROLLER_GEN = $(shell command -v ${GOBIN}/controller-gen > /dev/null)
+GOLINT = $(shell command -v $(GOBIN)/golangci-lint 2> /dev/null)
+HELMIFY = $(shell command -v $(GOBIN)/helmify 2> /dev/null)
+E2E = $(shell command -v $(GOBIN)/e2e 2> /dev/null)
+KUSTOMIZE = $(shell command -v $(GOBIN)/kustomize 2> /dev/null)
+CONTROLLER_GEN = $(shell command -v $(GOBIN)/controller-gen 2> /dev/null)
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v4@v4.5.5
@@ -91,7 +91,7 @@ uninstall: manifests kustomize
 # Deploy controller in the configured Kubernetes cluster in ~/.kube/config
 .PHONY: deploy
 deploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
 # Undeploy controller in the configured Kubernetes cluster in ~/.kube/config
@@ -102,32 +102,32 @@ undeploy: kustomize
 # Undeploy controller and all created resources in the configured Kubernetes cluster in ~/.kube/config
 .PHONY: undeploy-all
 undeploy-all: kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/default | kubectl delete -f -
 
 # Deploy namespace, CRDs, rbac, etc. except the controller in the configured Kubernetes cluster in ~/.kube/config
 .PHONY: predeploy
 predeploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 
 .PHONY: unpredeploy
 unpredeploy: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 
 # update the operator image's registry to localhost
 .PHONY: update-registry
 update-registry: kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 
 # recover the operator image's registry to vineyardcloudnative
 .PHONY: recover-registry
 recover-registry: kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 
 # dump the deployment configuration
 .PHONY: dry-run
 dry-run: manifests kustomize
-	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
+	cd config/manager && $(KUSTOMIZE) edit set image controller=$(IMG)
 	$(KUSTOMIZE) build config/default > controller.yaml
 
 # Generate manifests e.g. CRD, RBAC etc.
@@ -152,7 +152,7 @@ modules	= ./apis/... \
 # Run golangci-lint
 .PHONY: golint
 golint:
-    ifeq (${GOLINT},)
+    ifeq ($(GOLINT),)
 		@echo "golangci-lint not exist, installing it..."
 		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
     endif
@@ -162,7 +162,7 @@ golint:
 # Install helmify if not exist
 .PHONY: helmify
 helmify:
-    ifeq (${HELMIFY},)
+    ifeq ($(HELMIFY),)
 		@echo "helmify not exist, installing it..."
 		go install github.com/arttor/helmify/cmd/helmify@$(HELMIFY_VERSION)
     endif
@@ -172,7 +172,7 @@ helmify:
 # Install e2e if not exist
 .PHONY: e2e
 e2e:
-    ifeq (${E2E},)
+    ifeq ($(E2E),)
 		@echo "e2e not exist, installing it..."
 		go install github.com/apache/skywalking-infra-e2e/cmd/e2e@$(E2E_VERSION)
     endif
@@ -210,24 +210,24 @@ vendor:
 .PHONY: docker-build
 docker-build:
 	if docker build --help | grep -q load; then \
-		docker build --load . -t ${IMG}; \
+		docker build --load . -t $(IMG); \
 	else \
-		docker build . -t ${IMG}; \
+		docker build . -t $(IMG); \
 	fi
 
 docker-build-push-multi-arch:
-	docker buildx build . -t ${IMG} --platform linux/amd64,linux/arm64 --push
+	docker buildx build . -t $(IMG) --platform linux/amd64,linux/arm64 --push
 
 # Push the docker image
 .PHONY: docker-push
 docker-push:
-	docker push ${IMG}
+	docker push $(IMG)
 
 # find or download controller-gen
 # download controller-gen if necessary
 .PHONY: controller-gen
 controller-gen:
-    ifeq (${CONTROLLER_GEN},)
+    ifeq ($(CONTROLLER_GEN),)
 		@{ \
 		set -e ;\
 		CONTROLLER_GEN_TMP_DIR=$$(mktemp -d) ;\
@@ -241,7 +241,7 @@ controller-gen:
 
 .PHONY: kustomize
 kustomize:
-    ifeq (${KUSTOMIZE},)
+    ifeq ($(KUSTOMIZE),)
 		@{ \
 		set -e ;\
 		KUSTOMIZE_GEN_TMP_DIR=$$(mktemp -d) ;\

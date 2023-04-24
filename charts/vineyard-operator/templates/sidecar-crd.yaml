@@ -47,7 +47,7 @@ spec:
           spec:
             properties:
               etcdReplicas:
-                default: 3
+                default: 1
                 type: integer
               metric:
                 default:

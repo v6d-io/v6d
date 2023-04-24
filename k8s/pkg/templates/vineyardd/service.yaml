@@ -27,4 +27,5 @@ spec:
       protocol: TCP
       name: vineyard-rpc
   selector:
+    app.vineyard.io/role: vineyardd
     app.vineyard.io/name: {{ .Name }}

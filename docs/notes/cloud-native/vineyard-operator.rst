@@ -106,7 +106,7 @@ The detailed configuration entries for creating a vineyard cluster are listed as
        * - | etcdReplicas
          - int
          - The etcd replicas of vineyard
-         - 3
+         - 1
 
        * - | vineyard.
            | image

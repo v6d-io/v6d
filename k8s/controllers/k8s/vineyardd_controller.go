@@ -18,9 +18,6 @@ package k8s
 
 import (
 	"context"
-	"fmt"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -44,27 +41,6 @@ type VineyarddReconciler struct {
 	client.Client
 	record.EventRecorder
 	Scheme *runtime.Scheme
-}
-
-// EtcdConfig holds all configuration about etcd
-type EtcdConfig struct {
-	Name      string
-	Namespace string
-	Rank      int
-	Endpoints string
-	Image     string
-}
-
-// Etcd contains the configuration about etcd
-var Etcd EtcdConfig
-
-// GetEtcdConfig get etcd configuration from Etcd
-func getEtcdConfig() EtcdConfig {
-	return Etcd
-}
-
-func getStorage(q resource.Quantity) string {
-	return q.String()
 }
 
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
@@ -109,7 +85,9 @@ func (r *VineyarddReconciler) Reconcile(
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Vineyardd"),
 		Recorder: r.EventRecorder,
 		TmplFunc: map[string]interface{}{
-			"getStorage": getStorage,
+			"getStorage": func(q resource.Quantity) string {
+				return q.String()
+			},
 		},
 	}
 	etcdApp := kubernetes.Application{
@@ -117,16 +95,18 @@ func (r *VineyarddReconciler) Reconcile(
 		FileRepo: templates.Repo,
 		CR:       &vineyardd,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Vineyardd"),
-		TmplFunc: map[string]interface{}{"getEtcdConfig": getEtcdConfig},
+		TmplFunc: map[string]interface{}{"getEtcdConfig": nil},
 	}
 
-	// set up the etcd configuration
-	etcdReplicas := vineyardd.Spec.EtcdReplicas
-	Etcd = BuildEtcdConfig(vineyardd.Name, vineyardd.Namespace,
-		etcdReplicas, vineyardd.Spec.Vineyard.Image)
+	// set up the etcdCfg configuration
+	etcdCfg := NewEtcdConfig(vineyardd.Name, vineyardd.Namespace,
+		vineyardd.Spec.EtcdReplicas, vineyardd.Spec.Vineyard.Image)
 
-	for i := 0; i < etcdReplicas; i++ {
-		Etcd.Rank = i
+	for rank := 0; rank < vineyardd.Spec.EtcdReplicas; rank++ {
+		etcdApp.TmplFunc["getEtcdConfig"] = func() EtcdConfig {
+			etcdCfg.Rank = rank
+			return etcdCfg
+		}
 		if _, err := etcdApp.Apply(ctx, "etcd/etcd.yaml", logger, true); err != nil {
 			logger.Error(err, "failed to apply etcd pod")
 			return ctrl.Result{}, err
@@ -190,23 +170,4 @@ func (r *VineyarddReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&k8sv1alpha1.Vineyardd{}).
 		Complete(r)
-}
-
-// BuildEtcdConfig builds the etcd config.
-func BuildEtcdConfig(name string, namespace string,
-	replicas int, image string) EtcdConfig {
-	etcdConfig := EtcdConfig{}
-	// the etcd is built in the vineyardd image
-	etcdConfig.Name = name
-	etcdConfig.Image = image
-	etcdConfig.Namespace = namespace
-	etcdEndpoints := make([]string, 0, replicas)
-	for i := 0; i < replicas; i++ {
-		etcdEndpoints = append(
-			etcdEndpoints,
-			fmt.Sprintf("etcd%v=http://etcd%v:2380", strconv.Itoa(i), strconv.Itoa(i)),
-		)
-	}
-	etcdConfig.Endpoints = strings.Join(etcdEndpoints, ",")
-	return etcdConfig
 }

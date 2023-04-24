@@ -59,7 +59,7 @@ func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, name string,
 		return podObjs, svcObjs, errors.Wrap(err, "failed to get etcd manifests")
 	}
 	// set up the etcd config
-	*EtcdConfig = k8s.BuildEtcdConfig(name, namespace, replicas, image)
+	*EtcdConfig = k8s.NewEtcdConfig(name, namespace, replicas, image)
 
 	for i := 0; i < replicas; i++ {
 		EtcdConfig.Rank = i

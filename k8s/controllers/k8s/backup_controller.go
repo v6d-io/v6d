@@ -47,7 +47,7 @@ type FailoverConfig struct {
 	VineyarddName      string
 	Endpoint           string
 	VineyardSockPath   string
-	Allinstances       string
+	AllInstances       string
 }
 
 // BackupConfig holds all configuration about backup
@@ -55,18 +55,6 @@ type BackupConfig struct {
 	Name  string
 	Limit string
 	FailoverConfig
-}
-
-// Backup contains the configuration about backup
-var Backup BackupConfig
-
-// GetBackupConfig get backup configuratiin from Backup
-func getBackupConfig() BackupConfig {
-	return Backup
-}
-
-func getResourceStorage(q resource.Quantity) string {
-	return q.String()
 }
 
 // BackupReconciler reconciles a Backup object
@@ -96,26 +84,31 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 	logger.Info("Reconciling Backup", "backup", backup)
 
+	backupCfg := BackupConfig{}
+	backupCfg.Name = "backup-" + backup.Spec.VineyarddName + "-" + backup.Spec.VineyarddNamespace
+	backupCfg.Limit = strconv.Itoa(backup.Spec.Limit)
+	failoverCfg, err := newFailoverConfig(r.Client, &backup)
+	if err != nil {
+		logger.Error(err, "unable to build failover config")
+		return ctrl.Result{}, err
+	}
+	backupCfg.FailoverConfig = failoverCfg
+
 	app := kubernetes.Application{
 		Client:   r.Client,
 		FileRepo: templates.Repo,
 		CR:       &backup,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Backup"),
 		TmplFunc: map[string]interface{}{
-			"getResourceStorage": getResourceStorage,
-			"getBackupConfig":    getBackupConfig,
+			"getResourceStorage": func(q resource.Quantity) string {
+				return q.String()
+			},
+			"getBackupConfig": func() BackupConfig {
+				return backupCfg
+			},
 		},
 		Recorder: r.EventRecorder,
 	}
-
-	Backup.Name = "backup-" + backup.Spec.VineyarddName + "-" + backup.Spec.VineyarddNamespace
-	Backup.Limit = strconv.Itoa(backup.Spec.Limit)
-	config, err := BuildFailoverConfig(r.Client, &backup)
-	if err != nil {
-		logger.Error(err, "unable to build failover config")
-		return ctrl.Result{}, err
-	}
-	Backup.FailoverConfig = config
 
 	if backup.Status.State == "" || backup.Status.State == RunningState {
 		if _, err := app.Apply(ctx, "backup/job.yaml", logger, false); err != nil {
@@ -183,15 +176,17 @@ func (r *BackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// BuildFailoverConfig builds the failover config from the backup
-func BuildFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup) (FailoverConfig, error) {
+// newFailoverConfig builds the failover config from the backup
+func newFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup) (FailoverConfig, error) {
 	failoverConfig := FailoverConfig{}
 	// get vineyardd
 	vineyarddNamespace := backup.Spec.VineyarddNamespace
 	vineyarddName := backup.Spec.VineyarddName
 	vineyardd := &k8sv1alpha1.Vineyardd{}
-	if err := c.Get(context.Background(), client.ObjectKey{Namespace: vineyarddNamespace,
-		Name: vineyarddName}, vineyardd); err != nil {
+	if err := c.Get(context.Background(), client.ObjectKey{
+		Namespace: vineyarddNamespace,
+		Name:      vineyarddName,
+	}, vineyardd); err != nil {
 		return failoverConfig, errors.Wrap(err, "unable to fetch Vineyardd")
 	}
 
@@ -212,7 +207,7 @@ func BuildFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup) (FailoverC
 		return failoverConfig, errors.Wrap(err, "unable to resolve vineyardd socket")
 	}
 	failoverConfig.VineyardSockPath = socket
-	failoverConfig.Allinstances = strconv.Itoa(vineyardd.Spec.Replicas)
+	failoverConfig.AllInstances = strconv.Itoa(vineyardd.Spec.Replicas)
 
 	return failoverConfig, nil
 }

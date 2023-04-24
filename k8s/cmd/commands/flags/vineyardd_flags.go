@@ -139,7 +139,7 @@ func ApplyVineyarddOpts(cmd *cobra.Command) {
 	cmd.Flags().IntVarP(&VineyarddOpts.Replicas, "vineyard.replicas", "", 3,
 		"the number of vineyardd replicas")
 	cmd.Flags().IntVarP(&VineyarddOpts.EtcdReplicas, "vineyard.etcd.replicas",
-		"", 3, "the number of etcd replicas in a vineyard cluster")
+		"", 1, "the number of etcd replicas in a vineyard cluster")
 	cmd.Flags().StringVarP(&VineyarddFile, "file", "f", "", "the path of vineyardd")
 	// setup the vineyardd name
 	ApplyVineyarddNameOpts(cmd)

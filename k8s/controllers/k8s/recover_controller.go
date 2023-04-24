@@ -62,14 +62,6 @@ type RecoverConfig struct {
 	FailoverConfig
 }
 
-// Recover contains the configuration about recover
-var Recover RecoverConfig
-
-// getRecoverConfig get recover configuratiin from Recover
-func getRecoverConfig() RecoverConfig {
-	return Recover
-}
-
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=recovers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=recovers/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=k8s.v6d.io,resources=vineyardds,verbs=get;list;watch;create;update;patch;delete
@@ -93,29 +85,33 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	logger.Info("Reconciling Recover", "recover", recover)
 
-	app := swckkube.Application{
-		Client:   r.Client,
-		FileRepo: templates.Repo,
-		CR:       &recover,
-		GVK:      k8sv1alpha1.GroupVersion.WithKind("Recover"),
-		TmplFunc: map[string]interface{}{"getRecoverConfig": getRecoverConfig},
-	}
-
 	backup := k8sv1alpha1.Backup{}
-	if err := r.Get(ctx, client.ObjectKey{Namespace: recover.Spec.BackupNamespace, Name: recover.Spec.BackupName}, &backup); err != nil {
+	if err := r.Get(ctx, client.ObjectKey{
+		Namespace: recover.Spec.BackupNamespace,
+		Name:      recover.Spec.BackupName,
+	}, &backup); err != nil {
 		logger.Error(err, "unable to get Backup")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
 	// setup the recover configuration
-	Recover.Name = "recover-" + backup.Name
-	Recover.BackupPVCName = backup.Name
-	config, err := BuildFailoverConfig(r.Client, &backup)
+	recoverCfg := RecoverConfig{}
+	recoverCfg.Name = "recover-" + backup.Name
+	recoverCfg.BackupPVCName = backup.Name
+	failoverCfg, err := newFailoverConfig(r.Client, &backup)
 	if err != nil {
 		logger.Error(err, "unable to build failover configuration")
 		return ctrl.Result{}, err
 	}
-	Recover.FailoverConfig = config
+	recoverCfg.FailoverConfig = failoverCfg
+
+	app := swckkube.Application{
+		Client:   r.Client,
+		FileRepo: templates.Repo,
+		CR:       &recover,
+		GVK:      k8sv1alpha1.GroupVersion.WithKind("Recover"),
+		TmplFunc: map[string]interface{}{"getRecoverConfig": func() RecoverConfig { return recoverCfg }},
+	}
 
 	if recover.Status.State == "" || recover.Status.State == RunningState {
 		if _, err := app.Apply(ctx, "recover/job.yaml", logger, false); err != nil {
