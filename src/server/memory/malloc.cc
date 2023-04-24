@@ -81,6 +81,11 @@ struct memfd_create_compat {
     if (handle_) {
       memfd_create_fn =
           (int (*)(const char*, unsigned int)) dlsym(handle_, "memfd_create");
+      if (memfd_create_fn) {
+        LOG(INFO) << "Use memfd_create(2) for shared memory";
+      } else {
+        LOG(INFO) << "Use mkstemp(3) for shared memory";
+      }
     }
   }
 

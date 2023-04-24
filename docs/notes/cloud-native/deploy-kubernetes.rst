@@ -56,16 +56,17 @@ Option #2: Install form source code
 
 3. Install the cert-manager
 
-.. code:: bash
+    .. code:: bash
 
-    $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
+        $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.9.1/cert-manager.yaml
 
-.. note::
+    .. note::
 
-    Please wait the cert-manager for a while until it is ready before installing the
-    vineyard operator.
+        Please wait the cert-manager for a while until it is ready before installing the
+        vineyard operator.
 
 4. Next, deploy the vineyard operator:
+
    .. code:: bash
 
       $ make -C k8s deploy

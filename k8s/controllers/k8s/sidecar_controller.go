@@ -36,14 +36,6 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
 
-// SidecarEtcd contains the configuration about etcd of sidecar container
-var SidecarEtcd EtcdConfig
-
-// getSidecarEtcdConfig get etcd configuratiin from Etcd
-func getSidecarEtcdConfig() EtcdConfig {
-	return SidecarEtcd
-}
-
 // SidecarReconciler reconciles a Sidecar object
 type SidecarReconciler struct {
 	client.Client
@@ -74,17 +66,17 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		CR:       sidecar,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Sidecar"),
 		Recorder: r.EventRecorder,
-		TmplFunc: map[string]interface{}{
-			"getEtcdConfig": getSidecarEtcdConfig,
-		},
+		TmplFunc: map[string]interface{}{"getEtcdConfig": nil},
 	}
-	// setup the etcd configuration
-	etcdReplicas := sidecar.Spec.EtcdReplicas
-	SidecarEtcd = BuildEtcdConfig(sidecar.Name, sidecar.Namespace,
-		etcdReplicas, sidecar.Spec.Vineyard.Image)
+	// setup the etcdCfg configuration
+	etcdCfg := NewEtcdConfig(sidecar.Name, sidecar.Namespace,
+		sidecar.Spec.EtcdReplicas, sidecar.Spec.Vineyard.Image)
 
-	for i := 0; i < etcdReplicas; i++ {
-		SidecarEtcd.Rank = i
+	for rank := 0; rank < sidecar.Spec.EtcdReplicas; rank++ {
+		sidecarApp.TmplFunc["getEtcdConfig"] = func() EtcdConfig {
+			etcdCfg.Rank = rank
+			return etcdCfg
+		}
 		if _, err := sidecarApp.Apply(ctx, "etcd/etcd.yaml", logger, false); err != nil {
 			logger.Error(err, "failed to apply etcd pod")
 			return ctrl.Result{}, err

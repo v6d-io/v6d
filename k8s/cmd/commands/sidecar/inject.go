@@ -71,16 +71,16 @@ var (
 
 	injectLong = util.LongDesc(`
 	Inject the vineyard sidecar container into a workload. You can
-	input a workload yaml or a workload json and then get the injected 
+	input a workload yaml or a workload json and then get the injected
 	workload and some etcd manifests from the output.
-	
+
 	The output is a set of manifests that includes the injected workload,
 	the rpc service, the etcd service and the etcd cluster(e.g. several
 	pods and services). Next, we will introduce a simple example to show
 	the injection.
 
 	Assume you have the following workload yaml:` +
-		"\n```yaml" + `
+		"\n\n```yaml" + `
 	apiVersion: apps/v1
 	kind: Deployment
 	metadata:
@@ -102,13 +102,14 @@ var (
 	        ports:
 	        - containerPort: 80` +
 		"\n```" + `
+
 	Then, you can use the following command to inject the vineyard sidecar
-	
+
 	$ vineyardctl inject -f workload.yaml --apply-resources
-	
+
 	After running the command, the main output(removed some unnecessary fields)
 	is as follows:` +
-		"\n```yaml" + `
+		"\n\n```yaml" + `
 	apiVersion: apps/v1
 	kind: Deployment
 	metadata:
@@ -164,6 +165,7 @@ var (
 	    - emptyDir: {}
 	      name: vineyard-socket` +
 		"\n```" + `
+
 	The sidecar template can be accessed from the following link:
 	https://github.com/v6d-io/v6d/blob/main/k8s/pkg/templates/sidecar/injection-template.yaml
 	also you can get some inspiration from the doc link:
@@ -193,7 +195,7 @@ var (
 	# inject the default vineyard sidecar container into a workload
 	# output all injected manifests and then deploy them
 	vineyardctl inject -f workload.yaml | kubectl apply -f -
-	
+
 	# if you only want to get the injected workload yaml rather than
 	# all manifests that includes the etcd cluster and the rpc service,
 	# you can enable the apply-resources and then the manifests will be

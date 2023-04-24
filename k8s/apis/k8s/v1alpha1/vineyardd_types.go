@@ -194,7 +194,7 @@ type VineyarddSpec struct {
 
 	// EtcdReplicas describe the etcd replicas
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:=3
+	// +kubebuilder:default:=1
 	EtcdReplicas int `json:"etcdReplicas,omitempty"`
 
 	// vineyardd's service

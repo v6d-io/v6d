@@ -18,30 +18,31 @@ apiVersion: v1
 kind: Pod
 metadata:
   labels:
+    app.vineyard.io/role: etcd
     app.vineyard.io/name: {{ $etcd.Name }}
-    etcd_node: etcd {{- $etcd.Rank }}
-  name: etcd {{- $etcd.Rank }}
+    etcd_node: {{ $etcd.Name }}-etcd-{{ $etcd.Rank }}
+  name: {{ $etcd.Name }}-etcd-{{ $etcd.Rank }}
   namespace: {{ $etcd.Namespace }}
 spec:
   containers:
-  - command:
+  - name: etcd
+    image: {{ $etcd.Image }}
+    command:
     - etcd
     - --name
-    - etcd {{- $etcd.Rank}}
+    - {{ $etcd.Name }}-etcd-{{ $etcd.Rank }}
     - --initial-advertise-peer-urls
-    - http://etcd{{- $etcd.Rank -}} :2380
+    - http://{{ $etcd.Name }}-etcd-{{ $etcd.Rank }}:2380
+    - --advertise-client-urls
+    - http://{{ $etcd.Name }}-etcd-{{ $etcd.Rank }}:2379
     - --listen-peer-urls
     - http://0.0.0.0:2380
     - --listen-client-urls
     - http://0.0.0.0:2379
-    - --advertise-client-urls
-    - http://etcd{{- $etcd.Rank}}:2379
     - --initial-cluster
     - {{ $etcd.Endpoints }}
     - --initial-cluster-state
     - new
-    image: {{ $etcd.Image }}
-    name: etcd
     ports:
     - containerPort: 2379
       name: client

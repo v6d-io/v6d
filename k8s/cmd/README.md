@@ -715,7 +715,7 @@ vineyardctl deploy vineyard-deployment [flags]
       --pluginImage.distributedAssemblyImage string   the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
       --pluginImage.localAssemblyImage string         the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
       --pluginImage.recoverImage string               the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
-      --vineyard.etcd.replicas int                    the number of etcd replicas in a vineyard cluster (default 3)
+      --vineyard.etcd.replicas int                    the number of etcd replicas in a vineyard cluster (default 1)
       --vineyard.replicas int                         the number of vineyardd replicas (default 3)
       --vineyardd.envs strings                        The environment variables of vineyardd
       --vineyardd.image string                        the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
@@ -845,7 +845,7 @@ vineyardctl deploy vineyardd [flags]
       --pluginImage.distributedAssemblyImage string   the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
       --pluginImage.localAssemblyImage string         the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
       --pluginImage.recoverImage string               the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
-      --vineyard.etcd.replicas int                    the number of etcd replicas in a vineyard cluster (default 3)
+      --vineyard.etcd.replicas int                    the number of etcd replicas in a vineyard cluster (default 1)
       --vineyard.replicas int                         the number of vineyardd replicas (default 3)
       --vineyardd.envs strings                        The environment variables of vineyardd
       --vineyardd.image string                        the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
@@ -875,7 +875,7 @@ Inject the vineyard sidecar container into a workload
 ### Synopsis
 
 Inject the vineyard sidecar container into a workload. You can
-input a workload yaml or a workload json and then get the injected 
+input a workload yaml or a workload json and then get the injected
 workload and some etcd manifests from the output.
 
 The output is a set of manifests that includes the injected workload,
@@ -884,6 +884,7 @@ pods and services). Next, we will introduce a simple example to show
 the injection.
 
 Assume you have the following workload yaml:
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -906,12 +907,14 @@ spec:
         ports:
         - containerPort: 80
 ```
+
 Then, you can use the following command to inject the vineyard sidecar
 
 $ vineyardctl inject -f workload.yaml --apply-resources
 
 After running the command, the main output(removed some unnecessary fields)
 is as follows:
+
 ```yaml
 apiVersion: apps/v1
 kind: Deployment
@@ -968,6 +971,7 @@ template:
     - emptyDir: {}
       name: vineyard-socket
 ```
+
 The sidecar template can be accessed from the following link:
 https://github.com/v6d-io/v6d/blob/main/k8s/pkg/templates/sidecar/injection-template.yaml
 also you can get some inspiration from the doc link:
@@ -1007,7 +1011,7 @@ vineyardctl inject [flags]
   # inject the default vineyard sidecar container into a workload
   # output all injected manifests and then deploy them
   vineyardctl inject -f workload.yaml | kubectl apply -f -
-  
+
   # if you only want to get the injected workload yaml rather than
   # all manifests that includes the etcd cluster and the rpc service,
   # you can enable the apply-resources and then the manifests will be

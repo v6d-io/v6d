@@ -706,7 +706,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
       // update instance status
       if (boost::algorithm::starts_with(op.kv.key, "/instances/")) {
-        instanceUpdate(op);
+        instanceUpdate(op, from_remote);
       }
 
 #ifndef NDEBUG
@@ -822,7 +822,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
     VINEYARD_SUPPRESS(server_ptr_->ProcessDeferred(meta_));
   }
 
-  void instanceUpdate(const op_t& op) {
+  void instanceUpdate(const op_t& op, const bool from_remote = true) {
     std::vector<std::string> key_segments;
     boost::split(key_segments, op.kv.key, boost::is_any_of("/"));
     if (key_segments[0].empty()) {
@@ -831,13 +831,19 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
     if (key_segments[2] == "hostid") {
       uint64_t instance_id = std::stoul(key_segments[1].substr(1));
       if (op.op == op_t::op_type_t::kPut) {
-        LOG(INFO) << "Instance join: " << instance_id;
+        if (from_remote) {
+          LOG(INFO) << "Instance join: " << instance_id;
+        }
         instances_list_.emplace(instance_id);
       } else if (op.op == op_t::op_type_t::kDel) {
-        LOG(INFO) << "Instance exit: " << instance_id;
+        if (from_remote) {
+          LOG(INFO) << "Instance exit: " << instance_id;
+        }
         instances_list_.erase(instance_id);
       } else {
-        LOG(ERROR) << "Unknown op type: " << op.ToString();
+        if (from_remote) {
+          LOG(ERROR) << "Unknown op type: " << op.ToString();
+        }
       }
       LOG_SUMMARY("instances_total", "", instances_list_.size());
     }

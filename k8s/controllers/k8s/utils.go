@@ -18,6 +18,8 @@ package k8s
 import (
 	"crypto/rand"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
@@ -28,4 +30,34 @@ func GenerateRandomName(length int) string {
 		log.Fatal(err, "rand.Read failed")
 	}
 	return fmt.Sprintf("%x", bs)[:length]
+}
+
+// EtcdConfig holds all configuration about etcd
+type EtcdConfig struct {
+	Name      string
+	Namespace string
+	Rank      int
+	Endpoints string
+	Image     string
+}
+
+// NewEtcdConfig builds the etcd config.
+func NewEtcdConfig(name string, namespace string,
+	replicas int, image string,
+) EtcdConfig {
+	etcdConfig := EtcdConfig{}
+	// the etcd is built in the vineyardd image
+	etcdConfig.Name = name
+	etcdConfig.Image = image
+	etcdConfig.Namespace = namespace
+	etcdEndpoints := make([]string, 0, replicas)
+	for i := 0; i < replicas; i++ {
+		etcdName := fmt.Sprintf("%v-etcd-%v", name, strconv.Itoa(i))
+		etcdEndpoints = append(
+			etcdEndpoints,
+			fmt.Sprintf("%v=http://%v:2380", etcdName, etcdName),
+		)
+	}
+	etcdConfig.Endpoints = strings.Join(etcdEndpoints, ",")
+	return etcdConfig
 }
