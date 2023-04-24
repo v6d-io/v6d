@@ -124,7 +124,7 @@ void grin_destroy_value(GRIN_GRAPH g, GRIN_DATATYPE dt, const void* value) {
         delete static_cast<const double*>(value);
         break;
     case GRIN_DATATYPE::String:
-        delete static_cast<const std::string*>(value);
+        delete static_cast<const char*>(value);
         break;
     case GRIN_DATATYPE::Date32:
         delete static_cast<const int32_t*>(value);

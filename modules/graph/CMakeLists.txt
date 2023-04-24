@@ -201,6 +201,8 @@ endif()
 file(GLOB_RECURSE GRIN_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "grin/*.cc")
 add_library(vineyard_grin ${GRIN_SRC_FILES})
 target_link_libraries(vineyard_grin PRIVATE vineyard_graph ${Protobuf_LIBRARIES})
+install_vineyard_target(vineyard_grin)
+
 
 # grin test
 if(BUILD_VINEYARD_TESTS)

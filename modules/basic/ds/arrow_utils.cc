@@ -845,11 +845,11 @@ const void* get_arrow_array_data_element(std::shared_ptr<arrow::Array> const& ar
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::DoubleArray>(array)->raw_values() + offset);
   } else if (array->type()->Equals(arrow::utf8())) {
-    return reinterpret_cast<const void*>(
-        std::dynamic_pointer_cast<arrow::StringArray>(array).get() + offset);
+    return reinterpret_cast<const void*>(new std::string(
+        std::dynamic_pointer_cast<arrow::StringArray>(array).get()->GetView(offset)));
   } else if (array->type()->Equals(arrow::large_utf8())) {
-    return reinterpret_cast<const void*>(
-        std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get() + offset);
+    return reinterpret_cast<const void*>(new std::string(
+        std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get()->GetView(offset)));
   } else if (array->type()->id() == arrow::Type::LIST) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::ListArray>(array).get() + offset);

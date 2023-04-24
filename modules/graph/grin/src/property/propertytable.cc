@@ -36,8 +36,13 @@ const void* grin_get_value_from_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, 
         return new float(*static_cast<const float*>((*_r)[idx]));
     case GRIN_DATATYPE::Double:
         return new double(*static_cast<const double*>((*_r)[idx]));
-    case GRIN_DATATYPE::String:
-        return new std::string(*static_cast<const std::string*>((*_r)[idx]));
+    case GRIN_DATATYPE::String: {
+        auto s = static_cast<const std::string*>((*_r)[idx]);
+        int len = s->length() + 1;
+        char* out = new char[len];
+        snprintf(out, len, "%s", s->c_str());
+        return out;
+    }
     case GRIN_DATATYPE::Date32:
         return new int32_t(*static_cast<const int32_t*>((*_r)[idx]));
     case GRIN_DATATYPE::Date64:
@@ -134,7 +139,13 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
     case GRIN_DATATYPE::Double:
         return new double(*static_cast<const double*>(result));
     case GRIN_DATATYPE::String:
-        return new std::string(*static_cast<const std::string*>(result));
+    {
+        auto s = static_cast<const std::string*>(result);
+        int len = s->length() + 1;
+        char* out = new char[len];
+        snprintf(out, len, "%s", s->c_str());
+        return out;
+    }
     case GRIN_DATATYPE::Date32:
         return new int32_t(*static_cast<const int32_t*>(result));
     case GRIN_DATATYPE::Date64:

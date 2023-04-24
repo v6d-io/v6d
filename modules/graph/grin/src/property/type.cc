@@ -86,7 +86,9 @@ const char* grin_get_vertex_type_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
 GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH g, const char* name) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto s = std::string(name);
-    auto vt = new GRIN_VERTEX_TYPE_T(_g->schema().GetVertexLabelId(s));
+    auto _id = _g->schema().GetVertexLabelId(s);
+    if (_id == -1 ) return GRIN_NULL_VERTEX_TYPE;
+    auto vt = new GRIN_VERTEX_TYPE_T(_id);
     return vt;
 }
 #endif
@@ -174,7 +176,9 @@ const char* grin_get_edge_type_name(GRIN_GRAPH g, GRIN_EDGE_TYPE et) {
 GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH g, const char* name) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto s = std::string(name);
-    auto et = new GRIN_EDGE_TYPE_T(_g->schema().GetEdgeLabelId(s));
+    auto _id = _g->schema().GetEdgeLabelId(s);
+    if (_id == -1) return GRIN_NULL_EDGE_TYPE;
+    auto et = new GRIN_EDGE_TYPE_T(_id);
     return et;
 }
 #endif

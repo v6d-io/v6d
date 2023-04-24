@@ -70,7 +70,6 @@ GRIN_VERTEX_LIST grin_select_type_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_TYPE
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-
     if (_vl->type_begin > *_vtype || _vl->type_end <= *_vtype) return GRIN_NULL_LIST;
 
     auto fvl = new GRIN_VERTEX_LIST_T();

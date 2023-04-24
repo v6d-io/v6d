@@ -31,7 +31,9 @@ GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH g, GRIN_VERTEX_
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto s = std::string(name);
-    auto vp = new GRIN_VERTEX_PROPERTY_T(*_vtype, _g->schema().GetVertexPropertyId(*_vtype, s));
+    auto _id = _g->schema().GetVertexPropertyId(*_vtype, s);
+    if (_id < 0) return GRIN_NULL_VERTEX_PROPERTY;
+    auto vp = new GRIN_VERTEX_PROPERTY_T(*_vtype, _id);
     return vp;
 }
 
