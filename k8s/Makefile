@@ -272,4 +272,8 @@ generate-helm-chart: helmify kustomize
 	cd ../charts && $(KUSTOMIZE) build ../k8s/config/default | $(HELMIFY) --cert-manager-as-subchart vineyard-operator && \
 	sed -i 's/\/var\/run\/vineyard-kubernetes\/{{.Namespace}}\/{{.Name}}/\/var\/run\/vineyard-kubernetes\/{{ \"{{.Namespace}}\/{{.Name}}\" }}/g' \
 	vineyard-operator/templates/vineyardd-crd.yaml && \
-	sed -i 's/certManager/cert-manager/g' vineyard-operator/values.yaml
+	sed -i 's/certManager/cert-manager/g' vineyard-operator/values.yaml && \
+	sed -i '4i\  extraArgs:\n    - --enable-certificate-owner-ref=true' vineyard-operator/values.yaml
+	
+
+
