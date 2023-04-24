@@ -19,7 +19,6 @@ metadata:
   name: {{ .Name }}
   namespace: {{ .Namespace }}
   labels:
-    app.vineyard.io/role: vineyardd
     app.vineyard.io/name: {{ .Name }}
     app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}
     app.kubernetes.io/component: deployment
@@ -33,6 +32,7 @@ spec:
   template:
     metadata:
       labels:
+        app.vineyard.io/role: vineyardd
         app.vineyard.io/name: {{ .Name }}
         app.kubernetes.io/name: {{ .Name }}
         app.kubernetes.io/instance: {{ .Namespace -}} - {{- .Name }}

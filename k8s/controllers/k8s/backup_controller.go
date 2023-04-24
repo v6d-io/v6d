@@ -87,12 +87,12 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	backupCfg := BackupConfig{}
 	backupCfg.Name = "backup-" + backup.Spec.VineyarddName + "-" + backup.Spec.VineyarddNamespace
 	backupCfg.Limit = strconv.Itoa(backup.Spec.Limit)
-	config, err := newFailoverConfig(r.Client, &backup)
+	failoverCfg, err := newFailoverConfig(r.Client, &backup)
 	if err != nil {
 		logger.Error(err, "unable to build failover config")
 		return ctrl.Result{}, err
 	}
-	backupCfg.FailoverConfig = config
+	backupCfg.FailoverConfig = failoverCfg
 
 	app := kubernetes.Application{
 		Client:   r.Client,
