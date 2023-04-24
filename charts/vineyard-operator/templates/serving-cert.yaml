@@ -16,4 +16,4 @@ spec:
   issuerRef:
     kind: Issuer
     name: '{{ include "vineyard-operator.fullname" . }}-selfsigned-issuer'
-  secretName: webhook-server-cert
+  secretName: vineyard-operator-webhook-server-cert
