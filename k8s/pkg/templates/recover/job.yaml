@@ -38,13 +38,13 @@ spec:
         imagePullPolicy: IfNotPresent
         env:
         - name: RECOVER_PATH
-          value: {{  $failoverConfig.Path }}
+          value: {{ $failoverConfig.Path }}
         - name: ENDPOINT
           value: {{ $failoverConfig.Endpoint  }}
         - name: SELECTOR
           value: {{ .Name }}
         - name: ALLINSTANCES
-          value: "{{ $failoverConfig.Allinstances }}"
+          value: "{{ $failoverConfig.AllInstances }}"
         - name: POD_NAME
           valueFrom:
             fieldRef:

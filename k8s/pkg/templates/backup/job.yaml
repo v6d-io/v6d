@@ -46,7 +46,7 @@ spec:
         - name: SELECTOR
           value: {{ .Name }}
         - name: ALLINSTANCES
-          value: "{{ $failoverConfig.Allinstances }}"
+          value: "{{ $failoverConfig.AllInstances }}"
         - name: POD_NAME
           valueFrom:
             fieldRef:

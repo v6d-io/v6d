@@ -47,7 +47,7 @@ type FailoverConfig struct {
 	VineyarddName      string
 	Endpoint           string
 	VineyardSockPath   string
-	Allinstances       string
+	AllInstances       string
 }
 
 // BackupConfig holds all configuration about backup
@@ -87,7 +87,7 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	backupCfg := BackupConfig{}
 	backupCfg.Name = "backup-" + backup.Spec.VineyarddName + "-" + backup.Spec.VineyarddNamespace
 	backupCfg.Limit = strconv.Itoa(backup.Spec.Limit)
-	config, err := BuildFailoverConfig(r.Client, &backup)
+	config, err := newFailoverConfig(r.Client, &backup)
 	if err != nil {
 		logger.Error(err, "unable to build failover config")
 		return ctrl.Result{}, err
@@ -176,8 +176,8 @@ func (r *BackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-// BuildFailoverConfig builds the failover config from the backup
-func BuildFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup) (FailoverConfig, error) {
+// newFailoverConfig builds the failover config from the backup
+func newFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup) (FailoverConfig, error) {
 	failoverConfig := FailoverConfig{}
 	// get vineyardd
 	vineyarddNamespace := backup.Spec.VineyarddNamespace
@@ -207,7 +207,7 @@ func BuildFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup) (FailoverC
 		return failoverConfig, errors.Wrap(err, "unable to resolve vineyardd socket")
 	}
 	failoverConfig.VineyardSockPath = socket
-	failoverConfig.Allinstances = strconv.Itoa(vineyardd.Spec.Replicas)
+	failoverConfig.AllInstances = strconv.Itoa(vineyardd.Spec.Replicas)
 
 	return failoverConfig, nil
 }

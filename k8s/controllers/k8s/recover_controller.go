@@ -86,7 +86,10 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	logger.Info("Reconciling Recover", "recover", recover)
 
 	backup := k8sv1alpha1.Backup{}
-	if err := r.Get(ctx, client.ObjectKey{Namespace: recover.Spec.BackupNamespace, Name: recover.Spec.BackupName}, &backup); err != nil {
+	if err := r.Get(ctx, client.ObjectKey{
+		Namespace: recover.Spec.BackupNamespace,
+		Name:      recover.Spec.BackupName,
+	}, &backup); err != nil {
 		logger.Error(err, "unable to get Backup")
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -95,12 +98,12 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	recoverCfg := RecoverConfig{}
 	recoverCfg.Name = "recover-" + backup.Name
 	recoverCfg.BackupPVCName = backup.Name
-	config, err := BuildFailoverConfig(r.Client, &backup)
+	failoverCfg, err := newFailoverConfig(r.Client, &backup)
 	if err != nil {
 		logger.Error(err, "unable to build failover configuration")
 		return ctrl.Result{}, err
 	}
-	recoverCfg.FailoverConfig = config
+	recoverCfg.FailoverConfig = failoverCfg
 
 	app := swckkube.Application{
 		Client:   r.Client,
