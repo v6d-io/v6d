@@ -234,11 +234,11 @@ instances, simply create a `Vineyardd` Custom Resource (CR) as shown below.
     apiVersion: k8s.v6d.io/v1alpha1
     kind: Vineyardd
     metadata:
-    name: vineyardd-sample
-    namespace: vineyard-system
+      name: vineyardd-sample
+      namespace: vineyard-system
     spec:
-    # vineyard instances
-    replicas: 2
+      # vineyard instances
+      replicas: 2
     EOF
 
 .. admonition:: Expected output
@@ -286,26 +286,26 @@ First, let's deploy the Python client on two Vineyard nodes as follows.
     apiVersion: apps/v1
     kind: Deployment
     metadata:
-    name: vineyard-python-client
-    namespace:  vineyard-system
+      name: vineyard-python-client
+      namespace:  vineyard-system
     spec:
-    selector:
+      selector:
         matchLabels:
-        app: vineyard-python-client
-    replicas: 2
-    template:
+          app: vineyard-python-client
+      replicas: 2
+      template:
         metadata:
-        labels:
+          labels:
             app: vineyard-python-client
             # related to which vineyard cluster
             scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
             scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
             scheduling.k8s.v6d.io/job: v6d-workflow-demo-job1
         spec:
-        # use the vineyard scheduler to deploy the pod on the vineyard cluster.
-        schedulerName: vineyard-scheduler
-        containers:
-        - name: vineyard-python
+          # use the vineyard scheduler to deploy the pod on the vineyard cluster.
+          schedulerName: vineyard-scheduler
+          containers:
+          - name: vineyard-python
             imagePullPolicy: IfNotPresent
             image: vineyardcloudnative/vineyard-python:v0.11.4
             command:
@@ -314,11 +314,11 @@ First, let's deploy the Python client on two Vineyard nodes as follows.
             - sleep infinity
             volumeMounts:
             - mountPath: /var/run
-                name: vineyard-sock
-        volumes:
-        - name: vineyard-sock
+              name: vineyard-sock
+          volumes:
+          - name: vineyard-sock
             hostPath:
-            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+              path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
     EOF
 
 .. admonition:: Expected output

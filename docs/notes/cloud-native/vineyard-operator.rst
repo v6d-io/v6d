@@ -906,37 +906,37 @@ as shown below.
       name: v6d-workflow-demo-job1-deployment
       namespace: vineyard-job
     spec:
-    selector:
-      matchLabels:
-        app: v6d-workflow-demo-job1
-    replicas: 2
-    template:
-      metadata:
-        labels:
+      selector:
+        matchLabels:
           app: v6d-workflow-demo-job1
-          # vineyardd's name
-          scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
-          scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
-          # job name
-          scheduling.k8s.v6d.io/job: v6d-workflow-demo-job1
-      spec:
-        # vineyard scheduler name
-        schedulerName: vineyard-scheduler
-        containers:
-        - name: job1
-          image: ghcr.io/v6d-io/v6d/workflow-job1
-          # please set the JOB_NAME env, it will be used by vineyard scheduler
-          env:
-          - name: JOB_NAME
-            value: v6d-workflow-demo-job1
-          imagePullPolicy: IfNotPresent
-          volumeMounts:
-          - mountPath: /var/run
-            name: vineyard-sock
-        volumes:
-        - name: vineyard-sock
-          hostPath:
-            path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+      replicas: 2
+      template:
+        metadata:
+          labels:
+            app: v6d-workflow-demo-job1
+            # vineyardd's name
+            scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
+            scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
+            # job name
+            scheduling.k8s.v6d.io/job: v6d-workflow-demo-job1
+        spec:
+          # vineyard scheduler name
+          schedulerName: vineyard-scheduler
+          containers:
+          - name: job1
+            image: ghcr.io/v6d-io/v6d/workflow-job1
+            # please set the JOB_NAME env, it will be used by vineyard scheduler
+            env:
+            - name: JOB_NAME
+              value: v6d-workflow-demo-job1
+            imagePullPolicy: IfNotPresent
+            volumeMounts:
+            - mountPath: /var/run
+              name: vineyard-sock
+          volumes:
+          - name: vineyard-sock
+            hostPath:
+              path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
     EOF
 
 We can see the created job and the objects produced by it:
