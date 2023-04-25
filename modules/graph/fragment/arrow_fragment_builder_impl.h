@@ -1112,8 +1112,8 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
 
   this->set_vm_ptr_(vm_ptr_);
 
-  this->set_oid_type_(type_name<oid_t>());
-  this->set_vid_type_(type_name<vid_t>());
+  this->set_oid_type(type_name<oid_t>());
+  this->set_vid_type(type_name<vid_t>());
 
   VLOG(100) << "Finish building into vineyard: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();

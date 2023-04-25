@@ -128,9 +128,9 @@ class [[vineyard]] ArrowFragment
 
   bool is_multigraph() const override { return is_multigraph_; }
 
-  const std::string vid_typename() const override { return vid_type_; }
+  const std::string vid_typename() const override { return vid_type; }
 
-  const std::string oid_typename() const override { return oid_type_; }
+  const std::string oid_typename() const override { return oid_type; }
 
   void PostConstruct(const vineyard::ObjectMeta& meta) override {
     vid_parser_.Init(fnum_, vertex_label_num_);
@@ -690,7 +690,7 @@ class [[vineyard]] ArrowFragment
   [[shared]] property_graph_types::LABEL_ID_TYPE edge_label_num_;
   size_t oenum_, ienum_;  // FIXME: should be pre-computable
 
-  [[shared]] String oid_type_, vid_type_;
+  [[shared]] String oid_type, vid_type;
 
   [[shared]] vineyard::Array<vid_t> ivnums_, ovnums_, tvnums_;
 
