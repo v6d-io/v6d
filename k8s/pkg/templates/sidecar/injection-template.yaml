@@ -49,15 +49,21 @@ spec:
       {{- else }}
         mountPath: /var/run
       {{- end }}
-      {{- if and .Spec.Vineyard.CPU .Spec.Vineyard.Memory }}
       resources:
         requests:
+          {{- if .Spec.Vineyard.CPU }}
           cpu: "{{ .Spec.Vineyard.CPU }}"
+          {{- end }}
+          {{- if .Spec.Vineyard.Memory }}
           memory: "{{ .Spec.Vineyard.Memory }}"
+          {{- end }}
         limits:
+          {{- if .Spec.Vineyard.CPU }}
           cpu: "{{ .Spec.Vineyard.CPU }}"
+          {{- end }}
+          {{- if .Spec.Vineyard.Memory }}
           memory: "{{ .Spec.Vineyard.Memory }}"
-      {{- end }}
+          {{- end }}
     {{- if .Spec.Metric.Enable }}
     - name: metrics
       image : {{ .Spec.Metric.Image }}

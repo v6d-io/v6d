@@ -77,6 +77,10 @@ func ApplyVineyardContainerOpts(c *v1alpha1.VineyardConfig,
 		"", "0.8", "The high watermark of spilling memory")
 	cmd.Flags().StringVarP(&VineyardSpillPVandPVC, prefix+".spill.pv-pvc-spec", "", "",
 		"the json string of the persistent volume and persistent volume claim")
+	cmd.Flags().StringVarP(&c.Memory, prefix+".memory", "", "",
+		"the memory requests and limits of vineyard container")
+	cmd.Flags().StringVarP(&c.CPU, prefix+".cpu", "", "",
+		"the cpu requests and limits of vineyard container")
 }
 
 // ApplyServiceOpts represents the option of service
