@@ -717,9 +717,11 @@ vineyardctl deploy vineyard-deployment [flags]
       --pluginImage.recoverImage string               the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
       --vineyard.etcd.replicas int                    the number of etcd replicas in a vineyard cluster (default 1)
       --vineyard.replicas int                         the number of vineyardd replicas (default 3)
+      --vineyardd.cpu string                          the cpu requests and limits of vineyard container
       --vineyardd.envs strings                        The environment variables of vineyardd
       --vineyardd.image string                        the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
       --vineyardd.imagePullPolicy string              the imagePullPolicy of vineyardd (default "IfNotPresent")
+      --vineyardd.memory string                       the memory requests and limits of vineyard container
       --vineyardd.metric.enable                       enable metrics of vineyardd
       --vineyardd.metric.image string                 the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
       --vineyardd.metric.imagePullPolicy string       the imagePullPolicy of the metric image (default "IfNotPresent")
@@ -847,9 +849,11 @@ vineyardctl deploy vineyardd [flags]
       --pluginImage.recoverImage string               the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
       --vineyard.etcd.replicas int                    the number of etcd replicas in a vineyard cluster (default 1)
       --vineyard.replicas int                         the number of vineyardd replicas (default 3)
+      --vineyardd.cpu string                          the cpu requests and limits of vineyard container
       --vineyardd.envs strings                        The environment variables of vineyardd
       --vineyardd.image string                        the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
       --vineyardd.imagePullPolicy string              the imagePullPolicy of vineyardd (default "IfNotPresent")
+      --vineyardd.memory string                       the memory requests and limits of vineyard container
       --vineyardd.metric.enable                       enable metrics of vineyardd
       --vineyardd.metric.image string                 the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
       --vineyardd.metric.imagePullPolicy string       the imagePullPolicy of the metric image (default "IfNotPresent")
@@ -1031,9 +1035,11 @@ vineyardctl inject [flags]
   -o, --output string                           The output format of the command, support yaml and json (default "yaml")
       --owner-references string                 The owner reference of all injectied resources
       --resource string                         The resource of workload
+      --sidecar.cpu string                      the cpu requests and limits of vineyard container
       --sidecar.envs strings                    The environment variables of vineyardd
       --sidecar.image string                    the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
       --sidecar.imagePullPolicy string          the imagePullPolicy of vineyardd (default "IfNotPresent")
+      --sidecar.memory string                   the memory requests and limits of vineyard container
       --sidecar.metric.enable                   enable metrics of vineyardd
       --sidecar.metric.image string             the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
       --sidecar.metric.imagePullPolicy string   the imagePullPolicy of the metric image (default "IfNotPresent")
