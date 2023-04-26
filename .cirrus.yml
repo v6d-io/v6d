@@ -1,12 +1,12 @@
 # only run for releases
 only_if: $CIRRUS_TAG != ''
 
+env:
+  MACOSX_DEPLOYMENT_TARGET: "10.15"
+
 macosx_arm64_wheel_task:
   macos_instance:
     image: ghcr.io/cirruslabs/macos-monterey-base:latest
-
-  env:
-    MACOSX_DEPLOYMENT_TARGET: "10.15"
 
   checkout_script:
     - git submodule init
@@ -15,10 +15,15 @@ macosx_arm64_wheel_task:
   install_deps_script:
     - brew update
     - brew install golang
-    - brew install boost coreutils grpc llvm lz4 openssl protobuf python python@3.8 python@3.9 python@3.10 python@3.11
+    - brew install boost coreutils grpc llvm lz4 openssl protobuf pyenv python
+    - pyenv install 3.8.16
+    - pyenv install 3.9.16
+    - pyenv install 3.10.10
+    - pyenv install 3.11.2
 
   install_gflags_script: |
     echo "Installing gflags ..."
+    pyenv global 3.11.2
     cd /tmp
     curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz
     tar zxf gflags-v2.2.2.tar.gz
@@ -30,6 +35,7 @@ macosx_arm64_wheel_task:
 
   install_glog_script: |
     echo "Installing glog ..."
+    pyenv global 3.11.2
     cd /tmp
     curl -L https://github.com/google/glog/archive/v0.6.0.tar.gz --output glog-v0.6.0.tar.gz
     tar zxf glog-v0.6.0.tar.gz
@@ -43,6 +49,7 @@ macosx_arm64_wheel_task:
 
   install_apache_arrow_script: |
     echo "Installing apache-arrow ..."
+    pyenv global 3.11.2
     cd /tmp
     curl -L https://github.com/apache/arrow/archive/refs/tags/apache-arrow-8.0.1.tar.gz --output apache-arrow-8.0.1.tar.gz
     tar zxf apache-arrow-8.0.1.tar.gz
@@ -100,6 +107,7 @@ macosx_arm64_wheel_task:
     - mkdir -p build
     - cd build
     - |
+      pyenv global 3.11.2
       cmake .. -DCMAKE_BUILD_TYPE=Release \
                -DCMAKE_CXX_STANDARD=17 \
                -DCMAKE_CXX_STANDARD_REQUIRED=TRUE \
@@ -115,22 +123,25 @@ macosx_arm64_wheel_task:
                -DBUILD_VINEYARD_TESTS=OFF \
                -DBUILD_VINEYARD_TESTS_ALL=OFF \
                -DBUILD_VINEYARD_PROFILING=OFF
-    - make vineyardd -j$(sysctl -n hw.ncpu)
+      make vineyardd -j$(sysctl -n hw.ncpu)
 
   vineyardd_artifacts:
     path: build/bin/vineyardd
 
   build_vineyard_bdist_script:
+    - pyenv global 3.11.2
     - cp k8s/vineyardctl ./python/vineyard/bdist/vineyardctl
     - cp build/bin/vineyardd ./python/vineyard/bdist/vineyardd
     - strip ./python/vineyard/bdist/vineyardctl
     - strip ./python/vineyard/bdist/vineyardd
-    - python3 setup_bdist.py bdist_wheel
+    - python3 setup_bdist.py bdist_wheel --plat=macosx_11_0_arm64
 
   build_vineyard_python_script:
     - |
-      for py in 3.8 3.9 3.10 3.11; do
-        $(brew --prefix python@$py)/bin/python$py -m pip install delocate wheel
+      for py in 3.8.16 3.9.16 3.10.10 3.11.2; do
+        current_python=$(pyenv root)/versions/$py/bin/python
+        echo "Python is: $current_python, $($current_python --version)"
+        $current_python -m pip install delocate wheel
         rm -rf build/lib* build/bdist.* python/vineyard/*.dylib python/vineyard/*.so
         mkdir -p build
         cd build
@@ -142,7 +153,7 @@ macosx_arm64_wheel_task:
                  -DBUILD_VINEYARD_CLIENT=ON \
                  -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
                  -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
-                 -DPYTHON_EXECUTABLE=$(brew --prefix python@$py)/bin/python$py \
+                 -DPYTHON_EXECUTABLE=$current_python \
                  -DBUILD_VINEYARD_BASIC=OFF \
                  -DBUILD_VINEYARD_GRAPH=OFF \
                  -DBUILD_VINEYARD_IO=OFF \
@@ -152,11 +163,12 @@ macosx_arm64_wheel_task:
                  -DBUILD_VINEYARD_PROFILING=OFF
         make vineyard_client_python -j$(sysctl -n hw.ncpu)
         cd ..
-        $(brew --prefix python@$py)/bin/python$py setup.py bdist_wheel
+        $current_python setup.py bdist_wheel
       done
 
   delocate_wheel_script:
     - |
+      $(brew --prefix python)/bin/python3 -m pip install delocate wheel
       for wheel in dist/*.whl; do
         delocate-wheel -w fixed_wheels -v $wheel
       done
