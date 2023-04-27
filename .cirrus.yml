@@ -25,8 +25,8 @@ macosx_arm64_wheel_task:
       wget -q https://github.com/unsafecoerce/git-submodules-tarball/releases/download/grpc%2Fgrpc-v1.36.x/grpc-grpc-1.36.x.tar.gz
       tar zxf grpc-grpc-1.36.x.tar.gz
       cd grpc-grpc-1.36.x
-      mkdir build
-      cd build
+      mkdir -p cmake-build
+      cd cmake-build
       cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
                -DBUILD_SHARED_LIBS=OFF \
                -DgRPC_INSTALL=ON \
