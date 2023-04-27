@@ -1,5 +1,5 @@
 # only run for releases
-# only_if: $CIRRUS_TAG != ''
+only_if: $CIRRUS_TAG != ''
 
 env:
   MACOSX_DEPLOYMENT_TARGET: "10.15"
@@ -19,37 +19,36 @@ macosx_arm64_wheel_task:
   install_runtime_deps_script:
     - brew install boost lz4 openssl --build-from-source
 
-  install_protobuf_grpc_script:
-    - |
-      cd /tmp
-      wget -q https://github.com/unsafecoerce/git-submodules-tarball/releases/download/grpc%2Fgrpc-v1.36.x/grpc-grpc-1.36.x.tar.gz
-      tar zxf grpc-grpc-1.36.x.tar.gz
-      cd grpc-grpc-1.36.x
-      mkdir -p cmake-build
-      cd cmake-build
-      cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
-               -DBUILD_SHARED_LIBS=OFF \
-               -DgRPC_INSTALL=ON \
-               -DgRPC_BUILD_TESTS=OFF \
-               -DgRPC_BUILD_CSHARP_EXT=OFF \
-               -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF \
-               -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF \
-               -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
-               -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF \
-               -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF \
-               -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
-               -DgRPC_SSL_PROVIDER=package \
-               -DgRPC_ZLIB_PROVIDER=package \
-               -DgRPC_BACKWARDS_COMPATIBILITY_MODE=ON
-      make install -j`nproc`
-      cd /tmp
-      rm -rf grpc-grpc-1.36.x.tar.gz grpc-grpc-1.36.x/
-
-  install_various_python:
+  install_various_python_script:
     - pyenv install 3.8.16
     - pyenv install 3.9.16
     - pyenv install 3.10.10
     - pyenv install 3.11.2
+
+  install_protobuf_grpc_script: |
+    echo "Installing protobuf & grpc ..."
+    cd /tmp
+    wget -q https://github.com/unsafecoerce/git-submodules-tarball/releases/download/grpc%2Fgrpc-v1.36.x/grpc-grpc-1.36.x.tar.gz
+    tar zxf grpc-grpc-1.36.x.tar.gz
+    cd grpc-grpc-1.36.x
+    mkdir -p cmake-build
+    cd cmake-build
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF \
+             -DgRPC_INSTALL=ON \
+             -DgRPC_BUILD_TESTS=OFF \
+             -DgRPC_BUILD_CSHARP_EXT=OFF \
+             -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
+             -DgRPC_SSL_PROVIDER=package \
+             -DgRPC_ZLIB_PROVIDER=package \
+             -DOPENSSL_ROOT_DIR=$(brew --prefix openssl) \
+             -DgRPC_BACKWARDS_COMPATIBILITY_MODE=ON
+    sudo make install -j$(sysctl -n hw.ncpu)
 
   install_gflags_script: |
     echo "Installing gflags ..."
