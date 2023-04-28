@@ -55,6 +55,9 @@ spec:
             --sync_crds {{ .Spec.Vineyard.SyncCRDs }}
             --socket /var/run/vineyard.sock
             --size {{ .Spec.Vineyard.Size }}
+            {{- if .Spec.Vineyard.ReserveMemory }}
+            --reserve_memory
+            {{- end }}
             --stream_threshold {{ .Spec.Vineyard.StreamThreshold }}
             --etcd_cmd etcd
             --etcd_prefix /vineyard

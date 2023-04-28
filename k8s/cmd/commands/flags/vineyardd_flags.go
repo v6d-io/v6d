@@ -59,7 +59,10 @@ func ApplyVineyardContainerOpts(c *v1alpha1.VineyardConfig,
 	cmd.Flags().StringVarP(&c.Size, prefix+".size",
 		"", "256Mi",
 		"The size of vineyardd. You can use the power-of-two equivalents: "+
-			"Ei, Pi, Ti, Gi, Mi, Ki. ")
+			"Ei, Pi, Ti, Gi, Mi, Ki.")
+	cmd.Flags().BoolVarP(&c.ReserveMemory, prefix+".reserve_memory",
+		"", false,
+		"Reserving enough physical memory pages for vineyardd")
 	cmd.Flags().Int64VarP(&c.StreamThreshold, prefix+".streamThreshold",
 		"", 80, "memory threshold of streams (percentage of total memory)")
 	cmd.Flags().StringSliceVarP(&VineyardContainerEnvs, prefix+".envs", "", []string{},

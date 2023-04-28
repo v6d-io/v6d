@@ -130,6 +130,11 @@ type VineyardConfig struct {
 	// +kubebuilder:default:="256Mi"
 	Size string `json:"size,omitempty"`
 
+	// reserve the shared memory for vineyardd
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=false
+	ReserveMemory bool `json:"reserveMemory,omitempty"`
+
 	// memory threshold of streams (percentage of total memory)
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:=80
