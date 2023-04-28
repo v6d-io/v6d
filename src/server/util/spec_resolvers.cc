@@ -71,7 +71,10 @@ DEFINE_double(spill_upper_rate, 0.8,
               "high watermark of triggering memory spilling");
 
 // ipc
-DEFINE_string(socket, "/var/run/vineyard.sock", "IPC socket file location");
+DEFINE_string(
+    socket, "",
+    "IPC socket file location. Defaults to '/var/run/vineyard.sock' for root "
+    "users and '~/.vineyard/vineyard.sock' for non-root users.");
 
 // rpc
 DEFINE_bool(rpc, true, "Enable RPC service by default");

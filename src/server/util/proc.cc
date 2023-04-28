@@ -28,8 +28,8 @@ limitations under the License.
 #endif
 
 #include "boost/bind.hpp"
-#include "boost/filesystem.hpp"
 #include "boost/process.hpp"
+#include "gulrak/filesystem.hpp"
 
 #include "common/util/asio.h"
 
@@ -60,7 +60,7 @@ void Process::Start(const std::string& command,
   std::string command_path = command;
   {
     setenv("LC_ALL", "C", 1);
-    boost::filesystem::path target;
+    ghc::filesystem::path target;
     if (this->findRelativeProgram(command, target).ok()) {
       command_path = target.string();
     } else {
@@ -187,14 +187,14 @@ Status Process::recordLog(Status const& status, std::string const& line) {
 }
 
 Status Process::findRelativeProgram(std::string const& name,
-                                    boost::filesystem::path& target) {
+                                    ghc::filesystem::path& target) {
   // try directly finding first
-  if (boost::filesystem::exists(name)) {
-    target = boost::filesystem::path(name);
+  if (ghc::filesystem::exists(name)) {
+    target = ghc::filesystem::path(name);
     return Status::OK();
   }
 
-  boost::filesystem::path current_location;
+  ghc::filesystem::path current_location;
 
 #if defined(__APPLE__) && defined(__MACH__)
   char pathbuf[PROC_PIDPATHINFO_MAXSIZE];
@@ -216,10 +216,10 @@ Status Process::findRelativeProgram(std::string const& name,
 
 #endif
 
-  boost::filesystem::path parent_path = current_location.parent_path();
+  ghc::filesystem::path parent_path = current_location.parent_path();
   target = parent_path.append(name);
-  boost::system::error_code err;
-  if (boost::filesystem::exists(target, err)) {
+  std::error_code err;
+  if (ghc::filesystem::exists(target, err)) {
     return Status::OK();
   } else {
     return Status::IOError("Failed to get location of current process");

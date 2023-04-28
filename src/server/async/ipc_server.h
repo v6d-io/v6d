@@ -55,7 +55,7 @@ class IPCServer : public SocketServer,
 
   void doAccept() override;
 
-  const json ipc_spec_;
+  json ipc_spec_;
   asio::local::stream_protocol::acceptor acceptor_;
   asio::local::stream_protocol::socket socket_;
 };

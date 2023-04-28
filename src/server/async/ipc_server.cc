@@ -19,14 +19,98 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "boost/filesystem/operations.hpp"
-#include "boost/filesystem/path.hpp"
+#include "gulrak/filesystem.hpp"
 
+#include "common/util/env.h"
 #include "common/util/json.h"
 #include "common/util/logging.h"
 #include "server/server/vineyard_server.h"
 
 namespace vineyard {
+
+namespace detail {
+
+static bool check_connectable(asio::io_context& context,
+                              std::string const& path) {
+  asio::local::stream_protocol::socket socket(context);
+  boost::system::error_code ec;
+  socket.connect(path, ec);
+  return !ec;
+}
+
+static bool check_listable(asio::io_context& context, std::string const& path,
+                           std::string& error_message) {
+  // create parent directory
+  std::error_code ec;
+  auto socket_path = ghc::filesystem::absolute(ghc::filesystem::path(path), ec);
+  if (ec) {
+    error_message =
+        "Failed to resolve the absolute path for specified socket path '" +
+        path + "': " + ec.message();
+    return false;
+  }
+  ghc::filesystem::create_directories(socket_path.parent_path(), ec);
+  if (ec) {
+    error_message = "Failed to create parent directory '" +
+                    socket_path.parent_path().string() +
+                    "' for specified socket path '" + path +
+                    "': " + ec.message();
+    return false;
+  }
+  if (ghc::filesystem::exists(socket_path, ec)) {
+    if (ghc::filesystem::is_socket(socket_path, ec)) {
+      if (check_connectable(context, path)) {
+        error_message =
+            "the UNIX-domain socket '" + path +
+            "' is already inuse and has been listened on,\n\n"
+            "  - please use another IPC socket path to start vineyardd,\n\n"
+            "\te.g., vineyardd --socket=/tmp/vineyard.sock\n\n"
+            "  for more vineyardd options, see also: vineyard --help\n\n";
+        return false;
+      }
+      if (!ghc::filesystem::remove(socket_path, ec) &&
+          ec != std::errc::no_such_file_or_directory) {
+        error_message =
+            "Permission error when attempting to write the UNIX-domain socket "
+            "'" +
+            path + "': " + strerror(errno) +
+            ",\n\n"
+            "  - please use another IPC socket path to start vineyardd,\n\n"
+            "\te.g., vineyardd --socket=/tmp/vineyard.sock\n\n"
+            "  for more vineyardd options, see also: vineyard --help\n\n";
+        return false;
+      }
+      return true;
+    } else {
+      error_message =
+          "the UNIX-domain socket '" + path +
+          "' is not a named socket,\n\n"
+          "  - please use another IPC socket path to start vineyardd,\n\n"
+          "\te.g., vineyardd --socket=/tmp/vineyard.sock\n\n"
+          "  for more vineyardd options, see also: vineyard --help\n\n";
+      return false;
+    }
+  }
+  // check if we have permission to create the new file
+  std::ofstream ofs(socket_path.string(), std::ios::out | std::ios::binary);
+  if (ofs.fail()) {
+    error_message =
+        "Permission error when attempting to create the UNIX-domain socket "
+        "'" +
+        path + "': " + strerror(errno) +
+        ",\n\n"
+        "  - please use another IPC socket path to start vineyardd,\n\n"
+        "\te.g., vineyardd --socket=/tmp/vineyard.sock\n\n"
+        "  for more vineyardd options, see also: vineyard --help\n\n";
+    return false;
+  } else {
+    ofs.close();
+    ghc::filesystem::remove(socket_path, ec);
+    return true;
+  }
+}
+
+}  // namespace detail
 
 IPCServer::IPCServer(std::shared_ptr<VineyardServer> vs_ptr)
     : SocketServer(vs_ptr),
@@ -65,57 +149,31 @@ void IPCServer::Close() {
 
 asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
     asio::io_context& context) {
-  std::string const& ipc_socket =
-      ipc_spec_["socket"].get_ref<std::string const&>();
-  auto endpoint = asio::local::stream_protocol::endpoint(ipc_socket);
-  if (access(ipc_socket.c_str(), F_OK) == 0) {
-    // first check if the socket file is writable
-    if (access(ipc_socket.c_str(), W_OK) != 0) {
-      std::string reason = strerror(errno);
-      if (errno == EACCES) {
-        reason +=
-            ",\n\n  - please run vineyardd as root using 'sudo',\n"
-            "  - or use another IPC socket path to start vineyardd,\n\n"
-            "\te.g., vineyardd --socket=/tmp/vineyard.sock\n\n"
-            "  for more vineyardd options, see also: vineyard --help";
-      }
-      throw std::invalid_argument("cannot launch vineyardd on '" + ipc_socket +
-                                  "': " + reason);
+  std::string ipc_socket = ipc_spec_["socket"].get<std::string>();
+  std::string error_message;
+  if (ipc_socket.empty()) {
+    ipc_socket = "/var/run/vineyard.sock";
+    if (detail::check_listable(context, ipc_socket, error_message)) {
+      ::unlink(ipc_socket.c_str());
+      ipc_spec_["socket"] = ipc_socket;
+      return asio::local::stream_protocol::endpoint(ipc_socket);
     }
-    // then check if the socket file is used by another process, if not, unlink
-    // it first, otherwise raise an exception.
-    asio::local::stream_protocol::socket socket(context);
-    boost::system::error_code ec;
-    socket.connect(endpoint, ec);
-    if (!ec) {
-      std::string message =
-          "the UNIX-domain socket '" + ipc_socket +
-          "' has already been listened on,\n\n"
-          "  - please use another IPC socket path to start vineyardd,\n\n"
-          "\te.g., vineyardd --socket=/tmp/vineyard.sock\n\n"
-          "  for more vineyardd options, see also: vineyard --help\n\n";
-      throw boost::system::system_error(
-          asio::error::make_error_code(asio::error::address_in_use), message);
-    }
-  } else if (errno == ENOENT) {
-    // create parent directory
-    auto socket_path =
-        boost::filesystem::absolute(boost::filesystem::path(ipc_socket));
-    boost::system::error_code ec;
-    boost::filesystem::create_directories(socket_path.parent_path(), ec);
-    if (ec) {
-      std::string message = "Failed to create parent directory '" +
-                            socket_path.parent_path().string() +
-                            "' for specific socket path";
-      throw boost::system::system_error(ec, message);
+    ipc_socket = read_env("HOME") + "/.local/vineyard/vineyard.sock";
+    LOG(WARNING)
+        << "Failed to listen on default socket '/var/run/vineyard.sock'";
+    LOG(INFO) << "Falling back to '" << ipc_socket << "' ...";
+    if (detail::check_listable(context, ipc_socket, error_message)) {
+      ::unlink(ipc_socket.c_str());
+      ipc_spec_["socket"] = ipc_socket;
+      return asio::local::stream_protocol::endpoint(ipc_socket);
     }
   } else {
-    throw boost::system::system_error(
-        boost::system::errc::make_error_code(boost::system::errc::io_error),
-        strerror(errno));
+    if (detail::check_listable(context, ipc_socket, error_message)) {
+      ::unlink(ipc_socket.c_str());
+      return asio::local::stream_protocol::endpoint(ipc_socket);
+    }
   }
-  ::unlink(ipc_socket.c_str());
-  return endpoint;
+  throw std::invalid_argument(error_message);
 }
 
 Status IPCServer::Register(std::shared_ptr<SocketConnection> conn,

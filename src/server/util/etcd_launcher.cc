@@ -23,6 +23,7 @@ limitations under the License.
 #include <vector>
 
 #include "boost/algorithm/string.hpp"
+#include "gulrak/filesystem.hpp"
 
 #include "common/util/asio.h"
 #include "common/util/env.h"
@@ -84,8 +85,8 @@ EtcdLauncher::~EtcdLauncher() {
     etcd_proc_->wait(err);
   }
   if (!etcd_data_dir_.empty()) {
-    boost::system::error_code err;
-    boost::filesystem::remove_all(boost::filesystem::path(etcd_data_dir_), err);
+    std::error_code err;
+    ghc::filesystem::remove_all(ghc::filesystem::path(etcd_data_dir_), err);
   }
 }
 
