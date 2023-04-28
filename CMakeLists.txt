@@ -695,7 +695,6 @@ if(BUILD_VINEYARD_SERVER)
     endif()
 
     install_vineyard_target(vineyardd)
-    install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/server")
     if(NOT BUILD_SHARED_LIBS)
         if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
             target_compile_options(vineyardd PRIVATE -static-libgcc -static-libstdc++ -Os)

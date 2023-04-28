@@ -22,7 +22,6 @@ limitations under the License.
 #include <set>
 #include <string>
 
-#include "boost/filesystem.hpp"
 #include "boost/process.hpp"
 #include "etcd/Client.hpp"
 

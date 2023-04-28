@@ -21,8 +21,8 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "boost/filesystem.hpp"
 #include "boost/process.hpp"
+#include "gulrak/filesystem.hpp"
 
 #include "common/util/asio.h"
 #include "common/util/callback.h"
@@ -71,7 +71,7 @@ class Process : public std::enable_shared_from_this<Process> {
   Status recordLog(Status const& status, std::string const& line);
 
   Status findRelativeProgram(std::string const& name,
-                             boost::filesystem::path& target);
+                             ghc::filesystem::path& target);
 };
 
 }  // namespace vineyard

@@ -25,6 +25,8 @@ limitations under the License.
 #include <thread>
 #include <vector>
 
+#include "gulrak/filesystem.hpp"
+
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/logging.h"
@@ -1199,7 +1201,7 @@ Status VineyardServer::Verify(const std::string& username,
     }
     return callback(Status::OK());
   }
-  if (!boost::filesystem::exists(htpasswd)) {
+  if (!ghc::filesystem::exists(htpasswd)) {
     return callback(
         Status::IOError("Failed to find the htpasswd database for verifying"));
   }
