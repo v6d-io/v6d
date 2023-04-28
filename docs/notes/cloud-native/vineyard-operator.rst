@@ -140,6 +140,12 @@ The detailed configuration entries for creating a vineyard cluster are listed as
          - nil
 
        * - | vineyard.
+           | reserveMemory
+         - bool
+         - Reserving enough physical memory pages for vineyardd.
+         - false
+
+       * - | vineyard.
            | streamThreshold
          - int64
          - The memory threshold of streams
@@ -333,6 +339,12 @@ available configurations.
          - string
          - The shared memory size for vineyard sidecar.
          - nil
+
+       * - | vineyard.
+           | reserveMemory
+         - bool
+         - Reserving enough physical memory pages for vineyardd.
+         - false
 
        * - | vineyard.
            | streamThreshold

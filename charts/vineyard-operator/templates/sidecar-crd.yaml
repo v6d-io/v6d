@@ -166,6 +166,9 @@ spec:
                     type: string
                   memory:
                     type: string
+                  reserveMemory:
+                    default: false
+                    type: boolean
                   size:
                     default: 256Mi
                     type: string

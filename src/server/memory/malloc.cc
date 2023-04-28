@@ -56,7 +56,8 @@ constexpr int64_t kMmapRegionsGap = sizeof(size_t);
 //
 // In cases that the startup time doesn't much matter, e.g., in kubernetes
 // environment, pre-populate will archive a win.
-DEFINE_bool(reserve_memory, false, "Pre-reserving enough memory pages");
+DEFINE_bool(reserve_memory, false,
+            "Reserving enough physical memory pages for vineyardd");
 
 std::unordered_map<void*, MmapRecord> mmap_records;
 
@@ -81,11 +82,11 @@ struct memfd_create_compat {
     if (handle_) {
       memfd_create_fn =
           (int (*)(const char*, unsigned int)) dlsym(handle_, "memfd_create");
-      if (memfd_create_fn) {
-        LOG(INFO) << "Use memfd_create(2) for shared memory";
-      } else {
-        LOG(INFO) << "Use mkstemp(3) for shared memory";
-      }
+    }
+    if (memfd_create_fn) {
+      LOG(INFO) << "Use memfd_create(2) for shared memory";
+    } else {
+      LOG(INFO) << "Use mkstemp(3) for shared memory";
     }
   }
 
@@ -245,6 +246,7 @@ void* mmap_buffer(int fd, int64_t size, bool* is_committed, bool* is_zero) {
 #ifdef __linux__
     mmap_flag |= MAP_POPULATE;
     *is_committed = true;
+    LOG(INFO) << "mmap with MAP_POPULATE, reserving memory ...";
 #endif
   }
 
