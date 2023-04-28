@@ -268,6 +268,7 @@ We thank the following excellent open-source projects:
 - `dlmalloc <http://gee.cs.oswego.edu/dl/html/malloc.htmlp>`_, Doug Lea's memory allocator.
 - `etcd-cpp-apiv3 <https://github.com/etcd-cpp-apiv3/etcd-cpp-apiv3>`_, a C++ API for etcd's v3 client API.
 - `flat_hash_map <https://github.com/skarupke/flat_hash_map>`_, an efficient hashmap implementation.
+- `gulrak/filesystem <https://github.com/gulrak/filesystem>`_, an implementation of C++17 std::filesystem.
 - `libcuckoo <https://github.com/efficient/libcuckoo>`_, libcuckoo, a high-performance, concurrent hash table.
 - `mimalloc <https://github.com/microsoft/mimalloc>`_, a general purpose allocator with excellent performance characteristics.
 - `nlohmann/json <https://github.com/nlohmann/json>`_, a json library for modern c++.
