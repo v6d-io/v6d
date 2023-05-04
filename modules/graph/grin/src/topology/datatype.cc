@@ -18,30 +18,30 @@ extern "C" {
 #include "graph/grin/include/topology/datatype.h"
 }
 
-int grin_get_int32(void* value) {
-    return *(static_cast<int*>(value));
+int grin_get_int32(const void* value) {
+    return *(static_cast<const int*>(value));
 }
 
-unsigned int grin_get_uint32(void* value) {
-    return *(static_cast<unsigned int*>(value));
+unsigned int grin_get_uint32(const void* value) {
+    return *(static_cast<const unsigned int*>(value));
 }
 
-long int grin_get_int64(void* value) {
-    return *(static_cast<long int*>(value));
+long long int grin_get_int64(const void* value) {
+    return *(static_cast<const long int*>(value));
 }
 
-unsigned long int grin_get_uint64(void* value) {
-    return *(static_cast<unsigned long int*>(value));
+unsigned long long int grin_get_uint64(const void* value) {
+    return *(static_cast<const unsigned long int*>(value));
 }
 
-float grin_get_float(void* value) {
-    return *(static_cast<float*>(value));
+float grin_get_float(const void* value) {
+    return *(static_cast<const float*>(value));
 }
 
-double grin_get_double(void* value) {
-    return *(static_cast<double*>(value));
+double grin_get_double(const void* value) {
+    return *(static_cast<const double*>(value));
 }
 
-char* grin_get_string(void* value) {
-    return static_cast<char*>(value);
+const char* grin_get_string(const void* value) {
+    return static_cast<const char*>(value);
 }

@@ -212,7 +212,7 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
     auto offset = _e->eid;
     auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
-    auto _dt = _g->schema().GetVertexPropertyType(_ep->first, _ep->second);
+    auto _dt = _g->schema().GetEdgePropertyType(_ep->first, _ep->second);
     auto dt = ArrowToDataType(_dt);
     switch (dt) {
     case GRIN_DATATYPE::Int32:
@@ -228,7 +228,13 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
     case GRIN_DATATYPE::Double:
         return new double(*static_cast<const double*>(result));
     case GRIN_DATATYPE::String:
-        return new std::string(*static_cast<const std::string*>(result));
+    {
+        auto s = static_cast<const std::string*>(result);
+        int len = s->length() + 1;
+        char* out = new char[len];
+        snprintf(out, len, "%s", s->c_str());
+        return out;
+    }
     case GRIN_DATATYPE::Date32:
         return new int32_t(*static_cast<const int32_t*>(result));
     case GRIN_DATATYPE::Date64:
@@ -248,7 +254,6 @@ GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_
     auto _epl = static_cast<GRIN_EDGE_PROPERTY_LIST_T*>(epl);
     if (_e->eid >= _ept->num) return NULL;
     auto offset = _e->eid;
-
     auto r = new GRIN_ROW_T();
     for (auto ep: *_epl) {
         if (ep.first != _ept->etype) return NULL;
