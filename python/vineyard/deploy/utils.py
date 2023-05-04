@@ -196,6 +196,7 @@ def find_vineyardctl_path():
 
     # find vineyardctl in the package
     resource_path = None
+    vineyardctl_path = None
     try:
         # `pkg_resources.resource_filename` may causing `TypeError`
         resource_path = pkg_resources.resource_filename('vineyard.bdist', 'vineyardctl')
