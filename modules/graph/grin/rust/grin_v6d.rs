@@ -114,19 +114,19 @@ extern "C" {
         arg2: GrinAdjacentListIterator,
     ) -> GrinEdge;
 
-    pub fn grin_get_int32(arg1: *mut ::std::os::raw::c_void) -> i32;
+    pub fn grin_get_int32(arg1: *const ::std::os::raw::c_void) -> i32;
 
-    pub fn grin_get_uint32(arg1: *mut ::std::os::raw::c_void) -> u32;
+    pub fn grin_get_uint32(arg1: *const ::std::os::raw::c_void) -> u32;
 
-    pub fn grin_get_int64(arg1: *mut ::std::os::raw::c_void) -> i64;
+    pub fn grin_get_int64(arg1: *const ::std::os::raw::c_void) -> i64;
 
-    pub fn grin_get_uint64(arg1: *mut ::std::os::raw::c_void) -> u64;
+    pub fn grin_get_uint64(arg1: *const ::std::os::raw::c_void) -> u64;
 
-    pub fn grin_get_float(arg1: *mut ::std::os::raw::c_void) -> f32;
+    pub fn grin_get_float(arg1: *const ::std::os::raw::c_void) -> f32;
 
-    pub fn grin_get_double(arg1: *mut ::std::os::raw::c_void) -> f64;
+    pub fn grin_get_double(arg1: *const ::std::os::raw::c_void) -> f64;
 
-    pub fn grin_get_string(arg1: *mut ::std::os::raw::c_void) -> *mut ::std::os::raw::c_char;
+    pub fn grin_get_string(arg1: *const ::std::os::raw::c_void) -> *const ::std::os::raw::c_char;
 
     pub fn grin_get_graph_from_storage(
         arg1: i32,

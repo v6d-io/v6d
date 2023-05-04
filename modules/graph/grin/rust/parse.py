@@ -96,8 +96,8 @@ def static_replace(line):
     replaces = {
         '::std::os::raw::c_uint': 'u32',
         '::std::os::raw::c_int': 'i32',
-        '::std::os::raw::c_ulong': 'u64',
-        '::std::os::raw::c_long': 'i64',
+        '::std::os::raw::c_ulonglong': 'u64',
+        '::std::os::raw::c_longlong': 'i64',
     }
     for k in replaces:
         line = line.replace(k, replaces[k])

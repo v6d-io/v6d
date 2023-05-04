@@ -47,6 +47,10 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const
             vpl->push_back(GRIN_VERTEX_PROPERTY_T(vtype, pid));
         }
     }
+    if (vpl->empty()) {
+        delete vpl;
+        return GRIN_NULL_LIST;
+    }
     return vpl;
 }
 #endif
@@ -67,7 +71,9 @@ GRIN_EDGE_PROPERTY grin_get_edge_property_by_name(GRIN_GRAPH g, GRIN_EDGE_TYPE e
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto s = std::string(name);
-    auto ep = new GRIN_EDGE_PROPERTY_T(*_etype, _g->schema().GetEdgePropertyId(*_etype, s));
+    auto _id = _g->schema().GetEdgePropertyId(*_etype, s);
+    if (_id < 0) return GRIN_NULL_EDGE_PROPERTY;
+    auto ep = new GRIN_VERTEX_PROPERTY_T(*_etype, _id);
     return ep;
 }
 
@@ -80,6 +86,10 @@ GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const cha
         if (pid >= 0) {
             epl->push_back(GRIN_EDGE_PROPERTY_T(etype, pid));
         }
+    }
+    if (epl->empty()) {
+        delete epl;
+        return GRIN_NULL_LIST;
     }
     return epl;
 }

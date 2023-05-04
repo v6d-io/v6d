@@ -66,22 +66,22 @@ GRIN_VERTEX grin_get_vertex_by_primary_keys(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype
             if (dt == GRIN_DATATYPE::Int32) {
                 auto vid = static_cast<const int32_t*>(value);
                 auto _v = new GRIN_VERTEX_T();
-                _g->GetVertex(*_vtype, *vid, *_v);
+                if (!_g->GetVertex(*_vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
                 return _v;
             } else if (dt == GRIN_DATATYPE::UInt32) {
                 auto vid = static_cast<const uint32_t*>(value);
                 auto _v = new GRIN_VERTEX_T();
-                _g->GetVertex(*_vtype, *vid, *_v);
+                if (!_g->GetVertex(*_vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
                 return _v;
             } else if (dt == GRIN_DATATYPE::Int64) {
                 auto vid = static_cast<const int64_t*>(value);
                 auto _v = new GRIN_VERTEX_T();
-                _g->GetVertex(*_vtype, *vid, *_v);
+                if (!_g->GetVertex(*_vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
                 return _v;
             } else if (dt == GRIN_DATATYPE::UInt64) {
                 auto vid = static_cast<const uint64_t*>(value);
                 auto _v = new GRIN_VERTEX_T();
-                _g->GetVertex(*_vtype, *vid, *_v);
+                if (!_g->GetVertex(*_vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
                 return _v;
             }
         }
