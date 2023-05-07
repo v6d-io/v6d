@@ -12,7 +12,6 @@
 #include "../include/property/topology.h"
 #include "../include/property/type.h"
 #include "../include/topology/adjacentlist.h"
-#include "../include/topology/datatype.h"
 #include "../include/topology/edgelist.h"
 #include "../include/topology/structure.h"
 #include "../include/topology/vertexlist.h"
@@ -384,8 +383,8 @@ void test_property_vertex_table(int argc, char** argv) {
   printf("------------ Vertex property table ------------\n");
   GRIN_VERTEX_TYPE_LIST vtl = grin_get_vertex_type_list(g);
   size_t vtl_size = grin_get_vertex_type_list_size(g, vtl);
-  for (size_t i = 0; i < vtl_size; ++i) {
-    GRIN_VERTEX_TYPE vt = grin_get_vertex_type_from_list(g, vtl, i);
+  for (size_t vt_index = 0; vt_index < vtl_size; ++vt_index) {
+    GRIN_VERTEX_TYPE vt = grin_get_vertex_type_from_list(g, vtl, vt_index);
 
     GRIN_VERTEX_PROPERTY_LIST vpl =
         grin_get_vertex_property_list_by_type(g, vt);
@@ -415,7 +414,7 @@ void test_property_vertex_table(int argc, char** argv) {
       GRIN_ROW row = grin_get_row_from_vertex_property_table(g, vpt, v, vpl);
       for (size_t j = 0; j < vpl_size; ++j) {
         GRIN_VERTEX_PROPERTY vp = grin_get_vertex_property_from_list(g, vpl, j);
-        GRIN_VERTEX_PROPERTY vt1 = grin_get_vertex_property_vertex_type(g, vp);
+        GRIN_VERTEX_TYPE vt1 = grin_get_vertex_property_vertex_type(g, vp);
         if (!grin_equal_vertex_type(g, vt, vt1)) {
           printf("vertex type not match by property\n");
         }
