@@ -44,7 +44,7 @@ size_t grin_get_adjacent_list_size(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
 
 GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    for (auto i = 0; i < _al->etype_end - _al->etype_begin; ++i) {        
+    for (unsigned i = 0; i < _al->etype_end - _al->etype_begin; ++i) {        
         if (idx < _al->offsets[i+1]) {
             auto _idx = idx - _al->offsets[i];
             auto _nbr = _al->data[i].begin() + _idx;
@@ -57,7 +57,7 @@ GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIS
 
 GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
    auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    for (auto i = 0; i < _al->etype_end - _al->etype_begin; ++i) {        
+    for (unsigned i = 0; i < _al->etype_end - _al->etype_begin; ++i) {        
         if (idx < _al->offsets[i+1]) {
             auto _idx = idx - _al->offsets[i];
             auto _nbr = _al->data[i].begin() + _idx;

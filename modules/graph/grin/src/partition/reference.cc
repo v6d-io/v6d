@@ -22,21 +22,15 @@ extern "C" {
 GRIN_VERTEX_REF grin_get_vertex_ref_for_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto gid = _g->Vertex2Gid(*_v);
-    auto vr = new GRIN_VERTEX_REF_T(gid);
-    return vr;
+    return _g->Vertex2Gid(*_v);
 }
 
-void grin_destroy_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
-    auto _vr = static_cast<GRIN_VERTEX_REF_T*>(vr);
-    delete _vr;
-}
+void grin_destroy_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {}
 
 GRIN_VERTEX grin_get_vertex_from_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vr = static_cast<GRIN_VERTEX_REF_T*>(vr);
     auto v = new GRIN_VERTEX_T();
-    if (_g->Gid2Vertex(*_vr, *v)) {
+    if (_g->Gid2Vertex(vr, *v)) {
         return v;
     }
     return GRIN_NULL_VERTEX;
@@ -44,17 +38,14 @@ GRIN_VERTEX grin_get_vertex_from_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
 
 GRIN_PARTITION grin_get_master_partition_from_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vr = static_cast<GRIN_VERTEX_REF_T*>(vr);
     auto id_parser = vineyard::IdParser<GRIN_VERTEX_REF_T>();
     id_parser.Init(_g->fnum(), _g->vertex_label_num());
-    auto p = new GRIN_PARTITION_T(id_parser.GetFid(*_vr));
-    return p;
+    return id_parser.GetFid(vr);
 }
 
 const char* grin_serialize_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
-    auto _vr = static_cast<GRIN_VERTEX_REF_T*>(vr);
     std::stringstream ss;
-    ss << *_vr;
+    ss << vr;
     int len = ss.str().length() + 1;
     char* out = new char[len];
     snprintf(out, len, "%s", ss.str().c_str());
@@ -63,8 +54,11 @@ const char* grin_serialize_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
 
 #ifdef GRIN_TRAIT_FAST_VERTEX_REF
 long long int grin_serialize_vertex_ref_as_int64(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
-    auto _vr = static_cast<GRIN_VERTEX_REF_T*>(vr);
-    return *_vr;
+    return vr;
+}
+
+GRIN_VERTEX_REF grin_deserialize_vertex_ref_from_int64(GRIN_GRAPH g, long long int svr) {
+    return svr;
 }
 #endif
 
@@ -76,8 +70,7 @@ GRIN_VERTEX_REF grin_deserialize_to_vertex_ref(GRIN_GRAPH g, const char* msg) {
     std::stringstream ss(msg);
     GRIN_VERTEX_REF_T gid;
     ss >> gid;
-    auto vr = new GRIN_VERTEX_REF_T(gid);
-    return vr;
+    return gid;
 }
 
 bool grin_is_master_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {

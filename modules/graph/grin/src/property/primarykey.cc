@@ -36,11 +36,10 @@ GRIN_VERTEX_TYPE_LIST grin_get_vertex_types_with_primary_keys(GRIN_GRAPH g) {
 */
 GRIN_VERTEX_PROPERTY_LIST grin_get_primary_keys_by_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto vpl = new GRIN_VERTEX_PROPERTY_LIST_T();
-    for (auto p = 0; p < _g->vertex_property_num(*_vtype); ++p) {
-        if (_g->schema().GetVertexPropertyName(*_vtype, p) == "id") {
-            vpl->push_back(GRIN_VERTEX_PROPERTY_T(*_vtype, p));
+    for (auto p = 0; p < _g->vertex_property_num(vtype); ++p) {
+        if (_g->schema().GetVertexPropertyName(vtype, p) == "id") {
+            vpl->push_back(_grin_create_property(vtype, p));
             break;
         }
     }
@@ -55,33 +54,32 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_primary_keys_by_vertex_type(GRIN_GRAPH g, GRI
 */
 GRIN_VERTEX grin_get_vertex_by_primary_keys(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_ROW r) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto _r = static_cast<GRIN_ROW_T*>(r);
     auto value = (*_r)[0];
-    for (auto p = 0; p < _g->vertex_property_num(*_vtype); ++p) {
-        if (_g->schema().GetVertexPropertyName(*_vtype, p) == "id") {
-            auto arrow_dt = _g->schema().GetVertexPropertyType(*_vtype, p);
+    for (auto p = 0; p < _g->vertex_property_num(vtype); ++p) {
+        if (_g->schema().GetVertexPropertyName(vtype, p) == "id") {
+            auto arrow_dt = _g->schema().GetVertexPropertyType(vtype, p);
             auto dt = ArrowToDataType(arrow_dt);
             
             if (dt == GRIN_DATATYPE::Int32) {
                 auto vid = static_cast<const int32_t*>(value);
                 auto _v = new GRIN_VERTEX_T();
-                if (!_g->GetVertex(*_vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
+                if (!_g->GetVertex(vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
                 return _v;
             } else if (dt == GRIN_DATATYPE::UInt32) {
                 auto vid = static_cast<const uint32_t*>(value);
                 auto _v = new GRIN_VERTEX_T();
-                if (!_g->GetVertex(*_vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
+                if (!_g->GetVertex(vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
                 return _v;
             } else if (dt == GRIN_DATATYPE::Int64) {
                 auto vid = static_cast<const int64_t*>(value);
                 auto _v = new GRIN_VERTEX_T();
-                if (!_g->GetVertex(*_vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
+                if (!_g->GetVertex(vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
                 return _v;
             } else if (dt == GRIN_DATATYPE::UInt64) {
                 auto vid = static_cast<const uint64_t*>(value);
                 auto _v = new GRIN_VERTEX_T();
-                if (!_g->GetVertex(*_vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
+                if (!_g->GetVertex(vtype, *vid, *_v)) return GRIN_NULL_VERTEX;
                 return _v;
             }
         }

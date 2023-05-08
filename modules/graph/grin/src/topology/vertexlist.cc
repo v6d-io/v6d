@@ -40,7 +40,7 @@ size_t grin_get_vertex_list_size(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
 
 GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t idx) {
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    for (auto i = 0; i < _vl->type_end - _vl->type_begin; ++i) {        
+    for (unsigned i = 0; i < _vl->type_end - _vl->type_begin; ++i) {        
         if (idx < _vl->offsets[i+1]) {
             auto _idx = idx - _vl->offsets[i];
             auto v = new GRIN_VERTEX_T(_vl->vrs[i].begin_value() + _idx);

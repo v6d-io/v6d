@@ -224,10 +224,9 @@ void grin_destroy_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE
 
 GRIN_VERTEX_PROPERTY_TABLE grin_get_vertex_property_table_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto vpt = new GRIN_VERTEX_PROPERTY_TABLE_T();
-    vpt->vtype = *_vtype;
-    vpt->vertices = _g->InnerVertices(*_vtype);
+    vpt->vtype = vtype;
+    vpt->vertices = _g->InnerVertices(vtype);
     return vpt;
 }
 
@@ -236,12 +235,13 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
-    if (_vp->first != _vpt->vtype || !_vpt->vertices.Contain(*_v)) return NULL;
+    unsigned vtype = _grin_get_type_from_property(vp);
+    unsigned vprop = _grin_get_prop_from_property(vp);
+    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) return NULL;
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
-    auto _dt = _g->schema().GetVertexPropertyType(_vp->first, _vp->second);
+    auto _dt = _g->schema().GetVertexPropertyType(vtype, vprop);
     auto dt = ArrowToDataType(_dt);
     switch (dt) {
     case GRIN_DATATYPE::Int32:
@@ -279,9 +279,8 @@ int grin_get_int32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(_grin_get_type_from_property(vp))->column(_grin_get_prop_from_property(vp))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const int32_t*>(result);
 }
@@ -290,9 +289,8 @@ unsigned int grin_get_uint32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTE
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(_grin_get_type_from_property(vp))->column(_grin_get_prop_from_property(vp))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const uint32_t*>(result);
 }
@@ -301,9 +299,8 @@ long long int grin_get_int64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTE
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(_grin_get_type_from_property(vp))->column(_grin_get_prop_from_property(vp))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const int64_t*>(result);
 }
@@ -312,9 +309,8 @@ unsigned long long int grin_get_uint64_from_vertex_property_table(GRIN_GRAPH g, 
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(_grin_get_type_from_property(vp))->column(_grin_get_prop_from_property(vp))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const uint64_t*>(result);
 }
@@ -323,9 +319,8 @@ float grin_get_float_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPER
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(_grin_get_type_from_property(vp))->column(_grin_get_prop_from_property(vp))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const float*>(result);
 }
@@ -334,9 +329,8 @@ double grin_get_double_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROP
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(_grin_get_type_from_property(vp))->column(_grin_get_prop_from_property(vp))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const double*>(result);}
 
@@ -344,9 +338,8 @@ const char* grin_get_string_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(_grin_get_type_from_property(vp))->column(_grin_get_prop_from_property(vp))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     auto s = static_cast<const std::string*>(result);
     int len = s->length() + 1;
@@ -359,9 +352,8 @@ int grin_get_date32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERT
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(_grin_get_type_from_property(vp))->column(_grin_get_prop_from_property(vp))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const int32_t*>(result);
 }
@@ -370,9 +362,8 @@ int grin_get_time32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERT
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(_grin_get_type_from_property(vp))->column(_grin_get_prop_from_property(vp))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const int32_t*>(result);
 }
@@ -381,9 +372,8 @@ long long int grin_get_timestamp64_from_vertex_property_table(GRIN_GRAPH g, GRIN
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(_vp->first)->column(_vp->second)->chunk(0);
+    auto array = _g->vertex_data_table(_grin_get_type_from_property(vp))->column(_grin_get_prop_from_property(vp))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const int64_t*>(result);
 }
@@ -401,8 +391,9 @@ GRIN_ROW grin_get_row_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPE
 
     auto r = new GRIN_ROW_T();
     for (auto vp: *_vpl) {
-        if (vp.first != _vpt->vtype) return NULL;
-        auto array = _g->vertex_data_table(vp.first)->column(vp.second)->chunk(0);
+        unsigned vtype = _grin_get_type_from_property(vp);
+        if (vtype != _vpt->vtype) return NULL;
+        auto array = _g->vertex_data_table(vtype)->column(_grin_get_prop_from_property(vp))->chunk(0);
         auto result = vineyard::get_arrow_array_data_element(array, offset);
         r->push_back(result);
     }
@@ -428,10 +419,9 @@ void grin_destroy_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept
 
 GRIN_EDGE_PROPERTY_TABLE grin_get_edge_property_table_by_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto ept = new GRIN_EDGE_PROPERTY_TABLE_T();
-    ept->etype = *_etype;
-    ept->num = _g->edge_data_table(*_etype)->num_rows();
+    ept->etype = etype;
+    ept->num = _g->edge_data_table(etype)->num_rows();
     return ept;
 }
 
@@ -440,12 +430,13 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
-    if (_ep->first != _ept->etype || _e->eid >= _ept->num) return NULL;
+    unsigned etype = _grin_get_type_from_property(ep);
+    unsigned eprop = _grin_get_prop_from_property(ep);
+    if (etype != _ept->etype || _e->eid >= _ept->num) return NULL;
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
-    auto _dt = _g->schema().GetEdgePropertyType(_ep->first, _ep->second);
+    auto _dt = _g->schema().GetEdgePropertyType(etype, eprop);
     auto dt = ArrowToDataType(_dt);
     switch (dt) {
     case GRIN_DATATYPE::Int32:
@@ -482,9 +473,8 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
 int grin_get_int32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(_grin_get_type_from_property(ep))->column(_grin_get_prop_from_property(ep))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const int32_t*>(result);
 }
@@ -492,9 +482,8 @@ int grin_get_int32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TAB
 unsigned int grin_get_uint32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(_grin_get_type_from_property(ep))->column(_grin_get_prop_from_property(ep))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const uint32_t*>(result);
 }
@@ -502,9 +491,8 @@ unsigned int grin_get_uint32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PR
 long long int grin_get_int64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(_grin_get_type_from_property(ep))->column(_grin_get_prop_from_property(ep))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const int64_t*>(result);
 }
@@ -512,9 +500,8 @@ long long int grin_get_int64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PR
 unsigned long long int grin_get_uint64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(_grin_get_type_from_property(ep))->column(_grin_get_prop_from_property(ep))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const uint64_t*>(result);
 }
@@ -522,9 +509,8 @@ unsigned long long int grin_get_uint64_from_edge_property_table(GRIN_GRAPH g, GR
 float grin_get_float_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(_grin_get_type_from_property(ep))->column(_grin_get_prop_from_property(ep))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const float*>(result);
 }
@@ -532,9 +518,8 @@ float grin_get_float_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_T
 double grin_get_double_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(_grin_get_type_from_property(ep))->column(_grin_get_prop_from_property(ep))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const double*>(result);
 }
@@ -542,9 +527,8 @@ double grin_get_double_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY
 const char* grin_get_string_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(_grin_get_type_from_property(ep))->column(_grin_get_prop_from_property(ep))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     auto s = static_cast<const std::string*>(result);
     int len = s->length() + 1;
@@ -556,9 +540,8 @@ const char* grin_get_string_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PRO
 int grin_get_date32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(_grin_get_type_from_property(ep))->column(_grin_get_prop_from_property(ep))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const int32_t*>(result);
 }
@@ -566,9 +549,8 @@ int grin_get_date32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TA
 int grin_get_time32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(_grin_get_type_from_property(ep))->column(_grin_get_prop_from_property(ep))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const int32_t*>(result);
 }
@@ -576,9 +558,8 @@ int grin_get_time32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TA
 long long int grin_get_timestamp64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
     auto offset = _e->eid;
-    auto array = _g->edge_data_table(_ep->first)->column(_ep->second)->chunk(0);
+    auto array = _g->edge_data_table(_grin_get_type_from_property(ep))->column(_grin_get_prop_from_property(ep))->chunk(0);
     auto result = vineyard::get_arrow_array_data_element(array, offset);
     return *static_cast<const int64_t*>(result);
 }
@@ -595,8 +576,9 @@ GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_
     auto offset = _e->eid;
     auto r = new GRIN_ROW_T();
     for (auto ep: *_epl) {
-        if (ep.first != _ept->etype) return NULL;
-        auto array = _g->edge_data_table(ep.first)->column(ep.second)->chunk(0);
+        unsigned etype = _grin_get_type_from_property(ep);
+        if (etype != _ept->etype) return NULL;
+        auto array = _g->edge_data_table(etype)->column(_grin_get_prop_from_property(ep))->chunk(0);
         auto result = vineyard::get_arrow_array_data_element(array, offset);
         r->push_back(result);
     }

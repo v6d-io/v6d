@@ -18,10 +18,9 @@ extern "C" {
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_property_list_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto vpl = new GRIN_VERTEX_PROPERTY_LIST_T();
-    for (auto p = 0; p < _g->vertex_property_num(*_vtype); ++p) {
-        vpl->push_back(GRIN_VERTEX_PROPERTY_T(*_vtype, p));
+    for (auto p = 0; p < _g->vertex_property_num(vtype); ++p) {
+        vpl->push_back(_grin_create_property(vtype, p));
     }
     return vpl;
 }
@@ -33,8 +32,7 @@ size_t grin_get_vertex_property_list_size(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIS
 
 GRIN_VERTEX_PROPERTY grin_get_vertex_property_from_list(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST vpl, size_t idx) {
     auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
-    auto vp = new GRIN_VERTEX_PROPERTY_T((*_vpl)[idx]);
-    return vp;
+    return (*_vpl)[idx];
 }
 
 GRIN_VERTEX_PROPERTY_LIST grin_create_vertex_property_list(GRIN_GRAPH g) {
@@ -49,8 +47,7 @@ void grin_destroy_vertex_property_list(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST v
 
 bool grin_insert_vertex_property_to_list(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST vpl, GRIN_VERTEX_PROPERTY vp) {
     auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
-    _vpl->push_back(*_vp);
+    _vpl->push_back(vp);
     return true;
 }
 #endif
@@ -58,18 +55,14 @@ bool grin_insert_vertex_property_to_list(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST
 
 #ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
 GRIN_VERTEX_PROPERTY grin_get_vertex_property_from_id(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY_ID vpi) {
-    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    if (vpi >= _g->vertex_property_num(*_vtype)) return GRIN_NULL_VERTEX_PROPERTY;
-    auto vp = new GRIN_VERTEX_PROPERTY_T(*_vtype, vpi);
-    return vp;
+    if (vpi >= _g->vertex_property_num(vtype)) return GRIN_NULL_VERTEX_PROPERTY;
+    return _grin_create_property(vtype, vpi);
 }
 
 GRIN_VERTEX_PROPERTY_ID grin_get_vertex_property_id(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY vp) {
-    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
-    if (*_vtype != _vp->first) return GRIN_NULL_NATURAL_ID;
-    return _vp->second;
+    if (vtype != _grin_get_type_from_property(vp)) return GRIN_NULL_NATURAL_ID;
+    return _grin_get_prop_from_property(vp);
 }
 #endif
 
@@ -77,10 +70,9 @@ GRIN_VERTEX_PROPERTY_ID grin_get_vertex_property_id(GRIN_GRAPH g, GRIN_VERTEX_TY
 #ifdef GRIN_WITH_EDGE_PROPERTY
 GRIN_EDGE_PROPERTY_LIST grin_get_edge_property_list_by_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto epl = new GRIN_EDGE_PROPERTY_LIST_T();
-    for (auto p = 1; p < _g->edge_property_num(*_etype); ++p) {
-        epl->push_back(GRIN_EDGE_PROPERTY_T(*_etype, p));
+    for (auto p = 1; p < _g->edge_property_num(etype); ++p) {
+        epl->push_back(_grin_create_property(etype, p));
     }
     return epl;
 }
@@ -92,8 +84,7 @@ size_t grin_get_edge_property_list_size(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST ep
 
 GRIN_EDGE_PROPERTY grin_get_edge_property_from_list(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl, size_t idx) {
     auto _epl = static_cast<GRIN_EDGE_PROPERTY_LIST_T*>(epl);
-    auto ep = new GRIN_EDGE_PROPERTY_T((*_epl)[idx]);
-    return ep;
+    return (*_epl)[idx];
 }
 
 GRIN_EDGE_PROPERTY_LIST grin_create_edge_property_list(GRIN_GRAPH g) {
@@ -108,8 +99,7 @@ void grin_destroy_edge_property_list(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl) 
 
 bool grin_insert_edge_property_to_list(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl, GRIN_EDGE_PROPERTY ep) {
     auto _epl = static_cast<GRIN_EDGE_PROPERTY_LIST_T*>(epl);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
-    _epl->push_back(*_ep);
+    _epl->push_back(ep);
     return true;
 }
 #endif
@@ -117,18 +107,14 @@ bool grin_insert_edge_property_to_list(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl
 
 #ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
 GRIN_EDGE_PROPERTY grin_get_edge_property_from_id(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_EDGE_PROPERTY_ID epi) {
-    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    if (epi >= _g->edge_property_num(*_etype) - 1) return GRIN_NULL_EDGE_PROPERTY;
-    auto ep = new GRIN_EDGE_PROPERTY_T(*_etype, epi + 1);
-    return ep;
+    if (epi >= _g->edge_property_num(etype) - 1) return GRIN_NULL_EDGE_PROPERTY;
+    return _grin_create_property(etype, epi + 1);
 }
 
 GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_EDGE_PROPERTY ep) {
-    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
-    if (*_etype != _ep->first) return GRIN_NULL_NATURAL_ID;
-    return _ep->second - 1;
+    if (etype != _grin_get_type_from_property(ep)) return GRIN_NULL_NATURAL_ID;
+    return _grin_get_prop_from_property(ep) - 1;
 }
 #endif
 
