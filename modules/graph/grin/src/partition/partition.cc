@@ -19,7 +19,6 @@ extern "C" {
 }
 #include "graph/fragment/property_graph_types.h"
 
-
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
 GRIN_PARTITIONED_GRAPH grin_get_partitioned_graph_from_storage(int argc, char** argv) {
     if (argc < 2) {

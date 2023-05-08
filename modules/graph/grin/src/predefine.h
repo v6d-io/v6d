@@ -25,7 +25,7 @@ extern "C" {
 #include "graph/fragment/arrow_fragment_impl.h"
 
 #include "client/client.h"
-#include "arrow/api.h"
+#include "arrow/api.h" 
 
 template <typename T>
 struct GRIN_DATATYPE_ENUM {

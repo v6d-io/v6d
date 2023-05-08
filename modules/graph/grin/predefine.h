@@ -53,6 +53,14 @@ typedef enum {
   Timestamp64 = 10,   ///< Timestamp
 } GRIN_DATATYPE;
 
+/// Enumerates the error codes of grin
+typedef enum {
+  GRIN_NO_ERROR = 0,               ///< success
+  GRIN_UNKNOWN_ERROR = 1,         ///< unknown error
+  GRIN_INVALID_VALUE = 2,         ///< invalid value
+  GRIN_UNKNOWN_DATATYPE = 3,      ///< unknown datatype
+} GRIN_ERROR_CODE;
+
 /* Section 1: Toplogy */
 
 /** @name TopologyMacros
