@@ -48,8 +48,9 @@ typedef enum {
   Float = 5,          ///< float
   Double = 6,         ///< double
   String = 7,         ///< string
-  Date32 = 8,         ///< short date
-  Date64 = 9,         ///< long date
+  Date32 = 8,         ///< date
+  Time32 = 9,         ///< Time32
+  Timestamp64 = 10,   ///< Timestamp
 } GRIN_DATATYPE;
 
 /* Section 1: Toplogy */
@@ -210,6 +211,12 @@ typedef enum {
  * recognized in other partitions where the vertex also appears.
 */
 #define GRIN_ENABLE_VERTEX_REF
+
+/** @ingroup PartitionMacros
+ * @brief The storage provides fast reference of vertex, which means
+ * the vertex ref can be serialized into a int64 using grin_serialize_vertex_ref_as_int64
+*/
+#define GRIN_TRAIT_FAST_VERTEX_REF
 
 /** @ingroup PartitionMacros
  * @brief The storage provides reference of edge that can be
@@ -374,6 +381,7 @@ typedef enum {
 #undef GRIN_ENABLE_GRAPH_PARTITION
 #undef GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
 #undef GRIN_ENABLE_VERTEX_REF
+#undef GRIN_TRAIT_FAST_VERTEX_REF
 #undef GRIN_ENABLE_EDGE_REF
 #undef GRIN_ASSUME_ALL_REPLICATE_PARTITION
 #undef GRIN_ASSUME_EDGE_CUT_PARTITION
@@ -400,6 +408,7 @@ typedef enum {
 #define GRIN_ENABLE_GRAPH_PARTITION
 #define GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
 #define GRIN_ENABLE_VERTEX_REF
+#define GRIN_TRAIT_FAST_VERTEX_REF
 #define GRIN_ASSUME_EDGE_CUT_PARTITION
 #define GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST
 // GRIN_END
