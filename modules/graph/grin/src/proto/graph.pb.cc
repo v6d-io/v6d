@@ -285,6 +285,7 @@ const ::PROTOBUF_NAMESPACE_ID::uint32 TableStruct_graph_2eproto::offsets[] PROTO
   PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, grin_trait_select_partition_for_edge_list_),
   PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, grin_trait_select_master_neighbor_for_adjacent_list_),
   PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, grin_trait_select_neighbor_partition_for_adjacent_list_),
+  PROTOBUF_FIELD_OFFSET(::grin::PartitionFeature, grin_trait_fast_vertex_ref_),
   ~0u,  // no _has_bits_
   PROTOBUF_FIELD_OFFSET(::grin::VertexPropertyFeature, _internal_metadata_),
   ~0u,  // no _extensions_
@@ -375,14 +376,14 @@ static const ::PROTOBUF_NAMESPACE_ID::internal::MigrationSchema schemas[] PROTOB
   { 0, -1, sizeof(::grin::TopologyFeature)},
   { 14, -1, sizeof(::grin::MirrorPartitionListFeature)},
   { 23, -1, sizeof(::grin::PartitionFeature)},
-  { 41, -1, sizeof(::grin::VertexPropertyFeature)},
-  { 54, -1, sizeof(::grin::EdgePropertyFeature)},
-  { 66, -1, sizeof(::grin::PropertyFeature)},
-  { 83, -1, sizeof(::grin::IndexFeature)},
-  { 91, -1, sizeof(::grin::PredicateFeature)},
-  { 96, -1, sizeof(::grin::StorageFeature)},
-  { 107, -1, sizeof(::grin::Statistics)},
-  { 117, -1, sizeof(::grin::Graph)},
+  { 42, -1, sizeof(::grin::VertexPropertyFeature)},
+  { 55, -1, sizeof(::grin::EdgePropertyFeature)},
+  { 67, -1, sizeof(::grin::PropertyFeature)},
+  { 84, -1, sizeof(::grin::IndexFeature)},
+  { 92, -1, sizeof(::grin::PredicateFeature)},
+  { 97, -1, sizeof(::grin::StorageFeature)},
+  { 108, -1, sizeof(::grin::Statistics)},
+  { 118, -1, sizeof(::grin::Graph)},
 };
 
 static ::PROTOBUF_NAMESPACE_ID::Message const * const file_default_instances[] = {
@@ -416,7 +417,7 @@ const char descriptor_table_protodef_graph_2eproto[] PROTOBUF_SECTION_VARIABLE(p
   "t_mirror_vertex_mirror_partition_list\030\002 "
   "\001(\010\0224\n,grin_trait_master_edge_mirror_par"
   "tition_list\030\003 \001(\010\0224\n,grin_trait_mirror_e"
-  "dge_mirror_partition_list\030\004 \001(\010\"\277\005\n\020Part"
+  "dge_mirror_partition_list\030\004 \001(\010\"\343\005\n\020Part"
   "itionFeature\022>\n\030graph_partition_strategy"
   "\030\001 \001(\0162\034.grin.GraphPartitionStrategy\022+\n#"
   "grin_trait_natural_id_for_partition\030\002 \001("
@@ -434,65 +435,66 @@ const char descriptor_table_protodef_graph_2eproto[] PROTOBUF_SECTION_VARIABLE(p
   "e_list\030\013 \001(\010\022;\n3grin_trait_select_master"
   "_neighbor_for_adjacent_list\030\014 \001(\010\022>\n6gri"
   "n_trait_select_neighbor_partition_for_ad"
-  "jacent_list\030\r \001(\010\"\354\002\n\025VertexPropertyFeat"
-  "ure\022!\n\031grin_with_vertex_property\030\001 \001(\010\022&"
-  "\n\036grin_with_vertex_property_name\030\002 \001(\010\022\""
-  "\n\032grin_with_vertex_type_name\030\003 \001(\010\022)\n!gr"
-  "in_enable_vertex_property_table\030\004 \001(\010\022\'\n"
-  "\037grin_enable_vertex_primary_keys\030\005 \001(\010\022-"
-  "\n%grin_trait_natural_id_for_vertex_type\030"
-  "\006 \001(\010\0221\n)grin_trait_natural_id_for_verte"
-  "x_property\030\007 \001(\010\022.\n&grin_assume_by_type_"
-  "vertex_original_id\030\010 \001(\010\"\254\002\n\023EdgePropert"
-  "yFeature\022\037\n\027grin_with_edge_property\030\001 \001("
-  "\010\022$\n\034grin_with_edge_property_name\030\002 \001(\010\022"
-  " \n\030grin_with_edge_type_name\030\003 \001(\010\022\'\n\037gri"
-  "n_enable_edge_property_table\030\004 \001(\010\022%\n\035gr"
-  "in_enable_edge_primary_keys\030\005 \001(\010\022+\n#gri"
-  "n_trait_natural_id_for_edge_type\030\006 \001(\010\022/"
-  "\n\'grin_trait_natural_id_for_edge_propert"
-  "y\030\007 \001(\010\"\200\005\n\017PropertyFeature\022\027\n\017grin_enab"
-  "le_row\030\001 \001(\010\022<\n\027vertex_property_feature\030"
-  "\002 \001(\0132\033.grin.VertexPropertyFeature\0228\n\025ed"
-  "ge_property_feature\030\003 \001(\0132\031.grin.EdgePro"
-  "pertyFeature\022<\n\017vertex_property\030\004 \001(\0162#."
-  "grin.PropertyDataPartitionStrategy\022:\n\red"
-  "ge_property\030\005 \001(\0162#.grin.PropertyDataPar"
-  "titionStrategy\0224\n,grin_assume_column_sto"
-  "re_for_vertex_property\030\006 \001(\010\0222\n*grin_ass"
-  "ume_column_store_for_edge_property\030\007 \001(\010"
-  "\022.\n&grin_trait_select_type_for_vertex_li"
-  "st\030\010 \001(\010\022,\n$grin_trait_select_type_for_e"
-  "dge_list\030\t \001(\010\0229\n1grin_trait_select_neig"
-  "hbor_type_for_adjacent_list\030\n \001(\010\0225\n-gri"
-  "n_trait_select_edge_type_for_adjacent_li"
-  "st\030\013 \001(\010\022(\n grin_trait_specific_vev_rela"
-  "tion\030\014 \001(\010\"x\n\014IndexFeature\022\036\n\026grin_with_"
-  "vertex_label\030\001 \001(\010\022\034\n\024grin_with_edge_lab"
-  "el\030\002 \001(\010\022*\n\"grin_assume_all_vertex_list_"
-  "sorted\030\003 \001(\010\"\022\n\020PredicateFeature\"\241\002\n\016Sto"
-  "rageFeature\0221\n\020topology_feature\030\001 \001(\0132\025."
-  "grin.TopologyFeatureH\000\0223\n\021partition_feat"
-  "ure\030\002 \001(\0132\026.grin.PartitionFeatureH\000\0221\n\020p"
-  "roperty_feature\030\003 \001(\0132\025.grin.PropertyFea"
-  "tureH\000\022+\n\rindex_feature\030\004 \001(\0132\022.grin.Ind"
-  "exFeatureH\000\0223\n\021predicate_feature\030\005 \001(\0132\026"
-  ".grin.PredicateFeatureH\000B\022\n\020specific_fea"
-  "ture\"\203\001\n\nStatistics\022\024\n\014vertex_count\030\001 \001("
-  "\005\022\022\n\nedge_count\030\002 \001(\005\022\027\n\017partition_count"
-  "\030\003 \001(\005\022\031\n\021vertex_type_count\030\004 \001(\005\022\027\n\017edg"
-  "e_type_count\030\005 \001(\005\"x\n\005Graph\022\013\n\003uri\030\001 \001(\t"
-  "\022\024\n\014grin_version\030\002 \001(\t\022&\n\010features\030\003 \003(\013"
-  "2\024.grin.StorageFeature\022$\n\nstatistics\030\004 \001"
-  "(\0132\020.grin.Statistics*>\n\rListRetrieval\022\t\n"
-  "\005LR_NA\020\000\022\021\n\rLR_ARRAY_LIKE\020\001\022\017\n\013LR_ITERAT"
-  "OR\020\002*u\n\026GraphPartitionStrategy\022\n\n\006GPS_NA"
-  "\020\000\022\025\n\021GPS_ALL_REPLICATE\020\001\022\020\n\014GPS_EDGE_CU"
-  "T\020\002\022\022\n\016GPS_VERTEX_CUT\020\003\022\022\n\016GPS_HYBRID_CU"
-  "T\020\004*\202\001\n\035PropertyDataPartitionStrategy\022\013\n"
-  "\007PDPS_NA\020\000\022\024\n\020PDPS_MASTER_ONLY\020\001\022 \n\034PDPS"
-  "_REPLICATE_MASTER_MIRROR\020\002\022\034\n\030PDPS_SPLIT"
-  "_MASTER_MIRROR\020\003b\006proto3"
+  "jacent_list\030\r \001(\010\022\"\n\032grin_trait_fast_ver"
+  "tex_ref\030\016 \001(\010\"\354\002\n\025VertexPropertyFeature\022"
+  "!\n\031grin_with_vertex_property\030\001 \001(\010\022&\n\036gr"
+  "in_with_vertex_property_name\030\002 \001(\010\022\"\n\032gr"
+  "in_with_vertex_type_name\030\003 \001(\010\022)\n!grin_e"
+  "nable_vertex_property_table\030\004 \001(\010\022\'\n\037gri"
+  "n_enable_vertex_primary_keys\030\005 \001(\010\022-\n%gr"
+  "in_trait_natural_id_for_vertex_type\030\006 \001("
+  "\010\0221\n)grin_trait_natural_id_for_vertex_pr"
+  "operty\030\007 \001(\010\022.\n&grin_assume_by_type_vert"
+  "ex_original_id\030\010 \001(\010\"\254\002\n\023EdgePropertyFea"
+  "ture\022\037\n\027grin_with_edge_property\030\001 \001(\010\022$\n"
+  "\034grin_with_edge_property_name\030\002 \001(\010\022 \n\030g"
+  "rin_with_edge_type_name\030\003 \001(\010\022\'\n\037grin_en"
+  "able_edge_property_table\030\004 \001(\010\022%\n\035grin_e"
+  "nable_edge_primary_keys\030\005 \001(\010\022+\n#grin_tr"
+  "ait_natural_id_for_edge_type\030\006 \001(\010\022/\n\'gr"
+  "in_trait_natural_id_for_edge_property\030\007 "
+  "\001(\010\"\200\005\n\017PropertyFeature\022\027\n\017grin_enable_r"
+  "ow\030\001 \001(\010\022<\n\027vertex_property_feature\030\002 \001("
+  "\0132\033.grin.VertexPropertyFeature\0228\n\025edge_p"
+  "roperty_feature\030\003 \001(\0132\031.grin.EdgePropert"
+  "yFeature\022<\n\017vertex_property\030\004 \001(\0162#.grin"
+  ".PropertyDataPartitionStrategy\022:\n\redge_p"
+  "roperty\030\005 \001(\0162#.grin.PropertyDataPartiti"
+  "onStrategy\0224\n,grin_assume_column_store_f"
+  "or_vertex_property\030\006 \001(\010\0222\n*grin_assume_"
+  "column_store_for_edge_property\030\007 \001(\010\022.\n&"
+  "grin_trait_select_type_for_vertex_list\030\010"
+  " \001(\010\022,\n$grin_trait_select_type_for_edge_"
+  "list\030\t \001(\010\0229\n1grin_trait_select_neighbor"
+  "_type_for_adjacent_list\030\n \001(\010\0225\n-grin_tr"
+  "ait_select_edge_type_for_adjacent_list\030\013"
+  " \001(\010\022(\n grin_trait_specific_vev_relation"
+  "\030\014 \001(\010\"x\n\014IndexFeature\022\036\n\026grin_with_vert"
+  "ex_label\030\001 \001(\010\022\034\n\024grin_with_edge_label\030\002"
+  " \001(\010\022*\n\"grin_assume_all_vertex_list_sort"
+  "ed\030\003 \001(\010\"\022\n\020PredicateFeature\"\241\002\n\016Storage"
+  "Feature\0221\n\020topology_feature\030\001 \001(\0132\025.grin"
+  ".TopologyFeatureH\000\0223\n\021partition_feature\030"
+  "\002 \001(\0132\026.grin.PartitionFeatureH\000\0221\n\020prope"
+  "rty_feature\030\003 \001(\0132\025.grin.PropertyFeature"
+  "H\000\022+\n\rindex_feature\030\004 \001(\0132\022.grin.IndexFe"
+  "atureH\000\0223\n\021predicate_feature\030\005 \001(\0132\026.gri"
+  "n.PredicateFeatureH\000B\022\n\020specific_feature"
+  "\"\203\001\n\nStatistics\022\024\n\014vertex_count\030\001 \001(\005\022\022\n"
+  "\nedge_count\030\002 \001(\005\022\027\n\017partition_count\030\003 \001"
+  "(\005\022\031\n\021vertex_type_count\030\004 \001(\005\022\027\n\017edge_ty"
+  "pe_count\030\005 \001(\005\"x\n\005Graph\022\013\n\003uri\030\001 \001(\t\022\024\n\014"
+  "grin_version\030\002 \001(\t\022&\n\010features\030\003 \003(\0132\024.g"
+  "rin.StorageFeature\022$\n\nstatistics\030\004 \001(\0132\020"
+  ".grin.Statistics*>\n\rListRetrieval\022\t\n\005LR_"
+  "NA\020\000\022\021\n\rLR_ARRAY_LIKE\020\001\022\017\n\013LR_ITERATOR\020\002"
+  "*u\n\026GraphPartitionStrategy\022\n\n\006GPS_NA\020\000\022\025"
+  "\n\021GPS_ALL_REPLICATE\020\001\022\020\n\014GPS_EDGE_CUT\020\002\022"
+  "\022\n\016GPS_VERTEX_CUT\020\003\022\022\n\016GPS_HYBRID_CUT\020\004*"
+  "\202\001\n\035PropertyDataPartitionStrategy\022\013\n\007PDP"
+  "S_NA\020\000\022\024\n\020PDPS_MASTER_ONLY\020\001\022 \n\034PDPS_REP"
+  "LICATE_MASTER_MIRROR\020\002\022\034\n\030PDPS_SPLIT_MAS"
+  "TER_MIRROR\020\003b\006proto3"
   ;
 static const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable*const descriptor_table_graph_2eproto_deps[1] = {
 };
@@ -511,7 +513,7 @@ static ::PROTOBUF_NAMESPACE_ID::internal::SCCInfoBase*const descriptor_table_gra
 };
 static ::PROTOBUF_NAMESPACE_ID::internal::once_flag descriptor_table_graph_2eproto_once;
 const ::PROTOBUF_NAMESPACE_ID::internal::DescriptorTable descriptor_table_graph_2eproto = {
-  false, false, descriptor_table_protodef_graph_2eproto, "graph.proto", 3704,
+  false, false, descriptor_table_protodef_graph_2eproto, "graph.proto", 3740,
   &descriptor_table_graph_2eproto_once, descriptor_table_graph_2eproto_sccs, descriptor_table_graph_2eproto_deps, 11, 0,
   schemas, file_default_instances, TableStruct_graph_2eproto::offsets,
   file_level_metadata_graph_2eproto, 11, file_level_enum_descriptors_graph_2eproto, file_level_service_descriptors_graph_2eproto,
@@ -1308,16 +1310,16 @@ PartitionFeature::PartitionFeature(const PartitionFeature& from)
     mirror_partition_list_feature_ = nullptr;
   }
   ::memcpy(&graph_partition_strategy_, &from.graph_partition_strategy_,
-    static_cast<size_t>(reinterpret_cast<char*>(&grin_trait_select_neighbor_partition_for_adjacent_list_) -
-    reinterpret_cast<char*>(&graph_partition_strategy_)) + sizeof(grin_trait_select_neighbor_partition_for_adjacent_list_));
+    static_cast<size_t>(reinterpret_cast<char*>(&grin_trait_fast_vertex_ref_) -
+    reinterpret_cast<char*>(&graph_partition_strategy_)) + sizeof(grin_trait_fast_vertex_ref_));
   // @@protoc_insertion_point(copy_constructor:grin.PartitionFeature)
 }
 
 void PartitionFeature::SharedCtor() {
   ::PROTOBUF_NAMESPACE_ID::internal::InitSCC(&scc_info_PartitionFeature_graph_2eproto.base);
   ::memset(&mirror_partition_list_feature_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&grin_trait_select_neighbor_partition_for_adjacent_list_) -
-      reinterpret_cast<char*>(&mirror_partition_list_feature_)) + sizeof(grin_trait_select_neighbor_partition_for_adjacent_list_));
+      reinterpret_cast<char*>(&grin_trait_fast_vertex_ref_) -
+      reinterpret_cast<char*>(&mirror_partition_list_feature_)) + sizeof(grin_trait_fast_vertex_ref_));
 }
 
 PartitionFeature::~PartitionFeature() {
@@ -1357,8 +1359,8 @@ void PartitionFeature::Clear() {
   }
   mirror_partition_list_feature_ = nullptr;
   ::memset(&graph_partition_strategy_, 0, static_cast<size_t>(
-      reinterpret_cast<char*>(&grin_trait_select_neighbor_partition_for_adjacent_list_) -
-      reinterpret_cast<char*>(&graph_partition_strategy_)) + sizeof(grin_trait_select_neighbor_partition_for_adjacent_list_));
+      reinterpret_cast<char*>(&grin_trait_fast_vertex_ref_) -
+      reinterpret_cast<char*>(&graph_partition_strategy_)) + sizeof(grin_trait_fast_vertex_ref_));
   _internal_metadata_.Clear<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>();
 }
 
@@ -1461,6 +1463,13 @@ const char* PartitionFeature::_InternalParse(const char* ptr, ::PROTOBUF_NAMESPA
       case 13:
         if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 104)) {
           grin_trait_select_neighbor_partition_for_adjacent_list_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
+          CHK_(ptr);
+        } else goto handle_unusual;
+        continue;
+      // bool grin_trait_fast_vertex_ref = 14;
+      case 14:
+        if (PROTOBUF_PREDICT_TRUE(static_cast<::PROTOBUF_NAMESPACE_ID::uint8>(tag) == 112)) {
+          grin_trait_fast_vertex_ref_ = ::PROTOBUF_NAMESPACE_ID::internal::ReadVarint64(&ptr);
           CHK_(ptr);
         } else goto handle_unusual;
         continue;
@@ -1575,6 +1584,12 @@ failure:
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteBoolToArray(13, this->_internal_grin_trait_select_neighbor_partition_for_adjacent_list(), target);
   }
 
+  // bool grin_trait_fast_vertex_ref = 14;
+  if (this->grin_trait_fast_vertex_ref() != 0) {
+    target = stream->EnsureSpace(target);
+    target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormatLite::WriteBoolToArray(14, this->_internal_grin_trait_fast_vertex_ref(), target);
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     target = ::PROTOBUF_NAMESPACE_ID::internal::WireFormat::InternalSerializeUnknownFieldsToArray(
         _internal_metadata_.unknown_fields<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(::PROTOBUF_NAMESPACE_ID::UnknownFieldSet::default_instance), target, stream);
@@ -1661,6 +1676,11 @@ size_t PartitionFeature::ByteSizeLong() const {
     total_size += 1 + 1;
   }
 
+  // bool grin_trait_fast_vertex_ref = 14;
+  if (this->grin_trait_fast_vertex_ref() != 0) {
+    total_size += 1 + 1;
+  }
+
   if (PROTOBUF_PREDICT_FALSE(_internal_metadata_.have_unknown_fields())) {
     return ::PROTOBUF_NAMESPACE_ID::internal::ComputeUnknownFieldsSize(
         _internal_metadata_, total_size, &_cached_size_);
@@ -1731,6 +1751,9 @@ void PartitionFeature::MergeFrom(const PartitionFeature& from) {
   if (from.grin_trait_select_neighbor_partition_for_adjacent_list() != 0) {
     _internal_set_grin_trait_select_neighbor_partition_for_adjacent_list(from._internal_grin_trait_select_neighbor_partition_for_adjacent_list());
   }
+  if (from.grin_trait_fast_vertex_ref() != 0) {
+    _internal_set_grin_trait_fast_vertex_ref(from._internal_grin_trait_fast_vertex_ref());
+  }
 }
 
 void PartitionFeature::CopyFrom(const ::PROTOBUF_NAMESPACE_ID::Message& from) {
@@ -1755,8 +1778,8 @@ void PartitionFeature::InternalSwap(PartitionFeature* other) {
   using std::swap;
   _internal_metadata_.Swap<::PROTOBUF_NAMESPACE_ID::UnknownFieldSet>(&other->_internal_metadata_);
   ::PROTOBUF_NAMESPACE_ID::internal::memswap<
-      PROTOBUF_FIELD_OFFSET(PartitionFeature, grin_trait_select_neighbor_partition_for_adjacent_list_)
-      + sizeof(PartitionFeature::grin_trait_select_neighbor_partition_for_adjacent_list_)
+      PROTOBUF_FIELD_OFFSET(PartitionFeature, grin_trait_fast_vertex_ref_)
+      + sizeof(PartitionFeature::grin_trait_fast_vertex_ref_)
       - PROTOBUF_FIELD_OFFSET(PartitionFeature, mirror_partition_list_feature_)>(
           reinterpret_cast<char*>(&mirror_partition_list_feature_),
           reinterpret_cast<char*>(&other->mirror_partition_list_feature_));

@@ -130,6 +130,10 @@ const char* grin_get_static_storage_feature_msg() {
   feature->set_grin_enable_vertex_ref(true);
 #endif
 
+#ifdef GRIN_TRAIT_FAST_VERTEX_REF
+  feature->set_grin_trait_fast_vertex_ref(true);
+#endif
+
 #ifdef GRIN_ENABLE_EDGE_REF
   feature->set_grin_enable_edge_ref(true);
 #endif
