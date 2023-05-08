@@ -56,7 +56,7 @@ size_t grin_get_total_partitions_number(GRIN_PARTITIONED_GRAPH pg) {
 GRIN_PARTITION_LIST grin_get_local_partition_list(GRIN_PARTITIONED_GRAPH pg) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto pl = new GRIN_PARTITION_LIST_T();
-    for (auto fid = 0; fid < _pg->pg->total_frag_num(); ++fid) {
+    for (unsigned fid = 0; fid < _pg->pg->total_frag_num(); ++fid) {
         if (_pg->lgs[fid] != 0) {
             pl->push_back(fid);
         }
@@ -76,8 +76,7 @@ GRIN_PARTITION_LIST grin_create_partition_list(GRIN_PARTITIONED_GRAPH pg) {
 
 bool grin_insert_partition_to_list(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION_LIST pl, GRIN_PARTITION p) {
     auto _pl = static_cast<GRIN_PARTITION_LIST_T*>(pl);
-    auto _p = static_cast<GRIN_PARTITION_T*>(p);
-    _pl->push_back(*_p);
+    _pl->push_back(p);
     return true;
 }
 
@@ -88,20 +87,14 @@ size_t grin_get_partition_list_size(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION_LI
 
 GRIN_PARTITION grin_get_partition_from_list(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION_LIST pl, size_t idx) {
     auto _pl = static_cast<GRIN_PARTITION_LIST_T*>(pl);
-    auto p = new GRIN_PARTITION_T((*_pl)[idx]);
-    return p;
+    return (*_pl)[idx];
 }
 
 bool grin_equal_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p1, GRIN_PARTITION p2) {
-    auto _p1 = static_cast<GRIN_PARTITION_T*>(p1);
-    auto _p2 = static_cast<GRIN_PARTITION_T*>(p2);
-    return (*_p1 == *_p2);
+    return (p1 == p2);
 }
 
-void grin_destroy_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
-    auto _p = static_cast<GRIN_PARTITION_T*>(p);
-    delete _p;
-}
+void grin_destroy_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {}
 
 const void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     return NULL;
@@ -109,22 +102,19 @@ const void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p)
 
 GRIN_GRAPH grin_get_local_graph_from_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
-    auto _p = static_cast<GRIN_PARTITION_T*>(p);
     auto g = new GRIN_GRAPH_T();
-    g->g = _pg->lgs[*_p];
+    g->g = _pg->lgs[p];
     return g;
 }
 #endif
 
 #ifdef GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
 GRIN_PARTITION grin_get_partition_from_id(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION_ID pid) {
-    auto p = new GRIN_PARTITION_T(pid);
-    return p;
+    return pid;
 }
 
 GRIN_PARTITION_ID grin_get_partition_id(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
-    auto _p = static_cast<GRIN_PARTITION_T*>(p);
-    return *_p;
+    return p;
 }
 #endif
 

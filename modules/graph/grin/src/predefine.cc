@@ -106,3 +106,15 @@ void __grin_init_adjacent_list(std::shared_ptr<_GRIN_GRAPH_T> g, GRIN_ADJACENT_L
     }
 }
 #endif
+
+unsigned long long int _grin_create_property(unsigned type, unsigned prop) {
+    return ((unsigned long long int)type << 32) | prop;
+}
+
+unsigned _grin_get_type_from_property(unsigned long long int prop) {
+    return (unsigned)(prop >> 32);
+}
+
+unsigned _grin_get_prop_from_property(unsigned long long int prop) {
+    return (unsigned)(prop & 0xffffffff);
+}

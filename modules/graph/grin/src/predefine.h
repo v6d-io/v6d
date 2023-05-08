@@ -80,6 +80,13 @@ struct GRIN_DATATYPE_ENUM<arrow::Date64Type> {
 std::string GetDataTypeName(GRIN_DATATYPE);
 GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType>);
 
+unsigned long long int _grin_create_property(unsigned, unsigned);
+
+unsigned _grin_get_type_from_property(unsigned long long int);
+
+unsigned _grin_get_prop_from_property(unsigned long long int);
+
+
 #define GRIN_OID_T int64_t
 #define GRIN_VID_T uint64_t
 
@@ -165,7 +172,7 @@ typedef _GRIN_GRAPH_T::vid_t GRIN_VERTEX_REF_T;
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 typedef unsigned GRIN_VERTEX_TYPE_T;
 typedef std::vector<unsigned> GRIN_VERTEX_TYPE_LIST_T;
-typedef std::pair<unsigned, unsigned> GRIN_VERTEX_PROPERTY_T;
+typedef unsigned long long int GRIN_VERTEX_PROPERTY_T;
 typedef std::vector<GRIN_VERTEX_PROPERTY_T> GRIN_VERTEX_PROPERTY_LIST_T;
 struct GRIN_VERTEX_PROPERTY_TABLE_T {
     unsigned vtype;
@@ -176,7 +183,7 @@ struct GRIN_VERTEX_PROPERTY_TABLE_T {
 #ifdef GRIN_WITH_EDGE_PROPERTY
 typedef unsigned GRIN_EDGE_TYPE_T;
 typedef std::vector<unsigned> GRIN_EDGE_TYPE_LIST_T;
-typedef std::pair<unsigned, unsigned> GRIN_EDGE_PROPERTY_T;
+typedef unsigned long long int GRIN_EDGE_PROPERTY_T;
 typedef std::vector<GRIN_EDGE_PROPERTY_T> GRIN_EDGE_PROPERTY_LIST_T;
 struct GRIN_EDGE_PROPERTY_TABLE_T {
     unsigned etype;

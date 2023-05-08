@@ -816,19 +816,19 @@ typedef enum {
 /** @brief Null list iterator of any kind (invalid return value) */
 #define GRIN_NULL_LIST_ITERATOR NULL
 /** @brief Non-existing partition (invalid return value) */
-#define GRIN_NULL_PARTITION NULL
+#define GRIN_NULL_PARTITION (unsigned)~0
 /** @brief Null vertex reference (invalid return value) */
-#define GRIN_NULL_VERTEX_REF NULL
+#define GRIN_NULL_VERTEX_REF -1
 /** @brief Null edge reference (invalid return value) */
 #define GRIN_NULL_EDGE_REF NULL
 /** @brief Non-existing vertex type (invalid return value) */
-#define GRIN_NULL_VERTEX_TYPE NULL
+#define GRIN_NULL_VERTEX_TYPE (unsigned)~0
 /** @brief Non-existing edge type (invalid return value) */
-#define GRIN_NULL_EDGE_TYPE NULL
+#define GRIN_NULL_EDGE_TYPE (unsigned)~0
 /** @brief Non-existing vertex property (invalid return value) */
-#define GRIN_NULL_VERTEX_PROPERTY NULL
+#define GRIN_NULL_VERTEX_PROPERTY (unsigned long long int)~0
 /** @brief Non-existing vertex property (invalid return value) */
-#define GRIN_NULL_EDGE_PROPERTY NULL
+#define GRIN_NULL_EDGE_PROPERTY (unsigned long long int)~0
 /** @brief Null row (invalid return value) */
 #define GRIN_NULL_ROW NULL
 /** @brief Null natural id of any kind (invalid return value) */
@@ -881,7 +881,7 @@ typedef void* GRIN_EDGE_LIST_ITERATOR;
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
 typedef void* GRIN_PARTITIONED_GRAPH;
-typedef void* GRIN_PARTITION;
+typedef unsigned GRIN_PARTITION;
 typedef void* GRIN_PARTITION_LIST;
 #endif
 
@@ -890,7 +890,7 @@ typedef unsigned GRIN_PARTITION_ID;
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_REF
-typedef void* GRIN_VERTEX_REF;
+typedef long long int GRIN_VERTEX_REF;
 #endif
 
 #ifdef GRIN_ENABLE_EDGE_REF
@@ -899,9 +899,9 @@ typedef void* GRIN_EDGE_REF;
 
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
-typedef void* GRIN_VERTEX_TYPE;
+typedef unsigned GRIN_VERTEX_TYPE;
 typedef void* GRIN_VERTEX_TYPE_LIST;
-typedef void* GRIN_VERTEX_PROPERTY;
+typedef unsigned long long int GRIN_VERTEX_PROPERTY;
 typedef void* GRIN_VERTEX_PROPERTY_LIST;
 typedef void* GRIN_VERTEX_PROPERTY_TABLE;
 #endif
@@ -915,11 +915,11 @@ typedef unsigned GRIN_VERTEX_PROPERTY_ID;
 #endif
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
-typedef void* GRIN_EDGE_TYPE;
+typedef unsigned GRIN_EDGE_TYPE;
 typedef void* GRIN_EDGE_TYPE_LIST;
 typedef void* GRIN_VEV_TYPE;
 typedef void* GRIN_VEV_TYPE_LIST;
-typedef void* GRIN_EDGE_PROPERTY;
+typedef unsigned long long int GRIN_EDGE_PROPERTY;
 typedef void* GRIN_EDGE_PROPERTY_LIST;
 typedef void* GRIN_EDGE_PROPERTY_TABLE;
 #endif

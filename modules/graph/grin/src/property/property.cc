@@ -18,8 +18,7 @@ extern "C" {
 #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
 const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
-    auto s = _g->schema().GetVertexPropertyName(_vp->first, _vp->second);
+    auto s = _g->schema().GetVertexPropertyName(_grin_get_type_from_property(vp), _grin_get_prop_from_property(vp));
     int len = s.length() + 1;
     char* out = new char[len];
     snprintf(out, len, "%s", s.c_str());
@@ -29,12 +28,10 @@ const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp)
 GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype,
                                            const char* name) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vtype = static_cast<GRIN_VERTEX_TYPE_T*>(vtype);
     auto s = std::string(name);
-    auto _id = _g->schema().GetVertexPropertyId(*_vtype, s);
+    auto _id = _g->schema().GetVertexPropertyId(vtype, s);
     if (_id < 0) return GRIN_NULL_VERTEX_PROPERTY;
-    auto vp = new GRIN_VERTEX_PROPERTY_T(*_vtype, _id);
-    return vp;
+    return _grin_create_property(vtype, _id);
 }
 
 GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const char* name) {
@@ -44,7 +41,7 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
         auto pid = _g->schema().GetVertexPropertyId(vtype, s);
         if (pid >= 0) {
-            vpl->push_back(GRIN_VERTEX_PROPERTY_T(vtype, pid));
+            vpl->push_back(_grin_create_property(vtype, pid));
         }
     }
     if (vpl->empty()) {
@@ -58,8 +55,7 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const
 #ifdef GRIN_WITH_EDGE_PROPERTY_NAME
 const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
-    auto s = _g->schema().GetEdgePropertyName(_ep->first, _ep->second);
+    auto s = _g->schema().GetEdgePropertyName(_grin_get_type_from_property(ep), _grin_get_prop_from_property(ep));
     int len = s.length() + 1;
     char* out = new char[len];
     snprintf(out, len, "%s", s.c_str());
@@ -69,12 +65,10 @@ const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
 GRIN_EDGE_PROPERTY grin_get_edge_property_by_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype,
                                            const char* name) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _etype = static_cast<GRIN_EDGE_TYPE_T*>(etype);
     auto s = std::string(name);
-    auto _id = _g->schema().GetEdgePropertyId(*_etype, s);
+    auto _id = _g->schema().GetEdgePropertyId(etype, s);
     if (_id < 0) return GRIN_NULL_EDGE_PROPERTY;
-    auto ep = new GRIN_VERTEX_PROPERTY_T(*_etype, _id);
-    return ep;
+    return _grin_create_property(etype, _id);
 }
 
 GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const char* name) {
@@ -84,7 +78,7 @@ GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const cha
     for (auto etype = 0; etype < _g->edge_label_num(); ++etype) {
         auto pid = _g->schema().GetEdgePropertyId(etype, s);
         if (pid >= 0) {
-            epl->push_back(GRIN_EDGE_PROPERTY_T(etype, pid));
+            epl->push_back(_grin_create_property(etype, pid));
         }
     }
     if (epl->empty()) {
@@ -98,53 +92,37 @@ GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const cha
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 bool grin_equal_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp1, GRIN_VERTEX_PROPERTY vp2) {
-    auto _vp1 = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp1);
-    auto _vp2 = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp2);
-    return (*_vp1 == *_vp2);
+    return (vp1 == vp2);
 }
 
-void grin_destroy_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
-    delete _vp;
-}
+void grin_destroy_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {}
 
 GRIN_DATATYPE grin_get_vertex_property_data_type(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
-    auto dt = _g->schema().GetVertexPropertyType(_vp->first, _vp->second);
+    auto dt = _g->schema().GetVertexPropertyType(_grin_get_type_from_property(vp), _grin_get_prop_from_property(vp));
     return ArrowToDataType(dt);
 }
 
 GRIN_VERTEX_TYPE grin_get_vertex_property_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
-    auto _vp = static_cast<GRIN_VERTEX_PROPERTY_T*>(vp);
-    auto vt = new GRIN_VERTEX_TYPE_T(_vp->first);
-    return vt;
+    return _grin_get_type_from_property(vp);
 }
 #endif
 
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
 bool grin_equal_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep1, GRIN_EDGE_PROPERTY ep2) {
-    auto _ep1 = static_cast<GRIN_EDGE_PROPERTY_T*>(ep1);
-    auto _ep2 = static_cast<GRIN_EDGE_PROPERTY_T*>(ep2);
-    return (*_ep1 == *_ep2);
+    return (ep1 == ep2);
 }
 
-void grin_destroy_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
-    delete _ep;
-}
+void grin_destroy_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {}
 
 GRIN_DATATYPE grin_get_edge_property_data_type(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
-    auto dt = _g->schema().GetEdgePropertyType(_ep->first, _ep->second);
+    auto dt = _g->schema().GetEdgePropertyType(_grin_get_type_from_property(ep), _grin_get_prop_from_property(ep));
     return ArrowToDataType(dt);
 }
 
 GRIN_EDGE_TYPE grin_get_edge_property_edge_type(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
-    auto _ep = static_cast<GRIN_EDGE_PROPERTY_T*>(ep);
-    auto et = new GRIN_EDGE_TYPE_T(_ep->first);
-    return et;
+    return _grin_get_type_from_property(ep);
 }
 #endif
