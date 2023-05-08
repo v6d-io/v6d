@@ -160,6 +160,25 @@ class ArrowArrayBuilderVisitor {
   std::shared_ptr<ObjectBuilder> builder_;
 };
 
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 11000000
+#define VINEYARD_TYPE_ID_VISIT_INLINE(TYPE_CLASS)                     \
+  case arrow::TYPE_CLASS##Type::type_id: {                            \
+    const arrow::TYPE_CLASS##Type* concrete_ptr = NULLPTR;            \
+    return visitor->Visit(concrete_ptr, std::forward<ARGS>(args)...); \
+  }
+
+template <typename VISITOR, typename... ARGS>
+inline Status VineyardVisitTypeIdInline(arrow::Type::type id, VISITOR* visitor,
+                                        ARGS&&... args) {
+  switch (id) {
+    ARROW_GENERATE_FOR_ALL_TYPES(VINEYARD_TYPE_ID_VISIT_INLINE);
+  default:
+    break;
+  }
+  return Status::NotImplemented("Type not implemented: " + std::to_string(id));
+}
+#undef VINEYARD_TYPE_ID_VISIT_INLINE
+#else
 #define VINEYARD_TYPE_ID_VISIT_INLINE(TYPE_CLASS)          \
   case arrow::TYPE_CLASS##Type::type_id: {                 \
     const arrow::TYPE_CLASS##Type* concrete_ptr = NULLPTR; \
@@ -176,8 +195,8 @@ inline Status VineyardVisitTypeIdInline(arrow::Type::type id,
   }
   return Status::NotImplemented("Type not implemented: " + std::to_string(id));
 }
-
 #undef VINEYARD_TYPE_ID_VISIT_INLINE
+#endif
 
 Status BuildArray(Client& client, const std::shared_ptr<arrow::Array> array,
                   std::shared_ptr<ObjectBuilder>& builder) {
