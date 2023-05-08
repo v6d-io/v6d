@@ -14,10 +14,7 @@ macosx_arm64_wheel_task:
 
   install_deps_script:
     - brew update
-    - brew install coreutils golang llvm pyenv python
-
-  install_runtime_deps_script:
-    - brew install boost lz4 openssl --build-from-source
+    - brew install coreutils golang pyenv python
 
   install_various_python_script:
     - pyenv install 3.8.16
@@ -25,61 +22,10 @@ macosx_arm64_wheel_task:
     - pyenv install 3.10.10
     - pyenv install 3.11.2
 
-  install_protobuf_grpc_script: |
-    echo "Installing protobuf & grpc ..."
-    cd /tmp
-    wget -q https://github.com/unsafecoerce/git-submodules-tarball/releases/download/grpc%2Fgrpc-v1.36.x/grpc-grpc-1.36.x.tar.gz
-    tar zxf grpc-grpc-1.36.x.tar.gz
-    cd grpc-grpc-1.36.x
-    mkdir -p cmake-build
-    cd cmake-build
-    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
-             -DBUILD_SHARED_LIBS=OFF \
-             -DgRPC_INSTALL=ON \
-             -DgRPC_BUILD_TESTS=OFF \
-             -DgRPC_BUILD_CSHARP_EXT=OFF \
-             -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF \
-             -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF \
-             -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
-             -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF \
-             -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF \
-             -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
-             -DgRPC_SSL_PROVIDER=package \
-             -DgRPC_ZLIB_PROVIDER=package \
-             -DOPENSSL_ROOT_DIR=$(brew --prefix openssl) \
-             -DgRPC_BACKWARDS_COMPATIBILITY_MODE=ON
-    sudo make install -j$(sysctl -n hw.ncpu)
-
-  install_gflags_script: |
-    echo "Installing gflags ..."
-    pyenv global 3.11.2
-    cd /tmp
-    curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz
-    tar zxf gflags-v2.2.2.tar.gz
-    cd gflags-2.2.2
-    mkdir -p build-dir
-    cd build-dir
-    cmake .. -DBUILD_SHARED_LIBS=OFF
-    sudo make install -j$(sysctl -n hw.ncpu)
-
-  install_glog_script: |
-    echo "Installing glog ..."
-    pyenv global 3.11.2
-    cd /tmp
-    curl -L https://github.com/google/glog/archive/v0.6.0.tar.gz --output glog-v0.6.0.tar.gz
-    tar zxf glog-v0.6.0.tar.gz
-    cd glog-0.6.0
-    mkdir -p build-dir
-    cd build-dir
-    cmake .. -DBUILD_SHARED_LIBS=OFF \
-              -DWITH_GFLAGS=OFF \
-              -DBUILD_TESTING=OFF
-    sudo make install -j$(sysctl -n hw.ncpu)
-
   install_apache_arrow_script: |
     echo "Installing apache-arrow ..."
-    pyenv global 3.11.2
-    cd /tmp
+    mkdir -p /tmp/install
+    cd /tmp/install
     curl -L https://github.com/apache/arrow/archive/refs/tags/apache-arrow-8.0.1.tar.gz --output apache-arrow-8.0.1.tar.gz
     tar zxf apache-arrow-8.0.1.tar.gz
     cd arrow-apache-arrow-8.0.1
@@ -125,6 +71,86 @@ macosx_arm64_wheel_task:
         -DARROW_BUILD_SHARED=OFF \
         -DARROW_BUILD_STATIC=ON
     sudo make install -j$(sysctl -n hw.ncpu)
+    cd /tmp
+    sudo rm -rf /tmp/install
+
+  install_boost_script: |
+    echo "Installing boost ..."
+    mkdir -p /tmp/install
+    cd /tmp/install
+    wget -q https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz
+    tar zxf boost_1_75_0.tar.gz
+    cd boost_1_75_0
+    ./bootstrap.sh
+    sudo ./b2 install -j`nproc` variant=release threading=multi \
+        --with-atomic \
+        --with-chrono \
+        --with-date_time \
+        --with-filesystem \
+        --with-random \
+        --with-regex \
+        --with-system \
+        --with-thread
+    cd /tmp
+    sudo rm -rf /tmp/install
+
+  install_gflags_script: |
+    echo "Installing gflags ..."
+    mkdir -p /tmp/install
+    cd /tmp/install
+    curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz
+    tar zxf gflags-v2.2.2.tar.gz
+    cd gflags-2.2.2
+    mkdir -p build-dir
+    cd build-dir
+    cmake .. -DBUILD_SHARED_LIBS=OFF
+    sudo make install -j$(sysctl -n hw.ncpu)
+    cd /tmp
+    sudo rm -rf /tmp/install
+
+  install_glog_script: |
+    echo "Installing glog ..."
+    mkdir -p /tmp/install
+    cd /tmp/install
+    curl -L https://github.com/google/glog/archive/v0.6.0.tar.gz --output glog-v0.6.0.tar.gz
+    tar zxf glog-v0.6.0.tar.gz
+    cd glog-0.6.0
+    mkdir -p build-dir
+    cd build-dir
+    cmake .. -DBUILD_SHARED_LIBS=OFF \
+              -DWITH_GFLAGS=OFF \
+              -DBUILD_TESTING=OFF
+    sudo make install -j$(sysctl -n hw.ncpu)
+    cd /tmp
+    sudo rm -rf /tmp/install
+
+  install_protobuf_grpc_script: |
+    echo "Installing protobuf & grpc ..."
+    mkdir -p /tmp/install
+    cd /tmp/install
+    wget -q https://github.com/unsafecoerce/git-submodules-tarball/releases/download/grpc%2Fgrpc-v1.36.x/grpc-grpc-1.36.x.tar.gz
+    tar zxf grpc-grpc-1.36.x.tar.gz
+    cd grpc-grpc-1.36.x
+    mkdir -p cmake-build
+    cd cmake-build
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF \
+             -DgRPC_INSTALL=ON \
+             -DgRPC_BUILD_TESTS=OFF \
+             -DgRPC_BUILD_CSHARP_EXT=OFF \
+             -DgRPC_BUILD_GRPC_CSHARP_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_NODE_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_OBJECTIVE_C_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_PHP_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_PYTHON_PLUGIN=OFF \
+             -DgRPC_BUILD_GRPC_RUBY_PLUGIN=OFF \
+             -DgRPC_SSL_PROVIDER=package \
+             -DgRPC_ZLIB_PROVIDER=package \
+             -DOPENSSL_ROOT_DIR=$(brew --prefix openssl) \
+             -DgRPC_BACKWARDS_COMPATIBILITY_MODE=ON
+    sudo make install -j$(sysctl -n hw.ncpu)
+    cd /tmp
+    sudo rm -rf /tmp/install
 
   build_vineyardctl_script:
     - make -C k8s vineyardctl
