@@ -45,7 +45,9 @@ const void* grin_get_value_from_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, 
     }
     case GRIN_DATATYPE::Date32:
         return new int32_t(*static_cast<const int32_t*>((*_r)[idx]));
-    case GRIN_DATATYPE::Date64:
+    case GRIN_DATATYPE::Time32:
+        return new int32_t(*static_cast<const int32_t*>((*_r)[idx]));
+    case GRIN_DATATYPE::Timestamp64:
         return new int64_t(*static_cast<const int64_t*>((*_r)[idx]));
     default:
         return NULL;
@@ -140,7 +142,10 @@ bool grin_insert_value_to_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, const 
     case GRIN_DATATYPE::Date32:
         _value = new int32_t(*static_cast<const int32_t*>(value));
         break;
-    case GRIN_DATATYPE::Date64:
+    case GRIN_DATATYPE::Time32:
+        _value = new int32_t(*static_cast<const int32_t*>(value));
+        break;
+    case GRIN_DATATYPE::Timestamp64:
         _value = new int64_t(*static_cast<const int64_t*>(value));
         break;
     default:
@@ -261,7 +266,9 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
     }
     case GRIN_DATATYPE::Date32:
         return new int32_t(*static_cast<const int32_t*>(result));
-    case GRIN_DATATYPE::Date64:
+    case GRIN_DATATYPE::Time32:
+        return new int32_t(*static_cast<const int32_t*>(result));
+    case GRIN_DATATYPE::Timestamp64:
         return new int64_t(*static_cast<const int64_t*>(result));
     default:
         return NULL;
@@ -463,7 +470,9 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
     }
     case GRIN_DATATYPE::Date32:
         return new int32_t(*static_cast<const int32_t*>(result));
-    case GRIN_DATATYPE::Date64:
+    case GRIN_DATATYPE::Time32:
+        return new int32_t(*static_cast<const int32_t*>(result));
+    case GRIN_DATATYPE::Timestamp64:
         return new int64_t(*static_cast<const int64_t*>(result));
     default:
         return NULL;

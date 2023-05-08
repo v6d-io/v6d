@@ -74,7 +74,7 @@ struct GRIN_DATATYPE_ENUM<arrow::Date32Type> {
 
 template <>
 struct GRIN_DATATYPE_ENUM<arrow::Date64Type> {
-  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Date64;
+  static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Timestamp64;
 };
 
 std::string GetDataTypeName(GRIN_DATATYPE);

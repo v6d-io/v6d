@@ -33,8 +33,10 @@ std::string GetDataTypeName(GRIN_DATATYPE type) {
     return "string";
   case GRIN_DATATYPE::Date32:
     return "date32";
-  case GRIN_DATATYPE::Date64:
-    return "date64";
+  case GRIN_DATATYPE::Time32:
+    return "time32";
+  case GRIN_DATATYPE::Timestamp64:
+    return "timestamp64";
   default:
     return "undefined";
   }
