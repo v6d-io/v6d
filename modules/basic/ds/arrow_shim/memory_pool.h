@@ -75,11 +75,27 @@ class VineyardMemoryPool : public arrow::MemoryPool {
   /// returns -1
   int64_t max_memory() const override;
 
+  /// The number of bytes that were allocated.
+  int64_t total_bytes_allocated() const
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 12000000
+      override
+#endif
+      ;  // NOLINT(whitespace/semicolon)
+
+  /// The number of allocations or reallocations that were requested.
+  int64_t num_allocations() const
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 12000000
+      override
+#endif
+      ;  // NOLINT(whitespace/semicolon)
+
   std::string backend_name() const override;
 
  private:
   Client& client_;
   std::atomic_size_t bytes_allocated_;
+  std::atomic_size_t total_bytes_allocated_;
+  std::atomic_size_t num_allocations_;
   std::mutex mutex_;
   std::map<uintptr_t, std::unique_ptr<BlobWriter>> buffers_;
 };

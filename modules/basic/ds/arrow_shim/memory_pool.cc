@@ -29,6 +29,8 @@ namespace memory {
 
 VineyardMemoryPool::VineyardMemoryPool(Client& client) : client_(client) {
   bytes_allocated_.store(0);
+  total_bytes_allocated_.store(0);
+  num_allocations_.store(0);
 }
 
 VineyardMemoryPool::~VineyardMemoryPool() {
@@ -50,6 +52,8 @@ arrow::Status VineyardMemoryPool::Allocate(int64_t size, uint8_t** out) {
     {
       std::lock_guard<std::mutex> lock(mutex_);
       bytes_allocated_.fetch_add(size);
+      total_bytes_allocated_.fetch_add(size);
+      num_allocations_.fetch_add(1);
       buffers_.emplace(reinterpret_cast<uintptr_t>(*out), std::move(sbuffer));
     }
     return arrow::Status::OK();
@@ -97,6 +101,11 @@ arrow::Status VineyardMemoryPool::Reallocate(int64_t old_size, int64_t new_size,
   {
     std::lock_guard<std::mutex> lock(mutex_);
     bytes_allocated_.fetch_add(new_size);
+    const auto diff = new_size - old_size;
+    if (diff > 0) {
+      total_bytes_allocated_.fetch_add(diff);
+    }
+    num_allocations_.fetch_add(1);
     buffers_.emplace(reinterpret_cast<uintptr_t>(*ptr), std::move(nsbuffer));
   }
   // remove the original buffer
@@ -170,6 +179,16 @@ int64_t VineyardMemoryPool::bytes_allocated() const {
 /// \return Maximum bytes allocated. If not known (or not implemented),
 /// returns -1
 int64_t VineyardMemoryPool::max_memory() const { return -1; }
+
+/// The number of bytes that were allocated.
+int64_t VineyardMemoryPool::total_bytes_allocated() const {
+  return total_bytes_allocated_.load();
+}
+
+/// The number of allocations or reallocations that were requested.
+int64_t VineyardMemoryPool::num_allocations() const {
+  return num_allocations_.load();
+}
 
 std::string VineyardMemoryPool::backend_name() const { return "vineyard"; }
 
