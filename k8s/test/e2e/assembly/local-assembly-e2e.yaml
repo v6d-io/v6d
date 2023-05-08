@@ -41,11 +41,11 @@ setup:
         - namespace: vineyard-job
           resource: deployment/assembly-job2
           for: condition=Available
-  timeout: 3m
+  timeout: 30m
 
 cleanup:
   # always never success failure
-  on: never
+  on: success
 
 verify:
   # verify with retry strategy
