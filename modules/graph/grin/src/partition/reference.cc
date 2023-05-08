@@ -61,6 +61,13 @@ const char* grin_serialize_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
     return out;
 }
 
+#ifdef GRIN_TRAIT_FAST_VERTEX_REF
+long long int grin_serialize_vertex_ref_as_int64(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
+    auto _vr = static_cast<GRIN_VERTEX_REF_T*>(vr);
+    return *_vr;
+}
+#endif
+
 void grin_destroy_serialized_vertex_ref(GRIN_GRAPH g, const char* msg) {
     delete[] msg;
 }
