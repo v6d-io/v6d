@@ -25,8 +25,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # the last commit in homebrew-core tree that MacOS-10.15 has bottles, to make installing deps easier
-  HOMEBREW_REV: 01aff4dce839c54aa54ad81879ade95b7922ef6f
+  MACOSX_DEPLOYMENT_TARGET: "10.15"
 
 jobs:
   build-vineyardd:
@@ -34,7 +33,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
-        os: [macos-10.15]
+        os: [macos-11]
 
     steps:
       - uses: actions/checkout@v3
@@ -56,17 +55,12 @@ jobs:
 
       - name: Install dependencies for MacOS
         run: |
-          pushd $(brew --repo homebrew/core)
-          git checkout ${{ env.HOMEBREW_REV }} || true
-          popd
-
           brew install ccache boost coreutils grpc protobuf openssl || true
 
           export CC=clang
           export CXX=clang++
 
           export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH:$HOME/.local/bin
-          export MACOSX_DEPLOYMENT_TARGET=10.9
 
           echo "Installing gflags ..."
           cd /tmp
@@ -144,7 +138,6 @@ jobs:
           export CXX=clang++
 
           export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH:$HOME/.local/bin
-          export MACOSX_DEPLOYMENT_TARGET=10.9
 
           # patch cpprestsdk, that is not used, and the cases cannot be handled by delocate well,
           #
@@ -206,7 +199,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
-        os: [macos-10.15]
+        os: [macos-11]
 
     steps:
       - uses: actions/checkout@v3
@@ -249,7 +242,7 @@ jobs:
     if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
-        os: [macos-10.15]
+        os: [macos-11]
         python: ["3.7", "3.8", "3.9", "3.10", "3.11"]
 
     steps:
@@ -315,7 +308,6 @@ jobs:
           export CXX=clang++
 
           export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH:$HOME/.local/bin
-          export MACOSX_DEPLOYMENT_TARGET=10.9
 
           ccache --show-stats
 
@@ -398,7 +390,6 @@ jobs:
           export CXX=clang++
 
           export PATH=/usr/local/opt/ccache/bin:/usr/local/opt/ccache/libexec:$PATH:$HOME/.local/bin
-          export MACOSX_DEPLOYMENT_TARGET=10.9
 
           # run build
           mkdir -p build
