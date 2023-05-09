@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "../include/common/error.h"
 #include "../include/index/label.h"
 #include "../include/index/order.h"
 #include "../include/partition/partition.h"
@@ -15,8 +16,6 @@
 #include "../include/topology/edgelist.h"
 #include "../include/topology/structure.h"
 #include "../include/topology/vertexlist.h"
-
-extern __thread GRIN_ERROR_CODE grin_error_code;
 
 GRIN_GRAPH get_graph(int argc, char** argv) {
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
@@ -450,10 +449,10 @@ void test_property_vertex_table(int argc, char** argv) {
         GRIN_DATATYPE dt = grin_get_vertex_property_data_type(g, vp);
         const void* pv =
             grin_get_value_from_vertex_property_table(g, vpt, v, vp);
-        if (grin_error_code == GRIN_NO_ERROR) {
+        if (grin_get_last_error_code() == GRIN_NO_ERROR) {
           printf("(Correct) no error\n");
         } else {
-          printf("(Wrong) error code: %d\n", grin_error_code);
+          printf("(Wrong) error code: %d\n", grin_get_last_error_code());
         }
         const void* rv = grin_get_value_from_row(g, row, dt, j);
         if (dt == Int64) {
@@ -803,10 +802,10 @@ void test_error_code(int argc, char** argv) {
   GRIN_VERTEX v = get_one_vertex(g);
 
   const void* value = grin_get_value_from_vertex_property_table(g, vpt, v, vp);
-  if (grin_error_code == GRIN_INVALID_VALUE) {
+  if (grin_get_last_error_code() == GRIN_INVALID_VALUE) {
     printf("(Correct) invalid value\n");
   } else {
-    printf("(Wrong) error code: %d\n", grin_error_code);
+    printf("(Wrong) error code: %d\n", grin_get_last_error_code());
   }
 }
 
