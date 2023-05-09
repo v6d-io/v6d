@@ -90,7 +90,7 @@ def snake_to_camel(s):
 
 def snake_to_camel_line(line):
     segs = line.split(' ')
-    return ' '.join([snake_to_camel(s) if s.startswith('GRIN_') else s for s in segs])
+    return ' '.join([snake_to_camel(s) if s.startswith('GRIN_') and s.find('NULL') == -1 else s for s in segs])
 
 def static_replace(line):
     replaces = {
@@ -103,10 +103,13 @@ def static_replace(line):
         line = line.replace(k, replaces[k])
     return line
 
+
 def rewrite(file, r, strip=49):
     with open(file) as f:
         lines = f.readlines()
     externc_flag = True
+    need_ending_line = True
+    meet_error_code = False
     with open(file, 'w') as f:
         for i, line in enumerate(lines):
             if i < strip:
@@ -122,6 +125,7 @@ def rewrite(file, r, strip=49):
                 if i < len(lines) - 1:
                     f.write('\n')
                 else:
+                    need_ending_line = False
                     f.write('}\n')
                 continue
             if line.find('pub fn') != -1:
@@ -130,7 +134,20 @@ def rewrite(file, r, strip=49):
                 func_name = func_name.split('(')[0]
                 if func_name in r and r[func_name]:
                     f.write(f'    {r[func_name]}\n')
+                f.write('    #[allow(unused)]\n')
+                
+            if line.find('RUST_KEEP') != -1:
+                if need_ending_line:
+                    f.write('}\n\n')
+                segs = line.split('RUST_KEEP')
+                for s in segs[1:]:
+                    f.write(s[:s.find(';')+1])
+                    f.write('\n\n')
+                break
+            if line.find('pub static mut grin_error_code: GrinErrorCode') != -1:
+                continue
             f.write(line)
+        
 
 def parse_to_rs(path, dst):
     r = {}

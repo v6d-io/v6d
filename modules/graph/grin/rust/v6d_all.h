@@ -14,5 +14,22 @@
 #include "../include/property/type.h"
 #include "../include/index/label.h"
 #include "../include/index/order.h"
+#include "../include/common/error.h"
 
-__thread GRIN_ERROR_CODE grin_error_code;
+
+/// RUST_KEEP pub const GRIN_NULL_DATATYPE: GrinDataType = GRIN_DATATYPE_UNDEFINED;
+/// RUST_KEEP pub const GRIN_NULL_GRAPH: GrinGraph = std::ptr::null_mut();
+/// RUST_KEEP pub const GRIN_NULL_VERTEX: GrinVertex = std::ptr::null_mut();
+/// RUST_KEEP pub const GRIN_NULL_EDGE: GrinEdge = std::ptr::null_mut();
+/// RUST_KEEP pub const GRIN_NULL_LIST: *const ::std::os::raw::c_void = std::ptr::null_mut();
+/// RUST_KEEP pub const GRIN_NULL_LIST_ITERATOR: *const ::std::os::raw::c_void = std::ptr::null_mut();
+/// RUST_KEEP pub const GRIN_NULL_PARTITION: GrinPartition = u32::MAX;
+/// RUST_KEEP pub const GRIN_NULL_VERTEX_REF: GrinVertexRef = -1;
+/// RUST_KEEP pub const GRIN_NULL_VERTEX_TYPE: GrinVertexType = u32::MAX;
+/// RUST_KEEP pub const GRIN_NULL_EDGE_TYPE: GrinEdgeType = u32::MAX;
+/// RUST_KEEP pub const GRIN_NULL_VERTEX_PROPERTY: GrinVertexProperty = u64::MAX;
+/// RUST_KEEP pub const GRIN_NULL_EDGE_PROPERTY: GrinEdgeProperty = u64::MAX;
+/// RUST_KEEP pub const GRIN_NULL_ROW: GrinRow = std::ptr::null_mut();
+/// RUST_KEEP pub const GRIN_NULL_NATURAL_ID: u32 = u32::MAX;
+/// RUST_KEEP pub const GRIN_NULL_SIZE: u32 = u32::MAX;
+int ending;
