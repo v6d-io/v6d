@@ -78,6 +78,58 @@ using json = nlohmann::json;
   (__VA_ARGS__)
 #endif  // CATCH_JSON_ERROR
 
+#ifndef VCATCH_JSON_ERROR
+#define VCATCH_JSON_ERROR_RETURN_ANY(data, var, status, expr)           \
+  do {                                                                  \
+    try {                                                               \
+      var = expr;                                                       \
+    } catch (std::out_of_range const& err) {                            \
+      std::clog << "[error] json: out of range: " << err.what()         \
+                << ("in '" #expr "'") << std::endl;                     \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    } catch (std::invalid_argument const& err) {                        \
+      std::clog << "[error] json: invalid argument: " << err.what()     \
+                << ("in '" #expr "'") << std::endl;                     \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    } catch (vineyard::json::exception const& err) {                    \
+      std::clog << "[error] json: " << err.what() << ("in '" #expr "'") \
+                << std::endl;                                           \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    }                                                                   \
+    if (VLOG_IS_ON(100) && !status.ok()) {                              \
+      std::clog << "[error] json: " << data.dump(2) << std::endl;       \
+    }                                                                   \
+  } while (0)
+#define VCATCH_JSON_ERROR_STATEMENT(data, status, stmt)                 \
+  do {                                                                  \
+    try {                                                               \
+      stmt;                                                             \
+    } catch (std::out_of_range const& err) {                            \
+      std::clog << "[error] json: out of range: " << err.what()         \
+                << ("in '" #stmt "'") << std::endl;                     \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    } catch (std::invalid_argument const& err) {                        \
+      std::clog << "[error] json: invalid argument: " << err.what()     \
+                << ("in '" #stmt "'") << std::endl;                     \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    } catch (vineyard::json::exception const& err) {                    \
+      std::clog << "[error] json: " << err.what() << ("in '" #stmt "'") \
+                << std::endl;                                           \
+      status = vineyard::Status::MetaTreeInvalid();                     \
+    }                                                                   \
+    if (VLOG_IS_ON(100) && !status.ok()) {                              \
+      std::clog << "[error] json: " << data.dump(2) << std::endl;       \
+    }                                                                   \
+  } while (0)
+
+#define VCATCH_JSON_ERROR_RETURN_STATUS(data, var, expr) \
+  VCATCH_JSON_ERROR_RETURN_ANY(data, var, var, expr)
+#define VCATCH_JSON_ERROR(...)                          \
+  GET_MACRO3(__VA_ARGS__, VCATCH_JSON_ERROR_RETURN_ANY, \
+             VCATCH_JSON_ERROR_RETURN_STATUS)           \
+  (__VA_ARGS__)
+#endif  // VCATCH_JSON_ERROR
+
 template <typename... Args>
 auto json_to_string(Args&&... args)
     -> decltype(nlohmann::to_string(std::forward<Args>(args)...)) {
