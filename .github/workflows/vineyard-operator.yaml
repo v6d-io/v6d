@@ -234,7 +234,7 @@ jobs:
         env:
           SHOW_TIMESTAMPS: 'true'
           OUTPUT_DIR: ${{ github.workspace }}/${{ matrix.job }}-logs
-          NAMESPACES: local-path-storage,kube-system
+          NAMESPACES: vineyard*
 
       - uses: stoat-dev/stoat-action@v0
         if: ${{ matrix.job != 'release' && failure() }}
