@@ -1,3 +1,4 @@
+
 #[doc = "< incoming"]
 pub const GRIN_DIRECTION_IN: GrinDirection = 0;
 #[doc = "< outgoing"]
@@ -22,12 +23,24 @@ pub const GRIN_DATATYPE_FLOAT: GrinDatatype = 5;
 pub const GRIN_DATATYPE_DOUBLE: GrinDatatype = 6;
 #[doc = "< string"]
 pub const GRIN_DATATYPE_STRING: GrinDatatype = 7;
-#[doc = "< short date"]
+#[doc = "< date"]
 pub const GRIN_DATATYPE_DATE32: GrinDatatype = 8;
-#[doc = "< long date"]
-pub const GRIN_DATATYPE_DATE64: GrinDatatype = 9;
+#[doc = "< Time32"]
+pub const GRIN_DATATYPE_TIME32: GrinDatatype = 9;
+#[doc = "< Timestamp"]
+pub const GRIN_DATATYPE_TIMESTAMP64: GrinDatatype = 10;
 #[doc = " Enumerates the datatype supported in the storage"]
 pub type GrinDatatype = u32;
+#[doc = "< success"]
+pub const GrinErrorCodeGrinNoError: GrinErrorCode = 0;
+#[doc = "< unknown error"]
+pub const GrinErrorCodeGrinUnknownError: GrinErrorCode = 1;
+#[doc = "< invalid value"]
+pub const GrinErrorCodeGrinInvalidValue: GrinErrorCode = 2;
+#[doc = "< unknown datatype"]
+pub const GrinErrorCodeGrinUnknownDatatype: GrinErrorCode = 3;
+#[doc = " Enumerates the error codes of grin"]
+pub type GrinErrorCode = u32;
 #[doc = "@}"]
 pub type GrinGraph = *mut ::std::os::raw::c_void;
 pub type GrinVertex = *mut ::std::os::raw::c_void;
@@ -38,22 +51,22 @@ pub type GrinVertexListIterator = *mut ::std::os::raw::c_void;
 pub type GrinAdjacentList = *mut ::std::os::raw::c_void;
 pub type GrinAdjacentListIterator = *mut ::std::os::raw::c_void;
 pub type GrinPartitionedGraph = *mut ::std::os::raw::c_void;
-pub type GrinPartition = *mut ::std::os::raw::c_void;
+pub type GrinPartition = u32;
 pub type GrinPartitionList = *mut ::std::os::raw::c_void;
 pub type GrinPartitionId = u32;
-pub type GrinVertexRef = *mut ::std::os::raw::c_void;
-pub type GrinVertexType = *mut ::std::os::raw::c_void;
+pub type GrinVertexRef = i64;
+pub type GrinVertexType = u32;
 pub type GrinVertexTypeList = *mut ::std::os::raw::c_void;
-pub type GrinVertexProperty = *mut ::std::os::raw::c_void;
+pub type GrinVertexProperty = u64;
 pub type GrinVertexPropertyList = *mut ::std::os::raw::c_void;
 pub type GrinVertexPropertyTable = *mut ::std::os::raw::c_void;
 pub type GrinVertexTypeId = u32;
 pub type GrinVertexPropertyId = u32;
-pub type GrinEdgeType = *mut ::std::os::raw::c_void;
+pub type GrinEdgeType = u32;
 pub type GrinEdgeTypeList = *mut ::std::os::raw::c_void;
 pub type GrinVevType = *mut ::std::os::raw::c_void;
 pub type GrinVevTypeList = *mut ::std::os::raw::c_void;
-pub type GrinEdgeProperty = *mut ::std::os::raw::c_void;
+pub type GrinEdgeProperty = u64;
 pub type GrinEdgePropertyList = *mut ::std::os::raw::c_void;
 pub type GrinEdgePropertyTable = *mut ::std::os::raw::c_void;
 pub type GrinEdgeTypeId = u32;
@@ -313,6 +326,17 @@ extern "C" {
 
     #[cfg(feature = "grin_enable_vertex_ref")]
     pub fn grin_is_mirror_vertex(arg1: GrinGraph, arg2: GrinVertex) -> bool;
+
+    pub fn grin_serialize_vertex_ref_as_int64(
+        arg1: GrinGraph,
+        arg2: GrinVertexRef,
+    ) -> i64;
+
+    #[cfg(feature = "grin_trait_fast_vertex_ref")]
+    pub fn grin_deserialize_vertex_ref_from_int64(
+        arg1: GrinGraph,
+        arg2: i64,
+    ) -> GrinVertexRef;
 
     #[cfg(feature = "grin_enable_graph_partition")]
     pub fn grin_get_total_vertex_num(arg1: GrinPartitionedGraph) -> usize;
@@ -1066,4 +1090,6 @@ extern "C" {
         arg2: GrinVertexList,
         arg3: GrinVertex,
     ) -> usize;
+
+    pub static mut grin_error_code: GrinErrorCode;
 }

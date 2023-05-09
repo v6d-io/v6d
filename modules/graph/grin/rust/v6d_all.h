@@ -14,3 +14,5 @@
 #include "../include/property/type.h"
 #include "../include/index/label.h"
 #include "../include/index/order.h"
+
+__thread GRIN_ERROR_CODE grin_error_code;
