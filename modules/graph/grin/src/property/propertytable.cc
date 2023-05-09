@@ -191,13 +191,12 @@ bool grin_insert_float_to_row(GRIN_GRAPH g, GRIN_ROW r, float value) {
 bool grin_insert_double_to_row(GRIN_GRAPH g, GRIN_ROW r, double value) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
     _r->push_back(new double(value));
-    return true;}
+    return true;
+}
 
 bool grin_insert_string_to_row(GRIN_GRAPH g, GRIN_ROW r, const char* value) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
-    char* out = new char[strlen(value) + 1];
-    snprintf(out, strlen(value) + 1, "%s", value);
-    _r->push_back(out);
+    _r->push_back(new std::string(value));
     return true;
 }
 
