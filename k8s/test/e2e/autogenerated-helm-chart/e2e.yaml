@@ -62,7 +62,7 @@ setup:
 
 cleanup:
   # always never success failure
-  on: always
+  on: success
 
 verify:
   # verify with retry strategy

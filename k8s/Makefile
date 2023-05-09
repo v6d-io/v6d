@@ -174,7 +174,7 @@ helmify:
 e2e:
     ifeq ($(E2E),)
 		@echo "e2e not exist, installing it..."
-		go install github.com/apache/skywalking-infra-e2e/cmd/e2e@$(E2E_VERSION)
+		go install github.com/apache/skywalking-infra-e2e/cmd/e2e@$(E2E_VERSION) 2> /dev/null
     endif
 	@echo "e2e installed"
 
