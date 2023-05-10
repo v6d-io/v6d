@@ -31,11 +31,11 @@ The example demonstrates how to synchronize property values of vertices associat
 
 ```CPP
     void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION partition, const char* edge_type_name, const char* vertex_property_name) {
-        GRIN_GRAPH g = grin_get_local_graph_from_partition(partitioned_graph, partition);  // get local graph of partition
+        GRIN_GRAPH g = grin_get_local_graph_by_partition(partitioned_graph, partition);  // get local graph of partition
 
         GRIN_EDGE_TYPE etype = grin_get_edge_type_by_name(g, edge_type_name);  // get edge type from name
-        GRIN_VERTEX_TYPE_LIST src_vtypes = grin_get_src_types_from_edge_type(g, etype);  // get related source vertex type list
-        GRIN_VERTEX_TYPE_LIST dst_vtypes = grin_get_dst_types_from_edge_type(g, etype);  // get related destination vertex type list
+        GRIN_VERTEX_TYPE_LIST src_vtypes = grin_get_src_types_by_edge_type(g, etype);  // get related source vertex type list
+        GRIN_VERTEX_TYPE_LIST dst_vtypes = grin_get_dst_types_by_edge_type(g, etype);  // get related destination vertex type list
 
         size_t src_vtypes_num = grin_get_vertex_type_list_size(g, src_vtypes);
         size_t dst_vtypes_num = grin_get_vertex_type_list_size(g, dst_vtypes);
@@ -76,7 +76,7 @@ The example demonstrates how to synchronize property values of vertices associat
                     GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list(g, adj_list, k);  // get the dst vertex u
                     const void* value = grin_get_value_from_vertex_property_table(g, dst_vpt, u, dst_vp);  // get the property value of "features" of u
 
-                    GRIN_VERTEX_REF uref = grin_get_vertex_ref_for_vertex(g, u);  // get the reference of u that can be recoginized by other partitions
+                    GRIN_VERTEX_REF uref = grin_get_vertex_ref_by_vertex(g, u);  // get the reference of u that can be recoginized by other partitions
                     GRIN_PARTITION u_master_partition = grin_get_master_partition_from_vertex_ref(g, uref);  // get the master partition for u
 
                     send_value(u_master_partition, uref, dst_vp_dt, value);  // the value must be casted to the correct type based on dst_vp_dt before sending
@@ -297,7 +297,7 @@ be recognized in partitions other than the current partition where the instance 
     ```CPP
         /* grin/partition/partition.h */
         
-        GRIN_VERTEX_REF grin_get_vertex_ref_for_vertex(GRIN_GRAPH, GRIN_VERTEX);
+        GRIN_VERTEX_REF grin_get_vertex_ref_by_vertex(GRIN_GRAPH, GRIN_VERTEX);
         
         const char* grin_serialize_vertex_ref(GRIN_GRAPH, GRIN_VERTEX_REF);
 
@@ -308,7 +308,7 @@ be recognized in partitions other than the current partition where the instance 
 
         /* run.cc in machine 1 */
         {
-            auto vref = grin_get_vertex_ref_for_vertex(g, v);  // get v's vertex ref which can be recgonized in machine 2
+            auto vref = grin_get_vertex_ref_by_vertex(g, v);  // get v's vertex ref which can be recgonized in machine 2
 
             const char* msg = grin_serialize_vertex_ref(g, vref);  // serialize into a message
 

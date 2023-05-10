@@ -99,7 +99,7 @@ GRIN_VERTEX_ORIGINAL_ID grin_get_vertex_original_id(GRIN_GRAPH g, GRIN_VERTEX v)
 #endif
 
 #if defined(GRIN_WITH_VERTEX_ORIGINAL_ID) && !defined(GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID)
-GRIN_VERTEX grin_get_vertex_from_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
+GRIN_VERTEX grin_get_vertex_by_original_id(GRIN_GRAPH, GRIN_VERTEX_ORIGINAL_ID);
 #endif
 
 // Data
@@ -156,13 +156,13 @@ void grin_destroy_edge(GRIN_GRAPH g, GRIN_EDGE e) {
     delete _e;
 }
 
-GRIN_VERTEX grin_get_edge_src(GRIN_GRAPH g, GRIN_EDGE e) {
+GRIN_VERTEX grin_get_src_vertex_from_edge(GRIN_GRAPH g, GRIN_EDGE e) {
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     auto v = new GRIN_VERTEX_T(_e->src);
     return v;
 }
 
-GRIN_VERTEX grin_get_edge_dst(GRIN_GRAPH g, GRIN_EDGE e) {
+GRIN_VERTEX grin_get_dst_vertex_from_edge(GRIN_GRAPH g, GRIN_EDGE e) {
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     auto v = new GRIN_VERTEX_T(_e->dst);
     return v;

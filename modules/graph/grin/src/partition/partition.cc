@@ -99,7 +99,7 @@ const void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p)
     return NULL;
 }
 
-GRIN_GRAPH grin_get_local_graph_from_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
+GRIN_GRAPH grin_get_local_graph_by_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto g = new GRIN_GRAPH_T();
     g->g = _pg->lgs[p];
@@ -108,7 +108,7 @@ GRIN_GRAPH grin_get_local_graph_from_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_P
 #endif
 
 #ifdef GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
-GRIN_PARTITION grin_get_partition_from_id(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION_ID pid) {
+GRIN_PARTITION grin_get_partition_by_id(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION_ID pid) {
     return pid;
 }
 

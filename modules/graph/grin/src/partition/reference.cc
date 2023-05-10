@@ -19,7 +19,7 @@ extern "C" {
 }
 
 #ifdef GRIN_ENABLE_VERTEX_REF
-GRIN_VERTEX_REF grin_get_vertex_ref_for_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
+GRIN_VERTEX_REF grin_get_vertex_ref_by_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     return _g->Vertex2Gid(*_v);
@@ -57,7 +57,7 @@ long long int grin_serialize_vertex_ref_as_int64(GRIN_GRAPH g, GRIN_VERTEX_REF v
     return vr;
 }
 
-GRIN_VERTEX_REF grin_deserialize_vertex_ref_from_int64(GRIN_GRAPH g, long long int svr) {
+GRIN_VERTEX_REF grin_deserialize_int64_to_vertex_ref(GRIN_GRAPH g, long long int svr) {
     return svr;
 }
 #endif
@@ -95,7 +95,7 @@ GRIN_PARTITION_LIST grin_get_mirror_vertex_mirror_partition_list(GRIN_GRAPH, GRI
 #endif
 
 #ifdef GRIN_ENABLE_EDGE_REF
-GRIN_EDGE_REF grin_get_edge_ref_for_edge(GRIN_GRAPH, GRIN_EDGE);
+GRIN_EDGE_REF grin_get_edge_ref_by_edge(GRIN_GRAPH, GRIN_EDGE);
 
 void grin_destroy_edge_ref(GRIN_GRAPH, GRIN_EDGE_REF);
 

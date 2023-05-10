@@ -32,13 +32,13 @@ pub const GRIN_DATATYPE_TIMESTAMP64: GrinDatatype = 10;
 #[doc = " Enumerates the datatype supported in the storage"]
 pub type GrinDatatype = u32;
 #[doc = "< success"]
-pub const GrinErrorCodeGrinNoError: GrinErrorCode = 0;
+pub const GRIN_ERROR_CODE_NO_ERROR: GrinErrorCode = 0;
 #[doc = "< unknown error"]
-pub const GrinErrorCodeGrinUnknownError: GrinErrorCode = 1;
+pub const GRIN_ERROR_CODE_UNKNOWN_ERROR: GrinErrorCode = 1;
 #[doc = "< invalid value"]
-pub const GrinErrorCodeGrinInvalidValue: GrinErrorCode = 2;
+pub const GRIN_ERROR_CODE_INVALID_VALUE: GrinErrorCode = 2;
 #[doc = "< unknown datatype"]
-pub const GrinErrorCodeGrinUnknownDatatype: GrinErrorCode = 3;
+pub const GRIN_ERROR_CODE_UNKNOWN_DATATYPE: GrinErrorCode = 3;
 #[doc = " Enumerates the error codes of grin"]
 pub type GrinErrorCode = u32;
 #[doc = "@}"]
@@ -196,10 +196,10 @@ extern "C" {
     pub fn grin_destroy_edge(arg1: GrinGraph, arg2: GrinEdge);
 
     #[allow(unused)]
-    pub fn grin_get_edge_src(arg1: GrinGraph, arg2: GrinEdge) -> GrinVertex;
+    pub fn grin_get_src_vertex_from_edge(arg1: GrinGraph, arg2: GrinEdge) -> GrinVertex;
 
     #[allow(unused)]
-    pub fn grin_get_edge_dst(arg1: GrinGraph, arg2: GrinEdge) -> GrinVertex;
+    pub fn grin_get_dst_vertex_from_edge(arg1: GrinGraph, arg2: GrinEdge) -> GrinVertex;
 
     #[cfg(feature = "grin_enable_vertex_list")]
     #[allow(unused)]
@@ -318,14 +318,14 @@ extern "C" {
 
     #[cfg(feature = "grin_enable_graph_partition")]
     #[allow(unused)]
-    pub fn grin_get_local_graph_from_partition(
+    pub fn grin_get_local_graph_by_partition(
         arg1: GrinPartitionedGraph,
         arg2: GrinPartition,
     ) -> GrinGraph;
 
     #[cfg(feature = "grin_trait_natural_id_for_partition")]
     #[allow(unused)]
-    pub fn grin_get_partition_from_id(
+    pub fn grin_get_partition_by_id(
         arg1: GrinPartitionedGraph,
         arg2: GrinPartitionId,
     ) -> GrinPartition;
@@ -339,7 +339,7 @@ extern "C" {
 
     #[cfg(feature = "grin_enable_vertex_ref")]
     #[allow(unused)]
-    pub fn grin_get_vertex_ref_for_vertex(arg1: GrinGraph, arg2: GrinVertex) -> GrinVertexRef;
+    pub fn grin_get_vertex_ref_by_vertex(arg1: GrinGraph, arg2: GrinVertex) -> GrinVertexRef;
 
     #[cfg(feature = "grin_enable_vertex_ref")]
     #[allow(unused)]
@@ -395,7 +395,7 @@ extern "C" {
 
     #[cfg(feature = "grin_trait_fast_vertex_ref")]
     #[allow(unused)]
-    pub fn grin_deserialize_vertex_ref_from_int64(
+    pub fn grin_deserialize_int64_to_vertex_ref(
         arg1: GrinGraph,
         arg2: i64,
     ) -> GrinVertexRef;
@@ -449,7 +449,8 @@ extern "C" {
     #[allow(unused)]
     pub fn grin_get_vertex_property_name(
         arg1: GrinGraph,
-        arg2: GrinVertexProperty,
+        arg2: GrinVertexType,
+        arg3: GrinVertexProperty,
     ) -> *const ::std::os::raw::c_char;
 
     #[doc = " @brief get the vertex property with a given name under a specific vertex type\n @param GrinGraph the graph\n @param GrinVertexType the specific vertex type\n @param name the name"]
@@ -474,7 +475,8 @@ extern "C" {
     #[allow(unused)]
     pub fn grin_get_edge_property_name(
         arg1: GrinGraph,
-        arg2: GrinEdgeProperty,
+        arg2: GrinEdgeType,
+        arg3: GrinEdgeProperty,
     ) -> *const ::std::os::raw::c_char;
 
     #[doc = " @brief get the edge property with a given name under a specific edge type\n @param GrinGraph the graph\n @param GrinEdgeType the specific edge type\n @param name the name"]
@@ -518,7 +520,7 @@ extern "C" {
     #[doc = " @brief get the vertex type that the property is bound to\n @param GrinVertexProperty vertex property"]
     #[cfg(feature = "grin_with_vertex_property")]
     #[allow(unused)]
-    pub fn grin_get_vertex_property_vertex_type(
+    pub fn grin_get_vertex_type_from_property(
         arg1: GrinGraph,
         arg2: GrinVertexProperty,
     ) -> GrinVertexType;
@@ -547,7 +549,7 @@ extern "C" {
     #[doc = " @brief get the edge type that the property is bound to\n @param GrinEdgeProperty edge property"]
     #[cfg(feature = "grin_with_edge_property")]
     #[allow(unused)]
-    pub fn grin_get_edge_property_edge_type(
+    pub fn grin_get_edge_type_from_property(
         arg1: GrinGraph,
         arg2: GrinEdgeProperty,
     ) -> GrinEdgeType;
@@ -592,12 +594,13 @@ extern "C" {
 
     #[cfg(feature = "grin_trait_natural_id_for_vertex_property")]
     #[allow(unused)]
-    pub fn grin_get_vertex_property_from_id(
+    pub fn grin_get_vertex_property_by_id(
         arg1: GrinGraph,
         arg2: GrinVertexType,
         arg3: GrinVertexPropertyId,
     ) -> GrinVertexProperty;
 
+    #[doc = " We must specify the vertex type here, because the vertex property id is unique only under a specific vertex type"]
     #[cfg(feature = "grin_trait_natural_id_for_vertex_property")]
     #[allow(unused)]
     pub fn grin_get_vertex_property_id(
@@ -646,12 +649,13 @@ extern "C" {
 
     #[cfg(feature = "grin_trait_natural_id_for_edge_property")]
     #[allow(unused)]
-    pub fn grin_get_edge_property_from_id(
+    pub fn grin_get_edge_property_by_id(
         arg1: GrinGraph,
         arg2: GrinEdgeType,
         arg3: GrinEdgePropertyId,
     ) -> GrinEdgeProperty;
 
+    #[doc = " We must specify the edge type here, because the edge property id is unique only under a specific edge type"]
     #[cfg(feature = "grin_trait_natural_id_for_edge_property")]
     #[allow(unused)]
     pub fn grin_get_edge_property_id(
@@ -1076,7 +1080,7 @@ extern "C" {
 
     #[cfg(feature = "grin_assume_by_type_vertex_original_id")]
     #[allow(unused)]
-    pub fn grin_get_vertex_from_original_id_by_type(
+    pub fn grin_get_vertex_by_original_id_by_type(
         arg1: GrinGraph,
         arg2: GrinVertexType,
         arg3: GrinVertexOriginalId,
@@ -1167,7 +1171,7 @@ extern "C" {
 
     #[cfg(feature = "grin_trait_natural_id_for_vertex_type")]
     #[allow(unused)]
-    pub fn grin_get_vertex_type_from_id(
+    pub fn grin_get_vertex_type_by_id(
         arg1: GrinGraph,
         arg2: GrinVertexTypeId,
     ) -> GrinVertexType;
@@ -1240,12 +1244,12 @@ extern "C" {
 
     #[cfg(feature = "grin_trait_natural_id_for_edge_type")]
     #[allow(unused)]
-    pub fn grin_get_edge_type_from_id(arg1: GrinGraph, arg2: GrinEdgeTypeId) -> GrinEdgeType;
+    pub fn grin_get_edge_type_by_id(arg1: GrinGraph, arg2: GrinEdgeTypeId) -> GrinEdgeType;
 
     #[doc = " @brief  the src vertex type list"]
     #[cfg(all(feature = "grin_with_vertex_property", feature = "grin_with_edge_property"))]
     #[allow(unused)]
-    pub fn grin_get_src_types_from_edge_type(
+    pub fn grin_get_src_types_by_edge_type(
         arg1: GrinGraph,
         arg2: GrinEdgeType,
     ) -> GrinVertexTypeList;
@@ -1253,7 +1257,7 @@ extern "C" {
     #[doc = " @brief get the dst vertex type list"]
     #[cfg(all(feature = "grin_with_vertex_property", feature = "grin_with_edge_property"))]
     #[allow(unused)]
-    pub fn grin_get_dst_types_from_edge_type(
+    pub fn grin_get_dst_types_by_edge_type(
         arg1: GrinGraph,
         arg2: GrinEdgeType,
     ) -> GrinVertexTypeList;
@@ -1261,7 +1265,7 @@ extern "C" {
     #[doc = " @brief get the edge type list related to a given pair of vertex types"]
     #[cfg(all(feature = "grin_with_vertex_property", feature = "grin_with_edge_property"))]
     #[allow(unused)]
-    pub fn grin_get_edge_types_from_vertex_type_pair(
+    pub fn grin_get_edge_types_by_vertex_type_pair(
         arg1: GrinGraph,
         arg2: GrinVertexType,
         arg3: GrinVertexType,
@@ -1286,7 +1290,7 @@ extern "C" {
 
 }
 
- pub const GRIN_NULL_DATATYPE: GrinDataType = GRIN_DATATYPE_UNDEFINED;
+ pub const GRIN_NULL_DATATYPE: GrinDatatype = GRIN_DATATYPE_UNDEFINED;
 
  pub const GRIN_NULL_GRAPH: GrinGraph = std::ptr::null_mut();
 
@@ -1294,9 +1298,9 @@ extern "C" {
 
  pub const GRIN_NULL_EDGE: GrinEdge = std::ptr::null_mut();
 
- pub const GRIN_NULL_LIST: *const ::std::os::raw::c_void = std::ptr::null_mut();
+ pub const GRIN_NULL_LIST: *mut ::std::os::raw::c_void = std::ptr::null_mut();
 
- pub const GRIN_NULL_LIST_ITERATOR: *const ::std::os::raw::c_void = std::ptr::null_mut();
+ pub const GRIN_NULL_LIST_ITERATOR: *mut ::std::os::raw::c_void = std::ptr::null_mut();
 
  pub const GRIN_NULL_PARTITION: GrinPartition = u32::MAX;
 

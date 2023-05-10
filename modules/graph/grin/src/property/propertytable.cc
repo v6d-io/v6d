@@ -232,14 +232,14 @@ GRIN_VERTEX_PROPERTY_TABLE grin_get_vertex_property_table_by_type(GRIN_GRAPH g, 
 
 const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt,
                                                       GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return NULL;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -275,20 +275,20 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
     case GRIN_DATATYPE::Timestamp64:
         return new int64_t(*static_cast<const int64_t*>(result));
     default:
-        grin_error_code = GRIN_UNKNOWN_DATATYPE;
+        grin_error_code = GRIN_ERROR_CODE::UNKNOWN_DATATYPE;
         return NULL;
     }
 }
 
 int grin_get_int32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -298,14 +298,14 @@ int grin_get_int32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY
 }
 
 unsigned int grin_get_uint32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -315,14 +315,14 @@ unsigned int grin_get_uint32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTE
 }
 
 long long int grin_get_int64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -332,14 +332,14 @@ long long int grin_get_int64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTE
 }
 
 unsigned long long int grin_get_uint64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -349,14 +349,14 @@ unsigned long long int grin_get_uint64_from_vertex_property_table(GRIN_GRAPH g, 
 }
 
 float grin_get_float_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -366,14 +366,14 @@ float grin_get_float_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPER
 }
 
 double grin_get_double_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -383,14 +383,14 @@ double grin_get_double_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROP
 }
 
 const char* grin_get_string_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return NULL;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -404,14 +404,14 @@ const char* grin_get_string_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX
 }
 
 int grin_get_date32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -421,14 +421,14 @@ int grin_get_date32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERT
 }
 
 int grin_get_time32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -438,14 +438,14 @@ int grin_get_time32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERT
 }
 
 long long int grin_get_timestamp64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
     if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _v->GetValue() - _vpt->vertices.begin_value();
@@ -503,14 +503,14 @@ GRIN_EDGE_PROPERTY_TABLE grin_get_edge_property_table_by_type(GRIN_GRAPH g, GRIN
 
 const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept,
                                                GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return NULL;
     }
     auto offset = _e->eid;
@@ -546,20 +546,20 @@ const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROP
     case GRIN_DATATYPE::Timestamp64:
         return new int64_t(*static_cast<const int64_t*>(result));
     default:
-        grin_error_code = GRIN_UNKNOWN_DATATYPE;
+        grin_error_code = GRIN_ERROR_CODE::UNKNOWN_DATATYPE;
         return NULL;
     }
 }
 
 int grin_get_int32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);  
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _e->eid;
@@ -569,14 +569,14 @@ int grin_get_int32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TAB
 }
 
 unsigned int grin_get_uint32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);  
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _e->eid;
@@ -586,14 +586,14 @@ unsigned int grin_get_uint32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PR
 }
 
 long long int grin_get_int64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);  
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _e->eid;
@@ -603,14 +603,14 @@ long long int grin_get_int64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PR
 }
 
 unsigned long long int grin_get_uint64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);  
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _e->eid;
@@ -620,14 +620,14 @@ unsigned long long int grin_get_uint64_from_edge_property_table(GRIN_GRAPH g, GR
 }
 
 float grin_get_float_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);  
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _e->eid;
@@ -637,14 +637,14 @@ float grin_get_float_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_T
 }
 
 double grin_get_double_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);  
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _e->eid;
@@ -654,14 +654,14 @@ double grin_get_double_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY
 }
 
 const char* grin_get_string_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);  
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return NULL;
     }
     auto offset = _e->eid;
@@ -675,14 +675,14 @@ const char* grin_get_string_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PRO
 }
 
 int grin_get_date32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);  
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _e->eid;
@@ -692,14 +692,14 @@ int grin_get_date32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TA
 }
 
 int grin_get_time32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);  
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _e->eid;
@@ -709,14 +709,14 @@ int grin_get_time32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TA
 }
 
 long long int grin_get_timestamp64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_NO_ERROR;
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);  
     unsigned eprop = _grin_get_prop_from_property(ep);
     if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_INVALID_VALUE;
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return 0;
     }
     auto offset = _e->eid;
