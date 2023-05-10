@@ -18,7 +18,6 @@ extern "C" {
 }
 #include "graph.pb.h"
 
-
 const char* grin_get_static_storage_feature_msg() {
   grin::Graph g;
   g.set_uri("v6d://<object_id>");
