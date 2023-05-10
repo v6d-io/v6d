@@ -145,7 +145,7 @@ set_property(CACHE WITH_ALLOCATOR PROPERTY STRINGS
 message(STATUS "Setting the allocator to vineyardd as '${WITH_ALLOCATOR}'.")
 
 # check the cxx abi
-include(cmake/CheckGCCABI.cmake)
+include("cmake/CheckGCCABI.cmake")
 check_gcc_cxx11abi()
 
 get_directory_property(CURRENT_DEFINITIONS COMPILE_DEFINITIONS)
@@ -490,7 +490,12 @@ macro(find_zstd)
     set(ZSTD_BUILD_SHARED OFF CACHE INTERNAL "")
     set(ZSTD_BUILD_STATIC ON CACHE INTERNAL "")
     if (NOT TARGET libzstd_static)
+        set(CMAKE_MODULE_PATH_ORIGINAL ${CMAKE_MODULE_PATH})
+        if(${CMAKE_VERSION} VERSION_LESS "3.18")
+            list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
+        endif()
         add_subdirectory_static(thirdparty/zstd/build/cmake EXCLUDE_FROM_ALL)
+        set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH_ORIGINAL})
     endif()
 endmacro()
 
