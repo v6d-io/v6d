@@ -21,7 +21,7 @@ extern "C" {
 #include "graph/grin/include/common/error.h"
 }
 
-__thread GRIN_ERROR_CODE grin_error_code = GRIN_NO_ERROR;
+__thread GRIN_ERROR_CODE grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
 
 GRIN_ERROR_CODE grin_get_last_error_code() {
     return grin_error_code;

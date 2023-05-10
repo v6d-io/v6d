@@ -84,5 +84,5 @@ GRIN_ADJACENT_LIST grin_select_mirror_neighbor_for_adjacent_list(GRIN_GRAPH, GRI
 #endif
 
 #ifdef GRIN_TRAIT_SELECT_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
-GRIN_ADJACENT_LIST grin_select_neighbor_partition_for_adjacent_list(GRIN_GRAPH, GRIN_ADJACENT_LIST);
+GRIN_ADJACENT_LIST grin_select_neighbor_partition_for_adjacent_list(GRIN_GRAPH, GRIN_PARTITION, GRIN_ADJACENT_LIST);
 #endif

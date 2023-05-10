@@ -84,7 +84,7 @@ def to_rust(deps):
         assert False, f'unknown: {deps}'
  
 def snake_to_camel(s):
-    if s.startswith(('GRIN_DATATYPE_', 'GRIN_DIRECTION_')):
+    if s.startswith(('GRIN_DATATYPE_', 'GRIN_DIRECTION_', 'GRIN_ERROR_CODE_')):
         return s.upper()
     return ''.join([w.capitalize() for w in s.split('_')])
 

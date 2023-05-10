@@ -88,7 +88,7 @@ GRIN_VERTEX_TYPE_ID grin_get_vertex_type_id(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype
     return vtype;
 }
 
-GRIN_VERTEX_TYPE grin_get_vertex_type_from_id(GRIN_GRAPH g, GRIN_VERTEX_TYPE_ID vti) {
+GRIN_VERTEX_TYPE grin_get_vertex_type_by_id(GRIN_GRAPH g, GRIN_VERTEX_TYPE_ID vti) {
     return vti;
 }
 #endif
@@ -167,14 +167,14 @@ GRIN_EDGE_TYPE_ID grin_get_edge_type_id(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
     return etype;
 }
 
-GRIN_EDGE_TYPE grin_get_edge_type_from_id(GRIN_GRAPH g, GRIN_EDGE_TYPE_ID eti) {
+GRIN_EDGE_TYPE grin_get_edge_type_by_id(GRIN_GRAPH g, GRIN_EDGE_TYPE_ID eti) {
     return eti;
 }
 #endif
 
 
 #if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_WITH_EDGE_PROPERTY)
-GRIN_VERTEX_TYPE_LIST grin_get_src_types_from_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
+GRIN_VERTEX_TYPE_LIST grin_get_src_types_by_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto entry = _g->schema().GetEntry(etype, "EDGE");
     auto vtl = new GRIN_VERTEX_TYPE_LIST_T();
@@ -184,7 +184,7 @@ GRIN_VERTEX_TYPE_LIST grin_get_src_types_from_edge_type(GRIN_GRAPH g, GRIN_EDGE_
     return vtl;
 }
 
-GRIN_VERTEX_TYPE_LIST grin_get_dst_types_from_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
+GRIN_VERTEX_TYPE_LIST grin_get_dst_types_by_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto entry = _g->schema().GetEntry(etype, "EDGE");
     auto vtl = new GRIN_VERTEX_TYPE_LIST_T();
@@ -194,7 +194,7 @@ GRIN_VERTEX_TYPE_LIST grin_get_dst_types_from_edge_type(GRIN_GRAPH g, GRIN_EDGE_
     return vtl;
 }
 
-GRIN_EDGE_TYPE_LIST grin_get_edge_types_from_vertex_type_pair(GRIN_GRAPH g, GRIN_VERTEX_TYPE src_vt, 
+GRIN_EDGE_TYPE_LIST grin_get_edge_types_by_vertex_type_pair(GRIN_GRAPH g, GRIN_VERTEX_TYPE src_vt, 
                                                   GRIN_VERTEX_TYPE dst_vt) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto str_v1 = _g->schema().GetVertexLabelName(src_vt);

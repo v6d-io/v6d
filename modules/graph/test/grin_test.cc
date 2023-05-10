@@ -65,12 +65,12 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
     the destination is a mirror vertex, given the context of "edge-cut" partition strategy that the underlying storage uses.
     Then for each of these vertices, we send the value of the "features" property to its master partition.
   */
-  GRIN_GRAPH g = grin_get_local_graph_from_partition(partitioned_graph, partition);  // get local graph of partition
+  GRIN_GRAPH g = grin_get_local_graph_by_partition(partitioned_graph, partition);  // get local graph of partition
 
   GRIN_EDGE_TYPE etype = grin_get_edge_type_by_name(g, edge_type_name);  // get edge type from name
 
-  GRIN_VERTEX_TYPE_LIST src_vtypes = grin_get_src_types_from_edge_type(g, etype);  // get related source vertex type list
-  GRIN_VERTEX_TYPE_LIST dst_vtypes = grin_get_dst_types_from_edge_type(g, etype);  // get related destination vertex type list
+  GRIN_VERTEX_TYPE_LIST src_vtypes = grin_get_src_types_by_edge_type(g, etype);  // get related source vertex type list
+  GRIN_VERTEX_TYPE_LIST dst_vtypes = grin_get_dst_types_by_edge_type(g, etype);  // get related destination vertex type list
 
   size_t src_vtypes_num = grin_get_vertex_type_list_size(g, src_vtypes);
   size_t dst_vtypes_num = grin_get_vertex_type_list_size(g, dst_vtypes);
@@ -111,7 +111,7 @@ void sync_property(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION part
         GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list(g, adj_list, k);  // get the dst vertex u
         const void* value = grin_get_value_from_vertex_property_table(g, dst_vpt, u, dst_vp);  // get the property value of "features" of u
 
-        GRIN_VERTEX_REF uref = grin_get_vertex_ref_for_vertex(g, u);  // get the reference of u that can be recoginized by other partitions
+        GRIN_VERTEX_REF uref = grin_get_vertex_ref_by_vertex(g, u);  // get the reference of u that can be recoginized by other partitions
         GRIN_PARTITION u_master_partition = grin_get_master_partition_from_vertex_ref(g, uref);  // get the master partition for u
         const char* uref_ser = grin_serialize_vertex_ref(g, uref);
 
@@ -184,7 +184,7 @@ std::string Convert(GRIN_PARTITIONED_GRAPH pg) {
   stats->set_num_edges(grin_get_total_edge_num(pg));
 
   GRIN_PARTITION partition = grin_get_partition_from_list(pg, local_partitions, 0);
-  GRIN_GRAPH g = grin_get_local_graph_from_partition(pg, partition);
+  GRIN_GRAPH g = grin_get_local_graph_by_partition(pg, partition);
 
   // vertex type
   GRIN_VERTEX_TYPE_LIST vtl = grin_get_vertex_type_list(g);
@@ -260,8 +260,8 @@ std::string Convert(GRIN_PARTITIONED_GRAPH pg) {
 #endif
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
-    auto src_vtypes = grin_get_src_types_from_edge_type(g, et);
-    auto dst_vtypes = grin_get_dst_types_from_edge_type(g, et);
+    auto src_vtypes = grin_get_src_types_by_edge_type(g, et);
+    auto dst_vtypes = grin_get_dst_types_by_edge_type(g, et);
     auto pair_sz = grin_get_vertex_type_list_size(g, src_vtypes);
     for (size_t j = 0; j < pair_sz; ++j) {
       auto src_vt = grin_get_vertex_type_from_list(g, src_vtypes, j);

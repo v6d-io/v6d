@@ -318,7 +318,7 @@ class GRIN_ArrowFragment {
   void init(GRIN_PARTITIONED_GRAPH partitioned_graph, GRIN_PARTITION partition) {
     pg_ = partitioned_graph;
     partition_ = partition;
-    g_ = grin_get_local_graph_from_partition(pg_, partition_);
+    g_ = grin_get_local_graph_by_partition(pg_, partition_);
   }
 
   bool directed() const {
@@ -414,7 +414,7 @@ class GRIN_ArrowFragment {
   template <typename T>
   bool GetVertex(GRIN_VERTEX_TYPE label, T& oid, GRIN_VERTEX v) {
     if (GRIN_DATATYPE_ENUM<T>::value != grin_get_vertex_original_id_type(g_)) return false;
-    v = grin_get_vertex_from_original_id_by_type(g_, label, (GRIN_VERTEX_ORIGINAL_ID)(&oid));
+    v = grin_get_vertex_by_original_id_by_type(g_, label, (GRIN_VERTEX_ORIGINAL_ID)(&oid));
     return v != NULL;
   }
 
@@ -430,7 +430,7 @@ class GRIN_ArrowFragment {
 
 #ifdef GRIN_NATURAL_PARTITION_ID_TRAIT
   GRIN_PARTITION_ID GetPartition(GRIN_VERTEX u) const {
-    auto vref = grin_get_vertex_ref_for_vertex(g_, u);
+    auto vref = grin_get_vertex_ref_by_vertex(g_, u);
     auto partition = grin_get_master_partition_from_vertex_ref(g_, vref); 
     return grin_get_partition_id(pg_, partition);
   }
@@ -612,7 +612,7 @@ class GRIN_ArrowFragment {
           if (in_edge) {
             auto es = GetIncomingAdjList(*v, etype);
             for (auto& e : es) {
-              auto vref = grin_get_vertex_ref_for_vertex(g_, e.neighbor());
+              auto vref = grin_get_vertex_ref_by_vertex(g_, e.neighbor());
               auto p = grin_get_master_partition_from_vertex_ref(g_, vref);
 
               if (!grin_equal_partition(g_, p, partition_)) {
@@ -628,7 +628,7 @@ class GRIN_ArrowFragment {
           if (out_edge) {
             auto es = GetOutgoingAdjList(*v, etype);
             for (auto& e : es) {
-              auto vref = grin_get_vertex_ref_for_vertex(g_, e.neighbor());
+              auto vref = grin_get_vertex_ref_by_vertex(g_, e.neighbor());
               auto p = grin_get_master_partition_from_vertex_ref(g_, vref);
 
               if (!grin_equal_partition(g_, p, partition_)) {

@@ -16,7 +16,7 @@ extern "C" {
 }
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
-const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
+const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY vp) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto s = _g->schema().GetVertexPropertyName(_grin_get_type_from_property(vp), _grin_get_prop_from_property(vp));
     int len = s.length() + 1;
@@ -53,7 +53,7 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const
 #endif
 
 #ifdef GRIN_WITH_EDGE_PROPERTY_NAME
-const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
+const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto s = _g->schema().GetEdgePropertyName(_grin_get_type_from_property(ep), _grin_get_prop_from_property(ep));
     int len = s.length() + 1;
@@ -103,7 +103,7 @@ GRIN_DATATYPE grin_get_vertex_property_data_type(GRIN_GRAPH g, GRIN_VERTEX_PROPE
     return ArrowToDataType(dt);
 }
 
-GRIN_VERTEX_TYPE grin_get_vertex_property_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
+GRIN_VERTEX_TYPE grin_get_vertex_type_from_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
     return _grin_get_type_from_property(vp);
 }
 #endif
@@ -122,7 +122,7 @@ GRIN_DATATYPE grin_get_edge_property_data_type(GRIN_GRAPH g, GRIN_EDGE_PROPERTY 
     return ArrowToDataType(dt);
 }
 
-GRIN_EDGE_TYPE grin_get_edge_property_edge_type(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
+GRIN_EDGE_TYPE grin_get_edge_type_from_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
     return _grin_get_type_from_property(ep);
 }
 #endif
