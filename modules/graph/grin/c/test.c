@@ -249,15 +249,6 @@ void test_property_topology(int argc, char** argv) {
   const char* vt_name = grin_get_vertex_type_name(g, vt);
   const char* et_name = grin_get_edge_type_name(g, et);
 
-#ifdef GRIN_ENABLE_GRAPH_PARTITION
-  GRIN_PARTITIONED_GRAPH pg = get_partitioend_graph(argc, argv);
-  size_t tvnum = grin_get_total_vertex_num_by_type(pg, vt);
-  printf("total vertex num of %s: %zu\n", vt_name, tvnum);
-  size_t tenum = grin_get_total_edge_num_by_type(pg, et);
-  printf("total edge num of %s: %zu\n", et_name, tenum);
-  grin_destroy_partitioned_graph(pg);
-#endif
-
 #ifdef GRIN_ENABLE_VERTEX_LIST
   GRIN_VERTEX_LIST vl = grin_get_vertex_list(g);
 
