@@ -234,3 +234,6 @@ and edges and are listed as follows:
 - :code:`print_normalized_schema`: whether to print the **normalized** schema of the graph to
   :code:`STDERR` or not, default is :code:`0`. The word "normalized" means make the same property
   name has the same property id across different labels, **which is required by GraphScope GIE.**
+
+- :code:`dump`: a string that indicates a directory to dump the graph to, default is empty that
+  indicates no dump, e.g., :code:`"dump": "/tmp/dump-graph"`.
