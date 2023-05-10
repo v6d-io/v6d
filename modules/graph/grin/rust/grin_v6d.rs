@@ -400,14 +400,6 @@ extern "C" {
         arg2: i64,
     ) -> GrinVertexRef;
 
-    #[cfg(feature = "grin_enable_graph_partition")]
-    #[allow(unused)]
-    pub fn grin_get_total_vertex_num(arg1: GrinPartitionedGraph) -> usize;
-
-    #[cfg(feature = "grin_enable_graph_partition")]
-    #[allow(unused)]
-    pub fn grin_get_total_edge_num(arg1: GrinPartitionedGraph) -> usize;
-
     #[cfg(feature = "grin_trait_select_master_for_vertex_list")]
     #[allow(unused)]
     pub fn grin_select_master_for_vertex_list(
@@ -1063,20 +1055,6 @@ extern "C" {
     #[cfg(feature = "grin_with_edge_property")]
     #[allow(unused)]
     pub fn grin_get_edge_num_by_type(arg1: GrinGraph, arg2: GrinEdgeType) -> usize;
-
-    #[cfg(all(feature = "grin_enable_graph_partition", feature = "grin_with_vertex_property"))]
-    #[allow(unused)]
-    pub fn grin_get_total_vertex_num_by_type(
-        arg1: GrinPartitionedGraph,
-        arg2: GrinVertexType,
-    ) -> usize;
-
-    #[cfg(all(feature = "grin_enable_graph_partition", feature = "grin_with_edge_property"))]
-    #[allow(unused)]
-    pub fn grin_get_total_edge_num_by_type(
-        arg1: GrinPartitionedGraph,
-        arg2: GrinEdgeType,
-    ) -> usize;
 
     #[cfg(feature = "grin_assume_by_type_vertex_original_id")]
     #[allow(unused)]

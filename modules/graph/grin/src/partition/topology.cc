@@ -18,19 +18,6 @@ extern "C" {
 #include "graph/grin/include/partition/topology.h"
 }
 
-#ifdef GRIN_ENABLE_GRAPH_PARTITION
-size_t grin_get_total_vertex_num(GRIN_PARTITIONED_GRAPH pg) {
-    auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
-    if (_pg->lgs.size() == 0) return 0;
-    return _pg->lgs[0]->GetTotalVerticesNum();
-}
-
-size_t grin_get_total_edge_num(GRIN_PARTITIONED_GRAPH pg) {
-    auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
-    return _pg->pg->total_edge_num();
-}
-#endif
-
 #ifdef GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST
 GRIN_VERTEX_LIST grin_select_master_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
