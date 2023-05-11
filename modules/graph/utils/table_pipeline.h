@@ -140,10 +140,10 @@ class ConcatTablePipeline : public ITablePipeline {
       current.second = sources_[current.first];
     }
     auto status = current.second->Next(batch);
-    if (status.ok()) {
+    if (status.ok() || !status.IsStreamDrained()) {
+      // propagate the error
       return status;
     }
-
     // retry to get a new "current"
     current.second = nullptr;
     return Next(batch);
@@ -214,10 +214,18 @@ class FilterMapPipeline : public ITablePipeline {
 
   Status Next(std::shared_ptr<arrow::RecordBatch>& batch) override {
     std::shared_ptr<arrow::RecordBatch> from;
-    RETURN_ON_ERROR(from_->Next(from));
-    if (task_(from)) {
-      batch = from;
-      return Status::OK();
+    while (true) {
+      auto s = from_->Next(from);
+      if (s.IsStreamDrained()) {
+        return s;
+      }
+      if (!s.ok()) {
+        return s;
+      }
+      if (task_(from)) {
+        batch = from;
+        return Status::OK();
+      }
     }
     return Status::StreamDrained();
   }
