@@ -274,7 +274,11 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::addNewVertexLabels(
       int64_t vnum = array->length();
       builder.reserve(static_cast<size_t>(vnum));
       for (int64_t k = 0; k < vnum; ++k) {
-        builder.emplace(array->GetView(k), cur_gid);
+        if (!builder.emplace(array->GetView(k), cur_gid)) {
+          LOG(WARNING)
+              << "The vertex '" << array->GetView(k) << "' has been added "
+              << "more than once, please double check your vertices data";
+        }
         ++cur_gid;
       }
       RETURN_ON_ERROR(builder.Seal(client, object));
@@ -510,7 +514,11 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
       int64_t vnum = array->length();
       builder.reserve(static_cast<size_t>(vnum));
       for (int64_t k = 0; k < vnum; ++k) {
-        builder.emplace(array->GetView(k), cur_gid);
+        if (!builder.emplace(array->GetView(k), cur_gid)) {
+          LOG(WARNING)
+              << "The vertex '" << array->GetView(k) << "' has been added "
+              << "more than once, please double check your vertices data";
+        }
         ++cur_gid;
       }
       RETURN_ON_ERROR(builder.Seal(client, object));

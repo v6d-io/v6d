@@ -71,8 +71,8 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
    *
    */
   template <class... Args>
-  inline void emplace(Args&&... args) {
-    hashmap_.emplace(std::forward<Args>(args)...);
+  inline bool emplace(Args&&... args) {
+    return hashmap_.emplace(std::forward<Args>(args)...).second;
   }
 
   /**
