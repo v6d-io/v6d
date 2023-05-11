@@ -249,14 +249,14 @@ void SelectRows(const std::shared_ptr<arrow::RecordBatch> record_batch_in,
                 const std::vector<int64_t>& offset,
                 std::shared_ptr<arrow::RecordBatch>& record_batch_out);
 
-void ShuffleTableByOffsetLists(
+boost::leaf::result<void> ShuffleTableByOffsetLists(
     const grape::CommSpec& comm_spec,
     const std::shared_ptr<arrow::Schema> schema,
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& record_batches_send,
     const std::vector<std::vector<std::vector<int64_t>>>& offset_lists,
     std::vector<std::shared_ptr<arrow::RecordBatch>>& record_batches_recv);
 
-void ShuffleTableByOffsetLists(
+boost::leaf::result<void> ShuffleTableByOffsetLists(
     const grape::CommSpec& comm_spec,
     const std::shared_ptr<arrow::Schema> schema,
     const std::shared_ptr<ITablePipeline>& record_batches_send,

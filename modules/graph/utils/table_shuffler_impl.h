@@ -114,8 +114,9 @@ ShufflePropertyEdgeTableByPartition(
   VY_OK_OR_RAISE(status);
 
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches_recv;
-  ShuffleTableByOffsetLists(comm_spec, table_send->schema(), record_batches,
-                            offset_lists, batches_recv);
+  BOOST_LEAF_CHECK(ShuffleTableByOffsetLists(comm_spec, table_send->schema(),
+                                             record_batches, offset_lists,
+                                             batches_recv));
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
@@ -155,11 +156,13 @@ ShufflePropertyEdgeTableByPartition(
       offsets.clear();
     }
 
-    int64_t row_num = batch->num_rows();
-    auto src_col =
-        std::dynamic_pointer_cast<oid_array_type>(batch->column(src_col_id));
-    auto dst_col =
-        std::dynamic_pointer_cast<oid_array_type>(batch->column(dst_col_id));
+    int64_t row_num = batch ? batch->num_rows() : 0;
+    auto src_col = batch ? std::dynamic_pointer_cast<oid_array_type>(
+                               batch->column(src_col_id))
+                         : nullptr;
+    auto dst_col = batch ? std::dynamic_pointer_cast<oid_array_type>(
+                               batch->column(dst_col_id))
+                         : nullptr;
 
     for (int64_t row_id = 0; row_id < row_num; ++row_id) {
       internal_oid_t src_oid = src_col->GetView(row_id);
@@ -176,8 +179,8 @@ ShufflePropertyEdgeTableByPartition(
   };
 
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches_recv;
-  ShuffleTableByOffsetLists(comm_spec, table_send->schema(), table_send,
-                            offsetfn, batches_recv);
+  BOOST_LEAF_CHECK(ShuffleTableByOffsetLists(
+      comm_spec, table_send->schema(), table_send, offsetfn, batches_recv));
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
@@ -246,8 +249,9 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
 
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches_recv;
 
-  ShuffleTableByOffsetLists(comm_spec, table_send->schema(), record_batches,
-                            offset_lists, batches_recv);
+  BOOST_LEAF_CHECK(ShuffleTableByOffsetLists(comm_spec, table_send->schema(),
+                                             record_batches, offset_lists,
+                                             batches_recv));
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
@@ -283,9 +287,10 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
       offsets.clear();
     }
 
-    int64_t row_num = batch->num_rows();
+    int64_t row_num = batch ? batch->num_rows() : 0;
     std::shared_ptr<oid_array_type> id_col =
-        std::dynamic_pointer_cast<oid_array_type>(batch->column(0));
+        batch ? std::dynamic_pointer_cast<oid_array_type>(batch->column(0))
+              : nullptr;
 
     for (int64_t row_id = 0; row_id < row_num; ++row_id) {
       internal_oid_t rs = id_col->GetView(row_id);
@@ -295,8 +300,8 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyVertexTable(
   };
 
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches_recv;
-  ShuffleTableByOffsetLists(comm_spec, table_send->schema(), table_send,
-                            offsetfn, batches_recv);
+  BOOST_LEAF_CHECK(ShuffleTableByOffsetLists(
+      comm_spec, table_send->schema(), table_send, offsetfn, batches_recv));
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
@@ -373,8 +378,9 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
   VY_OK_OR_RAISE(status);
 
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches_recv;
-  ShuffleTableByOffsetLists(comm_spec, table_send->schema(), record_batches,
-                            offset_lists, batches_recv);
+  BOOST_LEAF_CHECK(ShuffleTableByOffsetLists(comm_spec, table_send->schema(),
+                                             record_batches, offset_lists,
+                                             batches_recv));
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {
@@ -410,13 +416,17 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
       offsets.clear();
     }
 
-    int64_t row_num = batch->num_rows();
+    int64_t row_num = batch ? batch->num_rows() : 0;
     const VID_TYPE* src_col =
-        std::dynamic_pointer_cast<vid_array_t>(batch->column(src_col_id))
-            ->raw_values();
+        batch
+            ? std::dynamic_pointer_cast<vid_array_t>(batch->column(src_col_id))
+                  ->raw_values()
+            : nullptr;
     const VID_TYPE* dst_col =
-        std::dynamic_pointer_cast<vid_array_t>(batch->column(dst_col_id))
-            ->raw_values();
+        batch
+            ? std::dynamic_pointer_cast<vid_array_t>(batch->column(dst_col_id))
+                  ->raw_values()
+            : nullptr;
 
     for (int64_t row_id = 0; row_id < row_num; ++row_id) {
       VID_TYPE src_gid = src_col[row_id];
@@ -433,8 +443,8 @@ boost::leaf::result<std::shared_ptr<arrow::Table>> ShufflePropertyEdgeTable(
   };
 
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches_recv;
-  ShuffleTableByOffsetLists(comm_spec, table_send->schema(), table_send,
-                            offsetfn, batches_recv);
+  BOOST_LEAF_CHECK(ShuffleTableByOffsetLists(
+      comm_spec, table_send->schema(), table_send, offsetfn, batches_recv));
 
   batches_recv.erase(std::remove_if(batches_recv.begin(), batches_recv.end(),
                                     [](std::shared_ptr<arrow::RecordBatch>& e) {

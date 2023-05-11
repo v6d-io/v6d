@@ -582,8 +582,11 @@ void SerializeSelectedItems(grape::InArchive& arc,
 void SerializeSelectedRows(grape::InArchive& arc,
                            std::shared_ptr<arrow::RecordBatch> record_batch,
                            const std::vector<int64_t>& offset) {
-  int col_num = record_batch->num_columns();
   arc << static_cast<int64_t>(offset.size());
+  if (record_batch == nullptr) {  // skip
+    return;
+  }
+  int col_num = record_batch->num_columns();
   for (int col_id = 0; col_id != col_num; ++col_id) {
     SerializeSelectedItems(arc, record_batch->column(col_id), offset);
   }
@@ -679,6 +682,10 @@ void SelectRows(std::shared_ptr<arrow::RecordBatch> record_batch_in,
                 const std::vector<int64_t>& offset,
                 std::shared_ptr<arrow::RecordBatch>& record_batch_out) {
   int64_t row_num = offset.size();
+  if (record_batch_in == nullptr) {  // skip
+    record_batch_out = nullptr;
+    return;
+  }
   std::unique_ptr<arrow::RecordBatchBuilder> builder;
   ARROW_CHECK_OK(arrow::RecordBatchBuilder::Make(record_batch_in->schema(),
                                                  arrow::default_memory_pool(),
@@ -691,7 +698,7 @@ void SelectRows(std::shared_ptr<arrow::RecordBatch> record_batch_in,
   ARROW_CHECK_OK(builder->Flush(&record_batch_out));
 }
 
-void ShuffleTableByOffsetLists(
+boost::leaf::result<void> ShuffleTableByOffsetLists(
     const grape::CommSpec& comm_spec,
     const std::shared_ptr<arrow::Schema> schema,
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& record_batches_send,
@@ -797,9 +804,10 @@ void ShuffleTableByOffsetLists(
     record_batches_recv.emplace_back(std::move(rb));
   }
   MPI_Barrier(comm_spec.comm());
+  return {};
 }
 
-void ShuffleTableByOffsetLists(
+boost::leaf::result<void> ShuffleTableByOffsetLists(
     const grape::CommSpec& comm_spec,
     const std::shared_ptr<arrow::Schema> schema,
     const std::shared_ptr<ITablePipeline>& record_batches_send,
@@ -869,40 +877,50 @@ void ShuffleTableByOffsetLists(
 
   // self: starts from `record_batches_to_recv`.
   std::atomic<int64_t> cur_self_batch_in(record_batches_to_recv);
-  for (int i = 0; i != serialize_thread_num; ++i) {
-    serialize_threads[i] = std::thread([&]() {
-      std::vector<std::vector<int64_t>> offset_lists(comm_spec.fnum());
-      while (true) {
-        std::shared_ptr<arrow::RecordBatch> batch;
-        auto status = record_batches_send->Next(batch);
-        if (status.IsStreamDrained()) {
-          break;
-        }
-        if (!status.ok()) {
-          LOG(ERROR) << "Failed to fetch a batch from the table pipeline: "
-                     << status.ToString();
-          break;
-        }
-        // generate offset lists
-        genoffset(batch, offset_lists);
+  std::vector<vineyard::Status> processing_errors(serialize_thread_num);
+  for (int thread_idx = 0; thread_idx != serialize_thread_num; ++thread_idx) {
+    serialize_threads[thread_idx] = std::thread(
+        [&](const int thread_index) {
+          std::vector<std::vector<int64_t>> offset_lists(comm_spec.fnum());
+          while (true) {
+            std::shared_ptr<arrow::RecordBatch> batch;
+            auto status = record_batches_send->Next(batch);
+            if (status.IsStreamDrained()) {
+              break;
+            }
+            if (!status.ok()) {
+              LOG(ERROR) << "Failed to fetch a batch from the table pipeline: "
+                         << status.ToString();
+              processing_errors[thread_index] = Status::Wrap(
+                  status, "Failed to fetch a batch from the table pipeline");
+            }
+            // NB: when error occurs, keep drain the input queue, and generate
+            // empty serialized outputs
+            if (!processing_errors[thread_index].ok()) {
+              batch = nullptr;
+            }
 
-        // send to other workers
-        for (int i = 1; i != worker_num; ++i) {
-          int dst_worker_id = (worker_id + i) % worker_num;
-          grape::fid_t dst_fid = comm_spec.WorkerToFrag(dst_worker_id);
-          std::pair<grape::fid_t, grape::InArchive> item;
-          item.first = dst_fid;
-          SerializeSelectedRows(item.second, batch, offset_lists[dst_fid]);
-          msg_out.Put(std::move(item));
-        }
+            // generate offset lists
+            genoffset(batch, offset_lists);
 
-        // select to self and put to recv
-        int64_t got_batch = cur_self_batch_in.fetch_add(1);
-        SelectRows(batch, offset_lists[comm_spec.fid()],
-                   record_batches_recv[got_batch]);
-      }
-      msg_out.DecProducerNum();
-    });
+            // send to other workers
+            for (int i = 1; i != worker_num; ++i) {
+              int dst_worker_id = (worker_id + i) % worker_num;
+              grape::fid_t dst_fid = comm_spec.WorkerToFrag(dst_worker_id);
+              std::pair<grape::fid_t, grape::InArchive> item;
+              item.first = dst_fid;
+              SerializeSelectedRows(item.second, batch, offset_lists[dst_fid]);
+              msg_out.Put(std::move(item));
+            }
+
+            // select to self and put to recv
+            int64_t got_batch = cur_self_batch_in.fetch_add(1);
+            SelectRows(batch, offset_lists[comm_spec.fid()],
+                       record_batches_recv[got_batch]);
+          }
+          msg_out.DecProducerNum();
+        },
+        thread_idx);
   }
 
   std::atomic<int64_t> cur_batch_in(0);
@@ -924,7 +942,13 @@ void ShuffleTableByOffsetLists(
   for (auto& thrd : deserialize_threads) {
     thrd.join();
   }
+  vineyard::Status error;
   MPI_Barrier(comm_spec.comm());
+  for (auto& err : processing_errors) {
+    error += err;
+  }
+  VY_OK_OR_RAISE(error);
+  return {};
 }
 
 }  // namespace vineyard

@@ -470,7 +470,12 @@ Status BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T>::
     internal_oid_t oid = oid_array->GetView(k);
     fid_t fid = partitioner_.GetPartitionId(oid);
     if (!vm->GetGid(fid, label_id, oid, builder[k])) {
-      LOG(ERROR) << "Mapping vertex " << oid << " failed.";
+      std::stringstream buffer;
+      buffer << "Mapping vertex '" << oid << "' failed. All src/dst in edges "
+             << "must present in corresponding vertices first";
+      std::string error_message = buffer.str();
+      LOG(ERROR) << error_message;
+      return Status::Invalid(error_message);
     }
   }
   out = std::make_shared<ArrowArrayType<VID_T>>(
