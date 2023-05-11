@@ -412,7 +412,11 @@ vineyard::Status ArrowLocalVertexMapBuilder<OID_T, VID_T>::addLocalVertices(
     int64_t vnum = array->length();
     builder.reserve(static_cast<size_t>(vnum));
     for (int64_t i = 0; i < vnum; ++i) {
-      builder.emplace(array->GetView(i), i);
+      if (!builder.emplace(array->GetView(i), i)) {
+        LOG(WARNING)
+            << "The vertex '" << array->GetView(i) << "' has been added "
+            << "more than once, please double check your vertices data";
+      }
     }
     RETURN_ON_ERROR(builder.Seal(client, object));
     o2i_[fid_][label] =
