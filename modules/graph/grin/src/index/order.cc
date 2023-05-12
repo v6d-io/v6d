@@ -30,12 +30,13 @@ size_t grin_get_position_of_vertex_from_sorted_list(GRIN_GRAPH g, GRIN_VERTEX_LI
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    auto vtype = (unsigned)_g->vertex_label(*_v);
-    if (vtype < _vl->type_begin || vtype >= _vl->type_end) return GRIN_NULL_SIZE;
-    auto offset = _v->GetValue() - _vl->vrs[vtype - _vl->type_begin].begin_value();
-    if (offset < _vl->vrs[vtype - _vl->type_begin].size()) {
-        return _vl->offsets[vtype - _vl->type_begin] + offset;
-    }
-    return GRIN_NULL_SIZE;
+    return _v->GetValue() - _vl->vrs[0].begin_value();
+    // auto vtype = (unsigned)_g->vertex_label(*_v);
+    // if (vtype < _vl->type_begin || vtype >= _vl->type_end) return GRIN_NULL_SIZE;
+    // auto offset = _v->GetValue() - _vl->vrs[vtype - _vl->type_begin].begin_value();
+    // if (offset < _vl->vrs[vtype - _vl->type_begin].size()) {
+    //     return _vl->offsets[vtype - _vl->type_begin] + offset;
+    // }
+    // return GRIN_NULL_SIZE;
 }
 #endif
