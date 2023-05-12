@@ -66,7 +66,7 @@ GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType> type) {
 }
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
-void __grin_init_vertex_list(std::shared_ptr<_GRIN_GRAPH_T> g, GRIN_VERTEX_LIST_T* vl) {
+void __grin_init_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
     vl->offsets.clear();
     vl->vrs.clear();
     _GRIN_GRAPH_T::vertices_t vr;
@@ -88,7 +88,7 @@ void __grin_init_vertex_list(std::shared_ptr<_GRIN_GRAPH_T> g, GRIN_VERTEX_LIST_
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
-void __grin_init_adjacent_list(std::shared_ptr<_GRIN_GRAPH_T> g, GRIN_ADJACENT_LIST_T* al) {
+void __grin_init_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
     al->offsets.clear();
     al->data.clear();
     _GRIN_GRAPH_T::raw_adj_list_t ral;

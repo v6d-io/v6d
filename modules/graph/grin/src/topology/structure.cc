@@ -17,17 +17,22 @@ limitations under the License.
 extern "C" {
 #include "graph/grin/include/topology/structure.h"
 }
+#include "client/client.h"
 
 GRIN_GRAPH grin_get_graph_from_storage(int argc, char** argv) {
     if (argc < 2) {
         return nullptr;
     }
+
     auto g = new GRIN_GRAPH_T();
     g->client.Connect(argv[0]);
+
     vineyard::ObjectID obj_id;
     std::stringstream ss(argv[1]);
     ss >> obj_id;
-    g->g = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(g->client.GetObject(obj_id));
+ 
+    g->_g = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(g->client.GetObject(obj_id));
+    g->g = g->_g.get();
     return g;
 }
 
