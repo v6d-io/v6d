@@ -168,6 +168,8 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
 template <typename VID_T, typename EID_T>
 boost::leaf::result<void> generate_varint_edges(
     property_graph_utils::NbrUnit<VID_T, EID_T>* e_list,
+    std::vector<int64_t>& encoded_eid_offset_list,
+    std::vector<int64_t>& encoded_vid_offset_list,
     std::vector<uint8_t>& encoded_eid_list,
     std::vector<uint8_t>& encoded_vid_list, size_t list_size);
 

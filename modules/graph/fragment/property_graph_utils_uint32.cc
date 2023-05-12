@@ -99,6 +99,8 @@ generate_undirected_csr_memopt<uint32_t, uint64_t>(
 
 template boost::leaf::result<void> generate_varint_edges<uint32_t, uint64_t>(
     property_graph_utils::NbrUnit<uint32_t, uint64_t>* e_list,
+    std::vector<int64_t>& encoded_eid_offset_list,
+    std::vector<int64_t>& encoded_vid_offset_list,
     std::vector<uint8_t>& encoded_eid_list,
     std::vector<uint8_t>& encoded_vid_list, size_t list_size);
 
