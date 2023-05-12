@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"
+#include "graph/fragment/varint_impl.h"
 
 namespace vineyard {
 
@@ -679,26 +680,54 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
   return {};
 }
 
+inline uint8_t construct_header(uint8_t pre_size, uint8_t size)
+{
+  return (pre_size << 4) | (size & 0x01);
+}
+
+inline uint8_t get_varint_pre_size(uint8_t header)
+{
+  return header >> 4;
+}
+
+inline uint8_t get_varint_size(uint8_t header)
+{
+  return header & 0x01;
+}
+
 template <typename VID_T, typename EID_T>
 boost::leaf::result<void> generate_varint_edges(
     property_graph_utils::NbrUnit<VID_T, EID_T>* e_list,
-    std::vector<uint8_t>& encoded_e_id_list,
-    std::vector<uint8_t>& encoded_v_id_list, int list_size) {
+    std::vector<uint8_t>& encoded_eid_list,
+    std::vector<uint8_t>& encoded_vid_list, size_t list_size) {
   LOG(INFO) << __func__;
 
   if (list_size <= 0)
     return {};
 
-  std::vector<EID_T> input_e_id_lists;
-  std::vector<VID_T> input_v_id_lists;
+  uint8_t pre_e_size = 0;
+  uint8_t pre_v_size = 0;
+  for (size_t i = 0; i < list_size; i++) {
+    uint8_t e_header, v_header;
+    std::vector<uint8_t> encoded_eid, encoded_vid;
 
-  for (int i = 0; i < list_size; i++) {
-    input_e_id_lists.push_back(e_list[i].eid);
-    input_v_id_lists.push_back(e_list[i].vid);
+    varint_encode(e_list[i].eid, encoded_eid);
+    varint_encode(e_list[i].vid, encoded_vid);
+
+    e_header = construct_header(pre_e_size, encoded_eid.size());
+    v_header = construct_header(pre_v_size, encoded_vid.size());
+
+    encoded_eid_list.push_back(e_header);
+    for (size_t j = 0; j < encoded_eid.size(); j++) {
+      encoded_eid_list.push_back(encoded_eid[j]);
+    }
+    encoded_vid_list.push_back(v_header);
+    for (size_t j = 0; j < encoded_vid.size(); j++) {
+      encoded_vid_list.push_back(encoded_vid[j]);
+    }
+    pre_e_size = encoded_eid.size();
+    pre_v_size = encoded_vid.size();
   }
-
-  varint_encode(input_e_id_lists, encoded_e_id_list);
-  varint_encode(input_v_id_lists, encoded_v_id_list);
 
   return {};
 }
