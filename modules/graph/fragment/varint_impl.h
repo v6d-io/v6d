@@ -15,14 +15,6 @@ inline uint64_t unaligned_load_u64(const uint8_t* p)
   return x;
 }
 
-inline const uint8_t *get_pointer(const uint8_t *start, const size_t &index)
-{
-  for (size_t i = 0; i < index; i++) {
-    start += ((*start) + 1);
-  }
-  return start;
-}
-
 /* header:
 |----------------------------------|
 | pre_size(4 bits) | size (4 bits) |
@@ -42,6 +34,14 @@ static inline unsigned int get_varint_pre_size(const uint8_t header)
 static inline unsigned int get_varint_size(const uint8_t header)
 {
   return (unsigned int)(header & 0x0F);
+}
+
+inline const uint8_t *get_pointer(const uint8_t *start, const size_t &index)
+{
+  for (size_t i = 0; i < index; i++) {
+    start += (get_varint_size(*start) + 1);
+  }
+  return start;
 }
 
 template<typename T>

@@ -623,17 +623,16 @@ class AdjList {
   AdjList(const NbrUnit<VID_T, EID_T>* begin, const NbrUnit<VID_T, EID_T>* end,
           const void** edata_arrays)
       : begin_(begin), end_(end), edata_arrays_(edata_arrays) {}
-  AdjList(const uint8_t v_ptr, const uint8_t e_ptr,
-          const size_t v_begin_index, const size_t v_end_index,
-          const size_t e_begin_index, const size_t e_end_index,
+  AdjList(const uint8_t* v_ptr, const uint8_t* e_ptr,
+          const size_t begin_index, const size_t end_index,
           const void** edata_arrays)
       {
-        v_begin_ptr_ = get_pointer(v_ptr, v_begin_index);
-        v_end_ptr_ = get_pointer(v_ptr, v_end_index);
-        e_begin_ptr_ = get_pointer(e_ptr, e_begin_index);
-        e_end_ptr_ = get_pointer(e_ptr, e_end_index);
+        v_begin_ptr_ = get_pointer(v_ptr, begin_index);
+        v_end_ptr_ = get_pointer(v_ptr, end_index);
+        e_begin_ptr_ = get_pointer(e_ptr, begin_index);
+        e_end_ptr_ = get_pointer(e_ptr, end_index);
         encoded_ = true;
-        size_ = v_end_index - v_begin_index;
+        size_ = end_index - begin_index;
       }
 
   inline Nbr<VID_T, EID_T> begin() const {
@@ -645,7 +644,7 @@ class AdjList {
 
   inline Nbr<VID_T, EID_T> end() const {
     if (encoded_) {
-      return Nbr<VID_T, EID_T>(v_begin_ptr_, e_begin_ptr_, edata_arrays_);
+      return Nbr<VID_T, EID_T>(v_end_ptr_, e_end_ptr_, edata_arrays_);
     }
     return Nbr<VID_T, EID_T>(end_, edata_arrays_);
   }
