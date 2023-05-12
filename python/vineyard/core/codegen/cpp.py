@@ -764,6 +764,7 @@ distributed_getter_tpl = '''
                 auto const __item = std::dynamic_pointer_cast<T>(__e);
                 if (__item != nullptr) {{
                     locals.emplace_back(__item);
+                    __local_size++;
                 }}
             }}
         }}

@@ -643,8 +643,8 @@ class [[vineyard]] ArrowFragment
 
   boost::leaf::result<vineyard::ObjectID> Project(
       vineyard::Client& client,
-      std::map<label_id_t, std::vector<label_id_t>> vertices,
-      std::map<label_id_t, std::vector<label_id_t>> edges);
+      std::map<label_id_t, std::vector<prop_id_t>> vertices,
+      std::map<label_id_t, std::vector<prop_id_t>> edges);
 
   boost::leaf::result<vineyard::ObjectID> TransformDirection(
       vineyard::Client& client, int concurrency);

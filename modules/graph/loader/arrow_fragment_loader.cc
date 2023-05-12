@@ -475,7 +475,6 @@ Status ReadTableFromLocation(const std::string& location,
   RETURN_ON_ERROR(io_adaptor->ReadTable(&table));
 
   if (table != nullptr) {  // the file may be too small
-    auto adaptor_meta = io_adaptor->GetMeta();
     auto meta = std::make_shared<arrow::KeyValueMetadata>();
     for (auto const& item : io_adaptor->GetMeta()) {
       VINEYARD_DISCARD(meta->Set(item.first, item.second));

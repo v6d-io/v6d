@@ -169,7 +169,7 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
 
   static_assert(!std::is_same<OID_T, std::string>::value,
-                "Expect arrow_string_view in local vertex map's OID_T");
+                "Expect arrow_string_view in vertex map's OID_T");
 
  public:
   BasicArrowVertexMapBuilder(
