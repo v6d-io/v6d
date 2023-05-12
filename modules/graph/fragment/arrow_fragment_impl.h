@@ -239,8 +239,8 @@ template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 boost::leaf::result<vineyard::ObjectID>
 ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
     vineyard::Client& client,
-    std::map<label_id_t, std::vector<label_id_t>> vertices,
-    std::map<label_id_t, std::vector<label_id_t>> edges) {
+    std::map<label_id_t, std::vector<prop_id_t>> vertices,
+    std::map<label_id_t, std::vector<prop_id_t>> edges) {
   ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
 
   auto schema = schema_;
@@ -259,7 +259,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::Project(
 
   auto remove_invalid_relation =
       [&schema](const std::vector<label_id_t>& edge_labels,
-                std::map<label_id_t, std::vector<label_id_t>> vertices) {
+                const std::map<label_id_t, std::vector<prop_id_t>>& vertices) {
         for (size_t i = 0; i < edge_labels.size(); ++i) {
           auto& entry = schema.GetMutableEntry(
               edge_labels[i], PropertyGraphSchema::EDGE_TYPE_NAME);
@@ -583,6 +583,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initDestFidList(
       std::vector<int> id_num(ivnum_, 0);
       std::set<fid_t> dstset;
       vertex_t v = *inner_vertices.begin();
+
       auto& fid_list = fid_lists[v_label_id][e_label_id];
       auto& fid_list_offset = fid_lists_offset[v_label_id][e_label_id];
 
@@ -594,19 +595,23 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initDestFidList(
         dstset.clear();
         if (in_edge) {
           auto es = GetIncomingAdjList(v, e_label_id);
+          fid_t last_fid = -1;
           for (auto& e : es) {
             fid_t f = GetFragId(e.neighbor());
-            if (f != fid_) {
+            if (f != last_fid && f != fid_) {
               dstset.insert(f);
+              last_fid = f;
             }
           }
         }
         if (out_edge) {
           auto es = GetOutgoingAdjList(v, e_label_id);
+          fid_t last_fid = -1;
           for (auto& e : es) {
             fid_t f = GetFragId(e.neighbor());
-            if (f != fid_) {
+            if (f != last_fid && f != fid_) {
               dstset.insert(f);
+              last_fid = f;
             }
           }
         }
