@@ -1077,6 +1077,8 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
   if (this->directed_) {
     Base::ie_lists_.resize(this->vertex_label_num_);
     Base::ie_offsets_lists_.resize(this->vertex_label_num_);
+    Base::encoded_ie_e_lists_.resize(this->vertex_label_num_);
+    Base::encoded_ie_v_lists_.resize(this->vertex_label_num_);
   }
   // Base::oe_lists_.resize(this->vertex_label_num_);
   Base::oe_offsets_lists_.resize(this->vertex_label_num_);
@@ -1088,6 +1090,8 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
     if (this->directed_) {
       Base::ie_lists_[i].resize(this->edge_label_num_);
       Base::ie_offsets_lists_[i].resize(this->edge_label_num_);
+      Base::encoded_ie_e_lists_[i].resize(this->vertex_label_num_);
+      Base::encoded_ie_v_lists_[i].resize(this->vertex_label_num_);
     }
     // Base::oe_lists_[i].resize(this->edge_label_num_);
     Base::oe_offsets_lists_[i].resize(this->edge_label_num_);
@@ -1103,6 +1107,10 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
           this->set_ie_lists_(i, j, object);
           RETURN_ON_ERROR(ie_offsets_lists_[i][j]->Seal(*client, object));
           this->set_ie_offsets_lists_(i, j, object);
+          RETURN_ON_ERROR(encoded_ie_e_lists_[i][j]->Seal(*client, object));
+          this->set_encoded_ie_e_lists_(i, j, object);
+          RETURN_ON_ERROR(encoded_ie_v_lists_[i][j]->Seal(*client, object));
+          this->set_encoded_ie_v_lists_(i, j, object);
         }
         {
           // RETURN_ON_ERROR(oe_lists_[i][j]->Seal(*client, object));
@@ -1318,14 +1326,25 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
       generate_varint_edges(this->oe_lists_[v_label][e_label]->data(), encoded_oe_eid_vec, encoded_oe_vid_vec, oe_lists_[v_label][e_label]->size());
       generate_varint_edges(this->ie_lists_[v_label][e_label]->data(), encoded_ie_eid_vec, encoded_ie_vid_vec, ie_lists_[v_label][e_label]->size());
 
-      LOG(INFO) << "eid";
-      for (size_t i = 0; i < encoded_oe_eid_vec.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_oe_eid_vec[i] << std::dec << " ";
-      }
-      LOG(INFO) << "vid";
-      for (size_t i = 0; i < encoded_oe_vid_vec.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_oe_vid_vec[i] << std::dec << " ";
-      }
+      // LOG(INFO) << "origin";
+      // LOG(INFO) << "eid";
+      // for (size_t i = 0; i < ie_lists_[v_label][e_label]->size(); i++) {
+      //   LOG(INFO) << (this->ie_lists_[v_label][e_label]->data())[i].eid;
+      // }
+      // LOG(INFO) << "vid";
+      // for (size_t i = 0; i < ie_lists_[v_label][e_label]->size(); i++) {
+      //   LOG(INFO) << (this->ie_lists_[v_label][e_label]->data())[i].vid;
+      // }
+
+      // LOG(INFO) << "encoded";
+      // LOG(INFO) << "eid";
+      // for (size_t i = 0; i < encoded_ie_eid_vec.size(); i++) {
+      //   LOG(INFO) << std::hex << (int)encoded_ie_eid_vec[i] << std::dec << " ";
+      // }
+      // LOG(INFO) << "vid";
+      // for (size_t i = 0; i < encoded_ie_vid_vec.size(); i++) {
+      //   LOG(INFO) << std::hex << (int)encoded_ie_vid_vec[i] << std::dec << " ";
+      // }
 
       encoded_oe_e_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_oe_eid_vec.size() * sizeof(uint8_t));
       encoded_oe_v_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_oe_vid_vec.size() * sizeof(uint8_t));
