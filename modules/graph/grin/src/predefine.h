@@ -94,7 +94,8 @@ unsigned _grin_get_prop_from_property(unsigned long long int);
 typedef vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T> _GRIN_GRAPH_T;                 
 struct GRIN_GRAPH_T {
     vineyard::Client client;
-    std::shared_ptr<_GRIN_GRAPH_T> g;
+    std::shared_ptr<_GRIN_GRAPH_T> _g;
+    _GRIN_GRAPH_T* g;
 };
 typedef _GRIN_GRAPH_T::vertex_t GRIN_VERTEX_T;     
 struct GRIN_EDGE_T {
@@ -117,7 +118,7 @@ struct GRIN_VERTEX_LIST_T {
     std::vector<unsigned> offsets;
     std::vector<_GRIN_GRAPH_T::vertices_t> vrs;
 };
-void __grin_init_vertex_list(std::shared_ptr<_GRIN_GRAPH_T> g, GRIN_VERTEX_LIST_T* vl);
+void __grin_init_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl);
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
@@ -140,7 +141,7 @@ struct GRIN_ADJACENT_LIST_T {
     std::vector<unsigned> offsets;
     std::vector<_GRIN_GRAPH_T::raw_adj_list_t> data;
 };
-void __grin_init_adjacent_list(std::shared_ptr<_GRIN_GRAPH_T> g, GRIN_ADJACENT_LIST_T* al);
+void __grin_init_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al);
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
@@ -157,9 +158,10 @@ struct GRIN_ADJACENT_LIST_ITERATOR_T {
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
 struct GRIN_PARTITIONED_GRAPH_T {
+  std::string socket;
   vineyard::Client client;
   std::shared_ptr<vineyard::ArrowFragmentGroup> pg;
-  std::vector<std::shared_ptr<_GRIN_GRAPH_T>> lgs;
+  std::vector<vineyard::ObjectID> lgs;
 };
 typedef unsigned GRIN_PARTITION_T;
 typedef std::vector<unsigned> GRIN_PARTITION_LIST_T;

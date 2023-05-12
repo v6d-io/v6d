@@ -25,18 +25,19 @@ GRIN_PARTITIONED_GRAPH grin_get_partitioned_graph_from_storage(int argc, char** 
         return nullptr;
     }
     auto pg = new GRIN_PARTITIONED_GRAPH_T();
+    pg->socket = std::string(argv[0]);
     pg->client.Connect(argv[0]);
     vineyard::ObjectID obj_id;
     std::stringstream ss(argv[1]);
     ss >> obj_id;
     pg->pg = std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(pg->client.GetObject(obj_id));
-    pg->lgs.resize(pg->pg->total_frag_num(), nullptr);
+    pg->lgs.resize(pg->pg->total_frag_num(), 0);
     for (auto & [fid, location] : pg->pg->FragmentLocations()) {
         if (location == pg->client.instance_id()) {
             auto obj_id = pg->pg->Fragments().at(fid);
 //            std::cout << fid << ": " << obj_id << std::endl;
-            auto frag = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(pg->client.GetObject(obj_id));
-            pg->lgs[fid] = frag;
+//            auto frag = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(pg->client.GetObject(obj_id));
+            pg->lgs[fid] = obj_id;
         }
     }
   return pg;
@@ -102,7 +103,10 @@ const void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p)
 GRIN_GRAPH grin_get_local_graph_by_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto g = new GRIN_GRAPH_T();
-    g->g = _pg->lgs[p];
+    
+    g->client.Connect(_pg->socket);
+    g->_g = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(g->client.GetObject(_pg->lgs[p]));
+    g->g = g->_g.get();
     return g;
 }
 #endif
