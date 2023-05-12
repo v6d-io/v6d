@@ -518,6 +518,9 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
   oe_ptr_lists_.resize(vertex_label_num_);
   oe_offsets_ptr_lists_.resize(vertex_label_num_);
 
+  encoded_oe_e_ptr_lists_.resize(vertex_label_num_);
+  encoded_oe_v_ptr_lists_.resize(vertex_label_num_);
+
   idst_.resize(vertex_label_num_);
   odst_.resize(vertex_label_num_);
   iodst_.resize(vertex_label_num_);
@@ -535,6 +538,9 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     oe_ptr_lists_[i].resize(edge_label_num_);
     oe_offsets_ptr_lists_[i].resize(edge_label_num_);
 
+    encoded_oe_e_ptr_lists_[i].resize(vertex_label_num_);
+    encoded_oe_v_ptr_lists_[i].resize(vertex_label_num_);
+
     idst_[i].resize(edge_label_num_);
     odst_[i].resize(edge_label_num_);
     iodst_[i].resize(edge_label_num_);
@@ -548,6 +554,11 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
           oe_lists_[i][j]->GetArray()->raw_values());
       oe_offsets_ptr_lists_[i][j] =
           oe_offsets_lists_[i][j]->GetArray()->raw_values();
+
+      encoded_oe_e_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
+          encoded_oe_e_lists_[i][j]->GetArray()->raw_values());
+      encoded_oe_v_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
+          encoded_oe_v_lists_[i][j]->GetArray()->raw_values());
     }
   }
 
