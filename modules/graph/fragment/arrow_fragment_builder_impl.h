@@ -1078,7 +1078,7 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
     Base::ie_lists_.resize(this->vertex_label_num_);
     Base::ie_offsets_lists_.resize(this->vertex_label_num_);
   }
-  Base::oe_lists_.resize(this->vertex_label_num_);
+  // Base::oe_lists_.resize(this->vertex_label_num_);
   Base::oe_offsets_lists_.resize(this->vertex_label_num_);
 
   Base::encoded_oe_e_lists_.resize(this->vertex_label_num_);
@@ -1089,7 +1089,7 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
       Base::ie_lists_[i].resize(this->edge_label_num_);
       Base::ie_offsets_lists_[i].resize(this->edge_label_num_);
     }
-    Base::oe_lists_[i].resize(this->edge_label_num_);
+    // Base::oe_lists_[i].resize(this->edge_label_num_);
     Base::oe_offsets_lists_[i].resize(this->edge_label_num_);
 
     Base::encoded_oe_e_lists_[i].resize(this->vertex_label_num_);
@@ -1105,8 +1105,8 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
           this->set_ie_offsets_lists_(i, j, object);
         }
         {
-          RETURN_ON_ERROR(oe_lists_[i][j]->Seal(*client, object));
-          this->set_oe_lists_(i, j, object);
+          // RETURN_ON_ERROR(oe_lists_[i][j]->Seal(*client, object));
+          // this->set_oe_lists_(i, j, object);
           RETURN_ON_ERROR(oe_offsets_lists_[i][j]->Seal(*client, object));
           this->set_oe_offsets_lists_(i, j, object);
 
