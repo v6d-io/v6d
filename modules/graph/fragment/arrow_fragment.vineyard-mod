@@ -739,6 +739,11 @@ class [[vineyard]] ArrowFragment
   std::vector<std::vector<const uint8_t *>> encoded_oe_e_ptr_lists_;
   std::vector<std::vector<const uint8_t *>> encoded_oe_v_ptr_lists_;
 
+  [[shared]] List<List<std::shared_ptr<UInt8Array>>> encoded_ie_e_lists_;
+  [[shared]] List<List<std::shared_ptr<UInt8Array>>> encoded_ie_v_lists_;
+  std::vector<std::vector<const uint8_t *>> encoded_ie_e_ptr_lists_;
+  std::vector<std::vector<const uint8_t *>> encoded_ie_v_ptr_lists_;
+
   std::vector<std::vector<std::vector<fid_t>>> idst_, odst_, iodst_;
   std::vector<std::vector<std::vector<fid_t*>>> idoffset_, odoffset_,
       iodoffset_;
