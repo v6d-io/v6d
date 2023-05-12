@@ -1292,34 +1292,54 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
 
   this->encoded_oe_e_lists_.resize(this->vertex_label_num_);
   this->encoded_oe_v_lists_.resize(this->vertex_label_num_);
+  this->encoded_ie_e_lists_.resize(this->vertex_label_num_);
+  this->encoded_ie_v_lists_.resize(this->vertex_label_num_);
 
   for (int v_label = 0; v_label < this->vertex_label_num_; v_label++) {
     std::vector<std::shared_ptr<FixedUInt8Builder>> encoded_oe_e_sub_lists_;
     std::vector<std::shared_ptr<FixedUInt8Builder>> encoded_oe_v_sub_lists_;
+    std::vector<std::shared_ptr<FixedUInt8Builder>> encoded_ie_e_sub_lists_;
+    std::vector<std::shared_ptr<FixedUInt8Builder>> encoded_ie_v_sub_lists_;
     encoded_oe_e_sub_lists_.resize(this->edge_label_num_);
     encoded_oe_v_sub_lists_.resize(this->edge_label_num_);
+    encoded_ie_e_sub_lists_.resize(this->edge_label_num_);
+    encoded_ie_v_sub_lists_.resize(this->edge_label_num_);
+
     this->encoded_oe_e_lists_[v_label].resize(this->edge_label_num_);
     this->encoded_oe_v_lists_[v_label].resize(this->edge_label_num_);
+    this->encoded_ie_e_lists_[v_label].resize(this->edge_label_num_);
+    this->encoded_ie_v_lists_[v_label].resize(this->edge_label_num_);
 
     for (int e_label = 0; e_label < this->edge_label_num_; e_label++) {
-      std::vector<uint8_t> encoded_eid_vec;
-      std::vector<uint8_t> encoded_vid_vec;
-      generate_varint_edges(this->oe_lists_[v_label][e_label]->data(), encoded_eid_vec, encoded_vid_vec, oe_lists_[v_label][e_label]->size());
+      std::vector<uint8_t> encoded_oe_eid_vec;
+      std::vector<uint8_t> encoded_oe_vid_vec;
+      std::vector<uint8_t> encoded_ie_eid_vec;
+      std::vector<uint8_t> encoded_ie_vid_vec;
+      generate_varint_edges(this->oe_lists_[v_label][e_label]->data(), encoded_oe_eid_vec, encoded_oe_vid_vec, oe_lists_[v_label][e_label]->size());
+      generate_varint_edges(this->ie_lists_[v_label][e_label]->data(), encoded_ie_eid_vec, encoded_ie_vid_vec, ie_lists_[v_label][e_label]->size());
+
       LOG(INFO) << "eid";
-      for (size_t i = 0; i < encoded_eid_vec.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_eid_vec[i] << std::dec << " ";
+      for (size_t i = 0; i < encoded_oe_eid_vec.size(); i++) {
+        LOG(INFO) << std::hex << (int)encoded_oe_eid_vec[i] << std::dec << " ";
       }
       LOG(INFO) << "vid";
-      for (size_t i = 0; i < encoded_vid_vec.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_vid_vec[i] << std::dec << " ";
+      for (size_t i = 0; i < encoded_oe_vid_vec.size(); i++) {
+        LOG(INFO) << std::hex << (int)encoded_oe_vid_vec[i] << std::dec << " ";
       }
-      encoded_oe_e_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_eid_vec.size() * sizeof(uint8_t));
-      encoded_oe_v_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_vid_vec.size() * sizeof(uint8_t));
-      memcpy(encoded_oe_e_sub_lists_[e_label]->data(), encoded_eid_vec.data(), encoded_eid_vec.size() * sizeof(uint8_t));
-      memcpy(encoded_oe_v_sub_lists_[e_label]->data(), encoded_vid_vec.data(), encoded_vid_vec.size() * sizeof(uint8_t));
+
+      encoded_oe_e_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_oe_eid_vec.size() * sizeof(uint8_t));
+      encoded_oe_v_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_oe_vid_vec.size() * sizeof(uint8_t));
+      encoded_ie_e_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_ie_eid_vec.size() * sizeof(uint8_t));
+      encoded_ie_v_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_ie_vid_vec.size() * sizeof(uint8_t));
+      memcpy(encoded_oe_e_sub_lists_[e_label]->data(), encoded_oe_eid_vec.data(), encoded_oe_eid_vec.size() * sizeof(uint8_t));
+      memcpy(encoded_oe_v_sub_lists_[e_label]->data(), encoded_oe_vid_vec.data(), encoded_oe_vid_vec.size() * sizeof(uint8_t));
+      memcpy(encoded_ie_e_sub_lists_[e_label]->data(), encoded_ie_eid_vec.data(), encoded_ie_eid_vec.size() * sizeof(uint8_t));
+      memcpy(encoded_ie_v_sub_lists_[e_label]->data(), encoded_ie_vid_vec.data(), encoded_ie_vid_vec.size() * sizeof(uint8_t));
       // LOG(INFO) << "esize:" << encoded_oe_e_sub_lists_[e_label]->size();
       this->encoded_oe_e_lists_[v_label][e_label] = encoded_oe_e_sub_lists_[e_label];
       this->encoded_oe_v_lists_[v_label][e_label] = encoded_oe_v_sub_lists_[e_label];
+      this->encoded_ie_e_lists_[v_label][e_label] = encoded_ie_e_sub_lists_[e_label];
+      this->encoded_ie_v_lists_[v_label][e_label] = encoded_ie_v_sub_lists_[e_label];
     }
   }
 
