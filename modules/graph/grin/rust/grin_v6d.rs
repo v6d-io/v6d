@@ -169,18 +169,14 @@ extern "C" {
 
     #[cfg(feature = "grin_with_vertex_original_id")]
     #[allow(unused)]
-    pub fn grin_destroy_vertex_original_id(arg1: GrinGraph, arg2: GrinVertexOriginalId);
+    pub fn grin_get_vertex_original_id_data_type(arg1: GrinGraph) -> GrinDatatype;
 
     #[cfg(feature = "grin_with_vertex_original_id")]
     #[allow(unused)]
-    pub fn grin_get_vertex_original_id_type(arg1: GrinGraph) -> GrinDatatype;
-
-    #[cfg(feature = "grin_with_vertex_original_id")]
-    #[allow(unused)]
-    pub fn grin_get_vertex_original_id(
+    pub fn grin_get_vertex_original_id_value(
         arg1: GrinGraph,
         arg2: GrinVertex,
-    ) -> GrinVertexOriginalId;
+    ) -> *const ::std::os::raw::c_void;
 
     #[allow(unused)]
     pub fn grin_destroy_value(
@@ -1061,7 +1057,8 @@ extern "C" {
     pub fn grin_get_vertex_by_original_id_by_type(
         arg1: GrinGraph,
         arg2: GrinVertexType,
-        arg3: GrinVertexOriginalId,
+        arg3: GrinDatatype,
+        arg4: *const ::std::os::raw::c_void,
     ) -> GrinVertex;
 
     #[cfg(feature = "grin_trait_select_type_for_vertex_list")]
