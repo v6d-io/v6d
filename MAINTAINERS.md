@@ -15,6 +15,7 @@ maintainers are listed in the [GOVERNANCE.md](GOVERNANCE.md) file.
 | Weibin Zeng  | [acezen](https://github.com/acezen)             | Alibaba     | [qiaozi.zwb@alibaba-inc.com](mailto:qiaozi.zwb@alibaba-inc.com)           |
 | Siyuan Zhang | [siyuan0322](https://github.com/siyuan0322)     | Alibaba     | [siyuanzhang.zsy@alibaba-inc.com](mailto:siyuanzhang.zsy@alibaba-inc.com) |
 | Diwen Zhu    | [andydiwenzhu](https://github.com/andydiwenzhu) | Alibaba     | [diwen.zdw@alibaba-inc.com](mailto:diwen.zdw@alibaba-inc.com)             |
+| Shumin Yuan  | [vegetableysm](https://github.com/vegetableysm) | Alibaba     | [yuanshumin.ysm@alibaba-inc.com](mailto:yuanshumin.ysm@alibaba-inc.com)   |
 
 ## Project Committers
 
