@@ -680,27 +680,6 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
   return {};
 }
 
-/* header:
-|----------------------------------|
-| pre_size(4 bits) | size (4 bits) |
-|----------------------------------|
-*/
-
-inline uint8_t construct_header(uint8_t pre_size, uint8_t size)
-{
-  return (pre_size << 4) | (size & 0x0F);
-}
-
-inline uint8_t get_varint_pre_size(uint8_t header)
-{
-  return header >> 4;
-}
-
-inline uint8_t get_varint_size(uint8_t header)
-{
-  return header & 0x0F;
-}
-
 template <typename VID_T, typename EID_T>
 boost::leaf::result<void> generate_varint_edges(
     property_graph_utils::NbrUnit<VID_T, EID_T>* e_list,
