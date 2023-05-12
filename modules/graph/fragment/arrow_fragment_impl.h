@@ -576,8 +576,8 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
       encoded_ie_v_ptr_lists_[i].resize(vertex_label_num_);
 
       for (label_id_t j = 0; j < edge_label_num_; ++j) {
-        ie_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
-            ie_lists_[i][j]->GetArray()->raw_values());
+        // ie_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
+        //     ie_lists_[i][j]->GetArray()->raw_values());
         ie_offsets_ptr_lists_[i][j] =
             ie_offsets_lists_[i][j]->GetArray()->raw_values();
 
