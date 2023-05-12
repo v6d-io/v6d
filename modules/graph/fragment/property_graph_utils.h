@@ -165,6 +165,13 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
     std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph);
 
+template <typename VID_T, typename EID_T>
+boost::leaf::result<void> generate_varint_edges(
+    property_graph_utils::NbrUnit<VID_T, EID_T> *e_list,
+    std::vector<uint8_t> &encoded_e_id_list,
+    std::vector<uint8_t> &encoded_v_id_list,
+    int list_size);
+
 }  // namespace vineyard
 
 #endif  // MODULES_GRAPH_FRAGMENT_PROPERTY_GRAPH_UTILS_H_

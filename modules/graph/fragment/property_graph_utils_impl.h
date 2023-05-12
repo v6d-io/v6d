@@ -679,6 +679,30 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
   return {};
 }
 
+template <typename VID_T, typename EID_T>
+boost::leaf::result<void> generate_varint_edges(
+    property_graph_utils::NbrUnit<VID_T, EID_T>* e_list,
+    std::vector<uint8_t>& encoded_e_id_list,
+    std::vector<uint8_t>& encoded_v_id_list, int list_size) {
+  LOG(INFO) << __func__;
+
+  if (list_size <= 0)
+    return {};
+
+  std::vector<EID_T> input_e_id_lists;
+  std::vector<VID_T> input_v_id_lists;
+
+  for (int i = 0; i < list_size; i++) {
+    input_e_id_lists.push_back(e_list[i].eid);
+    input_v_id_lists.push_back(e_list[i].vid);
+  }
+
+  varint_encode(input_e_id_lists, encoded_e_id_list);
+  varint_encode(input_v_id_lists, encoded_v_id_list);
+
+  return {};
+}
+
 }  // namespace vineyard
 
 #endif  // MODULES_GRAPH_FRAGMENT_PROPERTY_GRAPH_UTILS_IMPL_H_

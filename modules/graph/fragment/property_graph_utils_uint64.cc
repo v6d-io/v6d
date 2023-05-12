@@ -97,4 +97,11 @@ generate_undirected_csr_memopt<uint64_t, uint64_t>(
     std::vector<std::shared_ptr<FixedInt64Builder>>& edge_offsets,
     bool& is_multigraph);
 
+template boost::leaf::result<void>
+generate_varint_edges<uint64_t, uint64_t>(
+    property_graph_utils::NbrUnit<uint64_t, uint64_t> *e_list,
+    std::vector<uint8_t> &encoded_e_id_list,
+    std::vector<uint8_t> &encoded_v_id_list,
+    int list_size);
+
 }  // namespace vineyard
