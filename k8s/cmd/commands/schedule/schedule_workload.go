@@ -191,6 +191,7 @@ func SchedulingWorkload(c client.Client,
 					},
 				},
 			},
+			"topologyKey": "kubernetes.io/hostname",
 		},
 	}
 
