@@ -1122,7 +1122,6 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
           this->set_encoded_oe_e_lists_(i, j, object);
           RETURN_ON_ERROR(encoded_oe_v_lists_[i][j]->Seal(*client, object));
           this->set_encoded_oe_v_lists_(i, j, object);
-
         }
         return Status::OK();
       };
@@ -1323,8 +1322,12 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
       std::vector<uint8_t> encoded_oe_vid_vec;
       std::vector<uint8_t> encoded_ie_eid_vec;
       std::vector<uint8_t> encoded_ie_vid_vec;
-      generate_varint_edges(this->oe_lists_[v_label][e_label]->data(), encoded_oe_eid_vec, encoded_oe_vid_vec, oe_lists_[v_label][e_label]->size());
-      generate_varint_edges(this->ie_lists_[v_label][e_label]->data(), encoded_ie_eid_vec, encoded_ie_vid_vec, ie_lists_[v_label][e_label]->size());
+      generate_varint_edges(this->oe_lists_[v_label][e_label]->data(),
+                            encoded_oe_eid_vec, encoded_oe_vid_vec,
+                            oe_lists_[v_label][e_label]->size());
+      generate_varint_edges(this->ie_lists_[v_label][e_label]->data(),
+                            encoded_ie_eid_vec, encoded_ie_vid_vec,
+                            ie_lists_[v_label][e_label]->size());
 
       // LOG(INFO) << "origin";
       // LOG(INFO) << "eid";
@@ -1339,26 +1342,44 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
       // LOG(INFO) << "encoded";
       // LOG(INFO) << "eid";
       // for (size_t i = 0; i < encoded_ie_eid_vec.size(); i++) {
-      //   LOG(INFO) << std::hex << (int)encoded_ie_eid_vec[i] << std::dec << " ";
+      //   LOG(INFO) << std::hex << (int)encoded_ie_eid_vec[i] << std::dec << "
+      //   ";
       // }
       // LOG(INFO) << "vid";
       // for (size_t i = 0; i < encoded_ie_vid_vec.size(); i++) {
-      //   LOG(INFO) << std::hex << (int)encoded_ie_vid_vec[i] << std::dec << " ";
+      //   LOG(INFO) << std::hex << (int)encoded_ie_vid_vec[i] << std::dec << "
+      //   ";
       // }
 
-      encoded_oe_e_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_oe_eid_vec.size() * sizeof(uint8_t));
-      encoded_oe_v_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_oe_vid_vec.size() * sizeof(uint8_t));
-      encoded_ie_e_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_ie_eid_vec.size() * sizeof(uint8_t));
-      encoded_ie_v_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(client_, encoded_ie_vid_vec.size() * sizeof(uint8_t));
-      memcpy(encoded_oe_e_sub_lists_[e_label]->data(), encoded_oe_eid_vec.data(), encoded_oe_eid_vec.size() * sizeof(uint8_t));
-      memcpy(encoded_oe_v_sub_lists_[e_label]->data(), encoded_oe_vid_vec.data(), encoded_oe_vid_vec.size() * sizeof(uint8_t));
-      memcpy(encoded_ie_e_sub_lists_[e_label]->data(), encoded_ie_eid_vec.data(), encoded_ie_eid_vec.size() * sizeof(uint8_t));
-      memcpy(encoded_ie_v_sub_lists_[e_label]->data(), encoded_ie_vid_vec.data(), encoded_ie_vid_vec.size() * sizeof(uint8_t));
+      encoded_oe_e_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
+          client_, encoded_oe_eid_vec.size() * sizeof(uint8_t));
+      encoded_oe_v_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
+          client_, encoded_oe_vid_vec.size() * sizeof(uint8_t));
+      encoded_ie_e_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
+          client_, encoded_ie_eid_vec.size() * sizeof(uint8_t));
+      encoded_ie_v_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
+          client_, encoded_ie_vid_vec.size() * sizeof(uint8_t));
+      memcpy(encoded_oe_e_sub_lists_[e_label]->data(),
+             encoded_oe_eid_vec.data(),
+             encoded_oe_eid_vec.size() * sizeof(uint8_t));
+      memcpy(encoded_oe_v_sub_lists_[e_label]->data(),
+             encoded_oe_vid_vec.data(),
+             encoded_oe_vid_vec.size() * sizeof(uint8_t));
+      memcpy(encoded_ie_e_sub_lists_[e_label]->data(),
+             encoded_ie_eid_vec.data(),
+             encoded_ie_eid_vec.size() * sizeof(uint8_t));
+      memcpy(encoded_ie_v_sub_lists_[e_label]->data(),
+             encoded_ie_vid_vec.data(),
+             encoded_ie_vid_vec.size() * sizeof(uint8_t));
       // LOG(INFO) << "esize:" << encoded_oe_e_sub_lists_[e_label]->size();
-      this->encoded_oe_e_lists_[v_label][e_label] = encoded_oe_e_sub_lists_[e_label];
-      this->encoded_oe_v_lists_[v_label][e_label] = encoded_oe_v_sub_lists_[e_label];
-      this->encoded_ie_e_lists_[v_label][e_label] = encoded_ie_e_sub_lists_[e_label];
-      this->encoded_ie_v_lists_[v_label][e_label] = encoded_ie_v_sub_lists_[e_label];
+      this->encoded_oe_e_lists_[v_label][e_label] =
+          encoded_oe_e_sub_lists_[e_label];
+      this->encoded_oe_v_lists_[v_label][e_label] =
+          encoded_oe_v_sub_lists_[e_label];
+      this->encoded_ie_e_lists_[v_label][e_label] =
+          encoded_ie_e_sub_lists_[e_label];
+      this->encoded_ie_v_lists_[v_label][e_label] =
+          encoded_ie_v_sub_lists_[e_label];
     }
   }
 

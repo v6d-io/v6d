@@ -115,15 +115,19 @@ class BasicArrowFragmentBuilder
   std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
       ie_offsets_lists_, oe_offsets_lists_;
 
-  std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>> encoded_oe_e_lists_;
-  std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>> encoded_oe_v_lists_;
-  std::vector<std::vector<const uint8_t *>> encoded_oe_e_ptr_lists_;
-  std::vector<std::vector<const uint8_t *>> encoded_oe_v_ptr_lists_;
+  std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>
+      encoded_oe_e_lists_;
+  std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>
+      encoded_oe_v_lists_;
+  std::vector<std::vector<const uint8_t*>> encoded_oe_e_ptr_lists_;
+  std::vector<std::vector<const uint8_t*>> encoded_oe_v_ptr_lists_;
 
-  std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>> encoded_ie_e_lists_;
-  std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>> encoded_ie_v_lists_;
-  std::vector<std::vector<const uint8_t *>> encoded_ie_e_ptr_lists_;
-  std::vector<std::vector<const uint8_t *>> encoded_ie_v_ptr_lists_;
+  std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>
+      encoded_ie_e_lists_;
+  std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>
+      encoded_ie_v_lists_;
+  std::vector<std::vector<const uint8_t*>> encoded_ie_e_ptr_lists_;
+  std::vector<std::vector<const uint8_t*>> encoded_ie_v_ptr_lists_;
 
   std::shared_ptr<vertex_map_t> vm_ptr_;
 
