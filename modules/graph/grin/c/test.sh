@@ -5,5 +5,5 @@
 # 4. in build folder, run: bin/vineyard-graph-loader --socket tmp.sock --config modern_graph/config.json
 
 rm -rf ./test
-gcc test.c -I. -L/home/graphscope/gie-grin/v6d/build/shared-lib/ -lvineyard_grin -lvineyard_graph -lvineyard_basic -o test
-./test /home/graphscope/gie-grin/v6d/build/tmp.sock 134785075056209698
+gcc test.c -I. -L/workspaces/v6d/build/shared-lib/ -lvineyard_grin -lvineyard_graph -lvineyard_basic -o test
+./test /workspaces/v6d/build/tmp.sock 4510456268948890

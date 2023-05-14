@@ -40,10 +40,6 @@ const char* grin_get_static_storage_feature_msg() {
   feature->set_grin_assume_has_multi_edge_graph(true);
 #endif
 
-#ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
-  feature->set_grin_with_vertex_original_id(true);
-#endif
-
 #ifdef GRIN_WITH_VERTEX_DATA
   feature->set_grin_with_vertex_data(true);
 #endif
@@ -247,10 +243,6 @@ const char* grin_get_static_storage_feature_msg() {
   vfeature->set_grin_trait_natural_id_for_vertex_property(true);
 #endif
 
-#ifdef GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
-  vfeature->set_grin_assume_by_type_vertex_original_id(true);
-#endif
-
   auto efeature = feature->mutable_edge_property_feature();
 #ifdef GRIN_WITH_EDGE_PROPERTY
   efeature->set_grin_with_edge_property(true);
@@ -307,6 +299,10 @@ const char* grin_get_static_storage_feature_msg() {
 #ifdef GRIN_TRAIT_SPECIFIC_VEV_RELATION
   feature->set_grin_trait_specific_vev_relation(true);
 #endif
+
+#ifdef GRIN_TRAIT_CONST_VALUE_PTR
+  feature->set_grin_trait_const_value_ptr(true);
+#endif
 }
 
 {
@@ -322,6 +318,14 @@ const char* grin_get_static_storage_feature_msg() {
 
 #ifdef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
   feature->set_grin_assume_all_vertex_list_sorted(true);
+#endif
+
+#ifdef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
+  feature->set_grin_enable_vertex_original_id_of_int64(true);
+#endif
+
+#ifdef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_STRING
+  feature->set_grin_enable_vertex_original_id_of_string(true);
 #endif
 }
 
