@@ -14,6 +14,9 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
+extern "C" {
+#include "graph/grin/include/common/error.h"
+}
 
 std::string GetDataTypeName(GRIN_DATATYPE type) {
   switch (type) {
@@ -64,6 +67,39 @@ GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType> type) {
   } 
   return GRIN_DATATYPE::Undefined;
 }
+
+const void* _get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
+    auto _v = static_cast<GRIN_VERTEX_T*>(v);
+    unsigned vtype = _grin_get_type_from_property(vp);
+    unsigned vprop = _grin_get_prop_from_property(vp);
+    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
+        return NULL;
+    }
+    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
+    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
+    return vineyard::get_arrow_array_data_element(array, offset);
+}
+
+const void* _get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
+    auto _e = static_cast<GRIN_EDGE_T*>(e);
+    unsigned etype = _grin_get_type_from_property(ep);  
+    unsigned eprop = _grin_get_prop_from_property(ep);
+    if (etype != _ept->etype || _e->eid >= _ept->num) {
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
+        return NULL;
+    }
+    auto offset = _e->eid;
+    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
+    return vineyard::get_arrow_array_data_element(array, offset);
+}
+
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
 void __grin_init_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {

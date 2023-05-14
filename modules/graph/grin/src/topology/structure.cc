@@ -82,70 +82,9 @@ bool grin_equal_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
     return _g->Vertex2Gid(*_v1) == _g->Vertex2Gid(*_v2);
 }
 
-
-#ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
-
-GRIN_DATATYPE grin_get_vertex_original_id_data_type(GRIN_GRAPH g) {
-    return GRIN_DATATYPE_ENUM<VERTEX_ORIGINAL_ID_T>::value;
-}
-
-const void* grin_get_vertex_original_id_value(GRIN_GRAPH g, GRIN_VERTEX v) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    auto gid = _g->Vertex2Gid(*_v);
-    auto oid = new VERTEX_ORIGINAL_ID_T(_g->Gid2Oid(gid));
-    return oid;
-}
-#endif
-
-#if defined(GRIN_WITH_VERTEX_ORIGINAL_ID) && !defined(GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID)
-GRIN_VERTEX grin_get_vertex_by_original_id(GRIN_GRAPH, GRIN_DATATYPE, const void*);
-#endif
-
 // Data
-void grin_destroy_value(GRIN_GRAPH g, GRIN_DATATYPE dt, const void* value) {
-    switch (dt) {
-    case GRIN_DATATYPE::Int32:
-        delete static_cast<const int32_t*>(value);
-        break;
-    case GRIN_DATATYPE::UInt32:
-        delete static_cast<const uint32_t*>(value);
-        break;
-    case GRIN_DATATYPE::Int64:
-        delete static_cast<const int64_t*>(value);
-        break;
-    case GRIN_DATATYPE::UInt64:
-        delete static_cast<const uint64_t*>(value);
-        break;
-    case GRIN_DATATYPE::Float:
-        delete static_cast<const float*>(value);
-        break;
-    case GRIN_DATATYPE::Double:
-        delete static_cast<const double*>(value);
-        break;
-    case GRIN_DATATYPE::String:
-        delete static_cast<const char*>(value);
-        break;
-    case GRIN_DATATYPE::Date32:
-        delete static_cast<const int32_t*>(value);
-        break;
-    case GRIN_DATATYPE::Time32:
-        delete static_cast<const int32_t*>(value);
-        break;
-    case GRIN_DATATYPE::Timestamp64:
-        delete static_cast<const int64_t*>(value);
-        break;
-    default:
-        break;
-    }
-}
-
-void grin_destroy_name(GRIN_GRAPH g, const char* name) {
-    delete[] name;
-}
-
 #ifdef GRIN_WITH_VERTEX_DATA
-GRIN_DATATYPE grin_get_vertex_data_type(GRIN_GRAPH, GRIN_VERTEX);
+GRIN_DATATYPE grin_get_vertex_data_datatype(GRIN_GRAPH, GRIN_VERTEX);
 
 const void* grin_get_vertex_data_value(GRIN_GRAPH, GRIN_VERTEX);
 #endif
@@ -169,7 +108,7 @@ GRIN_VERTEX grin_get_dst_vertex_from_edge(GRIN_GRAPH g, GRIN_EDGE e) {
 }
 
 #ifdef GRIN_WITH_EDGE_DATA
-GRIN_DATATYPE grin_get_edge_data_type(GRIN_GRAPH, GRIN_EDGE);
+GRIN_DATATYPE grin_get_edge_data_datatype(GRIN_GRAPH, GRIN_EDGE);
 
 const void* grin_get_edge_data_value(GRIN_GRAPH, GRIN_EDGE);
 #endif

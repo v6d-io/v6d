@@ -84,13 +84,6 @@ typedef enum {
 #define GRIN_ASSUME_HAS_MULTI_EDGE_GRAPH
 
 /** @ingroup TopologyMacros 
- * @brief There is original ID for a vertex.
- * This facilitates queries starting from a specific vertex,
- * since one can get the vertex handler directly using its original ID.
- */
-#define GRIN_WITH_VERTEX_ORIGINAL_ID
-
-/** @ingroup TopologyMacros 
  * @brief There is data on vertex. E.g., the PageRank value of a vertex.
  */
 #define GRIN_WITH_VERTEX_DATA
@@ -161,7 +154,6 @@ typedef enum {
 #undef GRIN_ASSUME_HAS_DIRECTED_GRAPH
 #undef GRIN_ASSUME_HAS_UNDIRECTED_GRAPH
 #undef GRIN_ASSUME_HAS_MULTI_EDGE_GRAPH
-#undef GRIN_WITH_VERTEX_ORIGINAL_ID
 #undef GRIN_WITH_VERTEX_DATA
 #undef GRIN_WITH_EDGE_DATA
 #undef GRIN_ENABLE_VERTEX_LIST
@@ -179,7 +171,6 @@ typedef enum {
 #define GRIN_ASSUME_HAS_DIRECTED_GRAPH
 #define GRIN_ASSUME_HAS_UNDIRECTED_GRAPH
 #define GRIN_ASSUME_HAS_MULTI_EDGE_GRAPH
-#define GRIN_WITH_VERTEX_ORIGINAL_ID
 #define GRIN_ENABLE_VERTEX_LIST
 #define GRIN_ENABLE_VERTEX_LIST_ARRAY
 #define GRIN_ENABLE_VERTEX_LIST_ITERATOR
@@ -464,6 +455,11 @@ typedef enum {
 #define GRIN_ENABLE_ROW
 
 /** @ingroup PropertyMacros
+ * @brief Enable the pure data structure Row, which is used in primary keys and tables.
+*/
+#define GRIN_TRAIT_CONST_VALUE_PTR
+
+/** @ingroup PropertyMacros
  * @brief There are properties bound to vertices. When vertices are typed, vertex
  * properties are bound to vertex types, according to the definition of vertex type.
 */
@@ -502,7 +498,7 @@ typedef enum {
  * 
  * With primary keys, one can get the vertex from the graph or a certain type
  * by providing the values of the primary keys. The macro is unset if GRIN_WITH_VERTEX_PROPERTY
- * is NOT defined, in which case, one can use GRIN_WITH_VERTEX_ORIGINAL_ID when vertices have
+ * is NOT defined, in which case, one can use ORIGINAL_ID when vertices have
  * no properties.
 */
 #define GRIN_ENABLE_VERTEX_PRIMARY_KEYS
@@ -513,12 +509,6 @@ typedef enum {
  * It follows the design of natural ID trait in GRIN.
 */
 #define GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
-
-/** @ingroup PropertyMacros
- * @brief Assume the original id is ONLY unique under each vertex type. This means
- * to get a vertex from the original id, the caller must also provide the vertex type.
-*/
-#define GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
 
 
 /** @ingroup PropertyMacros
@@ -560,8 +550,7 @@ typedef enum {
  * 
  * With primary keys, one can get the edge from the graph or a certain type
  * by providing the values of the primary keys. The macro is unset if GRIN_WITH_EDGE_PROPERTY
- * is NOT defined, in which case, one can use GRIN_WITH_EDGE_ORIGINAL_ID when edges have
- * no properties.
+ * is NOT defined.
 */
 #define GRIN_ENABLE_EDGE_PRIMARY_KEYS
 
@@ -671,6 +660,7 @@ typedef enum {
 #ifndef GRIN_DOXYGEN_SKIP
 // GRIN_DEFAULT_DISABLE
 #undef GRIN_ENABLE_ROW
+#undef GRIN_TRAIT_CONST_VALUE_PTR
 #undef GRIN_WITH_VERTEX_PROPERTY
 #undef GRIN_WITH_VERTEX_PROPERTY_NAME
 #undef GRIN_WITH_VERTEX_TYPE_NAME
@@ -678,7 +668,6 @@ typedef enum {
 #undef GRIN_ENABLE_VERTEX_PROPERTY_TABLE
 #undef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
 #undef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
-#undef GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
 #undef GRIN_WITH_EDGE_PROPERTY
 #undef GRIN_WITH_EDGE_PROPERTY_NAME
 #undef GRIN_WITH_EDGE_TYPE_NAME
@@ -703,6 +692,7 @@ typedef enum {
 
 // GRIN_STORAGE_ENABLE
 #define GRIN_ENABLE_ROW
+#define GRIN_TRAIT_CONST_VALUE_PTR
 #define GRIN_WITH_VERTEX_PROPERTY
 #define GRIN_WITH_VERTEX_PROPERTY_NAME
 #define GRIN_WITH_VERTEX_TYPE_NAME
@@ -710,7 +700,6 @@ typedef enum {
 #define GRIN_ENABLE_VERTEX_PROPERTY_TABLE
 #define GRIN_ENABLE_VERTEX_PRIMARY_KEYS
 #define GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
-#define GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
 #define GRIN_WITH_EDGE_PROPERTY
 #define GRIN_WITH_EDGE_PROPERTY_NAME
 #define GRIN_WITH_EDGE_TYPE_NAME
@@ -790,15 +779,37 @@ typedef enum {
 #define GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
 ///@}
 
+/** @name IndexOIDMacros
+ * @brief Macros for label features
+ */
+///@{
+/** @ingroup IndexOIDMacros
+ * @brief There is original ID of type int64 for each vertex
+ * This facilitates queries starting from a specific vertex,
+ * since one can get the vertex handler directly using its original ID.
+ */
+#define GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
+
+/** @ingroup IndexOIDMacros
+ * @brief There is original ID of type string for each vertex
+ * This facilitates queries starting from a specific vertex,
+ * since one can get the vertex handler directly using its original ID.
+ */
+#define GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_STRING
+///@}
+
 #ifndef GRIN_DOXYGEN_SKIP
 // GRIN_DEFAULT_DISABLE
 #undef GRIN_WITH_VERTEX_LABEL
 #undef GRIN_WITH_EDGE_LABEL
 #undef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
+#undef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
+#undef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_STRING
 // GRIN_END
 
 // GRIN_STORAGE_ENABLE
 #define GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
+#define GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
 // GRIN_END
 
 // GRIN_FEATURE_DEPENDENCY
@@ -850,10 +861,6 @@ typedef enum {
 typedef void* GRIN_GRAPH;                      
 typedef void* GRIN_VERTEX;                     
 typedef void* GRIN_EDGE;                       
-
-#ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
-typedef void* GRIN_VERTEX_ORIGINAL_ID;                   
-#endif
 
 #ifdef GRIN_WITH_VERTEX_DATA
 typedef void* GRIN_VERTEX_DATA;                 

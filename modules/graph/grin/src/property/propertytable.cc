@@ -16,44 +16,12 @@ extern "C" {
 #include "graph/grin/include/common/error.h"
 }
 
+void grin_destroy_string_value(GRIN_GRAPH g, const char* value) {}
+
 #ifdef GRIN_ENABLE_ROW
 void grin_destroy_row(GRIN_GRAPH g, GRIN_ROW r) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
     delete _r;
-}
-
-const void* grin_get_value_from_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, size_t idx) {
-    auto _r = static_cast<GRIN_ROW_T*>(r);
-    switch (dt) {
-    case GRIN_DATATYPE::Int32:
-        return new int32_t(*static_cast<const int32_t*>((*_r)[idx]));
-    case GRIN_DATATYPE::UInt32:
-        return new uint32_t(*static_cast<const  uint32_t*>((*_r)[idx]));
-    case GRIN_DATATYPE::Int64:
-        return new int64_t(*static_cast<const int64_t*>((*_r)[idx]));
-    case GRIN_DATATYPE::UInt64:
-        return new uint64_t(*static_cast<const uint64_t*>((*_r)[idx]));
-    case GRIN_DATATYPE::Float:
-        return new float(*static_cast<const float*>((*_r)[idx]));
-    case GRIN_DATATYPE::Double:
-        return new double(*static_cast<const double*>((*_r)[idx]));
-    case GRIN_DATATYPE::String: {
-        auto s = static_cast<const std::string*>((*_r)[idx]);
-        int len = s->length() + 1;
-        char* out = new char[len];
-        snprintf(out, len, "%s", s->c_str());
-        return out;
-    }
-    case GRIN_DATATYPE::Date32:
-        return new int32_t(*static_cast<const int32_t*>((*_r)[idx]));
-    case GRIN_DATATYPE::Time32:
-        return new int32_t(*static_cast<const int32_t*>((*_r)[idx]));
-    case GRIN_DATATYPE::Timestamp64:
-        return new int64_t(*static_cast<const int64_t*>((*_r)[idx]));
-    default:
-        return NULL;
-    }
-    return NULL;
 }
 
 int grin_get_int32_from_row(GRIN_GRAPH g, GRIN_ROW r, size_t idx) {
@@ -115,48 +83,6 @@ GRIN_ROW grin_create_row(GRIN_GRAPH g) {
     return r;
 }
 
-bool grin_insert_value_to_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, const void* value) {
-    auto _r = static_cast<GRIN_ROW_T*>(r);
-    void* _value = NULL;
-    switch (dt) {
-    case GRIN_DATATYPE::Int32:
-        _value = new int32_t(*static_cast<const int32_t*>(value));
-        break;
-    case GRIN_DATATYPE::UInt32:
-        _value = new uint32_t(*static_cast<const uint32_t*>(value));
-        break;
-    case GRIN_DATATYPE::Int64:
-        _value = new int64_t(*static_cast<const int64_t*>(value));
-        break;
-    case GRIN_DATATYPE::UInt64:
-        _value = new uint64_t(*static_cast<const uint64_t*>(value));
-        break;
-    case GRIN_DATATYPE::Float:
-        _value = new float(*static_cast<const float*>(value));
-        break;
-    case GRIN_DATATYPE::Double:
-        _value = new double(*static_cast<const double*>(value));
-        break;
-    case GRIN_DATATYPE::String:
-        _value = new std::string(*static_cast<const std::string*>(value));
-        break;
-    case GRIN_DATATYPE::Date32:
-        _value = new int32_t(*static_cast<const int32_t*>(value));
-        break;
-    case GRIN_DATATYPE::Time32:
-        _value = new int32_t(*static_cast<const int32_t*>(value));
-        break;
-    case GRIN_DATATYPE::Timestamp64:
-        _value = new int64_t(*static_cast<const int64_t*>(value));
-        break;
-    default:
-        _value = NULL;
-    }    
-    _r->push_back(_value);
-    return true;
-}
-#endif
-
 bool grin_insert_int32_to_row(GRIN_GRAPH g, GRIN_ROW r, int value) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
     _r->push_back(new int32_t(value));
@@ -215,6 +141,40 @@ bool grin_insert_timestamp64_to_row(GRIN_GRAPH g, GRIN_ROW r, long long int valu
     _r->push_back(new int64_t(value));
     return true;
 }
+#endif
+
+#if defined(GRIN_ENABLE_ROW) && defined(GRIN_TRAIT_CONST_VALUE_PTR)
+const void* grin_get_value_from_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, size_t idx) {
+    auto _r = static_cast<GRIN_ROW_T*>(r);
+    switch (dt) {
+    case GRIN_DATATYPE::Int32:
+        return static_cast<const int32_t*>((*_r)[idx]);
+    case GRIN_DATATYPE::UInt32:
+        return static_cast<const  uint32_t*>((*_r)[idx]);
+    case GRIN_DATATYPE::Int64:
+        return static_cast<const int64_t*>((*_r)[idx]);
+    case GRIN_DATATYPE::UInt64:
+        return static_cast<const uint64_t*>((*_r)[idx]);
+    case GRIN_DATATYPE::Float:
+        return static_cast<const float*>((*_r)[idx]);
+    case GRIN_DATATYPE::Double:
+        return static_cast<const double*>((*_r)[idx]);
+    case GRIN_DATATYPE::String: {
+        auto s = static_cast<const std::string*>((*_r)[idx]);
+        return s->c_str();
+    }
+    case GRIN_DATATYPE::Date32:
+        return static_cast<const int32_t*>((*_r)[idx]);
+    case GRIN_DATATYPE::Time32:
+        return static_cast<const int32_t*>((*_r)[idx]);
+    case GRIN_DATATYPE::Timestamp64:
+        return static_cast<const int64_t*>((*_r)[idx]);
+    default:
+        return NULL;
+    }
+    return NULL;
+}
+#endif
 
 #ifdef GRIN_ENABLE_VERTEX_PROPERTY_TABLE
 void grin_destroy_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt) {
@@ -230,44 +190,93 @@ GRIN_VERTEX_PROPERTY_TABLE grin_get_vertex_property_table_by_type(GRIN_GRAPH g, 
     return vpt;
 }
 
+int grin_get_int32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    const void* result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return 0;
+    return *static_cast<const int32_t*>(result);
+}
+
+unsigned int grin_get_uint32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    const void* result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return 0;
+    return *static_cast<const uint32_t*>(result);
+}
+
+long long int grin_get_int64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    const void* result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return 0;
+    return *static_cast<const int64_t*>(result);
+}
+
+unsigned long long int grin_get_uint64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    const void* result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return 0;
+    return *static_cast<const uint64_t*>(result);
+}
+
+float grin_get_float_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    const void* result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return 0;
+    return *static_cast<const float*>(result);
+}
+
+double grin_get_double_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    const void* result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return 0;
+    return *static_cast<const double*>(result);
+}
+
+const char* grin_get_string_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    const void* result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return NULL;
+    return static_cast<const std::string*>(result)->c_str();
+}
+
+int grin_get_date32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    const void* result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return 0;
+    return *static_cast<const int32_t*>(result);
+}
+
+int grin_get_time32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    const void* result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return 0;
+    return *static_cast<const int32_t*>(result);
+}
+
+long long int grin_get_timestamp64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    const void* result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return 0;
+    return *static_cast<const int64_t*>(result);
+}
+#endif
+
+#if defined(GRIN_ENABLE_VERTEX_PROPERTY_TABLE) && defined(GRIN_TRAIT_CONST_VALUE_PTR)
 const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt,
                                                       GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
+
+    auto result = _get_value_from_vertex_property_table(g, vpt, v, vp);
+    if (result == NULL) return NULL;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
     unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return NULL;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
     auto _dt = _g->schema().GetVertexPropertyType(vtype, vprop);
     auto dt = ArrowToDataType(_dt);
     switch (dt) {
     case GRIN_DATATYPE::Int32:
-        return new int32_t(*static_cast<const int32_t*>(result));
+        return static_cast<const int32_t*>(result);
     case GRIN_DATATYPE::UInt32:
-        return new uint32_t(*static_cast<const uint32_t*>(result));
+        return static_cast<const uint32_t*>(result);
     case GRIN_DATATYPE::Int64:
-        return new int64_t(*static_cast<const int64_t*>(result));
+        return static_cast<const int64_t*>(result);
     case GRIN_DATATYPE::UInt64:
-        return new uint64_t(*static_cast<const uint64_t*>(result));
+        return static_cast<const uint64_t*>(result);
     case GRIN_DATATYPE::Float:
-        return new float(*static_cast<const float*>(result));
+        return static_cast<const float*>(result);
     case GRIN_DATATYPE::Double:
-        return new double(*static_cast<const double*>(result));
+        return static_cast<const double*>(result);
     case GRIN_DATATYPE::String:
-    {
-        auto s = static_cast<const std::string*>(result);
-        int len = s->length() + 1;
-        char* out = new char[len];
-        snprintf(out, len, "%s", s->c_str());
-        return out;
-    }
+        return static_cast<const std::string*>(result)->c_str();
     case GRIN_DATATYPE::Date32:
         return new int32_t(*static_cast<const int32_t*>(result));
     case GRIN_DATATYPE::Time32:
@@ -278,180 +287,6 @@ const void* grin_get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_
         grin_error_code = GRIN_ERROR_CODE::UNKNOWN_DATATYPE;
         return NULL;
     }
-}
-
-int grin_get_int32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const int32_t*>(result);
-}
-
-unsigned int grin_get_uint32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const uint32_t*>(result);
-}
-
-long long int grin_get_int64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const int64_t*>(result);
-}
-
-unsigned long long int grin_get_uint64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const uint64_t*>(result);
-}
-
-float grin_get_float_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const float*>(result);
-}
-
-double grin_get_double_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const double*>(result);
-}
-
-const char* grin_get_string_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return NULL;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    auto s = static_cast<const std::string*>(result);
-    int len = s->length() + 1;
-    char* out = new char[len];
-    snprintf(out, len, "%s", s->c_str());
-    return out;
-}
-
-int grin_get_date32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const int32_t*>(result);
-}
-
-int grin_get_time32_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const int32_t*>(result);
-}
-
-long long int grin_get_timestamp64_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
-    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const int64_t*>(result);
 }
 #endif
 
@@ -501,230 +336,105 @@ GRIN_EDGE_PROPERTY_TABLE grin_get_edge_property_table_by_type(GRIN_GRAPH g, GRIN
     return ept;
 }
 
+int grin_get_int32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return 0;
+    return *static_cast<const int32_t*>(result);
+}
+
+unsigned int grin_get_uint32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return 0;
+    return *static_cast<const uint32_t*>(result);
+}
+
+long long int grin_get_int64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return 0;
+    return *static_cast<const int64_t*>(result);
+}
+
+unsigned long long int grin_get_uint64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return 0;
+    return *static_cast<const uint64_t*>(result);
+}
+
+float grin_get_float_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return 0;
+    return *static_cast<const float*>(result);
+}
+
+double grin_get_double_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return 0;
+    return *static_cast<const double*>(result);
+}
+
+const char* grin_get_string_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return NULL;
+    return static_cast<const std::string*>(result)->c_str();
+}
+
+int grin_get_date32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return 0;
+    return *static_cast<const int32_t*>(result);
+}
+
+int grin_get_time32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return 0;
+    return *static_cast<const int32_t*>(result);
+}
+
+long long int grin_get_timestamp64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return 0;
+    return *static_cast<const int64_t*>(result);
+}
+#endif
+
+#if defined(GRIN_ENABLE_EDGE_PROPERTY_TABLE) && defined(GRIN_TRAIT_CONST_VALUE_PTR)
 const void* grin_get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept,
                                                GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
+    const void* result = _get_value_from_edge_property_table(g, ept, e, ep);
+    if (result == NULL) return NULL;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);
     unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return NULL;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
     auto _dt = _g->schema().GetEdgePropertyType(etype, eprop);
     auto dt = ArrowToDataType(_dt);
     switch (dt) {
     case GRIN_DATATYPE::Int32:
-        return new int32_t(*static_cast<const int32_t*>(result));
+        return static_cast<const int32_t*>(result);
     case GRIN_DATATYPE::UInt32:
-        return new uint32_t(*static_cast<const uint32_t*>(result));
+        return static_cast<const uint32_t*>(result);
     case GRIN_DATATYPE::Int64:
-        return new int64_t(*static_cast<const int64_t*>(result));
+        return static_cast<const int64_t*>(result);
     case GRIN_DATATYPE::UInt64:
-        return new uint64_t(*static_cast<const uint64_t*>(result));
+        return static_cast<const uint64_t*>(result);
     case GRIN_DATATYPE::Float:
-        return new float(*static_cast<const float*>(result));
+        return static_cast<const float*>(result);
     case GRIN_DATATYPE::Double:
-        return new double(*static_cast<const double*>(result));
+        return static_cast<const double*>(result);
     case GRIN_DATATYPE::String:
-    {
-        auto s = static_cast<const std::string*>(result);
-        int len = s->length() + 1;
-        char* out = new char[len];
-        snprintf(out, len, "%s", s->c_str());
-        return out;
-    }
+        return static_cast<const std::string*>(result)->c_str();
     case GRIN_DATATYPE::Date32:
-        return new int32_t(*static_cast<const int32_t*>(result));
+        return static_cast<const int32_t*>(result);
     case GRIN_DATATYPE::Time32:
-        return new int32_t(*static_cast<const int32_t*>(result));
+        return static_cast<const int32_t*>(result);
     case GRIN_DATATYPE::Timestamp64:
-        return new int64_t(*static_cast<const int64_t*>(result));
+        return static_cast<const int64_t*>(result);
     default:
         grin_error_code = GRIN_ERROR_CODE::UNKNOWN_DATATYPE;
         return NULL;
     }
 }
-
-int grin_get_int32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);  
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const int32_t*>(result);
-}
-
-unsigned int grin_get_uint32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);  
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const uint32_t*>(result);
-}
-
-long long int grin_get_int64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);  
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const int64_t*>(result);
-}
-
-unsigned long long int grin_get_uint64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);  
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const uint64_t*>(result);
-}
-
-float grin_get_float_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);  
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const float*>(result);
-}
-
-double grin_get_double_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);  
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const double*>(result);
-}
-
-const char* grin_get_string_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);  
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return NULL;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    auto s = static_cast<const std::string*>(result);
-    int len = s->length() + 1;
-    char* out = new char[len];
-    snprintf(out, len, "%s", s->c_str());
-    return out;
-}
-
-int grin_get_date32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);  
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const int32_t*>(result);
-}
-
-int grin_get_time32_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);  
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const int32_t*>(result);
-}
-
-long long int grin_get_timestamp64_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);  
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    if (etype != _ept->etype || _e->eid >= _ept->num) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return 0;
-    }
-    auto offset = _e->eid;
-    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
-    auto result = vineyard::get_arrow_array_data_element(array, offset);
-    return *static_cast<const int64_t*>(result);
-}
 #endif
+
 
 #if defined(GRIN_ENABLE_EDGE_PROPERTY_TABLE) && defined(GRIN_ENABLE_ROW)
 GRIN_ROW grin_get_row_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, 

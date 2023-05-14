@@ -2,6 +2,7 @@
 #include "../include/common/error.h"
 #include "../include/index/label.h"
 #include "../include/index/order.h"
+#include "../include/index/original_id.h"
 #include "../include/partition/partition.h"
 #include "../include/partition/reference.h"
 #include "../include/partition/topology.h"
@@ -25,6 +26,9 @@ GRIN_GRAPH get_graph(int argc, char** argv) {
   GRIN_PARTITION partition =
       grin_get_partition_from_list(pg, local_partitions, 0);
   GRIN_GRAPH g = grin_get_local_graph_by_partition(pg, partition);
+  grin_destroy_partition(pg, partition);
+  grin_destroy_partition_list(pg, local_partitions);
+  grin_destroy_partitioned_graph(pg);
 #else
   GRIN_GRAPH g = grin_get_graph_from_storage(argc - 1, &(argv[1]));
 #endif
@@ -99,7 +103,7 @@ void test_property_type(int argc, char** argv) {
     const char* vt_name = grin_get_vertex_type_name(g, vt);
     printf("vertex type name: %s\n", vt_name);
     GRIN_VERTEX_TYPE vt0 = grin_get_vertex_type_by_name(g, vt_name);
-    grin_destroy_name(g, vt_name);
+    //grin_destroy_name(g, vt_name);
     if (!grin_equal_vertex_type(g, vt, vt0)) {
       printf("vertex type name not match\n");
     }
@@ -132,7 +136,7 @@ void test_property_type(int argc, char** argv) {
   } else {
     const char* vt2_name = grin_get_vertex_type_name(g, vt2);
     printf("vertex type name: %s\n", vt2_name);
-    grin_destroy_name(g, vt2_name);
+    //grin_destroy_name(g, vt2_name);
   }
 #else
   GRIN_VERTEX_TYPE vt2 = get_one_vertex_type(g);
@@ -161,7 +165,7 @@ void test_property_type(int argc, char** argv) {
     const char* et_name = grin_get_edge_type_name(g, et);
     printf("edge type name: %s\n", et_name);
     GRIN_EDGE_TYPE et0 = grin_get_edge_type_by_name(g, et_name);
-    grin_destroy_name(g, et_name);
+    //grin_destroy_name(g, et_name);
     if (!grin_equal_edge_type(g, et, et0)) {
       printf("edge type name not match\n");
     }
@@ -195,9 +199,9 @@ void test_property_type(int argc, char** argv) {
       const char* dst_vt_name = grin_get_vertex_type_name(g, dst_vt);
       const char* et_name = grin_get_edge_type_name(g, et);
       printf("edge type name: %s-%s-%s\n", src_vt_name, et_name, dst_vt_name);
-      grin_destroy_name(g, src_vt_name);
-      grin_destroy_name(g, dst_vt_name);
-      grin_destroy_name(g, et_name);
+      //grin_destroy_name(g, src_vt_name);
+      //grin_destroy_name(g, dst_vt_name);
+      //grin_destroy_name(g, et_name);
       grin_destroy_vertex_type(g, src_vt);
       grin_destroy_vertex_type(g, dst_vt);
     }
@@ -221,7 +225,7 @@ void test_property_type(int argc, char** argv) {
   } else {
     const char* et2_name = grin_get_edge_type_name(g, et2);
     printf("edge type name: %s\n", et2_name);
-    grin_destroy_name(g, et2_name);
+    //grin_destroy_name(g, et2_name);
   }
 #else
   GRIN_EDGE_TYPE et2 = get_one_edge_type(g);
@@ -297,17 +301,17 @@ void test_property_topology(int argc, char** argv) {
   grin_destroy_vertex_list(g, vl);
 #endif
 
-#ifdef GRIN_ASSUME_BY_TYPE_VERTEX_ORIGINAL_ID
-  GRIN_DATATYPE dt = grin_get_vertex_original_id_data_type(g);
+#ifdef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
+  GRIN_DATATYPE dt = grin_get_vertex_original_id_datatype(g);
   if (dt == Int64) {
     long long int v0id = 4;
-    GRIN_VERTEX v0 = grin_get_vertex_by_original_id_by_type(g, vt, dt, &v0id);
+    GRIN_VERTEX v0 = grin_get_vertex_by_original_id_of_int64(g, v0id);
     if (v0 == GRIN_NULL_VERTEX) {
       printf("(Wrong) vertex of id %lld can not be found\n", v0id);
     } else {
       printf("vertex of original id %lld found\n", v0id);
-      const void* oid0 = grin_get_vertex_original_id_value(g, v0);
-      printf("get vertex original id: %lld\n", *((long long int*) oid0));
+      long long int oid0 = grin_get_vertex_original_id_of_int64(g, v0);
+      printf("get vertex original id: %lld\n", oid0);
     }
     grin_destroy_vertex(g, v0);
   } else {
@@ -362,8 +366,8 @@ void test_property_topology(int argc, char** argv) {
   grin_destroy_edge_list(g, el);
 #endif
 
-  grin_destroy_name(g, vt_name);
-  grin_destroy_name(g, et_name);
+  //grin_destroy_name(g, vt_name);
+  //grin_destroy_name(g, et_name);
   grin_destroy_vertex_type(g, vt);
   grin_destroy_edge_type(g, et);
   grin_destroy_graph(g);
@@ -438,7 +442,7 @@ void test_property_vertex_table(int argc, char** argv) {
 #else
         const char* vp_name = "unknown";
 #endif
-        GRIN_DATATYPE dt = grin_get_vertex_property_data_type(g, vp);
+        GRIN_DATATYPE dt = grin_get_vertex_property_datatype(g, vp);
         const void* pv =
             grin_get_value_from_vertex_property_table(g, vpt, v, vp);
         if (grin_get_last_error_code() == NO_ERROR) {
@@ -454,8 +458,8 @@ void test_property_vertex_table(int argc, char** argv) {
           printf("vp_id %u v%zu %s value: %s %s\n", id, i, vp_name, (char*) pv,
                  (char*) rv);
         }
-        grin_destroy_value(g, dt, pv);
-        grin_destroy_value(g, dt, rv);
+        //grin_destroy_value(g, dt, pv);
+        //grin_destroy_value(g, dt, rv);
         grin_destroy_vertex_property(g, vp);
       }
       grin_destroy_row(g, row);
@@ -517,8 +521,8 @@ void test_property_vertex_table(int argc, char** argv) {
                vp5_name);
         grin_destroy_vertex_property(g, vp5);
         grin_destroy_vertex_type(g, vt5);
-        grin_destroy_name(g, vt5_name);
-        grin_destroy_name(g, vp5_name);
+        //grin_destroy_name(g, vt5_name);
+        //grin_destroy_name(g, vp5_name);
       }
       grin_destroy_vertex_property_list(g, vpl2);
     }
@@ -599,7 +603,7 @@ void test_property_edge_table(int argc, char** argv) {
 #else
         unsigned int id = ~0;
 #endif
-        GRIN_DATATYPE dt = grin_get_edge_property_data_type(g, ep);
+        GRIN_DATATYPE dt = grin_get_edge_property_datatype(g, ep);
         const void* pv = grin_get_value_from_edge_property_table(g, ept, e, ep);
         const void* rv = grin_get_value_from_row(g, row, dt, k);
         if (dt == Int64) {
@@ -613,9 +617,9 @@ void test_property_edge_table(int argc, char** argv) {
                  *((double*) pv), *((double*) rv));
         }
         grin_destroy_edge_property(g, ep);
-        grin_destroy_name(g, ep_name);
-        grin_destroy_value(g, dt, pv);
-        grin_destroy_value(g, dt, rv);
+        //grin_destroy_name(g, ep_name);
+        //grin_destroy_value(g, dt, pv);
+        //grin_destroy_value(g, dt, rv);
       }
 
       grin_destroy_row(g, row);
@@ -646,8 +650,8 @@ void test_property_edge_table(int argc, char** argv) {
              et_name);
 
       grin_destroy_edge_type(g, et1);
-      grin_destroy_name(g, ep_name1);
-      grin_destroy_name(g, et_name);
+      //grin_destroy_name(g, ep_name1);
+      //grin_destroy_name(g, et_name);
 
 #ifdef GRIN_WITH_EDGE_PROPERTY_NAME
       const char* ep_name = grin_get_edge_property_name(g, et, ep);
@@ -704,8 +708,8 @@ void test_property_edge_table(int argc, char** argv) {
                ep5_name);
         grin_destroy_edge_property(g, ep5);
         grin_destroy_edge_type(g, et5);
-        grin_destroy_name(g, et5_name);
-        grin_destroy_name(g, ep5_name);
+        //grin_destroy_name(g, et5_name);
+        //grin_destroy_name(g, ep5_name);
       }
       grin_destroy_edge_property_list(g, epl2);
     }
@@ -735,7 +739,7 @@ void test_property_primary_key(int argc, char** argv) {
     GRIN_VERTEX_TYPE vt = grin_get_vertex_type_from_list(g, vtl, i);
     const char* vt_name = grin_get_vertex_type_name(g, vt);
     printf("vertex type name: %s\n", vt_name);
-    grin_destroy_name(g, vt_name);
+    //grin_destroy_name(g, vt_name);
 
     GRIN_VERTEX_PROPERTY_LIST vpl = grin_get_primary_keys_by_vertex_type(g, vt);
     size_t vpl_size = grin_get_vertex_property_list_size(g, vpl);
@@ -745,29 +749,25 @@ void test_property_primary_key(int argc, char** argv) {
       GRIN_VERTEX_PROPERTY vp = grin_get_vertex_property_from_list(g, vpl, j);
       const char* vp_name = grin_get_vertex_property_name(g, vt, vp);
       printf("primary key name: %s\n", vp_name);
-      grin_destroy_name(g, vp_name);
+      //grin_destroy_name(g, vp_name);
       grin_destroy_vertex_property(g, vp);
     }
 
     GRIN_VERTEX_PROPERTY vp = grin_get_vertex_property_from_list(g, vpl, 0);
-    GRIN_DATATYPE dt = grin_get_vertex_property_data_type(g, vp);
+    GRIN_DATATYPE dt = grin_get_vertex_property_datatype(g, vp);
 
     for (size_t j = 1; j <= 6; ++j) {
       GRIN_ROW r = grin_create_row(g);
-      grin_insert_value_to_row(g, r, dt, (void*) (&j));
+      if (dt == Int64) {
+        grin_insert_int64_to_row(g, r, j);
+      } else {
+        printf("(Wrong) the primary key type is not int64");
+      }
       GRIN_VERTEX v = grin_get_vertex_by_primary_keys(g, vt, r);
       if (id_type[j] == i) {
         if (v == GRIN_NULL_VERTEX) {
           printf("(Wrong) vertex of primary keys %zu does not exist\n", j);
         } else {
-          GRIN_DATATYPE dt0 = grin_get_vertex_original_id_data_type(g);
-          const void* oid0 = grin_get_vertex_original_id_value(g, v);
-          if (dt0 == Int64) {
-            printf("(Correct) vertex of primary keys %zu exists %lld\n", j,
-                 *((long long int*) oid0));
-          } else {
-            printf("(Wrong) unmatch original id type\n");
-          }
           grin_destroy_vertex(g, v);
         }
       } else {

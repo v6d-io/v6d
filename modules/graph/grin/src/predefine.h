@@ -78,7 +78,12 @@ struct GRIN_DATATYPE_ENUM<arrow::Date64Type> {
 };
 
 std::string GetDataTypeName(GRIN_DATATYPE);
+
 GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType>);
+
+const void* _get_value_from_vertex_property_table(GRIN_GRAPH, GRIN_VERTEX_PROPERTY_TABLE, GRIN_VERTEX, GRIN_VERTEX_PROPERTY);
+
+const void* _get_value_from_edge_property_table(GRIN_GRAPH, GRIN_EDGE_PROPERTY_TABLE, GRIN_EDGE, GRIN_EDGE_PROPERTY);
 
 unsigned long long int _grin_create_property(unsigned, unsigned);
 
@@ -105,10 +110,6 @@ struct GRIN_EDGE_T {
     unsigned etype;
     _GRIN_GRAPH_T::eid_t eid;
 };                     
-
-#ifdef GRIN_WITH_VERTEX_ORIGINAL_ID
-typedef _GRIN_GRAPH_T::oid_t VERTEX_ORIGINAL_ID_T;                   
-#endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
 struct GRIN_VERTEX_LIST_T {

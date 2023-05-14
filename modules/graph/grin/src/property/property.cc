@@ -97,7 +97,7 @@ bool grin_equal_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp1, GRIN_VER
 
 void grin_destroy_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {}
 
-GRIN_DATATYPE grin_get_vertex_property_data_type(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
+GRIN_DATATYPE grin_get_vertex_property_datatype(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto dt = _g->schema().GetVertexPropertyType(_grin_get_type_from_property(vp), _grin_get_prop_from_property(vp));
     return ArrowToDataType(dt);
@@ -116,7 +116,7 @@ bool grin_equal_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep1, GRIN_EDGE_PR
 
 void grin_destroy_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {}
 
-GRIN_DATATYPE grin_get_edge_property_data_type(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
+GRIN_DATATYPE grin_get_edge_property_datatype(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto dt = _g->schema().GetEdgePropertyType(_grin_get_type_from_property(ep), _grin_get_prop_from_property(ep));
     return ArrowToDataType(dt);
