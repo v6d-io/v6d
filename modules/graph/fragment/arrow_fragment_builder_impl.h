@@ -1451,45 +1451,7 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
                             this->ie_offsets_lists_[v_label][e_label]->size(),
                             encoded_ie_vec,
                             encoded_ie_offsets_vec);
-      // LOG(INFO) << "origin";
-      // LOG(INFO) << "eid";
-      // for (size_t i = 0; i < ie_lists_[v_label][e_label]->size(); i++) {
-      //   LOG(INFO) << (this->ie_lists_[v_label][e_label]->data())[i].eid;
-      // }
-      // LOG(INFO) << "vid";
-      // for (size_t i = 0; i < ie_lists_[v_label][e_label]->size(); i++) {
-      //   LOG(INFO) << (this->ie_lists_[v_label][e_label]->data())[i].vid;
-      // }
 
-      LOG(INFO) << "encoded";
-      LOG(INFO) << "ie";
-      LOG(INFO) << "vid";
-      for (size_t i = 0; i < encoded_ie_vid_vec.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_ie_vid_vec[i] << std::dec;
-      }
-      LOG(INFO) << "eid";
-      for (size_t i = 0; i < encoded_ie_eid_vec.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_ie_eid_vec[i] << std::dec;
-      }
-
-      LOG(INFO) << "eid && vid";
-      for (size_t i = 0; i < encoded_ie_vec.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_ie_vec[i] << std::dec;
-      }
-      LOG(INFO) << "oe";
-      LOG(INFO) << "vid";
-      for (size_t i = 0; i < encoded_oe_vid_vec.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_oe_vid_vec[i] << std::dec;
-      }
-      LOG(INFO) << "eid";
-      for (size_t i = 0; i < encoded_oe_eid_vec.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_oe_eid_vec[i] << std::dec;
-      }
-
-      LOG(INFO) << "eid && vid";
-      for (size_t i = 0; i < encoded_oe_vec.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_oe_vec[i] << std::dec;
-      }
 
       encoded_oe_e_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
           client_, encoded_oe_eid_vec.size() * sizeof(uint8_t));

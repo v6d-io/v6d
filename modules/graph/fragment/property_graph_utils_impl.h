@@ -752,14 +752,11 @@ boost::leaf::result<void> generate_varint_edges(
     int64_t* e_offsets_lists_, size_t e_offsets_lists_size,
     std::vector<uint8_t>& encoded_id_list,
     std::vector<int64_t>& encoded_offsets_list) {
-  // LOG(INFO) << __func__;
-
   encoded_offsets_list.resize(e_offsets_lists_size, 0);
 
   if (list_size <= 0)
     return {};
 
-  // LOG(INFO) << "======";
   size_t i = 0;
   int64_t start = 0;
 
@@ -770,12 +767,11 @@ boost::leaf::result<void> generate_varint_edges(
          count < e_offsets_lists_[k + 1] - e_offsets_lists_[k]; count++) {
       std::vector<uint8_t> encoded_eid, encoded_vid;
 
-      varint_encode(e_list[i].eid, encoded_eid);
       varint_encode(e_list[i].vid, encoded_vid);
-      // LOG(INFO) << "eid:" << e_list[i].eid << " vid:" << e_list[i].vid;
+      varint_encode(e_list[i].eid, encoded_eid);
 
-      start += (encoded_eid.size());
       start += (encoded_vid.size());
+      start += (encoded_eid.size());
 
       for (size_t j = 0; j < encoded_vid.size(); j++) {
         encoded_id_list.push_back(encoded_vid[j]);
@@ -783,21 +779,11 @@ boost::leaf::result<void> generate_varint_edges(
       for (size_t j = 0; j < encoded_eid.size(); j++) {
         encoded_id_list.push_back(encoded_eid[j]);
       }
-      // pre_e_size = encoded_eid.size();
-      // pre_v_size = encoded_vid.size();
 
       i++;
     }
   }
   encoded_offsets_list[e_offsets_lists_size - 1] = start;
-  // LOG(INFO) << "eid";
-  // for (int i = 0; i < encoded_eid_offset_list.size(); i++) {
-  //   LOG(INFO) << encoded_eid_offset_list[i];
-  // }
-  // LOG(INFO) << "vid";
-  // for (int i = 0; i < encoded_vid_offset_list.size(); i++) {
-  //   LOG(INFO) << encoded_vid_offset_list[i];
-  // }
   return {};
 }
 

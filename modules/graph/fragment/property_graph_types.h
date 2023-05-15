@@ -501,6 +501,138 @@ struct Nbr {
   const void** edata_arrays_;
 };
 
+template <typename VID_T, typename EID_T>
+struct EncodedNbr {
+ private:
+  using vid_t = VID_T;
+  using eid_t = EID_T;
+  using prop_id_t = property_graph_types::PROP_ID_TYPE;
+
+  EncodedNbr(){}
+
+ public:
+  EncodedNbr(const EncodedNbr& rhs)
+      : ptr_(rhs.ptr_),
+        data_(rhs.data_),
+        size_(rhs.size()),
+        edata_arrays_(rhs.edata_arrays_) {}
+  EncodedNbr(EncodedNbr&& rhs)
+      : ptr_(std::move(rhs.ptr_)),
+        data_(rhs.data_),
+        size_(rhs.size()),
+        edata_arrays_(rhs.edata_arrays_) {}
+  EncodedNbr(const uint8_t* ptr, size_t capacity, const void** edata_arrays)
+      : ptr_(ptr),
+        edata_arrays_(edata_arrays) {
+          if(capacity > 0)
+            decode();
+        }
+
+  EncodedNbr& operator=(const EncodedNbr& rhs) {
+    ptr_ = rhs.ptr_;
+    data_ = rhs.data_;
+    size_ = rhs.size_;
+    edata_arrays_ = rhs.edata_arrays_;
+    return *this;
+  }
+
+  EncodedNbr& operator=(EncodedNbr&& rhs) {
+    ptr_ = std::move(rhs.ptr_);
+    data_ = rhs.data_;
+    size_ = rhs.size_;
+    edata_arrays_ = std::move(rhs.edata_arrays_);
+    return *this;
+  }
+
+  inline void decode() const {
+    eid_t eid;
+    vid_t vid;
+    size_t e_size, v_size;
+    v_size = varint_decode(ptr_, vid);
+    e_size = varint_decode(ptr_ + v_size, eid);
+    data_.eid = eid;
+    data_.vid = vid;
+    size_ = v_size + e_size;
+  }
+
+  grape::Vertex<VID_T> neighbor() const {
+    return grape::Vertex<VID_T>(data_.vid);
+  }
+
+  grape::Vertex<VID_T> get_neighbor() const {
+    return grape::Vertex<VID_T>(data_.vid);
+  }
+
+  EID_T edge_id() const {
+    return data_.eid;
+  }
+
+  template <typename T>
+  T get_data(prop_id_t prop_id) const {
+    return ValueGetter<T>::Value(edata_arrays_[prop_id], data_.eid);
+  }
+
+  std::string get_str(prop_id_t prop_id) const {
+    return ValueGetter<std::string>::Value(edata_arrays_[prop_id], data_.eid);
+  }
+
+  double get_double(prop_id_t prop_id) const {
+    return ValueGetter<double>::Value(edata_arrays_[prop_id], data_.eid);
+  }
+
+  int64_t get_int(prop_id_t prop_id) const {
+    return ValueGetter<int64_t>::Value(edata_arrays_[prop_id], data_.eid);
+  }
+
+  inline const EncodedNbr& operator++() const {
+    ptr_ += size_;
+    /*
+     * This may cause the program to crash due to out-of-bounds access. Currently,
+     * this part is controlled by iterators. The default user access behavior will
+     * not be out of bounds.
+     */
+    decode();
+    return *this;
+  }
+
+  inline EncodedNbr operator++(int) const {
+    EncodedNbr ret(*this);
+    ++(*this);
+    return ret;
+  }
+
+  inline const EncodedNbr& operator--() const {
+    //TBD
+    return *this;
+  }
+
+  inline EncodedNbr operator--(int) const {
+    EncodedNbr ret(*this);
+    --(*this);
+    return ret;
+  }
+
+  inline bool operator==(const EncodedNbr& rhs) const {
+    return ptr_ == rhs.ptr_;
+  }
+  inline bool operator!=(const EncodedNbr& rhs) const {
+    return ptr_ != rhs.ptr_;
+  }
+
+  inline bool operator<(const EncodedNbr& rhs) const {
+    return ptr_ < rhs.ptr_;
+  }
+
+  inline const EncodedNbr& operator*() const { return *this; }
+
+ private:
+  const mutable uint8_t* ptr_;
+  mutable NbrUnit<VID_T, EID_T> data_;
+  mutable size_t size_;
+
+  const void** edata_arrays_;
+};
+
 template <typename VID_T>
 using NbrDefault = Nbr<VID_T, property_graph_types::EID_TYPE>;
 
@@ -720,6 +852,56 @@ class AdjList {
   size_t e_size_ = 0;
   size_t v_size_ = 0;
   bool encoded_ = false;
+
+  const void** edata_arrays_;
+};
+
+template<typename VID_T, typename EID_T>
+class EncodedAdjList{
+ public:
+  EncodedAdjList() : begin_ptr_(nullptr), end_ptr_(nullptr), size_(0), edata_arrays_(nullptr) {}
+  EncodedAdjList(const uint8_t* ptr,
+          const size_t begin_offset, const size_t end_offset,
+          const void** edata_arrays) {
+    begin_ptr_ = ptr + begin_offset;
+    end_ptr_ = ptr + end_offset;
+    size_ = end_offset - begin_offset;
+  }
+
+  inline EncodedNbr<VID_T, EID_T> begin() const {
+    return EncodedNbr<VID_T, EID_T>(begin_ptr_, size_, edata_arrays_);
+  }
+
+  inline EncodedNbr<VID_T, EID_T> end() const {
+    return EncodedNbr<VID_T, EID_T>(end_ptr_, 0, edata_arrays_);
+  }
+
+  inline size_t Size() const {
+    return size_;
+  }
+
+  inline bool Empty() const {
+    return size_ == 0;
+  }
+
+  inline bool NotEmpty() const {
+    return size_ != 0;
+  }
+
+  // may be there are bugs.
+  size_t size() const {
+    return size_;
+  }
+
+  // inline const NbrUnit<VID_T, EID_T>* begin_unit() const { return begin_; }
+
+  // inline const NbrUnit<VID_T, EID_T>* end_unit() const { return end_; }
+
+ private:
+
+  const uint8_t* begin_ptr_;
+  const uint8_t* end_ptr_;
+  size_t size_ = 0;
 
   const void** edata_arrays_;
 };
