@@ -640,14 +640,19 @@ class AdjList {
   AdjList(const NbrUnit<VID_T, EID_T>* begin, const NbrUnit<VID_T, EID_T>* end,
           const void** edata_arrays)
       : begin_(begin), end_(end), edata_arrays_(edata_arrays) {}
-  AdjList(const uint8_t* v_ptr, const uint8_t* e_ptr, const size_t begin_index,
-          const size_t end_index, const void** edata_arrays) {
-    v_begin_ptr_ = get_pointer(v_ptr, begin_index);
-    v_end_ptr_ = get_pointer(v_ptr, end_index);
-    e_begin_ptr_ = get_pointer(e_ptr, begin_index);
-    e_end_ptr_ = get_pointer(e_ptr, end_index);
+  AdjList(const uint8_t* v_ptr, const uint8_t* e_ptr, const size_t v_begin_offset, const size_t v_end_offset, const size_t e_begin_offset,
+          const size_t e_end_offset, const void** edata_arrays) {
+    // v_begin_ptr_ = get_pointer(v_ptr, begin_index);
+    // v_end_ptr_ = get_pointer(v_ptr, end_index);
+    // e_begin_ptr_ = get_pointer(e_ptr, begin_index);
+    // e_end_ptr_ = get_pointer(e_ptr, end_index);
+    v_begin_ptr_ = v_ptr + v_begin_offset;
+    v_end_ptr_ = v_ptr + v_end_offset;
+    e_begin_ptr_ = e_ptr + e_begin_offset;
+    e_end_ptr_ = e_ptr + e_end_offset;
     encoded_ = true;
-    size_ = end_index - begin_index;
+    v_size_ = v_end_offset - v_begin_offset;
+    e_size_ = e_end_offset - e_begin_offset;
   }
 
   inline Nbr<VID_T, EID_T> begin() const {
@@ -666,29 +671,30 @@ class AdjList {
 
   inline size_t Size() const {
     if (encoded_) {
-      return size_;
+      return v_size_;
     }
     return end_ - begin_;
   }
 
   inline bool Empty() const {
     if (encoded_) {
-      return size_ == 0;
+      return v_size_ == 0;
     }
     return end_ == begin_;
   }
 
   inline bool NotEmpty() const {
     if (encoded_) {
-      return size_ != 0;
+      return v_size_ != 0;
     }
 
     return end_ != begin_;
   }
 
+  // may be there are bugs.
   size_t size() const {
     if (encoded_) {
-      return size_;
+      return v_size_;
     }
     return end_ - begin_;
   }
@@ -705,7 +711,8 @@ class AdjList {
   const uint8_t* v_end_ptr_;
   const uint8_t* e_begin_ptr_;
   const uint8_t* e_end_ptr_;
-  size_t size_ = 0;
+  size_t e_size_ = 0;
+  size_t v_size_ = 0;
   bool encoded_ = false;
 
   const void** edata_arrays_;
