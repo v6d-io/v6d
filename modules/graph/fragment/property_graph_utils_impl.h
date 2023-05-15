@@ -682,10 +682,8 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
 
 template <typename VID_T, typename EID_T>
 boost::leaf::result<void> generate_varint_edges(
-    property_graph_utils::NbrUnit<VID_T, EID_T>* e_list,
-    size_t list_size,
-    int64_t* e_offsets_lists_,
-    size_t e_offsets_lists_size,
+    property_graph_utils::NbrUnit<VID_T, EID_T>* e_list, size_t list_size,
+    int64_t* e_offsets_lists_, size_t e_offsets_lists_size,
     std::vector<int64_t>& encoded_eid_offset_list,
     std::vector<int64_t>& encoded_vid_offset_list,
     std::vector<uint8_t>& encoded_eid_list,
@@ -711,7 +709,8 @@ boost::leaf::result<void> generate_varint_edges(
   for (size_t k = 0; k < e_offsets_lists_size - 1; k++) {
     encoded_eid_offset_list[k] = e_start;
     encoded_vid_offset_list[k] = v_start;
-    for (int64_t count = 0; count < e_offsets_lists_[k + 1] - e_offsets_lists_[k]; count++){
+    for (int64_t count = 0;
+         count < e_offsets_lists_[k + 1] - e_offsets_lists_[k]; count++) {
       std::vector<uint8_t> encoded_eid, encoded_vid;
 
       varint_encode(e_list[i].eid, encoded_eid);

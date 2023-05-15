@@ -450,9 +450,12 @@ class [[vineyard]] ArrowFragment
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
-    const int64_t* v_offset_array = encoded_ie_v_offset_ptr_lists_[v_label][e_label];
-    const int64_t* e_offset_array = encoded_ie_e_offset_ptr_lists_[v_label][e_label];
-    size_t v_offset_size = v_offset_array[v_offset + 1] - v_offset_array[v_offset];
+    const int64_t* v_offset_array =
+        encoded_ie_v_offset_ptr_lists_[v_label][e_label];
+    const int64_t* e_offset_array =
+        encoded_ie_e_offset_ptr_lists_[v_label][e_label];
+    size_t v_offset_size =
+        v_offset_array[v_offset + 1] - v_offset_array[v_offset];
     if (v_offset_size == 0) {
       return adj_list_t(nullptr, nullptr,
                         flatten_edge_tables_columns_[e_label]);
@@ -462,7 +465,8 @@ class [[vineyard]] ArrowFragment
     const uint8_t* v_ptr = encoded_ie_v_ptr_lists_[v_label][e_label];
 
     return adj_list_t(v_ptr, e_ptr, v_offset_array[v_offset],
-                      v_offset_array[v_offset + 1], e_offset_array[v_offset], e_offset_array[v_offset + 1],
+                      v_offset_array[v_offset + 1], e_offset_array[v_offset],
+                      e_offset_array[v_offset + 1],
                       flatten_edge_tables_columns_[e_label]);
   }
 
@@ -494,9 +498,12 @@ class [[vineyard]] ArrowFragment
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
-    const int64_t* v_offset_array = encoded_oe_v_offset_ptr_lists_[v_label][e_label];
-    const int64_t* e_offset_array = encoded_oe_e_offset_ptr_lists_[v_label][e_label];
-    size_t v_offset_size = v_offset_array[v_offset + 1] - v_offset_array[v_offset];
+    const int64_t* v_offset_array =
+        encoded_oe_v_offset_ptr_lists_[v_label][e_label];
+    const int64_t* e_offset_array =
+        encoded_oe_e_offset_ptr_lists_[v_label][e_label];
+    size_t v_offset_size =
+        v_offset_array[v_offset + 1] - v_offset_array[v_offset];
     if (v_offset_size == 0) {
       return adj_list_t(nullptr, nullptr,
                         flatten_edge_tables_columns_[e_label]);
@@ -506,7 +513,8 @@ class [[vineyard]] ArrowFragment
     const uint8_t* v_ptr = encoded_oe_v_ptr_lists_[v_label][e_label];
 
     return adj_list_t(v_ptr, e_ptr, v_offset_array[v_offset],
-                      v_offset_array[v_offset + 1], e_offset_array[v_offset], e_offset_array[v_offset + 1],
+                      v_offset_array[v_offset + 1], e_offset_array[v_offset],
+                      e_offset_array[v_offset + 1],
                       flatten_edge_tables_columns_[e_label]);
   }
 

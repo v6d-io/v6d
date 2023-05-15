@@ -47,7 +47,8 @@ inline uint64_t unaligned_load_u64(const uint8_t* p) {
 //   return (unsigned int) (header & 0x0F);
 // }
 
-// inline const uint8_t* get_pointer(const uint8_t* start, const size_t& index) {
+// inline const uint8_t* get_pointer(const uint8_t* start, const size_t& index)
+// {
 //   for (size_t i = 0; i < index; i++) {
 //     start += (get_varint_size(*start) + 1);
 //   }
@@ -74,11 +75,8 @@ void varint_encode(T input, std::vector<uint8_t>& output) {
   }
 }
 
-static int count = 0;
-
 template <typename T>
 size_t varint_decode(const uint8_t* input, T& output) {
-  count++;
   const uint8_t* origin_input = input;
   uint8_t b0 = *input++;
   if (LIKELY(b0 < UPPER_OF_RANGE_1)) {
@@ -95,4 +93,4 @@ size_t varint_decode(const uint8_t* input, T& output) {
 }
 
 }  // namespace vineyard
-#endif
+#endif  // MODULES_GRAPH_FRAGMENT_VARINT_IMPL_H_
