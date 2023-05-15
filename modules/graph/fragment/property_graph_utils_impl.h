@@ -681,7 +681,7 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
 }
 
 template <typename VID_T, typename EID_T>
-boost::leaf::result<void> generate_varint_edges(
+boost::leaf::result<void> generate_varint_edges_(
     property_graph_utils::NbrUnit<VID_T, EID_T>* e_list, size_t list_size,
     int64_t* e_offsets_lists_, size_t e_offsets_lists_size,
     std::vector<int64_t>& encoded_eid_offset_list,
@@ -743,6 +743,61 @@ boost::leaf::result<void> generate_varint_edges(
   //   LOG(INFO) << encoded_vid_offset_list[i];
   // }
 
+  return {};
+}
+
+template<typename VID_T, typename EID_T>
+boost::leaf::result<void> generate_varint_edges(
+    property_graph_utils::NbrUnit<VID_T, EID_T>* e_list, size_t list_size,
+    int64_t* e_offsets_lists_, size_t e_offsets_lists_size,
+    std::vector<uint8_t>& encoded_id_list,
+    std::vector<int64_t>& encoded_offsets_list) {
+  // LOG(INFO) << __func__;
+
+  encoded_offsets_list.resize(e_offsets_lists_size, 0);
+
+  if (list_size <= 0)
+    return {};
+
+  // LOG(INFO) << "======";
+  size_t i = 0;
+  int64_t start = 0;
+
+  // Record the offset of every edge at encoded array.
+  for (size_t k = 0; k < e_offsets_lists_size - 1; k++) {
+    encoded_offsets_list[k] = start;
+    for (int64_t count = 0;
+         count < e_offsets_lists_[k + 1] - e_offsets_lists_[k]; count++) {
+      std::vector<uint8_t> encoded_eid, encoded_vid;
+
+      varint_encode(e_list[i].eid, encoded_eid);
+      varint_encode(e_list[i].vid, encoded_vid);
+      // LOG(INFO) << "eid:" << e_list[i].eid << " vid:" << e_list[i].vid;
+
+      start += (encoded_eid.size());
+      start += (encoded_vid.size());
+
+      for (size_t j = 0; j < encoded_vid.size(); j++) {
+        encoded_id_list.push_back(encoded_vid[j]);
+      }
+      for (size_t j = 0; j < encoded_eid.size(); j++) {
+        encoded_id_list.push_back(encoded_eid[j]);
+      }
+      // pre_e_size = encoded_eid.size();
+      // pre_v_size = encoded_vid.size();
+
+      i++;
+    }
+  }
+  encoded_offsets_list[e_offsets_lists_size - 1] = start;
+  // LOG(INFO) << "eid";
+  // for (int i = 0; i < encoded_eid_offset_list.size(); i++) {
+  //   LOG(INFO) << encoded_eid_offset_list[i];
+  // }
+  // LOG(INFO) << "vid";
+  // for (int i = 0; i < encoded_vid_offset_list.size(); i++) {
+  //   LOG(INFO) << encoded_vid_offset_list[i];
+  // }
   return {};
 }
 
