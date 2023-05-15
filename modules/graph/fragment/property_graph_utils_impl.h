@@ -698,8 +698,8 @@ boost::leaf::result<void> generate_varint_edges(
   if (list_size <= 0)
     return {};
 
-  uint8_t pre_e_size = 0;
-  uint8_t pre_v_size = 0;
+  // uint8_t pre_e_size = 0;
+  // uint8_t pre_v_size = 0;
   // LOG(INFO) << "======";
   size_t i = 0;
   int64_t e_start = 0;
@@ -712,29 +712,23 @@ boost::leaf::result<void> generate_varint_edges(
     encoded_eid_offset_list[k] = e_start;
     encoded_vid_offset_list[k] = v_start;
     for (int64_t count = 0; count < e_offsets_lists_[k + 1] - e_offsets_lists_[k]; count++){
-      uint8_t e_header, v_header;
       std::vector<uint8_t> encoded_eid, encoded_vid;
 
       varint_encode(e_list[i].eid, encoded_eid);
       varint_encode(e_list[i].vid, encoded_vid);
       // LOG(INFO) << "eid:" << e_list[i].eid << " vid:" << e_list[i].vid;
 
-      e_header = construct_header(pre_e_size, encoded_eid.size());
-      v_header = construct_header(pre_v_size, encoded_vid.size());
+      e_start += (encoded_eid.size());
+      v_start += (encoded_vid.size());
 
-      e_start += (encoded_eid.size() + 1);
-      v_start += (encoded_vid.size() + 1);
-
-      encoded_eid_list.push_back(e_header);
       for (size_t j = 0; j < encoded_eid.size(); j++) {
         encoded_eid_list.push_back(encoded_eid[j]);
       }
-      encoded_vid_list.push_back(v_header);
       for (size_t j = 0; j < encoded_vid.size(); j++) {
         encoded_vid_list.push_back(encoded_vid[j]);
       }
-      pre_e_size = encoded_eid.size();
-      pre_v_size = encoded_vid.size();
+      // pre_e_size = encoded_eid.size();
+      // pre_v_size = encoded_vid.size();
 
       i++;
     }

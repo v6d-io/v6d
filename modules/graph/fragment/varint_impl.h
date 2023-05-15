@@ -35,24 +35,24 @@ inline uint64_t unaligned_load_u64(const uint8_t* p) {
 |----------------------------------|
 */
 
-static inline uint8_t construct_header(uint8_t pre_size, uint8_t size) {
-  return (pre_size << 4) | (size & 0x0F);
-}
+// static inline uint8_t construct_header(uint8_t pre_size, uint8_t size) {
+//   return (pre_size << 4) | (size & 0x0F);
+// }
 
-static inline unsigned int get_varint_pre_size(const uint8_t header) {
-  return (unsigned int) (header >> 4);
-}
+// static inline unsigned int get_varint_pre_size(const uint8_t header) {
+//   return (unsigned int) (header >> 4);
+// }
 
-static inline unsigned int get_varint_size(const uint8_t header) {
-  return (unsigned int) (header & 0x0F);
-}
+// static inline unsigned int get_varint_size(const uint8_t header) {
+//   return (unsigned int) (header & 0x0F);
+// }
 
-inline const uint8_t* get_pointer(const uint8_t* start, const size_t& index) {
-  for (size_t i = 0; i < index; i++) {
-    start += (get_varint_size(*start) + 1);
-  }
-  return start;
-}
+// inline const uint8_t* get_pointer(const uint8_t* start, const size_t& index) {
+//   for (size_t i = 0; i < index; i++) {
+//     start += (get_varint_size(*start) + 1);
+//   }
+//   return start;
+// }
 
 template <typename T>
 void varint_encode(T input, std::vector<uint8_t>& output) {
@@ -74,8 +74,12 @@ void varint_encode(T input, std::vector<uint8_t>& output) {
   }
 }
 
+static int count = 0;
+
 template <typename T>
-void varint_decode(const uint8_t* input, T& output) {
+size_t varint_decode(const uint8_t* input, T& output) {
+  count++;
+  const uint8_t* origin_input = input;
   uint8_t b0 = *input++;
   if (LIKELY(b0 < UPPER_OF_RANGE_1)) {
     output = b0;
@@ -87,6 +91,7 @@ void varint_decode(const uint8_t* input, T& output) {
     output = unaligned_load_u64(input) & ((uint64_t(1) << 8 * sh << 16) - 1);
     input += 2 + sh;
   }
+  return static_cast<size_t>(input - origin_input);
 }
 
 }  // namespace vineyard

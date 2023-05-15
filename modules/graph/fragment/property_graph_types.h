@@ -359,14 +359,14 @@ struct Nbr {
     return *this;
   }
 
-  void decode() const {
+  inline void decode() const {
     if (data_valid_) {
       return;
     }
     eid_t eid;
     vid_t vid;
-    varint_decode(e_ptr_ + 1, eid);
-    varint_decode(v_ptr_ + 1, vid);
+    e_size_ = varint_decode(e_ptr_, eid);
+    v_size_ = varint_decode(v_ptr_, vid);
     data_.eid = eid;
     data_.vid = vid;
     data_valid_ = true;
@@ -431,8 +431,9 @@ struct Nbr {
 
   inline const Nbr& operator++() const {
     if (encoded_) {
-      v_ptr_ += (get_varint_size(*v_ptr_) + 1);
-      e_ptr_ += (get_varint_size(*e_ptr_) + 1);
+      decode();
+      v_ptr_ += v_size_;
+      e_ptr_ += e_size_;
       data_valid_ = false;
     } else {
       ++nbr_;
@@ -448,9 +449,10 @@ struct Nbr {
 
   inline const Nbr& operator--() const {
     if (encoded_) {
-      v_ptr_ -= (get_varint_pre_size(*v_ptr_) + 1);
-      e_ptr_ -= (get_varint_pre_size(*e_ptr_) + 1);
-      data_valid_ = false;
+      // TBD
+      // v_ptr_ -= (get_varint_pre_size(*v_ptr_) + 1);
+      // e_ptr_ -= (get_varint_pre_size(*e_ptr_) + 1);
+      // data_valid_ = false;
     } else {
       --nbr_;
     }
@@ -493,6 +495,8 @@ struct Nbr {
   bool encoded_;
   mutable NbrUnit<VID_T, EID_T> data_;
   mutable bool data_valid_ = false;
+  mutable size_t v_size_;
+  mutable size_t e_size_;
 
   const void** edata_arrays_;
 };
@@ -653,6 +657,8 @@ class AdjList {
     encoded_ = true;
     v_size_ = v_end_offset - v_begin_offset;
     e_size_ = e_end_offset - e_begin_offset;
+    
+
   }
 
   inline Nbr<VID_T, EID_T> begin() const {
