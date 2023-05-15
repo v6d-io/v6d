@@ -229,11 +229,14 @@ and edges and are listed as follows:
   Using local vertex map is usually helpful to reduce the memory usage. **Note that
   :code:`local_vertex_map=0` isn't compatible with GraphScope GIE.**
 
-- :code:`print_memory_usage`: whether to print the memory usage of the graph to :code:`STDERR` or not,
-  default is :code:`0`.
+- :code:`print_memory_usage`: whether to print the memory usage of the graph to :code:`STDERR`
+  or not. Default is :code:`0`.
 - :code:`print_normalized_schema`: whether to print the **normalized** schema of the graph to
   :code:`STDERR` or not, default is :code:`0`. The word "normalized" means make the same property
   name has the same property id across different labels, **which is required by GraphScope GIE.**
 
 - :code:`dump`: a string that indicates a directory to dump the graph to, default is empty that
   indicates no dump, e.g., :code:`"dump": "/tmp/dump-graph"`.
+- :code:`dump_dry_run_rounds`: if greater than :code:`0`, will traverse the graph for
+  :code:`dump_dry_run_rounds` times to measure the edge (CSR) accessing performance. Default
+  is :code:`0`.
