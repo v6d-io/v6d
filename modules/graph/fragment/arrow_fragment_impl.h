@@ -518,12 +518,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
   // oe_ptr_lists_.resize(vertex_label_num_);
   // oe_offsets_ptr_lists_.resize(vertex_label_num_);
 
-  encoded_oe_e_ptr_lists_.resize(vertex_label_num_);
-  encoded_oe_v_ptr_lists_.resize(vertex_label_num_);
-
-  encoded_oe_e_offset_ptr_lists_.resize(vertex_label_num_);
-  encoded_oe_v_offset_ptr_lists_.resize(vertex_label_num_);
-
   encoded_oe_ptr_lists_.resize(vertex_label_num_);
   encoded_oe_offsets_ptr_lists_.resize(vertex_label_num_);
 
@@ -544,12 +538,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     // oe_ptr_lists_[i].resize(edge_label_num_);
     // oe_offsets_ptr_lists_[i].resize(edge_label_num_);
 
-    encoded_oe_e_ptr_lists_[i].resize(edge_label_num_);
-    encoded_oe_v_ptr_lists_[i].resize(edge_label_num_);
-
-    encoded_oe_e_offset_ptr_lists_[i].resize(edge_label_num_);
-    encoded_oe_v_offset_ptr_lists_[i].resize(edge_label_num_);
-
     encoded_oe_ptr_lists_[i].resize(edge_label_num_);
     encoded_oe_offsets_ptr_lists_[i].resize(edge_label_num_);
 
@@ -567,16 +555,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
       // oe_offsets_ptr_lists_[i][j] =
       //     oe_offsets_lists_[i][j]->GetArray()->raw_values();
 
-      encoded_oe_e_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
-          encoded_oe_e_lists_[i][j]->GetArray()->raw_values());
-      encoded_oe_v_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
-          encoded_oe_v_lists_[i][j]->GetArray()->raw_values());
-
-      encoded_oe_e_offset_ptr_lists_[i][j] =
-          encoded_oe_e_offset_lists_[i][j]->GetArray()->raw_values();
-      encoded_oe_v_offset_ptr_lists_[i][j] =
-          encoded_oe_v_offset_lists_[i][j]->GetArray()->raw_values();
-
       encoded_oe_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
           encoded_oe_lists_[i][j]->GetArray()->raw_values());
       encoded_oe_offsets_ptr_lists_[i][j] =
@@ -587,10 +565,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
   if (directed_) {
     // ie_ptr_lists_.resize(vertex_label_num_);
     // ie_offsets_ptr_lists_.resize(vertex_label_num_);
-    encoded_ie_e_ptr_lists_.resize(vertex_label_num_);
-    encoded_ie_v_ptr_lists_.resize(vertex_label_num_);
-    encoded_ie_e_offset_ptr_lists_.resize(vertex_label_num_);
-    encoded_ie_v_offset_ptr_lists_.resize(vertex_label_num_);
 
     encoded_ie_ptr_lists_.resize(vertex_label_num_);
     encoded_ie_offsets_ptr_lists_.resize(vertex_label_num_);
@@ -598,12 +572,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       // ie_ptr_lists_[i].resize(edge_label_num_);
       // ie_offsets_ptr_lists_[i].resize(edge_label_num_);
-
-      encoded_ie_e_ptr_lists_[i].resize(edge_label_num_);
-      encoded_ie_v_ptr_lists_[i].resize(edge_label_num_);
-
-      encoded_ie_e_offset_ptr_lists_[i].resize(edge_label_num_);
-      encoded_ie_v_offset_ptr_lists_[i].resize(edge_label_num_);
 
       encoded_ie_ptr_lists_[i].resize(edge_label_num_);
       encoded_ie_offsets_ptr_lists_[i].resize(edge_label_num_);
@@ -613,16 +581,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
         //     ie_lists_[i][j]->GetArray()->raw_values());
         // ie_offsets_ptr_lists_[i][j] =
         //     ie_offsets_lists_[i][j]->GetArray()->raw_values();
-
-        encoded_ie_e_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
-            encoded_ie_e_lists_[i][j]->GetArray()->raw_values());
-        encoded_ie_v_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
-            encoded_ie_v_lists_[i][j]->GetArray()->raw_values());
-
-        encoded_ie_e_offset_ptr_lists_[i][j] =
-            encoded_ie_e_offset_lists_[i][j]->GetArray()->raw_values();
-        encoded_ie_v_offset_ptr_lists_[i][j] =
-            encoded_ie_v_offset_lists_[i][j]->GetArray()->raw_values();
 
         encoded_ie_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
             encoded_ie_lists_[i][j]->GetArray()->raw_values());
@@ -634,8 +592,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
   } else {
     // ie_ptr_lists_ = oe_ptr_lists_;
     // ie_offsets_ptr_lists_ = oe_offsets_ptr_lists_;
-    encoded_ie_e_offset_lists_ = encoded_oe_e_offset_lists_;
-    encoded_ie_v_offset_lists_ = encoded_oe_v_offset_lists_;
 
     encoded_ie_ptr_lists_ = encoded_oe_ptr_lists_;
     encoded_ie_offsets_ptr_lists_ = encoded_oe_offsets_ptr_lists_;
