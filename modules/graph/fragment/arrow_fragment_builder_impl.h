@@ -1079,12 +1079,17 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
     Base::ie_offsets_lists_.resize(this->vertex_label_num_);
     Base::encoded_ie_e_lists_.resize(this->vertex_label_num_);
     Base::encoded_ie_v_lists_.resize(this->vertex_label_num_);
+
+    Base::encoded_ie_e_offset_lists_.resize(this->vertex_label_num_);
+    Base::encoded_ie_v_offset_lists_.resize(this->vertex_label_num_);
   }
   // Base::oe_lists_.resize(this->vertex_label_num_);
   Base::oe_offsets_lists_.resize(this->vertex_label_num_);
-
   Base::encoded_oe_e_lists_.resize(this->vertex_label_num_);
   Base::encoded_oe_v_lists_.resize(this->vertex_label_num_);
+
+  Base::encoded_oe_e_offset_lists_.resize(this->vertex_label_num_);
+  Base::encoded_oe_v_offset_lists_.resize(this->vertex_label_num_);
 
   for (label_id_t i = 0; i < this->vertex_label_num_; ++i) {
     if (this->directed_) {
@@ -1092,12 +1097,18 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
       Base::ie_offsets_lists_[i].resize(this->edge_label_num_);
       Base::encoded_ie_e_lists_[i].resize(this->vertex_label_num_);
       Base::encoded_ie_v_lists_[i].resize(this->vertex_label_num_);
+
+      Base::encoded_ie_e_offset_lists_[i].resize(this->vertex_label_num_);
+      Base::encoded_ie_v_offset_lists_[i].resize(this->vertex_label_num_);
     }
     // Base::oe_lists_[i].resize(this->edge_label_num_);
     Base::oe_offsets_lists_[i].resize(this->edge_label_num_);
 
     Base::encoded_oe_e_lists_[i].resize(this->vertex_label_num_);
     Base::encoded_oe_v_lists_[i].resize(this->vertex_label_num_);
+
+    Base::encoded_oe_e_offset_lists_[i].resize(this->vertex_label_num_);
+    Base::encoded_oe_v_offset_lists_[i].resize(this->vertex_label_num_);
 
     for (label_id_t j = 0; j < this->edge_label_num_; ++j) {
       auto fn = [this, i, j](Client* client) -> Status {
@@ -1111,6 +1122,11 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
           this->set_encoded_ie_e_lists_(i, j, object);
           RETURN_ON_ERROR(encoded_ie_v_lists_[i][j]->Seal(*client, object));
           this->set_encoded_ie_v_lists_(i, j, object);
+
+          RETURN_ON_ERROR(encoded_ie_e_offset_lists_[i][j]->Seal(*client, object));
+          this->set_encoded_ie_e_offset_lists_(i, j, object);
+          RETURN_ON_ERROR(encoded_ie_v_offset_lists_[i][j]->Seal(*client, object));
+          this->set_encoded_ie_v_offset_lists_(i, j, object);
         }
         {
           // RETURN_ON_ERROR(oe_lists_[i][j]->Seal(*client, object));
@@ -1122,6 +1138,11 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
           this->set_encoded_oe_e_lists_(i, j, object);
           RETURN_ON_ERROR(encoded_oe_v_lists_[i][j]->Seal(*client, object));
           this->set_encoded_oe_v_lists_(i, j, object);
+
+          RETURN_ON_ERROR(encoded_oe_e_offset_lists_[i][j]->Seal(*client, object));
+          this->set_encoded_oe_e_offset_lists_(i, j, object);
+          RETURN_ON_ERROR(encoded_oe_v_offset_lists_[i][j]->Seal(*client, object));
+          this->set_encoded_oe_v_offset_lists_(i, j, object);
         }
         return Status::OK();
       };
@@ -1337,12 +1358,10 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
 
       std::vector<int64_t> encoded_oe_eid_offset_vec, encoded_oe_vid_offset_vec, encoded_ie_eid_offset_vec, encoded_ie_vid_offset_vec;
 
-      generate_varint_edges(this->oe_lists_[v_label][e_label]->data(), encoded_oe_eid_offset_vec, encoded_oe_vid_offset_vec,
-                            encoded_oe_eid_vec, encoded_oe_vid_vec,
-                            oe_lists_[v_label][e_label]->size());
-      generate_varint_edges(this->ie_lists_[v_label][e_label]->data(), encoded_ie_eid_offset_vec, encoded_ie_vid_offset_vec,
-                            encoded_ie_eid_vec, encoded_ie_vid_vec,
-                            ie_lists_[v_label][e_label]->size());
+      generate_varint_edges(this->oe_lists_[v_label][e_label]->data(), oe_lists_[v_label][e_label]->size(), this->oe_offsets_lists_[v_label][e_label]->data(), this->oe_offsets_lists_[v_label][e_label]->size(), encoded_oe_eid_offset_vec, encoded_oe_vid_offset_vec,
+                            encoded_oe_eid_vec, encoded_oe_vid_vec);
+      generate_varint_edges(this->ie_lists_[v_label][e_label]->data(), ie_lists_[v_label][e_label]->size(), this->ie_offsets_lists_[v_label][e_label]->data(), this->ie_offsets_lists_[v_label][e_label]->size(), encoded_ie_eid_offset_vec, encoded_ie_vid_offset_vec,
+                            encoded_ie_eid_vec, encoded_ie_vid_vec);
 
       // LOG(INFO) << "origin";
       // LOG(INFO) << "eid";
@@ -1389,13 +1408,13 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
              encoded_ie_vid_vec.size() * sizeof(uint8_t));
 
       encoded_oe_e_offset_sub_lists_[e_label] = std::make_shared<FixedInt64Builder>(
-          client_, encoded_oe_eid_offset_vec.size() * sizeof(uint64_t));
+          client_, encoded_oe_eid_offset_vec.size());
       encoded_oe_v_offset_sub_lists_[e_label] = std::make_shared<FixedInt64Builder>(
-          client_, encoded_oe_vid_offset_vec.size() * sizeof(uint64_t));
+          client_, encoded_oe_vid_offset_vec.size());
       encoded_ie_e_offset_sub_lists_[e_label] = std::make_shared<FixedInt64Builder>(
-          client_, encoded_ie_eid_offset_vec.size() * sizeof(uint64_t));
+          client_, encoded_ie_eid_offset_vec.size());
       encoded_ie_v_offset_sub_lists_[e_label] = std::make_shared<FixedInt64Builder>(
-          client_, encoded_ie_vid_offset_vec.size() * sizeof(uint64_t));
+          client_, encoded_ie_vid_offset_vec.size());
 
       memcpy(encoded_oe_e_offset_sub_lists_[e_label]->data(),
              encoded_oe_eid_offset_vec.data(),
