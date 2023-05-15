@@ -131,7 +131,7 @@ GRIN_VERTEX grin_get_neighbor_from_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATO
     return v;
 }
 
-GRIN_EDGE grin_get_edge_from_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
+GRIN_EDGE grin_get_edge_from_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
     auto _nbr = _ali->data.begin() + _ali->current;
     auto e = new GRIN_EDGE_T();
