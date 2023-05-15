@@ -447,7 +447,7 @@ class [[vineyard]] ArrowFragment
   }
 
   inline encoded_adj_list_t GetIncomingAdjList(const vertex_t& v,
-                                       label_id_t e_label) const {
+                                               label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
@@ -457,8 +457,8 @@ class [[vineyard]] ArrowFragment
     const uint8_t* ptr = encoded_ie_ptr_lists_[v_label][e_label];
 
     return encoded_adj_list_t(ptr, offset_array[v_offset],
-                      offset_array[v_offset + 1],
-                      flatten_edge_tables_columns_[e_label]);
+                              offset_array[v_offset + 1],
+                              flatten_edge_tables_columns_[e_label]);
   }
 
   inline raw_adj_list_t GetIncomingRawAdjList(const vertex_t& v,
@@ -485,7 +485,7 @@ class [[vineyard]] ArrowFragment
   }
 
   inline encoded_adj_list_t GetOutgoingAdjList(const vertex_t& v,
-                                       label_id_t e_label) const {
+                                               label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
@@ -495,8 +495,8 @@ class [[vineyard]] ArrowFragment
     const uint8_t* ptr = encoded_oe_ptr_lists_[v_label][e_label];
 
     return encoded_adj_list_t(ptr, offset_array[v_offset],
-                      offset_array[v_offset + 1],
-                      flatten_edge_tables_columns_[e_label]);
+                              offset_array[v_offset + 1],
+                              flatten_edge_tables_columns_[e_label]);
   }
 
   inline raw_adj_list_t GetOutgoingRawAdjList(const vertex_t& v,
@@ -746,11 +746,15 @@ class [[vineyard]] ArrowFragment
   std::vector<std::vector<const int64_t*>> ie_offsets_ptr_lists_,
       oe_offsets_ptr_lists_;
 
-  [[shared]] List<List<std::shared_ptr<UInt8Array>>> encoded_ie_lists_, encoded_oe_lists_;
-  [[shared]] List<List<std::shared_ptr<Int64Array>>> encoded_ie_offsets_lists_, encoded_oe_offsets_lists_;
+  [[shared]] List<List<std::shared_ptr<UInt8Array>>> encoded_ie_lists_,
+      encoded_oe_lists_;
+  [[shared]] List<List<std::shared_ptr<Int64Array>>> encoded_ie_offsets_lists_,
+      encoded_oe_offsets_lists_;
 
-  std::vector<std::vector<const uint8_t*>> encoded_ie_ptr_lists_, encoded_oe_ptr_lists_;
-  std::vector<std::vector<const int64_t*>> encoded_ie_offsets_ptr_lists_, encoded_oe_offsets_ptr_lists_;
+  std::vector<std::vector<const uint8_t*>> encoded_ie_ptr_lists_,
+      encoded_oe_ptr_lists_;
+  std::vector<std::vector<const int64_t*>> encoded_ie_offsets_ptr_lists_,
+      encoded_oe_offsets_ptr_lists_;
 
   std::vector<std::vector<std::vector<fid_t>>> idst_, odst_, iodst_;
   std::vector<std::vector<std::vector<fid_t*>>> idoffset_, odoffset_,

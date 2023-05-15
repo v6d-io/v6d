@@ -746,7 +746,7 @@ boost::leaf::result<void> generate_varint_edges_(
   return {};
 }
 
-template<typename VID_T, typename EID_T>
+template <typename VID_T, typename EID_T>
 boost::leaf::result<void> generate_varint_edges(
     property_graph_utils::NbrUnit<VID_T, EID_T>* e_list, size_t list_size,
     int64_t* e_offsets_lists_, size_t e_offsets_lists_size,

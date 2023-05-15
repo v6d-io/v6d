@@ -584,9 +584,8 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
 
         encoded_ie_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
             encoded_ie_lists_[i][j]->GetArray()->raw_values());
-        encoded_ie_offsets_ptr_lists_[i][j] = encoded_ie_offsets_lists_[i][j]
-                                                  ->GetArray()
-                                                  ->raw_values();
+        encoded_ie_offsets_ptr_lists_[i][j] =
+            encoded_ie_offsets_lists_[i][j]->GetArray()->raw_values();
       }
     }
   } else {

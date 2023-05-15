@@ -508,7 +508,7 @@ struct EncodedNbr {
   using eid_t = EID_T;
   using prop_id_t = property_graph_types::PROP_ID_TYPE;
 
-  EncodedNbr(){}
+  EncodedNbr() {}
 
  public:
   EncodedNbr(const EncodedNbr& rhs)
@@ -522,11 +522,10 @@ struct EncodedNbr {
         size_(rhs.size()),
         edata_arrays_(rhs.edata_arrays_) {}
   EncodedNbr(const uint8_t* ptr, size_t capacity, const void** edata_arrays)
-      : ptr_(ptr),
-        edata_arrays_(edata_arrays) {
-          if(capacity > 0)
-            decode();
-        }
+      : ptr_(ptr), edata_arrays_(edata_arrays) {
+    if (capacity > 0)
+      decode();
+  }
 
   EncodedNbr& operator=(const EncodedNbr& rhs) {
     ptr_ = rhs.ptr_;
@@ -563,9 +562,7 @@ struct EncodedNbr {
     return grape::Vertex<VID_T>(data_.vid);
   }
 
-  EID_T edge_id() const {
-    return data_.eid;
-  }
+  EID_T edge_id() const { return data_.eid; }
 
   template <typename T>
   T get_data(prop_id_t prop_id) const {
@@ -587,9 +584,9 @@ struct EncodedNbr {
   inline const EncodedNbr& operator++() const {
     ptr_ += size_;
     /*
-     * This may cause the program to crash due to out-of-bounds access. Currently,
-     * this part is controlled by iterators. The default user access behavior will
-     * not be out of bounds.
+     * This may cause the program to crash due to out-of-bounds access.
+     * Currently, this part is controlled by iterators. The default user access
+     * behavior will not be out of bounds.
      */
     decode();
     return *this;
@@ -602,7 +599,7 @@ struct EncodedNbr {
   }
 
   inline const EncodedNbr& operator--() const {
-    //TBD
+    // TBD
     return *this;
   }
 
@@ -619,9 +616,7 @@ struct EncodedNbr {
     return ptr_ != rhs.ptr_;
   }
 
-  inline bool operator<(const EncodedNbr& rhs) const {
-    return ptr_ < rhs.ptr_;
-  }
+  inline bool operator<(const EncodedNbr& rhs) const { return ptr_ < rhs.ptr_; }
 
   inline const EncodedNbr& operator*() const { return *this; }
 
@@ -856,13 +851,16 @@ class AdjList {
   const void** edata_arrays_;
 };
 
-template<typename VID_T, typename EID_T>
-class EncodedAdjList{
+template <typename VID_T, typename EID_T>
+class EncodedAdjList {
  public:
-  EncodedAdjList() : begin_ptr_(nullptr), end_ptr_(nullptr), size_(0), edata_arrays_(nullptr) {}
-  EncodedAdjList(const uint8_t* ptr,
-          const size_t begin_offset, const size_t end_offset,
-          const void** edata_arrays) {
+  EncodedAdjList()
+      : begin_ptr_(nullptr),
+        end_ptr_(nullptr),
+        size_(0),
+        edata_arrays_(nullptr) {}
+  EncodedAdjList(const uint8_t* ptr, const size_t begin_offset,
+                 const size_t end_offset, const void** edata_arrays) {
     begin_ptr_ = ptr + begin_offset;
     end_ptr_ = ptr + end_offset;
     size_ = end_offset - begin_offset;
@@ -876,29 +874,20 @@ class EncodedAdjList{
     return EncodedNbr<VID_T, EID_T>(end_ptr_, 0, edata_arrays_);
   }
 
-  inline size_t Size() const {
-    return size_;
-  }
+  inline size_t Size() const { return size_; }
 
-  inline bool Empty() const {
-    return size_ == 0;
-  }
+  inline bool Empty() const { return size_ == 0; }
 
-  inline bool NotEmpty() const {
-    return size_ != 0;
-  }
+  inline bool NotEmpty() const { return size_ != 0; }
 
   // may be there are bugs.
-  size_t size() const {
-    return size_;
-  }
+  size_t size() const { return size_; }
 
   // inline const NbrUnit<VID_T, EID_T>* begin_unit() const { return begin_; }
 
   // inline const NbrUnit<VID_T, EID_T>* end_unit() const { return end_; }
 
  private:
-
   const uint8_t* begin_ptr_;
   const uint8_t* end_ptr_;
   size_t size_ = 0;

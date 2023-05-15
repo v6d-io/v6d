@@ -120,8 +120,10 @@ class BasicArrowFragmentBuilder
   std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
       encoded_ie_offsets_lists_, encoded_oe_offsets_lists_;
 
-  std::vector<std::vector<const uint8_t*>> encoded_ie_ptr_lists_, encoded_oe_ptr_lists_;
-  std::vector<std::vector<const int64_t*>> encoded_ie_offsets_ptr_lists_, encoded_oe_offsets_ptr_lists_;
+  std::vector<std::vector<const uint8_t*>> encoded_ie_ptr_lists_,
+      encoded_oe_ptr_lists_;
+  std::vector<std::vector<const int64_t*>> encoded_ie_offsets_ptr_lists_,
+      encoded_oe_offsets_ptr_lists_;
 
   std::shared_ptr<vertex_map_t> vm_ptr_;
 
