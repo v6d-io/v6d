@@ -56,6 +56,7 @@ struct loader_options {
   progressive_t progressive = NONE;
   bool catch_leaf_errors = true;
   std::string dump;
+  size_t dump_dry_run_rounds = 0;
   bool print_memory_usage = false;
   bool print_normalized_schema = false;
 };
@@ -69,7 +70,7 @@ template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 void dump_graph(Client& client, grape::CommSpec& comm_spec,
                 const ObjectID fragment_group_id,
-                const std::string& target_directory);
+                struct detail::loader_options const& options);
 
 }  // namespace detail
 

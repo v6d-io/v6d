@@ -17,6 +17,7 @@
 #ifndef MODULES_GRAPH_TOOLS_FRAGMENT_LOADER_IMPL_H_
 #define MODULES_GRAPH_TOOLS_FRAGMENT_LOADER_IMPL_H_
 
+#include <chrono>
 #include <cstdio>
 #include <fstream>
 #include <iostream>
@@ -109,18 +110,63 @@ ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
 }
 
 template <typename fragment_t>
-void traverse_graph(std::shared_ptr<fragment_t> graph,
-                    const std::string& path_prefix) {
+void traverse_fragment(const std::shared_ptr<fragment_t>& fragment,
+                       const size_t rounds = 1) {
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
-  label_id_t e_label_num = graph->edge_label_num();
-  label_id_t v_label_num = graph->vertex_label_num();
+  label_id_t e_label_num = fragment->edge_label_num();
+  label_id_t v_label_num = fragment->vertex_label_num();
+
+  LOG(INFO) << "start traversing the fragment ...";
+  auto start_time = std::chrono::high_resolution_clock::now();
+
+  typename fragment_t::vertex_t neighbor;
+  [[maybe_unused]] volatile typename fragment_t::eid_t neighbor_edge;
+  for (size_t round = 0; round < rounds; ++round) {
+    for (label_id_t e_label = 0; e_label != e_label_num; ++e_label) {
+      for (label_id_t v_label = 0; v_label != v_label_num; ++v_label) {
+        auto iv = fragment->InnerVertices(v_label);
+        for (auto v : iv) {
+          auto oe = fragment->GetOutgoingAdjList(v, e_label);
+          for (auto& e : oe) {
+            neighbor = e.neighbor();
+            neighbor_edge = e.edge_id();
+          }
+          if (fragment->directed()) {
+            auto ie = fragment->GetIncomingAdjList(v, e_label);
+            for (auto& e : ie) {
+              neighbor = e.neighbor();
+              neighbor_edge = e.edge_id();
+            }
+          }
+        }
+      }
+    }
+  }
+
+  auto end_time = std::chrono::high_resolution_clock::now();
+  LOG(INFO) << "traversing the fragment for " << rounds << " rounds takes "
+            << std::chrono::duration_cast<std::chrono::duration<double>>(
+                   end_time - start_time)
+                   .count()
+            << " seconds";
+}
+
+template <typename fragment_t>
+void dump_fragment(const std::shared_ptr<fragment_t>& fragment,
+                   const std::string& path_prefix) {
+  using label_id_t = property_graph_types::LABEL_ID_TYPE;
+  label_id_t e_label_num = fragment->edge_label_num();
+  label_id_t v_label_num = fragment->vertex_label_num();
+
+  LOG(INFO) << "start dumping the fragment ...";
+  auto start_time = std::chrono::high_resolution_clock::now();
 
   for (label_id_t v_label = 0; v_label != v_label_num; ++v_label) {
     std::ofstream fout(path_prefix + "_v" + std::to_string(v_label),
                        std::ios::binary);
-    auto iv = graph->InnerVertices(v_label);
+    auto iv = fragment->InnerVertices(v_label);
     for (auto v : iv) {
-      auto id = graph->GetId(v);
+      auto id = fragment->GetId(v);
       fout << id << std::endl;
     }
     fout.flush();
@@ -130,28 +176,41 @@ void traverse_graph(std::shared_ptr<fragment_t> graph,
     std::ofstream fout(path_prefix + "_e" + std::to_string(e_label),
                        std::ios::binary);
     for (label_id_t v_label = 0; v_label != v_label_num; ++v_label) {
-      auto iv = graph->InnerVertices(v_label);
+      auto iv = fragment->InnerVertices(v_label);
       for (auto v : iv) {
-        auto src_id = graph->GetId(v);
-        auto oe = graph->GetOutgoingAdjList(v, e_label);
+        auto src_id = fragment->GetId(v);
+        auto oe = fragment->GetOutgoingAdjList(v, e_label);
         for (auto& e : oe) {
-          fout << src_id << " " << graph->GetId(e.neighbor()) << "\n";
+          fout << src_id << " " << fragment->GetId(e.neighbor()) << "\n";
+        }
+        if (fragment->directed()) {
+          auto ie = fragment->GetIncomingAdjList(v, e_label);
+          for (auto& e : ie) {
+            fout << fragment->GetId(e.neighbor()) << " " << src_id << "\n";
+          }
         }
       }
     }
     fout.flush();
     fout.close();
   }
+  auto end_time = std::chrono::high_resolution_clock::now();
+  LOG(INFO) << "dumping the fragment takes "
+            << std::chrono::duration_cast<std::chrono::duration<double>>(
+                   end_time - start_time)
+                   .count()
+            << " seconds";
 }
 
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 void dump_graph(Client& client, grape::CommSpec& comm_spec,
                 const ObjectID fragment_group_id,
-                const std::string& target_directory) {
+                struct detail::loader_options const& options) {
   if (comm_spec.local_id() != 0) {
     return;
   }
+  const std::string target_directory = options.dump;
   create_dirs(target_directory.c_str());
 
   using fragment_t =
@@ -167,8 +226,12 @@ void dump_graph(Client& client, grape::CommSpec& comm_spec,
     if (item.second == client.instance_id()) {
       std::shared_ptr<fragment_t> fragment;
       VINEYARD_CHECK_OK(client.GetObject(fragments.at(item.first), fragment));
-      traverse_graph(fragment, target_directory + "/output_graph_f" +
-                                   std::to_string(fragment->fid()));
+      if (options.dump_dry_run_rounds) {
+        traverse_fragment(fragment, options.dump_dry_run_rounds);
+      } else {
+        dump_fragment(fragment, target_directory + "/output_graph_f" +
+                                    std::to_string(fragment->fid()));
+      }
     }
   }
 }

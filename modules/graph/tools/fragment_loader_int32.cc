@@ -44,11 +44,13 @@ template ObjectID load_graph<int32_t, uint32_t, ArrowLocalVertexMap>(
 
 template void dump_graph<int32_t, uint32_t, ArrowVertexMap>(
     Client& client, grape::CommSpec& comm_spec,
-    const ObjectID fragment_group_id, const std::string& target_directory);
+    const ObjectID fragment_group_id,
+    struct detail::loader_options const& options);
 
 template void dump_graph<int32_t, uint32_t, ArrowLocalVertexMap>(
     Client& client, grape::CommSpec& comm_spec,
-    const ObjectID fragment_group_id, const std::string& target_directory);
+    const ObjectID fragment_group_id,
+    struct detail::loader_options const& options);
 
 template ObjectID load_graph<int32_t, uint64_t, ArrowVertexMap>(
     Client& client, grape::CommSpec& comm_spec,
@@ -60,11 +62,13 @@ template ObjectID load_graph<int32_t, uint64_t, ArrowLocalVertexMap>(
 
 template void dump_graph<int32_t, uint64_t, ArrowVertexMap>(
     Client& client, grape::CommSpec& comm_spec,
-    const ObjectID fragment_group_id, const std::string& target_directory);
+    const ObjectID fragment_group_id,
+    struct detail::loader_options const& options);
 
 template void dump_graph<int32_t, uint64_t, ArrowLocalVertexMap>(
     Client& client, grape::CommSpec& comm_spec,
-    const ObjectID fragment_group_id, const std::string& target_directory);
+    const ObjectID fragment_group_id,
+    struct detail::loader_options const& options);
 
 }  // namespace detail
 
