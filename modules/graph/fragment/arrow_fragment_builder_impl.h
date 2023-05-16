@@ -1316,8 +1316,6 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
   VLOG(100) << "Init edges: after generate CSR: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
-  LOG(INFO) << "Generate varint edges.";
-
   this->encoded_oe_lists_.resize(this->vertex_label_num_);
   this->encoded_oe_offsets_lists_.resize(this->vertex_label_num_);
   this->encoded_ie_lists_.resize(this->vertex_label_num_);
@@ -1365,13 +1363,15 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
                             oe_lists_[v_label][e_label]->size(),
                             this->oe_offsets_lists_[v_label][e_label]->data(),
                             this->oe_offsets_lists_[v_label][e_label]->size(),
-                            encoded_oe_vec, encoded_oe_offsets_vec, encoded_oe_e_symbol_vec);
+                            encoded_oe_vec, encoded_oe_offsets_vec,
+                            encoded_oe_e_symbol_vec);
 
       generate_varint_edges(this->ie_lists_[v_label][e_label]->data(),
                             ie_lists_[v_label][e_label]->size(),
                             this->ie_offsets_lists_[v_label][e_label]->data(),
                             this->ie_offsets_lists_[v_label][e_label]->size(),
-                            encoded_ie_vec, encoded_ie_offsets_vec, encoded_ie_e_symbol_vec);
+                            encoded_ie_vec, encoded_ie_offsets_vec,
+                            encoded_ie_e_symbol_vec);
 
       encoded_oe_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
           client_, encoded_oe_vec.size() * sizeof(uint8_t));
@@ -1426,7 +1426,6 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
     }
   }
 
-  LOG(INFO) << "Generate varint edges end.";
   return {};
 }
 

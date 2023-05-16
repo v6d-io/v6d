@@ -753,7 +753,6 @@ boost::leaf::result<void> generate_varint_edges(
     std::vector<uint8_t>& encoded_id_list,
     std::vector<int64_t>& encoded_offsets_list,
     std::vector<uint8_t>& encoded_e_symbol_list) {
-  LOG(INFO) << __func__;
   encoded_offsets_list.resize(e_offsets_lists_size, 0);
 
   if (list_size <= 0)
@@ -793,18 +792,18 @@ boost::leaf::result<void> generate_varint_edges(
         bit = 7;
       }
 
-      LOG(INFO) << "vid:" << e_list[i].vid << " pre_vid:" << pre_vid;
-      LOG(INFO) << "encoded vid:";
-      for (size_t i = 0; i < encoded_vid.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_vid[i] << std::dec;
-      }
-      LOG(INFO) << "eid:" << e_list[i].eid << " pre_eid:" << pre_eid;
-      LOG(INFO) << "encoded eid:";
-      for (size_t i = 0; i < encoded_eid.size(); i++) {
-        LOG(INFO) << std::hex << (int)encoded_eid[i] << std::dec;
-      }
-      LOG(INFO) << "encoded eid symbol";
-      LOG(INFO) << std::hex << (int)symbol;
+      // LOG(INFO) << "vid:" << e_list[i].vid << " pre_vid:" << pre_vid;
+      // LOG(INFO) << "encoded vid:";
+      // for (size_t i = 0; i < encoded_vid.size(); i++) {
+      //   LOG(INFO) << std::hex << (int)encoded_vid[i] << std::dec;
+      // }
+      // LOG(INFO) << "eid:" << e_list[i].eid << " pre_eid:" << pre_eid;
+      // LOG(INFO) << "encoded eid:";
+      // for (size_t i = 0; i < encoded_eid.size(); i++) {
+      //   LOG(INFO) << std::hex << (int)encoded_eid[i] << std::dec;
+      // }
+      // LOG(INFO) << "encoded eid symbol";
+      // LOG(INFO) << std::hex << (int)symbol;
 
       start += (encoded_vid.size());
       start += (encoded_eid.size());
