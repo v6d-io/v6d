@@ -25,6 +25,12 @@ GRIN_GRAPH get_graph(int argc, char** argv) {
   GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
   GRIN_PARTITION partition =
       grin_get_partition_from_list(pg, local_partitions, 0);
+  GRIN_PARTITION_ID partition_id = grin_get_partition_id(pg, partition);
+  GRIN_PARTITION p1 = grin_get_partition_by_id(pg, partition_id);
+  if (!grin_equal_partition(pg, partition, p1)) {
+    printf("partition not match\n");
+  }
+  grin_destroy_partition(pg, p1);
   GRIN_GRAPH g = grin_get_local_graph_by_partition(pg, partition);
   grin_destroy_partition(pg, partition);
   grin_destroy_partition_list(pg, local_partitions);
@@ -34,6 +40,20 @@ GRIN_GRAPH get_graph(int argc, char** argv) {
 #endif
   return g;
 }
+
+
+#ifdef GRIN_ENABLE_GRAPH_PARTITION
+GRIN_PARTITION get_partition(int argc, char** argv) {
+  GRIN_PARTITIONED_GRAPH pg =
+      grin_get_partitioned_graph_from_storage(argc - 1, &(argv[1]));
+  GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
+  GRIN_PARTITION partition =
+      grin_get_partition_from_list(pg, local_partitions, 0);
+  grin_destroy_partition_list(pg, local_partitions);
+  grin_destroy_partitioned_graph(pg);
+  return partition;
+}
+#endif
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
 GRIN_PARTITIONED_GRAPH get_partitioend_graph(int argc, char** argv) {
@@ -864,7 +884,124 @@ void test_property(int argc, char** argv) {
   test_error_code(argc, argv);
 }
 
+
+void test_partition_reference(int argc, char** argv) {
+  printf("+++++++++++++++++++++ Test partition/reference +++++++++++++++++++++\n");
+  GRIN_GRAPH g = get_graph(argc, argv);
+  GRIN_PARTITION p0 = get_partition(argc, argv);
+
+  GRIN_VERTEX_LIST vlist = grin_get_vertex_list(g);
+  GRIN_VERTEX_LIST_ITERATOR vli = grin_get_vertex_list_begin(g, vlist);
+  GRIN_VERTEX_LIST mvlist = grin_select_master_for_vertex_list(g, vlist);
+  grin_destroy_vertex_list(g, vlist);
+
+  size_t cnt = 0;
+  while (!grin_is_vertex_list_end(g, vli)) {
+    cnt++;
+    GRIN_VERTEX v = grin_get_vertex_from_iter(g, vli);
+    GRIN_VERTEX_REF vref = grin_get_vertex_ref_by_vertex(g, v);
+#ifdef GRIN_TRAIT_FAST_VERTEX_REF
+    long long int sref = grin_serialize_vertex_ref_as_int64(g, vref);
+    GRIN_VERTEX_REF vref1 = grin_deserialize_int64_to_vertex_ref(g, sref);
+#else
+    const char* sref = grin_serialize_vertex_ref(g, vref);
+    GRIN_VERTEX_REF vref1 = grin_deserialize_vertex_ref(g, sref);
+    grin_destroy_string_value(g, sref);
+#endif
+    GRIN_VERTEX v1 = grin_get_vertex_from_vertex_ref(g, vref1);
+    if (!grin_equal_vertex(g, v, v1)) {
+      printf("vertex not match\n");
+    }
+
+    if (grin_is_master_vertex(g, v) && !grin_is_mirror_vertex(g, v)) {
+      GRIN_PARTITION p = grin_get_master_partition_from_vertex_ref(g, vref);
+      if (!grin_equal_partition(g, p, p0)) {
+        printf("partition not match\n");
+      }
+    } else {
+      printf("(Wrong) test only has one partition\n");
+    }
+
+    grin_destroy_vertex_ref(g, vref);
+    grin_destroy_vertex(g, v);
+    grin_get_next_vertex_list_iter(g, vli);
+  }
+  printf("num of vertex checked: %zu\n", cnt);
+
+#ifdef GRIN_ENABLE_VERTEX_LIST_ARRAY
+  size_t mvlist_size = grin_get_vertex_list_size(g, mvlist);
+  if (mvlist_size != cnt) {
+    printf("(Wrong) master vertex list size not match\n");
+  }
+#endif
+
+  grin_destroy_vertex_list(g, mvlist);
+  grin_destroy_graph(g);
+}
+
+void test_partition(int argc, char** argv) {
+#ifdef GRIN_ENABLE_GRAPH_PARTITION
+  test_partition_reference(argc, argv);
+#endif
+}
+
+
+void test_topology_adjacent_list(int argc, char** argv) {
+  GRIN_GRAPH g = get_graph(argc, argv);
+
+  GRIN_VERTEX v = get_one_vertex(g);
+
+  GRIN_ADJACENT_LIST al = grin_get_adjacent_list(g, OUT, v);
+  GRIN_ADJACENT_LIST_ITERATOR ali = grin_get_adjacent_list_begin(g, al);
+  grin_destroy_adjacent_list(g, al);
+  size_t cnt = 0;
+
+  while (!grin_is_adjacent_list_end(g, ali)) {
+    cnt++;
+
+    GRIN_EDGE e = grin_get_edge_from_adjacent_list_iter(g, ali);
+    GRIN_VERTEX v1 = grin_get_src_vertex_from_edge(g, e);
+    if (!grin_equal_vertex(g, v, v1)) {
+      printf("vertex not match\n");
+    }
+
+    GRIN_VERTEX v2 = grin_get_dst_vertex_from_edge(g, e);
+    GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list_iter(g, ali);
+    if (!grin_equal_vertex(g, v2, u)) {
+      printf("vertex not match\n");
+    }
+
+    grin_destroy_vertex(g, v1);
+    grin_destroy_vertex(g, v2);
+    grin_destroy_vertex(g, u);
+    grin_destroy_edge(g, e);
+    grin_get_next_adjacent_list_iter(g, ali);
+  }
+
+  printf("num of edge checked: %zu\n", cnt);
+
+  grin_destroy_adjacent_list_iter(g, ali);
+  grin_destroy_vertex(g, v);
+  grin_destroy_graph(g);
+}
+
+void test_topology_structure(int argc, char** argv) {
+  GRIN_GRAPH g = get_graph(argc, argv);
+
+  printf("vnum: %zu, enum: %zu\n", grin_get_vertex_num(g), grin_get_edge_num(g));
+
+  grin_destroy_graph(g);
+}
+
+
+void test_topology(int argc, char** argv) {
+  test_topology_structure(argc, argv);
+  test_topology_adjacent_list(argc, argv);
+}
+
 int main(int argc, char** argv) {
   test_property(argc, argv);
+  test_partition(argc, argv);
+  test_topology(argc, argv);
   return 0;
 }
