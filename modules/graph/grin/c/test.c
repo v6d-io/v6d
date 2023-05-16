@@ -961,52 +961,72 @@ void test_topology_adjacent_list(int argc, char** argv, GRIN_DIRECTION dir) {
   GRIN_VERTEX_LIST_ITERATOR vli = grin_get_vertex_list_begin(g, vl);
   grin_destroy_vertex_list(g, vl);
 
+  GRIN_EDGE_TYPE_LIST etl = grin_get_edge_type_list(g);
+  size_t etl_size = grin_get_edge_type_list_size(g, etl);
+
   while (!grin_is_vertex_list_end(g, vli)) {
     GRIN_VERTEX v = grin_get_vertex_from_iter(g, vli);
     GRIN_ADJACENT_LIST al = grin_get_adjacent_list(g, dir, v);
-    GRIN_ADJACENT_LIST_ITERATOR ali = grin_get_adjacent_list_begin(g, al);
-    grin_destroy_adjacent_list(g, al);
+    for (size_t i = 0; i <= etl_size; ++i) {
+      GRIN_ADJACENT_LIST al1 = al;
+      if (i < etl_size) {
+        GRIN_EDGE_TYPE et = grin_get_edge_type_from_list(g, etl, i);
+        al1 = grin_select_edge_type_for_adjacent_list(g, et, al);
+        grin_destroy_edge_type(g, et);
+      }
+      
+      GRIN_ADJACENT_LIST_ITERATOR ali = grin_get_adjacent_list_begin(g, al1);
+      grin_destroy_adjacent_list(g, al1);
 
-    size_t cnt = 0;
-    while (!grin_is_adjacent_list_end(g, ali)) {
-      cnt++;
-      GRIN_EDGE e = grin_get_edge_from_adjacent_list_iter(g, ali);
-      GRIN_VERTEX v1 = grin_get_src_vertex_from_edge(g, e);
-      GRIN_VERTEX v2 = grin_get_dst_vertex_from_edge(g, e);
-      GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list_iter(g, ali);
+      size_t cnt = 0;
+      while (!grin_is_adjacent_list_end(g, ali)) {
+        cnt++;
+        GRIN_EDGE e = grin_get_edge_from_adjacent_list_iter(g, ali);
+        GRIN_VERTEX v1 = grin_get_src_vertex_from_edge(g, e);
+        GRIN_VERTEX v2 = grin_get_dst_vertex_from_edge(g, e);
+        GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list_iter(g, ali);
 
-      if (dir == OUT) {
-        if (!grin_equal_vertex(g, v, v1)) {
-          printf("vertex not match\n");
+        if (dir == OUT) {
+          if (!grin_equal_vertex(g, v, v1)) {
+            printf("vertex not match\n");
+          }
+          if (!grin_equal_vertex(g, v2, u)) {
+            printf("vertex not match\n");
+          }
+        } else {
+          if (!grin_equal_vertex(g, v, v2)) {
+            printf("vertex not match\n");
+          }
+          if (!grin_equal_vertex(g, v1, u)) {
+            printf("vertex not match\n");
+          }
         }
-        if (!grin_equal_vertex(g, v2, u)) {
-          printf("vertex not match\n");
+
+        grin_destroy_vertex(g, v1);
+        grin_destroy_vertex(g, v2);
+        grin_destroy_vertex(g, u);
+        grin_destroy_edge(g, e);
+        grin_get_next_adjacent_list_iter(g, ali);
+      }
+#ifdef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
+      long long int vid = grin_get_vertex_original_id_of_int64(g, v);
+      if (dir == OUT) {
+        if (i < etl_size) {
+          printf("vertex %lld OUT adjacent list, edgetype: %zu checked num: %zu\n", vid, i, cnt);
+        } else {
+          printf("vertex %lld OUT adjacent list, edgetype: all checked num: %zu\n", vid, cnt);
         }
       } else {
-        if (!grin_equal_vertex(g, v, v2)) {
-          printf("vertex not match\n");
-        }
-        if (!grin_equal_vertex(g, v1, u)) {
-          printf("vertex not match\n");
+        if (i < etl_size) {
+          printf("vertex %lld IN adjacent list, edgetype: %zu checked num: %zu\n", vid, i, cnt);
+        } else {
+          printf("vertex %lld IN adjacent list, edgetype: all checked num: %zu\n", vid, cnt);
         }
       }
-
-      grin_destroy_vertex(g, v1);
-      grin_destroy_vertex(g, v2);
-      grin_destroy_vertex(g, u);
-      grin_destroy_edge(g, e);
-      grin_get_next_adjacent_list_iter(g, ali);
-    }
-#ifdef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
-    long long int vid = grin_get_vertex_original_id_of_int64(g, v);
-    if (dir == OUT) {
-      printf("vertex %lld OUT adjacent list checked num: %zu\n", vid, cnt);
-    } else {
-      printf("vertex %lld IN adjacent list checked num: %zu\n", vid, cnt);
-    }
 #endif
 
-    grin_destroy_adjacent_list_iter(g, ali);
+      grin_destroy_adjacent_list_iter(g, ali);
+    }    
     grin_destroy_vertex(g, v);
     grin_get_next_vertex_list_iter(g, vli);
   }

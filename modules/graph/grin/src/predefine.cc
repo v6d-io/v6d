@@ -117,12 +117,8 @@ void __grin_init_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
             vr = g->OuterVertices(vtype);
         }
         sum += vr.size();
-        if (sum == 0) {
-            vl->type_begin++;
-        } else {
-            vl->offsets.push_back(sum);
-            vl->vrs.push_back(vr);
-        }
+        vl->offsets.push_back(sum);
+        vl->vrs.push_back(vr);
     }
 }
 #endif
@@ -140,13 +136,9 @@ void __grin_init_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
         } else {
             ral = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), etype);
         }
-        sum += ral.size();
-        if (sum == 0) {
-            al->etype_begin++;
-        } else {
-            al->offsets.push_back(sum);
-            al->data.push_back(ral);
-        }
+        sum += ral.size();    
+        al->offsets.push_back(sum);
+        al->data.push_back(ral);
     }
 }
 #endif

@@ -61,6 +61,12 @@ GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH g, GRIN_VERTEX_L
     vli->type_current = _vl->type_begin;
     vli->current = 0;
     vli->all_master_mirror = _vl->all_master_mirror;
+    
+    while (vli->type_current < vli->type_end) {
+        if (_vl->offsets[vli->type_current - vli->type_begin + 1] > 0) break;
+        vli->type_current++;
+    }
+    
     if (vli->type_current < vli->type_end) {
         if (vli->all_master_mirror == 0) {
             vli->vr = _g->Vertices(vli->type_current);
