@@ -111,6 +111,7 @@ void grin_get_next_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR 
         if (_ali->current < _ali->data.size()) break;
         _ali->etype_current++;
         _ali->current = 0;
+        if (_ali->etype_current >= _ali->etype_end) break;
         if (_ali->dir == GRIN_DIRECTION::IN) {
             _ali->data = _g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(_ali->vid), _ali->etype_current);
         } else {
@@ -124,7 +125,7 @@ bool grin_is_adjacent_list_end(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
     return _ali->etype_current >= _ali->etype_end;
 }
 
-GRIN_VERTEX grin_get_neighbor_from_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
+GRIN_VERTEX grin_get_neighbor_from_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
     auto _nbr = _ali->data.begin() + _ali->current;
     auto v = new GRIN_VERTEX_T(_nbr->vid);
