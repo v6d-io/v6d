@@ -946,45 +946,6 @@ void test_partition(int argc, char** argv) {
 }
 
 
-void test_topology_adjacent_list(int argc, char** argv) {
-  GRIN_GRAPH g = get_graph(argc, argv);
-
-  GRIN_VERTEX v = get_one_vertex(g);
-
-  GRIN_ADJACENT_LIST al = grin_get_adjacent_list(g, OUT, v);
-  GRIN_ADJACENT_LIST_ITERATOR ali = grin_get_adjacent_list_begin(g, al);
-  grin_destroy_adjacent_list(g, al);
-  size_t cnt = 0;
-
-  while (!grin_is_adjacent_list_end(g, ali)) {
-    cnt++;
-
-    GRIN_EDGE e = grin_get_edge_from_adjacent_list_iter(g, ali);
-    GRIN_VERTEX v1 = grin_get_src_vertex_from_edge(g, e);
-    if (!grin_equal_vertex(g, v, v1)) {
-      printf("vertex not match\n");
-    }
-
-    GRIN_VERTEX v2 = grin_get_dst_vertex_from_edge(g, e);
-    GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list_iter(g, ali);
-    if (!grin_equal_vertex(g, v2, u)) {
-      printf("vertex not match\n");
-    }
-
-    grin_destroy_vertex(g, v1);
-    grin_destroy_vertex(g, v2);
-    grin_destroy_vertex(g, u);
-    grin_destroy_edge(g, e);
-    grin_get_next_adjacent_list_iter(g, ali);
-  }
-
-  printf("num of edge checked: %zu\n", cnt);
-
-  grin_destroy_adjacent_list_iter(g, ali);
-  grin_destroy_vertex(g, v);
-  grin_destroy_graph(g);
-}
-
 void test_topology_structure(int argc, char** argv) {
   GRIN_GRAPH g = get_graph(argc, argv);
 
@@ -993,10 +954,70 @@ void test_topology_structure(int argc, char** argv) {
   grin_destroy_graph(g);
 }
 
+void test_topology_adjacent_list(int argc, char** argv, GRIN_DIRECTION dir) {
+  GRIN_GRAPH g = get_graph(argc, argv);
+
+  GRIN_VERTEX_LIST vl = grin_get_vertex_list(g);
+  GRIN_VERTEX_LIST_ITERATOR vli = grin_get_vertex_list_begin(g, vl);
+  grin_destroy_vertex_list(g, vl);
+
+  while (!grin_is_vertex_list_end(g, vli)) {
+    GRIN_VERTEX v = grin_get_vertex_from_iter(g, vli);
+    GRIN_ADJACENT_LIST al = grin_get_adjacent_list(g, dir, v);
+    GRIN_ADJACENT_LIST_ITERATOR ali = grin_get_adjacent_list_begin(g, al);
+    grin_destroy_adjacent_list(g, al);
+
+    size_t cnt = 0;
+    while (!grin_is_adjacent_list_end(g, ali)) {
+      cnt++;
+      GRIN_EDGE e = grin_get_edge_from_adjacent_list_iter(g, ali);
+      GRIN_VERTEX v1 = grin_get_src_vertex_from_edge(g, e);
+      GRIN_VERTEX v2 = grin_get_dst_vertex_from_edge(g, e);
+      GRIN_VERTEX u = grin_get_neighbor_from_adjacent_list_iter(g, ali);
+
+      if (dir == OUT) {
+        if (!grin_equal_vertex(g, v, v1)) {
+          printf("vertex not match\n");
+        }
+        if (!grin_equal_vertex(g, v2, u)) {
+          printf("vertex not match\n");
+        }
+      } else {
+        if (!grin_equal_vertex(g, v, v2)) {
+          printf("vertex not match\n");
+        }
+        if (!grin_equal_vertex(g, v1, u)) {
+          printf("vertex not match\n");
+        }
+      }
+
+      grin_destroy_vertex(g, v1);
+      grin_destroy_vertex(g, v2);
+      grin_destroy_vertex(g, u);
+      grin_destroy_edge(g, e);
+      grin_get_next_adjacent_list_iter(g, ali);
+    }
+#ifdef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
+    long long int vid = grin_get_vertex_original_id_of_int64(g, v);
+    if (dir == OUT) {
+      printf("vertex %lld OUT adjacent list checked num: %zu\n", vid, cnt);
+    } else {
+      printf("vertex %lld IN adjacent list checked num: %zu\n", vid, cnt);
+    }
+#endif
+
+    grin_destroy_adjacent_list_iter(g, ali);
+    grin_destroy_vertex(g, v);
+    grin_get_next_vertex_list_iter(g, vli);
+  }
+
+  grin_destroy_graph(g);
+}
 
 void test_topology(int argc, char** argv) {
   test_topology_structure(argc, argv);
-  test_topology_adjacent_list(argc, argv);
+  test_topology_adjacent_list(argc, argv, OUT);
+  test_topology_adjacent_list(argc, argv, IN);
 }
 
 int main(int argc, char** argv) {
