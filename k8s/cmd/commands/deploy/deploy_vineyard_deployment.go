@@ -45,6 +45,9 @@ var (
 	# deploy the vineyard deployment with customized image
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
 	deploy vineyard-deployment --image vineyardd:v0.12.2`)
+
+	// OwnerReference is the owner reference of all vineyard deployment resources
+	OwnerReference string
 )
 
 // deployVineyardDeploymentCmd build and deploy the yaml file of vineyardd from stdin or file
@@ -73,6 +76,8 @@ func NewDeployVineyardDeploymentCmd() *cobra.Command {
 
 func init() {
 	flags.ApplyVineyarddOpts(deployVineyardDeploymentCmd)
+	deployVineyardDeploymentCmd.Flags().StringVarP(&OwnerReference, "owner-references",
+		"", "", "The owner reference of all vineyard deployment resources")
 }
 
 func getStorage(q resource.Quantity) string {
@@ -129,6 +134,13 @@ func applyVineyarddFromTemplate(c client.Client) error {
 	}
 
 	for _, o := range objects {
+		if OwnerReference != "" {
+			OwnerRefs, err := util.ParseOwnerRef(OwnerReference)
+			if err != nil {
+				return errors.Wrapf(err, "failed to parse owner reference %s", OwnerReference)
+			}
+			o.SetOwnerReferences(OwnerRefs)
+		}
 		if err := util.CreateIfNotExists(c, o); err != nil {
 			return errors.Wrapf(err, "failed to create object %s", o.GetName())
 		}
