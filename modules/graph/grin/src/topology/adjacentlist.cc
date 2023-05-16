@@ -90,10 +90,12 @@ GRIN_ADJACENT_LIST_ITERATOR grin_get_adjacent_list_begin(GRIN_GRAPH g, GRIN_ADJA
     ali->etype_end = _al->etype_end;
     ali->etype_current = _al->etype_begin;
     ali->current = 0;
-    if (ali->dir == GRIN_DIRECTION::IN) {
-        ali->data = _g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
-    } else {
-        ali->data = _g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
+    if (ali->etype_current < ali->etype_end) {
+        if (ali->dir == GRIN_DIRECTION::IN) {
+            ali->data = _g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
+        } else {
+            ali->data = _g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
+        }
     }
     return ali;
 }
