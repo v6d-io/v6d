@@ -515,13 +515,15 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     }
   }
 
-  // oe_ptr_lists_.resize(vertex_label_num_);
-  // oe_offsets_ptr_lists_.resize(vertex_label_num_);
+  if (this->encode_edges_) {
+    encoded_oe_ptr_lists_.resize(vertex_label_num_);
+    encoded_oe_offsets_ptr_lists_.resize(vertex_label_num_);
+    encoded_oe_e_symbol_ptr_lists_.resize(vertex_label_num_);
+  } else {
+    oe_ptr_lists_.resize(vertex_label_num_);
+    oe_offsets_ptr_lists_.resize(vertex_label_num_);
+  }
 
-  encoded_oe_ptr_lists_.resize(vertex_label_num_);
-  encoded_oe_offsets_ptr_lists_.resize(vertex_label_num_);
-
-  encoded_oe_e_symbol_ptr_lists_.resize(vertex_label_num_);
 
   idst_.resize(vertex_label_num_);
   odst_.resize(vertex_label_num_);
@@ -537,13 +539,14 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     ovgid_lists_ptr_[i] = ovgid_lists_[i]->GetArray()->raw_values();
     ovg2l_maps_ptr_[i] = ovg2l_maps_[i].get();
 
-    // oe_ptr_lists_[i].resize(edge_label_num_);
-    // oe_offsets_ptr_lists_[i].resize(edge_label_num_);
-
-    encoded_oe_ptr_lists_[i].resize(edge_label_num_);
-    encoded_oe_offsets_ptr_lists_[i].resize(edge_label_num_);
-
-    encoded_oe_e_symbol_ptr_lists_[i].resize(edge_label_num_);
+    if (encode_edges_) {
+      encoded_oe_ptr_lists_[i].resize(edge_label_num_);
+      encoded_oe_offsets_ptr_lists_[i].resize(edge_label_num_);
+      encoded_oe_e_symbol_ptr_lists_[i].resize(edge_label_num_);
+    } else {
+      oe_ptr_lists_[i].resize(edge_label_num_);
+      oe_offsets_ptr_lists_[i].resize(edge_label_num_);
+    }
 
     idst_[i].resize(edge_label_num_);
     odst_[i].resize(edge_label_num_);
@@ -554,62 +557,71 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     iodoffset_[i].resize(edge_label_num_);
 
     for (label_id_t j = 0; j < edge_label_num_; ++j) {
-      // oe_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
-      //     oe_lists_[i][j]->GetArray()->raw_values());
-      // oe_offsets_ptr_lists_[i][j] =
-      //     oe_offsets_lists_[i][j]->GetArray()->raw_values();
+      if (this->encode_edges_) {
+        encoded_oe_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
+            encoded_oe_lists_[i][j]->GetArray()->raw_values());
+        encoded_oe_offsets_ptr_lists_[i][j] =
+            encoded_oe_offsets_lists_[i][j]->GetArray()->raw_values();
+        encoded_oe_e_symbol_ptr_lists_[i][j] =
+            encoded_oe_e_symbol_lists_[i][j]->GetArray()->raw_values();
+      } else {
+        oe_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
+            oe_lists_[i][j]->GetArray()->raw_values());
+        oe_offsets_ptr_lists_[i][j] =
+            oe_offsets_lists_[i][j]->GetArray()->raw_values();
+      }
 
-      encoded_oe_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
-          encoded_oe_lists_[i][j]->GetArray()->raw_values());
-      encoded_oe_offsets_ptr_lists_[i][j] =
-          encoded_oe_offsets_lists_[i][j]->GetArray()->raw_values();
-
-      encoded_oe_e_symbol_ptr_lists_[i][j] =
-          encoded_oe_e_symbol_lists_[i][j]->GetArray()->raw_values();
     }
   }
 
-  if (directed_) {
-    // ie_ptr_lists_.resize(vertex_label_num_);
-    // ie_offsets_ptr_lists_.resize(vertex_label_num_);
+  if (this->encode_edges_) {
+    if (directed_) {
+      encoded_ie_ptr_lists_.resize(vertex_label_num_);
+      encoded_ie_offsets_ptr_lists_.resize(vertex_label_num_);
+      encoded_ie_e_symbol_ptr_lists_.resize(vertex_label_num_);
 
-    encoded_ie_ptr_lists_.resize(vertex_label_num_);
-    encoded_ie_offsets_ptr_lists_.resize(vertex_label_num_);
+      for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+        encoded_ie_ptr_lists_[i].resize(edge_label_num_);
+        encoded_ie_offsets_ptr_lists_[i].resize(edge_label_num_);
+        encoded_ie_e_symbol_ptr_lists_[i].resize(edge_label_num_);
 
-    encoded_ie_e_symbol_ptr_lists_.resize(vertex_label_num_);
+        for (label_id_t j = 0; j < edge_label_num_; ++j) {
+          encoded_ie_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
+              encoded_ie_lists_[i][j]->GetArray()->raw_values());
+          encoded_ie_offsets_ptr_lists_[i][j] =
+              encoded_ie_offsets_lists_[i][j]->GetArray()->raw_values();
 
-    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-      // ie_ptr_lists_[i].resize(edge_label_num_);
-      // ie_offsets_ptr_lists_[i].resize(edge_label_num_);
-
-      encoded_ie_ptr_lists_[i].resize(edge_label_num_);
-      encoded_ie_offsets_ptr_lists_[i].resize(edge_label_num_);
-
-      encoded_ie_e_symbol_ptr_lists_[i].resize(edge_label_num_);
-
-      for (label_id_t j = 0; j < edge_label_num_; ++j) {
-        // ie_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
-        //     ie_lists_[i][j]->GetArray()->raw_values());
-        // ie_offsets_ptr_lists_[i][j] =
-        //     ie_offsets_lists_[i][j]->GetArray()->raw_values();
-
-        encoded_ie_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
-            encoded_ie_lists_[i][j]->GetArray()->raw_values());
-        encoded_ie_offsets_ptr_lists_[i][j] =
-            encoded_ie_offsets_lists_[i][j]->GetArray()->raw_values();
-
-        encoded_ie_e_symbol_ptr_lists_[i][j] =
-            encoded_ie_e_symbol_lists_[i][j]->GetArray()->raw_values();
+          encoded_ie_e_symbol_ptr_lists_[i][j] =
+              encoded_ie_e_symbol_lists_[i][j]->GetArray()->raw_values();
+        }
       }
+    } else {
+      encoded_ie_ptr_lists_ = encoded_oe_ptr_lists_;
+      encoded_ie_offsets_ptr_lists_ = encoded_oe_offsets_ptr_lists_;
+      encoded_ie_e_symbol_ptr_lists_ = encoded_oe_e_symbol_ptr_lists_;
     }
   } else {
-    // ie_ptr_lists_ = oe_ptr_lists_;
-    // ie_offsets_ptr_lists_ = oe_offsets_ptr_lists_;
+    if (directed_) {
+      ie_ptr_lists_.resize(vertex_label_num_);
+      ie_offsets_ptr_lists_.resize(vertex_label_num_);
 
-    encoded_ie_ptr_lists_ = encoded_oe_ptr_lists_;
-    encoded_ie_offsets_ptr_lists_ = encoded_oe_offsets_ptr_lists_;
-    encoded_ie_e_symbol_ptr_lists_ = encoded_oe_e_symbol_ptr_lists_;
+      for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+        ie_ptr_lists_[i].resize(edge_label_num_);
+        ie_offsets_ptr_lists_[i].resize(edge_label_num_);
+
+        for (label_id_t j = 0; j < edge_label_num_; ++j) {
+          ie_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
+              ie_lists_[i][j]->GetArray()->raw_values());
+          ie_offsets_ptr_lists_[i][j] =
+              ie_offsets_lists_[i][j]->GetArray()->raw_values();
+        }
+      }
+    } else {
+      ie_ptr_lists_ = oe_ptr_lists_;
+      ie_offsets_ptr_lists_ = oe_offsets_ptr_lists_;
+    }
   }
+
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>

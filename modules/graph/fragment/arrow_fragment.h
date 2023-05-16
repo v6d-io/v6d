@@ -81,7 +81,7 @@ class BasicArrowFragmentBuilder
       fid_t fid, fid_t fnum,
       std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
       std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
-      bool directed = true, int concurrency = 1);
+      bool directed = true, int concurrency = 1, bool encode_edges = false);
 
   boost::leaf::result<void> SetPropertyGraphSchema(
       PropertyGraphSchema&& schema) {

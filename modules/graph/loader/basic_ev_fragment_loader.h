@@ -76,7 +76,8 @@ class BasicEVFragmentLoader {
                                  const PARTITIONER_T& partitioner,
                                  bool directed = true,
                                  bool generate_eid = false,
-                                 bool retain_oid = false);
+                                 bool retain_oid = false,
+                                 bool encode_edges = false);
 
   /**
    * @brief Add a loaded vertex table.
@@ -182,6 +183,7 @@ class BasicEVFragmentLoader {
   bool directed_;
   bool generate_eid_ = false;
   bool retain_oid_ = false;
+  bool encode_edges_;
 
   std::map<std::string, label_id_t> vertex_label_to_index_;
   std::vector<std::string> vertex_labels_;
