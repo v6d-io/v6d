@@ -305,7 +305,7 @@ func GetWorkloadObj(workload string) (*unstructured.Unstructured, error) {
 func GetManifestFromTemplate(workload string) (OutputManifests, error) {
 	var om OutputManifests
 
-	ownerRef, err := getOwnerRefFromInput()
+	ownerRef, err := util.ParseOwnerRef(flags.OwnerReference)
 	if err != nil {
 		return om, errors.Wrap(err, "failed to get owner reference from input")
 	}
@@ -399,19 +399,6 @@ func GetManifestFromTemplate(workload string) (OutputManifests, error) {
 	}
 
 	return om, nil
-}
-
-func getOwnerRefFromInput() ([]metav1.OwnerReference, error) {
-	ownerRef := []metav1.OwnerReference{}
-
-	if flags.OwnerReference != "" {
-		ownerRef = make([]metav1.OwnerReference, 1)
-		if err := json.Unmarshal([]byte(flags.OwnerReference), &ownerRef); err != nil {
-			return nil, errors.Wrap(err, "failed to unmarshal the owner reference")
-		}
-	}
-
-	return ownerRef, nil
 }
 
 func parseManifestsAsYAML(om OutputManifests) ([]string, error) {

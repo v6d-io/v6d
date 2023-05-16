@@ -22,7 +22,9 @@ import (
 	"github.com/ghodss/yaml"
 
 	"github.com/pkg/errors"
+
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
@@ -163,4 +165,18 @@ func GetPVAndPVC(pVAndPVC string) (*corev1.PersistentVolumeSpec,
 		}
 	}
 	return pv, pvc, nil
+}
+
+// ParseOwnerRef parse the string to metav1.OwnerReference
+func ParseOwnerRef(of string) ([]metav1.OwnerReference, error) {
+	ownerRef := []metav1.OwnerReference{}
+
+	if of != "" {
+		ownerRef = make([]metav1.OwnerReference, 1)
+		if err := json.Unmarshal([]byte(of), &ownerRef); err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal the owner reference")
+		}
+	}
+
+	return ownerRef, nil
 }

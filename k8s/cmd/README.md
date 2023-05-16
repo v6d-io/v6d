@@ -710,6 +710,7 @@ vineyardctl deploy vineyard-deployment [flags]
   -f, --file string                                   the path of vineyardd
   -h, --help                                          help for vineyard-deployment
       --name string                                   the name of vineyardd (default "vineyardd-sample")
+      --owner-references string                       The owner reference of all vineyard deployment resources
       --pluginImage.backupImage string                the backup image of vineyardd (default "ghcr.io/v6d-io/v6d/backup-job")
       --pluginImage.daskRepartitionImage string       the dask repartition image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/dask-repartition")
       --pluginImage.distributedAssemblyImage string   the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
@@ -725,9 +726,10 @@ vineyardctl deploy vineyard-deployment [flags]
       --vineyardd.metric.enable                       enable metrics of vineyardd
       --vineyardd.metric.image string                 the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
       --vineyardd.metric.imagePullPolicy string       the imagePullPolicy of the metric image (default "IfNotPresent")
+      --vineyardd.reserve_memory                      Reserving enough physical memory pages for vineyardd
       --vineyardd.service.port int                    the service port of vineyard service (default 9600)
       --vineyardd.service.type string                 the service type of vineyard service (default "ClusterIP")
-      --vineyardd.size string                         The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.  (default "256Mi")
+      --vineyardd.size string                         The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki. (default "256Mi")
       --vineyardd.socket string                       The directory on host for the IPC socket file. The namespace and name will be replaced with your vineyard config (default "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}")
       --vineyardd.spill.config string                 If you want to enable the spill mechanism, please set the name of spill config
       --vineyardd.spill.path string                   The path of spill config
@@ -857,9 +859,10 @@ vineyardctl deploy vineyardd [flags]
       --vineyardd.metric.enable                       enable metrics of vineyardd
       --vineyardd.metric.image string                 the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
       --vineyardd.metric.imagePullPolicy string       the imagePullPolicy of the metric image (default "IfNotPresent")
+      --vineyardd.reserve_memory                      Reserving enough physical memory pages for vineyardd
       --vineyardd.service.port int                    the service port of vineyard service (default 9600)
       --vineyardd.service.type string                 the service type of vineyard service (default "ClusterIP")
-      --vineyardd.size string                         The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.  (default "256Mi")
+      --vineyardd.size string                         The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki. (default "256Mi")
       --vineyardd.socket string                       The directory on host for the IPC socket file. The namespace and name will be replaced with your vineyard config (default "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}")
       --vineyardd.spill.config string                 If you want to enable the spill mechanism, please set the name of spill config
       --vineyardd.spill.path string                   The path of spill config
@@ -1043,9 +1046,10 @@ vineyardctl inject [flags]
       --sidecar.metric.enable                   enable metrics of vineyardd
       --sidecar.metric.image string             the metic image of vineyardd (default "vineyardcloudnative/vineyard-grok-exporter:latest")
       --sidecar.metric.imagePullPolicy string   the imagePullPolicy of the metric image (default "IfNotPresent")
+      --sidecar.reserve_memory                  Reserving enough physical memory pages for vineyardd
       --sidecar.service.port int                the service port of vineyard service (default 9600)
       --sidecar.service.type string             the service type of vineyard service (default "ClusterIP")
-      --sidecar.size string                     The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.  (default "256Mi")
+      --sidecar.size string                     The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki. (default "256Mi")
       --sidecar.socket string                   The directory on host for the IPC socket file. The namespace and name will be replaced with your vineyard config (default "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}")
       --sidecar.spill.config string             If you want to enable the spill mechanism, please set the name of spill config
       --sidecar.spill.path string               The path of spill config

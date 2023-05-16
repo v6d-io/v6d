@@ -57,10 +57,6 @@ func defaultKubeConfig() string {
 
 // GetDefaultVineyardNamespace return the default vineyard namespace
 func GetDefaultVineyardNamespace() string {
-	// we don't use the default namespace for vineyard
-	if Namespace == "default" {
-		return defaultNamespace
-	}
 	return Namespace
 }
 
