@@ -167,6 +167,7 @@ func GetPVAndPVC(pVAndPVC string) (*corev1.PersistentVolumeSpec,
 	return pv, pvc, nil
 }
 
+// ParseOwnerRef parse the string to metav1.OwnerReference
 func ParseOwnerRef(of string) ([]metav1.OwnerReference, error) {
 	ownerRef := []metav1.OwnerReference{}
 
