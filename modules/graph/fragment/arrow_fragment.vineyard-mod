@@ -720,7 +720,7 @@ class [[vineyard]] ArrowFragment
 
   [[shared]] fid_t fid_, fnum_;
   [[shared]] bool directed_;
-  [[shared]] bool encode_edges_;
+  [[shared]] bool compact_edges_;
   [[shared]] bool is_multigraph_;
   [[shared]] property_graph_types::LABEL_ID_TYPE vertex_label_num_;
   [[shared]] property_graph_types::LABEL_ID_TYPE edge_label_num_;

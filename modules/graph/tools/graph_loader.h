@@ -57,7 +57,7 @@ struct loader_options {
   bool catch_leaf_errors = true;
   std::string dump;
   size_t dump_dry_run_rounds = 0;
-  bool encode_edges = false;
+  bool compact_edges = false;
   bool print_memory_usage = false;
   bool print_normalized_schema = false;
 };

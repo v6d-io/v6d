@@ -90,7 +90,7 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadFragment(
 
   auto basic_fragment_loader = std::make_shared<basic_fragment_loader_t>(
       client_, comm_spec_, partitioner_, directed_, generate_eid_, retain_oid_,
-      encode_edges_);
+      compact_edges_);
 
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-0";
   for (auto const& pair : vertex_tables_with_label) {
@@ -550,7 +550,7 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::addVerticesAndEdges(
 
   auto basic_fragment_loader = std::make_shared<basic_fragment_loader_t>(
       client_, comm_spec_, partitioner_, directed_, generate_eid_, retain_oid_,
-      encode_edges_);
+      compact_edges_);
 
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-0";
   for (auto& pair : vertex_tables_with_label) {

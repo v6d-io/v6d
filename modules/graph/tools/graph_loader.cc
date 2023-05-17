@@ -300,8 +300,8 @@ static inline bool parse_options_from_config_json(
     options.print_normalized_schema =
         parse_boolean_value(config["print_normalized_schema"]);
   }
-  if (config.contains("encode_edges")) {
-    options.encode_edges = parse_boolean_value(config["encode_edges"]);
+  if (config.contains("compact_edges")) {
+    options.compact_edges = parse_boolean_value(config["compact_edges"]);
   }
   return true;
 }

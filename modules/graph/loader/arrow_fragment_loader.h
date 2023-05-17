@@ -176,7 +176,7 @@ class ArrowFragmentLoader {
                       const std::vector<std::string>& efiles,
                       const std::vector<std::string>& vfiles,
                       bool directed = true, bool generate_eid = false,
-                      bool retain_oid = false, bool encode_edges = false)
+                      bool retain_oid = false, bool compact_edges = false)
       : client_(client),
         comm_spec_(comm_spec),
         efiles_(efiles),
@@ -184,12 +184,12 @@ class ArrowFragmentLoader {
         directed_(directed),
         generate_eid_(generate_eid),
         retain_oid_(retain_oid),
-        encode_edges_(encode_edges) {}
+        compact_edges_(compact_edges) {}
 
   ArrowFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                       const std::vector<std::string>& efiles,
                       bool directed = true, bool generate_eid = false,
-                      bool retain_oid = false, bool encode_edges = false)
+                      bool retain_oid = false, bool compact_edges = false)
       : client_(client),
         comm_spec_(comm_spec),
         efiles_(efiles),
@@ -197,7 +197,7 @@ class ArrowFragmentLoader {
         directed_(directed),
         generate_eid_(generate_eid),
         retain_oid_(retain_oid),
-        encode_edges_(encode_edges) {}
+        compact_edges_(compact_edges) {}
 
   ArrowFragmentLoader(
       Client& client, const grape::CommSpec& comm_spec,
@@ -205,7 +205,7 @@ class ArrowFragmentLoader {
       std::vector<std::vector<std::shared_ptr<arrow::Table>>> const&
           partial_e_tables,
       bool directed = true, bool generate_eid = false, bool retain_oid = false,
-      bool encode_edges = false)
+      bool compact_edges = false)
       : client_(client),
         comm_spec_(comm_spec),
         partial_v_tables_(partial_v_tables),
@@ -213,14 +213,14 @@ class ArrowFragmentLoader {
         directed_(directed),
         generate_eid_(generate_eid),
         retain_oid_(retain_oid),
-        encode_edges_(encode_edges) {}
+        compact_edges_(compact_edges) {}
 
   ArrowFragmentLoader(
       Client& client, const grape::CommSpec& comm_spec,
       std::vector<std::vector<std::shared_ptr<arrow::Table>>> const&
           partial_e_tables,
       bool directed = true, bool generate_eid = false, bool retain_oid = false,
-      bool encode_edges = false)
+      bool compact_edges = false)
       : client_(client),
         comm_spec_(comm_spec),
         partial_v_tables_(),
@@ -228,7 +228,7 @@ class ArrowFragmentLoader {
         directed_(directed),
         generate_eid_(generate_eid),
         retain_oid_(retain_oid),
-        encode_edges_(encode_edges) {}
+        compact_edges_(compact_edges) {}
 
   ~ArrowFragmentLoader() = default;
 
@@ -302,7 +302,7 @@ class ArrowFragmentLoader {
   bool directed_;
   bool generate_eid_ = false;
   bool retain_oid_ = false;
-  bool encode_edges_;
+  bool compact_edges_;
 
   std::function<void(IIOAdaptor*)> io_deleter_ = [](IIOAdaptor* adaptor) {
     VINEYARD_DISCARD(adaptor->Close());

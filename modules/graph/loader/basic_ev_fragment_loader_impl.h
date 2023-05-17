@@ -45,14 +45,14 @@ template <typename OID_T, typename VID_T, typename PARTITIONER_T,
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T>::
     BasicEVFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                           const PARTITIONER_T& partitioner, bool directed,
-                          bool generate_eid, bool retain_oid, bool encode_edges)
+                          bool generate_eid, bool retain_oid, bool compact_edges)
     : client_(client),
       comm_spec_(comm_spec),
       partitioner_(partitioner),
       directed_(directed),
       generate_eid_(generate_eid),
       retain_oid_(retain_oid),
-      encode_edges_(encode_edges) {}
+      compact_edges_(compact_edges) {}
 
 /**
  * @brief Add a loaded vertex table.
@@ -363,7 +363,7 @@ boost::leaf::result<ObjectID> BasicEVFragmentLoader<
 
   BOOST_LEAF_CHECK(frag_builder.Init(
       comm_spec_.fid(), comm_spec_.fnum(), std::move(output_vertex_tables_),
-      std::move(output_edge_tables_), directed_, thread_num, encode_edges_));
+      std::move(output_edge_tables_), directed_, thread_num, compact_edges_));
 
   VLOG(100) << "Finished fragment builder construction: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();

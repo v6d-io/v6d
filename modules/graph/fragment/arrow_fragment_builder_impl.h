@@ -1074,7 +1074,7 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
     tg.AddTask(fn, &client);
   }
 
-  if (this->encode_edges_) {
+  if (this->compact_edges_) {
     if (this->directed_) {
       Base::encoded_ie_lists_.resize(this->vertex_label_num_);
       Base::encoded_ie_offsets_lists_.resize(this->vertex_label_num_);
@@ -1091,7 +1091,7 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
   }
 
   for (label_id_t i = 0; i < this->vertex_label_num_; ++i) {
-    if (this->encode_edges_) {
+    if (this->compact_edges_) {
       if (this->directed_) {
         Base::encoded_ie_lists_[i].resize(this->edge_label_num_);
         Base::encoded_ie_offsets_lists_[i].resize(this->edge_label_num_);
@@ -1110,7 +1110,7 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
     for (label_id_t j = 0; j < this->edge_label_num_; ++j) {
       auto fn = [this, i, j](Client* client) -> Status {
         std::shared_ptr<Object> object;
-        if (this->encode_edges_) {
+        if (this->compact_edges_) {
           if (this->directed_) {
             RETURN_ON_ERROR(encoded_ie_lists_[i][j]->Seal(*client, object));
             this->set_encoded_ie_lists_(i, j, object);
@@ -1160,14 +1160,14 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Init(
     fid_t fid, fid_t fnum,
     std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
     std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, bool directed,
-    int concurrency, bool encode_edges) {
+    int concurrency, bool compact_edges) {
   this->fid_ = fid;
   this->fnum_ = fnum;
   this->directed_ = directed;
   this->is_multigraph_ = false;
   this->vertex_label_num_ = vertex_tables.size();
   this->edge_label_num_ = edge_tables.size();
-  this->encode_edges_ = encode_edges;
+  this->compact_edges_ = compact_edges;
 
   vid_parser_.Init(this->fnum_, this->vertex_label_num_);
 
@@ -1308,7 +1308,7 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
   VLOG(100) << "Init edges: after generate CSR: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
-  if (this->encode_edges_) {
+  if (this->compact_edges_) {
     if (this->directed_) {
       this->encoded_ie_lists_.resize(this->vertex_label_num_);
       this->encoded_ie_offsets_lists_.resize(this->vertex_label_num_);

@@ -49,7 +49,7 @@ ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
   auto loader =
       loader_t(client, comm_spec, std::vector<std::string>{},
                std::vector<std::string>{}, options.directed,
-               options.generate_eid, options.retain_oid, options.encode_edges);
+               options.generate_eid, options.retain_oid, options.compact_edges);
 
   MPI_Barrier(comm_spec.comm());
   auto fn = [&]() -> boost::leaf::result<ObjectID> {

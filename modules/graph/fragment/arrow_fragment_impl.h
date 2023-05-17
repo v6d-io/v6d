@@ -515,7 +515,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     }
   }
 
-  if (this->encode_edges_) {
+  if (this->compact_edges_) {
     encoded_oe_ptr_lists_.resize(vertex_label_num_);
     encoded_oe_offsets_ptr_lists_.resize(vertex_label_num_);
   } else {
@@ -538,7 +538,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     ovgid_lists_ptr_[i] = ovgid_lists_[i]->GetArray()->raw_values();
     ovg2l_maps_ptr_[i] = ovg2l_maps_[i].get();
 
-    if (encode_edges_) {
+    if (compact_edges_) {
       encoded_oe_ptr_lists_[i].resize(edge_label_num_);
       encoded_oe_offsets_ptr_lists_[i].resize(edge_label_num_);
     } else {
@@ -555,7 +555,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     iodoffset_[i].resize(edge_label_num_);
 
     for (label_id_t j = 0; j < edge_label_num_; ++j) {
-      if (this->encode_edges_) {
+      if (this->compact_edges_) {
         encoded_oe_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
             encoded_oe_lists_[i][j]->GetArray()->raw_values());
         encoded_oe_offsets_ptr_lists_[i][j] =
@@ -570,7 +570,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     }
   }
 
-  if (this->encode_edges_) {
+  if (this->compact_edges_) {
     if (directed_) {
       encoded_ie_ptr_lists_.resize(vertex_label_num_);
       encoded_ie_offsets_ptr_lists_.resize(vertex_label_num_);
