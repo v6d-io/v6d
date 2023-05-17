@@ -522,8 +522,7 @@ struct EncodedNbr {
         size_(rhs.size()),
         edata_arrays_(rhs.edata_arrays_) {}
   EncodedNbr(const uint8_t* ptr, size_t capacity, const void** edata_arrays)
-      : ptr_(ptr),
-        edata_arrays_(edata_arrays) {
+      : ptr_(ptr), edata_arrays_(edata_arrays) {
     data_.eid = 0;
     data_.vid = 0;
     if (capacity > 0)
@@ -864,7 +863,6 @@ class EncodedAdjList {
         edata_arrays_(nullptr) {}
   EncodedAdjList(const uint8_t* ptr, const size_t begin_offset,
                  const size_t end_offset, const void** edata_arrays) {
-
     begin_ptr_ = ptr + begin_offset;
     end_ptr_ = ptr + end_offset;
     size_ = end_offset - begin_offset;

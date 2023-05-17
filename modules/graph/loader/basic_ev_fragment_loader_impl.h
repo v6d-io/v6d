@@ -45,7 +45,8 @@ template <typename OID_T, typename VID_T, typename PARTITIONER_T,
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T>::
     BasicEVFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                           const PARTITIONER_T& partitioner, bool directed,
-                          bool generate_eid, bool retain_oid, bool compact_edges)
+                          bool generate_eid, bool retain_oid,
+                          bool compact_edges)
     : client_(client),
       comm_spec_(comm_spec),
       partitioner_(partitioner),

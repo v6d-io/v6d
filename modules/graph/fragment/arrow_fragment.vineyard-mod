@@ -435,8 +435,8 @@ class [[vineyard]] ArrowFragment
   }
 
   template <bool ENCODED = true>
-  inline typename std::enable_if<!ENCODED, adj_list_t>::type
-  GetIncomingAdjList(const vertex_t& v, label_id_t e_label) const {
+  inline typename std::enable_if<!ENCODED, adj_list_t>::type GetIncomingAdjList(
+      const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
@@ -458,14 +458,14 @@ class [[vineyard]] ArrowFragment
 
     const uint8_t* ptr = encoded_ie_ptr_lists_[v_label][e_label];
 
-    return encoded_adj_list_t(
-        ptr, offset_array[v_offset], offset_array[v_offset + 1],
-        flatten_edge_tables_columns_[e_label]);
+    return encoded_adj_list_t(ptr, offset_array[v_offset],
+                              offset_array[v_offset + 1],
+                              flatten_edge_tables_columns_[e_label]);
   }
 
   template <bool ENCODED = true>
-  inline typename std::enable_if<!ENCODED, raw_adj_list_t>::type GetIncomingRawAdjList(const vertex_t& v,
-                                              label_id_t e_label) const {
+  inline typename std::enable_if<!ENCODED, raw_adj_list_t>::type
+  GetIncomingRawAdjList(const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
@@ -499,14 +499,14 @@ class [[vineyard]] ArrowFragment
 
     const uint8_t* ptr = encoded_oe_ptr_lists_[v_label][e_label];
 
-    return encoded_adj_list_t(
-        ptr, offset_array[v_offset], offset_array[v_offset + 1],
-        flatten_edge_tables_columns_[e_label]);
+    return encoded_adj_list_t(ptr, offset_array[v_offset],
+                              offset_array[v_offset + 1],
+                              flatten_edge_tables_columns_[e_label]);
   }
 
   template <bool ENCODED = true>
-  inline typename std::enable_if<!ENCODED, raw_adj_list_t>::type GetOutgoingRawAdjList(const vertex_t& v,
-                                              label_id_t e_label) const {
+  inline typename std::enable_if<!ENCODED, raw_adj_list_t>::type
+  GetOutgoingRawAdjList(const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);

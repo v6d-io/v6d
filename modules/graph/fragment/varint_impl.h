@@ -29,32 +29,6 @@ inline uint64_t unaligned_load_u64(const uint8_t* p) {
   return x;
 }
 
-/* header:
-|----------------------------------|
-| pre_size(4 bits) | size (4 bits) |
-|----------------------------------|
-*/
-
-// static inline uint8_t construct_header(uint8_t pre_size, uint8_t size) {
-//   return (pre_size << 4) | (size & 0x0F);
-// }
-
-// static inline unsigned int get_varint_pre_size(const uint8_t header) {
-//   return (unsigned int) (header >> 4);
-// }
-
-// static inline unsigned int get_varint_size(const uint8_t header) {
-//   return (unsigned int) (header & 0x0F);
-// }
-
-// inline const uint8_t* get_pointer(const uint8_t* start, const size_t& index)
-// {
-//   for (size_t i = 0; i < index; i++) {
-//     start += (get_varint_size(*start) + 1);
-//   }
-//   return start;
-// }
-
 template <typename T>
 void varint_encode(T input, std::vector<uint8_t>& output) {
   if (input < UPPER_OF_RANGE_1) {
@@ -78,14 +52,14 @@ void varint_encode(T input, std::vector<uint8_t>& output) {
 template <typename T>
 size_t varint_decode(const uint8_t* input, T& output) {
   const uint8_t* origin_input = input;
-  uint8_t b0 = *input++;
-  if (LIKELY(b0 < UPPER_OF_RANGE_1)) {
-    output = b0;
-  } else if (b0 < UPPER_OF_RANGE_2) {
-    uint8_t b1 = *input++;
-    output = UPPER_OF_RANGE_1 + b1 + ((b0 - UPPER_OF_RANGE_1) << 8);
+  uint8_t byte_0 = *input++;
+  if (LIKELY(byte_0 < UPPER_OF_RANGE_1)) {
+    output = byte_0;
+  } else if (byte_0 < UPPER_OF_RANGE_2) {
+    uint8_t byte_1 = *input++;
+    output = UPPER_OF_RANGE_1 + byte_1 + ((byte_0 - UPPER_OF_RANGE_1) << 8);
   } else {
-    size_t sh = b0 - UPPER_OF_RANGE_2;
+    size_t sh = byte_0 - UPPER_OF_RANGE_2;
     output = unaligned_load_u64(input) & ((uint64_t(1) << 8 * sh << 16) - 1);
     input += 2 + sh;
   }

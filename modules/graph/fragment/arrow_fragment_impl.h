@@ -523,7 +523,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
     oe_offsets_ptr_lists_.resize(vertex_label_num_);
   }
 
-
   idst_.resize(vertex_label_num_);
   odst_.resize(vertex_label_num_);
   iodst_.resize(vertex_label_num_);
@@ -566,7 +565,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
         oe_offsets_ptr_lists_[i][j] =
             oe_offsets_lists_[i][j]->GetArray()->raw_values();
       }
-
     }
   }
 
@@ -611,7 +609,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::initPointers() {
       ie_offsets_ptr_lists_ = oe_offsets_ptr_lists_;
     }
   }
-
 }
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
