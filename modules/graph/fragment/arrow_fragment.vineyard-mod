@@ -463,7 +463,8 @@ class [[vineyard]] ArrowFragment
         flatten_edge_tables_columns_[e_label]);
   }
 
-  inline raw_adj_list_t GetIncomingRawAdjList(const vertex_t& v,
+  template <bool ENCODED = true>
+  inline typename std::enable_if<!ENCODED, raw_adj_list_t>::type GetIncomingRawAdjList(const vertex_t& v,
                                               label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
@@ -503,7 +504,8 @@ class [[vineyard]] ArrowFragment
         flatten_edge_tables_columns_[e_label]);
   }
 
-  inline raw_adj_list_t GetOutgoingRawAdjList(const vertex_t& v,
+  template <bool ENCODED = true>
+  inline typename std::enable_if<!ENCODED, raw_adj_list_t>::type GetOutgoingRawAdjList(const vertex_t& v,
                                               label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
