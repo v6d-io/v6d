@@ -43,8 +43,7 @@ GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t 
     for (unsigned i = 0; i < _vl->type_end - _vl->type_begin; ++i) {        
         if (idx < _vl->offsets[i+1]) {
             auto _idx = idx - _vl->offsets[i];
-            auto v = new GRIN_VERTEX_T(_vl->vrs[i].begin_value() + _idx);
-            return v;
+            return _vl->vrs[i].begin_value() + _idx;
         }
     }
     return GRIN_NULL_VERTEX;
@@ -111,7 +110,6 @@ bool grin_is_vertex_list_end(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
 
 GRIN_VERTEX grin_get_vertex_from_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
     auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
-    auto v = new GRIN_VERTEX_T(_vli->vr.begin_value() + _vli->current);
-    return v;
+    return _vli->vr.begin_value() + _vli->current;
 }
 #endif

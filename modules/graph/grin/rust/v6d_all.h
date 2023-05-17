@@ -19,7 +19,7 @@
 
 /// RUST_KEEP pub const GRIN_NULL_DATATYPE: GrinDatatype = GRIN_DATATYPE_UNDEFINED;
 /// RUST_KEEP pub const GRIN_NULL_GRAPH: GrinGraph = std::ptr::null_mut();
-/// RUST_KEEP pub const GRIN_NULL_VERTEX: GrinVertex = std::ptr::null_mut();
+/// RUST_KEEP pub const GRIN_NULL_VERTEX: GrinVertex = u64::MAX;
 /// RUST_KEEP pub const GRIN_NULL_EDGE: GrinEdge = std::ptr::null_mut();
 /// RUST_KEEP pub const GRIN_NULL_LIST: *mut ::std::os::raw::c_void = std::ptr::null_mut();
 /// RUST_KEEP pub const GRIN_NULL_LIST_ITERATOR: *mut ::std::os::raw::c_void = std::ptr::null_mut();

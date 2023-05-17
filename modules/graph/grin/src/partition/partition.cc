@@ -35,12 +35,10 @@ GRIN_PARTITIONED_GRAPH grin_get_partitioned_graph_from_storage(int argc, char** 
     for (auto & [fid, location] : pg->pg->FragmentLocations()) {
         if (location == pg->client.instance_id()) {
             auto obj_id = pg->pg->Fragments().at(fid);
-//            std::cout << fid << ": " << obj_id << std::endl;
-//            auto frag = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(pg->client.GetObject(obj_id));
             pg->lgs[fid] = obj_id;
         }
     }
-  return pg;
+    return pg;
 }
 
 void grin_destroy_partitioned_graph(GRIN_PARTITIONED_GRAPH pg) {

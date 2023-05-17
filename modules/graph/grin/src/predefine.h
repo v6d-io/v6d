@@ -102,7 +102,7 @@ struct GRIN_GRAPH_T {
     std::shared_ptr<_GRIN_GRAPH_T> _g;
     _GRIN_GRAPH_T* g;
 };
-typedef _GRIN_GRAPH_T::vertex_t GRIN_VERTEX_T;     
+typedef _GRIN_GRAPH_T::vertex_t _GRIN_VERTEX_T;     
 struct GRIN_EDGE_T {
     _GRIN_GRAPH_T::vid_t src;
     _GRIN_GRAPH_T::vid_t dst;
@@ -116,7 +116,7 @@ struct GRIN_VERTEX_LIST_T {
     unsigned type_begin;
     unsigned type_end;
     unsigned all_master_mirror;
-    std::vector<unsigned> offsets;
+    std::vector<size_t> offsets;
     std::vector<_GRIN_GRAPH_T::vertices_t> vrs;
 };
 void __grin_init_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl);
@@ -139,7 +139,7 @@ struct GRIN_ADJACENT_LIST_T {
     GRIN_DIRECTION dir;
     unsigned etype_begin;
     unsigned etype_end;
-    std::vector<unsigned> offsets;
+    std::vector<size_t> offsets;
     std::vector<_GRIN_GRAPH_T::raw_adj_list_t> data;
 };
 void __grin_init_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al);
@@ -179,7 +179,8 @@ typedef unsigned long long int GRIN_VERTEX_PROPERTY_T;
 typedef std::vector<GRIN_VERTEX_PROPERTY_T> GRIN_VERTEX_PROPERTY_LIST_T;
 struct GRIN_VERTEX_PROPERTY_TABLE_T {
     unsigned vtype;
-    _GRIN_GRAPH_T::vertices_t vertices;
+    _GRIN_GRAPH_T::vid_t vbegin;
+    _GRIN_GRAPH_T::vid_t vend;
 };
 #endif
 

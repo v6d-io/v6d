@@ -825,7 +825,7 @@ typedef enum {
 /** @brief Null graph (invalid return value) */
 #define GRIN_NULL_GRAPH NULL
 /** @brief Non-existing vertex (invalid return value) */
-#define GRIN_NULL_VERTEX NULL
+#define GRIN_NULL_VERTEX (unsigned long long int)~0
 /** @brief Non-existing edge (invalid return value) */
 #define GRIN_NULL_EDGE NULL
 /** @brief Null list of any kind (invalid return value) */
@@ -859,7 +859,7 @@ typedef enum {
 
 /* Define the handlers using typedef */
 typedef void* GRIN_GRAPH;                      
-typedef void* GRIN_VERTEX;                     
+typedef unsigned long long int GRIN_VERTEX;                     
 typedef void* GRIN_EDGE;                       
 
 #ifdef GRIN_WITH_VERTEX_DATA

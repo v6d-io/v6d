@@ -21,24 +21,23 @@ extern "C" {
 #ifdef GRIN_ENABLE_VERTEX_REF
 GRIN_VERTEX_REF grin_get_vertex_ref_by_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    return _g->Vertex2Gid(*_v);
+    return _g->Vertex2Gid(_GRIN_VERTEX_T(v));
 }
 
 void grin_destroy_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {}
 
 GRIN_VERTEX grin_get_vertex_from_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto v = new GRIN_VERTEX_T();
-    if (_g->Gid2Vertex(vr, *v)) {
-        return v;
+    _GRIN_VERTEX_T v;
+    if (_g->Gid2Vertex(vr, v)) {
+        return v.GetValue();
     }
     return GRIN_NULL_VERTEX;
 }
 
 GRIN_PARTITION grin_get_master_partition_from_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto id_parser = vineyard::IdParser<GRIN_VERTEX_REF_T>();
+    auto id_parser = vineyard::IdParser<GRIN_VERTEX_REF_T>(); //TODO optimize after rebase
     id_parser.Init(_g->fnum(), _g->vertex_label_num());
     return id_parser.GetFid(vr);
 }
@@ -75,14 +74,12 @@ GRIN_VERTEX_REF grin_deserialize_to_vertex_ref(GRIN_GRAPH g, const char* msg) {
 
 bool grin_is_master_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    return _g->IsInnerVertex(*_v);
+    return _g->IsInnerVertex(_GRIN_VERTEX_T(v)); // TODO
 }
 
 bool grin_is_mirror_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    return _g->IsOuterVertex(*_v);
+    return _g->IsOuterVertex(_GRIN_VERTEX_T(v)); // TODO
 }
 #endif
 

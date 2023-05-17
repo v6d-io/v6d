@@ -22,8 +22,7 @@ bool grin_equal_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt1, GRIN_VERTEX_TYPE
 
 GRIN_VERTEX_TYPE grin_get_vertex_type(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    return _g->vertex_label(*_v);
+    return _g->vertex_label(_GRIN_VERTEX_T(v));  // TODO
 }
 
 void grin_destroy_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {}
@@ -71,7 +70,7 @@ const char* grin_get_vertex_type_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
     int len = s.length() + 1;
     char* out = new char[len];
     snprintf(out, len, "%s", s.c_str());
-    return out;
+    return out; // TODO
 }
 
 GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH g, const char* name) {
@@ -149,7 +148,7 @@ const char* grin_get_edge_type_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
     int len = s.length() + 1;
     char* out = new char[len];
     snprintf(out, len, "%s", s.c_str());
-    return out;    
+    return out;    // TODO
 }
 
 GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH g, const char* name) {
@@ -181,7 +180,7 @@ GRIN_VERTEX_TYPE_LIST grin_get_src_types_by_edge_type(GRIN_GRAPH g, GRIN_EDGE_TY
     for (auto& pair : entry.relations) {
         vtl->push_back(GRIN_VERTEX_TYPE_T(_g->schema().GetVertexLabelId(pair.first)));
     }
-    return vtl;
+    return vtl; // TODO
 }
 
 GRIN_VERTEX_TYPE_LIST grin_get_dst_types_by_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
@@ -191,7 +190,7 @@ GRIN_VERTEX_TYPE_LIST grin_get_dst_types_by_edge_type(GRIN_GRAPH g, GRIN_EDGE_TY
     for (auto& pair : entry.relations) {
         vtl->push_back(GRIN_VERTEX_TYPE_T(_g->schema().GetVertexLabelId(pair.second)));
     }
-    return vtl;
+    return vtl; // TODO
 }
 
 GRIN_EDGE_TYPE_LIST grin_get_edge_types_by_vertex_type_pair(GRIN_GRAPH g, GRIN_VERTEX_TYPE src_vt, 
@@ -209,6 +208,6 @@ GRIN_EDGE_TYPE_LIST grin_get_edge_types_by_vertex_type_pair(GRIN_GRAPH g, GRIN_V
             }
         }
     }
-    return etl;
+    return etl; // TODO
 }
 #endif
