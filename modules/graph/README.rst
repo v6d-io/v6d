@@ -162,6 +162,35 @@ can be archived in two approaches:
 - Option 2: configure the arrow dependency that used to build the vineyard-graph-loader to support
   S3 and HDFS with `extra cmake flags <https://arrow.apache.org/docs/developers/cpp/building.html#optional-components>`_.
 
+For edges that have different kinds of :code:`(src, dst)` pair, just repeat the "edge" object in
+the configuration file, e.g.,
+
+.. code:: json
+
+   {
+       "vertices": [
+          ...
+       ],
+       "edges": [
+           {
+               "data_path": "person_knows_person.csv",
+               "label": "knows",
+               "src_label": "person",
+               "dst_label": "person",
+               "options": "header_row=true&delimiter=|"
+           },
+           {
+               "data_path": "person_knows_item.csv",
+               "label": "knows",
+               "src_label": "person",
+               "dst_label": "item",
+               "options": "header_row=true&delimiter=|"
+           },
+           ...
+       ],
+      ...
+   }
+
 Read Options
 ~~~~~~~~~~~~
 

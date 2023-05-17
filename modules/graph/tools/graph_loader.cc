@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
 
@@ -155,6 +156,18 @@ static inline progressive_t parse_progressive_enum(const std::string& value) {
   }
 }
 
+static inline std::string string_join(std::vector<std::string> const& srcs,
+                                      std::string const sep) {
+  std::stringstream ss;
+  if (!srcs.empty()) {
+    ss << srcs[0];
+    for (size_t i = 1; i < srcs.size(); ++i) {
+      ss << sep << srcs[i];
+    }
+  }
+  return ss.str();
+}
+
 static inline progressive_t parse_progressive_enum(const char* value) {
   return parse_progressive_enum(std::string(value));
 }
@@ -227,6 +240,7 @@ static inline bool parse_options_from_config_json(
     }
   }
   if (config.contains("edges")) {
+    std::map<std::string, std::vector<std::string>> edges;
     for (auto const& item : config["edges"]) {
       auto efile = vineyard::ExpandEnvironmentVariables(
                        item["data_path"].get<std::string>()) +
@@ -236,7 +250,10 @@ static inline bool parse_options_from_config_json(
       if (item.contains("options")) {
         efile += "#" + item["options"].get<std::string>();
       }
-      options.efiles.push_back(efile);
+      edges[item["label"].get<std::string>()].push_back(efile);
+    }
+    for (auto const& item : edges) {
+      options.efiles.push_back(string_join(item.second, ";"));
     }
   }
   if (config.contains("directed")) {
