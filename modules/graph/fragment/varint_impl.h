@@ -50,7 +50,7 @@ void varint_encode(T input, std::vector<uint8_t>& output) {
 }
 
 template <typename T>
-size_t varint_decode(const uint8_t* input, T& output) {
+inline size_t varint_decode(const uint8_t* input, T& output) {
   const uint8_t* origin_input = input;
   uint8_t byte_0 = *input++;
   if (LIKELY(byte_0 < UPPER_OF_RANGE_1)) {
