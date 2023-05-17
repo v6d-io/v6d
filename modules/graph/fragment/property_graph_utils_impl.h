@@ -751,8 +751,7 @@ boost::leaf::result<void> generate_varint_edges(
     property_graph_utils::NbrUnit<VID_T, EID_T>* e_list, size_t list_size,
     int64_t* e_offsets_lists_, size_t e_offsets_lists_size,
     std::vector<uint8_t>& encoded_id_list,
-    std::vector<int64_t>& encoded_offsets_list,
-    std::vector<uint8_t>& encoded_e_symbol_list) {
+    std::vector<int64_t>& encoded_offsets_list) {
   encoded_offsets_list.resize(e_offsets_lists_size, 0);
 
   if (list_size <= 0)
@@ -760,37 +759,17 @@ boost::leaf::result<void> generate_varint_edges(
 
   size_t i = 0;
   int64_t start = 0;
-  uint8_t symbol = 0;
-  uint8_t negative = 0;
-  int bit = 7;
 
   // Record the offset of every edge at encoded array.
   for (size_t k = 0; k < e_offsets_lists_size - 1; k++) {
     encoded_offsets_list[k] = start;
     VID_T pre_vid = 0;
-    EID_T pre_eid = 0;
-    EID_T delta_eid = 0;
     for (int64_t count = 0;
          count < e_offsets_lists_[k + 1] - e_offsets_lists_[k]; count++) {
       std::vector<uint8_t> encoded_eid, encoded_vid;
 
       varint_encode(e_list[i].vid - pre_vid, encoded_vid);
-
-      if (e_list[i].eid >= pre_eid) {
-        delta_eid = e_list[i].eid - pre_eid;
-        negative = 0;
-      } else {
-        delta_eid = pre_eid - e_list[i].eid;
-        negative = 1;
-      }
-      varint_encode(delta_eid, encoded_eid);
-      symbol = symbol | (negative << bit);
-      bit--;
-      if (bit < 0) {
-        encoded_e_symbol_list.push_back(symbol);
-        symbol = 0;
-        bit = 7;
-      }
+      varint_encode(e_list[i].eid, encoded_eid);
 
       // LOG(INFO) << "vid:" << e_list[i].vid << " pre_vid:" << pre_vid;
       // LOG(INFO) << "encoded vid:";
@@ -816,14 +795,10 @@ boost::leaf::result<void> generate_varint_edges(
       }
 
       pre_vid = e_list[i].vid;
-      pre_eid = e_list[i].eid;
-
       i++;
     }
   }
-  if (bit != 7) {
-    encoded_e_symbol_list.push_back(symbol);
-  }
+
   encoded_offsets_list[e_offsets_lists_size - 1] = start;
   return {};
 }

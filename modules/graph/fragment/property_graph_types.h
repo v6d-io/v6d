@@ -521,11 +521,8 @@ struct EncodedNbr {
         data_(rhs.data_),
         size_(rhs.size()),
         edata_arrays_(rhs.edata_arrays_) {}
-  EncodedNbr(const uint8_t* ptr, size_t capacity, const void** edata_arrays,
-             const uint8_t* symbol_ptr, int symbol_offset)
+  EncodedNbr(const uint8_t* ptr, size_t capacity, const void** edata_arrays)
       : ptr_(ptr),
-        symbol_ptr_(symbol_ptr),
-        symbol_offset_(symbol_offset),
         edata_arrays_(edata_arrays) {
     data_.eid = 0;
     data_.vid = 0;
@@ -556,9 +553,7 @@ struct EncodedNbr {
     v_size = varint_decode(ptr_, vid);
     e_size = varint_decode(ptr_ + v_size, eid);
     data_.vid += vid;
-    data_.eid = ((*symbol_ptr_) & (0x1 << (7 - symbol_offset_)))
-                    ? data_.eid - eid
-                    : data_.eid + eid;
+    data_.eid = eid;
     size_ = v_size + e_size;
   }
 
@@ -597,11 +592,6 @@ struct EncodedNbr {
      * behavior will not be out of bounds.
      */
     decode();
-    symbol_offset_++;
-    if (symbol_offset_ == 8) {
-      symbol_offset_ = 0;
-      symbol_ptr_++;
-    }
     return *this;
   }
 
@@ -637,8 +627,6 @@ struct EncodedNbr {
   const mutable uint8_t* ptr_;
   mutable NbrUnit<VID_T, EID_T> data_;
   mutable size_t size_;
-  const mutable uint8_t* symbol_ptr_;
-  mutable int symbol_offset_;
 
   const void** edata_arrays_;
 };
@@ -875,12 +863,7 @@ class EncodedAdjList {
         size_(0),
         edata_arrays_(nullptr) {}
   EncodedAdjList(const uint8_t* ptr, const size_t begin_offset,
-                 const size_t end_offset, const void** edata_arrays,
-                 const uint8_t* symbol_ptr) {
-    symbol_ptr_ = symbol_ptr;
-    uint64_t symbol_index = begin_offset / 8;
-    symbol_offset_ = begin_offset % 8;
-    symbol_ptr_ += symbol_index;
+                 const size_t end_offset, const void** edata_arrays) {
 
     begin_ptr_ = ptr + begin_offset;
     end_ptr_ = ptr + end_offset;
@@ -888,12 +871,11 @@ class EncodedAdjList {
   }
 
   inline EncodedNbr<VID_T, EID_T> begin() const {
-    return EncodedNbr<VID_T, EID_T>(begin_ptr_, size_, edata_arrays_,
-                                    symbol_ptr_, symbol_offset_);
+    return EncodedNbr<VID_T, EID_T>(begin_ptr_, size_, edata_arrays_);
   }
 
   inline EncodedNbr<VID_T, EID_T> end() const {
-    return EncodedNbr<VID_T, EID_T>(end_ptr_, 0, edata_arrays_, 0, 0);
+    return EncodedNbr<VID_T, EID_T>(end_ptr_, 0, edata_arrays_);
   }
 
   inline size_t Size() const { return size_; }
@@ -913,8 +895,6 @@ class EncodedAdjList {
   const uint8_t* begin_ptr_;
   const uint8_t* end_ptr_;
   size_t size_ = 0;
-  const uint8_t* symbol_ptr_;
-  int symbol_offset_;
 
   const void** edata_arrays_;
 };

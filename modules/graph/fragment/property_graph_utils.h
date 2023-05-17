@@ -179,8 +179,7 @@ boost::leaf::result<void> generate_varint_edges(
     property_graph_utils::NbrUnit<VID_T, EID_T>* e_list, size_t list_size,
     int64_t* e_offsets_lists_, size_t e_offsets_lists_size,
     std::vector<uint8_t>& encoded_id_list,
-    std::vector<int64_t>& encoded_offsets_list,
-    std::vector<uint8_t>& encoded_e_symbol_list);
+    std::vector<int64_t>& encoded_offsets_list);
 
 }  // namespace vineyard
 
