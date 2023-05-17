@@ -162,7 +162,10 @@ def is_template_parameter(node: Cursor, typename: str) -> bool:
         return False
     if parent.kind == CursorKind.CLASS_TEMPLATE:
         for ch in parent.get_children():
-            if ch.kind == CursorKind.TEMPLATE_TYPE_PARAMETER:
+            if ch.kind in [
+                CursorKind.TEMPLATE_TYPE_PARAMETER,
+                CursorKind.TEMPLATE_NON_TYPE_PARAMETER,
+            ]:
                 if typename == ch.spelling:
                     return True
     return False
@@ -458,6 +461,7 @@ def find_fields(definition):
         if first_mmeber_offset == -1:
             if child.kind not in [
                 CursorKind.TEMPLATE_TYPE_PARAMETER,
+                CursorKind.TEMPLATE_NON_TYPE_PARAMETER,
                 CursorKind.CXX_BASE_SPECIFIER,
                 CursorKind.ANNOTATE_ATTR,
                 CursorKind.NAMESPACE_REF,
@@ -528,7 +532,10 @@ def split_members_and_methods(fields):
 def check_class(node):
     template_parameters = []
     for child in node.get_children():
-        if child.kind == CursorKind.TEMPLATE_TYPE_PARAMETER:
+        if child.kind in [
+            CursorKind.TEMPLATE_TYPE_PARAMETER,
+            CursorKind.TEMPLATE_NON_TYPE_PARAMETER,
+        ]:
             template_parameters.append((child.spelling, child.extent))
     return node.spelling, template_parameters
 
