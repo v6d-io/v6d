@@ -914,9 +914,9 @@ def codegen(  # pylint: disable=too-many-statements
             ]
 
             # get extent of type parameters, since default value may involved.
-            ts_names = [t for (t, _) in ts]  # without `typename`
+            ts_names = [(t, k) for (t, _, k) in ts]  # without `typename`
             ts_name_values = [
-                content[t.start.offset : t.end.offset] for (_, t) in ts
+                (content[t.start.offset : t.end.offset], k) for (_, t, k) in ts
             ]  # with `typename`
 
             name_elaborated = generate_template_type(name, ts_names, type_parameters)

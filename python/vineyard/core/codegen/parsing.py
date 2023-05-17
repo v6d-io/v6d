@@ -536,7 +536,7 @@ def check_class(node):
             CursorKind.TEMPLATE_TYPE_PARAMETER,
             CursorKind.TEMPLATE_NON_TYPE_PARAMETER,
         ]:
-            template_parameters.append((child.spelling, child.extent))
+            template_parameters.append((child.spelling, child.extent, child.kind))
     return node.spelling, template_parameters
 
 
@@ -547,8 +547,8 @@ def generate_template_header(ts, type_parameters):
         else:
             return 'template <>'
     ps = []
-    for t in ts:
-        if t.startswith('typename'):
+    for t, k in ts:
+        if t.startswith('typename') or k == CursorKind.TEMPLATE_NON_TYPE_PARAMETER:
             ps.append(t)
         else:
             ps.append('typename %s' % t)
@@ -560,7 +560,7 @@ def generate_template_type(name, ts, type_parameters):
         return '{name}<{ps}>'.format(name=name, ps=', '.join(type_parameters))
     if not ts:
         return name
-    return '{name}<{ps}>'.format(name=name, ps=', '.join(ts))
+    return '{name}<{ps}>'.format(name=name, ps=', '.join(t for (t, _) in ts))
 
 
 def parse_compilation_database(build_directory):
