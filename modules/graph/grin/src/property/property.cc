@@ -22,7 +22,7 @@ const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, 
     int len = s.length() + 1;
     char* out = new char[len];
     snprintf(out, len, "%s", s.c_str());
-    return out;
+    return out; // TODO: optimize after rebase, put strings in g.
 }
 
 GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype,
@@ -59,7 +59,7 @@ const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN
     int len = s.length() + 1;
     char* out = new char[len];
     snprintf(out, len, "%s", s.c_str());
-    return out;
+    return out; // TODO
 }
 
 GRIN_EDGE_PROPERTY grin_get_edge_property_by_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype,

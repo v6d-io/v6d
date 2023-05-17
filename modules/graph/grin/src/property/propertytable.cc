@@ -186,7 +186,9 @@ GRIN_VERTEX_PROPERTY_TABLE grin_get_vertex_property_table_by_type(GRIN_GRAPH g, 
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto vpt = new GRIN_VERTEX_PROPERTY_TABLE_T();
     vpt->vtype = vtype;
-    vpt->vertices = _g->InnerVertices(vtype);
+    auto vr = _g->InnerVertices(vtype);
+    vpt->vbegin = vr.begin_value();
+    vpt->vend = vr.end_value();
     return vpt;
 }
 
@@ -295,10 +297,9 @@ GRIN_ROW grin_get_row_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPE
                                        GRIN_VERTEX_PROPERTY_LIST vpl) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
-    if (!_vpt->vertices.Contain(*_v)) return NULL;
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
+    if (v < _vpt->vbegin || v >= _vpt->vend) return NULL;
+    auto offset = v - _vpt->vbegin;
 
     auto r = new GRIN_ROW_T();
     for (auto vp: *_vpl) {

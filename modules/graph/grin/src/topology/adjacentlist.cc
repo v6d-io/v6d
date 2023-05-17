@@ -22,9 +22,8 @@ extern "C" {
 GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_VERTEX v) {
     if (d == GRIN_DIRECTION::BOTH) return GRIN_NULL_LIST;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto al = new GRIN_ADJACENT_LIST_T();
-    al->vid = _v->GetValue();
+    al->vid = v;
     al->dir = d;
     al->etype_begin = 0;
     al->etype_end = _g->edge_label_num();
@@ -48,8 +47,7 @@ GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIS
         if (idx < _al->offsets[i+1]) {
             auto _idx = idx - _al->offsets[i];
             auto _nbr = _al->data[i].begin() + _idx;
-            auto v = new GRIN_VERTEX_T(_nbr->vid);
-            return v;
+            return _nbr->vid;
         }
     }
     return GRIN_NULL_VERTEX;
@@ -136,8 +134,7 @@ bool grin_is_adjacent_list_end(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
 GRIN_VERTEX grin_get_neighbor_from_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
     auto _nbr = _ali->data.begin() + _ali->current;
-    auto v = new GRIN_VERTEX_T(_nbr->vid);
-    return v;
+    return _nbr->vid;
 }
 
 GRIN_EDGE grin_get_edge_from_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {

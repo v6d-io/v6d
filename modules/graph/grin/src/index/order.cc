@@ -18,25 +18,20 @@ extern "C" {
 
 #ifdef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
 bool grin_smaller_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _v1 = static_cast<GRIN_VERTEX_T*>(v1);
-    auto _v2 = static_cast<GRIN_VERTEX_T*>(v2);
-    return _g->Vertex2Gid(*_v1) < _g->Vertex2Gid(*_v2);
+    return v1 < v2;    
 }
 #endif
 
 #if defined(GRIN_ASSUME_ALL_VERTEX_LIST_SORTED) && defined(GRIN_ENABLE_VERTEX_LIST_ARRAY)
 size_t grin_get_position_of_vertex_from_sorted_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    return _v->GetValue() - _vl->vrs[0].begin_value();
-    // auto vtype = (unsigned)_g->vertex_label(*_v);
-    // if (vtype < _vl->type_begin || vtype >= _vl->type_end) return GRIN_NULL_SIZE;
-    // auto offset = _v->GetValue() - _vl->vrs[vtype - _vl->type_begin].begin_value();
-    // if (offset < _vl->vrs[vtype - _vl->type_begin].size()) {
-    //     return _vl->offsets[vtype - _vl->type_begin] + offset;
-    // }
-    // return GRIN_NULL_SIZE;
+    auto vtype = (unsigned)_g->vertex_label(_GRIN_VERTEX_T(v)); // TODO: optimize after rebase
+    if (vtype < _vl->type_begin || vtype >= _vl->type_end) return GRIN_NULL_SIZE;
+    auto offset = v - _vl->vrs[vtype - _vl->type_begin].begin_value();
+    if (offset < _vl->vrs[vtype - _vl->type_begin].size()) {
+        return _vl->offsets[vtype - _vl->type_begin] + offset;
+    }
+    return GRIN_NULL_SIZE;
 }
 #endif

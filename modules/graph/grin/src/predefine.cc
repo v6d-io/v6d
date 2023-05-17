@@ -72,14 +72,13 @@ const void* _get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROP
     grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    auto _v = static_cast<GRIN_VERTEX_T*>(v);
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    if (vtype != _vpt->vtype || !_vpt->vertices.Contain(*_v)) {
+    if (v < _vpt->vbegin || v >= _vpt->vend) {
         grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return NULL;
     }
-    auto offset = _v->GetValue() - _vpt->vertices.begin_value();
+    unsigned vtype = _grin_get_type_from_property(vp);
+    unsigned vprop = _grin_get_prop_from_property(vp);
+    auto offset = v - _vpt->vbegin;
     auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
     return vineyard::get_arrow_array_data_element(array, offset);
 }
@@ -107,7 +106,7 @@ void __grin_init_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
     vl->vrs.clear();
     _GRIN_GRAPH_T::vertices_t vr;
     vl->offsets.push_back(0);
-    unsigned sum = 0;
+    size_t sum = 0;
     for (auto vtype = vl->type_begin; vtype < vl->type_end; ++vtype) {
         if (vl->all_master_mirror == 0) {
             vr = g->Vertices(vtype);
@@ -129,7 +128,7 @@ void __grin_init_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
     al->data.clear();
     _GRIN_GRAPH_T::raw_adj_list_t ral;
     al->offsets.push_back(0);
-    unsigned sum = 0;
+    size_t sum = 0;
     for (auto etype = al->etype_begin; etype < al->etype_end; ++etype) {
         if (al->dir == GRIN_DIRECTION::IN) {
             ral = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), etype);
