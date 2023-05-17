@@ -49,15 +49,15 @@ limitations under the License.
 
 namespace vineyard {
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 class ArrowFragmentBaseBuilder;
 
 template <typename OID_T, typename VID_T,
           typename VERTEX_MAP_T =
-              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>>
+              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>, bool ENCODED = true>
 class BasicArrowFragmentBuilder
-    : public ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> {
-  using Base = ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T>;
+    : public ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> {
+  using Base = ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>;
 
   using oid_t = OID_T;
   using vid_t = VID_T;
@@ -71,7 +71,7 @@ class BasicArrowFragmentBuilder
  public:
   explicit BasicArrowFragmentBuilder(vineyard::Client& client,
                                      std::shared_ptr<vertex_map_t> vm_ptr)
-      : ArrowFragmentBaseBuilder<oid_t, vid_t, vertex_map_t>(client),
+      : ArrowFragmentBaseBuilder<oid_t, vid_t, vertex_map_t, ENCODED>(client),
         client_(client),
         vm_ptr_(vm_ptr) {}
 

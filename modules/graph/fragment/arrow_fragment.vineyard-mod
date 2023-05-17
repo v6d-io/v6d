@@ -67,16 +67,16 @@ inline std::string generate_name_with_suffix(
   return prefix + "_" + std::to_string(v_label) + "_" + std::to_string(e_label);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 class ArrowFragmentBaseBuilder;
 
 template <typename OID_T, typename VID_T,
           typename VERTEX_MAP_T =
-              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>>
+              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>, bool ENCODED = true>
 class [[vineyard]] ArrowFragment
     : public ArrowFragmentBase,
       public vineyard::BareRegistered<
-          ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>> {
+          ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>> {
  public:
   using oid_t = OID_T;
   using vid_t = VID_T;
@@ -434,9 +434,9 @@ class [[vineyard]] ArrowFragment
                                   vid_parser_.GetOffset(v.GetValue()));
   }
 
-  template <bool ENCODED = true>
-  inline typename std::enable_if<!ENCODED, adj_list_t>::type GetIncomingAdjList(
-      const vertex_t& v, label_id_t e_label) const {
+  template <bool ENCODED_ = ENCODED>
+  inline typename std::enable_if<!ENCODED_, adj_list_t>::type
+  GetIncomingAdjList(const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
@@ -447,8 +447,8 @@ class [[vineyard]] ArrowFragment
                       flatten_edge_tables_columns_[e_label]);
   }
 
-  template <bool ENCODED = true>
-  inline typename std::enable_if<ENCODED, encoded_adj_list_t>::type
+  template <bool ENCODED_ = ENCODED>
+  inline typename std::enable_if<ENCODED_, encoded_adj_list_t>::type
   GetIncomingAdjList(const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
@@ -463,8 +463,8 @@ class [[vineyard]] ArrowFragment
                               flatten_edge_tables_columns_[e_label]);
   }
 
-  template <bool ENCODED = true>
-  inline typename std::enable_if<!ENCODED, raw_adj_list_t>::type
+  template <bool ENCODED_ = ENCODED>
+  inline typename std::enable_if<!ENCODED_, raw_adj_list_t>::type
   GetIncomingRawAdjList(const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
@@ -475,8 +475,8 @@ class [[vineyard]] ArrowFragment
                           &ie[offset_array[v_offset + 1]]);
   }
 
-  template <bool ENCODED = true>
-  inline typename std::enable_if<!ENCODED, adj_list_t>::type GetOutgoingAdjList(
+  template <bool ENCODED_ = ENCODED>
+  inline typename std::enable_if<!ENCODED_, adj_list_t>::type GetOutgoingAdjList(
       const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
@@ -488,8 +488,8 @@ class [[vineyard]] ArrowFragment
                       flatten_edge_tables_columns_[e_label]);
   }
 
-  template <bool ENCODED = true>
-  inline typename std::enable_if<ENCODED, encoded_adj_list_t>::type
+  template <bool ENCODED_ = ENCODED>
+  inline typename std::enable_if<ENCODED_, encoded_adj_list_t>::type
   GetOutgoingAdjList(const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
@@ -504,8 +504,8 @@ class [[vineyard]] ArrowFragment
                               flatten_edge_tables_columns_[e_label]);
   }
 
-  template <bool ENCODED = true>
-  inline typename std::enable_if<!ENCODED, raw_adj_list_t>::type
+  template <bool ENCODED_ = ENCODED>
+  inline typename std::enable_if<!ENCODED_, raw_adj_list_t>::type
   GetOutgoingRawAdjList(const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
@@ -774,7 +774,7 @@ class [[vineyard]] ArrowFragment
   [[shared]] json schema_json_;
   PropertyGraphSchema schema_;
 
-  friend class ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T>;
+  friend class ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>;
 
   template <typename _OID_T, typename _VID_T, typename VDATA_T,
             typename EDATA_T, typename _VERTEX_MAP_T>

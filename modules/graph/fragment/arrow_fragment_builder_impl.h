@@ -54,9 +54,9 @@ limitations under the License.
 
 namespace vineyard {
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVerticesAndEdges(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVerticesAndEdges(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
@@ -94,9 +94,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVerticesAndEdges(
                                 concurrency);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVertices(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVertices(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
     ObjectID vm_id) {
@@ -116,9 +116,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddVertices(
   return AddNewVertexLabels(client, std::move(vertex_tables), vm_id);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddEdges(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddEdges(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
@@ -143,9 +143,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddEdges(
 /// Add a set of new vertex labels and a set of new edge labels to graph.
 /// Vertex label id started from vertex_label_num_, and edge label id
 /// started from edge_label_num_.
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewVertexEdgeLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
     std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, ObjectID vm_id,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
@@ -545,9 +545,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
 
 /// Add a set of new vertex labels to graph. Vertex label id started from
 /// vertex_label_num_.
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewVertexLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
     ObjectID vm_id) {
   int extra_vertex_label_num = vertex_tables.size();
@@ -691,9 +691,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
 
 /// Add a set of new edge labels to graph. Edge label id started from
 /// edge_label_num_.
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewEdgeLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
         edge_relations,
@@ -1012,8 +1012,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
   return fragment_object->id();
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
-vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::Build(
     vineyard::Client& client) {
   VLOG(100) << "Start building into vineyard: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
@@ -1154,9 +1154,9 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
   return Status::OK();
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 boost::leaf::result<void>
-BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Init(
+BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::Init(
     fid_t fid, fid_t fnum,
     std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
     std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, bool directed,
@@ -1183,9 +1183,9 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Init(
 }
 
 // | prop_0 | prop_1 | ... |
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 boost::leaf::result<void>
-BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initVertices(
+BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initVertices(
     std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables) {
   assert(vertex_tables.size() == static_cast<size_t>(this->vertex_label_num_));
   vertex_tables_ = vertex_tables;
@@ -1200,9 +1200,9 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initVertices(
 
 // | src_id(generated) | dst_id(generated) | prop_0 | prop_1
 // | ... |
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 boost::leaf::result<void>
-BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
+BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initEdges(
     std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, int concurrency) {
   assert(edge_tables.size() == static_cast<size_t>(this->edge_label_num_));
   edge_tables_.resize(this->edge_label_num_);
