@@ -37,9 +37,8 @@ GRIN_VERTEX grin_get_vertex_from_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
 
 GRIN_PARTITION grin_get_master_partition_from_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto id_parser = vineyard::IdParser<GRIN_VERTEX_REF_T>(); //TODO optimize after rebase
-    id_parser.Init(_g->fnum(), _g->vertex_label_num());
-    return id_parser.GetFid(vr);
+    auto bg = static_cast<GRIN_GRAPH_T*>(g);
+    return bg->cache->id_parser.GetFid(vr);
 }
 
 const char* grin_serialize_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
@@ -74,12 +73,12 @@ GRIN_VERTEX_REF grin_deserialize_to_vertex_ref(GRIN_GRAPH g, const char* msg) {
 
 bool grin_is_master_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    return _g->IsInnerVertex(_GRIN_VERTEX_T(v)); // TODO
+    return _g->IsInnerVertex(_GRIN_VERTEX_T(v));
 }
 
 bool grin_is_mirror_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    return _g->IsOuterVertex(_GRIN_VERTEX_T(v)); // TODO
+    return _g->IsOuterVertex(_GRIN_VERTEX_T(v));
 }
 #endif
 

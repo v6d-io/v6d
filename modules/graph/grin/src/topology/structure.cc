@@ -33,11 +33,13 @@ GRIN_GRAPH grin_get_graph_from_storage(int argc, char** argv) {
  
     g->_g = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(g->client.GetObject(obj_id));
     g->g = g->_g.get();
+    _prepare_cache(g);
     return g;
 }
 
 void grin_destroy_graph(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g);
+    delete _g->cache;
     delete _g;
 }
 

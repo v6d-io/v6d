@@ -105,6 +105,7 @@ GRIN_GRAPH grin_get_local_graph_by_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PAR
     g->client.Connect(_pg->socket);
     g->_g = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(g->client.GetObject(_pg->lgs[p]));
     g->g = g->_g.get();
+    _prepare_cache(g);
     return g;
 }
 #endif

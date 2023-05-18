@@ -96,13 +96,26 @@ unsigned _grin_get_prop_from_property(unsigned long long int);
 #define GRIN_VID_T uint64_t
 
 /* The following data types shall be defined through typedef. */
-typedef vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T> _GRIN_GRAPH_T;                 
+typedef vineyard::ArrowFragment<GRIN_OID_T, GRIN_VID_T> _GRIN_GRAPH_T;   
+struct _GRAPH_CACHE {
+    vineyard::IdParser<_GRIN_GRAPH_T::vid_t> id_parser;
+    std::vector<std::string> vtype_names;
+    std::vector<std::string> etype_names;
+    std::vector<std::vector<std::string>> vprop_names;
+    std::vector<std::vector<std::string>> eprop_names;
+};
+
 struct GRIN_GRAPH_T {
     vineyard::Client client;
     std::shared_ptr<_GRIN_GRAPH_T> _g;
     _GRIN_GRAPH_T* g;
+    _GRAPH_CACHE* cache;
 };
-typedef _GRIN_GRAPH_T::vertex_t _GRIN_VERTEX_T;     
+
+void _prepare_cache(GRIN_GRAPH_T* g);
+
+typedef _GRIN_GRAPH_T::vertex_t _GRIN_VERTEX_T;    
+
 struct GRIN_EDGE_T {
     _GRIN_GRAPH_T::vid_t src;
     _GRIN_GRAPH_T::vid_t dst;

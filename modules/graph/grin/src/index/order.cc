@@ -26,7 +26,8 @@ bool grin_smaller_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
 size_t grin_get_position_of_vertex_from_sorted_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    auto vtype = (unsigned)_g->vertex_label(_GRIN_VERTEX_T(v)); // TODO: optimize after rebase
+    auto bg = static_cast<GRIN_GRAPH_T*>(g);
+    auto vtype = bg->cache->id_parser.GetLabelId(v);
     if (vtype < _vl->type_begin || vtype >= _vl->type_end) return GRIN_NULL_SIZE;
     auto offset = v - _vl->vrs[vtype - _vl->type_begin].begin_value();
     if (offset < _vl->vrs[vtype - _vl->type_begin].size()) {
