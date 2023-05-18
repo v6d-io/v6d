@@ -72,11 +72,11 @@ const void* _get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROP
     grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
-    if (v < _vpt->vbegin || v >= _vpt->vend) {
+    unsigned vtype = _grin_get_type_from_property(vp);
+    if (v < _vpt->vbegin || v >= _vpt->vend || vtype != _vpt->vtype) {
         grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return NULL;
-    }
-    unsigned vtype = _grin_get_type_from_property(vp);
+    }    
     unsigned vprop = _grin_get_prop_from_property(vp);
     auto offset = v - _vpt->vbegin;
     auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
@@ -152,4 +152,26 @@ unsigned _grin_get_type_from_property(unsigned long long int prop) {
 
 unsigned _grin_get_prop_from_property(unsigned long long int prop) {
     return (unsigned)(prop & 0xffffffff);
+}
+
+void _prepare_cache(GRIN_GRAPH_T* g) {
+    g->cache = new _GRAPH_CACHE();
+    g->cache->id_parser = vineyard::IdParser<_GRIN_GRAPH_T::vid_t>();
+    g->cache->id_parser.Init(g->g->fnum(), g->g->vertex_label_num());
+
+    for (int i = 0; i < g->g->vertex_label_num(); ++i) {
+        g->cache->vtype_names.push_back(g->g->schema().GetVertexLabelName(i));
+        g->cache->vprop_names.push_back(std::vector<std::string>());
+        for (int j = 0; j < g->g->vertex_property_num(i); ++j) {
+            g->cache->vprop_names[i].push_back(g->g->schema().GetVertexPropertyName(i, j));
+        } 
+    }
+
+    for (int i = 0; i < g->g->edge_label_num(); ++i) {
+        g->cache->etype_names.push_back(g->g->schema().GetEdgeLabelName(i));
+        g->cache->eprop_names.push_back(std::vector<std::string>());
+        for (int j = 0; j < g->g->edge_property_num(i); ++j) {
+            g->cache->eprop_names[i].push_back(g->g->schema().GetEdgePropertyName(i, j));
+        } 
+    }
 }
