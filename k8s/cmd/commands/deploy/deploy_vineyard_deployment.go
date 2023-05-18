@@ -17,9 +17,13 @@ limitations under the License.
 package deploy
 
 import (
+	"context"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,6 +70,10 @@ var deployVineyardDeploymentCmd = &cobra.Command{
 			log.Fatal(err, "failed to apply vineyardd resources from template")
 		}
 
+		if err := waitVineyardDeploymentReady(client); err != nil {
+			log.Fatal(err, "failed to wait vineyard deployment for ready")
+		}
+
 		log.Info("vineyard cluster deployed successfully")
 	},
 }
@@ -107,6 +115,14 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 		return objects, errors.Wrap(err, "failed to build vineyardd")
 	}
 
+	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Name,
+		vineyardd.Namespace, vineyardd.Spec.EtcdReplicas, vineyardd.Spec.Vineyard.Image, vineyardd,
+		tmplFunc)
+	if err != nil {
+		return objects, errors.Wrap(err, "failed to build etcd objects")
+	}
+	objects = append(objects, append(podObjs, svcObjs...)...)
+
 	// process the vineyard socket
 	v1alpha1.PreprocessVineyarddSocket(vineyardd)
 
@@ -116,13 +132,6 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	}
 	objects = append(objects, objs...)
 
-	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Name,
-		vineyardd.Namespace, vineyardd.Spec.EtcdReplicas, vineyardd.Spec.Vineyard.Image, vineyardd,
-		tmplFunc)
-	if err != nil {
-		return objects, errors.Wrap(err, "failed to build etcd objects")
-	}
-	objects = append(objects, append(podObjs, svcObjs...)...)
 	return objects, nil
 }
 
@@ -132,6 +141,7 @@ func applyVineyarddFromTemplate(c client.Client) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to get vineyardd resources from template")
 	}
+	deployment := &unstructured.Unstructured{}
 
 	for _, o := range objects {
 		if OwnerReference != "" {
@@ -141,9 +151,49 @@ func applyVineyarddFromTemplate(c client.Client) error {
 			}
 			o.SetOwnerReferences(OwnerRefs)
 		}
-		if err := util.CreateIfNotExists(c, o); err != nil {
+		if o.GetKind() == "Deployment" {
+			deployment = o
+			continue
+		}
+		waitETCDPodFunc := func(o *unstructured.Unstructured) bool {
+			if o.GetKind() == "Pod" {
+				pod := corev1.Pod{}
+				if err := c.Get(context.TODO(), client.ObjectKey{
+					Name:      o.GetName(),
+					Namespace: o.GetNamespace(),
+				}, &pod); err != nil {
+					return false
+				}
+				if pod.Status.Phase == corev1.PodRunning {
+					return true
+				}
+				return false
+			}
+			return true
+		}
+		if err := util.CreateIfNotExists(c, o, waitETCDPodFunc); err != nil {
 			return errors.Wrapf(err, "failed to create object %s", o.GetName())
 		}
 	}
+	// to reduce the time of waiting for the etcd cluster service ready in the vineyardd
+	// wait the etcd cluster for ready here and create the vineyard deployment at last
+	if err := util.CreateIfNotExists(c, deployment); err != nil {
+		return errors.Wrapf(err, "failed to create object %s", deployment.GetName())
+	}
+
 	return nil
+}
+
+func waitVineyardDeploymentReady(c client.Client) error {
+	return util.Wait(func() (bool, error) {
+		name := client.ObjectKey{Name: flags.VineyarddName, Namespace: flags.Namespace}
+		deployment := appsv1.Deployment{}
+		if err := c.Get(context.TODO(), name, &deployment); err != nil {
+			return false, errors.Wrap(err, "failed to get the vineyard-deployment")
+		}
+		if deployment.Status.ReadyReplicas == *deployment.Spec.Replicas {
+			return true, nil
+		}
+		return false, nil
+	})
 }
