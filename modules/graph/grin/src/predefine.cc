@@ -124,21 +124,33 @@ void __grin_init_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
 void __grin_init_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
-    al->offsets.clear();
-    al->data.clear();
-    _GRIN_GRAPH_T::raw_adj_list_t ral;
-    al->offsets.push_back(0);
-    size_t sum = 0;
-    for (auto etype = al->etype_begin; etype < al->etype_end; ++etype) {
+    if (al->etype_begin + 1 == al->etype_end) {
+        al->is_simple = true;
+        _GRIN_GRAPH_T::raw_adj_list_t ral;
         if (al->dir == GRIN_DIRECTION::IN) {
-            ral = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), etype);
-        } else {
-            ral = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), etype);
-        }
-        sum += ral.size();    
-        al->offsets.push_back(sum);
-        al->data.push_back(ral);
+              ral = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), al->etype_begin);
+          } else {
+              ral = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), al->etype_begin);
+          }
+        al->begin_ = ral.begin();
+        al->end_ = ral.end();
     }
+
+        al->offsets.clear();
+        al->data.clear();
+        al->offsets.push_back(0);
+        _GRIN_GRAPH_T::raw_adj_list_t ral;
+        size_t sum = 0;
+        for (auto etype = al->etype_begin; etype < al->etype_end; ++etype) {
+            if (al->dir == GRIN_DIRECTION::IN) {
+                ral = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), etype);
+            } else {
+                ral = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), etype);
+            }
+            sum += ral.size();    
+            al->offsets.push_back(sum);
+            al->data.push_back(ral);
+        }
 }
 #endif
 
