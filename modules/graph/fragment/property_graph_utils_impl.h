@@ -685,42 +685,78 @@ boost::leaf::result<void> generate_varint_edges(
     property_graph_utils::NbrUnit<VID_T, EID_T>* e_list, size_t list_size,
     int64_t* e_offsets_lists_, size_t e_offsets_lists_size,
     std::vector<uint8_t>& encoded_id_list,
-    std::vector<int64_t>& encoded_offsets_list) {
+    std::vector<int64_t>& encoded_offsets_list, int concurrency) {
   encoded_offsets_list.resize(e_offsets_lists_size, 0);
 
   if (list_size <= 0)
     return {};
 
-  size_t i = 0;
-  int64_t start = 0;
+  // size_t i = 0;
 
   // Record the offset of every edge at encoded array.
-  for (size_t k = 0; k < e_offsets_lists_size - 1; k++) {
-    encoded_offsets_list[k] = start;
-    VID_T pre_vid = 0;
-    for (int64_t count = 0;
-         count < e_offsets_lists_[k + 1] - e_offsets_lists_[k]; count++) {
-      std::vector<uint8_t> encoded_eid, encoded_vid;
+  // for (size_t k = 0; k < e_offsets_lists_size - 1; k++) {
+  //   encoded_offsets_list[k] = start;
+  //   VID_T pre_vid = 0;
+  //   for (int64_t count = 0;
+  //        count < e_offsets_lists_[k + 1] - e_offsets_lists_[k]; count++) {
+  //     std::vector<uint8_t> encoded_eid, encoded_vid;
 
-      varint_encode(e_list[i].vid - pre_vid, encoded_vid);
-      varint_encode(e_list[i].eid, encoded_eid);
+  //     varint_encode(e_list[i].vid - pre_vid, encoded_vid);
+  //     varint_encode(e_list[i].eid, encoded_eid);
 
-      start += (encoded_vid.size());
-      start += (encoded_eid.size());
+  //     start += (encoded_vid.size());
+  //     start += (encoded_eid.size());
 
-      for (size_t j = 0; j < encoded_vid.size(); j++) {
-        encoded_id_list.push_back(encoded_vid[j]);
-      }
-      for (size_t j = 0; j < encoded_eid.size(); j++) {
-        encoded_id_list.push_back(encoded_eid[j]);
-      }
+  //     for (size_t j = 0; j < encoded_vid.size(); j++) {
+  //       encoded_id_list.push_back(encoded_vid[j]);
+  //     }
+  //     for (size_t j = 0; j < encoded_eid.size(); j++) {
+  //       encoded_id_list.push_back(encoded_eid[j]);
+  //     }
 
-      pre_vid = e_list[i].vid;
-      i++;
+  //     pre_vid = e_list[i].vid;
+  //     i++;
+  //   }
+  // }
+  std::vector<std::vector<uint8_t>> encoded_id_sub_lists;
+  encoded_id_sub_lists.resize(e_offsets_lists_size - 1);
+
+  parallel_for(static_cast<size_t>(0), e_offsets_lists_size - 1,
+               [&e_list, &e_offsets_lists_, &encoded_id_sub_lists, &encoded_offsets_list](int64_t k) {
+                 VID_T pre_vid = 0;
+                 for (int64_t count = 0;
+                      count < e_offsets_lists_[k + 1] - e_offsets_lists_[k];
+                      count++) {
+                   std::vector<uint8_t> encoded_eid, encoded_vid;
+
+                   varint_encode(e_list[count].vid - pre_vid, encoded_vid);
+                   varint_encode(e_list[count].eid, encoded_eid);
+
+                   for (size_t j = 0; j < encoded_vid.size(); j++) {
+                     encoded_id_sub_lists[k].push_back(encoded_vid[j]);
+                   }
+                   for (size_t j = 0; j < encoded_eid.size(); j++) {
+                     encoded_id_sub_lists[k].push_back(encoded_eid[j]);
+                   }
+
+                   pre_vid = e_list[count].vid;
+                 }
+               },
+               concurrency);
+
+  encoded_offsets_list[0] = 0;
+  uint64_t count = 0;
+  for (size_t i = 0; i < encoded_id_sub_lists.size(); i++) {
+    count += encoded_id_sub_lists[i].size();
+  }
+  encoded_id_list.resize(count);
+
+  for (size_t i = 0; i < encoded_id_sub_lists.size(); i++) {
+    encoded_offsets_list[i + 1] = encoded_offsets_list[i] + encoded_id_list.size();
+    for (size_t j = 0; j < encoded_id_sub_lists[i].size(); j++) {
+      encoded_id_list.emplace_back(encoded_id_sub_lists[i][j]);
     }
   }
-
-  encoded_offsets_list[e_offsets_lists_size - 1] = start;
   return {};
 }
 
