@@ -38,39 +38,63 @@ void grin_destroy_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
 
 size_t grin_get_adjacent_list_size(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
+    if (_al->is_simple) return _al->end_ - _al->begin_;
     return _al->offsets[_al->etype_end - _al->etype_begin];
 }
 
 GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    for (unsigned i = 0; i < _al->etype_end - _al->etype_begin; ++i) {        
-        if (idx < _al->offsets[i+1]) {
-            auto _idx = idx - _al->offsets[i];
-            auto _nbr = _al->data[i].begin() + _idx;
-            return _nbr->vid;
+    if (_al->is_simple) {
+        auto nbr = _al->begin_ + idx;
+        if (nbr < _al->end_) return nbr->vid;
+    } else {
+        for (unsigned i = 0; i < _al->etype_end - _al->etype_begin; ++i) {        
+            if (idx < _al->offsets[i+1]) {
+                auto _idx = idx - _al->offsets[i];
+                auto _nbr = _al->data[i].begin() + _idx;
+                return _nbr->vid;
+            }
         }
     }
     return GRIN_NULL_VERTEX;
 }
 
 GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
-   auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    for (unsigned i = 0; i < _al->etype_end - _al->etype_begin; ++i) {        
-        if (idx < _al->offsets[i+1]) {
-            auto _idx = idx - _al->offsets[i];
-            auto _nbr = _al->data[i].begin() + _idx;
+    auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
+    if (_al->is_simple) {
+        auto nbr = _al->begin_ + idx;
+        if (nbr < _al->end_) {
             auto e = new GRIN_EDGE_T();        
             e->dir = _al->dir;
-            e->etype = _al->etype_begin + i;
-            e->eid = _nbr->eid;
+            e->etype = _al->etype_begin;
+            e->eid = nbr->eid;
             if (_al->dir == GRIN_DIRECTION::OUT) {
                 e->src = _al->vid;
-                e->dst = _nbr->vid;
+                e->dst = nbr->vid;
             } else {
-                e->src = _nbr->vid;
+                e->src = nbr->vid;
                 e->dst = _al->vid;
             }
-            return e;        
+            return e;
+        }
+    } else {
+        for (unsigned i = 0; i < _al->etype_end - _al->etype_begin; ++i) {        
+            if (idx < _al->offsets[i+1]) {
+                auto _idx = idx - _al->offsets[i];
+                auto _nbr = _al->data[i].begin() + _idx;
+                auto e = new GRIN_EDGE_T();        
+                e->dir = _al->dir;
+                e->etype = _al->etype_begin + i;
+                e->eid = _nbr->eid;
+                if (_al->dir == GRIN_DIRECTION::OUT) {
+                    e->src = _al->vid;
+                    e->dst = _nbr->vid;
+                } else {
+                    e->src = _nbr->vid;
+                    e->dst = _al->vid;
+                }
+                return e;        
+            }
         }
     }
     return GRIN_NULL_EDGE;

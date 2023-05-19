@@ -958,6 +958,8 @@ void test_topology_structure(int argc, char** argv) {
 }
 
 void test_topology_adjacent_list(int argc, char** argv, GRIN_DIRECTION dir) {
+  printf("+++++++++++++++++++++ Test topology/adjacent_list +++++++++++++++++++++\n");
+
   GRIN_GRAPH g = get_graph(argc, argv);
 
   GRIN_VERTEX_LIST vl = grin_get_vertex_list(g);

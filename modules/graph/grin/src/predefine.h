@@ -152,6 +152,9 @@ struct GRIN_ADJACENT_LIST_T {
     GRIN_DIRECTION dir;
     unsigned etype_begin;
     unsigned etype_end;
+    bool is_simple;
+    const _GRIN_GRAPH_T::nbr_unit_t* begin_;
+    const _GRIN_GRAPH_T::nbr_unit_t* end_;
     std::vector<size_t> offsets;
     std::vector<_GRIN_GRAPH_T::raw_adj_list_t> data;
 };
