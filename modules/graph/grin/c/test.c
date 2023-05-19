@@ -473,11 +473,14 @@ void test_property_vertex_table(int argc, char** argv) {
         }
         const void* rv = grin_get_value_from_row(g, row, dt, j);
         if (dt == Int64) {
-          printf("vp_id %u v%zu %s value: %ld %ld\n", id, i, vp_name,
+          printf("vp_id %u v%zu %s value int64: %ld %ld\n", id, i, vp_name,
                  *((long int*) pv), *((long int*) rv));
         } else if (dt == String) {
-          printf("vp_id %u v%zu %s value: %s %s\n", id, i, vp_name, (char*) pv,
+          printf("vp_id %u v%zu %s value string: %s %s\n", id, i, vp_name, (char*) pv,
                  (char*) rv);
+        } else if (dt == Int32) {
+          printf("vp_id %u v%zu %s value int32: %d %d\n", id, i, vp_name, *((int*)pv),
+                 *((int*)rv));
         }
         // grin_destroy_value(g, dt, pv);
         // grin_destroy_value(g, dt, rv);
