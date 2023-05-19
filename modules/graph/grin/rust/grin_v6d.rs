@@ -43,7 +43,7 @@ pub const GRIN_ERROR_CODE_UNKNOWN_DATATYPE: GrinErrorCode = 3;
 pub type GrinErrorCode = u32;
 #[doc = "@}"]
 pub type GrinGraph = *mut ::std::os::raw::c_void;
-pub type GrinVertex = *mut ::std::os::raw::c_void;
+pub type GrinVertex = u64;
 pub type GrinEdge = *mut ::std::os::raw::c_void;
 pub type GrinVertexList = *mut ::std::os::raw::c_void;
 pub type GrinVertexListIterator = *mut ::std::os::raw::c_void;
@@ -1231,7 +1231,7 @@ extern "C" {
 
  pub const GRIN_NULL_GRAPH: GrinGraph = std::ptr::null_mut();
 
- pub const GRIN_NULL_VERTEX: GrinVertex = std::ptr::null_mut();
+ pub const GRIN_NULL_VERTEX: GrinVertex = u64::MAX;
 
  pub const GRIN_NULL_EDGE: GrinEdge = std::ptr::null_mut();
 
