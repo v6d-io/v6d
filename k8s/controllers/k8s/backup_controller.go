@@ -23,6 +23,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -48,6 +49,7 @@ type FailoverConfig struct {
 	Endpoint           string
 	VineyardSockPath   string
 	AllInstances       string
+	WithScheduler      bool
 }
 
 // BackupConfig holds all configuration about backup
@@ -84,15 +86,14 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 	logger.Info("Reconciling Backup", "backup", backup)
 
-	backupCfg := BackupConfig{}
-	backupCfg.Name = "backup-" + backup.Spec.VineyarddName + "-" + backup.Spec.VineyarddNamespace
-	backupCfg.Limit = strconv.Itoa(backup.Spec.Limit)
-	failoverCfg, err := newFailoverConfig(r.Client, &backup)
+	useVineyardScheduler := true
+	path := backup.Spec.BackupPath
+	name := "backup-" + backup.Spec.VineyarddName + "-" + backup.Spec.VineyarddNamespace
+	backupCfg, err := BuildBackupCfg(r.Client, name, &backup, path, useVineyardScheduler)
 	if err != nil {
-		logger.Error(err, "unable to build failover config")
+		logger.Error(err, "unable to build backup config")
 		return ctrl.Result{}, err
 	}
-	backupCfg.FailoverConfig = failoverCfg
 
 	app := kubernetes.Application{
 		Client:   r.Client,
@@ -177,37 +178,68 @@ func (r *BackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // newFailoverConfig builds the failover config from the backup
-func newFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup) (FailoverConfig, error) {
-	failoverConfig := FailoverConfig{}
+func newFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup,
+	path string, withScheduler bool) (FailoverConfig, error) {
+	var (
+		failoverConfig FailoverConfig
+		replicas       int
+	)
 	// get vineyardd
 	vineyarddNamespace := backup.Spec.VineyarddNamespace
 	vineyarddName := backup.Spec.VineyarddName
-	vineyardd := &k8sv1alpha1.Vineyardd{}
-	if err := c.Get(context.Background(), client.ObjectKey{
-		Namespace: vineyarddNamespace,
-		Name:      vineyarddName,
-	}, vineyardd); err != nil {
-		return failoverConfig, errors.Wrap(err, "unable to fetch Vineyardd")
+
+	if withScheduler {
+		vineyardd := &k8sv1alpha1.Vineyardd{}
+		if err := c.Get(context.Background(), client.ObjectKey{
+			Namespace: vineyarddNamespace,
+			Name:      vineyarddName,
+		}, vineyardd); err != nil {
+			return failoverConfig, errors.Wrap(err, "unable to fetch Vineyardd")
+		}
+		replicas = vineyardd.Spec.Replicas
+	} else {
+		deployment := &appsv1.Deployment{}
+		if err := c.Get(context.Background(), client.ObjectKey{
+			Namespace: vineyarddNamespace,
+			Name:      vineyarddName,
+		}, deployment); err != nil {
+			return failoverConfig, errors.Wrap(err, "unable to fetch Vineyard Deployment")
+		}
+		replicas = int(*deployment.Spec.Replicas)
 	}
 
 	failoverConfig.Namespace = backup.Namespace
-	failoverConfig.Replicas = vineyardd.Spec.Replicas
-	failoverConfig.Path = backup.Spec.BackupPath
+	failoverConfig.Replicas = replicas
+	failoverConfig.Path = path
 	failoverConfig.VineyarddNamespace = vineyarddNamespace
 	failoverConfig.VineyarddName = vineyarddName
 	failoverConfig.Endpoint = vineyarddName + "-rpc." + vineyarddNamespace
+	failoverConfig.WithScheduler = withScheduler
 	utils := operation.ClientUtils{Client: c}
 	socket, err := utils.ResolveRequiredVineyarddSocket(
 		context.Background(),
-		vineyardd.Name,
-		vineyardd.Namespace,
+		vineyarddName,
+		vineyarddNamespace,
 		backup.Namespace,
 	)
 	if err != nil {
 		return failoverConfig, errors.Wrap(err, "unable to resolve vineyardd socket")
 	}
 	failoverConfig.VineyardSockPath = socket
-	failoverConfig.AllInstances = strconv.Itoa(vineyardd.Spec.Replicas)
+	failoverConfig.AllInstances = strconv.Itoa(replicas)
 
 	return failoverConfig, nil
+}
+
+func BuildBackupCfg(c client.Client, name string, backup *k8sv1alpha1.Backup,
+	path string, withScheduler bool) (BackupConfig, error) {
+	backupCfg := BackupConfig{}
+	backupCfg.Name = name
+	backupCfg.Limit = strconv.Itoa(backup.Spec.Limit)
+	failoverCfg, err := newFailoverConfig(c, backup, path, withScheduler)
+	if err != nil {
+		return backupCfg, errors.Wrap(err, "unable to build failover config")
+	}
+	backupCfg.FailoverConfig = failoverCfg
+	return backupCfg, nil
 }

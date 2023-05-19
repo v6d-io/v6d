@@ -39,9 +39,9 @@ Create a vineyard jobs on kubernetes
 **SEE ALSO**
 
 * [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
-* [vineyardctl create backup](#vineyardctl-create-backup)	 - Backup the current vineyard cluster on kubernetes
+* [vineyardctl create backup](#vineyardctl-create-backup)	 - Create a backup cr to backup the current vineyard cluster on kubernetes
 * [vineyardctl create operation](#vineyardctl-create-operation)	 - Insert an operation in a workflow based on vineyard cluster
-* [vineyardctl create recover](#vineyardctl-create-recover)	 - Recover the current vineyard cluster on kubernetes
+* [vineyardctl create recover](#vineyardctl-create-recover)	 - Create a recover cr to recover the current vineyard cluster on kubernetes
 
 ### Examples
 
@@ -68,7 +68,7 @@ Create a vineyard jobs on kubernetes
 
 ## `vineyardctl create backup`
 
-Backup the current vineyard cluster on kubernetes
+Create a backup cr to backup the current vineyard cluster on kubernetes
 
 ### Synopsis
 
@@ -76,6 +76,10 @@ Backup the current vineyard cluster on kubernetes. You could
 backup all objects of the current vineyard cluster quickly.
 For persistent storage, you could specify the pv spec and pv
 spec.
+
+Notice, the command is used to create a backup cr for the
+vineyard operator and you must deploy the vineyard operator
+and vineyard cluster before using it.
 
 ```
 vineyardctl create backup [flags]
@@ -88,7 +92,7 @@ vineyardctl create backup [flags]
 ### Examples
 
 ```shell
-  # create a backup job for the vineyard cluster on kubernetes
+  # create a backup cr for the vineyard cluster on kubernetes
   # you could define the pv and pvc spec from json string as follows
   vineyardctl create backup \
     --vineyardd-name vineyardd-sample \
@@ -121,7 +125,7 @@ vineyardctl create backup [flags]
       }
       }'
 
-  # create a backup job for the vineyard cluster on kubernetes
+  # create a backup cr for the vineyard cluster on kubernetes
   # you could define the pv and pvc spec from yaml string as follows
   vineyardctl create backup \
     --vineyardd-name vineyardd-sample \
@@ -146,7 +150,7 @@ vineyardctl create backup [flags]
       storage: 1Gi
     '
 
-  # create a backup job for the vineyard cluster on kubernetes
+  # create a backup cr for the vineyard cluster on kubernetes
   # you could define the pv and pvc spec from json file as follows
   # also you could use yaml file instead of json file
   cat pv-pvc.json | vineyardctl create backup \
@@ -226,14 +230,18 @@ vineyardctl create operation [flags]
 
 ## `vineyardctl create recover`
 
-Recover the current vineyard cluster on kubernetes
+Create a recover cr to recover the current vineyard cluster on kubernetes
 
 ### Synopsis
 
 Recover the current vineyard cluster on kubernetes. You could
 recover all objects from a backup of vineyard cluster. Usually,
-the recover job should be created in the same namespace of
+the recover crd should be created in the same namespace of
 the backup job.
+
+Notice, the command is used to create a recover cr for the
+vineyard operator and you must deploy the vineyard operator
+and vineyard cluster before using it.
 
 ```
 vineyardctl create recover [flags]
@@ -246,16 +254,19 @@ vineyardctl create recover [flags]
 ### Examples
 
 ```shell
-  # create a recover job for a backup job in the same namespace
+  # create a recover cr for a backup job in the same namespace
   vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system
 ```
 
 ### Options
 
 ```
-      --backup-name string    the name of backup job (default "vineyard-backup")
-  -h, --help                  help for recover
-      --recover-name string   the name of recover job (default "vineyard-recover")
+      --backup-name string                     the name of backup job (default "vineyard-backup")
+  -h, --help                                   help for recover
+      --recover-name string                    the name of recover job (default "vineyard-recover")
+      --recover-path string                    the path of recover job
+      --vineyard-deployment-name string        the name of vineyard deployment
+      --vineyard-deployment-namespace string   the namespace of vineyard deployment
 ```
 
 ## `vineyardctl delete`
@@ -532,8 +543,10 @@ Deploy the vineyard components on kubernetes
 **SEE ALSO**
 
 * [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
+* [vineyardctl deploy backup-job](#vineyardctl-deploy-backup-job)	 - Deploy a backup job of vineyard cluster on kubernetes
 * [vineyardctl deploy cert-manager](#vineyardctl-deploy-cert-manager)	 - Deploy the cert-manager on kubernetes
 * [vineyardctl deploy operator](#vineyardctl-deploy-operator)	 - Deploy the vineyard operator on kubernetes
+* [vineyardctl deploy recover-job](#vineyardctl-deploy-recover-job)	 - Deploy a recover job to recover a backup of current vineyard cluster on kubernetes
 * [vineyardctl deploy vineyard-cluster](#vineyardctl-deploy-vineyard-cluster)	 - Deploy the vineyard cluster from kubernetes
 * [vineyardctl deploy vineyard-deployment](#vineyardctl-deploy-vineyard-deployment)	 - DeployVineyardDeployment builds and deploy the yaml file of vineyardd without vineyard operator
 * [vineyardctl deploy vineyardd](#vineyardctl-deploy-vineyardd)	 - Deploy the vineyardd on kubernetes
@@ -558,6 +571,108 @@ Deploy the vineyard components on kubernetes
 
 ```
   -h, --help   help for deploy
+```
+
+## `vineyardctl deploy backup-job`
+
+Deploy a backup job of vineyard cluster on kubernetes
+
+### Synopsis
+
+Deploy the backup job for the vineyard cluster on kubernetes,
+which will backup all objects of the current vineyard cluster
+quickly. For persistent storage, you could specify the pv spec
+and pv spec.
+
+```
+vineyardctl deploy backup-job [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl deploy](#vineyardctl-deploy)	 - Deploy the vineyard components on kubernetes
+
+### Examples
+
+```shell
+  # deploy a backup job for the vineyard cluster on kubernetes
+  # you could define the pv and pvc spec from json string as follows
+  vineyardctl deploy backup-job \
+    --vineyardd-name vineyardd-sample \
+    --vineyardd-namespace vineyard-system  \
+    --limit 1000 \
+    --path /var/vineyard/dump  \
+    --pv-pvc-spec '{
+      "pv-spec": {
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "storageClassName": "manual",
+        "hostPath": {
+          "path": "/var/vineyard/dump"
+        }
+      },
+      "pvc-spec": {
+        "storageClassName": "manual",
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+          "storage": "1Gi"
+          }
+        }
+      }
+      }'
+
+  # deploy a backup job for the vineyard cluster on kubernetes
+  # you could define the pv and pvc spec from yaml string as follows
+  vineyardctl deploy backup-job \
+    --vineyardd-name vineyardd-sample \
+    --vineyardd-namespace vineyard-system  \
+    --limit 1000 --path /var/vineyard/dump  \
+    --pv-pvc-spec  \
+    '
+    pv-spec:
+    capacity:
+      storage: 1Gi
+    accessModes:
+    - ReadWriteOnce
+    storageClassName: manual
+    hostPath:
+      path: "/var/vineyard/dump"
+    pvc-spec:
+    storageClassName: manual
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+      storage: 1Gi
+    '
+
+  # deploy a backup job for the vineyard cluster on kubernetes
+  # you could define the pv and pvc spec from json file as follows
+  # also you could use yaml file instead of json file
+  cat pv-pvc.json | vineyardctl deploy backup-job \
+    --vineyardd-name vineyardd-sample \
+    --vineyardd-namespace vineyard-system  \
+    --limit 1000 --path /var/vineyard/dump  \
+    -
+```
+
+### Options
+
+```
+      --backup-name string           the name of backup job (default "vineyard-backup")
+  -h, --help                         help for backup-job
+      --limit int                    the limit of objects to backup (default 1000)
+      --path string                  the path of the backup data
+      --pv-pvc-spec string           the PersistentVolume and PersistentVolumeClaim of the backup data
+      --vineyardd-name string        the name of vineyardd
+      --vineyardd-namespace string   the namespace of vineyardd
 ```
 
 ## `vineyardctl deploy cert-manager`
@@ -647,6 +762,46 @@ vineyardctl deploy operator [flags]
   -h, --help             help for operator
   -l, --local string     the local kustomize dir
   -v, --version string   the version of kustomize dir from github repo (default "dev")
+```
+
+## `vineyardctl deploy recover-job`
+
+Deploy a recover job to recover a backup of current vineyard cluster on kubernetes
+
+### Synopsis
+
+Deploy the recover job for vineyard cluster on kubernetes, which
+will recover all objects from a backup of vineyard cluster. Usually,
+the recover job should be created in the same namespace of
+the backup job.
+
+```
+vineyardctl deploy recover-job [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl deploy](#vineyardctl-deploy)	 - Deploy the vineyard components on kubernetes
+
+### Examples
+
+```shell
+  # deploy a recover job for the vineyard cluster in the same namespace
+  vineyardctl deplot recover-job
+  --vineyardd-name vineyardd-sample \
+  --vineyardd-namespace vineyard-system \
+  --backup-name vineyardd-sample -n vineyard-system
+```
+
+### Options
+
+```
+      --backup-name string                     the name of backup job (default "vineyard-backup")
+  -h, --help                                   help for recover-job
+      --recover-name string                    the name of recover job (default "vineyard-recover")
+      --recover-path string                    the path of recover job
+      --vineyard-deployment-name string        the name of vineyard deployment
+      --vineyard-deployment-namespace string   the namespace of vineyard deployment
 ```
 
 ## `vineyardctl deploy vineyard-cluster`

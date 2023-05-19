@@ -1,0 +1,166 @@
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+setup:
+  env: kind
+  kubeconfig: /tmp/e2e-k8s.config
+  steps:
+    - name: setup the backup path
+      command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/dump; done
+    - name: download all failover images into kind cluster
+      command: |
+        make -C k8s/test/e2e publish-failover-images REGISTRY=localhost:5001
+    - name: install local-object
+      command: |
+        kubectl create namespace vineyard-job
+        sed 's/$job/localObject/' k8s/test/e2e/failover-demo/failover-job.yaml | \
+          gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | \
+          kubectl apply -f -
+        kubectl wait --for=condition=Ready pod -l app=build-local-object -n vineyard-job --timeout=5m
+        while [[ -z $(kubectl get pod -l app=build-local-object -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]]; \
+        do \
+          sleep 0.1; \
+        done
+        export meta=$(kubectl get pod -l app=build-local-object -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
+        export localobjectid=$(echo $meta | awk 'END {print}' |awk -F "[\"]" '{print $2}')
+      wait:
+        - namespace: vineyard-job
+          resource: deployment/build-local-object
+          for: condition=Available
+    - name: install distributed-object
+      command: |
+        sed 's/$job/distributedObject1/' k8s/test/e2e/failover-demo/failover-job.yaml | \
+          gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | \
+          kubectl apply -f -
+        kubectl wait --for=condition=Ready pod -l app=build-distributed-object-step1 -n vineyard-job --timeout=5m
+        while [[ -z $(kubectl get pod -l app=build-distributed-object-step1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]]; \
+        do \
+          sleep 0.1; \
+        done
+        export meta=$(kubectl get pod -l app=build-distributed-object-step1 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
+        export step1objectid=$(echo $meta | awk 'END {print}' |awk -F "[\"]" '{print $2}')
+        sed 's/objectid/'$step1objectid'/;s/$job/distributedObject2/' k8s/test/e2e/failover-demo/failover-job.yaml | \
+          gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | \
+          kubectl apply -f -
+        kubectl wait --for=condition=Ready pod -l app=build-distributed-object-step2 -n vineyard-job --timeout=5m
+        while [[ -z $(kubectl get pod -l app=build-distributed-object-step2 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job) ]]; \
+        do \
+          sleep 0.1; \
+        done
+        export meta=$(kubectl get pod -l app=build-distributed-object-step2 -n vineyard-job -oname | awk -F '/' '{print $2}' | xargs kubectl logs -n vineyard-job)
+        export distributedobjectid=$(echo $meta | awk 'END {print}' |awk -F "[\"]" '{print $2}')
+      wait:
+        - namespace: vineyard-job
+          resource: deployment/build-distributed-object-step2
+          for: condition=Available
+    - name: install backup
+      command: |
+        go run k8s/cmd/main.go deploy backup-job \
+          --vineyardd-name vineyardd-sample \
+          --vineyardd-namespace vineyard-system  \
+          --limit 1000 \
+          --path /var/vineyard/dump  \
+          --pv-pvc-spec '{
+          "pv-spec": {
+            "capacity": {
+              "storage": "1Gi"
+            },
+            "accessModes": [
+              "ReadWriteOnce"
+            ],
+            "storageClassName": "manual",
+            "hostPath": {
+              "path": "/var/vineyard/dump"
+            }
+          },
+          "pvc-spec": {
+            "storageClassName": "manual",
+            "accessModes": [
+              "ReadWriteOnce"
+            ],
+            "resources": {
+              "requests": {
+              "storage": "1Gi"
+              }
+            }
+          }
+          }'
+    - name: simulate vineyard node fail
+      command: |
+        go run k8s/cmd/main.go delete vineyardd --name vineyardd-sample --namespace vineyard-system
+        kubectl wait --for delete pod --timeout=60s --selector=app.kubernetes.io/name=vineyardd-sample -n vineyard-system
+    - name: reinstall vineyardd
+      command: |
+        go run k8s/cmd/main.go deploy vineyardd -f k8s/test/e2e/vineyardd.yaml
+    - name: install recover
+      command: |
+        go run k8s/cmd/main.go deploy recover-job \
+          --vineyardd-name vineyardd-sample \
+          --vineyardd-namespace vineyard-system  \
+          --path /var/vineyard/dump
+    - name: install get-local-object job
+      command: |
+        export newlocalobject_id=$(kubectl get recover -A | grep $localobjectid | sed 's/,/\n/g'| grep \"$localobjectid\" | sed 's/:/\n/g' | tail -n 1 | sed 's/}/\n/g' | head -n 1 | sed 's/"//g')
+        sed 's/objectid/'$newlocalobject_id'/;s/$job/getLocalObject/' k8s/test/e2e/failover-demo/failover-job.yaml | \
+          gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | \
+          kubectl apply -f -
+      wait:
+        - namespace: vineyard-job
+          resource: deployment/get-local-object
+          for: condition=Available
+    - name: install get-distributed-object job
+      command: |
+        export newdistributed_id=$(kubectl get recover -A | \
+          grep $distributedobjectid | \
+          sed 's/,/\n/g' | \
+          grep \"$distributedobjectid\" | \
+          sed 's/:/\n/g' | \
+          tail -n 1 | \
+          sed 's/}/\n/g' | \
+          head -n 1 | sed 's/"//g')
+        sed 's/objectid/'$newdistributed_id'/;s/$job/getDistributedObject/' k8s/test/e2e/failover-demo/failover-job.yaml | \
+          gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | \
+          kubectl apply -f -
+      wait:
+        - namespace: vineyard-job
+          resource: deployment/get-distributed-object
+          for: condition=Available
+  timeout: 60m
+
+cleanup:
+  # always never success failure
+  on: success
+
+verify:
+  # verify with retry strategy
+  retry:
+    # max retry count
+    count: 10
+    # the interval between two attempts, e.g. 10s, 1m.
+    interval: 10s
+  cases:
+    - query: |
+        kubectl get pod -l app=get-local-object -n vineyard-job -oname | \
+          awk -F '/' '{print $2}' | \
+          head -n 1 | \
+          xargs kubectl logs -n vineyard-job | \
+          yq e '{"sum": .}' - | \
+          yq e 'to_entries' -
+      expected: ../verify/values.yaml
+    # TODO(hetao) there seems issue in migration, don't check distributed object verifying
+    # - query: |
+    #     kubectl get pod -l app=get-distributed-object -n vineyard-job -oname | awk -F '/' '{print $2}' | \
+    #     xargs kubectl logs -n vineyard-job | yq e '{"result": .}' - | yq e 'to_entries' -
+    #   expected: ../verify/spill.yaml

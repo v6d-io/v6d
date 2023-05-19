@@ -17,8 +17,19 @@ package flags
 
 import "github.com/spf13/cobra"
 
-// RecoverName is the name of recover job
-var RecoverName string
+var (
+	// RecoverName is the name of recover job
+	RecoverName string
+
+	// RecoverPath is the path of recover job
+	RecoverPath string
+
+	// VineyardDeploymentName is the name of vineyard deployment
+	VineyardDeploymentName string
+
+	// VineyardDeploymentNamespace is the namespace of vineyard deployment
+	VineyardDeploymentNamespace string
+)
 
 func ApplyRecoverOpts(cmd *cobra.Command) {
 	cmd.Flags().
@@ -27,4 +38,13 @@ func ApplyRecoverOpts(cmd *cobra.Command) {
 	cmd.Flags().
 		StringVarP(&RecoverName, "recover-name", "", "vineyard-recover",
 			"the name of recover job")
+	cmd.Flags().
+		StringVarP(&RecoverPath, "recover-path", "", "",
+			"the path of recover job")
+	cmd.Flags().
+		StringVarP(&VineyardDeploymentName, "vineyard-deployment-name", "", "",
+			"the name of vineyard deployment")
+	cmd.Flags().
+		StringVarP(&VineyardDeploymentNamespace, "vineyard-deployment-namespace", "", "",
+			"the namespace of vineyard deployment")
 }

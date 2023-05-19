@@ -111,3 +111,27 @@ func BuildObjsFromVineyarddManifests(files []string, value interface{},
 	}
 	return objs, nil
 }
+
+// BuildObjsFromManifests builds a list of objects from the
+// the standard template files such as backup and recover
+func BuildObjsFromManifests(templateName string, value interface{},
+	tmplFunc map[string]interface{},
+) ([]*unstructured.Unstructured, error) {
+	objs := []*unstructured.Unstructured{}
+
+	manifests, err := templates.GetFilesRecursive(templateName)
+	if err != nil {
+		return objs, errors.Wrap(err, "failed to get backup manifests")
+	}
+	for _, m := range manifests {
+		obj, err := RenderManifestAsObj(m, value, tmplFunc)
+		if err != nil {
+			return objs, err
+		}
+
+		if obj.GetName() != "" {
+			objs = append(objs, obj)
+		}
+	}
+	return objs, nil
+}

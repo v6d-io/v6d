@@ -355,6 +355,15 @@ e2e-tests-vineyardctl: prepare-e2e-test build-local-cluster
 	@make delete-local-cluster
 .PHONY: e2e-tests-vineyardctl
 
+############# vineyardctl testing ################################################
+
+e2e-tests-deploy-raw-backup-and-recover: prepare-e2e-test build-local-cluster
+	@echo "Running vineyardctl backup and recover e2e test..."
+	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/deploy-raw-backup-and-recover/e2e.yaml
+	@echo "vineyardctl backup and recover e2e test passed."
+	@make delete-local-cluster
+.PHONY: e2e-tests-deploy-raw-backup-and-recover
+
 # publish all images to ghcr registry
 ALL-IMAGES ?= \
 publish-local-assembly-images \

@@ -51,4 +51,6 @@ func init() {
 	deployCmd.AddCommand(NewDeployVineyarddCmd())
 	deployCmd.AddCommand(NewDeployVineyardClusterCmd())
 	deployCmd.AddCommand(NewDeployVineyardDeploymentCmd())
+	deployCmd.AddCommand(NewDeployBackupJobCmd())
+	deployCmd.AddCommand(NewDeployRecoverJobCmd())
 }
