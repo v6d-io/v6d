@@ -18,6 +18,7 @@ limitations under the License.
 
 extern "C" {
 #include "graph/grin/predefine.h"
+#include "graph/grin/include/common/error.h"
 }
 
 #include "graph/fragment/arrow_fragment.h"
@@ -77,20 +78,55 @@ struct GRIN_DATATYPE_ENUM<arrow::Date64Type> {
   static constexpr GRIN_DATATYPE value = GRIN_DATATYPE::Timestamp64;
 };
 
-std::string GetDataTypeName(GRIN_DATATYPE);
+inline std::string GetDataTypeName(GRIN_DATATYPE type) {
+  switch (type) {
+  case GRIN_DATATYPE::Int32:
+    return "int32";
+  case GRIN_DATATYPE::UInt32:
+    return "uint32";
+  case GRIN_DATATYPE::Int64:
+    return "int64";
+  case GRIN_DATATYPE::UInt64:
+    return "uint64";
+  case GRIN_DATATYPE::Float:
+    return "float";
+  case GRIN_DATATYPE::Double:
+    return "double";
+  case GRIN_DATATYPE::String:
+    return "string";
+  case GRIN_DATATYPE::Date32:
+    return "date32";
+  case GRIN_DATATYPE::Time32:
+    return "time32";
+  case GRIN_DATATYPE::Timestamp64:
+    return "timestamp64";
+  default:
+    return "undefined";
+  }
+}
 
-GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType>);
-
-const void* _get_value_from_vertex_property_table(GRIN_GRAPH, GRIN_VERTEX_PROPERTY_TABLE, GRIN_VERTEX, GRIN_VERTEX_PROPERTY);
-
-const void* _get_value_from_edge_property_table(GRIN_GRAPH, GRIN_EDGE_PROPERTY_TABLE, GRIN_EDGE, GRIN_EDGE_PROPERTY);
-
-unsigned long long int _grin_create_property(unsigned, unsigned);
-
-unsigned _grin_get_type_from_property(unsigned long long int);
-
-unsigned _grin_get_prop_from_property(unsigned long long int);
-
+inline GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType> type) {
+  if (type == nullptr) {
+    return GRIN_DATATYPE::Undefined;
+  } else if (arrow::int32()->Equals(type)) {
+    return GRIN_DATATYPE::Int32;
+  } else if (arrow::int64()->Equals(type)) {
+    return GRIN_DATATYPE::Int64;
+  } else if (arrow::float32()->Equals(type)) {
+    return GRIN_DATATYPE::Float;
+  } else if (arrow::uint32()->Equals(type)) {
+    return GRIN_DATATYPE::UInt32;
+  } else if (arrow::uint64()->Equals(type)) {
+    return GRIN_DATATYPE::UInt64;
+  } else if (arrow::float64()->Equals(type)) {
+    return GRIN_DATATYPE::Double;
+  } else if (arrow::utf8()->Equals(type)) {
+    return GRIN_DATATYPE::String;
+  } else if (arrow::large_utf8()->Equals(type)) {
+    return GRIN_DATATYPE::String;
+  } 
+  return GRIN_DATATYPE::Undefined;
+}
 
 #define GRIN_OID_T int64_t
 #define GRIN_VID_T uint64_t
@@ -112,7 +148,28 @@ struct GRIN_GRAPH_T {
     _GRAPH_CACHE* cache;
 };
 
-void _prepare_cache(GRIN_GRAPH_T* g);
+inline void _prepare_cache(GRIN_GRAPH_T* g) {
+    g->cache = new _GRAPH_CACHE();
+    g->cache->id_parser = vineyard::IdParser<_GRIN_GRAPH_T::vid_t>();
+    g->cache->id_parser.Init(g->g->fnum(), g->g->vertex_label_num());
+
+    for (int i = 0; i < g->g->vertex_label_num(); ++i) {
+        g->cache->vtype_names.push_back(g->g->schema().GetVertexLabelName(i));
+        g->cache->vprop_names.push_back(std::vector<std::string>());
+        for (int j = 0; j < g->g->vertex_property_num(i); ++j) {
+            g->cache->vprop_names[i].push_back(g->g->schema().GetVertexPropertyName(i, j));
+        } 
+    }
+
+    for (int i = 0; i < g->g->edge_label_num(); ++i) {
+        g->cache->etype_names.push_back(g->g->schema().GetEdgeLabelName(i));
+        g->cache->eprop_names.push_back(std::vector<std::string>());
+        for (int j = 0; j < g->g->edge_property_num(i); ++j) {
+            g->cache->eprop_names[i].push_back(g->g->schema().GetEdgePropertyName(i, j));
+        } 
+    }
+}
+
 
 typedef _GRIN_GRAPH_T::vertex_t _GRIN_VERTEX_T;    
 
@@ -126,51 +183,134 @@ struct GRIN_EDGE_T {
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
 struct GRIN_VERTEX_LIST_T {
-    unsigned type_begin;
-    unsigned type_end;
+    _GRIN_GRAPH_T::vid_t begin_ = 0;
+    _GRIN_GRAPH_T::vid_t end_ = 0;
     unsigned all_master_mirror;
-    std::vector<size_t> offsets;
-    std::vector<_GRIN_GRAPH_T::vertices_t> vrs;
+    unsigned vtype;
+    bool is_simple;
+    std::vector<std::pair<size_t, _GRIN_GRAPH_T::vid_t>> offsets;
 };
-void __grin_init_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl);
+inline void __grin_init_simple_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
+    _GRIN_GRAPH_T::vertices_t vr;
+    if (vl->all_master_mirror == 0) {
+        vr = g->Vertices(vl->vtype);
+    } else if (vl->all_master_mirror == 1) {
+        vr = g->InnerVertices(vl->vtype);
+    } else {
+        vr = g->OuterVertices(vl->vtype);
+    }
+    vl->begin_ = vr.begin_value();
+    vl->end_ = vr.end_value();
+}
+inline void __grin_init_complex_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
+    _GRIN_GRAPH_T::vertices_t vr;
+    size_t sum = 0;
+    for (unsigned i = 0; i < vl->vtype; ++i) {
+        if (vl->all_master_mirror == 0) {
+            vr = g->Vertices(i);
+        } else if (vl->all_master_mirror == 1) {
+            vr = g->InnerVertices(i);
+        } else {
+            vr = g->OuterVertices(i);
+        }
+        vl->offsets.push_back(std::make_pair(sum, vr.begin_value()));
+        sum += vr.size();
+    }
+    vl->offsets.push_back(std::make_pair(sum, vr.end_value()));
+}
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
 struct GRIN_VERTEX_LIST_ITERATOR_T {
-    unsigned type_begin;
-    unsigned type_end;
+    _GRIN_GRAPH_T::vid_t end_;
+    _GRIN_GRAPH_T::vid_t current_;
     unsigned all_master_mirror;
-    unsigned type_current;
-    unsigned current;
-    _GRIN_GRAPH_T::vertices_t vr;
+    bool is_simple;
+    unsigned vtype_current;
+    unsigned vtype_end;
 };
+inline void __grin_next_valid_vertex_list_iterator(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_ITERATOR_T* vli) {
+    _GRIN_GRAPH_T::vertices_t vr;
+    while (vli->vtype_current < vli->vtype_end) {
+        if (vli->all_master_mirror == 0) {
+            vr = g->Vertices(vli->vtype_current);
+        } else if (vli->all_master_mirror == 1) {
+            vr = g->InnerVertices(vli->vtype_current);
+        } else {
+            vr = g->OuterVertices(vli->vtype_current);
+        }
+        if (vr.size() > 0) {
+            vli->current_ = vr.begin_value();
+            vli->end_ = vr.end_value();
+            break;
+        }
+        vli->vtype_current++;
+    }
+}
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
 struct GRIN_ADJACENT_LIST_T {
+    const _GRIN_GRAPH_T::nbr_unit_t* begin_ = nullptr;
+    const _GRIN_GRAPH_T::nbr_unit_t* end_ = nullptr;
     _GRIN_GRAPH_T::vid_t vid;
     GRIN_DIRECTION dir;
-    unsigned etype_begin;
-    unsigned etype_end;
+    unsigned etype;
     bool is_simple;
-    const _GRIN_GRAPH_T::nbr_unit_t* begin_;
-    const _GRIN_GRAPH_T::nbr_unit_t* end_;
-    std::vector<size_t> offsets;
-    std::vector<_GRIN_GRAPH_T::raw_adj_list_t> data;
+    std::vector<std::pair<size_t, const _GRIN_GRAPH_T::nbr_unit_t*>> offsets;
 };
-void __grin_init_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al);
+inline void __grin_init_simple_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
+    _GRIN_GRAPH_T::raw_adj_list_t ral;
+    if (al->dir == GRIN_DIRECTION::IN) {
+          ral = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), al->etype);
+      } else {
+          ral = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), al->etype);
+      }
+    al->begin_ = ral.begin();
+    al->end_ = ral.end();
+}
+inline void __grin_init_complex_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
+    _GRIN_GRAPH_T::raw_adj_list_t ral;
+    size_t sum = 0;
+    for (unsigned i = 0; i < al->etype; ++i) {
+        if (al->dir == GRIN_DIRECTION::IN) {
+            ral = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), i);
+        } else {
+            ral = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), i);
+        }
+        al->offsets.push_back(std::make_pair(sum, ral.begin()));
+        sum += ral.size();
+    }
+    al->offsets.push_back(std::make_pair(sum, ral.end()));
+}
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 struct GRIN_ADJACENT_LIST_ITERATOR_T {
+    const _GRIN_GRAPH_T::nbr_unit_t* end_;
+    const _GRIN_GRAPH_T::nbr_unit_t* current_;
     _GRIN_GRAPH_T::vid_t vid;
     GRIN_DIRECTION dir;
-    unsigned etype_begin;
-    unsigned etype_end;
+    bool is_simple;
     unsigned etype_current;
-    unsigned current;
-    _GRIN_GRAPH_T::raw_adj_list_t data;
-};  
+    unsigned etype_end;
+};
+inline void __grin_next_valid_adjacent_list_iterator(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_ITERATOR_T* ali) {
+    _GRIN_GRAPH_T::raw_adj_list_t raj;
+    while (ali->etype_current < ali->etype_end) {
+        if (ali->dir == GRIN_DIRECTION::IN) {
+            raj = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
+        } else {
+            raj = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
+        }
+        if (raj.size() > 0) {
+            ali->current_ = raj.begin();
+            ali->end_ = raj.end();
+            break;
+        }
+        ali->etype_current++;
+    }
+}
 #endif
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
@@ -188,6 +328,19 @@ typedef std::vector<unsigned> GRIN_PARTITION_LIST_T;
 typedef _GRIN_GRAPH_T::vid_t GRIN_VERTEX_REF_T;
 #endif
 
+inline unsigned long long int _grin_create_property(unsigned type, unsigned prop) {
+    return ((unsigned long long int)type << 32) | prop;
+}
+
+inline unsigned _grin_get_type_from_property(unsigned long long int prop) {
+    return (unsigned)(prop >> 32);
+}
+
+inline unsigned _grin_get_prop_from_property(unsigned long long int prop) {
+    return (unsigned)(prop & 0xffffffff);
+}
+
+
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 typedef unsigned GRIN_VERTEX_TYPE_T;
 typedef std::vector<unsigned> GRIN_VERTEX_TYPE_LIST_T;
@@ -198,6 +351,21 @@ struct GRIN_VERTEX_PROPERTY_TABLE_T {
     _GRIN_GRAPH_T::vid_t vbegin;
     _GRIN_GRAPH_T::vid_t vend;
 };
+
+inline const void* _get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_TABLE vpt, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto _vpt = static_cast<GRIN_VERTEX_PROPERTY_TABLE_T*>(vpt);
+    unsigned vtype = _grin_get_type_from_property(vp);
+    if (v < _vpt->vbegin || v >= _vpt->vend || vtype != _vpt->vtype) {
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
+        return NULL;
+    }    
+    unsigned vprop = _grin_get_prop_from_property(vp);
+    auto offset = v - _vpt->vbegin;
+    auto array = _g->vertex_data_table(vtype)->column(vprop)->chunk(0);
+    return vineyard::get_arrow_array_data_element(array, offset);
+}
 #endif
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
@@ -209,6 +377,22 @@ struct GRIN_EDGE_PROPERTY_TABLE_T {
     unsigned etype;
     unsigned num;
 };
+
+inline const void* _get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_TABLE ept, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto _ept = static_cast<GRIN_EDGE_PROPERTY_TABLE_T*>(ept);
+    auto _e = static_cast<GRIN_EDGE_T*>(e);
+    unsigned etype = _grin_get_type_from_property(ep);  
+    unsigned eprop = _grin_get_prop_from_property(ep);
+    if (etype != _ept->etype || _e->eid >= _ept->num) {
+        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
+        return NULL;
+    }
+    auto offset = _e->eid;
+    auto array = _g->edge_data_table(etype)->column(eprop)->chunk(0);
+    return vineyard::get_arrow_array_data_element(array, offset);
+}
 #endif
 
 #ifdef GRIN_ENABLE_ROW

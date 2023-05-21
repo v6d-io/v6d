@@ -22,9 +22,14 @@ extern "C" {
 GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto vl = new GRIN_VERTEX_LIST_T();
-    vl->type_begin = 0;
-    vl->type_end = _g->vertex_label_num();
-    __grin_init_vertex_list(_g, vl);
+    vl->all_master_mirror = 0;
+    vl->vtype = _g->vertex_label_num();
+    if (vl->vtype == 1) {
+        vl->is_simple = true;
+        __grin_init_simple_vertex_list(_g, vl);
+    } else {
+        vl->is_simple = false;
+    }
     return vl;
 }
 
@@ -35,15 +40,21 @@ void grin_destroy_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
 
 size_t grin_get_vertex_list_size(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    return _vl->offsets[_vl->type_end - _vl->type_begin];
+    if (_vl->is_simple) return _vl->end_ - _vl->begin_;
+    if (_vl->offsets.empty()) __grin_init_complex_vertex_list(static_cast<GRIN_GRAPH_T*>(g)->g, _vl);
+    return _vl->offsets[_vl->vtype].first;
 }
 
 GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t idx) {
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    for (unsigned i = 0; i < _vl->type_end - _vl->type_begin; ++i) {        
-        if (idx < _vl->offsets[i+1]) {
-            auto _idx = idx - _vl->offsets[i];
-            return _vl->vrs[i].begin_value() + _idx;
+    auto v = _vl->begin_ + idx;
+    if (v < _vl->end_) return v;
+    if (_vl->is_simple) return GRIN_NULL_VERTEX;
+    if (_vl->offsets.empty()) __grin_init_complex_vertex_list(static_cast<GRIN_GRAPH_T*>(g)->g, _vl);
+    for (unsigned i = 0; i < _vl->vtype; ++i) {
+        if (idx < _vl->offsets[i+1].first) {
+            v = _vl->offsets[i].second + idx - _vl->offsets[i].first;
+            return v;
         }
     }
     return GRIN_NULL_VERTEX;
@@ -55,26 +66,17 @@ GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH g, GRIN_VERTEX_L
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     auto vli = new GRIN_VERTEX_LIST_ITERATOR_T();
-    vli->type_begin = _vl->type_begin;
-    vli->type_end = _vl->type_end;
-    vli->type_current = _vl->type_begin;
-    vli->current = 0;
     vli->all_master_mirror = _vl->all_master_mirror;
-    
-    while (vli->type_current < vli->type_end) {
-        if (_vl->offsets[vli->type_current - vli->type_begin + 1] > 0) break;
-        vli->type_current++;
+    if (_vl->is_simple) {
+        vli->is_simple = true;
+        vli->vtype_current = _vl->vtype;
+        vli->vtype_end = _vl->vtype + 1;
+    } else {
+        vli->is_simple = false;
+        vli->vtype_current = 0;
+        vli->vtype_end = _vl->vtype;
     }
-    
-    if (vli->type_current < vli->type_end) {
-        if (vli->all_master_mirror == 0) {
-            vli->vr = _g->Vertices(vli->type_current);
-        } else if (vli->all_master_mirror == 1) {
-            vli->vr = _g->InnerVertices(vli->type_current);
-        } else {
-            vli->vr = _g->OuterVertices(vli->type_current);
-        }
-    }
+    __grin_next_valid_vertex_list_iterator(_g, vli);
     return vli;
 }
 
@@ -84,32 +86,27 @@ void grin_destroy_vertex_list_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) 
 }
 
 void grin_get_next_vertex_list_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
-    _vli->current++;
-    while (_vli->type_current < _vli->type_end) {
-        if (_vli->current < _vli->vr.size()) break;
-        _vli->type_current++;
-        _vli->current = 0;
-        if (_vli->type_current < _vli->type_end) {
-            if (_vli->all_master_mirror == 0) {
-                _vli->vr = _g->Vertices(_vli->type_current);
-            } else if (_vli->all_master_mirror == 1) {
-                _vli->vr = _g->InnerVertices(_vli->type_current);
-            } else {
-                _vli->vr = _g->OuterVertices(_vli->type_current);
-            }
-        }
+    _vli->current_++;
+    if (_vli->current_ < _vli->end_) return;
+    if (_vli->is_simple) {
+        _vli->vtype_current++;
+        return;
     }
+
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    _GRIN_GRAPH_T::vertex_range_t vr;
+    _vli->vtype_current++;
+    __grin_next_valid_vertex_list_iterator(_g, _vli);
 }
 
 bool grin_is_vertex_list_end(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
     auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
-    return _vli->type_current >= _vli->type_end;
+    return _vli->vtype_current >= _vli->vtype_end;
 }
 
 GRIN_VERTEX grin_get_vertex_from_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
     auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
-    return _vli->vr.begin_value() + _vli->current;
+    return _vli->current_;
 }
 #endif

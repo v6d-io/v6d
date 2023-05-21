@@ -31,15 +31,15 @@ size_t grin_get_edge_num_by_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
 
 #ifdef GRIN_TRAIT_SELECT_TYPE_FOR_VERTEX_LIST
 GRIN_VERTEX_LIST grin_select_type_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_LIST vl) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    if (_vl->type_begin > vtype || _vl->type_end <= vtype) return GRIN_NULL_LIST;
+    if (_vl->is_simple && _vl->vtype != vtype) return GRIN_NULL_LIST;
 
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto fvl = new GRIN_VERTEX_LIST_T();
     fvl->all_master_mirror = _vl->all_master_mirror;
-    fvl->type_begin = vtype;
-    fvl->type_end = vtype + 1;
-    __grin_init_vertex_list(_g, fvl);
+    fvl->vtype = vtype;
+    fvl->is_simple = true;
+    __grin_init_simple_vertex_list(_g, fvl);
     return fvl;
 }
 #endif
@@ -54,17 +54,15 @@ GRIN_ADJACENT_LIST grin_select_neighbor_type_for_adjacent_list(GRIN_GRAPH, GRIN_
 
 #ifdef GRIN_TRAIT_SELECT_EDGE_TYPE_FOR_ADJACENT_LIST
 GRIN_ADJACENT_LIST grin_select_edge_type_for_adjacent_list(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_ADJACENT_LIST al) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-
-    if (_al->etype_begin > etype || _al->etype_end <= etype) return GRIN_NULL_LIST;
-
+    if (_al->is_simple && _al->etype != etype) return GRIN_NULL_LIST;
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto fal = new GRIN_ADJACENT_LIST_T();
     fal->vid = _al->vid;
     fal->dir = _al->dir;
-    fal->etype_begin = etype;
-    fal->etype_end = etype + 1;
-    __grin_init_adjacent_list(_g, fal);
+    fal->etype = etype;
+    fal->is_simple = true;
+    __grin_init_simple_adjacent_list(_g, fal);
     return fal;
 }
 #endif

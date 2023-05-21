@@ -20,28 +20,26 @@ extern "C" {
 
 #ifdef GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST
 GRIN_VERTEX_LIST grin_select_master_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     if (_vl->all_master_mirror > 0) return GRIN_NULL_LIST;
-
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto fvl = new GRIN_VERTEX_LIST_T();
-    fvl->type_begin = _vl->type_begin;
-    fvl->type_end = _vl->type_end;
     fvl->all_master_mirror = 1;
-    __grin_init_vertex_list(_g, fvl);
+    fvl->vtype = _vl->vtype;
+    fvl->is_simple = _vl->is_simple;
+    if (fvl->is_simple) __grin_init_simple_vertex_list(_g, fvl);
     return fvl;
 }
 
 GRIN_VERTEX_LIST grin_select_mirror_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     if (_vl->all_master_mirror > 0) return GRIN_NULL_LIST;
-
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto fvl = new GRIN_VERTEX_LIST_T();
-    fvl->type_begin = _vl->type_begin;
-    fvl->type_end = _vl->type_end;
     fvl->all_master_mirror = 2;
-    __grin_init_vertex_list(_g, fvl);
+    fvl->vtype = _vl->vtype;
+    fvl->is_simple = _vl->is_simple;
+    if (fvl->is_simple) __grin_init_simple_vertex_list(_g, fvl);
     return fvl;
 }
 #endif

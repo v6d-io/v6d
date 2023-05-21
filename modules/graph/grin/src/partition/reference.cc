@@ -36,9 +36,8 @@ GRIN_VERTEX grin_get_vertex_from_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
 }
 
 GRIN_PARTITION grin_get_master_partition_from_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto bg = static_cast<GRIN_GRAPH_T*>(g);
-    return bg->cache->id_parser.GetFid(vr);
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
+    return _cache->id_parser.GetFid(vr);
 }
 
 const char* grin_serialize_vertex_ref(GRIN_GRAPH g, GRIN_VERTEX_REF vr) {

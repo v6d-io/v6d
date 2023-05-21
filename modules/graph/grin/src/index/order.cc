@@ -24,15 +24,12 @@ bool grin_smaller_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
 
 #if defined(GRIN_ASSUME_ALL_VERTEX_LIST_SORTED) && defined(GRIN_ENABLE_VERTEX_LIST_ARRAY)
 size_t grin_get_position_of_vertex_from_sorted_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, GRIN_VERTEX v) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    auto bg = static_cast<GRIN_GRAPH_T*>(g);
-    auto vtype = bg->cache->id_parser.GetLabelId(v);
-    if (vtype < _vl->type_begin || vtype >= _vl->type_end) return GRIN_NULL_SIZE;
-    auto offset = v - _vl->vrs[vtype - _vl->type_begin].begin_value();
-    if (offset < _vl->vrs[vtype - _vl->type_begin].size()) {
-        return _vl->offsets[vtype - _vl->type_begin] + offset;
-    }
-    return GRIN_NULL_SIZE;
+    if (v < _vl->end_ && v >= _vl->begin_) return v - _vl->begin_;
+    if (_vl->is_simple) return GRIN_NULL_SIZE;
+    if (_vl->offsets.empty()) __grin_init_complex_vertex_list(static_cast<GRIN_GRAPH_T*>(g)->g, _vl);
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
+    auto vtype = _cache->id_parser.GetLabelId(v);
+    return v - _vl->offsets[vtype].second + _vl->offsets[vtype].first;
 }
 #endif
