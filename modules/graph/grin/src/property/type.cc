@@ -21,9 +21,8 @@ bool grin_equal_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt1, GRIN_VERTEX_TYPE
 }
 
 GRIN_VERTEX_TYPE grin_get_vertex_type(GRIN_GRAPH g, GRIN_VERTEX v) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto bg = static_cast<GRIN_GRAPH_T*>(g);
-    return bg->cache->id_parser.GetLabelId(v);
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
+    return _cache->id_parser.GetLabelId(v);
 }
 
 void grin_destroy_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {}
@@ -66,9 +65,8 @@ GRIN_VERTEX_TYPE grin_get_vertex_type_from_list(GRIN_GRAPH g, GRIN_VERTEX_TYPE_L
 
 #ifdef GRIN_WITH_VERTEX_TYPE_NAME
 const char* grin_get_vertex_type_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto bg = static_cast<GRIN_GRAPH_T*>(g);
-    return bg->cache->vtype_names[vtype].c_str();
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
+    return _cache->vtype_names[vtype].c_str();
 }
 
 GRIN_VERTEX_TYPE grin_get_vertex_type_by_name(GRIN_GRAPH g, const char* name) {
@@ -141,9 +139,8 @@ GRIN_EDGE_TYPE grin_get_edge_type_from_list(GRIN_GRAPH g, GRIN_EDGE_TYPE_LIST et
 
 #ifdef GRIN_WITH_EDGE_TYPE_NAME
 const char* grin_get_edge_type_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto bg = static_cast<GRIN_GRAPH_T*>(g);
-    return bg->cache->etype_names[etype].c_str();
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
+    return _cache->etype_names[etype].c_str();
 }
 
 GRIN_EDGE_TYPE grin_get_edge_type_by_name(GRIN_GRAPH g, const char* name) {
