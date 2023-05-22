@@ -189,6 +189,9 @@ static inline bool parse_options_from_args(struct loader_options& options,
     options.directed = parse_boolean_value(argv[current_index++]);
   }
   if (argc > current_index) {
+    options.compact_edges = parse_boolean_value(argv[current_index++]);
+  }
+  if (argc > current_index) {
     options.generate_eid = parse_boolean_value(argv[current_index++]);
   }
   if (argc > current_index) {

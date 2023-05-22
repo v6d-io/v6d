@@ -387,7 +387,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewVertexEdgeLabels(
   VLOG(100) << "Add new vertices and edges: after generate CSR: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
   builder.set_vertex_label_num_(total_vertex_label_num);
   builder.set_edge_label_num_(total_edge_label_num);
 
@@ -571,7 +571,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewVertexLabels(
     tvnums[vertex_label_num_ + i] = ivnums[vertex_label_num_ + i];
   }
 
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
   builder.set_vertex_label_num_(total_vertex_label_num);
 
   VLOG(100) << "Add new vertices: start: " << get_rss_pretty()
@@ -883,7 +883,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewEdgeLabels(
   VLOG(100) << "Add new edges: after generate CSR: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
   builder.set_edge_label_num_(total_edge_label_num);
 
   auto schema = schema_;

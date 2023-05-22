@@ -19,18 +19,34 @@ namespace vineyard {
 
 template class ArrowFragment<
     int32_t, uint32_t,
-    ArrowVertexMap<typename InternalType<int32_t>::type, uint32_t>>;
+    ArrowVertexMap<typename InternalType<int32_t>::type, uint32_t>, false>;
 
 template class ArrowFragment<
     int32_t, uint32_t,
-    ArrowLocalVertexMap<typename InternalType<int32_t>::type, uint32_t>>;
+    ArrowLocalVertexMap<typename InternalType<int32_t>::type, uint32_t>, false>;
 
 template class BasicArrowFragmentBuilder<
     int32_t, uint32_t,
-    ArrowVertexMap<typename InternalType<int32_t>::type, uint32_t>>;
+    ArrowVertexMap<typename InternalType<int32_t>::type, uint32_t>, false>;
 
 template class BasicArrowFragmentBuilder<
     int32_t, uint32_t,
-    ArrowLocalVertexMap<typename InternalType<int32_t>::type, uint32_t>>;
+    ArrowLocalVertexMap<typename InternalType<int32_t>::type, uint32_t>, false>;
+
+template class ArrowFragment<
+    int32_t, uint32_t,
+    ArrowVertexMap<typename InternalType<int32_t>::type, uint32_t>, true>;
+
+template class ArrowFragment<
+    int32_t, uint32_t,
+    ArrowLocalVertexMap<typename InternalType<int32_t>::type, uint32_t>, true>;
+
+template class BasicArrowFragmentBuilder<
+    int32_t, uint32_t,
+    ArrowVertexMap<typename InternalType<int32_t>::type, uint32_t>, true>;
+
+template class BasicArrowFragmentBuilder<
+    int32_t, uint32_t,
+    ArrowLocalVertexMap<typename InternalType<int32_t>::type, uint32_t>, true>;
 
 }  // namespace vineyard

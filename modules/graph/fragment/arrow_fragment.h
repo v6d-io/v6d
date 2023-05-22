@@ -54,7 +54,7 @@ class ArrowFragmentBaseBuilder;
 
 template <typename OID_T, typename VID_T,
           typename VERTEX_MAP_T =
-              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>, bool ENCODED = true>
+              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>, bool ENCODED = false>
 class BasicArrowFragmentBuilder
     : public ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> {
   using Base = ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>;

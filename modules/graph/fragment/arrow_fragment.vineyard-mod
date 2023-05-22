@@ -72,7 +72,7 @@ class ArrowFragmentBaseBuilder;
 
 template <typename OID_T, typename VID_T,
           typename VERTEX_MAP_T =
-              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>, bool ENCODED = true>
+              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>, bool ENCODED = false>
 class [[vineyard]] ArrowFragment
     : public ArrowFragmentBase,
       public vineyard::BareRegistered<

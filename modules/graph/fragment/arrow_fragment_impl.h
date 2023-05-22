@@ -103,7 +103,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVertexColumnsImpl(
         std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
         columns,
     bool replace) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
   auto schema = schema_;
 
   /// If replace == true, invalidate all previous properties that have new
@@ -189,7 +189,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddEdgeColumnsImpl(
         std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
         columns,
     bool replace) {
-  vineyard::ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
+  vineyard::ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
   auto schema = schema_;
 
   if (replace) {
@@ -241,7 +241,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::Project(
     vineyard::Client& client,
     std::map<label_id_t, std::vector<prop_id_t>> vertices,
     std::map<label_id_t, std::vector<prop_id_t>> edges) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
 
   auto schema = schema_;
 
@@ -336,7 +336,7 @@ template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
 boost::leaf::result<vineyard::ObjectID>
 ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::TransformDirection(
     vineyard::Client& client, int concurrency) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
   builder.set_directed_(!directed_);
 
   std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>
@@ -391,7 +391,7 @@ boost::leaf::result<vineyard::ObjectID>
 ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::ConsolidateVertexColumns(
     vineyard::Client& client, const label_id_t vlabel,
     std::vector<prop_id_t> const& props, std::string const& consolidate_name) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
   auto schema = schema_;
 
   auto& table = this->vertex_tables_[vlabel];
@@ -448,7 +448,7 @@ boost::leaf::result<vineyard::ObjectID>
 ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::ConsolidateEdgeColumns(
     vineyard::Client& client, const label_id_t elabel,
     std::vector<prop_id_t> const& props, std::string const& consolidate_name) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
   auto schema = schema_;
 
   auto& table = this->edge_tables_[elabel];
