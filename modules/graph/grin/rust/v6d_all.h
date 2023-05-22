@@ -9,7 +9,7 @@
 #include "../include/property/primarykey.h"
 #include "../include/property/property.h"
 #include "../include/property/propertylist.h"
-#include "../include/property/propertytable.h"
+#include "../include/property/row.h"
 #include "../include/property/topology.h"
 #include "../include/property/type.h"
 #include "../include/index/label.h"

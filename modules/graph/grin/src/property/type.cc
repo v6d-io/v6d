@@ -30,8 +30,9 @@ void grin_destroy_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {}
 GRIN_VERTEX_TYPE_LIST grin_get_vertex_type_list(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto vtl = new GRIN_VERTEX_TYPE_LIST_T();
+    vtl->resize(_g->vertex_label_num());
     for (auto i = 0; i < _g->vertex_label_num(); ++i) {
-        vtl->push_back(i);
+        (*vtl)[i] = i;
     }
     return vtl;
 }
@@ -104,8 +105,9 @@ void grin_destroy_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {}
 GRIN_EDGE_TYPE_LIST grin_get_edge_type_list(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto etl = new GRIN_EDGE_TYPE_LIST_T();
+    etl->resize(_g->edge_label_num());
     for (auto i = 0; i < _g->edge_label_num(); ++i) {
-        etl->push_back(i);
+        (*etl)[i] = i;
     }
     return etl;
 }

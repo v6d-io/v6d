@@ -23,8 +23,9 @@ extern "C" {
 GRIN_VERTEX_TYPE_LIST grin_get_vertex_types_with_primary_keys(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto vtl = new GRIN_VERTEX_TYPE_LIST_T();
+    vtl->resize(_g->vertex_label_num());
     for (auto i = 0; i < _g->vertex_label_num(); ++i) {
-        vtl->push_back(i);
+        (*vtl)[i] = i;
     }
     return vtl;
 }

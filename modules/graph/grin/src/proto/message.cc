@@ -227,10 +227,6 @@ const char* grin_get_static_storage_feature_msg() {
   vfeature->set_grin_with_vertex_type_name(true);
 #endif
 
-#ifdef GRIN_ENABLE_VERTEX_PROPERTY_TABLE
-  vfeature->set_grin_enable_vertex_property_table(true);
-#endif
-
 #ifdef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
   vfeature->set_grin_enable_vertex_primary_keys(true);
 #endif
@@ -254,10 +250,6 @@ const char* grin_get_static_storage_feature_msg() {
 
 #ifdef GRIN_WITH_EDGE_TYPE_NAME
   efeature->set_grin_with_edge_type_name(true);
-#endif
-
-#ifdef GRIN_ENABLE_EDGE_PROPERTY_TABLE
-  efeature->set_grin_enable_edge_property_table(true);
 #endif
 
 #ifdef GRIN_ENABLE_EDGE_PRIMARY_KEYS
