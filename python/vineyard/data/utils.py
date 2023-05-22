@@ -162,7 +162,10 @@ def build_buffer(
     if existing is not None:
         return client.get_meta(existing)
     buffer = client.create_blob(size)
-    buffer.copy(0, address, size)
+    if isinstance(address, (int, np.integer)):
+        buffer.copy(0, int(address), size)
+    else:
+        buffer.copy(0, address)
     return buffer.seal(client)
 
 
