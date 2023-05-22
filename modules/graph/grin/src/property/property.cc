@@ -15,6 +15,8 @@ extern "C" {
 #include "graph/grin/include/property/property.h"
 }
 
+void grin_destroy_string_value(GRIN_GRAPH g, const char* value) {}
+
 #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
 const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY vp) {
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;

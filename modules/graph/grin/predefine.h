@@ -632,18 +632,6 @@ typedef enum {
  * @brief Assume full property values of an edge are split among master and mirror edges. 
 */
 #define GRIN_ASSUME_SPLIT_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
-
-/** @ingroup PropetyAssumptionMacros
- * @brief The storage uses column store for vertex properties.
- * This enables efficient property selections for vertices.
-*/
-#define GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY
-
-/** @ingroup PropetyAssumptionMacros
- * @brief The storage uses column store for edge properties.
- * This enables efficient property selections for edges.
-*/
-#define GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY
 ///@}
 
 #ifndef GRIN_DOXYGEN_SKIP
@@ -673,8 +661,6 @@ typedef enum {
 #undef GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_EDGE_PROPERTY
 #undef GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
 #undef GRIN_ASSUME_SPLIT_MASTER_MIRROR_PARTITION_FOR_EDGE_PROPERTY
-#undef GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY
-#undef GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY
 // GRIN_END
 
 // GRIN_STORAGE_ENABLE
@@ -693,8 +679,6 @@ typedef enum {
 #define GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
 #define GRIN_TRAIT_SELECT_TYPE_FOR_VERTEX_LIST
 #define GRIN_TRAIT_SELECT_EDGE_TYPE_FOR_ADJACENT_LIST
-#define GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY
-#define GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY
 // GRIN_END
 
 // GRIN_FEATURE_DEPENDENCY
