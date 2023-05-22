@@ -722,10 +722,28 @@ void bind_client(py::module& mod) {
           },
           doc::IPCClient_is_shared_memory)
       .def(
+          "is_shared_memory",
+          [](Client* self, py::buffer const& target) -> bool {
+            ObjectID object_id = InvalidObjectID();
+            return self->IsSharedMemory(target.ptr(), object_id);
+          },
+          doc::IPCClient_is_shared_memory)
+      .def(
           "find_shared_memory",
           [](Client* self, const uintptr_t target) -> py::object {
             ObjectID object_id = InvalidObjectID();
             if (self->IsSharedMemory(target, object_id)) {
+              return py::cast(ObjectIDWrapper(object_id));
+            } else {
+              return py::none();
+            }
+          },
+          doc::IPCClient_find_shared_memory)
+      .def(
+          "find_shared_memory",
+          [](Client* self, py::buffer const& target) -> py::object {
+            ObjectID object_id = InvalidObjectID();
+            if (self->IsSharedMemory(target.ptr(), object_id)) {
               return py::cast(ObjectIDWrapper(object_id));
             } else {
               return py::none();

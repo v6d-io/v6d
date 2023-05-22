@@ -25,6 +25,8 @@ from vineyard._C import ObjectMeta
 from vineyard.core.builder import BuilderContext
 from vineyard.core.resolver import ResolverContext
 
+from .utils import build_buffer
+
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle  # pylint: disable=import-error
 
@@ -32,14 +34,13 @@ if pickle.HIGHEST_PROTOCOL < 5:
 def default_builder(client: IPCClient, value: Any, **kwargs):
     '''Default builder: pickle (version 5), then build a blob object for it.'''
     payload = pickle.dumps(value, protocol=5)
-    buffer = client.create_blob(len(payload))
-    buffer.copy(0, payload)
+    buffer = build_buffer(client, payload, len(payload))
 
     meta = ObjectMeta(**kwargs)
     meta['typename'] = 'vineyard::PickleBuffer'
     meta['nbytes'] = len(payload)
     meta['size_'] = len(payload)
-    meta.add_member('buffer_', buffer.seal(client))
+    meta.add_member('buffer_', buffer)
     return client.create_metadata(meta)
 
 
