@@ -910,33 +910,50 @@ if(BUILD_VINEYARD_BENCHMARKS)
     add_subdirectory(benchmark)
 endif()
 
-file(GLOB_RECURSE FILES_NEED_FORMAT "src/*.cc" "src/*.h" "src/*.hpp" "src/*.vineyard-mod"
-                                    "modules/*.cc" "modules/*.h" "modules/*.vineyard-mod"
-                                    "python/*.cc" "python/*.h"
-                                    "test/*.cc"
-                                    "benchmark/*.h" "benchmark/*.cc" "benchmark/*.cpp"
+function(file_glob_recurse VAR)
+    set(options)
+    set(oneValueArgs PATTERNS EXCLUDE_PATTERNS)
+    set(multiValueArgs DIRECTORIES)
+    cmake_parse_arguments(FILE_GLOB_RECURSE
+                          "${options}" "${oneValueArgs}" "${multiValueArgs}" ${ARGN})
+
+    set(_subdirs)
+    set(_srcs)
+    foreach(_base ${FILE_GLOB_RECURSE_DIRECTORIES})
+        file(GLOB _items LIST_DIRECTORIES true ${_base}/*)
+        foreach(_item ${_items})
+            if(${_item} MATCHES ".*thirdparty.*")
+                continue()
+            endif()
+            if(IS_DIRECTORY ${_item})
+                list(APPEND _subdirs ${_item})
+            elseif(${_item} MATCHES "${FILE_GLOB_RECURSE_PATTERNS}" AND
+                    NOT (${_item} MATCHES "${FILE_GLOB_RECURSE_EXCLUDE_PATTERNS}"))
+                list(APPEND _srcs ${_item})
+            endif()
+        endforeach()
+    endforeach()
+
+    if(_subdirs)
+        file_glob_recurse(_subsrcs DIRECTORIES ${_subdirs}
+                                   PATTERNS ${FILE_GLOB_RECURSE_PATTERNS}
+                                   EXCLUDE_PATTERNS ${FILE_GLOB_RECURSE_EXCLUDE_PATTERNS})
+        list(APPEND _srcs ${_subsrcs})
+    endif()
+    set(${VAR} ${_srcs} PARENT_SCOPE)
+endfunction()
+
+file_glob_recurse(FILES_NEED_FORMAT DIRECTORIES      "src" "modules" "python" "test" "benchmark"
+                                    PATTERNS         ".*\\.(cc|cpp|h|hpp|vineyard-mod)$"
+                                    EXCLUDE_PATTERNS ".*\\.vineyard.h$"
 )
-file(GLOB_RECURSE FILES_NEED_LINT "src/*.cc" "src/*.h" "src/*.hpp"
-                                  "modules/*.cc" "modules/*.h"
-                                  "python/*.cc" "python/*.h"
-                                  "test/*.cc"
-                                  "benchmark/*.h" "benchmark/*.cc" "benchmark/*.cpp"
+file_glob_recurse(FILES_NEED_LINT   DIRECTORIES      "src" "modules" "python" "test" "benchmark"
+                                    PATTERNS         ".*\\.(cc|cpp|h|hpp)$"
+                                    EXCLUDE_PATTERNS ".*\\.vineyard.h$"
 )
 
-foreach (file_path ${FILES_NEED_FORMAT})
-    if (${file_path} MATCHES ".*vineyard.h" OR
-        ${file_path} MATCHES ".*thirdparty.*")
-        list(REMOVE_ITEM FILES_NEED_FORMAT ${file_path})
-    endif ()
-endforeach ()
-
-foreach (file_path ${FILES_NEED_LINT})
-    if (${file_path} MATCHES ".*vineyard.h" OR
-        ${file_path} MATCHES ".*memcpy.h" OR
-        ${file_path} MATCHES ".*thirdparty.*")
-        list(REMOVE_ITEM FILES_NEED_LINT ${file_path})
-    endif ()
-endforeach ()
+# the `memcpy.h` is borrowed from external project
+list(REMOVE_ITEM FILES_NEED_LINT "${PROJECT_SOURCE_DIR}/src/common/memory/memcpy.h")
 
 add_custom_target(vineyard_clformat
         COMMAND clang-format --style=file -i ${FILES_NEED_FORMAT}

@@ -16,6 +16,10 @@
 # limitations under the License.
 #
 
+import numpy as np
+
+import pytest
+
 import vineyard
 from vineyard._C import RemoteBlobBuilder
 from vineyard.core import default_builder_context
@@ -76,3 +80,12 @@ def test_remote_blob_create_and_get(vineyard_endpoint):
     assert remote_blob.id == blob_id
     assert remote_blob.size == len(payload)
     assert memoryview(remote_blob) == memoryview(payload)
+
+
+def test_remote_blob_error(vineyard_endpoint):
+    vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
+
+    with pytest.raises(
+        ValueError, match="Vineyard RPC client cannot be used to create local blobs"
+    ):
+        vineyard_rpc_client.put(np.ones((2, 3, 4)))

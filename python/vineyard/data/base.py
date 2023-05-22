@@ -31,6 +31,7 @@ from vineyard.core.builder import BuilderContext
 from vineyard.core.resolver import ResolverContext
 
 from .tensor import ndarray
+from .utils import build_buffer
 from .utils import normalize_dtype
 
 
@@ -62,15 +63,11 @@ def string_builder(client: IPCClient, value: str, **kwargs):
 
 
 def bytes_builder(client: IPCClient, value: bytes, **_kwargs):
-    buffer = client.create_blob(len(value))
-    buffer.copy(0, value)
-    return buffer.seal(client)
+    return build_buffer(client, value, len(value))
 
 
 def memoryview_builder(client: IPCClient, value: memoryview, **_kwargs):
-    buffer = client.create_blob(len(value))
-    buffer.copy(0, bytes(value))
-    return buffer.seal(client)
+    return build_buffer(client, bytes(value), len(value))
 
 
 def sequence_builder(client: IPCClient, value: List, builder: BuilderContext, **kwargs):

@@ -35,6 +35,7 @@ from vineyard._C import ObjectMeta
 from vineyard.core.builder import BuilderContext
 from vineyard.core.resolver import ResolverContext
 
+from .utils import build_buffer
 from .utils import normalize_dtype
 
 
@@ -42,15 +43,12 @@ def buffer_builder(
     client: IPCClient, buffer: Union[bytes, memoryview], builder: BuilderContext
 ):
     if buffer is None:
-        return client.create_empty_blob()
-    if len(buffer) == 0:
-        return client.create_empty_blob()
-    existing = client.find_shared_memory(buffer.address)
-    if existing is not None:
-        return client.get_meta(existing)
-    builder = client.create_blob(len(buffer))
-    builder.copy(0, buffer.address, len(buffer))
-    return builder.seal(client)
+        address = None
+        size = 0
+    else:
+        address = buffer.address
+        size = len(buffer)
+    return build_buffer(client, address, size, builder)
 
 
 def as_arrow_buffer(blob: Blob):

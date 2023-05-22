@@ -18,9 +18,14 @@
 
 import json
 import pickle
+from typing import Union
 
 import numpy as np
 import pyarrow as pa
+
+from vineyard._C import Object
+from vineyard._C import ObjectID
+from vineyard._C import ObjectMeta
 
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle  # pylint: disable=import-error
@@ -119,14 +124,48 @@ def normalize_arrow_dtype(  # noqa: C901, pylint: disable=too-many-return-statem
     raise ValueError('Unsupported data type: %s' % dtype)
 
 
-def build_buffer(client, address, size):
+def ensure_ipc_client(client, error_message=None):
+    '''Check if the given client is an instance of IPCClient,
+    raise ValueError if not.
+    '''
+    from vineyard._C import IPCClient
+
+    if not isinstance(client, IPCClient):
+        if error_message is None:
+            error_message = "Vineyard IPC client is required, got %s" % type(client)
+        else:
+            error_message = "Vineyard IPC client is required, got %s: %s" % (
+                type(client),
+                error_message,
+            )
+        raise ValueError(error_message)
+
+
+def build_buffer(
+    client, address, size, *args, **kwargs
+) -> Union["Object", "ObjectMeta", "ObjectID"]:
+    '''Build a blob in vineyard server for the given bytes or memoryview.
+
+    If address is None or size is 0, an empty blob will be returned.
+    '''
+    ensure_ipc_client(
+        client,
+        "Vineyard RPC client cannot be used to create local blobs, "
+        "try using an IPC client or `rpc_client.create_remote_blob()`",
+    )
+
     if size == 0:
+        return client.create_empty_blob()
+    if address is None:
         return client.create_empty_blob()
     existing = client.find_shared_memory(address)
     if existing is not None:
         return client.get_meta(existing)
     buffer = client.create_blob(size)
-    buffer.copy(0, address, size)
+    if isinstance(address, (int, np.integer)):
+        buffer.copy(0, int(address), size)
+    else:
+        buffer.copy(0, address)
     return buffer.seal(client)
 
 
@@ -138,9 +177,7 @@ def build_numpy_buffer(client, array):
         return build_buffer(client, address, array.nbytes)
     else:
         payload = pickle.dumps(array, protocol=5)
-        buffer = client.create_blob(len(payload))
-        buffer.copy(0, payload)
-        return buffer.seal(client)
+        return build_buffer(client, payload, len(payload))
 
 
 def default_json_encoder(value):
