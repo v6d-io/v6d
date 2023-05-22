@@ -264,14 +264,6 @@ const char* grin_get_static_storage_feature_msg() {
   efeature->set_grin_trait_natural_id_for_edge_property(true);
 #endif
 
-#ifdef GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY
-  feature->set_grin_assume_column_store_for_vertex_property(true);
-#endif
-
-#ifdef GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY
-  feature->set_grin_assume_column_store_for_edge_property(true);
-#endif
-
 #ifdef GRIN_TRAIT_SELECT_TYPE_FOR_VERTEX_LIST
   feature->set_grin_trait_select_type_for_vertex_list(true);
 #endif

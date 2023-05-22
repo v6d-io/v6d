@@ -16,8 +16,6 @@ extern "C" {
 #include "graph/grin/include/common/error.h"
 }
 
-void grin_destroy_string_value(GRIN_GRAPH g, const char* value) {}
-
 #ifdef GRIN_ENABLE_ROW
 void grin_destroy_row(GRIN_GRAPH g, GRIN_ROW r) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
