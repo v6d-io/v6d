@@ -67,6 +67,7 @@ jobs:
           - e2e-tests-workflow
           - e2e-tests-mars-examples
           - e2e-tests-vineyardctl
+          - e2e-tests-deploy-raw-backup-and-recover
     steps:
       - uses: actions/checkout@v3
         with:

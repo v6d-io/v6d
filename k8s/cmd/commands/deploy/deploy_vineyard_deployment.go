@@ -88,16 +88,8 @@ func init() {
 		"", "", "The owner reference of all vineyard deployment resources")
 }
 
-func getStorage(q resource.Quantity) string {
-	return q.String()
-}
-
 // EtcdConfig holds the configuration of etcd
 var EtcdConfig k8s.EtcdConfig
-
-func getEtcdConfig() k8s.EtcdConfig {
-	return EtcdConfig
-}
 
 // GetVineyardDeploymentObjectsFromTemplate gets kubernetes resources from template for vineyard-deployment
 func GetVineyardDeploymentObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
@@ -105,8 +97,12 @@ func GetVineyardDeploymentObjectsFromTemplate() ([]*unstructured.Unstructured, e
 	var err error
 
 	tmplFunc := map[string]interface{}{
-		"getStorage":    getStorage,
-		"getEtcdConfig": getEtcdConfig,
+		"getStorage": func(q resource.Quantity) string {
+			return q.String()
+		},
+		"getEtcdConfig": func() k8s.EtcdConfig {
+			return EtcdConfig
+		},
 	}
 
 	// build vineyardd

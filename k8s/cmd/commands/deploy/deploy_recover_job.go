@@ -44,11 +44,11 @@ var (
 	the backup job.`)
 
 	deployRecoverJobExample = util.Examples(`
-	# deploy a recover job for the vineyard cluster in the same namespace
-	vineyardctl deplot recover-job
-	--vineyardd-name vineyardd-sample \
-	--vineyardd-namespace vineyard-system \
-	--backup-name vineyardd-sample -n vineyard-system`)
+	# deploy a recover job for the vineyard deployment in the same namespace
+	vineyardctl deploy recover-job \
+	--vineyard-deployment-name vineyardd-sample \
+	--vineyard-deployment-namespace vineyard-system  \
+	--recover-path /var/vineyard/dump`)
 )
 
 // deployRecoverJobCmd creates the recover job of vineyard cluster on kubernetes
@@ -67,13 +67,15 @@ var deployRecoverJobCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err, "failed to get recover objects from template")
 		}
-		for _, obj := range objs {
-			if err := client.Create(context.Background(), obj); err != nil {
-				log.Fatal(err, "failed to create object")
-			}
+
+		if err := util.ApplyManifestsWithOwnerRef(client, objs, "Job", "Role,Rolebinding"); err != nil {
+			log.Fatal(err, "failed to apply recover objects")
 		}
 
-		waitRecoverJobReady(client)
+		if err := waitRecoverJobReady(client); err != nil {
+			log.Fatal(err, "failed to wait recover job ready")
+		}
+
 		if err := createMappingTableConfigmap(client, *clientset); err != nil {
 			log.Fatal(err, "failed to create mapping table configmap")
 		}
@@ -109,13 +111,13 @@ func getRecoverObjectsFromTemplate(c client.Client) ([]*unstructured.Unstructure
 
 	useVineyardScheduler := false
 	path := flags.RecoverPath
-	name := flags.BackupName
+	name := flags.RecoverName
 	recoverCfg, err := k8s.BuildRecoverCfg(c, name, &dummyBackup, path, useVineyardScheduler)
 	if err != nil {
 		return nil, err
 	}
 	tmplFunc := map[string]interface{}{
-		"getBackupConfig": func() k8s.RecoverConfig {
+		"getRecoverConfig": func() k8s.RecoverConfig {
 			return recoverCfg
 		},
 	}
@@ -130,7 +132,7 @@ func getRecoverObjectsFromTemplate(c client.Client) ([]*unstructured.Unstructure
 
 func waitRecoverJobReady(c client.Client) error {
 	return util.Wait(func() (bool, error) {
-		jobName := flags.BackupName
+		jobName := flags.RecoverName
 		name := client.ObjectKey{Name: jobName, Namespace: flags.Namespace}
 		job := batchv1.Job{}
 		if err := c.Get(context.TODO(), name, &job); err != nil {
@@ -144,7 +146,7 @@ func waitRecoverJobReady(c client.Client) error {
 }
 
 func createMappingTableConfigmap(c client.Client, cs kubernetes.Clientset) error {
-	jobName := flags.BackupName
+	jobName := flags.RecoverName
 	jobNamespace := flags.Namespace
 	mappingTable, err := k8s.GetObjectMappingTable(c, cs, jobName, jobNamespace)
 	if err != nil {

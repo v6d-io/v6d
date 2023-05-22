@@ -19,6 +19,7 @@ import (
 	"context"
 
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -117,19 +118,20 @@ var deployBackupJobCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgsOrInput(cmd, args)
 
-		client := util.KubernetesClient()
+		c := util.KubernetesClient()
 
-		objs, err := getBackupObjectsFromTemplate(client, args)
+		objs, err := getBackupObjectsFromTemplate(c, args)
 		if err != nil {
 			log.Fatal(err, "failed to get backup objects from template")
 		}
-		for _, obj := range objs {
-			if err := util.CreateIfNotExists(client, obj); err != nil {
-				log.Fatal(err, "failed to create backup objects")
-			}
+
+		if err := util.ApplyManifestsWithOwnerRef(c, objs, "Job", "Role,Rolebinding"); err != nil {
+			log.Fatal(err, "failed to apply backup objects")
 		}
 
-		waitBackupJobReady(client)
+		if err := waitBackupJobReady(c); err != nil {
+			log.Fatal(err, "failed to wait backup job ready")
+		}
 
 		log.Info("Backup Job is ready.")
 	},
@@ -155,7 +157,11 @@ func getBackupObjectsFromTemplate(c client.Client, args []string) ([]*unstructur
 	if err != nil {
 		return nil, err
 	}
+
 	tmplFunc := map[string]interface{}{
+		"getResourceStorage": func(q resource.Quantity) string {
+			return q.String()
+		},
 		"getBackupConfig": func() k8s.BackupConfig {
 			return backupCfg
 		},
@@ -171,7 +177,7 @@ func getBackupObjectsFromTemplate(c client.Client, args []string) ([]*unstructur
 
 func waitBackupJobReady(c client.Client) error {
 	return util.Wait(func() (bool, error) {
-		jobName := "backup-" + flags.VineyarddName + "-" + flags.VineyarddNamespace
+		jobName := flags.BackupName
 		name := client.ObjectKey{Name: jobName, Namespace: flags.Namespace}
 		job := batchv1.Job{}
 		if err := c.Get(context.TODO(), name, &job); err != nil {

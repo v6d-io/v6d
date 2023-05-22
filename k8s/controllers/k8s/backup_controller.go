@@ -187,6 +187,7 @@ func newFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup,
 	// get vineyardd
 	vineyarddNamespace := backup.Spec.VineyarddNamespace
 	vineyarddName := backup.Spec.VineyarddName
+	socket := ""
 
 	if withScheduler {
 		vineyardd := &k8sv1alpha1.Vineyardd{}
@@ -197,15 +198,34 @@ func newFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup,
 			return failoverConfig, errors.Wrap(err, "unable to fetch Vineyardd")
 		}
 		replicas = vineyardd.Spec.Replicas
+		utils := operation.ClientUtils{Client: c}
+		socketFromVineyardd, err := utils.ResolveRequiredVineyarddSocket(
+			context.Background(),
+			vineyarddName,
+			vineyarddNamespace,
+			backup.Namespace,
+		)
+		if err != nil {
+			return failoverConfig, errors.Wrap(err, "unable to resolve vineyardd socket")
+		}
+		socket = socketFromVineyardd
 	} else {
 		deployment := &appsv1.Deployment{}
+		vineyardDeploymentName := vineyarddName
+		VineyardDeploymentNmaepsace := vineyarddNamespace
 		if err := c.Get(context.Background(), client.ObjectKey{
-			Namespace: vineyarddNamespace,
-			Name:      vineyarddName,
+			Name:      vineyardDeploymentName,
+			Namespace: VineyardDeploymentNmaepsace,
 		}, deployment); err != nil {
 			return failoverConfig, errors.Wrap(err, "unable to fetch Vineyard Deployment")
 		}
 		replicas = int(*deployment.Spec.Replicas)
+		dummyVineyardd := &k8sv1alpha1.Vineyardd{}
+		dummyVineyardd.Name = vineyardDeploymentName
+		dummyVineyardd.Namespace = VineyardDeploymentNmaepsace
+		dummyVineyardd.Spec.Vineyard.Socket = "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}"
+		k8sv1alpha1.PreprocessVineyarddSocket(dummyVineyardd)
+		socket = dummyVineyardd.Spec.Vineyard.Socket
 	}
 
 	failoverConfig.Namespace = backup.Namespace
@@ -215,16 +235,7 @@ func newFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup,
 	failoverConfig.VineyarddName = vineyarddName
 	failoverConfig.Endpoint = vineyarddName + "-rpc." + vineyarddNamespace
 	failoverConfig.WithScheduler = withScheduler
-	utils := operation.ClientUtils{Client: c}
-	socket, err := utils.ResolveRequiredVineyarddSocket(
-		context.Background(),
-		vineyarddName,
-		vineyarddNamespace,
-		backup.Namespace,
-	)
-	if err != nil {
-		return failoverConfig, errors.Wrap(err, "unable to resolve vineyardd socket")
-	}
+
 	failoverConfig.VineyardSockPath = socket
 	failoverConfig.AllInstances = strconv.Itoa(replicas)
 

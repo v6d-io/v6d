@@ -84,19 +84,19 @@ var (
 		'
 		pv-spec:
 		capacity:
-			storage: 1Gi
+		  storage: 1Gi
 		accessModes:
 		- ReadWriteOnce
 		storageClassName: manual
 		hostPath:
-			path: "/var/vineyard/dump"
+		  path: "/var/vineyard/dump"
 		pvc-spec:
 		storageClassName: manual
 		accessModes:
 		- ReadWriteOnce
 		resources:
-			requests:
-			storage: 1Gi
+		  requests:
+		  storage: 1Gi
 		'
 
 	# create a backup cr for the vineyard cluster on kubernetes
@@ -170,7 +170,7 @@ func BuildBackup(c client.Client, args []string) (*v1alpha1.Backup, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to parse from stdin")
 	}
-	if str != "" {
+	if str != "" && flags.BackupPVandPVC == "" {
 		flags.BackupPVandPVC = str
 	}
 

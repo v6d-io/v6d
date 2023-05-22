@@ -22,6 +22,9 @@ setup:
     - name: download all failover images into kind cluster
       command: |
         make -C k8s/test/e2e publish-failover-images REGISTRY=localhost:5001
+    - name: deploy the vineyard deployment
+      command: |
+        go run k8s/cmd/main.go deploy vineyard-deployment --create-namespace
     - name: install local-object
       command: |
         kubectl create namespace vineyard-job
@@ -99,17 +102,17 @@ setup:
           }'
     - name: simulate vineyard node fail
       command: |
-        go run k8s/cmd/main.go delete vineyardd --name vineyardd-sample --namespace vineyard-system
+        go run k8s/cmd/main.go delete vineyard-deployment
         kubectl wait --for delete pod --timeout=60s --selector=app.kubernetes.io/name=vineyardd-sample -n vineyard-system
     - name: reinstall vineyardd
       command: |
-        go run k8s/cmd/main.go deploy vineyardd -f k8s/test/e2e/vineyardd.yaml
+        go run k8s/cmd/main.go deploy vineyard-deployment
     - name: install recover
       command: |
         go run k8s/cmd/main.go deploy recover-job \
-          --vineyardd-name vineyardd-sample \
-          --vineyardd-namespace vineyard-system  \
-          --path /var/vineyard/dump
+          --vineyard-deployment-name vineyardd-sample \
+          --vineyard-deployment-namespace vineyard-system  \
+          --recover-path /var/vineyard/dump
     - name: install get-local-object job
       command: |
         export newlocalobject_id=$(kubectl get recover -A | grep $localobjectid | sed 's/,/\n/g'| grep \"$localobjectid\" | sed 's/:/\n/g' | tail -n 1 | sed 's/}/\n/g' | head -n 1 | sed 's/"//g')
