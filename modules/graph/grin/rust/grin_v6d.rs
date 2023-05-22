@@ -58,7 +58,6 @@ pub type GrinVertexType = u32;
 pub type GrinVertexTypeList = *mut ::std::os::raw::c_void;
 pub type GrinVertexProperty = u64;
 pub type GrinVertexPropertyList = *mut ::std::os::raw::c_void;
-pub type GrinVertexPropertyTable = *mut ::std::os::raw::c_void;
 pub type GrinVertexTypeId = u32;
 pub type GrinVertexPropertyId = u32;
 pub type GrinEdgeType = u32;
@@ -67,7 +66,6 @@ pub type GrinVevType = *mut ::std::os::raw::c_void;
 pub type GrinVevTypeList = *mut ::std::os::raw::c_void;
 pub type GrinEdgeProperty = u64;
 pub type GrinEdgePropertyList = *mut ::std::os::raw::c_void;
-pub type GrinEdgePropertyTable = *mut ::std::os::raw::c_void;
 pub type GrinEdgeTypeId = u32;
 pub type GrinEdgePropertyId = u32;
 pub type GrinRow = *mut ::std::os::raw::c_void;
@@ -483,6 +481,77 @@ extern "C" {
         arg2: GrinVertexProperty,
     ) -> GrinDatatype;
 
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value_of_int32(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> i32;
+
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value_of_uint32(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> u32;
+
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value_of_int64(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> i64;
+
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value_of_uint64(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> u64;
+
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value_of_float(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> f32;
+
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value_of_double(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> f64;
+
+    #[cfg(feature = "grin_with_vertex_property")]
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value_of_string(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> *const ::std::os::raw::c_char;
+
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value_of_date32(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> i32;
+
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value_of_time32(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> i32;
+
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value_of_timestamp64(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> i64;
+
     #[doc = " @brief get the vertex type that the property is bound to\n @param GrinVertexProperty vertex property"]
     #[cfg(feature = "grin_with_vertex_property")]
     #[allow(unused)]
@@ -490,6 +559,14 @@ extern "C" {
         arg1: GrinGraph,
         arg2: GrinVertexProperty,
     ) -> GrinVertexType;
+
+    #[cfg(all(feature = "grin_with_vertex_property", feature = "grin_trait_const_value_ptr"))]
+    #[allow(unused)]
+    pub fn grin_get_vertex_property_value(
+        arg1: GrinGraph,
+        arg2: GrinVertex,
+        arg3: GrinVertexProperty,
+    ) -> *const ::std::os::raw::c_void;
 
     #[cfg(feature = "grin_with_edge_property")]
     #[allow(unused)]
@@ -512,6 +589,77 @@ extern "C" {
         arg2: GrinEdgeProperty,
     ) -> GrinDatatype;
 
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value_of_int32(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> i32;
+
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value_of_uint32(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> u32;
+
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value_of_int64(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> i64;
+
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value_of_uint64(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> u64;
+
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value_of_float(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> f32;
+
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value_of_double(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> f64;
+
+    #[cfg(feature = "grin_with_edge_property")]
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value_of_string(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> *const ::std::os::raw::c_char;
+
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value_of_date32(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> i32;
+
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value_of_time32(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> i32;
+
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value_of_timestamp64(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> i64;
+
     #[doc = " @brief get the edge type that the property is bound to\n @param GrinEdgeProperty edge property"]
     #[cfg(feature = "grin_with_edge_property")]
     #[allow(unused)]
@@ -519,6 +667,14 @@ extern "C" {
         arg1: GrinGraph,
         arg2: GrinEdgeProperty,
     ) -> GrinEdgeType;
+
+    #[cfg(all(feature = "grin_with_edge_property", feature = "grin_trait_const_value_ptr"))]
+    #[allow(unused)]
+    pub fn grin_get_edge_property_value(
+        arg1: GrinGraph,
+        arg2: GrinEdge,
+        arg3: GrinEdgeProperty,
+    ) -> *const ::std::os::raw::c_void;
 
     #[cfg(feature = "grin_with_vertex_property")]
     #[allow(unused)]
@@ -787,233 +943,15 @@ extern "C" {
         arg4: usize,
     ) -> *const ::std::os::raw::c_void;
 
-    #[doc = " @brief destroy vertex property table\n @param GrinVertexPropertyTable vertex property table"]
-    #[cfg(feature = "grin_enable_vertex_property_table")]
+    #[doc = " @brief get vertex row directly from the graph, this API only works for row store system\n @param GrinGraph the graph\n @param GrinVertex the vertex which is the row index\n @param GrinVertexPropertyList the vertex property list as columns"]
+    #[cfg(all(feature = "grin_with_vertex_property", feature = "grin_enable_row"))]
     #[allow(unused)]
-    pub fn grin_destroy_vertex_property_table(arg1: GrinGraph, arg2: GrinVertexPropertyTable);
+    pub fn grin_get_vertex_row(arg1: GrinGraph, arg2: GrinVertex) -> GrinRow;
 
-    #[doc = " @brief get the vertex property table of a certain vertex type\n No matter column or row store strategy is used in the storage,\n GRIN recommends to first get the property table of the vertex type,\n and then fetch values(rows) by vertex and property(list). However,\n GRIN does provide direct row fetching API when GrinAssumeColumnStoreForVertexProperty\n is NOT set.\n @param GrinGraph the graph\n @param GrinVertexType the vertex type"]
-    #[cfg(feature = "grin_enable_vertex_property_table")]
+    #[doc = " @brief get edge row directly from the graph, this API only works for row store system\n @param GrinGraph the graph\n @param GrinEdge the edge which is the row index\n @param GrinEdgePropertyList the edge property list as columns"]
+    #[cfg(all(feature = "grin_with_edge_property", feature = "grin_enable_row"))]
     #[allow(unused)]
-    pub fn grin_get_vertex_property_table_by_type(
-        arg1: GrinGraph,
-        arg2: GrinVertexType,
-    ) -> GrinVertexPropertyTable;
-
-    #[allow(unused)]
-    pub fn grin_get_int32_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> i32;
-
-    #[allow(unused)]
-    pub fn grin_get_uint32_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> u32;
-
-    #[allow(unused)]
-    pub fn grin_get_int64_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> i64;
-
-    #[allow(unused)]
-    pub fn grin_get_uint64_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> u64;
-
-    #[allow(unused)]
-    pub fn grin_get_float_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> f32;
-
-    #[allow(unused)]
-    pub fn grin_get_double_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> f64;
-
-    #[cfg(feature = "grin_enable_vertex_property_table")]
-    #[allow(unused)]
-    pub fn grin_get_string_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> *const ::std::os::raw::c_char;
-
-    #[allow(unused)]
-    pub fn grin_get_date32_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> i32;
-
-    #[allow(unused)]
-    pub fn grin_get_time32_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> i32;
-
-    #[allow(unused)]
-    pub fn grin_get_timestamp64_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> i64;
-
-    #[doc = " @brief get vertex property value from table as a const void*, callers don't have to\n destroy the returned value pointer since they are handled by the storage\n @param GrinVertexPropertyTable vertex property table\n @param GrinVertex the vertex which is the row index\n @param GrinVertexProperty the vertex property which is the column index\n @return can be casted to the property data type by the caller"]
-    #[cfg(all(feature = "grin_enable_vertex_property_table", feature = "grin_trait_const_value_ptr"))]
-    #[allow(unused)]
-    pub fn grin_get_value_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexProperty,
-    ) -> *const ::std::os::raw::c_void;
-
-    #[doc = " @brief get vertex row from table\n @param GrinVertexPropertyTable vertex property table\n @param GrinVertex the vertex which is the row index\n @param GrinVertexPropertyList the vertex property list as columns"]
-    #[cfg(all(feature = "grin_enable_vertex_property_table", feature = "grin_enable_row"))]
-    #[allow(unused)]
-    pub fn grin_get_row_from_vertex_property_table(
-        arg1: GrinGraph,
-        arg2: GrinVertexPropertyTable,
-        arg3: GrinVertex,
-        arg4: GrinVertexPropertyList,
-    ) -> GrinRow;
-
-    #[doc = " @brief destroy edge property table\n @param GrinEdgePropertyTable edge property table"]
-    #[cfg(feature = "grin_enable_edge_property_table")]
-    #[allow(unused)]
-    pub fn grin_destroy_edge_property_table(arg1: GrinGraph, arg2: GrinEdgePropertyTable);
-
-    #[doc = " @brief get the edge property table of a certain edge type\n No matter column or row store strategy is used in the storage,\n GRIN recommends to first get the property table of the edge type,\n and then fetch values(rows) by edge and property(list). However,\n GRIN does provide direct row fetching API when GrinAssumeColumnStoreForEdgeProperty\n is NOT set.\n @param GrinGraph the graph\n @param GrinEdgeType the edge type"]
-    #[cfg(feature = "grin_enable_edge_property_table")]
-    #[allow(unused)]
-    pub fn grin_get_edge_property_table_by_type(
-        arg1: GrinGraph,
-        arg2: GrinEdgeType,
-    ) -> GrinEdgePropertyTable;
-
-    #[allow(unused)]
-    pub fn grin_get_int32_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> i32;
-
-    #[allow(unused)]
-    pub fn grin_get_uint32_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> u32;
-
-    #[allow(unused)]
-    pub fn grin_get_int64_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> i64;
-
-    #[allow(unused)]
-    pub fn grin_get_uint64_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> u64;
-
-    #[allow(unused)]
-    pub fn grin_get_float_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> f32;
-
-    #[allow(unused)]
-    pub fn grin_get_double_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> f64;
-
-    #[cfg(feature = "grin_enable_edge_property_table")]
-    #[allow(unused)]
-    pub fn grin_get_string_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> *const ::std::os::raw::c_char;
-
-    #[allow(unused)]
-    pub fn grin_get_date32_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> i32;
-
-    #[allow(unused)]
-    pub fn grin_get_time32_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> i32;
-
-    #[allow(unused)]
-    pub fn grin_get_timestamp64_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> i64;
-
-    #[doc = " @brief get edge property value from table as a const void*, callers don't have to\n destroy the returned value pointer since they are handled by the storage\n @param GrinEdgePropertyTable edge property table\n @param GrinEdge the edge which is the row index\n @param GrinEdgeProperty the edge property which is the column index\n @return can be casted to the property data type by the caller"]
-    #[cfg(all(feature = "grin_enable_edge_property_table", feature = "grin_trait_const_value_ptr"))]
-    #[allow(unused)]
-    pub fn grin_get_value_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgeProperty,
-    ) -> *const ::std::os::raw::c_void;
-
-    #[doc = " @brief get edge row from table\n @param GrinEdgePropertyTable edge property table\n @param GrinEdge the edge which is the row index\n @param GrinEdgePropertyList the edge property list as columns"]
-    #[cfg(all(feature = "grin_enable_edge_property_table", feature = "grin_enable_row"))]
-    #[allow(unused)]
-    pub fn grin_get_row_from_edge_property_table(
-        arg1: GrinGraph,
-        arg2: GrinEdgePropertyTable,
-        arg3: GrinEdge,
-        arg4: GrinEdgePropertyList,
-    ) -> GrinRow;
+    pub fn grin_get_edge_row(arg1: GrinGraph, arg2: GrinEdge) -> GrinRow;
 
     #[cfg(feature = "grin_with_vertex_property")]
     #[allow(unused)]

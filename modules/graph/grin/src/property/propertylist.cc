@@ -19,8 +19,9 @@ extern "C" {
 GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_property_list_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto vpl = new GRIN_VERTEX_PROPERTY_LIST_T();
+    vpl->resize(_g->vertex_property_num(vtype));
     for (auto p = 0; p < _g->vertex_property_num(vtype); ++p) {
-        vpl->push_back(_grin_create_property(vtype, p));
+        (*vpl)[p] = _grin_create_property(vtype, p);
     }
     return vpl;
 }
@@ -71,8 +72,9 @@ GRIN_VERTEX_PROPERTY_ID grin_get_vertex_property_id(GRIN_GRAPH g, GRIN_VERTEX_TY
 GRIN_EDGE_PROPERTY_LIST grin_get_edge_property_list_by_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto epl = new GRIN_EDGE_PROPERTY_LIST_T();
+    epl->resize(_g->edge_property_num(etype) - 1);
     for (auto p = 1; p < _g->edge_property_num(etype); ++p) {
-        epl->push_back(_grin_create_property(etype, p));
+        (*epl)[p - 1] = _grin_create_property(etype, p);
     }
     return epl;
 }
@@ -117,44 +119,3 @@ GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_GRAPH g, GRIN_EDGE_TYPE ety
     return _grin_get_prop_from_property(ep) - 1;
 }
 #endif
-
-
-// #if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_ASSUME_COLUMN_STORE_FOR_VERTEX_PROPERTY)
-// GRIN_GRAPH grin_select_vertex_properties(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST vpl) {
-//     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-//     auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
-//     std::map<int, std::vector<int>> vertices, edges;
-//     for (auto& p: *_vpl) {
-//         int vtype = static_cast<int>(p.first);
-//         int vp = static_cast<int>(p.second);
-//         if (vertices.find(vtype) == vertices.end()) {
-//             vertices[vtype].clear();
-//         }
-//         vertices[vtype].push_back(vp);
-//     }
-//     vineyard::Client client;
-//     client.Connect();
-//     auto object_id = _g->Project(client, vertices, edges);
-//     return get_graph_by_object_id(client, object_id.value());
-// }
-// #endif
-
-// #if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_ASSUME_COLUMN_STORE_FOR_EDGE_PROPERTY)
-// GRIN_GRAPH grin_select_edge_properteis(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl) {
-//     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-//     auto _epl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(epl);
-//     std::map<int, std::vector<int>> vertices, edges;
-//     for (auto& p: *_epl) {
-//         int etype = static_cast<int>(p.first);
-//         int ep = static_cast<int>(p.second);
-//         if (edges.find(etype) == edges.end()) {
-//             edges[etype].clear();
-//         }
-//         edges[etype].push_back(ep);
-//     }
-//     vineyard::Client client;
-//     client.Connect();
-//     auto object_id = _g->Project(client, vertices, edges);
-//     return get_graph_by_object_id(client, object_id.value());
-// }
-// #endif
