@@ -30,7 +30,7 @@ inline uint64_t unaligned_load_u64(const uint8_t* p) {
 }
 
 template <typename T>
-void varint_encode(T input, std::vector<uint8_t>& output) {
+inline void varint_encode(T input, std::vector<uint8_t>& output) {
   if (input < UPPER_OF_RANGE_1) {
     output.push_back(static_cast<uint8_t>(input));
   } else if (input <= UPPER_OF_RANGE_1 + 255 +
