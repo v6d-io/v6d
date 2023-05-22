@@ -88,12 +88,10 @@ func init() {
 		"", "", "The owner reference of all vineyard deployment resources")
 }
 
-// EtcdConfig holds the configuration of etcd
-var EtcdConfig k8s.EtcdConfig
-
 // GetVineyardDeploymentObjectsFromTemplate gets kubernetes resources from template for vineyard-deployment
 func GetVineyardDeploymentObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	objects := []*unstructured.Unstructured{}
+	var etcdConfig k8s.EtcdConfig
 	var err error
 
 	tmplFunc := map[string]interface{}{
@@ -101,7 +99,7 @@ func GetVineyardDeploymentObjectsFromTemplate() ([]*unstructured.Unstructured, e
 			return q.String()
 		},
 		"getEtcdConfig": func() k8s.EtcdConfig {
-			return EtcdConfig
+			return etcdConfig
 		},
 	}
 
@@ -111,7 +109,7 @@ func GetVineyardDeploymentObjectsFromTemplate() ([]*unstructured.Unstructured, e
 		return objects, errors.Wrap(err, "failed to build vineyardd")
 	}
 
-	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Name,
+	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&etcdConfig, vineyardd.Name,
 		vineyardd.Namespace, vineyardd.Spec.EtcdReplicas, vineyardd.Spec.Vineyard.Image, vineyardd,
 		tmplFunc)
 	if err != nil {

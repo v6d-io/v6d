@@ -108,7 +108,9 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		FileRepo: templates.Repo,
 		CR:       &recover,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Recover"),
-		TmplFunc: map[string]interface{}{"getRecoverConfig": func() RecoverConfig { return recoverCfg }},
+		TmplFunc: map[string]interface{}{"getRecoverConfig": func() RecoverConfig {
+			return recoverCfg
+		}},
 	}
 
 	if recover.Status.State == "" || recover.Status.State == RunningState {
