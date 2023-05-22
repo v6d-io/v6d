@@ -19,9 +19,13 @@ setup:
   steps:
     - name: setup the backup path
       command: worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); for c in ${worker[@]}; do docker exec $c mkdir -p /var/vineyard/dump; done
-    - name: download all failover images into kind cluster
+    - name: download all failover images into kind cluster and load the backup-job and recover-job images manually
       command: |
         make -C k8s/test/e2e publish-failover-images REGISTRY=localhost:5001
+        docker tag localhost:5001/backup-job ghcr.io/v6d-io/v6d/backup-job
+        docker tag localhost:5001/recover-job ghcr.io/v6d-io/v6d/recover-job
+        kind load docker-image ghcr.io/v6d-io/v6d/backup-job
+        kind load docker-image ghcr.io/v6d-io/v6d/recover-job
     - name: deploy the vineyard deployment
       command: |
         go run k8s/cmd/main.go deploy vineyard-deployment --create-namespace
@@ -71,8 +75,8 @@ setup:
     - name: install backup
       command: |
         go run k8s/cmd/main.go deploy backup-job \
-          --vineyardd-name vineyardd-sample \
-          --vineyardd-namespace vineyard-system  \
+          --vineyard-deployment-name vineyardd-sample \
+          --vineyard-deployment-namespace vineyard-system  \
           --limit 1000 \
           --path /var/vineyard/dump  \
           --pv-pvc-spec '{
@@ -115,7 +119,7 @@ setup:
           --recover-path /var/vineyard/dump
     - name: install get-local-object job
       command: |
-        export newlocalobject_id=$(kubectl get recover -A | grep $localobjectid | sed 's/,/\n/g'| grep \"$localobjectid\" | sed 's/:/\n/g' | tail -n 1 | sed 's/}/\n/g' | head -n 1 | sed 's/"//g')
+        export newlocalobject_id=$(kubectl get configmap vineyard-recover-mapping-table -n vineyard-system -oyaml | grep $localobjectid | sed -n 's/.*: //p')
         sed 's/objectid/'$newlocalobject_id'/;s/$job/getLocalObject/' k8s/test/e2e/failover-demo/failover-job.yaml | \
           gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | \
           kubectl apply -f -
@@ -125,14 +129,8 @@ setup:
           for: condition=Available
     - name: install get-distributed-object job
       command: |
-        export newdistributed_id=$(kubectl get recover -A | \
-          grep $distributedobjectid | \
-          sed 's/,/\n/g' | \
-          grep \"$distributedobjectid\" | \
-          sed 's/:/\n/g' | \
-          tail -n 1 | \
-          sed 's/}/\n/g' | \
-          head -n 1 | sed 's/"//g')
+        export newdistributed_id=$(kubectl get configmap vineyard-recover-mapping-table -n vineyard-system -oyaml  | \
+          grep $distributedobjectid | sed -n 's/.*: //p')
         sed 's/objectid/'$newdistributed_id'/;s/$job/getDistributedObject/' k8s/test/e2e/failover-demo/failover-job.yaml | \
           gomplate -d config=k8s/test/e2e/failover-demo/failover-job-config.yaml | \
           kubectl apply -f -
@@ -162,8 +160,11 @@ verify:
           yq e '{"sum": .}' - | \
           yq e 'to_entries' -
       expected: ../verify/values.yaml
-    # TODO(hetao) there seems issue in migration, don't check distributed object verifying
-    # - query: |
-    #     kubectl get pod -l app=get-distributed-object -n vineyard-job -oname | awk -F '/' '{print $2}' | \
-    #     xargs kubectl logs -n vineyard-job | yq e '{"result": .}' - | yq e 'to_entries' -
-    #   expected: ../verify/spill.yaml
+    - query: |
+        kubectl get pod -l app=get-distributed-object -n vineyard-job -oname | \
+          awk -F '/' '{print $2}' | \
+          head -n 1 | \
+          xargs kubectl logs -n vineyard-job | \
+          yq e '{"sum": .}' - | \
+          yq e 'to_entries' -
+      expected: ../verify/distributed-object-values.yaml

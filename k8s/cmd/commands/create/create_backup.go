@@ -137,7 +137,7 @@ func NewCreateBackupCmd() *cobra.Command {
 }
 
 func init() {
-	flags.ApplyBackupOpts(createBackupCmd)
+	flags.ApplyCreateBackupOpts(createBackupCmd)
 }
 
 func buildBackupCR() (*v1alpha1.Backup, error) {

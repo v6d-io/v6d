@@ -163,7 +163,8 @@ jobs:
                      e2e-tests-spill \
                      e2e-tests-workflow \
                      e2e-tests-mars-examples \
-                     e2e-tests-vineyardctl; do
+                     e2e-tests-vineyardctl \
+                     e2e-tests-deploy-raw-backup-and-recover; do
             mkdir -p $job-logs
             chmod a+rwx $job-logs
           done
@@ -228,7 +229,7 @@ jobs:
         if: ${{ matrix.job == 'e2e-tests-vineyardctl' }}
         run: |
           make -C k8s/test/e2e e2e-tests-vineyardctl
-      
+
       - name: e2e-tests-deploy-raw-backup-and-recover
         if: ${{ matrix.job == 'e2e-tests-deploy-raw-backup-and-recover' }}
         run: |
@@ -283,6 +284,9 @@ jobs:
               ;;
             e2e-tests-scheduler-outside-cluster)
               signed_url_key=0c6a
+              ;;
+            e2e-tests-deploy-raw-backup-and-recover)
+              signed_url_key=4583
               ;;
           esac
 

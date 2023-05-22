@@ -23,21 +23,23 @@ var (
 
 	// RecoverPath is the path of recover job
 	RecoverPath string
-
-	// VineyardDeploymentName is the name of vineyard deployment
-	VineyardDeploymentName string
-
-	// VineyardDeploymentNamespace is the namespace of vineyard deployment
-	VineyardDeploymentNamespace string
 )
 
-func ApplyRecoverOpts(cmd *cobra.Command) {
-	cmd.Flags().
-		StringVarP(&BackupName, "backup-name", "", "vineyard-backup",
-			"the name of backup job")
+func ApplyRecoverNameOpts(cmd *cobra.Command) {
 	cmd.Flags().
 		StringVarP(&RecoverName, "recover-name", "", "vineyard-recover",
 			"the name of recover job")
+}
+
+func ApplyCreateRecoverOpts(cmd *cobra.Command) {
+	ApplyRecoverNameOpts(cmd)
+	cmd.Flags().
+		StringVarP(&BackupName, "backup-name", "", "vineyard-backup",
+			"the name of backup job")
+}
+
+func ApplyDeployRecoverJobOpts(cmd *cobra.Command) {
+	ApplyRecoverNameOpts(cmd)
 	cmd.Flags().
 		StringVarP(&RecoverPath, "recover-path", "", "",
 			"the path of recover job")
@@ -47,4 +49,7 @@ func ApplyRecoverOpts(cmd *cobra.Command) {
 	cmd.Flags().
 		StringVarP(&VineyardDeploymentNamespace, "vineyard-deployment-namespace", "", "",
 			"the namespace of vineyard deployment")
+	cmd.Flags().
+		StringVarP(&PVCName, "pvc-name", "", "",
+			"the name of an existing PersistentVolumeClaim")
 }

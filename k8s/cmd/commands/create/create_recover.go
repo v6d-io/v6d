@@ -54,7 +54,7 @@ var createRecoverCmd = &cobra.Command{
 		client := util.KubernetesClient()
 		util.CreateNamespaceIfNotExist(client)
 
-		recover, err := BuildRecoverCR()
+		recover, err := BuildV1alphaRecoverCR()
 		if err != nil {
 			log.Fatal(err, "failed to build recover cr")
 		}
@@ -73,10 +73,10 @@ func NewCreateRecoverCmd() *cobra.Command {
 }
 
 func init() {
-	flags.ApplyRecoverOpts(createRecoverCmd)
+	flags.ApplyCreateRecoverOpts(createRecoverCmd)
 }
 
-func BuildRecoverCR() (*v1alpha1.Recover, error) {
+func BuildV1alphaRecoverCR() (*v1alpha1.Recover, error) {
 	namespace := flags.GetDefaultVineyardNamespace()
 	recover := &v1alpha1.Recover{
 		ObjectMeta: metav1.ObjectMeta{

@@ -135,19 +135,19 @@ vineyardctl create backup [flags]
     '
     pv-spec:
     capacity:
-      storage: 1Gi
+    storage: 1Gi
     accessModes:
     - ReadWriteOnce
     storageClassName: manual
     hostPath:
-      path: "/var/vineyard/dump"
+    path: "/var/vineyard/dump"
     pvc-spec:
     storageClassName: manual
     accessModes:
     - ReadWriteOnce
     resources:
-      requests:
-      storage: 1Gi
+    requests:
+    storage: 1Gi
     '
 
   # create a backup cr for the vineyard cluster on kubernetes
@@ -261,12 +261,9 @@ vineyardctl create recover [flags]
 ### Options
 
 ```
-      --backup-name string                     the name of backup job (default "vineyard-backup")
-  -h, --help                                   help for recover
-      --recover-name string                    the name of recover job (default "vineyard-recover")
-      --recover-path string                    the path of recover job
-      --vineyard-deployment-name string        the name of vineyard deployment
-      --vineyard-deployment-namespace string   the namespace of vineyard deployment
+      --backup-name string    the name of backup job (default "vineyard-backup")
+  -h, --help                  help for recover
+      --recover-name string   the name of recover job (default "vineyard-recover")
 ```
 
 ## `vineyardctl delete`
@@ -449,7 +446,8 @@ vineyardctl delete recover [flags]
 ### Options
 
 ```
-  -h, --help   help for recover
+  -h, --help                  help for recover
+      --recover-name string   the name of recover job (default "vineyard-recover")
 ```
 
 ## `vineyardctl delete vineyard-cluster`
@@ -582,7 +580,8 @@ Deploy a backup job of vineyard cluster on kubernetes
 Deploy the backup job for the vineyard cluster on kubernetes,
 which will backup all objects of the current vineyard cluster
 quickly. For persistent storage, you could specify the pv spec
-and pv spec.
+and pv spec and the related pv and pvc will be created automatically.
+Also, you could also specify the existing pv and pvc name to use
 
 ```
 vineyardctl deploy backup-job [flags]
@@ -598,8 +597,8 @@ vineyardctl deploy backup-job [flags]
   # deploy a backup job for the vineyard cluster on kubernetes
   # you could define the pv and pvc spec from json string as follows
   vineyardctl deploy backup-job \
-    --vineyardd-name vineyardd-sample \
-    --vineyardd-namespace vineyard-system  \
+    --vineyard-deployment-name vineyardd-sample \
+    --vineyard-deployment-namespace vineyard-system  \
     --limit 1000 \
     --path /var/vineyard/dump  \
     --pv-pvc-spec '{
@@ -631,8 +630,8 @@ vineyardctl deploy backup-job [flags]
   # deploy a backup job for the vineyard cluster on kubernetes
   # you could define the pv and pvc spec from yaml string as follows
   vineyardctl deploy backup-job \
-    --vineyardd-name vineyardd-sample \
-    --vineyardd-namespace vineyard-system  \
+    --vineyard-deployment-name vineyardd-sample \
+    --vineyard-deployment-namespace vineyard-system  \
     --limit 1000 --path /var/vineyard/dump  \
     --pv-pvc-spec  \
     '
@@ -657,22 +656,31 @@ vineyardctl deploy backup-job [flags]
   # you could define the pv and pvc spec from json file as follows
   # also you could use yaml file instead of json file
   cat pv-pvc.json | vineyardctl deploy backup-job \
-    --vineyardd-name vineyardd-sample \
-    --vineyardd-namespace vineyard-system  \
+    --vineyard-deployment-name vineyardd-sample \
+    --vineyard-deployment-namespace vineyard-system  \
     --limit 1000 --path /var/vineyard/dump  \
     -
+    
+  # Assume you have already deployed a pvc named "pvc-sample", you
+  # could use them as the backend storage for the backup job as follows
+  vineyardctl deploy backup-job \
+    --vineyard-deployment-name vineyardd-sample \
+    --vineyard-deployment-namespace vineyard-system  \
+    --limit 1000 --path /var/vineyard/dump  \
+    --pvc-name pvc-sample
 ```
 
 ### Options
 
 ```
-      --backup-name string           the name of backup job (default "vineyard-backup")
-  -h, --help                         help for backup-job
-      --limit int                    the limit of objects to backup (default 1000)
-      --path string                  the path of the backup data
-      --pv-pvc-spec string           the PersistentVolume and PersistentVolumeClaim of the backup data
-      --vineyardd-name string        the name of vineyardd
-      --vineyardd-namespace string   the namespace of vineyardd
+      --backup-name string                     the name of backup job (default "vineyard-backup")
+  -h, --help                                   help for backup-job
+      --limit int                              the limit of objects to backup (default 1000)
+      --path string                            the path of the backup data
+      --pv-pvc-spec string                     the PersistentVolume and PersistentVolumeClaim of the backup data
+      --pvc-name string                        the name of an existing PersistentVolumeClaim
+      --vineyard-deployment-name string        the name of vineyard deployment
+      --vineyard-deployment-namespace string   the namespace of vineyard deployment
 ```
 
 ## `vineyardctl deploy cert-manager`
@@ -786,18 +794,26 @@ vineyardctl deploy recover-job [flags]
 ### Examples
 
 ```shell
-  # deploy a recover job for the vineyard cluster in the same namespace
-  vineyardctl deplot recover-job
-  --vineyardd-name vineyardd-sample \
-  --vineyardd-namespace vineyard-system \
-  --backup-name vineyardd-sample -n vineyard-system
+  # Deploy a recover job for the vineyard deployment in the same namespace.
+  # After the recover job finished, the command will create a kubernetes
+  # configmap named [recover-name]+"-mapping-table" that contains the
+  # mapping table from the old vineyard objects to the new ones.
+  #
+  # If you create the recover job as follows, you can get the mapping table via
+  # "kubectl get configmap vineyard-recover-mapping-table -n vineyard-system -o yaml"
+  # the left column is the old object id, and the right column is the new object id.
+  vineyardctl deploy recover-job \
+  --vineyard-deployment-name vineyardd-sample \
+  --vineyard-deployment-namespace vineyard-system  \
+  --recover-path /var/vineyard/dump \
+  --pvc-name vineyard-backup
 ```
 
 ### Options
 
 ```
-      --backup-name string                     the name of backup job (default "vineyard-backup")
   -h, --help                                   help for recover-job
+      --pvc-name string                        the name of an existing PersistentVolumeClaim
       --recover-name string                    the name of recover job (default "vineyard-recover")
       --recover-path string                    the path of recover job
       --vineyard-deployment-name string        the name of vineyard deployment

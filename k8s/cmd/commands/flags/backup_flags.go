@@ -31,6 +31,15 @@ var (
 	// BackupPVandPVC is the string of PersistentVolume data and
 	// PersistentVolumeClaim data
 	BackupPVandPVC string
+
+	// PVCName is the name of PersistentVolumeClaim
+	PVCName string
+
+	// VineyardDeploymentName is the name of vineyard deployment
+	VineyardDeploymentName string
+
+	// VineyardDeploymentNamespace is the namespace of vineyard deployment
+	VineyardDeploymentNamespace string
 )
 
 func ApplyBackupNameOpts(cmd *cobra.Command) {
@@ -39,21 +48,39 @@ func ApplyBackupNameOpts(cmd *cobra.Command) {
 			"the name of backup job")
 }
 
-func ApplyBackupOpts(cmd *cobra.Command) {
-	// the following flags are used to build the backup configurations
+func ApplyBackupCommonOpts(cmd *cobra.Command) {
+	cmd.Flags().
+		IntVarP(&BackupOpts.Limit, "limit", "", 1000,
+			"the limit of objects to backup")
+	cmd.Flags().
+		StringVarP(&BackupOpts.BackupPath, "path", "", "",
+			"the path of the backup data")
+	cmd.Flags().
+		StringVarP(&BackupPVandPVC, "pv-pvc-spec", "", "",
+			"the PersistentVolume and PersistentVolumeClaim of the backup data")
+}
+
+func ApplyCreateBackupOpts(cmd *cobra.Command) {
+	ApplyBackupNameOpts(cmd)
+	ApplyBackupCommonOpts(cmd)
 	cmd.Flags().
 		StringVarP(&BackupOpts.VineyarddName, "vineyardd-name", "", "",
 			"the name of vineyardd")
 	cmd.Flags().
 		StringVarP(&BackupOpts.VineyarddNamespace, "vineyardd-namespace", "", "",
 			"the namespace of vineyardd")
-	cmd.Flags().IntVarP(&BackupOpts.Limit, "limit", "", 1000,
-		"the limit of objects to backup")
-	cmd.Flags().StringVarP(&BackupOpts.BackupPath, "path", "", "",
-		"the path of the backup data")
-	cmd.Flags().StringVarP(&BackupPVandPVC, "pv-pvc-spec", "", "",
-		"the PersistentVolume and PersistentVolumeClaim of the backup data")
+}
 
-	// the following flags are used to build the backup job
+func ApplyDeployBackupJobOpts(cmd *cobra.Command) {
 	ApplyBackupNameOpts(cmd)
+	ApplyBackupCommonOpts(cmd)
+	cmd.Flags().
+		StringVarP(&PVCName, "pvc-name", "", "",
+			"the name of an existing PersistentVolumeClaim")
+	cmd.Flags().
+		StringVarP(&VineyardDeploymentName, "vineyard-deployment-name", "", "",
+			"the name of vineyard deployment")
+	cmd.Flags().
+		StringVarP(&VineyardDeploymentNamespace, "vineyard-deployment-namespace", "", "",
+			"the namespace of vineyard deployment")
 }

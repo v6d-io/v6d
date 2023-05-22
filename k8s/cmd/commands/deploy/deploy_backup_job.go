@@ -37,14 +37,15 @@ var (
 	Deploy the backup job for the vineyard cluster on kubernetes,
 	which will backup all objects of the current vineyard cluster
 	quickly. For persistent storage, you could specify the pv spec
-	and pv spec.`)
+	and pv spec and the related pv and pvc will be created automatically.
+	Also, you could also specify the existing pv and pvc name to use`)
 
 	deployBackupJobExample = util.Examples(`
 	# deploy a backup job for the vineyard cluster on kubernetes
 	# you could define the pv and pvc spec from json string as follows
 	vineyardctl deploy backup-job \
-		--vineyardd-name vineyardd-sample \
-		--vineyardd-namespace vineyard-system  \
+		--vineyard-deployment-name vineyardd-sample \
+		--vineyard-deployment-namespace vineyard-system  \
 		--limit 1000 \
 		--path /var/vineyard/dump  \
 		--pv-pvc-spec '{
@@ -76,8 +77,8 @@ var (
 	# deploy a backup job for the vineyard cluster on kubernetes
 	# you could define the pv and pvc spec from yaml string as follows
 	vineyardctl deploy backup-job \
-		--vineyardd-name vineyardd-sample \
-		--vineyardd-namespace vineyard-system  \
+		--vineyard-deployment-name vineyardd-sample \
+		--vineyard-deployment-namespace vineyard-system  \
 		--limit 1000 --path /var/vineyard/dump  \
 		--pv-pvc-spec  \
 		'
@@ -102,10 +103,18 @@ var (
 	# you could define the pv and pvc spec from json file as follows
 	# also you could use yaml file instead of json file
 	cat pv-pvc.json | vineyardctl deploy backup-job \
-		--vineyardd-name vineyardd-sample \
-		--vineyardd-namespace vineyard-system  \
+		--vineyard-deployment-name vineyardd-sample \
+		--vineyard-deployment-namespace vineyard-system  \
 		--limit 1000 --path /var/vineyard/dump  \
 		-
+		
+	# Assume you have already deployed a pvc named "pvc-sample", you 
+	# could use them as the backend storage for the backup job as follows
+	vineyardctl deploy backup-job \
+		--vineyard-deployment-name vineyardd-sample \
+		--vineyard-deployment-namespace vineyard-system  \
+		--limit 1000 --path /var/vineyard/dump  \
+		--pvc-name pvc-sample
 	`)
 )
 
@@ -142,7 +151,7 @@ func NewDeployBackupJobCmd() *cobra.Command {
 }
 
 func init() {
-	flags.ApplyBackupOpts(deployBackupJobCmd)
+	flags.ApplyDeployBackupJobOpts(deployBackupJobCmd)
 }
 
 func getBackupObjectsFromTemplate(c client.Client, args []string) ([]*unstructured.Unstructured, error) {
@@ -153,6 +162,9 @@ func getBackupObjectsFromTemplate(c client.Client, args []string) ([]*unstructur
 
 	useVineyardScheduler := false
 	path := flags.BackupOpts.BackupPath
+	// set the vineyardd name and namespace as the vineyard deployment
+	backup.Spec.VineyarddName = flags.VineyardDeploymentName
+	backup.Spec.VineyarddNamespace = flags.VineyardDeploymentNamespace
 	backupCfg, err := k8s.BuildBackupCfg(c, flags.BackupName, backup, path, useVineyardScheduler)
 	if err != nil {
 		return nil, err

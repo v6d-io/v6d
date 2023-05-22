@@ -53,3 +53,7 @@ var deleteRecoverCmd = &cobra.Command{
 func NewDeleteRecoverCmd() *cobra.Command {
 	return deleteRecoverCmd
 }
+
+func init() {
+	flags.ApplyRecoverNameOpts(deleteRecoverCmd)
+}

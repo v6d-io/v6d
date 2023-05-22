@@ -21,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/kubernetes"
@@ -44,11 +45,19 @@ var (
 	the backup job.`)
 
 	deployRecoverJobExample = util.Examples(`
-	# deploy a recover job for the vineyard deployment in the same namespace
+	# Deploy a recover job for the vineyard deployment in the same namespace.
+	# After the recover job finished, the command will create a kubernetes
+	# configmap named [recover-name]+"-mapping-table" that contains the
+	# mapping table from the old vineyard objects to the new ones.
+	#
+	# If you create the recover job as follows, you can get the mapping table via
+	# "kubectl get configmap vineyard-recover-mapping-table -n vineyard-system -o yaml"
+	# the left column is the old object id, and the right column is the new object id.
 	vineyardctl deploy recover-job \
 	--vineyard-deployment-name vineyardd-sample \
 	--vineyard-deployment-namespace vineyard-system  \
-	--recover-path /var/vineyard/dump`)
+	--recover-path /var/vineyard/dump \
+	--pvc-name vineyard-backup`)
 )
 
 // deployRecoverJobCmd creates the recover job of vineyard cluster on kubernetes
@@ -88,11 +97,11 @@ func NewDeployRecoverJobCmd() *cobra.Command {
 }
 
 func init() {
-	flags.ApplyRecoverOpts(deployRecoverJobCmd)
+	flags.ApplyDeployRecoverJobOpts(deployRecoverJobCmd)
 }
 
 func getRecoverObjectsFromTemplate(c client.Client) ([]*unstructured.Unstructured, error) {
-	recover, err := create.BuildRecoverCR()
+	recover, err := create.BuildV1alphaRecoverCR()
 	if err != nil {
 		log.Fatal(err, "failed to build recover cr")
 	}
@@ -164,7 +173,14 @@ func createMappingTableConfigmap(c client.Client, cs kubernetes.Clientset) error
 		},
 		Data: mappingTable,
 	}
-	if err := c.Create(context.Background(), &cm); err != nil {
+	err = c.Create(context.Background(), &cm)
+	if apierrors.IsAlreadyExists(err) {
+		err := c.Update(context.Background(), &cm)
+		if err != nil {
+			return errors.Wrap(err, "failed to update mapping table configmap")
+		}
+	}
+	if err != nil && !apierrors.IsAlreadyExists(err) {
 		return errors.Wrap(err, "failed to create mapping table configmap")
 	}
 	return nil

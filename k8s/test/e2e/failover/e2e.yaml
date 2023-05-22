@@ -156,8 +156,11 @@ verify:
           yq e '{"sum": .}' - | \
           yq e 'to_entries' -
       expected: ../verify/values.yaml
-    # TODO(hetao) there seems issue in migration, don't check distributed object verifying
-    # - query: |
-    #     kubectl get pod -l app=get-distributed-object -n vineyard-job -oname | awk -F '/' '{print $2}' | \
-    #     xargs kubectl logs -n vineyard-job | yq e '{"result": .}' - | yq e 'to_entries' -
-    #   expected: ../verify/spill.yaml
+    - query: |
+        kubectl get pod -l app=get-distributed-object -n vineyard-job -oname | \
+          awk -F '/' '{print $2}' | \
+          head -n 1 | \
+          xargs kubectl logs -n vineyard-job | \
+          yq e '{"sum": .}' - | \
+          yq e 'to_entries' -
+      expected: ../verify/distributed-object-values.yaml
