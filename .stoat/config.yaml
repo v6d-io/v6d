@@ -58,3 +58,8 @@ plugins:
         name: "vineyardctl-logs"
       path: e2e-tests-vineyardctl-logs
       file_viewer: true
+    e2e-tests-deploy-raw-backup-and-recover-logs:
+      metadata:
+        name: "deploy-raw-backup-and-recover-logs"
+      path: e2e-tests-deploy-raw-backup-and-recover-logs
+      file_viewer: true

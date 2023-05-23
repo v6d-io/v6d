@@ -289,7 +289,7 @@ jobs:
               signed_url_key=0c6a
               ;;
             e2e-tests-deploy-raw-backup-and-recover)
-              signed_url_key=4583
+              signed_url_key=6552
               ;;
           esac
 
