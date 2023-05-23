@@ -136,7 +136,7 @@ double grin_get_vertex_property_value_of_double(GRIN_GRAPH g, GRIN_VERTEX v, GRI
 const char* grin_get_vertex_property_value_of_string(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
     const void* result = _get_value_from_vertex_property_table(g, v, vp);
     if (result == NULL) return NULL;
-    return static_cast<const char*>(result);
+    return static_cast<const std::string*>(result)->c_str();
 }
 
 int grin_get_vertex_property_value_of_date32(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
@@ -253,7 +253,7 @@ double grin_get_edge_property_value_of_double(GRIN_GRAPH g, GRIN_EDGE e, GRIN_ED
 const char* grin_get_edge_property_value_of_string(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     const void* result = _get_value_from_edge_property_table(g, e, ep);
     if (result == NULL) return NULL;
-    return static_cast<const char*>(result);
+    return static_cast<const std::string*>(result)->c_str();
 }
 
 int grin_get_edge_property_value_of_date32(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {

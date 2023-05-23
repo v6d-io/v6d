@@ -408,6 +408,9 @@ extern "C" {
         arg3: GrinRow,
     ) -> GrinVertex;
 
+    #[allow(unused)]
+    pub fn grin_destroy_string_value(arg1: GrinGraph, arg2: *const ::std::os::raw::c_char);
+
     #[doc = " @brief get the vertex property name\n @param GrinGraph the graph\n @param GrinVertexProperty the vertex property"]
     #[cfg(feature = "grin_with_vertex_property_name")]
     #[allow(unused)]
@@ -786,9 +789,6 @@ extern "C" {
         arg3: GrinEdgeProperty,
     ) -> GrinEdgePropertyId;
 
-    #[allow(unused)]
-    pub fn grin_destroy_string_value(arg1: GrinGraph, arg2: *const ::std::os::raw::c_char);
-
     #[cfg(feature = "grin_enable_row")]
     #[allow(unused)]
     pub fn grin_destroy_row(arg1: GrinGraph, arg2: GrinRow);
@@ -943,12 +943,12 @@ extern "C" {
         arg4: usize,
     ) -> *const ::std::os::raw::c_void;
 
-    #[doc = " @brief get vertex row directly from the graph, this API only works for row store system\n @param GrinGraph the graph\n @param GrinVertex the vertex which is the row index\n @param GrinVertexPropertyList the vertex property list as columns"]
+    #[doc = " @brief get vertex row directly from the graph, this API only works for row store system\n @param GrinGraph the graph\n @param GrinVertex the vertex which is the row index"]
     #[cfg(all(feature = "grin_with_vertex_property", feature = "grin_enable_row"))]
     #[allow(unused)]
     pub fn grin_get_vertex_row(arg1: GrinGraph, arg2: GrinVertex) -> GrinRow;
 
-    #[doc = " @brief get edge row directly from the graph, this API only works for row store system\n @param GrinGraph the graph\n @param GrinEdge the edge which is the row index\n @param GrinEdgePropertyList the edge property list as columns"]
+    #[doc = " @brief get edge row directly from the graph, this API only works for row store system\n @param GrinGraph the graph\n @param GrinEdge the edge which is the row index"]
     #[cfg(all(feature = "grin_with_edge_property", feature = "grin_enable_row"))]
     #[allow(unused)]
     pub fn grin_get_edge_row(arg1: GrinGraph, arg2: GrinEdge) -> GrinRow;
