@@ -243,3 +243,27 @@ def test_migration_and_deletion(
 
     with pytest.raises(vineyard.ObjectNotExistsException):
         print(client2.get_meta(o2))
+
+
+@pytest.mark.skip_without_migration()
+def test_migration_large_object(
+    vineyard_ipc_sockets,
+):  # pylint: disable=too-many-statements
+    vineyard_ipc_sockets = list(
+        itertools.islice(itertools.cycle(vineyard_ipc_sockets), 2)
+    )
+
+    client1 = vineyard.connect(vineyard_ipc_sockets[0])
+    client2 = vineyard.connect(vineyard_ipc_sockets[1])
+
+    data1 = np.ones((1024, 102400))
+    o1 = client1.put(data1)
+    client1.persist(o1)
+    meta1 = client2.get_meta(o1, sync_remote=True)
+    assert data1.shape == tuple(json.loads(meta1['shape_']))
+
+    # migrate o1 to h2
+    o2 = client2.migrate(o1)
+    assert o1 != o2
+    np.testing.assert_allclose(client1.get(o1), client2.get(o2))
+    logger.info('------- finish migrate remote large object --------')

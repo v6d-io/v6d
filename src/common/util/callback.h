@@ -24,5 +24,8 @@ namespace vineyard {
 
 template <class... Args>
 using callback_t = std::function<Status(const Status&, Args...)>;
-}
+
+template <class... Args>
+using void_callback_t = std::function<void(Args...)>;
+}  // namespace vineyard
 #endif  // SRC_COMMON_UTIL_CALLBACK_H_
