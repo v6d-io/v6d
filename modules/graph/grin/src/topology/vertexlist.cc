@@ -26,6 +26,7 @@ GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH g) {
     vl->vtype = _g->vertex_label_num();
     if (vl->vtype == 1) {
         vl->is_simple = true;
+        vl->vtype = 0;
         __grin_init_simple_vertex_list(_g, vl);
     } else {
         vl->is_simple = false;

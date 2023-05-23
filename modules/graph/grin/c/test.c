@@ -964,10 +964,19 @@ void test_partition(int argc, char** argv) {
 }
 
 
-void test_topology_structure(int argc, char** argv) {
+void test_topology_vertex_list(int argc, char** argv) {
   GRIN_GRAPH g = get_graph(argc, argv);
 
   printf("vnum: %zu, enum: %zu\n", grin_get_vertex_num(g), grin_get_edge_num(g));
+
+#ifdef GRIN_ENABLE_GRAPH_PARTITION
+  GRIN_VERTEX_LIST vl = grin_get_vertex_list(g);
+  GRIN_VERTEX_TYPE vtype = grin_get_vertex_type_by_name(g, "person");
+  GRIN_VERTEX_LIST svl = grin_select_type_for_vertex_list(g, vtype, vl);
+  GRIN_VERTEX_LIST mvl = grin_select_master_for_vertex_list(g, svl);
+  size_t mvl_sz = grin_get_vertex_list_size(g, mvl);
+  printf("master vertex list size: %zu\n", mvl_sz);
+#endif
 
   grin_destroy_graph(g);
 }
@@ -1061,7 +1070,7 @@ void test_topology_adjacent_list(int argc, char** argv, GRIN_DIRECTION dir) {
 }
 
 void test_topology(int argc, char** argv) {
-  test_topology_structure(argc, argv);
+  test_topology_vertex_list(argc, argv);
   test_topology_adjacent_list(argc, argv, OUT);
   test_topology_adjacent_list(argc, argv, IN);
 }
