@@ -28,6 +28,7 @@ GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_V
     al->etype = _g->edge_label_num();
     if (al->etype == 1) {
         al->is_simple = true;
+        al->etype = 0;
         __grin_init_simple_adjacent_list(_g, al);
     } else {
         al->is_simple = false;
