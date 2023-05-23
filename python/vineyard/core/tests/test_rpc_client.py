@@ -30,6 +30,7 @@ register_builtin_types(default_builder_context, default_resolver_context)
 
 
 payload = b'abcdefgh1234567890uvwxyz'
+large_payload = b'abcdefgh1234567890uvwxyz' * 10_000_000
 
 
 def test_remote_blob_create(vineyard_client, vineyard_endpoint):
@@ -80,6 +81,22 @@ def test_remote_blob_create_and_get(vineyard_endpoint):
     assert remote_blob.id == blob_id
     assert remote_blob.size == len(payload)
     assert memoryview(remote_blob) == memoryview(payload)
+
+
+def test_remote_blob_create_and_get_large_object(vineyard_endpoint):
+    vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
+
+    buffer_writer = RemoteBlobBuilder(len(large_payload))
+    buffer_writer.copy(0, large_payload)
+    blob_id = vineyard_rpc_client.create_remote_blob(buffer_writer)
+
+    # get as remote blob
+    remote_blob = vineyard_rpc_client.get_remote_blob(blob_id)
+
+    # check remote blob
+    assert remote_blob.id == blob_id
+    assert remote_blob.size == len(large_payload)
+    assert memoryview(remote_blob) == memoryview(large_payload)
 
 
 def test_remote_blob_error(vineyard_endpoint):

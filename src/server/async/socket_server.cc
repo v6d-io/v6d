@@ -130,8 +130,6 @@ void SocketConnection::doReadBody() {
                        doStop();
                        return;
                      }
-                     // start next-round read
-                     doReadHeader();
                    });
 }
 
@@ -1589,7 +1587,9 @@ void SocketConnection::doAsyncWrite(std::string&& buf) {
   asio::async_write(
       socket_, boost::asio::buffer(payload->data(), payload->length()),
       [this, self, payload](boost::system::error_code ec, std::size_t) {
-        if (ec) {
+        if (!ec) {
+          doReadHeader();
+        } else {
           doStop();
         }
       });
@@ -1603,11 +1603,8 @@ void SocketConnection::doAsyncWrite(std::string&& buf, callback_t<> callback) {
                     boost::asio::buffer(payload->data(), payload->length()),
                     [this, self, payload, callback](
                         boost::system::error_code ec, std::size_t) {
-                      if (!ec) {
-                        auto status = callback(Status::OK());
-                        if (!status.ok()) {
-                          doStop();
-                        }
+                      if (!ec && callback(Status::OK()).ok()) {
+                        doReadHeader();
                       } else {
                         doStop();
                       }
