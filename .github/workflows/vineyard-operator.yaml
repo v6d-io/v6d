@@ -240,17 +240,17 @@ jobs:
 
       - name: Export kubernetes logs
         uses: dashanji/kubernetes-log-export-action@v3
-        if: ${{ matrix.job != 'release' && failure() }}
+        if: ${{ matrix.job != 'release' }}
         env:
           SHOW_TIMESTAMPS: 'true'
           OUTPUT_DIR: ${{ github.workspace }}/${{ matrix.job }}-logs
           NAMESPACES: vineyard*
 
       - uses: stoat-dev/stoat-action@v0
-        if: ${{ matrix.job != 'release' && failure() }}
+        if: ${{ matrix.job != 'release' }}
 
       - name: Leave a message for logs URL
-        if: ${{ matrix.job != 'release' && failure() }}
+        if: ${{ matrix.job != 'release' }}
         run: |
           short_sha=$(git rev-parse --short ${{ github.event.pull_request.head.sha }})
 
