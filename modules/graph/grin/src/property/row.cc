@@ -203,10 +203,10 @@ GRIN_ROW grin_get_edge_row(GRIN_GRAPH g, GRIN_EDGE e) {
 
     auto r = new GRIN_ROW_T();
     r->resize(_g->edge_property_num(etype));
-    for (auto ep = 0; ep < _g->edge_property_num(etype); ++ep) {
+    for (auto ep = 1; ep < _g->edge_property_num(etype); ++ep) {
         auto array = _cache->etables[etype]->column(ep)->chunk(0);
         auto result = vineyard::get_arrow_array_data_element(array, offset);
-        (*r)[ep] = result;
+        (*r)[ep-1] = result;
     }
     return r;
 }
