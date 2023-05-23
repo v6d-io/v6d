@@ -94,23 +94,23 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	// setup the recover configuration
-	recoverCfg := RecoverConfig{}
-	recoverCfg.Name = "recover-" + backup.Name
-	recoverCfg.BackupPVCName = backup.Name
-	failoverCfg, err := newFailoverConfig(r.Client, &backup)
+	useVineyardScheduler := true
+	path := backup.Spec.BackupPath
+	name := "recover-" + backup.Name
+	recoverCfg, err := BuildRecoverCfg(r.Client, name, &backup, path, useVineyardScheduler)
 	if err != nil {
-		logger.Error(err, "unable to build failover configuration")
+		logger.Error(err, "failed to build recover config")
 		return ctrl.Result{}, err
 	}
-	recoverCfg.FailoverConfig = failoverCfg
 
 	app := swckkube.Application{
 		Client:   r.Client,
 		FileRepo: templates.Repo,
 		CR:       &recover,
 		GVK:      k8sv1alpha1.GroupVersion.WithKind("Recover"),
-		TmplFunc: map[string]interface{}{"getRecoverConfig": func() RecoverConfig { return recoverCfg }},
+		TmplFunc: map[string]interface{}{"getRecoverConfig": func() RecoverConfig {
+			return recoverCfg
+		}},
 	}
 
 	if recover.Status.State == "" || recover.Status.State == RunningState {
@@ -169,40 +169,11 @@ func (r *RecoverReconciler) UpdateMappingStatus(
 	backup *k8sv1alpha1.Backup,
 	recover *k8sv1alpha1.Recover,
 ) error {
-	name := client.ObjectKey{Name: "recover-" + backup.Name, Namespace: backup.Namespace}
-	job := batchv1.Job{}
-	err := r.Get(ctx, name, &job)
+	jobName := "recover-" + backup.Name
+	jobNamespace := backup.Namespace
+	objectMapping, err := GetObjectMappingTable(r.Client, *r.Clientset, jobName, jobNamespace)
 	if err != nil {
-		log.V(1).Error(err, "failed to get job")
-	}
-	// if job completd and deleted after ttl
-	if apierrors.IsNotFound(err) {
-		return nil
-	}
-
-	// get object mappings
-	objectMapping := make(map[string]string)
-	labels := job.Spec.Template.Labels
-	podList := &corev1.PodList{}
-	opts := []client.ListOption{
-		client.MatchingLabels{
-			"controller-uid": labels["controller-uid"],
-		},
-	}
-	if err := r.List(ctx, podList, opts...); err != nil {
-		log.V(1).Error(err, "failed to list pod created by job")
-		return err
-	}
-
-	for i := range podList.Items {
-		mapping, err := r.getObjectMappingFromPodLogs(&podList.Items[i])
-		if err != nil {
-			log.V(1).Error(err, "failed to get logs from pods")
-			return err
-		}
-		for k, v := range mapping {
-			objectMapping[k] = v
-		}
+		return errors.Wrap(err, "failed to get object mapping table")
 	}
 
 	status := &k8sv1alpha1.RecoverStatus{
@@ -231,11 +202,37 @@ func (r *RecoverReconciler) applyStatusUpdate(ctx context.Context,
 	)
 }
 
-func (r *RecoverReconciler) getObjectMappingFromPodLogs(
+// SetupWithManager sets up the controller with the Manager.
+func (r *RecoverReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&k8sv1alpha1.Recover{}).
+		Complete(r)
+}
+
+func BuildRecoverCfg(c client.Client, name string, backup *k8sv1alpha1.Backup,
+	path string, useVineyardScheduler bool) (RecoverConfig, error) {
+	// setup the recover configuration
+	recoverCfg := RecoverConfig{}
+	recoverCfg.Name = name
+	recoverCfg.BackupPVCName = backup.Name
+
+	failoverCfg, err := newFailoverConfig(c, backup, path, useVineyardScheduler)
+	if err != nil {
+		return recoverCfg, errors.Wrap(err, "failed to build failover configuration")
+	}
+	recoverCfg.FailoverConfig = failoverCfg
+
+	return recoverCfg, nil
+}
+
+// getObjectMappingFromPodLogs gets object mapping from pod logs.
+func getObjectMappingFromPodLogs(
+	clientset *kubernetes.Clientset,
 	pod *corev1.Pod,
 ) (map[string]string, error) {
 	mappingtable := make(map[string]string)
-	req := r.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
+
+	req := clientset.CoreV1().Pods(pod.Namespace).GetLogs(pod.Name, &corev1.PodLogOptions{})
 	logs, err := req.Stream(context.Background())
 	if err != nil {
 		return mappingtable, errors.Wrap(err, "failed to open stream")
@@ -260,9 +257,40 @@ func (r *RecoverReconciler) getObjectMappingFromPodLogs(
 	return mappingtable, nil
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *RecoverReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&k8sv1alpha1.Recover{}).
-		Complete(r)
+func GetObjectMappingTable(c client.Client, clientset kubernetes.Clientset,
+	jobName, jobNamespace string) (map[string]string, error) {
+	objectMapping := make(map[string]string)
+	name := client.ObjectKey{Name: jobName, Namespace: jobNamespace}
+	job := batchv1.Job{}
+	err := c.Get(context.Background(), name, &job)
+	if err != nil {
+		return objectMapping, errors.Wrap(err, "failed to get job")
+	}
+	// if job completd and deleted after ttl
+	if apierrors.IsNotFound(err) {
+		return objectMapping, nil
+	}
+
+	// get object mappings
+	labels := job.Spec.Template.Labels
+	podList := &corev1.PodList{}
+	opts := []client.ListOption{
+		client.MatchingLabels{
+			"controller-uid": labels["controller-uid"],
+		},
+	}
+	if err := c.List(context.Background(), podList, opts...); err != nil {
+		return objectMapping, errors.Wrap(err, "failed to list pod created by job")
+	}
+
+	for i := range podList.Items {
+		mapping, err := getObjectMappingFromPodLogs(&clientset, &podList.Items[i])
+		if err != nil {
+			return objectMapping, errors.Wrap(err, "failed to get logs from pods")
+		}
+		for k, v := range mapping {
+			objectMapping[k] = v
+		}
+	}
+	return objectMapping, nil
 }

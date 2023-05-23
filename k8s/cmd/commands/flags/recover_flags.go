@@ -17,14 +17,39 @@ package flags
 
 import "github.com/spf13/cobra"
 
-// RecoverName is the name of recover job
-var RecoverName string
+var (
+	// RecoverName is the name of recover job
+	RecoverName string
 
-func ApplyRecoverOpts(cmd *cobra.Command) {
-	cmd.Flags().
-		StringVarP(&BackupName, "backup-name", "", "vineyard-backup",
-			"the name of backup job")
+	// RecoverPath is the path of recover job
+	RecoverPath string
+)
+
+func ApplyRecoverNameOpts(cmd *cobra.Command) {
 	cmd.Flags().
 		StringVarP(&RecoverName, "recover-name", "", "vineyard-recover",
 			"the name of recover job")
+}
+
+func ApplyCreateRecoverOpts(cmd *cobra.Command) {
+	ApplyRecoverNameOpts(cmd)
+	cmd.Flags().
+		StringVarP(&BackupName, "backup-name", "", "vineyard-backup",
+			"the name of backup job")
+}
+
+func ApplyDeployRecoverJobOpts(cmd *cobra.Command) {
+	ApplyRecoverNameOpts(cmd)
+	cmd.Flags().
+		StringVarP(&RecoverPath, "recover-path", "", "",
+			"the path of recover job")
+	cmd.Flags().
+		StringVarP(&VineyardDeploymentName, "vineyard-deployment-name", "", "",
+			"the name of vineyard deployment")
+	cmd.Flags().
+		StringVarP(&VineyardDeploymentNamespace, "vineyard-deployment-namespace", "", "",
+			"the namespace of vineyard deployment")
+	cmd.Flags().
+		StringVarP(&PVCName, "pvc-name", "", "",
+			"the name of an existing PersistentVolumeClaim")
 }

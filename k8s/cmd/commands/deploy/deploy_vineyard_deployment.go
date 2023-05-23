@@ -88,25 +88,19 @@ func init() {
 		"", "", "The owner reference of all vineyard deployment resources")
 }
 
-func getStorage(q resource.Quantity) string {
-	return q.String()
-}
-
-// EtcdConfig holds the configuration of etcd
-var EtcdConfig k8s.EtcdConfig
-
-func getEtcdConfig() k8s.EtcdConfig {
-	return EtcdConfig
-}
-
-// GetObjectsFromTemplate gets kubernetes resources from template for vineyardd
-func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
+// GetVineyardDeploymentObjectsFromTemplate gets kubernetes resources from template for vineyard-deployment
+func GetVineyardDeploymentObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 	objects := []*unstructured.Unstructured{}
+	var etcdConfig k8s.EtcdConfig
 	var err error
 
 	tmplFunc := map[string]interface{}{
-		"getStorage":    getStorage,
-		"getEtcdConfig": getEtcdConfig,
+		"getStorage": func(q resource.Quantity) string {
+			return q.String()
+		},
+		"getEtcdConfig": func() k8s.EtcdConfig {
+			return etcdConfig
+		},
 	}
 
 	// build vineyardd
@@ -115,7 +109,7 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 		return objects, errors.Wrap(err, "failed to build vineyardd")
 	}
 
-	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig, vineyardd.Name,
+	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&etcdConfig, vineyardd.Name,
 		vineyardd.Namespace, vineyardd.Spec.EtcdReplicas, vineyardd.Spec.Vineyard.Image, vineyardd,
 		tmplFunc)
 	if err != nil {
@@ -137,12 +131,11 @@ func GetObjectsFromTemplate() ([]*unstructured.Unstructured, error) {
 
 // applyVineyarddFromTemplate creates kubernetes resources from template fir
 func applyVineyarddFromTemplate(c client.Client) error {
-	objects, err := GetObjectsFromTemplate()
+	objects, err := GetVineyardDeploymentObjectsFromTemplate()
 	if err != nil {
 		return errors.Wrap(err, "failed to get vineyardd resources from template")
 	}
 	deployment := &unstructured.Unstructured{}
-
 	for _, o := range objects {
 		if OwnerReference != "" {
 			OwnerRefs, err := util.ParseOwnerRef(OwnerReference)

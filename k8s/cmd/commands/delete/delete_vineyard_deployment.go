@@ -62,7 +62,7 @@ func init() {
 
 // deleteVineyarddFromTemplate creates kubernetes resources from template fir
 func deleteVineyarddFromTemplate(c client.Client) error {
-	objects, err := deploy.GetObjectsFromTemplate()
+	objects, err := deploy.GetVineyardDeploymentObjectsFromTemplate()
 	if err != nil {
 		return errors.Wrap(err, "failed to get vineyardd resources from template")
 	}

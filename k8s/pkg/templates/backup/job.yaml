@@ -27,11 +27,15 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: {{ .Name }}
+        {{- if $failoverConfig.WithScheduler }}
         scheduling.k8s.v6d.io/vineyardd-namespace: {{ $failoverConfig.VineyarddNamespace }}
         scheduling.k8s.v6d.io/vineyardd: {{ $failoverConfig.VineyarddName }}
         scheduling.k8s.v6d.io/job: {{ $backupConfig.Name }}
+        {{- end }}
     spec:
+      {{- if $failoverConfig.WithScheduler }}
       schedulerName: vineyard-scheduler
+      {{- end }}
       containers:
       - name: engine
         image: ghcr.io/v6d-io/v6d/backup-job
@@ -79,3 +83,14 @@ spec:
                     values:
                      - {{ $backupConfig.Name }}
               topologyKey: "kubernetes.io/hostname"
+        {{- if not $failoverConfig.WithScheduler }}
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchExpressions:
+                  - key: app.kubernetes.io/instance
+                    operator: In
+                    values:
+                     - {{ $failoverConfig.VineyarddNamespace -}} - {{- $failoverConfig.VineyarddName }}
+              topologyKey: "kubernetes.io/hostname"
+        {{- end }}

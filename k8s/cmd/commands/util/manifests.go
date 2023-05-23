@@ -17,9 +17,12 @@ package util
 
 import (
 	"bytes"
+	"context"
+	"strings"
 
 	"github.com/pkg/errors"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -87,6 +90,55 @@ func DeleteManifests(c client.Client, manifests Manifests, namespace string) err
 		current.SetGroupVersionKind(object.GetObjectKind().GroupVersionKind())
 		if err := Delete(c, key, current); err != nil {
 			return errors.Wrap(err, "failed to delete manifest resource")
+		}
+	}
+	return nil
+}
+
+// ApplyManifestsWithOwnerRef create kubernetes resources from manifests
+// and choose one object as the owner of the other specific objects
+// Currently, only support to use the kind of manifest as the distinguishing conditions.
+// As a result, the ownerKind and refKind should not to be the same. Also, the refKind
+// could be more than one and should be separated by comma.
+func ApplyManifestsWithOwnerRef(c client.Client, objs []*unstructured.Unstructured,
+	ownerKind, refKind string) error {
+	newobjs := make([]*unstructured.Unstructured, 0)
+	ownerObj := &unstructured.Unstructured{}
+	// reorder the objects to deploy the backup job at first
+	for _, obj := range objs {
+		if obj.GetKind() == ownerKind {
+			ownerObj = obj
+		} else {
+			newobjs = append(newobjs, obj)
+		}
+	}
+	newobjs = append([]*unstructured.Unstructured{ownerObj}, newobjs...)
+
+	ownerRef := metav1.OwnerReference{}
+	refKinds := strings.Split(refKind, ",")
+	refKindMap := make(map[string]bool)
+	for _, kind := range refKinds {
+		refKindMap[kind] = true
+	}
+
+	for _, obj := range newobjs {
+		if _, ok := refKindMap[obj.GetKind()]; ok {
+			obj.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
+		}
+		if err := CreateIfNotExists(c, obj); err != nil {
+			return errors.Wrap(err, "failed to create manifest resource")
+		}
+		if obj.GetKind() == ownerKind {
+			if err := c.Get(context.Background(),
+				client.ObjectKeyFromObject(obj), ownerObj); err != nil {
+				return errors.Wrap(err, "failed to get owner kind object")
+			}
+			ownerRef = metav1.OwnerReference{
+				APIVersion: "batch/v1",
+				Kind:       "Job",
+				Name:       obj.GetName(),
+				UID:        obj.GetUID(),
+			}
 		}
 	}
 	return nil

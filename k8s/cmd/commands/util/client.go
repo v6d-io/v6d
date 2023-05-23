@@ -19,6 +19,7 @@ import (
 	"context"
 	"time"
 
+	"k8s.io/client-go/kubernetes"
 	defaultscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -62,8 +63,7 @@ func Deserializer() runtime.Decoder {
 	return serializer.NewCodecFactory(scheme).UniversalDeserializer()
 }
 
-// KubernetesClient return the kubernetes client
-func KubernetesClient() client.Client {
+func getKubernetesConfig() *rest.Config {
 	cfg, err := clientcmd.BuildConfigFromFlags("", flags.KubeConfig)
 	if err != nil {
 		cfg, err = rest.InClusterConfig()
@@ -71,11 +71,27 @@ func KubernetesClient() client.Client {
 			log.Fatal(err, "Failed to resolve the KUBECONFIG")
 		}
 	}
+	return cfg
+}
+
+// KubernetesClient return the kubernetes client
+func KubernetesClient() client.Client {
+	cfg := getKubernetesConfig()
 	client, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		log.Fatal(err, "failed to create the kubernetes API client")
 	}
 	return client
+}
+
+// KubernetesClientset return the kubernetes clientset
+func KubernetesClientset() *kubernetes.Clientset {
+	cfg := getKubernetesConfig()
+	clientset, err := kubernetes.NewForConfig(cfg)
+	if err != nil {
+		log.Fatal(err, "unable to create REST client")
+	}
+	return clientset
 }
 
 func Create[T client.Object](c client.Client, v T, until ...func(T) bool) error {

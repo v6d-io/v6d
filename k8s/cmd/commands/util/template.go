@@ -47,7 +47,7 @@ func RenderManifestAsObj(path string, value interface{},
 
 // BuildObjsFromEtcdManifests builds a list of objects from the etcd template files.
 // the template files are under the dir 'k8s/pkg/templates/etcd'
-func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, name string,
+func BuildObjsFromEtcdManifests(etcdConfig *k8s.EtcdConfig, name string,
 	namespace string, replicas int, image string, value interface{},
 	tmplFunc map[string]interface{},
 ) ([]*unstructured.Unstructured, []*unstructured.Unstructured, error) {
@@ -59,10 +59,10 @@ func BuildObjsFromEtcdManifests(EtcdConfig *k8s.EtcdConfig, name string,
 		return podObjs, svcObjs, errors.Wrap(err, "failed to get etcd manifests")
 	}
 	// set up the etcd config
-	*EtcdConfig = k8s.NewEtcdConfig(name, namespace, replicas, image)
+	*etcdConfig = k8s.NewEtcdConfig(name, namespace, replicas, image)
 
 	for i := 0; i < replicas; i++ {
-		EtcdConfig.Rank = i
+		etcdConfig.Rank = i
 		for _, ef := range etcdManifests {
 			obj, err := RenderManifestAsObj(ef, value, tmplFunc)
 			if err != nil {
@@ -107,6 +107,30 @@ func BuildObjsFromVineyarddManifests(files []string, value interface{},
 			if obj.GetName() != "" {
 				objs = append(objs, obj)
 			}
+		}
+	}
+	return objs, nil
+}
+
+// BuildObjsFromManifests builds a list of objects from the
+// the standard template files such as backup and recover
+func BuildObjsFromManifests(templateName string, value interface{},
+	tmplFunc map[string]interface{},
+) ([]*unstructured.Unstructured, error) {
+	objs := []*unstructured.Unstructured{}
+
+	manifests, err := templates.GetFilesRecursive(templateName)
+	if err != nil {
+		return objs, errors.Wrap(err, "failed to get backup manifests")
+	}
+	for _, m := range manifests {
+		obj, err := RenderManifestAsObj(m, value, tmplFunc)
+		if err != nil {
+			return objs, err
+		}
+
+		if obj.GetName() != "" {
+			objs = append(objs, obj)
 		}
 	}
 	return objs, nil

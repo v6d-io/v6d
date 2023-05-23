@@ -20,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -33,10 +34,14 @@ var (
 	Backup the current vineyard cluster on kubernetes. You could
 	backup all objects of the current vineyard cluster quickly.
 	For persistent storage, you could specify the pv spec and pv
-	spec.`)
+	spec.
+	
+	Notice, the command is used to create a backup cr for the
+	vineyard operator and you must deploy the vineyard operator
+	and vineyard cluster before using it.`)
 
 	createBackupExample = util.Examples(`
-	# create a backup job for the vineyard cluster on kubernetes
+	# create a backup cr for the vineyard cluster on kubernetes
 	# you could define the pv and pvc spec from json string as follows
 	vineyardctl create backup \
 		--vineyardd-name vineyardd-sample \
@@ -69,7 +74,7 @@ var (
 			}
 			}'
 
-	# create a backup job for the vineyard cluster on kubernetes
+	# create a backup cr for the vineyard cluster on kubernetes
 	# you could define the pv and pvc spec from yaml string as follows
 	vineyardctl create backup \
 		--vineyardd-name vineyardd-sample \
@@ -79,22 +84,22 @@ var (
 		'
 		pv-spec:
 		capacity:
-			storage: 1Gi
+		  storage: 1Gi
 		accessModes:
 		- ReadWriteOnce
 		storageClassName: manual
 		hostPath:
-			path: "/var/vineyard/dump"
+		  path: "/var/vineyard/dump"
 		pvc-spec:
 		storageClassName: manual
 		accessModes:
 		- ReadWriteOnce
 		resources:
-			requests:
-			storage: 1Gi
+		  requests:
+		  storage: 1Gi
 		'
 
-	# create a backup job for the vineyard cluster on kubernetes
+	# create a backup cr for the vineyard cluster on kubernetes
 	# you could define the pv and pvc spec from json file as follows
 	# also you could use yaml file instead of json file
 	cat pv-pvc.json | vineyardctl create backup \
@@ -107,35 +112,23 @@ var (
 // createBackupCmd creates the backup job of vineyard cluster on kubernetes
 var createBackupCmd = &cobra.Command{
 	Use:     "backup",
-	Short:   "Backup the current vineyard cluster on kubernetes",
+	Short:   "Create a backup cr to backup the current vineyard cluster on kubernetes",
 	Long:    createBackupLong,
 	Example: createBackupExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgsOrInput(cmd, args)
 
-		// Check if the input is coming from stdin
-		str, err := util.ReadJsonFromStdin(args)
-		if err != nil {
-			log.Fatal(err, "failed to parse from stdin")
-		}
-		if str != "" {
-			flags.BackupPVandPVC = str
-		}
 		client := util.KubernetesClient()
-
-		util.CreateNamespaceIfNotExist(client)
-
-		backup, err := buildBackupJob()
+		backup, err := BuildBackup(client, args)
 		if err != nil {
-			log.Fatal(err, "failed to build backup job")
+			log.Fatal(err, "failed to build backup cr")
 		}
-
 		if err := util.Create(client, backup, func(backup *v1alpha1.Backup) bool {
 			return backup.Status.State != k8s.SucceedState
 		}); err != nil {
 			log.Fatal(err, "failed to create/wait backup job")
 		}
-		log.Info("Backup Job is ready.")
+		log.Info("Backup cr is ready.")
 	},
 }
 
@@ -144,10 +137,10 @@ func NewCreateBackupCmd() *cobra.Command {
 }
 
 func init() {
-	flags.ApplyBackupOpts(createBackupCmd)
+	flags.ApplyCreateBackupOpts(createBackupCmd)
 }
 
-func buildBackupJob() (*v1alpha1.Backup, error) {
+func buildBackupCR() (*v1alpha1.Backup, error) {
 	opts := &flags.BackupOpts
 	backupPVandPVC := flags.BackupPVandPVC
 
@@ -166,6 +159,26 @@ func buildBackupJob() (*v1alpha1.Backup, error) {
 			Namespace: flags.Namespace,
 		},
 		Spec: *opts,
+	}
+	return backup, nil
+}
+
+// BuildBackup reads the args from input and return the backup cr
+func BuildBackup(c client.Client, args []string) (*v1alpha1.Backup, error) {
+	// Check if the input is coming from stdin
+	str, err := util.ReadJsonFromStdin(args)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to parse from stdin")
+	}
+	if str != "" && flags.BackupPVandPVC == "" {
+		flags.BackupPVandPVC = str
+	}
+
+	util.CreateNamespaceIfNotExist(c)
+
+	backup, err := buildBackupCR()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to build backup cr")
 	}
 	return backup, nil
 }

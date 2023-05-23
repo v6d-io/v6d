@@ -48,7 +48,7 @@ while True:
     # wait all pods to be deployed on nodes
     alldeployedpods = 0
     for i in api_response.items:
-        if i.spec.node_name is not None:
+        if i.spec.node_name is not None and i.status.phase == 'Running':
             alldeployedpods += 1
     if alldeployedpods == allinstances:
         api_response.items.sort(key=lambda a: a.spec.node_name)

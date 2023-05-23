@@ -31,18 +31,22 @@ var (
 	createRecoverLong = util.LongDesc(`
 	Recover the current vineyard cluster on kubernetes. You could
 	recover all objects from a backup of vineyard cluster. Usually,
-	the recover job should be created in the same namespace of
-	the backup job.`)
+	the recover crd should be created in the same namespace of
+	the backup job.
+	
+	Notice, the command is used to create a recover cr for the
+	vineyard operator and you must deploy the vineyard operator
+	and vineyard cluster before using it.`)
 
 	createRecoverExample = util.Examples(`
-	# create a recover job for a backup job in the same namespace
+	# create a recover cr for a backup job in the same namespace
 	vineyardctl create recover --backup-name vineyardd-sample -n vineyard-system`)
 )
 
 // createRecoverCmd creates the recover job of vineyard cluster on kubernetes
 var createRecoverCmd = &cobra.Command{
 	Use:     "recover",
-	Short:   "Recover the current vineyard cluster on kubernetes",
+	Short:   "Create a recover cr to recover the current vineyard cluster on kubernetes",
 	Long:    createRecoverLong,
 	Example: createRecoverExample,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -50,9 +54,9 @@ var createRecoverCmd = &cobra.Command{
 		client := util.KubernetesClient()
 		util.CreateNamespaceIfNotExist(client)
 
-		recover, err := buildRecoverJob()
+		recover, err := BuildV1alphaRecoverCR()
 		if err != nil {
-			log.Fatal(err, "failed to build recover job")
+			log.Fatal(err, "failed to build recover cr")
 		}
 
 		if err := util.Create(client, recover, func(*v1alpha1.Recover) bool {
@@ -60,7 +64,7 @@ var createRecoverCmd = &cobra.Command{
 		}); err != nil {
 			log.Fatal(err, "failed to create and wait recover job")
 		}
-		log.Info("Backup Job is ready.")
+		log.Info("Recover cr is ready.")
 	},
 }
 
@@ -69,10 +73,10 @@ func NewCreateRecoverCmd() *cobra.Command {
 }
 
 func init() {
-	flags.ApplyRecoverOpts(createRecoverCmd)
+	flags.ApplyCreateRecoverOpts(createRecoverCmd)
 }
 
-func buildRecoverJob() (*v1alpha1.Recover, error) {
+func BuildV1alphaRecoverCR() (*v1alpha1.Recover, error) {
 	namespace := flags.GetDefaultVineyardNamespace()
 	recover := &v1alpha1.Recover{
 		ObjectMeta: metav1.ObjectMeta{

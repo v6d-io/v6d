@@ -272,13 +272,6 @@ func getWorkloadResource() (string, error) {
 	return resource, nil
 }
 
-// EtcdConfig holds the configuration of etcd
-var EtcdConfig k8s.EtcdConfig
-
-func getEtcdConfig() k8s.EtcdConfig {
-	return EtcdConfig
-}
-
 // GetWorkloadObj returns the unstructured object of the workload
 func GetWorkloadObj(workload string) (*unstructured.Unstructured, error) {
 	unstructuredObj, err := util.ParseManifestToObject(workload)
@@ -304,6 +297,7 @@ func GetWorkloadObj(workload string) (*unstructured.Unstructured, error) {
 // GetManifestFromTemplate returns the manifests from the template
 func GetManifestFromTemplate(workload string) (OutputManifests, error) {
 	var om OutputManifests
+	var etcdConfig k8s.EtcdConfig
 
 	ownerRef, err := util.ParseOwnerRef(flags.OwnerReference)
 	if err != nil {
@@ -327,10 +321,12 @@ func GetManifestFromTemplate(workload string) (OutputManifests, error) {
 	}
 
 	tmplFunc := map[string]interface{}{
-		"getEtcdConfig": getEtcdConfig,
+		"getEtcdConfig": func() k8s.EtcdConfig {
+			return etcdConfig
+		},
 	}
 
-	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&EtcdConfig,
+	podObjs, svcObjs, err := util.BuildObjsFromEtcdManifests(&etcdConfig,
 		flags.SidecarName, namespace, sidecar.Spec.Replicas,
 		sidecar.Spec.Vineyard.Image, sidecar, tmplFunc)
 	if err != nil {
