@@ -55,7 +55,8 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::GARFragmentLoader(
   // Load graph info.
   auto maybe_graph_info = GraphArchive::GraphInfo::Load(graph_info_yaml);
   if (!maybe_graph_info.status().ok()) {
-    LOG(ERROR) << "Failed to load graph info from " << graph_info_yaml;
+    LOG(ERROR) << "Failed to load graph info from " << graph_info_yaml <<
+        ", error: " << maybe_graph_info.status().message();
   }
   graph_info_ = std::make_shared<GraphArchive::GraphInfo>(
       std::move(maybe_graph_info.value()));
@@ -68,21 +69,30 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadFragment() {
   // distribute the vertices for fragments.
   BOOST_LEAF_CHECK(distributeVertices());
   // Load vertex tables.
-  LOG(INFO) << "Load vertex tables.";
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "LOADING-VERTEX-TABLES-0";
   BOOST_LEAF_CHECK(LoadVertexTables());
-  LOG(INFO) << "Finish LoadVertexTables ..." << get_rss_pretty()
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER
+      << "LOADING-VERTEX-TABLES-100";
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after loading vertex tables: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
   // Construct vertex map.
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-MAP-0";
   BOOST_LEAF_CHECK(constructVertexMap());
-  LOG(INFO) << "Finish constructVertexMap ..." << get_rss_pretty()
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-MAP-100";
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after construct vertex map: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
   // Load edge tables.
-  LOG(INFO) << "Load edge tables.";
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "LOADING-EDGE-TABLES-0";
   BOOST_LEAF_CHECK(LoadEdgeTables());
-  LOG(INFO) << "[worker-" << comm_spec_.worker_id()
-            << "] RSS after loading tables: " << get_rss_pretty();
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER
+      << "LOADING-EDGE-TABLES-100";
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after loading edge tables: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
 
-  LOG(INFO) << "Construct fragment.";
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-FRAGMENT-0";
   return this->ConstructFragment();
 }
 
@@ -147,6 +157,8 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadEdgeTables() {
           FlattenTableInfos(csc_edge_tables_with_label_[i]));
     }
   }
+  csr_edge_tables_with_label_.clear();
+  csc_edge_tables_with_label_.clear();
   edge_label_num_ = edge_labels_.size();
   return {};
 }
@@ -165,7 +177,6 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::ConstructFragment() {
       (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
       comm_spec_.local_num();
 
-  LOG(INFO) << "Init builder";
   BOOST_LEAF_CHECK(
       frag_builder.Init(comm_spec_.fid(), comm_spec_.fnum(),
                         std::move(vertex_tables_), std::move(csr_edge_tables_),
@@ -195,6 +206,7 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::distributeVertices() {
     auto chunk_num = GraphArchive::utils::GetVertexChunkNum(
         graph_info_->GetPrefix(), vertex_info);
     RETURN_GS_ERROR_IF_NOT_OK(chunk_num.status());
+    // distribute the vertex chunks for fragments
     int64_t bsize = chunk_num.value() / static_cast<int64_t>(comm_spec_.fnum());
     vertex_chunk_begin_of_frag_[label].resize(comm_spec_.fnum() + 1, 0);
     for (fid_t fid = 0; fid < comm_spec_.fnum(); ++fid) {
@@ -238,8 +250,34 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::constructVertexMap() {
   ThreadGroup tg(comm_spec_);
   auto shuffle_procedure = [&](const label_id_t label_id) -> Status {
     std::vector<std::shared_ptr<arrow::ChunkedArray>> shuffled_oid_array;
-    // TODO: id column is the primary key of the vertex info.
-    auto local_oid_array = vertex_tables_[label_id]->column(0);
+    auto& vertex_info =
+        graph_info_->GetVertexInfo(vertex_labels_[label_id]).value();
+    const auto& property_groups = vertex_info.GetPropertyGroups();
+    std::string primary_key;
+    for (const auto& pg : property_groups) {
+      for (const auto& prop : pg.GetProperties()) {
+        if (prop.is_primary) {
+          primary_key = prop.name;
+          break;
+        }
+      }
+      if (!primary_key.empty()) {
+        break;
+      }
+    }
+    if (primary_key.empty()) {
+
+      std::string msg = "primary key is not found in " +
+          vertex_labels_[label_id] + " property groups";
+      return Status::Invalid(msg);
+    }
+    auto local_oid_array =
+        vertex_tables_[label_id]->GetColumnByName(primary_key);
+    if (local_oid_array == nullptr) {
+      std::string msg = "primary key column " + primary_key +
+          " is not found in " + vertex_labels_[label_id] + " table";
+      return Status::Invalid(msg);
+    }
     RETURN_ON_ERROR(FragmentAllGatherArray(comm_spec_, local_oid_array,
                                            shuffled_oid_array));
     for (auto const& array : shuffled_oid_array) {
@@ -248,8 +286,8 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::constructVertexMap() {
     }
     return Status::OK();
   };
-  for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
-    tg.AddTask(shuffle_procedure, v_label);
+  for (label_id_t label_id = 0; label_id < vertex_label_num_; ++label_id) {
+    tg.AddTask(shuffle_procedure, label_id);
   }
   {
     Status status;
@@ -264,8 +302,6 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::constructVertexMap() {
   std::shared_ptr<Object> vm_object;
   VY_OK_OR_RAISE(vm_builder.Seal(client_, vm_object));
   vm_ptr_ = std::dynamic_pointer_cast<vertex_map_t>(vm_object);
-  VLOG(100) << "Constructing after constructing vertex map: "
-            << get_rss_pretty() << ", peak = " << get_peak_rss_pretty();
   return {};
 }
 
@@ -278,14 +314,14 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadVertexTableOfLabel(
   RETURN_GS_ERROR_IF_NOT_OK(maybe_vertex_info.status());
   auto& vertex_info = maybe_vertex_info.value();
   const auto& label = vertex_info.GetLabel();
-  label_id_t v_label = vertex_label_to_index_[label];
+  label_id_t label_id = vertex_label_to_index_[label];
   auto vertex_chunk_begin =
       vertex_chunk_begin_of_frag_[label][comm_spec_.fid()];
   auto vertex_chunk_num_of_fragment =
       vertex_chunk_begin_of_frag_[label][comm_spec_.fid() + 1] -
       vertex_chunk_begin_of_frag_[label][comm_spec_.fid()];
   auto chunk_size = vertex_info.GetChunkSize();
-  auto property_groups = vertex_info.GetPropertyGroups();
+  const auto& property_groups = vertex_info.GetPropertyGroups();
 
   table_vec_t pg_tables;
   int64_t thread_num =
@@ -294,7 +330,7 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadVertexTableOfLabel(
   std::vector<std::thread> threads(thread_num);
   int64_t batch_size =
       (vertex_chunk_num_of_fragment + thread_num - 1) / thread_num;
-  for (const auto& pg : vertex_info.GetPropertyGroups()) {
+  for (const auto& pg : property_groups) {
     table_vec_t vertex_chunk_tables(vertex_chunk_num_of_fragment);
     std::atomic<int64_t> cur_chunk_index(0);
     for (int64_t i = 0; i < thread_num; ++i) {
@@ -342,10 +378,10 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadVertexTableOfLabel(
   VY_OK_OR_RAISE(CastTableToSchema(concat_table, normalized_schema, table_out));
   auto metadata = std::make_shared<arrow::KeyValueMetadata>();
   metadata->Append("label", label);
-  metadata->Append("label_id", std::to_string(v_label));
+  metadata->Append("label_id", std::to_string(label_id));
   metadata->Append("type", PropertyGraphSchema::VERTEX_TYPE_NAME);
   metadata->Append("retain_oid", std::to_string(false));
-  vertex_tables_[v_label] = table_out->ReplaceSchemaMetadata(metadata);
+  vertex_tables_[label_id] = table_out->ReplaceSchemaMetadata(metadata);
   return {};
 }
 

@@ -89,9 +89,6 @@ boost::leaf::result<void> generate_csr_for_reused_edge_label(
         client, actual_edge_num[v_label]);
   }
 
-  VLOG(100) << "Start building the CSR ..." << get_rss_pretty()
-            << ", peak = " << get_peak_rss_pretty();
-
   std::vector<int64_t> chunk_offsets(num_chunks + 1, 0);
   for (int64_t i = 0; i < num_chunks; ++i) {
     chunk_offsets[i + 1] = chunk_offsets[i] + src_chunks[i]->length();
@@ -120,7 +117,8 @@ boost::leaf::result<void> generate_csr_for_reused_edge_label(
       },
       concurrency);
 
-  VLOG(100) << "Finish building the CSR ..." << get_rss_pretty()
+  VLOG(100) << "[frag-" << this->fid_
+            << "] RSS after building the CSR ..." << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
   return {};
 }
@@ -161,9 +159,6 @@ boost::leaf::result<void> generate_csr(
     }
   }
 
-  LOG(INFO) << "Start building the CSR ..." << get_rss_pretty()
-            << ", peak = " << get_peak_rss_pretty();
-
   std::vector<int64_t> chunk_offsets(num_chunks + 1, 0);
   for (int64_t i = 0; i < num_chunks; ++i) {
     chunk_offsets[i + 1] = chunk_offsets[i] + src_chunks[i]->length();
@@ -186,7 +181,8 @@ boost::leaf::result<void> generate_csr(
       },
       concurrency);
 
-  LOG(INFO) << "Finish building the CSR ..." << get_rss_pretty()
+  VLOG(100) << "[frag-" << this->fid_
+            << "] RSS after building the CSR ..." << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
   return {};
 }
@@ -194,9 +190,6 @@ boost::leaf::result<void> generate_csr(
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 vineyard::Status GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
     vineyard::Client& client) {
-  VLOG(100) << "Start building into vineyard: " << get_rss_pretty()
-            << ", peak: " << get_peak_rss_pretty();
-
   ThreadGroup tg;
   {
     auto fn = [this](Client* client) -> Status {
@@ -298,7 +291,8 @@ vineyard::Status GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
   this->set_oid_type(type_name<oid_t>());
   this->set_vid_type(type_name<vid_t>());
 
-  VLOG(100) << "Finish building into vineyard: " << get_rss_pretty()
+  VLOG(100) << "[frag-" << this->fid_
+      << "] RSS after building into vineyard: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
   return Status::OK();
@@ -320,11 +314,13 @@ boost::leaf::result<void> GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Init(
   vid_parser_.Init(this->fnum_, this->vertex_label_num_);
 
   BOOST_LEAF_CHECK(initVertices(std::move(vertex_tables)));
-  LOG(INFO) << "Finish initVertices ..." << get_rss_pretty()
+  VLOG(100) << "[frag-" << this->fid_
+            << "] RSS after constructing vertices: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
   BOOST_LEAF_CHECK(initEdges(std::move(csr_edge_tables),
                              std::move(csc_edge_tables), concurrency));
-  LOG(INFO) << "Finish initEdges ..." << get_rss_pretty()
+  VLOG(100) << "[frag-" << this->fid_
+            << "] RSS after constructing edges: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
   return {};
 }
@@ -422,8 +418,9 @@ GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
           ovg2l_maps_, concurrency, csc_edge_dst[i], pool);
     }
   }
-  VLOG(100) << "Init edges: after generate_local_id_list: " << get_rss_pretty()
-            << ", peak: " << get_peak_rss_pretty();
+  VLOG(100) << "[frag-" << this->fid_
+            << "] RSS after generating local_id_list: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
 
   oe_lists_.resize(this->vertex_label_num_);
   oe_offsets_lists_.resize(this->vertex_label_num_);
@@ -450,6 +447,7 @@ GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
     std::vector<std::shared_ptr<arrow::Int64Array>> sub_oe_offset_lists(
         this->vertex_label_num_);
     if (csr_edge_tables[e_label].flag) {
+      // reuse the offset array
       generate_csr_for_reused_edge_label<vid_t, eid_t>(
           client_, vid_parser_, std::move(csr_edge_src[e_label]),
           std::move(csr_edge_dst[e_label]), tvnums_, this->vertex_label_num_,
@@ -464,6 +462,7 @@ GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
     }
     if (this->directed_) {
       if (csc_edge_tables[e_label].flag) {
+        // reuse the offset array
         generate_csr_for_reused_edge_label<vid_t, eid_t>(
             client_, vid_parser_, std::move(csc_edge_dst[e_label]),
             std::move(csc_edge_src[e_label]), tvnums_, this->vertex_label_num_,
