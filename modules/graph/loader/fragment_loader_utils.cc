@@ -276,8 +276,6 @@ EdgeTableInfo FlattenTableInfos(const std::vector<EdgeTableInfo>& edge_tables) {
     property_tables.push_back(table.property_table);
   }
   auto adj_list_table = arrow::ConcatenateTables(adj_list_tables).ValueOrDie();
-  // auto offsets_array = parallel_prefix_sum_chunks(offsets,
-  // adj_list_table->num_rows());
   auto property_table = arrow::ConcatenateTables(property_tables).ValueOrDie();
   return EdgeTableInfo(adj_list_table, nullptr, property_table, 0, true);
 }
