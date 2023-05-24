@@ -947,13 +947,9 @@ file_glob_recurse(FILES_NEED_FORMAT DIRECTORIES      "src" "modules" "python" "t
                                     PATTERNS         ".*\\.(cc|cpp|h|hpp|vineyard-mod)$"
                                     EXCLUDE_PATTERNS ".*\\.vineyard.h$"
 )
-file_glob_recurse(FILES_NEED_LINT   DIRECTORIES      "src" "modules" "python" "test" "benchmark"
-                                    PATTERNS         ".*\\.(cc|cpp|h|hpp)$"
-                                    EXCLUDE_PATTERNS ".*\\.vineyard.h$"
-)
 
 # the `memcpy.h` is borrowed from external project
-list(REMOVE_ITEM FILES_NEED_LINT "${PROJECT_SOURCE_DIR}/src/common/memory/memcpy.h")
+list(REMOVE_ITEM FILES_NEED_FORMAT "${PROJECT_SOURCE_DIR}/src/common/memory/memcpy.h")
 
 add_custom_target(vineyard_clformat
         COMMAND clang-format --style=file -i ${FILES_NEED_FORMAT}
@@ -961,7 +957,7 @@ add_custom_target(vineyard_clformat
         VERBATIM)
 
 add_custom_target(vineyard_cpplint
-        COMMAND ${PROJECT_SOURCE_DIR}/misc/cpplint.py --root=vineyard ${FILES_NEED_LINT}
+        COMMAND ${PROJECT_SOURCE_DIR}/misc/cpplint.py --root=vineyard ${FILES_NEED_FORMAT}
         COMMENT "Running cpplint check."
         VERBATIM)
 

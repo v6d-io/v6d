@@ -139,11 +139,11 @@ jobs:
 
       - name: Upload latest docker image
         if: ${{ matrix.job == 'release' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
-        env:
-          # pre-publish to ghcr.io to avoid the "no basic auth credentials" error
-          IMG: ghcr.io/v6d-io/v6d/vineyard-operator:latest
         run: |
+          # pre-publish to ghcr.io to avoid the "no basic auth credentials" error
+          export IMG=ghcr.io/v6d-io/v6d/vineyard-operator:${{ steps.tag.outputs.TAG }}
           make -C k8s docker-build-push-multi-arch REGISTRY=${{ env.REGISTRY }} VERSION=${{ steps.tag.outputs.TAG }}
+          export IMG=ghcr.io/v6d-io/v6d/vineyard-operator:latest
           make -C k8s docker-build-push-multi-arch REGISTRY=${{ env.REGISTRY }} VERSION=latest
 
       - name: Generate the python and vineyardd image for tests
