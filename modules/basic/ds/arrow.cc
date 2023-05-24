@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "basic/ds/arrow.h"
+#include "basic/ds/arrow.h"  // NOLINT(build/include)
 
 #include <iostream>
 #include <memory>

@@ -14,10 +14,6 @@
 	path = thirdparty/nlohmann-json
 	url = https://github.com/nlohmann/json.git
 	shallow = true
-[submodule "thirdparty/ctti"]
-	path = thirdparty/ctti
-	url = https://github.com/Manu343726/ctti.git
-	shallow = true
 [submodule "thirdparty/mimalloc"]
 	path = thirdparty/mimalloc
 	url = https://github.com/microsoft/mimalloc.git

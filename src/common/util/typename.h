@@ -20,21 +20,21 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#if defined(__clang__)
+#define __THE_PRETTY_FUNCTION __PRETTY_FUNCTION__
+#elif defined(__GNUC__) && !defined(__clang__)
+#define __THE_PRETTY_FUNCTION __PRETTY_FUNCTION__
+#elif defined(_MSC_VER)
+#define __THE_PRETTY_FUNCTION __FUNCSIG__
+#else
+#error "No support for this compiler."
+#endif
+
 // See also: https://stackoverflow.com/a/55926503/5080177
 //
 #if defined(__GNUC__) && !defined(__llvm__) && !defined(__INTEL_COMPILER)
 #define __VINEYARD_GCC_VERSION \
   (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#endif
-
-#if defined(__VINEYARD_GCC_VERSION)
-#pragma GCC push_options
-#pragma GCC optimize("O0")
-#endif
-#include "ctti/detail/name_filters.hpp"
-#include "ctti/nameof.hpp"
-#if defined(__VINEYARD_GCC_VERSION)
-#pragma GCC pop_options
 #endif
 
 namespace vineyard {
@@ -54,8 +54,6 @@ inline const std::string typename_unpack_args() {
   return __type_name<T>() + "," + typename_unpack_args<U, Args...>();
 }
 
-#if defined(__VINEYARD_GCC_VERSION) && __VINEYARD_GCC_VERSION <= 90100
-
 #if defined(__clang__)
 #define __TYPENAME_FROM_FUNCTION_PREFIX \
   "const std::string vineyard::detail::__typename_from_function() [T = "
@@ -64,8 +62,13 @@ inline const std::string typename_unpack_args() {
 #define __TYPENAME_FROM_FUNCTION_PREFIX \
   "const string vineyard::detail::__typename_from_function() [with T = "
 #if defined(_GLIBCXX_USE_CXX11_ABI) && _GLIBCXX_USE_CXX11_ABI
+#if defined(__VINEYARD_GCC_VERSION) && __VINEYARD_GCC_VERSION <= 90100
 #define __TYPENAME_FROM_FUNCTION_SUFFIX \
   "; std::__cxx11::string = std::__cxx11::basic_string<char>]"
+#else
+#define __TYPENAME_FROM_FUNCTION_SUFFIX \
+  "; std::string = std::__cxx11::basic_string<char>]"
+#endif
 #else
 #define __TYPENAME_FROM_FUNCTION_SUFFIX \
   "; std::string = std::basic_string<char>]"
@@ -79,25 +82,19 @@ inline const std::string typename_unpack_args() {
 
 template <typename T>
 inline const std::string __typename_from_function() {
-  std::string name = CTTI_PRETTY_FUNCTION;
+  const std::string name = __THE_PRETTY_FUNCTION;
   return name.substr(__TYPENAME_FROM_FUNCTION_LEFT,
                      name.length() - (__TYPENAME_FROM_FUNCTION_LEFT - 1) -
                          sizeof(__TYPENAME_FROM_FUNCTION_SUFFIX));
 }
-#endif
 
 template <typename T>
 inline const std::string typename_impl(T const&) {
-#if defined(__VINEYARD_GCC_VERSION) && __VINEYARD_GCC_VERSION <= 90100
   return __typename_from_function<T>();
-#else
-  return ctti::nameof<T>().cppstring();
-#endif
 }
 
 template <template <typename...> class C, typename... Args>
 inline const std::string typename_impl(C<Args...> const&) {
-#if defined(__VINEYARD_GCC_VERSION) && __VINEYARD_GCC_VERSION <= 90100
   const auto fullname = __typename_from_function<C<Args...>>();
   const auto index = fullname.find('<');
   if (index == std::string::npos) {
@@ -105,18 +102,6 @@ inline const std::string typename_impl(C<Args...> const&) {
   }
   const auto class_name = fullname.substr(0, index);
   return class_name + "<" + typename_unpack_args<Args...>() + ">";
-#else
-  constexpr auto fullname = ctti::pretty_function::type<C<Args...>>();
-  constexpr const char* index = ctti::detail::find(fullname, "<");
-  if (index == fullname.end()) {
-    return fullname(CTTI_VALUE_PRETTY_FUNCTION_LEFT - 1,
-                    fullname.end() - fullname.begin() - 1)
-        .cppstring();
-  }
-  constexpr auto class_name =
-      fullname(CTTI_VALUE_PRETTY_FUNCTION_LEFT - 1, index - fullname.begin());
-  return class_name.cppstring() + "<" + typename_unpack_args<Args...>() + ">";
-#endif
 }
 
 }  // namespace detail
