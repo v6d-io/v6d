@@ -312,14 +312,6 @@ macro(find_boost)
     add_compile_options(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
 endmacro()
 
-macro(find_ctti)
-    set(MESSAGE_QUIET ON)
-    set(CMAKE_WARN_DEPRECATED OFF CACHE BOOL "" FORCE)
-    add_subdirectory_static(thirdparty/ctti)
-    unset(MESSAGE_QUIET)
-    set(CMAKE_WARN_DEPRECATED ON CACHE BOOL "" FORCE)
-endmacro()
-
 macro(find_etcd_cpp_apiv3)
     if(USE_EXTERNAL_ETCD_LIBS)
         find_package(etcd-cpp-api 0.2.9 QUIET)
@@ -501,7 +493,6 @@ endmacro()
 
 macro(find_common_libraries)
     find_apache_arrow()
-    find_ctti()
     find_gflags()
     find_glog()
     find_libcuckoo()
@@ -740,11 +731,6 @@ if(BUILD_VINEYARD_CLIENT)
     )
     set_target_properties(vineyard_internal_registry PROPERTIES CXX_VISIBILITY_PRESET "hidden")
 
-    target_include_directories(vineyard_internal_registry PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
-        $<INSTALL_INTERFACE:include>
-    )
-
     # build the vineyard client library
     file(GLOB CLIENT_SRC_FILES "src/client/*.cc"
                                "src/client/ds/*.cc"
@@ -774,11 +760,6 @@ if(BUILD_VINEYARD_CLIENT)
     if(${LIBUNWIND_FOUND})
         target_link_libraries(vineyard_client PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()
-
-    target_include_directories(vineyard_client PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/ctti/include>
-        $<INSTALL_INTERFACE:include/vineyard/contrib>
-    )
 
     if(BUILD_VINEYARD_CLIENT_VERBOSE)
         target_compile_options(vineyard_client PRIVATE -DWITH_VERBOSE)
@@ -813,12 +794,6 @@ if(BUILD_VINEYARD_CLIENT)
     install_vineyard_target(vineyard_client)
     install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/client")
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_client)
-
-    install(DIRECTORY thirdparty/ctti/include/ctti
-            DESTINATION include/vineyard/contrib  # target directory
-            FILES_MATCHING                        # install only matched files
-            PATTERN "*.hpp"                       # select C++ template header files
-    )
 endif()
 
 if(BUILD_VINEYARD_PYTHON_BINDINGS)
