@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_BASIC_DS_HASHMAP_MOD_H_
-#define MODULES_BASIC_DS_HASHMAP_MOD_H_
+#ifndef MODULES_BASIC_DS_HASHMAP_VINEYARD_MOD_
+#define MODULES_BASIC_DS_HASHMAP_VINEYARD_MOD_
 
 #include <algorithm>
 #include <functional>
@@ -325,6 +325,6 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
 
 }  // namespace vineyard
 
-#endif  // MODULES_BASIC_DS_HASHMAP_MOD_H_
+#endif  // MODULES_BASIC_DS_HASHMAP_VINEYARD_MOD_
 
 // vim: syntax=cpp

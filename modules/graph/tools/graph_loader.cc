@@ -28,6 +28,7 @@
 #include "common/util/functions.h"
 #include "common/util/json.h"
 #include "common/util/logging.h"
+#include "common/util/version.h"
 
 #include "graph/fragment/arrow_fragment_base.h"
 #include "graph/fragment/arrow_fragment_group.h"
@@ -442,6 +443,8 @@ static void loading_vineyard_graph(
 
 int main(int argc, char** argv) {
   if (argc < 3) {
+    printf("vineyard-graph-loader version %s\n\n",
+           vineyard::vineyard_version());
     printf(R"r(Usage: loading vertices and edges as vineyard graph.
 
     -     ./vineyard-graph-loader [--socket <vineyard-ipc-socket>] \

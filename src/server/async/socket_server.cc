@@ -94,6 +94,9 @@ bool SocketConnection::Stop() {
 
 void SocketConnection::doReadHeader() {
   auto self(shared_from_this());
+  if (!running_.load()) {  // don't read if stopped
+    return;
+  }
   asio::async_read(socket_, asio::buffer(&read_msg_header_, sizeof(size_t)),
                    [this, self](boost::system::error_code ec, std::size_t) {
                      if (!ec && running_.load()) {
