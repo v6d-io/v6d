@@ -43,17 +43,17 @@ void grin_destroy_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
 
 size_t grin_get_adjacent_list_size(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    if (_al->is_simple) return _al->end_ - _al->begin_;
-    if (_al->offsets.empty()) __grin_init_complex_adjacent_list(static_cast<GRIN_GRAPH_T*>(g)->g, _al);
+    if (likely(_al->is_simple)) return _al->end_ - _al->begin_;
+    if (unlikely(_al->offsets.empty())) __grin_init_complex_adjacent_list(static_cast<GRIN_GRAPH_T*>(g)->g, _al);
     return _al->offsets[_al->etype].first;
 }
 
 GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
     auto nbr = _al->begin_ + idx;
-    if (nbr < _al->end_) return nbr->vid;
-    if (_al->is_simple) return GRIN_NULL_VERTEX;
-    if (_al->offsets.empty()) __grin_init_complex_adjacent_list(static_cast<GRIN_GRAPH_T*>(g)->g, _al);
+    if (likely(nbr < _al->end_)) return nbr->vid;
+    if (likely(_al->is_simple)) return GRIN_NULL_VERTEX;
+    if (unlikely(_al->offsets.empty())) __grin_init_complex_adjacent_list(static_cast<GRIN_GRAPH_T*>(g)->g, _al);
     for (unsigned i = 0; i < _al->etype; ++i) {
         if (idx < _al->offsets[i+1].first) {
             nbr = _al->offsets[i].second + idx - _al->offsets[i].first;
@@ -66,7 +66,7 @@ GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIS
 GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
     auto nbr = _al->begin_ + idx;
-    if (nbr < _al->end_) {
+    if (likely(nbr < _al->end_)) {
         auto e = new GRIN_EDGE_T();        
         e->dir = _al->dir;
         e->etype = _al->etype;
@@ -80,8 +80,8 @@ GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, 
         }
         return e;
     }
-    if (_al->is_simple) return GRIN_NULL_EDGE;
-    if (_al->offsets.empty()) __grin_init_complex_adjacent_list(static_cast<GRIN_GRAPH_T*>(g)->g, _al);
+    if (likely(_al->is_simple)) return GRIN_NULL_EDGE;
+    if (unlikely(_al->offsets.empty())) __grin_init_complex_adjacent_list(static_cast<GRIN_GRAPH_T*>(g)->g, _al);
     for (unsigned i = 0; i < _al->etype; ++i) {
         if (idx < _al->offsets[i+1].first) {
             nbr = _al->offsets[i].second + idx - _al->offsets[i].first;
@@ -132,7 +132,7 @@ void grin_get_next_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR 
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
     _ali->current_++;
     if (_ali->current_ < _ali->end_) return;
-    if (_ali->is_simple) {
+    if (likely(_ali->is_simple)) {
         _ali->etype_current++;
         return;
     }

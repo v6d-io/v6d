@@ -30,6 +30,7 @@ GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH g) {
         __grin_init_simple_vertex_list(_g, vl);
     } else {
         vl->is_simple = false;
+        __grin_init_complex_vertex_list(_g, vl);
     }
     return vl;
 }
@@ -42,16 +43,14 @@ void grin_destroy_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
 size_t grin_get_vertex_list_size(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     if (_vl->is_simple) return _vl->end_ - _vl->begin_;
-    if (_vl->offsets.empty()) __grin_init_complex_vertex_list(static_cast<GRIN_GRAPH_T*>(g)->g, _vl);
     return _vl->offsets[_vl->vtype].first;
 }
 
 GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t idx) {
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     auto v = _vl->begin_ + idx;
-    if (v < _vl->end_) return v;
-    if (_vl->is_simple) return GRIN_NULL_VERTEX;
-    if (_vl->offsets.empty()) __grin_init_complex_vertex_list(static_cast<GRIN_GRAPH_T*>(g)->g, _vl);
+    if (likely(v < _vl->end_)) return v;
+    if (likely(_vl->is_simple)) return GRIN_NULL_VERTEX;
     for (unsigned i = 0; i < _vl->vtype; ++i) {
         if (idx < _vl->offsets[i+1].first) {
             v = _vl->offsets[i].second + idx - _vl->offsets[i].first;
@@ -89,12 +88,11 @@ void grin_destroy_vertex_list_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) 
 void grin_get_next_vertex_list_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vli) {
     auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
     _vli->current_++;
-    if (_vli->current_ < _vli->end_) return;
-    if (_vli->is_simple) {
+    if (likely(_vli->current_ < _vli->end_)) return;
+    if (likely(_vli->is_simple)) {
         _vli->vtype_current++;
         return;
     }
-
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     _GRIN_GRAPH_T::vertex_range_t vr;
     _vli->vtype_current++;
