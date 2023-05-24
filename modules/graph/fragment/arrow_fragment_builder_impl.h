@@ -192,7 +192,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
     start_ids[i] = vid_parser_.GenerateId(0, i, ivnums[i]);
   }
 
-  VLOG(100) << "Add new vertices and edges: before init the new vertex map: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new vertices and edges: before init the new vertex map: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   // Make a copy of ovg2l map, since we need to add some extra outer vertices
@@ -205,7 +206,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
     }
   }
 
-  VLOG(100) << "After init the new vertex map: " << get_rss_pretty()
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] After init the new vertex map: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
   std::vector<std::shared_ptr<vid_array_t>> extra_ovgid_lists(
@@ -216,8 +218,10 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
   generate_outer_vertices_map(vid_parser_, fid_, total_vertex_label_num, srcs,
                               dsts, start_ids, ovg2l_maps, extra_ovgid_lists);
 
-  VLOG(100) << "Add new vertices and edges: after generate_outer_vertices_map: "
-            << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
+  VLOG(100)
+      << "[Frag-" << this->fid_
+      << "] Add new vertices and edges: after generate_outer_vertices_map: "
+      << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   std::vector<std::shared_ptr<vid_vineyard_builder_t>> ovgid_lists(
       total_vertex_label_num);
@@ -265,7 +269,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
     generate_local_id_list(vid_parser_, std::move(dsts[i]), fid_, ovg2l_maps,
                            concurrency, edge_dst[i], pool);
   }
-  VLOG(100) << "Add new vertices and edges: after generate_local_id_list: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new vertices and edges: after generate_local_id_list: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   // Generate CSR vector of new edge tables.
@@ -384,7 +389,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
     }
   }
 
-  VLOG(100) << "Add new vertices and edges: after generate CSR: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new vertices and edges: after generate CSR: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
@@ -530,7 +536,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexEdgeLabels(
     }
   }
 
-  VLOG(100) << "Add new vertices and edges: after building into vineyard: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new vertices and edges: after building into vineyard: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   // wait all
@@ -574,7 +581,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
   ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
   builder.set_vertex_label_num_(total_vertex_label_num);
 
-  VLOG(100) << "Add new vertices: start: " << get_rss_pretty()
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new vertices: start: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
   auto schema = schema_;
@@ -680,7 +688,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewVertexLabels(
     }
   }
 
-  VLOG(100) << "Add new vertices: after building into vineyard: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new vertices: after building into vineyard: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   builder.set_vm_ptr_(vm_ptr);
@@ -713,7 +722,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
                              edge_tables[label]->RemoveColumn(0));
   }
 
-  VLOG(100) << "Add new edges: before init the new vertex map: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new edges: before init the new vertex map: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   // Make a copy of ovg2l map, since we need to add some extra outer vertices
@@ -726,7 +736,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
     }
   }
 
-  VLOG(100) << "Add new edges: after init the new vertex map: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new edges: after init the new vertex map: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   std::vector<vid_t> start_ids(vertex_label_num_);
@@ -740,7 +751,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
   generate_outer_vertices_map(vid_parser_, fid_, vertex_label_num_, srcs, dsts,
                               start_ids, ovg2l_maps, extra_ovgid_lists);
 
-  VLOG(100) << "Init edges: after generate_outer_vertices_map: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Init edges: after generate_outer_vertices_map: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   std::vector<vid_t> ovnums(vertex_label_num_), tvnums(vertex_label_num_);
@@ -823,7 +835,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
     generate_local_id_list(vid_parser_, std::move(dsts[i]), fid_, ovg2l_maps,
                            concurrency, edge_dst[i], pool);
   }
-  VLOG(100) << "Add new edges: after generate_local_id_list: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new edges: after generate_local_id_list: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   // Generate CSR vector of new edge tables.
@@ -880,7 +893,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
     }
   }
 
-  VLOG(100) << "Add new edges: after generate CSR: " << get_rss_pretty()
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new edges: after generate CSR: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
   ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> builder(*this);
@@ -1005,7 +1019,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
   }
   tg.TakeResults();
 
-  VLOG(100) << "Add new edges: after building into vineyard: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Add new edges: after building into vineyard: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
   std::shared_ptr<Object> fragment_object;
   VY_OK_OR_RAISE(builder.Seal(client, fragment_object));
@@ -1015,7 +1030,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>::AddNewEdgeLabels(
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
 vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
     vineyard::Client& client) {
-  VLOG(100) << "Start building into vineyard: " << get_rss_pretty()
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Start building into vineyard: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
   ThreadGroup tg;
@@ -1115,7 +1131,8 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
   this->set_oid_type(type_name<oid_t>());
   this->set_vid_type(type_name<vid_t>());
 
-  VLOG(100) << "Finish building into vineyard: " << get_rss_pretty()
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Finish building into vineyard: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
   return Status::OK();
@@ -1137,13 +1154,16 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Init(
 
   vid_parser_.Init(this->fnum_, this->vertex_label_num_);
 
-  VLOG(100) << "Init: start init vertices: " << get_rss_pretty()
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Init: start init vertices: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
   BOOST_LEAF_CHECK(initVertices(std::move(vertex_tables)));
-  VLOG(100) << "Init: start init edges: " << get_rss_pretty()
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Init: start init edges: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
   BOOST_LEAF_CHECK(initEdges(std::move(edge_tables), concurrency));
-  VLOG(100) << "Init: finish init vertices and edges: " << get_rss_pretty()
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Init: finish init vertices and edges: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
   return {};
 }
@@ -1186,7 +1206,7 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
     edge_tables_[label] = table;
   }
 
-  VLOG(100) << "Init edges: " << get_rss_pretty()
+  VLOG(100) << "[Frag-" << this->fid_ << "] Init edges: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
   std::vector<vid_t> start_ids(this->vertex_label_num_);
@@ -1196,7 +1216,8 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
   generate_outer_vertices_map<vid_t>(vid_parser_, this->fid_,
                                      this->vertex_label_num_, srcs, dsts,
                                      start_ids, ovg2l_maps_, ovgid_lists_);
-  VLOG(100) << "Init edges: after generate_outer_vertices_map: "
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Init edges: after generate_outer_vertices_map: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   std::vector<std::vector<std::shared_ptr<vid_array_t>>> edge_src, edge_dst;
@@ -1219,8 +1240,9 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
     generate_local_id_list(vid_parser_, std::move(dsts[i]), this->fid_,
                            ovg2l_maps_, concurrency, edge_dst[i], pool);
   }
-  VLOG(100) << "Init edges: after generate_local_id_list: " << get_rss_pretty()
-            << ", peak: " << get_peak_rss_pretty();
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Init edges: after generate_local_id_list: "
+            << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
   oe_lists_.resize(this->vertex_label_num_);
   oe_offsets_lists_.resize(this->vertex_label_num_);
@@ -1271,7 +1293,8 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
       oe_offsets_lists_[v_label][e_label] = sub_oe_offset_lists[v_label];
     }
   }
-  VLOG(100) << "Init edges: after generate CSR: " << get_rss_pretty()
+  VLOG(100) << "[Frag-" << this->fid_
+            << "] Init edges: after generate CSR: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
   return {};

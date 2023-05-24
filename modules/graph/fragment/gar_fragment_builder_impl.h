@@ -116,10 +116,6 @@ boost::leaf::result<void> generate_csr_for_reused_edge_label(
         dst_chunks[chunk_index].reset();
       },
       concurrency);
-
-  VLOG(100) << "[frag-" << this->fid_
-            << "] RSS after building the CSR ..." << get_rss_pretty()
-            << ", peak = " << get_peak_rss_pretty();
   return {};
 }
 
@@ -181,9 +177,6 @@ boost::leaf::result<void> generate_csr(
       },
       concurrency);
 
-  VLOG(100) << "[frag-" << this->fid_
-            << "] RSS after building the CSR ..." << get_rss_pretty()
-            << ", peak = " << get_peak_rss_pretty();
   return {};
 }
 
@@ -292,7 +285,7 @@ vineyard::Status GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::Build(
   this->set_vid_type(type_name<vid_t>());
 
   VLOG(100) << "[frag-" << this->fid_
-      << "] RSS after building into vineyard: " << get_rss_pretty()
+            << "] RSS after building into vineyard: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
   return Status::OK();
@@ -477,6 +470,9 @@ GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
             csr_edge_tables[e_label].property_table->num_rows());
       }
     }
+
+    VLOG(100) << "[frag-" << this->fid_ << "] RSS after building the CSR ..."
+              << get_rss_pretty() << ", peak = " << get_peak_rss_pretty();
 
     for (label_id_t v_label = 0; v_label < this->vertex_label_num_; ++v_label) {
       if (this->directed_) {

@@ -55,8 +55,8 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::GARFragmentLoader(
   // Load graph info.
   auto maybe_graph_info = GraphArchive::GraphInfo::Load(graph_info_yaml);
   if (!maybe_graph_info.status().ok()) {
-    LOG(ERROR) << "Failed to load graph info from " << graph_info_yaml <<
-        ", error: " << maybe_graph_info.status().message();
+    LOG(ERROR) << "Failed to load graph info from " << graph_info_yaml
+               << ", error: " << maybe_graph_info.status().message();
   }
   graph_info_ = std::make_shared<GraphArchive::GraphInfo>(
       std::move(maybe_graph_info.value()));
@@ -71,8 +71,8 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadFragment() {
   // Load vertex tables.
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "LOADING-VERTEX-TABLES-0";
   BOOST_LEAF_CHECK(LoadVertexTables());
-  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER
-      << "LOADING-VERTEX-TABLES-100";
+  LOG_IF(INFO, !comm_spec_.worker_id())
+      << MARKER << "LOADING-VERTEX-TABLES-100";
   VLOG(100) << "[worker-" << comm_spec_.worker_id()
             << "] RSS after loading vertex tables: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
@@ -86,8 +86,7 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadFragment() {
   // Load edge tables.
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "LOADING-EDGE-TABLES-0";
   BOOST_LEAF_CHECK(LoadEdgeTables());
-  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER
-      << "LOADING-EDGE-TABLES-100";
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "LOADING-EDGE-TABLES-100";
   VLOG(100) << "[worker-" << comm_spec_.worker_id()
             << "] RSS after loading edge tables: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
@@ -266,16 +265,16 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::constructVertexMap() {
       }
     }
     if (primary_key.empty()) {
-
       std::string msg = "primary key is not found in " +
-          vertex_labels_[label_id] + " property groups";
+                        vertex_labels_[label_id] + " property groups";
       return Status::Invalid(msg);
     }
     auto local_oid_array =
         vertex_tables_[label_id]->GetColumnByName(primary_key);
     if (local_oid_array == nullptr) {
       std::string msg = "primary key column " + primary_key +
-          " is not found in " + vertex_labels_[label_id] + " table";
+                        " is not found in " + vertex_labels_[label_id] +
+                        " table";
       return Status::Invalid(msg);
     }
     RETURN_ON_ERROR(FragmentAllGatherArray(comm_spec_, local_oid_array,

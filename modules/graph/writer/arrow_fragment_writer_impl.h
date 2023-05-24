@@ -383,13 +383,14 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::writeEdgeImpl(
     }
     if (comm_spec_.worker_id() == 0) {
       // write vertex number
-      auto st = writer.WriteVerticesNum(frag_->GetVertexMap()->GetTotalNodesNum(main_label_id));
+      auto st = writer.WriteVerticesNum(
+          frag_->GetVertexMap()->GetTotalNodesNum(main_label_id));
       if (!st.ok()) {
         return Status::IOError(
-          "GAR error: " + std::to_string(static_cast<int>(st.code())) + ", " +
-          st.message());
+            "GAR error: " + std::to_string(static_cast<int>(st.code())) + ", " +
+            st.message());
+      }
     }
-  }
     return Status::OK();
   };
 
