@@ -28,6 +28,7 @@ GRIN_VERTEX_LIST grin_select_master_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LI
     fvl->vtype = _vl->vtype;
     fvl->is_simple = _vl->is_simple;
     if (fvl->is_simple) __grin_init_simple_vertex_list(_g, fvl);
+    else __grin_init_complex_vertex_list(_g, fvl);
     return fvl;
 }
 
@@ -40,6 +41,7 @@ GRIN_VERTEX_LIST grin_select_mirror_for_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LI
     fvl->vtype = _vl->vtype;
     fvl->is_simple = _vl->is_simple;
     if (fvl->is_simple) __grin_init_simple_vertex_list(_g, fvl);
+    else __grin_init_complex_vertex_list(_g, fvl);
     return fvl;
 }
 #endif

@@ -28,6 +28,6 @@ size_t grin_get_position_of_vertex_from_sorted_list(GRIN_GRAPH g, GRIN_VERTEX_LI
     if (likely(_vl->is_simple)) return v - _vl->begin_;
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     auto vtype = _cache->id_parser.GetLabelId(v);
-    return v - _vl->offsets[vtype].second;
+    return v - _vl->offsets[vtype].second + _vl->offsets[vtype].first;
 }
 #endif

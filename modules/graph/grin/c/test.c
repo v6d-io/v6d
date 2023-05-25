@@ -668,18 +668,18 @@ void test_property_edge_property_value(int argc, char** argv) {
 #else
         if (dt == Int64) {
           long long int pv =
-              grin_get_edge_property_value_of_int64(g, ept, e, ep);
+              grin_get_edge_property_value_of_int64(g, e, ep);
           long long int rv = grin_get_int64_from_row(g, row, k);
           printf("ep_id %u e%zu %s value: %lld %lld\n", id, j, ep_name, pv, rv);
         } else if (dt == String) {
           const char* pv =
-              grin_get_edge_property_value_of_string(g, ept, e, ep);
+              grin_get_edge_property_value_of_string(g, e, ep);
           const char* rv = grin_get_string_from_row(g, row, k);
           printf("ep_id %u e%zu %s value: %s %s\n", id, j, ep_name, pv, rv);
           grin_destroy_string_value(g, pv);
           grin_destroy_string_value(g, rv);
         } else if (dt == Double) {
-          double pv = grin_get_edge_property_value_of_double(g, ept, e, ep);
+          double pv = grin_get_edge_property_value_of_double(g, e, ep);
           double rv = grin_get_double_from_row(g, row, k);
           printf("ep_id %u e%zu %s value: %f %f\n", id, j, ep_name, pv, rv);
         }
@@ -1069,6 +1069,61 @@ void test_topology_adjacent_list(int argc, char** argv, GRIN_DIRECTION dir) {
   grin_destroy_graph(g);
 }
 
+void test_index_order(int argc, char** argv) {
+  printf("+++++++++++++++++++++ Test index/order +++++++++++++++++++++\n");
+  GRIN_GRAPH g = get_graph(argc, argv);
+
+  GRIN_VERTEX_LIST vl = grin_get_vertex_list(g);
+  size_t vl_sz = grin_get_vertex_list_size(g, vl);
+  for (size_t i = 0; i < vl_sz; ++i) {
+    GRIN_VERTEX v = grin_get_vertex_from_list(g, vl, i);
+    size_t p = grin_get_position_of_vertex_from_sorted_list(g, vl, v);
+    if (p != i) {
+      printf("vertex position not match\n");
+    }
+    grin_destroy_vertex(g, v);
+  }
+  printf("%zu vertices checked\n", vl_sz);
+
+#ifdef GRIN_ENABLE_GRAPH_PARTITION
+  GRIN_VERTEX_LIST mvl = grin_select_master_for_vertex_list(g, vl);
+  size_t mvl_sz = grin_get_vertex_list_size(g, mvl);
+  for (size_t i = 0; i < mvl_sz; ++i) {
+    GRIN_VERTEX v = grin_get_vertex_from_list(g, mvl, i);
+    size_t p = grin_get_position_of_vertex_from_sorted_list(g, mvl, v);
+    if (p != i) {
+      printf("vertex position not match\n");
+    }
+    grin_destroy_vertex(g, v);
+  }
+  printf("%zu vertices checked\n", mvl_sz);
+  grin_destroy_vertex_list(g, mvl);
+#endif
+
+  GRIN_VERTEX_TYPE vtype = grin_get_vertex_type_by_name(g, "person");
+  GRIN_VERTEX_LIST svl = grin_select_type_for_vertex_list(g, vtype, vl);
+  size_t svl_sz = grin_get_vertex_list_size(g, svl);
+  for (size_t i = 0; i < svl_sz; ++i) {
+    GRIN_VERTEX v = grin_get_vertex_from_list(g, svl, i);
+    size_t p = grin_get_position_of_vertex_from_sorted_list(g, svl, v);
+    if (p != i) {
+      printf("vertex position not match\n");
+    }
+    grin_destroy_vertex(g, v);
+  }
+  printf("%zu vertices checked\n", svl_sz);
+  grin_destroy_vertex_list(g, svl);
+
+  grin_destroy_vertex_list(g, vl);
+  grin_destroy_graph(g);
+}
+
+void test_index(int argc, char** argv) {
+#ifdef GRIN_ENABLE_VERTEX_LIST_ARRAY
+  test_index_order(argc, argv);
+#endif
+}
+
 void test_topology(int argc, char** argv) {
   test_topology_vertex_list(argc, argv);
   test_topology_adjacent_list(argc, argv, OUT);
@@ -1079,5 +1134,6 @@ int main(int argc, char** argv) {
   test_property(argc, argv);
   test_partition(argc, argv);
   test_topology(argc, argv);
+  test_index(argc, argv);
   return 0;
 }

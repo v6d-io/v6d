@@ -163,43 +163,6 @@ GRIN_VERTEX_TYPE grin_get_vertex_type_from_property(GRIN_GRAPH g, GRIN_VERTEX_PR
 }
 #endif
 
-#if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_TRAIT_CONST_VALUE_PTR)
-const void* grin_get_vertex_property_value(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    auto result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return NULL;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    auto _dt = _g->schema().GetVertexPropertyType(vtype, vprop);
-    auto dt = ArrowToDataType(_dt);
-    switch (dt) {
-    case GRIN_DATATYPE::Int32:
-        return static_cast<const int32_t*>(result);
-    case GRIN_DATATYPE::UInt32:
-        return static_cast<const uint32_t*>(result);
-    case GRIN_DATATYPE::Int64:
-        return static_cast<const int64_t*>(result);
-    case GRIN_DATATYPE::UInt64:
-        return static_cast<const uint64_t*>(result);
-    case GRIN_DATATYPE::Float:
-        return static_cast<const float*>(result);
-    case GRIN_DATATYPE::Double:
-        return static_cast<const double*>(result);
-    case GRIN_DATATYPE::String:
-        return static_cast<const std::string*>(result)->c_str();
-    case GRIN_DATATYPE::Date32:
-        return new int32_t(*static_cast<const int32_t*>(result));
-    case GRIN_DATATYPE::Time32:
-        return new int32_t(*static_cast<const int32_t*>(result));
-    case GRIN_DATATYPE::Timestamp64:
-        return new int64_t(*static_cast<const int64_t*>(result));
-    default:
-        grin_error_code = GRIN_ERROR_CODE::UNKNOWN_DATATYPE;
-        return NULL;
-    }
-}
-#endif
-
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
 bool grin_equal_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep1, GRIN_EDGE_PROPERTY ep2) {
@@ -276,42 +239,5 @@ long long int grin_get_edge_property_value_of_timestamp64(GRIN_GRAPH g, GRIN_EDG
 
 GRIN_EDGE_TYPE grin_get_edge_type_from_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
     return _grin_get_type_from_property(ep);
-}
-#endif
-
-#if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_TRAIT_CONST_VALUE_PTR)
-const void* grin_get_edge_property_value(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return NULL;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    unsigned etype = _grin_get_type_from_property(ep);
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    auto _dt = _g->schema().GetEdgePropertyType(etype, eprop);
-    auto dt = ArrowToDataType(_dt);
-    switch (dt) {
-    case GRIN_DATATYPE::Int32:
-        return static_cast<const int32_t*>(result);
-    case GRIN_DATATYPE::UInt32:
-        return static_cast<const uint32_t*>(result);
-    case GRIN_DATATYPE::Int64:
-        return static_cast<const int64_t*>(result);
-    case GRIN_DATATYPE::UInt64:
-        return static_cast<const uint64_t*>(result);
-    case GRIN_DATATYPE::Float:
-        return static_cast<const float*>(result);
-    case GRIN_DATATYPE::Double:
-        return static_cast<const double*>(result);
-    case GRIN_DATATYPE::String:
-        return static_cast<const std::string*>(result)->c_str();
-    case GRIN_DATATYPE::Date32:
-        return static_cast<const int32_t*>(result);
-    case GRIN_DATATYPE::Time32:
-        return static_cast<const int32_t*>(result);
-    case GRIN_DATATYPE::Timestamp64:
-        return static_cast<const int64_t*>(result);
-    default:
-        grin_error_code = GRIN_ERROR_CODE::UNKNOWN_DATATYPE;
-        return NULL;
-    }
 }
 #endif
