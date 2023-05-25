@@ -1,4 +1,15 @@
 [tool.black]
 line-length = 88
-exclude = '.*\/(\.git|benchmark|build|dist|misc|python\-libs|thirdparty)\/.*'
+exclude = '''
+(
+    .*\/\.git\/.*
+    | .*\/benchmark\/.*
+    | .*\/build\/.*
+    | .*\/dist\/.*
+    | .*\/misc\/.*
+    | .*\/python\-libs\/.*
+    | .*\/kedro\-starters\/.*
+    | .*\/thirdparty\/.*
+)
+'''
 skip-string-normalization = true
