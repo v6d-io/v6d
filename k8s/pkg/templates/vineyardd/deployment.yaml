@@ -53,7 +53,11 @@ spec:
             sleep 1;
             /usr/local/bin/vineyardd
             --sync_crds {{ .Spec.Vineyard.SyncCRDs }}
+            {{- if .Spec.Volume.MountPath }}
+            --socket {{ .Spec.Volume.MountPath }}/vineyard.sock
+            {{- else }}
             --socket /var/run/vineyard.sock
+            {{- end }}
             --size {{ .Spec.Vineyard.Size }}
             {{- if .Spec.Vineyard.ReserveMemory }}
             --reserve_memory
@@ -122,7 +126,11 @@ spec:
             exec:
               command:
               - ls
+              {{- if .Spec.Volume.MountPath }}
+              - {{ .Spec.Volume.MountPath }}/vineyard.sock
+              {{- else }}
               - /var/run/vineyard.sock
+              {{- end }}
           volumeMounts:
           {{- if .Spec.Volume.MountPath }}
           - name: vineyard-socket
