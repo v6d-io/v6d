@@ -53,7 +53,8 @@ struct InputTable {
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
           template <typename OID_T_ = typename InternalType<OID_T>::type,
                     typename VID_T_ = VID_T>
-          class VERTEX_MAP_T = ArrowVertexMap, bool COMPACT = false>
+          class VERTEX_MAP_T = ArrowVertexMap,
+          bool COMPACT = false>
 class BasicEVFragmentLoader {
   static constexpr int id_column = 0;
   static constexpr int src_column = 0;

@@ -19,18 +19,22 @@ namespace vineyard {
 
 template class ArrowFragmentLoader<int64_t, uint64_t, ArrowVertexMap, false>;
 
-template class ArrowFragmentLoader<int64_t, uint64_t, ArrowLocalVertexMap, false>;
+template class ArrowFragmentLoader<int64_t, uint64_t, ArrowLocalVertexMap,
+                                   false>;
 
 template class ArrowFragmentLoader<int64_t, uint32_t, ArrowVertexMap, false>;
 
-template class ArrowFragmentLoader<int64_t, uint32_t, ArrowLocalVertexMap, false>;
+template class ArrowFragmentLoader<int64_t, uint32_t, ArrowLocalVertexMap,
+                                   false>;
 
 template class ArrowFragmentLoader<int64_t, uint64_t, ArrowVertexMap, true>;
 
-template class ArrowFragmentLoader<int64_t, uint64_t, ArrowLocalVertexMap, true>;
+template class ArrowFragmentLoader<int64_t, uint64_t, ArrowLocalVertexMap,
+                                   true>;
 
 template class ArrowFragmentLoader<int64_t, uint32_t, ArrowVertexMap, true>;
 
-template class ArrowFragmentLoader<int64_t, uint32_t, ArrowLocalVertexMap, true>;
+template class ArrowFragmentLoader<int64_t, uint32_t, ArrowLocalVertexMap,
+                                   true>;
 
 }  // namespace vineyard

@@ -134,12 +134,12 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::LoadFragment(
 
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
-boost::leaf::result<ObjectID>
-ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::LoadFragmentAsFragmentGroup() {
+boost::leaf::result<ObjectID> ArrowFragmentLoader<
+    OID_T, VID_T, VERTEX_MAP_T, COMPACT>::LoadFragmentAsFragmentGroup() {
   BOOST_LEAF_AUTO(frag_id, LoadFragment());
-  auto frag =
-      std::dynamic_pointer_cast<ArrowFragment<OID_T, VID_T, vertex_map_t, COMPACT>>(
-          client_.GetObject(frag_id));
+  auto frag = std::dynamic_pointer_cast<
+      ArrowFragment<OID_T, VID_T, vertex_map_t, COMPACT>>(
+      client_.GetObject(frag_id));
   if (frag == nullptr) {
     RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
                     "fragment is null, means it is failed to be constructed");
@@ -193,9 +193,9 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPartitioner() {
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID>
-ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::LoadFragmentAsFragmentGroup(
-    const std::vector<std::string>& efiles,
-    const std::vector<std::string>& vfiles) {
+ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::
+    LoadFragmentAsFragmentGroup(const std::vector<std::string>& efiles,
+                                const std::vector<std::string>& vfiles) {
   this->efiles_ = efiles;
   this->vfiles_ = vfiles;
   return this->LoadFragmentAsFragmentGroup();
@@ -204,7 +204,8 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::LoadFragmentAsFragment
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<std::pair<table_vec_t, std::vector<table_vec_t>>>
-ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::LoadVertexEdgeTables() {
+ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T,
+                    COMPACT>::LoadVertexEdgeTables() {
   BOOST_LEAF_AUTO(v_tables, LoadVertexTables());
   BOOST_LEAF_AUTO(e_tables, LoadEdgeTables());
   return std::make_pair(v_tables, e_tables);
@@ -272,9 +273,9 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddLabelsToFragment(
 
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
-boost::leaf::result<vineyard::ObjectID>
-ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::
-    AddLabelsToFragmentAsFragmentGroup(vineyard::ObjectID frag_id) {
+boost::leaf::result<vineyard::ObjectID> ArrowFragmentLoader<
+    OID_T, VID_T, VERTEX_MAP_T,
+    COMPACT>::AddLabelsToFragmentAsFragmentGroup(vineyard::ObjectID frag_id) {
   BOOST_LEAF_AUTO(new_frag_id, AddLabelsToFragment(frag_id));
   return vineyard::ConstructFragmentGroup(client_, new_frag_id, comm_spec_);
 }
@@ -408,10 +409,10 @@ ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::loadEdgeTables(
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<
-    std::pair<typename ArrowFragmentLoader<OID_T, VID_T,
-                                           VERTEX_MAP_T, COMPACT>::vertex_table_info_t,
-              typename ArrowFragmentLoader<OID_T, VID_T,
-                                           VERTEX_MAP_T, COMPACT>::edge_table_info_t>>
+    std::pair<typename ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T,
+                                           COMPACT>::vertex_table_info_t,
+              typename ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T,
+                                           COMPACT>::edge_table_info_t>>
 ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::preprocessInputs(
     const std::vector<std::shared_ptr<arrow::Table>>& v_tables,
     const std::vector<std::vector<std::shared_ptr<arrow::Table>>>& e_tables,

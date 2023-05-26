@@ -24,11 +24,13 @@ template class BasicEVFragmentLoader<
 template class BasicEVFragmentLoader<
     std::string, uint64_t, HashPartitioner<std::string>, ArrowVertexMap, false>;
 
-template class BasicEVFragmentLoader<
-    std::string, uint32_t, HashPartitioner<std::string>, ArrowLocalVertexMap, false>;
+template class BasicEVFragmentLoader<std::string, uint32_t,
+                                     HashPartitioner<std::string>,
+                                     ArrowLocalVertexMap, false>;
 
-template class BasicEVFragmentLoader<
-    std::string, uint64_t, HashPartitioner<std::string>, ArrowLocalVertexMap, false>;
+template class BasicEVFragmentLoader<std::string, uint64_t,
+                                     HashPartitioner<std::string>,
+                                     ArrowLocalVertexMap, false>;
 
 template class BasicEVFragmentLoader<
     std::string, uint32_t, HashPartitioner<std::string>, ArrowVertexMap, true>;
@@ -36,10 +38,12 @@ template class BasicEVFragmentLoader<
 template class BasicEVFragmentLoader<
     std::string, uint64_t, HashPartitioner<std::string>, ArrowVertexMap, true>;
 
-template class BasicEVFragmentLoader<
-    std::string, uint32_t, HashPartitioner<std::string>, ArrowLocalVertexMap, true>;
+template class BasicEVFragmentLoader<std::string, uint32_t,
+                                     HashPartitioner<std::string>,
+                                     ArrowLocalVertexMap, true>;
 
-template class BasicEVFragmentLoader<
-    std::string, uint64_t, HashPartitioner<std::string>, ArrowLocalVertexMap, true>;
+template class BasicEVFragmentLoader<std::string, uint64_t,
+                                     HashPartitioner<std::string>,
+                                     ArrowLocalVertexMap, true>;
 
 }  // namespace vineyard

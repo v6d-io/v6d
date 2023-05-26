@@ -694,32 +694,37 @@ boost::leaf::result<void> generate_varint_edges(
   std::vector<std::vector<uint8_t>> compact_id_sub_lists;
   compact_id_sub_lists.resize(e_offsets_lists_size - 1);
 
-  parallel_for(static_cast<size_t>(0), e_offsets_lists_size - 1,
-               [&e_list, &e_offsets_lists_, &compact_id_sub_lists](int64_t k) {
-                  VID_T pre_vid = 0;
-                  compact_id_sub_lists[k].reserve(9 * (e_offsets_lists_[k + 1] - e_offsets_lists_[k]));
-                  for (int64_t count = e_offsets_lists_[k];
-                      count < e_offsets_lists_[k + 1];
-                      count++) {
-                   varint_encode(e_list[count].vid - pre_vid, compact_id_sub_lists[k]);
-                   varint_encode(e_list[count].eid, compact_id_sub_lists[k]);
+  parallel_for(
+      static_cast<size_t>(0), e_offsets_lists_size - 1,
+      [&e_list, &e_offsets_lists_, &compact_id_sub_lists](int64_t k) {
+        VID_T pre_vid = 0;
+        compact_id_sub_lists[k].reserve(
+            9 * (e_offsets_lists_[k + 1] - e_offsets_lists_[k]));
+        for (int64_t count = e_offsets_lists_[k];
+             count < e_offsets_lists_[k + 1]; count++) {
+          varint_encode(e_list[count].vid - pre_vid, compact_id_sub_lists[k]);
+          varint_encode(e_list[count].eid, compact_id_sub_lists[k]);
 
-                   pre_vid = e_list[count].vid;
-                 }
-               },
-               concurrency);
+          pre_vid = e_list[count].vid;
+        }
+      },
+      concurrency);
 
   compact_offsets_list[0] = 0;
   for (size_t i = 0; i < compact_id_sub_lists.size(); i++) {
-    compact_offsets_list[i + 1] = compact_offsets_list[i] + compact_id_sub_lists[i].size();
+    compact_offsets_list[i + 1] =
+        compact_offsets_list[i] + compact_id_sub_lists[i].size();
   }
 
   compact_id_list.resize(compact_offsets_list[e_offsets_lists_size - 1]);
-  parallel_for(static_cast<size_t>(0), compact_id_sub_lists.size(),
-               [&compact_id_sub_lists, &compact_id_list, &compact_offsets_list](int64_t i) {
-                 memcpy(compact_id_list.data() + compact_offsets_list[i], compact_id_sub_lists[i].data(), compact_id_sub_lists[i].size());
-               },
-               concurrency);
+  parallel_for(
+      static_cast<size_t>(0), compact_id_sub_lists.size(),
+      [&compact_id_sub_lists, &compact_id_list,
+       &compact_offsets_list](int64_t i) {
+        memcpy(compact_id_list.data() + compact_offsets_list[i],
+               compact_id_sub_lists[i].data(), compact_id_sub_lists[i].size());
+      },
+      concurrency);
   return {};
 }
 

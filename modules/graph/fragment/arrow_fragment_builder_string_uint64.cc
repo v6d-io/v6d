@@ -23,7 +23,8 @@ template class ArrowFragment<
 
 template class ArrowFragment<
     std::string, uint64_t,
-    ArrowLocalVertexMap<typename InternalType<std::string>::type, uint64_t>, false>;
+    ArrowLocalVertexMap<typename InternalType<std::string>::type, uint64_t>,
+    false>;
 
 template class BasicArrowFragmentBuilder<
     std::string, uint64_t,
@@ -31,7 +32,8 @@ template class BasicArrowFragmentBuilder<
 
 template class BasicArrowFragmentBuilder<
     std::string, uint64_t,
-    ArrowLocalVertexMap<typename InternalType<std::string>::type, uint64_t>, false>;
+    ArrowLocalVertexMap<typename InternalType<std::string>::type, uint64_t>,
+    false>;
 
 template class ArrowFragment<
     std::string, uint64_t,
@@ -39,7 +41,8 @@ template class ArrowFragment<
 
 template class ArrowFragment<
     std::string, uint64_t,
-    ArrowLocalVertexMap<typename InternalType<std::string>::type, uint64_t>, true>;
+    ArrowLocalVertexMap<typename InternalType<std::string>::type, uint64_t>,
+    true>;
 
 template class BasicArrowFragmentBuilder<
     std::string, uint64_t,
@@ -47,6 +50,7 @@ template class BasicArrowFragmentBuilder<
 
 template class BasicArrowFragmentBuilder<
     std::string, uint64_t,
-    ArrowLocalVertexMap<typename InternalType<std::string>::type, uint64_t>, true>;
+    ArrowLocalVertexMap<typename InternalType<std::string>::type, uint64_t>,
+    true>;
 
 }  // namespace vineyard

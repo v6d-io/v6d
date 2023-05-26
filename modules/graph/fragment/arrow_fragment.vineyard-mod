@@ -72,7 +72,8 @@ class ArrowFragmentBaseBuilder;
 
 template <typename OID_T, typename VID_T,
           typename VERTEX_MAP_T =
-              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>, bool COMPACT = false>
+              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>,
+          bool COMPACT = false>
 class [[vineyard]] ArrowFragment
     : public ArrowFragmentBase,
       public vineyard::BareRegistered<
@@ -476,8 +477,8 @@ class [[vineyard]] ArrowFragment
   }
 
   template <bool COMPACT_ = COMPACT>
-  inline typename std::enable_if<!COMPACT_, adj_list_t>::type GetOutgoingAdjList(
-      const vertex_t& v, label_id_t e_label) const {
+  inline typename std::enable_if<!COMPACT_, adj_list_t>::type
+  GetOutgoingAdjList(const vertex_t& v, label_id_t e_label) const {
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);

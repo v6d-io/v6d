@@ -123,7 +123,8 @@ template <typename OID_T = property_graph_types::OID_TYPE,
           typename VID_T = property_graph_types::VID_TYPE,
           template <typename OID_T_ = typename InternalType<OID_T>::type,
                     typename VID_T_ = VID_T>
-          class VERTEX_MAP_T = ArrowVertexMap, bool COMPACT = false>
+          class VERTEX_MAP_T = ArrowVertexMap,
+          bool COMPACT = false>
 class ArrowFragmentLoader {
  public:
   using oid_t = OID_T;
@@ -316,23 +317,25 @@ template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 struct rebind_arrow_fragment_loader;
 
 template <typename OID_T, typename VID_T, bool COMPACT>
-struct rebind_arrow_fragment_loader<OID_T, VID_T,
-                                    vineyard::ArrowVertexMap<OID_T, VID_T>, COMPACT> {
-  using type = ArrowFragmentLoader<OID_T, VID_T, vineyard::ArrowVertexMap, COMPACT>;
+struct rebind_arrow_fragment_loader<
+    OID_T, VID_T, vineyard::ArrowVertexMap<OID_T, VID_T>, COMPACT> {
+  using type =
+      ArrowFragmentLoader<OID_T, VID_T, vineyard::ArrowVertexMap, COMPACT>;
 };
 
 template <typename OID_T, typename VID_T, bool COMPACT>
 struct rebind_arrow_fragment_loader<
     OID_T, VID_T, vineyard::ArrowLocalVertexMap<OID_T, VID_T>, COMPACT> {
-  using type = ArrowFragmentLoader<OID_T, VID_T, vineyard::ArrowLocalVertexMap, COMPACT>;
+  using type =
+      ArrowFragmentLoader<OID_T, VID_T, vineyard::ArrowLocalVertexMap, COMPACT>;
 };
 
 }  // namespace detail
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 using arrow_fragment_loader_t =
-    typename detail::rebind_arrow_fragment_loader<OID_T, VID_T,
-                                                  VERTEX_MAP_T, COMPACT>::type;
+    typename detail::rebind_arrow_fragment_loader<OID_T, VID_T, VERTEX_MAP_T,
+                                                  COMPACT>::type;
 
 }  // namespace vineyard
 

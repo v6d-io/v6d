@@ -17,20 +17,26 @@ limitations under the License.
 
 namespace vineyard {
 
-template class ArrowFragmentLoader<std::string, uint64_t, ArrowVertexMap, false>;
+template class ArrowFragmentLoader<std::string, uint64_t, ArrowVertexMap,
+                                   false>;
 
-template class ArrowFragmentLoader<std::string, uint64_t, ArrowLocalVertexMap, false>;
+template class ArrowFragmentLoader<std::string, uint64_t, ArrowLocalVertexMap,
+                                   false>;
 
-template class ArrowFragmentLoader<std::string, uint32_t, ArrowVertexMap, false>;
+template class ArrowFragmentLoader<std::string, uint32_t, ArrowVertexMap,
+                                   false>;
 
-template class ArrowFragmentLoader<std::string, uint32_t, ArrowLocalVertexMap, false>;
+template class ArrowFragmentLoader<std::string, uint32_t, ArrowLocalVertexMap,
+                                   false>;
 
 template class ArrowFragmentLoader<std::string, uint64_t, ArrowVertexMap, true>;
 
-template class ArrowFragmentLoader<std::string, uint64_t, ArrowLocalVertexMap, true>;
+template class ArrowFragmentLoader<std::string, uint64_t, ArrowLocalVertexMap,
+                                   true>;
 
 template class ArrowFragmentLoader<std::string, uint32_t, ArrowVertexMap, true>;
 
-template class ArrowFragmentLoader<std::string, uint32_t, ArrowLocalVertexMap, true>;
+template class ArrowFragmentLoader<std::string, uint32_t, ArrowLocalVertexMap,
+                                   true>;
 
 }  // namespace vineyard

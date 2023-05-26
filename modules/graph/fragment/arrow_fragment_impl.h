@@ -189,7 +189,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddEdgeColumnsImpl(
         std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
         columns,
     bool replace) {
-  vineyard::ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
+  vineyard::ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>
+      builder(*this);
   auto schema = schema_;
 
   if (replace) {
