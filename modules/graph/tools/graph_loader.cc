@@ -190,6 +190,9 @@ static inline bool parse_options_from_args(struct loader_options& options,
     options.directed = parse_boolean_value(argv[current_index++]);
   }
   if (argc > current_index) {
+    options.compact_edges = parse_boolean_value(argv[current_index++]);
+  }
+  if (argc > current_index) {
     options.generate_eid = parse_boolean_value(argv[current_index++]);
   }
   if (argc > current_index) {
@@ -300,6 +303,9 @@ static inline bool parse_options_from_config_json(
   if (config.contains("print_normalized_schema")) {
     options.print_normalized_schema =
         parse_boolean_value(config["print_normalized_schema"]);
+  }
+  if (config.contains("compact_edges")) {
+    options.compact_edges = parse_boolean_value(config["compact_edges"]);
   }
   return true;
 }

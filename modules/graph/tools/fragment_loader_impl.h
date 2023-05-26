@@ -42,13 +42,15 @@ namespace vineyard {
 namespace detail {
 
 template <typename OID_T, typename VID_T,
-          template <typename, typename> class VERTEX_MAP_T>
-ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
-                    struct detail::loader_options const& options) {
+          template <typename, typename> class VERTEX_MAP_T,
+          bool COMPACT = false>
+ObjectID load_graph_impl(Client& client, grape::CommSpec& comm_spec,
+                         struct detail::loader_options const& options) {
   using loader_t = ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>;
-  auto loader = loader_t(client, comm_spec, std::vector<std::string>{},
-                         std::vector<std::string>{}, options.directed,
-                         options.generate_eid, options.retain_oid);
+  auto loader =
+      loader_t(client, comm_spec, std::vector<std::string>{},
+               std::vector<std::string>{}, options.directed,
+               options.generate_eid, options.retain_oid, options.compact_edges);
 
   MPI_Barrier(comm_spec.comm());
   auto fn = [&]() -> boost::leaf::result<ObjectID> {
@@ -106,6 +108,19 @@ ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
         });
   } else {
     return loadfn().value();
+  }
+}
+
+template <typename OID_T, typename VID_T,
+          template <typename, typename> class VERTEX_MAP_T>
+ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
+                    struct detail::loader_options const& options) {
+  if (options.compact_edges) {
+    return load_graph_impl<OID_T, VID_T, VERTEX_MAP_T, true>(client, comm_spec,
+                                                             options);
+  } else {
+    return load_graph_impl<OID_T, VID_T, VERTEX_MAP_T, false>(client, comm_spec,
+                                                              options);
   }
 }
 
@@ -203,10 +218,11 @@ void dump_fragment(const std::shared_ptr<fragment_t>& fragment,
 }
 
 template <typename OID_T, typename VID_T,
-          template <typename, typename> class VERTEX_MAP_T>
-void dump_graph(Client& client, grape::CommSpec& comm_spec,
-                const ObjectID fragment_group_id,
-                struct detail::loader_options const& options) {
+          template <typename, typename> class VERTEX_MAP_T,
+          bool COMPACT = false>
+void dump_graph_impl(Client& client, grape::CommSpec& comm_spec,
+                     const ObjectID fragment_group_id,
+                     struct detail::loader_options const& options) {
   if (comm_spec.local_id() != 0) {
     return;
   }
@@ -215,7 +231,8 @@ void dump_graph(Client& client, grape::CommSpec& comm_spec,
 
   using fragment_t =
       ArrowFragment<OID_T, VID_T,
-                    VERTEX_MAP_T<typename InternalType<OID_T>::type, VID_T>>;
+                    VERTEX_MAP_T<typename InternalType<OID_T>::type, VID_T>,
+                    COMPACT>;
 
   std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
       std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
@@ -233,6 +250,20 @@ void dump_graph(Client& client, grape::CommSpec& comm_spec,
                                     std::to_string(fragment->fid()));
       }
     }
+  }
+}
+
+template <typename OID_T, typename VID_T,
+          template <typename, typename> class VERTEX_MAP_T>
+void dump_graph(Client& client, grape::CommSpec& comm_spec,
+                const ObjectID fragment_group_id,
+                struct detail::loader_options const& options) {
+  if (options.compact_edges) {
+    dump_graph_impl<OID_T, VID_T, VERTEX_MAP_T, true>(
+        client, comm_spec, fragment_group_id, options);
+  } else {
+    dump_graph_impl<OID_T, VID_T, VERTEX_MAP_T, false>(
+        client, comm_spec, fragment_group_id, options);
   }
 }
 

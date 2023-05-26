@@ -123,7 +123,8 @@ template <typename OID_T = property_graph_types::OID_TYPE,
           typename VID_T = property_graph_types::VID_TYPE,
           template <typename OID_T_ = typename InternalType<OID_T>::type,
                     typename VID_T_ = VID_T>
-          class VERTEX_MAP_T = ArrowVertexMap>
+          class VERTEX_MAP_T = ArrowVertexMap,
+          bool COMPACT = false>
 class ArrowFragmentLoader {
  public:
   using oid_t = OID_T;
@@ -133,7 +134,7 @@ class ArrowFragmentLoader {
   using oid_array_t = ArrowArrayType<oid_t>;
   using vid_array_t = ArrowArrayType<vid_t>;
   using vertex_map_t = VERTEX_MAP_T<internal_oid_t, vid_t>;
-  using fragment_t = ArrowFragment<OID_T, VID_T, vertex_map_t>;
+  using fragment_t = ArrowFragment<OID_T, VID_T, vertex_map_t, COMPACT>;
 
   using table_vec_t = std::vector<std::shared_ptr<arrow::Table>>;
   using oid_array_vec_t = std::vector<std::shared_ptr<oid_array_t>>;
@@ -146,7 +147,7 @@ class ArrowFragmentLoader {
 #endif
 
   using basic_fragment_loader_t =
-      BasicEVFragmentLoader<OID_T, VID_T, partitioner_t, VERTEX_MAP_T>;
+      BasicEVFragmentLoader<OID_T, VID_T, partitioner_t, VERTEX_MAP_T, COMPACT>;
 
  protected:
   // These consts represent the key in the path of vfile/efile
@@ -176,53 +177,59 @@ class ArrowFragmentLoader {
                       const std::vector<std::string>& efiles,
                       const std::vector<std::string>& vfiles,
                       bool directed = true, bool generate_eid = false,
-                      bool retain_oid = false)
+                      bool retain_oid = false, bool compact_edges = false)
       : client_(client),
         comm_spec_(comm_spec),
         efiles_(efiles),
         vfiles_(vfiles),
         directed_(directed),
         generate_eid_(generate_eid),
-        retain_oid_(retain_oid) {}
+        retain_oid_(retain_oid),
+        compact_edges_(compact_edges) {}
 
   ArrowFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                       const std::vector<std::string>& efiles,
                       bool directed = true, bool generate_eid = false,
-                      bool retain_oid = false)
+                      bool retain_oid = false, bool compact_edges = false)
       : client_(client),
         comm_spec_(comm_spec),
         efiles_(efiles),
         vfiles_(),
         directed_(directed),
         generate_eid_(generate_eid),
-        retain_oid_(retain_oid) {}
+        retain_oid_(retain_oid),
+        compact_edges_(compact_edges) {}
 
   ArrowFragmentLoader(
       Client& client, const grape::CommSpec& comm_spec,
       std::vector<std::shared_ptr<arrow::Table>> const& partial_v_tables,
       std::vector<std::vector<std::shared_ptr<arrow::Table>>> const&
           partial_e_tables,
-      bool directed = true, bool generate_eid = false, bool retain_oid = false)
+      bool directed = true, bool generate_eid = false, bool retain_oid = false,
+      bool compact_edges = false)
       : client_(client),
         comm_spec_(comm_spec),
         partial_v_tables_(partial_v_tables),
         partial_e_tables_(partial_e_tables),
         directed_(directed),
         generate_eid_(generate_eid),
-        retain_oid_(retain_oid) {}
+        retain_oid_(retain_oid),
+        compact_edges_(compact_edges) {}
 
   ArrowFragmentLoader(
       Client& client, const grape::CommSpec& comm_spec,
       std::vector<std::vector<std::shared_ptr<arrow::Table>>> const&
           partial_e_tables,
-      bool directed = true, bool generate_eid = false, bool retain_oid = false)
+      bool directed = true, bool generate_eid = false, bool retain_oid = false,
+      bool compact_edges = false)
       : client_(client),
         comm_spec_(comm_spec),
         partial_v_tables_(),
         partial_e_tables_(partial_e_tables),
         directed_(directed),
         generate_eid_(generate_eid),
-        retain_oid_(retain_oid) {}
+        retain_oid_(retain_oid),
+        compact_edges_(compact_edges) {}
 
   ~ArrowFragmentLoader() = default;
 
@@ -296,6 +303,7 @@ class ArrowFragmentLoader {
   bool directed_;
   bool generate_eid_ = false;
   bool retain_oid_ = false;
+  bool compact_edges_;
 
   std::function<void(IIOAdaptor*)> io_deleter_ = [](IIOAdaptor* adaptor) {
     VINEYARD_DISCARD(adaptor->Close());
@@ -305,27 +313,29 @@ class ArrowFragmentLoader {
 
 namespace detail {
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 struct rebind_arrow_fragment_loader;
 
-template <typename OID_T, typename VID_T>
-struct rebind_arrow_fragment_loader<OID_T, VID_T,
-                                    vineyard::ArrowVertexMap<OID_T, VID_T>> {
-  using type = ArrowFragmentLoader<OID_T, VID_T, vineyard::ArrowVertexMap>;
+template <typename OID_T, typename VID_T, bool COMPACT>
+struct rebind_arrow_fragment_loader<
+    OID_T, VID_T, vineyard::ArrowVertexMap<OID_T, VID_T>, COMPACT> {
+  using type =
+      ArrowFragmentLoader<OID_T, VID_T, vineyard::ArrowVertexMap, COMPACT>;
 };
 
-template <typename OID_T, typename VID_T>
+template <typename OID_T, typename VID_T, bool COMPACT>
 struct rebind_arrow_fragment_loader<
-    OID_T, VID_T, vineyard::ArrowLocalVertexMap<OID_T, VID_T>> {
-  using type = ArrowFragmentLoader<OID_T, VID_T, vineyard::ArrowLocalVertexMap>;
+    OID_T, VID_T, vineyard::ArrowLocalVertexMap<OID_T, VID_T>, COMPACT> {
+  using type =
+      ArrowFragmentLoader<OID_T, VID_T, vineyard::ArrowLocalVertexMap, COMPACT>;
 };
 
 }  // namespace detail
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 using arrow_fragment_loader_t =
-    typename detail::rebind_arrow_fragment_loader<OID_T, VID_T,
-                                                  VERTEX_MAP_T>::type;
+    typename detail::rebind_arrow_fragment_loader<OID_T, VID_T, VERTEX_MAP_T,
+                                                  COMPACT>::type;
 
 }  // namespace vineyard
 

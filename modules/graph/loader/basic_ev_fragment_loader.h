@@ -53,7 +53,8 @@ struct InputTable {
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
           template <typename OID_T_ = typename InternalType<OID_T>::type,
                     typename VID_T_ = VID_T>
-          class VERTEX_MAP_T = ArrowVertexMap>
+          class VERTEX_MAP_T = ArrowVertexMap,
+          bool COMPACT = false>
 class BasicEVFragmentLoader {
   static constexpr int id_column = 0;
   static constexpr int src_column = 0;
@@ -65,7 +66,7 @@ class BasicEVFragmentLoader {
   using vid_t = VID_T;
   using partitioner_t = PARTITIONER_T;
   using vertex_map_t = VERTEX_MAP_T<typename InternalType<OID_T>::type, VID_T>;
-  using fragment_t = ArrowFragment<oid_t, vid_t, vertex_map_t>;
+  using fragment_t = ArrowFragment<oid_t, vid_t, vertex_map_t, COMPACT>;
   using oid_array_t = ArrowArrayType<oid_t>;
   using oid_array_builder_t = ArrowBuilderType<oid_t>;
   using internal_oid_t = typename InternalType<oid_t>::type;
@@ -76,7 +77,8 @@ class BasicEVFragmentLoader {
                                  const PARTITIONER_T& partitioner,
                                  bool directed = true,
                                  bool generate_eid = false,
-                                 bool retain_oid = false);
+                                 bool retain_oid = false,
+                                 bool compact_edges = false);
 
   /**
    * @brief Add a loaded vertex table.
@@ -110,13 +112,13 @@ class BasicEVFragmentLoader {
                                            int vertex_label_num = 0);
 
   boost::leaf::result<ObjectID> AddVerticesToFragment(
-      std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t>> frag);
+      std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t, COMPACT>> frag);
 
   boost::leaf::result<ObjectID> AddEdgesToFragment(
-      std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t>> frag);
+      std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t, COMPACT>> frag);
 
   boost::leaf::result<ObjectID> AddVerticesAndEdgesToFragment(
-      std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t>> frag);
+      std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t, COMPACT>> frag);
 
   boost::leaf::result<ObjectID> ConstructFragment();
 
@@ -182,6 +184,7 @@ class BasicEVFragmentLoader {
   bool directed_;
   bool generate_eid_ = false;
   bool retain_oid_ = false;
+  bool compact_edges_;
 
   std::map<std::string, label_id_t> vertex_label_to_index_;
   std::vector<std::string> vertex_labels_;

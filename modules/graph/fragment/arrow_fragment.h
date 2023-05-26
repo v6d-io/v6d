@@ -49,15 +49,16 @@ limitations under the License.
 
 namespace vineyard {
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 class ArrowFragmentBaseBuilder;
 
 template <typename OID_T, typename VID_T,
           typename VERTEX_MAP_T =
-              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>>
+              ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>,
+          bool COMPACT = false>
 class BasicArrowFragmentBuilder
-    : public ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T> {
-  using Base = ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T>;
+    : public ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> {
+  using Base = ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>;
 
   using oid_t = OID_T;
   using vid_t = VID_T;
@@ -71,7 +72,7 @@ class BasicArrowFragmentBuilder
  public:
   explicit BasicArrowFragmentBuilder(vineyard::Client& client,
                                      std::shared_ptr<vertex_map_t> vm_ptr)
-      : ArrowFragmentBaseBuilder<oid_t, vid_t, vertex_map_t>(client),
+      : ArrowFragmentBaseBuilder<oid_t, vid_t, vertex_map_t, COMPACT>(client),
         client_(client),
         vm_ptr_(vm_ptr) {}
 
@@ -81,7 +82,7 @@ class BasicArrowFragmentBuilder
       fid_t fid, fid_t fnum,
       std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
       std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
-      bool directed = true, int concurrency = 1);
+      bool directed = true, int concurrency = 1, bool compact_edges = false);
 
   boost::leaf::result<void> SetPropertyGraphSchema(
       PropertyGraphSchema&& schema) {
@@ -114,6 +115,16 @@ class BasicArrowFragmentBuilder
       ie_lists_, oe_lists_;
   std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
       ie_offsets_lists_, oe_offsets_lists_;
+
+  std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>
+      compact_ie_lists_, compact_oe_lists_;
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
+      compact_ie_offsets_lists_, compact_oe_offsets_lists_;
+
+  std::vector<std::vector<const uint8_t*>> compact_ie_ptr_lists_,
+      compact_oe_ptr_lists_;
+  std::vector<std::vector<const int64_t*>> compact_ie_offsets_ptr_lists_,
+      compact_oe_offsets_ptr_lists_;
 
   std::shared_ptr<vertex_map_t> vm_ptr_;
 

@@ -38,11 +38,12 @@ struct is_property_fragment<ArrowFragmentBase> {
   static constexpr bool value = true;
 };
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 class ArrowFragment;
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T>
-struct is_property_fragment<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T>> {
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
+struct is_property_fragment<
+    ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>> {
   using type = std::true_type;
   static constexpr bool value = true;
 };
