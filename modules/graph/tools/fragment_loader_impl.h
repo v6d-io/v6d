@@ -42,140 +42,85 @@ namespace vineyard {
 namespace detail {
 
 template <typename OID_T, typename VID_T,
+          template <typename, typename> class VERTEX_MAP_T,
+          bool COMPACT = false>
+ObjectID load_graph_impl(Client& client, grape::CommSpec& comm_spec,
+                         struct detail::loader_options const& options) {
+  using loader_t = ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>;
+  auto loader =
+      loader_t(client, comm_spec, std::vector<std::string>{},
+               std::vector<std::string>{}, options.directed,
+               options.generate_eid, options.retain_oid, options.compact_edges);
+
+  MPI_Barrier(comm_spec.comm());
+  auto fn = [&]() -> boost::leaf::result<ObjectID> {
+    return loader.LoadFragmentAsFragmentGroup(options.efiles, options.vfiles);
+  };
+
+  auto wholefn = [&]() -> boost::leaf::result<ObjectID> {
+    ObjectID frag = InvalidObjectID();
+    BOOST_LEAF_ASSIGN(frag, loader.LoadFragment());
+    loader_t adder(client, comm_spec, options.efiles, options.vfiles,
+                   options.directed, options.generate_eid, options.retain_oid);
+    return adder.AddLabelsToFragmentAsFragmentGroup(frag);
+  };
+
+  auto stepbystepfn = [&]() -> boost::leaf::result<ObjectID> {
+    ObjectID frag = InvalidObjectID();
+    BOOST_LEAF_ASSIGN(frag, loader.LoadFragment());
+    for (auto vfile : options.vfiles) {
+      loader_t adder(client, comm_spec, std::vector<std::string>{},
+                     std::vector<std::string>{vfile}, options.directed,
+                     options.generate_eid, options.retain_oid);
+      BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
+    }
+    for (auto efile : options.efiles) {
+      loader_t adder(client, comm_spec, std::vector<std::string>{efile},
+                     std::vector<std::string>{}, options.directed,
+                     options.generate_eid, options.retain_oid);
+      BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
+    }
+    return vineyard::ConstructFragmentGroup(client, frag, comm_spec);
+  };
+
+  auto loadfn = [&]() -> boost::leaf::result<ObjectID> {
+    if (options.progressive == progressive_t::WHOLE) {
+      return wholefn();
+    }
+    if (options.progressive == progressive_t::STEP_BY_STEP) {
+      return stepbystepfn();
+    }
+    if (true /* options.progressive == progressive_t::NONE */) {
+      return fn();
+    }
+  };
+
+  if (options.catch_leaf_errors) {
+    return boost::leaf::try_handle_all(
+        [&loadfn]() { return loadfn(); },
+        [](const GSError& e) {
+          LOG(ERROR) << e.error_msg;
+          return InvalidObjectID();
+        },
+        [](const boost::leaf::error_info& unmatched) {
+          LOG(ERROR) << "Unmatched error " << unmatched;
+          return InvalidObjectID();
+        });
+  } else {
+    return loadfn().value();
+  }
+}
+
+template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
                     struct detail::loader_options const& options) {
   if (options.compact_edges) {
-    LOG(INFO) << "true!";
-    using loader_t = ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T, true>;
-    auto loader = loader_t(client, comm_spec, std::vector<std::string>{},
-                           std::vector<std::string>{}, options.directed,
-                           options.generate_eid, options.retain_oid,
-                           options.compact_edges);
-
-    MPI_Barrier(comm_spec.comm());
-    auto fn = [&]() -> boost::leaf::result<ObjectID> {
-      return loader.LoadFragmentAsFragmentGroup(options.efiles, options.vfiles);
-    };
-
-    auto wholefn = [&]() -> boost::leaf::result<ObjectID> {
-      ObjectID frag = InvalidObjectID();
-      BOOST_LEAF_ASSIGN(frag, loader.LoadFragment());
-      loader_t adder(client, comm_spec, options.efiles, options.vfiles,
-                     options.directed, options.generate_eid,
-                     options.retain_oid);
-      return adder.AddLabelsToFragmentAsFragmentGroup(frag);
-    };
-
-    auto stepbystepfn = [&]() -> boost::leaf::result<ObjectID> {
-      ObjectID frag = InvalidObjectID();
-      BOOST_LEAF_ASSIGN(frag, loader.LoadFragment());
-      for (auto vfile : options.vfiles) {
-        loader_t adder(client, comm_spec, std::vector<std::string>{},
-                       std::vector<std::string>{vfile}, options.directed,
-                       options.generate_eid, options.retain_oid);
-        BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
-      }
-      for (auto efile : options.efiles) {
-        loader_t adder(client, comm_spec, std::vector<std::string>{efile},
-                       std::vector<std::string>{}, options.directed,
-                       options.generate_eid, options.retain_oid);
-        BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
-      }
-      return vineyard::ConstructFragmentGroup(client, frag, comm_spec);
-    };
-
-    auto loadfn = [&]() -> boost::leaf::result<ObjectID> {
-      if (options.progressive == progressive_t::WHOLE) {
-        return wholefn();
-      }
-      if (options.progressive == progressive_t::STEP_BY_STEP) {
-        return stepbystepfn();
-      }
-      if (true /* options.progressive == progressive_t::NONE */) {
-        return fn();
-      }
-    };
-
-    if (options.catch_leaf_errors) {
-      return boost::leaf::try_handle_all(
-          [&loadfn]() { return loadfn(); },
-          [](const GSError& e) {
-            LOG(ERROR) << e.error_msg;
-            return InvalidObjectID();
-          },
-          [](const boost::leaf::error_info& unmatched) {
-            LOG(ERROR) << "Unmatched error " << unmatched;
-            return InvalidObjectID();
-          });
-    } else {
-      return loadfn().value();
-    }
+    return load_graph_impl<OID_T, VID_T, VERTEX_MAP_T, true>(client, comm_spec,
+                                                             options);
   } else {
-    using loader_t = ArrowFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>;
-    auto loader = loader_t(client, comm_spec, std::vector<std::string>{},
-                           std::vector<std::string>{}, options.directed,
-                           options.generate_eid, options.retain_oid,
-                           options.compact_edges);
-
-    MPI_Barrier(comm_spec.comm());
-    auto fn = [&]() -> boost::leaf::result<ObjectID> {
-      return loader.LoadFragmentAsFragmentGroup(options.efiles, options.vfiles);
-    };
-
-    auto wholefn = [&]() -> boost::leaf::result<ObjectID> {
-      ObjectID frag = InvalidObjectID();
-      BOOST_LEAF_ASSIGN(frag, loader.LoadFragment());
-      loader_t adder(client, comm_spec, options.efiles, options.vfiles,
-                     options.directed, options.generate_eid,
-                     options.retain_oid);
-      return adder.AddLabelsToFragmentAsFragmentGroup(frag);
-    };
-
-    auto stepbystepfn = [&]() -> boost::leaf::result<ObjectID> {
-      ObjectID frag = InvalidObjectID();
-      BOOST_LEAF_ASSIGN(frag, loader.LoadFragment());
-      for (auto vfile : options.vfiles) {
-        loader_t adder(client, comm_spec, std::vector<std::string>{},
-                       std::vector<std::string>{vfile}, options.directed,
-                       options.generate_eid, options.retain_oid);
-        BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
-      }
-      for (auto efile : options.efiles) {
-        loader_t adder(client, comm_spec, std::vector<std::string>{efile},
-                       std::vector<std::string>{}, options.directed,
-                       options.generate_eid, options.retain_oid);
-        BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
-      }
-      return vineyard::ConstructFragmentGroup(client, frag, comm_spec);
-    };
-
-    auto loadfn = [&]() -> boost::leaf::result<ObjectID> {
-      if (options.progressive == progressive_t::WHOLE) {
-        return wholefn();
-      }
-      if (options.progressive == progressive_t::STEP_BY_STEP) {
-        return stepbystepfn();
-      }
-      if (true /* options.progressive == progressive_t::NONE */) {
-        return fn();
-      }
-    };
-
-    if (options.catch_leaf_errors) {
-      return boost::leaf::try_handle_all(
-          [&loadfn]() { return loadfn(); },
-          [](const GSError& e) {
-            LOG(ERROR) << e.error_msg;
-            return InvalidObjectID();
-          },
-          [](const boost::leaf::error_info& unmatched) {
-            LOG(ERROR) << "Unmatched error " << unmatched;
-            return InvalidObjectID();
-          });
-    } else {
-      return loadfn().value();
-    }
+    return load_graph_impl<OID_T, VID_T, VERTEX_MAP_T, false>(client, comm_spec,
+                                                              options);
   }
 }
 
@@ -273,10 +218,11 @@ void dump_fragment(const std::shared_ptr<fragment_t>& fragment,
 }
 
 template <typename OID_T, typename VID_T,
-          template <typename, typename> class VERTEX_MAP_T>
-void dump_graph(Client& client, grape::CommSpec& comm_spec,
-                const ObjectID fragment_group_id,
-                struct detail::loader_options const& options) {
+          template <typename, typename> class VERTEX_MAP_T,
+          bool COMPACT = false>
+void dump_graph_impl(Client& client, grape::CommSpec& comm_spec,
+                     const ObjectID fragment_group_id,
+                     struct detail::loader_options const& options) {
   if (comm_spec.local_id() != 0) {
     return;
   }
@@ -285,11 +231,8 @@ void dump_graph(Client& client, grape::CommSpec& comm_spec,
 
   using fragment_t =
       ArrowFragment<OID_T, VID_T,
-                    VERTEX_MAP_T<typename InternalType<OID_T>::type, VID_T>>;
-  using fragment_compact_t =
-      ArrowFragment<OID_T, VID_T,
                     VERTEX_MAP_T<typename InternalType<OID_T>::type, VID_T>,
-                    true>;
+                    COMPACT>;
 
   std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
       std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
@@ -298,26 +241,29 @@ void dump_graph(Client& client, grape::CommSpec& comm_spec,
   auto const& fragments = fg->Fragments();
   for (const auto& item : fg->FragmentLocations()) {
     if (item.second == client.instance_id()) {
-      if (options.compact_edges) {
-        std::shared_ptr<fragment_compact_t> fragment;
-        VINEYARD_CHECK_OK(client.GetObject(fragments.at(item.first), fragment));
-        if (options.dump_dry_run_rounds) {
-          traverse_fragment(fragment, options.dump_dry_run_rounds);
-        } else {
-          dump_fragment(fragment, target_directory + "/output_graph_f" +
-                                      std::to_string(fragment->fid()));
-        }
+      std::shared_ptr<fragment_t> fragment;
+      VINEYARD_CHECK_OK(client.GetObject(fragments.at(item.first), fragment));
+      if (options.dump_dry_run_rounds) {
+        traverse_fragment(fragment, options.dump_dry_run_rounds);
       } else {
-        std::shared_ptr<fragment_t> fragment;
-        VINEYARD_CHECK_OK(client.GetObject(fragments.at(item.first), fragment));
-        if (options.dump_dry_run_rounds) {
-          traverse_fragment(fragment, options.dump_dry_run_rounds);
-        } else {
-          dump_fragment(fragment, target_directory + "/output_graph_f" +
-                                      std::to_string(fragment->fid()));
-        }
+        dump_fragment(fragment, target_directory + "/output_graph_f" +
+                                    std::to_string(fragment->fid()));
       }
     }
+  }
+}
+
+template <typename OID_T, typename VID_T,
+          template <typename, typename> class VERTEX_MAP_T>
+void dump_graph(Client& client, grape::CommSpec& comm_spec,
+                const ObjectID fragment_group_id,
+                struct detail::loader_options const& options) {
+  if (options.compact_edges) {
+    dump_graph_impl<OID_T, VID_T, VERTEX_MAP_T, true>(
+        client, comm_spec, fragment_group_id, options);
+  } else {
+    dump_graph_impl<OID_T, VID_T, VERTEX_MAP_T, false>(
+        client, comm_spec, fragment_group_id, options);
   }
 }
 

@@ -15,8 +15,12 @@ limitations under the License.
 
 #ifndef MODULES_GRAPH_FRAGMENT_VARINT_IMPL_H_
 #define MODULES_GRAPH_FRAGMENT_VARINT_IMPL_H_
-#include <bits/types.h>
+
+#include <cstdint>
+#include <cstring>
 #include <vector>
+
+#include "common/util/likely.h"
 
 namespace vineyard {
 
@@ -53,7 +57,7 @@ template <typename T>
 inline size_t varint_decode(const uint8_t* input, T& output) {
   const uint8_t* origin_input = input;
   uint8_t byte_0 = *input++;
-  if (LIKELY(byte_0 < UPPER_OF_RANGE_1)) {
+  if (likely(byte_0 < UPPER_OF_RANGE_1)) {
     output = byte_0;
   } else if (byte_0 < UPPER_OF_RANGE_2) {
     uint8_t byte_1 = *input++;
@@ -67,4 +71,5 @@ inline size_t varint_decode(const uint8_t* input, T& output) {
 }
 
 }  // namespace vineyard
+
 #endif  // MODULES_GRAPH_FRAGMENT_VARINT_IMPL_H_

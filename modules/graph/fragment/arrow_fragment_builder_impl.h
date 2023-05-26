@@ -1205,8 +1205,7 @@ template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
 BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initEdges(
     std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, int concurrency) {
-  LOG(INFO) << "Gen edges list start...";
-  auto gen_edge_start_time = vineyard::GetMicroTimestamp();
+  auto gen_edge_start_time = vineyard::GetCurrentTime();
   assert(edge_tables.size() == static_cast<size_t>(this->edge_label_num_));
   edge_tables_.resize(this->edge_label_num_);
 
@@ -1311,17 +1310,12 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initEdges(
   VLOG(100) << "Init edges: after generate CSR: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
-  LOG(INFO) << "Generate edges lists finished.";
-  auto gen_edge_finish_time = vineyard::GetMicroTimestamp();
+  VLOG(100) << "Generate edge time usage: "
+            << (vineyard::GetCurrentTime() - gen_edge_start_time) << " seconds";
 
-  LOG(INFO) << "Generate edge time usage: "
-            << ((gen_edge_finish_time - gen_edge_start_time) / 1000000.0)
-            << " seconds";
-
-  LOG(INFO) << "Compact edges start...";
-  auto start_time = vineyard::GetMicroTimestamp();
-  int64_t generate_varint_time = 0;
-  int64_t memcpy_time = 0;
+  auto compact_start_time = vineyard::GetCurrentTime();
+  double total_generate_varint_time = 0;
+  double total_memcpy_time = 0;
 
   if (this->compact_edges_) {
     if (this->directed_) {
@@ -1361,33 +1355,30 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initEdges(
         std::vector<uint8_t> compact_oe_vec, compact_ie_vec;
         std::vector<int64_t> compact_oe_offsets_vec, compact_ie_offsets_vec;
 
-        auto generate_varint_start_time = vineyard::GetMicroTimestamp();
+        auto generate_varint_start_time = vineyard::GetCurrentTime();
         generate_varint_edges<vid_t, eid_t>(
             this->oe_lists_[v_label][e_label]->data(),
             oe_lists_[v_label][e_label]->size(),
             this->oe_offsets_lists_[v_label][e_label]->data(),
             this->oe_offsets_lists_[v_label][e_label]->size(), compact_oe_vec,
             compact_oe_offsets_vec, concurrency);
-        auto generate_varint_finish_time = vineyard::GetMicroTimestamp();
-        generate_varint_time +=
-            (generate_varint_finish_time - generate_varint_start_time);
+        total_generate_varint_time +=
+            vineyard::GetCurrentTime() - generate_varint_start_time;
 
         compact_oe_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
             client_, compact_oe_vec.size() * sizeof(uint8_t));
-        auto memcpy_start_time = vineyard::GetMicroTimestamp();
+        auto memcpy_start_time = vineyard::GetCurrentTime();
         memcpy(compact_oe_sub_lists_[e_label]->data(), compact_oe_vec.data(),
                compact_oe_vec.size() * sizeof(uint8_t));
-        auto memcpy_finish_time = vineyard::GetMicroTimestamp();
-        memcpy_time += (memcpy_finish_time - memcpy_start_time);
+        total_memcpy_time += vineyard::GetCurrentTime() - memcpy_start_time;
         compact_oe_offsets_sub_lists_[e_label] =
             std::make_shared<FixedInt64Builder>(client_,
                                                 compact_oe_offsets_vec.size());
-        memcpy_start_time = vineyard::GetMicroTimestamp();
+        memcpy_start_time = vineyard::GetCurrentTime();
         memcpy(compact_oe_offsets_sub_lists_[e_label]->data(),
                compact_oe_offsets_vec.data(),
                compact_oe_offsets_vec.size() * sizeof(int64_t));
-        memcpy_finish_time = vineyard::GetMicroTimestamp();
-        memcpy_time += (memcpy_finish_time - memcpy_start_time);
+        total_memcpy_time += vineyard::GetCurrentTime() - memcpy_start_time;
 
         this->compact_oe_lists_[v_label][e_label] =
             compact_oe_sub_lists_[e_label];
@@ -1395,35 +1386,34 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initEdges(
             compact_oe_offsets_sub_lists_[e_label];
 
         if (this->directed_) {
-          auto generate_varint_start_time = vineyard::GetMicroTimestamp();
+          auto generate_varint_start_time = vineyard::GetCurrentTime();
           generate_varint_edges<vid_t, eid_t>(
               this->ie_lists_[v_label][e_label]->data(),
               ie_lists_[v_label][e_label]->size(),
               this->ie_offsets_lists_[v_label][e_label]->data(),
               this->ie_offsets_lists_[v_label][e_label]->size(), compact_ie_vec,
               compact_ie_offsets_vec, concurrency);
-          auto generate_varint_finish_time = vineyard::GetMicroTimestamp();
-          generate_varint_time +=
-              (generate_varint_finish_time - generate_varint_start_time);
+          total_generate_varint_time +=
+              vineyard::GetCurrentTime() - generate_varint_start_time;
 
           compact_ie_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
               client_, compact_ie_vec.size() * sizeof(uint8_t));
 
-          auto memcpy_start_time = vineyard::GetMicroTimestamp();
+          auto memcpy_start_time = vineyard::GetCurrentTime();
           memcpy(compact_ie_sub_lists_[e_label]->data(), compact_ie_vec.data(),
                  compact_ie_vec.size() * sizeof(uint8_t));
-          auto memcpy_finish_time = vineyard::GetMicroTimestamp();
-          memcpy_time += (memcpy_finish_time - memcpy_start_time);
+          auto memcpy_finish_time = vineyard::GetCurrentTime();
+          total_memcpy_time += (memcpy_finish_time - memcpy_start_time);
 
           compact_ie_offsets_sub_lists_[e_label] =
               std::make_shared<FixedInt64Builder>(
                   client_, compact_ie_offsets_vec.size());
-          memcpy_start_time = vineyard::GetMicroTimestamp();
+          memcpy_start_time = vineyard::GetCurrentTime();
           memcpy(compact_ie_offsets_sub_lists_[e_label]->data(),
                  compact_ie_offsets_vec.data(),
                  compact_ie_offsets_vec.size() * sizeof(int64_t));
-          memcpy_finish_time = vineyard::GetMicroTimestamp();
-          memcpy_time += (memcpy_finish_time - memcpy_start_time);
+          memcpy_finish_time = vineyard::GetCurrentTime();
+          total_memcpy_time += (memcpy_finish_time - memcpy_start_time);
 
           this->compact_ie_lists_[v_label][e_label] =
               compact_ie_sub_lists_[e_label];
@@ -1433,14 +1423,13 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initEdges(
       }
     }
   }
-  LOG(INFO) << "Compact edges finished.";
-  auto finish_time = vineyard::GetMicroTimestamp();
 
-  LOG(INFO) << "Compact time usage: "
-            << ((finish_time - start_time) / 1000000.0) << " seconds";
-  LOG(INFO) << "Generate varint time usage: "
-            << (generate_varint_time / 1000000.0) << " seconds";
-  LOG(INFO) << "Memcpy time usage: " << (memcpy_time / 1000000.0) << " seconds";
+  VLOG(100) << "Compact time usage: "
+            << (vineyard::GetMicroTimestamp() - compact_start_time)
+            << " seconds"
+            << ", generate varint time usage: " << total_generate_varint_time
+            << " seconds"
+            << ", memcpy time usage: " << total_memcpy_time << " seconds";
   return {};
 }
 
