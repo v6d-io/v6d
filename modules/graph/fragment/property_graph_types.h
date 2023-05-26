@@ -300,144 +300,54 @@ struct Nbr {
   using prop_id_t = property_graph_types::PROP_ID_TYPE;
 
  public:
-  Nbr()
-      : nbr_(NULL),
-        v_ptr_(nullptr),
-        e_ptr_(nullptr),
-        encoded_(false),
-        edata_arrays_(nullptr) {}
+  Nbr() : nbr_(NULL), edata_arrays_(nullptr) {}
   Nbr(const NbrUnit<VID_T, EID_T>* nbr, const void** edata_arrays)
-      : nbr_(nbr),
-        v_ptr_(nullptr),
-        e_ptr_(nullptr),
-        encoded_(false),
-        edata_arrays_(edata_arrays) {}
-  Nbr(const Nbr& rhs)
-      : nbr_(rhs.nbr_),
-        v_ptr_(rhs.v_ptr_),
-        e_ptr_(rhs.e_ptr_),
-        encoded_(false),
-        data_(rhs.data_),
-        data_valid_(rhs.data_valid_),
-        edata_arrays_(rhs.edata_arrays_) {}
+      : nbr_(nbr), edata_arrays_(edata_arrays) {}
+  Nbr(const Nbr& rhs) : nbr_(rhs.nbr_), edata_arrays_(rhs.edata_arrays_) {}
   Nbr(Nbr&& rhs)
-      : nbr_(std::move(rhs.nbr_)),
-        v_ptr_(std::move(rhs.v_ptr_)),
-        e_ptr_(std::move(rhs.e_ptr_)),
-        encoded_(rhs.encoded_),
-        data_(rhs.data_),
-        data_valid_(rhs.data_valid_),
-        edata_arrays_(rhs.edata_arrays_) {}
-  Nbr(const uint8_t* v_ptr, const uint8_t* e_ptr, const void** edata_arrays)
-      : nbr_(nullptr),
-        v_ptr_(v_ptr),
-        e_ptr_(e_ptr),
-        encoded_(true),
-        edata_arrays_(edata_arrays) {}
+      : nbr_(std::move(rhs.nbr_)), edata_arrays_(rhs.edata_arrays_) {}
 
   Nbr& operator=(const Nbr& rhs) {
-    if (rhs.encoded_) {
-      v_ptr_ = rhs.v_ptr_;
-      e_ptr_ = rhs.e_ptr_;
-      encoded_ = true;
-    } else {
-      nbr_ = rhs.nbr_;
-    }
+    nbr_ = rhs.nbr_;
     edata_arrays_ = rhs.edata_arrays_;
     return *this;
   }
 
   Nbr& operator=(Nbr&& rhs) {
-    if (rhs.encoded_) {
-      v_ptr_ = std::move(rhs.v_ptr_);
-      e_ptr_ = std::move(rhs.e_ptr_);
-      encoded_ = true;
-    } else {
-      nbr_ = std::move(rhs.nbr_);
-    }
+    nbr_ = std::move(rhs.nbr_);
     edata_arrays_ = std::move(rhs.edata_arrays_);
     return *this;
   }
 
-  inline void decode() const {
-    if (data_valid_) {
-      return;
-    }
-    eid_t eid;
-    vid_t vid;
-    e_size_ = varint_decode(e_ptr_, eid);
-    v_size_ = varint_decode(v_ptr_, vid);
-    data_.eid = eid;
-    data_.vid = vid;
-    data_valid_ = true;
-  }
-
   grape::Vertex<VID_T> neighbor() const {
-    if (encoded_) {
-      decode();
-      return grape::Vertex<VID_T>(data_.vid);
-    }
     return grape::Vertex<VID_T>(nbr_->vid);
   }
 
   grape::Vertex<VID_T> get_neighbor() const {
-    if (encoded_) {
-      decode();
-      return grape::Vertex<VID_T>(data_.vid);
-    }
     return grape::Vertex<VID_T>(nbr_->vid);
   }
 
-  EID_T edge_id() const {
-    if (encoded_) {
-      decode();
-      return data_.eid;
-    }
-    return nbr_->eid;
-  }
+  EID_T edge_id() const { return nbr_->eid; }
 
   template <typename T>
   T get_data(prop_id_t prop_id) const {
-    if (encoded_) {
-      decode();
-      return ValueGetter<T>::Value(edata_arrays_[prop_id], data_.eid);
-    }
     return ValueGetter<T>::Value(edata_arrays_[prop_id], nbr_->eid);
   }
 
   std::string get_str(prop_id_t prop_id) const {
-    if (encoded_) {
-      decode();
-      return ValueGetter<std::string>::Value(edata_arrays_[prop_id], data_.eid);
-    }
     return ValueGetter<std::string>::Value(edata_arrays_[prop_id], nbr_->eid);
   }
 
   double get_double(prop_id_t prop_id) const {
-    if (encoded_) {
-      decode();
-      return ValueGetter<double>::Value(edata_arrays_[prop_id], data_.eid);
-    }
     return ValueGetter<double>::Value(edata_arrays_[prop_id], nbr_->eid);
   }
 
   int64_t get_int(prop_id_t prop_id) const {
-    if (encoded_) {
-      decode();
-      return ValueGetter<int64_t>::Value(edata_arrays_[prop_id], data_.eid);
-    }
     return ValueGetter<int64_t>::Value(edata_arrays_[prop_id], nbr_->eid);
   }
 
   inline const Nbr& operator++() const {
-    if (encoded_) {
-      decode();
-      v_ptr_ += v_size_;
-      e_ptr_ += e_size_;
-      data_valid_ = false;
-    } else {
-      ++nbr_;
-    }
+    ++nbr_;
     return *this;
   }
 
@@ -448,14 +358,7 @@ struct Nbr {
   }
 
   inline const Nbr& operator--() const {
-    if (encoded_) {
-      // TBD
-      // v_ptr_ -= (get_varint_pre_size(*v_ptr_) + 1);
-      // e_ptr_ -= (get_varint_pre_size(*e_ptr_) + 1);
-      // data_valid_ = false;
-    } else {
-      --nbr_;
-    }
+    --nbr_;
     return *this;
   }
 
@@ -465,39 +368,15 @@ struct Nbr {
     return ret;
   }
 
-  inline bool operator==(const Nbr& rhs) const {
-    if (encoded_) {
-      return v_ptr_ == rhs.v_ptr_ && e_ptr_ == rhs.e_ptr_;
-    }
-    return nbr_ == rhs.nbr_;
-  }
-  inline bool operator!=(const Nbr& rhs) const {
-    if (encoded_) {
-      return v_ptr_ != rhs.v_ptr_ || e_ptr_ != rhs.e_ptr_;
-    }
-    return nbr_ != rhs.nbr_;
-  }
+  inline bool operator==(const Nbr& rhs) const { return nbr_ == rhs.nbr_; }
+  inline bool operator!=(const Nbr& rhs) const { return nbr_ != rhs.nbr_; }
 
-  inline bool operator<(const Nbr& rhs) const {
-    if (encoded_) {
-      return v_ptr_ == rhs.v_ptr_ ? e_ptr_ < rhs.e_ptr_ : v_ptr_ < rhs.v_ptr_;
-    }
-    return nbr_ < rhs.nbr_;
-  }
+  inline bool operator<(const Nbr& rhs) const { return nbr_ < rhs.nbr_; }
 
   inline const Nbr& operator*() const { return *this; }
 
  private:
   const mutable NbrUnit<VID_T, EID_T>* nbr_;
-
-  const mutable uint8_t* v_ptr_;
-  const mutable uint8_t* e_ptr_;
-  bool encoded_;
-  mutable NbrUnit<VID_T, EID_T> data_;
-  mutable bool data_valid_ = false;
-  mutable size_t v_size_;
-  mutable size_t e_size_;
-
   const void** edata_arrays_;
 };
 
@@ -773,66 +652,22 @@ class AdjList {
   AdjList(const NbrUnit<VID_T, EID_T>* begin, const NbrUnit<VID_T, EID_T>* end,
           const void** edata_arrays)
       : begin_(begin), end_(end), edata_arrays_(edata_arrays) {}
-  AdjList(const uint8_t* v_ptr, const uint8_t* e_ptr,
-          const size_t v_begin_offset, const size_t v_end_offset,
-          const size_t e_begin_offset, const size_t e_end_offset,
-          const void** edata_arrays) {
-    // v_begin_ptr_ = get_pointer(v_ptr, begin_index);
-    // v_end_ptr_ = get_pointer(v_ptr, end_index);
-    // e_begin_ptr_ = get_pointer(e_ptr, begin_index);
-    // e_end_ptr_ = get_pointer(e_ptr, end_index);
-    v_begin_ptr_ = v_ptr + v_begin_offset;
-    v_end_ptr_ = v_ptr + v_end_offset;
-    e_begin_ptr_ = e_ptr + e_begin_offset;
-    e_end_ptr_ = e_ptr + e_end_offset;
-    encoded_ = true;
-    v_size_ = v_end_offset - v_begin_offset;
-    e_size_ = e_end_offset - e_begin_offset;
-  }
 
   inline Nbr<VID_T, EID_T> begin() const {
-    if (encoded_) {
-      return Nbr<VID_T, EID_T>(v_begin_ptr_, e_begin_ptr_, edata_arrays_);
-    }
     return Nbr<VID_T, EID_T>(begin_, edata_arrays_);
   }
 
   inline Nbr<VID_T, EID_T> end() const {
-    if (encoded_) {
-      return Nbr<VID_T, EID_T>(v_end_ptr_, e_end_ptr_, edata_arrays_);
-    }
     return Nbr<VID_T, EID_T>(end_, edata_arrays_);
   }
 
-  inline size_t Size() const {
-    if (encoded_) {
-      return v_size_;
-    }
-    return end_ - begin_;
-  }
+  inline size_t Size() const { return end_ - begin_; }
 
-  inline bool Empty() const {
-    if (encoded_) {
-      return v_size_ == 0;
-    }
-    return end_ == begin_;
-  }
+  inline bool Empty() const { return end_ == begin_; }
 
-  inline bool NotEmpty() const {
-    if (encoded_) {
-      return v_size_ != 0;
-    }
+  inline bool NotEmpty() const { return end_ != begin_; }
 
-    return end_ != begin_;
-  }
-
-  // may be there are bugs.
-  size_t size() const {
-    if (encoded_) {
-      return v_size_;
-    }
-    return end_ - begin_;
-  }
+  size_t size() const { return end_ - begin_; }
 
   inline const NbrUnit<VID_T, EID_T>* begin_unit() const { return begin_; }
 
@@ -841,15 +676,6 @@ class AdjList {
  private:
   const NbrUnit<VID_T, EID_T>* begin_;
   const NbrUnit<VID_T, EID_T>* end_;
-
-  const uint8_t* v_begin_ptr_;
-  const uint8_t* v_end_ptr_;
-  const uint8_t* e_begin_ptr_;
-  const uint8_t* e_end_ptr_;
-  size_t e_size_ = 0;
-  size_t v_size_ = 0;
-  bool encoded_ = false;
-
   const void** edata_arrays_;
 };
 

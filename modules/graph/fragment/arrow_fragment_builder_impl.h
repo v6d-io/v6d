@@ -54,9 +54,9 @@ limitations under the License.
 
 namespace vineyard {
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVerticesAndEdges(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddVerticesAndEdges(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
@@ -94,9 +94,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVerticesAndEdges(
                                 concurrency);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVertices(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddVertices(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
     ObjectID vm_id) {
@@ -116,9 +116,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVertices(
   return AddNewVertexLabels(client, std::move(vertex_tables), vm_id);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddEdges(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddEdges(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
@@ -143,9 +143,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddEdges(
 /// Add a set of new vertex labels and a set of new edge labels to graph.
 /// Vertex label id started from vertex_label_num_, and edge label id
 /// started from edge_label_num_.
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewVertexEdgeLabels(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddNewVertexEdgeLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
     std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, ObjectID vm_id,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
@@ -387,7 +387,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewVertexEdgeLabels(
   VLOG(100) << "Add new vertices and edges: after generate CSR: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
 
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
   builder.set_vertex_label_num_(total_vertex_label_num);
   builder.set_edge_label_num_(total_edge_label_num);
 
@@ -545,9 +545,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewVertexEdgeLabels(
 
 /// Add a set of new vertex labels to graph. Vertex label id started from
 /// vertex_label_num_.
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewVertexLabels(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddNewVertexLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
     ObjectID vm_id) {
   int extra_vertex_label_num = vertex_tables.size();
@@ -571,7 +571,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewVertexLabels(
     tvnums[vertex_label_num_ + i] = ivnums[vertex_label_num_ + i];
   }
 
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
   builder.set_vertex_label_num_(total_vertex_label_num);
 
   VLOG(100) << "Add new vertices: start: " << get_rss_pretty()
@@ -691,9 +691,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewVertexLabels(
 
 /// Add a set of new edge labels to graph. Edge label id started from
 /// edge_label_num_.
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewEdgeLabels(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddNewEdgeLabels(
     Client& client, std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
     const std::vector<std::set<std::pair<std::string, std::string>>>&
         edge_relations,
@@ -883,7 +883,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewEdgeLabels(
   VLOG(100) << "Add new edges: after generate CSR: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
 
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
   builder.set_edge_label_num_(total_edge_label_num);
 
   auto schema = schema_;
@@ -1012,8 +1012,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddNewEdgeLabels(
   return fragment_object->id();
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
-vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::Build(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
+vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::Build(
     vineyard::Client& client) {
   VLOG(100) << "Start building into vineyard: " << get_rss_pretty()
             << ", peak: " << get_peak_rss_pretty();
@@ -1076,11 +1076,11 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>:
 
   if (this->compact_edges_) {
     if (this->directed_) {
-      Base::encoded_ie_lists_.resize(this->vertex_label_num_);
-      Base::encoded_ie_offsets_lists_.resize(this->vertex_label_num_);
+      Base::compact_ie_lists_.resize(this->vertex_label_num_);
+      Base::compact_ie_offsets_lists_.resize(this->vertex_label_num_);
     }
-    Base::encoded_oe_lists_.resize(this->vertex_label_num_);
-    Base::encoded_oe_offsets_lists_.resize(this->vertex_label_num_);
+    Base::compact_oe_lists_.resize(this->vertex_label_num_);
+    Base::compact_oe_offsets_lists_.resize(this->vertex_label_num_);
   } else {
     if (this->directed_) {
       Base::ie_lists_.resize(this->vertex_label_num_);
@@ -1093,11 +1093,11 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>:
   for (label_id_t i = 0; i < this->vertex_label_num_; ++i) {
     if (this->compact_edges_) {
       if (this->directed_) {
-        Base::encoded_ie_lists_[i].resize(this->edge_label_num_);
-        Base::encoded_ie_offsets_lists_[i].resize(this->edge_label_num_);
+        Base::compact_ie_lists_[i].resize(this->edge_label_num_);
+        Base::compact_ie_offsets_lists_[i].resize(this->edge_label_num_);
       }
-      Base::encoded_oe_lists_[i].resize(this->edge_label_num_);
-      Base::encoded_oe_offsets_lists_[i].resize(this->edge_label_num_);
+      Base::compact_oe_lists_[i].resize(this->edge_label_num_);
+      Base::compact_oe_offsets_lists_[i].resize(this->edge_label_num_);
     } else {
       if (this->directed_) {
         Base::ie_lists_[i].resize(this->edge_label_num_);
@@ -1112,17 +1112,17 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>:
         std::shared_ptr<Object> object;
         if (this->compact_edges_) {
           if (this->directed_) {
-            RETURN_ON_ERROR(encoded_ie_lists_[i][j]->Seal(*client, object));
-            this->set_encoded_ie_lists_(i, j, object);
+            RETURN_ON_ERROR(compact_ie_lists_[i][j]->Seal(*client, object));
+            this->set_compact_ie_lists_(i, j, object);
             RETURN_ON_ERROR(
-                encoded_ie_offsets_lists_[i][j]->Seal(*client, object));
-            this->set_encoded_ie_offsets_lists_(i, j, object);
+                compact_ie_offsets_lists_[i][j]->Seal(*client, object));
+            this->set_compact_ie_offsets_lists_(i, j, object);
           }
-          RETURN_ON_ERROR(encoded_oe_lists_[i][j]->Seal(*client, object));
-          this->set_encoded_oe_lists_(i, j, object);
+          RETURN_ON_ERROR(compact_oe_lists_[i][j]->Seal(*client, object));
+          this->set_compact_oe_lists_(i, j, object);
           RETURN_ON_ERROR(
-              encoded_oe_offsets_lists_[i][j]->Seal(*client, object));
-          this->set_encoded_oe_offsets_lists_(i, j, object);
+              compact_oe_offsets_lists_[i][j]->Seal(*client, object));
+          this->set_compact_oe_offsets_lists_(i, j, object);
         } else {
           if (this->directed_) {
             RETURN_ON_ERROR(ie_lists_[i][j]->Seal(*client, object));
@@ -1154,9 +1154,9 @@ vineyard::Status BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>:
   return Status::OK();
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
-BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::Init(
+BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::Init(
     fid_t fid, fid_t fnum,
     std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
     std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, bool directed,
@@ -1183,9 +1183,9 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::Init(
 }
 
 // | prop_0 | prop_1 | ... |
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
-BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initVertices(
+BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initVertices(
     std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables) {
   assert(vertex_tables.size() == static_cast<size_t>(this->vertex_label_num_));
   vertex_tables_ = vertex_tables;
@@ -1200,9 +1200,9 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initVertices(
 
 // | src_id(generated) | dst_id(generated) | prop_0 | prop_1
 // | ... |
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
-BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initEdges(
+BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initEdges(
     std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, int concurrency) {
   LOG(INFO) << "Gen edges list start...";
   auto gen_edge_start_time = vineyard::GetMicroTimestamp();
@@ -1323,41 +1323,41 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initEdges(
 
   if (this->compact_edges_) {
     if (this->directed_) {
-      this->encoded_ie_lists_.resize(this->vertex_label_num_);
-      this->encoded_ie_offsets_lists_.resize(this->vertex_label_num_);
+      this->compact_ie_lists_.resize(this->vertex_label_num_);
+      this->compact_ie_offsets_lists_.resize(this->vertex_label_num_);
     }
 
-    this->encoded_oe_lists_.resize(this->vertex_label_num_);
-    this->encoded_oe_offsets_lists_.resize(this->vertex_label_num_);
+    this->compact_oe_lists_.resize(this->vertex_label_num_);
+    this->compact_oe_offsets_lists_.resize(this->vertex_label_num_);
 
     for (int v_label = 0; v_label < this->vertex_label_num_; v_label++) {
-      std::vector<std::shared_ptr<FixedUInt8Builder>> encoded_oe_sub_lists_,
-          encoded_ie_sub_lists_;
+      std::vector<std::shared_ptr<FixedUInt8Builder>> compact_oe_sub_lists_,
+          compact_ie_sub_lists_;
       std::vector<std::shared_ptr<FixedInt64Builder>>
-          encoded_oe_offsets_sub_lists_, encoded_ie_offsets_sub_lists_;
+          compact_oe_offsets_sub_lists_, compact_ie_offsets_sub_lists_;
 
-      encoded_oe_sub_lists_.resize(this->edge_label_num_);
-      encoded_oe_offsets_sub_lists_.resize(this->edge_label_num_);
-      this->encoded_oe_lists_[v_label].resize(this->edge_label_num_);
-      this->encoded_oe_offsets_lists_[v_label].resize(this->edge_label_num_);
+      compact_oe_sub_lists_.resize(this->edge_label_num_);
+      compact_oe_offsets_sub_lists_.resize(this->edge_label_num_);
+      this->compact_oe_lists_[v_label].resize(this->edge_label_num_);
+      this->compact_oe_offsets_lists_[v_label].resize(this->edge_label_num_);
 
       if (this->directed_) {
-        encoded_ie_sub_lists_.resize(this->edge_label_num_);
-        encoded_ie_offsets_sub_lists_.resize(this->edge_label_num_);
-        this->encoded_ie_lists_[v_label].resize(this->edge_label_num_);
-        this->encoded_ie_offsets_lists_[v_label].resize(this->edge_label_num_);
+        compact_ie_sub_lists_.resize(this->edge_label_num_);
+        compact_ie_offsets_sub_lists_.resize(this->edge_label_num_);
+        this->compact_ie_lists_[v_label].resize(this->edge_label_num_);
+        this->compact_ie_offsets_lists_[v_label].resize(this->edge_label_num_);
       }
 
       for (int e_label = 0; e_label < this->edge_label_num_; e_label++) {
-        std::vector<uint8_t> encoded_oe_eid_vec, encoded_oe_vid_vec,
-            encoded_ie_eid_vec, encoded_ie_vid_vec;
+        std::vector<uint8_t> compact_oe_eid_vec, compact_oe_vid_vec,
+            compact_ie_eid_vec, compact_ie_vid_vec;
 
-        std::vector<int64_t> encoded_oe_eid_offset_vec,
-            encoded_oe_vid_offset_vec, encoded_ie_eid_offset_vec,
-            encoded_ie_vid_offset_vec;
+        std::vector<int64_t> compact_oe_eid_offset_vec,
+            compact_oe_vid_offset_vec, compact_ie_eid_offset_vec,
+            compact_ie_vid_offset_vec;
 
-        std::vector<uint8_t> encoded_oe_vec, encoded_ie_vec;
-        std::vector<int64_t> encoded_oe_offsets_vec, encoded_ie_offsets_vec;
+        std::vector<uint8_t> compact_oe_vec, compact_ie_vec;
+        std::vector<int64_t> compact_oe_offsets_vec, compact_ie_offsets_vec;
 
 
         auto generate_varint_start_time = vineyard::GetMicroTimestamp();
@@ -1365,32 +1365,32 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initEdges(
                               oe_lists_[v_label][e_label]->size(),
                               this->oe_offsets_lists_[v_label][e_label]->data(),
                               this->oe_offsets_lists_[v_label][e_label]->size(),
-                              encoded_oe_vec, encoded_oe_offsets_vec, concurrency);
+                              compact_oe_vec, compact_oe_offsets_vec, concurrency);
         auto generate_varint_finish_time = vineyard::GetMicroTimestamp();
         generate_varint_time +=
             (generate_varint_finish_time - generate_varint_start_time);
 
-        encoded_oe_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
-            client_, encoded_oe_vec.size() * sizeof(uint8_t));
+        compact_oe_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
+            client_, compact_oe_vec.size() * sizeof(uint8_t));
         auto memcpy_start_time = vineyard::GetMicroTimestamp();
-        memcpy(encoded_oe_sub_lists_[e_label]->data(), encoded_oe_vec.data(),
-               encoded_oe_vec.size() * sizeof(uint8_t));
+        memcpy(compact_oe_sub_lists_[e_label]->data(), compact_oe_vec.data(),
+               compact_oe_vec.size() * sizeof(uint8_t));
         auto memcpy_finish_time = vineyard::GetMicroTimestamp();
         memcpy_time += (memcpy_finish_time - memcpy_start_time);
-        encoded_oe_offsets_sub_lists_[e_label] =
+        compact_oe_offsets_sub_lists_[e_label] =
             std::make_shared<FixedInt64Builder>(client_,
-                                                encoded_oe_offsets_vec.size());
+                                                compact_oe_offsets_vec.size());
         memcpy_start_time = vineyard::GetMicroTimestamp();
-        memcpy(encoded_oe_offsets_sub_lists_[e_label]->data(),
-               encoded_oe_offsets_vec.data(),
-               encoded_oe_offsets_vec.size() * sizeof(int64_t));
+        memcpy(compact_oe_offsets_sub_lists_[e_label]->data(),
+               compact_oe_offsets_vec.data(),
+               compact_oe_offsets_vec.size() * sizeof(int64_t));
         memcpy_finish_time = vineyard::GetMicroTimestamp();
         memcpy_time += (memcpy_finish_time - memcpy_start_time);
 
-        this->encoded_oe_lists_[v_label][e_label] =
-            encoded_oe_sub_lists_[e_label];
-        this->encoded_oe_offsets_lists_[v_label][e_label] =
-            encoded_oe_offsets_sub_lists_[e_label];
+        this->compact_oe_lists_[v_label][e_label] =
+            compact_oe_sub_lists_[e_label];
+        this->compact_oe_offsets_lists_[v_label][e_label] =
+            compact_oe_offsets_sub_lists_[e_label];
 
         if (this->directed_) {
           auto generate_varint_start_time = vineyard::GetMicroTimestamp();
@@ -1398,35 +1398,35 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initEdges(
               this->ie_lists_[v_label][e_label]->data(),
               ie_lists_[v_label][e_label]->size(),
               this->ie_offsets_lists_[v_label][e_label]->data(),
-              this->ie_offsets_lists_[v_label][e_label]->size(), encoded_ie_vec,
-              encoded_ie_offsets_vec, concurrency);
+              this->ie_offsets_lists_[v_label][e_label]->size(), compact_ie_vec,
+              compact_ie_offsets_vec, concurrency);
           auto generate_varint_finish_time = vineyard::GetMicroTimestamp();
           generate_varint_time +=
               (generate_varint_finish_time - generate_varint_start_time);
           
-          encoded_ie_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
-              client_, encoded_ie_vec.size() * sizeof(uint8_t));
+          compact_ie_sub_lists_[e_label] = std::make_shared<FixedUInt8Builder>(
+              client_, compact_ie_vec.size() * sizeof(uint8_t));
           
           auto memcpy_start_time = vineyard::GetMicroTimestamp();
-          memcpy(encoded_ie_sub_lists_[e_label]->data(), encoded_ie_vec.data(),
-                 encoded_ie_vec.size() * sizeof(uint8_t));
+          memcpy(compact_ie_sub_lists_[e_label]->data(), compact_ie_vec.data(),
+                 compact_ie_vec.size() * sizeof(uint8_t));
           auto memcpy_finish_time = vineyard::GetMicroTimestamp();
           memcpy_time += (memcpy_finish_time - memcpy_start_time);
 
-          encoded_ie_offsets_sub_lists_[e_label] =
+          compact_ie_offsets_sub_lists_[e_label] =
               std::make_shared<FixedInt64Builder>(
-                  client_, encoded_ie_offsets_vec.size());
+                  client_, compact_ie_offsets_vec.size());
           memcpy_start_time = vineyard::GetMicroTimestamp();
-          memcpy(encoded_ie_offsets_sub_lists_[e_label]->data(),
-                 encoded_ie_offsets_vec.data(),
-                 encoded_ie_offsets_vec.size() * sizeof(int64_t));
+          memcpy(compact_ie_offsets_sub_lists_[e_label]->data(),
+                 compact_ie_offsets_vec.data(),
+                 compact_ie_offsets_vec.size() * sizeof(int64_t));
           memcpy_finish_time = vineyard::GetMicroTimestamp();
           memcpy_time += (memcpy_finish_time - memcpy_start_time);
 
-          this->encoded_ie_lists_[v_label][e_label] =
-              encoded_ie_sub_lists_[e_label];
-          this->encoded_ie_offsets_lists_[v_label][e_label] =
-              encoded_ie_offsets_sub_lists_[e_label];
+          this->compact_ie_lists_[v_label][e_label] =
+              compact_ie_sub_lists_[e_label];
+          this->compact_ie_offsets_lists_[v_label][e_label] =
+              compact_ie_offsets_sub_lists_[e_label];
         }
       }
     }

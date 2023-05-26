@@ -100,7 +100,7 @@ generate_undirected_csr_memopt<uint64_t, uint64_t>(
 template boost::leaf::result<void> generate_varint_edges<uint64_t, uint64_t>(
     property_graph_utils::NbrUnit<uint64_t, uint64_t>* e_list, size_t list_size,
     int64_t* e_offsets_lists_, size_t e_offsets_lists_size,
-    std::vector<uint8_t>& encoded_id_list,
-    std::vector<int64_t>& encoded_offsets_list, int concurrency);
+    std::vector<uint8_t>& compact_id_list,
+    std::vector<int64_t>& compact_offsets_list, int concurrency);
 
 }  // namespace vineyard

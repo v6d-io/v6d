@@ -54,8 +54,8 @@ limitations under the License.
 
 namespace vineyard {
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
-void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::PrepareToRunApp(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
+void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::PrepareToRunApp(
     const grape::CommSpec& comm_spec, grape::PrepareConf conf) {
   if (conf.message_strategy ==
       grape::MessageStrategy::kAlongEdgeToOuterVertex) {
@@ -69,9 +69,9 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::PrepareToRunApp(
   }
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVertexColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddVertexColumns(
     vineyard::Client& client,
     const std::map<
         label_id_t,
@@ -81,9 +81,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVertexColumns(
   return AddVertexColumnsImpl<arrow::Array>(client, columns, replace);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVertexColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddVertexColumns(
     vineyard::Client& client,
     const std::map<label_id_t,
                    std::vector<std::pair<std::string,
@@ -93,17 +93,17 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVertexColumns(
   return AddVertexColumnsImpl<arrow::ChunkedArray>(client, columns, replace);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 template <typename ArrayType>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVertexColumnsImpl(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddVertexColumnsImpl(
     vineyard::Client& client,
     const std::map<
         label_id_t,
         std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
         columns,
     bool replace) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
   auto schema = schema_;
 
   /// If replace == true, invalidate all previous properties that have new
@@ -155,9 +155,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddVertexColumnsImpl(
   return fragment_sealed->id();
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddEdgeColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddEdgeColumns(
     vineyard::Client& client,
     const std::map<
         label_id_t,
@@ -167,9 +167,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddEdgeColumns(
   return AddEdgeColumnsImpl<arrow::Array>(client, columns, replace);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddEdgeColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddEdgeColumns(
     vineyard::Client& client,
     const std::map<label_id_t,
                    std::vector<std::pair<std::string,
@@ -179,17 +179,17 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddEdgeColumns(
   return AddEdgeColumnsImpl<arrow::ChunkedArray>(client, columns, replace);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 template <typename ArrayType>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddEdgeColumnsImpl(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddEdgeColumnsImpl(
     vineyard::Client& client,
     const std::map<
         label_id_t,
         std::vector<std::pair<std::string, std::shared_ptr<ArrayType>>>>
         columns,
     bool replace) {
-  vineyard::ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
+  vineyard::ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
   auto schema = schema_;
 
   if (replace) {
@@ -235,13 +235,13 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::AddEdgeColumnsImpl(
   return fragment_sealed->id();
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::Project(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::Project(
     vineyard::Client& client,
     std::map<label_id_t, std::vector<prop_id_t>> vertices,
     std::map<label_id_t, std::vector<prop_id_t>> edges) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
 
   auto schema = schema_;
 
@@ -332,11 +332,11 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::Project(
   return fragment_sealed->id();
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::TransformDirection(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::TransformDirection(
     vineyard::Client& client, int concurrency) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
   builder.set_directed_(!directed_);
 
   std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>
@@ -368,9 +368,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::TransformDirection(
   return fragment_sealed->id();
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::ConsolidateVertexColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::ConsolidateVertexColumns(
     vineyard::Client& client, const label_id_t vlabel,
     std::vector<std::string> const& prop_names,
     std::string const& consolidate_name) {
@@ -386,12 +386,12 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::ConsolidateVertexColumns(
   return ConsolidateVertexColumns(client, vlabel, props, consolidate_name);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::ConsolidateVertexColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::ConsolidateVertexColumns(
     vineyard::Client& client, const label_id_t vlabel,
     std::vector<prop_id_t> const& props, std::string const& consolidate_name) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
   auto schema = schema_;
 
   auto& table = this->vertex_tables_[vlabel];
@@ -425,9 +425,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::ConsolidateVertexColumns(
   return fragment_sealed->id();
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::ConsolidateEdgeColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::ConsolidateEdgeColumns(
     vineyard::Client& client, const label_id_t elabel,
     std::vector<std::string> const& prop_names,
     std::string const& consolidate_name) {
@@ -443,12 +443,12 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::ConsolidateEdgeColumns(
   return ConsolidateEdgeColumns(client, elabel, props, consolidate_name);
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<vineyard::ObjectID>
-ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::ConsolidateEdgeColumns(
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::ConsolidateEdgeColumns(
     vineyard::Client& client, const label_id_t elabel,
     std::vector<prop_id_t> const& props, std::string const& consolidate_name) {
-  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, ENCODED> builder(*this);
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
   auto schema = schema_;
 
   auto& table = this->edge_tables_[elabel];
@@ -482,8 +482,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::ConsolidateEdgeColumns(
   return fragment_sealed->id();
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
-void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initPointers() {
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
+void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
   edge_tables_columns_.resize(edge_label_num_);
   flatten_edge_tables_columns_.resize(edge_label_num_);
   for (label_id_t i = 0; i < edge_label_num_; ++i) {
@@ -516,8 +516,8 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initPointers() {
   }
 
   if (this->compact_edges_) {
-    encoded_oe_ptr_lists_.resize(vertex_label_num_);
-    encoded_oe_offsets_ptr_lists_.resize(vertex_label_num_);
+    compact_oe_ptr_lists_.resize(vertex_label_num_);
+    compact_oe_offsets_ptr_lists_.resize(vertex_label_num_);
   } else {
     oe_ptr_lists_.resize(vertex_label_num_);
     oe_offsets_ptr_lists_.resize(vertex_label_num_);
@@ -538,8 +538,8 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initPointers() {
     ovg2l_maps_ptr_[i] = ovg2l_maps_[i].get();
 
     if (compact_edges_) {
-      encoded_oe_ptr_lists_[i].resize(edge_label_num_);
-      encoded_oe_offsets_ptr_lists_[i].resize(edge_label_num_);
+      compact_oe_ptr_lists_[i].resize(edge_label_num_);
+      compact_oe_offsets_ptr_lists_[i].resize(edge_label_num_);
     } else {
       oe_ptr_lists_[i].resize(edge_label_num_);
       oe_offsets_ptr_lists_[i].resize(edge_label_num_);
@@ -555,10 +555,10 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initPointers() {
 
     for (label_id_t j = 0; j < edge_label_num_; ++j) {
       if (this->compact_edges_) {
-        encoded_oe_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
-            encoded_oe_lists_[i][j]->GetArray()->raw_values());
-        encoded_oe_offsets_ptr_lists_[i][j] =
-            encoded_oe_offsets_lists_[i][j]->GetArray()->raw_values();
+        compact_oe_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
+            compact_oe_lists_[i][j]->GetArray()->raw_values());
+        compact_oe_offsets_ptr_lists_[i][j] =
+            compact_oe_offsets_lists_[i][j]->GetArray()->raw_values();
       } else {
         oe_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
             oe_lists_[i][j]->GetArray()->raw_values());
@@ -570,23 +570,23 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initPointers() {
 
   if (this->compact_edges_) {
     if (directed_) {
-      encoded_ie_ptr_lists_.resize(vertex_label_num_);
-      encoded_ie_offsets_ptr_lists_.resize(vertex_label_num_);
+      compact_ie_ptr_lists_.resize(vertex_label_num_);
+      compact_ie_offsets_ptr_lists_.resize(vertex_label_num_);
 
       for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-        encoded_ie_ptr_lists_[i].resize(edge_label_num_);
-        encoded_ie_offsets_ptr_lists_[i].resize(edge_label_num_);
+        compact_ie_ptr_lists_[i].resize(edge_label_num_);
+        compact_ie_offsets_ptr_lists_[i].resize(edge_label_num_);
 
         for (label_id_t j = 0; j < edge_label_num_; ++j) {
-          encoded_ie_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
-              encoded_ie_lists_[i][j]->GetArray()->raw_values());
-          encoded_ie_offsets_ptr_lists_[i][j] =
-              encoded_ie_offsets_lists_[i][j]->GetArray()->raw_values();
+          compact_ie_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
+              compact_ie_lists_[i][j]->GetArray()->raw_values());
+          compact_ie_offsets_ptr_lists_[i][j] =
+              compact_ie_offsets_lists_[i][j]->GetArray()->raw_values();
         }
       }
     } else {
-      encoded_ie_ptr_lists_ = encoded_oe_ptr_lists_;
-      encoded_ie_offsets_ptr_lists_ = encoded_oe_offsets_ptr_lists_;
+      compact_ie_ptr_lists_ = compact_oe_ptr_lists_;
+      compact_ie_offsets_ptr_lists_ = compact_oe_offsets_ptr_lists_;
     }
   } else {
     if (directed_) {
@@ -611,8 +611,8 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initPointers() {
   }
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
-void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initDestFidList(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
+void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initDestFidList(
     bool in_edge, bool out_edge,
     std::vector<std::vector<std::vector<fid_t>>>& fid_lists,
     std::vector<std::vector<std::vector<fid_t*>>>& fid_lists_offset) {
@@ -672,8 +672,8 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::initDestFidList(
   }
 }
 
-template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool ENCODED>
-void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, ENCODED>::directedCSR2Undirected(
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
+void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::directedCSR2Undirected(
     vineyard::Client& client,
     std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>&
         oe_lists,

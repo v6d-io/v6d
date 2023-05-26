@@ -41,8 +41,8 @@ limitations under the License.
 namespace vineyard {
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
-BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
+BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::
     BasicEVFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                           const PARTITIONER_T& partitioner, bool directed,
                           bool generate_eid, bool retain_oid,
@@ -64,10 +64,10 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
  * @return
  */
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void> BasicEVFragmentLoader<
     OID_T, VID_T, PARTITIONER_T,
-    VERTEX_MAP_T, ENCODED>::AddVertexTable(const std::string& label,
+    VERTEX_MAP_T, COMPACT>::AddVertexTable(const std::string& label,
                                   std::shared_ptr<arrow::Table> vertex_table) {
   auto id_column_type = vertex_table->column(id_column)->type();
 
@@ -92,10 +92,10 @@ boost::leaf::result<void> BasicEVFragmentLoader<
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
-                      VERTEX_MAP_T, ENCODED>::ConstructVertices(ObjectID vm_id) {
+                      VERTEX_MAP_T, COMPACT>::ConstructVertices(ObjectID vm_id) {
   for (size_t i = 0; i < vertex_labels_.size(); ++i) {
     vertex_label_to_index_[vertex_labels_[i]] = i;
   }
@@ -134,9 +134,9 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
  * @return
  */
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
-BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::AddEdgeTable(
+BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::AddEdgeTable(
     const std::string& src_label, const std::string& dst_label,
     const std::string& edge_label, std::shared_ptr<arrow::Table> edge_table) {
   label_id_t src_label_id, dst_label_id;
@@ -185,10 +185,10 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::AddEd
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
-                      VERTEX_MAP_T, ENCODED>::ConstructEdges(int label_offset,
+                      VERTEX_MAP_T, COMPACT>::ConstructEdges(int label_offset,
                                                     int vertex_label_num) {
   if (vertex_label_num == 0) {
     vertex_label_num = vertex_label_num_;
@@ -245,11 +245,11 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID>
-BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
+BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::
     AddVerticesToFragment(
-        std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t, ENCODED>> frag) {
+        std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t, COMPACT>> frag) {
   if (vineyard::is_local_vertex_map<vertex_map_t>::value) {
     RETURN_GS_ERROR(
         vineyard::ErrorCode::kUnsupportedOperationError,
@@ -265,11 +265,11 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID>
-BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
+BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::
     AddEdgesToFragment(
-        std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t, ENCODED>> frag) {
+        std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t, COMPACT>> frag) {
   std::vector<std::set<std::pair<std::string, std::string>>> edge_relations(
       edge_label_num_);
   int pre_vlabel_num = frag->schema().all_vertex_label_num();
@@ -298,11 +298,11 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID>
-BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
+BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::
     AddVerticesAndEdgesToFragment(
-        std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t, ENCODED>> frag) {
+        std::shared_ptr<ArrowFragment<oid_t, vid_t, vertex_map_t, COMPACT>> frag) {
   // handle two special cases
   if (output_edge_tables_.empty()) {
     return AddVerticesToFragment(frag);
@@ -346,10 +346,10 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<ObjectID> BasicEVFragmentLoader<
-    OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::ConstructFragment() {
-  BasicArrowFragmentBuilder<oid_t, vid_t, vertex_map_t, ENCODED> frag_builder(client_,
+    OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::ConstructFragment() {
+  BasicArrowFragmentBuilder<oid_t, vid_t, vertex_map_t, COMPACT> frag_builder(client_,
                                                                      vm_ptr_);
 
   VLOG(100) << "Start constructing fragment: " << get_rss_pretty()
@@ -381,9 +381,9 @@ boost::leaf::result<ObjectID> BasicEVFragmentLoader<
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<std::shared_ptr<ITablePipeline>>
-BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::edgesId2Gid(
+BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::edgesId2Gid(
     const std::shared_ptr<ITablePipeline> edge_table, label_id_t src_label,
     label_id_t dst_label) {
   std::shared_ptr<arrow::Field> src_gid_field = std::make_shared<arrow::Field>(
@@ -420,8 +420,8 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::edges
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
-Status BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
+Status BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::
     parseOidChunkedArray(
         label_id_t label_id,
         const std::shared_ptr<arrow::ChunkedArray> oid_arrays_in,
@@ -451,8 +451,8 @@ Status BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
-Status BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
+Status BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::
     parseOidChunkedArrayChunk(label_id_t label_id,
                               const std::shared_ptr<arrow::Array> oid_arrays_in,
                               std::shared_ptr<arrow::Array>& out) {
@@ -487,9 +487,9 @@ Status BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
-BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::initSchema(
+BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::initSchema(
     PropertyGraphSchema& schema) {
   schema.set_fnum(comm_spec_.fnum());
   for (label_id_t v_label = 0; v_label != vertex_label_num_; ++v_label) {
@@ -536,9 +536,9 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::initS
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
-BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
+BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, COMPACT>::
     generateEdgeId(
         const grape::CommSpec& comm_spec,
         std::vector<std::vector<std::pair<std::pair<label_id_t, label_id_t>,
@@ -598,10 +598,10 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T, VERTEX_MAP_T, ENCODED>::
 
 // constructVertices implementation for ArrowVertexMap
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
-                      VERTEX_MAP_T, ENCODED>::constructVerticesImpl(ObjectID vm_id,
+                      VERTEX_MAP_T, COMPACT>::constructVerticesImpl(ObjectID vm_id,
                                                            std::false_type) {
   VLOG(100) << "Starting constructing vertices: " << get_rss_pretty();
   std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>> oid_lists(
@@ -684,10 +684,10 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
 
 // constructVertices implementation for ArrowLocalVertexMap
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
-                      VERTEX_MAP_T, ENCODED>::constructVerticesImpl(ObjectID vm_id,
+                      VERTEX_MAP_T, COMPACT>::constructVerticesImpl(ObjectID vm_id,
                                                            std::true_type) {
   if (vm_id != InvalidObjectID()) {
     auto old_vm_ptr =
@@ -747,10 +747,10 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
-                      VERTEX_MAP_T, ENCODED>::constructEdgesImpl(int label_offset,
+                      VERTEX_MAP_T, COMPACT>::constructEdgesImpl(int label_offset,
                                                         int vertex_label_num,
                                                         std::false_type) {
   vineyard::IdParser<vid_t> id_parser;
@@ -796,10 +796,10 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
 }
 
 template <typename OID_T, typename VID_T, typename PARTITIONER_T,
-          template <typename, typename> class VERTEX_MAP_T, bool ENCODED>
+          template <typename, typename> class VERTEX_MAP_T, bool COMPACT>
 boost::leaf::result<void>
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T,
-                      VERTEX_MAP_T, ENCODED>::constructEdgesImpl(int label_offset,
+                      VERTEX_MAP_T, COMPACT>::constructEdgesImpl(int label_offset,
                                                         int vertex_label_num,
                                                         std::true_type) {
   vineyard::IdParser<vid_t> id_parser;
