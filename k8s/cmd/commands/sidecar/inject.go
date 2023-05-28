@@ -525,7 +525,9 @@ func buildSidecar(namespace string) (*v1alpha1.Sidecar, error) {
 func InjectSidecarConfig(sidecar *v1alpha1.Sidecar, workloadObj,
 	sidecarObj *unstructured.Unstructured,
 ) error {
-	selector := labels.VineyardAppLabel + "=" + flags.SidecarName
+	selector1 := labels.VineyardAppLabel + "=" + flags.SidecarName
+	selector2 := labels.VineyardRoleLabel + "=" + "vineyardd"
+	selector := selector1 + "," + selector2
 	err := injector.InjectSidecar(workloadObj, sidecarObj, sidecar, selector)
 	if err != nil {
 		return errors.Wrap(err, "failed to inject the sidecar")
