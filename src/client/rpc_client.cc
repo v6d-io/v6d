@@ -28,6 +28,7 @@ limitations under the License.
 #include "client/ds/remote_blob.h"
 #include "client/io.h"
 #include "client/utils.h"
+#include "common/compression/compressor.h"
 #include "common/util/env.h"
 #include "common/util/protocols.h"
 
@@ -111,9 +112,9 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
   RETURN_ON_ERROR(doRead(message_in));
   std::string ipc_socket_value, rpc_endpoint_value;
   bool store_match;
-  RETURN_ON_ERROR(ReadRegisterReply(message_in, ipc_socket_value,
-                                    rpc_endpoint_value, remote_instance_id_,
-                                    session_id_, server_version_, store_match));
+  RETURN_ON_ERROR(ReadRegisterReply(
+      message_in, ipc_socket_value, rpc_endpoint_value, remote_instance_id_,
+      session_id_, server_version_, store_match, support_rpc_compression_));
   ipc_socket_ = ipc_socket_value;
   connected_ = true;
 
@@ -250,19 +251,74 @@ std::vector<std::shared_ptr<Object>> RPCClient::ListObjects(
   return objects;
 }
 
+namespace detail {
+
+Status compress_and_send(std::shared_ptr<Compressor> const& compressor, int fd,
+                         const char* buffer, const size_t buffer_size) {
+  RETURN_ON_ERROR(compressor->Compress(buffer, buffer_size));
+  void* chunk = nullptr;
+  size_t chunk_size = 0;
+  while (compressor->Pull(chunk, chunk_size).ok()) {
+    RETURN_ON_ERROR(send_bytes(fd, &chunk_size, sizeof(size_t)));
+    RETURN_ON_ERROR(send_bytes(fd, chunk, chunk_size));
+  }
+  return Status::OK();
+}
+
+Status recv_and_decompress(std::shared_ptr<Decompressor> const& decompressor,
+                           int fd, char* buffer, const size_t buffer_size) {
+  size_t decompressed_offset = 0;
+  void* incoming_buffer = nullptr;
+  size_t incoming_buffer_size = 0;
+  while (true) {
+    RETURN_ON_ERROR(
+        decompressor->Buffer(incoming_buffer, incoming_buffer_size));
+    size_t nbytes = 0;
+    RETURN_ON_ERROR(recv_bytes(fd, &nbytes, sizeof(size_t)));
+    assert(nbytes <= incoming_buffer_size);
+    RETURN_ON_ERROR(recv_bytes(fd, incoming_buffer, nbytes));
+    RETURN_ON_ERROR(decompressor->Decompress(nbytes));
+    size_t chunk_size = 0;
+    while (decompressor
+               ->Pull(buffer + decompressed_offset,
+                      buffer_size - decompressed_offset, chunk_size)
+               .ok()) {
+      decompressed_offset += chunk_size;
+      if (decompressed_offset == buffer_size) {
+        break;
+      }
+    }
+    if (decompressed_offset == buffer_size) {
+      break;
+    }
+  }
+  return Status::OK();
+}
+
+}  // namespace detail
+
 Status RPCClient::CreateRemoteBlob(
     std::shared_ptr<RemoteBlobWriter> const& buffer, ObjectID& id) {
   ENSURE_CONNECTED(this);
   VINEYARD_ASSERT(buffer != nullptr, "Expects a non-null remote blob rewriter");
+  std::shared_ptr<Compressor> compressor;
+  if (support_rpc_compression_) {
+    compressor = std::make_shared<Compressor>();
+  }
 
   Payload payload;
   int fd_sent = -1;
 
   std::string message_out;
-  WriteCreateRemoteBufferRequest(buffer->size(), message_out);
+  WriteCreateRemoteBufferRequest(buffer->size(), !!compressor, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   // send the actual payload
-  RETURN_ON_ERROR(send_bytes(vineyard_conn_, buffer->data(), buffer->size()));
+  if (compressor && buffer->size() > 0) {
+    RETURN_ON_ERROR(detail::compress_and_send(compressor, vineyard_conn_,
+                                              buffer->data(), buffer->size()));
+  } else {
+    RETURN_ON_ERROR(send_bytes(vineyard_conn_, buffer->data(), buffer->size()));
+  }
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, payload, fd_sent));
@@ -280,12 +336,17 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id,
 Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
                                 std::shared_ptr<RemoteBlob>& buffer) {
   ENSURE_CONNECTED(this);
+  std::shared_ptr<Decompressor> decompressor;
+  if (support_rpc_compression_) {
+    decompressor = std::make_shared<Decompressor>();
+  }
 
   std::vector<Payload> payloads;
   std::vector<int> fd_sent;
 
   std::string message_out;
-  WriteGetRemoteBuffersRequest(std::set<ObjectID>{id}, unsafe, message_out);
+  WriteGetRemoteBuffersRequest(std::set<ObjectID>{id}, unsafe, !!decompressor,
+                               message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -295,10 +356,17 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
   // read the actual payload
   buffer = std::shared_ptr<RemoteBlob>(new RemoteBlob(
       payloads[0].object_id, remote_instance_id_, payloads[0].data_size));
-  RETURN_ON_ERROR(recv_bytes(vineyard_conn_, buffer->mutable_data(),
-                             payloads[0].data_size));
+  if (decompressor && payloads[0].data_size > 0) {
+    RETURN_ON_ERROR(detail::recv_and_decompress(decompressor, vineyard_conn_,
+                                                buffer->mutable_data(),
+                                                payloads[0].data_size));
+  } else {
+    RETURN_ON_ERROR(recv_bytes(vineyard_conn_, buffer->mutable_data(),
+                               payloads[0].data_size));
+  }
   return Status::OK();
 }
+
 Status RPCClient::GetRemoteBlobs(
     std::vector<ObjectID> const& ids,
     std::vector<std::shared_ptr<RemoteBlob>>& remote_blobs) {
@@ -309,13 +377,17 @@ Status RPCClient::GetRemoteBlobs(
     std::vector<ObjectID> const& ids, const bool unsafe,
     std::vector<std::shared_ptr<RemoteBlob>>& remote_blobs) {
   ENSURE_CONNECTED(this);
+  std::shared_ptr<Decompressor> decompressor;
+  if (support_rpc_compression_) {
+    decompressor = std::make_shared<Decompressor>();
+  }
 
   std::unordered_set<ObjectID> id_set(ids.begin(), ids.end());
   std::vector<Payload> payloads;
   std::vector<int> fd_sent;
 
   std::string message_out;
-  WriteGetRemoteBuffersRequest(id_set, unsafe, message_out);
+  WriteGetRemoteBuffersRequest(id_set, unsafe, !!decompressor, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -329,8 +401,14 @@ Status RPCClient::GetRemoteBlobs(
   for (auto const& payload : payloads) {
     auto remote_blob = std::shared_ptr<RemoteBlob>(new RemoteBlob(
         payload.object_id, remote_instance_id_, payload.data_size));
-    RETURN_ON_ERROR(recv_bytes(vineyard_conn_, remote_blob->mutable_data(),
-                               payload.data_size));
+    if (decompressor && payload.data_size > 0) {
+      RETURN_ON_ERROR(detail::recv_and_decompress(decompressor, vineyard_conn_,
+                                                  remote_blob->mutable_data(),
+                                                  payload.data_size));
+    } else {
+      RETURN_ON_ERROR(recv_bytes(vineyard_conn_, remote_blob->mutable_data(),
+                                 payload.data_size));
+    }
     id_payload_map[payload.object_id] = remote_blob;
   }
   // clear the result container

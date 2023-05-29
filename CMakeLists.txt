@@ -481,6 +481,17 @@ macro(find_zstd)
     set(ZSTD_BUILD_TESTS OFF CACHE INTERNAL "")
     set(ZSTD_BUILD_SHARED OFF CACHE INTERNAL "")
     set(ZSTD_BUILD_STATIC ON CACHE INTERNAL "")
+    set(ZSTD_BUILD_COMPRESSION ON CACHE INTERNAL "")
+    set(ZSTD_BUILD_DECOMPRESSION ON CACHE INTERNAL "")
+    set(ZSTD_BUILD_DICTBUILDER OFF CACHE INTERNAL "")
+    set(ZSTD_BUILD_DEPRECATED OFF CACHE INTERNAL "")
+
+    set(ZSTDLIB_VISIBLE "hidden" CACHE STRING "" FORCE)
+    set(ZSTDERRORLIB_VISIBLE "hidden" CACHE STRING "" FORCE)
+    set(ZDICTLIB_VISIBLE "hidden" CACHE STRING "" FORCE)
+    set(ZSTDLIB_STATIC_API "hidden" CACHE STRING "" FORCE)
+    set(ZDICTLIB_STATIC_API "hidden" CACHE STRING "" FORCE)
+
     if (NOT TARGET libzstd_static)
         set(CMAKE_MODULE_PATH_ORIGINAL ${CMAKE_MODULE_PATH})
         if(${CMAKE_VERSION} VERSION_LESS "3.18")
@@ -499,6 +510,7 @@ macro(find_common_libraries)
     find_libunwind()
     find_pthread()
     find_nlohmann_json()
+    find_zstd()
 
     include_directories(SYSTEM ${ARROW_INCLUDE_DIR})
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
@@ -633,7 +645,6 @@ if(BUILD_VINEYARD_SERVER)
     find_etcd_cpp_apiv3()
     find_mimalloc()
     find_openssl_libraries(REQUIRED)
-    find_zstd()
 
     if(BUILD_VINEYARD_SERVER_REDIS)
         find_hiredis()
@@ -641,6 +652,7 @@ if(BUILD_VINEYARD_SERVER)
     endif()
 
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
+                                       "src/common/compression/*.cc"
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
                                        "src/common/memory/gpu/*.cc"
@@ -734,6 +746,7 @@ if(BUILD_VINEYARD_CLIENT)
     # build the vineyard client library
     file(GLOB CLIENT_SRC_FILES "src/client/*.cc"
                                "src/client/ds/*.cc"
+                               "src/common/compression/*.cc"
                                "src/common/memory/*.cc"
                                "src/common/util/*.cc"
                                "src/common/memory/gpu/*.cc"
@@ -745,6 +758,7 @@ if(BUILD_VINEYARD_CLIENT)
     target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
                                                  Threads::Threads
     )
+    target_link_libraries(vineyard_client PRIVATE libzstd_static)
     if(USE_GPU)
         find_package(CUDA REQUIRED)
         target_link_libraries(vineyard_client PUBLIC ${CUDA_LIBRARIES})

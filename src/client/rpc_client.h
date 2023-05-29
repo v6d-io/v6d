@@ -299,24 +299,25 @@ class RPCClient final : public ClientBase {
    * Note that getting remote blobs requires an expensive copy over network.
    */
   Status GetRemoteBlob(const ObjectID& id, std::shared_ptr<RemoteBlob>& buffer);
+
   /**
    * @brief Get the remote blob of the connected vineyard server, using the RPC
    * socket, and optionally bypass the "seal" check.
    *
    * Note that getting remote blobs requires an expensive copy over network.
    */
-
   Status GetRemoteBlob(const ObjectID& id, const bool unsafe,
                        std::shared_ptr<RemoteBlob>& buffer);
+
   /**
    * @brief Get the remote blobs of the connected vineyard server, using the RPC
    * socket.
    *
    * Note that getting remote blobs requires an expensive copy over network.
    */
-
   Status GetRemoteBlobs(std::vector<ObjectID> const& ids,
                         std::vector<std::shared_ptr<RemoteBlob>>& remote_blobs);
+
   /**
    * @brief Get the remote blobs of the connected vineyard server, using the RPC
    * socket. and optionally bypass the "seal" check.
@@ -328,6 +329,7 @@ class RPCClient final : public ClientBase {
 
  private:
   InstanceID remote_instance_id_;
+  bool support_rpc_compression_ = false;
 
   friend class Client;
 };

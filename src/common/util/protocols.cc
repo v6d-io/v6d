@@ -254,8 +254,8 @@ Status ReadRegisterRequest(const json& root, std::string& version,
 void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
                         const InstanceID instance_id,
-                        const SessionID session_id, bool& store_match,
-                        std::string& msg) {
+                        const SessionID session_id, const bool store_match,
+                        const bool support_rpc_compression, std::string& msg) {
   json root;
   root["type"] = command_t::REGISTER_REPLY;
   root["ipc_socket"] = ipc_socket;
@@ -264,13 +264,14 @@ void WriteRegisterReply(const std::string& ipc_socket,
   root["session_id"] = session_id;
   root["version"] = vineyard_version();
   root["store_match"] = store_match;
+  root["support_rpc_compression"] = support_rpc_compression;
   encode_msg(root, msg);
 }
 
 Status ReadRegisterReply(const json& root, std::string& ipc_socket,
                          std::string& rpc_endpoint, InstanceID& instance_id,
                          SessionID& session_id, std::string& version,
-                         bool& store_match) {
+                         bool& store_match, bool& support_rpc_compression) {
   CHECK_IPC_ERROR(root, command_t::REGISTER_REPLY);
   ipc_socket = root["ipc_socket"].get_ref<std::string const&>();
   rpc_endpoint = root["rpc_endpoint"].get_ref<std::string const&>();
@@ -280,7 +281,9 @@ Status ReadRegisterReply(const json& root, std::string& ipc_socket,
   // When the "version" field is missing from the server, we treat it
   // as default unknown version number: 0.0.0.
   version = root.value<std::string>("version", std::string("0.0.0"));
-  store_match = root["store_match"].get<bool>();
+
+  store_match = root.value("store_match", true);
+  support_rpc_compression = root.value("support_rpc_compression", false);
   return Status::OK();
 }
 

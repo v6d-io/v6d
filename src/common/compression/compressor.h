@@ -13,16 +13,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef SRC_SERVER_UTIL_COMPRESSOR_H_
-#define SRC_SERVER_UTIL_COMPRESSOR_H_
+#ifndef SRC_COMMON_COMPRESSION_COMPRESSOR_H_
+#define SRC_COMMON_COMPRESSION_COMPRESSOR_H_
 
 #include <memory>
 #include <string>
 
-#include "zstd/lib/zstd.h"
-#include "zstd/lib/zstd_errors.h"
-
 #include "common/util/status.h"
+
+// forward declaration to avoid including zstd.h
+struct ZSTD_inBuffer_s;
+struct ZSTD_outBuffer_s;
+struct ZSTD_CCtx_s;
+struct ZSTD_DCtx_s;
 
 namespace vineyard {
 
@@ -30,11 +33,11 @@ namespace vineyard {
  * Usage of the ZSTD compressor:
  *
  *  auto compressor = Compressor();
- *  compressor.compress(data, data_size);
+ *  compressor.Compress(data, data_size);
  *
  *  void *chunk;
  *  size_t size;
- *  while (compressor.pull(chunk, size).ok()) {
+ *  while (compressor.Pull(chunk, size).ok()) {
  *      // do something with resulted chunk and size
  *  }
  */
@@ -61,20 +64,28 @@ class Compressor {
 
   size_t in_size_, out_size_, accumulated_;
   bool finished_ = true, flushing_ = false;
-  ZSTD_inBuffer input_;
-  ZSTD_outBuffer output_;
-  ZSTD_CStream* stream = nullptr;
+  struct ZSTD_inBuffer_s* input_ = nullptr;
+  struct ZSTD_outBuffer_s* output_ = nullptr;
+  ZSTD_CCtx_s* stream = nullptr;
 };
 
 /**
  * Usage of the ZSTD decompressor:
  *
  *  auto decompressor = Decompressor();
- *  decompressor.decompress(data, data_size);
+ *
+ *  void *data;
+ *  size_t data_size;
+ *  decompressor.Buffer(data, data_size);
+ *
+ *  // fill data with compressed data ...
+ *  size_t actual_data_size = ...;
+ *
+ *  decompressor.Decompress(actual_data_size);
  *
  *  void *chunk;
  *  size_t size;
- *  while (decompressor.pull(chunk, chunk_capacity, size)) {
+ *  while (decompressor.Pull(chunk, chunk_capacity, size)) {
  *      // do something with resulted chunk and size
  *  }
  */
@@ -99,11 +110,11 @@ class Decompressor {
 
   size_t in_size_, out_size_;
   bool finished_ = true;
-  ZSTD_inBuffer input_;
-  ZSTD_outBuffer output_;
-  ZSTD_DStream* stream = nullptr;
+  struct ZSTD_inBuffer_s* input_ = nullptr;
+  struct ZSTD_outBuffer_s* output_ = nullptr;
+  ZSTD_DCtx_s* stream = nullptr;
 };
 
 }  // namespace vineyard
 
-#endif  // SRC_SERVER_UTIL_COMPRESSOR_H_
+#endif  // SRC_COMMON_COMPRESSION_COMPRESSOR_H_

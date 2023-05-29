@@ -19,8 +19,8 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
+#include "common/compression/compressor.h"
 #include "common/util/logging.h"
-#include "server/util/compressor.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
