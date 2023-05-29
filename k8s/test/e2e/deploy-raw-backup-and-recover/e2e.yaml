@@ -74,11 +74,10 @@ setup:
           for: condition=Available
     - name: install backup
       command: |
-        --objectIDs "$localobjectid,$distributedobjectid"
         go run k8s/cmd/main.go deploy backup-job \
           --vineyard-deployment-name vineyardd-sample \
           --vineyard-deployment-namespace vineyard-system  \
-          --objectIDs "o334398ae3434,o334398ae3434332" \
+          --objectIDs "$localobjectid,$distributedobjectid" \
           --path /var/vineyard/dump  \
           --pv-pvc-spec '{
           "pv-spec": {
