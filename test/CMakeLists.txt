@@ -42,7 +42,7 @@ foreach(testfile ${TEST_FILES})
     endif()
 
     if(${testname} STREQUAL "compressor_test")
-        target_sources(${testname} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src/server/util/compressor.cc)
+        target_sources(${testname} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src/common/compression/compressor.cc)
         target_link_libraries(${testname} PRIVATE libzstd_static)
     endif()
 

@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "server/util/compressor.h"
+#include "common/compression/compressor.h"
 
 #include <algorithm>
 
@@ -41,22 +41,30 @@ Compressor::Compressor() {
   in_size_ = ZSTD_CStreamInSize();
   out_size_ = ZSTD_CStreamOutSize();
   accumulated_ = 0;
-  input_ = ZSTD_inBuffer{nullptr, 0, 0};
-  output_ = ZSTD_outBuffer{malloc(out_size_), out_size_, 0};
+  input_ = new ZSTD_inBuffer{nullptr, 0, 0};
+  output_ = new ZSTD_outBuffer{malloc(out_size_), out_size_, 0};
 }
 
 Compressor::~Compressor() {
   if (stream) {
-    if (input_.src != nullptr) {
-      ZSTD_compressStream2(stream, &output_, &input_,
+    if (input_->src != nullptr) {
+      ZSTD_compressStream2(stream, output_, input_,
                            ZSTD_EndDirective::ZSTD_e_end);
     }
     ZSTD_freeCStream(stream);
-    if (output_.dst) {
-      free(output_.dst);
-      output_.dst = nullptr;
+    if (output_->dst) {
+      free(output_->dst);
+      output_->dst = nullptr;
     }
     stream = nullptr;
+  }
+  if (input_) {
+    delete input_;
+    input_ = nullptr;
+  }
+  if (output_) {
+    delete output_;
+    output_ = nullptr;
   }
 }
 
@@ -64,7 +72,7 @@ Status Compressor::Compress(const void* data, const size_t size) {
   if (!finished_) {
     return Status::Invalid("Compressor: the zstd stream is not finished yet");
   }
-  input_ = ZSTD_inBuffer{data, size, 0};
+  *input_ = ZSTD_inBuffer{data, size, 0};
   finished_ = false;
   return Status::OK();
 }
@@ -76,7 +84,7 @@ Status Compressor::Pull(void*& data, size_t& size) {
   }
 
   // reset output pointer
-  output_.pos = 0;
+  output_->pos = 0;
 
   // if reach a flush point, flush util empty to make the decompressor
   // can start work and avoid much memory consumption.
@@ -85,15 +93,15 @@ Status Compressor::Pull(void*& data, size_t& size) {
     accumulated_ = 0;
   }
   if (flushing_) {
-    size_t ret = ZSTD_compressStream2(stream, &output_, &input_,
+    size_t ret = ZSTD_compressStream2(stream, output_, input_,
                                       ZSTD_EndDirective::ZSTD_e_flush);
     RETURN_ON_ZSTD_ERROR(ret, "ZSTD compress flush");
     if (ret == 0) {  // stop flushing
       flushing_ = false;
     }
-    if (output_.pos > 0) {  // maybe nothing flushed
-      data = output_.dst;
-      size = output_.pos;
+    if (output_->pos > 0) {  // maybe nothing flushed
+      data = output_->dst;
+      size = output_->pos;
       return Status::OK();
     }
     if (finished_) {
@@ -103,7 +111,7 @@ Status Compressor::Pull(void*& data, size_t& size) {
   }
 
   // if not a flush point, but reaching the end
-  if (input_.pos >= input_.size) {
+  if (input_->pos >= input_->size) {
     flushing_ = true;
     finished_ = true;  // finishing this block
     // starting flushing
@@ -111,12 +119,12 @@ Status Compressor::Pull(void*& data, size_t& size) {
   }
 
   // continue to compress
-  size_t ret = ZSTD_compressStream2(stream, &output_, &input_,
+  size_t ret = ZSTD_compressStream2(stream, output_, input_,
                                     ZSTD_EndDirective::ZSTD_e_continue);
   RETURN_ON_ZSTD_ERROR(ret, "ZSTD compress continue");
 
-  data = output_.dst;
-  size = output_.pos;
+  data = output_->dst;
+  size = output_->pos;
   accumulated_ += size;  // update accumulate statistics
   return Status::OK();
 }
@@ -125,18 +133,26 @@ Decompressor::Decompressor() {
   stream = ZSTD_createDStream();
   in_size_ = std::max(ZSTD_CStreamOutSize(), ZSTD_DStreamInSize());
   out_size_ = ZSTD_DStreamOutSize();
-  input_ = ZSTD_inBuffer{malloc(in_size_), in_size_, 0};
-  output_ = ZSTD_outBuffer{nullptr, 0, 0};
+  input_ = new ZSTD_inBuffer{malloc(in_size_), in_size_, 0};
+  output_ = new ZSTD_outBuffer{nullptr, 0, 0};
 }
 
 Decompressor::~Decompressor() {
   if (stream) {
     ZSTD_freeDStream(stream);
-    if (input_.src) {
-      free(const_cast<void*>(input_.src));
-      input_.src = nullptr;
+    if (input_ && input_->src) {
+      free(const_cast<void*>(input_->src));
+      input_->src = nullptr;
     }
     stream = nullptr;
+  }
+  if (input_) {
+    delete input_;
+    input_ = nullptr;
+  }
+  if (output_) {
+    delete output_;
+    output_ = nullptr;
   }
 }
 
@@ -146,8 +162,8 @@ Status Decompressor::Buffer(void*& data, size_t& size) {
         "Decompressor: the zstd stream is not finished yet, the next input "
         "cannot be fed");
   }
-  data = const_cast<void*>(input_.src);
-  size = input_.size;
+  data = const_cast<void*>(input_->src);
+  size = input_->size;
   return Status::OK();
 }
 
@@ -165,8 +181,8 @@ Status Decompressor::Decompress(const size_t size) {
           "process cannot be started");
     }
   }
-  input_.size = size;
-  input_.pos = 0;
+  input_->size = size;
+  input_->pos = 0;
   finished_ = false;
   return Status::OK();
 }
@@ -182,14 +198,16 @@ Status Decompressor::Pull(void* data, const size_t capacity, size_t& size) {
   }
 
   // reset output pointer
-  output_ = ZSTD_outBuffer{data, capacity, 0};
+  *output_ = ZSTD_outBuffer{data, capacity, 0};
 
   // decompress
-  size_t ret = ZSTD_decompressStream(stream, &output_, &input_);
+  size_t ret = ZSTD_decompressStream(stream, output_, input_);
   RETURN_ON_ZSTD_ERROR(ret, "ZSTD decompress");
-  size = output_.pos;
+  size = output_->pos;
   if (size == 0) {
     finished_ = true;
+    // reset the input buffer
+    input_->size = in_size_;
     return Status::StreamDrained();
   }
   return Status::OK();

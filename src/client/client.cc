@@ -59,10 +59,10 @@ Status BasicIPCClient::Connect(const std::string& ipc_socket,
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::string ipc_socket_value, rpc_endpoint_value;
-  bool store_match;
-  RETURN_ON_ERROR(ReadRegisterReply(message_in, ipc_socket_value,
-                                    rpc_endpoint_value, instance_id_,
-                                    session_id_, server_version_, store_match));
+  bool store_match = false, support_rpc_compression = false;
+  RETURN_ON_ERROR(ReadRegisterReply(
+      message_in, ipc_socket_value, rpc_endpoint_value, instance_id_,
+      session_id_, server_version_, store_match, support_rpc_compression));
   rpc_endpoint_ = rpc_endpoint_value;
   connected_ = true;
 

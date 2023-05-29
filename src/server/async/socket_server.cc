@@ -345,7 +345,7 @@ bool SocketConnection::doRegister(const json& root) {
                                self->server_ptr_->RPCEndpoint(),
                                self->server_ptr_->instance_id(),
                                self->server_ptr_->session_id(), store_match,
-                               message_out);
+                               true /* support_rpc_compression */, message_out);
           } else {
             WriteErrorReply(s, message_out);
           }

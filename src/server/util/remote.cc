@@ -20,10 +20,10 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "common/compression/compressor.h"
 #include "common/util/asio.h"
 #include "common/util/protocols.h"
-#include "server//server/vineyard_server.h"
-#include "server/util/compressor.h"
+#include "server/server/vineyard_server.h"
 #include "server/util/remote.h"
 
 namespace vineyard {
@@ -92,12 +92,12 @@ Status RemoteClient::Connect(const std::string& host, const uint32_t port,
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::string ipc_socket_value, rpc_endpoint_value;
-  bool store_match;
+  bool store_match, support_rpc_compression;
   SessionID session_id_;
   std::string server_version_;
-  RETURN_ON_ERROR(ReadRegisterReply(message_in, ipc_socket_value,
-                                    rpc_endpoint_value, remote_instance_id_,
-                                    session_id_, server_version_, store_match));
+  RETURN_ON_ERROR(ReadRegisterReply(
+      message_in, ipc_socket_value, rpc_endpoint_value, remote_instance_id_,
+      session_id_, server_version_, store_match, support_rpc_compression));
   this->connected_ = true;
   return Status::OK();
 }
@@ -330,8 +330,7 @@ namespace detail {
 
 static void send_chunk(asio::generic::stream_protocol::socket& socket,
                        std::vector<std::shared_ptr<Payload>> const& objects,
-                       size_t index, std::shared_ptr<Compressor> compressor,
-                       callback_t<> callback_after_finish) {
+                       size_t index, callback_t<> callback_after_finish) {
   asio::async_write(
       socket, asio::buffer(objects[index]->pointer, objects[index]->data_size),
       [callback_after_finish](boost::system::error_code ec, std::size_t) {
@@ -411,14 +410,12 @@ void SendRemoteBuffers(asio::generic::stream_protocol::socket& socket,
       VINEYARD_DISCARD(callback_after_finish(s));
       return;
     }
-  }
-  if (compressor) {
     // we need the `size` leave in heap to keep it alive inside callback
     std::shared_ptr<size_t> chunk_size = std::make_shared<size_t>(0);
     detail::send_chunk_compressed(socket, objects, index, compressor,
                                   chunk_size, callback);
   } else {
-    detail::send_chunk(socket, objects, index, compressor, callback);
+    detail::send_chunk(socket, objects, index, callback);
   }
 }
 
