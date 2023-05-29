@@ -398,14 +398,16 @@ struct CompactNbr {
         size_(rhs.size_),
         edata_arrays_(rhs.edata_arrays_),
         data_(rhs.data_),
-        current_(rhs.current_) {}
+        current_(rhs.current_),
+        prev_vid_(rhs.prev_vid_) {}
   CompactNbr(CompactNbr&& rhs)
       : ptr_(rhs.ptr_),
       next_(rhs.next_),
         size_(rhs.size_),
         edata_arrays_(rhs.edata_arrays_),
         data_(rhs.data_),
-        current_(rhs.current_) {}
+        current_(rhs.current_),
+        prev_vid_(rhs.prev_vid_) {}
   CompactNbr(const uint8_t* ptr, const size_t size, const void** edata_arrays)
       : ptr_(ptr), next_(ptr), size_(size), edata_arrays_(edata_arrays) {
     decode();
@@ -418,6 +420,7 @@ struct CompactNbr {
     edata_arrays_ = rhs.edata_arrays_;
     data_ = rhs.data_;
     current_ = rhs.current_;
+    prev_vid_ = rhs.prev_vid_;
     return *this;
   }
 
@@ -428,18 +431,19 @@ struct CompactNbr {
     edata_arrays_ = std::move(rhs.edata_arrays_);
     data_ = rhs.data_;
     current_ = rhs.current_;
+    prev_vid_ = rhs.prev_vid_;
     return *this;
   }
 
   inline void decode() const {
-    if (likely(current_ % batch_size != 0 || current_ >= size_)) {
+    if (likely((current_ % batch_size != 0) || current_ >= size_)) {
       if (unlikely(current_ == size_)) {
         ptr_ = next_;
       }
       return;
     }
     ptr_ = next_;
-    size_t n = current_ + batch_size < size_ ? batch_size : size_ - current_;
+    size_t n = (current_ + batch_size) < size_ ? batch_size : (size_ - current_);
     // next_ = vbdec64(const_cast<unsigned char*>(
     //                    reinterpret_cast<const unsigned char*>(next_)),
     //                n * 2, reinterpret_cast<uint64_t*>(data_));
@@ -478,6 +482,8 @@ struct CompactNbr {
   inline const CompactNbr& operator++() const {
     current_ += 1;
     decode();
+    data_[current_ % batch_size].vid += prev_vid_;
+    prev_vid_ = data_[current_ % batch_size].vid;
     return *this;
   }
 
@@ -510,7 +516,7 @@ struct CompactNbr {
   inline const CompactNbr& operator*() const { return *this; }
 
  private:
-  static constexpr size_t batch_size = 8;
+  static constexpr size_t batch_size = VARINT_ENCODING_BATCH_SIZE;
 
   mutable const uint8_t* ptr_, *next_ = nullptr;
   mutable size_t size_ = 0;
@@ -518,6 +524,7 @@ struct CompactNbr {
 
   mutable NbrUnit<VID_T, EID_T> data_[batch_size];
   mutable size_t current_ = 0;
+  mutable VID_T prev_vid_ = 0;
 };
 
 template <typename VID_T>

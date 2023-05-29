@@ -29,6 +29,8 @@ namespace vineyard {
 #define UPPER_OF_RANGE_1 185
 #define UPPER_OF_RANGE_2 249
 
+#define VARINT_ENCODING_BATCH_SIZE 16
+
 inline uint64_t unaligned_load_u64(const uint8_t* p) {
   uint64_t x;
   std::memcpy(&x, p, 8);
