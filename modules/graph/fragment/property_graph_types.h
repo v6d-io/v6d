@@ -393,7 +393,7 @@ struct CompactNbr {
  public:
   CompactNbr(const CompactNbr& rhs)
       : ptr_(rhs.ptr_),
-      next_(rhs.next_),
+        next_(rhs.next_),
         size_(rhs.size_),
         edata_arrays_(rhs.edata_arrays_),
         data_(rhs.data_),
@@ -401,7 +401,7 @@ struct CompactNbr {
         prev_vid_(rhs.prev_vid_) {}
   CompactNbr(CompactNbr&& rhs)
       : ptr_(rhs.ptr_),
-      next_(rhs.next_),
+        next_(rhs.next_),
         size_(rhs.size_),
         edata_arrays_(rhs.edata_arrays_),
         data_(rhs.data_),
@@ -442,10 +442,11 @@ struct CompactNbr {
       return;
     }
     ptr_ = next_;
-    size_t n = (current_ + batch_size) < size_ ? batch_size : (size_ - current_);
+    size_t n =
+        (current_ + batch_size) < size_ ? batch_size : (size_ - current_);
     next_ = v8dec32(const_cast<unsigned char*>(
-                       reinterpret_cast<const unsigned char*>(next_)),
-                   n * element_size, reinterpret_cast<uint32_t*>(data_));
+                        reinterpret_cast<const unsigned char*>(next_)),
+                    n * element_size, reinterpret_cast<uint32_t*>(data_));
   }
 
   grape::Vertex<VID_T> neighbor() const {
@@ -512,11 +513,11 @@ struct CompactNbr {
   inline const CompactNbr& operator*() const { return *this; }
 
  private:
- static constexpr size_t element_size =
+  static constexpr size_t element_size =
       sizeof(property_graph_utils::NbrUnit<VID_T, EID_T>) / sizeof(uint32_t);
   static constexpr size_t batch_size = VARINT_ENCODING_BATCH_SIZE;
 
-  mutable const uint8_t* ptr_, *next_ = nullptr;
+  mutable const uint8_t *ptr_, *next_ = nullptr;
   mutable size_t size_ = 0;
   const void** edata_arrays_;
 
@@ -711,8 +712,7 @@ class CompactAdjList {
         end_ptr_(ptr + end_offset),
         bsize_(end_offset - begin_offset),
         size_(size),
-        edata_arrays_(edata_arrays) {
-  }
+        edata_arrays_(edata_arrays) {}
 
   inline CompactNbr<VID_T, EID_T> begin() const {
     return CompactNbr<VID_T, EID_T>(begin_ptr_, size_, edata_arrays_);

@@ -463,10 +463,10 @@ class [[vineyard]] ArrowFragment
     const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
     const int64_t* boffset_array = ie_boffsets_ptr_lists_[v_label][e_label];
     const uint8_t* ptr = compact_ie_ptr_lists_[v_label][e_label];
-    return compact_adj_list_t(ptr, boffset_array[v_offset],
-                              boffset_array[v_offset + 1],
-                              offset_array[v_offset + 1] - offset_array[v_offset],
-                              flatten_edge_tables_columns_[e_label]);
+    return compact_adj_list_t(
+        ptr, boffset_array[v_offset], boffset_array[v_offset + 1],
+        offset_array[v_offset + 1] - offset_array[v_offset],
+        flatten_edge_tables_columns_[e_label]);
   }
 
   template <bool COMPACT_ = COMPACT>
@@ -503,10 +503,10 @@ class [[vineyard]] ArrowFragment
     const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
     const int64_t* boffset_array = oe_boffsets_ptr_lists_[v_label][e_label];
     const uint8_t* ptr = compact_oe_ptr_lists_[v_label][e_label];
-    return compact_adj_list_t(ptr, boffset_array[v_offset],
-                              boffset_array[v_offset + 1],
-                              offset_array[v_offset + 1] - offset_array[v_offset],
-                              flatten_edge_tables_columns_[e_label]);
+    return compact_adj_list_t(
+        ptr, boffset_array[v_offset], boffset_array[v_offset + 1],
+        offset_array[v_offset + 1] - offset_array[v_offset],
+        flatten_edge_tables_columns_[e_label]);
   }
 
   template <bool COMPACT_ = COMPACT>
@@ -526,13 +526,13 @@ class [[vineyard]] ArrowFragment
    * later.
    */
 
-  inline const int64_t*
-  GetIncomingOffsetArray(label_id_t v_label, label_id_t e_label) const {
+  inline const int64_t* GetIncomingOffsetArray(label_id_t v_label,
+                                               label_id_t e_label) const {
     return ie_offsets_ptr_lists_[v_label][e_label];
   }
 
-  inline const int64_t*
-  GetOutgoingOffsetArray(label_id_t v_label, label_id_t e_label) const {
+  inline const int64_t* GetOutgoingOffsetArray(label_id_t v_label,
+                                               label_id_t e_label) const {
     return oe_offsets_ptr_lists_[v_label][e_label];
   }
 
