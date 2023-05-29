@@ -206,6 +206,8 @@ Status Decompressor::Pull(void* data, const size_t capacity, size_t& size) {
   size = output_->pos;
   if (size == 0) {
     finished_ = true;
+    // reset the input buffer
+    input_->size = in_size_;
     return Status::StreamDrained();
   }
   return Status::OK();
