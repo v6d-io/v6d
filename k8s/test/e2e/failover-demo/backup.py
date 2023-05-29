@@ -61,18 +61,23 @@ while True:
 # get instance id
 instance = vineyard_client.instance_id
 
-objs = []
+objIDs = []
 if objectids is not None:
     objs = objectids.split(',')
+    for _,o in enumerate(objs):
+        objIDs = objIDs.append(vineyard.ObjectID(o))
 else:
     objs = vineyard_client.list_objects(pattern='*')
+    for _,o in enumerate(objs):
+        objIDs = objIDs.append(o.id)
+
 
 # serialize all persistent objects
-for _,o in enumerate(objs):
+for _,o in enumerate(objIDs):
     try:
-        meta = vineyard_client.get_meta(o.id, sync_remote=True)
+        meta = vineyard_client.get_meta(o, sync_remote=True)
         if not meta['transient'] and meta['typename'] not in ['vineyard::ParallelStream','vineyard::StreamCollection']:
-            objname = str(o.id).split("\"")[1]
+            objname = str(o).split("\"")[1]
             objpath = path + '/' + objname
             # for local objects
             if not meta['global'] and meta['instance_id']==instance:
@@ -81,7 +86,7 @@ for _,o in enumerate(objs):
                     os.makedirs(objpath)
                 vineyard.io.serialize(
                     objpath,
-                    o.id,
+                    o,
                     vineyard_ipc_socket=socket,
                     vineyard_endpoint=service,
                 )
@@ -92,7 +97,7 @@ for _,o in enumerate(objs):
                     os.makedirs(objpath)
                 vineyard.io.serialize(
                     objpath,
-                    o.id,
+                    o,
                     type="global",
                     vineyard_ipc_socket=socket,
                     vineyard_endpoint=service,
@@ -100,7 +105,7 @@ for _,o in enumerate(objs):
                     hosts=hosts,
                 )
     except vineyard.ObjectNotExistsException:
-        print(o.id,' trigger ObjectNotExistsException')
+        print(o,' trigger ObjectNotExistsException')
 
 # wait other backup process ready
 print('Succeed',flush=True)

@@ -67,8 +67,6 @@ setup:
           for: condition=Available
     - name: install backup with the specific objects
       command: |
-        echo "localobjectid: $localobjectid"
-        echo "distributedobjectid: $distributedobjectid"
         go run k8s/cmd/main.go create backup \
           --vineyardd-name vineyardd-sample \
           --vineyardd-namespace vineyard-system  \

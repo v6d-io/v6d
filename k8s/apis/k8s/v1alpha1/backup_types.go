@@ -31,10 +31,10 @@ type BackupSpec struct {
 	// +kubebuilder:validation:Required
 	VineyarddNamespace string `json:"vineyarddNamespace,omitempty"`
 
-	// the specific objects to be backed up, separated by comma
+	// the specific objects to be backed up
 	// if not specified, all objects will be backed up
 	// +kubebuilder:validation:Required
-	ObjectIDs string `json:"objecIDs,omitempty"`
+	ObjectIDs []string `json:"objecIDs,omitempty"`
 
 	// the path of backup data
 	// +kubebuilder:validation:Required

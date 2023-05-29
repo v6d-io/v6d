@@ -34,7 +34,9 @@ spec:
               backupPath:
                 type: string
               objecIDs:
-                type: string
+                items:
+                  type: string
+                type: array
               persistentVolumeClaimSpec:
                 properties:
                   accessModes:

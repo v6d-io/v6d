@@ -19,6 +19,7 @@ package k8s
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -246,7 +247,8 @@ func BuildBackupCfg(c client.Client, name string, backup *k8sv1alpha1.Backup,
 	path string, withScheduler bool) (BackupConfig, error) {
 	backupCfg := BackupConfig{}
 	backupCfg.Name = name
-	backupCfg.ObjectIDs = backup.Spec.ObjectIDs
+	backupCfg.ObjectIDs = strings.Join(backup.Spec.ObjectIDs, ",")
+
 	failoverCfg, err := newFailoverConfig(c, backup, path, withScheduler)
 	if err != nil {
 		return backupCfg, errors.Wrap(err, "unable to build failover config")

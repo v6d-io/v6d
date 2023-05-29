@@ -1742,8 +1742,8 @@ the vineyard operator. The main fields are described as follows.
          - nil
 
        * - objectIDs
-         - string
-         - The object IDs that need to be backed up, separated by commas.
+         - []string
+         - The object IDs that need to be backed up.
            If it is empty, all objects will be backed up.
          - nil
 

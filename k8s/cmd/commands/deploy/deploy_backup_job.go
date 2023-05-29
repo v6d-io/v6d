@@ -114,7 +114,17 @@ var (
 		--vineyard-deployment-namespace vineyard-system  \
 		--path /var/vineyard/dump  \
 		--pvc-name pvc-sample
-	`)
+	
+	# The namespace to deploy the backup and recover job must be the same
+	# as the vineyard cluster namespace.
+	# Assume the vineyard cluster is deployed in the namespace "test", you
+	# could deploy the backup job as follows
+	vineyardctl deploy backup-job \
+		--vineyard-deployment-name vineyardd-sample \
+		--vineyard-deployment-namespace test  \
+		--namespace test  \
+		--path /var/vineyard/dump  \
+		--pvc-name pvc-sample`)
 )
 
 // deployBackupJobCmd deploy the backup job of vineyard cluster on kubernetes
