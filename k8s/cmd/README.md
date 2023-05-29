@@ -165,7 +165,7 @@ vineyardctl create backup [flags]
 ```
       --backup-name string           the name of backup job (default "vineyard-backup")
   -h, --help                         help for backup
-      --limit int                    the limit of objects to backup (default 1000)
+      --objectIDs string             the specific objects to be backed up, separated by comma
       --path string                  the path of the backup data
       --pv-pvc-spec string           the PersistentVolume and PersistentVolumeClaim of the backup data
       --vineyardd-name string        the name of vineyardd
@@ -594,12 +594,12 @@ vineyardctl deploy backup-job [flags]
 ### Examples
 
 ```shell
-  # deploy a backup job for the vineyard cluster on kubernetes
-  # you could define the pv and pvc spec from json string as follows
+  # deploy a backup job for all vineyard objects of the vineyard
+  # cluster on kubernetes and you could define the pv and pvc
+  # spec from json string as follows
   vineyardctl deploy backup-job \
     --vineyard-deployment-name vineyardd-sample \
     --vineyard-deployment-namespace vineyard-system  \
-    --limit 1000 \
     --path /var/vineyard/dump  \
     --pv-pvc-spec '{
       "pv-spec": {
@@ -632,7 +632,7 @@ vineyardctl deploy backup-job [flags]
   vineyardctl deploy backup-job \
     --vineyard-deployment-name vineyardd-sample \
     --vineyard-deployment-namespace vineyard-system  \
-    --limit 1000 --path /var/vineyard/dump  \
+    --path /var/vineyard/dump  \
     --pv-pvc-spec  \
     '
     pv-spec:
@@ -652,21 +652,20 @@ vineyardctl deploy backup-job [flags]
       storage: 1Gi
     '
 
-  # deploy a backup job for the vineyard cluster on kubernetes
-  # you could define the pv and pvc spec from json file as follows
-  # also you could use yaml file instead of json file
+  # deploy a backup job for specific vineyard objects of the vineyard
+  # cluster on kubernetes.
   cat pv-pvc.json | vineyardctl deploy backup-job \
     --vineyard-deployment-name vineyardd-sample \
     --vineyard-deployment-namespace vineyard-system  \
-    --limit 1000 --path /var/vineyard/dump  \
-    -
+    --objectIDs "o000018d29207fd01,o000018d80d264010"  \
+    --path /var/vineyard/dump
     
   # Assume you have already deployed a pvc named "pvc-sample", you
   # could use them as the backend storage for the backup job as follows
   vineyardctl deploy backup-job \
     --vineyard-deployment-name vineyardd-sample \
     --vineyard-deployment-namespace vineyard-system  \
-    --limit 1000 --path /var/vineyard/dump  \
+    --path /var/vineyard/dump  \
     --pvc-name pvc-sample
 ```
 
@@ -675,7 +674,7 @@ vineyardctl deploy backup-job [flags]
 ```
       --backup-name string                     the name of backup job (default "vineyard-backup")
   -h, --help                                   help for backup-job
-      --limit int                              the limit of objects to backup (default 1000)
+      --objectIDs string                       the specific objects to be backed up, separated by comma
       --path string                            the path of the backup data
       --pv-pvc-spec string                     the PersistentVolume and PersistentVolumeClaim of the backup data
       --pvc-name string                        the name of an existing PersistentVolumeClaim

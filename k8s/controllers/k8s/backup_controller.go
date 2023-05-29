@@ -54,8 +54,8 @@ type FailoverConfig struct {
 
 // BackupConfig holds all configuration about backup
 type BackupConfig struct {
-	Name  string
-	Limit string
+	Name      string
+	ObjectIDs string
 	FailoverConfig
 }
 
@@ -246,7 +246,7 @@ func BuildBackupCfg(c client.Client, name string, backup *k8sv1alpha1.Backup,
 	path string, withScheduler bool) (BackupConfig, error) {
 	backupCfg := BackupConfig{}
 	backupCfg.Name = name
-	backupCfg.Limit = strconv.Itoa(backup.Spec.Limit)
+	backupCfg.ObjectIDs = backup.Spec.ObjectIDs
 	failoverCfg, err := newFailoverConfig(c, backup, path, withScheduler)
 	if err != nil {
 		return backupCfg, errors.Wrap(err, "unable to build failover config")

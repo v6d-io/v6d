@@ -24,7 +24,9 @@ from kubernetes.client.rest import ApiException
 
 env_dist = os.environ
 
-limits = int(env_dist['LIMIT'])
+objectids = None
+if "ObjectIDs" not in env_dist:
+    objectids = env_dist["ObjectIDs"]
 path = env_dist['BACKUP_PATH']
 socket = '/var/run/vineyard.sock'
 endpoint = env_dist['ENDPOINT']
@@ -59,9 +61,14 @@ while True:
 # get instance id
 instance = vineyard_client.instance_id
 
-objs = vineyard_client.list_objects(pattern='*',limit=limits)
+objs = []
+if objectids is not None:
+    objs = objectids.split(',')
+else:
+    objs = vineyard_client.list_objects(pattern='*')
+
 # serialize all persistent objects
-for i,o in enumerate(objs):
+for _,o in enumerate(objs):
     try:
         meta = vineyard_client.get_meta(o.id, sync_remote=True)
         if not meta['transient'] and meta['typename'] not in ['vineyard::ParallelStream','vineyard::StreamCollection']:
