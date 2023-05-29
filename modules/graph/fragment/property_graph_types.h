@@ -393,27 +393,27 @@ struct CompactNbr {
 
  public:
   CompactNbr(const CompactNbr& rhs)
-      : head_(rhs.head_),
-        ptr_(rhs.ptr_),
+      : ptr_(rhs.ptr_),
+      next_(rhs.next_),
         size_(rhs.size_),
         edata_arrays_(rhs.edata_arrays_),
         data_(rhs.data_),
         current_(rhs.current_) {}
   CompactNbr(CompactNbr&& rhs)
-      : head_(rhs.head_),
-        ptr_(rhs.ptr_),
+      : ptr_(rhs.ptr_),
+      next_(rhs.next_),
         size_(rhs.size_),
         edata_arrays_(rhs.edata_arrays_),
         data_(rhs.data_),
         current_(rhs.current_) {}
   CompactNbr(const uint8_t* ptr, const size_t size, const void** edata_arrays)
-      : head_(ptr), ptr_(ptr), size_(size), edata_arrays_(edata_arrays) {
+      : ptr_(ptr), next_(ptr), size_(size), edata_arrays_(edata_arrays) {
     decode();
   }
 
   CompactNbr& operator=(const CompactNbr& rhs) {
-    head_ = rhs.head_;
     ptr_ = rhs.ptr_;
+    next_ = rhs.next_;
     size_ = rhs.size_;
     edata_arrays_ = rhs.edata_arrays_;
     data_ = rhs.data_;
@@ -422,8 +422,8 @@ struct CompactNbr {
   }
 
   CompactNbr& operator=(CompactNbr&& rhs) {
-    head_ = rhs.head_;
     ptr_ = rhs.ptr_;
+    next_ = rhs.next_;
     size_ = rhs.size_;
     edata_arrays_ = std::move(rhs.edata_arrays_);
     data_ = rhs.data_;
@@ -440,21 +440,28 @@ struct CompactNbr {
     // data_.vid += vid;
     // data_.eid = eid;
     // size_ = v_size + e_size;
+    if (likely(current_ % 8 != 0 || current_ >= size_)) {
+      if (unlikely(current_ == size_)) {
+        ptr_ = next_;
+      }
+      return;
+    }
+    ptr_ = next_;
     size_t n = current_ + 8 < size_ ? 8 : size_ - current_;
-    ptr_ = vbdec64(const_cast<unsigned char*>(
+    next_ = vbdec64(const_cast<unsigned char*>(
                        reinterpret_cast<const unsigned char*>(ptr_)),
-                   n, reinterpret_cast<uint64_t*>(data_));
+                   n * 2, reinterpret_cast<uint64_t*>(data_));
   }
 
   grape::Vertex<VID_T> neighbor() const {
-    return grape::Vertex<VID_T>(data_[current_ & 0x111].vid);
+    return grape::Vertex<VID_T>(data_[current_ % 8].vid);
   }
 
   grape::Vertex<VID_T> get_neighbor() const {
-    return grape::Vertex<VID_T>(data_[current_ & 0x111].vid);
+    return grape::Vertex<VID_T>(data_[current_ % 8].vid);
   }
 
-  EID_T edge_id() const { return data_[current_ & 0x111].eid; }
+  EID_T edge_id() const { return data_[current_ % 8].eid; }
 
   template <typename T>
   T get_data(prop_id_t prop_id) const {
@@ -475,9 +482,7 @@ struct CompactNbr {
 
   inline const CompactNbr& operator++() const {
     current_ += 1;
-    if (current_ % 8 == 0) {
-      decode();
-    }
+    decode();
     return *this;
   }
 
@@ -510,8 +515,7 @@ struct CompactNbr {
   inline const CompactNbr& operator*() const { return *this; }
 
  private:
-  const uint8_t* head_;
-  mutable const uint8_t* ptr_;
+  mutable const uint8_t* ptr_, *next_ = nullptr;
   mutable size_t size_ = 0;
   const void** edata_arrays_;
 
@@ -705,7 +709,8 @@ class CompactAdjList {
         end_ptr_(ptr + end_offset),
         bsize_(end_offset - begin_offset),
         size_(size),
-        edata_arrays_(edata_arrays) {}
+        edata_arrays_(edata_arrays) {
+  }
 
   inline CompactNbr<VID_T, EID_T> begin() const {
     return CompactNbr<VID_T, EID_T>(begin_ptr_, size_, edata_arrays_);
