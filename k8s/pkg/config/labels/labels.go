@@ -22,6 +22,8 @@ const (
 	// VineyardAppLabel is the special label key for vineyard application
 	VineyardAppLabel = "app.vineyard.io/name"
 
+	// VineyardRoleLabel is the label key for vineyardd role
+	VineyardRoleLabel = "app.vineyard.io/role"
 	/* following labels are used for scheduling */
 
 	// SchedulingEnabledLabel is the label key for enabling scheduling

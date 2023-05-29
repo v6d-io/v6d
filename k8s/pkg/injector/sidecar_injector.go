@@ -226,19 +226,21 @@ func InjectSidecar(workload, sidecar *unstructured.Unstructured, s *v1alpha1.Sid
 		return err
 	}
 
-	// add selector to the workload
-	if selector != "" {
-		labels, err := GetLabels(workload)
-		if err != nil {
-			return err
-		}
-		s := strings.Split(selector, "=")
+	labels, err := GetLabels(workload)
+	if err != nil {
+		return err
+	}
+
+	selectors := strings.Split(selector, ",")
+	for i := range selectors {
+		s := strings.Split(selectors[i], "=")
 		// add the rpc label selector to the workload
 		labels[s[0]] = s[1]
-		err = SetLabels(workload, labels)
-		if err != nil {
-			return err
-		}
 	}
+	err = SetLabels(workload, labels)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
