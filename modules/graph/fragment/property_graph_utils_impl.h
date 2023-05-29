@@ -728,8 +728,10 @@ boost::leaf::result<void> varint_encoding_edges_impl(
         //   last_vid = nbr_unit.vid;
         // }
         if (std::is_same<VID_T, uint64_t>::value) {
-          ptr = vbenc64(reinterpret_cast<uint64_t*>(edges),
-                        (offsets[v + 1] - offsets[v]) * 2, ptr);
+          // ptr = vbenc64(reinterpret_cast<uint64_t*>(edges),
+          //               (offsets[v + 1] - offsets[v]) * 2, ptr);
+          ptr = v8enc32(reinterpret_cast<uint32_t*>(edges),
+                        (offsets[v + 1] - offsets[v]) * 4, ptr);
         } else {
           // TODO
           // vbenc64(uint64_t *__restrict in, unsigned int n, unsigned char

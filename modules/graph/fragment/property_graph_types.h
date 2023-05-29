@@ -432,36 +432,31 @@ struct CompactNbr {
   }
 
   inline void decode() const {
-    // int sz = eid_t eid;
-    // vid_t vid;
-    // size_t e_size, v_size;
-    // v_size = varint_decode(ptr_, vid);
-    // e_size = varint_decode(ptr_ + v_size, eid);
-    // data_.vid += vid;
-    // data_.eid = eid;
-    // size_ = v_size + e_size;
-    if (likely(current_ % 8 != 0 || current_ >= size_)) {
+    if (likely(current_ % batch_size != 0 || current_ >= size_)) {
       if (unlikely(current_ == size_)) {
         ptr_ = next_;
       }
       return;
     }
     ptr_ = next_;
-    size_t n = current_ + 8 < size_ ? 8 : size_ - current_;
-    next_ = vbdec64(const_cast<unsigned char*>(
-                       reinterpret_cast<const unsigned char*>(ptr_)),
-                   n * 2, reinterpret_cast<uint64_t*>(data_));
+    size_t n = current_ + batch_size < size_ ? batch_size : size_ - current_;
+    // next_ = vbdec64(const_cast<unsigned char*>(
+    //                    reinterpret_cast<const unsigned char*>(next_)),
+    //                n * 2, reinterpret_cast<uint64_t*>(data_));
+    next_ = v8dec32(const_cast<unsigned char*>(
+                       reinterpret_cast<const unsigned char*>(next_)),
+                   n * 4, reinterpret_cast<uint32_t*>(data_));
   }
 
   grape::Vertex<VID_T> neighbor() const {
-    return grape::Vertex<VID_T>(data_[current_ % 8].vid);
+    return grape::Vertex<VID_T>(data_[current_ % batch_size].vid);
   }
 
   grape::Vertex<VID_T> get_neighbor() const {
-    return grape::Vertex<VID_T>(data_[current_ % 8].vid);
+    return grape::Vertex<VID_T>(data_[current_ % batch_size].vid);
   }
 
-  EID_T edge_id() const { return data_[current_ % 8].eid; }
+  EID_T edge_id() const { return data_[current_ % batch_size].eid; }
 
   template <typename T>
   T get_data(prop_id_t prop_id) const {
@@ -515,11 +510,13 @@ struct CompactNbr {
   inline const CompactNbr& operator*() const { return *this; }
 
  private:
+  static constexpr size_t batch_size = 8;
+
   mutable const uint8_t* ptr_, *next_ = nullptr;
   mutable size_t size_ = 0;
   const void** edata_arrays_;
 
-  mutable NbrUnit<VID_T, EID_T> data_[8];
+  mutable NbrUnit<VID_T, EID_T> data_[batch_size];
   mutable size_t current_ = 0;
 };
 
