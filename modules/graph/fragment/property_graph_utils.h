@@ -184,6 +184,10 @@ boost::leaf::result<void> varint_encoding_edges(
         ie_offsets_lists,
     const std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
         oe_offsets_lists,
+    std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
+        ie_boffsets_lists,
+    std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
+        oe_boffsets_lists,
     const int concurrency = std::thread::hardware_concurrency());
 }  // namespace vineyard
 

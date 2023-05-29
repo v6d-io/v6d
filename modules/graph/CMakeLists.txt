@@ -52,9 +52,7 @@ add_library(vineyard_graph ${GRAPH_SRC_FILES})
 target_add_debuginfo(vineyard_graph)
 target_compile_options(vineyard_graph PUBLIC "-fopenmp")
 target_link_options(vineyard_graph PUBLIC "-fopenmp")
-target_include_directories(vineyard_graph PUBLIC
-                                          ${MPI_CXX_INCLUDE_PATH}
-)
+target_include_directories(vineyard_graph PUBLIC ${MPI_CXX_INCLUDE_PATH})
 
 find_package(Boost COMPONENTS leaf)
 if(Boost_LEAF_FOUND)
@@ -94,6 +92,12 @@ else()
         $<INSTALL_INTERFACE:include>
     )
 endif()
+
+target_include_directories(vineyard_graph PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty>
+    $<INSTALL_INTERFACE:include>
+)
+target_link_libraries(vineyard_graph PUBLIC ic)
 
 if(BUILD_VINEYARD_GRAPH_WITH_GAR)
     target_compile_definitions(vineyard_graph PUBLIC -DENABLE_GAR)

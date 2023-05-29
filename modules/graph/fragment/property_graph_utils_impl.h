@@ -20,6 +20,8 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
+#include "ic.h"
+
 #include "common/util/functions.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"
@@ -689,8 +691,9 @@ boost::leaf::result<void> varint_encoding_edges_impl(
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>& e_lists,
     std::shared_ptr<FixedUInt8Builder>& ce_lists,
     const std::shared_ptr<FixedInt64Builder>& e_offsets,
+    std::shared_ptr<FixedInt64Builder>& e_boffsets,
     const int concurrency = std::thread::hardware_concurrency()) {
-  int64_t* offsets = e_offsets->data();
+  const int64_t* offsets = e_offsets->data();
   property_graph_utils::NbrUnit<VID_T, EID_T>* edges = e_lists->data();
 
   const VID_T vnum = e_offsets->size() - 1;
@@ -708,24 +711,40 @@ boost::leaf::result<void> varint_encoding_edges_impl(
           compact_degree[v] = 0;
           return;
         }
+        int64_t last_vid = 0;
+        for (int64_t e = offsets[v]; e < offsets[v + 1]; ++e) {
+          edges[e].vid -= last_vid;
+          last_vid += edges[e].vid;
+        }
         compact_edges[v] = static_cast<uint8_t*>(
             malloc(9 * 2 * (offsets[v + 1] - offsets[v])));
         uint8_t* ptr = compact_edges[v];
-        int64_t last_vid = 0;
-        for (int64_t e = offsets[v]; e < offsets[v + 1]; ++e) {
-          const property_graph_utils::NbrUnit<VID_T, EID_T>& nbr_unit =
-              edges[e];
-          ptr = varint_encode(nbr_unit.vid - last_vid, ptr);
-          ptr = varint_encode(nbr_unit.eid, ptr);
-          last_vid = nbr_unit.vid;
+        // int64_t last_vid = 0;
+        // for (int64_t e = offsets[v]; e < offsets[v + 1]; ++e) {
+        //   const property_graph_utils::NbrUnit<VID_T, EID_T>& nbr_unit =
+        //       edges[e];
+        //   ptr = varint_encode(nbr_unit.vid - last_vid, ptr);
+        //   ptr = varint_encode(nbr_unit.eid, ptr);
+        //   last_vid = nbr_unit.vid;
+        // }
+        if (std::is_same<VID_T, uint64_t>::value) {
+          ptr = vbenc64(reinterpret_cast<uint64_t*>(edges),
+                        (offsets[v + 1] - offsets[v]) * 2, ptr);
+        } else {
+          // TODO
+          // vbenc64(uint64_t *__restrict in, unsigned int n, unsigned char
+          // *__restrict out);
         }
         compact_degree[v] = ptr - compact_edges[v];
       },
       concurrency);
 
   auto before_prefix_sum_timestamp = GetCurrentTime();
+  e_boffsets = std::make_shared<FixedInt64Builder>(client, vnum + 1);
+  int64_t* boffsets = e_boffsets->data();
+  boffsets[0] = 0;
   parallel_prefix_sum(compact_degree.data(),
-                      offsets + 1 /* exclusive prefix sum */, vnum,
+                      boffsets + 1 /* exclusive prefix sum */, vnum,
                       concurrency);
 
   auto before_memcpy_timestamp = GetCurrentTime();
@@ -736,7 +755,7 @@ boost::leaf::result<void> varint_encoding_edges_impl(
         if (compact_degree[v] == 0) {
           return;
         }
-        memcpy(ce_lists->data() + offsets[v], compact_edges[v],
+        memcpy(ce_lists->data() + boffsets[v], compact_edges[v],
                compact_degree[v]);
         free(compact_edges[v]);
       },
@@ -772,27 +791,37 @@ boost::leaf::result<void> varint_encoding_edges(
         ie_offsets_lists,
     const std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
         oe_offsets_lists,
+    std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
+        ie_boffsets_lists,
+    std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
+        oe_boffsets_lists,
     const int concurrency) {
   compact_oe_lists.resize(vertex_label_num);
+  oe_boffsets_lists.resize(vertex_label_num);
   if (directed) {
     compact_ie_lists.resize(vertex_label_num);
+    ie_boffsets_lists.resize(vertex_label_num);
   }
 
   for (int v_label = 0; v_label < vertex_label_num; v_label++) {
     compact_oe_lists[v_label].resize(edge_label_num);
+    oe_boffsets_lists[v_label].resize(edge_label_num);
     if (directed) {
       compact_ie_lists[v_label].resize(edge_label_num);
+      ie_boffsets_lists[v_label].resize(edge_label_num);
     }
 
     for (int e_label = 0; e_label < edge_label_num; e_label++) {
       varint_encoding_edges_impl(client, oe_lists[v_label][e_label],
                                  compact_oe_lists[v_label][e_label],
                                  oe_offsets_lists[v_label][e_label],
+                                 oe_boffsets_lists[v_label][e_label],
                                  concurrency);
       if (directed) {
         varint_encoding_edges_impl(client, ie_lists[v_label][e_label],
                                    compact_ie_lists[v_label][e_label],
                                    ie_offsets_lists[v_label][e_label],
+                                   ie_boffsets_lists[v_label][e_label],
                                    concurrency);
       }
     }

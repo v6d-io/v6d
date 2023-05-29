@@ -21,6 +21,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "ic.h"
+
 #include "grape/config.h"
 #include "grape/utils/vertex_array.h"
 
@@ -381,132 +383,140 @@ struct Nbr {
 };
 
 template <typename VID_T, typename EID_T>
-struct EncodedNbr {
+struct CompactNbr {
  private:
   using vid_t = VID_T;
   using eid_t = EID_T;
   using prop_id_t = property_graph_types::PROP_ID_TYPE;
 
-  EncodedNbr() {}
+  CompactNbr() {}
 
  public:
-  EncodedNbr(const EncodedNbr& rhs)
-      : ptr_(rhs.ptr_),
+  CompactNbr(const CompactNbr& rhs)
+      : head_(rhs.head_),
+        ptr_(rhs.ptr_),
+        size_(rhs.size_),
+        edata_arrays_(rhs.edata_arrays_),
         data_(rhs.data_),
-        size_(rhs.size()),
-        edata_arrays_(rhs.edata_arrays_) {}
-  EncodedNbr(EncodedNbr&& rhs)
-      : ptr_(std::move(rhs.ptr_)),
+        current_(rhs.current_) {}
+  CompactNbr(CompactNbr&& rhs)
+      : head_(rhs.head_),
+        ptr_(rhs.ptr_),
+        size_(rhs.size_),
+        edata_arrays_(rhs.edata_arrays_),
         data_(rhs.data_),
-        size_(rhs.size()),
-        edata_arrays_(rhs.edata_arrays_) {}
-  EncodedNbr(const uint8_t* ptr, size_t capacity, const void** edata_arrays)
-      : ptr_(ptr), edata_arrays_(edata_arrays) {
-    data_.eid = 0;
-    data_.vid = 0;
-    if (capacity > 0)
-      decode();
+        current_(rhs.current_) {}
+  CompactNbr(const uint8_t* ptr, const size_t size, const void** edata_arrays)
+      : head_(ptr), ptr_(ptr), size_(size), edata_arrays_(edata_arrays) {
+    decode();
   }
 
-  EncodedNbr& operator=(const EncodedNbr& rhs) {
+  CompactNbr& operator=(const CompactNbr& rhs) {
+    head_ = rhs.head_;
     ptr_ = rhs.ptr_;
-    data_ = rhs.data_;
     size_ = rhs.size_;
     edata_arrays_ = rhs.edata_arrays_;
+    data_ = rhs.data_;
+    current_ = rhs.current_;
     return *this;
   }
 
-  EncodedNbr& operator=(EncodedNbr&& rhs) {
-    ptr_ = std::move(rhs.ptr_);
-    data_ = rhs.data_;
+  CompactNbr& operator=(CompactNbr&& rhs) {
+    head_ = rhs.head_;
+    ptr_ = rhs.ptr_;
     size_ = rhs.size_;
     edata_arrays_ = std::move(rhs.edata_arrays_);
+    data_ = rhs.data_;
+    current_ = rhs.current_;
     return *this;
   }
 
   inline void decode() const {
-    eid_t eid;
-    vid_t vid;
-    size_t e_size, v_size;
-    v_size = varint_decode(ptr_, vid);
-    e_size = varint_decode(ptr_ + v_size, eid);
-    data_.vid += vid;
-    data_.eid = eid;
-    size_ = v_size + e_size;
+    // int sz = eid_t eid;
+    // vid_t vid;
+    // size_t e_size, v_size;
+    // v_size = varint_decode(ptr_, vid);
+    // e_size = varint_decode(ptr_ + v_size, eid);
+    // data_.vid += vid;
+    // data_.eid = eid;
+    // size_ = v_size + e_size;
+    size_t n = current_ + 8 < size_ ? 8 : size_ - current_;
+    ptr_ = vbdec64(const_cast<unsigned char*>(
+                       reinterpret_cast<const unsigned char*>(ptr_)),
+                   n, reinterpret_cast<uint64_t*>(data_));
   }
 
   grape::Vertex<VID_T> neighbor() const {
-    return grape::Vertex<VID_T>(data_.vid);
+    return grape::Vertex<VID_T>(data_[current_ & 0x111].vid);
   }
 
   grape::Vertex<VID_T> get_neighbor() const {
-    return grape::Vertex<VID_T>(data_.vid);
+    return grape::Vertex<VID_T>(data_[current_ & 0x111].vid);
   }
 
-  EID_T edge_id() const { return data_.eid; }
+  EID_T edge_id() const { return data_[current_ & 0x111].eid; }
 
   template <typename T>
   T get_data(prop_id_t prop_id) const {
-    return ValueGetter<T>::Value(edata_arrays_[prop_id], data_.eid);
+    return ValueGetter<T>::Value(edata_arrays_[prop_id], edge_id());
   }
 
   std::string get_str(prop_id_t prop_id) const {
-    return ValueGetter<std::string>::Value(edata_arrays_[prop_id], data_.eid);
+    return ValueGetter<std::string>::Value(edata_arrays_[prop_id], edge_id());
   }
 
   double get_double(prop_id_t prop_id) const {
-    return ValueGetter<double>::Value(edata_arrays_[prop_id], data_.eid);
+    return ValueGetter<double>::Value(edata_arrays_[prop_id], edge_id());
   }
 
   int64_t get_int(prop_id_t prop_id) const {
-    return ValueGetter<int64_t>::Value(edata_arrays_[prop_id], data_.eid);
+    return ValueGetter<int64_t>::Value(edata_arrays_[prop_id], edge_id());
   }
 
-  inline const EncodedNbr& operator++() const {
-    ptr_ += size_;
-    /*
-     * This may cause the program to crash due to out-of-bounds access.
-     * Currently, this part is controlled by iterators. The default user access
-     * behavior will not be out of bounds.
-     */
-    decode();
+  inline const CompactNbr& operator++() const {
+    current_ += 1;
+    if (current_ % 8 == 0) {
+      decode();
+    }
     return *this;
   }
 
-  inline EncodedNbr operator++(int) const {
-    EncodedNbr ret(*this);
+  inline CompactNbr operator++(int) const {
+    CompactNbr ret(*this);
     ++(*this);
     return ret;
   }
 
-  inline const EncodedNbr& operator--() const {
+  inline const CompactNbr& operator--() const {
     // TBD
     return *this;
   }
 
-  inline EncodedNbr operator--(int) const {
-    EncodedNbr ret(*this);
+  inline CompactNbr operator--(int) const {
+    CompactNbr ret(*this);
     --(*this);
     return ret;
   }
 
-  inline bool operator==(const EncodedNbr& rhs) const {
+  inline bool operator==(const CompactNbr& rhs) const {
     return ptr_ == rhs.ptr_;
   }
-  inline bool operator!=(const EncodedNbr& rhs) const {
+  inline bool operator!=(const CompactNbr& rhs) const {
     return ptr_ != rhs.ptr_;
   }
 
-  inline bool operator<(const EncodedNbr& rhs) const { return ptr_ < rhs.ptr_; }
+  inline bool operator<(const CompactNbr& rhs) const { return ptr_ < rhs.ptr_; }
 
-  inline const EncodedNbr& operator*() const { return *this; }
+  inline const CompactNbr& operator*() const { return *this; }
 
  private:
-  const mutable uint8_t* ptr_;
-  mutable NbrUnit<VID_T, EID_T> data_;
-  mutable size_t size_;
-
+  const uint8_t* head_;
+  mutable const uint8_t* ptr_;
+  mutable size_t size_ = 0;
   const void** edata_arrays_;
+
+  mutable NbrUnit<VID_T, EID_T> data_[8];
+  mutable size_t current_ = 0;
 };
 
 template <typename VID_T>
@@ -680,26 +690,29 @@ class AdjList {
 };
 
 template <typename VID_T, typename EID_T>
-class EncodedAdjList {
+class CompactAdjList {
  public:
-  EncodedAdjList()
+  CompactAdjList()
       : begin_ptr_(nullptr),
         end_ptr_(nullptr),
+        bsize_(0),
         size_(0),
         edata_arrays_(nullptr) {}
-  EncodedAdjList(const uint8_t* ptr, const size_t begin_offset,
-                 const size_t end_offset, const void** edata_arrays) {
-    begin_ptr_ = ptr + begin_offset;
-    end_ptr_ = ptr + end_offset;
-    size_ = end_offset - begin_offset;
+  CompactAdjList(const uint8_t* ptr, const size_t begin_offset,
+                 const size_t end_offset, const size_t size,
+                 const void** edata_arrays)
+      : begin_ptr_(ptr + begin_offset),
+        end_ptr_(ptr + end_offset),
+        bsize_(end_offset - begin_offset),
+        size_(size),
+        edata_arrays_(edata_arrays) {}
+
+  inline CompactNbr<VID_T, EID_T> begin() const {
+    return CompactNbr<VID_T, EID_T>(begin_ptr_, size_, edata_arrays_);
   }
 
-  inline EncodedNbr<VID_T, EID_T> begin() const {
-    return EncodedNbr<VID_T, EID_T>(begin_ptr_, size_, edata_arrays_);
-  }
-
-  inline EncodedNbr<VID_T, EID_T> end() const {
-    return EncodedNbr<VID_T, EID_T>(end_ptr_, 0, edata_arrays_);
+  inline CompactNbr<VID_T, EID_T> end() const {
+    return CompactNbr<VID_T, EID_T>(end_ptr_, 0, edata_arrays_);
   }
 
   inline size_t Size() const { return size_; }
@@ -708,7 +721,6 @@ class EncodedAdjList {
 
   inline bool NotEmpty() const { return size_ != 0; }
 
-  // may be there are bugs.
   size_t size() const { return size_; }
 
   // inline const NbrUnit<VID_T, EID_T>* begin_unit() const { return begin_; }
@@ -718,7 +730,7 @@ class EncodedAdjList {
  private:
   const uint8_t* begin_ptr_;
   const uint8_t* end_ptr_;
-  size_t size_ = 0;
+  const size_t bsize_ = 0, size_ = 0;
 
   const void** edata_arrays_;
 };

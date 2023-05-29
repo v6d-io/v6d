@@ -20,6 +20,8 @@ limitations under the License.
 #include <cstring>
 #include <vector>
 
+#include "powturbo/include/ic.h"
+
 #include "common/util/likely.h"
 
 namespace vineyard {
@@ -72,6 +74,8 @@ inline size_t varint_decode(const uint8_t* input, T& output) {
   }
   return static_cast<size_t>(input - origin_input);
 }
+
+namespace powturbo {}  // namespace powturbo
 
 }  // namespace vineyard
 

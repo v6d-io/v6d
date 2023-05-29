@@ -118,6 +118,8 @@ class BasicArrowFragmentBuilder
       compact_ie_lists_, compact_oe_lists_;
   std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
       ie_offsets_lists_, oe_offsets_lists_;
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
+      ie_boffsets_lists_, oe_boffsets_lists_;
 
   std::shared_ptr<vertex_map_t> vm_ptr_;
   IdParser<vid_t> vid_parser_;
