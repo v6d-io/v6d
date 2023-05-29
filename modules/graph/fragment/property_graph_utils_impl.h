@@ -20,14 +20,16 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
+#include "common/util/functions.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"
-#include "graph/fragment/varint_impl.h"
+#include "graph/utils/varint_encoding.h"
 
 namespace vineyard {
 
-inline void parallel_prefix_sum(const int* input, int64_t* output,
-                                size_t length, int concurrency) {
+template <typename T>
+inline void parallel_prefix_sum(const T* input, int64_t* output, size_t length,
+                                int concurrency) {
   size_t bsize =
       std::max(static_cast<size_t>(1024),
                static_cast<size_t>((length + concurrency - 1) / concurrency));
@@ -681,50 +683,120 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
 }
 
 template <typename VID_T, typename EID_T>
-boost::leaf::result<void> generate_varint_edges(
-    property_graph_utils::NbrUnit<VID_T, EID_T>* e_list, size_t list_size,
-    int64_t* e_offsets_lists_, size_t e_offsets_lists_size,
-    std::vector<uint8_t>& compact_id_list,
-    std::vector<int64_t>& compact_offsets_list, int concurrency) {
-  compact_offsets_list.resize(e_offsets_lists_size, 0);
+boost::leaf::result<void> varint_encoding_edges_impl(
+    Client& client,
+    const std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>& e_lists,
+    std::shared_ptr<FixedUInt8Builder>& ce_lists,
+    const std::shared_ptr<FixedInt64Builder>& e_offsets,
+    const int concurrency = std::thread::hardware_concurrency()) {
+  int64_t* offsets = e_offsets->data();
+  property_graph_utils::NbrUnit<VID_T, EID_T>* edges = e_lists->data();
 
-  if (list_size <= 0)
-    return {};
+  const VID_T vnum = e_offsets->size() - 1;
+  std::vector<uint8_t*> compact_edges(vnum);
+  std::vector<int64_t> compact_degree(vnum);  // degree in bytes
 
-  std::vector<std::vector<uint8_t>> compact_id_sub_lists;
-  compact_id_sub_lists.resize(e_offsets_lists_size - 1);
-
+  auto before_encoding_timestamp = GetCurrentTime();
   parallel_for(
-      static_cast<size_t>(0), e_offsets_lists_size - 1,
-      [&e_list, &e_offsets_lists_, &compact_id_sub_lists](int64_t k) {
-        VID_T pre_vid = 0;
-        compact_id_sub_lists[k].reserve(
-            9 * (e_offsets_lists_[k + 1] - e_offsets_lists_[k]));
-        for (int64_t count = e_offsets_lists_[k];
-             count < e_offsets_lists_[k + 1]; count++) {
-          varint_encode(e_list[count].vid - pre_vid, compact_id_sub_lists[k]);
-          varint_encode(e_list[count].eid, compact_id_sub_lists[k]);
-
-          pre_vid = e_list[count].vid;
+      static_cast<VID_T>(0), vnum,
+      [&](const VID_T v) {
+        // use malloc rather std::vector::reserve() to avoid touching unused
+        // pages
+        if (offsets[v] == offsets[v + 1]) {
+          compact_edges[v] = nullptr;
+          compact_degree[v] = 0;
+          return;
         }
+        compact_edges[v] = static_cast<uint8_t*>(
+            malloc(9 * 2 * (offsets[v + 1] - offsets[v])));
+        uint8_t* ptr = compact_edges[v];
+        int64_t last_vid = 0;
+        for (int64_t e = offsets[v]; e < offsets[v + 1]; ++e) {
+          const property_graph_utils::NbrUnit<VID_T, EID_T>& nbr_unit =
+              edges[e];
+          ptr = varint_encode(nbr_unit.vid - last_vid, ptr);
+          ptr = varint_encode(nbr_unit.eid, ptr);
+          last_vid = nbr_unit.vid;
+        }
+        compact_degree[v] = ptr - compact_edges[v];
       },
       concurrency);
 
-  compact_offsets_list[0] = 0;
-  for (size_t i = 0; i < compact_id_sub_lists.size(); i++) {
-    compact_offsets_list[i + 1] =
-        compact_offsets_list[i] + compact_id_sub_lists[i].size();
+  auto before_prefix_sum_timestamp = GetCurrentTime();
+  parallel_prefix_sum(compact_degree.data(),
+                      offsets + 1 /* exclusive prefix sum */, vnum,
+                      concurrency);
+
+  auto before_memcpy_timestamp = GetCurrentTime();
+  ce_lists = std::make_shared<FixedUInt8Builder>(client, offsets[vnum]);
+  parallel_for(
+      static_cast<VID_T>(0), vnum,
+      [&](const VID_T v) {
+        if (compact_degree[v] == 0) {
+          return;
+        }
+        memcpy(ce_lists->data() + offsets[v], compact_edges[v],
+               compact_degree[v]);
+        free(compact_edges[v]);
+      },
+      concurrency);
+
+  auto now = GetCurrentTime();
+  VLOG(100) << "Varint + Delta encoding edges use "
+            << (now - before_encoding_timestamp) << " seconds\n\tencoding use "
+            << (before_prefix_sum_timestamp - before_encoding_timestamp)
+            << " seconds\n\tprefix sum use "
+            << (before_memcpy_timestamp - before_prefix_sum_timestamp)
+            << " seconds\n\tmemory compact (copy) use "
+            << (now - before_memcpy_timestamp) << " seconds";
+  return {};
+}
+
+template <typename VID_T, typename EID_T>
+boost::leaf::result<void> varint_encoding_edges(
+    Client& client, const bool directed,
+    const property_graph_types::LABEL_ID_TYPE vertex_label_num,
+    const property_graph_types::LABEL_ID_TYPE edge_label_num,
+    const std::vector<std::vector<std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>>&
+        ie_lists,
+    const std::vector<std::vector<std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>>&
+        oe_lists,
+    std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>&
+        compact_ie_lists,
+    std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>&
+        compact_oe_lists,
+    const std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
+        ie_offsets_lists,
+    const std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
+        oe_offsets_lists,
+    const int concurrency) {
+  compact_oe_lists.resize(vertex_label_num);
+  if (directed) {
+    compact_ie_lists.resize(vertex_label_num);
   }
 
-  compact_id_list.resize(compact_offsets_list[e_offsets_lists_size - 1]);
-  parallel_for(
-      static_cast<size_t>(0), compact_id_sub_lists.size(),
-      [&compact_id_sub_lists, &compact_id_list,
-       &compact_offsets_list](int64_t i) {
-        memcpy(compact_id_list.data() + compact_offsets_list[i],
-               compact_id_sub_lists[i].data(), compact_id_sub_lists[i].size());
-      },
-      concurrency);
+  for (int v_label = 0; v_label < vertex_label_num; v_label++) {
+    compact_oe_lists[v_label].resize(edge_label_num);
+    if (directed) {
+      compact_ie_lists[v_label].resize(edge_label_num);
+    }
+
+    for (int e_label = 0; e_label < edge_label_num; e_label++) {
+      varint_encoding_edges_impl(client, oe_lists[v_label][e_label],
+                                 compact_oe_lists[v_label][e_label],
+                                 oe_offsets_lists[v_label][e_label],
+                                 concurrency);
+      if (directed) {
+        varint_encoding_edges_impl(client, ie_lists[v_label][e_label],
+                                   compact_ie_lists[v_label][e_label],
+                                   ie_offsets_lists[v_label][e_label],
+                                   concurrency);
+      }
+    }
+  }
   return {};
 }
 

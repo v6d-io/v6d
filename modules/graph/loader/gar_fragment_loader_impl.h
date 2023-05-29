@@ -543,9 +543,9 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadEdgeTableOfLabel(
   std::shared_ptr<arrow::Table> adj_list_table_with_gid;
   BOOST_LEAF_ASSIGN(
       adj_list_table_with_gid,
-      edgesId2Gid(std::move(adj_list_table).ValueOrDie(),
-                  vertex_label_to_index_[src_label],
-                  vertex_label_to_index_[dst_label], adj_list_type));
+      parseEdgeIdArrays(std::move(adj_list_table).ValueOrDie(),
+                        vertex_label_to_index_[src_label],
+                        vertex_label_to_index_[dst_label], adj_list_type));
 
   // process property tables
   std::shared_ptr<arrow::Table> property_table;
@@ -639,7 +639,7 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::initSchema(
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 boost::leaf::result<std::shared_ptr<arrow::Table>>
-GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::edgesId2Gid(
+GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::parseEdgeIdArrays(
     std::shared_ptr<arrow::Table> adj_list_table, label_id_t src_label,
     label_id_t dst_label, GraphArchive::AdjListType adj_list_type) {
   std::shared_ptr<arrow::Field> src_gid_field = std::make_shared<arrow::Field>(

@@ -322,65 +322,27 @@ static void loading_vineyard_graph(
 
   MPI_Barrier(comm_spec.comm());
   vineyard::ObjectID fragment_group_id = InvalidObjectID();
-  if (options.local_vertex_map) {
-    if (options.large_vid) {
-      if (options.oid_type == "string") {
-        fragment_group_id =
-            detail::load_graph<std::string, uint64_t, ArrowLocalVertexMap>(
-                client, comm_spec, options);
-      } else if (options.oid_type == "int32") {
-        fragment_group_id =
-            detail::load_graph<int32_t, uint64_t, ArrowLocalVertexMap>(
-                client, comm_spec, options);
-      } else {
-        fragment_group_id =
-            detail::load_graph<int64_t, uint64_t, ArrowLocalVertexMap>(
-                client, comm_spec, options);
-      }
+  if (options.large_vid) {
+    if (options.oid_type == "string") {
+      fragment_group_id =
+          detail::load_graph<std::string, uint64_t>(client, comm_spec, options);
+    } else if (options.oid_type == "int32") {
+      fragment_group_id =
+          detail::load_graph<int32_t, uint64_t>(client, comm_spec, options);
     } else {
-      if (options.oid_type == "string") {
-        fragment_group_id =
-            detail::load_graph<std::string, uint32_t, ArrowLocalVertexMap>(
-                client, comm_spec, options);
-      } else if (options.oid_type == "int32") {
-        fragment_group_id =
-            detail::load_graph<int32_t, uint32_t, ArrowLocalVertexMap>(
-                client, comm_spec, options);
-      } else {
-        fragment_group_id =
-            detail::load_graph<int64_t, uint32_t, ArrowLocalVertexMap>(
-                client, comm_spec, options);
-      }
+      fragment_group_id =
+          detail::load_graph<int64_t, uint64_t>(client, comm_spec, options);
     }
   } else {
-    if (options.large_vid) {
-      if (options.oid_type == "string") {
-        fragment_group_id =
-            detail::load_graph<std::string, uint64_t, ArrowVertexMap>(
-                client, comm_spec, options);
-      } else if (options.oid_type == "int32") {
-        fragment_group_id =
-            detail::load_graph<int32_t, uint64_t, ArrowVertexMap>(
-                client, comm_spec, options);
-      } else {
-        fragment_group_id =
-            detail::load_graph<int64_t, uint64_t, ArrowVertexMap>(
-                client, comm_spec, options);
-      }
+    if (options.oid_type == "string") {
+      fragment_group_id =
+          detail::load_graph<std::string, uint32_t>(client, comm_spec, options);
+    } else if (options.oid_type == "int32") {
+      fragment_group_id =
+          detail::load_graph<int32_t, uint32_t>(client, comm_spec, options);
     } else {
-      if (options.oid_type == "string") {
-        fragment_group_id =
-            detail::load_graph<std::string, uint32_t, ArrowVertexMap>(
-                client, comm_spec, options);
-      } else if (options.oid_type == "int32") {
-        fragment_group_id =
-            detail::load_graph<int32_t, uint32_t, ArrowVertexMap>(
-                client, comm_spec, options);
-      } else {
-        fragment_group_id =
-            detail::load_graph<int64_t, uint32_t, ArrowVertexMap>(
-                client, comm_spec, options);
-      }
+      fragment_group_id =
+          detail::load_graph<int64_t, uint32_t>(client, comm_spec, options);
     }
   }
 
@@ -392,54 +354,27 @@ static void loading_vineyard_graph(
                                    options.print_memory_usage);
 
   if (!options.dump.empty() || (options.dump_dry_run_rounds > 0)) {
-    if (options.local_vertex_map) {
-      if (options.large_vid) {
-        if (options.oid_type == "string") {
-          detail::dump_graph<std::string, uint64_t, ArrowLocalVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        } else if (options.oid_type == "int32") {
-          detail::dump_graph<int32_t, uint64_t, ArrowLocalVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        } else {
-          detail::dump_graph<int64_t, uint64_t, ArrowLocalVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        }
+    if (options.large_vid) {
+      if (options.oid_type == "string") {
+        detail::dump_graph<std::string, uint64_t>(client, comm_spec,
+                                                  fragment_group_id, options);
+      } else if (options.oid_type == "int32") {
+        detail::dump_graph<int32_t, uint64_t>(client, comm_spec,
+                                              fragment_group_id, options);
       } else {
-        if (options.oid_type == "string") {
-          detail::dump_graph<std::string, uint32_t, ArrowLocalVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        } else if (options.oid_type == "int32") {
-          detail::dump_graph<int32_t, uint32_t, ArrowLocalVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        } else {
-          detail::dump_graph<int64_t, uint32_t, ArrowLocalVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        }
+        detail::dump_graph<int64_t, uint64_t>(client, comm_spec,
+                                              fragment_group_id, options);
       }
-
     } else {
-      if (options.large_vid) {
-        if (options.oid_type == "string") {
-          detail::dump_graph<std::string, uint64_t, ArrowVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        } else if (options.oid_type == "int32") {
-          detail::dump_graph<int32_t, uint64_t, ArrowVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        } else {
-          detail::dump_graph<int64_t, uint64_t, ArrowVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        }
+      if (options.oid_type == "string") {
+        detail::dump_graph<std::string, uint32_t>(client, comm_spec,
+                                                  fragment_group_id, options);
+      } else if (options.oid_type == "int32") {
+        detail::dump_graph<int32_t, uint32_t>(client, comm_spec,
+                                              fragment_group_id, options);
       } else {
-        if (options.oid_type == "string") {
-          detail::dump_graph<std::string, uint32_t, ArrowVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        } else if (options.oid_type == "int32") {
-          detail::dump_graph<int32_t, uint32_t, ArrowVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        } else {
-          detail::dump_graph<int64_t, uint32_t, ArrowVertexMap>(
-              client, comm_spec, fragment_group_id, options);
-        }
+        detail::dump_graph<int64_t, uint32_t>(client, comm_spec,
+                                              fragment_group_id, options);
       }
     }
   }

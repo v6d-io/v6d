@@ -112,7 +112,7 @@ class GARFragmentLoader {
 
   boost::leaf::result<void> initSchema(PropertyGraphSchema& schema);
 
-  boost::leaf::result<std::shared_ptr<arrow::Table>> edgesId2Gid(
+  boost::leaf::result<std::shared_ptr<arrow::Table>> parseEdgeIdArrays(
       std::shared_ptr<arrow::Table> adj_list_table, label_id_t src_label,
       label_id_t dst_label, GraphArchive::AdjListType adj_list_type);
 

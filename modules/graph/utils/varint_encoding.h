@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_GRAPH_FRAGMENT_VARINT_IMPL_H_
-#define MODULES_GRAPH_FRAGMENT_VARINT_IMPL_H_
+#ifndef MODULES_GRAPH_UTILS_VARINT_ENCODING_H_
+#define MODULES_GRAPH_UTILS_VARINT_ENCODING_H_
 
 #include <cstdint>
 #include <cstring>
@@ -34,22 +34,25 @@ inline uint64_t unaligned_load_u64(const uint8_t* p) {
 }
 
 template <typename T>
-inline void varint_encode(T input, std::vector<uint8_t>& output) {
+inline uint8_t* varint_encode(T input, uint8_t* output) {
   if (input < UPPER_OF_RANGE_1) {
-    output.push_back(static_cast<uint8_t>(input));
+    output[0] = static_cast<uint8_t>(input);
+    return output + 1;
   } else if (input <= UPPER_OF_RANGE_1 + 255 +
                           256 * (UPPER_OF_RANGE_2 - 1 - UPPER_OF_RANGE_1)) {
     input -= UPPER_OF_RANGE_1;
-    output.push_back(UPPER_OF_RANGE_1 + (input >> 8));
-    output.push_back(input & 0xff);
+    output[0] = UPPER_OF_RANGE_1 + (input >> 8);
+    output[1] = input & 0xff;
+    return output + 2;
   } else {
     unsigned bits = 64 - __builtin_clzll(input);
     unsigned bytes = (bits + 7) / 8;
-    output.push_back(UPPER_OF_RANGE_2 + (bytes - 2));
+    output[0] = UPPER_OF_RANGE_2 + (bytes - 2);
     for (unsigned n = 0; n < bytes; n++) {
-      output.push_back(input & 0xff);
+      output[n + 1] = input & 0xff;
       input >>= 8;
     }
+    return output + 1 + bytes;
   }
 }
 
@@ -72,4 +75,4 @@ inline size_t varint_decode(const uint8_t* input, T& output) {
 
 }  // namespace vineyard
 
-#endif  // MODULES_GRAPH_FRAGMENT_VARINT_IMPL_H_
+#endif  // MODULES_GRAPH_UTILS_VARINT_ENCODING_H_

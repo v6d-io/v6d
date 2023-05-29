@@ -19,6 +19,7 @@ limitations under the License.
 #include <cstddef>
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -48,6 +49,73 @@ class ArrowFragmentBase : public vineyard::Object {
   using label_id_t = property_graph_types::LABEL_ID_TYPE;
 
   virtual ~ArrowFragmentBase() = default;
+
+  virtual boost::leaf::result<ObjectID> AddVerticesAndEdges(
+      Client& client,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
+      ObjectID vm_id,
+      const std::vector<std::set<std::pair<std::string, std::string>>>&
+          edge_relations,
+      const int concurrency = std::thread::hardware_concurrency()) {
+    VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
+  }
+
+  virtual boost::leaf::result<ObjectID> AddVertices(
+      Client& client,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
+      ObjectID vm_id,
+      const int concurrency = std::thread::hardware_concurrency()) {
+    VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
+  }
+
+  virtual boost::leaf::result<ObjectID> AddEdges(
+      Client& client,
+      std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
+      const std::vector<std::set<std::pair<std::string, std::string>>>&
+          edge_relations,
+      const int concurrency = std::thread::hardware_concurrency()) {
+    VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
+  }
+
+  /// Add a set of new vertex labels and a set of new edge labels to graph.
+  /// Vertex label id started from vertex_label_num_, and edge label id
+  /// started from edge_label_num_.
+  virtual boost::leaf::result<ObjectID> AddNewVertexEdgeLabels(
+      Client& client,
+      std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
+      std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, ObjectID vm_id,
+      const std::vector<std::set<std::pair<std::string, std::string>>>&
+          edge_relations,
+      const int concurrency = std::thread::hardware_concurrency()) {
+    VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
+  }
+
+  /// Add a set of new vertex labels to graph. Vertex label id started from
+  /// vertex_label_num_.
+  virtual boost::leaf::result<ObjectID> AddNewVertexLabels(
+      Client& client,
+      std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
+      ObjectID vm_id,
+      const int concurrency = std::thread::hardware_concurrency()) {
+    VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
+  }
+
+  /// Add a set of new edge labels to graph. Edge label id started from
+  /// edge_label_num_.
+  virtual boost::leaf::result<ObjectID> AddNewEdgeLabels(
+      Client& client, std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
+      const std::vector<std::set<std::pair<std::string, std::string>>>&
+          edge_relations,
+      const int concurrency = std::thread::hardware_concurrency()) {
+    VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
+  }
 
   virtual boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
       vineyard::Client& client,
@@ -94,6 +162,10 @@ class ArrowFragmentBase : public vineyard::Object {
   }
 
   virtual vineyard::ObjectID vertex_map_id() const = 0;
+
+  virtual bool local_vertex_map() const = 0;
+
+  virtual bool compact_edges() const = 0;
 
   virtual const PropertyGraphSchema& schema() const = 0;
 

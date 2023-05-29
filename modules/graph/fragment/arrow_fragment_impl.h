@@ -516,14 +516,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
     }
   }
 
-  if (this->compact_edges_) {
-    compact_oe_ptr_lists_.resize(vertex_label_num_);
-    compact_oe_offsets_ptr_lists_.resize(vertex_label_num_);
-  } else {
-    oe_ptr_lists_.resize(vertex_label_num_);
-    oe_offsets_ptr_lists_.resize(vertex_label_num_);
-  }
-
   idst_.resize(vertex_label_num_);
   odst_.resize(vertex_label_num_);
   iodst_.resize(vertex_label_num_);
@@ -534,17 +526,23 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
 
   ovgid_lists_ptr_.resize(vertex_label_num_);
   ovg2l_maps_ptr_.resize(vertex_label_num_);
+
+  if (this->compact_edges_) {
+    compact_oe_ptr_lists_.resize(vertex_label_num_);
+  } else {
+    oe_ptr_lists_.resize(vertex_label_num_);
+  }
+  oe_offsets_ptr_lists_.resize(vertex_label_num_);
   for (label_id_t i = 0; i < vertex_label_num_; ++i) {
     ovgid_lists_ptr_[i] = ovgid_lists_[i]->GetArray()->raw_values();
     ovg2l_maps_ptr_[i] = ovg2l_maps_[i].get();
 
-    if (compact_edges_) {
+    if (this->compact_edges_) {
       compact_oe_ptr_lists_[i].resize(edge_label_num_);
-      compact_oe_offsets_ptr_lists_[i].resize(edge_label_num_);
     } else {
       oe_ptr_lists_[i].resize(edge_label_num_);
-      oe_offsets_ptr_lists_[i].resize(edge_label_num_);
     }
+    oe_offsets_ptr_lists_[i].resize(edge_label_num_);
 
     idst_[i].resize(edge_label_num_);
     odst_[i].resize(edge_label_num_);
@@ -558,57 +556,49 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
       if (this->compact_edges_) {
         compact_oe_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
             compact_oe_lists_[i][j]->GetArray()->raw_values());
-        compact_oe_offsets_ptr_lists_[i][j] =
-            compact_oe_offsets_lists_[i][j]->GetArray()->raw_values();
       } else {
         oe_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
             oe_lists_[i][j]->GetArray()->raw_values());
-        oe_offsets_ptr_lists_[i][j] =
-            oe_offsets_lists_[i][j]->GetArray()->raw_values();
       }
+      oe_offsets_ptr_lists_[i][j] =
+          oe_offsets_lists_[i][j]->GetArray()->raw_values();
     }
   }
 
-  if (this->compact_edges_) {
-    if (directed_) {
+  if (directed_) {
+    if (this->compact_edges_) {
       compact_ie_ptr_lists_.resize(vertex_label_num_);
-      compact_ie_offsets_ptr_lists_.resize(vertex_label_num_);
-
-      for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+    } else {
+      ie_ptr_lists_.resize(vertex_label_num_);
+    }
+    ie_offsets_ptr_lists_.resize(vertex_label_num_);
+    for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+      if (this->compact_edges_) {
         compact_ie_ptr_lists_[i].resize(edge_label_num_);
-        compact_ie_offsets_ptr_lists_[i].resize(edge_label_num_);
+      } else {
+        ie_ptr_lists_[i].resize(edge_label_num_);
+      }
+      ie_offsets_ptr_lists_[i].resize(edge_label_num_);
 
-        for (label_id_t j = 0; j < edge_label_num_; ++j) {
+      for (label_id_t j = 0; j < edge_label_num_; ++j) {
+        if (this->compact_edges_) {
           compact_ie_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
               compact_ie_lists_[i][j]->GetArray()->raw_values());
-          compact_ie_offsets_ptr_lists_[i][j] =
-              compact_ie_offsets_lists_[i][j]->GetArray()->raw_values();
-        }
-      }
-    } else {
-      compact_ie_ptr_lists_ = compact_oe_ptr_lists_;
-      compact_ie_offsets_ptr_lists_ = compact_oe_offsets_ptr_lists_;
-    }
-  } else {
-    if (directed_) {
-      ie_ptr_lists_.resize(vertex_label_num_);
-      ie_offsets_ptr_lists_.resize(vertex_label_num_);
-
-      for (label_id_t i = 0; i < vertex_label_num_; ++i) {
-        ie_ptr_lists_[i].resize(edge_label_num_);
-        ie_offsets_ptr_lists_[i].resize(edge_label_num_);
-
-        for (label_id_t j = 0; j < edge_label_num_; ++j) {
+        } else {
           ie_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
               ie_lists_[i][j]->GetArray()->raw_values());
-          ie_offsets_ptr_lists_[i][j] =
-              ie_offsets_lists_[i][j]->GetArray()->raw_values();
         }
+        ie_offsets_ptr_lists_[i][j] =
+            ie_offsets_lists_[i][j]->GetArray()->raw_values();
       }
+    }
+  } else {
+    if (this->compact_edges_) {
+      compact_ie_ptr_lists_ = compact_oe_ptr_lists_;
     } else {
       ie_ptr_lists_ = oe_ptr_lists_;
-      ie_offsets_ptr_lists_ = oe_offsets_ptr_lists_;
     }
+    ie_offsets_ptr_lists_ = oe_offsets_ptr_lists_;
   }
 }
 
@@ -680,7 +670,12 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::directedCSR2Undirected(
         oe_lists,
     std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
         oe_offsets_lists,
-    int concurrency, bool& is_multigraph) {
+    const int concurrency, bool& is_multigraph) {
+  // FIXME: varint encoding
+  VINEYARD_ASSERT(
+      !this->compact_edges_,
+      "Varint encoding is not implemented for adding vertices/edges");
+
   for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
     for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
       const nbr_unit_t* ie = ie_ptr_lists_.at(v_label).at(e_label);

@@ -36,12 +36,60 @@ limitations under the License.
 
 namespace vineyard {
 
-template <typename OID_T, typename PARTITIONER_T>
+boost::leaf::result<std::vector<std::string>> GatherVertexLabels(
+    const grape::CommSpec& comm_spec, const std::vector<InputTable>& tables) {
+  std::set<std::string> local_vertex_labels;
+  for (auto& tab : tables) {
+    local_vertex_labels.insert(tab.src_label);
+    local_vertex_labels.insert(tab.dst_label);
+  }
+  std::vector<std::string> local_vertex_label_list;
+  for (auto& label : local_vertex_labels) {
+    local_vertex_label_list.push_back(label);
+  }
+  std::vector<std::vector<std::string>> gathered_vertex_label_lists;
+  GlobalAllGatherv(local_vertex_label_list, gathered_vertex_label_lists,
+                   comm_spec);
+  std::vector<std::string> sorted_labels;
+  for (auto& vec : gathered_vertex_label_lists) {
+    sorted_labels.insert(sorted_labels.end(), vec.begin(), vec.end());
+  }
+  std::sort(sorted_labels.begin(), sorted_labels.end());
+  auto iter = std::unique(sorted_labels.begin(), sorted_labels.end());
+  sorted_labels.erase(iter, sorted_labels.end());
+  return sorted_labels;
+}
+
+/**
+ * @brief Build a label to index map
+ *
+ * @param tables vector of labels, each items must be unique.
+ * @return label to index map
+ */
+boost::leaf::result<std::map<std::string, property_graph_types::LABEL_ID_TYPE>>
+GetVertexLabelToIndex(const std::vector<std::string>& labels) {
+  std::map<std::string, property_graph_types::LABEL_ID_TYPE> label_to_index;
+  for (size_t i = 0; i < labels.size(); ++i) {
+    label_to_index[labels[i]] =
+        static_cast<property_graph_types::LABEL_ID_TYPE>(i);
+  }
+  return label_to_index;
+}
+
+template <typename PARTITIONER_T>
 boost::leaf::result<std::map<std::string, std::shared_ptr<arrow::Table>>>
-FragmentLoaderUtils<OID_T, PARTITIONER_T>::BuildVertexTableFromEdges(
+BuildVertexTableFromEdges(
+    const grape::CommSpec& comm_spec, const PARTITIONER_T& partitioner,
     const std::vector<InputTable>& edge_tables,
-    const std::map<std::string, label_id_t>& vertex_label_to_index,
+    const std::map<std::string, property_graph_types::LABEL_ID_TYPE>&
+        vertex_label_to_index,
     const std::set<std::string>& deduced_labels) {
+  static constexpr int src_column = 0;
+  static constexpr int dst_column = 1;
+
+  using oid_t = typename PARTITIONER_T::oid_t;
+  using label_id_t = property_graph_types::LABEL_ID_TYPE;
+
   auto schema = std::make_shared<arrow::Schema>(
       std::vector<std::shared_ptr<arrow::Field>>{
           arrow::field("id", vineyard::ConvertToArrowType<oid_t>::TypeValue()),
@@ -103,15 +151,15 @@ FragmentLoaderUtils<OID_T, PARTITIONER_T>::BuildVertexTableFromEdges(
   }
 
   int concurrency =
-      (std::thread::hardware_concurrency() + comm_spec_.local_num() - 1) /
-      comm_spec_.local_num();
+      (std::thread::hardware_concurrency() + comm_spec.local_num() - 1) /
+      comm_spec.local_num();
 
   // shuffle: gather vertex ids from all fragments
   std::map<std::string, std::shared_ptr<arrow::Table>> results;
   for (const auto& label : deduced_labels) {
     label_id_t label_id = vertex_label_to_index.at(label);
     BOOST_LEAF_AUTO(
-        out, ShufflePropertyVertexTable(comm_spec_, partitioner_,
+        out, ShufflePropertyVertexTable(comm_spec, partitioner,
                                         table_pipelines_deduped[label_id]));
 
     oid_sets[label_id].Clear();
@@ -130,51 +178,33 @@ FragmentLoaderUtils<OID_T, PARTITIONER_T>::BuildVertexTableFromEdges(
 
 template boost::leaf::result<
     std::map<std::string, std::shared_ptr<arrow::Table>>>
-FragmentLoaderUtils<int32_t, HashPartitioner<int32_t>>::
-    BuildVertexTableFromEdges(
-        const std::vector<InputTable>& edge_tables,
-        const std::map<std::string, label_id_t>& vertex_label_to_index,
-        const std::set<std::string>& deduced_labels);
+BuildVertexTableFromEdges<HashPartitioner<int32_t>>(
+    const grape::CommSpec& comm_spec,
+    const HashPartitioner<int32_t>& partitioner,
+    const std::vector<InputTable>& edge_tables,
+    const std::map<std::string, property_graph_types::LABEL_ID_TYPE>&
+        vertex_label_to_index,
+    const std::set<std::string>& deduced_labels);
 
 template boost::leaf::result<
     std::map<std::string, std::shared_ptr<arrow::Table>>>
-FragmentLoaderUtils<int64_t, HashPartitioner<int64_t>>::
-    BuildVertexTableFromEdges(
-        const std::vector<InputTable>& edge_tables,
-        const std::map<std::string, label_id_t>& vertex_label_to_index,
-        const std::set<std::string>& deduced_labels);
+BuildVertexTableFromEdges<HashPartitioner<int64_t>>(
+    const grape::CommSpec& comm_spec,
+    const HashPartitioner<int64_t>& partitioner,
+    const std::vector<InputTable>& edge_tables,
+    const std::map<std::string, property_graph_types::LABEL_ID_TYPE>&
+        vertex_label_to_index,
+    const std::set<std::string>& deduced_labels);
 
 template boost::leaf::result<
     std::map<std::string, std::shared_ptr<arrow::Table>>>
-FragmentLoaderUtils<std::string, HashPartitioner<std::string>>::
-    BuildVertexTableFromEdges(
-        const std::vector<InputTable>& edge_tables,
-        const std::map<std::string, label_id_t>& vertex_label_to_index,
-        const std::set<std::string>& deduced_labels);
-
-template boost::leaf::result<
-    std::map<std::string, std::shared_ptr<arrow::Table>>>
-FragmentLoaderUtils<int32_t, SegmentedPartitioner<int32_t>>::
-    BuildVertexTableFromEdges(
-        const std::vector<InputTable>& edge_tables,
-        const std::map<std::string, label_id_t>& vertex_label_to_index,
-        const std::set<std::string>& deduced_labels);
-
-template boost::leaf::result<
-    std::map<std::string, std::shared_ptr<arrow::Table>>>
-FragmentLoaderUtils<int64_t, SegmentedPartitioner<int64_t>>::
-    BuildVertexTableFromEdges(
-        const std::vector<InputTable>& edge_tables,
-        const std::map<std::string, label_id_t>& vertex_label_to_index,
-        const std::set<std::string>& deduced_labels);
-
-template boost::leaf::result<
-    std::map<std::string, std::shared_ptr<arrow::Table>>>
-FragmentLoaderUtils<std::string, SegmentedPartitioner<std::string>>::
-    BuildVertexTableFromEdges(
-        const std::vector<InputTable>& edge_tables,
-        const std::map<std::string, label_id_t>& vertex_label_to_index,
-        const std::set<std::string>& deduced_labels);
+BuildVertexTableFromEdges<HashPartitioner<std::string>>(
+    const grape::CommSpec& comm_spec,
+    const HashPartitioner<std::string>& partitioner,
+    const std::vector<InputTable>& edge_tables,
+    const std::map<std::string, property_graph_types::LABEL_ID_TYPE>&
+        vertex_label_to_index,
+    const std::set<std::string>& deduced_labels);
 
 boost::leaf::result<std::shared_ptr<arrow::Table>> SyncSchema(
     const std::shared_ptr<arrow::Table>& table,

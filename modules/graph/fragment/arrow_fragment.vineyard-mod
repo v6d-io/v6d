@@ -126,7 +126,13 @@ class [[vineyard]] ArrowFragment
 
   vineyard::ObjectID vertex_map_id() const override { return vm_ptr_->id(); }
 
+  bool local_vertex_map() const override { return local_vertex_map_; }
+
+  bool compact_edges() const override { return compact_edges_; }
+
   bool directed() const override { return directed_; }
+
+  const PropertyGraphSchema& schema() const override { return schema_; }
 
   bool is_multigraph() const override { return is_multigraph_; }
 
@@ -454,11 +460,8 @@ class [[vineyard]] ArrowFragment
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
-    const int64_t* offset_array =
-        compact_ie_offsets_ptr_lists_[v_label][e_label];
-
+    const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
     const uint8_t* ptr = compact_ie_ptr_lists_[v_label][e_label];
-
     return compact_adj_list_t(ptr, offset_array[v_offset],
                               offset_array[v_offset + 1],
                               flatten_edge_tables_columns_[e_label]);
@@ -495,11 +498,8 @@ class [[vineyard]] ArrowFragment
     vid_t vid = v.GetValue();
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
-    const int64_t* offset_array =
-        compact_oe_offsets_ptr_lists_[v_label][e_label];
-
+    const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
     const uint8_t* ptr = compact_oe_ptr_lists_[v_label][e_label];
-
     return compact_adj_list_t(ptr, offset_array[v_offset],
                               offset_array[v_offset + 1],
                               flatten_edge_tables_columns_[e_label]);
@@ -522,13 +522,15 @@ class [[vineyard]] ArrowFragment
    * later.
    */
 
-  inline const int64_t* GetIncomingOffsetArray(label_id_t v_label,
-                                               label_id_t e_label) const {
+  template <bool COMPACT_ = COMPACT>
+  inline const typename std::enable_if<!COMPACT_, int64_t*>::type
+  GetIncomingOffsetArray(label_id_t v_label, label_id_t e_label) const {
     return ie_offsets_ptr_lists_[v_label][e_label];
   }
 
-  inline const int64_t* GetOutgoingOffsetArray(label_id_t v_label,
-                                               label_id_t e_label) const {
+  template <bool COMPACT_ = COMPACT>
+  inline typename std::enable_if<!COMPACT_, const int64_t*>::type
+  GetOutgoingOffsetArray(label_id_t v_label, label_id_t e_label) const {
     return oe_offsets_ptr_lists_[v_label][e_label];
   }
 
@@ -577,8 +579,6 @@ class [[vineyard]] ArrowFragment
 
   std::shared_ptr<vertex_map_t> GetVertexMap() { return vm_ptr_; }
 
-  const PropertyGraphSchema& schema() const override { return schema_; }
-
   void PrepareToRunApp(const grape::CommSpec& comm_spec,
                        grape::PrepareConf conf);
 
@@ -589,19 +589,20 @@ class [[vineyard]] ArrowFragment
       ObjectID vm_id,
       const std::vector<std::set<std::pair<std::string, std::string>>>&
           edge_relations,
-      int concurrency);
+      const int concurrency = std::thread::hardware_concurrency()) override;
 
   boost::leaf::result<ObjectID> AddVertices(
       Client& client,
       std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
-      ObjectID vm_id);
+      ObjectID vm_id,
+      const int concurrency = std::thread::hardware_concurrency()) override;
 
   boost::leaf::result<ObjectID> AddEdges(
       Client& client,
       std::map<label_id_t, std::shared_ptr<arrow::Table>>&& edge_tables_map,
       const std::vector<std::set<std::pair<std::string, std::string>>>&
           edge_relations,
-      int concurrency);
+      const int concurrency = std::thread::hardware_concurrency()) override;
 
   /// Add a set of new vertex labels and a set of new edge labels to graph.
   /// Vertex label id started from vertex_label_num_, and edge label id
@@ -612,14 +613,15 @@ class [[vineyard]] ArrowFragment
       std::vector<std::shared_ptr<arrow::Table>>&& edge_tables, ObjectID vm_id,
       const std::vector<std::set<std::pair<std::string, std::string>>>&
           edge_relations,
-      int concurrency);
+      const int concurrency = std::thread::hardware_concurrency()) override;
 
   /// Add a set of new vertex labels to graph. Vertex label id started from
   /// vertex_label_num_.
   boost::leaf::result<ObjectID> AddNewVertexLabels(
       Client& client,
       std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
-      ObjectID vm_id);
+      ObjectID vm_id,
+      const int concurrency = std::thread::hardware_concurrency()) override;
 
   /// Add a set of new edge labels to graph. Edge label id started from
   /// edge_label_num_.
@@ -627,7 +629,7 @@ class [[vineyard]] ArrowFragment
       Client& client, std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
       const std::vector<std::set<std::pair<std::string, std::string>>>&
           edge_relations,
-      int concurrency);
+      const int concurrency = std::thread::hardware_concurrency()) override;
 
   boost::leaf::result<vineyard::ObjectID> AddVertexColumns(
       vineyard::Client& client,
@@ -719,10 +721,11 @@ class [[vineyard]] ArrowFragment
           oe_lists,
       std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
           oe_offsets_lists,
-      int concurrency, bool& is_multigraph);
+      const int concurrency, bool& is_multigraph);
 
   [[shared]] fid_t fid_, fnum_;
   [[shared]] bool directed_;
+  [[shared]] bool local_vertex_map_;
   [[shared]] bool compact_edges_;
   [[shared]] bool is_multigraph_;
   [[shared]] property_graph_types::LABEL_ID_TYPE vertex_label_num_;
@@ -749,20 +752,14 @@ class [[vineyard]] ArrowFragment
   [[shared]] List<List<std::shared_ptr<FixedSizeBinaryArray>>> ie_lists_,
       oe_lists_;
   std::vector<std::vector<const nbr_unit_t*>> ie_ptr_lists_, oe_ptr_lists_;
+  [[shared]] List<List<std::shared_ptr<UInt8Array>>> compact_ie_lists_,
+      compact_oe_lists_;
+  std::vector<std::vector<const uint8_t*>> compact_ie_ptr_lists_,
+      compact_oe_ptr_lists_;
   [[shared]] List<List<std::shared_ptr<Int64Array>>> ie_offsets_lists_,
       oe_offsets_lists_;
   std::vector<std::vector<const int64_t*>> ie_offsets_ptr_lists_,
       oe_offsets_ptr_lists_;
-
-  [[shared]] List<List<std::shared_ptr<UInt8Array>>> compact_ie_lists_,
-      compact_oe_lists_;
-  [[shared]] List<List<std::shared_ptr<Int64Array>>> compact_ie_offsets_lists_,
-      compact_oe_offsets_lists_;
-
-  std::vector<std::vector<const uint8_t*>> compact_ie_ptr_lists_,
-      compact_oe_ptr_lists_;
-  std::vector<std::vector<const int64_t*>> compact_ie_offsets_ptr_lists_,
-      compact_oe_offsets_ptr_lists_;
 
   std::vector<std::vector<std::vector<fid_t>>> idst_, odst_, iodst_;
   std::vector<std::vector<std::vector<fid_t*>>> idoffset_, odoffset_,

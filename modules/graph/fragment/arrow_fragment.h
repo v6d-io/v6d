@@ -82,7 +82,8 @@ class BasicArrowFragmentBuilder
       fid_t fid, fid_t fnum,
       std::vector<std::shared_ptr<arrow::Table>>&& vertex_tables,
       std::vector<std::shared_ptr<arrow::Table>>&& edge_tables,
-      bool directed = true, int concurrency = 1, bool compact_edges = false);
+      bool directed = true,
+      const int concurrency = std::thread::hardware_concurrency());
 
   boost::leaf::result<void> SetPropertyGraphSchema(
       PropertyGraphSchema&& schema) {
@@ -113,21 +114,12 @@ class BasicArrowFragmentBuilder
 
   std::vector<std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>>>
       ie_lists_, oe_lists_;
-  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
-      ie_offsets_lists_, oe_offsets_lists_;
-
   std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>
       compact_ie_lists_, compact_oe_lists_;
   std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
-      compact_ie_offsets_lists_, compact_oe_offsets_lists_;
-
-  std::vector<std::vector<const uint8_t*>> compact_ie_ptr_lists_,
-      compact_oe_ptr_lists_;
-  std::vector<std::vector<const int64_t*>> compact_ie_offsets_ptr_lists_,
-      compact_oe_offsets_ptr_lists_;
+      ie_offsets_lists_, oe_offsets_lists_;
 
   std::shared_ptr<vertex_map_t> vm_ptr_;
-
   IdParser<vid_t> vid_parser_;
 };
 
