@@ -91,77 +91,26 @@ class ConcurrentOidSet {
   concurrent_map_t oids;
 };
 
-template <typename OID_T, typename PARTITIONER_T>
-class FragmentLoaderUtils {
-  static constexpr int src_column = 0;
-  static constexpr int dst_column = 1;
+boost::leaf::result<std::vector<std::string>> GatherVertexLabels(
+    const grape::CommSpec& comm_spec, const std::vector<InputTable>& tables);
 
-  using label_id_t = property_graph_types::LABEL_ID_TYPE;
-  using oid_t = OID_T;
-  using partitioner_t = PARTITIONER_T;
-  using oid_array_t = ArrowArrayType<oid_t>;
-  using internal_oid_t = typename InternalType<oid_t>::type;
+/**
+ * @brief Build a label to index map
+ *
+ * @param tables vector of labels, each items must be unique.
+ * @return label to index map
+ */
+boost::leaf::result<std::map<std::string, property_graph_types::LABEL_ID_TYPE>>
+GetVertexLabelToIndex(const std::vector<std::string>& labels);
 
- public:
-  explicit FragmentLoaderUtils(const grape::CommSpec& comm_spec,
-                               const PARTITIONER_T& partitioner)
-      : comm_spec_(comm_spec), partitioner_(partitioner) {}
-
-  /**
-   * @brief Gather all vertex labels from each worker, then sort and unique them
-   *
-   * @param tables vector of edge tables
-   * @return processed vector of vertex labels
-   */
-  boost::leaf::result<std::vector<std::string>> GatherVertexLabels(
-      const std::vector<InputTable>& tables) {
-    std::set<std::string> local_vertex_labels;
-    for (auto& tab : tables) {
-      local_vertex_labels.insert(tab.src_label);
-      local_vertex_labels.insert(tab.dst_label);
-    }
-    std::vector<std::string> local_vertex_label_list;
-    for (auto& label : local_vertex_labels) {
-      local_vertex_label_list.push_back(label);
-    }
-    std::vector<std::vector<std::string>> gathered_vertex_label_lists;
-    GlobalAllGatherv(local_vertex_label_list, gathered_vertex_label_lists,
-                     comm_spec_);
-    std::vector<std::string> sorted_labels;
-    for (auto& vec : gathered_vertex_label_lists) {
-      sorted_labels.insert(sorted_labels.end(), vec.begin(), vec.end());
-    }
-    std::sort(sorted_labels.begin(), sorted_labels.end());
-    auto iter = std::unique(sorted_labels.begin(), sorted_labels.end());
-    sorted_labels.erase(iter, sorted_labels.end());
-    return sorted_labels;
-  }
-
-  /**
-   * @brief Build a label to index map
-   *
-   * @param tables vector of labels, each items must be unique.
-   * @return label to index map
-   */
-  boost::leaf::result<std::map<std::string, label_id_t>> GetVertexLabelToIndex(
-      const std::vector<std::string>& labels) {
-    std::map<std::string, label_id_t> label_to_index;
-    for (size_t i = 0; i < labels.size(); ++i) {
-      label_to_index[labels[i]] = static_cast<label_id_t>(i);
-    }
-    return label_to_index;
-  }
-
-  boost::leaf::result<std::map<std::string, std::shared_ptr<arrow::Table>>>
-  BuildVertexTableFromEdges(
-      const std::vector<InputTable>& edge_tables,
-      const std::map<std::string, label_id_t>& vertex_label_to_index,
-      const std::set<std::string>& deduced_labels);
-
- private:
-  grape::CommSpec comm_spec_;
-  const partitioner_t& partitioner_;
-};
+template <typename PARTITIONER_T>
+boost::leaf::result<std::map<std::string, std::shared_ptr<arrow::Table>>>
+BuildVertexTableFromEdges(
+    const grape::CommSpec& comm_spec, const PARTITIONER_T& partitioner,
+    const std::vector<InputTable>& edge_tables,
+    const std::map<std::string, property_graph_types::LABEL_ID_TYPE>&
+        vertex_label_to_index,
+    const std::set<std::string>& deduced_labels);
 
 struct EdgeTableInfo {
   using label_id_t = property_graph_types::LABEL_ID_TYPE;

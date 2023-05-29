@@ -26,7 +26,7 @@ limitations under the License.
 
 #include "basic/ds/arrow.h"
 #include "common/util/arrow.h"
-#include "graph/fragment/varint_impl.h"
+#include "graph/utils/varint_encoding.h"
 
 namespace vineyard {
 

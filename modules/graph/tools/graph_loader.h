@@ -62,13 +62,11 @@ struct loader_options {
   bool print_normalized_schema = false;
 };
 
-template <typename OID_T, typename VID_T,
-          template <typename, typename> class VERTEX_MAP_T>
+template <typename OID_T, typename VID_T>
 ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
                     struct detail::loader_options const& options);
 
-template <typename OID_T, typename VID_T,
-          template <typename, typename> class VERTEX_MAP_T>
+template <typename OID_T, typename VID_T>
 void dump_graph(Client& client, grape::CommSpec& comm_spec,
                 const ObjectID fragment_group_id,
                 struct detail::loader_options const& options);

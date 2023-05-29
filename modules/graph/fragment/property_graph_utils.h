@@ -166,12 +166,25 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
     bool& is_multigraph);
 
 template <typename VID_T, typename EID_T>
-boost::leaf::result<void> generate_varint_edges(
-    property_graph_utils::NbrUnit<VID_T, EID_T>* e_list, size_t list_size,
-    int64_t* e_offsets_lists_, size_t e_offsets_lists_size,
-    std::vector<uint8_t>& compact_id_list,
-    std::vector<int64_t>& compact_offsets_list, int concurrency);
-
+boost::leaf::result<void> varint_encoding_edges(
+    Client& client, const bool directed,
+    const property_graph_types::LABEL_ID_TYPE vertex_label_num,
+    const property_graph_types::LABEL_ID_TYPE edge_label_num,
+    const std::vector<std::vector<std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>>&
+        ie_lists,
+    const std::vector<std::vector<std::shared_ptr<
+        PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>>&
+        oe_lists,
+    std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>&
+        compact_ie_lists,
+    std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>&
+        compact_oe_lists,
+    const std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
+        ie_offsets_lists,
+    const std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>&
+        oe_offsets_lists,
+    const int concurrency = std::thread::hardware_concurrency());
 }  // namespace vineyard
 
 #endif  // MODULES_GRAPH_FRAGMENT_PROPERTY_GRAPH_UTILS_H_
