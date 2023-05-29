@@ -20,12 +20,11 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
-#include "ic.h"
+#include "powturbo/include/ic.h"
 
 #include "common/util/functions.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"
-#include "graph/utils/varint_encoding.h"
 
 namespace vineyard {
 
@@ -183,7 +182,6 @@ void sort_edges_with_respect_to_vertex(
     vineyard::PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>&
         builder,
     const int64_t* offsets, VID_T tvnum, int concurrency) {
-  LOG(INFO) << "start sort_edges_with_respect_to_vertex";
   using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
   parallel_for(
       static_cast<VID_T>(0), tvnum,
@@ -195,7 +193,6 @@ void sort_edges_with_respect_to_vertex(
         });
       },
       concurrency);
-  LOG(INFO) << "finish sort_edges_with_respect_to_vertex";
 }
 
 template <typename VID_T, typename EID_T>
@@ -204,7 +201,6 @@ void check_is_multigraph(
         builder,
     const int64_t* offsets, VID_T tvnum, int concurrency, bool& is_multigraph) {
   using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
-  LOG(INFO) << "start check_is_multigraph";
   parallel_for(
       static_cast<VID_T>(0), tvnum,
       [offsets, &builder, &is_multigraph](VID_T i) {
@@ -222,7 +218,6 @@ void check_is_multigraph(
         }
       },
       concurrency);
-  LOG(INFO) << "finish check_is_multigraph";
 }
 
 template <typename VID_T, typename EID_T>
@@ -708,8 +703,9 @@ boost::leaf::result<void> varint_encoding_edges_impl(
   std::vector<uint8_t*> compact_edges(vnum);
   std::vector<int64_t> compact_degree(vnum);  // degree in bytes
 
-  LOG(INFO) << "start encoding";
   auto before_encoding_timestamp = GetCurrentTime();
+  constexpr size_t element_size =
+      sizeof(property_graph_utils::NbrUnit<VID_T, EID_T>) / sizeof(uint32_t);
   parallel_for(
       static_cast<VID_T>(0), vnum,
       [&](const VID_T v) {
@@ -725,27 +721,24 @@ boost::leaf::result<void> varint_encoding_edges_impl(
           edges[e].vid -= last_vid;
           last_vid += edges[e].vid;
         }
-        compact_edges[v] = static_cast<uint8_t*>(
-            malloc(9 * 2 * (offsets[v + 1] - offsets[v])));
+        const int64_t reserved_memory_size =
+            9 * 2 * (offsets[v + 1] - offsets[v]);
+        compact_edges[v] = static_cast<uint8_t*>(malloc(reserved_memory_size));
         uint8_t* ptr = compact_edges[v];
-        if (std::is_same<VID_T, uint64_t>::value) {
-          // ptr = vbenc64(reinterpret_cast<uint64_t*>(edges + offsets[v]),
-          //               (offsets[v + 1] - offsets[v]) * 2, ptr);
-          for (int64_t i = offsets[v]; i < offsets[v+1]; i += VARINT_ENCODING_BATCH_SIZE) {
-            ptr = v8enc32(reinterpret_cast<uint32_t*>(edges + i),
-                        (i + VARINT_ENCODING_BATCH_SIZE < offsets[v + 1] ? VARINT_ENCODING_BATCH_SIZE : (offsets[v + 1] - i)) * 4, ptr);
-          }
-          assert(ptr - compact_edges[v] <= 9 * 2 * (offsets[v + 1] - offsets[v]));
-        } else {
-          // TODO
-          // vbenc64(uint64_t *__restrict in, unsigned int n, unsigned char
-          // *__restrict out);
+        for (int64_t i = offsets[v]; i < offsets[v + 1];
+             i += VARINT_ENCODING_BATCH_SIZE) {
+          ptr = v8enc32(reinterpret_cast<uint32_t*>(edges + i),
+                        (i + VARINT_ENCODING_BATCH_SIZE < offsets[v + 1]
+                             ? VARINT_ENCODING_BATCH_SIZE
+                             : (offsets[v + 1] - i)) *
+                            element_size,
+                        ptr);
         }
+        assert(ptr - compact_edges[v] <= reserved_memory_size);  // no overflow
         compact_degree[v] = ptr - compact_edges[v];
       },
       concurrency);
 
-  LOG(INFO) << "start prefixsum";
   auto before_prefix_sum_timestamp = GetCurrentTime();
   e_boffsets = std::make_shared<FixedInt64Builder>(client, vnum + 1);
   int64_t* boffsets = e_boffsets->data();
@@ -754,7 +747,6 @@ boost::leaf::result<void> varint_encoding_edges_impl(
                       boffsets + 1 /* exclusive prefix sum */, vnum,
                       concurrency);
 
-  LOG(INFO) << "start memcpy";
   auto before_memcpy_timestamp = GetCurrentTime();
   ce_lists = std::make_shared<FixedUInt8Builder>(client, boffsets[vnum]);
   parallel_for(

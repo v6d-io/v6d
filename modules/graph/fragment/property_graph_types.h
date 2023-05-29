@@ -21,14 +21,13 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "ic.h"
+#include "powturbo/include/ic.h"
 
 #include "grape/config.h"
 #include "grape/utils/vertex_array.h"
 
 #include "basic/ds/arrow.h"
 #include "common/util/arrow.h"
-#include "graph/utils/varint_encoding.h"
 
 namespace vineyard {
 
@@ -444,12 +443,9 @@ struct CompactNbr {
     }
     ptr_ = next_;
     size_t n = (current_ + batch_size) < size_ ? batch_size : (size_ - current_);
-    // next_ = vbdec64(const_cast<unsigned char*>(
-    //                    reinterpret_cast<const unsigned char*>(next_)),
-    //                n * 2, reinterpret_cast<uint64_t*>(data_));
     next_ = v8dec32(const_cast<unsigned char*>(
                        reinterpret_cast<const unsigned char*>(next_)),
-                   n * 4, reinterpret_cast<uint32_t*>(data_));
+                   n * element_size, reinterpret_cast<uint32_t*>(data_));
   }
 
   grape::Vertex<VID_T> neighbor() const {
@@ -516,6 +512,8 @@ struct CompactNbr {
   inline const CompactNbr& operator*() const { return *this; }
 
  private:
+ static constexpr size_t element_size =
+      sizeof(property_graph_utils::NbrUnit<VID_T, EID_T>) / sizeof(uint32_t);
   static constexpr size_t batch_size = VARINT_ENCODING_BATCH_SIZE;
 
   mutable const uint8_t* ptr_, *next_ = nullptr;
