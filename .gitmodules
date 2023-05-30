@@ -50,3 +50,6 @@
 	path = modules/graph/thirdparty/libgrape-lite
 	url = https://github.com/alibaba/libgrape-lite.git
 	shallow = true
+[submodule "modules/graph/thirdparty/powturbo"]
+	path = modules/graph/thirdparty/powturbo
+	url = https://github.com/powturbo/TurboPFor-Integer-Compression.git

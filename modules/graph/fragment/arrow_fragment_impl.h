@@ -529,6 +529,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
 
   if (this->compact_edges_) {
     compact_oe_ptr_lists_.resize(vertex_label_num_);
+    oe_boffsets_ptr_lists_.resize(vertex_label_num_);
   } else {
     oe_ptr_lists_.resize(vertex_label_num_);
   }
@@ -539,6 +540,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
 
     if (this->compact_edges_) {
       compact_oe_ptr_lists_[i].resize(edge_label_num_);
+      oe_boffsets_ptr_lists_[i].resize(edge_label_num_);
     } else {
       oe_ptr_lists_[i].resize(edge_label_num_);
     }
@@ -556,6 +558,8 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
       if (this->compact_edges_) {
         compact_oe_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
             compact_oe_lists_[i][j]->GetArray()->raw_values());
+        oe_boffsets_ptr_lists_[i][j] =
+            oe_boffsets_lists_[i][j]->GetArray()->raw_values();
       } else {
         oe_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
             oe_lists_[i][j]->GetArray()->raw_values());
@@ -568,6 +572,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
   if (directed_) {
     if (this->compact_edges_) {
       compact_ie_ptr_lists_.resize(vertex_label_num_);
+      ie_boffsets_ptr_lists_.resize(vertex_label_num_);
     } else {
       ie_ptr_lists_.resize(vertex_label_num_);
     }
@@ -575,6 +580,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
     for (label_id_t i = 0; i < vertex_label_num_; ++i) {
       if (this->compact_edges_) {
         compact_ie_ptr_lists_[i].resize(edge_label_num_);
+        ie_boffsets_ptr_lists_[i].resize(edge_label_num_);
       } else {
         ie_ptr_lists_[i].resize(edge_label_num_);
       }
@@ -584,6 +590,8 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
         if (this->compact_edges_) {
           compact_ie_ptr_lists_[i][j] = reinterpret_cast<const uint8_t*>(
               compact_ie_lists_[i][j]->GetArray()->raw_values());
+          ie_boffsets_ptr_lists_[i][j] =
+              ie_boffsets_lists_[i][j]->GetArray()->raw_values();
         } else {
           ie_ptr_lists_[i][j] = reinterpret_cast<const nbr_unit_t*>(
               ie_lists_[i][j]->GetArray()->raw_values());
@@ -595,6 +603,7 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
   } else {
     if (this->compact_edges_) {
       compact_ie_ptr_lists_ = compact_oe_ptr_lists_;
+      ie_boffsets_ptr_lists_ = oe_boffsets_ptr_lists_;
     } else {
       ie_ptr_lists_ = oe_ptr_lists_;
     }

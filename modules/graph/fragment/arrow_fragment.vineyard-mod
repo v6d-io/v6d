@@ -92,7 +92,7 @@ class [[vineyard]] ArrowFragment
   using nbr_t = property_graph_utils::Nbr<vid_t, eid_t>;
   using nbr_unit_t = property_graph_utils::NbrUnit<vid_t, eid_t>;
   using adj_list_t = property_graph_utils::AdjList<vid_t, eid_t>;
-  using compact_adj_list_t = property_graph_utils::EncodedAdjList<vid_t, eid_t>;
+  using compact_adj_list_t = property_graph_utils::CompactAdjList<vid_t, eid_t>;
   using raw_adj_list_t = property_graph_utils::RawAdjList<vid_t, eid_t>;
   using vertex_map_t = VERTEX_MAP_T;
   using vertex_t = grape::Vertex<vid_t>;
@@ -461,10 +461,12 @@ class [[vineyard]] ArrowFragment
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
     const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
+    const int64_t* boffset_array = ie_boffsets_ptr_lists_[v_label][e_label];
     const uint8_t* ptr = compact_ie_ptr_lists_[v_label][e_label];
-    return compact_adj_list_t(ptr, offset_array[v_offset],
-                              offset_array[v_offset + 1],
-                              flatten_edge_tables_columns_[e_label]);
+    return compact_adj_list_t(
+        ptr, boffset_array[v_offset], boffset_array[v_offset + 1],
+        offset_array[v_offset + 1] - offset_array[v_offset],
+        flatten_edge_tables_columns_[e_label]);
   }
 
   template <bool COMPACT_ = COMPACT>
@@ -499,10 +501,12 @@ class [[vineyard]] ArrowFragment
     label_id_t v_label = vid_parser_.GetLabelId(vid);
     int64_t v_offset = vid_parser_.GetOffset(vid);
     const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
+    const int64_t* boffset_array = oe_boffsets_ptr_lists_[v_label][e_label];
     const uint8_t* ptr = compact_oe_ptr_lists_[v_label][e_label];
-    return compact_adj_list_t(ptr, offset_array[v_offset],
-                              offset_array[v_offset + 1],
-                              flatten_edge_tables_columns_[e_label]);
+    return compact_adj_list_t(
+        ptr, boffset_array[v_offset], boffset_array[v_offset + 1],
+        offset_array[v_offset + 1] - offset_array[v_offset],
+        flatten_edge_tables_columns_[e_label]);
   }
 
   template <bool COMPACT_ = COMPACT>
@@ -522,15 +526,13 @@ class [[vineyard]] ArrowFragment
    * later.
    */
 
-  template <bool COMPACT_ = COMPACT>
-  inline const typename std::enable_if<!COMPACT_, int64_t*>::type
-  GetIncomingOffsetArray(label_id_t v_label, label_id_t e_label) const {
+  inline const int64_t* GetIncomingOffsetArray(label_id_t v_label,
+                                               label_id_t e_label) const {
     return ie_offsets_ptr_lists_[v_label][e_label];
   }
 
-  template <bool COMPACT_ = COMPACT>
-  inline typename std::enable_if<!COMPACT_, const int64_t*>::type
-  GetOutgoingOffsetArray(label_id_t v_label, label_id_t e_label) const {
+  inline const int64_t* GetOutgoingOffsetArray(label_id_t v_label,
+                                               label_id_t e_label) const {
     return oe_offsets_ptr_lists_[v_label][e_label];
   }
 
@@ -760,6 +762,10 @@ class [[vineyard]] ArrowFragment
       oe_offsets_lists_;
   std::vector<std::vector<const int64_t*>> ie_offsets_ptr_lists_,
       oe_offsets_ptr_lists_;
+  [[shared]] List<List<std::shared_ptr<Int64Array>>> ie_boffsets_lists_,
+      oe_boffsets_lists_;
+  std::vector<std::vector<const int64_t*>> ie_boffsets_ptr_lists_,
+      oe_boffsets_ptr_lists_;
 
   std::vector<std::vector<std::vector<fid_t>>> idst_, odst_, iodst_;
   std::vector<std::vector<std::vector<fid_t*>>> idoffset_, odoffset_,

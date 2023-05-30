@@ -1108,6 +1108,7 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::Build(
   if (this->directed_) {
     if (this->compact_edges_) {
       Base::compact_ie_lists_.resize(this->vertex_label_num_);
+      Base::ie_boffsets_lists_.resize(this->vertex_label_num_);
     } else {
       Base::ie_lists_.resize(this->vertex_label_num_);
     }
@@ -1115,6 +1116,7 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::Build(
   }
   if (this->compact_edges_) {
     Base::compact_oe_lists_.resize(this->vertex_label_num_);
+    Base::oe_boffsets_lists_.resize(this->vertex_label_num_);
   } else {
     Base::oe_lists_.resize(this->vertex_label_num_);
   }
@@ -1124,6 +1126,7 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::Build(
     if (this->directed_) {
       if (this->compact_edges_) {
         Base::compact_ie_lists_[i].resize(this->edge_label_num_);
+        Base::ie_boffsets_lists_[i].resize(this->edge_label_num_);
       } else {
         Base::ie_lists_[i].resize(this->edge_label_num_);
       }
@@ -1131,6 +1134,7 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::Build(
     }
     if (this->compact_edges_) {
       Base::compact_oe_lists_[i].resize(this->edge_label_num_);
+      Base::oe_boffsets_lists_[i].resize(this->edge_label_num_);
     } else {
       Base::oe_lists_[i].resize(this->edge_label_num_);
     }
@@ -1143,6 +1147,8 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::Build(
           if (this->compact_edges_) {
             RETURN_ON_ERROR(compact_ie_lists_[i][j]->Seal(*client, object));
             this->set_compact_ie_lists_(i, j, object);
+            RETURN_ON_ERROR(ie_boffsets_lists_[i][j]->Seal(*client, object));
+            this->set_ie_boffsets_lists_(i, j, object);
           } else {
             RETURN_ON_ERROR(ie_lists_[i][j]->Seal(*client, object));
             this->set_ie_lists_(i, j, object);
@@ -1153,6 +1159,8 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::Build(
         if (this->compact_edges_) {
           RETURN_ON_ERROR(compact_oe_lists_[i][j]->Seal(*client, object));
           this->set_compact_oe_lists_(i, j, object);
+          RETURN_ON_ERROR(oe_boffsets_lists_[i][j]->Seal(*client, object));
+          this->set_oe_boffsets_lists_(i, j, object);
         } else {
           RETURN_ON_ERROR(oe_lists_[i][j]->Seal(*client, object));
           this->set_oe_lists_(i, j, object);
@@ -1348,7 +1356,8 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initEdges(
     varint_encoding_edges(client_, this->directed_, this->vertex_label_num_,
                           this->edge_label_num_, ie_lists_, oe_lists_,
                           compact_ie_lists_, compact_oe_lists_,
-                          ie_offsets_lists_, oe_offsets_lists_, concurrency);
+                          ie_offsets_lists_, oe_offsets_lists_,
+                          ie_boffsets_lists_, oe_boffsets_lists_, concurrency);
   }
   return {};
 }

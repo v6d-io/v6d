@@ -41,6 +41,19 @@ add_custom_target(vineyard_graph_java_gen
 
 add_dependencies(vineyard_graph_gen vineyard_basic_gen)
 
+# add powturbo library
+set(POWTURBO_SRC_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/v8.c
+)
+add_library(powturbo-objects OBJECT ${POWTURBO_SRC_FILES})
+set(powturbo-target-objects $<TARGET_OBJECTS:powturbo-objects>)
+target_compile_options(powturbo-objects PRIVATE -Wp,-w -O3 -fPIC -falign-loops -fstrict-aliasing)
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+    target_compile_options(powturbo-objects PRIVATE -march=corei7-avx -mtune=corei7-avx)
+else()
+    target_compile_options(powturbo-objects PRIVATE "-D_NAVX2")
+endif()
+
 file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
                                                                 "loader/*.cc"
                                                                 "utils/*.cc"
@@ -48,13 +61,12 @@ file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
                                                                 "writer/*.cc"
 )
 
-add_library(vineyard_graph ${GRAPH_SRC_FILES})
+add_library(vineyard_graph ${GRAPH_SRC_FILES} ${powturbo-target-objects})
 target_add_debuginfo(vineyard_graph)
 target_compile_options(vineyard_graph PUBLIC "-fopenmp")
 target_link_options(vineyard_graph PUBLIC "-fopenmp")
-target_include_directories(vineyard_graph PUBLIC
-                                          ${MPI_CXX_INCLUDE_PATH}
-)
+target_include_directories(vineyard_graph PUBLIC ${MPI_CXX_INCLUDE_PATH})
+target_compile_options(vineyard_graph PUBLIC "-DVARINT_ENCODING_BATCH_SIZE=16")  # for varint batching
 
 find_package(Boost COMPONENTS leaf)
 if(Boost_LEAF_FOUND)
@@ -69,7 +81,6 @@ else()
             DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib
             PATTERN "*.hpp"
     )
-
     target_include_directories(vineyard_graph PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/boost-leaf/include>
         $<INSTALL_INTERFACE:include/vineyard/contrib>
@@ -94,6 +105,16 @@ else()
         $<INSTALL_INTERFACE:include>
     )
 endif()
+
+# install headers for powturbo
+target_include_directories(vineyard_graph PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty>
+    $<INSTALL_INTERFACE:include>
+)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/include"
+    DESTINATION ${CMAKE_INSTALL_PREFIX}/include/vineyard/contrib/powturbo
+    PATTERN "*.h"
+)
 
 if(BUILD_VINEYARD_GRAPH_WITH_GAR)
     target_compile_definitions(vineyard_graph PUBLIC -DENABLE_GAR)
