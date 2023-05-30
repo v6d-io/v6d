@@ -6,7 +6,6 @@ metadata:
 spec:
   vineyarddName: vineyardd-sample
   vineyarddNamespace: vineyard-system
-  limit: 1000
   backupPath: /var/vineyard/dump
   persistentVolumeSpec:
     storageClassName: manual

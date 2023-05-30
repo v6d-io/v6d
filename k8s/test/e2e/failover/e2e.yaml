@@ -65,12 +65,12 @@ setup:
         - namespace: vineyard-job
           resource: deployment/build-distributed-object-step2
           for: condition=Available
-    - name: install backup
+    - name: install backup with the specific objects
       command: |
         go run k8s/cmd/main.go create backup \
           --vineyardd-name vineyardd-sample \
           --vineyardd-namespace vineyard-system  \
-          --limit 1000 \
+          --objectIDs $localobjectid,$distributedobjectid \
           --path /var/vineyard/dump  \
           --pv-pvc-spec '{
           "pv-spec": {

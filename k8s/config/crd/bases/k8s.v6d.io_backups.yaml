@@ -33,8 +33,10 @@ spec:
             properties:
               backupPath:
                 type: string
-              limit:
-                type: integer
+              objecIDs:
+                items:
+                  type: string
+                type: array
               persistentVolumeClaimSpec:
                 properties:
                   accessModes:

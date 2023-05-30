@@ -41,8 +41,10 @@ spec:
         image: ghcr.io/v6d-io/v6d/backup-job
         imagePullPolicy: IfNotPresent
         env:
-        - name: LIMIT
-          value: "{{ $backupConfig.Limit }}"
+        {{- if $backupConfig.ObjectIDs }}
+        - name: ObjectIDs
+          value: "{{ $backupConfig.ObjectIDs }}"
+        {{- end }}
         - name: BACKUP_PATH
           value: {{ $failoverConfig.Path }}
         - name: ENDPOINT

@@ -1741,9 +1741,10 @@ the vineyard operator. The main fields are described as follows.
          - The namespace of vineyardd cluster.
          - nil
 
-       * - limit
-         - int
-         - The number of objects to be backed up
+       * - objectIDs
+         - []string
+         - The object IDs that need to be backed up.
+           If it is empty, all objects will be backed up.
          - nil
 
        * - backupPath
@@ -1806,7 +1807,6 @@ up the data. The following is the yaml file of the backup:
   spec:
     vineyarddName: vineyardd-sample
     vineyarddNamespace: vineyard-system
-    limit: 1000
     backupPath: /var/vineyard/dump
     persistentVolumeSpec:
       storageClassName: manual

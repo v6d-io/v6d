@@ -77,7 +77,7 @@ setup:
         go run k8s/cmd/main.go deploy backup-job \
           --vineyard-deployment-name vineyardd-sample \
           --vineyard-deployment-namespace vineyard-system  \
-          --limit 1000 \
+          --objectIDs "$localobjectid,$distributedobjectid" \
           --path /var/vineyard/dump  \
           --pv-pvc-spec '{
           "pv-spec": {

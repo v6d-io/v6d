@@ -50,8 +50,8 @@ func ApplyBackupNameOpts(cmd *cobra.Command) {
 
 func ApplyBackupCommonOpts(cmd *cobra.Command) {
 	cmd.Flags().
-		IntVarP(&BackupOpts.Limit, "limit", "", 1000,
-			"the limit of objects to backup")
+		StringSliceVarP(&BackupOpts.ObjectIDs, "objectIDs", "", []string{},
+			"the specific objects to be backed up")
 	cmd.Flags().
 		StringVarP(&BackupOpts.BackupPath, "path", "", "",
 			"the path of the backup data")
