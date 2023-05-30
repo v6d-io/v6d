@@ -55,7 +55,7 @@ func NewRoundRobinStrategy(nodes []string) *RoundRobinStrategy {
 func (r *RoundRobinStrategy) Compute(rank int) (string, error) {
 	l := len(r.nodes)
 	if l == 0 {
-		return "", nil
+		return "", errors.Errorf("No nodes found")
 	}
 	return r.nodes[rank%l], nil
 }
