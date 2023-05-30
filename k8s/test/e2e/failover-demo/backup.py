@@ -25,7 +25,7 @@ from kubernetes.client.rest import ApiException
 env_dist = os.environ
 
 objectids = None
-if "ObjectIDs" not in env_dist:
+if "ObjectIDs" in env_dist:
     objectids = env_dist["ObjectIDs"]
 path = env_dist['BACKUP_PATH']
 socket = '/var/run/vineyard.sock'
@@ -65,11 +65,11 @@ objIDs = []
 if objectids is not None:
     objs = objectids.split(',')
     for _,o in enumerate(objs):
-        objIDs = objIDs.append(vineyard.ObjectID(o))
+        objIDs.append(vineyard.ObjectID(o))
 else:
     objs = vineyard_client.list_objects(pattern='*')
     for _,o in enumerate(objs):
-        objIDs = objIDs.append(o.id)
+        objIDs.append(o.id)
 
 
 # serialize all persistent objects
