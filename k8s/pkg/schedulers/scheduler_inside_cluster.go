@@ -143,7 +143,10 @@ func (vs *VineyardSchedulerInsideCluster) Schedule(nodeName string) (int, error)
 	roundRobin := NewRoundRobinStrategy(vs.config.Nodes)
 
 	if len(vs.config.Required) == 0 {
-		target, _ := roundRobin.Compute(vs.rank)
+		target, err := roundRobin.Compute(vs.rank)
+		if err != nil {
+			return 1, err
+		}
 		if target == nodeName {
 			return 100, nil
 		}

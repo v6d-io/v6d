@@ -85,7 +85,10 @@ func (vs *VineyardSchedulerOutsideCluster) Schedule(replica int) (string, error)
 
 	if len(vs.config.Required) == 0 {
 		for i := 0; i < replica; i++ {
-			node, _ := roundRobin.Compute(i)
+			node, err := roundRobin.Compute(i)
+			if err != nil {
+				return "", err
+			}
 			jobToNode[node]++
 		}
 		return vs.buildSchedulerOrder(jobToNode), nil
