@@ -43,42 +43,13 @@ add_dependencies(vineyard_graph_gen vineyard_basic_gen)
 
 # add powturbo library
 set(POWTURBO_SRC_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/bic.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/bitunpack.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/bitpack.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/bitutil.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/eliasfano.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/fp.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/transpose.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/transpose_.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/trlec.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/trled.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/vp4c.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/vp4d.c
     ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/v8.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/v8pack.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/vint.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/vsimple.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/vbit.c
-)
-set(POWTURBO_AVX2_SRC_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/bitunpack.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/bitpack.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/bitutil.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/transpose.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/vp4c.c
-    ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/powturbo/lib/vp4d.c
 )
 add_library(powturbo-objects OBJECT ${POWTURBO_SRC_FILES})
 set(powturbo-target-objects $<TARGET_OBJECTS:powturbo-objects>)
 target_compile_options(powturbo-objects PRIVATE -Wp,-w -O3 -fPIC -falign-loops -fstrict-aliasing)
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
     target_compile_options(powturbo-objects PRIVATE -march=corei7-avx -mtune=corei7-avx)
-
-    add_library(powturbo-avx2-objects OBJECT ${POWTURBO_AVX2_SRC_FILES})
-    set(powturbo-target-objects ${powturbo-target-objects} $<TARGET_OBJECTS:powturbo-avx2-objects>)
-    target_compile_options(powturbo-avx2-objects PRIVATE -Wp,-w -O3 -fPIC -falign-loops -fstrict-aliasing)
-    target_compile_options(powturbo-avx2-objects PRIVATE -march=haswell)
 else()
     target_compile_options(powturbo-objects PRIVATE "-D_NAVX2")
 endif()
