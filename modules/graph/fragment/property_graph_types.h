@@ -29,6 +29,11 @@ limitations under the License.
 #include "basic/ds/arrow.h"
 #include "common/util/arrow.h"
 
+// batching varint decoding for edge list
+#ifndef VARINT_ENCODING_BATCH_SIZE
+#define VARINT_ENCODING_BATCH_SIZE 16
+#endif
+
 namespace vineyard {
 
 using fid_t = grape::fid_t;

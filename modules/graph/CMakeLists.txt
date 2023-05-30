@@ -66,7 +66,6 @@ target_add_debuginfo(vineyard_graph)
 target_compile_options(vineyard_graph PUBLIC "-fopenmp")
 target_link_options(vineyard_graph PUBLIC "-fopenmp")
 target_include_directories(vineyard_graph PUBLIC ${MPI_CXX_INCLUDE_PATH})
-target_compile_options(vineyard_graph PUBLIC "-DVARINT_ENCODING_BATCH_SIZE=16")  # for varint batching
 
 find_package(Boost COMPONENTS leaf)
 if(Boost_LEAF_FOUND)
