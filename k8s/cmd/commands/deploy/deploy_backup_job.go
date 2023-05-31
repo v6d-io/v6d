@@ -169,12 +169,15 @@ func getBackupObjectsFromTemplate(c client.Client, args []string) ([]*unstructur
 		return nil, err
 	}
 
-	useVineyardScheduler := false
-	path := flags.BackupOpts.BackupPath
 	// set the vineyardd name and namespace as the vineyard deployment
 	backup.Spec.VineyarddName = flags.VineyardDeploymentName
 	backup.Spec.VineyarddNamespace = flags.VineyardDeploymentNamespace
-	backupCfg, err := k8s.BuildBackupCfg(c, flags.BackupName, backup, path, useVineyardScheduler)
+	opts := k8s.NewBackupOpts(
+		flags.BackupName,
+		flags.PVCName,
+		flags.BackupOpts.BackupPath,
+	)
+	backupCfg, err := opts.BuildCfgForVineyarctl(c, backup)
 	if err != nil {
 		return nil, err
 	}

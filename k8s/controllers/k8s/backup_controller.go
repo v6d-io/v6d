@@ -50,6 +50,7 @@ type FailoverConfig struct {
 	Endpoint           string
 	VineyardSockPath   string
 	AllInstances       string
+	PVCName            string
 	WithScheduler      bool
 }
 
@@ -87,10 +88,12 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 	logger.Info("Reconciling Backup", "backup", backup)
 
-	useVineyardScheduler := true
-	path := backup.Spec.BackupPath
-	name := "backup-" + backup.Spec.VineyarddName + "-" + backup.Spec.VineyarddNamespace
-	backupCfg, err := BuildBackupCfg(r.Client, name, &backup, path, useVineyardScheduler)
+	opts := NewBackupOpts(
+		"backup-"+backup.Spec.VineyarddName+"-"+backup.Spec.VineyarddNamespace,
+		backup.Name,
+		backup.Spec.BackupPath,
+	)
+	backupCfg, err := opts.BuildCfgForController(r.Client, &backup)
 	if err != nil {
 		logger.Error(err, "unable to build backup config")
 		return ctrl.Result{}, err
@@ -178,9 +181,36 @@ func (r *BackupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
+// BackupOpts holds all options of backup config
+type BackupOpts struct {
+	name    string
+	pvcName string
+	path    string
+}
+
+func NewBackupOpts(name, pvcName, path string) *BackupOpts {
+	return &BackupOpts{
+		name:    name,
+		pvcName: pvcName,
+		path:    path,
+	}
+}
+
+func (opts *BackupOpts) BuildCfgForVineyarctl(c client.Client, backup *k8sv1alpha1.Backup) (BackupConfig, error) {
+	// set to false means there is no scheduler
+	withScheduler := false
+	return buildBackupCfg(c, backup, *opts, withScheduler)
+}
+
+func (opts *BackupOpts) BuildCfgForController(c client.Client, backup *k8sv1alpha1.Backup) (BackupConfig, error) {
+	// set to true means there is a scheduler
+	withScheduler := true
+	return buildBackupCfg(c, backup, *opts, withScheduler)
+}
+
 // newFailoverConfig builds the failover config from the backup
 func newFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup,
-	path string, withScheduler bool) (FailoverConfig, error) {
+	path string, withScheduler bool, pvcName string) (FailoverConfig, error) {
 	var (
 		failoverConfig FailoverConfig
 		replicas       int
@@ -238,18 +268,19 @@ func newFailoverConfig(c client.Client, backup *k8sv1alpha1.Backup,
 	failoverConfig.WithScheduler = withScheduler
 
 	failoverConfig.VineyardSockPath = socket
+	failoverConfig.PVCName = pvcName
 	failoverConfig.AllInstances = strconv.Itoa(replicas)
 
 	return failoverConfig, nil
 }
 
-func BuildBackupCfg(c client.Client, name string, backup *k8sv1alpha1.Backup,
-	path string, withScheduler bool) (BackupConfig, error) {
+func buildBackupCfg(c client.Client, backup *k8sv1alpha1.Backup,
+	opts BackupOpts, withScheduler bool) (BackupConfig, error) {
 	backupCfg := BackupConfig{}
-	backupCfg.Name = name
+	backupCfg.Name = opts.name
 	backupCfg.ObjectIDs = strings.Join(backup.Spec.ObjectIDs, ",")
 
-	failoverCfg, err := newFailoverConfig(c, backup, path, withScheduler)
+	failoverCfg, err := newFailoverConfig(c, backup, opts.path, withScheduler, opts.pvcName)
 	if err != nil {
 		return backupCfg, errors.Wrap(err, "unable to build failover config")
 	}

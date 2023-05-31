@@ -72,6 +72,48 @@ setup:
         - namespace: vineyard-job
           resource: deployment/build-distributed-object-step2
           for: condition=Available
+    - name: install pv and pvc
+      command: |
+        # create pv
+        cat <<EOF | kubectl apply -f -
+        apiVersion: v1
+        kind: PersistentVolume
+        metadata:
+          name: backup-path
+          labels:
+            app: backup-and-recover-demo
+          namespace: vineyard-system
+        spec:
+          capacity:
+            storage: 1Gi
+          storageClassName: manual
+          accessModes:
+            - ReadWriteOnce
+          hostPath:
+            path: /var/vineyard/dump
+        EOF
+
+        # create pvc
+        cat <<EOF | kubectl apply -f -
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: pvc-for-backup-and-recover-demo
+          labels:
+            app: backup-and-recover-demo
+          namespace: vineyard-system
+        spec:
+          storageClassName: manual
+          accessModes:
+          - ReadWriteOnce
+          resources:
+            requests:
+              storage: 1Gi
+          selector:
+            matchLabels:
+              app: backup-and-recover-demo
+        EOF
+ 
     - name: install backup
       command: |
         go run k8s/cmd/main.go deploy backup-job \
@@ -79,31 +121,7 @@ setup:
           --vineyard-deployment-namespace vineyard-system  \
           --objectIDs "$localobjectid,$distributedobjectid" \
           --path /var/vineyard/dump  \
-          --pv-pvc-spec '{
-          "pv-spec": {
-            "capacity": {
-              "storage": "1Gi"
-            },
-            "accessModes": [
-              "ReadWriteOnce"
-            ],
-            "storageClassName": "manual",
-            "hostPath": {
-              "path": "/var/vineyard/dump"
-            }
-          },
-          "pvc-spec": {
-            "storageClassName": "manual",
-            "accessModes": [
-              "ReadWriteOnce"
-            ],
-            "resources": {
-              "requests": {
-              "storage": "1Gi"
-              }
-            }
-          }
-          }'
+          --pvc-name pvc-for-backup-and-recover-demo
     - name: simulate vineyard node fail
       command: |
         go run k8s/cmd/main.go delete vineyard-deployment
@@ -117,6 +135,7 @@ setup:
           --vineyard-deployment-name vineyardd-sample \
           --vineyard-deployment-namespace vineyard-system  \
           --recover-path /var/vineyard/dump
+          --pvc-name pvc-for-backup-and-recover-demo
     - name: install get-local-object job
       command: |
         export newlocalobject_id=$(kubectl get configmap vineyard-recover-mapping-table -n vineyard-system -oyaml | grep $localobjectid | sed -n 's/.*: //p')

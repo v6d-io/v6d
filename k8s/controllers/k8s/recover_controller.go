@@ -57,8 +57,7 @@ type RecoverReconciler struct {
 
 // RecoverConfig holds all configuration about recover
 type RecoverConfig struct {
-	Name          string
-	BackupPVCName string
+	Name string
 	FailoverConfig
 }
 
@@ -94,10 +93,14 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	useVineyardScheduler := true
-	path := backup.Spec.BackupPath
-	name := "recover-" + backup.Name
-	recoverCfg, err := BuildRecoverCfg(r.Client, name, &backup, path, useVineyardScheduler)
+	// if pvcName is empty, we'll create a pv and pvc here.
+	pvcName := ""
+	opts := NewRecoverOpts(
+		"recover-"+backup.Name,
+		pvcName,
+		backup.Spec.BackupPath,
+	)
+	recoverCfg, err := opts.BuildCfgForController(r.Client, &backup)
 	if err != nil {
 		logger.Error(err, "failed to build recover config")
 		return ctrl.Result{}, err
@@ -209,14 +212,42 @@ func (r *RecoverReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func BuildRecoverCfg(c client.Client, name string, backup *k8sv1alpha1.Backup,
-	path string, useVineyardScheduler bool) (RecoverConfig, error) {
+// RecoverOpts holds all options of recover config
+type RecoverOpts struct {
+	name    string
+	pvcName string
+	path    string
+}
+
+func NewRecoverOpts(name, pvcName, path string) RecoverOpts {
+	return RecoverOpts{
+		name:    name,
+		pvcName: pvcName,
+		path:    path,
+	}
+}
+
+func (opts RecoverOpts) BuildCfgForVineyarctl(c client.Client, backup *k8sv1alpha1.Backup) (RecoverConfig, error) {
+	withScheduler := false
+	return buildRecoverCfg(c, backup, opts, withScheduler)
+}
+
+func (opts RecoverOpts) BuildCfgForController(c client.Client, backup *k8sv1alpha1.Backup) (RecoverConfig, error) {
+	withScheduler := true
+	return buildRecoverCfg(c, backup, opts, withScheduler)
+}
+
+func buildRecoverCfg(c client.Client, backup *k8sv1alpha1.Backup,
+	opts RecoverOpts, withScheduler bool) (RecoverConfig, error) {
 	// setup the recover configuration
 	recoverCfg := RecoverConfig{}
-	recoverCfg.Name = name
-	recoverCfg.BackupPVCName = backup.Name
+	recoverCfg.Name = opts.name
 
-	failoverCfg, err := newFailoverConfig(c, backup, path, useVineyardScheduler)
+	pN := backup.Name
+	if opts.pvcName != "" {
+		pN = opts.pvcName
+	}
+	failoverCfg, err := newFailoverConfig(c, backup, opts.path, withScheduler, pN)
 	if err != nil {
 		return recoverCfg, errors.Wrap(err, "failed to build failover configuration")
 	}

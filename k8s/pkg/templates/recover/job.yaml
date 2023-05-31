@@ -69,7 +69,7 @@ spec:
           path: {{ $failoverConfig.VineyardSockPath }}
       - name: recover-path
         persistentVolumeClaim:
-          claimName: {{ $recoverConfig.BackupPVCName }}
+          claimName: {{ $failoverConfig.PVCName }}
       restartPolicy: Never
       affinity:
         podAntiAffinity:
