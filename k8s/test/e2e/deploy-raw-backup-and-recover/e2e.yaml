@@ -113,10 +113,10 @@ setup:
             matchLabels:
               app: backup-and-recover-demo
         EOF
- 
     - name: install backup
       command: |
-        go run k8s/cmd/main.go deploy backup-job \
+        go run k8s/cmd/main.go deploy backup-job\
+          --backup-name backup-job-xxx \
           --vineyard-deployment-name vineyardd-sample \
           --vineyard-deployment-namespace vineyard-system  \
           --objectIDs "$localobjectid,$distributedobjectid" \
@@ -131,10 +131,11 @@ setup:
         go run k8s/cmd/main.go deploy vineyard-deployment
     - name: install recover
       command: |
-        go run k8s/cmd/main.go deploy recover-job \
+        go run k8s/cmd/main.go deploy recover-job\
+          --recover-name recover-job-xxx \
           --vineyard-deployment-name vineyardd-sample \
           --vineyard-deployment-namespace vineyard-system  \
-          --recover-path /var/vineyard/dump
+          --recover-path /var/vineyard/dump \
           --pvc-name pvc-for-backup-and-recover-demo
     - name: install get-local-object job
       command: |
