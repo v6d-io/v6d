@@ -28,6 +28,7 @@ limitations under the License.
 #include "wyhash/wyhash.hpp"
 
 #include "basic/ds/array.vineyard.h"
+#include "basic/ds/arrow_utils.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
@@ -374,10 +375,6 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   template <typename K_ = K>
   typename std::enable_if<IS_INTEGER_TYPE(K_), std::pair<K, V>*>::type find(
       const K& key) {
-    if (unlikely(!construct_mphf_)) {
-      constructHashmapFunction();
-      construct_mphf_ = true;
-    }
     // check if the key not exists.
     size_t index = bphf_.lookup(key);
     // Caution! Memory leak here.
@@ -401,6 +398,8 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
   size_t bucket_count() const { return num_elements_; }
 
+  float load_factor() const { return 1.0f; }
+
   bool empty() const { return num_elements_ == 0; }
 
   const V& at(const K& key) const {
@@ -411,13 +410,13 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
     return found->second;
   }
 
-  // void PostConstruct(const ObjectMeta& meta) override {
-  //   constructHashmapFunction();
-  // }
+  void PostConstruct(const ObjectMeta& meta) override {
+    ConstructHashmapFunction();
+  }
 
   template <typename K_ = K>
   typename std::enable_if<IS_INTEGER_TYPE(K_), void>::type
-  constructHashmapFunction() {
+  ConstructHashmapFunction() {
     auto data_iterator = boomphf::range(
         static_cast<const K*>(ph_keys_.data()),
         static_cast<const K*>(ph_keys_.data() + ph_keys_.size()));
@@ -431,7 +430,22 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
   template <typename K_ = K>
   typename std::enable_if<!IS_INTEGER_TYPE(K_), void>::type
-  constructHashmapFunction() {
+  ConstructHashmapFunction() {
+    LOG(INFO) << "Perfect map for string is not supported yet.";
+  }
+
+  template <typename K_ = K>
+  typename std::enable_if<IS_INTEGER_TYPE(K_), void>::type
+  SetData(ArrowArrayType<K> &array) {
+    ph_keys_.resize(num_elements_);
+    for (size_t i = 0; i < num_elements_; ++i) {
+      ph_keys_[i] = array.Value(i);
+    }
+  }
+
+  template <typename K_ = K>
+  typename std::enable_if<!IS_INTEGER_TYPE(K_), void>::type
+  SetData(ArrowArrayType<K> &array) {
     LOG(INFO) << "Perfect map for string is not supported yet.";
   }
 
@@ -440,7 +454,7 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   [[shared]] Array<V> ph_values_;
   [[shared]] Array<K> ph_keys_;
   boomphf::mphf<K, hasher_t> bphf_;
-  bool construct_mphf_ = false;
+  // bool construct_mphf_ = false;
 
   friend class Client;
   friend class PerfectHashmapBaseBuilder<K, V>;
