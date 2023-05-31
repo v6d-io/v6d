@@ -118,10 +118,12 @@ func getRecoverObjectsFromTemplate(c client.Client) ([]*unstructured.Unstructure
 		},
 	}
 
-	useVineyardScheduler := false
-	path := flags.RecoverPath
-	name := flags.RecoverName
-	recoverCfg, err := k8s.BuildRecoverCfg(c, name, &dummyBackup, path, useVineyardScheduler)
+	opts := k8s.NewRecoverOpts(
+		flags.RecoverName,
+		flags.PVCName,
+		flags.RecoverPath,
+	)
+	recoverCfg, err := opts.BuildCfgForVineyarctl(c, &dummyBackup)
 	if err != nil {
 		return nil, err
 	}

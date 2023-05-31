@@ -24,6 +24,7 @@ import (
 
 	swckkube "github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 	"github.com/v6d-io/v6d/k8s/pkg/templates"
 )
@@ -129,6 +130,9 @@ func BuildObjsFromManifests(templateName string, value interface{},
 			return objs, err
 		}
 
+		if flags.PVCName != "" && obj.GetKind() == "PersistentVolumeClaim" || obj.GetKind() == "PersistentVolume" {
+			continue
+		}
 		if obj.GetName() != "" {
 			objs = append(objs, obj)
 		}
