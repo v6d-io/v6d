@@ -31,8 +31,9 @@ limitations under the License.
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
+#include "common/util/functions.h"
 #include "common/util/uuid.h"
-#include "graph/utils/perfect_hash.h"
+#include "graph/utils/BooPHF.h"
 
 namespace vineyard {
 
@@ -41,6 +42,9 @@ namespace vineyard {
 #pragma GCC diagnostic ignored "-Wattributes"
 #endif
 
+#define IS_INTEGER_TYPE(K)                                                \
+  (std::is_same<K, uint32_t>::value || std::is_same<K, int32_t>::value || \
+   std::is_same<K, int64_t>::value || std::is_same<K, uint64_t>::value)
 struct prime_hash_policy {
   prime_hash_policy() : current_prime_(1) {}
   prime_hash_policy(const prime_hash_policy& rhs)
@@ -326,60 +330,63 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
 template <typename K, typename V>
 class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
  public:
-  using PerfectEntryPointer = const PerfectEntry<K, V>*;
+  // using PerfectEntryPointer = const PerfectEntry<K, V>*;
   using value_type = std::pair<K, V>;
   typedef boomphf::SingleHashFunctor<K> hasher_t;
-  struct iterator{
-    iterator() = default;
-    explicit iterator(PerfectEntryPointer current) : current(current) {}
-    PerfectEntryPointer current = nullptr;
+  // struct iterator{
+  //   iterator() = default;
+  //   explicit iterator(PerfectEntryPointer current) : current(current) {}
+  //   PerfectEntryPointer current = nullptr;
 
-    friend bool operator==(const iterator& lhs, const iterator& rhs) {
-      return lhs.current == rhs.current;
-    }
+  //   friend bool operator==(const iterator& lhs, const iterator& rhs) {
+  //     return lhs.current == rhs.current;
+  //   }
 
-    friend bool operator!=(const iterator& lhs, const iterator& rhs) {
-      return lhs.current != rhs.current;
-    }
+  //   friend bool operator!=(const iterator& lhs, const iterator& rhs) {
+  //     return lhs.current != rhs.current;
+  //   }
 
-    iterator& operator++() {
-      current++;
-      return *this;
-    }
+  //   iterator& operator++() {
+  //     current++;
+  //     return *this;
+  //   }
 
-    iterator operator++(int) {
-      iterator copy(*this);
-      ++*this;
-      return copy;
-    }
+  //   iterator operator++(int) {
+  //     iterator copy(*this);
+  //     ++*this;
+  //     return copy;
+  //   }
 
-    const value_type& operator*() const { return current->value_; }
+  //   const value_type& operator*() const { return current->value_; }
 
-    const value_type* operator->() const {
-      return std::addressof(current->value_);
-    }
-  };
+  //   const value_type* operator->() const {
+  //     return std::addressof(current->value_);
+  //   }
+  // };
 
   std::pair<K, V>* begin() const {
+    LOG(INFO) << "begin() is not supported in PerfectHashmap.";
     return nullptr;
   }
 
-  std::pair<K, V>* end() const {
-    return nullptr;
-  }
+  std::pair<K, V>* end() const { return nullptr; }
 
-  template<typename K_ = K>
-  typename std::enable_if<IS_INTEGER_TYPE(K_), std::pair<K, V>*>::type
-  find(const K& key) {
+  template <typename K_ = K>
+  typename std::enable_if<IS_INTEGER_TYPE(K_), std::pair<K, V>*>::type find(
+      const K& key) {
+    if (unlikely(!construct_mphf_)) {
+      constructHashmapFunction();
+      construct_mphf_ = true;
+    }
     // check if the key not exists.
     size_t index = bphf_.lookup(key);
     // Caution! Memory leak here.
     return new std::pair<K, V>(key, ph_values_[index]);
   }
 
-  template<typename K_ = K>
-  typename std::enable_if<!IS_INTEGER_TYPE(K_), std::pair<K, V>*>::type
-  find(const K& key) {
+  template <typename K_ = K>
+  typename std::enable_if<!IS_INTEGER_TYPE(K_), std::pair<K, V>*>::type find(
+      const K& key) {
     LOG(INFO) << __func__ << " is not supported in string type.";
     return end();
   }
@@ -390,13 +397,9 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
   size_t count(const K& key) const { return find(key) == end() ? 0 : 1; }
 
-  size_t size() const {
-    return num_elements_;
-  }
+  size_t size() const { return num_elements_; }
 
-  size_t bucket_count() const {
-    return num_elements_;
-  }
+  size_t bucket_count() const { return num_elements_; }
 
   bool empty() const { return num_elements_ == 0; }
 
@@ -408,18 +411,25 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
     return found->second;
   }
 
-  void PostConstruct(const ObjectMeta& meta) override {
-    constructHashmapFunction();
-  }
+  // void PostConstruct(const ObjectMeta& meta) override {
+  //   constructHashmapFunction();
+  // }
 
-  template<typename K_ = K>
+  template <typename K_ = K>
   typename std::enable_if<IS_INTEGER_TYPE(K_), void>::type
   constructHashmapFunction() {
-    auto data_iterator = boomphf::range(static_cast<const K*>(ph_keys_.data()), static_cast<const K*>(ph_keys_.data() + ph_keys_.size()));
-    bphf_ = boomphf::mphf<K, hasher_t>(ph_keys_.size(), data_iterator, 16, 1.0f);
+    auto data_iterator = boomphf::range(
+        static_cast<const K*>(ph_keys_.data()),
+        static_cast<const K*>(ph_keys_.data() + ph_keys_.size()));
+    auto time_stamp = vineyard::GetCurrentTime();
+    bphf_ =
+        boomphf::mphf<K, hasher_t>(ph_keys_.size(), data_iterator, 16, 1.0f);
+    LOG(INFO) << "Construct perfect map of " << ph_keys_.size()
+              << " vertex takes " << vineyard::GetCurrentTime() - time_stamp
+              << " s.";
   }
 
-  template<typename K_ = K>
+  template <typename K_ = K>
   typename std::enable_if<!IS_INTEGER_TYPE(K_), void>::type
   constructHashmapFunction() {
     LOG(INFO) << "Perfect map for string is not supported yet.";
@@ -430,6 +440,7 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   [[shared]] Array<V> ph_values_;
   [[shared]] Array<K> ph_keys_;
   boomphf::mphf<K, hasher_t> bphf_;
+  bool construct_mphf_ = false;
 
   friend class Client;
   friend class PerfectHashmapBaseBuilder<K, V>;

@@ -57,12 +57,12 @@ void ArrowVertexMap<OID_T, VID_T>::Construct(const vineyard::ObjectMeta& meta) {
       o2g_[i].resize(label_num_);
       oid_arrays_[i].resize(label_num_);
       for (label_id_t j = 0; j < label_num_; ++j) {
-        o2g_[i][j].Construct(meta.GetMemberMeta("o2g_" + std::to_string(i) + "_" +
-                                                std::to_string(j)));
+        o2g_[i][j].Construct(meta.GetMemberMeta("o2g_" + std::to_string(i) +
+                                                "_" + std::to_string(j)));
 
         typename InternalType<oid_t>::vineyard_array_type array;
         array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
-                                          "_" + std::to_string(j)));
+                                           "_" + std::to_string(j)));
         oid_arrays_[i][j] = array.GetArray();
 
         local_oid_total += array.nbytes();
@@ -81,7 +81,7 @@ void ArrowVertexMap<OID_T, VID_T>::Construct(const vineyard::ObjectMeta& meta) {
 
         typename InternalType<oid_t>::vineyard_array_type array;
         array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
-                                          "_" + std::to_string(j)));
+                                           "_" + std::to_string(j)));
         oid_arrays_[i][j] = array.GetArray();
 
         local_oid_total += array.nbytes();
@@ -397,7 +397,8 @@ void ArrowVertexMapBuilder<OID_T, VID_T>::set_o2g(
 
 template <typename OID_T, typename VID_T>
 void ArrowVertexMapBuilder<OID_T, VID_T>::set_o2g_p(
-    fid_t fid, label_id_t label, const vineyard::PerfectHashmap<oid_t, vid_t>& rm) {
+    fid_t fid, label_id_t label,
+    const vineyard::PerfectHashmap<oid_t, vid_t>& rm) {
   o2g_p_[fid][label] = rm;
 }
 
@@ -559,7 +560,6 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
       RETURN_ON_ERROR(array_builder.Seal(client, object));
       varray = std::dynamic_pointer_cast<vineyard_oid_array_t>(object);
       this->set_oid_array(fid, label, varray);
-
       // release the reference
       oid_arrays_[label][fid].clear();
     }
@@ -604,7 +604,8 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
         RETURN_ON_ERROR(builder.Seal(client, object));
         this->set_o2g_p(
             fid, label,
-            std::dynamic_pointer_cast<vineyard::PerfectHashmap<oid_t, vid_t>>(object));
+            std::dynamic_pointer_cast<vineyard::PerfectHashmap<oid_t, vid_t>>(
+                object));
       }
     }
     return Status::OK();

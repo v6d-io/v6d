@@ -21,7 +21,6 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <utility>
-#include <string_view>
 
 #include "flat_hash_map/flat_hash_map.hpp"
 #include "wyhash/wyhash.hpp"
@@ -34,7 +33,6 @@ limitations under the License.
 #include "common/util/uuid.h"
 
 #include "graph/utils/BooPHF.h"
-#include "graph/utils/perfect_hash.h"
 
 namespace vineyard {
 
@@ -224,12 +222,10 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
 template <typename K, typename V>
 class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
  public:
+  typedef boomphf::SingleHashFunctor<K> hasher_t;
+
   explicit PerfectHashmapBuilder(Client& client)
       : PerfectHashmapBaseBuilder<K, V>(client) {}
-
-  explicit PerfectHashmapBuilder(Client& client,
-                          PerfectHash<K, V>&& perfect_hashmap)
-      : PerfectHashmapBaseBuilder<K, V>(client), perfect_hashmap_(std::move(perfect_hashmap)) {}
 
   /**
    * @brief Get the mapping value of the given key.
@@ -253,10 +249,9 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Emplace key-value pair into the hashmap.
    *
    */
-  template <class... Args>
-  inline bool emplace(Args&&... args) {
-    // return hashmap_.emplace(std::forward<Args>(args)...).second;
-    perfect_hashmap_.emplace(std::forward<Args>(args)...);
+  inline bool emplace(K key, V value) {
+    // TODO : check if the vertex add twice.
+    vec_kv_.push_back(std::pair<K, V>(key, value));
     return true;
   }
 
@@ -275,7 +270,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    *
    */
   const V& at(const K& key) const {
-    // return hashmap_.at(key); 
+    // return hashmap_.at(key);
     LOG(INFO) << __func__ << " is not finished yet.";
     return V(0);
   }
@@ -284,18 +279,13 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Get the size of the hashmap.
    *
    */
-  size_t size() const {
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return perfect_hashmap_.size();
-  }
+  size_t size() const { return vec_kv_.size(); }
 
   /**
    * @brief Reserve the size for the hashmap.
    *
    */
-  void reserve(size_t size) {
-    perfect_hashmap_.reserve(size);
-  }
+  void reserve(size_t size) { LOG(INFO) << __func__ << " is not finished."; }
 
   /**
    * @brief Return the maximum possible size of the HashMap, i.e., the number
@@ -332,7 +322,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Return the beginning iterator.
    *
    */
-  void *begin() {
+  void* begin() {
     // return hashmap_.begin();
     LOG(INFO) << __func__ << " is not finished yet.";
     return nullptr;
@@ -342,7 +332,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Return the const beginning iterator.
    *
    */
-  void *begin() const {
+  void* begin() const {
     // return hashmap_.begin();
     LOG(INFO) << __func__ << " is not finished yet.";
     return nullptr;
@@ -352,7 +342,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Return the const beginning iterator.
    *
    */
-  void *cbegin() const {
+  void* cbegin() const {
     // return hashmap_.cbegin();
     LOG(INFO) << __func__ << " is not finished yet.";
     return nullptr;
@@ -402,7 +392,32 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Associated with a given data buffer
    */
   void AssociateDataBuffer(std::shared_ptr<Blob> data_buffer) {
-    this->data_buffer_ = data_buffer;
+    // this->data_buffer_ = data_buffer;
+  }
+
+  template <typename K_ = K>
+  typename std::enable_if<IS_INTEGER_TYPE(K_), void>::type Construct(
+      int concurrency = 1) {
+    size_t count = 0;
+    vec_k_.resize(vec_kv_.size());
+    for (auto& kv_ : vec_kv_) {
+      vec_k_[count] = kv_.first;
+      count++;
+    }
+    auto data_iterator = boomphf::range(vec_k_.begin(), vec_k_.end());
+    auto bphf = boomphf::mphf<K, hasher_t>(vec_k_.size(), data_iterator,
+                                           concurrency, 1.0f);
+
+    vec_v_.resize(count);
+    for (size_t i = 0; i < vec_v_.size(); i++) {
+      vec_v_[bphf.lookup(vec_k_[i])] = vec_kv_[i].second;
+    }
+  }
+
+  template <typename K_ = K>
+  typename std::enable_if<!IS_INTEGER_TYPE(K_), void>::type Construct(
+      int concurrency = 1) {
+    LOG(INFO) << __func__ << " is not supported yet.";
   }
 
   /**
@@ -410,25 +425,29 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    *
    */
   Status Build(Client& client) override {
+    Construct(1);
 
-    perfect_hashmap_.Construct(1);
+    auto ph_values_builder =
+        std::make_shared<ArrayBuilder<V>>(client, vec_v_.data(), vec_v_.size());
+    auto ph_keys_builder =
+        std::make_shared<ArrayBuilder<K>>(client, vec_k_.data(), vec_k_.size());
 
-    auto ph_values_builder = std::make_shared<ArrayBuilder<V>>(
-        client, perfect_hashmap_.vec_v_.data(), perfect_hashmap_.vec_v_.size());
-    auto ph_keys_builder = std::make_shared<ArrayBuilder<K>>(
-        client, perfect_hashmap_.vec_k_.data(), perfect_hashmap_.vec_k_.size());
-
-    this->set_num_elements_(perfect_hashmap_.size());
+    this->set_num_elements_(vec_kv_.size());
 
     this->set_ph_keys_(std::static_pointer_cast<ObjectBase>(ph_keys_builder));
-    this->set_ph_values_(std::static_pointer_cast<ObjectBase>(ph_values_builder));
+    this->set_ph_values_(
+        std::static_pointer_cast<ObjectBase>(ph_values_builder));
 
     return Status::OK();
   }
 
  private:
-  PerfectHash<K, V> perfect_hashmap_;
-  std::shared_ptr<Blob> data_buffer_;
+  // PerfectHash<K, V> perfect_hashmap_;
+  // std::shared_ptr<Blob> data_buffer_;
+
+  std::vector<V> vec_v_;
+  std::vector<K> vec_k_;
+  std::vector<std::pair<K, V>> vec_kv_;
 };
 
 }  // namespace vineyard

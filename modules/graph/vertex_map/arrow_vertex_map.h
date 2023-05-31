@@ -28,7 +28,6 @@ limitations under the License.
 #include "common/util/typename.h"
 
 #include "graph/fragment/property_graph_types.h"
-#include "graph/utils/perfect_hash.h"
 
 namespace vineyard {
 
@@ -51,10 +50,10 @@ class ArrowVertexMap
 
  public:
   ArrowVertexMap() {
-    if(IS_INTEGER_TYPE(OID_T)) {
-        is_string_oid_ = false;
+    if (IS_INTEGER_TYPE(OID_T)) {
+      is_string_oid_ = false;
     } else {
-        is_string_oid_ = true;
+      is_string_oid_ = true;
     }
   }
   ~ArrowVertexMap() {}
@@ -69,26 +68,26 @@ class ArrowVertexMap
 
   bool GetOid(vid_t gid, oid_t& oid) const;
 
-  template<typename K = OID_T>
-  typename std::enable_if<IS_INTEGER_TYPE(K), bool>::type
-  GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
+  template <typename K = OID_T>
+  typename std::enable_if<IS_INTEGER_TYPE(K), bool>::type GetGid(
+      fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
     const std::pair<OID_T, VID_T>* res = o2g_p_[fid][label_id].find(oid);
-    if(res) {
-        gid = res->second;
-        // LOG(INFO) << "GetGid: " << oid << " -> " << gid;
-        delete res;
-        return true;
+    if (res) {
+      gid = res->second;
+      // LOG(INFO) << "GetGid: " << oid << " -> " << gid;
+      delete res;
+      return true;
     }
     return false;
   }
 
-  template<typename K = OID_T>
-  typename std::enable_if<!IS_INTEGER_TYPE(K), bool>::type
-  GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
+  template <typename K = OID_T>
+  typename std::enable_if<!IS_INTEGER_TYPE(K), bool>::type GetGid(
+      fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
     auto iter = o2g_[fid][label_id].find(oid);
     if (iter != o2g_[fid][label_id].end()) {
-        gid = iter->second;
-        return true;
+      gid = iter->second;
+      return true;
     }
     return false;
   }
@@ -162,10 +161,10 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
 
  public:
   explicit ArrowVertexMapBuilder(vineyard::Client& client) {
-    if(IS_INTEGER_TYPE(OID_T)) {
-        is_string_oid_ = false;
+    if (IS_INTEGER_TYPE(OID_T)) {
+      is_string_oid_ = false;
     } else {
-        is_string_oid_ = true;
+      is_string_oid_ = true;
     }
   }
 
@@ -187,10 +186,11 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
                const std::shared_ptr<vineyard::Hashmap<oid_t, vid_t>>& rm);
 
   void set_o2g_p(fid_t fid, label_id_t label,
-               const vineyard::PerfectHashmap<oid_t, vid_t>& rm);
+                 const vineyard::PerfectHashmap<oid_t, vid_t>& rm);
 
-  void set_o2g_p(fid_t fid, label_id_t label,
-               const std::shared_ptr<vineyard::PerfectHashmap<oid_t, vid_t>>& rm);
+  void set_o2g_p(
+      fid_t fid, label_id_t label,
+      const std::shared_ptr<vineyard::PerfectHashmap<oid_t, vid_t>>& rm);
 
   Status _Seal(vineyard::Client& client,
                std::shared_ptr<vineyard::Object>& object) override;
