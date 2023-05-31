@@ -161,9 +161,15 @@ def find_vineyardd_path():
     current_dir = os.path.dirname(__file__)
 
     # find vineyard in the package
-    vineyardd_path = _check_executable(
-        pkg_resources.resource_filename('vineyard.bdist', 'vineyardd')
-    )
+    resource_path = None
+    vineyardd_path = None
+    try:
+        # `pkg_resources.resource_filename` may causing `TypeError`
+        resource_path = pkg_resources.resource_filename('vineyard.bdist', 'vineyardd')
+    except:  # noqa: E722, pylint: disable=bare-except
+        resource_path = None
+    if resource_path is not None:
+        vineyardd_path = _check_executable(resource_path)
     if vineyardd_path is None:
         vineyardd_path = _check_executable(
             os.path.join(current_dir, '..', 'bdist', 'vineyardd')
