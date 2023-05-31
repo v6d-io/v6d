@@ -21,6 +21,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <utility>
+#include <string_view>
 
 #include "flat_hash_map/flat_hash_map.hpp"
 #include "wyhash/wyhash.hpp"
@@ -31,6 +32,9 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
 #include "common/util/uuid.h"
+
+#include "graph/utils/BooPHF.h"
+#include "graph/utils/perfect_hash.h"
 
 namespace vineyard {
 
@@ -214,6 +218,216 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
 
  private:
   ska::flat_hash_map<K, V, H, E> hashmap_;
+  std::shared_ptr<Blob> data_buffer_;
+};
+
+template <typename K, typename V>
+class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
+ public:
+  explicit PerfectHashmapBuilder(Client& client)
+      : PerfectHashmapBaseBuilder<K, V>(client) {}
+
+  explicit PerfectHashmapBuilder(Client& client,
+                          PerfectHash<K, V>&& perfect_hashmap)
+      : PerfectHashmapBaseBuilder<K, V>(client), perfect_hashmap_(std::move(perfect_hashmap)) {}
+
+  /**
+   * @brief Get the mapping value of the given key.
+   *
+   */
+  inline V& operator[](const K& key) {
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return V(0);
+  }
+
+  /**
+   * @brief Get the mapping value of the given key.
+   *
+   */
+  inline V& operator[](K&& key) {
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return V(0);
+  }
+
+  /**
+   * @brief Emplace key-value pair into the hashmap.
+   *
+   */
+  template <class... Args>
+  inline bool emplace(Args&&... args) {
+    // return hashmap_.emplace(std::forward<Args>(args)...).second;
+    perfect_hashmap_.emplace(std::forward<Args>(args)...);
+    return true;
+  }
+
+  /**
+   * @brief Get the mapping value of the given key.
+   *
+   */
+  V& at(const K& key) {
+    // return hashmap_.at(key);
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return V(0);
+  }
+
+  /**
+   * @brief Get the const mapping value of the given key.
+   *
+   */
+  const V& at(const K& key) const {
+    // return hashmap_.at(key); 
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return V(0);
+  }
+
+  /**
+   * @brief Get the size of the hashmap.
+   *
+   */
+  size_t size() const {
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return perfect_hashmap_.size();
+  }
+
+  /**
+   * @brief Reserve the size for the hashmap.
+   *
+   */
+  void reserve(size_t size) {
+    perfect_hashmap_.reserve(size);
+  }
+
+  /**
+   * @brief Return the maximum possible size of the HashMap, i.e., the number
+   * of elements that can be stored in the HashMap.
+   *
+   */
+  size_t bucket_count() const {
+    // return hashmap_.bucket_count();
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return 0;
+  }
+
+  /**
+   * @brief Return the load factor of the HashMap.
+   *
+   */
+  float load_factor() const {
+    // return hashmap_.load_factor();
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return 0;
+  }
+
+  /**
+   * @brief Check whether the hashmap is empty.
+   *
+   */
+  bool empty() const {
+    // return hashmap_.empty();
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return true;
+  }
+
+  /**
+   * @brief Return the beginning iterator.
+   *
+   */
+  void *begin() {
+    // return hashmap_.begin();
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return nullptr;
+  }
+
+  /**
+   * @brief Return the const beginning iterator.
+   *
+   */
+  void *begin() const {
+    // return hashmap_.begin();
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return nullptr;
+  }
+
+  /**
+   * @brief Return the const beginning iterator.
+   *
+   */
+  void *cbegin() const {
+    // return hashmap_.cbegin();
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return nullptr;
+  }
+
+  /**
+   * @brief Return the ending iterator
+   *
+   */
+  void* end() {
+    // return hashmap_.end();
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return nullptr;
+  }
+
+  /**
+   * @brief Return the const ending iterator.
+   *
+   */
+  void* end() const {
+    // return hashmap_.end();
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return nullptr;
+  }
+
+  /**
+   * @brief Return the const ending iterator.
+   *
+   */
+  void* cend() const {
+    // return hashmap_.cend();
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return nullptr;
+  }
+
+  /**
+   * @brief Find the value by key.
+   *
+   */
+  void* find(const K& key) {
+    // return hashmap_.find(key);
+    LOG(INFO) << __func__ << " is not finished yet.";
+    return nullptr;
+  }
+
+  /**
+   * @brief Associated with a given data buffer
+   */
+  void AssociateDataBuffer(std::shared_ptr<Blob> data_buffer) {
+    this->data_buffer_ = data_buffer;
+  }
+
+  /**
+   * @brief Build the hashmap object.
+   *
+   */
+  Status Build(Client& client) override {
+
+    perfect_hashmap_.Construct(1);
+
+    auto ph_values_builder = std::make_shared<ArrayBuilder<V>>(
+        client, perfect_hashmap_.vec_v_.data(), perfect_hashmap_.vec_v_.size());
+    auto ph_keys_builder = std::make_shared<ArrayBuilder<K>>(
+        client, perfect_hashmap_.vec_k_.data(), perfect_hashmap_.vec_k_.size());
+
+    this->set_num_elements_(perfect_hashmap_.size());
+
+    this->set_ph_keys_(std::static_pointer_cast<ObjectBase>(ph_keys_builder));
+    this->set_ph_values_(std::static_pointer_cast<ObjectBase>(ph_values_builder));
+
+    return Status::OK();
+  }
+
+ private:
+  PerfectHash<K, V> perfect_hashmap_;
   std::shared_ptr<Blob> data_buffer_;
 };
 
