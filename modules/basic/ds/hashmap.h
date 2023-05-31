@@ -252,6 +252,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   inline bool emplace(K key, V value) {
     // TODO : check if the vertex add twice.
     vec_kv_.push_back(std::pair<K, V>(key, value));
+    n_elements_++;
     return true;
   }
 
@@ -279,13 +280,16 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Get the size of the hashmap.
    *
    */
-  size_t size() const { return vec_kv_.size(); }
+  size_t size() const { return n_elements_; }
 
   /**
    * @brief Reserve the size for the hashmap.
    *
    */
-  void reserve(size_t size) { LOG(INFO) << __func__ << " is not finished."; }
+  void reserve(size_t size) { 
+    LOG(INFO) << __func__ << " is not finished.";
+    vec_kv_.reserve(size);
+  }
 
   /**
    * @brief Return the maximum possible size of the HashMap, i.e., the number
@@ -399,6 +403,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   typename std::enable_if<IS_INTEGER_TYPE(K_), void>::type Construct(
       int concurrency = 1) {
     size_t count = 0;
+    vec_kv_.resize(n_elements_);
     vec_k_.resize(vec_kv_.size());
     for (auto& kv_ : vec_kv_) {
       vec_k_[count] = kv_.first;
@@ -448,6 +453,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   std::vector<V> vec_v_;
   std::vector<K> vec_k_;
   std::vector<std::pair<K, V>> vec_kv_;
+  uint64_t n_elements_ = 0;
 };
 
 }  // namespace vineyard
