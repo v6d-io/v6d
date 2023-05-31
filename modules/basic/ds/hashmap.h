@@ -405,18 +405,25 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     size_t count = 0;
     vec_kv_.resize(n_elements_);
     vec_k_.resize(vec_kv_.size());
+    uint64_t start_time = GetCurrentTime();
     for (auto& kv_ : vec_kv_) {
       vec_k_[count] = kv_.first;
       count++;
     }
+    LOG(INFO) << "Constructing the vec_k_ takes "
+              << GetCurrentTime() - start_time << " s.";
+
     auto data_iterator = boomphf::range(vec_k_.begin(), vec_k_.end());
     auto bphf = boomphf::mphf<K, hasher_t>(vec_k_.size(), data_iterator,
                                            concurrency, 1.0f);
 
     vec_v_.resize(count);
+    start_time = GetCurrentTime();
     for (size_t i = 0; i < vec_v_.size(); i++) {
       vec_v_[bphf.lookup(vec_k_[i])] = vec_kv_[i].second;
     }
+    LOG(INFO) << "Constructing the vec_v_ takes "
+              << GetCurrentTime() - start_time << " s.";
   }
 
   template <typename K_ = K>
