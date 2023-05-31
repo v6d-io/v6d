@@ -12,7 +12,7 @@ limitations under the License.
 
 #include "graph/grin/src/predefine.h"
 extern "C" {
-#include "graph/grin/include/property/property.h"
+#include "property/property.h"
 }
 
 void grin_destroy_string_value(GRIN_GRAPH g, const char* value) {}

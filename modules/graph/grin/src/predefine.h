@@ -18,7 +18,7 @@ limitations under the License.
 
 extern "C" {
 #include "graph/grin/predefine.h"
-#include "graph/grin/include/common/error.h"
+#include "common/error.h"
 }
 
 #include "graph/fragment/arrow_fragment.h"
@@ -211,137 +211,34 @@ struct GRIN_EDGE_T {
 };                     
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
-struct GRIN_VERTEX_LIST_T {
-    _GRIN_GRAPH_T::vid_t begin_ = 0;
-    _GRIN_GRAPH_T::vid_t end_ = 0;
-    unsigned all_master_mirror;
-    unsigned vtype;
-    bool is_simple;
-    std::vector<std::pair<size_t, _GRIN_GRAPH_T::vid_t>> offsets;
-};
-inline void __grin_init_simple_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
-    _GRIN_GRAPH_T::vertices_t vr;
-    if (vl->all_master_mirror == 0) {
-        vr = g->Vertices(vl->vtype);
-    } else if (vl->all_master_mirror == 1) {
-        vr = g->InnerVertices(vl->vtype);
-    } else {
-        vr = g->OuterVertices(vl->vtype);
-    }
-    vl->begin_ = vr.begin_value();
-    vl->end_ = vr.end_value();
-}
-inline void __grin_init_complex_vertex_list(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_T* vl) {
-    _GRIN_GRAPH_T::vertices_t vr;
-    size_t sum = 0;
-    vl->offsets.resize(vl->vtype + 1);
-    for (unsigned i = 0; i < vl->vtype; ++i) {
-        if (vl->all_master_mirror == 0) {
-            vr = g->Vertices(i);
-        } else if (vl->all_master_mirror == 1) {
-            vr = g->InnerVertices(i);
-        } else {
-            vr = g->OuterVertices(i);
-        }
-        vl->offsets[i] = std::make_pair(sum, vr.begin_value());
-        sum += vr.size();
-    }
-    vl->offsets[vl->vtype] = std::make_pair(sum, vr.end_value());
-}
+typedef _GRIN_GRAPH_T::vertices_t GRIN_VERTEX_LIST_T;
 #endif
 
 #ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
 struct GRIN_VERTEX_LIST_ITERATOR_T {
-    _GRIN_GRAPH_T::vid_t end_;
-    _GRIN_GRAPH_T::vid_t current_;
-    unsigned all_master_mirror;
-    bool is_simple;
-    unsigned vtype_current;
-    unsigned vtype_end;
+  _GRIN_GRAPH_T::vid_t current;
+  _GRIN_GRAPH_T::vid_t end;
 };
-inline void __grin_next_valid_vertex_list_iterator(_GRIN_GRAPH_T* g, GRIN_VERTEX_LIST_ITERATOR_T* vli) {
-    _GRIN_GRAPH_T::vertices_t vr;
-    while (vli->vtype_current < vli->vtype_end) {
-        if (vli->all_master_mirror == 0) {
-            vr = g->Vertices(vli->vtype_current);
-        } else if (vli->all_master_mirror == 1) {
-            vr = g->InnerVertices(vli->vtype_current);
-        } else {
-            vr = g->OuterVertices(vli->vtype_current);
-        }
-        if (vr.size() > 0) {
-            vli->current_ = vr.begin_value();
-            vli->end_ = vr.end_value();
-            break;
-        }
-        vli->vtype_current++;
-    }
-}
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
 struct GRIN_ADJACENT_LIST_T {
-    const _GRIN_GRAPH_T::nbr_unit_t* begin_ = nullptr;
-    const _GRIN_GRAPH_T::nbr_unit_t* end_ = nullptr;
+    const _GRIN_GRAPH_T::nbr_unit_t* begin;
+    const _GRIN_GRAPH_T::nbr_unit_t* end;
     _GRIN_GRAPH_T::vid_t vid;
     GRIN_DIRECTION dir;
     unsigned etype;
-    bool is_simple;
-    std::vector<std::pair<size_t, const _GRIN_GRAPH_T::nbr_unit_t*>> offsets;
 };
-inline void __grin_init_simple_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
-    _GRIN_GRAPH_T::raw_adj_list_t ral;
-    if (al->dir == GRIN_DIRECTION::IN) {
-          ral = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), al->etype);
-      } else {
-          ral = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), al->etype);
-      }
-    al->begin_ = ral.begin();
-    al->end_ = ral.end();
-}
-inline void __grin_init_complex_adjacent_list(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_T* al) {
-    _GRIN_GRAPH_T::raw_adj_list_t ral;
-    size_t sum = 0;
-    al->offsets.resize(al->etype + 1);
-    for (unsigned i = 0; i < al->etype; ++i) {
-        if (al->dir == GRIN_DIRECTION::IN) {
-            ral = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), i);
-        } else {
-            ral = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(al->vid), i);
-        }
-        al->offsets[i] = std::make_pair(sum, ral.begin());
-        sum += ral.size();
-    }
-    al->offsets[al->etype] = std::make_pair(sum, ral.end());
-}
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 struct GRIN_ADJACENT_LIST_ITERATOR_T {
-    const _GRIN_GRAPH_T::nbr_unit_t* end_;
-    const _GRIN_GRAPH_T::nbr_unit_t* current_;
+    const _GRIN_GRAPH_T::nbr_unit_t* current;
+    const _GRIN_GRAPH_T::nbr_unit_t* end;
     _GRIN_GRAPH_T::vid_t vid;
     GRIN_DIRECTION dir;
-    bool is_simple;
-    unsigned etype_current;
-    unsigned etype_end;
+    unsigned etype;
 };
-inline void __grin_next_valid_adjacent_list_iterator(_GRIN_GRAPH_T* g, GRIN_ADJACENT_LIST_ITERATOR_T* ali) {
-    _GRIN_GRAPH_T::raw_adj_list_t raj;
-    while (ali->etype_current < ali->etype_end) {
-        if (ali->dir == GRIN_DIRECTION::IN) {
-            raj = g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
-        } else {
-            raj = g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(ali->vid), ali->etype_current);
-        }
-        if (raj.size() > 0) {
-            ali->current_ = raj.begin();
-            ali->end_ = raj.end();
-            break;
-        }
-        ali->etype_current++;
-    }
-}
 #endif
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
@@ -404,6 +301,7 @@ inline const void* _get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE e
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);
     if (_e->etype != etype) {
+        printf("INVALID: %u %u\n", _e->etype, etype);
         grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
         return NULL;
     }

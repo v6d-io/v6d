@@ -12,8 +12,8 @@ limitations under the License.
 
 #include "graph/grin/src/predefine.h"
 extern "C" {
-#include "graph/grin/include/property/row.h"
-#include "graph/grin/include/common/error.h"
+#include "property/row.h"
+#include "common/error.h"
 }
 
 #ifdef GRIN_ENABLE_ROW

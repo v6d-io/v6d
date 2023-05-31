@@ -15,7 +15,7 @@ limitations under the License.
 
 #include "graph/grin/src/predefine.h"
 extern "C" {
-#include "graph/grin/include/partition/reference.h"
+#include "partition/reference.h"
 }
 
 #ifdef GRIN_ENABLE_VERTEX_REF

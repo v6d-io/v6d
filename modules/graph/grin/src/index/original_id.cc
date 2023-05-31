@@ -13,7 +13,7 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 
 extern "C" {
-#include "graph/grin/include/index/original_id.h"
+#include "index/original_id.h"
 }
 
 GRIN_DATATYPE grin_get_vertex_original_id_datatype(GRIN_GRAPH g) {
@@ -31,9 +31,11 @@ GRIN_VERTEX grin_get_vertex_by_original_id_of_int64(GRIN_GRAPH g, long long int 
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     _GRIN_GRAPH_T::vid_t gid;
     _GRIN_VERTEX_T v;
-    if (_g->Oid2Gid(0, oid, gid)) {
-        if (_g->Gid2Vertex(gid, v)) {
-            return v.GetValue();
+    for (int vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
+        if (_g->Oid2Gid(vtype, oid, gid)) {
+            if (_g->Gid2Vertex(gid, v)) {
+                return v.GetValue();
+            }
         }
     }
     return GRIN_NULL_VERTEX;

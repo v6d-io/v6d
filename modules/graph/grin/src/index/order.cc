@@ -13,7 +13,7 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 
 extern "C" {
-#include "graph/grin/include/index/order.h"
+#include "index/order.h"
 }
 
 #ifdef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
@@ -25,9 +25,6 @@ bool grin_smaller_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
 #if defined(GRIN_ASSUME_ALL_VERTEX_LIST_SORTED) && defined(GRIN_ENABLE_VERTEX_LIST_ARRAY)
 size_t grin_get_position_of_vertex_from_sorted_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, GRIN_VERTEX v) {
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
-    if (likely(_vl->is_simple)) return v - _vl->begin_;
-    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
-    auto vtype = _cache->id_parser.GetLabelId(v);
-    return v - _vl->offsets[vtype].second + _vl->offsets[vtype].first;
+    return v - _vl->begin_value();
 }
 #endif

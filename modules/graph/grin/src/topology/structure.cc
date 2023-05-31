@@ -15,7 +15,7 @@ limitations under the License.
 
 #include "graph/grin/src/predefine.h"
 extern "C" {
-#include "graph/grin/include/topology/structure.h"
+#include "topology/structure.h"
 }
 #include "client/client.h"
 
@@ -57,19 +57,13 @@ bool grin_is_multigraph(GRIN_GRAPH g) {
 }
 #endif
 
-size_t grin_get_vertex_num(GRIN_GRAPH g) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    size_t result = 0;
-    for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
-        result += _g->GetVerticesNum(vtype);
-    }
-    return result;
-}
+#if !defined(GRIN_WITH_VERTEX_PROPERTY)
+size_t grin_get_vertex_num(GRIN_GRAPH);
+#endif
 
-size_t grin_get_edge_num(GRIN_GRAPH g) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    return _g->GetEdgeNum();
-}
+#if !defined(GRIN_WITH_EDGE_PROPERTY)
+size_t grin_get_edge_num(GRIN_GRAPH);
+#endif
 
 // Vertex
 void grin_destroy_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {}

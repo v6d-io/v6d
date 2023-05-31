@@ -13,7 +13,7 @@ find_package(libgrapelite REQUIRED)
 find_package(Protobuf REQUIRED)
 include_directories(${Protobuf_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${CMAKE_CURRENT_SOURCE_DIR}/grin/include/proto/graph.proto)
+protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/grin/proto/graph.proto)
 
 
 if(VINEYARD_MOD_SRCS)
@@ -202,6 +202,7 @@ endif()
 # grin lib
 file(GLOB_RECURSE GRIN_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "grin/*.cc")
 add_library(vineyard_grin ${GRIN_SRC_FILES} ${PROTO_SRCS} ${PROTO_HDRS})
+target_include_directories(vineyard_grin PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/grin/include>)
 target_link_libraries(vineyard_grin PRIVATE vineyard_graph ${Protobuf_LIBRARIES})
 install_vineyard_target(vineyard_grin)
 

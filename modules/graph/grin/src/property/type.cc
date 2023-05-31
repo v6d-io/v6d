@@ -12,7 +12,7 @@ limitations under the License.
 
 #include "graph/grin/src/predefine.h"
 extern "C" {
-#include "graph/grin/include/property/type.h"
+#include "property/type.h"
 }
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY

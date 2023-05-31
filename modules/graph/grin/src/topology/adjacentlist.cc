@@ -15,111 +15,58 @@ limitations under the License.
 
 #include "graph/grin/src/predefine.h"
 extern "C" {
-#include "graph/grin/include/topology/adjacentlist.h"
+#include "topology/adjacentlist.h"
 }
+
+#if defined(GRIN_ENABLE_ADJACENT_LIST) && !defined(GRIN_ENABLE_EDGE_PROPERTY)
+GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH, GRIN_DIRECTION, GRIN_VERTEX);
+#endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
-GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_VERTEX v) {
-    if (d == GRIN_DIRECTION::BOTH) return GRIN_NULL_LIST;
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto al = new GRIN_ADJACENT_LIST_T();
-    al->vid = v;
-    al->dir = d;
-    al->etype = _g->edge_label_num();
-    if (al->etype == 1) {
-        al->is_simple = true;
-        al->etype = 0;
-        __grin_init_simple_adjacent_list(_g, al);
-    } else {
-        al->is_simple = false;
-    }
-    return al;
-}
-
 void grin_destroy_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
     delete _al;
 }
+#endif
 
+#ifdef GRIN_ENABLE_ADJACENT_LIST_ARRAY
 size_t grin_get_adjacent_list_size(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    if (likely(_al->is_simple)) return _al->end_ - _al->begin_;
-    if (unlikely(_al->offsets.empty())) __grin_init_complex_adjacent_list(static_cast<GRIN_GRAPH_T*>(g)->g, _al);
-    return _al->offsets[_al->etype].first;
+    return _al->end - _al->begin;
 }
 
 GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    auto nbr = _al->begin_ + idx;
-    if (likely(nbr < _al->end_)) return nbr->vid;
-    if (likely(_al->is_simple)) return GRIN_NULL_VERTEX;
-    if (unlikely(_al->offsets.empty())) __grin_init_complex_adjacent_list(static_cast<GRIN_GRAPH_T*>(g)->g, _al);
-    for (unsigned i = 0; i < _al->etype; ++i) {
-        if (idx < _al->offsets[i+1].first) {
-            nbr = _al->offsets[i].second + idx - _al->offsets[i].first;
-            return nbr->vid;
-        }
-    }
-    return GRIN_NULL_VERTEX;
+    return (_al->begin + idx)->vid;
 }
 
 GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
-    auto nbr = _al->begin_ + idx;
-    if (likely(nbr < _al->end_)) {
-        auto e = new GRIN_EDGE_T();        
-        e->dir = _al->dir;
-        e->etype = _al->etype;
-        e->eid = nbr->eid;
-        if (_al->dir == GRIN_DIRECTION::OUT) {
-            e->src = _al->vid;
-            e->dst = nbr->vid;
-        } else {
-            e->src = nbr->vid;
-            e->dst = _al->vid;
-        }
-        return e;
+    auto nbr = _al->begin + idx;
+    auto e = new GRIN_EDGE_T();        
+    e->dir = _al->dir;
+    e->etype = _al->etype;
+    e->eid = nbr->eid;
+    if (_al->dir == GRIN_DIRECTION::OUT) {
+        e->src = _al->vid;
+        e->dst = nbr->vid;
+    } else {
+        e->src = nbr->vid;
+        e->dst = _al->vid;
     }
-    if (likely(_al->is_simple)) return GRIN_NULL_EDGE;
-    if (unlikely(_al->offsets.empty())) __grin_init_complex_adjacent_list(static_cast<GRIN_GRAPH_T*>(g)->g, _al);
-    for (unsigned i = 0; i < _al->etype; ++i) {
-        if (idx < _al->offsets[i+1].first) {
-            nbr = _al->offsets[i].second + idx - _al->offsets[i].first;
-            auto e = new GRIN_EDGE_T();        
-            e->dir = _al->dir;
-            e->etype = i;
-            e->eid = nbr->eid;
-            if (_al->dir == GRIN_DIRECTION::OUT) {
-                e->src = _al->vid;
-                e->dst = nbr->vid;
-            } else {
-                e->src = nbr->vid;
-                e->dst = _al->vid;
-            }
-            return e;        
-        }
-    }
-    return GRIN_NULL_EDGE;
+    return e;
 }
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 GRIN_ADJACENT_LIST_ITERATOR grin_get_adjacent_list_begin(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
     auto ali = new GRIN_ADJACENT_LIST_ITERATOR_T();
     ali->vid = _al->vid;
     ali->dir = _al->dir;
-    if (_al->is_simple) {
-        ali->is_simple = true;
-        ali->etype_current = _al->etype;
-        ali->etype_end = _al->etype + 1;
-    } else {
-        ali->is_simple = false;
-        ali->etype_current = 0;
-        ali->etype_end = _al->etype;
-    }
-    __grin_next_valid_adjacent_list_iterator(_g, ali);
+    ali->etype = _al->etype;
+    ali->current = _al->begin;
+    ali->end = _al->end;
     return ali;
 }
 
@@ -130,35 +77,25 @@ void grin_destroy_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR a
 
 void grin_get_next_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
-    _ali->current_++;
-    if (_ali->current_ < _ali->end_) return;
-    if (likely(_ali->is_simple)) {
-        _ali->etype_current++;
-        return;
-    }
-
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    _GRIN_GRAPH_T::raw_adj_list_t raj;
-    _ali->etype_current++;
-    __grin_next_valid_adjacent_list_iterator(_g, _ali);
+    _ali->current++;
 }
 
 bool grin_is_adjacent_list_end(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
-    return _ali->etype_current >= _ali->etype_end;
+    return _ali->current >= _ali->end;
 }
 
 GRIN_VERTEX grin_get_neighbor_from_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
-    return _ali->current_->vid;
+    return _ali->current->vid;
 }
 
 GRIN_EDGE grin_get_edge_from_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
-    auto _nbr = _ali->current_;
+    auto _nbr = _ali->current;
     auto e = new GRIN_EDGE_T();
     e->dir = _ali->dir;
-    e->etype = _ali->etype_current;
+    e->etype = _ali->etype;
     e->eid = _nbr->eid;
     if (_ali->dir == GRIN_DIRECTION::OUT) {
         e->src = _ali->vid;
