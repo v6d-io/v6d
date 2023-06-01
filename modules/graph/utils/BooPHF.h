@@ -901,6 +901,8 @@ class mphf {
     uint64_t non_minimal_hp, minimal_hp;
 
     hash_pair_t bbhash;
+    bbhash[0] = 0;
+    bbhash[1] = 0;
     int level;
     uint64_t level_hash = getLevel(bbhash, elem, &level);
 
@@ -984,6 +986,8 @@ class mphf {
 
         // auto hashes = _hasher(val);
         hash_pair_t bbhash;
+        bbhash[0] = 0;
+        bbhash[1] = 0;
         int level;
         uint64_t level_hash;
         if (_writeEachLevel)
