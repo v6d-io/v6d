@@ -659,6 +659,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::constructVerticesImpl(
     // fill oid array.
     uint64_t memory_usage = get_rss() / 1024 / 1024;
     uint64_t max_memory_usage = get_rss() / 1024 / 1024;
+    LOG(INFO) << "start";
     uint64_t time = GetCurrentTime();
     BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
         client_, comm_spec_.fnum(), vertex_label_num_, std::move(oid_lists));
@@ -672,8 +673,8 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::constructVerticesImpl(
               << (GetCurrentTime() - time) << "s";
     uint64_t post_memory_usage = get_rss() / 1024 / 1024;
     uint64_t post_max_memory_usage = get_rss() / 1024 / 1024;
-    LOG(INFO) << "pre memory_usage" << memory_usage << ", pre max_memory_usage"
-              << max_memory_usage << ", post memory_usage" << post_memory_usage << " post max memory usage" << post_max_memory_usage;
+    LOG(INFO) << "pre memory_usage:" << memory_usage << ", pre max_memory_usage:"
+              << max_memory_usage << ", post memory_usage:" << post_memory_usage << " post max memory usage:" << post_max_memory_usage;
     LOG(INFO) << "Delta memory usage: " << post_memory_usage - memory_usage;
   } else {
     auto old_vm_ptr =

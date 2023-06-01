@@ -83,6 +83,7 @@ void ArrowVertexMap<OID_T, VID_T>::Construct(const vineyard::ObjectMeta& meta) {
         array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
                                            "_" + std::to_string(j)));
         oid_arrays_[i][j] = array.GetArray();
+        o2g_p_[i][j].ConstructHashmapFunction(oid_arrays_[i][j]);
 
         local_oid_total += array.nbytes();
         o2g_size += o2g_p_[i][j].size();

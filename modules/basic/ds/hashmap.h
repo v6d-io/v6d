@@ -441,12 +441,9 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
 
     auto ph_values_builder =
         std::make_shared<ArrayBuilder<V>>(client, vec_v_.data(), vec_v_.size());
-    auto ph_keys_builder =
-        std::make_shared<ArrayBuilder<K>>(client, vec_k_.data(), vec_k_.size());
 
     this->set_num_elements_(vec_kv_.size());
 
-    this->set_ph_keys_(std::static_pointer_cast<ObjectBase>(ph_keys_builder));
     this->set_ph_values_(
         std::static_pointer_cast<ObjectBase>(ph_values_builder));
 
@@ -454,8 +451,6 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   }
 
  private:
-  // PerfectHash<K, V> perfect_hashmap_;
-  // std::shared_ptr<Blob> data_buffer_;
 
   std::vector<V> vec_v_;
   std::vector<K> vec_k_;
