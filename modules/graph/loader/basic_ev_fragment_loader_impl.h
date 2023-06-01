@@ -658,7 +658,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::constructVerticesImpl(
   if (vm_id == InvalidObjectID()) {
     // fill oid array.
     uint64_t memory_usage = get_rss() / 1024 / 1024;
-    uint64_t max_memory_usage = get_rss() / 1024 / 1024;
+    uint64_t max_memory_usage = get_peak_rss() / 1024 / 1024;
     LOG(INFO) << "start";
     uint64_t time = GetCurrentTime();
     BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
@@ -672,7 +672,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::constructVerticesImpl(
     LOG(INFO) << "Vertex map construction time: "
               << (GetCurrentTime() - time) << "s";
     uint64_t post_memory_usage = get_rss() / 1024 / 1024;
-    uint64_t post_max_memory_usage = get_rss() / 1024 / 1024;
+    uint64_t post_max_memory_usage = get_peak_rss() / 1024 / 1024;
     LOG(INFO) << "pre memory_usage:" << memory_usage << ", pre max_memory_usage:"
               << max_memory_usage << ", post memory_usage:" << post_memory_usage << " post max memory usage:" << post_max_memory_usage;
     LOG(INFO) << "Delta memory usage: " << post_memory_usage - memory_usage;

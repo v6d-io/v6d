@@ -437,7 +437,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    *
    */
   Status Build(Client& client) override {
-    Construct(1);
+    Construct(16);
 
     auto ph_values_builder =
         std::make_shared<ArrayBuilder<V>>(client, vec_v_.data(), vec_v_.size());
