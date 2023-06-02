@@ -46,14 +46,6 @@ limitations under the License.
 #include "graph/vertex_map/arrow_local_vertex_map.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
-namespace gs {
-
-template <typename OID_T, typename VID_T, typename VDATA_T, typename EDATA_T,
-          typename VERTEX_MAP_T, bool COMPACT>
-class ArrowProjectedFragment;
-
-}  // namespace gs
-
 namespace vineyard {
 
 inline std::string generate_name_with_suffix(

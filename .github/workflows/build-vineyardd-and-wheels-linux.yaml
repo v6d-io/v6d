@@ -167,7 +167,8 @@ jobs:
 
           env CGO_ENABLED=0 GOARCH=$arch go build -a -o vineyardctl k8s/cmd/main.go
 
-          sudo apt-get install binutils-x86-64-linux-gnu binutils-aarch64-linux-gnu
+          sudo apt-get update -y
+          sudo apt-get install -y binutils-x86-64-linux-gnu binutils-aarch64-linux-gnu || true
           x86_64-linux-gnu-strip ./vineyardctl || true
           aarch64-linux-gnu-strip ./vineyardctl || true
 

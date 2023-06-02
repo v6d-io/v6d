@@ -115,6 +115,97 @@ int main(int, const char**) {
     CHECK_EQ(type, "vineyard::BaseBinaryArray<arrow::LargeStringArray>");
   }
 
+  /* minimize unittest dependencies
+  {
+    const auto type = type_name<ArrowFragment<int64_t, uint64_t>>();
+    CHECK_EQ(type,
+             "vineyard::ArrowFragment<int64,uint64,vineyard::ArrowVertexMap<"
+             "int64,uint64>,false>");
+  }
+
+  {
+    const auto type =
+        type_name<ArrowFragment<int64_t, uint64_t,
+                                ArrowVertexMap<int64_t, uint64_t>, true>>();
+    CHECK_EQ(type,
+             "vineyard::ArrowFragment<int64,uint64,vineyard::ArrowVertexMap<"
+             "int64,uint64>,true>");
+  }
+
+  {
+    const auto type = type_name<ArrowFragment<
+        int64_t, uint64_t, ArrowLocalVertexMap<int64_t, uint64_t>, false>>();
+    CHECK_EQ(type,
+             "vineyard::ArrowFragment<int64,uint64,vineyard::"
+             "ArrowLocalVertexMap<int64,uint64>,false>");
+  }
+
+  {
+    const auto type = type_name<ArrowFragment<std::string, uint64_t>>();
+    CHECK_EQ(
+        type,
+        "vineyard::ArrowFragment<std::string,uint64,vineyard::ArrowVertexMap<"
+        "std::basic_string_view<char,std::char_traits<char>>,uint64>,false>");
+  }
+
+  {
+    const auto type = type_name<ArrowFragment<
+        std::string, uint64_t,
+        ArrowVertexMap<InternalType<std::string>::type, uint64_t>, true>>();
+    CHECK_EQ(
+        type,
+        "vineyard::ArrowFragment<std::string,uint64,vineyard::ArrowVertexMap<"
+        "std::basic_string_view<char,std::char_traits<char>>,uint64>,true>");
+  }
+
+  {
+    const auto type = type_name<ArrowFragment<
+        std::string, uint64_t,
+        ArrowLocalVertexMap<InternalType<std::string>::type, uint64_t>,
+        false>>();
+    CHECK_EQ(type,
+             "vineyard::ArrowFragment<std::string,uint64,vineyard::"
+             "ArrowLocalVertexMap<std::basic_string_view<char,std::char_traits<"
+             "char>>,uint64>,false>");
+  }
+
+  {
+    const auto type = type_name<
+        gs::ArrowProjectedFragment<int64_t, uint64_t, int32_t, double,
+                                   ArrowVertexMap<int64_t, uint64_t>, true>>();
+    CHECK_EQ(type,
+             "gs::ArrowProjectedFragment<int64,uint64,int,double,vineyard::"
+             "ArrowVertexMap<int64,uint64>,true>");
+  }
+  {
+    const auto type = type_name<gs::ArrowProjectedFragment<
+        int64_t, uint64_t, int32_t, double,
+        ArrowLocalVertexMap<int64_t, uint64_t>, false>>();
+    CHECK_EQ(type,
+             "gs::ArrowProjectedFragment<int64,uint64,int,double,vineyard::"
+             "ArrowLocalVertexMap<int64,uint64>,false>");
+  }
+  {
+    const auto type = type_name<gs::ArrowProjectedFragment<
+        std::string, uint64_t, int32_t, double,
+        ArrowVertexMap<InternalType<std::string>::type, uint64_t>, true>>();
+    CHECK_EQ(type,
+             "gs::ArrowProjectedFragment<std::string,uint64,int,double,"
+             "vineyard::ArrowVertexMap<std::basic_string_view<char,std::char_"
+             "traits<char>>,uint64>,true>");
+  }
+  {
+    const auto type = type_name<gs::ArrowProjectedFragment<
+        std::string, uint64_t, int32_t, double,
+        ArrowLocalVertexMap<InternalType<std::string>::type, uint64_t>,
+        false>>();
+    CHECK_EQ(type,
+             "gs::ArrowProjectedFragment<std::string,uint64,int,double,"
+             "vineyard::ArrowLocalVertexMap<std::basic_string_view<char,std::"
+             "char_traits<char>>,uint64>,false>");
+  }
+  */
+
   LOG(INFO) << "Passed typename tests...";
 
   return 0;

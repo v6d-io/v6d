@@ -16,9 +16,12 @@ limitations under the License.
 #ifndef MODULES_GRAPH_FRAGMENT_FRAGMENT_TRAITS_H_
 #define MODULES_GRAPH_FRAGMENT_FRAGMENT_TRAITS_H_
 
+#include <sstream>
 #include <string>
 #include <type_traits>
 #include <typeinfo>
+
+#include "common/util/typename.h"
 
 namespace vineyard {
 
@@ -41,11 +44,57 @@ struct is_property_fragment<ArrowFragmentBase> {
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 class ArrowFragment;
 
+// Currently `typename_t` cannot automatically process non-type template
+// parameters
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
+struct typename_t<ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>> {
+  inline static const std::string name() {
+    std::ostringstream ss;
+    ss << "vineyard::ArrowFragment<";
+    ss << type_name<OID_T>() << ",";
+    ss << type_name<VID_T>() << ",";
+    ss << type_name<VERTEX_MAP_T>() << ",";
+    ss << (COMPACT ? "true" : "false") << ">";
+    return ss.str();
+  }
+};
+
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 struct is_property_fragment<
     ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>> {
   using type = std::true_type;
   static constexpr bool value = true;
+};
+
+}  // namespace vineyard
+
+namespace gs {
+
+template <typename OID_T, typename VID_T, typename VDATA_T, typename EDATA_T,
+          typename VERTEX_MAP_T, bool COMPACT>
+class ArrowProjectedFragment;
+
+}  // namespace gs
+
+namespace vineyard {
+
+// Currently `typename_t` cannot automatically process non-type template
+// parameters
+template <typename OID_T, typename VID_T, typename VDATA_T, typename EDATA_T,
+          typename VERTEX_MAP_T, bool COMPACT>
+struct typename_t<gs::ArrowProjectedFragment<OID_T, VID_T, VDATA_T, EDATA_T,
+                                             VERTEX_MAP_T, COMPACT>> {
+  inline static const std::string name() {
+    std::ostringstream ss;
+    ss << "gs::ArrowProjectedFragment<";
+    ss << type_name<OID_T>() << ",";
+    ss << type_name<VID_T>() << ",";
+    ss << type_name<VDATA_T>() << ",";
+    ss << type_name<EDATA_T>() << ",";
+    ss << type_name<VERTEX_MAP_T>() << ",";
+    ss << (COMPACT ? "true" : "false") << ">";
+    return ss.str();
+  }
 };
 
 }  // namespace vineyard
