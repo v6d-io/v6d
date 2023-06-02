@@ -20,8 +20,6 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
-#include "powturbo/include/ic.h"
-
 #include "common/util/functions.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"

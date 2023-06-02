@@ -68,6 +68,7 @@ class BasicArrowFragmentBuilder
   using vertex_map_t = VERTEX_MAP_T;
   using nbr_unit_t = property_graph_utils::NbrUnit<vid_t, eid_t>;
   using vid_array_t = vineyard::ArrowArrayType<vid_t>;
+  static constexpr bool compact_v = COMPACT;
 
  public:
   explicit BasicArrowFragmentBuilder(vineyard::Client& client,

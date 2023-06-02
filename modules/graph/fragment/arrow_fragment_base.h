@@ -36,7 +36,7 @@ limitations under the License.
 namespace gs {
 
 template <typename OID_T, typename VID_T, typename VDATA_T, typename EDATA_T,
-          typename VERTEX_MAP_T>
+          typename VERTEX_MAP_T, bool COMPACT>
 class ArrowProjectedFragment;
 
 }  // namespace gs

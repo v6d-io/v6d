@@ -122,10 +122,10 @@ void traverse_fragment(const std::shared_ptr<fragment_t>& fragment,
   typename fragment_t::vertex_t neighbor;
   [[maybe_unused]] volatile typename fragment_t::eid_t neighbor_edge;
   for (size_t round = 0; round < rounds; ++round) {
-    for (label_id_t e_label = 0; e_label != e_label_num; ++e_label) {
-      for (label_id_t v_label = 0; v_label != v_label_num; ++v_label) {
-        auto iv = fragment->InnerVertices(v_label);
-        for (auto v : iv) {
+    for (label_id_t v_label = 0; v_label != v_label_num; ++v_label) {
+      auto iv = fragment->InnerVertices(v_label);
+      for (auto v : iv) {
+        for (label_id_t e_label = 0; e_label != e_label_num; ++e_label) {
           auto oe = fragment->GetOutgoingAdjList(v, e_label);
           for (auto& e : oe) {
             neighbor = e.neighbor();
