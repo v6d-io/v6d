@@ -402,16 +402,14 @@ struct CompactNbr {
         size_(rhs.size_),
         edata_arrays_(rhs.edata_arrays_),
         data_(rhs.data_),
-        current_(rhs.current_),
-        prev_vid_(rhs.prev_vid_) {}
+        current_(rhs.current_) {}
   CompactNbr(CompactNbr&& rhs)
       : ptr_(rhs.ptr_),
         next_(rhs.next_),
         size_(rhs.size_),
         edata_arrays_(rhs.edata_arrays_),
         data_(rhs.data_),
-        current_(rhs.current_),
-        prev_vid_(rhs.prev_vid_) {}
+        current_(rhs.current_) {}
   CompactNbr(const uint8_t* ptr, const size_t size, const void** edata_arrays)
       : ptr_(ptr), next_(ptr), size_(size), edata_arrays_(edata_arrays) {
     decode();
@@ -424,7 +422,6 @@ struct CompactNbr {
     edata_arrays_ = rhs.edata_arrays_;
     data_ = rhs.data_;
     current_ = rhs.current_;
-    prev_vid_ = rhs.prev_vid_;
     return *this;
   }
 
@@ -435,23 +432,7 @@ struct CompactNbr {
     edata_arrays_ = std::move(rhs.edata_arrays_);
     data_ = rhs.data_;
     current_ = rhs.current_;
-    prev_vid_ = rhs.prev_vid_;
     return *this;
-  }
-
-  inline void decode() const {
-    if (likely((current_ % batch_size != 0) || current_ >= size_)) {
-      if (unlikely(current_ == size_)) {
-        ptr_ = next_;
-      }
-      return;
-    }
-    ptr_ = next_;
-    size_t n =
-        (current_ + batch_size) < size_ ? batch_size : (size_ - current_);
-    next_ = v8dec32(const_cast<unsigned char*>(
-                        reinterpret_cast<const unsigned char*>(next_)),
-                    n * element_size, reinterpret_cast<uint32_t*>(data_));
   }
 
   grape::Vertex<VID_T> neighbor() const {
@@ -482,27 +463,16 @@ struct CompactNbr {
   }
 
   inline const CompactNbr& operator++() const {
+    VID_T prev_vid = data_[current_ % batch_size].vid;
     current_ += 1;
     decode();
-    data_[current_ % batch_size].vid += prev_vid_;
-    prev_vid_ = data_[current_ % batch_size].vid;
+    data_[current_ % batch_size].vid += prev_vid;
     return *this;
   }
 
   inline CompactNbr operator++(int) const {
     CompactNbr ret(*this);
     ++(*this);
-    return ret;
-  }
-
-  inline const CompactNbr& operator--() const {
-    // TBD
-    return *this;
-  }
-
-  inline CompactNbr operator--(int) const {
-    CompactNbr ret(*this);
-    --(*this);
     return ret;
   }
 
@@ -518,6 +488,21 @@ struct CompactNbr {
   inline const CompactNbr& operator*() const { return *this; }
 
  private:
+  inline void decode() const {
+    if (likely((current_ % batch_size != 0) || current_ >= size_)) {
+      if (unlikely(current_ == size_)) {
+        ptr_ = next_;
+      }
+      return;
+    }
+    ptr_ = next_;
+    size_t n =
+        (current_ + batch_size) < size_ ? batch_size : (size_ - current_);
+    next_ = v8dec32(const_cast<unsigned char*>(
+                        reinterpret_cast<const unsigned char*>(next_)),
+                    n * element_size, reinterpret_cast<uint32_t*>(data_));
+  }
+
   static constexpr size_t element_size =
       sizeof(property_graph_utils::NbrUnit<VID_T, EID_T>) / sizeof(uint32_t);
   static constexpr size_t batch_size = VARINT_ENCODING_BATCH_SIZE;
@@ -528,7 +513,6 @@ struct CompactNbr {
 
   mutable NbrUnit<VID_T, EID_T> data_[batch_size];
   mutable size_t current_ = 0;
-  mutable VID_T prev_vid_ = 0;
 };
 
 template <typename VID_T>
@@ -707,15 +691,43 @@ class CompactAdjList {
   CompactAdjList()
       : begin_ptr_(nullptr),
         end_ptr_(nullptr),
-        bsize_(0),
         size_(0),
         edata_arrays_(nullptr) {}
-  CompactAdjList(const uint8_t* ptr, const size_t begin_offset,
-                 const size_t end_offset, const size_t size,
-                 const void** edata_arrays)
-      : begin_ptr_(ptr + begin_offset),
-        end_ptr_(ptr + end_offset),
-        bsize_(end_offset - begin_offset),
+
+  CompactAdjList(const CompactAdjList& nbrs) {
+    begin_ptr_ = nbrs.begin_ptr_;
+    end_ptr_ = nbrs.end_ptr_;
+    size_ = nbrs.size_;
+    edata_arrays_ = nbrs.edata_arrays_;
+  }
+
+  CompactAdjList(CompactAdjList&& nbrs) {
+    begin_ptr_ = nbrs.begin_ptr_;
+    end_ptr_ = nbrs.end_ptr_;
+    size_ = nbrs.size_;
+    edata_arrays_ = nbrs.edata_arrays_;
+  }
+
+  CompactAdjList& operator=(const CompactAdjList& rhs) {
+    begin_ptr_ = rhs.begin_ptr_;
+    end_ptr_ = rhs.end_ptr_;
+    size_ = rhs.size_;
+    edata_arrays_ = rhs.edata_arrays_;
+    return *this;
+  }
+
+  CompactAdjList& operator=(CompactAdjList&& rhs) {
+    begin_ptr_ = rhs.begin_ptr_;
+    end_ptr_ = rhs.end_ptr_;
+    size_ = rhs.size_;
+    edata_arrays_ = rhs.edata_arrays_;
+    return *this;
+  }
+
+  CompactAdjList(const uint8_t* begin_ptr, const uint8_t* end_ptr,
+                 const size_t size, const void** edata_arrays)
+      : begin_ptr_(begin_ptr),
+        end_ptr_(end_ptr),
         size_(size),
         edata_arrays_(edata_arrays) {}
 
@@ -735,14 +747,10 @@ class CompactAdjList {
 
   size_t size() const { return size_; }
 
-  // inline const NbrUnit<VID_T, EID_T>* begin_unit() const { return begin_; }
-
-  // inline const NbrUnit<VID_T, EID_T>* end_unit() const { return end_; }
-
  private:
   const uint8_t* begin_ptr_;
   const uint8_t* end_ptr_;
-  const size_t bsize_ = 0, size_ = 0;
+  size_t size_ = 0;
 
   const void** edata_arrays_;
 };

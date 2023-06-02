@@ -49,7 +49,7 @@ limitations under the License.
 namespace gs {
 
 template <typename OID_T, typename VID_T, typename VDATA_T, typename EDATA_T,
-          typename VERTEX_MAP_T>
+          typename VERTEX_MAP_T, bool COMPACT>
 class ArrowProjectedFragment;
 
 }  // namespace gs
@@ -96,6 +96,8 @@ class [[vineyard]] ArrowFragment
   using raw_adj_list_t = property_graph_utils::RawAdjList<vid_t, eid_t>;
   using vertex_map_t = VERTEX_MAP_T;
   using vertex_t = grape::Vertex<vid_t>;
+
+  static constexpr bool compact_v = COMPACT;
 
   using ovg2l_map_t =
       ska::flat_hash_map<vid_t, vid_t, typename Hashmap<vid_t, vid_t>::KeyHash>;
@@ -462,7 +464,7 @@ class [[vineyard]] ArrowFragment
     const int64_t* boffset_array = ie_boffsets_ptr_lists_[v_label][e_label];
     const uint8_t* ptr = compact_ie_ptr_lists_[v_label][e_label];
     return compact_adj_list_t(
-        ptr, boffset_array[v_offset], boffset_array[v_offset + 1],
+        ptr + boffset_array[v_offset], ptr + boffset_array[v_offset + 1],
         offset_array[v_offset + 1] - offset_array[v_offset],
         flatten_edge_tables_columns_[e_label]);
   }
@@ -502,7 +504,7 @@ class [[vineyard]] ArrowFragment
     const int64_t* boffset_array = oe_boffsets_ptr_lists_[v_label][e_label];
     const uint8_t* ptr = compact_oe_ptr_lists_[v_label][e_label];
     return compact_adj_list_t(
-        ptr, boffset_array[v_offset], boffset_array[v_offset + 1],
+        ptr + boffset_array[v_offset], ptr + boffset_array[v_offset + 1],
         offset_array[v_offset + 1] - offset_array[v_offset],
         flatten_edge_tables_columns_[e_label]);
   }
@@ -779,7 +781,7 @@ class [[vineyard]] ArrowFragment
   friend class ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>;
 
   template <typename _OID_T, typename _VID_T, typename VDATA_T,
-            typename EDATA_T, typename _VERTEX_MAP_T>
+            typename EDATA_T, typename _VERTEX_MAP_T, bool _COMPACT>
   friend class gs::ArrowProjectedFragment;
 };
 
