@@ -32,6 +32,7 @@ limitations under the License.
 #include "common/util/arrow.h"
 #include "common/util/uuid.h"
 
+#include "graph/fragment/property_graph_utils.h"
 #include "graph/utils/BooPHF.h"
 
 namespace vineyard {
@@ -417,13 +418,42 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     auto bphf = boomphf::mphf<K, hasher_t>(vec_k_.size(), data_iterator,
                                            concurrency, 1.0f);
 
+    // std::vector<V> vec_v_temp;
+    // vec_v_temp.resize(count);
+    // start_time = GetCurrentTime();
+    // for (size_t i = 0; i < vec_v_temp.size(); i++) {
+    //   vec_v_temp[bphf.lookup(vec_k_[i])] = vec_kv_[i].second;
+    // }
+    // LOG(INFO) << "Constructing the vec_v_ takes "
+    //           << GetCurrentTime() - start_time << " s.";
+
     vec_v_.resize(count);
+    count = vec_k_.size() / 8;
     start_time = GetCurrentTime();
-    for (size_t i = 0; i < vec_v_.size(); i++) {
-      vec_v_[bphf.lookup(vec_k_[i])] = vec_kv_[i].second;
-    }
-    LOG(INFO) << "Constructing the vec_v_ takes "
+    parallel_for(
+        0, 8,
+        [&](const int i) {
+          if (unlikely(i == 7)) {
+            for (size_t j = i * count; j < vec_v_.size(); j++) {
+              vec_v_[bphf.lookup(vec_k_[j])] = vec_kv_[j].second;
+            }
+          } else {
+            for (size_t j = i * count; j < (i + 1) * count; j++) {
+              vec_v_[bphf.lookup(vec_k_[j])] = vec_kv_[j].second;
+            }
+          }
+        },
+        8);
+    LOG(INFO) << "Parallel for constructing the vec_v_ takes "
               << GetCurrentTime() - start_time << " s.";
+    // LOG(INFO) << "Check";
+    // for (size_t i = 0; i < vec_v_.size(); i++) {
+    //   if (vec_v_[i] != vec_v_temp[i]) {
+    //     LOG(INFO) << "vec_v_[" << i << "] is not equal to vec_v_temp[" << i
+    //               << "].";
+    //   }
+    // }
+    // LOG(INFO) << "Check done.";
   }
 
   template <typename K_ = K>
