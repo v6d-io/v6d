@@ -35,6 +35,11 @@ limitations under the License.
 #include "graph/fragment/property_graph_utils.h"
 #include "graph/utils/BooPHF.h"
 
+#if defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+#include <unistd.h>
+#endif
+
 namespace vineyard {
 
 /**
@@ -428,12 +433,12 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     //           << GetCurrentTime() - start_time << " s.";
 
     vec_v_.resize(count);
-    count = vec_k_.size() / 8;
+    count = vec_k_.size() / concurrency;
     start_time = GetCurrentTime();
     parallel_for(
-        0, 8,
+        0, concurrency,
         [&](const int i) {
-          if (unlikely(i == 7)) {
+          if (unlikely(i == concurrency - 1)) {
             for (size_t j = i * count; j < vec_v_.size(); j++) {
               vec_v_[bphf.lookup(vec_k_[j])] = vec_kv_[j].second;
             }
@@ -443,7 +448,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
             }
           }
         },
-        8);
+        concurrency);
     LOG(INFO) << "Parallel for constructing the vec_v_ takes "
               << GetCurrentTime() - start_time << " s.";
     // LOG(INFO) << "Check";
@@ -467,7 +472,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    *
    */
   Status Build(Client& client) override {
-    Construct(16);
+    Construct(currency_);
 
     auto ph_values_builder =
         std::make_shared<ArrayBuilder<V>>(client, vec_v_.data(), vec_v_.size());
@@ -481,11 +486,16 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   }
 
  private:
-
   std::vector<V> vec_v_;
   std::vector<K> vec_k_;
   std::vector<std::pair<K, V>> vec_kv_;
   uint64_t n_elements_ = 0;
+#if defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+    int currency_ = sysconf(_SC_NPROCESSORS_ONLN);
+#else
+    int currency_ = 16;
+#endif
 };
 
 }  // namespace vineyard

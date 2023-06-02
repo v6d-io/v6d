@@ -22,6 +22,11 @@ limitations under the License.
 #include <string>
 #include <utility>
 
+#if defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+#include <unistd.h>
+#endif
+
 #include "flat_hash_map/flat_hash_map.hpp"
 
 #include "cityhash/cityhash.hpp"
@@ -387,7 +392,7 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
         static_cast<const K*>(array->raw_values() + array->length()));
     auto time_stamp = vineyard::GetCurrentTime();
     bphf_ =
-        boomphf::mphf<K, hasher_t>(array->length(), data_iterator, 16, 1.0f);
+        boomphf::mphf<K, hasher_t>(array->length(), data_iterator, currency_, 1.0f);
     LOG(INFO) << "Construct perfect map of " << array->length()
               << " vertex takes " << vineyard::GetCurrentTime() - time_stamp
               << " s.";
@@ -403,6 +408,12 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   [[shared]] size_t num_elements_;
   [[shared]] Array<V> ph_values_;
   boomphf::mphf<K, hasher_t> bphf_;
+#if defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+    int currency_ = sysconf(_SC_NPROCESSORS_ONLN);
+#else
+    int currency_ = 16;
+#endif
 
   friend class Client;
   friend class PerfectHashmapBaseBuilder<K, V>;
