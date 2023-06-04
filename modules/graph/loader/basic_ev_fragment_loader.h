@@ -126,8 +126,6 @@ class BasicEVFragmentLoader {
     return vertex_label_to_index_;
   }
 
-  //   void set_vm_ptr(std::shared_ptr<vertex_map_t> in) { vm_ptr_ = in; }
-
  private:
   boost::leaf::result<std::shared_ptr<ITablePipeline>> edgesId2Gid(
       const std::shared_ptr<ITablePipeline> edge_table, label_id_t src_label,

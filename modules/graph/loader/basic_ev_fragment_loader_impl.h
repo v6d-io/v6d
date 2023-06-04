@@ -693,7 +693,7 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::constructVerticesImplLocal(
     ObjectID vm_id) {
   if (vm_id != InvalidObjectID()) {
     auto old_vm_ptr =
-        std::dynamic_pointer_cast<vertex_map_t>(client_.GetObject(vm_id));
+        std::dynamic_pointer_cast<local_vertex_map_t>(client_.GetObject(vm_id));
     label_id_t pre_label_num = old_vm_ptr->label_num();
     if (pre_label_num != 0) {
       std::string msg =
