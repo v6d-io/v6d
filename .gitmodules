@@ -10,10 +10,6 @@
 	path = thirdparty/cpprestsdk
 	url = https://github.com/microsoft/cpprestsdk.git
 	shallow = true
-[submodule "thirdparty/nlohmann-json"]
-	path = thirdparty/nlohmann-json
-	url = https://github.com/nlohmann/json.git
-	shallow = true
 [submodule "thirdparty/mimalloc"]
 	path = thirdparty/mimalloc
 	url = https://github.com/microsoft/mimalloc.git
