@@ -577,8 +577,7 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
             fid, label,
             std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(object));
       } else {
-        vineyard::PerfectHashmapBuilder<oid_t, vid_t> builder(client);
-        builder.AssociateDataBuffer(varray->GetBuffer());
+        vineyard::PerfectHashmapBuilder<oid_t, vid_t> builder(client);     
 
         auto array = varray->GetArray();
         vid_t cur_gid = id_parser_.GenerateId(fid, label, 0);

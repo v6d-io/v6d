@@ -33,12 +33,7 @@ limitations under the License.
 #include "common/util/uuid.h"
 
 #include "graph/fragment/property_graph_utils.h"
-#include "graph/thirdparty/BBHash/BooPHF.h"
-
-#if defined(__linux__) || defined(__linux) || defined(linux) || \
-    defined(__gnu_linux__)
-#include <unistd.h>
-#endif
+#include "BBHash/BooPHF.h"
 
 namespace vineyard {
 
@@ -233,53 +228,10 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   explicit PerfectHashmapBuilder(Client& client)
       : PerfectHashmapBaseBuilder<K, V>(client) {}
 
-  /**
-   * @brief Get the mapping value of the given key.
-   *
-   */
-  inline V& operator[](const K& key) {
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return V(0);
-  }
-
-  /**
-   * @brief Get the mapping value of the given key.
-   *
-   */
-  inline V& operator[](K&& key) {
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return V(0);
-  }
-
-  /**
-   * @brief Emplace key-value pair into the hashmap.
-   *
-   */
   inline bool emplace(K key, V value) {
-    // TODO : check if the vertex add twice.
     vec_kv_.push_back(std::pair<K, V>(key, value));
     n_elements_++;
     return true;
-  }
-
-  /**
-   * @brief Get the mapping value of the given key.
-   *
-   */
-  V& at(const K& key) {
-    // return hashmap_.at(key);
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return V(0);
-  }
-
-  /**
-   * @brief Get the const mapping value of the given key.
-   *
-   */
-  const V& at(const K& key) const {
-    // return hashmap_.at(key);
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return V(0);
   }
 
   /**
@@ -293,121 +245,12 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    *
    */
   void reserve(size_t size) {
-    LOG(INFO) << __func__ << " is not finished.";
     vec_kv_.reserve(size);
-  }
-
-  /**
-   * @brief Return the maximum possible size of the HashMap, i.e., the number
-   * of elements that can be stored in the HashMap.
-   *
-   */
-  size_t bucket_count() const {
-    // return hashmap_.bucket_count();
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return 0;
-  }
-
-  /**
-   * @brief Return the load factor of the HashMap.
-   *
-   */
-  float load_factor() const {
-    // return hashmap_.load_factor();
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return 0;
-  }
-
-  /**
-   * @brief Check whether the hashmap is empty.
-   *
-   */
-  bool empty() const {
-    // return hashmap_.empty();
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return true;
-  }
-
-  /**
-   * @brief Return the beginning iterator.
-   *
-   */
-  void* begin() {
-    // return hashmap_.begin();
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return nullptr;
-  }
-
-  /**
-   * @brief Return the const beginning iterator.
-   *
-   */
-  void* begin() const {
-    // return hashmap_.begin();
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return nullptr;
-  }
-
-  /**
-   * @brief Return the const beginning iterator.
-   *
-   */
-  void* cbegin() const {
-    // return hashmap_.cbegin();
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return nullptr;
-  }
-
-  /**
-   * @brief Return the ending iterator
-   *
-   */
-  void* end() {
-    // return hashmap_.end();
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return nullptr;
-  }
-
-  /**
-   * @brief Return the const ending iterator.
-   *
-   */
-  void* end() const {
-    // return hashmap_.end();
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return nullptr;
-  }
-
-  /**
-   * @brief Return the const ending iterator.
-   *
-   */
-  void* cend() const {
-    // return hashmap_.cend();
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return nullptr;
-  }
-
-  /**
-   * @brief Find the value by key.
-   *
-   */
-  void* find(const K& key) {
-    // return hashmap_.find(key);
-    LOG(INFO) << __func__ << " is not finished yet.";
-    return nullptr;
-  }
-
-  /**
-   * @brief Associated with a given data buffer
-   */
-  void AssociateDataBuffer(std::shared_ptr<Blob> data_buffer) {
-    // this->data_buffer_ = data_buffer;
   }
 
   template <typename K_ = K>
   typename std::enable_if<std::is_integral<K_>::value, void>::type Construct(
-      int concurrency = 1) {
+      const int concurrency = std::thread::hardware_concurrency()) {
     size_t count = 0;
     vec_kv_.resize(n_elements_);
     vec_k_.resize(vec_kv_.size());
@@ -416,7 +259,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
       vec_k_[count] = kv_.first;
       count++;
     }
-    LOG(INFO) << "Constructing the vec_k_ takes "
+    VLOG(100) << "Constructing the vec_k_ takes "
               << GetCurrentTime() - start_time << " s.";
 
     auto data_iterator = boomphf::range(vec_k_.begin(), vec_k_.end());
@@ -440,15 +283,13 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
           }
         },
         concurrency);
-    LOG(INFO) << "Parallel for constructing the vec_v_ takes "
+    VLOG(100) << "Parallel for constructing the vec_v_ takes "
               << GetCurrentTime() - start_time << " s.";
   }
 
   template <typename K_ = K>
   typename std::enable_if<!std::is_integral<K_>::value, void>::type Construct(
-      int concurrency = 1) {
-    LOG(INFO) << __func__ << " is not supported yet.";
-  }
+      const int concurrency = std::thread::hardware_concurrency()) {}
 
   /**
    * @brief Build the hashmap object.
