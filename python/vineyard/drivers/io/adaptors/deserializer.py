@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import base64
 import io
 import json
 import logging
@@ -179,7 +180,9 @@ def traverse_to_rebuild(client, stream_id: ObjectID, blobs: Dict[ObjectID, Blob]
         return memberpath, blob
 
 
-def deserialize(vineyard_socket, object_id, proc_num, proc_index):
+def deserialize(
+    vineyard_socket, object_id, proc_num, proc_index, deserialization_options
+):
     client = vineyard.connect(vineyard_socket)
     streams = client.get(object_id)
 
@@ -196,9 +199,12 @@ def deserialize(vineyard_socket, object_id, proc_num, proc_index):
     rqueue: "ConcurrentQueue[Tuple[ObjectID, str, Blob]]" = ConcurrentQueue()
 
     # copy blobs
+    parallelism = deserialization_options.pop(
+        'parallelism', multiprocessing.cpu_count()
+    )
     executor = ThreadStreamExecutor(
         ReconstructExecututor,
-        parallism=multiprocessing.cpu_count(),
+        parallelism=parallelism,
         client=client,
         task_queue=queue,
         result_queue=rqueue,
@@ -217,14 +223,22 @@ def deserialize(vineyard_socket, object_id, proc_num, proc_index):
 
 def main():
     if len(sys.argv) < 5:
-        print("usage: ./deserializer <ipc_socket> <object_id> <proc_num> <proc_index>")
+        print(
+            "usage: ./deserializer <ipc_socket> <object_id> <deserialization_options> "
+            "<proc_num> <proc_index>"
+        )
         sys.exit(1)
     ipc_socket = sys.argv[1]
     object_id = vineyard.ObjectID(sys.argv[2])
-    proc_num = int(sys.argv[3])
-    proc_index = int(sys.argv[4])
+    deserialization_options = json.loads(
+        base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
+    )
+    proc_num = int(sys.argv[4])
+    proc_index = int(sys.argv[5])
     try:
-        deserialize(ipc_socket, object_id, proc_num, proc_index)
+        deserialize(
+            ipc_socket, object_id, proc_num, proc_index, deserialization_options
+        )
     except Exception:  # pylint: disable=broad-except
         report_exception()
         sys.exit(-1)

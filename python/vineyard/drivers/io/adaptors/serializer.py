@@ -182,9 +182,10 @@ def serialize(vineyard_socket, object_id, serialization_options):
     # start transfer
     #
     # easy to be implemented as a threaded executor in a future
+    parallelism = serialization_options.pop('parallelism', multiprocessing.cpu_count())
     executor = ThreadStreamExecutor(
         SerializeExecutor,
-        parallism=multiprocessing.cpu_count(),
+        parallelism=parallelism,
         task_queue=queue,
         serialization_options=serialization_options,
     )

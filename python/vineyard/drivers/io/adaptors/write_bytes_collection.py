@@ -152,9 +152,10 @@ def write_bytes_collection(
     )
 
     # write streams to file
+    parallelism = storage_options.pop('parallelism', multiprocessing.cpu_count())
     executor = ThreadStreamExecutor(
         WriteBytesExecutor,
-        parallism=multiprocessing.cpu_count(),
+        parallelism=parallelism,
         client=client,
         prefix=worker_prefix,
         storage_options=storage_options,

@@ -183,17 +183,16 @@ def read_bytes_collection(
 
     worker_prefix = os.path.join(prefix_path, '%s-%s' % (proc_num, proc_index))
 
-    logger.info("start creating blobs ...")
     queue: "ConcurrentQueue[Tuple[ByteStream, str]]" = ConcurrentQueue()
     stream_id = read_stream_collections(client, fs, queue, worker_prefix, worker_prefix)
 
     client.persist(stream_id)
     report_success(stream_id)
 
-    logger.info("start reading blobs ...")
+    parallelism = storage_options.pop('parallelism', multiprocessing.cpu_count())
     executor = ThreadStreamExecutor(
         ReadToByteStreamExecutor,
-        parallism=multiprocessing.cpu_count(),
+        parallelism=parallelism,
         client=client,
         fs=fs,
         task_queue=queue,
