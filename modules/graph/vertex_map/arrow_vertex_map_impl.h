@@ -45,14 +45,14 @@ void ArrowVertexMap<OID_T, VID_T>::Construct(const vineyard::ObjectMeta& meta) {
   id_parser_.Init(fnum_, label_num_);
   size_t nbytes = 0, local_oid_total = 0;
   size_t o2g_total_bytes = 0, o2g_size = 0, o2g_bucket_count = 0;
-  if (is_string_oid_) {
+  if (!std::is_integral<OID_T>::value) {
     o2g_.resize(fnum_);
   } else {
     o2g_p_.resize(fnum_);
   }
   oid_arrays_.resize(fnum_);
 
-  if (is_string_oid_) {
+  if (!std::is_integral<OID_T>::value) {
     for (fid_t i = 0; i < fnum_; ++i) {
       o2g_[i].resize(label_num_);
       oid_arrays_[i].resize(label_num_);
@@ -441,7 +441,7 @@ Status ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
     }
   }
 
-  if (is_string_oid_) {
+  if (!std::is_integral<OID_T>::value) {
     vertex_map->o2g_ = o2g_;
   } else {
     vertex_map->o2g_p_ = o2g_p_;
@@ -453,7 +453,7 @@ Status ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
   vertex_map->meta_.AddKeyValue("label_num", label_num_);
 
   size_t nbytes = 0;
-  if (is_string_oid_) {
+  if (!std::is_integral<OID_T>::value) {
     for (fid_t i = 0; i < fnum_; ++i) {
       for (label_id_t j = 0; j < label_num_; ++j) {
         vertex_map->meta_.AddMember(
@@ -501,11 +501,6 @@ BasicArrowVertexMapBuilder<OID_T, VID_T>::BasicArrowVertexMapBuilder(
     : ArrowVertexMapBuilder<oid_t, vid_t>(client),
       fnum_(fnum),
       label_num_(label_num) {
-  if (IS_INTEGER_TYPE(OID_T)) {
-    is_string_oid_ = false;
-  } else {
-    is_string_oid_ = true;
-  }
   CHECK_EQ(oid_arrays.size(), label_num);
   oid_arrays_.resize(oid_arrays.size());
   for (label_id_t label = 0; label < label_num; ++label) {
@@ -524,11 +519,6 @@ BasicArrowVertexMapBuilder<OID_T, VID_T>::BasicArrowVertexMapBuilder(
     : ArrowVertexMapBuilder<oid_t, vid_t>(client),
       fnum_(fnum),
       label_num_(label_num) {
-  if (IS_INTEGER_TYPE(OID_T)) {
-    is_string_oid_ = false;
-  } else {
-    is_string_oid_ = true;
-  }
   CHECK_EQ(oid_arrays.size(), label_num);
   oid_arrays_.resize(oid_arrays.size());
   for (label_id_t label = 0; label < label_num; ++label) {
@@ -566,7 +556,7 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
     }
     {
       // emplace oid -> gid and set o2g
-      if (is_string_oid_) {
+      if (!std::is_integral<OID_T>::value) {
         vineyard::HashmapBuilder<oid_t, vid_t> builder(client);
         builder.AssociateDataBuffer(varray->GetBuffer());
 

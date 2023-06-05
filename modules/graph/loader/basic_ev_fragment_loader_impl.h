@@ -26,6 +26,7 @@ limitations under the License.
 
 #include "grape/worker/comm_spec.h"
 
+#include "common/util/env.h"
 #include "common/util/static_if.h"
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/arrow_fragment_group.h"
@@ -37,7 +38,6 @@ limitations under the License.
 #include "graph/utils/table_shuffler_beta.h"
 #include "graph/vertex_map/arrow_local_vertex_map.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
-#include "common/util/env.h"
 
 namespace vineyard {
 
@@ -669,12 +669,14 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::constructVerticesImpl(
     std::shared_ptr<Object> vm_object;
     VY_OK_OR_RAISE(vm_builder.Seal(client_, vm_object));
     new_vm_id = vm_object->id();
-    LOG(INFO) << "Vertex map construction time: "
-              << (GetCurrentTime() - time) << "s";
+    LOG(INFO) << "Vertex map construction time: " << (GetCurrentTime() - time)
+              << "s";
     uint64_t post_memory_usage = get_rss() / 1024 / 1024;
     uint64_t post_max_memory_usage = get_peak_rss() / 1024 / 1024;
-    LOG(INFO) << "pre memory_usage:" << memory_usage << ", pre max_memory_usage:"
-              << max_memory_usage << ", post memory_usage:" << post_memory_usage << " post max memory usage:" << post_max_memory_usage;
+    LOG(INFO) << "pre memory_usage:" << memory_usage
+              << ", pre max_memory_usage:" << max_memory_usage
+              << ", post memory_usage:" << post_memory_usage
+              << " post max memory usage:" << post_max_memory_usage;
     LOG(INFO) << "Delta memory usage: " << post_memory_usage - memory_usage;
   } else {
     auto old_vm_ptr =

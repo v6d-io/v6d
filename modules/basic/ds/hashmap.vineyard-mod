@@ -48,9 +48,6 @@ namespace vineyard {
 #pragma GCC diagnostic ignored "-Wattributes"
 #endif
 
-#define IS_INTEGER_TYPE(K)                                                \
-  (std::is_same<K, uint32_t>::value || std::is_same<K, int32_t>::value || \
-   std::is_same<K, int64_t>::value || std::is_same<K, uint64_t>::value)
 struct prime_hash_policy {
   prime_hash_policy() : current_prime_(1) {}
   prime_hash_policy(const prime_hash_policy& rhs)
@@ -347,8 +344,8 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   std::pair<K, V>* end() const { return nullptr; }
 
   template <typename K_ = K>
-  typename std::enable_if<IS_INTEGER_TYPE(K_), std::pair<K, V>*>::type find(
-      const K& key) {
+  typename std::enable_if<std::is_integral<K_>::value, std::pair<K, V>*>::type
+  find(const K& key) {
     // check if the key not exists.
     size_t index = bphf_.lookup(key);
     // Caution! Memory leak here.
@@ -356,8 +353,8 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   }
 
   template <typename K_ = K>
-  typename std::enable_if<!IS_INTEGER_TYPE(K_), std::pair<K, V>*>::type find(
-      const K& key) {
+  typename std::enable_if<!std::is_integral<K_>::value, std::pair<K, V>*>::type
+  find(const K& key) {
     LOG(INFO) << __func__ << " is not supported in string type.";
     return end();
   }
@@ -385,21 +382,21 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   }
 
   template <typename K_ = K>
-  typename std::enable_if<IS_INTEGER_TYPE(K_), void>::type
+  typename std::enable_if<std::is_integral<K_>::value, void>::type
   ConstructHashmapFunction(std::shared_ptr<ArrowArrayType<K>> array) {
     auto data_iterator = boomphf::range(
         static_cast<const K*>(array->raw_values()),
         static_cast<const K*>(array->raw_values() + array->length()));
     auto time_stamp = vineyard::GetCurrentTime();
-    bphf_ =
-        boomphf::mphf<K, hasher_t>(array->length(), data_iterator, currency_, 1.0f);
+    bphf_ = boomphf::mphf<K, hasher_t>(array->length(), data_iterator,
+                                       currency_, 1.0f);
     LOG(INFO) << "Construct perfect map of " << array->length()
               << " vertex takes " << vineyard::GetCurrentTime() - time_stamp
               << " s.";
   }
 
   template <typename K_ = K>
-  typename std::enable_if<!IS_INTEGER_TYPE(K_), void>::type
+  typename std::enable_if<!std::is_integral<K_>::value, void>::type
   ConstructHashmapFunction(std::shared_ptr<ArrowArrayType<K>> array) {
     LOG(INFO) << "Perfect map for string is not supported yet.";
   }
@@ -410,9 +407,9 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   boomphf::mphf<K, hasher_t> bphf_;
 #if defined(__linux__) || defined(__linux) || defined(linux) || \
     defined(__gnu_linux__)
-    int currency_ = sysconf(_SC_NPROCESSORS_ONLN);
+  int currency_ = sysconf(_SC_NPROCESSORS_ONLN);
 #else
-    int currency_ = 16;
+  int currency_ = 16;
 #endif
 
   friend class Client;

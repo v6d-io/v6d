@@ -49,13 +49,7 @@ class ArrowVertexMap
                 "Expect arrow_string_view in vertex map's OID_T");
 
  public:
-  ArrowVertexMap() {
-    if (IS_INTEGER_TYPE(OID_T)) {
-      is_string_oid_ = false;
-    } else {
-      is_string_oid_ = true;
-    }
-  }
+  ArrowVertexMap() {}
   ~ArrowVertexMap() {}
 
   static std::unique_ptr<vineyard::Object> Create() __attribute__((used)) {
@@ -69,12 +63,11 @@ class ArrowVertexMap
   bool GetOid(vid_t gid, oid_t& oid) const;
 
   template <typename K = OID_T>
-  typename std::enable_if<IS_INTEGER_TYPE(K), bool>::type GetGid(
+  typename std::enable_if<std::is_integral<K>::value, bool>::type GetGid(
       fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
     const std::pair<OID_T, VID_T>* res = o2g_p_[fid][label_id].find(oid);
     if (res) {
       gid = res->second;
-      // LOG(INFO) << "GetGid: " << oid << " -> " << gid;
       delete res;
       return true;
     }
@@ -82,7 +75,7 @@ class ArrowVertexMap
   }
 
   template <typename K = OID_T>
-  typename std::enable_if<!IS_INTEGER_TYPE(K), bool>::type GetGid(
+  typename std::enable_if<!std::is_integral<K>::value, bool>::type GetGid(
       fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
     auto iter = o2g_[fid][label_id].find(oid);
     if (iter != o2g_[fid][label_id].end()) {
@@ -144,7 +137,6 @@ class ArrowVertexMap
   std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays_;
   std::vector<std::vector<vineyard::Hashmap<oid_t, vid_t>>> o2g_;
   std::vector<std::vector<vineyard::PerfectHashmap<oid_t, vid_t>>> o2g_p_;
-  bool is_string_oid_;
 
   friend class ArrowVertexMapBuilder<OID_T, VID_T>;
   friend class BasicArrowVertexMapBuilder<OID_T, VID_T>;
@@ -160,13 +152,7 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
                 "Expect arrow_string_view in local vertex map's OID_T");
 
  public:
-  explicit ArrowVertexMapBuilder(vineyard::Client& client) {
-    if (IS_INTEGER_TYPE(OID_T)) {
-      is_string_oid_ = false;
-    } else {
-      is_string_oid_ = true;
-    }
-  }
+  explicit ArrowVertexMapBuilder(vineyard::Client& client) {}
 
   void set_fnum_label_num(fid_t fnum, label_id_t label_num);
 
@@ -203,7 +189,6 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
       oid_arrays_;
   std::vector<std::vector<vineyard::Hashmap<oid_t, vid_t>>> o2g_;
   std::vector<std::vector<vineyard::PerfectHashmap<oid_t, vid_t>>> o2g_p_;
-  bool is_string_oid_;
 };
 
 template <typename OID_T, typename VID_T>
@@ -236,7 +221,6 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
 
   std::vector<std::vector<std::vector<std::shared_ptr<oid_array_t>>>>
       oid_arrays_;
-  bool is_string_oid_;
 };
 
 }  // namespace vineyard

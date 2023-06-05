@@ -292,7 +292,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Reserve the size for the hashmap.
    *
    */
-  void reserve(size_t size) { 
+  void reserve(size_t size) {
     LOG(INFO) << __func__ << " is not finished.";
     vec_kv_.reserve(size);
   }
@@ -406,7 +406,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   }
 
   template <typename K_ = K>
-  typename std::enable_if<IS_INTEGER_TYPE(K_), void>::type Construct(
+  typename std::enable_if<std::is_integral<K_>::value, void>::type Construct(
       int concurrency = 1) {
     size_t count = 0;
     vec_kv_.resize(n_elements_);
@@ -462,7 +462,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   }
 
   template <typename K_ = K>
-  typename std::enable_if<!IS_INTEGER_TYPE(K_), void>::type Construct(
+  typename std::enable_if<!std::is_integral<K_>::value, void>::type Construct(
       int concurrency = 1) {
     LOG(INFO) << __func__ << " is not supported yet.";
   }
@@ -492,9 +492,9 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   uint64_t n_elements_ = 0;
 #if defined(__linux__) || defined(__linux) || defined(linux) || \
     defined(__gnu_linux__)
-    int currency_ = sysconf(_SC_NPROCESSORS_ONLN);
+  int currency_ = sysconf(_SC_NPROCESSORS_ONLN);
 #else
-    int currency_ = 16;
+  int currency_ = 16;
 #endif
 };
 

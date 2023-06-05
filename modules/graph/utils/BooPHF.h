@@ -1415,7 +1415,7 @@ class mphf {
   bool _fastmode;
   std::vector<elem_t> setLevelFastmode;
   //	std::vector< elem_t > setLevelFastmode_next; // todo shrinker le set e
-  //nram a chaque niveau  ?
+  // nram a chaque niveau  ?
 
   std::vector<std::vector<elem_t>> bufferperThread;
 
