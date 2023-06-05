@@ -45,7 +45,8 @@ template <typename OID_T, typename VID_T, typename PARTITIONER_T>
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::BasicEVFragmentLoader(
     Client& client, const grape::CommSpec& comm_spec,
     const PARTITIONER_T& partitioner, bool directed, bool generate_eid,
-    bool retain_oid, bool local_vertex_map, bool compact_edges)
+    bool retain_oid, bool local_vertex_map, bool compact_edges,
+    bool use_perfect_hash)
     : client_(client),
       comm_spec_(comm_spec),
       partitioner_(partitioner),
@@ -53,7 +54,8 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::BasicEVFragmentLoader(
       generate_eid_(generate_eid),
       retain_oid_(retain_oid),
       local_vertex_map_(local_vertex_map),
-      compact_edges_(compact_edges) {}
+      compact_edges_(compact_edges),
+      use_perfect_hash_(use_perfect_hash) {}
 
 /**
  * @brief Add a loaded vertex table.
@@ -661,7 +663,8 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::constructVerticesImpl(
     uint64_t max_memory_usage = get_peak_rss() / 1024 / 1024;
     uint64_t time = GetCurrentTime();
     BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
-        client_, comm_spec_.fnum(), vertex_label_num_, std::move(oid_lists));
+        client_, comm_spec_.fnum(), vertex_label_num_, std::move(oid_lists),
+        use_perfect_hash_);
     // oid_lists.clear();
 
     // vm_object -> vertex map

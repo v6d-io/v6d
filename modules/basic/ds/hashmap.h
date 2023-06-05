@@ -32,8 +32,8 @@ limitations under the License.
 #include "common/util/arrow.h"
 #include "common/util/uuid.h"
 
-#include "graph/fragment/property_graph_utils.h"
 #include "BBHash/BooPHF.h"
+#include "graph/fragment/property_graph_utils.h"
 
 namespace vineyard {
 
@@ -244,9 +244,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Reserve the size for the hashmap.
    *
    */
-  void reserve(size_t size) {
-    vec_kv_.reserve(size);
-  }
+  void reserve(size_t size) { vec_kv_.reserve(size); }
 
   template <typename K_ = K>
   typename std::enable_if<std::is_integral<K_>::value, void>::type Construct(
