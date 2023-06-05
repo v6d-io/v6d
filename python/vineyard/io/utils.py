@@ -122,19 +122,19 @@ class BaseStreamExecutor:
 
 
 class ThreadStreamExecutor:
-    def __init__(self, executor_cls, parallism: int = None, **kwargs):
-        if parallism is None:
-            self._parallism = multiprocessing.cpu_count()
+    def __init__(self, executor_cls, parallelism: int = None, **kwargs):
+        if parallelism is None:
+            self._parallelism = multiprocessing.cpu_count()
         else:
-            self._parallism = parallism
-        self._executors = [executor_cls(**kwargs) for _ in range(self._parallism)]
+            self._parallelism = parallelism
+        self._executors = [executor_cls(**kwargs) for _ in range(self._parallelism)]
 
     def execute(self):
         def start_to_execute(executor: BaseStreamExecutor):
             return executor.execute()
 
         with concurrent.futures.ThreadPoolExecutor(
-            max_workers=self._parallism
+            max_workers=self._parallelism
         ) as executor:
             results = [
                 executor.submit(start_to_execute, exec) for exec in self._executors

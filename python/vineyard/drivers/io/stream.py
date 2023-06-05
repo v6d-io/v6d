@@ -19,6 +19,7 @@
 import base64
 import json
 import logging
+import multiprocessing
 import os
 from typing import Callable
 from typing import List
@@ -707,7 +708,7 @@ def merge_global_object(vineyard_endpoint, results: List[List[ObjectID]]) -> Obj
 
 
 def write_bytes_collection(
-    path, byte_stream, vineyard_socket, storage_options, *args, handlers=None, **kwargs
+    vineyard_socket, path, byte_stream, storage_options, *args, handlers=None, **kwargs
 ):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
@@ -726,7 +727,7 @@ def write_bytes_collection(
 
 
 def read_bytes_collection(
-    path, vineyard_socket, storage_options, *args, handlers=None, **kwargs
+    vineyard_socket, path, storage_options, *args, handlers=None, **kwargs
 ):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
@@ -743,7 +744,7 @@ def read_bytes_collection(
     return launcher.wait()
 
 
-def serialize_to_stream(object_id, vineyard_socket, *args, handlers=None, **kwargs):
+def serialize_to_stream(vineyard_socket, object_id, *args, handlers=None, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     serialization_options = kwargs.pop("serialization_options", {})
     serialization_options = base64.b64encode(
@@ -763,28 +764,49 @@ def serialize_to_stream(object_id, vineyard_socket, *args, handlers=None, **kwar
     return launcher.wait()
 
 
-def serialize(path, object_id, vineyard_socket, *args, handlers=None, **kwargs):
+def serialize(
+    path,
+    object_id,
+    vineyard_socket,
+    *args,
+    handlers=None,
+    parallelism=multiprocessing.cpu_count(),
+    **kwargs,
+):
     path = json.dumps(path)
     storage_options = kwargs.pop("storage_options", {})
+    storage_options['parallelism'] = parallelism
     storage_options = base64.b64encode(
         json.dumps(storage_options).encode("utf-8")
     ).decode("utf-8")
+    serialization_options = kwargs.pop("serialization_options", {})
+    serialization_options['parallelism'] = parallelism
+    serialization_options = base64.b64encode(
+        json.dumps(serialization_options).encode("utf-8")
+    ).decode("utf-8")
 
     stream = serialize_to_stream(
-        object_id, vineyard_socket, *args, handlers=handlers, **kwargs.copy()
+        vineyard_socket,
+        object_id,
+        serialization_options,
+        *args,
+        handlers=handlers,
+        parallelism=parallelism,
+        **kwargs.copy(),
     )
     write_bytes_collection(
+        vineyard_socket,
         path,
         stream,
-        vineyard_socket,
         storage_options,
         *args,
         handlers=handlers,
+        parallelism=parallelism,
         **kwargs.copy(),
     )
 
 
-def deserialize_from_stream(stream, vineyard_socket, *args, handlers=None, **kwargs):
+def deserialize_from_stream(vineyard_socket, stream, *args, handlers=None, **kwargs):
     deployment = kwargs.pop("deployment", "ssh")
     launcher = ParallelStreamLauncher(deployment)
     launcher.run(
@@ -799,16 +821,39 @@ def deserialize_from_stream(stream, vineyard_socket, *args, handlers=None, **kwa
     return launcher.join_with_aggregator(aggregator=merge_global_object)
 
 
-def deserialize(path, vineyard_socket, *args, handlers=None, **kwargs):
+def deserialize(
+    path,
+    vineyard_socket,
+    *args,
+    handlers=None,
+    parallelism=multiprocessing.cpu_count(),
+    **kwargs,
+):
     storage_options = kwargs.pop("storage_options", {})
+    storage_options['parallelism'] = parallelism
     storage_options = base64.b64encode(
         json.dumps(storage_options).encode("utf-8")
     ).decode("utf-8")
+    deserialization_options = kwargs.pop("deserialization_options", {})
+    deserialization_options['parallelism'] = parallelism
+    deserialization_options = base64.b64encode(
+        json.dumps(deserialization_options).encode("utf-8")
+    ).decode("utf-8")
     stream = read_bytes_collection(
-        path, vineyard_socket, storage_options, *args, handlers=handlers, **kwargs
+        vineyard_socket,
+        path,
+        storage_options,
+        *args,
+        handlers=handlers,
+        **kwargs,
     )
     return deserialize_from_stream(
-        stream, vineyard_socket, *args, handlers=handlers, **kwargs.copy()
+        vineyard_socket,
+        stream,
+        deserialization_options,
+        *args,
+        handlers=handlers,
+        **kwargs.copy(),
     )
 
 
