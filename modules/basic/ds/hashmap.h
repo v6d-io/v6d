@@ -33,7 +33,7 @@ limitations under the License.
 #include "common/util/uuid.h"
 
 #include "graph/fragment/property_graph_utils.h"
-#include "graph/utils/BooPHF.h"
+#include "graph/thirdparty/BBHash/BooPHF.h"
 
 #if defined(__linux__) || defined(__linux) || defined(linux) || \
     defined(__gnu_linux__)
