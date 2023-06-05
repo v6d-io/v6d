@@ -247,8 +247,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   void reserve(size_t size) { vec_kv_.reserve(size); }
 
   template <typename K_ = K>
-  typename std::enable_if<std::is_integral<K_>::value, void>::type Construct(
-      const int concurrency = std::thread::hardware_concurrency()) {
+  typename std::enable_if<std::is_integral<K_>::value, void>::type Construct() {
     size_t count = 0;
     vec_kv_.resize(n_elements_);
     vec_k_.resize(vec_kv_.size());
@@ -262,15 +261,15 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
 
     auto data_iterator = boomphf::range(vec_k_.begin(), vec_k_.end());
     auto bphf = boomphf::mphf<K, hasher_t>(vec_k_.size(), data_iterator,
-                                           concurrency, 1.0f);
+                                           concurrency_, 1.0f);
 
     vec_v_.resize(count);
-    count = vec_k_.size() / concurrency;
+    count = vec_k_.size() / concurrency_;
     start_time = GetCurrentTime();
     parallel_for(
-        0, concurrency,
+        0, concurrency_,
         [&](const int i) {
-          if (unlikely(i == concurrency - 1)) {
+          if (unlikely(i == concurrency_ - 1)) {
             for (size_t j = i * count; j < vec_v_.size(); j++) {
               vec_v_[bphf.lookup(vec_k_[j])] = vec_kv_[j].second;
             }
@@ -280,21 +279,23 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
             }
           }
         },
-        concurrency);
+        concurrency_);
     VLOG(100) << "Parallel for constructing the vec_v_ takes "
               << GetCurrentTime() - start_time << " s.";
   }
 
   template <typename K_ = K>
-  typename std::enable_if<!std::is_integral<K_>::value, void>::type Construct(
-      const int concurrency = std::thread::hardware_concurrency()) {}
+  typename std::enable_if<!std::is_integral<K_>::value, void>::type
+  Construct() {
+    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
+  }
 
   /**
    * @brief Build the hashmap object.
    *
    */
   Status Build(Client& client) override {
-    Construct(currency_);
+    Construct();
 
     auto ph_values_builder =
         std::make_shared<ArrayBuilder<V>>(client, vec_v_.data(), vec_v_.size());
@@ -312,12 +313,8 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   std::vector<K> vec_k_;
   std::vector<std::pair<K, V>> vec_kv_;
   uint64_t n_elements_ = 0;
-#if defined(__linux__) || defined(__linux) || defined(linux) || \
-    defined(__gnu_linux__)
-  int currency_ = sysconf(_SC_NPROCESSORS_ONLN);
-#else
-  int currency_ = 16;
-#endif
+
+  int concurrency_ = std::thread::hardware_concurrency();
 };
 
 }  // namespace vineyard

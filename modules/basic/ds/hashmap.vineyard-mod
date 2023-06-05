@@ -404,11 +404,6 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
   friend class Client;
   friend class PerfectHashmapBaseBuilder<K, V>;
-
-  size_t hash_object(const K& key) const {
-    LOG(INFO) << __func__ << " Not implemented yet";
-    return 0;
-  }
 };
 
 #ifdef __GNUC__
