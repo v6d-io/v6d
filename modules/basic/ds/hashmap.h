@@ -423,15 +423,6 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     auto bphf = boomphf::mphf<K, hasher_t>(vec_k_.size(), data_iterator,
                                            concurrency, 1.0f);
 
-    // std::vector<V> vec_v_temp;
-    // vec_v_temp.resize(count);
-    // start_time = GetCurrentTime();
-    // for (size_t i = 0; i < vec_v_temp.size(); i++) {
-    //   vec_v_temp[bphf.lookup(vec_k_[i])] = vec_kv_[i].second;
-    // }
-    // LOG(INFO) << "Constructing the vec_v_ takes "
-    //           << GetCurrentTime() - start_time << " s.";
-
     vec_v_.resize(count);
     count = vec_k_.size() / concurrency;
     start_time = GetCurrentTime();
@@ -451,14 +442,6 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
         concurrency);
     LOG(INFO) << "Parallel for constructing the vec_v_ takes "
               << GetCurrentTime() - start_time << " s.";
-    // LOG(INFO) << "Check";
-    // for (size_t i = 0; i < vec_v_.size(); i++) {
-    //   if (vec_v_[i] != vec_v_temp[i]) {
-    //     LOG(INFO) << "vec_v_[" << i << "] is not equal to vec_v_temp[" << i
-    //               << "].";
-    //   }
-    // }
-    // LOG(INFO) << "Check done.";
   }
 
   template <typename K_ = K>
