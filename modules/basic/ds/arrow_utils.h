@@ -221,6 +221,16 @@ Status CombineRecordBatches(
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
     std::shared_ptr<arrow::RecordBatch>* batch);
 
+Status CombineRecordBatches(
+    const std::shared_ptr<arrow::Schema> schema,
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::RecordBatch>* batch);
+
+Status CombineRecordBatches(
+    const std::shared_ptr<arrow::Schema> schema,
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Table>* table);
+
 Status TableToRecordBatches(
     const std::shared_ptr<arrow::Table> table,
     std::vector<std::shared_ptr<arrow::RecordBatch>>* batches);

@@ -24,8 +24,20 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#if defined(__has_include) && __has_include(<version>)
+#include <version>
+#endif
+
 #include "common/util/status.h"
 #include "graph/utils/error.h"
+
+#ifdef __cpp_lib_is_invocable
+template <class T, typename... Args>
+using result_of_t = std::invoke_result_t<T, Args...>;
+#else
+template <class T, typename... Args>
+using result_of_t = typename std::result_of<T(Args...)>::type;
+#endif
 
 namespace grape {
 class CommSpec;
@@ -48,10 +60,8 @@ class ThreadGroup {
 
   template <class F, class... Args>
   tid_t AddTask(F&& f, Args&&... args) {
-    static_assert(
-        std::is_same<return_t,
-                     typename std::result_of<F(Args...)>::type>::value,
-        "The return type of the task must be `Status`");
+    static_assert(std::is_same<return_t, result_of_t<F, Args...>>::value,
+                  "The return type of the task must be `Status`");
     if (stopped_.load()) {
       throw std::runtime_error("ThreadGroup is stopped");
     }
@@ -121,10 +131,8 @@ class DynamicThreadGroup {
 
   template <class F, class... Args>
   tid_t AddTask(F&& f, Args&&... args) {
-    static_assert(
-        std::is_same<return_t,
-                     typename std::result_of<F(Args...)>::type>::value,
-        "The return type of the task must be `Status`");
+    static_assert(std::is_same<return_t, result_of_t<F, Args...>>::value,
+                  "The return type of the task must be `Status`");
     if (stopped_) {
       throw std::runtime_error("DynamicThreadGroup is stopped");
     }

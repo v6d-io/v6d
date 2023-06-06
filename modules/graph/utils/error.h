@@ -21,10 +21,22 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#if defined(__has_include) && __has_include(<version>)
+#include <version>
+#endif
+
 #include "boost/leaf.hpp"
 
 #include "common/backtrace/backtrace.hpp"
 #include "graph/utils/mpi_utils.h"
+
+#ifdef __cpp_lib_is_invocable
+template <class T, typename... Args>
+using result_of_t = std::invoke_result_t<T, Args...>;
+#else
+template <class T, typename... Args>
+using result_of_t = typename std::result_of<T(Args...)>::type;
+#endif
 
 namespace vineyard {
 
@@ -174,11 +186,11 @@ inline GSError all_gather_error(const grape::CommSpec& comm_spec) {
 }
 
 template <class F_T, class... ARGS_T>
-inline typename std::result_of<
-    typename std::decay<F_T>::type(typename std::decay<ARGS_T>::type...)>::type
+inline result_of_t<typename std::decay<F_T>::type,
+                   typename std::decay<ARGS_T>::type...>
 sync_gs_error(const grape::CommSpec& comm_spec, F_T&& f, ARGS_T&&... args) {
-  using return_t = typename std::result_of<typename std::decay<F_T>::type(
-      typename std::decay<ARGS_T>::type...)>::type;
+  using return_t = result_of_t<typename std::decay<F_T>::type,
+                               typename std::decay<ARGS_T>::type...>;
   auto f_wrapper = [](F_T&& _f, ARGS_T&&... _args) -> return_t {
     try {
       return _f(std::forward<ARGS_T>(_args)...);
