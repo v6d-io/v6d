@@ -19,7 +19,7 @@ limitations under the License.
 #include <thread>
 
 namespace vineyard {
-  
+
 template <typename ITER_T, typename FUNC_T>
 void parallel_for(const ITER_T& begin, const ITER_T& end, const FUNC_T& func,
                   int thread_num, size_t chunk = 0) {

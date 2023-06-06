@@ -388,7 +388,7 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   template <typename K_ = K>
   typename std::enable_if<!std::is_integral<K_>::value, void>::type
   ConstructHashmapFunction(std::shared_ptr<ArrowArrayType<K>> array) {
-    LOG(INFO) << "Perfect map for string is not supported yet.";
+    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
   }
 
  private:
