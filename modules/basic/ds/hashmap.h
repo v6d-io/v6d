@@ -262,7 +262,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
 
     auto data_iterator = boomphf::range(vec_k_.begin(), vec_k_.end());
     auto bphf = boomphf::mphf<K, hasher_t>(vec_k_.size(), data_iterator,
-                                           concurrency_, 1.0f);
+                                           concurrency_, 2.5f);
 
     vec_v_.resize(count);
     count = vec_k_.size() / concurrency_;

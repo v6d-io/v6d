@@ -380,7 +380,7 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
         static_cast<const K*>(array->raw_values() + array->length()));
     auto time_stamp = vineyard::GetCurrentTime();
     bphf_ = boomphf::mphf<K, hasher_t>(array->length(), data_iterator,
-                                       concurrency_, 1.0f);
+                                       concurrency_, 2.5f);
     VLOG(100) << "Construct perfect map of " << array->length()
               << " vertex takes " << vineyard::GetCurrentTime() - time_stamp
               << " s.";
