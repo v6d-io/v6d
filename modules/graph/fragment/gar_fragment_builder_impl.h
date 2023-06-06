@@ -22,6 +22,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "basic/utils.h"
 #include "graph/fragment/gar_fragment_builder.h"
 #include "graph/fragment/property_graph_utils_impl.h"
 

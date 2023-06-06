@@ -27,13 +27,13 @@ limitations under the License.
 
 #include "basic/ds/array.h"
 #include "basic/ds/hashmap.vineyard.h"
+#include "basic/utils.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
 #include "common/util/uuid.h"
 
 #include "BBHash/BooPHF.h"
-#include "graph/fragment/property_graph_utils.h"
 
 namespace vineyard {
 

@@ -42,37 +42,6 @@ limitations under the License.
 
 namespace vineyard {
 
-template <typename ITER_T, typename FUNC_T>
-void parallel_for(const ITER_T& begin, const ITER_T& end, const FUNC_T& func,
-                  int thread_num, size_t chunk = 0) {
-  std::vector<std::thread> threads(thread_num);
-  size_t num = end - begin;
-  if (chunk == 0) {
-    chunk = (num + thread_num - 1) / thread_num;
-  }
-  std::atomic<size_t> cur(0);
-  for (int i = 0; i < thread_num; ++i) {
-    threads[i] = std::thread([&]() {
-      while (true) {
-        size_t x = cur.fetch_add(chunk);
-        if (x >= num) {
-          break;
-        }
-        size_t y = std::min(x + chunk, num);
-        ITER_T a = begin + x;
-        ITER_T b = begin + y;
-        while (a != b) {
-          func(a);
-          ++a;
-        }
-      }
-    });
-  }
-  for (auto& thrd : threads) {
-    thrd.join();
-  }
-}
-
 template <typename VID_T>
 boost::leaf::result<void> generate_outer_vertices_map(
     const IdParser<VID_T>& parser, fid_t fid,
