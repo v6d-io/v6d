@@ -331,34 +331,29 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   using value_type = std::pair<K, V>;
   typedef boomphf::SingleHashFunctor<K> hasher_t;
 
-  std::pair<K, V>* begin() const {
-    LOG(INFO) << "begin() is not supported in PerfectHashmap.";
-    return nullptr;
-  }
-
-  std::pair<K, V>* end() const { return nullptr; }
-
   template <typename K_ = K>
   typename std::enable_if<std::is_integral<K_>::value, std::pair<K, V>*>::type
   find(const K& key) {
     // check if the key not exists.
     size_t index = bphf_.lookup(key);
-    // Caution! Memory leak here.
+    if (index >= num_elements_) {
+      return nullptr;
+    }
     return new std::pair<K, V>(key, ph_values_[index]);
   }
 
   template <typename K_ = K>
   typename std::enable_if<!std::is_integral<K_>::value, std::pair<K, V>*>::type
   find(const K& key) {
-    LOG(INFO) << __func__ << " is not supported in string type.";
-    return end();
+    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
+    return nullptr;
   }
 
   const std::pair<K, V>* find(const K& key) const {
     return const_cast<PerfectHashmap<K, V>*>(this)->find(key);
   }
 
-  size_t count(const K& key) const { return find(key) == end() ? 0 : 1; }
+  size_t count(const K& key) const { return find(key) == nullptr ? 0 : 1; }
 
   size_t size() const { return num_elements_; }
 
@@ -370,7 +365,7 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
   const V& at(const K& key) const {
     auto found = this->find(key);
-    if (found == this->end()) {
+    if (found == nullptr) {
       throw std::out_of_range("Argument passed to at() was not in the map.");
     }
     return found->second;

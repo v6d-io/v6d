@@ -238,7 +238,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Get the size of the hashmap.
    *
    */
-  size_t size() const { return n_elements_; }
+  size_t size() const { return vec_kv_.size(); }
 
   /**
    * @brief Reserve the size for the hashmap.
