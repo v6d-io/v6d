@@ -16,7 +16,9 @@ limitations under the License.
 #ifndef MODULES_BASIC_UTILS_H_
 #define MODULES_BASIC_UTILS_H_
 
+#include <algorithm>
 #include <thread>
+#include <vector>
 
 namespace vineyard {
 
@@ -51,4 +53,5 @@ void parallel_for(const ITER_T& begin, const ITER_T& end, const FUNC_T& func,
   }
 }
 }  // namespace vineyard
+
 #endif  // MODULES_BASIC_UTILS_H_

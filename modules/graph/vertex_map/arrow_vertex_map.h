@@ -20,6 +20,7 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "basic/ds/arrow.h"
@@ -49,7 +50,7 @@ class ArrowVertexMap
                 "Expect arrow_string_view in vertex map's OID_T");
 
  public:
-  ArrowVertexMap(bool use_perfect_hash) : use_perfect_hash_(use_perfect_hash) {}
+  explicit ArrowVertexMap(bool use_perfect_hash) : use_perfect_hash_(use_perfect_hash) {}
   ~ArrowVertexMap() {}
 
   static std::unique_ptr<vineyard::Object> Create() __attribute__((used)) {
