@@ -386,15 +386,26 @@ Status RecordBatchesToTable(
                                      arrow::Table::FromRecordBatches(batches));
     return Status::OK();
   } else {
-    return EmptyTableBuilder::Build(schema, *table);
+    if (schema != nullptr) {
+      return EmptyTableBuilder::Build(schema, *table);
+    } else {
+      return Status::Invalid("Unable to create empty table without schema");
+    }
   }
 }
 
 Status CombineRecordBatches(
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
     std::shared_ptr<arrow::RecordBatch>* batch) {
+  return CombineRecordBatches(nullptr, batches, batch);
+}
+
+Status CombineRecordBatches(
+    const std::shared_ptr<arrow::Schema> schema,
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::RecordBatch>* batch) {
   std::shared_ptr<arrow::Table> table, combined_table;
-  RETURN_ON_ERROR(RecordBatchesToTable(batches, &table));
+  RETURN_ON_ERROR(RecordBatchesToTable(schema, batches, &table));
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       combined_table, table->CombineChunks(arrow::default_memory_pool()));
   arrow::TableBatchReader reader(*combined_table);
@@ -402,6 +413,17 @@ Status CombineRecordBatches(
   std::shared_ptr<arrow::RecordBatch> test_batch;
   RETURN_ON_ARROW_ERROR(reader.ReadNext(&test_batch));
   RETURN_ON_ASSERT(test_batch == nullptr);
+  return Status::OK();
+}
+
+Status CombineRecordBatches(
+    const std::shared_ptr<arrow::Schema> schema,
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Table>* table) {
+  std::shared_ptr<arrow::Table> chunked_table;
+  RETURN_ON_ERROR(RecordBatchesToTable(schema, batches, &chunked_table));
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(
+      *table, chunked_table->CombineChunks(arrow::default_memory_pool()));
   return Status::OK();
 }
 

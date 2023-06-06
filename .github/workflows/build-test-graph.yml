@@ -173,7 +173,7 @@ jobs:
               echo "|"
               echo "| to fix this error."
               echo "|"
-              echo "| Ensure you are working with clang-format-8, which can be obtained from"
+              echo "| Ensure you are working with clang-format-11, which can be obtained from"
               echo "|"
               echo "|    https://github.com/muttleyxd/clang-tools-static-binaries/releases "
               echo "|"

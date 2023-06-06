@@ -62,6 +62,11 @@ inline std::string generate_name_with_suffix(
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 class ArrowFragmentBaseBuilder;
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wattributes"
+#endif
+
 template <typename OID_T, typename VID_T,
           typename VERTEX_MAP_T =
               ArrowVertexMap<typename InternalType<OID_T>::type, VID_T>,
@@ -776,6 +781,10 @@ class [[vineyard]] ArrowFragment
             typename EDATA_T, typename _VERTEX_MAP_T, bool _COMPACT>
   friend class gs::ArrowProjectedFragment;
 };
+
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 }  // namespace vineyard
 

@@ -280,7 +280,11 @@ class TablePipelineSink {
       status += s;
     }
     RETURN_ON_ERROR(status);
-    RETURN_ON_ERROR(RecordBatchesToTable(schema_, batches, &table));
+    if (combine_chunks_) {
+      RETURN_ON_ERROR(CombineRecordBatches(schema_, batches, &table));
+    } else {
+      RETURN_ON_ERROR(RecordBatchesToTable(schema_, batches, &table));
+    }
     return Status::OK();
   }
 
