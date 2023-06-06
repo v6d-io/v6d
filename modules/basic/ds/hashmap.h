@@ -21,6 +21,7 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "flat_hash_map/flat_hash_map.hpp"
 #include "wyhash/wyhash.hpp"
