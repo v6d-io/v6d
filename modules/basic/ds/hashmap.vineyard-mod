@@ -364,14 +364,42 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
   bool empty() const { return num_elements_ == 0; }
 
-  const V& at(const K& key) const {
+  const V at(const K& key) const {
+    V ret = V();
     auto found = this->find(key);
     if (found == nullptr) {
       throw std::out_of_range("Argument passed to at() was not in the map.");
+    } else {
+      ret = found->second;
     }
-    return found->second;
+    return ret;
   }
 
+  template <typename K_ = K>
+  typename std::enable_if<std::is_integral<K_>::value, void>::type
+  PostConstructImpl() {
+    if (persist_key_) {
+      auto data_iterator = boomphf::range(
+          static_cast<const K*>(ph_keys_.data()),
+          static_cast<const K*>(ph_keys_.data() + ph_keys_.size()));
+      auto time_stamp = vineyard::GetCurrentTime();
+      bphf_ = boomphf::mphf<K, hasher_t>(ph_keys_.size(), data_iterator,
+                                         concurrency_, 2.5f);
+      VLOG(100) << "Construct perfect map of " << ph_keys_.size()
+                << " vertex takes " << vineyard::GetCurrentTime() - time_stamp
+                << " s.";
+    }
+  }
+
+  template <typename K_ = K>
+  typename std::enable_if<!std::is_integral<K_>::value, void>::type
+  PostConstructImpl() {
+    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
+  }
+
+  void PostConstruct(const ObjectMeta& meta) override { PostConstructImpl(); }
+
+  // For optmizing vertex map only.
   template <typename K_ = K>
   typename std::enable_if<std::is_integral<K_>::value, void>::type
   ConstructHashmapFunction(std::shared_ptr<ArrowArrayType<K>> array) {
@@ -394,7 +422,9 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
  private:
   [[shared]] size_t num_elements_;
+  [[shared]] bool persist_key_;
   [[shared]] Array<V> ph_values_;
+  [[shared]] Array<K> ph_keys_;
   boomphf::mphf<K, hasher_t> bphf_;
   int concurrency_ = std::thread::hardware_concurrency();
 

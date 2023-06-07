@@ -236,6 +236,18 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   }
 
   /**
+   * @brief Get the mapping value of the given key.
+   *
+   */
+  inline V operator[](const K& key) {
+    if (construct_flag_) {
+      return vec_v_[bphf_.lookup(key)];
+    }
+    LOG(INFO) << "Please get value after seal the hashmap.";
+    return V(0);
+  }
+
+  /**
    * @brief Get the size of the hashmap.
    *
    */
@@ -261,8 +273,8 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
               << GetCurrentTime() - start_time << " s.";
 
     auto data_iterator = boomphf::range(vec_k_.begin(), vec_k_.end());
-    auto bphf = boomphf::mphf<K, hasher_t>(vec_k_.size(), data_iterator,
-                                           concurrency_, 2.5f);
+    bphf_ = boomphf::mphf<K, hasher_t>(vec_k_.size(), data_iterator,
+                                       concurrency_, 2.5f);
 
     vec_v_.resize(count);
     count = vec_k_.size() / concurrency_;
@@ -272,17 +284,18 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
         [&](const int i) {
           if (unlikely(i == concurrency_ - 1)) {
             for (size_t j = i * count; j < vec_v_.size(); j++) {
-              vec_v_[bphf.lookup(vec_k_[j])] = vec_kv_[j].second;
+              vec_v_[bphf_.lookup(vec_k_[j])] = vec_kv_[j].second;
             }
           } else {
             for (size_t j = i * count; j < (i + 1) * count; j++) {
-              vec_v_[bphf.lookup(vec_k_[j])] = vec_kv_[j].second;
+              vec_v_[bphf_.lookup(vec_k_[j])] = vec_kv_[j].second;
             }
           }
         },
         concurrency_);
     VLOG(100) << "Parallel for constructing the vec_v_ takes "
               << GetCurrentTime() - start_time << " s.";
+    construct_flag_ = true;
   }
 
   template <typename K_ = K>
@@ -306,14 +319,30 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     this->set_ph_values_(
         std::static_pointer_cast<ObjectBase>(ph_values_builder));
 
+    if (persist_key_) {
+      this->set_persist_key_(true);
+      auto ph_keys_builder = std::make_shared<ArrayBuilder<K>>(
+          client, vec_k_.data(), vec_k_.size());
+      this->set_ph_keys_(std::static_pointer_cast<ObjectBase>(ph_keys_builder));
+    } else {
+      this->set_persist_key_(false);
+      auto ph_keys_builder = std::make_shared<ArrayBuilder<K>>(client, 0);
+      this->set_ph_keys_(std::static_pointer_cast<ObjectBase>(ph_keys_builder));
+    }
+
     return Status::OK();
   }
+
+  void inline not_persist_key() { persist_key_ = false; }
 
  private:
   std::vector<V> vec_v_;
   std::vector<K> vec_k_;
   std::vector<std::pair<K, V>> vec_kv_;
   uint64_t n_elements_ = 0;
+  bool construct_flag_ = false;
+  boomphf::mphf<K, hasher_t> bphf_;
+  bool persist_key_ = true;
 
   int concurrency_ = std::thread::hardware_concurrency();
 };

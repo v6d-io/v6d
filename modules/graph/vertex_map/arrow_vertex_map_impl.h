@@ -650,6 +650,7 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
           }
           ++cur_gid;
         }
+        builder.not_persist_key();
         RETURN_ON_ERROR(builder.Seal(client, object));
         this->set_o2g_p(
             fid, label,
