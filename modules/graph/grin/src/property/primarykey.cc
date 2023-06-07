@@ -11,9 +11,8 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
-extern "C" {
 #include "property/primarykey.h"
-}
+
 
 #ifdef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
 /** 

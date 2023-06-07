@@ -14,9 +14,7 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
-extern "C" {
 #include "partition/topology.h"
-}
 
 
 #if defined(GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST) && !defined(GRIN_WITH_VERTEX_PROPERTY)

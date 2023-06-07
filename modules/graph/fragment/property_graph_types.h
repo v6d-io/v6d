@@ -35,9 +35,6 @@ limitations under the License.
 #ifndef VARINT_ENCODING_BATCH_SIZE
 #define VARINT_ENCODING_BATCH_SIZE 16
 #endif
-extern "C" {
-#include "grin/topology/adjacentlist.h"
-}
 
 namespace vineyard {
 

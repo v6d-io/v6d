@@ -25,6 +25,10 @@ limitations under the License.
  * The final part is the rule part to handle dependencies between macros which should not be edited.
 */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef GRIN_INCLUDE_PREDEFINE_H_
 #define GRIN_INCLUDE_PREDEFINE_H_
 
@@ -923,3 +927,7 @@ typedef void* GRIN_LABEL_LIST;
 #endif
 
 #endif  // GRIN_INCLUDE_PREDEFINE_H_
+
+#ifdef __cplusplus
+}
+#endif

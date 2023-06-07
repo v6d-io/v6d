@@ -14,9 +14,7 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
-extern "C" {
 #include "topology/structure.h"
-}
 #include "client/client.h"
 
 GRIN_GRAPH grin_get_graph_from_storage(int argc, char** argv) {

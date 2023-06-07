@@ -11,10 +11,8 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
-extern "C" {
 #include "property/row.h"
 #include "common/error.h"
-}
 
 #ifdef GRIN_ENABLE_ROW
 void grin_destroy_row(GRIN_GRAPH g, GRIN_ROW r) {

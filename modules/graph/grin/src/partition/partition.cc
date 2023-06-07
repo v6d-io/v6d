@@ -14,9 +14,7 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
-extern "C" {
 #include "partition/partition.h"
-}
 #include "graph/fragment/property_graph_types.h"
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
