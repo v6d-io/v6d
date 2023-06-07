@@ -64,24 +64,7 @@ class ArrowVertexMap
 
   bool GetOid(vid_t gid, oid_t& oid) const;
 
-  bool GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
-    if (use_perfect_hash_) {
-      const std::pair<OID_T, VID_T>* res = o2g_p_[fid][label_id].find(oid);
-      if (res) {
-        gid = res->second;
-        delete res;
-        return true;
-      }
-      return false;
-    } else {
-      auto iter = o2g_[fid][label_id].find(oid);
-      if (iter != o2g_[fid][label_id].end()) {
-        gid = iter->second;
-        return true;
-      }
-      return false;
-    }
-  }
+  bool GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const;
 
   bool GetGid(label_id_t label_id, oid_t oid, vid_t& gid) const;
 
@@ -177,7 +160,7 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
       fid_t fid, label_id_t label,
       const std::shared_ptr<vineyard::PerfectHashmap<oid_t, vid_t>>& rm);
 
-  void set_perfect_hash_field(bool use_perfect_hash);
+  void set_perfect_hash(bool use_perfect_hash);
 
   Status _Seal(vineyard::Client& client,
                std::shared_ptr<vineyard::Object>& object) override;

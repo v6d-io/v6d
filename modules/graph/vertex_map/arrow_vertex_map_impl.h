@@ -41,7 +41,7 @@ void ArrowVertexMap<OID_T, VID_T>::Construct(const vineyard::ObjectMeta& meta) {
 
   this->fnum_ = meta.GetKeyValue<fid_t>("fnum");
   this->label_num_ = meta.GetKeyValue<label_id_t>("label_num");
-  this->use_perfect_hash_ = meta.GetKeyValue<bool>("use_perfect_hash_");
+  meta.GetKeyValue<bool>("use_perfect_hash_", this->use_perfect_hash_);
 
   id_parser_.Init(fnum_, label_num_);
   size_t nbytes = 0, local_oid_total = 0;
@@ -118,6 +118,26 @@ bool ArrowVertexMap<OID_T, VID_T>::GetOid(vid_t gid, oid_t& oid) const {
     }
   }
   return false;
+}
+
+template <typename OID_T, typename VID_T>
+bool ArrowVertexMap<OID_T, VID_T>::GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
+  if (use_perfect_hash_) {
+    const std::pair<OID_T, VID_T>* res = o2g_p_[fid][label_id].find(oid);
+    if (res) {
+      gid = res->second;
+      delete res;
+      return true;
+    }
+    return false;
+  } else {
+    auto iter = o2g_[fid][label_id].find(oid);
+    if (iter != o2g_[fid][label_id].end()) {
+      gid = iter->second;
+      return true;
+    }
+    return false;
+  }
 }
 
 template <typename OID_T, typename VID_T>
@@ -427,7 +447,7 @@ void ArrowVertexMapBuilder<OID_T, VID_T>::set_o2g_p(
 }
 
 template <typename OID_T, typename VID_T>
-void ArrowVertexMapBuilder<OID_T, VID_T>::set_perfect_hash_field(
+void ArrowVertexMapBuilder<OID_T, VID_T>::set_perfect_hash(
     bool use_perfect_hash) {
   use_perfect_hash_ = use_perfect_hash;
 }
@@ -437,6 +457,9 @@ Status ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
     vineyard::Client& client, std::shared_ptr<vineyard::Object>& object) {
   // ensure the builder hasn't been sealed yet.
   ENSURE_NOT_SEALED(this);
+  uint64_t memory_usage = get_rss() / 1024 / 1024;
+  uint64_t peak_memory_usage = get_peak_rss() / 1024 / 1024;
+  double time = GetCurrentTime();
 
   RETURN_ON_ERROR(this->Build(client));
 
@@ -507,6 +530,12 @@ Status ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
 
   // mark the builder as sealed
   this->set_sealed(true);
+  VLOG(100) << "Vertex map construction time: " << (GetCurrentTime() - time)
+            << "s";
+  VLOG(100) << "memory_usage(Before construct vertex map): " << memory_usage << " MB, "
+            << "peak memory usage(Before construct vertex map):" << peak_memory_usage << " MB, "
+            << "memory_usage(After construct vertex map): " << get_rss() / 1024 / 1024 << " MB, "
+            << "peak memory usage(After construct vertex map):" << get_peak_rss() / 1024 / 1024 << " MB";
   return Status::OK();
 }
 
@@ -561,9 +590,9 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
       typename InternalType<oid_t>::vineyard_array_type;
 
   if ((!std::is_integral<OID_T>::value) || (!use_perfect_hash_)) {
-    this->set_perfect_hash_field(false);
+    this->set_perfect_hash(false);
   } else {
-    this->set_perfect_hash_field(true);
+    this->set_perfect_hash(true);
   }
   this->set_fnum_label_num(fnum_, label_num_);
 
