@@ -121,7 +121,8 @@ bool ArrowVertexMap<OID_T, VID_T>::GetOid(vid_t gid, oid_t& oid) const {
 }
 
 template <typename OID_T, typename VID_T>
-bool ArrowVertexMap<OID_T, VID_T>::GetGid(fid_t fid, label_id_t label_id, oid_t oid, vid_t& gid) const {
+bool ArrowVertexMap<OID_T, VID_T>::GetGid(fid_t fid, label_id_t label_id,
+                                          oid_t oid, vid_t& gid) const {
   if (use_perfect_hash_) {
     const std::pair<OID_T, VID_T>* res = o2g_p_[fid][label_id].find(oid);
     if (res) {
@@ -532,10 +533,14 @@ Status ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
   this->set_sealed(true);
   VLOG(100) << "Vertex map construction time: " << (GetCurrentTime() - time)
             << "s";
-  VLOG(100) << "memory_usage(Before construct vertex map): " << memory_usage << " MB, "
-            << "peak memory usage(Before construct vertex map):" << peak_memory_usage << " MB, "
-            << "memory_usage(After construct vertex map): " << get_rss() / 1024 / 1024 << " MB, "
-            << "peak memory usage(After construct vertex map):" << get_peak_rss() / 1024 / 1024 << " MB";
+  VLOG(100) << "memory_usage(Before construct vertex map): " << memory_usage
+            << " MB, "
+            << "peak memory usage(Before construct vertex map):"
+            << peak_memory_usage << " MB, "
+            << "memory_usage(After construct vertex map): "
+            << get_rss() / 1024 / 1024 << " MB, "
+            << "peak memory usage(After construct vertex map):"
+            << get_peak_rss() / 1024 / 1024 << " MB";
   return Status::OK();
 }
 
