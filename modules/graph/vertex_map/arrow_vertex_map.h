@@ -160,7 +160,7 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
       fid_t fid, label_id_t label,
       const std::shared_ptr<vineyard::PerfectHashmap<oid_t, vid_t>>& rm);
 
-  void set_perfect_hash(bool use_perfect_hash);
+  void set_perfect_hash_(bool use_perfect_hash);
 
   Status _Seal(vineyard::Client& client,
                std::shared_ptr<vineyard::Object>& object) override;

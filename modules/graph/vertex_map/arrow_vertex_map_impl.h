@@ -447,7 +447,7 @@ void ArrowVertexMapBuilder<OID_T, VID_T>::set_o2g_p(
 }
 
 template <typename OID_T, typename VID_T>
-void ArrowVertexMapBuilder<OID_T, VID_T>::set_perfect_hash(
+void ArrowVertexMapBuilder<OID_T, VID_T>::set_perfect_hash_(
     bool use_perfect_hash) {
   use_perfect_hash_ = use_perfect_hash;
 }
@@ -590,9 +590,9 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
       typename InternalType<oid_t>::vineyard_array_type;
 
   if ((!std::is_integral<OID_T>::value) || (!use_perfect_hash_)) {
-    this->set_perfect_hash(false);
+    this->set_perfect_hash_(false);
   } else {
-    this->set_perfect_hash(true);
+    this->set_perfect_hash_(true);
   }
   this->set_fnum_label_num(fnum_, label_num_);
 
