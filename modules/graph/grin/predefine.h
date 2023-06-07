@@ -25,10 +25,6 @@ limitations under the License.
  * The final part is the rule part to handle dependencies between macros which should not be edited.
 */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifndef GRIN_INCLUDE_PREDEFINE_H_
 #define GRIN_INCLUDE_PREDEFINE_H_
 
@@ -502,6 +498,8 @@ typedef enum {
 */
 #define GRIN_ENABLE_VERTEX_PRIMARY_KEYS
 
+#define GRIN_ENABLE_VERTEX_PK_OF_INT64
+
 /** @ingroup PropertyMacros
  * @brief The storage provides natural number IDs for properties bound to
  * a certain vertex type.
@@ -547,6 +545,8 @@ typedef enum {
 */
 #define GRIN_ENABLE_EDGE_PRIMARY_KEYS
 
+#define GRIN_ENABLE_EDGE_PK_OF_INT64
+
 /** @ingroup PropertyMacros
  * @brief The storage provides natural number IDs for properties bound to
  * a certain edge type.
@@ -560,38 +560,6 @@ typedef enum {
  * structures like vertex list and adjacent list.
  */
 ///@{
-/** @ingroup TraitFilterTypeMacros
- * @brief The storage provides a filtering predicate of single-type vertices
- * for vertex list iterator. That means, the caller can use the predicate
- * to make a vertex list iterator for a certain type of vertices from the 
- * original iterator.
-*/
-#define GRIN_TRAIT_SELECT_TYPE_FOR_VERTEX_LIST
-
-/** @ingroup TraitFilterTypeMacros
- * @brief The storage provides a filtering predicate of single-type edges
- * for edge list iterator. That means, the caller can use the predicate
- * to make an edge list iterator for a certain type of edges from the 
- * original iterator.
-*/
-#define GRIN_TRAIT_SELECT_TYPE_FOR_EDGE_LIST
-
-/** @ingroup TraitFilterTypeMacros
- * @brief The storage provides a filtering predicate of single-type neighbors
- * for adjacent list iterator. That means, the caller can use the predicate
- * to make an adjacent list iterator of neighbors with a certain type from 
- * the original iterator.
-*/
-#define GRIN_TRAIT_SELECT_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
-
-/** @ingroup TraitFilterTypeMacros
- * @brief The storage provides a filtering predicate of single-type edges
- * for adjacent list iterator. That means, the caller can use the predicate
- * to make an adjacent list iterator of edges with a certain type from 
- * the original iterator.
-*/
-#define GRIN_TRAIT_SELECT_EDGE_TYPE_FOR_ADJACENT_LIST
-
 /** @ingroup TraitFilterTypeMacros
  * @brief The storage provides specific relationship description for each
  * vertex-edge-vertex type traid. This means further optimizations can be
@@ -647,17 +615,15 @@ typedef enum {
 #undef GRIN_WITH_VERTEX_TYPE_NAME
 #undef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
 #undef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
+#undef GRIN_ENABLE_VERTEX_PK_OF_INT64
 #undef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
 #undef GRIN_WITH_EDGE_PROPERTY
 #undef GRIN_WITH_EDGE_PROPERTY_NAME
 #undef GRIN_WITH_EDGE_TYPE_NAME
 #undef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
 #undef GRIN_ENABLE_EDGE_PRIMARY_KEYS
+#undef GRIN_ENABLE_EDGE_PK_OF_INT64
 #undef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
-#undef GRIN_TRAIT_SELECT_TYPE_FOR_VERTEX_LIST
-#undef GRIN_TRAIT_SELECT_TYPE_FOR_EDGE_LIST
-#undef GRIN_TRAIT_SELECT_NEIGHBOR_TYPE_FOR_ADJACENT_LIST
-#undef GRIN_TRAIT_SELECT_EDGE_TYPE_FOR_ADJACENT_LIST
 #undef GRIN_TRAIT_SPECIFIC_VEV_RELATION
 #undef GRIN_ASSUME_MASTER_ONLY_PARTITION_FOR_VERTEX_PROPERTY
 #undef GRIN_ASSUME_REPLICATE_MASTER_MIRROR_PARTITION_FOR_VERTEX_PROPERTY
@@ -673,7 +639,7 @@ typedef enum {
 #define GRIN_WITH_VERTEX_PROPERTY_NAME
 #define GRIN_WITH_VERTEX_TYPE_NAME
 #define GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
-#define GRIN_ENABLE_VERTEX_PRIMARY_KEYS
+#define GRIN_ENABLE_VERTEX_PK_OF_INT64
 #define GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
 #define GRIN_WITH_EDGE_PROPERTY
 #define GRIN_WITH_EDGE_PROPERTY_NAME
@@ -770,6 +736,10 @@ typedef enum {
 #define GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_STRING
 ///@}
 
+#define GRIN_ENABLE_VERTEX_PK_INDEX
+
+#define GRIN_ENABLE_EDGE_PK_INDEX
+
 #ifndef GRIN_DOXYGEN_SKIP
 // GRIN_DEFAULT_DISABLE
 #undef GRIN_WITH_VERTEX_LABEL
@@ -777,11 +747,14 @@ typedef enum {
 #undef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
 #undef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
 #undef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_STRING
+#undef GRIN_ENABLE_VERTEX_PK_INDEX
+#undef GRIN_ENABLE_EDGE_PK_INDEX
 // GRIN_END
 
 // GRIN_STORAGE_ENABLE
 #define GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
 #define GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
+#define GRIN_ENABLE_VERTEX_PK_INDEX
 // GRIN_END
 
 // GRIN_FEATURE_DEPENDENCY
@@ -927,7 +900,3 @@ typedef void* GRIN_LABEL_LIST;
 #endif
 
 #endif  // GRIN_INCLUDE_PREDEFINE_H_
-
-#ifdef __cplusplus
-}
-#endif

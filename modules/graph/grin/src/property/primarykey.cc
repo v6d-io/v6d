@@ -11,8 +11,9 @@ limitations under the License.
 */
 
 #include "graph/grin/src/predefine.h"
+extern "C" {
 #include "property/primarykey.h"
-
+}
 
 #ifdef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
 /** 
@@ -46,36 +47,13 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_primary_keys_by_vertex_type(GRIN_GRAPH g, GRI
     return vpl;
 }
 
-/** 
- * @brief get the vertex with the given primary keys
- * @param GRIN_GRAPH the graph
- * @param GRIN_VERTEX_TYPE the vertex type which determines the property list for primary keys
- * @param GRIN_ROW the values of primary keys
-*/
-GRIN_VERTEX grin_get_vertex_by_primary_keys(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_ROW r) {
+GRIN_ROW grin_get_primary_keys_row_by_vertex(GRIN_GRAPH, GRIN_VERTEX);
+#endif
+
+#ifdef GRIN_ENABLE_VERTEX_PK_OF_INT64
+long long int grin_get_vertex_pk_of_int64(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto _r = static_cast<GRIN_ROW_T*>(r);
-    auto value = (*_r)[0];
-#if 0
-    for (auto p = 0; p < _g->vertex_property_num(vtype); ++p) {
-        if (_g->schema().GetVertexPropertyName(vtype, p) == "id") {
-            auto arrow_dt = _g->schema().GetVertexPropertyType(vtype, p);
-            auto dt = ArrowToDataType(arrow_dt);
-            
-            if (dt == GRIN_DATATYPE::Int64) {
-#endif
-                _GRIN_VERTEX_T v;
-                auto vid = static_cast<const int64_t*>(value);
-                if (!_g->GetVertex(vtype, *vid, v)) return GRIN_NULL_VERTEX;
-                return v.GetValue();
-#if 0
-            } else {
-                return GRIN_NULL_VERTEX;
-            }
-        }
-    }
-    return GRIN_NULL_VERTEX;
-#endif
+    return _g->GetId(_GRIN_VERTEX_T(v));
 }
 #endif
 
@@ -93,11 +71,9 @@ GRIN_EDGE_TYPE_LIST grin_get_edge_types_with_primary_keys(GRIN_GRAPH);
 */
 GRIN_EDGE_PROPERTY_LIST grin_get_primary_keys_by_edge_type(GRIN_GRAPH, GRIN_EDGE_TYPE);
 
-/** 
- * @brief get the edge with the given primary keys
- * @param GRIN_GRAPH the graph
- * @param GRIN_EDGE_PROPERTY_LIST the primary keys
- * @param GRIN_ROW the values of primary keys
-*/
-GRIN_EDGE grin_get_edge_by_primary_keys(GRIN_GRAPH, GRIN_EDGE_TYPE, GRIN_ROW);
+GRIN_ROW grin_get_primary_keys_row_by_edge(GRIN_GRAPH, GRIN_EDGE);
+#endif
+
+#ifdef GRIN_ENABLE_EDGE_PK_OF_INT64
+long long int grin_get_edge_pk_of_int64(GRIN_GRAPH, GRIN_EDGE);
 #endif

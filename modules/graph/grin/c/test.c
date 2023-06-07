@@ -7,6 +7,7 @@
 #include "index/label.h"
 #include "index/order.h"
 #include "index/original_id.h"
+#include "index/pk.h"
 #include "partition/partition.h"
 #include "partition/reference.h"
 #include "partition/topology.h"
@@ -678,6 +679,28 @@ void test_property_primary_key(int argc, char** argv) {
 }
 #endif
 
+void test_property_vertex_pk_of_int64(int argc, char** argv) {
+  printf(
+      "+++++++++++++++++++++ Test property/pk int64 "
+      "+++++++++++++++++++++\n");
+  GRIN_GRAPH g = get_graph(argc, argv, 0);
+
+FOR_VERTEX_LIST_BEGIN(g, vl)
+  FOR_VERTEX_BEGIN(g, vl, v)
+  long long int pk = grin_get_vertex_pk_of_int64(g, v);
+  printf("vertex pk: %lld\n", pk);
+
+#ifdef GRIN_ENABLE_VERTEX_PK_INDEX
+  GRIN_VERTEX v1 = grin_get_vertex_by_pk_of_int64(g, __vt, pk);
+  assert(grin_equal_vertex(g, v, v1));
+#endif
+
+  FOR_VERTEX_END(g, vl, v)
+FOR_VERTEX_LIST_END(g, vl)
+
+  grin_destroy_graph(g);
+}
+
 
 void test_error_code(int argc, char** argv) {
   printf("+++++++++++++++++++++ Test error code +++++++++++++++++++++\n");
@@ -704,6 +727,9 @@ void test_property(int argc, char** argv) {
   test_property_edge_property_value(argc, argv, IN);
 #ifdef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
   test_property_primary_key(argc, argv);
+#endif
+#ifdef GRIN_ENABLE_VERTEX_PK_OF_INT64
+  test_property_vertex_pk_of_int64(argc, argv);
 #endif
 #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
   // test_error_code(argc, argv);
@@ -869,7 +895,7 @@ FOR_VERTEX_LIST_BEGIN(g, vl)
   #ifdef GRIN_ENABLE_VERTEX_ORIGINAL_ID_OF_INT64
     long long int vid = grin_get_vertex_original_id_of_int64(g, v);
   #else
-    long long int vid = vcnt;
+    long long int vid = __vcnt;
   #endif
   #ifdef GRIN_ENABLE_GRAPH_PARTITION
     if (!grin_is_master_vertex(g, v)) {
