@@ -266,6 +266,62 @@ inline unsigned _grin_get_prop_from_property(unsigned long long int prop) {
     return (unsigned)(prop & 0xffffffff);
 }
 
+inline const void* _get_arrow_array_data_element(std::shared_ptr<arrow::Array> const& array, unsigned offset) {
+  if (array->type()->Equals(arrow::int8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int8Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::uint8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt8Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::int16())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int16Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::uint16())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt16Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::int32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int32Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::uint32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt32Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::int64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int64Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::uint64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt64Array>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::float32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::FloatArray>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::float64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::DoubleArray>(array)->raw_values() + offset);
+  } else if (array->type()->Equals(arrow::utf8())) {
+    return reinterpret_cast<const void*>(new std::string(
+        std::dynamic_pointer_cast<arrow::StringArray>(array).get()->GetView(offset)));
+  } else if (array->type()->Equals(arrow::large_utf8())) {
+    return reinterpret_cast<const void*>(new std::string(
+        std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get()->GetView(offset)));
+  } else if (array->type()->id() == arrow::Type::LIST) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::ListArray>(array).get() + offset);
+  } else if (array->type()->id() == arrow::Type::LARGE_LIST) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::LargeListArray>(array).get() + offset);
+  } else if (array->type()->id() == arrow::Type::FIXED_SIZE_LIST) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::FixedSizeListArray>(array).get() + offset);
+  } else if (array->type()->Equals(arrow::null())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::NullArray>(array).get() + offset);
+  } else {
+    LOG(ERROR) << "Unsupported arrow array type '" << array->type()->ToString()
+               << "', type id: " << array->type()->id();
+    return NULL;
+  }
+}
+
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 typedef unsigned GRIN_VERTEX_TYPE_T;
@@ -284,7 +340,7 @@ inline const void* _get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERT
     }
     unsigned vprop = _grin_get_prop_from_property(vp);
     auto array = _cache->vtables[vtype0]->column(vprop)->chunk(0);
-    return vineyard::get_arrow_array_data_element(array, _cache->id_parser.GetOffset(v));
+    return _get_arrow_array_data_element(array, _cache->id_parser.GetOffset(v));
 }
 #endif
 
@@ -306,7 +362,7 @@ inline const void* _get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE e
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     unsigned eprop = _grin_get_prop_from_property(ep);
     auto array = _cache->etables[etype]->column(eprop)->chunk(0);
-    return vineyard::get_arrow_array_data_element(array, _e->eid);
+    return _get_arrow_array_data_element(array, _e->eid);
 }
 #endif
 

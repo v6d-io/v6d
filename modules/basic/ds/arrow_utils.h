@@ -354,8 +354,6 @@ std::string type_name_from_arrow_type(
 
 const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array);
 
-const void* get_arrow_array_data_element(std::shared_ptr<arrow::Array> const& array, unsigned offset);
-
 Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Schema>>& schemas,
                   std::shared_ptr<arrow::Schema>& schema);
 
