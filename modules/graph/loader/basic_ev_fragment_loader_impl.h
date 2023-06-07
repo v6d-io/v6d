@@ -26,6 +26,7 @@ limitations under the License.
 
 #include "grape/worker/comm_spec.h"
 
+#include "common/util/env.h"
 #include "common/util/static_if.h"
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/arrow_fragment_group.h"
@@ -44,7 +45,8 @@ template <typename OID_T, typename VID_T, typename PARTITIONER_T>
 BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::BasicEVFragmentLoader(
     Client& client, const grape::CommSpec& comm_spec,
     const PARTITIONER_T& partitioner, bool directed, bool generate_eid,
-    bool retain_oid, bool local_vertex_map, bool compact_edges)
+    bool retain_oid, bool local_vertex_map, bool compact_edges,
+    bool use_perfect_hash)
     : client_(client),
       comm_spec_(comm_spec),
       partitioner_(partitioner),
@@ -52,7 +54,8 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::BasicEVFragmentLoader(
       generate_eid_(generate_eid),
       retain_oid_(retain_oid),
       local_vertex_map_(local_vertex_map),
-      compact_edges_(compact_edges) {}
+      compact_edges_(compact_edges),
+      use_perfect_hash_(use_perfect_hash) {}
 
 /**
  * @brief Add a loaded vertex table.
@@ -655,10 +658,13 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::constructVerticesImpl(
 
   ObjectID new_vm_id = InvalidObjectID();
   if (vm_id == InvalidObjectID()) {
+    // fill oid array.
     BasicArrowVertexMapBuilder<internal_oid_t, vid_t> vm_builder(
-        client_, comm_spec_.fnum(), vertex_label_num_, std::move(oid_lists));
+        client_, comm_spec_.fnum(), vertex_label_num_, std::move(oid_lists),
+        use_perfect_hash_);
     // oid_lists.clear();
 
+    // vm_object -> vertex map
     std::shared_ptr<Object> vm_object;
     VY_OK_OR_RAISE(vm_builder.Seal(client_, vm_object));
     new_vm_id = vm_object->id();

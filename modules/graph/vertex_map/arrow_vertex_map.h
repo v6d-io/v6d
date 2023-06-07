@@ -20,6 +20,7 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "basic/ds/arrow.h"
@@ -49,13 +50,14 @@ class ArrowVertexMap
                 "Expect arrow_string_view in vertex map's OID_T");
 
  public:
-  ArrowVertexMap() {}
+  explicit ArrowVertexMap(bool use_perfect_hash)
+      : use_perfect_hash_(use_perfect_hash) {}
   ~ArrowVertexMap() {}
 
   static std::unique_ptr<vineyard::Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<vineyard::Object>(
         std::unique_ptr<ArrowVertexMap<OID_T, VID_T>>{
-            new ArrowVertexMap<OID_T, VID_T>()});
+            new ArrowVertexMap<OID_T, VID_T>(false)});
   }
 
   void Construct(const vineyard::ObjectMeta& meta);
@@ -109,12 +111,14 @@ class ArrowVertexMap
 
   fid_t fnum_;
   label_id_t label_num_;
+  bool use_perfect_hash_;
 
   vineyard::IdParser<vid_t> id_parser_;
 
   // frag->label->oid
   std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays_;
   std::vector<std::vector<vineyard::Hashmap<oid_t, vid_t>>> o2g_;
+  std::vector<std::vector<vineyard::PerfectHashmap<oid_t, vid_t>>> o2g_p_;
 
   friend class ArrowVertexMapBuilder<OID_T, VID_T>;
   friend class BasicArrowVertexMapBuilder<OID_T, VID_T>;
@@ -149,16 +153,27 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
   void set_o2g(fid_t fid, label_id_t label,
                const std::shared_ptr<vineyard::Hashmap<oid_t, vid_t>>& rm);
 
+  void set_o2g_p(fid_t fid, label_id_t label,
+                 const vineyard::PerfectHashmap<oid_t, vid_t>& rm);
+
+  void set_o2g_p(
+      fid_t fid, label_id_t label,
+      const std::shared_ptr<vineyard::PerfectHashmap<oid_t, vid_t>>& rm);
+
+  void set_perfect_hash_(bool use_perfect_hash);
+
   Status _Seal(vineyard::Client& client,
                std::shared_ptr<vineyard::Object>& object) override;
 
  private:
   fid_t fnum_;
   label_id_t label_num_;
+  bool use_perfect_hash_;
 
   std::vector<std::vector<typename InternalType<oid_t>::vineyard_array_type>>
       oid_arrays_;
   std::vector<std::vector<vineyard::Hashmap<oid_t, vid_t>>> o2g_;
+  std::vector<std::vector<vineyard::PerfectHashmap<oid_t, vid_t>>> o2g_p_;
 };
 
 template <typename OID_T, typename VID_T>
@@ -174,18 +189,20 @@ class BasicArrowVertexMapBuilder : public ArrowVertexMapBuilder<OID_T, VID_T> {
  public:
   BasicArrowVertexMapBuilder(
       vineyard::Client& client, fid_t fnum, label_id_t label_num,
-      std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays);
+      std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays,
+      bool use_perfect_hash = false);
 
   BasicArrowVertexMapBuilder(
       vineyard::Client& client, fid_t fnum, label_id_t label_num,
-      std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>>
-          oid_arrays);
+      std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>> oid_arrays,
+      bool use_perfect_hash = false);
 
   vineyard::Status Build(vineyard::Client& client) override;
 
  private:
   fid_t fnum_;
   label_id_t label_num_;
+  bool use_perfect_hash_;
 
   vineyard::IdParser<vid_t> id_parser_;
 

@@ -307,6 +307,9 @@ static inline bool parse_options_from_config_json(
   if (config.contains("compact_edges")) {
     options.compact_edges = parse_boolean_value(config["compact_edges"]);
   }
+  if (config.contains("use_perfect_hash")) {
+    options.use_perfect_hash = parse_boolean_value(config["use_perfect_hash"]);
+  }
   return true;
 }
 

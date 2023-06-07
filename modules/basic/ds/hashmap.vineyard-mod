@@ -28,10 +28,14 @@ limitations under the License.
 #include "wyhash/wyhash.hpp"
 
 #include "basic/ds/array.vineyard.h"
+#include "basic/ds/arrow_utils.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
+#include "common/util/functions.h"
 #include "common/util/uuid.h"
+
+#include "BBHash/BooPHF.h"
 
 namespace vineyard {
 
@@ -91,6 +95,9 @@ struct typename_t<prime_number_hash_city<U>> {
 
 template <typename K, typename V, typename H, typename E>
 class HashmapBaseBuilder;
+
+template <typename K, typename V>
+class PerfectHashmapBaseBuilder;
 
 /**
  * @brief The hash map in vineyard.
@@ -317,6 +324,122 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
     return static_cast<const E&>(*this)(
         lhs, arrow_string_view{rhs.data() + diff_, rhs.size()});
   }
+};
+
+template <typename K, typename V>
+class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
+ public:
+  using value_type = std::pair<K, V>;
+  typedef boomphf::SingleHashFunctor<K> hasher_t;
+
+  template <typename K_ = K>
+  typename std::enable_if<std::is_integral<K_>::value, std::pair<K, V>*>::type
+  find(const K& key) {
+    // check if the key not exists.
+    size_t index = bphf_.lookup(key);
+    if (index >= num_elements_) {
+      return nullptr;
+    }
+    return new std::pair<K, V>(key, ph_values_[index]);
+  }
+
+  template <typename K_ = K>
+  typename std::enable_if<!std::is_integral<K_>::value, std::pair<K, V>*>::type
+  find(const K& key) {
+    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
+    return nullptr;
+  }
+
+  const std::pair<K, V>* find(const K& key) const {
+    return const_cast<PerfectHashmap<K, V>*>(this)->find(key);
+  }
+
+  size_t count(const K& key) const {
+    size_t ret;
+    auto found = this->find(key);
+    if (found == nullptr) {
+      ret = 0;
+    } else {
+      ret = 1;
+      delete found;
+    }
+    return ret;
+  }
+
+  size_t size() const { return num_elements_; }
+
+  size_t bucket_count() const { return num_elements_; }
+
+  float load_factor() const { return 1.0f; }
+
+  bool empty() const { return num_elements_ == 0; }
+
+  const V at(const K& key) const {
+    V ret = V();
+    auto found = this->find(key);
+    if (found == nullptr) {
+      throw std::out_of_range("Argument passed to at() was not in the map.");
+    } else {
+      ret = found->second;
+    }
+    return ret;
+  }
+
+  template <typename K_ = K>
+  typename std::enable_if<std::is_integral<K_>::value, void>::type
+  PostConstructImpl() {
+    if (persist_key_) {
+      auto data_iterator = boomphf::range(
+          static_cast<const K*>(ph_keys_.data()),
+          static_cast<const K*>(ph_keys_.data() + ph_keys_.size()));
+      auto time_stamp = vineyard::GetCurrentTime();
+      bphf_ = boomphf::mphf<K, hasher_t>(ph_keys_.size(), data_iterator,
+                                         concurrency_, 2.5f);
+      VLOG(100) << "Construct perfect map of " << ph_keys_.size()
+                << " vertex takes " << vineyard::GetCurrentTime() - time_stamp
+                << " s.";
+    }
+  }
+
+  template <typename K_ = K>
+  typename std::enable_if<!std::is_integral<K_>::value, void>::type
+  PostConstructImpl() {
+    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
+  }
+
+  void PostConstruct(const ObjectMeta& meta) override { PostConstructImpl(); }
+
+  // For optmizing vertex map only.
+  template <typename K_ = K>
+  typename std::enable_if<std::is_integral<K_>::value, void>::type
+  ConstructHashmapFunction(std::shared_ptr<ArrowArrayType<K>> array) {
+    auto data_iterator = boomphf::range(
+        static_cast<const K*>(array->raw_values()),
+        static_cast<const K*>(array->raw_values() + array->length()));
+    auto time_stamp = vineyard::GetCurrentTime();
+    bphf_ = boomphf::mphf<K, hasher_t>(array->length(), data_iterator,
+                                       concurrency_, 2.5f);
+    VLOG(100) << "Construct perfect map of " << array->length()
+              << " vertex takes " << vineyard::GetCurrentTime() - time_stamp
+              << " s.";
+  }
+
+  template <typename K_ = K>
+  typename std::enable_if<!std::is_integral<K_>::value, void>::type
+  ConstructHashmapFunction(std::shared_ptr<ArrowArrayType<K>> array) {
+    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
+  }
+
+ private:
+  [[shared]] size_t num_elements_;
+  [[shared]] bool persist_key_;
+  [[shared]] Array<V> ph_values_;
+  [[shared]] Array<K> ph_keys_;
+  boomphf::mphf<K, hasher_t> bphf_;
+  int concurrency_ = std::thread::hardware_concurrency();
+
+  friend class Client;
+  friend class PerfectHashmapBaseBuilder<K, V>;
 };
 
 #ifdef __GNUC__

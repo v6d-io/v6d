@@ -74,7 +74,8 @@ class BasicEVFragmentLoader {
       Client& client, const grape::CommSpec& comm_spec,
       const PARTITIONER_T& partitioner, bool directed = true,
       bool generate_eid = false, bool retain_oid = false,
-      bool local_vertex_map = false, bool compact_edges = false);
+      bool local_vertex_map = false, bool compact_edges = false,
+      bool use_perfect_hash_ = false);
 
   /**
    * @brief Add a loaded vertex table.
@@ -176,6 +177,7 @@ class BasicEVFragmentLoader {
   bool retain_oid_ = false;
   bool local_vertex_map_ = false;
   bool compact_edges_ = false;
+  bool use_perfect_hash_ = false;
 
   std::map<std::string, label_id_t> vertex_label_to_index_;
   std::vector<std::string> vertex_labels_;

@@ -41,28 +41,56 @@ void ArrowVertexMap<OID_T, VID_T>::Construct(const vineyard::ObjectMeta& meta) {
 
   this->fnum_ = meta.GetKeyValue<fid_t>("fnum");
   this->label_num_ = meta.GetKeyValue<label_id_t>("label_num");
+  meta.GetKeyValue<bool>("use_perfect_hash_", this->use_perfect_hash_);
 
   id_parser_.Init(fnum_, label_num_);
   size_t nbytes = 0, local_oid_total = 0;
   size_t o2g_total_bytes = 0, o2g_size = 0, o2g_bucket_count = 0;
-  o2g_.resize(fnum_);
+  if (!use_perfect_hash_) {
+    o2g_.resize(fnum_);
+  } else {
+    o2g_p_.resize(fnum_);
+  }
   oid_arrays_.resize(fnum_);
-  for (fid_t i = 0; i < fnum_; ++i) {
-    o2g_[i].resize(label_num_);
-    oid_arrays_[i].resize(label_num_);
-    for (label_id_t j = 0; j < label_num_; ++j) {
-      o2g_[i][j].Construct(meta.GetMemberMeta("o2g_" + std::to_string(i) + "_" +
-                                              std::to_string(j)));
 
-      typename InternalType<oid_t>::vineyard_array_type array;
-      array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
-                                         "_" + std::to_string(j)));
-      oid_arrays_[i][j] = array.GetArray();
+  if (!use_perfect_hash_) {
+    for (fid_t i = 0; i < fnum_; ++i) {
+      o2g_[i].resize(label_num_);
+      oid_arrays_[i].resize(label_num_);
+      for (label_id_t j = 0; j < label_num_; ++j) {
+        o2g_[i][j].Construct(meta.GetMemberMeta("o2g_" + std::to_string(i) +
+                                                "_" + std::to_string(j)));
 
-      local_oid_total += array.nbytes();
-      o2g_size += o2g_[i][j].size();
-      o2g_total_bytes += o2g_[i][j].nbytes();
-      o2g_bucket_count += o2g_[i][j].bucket_count();
+        typename InternalType<oid_t>::vineyard_array_type array;
+        array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
+                                           "_" + std::to_string(j)));
+        oid_arrays_[i][j] = array.GetArray();
+
+        local_oid_total += array.nbytes();
+        o2g_size += o2g_[i][j].size();
+        o2g_total_bytes += o2g_[i][j].nbytes();
+        o2g_bucket_count += o2g_[i][j].bucket_count();
+      }
+    }
+  } else {
+    for (fid_t i = 0; i < fnum_; ++i) {
+      o2g_p_[i].resize(label_num_);
+      oid_arrays_[i].resize(label_num_);
+      for (label_id_t j = 0; j < label_num_; ++j) {
+        o2g_p_[i][j].Construct(meta.GetMemberMeta("o2g_p_" + std::to_string(i) +
+                                                  "_" + std::to_string(j)));
+
+        typename InternalType<oid_t>::vineyard_array_type array;
+        array.Construct(meta.GetMemberMeta("oid_arrays_" + std::to_string(i) +
+                                           "_" + std::to_string(j)));
+        oid_arrays_[i][j] = array.GetArray();
+        o2g_p_[i][j].ConstructHashmapFunction(oid_arrays_[i][j]);
+
+        local_oid_total += array.nbytes();
+        o2g_size += o2g_p_[i][j].size();
+        o2g_total_bytes += o2g_p_[i][j].nbytes();
+        o2g_bucket_count += o2g_p_[i][j].bucket_count();
+      }
     }
   }
 
@@ -95,12 +123,22 @@ bool ArrowVertexMap<OID_T, VID_T>::GetOid(vid_t gid, oid_t& oid) const {
 template <typename OID_T, typename VID_T>
 bool ArrowVertexMap<OID_T, VID_T>::GetGid(fid_t fid, label_id_t label_id,
                                           oid_t oid, vid_t& gid) const {
-  auto iter = o2g_[fid][label_id].find(oid);
-  if (iter != o2g_[fid][label_id].end()) {
-    gid = iter->second;
-    return true;
+  if (use_perfect_hash_) {
+    const std::pair<OID_T, VID_T>* res = o2g_p_[fid][label_id].find(oid);
+    if (res) {
+      gid = res->second;
+      delete res;
+      return true;
+    }
+    return false;
+  } else {
+    auto iter = o2g_[fid][label_id].find(oid);
+    if (iter != o2g_[fid][label_id].end()) {
+      gid = iter->second;
+      return true;
+    }
+    return false;
   }
-  return false;
 }
 
 template <typename OID_T, typename VID_T>
@@ -352,10 +390,18 @@ void ArrowVertexMapBuilder<OID_T, VID_T>::set_fnum_label_num(
   fnum_ = fnum;
   label_num_ = label_num;
   oid_arrays_.resize(fnum_);
-  o2g_.resize(fnum_);
-  for (fid_t i = 0; i < fnum_; ++i) {
-    oid_arrays_[i].resize(label_num_);
-    o2g_[i].resize(label_num_);
+  if (use_perfect_hash_) {
+    o2g_p_.resize(fnum_);
+    for (fid_t i = 0; i < fnum_; ++i) {
+      oid_arrays_[i].resize(label_num_);
+      o2g_p_[i].resize(label_num_);
+    }
+  } else {
+    o2g_.resize(fnum_);
+    for (fid_t i = 0; i < fnum_; ++i) {
+      oid_arrays_[i].resize(label_num_);
+      o2g_[i].resize(label_num_);
+    }
   }
 }
 
@@ -381,6 +427,13 @@ void ArrowVertexMapBuilder<OID_T, VID_T>::set_o2g(
 }
 
 template <typename OID_T, typename VID_T>
+void ArrowVertexMapBuilder<OID_T, VID_T>::set_o2g_p(
+    fid_t fid, label_id_t label,
+    const vineyard::PerfectHashmap<oid_t, vid_t>& rm) {
+  o2g_p_[fid][label] = rm;
+}
+
+template <typename OID_T, typename VID_T>
 void ArrowVertexMapBuilder<OID_T, VID_T>::set_o2g(
     fid_t fid, label_id_t label,
     const std::shared_ptr<vineyard::Hashmap<oid_t, vid_t>>& rm) {
@@ -388,14 +441,31 @@ void ArrowVertexMapBuilder<OID_T, VID_T>::set_o2g(
 }
 
 template <typename OID_T, typename VID_T>
+void ArrowVertexMapBuilder<OID_T, VID_T>::set_o2g_p(
+    fid_t fid, label_id_t label,
+    const std::shared_ptr<vineyard::PerfectHashmap<oid_t, vid_t>>& rm) {
+  o2g_p_[fid][label] = *rm;
+}
+
+template <typename OID_T, typename VID_T>
+void ArrowVertexMapBuilder<OID_T, VID_T>::set_perfect_hash_(
+    bool use_perfect_hash) {
+  use_perfect_hash_ = use_perfect_hash;
+}
+
+template <typename OID_T, typename VID_T>
 Status ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
     vineyard::Client& client, std::shared_ptr<vineyard::Object>& object) {
   // ensure the builder hasn't been sealed yet.
   ENSURE_NOT_SEALED(this);
+  uint64_t memory_usage = get_rss() / 1024 / 1024;
+  uint64_t peak_memory_usage = get_peak_rss() / 1024 / 1024;
+  double time = GetCurrentTime();
 
   RETURN_ON_ERROR(this->Build(client));
 
-  auto vertex_map = std::make_shared<ArrowVertexMap<oid_t, vid_t>>();
+  auto vertex_map =
+      std::make_shared<ArrowVertexMap<oid_t, vid_t>>(use_perfect_hash_);
   object = vertex_map;
 
   vertex_map->fnum_ = fnum_;
@@ -411,28 +481,48 @@ Status ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
     }
   }
 
-  vertex_map->o2g_ = o2g_;
+  if (!use_perfect_hash_) {
+    vertex_map->o2g_ = o2g_;
+  } else {
+    vertex_map->o2g_p_ = o2g_p_;
+  }
 
   vertex_map->meta_.SetTypeName(type_name<ArrowVertexMap<oid_t, vid_t>>());
 
   vertex_map->meta_.AddKeyValue("fnum", fnum_);
   vertex_map->meta_.AddKeyValue("label_num", label_num_);
+  vertex_map->meta_.AddKeyValue("use_perfect_hash_", use_perfect_hash_);
 
   size_t nbytes = 0;
-  for (fid_t i = 0; i < fnum_; ++i) {
-    for (label_id_t j = 0; j < label_num_; ++j) {
-      vertex_map->meta_.AddMember(
-          "oid_arrays_" + std::to_string(i) + "_" + std::to_string(j),
-          oid_arrays_[i][j].meta());
-      nbytes += oid_arrays_[i][j].nbytes();
+  if (!use_perfect_hash_) {
+    for (fid_t i = 0; i < fnum_; ++i) {
+      for (label_id_t j = 0; j < label_num_; ++j) {
+        vertex_map->meta_.AddMember(
+            "oid_arrays_" + std::to_string(i) + "_" + std::to_string(j),
+            oid_arrays_[i][j].meta());
+        nbytes += oid_arrays_[i][j].nbytes();
 
-      vertex_map->meta_.AddMember(
-          "o2g_" + std::to_string(i) + "_" + std::to_string(j),
-          o2g_[i][j].meta());
-      nbytes += o2g_[i][j].nbytes();
+        vertex_map->meta_.AddMember(
+            "o2g_" + std::to_string(i) + "_" + std::to_string(j),
+            o2g_[i][j].meta());
+        nbytes += o2g_[i][j].nbytes();
+      }
+    }
+  } else {
+    for (fid_t i = 0; i < fnum_; ++i) {
+      for (label_id_t j = 0; j < label_num_; ++j) {
+        vertex_map->meta_.AddMember(
+            "oid_arrays_" + std::to_string(i) + "_" + std::to_string(j),
+            oid_arrays_[i][j].meta());
+        nbytes += oid_arrays_[i][j].nbytes();
+
+        vertex_map->meta_.AddMember(
+            "o2g_p_" + std::to_string(i) + "_" + std::to_string(j),
+            o2g_p_[i][j].meta());
+        nbytes += o2g_p_[i][j].nbytes();
+      }
     }
   }
-
   vertex_map->meta_.SetNBytes(nbytes);
 
   RETURN_ON_ERROR(client.CreateMetaData(vertex_map->meta_, vertex_map->id_));
@@ -441,13 +531,24 @@ Status ArrowVertexMapBuilder<OID_T, VID_T>::_Seal(
 
   // mark the builder as sealed
   this->set_sealed(true);
+  VLOG(100) << "Vertex map construction time: " << (GetCurrentTime() - time)
+            << "s";
+  VLOG(100) << "memory_usage(Before construct vertex map): " << memory_usage
+            << " MB, "
+            << "peak memory usage(Before construct vertex map):"
+            << peak_memory_usage << " MB, "
+            << "memory_usage(After construct vertex map): "
+            << get_rss() / 1024 / 1024 << " MB, "
+            << "peak memory usage(After construct vertex map):"
+            << get_peak_rss() / 1024 / 1024 << " MB";
   return Status::OK();
 }
 
 template <typename OID_T, typename VID_T>
 BasicArrowVertexMapBuilder<OID_T, VID_T>::BasicArrowVertexMapBuilder(
     vineyard::Client& client, fid_t fnum, label_id_t label_num,
-    std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays)
+    std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays,
+    bool use_perfect_hash)
     : ArrowVertexMapBuilder<oid_t, vid_t>(client),
       fnum_(fnum),
       label_num_(label_num) {
@@ -460,12 +561,14 @@ BasicArrowVertexMapBuilder<OID_T, VID_T>::BasicArrowVertexMapBuilder(
     }
   }
   id_parser_.Init(fnum_, label_num_);
+  use_perfect_hash_ = use_perfect_hash;
 }
 
 template <typename OID_T, typename VID_T>
 BasicArrowVertexMapBuilder<OID_T, VID_T>::BasicArrowVertexMapBuilder(
     vineyard::Client& client, fid_t fnum, label_id_t label_num,
-    std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>> oid_arrays)
+    std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>> oid_arrays,
+    bool use_perfect_hash)
     : ArrowVertexMapBuilder<oid_t, vid_t>(client),
       fnum_(fnum),
       label_num_(label_num) {
@@ -482,6 +585,7 @@ BasicArrowVertexMapBuilder<OID_T, VID_T>::BasicArrowVertexMapBuilder(
     }
   }
   id_parser_.Init(fnum_, label_num_);
+  use_perfect_hash_ = use_perfect_hash;
 }
 
 template <typename OID_T, typename VID_T>
@@ -490,6 +594,11 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
   using vineyard_oid_array_t =
       typename InternalType<oid_t>::vineyard_array_type;
 
+  if ((!std::is_integral<OID_T>::value) || (!use_perfect_hash_)) {
+    this->set_perfect_hash_(false);
+  } else {
+    this->set_perfect_hash_(true);
+  }
   this->set_fnum_label_num(fnum_, label_num_);
 
   auto fn = [&](const label_id_t label, const fid_t fid) -> Status {
@@ -501,30 +610,53 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
       RETURN_ON_ERROR(array_builder.Seal(client, object));
       varray = std::dynamic_pointer_cast<vineyard_oid_array_t>(object);
       this->set_oid_array(fid, label, varray);
-
       // release the reference
       oid_arrays_[label][fid].clear();
     }
     {
-      vineyard::HashmapBuilder<oid_t, vid_t> builder(client);
-      builder.AssociateDataBuffer(varray->GetBuffer());
+      // emplace oid -> gid and set o2g
+      if ((!std::is_integral<OID_T>::value) || (!use_perfect_hash_)) {
+        vineyard::HashmapBuilder<oid_t, vid_t> builder(client);
+        builder.AssociateDataBuffer(varray->GetBuffer());
 
-      auto array = varray->GetArray();
-      vid_t cur_gid = id_parser_.GenerateId(fid, label, 0);
-      int64_t vnum = array->length();
-      builder.reserve(static_cast<size_t>(vnum));
-      for (int64_t k = 0; k < vnum; ++k) {
-        if (!builder.emplace(array->GetView(k), cur_gid)) {
-          LOG(WARNING)
-              << "The vertex '" << array->GetView(k) << "' has been added "
-              << "more than once, please double check your vertices data";
+        auto array = varray->GetArray();
+        vid_t cur_gid = id_parser_.GenerateId(fid, label, 0);
+        int64_t vnum = array->length();
+        builder.reserve(static_cast<size_t>(vnum));
+        for (int64_t k = 0; k < vnum; ++k) {
+          if (!builder.emplace(array->GetView(k), cur_gid)) {
+            LOG(WARNING)
+                << "The vertex '" << array->GetView(k) << "' has been added "
+                << "more than once, please double check your vertices data";
+          }
+          ++cur_gid;
         }
-        ++cur_gid;
+        RETURN_ON_ERROR(builder.Seal(client, object));
+        this->set_o2g(
+            fid, label,
+            std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(object));
+      } else {
+        vineyard::PerfectHashmapBuilder<oid_t, vid_t> builder(client);
+
+        auto array = varray->GetArray();
+        vid_t cur_gid = id_parser_.GenerateId(fid, label, 0);
+        int64_t vnum = array->length();
+        builder.reserve(static_cast<size_t>(vnum));
+        for (int64_t k = 0; k < vnum; ++k) {
+          if (!builder.emplace(array->GetView(k), cur_gid)) {
+            LOG(WARNING)
+                << "The vertex '" << array->GetView(k) << "' has been added "
+                << "more than once, please double check your vertices data";
+          }
+          ++cur_gid;
+        }
+        builder.not_persist_key();
+        RETURN_ON_ERROR(builder.Seal(client, object));
+        this->set_o2g_p(
+            fid, label,
+            std::dynamic_pointer_cast<vineyard::PerfectHashmap<oid_t, vid_t>>(
+                object));
       }
-      RETURN_ON_ERROR(builder.Seal(client, object));
-      this->set_o2g(
-          fid, label,
-          std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(object));
     }
     return Status::OK();
   };

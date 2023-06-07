@@ -60,6 +60,7 @@ struct loader_options {
   bool compact_edges = false;
   bool print_memory_usage = false;
   bool print_normalized_schema = false;
+  bool use_perfect_hash = false;
 };
 
 template <typename OID_T, typename VID_T>

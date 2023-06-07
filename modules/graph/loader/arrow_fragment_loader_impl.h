@@ -85,7 +85,7 @@ boost::leaf::result<ObjectID> ArrowFragmentLoader<OID_T, VID_T>::LoadFragment(
 
   auto basic_fragment_loader = std::make_shared<basic_fragment_loader_t>(
       client_, comm_spec_, partitioner_, directed_, generate_eid_, retain_oid_,
-      local_vertex_map_, compact_edges_);
+      local_vertex_map_, compact_edges_, use_perfect_hash_);
 
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-0";
   for (auto const& pair : vertex_tables_with_label) {
@@ -321,7 +321,7 @@ ArrowFragmentLoader<OID_T, VID_T>::addVerticesAndEdges(
 
   auto basic_fragment_loader = std::make_shared<basic_fragment_loader_t>(
       client_, comm_spec_, partitioner_, directed_, generate_eid_, retain_oid_,
-      local_vertex_map_, compact_edges_);
+      local_vertex_map_, compact_edges_, use_perfect_hash_);
 
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-0";
   for (auto& pair : vertex_tables_with_label) {

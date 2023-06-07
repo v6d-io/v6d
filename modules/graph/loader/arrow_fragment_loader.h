@@ -270,7 +270,7 @@ class ArrowFragmentLoader : public DataLoader {
                       const std::vector<std::string>& vfiles,
                       bool directed = true, bool generate_eid = false,
                       bool retain_oid = false, bool local_vertex_map = false,
-                      bool compact_edges = false)
+                      bool compact_edges = false, bool use_perfect_hash = false)
       : DataLoader(client, comm_spec, efiles, vfiles),
         client_(client),
         comm_spec_(comm_spec),
@@ -278,13 +278,14 @@ class ArrowFragmentLoader : public DataLoader {
         generate_eid_(generate_eid),
         retain_oid_(retain_oid),
         local_vertex_map_(local_vertex_map),
-        compact_edges_(compact_edges) {}
+        compact_edges_(compact_edges),
+        use_perfect_hash_(use_perfect_hash) {}
 
   ArrowFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
                       const std::vector<std::string>& efiles,
                       bool directed = true, bool generate_eid = false,
                       bool retain_oid = false, bool local_vertex_map = false,
-                      bool compact_edges = false)
+                      bool compact_edges = false, bool use_perfect_hash = false)
       : DataLoader(client, comm_spec, efiles),
         client_(client),
         comm_spec_(comm_spec),
@@ -292,7 +293,8 @@ class ArrowFragmentLoader : public DataLoader {
         generate_eid_(generate_eid),
         retain_oid_(retain_oid),
         local_vertex_map_(local_vertex_map),
-        compact_edges_(compact_edges) {}
+        compact_edges_(compact_edges),
+        use_perfect_hash_(use_perfect_hash) {}
 
   ArrowFragmentLoader(
       Client& client, const grape::CommSpec& comm_spec,
@@ -300,7 +302,8 @@ class ArrowFragmentLoader : public DataLoader {
       std::vector<std::vector<std::shared_ptr<arrow::Table>>> const&
           partial_e_tables,
       bool directed = true, bool generate_eid = false, bool retain_oid = false,
-      bool local_vertex_map = false, bool compact_edges = false)
+      bool local_vertex_map = false, bool compact_edges = false,
+      bool use_perfect_hash = false)
       : DataLoader(client, comm_spec, partial_v_tables, partial_e_tables),
         client_(client),
         comm_spec_(comm_spec),
@@ -308,14 +311,16 @@ class ArrowFragmentLoader : public DataLoader {
         generate_eid_(generate_eid),
         retain_oid_(retain_oid),
         local_vertex_map_(local_vertex_map),
-        compact_edges_(compact_edges) {}
+        compact_edges_(compact_edges),
+        use_perfect_hash_(use_perfect_hash) {}
 
   ArrowFragmentLoader(
       Client& client, const grape::CommSpec& comm_spec,
       std::vector<std::vector<std::shared_ptr<arrow::Table>>> const&
           partial_e_tables,
       bool directed = true, bool generate_eid = false, bool retain_oid = false,
-      bool local_vertex_map = false, bool compact_edges = false)
+      bool local_vertex_map = false, bool compact_edges = false,
+      bool use_perfect_hash = false)
       : DataLoader(client, comm_spec, partial_e_tables),
         client_(client),
         comm_spec_(comm_spec),
@@ -323,7 +328,8 @@ class ArrowFragmentLoader : public DataLoader {
         generate_eid_(generate_eid),
         retain_oid_(retain_oid),
         local_vertex_map_(local_vertex_map),
-        compact_edges_(compact_edges) {}
+        compact_edges_(compact_edges),
+        use_perfect_hash_(use_perfect_hash) {}
 
   ~ArrowFragmentLoader() = default;
 
@@ -381,6 +387,7 @@ class ArrowFragmentLoader : public DataLoader {
   bool retain_oid_ = false;
   bool local_vertex_map_ = false;
   bool compact_edges_ = false;
+  bool use_perfect_hash_ = false;
 
   std::function<void(IIOAdaptor*)> io_deleter_ = [](IIOAdaptor* adaptor) {
     VINEYARD_DISCARD(adaptor->Close());
