@@ -12,9 +12,8 @@ limitations under the License.
 
 #include "graph/grin/src/predefine.h"
 
-extern "C" {
 #include "index/pk.h"
-}
+
 
 #if defined(GRIN_ENABLE_VERTEX_PK_INDEX) && defined(GRIN_ENABLE_VERTEX_PRIMARY_KEYS)
 GRIN_VERTEX grin_get_vertex_by_primary_keys_row(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_ROW);
