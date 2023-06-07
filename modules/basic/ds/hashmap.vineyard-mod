@@ -354,7 +354,17 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
     return const_cast<PerfectHashmap<K, V>*>(this)->find(key);
   }
 
-  size_t count(const K& key) const { return find(key) == nullptr ? 0 : 1; }
+  size_t count(const K& key) const {
+    size_t ret;
+    auto found = this->find(key);
+    if (found == nullptr) {
+      ret = 0;
+    } else {
+      ret = 1;
+      delete found;
+    }
+    return ret;
+  }
 
   size_t size() const { return num_elements_; }
 
