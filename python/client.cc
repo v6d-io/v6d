@@ -673,7 +673,7 @@ void bind_client(py::module& mod) {
           "new_buffer_chunk",
           [](Client* self, ObjectID const stream_id,
              size_t const size) -> py::memoryview {
-            std::unique_ptr<arrow::MutableBuffer> buffer;
+            std::unique_ptr<MutableBuffer> buffer;
             throw_on_error(self->GetNextStreamChunk(stream_id, size, buffer));
             if (buffer == nullptr) {
               return py::none();
@@ -686,7 +686,7 @@ void bind_client(py::module& mod) {
       .def(
           "next_buffer_chunk",
           [](Client* self, ObjectID const stream_id) -> py::memoryview {
-            std::unique_ptr<arrow::Buffer> buffer;
+            std::unique_ptr<Buffer> buffer;
             throw_on_error(self->PullNextStreamChunk(stream_id, buffer));
             if (buffer == nullptr) {
               return py::none();

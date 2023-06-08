@@ -55,6 +55,9 @@ struct command_t {
   static const std::string DROP_BUFFER_REQUEST;
   static const std::string DROP_BUFFER_REPLY;
 
+  static const std::string REQUEST_FD_REQUEST;
+  static const std::string REQUEST_FD_REPLY;
+
   static const std::string CREATE_REMOTE_BUFFER_REQUEST;
   static const std::string GET_REMOTE_BUFFERS_REQUEST;
 
@@ -278,6 +281,17 @@ Status ReadDropBufferRequest(const json& root, ObjectID& id);
 void WriteDropBufferReply(std::string& msg);
 
 Status ReadDropBufferReply(const json& root);
+
+void WriteRequestFDRequest(std::vector<int> fds, std::string& msg);
+
+Status ReadRequestFDRequest(const json& root, size_t& size, bool& skip_fd);
+
+void WriteRequestFDReply(const ObjectID id,
+                         const std::shared_ptr<Payload>& object,
+                         const int fd_to_send, std::string& msg);
+
+Status ReadRequestFDReply(const json& root, ObjectID& id, Payload& object,
+                          int& fd_sent);
 
 void WriteCreateRemoteBufferRequest(const size_t size, std::string& msg);
 

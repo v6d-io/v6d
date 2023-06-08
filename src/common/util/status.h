@@ -32,9 +32,6 @@
 #include <string>
 #include <utility>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-
 #include "common/util/json.h"
 #include "common/util/macros.h"
 #include "common/util/uuid.h"
@@ -502,14 +499,6 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// Return an error when the requested vineyard server is not ready yet.
   static Status VineyardServerNotReady(std::string const& message) {
     return Status(StatusCode::kVineyardServerNotReady, message);
-  }
-
-  /// Return an error when we meet an errorous status from apache-arrow APIs.
-  static Status ArrowError(arrow::Status const& status) {
-    if (status.ok()) {
-      return Status::OK();
-    }
-    return Status(StatusCode::kArrowError, status.ToString());
   }
 
   /// Return an error when client failed to connect to vineyard server.

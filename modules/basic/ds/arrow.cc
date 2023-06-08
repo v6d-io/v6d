@@ -297,7 +297,7 @@ template <typename T>
 void NumericArray<T>::PostConstruct(const ObjectMeta& meta) {
   this->array_ = std::make_shared<ArrayType>(
       ConvertToArrowType<T>::TypeValue(), this->length_,
-      this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
+      this->buffer_->ArrowBufferOrEmpty(), this->null_bitmap_->ArrowBuffer(),
       this->null_count_, this->offset_);
 }
 
@@ -434,7 +434,7 @@ template class FixedNumericArrayBuilder<double>;
 void BooleanArray::PostConstruct(const ObjectMeta& meta) {
   this->array_ = std::make_shared<ArrayType>(
       ConvertToArrowType<bool>::TypeValue(), this->length_,
-      this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
+      this->buffer_->ArrowBufferOrEmpty(), this->null_bitmap_->ArrowBuffer(),
       this->null_count_, this->offset_);
 }
 
@@ -491,9 +491,9 @@ Status BooleanArrayBuilder::Build(Client& client) {
 template <typename ArrayType>
 void BaseBinaryArray<ArrayType>::PostConstruct(const ObjectMeta& meta) {
   this->array_ = std::make_shared<ArrayType>(
-      this->length_, this->buffer_offsets_->BufferOrEmpty(),
-      this->buffer_data_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
-      this->null_count_, this->offset_);
+      this->length_, this->buffer_offsets_->ArrowBufferOrEmpty(),
+      this->buffer_data_->ArrowBufferOrEmpty(),
+      this->null_bitmap_->ArrowBuffer(), this->null_count_, this->offset_);
 }
 
 template class BaseBinaryArray<arrow::BinaryArray>;
@@ -572,7 +572,7 @@ template class GenericBinaryArrayBuilder<arrow::LargeStringArray,
 void FixedSizeBinaryArray::PostConstruct(const ObjectMeta& meta) {
   this->array_ = std::make_shared<arrow::FixedSizeBinaryArray>(
       arrow::fixed_size_binary(this->byte_width_), this->length_,
-      this->buffer_->BufferOrEmpty(), this->null_bitmap_->Buffer(),
+      this->buffer_->ArrowBufferOrEmpty(), this->null_bitmap_->ArrowBuffer(),
       this->null_count_, this->offset_);
 }
 
@@ -680,8 +680,9 @@ void BaseListArray<ArrayType>::PostConstruct(const ObjectMeta& meta) {
   auto list_type =
       std::make_shared<typename ArrayType::TypeClass>(array->type());
   this->array_ = std::make_shared<ArrayType>(
-      list_type, this->length_, this->buffer_offsets_->BufferOrEmpty(), array,
-      this->null_bitmap_->Buffer(), this->null_count_, this->offset_);
+      list_type, this->length_, this->buffer_offsets_->ArrowBufferOrEmpty(),
+      array, this->null_bitmap_->ArrowBuffer(), this->null_count_,
+      this->offset_);
 }
 
 template class BaseListArray<arrow::ListArray>;
@@ -835,7 +836,7 @@ void SchemaProxy::PostConstruct(const ObjectMeta& meta) {
     // for backward compatibility
     std::shared_ptr<Blob> buffer;
     VINEYARD_CHECK_OK(this->meta_.GetMember("buffer_", buffer));
-    wrapper = buffer->BufferOrEmpty();
+    wrapper = buffer->ArrowBufferOrEmpty();
   }
   if (wrapper == nullptr) {
     LOG(ERROR) << "Invalid schema binary: " << this->schema_binary_.dump(4);

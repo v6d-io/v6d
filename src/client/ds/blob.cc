@@ -46,7 +46,7 @@ const char* Blob::data() const {
   return reinterpret_cast<const char*>(buffer_->data());
 }
 
-const std::shared_ptr<arrow::Buffer>& Blob::Buffer() const {
+const std::shared_ptr<Buffer>& Blob::Buffer() const {
   if (size_ > 0 && (buffer_ == nullptr || buffer_->size() == 0)) {
     throw std::invalid_argument(
         "Blob::Buffer(): the object might be a (partially) remote object and "
@@ -56,10 +56,10 @@ const std::shared_ptr<arrow::Buffer>& Blob::Buffer() const {
   return buffer_;
 }
 
-const std::shared_ptr<arrow::Buffer> Blob::BufferOrEmpty() const {
+const std::shared_ptr<Buffer> Blob::BufferOrEmpty() const {
   auto buffer = this->Buffer();
   if (size_ == 0 && buffer == nullptr) {
-    buffer = std::make_shared<arrow::Buffer>(nullptr, 0);
+    buffer = std::make_shared<vineyard::Buffer>(nullptr, 0);
   }
   return buffer;
 }
@@ -143,8 +143,7 @@ std::shared_ptr<Blob> Blob::FromAllocator(Client& client,
   blob->meta_.AddKeyValue("length", size);
   blob->meta_.SetNBytes(size);
 
-  blob->buffer_ =
-      arrow::Buffer::Wrap(reinterpret_cast<const uint8_t*>(pointer), size);
+  blob->buffer_ = Buffer::Wrap(reinterpret_cast<const uint8_t*>(pointer), size);
 
   // n.b.: the later emplacement requires object id exists
   VINEYARD_CHECK_OK(blob->meta_.buffer_set_->EmplaceBuffer(object_id));
@@ -174,7 +173,7 @@ std::shared_ptr<Blob> Blob::FromPointer(Client& client, const uintptr_t pointer,
     blob->meta_.SetNBytes(size);
 
     blob->buffer_ =
-        arrow::Buffer::Wrap(reinterpret_cast<const uint8_t*>(pointer), size);
+        Buffer::Wrap(reinterpret_cast<const uint8_t*>(pointer), size);
 
     // n.b.: the later emplacement requires object id exists
     VINEYARD_CHECK_OK(blob->meta_.buffer_set_->EmplaceBuffer(object_id));
@@ -194,9 +193,7 @@ std::shared_ptr<Blob> Blob::FromPointer(Client& client, const uintptr_t pointer,
   }
 }
 
-const std::shared_ptr<arrow::Buffer>& Blob::BufferUnsafe() const {
-  return buffer_;
-}
+const std::shared_ptr<Buffer>& Blob::BufferUnsafe() const { return buffer_; }
 
 ObjectID BlobWriter::id() const { return object_id_; }
 
@@ -209,7 +206,7 @@ const char* BlobWriter::data() const {
   return reinterpret_cast<const char*>(buffer_->data());
 }
 
-const std::shared_ptr<arrow::MutableBuffer>& BlobWriter::Buffer() const {
+const std::shared_ptr<MutableBuffer>& BlobWriter::Buffer() const {
   return buffer_;
 }
 
@@ -259,7 +256,7 @@ Status BlobWriter::_Seal(Client& client, std::shared_ptr<Object>& object) {
         payload_.pointer - payload_.data_offset, false, true, &mmapped_ptr));
     dist = mmapped_ptr + payload_.data_offset;
   }
-  auto buffer = arrow::Buffer::Wrap(dist, payload_.data_size);
+  auto buffer = Buffer::Wrap(dist, payload_.data_size);
 
   std::shared_ptr<Blob> blob(new Blob());
   object = blob;
@@ -302,7 +299,7 @@ Status BufferSet::EmplaceBuffer(ObjectID const id) {
 }
 
 Status BufferSet::EmplaceBuffer(ObjectID const id,
-                                std::shared_ptr<arrow::Buffer> const& buffer) {
+                                std::shared_ptr<Buffer> const& buffer) {
   auto p = buffers_.find(id);
   if (p == buffers_.end()) {
     return Status::Invalid(
@@ -334,8 +331,7 @@ bool BufferSet::Contains(ObjectID const id) const {
   return buffers_.find(id) != buffers_.end();
 }
 
-bool BufferSet::Get(ObjectID const id,
-                    std::shared_ptr<arrow::Buffer>& buffer) const {
+bool BufferSet::Get(ObjectID const id, std::shared_ptr<Buffer>& buffer) const {
   auto iter = buffers_.find(id);
   if (iter == buffers_.end()) {
     return false;

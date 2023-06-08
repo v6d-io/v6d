@@ -28,14 +28,15 @@ limitations under the License.
 
 namespace arrow {
 class Buffer;
-class MutableBuffer;
 }  // namespace arrow
 
 namespace vineyard {
 
+class Buffer;
+class MutableBuffer;
+class ObjectMeta;
 class RemoteBlobWriter;
 class RPCClient;
-class ObjectMeta;
 
 /**
  * @brief The unit to store data payload in vineyard.
@@ -79,21 +80,38 @@ class RemoteBlob {
   const char* data() const;
 
   /**
-   * @brief Get the arrow buffer of the blob.
+   * @brief Get the buffer of the blob.
    *
-   * @return The arrow buffer which holds the data payload
+   * @return The buffer which holds the data payload
    * of the blob.
    */
-  const std::shared_ptr<arrow::Buffer>& Buffer() const;
+  const std::shared_ptr<vineyard::Buffer>& Buffer() const;
+
+  /**
+   * @brief Get the arrow buffer of the blob.
+   *
+   * @return The buffer which holds the data payload
+   * of the blob.
+   */
+  const std::shared_ptr<arrow::Buffer> ArrowBuffer() const;
+
+  /**
+   * @brief Get the buffer of the blob, ensure a valid shared_ptr been
+   * returned even the blob is empty (size == 0).
+   *
+   * @return The buffer which holds the data payload
+   * of the blob.
+   */
+  const std::shared_ptr<vineyard::Buffer> BufferOrEmpty() const;
 
   /**
    * @brief Get the arrow buffer of the blob, ensure a valid shared_ptr been
    * returned even the blob is empty (size == 0).
    *
-   * @return The arrow buffer which holds the data payload
+   * @return The buffer which holds the data payload
    * of the blob.
    */
-  const std::shared_ptr<arrow::Buffer> BufferOrEmpty() const;
+  const std::shared_ptr<arrow::Buffer> ArrowBufferOrEmpty() const;
 
   /**
    * @brief Dump the buffer for debugging.
@@ -109,7 +127,7 @@ class RemoteBlob {
   ObjectID id_;
   InstanceID instance_id_;
   size_t size_ = 0;
-  std::shared_ptr<arrow::Buffer> buffer_ = nullptr;
+  std::shared_ptr<vineyard::Buffer> buffer_ = nullptr;
 
   friend class RPCClient;
   friend class RemoteBlobWriter;
@@ -124,8 +142,7 @@ class RemoteBlob {
 class RemoteBlobWriter {
  public:
   explicit RemoteBlobWriter(const size_t size);
-  explicit RemoteBlobWriter(
-      std::shared_ptr<arrow::MutableBuffer> const& buffer);
+  explicit RemoteBlobWriter(std::shared_ptr<MutableBuffer> const& buffer);
 
   ~RemoteBlobWriter();
 
@@ -157,7 +174,7 @@ class RemoteBlobWriter {
    * @return The mutable buffer of the blob, which can be modified
    * to update the content in the blob.
    */
-  const std::shared_ptr<arrow::MutableBuffer>& Buffer() const;
+  const std::shared_ptr<MutableBuffer>& Buffer() const;
 
   /**
    * @brief Abort the blob builder.
@@ -172,7 +189,7 @@ class RemoteBlobWriter {
   void Dump() const;
 
  private:
-  std::shared_ptr<arrow::MutableBuffer> buffer_;
+  std::shared_ptr<MutableBuffer> buffer_;
 
   friend class RPCClient;
 };

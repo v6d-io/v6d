@@ -68,9 +68,20 @@ class hash<vineyard::arrow_string_view> {
 
 namespace vineyard {
 
+/// Return an error when we meet an errorous status from apache-arrow APIs.
+///
+/// Don't put this function in `status.h` to avoid dependency on
+/// apache-arrow.
+static inline Status ArrowError(const arrow::Status& status) {
+  if (status.ok()) {
+    return Status::OK();
+  } else {
+    return Status(StatusCode::kArrowError, status.ToString());
+  }
+}
+
 #ifndef CHECK_ARROW_ERROR
-#define CHECK_ARROW_ERROR(expr) \
-  VINEYARD_CHECK_OK(::vineyard::Status::ArrowError(expr))
+#define CHECK_ARROW_ERROR(expr) VINEYARD_CHECK_OK(::vineyard::ArrowError(expr))
 #endif  // CHECK_ARROW_ERROR
 
 // discard and ignore the error status.
@@ -92,23 +103,23 @@ namespace vineyard {
 #endif  // CHECK_ARROW_ERROR_AND_ASSIGN
 
 #ifndef RETURN_ON_ARROW_ERROR
-#define RETURN_ON_ARROW_ERROR(expr)                  \
-  do {                                               \
-    auto status = (expr);                            \
-    if (!status.ok()) {                              \
-      return ::vineyard::Status::ArrowError(status); \
-    }                                                \
+#define RETURN_ON_ARROW_ERROR(expr)          \
+  do {                                       \
+    auto status = (expr);                    \
+    if (!status.ok()) {                      \
+      return ::vineyard::ArrowError(status); \
+    }                                        \
   } while (0)
 #endif  // RETURN_ON_ARROW_ERROR
 
 #ifndef RETURN_ON_ARROW_ERROR_AND_ASSIGN
-#define RETURN_ON_ARROW_ERROR_AND_ASSIGN(lhs, expr)           \
-  do {                                                        \
-    auto result = (expr);                                     \
-    if (!result.status().ok()) {                              \
-      return ::vineyard::Status::ArrowError(result.status()); \
-    }                                                         \
-    lhs = std::move(result).ValueOrDie();                     \
+#define RETURN_ON_ARROW_ERROR_AND_ASSIGN(lhs, expr)   \
+  do {                                                \
+    auto result = (expr);                             \
+    if (!result.status().ok()) {                      \
+      return ::vineyard::ArrowError(result.status()); \
+    }                                                 \
+    lhs = std::move(result).ValueOrDie();             \
   } while (0)
 #endif  // RETURN_ON_ARROW_ERROR_AND_ASSIGN
 

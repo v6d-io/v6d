@@ -151,7 +151,7 @@ class [[vineyard]] Tensor : public ITensor, public BareRegistered<Tensor<T>> {
    * holds the data buffer of the tensor.
    */
   [[shared]] const std::shared_ptr<arrow::Buffer> buffer() const override {
-    return this->buffer_->Buffer();
+    return this->buffer_->ArrowBuffer();
   }
 
   [[shared]] const std::shared_ptr<arrow::Buffer> auxiliary_buffer()
@@ -165,7 +165,7 @@ class [[vineyard]] Tensor : public ITensor, public BareRegistered<Tensor<T>> {
    *
    */
   [[shared]] const std::shared_ptr<ArrowTensorT> ArrowTensor() {
-    return std::make_shared<ArrowTensorT>(buffer_->Buffer(), shape());
+    return std::make_shared<ArrowTensorT>(buffer_->ArrowBuffer(), shape());
   }
 
  private:

@@ -95,7 +95,7 @@ Status RecordBatchStream::ReadBatch(std::shared_ptr<arrow::RecordBatch>& batch,
   if (auto chunk = std::dynamic_pointer_cast<RecordBatch>(result)) {
     batch = chunk->GetRecordBatch();
   } else if (auto chunk = std::dynamic_pointer_cast<Blob>(result)) {
-    auto buffer = chunk->Buffer();
+    auto buffer = chunk->ArrowBuffer();
     RETURN_ON_ERROR(DeserializeRecordBatch(buffer, &batch));
     batch = AddMetadataToRecordBatch(batch, params_);
   } else {

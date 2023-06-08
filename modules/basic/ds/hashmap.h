@@ -34,7 +34,15 @@ limitations under the License.
 #include "common/util/arrow.h"
 #include "common/util/uuid.h"
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-variable"
+#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
+#endif
 #include "BBHash/BooPHF.h"
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
 namespace vineyard {
 

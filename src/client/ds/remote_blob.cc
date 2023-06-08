@@ -21,9 +21,7 @@ limitations under the License.
 #include <limits>
 #include <memory>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-
+#include "client/ds/blob.h"
 #include "client/rpc_client.h"
 #include "common/memory/payload.h"
 #include "common/util/status.h"
@@ -52,7 +50,7 @@ const char* RemoteBlob::data() const {
   return reinterpret_cast<const char*>(buffer_->data());
 }
 
-const std::shared_ptr<arrow::Buffer>& RemoteBlob::Buffer() const {
+const std::shared_ptr<Buffer>& RemoteBlob::Buffer() const {
   if (size_ > 0 && (buffer_ == nullptr || buffer_->size() == 0)) {
     throw std::invalid_argument(
         "RemoteBlob::Buffer(): the object might be a (partially) remote object "
@@ -62,10 +60,10 @@ const std::shared_ptr<arrow::Buffer>& RemoteBlob::Buffer() const {
   return buffer_;
 }
 
-const std::shared_ptr<arrow::Buffer> RemoteBlob::BufferOrEmpty() const {
+const std::shared_ptr<Buffer> RemoteBlob::BufferOrEmpty() const {
   auto buffer = this->Buffer();
   if (size_ == 0 && buffer == nullptr) {
-    buffer = std::make_shared<arrow::Buffer>(nullptr, 0);
+    buffer = std::make_shared<vineyard::Buffer>(nullptr, 0);
   }
   return buffer;
 }
@@ -91,9 +89,11 @@ RemoteBlob::RemoteBlob(const ObjectID id, const InstanceID instance_id,
                        const size_t size)
     : id_(id), instance_id_(instance_id), size_(size) {
   if (size > 0) {
-    auto r = arrow::AllocateBuffer(size_, arrow::default_memory_pool());
-    VINEYARD_ASSERT(r.ok(), "Failed to create an arrow buffer");
-    this->buffer_ = r.MoveValueUnsafe();
+    auto buffer = MallocBuffer::AllocateBuffer(size);
+    VINEYARD_ASSERT(
+        buffer != nullptr,
+        "Failed to malloc the internal buffer of size " + std::to_string(size));
+    this->buffer_ = std::dynamic_pointer_cast<MutableBuffer>(std::move(buffer));
   }
 }
 
@@ -112,14 +112,15 @@ char* RemoteBlob::mutable_data() const {
 
 RemoteBlobWriter::RemoteBlobWriter(const size_t size) {
   if (size > 0) {
-    auto r = arrow::AllocateBuffer(size, arrow::default_memory_pool());
-    VINEYARD_ASSERT(r.ok(), "Failed to create an arrow buffer");
-    this->buffer_ =
-        std::make_shared<arrow::MutableBuffer>(r.MoveValueUnsafe(), 0, size);
+    auto buffer = MallocBuffer::AllocateBuffer(size);
+    VINEYARD_ASSERT(
+        buffer != nullptr,
+        "Failed to malloc the internal buffer of size " + std::to_string(size));
+    this->buffer_ = std::move(buffer);
   }
 }
-RemoteBlobWriter::RemoteBlobWriter(
-    std::shared_ptr<arrow::MutableBuffer> const& buffer)
+
+RemoteBlobWriter::RemoteBlobWriter(std::shared_ptr<MutableBuffer> const& buffer)
     : buffer_(buffer) {}
 
 RemoteBlobWriter::~RemoteBlobWriter() {}
@@ -133,7 +134,7 @@ const char* RemoteBlobWriter::data() const {
   return reinterpret_cast<const char*>(buffer_->data());
 }
 
-const std::shared_ptr<arrow::MutableBuffer>& RemoteBlobWriter::Buffer() const {
+const std::shared_ptr<MutableBuffer>& RemoteBlobWriter::Buffer() const {
   return buffer_;
 }
 

@@ -19,7 +19,10 @@ limitations under the License.
 
 #include <vector>
 
+#include "arrow/api.h"
 #include "arrow/filesystem/filesystem.h"
+#include "arrow/io/api.h"
+
 #include "common/util/arrow.h"
 
 namespace vineyard {
@@ -64,7 +67,7 @@ Status FileIOAdaptor::Write(const char* buffer, size_t size) {
     return Status::IOError("The file hasn't been opened in write mode: " +
                            location_);
   }
-  return Status::ArrowError(ofp_->Write(buffer, size));
+  return ArrowError(ofp_->Write(buffer, size));
 }
 
 Status FileIOAdaptor::Flush() {
@@ -72,20 +75,20 @@ Status FileIOAdaptor::Flush() {
     return Status::IOError("The file hasn't been opened in write mode: " +
                            location_);
   }
-  return Status::ArrowError(ofp_->Flush());
+  return ArrowError(ofp_->Flush());
 }
 
 Status FileIOAdaptor::Close() {
   Status s1, s2;
   if (ifp_) {
-    s1 = Status::ArrowError(ifp_->Close());
+    s1 = ArrowError(ifp_->Close());
   }
   if (ofp_) {
     auto status = ofp_->Flush();
     if (status.ok()) {
-      s2 = Status::ArrowError(ofp_->Close());
+      s2 = ArrowError(ofp_->Close());
     } else {
-      s2 = Status::ArrowError(status);
+      s2 = ArrowError(status);
     }
   }
   return s1 & s2;
@@ -104,12 +107,12 @@ Status FileIOAdaptor::Read(void* buffer, size_t size) {
       return Status::OK();
     }
   } else {
-    return Status::ArrowError(r.status());
+    return ArrowError(r.status());
   }
 }
 
 Status FileIOAdaptor::CreateDir(const std::string& path) {
-  return Status::ArrowError(fs_->CreateDir(path, true));
+  return ArrowError(fs_->CreateDir(path, true));
 }
 
 Status FileIOAdaptor::DeleteDir() {

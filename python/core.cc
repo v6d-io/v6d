@@ -225,7 +225,7 @@ void bind_core(py::module& mod) {
           doc::ObjectMeta_get_member)
       .def("get_buffer",
            [](ObjectMeta* self, const ObjectID key) -> py::memoryview {
-             std::shared_ptr<arrow::Buffer> buffer;
+             std::shared_ptr<Buffer> buffer;
              throw_on_error(self->GetBuffer(key, buffer));
              if (buffer == nullptr) {
                return py::none();

@@ -20,7 +20,6 @@ import contextlib
 import logging
 import os
 import sys
-import traceback
 
 from .version import __version__
 
@@ -115,13 +114,6 @@ def _init_global_context():
         sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
         with envvars(ctx):  # n.b., no append
             from . import _C  # noqa: F811
-
-        # See Note [Import pyarrow before _C]
-        sys.setdlopenflags(_dl_flags.RTLD_GLOBAL | _dl_flags.RTLD_LAZY)
-        import pyarrow
-
-        del pyarrow
-
         # restore
         sys.setdlopenflags(old_flags)
 
