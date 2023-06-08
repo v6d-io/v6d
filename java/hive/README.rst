@@ -56,14 +56,17 @@ Hive Usage
 Hive and Vineyard
 -----------------
 
-- Create hive table on vineyard:
+- Create hive table on vineyard (using :code:`file:///` is enough as we won't touch filesystem input/output format):
 
     .. code:: sql
 
         create table hive_example(
             a string,
             b int)
+        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
-        LOCATION "vineyard:///opt/hive/data/warehouse/hive_example";
+        LOCATION "file:///opt/hive/data/warehouse/hive_example";
+
+        insert into hive_example values('a', 1), ('a', 2), ('b',3);

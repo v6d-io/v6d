@@ -21,9 +21,14 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     public static final String SCHEME = "vineyard";
+
+    private URI uri = null;
+    private static Logger logger = LoggerFactory.getLogger(FileSystem.class);
 
     public FileSystem() {
         super();
@@ -40,7 +45,20 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public URI getUri() {
-        return null;
+        return uri;
+    }
+
+    @Override
+    protected URI canonicalizeUri(URI uri) {
+        return uri;
+    }
+
+    @Override
+    public void initialize(URI name, Configuration conf) throws IOException {
+        super.initialize(name, conf);
+
+        logger.info("Initialize vineyard file system: {}", name);
+        this.uri = name;
     }
 
     @Override
@@ -97,6 +115,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public FileStatus getFileStatus(Path path) throws IOException {
-        return null;
+        return new FileStatus(0, true, 1, 0, 0, path);
     }
 }

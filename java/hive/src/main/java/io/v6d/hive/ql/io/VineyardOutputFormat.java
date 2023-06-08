@@ -14,21 +14,24 @@
  */
 package io.v6d.hive.ql.io;
 
+import io.v6d.core.common.util.VineyardException;
 import java.io.IOException;
 import java.util.Properties;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
+import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
+import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableComparable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
+import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class VineyardOutputFormat<K extends WritableComparable, V extends Writable>
+public class VineyardOutputFormat<K extends NullWritable, V extends ArrowWrapperWritable>
         implements HiveOutputFormat<K, V> {
     private static Logger logger = LoggerFactory.getLogger(VineyardOutputFormat.class);
 
@@ -41,16 +44,72 @@ public class VineyardOutputFormat<K extends WritableComparable, V extends Writab
             Properties tableProperties,
             Progressable progress)
             throws IOException {
-        return null;
+        return new SinkRecordWriter(
+                jc, finalOutPath, valueClass, isCompressed, tableProperties, progress);
     }
 
     @Override
     public RecordWriter<K, V> getRecordWriter(
             FileSystem fileSystem, JobConf jobConf, String s, Progressable progressable)
             throws IOException {
-        return null;
+        return new MapredRecordWriter<K, V>();
     }
 
     @Override
     public void checkOutputSpecs(FileSystem fileSystem, JobConf jobConf) throws IOException {}
+}
+
+class SinkRecordWriter implements FileSinkOperator.RecordWriter {
+    private JobConf jc;
+    private Path finalOutPath;
+    private Properties tableProperties;
+    private Progressable progress;
+
+    @lombok.SneakyThrows
+    public SinkRecordWriter(
+            JobConf jc,
+            Path finalOutPath,
+            Class<? extends Writable> valueClass,
+            boolean isCompressed,
+            Properties tableProperties,
+            Progressable progress) {
+        this.jc = jc;
+        if (!ArrowWrapperWritable.class.isAssignableFrom(valueClass)) {
+            throw new VineyardException.Invalid("value class must be ArrowWrapperWritable");
+        }
+        if (isCompressed) {
+            throw new VineyardException.Invalid("compressed output is not supported");
+        }
+        this.finalOutPath = finalOutPath;
+        this.tableProperties = tableProperties;
+        this.progress = progress;
+    }
+
+    @Override
+    public void write(Writable w) throws IOException {
+        System.out.printf("vineard filesink record writer: %s, %s\n", w, w.getClass());
+    }
+
+    @Override
+    public void close(boolean abort) throws IOException {
+        System.out.println("vineyard filesink operator closing\n");
+    }
+}
+
+class MapredRecordWriter<K extends NullWritable, V extends ArrowWrapperWritable>
+        implements RecordWriter<K, V> {
+    MapredRecordWriter() throws IOException {
+        System.out.printf("creating vineyard record writer\n");
+        throw new RuntimeException("mapred record writter: unimplemented");
+    }
+
+    @Override
+    public void write(K k, V v) throws IOException {
+        System.out.printf("write: k = %s, v = %s\n", k, v);
+    }
+
+    @Override
+    public void close(Reporter reporter) throws IOException {
+        System.out.printf("closing\n");
+    }
 }
