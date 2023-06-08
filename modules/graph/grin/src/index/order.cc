@@ -23,6 +23,7 @@ bool grin_smaller_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
 #if defined(GRIN_ASSUME_ALL_VERTEX_LIST_SORTED) && defined(GRIN_ENABLE_VERTEX_LIST_ARRAY)
 size_t grin_get_position_of_vertex_from_sorted_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, GRIN_VERTEX v) {
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
+    assert(v >= _vl->begin_value() && v < _vl->end_value());
     return v - _vl->begin_value();
 }
 #endif
