@@ -154,8 +154,8 @@ struct _GRAPH_CACHE {
     std::vector<std::string> etype_names;
     std::vector<std::vector<std::string>> vprop_names;
     std::vector<std::vector<std::string>> eprop_names;
-    std::vector<std::shared_ptr<arrow::Table>> vtables;
-    std::vector<std::shared_ptr<arrow::Table>> etables;
+    std::vector<std::vector<std::shared_ptr<arrow::Array>>> varrays;
+    std::vector<std::vector<std::shared_ptr<arrow::Array>>> earrays;
 };
 
 struct GRIN_GRAPH_T {
@@ -171,28 +171,30 @@ inline void _prepare_cache(GRIN_GRAPH_T* g) {
     g->cache->id_parser.Init(g->g->fnum(), g->g->vertex_label_num());
 
     g->cache->vtype_names.resize(g->g->vertex_label_num());
-    g->cache->vtables.resize(g->g->vertex_label_num());
+    g->cache->varrays.resize(g->g->vertex_label_num());
     g->cache->vprop_names.resize(g->g->vertex_label_num());
 
     for (int i = 0; i < g->g->vertex_label_num(); ++i) {
         g->cache->vtype_names[i] = g->g->schema().GetVertexLabelName(i);
-        g->cache->vtables[i] = g->g->vertex_data_table(i);
+        g->cache->varrays[i].resize(g->g->vertex_property_num(i));
         g->cache->vprop_names[i].resize(g->g->vertex_property_num(i));
         for (int j = 0; j < g->g->vertex_property_num(i); ++j) {
             g->cache->vprop_names[i][j] = g->g->schema().GetVertexPropertyName(i, j);
+            g->cache->varrays[i][j] = g->g->vertex_data_table(i)->column(j)->chunk(0);
         } 
     }
 
     g->cache->etype_names.resize(g->g->edge_label_num());
-    g->cache->etables.resize(g->g->edge_label_num());
+    g->cache->earrays.resize(g->g->edge_label_num());
     g->cache->eprop_names.resize(g->g->edge_label_num());
 
     for (int i = 0; i < g->g->edge_label_num(); ++i) {
         g->cache->etype_names[i] = g->g->schema().GetEdgeLabelName(i);
-        g->cache->etables[i] = g->g->edge_data_table(i);
+        g->cache->earrays[i].resize(g->g->edge_property_num(i));
         g->cache->eprop_names[i].resize(g->g->edge_property_num(i));
         for (int j = 0; j < g->g->edge_property_num(i); ++j) {
             g->cache->eprop_names[i][j] = g->g->schema().GetEdgePropertyName(i, j);
+            g->cache->earrays[i][j] = g->g->edge_data_table(i)->column(j)->chunk(0);
         } 
     }
 }
@@ -339,8 +341,7 @@ inline const void* _get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERT
         return NULL;
     }
     unsigned vprop = _grin_get_prop_from_property(vp);
-    auto array = _cache->vtables[vtype0]->column(vprop)->chunk(0);
-    return _get_arrow_array_data_element(array, _cache->id_parser.GetOffset(v));
+    return _get_arrow_array_data_element(_cache->varrays[vtype0][vprop], _cache->id_parser.GetOffset(v));
 }
 #endif
 
@@ -361,8 +362,7 @@ inline const void* _get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE e
     }
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     unsigned eprop = _grin_get_prop_from_property(ep);
-    auto array = _cache->etables[etype]->column(eprop)->chunk(0);
-    return _get_arrow_array_data_element(array, _e->eid);
+    return _get_arrow_array_data_element(_cache->earrays[etype][eprop], _e->eid);
 }
 #endif
 

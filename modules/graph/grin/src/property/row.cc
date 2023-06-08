@@ -183,8 +183,7 @@ GRIN_ROW grin_get_vertex_row(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto r = new GRIN_ROW_T();
     r->resize(_g->vertex_property_num(vtype));
     for (auto vp = 0; vp < _g->vertex_property_num(vtype); ++vp) {
-        auto array = _cache->vtables[vtype]->column(vp)->chunk(0);
-        auto result = _get_arrow_array_data_element(array, offset);
+        auto result = _get_arrow_array_data_element(_cache->varrays[vtype][vp], offset);
         (*r)[vp] = result;
     }
     return r;
@@ -202,8 +201,7 @@ GRIN_ROW grin_get_edge_row(GRIN_GRAPH g, GRIN_EDGE e) {
     auto r = new GRIN_ROW_T();
     r->resize(_g->edge_property_num(etype));
     for (auto ep = 1; ep < _g->edge_property_num(etype); ++ep) {
-        auto array = _cache->etables[etype]->column(ep)->chunk(0);
-        auto result = _get_arrow_array_data_element(array, offset);
+        auto result = _get_arrow_array_data_element(_cache->earrays[etype][ep], offset);
         (*r)[ep-1] = result;
     }
     return r;

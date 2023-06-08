@@ -22,8 +22,8 @@ size_t grin_get_vertex_num_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
 size_t grin_get_edge_num_by_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
-    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
-    return _cache->etables[etype]->num_rows();
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    return _g->edge_data_table(etype)->num_rows();
 }
 #endif
 
