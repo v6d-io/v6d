@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
   }
 
   {
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
     auto s = client.GetBuffers({blob_id}, buffers);
     CHECK(s.ok() && buffers.size() == 1);
   }
@@ -82,7 +82,7 @@ int main(int argc, char** argv) {
   CHECK(!exists);
 
   {
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
     auto s = client.GetBuffers({blob_id}, buffers);
     CHECK(s.ok() && buffers.size() == 0);
   }
@@ -102,7 +102,7 @@ int main(int argc, char** argv) {
   }
 
   {
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
     auto s = client.GetBuffers({blob_id}, buffers);
     CHECK(s.ok() && buffers.size() == 1);
   }
@@ -122,7 +122,7 @@ int main(int argc, char** argv) {
 
   // the blob should have been removed
   {
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
     auto s = client.GetBuffers({blob_id}, buffers);
     CHECK(s.ok() && buffers.size() == 0);
   }
@@ -142,7 +142,7 @@ int main(int argc, char** argv) {
   }
 
   {
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
     auto s = client.GetBuffers({blob_id}, buffers);
     CHECK(s.ok() && buffers.size() == 1);
   }
@@ -159,7 +159,7 @@ int main(int argc, char** argv) {
   CHECK(!exists);  // see Note [Deleting objects and blobs]
 
   {
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
     auto s = client.GetBuffers({blob_id}, buffers);
     // the deletion on direct blob member is not shallow
     CHECK(s.ok() && buffers.size() == 0);
@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
   }
 
   {
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
     auto s = client.GetBuffers({blob_id}, buffers);
     CHECK(s.ok() && buffers.size() == 1);
   }
@@ -208,7 +208,7 @@ int main(int argc, char** argv) {
   CHECK(exists);  // see Note [Deleting objects and blobs]
 
   {
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
     auto s = client.GetBuffers({blob_id}, buffers);
     // the deletion on non-direct blob member is shallow
     CHECK(s.ok() && buffers.size() == 1);
@@ -241,7 +241,7 @@ int main(int argc, char** argv) {
 
   // the blob should have been removed
   {
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
     auto s = client.GetBuffers({blob_id}, buffers);
     CHECK(s.ok() && buffers.size() == 0);
   }
@@ -276,7 +276,7 @@ int main(int argc, char** argv) {
 
   // the blob should have been removed
   {
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
     auto s = client.GetBuffers({blob_id}, buffers);
     CHECK(s.ok() && buffers.size() == 0);
   }

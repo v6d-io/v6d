@@ -493,7 +493,7 @@ Status CheckSchemaConsistency(const arrow::Schema& schema,
     int sum = 0;
     MPI_Allreduce(&flag, &sum, 1, MPI_INT, MPI_SUM, comm_spec.comm());
     if (sum != 0) {
-      return Status::ArrowError(
+      return ArrowError(
           arrow::Status(arrow::StatusCode::Invalid,
                         "failed to serialize the schema on peer worker"));
     }
@@ -533,7 +533,7 @@ Status CheckSchemaConsistency(const arrow::Schema& schema,
 
   if (!consistent) {
     if (status.ok()) {
-      return Status::ArrowError(
+      return ArrowError(
           arrow::Status(arrow::StatusCode::Invalid,
                         "Schemas of edge tables are not consistent."));
     } else {

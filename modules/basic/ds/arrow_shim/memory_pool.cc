@@ -20,6 +20,9 @@ limitations under the License.
 #include <string>
 #include <utility>
 
+#include "arrow/api.h"
+#include "arrow/io/api.h"
+
 #include "client/ds/blob.h"
 #include "common/memory/memcpy.h"
 

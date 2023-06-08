@@ -27,9 +27,6 @@ limitations under the License.
 #include <unordered_map>
 #include <utility>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-
 #include "client/ds/blob.h"
 #include "client/io.h"
 #include "client/utils.h"
@@ -176,7 +173,7 @@ Status Client::GetMetaData(const ObjectID id, ObjectMeta& meta,
   meta.Reset();
   meta.SetMetaData(this, tree);
 
-  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+  std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
   RETURN_ON_ERROR(GetBuffers(meta.GetBufferSet()->AllBufferIds(), buffers));
 
   for (auto const& id : meta.GetBufferSet()->AllBufferIds()) {
@@ -212,7 +209,7 @@ Status Client::GetMetaData(const std::vector<ObjectID>& ids,
     }
   }
 
-  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+  std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
   RETURN_ON_ERROR(GetBuffers(blob_ids, buffers));
 
   for (auto& meta : metas) {
@@ -230,7 +227,7 @@ Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
   ENSURE_CONNECTED(this);
   ObjectID object_id = InvalidObjectID();
   Payload object;
-  std::shared_ptr<arrow::MutableBuffer> buffer = nullptr;
+  std::shared_ptr<MutableBuffer> buffer = nullptr;
   RETURN_ON_ERROR(CreateBuffer(size, object_id, object, buffer));
   blob.reset(new BlobWriter(object_id, object, buffer));
   return Status::OK();
@@ -260,7 +257,7 @@ Status Client::GetBlobs(std::vector<ObjectID> const id,
 Status Client::GetBlobs(std::vector<ObjectID> const ids, const bool unsafe,
                         std::vector<std::shared_ptr<Blob>>& blobs) {
   std::set<ObjectID> id_set(ids.begin(), ids.end());
-  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+  std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
   RETURN_ON_ERROR(this->GetBuffers(id_set, unsafe, buffers));
   // clear the result container
   blobs.clear();
@@ -317,14 +314,14 @@ Status Client::CreateDiskBlob(size_t size, const std::string& path,
         payload.pointer - payload.data_offset, false, false, &shared));
     dist = shared + payload.data_offset;
   }
-  auto buffer = std::make_shared<arrow::MutableBuffer>(dist, payload.data_size);
+  auto buffer = std::make_shared<MutableBuffer>(dist, payload.data_size);
   blob.reset(new BlobWriter(object_id, payload, buffer));
   RETURN_ON_ERROR(AddUsage(object_id, payload));
   return Status::OK();
 }
 
 Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
-                                  std::unique_ptr<arrow::MutableBuffer>& blob) {
+                                  std::unique_ptr<MutableBuffer>& blob) {
   ENSURE_CONNECTED(this);
   std::string message_out;
   WriteGetNextStreamChunkRequest(id, size, message_out);
@@ -355,18 +352,17 @@ Status Client::GetNextStreamChunk(ObjectID const id, size_t const size,
         &mmapped_ptr));
     dist = mmapped_ptr + object.data_offset;
   }
-  blob.reset(new arrow::MutableBuffer(dist, object.data_size));
+  blob.reset(new MutableBuffer(dist, object.data_size));
   return Status::OK();
 }
 
 Status Client::PullNextStreamChunk(ObjectID const id,
-                                   std::unique_ptr<arrow::Buffer>& chunk) {
+                                   std::unique_ptr<Buffer>& chunk) {
   std::shared_ptr<Object> buffer;
   RETURN_ON_ERROR(ClientBase::PullNextStreamChunk(id, buffer));
   if (auto casted = std::dynamic_pointer_cast<vineyard::Blob>(buffer)) {
-    chunk.reset(
-        new arrow::Buffer(reinterpret_cast<const uint8_t*>(casted->data()),
-                          casted->allocated_size()));
+    chunk.reset(new Buffer(reinterpret_cast<const uint8_t*>(casted->data()),
+                           casted->allocated_size()));
     return Status::OK();
   }
   return Status::Invalid("Expect buffer, but got '" +
@@ -460,7 +456,7 @@ std::vector<ObjectMeta> Client::ListObjectMeta(std::string const& pattern,
   }
 
   // retrieve blobs
-  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+  std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
   VINEYARD_CHECK_OK(GetBuffers(blob_ids, buffers));
 
   // construct objects
@@ -495,7 +491,7 @@ std::vector<std::shared_ptr<Object>> Client::ListObjects(
   }
 
   // retrieve blobs
-  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+  std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
   VINEYARD_CHECK_OK(GetBuffers(blob_ids, buffers));
 
   // construct objects
@@ -593,7 +589,7 @@ Status Client::ReleaseArena(const int fd, std::vector<size_t> const& offsets,
 }
 
 Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
-                            std::shared_ptr<arrow::MutableBuffer>& buffer) {
+                            std::shared_ptr<MutableBuffer>& buffer) {
   ENSURE_CONNECTED(this);
   std::string message_out;
   WriteCreateBufferRequest(size, message_out);
@@ -623,7 +619,7 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
         payload.pointer - payload.data_offset, false, true, &shared));
     dist = shared + payload.data_offset;
   }
-  buffer = std::make_shared<arrow::MutableBuffer>(dist, payload.data_size);
+  buffer = std::make_shared<MutableBuffer>(dist, payload.data_size);
 
   RETURN_ON_ERROR(AddUsage(id, payload));
   return Status::OK();
@@ -668,9 +664,8 @@ Status Client::GetGPUBuffers(const std::set<ObjectID>& ids, const bool unsafe,
   return Status::OK();
 }
 
-Status Client::GetBuffer(const ObjectID id,
-                         std::shared_ptr<arrow::Buffer>& buffer) {
-  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers;
+Status Client::GetBuffer(const ObjectID id, std::shared_ptr<Buffer>& buffer) {
+  std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
   RETURN_ON_ERROR(GetBuffers({id}, buffers));
   if (buffers.empty()) {
     return Status::ObjectNotExists("buffer not exists: " +
@@ -682,13 +677,13 @@ Status Client::GetBuffer(const ObjectID id,
 
 Status Client::GetBuffers(
     const std::set<ObjectID>& ids,
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers) {
+    std::map<ObjectID, std::shared_ptr<Buffer>>& buffers) {
   return this->GetBuffers(ids, false, buffers);
 }
 
 Status Client::GetBuffers(
     const std::set<ObjectID>& ids, const bool unsafe,
-    std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers) {
+    std::map<ObjectID, std::shared_ptr<Buffer>>& buffers) {
   if (ids.empty()) {
     return Status::OK();
   }
@@ -722,7 +717,7 @@ Status Client::GetBuffers(
   }
 
   for (auto const& item : payloads) {
-    std::shared_ptr<arrow::Buffer> buffer = nullptr;
+    std::shared_ptr<Buffer> buffer = nullptr;
     uint8_t *shared = nullptr, *dist = nullptr;
     if (item.data_size > 0) {
       VINEYARD_CHECK_OK(shm_->Mmap(item.store_fd, item.object_id, item.map_size,
@@ -731,7 +726,7 @@ Status Client::GetBuffers(
                                    &shared));
       dist = shared + item.data_offset;
     }
-    buffer = std::make_shared<arrow::Buffer>(dist, item.data_size);
+    buffer = std::make_shared<Buffer>(dist, item.data_size);
     buffers.emplace(item.object_id, buffer);
     /// Add reference count of buffers
     RETURN_ON_ERROR(AddUsage(item.object_id, item));
@@ -1084,7 +1079,7 @@ Status PlasmaClient::CreateBuffer(PlasmaID plasma_id, size_t size,
   ENSURE_CONNECTED(this);
   ObjectID object_id = InvalidObjectID();
   PlasmaPayload plasma_payload;
-  std::shared_ptr<arrow::MutableBuffer> buffer = nullptr;
+  std::shared_ptr<MutableBuffer> buffer = nullptr;
 
   std::string message_out;
   WriteCreateBufferByPlasmaRequest(plasma_id, size, plasma_size, message_out);
@@ -1119,8 +1114,7 @@ Status PlasmaClient::CreateBuffer(PlasmaID plasma_id, size_t size,
                          false, true, &shared));
     dist = shared + plasma_payload.data_offset;
   }
-  buffer =
-      std::make_shared<arrow::MutableBuffer>(dist, plasma_payload.data_size);
+  buffer = std::make_shared<MutableBuffer>(dist, plasma_payload.data_size);
 
   auto payload = plasma_payload.ToNormalPayload();
   object_id = payload.object_id;
@@ -1176,19 +1170,19 @@ Status PlasmaClient::GetPayloads(
 
 Status PlasmaClient::GetBuffers(
     std::set<PlasmaID> const& plasma_ids,
-    std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers) {
+    std::map<PlasmaID, std::shared_ptr<Buffer>>& buffers) {
   return this->GetBuffers(plasma_ids, false, buffers);
 }
 Status PlasmaClient::GetBuffers(
     std::set<PlasmaID> const& plasma_ids, const bool unsafe,
-    std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers) {
+    std::map<PlasmaID, std::shared_ptr<Buffer>>& buffers) {
   ENSURE_CONNECTED(this);
 
   std::map<PlasmaID, PlasmaPayload> plasma_payloads;
   RETURN_ON_ERROR(GetPayloads(plasma_ids, unsafe, plasma_payloads));
 
   for (auto const& item : plasma_payloads) {
-    std::shared_ptr<arrow::Buffer> buffer = nullptr;
+    std::shared_ptr<Buffer> buffer = nullptr;
     uint8_t *shared = nullptr, *dist = nullptr;
     if (item.second.data_size > 0) {
       VINEYARD_CHECK_OK(this->shm_->Mmap(
@@ -1197,7 +1191,7 @@ Status PlasmaClient::GetBuffers(
           item.second.pointer - item.second.data_offset, true, true, &shared));
       dist = shared + item.second.data_offset;
     }
-    buffer = std::make_shared<arrow::Buffer>(dist, item.second.data_size);
+    buffer = std::make_shared<Buffer>(dist, item.second.data_size);
     buffers.emplace(item.second.plasma_id, buffer);
 
     RETURN_ON_ERROR(AddUsage(item.second.plasma_id, item.second));

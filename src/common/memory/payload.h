@@ -16,6 +16,7 @@ limitations under the License.
 #ifndef SRC_COMMON_MEMORY_PAYLOAD_H_
 #define SRC_COMMON_MEMORY_PAYLOAD_H_
 
+#include <atomic>
 #include <memory>
 
 #include "common/util/json.h"

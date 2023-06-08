@@ -230,7 +230,7 @@ Status ObjectMeta::GetMemberMeta(const std::string& name,
 }
 
 Status ObjectMeta::GetBuffer(const ObjectID blob_id,
-                             std::shared_ptr<arrow::Buffer>& buffer) const {
+                             std::shared_ptr<Buffer>& buffer) const {
   if (buffer_set_->Get(blob_id, buffer)) {
     return Status::OK();
   } else {
@@ -240,7 +240,7 @@ Status ObjectMeta::GetBuffer(const ObjectID blob_id,
 }
 
 void ObjectMeta::SetBuffer(const ObjectID& id,
-                           const std::shared_ptr<arrow::Buffer>& buffer) {
+                           const std::shared_ptr<Buffer>& buffer) {
   // After `findAllBlobs` we know the buffer set of this object. If the given id
   // is not present in the buffer set, it should be an error.
   VINEYARD_ASSERT(buffer_set_->Contains(id));
@@ -273,7 +273,7 @@ size_t ObjectMeta::MemoryUsage(json& usages, const bool pretty) const {
     ObjectID member_id =
         ObjectIDFromString(tree["id"].get_ref<std::string const&>());
     if (IsBlob(member_id)) {
-      std::shared_ptr<arrow::Buffer> buffer;
+      std::shared_ptr<Buffer> buffer;
       if (buffer_set_->Get(member_id, buffer)) {
         if (pretty) {
           usages = json::string_t(prettyprint_memory_size(buffer->size()));
@@ -379,7 +379,7 @@ std::unique_ptr<ObjectMeta> ObjectMeta::Unsafe(json meta, size_t nobjects,
   std::unique_ptr<ObjectMeta> metadata(new ObjectMeta());
   metadata->SetMetaData(nullptr, meta);
   for (size_t index = 0; index < nobjects; ++index) {
-    auto buffer = std::make_shared<arrow::Buffer>(
+    auto buffer = std::make_shared<Buffer>(
         reinterpret_cast<const uint8_t*>(pointers[index]), sizes[index]);
     metadata->SetBuffer(objects[index], buffer);
   }

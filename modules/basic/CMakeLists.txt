@@ -46,6 +46,7 @@ target_link_libraries(vineyard_basic PUBLIC vineyard_client
                                             ${ARROW_SHARED_LIB}
                                             ${GLOG_LIBRARIES}
 )
+target_include_directories(vineyard_basic PUBLIC ${ARROW_INCLUDE_DIR})
 
 # install bundled thirdparty: flat_hash_map
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/flat_hash_map

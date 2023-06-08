@@ -25,14 +25,113 @@ limitations under the License.
 #include <unordered_map>
 #include <utility>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-
 #include "client/ds/i_object.h"
 #include "common/memory/payload.h"
 #include "common/util/uuid.h"
 
+namespace arrow {
+class Buffer;
+}  // namespace arrow
+
 namespace vineyard {
+
+class Buffer {
+ public:
+  Buffer(const uint8_t* data, int64_t size)
+      : is_mutable_(false),
+        is_cpu_(true),
+        data_(data),
+        size_(size),
+        capacity_(size) {}
+
+  virtual ~Buffer() = default;
+
+  uint8_t operator[](std::size_t i) const { return data_[i]; }
+
+  template <typename T, typename SizeType = int64_t>
+  static std::shared_ptr<Buffer> Wrap(const T* data, SizeType length) {
+    return std::make_shared<Buffer>(reinterpret_cast<const uint8_t*>(data),
+                                    static_cast<int64_t>(sizeof(T) * length));
+  }
+
+  const uint8_t* data() const { return likely(is_cpu_) ? data_ : nullptr; }
+
+  uint8_t* mutable_data() {
+    return likely(is_cpu_ && is_mutable_) ? const_cast<uint8_t*>(data_)
+                                          : nullptr;
+  }
+
+  uintptr_t address() const { return reinterpret_cast<uintptr_t>(data_); }
+
+  uintptr_t mutable_address() const {
+    return likely(is_mutable_) ? reinterpret_cast<uintptr_t>(data_) : 0;
+  }
+
+  int64_t size() const { return size_; }
+
+  int64_t capacity() const { return capacity_; }
+
+  bool is_cpu() const { return is_cpu_; }
+
+  bool is_mutable() const { return is_mutable_; }
+
+ protected:
+  bool is_mutable_;
+  bool is_cpu_;
+  const uint8_t* data_;
+  int64_t size_;
+  int64_t capacity_;
+
+ private:
+  Buffer() = delete;
+
+  Buffer(const Buffer&) = delete;
+  Buffer(Buffer&&) = delete;
+  Buffer& operator=(const Buffer&) = delete;
+  Buffer& operator=(Buffer&&) = delete;
+};
+
+class MutableBuffer : public Buffer {
+ public:
+  MutableBuffer(uint8_t* data, const int64_t size) : Buffer(data, size) {
+    is_mutable_ = true;
+  }
+
+  template <typename T, typename SizeType = int64_t>
+  static std::shared_ptr<Buffer> Wrap(T* data, SizeType length) {
+    return std::make_shared<MutableBuffer>(
+        reinterpret_cast<uint8_t*>(data),
+        static_cast<int64_t>(sizeof(T) * length));
+  }
+
+ protected:
+  MutableBuffer() : Buffer(nullptr, 0) {}
+};
+
+class MallocBuffer : public MutableBuffer {
+ public:
+  ~MallocBuffer() {
+    if (buffer_ != nullptr) {
+      free(buffer_);
+    }
+  }
+
+  static std::unique_ptr<MallocBuffer> AllocateBuffer(const size_t size) {
+    void* buffer = malloc(size);
+    if (buffer) {
+      return std::unique_ptr<MallocBuffer>(new MallocBuffer(buffer, size));
+    } else {
+      return nullptr;
+    }
+  }
+
+ private:
+  MallocBuffer(void* buffer, const size_t size)
+      : MutableBuffer(reinterpret_cast<uint8_t*>(buffer), size),
+        buffer_(buffer) {}
+
+  void* buffer_ = nullptr;
+};
 
 class BlobWriter;
 class BufferSet;
@@ -78,21 +177,38 @@ class Blob : public Registered<Blob> {
   const char* data() const;
 
   /**
-   * @brief Get the arrow buffer of the blob.
+   * @brief Get the buffer of the blob.
    *
-   * @return The arrow buffer which holds the data payload
+   * @return The buffer which holds the data payload
    * of the blob.
    */
-  const std::shared_ptr<arrow::Buffer>& Buffer() const;
+  const std::shared_ptr<vineyard::Buffer>& Buffer() const;
+
+  /**
+   * @brief Get the arrow buffer of the blob.
+   *
+   * @return The buffer which holds the data payload
+   * of the blob.
+   */
+  const std::shared_ptr<arrow::Buffer> ArrowBuffer() const;
+
+  /**
+   * @brief Get the buffer of the blob, ensure a valid shared_ptr been
+   * returned even the blob is empty (size == 0).
+   *
+   * @return The buffer which holds the data payload
+   * of the blob.
+   */
+  const std::shared_ptr<vineyard::Buffer> BufferOrEmpty() const;
 
   /**
    * @brief Get the arrow buffer of the blob, ensure a valid shared_ptr been
    * returned even the blob is empty (size == 0).
    *
-   * @return The arrow buffer which holds the data payload
+   * @return The buffer which holds the data payload
    * of the blob.
    */
-  const std::shared_ptr<arrow::Buffer> BufferOrEmpty() const;
+  const std::shared_ptr<arrow::Buffer> ArrowBufferOrEmpty() const;
 
   static std::unique_ptr<Object> Create() __attribute__((used)) {
     return std::static_pointer_cast<Object>(std::unique_ptr<Blob>{new Blob()});
@@ -152,10 +268,10 @@ class Blob : public Registered<Blob> {
     this->buffer_ = nullptr;
   }
 
-  const std::shared_ptr<arrow::Buffer>& BufferUnsafe() const;
+  const std::shared_ptr<vineyard::Buffer>& BufferUnsafe() const;
 
   size_t size_ = 0;
-  std::shared_ptr<arrow::Buffer> buffer_ = nullptr;
+  std::shared_ptr<vineyard::Buffer> buffer_ = nullptr;
 
   friend class Client;
   friend class PlasmaClient;
@@ -209,7 +325,7 @@ class BlobWriter : public ObjectBuilder {
    * @return The mutable buffer of the blob, which can be modified
    * to update the content in the blob.
    */
-  const std::shared_ptr<arrow::MutableBuffer>& Buffer() const;
+  const std::shared_ptr<MutableBuffer>& Buffer() const;
 
   /**
    * @brief Build a blob in vineyard server.
@@ -251,16 +367,16 @@ class BlobWriter : public ObjectBuilder {
 
  private:
   BlobWriter(ObjectID const object_id, const Payload& payload,
-             std::shared_ptr<arrow::MutableBuffer> const& buffer)
+             std::shared_ptr<MutableBuffer> const& buffer)
       : object_id_(object_id), payload_(payload), buffer_(buffer) {}
 
   BlobWriter(ObjectID const object_id, Payload&& payload,
-             std::shared_ptr<arrow::MutableBuffer> const& buffer)
+             std::shared_ptr<MutableBuffer> const& buffer)
       : object_id_(object_id), payload_(payload), buffer_(buffer) {}
 
   ObjectID object_id_;
   Payload payload_;
-  std::shared_ptr<arrow::MutableBuffer> buffer_;
+  std::shared_ptr<MutableBuffer> buffer_;
   // Allowing blobs have extra key-value metadata
   std::unordered_map<std::string, std::string> metadata_;
 
@@ -277,14 +393,14 @@ class BufferSet {
  public:
   const std::set<ObjectID>& AllBufferIds() const { return buffer_ids_; }
 
-  const std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& AllBuffers() const {
+  const std::map<ObjectID, std::shared_ptr<Buffer>>& AllBuffers() const {
     return buffers_;
   }
 
   Status EmplaceBuffer(ObjectID const id);
 
   Status EmplaceBuffer(ObjectID const id,
-                       std::shared_ptr<arrow::Buffer> const& buffer);
+                       std::shared_ptr<Buffer> const& buffer);
 
   void Extend(BufferSet const& others);
 
@@ -292,12 +408,12 @@ class BufferSet {
 
   bool Contains(ObjectID const id) const;
 
-  bool Get(ObjectID const id, std::shared_ptr<arrow::Buffer>& buffer) const;
+  bool Get(ObjectID const id, std::shared_ptr<Buffer>& buffer) const;
 
  private:
   // blob ids to buffer mapping: local blobs (not null) + remote blobs (null).
   std::set<ObjectID> buffer_ids_;
-  std::map<ObjectID, std::shared_ptr<arrow::Buffer>> buffers_;
+  std::map<ObjectID, std::shared_ptr<Buffer>> buffers_;
 };
 
 }  // namespace vineyard

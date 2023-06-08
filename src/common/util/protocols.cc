@@ -66,6 +66,9 @@ const std::string command_t::GET_GPU_BUFFERS_REPLY = "get_gpu_buffers_reply";
 const std::string command_t::DROP_BUFFER_REQUEST = "drop_buffer_request";
 const std::string command_t::DROP_BUFFER_REPLY = "drop_buffer_reply";
 
+const std::string command_t::REQUEST_FD_REQUEST = "request_fd_request";
+const std::string command_t::REQUEST_FD_REPLY = "request_fd_reply";
+
 const std::string command_t::CREATE_REMOTE_BUFFER_REQUEST =
     "create_remote_buffer_request";
 const std::string command_t::GET_REMOTE_BUFFERS_REQUEST =

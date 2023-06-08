@@ -26,6 +26,8 @@ limitations under the License.
 
 #include "boost/algorithm/string.hpp"
 
+#include "client/ds/blob.h"
+#include "client/ds/remote_blob.h"
 #include "common/util/typename.h"
 
 namespace vineyard {
@@ -55,6 +57,30 @@ std::shared_ptr<arrow::DataType> FromAnyType(AnyType type) {
   default:
     return arrow::null();
   }
+}
+
+std::shared_ptr<arrow::Buffer> ToArrowBuffer(
+    const std::shared_ptr<Buffer>& buffer) {
+  if (buffer == nullptr) {
+    return nullptr;
+  }
+  return arrow::Buffer::Wrap(buffer->data(), buffer->size());
+}
+
+const std::shared_ptr<arrow::Buffer> Blob::ArrowBuffer() const {
+  return ToArrowBuffer(this->Buffer());
+}
+
+const std::shared_ptr<arrow::Buffer> Blob::ArrowBufferOrEmpty() const {
+  return ToArrowBuffer(this->BufferOrEmpty());
+}
+
+const std::shared_ptr<arrow::Buffer> RemoteBlob::ArrowBuffer() const {
+  return ToArrowBuffer(this->Buffer());
+}
+
+const std::shared_ptr<arrow::Buffer> RemoteBlob::ArrowBufferOrEmpty() const {
+  return ToArrowBuffer(this->BufferOrEmpty());
 }
 
 namespace detail {

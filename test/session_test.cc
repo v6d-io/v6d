@@ -103,7 +103,7 @@ int main(int argc, char** argv) {
 
     VINEYARD_CHECK_OK(client2.ShallowCopy(id, new_ids, client1));
 
-    std::map<PlasmaID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<PlasmaID, std::shared_ptr<Buffer>> buffers;
     VINEYARD_CHECK_OK(client2.GetBuffers(new_ids, buffers));
     LOG(INFO) << "Passed session shallow copy test2 ...";
 

@@ -35,15 +35,12 @@ limitations under the License.
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
-namespace arrow {
-class Buffer;
-class MutableBuffer;
-}  // namespace arrow
-
 namespace vineyard {
 
 class Blob;
 class BlobWriter;
+class Buffer;
+class MutableBuffer;
 
 namespace detail {
 
@@ -461,7 +458,7 @@ class Client final : public BasicIPCClient,
    * @return Status that indicates whether the allocation has succeeded.
    */
   Status GetNextStreamChunk(ObjectID const id, size_t const size,
-                            std::unique_ptr<arrow::MutableBuffer>& blob);
+                            std::unique_ptr<MutableBuffer>& blob);
 
   // bring the overloadings in parent class to current scope.
   using ClientBase::PullNextStreamChunk;
@@ -477,8 +474,7 @@ class Client final : public BasicIPCClient,
    *
    * @return Status that indicates whether the polling has succeeded.
    */
-  Status PullNextStreamChunk(ObjectID const id,
-                             std::unique_ptr<arrow::Buffer>& chunk);
+  Status PullNextStreamChunk(ObjectID const id, std::unique_ptr<Buffer>& chunk);
 
   /**
    * @brief Get an object from vineyard. The ObjectFactory will be used to
@@ -826,7 +822,7 @@ class Client final : public BasicIPCClient,
   Status GetDependency(ObjectID const& id, std::set<ObjectID>& bids);
 
   Status CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
-                      std::shared_ptr<arrow::MutableBuffer>& buffer);
+                      std::shared_ptr<MutableBuffer>& buffer);
 
   /**
    * @brief Get a blob from vineyard server. When obtaining blobs from vineyard
@@ -839,7 +835,7 @@ class Client final : public BasicIPCClient,
    *
    * @return Status that indicates whether the create action has succeeded.
    */
-  Status GetBuffer(const ObjectID id, std::shared_ptr<arrow::Buffer>& buffer);
+  Status GetBuffer(const ObjectID id, std::shared_ptr<Buffer>& buffer);
 
   /**
    * @brief Get a set of blobs from vineyard server. See also `GetBuffer`.
@@ -849,9 +845,8 @@ class Client final : public BasicIPCClient,
    *
    * @return Status that indicates whether the get action has succeeded.
    */
-  Status GetBuffers(
-      const std::set<ObjectID>& ids,
-      std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers);
+  Status GetBuffers(const std::set<ObjectID>& ids,
+                    std::map<ObjectID, std::shared_ptr<Buffer>>& buffers);
 
   /**
    * @brief Get the size of blobs from vineyard server.
@@ -880,9 +875,8 @@ class Client final : public BasicIPCClient,
   Status Seal(ObjectID const& object_id);
 
  private:
-  Status GetBuffers(
-      const std::set<ObjectID>& ids, const bool unsafe,
-      std::map<ObjectID, std::shared_ptr<arrow::Buffer>>& buffers);
+  Status GetBuffers(const std::set<ObjectID>& ids, const bool unsafe,
+                    std::map<ObjectID, std::shared_ptr<Buffer>>& buffers);
 
   Status GetBufferSizes(const std::set<ObjectID>& ids, const bool unsafe,
                         std::map<ObjectID, size_t>& sizes);
@@ -946,9 +940,8 @@ class PlasmaClient final
   Status GetPayloads(std::set<PlasmaID> const& plasma_ids,
                      std::map<PlasmaID, PlasmaPayload>& plasma_payloads);
 
-  Status GetBuffers(
-      std::set<PlasmaID> const& plasma_ids,
-      std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers);
+  Status GetBuffers(std::set<PlasmaID> const& plasma_ids,
+                    std::map<PlasmaID, std::shared_ptr<Buffer>>& buffers);
 
   Status ShallowCopy(PlasmaID const plasma_id, PlasmaID& target_pid,
                      PlasmaClient& source_client);
@@ -993,9 +986,8 @@ class PlasmaClient final
   Status GetPayloads(std::set<PlasmaID> const& plasma_ids, const bool unsafe,
                      std::map<PlasmaID, PlasmaPayload>& plasma_payloads);
 
-  Status GetBuffers(
-      std::set<PlasmaID> const& plasma_ids, const bool unsafe,
-      std::map<PlasmaID, std::shared_ptr<arrow::Buffer>>& buffers);
+  Status GetBuffers(std::set<PlasmaID> const& plasma_ids, const bool unsafe,
+                    std::map<PlasmaID, std::shared_ptr<Buffer>>& buffers);
 
   friend class detail::UsageTracker<PlasmaID, PlasmaPayload, PlasmaClient>;
 };

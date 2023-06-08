@@ -409,7 +409,7 @@ Status LocalIOAdaptor::ReadPartialTable(std::shared_ptr<arrow::Table>* table,
       *table = nullptr;
       return Status::OK();
     } else {
-      return Status::ArrowError(result.status());
+      return ArrowError(result.status());
     }
   }
   *table = result.ValueOrDie();
@@ -490,7 +490,7 @@ Status LocalIOAdaptor::ReadLine(std::string& line) {
   }
 
   VINEYARD_DISCARD(
-      Status::ArrowError(ifp_->Seek(start_position + offset + skip_endofline)));
+      ArrowError(ifp_->Seek(start_position + offset + skip_endofline)));
   std::string linebuffer = std::string(buff, offset);
   line.swap(linebuffer);
   return Status::OK();
@@ -514,9 +514,9 @@ Status LocalIOAdaptor::WriteLine(const std::string& line) {
   }
   auto status = ofp_->Write(line.c_str(), line.size());
   if (status.ok()) {
-    return Status::ArrowError(ofp_->Write("\n", 1));
+    return ArrowError(ofp_->Write("\n", 1));
   } else {
-    return Status::ArrowError(status);
+    return ArrowError(status);
   }
 }
 
@@ -548,12 +548,12 @@ Status LocalIOAdaptor::seek(const int64_t offset,
   }
   switch (seek_from) {
   case kFileLocationBegin: {
-    return Status::ArrowError(ifp_->Seek(offset));
+    return ArrowError(ifp_->Seek(offset));
   } break;
   case kFileLocationCurrent: {
     auto p = ifp_->Tell();
     if (p.ok()) {
-      return Status::ArrowError(ifp_->Seek(p.ValueUnsafe() + offset));
+      return ArrowError(ifp_->Seek(p.ValueUnsafe() + offset));
     } else {
       return Status::IOError("Fail to tell current position: " + location_);
     }
@@ -561,7 +561,7 @@ Status LocalIOAdaptor::seek(const int64_t offset,
   case kFileLocationEnd: {
     auto sz = ifp_->GetSize();
     if (sz.ok()) {
-      return Status::ArrowError(ifp_->Seek(sz.ValueUnsafe() - offset));
+      return ArrowError(ifp_->Seek(sz.ValueUnsafe() - offset));
     } else {
       return Status::IOError("Fail to tell the total file size: " + location_);
     }
@@ -586,7 +586,7 @@ Status LocalIOAdaptor::Read(void* buffer, size_t size) {
       return Status::OK();
     }
   } else {
-    return Status::ArrowError(r.status());
+    return ArrowError(r.status());
   }
 }
 
@@ -595,7 +595,7 @@ Status LocalIOAdaptor::Write(void* buffer, size_t size) {
     return Status::IOError("The file hasn't been opened in write mode: " +
                            location_);
   }
-  return Status::ArrowError(ofp_->Write(buffer, size));
+  return ArrowError(ofp_->Write(buffer, size));
 }
 
 Status LocalIOAdaptor::Flush() {
@@ -603,20 +603,20 @@ Status LocalIOAdaptor::Flush() {
     return Status::IOError("The file hasn't been opened in write mode: " +
                            location_);
   }
-  return Status::ArrowError(ofp_->Flush());
+  return ArrowError(ofp_->Flush());
 }
 
 Status LocalIOAdaptor::Close() {
   Status s1, s2;
   if (ifp_) {
-    s1 = Status::ArrowError(ifp_->Close());
+    s1 = ArrowError(ifp_->Close());
   }
   if (ofp_) {
     auto status = ofp_->Flush();
     if (status.ok()) {
-      s2 = Status::ArrowError(ofp_->Close());
+      s2 = ArrowError(ofp_->Close());
     } else {
-      s2 = Status::ArrowError(status);
+      s2 = ArrowError(status);
     }
   }
   return s1 & s2;
@@ -635,7 +635,7 @@ Status LocalIOAdaptor::ListDirectory(const std::string& path,
 }
 
 Status LocalIOAdaptor::MakeDirectory(const std::string& path) {
-  return Status::ArrowError(fs_->CreateDir(path, true));
+  return ArrowError(fs_->CreateDir(path, true));
 }
 
 bool LocalIOAdaptor::IsExist(const std::string& path) {

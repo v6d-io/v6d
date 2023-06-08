@@ -507,8 +507,6 @@ macro(find_zstd)
 endmacro()
 
 macro(find_common_libraries)
-    find_apache_arrow()
-    find_gflags()
     find_glog()
     find_libcuckoo()
     find_libunwind()
@@ -516,10 +514,8 @@ macro(find_common_libraries)
     find_nlohmann_json()
     find_zstd()
 
-    include_directories(SYSTEM ${ARROW_INCLUDE_DIR})
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
     include_directories(SYSTEM ${GLOG_INCLUDE_DIR})
-    include_directories(SYSTEM ${GFLAGS_INCLUDE_DIR})
 endmacro()
 
 # find openssl first since apache-arrow may requires that (on MacOS, installed by brew)
@@ -624,6 +620,9 @@ endif()
 
 if(BUILD_VINEYARD_BASIC OR BUILD_VINEYARD_IO OR BUILD_VINEYARD_MIGRATION OR BUILD_VINEYARD_PYTHON_BINDINGS)
     set(BUILD_VINEYARD_CLIENT ON)
+
+    find_apache_arrow()
+    include_directories(SYSTEM ${ARROW_INCLUDE_DIR})
 endif()
 
 if(BUILD_VINEYARD_MALLOC)
@@ -646,7 +645,9 @@ endif()
 
 # build vineyardd
 if(BUILD_VINEYARD_SERVER)
+    find_apache_arrow()
     find_etcd_cpp_apiv3()
+    find_gflags()
     find_mimalloc()
     find_openssl_libraries(REQUIRED)
 
@@ -676,6 +677,9 @@ if(BUILD_VINEYARD_SERVER)
                                             ${OPENSSL_LIBRARIES}
                                             libzstd_static
                                             mimalloc-static
+    )
+    target_include_directories(vineyardd PRIVATE ${ARROW_INCLUDE_DIR}
+                                                 ${GFLAGS_INCLUDE_DIR}
     )
     if(ARROW_SHARED_LIB)
         target_link_libraries(vineyardd PRIVATE ${ARROW_SHARED_LIB})
@@ -770,11 +774,6 @@ if(BUILD_VINEYARD_CLIENT)
 
     # make sure `vineyard_internal_registry` been built.
     add_dependencies(vineyard_client vineyard_internal_registry)
-    if(ARROW_SHARED_LIB)
-        target_link_libraries(vineyard_client PUBLIC ${ARROW_SHARED_LIB})
-    else()
-        target_link_libraries(vineyard_client PUBLIC ${ARROW_STATIC_LIB})
-    endif()
     if(${LIBUNWIND_FOUND})
         target_link_libraries(vineyard_client PRIVATE ${LIBUNWIND_LIBRARIES})
     endif()

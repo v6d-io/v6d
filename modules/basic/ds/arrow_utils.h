@@ -27,6 +27,7 @@ limitations under the License.
 #include "arrow/io/api.h"
 
 #include "basic/ds/types.h"
+#include "client/ds/blob.h"
 #include "common/util/arrow.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
@@ -129,6 +130,9 @@ CONVERT_TO_ARROW_TYPE(arrow::Date64Type, arrow::Date64Type, arrow::Date64Array,
                       arrow::Date64Builder, arrow::date64())
 
 std::shared_ptr<arrow::DataType> FromAnyType(AnyType type);
+
+std::shared_ptr<arrow::Buffer> ToArrowBuffer(
+    const std::shared_ptr<Buffer>& buffer);
 
 namespace detail {
 /**

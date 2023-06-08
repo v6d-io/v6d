@@ -53,6 +53,7 @@ The :code:`vineyard-graph-loader` accepts a sequence of command line arguments t
 specify the edge files and vertex files, e.g.,
 
 .. code:: bash
+
    $ ./vineyard-graph-loader 2 "modern_graph/knows.csv#header_row=true&src_label=person&dst_label=person&label=knows&delimiter=|" \
                                "modern_graph/created.csv#header_row=true&src_label=person&dst_label=software&label=created&delimiter=|" \
                              2 "modern_graph/person.csv#header_row=true&label=person&delimiter=|" \

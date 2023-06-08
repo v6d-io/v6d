@@ -24,9 +24,6 @@ limitations under the License.
 #include <unordered_map>
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-
 #include "client/ds/core_types.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
@@ -35,12 +32,13 @@ limitations under the License.
 
 namespace vineyard {
 
+class Blob;
+class Buffer;
+class BufferSet;
 class ClientBase;
 class Client;
-class RPCClient;
-class Blob;
-class BufferSet;
 class Object;
+class RPCClient;
 
 /**
  * @brief ObjectMeta is the type for metadata of an Object. The ObjectMeta can
@@ -709,10 +707,9 @@ class ObjectMeta {
    * metadata should has already been initialized.
    */
   Status GetBuffer(const ObjectID blob_id,
-                   std::shared_ptr<arrow::Buffer>& buffer) const;
+                   std::shared_ptr<Buffer>& buffer) const;
 
-  void SetBuffer(const ObjectID& id,
-                 const std::shared_ptr<arrow::Buffer>& buffer);
+  void SetBuffer(const ObjectID& id, const std::shared_ptr<Buffer>& buffer);
 
   /**
    * @brief Reset the metadata as an initialized one.

@@ -74,7 +74,7 @@ int main(int argc, char** argv) {
   auto get_plasma_objects = [](PlasmaClient& client,
                                std::vector<PlasmaID>& eids, bool check_seal) {
     std::vector<std::string> results;
-    std::map<PlasmaID, std::shared_ptr<arrow::Buffer>> buffers;
+    std::map<PlasmaID, std::shared_ptr<Buffer>> buffers;
     auto status = client.GetBuffers(
         std::set<PlasmaID>(eids.begin(), eids.end()), buffers);
     if (!check_seal) {
@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
       return results;
     }
     for (size_t i = 0; i < eids.size(); ++i) {
-      std::shared_ptr<arrow::Buffer> buff = buffers.find(eids[i])->second;
+      std::shared_ptr<Buffer> buff = buffers.find(eids[i])->second;
       char* data = reinterpret_cast<char*>(const_cast<uint8_t*>(buff->data()));
       results.emplace_back(std::string(data, buff->size()));
       VINEYARD_CHECK_OK(client.Seal(eids[i]));
