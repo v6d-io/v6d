@@ -33,6 +33,7 @@
   <modules>
     <module>core</module>
     <module>modules</module>
+    <module>hive</module>
     <module>spark</module>
   </modules>
 
