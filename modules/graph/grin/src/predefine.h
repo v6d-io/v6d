@@ -303,7 +303,6 @@ struct GRIN_ADJACENT_LIST_ITERATOR_T {
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
 struct GRIN_PARTITIONED_GRAPH_T {
-  std::string socket;
   vineyard::Client client;
   std::shared_ptr<vineyard::ArrowFragmentGroup> pg;
   std::vector<vineyard::ObjectID> lgs;

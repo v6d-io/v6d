@@ -18,15 +18,12 @@ limitations under the License.
 #include "graph/fragment/property_graph_types.h"
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
-GRIN_PARTITIONED_GRAPH grin_get_partitioned_graph_from_storage(int argc, char** argv) {
-    if (argc < 2) {
-        return nullptr;
-    }
+GRIN_PARTITIONED_GRAPH grin_get_partitioned_graph_from_storage(const char* id, const char* version) {
     auto pg = new GRIN_PARTITIONED_GRAPH_T();
-    pg->socket = std::string(argv[0]);
-    pg->client.Connect(argv[0]);
+    auto ipc_socket = getenv("VINEYARD_IPC_SOCKET");
+    pg->client.Connect(ipc_socket);
     vineyard::ObjectID obj_id;
-    std::stringstream ss(argv[1]);
+    std::stringstream ss(id);
     ss >> obj_id;
     pg->pg = std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(pg->client.GetObject(obj_id));
     pg->lgs.resize(pg->pg->total_frag_num(), 0);
@@ -99,8 +96,8 @@ const void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p)
 GRIN_GRAPH grin_get_local_graph_by_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto g = new GRIN_GRAPH_T();
-    
-    g->client.Connect(_pg->socket);
+    auto ipc_socket = getenv("VINEYARD_IPC_SOCKET");
+    g->client.Connect(ipc_socket);
     g->_g = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(g->client.GetObject(_pg->lgs[p]));
     g->g = g->_g.get();
     _prepare_cache(g);
