@@ -333,15 +333,11 @@ typedef std::vector<GRIN_VERTEX_PROPERTY_T> GRIN_VERTEX_PROPERTY_LIST_T;
 
 inline const void* _get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
     grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
-    unsigned vtype0 =  _cache->id_parser.GetLabelId(v);
-    unsigned vtype1 = _grin_get_type_from_property(vp);
-    if (vtype0 != vtype1) {
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return NULL;
-    }
+    unsigned vtype = _grin_get_type_from_property(vp);
     unsigned vprop = _grin_get_prop_from_property(vp);
-    return _get_arrow_array_data_element(_cache->varrays[vtype0][vprop], _cache->id_parser.GetOffset(v));
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
+    assert((unsigned)_cache->id_parser.GetLabelId(v) == vtype);
+    return _get_arrow_array_data_element(_cache->varrays[vtype][vprop], _cache->id_parser.GetOffset(v));
 }
 #endif
 
@@ -355,13 +351,9 @@ inline const void* _get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE e
     grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
     auto _e = static_cast<GRIN_EDGE_T*>(e);
     unsigned etype = _grin_get_type_from_property(ep);
-    if (_e->etype != etype) {
-        printf("INVALID: %u %u\n", _e->etype, etype);
-        grin_error_code = GRIN_ERROR_CODE::INVALID_VALUE;
-        return NULL;
-    }
-    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
+    assert(etype == _e->etype);
     unsigned eprop = _grin_get_prop_from_property(ep);
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     return _get_arrow_array_data_element(_cache->earrays[etype][eprop], _e->eid);
 }
 #endif

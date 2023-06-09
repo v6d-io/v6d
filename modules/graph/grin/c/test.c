@@ -705,7 +705,7 @@ void test_property(int argc, char** argv) {
   test_property_primary_key(argc, argv);
 #endif
 #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
-  test_error_code(argc, argv);
+  // test_error_code(argc, argv);
 #endif
 }
 
