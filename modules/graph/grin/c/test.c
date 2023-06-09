@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/time.h>     
 #include "predefine.h"
 #include "common/error.h"
 #include "index/label.h"
@@ -1011,11 +1012,35 @@ void test_index(int argc, char** argv) {
   test_index_original_id(argc, argv);
 }
 
+void test_vertex_property_value(int argc, char** argv) {
+  GRIN_GRAPH g = get_graph(argc, argv, 0);
+  GRIN_VERTEX_TYPE vt = grin_get_vertex_type_by_name(g, "person");
+  GRIN_VERTEX_PROPERTY vp = grin_get_vertex_property_by_name(g, vt, "age");
+  GRIN_VERTEX v = get_one_master_person(g);
+  struct timeval t1, t2;
+  gettimeofday(&t1, NULL);
+  for (int i = 0; i < 1000000; ++i) {
+    long long int age = grin_get_vertex_property_value_of_int64(g, v, vp);
+  }
+  gettimeofday(&t2, NULL);
+  double elapsedTime = (t2.tv_sec - t1.tv_sec) * 1000.0;
+  elapsedTime += (t2.tv_usec - t1.tv_usec) / 1000.0; 
+  printf("%f ms.\n", elapsedTime);
+  grin_destroy_vertex(g, v);
+  grin_destroy_vertex_property(g, vp);
+  grin_destroy_vertex_type(g, vt);
+  grin_destroy_graph(g);
+}
+
+void test_perf(int argc, char** argv) {
+  test_vertex_property_value(argc, argv);
+}
 
 int main(int argc, char** argv) {
   test_index(argc, argv);
   test_property(argc, argv);
   test_partition(argc, argv);
   test_topology(argc, argv);
+  test_perf(argc, argv);
   return 0;
 }

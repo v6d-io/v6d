@@ -156,6 +156,8 @@ struct _GRAPH_CACHE {
     std::vector<std::vector<std::string>> eprop_names;
     std::vector<std::vector<std::shared_ptr<arrow::Array>>> varrays;
     std::vector<std::vector<std::shared_ptr<arrow::Array>>> earrays;
+    std::vector<std::vector<const void*>> varrs;
+    std::vector<std::vector<const void*>> earrs;
 };
 
 struct GRIN_GRAPH_T {
@@ -165,6 +167,58 @@ struct GRIN_GRAPH_T {
     _GRAPH_CACHE* cache;
 };
 
+inline const void* _GetArrowArrayData(
+    std::shared_ptr<arrow::Array> const& array) {
+  if (array->type()->Equals(arrow::int8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int8Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt8Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::int16())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int16Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint16())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt16Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::int32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int32Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt32Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::int64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Int64Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::uint64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::UInt64Array>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::float32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::FloatArray>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::float64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::DoubleArray>(array)->raw_values());
+  } else if (array->type()->Equals(arrow::utf8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::StringArray>(array).get());
+  } else if (array->type()->Equals(arrow::large_utf8())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get());
+  } else if (array->type()->Equals(arrow::list(arrow::int32())) ||
+             array->type()->Equals(arrow::large_list(arrow::uint32())) ||
+             array->type()->Equals(arrow::large_list(arrow::int64())) ||
+             array->type()->Equals(arrow::large_list(arrow::uint64())) ||
+             array->type()->Equals(arrow::large_list(arrow::float32())) ||
+             array->type()->Equals(arrow::large_list(arrow::float64()))) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::LargeListArray>(array).get());
+  } else if (array->type()->Equals(arrow::null())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::NullArray>(array).get());
+  }
+}
+
 inline void _prepare_cache(GRIN_GRAPH_T* g) {
     g->cache = new _GRAPH_CACHE();
     g->cache->id_parser = vineyard::IdParser<_GRIN_GRAPH_T::vid_t>();
@@ -172,29 +226,35 @@ inline void _prepare_cache(GRIN_GRAPH_T* g) {
 
     g->cache->vtype_names.resize(g->g->vertex_label_num());
     g->cache->varrays.resize(g->g->vertex_label_num());
+    g->cache->varrs.resize(g->g->vertex_label_num());
     g->cache->vprop_names.resize(g->g->vertex_label_num());
 
     for (int i = 0; i < g->g->vertex_label_num(); ++i) {
         g->cache->vtype_names[i] = g->g->schema().GetVertexLabelName(i);
         g->cache->varrays[i].resize(g->g->vertex_property_num(i));
+        g->cache->varrs[i].resize(g->g->vertex_property_num(i));
         g->cache->vprop_names[i].resize(g->g->vertex_property_num(i));
         for (int j = 0; j < g->g->vertex_property_num(i); ++j) {
             g->cache->vprop_names[i][j] = g->g->schema().GetVertexPropertyName(i, j);
             g->cache->varrays[i][j] = g->g->vertex_data_table(i)->column(j)->chunk(0);
+            g->cache->varrs[i][j] = _GetArrowArrayData(g->g->vertex_data_table(i)->column(j)->chunk(0));
         } 
     }
 
     g->cache->etype_names.resize(g->g->edge_label_num());
     g->cache->earrays.resize(g->g->edge_label_num());
+    g->cache->earrs.resize(g->g->edge_label_num());
     g->cache->eprop_names.resize(g->g->edge_label_num());
 
     for (int i = 0; i < g->g->edge_label_num(); ++i) {
         g->cache->etype_names[i] = g->g->schema().GetEdgeLabelName(i);
         g->cache->earrays[i].resize(g->g->edge_property_num(i));
+        g->cache->earrs[i].resize(g->g->edge_property_num(i));
         g->cache->eprop_names[i].resize(g->g->edge_property_num(i));
         for (int j = 0; j < g->g->edge_property_num(i); ++j) {
             g->cache->eprop_names[i][j] = g->g->schema().GetEdgePropertyName(i, j);
             g->cache->earrays[i][j] = g->g->edge_data_table(i)->column(j)->chunk(0);
+            g->cache->earrs[i][j] = _GetArrowArrayData(g->g->edge_data_table(i)->column(j)->chunk(0));
         } 
     }
 }
@@ -324,21 +384,11 @@ inline const void* _get_arrow_array_data_element(std::shared_ptr<arrow::Array> c
   }
 }
 
-
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 typedef unsigned GRIN_VERTEX_TYPE_T;
 typedef std::vector<unsigned> GRIN_VERTEX_TYPE_LIST_T;
 typedef unsigned long long int GRIN_VERTEX_PROPERTY_T;
 typedef std::vector<GRIN_VERTEX_PROPERTY_T> GRIN_VERTEX_PROPERTY_LIST_T;
-
-inline const void* _get_value_from_vertex_property_table(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    unsigned vtype = _grin_get_type_from_property(vp);
-    unsigned vprop = _grin_get_prop_from_property(vp);
-    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
-    assert((unsigned)_cache->id_parser.GetLabelId(v) == vtype);
-    return _get_arrow_array_data_element(_cache->varrays[vtype][vprop], _cache->id_parser.GetOffset(v));
-}
 #endif
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
@@ -346,16 +396,6 @@ typedef unsigned GRIN_EDGE_TYPE_T;
 typedef std::vector<unsigned> GRIN_EDGE_TYPE_LIST_T;
 typedef unsigned long long int GRIN_EDGE_PROPERTY_T;
 typedef std::vector<GRIN_EDGE_PROPERTY_T> GRIN_EDGE_PROPERTY_LIST_T;
-
-inline const void* _get_value_from_edge_property_table(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR;
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    unsigned etype = _grin_get_type_from_property(ep);
-    assert(etype == _e->etype);
-    unsigned eprop = _grin_get_prop_from_property(ep);
-    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
-    return _get_arrow_array_data_element(_cache->earrays[etype][eprop], _e->eid);
-}
 #endif
 
 #ifdef GRIN_ENABLE_ROW

@@ -13,6 +13,20 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "property/property.h"
 
+#define GET_VERTEX_VALUE \
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR; \
+    unsigned vtype = _grin_get_type_from_property(vp); \
+    unsigned vprop = _grin_get_prop_from_property(vp); \
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache; \
+    assert((unsigned)_cache->id_parser.GetLabelId(v) == vtype);
+
+#define GET_EDGE_VALUE \
+    grin_error_code = GRIN_ERROR_CODE::NO_ERROR; \
+    auto _e = static_cast<GRIN_EDGE_T*>(e); \
+    unsigned etype = _grin_get_type_from_property(ep); \
+    assert(etype == _e->etype); \
+    unsigned eprop = _grin_get_prop_from_property(ep); \
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
 
 void grin_destroy_string_value(GRIN_GRAPH g, const char* value) {}
 
@@ -97,63 +111,54 @@ GRIN_DATATYPE grin_get_vertex_property_datatype(GRIN_GRAPH g, GRIN_VERTEX_PROPER
 }
 
 int grin_get_vertex_property_value_of_int32(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    const void* result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return 0;
-    return *static_cast<const int*>(result);
+    GET_VERTEX_VALUE
+    return static_cast<const int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
 unsigned int grin_get_vertex_property_value_of_uint32(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    const void* result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return 0;
-    return *static_cast<const unsigned int*>(result);
+    GET_VERTEX_VALUE
+    return static_cast<const unsigned int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
 long long int grin_get_vertex_property_value_of_int64(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    const void* result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return 0;
-    return *static_cast<const long long int*>(result);
+    GET_VERTEX_VALUE
+    return static_cast<const long long int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
 unsigned long long int grin_get_vertex_property_value_of_uint64(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    const void* result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return 0;
-    return *static_cast<const unsigned long long int*>(result);
+    GET_VERTEX_VALUE
+    return static_cast<const unsigned long long int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
 float grin_get_vertex_property_value_of_float(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    const void* result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return 0;
-    return *static_cast<const float*>(result);
+    GET_VERTEX_VALUE
+    return static_cast<const float*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
 double grin_get_vertex_property_value_of_double(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    const void* result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return 0;
-    return *static_cast<const double*>(result);
+    GET_VERTEX_VALUE
+    return static_cast<const double*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
 const char* grin_get_vertex_property_value_of_string(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    const void* result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return NULL;
+    GET_VERTEX_VALUE
+    auto result = _get_arrow_array_data_element(_cache->varrays[vtype][vprop], _cache->id_parser.GetOffset(v));
     return static_cast<const std::string*>(result)->c_str();
 }
 
 int grin_get_vertex_property_value_of_date32(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    const void* result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return 0;
-    return *static_cast<const int*>(result);
+    GET_VERTEX_VALUE
+    return static_cast<const int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
 int grin_get_vertex_property_value_of_time32(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    const void* result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return 0;
-    return *static_cast<const int*>(result);
+    GET_VERTEX_VALUE
+    return static_cast<const int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
 long long int grin_get_vertex_property_value_of_timestamp64(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    const void* result = _get_value_from_vertex_property_table(g, v, vp);
-    if (result == NULL) return 0;
-    return *static_cast<const long long int*>(result);
+    GET_VERTEX_VALUE
+    return static_cast<const long long int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
 
@@ -177,63 +182,54 @@ GRIN_DATATYPE grin_get_edge_property_datatype(GRIN_GRAPH g, GRIN_EDGE_PROPERTY e
 }
 
 int grin_get_edge_property_value_of_int32(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return 0;
-    return *static_cast<const int*>(result);
+    GET_EDGE_VALUE
+    return static_cast<const int*>(_cache->earrs[etype][eprop])[_e->eid];
 }
 
 unsigned int grin_get_edge_property_value_of_uint32(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return 0;
-    return *static_cast<const unsigned int*>(result);
+    GET_EDGE_VALUE
+    return static_cast<const unsigned int*>(_cache->earrs[etype][eprop])[_e->eid];
 }
 
 long long int grin_get_edge_property_value_of_int64(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return 0;
-    return *static_cast<const long long int*>(result);
+    GET_EDGE_VALUE
+    return static_cast<const long long int*>(_cache->earrs[etype][eprop])[_e->eid];
 }
 
 unsigned long long int grin_get_edge_property_value_of_uint64(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return 0;
-    return *static_cast<const unsigned long long int*>(result);
+    GET_EDGE_VALUE
+    return static_cast<const unsigned long long int*>(_cache->earrs[etype][eprop])[_e->eid];
 }
 
 float grin_get_edge_property_value_of_float(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return 0;
-    return *static_cast<const float*>(result);
+    GET_EDGE_VALUE
+    return static_cast<const float*>(_cache->earrs[etype][eprop])[_e->eid];
 }
 
 double grin_get_edge_property_value_of_double(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return 0;
-    return *static_cast<const double*>(result);
+    GET_EDGE_VALUE
+    return static_cast<const double*>(_cache->earrs[etype][eprop])[_e->eid];
 }
 
 const char* grin_get_edge_property_value_of_string(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return NULL;
+    GET_EDGE_VALUE
+    auto result = _get_arrow_array_data_element(_cache->earrays[etype][eprop], _e->eid);
     return static_cast<const std::string*>(result)->c_str();
 }
 
 int grin_get_edge_property_value_of_date32(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return 0;
-    return *static_cast<const int*>(result);
+    GET_EDGE_VALUE
+    return static_cast<const int*>(_cache->earrs[etype][eprop])[_e->eid];
 }
 
 int grin_get_edge_property_value_of_time32(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return 0;
-    return *static_cast<const int*>(result);
+    GET_EDGE_VALUE
+    return static_cast<const int*>(_cache->earrs[etype][eprop])[_e->eid];
 }
 
 long long int grin_get_edge_property_value_of_timestamp64(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    const void* result = _get_value_from_edge_property_table(g, e, ep);
-    if (result == NULL) return 0;
-    return *static_cast<const long long int*>(result);
+    GET_EDGE_VALUE
+    return static_cast<const long long int*>(_cache->earrs[etype][eprop])[_e->eid];
 }
 
 GRIN_EDGE_TYPE grin_get_edge_type_from_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
