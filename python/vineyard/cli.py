@@ -410,12 +410,13 @@ def vineyard_argument_parser():  # pylint: disable=too-many-statements
     start_opt.add_argument(
         '--size',
         type=str,
-        default='256M',
+        default='',
         help=(
             'The memory size limit for vineyard’s shared memory. The memory size '
             'can be a plain integer or as a fixed-point number using one of these '
             'suffixes: E, P, T, G, M, K. You can also use the power-of-two '
-            'equivalents: Ei, Pi, Ti, Gi, Mi, Ki.'
+            'equivalents: Ei, Pi, Ti, Gi, Mi, Ki.\n'
+            'Defaults to "", means not limited'
         ),
     )
     start_opt.add_argument(

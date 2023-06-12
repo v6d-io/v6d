@@ -41,7 +41,7 @@ def start_vineyardd(
     etcd_endpoints=None,
     etcd_prefix=None,
     vineyardd_path=None,
-    size='256M',
+    size='',
     socket=None,
     rpc=True,
     rpc_socket_port=9600,
@@ -68,6 +68,7 @@ def start_vineyardd(
                 E, P, T, G, M, K.
 
             You can also use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki.
+            Defaults to "", means not limited.
 
             For example, the following represent roughly the same value:
 

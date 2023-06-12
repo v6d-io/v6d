@@ -40,7 +40,7 @@ type SidecarSpec struct {
 	// vineyard container configuration
 	// +kububuilder:validation:Optional
 	//nolint: lll
-	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}", size: "256Mi", streamThreshold: 80}
+	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}", size: "", streamThreshold: 80}
 	Vineyard VineyardConfig `json:"vineyard,omitempty"`
 
 	// metric container configuration

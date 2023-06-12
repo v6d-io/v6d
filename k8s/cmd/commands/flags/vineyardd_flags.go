@@ -57,9 +57,9 @@ func ApplyVineyardContainerOpts(c *v1alpha1.VineyardConfig,
 		"The directory on host for the IPC socket file. "+
 			"The namespace and name will be replaced with your vineyard config")
 	cmd.Flags().StringVarP(&c.Size, prefix+".size",
-		"", "256Mi",
+		"", "",
 		"The size of vineyardd. You can use the power-of-two equivalents: "+
-			"Ei, Pi, Ti, Gi, Mi, Ki.")
+			"Ei, Pi, Ti, Gi, Mi, Ki. Defaults \"\", means not limited")
 	cmd.Flags().BoolVarP(&c.ReserveMemory, prefix+".reserve_memory",
 		"", false,
 		"Reserving enough physical memory pages for vineyardd")
@@ -97,7 +97,7 @@ func ApplyServiceOpts(s *v1alpha1.ServiceConfig, prefix string, cmd *cobra.Comma
 // ApplyVolumeOpts represents the option of pvc volume configuration
 func ApplyVolumeOpts(v *v1alpha1.VolumeConfig, prefix string, cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&v.PvcName, prefix+".volume.pvcname", "",
-		"", "Set the pvc name for storing the vineyard objects persistently, ")
+		"", "Set the pvc name for storing the vineyard objects persistently")
 	cmd.Flags().StringVarP(&v.MountPath, prefix+".volume.mountPath", "",
 		"", "Set the mount path for the pvc")
 }

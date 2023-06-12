@@ -566,7 +566,7 @@ Next, you could see the sidecar container injected into the pod.
       vineyard:
         image: vineyardcloudnative/vineyardd:latest
         imagePullPolicy: IfNotPresent
-        size: 256Mi
+        size: ""
         socket: /var/run/vineyard.sock
         spill:
           name: ""
@@ -606,7 +606,7 @@ Next, you could see the sidecar container injected into the pod.
         - |
           /usr/bin/wait-for-it.sh -t 60 etcd-for-vineyard.vineyard-job.svc.cluster.local:2379;
           sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock
-          --size 256Mi --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard
+          --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard
           --etcd_endpoint http://etcd-for-vineyard:2379
         env:
         - name: VINEYARDD_UID

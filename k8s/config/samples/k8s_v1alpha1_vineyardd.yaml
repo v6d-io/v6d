@@ -10,7 +10,7 @@ spec:
     image: vineyardcloudnative/vineyardd:latest
     imagePullPolicy: IfNotPresent
     # vineyardd's configuration
-    size: 256Mi
+    size: ""
     syncCRDs: true
   spill:
     name: spill-path

@@ -341,7 +341,7 @@ The memory address value of this blob.
 
 const char* Blob_buffer = R"doc(
 The readonly buffer behind this blob. The result buffer has type
-:code:`pyarrow::Buffer`.
+:code:`memoryview`.
 )doc";
 
 const char* BlobBuilder = R"doc(
@@ -381,7 +381,7 @@ The memory address value of this blob builder.
 
 const char* BlobBuilder_buffer = R"doc(
 The writeable buffer behind this blob builder. The result buffer has type
-:code:`pyarrow::Buffer`, and it is a mutable one.
+:code:`memoryview`, and it is a mutable one.
 )doc";
 
 const char* RemoteBlob = R"doc(
@@ -412,7 +412,7 @@ The memory address value of this blob.
 
 const char* RemoteBlob_buffer = R"doc(
 The readonly buffer behind this blob. The result buffer has type
-:code:`pyarrow::Buffer`.
+:code:`memoryview`.
 )doc";
 
 const char* RemoteBlobBuilder = R"doc(
@@ -449,7 +449,7 @@ The memory address value of this blob builder.
 
 const char* RemoteBlobBuilder_buffer = R"doc(
 The writeable buffer behind this blob builder. The result buffer has type
-:code:`pyarrow::Buffer`, and it is a mutable one.
+:code:`memoryview`, and it is a mutable one.
 )doc";
 
 const char* InstanceStatus = R"doc(

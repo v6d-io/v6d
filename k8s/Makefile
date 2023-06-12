@@ -274,6 +274,3 @@ generate-helm-chart: helmify kustomize
 	vineyard-operator/templates/vineyardd-crd.yaml && \
 	sed -i 's/certManager/cert-manager/g' vineyard-operator/values.yaml && \
 	sed -i '4i\  extraArgs:\n    - --enable-certificate-owner-ref=true' vineyard-operator/values.yaml
-	
-
-

@@ -127,7 +127,7 @@ type VineyardConfig struct {
 
 	// shared memory size for vineyardd
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default:="256Mi"
+	// +kubebuilder:default:=""
 	Size string `json:"size,omitempty"`
 
 	// reserve the shared memory for vineyardd
@@ -210,7 +210,7 @@ type VineyarddSpec struct {
 	// vineyard container configuration
 	// +kubebuilder:validation:Optional
 	//nolint: lll
-	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}", size: "256Mi", streamThreshold: 80}
+	// +kubebuilder:default:={image: "vineyardcloudnative/vineyardd:latest", imagePullPolicy: "IfNotPresent", syncCRDs: true, socket: "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}", size: "", streamThreshold: 80}
 	Vineyard VineyardConfig `json:"vineyard,omitempty"`
 
 	// operation container configuration

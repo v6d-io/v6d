@@ -239,7 +239,7 @@ int64_t get_maximum_shared_memory() {
   close(shm_fd);
 #else
   size_t len = sizeof(shmmax);
-  if (-1 == sysctlbyname("kern.sysv.shmmax", &shmmax, &len, NULL, 0)) {
+  if (sysctlbyname("kern.sysv.shmmax", &shmmax, &len, NULL, 0) == -1) {
     std::clog << "[warn] Failed to read shmmax from 'kern.sysv.shmmax'!"
               << std::endl;
   }
@@ -268,35 +268,84 @@ std::string prettyprint_memory_size(size_t nbytes) {
  * @brief Parse human-readable size. Note that any extra character that follows
  * a valid sequence will be ignored.
  */
-size_t parse_memory_size(std::string const& nbytes) {
+int64_t parse_memory_size(std::string const& nbytes) {
   const char *start = nbytes.c_str(), *end = nbytes.c_str() + nbytes.size();
   char* parsed_end = nullptr;
   double parse_size = std::strtod(start, &parsed_end);
   if (end == parsed_end || *parsed_end == '\0') {
-    return static_cast<size_t>(parse_size);
+    return static_cast<int64_t>(parse_size);
   }
   switch (*parsed_end) {
   case 'k':
   case 'K':
-    return static_cast<size_t>(parse_size * (1LL << 10));
+    return static_cast<int64_t>(parse_size * (1LL << 10));
   case 'm':
   case 'M':
-    return static_cast<size_t>(parse_size * (1LL << 20));
+    return static_cast<int64_t>(parse_size * (1LL << 20));
   case 'g':
   case 'G':
-    return static_cast<size_t>(parse_size * (1LL << 30));
+    return static_cast<int64_t>(parse_size * (1LL << 30));
   case 't':
   case 'T':
-    return static_cast<size_t>(parse_size * (1LL << 40));
+    return static_cast<int64_t>(parse_size * (1LL << 40));
   case 'P':
   case 'p':
-    return static_cast<size_t>(parse_size * (1LL << 50));
+    return static_cast<int64_t>(parse_size * (1LL << 50));
   case 'e':
   case 'E':
-    return static_cast<size_t>(parse_size * (1LL << 60));
+    return static_cast<int64_t>(parse_size * (1LL << 60));
   default:
-    return static_cast<size_t>(parse_size);
+    return static_cast<int64_t>(parse_size);
   }
+}
+
+int64_t read_physical_memory_limit() {
+  // see also: https://stackoverflow.com/a/71392704/5080177
+  constexpr const int64_t unlimited = 0x7f00000000000000;
+
+  int64_t limit_in_bytes = 0;
+  FILE* fp = nullptr;
+  if ((fp = fopen("/sys/fs/cgroup/memory/memory.limit_in_bytes", "r")) !=
+      nullptr) {
+    if (fscanf(fp, "%ld", &limit_in_bytes) != 1 ||
+        limit_in_bytes >= unlimited) {
+      limit_in_bytes = 0;
+    }
+    fclose(fp);
+  }
+  if (limit_in_bytes != 0) {
+    return limit_in_bytes;
+  }
+
+  if ((fp = fopen("/sys/fs/cgroup/memory.max", "r")) != nullptr) {
+    if (fscanf(fp, "%ld", &limit_in_bytes) != 1 ||
+        limit_in_bytes >= unlimited) {
+      limit_in_bytes = 0;
+    }
+    fclose(fp);
+  }
+  if (limit_in_bytes != 0) {
+    return limit_in_bytes;
+  }
+
+#ifdef __linux__
+  int64_t physical_pages = sysconf(_SC_PHYS_PAGES);
+  if (physical_pages == -1) {
+    return -1;
+  }
+  int64_t page_size = sysconf(_SC_PAGE_SIZE);
+  if (page_size == -1) {
+    return -1;
+  }
+  limit_in_bytes = physical_pages * page_size;
+#else
+  size_t len = sizeof(limit_in_bytes);
+  if (sysctlbyname("hw.memsize", &limit_in_bytes, &len, NULL, 0) == -1) {
+    return -1;
+  }
+#endif
+
+  return limit_in_bytes;
 }
 
 }  // namespace vineyard

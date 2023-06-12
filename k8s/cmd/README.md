@@ -882,7 +882,7 @@ vineyardctl deploy vineyard-deployment [flags]
 
   # deploy the vineyard deployment with customized image
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
-  deploy vineyard-deployment --image vineyardd:v0.12.2
+  deploy vineyard-deployment --image vineyardcloudnative/vineyardd:v0.12.2
 ```
 
 ### Options
@@ -910,7 +910,7 @@ vineyardctl deploy vineyard-deployment [flags]
       --vineyardd.reserve_memory                      Reserving enough physical memory pages for vineyardd
       --vineyardd.service.port int                    the service port of vineyard service (default 9600)
       --vineyardd.service.type string                 the service type of vineyard service (default "ClusterIP")
-      --vineyardd.size string                         The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki. (default "256Mi")
+      --vineyardd.size string                         The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki. Defaults "", means not limited
       --vineyardd.socket string                       The directory on host for the IPC socket file. The namespace and name will be replaced with your vineyard config (default "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}")
       --vineyardd.spill.config string                 If you want to enable the spill mechanism, please set the name of spill config
       --vineyardd.spill.path string                   The path of spill config
@@ -920,7 +920,7 @@ vineyardctl deploy vineyard-deployment [flags]
       --vineyardd.streamThreshold int                 memory threshold of streams (percentage of total memory) (default 80)
       --vineyardd.syncCRDs                            enable metrics of vineyardd (default true)
       --vineyardd.volume.mountPath string             Set the mount path for the pvc
-      --vineyardd.volume.pvcname string               Set the pvc name for storing the vineyard objects persistently, 
+      --vineyardd.volume.pvcname string               Set the pvc name for storing the vineyard objects persistently
 ```
 
 ## `vineyardctl deploy vineyardd`
@@ -1043,7 +1043,7 @@ vineyardctl deploy vineyardd [flags]
       --vineyardd.reserve_memory                      Reserving enough physical memory pages for vineyardd
       --vineyardd.service.port int                    the service port of vineyard service (default 9600)
       --vineyardd.service.type string                 the service type of vineyard service (default "ClusterIP")
-      --vineyardd.size string                         The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki. (default "256Mi")
+      --vineyardd.size string                         The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki. Defaults "", means not limited
       --vineyardd.socket string                       The directory on host for the IPC socket file. The namespace and name will be replaced with your vineyard config (default "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}")
       --vineyardd.spill.config string                 If you want to enable the spill mechanism, please set the name of spill config
       --vineyardd.spill.path string                   The path of spill config
@@ -1053,7 +1053,7 @@ vineyardctl deploy vineyardd [flags]
       --vineyardd.streamThreshold int                 memory threshold of streams (percentage of total memory) (default 80)
       --vineyardd.syncCRDs                            enable metrics of vineyardd (default true)
       --vineyardd.volume.mountPath string             Set the mount path for the pvc
-      --vineyardd.volume.pvcname string               Set the pvc name for storing the vineyard objects persistently, 
+      --vineyardd.volume.pvcname string               Set the pvc name for storing the vineyard objects persistently
 ```
 
 ## `vineyardctl inject`
@@ -1135,7 +1135,7 @@ template:
       - -c
       - |
         /usr/bin/wait-for-it.sh -t 60 vineyard-sidecar-etcd-service.vineyard-job.svc.cluster.local:2379; \
-        sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock --size 256Mi \
+        sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock \
         --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard \
         --etcd_endpoint http://vineyard-sidecar-etcd-service:2379
       env:
@@ -1230,7 +1230,7 @@ vineyardctl inject [flags]
       --sidecar.reserve_memory                  Reserving enough physical memory pages for vineyardd
       --sidecar.service.port int                the service port of vineyard service (default 9600)
       --sidecar.service.type string             the service type of vineyard service (default "ClusterIP")
-      --sidecar.size string                     The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki. (default "256Mi")
+      --sidecar.size string                     The size of vineyardd. You can use the power-of-two equivalents: Ei, Pi, Ti, Gi, Mi, Ki. Defaults "", means not limited
       --sidecar.socket string                   The directory on host for the IPC socket file. The namespace and name will be replaced with your vineyard config (default "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}")
       --sidecar.spill.config string             If you want to enable the spill mechanism, please set the name of spill config
       --sidecar.spill.path string               The path of spill config
@@ -1240,7 +1240,7 @@ vineyardctl inject [flags]
       --sidecar.streamThreshold int             memory threshold of streams (percentage of total memory) (default 80)
       --sidecar.syncCRDs                        enable metrics of vineyardd (default true)
       --sidecar.volume.mountPath string         Set the mount path for the pvc
-      --sidecar.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently, 
+      --sidecar.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently
 ```
 
 ## `vineyardctl manager`

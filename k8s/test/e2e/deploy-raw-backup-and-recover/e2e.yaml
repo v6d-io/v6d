@@ -22,13 +22,16 @@ setup:
     - name: download all failover images into kind cluster and load the backup-job and recover-job images manually
       command: |
         make -C k8s/test/e2e publish-failover-images REGISTRY=localhost:5001
-        docker tag localhost:5001/backup-job ghcr.io/v6d-io/v6d/backup-job
-        docker tag localhost:5001/recover-job ghcr.io/v6d-io/v6d/recover-job
-        kind load docker-image ghcr.io/v6d-io/v6d/backup-job
-        kind load docker-image ghcr.io/v6d-io/v6d/recover-job
     - name: deploy the vineyard deployment
       command: |
-        go run k8s/cmd/main.go deploy vineyard-deployment --create-namespace
+        go run k8s/cmd/main.go deploy vineyard-deployment \
+          --vineyardd.image="localhost:5001/vineyardd:alpine-latest" \
+          --pluginImage.backupImage="localhost:5001/backup-job" \
+          --pluginImage.recoverImage="localhost:5001/recover-job" \
+          --pluginImage.daskRepartitionImage="localhost:5001/dask-repartition" \
+          --pluginImage.localAssemblyImage="localhost:5001/local-assembly" \
+          --pluginImage.distributedAssemblyImage="localhost:5001/distributed-assembly" \
+          --create-namespace
     - name: install local-object
       command: |
         kubectl create namespace vineyard-job
@@ -128,10 +131,17 @@ setup:
         kubectl wait --for delete pod --timeout=60s --selector=app.kubernetes.io/name=vineyardd-sample -n vineyard-system
     - name: reinstall vineyardd
       command: |
-        go run k8s/cmd/main.go deploy vineyard-deployment
+        go run k8s/cmd/main.go deploy vineyard-deployment \
+          --vineyardd.image="localhost:5001/vineyardd:alpine-latest" \
+          --pluginImage.backupImage="localhost:5001/backup-job" \
+          --pluginImage.recoverImage="localhost:5001/recover-job" \
+          --pluginImage.daskRepartitionImage="localhost:5001/dask-repartition" \
+          --pluginImage.localAssemblyImage="localhost:5001/local-assembly" \
+          --pluginImage.distributedAssemblyImage="localhost:5001/distributed-assembly" \
+          --create-namespace
     - name: install recover
       command: |
-        go run k8s/cmd/main.go deploy recover-job\
+        go run k8s/cmd/main.go deploy recover-job \
           --recover-name recover-job-xxx \
           --vineyard-deployment-name vineyardd-sample \
           --vineyard-deployment-namespace vineyard-system  \

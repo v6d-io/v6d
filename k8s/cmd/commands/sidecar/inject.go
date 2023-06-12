@@ -141,7 +141,7 @@ var (
 	      - -c
 	      - |
 	        /usr/bin/wait-for-it.sh -t 60 vineyard-sidecar-etcd-service.vineyard-job.svc.cluster.local:2379; \
-	        sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock --size 256Mi \
+	        sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock \
 	        --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard \
 	        --etcd_endpoint http://vineyard-sidecar-etcd-service:2379
 	      env:

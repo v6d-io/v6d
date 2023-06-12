@@ -96,7 +96,7 @@ spec:
                 default:
                   image: vineyardcloudnative/vineyardd:latest
                   imagePullPolicy: IfNotPresent
-                  size: 256Mi
+                  size: ""
                   socket: /var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}
                   streamThreshold: 80
                   syncCRDs: true
@@ -179,7 +179,7 @@ spec:
                     default: false
                     type: boolean
                   size:
-                    default: 256Mi
+                    default: ""
                     type: string
                   socket:
                     default: /var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}
