@@ -17,6 +17,7 @@
 #
 
 from . import catalog
+from . import argo
 from . import cli
 from .hook import VineyardHook
 from .hook import hooks

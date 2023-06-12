@@ -11,8 +11,8 @@ spec:
       labels:
         app: {{ task.name }}
         # this label represents the vineyardd's name that need to be used
-        scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
-        scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
+        scheduling.k8s.v6d.io/vineyardd-namespace: {{ vineyardd_namespace }}
+        scheduling.k8s.v6d.io/vineyardd: {{ vineyardd_name }}
         scheduling.k8s.v6d.io/job:  {{ task.name }}
       {% if task.deps %}
       annotations:
@@ -39,7 +39,7 @@ spec:
     volumes:
       - name: vineyard
         hostPath:
-          path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+          path: /var/run/vineyard-kubernetes/{{ vineyardd_namespace }}/{{ vineyardd_name }}
           type: DirectoryOrCreate
   {% endfor %}
   - name: dag

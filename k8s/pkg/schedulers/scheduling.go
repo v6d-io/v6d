@@ -24,8 +24,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	//wfv1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
-
+	wfv1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -37,6 +36,7 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
@@ -197,22 +197,61 @@ func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int, error) {
 				return int(*deployment.Spec.Replicas), nil
 			}
 		case "Workflow":
-			// TODO: support Argo workflow
-			/*workflow := &wfv1alpha1.Workflow{}
-
-			// Get the Argo workflow's spec.
-			err := vs.Get(context.Background(), name, workflow)
-			if err != nil {
-				fmt.Println(err)
-				return -1, err
-			}*/
-			return 1, nil
+			return vs.GetArgoWorkflowReplicas(name, pod)
 		default:
 			slog.Info(fmt.Sprintf("Unknown owner kind: %v", owner.Kind))
 		}
 	}
 
 	return -1, errors.Errorf("Failed to get vineyard job name for %v", GetNamespacedName(pod))
+}
+
+// GetArgoWorkflowReplicas get the replicas of the pod from the argo workflow
+func (vs *VineyardScheduling) GetArgoWorkflowReplicas(name types.NamespacedName, pod *v1.Pod) (int, error) {
+	workflow := &wfv1.Workflow{}
+
+	// add Argo workflow scheme to the existing scheme
+	if err := vs.AddArgoWorkflowScheme(); err != nil {
+		return -1, err
+	}
+
+	// Get the Argo workflow's spec.
+	err := vs.Get(context.Background(), name, workflow)
+	if err != nil {
+		slog.Errorf(err, "Failed to get Argo workflow spec: %v")
+		return -1, err
+	}
+
+	// Get the template name of the pod.
+	templateName := pod.Labels[labels.VineyardJobName]
+	if templateName == "" {
+		return -1, errors.Errorf("Failed to get template name for %v", GetNamespacedName(pod))
+	}
+
+	// Get the template spec.
+	for i := range workflow.Spec.Templates {
+		if workflow.Spec.Templates[i].Name == templateName {
+			return int(*workflow.Spec.Templates[i].Parallelism), nil
+		}
+	}
+	// if the template spec is not found, return -1
+	return -1, errors.Errorf("Failed to get replicas for %v from the argo workflow", GetNamespacedName(pod))
+}
+
+// AddArgoWorkflowScheme adds Argo workflow scheme to the existing scheme, if it is not added.
+func (vs *VineyardScheduling) AddArgoWorkflowScheme() error {
+	// Check if the Argo schema exists in the vs.Client.Scheme()
+	gvks, _, _ := vs.Client.Scheme().ObjectKinds(&wfv1.Workflow{})
+
+	if len(gvks) == 0 {
+		// add Argo workflow scheme to the existing scheme
+		err := wfv1.AddToScheme(vs.Client.Scheme())
+		if err != nil {
+			slog.Errorf(err, "Failed to add Argo workflow scheme")
+			return err
+		}
+	}
+	return nil
 }
 
 // GetPodRank returns the rank of this pod

@@ -17,4 +17,3 @@ profiles:
       postBind:
         enabled:
           - name: Vineyard
-
