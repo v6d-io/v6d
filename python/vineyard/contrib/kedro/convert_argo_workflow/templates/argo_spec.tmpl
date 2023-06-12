@@ -1,0 +1,61 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: {{ package_name }}-
+spec:
+  entrypoint: dag
+  templates:
+  {% for task in tasks %}
+  - name: {{ task.name }}
+    metadata:
+      labels:
+        app: {{ task.name }}
+        # this label represents the vineyardd's name that need to be used
+        scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
+        scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
+        scheduling.k8s.v6d.io/job:  {{ task.name }}
+      {% if task.deps %}
+      annotations:
+        scheduling.k8s.v6d.io/required: {{ task.deps | join(',') }}
+      {% endif %}
+    retryStrategy:
+      limit: 1
+    inputs:
+      parameters:
+      - name: kedro_node
+    schedulerName: vineyard-scheduler
+    container:
+      imagePullPolicy: IfNotPresent
+      image: {{ image }}
+      env:
+        - name: VINEYARD_IPC_SOCKET
+          value: /var/run/vineyard.sock
+      command: [kedro]{% raw %}
+      args: ["run", "-n",  "{{inputs.parameters.kedro_node}}"]
+      {% endraw %}
+      volumeMounts:
+      - name: vineyard
+        mountPath: /var/run
+    volumes:
+      - name: vineyard
+        hostPath:
+          path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+          type: DirectoryOrCreate
+  {% endfor %}
+  - name: dag
+    dag:
+      tasks:
+      {% for task in tasks %}
+      - name: {{ task.name }}
+        template: {{ task.name }}
+        {% if task.deps %}
+        dependencies:
+        {% for dep in task.deps %}
+          - {{ dep }}
+        {% endfor %}
+        {% endif %}
+        arguments:
+          parameters:
+          - name: kedro_node
+            value: {{ task.node }}
+      {% endfor %}

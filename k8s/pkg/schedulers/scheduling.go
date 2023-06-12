@@ -24,6 +24,8 @@ import (
 
 	"github.com/pkg/errors"
 
+	//wfv1alpha1 "github.com/argoproj/argo-workflows/v3/pkg/apis/workflow/v1alpha1"
+
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
@@ -194,6 +196,17 @@ func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int, error) {
 			if err := vs.Get(ctx, name, deployment); err == nil {
 				return int(*deployment.Spec.Replicas), nil
 			}
+		case "Workflow":
+			// TODO: support Argo workflow
+			/*workflow := &wfv1alpha1.Workflow{}
+
+			// Get the Argo workflow's spec.
+			err := vs.Get(context.Background(), name, workflow)
+			if err != nil {
+				fmt.Println(err)
+				return -1, err
+			}*/
+			return 1, nil
 		default:
 			slog.Info(fmt.Sprintf("Unknown owner kind: %v", owner.Kind))
 		}
