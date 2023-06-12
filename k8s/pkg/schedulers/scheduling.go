@@ -218,7 +218,7 @@ func (vs *VineyardScheduling) GetArgoWorkflowReplicas(name types.NamespacedName,
 	// Get the Argo workflow's spec.
 	err := vs.Get(context.Background(), name, workflow)
 	if err != nil {
-		slog.Errorf(err, "Failed to get Argo workflow spec: %v")
+		slog.Errorf(err, "Failed to get Argo workflow spec")
 		return -1, err
 	}
 

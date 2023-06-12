@@ -7,7 +7,7 @@
 #
 # which is licensed under the Apache License, Version 2.0.
 
-"""Command line `kedro vineyard argo generate` will generate an Argo workflow 
+"""Command line `kedro vineyard argo generate` will generate an Argo workflow
    configuration file from a Kedro pipeline.
 """
 
@@ -15,8 +15,8 @@ import re
 from pathlib import Path
 
 import click
-from jinja2 import Environment, FileSystemLoader
-
+from jinja2 import Environment
+from jinja2 import FileSystemLoader
 from kedro.framework.project import pipelines
 from kedro.framework.startup import bootstrap_project
 
@@ -25,33 +25,49 @@ from .cli import vineyard as vineyard_cli
 TEMPLATE_FILE = "argo_spec.tmpl"
 TEMPLATE_PATH = Path("templates")
 
+
 @vineyard_cli.group()
 def argo():
     """Commands for working with argo."""
 
+
 @argo.command("generate")
-@click.option("--image", "-i", "image", type=str ,required=True, default="")
+@click.option("--image", "-i", "image", type=str, required=True, default="")
 @click.option("--pipeline", "-p", "pipeline_name", type=str, default=None)
-@click.option("--vineyard", "-v", "vineyardd_name", type=str, default="vineyardd-sample")
-@click.option("--namespace", "-n", "vineyardd_namespace", type=str, default="vineyard-system")
+@click.option(
+    "--vineyard", "-v", "vineyardd_name", type=str, default="vineyardd-sample"
+)
+@click.option(
+    "--namespace", "-n", "vineyardd_namespace", type=str, default="vineyard-system"
+)
 @click.option("--output_path", "-o", "output_path", type=str, default=".")
-def generate_argo_config(image, pipeline_name, vineyardd_name, vineyardd_namespace, output_path):
+def generate_argo_config(
+    image, pipeline_name, vineyardd_name, vineyardd_namespace, output_path
+):
     """Generates an Argo workflow configuration file from a Kedro pipeline.
 
     Args:
 
         image (str, required): The Docker image to use for the workflow.
 
-        pipeline_name (str, optional): The name of the pipeline to generate the workflow for. If not specified, the default pipeline will be used.
+        pipeline_name (str, optional): The name of the pipeline to
+        generate the workflow for. If not specified, the default pipeline
+        will be used.
 
-        vineyardd_name (str, optional): The name of the Vineyardd server to use. Defaults to "vineyardd-sample".
+        vineyardd_name (str, optional): The name of the Vineyardd server
+        to use. Defaults to "vineyardd-sample".
 
-        vineyardd_namespace (str, optional): The namespace of the Vineyardd server. Defaults to "vineyard-system".
+        vineyardd_namespace (str, optional): The namespace of the Vineyardd
+        server. Defaults to "vineyard-system".
 
-        output_path (str, optional): The path to the output file. Defaults to the current directory.
+        output_path (str, optional): The path to the output file. Defaults
+        to the current directory.
 
     """
-    loader = FileSystemLoader(searchpath=TEMPLATE_PATH)
+    # get the absolute path of the template directory
+    template_path = Path(__file__).resolve().parent / TEMPLATE_PATH
+
+    loader = FileSystemLoader(searchpath=template_path)
     template_env = Environment(loader=loader, trim_blocks=True, lstrip_blocks=True)
     template = template_env.get_template(TEMPLATE_FILE)
 

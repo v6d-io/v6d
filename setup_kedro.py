@@ -74,7 +74,11 @@ setup(
     url='https://v6d.io',
     package_dir={'vineyard.contrib.kedro': 'python/vineyard/contrib/kedro'},
     package_data={
-        'vineyard.contrib.kedro': ['*.tmpl', '*.yaml', '*.README'],
+        'vineyard.contrib.kedro': [
+            'plugins/templates/*',
+            '*.yaml',
+            '*.README'
+        ],
     },
     packages=find_airflow_packages('python'),
     entry_points={
