@@ -181,8 +181,9 @@ jobs:
       - name: Commit Doc
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}
         run: |
-          git config user.email github-actions@github.com
-          git config user.name github-actions
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           git branch -D gh-pages || true
           git checkout --orphan gh-pages
           shopt -s extglob

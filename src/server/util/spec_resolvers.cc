@@ -46,9 +46,9 @@ DEFINE_string(redis_cmd, "", "path of redis executable");
 #endif
 
 // share memory
-DEFINE_string(size, "256Mi",
+DEFINE_string(size, "",
               "shared memory size for vineyardd, the format could be 1024M, "
-              "1024000, 1G, or 1Gi");
+              "1024000, 1G, or 1Gi.\nDefaults to empty, means not limited");
 DEFINE_string(allocator,
 #if defined(DEFAULT_ALLOCATOR)
               VINEYARD_TO_STRING(DEFAULT_ALLOCATOR),
@@ -163,34 +163,21 @@ size_t BulkstoreSpecResolver::parseMemoryLimit(
   // For example, the following represent roughly the same value:
   //
   // 128974848, 129k, 129M, 123Mi, 1G, 10Gi, ...
-  const char *start = memory_limit.c_str(),
-             *end = memory_limit.c_str() + memory_limit.size();
-  char* parsed_end = nullptr;
-  double parse_size = std::strtod(start, &parsed_end);
-  if (end == parsed_end || *parsed_end == '\0') {
-    return static_cast<size_t>(parse_size);
-  }
-  switch (*parsed_end) {
-  case 'k':
-  case 'K':
-    return static_cast<size_t>(parse_size * (1LL << 10));
-  case 'm':
-  case 'M':
-    return static_cast<size_t>(parse_size * (1LL << 20));
-  case 'g':
-  case 'G':
-    return static_cast<size_t>(parse_size * (1LL << 30));
-  case 't':
-  case 'T':
-    return static_cast<size_t>(parse_size * (1LL << 40));
-  case 'P':
-  case 'p':
-    return static_cast<size_t>(parse_size * (1LL << 50));
-  case 'e':
-  case 'E':
-    return static_cast<size_t>(parse_size * (1LL << 60));
-  default:
-    return static_cast<size_t>(parse_size);
+  const int64_t parsed_bytes = parse_memory_size(memory_limit);
+  if (parsed_bytes <= 0) {
+    // defaults to the physical memory size
+    const int64_t system_memory_limit = read_physical_memory_limit();
+    if (system_memory_limit <= 0) {
+      LOG(WARNING) << "Failed to resolve the system physical memory size. "
+                      "Defaults the limit to 16Gi.";
+      LOG(WARNING) << "Try specify the memory size manually with the `--size` "
+                      "command line argument.";
+      return 16L * 1024 * 1024 * 1024;
+    } else {
+      return system_memory_limit;
+    }
+  } else {
+    return parsed_bytes;
   }
 }
 

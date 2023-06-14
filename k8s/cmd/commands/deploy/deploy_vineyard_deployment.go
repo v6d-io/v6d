@@ -48,7 +48,7 @@ var (
 
 	# deploy the vineyard deployment with customized image
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config \
-	deploy vineyard-deployment --image vineyardd:v0.12.2`)
+	deploy vineyard-deployment --image vineyardcloudnative/vineyardd:v0.12.2`)
 
 	// OwnerReference is the owner reference of all vineyard deployment resources
 	OwnerReference string

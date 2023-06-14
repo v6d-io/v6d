@@ -136,18 +136,6 @@ jobs:
           sudo mkdir -p ~/.ccache
           sudo chmod -R a+wrx ~/.ccache
 
-          # install pyarrow from scratch
-          export PYARROW_WITH_PARQUET=1
-          export PYARROW_WITH_ORC=1
-          export PYARROW_WITH_DATASET=1
-          export PYARROW_BUILD_VERBOSE=1
-          export PYARROW_PARALLEL=$(nproc)
-          export PYARROW_CMAKE_OPTIONS="-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
-          sudo -E env PATH=$PATH pip3 install --no-binary pyarrow pyarrow==11.0.0
-
-          # restore the permission of ccache directory
-          sudo chmod -R a+wrx ~/.ccache
-
           # install python packages for codegen, and io adaptors
           sudo pip3 install -U "Pygments>=2.4.1"
           sudo pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt

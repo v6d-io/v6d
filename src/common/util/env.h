@@ -144,7 +144,14 @@ std::string prettyprint_memory_size(size_t nbytes);
  *
  * 128974848, 129k, 129M, 123Mi, 1G, 10Gi, ...
  */
-size_t parse_memory_size(std::string const& nbytes);
+int64_t parse_memory_size(std::string const& nbytes);
+
+/**
+ * Read physical memory limits in both containers and hosts, return in bytes.
+ *
+ * -1 means failed to figure out the value.
+ */
+int64_t read_physical_memory_limit();
 
 }  // namespace vineyard
 
