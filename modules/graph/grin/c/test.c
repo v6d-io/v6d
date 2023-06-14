@@ -686,9 +686,13 @@ void test_property_vertex_pk_of_int64(int argc, char** argv) {
   GRIN_GRAPH g = get_graph(argc, argv, 0);
 
 FOR_VERTEX_LIST_BEGIN(g, vl)
+  long long int pk_min = grin_get_min_vertex_pk_of_int64(g, __vt);
+  long long int pk_max = grin_get_max_vertex_pk_of_int64(g, __vt);
+  printf("%s pk_min %lld, pk_max %lld\n", vt_names[__vtl_i], pk_min, pk_max);
   FOR_VERTEX_BEGIN(g, vl, v)
   long long int pk = grin_get_vertex_pk_of_int64(g, v);
   printf("vertex pk: %lld\n", pk);
+  assert(pk_min <= pk && pk <= pk_max);
 
 #ifdef GRIN_ENABLE_VERTEX_PK_INDEX
   GRIN_VERTEX v1 = grin_get_vertex_by_pk_of_int64(g, __vt, pk);
@@ -964,7 +968,7 @@ void test_topology(int argc, char** argv) {
   test_topology_adjacent_list(argc, argv, IN);
 }
 
-
+#if defined(GRIN_ASSUME_ALL_VERTEX_LIST_SORTED) && defined(GRIN_ENABLE_VERTEX_LIST_ARRAY)
 void test_index_order(int argc, char** argv) {
   printf("+++++++++++++++++++++ Test index order +++++++++++++++++++++\n");
   GRIN_GRAPH g = get_graph(argc, argv, 0);
@@ -1011,6 +1015,7 @@ FOR_VERTEX_LIST_END(g, vl)
 
   grin_destroy_graph(g);
 }
+#endif
 
 void test_index_original_id(int argc, char** argv) {
   printf("+++++++++++++++++++++ Test index original id +++++++++++++++++++++\n");

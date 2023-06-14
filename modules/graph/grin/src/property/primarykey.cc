@@ -53,7 +53,8 @@ GRIN_ROW grin_get_primary_keys_row_by_vertex(GRIN_GRAPH, GRIN_VERTEX);
 #ifdef GRIN_ENABLE_VERTEX_PK_OF_INT64
 long long int grin_get_vertex_pk_of_int64(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    return _g->GetId(_GRIN_VERTEX_T(v));
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
+    return _cache->id_parser.GetOffset(v);
 }
 #endif
 

@@ -20,14 +20,18 @@ GRIN_VERTEX grin_get_vertex_by_primary_keys_row(GRIN_GRAPH, GRIN_VERTEX_TYPE, GR
 #endif
 
 #if defined(GRIN_ENABLE_VERTEX_PK_INDEX) && defined(GRIN_ENABLE_VERTEX_PK_OF_INT64)
-GRIN_VERTEX grin_get_vertex_by_pk_of_int64(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt, long long int vid) {
+GRIN_VERTEX grin_get_vertex_by_pk_of_int64(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt, long long int pk) {
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
+    return _cache->id_parser.GenerateId(vt, pk);
+}
+
+long long int grin_get_min_vertex_pk_of_int64(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
+    return 0;
+}
+
+long long int grin_get_max_vertex_pk_of_int64(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    _GRIN_VERTEX_T v;
-    if (_g->GetVertex(vt, vid, v)) {
-        return v.GetValue();
-    } else {
-        return GRIN_NULL_VERTEX;
-    }
+    return _g->GetVerticesNum(vt) - 1;
 }
 #endif
 
