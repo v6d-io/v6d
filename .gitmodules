@@ -52,3 +52,9 @@
 [submodule "modules/graph/thirdparty/grin"]
 	path = modules/graph/thirdparty/grin
 	url = https://github.com/GraphScope/GRIN.git
+[submodule "modules/graph/thirdparty/boost-leaf"]
+	path = modules/graph/thirdparty/boost-leaf
+	url = https://github.com/boostorg/leaf.git
+[submodule "thirdparty/nlohmann-json"]
+	path = thirdparty/nlohmann-json
+	url = https://github.com/nlohmann/json.git
