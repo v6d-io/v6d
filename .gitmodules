@@ -14,6 +14,10 @@
 	path = thirdparty/mimalloc
 	url = https://github.com/microsoft/mimalloc.git
 	shallow = true
+[submodule "thirdparty/boost-leaf"]
+	path = modules/graph/thirdparty/boost-leaf
+	url = https://github.com/boostorg/leaf.git
+	shallow = true
 [submodule "modules/hosseinmoein-dataframe/thirdparty/DataFrame"]
 	path = modules/hosseinmoein-dataframe/thirdparty/DataFrame
 	url = https://github.com/hosseinmoein/DataFrame.git
@@ -33,6 +37,10 @@
 [submodule "thirdparty/libcuckoo"]
 	path = thirdparty/libcuckoo
 	url = https://github.com/efficient/libcuckoo.git
+	shallow = true
+[submodule "modules/graph/thirdparty/GraphAr"]
+	path = modules/graph/thirdparty/GraphAr
+	url = https://github.com/alibaba/GraphAr.git
 	shallow = true
 [submodule "modules/graph/thirdparty/libgrape-lite"]
 	path = modules/graph/thirdparty/libgrape-lite
