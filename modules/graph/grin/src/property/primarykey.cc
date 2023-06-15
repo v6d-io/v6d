@@ -47,14 +47,20 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_primary_keys_by_vertex_type(GRIN_GRAPH g, GRI
     return vpl;
 }
 
-GRIN_ROW grin_get_primary_keys_row_by_vertex(GRIN_GRAPH, GRIN_VERTEX);
-#endif
-
-#ifdef GRIN_ENABLE_VERTEX_PK_OF_INT64
-long long int grin_get_vertex_pk_of_int64(GRIN_GRAPH g, GRIN_VERTEX v) {
+GRIN_ROW grin_get_primary_keys_row_by_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
-    return _cache->id_parser.GetOffset(v);
+    unsigned vtype = _cache->id_parser.GetLabelId(v);
+    auto offset = _cache->id_parser.GetOffset(v);
+
+    auto r = new GRIN_ROW_T();
+    for (auto vp = 0; vp < _g->vertex_property_num(vtype); ++vp) {
+        if (_g->schema().GetVertexPropertyName(vtype, vp) == "id") {
+            auto result = _get_arrow_array_data_element(_cache->varrays[vtype][vp], offset);
+            r->push_back(result);
+        }
+    }
+    return r;
 }
 #endif
 
@@ -73,8 +79,4 @@ GRIN_EDGE_TYPE_LIST grin_get_edge_types_with_primary_keys(GRIN_GRAPH);
 GRIN_EDGE_PROPERTY_LIST grin_get_primary_keys_by_edge_type(GRIN_GRAPH, GRIN_EDGE_TYPE);
 
 GRIN_ROW grin_get_primary_keys_row_by_edge(GRIN_GRAPH, GRIN_EDGE);
-#endif
-
-#ifdef GRIN_ENABLE_EDGE_PK_OF_INT64
-long long int grin_get_edge_pk_of_int64(GRIN_GRAPH, GRIN_EDGE);
 #endif

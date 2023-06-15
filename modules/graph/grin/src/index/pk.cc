@@ -16,29 +16,21 @@ limitations under the License.
 
 
 #if defined(GRIN_ENABLE_VERTEX_PK_INDEX) && defined(GRIN_ENABLE_VERTEX_PRIMARY_KEYS)
-GRIN_VERTEX grin_get_vertex_by_primary_keys_row(GRIN_GRAPH, GRIN_VERTEX_TYPE, GRIN_ROW);
-#endif
-
-#if defined(GRIN_ENABLE_VERTEX_PK_INDEX) && defined(GRIN_ENABLE_VERTEX_PK_OF_INT64)
-GRIN_VERTEX grin_get_vertex_by_pk_of_int64(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt, long long int pk) {
-    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
-    return _cache->id_parser.GenerateId(vt, pk);
-}
-
-long long int grin_get_min_vertex_pk_of_int64(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
-    return 0;
-}
-
-long long int grin_get_max_vertex_pk_of_int64(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt) {
+GRIN_VERTEX grin_get_vertex_by_primary_keys_row(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt, GRIN_ROW r) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    return _g->GetVerticesNum(vt) - 1;
+    auto _row = static_cast<GRIN_ROW_T*>(r);
+    auto oid = *static_cast<const _GRIN_GRAPH_T::oid_t*>((*_row)[0]);
+    _GRIN_GRAPH_T::vid_t gid;
+    _GRIN_VERTEX_T v;
+    if (_g->Oid2Gid(vt, oid, gid)) {
+        if (_g->Gid2Vertex(gid, v) && _g->IsInnerVertex(v)) {
+            return v.GetValue();
+        }
+    }
+    return GRIN_NULL_VERTEX;
 }
 #endif
 
 #if defined(GRIN_ENABLE_EDGE_PK_INDEX) && defined(GRIN_ENABLE_EDGE_PRIMARY_KEYS)
 GRIN_EDGE grin_get_edge_by_primary_keys_row(GRIN_GRAPH, GRIN_EDGE_TYPE, GRIN_ROW);
-#endif
-
-#if defined(GRIN_ENABLE_EDGE_PK_INDEX) && defined(GRIN_ENABLE_EDGE_PK_OF_INT64)
-GRIN_EDGE grin_get_edge_by_pk_of_int64(GRIN_GRAPH, GRIN_EDGE_TYPE, long long int);
 #endif

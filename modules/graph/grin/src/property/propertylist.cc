@@ -61,7 +61,7 @@ GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_id(GRIN_GRAPH g, GRIN_VERTEX_TY
 }
 
 GRIN_VERTEX_PROPERTY_ID grin_get_vertex_property_id(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY vp) {
-    if (vtype != _grin_get_type_from_property(vp)) return GRIN_NULL_NATURAL_ID;
+    if (vtype != _grin_get_type_from_property(vp)) return GRIN_NULL_VERTEX_PROPERTY_ID;
     return _grin_get_prop_from_property(vp);
 }
 #endif
@@ -114,7 +114,7 @@ GRIN_EDGE_PROPERTY grin_get_edge_property_by_id(GRIN_GRAPH g, GRIN_EDGE_TYPE ety
 }
 
 GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_EDGE_PROPERTY ep) {
-    if (etype != _grin_get_type_from_property(ep)) return GRIN_NULL_NATURAL_ID;
+    if (etype != _grin_get_type_from_property(ep)) return GRIN_NULL_EDGE_PROPERTY_ID;
     return _grin_get_prop_from_property(ep) - 1;
 }
 #endif

@@ -57,7 +57,7 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const
     }
     if (vpl->empty()) {
         delete vpl;
-        return GRIN_NULL_LIST;
+        return GRIN_NULL_VERTEX_PROPERTY_LIST;
     }
     return vpl;
 }
@@ -90,7 +90,7 @@ GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const cha
     }
     if (epl->empty()) {
         delete epl;
-        return GRIN_NULL_LIST;
+        return GRIN_NULL_EDGE_PROPERTY_LIST;
     }
     return epl;
 }
