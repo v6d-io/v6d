@@ -100,7 +100,13 @@ typedef enum {
 /* Define the handles using typedef */
 typedef void* GRIN_GRAPH;
 typedef unsigned long long int GRIN_VERTEX;                 
-typedef void* GRIN_EDGE;                       
+typedef struct GRIN_EDGE {
+  GRIN_VERTEX src;
+  GRIN_VERTEX dst;
+  GRIN_DIRECTION dir;
+  unsigned etype;
+  unsigned long long int eid;
+} GRIN_EDGE;                 
 
 #ifdef GRIN_WITH_VERTEX_DATA
 typedef void* GRIN_VERTEX_DATA;                 

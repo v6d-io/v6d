@@ -95,8 +95,7 @@ bool grin_equal_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE et1, GRIN_EDGE_TYPE et2) 
 }
 
 GRIN_EDGE_TYPE grin_get_edge_type(GRIN_GRAPH g, GRIN_EDGE e) {
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    return _e->etype;
+    return e.etype;
 }
 
 void grin_destroy_edge_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {}

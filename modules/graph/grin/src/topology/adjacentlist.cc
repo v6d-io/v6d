@@ -42,16 +42,16 @@ GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIS
 GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
     auto _al = static_cast<GRIN_ADJACENT_LIST_T*>(al);
     auto nbr = _al->begin + idx;
-    auto e = new GRIN_EDGE_T();        
-    e->dir = _al->dir;
-    e->etype = _al->etype;
-    e->eid = nbr->eid;
+    GRIN_EDGE e;     
+    e.dir = _al->dir;
+    e.etype = _al->etype;
+    e.eid = nbr->eid;
     if (_al->dir == GRIN_DIRECTION::OUT) {
-        e->src = _al->vid;
-        e->dst = nbr->vid;
+        e.src = _al->vid;
+        e.dst = nbr->vid;
     } else {
-        e->src = nbr->vid;
-        e->dst = _al->vid;
+        e.src = nbr->vid;
+        e.dst = _al->vid;
     }
     return e;
 }
@@ -92,16 +92,16 @@ GRIN_VERTEX grin_get_neighbor_from_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACEN
 GRIN_EDGE grin_get_edge_from_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST_ITERATOR ali) {
     auto _ali = static_cast<GRIN_ADJACENT_LIST_ITERATOR_T*>(ali);
     auto _nbr = _ali->current;
-    auto e = new GRIN_EDGE_T();
-    e->dir = _ali->dir;
-    e->etype = _ali->etype;
-    e->eid = _nbr->eid;
+    GRIN_EDGE e;
+    e.dir = _ali->dir;
+    e.etype = _ali->etype;
+    e.eid = _nbr->eid;
     if (_ali->dir == GRIN_DIRECTION::OUT) {
-        e->src = _ali->vid;
-        e->dst = _nbr->vid;
+        e.src = _ali->vid;
+        e.dst = _nbr->vid;
     } else {
-        e->src = _nbr->vid;
-        e->dst = _ali->vid;
+        e.src = _nbr->vid;
+        e.dst = _ali->vid;
     }
     return e;     
 }

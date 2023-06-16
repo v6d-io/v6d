@@ -260,15 +260,7 @@ inline void _prepare_cache(GRIN_GRAPH_T* g) {
 }
 
 
-typedef _GRIN_GRAPH_T::vertex_t _GRIN_VERTEX_T;    
-
-struct GRIN_EDGE_T {
-    _GRIN_GRAPH_T::vid_t src;
-    _GRIN_GRAPH_T::vid_t dst;
-    GRIN_DIRECTION dir;
-    unsigned etype;
-    _GRIN_GRAPH_T::eid_t eid;
-};                     
+typedef _GRIN_GRAPH_T::vertex_t _GRIN_VERTEX_T;                       
 
 #ifdef GRIN_ENABLE_VERTEX_LIST
 typedef _GRIN_GRAPH_T::vertices_t GRIN_VERTEX_LIST_T;

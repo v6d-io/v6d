@@ -194,9 +194,8 @@ GRIN_ROW grin_get_vertex_row(GRIN_GRAPH g, GRIN_VERTEX v) {
 GRIN_ROW grin_get_edge_row(GRIN_GRAPH g, GRIN_EDGE e) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    auto etype = _e->etype;
-    auto offset = _e->eid;
+    auto etype = e.etype;
+    auto offset = e.eid;
 
     auto r = new GRIN_ROW_T();
     r->resize(_g->edge_property_num(etype));

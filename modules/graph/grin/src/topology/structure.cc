@@ -75,19 +75,14 @@ const void* grin_get_vertex_data_value(GRIN_GRAPH, GRIN_VERTEX);
 #endif
 
 // Edge
-void grin_destroy_edge(GRIN_GRAPH g, GRIN_EDGE e) {
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    delete _e;
-}
+void grin_destroy_edge(GRIN_GRAPH g, GRIN_EDGE e) {}
 
 GRIN_VERTEX grin_get_src_vertex_from_edge(GRIN_GRAPH g, GRIN_EDGE e) {
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    return _e->src;
+    return e.src;
 }
 
 GRIN_VERTEX grin_get_dst_vertex_from_edge(GRIN_GRAPH g, GRIN_EDGE e) {
-    auto _e = static_cast<GRIN_EDGE_T*>(e);
-    return _e->dst;
+    return e.dst;
 }
 
 #ifdef GRIN_WITH_EDGE_DATA
