@@ -658,7 +658,7 @@ void test_property_primary_key(int argc, char** argv) {
       grin_insert_int64_to_row(g, r, j);
       GRIN_VERTEX v = grin_get_vertex_by_primary_keys_row(g, vt, r);
       if (v != GRIN_NULL_VERTEX && id_type[j] == i) {
-        GRIN_ROW nr = grin_get_primary_keys_row_by_vertex(g, v);
+        GRIN_ROW nr = grin_get_vertex_primary_keys_row(g, v);
         long long int k = grin_get_int64_from_row(g, nr, 0);
         assert(k == j);
         grin_destroy_row(g, nr);
@@ -990,12 +990,12 @@ void test_index_internal_id(int argc, char** argv) {
   GRIN_GRAPH g = get_graph(argc, argv, 0);
 
 FOR_VERTEX_LIST_BEGIN(g, vl)
-  long long int min = grin_get_min_vertex_internal_id_by_type(g, __vt);
-  long long int max = grin_get_max_vertex_internal_id_by_type(g, __vt);
+  long long int min = grin_get_vertex_internal_id_lower_bound_by_type(g, __vt);
+  long long int max = grin_get_vertex_internal_id_upper_bound_by_type(g, __vt);
   FOR_VERTEX_BEGIN(g, vl, v)
 #ifdef GRIN_ENABLE_VERTEX_INTERNAL_ID_INDEX
   long long int oid = grin_get_vertex_internal_id_by_type(g, __vt, v);
-  assert(oid >= min && oid <= max);
+  assert(oid >= min && oid < max);
   GRIN_VERTEX v1 = grin_get_vertex_by_internal_id_by_type(g, __vt, oid);
   assert(grin_equal_vertex(g, v, v1));
   grin_destroy_vertex(g, v1);
