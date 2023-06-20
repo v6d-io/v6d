@@ -80,12 +80,22 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
     auto s = uri.Parse(encoded_location);
     if (!s.ok()) {  // Assume it's a local file
       // defaulting to local file system: resolve to abs path first
-      char resolved_path[PATH_MAX];
-      char* res = realpath(location_to_parse.c_str(), resolved_path);
-      if (!res) {
-        VLOG(2) << "Warning: failed to resolve realpath of "
-                << location_to_parse;
+      char resolved_path[PATH_MAX] = {0};
+      int index = location_to_parse.length();
+      std::string sub_str = location_to_parse.c_str();
+      std::string tail;
+      char* res = realpath(sub_str.c_str(), resolved_path);
+      while (!res) {
+        VLOG(2) << "Warning: failed to resolve realpath of " << sub_str;
+        index = sub_str.find_last_of("/");
+        if (index == 0) {
+          break;
+        }
+        tail = sub_str.substr(index) + tail;
+        sub_str.erase(index, sub_str.length() - index);
+        res = realpath(sub_str.c_str(), resolved_path);
       }
+      strcpy(resolved_path + strlen(resolved_path), tail.c_str());
       // Note we should not encode the leading '/' if there is one,
       // cause arrow::internal::Uri requires the path must be an absolute path.
       location_to_parse = std::string(resolved_path);
