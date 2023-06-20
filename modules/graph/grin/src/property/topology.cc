@@ -50,9 +50,11 @@ GRIN_ADJACENT_LIST grin_get_adjacent_list_by_edge_type(GRIN_GRAPH g, GRIN_DIRECT
     if (d == GRIN_DIRECTION::OUT) {
         al.dir = GRIN_DIRECTION::OUT;
         ral = _g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(v), etype);
-    } else {
+    } else if (d == GRIN_DIRECTION::IN) {
         al.dir = GRIN_DIRECTION::IN;
         ral = _g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(v), etype);
+    } else {
+        return GRIN_NULL_ADJACENT_LIST;
     }
     al.begin = ral.begin();
     al.end = ral.end();
