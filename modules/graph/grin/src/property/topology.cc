@@ -43,19 +43,19 @@ GRIN_EDGE_LIST grin_get_edge_list_by_type(GRIN_GRAPH, GRIN_EDGE_TYPE);
 GRIN_ADJACENT_LIST grin_get_adjacent_list_by_edge_type(GRIN_GRAPH g, GRIN_DIRECTION d, GRIN_VERTEX v, GRIN_EDGE_TYPE etype) {
     assert(d != GRIN_DIRECTION::BOTH);
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto al = new GRIN_ADJACENT_LIST_T();
-    al->etype = etype;
-    al->vid = v;
+    GRIN_ADJACENT_LIST al;
+    al.etype = etype;
+    al.vid = v;
     _GRIN_GRAPH_T::raw_adj_list_t ral;
     if (d == GRIN_DIRECTION::OUT) {
-        al->dir = GRIN_DIRECTION::OUT;
+        al.dir = GRIN_DIRECTION::OUT;
         ral = _g->GetOutgoingRawAdjList(_GRIN_GRAPH_T::vertex_t(v), etype);
     } else {
-        al->dir = GRIN_DIRECTION::IN;
+        al.dir = GRIN_DIRECTION::IN;
         ral = _g->GetIncomingRawAdjList(_GRIN_GRAPH_T::vertex_t(v), etype);
     }
-    al->begin = ral.begin();
-    al->end = ral.end();
+    al.begin = ral.begin();
+    al.end = ral.end();
     return al;
 }
 #endif

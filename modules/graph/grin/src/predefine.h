@@ -273,16 +273,6 @@ struct GRIN_VERTEX_LIST_ITERATOR_T {
 };
 #endif
 
-#ifdef GRIN_ENABLE_ADJACENT_LIST
-struct GRIN_ADJACENT_LIST_T {
-    const _GRIN_GRAPH_T::nbr_unit_t* begin;
-    const _GRIN_GRAPH_T::nbr_unit_t* end;
-    _GRIN_GRAPH_T::vid_t vid;
-    GRIN_DIRECTION dir;
-    unsigned etype;
-};
-#endif
-
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 struct GRIN_ADJACENT_LIST_ITERATOR_T {
     const _GRIN_GRAPH_T::nbr_unit_t* current;

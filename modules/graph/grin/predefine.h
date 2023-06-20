@@ -121,11 +121,17 @@ typedef void* GRIN_VERTEX_LIST_ITERATOR;
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
-typedef void* GRIN_ADJACENT_LIST;               
+typedef struct GRIN_ADJACENT_LIST {
+  const void* begin;
+  const void* end;
+  GRIN_VERTEX vid;
+  GRIN_DIRECTION dir;
+  unsigned etype;
+} GRIN_ADJACENT_LIST;           
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
-typedef void* GRIN_ADJACENT_LIST_ITERATOR;       
+typedef void* GRIN_ADJACENT_LIST_ITERATOR;    
 #endif
 
 #ifdef GRIN_WITH_EDGE_DATA
