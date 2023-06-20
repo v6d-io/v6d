@@ -17,9 +17,25 @@ limitations under the License.
 #include "topology/structure.h"
 #include "client/client.h"
 
-GRIN_GRAPH grin_get_graph_from_storage(const char* id, const char* version) {
+GRIN_GRAPH grin_get_graph_from_storage(const char* uri) {
+    std::string uri_str(uri);
+    std::string ipc_socket;
+    std::string id;
+    auto pos1 = uri_str.find("://");
+    if (pos1 == std::string::npos) {
+        return GRIN_NULL_GRAPH;
+    } else {
+        auto pos2 = std::string(uri).find("?");
+        if (pos2 == std::string::npos) {
+            ipc_socket = getenv("VINEYARD_IPC_SOCKET");
+            id = uri_str.substr(pos1 + 3);
+        } else {
+            ipc_socket = uri_str.substr(pos2+12);
+            id = uri_str.substr(pos1 + 3, pos2 - pos1 - 3);
+        }
+    }
+
     auto g = new GRIN_GRAPH_T();
-    auto ipc_socket = getenv("VINEYARD_IPC_SOCKET");
     g->client.Connect(ipc_socket);
 
     vineyard::ObjectID obj_id;

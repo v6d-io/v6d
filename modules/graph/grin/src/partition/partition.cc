@@ -18,9 +18,26 @@ limitations under the License.
 #include "graph/fragment/property_graph_types.h"
 
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
-GRIN_PARTITIONED_GRAPH grin_get_partitioned_graph_from_storage(const char* id, const char* version) {
+GRIN_PARTITIONED_GRAPH grin_get_partitioned_graph_from_storage(const char* uri) {
+    std::string uri_str(uri);
+    std::string ipc_socket;
+    std::string id;
+    auto pos1 = uri_str.find("://");
+    if (pos1 == std::string::npos) {
+        return GRIN_NULL_GRAPH;
+    } else {
+        auto pos2 = std::string(uri).find("?");
+        if (pos2 == std::string::npos) {
+            ipc_socket = getenv("VINEYARD_IPC_SOCKET");
+            id = uri_str.substr(pos1 + 3);
+        } else {
+            ipc_socket = uri_str.substr(pos2+12);
+            id = uri_str.substr(pos1 + 3, pos2 - pos1 - 3);
+        }
+    }
+
     auto pg = new GRIN_PARTITIONED_GRAPH_T();
-    auto ipc_socket = getenv("VINEYARD_IPC_SOCKET");
+    pg->ipc_socket = ipc_socket;
     pg->client.Connect(ipc_socket);
     vineyard::ObjectID obj_id;
     std::stringstream ss(id);
@@ -96,8 +113,7 @@ const void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p)
 GRIN_GRAPH grin_get_local_graph_by_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     auto _pg = static_cast<GRIN_PARTITIONED_GRAPH_T*>(pg);
     auto g = new GRIN_GRAPH_T();
-    auto ipc_socket = getenv("VINEYARD_IPC_SOCKET");
-    g->client.Connect(ipc_socket);
+    g->client.Connect(_pg->ipc_socket);
     g->_g = std::dynamic_pointer_cast<_GRIN_GRAPH_T>(g->client.GetObject(_pg->lgs[p]));
     g->g = g->_g.get();
     _prepare_cache(g);

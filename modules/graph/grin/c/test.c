@@ -120,7 +120,7 @@ const char *v_names[][4] = {
 GRIN_GRAPH get_graph(int argc, char** argv, int p) {
 #ifdef GRIN_ENABLE_GRAPH_PARTITION
   GRIN_PARTITIONED_GRAPH pg =
-      grin_get_partitioned_graph_from_storage(argv[1], "");
+      grin_get_partitioned_graph_from_storage(argv[1]);
   GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
   assert(p < grin_get_partition_list_size(pg, local_partitions));
   GRIN_PARTITION partition =
@@ -136,7 +136,7 @@ GRIN_GRAPH get_graph(int argc, char** argv, int p) {
   grin_destroy_partition_list(pg, local_partitions);
   grin_destroy_partitioned_graph(pg);
 #else
-  GRIN_GRAPH g = grin_get_graph_from_storage(argv[1], "");
+  GRIN_GRAPH g = grin_get_graph_from_storage(argv[1]);
 #endif
   return g;
 }
@@ -711,7 +711,7 @@ void test_property(int argc, char** argv) {
 
 void test_partition_reference(int argc, char** argv) {
   printf("+++++++++++++++++++++ Test partition/reference +++++++++++++++++++++\n");
-  GRIN_PARTITIONED_GRAPH pg = grin_get_partitioned_graph_from_storage(argv[1], "");
+  GRIN_PARTITIONED_GRAPH pg = grin_get_partitioned_graph_from_storage(argv[1]);
   GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
   assert(grin_get_partition_list_size(pg, local_partitions) >= 2);
 
