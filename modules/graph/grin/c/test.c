@@ -656,6 +656,7 @@ void test_property_primary_key(int argc, char** argv) {
       GRIN_ROW r = grin_create_row(g);
       assert(dt == Int64);
       grin_insert_int64_to_row(g, r, j);
+#ifdef GRIN_ENABLE_VERTEX_PK_INDEX
       GRIN_VERTEX v = grin_get_vertex_by_primary_keys_row(g, vt, r);
       if (v != GRIN_NULL_VERTEX && id_type[j] == i) {
         GRIN_ROW nr = grin_get_vertex_primary_keys_row(g, v);
@@ -664,6 +665,7 @@ void test_property_primary_key(int argc, char** argv) {
         grin_destroy_row(g, nr);
         grin_destroy_vertex(g, v);
       }
+#endif
       grin_destroy_row(g, r);
     }
 
