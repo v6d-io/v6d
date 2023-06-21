@@ -206,6 +206,14 @@ target_include_directories(vineyard_grin PUBLIC $<BUILD_INTERFACE:${CMAKE_CURREN
 target_link_libraries(vineyard_grin PRIVATE vineyard_graph ${Protobuf_LIBRARIES})
 install_vineyard_target(vineyard_grin)
 
+# grin extension
+file(GLOB_RECURSE GRIN_EXT_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "thirdparty/grin/extension/src/*.cc")
+add_library(vineyard_grin_ext ${GRIN_EXT_SRC_FILES})
+target_include_directories(vineyard_grin_ext PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/grin>)
+target_include_directories(vineyard_grin_ext PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/grin/include>)
+target_include_directories(vineyard_grin_ext PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/grin/extension/include>)
+target_link_libraries(vineyard_grin_ext PRIVATE vineyard_grin)
+install_vineyard_target(vineyard_grin_ext)
 
 # grin test
 if(BUILD_VINEYARD_TESTS)
