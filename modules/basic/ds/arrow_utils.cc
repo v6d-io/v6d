@@ -556,6 +556,7 @@ Status ConcatenateTables(
     return Status::OK();
   }
   std::vector<std::shared_ptr<arrow::Table>> out_tables(tables.size());
+  out_tables[0] = tables[0];
   auto col_names = tables[0]->ColumnNames();
   for (size_t i = 1; i < tables.size(); ++i) {
     RETURN_ON_ARROW_ERROR_AND_ASSIGN(out_tables[i],
