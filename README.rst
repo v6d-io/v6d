@@ -9,7 +9,7 @@
 
 |Vineyard CI| |Coverage| |Docs| |FAQ| |Discussion| |Slack| |License| |CII Best Practices| |FOSSA|
 
-|PyPI| |Docker HUB| |Artifact HUB|
+|PyPI| |Docker HUB| |Artifact HUB| |ACM DL|
 
 
 Vineyard (v6d) is an innovative in-memory immutable data manager that offers **out-of-the-box
@@ -253,8 +253,8 @@ Publications
 ------------
 
 - Wenyuan Yu, Tao He, Lei Wang, Ke Meng, Ye Cao, Diwen Zhu, Sanhong Li, Jingren Zhou.
-  Vineyard: Optimizing Data Sharing in Data-Intensive Analytics.
-  ACM SIG Conference on Management of Data (SIGMOD), industry, 2023.
+  `Vineyard: Optimizing Data Sharing in Data-Intensive Analytics <https://v6d.io/vineyard-sigmod-2023.pdf>`_.
+  ACM SIG Conference on Management of Data (SIGMOD), industry, 2023. |ACM DL|.
 
 Acknowledgements
 ----------------
@@ -328,3 +328,6 @@ third-party libraries may not have the same license as vineyard.
    :target: https://app.fossa.com/projects/git%2Bgithub.com%2Fv6d-io%2Fv6d?ref=badge_large
 .. |License| image:: https://img.shields.io/github/license/v6d-io/v6d
    :target: https://github.com/v6d-io/v6d/blob/main/LICENSE
+
+.. |ACM DL| image:: https://img.shields.io/badge/ACM%20DL-10.1145%2F3589780-blue
+   :target: https://dl.acm.org/doi/10.1145/3589780

@@ -122,7 +122,7 @@ html_theme_options = {
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = [
-    'images/',
+    "images/",
     "_static/",
 ]
 
@@ -134,12 +134,13 @@ html_css_files = [
 ]
 
 html_extra_path = [
-    './CNAME',
-    './.nojekyll',
-    './summer.html',
+    "artifacts/",
+    "./CNAME",
+    "./.nojekyll",
+    "./summer.html",
 ]
 
-html_title = 'Vineyard'
+html_title = "Vineyard"
 html_logo = "images/vineyard-logo-h.png"
 html_favicon = "images/vineyard.ico"
 
