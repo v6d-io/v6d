@@ -350,7 +350,14 @@ static void send_chunk_compressed(
     callback_t<> callback_after_finish) {
   void* data = nullptr;
   size_t size = 0;
-  auto s = compressor->Pull(data, size);
+  Status s;
+  do {
+    size = 0;
+    s = compressor->Pull(data, size);
+    if (!s.ok() || size != 0) {
+      break;
+    }
+  } while (true);
   if (s.IsStreamDrained()) {
     VINEYARD_DISCARD(callback_after_finish(Status::OK()));
     return;
@@ -464,6 +471,15 @@ static size_t decompress_chunk(
       decompressed_size += size;
     }
   }
+  // the decompressor is expected to be "finished"
+  while (true) {
+    char data;
+    size_t size = 0;
+    if (decompressor->Pull(&data, 1, size).IsStreamDrained()) {
+      break;
+    }
+    assert(s.ok() && size == 0);
+  }
   return decompressed_size;
 }
 
@@ -556,6 +572,9 @@ void ReceiveRemoteBuffers(asio::generic::stream_protocol::socket& socket,
     void* data = nullptr;
     size_t size;
     auto s = decompressor->Buffer(data, size);
+    if (!s.ok()) {
+      VINEYARD_DISCARD(callback_after_finish(s));
+    }
     buffer = asio::buffer(data, size);
     detail::read_sized_chunk(socket, objects, index, offset, decompressor,
                              buffer, callback_after_finish);

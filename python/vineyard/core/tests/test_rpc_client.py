@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+import os
+
 import numpy as np
 
 import pytest
@@ -106,3 +108,26 @@ def test_remote_blob_error(vineyard_endpoint):
         ValueError, match="Vineyard RPC client cannot be used to create local blobs"
     ):
         vineyard_rpc_client.put(np.ones((2, 3, 4)))
+
+
+def test_multiple_remote_blobs(vineyard_endpoint):
+    vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
+
+    for i in range(4):
+        print(f"Writing {i} blob")
+        payload = os.urandom(1024 * 1024 * 100)
+        blob_builder = vineyard.RemoteBlobBuilder(len(payload))
+        blob_builder.copy(0, payload)
+
+        have_written = False
+        while not have_written:
+            try:
+                blob_id = vineyard_rpc_client.create_remote_blob(blob_builder)
+                have_written = True
+                print(f"Successfully written {i} blob")
+                remote_blob = vineyard_rpc_client.get_remote_blob(blob_id)
+                assert remote_blob.size == len(payload)
+                print(f"Successfully read {i} blob")
+            except vineyard.NotEnoughMemoryException:
+                print(f"Not enough memory, retrying {i} blob")
+                continue

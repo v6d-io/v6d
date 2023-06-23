@@ -259,6 +259,9 @@ Status compress_and_send(std::shared_ptr<Compressor> const& compressor, int fd,
   void* chunk = nullptr;
   size_t chunk_size = 0;
   while (compressor->Pull(chunk, chunk_size).ok()) {
+    if (chunk_size == 0) {
+      continue;
+    }
     RETURN_ON_ERROR(send_bytes(fd, &chunk_size, sizeof(size_t)));
     RETURN_ON_ERROR(send_bytes(fd, chunk, chunk_size));
   }
@@ -287,6 +290,16 @@ Status recv_and_decompress(std::shared_ptr<Decompressor> const& decompressor,
       if (decompressed_offset == buffer_size) {
         break;
       }
+    }
+    // the decompressor is expected to be "finished"
+    while (true) {
+      char data;
+      size_t size = 0;
+      auto s = decompressor->Pull(&data, 1, size);
+      if (s.IsStreamDrained()) {
+        break;
+      }
+      assert(s.ok() && size == 0);
     }
     if (decompressed_offset == buffer_size) {
       break;
