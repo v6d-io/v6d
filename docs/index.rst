@@ -17,7 +17,7 @@
 
    *an in-memory immutable data manager*
 
-|PyPI| |FAQ| |Discussion| |Slack| |License|
+|PyPI| |FAQ| |Discussion| |Slack| |License| |ACM DL|
 
 Why bother?
 -----------
@@ -182,6 +182,13 @@ Get started now!
    ^^^^^^^^^^^^
    Frequently asked questions and discussions during the adoption of Vineyard.
 
+Read the Paper
+--------------
+
+- Wenyuan Yu, Tao He, Lei Wang, Ke Meng, Ye Cao, Diwen Zhu, Sanhong Li, Jingren Zhou.
+  `Vineyard: Optimizing Data Sharing in Data-Intensive Analytics <https://v6d.io/vineyard-sigmod-2023.pdf>`_.
+  ACM SIG Conference on Management of Data (SIGMOD), industry, 2023. |ACM DL|.
+
 Vineyard is a `CNCF sandbox project`_ and is made successful by its community.
 
 .. image:: https://v6d.io/_static/cncf-color.svg
@@ -252,3 +259,6 @@ Vineyard is a `CNCF sandbox project`_ and is made successful by its community.
    :target: https://slack.cncf.io/
 .. |License| image:: https://img.shields.io/github/license/v6d-io/v6d
    :target: https://github.com/v6d-io/v6d/blob/main/LICENSE
+
+.. |ACM DL| image:: https://img.shields.io/badge/ACM%20DL-10.1145%2F3589780-blue
+   :target: https://dl.acm.org/doi/10.1145/3589780
