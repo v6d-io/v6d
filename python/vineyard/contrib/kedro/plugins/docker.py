@@ -20,6 +20,9 @@ from typing import Sequence
 from typing import Tuple
 from typing import Union
 
+from jinja2 import Environment
+from jinja2 import FileSystemLoader
+
 import click
 from click import secho
 from kedro import __version__ as kedro_version
@@ -31,7 +34,7 @@ from .cli import vineyard as vineyard_cli
 
 KEDRO_VERSION = VersionInfo.parse(kedro_version)
 TEMPLATE_PATH = Path("templates")
-DOCKER_FILE = "Dockerfile"
+DOCKER_FILE_TMPL = "Dockerfile.tmpl"
 DEFAULT_BASE_IMAGE = f"python:{version_info.major}.{version_info.minor}-slim"
 
 
@@ -41,7 +44,8 @@ def docker():
 
 
 @docker.command("init")
-def docker_init():
+@click.option("--with_vineyard", "-w", "with_vineyard", type=bool, default=False, help="Whether to install vineyard in the dockerfile.")
+def docker_init(with_vineyard):
     """Initialize a Dockerfile for the project."""
     project_path = Path.cwd()
 
@@ -55,11 +59,10 @@ def docker_init():
     # get the absolute path of the template directory
     template_path = Path(__file__).resolve().parent / TEMPLATE_PATH
 
-    copy_template_files(
+    generate_dockerfile(
         project_path,
         template_path,
-        ["Dockerfile"],
-        verbose,
+        with_vineyard=with_vineyard,
     )
 
 
@@ -99,16 +102,25 @@ def docker_init():
     show_default=True,
     help="Extra arguments to pass to `docker build` command.",
 )
+@click.option(
+    "--with_vineyard",
+    "-w", 
+    "with_vineyard",
+    type=bool,
+    default=False,
+    show_default=True,
+    help="Whether to install vineyard in the dockerfile.",
+)
 @click.pass_context
 def docker_build(
-    ctx, uid, gid, base_image, image, docker_args
+    ctx, uid, gid, base_image, image, docker_args, with_vineyard
 ):  # pylint: disable=too-many-arguments
     """Build a Docker image for the project."""
     uid, gid = get_uid_gid(uid, gid)
     project_path = Path.cwd()
     image = image or project_path.name
 
-    ctx.invoke(docker_init)
+    ctx.invoke(docker_init, with_vineyard=with_vineyard)
 
     combined_args = compose_docker_run_args(
         required_args=[
@@ -123,34 +135,41 @@ def docker_build(
     command = ["docker", "build"] + combined_args + [str(project_path)]
     call(command)
 
-
-def copy_template_files(
+def generate_dockerfile(
     project_path: Path,
     template_path: Path,
-    template_files: Sequence[str],
-    verbose: bool = False,
+    with_vineyard: bool = False,
 ):
-    """
-    If necessary copy files from a template directory into a project directory.
+    """generate the Dockerfile for the project.
 
     Args:
-        project_path: Destination path.
+        project_path (Path): Destination path.
         template_path: Source path.
-        template_files: Files to copy.
-        verbose: Echo the names of any created files.
-
+        with_vineyard (bool, optional): The dockerfile with vineyard or not. Defaults to False.
     """
-    for file_ in template_files:
-        dest_file = "Dockerfile" if file_.startswith("Dockerfile") else file_
-        dest = project_path / dest_file
-        if not dest.exists():
-            src = template_path / file_
-            shutil.copyfile(str(src), str(dest))
-            if verbose:
-                secho(f"Creating `{dest}`")
-        else:
-            msg = f"{dest_file} already exists and won't be overwritten."
-            secho(msg, fg="yellow")
+    # get the absolute path of the template directory
+    template_path = Path(__file__).resolve().parent / TEMPLATE_PATH
+    
+    loader = FileSystemLoader(searchpath=template_path)
+    template_env = Environment(loader=loader, trim_blocks=True, lstrip_blocks=True)
+    template = template_env.get_template(DOCKER_FILE_TMPL)
+
+    src = template_path / DOCKER_FILE_TMPL
+
+    dockerfile = template.render(
+        with_vineyard=with_vineyard,
+    )
+
+    dest = project_path / "Dockerfile"
+
+    if dest.exists():
+        print(f"{dest} already exists and won't be overwritten.")
+    else:
+        # Create the Dockerfile in the destination path
+        with open(dest, "w") as f:
+            f.write(dockerfile)
+
+        print(f"Created `{dest}`")
 
 
 def get_uid_gid(uid: int = None, gid: int = None) -> Tuple[int, int]:
