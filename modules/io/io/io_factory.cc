@@ -82,7 +82,7 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
       // defaulting to local file system: resolve to abs path first
       char resolved_path[PATH_MAX] = {0};
       int index = location_to_parse.length();
-      std::string sub_str = location_to_parse.c_str();
+      std::string sub_str = location_to_parse;
       std::string tail;
       char* res = realpath(sub_str.c_str(), resolved_path);
       while (!res) {
