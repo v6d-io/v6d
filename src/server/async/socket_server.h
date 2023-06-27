@@ -169,7 +169,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   void doWrite(std::string&& buf);
 
-  void doWrite(const std::string& buf, callback_t<> callback);
+  void doWrite(const std::string& buf, callback_t<> callback,
+               const bool partial = false);
 
   /**
    * Being called when the encounter a socket error (in read/write), or by
@@ -181,7 +182,8 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   void doAsyncWrite(std::string&& buf);
 
-  void doAsyncWrite(std::string&& buf, callback_t<> callback);
+  void doAsyncWrite(std::string&& buf, callback_t<> callback,
+                    const bool partial = false);
 
   void switchSession(std::shared_ptr<VineyardServer>& session) {
     this->server_ptr_ = session;
