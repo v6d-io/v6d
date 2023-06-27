@@ -95,7 +95,8 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
         sub_str.erase(index, sub_str.length() - index);
         res = realpath(sub_str.c_str(), resolved_path);
       }
-      strcpy(resolved_path + strlen(resolved_path), tail.c_str());
+      strncpy(resolved_path + strlen(resolved_path), tail.c_str(),
+              tail.length());
       // Note we should not encode the leading '/' if there is one,
       // cause arrow::internal::Uri requires the path must be an absolute path.
       location_to_parse = std::string(resolved_path);
