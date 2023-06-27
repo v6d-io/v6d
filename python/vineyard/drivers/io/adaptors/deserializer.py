@@ -90,7 +90,7 @@ def copy_bytestream_to_blob(client, bs: ByteStream, blob: BlobBuilder):
     return blob.seal(client)
 
 
-class ReconstructExecututor(BaseStreamExecutor):
+class ReconstructExecutor(BaseStreamExecutor):
     def __init__(
         self,
         client,
@@ -203,7 +203,7 @@ def deserialize(
         'parallelism', multiprocessing.cpu_count()
     )
     executor = ThreadStreamExecutor(
-        ReconstructExecututor,
+        ReconstructExecutor,
         parallelism=parallelism,
         client=client,
         task_queue=queue,
