@@ -572,23 +572,32 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
   RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
 
-  ReceiveRemoteBuffers(
-      socket_, {object}, 0, 0, compress,
-      [self, object](const Status& status) -> Status {
-        std::string message_out;
-        if (status.ok()) {
-          WriteCreateBufferReply(object->object_id, object, -1, message_out);
-        } else {
-          // cleanup
-          VINEYARD_DISCARD(self->bulk_store_->Delete(object->object_id));
-          WriteErrorReply(status, message_out);
-        }
-        self->doWrite(message_out);
-        LOG_SUMMARY("instances_memory_usage_bytes",
-                    self->server_ptr_->instance_id(),
-                    self->bulk_store_->Footprint());
-        return Status::OK();
-      });
+  auto callback = [self, this, compress,
+                   object](const Status& status) -> Status {
+    ReceiveRemoteBuffers(
+        socket_, {object}, 0, 0, compress,
+        [self, object](const Status& status) -> Status {
+          std::string message_out;
+          if (status.ok()) {
+            WriteCreateBufferReply(object->object_id, object, -1, message_out);
+          } else {
+            // cleanup
+            VINEYARD_DISCARD(self->bulk_store_->Delete(object->object_id));
+            WriteErrorReply(status, message_out);
+          }
+          self->doWrite(message_out);
+          return Status::OK();
+        });
+    LOG_SUMMARY("instances_memory_usage_bytes",
+                self->server_ptr_->instance_id(),
+                self->bulk_store_->Footprint());
+    return Status::OK();
+  };
+
+  // ok to continue
+  std::string message_out;
+  WriteCreateBufferReply(object->object_id, object, -1, message_out);
+  self->doWrite(message_out, callback, true);
   return false;
 }
 
@@ -1561,7 +1570,8 @@ void SocketConnection::doWrite(const std::string& buf) {
   doAsyncWrite(std::move(to_send));
 }
 
-void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
+void SocketConnection::doWrite(const std::string& buf, callback_t<> callback,
+                               const bool partial) {
   std::string to_send;
   size_t length = buf.size();
   to_send.resize(length + sizeof(size_t));
@@ -1569,7 +1579,7 @@ void SocketConnection::doWrite(const std::string& buf, callback_t<> callback) {
   memcpy(ptr, &length, sizeof(size_t));
   ptr += sizeof(size_t);
   memcpy(ptr, buf.data(), length);
-  doAsyncWrite(std::move(to_send), callback);
+  doAsyncWrite(std::move(to_send), callback, partial);
 }
 
 void SocketConnection::doWrite(std::string&& buf) {
@@ -1598,16 +1608,23 @@ void SocketConnection::doAsyncWrite(std::string&& buf) {
       });
 }
 
-void SocketConnection::doAsyncWrite(std::string&& buf, callback_t<> callback) {
+void SocketConnection::doAsyncWrite(std::string&& buf, callback_t<> callback,
+                                    const bool partial) {
   std::shared_ptr<std::string> payload =
       std::make_shared<std::string>(std::move(buf));
   auto self(shared_from_this());
   asio::async_write(socket_,
                     boost::asio::buffer(payload->data(), payload->length()),
-                    [this, self, payload, callback](
+                    [this, self, payload, callback, partial](
                         boost::system::error_code ec, std::size_t) {
-                      if (!ec && callback(Status::OK()).ok()) {
-                        doReadHeader();
+                      if (!ec) {
+                        if (callback(Status::OK()).ok()) {
+                          if (!partial) {
+                            doReadHeader();
+                          }
+                        } else {
+                          doStop();
+                        }
                       } else {
                         doStop();
                       }

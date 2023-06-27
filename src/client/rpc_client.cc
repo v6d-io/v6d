@@ -325,6 +325,14 @@ Status RPCClient::CreateRemoteBlob(
   std::string message_out;
   WriteCreateRemoteBufferRequest(buffer->size(), !!compressor, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
+
+  // receive a confirm to continue
+  {
+    json message_in;
+    RETURN_ON_ERROR(doRead(message_in));
+    RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, payload, fd_sent));
+  }
+
   // send the actual payload
   if (compressor && buffer->size() > 0) {
     RETURN_ON_ERROR(detail::compress_and_send(compressor, vineyard_conn_,
