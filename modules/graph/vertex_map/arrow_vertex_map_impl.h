@@ -548,7 +548,7 @@ template <typename OID_T, typename VID_T>
 BasicArrowVertexMapBuilder<OID_T, VID_T>::BasicArrowVertexMapBuilder(
     vineyard::Client& client, fid_t fnum, label_id_t label_num,
     std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays,
-    bool use_perfect_hash)
+    const bool use_perfect_hash)
     : ArrowVertexMapBuilder<oid_t, vid_t>(client),
       fnum_(fnum),
       label_num_(label_num) {
@@ -568,7 +568,7 @@ template <typename OID_T, typename VID_T>
 BasicArrowVertexMapBuilder<OID_T, VID_T>::BasicArrowVertexMapBuilder(
     vineyard::Client& client, fid_t fnum, label_id_t label_num,
     std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>> oid_arrays,
-    bool use_perfect_hash)
+    const bool use_perfect_hash)
     : ArrowVertexMapBuilder<oid_t, vid_t>(client),
       fnum_(fnum),
       label_num_(label_num) {
