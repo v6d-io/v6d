@@ -78,7 +78,6 @@ typedef enum {
 #define GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
 #define GRIN_ENABLE_VERTEX_REF
 #define GRIN_TRAIT_FAST_VERTEX_REF
-#define GRIN_ASSUME_EDGE_CUT_PARTITION
 #define GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST
 // Property
 #define GRIN_ENABLE_ROW
@@ -182,8 +181,6 @@ typedef unsigned GRIN_VERTEX_PROPERTY_ID;
 #ifdef GRIN_WITH_EDGE_PROPERTY
 typedef unsigned GRIN_EDGE_TYPE;
 typedef void* GRIN_EDGE_TYPE_LIST;
-typedef void* GRIN_VEV_TYPE;
-typedef void* GRIN_VEV_TYPE_LIST;
 typedef unsigned long long int GRIN_EDGE_PROPERTY;
 typedef void* GRIN_EDGE_PROPERTY_LIST;
 #endif
@@ -226,8 +223,6 @@ typedef void* GRIN_LABEL_LIST;
 #define GRIN_NULL_VERTEX_PROPERTY_ID (unsigned)~0
 #define GRIN_NULL_EDGE_TYPE (unsigned)~0
 #define GRIN_NULL_EDGE_TYPE_LIST NULL
-#define GRIN_NULL_VEV_TYPE NULL
-#define GRIN_NULL_VEV_TYPE_LIST NULL
 #define GRIN_NULL_EDGE_PROPERTY (unsigned long long int)~0
 #define GRIN_NULL_EDGE_PROPERTY_LIST NULL
 #define GRIN_NULL_EDGE_TYPE_ID (unsigned)~0

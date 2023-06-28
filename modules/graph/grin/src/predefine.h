@@ -217,6 +217,7 @@ inline const void* _GetArrowArrayData(
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::NullArray>(array).get());
   }
+  return nullptr;
 }
 
 inline void _prepare_cache(GRIN_GRAPH_T* g) {

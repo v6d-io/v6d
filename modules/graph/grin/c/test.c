@@ -11,7 +11,6 @@
 #include "partition/partition.h"
 #include "partition/reference.h"
 #include "partition/topology.h"
-#include "property/partition.h"
 #include "property/primarykey.h"
 #include "property/property.h"
 #include "property/propertylist.h"
