@@ -307,7 +307,7 @@ int64_t read_physical_memory_limit() {
   FILE* fp = nullptr;
   if ((fp = fopen("/sys/fs/cgroup/memory/memory.limit_in_bytes", "r")) !=
       nullptr) {
-    if (fscanf(fp, "%ld", &limit_in_bytes) != 1 ||
+    if (fscanf(fp, "%lld", &limit_in_bytes) != 1 ||
         limit_in_bytes >= unlimited) {
       limit_in_bytes = 0;
     }
@@ -318,7 +318,7 @@ int64_t read_physical_memory_limit() {
   }
 
   if ((fp = fopen("/sys/fs/cgroup/memory.max", "r")) != nullptr) {
-    if (fscanf(fp, "%ld", &limit_in_bytes) != 1 ||
+    if (fscanf(fp, "%lld", &limit_in_bytes) != 1 ||
         limit_in_bytes >= unlimited) {
       limit_in_bytes = 0;
     }

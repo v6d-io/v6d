@@ -229,6 +229,41 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
   std::shared_ptr<Blob> data_buffer_;
 };
 
+}  // namespace vineyard
+
+namespace boomphf {
+
+// wrapper around HashFunctors to return only one value instead of 7
+template <>
+class SingleHashFunctor<std::string> {
+ public:
+  uint64_t operator()(const std::string& key,
+                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
+    return hashFunctors(key);
+  }
+
+ private:
+  std::hash<std::string> hashFunctors;
+};
+
+#if __cpp_lib_string_view
+template <>
+class SingleHashFunctor<std::string_view> {
+ public:
+  uint64_t operator()(const std::string_view& key,
+                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
+    return hashFunctors(key);
+  }
+
+ private:
+  std::hash<std::string_view> hashFunctors;
+};
+#endif  // __cpp_lib_string_view
+
+}  // namespace boomphf
+
+namespace vineyard {
+
 template <typename K, typename V>
 class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
  public:
