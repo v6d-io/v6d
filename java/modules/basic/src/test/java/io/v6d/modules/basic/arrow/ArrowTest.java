@@ -24,6 +24,7 @@ import lombok.val;
 import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.LargeVarCharVector;
+import org.apache.arrow.vector.VarCharVector;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -86,7 +87,7 @@ public class ArrowTest {
 
     @Test
     public void testStringArray() throws VineyardException {
-        val base = new LargeVarCharVector("", Arrow.default_allocator);
+        val base = new VarCharVector("", Arrow.default_allocator);
         base.setSafe(0, "hello".getBytes(), 0, 5);
         base.setSafe(1, " ".getBytes(), 0, 1);
         base.setSafe(2, "world".getBytes(), 0, 5);
@@ -98,6 +99,31 @@ public class ArrowTest {
 
         val array =
                 (StringArray) ObjectFactory.getFactory().resolve(client.getMetaData(meta.getId()));
+        assertEquals(3, array.length());
+
+        val expected = builder.columnar();
+        val actual = array.columnar();
+        assertEquals(expected.valueCount(), actual.valueCount());
+        for (int index = 0; index < array.length(); ++index) {
+            assertEquals(expected.getUTF8String(index), actual.getUTF8String(index));
+        }
+    }
+
+    @Test
+    public void testLargeStringArray() throws VineyardException {
+        val base = new LargeVarCharVector("", Arrow.default_allocator);
+        base.setSafe(0, "hello".getBytes(), 0, 5);
+        base.setSafe(1, " ".getBytes(), 0, 1);
+        base.setSafe(2, "world".getBytes(), 0, 5);
+        base.setValueCount(3); // nb. important
+
+        val builder = new LargeStringArrayBuilder(client, base);
+        val meta = builder.seal(client);
+        assertEquals(3, meta.getIntValue("length_"));
+
+        val array =
+                (LargeStringArray)
+                        ObjectFactory.getFactory().resolve(client.getMetaData(meta.getId()));
         assertEquals(3, array.length());
 
         val expected = builder.columnar();

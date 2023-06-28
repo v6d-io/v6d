@@ -1,0 +1,63 @@
+version: '3.5'
+
+services:
+  metastore:
+    image: apache/hive:2.3.9
+    restart: unless-stopped
+    container_name: metastore
+    hostname: metastore
+    environment:
+      DB_DRIVER: derby
+      SERVICE_NAME: 'metastore'
+      SERVICE_OPTS: '-Xmx1G
+                     -Dhive.server2.thrift.max.worker.threads=100
+                     -Djnr.ffi.asm.enabled=false
+                     ${SERVICE_OPTS}'
+      HIVE_AUX_JARS_PATH: /opt/hive/auxlib
+      VINEYARD_IPC_SOCKET: /tmp/vineyard/vineyard.sock
+    networks:
+      - hive
+    ports:
+      - '9083:9083'
+    volumes:
+      - /user/hive/warehouse:/opt/hive/data/warehouse
+      - /user/hive/warehouse:/user/hive/warehouse
+      - ~/performance/spark:/spark
+      - ../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
+      - ../../build/vineyard:/tmp/vineyard
+      - ../../share:/opt/hive/auxlib
+
+  hive:
+    image: apache/hive:2.3.9
+    depends_on:
+      - metastore
+    restart: unless-stopped
+    container_name: hive
+    environment:
+      HIVE_SERVER2_THRIFT_PORT: 10000
+      SERVICE_OPTS: '-Xmx1G
+                     -Dhive.metastore.uris=thrift://metastore:9083
+                     -Dhive.server2.thrift.max.worker.threads=100
+                     -Djnr.ffi.asm.enabled=false
+                     ${SERVICE_OPTS}'
+      IS_RESUME: 'true'
+      SERVICE_NAME: 'hiveserver2'
+      HIVE_AUX_JARS_PATH: '/opt/hive/auxlib'
+      VINEYARD_IPC_SOCKET: /tmp/vineyard/vineyard.sock
+    networks:
+      - hive
+    ports:
+      - '10000:10000'
+      - '10002:10002'
+    volumes:
+      - /user/hive/warehouse:/opt/hive/data/warehouse
+      - /user/hive/warehouse:/user/hive/warehouse
+      - ~/performance/spark:/spark
+      - ../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
+      - ../../java/hive/target:/opt/hive/auxlib
+      - ../../build/vineyard:/tmp/vineyard
+
+networks:
+  hive:
+    name: hive-ns
+    driver: bridge

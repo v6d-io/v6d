@@ -383,7 +383,7 @@ public class ObjectMeta implements Serializable, Iterable<Map.Entry<String, Json
         if (this.buffers == null) {
             this.buffers = new BufferSet();
         }
-        if (meta == null || meta.isEmpty()) {
+        if (meta == null || meta.isEmpty(null) /* use the more compatible overloading */) {
             return;
         }
         ObjectID member = ObjectID.fromString(meta.get("id").textValue());

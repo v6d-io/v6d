@@ -53,11 +53,16 @@ public class RecordBatchBuilder implements ObjectBuilder {
     }
 
     public RecordBatchBuilder(
-            final IPCClient client, final Schema schema, List<ColumnarDataBuilder> columnBuilders)
+            final IPCClient client,
+            final Schema schema,
+            List<ColumnarDataBuilder> columnBuilders,
+            int rows)
             throws VineyardException {
         this.schemaBuilder = SchemaBuilder.fromSchema(schema);
         this.schemaMutable = false;
+        this.rows = rows;
 
+        // Fill array builder in the future.
         this.columnBuilders = requireNonNull(columnBuilders, "column builders is null");
     }
 
@@ -92,9 +97,17 @@ public class RecordBatchBuilder implements ObjectBuilder {
         return columnBuilders;
     }
 
-    public ColumnarDataBuilder getColumnBuilder(int index) throws VineyardException {
+    public ColumnarDataBuilder getColumnBuilder(int column_index) throws VineyardException {
         VineyardException.asserts(!schemaMutable, "the schema builder is not finished yet");
-        return columnBuilders.get(index);
+        return columnBuilders.get(column_index);
+    }
+
+    public long getNumRows() {
+        return this.rows;
+    }
+
+    public long getNumColumns() {
+        return this.columnBuilders.size();
     }
 
     @Override
@@ -131,6 +144,8 @@ public class RecordBatchBuilder implements ObjectBuilder {
         } else if (field.getType().equals(Arrow.Type.Double)) {
             return new DoubleArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.VarChar)) {
+            return new LargeStringArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.ShortVarChar)) {
             return new StringArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.Null)) {
             return new NullArrayBuilder(client, rows);

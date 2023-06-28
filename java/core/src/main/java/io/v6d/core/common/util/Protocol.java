@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.v6d.core.common.memory.Payload;
+import java.io.*;
 import java.util.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -126,6 +127,13 @@ public class Protocol {
         }
     }
 
+    public static class SealRequest extends Request {
+        public static void put(ObjectNode root, ObjectID id) {
+            root.put("type", "seal_request");
+            root.put("object_id", id.value());
+        }
+    }
+
     @Data
     @EqualsAndHashCode(callSuper = false)
     public static class CreateBufferReply extends Reply {
@@ -137,6 +145,13 @@ public class Protocol {
             check(root, "create_buffer_reply");
             this.id = new ObjectID(JSON.getLong(root, "id"));
             this.payload = Payload.fromJson(root.get("created"));
+        }
+    }
+
+    public static class SealReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "seal_reply");
         }
     }
 

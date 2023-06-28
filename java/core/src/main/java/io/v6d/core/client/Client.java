@@ -21,10 +21,15 @@ import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.InstanceID;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
+import java.lang.reflect.Field;
 import java.util.Collection;
+import java.util.Map;
 
 /** Vineyard IPC client. */
 public abstract class Client {
+    public static final String DEFAULT_IPC_SOCKET_KEY = "VINEYARD_IPC_SOCKET";
+    public static final String DEFAULT_RPC_ENDPOINT_KEY = "VINEYARD_RPC_ENDPOINT";
+
     protected String ipc_socket;
     protected String rpc_endpoint;
     protected InstanceID instanceId;
@@ -121,5 +126,13 @@ public abstract class Client {
                 .add("ipc_socket", ipc_socket)
                 .add("rpc_endpoint", rpc_endpoint)
                 .toString();
+    }
+
+    @SuppressWarnings({"unchecked"})
+    public static void putenv(String name, String val) throws ReflectiveOperationException {
+        Map<String, String> env = System.getenv();
+        Field field = env.getClass().getDeclaredField("m");
+        field.setAccessible(true);
+        ((Map<String, String>) field.get(env)).put(name, val);
     }
 }

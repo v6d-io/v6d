@@ -18,6 +18,7 @@ import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.modules.basic.columnar.ColumnarData;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -40,6 +41,8 @@ public class RecordBatch extends Object {
         Int64Array.instantiate();
         FloatArray.instantiate();
         DoubleArray.instantiate();
+        LargeStringArray.instantiate();
+        // TBD : test construct (Large) string array.
         StringArray.instantiate();
         NullArray.instantiate();
         ObjectFactory.getFactory().register("vineyard::RecordBatch", new RecordBatchResolver());
@@ -52,6 +55,18 @@ public class RecordBatch extends Object {
 
     public VectorSchemaRoot getBatch() {
         return batch;
+    }
+
+    public long getRowCount() {
+        return batch.getRowCount();
+    }
+
+    public long getColumnCount() {
+        return batch.getFieldVectors().size();
+    }
+
+    public ColumnarData[] columar() {
+        return batch.getFieldVectors().stream().map(ColumnarData::new).toArray(ColumnarData[]::new);
     }
 
     @Override

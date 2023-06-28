@@ -1,0 +1,157 @@
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.SparkSession
+
+    val conf = new SparkConf()
+    conf.setAppName("Spark on Vineyard").setMaster("local[*]").set("spark.scheduler.minRegisteredResourcesRatio", "1.0")
+
+    val spark = SparkSession.builder().config(conf).enableHiveSupport().getOrCreate()
+
+    spark.sql(
+      """
+        |drop table if exists hive_example;
+        |""".stripMargin)
+
+    spark.sql(
+      """
+        |create external table hive_example(
+        |                            field_1 int,
+        |                            field_2 string)
+        |        row format serde "io.v6d.hive.ql.io.VineyardBackUpSerDe"
+        |        stored as
+        |            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardBackUpInputFormat'
+        |            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
+        |       LOCATION 'vineyard:///opt/hive/data/warehouse/hive_example'
+        |""".stripMargin).show()
+    spark.sql(
+      """
+        |insert into hive_example values(3, '5'),(2, '6');
+        |""".stripMargin).show()
+    spark.sql(
+      """
+        |select * from hive_example;
+        |""".stripMargin).show()
+    spark.sql(
+      """
+        |ANALYZE TABLE hive_example COMPUTE STATISTICS; 
+        |""".stripMargin).show()
+    spark.sql(
+      """
+        |select  sum(field_1) from hive_example; 
+        |""".stripMargin).show()
+spark.sql("set spark.hive.vectorized.execution.enabled=true;")
+
+    spark.sql(
+      """
+        |drop table if exists hive_example;
+        |""".stripMargin)
+
+    spark.sql(
+      """
+        |create table hive_example10(
+        |                            field_1 int,
+        |                            field_2 bigint)
+        | LOCATION "file:///opt/hive/data/warehouse/hive_example_test";
+        |""".stripMargin).show()
+
+    spark.sql(
+      """
+        |insert into hive_example10 values(1, 1);
+        |""".stripMargin).show()
+    spark.sql(
+      """
+        |select * from hive_example10;
+        |""".stripMargin).show()
+        
+// cp /share/* /opt/hive/auxlib/
+// cp /opt/hive/auxlib/vineyard* /opt/hive/lib && cp /opt/hive/auxlib/vineyard* ./jars
+// cp /opt/hive/auxlib/vineyard* ./jars
+
+    spark.sql(
+      """
+        |create table hive_example1(
+        |                            field_1 int,
+        |                            field_2 bigint);
+        |""".stripMargin).show()
+    spark.sql(
+      """
+        |insert into hive_example1 select * from hive_example;
+        |""".stripMargin).show()
+    spark.sql(
+      """
+        |select * from hive_example1;
+        |""".stripMargin).show()
+  
+        drop table hive_example1;
+        create table hive_example2(
+                                    field_1 int,
+                                    field_2 string)
+                row format serde "io.v6d.hive.ql.io.VineyardBackUpSerDe"
+                stored as
+                    INPUTFORMAT 'io.v6d.hive.ql.io.VineyardBackUpInputFormat'
+                    OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
+               LOCATION 'file:///user/hive/warehouse/hive_example2';
+        insert into hive_example2 values(1, 'abc'), (2, 'bcd');
+
+// ORC
+import org.apache.spark.{SparkConf, SparkContext}
+import org.apache.spark.sql.SparkSession
+
+    val conf = new SparkConf()
+    conf.setAppName("Spark on Vineyard").setMaster("local[*]").set("spark.scheduler.minRegisteredResourcesRatio", "1.0")
+
+    val spark = SparkSession.builder().config(conf).config("spark.sql.hive.convertMetastoreOrc", "true").enableHiveSupport().getOrCreate()
+    spark.sql(
+      """
+        |drop table if exists test_orc;
+        |""".stripMargin)
+    spark.sql(
+      """
+        | create table test_orc(
+        |                             field int,
+        |                             field_2 bigint)
+        | ROW FORMAT SERDE 
+        |             'org.apache.hadoop.hive.ql.io.orc.OrcSerde'
+        | stored as
+        |             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
+        |             OUTPUTFORMAT 'org.apache.hadoop.hive.ql.io.orc.OrcOutputFormat';
+        | """.stripMargin).show()
+
+    spark.sql(
+      """
+        |insert into test_orc values(3, 5);
+        |""".stripMargin).show()
+    spark.sql(
+      """
+        |select * from test_orc;
+        |""".stripMargin).show()
+    spark.sql(
+      """
+        |set hive.vectorized.execution.enabled;
+        |""".stripMargin).show()
+
+// ORC end
+
+create table test(
+  field int,
+  field_2 bigint
+);
+
+insert into test values(3, 5);
+insert into test_orc1 select * from test1;
+
+        create table hive_example3(
+                                    field_1 int,
+                                    field_2 bigint)
+                row format serde "io.v6d.hive.ql.io.VineyardSerDe"
+                stored as
+                    INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
+                    OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
+               LOCATION 'vineyard:///opt/hive/data/warehouse/hive_example3';
+            
+            insert into hive_example3 values(1, 1),(2, 2);
+
+
+file:/user/hive/warehouse/hive_example/.hive-staging_hive_2023-08-10_08-33-50_445_1788711205086488995-1/-ext-10000/_temporary/0/_temporary/attempt_202308100833501839971477450061_0002_m_000000_2/part-00000-b69f9889-1e4e-46b4-a948-3790dd8dc5ed-c000
+file:/user/hive/warehouse/hive_example/.hive-staging_hive_2023-08-10_08-33-50_445_1788711205086488995-1/-ext-10000/_temporary/0/_temporary/attempt_202308100833501839971477450061_0002_m_000000_2/part-00000-b69f9889-1e4e-46b4-a948-3790dd8dc5ed-c000
+
+file:/opt/hive/data/warehouse/hive_example1/.hive-staging_hive_2023-08-11_08-33-54_679_395374887926026576-5/_task_tmp.-ext-10000/_tmp.000000_2

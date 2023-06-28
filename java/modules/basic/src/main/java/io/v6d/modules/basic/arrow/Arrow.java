@@ -39,7 +39,9 @@ public final class Arrow {
                 new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE);
         public static final ArrowType Boolean = new ArrowType.Bool();
         public static final ArrowType VarChar = new ArrowType.LargeUtf8();
+        public static final ArrowType ShortVarChar = new ArrowType.Utf8();
         public static final ArrowType VarBinary = new ArrowType.LargeBinary();
+        public static final ArrowType ShortVarBinary = new ArrowType.Binary();
     }
 
     public static class FieldType {
@@ -61,8 +63,12 @@ public final class Arrow {
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.Boolean, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType VarChar =
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.VarChar, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType ShortVarChar =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.ShortVarChar, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType VarBinary =
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.VarBinary, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType ShortVarBinary =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.ShortVarBinary, null);
     }
 
     public static Field makeField(

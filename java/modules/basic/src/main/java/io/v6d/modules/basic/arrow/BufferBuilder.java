@@ -106,6 +106,7 @@ public class BufferBuilder implements ObjectBuilder {
         // to make resolving the returned object metadata possible
         meta.setBufferUnchecked(buffer.getObjectId(), buffer);
 
+        ((IPCClient) client).sealBuffer(buffer.getObjectId());
         return meta; // n.b.: blob: no create meta action
     }
 

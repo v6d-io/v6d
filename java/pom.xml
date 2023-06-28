@@ -18,11 +18,11 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <dependency.arrow.version>5.0.0</dependency.arrow.version>
+    <dependency.arrow.version>11.0.0</dependency.arrow.version>
     <dependency.guava.version>32.0.0-jre</dependency.guava.version>
     <dependency.jackson.version>2.14.0-rc1</dependency.jackson.version>
-    <dependency.jnr-posix.version>3.1.7</dependency.jnr-posix.version>
-    <dependency.jnr-unixsocket.version>0.38.8</dependency.jnr-unixsocket.version>
+    <dependency.jnr-posix.version>3.1.17</dependency.jnr-posix.version>
+    <dependency.jnr-unixsocket.version>0.38.20</dependency.jnr-unixsocket.version>
     <dependency.junit.version>4.13.2</dependency.junit.version>
     <dependency.lombok.version>1.18.20</dependency.lombok.version>
     <dependency.logback.version>1.2.9</dependency.logback.version>
@@ -206,6 +206,10 @@
           <version>3.2.0</version>
         </plugin>
         <plugin>
+          <artifactId>maven-shade-plugin</artifactId>
+          <version>3.5.0</version>
+        </plugin>
+        <plugin>
           <artifactId>maven-install-plugin</artifactId>
           <version>2.5.2</version>
         </plugin>
@@ -259,6 +263,11 @@
             </formats>
             <!-- define a language-specific format -->
             <java>
+              <excludes>
+                <exclude>**/com/google/**/*.java</exclude>
+                <exclude>**/org/apache/hadoop/hive/**/*.java</exclude>
+              </excludes>
+
               <importOrder>  <!-- or a custom ordering -->
                 <wildcardsLast>false</wildcardsLast>
                 <order>java,javax,org.apache,org,com,lombok,io.v6d,</order>

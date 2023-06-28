@@ -23,6 +23,6 @@ import org.apache.hadoop.fs.DelegateToFileSystem;
 public class VineyardFileSystem extends DelegateToFileSystem {
     VineyardFileSystem(final URI uri, final Configuration conf)
             throws IOException, URISyntaxException {
-        super(uri, new FileSystem(uri, conf), conf, FileSystem.SCHEME, false);
+        super(uri, new FileSystem(), conf, FileSystem.SCHEME, false);
     }
 }
