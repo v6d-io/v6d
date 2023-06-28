@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"html/template"
 	"net/http"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -33,6 +34,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
@@ -84,9 +86,15 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 
 		sort.Strings(keys)
 		selectorname := strings.Join([]string{keys[0], l[keys[0]]}, "-")
+		if len(selectorname) > 63-len("-default-sidecar") {
+			selectorname = selectorname[:63-len("-default-sidecar")]
+		}
 		sidecar.Name = selectorname + "-default-sidecar"
+		// replace the invalid characters in the name
+		re := regexp.MustCompile(`[^a-zA-Z0-9.-]+`)
+		sidecar.Name = re.ReplaceAllString(sidecar.Name, "-")
 		sidecar.Namespace = pod.Namespace
-
+		sidecar.OwnerReferences = pod.OwnerReferences
 		err := r.Get(
 			ctx,
 			types.NamespacedName{Name: sidecar.Name, Namespace: sidecar.Namespace},
@@ -107,9 +115,18 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		} else {
-			// the default sidecar cr exists, update it
-			sidecar.Spec.Replicas++
-			if err := r.Update(ctx, sidecar); err != nil {
+			if err := retry.RetryOnConflict(retry.DefaultBackoff, func() error {
+				name := client.ObjectKeyFromObject(sidecar)
+				if err := r.Get(ctx, name, sidecar); err != nil {
+					return errors.Wrap(err, "failed to get "+name.String())
+				}
+				// the default sidecar cr exists, update it
+				sidecar.Spec.Replicas++
+				if err := r.Update(ctx, sidecar); err != nil {
+					return errors.Wrap(err, "failed to update sidecar's status")
+				}
+				return nil
+			}); err != nil {
 				logger.Error(err, "failed to update default sidecar cr")
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
@@ -175,6 +192,10 @@ func (r *Injector) ApplyToSidecar(
 	}
 	if err := injector.InjectSidecar(unstructuredPodWithSidecar, unstructuredPod, sidecar, selector); err != nil {
 		return errors.Wrap(err, "failed to inject sidecar")
+	}
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(
+		unstructuredPodWithSidecar.Object, podWithSidecar); err != nil {
+		return errors.Wrap(err, "failed to convert unstructured object to podWithSidecar")
 	}
 
 	return nil

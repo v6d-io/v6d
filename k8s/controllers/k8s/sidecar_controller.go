@@ -77,11 +77,11 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			etcdCfg.Rank = rank
 			return etcdCfg
 		}
-		if _, err := sidecarApp.Apply(ctx, "etcd/etcd.yaml", logger, false); err != nil {
+		if _, err := sidecarApp.Apply(ctx, "etcd/etcd.yaml", logger, true); err != nil {
 			logger.Error(err, "failed to apply etcd pod")
 			return ctrl.Result{}, err
 		}
-		if _, err := sidecarApp.Apply(ctx, "etcd/service.yaml", logger, false); err != nil {
+		if _, err := sidecarApp.Apply(ctx, "etcd/service.yaml", logger, true); err != nil {
 			logger.Error(err, "failed to apply etcd service")
 			return ctrl.Result{}, err
 		}

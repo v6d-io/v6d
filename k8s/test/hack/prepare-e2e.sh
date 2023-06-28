@@ -58,3 +58,11 @@ if ! command -v gomplate &> /dev/null; then
     fi
 fi
 
+# v0.20.0 is not compatible on the github action
+if [ $(kind version | awk '{print $2}') == "v0.20.0" ]; then
+  curl -Lo ./kind https://github.com/kubernetes-sigs/kind/releases/download/v0.19.0/kind-linux-amd64
+  chmod +x ./kind
+  mv ./kind /usr/local/bin/kind
+fi
+
+
