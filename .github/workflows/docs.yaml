@@ -21,7 +21,7 @@ on:
       - main
       - docs
       - dev/docs
-  pull_request_target:
+  pull_request:
     branches:
       - main
       - docs
@@ -49,8 +49,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          repository: ${{github.event.pull_request.head.repo.full_name}}
-          ref: ${{github.event.pull_request.head.ref}}
+          repository: ${{ github.event.pull_request.head.repo.full_name }}
+          ref: ${{ github.event.pull_request.head.ref }}
           submodules: true
 
       - name: Generate Summary for Submodules
@@ -151,7 +151,7 @@ jobs:
 
       - name: Preview using netlify
         uses: netlify/actions/cli@master
-        if: ${{ github.event_name == 'pull_request_target' }}
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'v6d-io/v6d' }}
         with:
           args: deploy deploy --dir=docs/_build/html --alias deploy-preview-pr-${{ github.event.number }}
         env:
@@ -160,7 +160,7 @@ jobs:
 
       - name: Leave the comment on pull request
         uses: actions-cool/maintain-one-comment@v3
-        if: ${{ github.event_name == 'pull_request_target' }}
+        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'v6d-io/v6d' }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
@@ -170,7 +170,7 @@ jobs:
 
       - name: Leave the comment on pull request when failed
         uses: actions-cool/maintain-one-comment@v3
-        if: ${{ failure() && github.event_name == 'pull_request_target' }}
+        if: ${{ failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'v6d-io/v6d' }}
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           body: |
