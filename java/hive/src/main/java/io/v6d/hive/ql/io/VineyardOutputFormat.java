@@ -15,6 +15,7 @@
 package io.v6d.hive.ql.io;
 
 import io.v6d.core.common.util.VineyardException;
+import io.v6d.core.client.IPCClient;
 import java.io.IOException;
 import java.util.Properties;
 import org.apache.hadoop.fs.FileSystem;
@@ -65,6 +66,9 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private Properties tableProperties;
     private Progressable progress;
 
+    // vineyard
+    private static IPCClient client;
+
     @lombok.SneakyThrows
     public SinkRecordWriter(
             JobConf jc,
@@ -83,6 +87,16 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         this.finalOutPath = finalOutPath;
         this.tableProperties = tableProperties;
         this.progress = progress;
+
+        System.out.printf("final out path: %s\n", finalOutPath);
+        // connect to vineyard
+        client = new IPCClient("/tmp/vineyard.sock");
+        System.out.printf("connecting to vineyard...\n");
+        if (!client.connected()) {
+            throw new VineyardException.Invalid("failed to connect to vineyard");
+        } else {
+            System.out.printf("connected to vineyard succeed!\n");
+        }
     }
 
     @Override

@@ -309,10 +309,14 @@ public class IPCClient extends Client {
 
     private void connectIPCSocket(UnixSocketAddress address) throws VineyardException.IOError {
         try {
+            System.out.println("open:" + address.path());
             channel = UnixSocketChannel.open(address);
+            System.out.println("open success.");
         } catch (IOException e) {
+            System.out.println("Failed to connect to IPC socket: " + e.getMessage());
             throw new VineyardException.IOError(e.getMessage());
         }
+        System.out.println("Connected to IPC socket successfully.");
         writer = new LittleEndianDataOutputStream(Channels.newOutputStream(channel));
         reader = new LittleEndianDataInputStream(Channels.newInputStream(channel));
     }
@@ -322,6 +326,8 @@ public class IPCClient extends Client {
             throws VineyardException.ConnectionFailed {
         val address = new UnixSocketAddress(new File(pathname).getAbsolutePath());
         int num_retries = NUM_CONNECT_ATTEMPTS;
+        System.out.println("Connecting to " + pathname);
+        System.out.println("address:" + address.path());
         while (num_retries > 0) {
             try {
                 connectIPCSocket(address);
@@ -331,7 +337,13 @@ public class IPCClient extends Client {
             }
             num_retries -= 1;
         }
+        System.out.println("Connected to IPC socket successfully2.");
         if (reader == null || writer == null) {
+            if (reader == null) {
+                System.out.println("reader is null");
+            } else {
+                System.out.println("writer is null");
+            }
             throw new VineyardException.ConnectionFailed();
         }
     }
