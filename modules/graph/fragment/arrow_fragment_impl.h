@@ -59,13 +59,13 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::PrepareToRunApp(
     const grape::CommSpec& comm_spec, grape::PrepareConf conf) {
   if (conf.message_strategy ==
       grape::MessageStrategy::kAlongEdgeToOuterVertex) {
-    initDestFidList(true, true, iodst_, iodoffset_);
+    initDestFidList(comm_spec, true, true, iodst_, iodoffset_);
   } else if (conf.message_strategy ==
              grape::MessageStrategy::kAlongIncomingEdgeToOuterVertex) {
-    initDestFidList(true, false, idst_, idoffset_);
+    initDestFidList(comm_spec, true, false, idst_, idoffset_);
   } else if (conf.message_strategy ==
              grape::MessageStrategy::kAlongOutgoingEdgeToOuterVertex) {
-    initDestFidList(false, true, odst_, odoffset_);
+    initDestFidList(comm_spec, false, true, odst_, odoffset_);
   }
 }
 
@@ -613,9 +613,13 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initPointers() {
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initDestFidList(
-    bool in_edge, bool out_edge,
+    const grape::CommSpec& comm_spec, const bool in_edge, const bool out_edge,
     std::vector<std::vector<std::vector<fid_t>>>& fid_lists,
     std::vector<std::vector<std::vector<fid_t*>>>& fid_lists_offset) {
+  int concurrency =
+      (std::thread::hardware_concurrency() + comm_spec.local_num() - 1) /
+      comm_spec.local_num();
+
   for (auto v_label_id = 0; v_label_id < vertex_label_num_; v_label_id++) {
     auto ivnum_ = ivnums_[v_label_id];
     auto inner_vertices = InnerVertices(v_label_id);
@@ -632,41 +636,57 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initDestFidList(
         return;
       }
       fid_list_offset.resize(ivnum_ + 1, NULL);
-      for (vid_t i = 0; i < ivnum_; ++i) {
-        dstset.clear();
-        if (in_edge) {
-          auto es = GetIncomingAdjList(v, e_label_id);
-          fid_t last_fid = -1;
-          for (auto& e : es) {
-            fid_t f = GetFragId(e.neighbor());
-            if (f != last_fid && f != fid_) {
-              dstset.insert(f);
-              last_fid = f;
-            }
-          }
-        }
-        if (out_edge) {
-          auto es = GetOutgoingAdjList(v, e_label_id);
-          fid_t last_fid = -1;
-          for (auto& e : es) {
-            fid_t f = GetFragId(e.neighbor());
-            if (f != last_fid && f != fid_) {
-              dstset.insert(f);
-              last_fid = f;
-            }
-          }
-        }
-        id_num[i] = dstset.size();
-        for (auto fid : dstset) {
-          fid_list.push_back(fid);
-        }
-        ++v;
-      }
+      // don't use std::vector<bool> due to its specialization
+      std::vector<uint8_t> fid_list_bitmap(ivnum_ * fnum_, 0);
+      std::atomic_size_t fid_list_size(0);
 
-      fid_list.shrink_to_fit();
+      vineyard::parallel_for(
+          static_cast<vid_t>(0), static_cast<vid_t>(ivnum_),
+          [this, e_label_id, &inner_vertices, in_edge, out_edge,
+           &fid_list_bitmap, &fid_list_size](const vid_t& offset) {
+            vertex_t v = *(inner_vertices.begin() + offset);
+
+            if (in_edge) {
+              auto es = GetIncomingAdjList(v, e_label_id);
+              fid_t last_fid = -1;
+              for (auto& e : es) {
+                fid_t f = GetFragId(e.neighbor());
+                if (f != last_fid && f != fid_ &&
+                    !fid_list_bitmap[offset * fnum_ + f]) {
+                  last_fid = f;
+                  fid_list_bitmap[offset * fnum_ + f] = 1;
+                  fid_list_size.fetch_add(1);
+                }
+              }
+            }
+            if (out_edge) {
+              auto es = GetOutgoingAdjList(v, e_label_id);
+              fid_t last_fid = -1;
+              for (auto& e : es) {
+                fid_t f = GetFragId(e.neighbor());
+                if (f != last_fid && f != fid_ &&
+                    !fid_list_bitmap[offset * fnum_ + f]) {
+                  last_fid = f;
+                  fid_list_bitmap[offset * fnum_ + f] = 1;
+                  fid_list_size.fetch_add(1);
+                }
+              }
+            }
+          },
+          concurrency, 1024);
+
+      fid_list.reserve(fid_list_size.load());
       fid_list_offset[0] = fid_list.data();
+
       for (vid_t i = 0; i < ivnum_; ++i) {
-        fid_list_offset[i + 1] = fid_list_offset[i] + id_num[i];
+        size_t nonzero = 0;
+        for (fid_t fid = 0; fid < fnum_; ++fid) {
+          if (fid_list_bitmap[i * fnum_ + fid]) {
+            nonzero += 1;
+            fid_list.push_back(fid);
+          }
+        }
+        fid_list_offset[i + 1] = fid_list_offset[i] + nonzero;
       }
     }
   }

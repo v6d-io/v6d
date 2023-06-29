@@ -26,9 +26,9 @@ limitations under the License.
 #include <vector>
 
 #include "grape/worker/comm_spec.h"
-#include "libcuckoo/cuckoohash_map.hh"
 
 #include "basic/ds/arrow_utils.h"
+#include "graph/fragment/property_graph_types.h"
 #include "graph/loader/basic_ev_fragment_loader.h"
 #include "graph/utils/table_shuffler_beta.h"
 
@@ -40,11 +40,6 @@ class ConcurrentOidSet {
   using internal_oid_t = typename InternalType<oid_t>::type;
   using oid_array_t = ArrowArrayType<oid_t>;
   using oid_array_builder_t = ArrowBuilderType<oid_t>;
-
-  // no cuckoohash_set, so we use a map instead
-  using concurrent_map_t =
-      libcuckoo::cuckoohash_map<internal_oid_t, bool,
-                                prime_number_hash_wy<internal_oid_t>>;
 
  public:
   Status Insert(const std::shared_ptr<arrow::Array>& array,
@@ -88,7 +83,7 @@ class ConcurrentOidSet {
   void Clear() { oids.clear(); }
 
  private:
-  concurrent_map_t oids;
+  concurrent_set_t<internal_oid_t> oids;
 };
 
 boost::leaf::result<std::vector<std::string>> GatherVertexLabels(

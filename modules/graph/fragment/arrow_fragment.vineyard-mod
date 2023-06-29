@@ -710,7 +710,7 @@ class [[vineyard]] ArrowFragment
   void initPointers();
 
   void initDestFidList(
-      bool in_edge, bool out_edge,
+      const grape::CommSpec& comm_spec, const bool in_edge, const bool out_edge,
       std::vector<std::vector<std::vector<fid_t>>>& fid_lists,
       std::vector<std::vector<std::vector<fid_t*>>>& fid_lists_offset);
 
