@@ -28,7 +28,6 @@ limitations under the License.
 
 #include "basic/ds/array.h"
 #include "basic/ds/hashmap.vineyard.h"
-#include "basic/utils.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
@@ -62,8 +61,7 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
   explicit HashmapBuilder(Client& client)
       : HashmapBaseBuilder<K, V, H, E>(client) {}
 
-  explicit HashmapBuilder(Client& client,
-                          ska::flat_hash_map<K, V, H, E>&& hashmap)
+  HashmapBuilder(Client& client, ska::flat_hash_map<K, V, H, E>&& hashmap)
       : HashmapBaseBuilder<K, V, H, E>(client), hashmap_(std::move(hashmap)) {}
 
   /**
@@ -229,165 +227,134 @@ class HashmapBuilder : public HashmapBaseBuilder<K, V, H, E> {
   std::shared_ptr<Blob> data_buffer_;
 };
 
-}  // namespace vineyard
-
-namespace boomphf {
-
-// wrapper around HashFunctors to return only one value instead of 7
-template <>
-class SingleHashFunctor<std::string> {
- public:
-  uint64_t operator()(const std::string& key,
-                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
-    return hashFunctors(key);
-  }
-
- private:
-  std::hash<std::string> hashFunctors;
-};
-
-#if __cpp_lib_string_view
-template <>
-class SingleHashFunctor<std::string_view> {
- public:
-  uint64_t operator()(const std::string_view& key,
-                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
-    return hashFunctors(key);
-  }
-
- private:
-  std::hash<std::string_view> hashFunctors;
-};
-#endif  // __cpp_lib_string_view
-
-}  // namespace boomphf
-
-namespace vineyard {
-
 template <typename K, typename V>
 class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
  public:
+  static_assert(std::is_pod<V>::value, "V in perfect hashmap must be POD type");
+
   typedef boomphf::SingleHashFunctor<K> hasher_t;
 
   explicit PerfectHashmapBuilder(Client& client)
       : PerfectHashmapBaseBuilder<K, V>(client) {}
 
-  inline bool emplace(K key, V value) {
-    vec_kv_.push_back(std::pair<K, V>(key, value));
-    n_elements_++;
-    return true;
+  Status ComputeHash(Client& client, const K* keys, const V* values,
+                     const size_t n_elements) {
+    std::shared_ptr<Blob> blob;
+    RETURN_ON_ERROR(this->allocateKeys(client, keys, n_elements, blob));
+    return ComputeHash(client, blob, values, n_elements);
   }
 
   /**
-   * @brief Get the mapping value of the given key.
-   *
+   * Using existing blobs for keys.
    */
-  inline V operator[](const K& key) {
-    if (construct_flag_) {
-      return vec_v_[bphf_.lookup(key)];
-    }
-    LOG(INFO) << "Please get value after seal the hashmap.";
-    return V(0);
+  Status ComputeHash(Client& client, const std::shared_ptr<Blob> keys,
+                     const V* values, const size_t n_elements) {
+    this->set_num_elements_(n_elements);
+    this->set_ph_keys_(keys);
+    RETURN_ON_ERROR(detail::boomphf::build_keys(
+        bphf_, reinterpret_cast<const K*>(keys->data()), n_elements));
+    return this->allocateValues(
+        client, n_elements, [&](V* shuffled_values) -> Status {
+          return detail::boomphf::build_values(
+              bphf_, reinterpret_cast<const K*>(keys->data()), n_elements,
+              values, shuffled_values);
+        });
   }
 
   /**
-   * @brief Get the size of the hashmap.
-   *
+   * Using existing arrow array for keys.
    */
-  size_t size() const { return vec_kv_.size(); }
+  Status ComputeHash(Client& client,
+                     const std::shared_ptr<ArrowVineyardArrayType<K>>& keys,
+                     const V* values, const size_t n_elements) {
+    this->set_num_elements_(n_elements);
+    this->set_ph_keys_(keys);
+    RETURN_ON_ERROR(detail::boomphf::build_keys(bphf_, keys->GetArray()));
+    return this->allocateValues(
+        client, n_elements, [&](V* shuffled_values) -> Status {
+          return detail::boomphf::build_values(bphf_, keys->GetArray(), values,
+                                               shuffled_values);
+        });
+    return Status::OK();
+  }
+
+  Status ComputeHash(Client& client, const K* keys, const V begin_value,
+                     const size_t n_elements) {
+    std::shared_ptr<Blob> blob;
+    RETURN_ON_ERROR(this->allocateKeys(client, keys, n_elements, blob));
+    return ComputeHash(client, blob, begin_value, n_elements);
+  }
 
   /**
-   * @brief Reserve the size for the hashmap.
-   *
+   * Using existing blobs for keys.
    */
-  void reserve(size_t size) { vec_kv_.reserve(size); }
-
-  template <typename K_ = K>
-  typename std::enable_if<std::is_integral<K_>::value, void>::type Construct() {
-    size_t count = 0;
-    vec_kv_.resize(n_elements_);
-    vec_k_.resize(vec_kv_.size());
-    uint64_t start_time = GetCurrentTime();
-    for (auto& kv_ : vec_kv_) {
-      vec_k_[count] = kv_.first;
-      count++;
-    }
-    VLOG(100) << "Constructing the vec_k_ takes "
-              << GetCurrentTime() - start_time << " s.";
-
-    auto data_iterator = boomphf::range(vec_k_.begin(), vec_k_.end());
-    bphf_ = boomphf::mphf<K, hasher_t>(vec_k_.size(), data_iterator,
-                                       concurrency_, 2.5f);
-
-    vec_v_.resize(count);
-    count = vec_k_.size() / concurrency_;
-    start_time = GetCurrentTime();
-    parallel_for(
-        0, concurrency_,
-        [&](const int i) {
-          if (unlikely(i == concurrency_ - 1)) {
-            for (size_t j = i * count; j < vec_v_.size(); j++) {
-              vec_v_[bphf_.lookup(vec_k_[j])] = vec_kv_[j].second;
-            }
-          } else {
-            for (size_t j = i * count; j < (i + 1) * count; j++) {
-              vec_v_[bphf_.lookup(vec_k_[j])] = vec_kv_[j].second;
-            }
-          }
-        },
-        concurrency_);
-    VLOG(100) << "Parallel for constructing the vec_v_ takes "
-              << GetCurrentTime() - start_time << " s.";
-    construct_flag_ = true;
+  Status ComputeHash(Client& client, const std::shared_ptr<Blob> keys,
+                     const V begin_value, const size_t n_elements) {
+    this->set_num_elements_(n_elements);
+    this->set_ph_keys_(keys);
+    RETURN_ON_ERROR(detail::boomphf::build_keys(
+        bphf_, reinterpret_cast<const K*>(keys->data()), n_elements));
+    return this->allocateValues(
+        client, n_elements, [&](V* shuffled_values) -> Status {
+          return detail::boomphf::build_values(
+              bphf_, reinterpret_cast<const K*>(keys->data()), n_elements,
+              begin_value, shuffled_values);
+        });
   }
 
-  template <typename K_ = K>
-  typename std::enable_if<!std::is_integral<K_>::value, void>::type
-  Construct() {
-    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
+  /**
+   * Using existing arrow array for keys.
+   */
+  Status ComputeHash(Client& client,
+                     const std::shared_ptr<ArrowVineyardArrayType<K>>& keys,
+                     const V begin_value, const size_t n_elements) {
+    this->set_num_elements_(n_elements);
+    this->set_ph_keys_(keys);
+    RETURN_ON_ERROR(detail::boomphf::build_keys(bphf_, keys->GetArray()));
+    return this->allocateValues(
+        client, n_elements, [&](V* shuffled_values) -> Status {
+          return detail::boomphf::build_values(bphf_, keys->GetArray(),
+                                               begin_value, shuffled_values);
+        });
+    return Status::OK();
   }
+
+  size_t size() const { return this->num_elements_; }
 
   /**
    * @brief Build the hashmap object.
    *
    */
-  Status Build(Client& client) override {
-    Construct();
+  Status Build(Client& client) override { return Status::OK(); }
 
-    auto ph_values_builder =
-        std::make_shared<ArrayBuilder<V>>(client, vec_v_.data(), vec_v_.size());
-
-    this->set_num_elements_(vec_kv_.size());
-
-    this->set_ph_values_(
-        std::static_pointer_cast<ObjectBase>(ph_values_builder));
-
-    if (persist_key_) {
-      this->set_persist_key_(true);
-      auto ph_keys_builder = std::make_shared<ArrayBuilder<K>>(
-          client, vec_k_.data(), vec_k_.size());
-      this->set_ph_keys_(std::static_pointer_cast<ObjectBase>(ph_keys_builder));
-    } else {
-      this->set_persist_key_(false);
-      auto ph_keys_builder = std::make_shared<ArrayBuilder<K>>(client, 0);
-      this->set_ph_keys_(std::static_pointer_cast<ObjectBase>(ph_keys_builder));
-    }
-
+ private:
+  Status allocateKeys(Client& client, const K* keys, const size_t n_elements,
+                      std::shared_ptr<Blob>& out) {
+    std::unique_ptr<BlobWriter> blob_writer;
+    RETURN_ON_ERROR(client.CreateBlob(n_elements * sizeof(K), blob_writer));
+    memcpy(blob_writer->data(), keys, n_elements * sizeof(K));
+    std::shared_ptr<Object> blob;
+    RETURN_ON_ERROR(blob_writer->Seal(client, blob));
+    out = std::dynamic_pointer_cast<Blob>(blob);
     return Status::OK();
   }
 
-  void inline not_persist_key() { persist_key_ = false; }
+  template <typename Func>
+  Status allocateValues(Client& client, const size_t n_elements, Func func) {
+    std::unique_ptr<BlobWriter> blob_writer;
+    RETURN_ON_ERROR(client.CreateBlob(n_elements * sizeof(V), blob_writer));
+    V* values = reinterpret_cast<V*>(blob_writer->data());
+    RETURN_ON_ERROR(func(values));
+    std::shared_ptr<Object> blob;
+    RETURN_ON_ERROR(blob_writer->Seal(client, blob));
+    this->set_ph_values_(blob);
+    return Status::OK();
+  }
 
- private:
-  std::vector<V> vec_v_;
-  std::vector<K> vec_k_;
-  std::vector<std::pair<K, V>> vec_kv_;
-  uint64_t n_elements_ = 0;
-  bool construct_flag_ = false;
   boomphf::mphf<K, hasher_t> bphf_;
-  bool persist_key_ = true;
 
-  int concurrency_ = std::thread::hardware_concurrency();
+  const int concurrency_ = std::thread::hardware_concurrency();
+  const double gamma_ = 2.5f;
 };
 
 }  // namespace vineyard

@@ -50,7 +50,7 @@ class ArrowVertexMap
                 "Expect arrow_string_view in vertex map's OID_T");
 
  public:
-  ArrowVertexMap(const bool use_perfect_hash = false)
+  explicit ArrowVertexMap(const bool use_perfect_hash = false)
       : use_perfect_hash_(use_perfect_hash) {}
   ~ArrowVertexMap() {}
 
@@ -160,7 +160,7 @@ class ArrowVertexMapBuilder : public vineyard::ObjectBuilder {
       fid_t fid, label_id_t label,
       const std::shared_ptr<vineyard::PerfectHashmap<oid_t, vid_t>>& rm);
 
-  void set_perfect_hash_(bool use_perfect_hash);
+  void set_perfect_hash_(const bool use_perfect_hash = false);
 
   Status _Seal(vineyard::Client& client,
                std::shared_ptr<vineyard::Object>& object) override;

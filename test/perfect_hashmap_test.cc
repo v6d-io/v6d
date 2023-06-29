@@ -42,9 +42,8 @@ int main(int argc, char** argv) {
   PerfectHashmapBuilder<int, double> builder(client);
   std::vector<int> keys = {1, 2, 3, 4, 5};
   std::vector<double> values = {100.0, 50.0, 25.0, 12.5, 6.25};
-  for (size_t i = 0; i < keys.size(); i++) {
-    builder.emplace(keys[i], values[i]);
-  }
+  VINEYARD_CHECK_OK(
+      builder.ComputeHash(client, keys.data(), values.data(), keys.size()));
 
   auto sealed_perfec_hashmap =
       std::dynamic_pointer_cast<PerfectHashmap<int, double>>(
@@ -70,7 +69,7 @@ int main(int argc, char** argv) {
     CHECK_DOUBLE_EQ(values[i], vy_hashmap->at(keys[i]));
   }
 
-  LOG(INFO) << "Passed double hashmap tests...";
+  LOG(INFO) << "Passed double perfect hashmap tests...";
 
   client.Disconnect();
 

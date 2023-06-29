@@ -270,6 +270,6 @@ and edges and are listed as follows:
 - :code:`dump_dry_run_rounds`: if greater than :code:`0`, will traverse the graph for
   :code:`dump_dry_run_rounds` times to measure the edge (CSR) accessing performance. Default
   is :code:`0`.
-  :code:`use_perfect_map` whether to use perfect map when construct vertex map. Default is
+- :code:`use_perfect_hash` whether to use perfect map when construct vertex map. Default is
   :code:`0`. Using perfect map is usually helpful to reduce the memory usage. But it is not
   recommended when the graph is small.

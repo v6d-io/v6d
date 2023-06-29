@@ -54,16 +54,22 @@ class NumericArrayBuilder;
 template <typename T>
 class FixedNumericArrayBuilder;
 
-#define CONVERT_TO_ARROW_TYPE(type, data_type, array_type, builder_type,       \
-                              type_value)                                      \
+class NullArray;
+class NullArrayBuilder;
+class BooleanArray;
+class BooleanArrayBuilder;
+
+#define CONVERT_TO_ARROW_TYPE(                                                 \
+    type, data_type, array_type, vineyard_array_type, builder_type,            \
+    vineyard_builder_type, fixed_vineyard_builder_type, type_value)            \
   template <>                                                                  \
   struct ConvertToArrowType<type> {                                            \
     using DataType = data_type;                                                \
     using ArrayType = array_type;                                              \
-    using VineyardArrayType = NumericArray<type>;                              \
+    using VineyardArrayType = vineyard_array_type;                             \
     using BuilderType = builder_type;                                          \
-    using VineyardBuilderType = NumericArrayBuilder<type>;                     \
-    using FixedVineyardBuilderType = FixedNumericArrayBuilder<type>;           \
+    using VineyardBuilderType = vineyard_builder_type;                         \
+    using FixedVineyardBuilderType = fixed_vineyard_builder_type;              \
     static std::shared_ptr<arrow::DataType> TypeValue() { return type_value; } \
   };
 
@@ -88,46 +94,86 @@ template <typename T>
 using FixedArrowVineyardBuilderType =
     typename ConvertToArrowType<T>::FixedVineyardBuilderType;
 
-CONVERT_TO_ARROW_TYPE(void, arrow::NullType, arrow::NullArray,
-                      arrow::NullBuilder, arrow::null())
+template <typename ArrayType>
+class BaseBinaryArray;
+
+template <typename ArrayType>
+class BaseBinaryArrayBuilder;
+
+template <typename ArrayType, typename BuilderType>
+class GenericBinaryArrayBuilder;
+
+using LargeStringArrayBuilder =
+    GenericBinaryArrayBuilder<arrow::LargeStringArray,
+                              arrow::LargeStringBuilder>;
+
+CONVERT_TO_ARROW_TYPE(void, arrow::NullType, arrow::NullArray, NullArray,
+                      arrow::NullBuilder, NullArrayBuilder, void, arrow::null())
 CONVERT_TO_ARROW_TYPE(bool, arrow::BooleanType, arrow::BooleanArray,
-                      arrow::BooleanBuilder, arrow::boolean())
+                      BooleanArray, arrow::BooleanBuilder, BooleanArrayBuilder,
+                      void, arrow::boolean())
 CONVERT_TO_ARROW_TYPE(int8_t, arrow::Int8Type, arrow::Int8Array,
-                      arrow::Int8Builder, arrow::int8())
+                      NumericArray<int8_t>, arrow::Int8Builder,
+                      NumericArrayBuilder<int8_t>,
+                      FixedNumericArrayBuilder<int8_t>, arrow::int8())
 CONVERT_TO_ARROW_TYPE(uint8_t, arrow::UInt8Type, arrow::UInt8Array,
-                      arrow::UInt8Builder, arrow::uint8())
+                      NumericArray<uint8_t>, arrow::UInt8Builder,
+                      NumericArrayBuilder<uint8_t>,
+                      FixedNumericArrayBuilder<uint8_t>, arrow::uint8())
 CONVERT_TO_ARROW_TYPE(int16_t, arrow::Int16Type, arrow::Int16Array,
-                      arrow::Int16Builder, arrow::int16())
+                      NumericArray<int16_t>, arrow::Int16Builder,
+                      NumericArrayBuilder<int16_t>,
+                      FixedNumericArrayBuilder<int16_t>, arrow::int16())
 CONVERT_TO_ARROW_TYPE(uint16_t, arrow::UInt16Type, arrow::UInt16Array,
-                      arrow::UInt16Builder, arrow::uint16())
+                      NumericArray<uint16_t>, arrow::UInt16Builder,
+                      NumericArrayBuilder<uint16_t>,
+                      FixedNumericArrayBuilder<uint16_t>, arrow::uint16())
 CONVERT_TO_ARROW_TYPE(int32_t, arrow::Int32Type, arrow::Int32Array,
-                      arrow::Int32Builder, arrow::int32())
+                      NumericArray<int32_t>, arrow::Int32Builder,
+                      NumericArrayBuilder<int32_t>,
+                      FixedNumericArrayBuilder<int32_t>, arrow::int32())
 CONVERT_TO_ARROW_TYPE(uint32_t, arrow::UInt32Type, arrow::UInt32Array,
-                      arrow::UInt32Builder, arrow::uint32())
+                      NumericArray<uint32_t>, arrow::UInt32Builder,
+                      NumericArrayBuilder<uint32_t>,
+                      FixedNumericArrayBuilder<uint32_t>, arrow::uint32())
 CONVERT_TO_ARROW_TYPE(int64_t, arrow::Int64Type, arrow::Int64Array,
-                      arrow::Int64Builder, arrow::int64())
+                      NumericArray<int64_t>, arrow::Int64Builder,
+                      NumericArrayBuilder<int64_t>,
+                      FixedNumericArrayBuilder<int64_t>, arrow::int64())
 CONVERT_TO_ARROW_TYPE(uint64_t, arrow::UInt64Type, arrow::UInt64Array,
-                      arrow::UInt64Builder, arrow::uint64())
+                      NumericArray<uint64_t>, arrow::UInt64Builder,
+                      NumericArrayBuilder<uint64_t>,
+                      FixedNumericArrayBuilder<uint64_t>, arrow::uint64())
 CONVERT_TO_ARROW_TYPE(float, arrow::FloatType, arrow::FloatArray,
-                      arrow::FloatBuilder, arrow::float32())
+                      NumericArray<float>, arrow::FloatBuilder,
+                      NumericArrayBuilder<float>,
+                      FixedNumericArrayBuilder<float>, arrow::float32())
 CONVERT_TO_ARROW_TYPE(double, arrow::DoubleType, arrow::DoubleArray,
-                      arrow::DoubleBuilder, arrow::float64())
+                      NumericArray<double>, arrow::DoubleBuilder,
+                      NumericArrayBuilder<double>,
+                      FixedNumericArrayBuilder<double>, arrow::float64())
 CONVERT_TO_ARROW_TYPE(RefString, arrow::LargeStringType,
-                      arrow::LargeStringArray, arrow::LargeStringBuilder,
+                      arrow::LargeStringArray,
+                      BaseBinaryArray<arrow::LargeStringArray>,
+                      arrow::LargeStringBuilder, LargeStringArrayBuilder, void,
                       arrow::large_utf8())
 CONVERT_TO_ARROW_TYPE(std::string, arrow::LargeStringType,
-                      arrow::LargeStringArray, arrow::LargeStringBuilder,
+                      arrow::LargeStringArray,
+                      BaseBinaryArray<arrow::LargeStringArray>,
+                      arrow::LargeStringBuilder, LargeStringArrayBuilder, void,
                       arrow::large_utf8())
 CONVERT_TO_ARROW_TYPE(arrow_string_view, arrow::LargeStringType,
-                      arrow::LargeStringArray, arrow::LargeStringBuilder,
+                      arrow::LargeStringArray,
+                      BaseBinaryArray<arrow::LargeStringArray>,
+                      arrow::LargeStringBuilder, LargeStringArrayBuilder, void,
                       arrow::large_utf8())
 CONVERT_TO_ARROW_TYPE(arrow::TimestampType, arrow::TimestampType,
-                      arrow::TimestampArray, arrow::TimestampBuilder,
-                      arrow::timestamp(arrow::TimeUnit::MILLI))
+                      arrow::TimestampArray, void, arrow::TimestampBuilder,
+                      void, void, arrow::timestamp(arrow::TimeUnit::MILLI))
 CONVERT_TO_ARROW_TYPE(arrow::Date32Type, arrow::Date32Type, arrow::Date32Array,
-                      arrow::Date32Builder, arrow::date32())
+                      void, arrow::Date32Builder, void, void, arrow::date32())
 CONVERT_TO_ARROW_TYPE(arrow::Date64Type, arrow::Date64Type, arrow::Date64Array,
-                      arrow::Date64Builder, arrow::date64())
+                      void, arrow::Date64Builder, void, void, arrow::date64())
 
 std::shared_ptr<arrow::DataType> FromAnyType(AnyType type);
 

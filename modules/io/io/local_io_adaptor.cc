@@ -77,11 +77,12 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
         }
         meta_.emplace("delimiter", std::string(1, delimiter_));
       } else if (kv_pair[0] == "header_row") {
-        header_row_ = (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
+        std::string value = boost::algorithm::to_lower_copy(kv_pair[1]);
+        header_row_ = value == "true" || value == "y" || value == "1";
         meta_.emplace("header_row", std::to_string(header_row_));
       } else if (kv_pair[0] == "include_all_columns") {
-        include_all_columns_ =
-            (boost::algorithm::to_lower_copy(kv_pair[1]) == "true");
+        std::string value = boost::algorithm::to_lower_copy(kv_pair[1]);
+        include_all_columns_ = value == "true" || value == "y" || value == "1";
         meta_.emplace("include_all_columns",
                       std::to_string(include_all_columns_));
       } else if (kv_pair[0] == "block_size") {

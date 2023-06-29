@@ -28,7 +28,9 @@ limitations under the License.
 #include "wyhash/wyhash.hpp"
 
 #include "basic/ds/array.vineyard.h"
+#include "basic/ds/arrow.vineyard.h"
 #include "basic/ds/arrow_utils.h"
+#include "basic/utils.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
@@ -334,44 +336,223 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
   }
 };
 
+}  // namespace vineyard
+
+namespace boomphf {
+
+// wrapper around HashFunctors to return only one value instead of 7
+template <>
+class SingleHashFunctor<std::string> {
+ public:
+  uint64_t operator()(const std::string& key,
+                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
+    return hashFunctors(key);
+  }
+
+ private:
+  std::hash<std::string> hashFunctors;
+};
+
+#if __cpp_lib_string_view
+template <>
+class SingleHashFunctor<std::string_view> {
+ public:
+  uint64_t operator()(const std::string_view& key,
+                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
+    return hashFunctors(key);
+  }
+
+ private:
+  wy::hash<std::string_view> hashFunctors;
+};
+#endif  // __cpp_lib_string_view
+
+#if !nssv_USES_STD_STRING_VIEW && \
+    ((!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10)
+template <>
+class SingleHashFunctor<vineyard::arrow_string_view> {
+ public:
+  uint64_t operator()(const std::string_view& key,
+                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
+    return hashFunctors(key);
+  }
+
+ private:
+  wy::hash<vineyard::arrow_string_view> hashFunctors;
+};
+#endif
+
+}  // namespace boomphf
+
+namespace vineyard {
+
+namespace detail {
+
+namespace boomphf {
+
+template <typename K>
+using hasher_t = ::boomphf::SingleHashFunctor<K>;
+
+template <typename K>
+using hashmap_t = ::boomphf::mphf<K, hasher_t<K>>;
+
+template <typename Value, typename Array>
+struct arrow_array_iterator {
+ public:
+  using value_type = Value;
+  explicit arrow_array_iterator(const typename Array::IteratorType& iterator)
+      : iterator_(iterator) {}
+
+  arrow_array_iterator(const arrow_array_iterator& other) {
+    iterator_ = other.iterator_;
+  }
+
+  arrow_array_iterator(arrow_array_iterator&& other) {
+    iterator_ = std::move(other.iterator_);
+  }
+
+  arrow_array_iterator& operator=(const arrow_array_iterator& other) {
+    iterator_ = other.iterator_;
+    return *this;
+  }
+
+  arrow_array_iterator& operator=(arrow_array_iterator&& other) {
+    iterator_ = std::move(other.iterator_);
+    return *this;
+  }
+
+  ~arrow_array_iterator() = default;
+
+  value_type operator*() const { return (*iterator_).value(); }
+
+  arrow_array_iterator& operator++() {
+    ++iterator_;
+    return *this;
+  }
+
+  arrow_array_iterator operator++(int) {
+    arrow_array_iterator tmp(*this);
+    ++iterator_;
+    return tmp;
+  }
+
+  bool operator==(const arrow_array_iterator& other) const {
+    return iterator_ == other.iterator_;
+  }
+
+  bool operator!=(const arrow_array_iterator& other) const {
+    return iterator_ != other.iterator_;
+  }
+
+ private:
+  typename Array::IteratorType iterator_;
+};
+
+template <typename K>
+Status build_keys(
+    hashmap_t<K>& bphf, const K* keys, const size_t n_elements,
+    const size_t concurrency = std::thread::hardware_concurrency(),
+    const double gamma = 2.5f) {
+  RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
+  auto data_iterator = ::boomphf::range(keys, keys + n_elements);
+  bphf = ::boomphf::mphf<K, hasher_t<K>>(n_elements, data_iterator, concurrency,
+                                         gamma, false /* writeEach */,
+                                         false /* progress */);
+  return Status::OK();
+}
+
+template <typename K>
+Status build_keys(
+    hashmap_t<K>& bphf, const std::shared_ptr<ArrowArrayType<K>>& keys,
+    const size_t concurrency = std::thread::hardware_concurrency(),
+    const double gamma = 2.5f) {
+  auto data_iterator = ::boomphf::range(
+      arrow_array_iterator<K, ArrowArrayType<K>>(keys->begin()),
+      arrow_array_iterator<K, ArrowArrayType<K>>(keys->end()));
+  bphf = ::boomphf::mphf<K, hasher_t<K>>(
+      keys->length(), data_iterator, concurrency, gamma, false /* writeEach */,
+      false /* progress */);
+  return Status::OK();
+}
+
+template <typename K, typename V>
+Status build_values(
+    hashmap_t<K>& bphf, const K* keys, const size_t n_elements,
+    const V* begin_value, V* values,
+    const size_t concurrency = std::thread::hardware_concurrency()) {
+  RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
+  parallel_for(
+      static_cast<size_t>(0), n_elements,
+      [&](const size_t index) {
+        values[bphf.lookup(keys[index])] = begin_value[index];
+      },
+      concurrency);
+  return Status::OK();
+}
+
+template <typename K, typename V>
+Status build_values(
+    hashmap_t<K>& bphf, const std::shared_ptr<ArrowArrayType<K>>& keys,
+    const V* begin_value, V* values,
+    const size_t concurrency = std::thread::hardware_concurrency()) {
+  parallel_for(
+      static_cast<size_t>(0), static_cast<size_t>(keys->length()),
+      [&](const size_t index) {
+        values[bphf.lookup(keys->GetView(index))] = begin_value[index];
+      },
+      concurrency);
+  return Status::OK();
+}
+
+template <typename K, typename V>
+Status build_values(
+    hashmap_t<K>& bphf, const K* keys, const size_t n_elements,
+    const V begin_value, V* values,
+    const size_t concurrency = std::thread::hardware_concurrency()) {
+  RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
+  parallel_for(
+      static_cast<size_t>(0), n_elements,
+      [&](const size_t index) {
+        values[bphf.lookup(keys[index])] = begin_value + index;
+      },
+      concurrency);
+  return Status::OK();
+}
+
+template <typename K, typename V>
+Status build_values(
+    hashmap_t<K>& bphf, const std::shared_ptr<ArrowArrayType<K>>& keys,
+    const V begin_value, V* values,
+    const size_t concurrency = std::thread::hardware_concurrency()) {
+  parallel_for(
+      static_cast<size_t>(0), static_cast<size_t>(keys->length()),
+      [&](const size_t index) {
+        values[bphf.lookup(keys->GetView(index))] = begin_value + index;
+      },
+      concurrency);
+  return Status::OK();
+}
+
+}  // namespace boomphf
+}  // namespace detail
+
 template <typename K, typename V>
 class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
  public:
-  using value_type = std::pair<K, V>;
+  using value_type = V;
   typedef boomphf::SingleHashFunctor<K> hasher_t;
 
-  template <typename K_ = K>
-  typename std::enable_if<std::is_integral<K_>::value, std::pair<K, V>*>::type
-  find(const K& key) {
+  const V* find(const K& key) const {
     // check if the key not exists.
-    size_t index = bphf_.lookup(key);
+    const size_t index = bphf_.lookup(key);
     if (index >= num_elements_) {
       return nullptr;
     }
-    return new std::pair<K, V>(key, ph_values_[index]);
-  }
-
-  template <typename K_ = K>
-  typename std::enable_if<!std::is_integral<K_>::value, std::pair<K, V>*>::type
-  find(const K& key) {
-    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
-    return nullptr;
-  }
-
-  const std::pair<K, V>* find(const K& key) const {
-    return const_cast<PerfectHashmap<K, V>*>(this)->find(key);
+    return &ph_values_ptr_[index];
   }
 
   size_t count(const K& key) const {
-    size_t ret;
-    auto found = this->find(key);
-    if (found == nullptr) {
-      ret = 0;
-    } else {
-      ret = 1;
-      delete found;
-    }
-    return ret;
+    return this->find(key) == nullptr ? 0 : 1;
   }
 
   size_t size() const { return num_elements_; }
@@ -383,68 +564,35 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   bool empty() const { return num_elements_ == 0; }
 
   const V at(const K& key) const {
-    V ret = V();
     auto found = this->find(key);
     if (found == nullptr) {
       throw std::out_of_range("Argument passed to at() was not in the map.");
+    }
+    return *found;
+  }
+
+  void PostConstruct(const ObjectMeta& meta) override {
+    ph_values_ptr_ = reinterpret_cast<const V*>(ph_values_->data());
+    if (auto blob = std::dynamic_pointer_cast<Blob>(ph_keys_)) {
+      detail::boomphf::build_keys<K>(
+          bphf_, reinterpret_cast<const K*>(blob->data()), num_elements_);
+    } else if (auto array =
+                   std::dynamic_pointer_cast<ArrowVineyardArrayType<K>>(
+                       ph_keys_)) {
+      detail::boomphf::build_keys<K>(bphf_, array->GetArray());
     } else {
-      ret = found->second;
+      VINEYARD_ASSERT(
+          false, "Unsupported key type: " + ph_keys_->meta().GetTypeName());
     }
-    return ret;
-  }
-
-  template <typename K_ = K>
-  typename std::enable_if<std::is_integral<K_>::value, void>::type
-  PostConstructImpl() {
-    if (persist_key_) {
-      auto data_iterator = boomphf::range(
-          static_cast<const K*>(ph_keys_.data()),
-          static_cast<const K*>(ph_keys_.data() + ph_keys_.size()));
-      auto time_stamp = vineyard::GetCurrentTime();
-      bphf_ = boomphf::mphf<K, hasher_t>(ph_keys_.size(), data_iterator,
-                                         concurrency_, 2.5f);
-      VLOG(100) << "Construct perfect map of " << ph_keys_.size()
-                << " vertex takes " << vineyard::GetCurrentTime() - time_stamp
-                << " s.";
-    }
-  }
-
-  template <typename K_ = K>
-  typename std::enable_if<!std::is_integral<K_>::value, void>::type
-  PostConstructImpl() {
-    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
-  }
-
-  void PostConstruct(const ObjectMeta& meta) override { PostConstructImpl(); }
-
-  // For optmizing vertex map only.
-  template <typename K_ = K>
-  typename std::enable_if<std::is_integral<K_>::value, void>::type
-  ConstructHashmapFunction(std::shared_ptr<ArrowArrayType<K>> array) {
-    auto data_iterator = boomphf::range(
-        static_cast<const K*>(array->raw_values()),
-        static_cast<const K*>(array->raw_values() + array->length()));
-    auto time_stamp = vineyard::GetCurrentTime();
-    bphf_ = boomphf::mphf<K, hasher_t>(array->length(), data_iterator,
-                                       concurrency_, 2.5f);
-    VLOG(100) << "Construct perfect map of " << array->length()
-              << " vertex takes " << vineyard::GetCurrentTime() - time_stamp
-              << " s.";
-  }
-
-  template <typename K_ = K>
-  typename std::enable_if<!std::is_integral<K_>::value, void>::type
-  ConstructHashmapFunction(std::shared_ptr<ArrowArrayType<K>> array) {
-    VINEYARD_ASSERT(false, "Unsupported key type with perfect hash map.");
   }
 
  private:
   [[shared]] size_t num_elements_;
-  [[shared]] bool persist_key_;
-  [[shared]] Array<V> ph_values_;
-  [[shared]] Array<K> ph_keys_;
-  boomphf::mphf<K, hasher_t> bphf_;
-  int concurrency_ = std::thread::hardware_concurrency();
+  [[shared]] std::shared_ptr<Object> ph_keys_;
+  [[shared]] std::shared_ptr<Blob> ph_values_;
+
+  const V* ph_values_ptr_ = nullptr;
+  mutable boomphf::mphf<K, hasher_t> bphf_;
 
   friend class Client;
   friend class PerfectHashmapBaseBuilder<K, V>;

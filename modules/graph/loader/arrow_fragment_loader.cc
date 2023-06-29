@@ -622,9 +622,8 @@ DataLoader::loadEdgeTables(const std::vector<std::string>& files, int index,
             VY_OK_OR_RAISE(ReadTableFromVineyard(client_, sourceId, table,
                                                  index, total_parts));
           } else {
-            VY_OK_OR_RAISE(
-                ReadTableFromLocation(sub_label_files[j] + "#header_row=true",
-                                      table, index, total_parts));
+            VY_OK_OR_RAISE(ReadTableFromLocation(sub_label_files[j], table,
+                                                 index, total_parts));
           }
           return table;
         };
