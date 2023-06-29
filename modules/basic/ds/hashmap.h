@@ -325,7 +325,18 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    * @brief Build the hashmap object.
    *
    */
-  Status Build(Client& client) override { return Status::OK(); }
+  Status Build(Client& client) override {
+    size_t size = detail::boomphf::bphf_serde::compute_size(bphf_);
+    std::unique_ptr<BlobWriter> blob_writer;
+    RETURN_ON_ERROR(client.CreateBlob(size, blob_writer));
+    char* dst = detail::boomphf::bphf_serde::ser(blob_writer->data(), bphf_);
+    RETURN_ON_ASSERT(dst == blob_writer->data() + size,
+                     "boomphf serialization error: buffer size mismatched");
+    std::shared_ptr<Object> blob;
+    RETURN_ON_ERROR(blob_writer->Seal(client, blob));
+    this->set_ph_(std::dynamic_pointer_cast<Blob>(blob));
+    return Status::OK();
+  }
 
  private:
   Status allocateKeys(Client& client, const K* keys, const size_t n_elements,
