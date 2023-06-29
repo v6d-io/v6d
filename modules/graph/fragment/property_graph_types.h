@@ -21,12 +21,14 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "libcuckoo/cuckoohash_map.hh"
 #include "powturbo/include/ic.h"
 
 #include "grape/config.h"
 #include "grape/utils/vertex_array.h"
 
 #include "basic/ds/arrow.h"
+#include "basic/ds/hashmap.h"
 #include "common/util/arrow.h"
 
 // batching varint decoding for edge list
@@ -35,6 +37,13 @@ limitations under the License.
 #endif
 
 namespace vineyard {
+
+template <typename Key, typename Value>
+using concurrent_map_t =
+    libcuckoo::cuckoohash_map<Key, Value, prime_number_hash_wy<Key>>;
+
+template <typename Key>
+using concurrent_set_t = concurrent_map_t<Key, bool>;
 
 using fid_t = grape::fid_t;
 
