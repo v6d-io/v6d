@@ -17,22 +17,27 @@ limitations under the License.
 #define MODULES_BASIC_UTILS_H_
 
 #include <algorithm>
+#include <atomic>
 #include <thread>
 #include <vector>
+
+#include "common/util/logging.h"
 
 namespace vineyard {
 
 template <typename ITER_T, typename FUNC_T>
-void parallel_for(const ITER_T& begin, const ITER_T& end, const FUNC_T& func,
-                  int thread_num, size_t chunk = 0) {
-  std::vector<std::thread> threads(thread_num);
+void parallel_for(
+    const ITER_T& begin, const ITER_T& end, const FUNC_T& func,
+    const size_t parallelism = std::thread::hardware_concurrency(),
+    size_t chunk = 0) {
+  std::vector<std::thread> threads(parallelism);
   size_t num = end - begin;
   if (chunk == 0) {
-    chunk = (num + thread_num - 1) / thread_num;
+    chunk = (num + parallelism - 1) / parallelism;
   }
   std::atomic<size_t> cur(0);
-  for (int i = 0; i < thread_num; ++i) {
-    threads[i] = std::thread([&]() {
+  for (size_t thread_index = 0; thread_index < parallelism; ++thread_index) {
+    threads[thread_index] = std::thread([&]() {
       while (true) {
         size_t x = cur.fetch_add(chunk);
         if (x >= num) {

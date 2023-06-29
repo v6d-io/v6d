@@ -15,6 +15,14 @@
 #include <unordered_map>
 #include <vector>
 
+namespace vineyard {
+namespace detail {
+namespace boomphf {
+class bphf_serde;
+}
+}
+}
+
 namespace boomphf {
 
 inline uint64_t printPt(pthread_t pt) {
@@ -709,6 +717,8 @@ class bitVector {
   }
 
  protected:
+  friend class vineyard::detail::boomphf::bphf_serde;
+
   uint64_t* _bitArray;
   // uint64_t* _bitArray;
   uint64_t _size;
@@ -1373,6 +1383,8 @@ class mphf {
   }
 
  private:
+  friend class vineyard::detail::boomphf::bphf_serde;
+
   // level ** _levels;
   std::vector<level> _levels;
   int _nb_levels;
