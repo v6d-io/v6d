@@ -21,13 +21,23 @@ setup:
     - name: download all sidecar images into kind cluster
       command: |
         make -C k8s/test/e2e publish-sidecar-images REGISTRY=localhost:5001
-    - name: install app with default sidecar
+    - name: install app with default sidecar via vineyardctl
       command: |
         kubectl create namespace vineyard-job
         go run k8s/cmd/main.go inject -f k8s/test/e2e/sidecar-demo/sidecar-with-default-sidecar.yaml --apply-resources\
         | kubectl apply -f -
       wait:
         - namespace: vineyard-job
+          resource: deployment/job-deployment-with-default-sidecar
+          for: condition=Available
+    - name: install app with default sidecar via kubectl
+      command: |
+        kubectl create namespace vineyard-job1
+        kubectl label namespace vineyard-job1 sidecar-injection=enabled
+        sed -e 's/vineyard-job/vineyard-job1/g' k8s/test/e2e/sidecar-demo/sidecar-with-default-sidecar.yaml | \
+          kubectl apply -f -
+      wait:
+        - namespace: vineyard-job1
           resource: deployment/job-deployment-with-default-sidecar
           for: condition=Available
     - name: install app with custom sidecar
@@ -57,6 +67,14 @@ verify:
           awk -F '/' '{print $2}' | \
           head -n 1 | \
           xargs kubectl logs -c job -n vineyard-job | \
+          yq e '{"sum": .}' - | \
+          yq e 'to_entries' -
+      expected: ../verify/values.yaml
+    - query: |
+        kubectl get pod -l app=job-deployment-with-default-sidecar -n vineyard-job1 -oname | \
+          awk -F '/' '{print $2}' | \
+          head -n 1 | \
+          xargs kubectl logs -c job -n vineyard-job1 | \
           yq e '{"sum": .}' - | \
           yq e 'to_entries' -
       expected: ../verify/values.yaml

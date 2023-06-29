@@ -69,6 +69,9 @@ func GetRequiredJob(anno map[string]string) []string {
 	if !exists {
 		return []string{}
 	}
+	if requiredJobs == "" {
+		return []string{}
+	}
 
 	return strings.Split(requiredJobs, ",")
 }

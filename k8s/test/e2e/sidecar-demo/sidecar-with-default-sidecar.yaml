@@ -28,6 +28,7 @@ spec:
       annotations:
         sidecar.v6d.io/name: "default"
       labels:
+        app.kubernetes.io/instance: job-deployment-with-default-sidecar
         app: job-deployment-with-default-sidecar
         sidecar.v6d.io/enabled: "true"
     spec:
