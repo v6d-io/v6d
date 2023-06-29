@@ -54,6 +54,14 @@ public class DataFrame extends Object {
         this.values = values;
     }
 
+    public DataFrame() {
+        super(ObjectMeta.empty());
+        this.rowCount = 0;
+        this.columnCount = 0;
+        this.columns = new ArrayList<>();
+        this.values = new ArrayList<>();
+    }
+
     public int getRowCount() {
         return this.rowCount;
     }
@@ -72,6 +80,22 @@ public class DataFrame extends Object {
 
     public Tensor value(int index) {
         return values.get(index);
+    }
+
+    public void setColumns(List<JsonNode> columns) {
+        this.columns = columns;
+    }
+
+    public void setRowCount(int rowCount) {
+        this.rowCount = rowCount;
+    }
+
+    public void setColumnCount(int columnCount) {
+        this.columnCount = columnCount;
+    }
+
+    public void setValues(List<Tensor> values) {
+        this.values = values;
     }
 
     public ValueVector valueArray(int index) {

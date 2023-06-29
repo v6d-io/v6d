@@ -104,6 +104,11 @@ public class IPCClient extends Client {
     }
 
     @Override
+    public boolean connected() {
+        return channel != null && channel.isConnected();
+    }
+
+    @Override
     public ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait)
             throws VineyardException {
         val root = mapper.createObjectNode();
