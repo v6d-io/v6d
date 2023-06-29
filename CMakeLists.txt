@@ -41,7 +41,7 @@ option(BUILD_VINEYARD_CLIENT_VERBOSE "Build vineyard's client with the most verb
 option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
 option(BUILD_VINEYARD_PYPI_PACKAGES "Build vineyard's python bindings" OFF)
 
-option(BUILD_VINEYARD_JAVA "Build vineyard's java SDK" ON)
+option(BUILD_VINEYARD_JAVA "Build vineyard's java SDK" OFF)
 
 option(BUILD_VINEYARD_BASIC "Build vineyard's basic data structures" ON)
 option(BUILD_VINEYARD_IO "Enable vineyard's IOAdaptor support" ON)
