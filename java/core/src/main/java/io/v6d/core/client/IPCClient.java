@@ -294,21 +294,36 @@ public class IPCClient extends Client {
     }
 
     public Buffer createBuffer(long size) throws VineyardException {
+        System.out.println("createBuffer:" + size);
         if (size == 0) {
             return Buffer.empty();
         }
+        System.out.println("stage: 1");
         val root = mapper.createObjectNode();
+        System.out.println("stage: 2");
         CreateBufferRequest.put(root, size);
+        System.out.println("stage: 3");
         this.doWrite(root);
+        System.out.println("stage: 4");
         val reply = new CreateBufferReply();
+        System.out.println("stage: 5");
         reply.get(this.doReadJson());
 
+        System.out.println("stage: 6");
         val payload = reply.getPayload();
+        System.out.println("stage: 7");
+        System.out.println("size: " + payload.getMapSize());
+        System.out.println("fd: " + payload.getStoreFD());
         long pointer = this.mmap(payload.getStoreFD(), payload.getMapSize(), true, true);
+        System.out.println("stage: 8");
         val buffer = new Buffer();
+        System.out.println("stage: 9");
         buffer.setObjectId(reply.getId());
+        System.out.println("stage: 10");
         buffer.setPointer(pointer + payload.getDataOffset());
+        System.out.println("stage: 11");
         buffer.setSize(reply.getPayload().getDataSize());
+        System.out.println("stage: 12");
         return buffer;
     }
 
@@ -375,15 +390,22 @@ public class IPCClient extends Client {
 
     private long mmap(int fd, long mapSize, boolean readonly, boolean realign)
             throws VineyardException {
+        System.out.println("mmap start");
         if (mmapTable.containsKey(fd)) {
+            System.out.println("mmap exists");
             return mmapTable.get(fd);
         }
+        System.out.println("tans fd");
+        System.out.println("channel fd:" + this.channel.getFD());
         int client_fd = Fling.recvFD(this.channel.getFD());
+        System.out.println("client fd:" + client_fd);
         long pointer = Fling.mapSharedMem(client_fd, mapSize, readonly, realign);
+        System.out.println("map pointer:" + pointer);
         if (pointer == -1) {
             throw new VineyardException.UnknownError("mmap failed for fd " + fd);
         }
         mmapTable.put(fd, pointer);
+        System.out.println("set in map");
         return pointer;
     }
 
@@ -406,19 +428,25 @@ public class IPCClient extends Client {
 
     @SneakyThrows(IOException.class)
     private byte[] doRead() {
+        System.out.println("doRead");
         int length = (int) reader.readLong(); // n.b.: the server writes a size_t (long)
         val content = new byte[length];
         int done = 0, remaining = length;
+        System.out.println("length:" + length);
         while (done < length) {
             int batch = reader.read(content, done, remaining);
             done += batch;
             remaining -= batch;
+            System.out.println("done:" + done);
+            System.out.println("remaining:" + remaining);
         }
+        System.out.println("doRead end");
         return content;
     }
 
     @SneakyThrows(IOException.class)
     private JsonNode doReadJson() {
+        System.out.println("doReadJson");
         return mapper.readTree(doRead());
     }
 }

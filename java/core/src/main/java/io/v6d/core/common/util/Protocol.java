@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.v6d.core.common.memory.Payload;
 import java.util.*;
+import java.io.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.val;
@@ -135,8 +136,17 @@ public class Protocol {
         @Override
         public void get(JsonNode root) throws VineyardException {
             check(root, "create_buffer_reply");
+
+            System.out.println("get id");
+
             this.id = new ObjectID(JSON.getLong(root, "id"));
+            System.out.println(root.toString());
+
+            System.out.println("id:" + this.id.value());
+            System.out.println("get payload");
+
             this.payload = Payload.fromJson(root.get("created"));
+            System.out.println("end");
         }
     }
 
