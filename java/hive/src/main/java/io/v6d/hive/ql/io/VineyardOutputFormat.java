@@ -20,9 +20,12 @@ import io.v6d.modules.basic.arrow.*;
 import io.v6d.modules.basic.dataframe.DataFrameBuilder;
 import io.v6d.modules.basic.tensor.TensorBuilder;
 import io.v6d.modules.basic.tensor.ITensor;
+import io.v6d.modules.basic.arrow.BufferBuilder;
+import io.v6d.core.client.ds.ObjectMeta;
 
 import java.io.IOException;
 import java.util.Properties;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.arrow.memory.BufferAllocator;
@@ -111,6 +114,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         } else {
             System.out.printf("connected to vineyard succeed!\n");
         }
+        
     }
 
     @Override
@@ -133,6 +137,15 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         //     System.out.printf("field %d: %s\n", i, structVector.getChildrenFromFields().get(i).getName());
         // }
         System.out.println("==============");
+
+        try{
+            BufferBuilder builder = new BufferBuilder(client, 100);
+            ObjectMeta meta =  builder.seal(client);
+            System.out.printf("buffer id: %d\n", meta.getId());
+        } catch (Exception e) {
+            System.out.printf("failed to seal buffer: %s\n", e);
+        }
+
         for (int i = 0; i < root.getRowCount(); i++) {
             System.out.printf("row %d: ", i);
             for (int j = 0; j < root.getFieldVectors().size(); ++j) {
@@ -157,7 +170,11 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                 // TODO: other type
                 case Int:
                     System.out.printf("int\n");
-                    tensorBuilder = new TensorBuilder(client, root.getFieldVectors().get(i));
+                    List<Integer> shape = new ArrayList<Integer>(1);
+                    shape.add(root.getRowCount());
+                    tensorBuilder = new TensorBuilder(client, shape, root.getFieldVectors().get(i));
+                    // tensorBuilder.setValues(root.getFieldVectors().get(i));
+                    // tensorBuilder = new TensorBuilder(root.getFieldVectors().get(i));
                     // column
                     dataFrameBuilder.addColumn(schema.getFields().get(i).getName(), tensorBuilder);
                     break;

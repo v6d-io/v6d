@@ -46,6 +46,7 @@ public class DataFrameBuilder implements ObjectBuilder {
         mapper = new ObjectMapper();
         columns = new ArrayList<>();
         tensorBuilders = new ArrayList<>();
+        System.out.println("values size:" + values.size());
     }
 
     public void set_index(TensorBuilder index) {
@@ -66,6 +67,7 @@ public class DataFrameBuilder implements ObjectBuilder {
         columnCount++;
         columns.add(getJsonNode(column));
         tensorBuilders.add(builder);
+        System.out.println("values size:" + values.size());
     }
 
     @Override
@@ -99,13 +101,13 @@ public class DataFrameBuilder implements ObjectBuilder {
 
         dataFrameMeta.setListValue("columns_", columns);
         dataFrameMeta.setValue("__values_-size", values.size());
-        for (int i = 0; i < values.size(); i++) {
-            // seal tensor
-            values.forEach((key,value)->{
-                dataFrameMeta.setValue("__values_-key-", key);
-                dataFrameMeta.addMember("__values_-value-", value.seal(client));
-            });
-        }
+        System.out.println("values size:" + values.size());
+        // seal tensor
+        values.forEach((key,value)->{
+            System.out.println("key:" + key.toString());
+            dataFrameMeta.setValue("__values_-key-", key);
+            dataFrameMeta.addMember("__values_-value-", value.seal(client));
+        });
 
         // DataFrame dataFrame = new DataFrame(dataFrameMeta, rowCount, columnCount, columns, tensors);
         // dataFrame.setColumns(columns);
