@@ -100,7 +100,9 @@ public class TensorBuilder implements ObjectBuilder{
         // Int32ArrayBuilder intBuilder = new Int32ArrayBuilder(client, );
 
         try {
-            tensorMeta.addMember("buffer_", bufferBuilder.seal(client));
+            ObjectMeta meta = bufferBuilder.seal(client);
+            tensorMeta.addMember("buffer_", meta);
+            System.out.println("buffer id:" + meta.getId().value());
         } catch (VineyardException e) {
             System.out.println("Seal buffer error");
             e.printStackTrace();
@@ -114,7 +116,6 @@ public class TensorBuilder implements ObjectBuilder{
         try {
             client.createMetaData(tensorMeta);
             System.out.println("Tensor id:" + tensorMeta.getId().value());
-            System.out.println("Tensor id:" + tensorMeta.getId());
         } catch (VineyardException e) {
             e.printStackTrace();
             return null;

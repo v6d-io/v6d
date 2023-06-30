@@ -327,6 +327,15 @@ public class IPCClient extends Client {
         return buffer;
     }
 
+    // TODO: exception
+    public void sealBlob(ObjectID id) throws VineyardException {
+        val root = mapper.createObjectNode();
+        SealRequest.put(root, id);
+        this.doWrite(root);
+        val reply = new SealReply();
+        reply.get(this.doReadJson());
+    }
+
     private void connectIPCSocket(UnixSocketAddress address) throws VineyardException.IOError {
         try {
             System.out.println("open:" + address.path());

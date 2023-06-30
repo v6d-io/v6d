@@ -138,14 +138,6 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         // }
         System.out.println("==============");
 
-        try{
-            BufferBuilder builder = new BufferBuilder(client, 100);
-            ObjectMeta meta =  builder.seal(client);
-            System.out.printf("buffer id: %d\n", meta.getId());
-        } catch (Exception e) {
-            System.out.printf("failed to seal buffer: %s\n", e);
-        }
-
         for (int i = 0; i < root.getRowCount(); i++) {
             System.out.printf("row %d: ", i);
             for (int j = 0; j < root.getFieldVectors().size(); ++j) {
@@ -153,6 +145,15 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             }
             System.out.printf("\n");
         }
+
+        // try {
+        //     BufferBuilder bufferBuilder = new BufferBuilder(client, 100);
+        //     ObjectMeta meta = bufferBuilder.seal(client);
+        //     System.out.println("buffer id: " + meta.getId().value());
+        // } catch (Exception e) {
+        //     System.out.printf("failed to create buffer builder: %s\n", e);
+        // }
+        
         System.out.println("==============");
         for (int j = 0; j < schema.getFields().size(); ++j) {
             System.out.printf(schema.getFields().get(j).getName() + " ");
@@ -188,7 +189,8 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     @Override
     public void close(boolean abort) throws IOException {
         System.out.println("vineyard filesink operator closing\n");
-        dataFrameBuilder.seal(client);
+        ObjectMeta meta = dataFrameBuilder.seal(client);
+        System.out.printf("DataFrame id:" + meta.getId().value());
     }
 }
 

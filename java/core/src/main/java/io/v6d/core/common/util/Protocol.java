@@ -127,6 +127,13 @@ public class Protocol {
         }
     }
 
+    public static class SealRequest extends Request {
+        public static void put(ObjectNode root, ObjectID id) {
+            root.put("type", "seal_request");
+            root.put("object_id", id.value());
+        }
+    }
+
     @Data
     @EqualsAndHashCode(callSuper = false)
     public static class CreateBufferReply extends Reply {
@@ -147,6 +154,13 @@ public class Protocol {
 
             this.payload = Payload.fromJson(root.get("created"));
             System.out.println("end");
+        }
+    }
+
+    public static class SealReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "seal_reply");
         }
     }
 
