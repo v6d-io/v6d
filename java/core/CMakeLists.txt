@@ -92,20 +92,18 @@ else()
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath,$ORIGIN:$ORIGIN/../lib")
 endif()
 
-if(CMAKE_VERSION VERSION_LESS "3.1")
-    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        check_cxx_compiler_flag(-std=c++14 HAVE_FLAG_STD_CXX14)
-        if(BUILD_VINEYARD_PYPI_PACKAGES AND NOT HAVE_FLAG_STD_CXX14)
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-        else()
-            set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-        endif()
-    else()
-        set(HAVE_FLAG_STD_CXX14 TRUE)
-    endif()
-else()
+check_cxx_compiler_flag(-std=c++17 HAVE_FLAG_STD_CXX17)
+check_cxx_compiler_flag(-std=c++14 HAVE_FLAG_STD_CXX14)
+if(HAVE_FLAG_STD_CXX17)
+    set(CMAKE_CXX_STANDARD 17)
+elseif(HAVE_FLAG_STD_CXX14)
     set(CMAKE_CXX_STANDARD 14)
-    set(HAVE_FLAG_STD_CXX14 TRUE)
+else()
+    set(CMAKE_CXX_STANDARD 11)
+endif()
+
+if(CMAKE_VERSION VERSION_LESS "3.1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++${CMAKE_CXX_STANDARD}")
 endif()
 
 # find vineyard
@@ -128,7 +126,7 @@ macro(target_add_link_options target scope)
 endmacro()
 
 # JNI
-find_package(JNI REQUIRED)
+find_package(JNI COMPONENTS JVM REQUIRED)
 include_directories(SYSTEM ${JAVA_INCLUDE_PATH})
 include_directories(SYSTEM ${JAVA_INCLUDE_PATH2})
 
@@ -141,8 +139,7 @@ include_directories(${CMAKE_CURRENT_LIST_DIR}/src/main/cpp)
 
 add_library(vineyard-core_jni ${CLIENT_SRC_FILES})
 set_target_properties(vineyard-core_jni PROPERTIES OUTPUT_NAME vineyard-core_jni-${PLATFORM_NATIVE_LIBRARY_VERSION})
-target_link_libraries(vineyard-core_jni PUBLIC vineyard_client
-                                               ${JAVA_JVM_LIBRARY}
+target_link_libraries(vineyard-core_jni PUBLIC ${JAVA_JVM_LIBRARY}
                                                ${JNI_LIBRARIES}
 )
 target_include_directories(vineyard-core_jni PRIVATE ${VINEYARD_INCLUDE_DIRS}

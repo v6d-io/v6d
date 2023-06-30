@@ -21,8 +21,8 @@
     <dependency.arrow.version>5.0.0</dependency.arrow.version>
     <dependency.guava.version>32.0.0-jre</dependency.guava.version>
     <dependency.jackson.version>2.14.0-rc1</dependency.jackson.version>
-    <dependency.jnr-posix.version>3.1.7</dependency.jnr-posix.version>
-    <dependency.jnr-unixsocket.version>0.38.8</dependency.jnr-unixsocket.version>
+    <dependency.jnr-posix.version>3.1.17</dependency.jnr-posix.version>
+    <dependency.jnr-unixsocket.version>0.38.20</dependency.jnr-unixsocket.version>
     <dependency.junit.version>4.13.2</dependency.junit.version>
     <dependency.lombok.version>1.18.20</dependency.lombok.version>
     <dependency.logback.version>1.2.9</dependency.logback.version>

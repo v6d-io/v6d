@@ -314,7 +314,7 @@ public class IPCClient extends Client {
         System.out.println("stage: 7");
         System.out.println("size: " + payload.getMapSize());
         System.out.println("fd: " + payload.getStoreFD());
-        long pointer = this.mmap(payload.getStoreFD(), payload.getMapSize(), true, true);
+        long pointer = this.mmap(payload.getStoreFD(), payload.getMapSize(), false, true);
         System.out.println("stage: 8");
         val buffer = new Buffer();
         System.out.println("stage: 9");

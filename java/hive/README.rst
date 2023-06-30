@@ -18,6 +18,7 @@ Using docker to launch the hive server:
         -v `pwd`/java/hive/target:/opt/hive/auxlib \
         --env HIVE_AUX_JARS_PATH=/opt/hive/auxlib/ \
         --env SERVICE_NAME=hiveserver2 \
+        --env SERVICE_OPTS="-Djnr.ffi.asm.enabled=false" \
         --name hive \
         apache/hive:${HIVE_VERSION}
 
