@@ -18,7 +18,7 @@ Table of Contents
 - [Usage](#usage)
 - [Argo Workflow Integration](#argo-workflow-integration)
 
-Requirements <a name="requirements"/>
+Requirements
 ------------
 
 The following packages are needed to run Kedro on vineyard,
@@ -26,7 +26,7 @@ The following packages are needed to run Kedro on vineyard,
 - kedro >= 0.18
 - vineyard >= 0.14.5
 
-Configuration <a name="configuration"/>
+Configuration
 -------------
 
 1. Install required packages:
@@ -46,7 +46,7 @@ Configuration <a name="configuration"/>
 
        export VINEYARD_IPC_SOCKET=/tmp/vineyard.sock
 
-Usage <a name="usage"/>
+Usage
 -----
 
 After installing the dependencies and preparing the vineyard server, you can execute the
@@ -188,11 +188,11 @@ y_test:
 y_train:
   ds_name: y_train
   type: vineyard.contrib.kedro.io.dataset.VineyardDataSet
-``
+```
 
-
-Argo Workflow Integration <a name="argo-workflow-integration"/>
+Argo Workflow Integration
 -------------------------
+
 
 The Kedro vineyard plugin also provides a tool to generate the Argo workflow YAML file. Next, we will show how to generate the Argo workflow YAML file and run the Argo workflow on Kubernetes.
 
@@ -256,6 +256,9 @@ NAME         STATUS      AGE   DURATION   PRIORITY   MESSAGE
 iris-sg6qf   Succeeded   18m   30s        0
 ```
 
+For the performance regarding the vineyard as the intermediate data catalog, please refer to [this report][4].
+
 [1]: https://v6d.io/notes/getting-started.html#starting-vineyard-server
 [2]: https://docs.kedro.org/en/stable/get_started/new_project.html
 [3]: https://docs.kedro.org/en/stable/deployment/argo.html#how-to-run-your-kedro-pipeline-using-argo-workflows
+[4]: https://v6d.io/notes/kedro-integration-performance.html

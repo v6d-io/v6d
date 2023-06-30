@@ -76,7 +76,6 @@ setup(
     package_data={
         'vineyard.contrib.kedro': [
             'plugins/templates/*',
-            '*.yaml',
             '*.README'
         ],
     },

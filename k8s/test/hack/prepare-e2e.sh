@@ -60,7 +60,7 @@ fi
 
 # v0.20.0 is not compatible on the github action
 if [ $(kind version | awk '{print $2}') == "v0.20.0" ]; then
-  curl -Lo ./kind https://github.com/kubernetes-sigs/kind/releases/download/v0.19.0/kind-linux-amd64
+  curl -Lo ./kind https://github.com/kubernetes-sigs/kind/releases/download/v0.19.0/kind-${OS}-${ARCH}
   chmod +x ./kind
   mv ./kind /usr/local/bin/kind
 fi

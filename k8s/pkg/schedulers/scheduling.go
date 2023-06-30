@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -36,7 +37,6 @@ import (
 	"k8s.io/kubernetes/pkg/scheduler/framework"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
@@ -51,12 +51,17 @@ const (
 	VineyardSystemNamespace = "vineyard-system"
 )
 
+type PodRank struct {
+	sync.Mutex
+	rank map[string]map[string]int
+}
+
 // VineyardScheduling is a plugin that schedules pods that requires vineyard objects as inputs.
 type VineyardScheduling struct {
 	client.Client
 	handle          framework.Handle
 	scheduleTimeout *time.Duration
-	podRank         map[string]map[string]int
+	podRank         *PodRank
 }
 
 // New initializes a vineyard scheduler
@@ -73,7 +78,9 @@ func New(
 		Client:          client,
 		handle:          handle,
 		scheduleTimeout: &timeout,
-		podRank:         map[string]map[string]int{},
+		podRank: &PodRank{
+			rank: make(map[string]map[string]int),
+		},
 	}
 	return scheduling, nil
 }
@@ -162,7 +169,6 @@ func (vs *VineyardScheduling) PostBind(
 func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int, error) {
 	// infer from the ownership
 	ctx := context.TODO()
-	// ctx := context.Background()
 	for _, owner := range pod.GetOwnerReferences() {
 		name := types.NamespacedName{Namespace: pod.Namespace, Name: owner.Name}
 		switch owner.Kind {
@@ -216,26 +222,19 @@ func (vs *VineyardScheduling) GetArgoWorkflowReplicas(name types.NamespacedName,
 	}
 
 	// Get the Argo workflow's spec.
-	err := vs.Get(context.Background(), name, workflow)
+	err := vs.Get(context.TODO(), name, workflow)
 	if err != nil {
 		slog.Errorf(err, "Failed to get Argo workflow spec")
 		return -1, err
 	}
 
-	// Get the template name of the pod.
-	templateName := pod.Labels[labels.VineyardJobName]
-	if templateName == "" {
-		return -1, errors.Errorf("Failed to get template name for %v", GetNamespacedName(pod))
+	// suppose there is only a single template in the workflow
+	// as we only generate a single template while generating the argo workflow for kedro project
+	if workflow.Spec.Templates[0].Parallelism == nil {
+		return 1, nil
 	}
 
-	// Get the template spec.
-	for i := range workflow.Spec.Templates {
-		if workflow.Spec.Templates[i].Name == templateName {
-			return int(*workflow.Spec.Templates[i].Parallelism), nil
-		}
-	}
-	// if the template spec is not found, return -1
-	return -1, errors.Errorf("Failed to get replicas for %v from the argo workflow", GetNamespacedName(pod))
+	return int(*workflow.Spec.Templates[0].Parallelism), nil
 }
 
 // AddArgoWorkflowScheme adds Argo workflow scheme to the existing scheme, if it is not added.
@@ -245,11 +244,13 @@ func (vs *VineyardScheduling) AddArgoWorkflowScheme() error {
 
 	if len(gvks) == 0 {
 		// add Argo workflow scheme to the existing scheme
-		err := wfv1.AddToScheme(vs.Client.Scheme())
-		if err != nil {
-			slog.Errorf(err, "Failed to add Argo workflow scheme")
-			return err
-		}
+		var once sync.Once
+		once.Do(func() {
+			err := wfv1.AddToScheme(vs.Client.Scheme())
+			if err != nil {
+				slog.Error(err, "Failed to add Argo workflow scheme")
+			}
+		})
 	}
 	return nil
 }
@@ -261,16 +262,18 @@ func (vs *VineyardScheduling) GetPodRank(pod *v1.Pod, replica int) int {
 	prefixIndex := strings.LastIndexByte(podName, '-')
 	prefixName := podName[:prefixIndex]
 
+	vs.podRank.Lock()
+	defer vs.podRank.Unlock()
 	// clean up the pod rank
-	if len(vs.podRank[prefixName]) > replica {
-		delete(vs.podRank, prefixName)
+	if len(vs.podRank.rank[prefixName]) > replica {
+		delete(vs.podRank.rank, prefixName)
 	}
 
-	rank, prefixExist := vs.podRank[prefixName]
+	rank, prefixExist := vs.podRank.rank[prefixName]
 	if !prefixExist {
 		m := make(map[string]int)
 		m[podName] = len(rank)
-		vs.podRank[prefixName] = m
+		vs.podRank.rank[prefixName] = m
 		return 0
 	} else {
 		_, podExist := rank[podName]

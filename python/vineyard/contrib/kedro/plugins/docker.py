@@ -10,8 +10,6 @@
 """Command line `kedro vineyard docker` will containize the kedro project"""
 
 import os
-import shutil
-import sys
 from importlib import import_module
 from pathlib import Path
 from sys import version_info
@@ -20,19 +18,13 @@ from typing import Sequence
 from typing import Tuple
 from typing import Union
 
+import click
 from jinja2 import Environment
 from jinja2 import FileSystemLoader
-
-import click
-from click import secho
-from kedro import __version__ as kedro_version
-from kedro.framework.cli.utils import KedroCliError
 from kedro.framework.cli.utils import call
-from semver import VersionInfo
 
 from .cli import vineyard as vineyard_cli
 
-KEDRO_VERSION = VersionInfo.parse(kedro_version)
 TEMPLATE_PATH = Path("templates")
 DOCKER_FILE_TMPL = "Dockerfile.tmpl"
 DEFAULT_BASE_IMAGE = f"python:{version_info.major}.{version_info.minor}-slim"
@@ -44,17 +36,17 @@ def docker():
 
 
 @docker.command("init")
-@click.option("--with_vineyard", "-w", "with_vineyard", type=bool, default=False, help="Whether to install vineyard in the dockerfile.")
+@click.option(
+    "--with_vineyard",
+    "-w",
+    "with_vineyard",
+    type=bool,
+    default=False,
+    help="Whether to install vineyard in the dockerfile.",
+)
 def docker_init(with_vineyard):
     """Initialize a Dockerfile for the project."""
     project_path = Path.cwd()
-
-    if KEDRO_VERSION.match(">=0.17.0"):
-        verbose = KedroCliError.VERBOSE_ERROR
-    else:
-        from kedro.framework.cli.cli import (
-            _VERBOSE as verbose,
-        )  # noqa # pylint:disable=import-outside-toplevel, no-name-in-module
 
     # get the absolute path of the template directory
     template_path = Path(__file__).resolve().parent / TEMPLATE_PATH
@@ -104,7 +96,7 @@ def docker_init(with_vineyard):
 )
 @click.option(
     "--with_vineyard",
-    "-w", 
+    "-w",
     "with_vineyard",
     type=bool,
     default=False,
@@ -135,6 +127,7 @@ def docker_build(
     command = ["docker", "build"] + combined_args + [str(project_path)]
     call(command)
 
+
 def generate_dockerfile(
     project_path: Path,
     template_path: Path,
@@ -145,16 +138,15 @@ def generate_dockerfile(
     Args:
         project_path (Path): Destination path.
         template_path: Source path.
-        with_vineyard (bool, optional): The dockerfile with vineyard or not. Defaults to False.
+        with_vineyard (bool, optional): The dockerfile with vineyard or not.
+                                        Defaults to False.
     """
     # get the absolute path of the template directory
     template_path = Path(__file__).resolve().parent / TEMPLATE_PATH
-    
+
     loader = FileSystemLoader(searchpath=template_path)
     template_env = Environment(loader=loader, trim_blocks=True, lstrip_blocks=True)
     template = template_env.get_template(DOCKER_FILE_TMPL)
-
-    src = template_path / DOCKER_FILE_TMPL
 
     dockerfile = template.render(
         with_vineyard=with_vineyard,
@@ -166,7 +158,7 @@ def generate_dockerfile(
         print(f"{dest} already exists and won't be overwritten.")
     else:
         # Create the Dockerfile in the destination path
-        with open(dest, "w") as f:
+        with open(dest, "w", encoding="utf-8") as f:
             f.write(dockerfile)
 
         print(f"Created `{dest}`")

@@ -41,11 +41,21 @@ def argo():
     "--namespace", "-n", "vineyardd_namespace", type=str, default="vineyard-system"
 )
 @click.option(
-    "--with_vineyard_operator", "-w", "with_vineyard_operator", type=bool, default=True, help="Whether to generate the workflow with vineyard operator."
+    "--with_vineyard_operator",
+    "-w",
+    "with_vineyard_operator",
+    type=bool,
+    default=True,
+    help="Whether to generate the workflow with vineyard operator.",
 )
 @click.option("--output_path", "-o", "output_path", type=str, default=".")
 def generate_argo_config(
-    image, pipeline_name, vineyardd_name, vineyardd_namespace, with_vineyard_operator, output_path
+    image,
+    pipeline_name,
+    vineyardd_name,
+    vineyardd_namespace,
+    with_vineyard_operator,
+    output_path,
 ):
     """Generates an Argo workflow configuration file from a Kedro pipeline.
 
@@ -62,14 +72,14 @@ def generate_argo_config(
         vineyardd_namespace (str, optional): The namespace of the Vineyardd
         server. Defaults to "vineyard-system".
 
-        with_vineyard_operator (bool, optional): Whether to generate the 
+        with_vineyard_operator (bool, optional): Whether to generate the
         workflow with vineyard operator. Defaults to True.
 
         output_path (str, optional): The path to the output file. Defaults
         to the current directory.
-        
+
     """
-        # get the absolute path of the template directory
+    # get the absolute path of the template directory
     template_path = Path(__file__).resolve().parent / TEMPLATE_PATH
 
     loader = FileSystemLoader(searchpath=template_path)
@@ -97,6 +107,7 @@ def generate_argo_config(
     output_path = Path(output_path)
 
     (output_path / f"argo-{package_name}.yml").write_text(output)
+
 
 def get_dependencies(dependencies):
     """Gets the dependencies of a Kedro pipeline.
