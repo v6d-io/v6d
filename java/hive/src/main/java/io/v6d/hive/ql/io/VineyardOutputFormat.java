@@ -16,11 +16,8 @@ package io.v6d.hive.ql.io;
 
 import io.v6d.core.common.util.VineyardException;
 import io.v6d.core.client.IPCClient;
-import io.v6d.modules.basic.arrow.*;
 import io.v6d.modules.basic.dataframe.DataFrameBuilder;
 import io.v6d.modules.basic.tensor.TensorBuilder;
-import io.v6d.modules.basic.tensor.ITensor;
-import io.v6d.modules.basic.arrow.BufferBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
 
 import java.io.IOException;
@@ -28,10 +25,7 @@ import java.util.Properties;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.complex.NonNullableStructVector;
-import org.apache.arrow.vector.types.pojo.ArrowType.ArrowTypeID;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
@@ -107,6 +101,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         System.out.printf("final out path: %s\n", finalOutPath);
         // connect to vineyard
         if (client == null) {
+            // TBD: get vineyard socket path from table properties
             client = new IPCClient("/tmp/vineyard.sock");
         }
         if (client == null || !client.connected()) {
@@ -123,74 +118,33 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         VectorSchemaRoot root = ((ArrowWrapperWritable) w).getVectorSchemaRoot();
         org.apache.arrow.vector.types.pojo.Schema schema = root.getSchema();
 
-        // why?
-        // System.out.printf("row count: %d\n", root.getRowCount());
-        // for (int i = 0; i < root.getRowCount(); ++i) {
-        //     System.out.printf("row %d: ", i);
-        //     for (int j = 0; j < structVector.getChildrenFromFields().size(); ++j) {
-        //         System.out.printf("%s ", structVector.getChildrenFromFields().get(j).getObject(i));
-        //     }
-        //     System.out.printf("\n");
-        // }
-        // System.out.println("==============");
-        // for (int i = 0; i < structVector.getChildrenFromFields().size(); ++i) {
-        //     System.out.printf("field %d: %s\n", i, structVector.getChildrenFromFields().get(i).getName());
-        // }
-        System.out.println("==============");
-
-        for (int i = 0; i < root.getRowCount(); i++) {
-            System.out.printf("row %d: ", i);
-            for (int j = 0; j < root.getFieldVectors().size(); ++j) {
-                System.out.printf("%s ", root.getFieldVectors().get(j).getObject(i));
-            }
-            System.out.printf("\n");
+        try {
+            dataFrameBuilder = new DataFrameBuilder(client);
+        } catch (Exception e) {
+            throw new IOException("Create DataFrameBuilder failed");
         }
-
-        // try {
-        //     BufferBuilder bufferBuilder = new BufferBuilder(client, 100);
-        //     ObjectMeta meta = bufferBuilder.seal(client);
-        //     System.out.println("buffer id: " + meta.getId().value());
-        // } catch (Exception e) {
-        //     System.out.printf("failed to create buffer builder: %s\n", e);
-        // }
-        
-        System.out.println("==============");
-        for (int j = 0; j < schema.getFields().size(); ++j) {
-            System.out.printf(schema.getFields().get(j).getName() + " ");
-        }
-        for (int j = 0; j < schema.getFields().size(); ++j) {
-            System.out.printf(schema.getFields().get(j).getName() + " ");
-        }
-        System.out.printf("\n");
-
-        dataFrameBuilder = new DataFrameBuilder(client);
         // Create Tensors
         for (int i = 0; i < schema.getFields().size(); i++) {
-            ArrowTypeID arrowTypeID = schema.getFields().get(i).getType().getTypeID();
-            switch(arrowTypeID) {
-                // TODO: other type
-                case Int:
-                    System.out.printf("int\n");
-                    List<Integer> shape = new ArrayList<Integer>(1);
-                    shape.add(root.getRowCount());
-                    tensorBuilder = new TensorBuilder(client, shape, root.getFieldVectors().get(i));
-                    // tensorBuilder.setValues(root.getFieldVectors().get(i));
-                    // tensorBuilder = new TensorBuilder(root.getFieldVectors().get(i));
-                    // column
-                    dataFrameBuilder.addColumn(schema.getFields().get(i).getName(), tensorBuilder);
-                    break;
-                default:
-                    System.out.printf("unsupported arrow type: %s\n", arrowTypeID);
-                    break;
+            List<Integer> shape = new ArrayList<Integer>(1);
+            shape.add(root.getRowCount());
+            try {
+                tensorBuilder = new TensorBuilder(client, shape, root.getFieldVectors().get(i));
+                dataFrameBuilder.addColumn(schema.getFields().get(i).getName(), tensorBuilder);
+            } catch (Exception e) {
+                throw new IOException("Create TensorBuilder failed");
             }
         }
     }
 
     @Override
     public void close(boolean abort) throws IOException {
-        System.out.println("vineyard filesink operator closing\n");
-        ObjectMeta meta = dataFrameBuilder.seal(client);
-        System.out.printf("DataFrame id:" + meta.getId().value());
+        System.out.println("vineyard filesink operator closing");
+        try {
+            ObjectMeta meta = dataFrameBuilder.seal(client);
+            System.out.println("DataFrame id:" + meta.getId().value());
+        } catch (Exception e) {
+            throw new IOException("Seal DataFrame failed");
+        }
     }
 }
 

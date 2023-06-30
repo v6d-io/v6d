@@ -2,24 +2,18 @@ package io.v6d.modules.basic.tensor;
 
 import io.v6d.core.client.Client;
 import io.v6d.core.client.IPCClient;
-import io.v6d.core.client.ds.ObjectBase;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.arrow.Buffer;
 import io.v6d.modules.basic.arrow.BufferBuilder;
 import io.v6d.modules.basic.arrow.Int32ArrayBuilder;
 import io.v6d.core.common.util.VineyardException;
-import io.v6d.modules.basic.arrow.TableBuilder;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.lang.Long;
 
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.types.Types;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class TensorBuilder implements ObjectBuilder{
     private FieldVector values;
@@ -29,13 +23,11 @@ public class TensorBuilder implements ObjectBuilder{
     private int partition_index_ = 0;
     private long size = 0;
 
-    public TensorBuilder(FieldVector vector) {
-        System.out.println("TensorBuilder with vector");
+    public TensorBuilder(FieldVector vector) throws VineyardException {
         values = vector;
     }
 
-    public TensorBuilder(IPCClient client, Collection<Integer> shape) {
-        System.out.println("TensorBuilder with shape");
+    public TensorBuilder(IPCClient client, Collection<Integer> shape) throws VineyardException {
         this.shape = shape;
         int count = 0;
         for (Integer item : shape) {
@@ -43,36 +35,30 @@ public class TensorBuilder implements ObjectBuilder{
         }
         //TODO:Support other type.
         size = count * Integer.SIZE;
-        //TODO: init intBuilder
+        bufferBuilder = new BufferBuilder(client, size);
+        if (bufferBuilder == null) {
+            throw new VineyardException.NotEnoughMemory("Failed to create bufferBuilder");
+        }
     }
 
-    public TensorBuilder(IPCClient client, Collection<Integer> shape, FieldVector values) {
-        System.out.println("TensorBuilder with shape");
+    public TensorBuilder(IPCClient client, Collection<Integer> shape, FieldVector values) throws VineyardException {
         this.shape = shape;
         int count = 0;
         for (Integer item : shape) {
             count += item.intValue();
         }
-        System.out.print("count:" + count);
+
         //TODO:Support other type.
         size = count * Integer.SIZE;
-        try {
-            bufferBuilder = new BufferBuilder(client, size);
-            for (int i = 0; i < values.getValueCount(); i++) {
-                bufferBuilder.getBuffer().setInt(i, ((IntVector)values).get(i));
-            }
-        } catch (VineyardException e) {
-            System.out.println("TensorBuilder error");
-            e.printStackTrace();
+        bufferBuilder = new BufferBuilder(client, size);
+        for (int i = 0; i < values.getValueCount(); i++) {
+            bufferBuilder.getBuffer().setInt(i, ((IntVector)values).get(i));
         }
-        System.out.println("TensorBuilder end");
     }
 
-    public void setValues(FieldVector values) {
-        System.out.println("setValues ");
-        this.values = values;
-        // other type
-        this.size = values.getBufferSize() * Integer.SIZE;
+    public void append(Object value) throws VineyardException {
+        System.out.println("append");
+        // Support in the future.
     }
 
     public FieldVector getBuffer() {
@@ -80,17 +66,18 @@ public class TensorBuilder implements ObjectBuilder{
     }
 
     public int getRowCount() {
-        System.out.println("getRowCount");
-        System.out.println("Row count " + values.getValueCount());
         return values.getValueCount();
     }
 
-    @Override
-    public void build(Client client) {}
+    public long getNBytes() {
+        return size;
+    }
 
     @Override
-    public ObjectMeta seal(Client client) {
-        System.out.println("seal tensor");
+    public void build(Client client) throws VineyardException {}
+
+    @Override
+    public ObjectMeta seal(Client client) throws VineyardException {
         this.build(client);
         ObjectMeta tensorMeta = ObjectMeta.empty();
 
@@ -99,27 +86,15 @@ public class TensorBuilder implements ObjectBuilder{
         tensorMeta.setValue("value_type_", "int");
         // Int32ArrayBuilder intBuilder = new Int32ArrayBuilder(client, );
 
-        try {
-            ObjectMeta meta = bufferBuilder.seal(client);
-            tensorMeta.addMember("buffer_", meta);
-            System.out.println("buffer id:" + meta.getId().value());
-        } catch (VineyardException e) {
-            System.out.println("Seal buffer error");
-            e.printStackTrace();
-            return null;
-        }
+        ObjectMeta meta = bufferBuilder.seal(client);
+        tensorMeta.addMember("buffer_", meta);
         // tensorMeta.addMember("buffer_", ????);
         tensorMeta.setListValue("shape_", shape);
         tensorMeta.setValue("partition_index_", partition_index_);
         tensorMeta.setNBytes(size);
 
-        try {
-            client.createMetaData(tensorMeta);
-            System.out.println("Tensor id:" + tensorMeta.getId().value());
-        } catch (VineyardException e) {
-            e.printStackTrace();
-            return null;
-        }
+
+        client.createMetaData(tensorMeta);
         return tensorMeta;
     }
 }

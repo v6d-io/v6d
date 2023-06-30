@@ -39,12 +39,10 @@ public class BufferBuilder implements ObjectBuilder {
         if (size == 0) {
             this.arrowBuf = null;
         } else {
-            System.out.println("create arrow buffer");
             this.arrowBuf =
                     new ArrowBuf(
                             ReferenceManager.NO_OP, null, buffer.getSize(), buffer.getPointer());
         }
-        System.out.println("create buffer builder end");
     }
 
     public BufferBuilder(IPCClient client, final ArrowBuf buffer) throws VineyardException {
