@@ -102,6 +102,7 @@ boost::leaf::result<void> generate_outer_vertices_map(
 
   auto gid_array = ConcatenateChunkedArrays({srcs, dsts});
   if (gid_array != nullptr /* may be empty graph */) {
+    // FIXME: can this process be parallelized?
     for (auto const& chunk : gid_array->chunks()) {
       auto array = std::dynamic_pointer_cast<vid_array_t>(chunk);
       const VID_T* arr = array->raw_values();
@@ -191,7 +192,7 @@ void sort_edges_with_respect_to_vertex(
           return lhs.vid < rhs.vid;
         });
       },
-      concurrency);
+      concurrency, 16);
 }
 
 template <typename VID_T, typename EID_T>
@@ -216,7 +217,7 @@ void check_is_multigraph(
           }
         }
       },
-      concurrency);
+      concurrency, 1024);
 }
 
 template <typename VID_T, typename EID_T>
@@ -355,7 +356,7 @@ boost::leaf::result<void> generate_directed_csc(
                 degree[parser.GetLabelId(dst_id)][parser.GetOffset(dst_id)], 1);
           }
         },
-        concurrency);
+        concurrency, 16);
   }
 
   std::vector<std::vector<int64_t>> offsets(vertex_label_num);
@@ -406,7 +407,7 @@ boost::leaf::result<void> generate_directed_csc(
             ptr->eid = static_cast<EID_T>(oe[i].eid);
           }
         },
-        concurrency);
+        concurrency, 16);
   }
 
   VLOG(100) << "Finish building the CSC ..." << get_rss_pretty()
@@ -668,7 +669,7 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
             ptr->eid = static_cast<EID_T>(oe[i].eid);
           }
         },
-        concurrency);
+        concurrency, 16);
   }
 
   VLOG(100) << "Finish building the CSC ..." << get_rss_pretty()
@@ -736,7 +737,7 @@ boost::leaf::result<void> varint_encoding_edges_impl(
         assert(ptr - compact_edges[v] <= reserved_memory_size);  // no overflow
         compact_degree[v] = ptr - compact_edges[v];
       },
-      concurrency);
+      concurrency, 16);
 
   auto before_prefix_sum_timestamp = GetCurrentTime();
   e_boffsets = std::make_shared<FixedInt64Builder>(client, vnum + 1);
