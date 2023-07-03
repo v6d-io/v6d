@@ -26,13 +26,13 @@ containerdConfigPatches:
     endpoint = ["http://${reg_name}:5000"]
 nodes:
 - role: control-plane
-  image: kindest/node:v1.25.0
+  image: kindest/node:v1.25.11
 - role: worker
-  image: kindest/node:v1.25.0
+  image: kindest/node:v1.25.11
 - role: worker
-  image: kindest/node:v1.25.0
+  image: kindest/node:v1.25.11
 - role: worker
-  image: kindest/node:v1.25.0
+  image: kindest/node:v1.25.11
 EOF
 
 # connect the registry to the cluster network if not already connected
