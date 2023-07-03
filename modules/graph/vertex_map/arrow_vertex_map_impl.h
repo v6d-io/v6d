@@ -41,7 +41,11 @@ void ArrowVertexMap<OID_T, VID_T>::Construct(const vineyard::ObjectMeta& meta) {
 
   this->fnum_ = meta.GetKeyValue<fid_t>("fnum");
   this->label_num_ = meta.GetKeyValue<label_id_t>("label_num");
-  meta.GetKeyValue<bool>("use_perfect_hash_", this->use_perfect_hash_);
+  if (meta.HasKey("use_perfect_hash_")) {
+    meta.GetKeyValue<bool>("use_perfect_hash_", this->use_perfect_hash_);
+  } else {
+    this->use_perfect_hash_ = false;
+  }
 
   id_parser_.Init(fnum_, label_num_);
   size_t nbytes = 0, local_oid_total = 0;
@@ -97,11 +101,11 @@ void ArrowVertexMap<OID_T, VID_T>::Construct(const vineyard::ObjectMeta& meta) {
   double o2g_load_factor =
       o2g_bucket_count == 0 ? 0
                             : static_cast<double>(o2g_size) / o2g_bucket_count;
-  VLOG(2) << type_name<ArrowVertexMap<oid_t, vid_t>>()
-          << "\n\tmemory: " << prettyprint_memory_size(nbytes)
-          << "\n\to2g size: " << o2g_size
-          << ", load factor: " << o2g_load_factor
-          << "\n\to2g memory: " << prettyprint_memory_size(o2g_total_bytes);
+  VLOG(100) << type_name<ArrowVertexMap<oid_t, vid_t>>()
+            << "\n\tmemory: " << prettyprint_memory_size(nbytes)
+            << "\n\to2g size: " << o2g_size
+            << ", load factor: " << o2g_load_factor
+            << "\n\to2g memory: " << prettyprint_memory_size(o2g_total_bytes);
 }
 
 template <typename OID_T, typename VID_T>
