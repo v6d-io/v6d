@@ -15,22 +15,20 @@ limitations under the License.
 
 package common
 
-import (
-	"testing"
+import "fmt"
 
-	"gotest.tools/v3/assert"
+const (
+	VINEYARD_VERSION_MAJOR = 0
+	VINEYARD_VERSION_MINOR = 7
+	VINEYARD_VERSION_PATCH = 2
+
+	VINEYARD_VERSION = ((VINEYARD_VERSION_MAJOR*1000)+VINEYARD_VERSION_MINOR)*1000 +
+		VINEYARD_VERSION_PATCH
 )
 
-func TestObjectID(t *testing.T) {
-	var s string = ObjectIDToString(1234)
-	var o, _ = ObjectIDFromString(s)
-	assert.Equal(t, s, "o00000000000004d2")
-	assert.Equal(t, o, uint64(1234))
-}
-
-func TestSignature(t *testing.T) {
-	var s string = SignatureToString(1234)
-	var o, _ = SignatureFromString(s)
-	assert.Equal(t, s, "s00000000000004d2")
-	assert.Equal(t, o, uint64(1234))
-}
+var VINEYARD_VERSION_STRING = fmt.Sprintf(
+	"%d.%d.%d",
+	VINEYARD_VERSION_MAJOR,
+	VINEYARD_VERSION_MINOR,
+	VINEYARD_VERSION_PATCH,
+)

@@ -13,180 +13,257 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vineyard
+package client
 
-/*
-#cgo CFLAGS: -I ../common/memory
-#cgo LDFLAGS: -L ../common/memory -lfling
-
-#include <sys/mman.h>
-
-#include "fling.h"
-*/
-// nolint: typecheck
-import "C"
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
 	"net"
-	"unsafe"
+	"syscall"
 
-	"github.com/apache/arrow/go/arrow/memory"
-	"github.com/v6d-io/v6d/go/vineyard/pkg/client/ds"
+	arrow "github.com/apache/arrow/go/v11/arrow/memory"
+	"github.com/pkg/errors"
+
+	"github.com/v6d-io/v6d/go/vineyard/pkg/client/io"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common/memory"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common/types"
 )
 
 type IPCClient struct {
-	ClientBase
-	connected     bool
-	ipcSocket     string
-	conn          *net.UnixConn
-	instanceID    int
-	serverVersion string
-	rpcEndpoint   string
-	mmapTable     map[int]MmapEntry
+	*ClientBase
+	unixConn  *net.UnixConn
+	mmapTable map[int]MmapEntry
 }
 
 type MmapEntry struct {
-	clientFd  int
-	mapSize   int64
-	readOnly  bool
-	realign   bool
-	roPointer unsafe.Pointer
-	rwPointer unsafe.Pointer
+	FD   int
+	Size int64
+	ro   []byte // slice
+	rw   []byte // slice
 }
 
-func (m *MmapEntry) MapReadOnly() {
-	m.roPointer = C.mmap(nil, C.ulong(m.mapSize), C.PROT_READ, C.MAP_SHARED, C.int(m.clientFd), 0)
-	// TODO: error fix
-}
-
-func (m *MmapEntry) MapReadWrite() {
-	m.rwPointer = C.mmap(nil, C.ulong(m.mapSize), C.PROT_READ|C.PROT_WRITE, C.MAP_SHARED, C.int(m.clientFd), 0)
+func (m *MmapEntry) mmap(readonly bool) error {
+	protection := syscall.PROT_READ
+	if !readonly {
+		protection |= syscall.PROT_WRITE
+	}
+	data, err := syscall.Mmap(m.FD, 0, int(m.Size), protection, syscall.MAP_SHARED)
+	if err == nil {
+		if readonly {
+			m.ro = data
+		} else {
+			m.rw = data
+		}
+	}
+	return err
 }
 
 // Connect to IPCClient steps as follows
-// 1. using unix socket connecct to vineyead server
+//
+// 1. using unix socket connect to vineyard server
 // 2. sending register request to server and get response from server
+//
 // Note: you should send message's length first to server, then send message
-func (i *IPCClient) Connect(ipcSocket string) error {
-	if i.connected || i.ipcSocket == ipcSocket {
-		return nil
+func NewIPCClient(socket string) (*IPCClient, error) {
+	c := &IPCClient{}
+	c.ClientBase = &ClientBase{}
+	c.IPCSocket = socket
+
+	c.unixConn = new(net.UnixConn)
+	if err := io.ConnectIPCSocketRetry(socket, &c.unixConn); err != nil {
+		return nil, err
 	}
-	i.ipcSocket = ipcSocket
-	i.conn = new(net.UnixConn)
-	if err := ConnectIPCSocketRetry(i.ipcSocket, &i.conn); err != nil {
-		return err
+	c.conn = c.unixConn
+
+	messageOut := common.WriteRegisterRequest(common.VINEYARD_VERSION_STRING)
+	if err := c.doWrite(messageOut); err != nil {
+		return nil, err
 	}
-	i.ClientBase.conn = i.conn
-	var messageOut string
-	common.WriteRegisterRequest(&messageOut)
-	if err := i.DoWrite(messageOut); err != nil {
-		return err
+	var reply common.RegisterReply
+	if err := c.doReadReply(&reply); err != nil {
+		return nil, err
 	}
-	var messageIn string
-	err := i.DoRead(&messageIn)
-	if err != nil {
-		return err
-	}
-	var registerReply common.RegisterReply
-	err = json.Unmarshal([]byte(messageIn), &registerReply)
-	if err != nil {
-		return err
-	}
-	i.instanceID = registerReply.InstanceID
-	if registerReply.Version == "" {
-		i.serverVersion = common.DEFAULT_SERVER_VERSION
-	} else {
-		i.serverVersion = registerReply.Version
-	}
-	i.connected = true
-	i.rpcEndpoint = registerReply.RPCEndpoint
-	i.mmapTable = make(map[int]MmapEntry)
-	// TODO: compatible server check
-	return nil
+
+	c.connected = true
+	c.RPCEndpoint = reply.RPCEndpoint
+	c.InstanceID = reply.InstanceID
+	c.serverVersion = reply.Version
+
+	c.mmapTable = make(map[int]MmapEntry)
+	return c, nil
 }
 
-func (i *IPCClient) CreateBlob(size int, blob *ds.BlobWriter) {
-	if i.connected == false {
-		return
+func (c *IPCClient) CreateBuffer(size uint64) (blob BlobWriter, err error) {
+	if size == 0 {
+		return EmptyBlobWriter(c), nil
 	}
-	var buffer memory.Buffer
-	var id common.ObjectID = common.InvalidObjectID()
-	var payload ds.Payload
-	i.CreateBuffer(size, &id, &payload, &buffer)
-	blob.Reset(id, payload, buffer)
-}
 
-func (i *IPCClient) CreateBuffer(size int, id *common.ObjectID, payload *ds.Payload, buffer *memory.Buffer) error {
-	if i.connected == false {
-		return errors.New("ipc client is not connected")
+	messageOut := common.WriteCreateBufferRequest(size)
+	if err := c.doWrite(messageOut); err != nil {
+		return blob, err
 	}
-	var messageOut string
-	common.WriteCreateBufferRequest(size, &messageOut)
-
-	if err := i.DoWrite(messageOut); err != nil {
-		return err
+	var reply common.CreateBufferReply
+	if err := c.doReadReply(&reply); err != nil {
+		return blob, err
 	}
-	var messageIn string
-	err := i.DoRead(&messageIn)
-	if err != nil {
-		return err
-	}
-	fmt.Println("receive from vineyard create buffer is :", messageIn)
-	var createBufferReply common.CreateBufferReply
-	err = json.Unmarshal([]byte(messageIn), &createBufferReply)
-	if err != nil {
-		fmt.Println("create buffer reply json failed")
-		return err
-	}
-	*id = createBufferReply.ID // TODO: check whether two id is same
-	payload.ID = createBufferReply.ID
-	payload.StoreFd = createBufferReply.Created.StoreFd
-	payload.DataOffset = createBufferReply.Created.DataOffset
-	payload.DataSize = createBufferReply.Created.DataSize
-	payload.MapSize = createBufferReply.Created.MapSize
-
+	payload := reply.Created
 	if size != payload.DataSize {
-		return errors.New("data size not match")
+		return blob, errors.New("data size not match")
 	}
 
-	var shared *uint8
-	if payload.DataSize > 0 {
-		i.MmapToClient(payload.StoreFd, int64(payload.MapSize), false, true, &shared)
-		//i.MmapToClient()
+	pointer, err := c.mmapToClient(payload.StoreFd, int64(payload.MapSize), false, true)
+	if err != nil {
+		return blob, err
 	}
-	//fmt.Println(shared[0:1])
-	//buffer := memory.NewBufferBytes(shared[])
-	return nil
+	v := memory.Slice(pointer, payload.DataOffset, payload.DataSize)
+	blob.Reset(payload.ID, payload.DataSize, arrow.NewBufferBytes(v), c.InstanceID)
+	return blob, nil
 }
 
-func (i *IPCClient) MmapToClient(fd int, mapSize int64, readOnly bool, realign bool, ptr **uint8) error {
-	_, ok := i.mmapTable[fd]
-	if !ok {
-		file, err := i.conn.File()
-		if err != nil {
-			fmt.Println("Get connection file")
-			return err
-		}
-		clientFd := C.recv_fd(C.int(file.Fd()))
-		if clientFd <= 0 {
-			return errors.New("receive client fd error")
-		}
-		newEntry := MmapEntry{int(clientFd), mapSize, readOnly, realign, nil, nil}
+func (c *IPCClient) GetBuffer(id types.ObjectID, unsafe bool) (Blob, error) {
+	buffers, err := c.GetBuffers([]types.ObjectID{id}, unsafe)
+	if err != nil {
+		return Blob{}, err
+	}
+	return buffers[id], nil
+}
 
-		if readOnly {
-			newEntry.MapReadOnly()
-		} else {
-			newEntry.MapReadWrite()
-		}
-		i.mmapTable[fd] = newEntry
+func (c *IPCClient) GetBuffers(
+	ids []types.ObjectID,
+	unsafe_ bool,
+) (map[types.ObjectID]Blob, error) {
+	if len(ids) == 0 {
+		return nil, nil
 	}
 
-	// TODO: set entry to read only
-	//if readOnly {
-	//} else {
-	//}
-	return nil
+	messageOut := common.WriteGetBuffersRequest(ids, unsafe_)
+	if err := c.doWrite(messageOut); err != nil {
+		return nil, err
+	}
+	var reply common.GetBuffersReply
+	if err := c.doReadReply(&reply); err != nil {
+		return nil, err
+	}
+	buffers := make(map[types.ObjectID]Blob)
+	for _, payload := range reply.Payloads {
+		if payload.DataSize == 0 {
+			buffers[payload.ID] = Blob{Object{payload.ID, nil}, 0, nil}
+			continue
+		}
+		pointer, err := c.mmapToClient(payload.StoreFd, int64(payload.MapSize), true, true)
+		if err != nil {
+			return nil, err
+		}
+		v := memory.Slice(pointer, payload.DataOffset, payload.DataSize)
+		buffers[payload.ID] = Blob{
+			Object{payload.ID, nil},
+			payload.DataSize,
+			arrow.NewBufferBytes(v),
+		}
+	}
+	return buffers, nil
+}
+
+func (c *IPCClient) CreateMetaData(metadata *ObjectMeta) (id types.ObjectID, err error) {
+	if !c.connected {
+		return types.InvalidObjectID(), NOT_CONNECTED_ERR
+	}
+	metadata.SetInstanceId(c.InstanceID)
+	metadata.SetTransient(true)
+	if !metadata.HasKey("nbytes") {
+		metadata.SetNBytes(0)
+	}
+	if metadata.InComplete() {
+		_ = c.SyncMetaData()
+	}
+
+	id, signature, instanceId, err := c.CreateData(metadata.MetaData())
+	if err != nil {
+		return id, err
+	}
+
+	metadata.SetId(id)
+	metadata.SetSignature(signature)
+	metadata.SetInstanceId(instanceId)
+	if metadata.InComplete() {
+		if meta, err := c.GetMetaData(id, false); err != nil {
+			return types.InvalidObjectID(), err
+		} else {
+			*metadata = *meta
+		}
+	}
+	return id, nil
+}
+
+func (c *IPCClient) GetMetaData(id types.ObjectID, syncRemote bool) (meta *ObjectMeta, err error) {
+	if !c.connected {
+		return nil, NOT_CONNECTED_ERR
+	}
+	metadatas, err := c.GetData([]types.ObjectID{id}, syncRemote, false)
+	if err != nil {
+		return nil, err
+	}
+	meta = NewObjectMeta()
+	meta.Reset()
+	meta.SetMetaData(c.ClientBase, metadatas[0])
+
+	bufferset := meta.GetBuffers()
+	buffers, err := c.GetBuffers(bufferset.GetBufferIds(), false)
+	if err != nil {
+		return nil, err
+	}
+	for id, buffer := range buffers {
+		logger.Info("add buffer: ", "id", id, "buffer", buffer)
+		_ = bufferset.EmplaceBuffer(id, buffer.Buffer)
+	}
+	return meta, nil
+}
+
+func (c *IPCClient) GetObject(id types.ObjectID, object IObject) error {
+	if !c.connected {
+		return NOT_CONNECTED_ERR
+	}
+	meta, err := c.GetMetaData(id, false)
+	if err != nil {
+		return err
+	}
+	return object.Construct(c, meta)
+}
+
+func (c *IPCClient) mmapToClient(
+	fd int,
+	mapSize int64,
+	readOnly bool,
+	realign bool,
+) ([]byte, error) {
+	if _, ok := c.mmapTable[fd]; !ok {
+		file, err := c.unixConn.File()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to obtain native socket")
+		}
+		clientFd, err := memory.RecvFileDescriptor(int(file.Fd()))
+		if err != nil {
+			return nil, err
+		}
+		if clientFd <= 0 {
+			return nil, errors.New("receive client fd error")
+		}
+		entry := MmapEntry{FD: clientFd}
+		if realign {
+			entry.Size = mapSize + 8 /* sizeof(size_t) */
+		} else {
+			entry.Size = mapSize
+		}
+		c.mmapTable[fd] = entry
+	}
+	entry := c.mmapTable[fd]
+	if readOnly && entry.ro == nil || !readOnly && entry.rw == nil {
+		if err := entry.mmap(readOnly); err != nil {
+			return nil, err
+		}
+	}
+	if readOnly {
+		return entry.ro, nil
+	} else {
+		return entry.rw, nil
+	}
 }

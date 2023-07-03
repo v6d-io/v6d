@@ -5,25 +5,15 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
-GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version)
+GOLINT := $(shell command -v ${GOBIN}/golangci-lint --version 2>/dev/null)
 
 ## Tool Versions
 GOLANGCI_LINT_VERSION ?= v1.49.0
 
-CC				?= gcc
-AR				?= ar
-
-all: golint cgo fmt vet test
-
-pkg/common/memory/libfling.a: pkg/common/memory/fling.cc
-	${CC} -O3 -fPIC -c pkg/common/memory/fling.cc -o pkg/common/memory/fling.o
-	${AR} rcs pkg/common/memory/libfling.a pkg/common/memory/fling.o
-
-cgo: pkg/common/memory/libfling.a
-.PHONY: cgo
+all: fmt test
 
 # Run golangci-lint
-golint: 
+lint:
     ifeq (${GOLINT},)
 		@echo "golangci-lint not exist, installing it..."
 		go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
@@ -32,7 +22,7 @@ golint:
 .PHONY: golint
 
 # Run tests
-test: cgo
+test:
 	go test ./...
 .PHONY: test
 

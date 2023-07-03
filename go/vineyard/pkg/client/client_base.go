@@ -13,231 +13,252 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package vineyard
+package client
 
 import (
-	"encoding/json"
-	"errors"
 	"net"
+	"os"
+	"strconv"
+	"strings"
 
-	vineyard "github.com/v6d-io/v6d/go/vineyard/pkg/client/ds"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/client/io"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common/log"
+	"github.com/v6d-io/v6d/go/vineyard/pkg/common/types"
 )
 
-type Signature = uint64
+const (
+	VINEYARD_IPC_SOCKET_KEY   = "VINEYARD_IPC_SOCKET"
+	VINEYARD_RPC_ENDPOINT_KEY = "VINEYARD_RPC_ENDPOINT"
+	VINEYARD_DEFAULT_RPC_PORT = 9600
+)
 
-type ClientBase struct {
-	// TODO: fix unify connection conn
-	conn       net.Conn
-	connected  bool
-	instanceID common.InstanceID
+var logger = log.Log.WithName("client")
+
+var NOT_CONNECTED_ERR = common.NotConnected()
+
+func GetDefaultIPCSocket() string {
+	return os.Getenv(VINEYARD_IPC_SOCKET_KEY)
 }
 
-func (c *ClientBase) DoWrite(msgOut string) error {
-	err := SendMessage(c.conn, msgOut)
+func GetDefaultRPCEndpoint() string {
+	return os.Getenv(VINEYARD_RPC_ENDPOINT_KEY)
+}
+
+func GetDefaultRPCHostAndPort() (string, uint16) {
+	rpcEndpoint := GetDefaultRPCEndpoint()
+	parts := strings.Split(rpcEndpoint, ":")
+	if len(parts) == 1 {
+		return rpcEndpoint, VINEYARD_DEFAULT_RPC_PORT
+	}
+	port, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return parts[0], VINEYARD_DEFAULT_RPC_PORT
+	}
+	return parts[0], uint16(port)
+}
+
+type ClientBase struct {
+	conn          net.Conn
+	connected     bool
+	IPCSocket     string
+	RPCEndpoint   string
+	serverVersion string
+	InstanceID    types.InstanceID
+}
+
+func (c *ClientBase) doWrite(message []byte) error {
+	err := io.SendMessageBytes(c.conn, message)
 	if err != nil {
 		c.connected = false
 	}
-	return nil
+	return err
 }
 
-func (c *ClientBase) DoRead(msg *string) error {
-	return RecvMessage(c.conn, msg)
+func (c *ClientBase) doRead() ([]byte, error) {
+	return io.RecvMessageBytes(c.conn)
 }
 
-func (c *ClientBase) Disconnect() error {
-	if !c.connected {
-		return nil
-	}
-	var messageOut string
-	common.WriteExitRequest(&messageOut)
-	if err := c.DoWrite(messageOut); err != nil {
+func (c *ClientBase) doReadReply(v common.Reply) error {
+	messageIn, err := c.doRead()
+	if err != nil {
 		return err
 	}
-	c.conn.Close()
+	if err := common.ParseJson(messageIn, v); err != nil {
+		return err
+	}
+	return v.Check()
+}
+
+func (c *ClientBase) Disconnect() {
+	if !c.connected {
+		return
+	}
+	messageOut := common.WriteExitRequest()
+	if err := c.doWrite(messageOut); err != nil {
+		log.Error(err, "failed to disconnect the client")
+	}
 	c.connected = false
-	return nil
+	_ = c.conn.Close() // ignore the error in `close`
 }
 
-func (c *ClientBase) Persist(id common.ObjectID) error {
-	var messageOut string
-	common.WritePersistRequest(id, &messageOut)
-	if err := c.DoWrite(messageOut); err != nil {
-		return err
-	}
-	var messageIn string
-	if err := c.DoRead(&messageIn); err != nil {
-		return err
-	}
-
-	var persistReply common.PersisReply
-	err := json.Unmarshal([]byte(messageIn), &persistReply)
-	if err != nil {
-		return err
-	}
-
-	if persistReply.Code != 0 || persistReply.Type != common.PERSIST_REQUEST {
-		return errors.New("get persist response from vineyard failed")
-	}
-	return nil
-}
-
-func (c *ClientBase) PutName(id common.ObjectID, name string) error {
-	var messageOut string
-	common.WritePutNameRequest(id, name, &messageOut)
-	if err := c.DoWrite(messageOut); err != nil {
-		return err
-	}
-	var messageIn string
-	if err := c.DoRead(&messageIn); err != nil {
-		return err
-	}
-
-	var putNameReply common.PutNameReply
-	err := json.Unmarshal([]byte(messageIn), &putNameReply)
-	if err != nil {
-		return err
-	}
-
-	if putNameReply.Code != 0 || putNameReply.Type != common.PUT_NAME_REPLY {
-		return &common.ReplyError{Code: putNameReply.Code, Type: putNameReply.Type, Err: err}
-	}
-	return nil
-}
-
-func (c *ClientBase) GetName(name string, wait bool, id *common.ObjectID) error {
-	var messageOut string
-	common.WriteGetNameRequest(name, wait, &messageOut)
-	if err := c.DoWrite(messageOut); err != nil {
-		return err
-	}
-	var messageIn string
-	if err := c.DoRead(&messageIn); err != nil {
-		return err
-	}
-
-	var getNameReply common.GetNameReply
-	err := json.Unmarshal([]byte(messageIn), &getNameReply)
-	if err != nil {
-		return err
-	}
-
-	if getNameReply.Code != 0 || getNameReply.Type != common.GET_NAME_REPLY {
-		return &common.ReplyError{Code: getNameReply.Code, Type: getNameReply.Type, Err: err}
-	}
-	*id = getNameReply.RepObjectID
-	return nil
-}
-
-func (c *ClientBase) DropName(name string) error {
-	var messageOut string
-	common.WriteDropNameRequest(name, &messageOut)
-	if err := c.DoWrite(messageOut); err != nil {
-		return err
-	}
-	var messageIn string
-	if err := c.DoRead(&messageIn); err != nil {
-		return err
-	}
-
-	var dropNameReply common.DropNameReply
-	err := json.Unmarshal([]byte(messageIn), &dropNameReply)
-	if err != nil {
-		return err
-	}
-
-	if dropNameReply.Code != 0 || dropNameReply.Type != common.DROP_NAME_REPLY {
-		return &common.ReplyError{Code: dropNameReply.Code, Type: dropNameReply.Type, Err: err}
-	}
-	return nil
-}
-
-func (c *ClientBase) GetData(id common.ObjectID, getDataReply *common.GetDataReply, syncRemote, wait bool) error {
+func (c *ClientBase) Seal(id types.ObjectID) error {
 	if !c.connected {
-		return nil
+		return NOT_CONNECTED_ERR
 	}
-	var messageOut string
-	common.WriteGetDataRequest(id, syncRemote, wait, &messageOut)
-	if err := c.DoWrite(messageOut); err != nil {
+	messageOut := common.WriteSealRequest(id)
+	if err := c.doWrite(messageOut); err != nil {
 		return err
 	}
-	var messageIn string
-	if err := c.DoRead(&messageIn); err != nil {
+	var reply common.SealReply
+	return c.doReadReply(&reply)
+}
+
+func (c *ClientBase) DropBuffer(id types.ObjectID) error {
+	if !c.connected {
+		return NOT_CONNECTED_ERR
+	}
+	messageOut := common.WriteDropBufferRequest(id)
+	if err := c.doWrite(messageOut); err != nil {
 		return err
 	}
-	err := json.Unmarshal([]byte(messageIn), getDataReply)
-	if err != nil {
+	var reply common.DropBufferReply
+	return c.doReadReply(&reply)
+}
+
+func (c *ClientBase) IncreaseRefCount(ids []types.ObjectID) error {
+	if !c.connected {
+		return NOT_CONNECTED_ERR
+	}
+	messageOut := common.WriteIncreaseRefCountRequest(ids)
+	if err := c.doWrite(messageOut); err != nil {
 		return err
 	}
-	return nil
+	var reply common.IncreaseRefCountReply
+	return c.doReadReply(&reply)
+}
+
+func (c *ClientBase) Release(id types.ObjectID) error {
+	if !c.connected {
+		return NOT_CONNECTED_ERR
+	}
+	messageOut := common.WriteReleaseRequest(id)
+	if err := c.doWrite(messageOut); err != nil {
+		return err
+	}
+	var reply common.ReleaseReply
+	return c.doReadReply(&reply)
+}
+
+func (c *ClientBase) CreateData(
+	tree map[string]any,
+) (id types.ObjectID, signature types.Signature, instanceID types.InstanceID, err error) {
+	if !c.connected {
+		return id, signature, instanceID, NOT_CONNECTED_ERR
+	}
+	messageOut := common.WriteCreateDataRequest(tree)
+	if err := c.doWrite(messageOut); err != nil {
+		return id, signature, instanceID, err
+	}
+	var reply common.CreateDataReply
+	if err := c.doReadReply(&reply); err != nil {
+		return id, signature, instanceID, err
+	}
+	id = reply.ID
+	signature = reply.Signature
+	instanceID = reply.InstanceID
+	return id, signature, instanceID, nil
+}
+
+func (c *ClientBase) GetData(
+	ids []types.ObjectID,
+	syncRemote bool,
+	wait bool,
+) (objects []map[string]any, err error) {
+	messageOut := common.WriteGetDataRequest(ids, syncRemote, wait)
+	if err := c.doWrite(messageOut); err != nil {
+		return nil, err
+	}
+	var reply common.GetDataReply
+	if err := c.doReadReply(&reply); err != nil {
+		return nil, err
+	}
+	objects = make([]map[string]any, 0, len(ids))
+	for _, id := range ids {
+		if item, ok := reply.Content[types.ObjectIDToString(id)]; ok {
+			objects = append(objects, item)
+		} else {
+			objects = append(objects, nil)
+		}
+	}
+	return objects, nil
+}
+
+func (c *ClientBase) Delete(ids []types.ObjectID) error {
+	if !c.connected {
+		return NOT_CONNECTED_ERR
+	}
+	messageOut := common.WriteDeleteDataRequest(ids, false)
+	if err := c.doWrite(messageOut); err != nil {
+		return err
+	}
+	var reply common.DeleteDataReply
+	return c.doReadReply(&reply)
 }
 
 func (c *ClientBase) SyncMetaData() error {
-	var getDataReply common.GetDataReply
-	return c.GetData(common.InvalidObjectID(), &getDataReply, true, false)
+	_, err := c.GetData([]types.ObjectID{types.InvalidObjectID()}, true, false)
+	return err
 }
 
-func (c *ClientBase) CreateData(tree interface{}, id *common.ObjectID, signature *Signature, instanceID *common.InstanceID) error {
+func (c *ClientBase) Persist(id types.ObjectID) error {
 	if !c.connected {
-		return nil
+		return NOT_CONNECTED_ERR
 	}
-	var messageOut string
-	common.WriteCreateDataRequest(id, &messageOut)
-	if err := c.DoWrite(messageOut); err != nil {
+	messageOut := common.WritePersistRequest(id)
+	if err := c.doWrite(messageOut); err != nil {
 		return err
 	}
-	var messageIn string
-	if err := c.DoRead(&messageIn); err != nil {
-		return err
-	}
-	var createDataReply common.CreateDataReply
-	err := json.Unmarshal([]byte(messageIn), &createDataReply)
-	if err != nil {
-		return err
-	}
-	id = &createDataReply.ID
-	signature = &createDataReply.Signature
-	instanceID = &createDataReply.InstanceID
-	return nil
+	var reply common.PersistReply
+	return c.doReadReply(&reply)
 }
 
-func (c *ClientBase) GetMetaData(id common.ObjectID, meta *vineyard.ObjectMeta, syncRemote bool) {
+func (c *ClientBase) PutName(id types.ObjectID, name string) error {
 	if !c.connected {
-		return
+		return NOT_CONNECTED_ERR
 	}
-	var getDataReply common.GetDataReply
-	err := c.GetData(id, &getDataReply, syncRemote, false)
-	if err != nil {
-		return
+	messageOut := common.WritePutNameRequest(id, name)
+	if err := c.doWrite(messageOut); err != nil {
+		return err
 	}
-	meta.Reset()
-	//meta.SetMetaData(*i, getDataReply) // TODO: how to set
-	// TODO
-	return
+	var reply common.PutNameReply
+	return c.doReadReply(&reply)
 }
 
-func (c *ClientBase) CreateMetaData(metaData *vineyard.ObjectMeta, id common.ObjectID) {
-	var instanceID common.InstanceID = c.instanceID
-	metaData.Init()
-	metaData.SetInstanceId(instanceID)
-	if !metaData.HasKey("nbytes") {
-		metaData.SetNBytes(0)
+func (c *ClientBase) GetName(name string, wait bool) (id types.ObjectID, err error) {
+	if !c.connected {
+		return id, NOT_CONNECTED_ERR
 	}
-	if metaData.InComplete() {
-		c.SyncMetaData() // TODO: check correctness
+	messageOut := common.WriteGetNameRequest(name, wait)
+	if err = c.doWrite(messageOut); err != nil {
+		return id, err
 	}
-	var signature Signature
-	err := c.CreateData(metaData.MetaData(), &id, &signature, &instanceID)
-	if err != nil {
-		metaData.SetId(id)
-		metaData.SetSignature(signature)
-		// metaData.SetClient(c) // TODO: fix type not match
-		metaData.SetInstanceId(instanceID)
-		if metaData.InComplete() {
-			var resultMeta vineyard.ObjectMeta
-			c.GetMetaData(id, &resultMeta, false)
-			metaData = &resultMeta
-		}
+	var reply common.GetNameReply
+	if err = c.doReadReply(&reply); err != nil {
+		return id, err
 	}
-	return
+	id = reply.ID
+	return id, err
+}
+
+func (c *ClientBase) DropName(name string) error {
+	if !c.connected {
+		return NOT_CONNECTED_ERR
+	}
+	messageOut := common.WriteDropNameRequest(name)
+	if err := c.doWrite(messageOut); err != nil {
+		return err
+	}
+	var reply common.DropNameReply
+	return c.doReadReply(&reply)
 }

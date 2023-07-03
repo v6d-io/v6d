@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package types
 
 import (
 	"fmt"
@@ -22,6 +22,11 @@ import (
 )
 
 type ObjectID = uint64
+
+func GenerateObjectID() ObjectID {
+	// TODO: check c++ version's rdtsc instead of time.Now() in golang
+	return ObjectID(0x7FFFFFFFFFFFFFFF & time.Now().Unix())
+}
 
 func ObjectIDToString(id ObjectID) string {
 	return fmt.Sprintf("o%016x", id)
@@ -37,6 +42,10 @@ func IsBlob(id ObjectID) bool {
 
 func InvalidObjectID() ObjectID {
 	return 0xffffffffffffffff
+}
+
+func EmptyBlobID() ObjectID {
+	return 0x8000000000000000
 }
 
 type Signature = uint64
@@ -59,7 +68,16 @@ func UnspecifiedInstanceID() InstanceID {
 	return 0xffffffffffffffff
 }
 
-func GenerateObjectID() ObjectID {
-	// TODO: check c++ version's rdtsc instead of time.Now() in golang
-	return ObjectID(0x7FFFFFFFFFFFFFFF & time.Now().Unix())
+type SessionID = uint64
+
+func SessionIDToString(sig SessionID) string {
+	return fmt.Sprintf("S%016x", sig)
+}
+
+func SessionIDFromString(sig string) (SessionID, error) {
+	return strconv.ParseUint(sig[1:], 16, 64)
+}
+
+func RootSessionID() SessionID {
+	return 0
 }

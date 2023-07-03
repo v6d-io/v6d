@@ -13,4 +13,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package common
+package types
+
+type Payload struct {
+	ID         ObjectID `json:"object_id"`
+	StoreFd    int      `json:"store_fd"`
+	ArenaFd    int      `json:"-"`
+	DataOffset uint64   `json:"data_offset"`
+	DataSize   uint64   `json:"data_size"`
+	MapSize    uint64   `json:"map_size"`
+	Pointer    *uint64  `json:"-"`
+	Owing      bool     `json:"is_owner"`
+	Sealed     bool     `json:"is_sealed"`
+	GPU        bool     `json:"is_gpu"`
+}
