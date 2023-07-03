@@ -1,0 +1,76 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: {{ package_name }}-
+spec:
+  entrypoint: dag
+  templates:
+  - name: kedro
+    metadata:
+      labels:
+        app: kedro-argo
+      {% if with_vineyard_operator %}
+        # this label represents the vineyardd's name that need to be used
+        scheduling.k8s.v6d.io/vineyardd-namespace: {{ vineyardd_namespace }}
+        scheduling.k8s.v6d.io/vineyardd: {{ vineyardd_name }}{% raw %}
+        scheduling.k8s.v6d.io/job: "{{ inputs.parameters.job }}"
+      annotations:
+        scheduling.k8s.v6d.io/required: "{{ inputs.parameters.required }}"
+        {% endraw %}
+      {% endif %}
+    retryStrategy:
+      limit: 1
+    inputs:
+      parameters:
+      - name: kedro_node
+      {% if with_vineyard_operator %}
+      - name: job
+      - name: required
+      {% endif %}
+    container:
+      imagePullPolicy: IfNotPresent
+      image: {{ image }}
+      command: [kedro]{% raw %}
+      args: ["run", "-n",  "{{inputs.parameters.kedro_node}}"]
+      {% endraw %}
+    {% if with_vineyard_operator %}
+      env:
+        - name: VINEYARD_IPC_SOCKET
+          value: /var/run/vineyard.sock
+      volumeMounts:
+      - name: vineyard-socket
+        mountPath: /var/run
+    volumes:
+      - name: vineyard-socket
+        hostPath:
+          path: /var/run/vineyard-kubernetes/{{ vineyardd_namespace }}/{{ vineyardd_name }}
+          type: DirectoryOrCreate
+    schedulerName: vineyard-scheduler
+    {% endif %}
+  - name: dag
+    dag:
+      tasks:
+      {% for task in tasks %}
+      - name: {{ task.name }}
+        template: kedro
+        {% if task.deps %}
+        dependencies:
+        {% for dep in task.deps %}
+          - {{ dep }}
+        {% endfor %}
+        {% endif %}
+        arguments:
+          parameters:
+          - name: kedro_node
+            value: {{ task.node }}
+          {% if with_vineyard_operator %}
+          - name: job
+            value: {{ task.name }}
+          - name: required
+            {% if task.deps %}
+            value: {{ task.deps | join(',') }}
+            {% else %}
+            value: ""
+            {% endif %}
+          {% endif %}
+      {% endfor %}

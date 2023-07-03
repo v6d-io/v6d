@@ -60,7 +60,10 @@ rules:
 - apiGroups: ["events.k8s.io"]
   resources: ["events"]
   verbs: ["create", "patch", "update"]
-
+# add list argo workflows permission
+- apiGroups: ["argoproj.io"]
+  resources: ["workflows"]
+  verbs: ["list", "get", "watch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

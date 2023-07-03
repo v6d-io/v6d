@@ -16,7 +16,9 @@
 # limitations under the License.
 #
 
+from . import argo
 from . import catalog
 from . import cli
+from . import docker
 from .hook import VineyardHook
 from .hook import hooks

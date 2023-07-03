@@ -14,6 +14,7 @@ exclude = '''
     | .*\/python\-libs\/.*
     | .*\/kedro\-starters\/.*
     | .*\/thirdparty\/.*
+    | .*\/python/vineyard/contrib/kedro/benchmark\/.*
 )
 '''
 skip-string-normalization = true
