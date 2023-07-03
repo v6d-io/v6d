@@ -13,13 +13,13 @@ import java.util.Collection;
 
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.IntVector;
-import org.apache.arrow.vector.types.Types;
+import org.apache.arrow.vector.Float4Vector;
 
 public class TensorBuilder implements ObjectBuilder{
     private FieldVector values;
     private BufferBuilder bufferBuilder;
     private Collection<Integer> shape;
-    private Types.MinorType dtype;
+    private String dtype;
     private int partition_index_ = 0;
     private long size = 0;
 
@@ -49,10 +49,30 @@ public class TensorBuilder implements ObjectBuilder{
         }
 
         //TODO:Support other type.
-        size = count * Integer.SIZE;
-        bufferBuilder = new BufferBuilder(client, size);
-        for (int i = 0; i < values.getValueCount(); i++) {
-            bufferBuilder.getBuffer().setInt(i, ((IntVector)values).get(i));
+        switch (values.getField().getType().getTypeID()) {
+            case Int:
+                dtype = new String("int");
+                size = count * Integer.SIZE;
+                bufferBuilder = new BufferBuilder(client, size);
+                for (int i = 0; i < values.getValueCount(); i++) {
+                    bufferBuilder.getBuffer().setInt(i, ((IntVector)values).get(i));
+                }
+                break;
+            case FloatingPoint:
+                dtype = new String("float");
+                size = count * Float.SIZE;
+                bufferBuilder = new BufferBuilder(client, size);
+                for (int i = 0; i < values.getValueCount(); i++) {
+                    bufferBuilder.getBuffer().setFloat(i, ((Float4Vector)values).get(i));
+                }
+                break;
+            case Utf8:
+                //string
+                // support in the future.
+            default:
+                System.out.println("Type:" + values.getField().getType().getTypeID());
+                System.out.println("Type class: " + values.getField().getType().getClass());
+                throw new VineyardException.NotImplemented("Type Not implemented");
         }
     }
 
@@ -82,8 +102,8 @@ public class TensorBuilder implements ObjectBuilder{
         ObjectMeta tensorMeta = ObjectMeta.empty();
 
         // TODO: set other typename
-        tensorMeta.setTypename("vineyard::Tensor<int>");
-        tensorMeta.setValue("value_type_", "int");
+        tensorMeta.setTypename("vineyard::Tensor<" + dtype + ">");
+        tensorMeta.setValue("value_type_", dtype);
         // Int32ArrayBuilder intBuilder = new Int32ArrayBuilder(client, );
 
         ObjectMeta meta = bufferBuilder.seal(client);

@@ -131,6 +131,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                 tensorBuilder = new TensorBuilder(client, shape, root.getFieldVectors().get(i));
                 dataFrameBuilder.addColumn(schema.getFields().get(i).getName(), tensorBuilder);
             } catch (Exception e) {
+                System.out.println(e.getMessage());
                 throw new IOException("Create TensorBuilder failed");
             }
         }
