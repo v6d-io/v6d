@@ -106,8 +106,8 @@ Install MinIO S3
       name: my-minio-cred
     type: Opaque
     data:
-      accessKey: <Your Access Key>
-      secretKey: <Your Secret Key>
+      accessKey: <Your Access Key> and Base64 encoded
+      secretKey: <Your Secret Key> and Base64 encoded
     EOF
 
 1. Set the configurations of MinIO clusters.
@@ -197,17 +197,17 @@ Install the argo server
 Prepare the kedro benchmark project
 -----------------------------------
 
-1. Download the kedro project.
+1. Go to the kedro benchmark project under vineyard root directory.
 
 .. code:: bash
 
-    $ git clone https://github.com/dashanji/kedro-benchmark-project.git
+    $ cd python/contrib/kedro/benchmark
 
 2. Fulfill the credentials configurations of AWS S3.
 
 .. code:: bash
 
-    $ cd aws-s3-benchmark
+    $ cd aws-s3
     $ cat conf/local/credentials.yml
     benchmark_aws_s3:
         client_kwargs:
@@ -233,7 +233,7 @@ Prepare the kedro benchmark project
 
 .. code:: bash
 
-    $ pushd aws-s3-benchmark
+    $ pushd aws-s3
     # build the docker images
     $ make
     # check the docker images
@@ -248,7 +248,7 @@ Prepare the kedro benchmark project
 
 .. code:: bash
 
-    $ pushd minio-s3-benchmark
+    $ pushd minio-s3
 
     # build the docker images
     $ make
@@ -290,7 +290,7 @@ Submit the benchmark workflow
 
 .. code:: bash
 
-    $ pushd vineyard-benchmark
+    $ pushd vineyard
     # 1M data
     $ sed -i "s/vineyard-benchmark/vineyard-benchmark-with-1m-data/g" argo-vineyard-benchmark.yml && \
         argo submit -n vineyard-system --watch argo-vineyard-benchmark.yml
@@ -309,7 +309,7 @@ Submit the benchmark workflow
 
 .. code:: bash
 
-    $ pushd aws-s3-benchmark
+    $ pushd aws-s3
     # 1M data
     $ sed -i "s/aws-s3-benchmark/aws-s3-benchmark-with-1m-data/g" argo-aws-s3-benchmark.yml && \
         argo submit -n s3 --watch argo-aws-s3-benchmark.yml
@@ -328,7 +328,7 @@ Submit the benchmark workflow
 
 .. code:: bash
 
-    $ pushd minio-s3-benchmark
+    $ pushd minio-s3
     # 1M data
     $ sed -i "s/minio-s3-benchmark/minio-s3-benchmark-with-1m-data/g" argo-minio-s3-benchmark.yml && \
         argo submit -n minio --watch argo-minio-s3-benchmark.yml

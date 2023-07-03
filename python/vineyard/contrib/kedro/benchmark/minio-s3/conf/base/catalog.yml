@@ -1,0 +1,29 @@
+# Here you can define all your data sets by using simple YAML syntax.
+#
+# Documentation for this file format can be found in "The Data Catalog"
+# Link: https://docs.kedro.org/en/stable/data/data_catalog.html
+
+house_prices:
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/train.csv
+
+house_prices_clean:
+  type: pandas.CSVDataSet
+  filepath: s3://minio-s3-benchmark-bucket/house_prices_clean1.csv
+  credentials: benchmark_minio_s3
+house_prices_drop:
+  type: pandas.CSVDataSet
+  filepath: s3://minio-s3-benchmark-bucket/house_prices_drop1.csv
+  credentials: benchmark_minio_s3
+house_prices_no_na:
+  type: pandas.CSVDataSet
+  filepath: s3://minio-s3-benchmark-bucket/house_prices_no_na1.csv
+  credentials: benchmark_minio_s3
+house_prices_no_outliers:
+  type: pandas.CSVDataSet
+  filepath: s3://minio-s3-benchmark-bucket/house_prices_no_outliers1.csv
+  credentials: benchmark_minio_s3
+y_train:
+  type: pandas.CSVDataSet
+  filepath: s3://minio-s3-benchmark-bucket/y_train1.csv
+  credentials: benchmark_minio_s3

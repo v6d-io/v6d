@@ -257,21 +257,21 @@ publish-repartition-images: push-dask-repartition push-dask-repartition-job1 pus
 dask-repartition:
 	docker build repartition-demo/ -f Dockerfile \
 		--build-arg APP=dask-repartition.py \
-		--build-arg PYPI_DEPENDENCIES="msgpack==1.0.4 numpy=1.23.2 pandas==1.4.3 dask==2022.8.1 distributed==2022.8.1 vineyard-dask" \
+		--build-arg PYPI_DEPENDENCIES="msgpack==1.0.4 numpy==1.23.2 pandas==1.4.3 dask==2022.8.1 distributed==2022.8.1 vineyard-dask" \
 		-t $(REGISTRY)/dask-repartition:$(TAG)
 .PHONY: dask-repartition
 
 dask-repartition-job1:
 	docker build repartition-demo/ -f Dockerfile \
 		--build-arg APP=job1.py \
-		--build-arg PYPI_DEPENDENCIES="msgpack==1.0.4 numpy=1.23.2 pandas==1.4.3 dask==2022.8.1 distributed==2022.8.1 lz4 vineyard-dask" \
+		--build-arg PYPI_DEPENDENCIES="msgpack==1.0.4 numpy==1.23.2 pandas==1.4.3 dask==2022.8.1 distributed==2022.8.1 lz4 vineyard-dask" \
 		-t $(REGISTRY)/dask-repartition-job1:$(TAG)
 .PHONY: dask-repartition-job1
 
 dask-repartition-job2:
 	docker build repartition-demo/ -f Dockerfile \
 		--build-arg APP=job2.py \
-		--build-arg PYPI_DEPENDENCIES="msgpack==1.0.4 numpy=1.23.2 pandas==1.4.3 dask==2022.8.1 distributed==2022.8.1 lz4 vineyard-dask" \
+		--build-arg PYPI_DEPENDENCIES="msgpack==1.0.4 numpy==1.23.2 pandas==1.4.3 dask==2022.8.1 distributed==2022.8.1 lz4 vineyard-dask" \
 		-t $(REGISTRY)/dask-repartition-job2:$(TAG)
 .PHONY: dask-repartition-job2
 
