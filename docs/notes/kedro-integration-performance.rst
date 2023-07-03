@@ -4,12 +4,12 @@ Kedro Integration Performance Report
 ====================================
 
 This is a performance report of kedro integration, here we will compare three
-different data catalog of kedro benchmark project: vineyard, AWS S3 and MinIO S3.
+different data catalog of kedro benchmark project: vineyard(v0.15.3), AWS S3 and MinIO S3(the latest one).
 
 Create a kubernetes cluster
 ---------------------------
 
-If you don't have a kubernetes on hand, you can use the `kind <https://kind.sigs.k8s.io/>`_
+If you don't have a kubernetes on hand, you can use the `kind v0.20.0 <https://kind.sigs.k8s.io/>`_
 to create a kubernetes cluster with 4 nodes(including a master node) as follows:
 
 .. code:: bash
@@ -19,14 +19,39 @@ to create a kubernetes cluster with 4 nodes(including a master node) as follows:
     apiVersion: kind.x-k8s.io/v1alpha4
     nodes:
     - role: control-plane
-      image: kindest/node:v1.24.0
+      image: kindest/node:v1.25.11
     - role: worker
-      image: kindest/node:v1.24.0
+      image: kindest/node:v1.25.11
     - role: worker
-      image: kindest/node:v1.24.0
+      image: kindest/node:v1.25.11
     - role: worker
-      image: kindest/node:v1.24.0
+      image: kindest/node:v1.25.11
     EOF
+
+
+Install the argo server
+-----------------------
+
+1. Create the argo namespace.
+
+.. code:: bash
+
+    $ kubectl create namespace argo
+
+2. Install the argo server.
+
+.. code:: bash
+
+    $ kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.4.8/install.yaml
+
+3. Check the argo server.
+
+.. code:: bash
+
+    $ kubectl get pod -n argo
+    NAME                                READY   STATUS    RESTARTS   AGE
+    argo-server-7698c96655-jg2ds        1/1     Running   0          11s
+    workflow-controller-b888f4458-x4qf2 1/1     Running   0          11s
 
 
 Install Vineyard Operator
@@ -81,25 +106,19 @@ Prepare AWS S3
 Install MinIO S3
 ----------------
 
-1. Create the minio namespace as follows:
+1. Deploy the minio resources.
 
 .. code:: bash
 
-    $ kubectl create namespace minio
+    $ kubectl apply -f python/vineyard/contrib/kedro/benchmark/minio-s3/minio-dev.yaml
 
-2. Install the MinIO cluster via helm chart.
-
-.. code:: bash
-
-    $ helm repo add stable https://charts.helm.sh/stable
-    $ helm repo update
-    $ helm install --namespace=minio minio-artifacts stable/minio --set service.type=LoadBalancer --set fullnameOverride=minio-artifacts
+2. The default access key and secret key of the minio cluster are `minioadmin` and `minioadmin`.
 
 3. Install the secret of the MinIO cluster.
 
 .. code:: bash
 
-    $ cat <<EOF | kubectl apply -n minio -f -
+    $ cat <<EOF | kubectl apply -n minio-dev -f -
     apiVersion: v1
     kind: Secret
     metadata:
@@ -110,7 +129,7 @@ Install MinIO S3
       secretKey: <Your Secret Key> and Base64 encoded
     EOF
 
-1. Set the configurations of MinIO clusters.
+4. Set the configurations of MinIO clusters.
 
 .. code:: bash
 
@@ -130,8 +149,8 @@ Install MinIO S3
           useSDKCreds: false
     EOF
 
-    # Get the actual MinIO service address.
-    $ minioUrl=$(kubectl get service minio-artifacts -n minio -o jsonpath='{.spec.clusterIP}:{.spec.ports[0].nodePort}')
+    # Get the endpoint of minio service
+    $ minioUrl=$(kubectl get endpoints -n minio-dev -o jsonpath='{.items[*].subsets[*].addresses[*].ip}'):9000
 
     # Replace with actual minio url
     $ sed -i "s/{{MINIO}}/${minioUrl}/g" ./minio-default.yaml
@@ -139,11 +158,11 @@ Install MinIO S3
     # Apply to configmap in the argo namespace
     $ kubectl -n argo patch configmap/workflow-controller-configmap --patch "$(cat ./minio-default.yaml)"
 
-1. Forward minio-artifacts service.
+5. Forward minio-artifacts service.
 
 .. code:: bash
 
-    $ kubectl port-forward service/minio-artifacts -n minio 9000:9000
+    $ kubectl port-forward service/minio -n minio-dev 9000:9000
 
 6. Download the minio client and install it.
 
@@ -169,31 +188,6 @@ Install MinIO S3
     Bucket created successfully `minio/minio-s3-benchmark-bucket`.
 
 
-Install the argo server
------------------------
-
-1. Create the argo namespace.
-
-.. code:: bash
-
-    $ kubectl create namespace argo
-
-2. Install the argo server.
-
-.. code:: bash
-
-    $ kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.4.8/install.yaml
-
-3. Check the argo server.
-
-.. code:: bash
-
-    $ kubectl get pod -n argo
-    NAME                                READY   STATUS    RESTARTS   AGE
-    argo-server-7698c96655-jg2ds        1/1     Running   0          11s
-    workflow-controller-b888f4458-x4qf2 1/1     Running   0          11s
-
-
 Prepare the kedro benchmark project
 -----------------------------------
 
@@ -201,7 +195,7 @@ Prepare the kedro benchmark project
 
 .. code:: bash
 
-    $ cd python/contrib/kedro/benchmark
+    $ cd python/vineyard/contrib/kedro/benchmark
 
 2. Fulfill the credentials configurations of AWS S3.
 
@@ -213,20 +207,21 @@ Prepare the kedro benchmark project
         client_kwargs:
             aws_access_key_id: Your AWS Access Key ID
             aws_secret_access_key: Your AWS Secret Access Key
+            region_name: Your AWS Region Name
 
 2. Build the docker images of the kedro project for vineyard benchmark.
 
 .. code:: bash
 
-    $ pushd vineyard-benchmark
+    $ pushd vineyard
     # build the docker images
     $ make
     # check the docker images
     $ docker images | grep vineyard-benchmark
-    vineyard-benchmark-with-500m-data       latest    0430517cd6c3   48 minutes ago       2.26GB
-    vineyard-benchmark-with-100m-data       latest    21532a9514e7   48 minutes ago       1.86GB
-    vineyard-benchmark-with-10m-data        latest    83672e4baec2   49 minutes ago       1.77GB
-    vineyard-benchmark-with-1m-data         latest    4506d2cc264a   49 minutes ago       1.76GB
+    vineyard-benchmark-with-500m-data   latest  982c6a376597   About a minute ago   1.66GB
+    vineyard-benchmark-with-100m-data   latest  e58ca1cada98   About a minute ago   1.25GB
+    vineyard-benchmark-with-10m-data    latest  f7c618b48913   About a minute ago   1.16GB
+    vineyard-benchmark-with-1m-data     latest  8f9e74ff5116   About a minute ago   1.15GB
     $ popd
 
 3. Build the docker images of the kedro project for aws s3 benchmark.
@@ -238,10 +233,10 @@ Prepare the kedro benchmark project
     $ make
     # check the docker images
     $ docker images | grep aws-s3-benchmark
-    aws-s3-benchmark-with-500m-data         latest    f888ebff69a9   48 seconds ago      2.01GB
-    aws-s3-benchmark-with-100m-data         latest    744852f72352   2 minutes ago       1.61GB
-    aws-s3-benchmark-with-10m-data          latest    0e5dde266d7a   3 minutes ago       1.52GB
-    aws-s3-benchmark-with-1m-data           latest    a6813fce87f8   4 minutes ago       1.51GB
+    aws-s3-benchmark-with-500m-data latest  877d8fc1ef78   3 minutes ago   1.42GB
+    aws-s3-benchmark-with-100m-data latest  b8e15edda5cd   3 minutes ago   1.01GB
+    aws-s3-benchmark-with-10m-data  latest  c1a58ddb2888   3 minutes ago   915MB
+    aws-s3-benchmark-with-1m-data   latest  9f27ac5ce9dd   3 minutes ago   907MB
     $ popd
 
 4. Build the docker images of the kedro project for minio s3 benchmark.
@@ -255,10 +250,10 @@ Prepare the kedro benchmark project
 
     # check the docker images
     $ docker images | grep minio-s3-benchmark
-    minio-s3-benchmark-with-500m-data       latest    bcee3927f4c5   49 minutes ago       2.01GB
-    minio-s3-benchmark-with-100m-data       latest    624237fdc2e4   50 minutes ago       1.61GB
-    minio-s3-benchmark-with-10m-data        latest    398084760ac7   50 minutes ago       1.52GB
-    minio-s3-benchmark-with-1m-data         latest    c37c31629a3d   50 minutes ago       1.51GB
+    minio-s3-benchmark-with-500m-data   latest  1c75300390cf   8 seconds ago    1.41GB
+    minio-s3-benchmark-with-100m-data   latest  f4aa093ddf36   11 seconds ago   1.01GB
+    minio-s3-benchmark-with-10m-data    latest  8b068600e368   12 seconds ago   913MB
+    minio-s3-benchmark-with-1m-data     latest  b3eaf0a5898c   13 seconds ago   904MB
 
     $ popd
 
@@ -331,16 +326,16 @@ Submit the benchmark workflow
     $ pushd minio-s3
     # 1M data
     $ sed -i "s/minio-s3-benchmark/minio-s3-benchmark-with-1m-data/g" argo-minio-s3-benchmark.yml && \
-        argo submit -n minio --watch argo-minio-s3-benchmark.yml
+        argo submit -n minio-dev --watch argo-minio-s3-benchmark.yml
     # 10M data
     $ sed -i "s/minio-s3-benchmark-with-1m-data/minio-s3-benchmark-with-10m-data/g" argo-minio-s3-benchmark.yml && \
-        argo submit -n minio --watch argo-minio-s3-benchmark.yml
+        argo submit -n minio-dev --watch argo-minio-s3-benchmark.yml
     # 100M data
     $ sed -i "s/minio-s3-benchmark-with-10m-data/minio-s3-benchmark-with-100m-data/g" argo-minio-s3-benchmark.yml && \
-        argo submit -n minio --watch argo-minio-s3-benchmark.yml
+        argo submit -n minio-dev --watch argo-minio-s3-benchmark.yml
     # 500M data
     $ sed -i "s/minio-s3-benchmark-with-100m-data/minio-s3-benchmark-with-500m-data/g" argo-minio-s3-benchmark.yml && \
-        argo submit -n minio --watch argo-minio-s3-benchmark.yml
+        argo submit -n minio-dev --watch argo-minio-s3-benchmark.yml
 
 4. Record the time of each workflow.
 
@@ -355,7 +350,7 @@ the completion time of the argo workflow.
 
 | Data Size | Vineyard |  AWS S3  | MinIO S3 |
 | --------- | -------- | -------- | -------- |
-| 1M        | 30s      | 61s      | 31s      |
-| 10M       | 30s      | 63s      | 31s      |
-| 100M      | 60s      | 141s     | 63s      |
-| 500M      | 108s     | 418s     | 178s     |
+| 1M        | 30s      | 50s      | 30s      |
+| 10M       | 30s      | 63s      | 30s      |
+| 100M      | 60s      | 144s     | 64s      |
+| 500M      | 91s      | 457s     | 177s     |

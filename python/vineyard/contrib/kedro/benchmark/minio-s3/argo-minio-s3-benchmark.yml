@@ -16,7 +16,7 @@ spec:
       - name: kedro_node
     container:
       imagePullPolicy: IfNotPresent
-      image: minio-s3-benchmark-
+      image: minio-s3-benchmark
       command: [kedro]
       args: ["run", "-n",  "{{inputs.parameters.kedro_node}}"]
   - name: dag

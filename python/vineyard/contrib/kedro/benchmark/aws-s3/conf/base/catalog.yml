@@ -9,21 +9,21 @@ house_prices:
 
 house_prices_clean:
   type: pandas.CSVDataSet
-  filepath: s3://argo-benchmark-bucket/house_prices_clean1.csv
+  filepath: s3://aws-s3-benchmark-bucket/house_prices_clean1.csv
   credentials: benchmark_aws_s3
 house_prices_drop:
   type: pandas.CSVDataSet
-  filepath: s3://argo-benchmark-bucket/house_prices_drop1.csv
+  filepath: s3://aws-s3-benchmark-bucket/house_prices_drop1.csv
   credentials: benchmark_aws_s3
 house_prices_no_na:
   type: pandas.CSVDataSet
-  filepath: s3://argo-benchmark-bucket/house_prices_no_na1.csv
+  filepath: s3://aws-s3-benchmark-bucket/house_prices_no_na1.csv
   credentials: benchmark_aws_s3
 house_prices_no_outliers:
   type: pandas.CSVDataSet
-  filepath: s3://argo-benchmark-bucket/house_prices_no_outliers1.csv
+  filepath: s3://aws-s3-benchmark-bucket/house_prices_no_outliers1.csv
   credentials: benchmark_aws_s3
 y_train:
   type: pandas.CSVDataSet
-  filepath: s3://argo-benchmark-bucket/y_train1.csv
+  filepath: s3://aws-s3-benchmark-bucket/y_train1.csv
   credentials: benchmark_aws_s3
