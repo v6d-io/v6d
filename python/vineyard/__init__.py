@@ -20,6 +20,10 @@ import contextlib
 import logging
 import os
 import sys
+from typing import Any
+from typing import Dict
+from typing import Generator
+from typing import Union
 
 from .version import __version__
 
@@ -39,7 +43,11 @@ logger = logging.getLogger('vineyard')
 
 
 @contextlib.contextmanager
-def envvars(key: str, value: str = None, append: bool = False) -> None:
+def envvars(
+    key: Union[str, Dict[str, str]],
+    value: Union[str, None] = None,
+    append: bool = False,
+) -> Generator[os._Environ, Any, Any]:
     """Create a context with specified environment variables set.
 
     It is useful for setting the :code`VINEYARD_IPC_SOCKET` environment
@@ -59,9 +67,13 @@ def envvars(key: str, value: str = None, append: bool = False) -> None:
             # env :code:`KEY1` will be set as None and :code:`KEY2` will
             # be set as :code:`value2`.
     """
-    items = key
     if isinstance(key, str):
-        items = {key: value}
+        if value is None:
+            items = dict()
+        else:
+            items: Dict[str, str] = {key: value}
+    else:
+        items: Dict[str, str] = key
     original_items = dict()
     for k, v in items.items():
         original_items[k] = os.environ.get(k, None)
