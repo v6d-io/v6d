@@ -167,6 +167,8 @@ class ArrowFragmentBase : public vineyard::Object {
 
   virtual bool compact_edges() const = 0;
 
+  virtual bool use_perfect_hash() const = 0;
+
   virtual const PropertyGraphSchema& schema() const = 0;
 
   virtual bool directed() const = 0;

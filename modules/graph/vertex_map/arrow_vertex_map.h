@@ -74,6 +74,8 @@ class ArrowVertexMap
 
   fid_t fnum() const { return fnum_; }
 
+  bool use_perfect_hash() const { return use_perfect_hash_; }
+
   size_t GetTotalNodesNum() const;
 
   size_t GetTotalNodesNum(label_id_t label) const;
