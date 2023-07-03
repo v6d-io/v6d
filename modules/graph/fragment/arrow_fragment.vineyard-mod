@@ -129,6 +129,8 @@ class [[vineyard]] ArrowFragment
 
   bool compact_edges() const override { return compact_edges_; }
 
+  bool use_perfect_hash() const override { return vm_ptr_->use_perfect_hash(); }
+
   bool directed() const override { return directed_; }
 
   const PropertyGraphSchema& schema() const override { return schema_; }

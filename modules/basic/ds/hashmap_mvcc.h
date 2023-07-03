@@ -234,15 +234,17 @@ class HashmapMVCC
   /**
    * @brief Emplace key-value pair into the hashmap.
    *
+   * @param out If the emplace finished without rehash, the `out` will
+   *        be nullptr, otherwise will be the new hashmap after rehash.
    */
   template <class... Args>
   inline Status emplace(std::shared_ptr<hashmap_t>& out, Args&&... args) {
-    out = this->shared_from_this();
-    if (try_emplace(const_cast<MutEntryPointer>(out->entries_),
-                    out->hash_policy_, out->num_buckets_,
-                    std::forward<Args>(args)...)) {
+    if (try_emplace(const_cast<MutEntryPointer>(entries_), hash_policy_,
+                    num_buckets_, std::forward<Args>(args)...)) {
+      out = nullptr;
       return Status::OK();
     }
+    out = this->shared_from_this();
     size_t new_num_buckets = compute_next_num_buckets(out->num_buckets_);
     while (true) {
       DVLOG(100) << "trigger rehash when emplace: " << new_num_buckets;

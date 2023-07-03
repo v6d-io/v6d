@@ -43,6 +43,9 @@ void testHashmapMVCC(Client& client) {
   for (int i = 1; i <= n; ++i) {
     std::shared_ptr<hashmap_t> hmap;
     VINEYARD_CHECK_OK(hashmaps[i - 1]->emplace(hmap, i, i * 100.0));
+    if (hmap == nullptr) {
+      hmap = hashmaps[i - 1];
+    }
     hashmaps.emplace_back(hmap);
   }
 
@@ -71,6 +74,9 @@ void testHashmapMVCCLarge(Client& client) {
   for (int i = 1; i <= n; ++i) {
     std::shared_ptr<hashmap_t> hmap;
     VINEYARD_CHECK_OK(hashmaps[i - 1]->emplace(hmap, i, i * 100.0));
+    if (hmap == nullptr) {
+      hmap = hashmaps[i - 1];
+    }
     hashmaps.emplace_back(hmap);
   }
 
@@ -97,6 +103,9 @@ void testHashmapMVCCView(Client& client) {
   for (int i = 1; i <= n; ++i) {
     std::shared_ptr<hashmap_t> hmap;
     VINEYARD_CHECK_OK(hashmaps[i - 1]->emplace(hmap, i, i * 100.0));
+    if (hmap == nullptr) {
+      hmap = hashmaps[i - 1];
+    }
     hashmaps.emplace_back(hmap);
   }
 
