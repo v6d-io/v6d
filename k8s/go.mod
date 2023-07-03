@@ -22,7 +22,7 @@ require (
 	k8s.io/client-go v0.25.0
 	k8s.io/component-base v0.25.0
 	k8s.io/component-helpers v0.25.0
-	k8s.io/kubernetes v1.24.3
+	k8s.io/kubernetes v1.25.0
 	sigs.k8s.io/controller-runtime v0.13.0
 	sigs.k8s.io/kustomize/kustomize/v4 v4.5.7
 	sigs.k8s.io/kustomize/kyaml v0.13.9
