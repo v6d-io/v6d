@@ -164,7 +164,7 @@ and the I/O cost between external AWS S3 or Minio services.
 
 Besides the runner, like `kedro catalog create`, the Kedro vineyard plugin provides a command-line
 interface to generate the catalog configuration for given pipeline, which will rewrite the unspecified
-intermediate data to `VinneyardDataSet`, e.g.,
+intermediate data to `VineyardDataSet`, e.g.,
 
 ```bash
 $ kedro vineyard catalog create -p __default__
