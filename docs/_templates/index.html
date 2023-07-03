@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./_static/css/index.css" />
+    <link
+      rel="stylesheet"
+      href="https://use.fontawesome.com/releases/v5.0.7/css/all.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Roboto&display=swap"
+      rel="stylesheet"
+    />
+    <title>Vineyard: Next Gen Data Manager</title>
+  </head>
+  <body>
+    <nav>
+      <div class="flex navbar justify-content-space-between">
+        <div class="logo">
+          <img
+            src="{{ pathto('_static/images/vineyard-logo-h.png', 1) }}"
+            alt="vineyard logo"
+          />
+        </div>
+        <div class="menu-toggle" id="mobile-menu" onClick="handleToggle()">
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </div>
+        <ul class="flex vertical-align-center" id="navLinkWrapper">
+          <li><a href="{{ pathto('index') }}" class="navLink">Home</a></li>
+          <li><a href="{{ pathto('docs') }}" class="navLink">Docs</a></li>
+          <li>
+            <a
+              href="{{ pathto('notes/developers/build-from-source') }}"
+              class="navLink"
+              >Download</a
+            >
+          </li>
+          <li>
+            <a href="{{ pathto('notes/developers') }}" class="navLink"
+              >Community</a
+            >
+          </li>
+        </ul>
+        <div class="flex media-section">
+          <i class="fab fa-slack"></i>
+          <i class="fab fa-twitter"></i>
+          <i class="fab fa-github-square"></i>
+        </div>
+      </div>
+    </nav>
+    <section class="flex justify-content-center hero-section">
+      <div
+        class="text-center hero-container flex flex-column align-items-center"
+      >
+        <h2 class="hero-text">
+          Vineyard: An In-Memory Data Manager For Data-Intensive Analysis
+        </h2>
+        <p class="hero-text-secondary">
+          an innovative in-memory immutable data manager that offers
+          out-of-the-box high-level abstractions and zero-copy in-memory sharing
+          for distributed data in various big data tasks
+        </p>
+        <div class="btn-container">
+          <button class="btn-primary">Get Started</button>
+          <button class="btn-secondary">API Reference</button>
+        </div>
+      </div>
+    </section>
+    <section class="feature-section feature-section-mobile">
+      <div class="flex justify-content-space-between feature-container">
+        <div class="feature-item">
+          <h4><i class="fa fa-exchange"></i>Efficient data sharing</h4>
+          <p>
+            Vineyard shares immutable data across different systems using shared
+            memory without extra overheads, eliminating the overhead of
+            serialization/deserialization
+          </p>
+        </div>
+        <div class="feature-item">
+          <h4>
+            <i class="fa-solid fa-box-open"></i>Out-of-the-box data abstraction
+          </h4>
+          <p>
+            Vineyard defines a metadata-payload separated data model to capture
+            the payload commonalities and method commonalities between sharable
+            object
+          </p>
+        </div>
+      </div>
+      <div class="flex justify-content-space-between feature-container">
+        <div class="feature-item">
+          <h4>
+            <i class="fa-solid fa-plug fa-rotate-90 fa-lg"></i>Pluggable I/O
+            routines
+          </h4>
+          <p>
+            Vineyard provides common manipulation routines for immutable data as
+            drivers, which extend the capabilities of data structures by
+            registering appropriate drivers
+          </p>
+        </div>
+        <div class="feature-item">
+          <h4>
+            <i class="fa-solid fa-vector-square fa-lg"></i>Data orchestration on
+            Kubernetes
+          </h4>
+          <p>
+            Vineyard provides efficient distributed data sharing in cloud-native
+            environments by embracing cloud-native big data processing
+          </p>
+        </div>
+      </div>
+    </section>
+    <section class="feature-section">
+      <h2 class="text-center">Use Cases</h2>
+      <div class="flex justify-content-space-between gap-sm feature-container">
+        <div class="feature-item-sm text-center">
+          <h4>Object Manager</h4>
+          <p>
+            Put and get arbitrary objects using Vineyard, in a zero-copy way!
+          </p>
+        </div>
+        <div class="feature-item-sm text-center">
+          <h4>Cross-system sharing</h4>
+          <p>Share large objects across computing systems.</p>
+        </div>
+        <div class="feature-item-sm text-center">
+          <h4>Data Orchestration</h4>
+          <p>
+            Vineyard coordinates the flow of objects and jobs on Kubernetes
+            based on data-aware scheduling.
+          </p>
+        </div>
+      </div>
+    </section>
+    <div class="banner text-center">
+      <p>
+        Vineyard is a
+        <a href="https://www.cncf.io/sandbox-projects/" class="banner-link"
+          >Cloud Native Computing Foundation sandbox project</a
+        >
+      </p>
+      <div class="img-container">
+        <img src="./images/cncf-color.svg" alt="cncf logo" />
+      </div>
+    </div>
+    <footer class="footer">
+      <div class="flex justify-content-space-between footer-container">
+        <ul>
+          <li class="text-bold padding-bottom-20">Docs</li>
+          <li class="padding-bottom-10">
+            <a href="#" class="navLink">Getting Started</a>
+          </li>
+          <li class="padding-bottom-10">
+            <a href="#" class="navLink">Key Concepts</a>
+          </li>
+          <li><a href="#" class="navLink">Architecture</a></li>
+        </ul>
+        <ul>
+          <li class="text-bold padding-bottom-20">Community</li>
+          <li class="padding-bottom-10">
+            <a href="#" class="navLink">GitHub</a>
+          </li>
+          <li class="padding-bottom-10">
+            <a href="#" class="navLink">Slack</a>
+          </li>
+          <li><a href="#" class="navLink">Twitter</a></li>
+        </ul>
+        <ul>
+          <li class="text-bold padding-bottom-20">More</li>
+          <li><a href="#" class="navLink">Faq</a></li>
+        </ul>
+        <ul>
+          <li class="text-bold padding-bottom-20">Legal</li>
+          <li class="padding-bottom-10">
+            <a href="#" class="navLink">Terms</a>
+          </li>
+          <li class="padding-bottom-10">
+            <a href="#" class="navLink">Privacy</a>
+          </li>
+          <li><a href="#" class="navLink">Trademarks</a></li>
+        </ul>
+      </div>
+      <div class="text-center footer-info-text">
+        <p>
+          Copyright &copy;
+          <span id="copyright">
+            <script>
+              document
+                .getElementById("copyright")
+                .appendChild(document.createTextNode(new Date().getFullYear()));
+            </script>
+          </span>
+          , The Vineyard Authors
+        </p>
+        <p>
+          The Linux Foundation has registered trademarks and uses trademarks.
+          For a list of trademarks of The Linux Foundation, please see our
+          Trademark Usage page.
+        </p>
+      </div>
+    </footer>
+  </body>
+  <script
+    src="https://kit.fontawesome.com/91dde3bebe.js"
+    crossorigin="anonymous"
+  ></script>
+  <script>
+    const handleToggle = () => {
+      const menuToggleNode = document.getElementById("mobile-menu");
+      let navBarLinkContainer = document.getElementById("navLinkWrapper");
+
+      if (menuToggleNode.className === "menu-toggle") {
+        menuToggleNode.className = "menu-toggle is-active";
+        navBarLinkContainer.style.display = "flex";
+        navBarLinkContainer.className = "navLinkContainer";
+      } else {
+        menuToggleNode.className = "menu-toggle";
+        navBarLinkContainer.style.display = "none";
+      }
+    };
+  </script>
+</html>
