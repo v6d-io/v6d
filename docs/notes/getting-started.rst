@@ -64,7 +64,8 @@ to retrieve shared objects from vineyard using the latter.
 
 In the following example, we use :code:`client.put()` to build a vineyard object from the numpy
 ndarray ``arr``, which returns the ``object_id`` - a unique identifier in vineyard representing
-the object. Given the ``object_id``, we can obtain a shared-memory object from vineyard with the :code:`client.get()` method.
+the object. Given the ``object_id``, we can obtain a shared-memory object from vineyard with the
+:code:`client.get()` method.
 
 .. code:: python
 
@@ -149,7 +150,7 @@ the producer and consumer in the example below:
 
 Running the code above, you should see the following output:
 
-.. code:: python
+.. code:: text
 
    A   -4.529080
    B   -2.969152
@@ -212,7 +213,8 @@ Learn more about vineyard's key concepts from the following user guides:
       :text: I/O Drivers
       :classes: btn-block stretched-link
 
-   Understand the design and implementation of pluggable routines for I/O, repartition, migration, and more.
+   Understand the design and implementation of pluggable routines for I/O, repartition,
+   migration, and more.
 
 Vineyard is a natural fit for cloud-native computing, where it can be deployed and
 managed by the *vineyard operator*, providing data-aware scheduling for data analytical

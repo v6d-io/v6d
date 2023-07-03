@@ -6,11 +6,10 @@ Kedro Integration Performance Report
 This is a performance report of kedro integration, here we will compare three
 different data catalog of kedro benchmark project: vineyard, AWS S3 and MinIO S3.
 
-
 Create a kubernetes cluster
 ---------------------------
 
-If you don't have a kubernetes on hand, you can use the [kind](https://kind.sigs.k8s.io/)
+If you don't have a kubernetes on hand, you can use the `kind <https://kind.sigs.k8s.io/>`_
 to create a kubernetes cluster with 4 nodes(including a master node) as follows:
 
 .. code:: bash
@@ -79,7 +78,6 @@ Prepare AWS S3
 
 3. Create a bucket named `aws-s3-benchmark-bucket` on the AWS S3.
 
-
 Install MinIO S3
 ----------------
 
@@ -108,11 +106,11 @@ Install MinIO S3
       name: my-minio-cred
     type: Opaque
     data:
-      accessKey: QUtJQUlPU0ZPRE5ON0VYQU1QTEU= # AKIAIOSFODNN7EXAMPLE
-      secretKey: d0phbHJYVXRuRkVNSS9LN01ERU5HL2JQeFJmaUNZRVhBTVBMRUtFWQ== #wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+      accessKey: <Your Access Key>
+      secretKey: <Your Secret Key>
     EOF
 
-4. Set the configurations of MinIO clusters.
+1. Set the configurations of MinIO clusters.
 
 .. code:: bash
 
@@ -131,15 +129,17 @@ Install MinIO S3
             key: secretKey
           useSDKCreds: false
     EOF
+
     # Get the actual MinIO service address.
     $ minioUrl=$(kubectl get service minio-artifacts -n minio -o jsonpath='{.spec.clusterIP}:{.spec.ports[0].nodePort}')
-    
+
     # Replace with actual minio url
     $ sed -i "s/{{MINIO}}/${minioUrl}/g" ./minio-default.yaml
+
     # Apply to configmap in the argo namespace
     $ kubectl -n argo patch configmap/workflow-controller-configmap --patch "$(cat ./minio-default.yaml)"
 
-5. Forward minio-artifacts service.
+1. Forward minio-artifacts service.
 
 .. code:: bash
 
@@ -158,13 +158,13 @@ Install MinIO S3
 .. code:: bash
 
     $ mc alias set minio http://localhost:9000
-    Enter Access Key: AKIAIOSFODNN7EXAMPLE
-    Enter Secret Key: wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+    Enter Access Key: <Your Access Key>
+    Enter Secret Key: <Your Secret Key>
 
-8. Create a bucket named `minio-s3-benchmark-bucket` on the MinIO cluster.
+1. Create a bucket named `minio-s3-benchmark-bucket` on the MinIO cluster.
 
 .. code:: bash
-    
+
     $ mc mb minio/minio-s3-benchmark-bucket
     Bucket created successfully `minio/minio-s3-benchmark-bucket`.
 
@@ -189,8 +189,8 @@ Install the argo server
 .. code:: bash
 
     $ kubectl get pod -n argo
-    NAME                                READY   STATUS    RESTARTS   AGE                                                          │
-    argo-server-7698c96655-jg2ds        1/1     Running   0          11s                                                          
+    NAME                                READY   STATUS    RESTARTS   AGE
+    argo-server-7698c96655-jg2ds        1/1     Running   0          11s
     workflow-controller-b888f4458-x4qf2 1/1     Running   0          11s
 
 
@@ -249,25 +249,38 @@ Prepare the kedro benchmark project
 .. code:: bash
 
     $ pushd minio-s3-benchmark
+
     # build the docker images
     $ make
+
     # check the docker images
     $ docker images | grep minio-s3-benchmark
     minio-s3-benchmark-with-500m-data       latest    bcee3927f4c5   49 minutes ago       2.01GB
     minio-s3-benchmark-with-100m-data       latest    624237fdc2e4   50 minutes ago       1.61GB
     minio-s3-benchmark-with-10m-data        latest    398084760ac7   50 minutes ago       1.52GB
     minio-s3-benchmark-with-1m-data         latest    c37c31629a3d   50 minutes ago       1.51GB
+
     $ popd
 
 5. Load the above images to the kind cluster.
 
 .. code:: bash
+
     # load the vineyard benchmark images
-    $ kind load docker-image vineyard-benchmark-with-1m-data && kind load docker-image vineyard-benchmark-with-10m-data && kind load docker-image vineyard-benchmark-with-100m-data && kind load docker-image vineyard-benchmark-with-500m-data
+    $ kind load docker-image vineyard-benchmark-with-1m-data && \
+        kind load docker-image vineyard-benchmark-with-10m-data && \
+        kind load docker-image vineyard-benchmark-with-100m-data && \
+        kind load docker-image vineyard-benchmark-with-500m-data
     # load the aws s3 benchmark images
-    $ kind load docker-image aws-s3-benchmark-with-1m-data && kind load docker-image aws-s3-benchmark-with-10m-data && kind load docker-image aws-s3-benchmark-with-100m-data && kind load docker-image aws-s3-benchmark-with-500m-data
+    $ kind load docker-image aws-s3-benchmark-with-1m-data && \
+        kind load docker-image aws-s3-benchmark-with-10m-data && \
+        kind load docker-image aws-s3-benchmark-with-100m-data && \
+        kind load docker-image aws-s3-benchmark-with-500m-data
     # load the minio s3 benchmark images
-    $ kind load docker-image minio-s3-benchmark-with-1m-data && kind load docker-image minio-s3-benchmark-with-10m-data && kind load docker-image minio-s3-benchmark-with-100m-data && kind load docker-image minio-s3-benchmark-with-500m-data
+    $ kind load docker-image minio-s3-benchmark-with-1m-data && \
+        kind load docker-image minio-s3-benchmark-with-10m-data && \
+        kind load docker-image minio-s3-benchmark-with-100m-data && \
+        kind load docker-image minio-s3-benchmark-with-500m-data
 
 
 Submit the benchmark workflow
@@ -279,13 +292,17 @@ Submit the benchmark workflow
 
     $ pushd vineyard-benchmark
     # 1M data
-    $ sed -i "s/vineyard-benchmark/vineyard-benchmark-with-1m-data/g" argo-vineyard-benchmark.yml && argo submit -n vineyard-system --watch argo-vineyard-benchmark.yml
+    $ sed -i "s/vineyard-benchmark/vineyard-benchmark-with-1m-data/g" argo-vineyard-benchmark.yml && \
+        argo submit -n vineyard-system --watch argo-vineyard-benchmark.yml
     # 10M data
-    $ sed -i "s/vineyard-benchmark-with-1m-data/vineyard-benchmark-with-10m-data/g" argo-vineyard-benchmark.yml && argo submit -n vineyard-system --watch argo-vineyard-benchmark.yml
+    $ sed -i "s/vineyard-benchmark-with-1m-data/vineyard-benchmark-with-10m-data/g" argo-vineyard-benchmark.yml && \
+        argo submit -n vineyard-system --watch argo-vineyard-benchmark.yml
     # 100M data
-    $ sed -i "s/vineyard-benchmark-with-10m-data/vineyard-benchmark-with-100m-data/g" argo-vineyard-benchmark.yml && argo submit -n vineyard-system --watch argo-vineyard-benchmark.yml
+    $ sed -i "s/vineyard-benchmark-with-10m-data/vineyard-benchmark-with-100m-data/g" argo-vineyard-benchmark.yml && \
+        argo submit -n vineyard-system --watch argo-vineyard-benchmark.yml
     # 500M data
-    $ sed -i "s/vineyard-benchmark-with-100m-data/vineyard-benchmark-with-500m-data/g" argo-vineyard-benchmark.yml && argo submit -n vineyard-system --watch argo-vineyard-benchmark.yml
+    $ sed -i "s/vineyard-benchmark-with-100m-data/vineyard-benchmark-with-500m-data/g" argo-vineyard-benchmark.yml && \
+        argo submit -n vineyard-system --watch argo-vineyard-benchmark.yml
     $ popd
 
 2. Submit the aws s3 benchmark workflow.
@@ -294,13 +311,17 @@ Submit the benchmark workflow
 
     $ pushd aws-s3-benchmark
     # 1M data
-    $ sed -i "s/aws-s3-benchmark/aws-s3-benchmark-with-1m-data/g" argo-aws-s3-benchmark.yml && argo submit -n s3 --watch argo-aws-s3-benchmark.yml
+    $ sed -i "s/aws-s3-benchmark/aws-s3-benchmark-with-1m-data/g" argo-aws-s3-benchmark.yml && \
+        argo submit -n s3 --watch argo-aws-s3-benchmark.yml
     # 10M data
-    $ sed -i "s/aws-s3-benchmark-with-1m-data/aws-s3-benchmark-with-10m-data/g" argo-aws-s3-benchmark.yml && argo submit -n s3 --watch argo-aws-s3-benchmark.yml
+    $ sed -i "s/aws-s3-benchmark-with-1m-data/aws-s3-benchmark-with-10m-data/g" argo-aws-s3-benchmark.yml && \
+        argo submit -n s3 --watch argo-aws-s3-benchmark.yml
     # 100M data
-    $ sed -i "s/aws-s3-benchmark-with-10m-data/aws-s3-benchmark-with-100m-data/g" argo-aws-s3-benchmark.yml && argo submit -n s3 --watch argo-aws-s3-benchmark.yml
+    $ sed -i "s/aws-s3-benchmark-with-10m-data/aws-s3-benchmark-with-100m-data/g" argo-aws-s3-benchmark.yml && \
+        argo submit -n s3 --watch argo-aws-s3-benchmark.yml
     # 500M data
-    $ sed -i "s/aws-s3-benchmark-with-100m-data/aws-s3-benchmark-with-500m-data/g" argo-aws-s3-benchmark.yml && argo submit -n s3 --watch argo-aws-s3-benchmark.yml
+    $ sed -i "s/aws-s3-benchmark-with-100m-data/aws-s3-benchmark-with-500m-data/g" argo-aws-s3-benchmark.yml && \
+        argo submit -n s3 --watch argo-aws-s3-benchmark.yml
     $ popd
 
 3. Submit the minio s3 benchmark workflow.
@@ -309,14 +330,18 @@ Submit the benchmark workflow
 
     $ pushd minio-s3-benchmark
     # 1M data
-    $ sed -i "s/minio-s3-benchmark/minio-s3-benchmark-with-1m-data/g" argo-minio-s3-benchmark.yml && argo submit -n minio --watch argo-minio-s3-benchmark.yml
+    $ sed -i "s/minio-s3-benchmark/minio-s3-benchmark-with-1m-data/g" argo-minio-s3-benchmark.yml && \
+        argo submit -n minio --watch argo-minio-s3-benchmark.yml
     # 10M data
-    $ sed -i "s/minio-s3-benchmark-with-1m-data/minio-s3-benchmark-with-10m-data/g" argo-minio-s3-benchmark.yml && argo submit -n minio --watch argo-minio-s3-benchmark.yml
+    $ sed -i "s/minio-s3-benchmark-with-1m-data/minio-s3-benchmark-with-10m-data/g" argo-minio-s3-benchmark.yml && \
+        argo submit -n minio --watch argo-minio-s3-benchmark.yml
     # 100M data
-    $ sed -i "s/minio-s3-benchmark-with-10m-data/minio-s3-benchmark-with-100m-data/g" argo-minio-s3-benchmark.yml && argo submit -n minio --watch argo-minio-s3-benchmark.yml
+    $ sed -i "s/minio-s3-benchmark-with-10m-data/minio-s3-benchmark-with-100m-data/g" argo-minio-s3-benchmark.yml && \
+        argo submit -n minio --watch argo-minio-s3-benchmark.yml
     # 500M data
-    $ sed -i "s/minio-s3-benchmark-with-100m-data/minio-s3-benchmark-with-500m-data/g" argo-minio-s3-benchmark.yml && argo submit -n minio --watch argo-minio-s3-benchmark.yml
-    
+    $ sed -i "s/minio-s3-benchmark-with-100m-data/minio-s3-benchmark-with-500m-data/g" argo-minio-s3-benchmark.yml && \
+        argo submit -n minio --watch argo-minio-s3-benchmark.yml
+
 4. Record the time of each workflow.
 
 
@@ -325,10 +350,10 @@ Summary
 
 After running the benchmark, we can get the following results:
 
-The data size is the size of input file, and the time is 
+The data size is the size of input file, and the time is
 the completion time of the argo workflow.
 
-| Data Size | Vineyard |  AWS S3  | MinIO S3 | 
+| Data Size | Vineyard |  AWS S3  | MinIO S3 |
 | --------- | -------- | -------- | -------- |
 | 1M        | 30s      | 61s      | 31s      |
 | 10M       | 30s      | 63s      | 31s      |

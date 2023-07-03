@@ -194,9 +194,11 @@ Argo Workflow Integration
 -------------------------
 
 
-The Kedro vineyard plugin also provides a tool to generate the Argo workflow YAML file. Next, we will show how to generate the Argo workflow YAML file and run the Argo workflow on Kubernetes.
+The Kedro vineyard plugin also provides a tool to generate the Argo workflow YAML file. Next, we will
+show how to generate the Argo workflow YAML file and run the Argo workflow on Kubernetes.
 
-Install vineyard operator as follows. 
+Install vineyard operator as follows.
+
 ```bash
 # export your kubeconfig path here
 $ export KUBECONFIG=/path/to/your/kubeconfig
@@ -206,50 +208,59 @@ $ go run k8s/cmd/main.go deploy vineyard-cluster --create-namespace
 ```
 
 Install the argo server as follows.
+
 ```bash
 # install the argo server
 $ kubectl create namespace argo
 $ kubectl apply -n argo -f https://github.com/argoproj/argo-workflows/releases/download/v3.4.8/install.yaml
 ```
 
-Generate the iris demo and 
+Generate the iris demo and
+
 ```bash
 $ kedro new --starter=pandas-iris
 ```
 
 Build the docker image for the iris demo and input `N` if you
 encounter the usage analytics prompt.
+
 ```bash
 # go to the iris demo root directory
 $ cd iris
 $ kedro vineyard docker build
-As an open-source project, we collect usage analytics. 
-We cannot see nor store information contained in a Kedro project. 
-You can find out more by reading our privacy notice: 
-https://github.com/kedro-org/kedro-plugins/tree/main/kedro-telemetry#privacy-notice 
+As an open-source project, we collect usage analytics.
+We cannot see nor store information contained in a Kedro project.
+You can find out more by reading our privacy notice:
+https://github.com/kedro-org/kedro-plugins/tree/main/kedro-telemetry#privacy-notice
 Do you opt into usage analytics?  [y/N]: N
 ```
 
-You can see the docker image named `docker.io/library/iris` is built successfully, and then push the docker image to your docker registry or load the docker image to your Kubernetes cluster.
+You can see the docker image named `docker.io/library/iris` is built successfully, and then push the docker
+image to your docker registry or load the docker image to your Kubernetes cluster.
+
 ```bash
-$ docker images | grep iris     
+$ docker images | grep iris
 iris   latest   3c92da8241c6   About a minute ago   690MB
 ```
 
 Generate the Argo workflow YAML file.
+
 ```bash
 $ kedro vineyard argo generate -i iris
-# check the generated Argo workflow YAML file, you can see the Argo workflow YAML file named `iris.yaml` is generated successfully.
-$ ls -l argo-iris.yml                          
+# check the generated Argo workflow YAML file, you can see the Argo workflow YAML file named `iris.yaml`
+# is generated successfully.
+$ ls -l argo-iris.yml
 -rw-rw-r-- 1 gsbot gsbot 3685 Jun 12 23:55 argo-iris.yml
 ```
 
 Submit the Argo workflow YAML file to Kubernetes.
+
 ```bash
 $ argo submit -n argo argo-iris.yml
 ```
 
 Check the Argo workflow status.
+
 ```bash
 $ argo list workflows -n argo
 NAME         STATUS      AGE   DURATION   PRIORITY   MESSAGE
