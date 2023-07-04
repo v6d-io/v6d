@@ -31,7 +31,7 @@ import (
 )
 
 // nolint: lll
-// +kubebuilder:webhook:admissionReviewVersions=v1,sideEffects=None,path=/mutate-v1-pod-scheduling,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create;update,versions=v1,name=mpod.scheduling.kb.io
+// +kubebuilder:webhook:admissionReviewVersions=v1,sideEffects=None,path=/mutate-v1-pod-scheduling,mutating=true,failurePolicy=fail,groups="",resources=pods,verbs=create,versions=v1,name=mpod.scheduling.kb.io
 
 // Injector injects scheduling info into pods.
 type Injector struct {
