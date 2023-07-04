@@ -53,12 +53,14 @@ public class RecordBatchBuilder implements ObjectBuilder {
     }
 
     public RecordBatchBuilder(
-            final IPCClient client, final Schema schema, List<ColumnarDataBuilder> columnBuilders)
+            final IPCClient client, final Schema schema, List<ColumnarDataBuilder> columnBuilders, int rows)
             throws VineyardException {
         this.schemaBuilder = SchemaBuilder.fromSchema(schema);
         this.schemaMutable = false;
+        this.rows = rows;
 
         this.columnBuilders = requireNonNull(columnBuilders, "column builders is null");
+        // Fill array builder in the future.
     }
 
     public void addField(final Field field) throws VineyardException {
@@ -110,11 +112,15 @@ public class RecordBatchBuilder implements ObjectBuilder {
         meta.setValue("column_num_", arrayBuilders.size());
         meta.setValue("row_num_", rows);
         meta.setValue("__columns_-size", arrayBuilders.size());
+        System.out.println("Seal schema");
         meta.addMember("schema_", schemaBuilder.seal(client));
 
+        System.out.println("Seal arrayBuilders");
         for (int index = 0; index < arrayBuilders.size(); ++index) {
+            System.out.println("index:" + index);
             meta.addMember("__columns_-" + index, arrayBuilders.get(index).seal(client));
         }
+        System.out.println("Seal arrayBuilders done");
         meta.setNBytes(0); // FIXME
 
         return client.createMetaData(meta);

@@ -16,16 +16,21 @@ package io.v6d.hive.ql.io;
 
 import io.v6d.core.common.util.VineyardException;
 import io.v6d.core.client.IPCClient;
-import io.v6d.modules.basic.dataframe.DataFrameBuilder;
-import io.v6d.modules.basic.tensor.TensorBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.modules.basic.arrow.TableBuilder;
+import io.v6d.modules.basic.arrow.SchemaBuilder;
+import io.v6d.modules.basic.arrow.Arrow;
+import io.v6d.modules.basic.arrow.RecordBatchBuilder;
 
 import java.io.IOException;
 import java.util.Properties;
 import java.util.ArrayList;
 import java.util.List;
+import lombok.val;
 
 import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.types.pojo.*;
+import org.apache.arrow.vector.*;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
@@ -76,8 +81,11 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
     // vineyard
     private static IPCClient client;
-    private DataFrameBuilder dataFrameBuilder;
-    private TensorBuilder tensorBuilder;
+    // private DataFrameBuilder dataFrameBuilder;
+    // private TensorBuilder tensorBuilder;
+    private TableBuilder tableBuilder;
+    private SchemaBuilder schemaBuilder;
+    private List<RecordBatchBuilder> recordBatchBuilders;
 
     @lombok.SneakyThrows
     public SinkRecordWriter(
@@ -109,7 +117,6 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         } else {
             System.out.printf("connected to vineyard succeed!\n");
         }
-        
     }
 
     @Override
@@ -118,35 +125,73 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         VectorSchemaRoot root = ((ArrowWrapperWritable) w).getVectorSchemaRoot();
         org.apache.arrow.vector.types.pojo.Schema schema = root.getSchema();
 
+        schemaBuilder = SchemaBuilder.fromSchema(schema);
+        recordBatchBuilders = new ArrayList<RecordBatchBuilder>();
+        RecordBatchBuilder recordBatchBuilder;
+
         try {
-            dataFrameBuilder = new DataFrameBuilder(client);
-        } catch (Exception e) {
-            throw new IOException("Create DataFrameBuilder failed");
-        }
-        // Create Tensors
-        for (int i = 0; i < schema.getFields().size(); i++) {
-            List<Integer> shape = new ArrayList<Integer>(1);
-            shape.add(root.getRowCount());
-            try {
-                tensorBuilder = new TensorBuilder(client, shape, root.getFieldVectors().get(i));
-                dataFrameBuilder.addColumn(schema.getFields().get(i).getName(), tensorBuilder);
-            } catch (Exception e) {
-                System.out.println(e.getMessage());
-                throw new IOException("Create TensorBuilder failed");
+            recordBatchBuilder = new RecordBatchBuilder(client, schema, root.getRowCount());
+            for (int i = 0; i < schema.getFields().size(); i++) {
+                val column = recordBatchBuilder.getColumnBuilder(i);
+                Field field = schema.getFields().get(i);
+                if (field.getType().equals(Arrow.Type.Boolean)) {
+                    BitVector vector = (BitVector) root.getFieldVectors().get(i);
+                    for (int j = 0; j < root.getRowCount(); j++) {
+                        if (vector.get(j) != 0) {
+                            column.setBoolean(j, true);
+                        } else {
+                            column.setBoolean(j, false);
+                        }
+                    }
+                } else if (field.getType().equals(Arrow.Type.Int)) {
+                    IntVector vector= (IntVector) root.getFieldVectors().get(i);
+                    for (int j = 0; j < root.getRowCount(); j++) {
+                        column.setInt(j, vector.get(j));
+                    }
+                } else if (field.getType().equals(Arrow.Type.Int64)) {
+                    BigIntVector vector = (BigIntVector) root.getFieldVectors().get(i);
+                    for (int j = 0; j < root.getRowCount(); j++) {
+                        column.setLong(j, vector.get(j));
+                    }
+                } else if (field.getType().equals(Arrow.Type.Float)) {
+                    Float4Vector vector = (Float4Vector) root.getFieldVectors().get(i);
+                    for (int j = 0; j < root.getRowCount(); j++) {
+                        column.setFloat(j, vector.get(j));
+                    }
+                } else if (field.getType().equals(Arrow.Type.Double)) {
+                    Float8Vector vector = (Float8Vector) root.getFieldVectors().get(i);
+                    for (int j = 0; j < root.getRowCount(); j++) {
+                        column.setDouble(j, vector.get(j));
+                    } 
+                } else if (field.getType().equals(Arrow.Type.VarChar)) {
+                    VarCharVector vector = (VarCharVector) root.getFieldVectors().get(i);
+                    for (int j = 0; j < root.getRowCount(); j++) {
+                        column.setUTF8String(j, vector.getObject(j));
+                    } 
+                } else {
+                    throw new VineyardException.NotImplemented(
+                            "array builder for type " + field.getType() + " is not supported");
+                }
             }
+            recordBatchBuilders.add(recordBatchBuilder);
+        } catch (Exception e) {
+            throw new IOException("Add field failed");
         }
+
+        tableBuilder = new TableBuilder(client, schemaBuilder, recordBatchBuilders);
     }
 
     @Override
     public void close(boolean abort) throws IOException {
         System.out.println("vineyard filesink operator closing");
         try {
-            ObjectMeta meta = dataFrameBuilder.seal(client);
-            System.out.println("DataFrame id:" + meta.getId().value());
+            ObjectMeta meta = tableBuilder.seal(client);
+            System.out.println("Table id in vineyard:" + meta.getId().value());
         } catch (Exception e) {
-            throw new IOException("Seal DataFrame failed");
+            throw new IOException("Seal TableBuilder failed");
         }
     }
+
 }
 
 class MapredRecordWriter<K extends NullWritable, V extends ArrowWrapperWritable>
