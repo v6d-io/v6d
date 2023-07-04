@@ -81,11 +81,10 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
     // vineyard
     private static IPCClient client;
-    // private DataFrameBuilder dataFrameBuilder;
-    // private TensorBuilder tensorBuilder;
     private TableBuilder tableBuilder;
     private SchemaBuilder schemaBuilder;
     private List<RecordBatchBuilder> recordBatchBuilders;
+    private static RecordBatchBuilder recordBatchBuilder;
 
     @lombok.SneakyThrows
     public SinkRecordWriter(
@@ -106,7 +105,6 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         this.tableProperties = tableProperties;
         this.progress = progress;
 
-        System.out.printf("final out path: %s\n", finalOutPath);
         // connect to vineyard
         if (client == null) {
             // TBD: get vineyard socket path from table properties
@@ -115,7 +113,8 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         if (client == null || !client.connected()) {
             throw new VineyardException.Invalid("failed to connect to vineyard");
         } else {
-            System.out.printf("connected to vineyard succeed!\n");
+            System.out.printf("Connected to vineyard succeed!\n");
+            System.out.printf("Hello vineyard!\n");
         }
     }
 
@@ -127,52 +126,10 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
         schemaBuilder = SchemaBuilder.fromSchema(schema);
         recordBatchBuilders = new ArrayList<RecordBatchBuilder>();
-        RecordBatchBuilder recordBatchBuilder;
 
         try {
             recordBatchBuilder = new RecordBatchBuilder(client, schema, root.getRowCount());
-            for (int i = 0; i < schema.getFields().size(); i++) {
-                val column = recordBatchBuilder.getColumnBuilder(i);
-                Field field = schema.getFields().get(i);
-                if (field.getType().equals(Arrow.Type.Boolean)) {
-                    BitVector vector = (BitVector) root.getFieldVectors().get(i);
-                    for (int j = 0; j < root.getRowCount(); j++) {
-                        if (vector.get(j) != 0) {
-                            column.setBoolean(j, true);
-                        } else {
-                            column.setBoolean(j, false);
-                        }
-                    }
-                } else if (field.getType().equals(Arrow.Type.Int)) {
-                    IntVector vector= (IntVector) root.getFieldVectors().get(i);
-                    for (int j = 0; j < root.getRowCount(); j++) {
-                        column.setInt(j, vector.get(j));
-                    }
-                } else if (field.getType().equals(Arrow.Type.Int64)) {
-                    BigIntVector vector = (BigIntVector) root.getFieldVectors().get(i);
-                    for (int j = 0; j < root.getRowCount(); j++) {
-                        column.setLong(j, vector.get(j));
-                    }
-                } else if (field.getType().equals(Arrow.Type.Float)) {
-                    Float4Vector vector = (Float4Vector) root.getFieldVectors().get(i);
-                    for (int j = 0; j < root.getRowCount(); j++) {
-                        column.setFloat(j, vector.get(j));
-                    }
-                } else if (field.getType().equals(Arrow.Type.Double)) {
-                    Float8Vector vector = (Float8Vector) root.getFieldVectors().get(i);
-                    for (int j = 0; j < root.getRowCount(); j++) {
-                        column.setDouble(j, vector.get(j));
-                    } 
-                } else if (field.getType().equals(Arrow.Type.VarChar)) {
-                    VarCharVector vector = (VarCharVector) root.getFieldVectors().get(i);
-                    for (int j = 0; j < root.getRowCount(); j++) {
-                        column.setUTF8String(j, vector.getObject(j));
-                    } 
-                } else {
-                    throw new VineyardException.NotImplemented(
-                            "array builder for type " + field.getType() + " is not supported");
-                }
-            }
+            fillColumns(root, schema);
             recordBatchBuilders.add(recordBatchBuilder);
         } catch (Exception e) {
             throw new IOException("Add field failed");
@@ -190,8 +147,55 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         } catch (Exception e) {
             throw new IOException("Seal TableBuilder failed");
         }
+        client.disconnect();
+        System.out.println("Bye, vineyard!");
     }
 
+    private static void fillColumns(VectorSchemaRoot root, Schema schema)
+        throws VineyardException {
+        for (int i = 0; i < schema.getFields().size(); i++) {
+            val column = recordBatchBuilder.getColumnBuilder(i);
+            Field field = schema.getFields().get(i);
+            if (field.getType().equals(Arrow.Type.Boolean)) {
+                BitVector vector = (BitVector) root.getFieldVectors().get(i);
+                for (int j = 0; j < root.getRowCount(); j++) {
+                    if (vector.get(j) != 0) {
+                        column.setBoolean(j, true);
+                    } else {
+                        column.setBoolean(j, false);
+                    }
+                }
+            } else if (field.getType().equals(Arrow.Type.Int)) {
+                IntVector vector= (IntVector) root.getFieldVectors().get(i);
+                for (int j = 0; j < root.getRowCount(); j++) {
+                    column.setInt(j, vector.get(j));
+                }
+            } else if (field.getType().equals(Arrow.Type.Int64)) {
+                BigIntVector vector = (BigIntVector) root.getFieldVectors().get(i);
+                for (int j = 0; j < root.getRowCount(); j++) {
+                    column.setLong(j, vector.get(j));
+                }
+            } else if (field.getType().equals(Arrow.Type.Float)) {
+                Float4Vector vector = (Float4Vector) root.getFieldVectors().get(i);
+                for (int j = 0; j < root.getRowCount(); j++) {
+                    column.setFloat(j, vector.get(j));
+                }
+            } else if (field.getType().equals(Arrow.Type.Double)) {
+                Float8Vector vector = (Float8Vector) root.getFieldVectors().get(i);
+                for (int j = 0; j < root.getRowCount(); j++) {
+                    column.setDouble(j, vector.get(j));
+                } 
+            } else if (field.getType().equals(Arrow.Type.VarChar)) {
+                VarCharVector vector = (VarCharVector) root.getFieldVectors().get(i);
+                for (int j = 0; j < root.getRowCount(); j++) {
+                    column.setUTF8String(j, vector.getObject(j));
+                } 
+            } else {
+                throw new VineyardException.NotImplemented(
+                        "array builder for type " + field.getType() + " is not supported");
+            }
+        }
+    }
 }
 
 class MapredRecordWriter<K extends NullWritable, V extends ArrowWrapperWritable>

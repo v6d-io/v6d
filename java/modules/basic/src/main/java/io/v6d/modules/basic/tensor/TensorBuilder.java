@@ -4,9 +4,7 @@ import io.v6d.core.client.Client;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
-import io.v6d.modules.basic.arrow.Buffer;
 import io.v6d.modules.basic.arrow.BufferBuilder;
-import io.v6d.modules.basic.arrow.Int32ArrayBuilder;
 import io.v6d.core.common.util.VineyardException;
 
 import java.util.Collection;
@@ -33,7 +31,7 @@ public class TensorBuilder implements ObjectBuilder{
         for (Integer item : shape) {
             count += item;
         }
-        //TODO:Support other type.
+        //TBD:Support other type.
         size = count * Integer.SIZE;
         bufferBuilder = new BufferBuilder(client, size);
         if (bufferBuilder == null) {
@@ -48,7 +46,7 @@ public class TensorBuilder implements ObjectBuilder{
             count += item.intValue();
         }
 
-        //TODO:Support other type.
+        //TBD:Support other type.
         switch (values.getField().getType().getTypeID()) {
             case Int:
                 dtype = new String("int");
@@ -101,7 +99,7 @@ public class TensorBuilder implements ObjectBuilder{
         this.build(client);
         ObjectMeta tensorMeta = ObjectMeta.empty();
 
-        // TODO: set other typename
+        // TBD: set other typename
         tensorMeta.setTypename("vineyard::Tensor<" + dtype + ">");
         tensorMeta.setValue("value_type_", dtype);
         // Int32ArrayBuilder intBuilder = new Int32ArrayBuilder(client, );

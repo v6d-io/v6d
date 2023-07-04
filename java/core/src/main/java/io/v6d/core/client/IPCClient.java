@@ -312,7 +312,6 @@ public class IPCClient extends Client {
         return buffer;
     }
 
-    // TODO: exception
     public void sealBlob(ObjectID id) throws VineyardException {
         val root = mapper.createObjectNode();
         SealRequest.put(root, id);

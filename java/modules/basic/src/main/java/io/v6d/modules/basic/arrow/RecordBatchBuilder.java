@@ -112,15 +112,11 @@ public class RecordBatchBuilder implements ObjectBuilder {
         meta.setValue("column_num_", arrayBuilders.size());
         meta.setValue("row_num_", rows);
         meta.setValue("__columns_-size", arrayBuilders.size());
-        System.out.println("Seal schema");
         meta.addMember("schema_", schemaBuilder.seal(client));
 
-        System.out.println("Seal arrayBuilders");
         for (int index = 0; index < arrayBuilders.size(); ++index) {
-            System.out.println("index:" + index);
             meta.addMember("__columns_-" + index, arrayBuilders.get(index).seal(client));
         }
-        System.out.println("Seal arrayBuilders done");
         meta.setNBytes(0); // FIXME
 
         return client.createMetaData(meta);
