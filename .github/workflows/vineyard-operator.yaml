@@ -73,6 +73,10 @@ jobs:
         with:
           submodules: true
 
+      - name: Free disk space
+        run: |
+          bash .github/free-disk-space.sh
+
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19

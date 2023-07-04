@@ -54,6 +54,10 @@ jobs:
         with:
           submodules: true
 
+      - name: Free disk space
+        run: |
+          bash .github/free-disk-space.sh
+
       - uses: dorny/paths-filter@v2
         id: changes
         with:
@@ -301,7 +305,7 @@ jobs:
           rm -rf build/lib* build/bdist.*
           python3 setup.py bdist_wheel
 
-          for pkg in airflow bdist dask io ml; do
+          for pkg in airflow bdist dask io kedro ml; do
             rm -rf build/lib* build/bdist.*
             python3 setup_${pkg}.py bdist_wheel
           done
