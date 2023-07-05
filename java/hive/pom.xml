@@ -61,6 +61,12 @@
       <version>${hive.version}</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-llap-ext-client</artifactId>
+      <version>${hive.version}</version>
+      <scope>provided</scope>
+    </dependency>
 
     <!-- Apache Arrow -->
     <dependency>

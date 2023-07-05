@@ -70,4 +70,32 @@ Hive and Vineyard
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
         LOCATION "file:///opt/hive/data/warehouse/hive_example";
 
+        set hive.vectorized.execution.enabled = true;
+
+        create table hive_example(
+                    field_1 int,
+                    field_2 int)
+        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+        stored as
+            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
+            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
+        LOCATION "file:///opt/hive/data/warehouse/hive_example";
+
+        select * from hive_example;
+
+        explain vectorization only
+        select * from hive_example;
+
+        create table hive_example(
+                            field_1 int,
+                            field_2 int)
+        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
+        stored as
+            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
+            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
+        LOCATION "file:///opt/hive/data/warehouse/hive_example";
+
+        select * from hive_example;
+
+
         insert into hive_example values('a', 1), ('a', 2), ('b',3);

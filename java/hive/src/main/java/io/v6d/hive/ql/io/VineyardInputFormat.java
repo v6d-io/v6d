@@ -27,20 +27,21 @@ import io.v6d.modules.basic.arrow.Arrow;
 import io.v6d.modules.basic.arrow.RecordBatchBuilder;
 import io.v6d.modules.basic.arrow.Table;
 
+import org.apache.hadoop.hive.llap.FieldDesc;
+import org.apache.hadoop.hive.llap.Row;
+import org.apache.hadoop.hive.llap.LlapArrowRowRecordReader;
 import org.apache.hadoop.hive.ql.io.HiveInputFormat;
 import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
-import org.apache.hadoop.io.NullWritable;
-import org.apache.hadoop.mapred.RecordReader;
-import org.apache.hadoop.mapred.JobConf;
-import org.apache.hadoop.mapred.FileInputFormat;
-import org.apache.hadoop.mapred.InputSplit;
-import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.hive.serde2.ColumnProjectionUtils;
+import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
+import org.apache.hadoop.io.*;
+import org.apache.hadoop.mapred.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.flatbuffers.IntVector;
 
-import org.apache.hadoop.io.Text;
 import java.io.IOException;
 
 import org.apache.arrow.vector.VectorSchemaRoot;
@@ -64,21 +65,147 @@ import lombok.val;
 // 
 // We do not split the file at present.
 
-public class VineyardInputFormat extends HiveInputFormat<NullWritable, ArrowWrapperWritable> {
+class RowWritable implements Writable {
+    private Row row;
+    private int columnCount = 0;
+
+    public RowWritable(final Row row) {
+        this.row = row;
+        this.columnCount = row.getSchema().getColumns().size();
+    }
+
+    public Row getRow() {
+        return row;
+    }
+
+    public Object[] getValues() {
+        Object[] values = new Object[this.columnCount];
+        for (int i = 0; i < this.columnCount; i++) {
+            // FIXME(tao): can be avoid the transformation to `Writable`?
+            values[i] = makeWritable(this.row.getValue(i));
+        }
+        return values;
+    }
+
+    @Override
+    public void write(DataOutput out) throws IOException {
+    }
+
+    @Override
+    public void readFields(DataInput in) throws IOException {
+    }
+
+    private BooleanWritable makeWritable(boolean value) {
+        return new BooleanWritable(value);
+    }
+
+    private IntWritable makeWritable(int value) {
+        return new IntWritable(value);
+    }
+
+    private LongWritable makeWritable(long value) {
+        return new LongWritable(value);
+    }
+
+    private FloatWritable makeWritable(float value) {
+        return new FloatWritable(value);
+    }
+
+    private DoubleWritable makeWritable(double value) {
+        return new DoubleWritable(value);
+    }
+
+    private Text makeWritable(String value) {
+        return new Text(value);
+    }
+
+    private Object makeWritable(Object value) {
+        if (value == null) {
+            return null;
+        }
+        if (value instanceof Boolean) {
+            return makeWritable((boolean) value);
+        }
+        if (value instanceof Integer) {
+            return makeWritable((int) value);
+        }
+        if (value instanceof Long) {
+            return makeWritable((long) value);
+        }
+        if (value instanceof Float) {
+            return makeWritable((float) value);
+        }
+        if (value instanceof Double) {
+            return makeWritable((double) value);
+        }
+        if (value instanceof String) {
+            return makeWritable((String) value);
+        }
+        return value;
+    }
+}
+
+class VineyardArrowRowRecordReader implements RecordReader<NullWritable, RowWritable> {
+    private LlapArrowRowRecordReader reader;
+
+    public VineyardArrowRowRecordReader(JobConf job, org.apache.hadoop.hive.llap.Schema schema, RecordReader<NullWritable, ArrowWrapperWritable> reader) throws IOException {
+        this.reader = new LlapArrowRowRecordReader(job, schema, reader);
+    }
+
+    @Override
+    public boolean next(NullWritable key, RowWritable value) throws IOException {
+        if (this.reader.next(key, value.getRow())) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    @Override
+    public NullWritable createKey() {
+        return NullWritable.get();
+    }
+
+    @Override
+    public RowWritable createValue() {
+        return new RowWritable(new Row(this.reader.getSchema()));
+    }
+
+    @Override
+    public long getPos() throws IOException {
+        return 0;
+    }
+
+    @Override
+    public void close() throws IOException {
+        this.reader.close();
+    }
+
+    @Override
+    public float getProgress() throws IOException {
+        return 0;
+    }
+}
+
+public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritable> {
     
     @Override
-    public RecordReader<NullWritable, ArrowWrapperWritable>
+    public RecordReader<NullWritable, RowWritable>
     getRecordReader(InputSplit genericSplit, JobConf job, Reporter reporter)
         throws IOException {
         reporter.setStatus(genericSplit.toString());
         System.out.printf("--------+creating vineyard record reader\n");
         System.out.println("split class:" + genericSplit.getClass().getName());
-        return new VineyardRecordReader(job, (VineyardSplit) genericSplit);
+        return new VineyardArrowRowRecordReader(job, this.makeDummySchema(), new VineyardRecordReader(job, (VineyardSplit) genericSplit));
     }
 
     @Override
     public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
         System.out.println("--------+creating vineyard input split. Num:" + numSplits);
+        val columnIds = ColumnProjectionUtils.getReadColumnIDs(job);
+        System.out.printf("columnIds: %s\n", columnIds);
+        val columnNames = ColumnProjectionUtils.getReadColumnNames(job);
+        System.out.printf("columnNames: %s\n", columnNames);
         List<InputSplit> splits = new ArrayList<InputSplit>();
         Path path = FileInputFormat.getInputPaths(job)[0];
         System.out.println("path:" + path);
@@ -87,6 +214,21 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, ArrowWrap
         vineyardSplit.setPath(path);
         splits.add(vineyardSplit);
         return splits.toArray(new VineyardSplit[splits.size()]);
+    }
+
+    private org.apache.hadoop.hive.llap.Schema makeDummySchema() {
+        // Field field1 = new Field("field_1", FieldType.nullable(new ArrowType.Int(32, true)), null);//Arrow.makeField("field_1", Arrow.FieldType.Int);
+        // Field field2 = new Field("field_2", FieldType.nullable(new ArrowType.Int(32, true)), null);//Arrow.makeField("field_2", Arrow.FieldType.Int);
+        // List<Field> fields = new ArrayList<Field>();
+        // fields.add(field1);
+        // fields.add(field2);
+        // return new Schema(fields);
+        FieldDesc field1 = new FieldDesc("field_1", TypeInfoFactory.getPrimitiveTypeInfo("int"));
+        FieldDesc field2 = new FieldDesc("field_2", TypeInfoFactory.getPrimitiveTypeInfo("int"));
+        List<FieldDesc> fields = new ArrayList<FieldDesc>();
+        fields.add(field1);
+        fields.add(field2);
+        return new org.apache.hadoop.hive.llap.Schema(fields);
     }
 }
 
@@ -144,7 +286,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
     private static IPCClient client;
     private String tableName;
     private Boolean tableNameValid = false;
-    private VectorSchemaRoot vectorSchemaRoot;
+    private VectorSchemaRoot vectorSchemaRoot = getSchemaRoot();
 
     // for test
     private long tableID;
@@ -163,6 +305,11 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
         tableName = path.substring(index + 1);
         tableNameValid = true;
         System.out.println("Table name:" + tableName);
+
+        val columnIds = ColumnProjectionUtils.getReadColumnIDs(job);
+        System.out.printf("columnIds: %s\n", columnIds);
+        val columnNames = ColumnProjectionUtils.getReadColumnNames(job);
+        System.out.printf("columnNames: %s\n", columnNames);
 
         // connect to vineyard
         if (client == null) {
@@ -208,7 +355,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
     @Override
     public ArrowWrapperWritable createValue() {
         System.out.printf("++++++++creating value\n");
-        return new ArrowWrapperWritable(null , Arrow.default_allocator, NonNullableStructVector.empty(tableName, Arrow.default_allocator));
+        return new ArrowWrapperWritable(vectorSchemaRoot , Arrow.default_allocator, NonNullableStructVector.empty(tableName, Arrow.default_allocator));
     }
 
     @Override
@@ -252,15 +399,10 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
                 System.out.println("null count:" + ((org.apache.arrow.vector.IntVector)fieldVectors.get(i)).getNullCount());
             }
             System.out.println("========================");
-            for (int i = 0; i < vectorSchemaRoot.getSchema().getFields().size(); i++) {
-                for (int j = 0; j < vectorSchemaRoot.getRowCount(); j++) {
-                    System.out.println(vectorSchemaRoot.getFieldVectors().get(i).getObject(j));
-                }
-                System.out.println("null count:" + ((org.apache.arrow.vector.IntVector)vectorSchemaRoot.getFieldVectors().get(i)).getNullCount());
-            }
             if (value.getVectorSchemaRoot() != null) {
                 System.out.println("Set vectorSchemaRoot succeed!");
             }
+            tableNameValid = false;
             return true;
         }
         return false;
@@ -326,7 +468,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
             v1.set(i, i);
             v2.set(i, i + 1);
         }
-        tableNameValid = false;
+        // tableNameValid = false;
         return vectorSchemaRoot;
     }
 
