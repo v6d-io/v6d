@@ -41,7 +41,7 @@ spec:
         command: ["spill_test", "/var/run/vineyard.sock"]
         imagePullPolicy: IfNotPresent
         volumeMounts:
-        - mountPath: /var/run
+        - mountPath: test-volume-path #/var/run
           name: vineyard-sock
         - mountPath: /var/vineyard/spill
           name: spill-pvc
