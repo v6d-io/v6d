@@ -128,8 +128,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         // System.out.printf("field class: %s\n", root.getFieldVectors().get(0).getObject(0).getClass());
         // System.out.printf("Value: %d\n", ((IntWritable)root.getFieldVectors().get(0).getObject(0)).get());
 
-        // schemaBuilder = SchemaBuilder.fromSchema(schema);
-        schemaBuilder = new SchemaBuilder();
+        schemaBuilder = SchemaBuilder.fromSchema(schema);
         recordBatchBuilders = new ArrayList<RecordBatchBuilder>();
 
         try {
