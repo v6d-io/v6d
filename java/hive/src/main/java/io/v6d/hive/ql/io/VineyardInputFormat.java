@@ -319,7 +319,9 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
         org.apache.arrow.vector.IntVector v1 = (org.apache.arrow.vector.IntVector) vectorSchemaRoot.getVector("field_1");
         org.apache.arrow.vector.IntVector v2 = (org.apache.arrow.vector.IntVector) vectorSchemaRoot.getVector("field_2");
         v1.allocateNew(5);
+        v1.setValueCount(5);
         v2.allocateNew(5);
+        v2.setValueCount(5);
         for (int i = 0; i < 5; i++) {
             v1.set(i, i);
             v2.set(i, i + 1);
