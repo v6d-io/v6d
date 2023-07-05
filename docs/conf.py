@@ -7,6 +7,7 @@
 # -- Path setup --------------------------------------------------------------
 
 import os
+from typing import Type
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -17,10 +18,11 @@ import sys
 sys.path.insert(0, os.path.abspath('../python'))
 
 # Initialize attached doc strings.
-import vineyard  # noqa: E402
-
-version = vineyard.__version__
-del vineyard
+try:
+    import vineyard  # noqa: E402
+    version = vineyard.__version__
+except ImportError:
+    version = '0.0.0'
 
 # -- Project information -----------------------------------------------------
 
@@ -202,5 +204,5 @@ try:
     def setup(app):
         app.add_builder(StandaloneHTMLBuilderPatched, override=True)
         return {'version': __display_version__, 'parallel_read_safe': True}
-except:
+except:  # noqa: E722, pylint: disable=bare-except
     pass

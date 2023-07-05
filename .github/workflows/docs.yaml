@@ -66,9 +66,9 @@ jobs:
           restore-keys: |
             ${{ matrix.os }}-docs-cache-
 
-      - name: Install Dependencies for Linux
-        if: runner.os == 'Linux'
+      - name: Install dependencies
         run: |
+          # install dependencies
           sudo apt update -y
           sudo apt install -y ca-certificates \
                               ccache \
@@ -102,81 +102,11 @@ jobs:
           wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt update
-          sudo apt install -y libarrow-dev=3.0.0-1
+          sudo apt install -y libarrow-dev=11.0.0-1
 
-          # install latest ccache
-          wget https://github.com/ccache/ccache/releases/download/v4.7.4/ccache-4.7.4-linux-x86_64.tar.xz
-          tar -xf ccache-4.7.4-linux-x86_64.tar.xz
-          sudo mv ccache-4.7.4-linux-x86_64/ccache /usr/bin/ccache
-
-          # avoid possible permission errors
-          ccache -o cache_dir=~/.ccache
-          sudo mkdir -p ~/.ccache
-          sudo chmod -R a+wrx ~/.ccache
-
-          # install python packages for codegen, and io adaptors
-          sudo pip3 install -U "Pygments>=2.4.1"
-          sudo pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt
-
-          # linters
-          sudo pip3 install black isort flake8
-
-      - name: CMake
+      - name: Generate docs
         run: |
-          export PATH=/usr/lib/ccache:$PATH
-
-          mkdir build
-          cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Debug \
-                   -DBUILD_SHARED_LIBS=ON \
-                   -DBUILD_VINEYARD_COVERAGE=ON \
-                   -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
-                   -DBUILD_VINEYARD_BASIC=ON \
-                   -DBUILD_VINEYARD_GRAPH=ON \
-                   -DBUILD_VINEYARD_IO=ON \
-                   -DBUILD_VINEYARD_IO_KAFKA=ON \
-                   -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=ON \
-                   -DBUILD_VINEYARD_TESTS=ON
-
-      - name: Code generation
-        run: |
-          pushd build
-          make vineyard_basic_gen -j
-          make vineyard_client_python -j
-
-      - name: Generate Doc
-        run: |
-          cd build
-          make vineyard_doc
-
-      - name: Preview using netlify
-        uses: netlify/actions/cli@master
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'v6d-io/v6d' }}
-        with:
-          args: deploy deploy --dir=docs/_build/html --alias deploy-preview-pr-${{ github.event.number }}
-        env:
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-
-      - name: Leave the comment on pull request
-        uses: actions-cool/maintain-one-comment@v3
-        if: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'v6d-io/v6d' }}
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          body: |
-            🎊 PR Preview ${{ github.event.pull_request.head.sha }} has been successfully built and deployed to https://deploy-preview-pr-${{ github.event.number }}--v6d.netlify.app
-            <sub>🤖 By [netlify](https://www.netlify.com/)</sub>
-          body-include: '<!-- Created by actions-cool/maintain-one-comment -->'
-
-      - name: Leave the comment on pull request when failed
-        uses: actions-cool/maintain-one-comment@v3
-        if: ${{ failure() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == 'v6d-io/v6d' }}
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          body: |
-            😭 Deploy PR Preview ${{ github.event.pull_request.head.sha }} failed. [Build logs](https://github.com/v6d-io/v6d/runs/${{ github.run_id }})
-            <sub>🤖 By [netlify](https://www.netlify.com/)</sub>
-          body-include: '<!-- Created by actions-cool/maintain-one-comment -->'
+          bash .github/build-docs.sh
 
       - name: Commit Doc
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && github.repository == 'v6d-io/v6d' }}

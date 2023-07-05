@@ -21,4 +21,5 @@ help:
 
 doxygen:
 	@mkdir -p _build
-	@doxygen Doxyfile
+	@doxygen Doxyfile || true
+
