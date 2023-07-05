@@ -74,6 +74,17 @@ button {
   margin: 0 auto;
 }
 
+.logo {
+  width: 140px;
+  height: 40px;
+  object-fit: contain;
+}
+
+.logo > img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
 .text-center {
   text-align: center;
 }
