@@ -168,7 +168,7 @@ button {
 }
 
 .footer {
-  padding: 50px 20% 50px;
+  padding: 50px 20%;
   color: white;
   background-color: black;
   font-weight: 300;
@@ -292,7 +292,7 @@ button {
   }
 
   .footer {
-    padding: 50px 5% 50px;
+    padding: 50px 5%;
   }
 
   .footer-container {
