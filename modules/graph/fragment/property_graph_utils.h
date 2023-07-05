@@ -27,6 +27,7 @@ limitations under the License.
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 #include "arrow/ipc/api.h"
+
 #include "boost/algorithm/string.hpp"
 #include "boost/leaf.hpp"
 
@@ -36,6 +37,7 @@ limitations under the License.
 #include "grape/utils/vertex_array.h"
 
 #include "basic/ds/hashmap.h"
+#include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/utils/error.h"
 #include "graph/utils/mpi_utils.h"

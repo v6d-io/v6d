@@ -28,6 +28,7 @@ limitations under the License.
 #include "client/client.h"
 #include "common/util/typename.h"
 
+#include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
 
 namespace vineyard {
@@ -95,6 +96,35 @@ class ArrowVertexMap
       Client& client,
       std::map<label_id_t, std::vector<std::shared_ptr<arrow::ChunkedArray>>>
           oid_arrays_map);
+  /**
+   * @brief Update the vertex map of a label when adding new vertices to an
+   * existed label
+   *
+   * @param client
+   * @param label_id the specific label which needs to be updated
+   * @param oid_list newly added vertices for an existed label
+   * @return ObjectID the newly created vertex map
+   */
+  ObjectID UpdateLabelVertexMap(
+      Client& client, PropertyGraphSchema::LabelId label_id,
+      const std::vector<std::shared_ptr<oid_array_t>>& oid_list);
+
+  /**
+   * @brief Update the vertex map of a label when adding new vertices to an
+   * existed label
+   *
+   * @param client
+   * @param label_id the specific label which needs to be updated
+   * @param oid_list newly added vertices for an existed label
+   * @return ObjectID the newly created vertex map
+   */
+  ObjectID UpdateLabelVertexMap(
+      Client& client, PropertyGraphSchema::LabelId label_id,
+      const std::vector<std::shared_ptr<arrow::ChunkedArray>>& oid_list);
+
+  ObjectID CombineVertices(
+      Client& client, PropertyGraphSchema::LabelId label_id,
+      const std::vector<std::shared_ptr<oid_array_t>>& oid_list);
 
   ObjectID AddNewVertexLabels(
       Client& client,
@@ -110,6 +140,10 @@ class ArrowVertexMap
       Client& client,
       std::vector<std::vector<std::vector<std::shared_ptr<oid_array_t>>>>
           oid_arrays);
+
+  ObjectID updateLabelVertexMap(
+      Client& client, PropertyGraphSchema::LabelId label_id,
+      std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays);
 
   fid_t fnum_;
   label_id_t label_num_;

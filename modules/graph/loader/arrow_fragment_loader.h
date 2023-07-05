@@ -206,6 +206,7 @@ class DataLoader {
 
   std::vector<ObjectID> v_streams_;
   std::vector<std::vector<ObjectID>> e_streams_;
+  // partial means every worker has its own part of the table
   std::vector<std::shared_ptr<arrow::Table>> partial_v_tables_;
   std::vector<std::vector<std::shared_ptr<arrow::Table>>> partial_e_tables_;
 
@@ -353,6 +354,20 @@ class ArrowFragmentLoader : public DataLoader {
 
   boost::leaf::result<vineyard::ObjectID> AddLabelsToFragmentAsFragmentGroup(
       vineyard::ObjectID frag_id);
+
+  boost::leaf::result<vineyard::ObjectID> AddDataToExistedVLabel(
+      vineyard::ObjectID frag_id, PropertyGraphSchema::LabelId label_id);
+
+  boost::leaf::result<vineyard::ObjectID> addDataToExistedVLabel(
+      vineyard::ObjectID frag_id, PropertyGraphSchema::LabelId label_id,
+      std::pair<table_vec_t, std::vector<table_vec_t>> raw_v_e_tables);
+
+  boost::leaf::result<vineyard::ObjectID> AddDataToExistedELabel(
+      vineyard::ObjectID frag_id, PropertyGraphSchema::LabelId label_id);
+
+  boost::leaf::result<vineyard::ObjectID> addDataToExistedELabel(
+      vineyard::ObjectID frag_id, PropertyGraphSchema::LabelId label_id,
+      std::pair<table_vec_t, std::vector<table_vec_t>> raw_v_e_tables);
 
   using DataLoader::LoadEdgeTables;
   using DataLoader::LoadVertexEdgeTables;

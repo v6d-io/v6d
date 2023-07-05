@@ -22,7 +22,6 @@ limitations under the License.
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
-
 #include "common/util/env.h"
 
 #if defined(__unix__) || defined(__unix) || defined(unix) || \

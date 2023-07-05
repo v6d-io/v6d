@@ -624,6 +624,17 @@ class [[vineyard]] ArrowFragment
       ObjectID vm_id,
       const int concurrency = std::thread::hardware_concurrency()) override;
 
+  boost::leaf::result<ObjectID> AddVerticesToExistedLabel(
+      Client& client, label_id_t label_id,
+      std::shared_ptr<arrow::Table>&& vertex_table, ObjectID vm_id,
+      const int concurrency = std::thread::hardware_concurrency()) override;
+
+  boost::leaf::result<ObjectID> AddEdgesToExistedLabel(
+      Client& client, label_id_t label_id,
+      std::shared_ptr<arrow::Table>&& edge_table,
+      const std::set<std::pair<std::string, std::string>>& edge_relations,
+      const int concurrency = std::thread::hardware_concurrency()) override;
+
   /// Add a set of new edge labels to graph. Edge label id started from
   /// edge_label_num_.
   boost::leaf::result<ObjectID> AddNewEdgeLabels(

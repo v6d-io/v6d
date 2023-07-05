@@ -233,6 +233,7 @@ static inline bool parse_options_from_config_json(
       vineyard::json::parse(config_json_content, nullptr, true);
 #endif
   if (config.contains("vertices")) {
+    std::map<std::string, std::vector<std::string>> vertices;
     for (auto const& item : config["vertices"]) {
       auto vfile = vineyard::ExpandEnvironmentVariables(
                        item["data_path"].get<std::string>()) +
@@ -240,7 +241,11 @@ static inline bool parse_options_from_config_json(
       if (item.contains("options")) {
         vfile += "#" + item["options"].get<std::string>();
       }
-      options.vfiles.push_back(vfile);
+      vertices[item["label"].get<std::string>()].push_back(vfile);
+      // options.vfiles.push_back(vfile);
+    }
+    for (auto const& item : vertices) {
+      options.vfiles.push_back(string_join(item.second, ";"));
     }
   }
   if (config.contains("edges")) {
@@ -255,6 +260,7 @@ static inline bool parse_options_from_config_json(
         efile += "#" + item["options"].get<std::string>();
       }
       edges[item["label"].get<std::string>()].push_back(efile);
+      // options.efiles.push_back(efile);
     }
     for (auto const& item : edges) {
       options.efiles.push_back(string_join(item.second, ";"));

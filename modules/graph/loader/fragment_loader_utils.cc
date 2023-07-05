@@ -238,7 +238,6 @@ boost::leaf::result<ObjectID> ConstructFragmentGroup(
   if (comm_spec.worker_id() == 0) {
     std::vector<uint64_t> gathered_instance_ids(comm_spec.worker_num());
     std::vector<ObjectID> gathered_object_ids(comm_spec.worker_num());
-
     MPI_Gather(&instance_id, sizeof(uint64_t), MPI_CHAR,
                &gathered_instance_ids[0], sizeof(uint64_t), MPI_CHAR, 0,
                comm_spec.comm());
@@ -281,11 +280,11 @@ boost::leaf::result<ObjectID> ConstructFragmentGroup(
     MPI_Bcast(&group_object_id, sizeof(ObjectID), MPI_CHAR, 0,
               comm_spec.comm());
   } else {
+    // if not 0 worker, collect self data and send to the 0 worker
     MPI_Gather(&instance_id, sizeof(uint64_t), MPI_CHAR, NULL, sizeof(uint64_t),
                MPI_CHAR, 0, comm_spec.comm());
     MPI_Gather(&frag_id, sizeof(ObjectID), MPI_CHAR, NULL, sizeof(ObjectID),
                MPI_CHAR, 0, comm_spec.comm());
-
     MPI_Bcast(&group_object_id, sizeof(ObjectID), MPI_CHAR, 0,
               comm_spec.comm());
   }

@@ -30,6 +30,9 @@ limitations under the License.
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 
+#include "basic/ds/arrow.vineyard.h"
+
+#include "common/util/uuid.h"
 #include "grape/fragment/fragment_base.h"
 #include "grape/graph/adj_list.h"
 #include "grape/utils/vertex_array.h"
@@ -47,6 +50,7 @@ limitations under the License.
 #include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"
+
 #include "graph/utils/context_protocols.h"
 #include "graph/utils/error.h"
 #include "graph/utils/thread_group.h"
@@ -100,8 +104,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddVertices(
     Client& client,
     std::map<label_id_t, std::shared_ptr<arrow::Table>>&& vertex_tables_map,
     ObjectID vm_id, const int concurrency) {
-  int extra_vertex_label_num = vertex_tables_map.size();
-  int total_vertex_label_num = vertex_label_num_ + extra_vertex_label_num;
+  int extra_vertex_label_num = vertex_tables_map.size();  // all new labels
+  int total_vertex_label_num =
+      vertex_label_num_ + extra_vertex_label_num;  // total labels
 
   std::vector<std::shared_ptr<arrow::Table>> vertex_tables;
   vertex_tables.resize(extra_vertex_label_num);
@@ -111,6 +116,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddVertices(
       RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
                       "Invalid vertex label id: " + std::to_string(pair.first));
     }
+    // pair.first = vertex_label_num_ + idx, so we need do subtract here
     vertex_tables[pair.first - vertex_label_num_] = pair.second;
   }
   return AddNewVertexLabels(client, std::move(vertex_tables), vm_id);
@@ -156,7 +162,6 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddNewVertexEdgeLabels(
   int extra_edge_label_num = edge_tables.size();
   int total_edge_label_num = edge_label_num_ + extra_edge_label_num;
 
-  // Init size
   auto vm_ptr =
       std::dynamic_pointer_cast<vertex_map_t>(client.GetObject(vm_id));
 
@@ -269,6 +274,8 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddNewVertexEdgeLabels(
     generate_local_id_list(vid_parser_, std::move(dsts[i]), fid_, ovg2l_maps,
                            concurrency, edge_dst[i], pool);
   }
+  // TODO: check edge duplicates here
+
   VLOG(100) << "[frag-" << this->fid_
             << "] Add new vertices and edges: after generate_local_id_list: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
@@ -573,18 +580,19 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddNewVertexLabels(
   std::vector<vid_t> ivnums(total_vertex_label_num);
   std::vector<vid_t> ovnums(total_vertex_label_num);
   std::vector<vid_t> tvnums(total_vertex_label_num);
+  // copy previous info about ivnums, ovnums and tvnums
   for (label_id_t i = 0; i < vertex_label_num_; ++i) {
     ivnums[i] = ivnums_[i];
     ovnums[i] = ovnums_[i];
     tvnums[i] = tvnums_[i];
   }
+  // update according newly added vertices
   for (size_t i = 0; i < vertex_tables.size(); ++i) {
     ivnums[vertex_label_num_ + i] =
         vm_ptr->GetInnerVertexSize(fid_, vertex_label_num_ + i);
     ovnums[vertex_label_num_ + i] = 0;
     tvnums[vertex_label_num_ + i] = ivnums[vertex_label_num_ + i];
   }
-
   ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
   builder.set_vertex_label_num_(total_vertex_label_num);
 
@@ -622,7 +630,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddNewVertexLabels(
     RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
   }
   builder.set_schema_json_(schema.ToJSON());
-
+  // add ivnum, ovnums, tvnums to Vineyard shared memory
   vineyard::ArrayBuilder<vid_t> ivnums_builder(client, ivnums);
   vineyard::ArrayBuilder<vid_t> ovnums_builder(client, ovnums);
   vineyard::ArrayBuilder<vid_t> tvnums_builder(client, tvnums);
@@ -703,6 +711,447 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddNewVertexLabels(
   std::shared_ptr<Object> vm_object;
   VY_OK_OR_RAISE(builder.Seal(client, vm_object));
   return vm_object->id();
+}
+
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
+boost::leaf::result<ObjectID>
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddVerticesToExistedLabel(
+    Client& client, PropertyGraphSchema::LabelId label_id,
+    std::shared_ptr<arrow::Table>&& vertex_table, ObjectID vm_id,
+    const int concurrency) {
+  int total_vertex_label_num = vertex_label_num_;
+  auto vm_ptr =
+      std::dynamic_pointer_cast<vertex_map_t>(client.GetObject(vm_id));
+  // copy previous ivnums, ovnums, tvnums
+  std::vector<vid_t> ivnums(total_vertex_label_num);
+  std::vector<vid_t> ovnums(total_vertex_label_num);
+  std::vector<vid_t> tvnums(total_vertex_label_num);
+  for (label_id_t i = 0; i < total_vertex_label_num; i++) {
+    ivnums[i] = ivnums_[i];
+    ovnums[i] = ovnums_[i];
+    tvnums[i] = tvnums_[i];
+  }
+  // update vnums according to vm_ptr
+  ivnums[label_id] = vm_ptr->GetInnerVertexSize(fid_, label_id);
+  ovnums[label_id] = 0;
+  tvnums[label_id] = ivnums[label_id];
+
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
+  builder.set_vertex_label_num_(total_vertex_label_num);
+
+  VLOG(100) << "[frag-" << this->fid_
+            << "] Add new vertices to exist label: start: " << get_rss_pretty()
+            << ", peak: " << get_peak_rss_pretty();
+  auto schema = schema_;
+  builder.set_vertex_tables_(
+      label_id, std::make_shared<TableBuilder>(client, std::move(vertex_table),
+                                               true /* merge chunks */));
+
+  std::string error_message;
+  if (!schema.Validate(error_message)) {
+    RETURN_GS_ERROR(ErrorCode::kInvalidValueError, error_message);
+  }
+  builder.set_schema_json_(schema.ToJSON());
+
+  vineyard::ArrayBuilder<vid_t> ivnums_builder(client, ivnums);
+  vineyard::ArrayBuilder<vid_t> ovnums_builder(client, ovnums);
+  vineyard::ArrayBuilder<vid_t> tvnums_builder(client, tvnums);
+
+  std::shared_ptr<Object> object;
+  VY_OK_OR_RAISE(ivnums_builder.Seal(client, object));
+  builder.set_ivnums_(object);
+  VY_OK_OR_RAISE(ovnums_builder.Seal(client, object));
+  builder.set_ovnums_(object);
+  VY_OK_OR_RAISE(tvnums_builder.Seal(client, object));
+  builder.set_tvnums_(object);
+
+  // Assign additional meta for new vertex labels
+  builder.set_ovgid_lists_(label_id,
+                           std::make_shared<vid_vineyard_builder_t>(client));
+  builder.set_ovg2l_maps_(
+      label_id,
+      std::make_shared<vineyard::HashmapBuilder<vid_t, vid_t>>(client));
+
+  std::vector<std::shared_ptr<FixedInt64Builder>> ie_offsets_lists_expanded(
+      vertex_label_num_);
+  std::vector<std::shared_ptr<FixedInt64Builder>> oe_offsets_lists_expanded(
+      vertex_label_num_);
+
+  if (directed_) {
+    ie_offsets_lists_expanded.resize(edge_label_num_);
+  }
+  oe_offsets_lists_expanded.resize(edge_label_num_);
+
+  for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+    vid_t prev_offset_size = tvnums_[label_id] + 1;
+    vid_t current_offset_size = tvnums[label_id] + 1;
+    if (directed_) {
+      ie_offsets_lists_expanded[e_label] =
+          std::make_shared<FixedInt64Builder>(client, current_offset_size);
+      int64_t* offsets = ie_offsets_lists_expanded[e_label]->data();
+      const int64_t* offset_array = ie_offsets_ptr_lists_[label_id][e_label];
+      for (vid_t k = 0; k < prev_offset_size; ++k) {
+        offsets[k] = offset_array[k];
+      }
+      for (vid_t k = prev_offset_size; k < current_offset_size; ++k) {
+        offsets[k] = offsets[k - 1];
+      }
+    }
+    oe_offsets_lists_expanded[e_label] =
+        std::make_shared<FixedInt64Builder>(client, current_offset_size);
+    int64_t* offsets = oe_offsets_lists_expanded[e_label]->data();
+    const int64_t* offset_array = oe_offsets_ptr_lists_[label_id][e_label];
+    for (size_t k = 0; k < prev_offset_size; ++k) {
+      offsets[k] = offset_array[k];
+    }
+    for (size_t k = prev_offset_size; k < current_offset_size; ++k) {
+      offsets[k] = offsets[k - 1];
+    }
+  }
+  ThreadGroup tg;
+  if (directed_) {
+    builder.ie_lists_.resize(vertex_label_num_);
+    builder.ie_offsets_lists_.resize(vertex_label_num_);
+  }
+  builder.oe_lists_.resize(vertex_label_num_);
+  builder.oe_offsets_lists_.resize(vertex_label_num_);
+  for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+    for (label_id_t j = 0; j < edge_label_num_; ++j) {
+      if (directed_) {
+        builder.set_ie_offsets_lists_(label_id, j,
+                                      ie_offsets_lists_expanded[j]);
+      }
+      builder.set_oe_offsets_lists_(label_id, j, oe_offsets_lists_expanded[j]);
+    }
+  }
+
+  VLOG(100)
+      << "[frag-" << this->fid_
+      << "] Add new vertices to exist label: after building into vineyard: "
+      << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
+
+  builder.set_vm_ptr_(vm_ptr);
+  std::shared_ptr<Object> vm_object;
+  VY_OK_OR_RAISE(builder.Seal(client, vm_object));
+  return vm_object->id();
+}
+
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
+boost::leaf::result<ObjectID>
+ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddEdgesToExistedLabel(
+    Client& client, PropertyGraphSchema::LabelId label_id,
+    std::shared_ptr<arrow::Table>&& edge_table,
+    const std::set<std::pair<std::string, std::string>>& edge_relations,
+    const int concurrency) {
+  int extra_edge_label_num = 1;
+  std::shared_ptr<arrow::ChunkedArray> src, dst;
+  src = edge_table->column(0);  // src is newly added src_ids
+  dst = edge_table->column(1);  // dst is newly added dst_ids
+  ARROW_OK_ASSIGN_OR_RAISE(edge_table,
+                           edge_table->RemoveColumn(0));  // remove src_ids
+  ARROW_OK_ASSIGN_OR_RAISE(edge_table,
+                           edge_table->RemoveColumn(0));  // remove dst_ids
+  VLOG(100) << "[frag-" << this->fid_
+            << "] Add new edges to existed edge label: before init the new "
+               "vertex map: "
+            << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
+
+  // Make a copy of ovg2l map, since we need to add some extra outer vertices
+  // pulled in this fragment by new edges.
+  std::vector<ovg2l_map_t> ovg2l_maps(vertex_label_num_);
+  for (int i = 0; i < vertex_label_num_; ++i) {
+    for (auto iter = ovg2l_maps_ptr_[i]->begin();
+         iter != ovg2l_maps_ptr_[i]->end(); ++iter) {
+      ovg2l_maps[i].emplace(iter->first, iter->second);
+    }
+  }
+
+  VLOG(100) << "[frag-" << this->fid_
+            << "] Add new edges to existed edge label: after init the new "
+               "vertex map: "
+            << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
+
+  std::vector<vid_t> start_ids(vertex_label_num_);
+  for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+    start_ids[i] = vid_parser_.GenerateId(0, i, ivnums_[i]) + ovnums_[i];
+  }
+
+  // Add extra outer vertices to ovg2l map, and collect distinct gid of extra
+  // outer vertices.
+  std::vector<std::shared_ptr<vid_array_t>> extra_ovgid_lists(
+      vertex_label_num_);
+  // for api reuse
+  std::vector<std::shared_ptr<arrow::ChunkedArray>> srcs, dsts;
+  srcs.push_back(src);
+  dsts.push_back(dst);
+  generate_outer_vertices_map(vid_parser_, fid_, vertex_label_num_, srcs, dsts,
+                              start_ids, ovg2l_maps, extra_ovgid_lists);
+
+  VLOG(100) << "[frag-" << this->fid_
+            << "] Init edges: after generate_outer_vertices_map: "
+            << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
+
+  std::vector<vid_t> ovnums(vertex_label_num_), tvnums(vertex_label_num_);
+  std::vector<std::shared_ptr<vid_vineyard_builder_t>> ovgid_lists(
+      vertex_label_num_);
+  // Append extra ovgid_lists with origin ovgid_lists to make it complete
+  for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+    vid_builder_t ovgid_list_builder;
+    // If the ovgid have no new entries, leave it empty to indicate using the
+    // old ovgid when seal.
+    if (extra_ovgid_lists[i]->length() != 0) {
+      std::vector<std::shared_ptr<vid_array_t>> chunks;
+      chunks.push_back(ovgid_lists_[i]->GetArray());
+      chunks.push_back(extra_ovgid_lists[i]);
+      ovgid_lists[i] = std::make_shared<vid_vineyard_builder_t>(client, chunks);
+    } else {
+      ovgid_lists[i] = nullptr;
+    }
+
+    ovnums[i] = ovgid_lists_[i]->length() + extra_ovgid_lists[i]->length();
+    tvnums[i] = ivnums_[i] + ovnums[i];
+
+    extra_ovgid_lists[i].reset();  // release the reference
+  }
+
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
+      ie_offsets_lists_expanded(vertex_label_num_);
+  std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
+      oe_offsets_lists_expanded(vertex_label_num_);
+
+  // edge_label_num_ is previous edge_label_num
+  // below code is to generate ie_offset_lists_expanded and
+  // oe_offset_lists_expanded
+  for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
+    if (directed_) {
+      ie_offsets_lists_expanded[v_label].resize(edge_label_num_);
+    }
+    oe_offsets_lists_expanded[v_label].resize(edge_label_num_);
+  }
+  for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
+    for (label_id_t e_label = 0; e_label < edge_label_num_; ++e_label) {
+      vid_t prev_offset_size = tvnums_[v_label] + 1;
+      vid_t current_offset_size = tvnums[v_label] + 1;
+      if (directed_) {
+        ie_offsets_lists_expanded[v_label][e_label] =
+            std::make_shared<FixedInt64Builder>(client, current_offset_size);
+        int64_t* offsets = ie_offsets_lists_expanded[v_label][e_label]->data();
+        const int64_t* offset_array = ie_offsets_ptr_lists_[v_label][e_label];
+        for (vid_t k = 0; k < prev_offset_size; ++k) {
+          offsets[k] = offset_array[k];
+        }
+        for (vid_t k = prev_offset_size; k < current_offset_size; ++k) {
+          offsets[k] = offsets[k - 1];
+        }
+      }
+      oe_offsets_lists_expanded[v_label][e_label] =
+          std::make_shared<FixedInt64Builder>(client, current_offset_size);
+      int64_t* offsets = oe_offsets_lists_expanded[v_label][e_label]->data();
+      const int64_t* offset_array = oe_offsets_ptr_lists_[v_label][e_label];
+      for (size_t k = 0; k < prev_offset_size; ++k) {
+        offsets[k] = offset_array[k];
+      }
+      for (size_t k = prev_offset_size; k < current_offset_size; ++k) {
+        offsets[k] = offsets[k - 1];
+      }
+    }
+  }
+
+  std::vector<std::shared_ptr<vid_array_t>> edge_src, edge_dst;
+
+  arrow::MemoryPool* pool = arrow::default_memory_pool();
+  std::shared_ptr<arrow::MemoryPool> recorder;
+  if (VLOG_IS_ON(1000)) {
+    recorder = std::make_shared<arrow::LoggingMemoryPool>(pool);
+    pool = recorder.get();
+  }
+  for (int i = 0; i < extra_edge_label_num; ++i) {
+    generate_local_id_list(vid_parser_, std::move(src), fid_, ovg2l_maps,
+                           concurrency, edge_src, pool);
+    generate_local_id_list(vid_parser_, std::move(dst), fid_, ovg2l_maps,
+                           concurrency, edge_dst, pool);
+  }
+  VLOG(100)
+      << "[frag-" << this->fid_
+      << "] Add new edges to existed label: after generate_local_id_list: "
+      << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
+
+  // Regenerate CSR vector of the existed label
+  std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>> ie_list(
+      vertex_label_num_);
+  std::vector<std::shared_ptr<PodArrayBuilder<nbr_unit_t>>> oe_list(
+      vertex_label_num_);
+  std::vector<std::shared_ptr<FixedInt64Builder>> ie_offsets_list(
+      vertex_label_num_);
+  std::vector<std::shared_ptr<FixedInt64Builder>> oe_offsets_list(
+      vertex_label_num_);
+
+  // get previous src_id, dst_id.
+  std::vector<vid_t> prev_src_ids, prev_dst_ids;
+  std::shared_ptr<vid_array_t> prev_src_id_list, prev_dst_id_list;
+  std::unordered_map<std::string, int> vis;
+  for (label_id_t v_label = 0; v_label < vertex_label_num_; v_label++) {
+    // get the entry of specific label
+    auto iv = this->InnerVertices(v_label);
+    for (auto v : iv) {
+      auto offset = vertex_offset(v);
+      vid_t src_id = vid_parser_.GenerateId(v_label, offset);
+      // if(!directed_ && vis.count(src_id)) continue;
+      auto oe = this->GetOutgoingAdjList(v, label_id);
+      // if(oe.Size()) prev_src_ids.push_back(src_id);
+      for (auto& e : oe) {
+        auto dst_label = vertex_label(e.neighbor());
+        auto dst_offset = vertex_offset(e.neighbor());
+        vid_t dst_id = vid_parser_.GenerateId(dst_label, dst_offset);
+        if (!directed_) {
+          if (vis.count(std::to_string(src_id) + std::to_string(dst_id)) ||
+              vis.count(std::to_string(dst_id) + std::to_string(src_id)))
+            continue;
+          vis[std::to_string(src_id) + std::to_string(dst_id)] = 1;
+          vis[std::to_string(dst_id) + std::to_string(src_id)] = 1;
+          prev_src_ids.push_back(src_id);
+          prev_dst_ids.push_back(dst_id);
+        } else {
+          if (vis.count(std::to_string(src_id) + std::to_string(dst_id)))
+            continue;
+          prev_src_ids.push_back(src_id);
+          prev_dst_ids.push_back(dst_id);
+        }
+      }
+    }
+  }
+
+  auto gen_prev_fn =
+      [](std::vector<VID_T> vids, arrow::MemoryPool* pool,
+         std::shared_ptr<vid_array_t>& lid_list) -> boost::leaf::result<void> {
+    ArrowBuilderType<VID_T> builder(pool);
+    ARROW_OK_OR_RAISE(builder.AppendValues(vids.data(), vids.size()));
+    ARROW_OK_OR_RAISE(builder.Finish(&lid_list));
+    return {};
+  };
+  gen_prev_fn(prev_src_ids, pool, prev_src_id_list);
+  gen_prev_fn(prev_dst_ids, pool, prev_dst_id_list);
+  // check duplicates
+  auto src_id_array = edge_src[0];
+  auto dst_id_array = edge_dst[0];
+
+  // gurantee the id->table is in correct order
+  edge_src.push_back(edge_src[0]);
+  edge_dst.push_back(edge_dst[0]);
+  edge_src[0] = prev_src_id_list;
+  edge_dst[0] = prev_dst_id_list;
+  bool is_multigraph = is_multigraph_;
+  if (directed_) {
+    generate_directed_csr<vid_t, eid_t>(
+        client, vid_parser_, std::move(edge_src), std::move(edge_dst), tvnums,
+        vertex_label_num_, concurrency, oe_list, oe_offsets_list,
+        is_multigraph_);
+    generate_directed_csc<vid_t, eid_t>(
+        client, vid_parser_, tvnums, vertex_label_num_, concurrency, oe_list,
+        oe_offsets_list, ie_list, ie_offsets_list, is_multigraph_);
+  } else {
+    generate_undirected_csr_memopt<vid_t, eid_t>(
+        client, vid_parser_, std::move(edge_src), std::move(edge_dst), tvnums,
+        vertex_label_num_, concurrency, oe_list, oe_offsets_list,
+        is_multigraph_);
+  }
+
+  LOG_IF(WARNING, is_multigraph == false && is_multigraph_ == true)
+      << "There maybe duplicated edges in your data, and we change the graph "
+         "type to multigraph";
+
+  if (this->compact_edges_) {
+    RETURN_GS_ERROR(
+        ErrorCode::kUnimplementedMethod,
+        "Varint encoding is not implemented for adding vertices/edges");
+  }
+
+  VLOG(100) << "[frag-" << this->fid_
+            << "] Add new edges to existed label: after generate CSR: "
+            << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
+
+  ArrowFragmentBaseBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT> builder(*this);
+  builder.set_edge_label_num_(edge_label_num_);
+  std::vector<std::shared_ptr<arrow::Table>> edge_tables;
+  edge_tables.push_back(edge_data_table(label_id));  // previous one
+  edge_tables.push_back(std::move(edge_table));      // current one
+
+  builder.set_edge_tables_(label_id, std::make_shared<TableBuilder>(
+                                         client, std::move(edge_tables), true));
+  edge_tables.clear();
+
+  ThreadGroup tg;
+  {
+    auto fn = [&builder, &ovnums, &tvnums](Client* client) -> Status {
+      vineyard::ArrayBuilder<vid_t> ovnums_builder(*client, ovnums);
+      vineyard::ArrayBuilder<vid_t> tvnums_builder(*client, tvnums);
+      std::shared_ptr<Object> object;
+      RETURN_ON_ERROR(ovnums_builder.Seal(*client, object));
+      builder.set_ovnums_(object);
+      RETURN_ON_ERROR(tvnums_builder.Seal(*client, object));
+      builder.set_tvnums_(object);
+      return Status::OK();
+    };
+    tg.AddTask(fn, &client);
+  }
+
+  for (int i = 0; i < vertex_label_num_; ++i) {
+    if (ovg2l_maps_ptr_[i]->size() == ovg2l_maps[i].size()) {
+      ovg2l_maps[i].clear();
+    }
+  }
+  builder.ovgid_lists_.resize(vertex_label_num_);
+  builder.ovg2l_maps_.resize(vertex_label_num_);
+  for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+    auto fn = [&builder, i, &ovgid_lists,
+               &ovg2l_maps](Client* client) -> Status {
+      if (ovgid_lists[i] != nullptr) {
+        builder.set_ovgid_lists_(i, ovgid_lists[i]);
+      }
+
+      if (!ovg2l_maps[i].empty()) {
+        vineyard::HashmapBuilder<vid_t, vid_t> ovg2l_builder(
+            *client, std::move(ovg2l_maps[i]));
+        std::shared_ptr<Object> ovg2l_map_object;
+        RETURN_ON_ERROR(ovg2l_builder.Seal(*client, ovg2l_map_object));
+        builder.set_ovg2l_maps_(i, ovg2l_map_object);
+      }
+      return Status::OK();
+    };
+    tg.AddTask(fn, &client);
+  }
+  // for the newly added edges to existed edge label,
+  // we need to update the ie_lists_, oe_lists_, ie_offsets_lists_,
+  // oe_offsets_lists_
+  if (directed_) {
+    builder.ie_lists_.resize(vertex_label_num_);
+    builder.ie_offsets_lists_.resize(vertex_label_num_);
+  }
+  builder.oe_lists_.resize(vertex_label_num_);
+  builder.oe_offsets_lists_.resize(vertex_label_num_);
+
+  for (label_id_t i = 0; i < vertex_label_num_; ++i) {
+    auto fn = [this, &builder, i, &label_id, &ie_list, &oe_list,
+               &ie_offsets_list, &oe_offsets_list](Client* client) -> Status {
+      if (directed_) {
+        builder.set_ie_lists_(i, label_id, ie_list[i]);
+        builder.set_ie_offsets_lists_(i, label_id, ie_offsets_list[i]);
+      }
+      builder.set_oe_lists_(i, label_id, oe_list[i]);
+      builder.set_oe_offsets_lists_(i, label_id, oe_offsets_list[i]);
+      return Status::OK();
+    };
+    tg.AddTask(fn, &client);
+  }
+  tg.TakeResults();
+
+  VLOG(100)
+      << "[frag-" << this->fid_
+      << "] Add new edges to existed edge label: after building into vineyard: "
+      << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
+  std::shared_ptr<Object> fragment_object;
+  VY_OK_OR_RAISE(builder.Seal(client, fragment_object));
+  return fragment_object->id();
 }
 
 /// Add a set of new edge labels to graph. Edge label id started from
@@ -789,7 +1238,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddNewEdgeLabels(
       ie_offsets_lists_expanded(vertex_label_num_);
   std::vector<std::vector<std::shared_ptr<FixedInt64Builder>>>
       oe_offsets_lists_expanded(vertex_label_num_);
-
+  // edge_label_num_ is previous edge_label_num
+  // below code is to generate ie_offset_lists_expanded and
+  // oe_offset_lists_expanded
   for (label_id_t v_label = 0; v_label < vertex_label_num_; ++v_label) {
     if (directed_) {
       ie_offsets_lists_expanded[v_label].resize(edge_label_num_);
@@ -842,6 +1293,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddNewEdgeLabels(
     generate_local_id_list(vid_parser_, std::move(dsts[i]), fid_, ovg2l_maps,
                            concurrency, edge_dst[i], pool);
   }
+
   VLOG(100) << "[frag-" << this->fid_
             << "] Add new edges: after generate_local_id_list: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();
@@ -1292,6 +1744,7 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initEdges(
     generate_local_id_list(vid_parser_, std::move(dsts[i]), this->fid_,
                            ovg2l_maps_, concurrency, edge_dst[i], pool);
   }
+
   VLOG(100) << "[frag-" << this->fid_
             << "] Init edges: after generate_local_id_list: "
             << get_rss_pretty() << ", peak: " << get_peak_rss_pretty();

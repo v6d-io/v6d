@@ -29,11 +29,14 @@ limitations under the License.
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 
+#include "common/util/uuid.h"
 #include "grape/worker/comm_spec.h"
 
 #include "basic/ds/dataframe.h"
 #include "basic/ds/tensor.h"
 #include "client/client.h"
+#include "graph/fragment/graph_schema.h"
+#include "graph/utils/error.h"
 #include "io/io/io_factory.h"
 
 #include "graph/fragment/property_graph_utils.h"
@@ -211,6 +214,188 @@ ArrowFragmentLoader<OID_T, VID_T>::AddLabelsToFragmentAsFragmentGroup(
 }
 
 template <typename OID_T, typename VID_T>
+boost::leaf::result<vineyard::ObjectID>
+ArrowFragmentLoader<OID_T, VID_T>::AddDataToExistedVLabel(
+    vineyard::ObjectID frag_id, PropertyGraphSchema::LabelId label_id) {
+  // first load the vertex table
+  BOOST_LEAF_CHECK(initPartitioner());
+  std::pair<table_vec_t, std::vector<table_vec_t>> raw_v_e_tables;
+  if (vfiles_.empty()) {
+    raw_v_e_tables.first = partial_v_tables_;
+  } else {
+    BOOST_LEAF_ASSIGN(raw_v_e_tables, LoadVertexEdgeTables());
+  }
+  return addDataToExistedVLabel(frag_id, label_id, raw_v_e_tables);
+}
+
+template <typename OID_T, typename VID_T>
+boost::leaf::result<vineyard::ObjectID>
+ArrowFragmentLoader<OID_T, VID_T>::AddDataToExistedELabel(
+    vineyard::ObjectID frag_id, PropertyGraphSchema::LabelId label_id) {
+  BOOST_LEAF_CHECK(initPartitioner());
+  std::pair<table_vec_t, std::vector<table_vec_t>> raw_v_e_tables;
+  if (efiles_.empty()) {
+    raw_v_e_tables.second = partial_e_tables_;
+  } else {
+    BOOST_LEAF_ASSIGN(raw_v_e_tables, LoadVertexEdgeTables());
+  }
+  return addDataToExistedELabel(frag_id, label_id, raw_v_e_tables);
+}
+
+template <typename OID_T, typename VID_T>
+boost::leaf::result<vineyard::ObjectID>
+ArrowFragmentLoader<OID_T, VID_T>::addDataToExistedVLabel(
+    vineyard::ObjectID frag_id, PropertyGraphSchema::LabelId label_id,
+    std::pair<table_vec_t, std::vector<table_vec_t>> raw_v_e_tables) {
+  auto& partial_v_tables = raw_v_e_tables.first;
+  std::shared_ptr<ArrowFragmentBase> frag;
+
+  VY_OK_OR_RAISE(client_.GetObject(frag_id, frag));
+  const PropertyGraphSchema& schema = frag->schema();
+
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "PROCESS-INPUTS-0";
+
+  ArrowFragmentLoader<OID_T, VID_T>::vertex_table_info_t
+      vertex_tables_with_label;
+  // get vertex_tables_with_label
+  for (auto table : partial_v_tables) {
+    auto meta = table->schema()->metadata();
+    if (meta == nullptr) {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                      "Metadata of input vertex files shouldn't be empty");
+    }
+
+    int label_meta_index = meta->FindKey(LABEL_TAG);
+    if (label_meta_index == -1) {
+      RETURN_GS_ERROR(
+          ErrorCode::kInvalidValueError,
+          "Metadata of input vertex files should contain label name");
+    }
+    std::string label_name = meta->value(label_meta_index);
+    vertex_tables_with_label[label_name] = table;
+  }
+
+  partial_v_tables.clear();
+  auto basic_fragment_loader = std::make_shared<basic_fragment_loader_t>(
+      client_, comm_spec_, partitioner_, directed_, generate_eid_, retain_oid_,
+      local_vertex_map_, compact_edges_, use_perfect_hash_);
+  // init basic_fragment_loader input_vertex_table
+  for (auto& pair : vertex_tables_with_label) {
+    BOOST_LEAF_CHECK(
+        basic_fragment_loader->AddVertexTable(pair.first, pair.second));
+  }
+  vertex_tables_with_label.clear();
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after freeing vertex tables: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
+
+  auto old_vertex_map_id = frag->vertex_map_id();
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-50";
+  // use old_vertex_map to find
+  BOOST_LEAF_CHECK(basic_fragment_loader->ProcessIncrementalVertices(
+      old_vertex_map_id, label_id));
+
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-100";
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after constructing vertices: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
+
+  std::map<std::string, label_id_t> vertex_label_to_index;
+  auto new_labels_index = basic_fragment_loader->get_vertex_label_to_index();
+  for (auto& pair : new_labels_index) {
+    vertex_label_to_index[pair.first] = pair.second;
+  }
+  basic_fragment_loader->set_vertex_label_to_index(
+      std::move(vertex_label_to_index));
+  return basic_fragment_loader->AddIncrementalVerticesToFragment(frag,
+                                                                 label_id);
+}
+
+template <typename OID_T, typename VID_T>
+boost::leaf::result<vineyard::ObjectID>
+ArrowFragmentLoader<OID_T, VID_T>::addDataToExistedELabel(
+    vineyard::ObjectID frag_id, PropertyGraphSchema::LabelId label_id,
+    std::pair<table_vec_t, std::vector<table_vec_t>> raw_v_e_tables) {
+  auto& partial_v_tables = raw_v_e_tables.first;
+  auto& partial_e_tables = raw_v_e_tables.second;
+
+  if (!partial_v_tables.empty() || partial_e_tables.size() != 1) {
+    RETURN_GS_ERROR(ErrorCode::kInvalidOperationError,
+                    "addDataToExistedELabel only support one edge table");
+  }
+  // get frag according to frag_id
+  std::shared_ptr<ArrowFragmentBase> frag;
+  VY_OK_OR_RAISE(client_.GetObject(frag_id, frag));
+
+  const PropertyGraphSchema& schema = frag->schema();
+  std::set<std::string> previous_labels;
+  std::map<std::string, label_id_t> vertex_label_to_index;
+  // get previous labels for preprocessInput()
+  for (auto& entry : schema.vertex_entries()) {
+    vertex_label_to_index[entry.label] = entry.id;
+    previous_labels.insert(entry.label);
+  }
+
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "PROCESS-INPUTS-0";
+  BOOST_LEAF_AUTO(
+      v_e_tables,
+      preprocessInputs(partial_v_tables, partial_e_tables, previous_labels));
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "PROCESS-INPUTS-100";
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after normalize tables: " << get_rss_pretty();
+
+  partial_v_tables.clear();
+  partial_e_tables.clear();
+
+  auto& edge_tables_with_label = v_e_tables.second;
+
+  auto basic_fragment_loader = std::make_shared<basic_fragment_loader_t>(
+      client_, comm_spec_, partitioner_, directed_, generate_eid_, retain_oid_,
+      local_vertex_map_, compact_edges_, use_perfect_hash_);
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-0";
+  if (edge_tables_with_label.size() != 1) {
+    RETURN_GS_ERROR(ErrorCode::kInvalidOperationError,
+                    "addDataToExistedELabel only support one edge table");
+  }
+
+  basic_fragment_loader->set_vertex_label_to_index(
+      std::move(vertex_label_to_index));
+
+  auto& table = edge_tables_with_label[0];
+  // put table into basic_fragment_loader::input_edge_table[0]
+  BOOST_LEAF_CHECK(basic_fragment_loader->AddEdgeTable(
+      table.src_label, table.dst_label, table.edge_label, table.table));
+  edge_tables_with_label.clear();
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after freeing edge tables: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
+
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-50";
+
+  // set basic_fragment_builder
+  vineyard::ObjectID vm_id = frag->vertex_map_id();
+  if (local_vertex_map_) {
+    basic_fragment_loader->set_local_vm_ptr(vm_id);
+  } else {
+    basic_fragment_loader->set_vm_ptr(vm_id);
+  }
+  int edges_num =
+      std::dynamic_pointer_cast<vineyard::ArrowFragment<OID_T, VID_T>>(frag)
+          ->edge_data_table(label_id)
+          ->num_rows();
+  BOOST_LEAF_CHECK(basic_fragment_loader->ConstructEdges(
+      schema.all_edge_label_num(), schema.all_vertex_label_num(), label_id,
+      edges_num));
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-EDGE-100";
+  VLOG(100) << "[worker-" << comm_spec_.worker_id()
+            << "] RSS after constructing edges: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
+
+  LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "SEAL-0";
+  return basic_fragment_loader->AddIncrementalEdgesToFragment(frag, label_id);
+}
+
+template <typename OID_T, typename VID_T>
 boost::leaf::result<
     std::pair<typename ArrowFragmentLoader<OID_T, VID_T>::vertex_table_info_t,
               typename ArrowFragmentLoader<OID_T, VID_T>::edge_table_info_t>>
@@ -288,6 +473,7 @@ boost::leaf::result<vineyard::ObjectID>
 ArrowFragmentLoader<OID_T, VID_T>::addVerticesAndEdges(
     vineyard::ObjectID frag_id,
     std::pair<table_vec_t, std::vector<table_vec_t>> raw_v_e_tables) {
+  // newly added vertex and edge tables
   auto& partial_v_tables = raw_v_e_tables.first;
   auto& partial_e_tables = raw_v_e_tables.second;
 
@@ -305,9 +491,11 @@ ArrowFragmentLoader<OID_T, VID_T>::addVerticesAndEdges(
   }
 
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "PROCESS-INPUTS-0";
+  // group input tables by label
   BOOST_LEAF_AUTO(
       v_e_tables,
       preprocessInputs(partial_v_tables, partial_e_tables, previous_labels));
+
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "PROCESS-INPUTS-100";
   VLOG(100) << "[worker-" << comm_spec_.worker_id()
             << "] RSS after normalize tables: " << get_rss_pretty();
@@ -318,7 +506,6 @@ ArrowFragmentLoader<OID_T, VID_T>::addVerticesAndEdges(
 
   auto& vertex_tables_with_label = v_e_tables.first;
   auto& edge_tables_with_label = v_e_tables.second;
-
   auto basic_fragment_loader = std::make_shared<basic_fragment_loader_t>(
       client_, comm_spec_, partitioner_, directed_, generate_eid_, retain_oid_,
       local_vertex_map_, compact_edges_, use_perfect_hash_);
@@ -332,7 +519,6 @@ ArrowFragmentLoader<OID_T, VID_T>::addVerticesAndEdges(
   VLOG(100) << "[worker-" << comm_spec_.worker_id()
             << "] RSS after freeing vertex tables: " << get_rss_pretty()
             << ", peak = " << get_peak_rss_pretty();
-
   auto old_vertex_map_id = frag->vertex_map_id();
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "CONSTRUCT-VERTEX-50";
   BOOST_LEAF_CHECK(basic_fragment_loader->ConstructVertices(old_vertex_map_id));

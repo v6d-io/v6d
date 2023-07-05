@@ -37,6 +37,7 @@ limitations under the License.
 #include "basic/stream/recordbatch_stream.h"
 #include "client/client.h"
 #include "graph/loader/fragment_loader_utils.h"
+#include "graph/utils/error.h"
 
 namespace vineyard {
 
@@ -566,39 +567,58 @@ DataLoader::loadVertexTables(const std::vector<std::string>& files, int index,
   auto label_num = static_cast<label_id_t>(files.size());
   std::vector<std::shared_ptr<arrow::Table>> tables(label_num);
 
-  for (label_id_t label_id = 0; label_id < label_num; ++label_id) {
-    auto read_procedure =
-        [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
-      std::shared_ptr<arrow::Table> table;
-      if (files[label_id].rfind("vineyard://", 0) == 0) {
-        BOOST_LEAF_AUTO(sourceId,
-                        resolveVineyardObject(files[label_id].substr(11)));
-        VY_OK_OR_RAISE(ReadTableFromVineyard(client_, sourceId, table, index,
-                                             total_parts));
-      } else {
-        VY_OK_OR_RAISE(
-            ReadTableFromLocation(files[label_id], table, index, total_parts));
-      }
-      return table;
-    };
-    BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
-
-    auto sync_schema_procedure =
-        [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
-      return SyncSchema(table, comm_spec_);
-    };
-
-    // normailize the schema of this distributed table
-    BOOST_LEAF_AUTO(normalized_table,
-                    sync_gs_error(comm_spec_, sync_schema_procedure));
-
-    auto meta = normalized_table->schema()->metadata();
-    if (meta == nullptr || meta->FindKey(LABEL_TAG) == -1) {
-      RETURN_GS_ERROR(
-          ErrorCode::kIOError,
-          "Metadata of input vertex files should contain label name");
+  auto read_procedure = [&](label_id_t label_id,
+                            std::string sub_label_file_name)
+      -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+    std::shared_ptr<arrow::Table> table;
+    if (files[label_id].rfind("vineyard://", 0) == 0) {
+      BOOST_LEAF_AUTO(sourceId,
+                      resolveVineyardObject(files[label_id].substr(11)));
+      VY_OK_OR_RAISE(
+          ReadTableFromVineyard(client_, sourceId, table, index, total_parts));
+    } else {
+      VY_OK_OR_RAISE(ReadTableFromLocation(sub_label_file_name, table, index,
+                                           total_parts));
     }
-    tables[label_id] = normalized_table;
+    return table;
+  };
+
+  for (label_id_t label_id = 0; label_id < label_num; ++label_id) {
+    std::vector<std::string> sub_label_files;
+    boost::split(sub_label_files, files[label_id], boost::is_any_of(";"));
+    for (size_t j = 0; j < sub_label_files.size(); ++j) {
+      BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure, label_id,
+                                           sub_label_files[j]));
+
+      if (table == nullptr || table->num_rows() == 0) {
+        continue;
+      }
+
+      auto sync_schema_procedure =
+          [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+        return SyncSchema(table, comm_spec_);
+      };
+
+      // normailize the schema of this distributed table
+      BOOST_LEAF_AUTO(normalized_table,
+                      sync_gs_error(comm_spec_, sync_schema_procedure));
+
+      auto meta = normalized_table->schema()->metadata();
+      if (meta == nullptr || meta->FindKey(LABEL_TAG) == -1) {
+        RETURN_GS_ERROR(
+            ErrorCode::kIOError,
+            "Metadata of input vertex files should contain label name");
+      }
+
+      if (j == 0) {
+        tables[label_id] = normalized_table;
+        continue;
+      }
+      std::shared_ptr<arrow::Table> prev_table = tables[label_id];
+      std::shared_ptr<arrow::Table> combined_table;
+      ConcatenateTables({prev_table, normalized_table}, combined_table);
+      tables[label_id] = combined_table;
+    }
   }
   return tables;
 }
@@ -610,27 +630,31 @@ DataLoader::loadEdgeTables(const std::vector<std::string>& files, int index,
   std::vector<std::vector<std::shared_ptr<arrow::Table>>> tables(label_num);
 
   try {
+    auto read_procedure = [&](label_id_t label_id,
+                              std::string sub_label_file_name)
+        -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
+      std::shared_ptr<arrow::Table> table;
+      if (files[label_id].rfind("vineyard://", 0) == 0) {
+        BOOST_LEAF_AUTO(sourceId,
+                        resolveVineyardObject(files[label_id].substr(11)));
+        VY_OK_OR_RAISE(ReadTableFromVineyard(client_, sourceId, table, index,
+                                             total_parts));
+      } else {
+        VY_OK_OR_RAISE(ReadTableFromLocation(sub_label_file_name, table, index,
+                                             total_parts));
+      }
+      return table;
+    };
+
     for (label_id_t label_id = 0; label_id < label_num; ++label_id) {
       std::vector<std::string> sub_label_files;
       boost::split(sub_label_files, files[label_id], boost::is_any_of(";"));
-
       for (size_t j = 0; j < sub_label_files.size(); ++j) {
-        auto read_procedure =
-            [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
-          std::shared_ptr<arrow::Table> table;
-          if (files[label_id].rfind("vineyard://", 0) == 0) {
-            BOOST_LEAF_AUTO(sourceId,
-                            resolveVineyardObject(files[label_id].substr(11)));
-            VY_OK_OR_RAISE(ReadTableFromVineyard(client_, sourceId, table,
-                                                 index, total_parts));
-          } else {
-            VY_OK_OR_RAISE(ReadTableFromLocation(sub_label_files[j], table,
-                                                 index, total_parts));
-          }
-          return table;
-        };
-        BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure));
-
+        BOOST_LEAF_AUTO(table, sync_gs_error(comm_spec_, read_procedure,
+                                             label_id, sub_label_files[j]));
+        if (table == nullptr || table->num_rows() == 0) {
+          continue;
+        }
         // normailize the schema of this distributed table
         auto sync_schema_procedure =
             [&]() -> boost::leaf::result<std::shared_ptr<arrow::Table>> {
@@ -655,6 +679,7 @@ DataLoader::loadEdgeTables(const std::vector<std::string>& files, int index,
               ErrorCode::kIOError,
               "Metadata of input edge files should contain dst label name");
         }
+
         tables[label_id].emplace_back(normalized_table);
       }
     }
