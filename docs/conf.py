@@ -17,10 +17,11 @@ import sys
 sys.path.insert(0, os.path.abspath('../python'))
 
 # Initialize attached doc strings.
-import vineyard  # noqa: E402
-
-version = vineyard.__version__
-del vineyard
+try:
+    import vineyard  # noqa: E402
+    version = vineyard.__version__
+except ImportError:
+    version = '0.0.0'
 
 # -- Project information -----------------------------------------------------
 
