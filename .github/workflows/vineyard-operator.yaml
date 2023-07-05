@@ -253,9 +253,11 @@ jobs:
 
       - name: Stop to export kubernetes logs
         uses: dashanji/kubernetes-log-export-action@v5
-        if: ${{ matrix.job != 'release'}}
+        if: ${{ matrix.job != 'release' && failure() }}
         env:
           MODE: stop
+          OUTPUT_DIR: ${{ github.workspace }}/${{ matrix.job }}-logs
+          WITH_STOAT: true
 
       - uses: stoat-dev/stoat-action@v0
         if: ${{ matrix.job != 'release' && failure() }}
