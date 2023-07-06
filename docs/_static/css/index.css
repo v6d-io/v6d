@@ -323,6 +323,14 @@ button {
     transform: translateY(-8px) rotate(-45deg);
   }
 
+  .hero-container {
+    width: 90%;
+  }
+  
+  .hero-text-secondary {
+    width: 70%;
+  }
+
   .footer {
     padding: 50px 5%;
   }
