@@ -30,6 +30,8 @@ button {
   width: 120px;
   height: 50px;
   border-radius: 7px;
+  font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .navLink {
