@@ -82,7 +82,7 @@ button {
   object-fit: contain;
 }
 
-.logo > img {
+.logo > a > img {
   max-width: 100%;
   max-height: 100%;
 }
@@ -100,6 +100,14 @@ button {
   text-decoration: underline;
   text-decoration-thickness: 2px;
   text-underline-offset: 10px;
+}
+
+.text-white {
+  color: white;
+}
+
+.text-black {
+  color: black;
 }
 
 .padding-bottom-20 {
@@ -196,6 +204,11 @@ button {
 .footer-info-text {
   font-size: 0.85rem;
   padding-top: 10px;
+}
+
+.footer-link-text {
+  color: white;
+  text-decoration: underline;
 }
 
 .img-container {

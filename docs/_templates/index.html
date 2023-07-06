@@ -21,10 +21,12 @@
     <nav>
       <div class="flex navbar justify-content-space-between">
         <div class="logo">
+          <a href="{{ pathto('index') }}">
           <img
             src="{{ pathto('_static/vineyard-logo-h.png', 1) }}"
             alt="vineyard logo"
           />
+        </a>
         </div>
         <div class="menu-toggle" id="mobile-menu" onClick="handleToggle()">
           <span class="bar"></span>
@@ -48,9 +50,8 @@
           </li>
         </ul>
         <div class="flex media-section">
-          <i class="fab fa-slack"></i>
-          <i class="fab fa-twitter"></i>
-          <i class="fab fa-github-square"></i>
+          <a href="https://slack.cncf.io/" class="text-black"><i class="fab fa-slack"></i></a>
+          <a href="https://github.com/v6d-io/v6d" class="text-black"><i class="fab fa-github"></i></a>
         </div>
       </div>
     </nav>
@@ -67,8 +68,8 @@
           for distributed data in various big data tasks
         </p>
         <div class="btn-container">
-          <button class="btn-primary">Get Started</button>
-          <button class="btn-secondary">API Reference</button>
+          <a href="{{ pathto('notes/getting-started') }}"><button class="btn-primary">Get Started</button></a>
+          <a href="{{ pathto('notes/references') }}"><button class="btn-secondary">API Reference</button></a>
         </div>
       </div>
     </section>
@@ -155,41 +156,40 @@
         <ul>
           <li class="text-bold padding-bottom-20">Docs</li>
           <li class="padding-bottom-10">
-            <a href="#" class="navLink">Getting Started</a>
+            <a href="{{ pathto('notes/getting-started') }}" class="navLink">Getting Started</a>
           </li>
           <li class="padding-bottom-10">
-            <a href="#" class="navLink">Key Concepts</a>
+            <a href="{{ pathto('notes/key-concepts') }}" class="navLink">Key Concepts</a>
           </li>
-          <li><a href="#" class="navLink">Architecture</a></li>
+          <li><a href="{{ pathto('notes/architecture') }}" class="navLink">Architecture</a></li>
         </ul>
         <ul>
           <li class="text-bold padding-bottom-20">Community</li>
           <li class="padding-bottom-10">
-            <a href="#" class="navLink">GitHub</a>
+            <a href="https://github.com/v6d-io/v6d" class="navLink">GitHub</a>
           </li>
           <li class="padding-bottom-10">
-            <a href="#" class="navLink">Slack</a>
+            <a href="https://slack.cncf.io/" class="navLink">Slack</a>
           </li>
-          <li><a href="#" class="navLink">Twitter</a></li>
         </ul>
         <ul>
           <li class="text-bold padding-bottom-20">More</li>
-          <li><a href="#" class="navLink">Faq</a></li>
+          <li><a href="{{ pathto('notes/developers/faq') }}" class="navLink">Faq</a></li>
         </ul>
         <ul>
           <li class="text-bold padding-bottom-20">Legal</li>
           <li class="padding-bottom-10">
-            <a href="#" class="navLink">Terms</a>
+            <a href="https://www.linuxfoundation.org/legal/terms" class="navLink">Terms</a>
           </li>
           <li class="padding-bottom-10">
-            <a href="#" class="navLink">Privacy</a>
+            <a href="https://www.linuxfoundation.org/legal/privacy-policy" class="navLink">Privacy</a>
           </li>
-          <li><a href="#" class="navLink">Trademarks</a></li>
+          <li><a href="https://www.linuxfoundation.org/legal/trademark-usage" class="navLink">Trademarks</a></li>
         </ul>
       </div>
       <div class="text-center footer-info-text">
         <p>
-          Copyright &copy;
+          Copyright &copy; 2020-
           <span id="copyright">
             <script>
               document
@@ -202,7 +202,7 @@
         <p>
           The Linux Foundation has registered trademarks and uses trademarks.
           For a list of trademarks of The Linux Foundation, please see our
-          Trademark Usage page.
+          <a href="https://www.linuxfoundation.org/legal/trademark-usage" class="footer-link-text">Trademark Usage page.</a>
         </p>
       </div>
     </footer>
