@@ -16,7 +16,7 @@ spec:
       - name: kedro_node
     container:
       imagePullPolicy: IfNotPresent
-      image: aws-s3-benchmark-
+      image: aws-s3-benchmark
       env:
         - name: AWS_ACCESS_KEY_ID
           valueFrom:

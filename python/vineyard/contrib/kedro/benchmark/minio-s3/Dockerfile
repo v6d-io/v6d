@@ -22,6 +22,10 @@ ARG KEDRO_UID=999
 ARG KEDRO_GID=0
 COPY --chown=${KEDRO_UID}:${KEDRO_GID} . .
 
+# build the dataset
+ARG DATASET_COUNT
+ENV DATASET_COUNT ${DATASET_COUNT}
+
 RUN awk 'NR == 1 {print $0; next} {for (i=1; i<=n; i++) print $0}' n=${DATASET_COUNT} data/01_raw/train.csv > temp && mv temp data/01_raw/train.csv 
 
 CMD ["kedro", "run"]

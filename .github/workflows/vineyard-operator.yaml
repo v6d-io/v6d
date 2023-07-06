@@ -73,6 +73,10 @@ jobs:
         with:
           submodules: true
 
+      - name: Free disk space
+        run: |
+          bash .github/free-disk-space.sh
+
       - uses: actions/setup-go@v3
         with:
           go-version: 1.19
@@ -172,6 +176,15 @@ jobs:
             chmod a+rwx $job-logs
           done
 
+      - name: Start to export kubernetes logs
+        uses: dashanji/kubernetes-log-export-action@v5
+        if: ${{ matrix.job != 'release'}}
+        env:
+          SHOW_TIMESTAMPS: 'true'
+          OUTPUT_DIR: ${{ github.workspace }}/${{ matrix.job }}-logs
+          NAMESPACES: vineyard*
+          MODE: start
+
       - name: e2e-tests-assembly-local
         if: ${{ matrix.job == 'e2e-tests-assembly-local' }}
         run: |
@@ -238,13 +251,13 @@ jobs:
         run: |
           make -C k8s/test/e2e e2e-tests-deploy-raw-backup-and-recover
 
-      - name: Export kubernetes logs
-        uses: dashanji/kubernetes-log-export-action@v3
+      - name: Stop to export kubernetes logs
+        uses: dashanji/kubernetes-log-export-action@v5
         if: ${{ matrix.job != 'release' && failure() }}
         env:
-          SHOW_TIMESTAMPS: 'true'
+          MODE: stop
           OUTPUT_DIR: ${{ github.workspace }}/${{ matrix.job }}-logs
-          NAMESPACES: vineyard*
+          WITH_STOAT: true
 
       - uses: stoat-dev/stoat-action@v0
         if: ${{ matrix.job != 'release' && failure() }}

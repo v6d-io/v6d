@@ -24,7 +24,7 @@ spec:
       - name: required
     container:
       imagePullPolicy: IfNotPresent
-      image: vineyard-benchmark-
+      image: vineyard-benchmark
       command: [kedro]
       args: ["run", "-n",  "{{inputs.parameters.kedro_node}}"]
       env:
