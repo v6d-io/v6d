@@ -94,6 +94,12 @@ button {
   font-weight: 600;
 }
 
+.text-underline {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 10px;
+}
+
 .padding-bottom-20 {
   padding-bottom: 20px;
 }
