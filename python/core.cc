@@ -657,10 +657,45 @@ void bind_blobs(py::module& mod) {
   py::class_<RemoteBlobWriter, std::shared_ptr<RemoteBlobWriter>>(
       mod, "RemoteBlobBuilder", py::buffer_protocol(), doc::RemoteBlobBuilder)
       .def(py::init<>(
-               [](const size_t size) -> std::unique_ptr<RemoteBlobWriter> {
-                 return std::make_unique<RemoteBlobWriter>(size);
+               [](const size_t size) -> std::shared_ptr<RemoteBlobWriter> {
+                 return std::make_shared<RemoteBlobWriter>(size);
                }),
            py::arg("size"))
+      .def_static(
+          "make",
+          [](const size_t size) -> std::shared_ptr<RemoteBlobWriter> {
+            return RemoteBlobWriter::Make(size);
+          },
+          "size"_a)
+      .def_static(
+          "wrap",
+          [](uintptr_t const data,
+             const size_t size) -> std::shared_ptr<RemoteBlobWriter> {
+            return RemoteBlobWriter::Wrap(
+                reinterpret_cast<const uint8_t*>(data), size);
+          },
+          "data"_a, "size"_a)
+      .def_static(
+          "wrap",
+          [](py::buffer const& buffer,
+             const size_t nbytes) -> std::shared_ptr<RemoteBlobWriter> {
+            return RemoteBlobWriter::Wrap(
+                reinterpret_cast<const uint8_t*>(buffer.ptr()), nbytes);
+          },
+          "data"_a, "size"_a)
+      .def_static(
+          "wrap",
+          [](py::bytes const& bs) -> std::shared_ptr<RemoteBlobWriter> {
+            char* buffer = nullptr;
+            ssize_t length = 0;
+            if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &length)) {
+              py::pybind11_fail("Unable to extract bytes contents!");
+            }
+            std::cout << "length = " << length << std::endl;
+            return RemoteBlobWriter::Wrap(
+                reinterpret_cast<const uint8_t*>(buffer), length);
+          },
+          "data"_a)
       .def_property_readonly("size", &RemoteBlobWriter::size,
                              doc::RemoteBlobBuilder_size)
       .def("__len__", &RemoteBlobWriter::size, doc::RemoteBlobBuilder_size)

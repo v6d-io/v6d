@@ -23,7 +23,8 @@ import numpy as np
 import pytest
 
 import vineyard
-from vineyard._C import RemoteBlobBuilder
+from vineyard import RemoteBlobBuilder
+from vineyard import RPCClient
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
@@ -52,7 +53,7 @@ def test_remote_blob_create(vineyard_client, vineyard_endpoint):
 
 
 def test_remote_blob_get(vineyard_client, vineyard_endpoint):
-    vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
+    vineyard_rpc_client: RPCClient = vineyard.connect(*vineyard_endpoint.split(':'))
 
     buffer_writer = vineyard_client.create_blob(len(payload))
     buffer_writer.copy(0, payload)
@@ -88,8 +89,21 @@ def test_remote_blob_create_and_get(vineyard_endpoint):
 def test_remote_blob_create_and_get_large_object(vineyard_endpoint):
     vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
 
+    # allocate & copy
     buffer_writer = RemoteBlobBuilder(len(large_payload))
     buffer_writer.copy(0, large_payload)
+    blob_id = vineyard_rpc_client.create_remote_blob(buffer_writer)
+
+    # get as remote blob
+    remote_blob = vineyard_rpc_client.get_remote_blob(blob_id)
+
+    # check remote blob
+    assert remote_blob.id == blob_id
+    assert remote_blob.size == len(large_payload)
+    assert memoryview(remote_blob) == memoryview(large_payload)
+
+    # wrap
+    buffer_writer = RemoteBlobBuilder.wrap(large_payload)
     blob_id = vineyard_rpc_client.create_remote_blob(buffer_writer)
 
     # get as remote blob

@@ -125,6 +125,17 @@ RemoteBlobWriter::RemoteBlobWriter(std::shared_ptr<MutableBuffer> const& buffer)
 
 RemoteBlobWriter::~RemoteBlobWriter() {}
 
+std::shared_ptr<RemoteBlobWriter> RemoteBlobWriter::Make(const size_t size) {
+  return std::shared_ptr<RemoteBlobWriter>(new RemoteBlobWriter(size));
+}
+
+std::shared_ptr<RemoteBlobWriter> RemoteBlobWriter::Wrap(const uint8_t* data,
+                                                         const size_t size) {
+  auto buffer = std::dynamic_pointer_cast<MutableBuffer>(
+      MutableBuffer::Wrap(const_cast<uint8_t*>(data), size));
+  return std::shared_ptr<RemoteBlobWriter>(new RemoteBlobWriter(buffer));
+}
+
 size_t RemoteBlobWriter::size() const { return buffer_ ? buffer_->size() : 0; }
 
 char* RemoteBlobWriter::data() {

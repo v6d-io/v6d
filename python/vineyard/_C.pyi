@@ -376,7 +376,9 @@ def connect(
     *, username: str = "", password: str = ""
 ) -> Union[IPCClient, RPCClient]: ...
 @overload
-def connect(socket: str = "", username: str = "", password: str = "") -> IPCClient: ...
+def connect(
+    socket: str = "", *, username: str = "", password: str = ""
+) -> IPCClient: ...
 @overload
 def connect(
     host: str,

@@ -21,11 +21,6 @@ on:
       - main
       - docs
       - dev/docs
-  pull_request:
-    branches:
-      - main
-      - docs
-      - dev/docs
 
 concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}

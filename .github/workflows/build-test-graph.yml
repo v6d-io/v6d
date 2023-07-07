@@ -16,11 +16,15 @@ name: Vineyard Graph CI
 
 on:
   push:
+    branches:
+      - main
     paths:
-      - modules/graph
+      - 'modules/graph'
   pull_request:
+    branches:
+      - main
     paths:
-      - modules/graph
+      - 'modules/graph'
 
 concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}

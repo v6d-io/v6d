@@ -146,6 +146,11 @@ class RemoteBlobWriter {
 
   ~RemoteBlobWriter();
 
+  static std::shared_ptr<RemoteBlobWriter> Make(const size_t size);
+
+  static std::shared_ptr<RemoteBlobWriter> Wrap(const uint8_t* data,
+                                                const size_t size);
+
   /**
    * @brief Get the size of the blob, i.e., the number of bytes of the data
    * payload in the blob.
