@@ -428,6 +428,41 @@ See Also:
     IPCClient.create_empty_blob
 )doc";
 
+const char* RemoteBlobBuilderMake = R"doc(
+Create a new remote blob builder with given size.
+
+See Also:
+    RemoteBlobBuilder
+    RemoteBlobBuilder.wrap
+)doc";
+
+const char* RemoteBlobBuilderWrap = R"doc(
+Wrap a given pointer and with its size as a remote blob builder to send to
+the remote vineyard instance.
+
+See Also:
+    RemoteBlobBuilder
+    RemoteBlobBuilder.make
+)doc";
+
+const char* RemoteBlobBuilderWrapBuffer = R"doc(
+Wrap an existing memory buffer as a remote blob builder to send to the remote
+vineyard instance.
+
+See Also:
+    RemoteBlobBuilder
+    RemoteBlobBuilder.make
+)doc";
+
+const char* RemoteBlobBuilderWrapBytes = R"doc(
+Wrap an existing bytes buffer as a remote blob builder to send to the remote
+vineyard instance.
+
+See Also:
+    RemoteBlobBuilder
+    RemoteBlobBuilder.make
+)doc";
+
 const char* RemoteBlobBuilder_size = R"doc(
 Size of this blob builder.
 )doc";

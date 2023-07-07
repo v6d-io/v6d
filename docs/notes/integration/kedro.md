@@ -1,24 +1,17 @@
 Kedro Vineyard Plugin
 =====================
 
-The Kedro vineyard plugin contains components (e.g., `DataSet` and `Runner`) to share
-intermediate data among nodes in Kedro pipelines using vineyard.
+The Kedro vineyard plugin contains components (e.g., `DataSet` and `Runner`)
+to share intermediate data among nodes in Kedro pipelines using vineyard.
+
+Kedro on Vineyard
+-----------------
 
 Vineyard works as the *DataSet* provider for kedro workers to allow transferring
 large-scale data objects between tasks that cannot be efficiently serialized and
 is not suitable for `pickle`, without involving external storage systems like
 AWS S3 (or Minio as an alternative). The Kedro vineyard plugin handles object migration
 as well when the required inputs are not located where the task is scheduled to execute.
-
-Table of Contents
------------------
-
-- [Kedro Vineyard Plugin](#kedro-vineyard-plugin)
-  - [Table of Contents](#table-of-contents)
-  - [Requirements](#requirements)
-  - [Configuration](#configuration)
-  - [Usage](#usage)
-  - [Deploy to Kubernetes](#deploy-to-kubernetes)
 
 Requirements
 ------------

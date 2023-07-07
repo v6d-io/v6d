@@ -10,6 +10,7 @@ Data processing
    ./data-processing/using-objects-python.rst
    ./data-processing/python-sharedmemory.rst
    ./data-processing/distributed-learning.rst
+   ./data-processing/accelerate-data-sharing-in-kedro.rst
 
 In these comprehensive case studies, we demonstrate how to seamlessly integrate vineyard's
 capabilities with existing data-intensive tasks. By incorporating vineyard into complex
@@ -45,3 +46,14 @@ improvements in both performance and ease of use.
    ^^^^^^^^^^^^
    Discover how vineyard enhances distributed machine learning training workflows by
    seamlessly integrating with various computing engines for improved efficiency and elegance.
+
+   ---
+
+   .. link-button:: ./data-processing/accelerate-data-sharing-in-kedro
+      :type: ref
+      :text: Accelerate Data Sharing in Kedro
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   Vineyard serves as the :code:`DataSet` backend for Kedro pipelines, enabling
+   efficient data sharing between tasks without intrusive code modification, even
+   when the pipeline is deployed to Kubernetes.
