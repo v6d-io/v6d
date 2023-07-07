@@ -670,7 +670,7 @@ public class ColumnarDataBuilder {
 
         @Override
         final void setUTF8String(int rowId, Text value) {
-            accessor.set(rowId, value);
+            accessor.setSafe(rowId, value);
         }
     }
 
@@ -696,7 +696,7 @@ public class ColumnarDataBuilder {
 
         @Override
         final void setUTF8String(int rowId, Text value) {
-            accessor.set(rowId, value);
+            accessor.setSafe(rowId, value);
         }
     }
 

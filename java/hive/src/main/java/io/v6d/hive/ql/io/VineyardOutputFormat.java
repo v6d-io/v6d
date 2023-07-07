@@ -132,10 +132,12 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         recordBatchBuilders = new ArrayList<RecordBatchBuilder>();
 
         try {
+            // TBD : more clear error message.
             recordBatchBuilder = new RecordBatchBuilder(client, schema, root.getRowCount());
             fillColumns(root, schema);
             recordBatchBuilders.add(recordBatchBuilder);
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             throw new IOException("Add field failed");
         }
 
@@ -188,6 +190,11 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                 Float8Vector vector = (Float8Vector) root.getFieldVectors().get(i);
                 for (int j = 0; j < root.getRowCount(); j++) {
                     column.setDouble(j, vector.get(j));
+                } 
+            } else if (field.getType().equals(Arrow.Type.LargeVarChar)) {
+                LargeVarCharVector vector = (LargeVarCharVector) root.getFieldVectors().get(i);
+                for (int j = 0; j < root.getRowCount(); j++) {
+                    column.setUTF8String(j, vector.getObject(j));
                 } 
             } else if (field.getType().equals(Arrow.Type.VarChar)) {
                 VarCharVector vector = (VarCharVector) root.getFieldVectors().get(i);
