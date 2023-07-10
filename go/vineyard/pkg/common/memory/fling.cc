@@ -90,7 +90,7 @@ int send_fd(int conn, int fd) {
       }
     } else if (r == 0) {
       std::clog << "[error] Encountered unexpected EOF" << std::endl;
-      return -1;
+      return 0;
     } else {
       return static_cast<int>(r);
     }
