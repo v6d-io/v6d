@@ -14,45 +14,42 @@
  */
 package io.v6d.hive.ql.io;
 
-import io.v6d.core.common.util.ObjectID;
 import org.apache.arrow.memory.BufferAllocator;
 import io.v6d.core.common.util.VineyardException;
 import org.apache.arrow.memory.RootAllocator;
 import io.v6d.core.client.IPCClient;
-import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.arrow.TableBuilder;
 import io.v6d.modules.basic.arrow.SchemaBuilder;
 import io.v6d.modules.basic.arrow.Arrow;
 import io.v6d.modules.basic.arrow.RecordBatchBuilder;
-import io.v6d.modules.basic.arrow.Table;
 
-import org.apache.hadoop.hive.llap.FieldDesc;
-import org.apache.hadoop.hive.llap.Row;
-import org.apache.hadoop.hive.llap.LlapArrowRowRecordReader;
+import org.apache.arrow.vector.complex.NonNullableStructVector;
+import org.apache.hadoop.hive.ql.exec.Utilities;
+import org.apache.hadoop.hive.ql.exec.vector.*;
 import org.apache.hadoop.hive.ql.io.HiveInputFormat;
 import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
-import org.apache.hadoop.hive.serde2.ColumnProjectionUtils;
-import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
-import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
-import org.apache.hadoop.io.*;
-import org.apache.hadoop.mapred.*;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapred.RecordReader;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.InputSplit;
+import org.apache.hadoop.mapred.Reporter;
+import org.apache.hadoop.mapred.FileSplit;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.flatbuffers.IntVector;
 
 import java.io.IOException;
 
 import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.complex.NonNullableStructVector;
 import org.apache.arrow.vector.types.pojo.*;
 import org.apache.hadoop.fs.Path;
-import org.apache.arrow.vector.FieldVector;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.io.DataOutput;
 import java.io.DataInput;
+import java.util.Vector;
 
 import lombok.val;
 // how to connect vineyard
@@ -65,147 +62,26 @@ import lombok.val;
 //
 // We do not split the file at present.
 
-class RowWritable implements Writable {
-    private Row row;
-    private int columnCount = 0;
-
-    public RowWritable(final Row row) {
-        this.row = row;
-        this.columnCount = row.getSchema().getColumns().size();
-    }
-
-    public Row getRow() {
-        return row;
-    }
-
-    public Object[] getValues() {
-        Object[] values = new Object[this.columnCount];
-        for (int i = 0; i < this.columnCount; i++) {
-            // FIXME(tao): can be avoid the transformation to `Writable`?
-            values[i] = makeWritable(this.row.getValue(i));
-        }
-        return values;
-    }
+public class VineyardBatchInputFormat extends HiveInputFormat<NullWritable, VectorizedRowBatch> implements VectorizedInputFormatInterface {
 
     @Override
-    public void write(DataOutput out) throws IOException {
-    }
-
-    @Override
-    public void readFields(DataInput in) throws IOException {
-    }
-
-    private BooleanWritable makeWritable(boolean value) {
-        return new BooleanWritable(value);
-    }
-
-    private IntWritable makeWritable(int value) {
-        return new IntWritable(value);
-    }
-
-    private LongWritable makeWritable(long value) {
-        return new LongWritable(value);
-    }
-
-    private FloatWritable makeWritable(float value) {
-        return new FloatWritable(value);
-    }
-
-    private DoubleWritable makeWritable(double value) {
-        return new DoubleWritable(value);
-    }
-
-    private Text makeWritable(String value) {
-        return new Text(value);
-    }
-
-    private Object makeWritable(Object value) {
-        if (value == null) {
-            return null;
-        }
-        if (value instanceof Boolean) {
-            return makeWritable((boolean) value);
-        }
-        if (value instanceof Integer) {
-            return makeWritable((int) value);
-        }
-        if (value instanceof Long) {
-            return makeWritable((long) value);
-        }
-        if (value instanceof Float) {
-            return makeWritable((float) value);
-        }
-        if (value instanceof Double) {
-            return makeWritable((double) value);
-        }
-        if (value instanceof String) {
-            return makeWritable((String) value);
-        }
-        return value;
-    }
-}
-
-class VineyardArrowRowRecordReader implements RecordReader<NullWritable, RowWritable> {
-    private LlapArrowRowRecordReader reader;
-
-    public VineyardArrowRowRecordReader(JobConf job, org.apache.hadoop.hive.llap.Schema schema, RecordReader<NullWritable, ArrowWrapperWritable> reader) throws IOException {
-        this.reader = new LlapArrowRowRecordReader(job, schema, reader);
-    }
-
-    @Override
-    public boolean next(NullWritable key, RowWritable value) throws IOException {
-        if (this.reader.next(key, value.getRow())) {
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    @Override
-    public NullWritable createKey() {
-        return NullWritable.get();
-    }
-
-    @Override
-    public RowWritable createValue() {
-        return new RowWritable(new Row(this.reader.getSchema()));
-    }
-
-    @Override
-    public long getPos() throws IOException {
-        return 0;
-    }
-
-    @Override
-    public void close() throws IOException {
-        this.reader.close();
-    }
-
-    @Override
-    public float getProgress() throws IOException {
-        return 0;
-    }
-}
-
-public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritable> {
-
-    @Override
-    public RecordReader<NullWritable, RowWritable>
+    public RecordReader<NullWritable, VectorizedRowBatch>
     getRecordReader(InputSplit genericSplit, JobConf job, Reporter reporter)
-        throws IOException {
+            throws IOException {
         reporter.setStatus(genericSplit.toString());
         System.out.printf("--------+creating vineyard record reader\n");
         System.out.println("split class:" + genericSplit.getClass().getName());
-        return new VineyardArrowRowRecordReader(job, this.makeDummySchema(), new VineyardRecordReader(job, (VineyardSplit) genericSplit));
+        return new VineyardBatchRecordReader(job, (VineyardSplit) genericSplit);
+    }
+
+    @Override
+    public VectorizedSupport.Support[] getSupportedFeatures() {
+        return new VectorizedSupport.Support[] {VectorizedSupport.Support.DECIMAL_64};
     }
 
     @Override
     public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
         System.out.println("--------+creating vineyard input split. Num:" + numSplits);
-        val columnIds = ColumnProjectionUtils.getReadColumnIDs(job);
-        System.out.printf("columnIds: %s\n", columnIds);
-        val columnNames = ColumnProjectionUtils.getReadColumnNames(job);
-        System.out.printf("columnNames: %s\n", columnNames);
         List<InputSplit> splits = new ArrayList<InputSplit>();
         Path path = FileInputFormat.getInputPaths(job)[0];
         System.out.println("path:" + path);
@@ -215,78 +91,18 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritab
         splits.add(vineyardSplit);
         return splits.toArray(new VineyardSplit[splits.size()]);
     }
-
-    private org.apache.hadoop.hive.llap.Schema makeDummySchema() {
-        // Field field1 = new Field("field_1", FieldType.nullable(new ArrowType.Int(32, true)), null);//Arrow.makeField("field_1", Arrow.FieldType.Int);
-        // Field field2 = new Field("field_2", FieldType.nullable(new ArrowType.Int(32, true)), null);//Arrow.makeField("field_2", Arrow.FieldType.Int);
-        // List<Field> fields = new ArrayList<Field>();
-        // fields.add(field1);
-        // fields.add(field2);
-        // return new Schema(fields);
-        FieldDesc field1 = new FieldDesc("field_1", TypeInfoFactory.getPrimitiveTypeInfo("int"));
-        FieldDesc field2 = new FieldDesc("field_2", TypeInfoFactory.getPrimitiveTypeInfo("int"));
-        List<FieldDesc> fields = new ArrayList<FieldDesc>();
-        fields.add(field1);
-        fields.add(field2);
-        return new org.apache.hadoop.hive.llap.Schema(fields);
-    }
 }
 
-class VineyardSplit extends FileSplit {
-    private Path path = new Path("/opt/hive/data/warehouse/hive_example");
-
-    @Override
-    public long getLength() {
-        System.out.printf("--------+getLength\n");
-        return 0;
-    }
-
-    @Override
-    public String[] getLocations() throws IOException {
-        System.out.printf("--------+getLocations\n");
-        IOException e = new IOException("read field");
-        // e.printStackTrace();
-        return new String[0];
-    }
-
-    @Override
-    public void readFields(DataInput in) throws IOException {
-        System.out.printf("--------+creating vineyard readField\n");
-        IOException e = new IOException("read field");
-        // e.printStackTrace();
-
-        // path = new Path();
-        // System.out.println("Path: " + path);
-    }
-
-    @Override
-    public void write(DataOutput out) throws IOException {
-        System.out.printf("--------+creating vineyard write\n");
-    }
-
-    VineyardSplit() {
-        System.out.printf("--------+creating vineyard split\n");
-    }
-
-    public Path getPath() {
-        System.out.println("--------+getPath");
-        return path;
-    }
-
-    void setPath(Path path) {
-        System.out.println("--------+setPath");
-        this.path = path;
-    }
-}
-
-class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWritable> {
-    private static Logger logger = LoggerFactory.getLogger(VineyardRecordReader.class);
+class VineyardBatchRecordReader implements RecordReader<NullWritable, VectorizedRowBatch> {
+    private static Logger logger = LoggerFactory.getLogger(VineyardBatchRecordReader.class);
 
     // vineyard field
     private static IPCClient client;
     private String tableName;
     private Boolean tableNameValid = false;
-    private VectorSchemaRoot vectorSchemaRoot = getSchemaRoot();
+    private VectorSchemaRoot vectorSchemaRoot;
+
+    private VectorizedRowBatchCtx ctx;
 
     // for test
     private long tableID;
@@ -295,7 +111,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
     private List<RecordBatchBuilder> recordBatchBuilders;
     private static RecordBatchBuilder recordBatchBuilder;
 
-    VineyardRecordReader(JobConf job, VineyardSplit split) {
+    VineyardBatchRecordReader(JobConf job, VineyardSplit split) {
         System.out.printf("--------+creating vineyard record reader\n");
         // throw new RuntimeException("mapred record reader: unimplemented");
         // reader = new LineRecordReader(job, split);
@@ -305,11 +121,6 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
         tableName = path.substring(index + 1);
         tableNameValid = true;
         System.out.println("Table name:" + tableName);
-
-        val columnIds = ColumnProjectionUtils.getReadColumnIDs(job);
-        System.out.printf("columnIds: %s\n", columnIds);
-        val columnNames = ColumnProjectionUtils.getReadColumnNames(job);
-        System.out.printf("columnNames: %s\n", columnNames);
 
         // connect to vineyard
         if (client == null) {
@@ -335,12 +146,13 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
             System.out.println(e.getMessage());
         }
         Arrow.instantiate();
+        ctx = Utilities.getVectorizedRowBatchCtx(job);
     }
 
     @Override
     public void close() throws IOException {
         System.out.printf("--------closing\n");
-        if(client.connected()) {
+        if(client != null && client.connected()) {
             client.disconnect();
             System.out.println("Bye, vineyard!");
         }
@@ -353,9 +165,10 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
     }
 
     @Override
-    public ArrowWrapperWritable createValue() {
+    public VectorizedRowBatch createValue() {
         System.out.printf("++++++++creating value\n");
-        return new ArrowWrapperWritable(vectorSchemaRoot , Arrow.default_allocator, NonNullableStructVector.empty(tableName, Arrow.default_allocator));
+        return ctx.createVectorizedRowBatch();
+        // return new ArrowWrapperWritable(null , Arrow.default_allocator, NonNullableStructVector.empty(tableName, Arrow.default_allocator));
     }
 
     @Override
@@ -370,8 +183,21 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
         return 0;
     }
 
+    private void arrowToVectorizedRowBatch(VectorSchemaRoot recordBatch, VectorizedRowBatch batch) {
+        batch.numCols = recordBatch.getFieldVectors().size();
+        batch.size = recordBatch.getRowCount();
+        batch.selected = new int[batch.size];
+        batch.selectedInUse = true;
+        batch.cols = new ColumnVector[batch.numCols];
+        batch.projectedColumns = new int[batch.numCols];
+        batch.projectionSize = batch.numCols;
+        for (int i = 0; i < batch.numCols; i++) {
+            batch.projectedColumns[i] = i;
+        }
+    }
+
     @Override
-    public boolean next(NullWritable key, ArrowWrapperWritable value) throws IOException {
+    public boolean next(NullWritable key, VectorizedRowBatch value) throws IOException {
         System.out.printf("+++++++++next\n");
         if (tableNameValid) {
             // read(tableName);
@@ -383,26 +209,35 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
                 return false;
             }
             System.out.println("Get schema root succeed!");
-            value.setVectorSchemaRoot(vectorSchemaRoot);
-            NonNullableStructVector vector = value.getRootVector();
-            vector.initializeChildrenFromFields(vectorSchemaRoot.getSchema().getFields());
-            vector.setValueCount(vectorSchemaRoot.getRowCount());
-            List<FieldVector> fieldVectors = vector.getChildrenFromFields();
-            System.out.println("fieldVectors size: " + fieldVectors.size());
-            for (int i = 0; i < fieldVectors.size(); i++) {
-                System.out.println("fieldVectors[" + i + "] size: " + fieldVectors.get(i).getValueCount());
-                for (int j = 0; j < fieldVectors.get(i).getValueCount(); j++) {
-                    ((org.apache.arrow.vector.IntVector)(fieldVectors.get(i))).set(j, (int)(vectorSchemaRoot.getFieldVectors().get(i).getObject(j)));
-                    System.out.println(fieldVectors.get(i).getObject(j));
+            // value.setVectorSchemaRoot(vectorSchemaRoot);
 
-                }
-                System.out.println("null count:" + ((org.apache.arrow.vector.IntVector)fieldVectors.get(i)).getNullCount());
-            }
+            this.arrowToVectorizedRowBatch(vectorSchemaRoot, value);
+
+            // value.setVectorSchemaRoot(vectorSchemaRoot);
+            // NonNullableStructVector vector = value.getRootVector();
+            // vector.initializeChildrenFromFields(vectorSchemaRoot.getSchema().getFields());
+            // vector.setValueCount(vectorSchemaRoot.getRowCount());
+            // List<FieldVector> fieldVectors = vector.getChildrenFromFields();
+            // System.out.println("fieldVectors size: " + fieldVectors.size());
+            // for (int i = 0; i < fieldVectors.size(); i++) {
+            //     System.out.println("fieldVectors[" + i + "] size: " + fieldVectors.get(i).getValueCount());
+            //     for (int j = 0; j < fieldVectors.get(i).getValueCount(); j++) {
+            //         ((org.apache.arrow.vector.IntVector)(fieldVectors.get(i))).set(j, (int)(vectorSchemaRoot.getFieldVectors().get(i).getObject(j)));
+            //         System.out.println(fieldVectors.get(i).getObject(j));
+            //
+            //     }
+            //     System.out.println("null count:" + ((org.apache.arrow.vector.IntVector)fieldVectors.get(i)).getNullCount());
+            // }
             System.out.println("========================");
-            if (value.getVectorSchemaRoot() != null) {
-                System.out.println("Set vectorSchemaRoot succeed!");
+            for (int i = 0; i < vectorSchemaRoot.getSchema().getFields().size(); i++) {
+                for (int j = 0; j < vectorSchemaRoot.getRowCount(); j++) {
+                    System.out.println(vectorSchemaRoot.getFieldVectors().get(i).getObject(j));
+                }
+                System.out.println("null count:" + ((org.apache.arrow.vector.IntVector)vectorSchemaRoot.getFieldVectors().get(i)).getNullCount());
             }
-            tableNameValid = false;
+            // if (value.getVectorSchemaRoot() != null) {
+            //     System.out.println("Set vectorSchemaRoot succeed!");
+            // }
             return true;
         }
         return false;
@@ -468,7 +303,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
             v1.set(i, i);
             v2.set(i, i + 1);
         }
-        // tableNameValid = false;
+        tableNameValid = false;
         return vectorSchemaRoot;
     }
 

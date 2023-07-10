@@ -70,21 +70,28 @@ Hive and Vineyard
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
         LOCATION "file:///opt/hive/data/warehouse/hive_example";
 
-        set hive.vectorized.execution.enabled = true;
+        insert into hive_example values('a', 1), ('a', 2), ('b',3);
 
-        create table hive_example(
+- Create table and select
+
+    .. code:: sql
+
+        create table hive_example2(
                     field_1 int,
                     field_2 int)
         row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
-        LOCATION "file:///opt/hive/data/warehouse/hive_example";
+        LOCATION "file:///opt/hive/data/warehouse/hive_example2";
 
         select * from hive_example;
 
-        explain vectorization only
-        select * from hive_example;
+        explain vectorization only select * from hive_example;
+
+- Insert using `VineyardSerDe`:
+
+    .. code:: sql
 
         create table hive_example(
                             field_1 int,
@@ -95,7 +102,44 @@ Hive and Vineyard
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
         LOCATION "file:///opt/hive/data/warehouse/hive_example";
 
-        select * from hive_example;
+        insert into hive_example values('a', 1), ('a', 2), ('b',3);
 
+- Vectorized Input (and output):
+
+    .. code:: sql
+
+        set hive.fetch.task.conversion=none;
+        set hive.vectorized.use.vectorized.input.format=true;
+        set hive.vectorized.use.row.serde.deserialize=false;
+        set hive.vectorized.use.vector.serde.deserialize=true;
+        set hive.vectorized.execution.enabled=true;
+        set hive.vectorized.execution.reduce.enabled=true;
+        set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardBatchInputFormat;
+
+        create table hive_example(
+                            field_1 int,
+                            field_2 int)
+        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+        stored as
+            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardBatchInputFormat'
+            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
+        LOCATION "file:///opt/hive/data/warehouse/hive_example";
+
+        select * from hive_example;
+        explain vectorization select * from hive_example;
 
         insert into hive_example values('a', 1), ('a', 2), ('b',3);
+
+- Test output format:
+
+    .. code:: sql
+
+        create table hive_example_orc(
+                                    field_1 int,
+                                    field_2 int)
+        stored as orc
+        LOCATION "file:///opt/hive/data/warehouse/hive_example_orc";
+        insert into hive_example values(1, 1), (2, 2), (3, 3);
+        explain vectorization select * from hive_example_orc;
+
+
