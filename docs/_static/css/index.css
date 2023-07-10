@@ -145,6 +145,10 @@ button {
   color: #476581;
 }
 
+.font-weight-300 {
+  font-weight: 300;
+}
+
 .hero-section {
   background: linear-gradient(
       270deg,
