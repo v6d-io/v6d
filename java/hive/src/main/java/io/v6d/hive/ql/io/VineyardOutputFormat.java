@@ -82,11 +82,11 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private Progressable progress;
 
     // vineyard
-    private static IPCClient client;
+    private IPCClient client;
     private TableBuilder tableBuilder;
     private SchemaBuilder schemaBuilder;
     private List<RecordBatchBuilder> recordBatchBuilders;
-    private static RecordBatchBuilder recordBatchBuilder;
+    RecordBatchBuilder recordBatchBuilder;
 
     @lombok.SneakyThrows
     public SinkRecordWriter(
@@ -110,7 +110,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         // connect to vineyard
         if (client == null) {
             // TBD: get vineyard socket path from table properties
-            client = new IPCClient("/tmp/vineyard.sock");
+            client = new IPCClient("/tmp/vineyard/vineyard.sock");
         }
         if (client == null || !client.connected()) {
             throw new VineyardException.Invalid("failed to connect to vineyard");
@@ -118,35 +118,24 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             System.out.printf("Connected to vineyard succeed!\n");
             System.out.printf("Hello vineyard!\n");
         }
+
+        recordBatchBuilders = new ArrayList<RecordBatchBuilder>();
     }
 
     @Override
     public void write(Writable w) throws IOException {
         System.out.printf("vineard filesink record writer: %s, %s\n", w, w.getClass());
-        VectorSchemaRoot root = ((ArrowWrapperWritable) w).getVectorSchemaRoot();
-        org.apache.arrow.vector.types.pojo.Schema schema = root.getSchema();
-        // System.out.printf("field class: %s\n", root.getFieldVectors().get(0).getObject(0).getClass());
-        // System.out.printf("Value: %d\n", ((IntWritable)root.getFieldVectors().get(0).getObject(0)).get());
-
-        schemaBuilder = SchemaBuilder.fromSchema(schema);
-        recordBatchBuilders = new ArrayList<RecordBatchBuilder>();
-
-        try {
-            // TBD : more clear error message.
-            recordBatchBuilder = new RecordBatchBuilder(client, schema, root.getRowCount());
-            fillColumns(root, schema);
-            recordBatchBuilders.add(recordBatchBuilder);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            throw new IOException("Add field failed");
-        }
-
-        tableBuilder = new TableBuilder(client, schemaBuilder, recordBatchBuilders);
+        ArrowWrapperWritable arrowWrapperWritable = (ArrowWrapperWritable) w;
+        VectorSchemaRoot root = arrowWrapperWritable.getVectorSchemaRoot();
+        fillRecordBatchBuilder(root);
     }
 
     @Override
     public void close(boolean abort) throws IOException {
         System.out.println("vineyard filesink operator closing");
+        for (int i = 0; i < recordBatchBuilders.size(); i++) {
+            tableBuilder.addBatch(recordBatchBuilders.get(i));
+        }
         try {
             ObjectMeta meta = tableBuilder.seal(client);
             System.out.println("Table id in vineyard:" + meta.getId().value());
@@ -157,7 +146,22 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         System.out.println("Bye, vineyard!");
     }
 
-    private static void fillColumns(VectorSchemaRoot root, Schema schema)
+    private void fillRecordBatchBuilder(VectorSchemaRoot root) throws IOException{
+        org.apache.arrow.vector.types.pojo.Schema schema = root.getSchema();
+        schemaBuilder = SchemaBuilder.fromSchema(schema);
+        tableBuilder = new TableBuilder(client, schemaBuilder);
+        try {
+            // TBD : more clear error message.
+            recordBatchBuilder = new RecordBatchBuilder(client, schema, root.getRowCount());
+            fillColumns(root, schema);
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
+            throw new IOException("Add field failed");
+        }
+        recordBatchBuilders.add(recordBatchBuilder);
+    }
+
+    private void fillColumns(VectorSchemaRoot root, Schema schema)
         throws VineyardException {
         for (int i = 0; i < schema.getFields().size(); i++) {
             val column = recordBatchBuilder.getColumnBuilder(i);

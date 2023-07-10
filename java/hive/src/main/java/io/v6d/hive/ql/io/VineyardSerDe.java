@@ -15,9 +15,22 @@
 package io.v6d.hive.ql.io;
 
 import org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe;
+import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hive.conf.HiveConf;
+import static org.apache.hadoop.hive.conf.HiveConf.ConfVars.HIVE_ARROW_BATCH_SIZE;
+
+import java.util.Properties;
 
 public class VineyardSerDe extends ArrowColumnarBatchSerDe {
+    @Override
+    public void initialize(Configuration configuration, Properties tableProperties, Properties partitionProperties)
+        throws SerDeException {
+        System.out.println("initialize");
+        super.initialize(configuration, tableProperties, partitionProperties);
+    }
+
     @Override
     public Object deserialize(Writable writable) {
         return ((RowWritable)writable).getValues();

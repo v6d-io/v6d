@@ -315,7 +315,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, ArrowWrapperWri
         if (client == null) {
             // TBD: get vineyard socket path from table properties
             try {
-                client = new IPCClient("/tmp/vineyard.sock");
+                client = new IPCClient("/tmp/vineyard/vineyard.sock");
             } catch (Exception e) {
                 System.out.println("connect to vineyard failed!");
                 System.out.println(e.getMessage());
