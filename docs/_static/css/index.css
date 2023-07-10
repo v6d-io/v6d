@@ -16,9 +16,20 @@ ul {
   list-style: none;
 }
 
-li,
-i {
+li {
   padding: 0 20px;
+}
+
+nav i {
+  padding: 0 20px;
+}
+
+h4 > i {
+  padding-right: 10px;
+}
+
+p i {
+  padding-left: 6px;
 }
 
 a {
@@ -180,6 +191,7 @@ button {
   width: 18em;
   height: 10em;
   background-color: #f6f6f7;
+  padding-left: 1.5em;
 }
 
 .banner {
