@@ -221,7 +221,7 @@ button {
   width: 18em;
   height: 15em;
   background-color: #ffffff;
-  padding-left: 1.5em;
+  padding: 0 0.5em 0 0.5em;
   display: flex;
   flex-direction: column;
   border-radius: 0 1.25em 0 1.25em;
