@@ -17,8 +17,12 @@ FROM ghcr.io/v6d-io/v6d/vineyardd-alpine-builder:builder-latest as builder
 RUN export arch="$PLATFORM" && \
     export arch="${arch/x86_64/amd64}" && \
     export arch="${arch/aarch64/arm64}" && \
+    echo "PLATFORM = $PLATFORM" && \
     echo "arch = $arch" && \
     cd /tmp && \
+    curl -LO https://github.com/robxu9/bash-static/releases/download/5.2.015-1.2.3-2/bash-linux-$PLATFORM && \
+    chmod +x bash-linux-$PLATFORM && \
+    mv /tmp/bash-linux-$PLATFORM /usr/bin/bash-linux && \
     curl -LO https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_$arch && \
     chmod +x dumb-init_1.2.2_$arch && \
     mv /tmp/dumb-init_1.2.2_$arch /usr/bin/dumb-init && \
@@ -61,10 +65,10 @@ RUN cd /work/v6d && \
     make -j`nproc` && \
     strip ./bin/vineyardd
 
-FROM pingcap/alpine-glibc:alpine-3.14.3
+# debug has busybox
+FROM gcr.io/distroless/base:debug
 
-RUN apk add --no-cache bash sudo
-
+COPY --from=builder /usr/bin/bash-linux /bin/bash
 COPY --from=builder /usr/bin/dumb-init /usr/bin/dumb-init
 COPY --from=builder /usr/bin/wait-for-it.sh /usr/bin/wait-for-it.sh
 COPY --from=builder /usr/bin/etcd /usr/bin/etcd

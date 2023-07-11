@@ -22,18 +22,20 @@ on:
       - 'v*'
     paths:
       - '.github/workflows/vineyard-operator.yaml'
+      - 'charts/vineyard-operator/**'
+      - 'docker/Dockerfile.vineyardd*'
       - 'k8s/**'
       - 'src/server/util/kubectl*'
-      - 'charts/vineyard-operator/**'
   pull_request:
     branches:
       - main
       - dev/kubernetes
     paths:
       - '.github/workflows/vineyard-operator.yaml'
+      - 'charts/vineyard-operator/**'
+      - 'docker/Dockerfile.vineyardd*'
       - 'k8s/**'
       - 'src/server/util/kubectl*'
-      - 'charts/vineyard-operator/**'
 
 concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
