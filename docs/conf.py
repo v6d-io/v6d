@@ -89,6 +89,8 @@ source_suffix = ['.rst', '.md']
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
+master_doc = "docs"
+
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
@@ -133,6 +135,7 @@ html_css_files = [
     "css/v4-shims.min.css",  # font-awesome
     "css/custom.css",
     "css/panels.css",
+    "css/index.css",
 ]
 
 html_extra_path = [
@@ -141,6 +144,8 @@ html_extra_path = [
     "./.nojekyll",
     "./summer.html",
 ]
+
+html_additional_pages = {'index': 'index.html'}
 
 html_title = "Vineyard"
 html_logo = "images/vineyard-logo-h.png"
