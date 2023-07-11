@@ -39,6 +39,8 @@ import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.FileOutputFormat;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
@@ -87,6 +89,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private SchemaBuilder schemaBuilder;
     private List<RecordBatchBuilder> recordBatchBuilders;
     RecordBatchBuilder recordBatchBuilder;
+    private String tableName;
 
     @lombok.SneakyThrows
     public SinkRecordWriter(
@@ -106,6 +109,15 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         this.finalOutPath = finalOutPath;
         this.tableProperties = tableProperties;
         this.progress = progress;
+
+        // for (Object key : tableProperties.keySet()) {
+        //     System.out.printf("table property: %s, %s\n", key, tableProperties.getProperty((String) key));
+        // }
+        String path = tableProperties.getProperty("location");
+        int index = path.lastIndexOf("/");
+        tableName = path.substring(index + 1);
+        System.out.println("Table name:" + tableName);
+
 
         // connect to vineyard
         if (client == null) {
@@ -139,6 +151,8 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         try {
             ObjectMeta meta = tableBuilder.seal(client);
             System.out.println("Table id in vineyard:" + meta.getId().value());
+            client.persist(meta.getId());
+            client.putName(meta.getId(), tableName);
         } catch (Exception e) {
             throw new IOException("Seal TableBuilder failed");
         }

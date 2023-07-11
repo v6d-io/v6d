@@ -153,11 +153,11 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
             System.out.println("Hello, vineyard!");
         }
 
-        try {
-            prepare();
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-        }
+        // try {
+        //     prepare();
+        // } catch (Exception e) {
+        //     System.out.println(e.getMessage());
+        // }
         Arrow.instantiate();
         ctx = Utilities.getVectorizedRowBatchCtx(job);
     }
@@ -322,8 +322,9 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
             //test vineyard
             if (table == null) {
                 try {
-                    long id = tableID;//client.getName(tableName);
-                    ObjectID objectID = new ObjectID(id);
+                    // long id = tableID;//client.getName(tableName);
+                    // tableID = 
+                    ObjectID objectID = client.getName(tableName, true);
                     table = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID));
                 } catch (Exception e) {
                     System.out.println("Get objectID failed.");
