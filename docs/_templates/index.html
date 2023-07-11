@@ -5,6 +5,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="./_static/css/index.css" />
+    <link rel="stylesheet" href="./_static/css/termynal.css">
     <link rel="icon" type="image/x-icon" href="{{ pathto('_static/vineyard.ico', 1) }}" />
     <link
       rel="stylesheet"
@@ -67,9 +68,7 @@
       </div>
     </nav>
     <section class="background-gradient-color flex justify-content-center hero-section">
-      <div
-        class="main-content text-center hero-container flex flex-column align-items-center"
-      >
+      <div class="main-content text-center hero-container flex flex-column align-items-center">
         <h2 class="hero-text">
           Vineyard: an In-Memory Data Manager for Data-Intensive Analytics
         </h2>
@@ -85,6 +84,16 @@
           <a href="{{ pathto('notes/references') }}">
             <button class="btn-secondary">API Reference</button>
           </a>
+        </div>
+        <div id="termynal" class="termynal" data-termynal>
+          <span data-ty="input">pip install vineyard</span>
+          <span data-ty="progress"></span>
+          <span data-ty>Successfully installed vineyard</span>
+          <span data-ty="input">python -m vineyard</span>
+          <span data-ty>Hello vineyard!</span>
+          <span data-ty>Starting the etcd server ...</span>
+          <span data-ty>Vineyard will listen on "/var/run/vineyard.sock" for IPC</span>
+          <span data-ty>Vineyard will listen on 0.0.0.0:9600 for RPC</span>
         </div>
       </div>
     </section>
@@ -262,6 +271,7 @@
     src="https://kit.fontawesome.com/91dde3bebe.js"
     crossorigin="anonymous">
   </script>
+  <script src="./_static/js/termynal.js" data-termynal-container="#termynal"></script>
   <script>
     // mobile menu toggle handler
     const handleToggle = () => {
