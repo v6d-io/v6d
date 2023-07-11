@@ -14,6 +14,7 @@
 .. figure:: images/vineyard-logo-rect.png
    :width: 397
    :alt: Vineyard: an in-memory immutable data manager
+   :target: https://v6d.io
 
    *an in-memory immutable data manager*
 
