@@ -170,6 +170,10 @@ button {
   text-align: left;
 }
 
+.breaking-word-all {
+  word-break: break-all;
+}
+
 .font-weight-300 {
   font-weight: 300;
 }
