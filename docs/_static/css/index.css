@@ -3,14 +3,11 @@ body {
   margin: 0;
 }
 
-nav {
-  background: linear-gradient(
-      270deg,
-      rgba(35, 128, 242, 0.5) 32.55%,
-      rgba(35, 128, 242, 0) 99.31%
-    ),
-    rgba(49, 227, 222, 0.7);
-}
+/* nav {
+  position: sticky;
+  top: 0;
+  transition: background-color .25s;
+} */
 
 .list-style-none {
   list-style: none;
@@ -45,15 +42,31 @@ button {
   font-size: 0.95rem;
 }
 
+.background-gradient-color {
+  background: linear-gradient(
+      270deg,
+      rgba(35, 128, 242, 0.5) 15.55%,
+      rgba(35, 128, 242, 0) 99.31%
+    ),
+    rgba(49, 227, 222, 0.7);
+}
+
+/* html:not([data-scroll='0']) {
+  .navigator.background-gradient-color {
+    background: #f5f5f5;
+    box-shadow: 0 0 .5em rgba(0, 0, 0, .5);
+  }
+} */
+
 .main-content {
   max-width: max(70%, 1080px);
 }
 
-.navLink {
+.nav-link {
   color: white;
 }
 
-.navLink:hover {
+.nav-link:hover {
   color: blue;
 }
 
@@ -156,15 +169,6 @@ button {
   font-weight: 300;
 }
 
-.hero-section {
-  background: linear-gradient(
-      270deg,
-      rgba(35, 128, 242, 0.5) 32.55%,
-      rgba(35, 128, 242, 0) 99.31%
-    ),
-    rgba(49, 227, 222, 0.7);
-}
-
 .hero-container {
   padding: 100px 3% 200px;
 }
@@ -179,10 +183,12 @@ button {
   margin-top: -15px;
   color: white;
   font-weight: 300;
+  font-size: larger;
 }
 
 .feature-section {
   padding: 100px 3% 25px;
+  font-size: larger;
 }
 
 .feature-section > .main-content {
@@ -190,7 +196,7 @@ button {
 }
 
 .feature-item {
-  width: 28em;
+  width: 45%;
 }
 
 .feature-item > p {
@@ -213,12 +219,12 @@ button {
 
 .feature-item-sm {
   width: 18em;
-  height: 13em;
+  height: 15em;
   background-color: #ffffff;
   padding-left: 1.5em;
   display: flex;
   flex-direction: column;
-  border-radius: 0 0 0 0.75em;
+  border-radius: 0 0 0 1.25em;
 }
 
 .use-case-section {
@@ -311,8 +317,7 @@ button {
     display: none;
   }
 
-  .menu-toggle,
-  .bar {
+  .menu-toggle, .bar {
     display: block;
     cursor: pointer;
   }
@@ -331,7 +336,7 @@ button {
     display: none;
   }
 
-  .navLinkContainer {
+  .nav-link-container {
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -354,7 +359,7 @@ button {
     margin-top: 50px;
   }
 
-  .navbar .navLink {
+  .navbar .nav-link {
     color: black;
     font-size: 1.3rem;
   }
@@ -399,6 +404,7 @@ button {
   .feature-container {
     display: grid;
     grid-template-columns: repeat(1, 1fr);
+    padding-bottom: 1em;
   }
 
   .feature-section-mobile {
@@ -407,14 +413,17 @@ button {
 
   .feature-section {
     padding: 100px 3% 0px;
+    font-size: initial;
   }
 
   .feature-item {
-    width: 24em;
+    width: 80%;
     margin: 0 auto;
   }
 
   .feature-item-sm {
     margin: 0 auto;
+    width: 80%;
+    height: auto;
   }
 }

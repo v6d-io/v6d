@@ -16,11 +16,10 @@
       href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Roboto&display=swap"
       rel="stylesheet"
     />
-    <title>Vineyard: An In-Memory Data Manager For
-      Data-Intensive Analysis</title>
+    <title>Vineyard: an In-Memory Data Manager for Data-Intensive Analytics</title>
   </head>
   <body>
-    <nav>
+    <nav class="navigator background-gradient-color">
       <div class="main-content flex navbar justify-content-space-between align-items-center">
         <div class="logo">
           <a href="{{ pathto('index') }}">
@@ -35,53 +34,57 @@
           <span class="bar"></span>
           <span class="bar"></span>
         </div>
-        <ul class="flex vertical-align-center list-style-none" id="navLinkWrapper">
-          <li class="padding-left-right-20"><a href="{{ pathto('index') }}" class="navLink">Home</a></li>
-          <li class="padding-left-right-20"><a href="{{ pathto('docs') }}" class="navLink">Docs</a></li>
+        <ul class="flex vertical-align-center list-style-none" id="nav-link-wrapper">
           <li class="padding-left-right-20">
-            <a
-              href="{{ pathto('notes/developers/build-from-source') }}"
-              class="navLink"
-              >Download</a
-            >
+            <a href="{{ pathto('index') }}"
+               class="nav-link">
+               Home
+            </a>
           </li>
           <li class="padding-left-right-20">
-            <a href="{{ pathto('notes/developers') }}" class="navLink"
-              >Community</a
-            >
+            <a href="{{ pathto('docs') }}"
+               class="nav-link">
+               Docs
+            </a>
+          </li>
+          <li class="padding-left-right-20">
+            <a href="{{ pathto('notes/developers/build-from-source') }}"
+               class="nav-link">
+               Installation
+            </a>
+          </li>
+          <li class="padding-left-right-20">
+            <a href="{{ pathto('notes/developers') }}"
+               class="nav-link">
+               Community
+            </a>
           </li>
         </ul>
         <div class="flex media-section">
-          <a href="https://slack.cncf.io/" class="text-black"
-            ><i class="fab fa-slack"></i
-          ></a>
-          <a href="https://github.com/v6d-io/v6d" class="text-black"
-            ><i class="fab fa-github"></i
-          ></a>
+          <a href="https://slack.cncf.io/" class="text-black" target="_blank"><i class="fab fa-slack"></i></a>
+          <a href="https://github.com/v6d-io/v6d" class="text-black" target="_blank"><i class="fab fa-github"></i></a>
         </div>
       </div>
     </nav>
-    <section class="flex justify-content-center hero-section">
+    <section class="background-gradient-color flex justify-content-center hero-section">
       <div
         class="main-content text-center hero-container flex flex-column align-items-center"
       >
         <h2 class="hero-text">
-          Vineyard: An
-          <span class="text-underline">In-Memory Data Manager</span> For
-          Data-Intensive Analysis
+          Vineyard: an In-Memory Data Manager for Data-Intensive Analytics
         </h2>
         <p class="hero-text-secondary">
-          an innovative in-memory immutable data manager that offers
+          an innovative cloud-native in-memory immutable data manager that offers
           out-of-the-box high-level abstractions and zero-copy in-memory sharing
-          for distributed data in various big data tasks
+          for distributed data in various big data tasks.
         </p>
         <div class="btn-container">
-          <a href="{{ pathto('notes/getting-started') }}"
-            ><button class="btn-primary">Get Started</button></a
-          >
-          <a href="{{ pathto('notes/references') }}"
-            ><button class="btn-secondary">API Reference</button></a
-          >
+          <a href="{{ pathto('notes/getting-started') }}">
+            <button class="btn-primary">Get Started</button>
+          </a>
+          <a href="{{ pathto('notes/references') }}">
+            <button class="btn-secondary">API Reference</button>
+          </a>
         </div>
       </div>
     </section>
@@ -92,7 +95,7 @@
           <p>
             Vineyard shares immutable data across different systems using shared
             memory without extra overheads, eliminating the overhead of
-            serialization/deserialization
+            serialization and deserialization.
           </p>
           <p><a href="{{ pathto('notes/architecture') }}">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
         </div>
@@ -103,7 +106,7 @@
           <p>
             Vineyard defines a metadata-payload separated data model to capture
             the payload commonalities and method commonalities between sharable
-            object
+            object.
           </p>
           <p><a href="{{ pathto('notes/architecture') }}">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
         </div>
@@ -117,7 +120,7 @@
           <p>
             Vineyard provides common manipulation routines for immutable data as
             drivers, which extend the capabilities of data structures by
-            registering appropriate drivers
+            registering appropriate drivers.
           </p>
           <p><a href="{{ pathto('notes/architecture') }}">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
         </div>
@@ -128,7 +131,7 @@
           </h4>
           <p>
             Vineyard provides efficient distributed data sharing in cloud-native
-            environments by embracing cloud-native big data processing
+            environments by embracing cloud-native big data processing.
           </p>
           <p><a href="{{ pathto('notes/architecture') }}">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
         </div>
@@ -138,7 +141,7 @@
       <h2 class="text-center">Use Cases</h2>
       <div class="main-content flex justify-content-space-around gap-sm feature-container">
         <div class="feature-item-sm">
-          <h4>Object manager</h4>
+          <h4>Object store for all</h4>
           <p>
             Putting and getting arbitrary objects using Vineyard, in a zero-copy way!
           </p>
@@ -169,9 +172,9 @@
     <div class="banner text-center">
       <p>
         Vineyard is a
-        <a href="https://www.cncf.io/sandbox-projects/" class="banner-link"
-          >Cloud Native Computing Foundation sandbox project</a
-        >
+        <a href="https://www.cncf.io/sandbox-projects/" class="banner-link" target="_blank">
+          Cloud Native Computing Foundation sandbox project
+        </a>
       </p>
       <div class="img-container">
         <img src="{{ pathto('_static/cncf-color.svg', 1) }}" alt="cncf logo" />
@@ -182,17 +185,17 @@
         <ul class="list-style-none">
           <li class="text-bold padding-bottom-20">Docs</li>
           <li class="padding-bottom-10">
-            <a href="{{ pathto('notes/getting-started') }}" class="navLink"
+            <a href="{{ pathto('notes/getting-started') }}" class="nav-link"
               >Getting Started</a
             >
           </li>
           <li class="padding-bottom-10">
-            <a href="{{ pathto('notes/key-concepts') }}" class="navLink"
+            <a href="{{ pathto('notes/key-concepts') }}" class="nav-link"
               >Key Concepts</a
             >
           </li>
           <li>
-            <a href="{{ pathto('notes/architecture') }}" class="navLink"
+            <a href="{{ pathto('notes/architecture') }}" class="nav-link"
               >Architecture</a
             >
           </li>
@@ -200,16 +203,16 @@
         <ul class="list-style-none">
           <li class="text-bold padding-bottom-20">Community</li>
           <li class="padding-bottom-10">
-            <a href="https://github.com/v6d-io/v6d" class="navLink">GitHub</a>
+            <a href="https://github.com/v6d-io/v6d" class="nav-link" target="_blank">GitHub</a>
           </li>
           <li class="padding-bottom-10">
-            <a href="https://slack.cncf.io/" class="navLink">Slack</a>
+            <a href="https://slack.cncf.io/" class="nav-link" target="_blank">Slack</a>
           </li>
         </ul>
         <ul class="list-style-none">
           <li class="text-bold padding-bottom-20">More</li>
           <li>
-            <a href="{{ pathto('notes/developers/faq') }}" class="navLink"
+            <a href="{{ pathto('notes/developers/faq') }}" class="nav-link"
               >Faq</a
             >
           </li>
@@ -217,25 +220,19 @@
         <ul class="list-style-none">
           <li class="text-bold padding-bottom-20">Legal</li>
           <li>
-            <a
-              href="https://www.linuxfoundation.org/legal/terms"
-              class="navLink"
-              >Terms</a
-            >
+            <a href="https://www.linuxfoundation.org/legal/terms" class="nav-link" target="_blank">
+              Terms
+            </a>
           </li>
           <li>
-            <a
-              href="https://www.linuxfoundation.org/legal/privacy-policy"
-              class="navLink"
-              >Privacy</a
-            >
+            <a href="https://www.linuxfoundation.org/legal/privacy-policy" class="nav-link" target="_blank">
+              Privacy
+            </a>
           </li>
           <li>
-            <a
-              href="https://www.linuxfoundation.org/legal/trademark-usage"
-              class="navLink"
-              >Trademarks</a
-            >
+            <a href="https://www.linuxfoundation.org/legal/trademark-usage" class="nav-link" target="_blank">
+              Trademarks
+            </a>
           </li>
         </ul>
       </div>
@@ -254,29 +251,27 @@
         <p>
           The Linux Foundation has registered trademarks and uses trademarks.
           For a list of trademarks of The Linux Foundation, please see our
-          <a
-            href="https://www.linuxfoundation.org/legal/trademark-usage"
-            class="footer-link-text"
-            >Trademark Usage page.</a
-          >
+          <a href="https://www.linuxfoundation.org/legal/trademark-usage" class="footer-link-text" target="_blank">
+            Trademark Usage page.
+          </a>
         </p>
       </div>
     </footer>
   </body>
   <script
     src="https://kit.fontawesome.com/91dde3bebe.js"
-    crossorigin="anonymous"
-  ></script>
+    crossorigin="anonymous">
+  </script>
   <script>
     // mobile menu toggle handler
     const handleToggle = () => {
       const menuToggleNode = document.getElementById("mobile-menu");
-      let navBarLinkContainer = document.getElementById("navLinkWrapper");
+      let navBarLinkContainer = document.getElementById("nav-link-wrapper");
 
       if (menuToggleNode.className === "menu-toggle") {
         menuToggleNode.className = "menu-toggle is-active";
         navBarLinkContainer.style.display = "flex";
-        navBarLinkContainer.className = "navLinkContainer";
+        navBarLinkContainer.className = "nav-link-container";
       } else {
         menuToggleNode.className = "menu-toggle";
         navBarLinkContainer.style.display = "none";
