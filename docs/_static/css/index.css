@@ -12,7 +12,7 @@ nav {
     rgba(49, 227, 222, 0.7);
 }
 
-ul {
+.list-style-none {
   list-style: none;
 }
 
