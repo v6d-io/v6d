@@ -15,12 +15,16 @@
 package io.v6d.hive.ql.io;
 
 import org.apache.arrow.memory.BufferAllocator;
+
+import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
 import org.apache.arrow.memory.RootAllocator;
 import io.v6d.core.client.IPCClient;
+import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.arrow.TableBuilder;
 import io.v6d.modules.basic.arrow.SchemaBuilder;
+import io.v6d.modules.basic.arrow.Table;
 import io.v6d.modules.basic.arrow.Arrow;
 import io.v6d.modules.basic.arrow.RecordBatchBuilder;
 
@@ -113,10 +117,12 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
 
     // for test
     private long tableID;
+    private Table table;
     private TableBuilder tableBuilder;
     private SchemaBuilder schemaBuilder;
     private List<RecordBatchBuilder> recordBatchBuilders;
     private static RecordBatchBuilder recordBatchBuilder;
+    private int batchIndex = 0;
 
     VineyardBatchRecordReader(JobConf job, VineyardSplit split) {
         System.out.printf("--------+creating vineyard record reader\n");
@@ -310,7 +316,25 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
             // read(tableName);
             // if exist, create vectorSchema root set data and return true;
             // return false;
-            vectorSchemaRoot = getSchemaRoot();
+
+            // vectorSchemaRoot = getSchemaRoot();
+            
+            //test vineyard
+            if (table == null) {
+                try {
+                    long id = tableID;//client.getName(tableName);
+                    ObjectID objectID = new ObjectID(id);
+                    table = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID));
+                } catch (Exception e) {
+                    System.out.println("Get objectID failed.");
+                    return false;
+                }
+            }
+            if (batchIndex >= table.getBatches().size()) {
+                return false;
+            }
+            vectorSchemaRoot = table.getArrowBatch(batchIndex++);
+
             if (vectorSchemaRoot == null) {
                 System.out.println(tableName + " not exist!");
                 return false;
@@ -435,7 +459,8 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
         ObjectMeta meta = tableBuilder.seal(client);
         client.persist(meta.getId());
         client.putName(meta.getId(), "hive_example");
-        System.out.println("Table ID: " + meta.getId().value());
+        tableID = meta.getId().value();
+        System.out.println("Table ID: " + tableID);
         System.out.println("Prepare data done");
     }
 }
