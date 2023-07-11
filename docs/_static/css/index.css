@@ -45,6 +45,10 @@ button {
   font-size: 0.95rem;
 }
 
+.main-content {
+  max-width: max(70%, 1080px);
+}
+
 .navLink {
   color: white;
 }
@@ -69,6 +73,10 @@ button {
   margin: 0 auto;
 }
 
+.justify-content-space-around {
+  justify-content: space-around;
+}
+
 .justify-content-space-between {
   justify-content: space-between;
 }
@@ -83,7 +91,6 @@ button {
 
 .navbar {
   padding: 30px 3%;
-  max-width: 1960px;
   margin: 0 auto;
 }
 
@@ -159,8 +166,7 @@ button {
 }
 
 .hero-container {
-  width: 70%;
-  padding: 100px 0 200px;
+  padding: 100px 3% 200px;
 }
 
 .hero-text {
@@ -176,7 +182,11 @@ button {
 }
 
 .feature-section {
-  padding: 100px 23% 0px;
+  padding: 100px 3% 25px;
+}
+
+.feature-section > .main-content {
+  margin: 0 auto;
 }
 
 .feature-item {
@@ -187,15 +197,32 @@ button {
   font-weight: 300;
 }
 
+.feature-item-sm > h4 {
+  display: inline-block;
+  height: 1rem;
+}
+
 .feature-item-sm > p {
   font-weight: 100;
 }
 
+.feature-item-sm > span {
+  margin: auto 1em 1em 0;
+  text-align: right;
+}
+
 .feature-item-sm {
   width: 18em;
-  height: 11em;
-  background-color: #f6f6f7;
+  height: 13em;
+  background-color: #ffffff;
   padding-left: 1.5em;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0 0 0 0.75em;
+}
+
+.use-case-section {
+  background-color: ghostwhite;
 }
 
 .banner {
@@ -244,6 +271,17 @@ button {
 
 #mobile-menu {
   display: none;
+}
+
+.text-wrapping {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  -ms-word-break: break-all;
+  word-break: break-word;
+  -ms-hyphens: auto;
+  -moz-hyphens: auto;
+  -webkit-hyphens: auto;
+  hyphens: auto;
 }
 
 @media only screen and (max-width: 786px) {
@@ -342,7 +380,7 @@ button {
   .hero-container {
     width: 90%;
   }
-  
+
   .hero-text-secondary {
     width: 70%;
   }

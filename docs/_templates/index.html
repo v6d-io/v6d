@@ -21,7 +21,7 @@
   </head>
   <body>
     <nav>
-      <div class="flex navbar justify-content-space-between align-items-center">
+      <div class="main-content flex navbar justify-content-space-between align-items-center">
         <div class="logo">
           <a href="{{ pathto('index') }}">
             <img
@@ -63,7 +63,7 @@
     </nav>
     <section class="flex justify-content-center hero-section">
       <div
-        class="text-center hero-container flex flex-column align-items-center"
+        class="main-content text-center hero-container flex flex-column align-items-center"
       >
         <h2 class="hero-text">
           Vineyard: An
@@ -85,8 +85,8 @@
         </div>
       </div>
     </section>
-    <section class="feature-section feature-section-mobile">
-      <div class="flex justify-content-space-between feature-container">
+    <section class="feature-section feature-section-mobile text-wrapping">
+      <div class="main-content flex justify-content-space-around feature-container">
         <div class="feature-item">
           <h4><i class="fa fa-exchange"></i>Efficient data sharing</h4>
           <p>
@@ -108,7 +108,7 @@
           <p><a href="{{ pathto('notes/architecture') }}">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
         </div>
       </div>
-      <div class="flex justify-content-space-between feature-container">
+      <div class="main-content flex justify-content-space-around feature-container">
         <div class="feature-item">
           <h4>
             <i class="fa-solid fa-plug fa-lg"></i>Pluggable I/O
@@ -134,28 +134,35 @@
         </div>
       </div>
     </section>
-    <section class="feature-section">
+    <section class="feature-section use-case-section text-wrapping">
       <h2 class="text-center">Use Cases</h2>
-      <div class="flex justify-content-space-between gap-sm feature-container">
+      <div class="main-content flex justify-content-space-around gap-sm feature-container">
         <div class="feature-item-sm">
-          <h4>Object Manager</h4>
+          <h4>Object manager</h4>
           <p>
-            Put and get arbitrary objects using Vineyard, in a zero-copy way!
+            Putting and getting arbitrary objects using Vineyard, in a zero-copy way!
           </p>
-          <p><a href="{{ pathto('notes/key-concepts/objects') }}" class="font-weight-300">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
+          <span><a href="{{ pathto('tutorials/data-processing/using-objects-python') }}" class="font-weight-300">Learn More <i class="fa-solid fa-arrow-right"></i></a></span>
         </div>
         <div class="feature-item-sm">
-          <h4>Cross-system sharing</h4>
-          <p>Share large objects across computing systems.</p>
-          <p><a href="{{ pathto('tutorials/data-processing/accelerate-data-sharing-in-kedro') }}" class="font-weight-300">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
+          <h4>Data sharing in Kedro pipelines</h4>
+          <p>Sharing intermediate data between tasks in Kedro pipelines.</p>
+          <span><a href="{{ pathto('tutorials/data-processing/accelerate-data-sharing-in-kedro') }}" class="font-weight-300">Learn More <i class="fa-solid fa-arrow-right"></i></a></span>
         </div>
         <div class="feature-item-sm">
-          <h4>Data Orchestration</h4>
+          <h4>Data processing for machine learning</h4>
           <p>
-            Vineyard coordinates the flow of objects and jobs on Kubernetes
-            based on data-aware scheduling.
+            Sharing large objects between different systems in data preprocessing pipelines in machine learning applications.
           </p>
-          <p><a href="{{ pathto('tutorials/kubernetes/using-vineyard-operator') }}" class="font-weight-300">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
+          <span><a href="{{ pathto('tutorials/kubernetes/ml-pipeline-mars-pytorch') }}" class="font-weight-300">Learn More <i class="fa-solid fa-arrow-right"></i></a></span>
+        </div>
+        <div class="feature-item-sm">
+          <h4>Data sharing on Kubernetes</h4>
+          <p>
+            Coordinating the flow of objects and jobs on Kubernetes
+            with the data-aware scheduler plugin.
+          </p>
+          <span class="font-weight-300"><a href="{{ pathto('tutorials/kubernetes/using-vineyard-operator') }}">Learn More <i class="fa-solid fa-arrow-right"></i></a></span>
         </div>
       </div>
     </section>
