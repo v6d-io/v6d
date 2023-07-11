@@ -33,7 +33,7 @@ a {
   text-decoration: none;
 }
 
-button {
+.button {
   border: none;
   width: 120px;
   height: 50px;
