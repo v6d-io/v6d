@@ -182,6 +182,11 @@ button {
   padding: 100px 3% 100px;
 }
 
+.hero-section {
+  position: relative;
+  z-index: -1;
+}
+
 .hero-text {
   font-size: 3rem;
   color: #f8f8f8;
