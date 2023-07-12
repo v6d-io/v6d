@@ -21,6 +21,7 @@ import json
 import logging
 import sys
 
+import cloudpickle
 import fsspec
 
 import vineyard
@@ -53,6 +54,8 @@ def write_parquet(
     instream: DataframeStream = streams[proc_index]
     reader = instream.open_reader(client)
 
+    chunk_hook = write_options.get('chunk_hook', None)
+
     writer = None
     with fsspec.open(f"{path}_{proc_index}", "wb", **storage_options) as fp:
         while True:
@@ -61,6 +64,8 @@ def write_parquet(
             except (StopIteration, vineyard.StreamDrainedException):
                 writer.close()
                 break
+            if chunk_hook is not None:
+                batch = chunk_hook(batch)
             if writer is None:
                 import pyarrow.parquet
 
@@ -105,6 +110,10 @@ def main():
     write_options = json.loads(
         base64.b64decode(sys.argv[5].encode("utf-8")).decode("utf-8")
     )
+    if 'chunk_hook' in write_options:
+        write_options['chunk_hook'] = cloudpickle.loads(
+            base64.b64decode(write_options['chunk_hook'].encode('ascii'))
+        )
     proc_num = int(sys.argv[6])
     proc_index = int(sys.argv[7])
     write_parquet(

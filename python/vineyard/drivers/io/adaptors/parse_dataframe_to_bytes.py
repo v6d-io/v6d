@@ -20,6 +20,8 @@ import base64
 import json
 import sys
 
+import cloudpickle
+
 import vineyard
 from vineyard.io.byte import ByteStream
 from vineyard.io.dataframe import DataframeStream
@@ -86,6 +88,8 @@ def parse_dataframe(vineyard_socket, stream_id, write_options, proc_num, proc_in
     stream_writer = stream.open_writer(client)
     first_write = header_row
 
+    chunk_hook = write_options.get('chunk_hook', None)
+
     try:
         while True:
             try:
@@ -93,6 +97,8 @@ def parse_dataframe(vineyard_socket, stream_id, write_options, proc_num, proc_in
             except (StopIteration, vineyard.StreamDrainedException):
                 stream_writer.finish()
                 break
+            if chunk_hook is not None:
+                batch = chunk_hook(batch)
             df = batch.to_pandas()
             csv_content = df.to_csv(
                 header=first_write, index=False, sep=delimiter
@@ -125,6 +131,10 @@ def main():
     write_options = json.loads(
         base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
     )
+    if 'chunk_hook' in write_options:
+        write_options['chunk_hook'] = cloudpickle.loads(
+            base64.b64decode(write_options['chunk_hook'].encode('ascii'))
+        )
     proc_num = int(sys.argv[4])
     proc_index = int(sys.argv[5])
     parse_dataframe(ipc_socket, stream_id, write_options, proc_num, proc_index)

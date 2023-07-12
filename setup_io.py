@@ -109,6 +109,8 @@ setup(
         's3fs',
         'vineyard',
         'zstd',
+        'cloudpickle>=2.2.1; python_version>="3.11"',
+        'cloudpickle>=1.5.0; python_version<"3.11"',
     ],
     extras_require={
         'dev': [

@@ -16,12 +16,15 @@
 # limitations under the License.
 #
 
+import base64
 import json
 import logging
 import sys
 
 import pyarrow as pa
 import pyarrow.csv  # pylint: disable=unused-import
+
+import cloudpickle
 
 import vineyard
 from vineyard.data.utils import normalize_arrow_dtype
@@ -45,7 +48,7 @@ def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
     stream_id,
     proc_num,
     proc_index,
-    accumulate=False,
+    read_options: dict,
 ):
     client = vineyard.connect(vineyard_socket)
 
@@ -85,15 +88,15 @@ def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
 
     include_all_columns = instream.params.get('include_all_columns', None) == '1'
 
-    read_options = pa.csv.ReadOptions()
-    parse_options = pa.csv.ParseOptions()
-    convert_options = pa.csv.ConvertOptions()
+    csv_read_options = pa.csv.ReadOptions()
+    csv_parse_options = pa.csv.ParseOptions()
+    csv_convert_options = pa.csv.ConvertOptions()
 
     if original_columns:
-        read_options.column_names = original_columns
+        csv_read_options.column_names = original_columns
     else:
-        read_options.autogenerate_column_names = True
-    parse_options.delimiter = delimiter
+        csv_read_options.autogenerate_column_names = True
+    csv_parse_options.delimiter = delimiter
 
     indices = []
     for i, column in enumerate(columns):
@@ -116,7 +119,7 @@ def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
                 columns.append(column)
 
     if columns:
-        convert_options.include_columns = columns
+        csv_convert_options.include_columns = columns
     if len(column_types) > len(columns):
         raise ValueError("Format of column type schema is incorrect: too many columns")
 
@@ -124,16 +127,18 @@ def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
     for i, column_type in enumerate(column_types):
         if column_type:
             arrow_column_types[columns[i]] = normalize_arrow_dtype(column_type)
-    convert_options.column_types = arrow_column_types
+    csv_convert_options.column_types = arrow_column_types
 
     chunks = []
-    if accumulate:
+    if read_options.get('accumulate', False):
         stream_writer = None
     else:
         stream = DataframeStream.new(client, params=instream.params)
         client.persist(stream.id)
         report_success(stream.id)
         stream_writer = stream.open_writer(client)
+
+    chunk_hook = read_options.get('chunk_hook', None)
 
     try:
         while True:
@@ -150,8 +155,14 @@ def parse_bytes(  # noqa: C901, pylint: disable=too-many-statements
 
             # parse csv
             table = parse_dataframe_blocks(
-                content, read_options, parse_options, convert_options
+                content, csv_read_options, csv_parse_options, csv_convert_options
             )
+            if chunk_hook is not None:
+                batches = table.to_batches()
+                new_batches = []
+                for batch in batches:
+                    new_batches.append(chunk_hook(batch))
+                table = pa.Table.from_batches(new_batches)
             # write recordbatches
             if stream_writer is not None:
                 stream_writer.write_table(table)
@@ -172,15 +183,26 @@ def main():
     if len(sys.argv) < 5:
         print(
             "usage: ./parse_bytes_to_dataframe.py <ipc_socket> <stream_id> "
-            "<accumulate> <proc_num> <proc_index>"
+            "<read_options> <proc_num> <proc_index>"
         )
         sys.exit(1)
     ipc_socket = sys.argv[1]
     stream_id = sys.argv[2]
-    accumulate = str_to_bool(sys.argv[3])
+    try:
+        read_options = json.loads(
+            base64.b64decode(sys.argv[3].encode("utf-8")).decode("utf-8")
+        )
+        if not isinstance(read_options, dict):
+            read_options = {'accumulate': str_to_bool(read_options)}
+    except:  # noqa: E722, pylint: disable=bare-except
+        read_options = {'accumulate': str_to_bool(sys.argv[3])}
+    if 'chunk_hook' in read_options:
+        read_options['chunk_hook'] = cloudpickle.loads(
+            base64.b64decode(read_options['chunk_hook'].encode('ascii'))
+        )
     proc_num = int(sys.argv[4])
     proc_index = int(sys.argv[5])
-    parse_bytes(ipc_socket, stream_id, proc_num, proc_index, accumulate=accumulate)
+    parse_bytes(ipc_socket, stream_id, proc_num, proc_index, read_options=read_options)
 
 
 if __name__ == "__main__":

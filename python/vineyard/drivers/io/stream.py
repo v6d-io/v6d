@@ -23,7 +23,10 @@ import multiprocessing
 import os
 from typing import Callable
 from typing import List
+from typing import Optional
 from typing import Union
+
+import cloudpickle
 
 import vineyard.io
 from vineyard._C import Object
@@ -168,8 +171,8 @@ class ParallelStreamLauncher(ScriptLauncher):
     def wait(  # pylint: disable=arguments-differ
         self,
         timeout=None,
-        aggregator: Callable[
-            [str, List[ObjectID]], Union[Object, ObjectID, ObjectMeta]
+        aggregator: Optional[
+            Callable[[str, List[ObjectID]], Union[Object, ObjectID, ObjectMeta]]
         ] = None,
         **kwargs,
     ):
@@ -227,7 +230,7 @@ def parse_bytes_to_dataframe(
     *args,
     handlers=None,
     aggregator=None,
-    accumulate=False,
+    read_options=None,
     **kwargs,
 ):
     deployment = kwargs.pop("deployment", "ssh")
@@ -237,7 +240,7 @@ def parse_bytes_to_dataframe(
         vineyard_socket,
         byte_stream,
         *args,
-        accumulate,
+        read_options,
         **kwargs,
     )
     if handlers is not None:
@@ -353,17 +356,23 @@ def read_dataframe(
     handlers=None,
     filetype=None,
     accumulate=False,
+    chunk_hook: Optional[Callable] = None,
     **kwargs,
 ):
     path = json.dumps(path)
     storage_options_dict = kwargs.pop("storage_options", {})
     read_options_dict = kwargs.pop("read_options", {})
+    read_options_dict['accumulate'] = accumulate
+    if chunk_hook is not None:
+        read_options_dict["chunk_hook"] = base64.b64encode(
+            cloudpickle.dumps(chunk_hook)
+        ).decode('ascii')
     storage_options = base64.b64encode(
         json.dumps(storage_options_dict).encode("utf-8")
-    ).decode("utf-8")
+    ).decode("ascii")
     read_options = base64.b64encode(
         json.dumps(read_options_dict).encode("utf-8")
-    ).decode("utf-8")
+    ).decode("ascii")
 
     if filetype is None:
         filetype = storage_options_dict.get('filetype', None)
@@ -437,7 +446,7 @@ def read_dataframe(
             *args,
             handlers=handlers,
             aggregator=make_aggregator(callback=lambda client: client.delete(stream)),
-            accumulate=accumulate,
+            read_options=read_options,
             **kwargs.copy(),
         )
 
@@ -548,17 +557,27 @@ def write_parquet(
 
 
 def write_dataframe(
-    path, dataframe_stream, vineyard_socket, *args, handlers=None, **kwargs
+    path,
+    dataframe_stream,
+    vineyard_socket,
+    *args,
+    handlers=None,
+    chunk_hook: Optional[Callable] = None,
+    **kwargs,
 ):
     path = json.dumps(path)
-    storage_options = kwargs.pop("storage_options", {})
-    write_options = kwargs.pop("write_options", {})
+    storage_options_dict = kwargs.pop("storage_options", {})
+    write_options_dict = kwargs.pop("write_options", {})
+    if chunk_hook is not None:
+        write_options_dict["chunk_hook"] = base64.b64encode(
+            cloudpickle.dumps(chunk_hook)
+        ).decode('ascii')
     storage_options = base64.b64encode(
-        json.dumps(storage_options).encode("utf-8")
-    ).decode("utf-8")
-    write_options = base64.b64encode(json.dumps(write_options).encode("utf-8")).decode(
-        "utf-8"
-    )
+        json.dumps(storage_options_dict).encode("utf-8")
+    ).decode("ascii")
+    write_options = base64.b64encode(
+        json.dumps(write_options_dict).encode("utf-8")
+    ).decode("ascii")
     if ".orc" in path:
         write_orc(
             path,

@@ -23,6 +23,7 @@ import sys
 import traceback
 from typing import Dict
 
+import cloudpickle
 import fsspec
 import fsspec.implementations.arrow
 from fsspec.core import get_fs_token_paths
@@ -61,6 +62,8 @@ def read_parquet_blocks(
     if columns:
         kwargs['columns'] = columns.split(',')
 
+    chunk_hook = read_options.get('chunk_hook', None)
+
     with fs.open(path, 'rb') as f:
         reader = pyarrow.parquet.ParquetFile(f)
         row_groups_per_proc = reader.num_row_groups // proc_num
@@ -78,6 +81,8 @@ def read_parquet_blocks(
                 use_threads=False,
                 **kwargs,
             ):
+                if chunk_hook is not None:
+                    batch = chunk_hook(batch)
                 if writer is not None:
                     writer.write(batch)
                 else:
@@ -186,6 +191,10 @@ def main():
     read_options = json.loads(
         base64.b64decode(sys.argv[4].encode("utf-8")).decode("utf-8")
     )
+    if 'chunk_hook' in read_options:
+        read_options['chunk_hook'] = cloudpickle.loads(
+            base64.b64decode(read_options['chunk_hook'].encode('ascii'))
+        )
     accumulate = str_to_bool(sys.argv[5])
     proc_num = int(sys.argv[6])
     proc_index = int(sys.argv[7])

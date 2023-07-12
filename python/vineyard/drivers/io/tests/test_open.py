@@ -227,6 +227,78 @@ def test_local_csv_without_header_accumulate(
     )
 
 
+def test_local_csv_without_header_with_hooks(
+    vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
+):
+    def exchange_column(batch):
+        import pyarrow as pa
+
+        columns = batch.columns
+        first = columns[0]
+        second = columns[1]
+        columns = [second, first] + columns[2:]
+        return pa.RecordBatch.from_arrays(columns, schema=batch.schema)
+
+    # not same after apply hook
+    handlers = []
+    stream = vineyard.io.open(
+        "file://%s/p2p-31.e" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        read_options={"header_row": False, "delimiter": " "},
+        handlers=handlers,
+        chunk_hook=exchange_column,
+    )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": False, "delimiter": " "},
+            handlers=handlers,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    assert not filecmp.cmp(
+        "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
+    )
+
+    # not same after apply hook in both read and write
+    handlers = []
+    stream = vineyard.io.open(
+        "file://%s/p2p-31.e" % test_dataset,
+        vineyard_ipc_socket=vineyard_ipc_socket,
+        vineyard_endpoint=vineyard_endpoint,
+        read_options={"header_row": False, "delimiter": " "},
+        handlers=handlers,
+        chunk_hook=exchange_column,
+    )
+    with capture_exception() as e:
+        vineyard.io.open(
+            "file://%s/p2p-31.out" % test_dataset_tmp,
+            stream,
+            mode="w",
+            vineyard_ipc_socket=vineyard_ipc_socket,
+            vineyard_endpoint=vineyard_endpoint,
+            write_options={"header_row": False, "delimiter": " "},
+            handlers=handlers,
+            chunk_hook=exchange_column,
+        )
+
+    e.print()
+    _ = [handler.join() for handler in handlers]
+    e.check()
+
+    assert filecmp.cmp(
+        "%s/p2p-31.e" % test_dataset, "%s/p2p-31.out_0" % test_dataset_tmp
+    )
+
+
 def test_local_parquet_to_csv(
     vineyard_ipc_socket, vineyard_endpoint, test_dataset, test_dataset_tmp
 ):

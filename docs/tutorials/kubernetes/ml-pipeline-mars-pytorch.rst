@@ -184,10 +184,12 @@ the job, follow the steps below:
     The `prepare-data` job needs to exec into the other pods. Therefore, you need to
     create a service account and bind it to the role under the namespace.
     Please make sure you can have permission to create the following role.
-    
-    - apiGroups: [""]
-      resources: ["pods", "pods/log", "pods/exec"]
-      verbs: ["get", "patch", "delete", "create", "watch", "list"]
+
+    .. code:: text
+
+      - apiGroups: [""]
+        resources: ["pods", "pods/log", "pods/exec"]
+        verbs: ["get", "patch", "delete", "create", "watch", "list"]
 
 .. code:: bash
 
@@ -212,21 +214,23 @@ the job, follow the steps below:
     The `process-data` job needs to create a new namespace and deploy several kubernetes 
     resources in it. Please make sure you can have permission to create the following role.
 
-    - apiGroups: [""]
-      resources: ["pods", "pods/exec", "pods/log", "endpoints", "services"]
-      verbs: ["get", "patch", "delete", "create", "watch", "list"]
-    - apiGroups: [""]
-      resources: ["namespaces"]
-      verbs: ["get", "create", "delete"]
-    - apiGroups: [""]
-      resources: ["nodes"]
-      verbs: ["get", "list"]
-    - apiGroups: ["rbac.authorization.k8s.io"]
-      resources: ["roles", "rolebindings"]
-      verbs: ["patch", "get", "create", "delete"]
-    - apiGroups: ["apps"]
-      resources: ["deployments"]
-      verbs: ["create"]
+    .. code:: text
+
+        - apiGroups: [""]
+          resources: ["pods", "pods/exec", "pods/log", "endpoints", "services"]
+          verbs: ["get", "patch", "delete", "create", "watch", "list"]
+        - apiGroups: [""]
+          resources: ["namespaces"]
+          verbs: ["get", "create", "delete"]
+        - apiGroups: [""]
+          resources: ["nodes"]
+          verbs: ["get", "list"]
+        - apiGroups: ["rbac.authorization.k8s.io"]
+          resources: ["roles", "rolebindings"]
+          verbs: ["patch", "get", "create", "delete"]
+        - apiGroups: ["apps"]
+          resources: ["deployments"]
+          verbs: ["create"]
 
     Notice, the `process-data` job will require lots of permissions to deal 
     kubernetes resources, so please check the image of `process-data` job 
@@ -239,7 +243,7 @@ code`_. Apply the `process-data` job as follows:
 .. code:: bash
 
     $ kubectl apply -f showcase/vineyard-mars-pytorch/process-data/resources && \
-    kubectl wait job -n vineyard-job -l app=process-data --for condition=complete --timeout=1200s
+      kubectl wait job -n vineyard-job -l app=process-data --for condition=complete --timeout=1200s
 
 Finally, apply the `train-data` job to obtain the fraudulent transaction classifier. You can
 also view the `train data code`_.
@@ -247,7 +251,7 @@ also view the `train data code`_.
 .. code:: bash
 
     $ kubectl apply -f k8s/showcase/vineyard-mars-pytorch/train-data/resources && \
-    kubectl wait pods -n vineyard-job -l app=train-data --for condition=Ready --timeout=1200s
+      kubectl wait pods -n vineyard-job -l app=train-data --for condition=Ready --timeout=1200s
 
 If any of the above steps fail, please refer to the `mars showcase e2e test`_ for further guidance.
 
