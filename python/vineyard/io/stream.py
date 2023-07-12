@@ -19,8 +19,10 @@
 import json
 import logging
 import traceback
+from typing import Callable
 from typing import Dict
 from typing import List
+from typing import Optional
 from urllib.parse import urlparse
 
 from vineyard._C import ObjectID
@@ -33,7 +35,14 @@ logger = logging.getLogger('vineyard')
 
 
 @registerize
-def read(path, *args, handlers=None, accumulate=False, **kwargs):
+def read(
+    path,
+    *args,
+    handlers=None,
+    accumulate=False,
+    chunk_hook: Optional[Callable] = None,
+    **kwargs
+):
     """Open a path and read it as a single stream.
 
     Parameters
@@ -48,6 +57,25 @@ def read(path, *args, handlers=None, accumulate=False, **kwargs):
     accumulate: bool, optional
         If :code:`accumulate` is True, it will return a data frame,
         rather than dataframe stream. Default is False.
+    chunk_hook: callable, optional
+        If the read/write target is a global dataframe (e.g., csv,
+        orc, parquet, etc.), the hook will be called for each chunk
+        to be read or write (usually a :code:`pyarrow.RecordBatch`).
+        The hook should return a :code:`pyarrow.RecordBatch` object
+        and should be stateless as the invoke order is not guaranteed.
+        E.g.,
+
+        .. code:: python
+
+            def exchange_column(batch):
+                import pyarrow as pa
+
+                columns = batch.columns
+                first = columns[0]
+                second = columns[1]
+                columns = [second, first] + columns[2:]
+                return pa.RecordBatch.from_arrays(columns, schema=batch.schema)
+
     vineyard_ipc_socket: str
         The local or remote vineyard's IPC socket location that the
         remote readers will use to establish connections with the
@@ -71,6 +99,7 @@ def read(path, *args, handlers=None, accumulate=False, **kwargs):
                     *args,
                     handlers=handlers,
                     accumulate=accumulate,
+                    chunk_hook=chunk_hook,
                     **proc_kwargs
                 )
                 if r is not None:
@@ -86,7 +115,9 @@ def read(path, *args, handlers=None, accumulate=False, **kwargs):
 
 
 @registerize
-def write(path, stream, *args, handlers=None, **kwargs):
+def write(
+    path, stream, *args, handlers=None, chunk_hook: Optional[Callable] = None, **kwargs
+):
     """Write the stream to a given path.
 
     Parameters
@@ -100,6 +131,25 @@ def write(path, stream, *args, handlers=None, **kwargs):
         If handlers is not None, launched worker processes will be
         emplaced into the list for further customized job lifecycle
         management. Default is None.
+    chunk_hook: callable, optional
+        If the read/write target is a global dataframe (e.g., csv,
+        orc, parquet, etc.), the hook will be called for each chunk
+        to be read or write (usually a :code:`pyarrow.RecordBatch`).
+        The hook should return a :code:`pyarrow.RecordBatch` object
+        and should be stateless as the invoke order is not guaranteed.
+        E.g.,
+
+        .. code:: python
+
+            def exchange_column(batch):
+                import pyarrow as pa
+
+                columns = batch.columns
+                first = columns[0]
+                second = columns[1]
+                columns = [second, first] + columns[2:]
+                return pa.RecordBatch.from_arrays(columns, schema=batch.schema)
+
     vineyard_ipc_socket: str
         The local or remote vineyard's IPC socket location that the remote
         readers will use to establish connections with the vineyard server.
@@ -121,6 +171,7 @@ def write(path, stream, *args, handlers=None, **kwargs):
                     proc_kwargs.pop('vineyard_ipc_socket'),
                     *args,
                     handlers=handlers,
+                    chunk_hook=chunk_hook,
                     **proc_kwargs
                 )
             except Exception:  # pylint: disable=broad-except
@@ -141,7 +192,14 @@ def write(path, stream, *args, handlers=None, **kwargs):
         raise ValueError("No IO driver registered for %s" % path)
 
 
-def open(path, *args, mode='r', handlers=None, **kwargs):
+def open(
+    path,
+    *args,
+    mode='r',
+    handlers=None,
+    chunk_hook: Optional[Callable] = None,
+    **kwargs
+):
     """Open a path as a reader or writer, depends on the parameter :code:`mode`.
     If :code:`mode` is :code:`r`, it will open a stream for read, and open a
     stream for write when :code:`mode` is :code:`w`.
@@ -156,6 +214,25 @@ def open(path, *args, mode='r', handlers=None, **kwargs):
         A dict that will be filled with a :code:`handler` that contains the process
         handler of the underlying read/write process that can be joined using
         :code:`join` to capture the possible errors during the I/O proceeding.
+    chunk_hook: callable, optional
+        If the read/write target is a global dataframe (e.g., csv,
+        orc, parquet, etc.), the hook will be called for each chunk
+        to be read or write (usually a :code:`pyarrow.RecordBatch`).
+        The hook should return a :code:`pyarrow.RecordBatch` object
+        and should be stateless as the invoke order is not guaranteed.
+        E.g.,
+
+        .. code:: python
+
+            def exchange_column(batch):
+                import pyarrow as pa
+
+                columns = batch.columns
+                first = columns[0]
+                second = columns[1]
+                columns = [second, first] + columns[2:]
+                return pa.RecordBatch.from_arrays(columns, schema=batch.schema)
+
     vineyard_ipc_socket: str
         Vineyard's IPC socket location.
     vineyard_endpoint: str
@@ -171,10 +248,10 @@ def open(path, *args, mode='r', handlers=None, **kwargs):
         path = 'file://' + path
 
     if mode == 'r':
-        return read(path, *args, handlers=handlers, **kwargs)
+        return read(path, *args, handlers=handlers, chunk_hook=chunk_hook, **kwargs)
 
     if mode == 'w':
-        return write(path, *args, handlers=handlers, **kwargs)
+        return write(path, *args, handlers=handlers, chunk_hook=chunk_hook, **kwargs)
 
     raise RuntimeError('Opening %s with mode %s is not supported' % (path, mode))
 
