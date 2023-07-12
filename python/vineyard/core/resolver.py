@@ -19,6 +19,11 @@
 import contextlib
 import inspect
 import threading
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Generator
+from typing import Optional
 
 from sortedcontainers import SortedDict
 
@@ -26,23 +31,30 @@ from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import RPCClient
-from vineyard.core.driver import get_current_drivers
 from vineyard.core.utils import find_most_precise_match
 
 
 class ResolverContext:
-    def __init__(self):
-        self.__factory = SortedDict()
+    def __init__(self, parent_context: Optional["ResolverContext"] = None):
+        self._factory = SortedDict()
+        if parent_context is not None:
+            self._parent_context = parent_context
+        else:
+            self._parent_context = self
 
     def __str__(self) -> str:
-        return str(self.__factory)
+        return str(self._factory)
 
-    def register(self, typename_prefix, resolver):
-        self.__factory[typename_prefix] = resolver
+    @property
+    def parent_context(self) -> "ResolverContext":
+        return self._parent_context
 
-    def run(self, obj, **kw):
+    def register(self, typename_prefix: str, resolver: Callable):
+        self._factory[typename_prefix] = resolver
+
+    def run(self, obj: Any, **kw):
         typename = obj.meta.typename
-        prefix, resolver = find_most_precise_match(typename, self.__factory)
+        prefix, resolver = find_most_precise_match(typename, self._factory)
         vineyard_client = kw.pop('__vineyard_client', None)
         if prefix:
             resolver_func_sig = inspect.getfullargspec(resolver)
@@ -75,6 +87,8 @@ class ResolverContext:
                 setattr(value, '__vineyard_client', vineyard_client)
 
                 # register methods
+                from vineyard.core.driver import get_current_drivers
+
                 get_current_drivers().resolve(value, obj.typename)
             except AttributeError:
                 pass
@@ -87,12 +101,12 @@ class ResolverContext:
         return self.run(obj, **kw)
 
     def extend(self, resolvers=None):
-        resolver = ResolverContext()
-        resolver.__factory = (  # pylint: disable=unused-private-member
-            self.__factory.copy()
+        resolver = ResolverContext(self)
+        resolver._factory = (  # pylint: disable=unused-private-member
+            self._factory.copy()
         )
         if resolvers:
-            resolver.__factory.update(resolvers)
+            resolver._factory.update(resolvers)
         return resolver
 
 
@@ -102,7 +116,7 @@ _resolver_context_local = threading.local()
 _resolver_context_local.default_resolver = default_resolver_context
 
 
-def get_current_resolvers():
+def get_current_resolvers() -> ResolverContext:
     '''Obtain current resolver context.'''
     default_resolver = getattr(_resolver_context_local, 'default_resolver', None)
     if not default_resolver:
@@ -111,8 +125,11 @@ def get_current_resolvers():
 
 
 @contextlib.contextmanager
-def resolver_context(resolvers=None, base=None):
-    """Open a new context for register resolvers, without populting outside
+def resolver_context(
+    resolvers: Optional[Dict[str, Callable]] = None,
+    base: Optional[ResolverContext] = None,
+) -> Generator[ResolverContext, Any, Any]:
+    """Open a new context for register resolvers, without populating outside
     the global environment.
 
     The :code:`resolver_context` can be useful when users have more than
@@ -170,9 +187,9 @@ def resolver_context(resolvers=None, base=None):
 
 def get(
     client,
-    object_id: ObjectID = None,
-    name: str = None,
-    resolver: ResolverContext = None,
+    object_id: Optional[ObjectID] = None,
+    name: Optional[str] = None,
+    resolver: Optional[ResolverContext] = None,
     fetch: bool = False,
     **kw
 ):

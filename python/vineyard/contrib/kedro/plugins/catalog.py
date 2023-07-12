@@ -24,7 +24,7 @@ from kedro.framework.project import pipelines
 from kedro.framework.project import settings
 from kedro.framework.startup import ProjectMetadata
 
-from .cli import vineyard as vineyard_cli
+from vineyard.contrib.kedro.plugins.cli import vineyard as vineyard_cli
 
 
 @vineyard_cli.group()
@@ -147,7 +147,7 @@ def create_catalog(metadata: ProjectMetadata, pipeline_name, env):
 
 
 def _add_missing_datasets_to_catalog(missing_ds, catalog_path):
-    from ..io import VineyardDataSet
+    from vineyard.contrib.kedro.io import VineyardDataSet
 
     if catalog_path.is_file():
         catalog_config = yaml.safe_load(catalog_path.read_text()) or {}

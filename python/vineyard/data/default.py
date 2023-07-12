@@ -18,17 +18,17 @@
 
 import pickle
 from typing import Any
+from typing import Optional
 
 from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectMeta
 from vineyard.core.builder import BuilderContext
 from vineyard.core.resolver import ResolverContext
-
-from .utils import build_buffer
+from vineyard.data.utils import build_buffer
 
 if pickle.HIGHEST_PROTOCOL < 5:
-    import pickle5 as pickle  # pylint: disable=import-error
+    import pickle5 as pickle  # pylint: disable=shadow-import
 
 
 def default_builder(client: IPCClient, value: Any, **kwargs):
@@ -50,7 +50,8 @@ def default_resolver(obj: Object):
 
 
 def register_default_types(
-    builder_ctx: BuilderContext = None, resolver_ctx: ResolverContext = None
+    builder_ctx: Optional[BuilderContext] = None,
+    resolver_ctx: Optional[ResolverContext] = None,
 ):
     if builder_ctx is not None:
         builder_ctx.register(object, default_builder)

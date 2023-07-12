@@ -27,8 +27,8 @@ try:
 except ImportError:
     kubernetes = None
 
-from .etcd import start_etcd_k8s
-from .utils import ensure_kubernetes_namespace
+from vineyard.deploy.etcd import start_etcd_k8s
+from vineyard.deploy.utils import ensure_kubernetes_namespace
 
 logger = logging.getLogger('vineyard')
 

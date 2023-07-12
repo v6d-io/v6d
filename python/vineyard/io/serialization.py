@@ -30,9 +30,9 @@ def serialize(path, object_id, *args, **kwargs):
     if not parsed.scheme:
         path = 'file://' + path
     obj_type = kwargs.pop('type', 'default')
-    if serialize.__factory and serialize.__factory.get(obj_type):
+    if serialize._factory and serialize._factory.get(obj_type):
         proc_kwargs = kwargs.copy()
-        serializer = serialize.__factory[obj_type][0]
+        serializer = serialize._factory[obj_type][0]
         try:
             serializer(
                 path,
@@ -55,9 +55,9 @@ def deserialize(path, *args, **kwargs):
     if not parsed.scheme:
         path = 'file://' + path
     obj_type = kwargs.pop('type', 'default')
-    if deserialize.__factory and deserialize.__factory.get(obj_type):
+    if deserialize._factory and deserialize._factory.get(obj_type):
         proc_kwargs = kwargs.copy()
-        deserializer = deserialize.__factory[obj_type][0]
+        deserializer = deserialize._factory[obj_type][0]
         try:
             return deserializer(
                 path, proc_kwargs.pop('vineyard_ipc_socket'), *args, **proc_kwargs

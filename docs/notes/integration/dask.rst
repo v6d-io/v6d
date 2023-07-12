@@ -29,7 +29,7 @@ In this step, we load the mnist data and duplicate it to simulate the parallel p
 .. code:: python
 
     from vineyard.core.builder import builder_context
-    from vineyard.contrib.dask.dask import register_dask_types
+    from vineyard.contrib.dask.dask import dask_context
 
     def dask_preprocess(dask_scheduler):
         def get_mnist():
@@ -40,10 +40,7 @@ In this step, we load the mnist data and duplicate it to simulate the parallel p
             y_train = y_train.astype(np.int64)
             return pd.DataFrame({'x': list(x_train), 'y': y_train})
 
-        with builder_context() as builder:
-            # register the builder for dask.dataframe to the builder_context
-            register_dask_builder(builder, None)
-
+        with dask_context():
             datasets = [delayed(get_mnist)() for i in range(20)]
             dfs = [dd.from_delayed(ds) for ds in datasets]
             gdf = dd.concat(dfs)

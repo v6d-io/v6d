@@ -47,32 +47,3 @@ Vineyard Issues on Kubernetes
     cgroups. In such cases, users should increase the CPU resources allocated to the etcd pod. For
     more information on etcd tuning, please refer to the `Hardware recommendations
     <https://etcd.io/docs/v3.4.0/op-guide/hardware/>`_ section in the etcd documentation.
-
-Python SDK Error Scenarios
---------------------------
-
-1. Unexpected Behavior with PyArrow
-
-    Vineyard's Python SDK relies on libarrow-dev. When this module is imported
-    alongside PyArrow, numerous DLL conflict issues may arise, as detailed in https://issues.apache.org/jira/browse/ARROW-10599.
-
-    To maintain consistency between Apache Arrow and Vineyard installations:
-
-    + For users, simply install PyArrow and Vineyard using the :code:`pip` package
-      manager should suffice. You can install them with the following command:
-
-      .. code::
-
-          pip3 install pyarrow vineyard
-
-    + For Vineyard developers, the locally installed PyArrow should be built
-      from scratch, using the system-wide libarrow-dev. This can be achieved by:
-
-      .. code::
-
-          pip3 install --no-binary pyarrow pyarrow
-
-    Additionally, you may encounter unexpected crashes or runtime exceptions if you :code:`import`
-    PyArrow before Vineyard. To avoid this, adjust the import order by :code:`import`ing Vineyard
-    before PyArrow. If you encounter any shared library-related issues, please set the environment
-    variable :code:`VINEYARD_DEVELOP=TRUE`.

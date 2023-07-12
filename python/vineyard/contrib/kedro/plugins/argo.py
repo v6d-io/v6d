@@ -20,7 +20,7 @@ from jinja2 import FileSystemLoader
 from kedro.framework.project import pipelines
 from kedro.framework.startup import bootstrap_project
 
-from .cli import vineyard as vineyard_cli
+from vineyard.contrib.kedro.plugins.cli import vineyard as vineyard_cli
 
 TEMPLATE_FILE = "argo_spec.tmpl"
 TEMPLATE_PATH = Path("templates")

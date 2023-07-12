@@ -16,12 +16,17 @@
 # limitations under the License.
 #
 
+import contextlib
+
 import numpy as np
 
-import xgboost as xgb
+import lazy_import
 
+from vineyard.core import context
 from vineyard.core.resolver import default_resolver_context
 from vineyard.core.resolver import resolver_context
+
+xgb = lazy_import.lazy_module("xgboost")
 
 
 def xgb_builder(client, value, builder, **kw):  # pylint: disable=unused-argument
@@ -70,7 +75,7 @@ def xgb_table_resolver(obj, **kw):
     return xgb.DMatrix(df, feature_names=df.columns)
 
 
-def register_xgb_types(builder_ctx, resolver_ctx):
+def register_xgboost_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
         builder_ctx.register(xgb.DMatrix, xgb_builder)
 
@@ -79,3 +84,11 @@ def register_xgb_types(builder_ctx, resolver_ctx):
         resolver_ctx.register('vineyard::DataFrame', xgb_dataframe_resolver)
         resolver_ctx.register('vineyard::RecordBatch', xgb_recordbatch_resolver)
         resolver_ctx.register('vineyard::Table', xgb_table_resolver)
+
+
+@contextlib.contextmanager
+def xgboost_context():
+    with context() as (builder_ctx, resolver_ctx):
+        with contextlib.suppress(ImportError):
+            register_xgboost_types(builder_ctx, resolver_ctx)
+        yield builder_ctx, resolver_ctx

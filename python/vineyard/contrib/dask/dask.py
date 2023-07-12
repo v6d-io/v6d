@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import contextlib
 import json
 
 import numpy as np
@@ -27,6 +28,7 @@ import dask.dataframe as dd
 from dask.distributed import Client  # pylint: disable=no-name-in-module
 
 import vineyard
+from vineyard.core import context
 from vineyard.data.dataframe import make_global_dataframe
 from vineyard.data.tensor import make_global_tensor
 
@@ -133,7 +135,7 @@ def dask_dataframe_resolver(obj, resolver, **kw):  # pylint: disable=unused-argu
     return dd.concat(dfs, axis=0)
 
 
-def register_dask_types(builder_ctx, resolver_ctx):
+def register_dask_types(builder_ctx=None, resolver_ctx=None):
     if builder_ctx is not None:
         builder_ctx.register(dask.array.Array, dask_array_builder)
         builder_ctx.register(dask.dataframe.DataFrame, dask_dataframe_builder)
@@ -141,3 +143,10 @@ def register_dask_types(builder_ctx, resolver_ctx):
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::GlobalTensor', dask_array_resolver)
         resolver_ctx.register('vineyard::GlobalDataFrame', dask_dataframe_resolver)
+
+
+@contextlib.contextmanager
+def dask_context():
+    with context() as (builder_ctx, resolver_ctx):
+        register_dask_types(builder_ctx, resolver_ctx)
+        yield builder_ctx, resolver_ctx

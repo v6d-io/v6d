@@ -19,8 +19,8 @@ import os
 import subprocess
 import sys
 
-from ._cobra import click
-from .utils import find_vineyardctl_path
+from vineyard.deploy._cobra import click
+from vineyard.deploy.utils import find_vineyardctl_path
 
 _vineyardctl = find_vineyardctl_path()
 

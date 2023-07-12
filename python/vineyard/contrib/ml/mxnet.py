@@ -16,17 +16,22 @@
 # limitations under the License.
 #
 
+import contextlib
+
 import numpy as np
 
-import mxnet as mx  # pylint: disable=import-error
+import lazy_import
 
 from vineyard._C import ObjectMeta
+from vineyard.core import context
 from vineyard.core.resolver import default_resolver_context
 from vineyard.core.resolver import resolver_context
 from vineyard.data.utils import build_numpy_buffer
 from vineyard.data.utils import from_json
 from vineyard.data.utils import normalize_dtype
 from vineyard.data.utils import to_json
+
+mx = lazy_import.lazy_module("mxnet")
 
 
 def mxnet_tensor_builder(client, value, **kw):
@@ -164,3 +169,11 @@ def register_mxnet_types(builder_ctx, resolver_ctx):
         resolver_ctx.register(
             'vineyard::GlobalDataFrame', mxnet_global_dataframe_resolver
         )
+
+
+@contextlib.contextmanager
+def mxnet_context():
+    with context() as (builder_ctx, resolver_ctx):
+        with contextlib.suppress(ImportError):
+            register_mxnet_types(builder_ctx, resolver_ctx)
+        yield builder_ctx, resolver_ctx

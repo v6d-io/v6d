@@ -18,7 +18,7 @@
 
 import sys
 
-from .deploy.ctl import _main
+from vineyard.deploy.ctl import _main
 
 # use `vineyard.ctl` rather than `vineyard.deploy.ctl` to suppress a warning
 # like

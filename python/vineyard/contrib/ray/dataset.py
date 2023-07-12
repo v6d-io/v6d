@@ -28,11 +28,10 @@ from ray.data.impl.block_list import BlockList  # pylint: disable=import-error
 from ray.data.impl.remote_fn import cached_remote_fn  # pylint: disable=import-error
 
 import vineyard
+from vineyard.contrib.ray.actor import spread  # pylint: disable=unused-import
+from vineyard.contrib.ray.actor import spread_and_get  # pylint: disable=unused-import
+from vineyard.contrib.ray.actor import spread_to_all_nodes
 from vineyard.data.dataframe import make_global_dataframe
-
-from .actor import spread  # pylint: disable=unused-import
-from .actor import spread_and_get  # pylint: disable=unused-import
-from .actor import spread_to_all_nodes
 
 
 def _block_to_vineyard(block: Block):

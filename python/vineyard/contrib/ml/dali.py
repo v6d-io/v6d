@@ -16,37 +16,23 @@
 # limitations under the License.
 #
 
+import contextlib
+
 import numpy as np
 
-try:
-    from nvidia import dali  # pylint: disable=import-error
-    from nvidia.dali import pipeline_def  # pylint: disable=import-error
-    from nvidia.dali import types  # pylint: disable=import-error
-except ImportError:
-    dali = None
+import lazy_import
 
 from vineyard._C import ObjectMeta
+from vineyard.core import context
 from vineyard.data.utils import build_numpy_buffer
 from vineyard.data.utils import from_json
 from vineyard.data.utils import normalize_dtype
 from vineyard.data.utils import to_json
 
-num_gpus = 1
-device_id = 0
-batch_size = 2
-num_threads = 4
-
-if dali is not None:
-
-    @pipeline_def
-    def dali_pipe(data, label):
-        fdata = types.Constant(data)
-        flabel = types.Constant(label)
-        return fdata, flabel
+dali = lazy_import.lazy_module("nvidia.dali")
 
 
 def dali_tensor_builder(client, value, **kw):
-    assert dali is not None, "Nvidia DALI is not available"
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::Tensor'
     meta['partition_index_'] = to_json(kw.get('partition_index', []))
@@ -63,8 +49,13 @@ def dali_tensor_builder(client, value, **kw):
     return client.create_metadata(meta)
 
 
-def dali_tensor_resolver(obj, **_kw):
-    assert dali is not None, "Nvidia DALI is not available"
+def dali_tensor_resolver(obj, device_id=0, num_threads=4, batch_size=2, **_kw):
+    @dali.pipeline_def
+    def dali_pipe(data, label):
+        fdata = dali.types.Constant(data)
+        flabel = dali.types.Constant(label)
+        return fdata, flabel
+
     meta = obj.meta
     data_shape = from_json(meta['data_shape_'])
     label_shape = from_json(meta['label_shape_'])
@@ -94,3 +85,11 @@ def register_dali_types(builder_ctx, resolver_ctx):
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Tensor', dali_tensor_resolver)
+
+
+@contextlib.contextmanager
+def dali_context():
+    with context() as (builder_ctx, resolver_ctx):
+        with contextlib.suppress(ImportError):
+            register_dali_types(builder_ctx, resolver_ctx)
+        yield builder_ctx, resolver_ctx

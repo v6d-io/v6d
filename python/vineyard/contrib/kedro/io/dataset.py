@@ -20,11 +20,9 @@
    stored in vineyard.
 """
 
-import functools
-import logging
-import time
 from typing import Any
 from typing import Dict
+from typing import Optional
 
 from kedro.io.core import AbstractDataSet
 
@@ -55,7 +53,7 @@ class VineyardDataSet(AbstractDataSet):
 
     """
 
-    def __init__(self, ds_name: str, vineyard_ipc_socket: str = None):
+    def __init__(self, ds_name: str, vineyard_ipc_socket: Optional[str] = None):
         """Creates a new instance of ``MemoryDataSet`` pointing to the
         provided Python object.
 

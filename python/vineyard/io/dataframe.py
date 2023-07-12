@@ -70,6 +70,7 @@
     StopIteration: No more chunks
 '''
 
+import contextlib
 import json
 from io import BytesIO
 from typing import Dict
@@ -81,8 +82,7 @@ from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 from vineyard._C import StreamDrainedException
 from vineyard._C import memory_copy
-
-from .stream import BaseStream
+from vineyard.io.stream import BaseStream
 
 
 class DataframeStream(BaseStream):

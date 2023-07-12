@@ -86,8 +86,7 @@ from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 from vineyard._C import StreamDrainedException
 from vineyard._C import memory_copy
-
-from .stream import BaseStream
+from vineyard.io.stream import BaseStream
 
 
 class ByteStream(BaseStream):

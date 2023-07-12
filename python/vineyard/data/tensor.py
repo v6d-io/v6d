@@ -23,12 +23,11 @@ import numpy as np
 from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
-
-from .utils import build_numpy_buffer
-from .utils import from_json
-from .utils import normalize_cpptype
-from .utils import normalize_dtype
-from .utils import to_json
+from vineyard.data.utils import build_numpy_buffer
+from vineyard.data.utils import from_json
+from vineyard.data.utils import normalize_cpptype
+from vineyard.data.utils import normalize_dtype
+from vineyard.data.utils import to_json
 
 try:
     import scipy as sp
@@ -76,8 +75,8 @@ def numpy_ndarray_resolver(obj):
     value_type = normalize_dtype(value_type_name, meta.get('value_type_meta_', None))
     # process string ndarray from c++
     if value_type_name in ['str', 'string', 'std::string', 'std::__1::string']:
-        from .arrow import binary_array_resolver
-        from .arrow import string_array_resolver
+        from vineyard.data.arrow import binary_array_resolver
+        from vineyard.data.arrow import string_array_resolver
 
         try:
             return string_array_resolver(obj.member('buffer_')).to_numpy(

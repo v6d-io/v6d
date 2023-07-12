@@ -20,7 +20,7 @@ import os
 import subprocess
 import sys
 
-from .utils import find_vineyardd_path
+from vineyard.deploy.utils import find_vineyardd_path
 
 
 def deploy_vineyardd(args):

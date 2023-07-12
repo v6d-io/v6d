@@ -22,7 +22,7 @@ registration examples.
     >>> def open(path, *args, **kwargs):
     >>>     scheme = urlparse(path).scheme
 
-    >>>     for reader in open.__factory[scheme][::-1]:
+    >>>     for reader in open._factory[scheme][::-1]:
     >>>         r = reader(path, *args, **kwargs)
     >>>         if r is not None:
     >>>             return r

@@ -22,6 +22,10 @@ import inspect
 import threading
 import warnings
 from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import Generator
+from typing import Optional
 
 from vineyard._C import IPCClient
 from vineyard._C import Object
@@ -31,13 +35,21 @@ from vineyard._C import RPCClient
 
 
 class BuilderContext:
-    def __init__(self):
-        self.__factory = dict()
+    def __init__(self, parent_context: Optional["BuilderContext"] = None):
+        self._factory = dict()
+        if parent_context is not None:
+            self._parent_context = parent_context
+        else:
+            self._parent_context = self
 
     def __str__(self) -> str:
-        return str(self.__factory)
+        return str(self._factory)
 
-    def register(self, type_id, builder):
+    @property
+    def parent_context(self) -> "BuilderContext":
+        return self._parent_context
+
+    def register(self, type_id: type, builder: Callable):
         """Register a Python type to the builder context.
 
         Parameters
@@ -49,7 +61,7 @@ class BuilderContext:
             A builder translates a python object to vineyard, it accepts a Python
             value as parameter, and returns an vineyard object as result.
         """
-        self.__factory[type_id] = builder
+        self._factory[type_id] = builder
 
     def run(self, client, value, **kw):
         """Follows the MRO to find the proper builder for given python value.
@@ -78,26 +90,26 @@ class BuilderContext:
         #     return base.meta
 
         for ty in type(value).__mro__:
-            if ty in self.__factory:
-                builder_func_sig = inspect.getfullargspec(self.__factory[ty])
+            if ty in self._factory:
+                builder_func_sig = inspect.getfullargspec(self._factory[ty])
                 if (
                     'builder' in builder_func_sig.args
                     or builder_func_sig.varkw is not None
                 ):
                     kw['builder'] = self
-                return self.__factory[ty](client, value, **kw)
+                return self._factory[ty](client, value, **kw)
         raise RuntimeError('Unknown type to build as vineyard object')
 
     def __call__(self, client, value, **kw):
         return self.run(client, value, **kw)
 
     def extend(self, builders=None):
-        builder = BuilderContext()
-        builder.__factory = copy.copy(  # pylint: disable=unused-private-member
-            self.__factory
+        builder = BuilderContext(self)
+        builder._factory = copy.copy(  # pylint: disable=unused-private-member
+            self._factory
         )
         if builders:
-            builder.__factory.update(builders)
+            builder._factory.update(builders)
         return builder
 
 
@@ -107,7 +119,7 @@ _builder_context_local = threading.local()
 _builder_context_local.default_builder = default_builder_context
 
 
-def get_current_builders():
+def get_current_builders() -> BuilderContext:
     '''Obtain the current builder context.'''
     default_builder = getattr(_builder_context_local, 'default_builder', None)
     if not default_builder:
@@ -116,8 +128,11 @@ def get_current_builders():
 
 
 @contextlib.contextmanager
-def builder_context(builders=None, base=None):
-    """Open a new context for register builders, without populting outside global
+def builder_context(
+    builders: Optional[Dict[type, Callable]] = None,
+    base: Optional[BuilderContext] = None,
+) -> Generator[BuilderContext, Any, Any]:
+    """Open a new context for register builders, without populating outside global
     environment.
 
     See Also:
@@ -138,9 +153,9 @@ def builder_context(builders=None, base=None):
 def put(
     client,
     value: Any,
-    builder: BuilderContext = None,
+    builder: Optional[BuilderContext] = None,
     persist: bool = False,
-    name: str = None,
+    name: Optional[str] = None,
     **kwargs
 ):
     """Put python value to vineyard.

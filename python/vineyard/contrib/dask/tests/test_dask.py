@@ -28,9 +28,7 @@ import dask.dataframe as dd
 import pytest
 
 import vineyard
-from vineyard.contrib.dask.dask import register_dask_types
-from vineyard.core.builder import builder_context
-from vineyard.core.resolver import resolver_context
+from vineyard.contrib.dask.dask import dask_context
 from vineyard.data.dataframe import make_global_dataframe
 from vineyard.data.tensor import make_global_tensor
 from vineyard.deploy.utils import start_program
@@ -38,10 +36,8 @@ from vineyard.deploy.utils import start_program
 
 @pytest.fixture(scope="module", autouse=True)
 def vineyard_for_dask():
-    with builder_context() as builder:
-        with resolver_context() as resolver:
-            register_dask_types(builder, resolver)
-            yield builder, resolver
+    with dask_context():
+        yield
 
 
 @contextlib.contextmanager

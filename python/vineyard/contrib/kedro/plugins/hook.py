@@ -23,7 +23,7 @@ from kedro.io import DataCatalog
 from kedro.io import DataSetNotFoundError
 from kedro.pipeline import Pipeline
 
-from ..io import VineyardDataSet
+from vineyard.contrib.kedro.io import VineyardDataSet
 
 logger = logging.getLogger('vineyard')
 

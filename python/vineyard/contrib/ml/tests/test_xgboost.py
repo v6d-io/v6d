@@ -22,17 +22,13 @@ import pyarrow as pa
 
 import pytest
 
-from vineyard.contrib.ml.xgboost import register_xgb_types
-from vineyard.core.builder import builder_context
-from vineyard.core.resolver import resolver_context
+from vineyard.contrib.ml.xgboost import xgboost_context
 
 
 @pytest.fixture(scope="module", autouse=True)
 def vineyard_for_xgboost():
-    with builder_context() as builder:
-        with resolver_context() as resolver:
-            register_xgb_types(builder, resolver)
-            yield builder, resolver
+    with xgboost_context():
+        yield
 
 
 def test_numpy_ndarray(vineyard_client):

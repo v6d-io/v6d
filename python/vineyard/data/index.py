@@ -19,10 +19,9 @@
 import pandas as pd
 
 from vineyard._C import ObjectMeta
-
-from .utils import from_json
-from .utils import normalize_dtype
-from .utils import to_json
+from vineyard.data.utils import from_json
+from vineyard.data.utils import normalize_dtype
+from vineyard.data.utils import to_json
 
 
 def pandas_index_builder(client, value, builder, **kw):

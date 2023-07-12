@@ -19,16 +19,19 @@
 ''' This module exposes support for RecordBatchStream.
 '''
 
+import contextlib
 import json
+from typing import Any
 from typing import Dict
+from typing import Optional
 
 from vineyard._C import ObjectMeta
-
-from .stream import BaseStream
+from vineyard.core import context
+from vineyard.io.stream import BaseStream
 
 
 class RecordBatchStream(BaseStream):
-    def __init__(self, meta: ObjectMeta, params: Dict = None):
+    def __init__(self, meta: ObjectMeta, params: Optional[Dict[str, Any]] = None):
         super().__init__(meta)
         self._params = params
 
@@ -38,7 +41,9 @@ class RecordBatchStream(BaseStream):
 
     @staticmethod
     def new(
-        client, params: Dict = None, meta: ObjectMeta = None
+        client,
+        params: Optional[Dict[str, Any]] = None,
+        meta: Optional[ObjectMeta] = None,
     ) -> "RecordBatchStream":
         if meta is None:
             meta = ObjectMeta()
@@ -65,3 +70,10 @@ def register_recordbatch_stream_types(_builder_ctx, resolver_ctx):
         resolver_ctx.register(
             'vineyard::RecordBatchStream', recordbatch_stream_resolver
         )
+
+
+@contextlib.contextmanager
+def recordbatch_stream_context():
+    with context() as (builder_ctx, resolver_ctx):
+        register_recordbatch_stream_types(builder_ctx, resolver_ctx)
+        yield builder_ctx, resolver_ctx
