@@ -42,6 +42,10 @@ a {
   font-size: 0.95rem;
 }
 
+.button:hover {
+  cursor: pointer;
+}
+
 .background-gradient-color {
   background: linear-gradient(
       270deg,
@@ -180,11 +184,6 @@ a {
 
 .hero-container {
   padding: 100px 3% 100px;
-}
-
-.hero-section {
-  position: relative;
-  z-index: -1;
 }
 
 .hero-text {
