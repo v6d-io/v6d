@@ -196,16 +196,16 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
     }
 
     private void arrowToVectorizedRowBatch(VectorSchemaRoot recordBatch, VectorizedRowBatch batch) {
-        batch.numCols = recordBatch.getFieldVectors().size();
+        // batch.numCols = recordBatch.getFieldVectors().size();
         batch.size = recordBatch.getRowCount();
         batch.selected = new int[batch.size];
         batch.selectedInUse = false;
-        batch.cols = new ColumnVector[batch.numCols];
-        batch.projectedColumns = new int[batch.numCols];
-        batch.projectionSize = batch.numCols;
-        for (int i = 0; i < batch.numCols; i++) {
-            batch.projectedColumns[i] = i;
-        }
+        // batch.cols = new ColumnVector[batch.numCols];
+        // batch.projectedColumns = new int[batch.numCols];
+        // batch.projectionSize = batch.numCols;
+        // for (int i = 0; i < batch.numCols; i++) {
+        //     batch.projectedColumns[i] = i;
+        // }
 
         for (int i = 0; i < recordBatch.getSchema().getFields().size(); i++) {
             Field field = recordBatch.getSchema().getFields().get(i);
@@ -323,7 +323,7 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                 try {
                     // long id = tableID;//client.getName(tableName);
                     // tableID = 
-                    ObjectID objectID = client.getName(tableName, true);
+                    ObjectID objectID = client.getName(tableName, false);
                     table = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID));
                 } catch (Exception e) {
                     System.out.println("Get objectID failed.");
