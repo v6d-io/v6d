@@ -210,8 +210,7 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritab
         Path path = FileInputFormat.getInputPaths(job)[0];
         System.out.println("path:" + path);
         // fill splits
-        VineyardSplit vineyardSplit = new VineyardSplit();
-        vineyardSplit.setPath(path);
+        VineyardSplit vineyardSplit = new VineyardSplit(path, 0, 0, job);
         splits.add(vineyardSplit);
         return splits.toArray(new VineyardSplit[splits.size()]);
     }
@@ -233,7 +232,26 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritab
 }
 
 class VineyardSplit extends FileSplit {
-    private Path path = new Path("/opt/hive/data/warehouse/hive_example");
+    String customPath;
+
+    protected VineyardSplit() {
+        super();
+        System.out.printf("--------+creating vineyard split\n");
+    }
+
+    public VineyardSplit(Path file, long start, long length, JobConf conf) {
+        super(file, start, length, (String[]) null);
+    }
+
+    public VineyardSplit(Path file, long start, long length, String[] hosts) {
+        super(file, start, length, hosts);
+    }
+
+    @Override
+    public Path getPath() {
+        System.out.println("--------+getPath");
+        return super.getPath();
+    }
 
     @Override
     public long getLength() {
@@ -244,38 +262,19 @@ class VineyardSplit extends FileSplit {
     @Override
     public String[] getLocations() throws IOException {
         System.out.printf("--------+getLocations\n");
-        IOException e = new IOException("read field");
-        // e.printStackTrace();
         return new String[0];
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
         System.out.printf("--------+creating vineyard readField\n");
-        IOException e = new IOException("read field");
-        // e.printStackTrace();
-
-        // path = new Path();
-        // System.out.println("Path: " + path);
+        super.readFields(in);
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
         System.out.printf("--------+creating vineyard write\n");
-    }
-
-    VineyardSplit() {
-        System.out.printf("--------+creating vineyard split\n");
-    }
-
-    public Path getPath() {
-        System.out.println("--------+getPath");
-        return path;
-    }
-
-    void setPath(Path path) {
-        System.out.println("--------+setPath");
-        this.path = path;
+        super.write(out);
     }
 }
 

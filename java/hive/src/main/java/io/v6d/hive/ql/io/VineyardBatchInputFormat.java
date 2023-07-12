@@ -97,8 +97,7 @@ public class VineyardBatchInputFormat extends HiveInputFormat<NullWritable, Vect
         Path path = FileInputFormat.getInputPaths(job)[0];
         System.out.println("path:" + path);
         // fill splits
-        VineyardSplit vineyardSplit = new VineyardSplit();
-        vineyardSplit.setPath(path);
+        VineyardSplit vineyardSplit = new VineyardSplit(path, 0, 0, job);
         splits.add(vineyardSplit);
         return splits.toArray(new VineyardSplit[splits.size()]);
     }
