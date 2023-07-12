@@ -33,7 +33,7 @@ a {
   text-decoration: none;
 }
 
-button {
+.button {
   border: none;
   width: 120px;
   height: 50px;
@@ -180,6 +180,11 @@ button {
 
 .hero-container {
   padding: 100px 3% 100px;
+}
+
+.hero-section {
+  position: relative;
+  z-index: -1;
 }
 
 .hero-text {

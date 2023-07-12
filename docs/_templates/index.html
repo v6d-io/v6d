@@ -79,10 +79,10 @@
         </p>
         <div class="btn-container">
           <a href="{{ pathto('notes/getting-started') }}">
-            <button class="btn-primary">Get Started</button>
+            <button class="button btn-primary">Get Started</button>
           </a>
           <a href="{{ pathto('notes/references') }}">
-            <button class="btn-secondary">API Reference</button>
+            <button class="button btn-secondary">API Reference</button>
           </a>
         </div>
         <div id="termynal" class="termynal" data-termynal>
@@ -281,7 +281,7 @@
       if (menuToggleNode.className === "menu-toggle") {
         menuToggleNode.className = "menu-toggle is-active";
         navBarLinkContainer.style.display = "flex";
-        navBarLinkContainer.className = "nav-link-container";
+        navBarLinkContainer.className = "nav-link-container list-style-none";
       } else {
         menuToggleNode.className = "menu-toggle";
         navBarLinkContainer.style.display = "none";
