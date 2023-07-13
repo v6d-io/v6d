@@ -24,6 +24,7 @@ import (
 	// import as early as possible to introduce the "version" global flag
 	_ "k8s.io/component-base/version/verflag"
 
+	"github.com/v6d-io/v6d/k8s/cmd/commands/client"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/create"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
@@ -69,6 +70,7 @@ func init() {
 	cmd.AddCommand(manager.NewManagerCmd())
 	cmd.AddCommand(schedule.NewScheduleCmd())
 	cmd.AddCommand(sidecar.NewInjectCmd())
+	cmd.AddCommand(client.NewLsCmd())
 }
 
 func main() {

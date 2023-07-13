@@ -212,7 +212,6 @@ func (c *IPCClient) GetMetaData(id types.ObjectID, syncRemote bool) (meta *Objec
 		return nil, err
 	}
 	for id, buffer := range buffers {
-		logger.Info("add buffer: ", "id", id, "buffer", buffer)
 		_ = bufferset.EmplaceBuffer(id, buffer.Buffer)
 	}
 	return meta, nil
@@ -227,6 +226,22 @@ func (c *IPCClient) GetObject(id types.ObjectID, object IObject) error {
 		return err
 	}
 	return object.Construct(c, meta)
+}
+
+func (c *IPCClient) ListMetadata(pattern string, regex bool, limit int) (map[string]map[string]any, error) {
+	if !c.connected {
+		return nil, NOT_CONNECTED_ERR
+	}
+	messageOut := common.WriteListDataRequest(pattern, regex, limit)
+	if err := c.doWrite(messageOut); err != nil {
+		return nil, err
+	}
+	var reply common.ListDataReply
+	if err := c.doReadReply(&reply); err != nil {
+		return nil, err
+	}
+
+	return reply.Content, nil
 }
 
 func (c *IPCClient) mmapToClient(

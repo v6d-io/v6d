@@ -39,6 +39,16 @@ var (
 
 	// VineyardFile is the path of vineyardd file
 	VineyarddFile string
+
+	// The following variables are used for the vineyard client
+	// VineyardIPCSocket is the path of vineyardd IPC socket
+	VineyardIPCSocket string
+
+	// VineyardRPCSocket is the path of vineyardd RPC socket
+	VineyardRPCSocket string
+
+	// NamespacedVineyardDeployment is the namespaced name of vineyard deployment
+	NamespacedVineyardDeployment string
 )
 
 // ApplyVineyardContainerOpts applies the vineyard container options
@@ -143,9 +153,9 @@ func ApplyVineyarddNameOpts(cmd *cobra.Command) {
 // ApplyVineyarddOpts represents the option of vineyardd configuration
 func ApplyVineyarddOpts(cmd *cobra.Command) {
 	// setup the vineyardd configuration
-	cmd.Flags().IntVarP(&VineyarddOpts.Replicas, "vineyard.replicas", "", 3,
+	cmd.Flags().IntVarP(&VineyarddOpts.Replicas, "replicas", "", 3,
 		"the number of vineyardd replicas")
-	cmd.Flags().IntVarP(&VineyarddOpts.EtcdReplicas, "vineyard.etcd.replicas",
+	cmd.Flags().IntVarP(&VineyarddOpts.EtcdReplicas, "etcd.replicas",
 		"", 1, "the number of etcd replicas in a vineyard cluster")
 	cmd.Flags().StringVarP(&VineyarddFile, "file", "f", "", "the path of vineyardd")
 	// setup the vineyardd name

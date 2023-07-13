@@ -72,4 +72,29 @@ func TestIPCClientBuffer(t *testing.T) {
 			t.Fatalf("buffer content not match")
 		}
 	}
+
+	// create a new buffer
+	newBuffer, err := client.CreateBuffer(1024)
+	if err != nil {
+		t.Fatalf("create newBuffer failed: %+v", err)
+	}
+	_, err = newBuffer.Seal(client)
+	if err != nil {
+		t.Fatalf("seal newBuffer failed: %+v", err)
+	}
+
+	// list metadatas
+	metadatas := map[string]map[string]any{}
+	pattern := "*"
+	limit := 100
+	regex := false
+	metadatas, err = client.ListMetadata(pattern, regex, limit)
+	if err != nil {
+		t.Fatalf("list metadatas failed: %+v", err)
+	}
+
+	if len(metadatas) != 2 {
+		t.Fatalf("list metadatas failed: %+v", err)
+	}
+
 }
