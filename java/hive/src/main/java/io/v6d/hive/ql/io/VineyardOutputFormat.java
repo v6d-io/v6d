@@ -136,7 +136,6 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
     @Override
     public void write(Writable w) throws IOException {
-        System.out.printf("vineard filesink record writer: %s, %s\n", w, w.getClass());
         ArrowWrapperWritable arrowWrapperWritable = (ArrowWrapperWritable) w;
         VectorSchemaRoot root = arrowWrapperWritable.getVectorSchemaRoot();
         fillRecordBatchBuilder(root);
@@ -144,7 +143,6 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
     @Override
     public void close(boolean abort) throws IOException {
-        System.out.println("vineyard filesink operator closing");
         for (int i = 0; i < recordBatchBuilders.size(); i++) {
             tableBuilder.addBatch(recordBatchBuilders.get(i));
         }

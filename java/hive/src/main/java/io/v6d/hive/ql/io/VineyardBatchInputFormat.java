@@ -18,7 +18,6 @@ import org.apache.arrow.memory.BufferAllocator;
 
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
-import org.apache.arrow.memory.RootAllocator;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -28,50 +27,31 @@ import io.v6d.modules.basic.arrow.Table;
 import io.v6d.modules.basic.arrow.Arrow;
 import io.v6d.modules.basic.arrow.RecordBatchBuilder;
 
-import org.apache.arrow.vector.complex.NonNullableStructVector;
 import org.apache.hadoop.hive.ql.exec.Utilities;
 import org.apache.hadoop.hive.ql.exec.vector.*;
 import org.apache.hadoop.hive.ql.io.HiveInputFormat;
-import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.FileInputFormat;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.Reporter;
-import org.apache.hadoop.mapred.FileSplit;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.arrow.vector.util.Text;
-
-import com.google.flatbuffers.LongVector;
-
-import org.apache.hadoop.hive.ql.exec.vector.*;
-
-import java.io.IOException;
 
 import org.apache.arrow.vector.*;
+import org.apache.arrow.vector.util.Text;
 import org.apache.arrow.vector.VectorSchemaRoot;
-import org.apache.arrow.vector.types.FloatingPointPrecision;
 import org.apache.arrow.vector.types.pojo.*;
+import org.apache.arrow.memory.RootAllocator;
 import org.apache.hadoop.fs.Path;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.io.DataOutput;
-import java.io.DataInput;
-import java.util.Vector;
+import java.io.IOException;
 
 import lombok.val;
-// how to connect vineyard
-
-// check phase:
-// 1. check if vineyard is running
-// 2. check if file exist in vineyard
-// 3. if exist, read file from vineyard
-// 4. if not exist, read file from hdfs and write to vineyard
-//
-// We do not split the file at present.
 
 public class VineyardBatchInputFormat extends HiveInputFormat<NullWritable, VectorizedRowBatch> implements VectorizedInputFormatInterface {
 
@@ -80,8 +60,6 @@ public class VineyardBatchInputFormat extends HiveInputFormat<NullWritable, Vect
     getRecordReader(InputSplit genericSplit, JobConf job, Reporter reporter)
             throws IOException {
         reporter.setStatus(genericSplit.toString());
-        System.out.printf("--------+creating vineyard record reader\n");
-        System.out.println("split class:" + genericSplit.getClass().getName());
         return new VineyardBatchRecordReader(job, (VineyardSplit) genericSplit);
     }
 
@@ -92,10 +70,8 @@ public class VineyardBatchInputFormat extends HiveInputFormat<NullWritable, Vect
 
     @Override
     public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
-        System.out.println("--------+creating vineyard input split. Num:" + numSplits);
         List<InputSplit> splits = new ArrayList<InputSplit>();
         Path path = FileInputFormat.getInputPaths(job)[0];
-        System.out.println("path:" + path);
         // fill splits
         VineyardSplit vineyardSplit = new VineyardSplit(path, 0, 0, job);
         splits.add(vineyardSplit);
@@ -122,17 +98,13 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
     private List<RecordBatchBuilder> recordBatchBuilders;
     private static RecordBatchBuilder recordBatchBuilder;
     private int batchIndex = 0;
+    private int batchNum = 0;
 
     VineyardBatchRecordReader(JobConf job, VineyardSplit split) {
-        System.out.printf("--------+creating vineyard record reader\n");
-        // throw new RuntimeException("mapred record reader: unimplemented");
-        // reader = new LineRecordReader(job, split);
-        System.out.println("Path:" + split.getPath());
         String path = split.getPath().toString();
         int index = path.lastIndexOf("/");
         tableName = path.substring(index + 1);
         tableNameValid = true;
-        System.out.println("Table name:" + tableName);
 
         // connect to vineyard
         if (client == null) {
@@ -152,18 +124,12 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
             System.out.println("Hello, vineyard!");
         }
 
-        // try {
-        //     prepare();
-        // } catch (Exception e) {
-        //     System.out.println(e.getMessage());
-        // }
         Arrow.instantiate();
         ctx = Utilities.getVectorizedRowBatchCtx(job);
     }
 
     @Override
     public void close() throws IOException {
-        System.out.printf("--------closing\n");
         if(client != null && client.connected()) {
             client.disconnect();
             System.out.println("Bye, vineyard!");
@@ -172,29 +138,30 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
 
     @Override
     public NullWritable createKey() {
-        System.out.printf("--------creating key\n");
         return null;
     }
 
     @Override
     public VectorizedRowBatch createValue() {
-        System.out.printf("++++++++creating value\n");
         return ctx.createVectorizedRowBatch();
-        // return new ArrowWrapperWritable(null , Arrow.default_allocator, NonNullableStructVector.empty(tableName, Arrow.default_allocator));
     }
 
     @Override
     public long getPos() throws IOException {
-        System.out.printf("+++++++get pos\n");
         return 0;
     }
 
     @Override
     public float getProgress() throws IOException {
-        System.out.printf("++++++++get progress\n");
-        return 0;
+        return batchIndex / batchNum;
     }
 
+    /**
+     * Copy data from the Arrow RecordBatch to the VectorizedRowBatch.
+     *
+     * @param recordBatch the Arrow RecordBatch to copy from
+     * @param batch the VectorizedRowBatch to copy to
+     */
     private void arrowToVectorizedRowBatch(VectorSchemaRoot recordBatch, VectorizedRowBatch batch) {
         // batch.numCols = recordBatch.getFieldVectors().size();
         batch.size = recordBatch.getRowCount();
@@ -216,10 +183,6 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                     vector.vector[k] = bitVector.get(k);
                 }
                 batch.cols[i] = vector;
-                for (int k = 0; k < batch.size; k++) {
-                    System.out.printf(vector.vector[k] + " ");
-                }
-                System.out.printf("\n");
             } else if (field.getType().equals(Arrow.Type.Int)) {
                 LongColumnVector vector = new LongColumnVector(batch.size);
                 IntVector intVector = (IntVector) recordBatch.getFieldVectors().get(i);
@@ -227,10 +190,6 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                     vector.vector[k] = intVector.get(k);
                 }
                 batch.cols[i] = vector;
-                for (int k = 0; k < batch.size; k++) {
-                    System.out.printf(vector.vector[k] + " ");
-                }
-                System.out.printf("\n");
             } else if (field.getType().equals(Arrow.Type.Int64)) {
                 LongColumnVector vector = new LongColumnVector(batch.size);
                 BigIntVector bigIntVector = (BigIntVector) recordBatch.getFieldVectors().get(i);
@@ -238,23 +197,13 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                     vector.vector[k] = bigIntVector.get(k);
                 }
                 batch.cols[i] = vector;
-                for (int k = 0; k < batch.size; k++) {
-                    System.out.printf(vector.vector[k] + " ");
-                }
-                System.out.printf("\n");
             } else if (field.getType().equals(Arrow.Type.Float)) {
                 DoubleColumnVector vector = new DoubleColumnVector(batch.size);
                 Float4Vector float4Vector = (Float4Vector) recordBatch.getFieldVectors().get(i);
-                System.out.println("Batch size is :" + batch.size);
                 for (int k = 0; k < batch.size; k++) {
-                    System.out.println("k is " + k + " value is " + float4Vector.get(k));
                     vector.vector[k] = float4Vector.get(k);
                 }
                 batch.cols[i] = vector;
-                for (int k = 0; k < batch.size; k++) {
-                    System.out.printf(vector.vector[k] + " ");
-                }
-                System.out.printf("\n");
             } else if (field.getType().equals(Arrow.Type.Double)) {
                 DoubleColumnVector vector = new DoubleColumnVector(batch.size);
                 Float8Vector float8Vector = (Float8Vector) recordBatch.getFieldVectors().get(i);
@@ -262,25 +211,12 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                     vector.vector[k] = float8Vector.get(k);
                 }
                 batch.cols[i] = vector;
-                for (int k = 0; k < batch.size; k++) {
-                    System.out.printf(vector.vector[k] + " ");
-                }
-                System.out.printf("\n");
             } else if (field.getType().equals(Arrow.Type.LargeVarChar)) {
                 BytesColumnVector vector = new BytesColumnVector(batch.size);
                 LargeVarCharVector largeVarCharVector = (LargeVarCharVector) recordBatch.getFieldVectors().get(i);
                 for (int k = 0; k < batch.size; k++) {
                     vector.isNull[k] = false;
-                    // vector.vector[k] = new byte[largeVarCharVector.getByteCapacity()];
-                    System.out.println("byte capacity:" + largeVarCharVector.getByteCapacity());
-                    System.out.println("buffer size:" + largeVarCharVector.get(k).length);
-                    
                     vector.setRef(k, largeVarCharVector.get(k), 0, largeVarCharVector.get(k).length);
-                    System.out.println("vector size:" + vector.vector[k].length);
-                }
-                System.out.println("Large");
-                for (int p = 0; p < batch.size; p++) {
-                    System.out.println((vector.toString(p)) + ".");
                 }
                 batch.cols[i] = vector;
             } else if (field.getType().equals(Arrow.Type.VarChar)) {
@@ -289,28 +225,18 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                 VarCharVector varCharVector = (VarCharVector) recordBatch.getFieldVectors().get(i);
                 for (int k = 0; k < batch.size; k++) {
                     vector.isNull[k] = false;
-                    // vector.vector[k] = new byte[(int)(varCharVector.getByteCapacity())];
-                    System.out.println("byte capacity:" + varCharVector.getByteCapacity());
-                    System.out.println("buffer size:" + varCharVector.get(k).length);
                     vector.setRef(k, varCharVector.get(k), 0, varCharVector.get(k).length);
-                    System.out.println("vector size:" + vector.vector[k].length);
-                }
-                for (int p = 0; p < batch.size; p++) {
-                    System.out.println((vector.toString(p)) + ".");
                 }
                 batch.cols[i] = vector;
             } else {
-                // throw new VineyardException.NotImplemented(
-                //         "array builder for type " + field.getType() + " is not supported");
                 System.out.println("array builder for type " + field.getType() + " is not supported");
+                throw new UnsupportedOperationException("array builder for type " + field.getType() + " is not supported");
             }
         }
-        System.out.println("batch size:" + batch.size);
     }
 
     @Override
     public boolean next(NullWritable key, VectorizedRowBatch value) throws IOException {
-        System.out.printf("+++++++++next\n");
         if (tableNameValid) {
             // read(tableName);
             // if exist, create vectorSchema root set data and return true;
@@ -325,6 +251,7 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                     // tableID = 
                     ObjectID objectID = client.getName(tableName, false);
                     table = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID));
+                    batchNum = table.getBatches().size();
                 } catch (Exception e) {
                     System.out.println("Get objectID failed.");
                     return false;
@@ -339,8 +266,6 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                 System.out.println(tableName + " not exist!");
                 return false;
             }
-            System.out.println("Get schema root succeed!");
-            // value.setVectorSchemaRoot(vectorSchemaRoot);
 
             this.arrowToVectorizedRowBatch(vectorSchemaRoot, value);
             return true;
@@ -348,75 +273,27 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
         return false;
     }
 
+    // For test.
     private VectorSchemaRoot getSchemaRoot() {
         int BATCH_SIZE = 3;
-        // System.out.println("Get table from vineyard.");
-        // if (tableNameValid == false) {
-        //     return null;
-        // }
 
-        // try {
-        //     ObjectID objectID = client.getName(tableName);
-        //     System.out.println("ObjectID: " + objectID.value());
-        //     ObjectMeta meta = client.getMetaData(objectID);
-        //     if (meta == null) {
-        //         System.out.println("Get meta failed.");
-        //     } else {
-        //         System.out.println("Get meta succeed. Meta id:" + meta.getId().value());
-        //     }
-        //     Table table = (Table) ObjectFactory.getFactory().resolve(meta);
-        //     if (table == null) {
-        //         System.out.println("Create table from factory failed!");
-        //     } else {
-        //         System.out.println("Create table from factory succeed!");
-        //     }
-        //     // TBD: support more than one batch
-        //     tableNameValid = false;
-        //     return table.getArrowBatch(0);
-        // } catch (Exception e) {
-        //     System.out.println("Get table failed!");
-        //     System.out.println(e.getMessage());
-        // }
         BufferAllocator allocator = new RootAllocator();
-        // Field field1 = new Field("field_1", FieldType.nullable(new ArrowType.Int(32, true)), null);//Arrow.makeField("field_1", Arrow.FieldType.Int);
-        // Field field2 = new Field("field_2", FieldType.nullable(new ArrowType.Int(32, true)), null);//Arrow.makeField("field_2", Arrow.FieldType.Int);
-        // Field field1 = new Field("field_1", FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.SINGLE)), null);
-        // Field field2 = new Field("field_2", FieldType.nullable(new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE)), null);
         Field field1 = new Field("field_1", FieldType.nullable(new ArrowType.Utf8()), null);
         Field field2 = new Field("field_2", FieldType.nullable(new ArrowType.LargeUtf8()), null);
         List<Field> fields = new ArrayList<Field>();
         fields.add(field1);
         fields.add(field2);
-        // org.apache.arrow.vector.IntVector vector1 = new org.apache.arrow.vector.IntVector(field1, Arrow.default_allocator);
-        // org.apache.arrow.vector.IntVector vector2 = new org.apache.arrow.vector.IntVector(field2, Arrow.default_allocator);
-        // vector1.allocateNew(5);
-        // vector2.allocateNew(5);
-        // for (int i = 0; i < 5; i++) {
-        //     vector1.set(i, i);
-        //     vector2.set(i, i + 1);
-        // }
-        // List<FieldVector> fieldVectors = new ArrayList<FieldVector>();
-        // fieldVectors.add(vector1);
-        // fieldVectors.add(vector2);
 
-        // VectorSchemaRoot vectorSchemaRoot = new VectorSchemaRoot(fieldVectors);
         Schema schema = new Schema(fields);
         VectorSchemaRoot vectorSchemaRoot = VectorSchemaRoot.create(schema, allocator);
         vectorSchemaRoot.setRowCount(BATCH_SIZE);
-        // org.apache.arrow.vector.IntVector v1 = (org.apache.arrow.vector.IntVector) vectorSchemaRoot.getVector("field_1");
-        // org.apache.arrow.vector.IntVector v2 = (org.apache.arrow.vector.IntVector) vectorSchemaRoot.getVector("field_2");
-        // org.apache.arrow.vector.Float4Vector v1 = (Float4Vector) vectorSchemaRoot.getVector("field_1");
-        // org.apache.arrow.vector.Float8Vector v2 = (Float8Vector) vectorSchemaRoot.getVector("field_2");
         org.apache.arrow.vector.VarCharVector v1 = (VarCharVector) vectorSchemaRoot.getVector("field_1");
         org.apache.arrow.vector.LargeVarCharVector v2 = (LargeVarCharVector) vectorSchemaRoot.getVector("field_2");
         v1.allocateNew(BATCH_SIZE);
         v1.setValueCount(BATCH_SIZE);
         v2.allocateNew(BATCH_SIZE);
         v2.setValueCount(BATCH_SIZE);
-        // for (int i = 0; i < 3; i++) {
-        //     v1.set(i, i);
-        //     v2.set(i, i + 1);
-        // }
+
         v1.setSafe(0, new Text("我是"));
         v1.setSafe(1, new Text("涛老师"));
         v1.setSafe(2, new Text("的迷弟"));
@@ -427,6 +304,7 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
         return vectorSchemaRoot;
     }
 
+    // For test.
     private void prepare() throws VineyardException{
         System.out.println("Prepare data");
         SchemaBuilder schemaBuilder = new SchemaBuilder();

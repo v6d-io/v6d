@@ -236,7 +236,6 @@ class VineyardSplit extends FileSplit {
 
     protected VineyardSplit() {
         super();
-        System.out.printf("--------+creating vineyard split\n");
     }
 
     public VineyardSplit(Path file, long start, long length, JobConf conf) {
@@ -249,31 +248,26 @@ class VineyardSplit extends FileSplit {
 
     @Override
     public Path getPath() {
-        System.out.println("--------+getPath");
         return super.getPath();
     }
 
     @Override
     public long getLength() {
-        System.out.printf("--------+getLength\n");
         return 0;
     }
 
     @Override
     public String[] getLocations() throws IOException {
-        System.out.printf("--------+getLocations\n");
         return new String[0];
     }
 
     @Override
     public void readFields(DataInput in) throws IOException {
-        System.out.printf("--------+creating vineyard readField\n");
         super.readFields(in);
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
-        System.out.printf("--------+creating vineyard write\n");
         super.write(out);
     }
 }
