@@ -130,6 +130,40 @@ Hive and Vineyard
 
         insert into hive_example values('a', 1), ('a', 2), ('b',3);
 
+- Test large data sets:
+
+    Test large data sets must point out the `hive.arrow.batch.size` to avoid etcd failure. The default value is 1000.
+    The recommended value for the field is one-tenth of the number of rows in the table.
+    The following sql statement reads the livejournal dataset (a 27 million line csv file) and stores it in vineyard.
+    You must place the dataset in the correct directory.
+
+    .. code:: sql
+
+        set hive.fetch.task.conversion=none;
+        set hive.vectorized.use.vectorized.input.format=true;
+        set hive.vectorized.use.row.serde.deserialize=false;
+        set hive.vectorized.use.vector.serde.deserialize=true;
+        set hive.vectorized.execution.enabled=true;
+        set hive.vectorized.execution.reduce.enabled=true;
+        set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardBatchInputFormat;
+        set hive.arrow.batch.size=2000000;
+
+        create table hive_example(
+                            src_id int,
+                            dst_id int)
+        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+        stored as
+            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardBatchInputFormat'
+            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
+        create table hive_test_data_livejournal(
+                            src_id int,
+                            dst_id int
+        )
+        row format serde 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
+        stored as textfile ;
+        load data local inpath "file:///opt/hive/data/warehouse/soc-livejournal.csv" into table hive_test_data_livejournal;
+        insert into hive_example select * from hive_test_data_livejournal; 
+
 - Test output format:
 
     .. code:: sql
