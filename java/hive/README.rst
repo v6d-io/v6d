@@ -22,6 +22,23 @@ Using docker to launch the hive server:
         --name hive \
         apache/hive:${HIVE_VERSION}
 
+If the result query is large, you may need to increase the memory of the hive server(e.g. Set max memory to 8G):
+
+.. code:: bash
+
+    docker run \
+        --rm \
+        -it \
+        -p 10000:10000 \
+        -p 10002:10002 \
+        -v `pwd`/hive-warehouse:/opt/hive/data/warehouse \
+        -v `pwd`/java/hive/target:/opt/hive/auxlib \
+        --env HIVE_AUX_JARS_PATH=/opt/hive/auxlib/ \
+        --env SERVICE_NAME=hiveserver2 \
+        --env SERVICE_OPTS="-Djnr.ffi.asm.enabled=false -Xmx8g" \
+        --name hive \
+        apache/hive:${HIVE_VERSION}
+
 Connecting to the hive server:
 
 .. code:: bash

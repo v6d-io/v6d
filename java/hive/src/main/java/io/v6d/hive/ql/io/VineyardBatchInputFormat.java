@@ -98,7 +98,6 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
     private List<RecordBatchBuilder> recordBatchBuilders;
     private static RecordBatchBuilder recordBatchBuilder;
     private int batchIndex = 0;
-    private int batchNum = 0;
 
     VineyardBatchRecordReader(JobConf job, VineyardSplit split) {
         String path = split.getPath().toString();
@@ -153,7 +152,7 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
 
     @Override
     public float getProgress() throws IOException {
-        return batchIndex / batchNum;
+        return 0;
     }
 
     /**
@@ -251,7 +250,6 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                     // tableID = 
                     ObjectID objectID = client.getName(tableName, false);
                     table = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID));
-                    batchNum = table.getBatches().size();
                 } catch (Exception e) {
                     System.out.println("Get objectID failed.");
                     return false;

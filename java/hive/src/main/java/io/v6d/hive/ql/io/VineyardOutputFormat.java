@@ -14,11 +14,14 @@
  */
 package io.v6d.hive.ql.io;
 
+import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
 import io.v6d.core.client.IPCClient;
+import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.arrow.TableBuilder;
 import io.v6d.modules.basic.arrow.SchemaBuilder;
+import io.v6d.modules.basic.arrow.Table;
 import io.v6d.modules.basic.arrow.Arrow;
 import io.v6d.modules.basic.arrow.RecordBatchBuilder;
 
@@ -132,6 +135,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         }
 
         recordBatchBuilders = new ArrayList<RecordBatchBuilder>();
+        Arrow.instantiate();
     }
 
     @Override
@@ -140,9 +144,30 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         VectorSchemaRoot root = arrowWrapperWritable.getVectorSchemaRoot();
         fillRecordBatchBuilder(root);
     }
-
+    
+    // check if the table is already created.
+    // if not, create a new table.
+    // if yes, append the data to the table.(Get from vineyard, and seal it in a new table) 
     @Override
     public void close(boolean abort) throws IOException {
+        Table oldTable = null;
+        try {
+            ObjectID objectID = client.getName(tableName, false);
+            if (objectID == null) {
+                System.out.println("Table not exist.");
+            } else {
+                oldTable = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID));
+            }
+        } catch (Exception e) {
+            System.out.println("Get table id failed");
+        }
+
+        if (oldTable != null) {
+            for (int i = 0; i < oldTable.getBatches().size(); i++) {
+                tableBuilder.addBatch(oldTable.getBatches().get(i));
+            }
+        }
+
         for (int i = 0; i < recordBatchBuilders.size(); i++) {
             tableBuilder.addBatch(recordBatchBuilders.get(i));
         }
