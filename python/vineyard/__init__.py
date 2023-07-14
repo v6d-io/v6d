@@ -23,6 +23,8 @@ import sys
 from typing import Any
 from typing import Dict
 from typing import Generator
+from typing import Optional
+from typing import Tuple
 from typing import Union
 
 from .version import __version__
@@ -181,7 +183,7 @@ from ._C import TypeErrorException
 from ._C import UnknownErrorException
 from ._C import UserInputErrorException
 from ._C import VineyardServerNotReadyException
-from ._C import connect
+from ._C import _connect
 from ._C import memory_copy
 from .core import builder_context
 from .core import default_builder_context
@@ -191,10 +193,9 @@ from .core import driver_context
 from .core import resolver_context
 from .data import register_builtin_types
 from .data.graph import Graph
-from .deploy.local import get_current_client
 from .deploy.local import get_current_socket
-from .deploy.local import init
 from .deploy.local import shutdown
+from .deploy.local import try_init
 
 
 def _init_vineyard_modules():  # noqa: C901
@@ -283,3 +284,134 @@ try:
 except Exception:  # pylint: disable=broad-except
     pass
 del _init_vineyard_modules
+
+
+def connect(
+    socket_or_endpoint: Union[None, str, Tuple[str, Union[int, str]]] = None,
+    *,
+    session_id: Optional[int] = None,
+    username: Optional[str] = None,
+    password: Optional[str] = None
+):
+    """
+    Connect to vineyard by specified UNIX-domain socket or TCP endpoint.
+
+    If no arguments are provided and failed to resolve both the environment
+    variables :code:`VINEYARD_IPC_SOCKET` and :code:`VINEYARD_RPC_ENDPOINT`,
+    it will launch a standalone vineyardd server in the background and then
+    connect to it.
+
+    .. function:: connect(socket: str,
+                        username: str = None,
+                        password: str = None) -> IPCClient
+        :noindex:
+
+        Connect to vineyard via UNIX domain socket for IPC service:
+
+        .. code:: python
+
+            client = vineyard.connect('/var/run/vineyard.sock')
+
+        Parameters:
+            socket: str
+                UNIX domain socket path to setup an IPC connection.
+            username: str
+                Username to login, default to None.
+            password: str
+                Password to login, default to None.
+
+        Returns:
+            IPCClient: The connected IPC client.
+
+    .. function:: connect(host: str,
+                        port: int or str,
+                        username: str = None,
+                        password: str = None) -> RPCClient
+        :noindex:
+
+        Connect to vineyard via TCP socket.
+
+        Parameters:
+            host: str
+                Hostname to connect to.
+            port: int or str
+                The TCP that listened by vineyard TCP service.
+            username: str
+                Username to login, default to None.
+            password: str
+                Password to login, default to None.
+
+        Returns:
+            RPCClient: The connected RPC client.
+
+    .. function:: connect(endpoint: (str, int or str),
+                        username: str = None,
+                        password: str = None) -> RPCClient
+        :noindex:
+
+        Connect to vineyard via TCP socket.
+
+        Parameters:
+            endpoint: tuple(str, int or str)
+                Endpoint to connect to. The parameter is a tuple, in which the first
+                element is the host, and the second parameter is the port (can be int
+                a str).
+            username: str
+                Username to login, default to None.
+            password: str
+                Password to login, default to None.
+
+        Returns:
+            RPCClient: The connected RPC client.
+
+    .. function:: connect(username: str = None,
+                        password: str = None) -> IPCClient or RPCClient
+        :noindex:
+
+        Connect to vineyard via UNIX domain socket or TCP endpoint. This method normally
+        usually no arguments, and will first tries to resolve IPC socket from the
+        environment variable `VINEYARD_IPC_SOCKET` and connect to it. If it fails to
+        establish a connection with vineyard server, the method will tries to resolve
+        RPC endpoint from the environment variable `VINEYARD_RPC_ENDPOINT`.
+
+        If both tries are failed, this method will raise a :class:`ConnectionFailed`
+        exception.
+
+        In rare cases, user may be not sure about if the IPC socket or RPC endpoint
+        is available, i.e., the variable might be :code:`None`. In such cases this
+        method can accept a `None` as arguments, and do resolution as described above.
+
+        Parameters:
+            username: str
+                Username to login, default to None.
+            password: str
+                Password to login, default to None.
+
+        Raises:
+            ConnectionFailed
+    """
+    args, kwargs = [], dict()
+    if socket_or_endpoint is not None:
+        if isinstance(socket_or_endpoint, str):
+            args.append(socket_or_endpoint)
+        if isinstance(socket_or_endpoint, (tuple, list)):
+            args.append(*socket_or_endpoint)
+    if session_id is not None:
+        kwargs['session_id'] = session_id
+    if username is not None:
+        kwargs['username'] = username
+    if password is not None:
+        kwargs['password'] = password
+
+    if (
+        not args
+        and not kwargs
+        and 'VINEYARD_IPC_SOCKET' not in os.environ
+        and 'VINEYARD_RPC_ENDPOINT' not in os.environ
+    ):
+        logger.info(
+            'No vineyard socket or endpoint is specified, '
+            'try to launch a standalone one.'
+        )
+        try_init()
+    return _connect(*args, **kwargs)

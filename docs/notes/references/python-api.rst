@@ -99,9 +99,7 @@ Shared memory
 Deployment
 ----------
 
-.. autofunction:: vineyard.init
-.. autofunction:: vineyard.shutdown
-.. autofunction:: vineyard.get_current_client
+.. autofunction:: vineyard.connect
 .. autofunction:: vineyard.get_current_socket
 .. autofunction:: vineyard.deploy.local.start_vineyardd
 .. autofunction:: vineyard.deploy.distributed.start_vineyardd
