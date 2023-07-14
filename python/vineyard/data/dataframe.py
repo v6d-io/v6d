@@ -413,6 +413,12 @@ def pandas_dataframe_builder(client, value, builder, **kw):
         if isinstance(block.values, pd.arrays.SparseArray):
             assert len(slices) == 1
             value_columns[slices[0]] = block.values
+        elif len(slices) == 1 and isinstance(block.values, NDArrayArray):
+            value_columns[slices[0]] = np.array(block.values)
+            vineyard_ref = getattr(block.values, '__vineyard_ref', None)
+            # the block comes from vineyard
+            if vineyard_ref is not None:
+                setattr(value_columns[slices[0]], '__vineyard_ref', vineyard_ref)
         elif len(slices) == 1:
             value_columns[slices[0]] = block.values[0]
             vineyard_ref = getattr(block.values, '__vineyard_ref', None)

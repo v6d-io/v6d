@@ -22,6 +22,7 @@ from typing import Iterator
 from typing import List
 from typing import Union
 
+import numpy as np
 import pandas as pd
 import pyarrow as pa
 
@@ -102,7 +103,7 @@ def torch_dataset_resolver(obj, resolver, **kw):
     value = resolver.parent_context.run(obj, **kw)
     if isinstance(value, pd.DataFrame):
         return torch.utils.data.TensorDataset(
-            *[torch.tensor(value[column].values) for column in value.columns]
+            *[torch.tensor(np.array(value[column].values)) for column in value.columns]
         )
     elif isinstance(value, (pa.Table, pa.RecordBatch)):
         return torch.utils.data.TensorDataset(

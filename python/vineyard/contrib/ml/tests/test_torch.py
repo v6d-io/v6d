@@ -24,6 +24,7 @@ import lazy_import
 import pytest
 
 from vineyard.contrib.ml.torch import torch_context
+from vineyard.data.dataframe import NDArrayArray
 
 torch = lazy_import.lazy_module("torch")
 torchdata = lazy_import.lazy_module("torchdata")
@@ -74,6 +75,20 @@ def test_torch_dataset_dataframe(vineyard_client):
     assert torch.isclose(
         value.tensors[2], torch.tensor([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
     ).all()
+
+
+def test_torch_dataset_dataframe_multidimensional(vineyard_client):
+    df = pd.DataFrame(
+        {
+            'data': NDArrayArray(np.random.rand(1000, 10)),
+            'label': np.random.randint(0, 2, size=(1000,)),
+        }
+    )
+    object_id = vineyard_client.put(df)
+    value = vineyard_client.get(object_id)
+
+    assert isinstance(value, torch.utils.data.TensorDataset)
+    assert len(df.columns) == len(value.tensors)
 
 
 def test_torch_dataset_recordbatch(vineyard_client):
