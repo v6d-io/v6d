@@ -21,7 +21,18 @@ import vineyard.deploy.local
 
 
 def test_local_instances():
-    client = vineyard.deploy.local.try_init()
+    vineyard.deploy.local.try_init()
+    client = vineyard.connect()
+    obj_id = client.put(1024)
+    client1 = vineyard.connect()
+    assert client1.get(obj_id) == 1024
+    client2 = vineyard.connect()
+    assert client == client2
+    vineyard.deploy.local.shutdown()
+
+
+def test_local_instances_connect():
+    client = vineyard.connect()
     obj_id = client.put(1024)
     client1 = vineyard.connect()
     assert client1.get(obj_id) == 1024
