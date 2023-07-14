@@ -152,6 +152,38 @@ def register_torch_types(builder_ctx, resolver_ctx):
         )
 
 
+def datapipe(
+    dataset: torch.utils.data.Dataset,
+) -> torchdata.datapipes.iter.IterableWrapper:
+    '''Convert a torch.utils.data.Dataset to a torchdata.datapipes.iter.IterableWrapper.
+
+        e.g.,
+
+        .. code:: python
+
+            with torch_context():
+                # using existing vineyard object as the dataset
+                ds = client.get(object_id)
+
+                # convert to datapipes
+                ds = datapipe(ds)
+
+                # do some transformation
+                ds2 = ds.map(lambda x: x + 1)
+
+                # iterator
+                for index, record in enumerate(ds2):
+                    print(record)
+
+    Args:
+        dataset: The torch.utils.data.Dataset to be converted.
+
+    Returns:
+        A torchdata.datapipes.iter.IterableWrapper.
+    '''
+    return torchdata.datapipes.iter.IterableWrapper(dataset)
+
+
 @contextlib.contextmanager
 def torch_context():
     with context() as (builder_ctx, resolver_ctx):
