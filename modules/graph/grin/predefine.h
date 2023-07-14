@@ -95,6 +95,7 @@ typedef enum {
 // Index
 #define GRIN_ENABLE_VERTEX_INTERNAL_ID_INDEX
 #define GRIN_ENABLE_VERTEX_PK_INDEX
+#define GRIN_ENABLE_VERTEX_EXTERNAL_ID_OF_INT64
 
 /* Define the handles using typedef */
 typedef void* GRIN_GRAPH;

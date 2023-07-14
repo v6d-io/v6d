@@ -4,6 +4,7 @@
 #include <sys/time.h>     
 #include "predefine.h"
 #include "common/error.h"
+#include "index/external_id.h"
 #include "index/internal_id.h"
 #include "index/label.h"
 #include "index/order.h"
@@ -1007,6 +1008,22 @@ FOR_VERTEX_LIST_END(g, vl)
   grin_destroy_graph(g);
 }
 
+void test_index_external_id_of_int64(int argc, char** argv) {
+  printf("+++++++++++++++++++++ Test index external id +++++++++++++++++++++\n");
+  GRIN_GRAPH g = get_graph(argc, argv, 0);
+
+FOR_VERTEX_LIST_BEGIN(g, vl)
+  FOR_VERTEX_BEGIN(g, vl, v)
+  long long int ext_id = grin_get_vertex_external_id_of_int64(g, v);
+  GRIN_VERTEX v1 = grin_get_vertex_by_external_id_of_int64(g, ext_id);
+  assert(grin_equal_vertex(g, v, v1));
+  grin_destroy_vertex(g, v1);
+  FOR_VERTEX_END(g, vl, v)
+FOR_VERTEX_LIST_END(g, vl)
+
+  grin_destroy_graph(g);
+}
+
 
 void test_index(int argc, char** argv) {
 #if defined(GRIN_ASSUME_ALL_VERTEX_LIST_SORTED) && defined(GRIN_ENABLE_VERTEX_LIST_ARRAY)
@@ -1014,6 +1031,9 @@ void test_index(int argc, char** argv) {
 #endif
 #ifdef GRIN_ENABLE_VERTEX_INTERNAL_ID_INDEX
   test_index_internal_id(argc, argv);
+#endif
+#ifdef GRIN_ENABLE_VERTEX_EXTERNAL_ID_OF_INT64
+  test_index_external_id_of_int64(argc, argv);
 #endif
 }
 
