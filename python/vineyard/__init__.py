@@ -287,7 +287,10 @@ del _init_vineyard_modules
 
 
 def connect(
-    socket_or_endpoint: Union[None, str, Tuple[str, Union[int, str]]] = None,
+    socket: Optional[str] = None,
+    endpoint: Tuple[str, Union[int, str]] = None,
+    host: Optional[str] = None,
+    port: Optional[Union[int, str]] = None,
     *,
     session_id: Optional[int] = None,
     username: Optional[str] = None,
@@ -391,11 +394,12 @@ def connect(
             ConnectionFailed
     """
     args, kwargs = [], dict()
-    if socket_or_endpoint is not None:
-        if isinstance(socket_or_endpoint, str):
-            args.append(socket_or_endpoint)
-        if isinstance(socket_or_endpoint, (tuple, list)):
-            args.append(*socket_or_endpoint)
+    if socket is not None:
+        args.append(socket)
+    elif endpoint is not None:
+        args.extend(endpoint)
+    elif host is not None and port is not None:
+        args.extend([host, port])
     if session_id is not None:
         kwargs['session_id'] = session_id
     if username is not None:
