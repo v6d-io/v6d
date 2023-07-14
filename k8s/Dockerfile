@@ -8,19 +8,21 @@ ENV GOOS=linux
 WORKDIR /workspace
 
 # Copy the Go Modules manifests
-COPY go.mod go.mod
-COPY go.sum go.sum
+#COPY go.mod go.mod
+#COPY go.sum go.sum
 
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
-RUN go mod download
+#RUN go mod download
 
+COPY go/ go/
 # Copy the go source
-COPY apis/ apis/
-COPY controllers/ controllers/
-COPY cmd/ cmd/
-COPY pkg/ pkg/
-COPY hack/ hack/
+COPY k8s/ k8s/
+
+# Update the working directory
+WORKDIR /workspace/k8s
+
+RUN go mod download
 
 # Build
 RUN go build -a -o vineyardctl cmd/main.go && \
@@ -31,9 +33,9 @@ RUN go build -a -o vineyardctl cmd/main.go && \
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /
 
-COPY config/scheduler/config.yaml /etc/kubernetes/scheduler.yaml
+COPY k8s/config/scheduler/config.yaml /etc/kubernetes/scheduler.yaml
 
-COPY --from=builder /workspace/vineyardctl /vineyardctl
+COPY --from=builder /workspace/k8s/vineyardctl /vineyardctl
 USER nonroot:nonroot
 
 ENTRYPOINT ["/vineyardctl", "manager"]

@@ -15,7 +15,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/pflag v1.0.5
-	github.com/v6d-io/v6d/go/vineyard v0.0.0-20230711024033-999bcd80d587
+	github.com/v6d-io/v6d/go/vineyard v0.0.0-00010101000000-000000000000
 	go.uber.org/multierr v1.9.0
 	go.uber.org/zap v1.24.0
 	k8s.io/api v0.25.10
@@ -151,6 +151,7 @@ replace (
 	//github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible
 	//github.com/emicklei/go-restful/v3 => github.com/emicklei/go-restful v2.9.5+incompatible
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.2
+	github.com/v6d-io/v6d/go/vineyard => ../go/vineyard
 	// these are needed since k8s.io/kubernetes cites v0.0.0 for these in its go.mod
 	k8s.io/api => k8s.io/api v0.25.10
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.25.10

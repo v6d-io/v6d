@@ -209,10 +209,11 @@ vendor:
 # Build the docker image
 .PHONY: docker-build
 docker-build:
+	cd .. &&\
 	if docker build --help | grep -q load; then \
-		docker build --load . -t $(IMG); \
+		docker build --load -f k8s/Dockerfile . -t $(IMG); \
 	else \
-		docker build . -t $(IMG); \
+		docker build -f k8s/Dockerfile . -t $(IMG); \
 	fi
 
 docker-build-push-multi-arch:

@@ -43,5 +43,13 @@ docs/_build/
 # go vendor
 vendor/
 
+# k8s
+k8s/bin/
+k8s/vendor/
+k8s/examples/
+k8s/test/
+k8s/hack/
+!k8s/config/scheduler/config.yaml
+
 # artifacts
 wheels/
