@@ -137,6 +137,8 @@ def start_vineyardd(
         command.extend(('--etcd_endpoint', etcd_endpoints))
         if etcd_prefix is not None:
             command.extend(('--etcd_prefix', etcd_prefix))
+    else:
+        etcd_ctx = None
 
     env = os.environ.copy()
     if debug:

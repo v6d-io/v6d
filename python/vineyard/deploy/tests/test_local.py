@@ -27,7 +27,7 @@ def test_local_instances():
     client1 = vineyard.connect()
     assert client1.get(obj_id) == 1024
     client2 = vineyard.connect()
-    assert client == client2
+    assert client.instance_id == client2.instance_id
     vineyard.deploy.local.shutdown()
 
 
@@ -37,5 +37,5 @@ def test_local_instances_connect():
     client1 = vineyard.connect()
     assert client1.get(obj_id) == 1024
     client2 = vineyard.connect()
-    assert client == client2
+    assert client.instance_id == client2.instance_id
     vineyard.deploy.local.shutdown()
