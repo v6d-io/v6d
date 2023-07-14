@@ -691,6 +691,38 @@ func (reply *ListNameReply) Check() error {
 	return nil
 }
 
+type ListDataRequest struct {
+	request
+	Pattern string `json:"pattern"`
+	Regex   bool   `json:"regex"`
+	Limit   int    `json:"limit"`
+}
+
+type ListDataReply struct {
+	reply
+	Content map[string]map[string]any `json:"content"`
+}
+
+func WriteListDataRequest(pattern string, regex bool, limit int) []byte {
+	var request ListDataRequest
+	request.Type = LIST_DATA_REQUEST
+	request.Pattern = pattern
+	request.Regex = regex
+	request.Limit = limit
+	return encodeMsg(request)
+}
+
+func (reply *ListDataReply) Check() error {
+	if err := reply.check(); err != nil {
+		return err
+	}
+
+	if reply.Type != GET_DATA_REPLY {
+		return ReplyTypeMismatch(LIST_DATA_REPLY)
+	}
+	return nil
+}
+
 type DropNameRequest struct {
 	request
 	Name string `json:"name"`

@@ -18,6 +18,7 @@ package util
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
@@ -33,5 +34,14 @@ func AssertNoArgsOrInput(cmd *cobra.Command, args []string) {
 			return
 		}
 		log.Fatal(err, "Expects no positional arguments")
+	}
+}
+
+func CheckClientSocket(cmd *cobra.Command, args []string) {
+	ipcSocket := flags.GetIPCSocket()
+	rpcSocket := flags.GetRPCSocket()
+	vineyardDeployment := flags.DeploymentName
+	if ipcSocket == "" && rpcSocket == "" && vineyardDeployment == "" {
+		log.Fatal(nil, "Please specify the ipc socket or rpc socket")
 	}
 }

@@ -63,7 +63,7 @@ func Deserializer() runtime.Decoder {
 	return serializer.NewCodecFactory(scheme).UniversalDeserializer()
 }
 
-func getKubernetesConfig() *rest.Config {
+func GetKubernetesConfig() *rest.Config {
 	cfg, err := clientcmd.BuildConfigFromFlags("", flags.KubeConfig)
 	if err != nil {
 		cfg, err = rest.InClusterConfig()
@@ -76,7 +76,7 @@ func getKubernetesConfig() *rest.Config {
 
 // KubernetesClient return the kubernetes client
 func KubernetesClient() client.Client {
-	cfg := getKubernetesConfig()
+	cfg := GetKubernetesConfig()
 	client, err := client.New(cfg, client.Options{Scheme: scheme})
 	if err != nil {
 		log.Fatal(err, "failed to create the kubernetes API client")
@@ -86,7 +86,7 @@ func KubernetesClient() client.Client {
 
 // KubernetesClientset return the kubernetes clientset
 func KubernetesClientset() *kubernetes.Clientset {
-	cfg := getKubernetesConfig()
+	cfg := GetKubernetesConfig()
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		log.Fatal(err, "unable to create REST client")

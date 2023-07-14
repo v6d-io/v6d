@@ -16,6 +16,7 @@ drivers.
 * [vineyardctl delete](#vineyardctl-delete)	 - Delete the vineyard components from kubernetes
 * [vineyardctl deploy](#vineyardctl-deploy)	 - Deploy the vineyard components on kubernetes
 * [vineyardctl inject](#vineyardctl-inject)	 - Inject the vineyard sidecar container into a workload
+* [vineyardctl ls](#vineyardctl-ls)	 - List vineyard objects, metadatas or blobs
 * [vineyardctl manager](#vineyardctl-manager)	 - Start the manager of vineyard operator
 * [vineyardctl schedule](#vineyardctl-schedule)	 - Schedule a workload or a workflow to existing vineyard cluster.
 
@@ -888,6 +889,7 @@ vineyardctl deploy vineyard-deployment [flags]
 ### Options
 
 ```
+      --etcd.replicas int                             the number of etcd replicas in a vineyard cluster (default 1)
   -f, --file string                                   the path of vineyardd
   -h, --help                                          help for vineyard-deployment
       --name string                                   the name of vineyardd (default "vineyardd-sample")
@@ -897,8 +899,7 @@ vineyardctl deploy vineyard-deployment [flags]
       --pluginImage.distributedAssemblyImage string   the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
       --pluginImage.localAssemblyImage string         the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
       --pluginImage.recoverImage string               the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
-      --vineyard.etcd.replicas int                    the number of etcd replicas in a vineyard cluster (default 1)
-      --vineyard.replicas int                         the number of vineyardd replicas (default 3)
+      --replicas int                                  the number of vineyardd replicas (default 3)
       --vineyardd.cpu string                          the cpu requests and limits of vineyard container
       --vineyardd.envs strings                        The environment variables of vineyardd
       --vineyardd.image string                        the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
@@ -1022,6 +1023,7 @@ vineyardctl deploy vineyardd [flags]
 ### Options
 
 ```
+      --etcd.replicas int                             the number of etcd replicas in a vineyard cluster (default 1)
   -f, --file string                                   the path of vineyardd
   -h, --help                                          help for vineyardd
       --name string                                   the name of vineyardd (default "vineyardd-sample")
@@ -1030,8 +1032,7 @@ vineyardctl deploy vineyardd [flags]
       --pluginImage.distributedAssemblyImage string   the distributed image of vineyard workflow (default "ghcr.io/v6d-io/v6d/distributed-assembly")
       --pluginImage.localAssemblyImage string         the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
       --pluginImage.recoverImage string               the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
-      --vineyard.etcd.replicas int                    the number of etcd replicas in a vineyard cluster (default 1)
-      --vineyard.replicas int                         the number of vineyardd replicas (default 3)
+      --replicas int                                  the number of vineyardd replicas (default 3)
       --vineyardd.cpu string                          the cpu requests and limits of vineyard container
       --vineyardd.envs strings                        The environment variables of vineyardd
       --vineyardd.image string                        the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
@@ -1241,6 +1242,215 @@ vineyardctl inject [flags]
       --sidecar.syncCRDs                        enable metrics of vineyardd (default true)
       --sidecar.volume.mountPath string         Set the mount path for the pvc
       --sidecar.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently
+```
+
+## `vineyardctl ls`
+
+List vineyard objects, metadatas or blobs
+
+**SEE ALSO**
+
+* [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
+* [vineyardctl ls blobs](#vineyardctl-ls-blobs)	 - List vineyard blobs
+* [vineyardctl ls metadatas](#vineyardctl-ls-metadatas)	 - List vineyard metadatas
+* [vineyardctl ls objects](#vineyardctl-ls-objects)	 - List vineyard objects
+
+### Examples
+
+```shell
+  # Connect the vineyardd server with IPC client
+  # List the vineyard objects no more than 10
+  vineyardctl ls objects --limit 10 --ipc-socket /var/run/vineyard.sock
+
+  # List the vineyard blobs no more than 10
+  vineyardctl ls blobs --limit 10 --ipc-socket /var/run/vineyard.sock
+
+  # List the vineyard objects with the specified pattern
+  vineyardctl ls objects --pattern "vineyard::Tensor<.*>" --regex --ipc-socket /var/run/vineyard.sock
+
+  # Connect the vineyardd server with RPC client
+  # List the vineyard metadatas no more than 1000
+  vineyardctl ls metadatas --rpc-socket 127.0.0.1:9600 --limit 1000
+  
+  # Connect the vineyard deployment with PRC client
+  # List the vineyard objects no more than 1000
+  vineyardctl ls objects --deployment-name vineyardd-sample -n vineyard-system
+```
+
+### Options
+
+```
+  -h, --help   help for ls
+```
+
+## `vineyardctl ls blobs`
+
+List vineyard blobs
+
+### Synopsis
+
+List vineyard blobs and only support IPC socket.
+If you don't specify the ipc socket every time, you can set it as the 
+environment variable VINEYARD_IPC_SOCKET.
+
+```
+vineyardctl ls blobs [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl ls](#vineyardctl-ls)	 - List vineyard objects, metadatas or blobs
+
+### Examples
+
+```shell
+  # List no more than 10 vineyard blobs
+  vineyardctl ls blobs --limit 10 --ipc-socket /var/run/vineyard.sock
+
+  # List no more than 1000 vineyard blobs
+  vineyardctl ls blobs --ipc-socket /var/run/vineyard.sock --limit 1000
+  
+  # List vineyard blobs with the name matching
+  vineyardctl ls blobs --pattern "vineyard::Tensor<.*>" --regex --ipc-socket /var/run/vineyard.sock
+  
+  # List vineyard blobs with the regex pattern
+  vineyardctl ls blobs --pattern "*DataFrame*" --ipc-socket /var/run/vineyard.sock
+  
+  # If you set the environment variable VINEYARD_IPC_SOCKET
+  # you can use the following command to list vineyard blobs
+  vineyardctl ls blobs --limit 1000
+```
+
+### Options
+
+```
+      --deployment-name string   the name of vineyard deployment
+  -o, --format string            the output format, support table or json, default is table (default "table")
+      --forward-port int         the forward port of vineyard deployment (default 9600)
+  -h, --help                     help for blobs
+      --ipc-socket string        vineyard IPC socket path
+  -l, --limit int                maximum number of objects to return (default 5)
+      --port int                 the port of vineyard deployment (default 9600)
+      --rpc-socket string        vineyard RPC socket path
+```
+
+## `vineyardctl ls metadatas`
+
+List vineyard metadatas
+
+### Synopsis
+
+List vineyard metadatas and support IPC socket,
+RPC socket and vineyard deployment. If you don't specify the ipc socket or rpc socket
+every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or 
+VINEYARD_RPC_SOCKET.
+
+```
+vineyardctl ls metadatas [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl ls](#vineyardctl-ls)	 - List vineyard objects, metadatas or blobs
+
+### Examples
+
+```shell
+  # List no more than 10 vineyard metadatas
+  vineyardctl ls metadatas --limit 10 --ipc-socket /var/run/vineyard.sock
+  
+  # List no more than 1000 vineyard metadatas
+  vineyardctl ls metadatas --rpc-socket 127.0.0.1:9600 --limit 1000
+  
+  # List vineyard metadatas with the name matching the regex pattern
+  vineyardctl ls metadatas --pattern "vineyard::Blob" --ipc-socket /var/run/vineyard.sock
+
+  # List vineyard metadatas of the vineyard deployment
+  vineyardctl ls metadatas --deployment-name vineyardd-sample -n vineyard-system --limit 1000
+  
+  # List vineyard metadatas sorted by the instance id
+  vineyardctl ls metadatas --sorted-key instance_id --limit 1000 --ipc-socket /var/run/vineyard.sock
+
+  # List vineyard metadatas sorted by the type and print the output as json format
+  vineyardctl ls metadatas --sorted-key type --limit 1000 --format json --ipc-socket /var/run/vineyard.sock
+```
+
+### Options
+
+```
+      --deployment-name string   the name of vineyard deployment
+  -o, --format string            the output format, support table or json, default is table (default "table")
+      --forward-port int         the forward port of vineyard deployment (default 9600)
+  -h, --help                     help for metadatas
+      --ipc-socket string        vineyard IPC socket path
+  -l, --limit int                maximum number of objects to return (default 5)
+  -p, --pattern string           string that will be matched against the object’s typenames (default "*")
+      --port int                 the port of vineyard deployment (default 9600)
+  -r, --regex                    regex pattern to match the object’s typenames
+      --rpc-socket string        vineyard RPC socket path
+  -k, --sorted-key string        key to sort the objects, support:
+                                 - id: object id, the default value.
+                                 - typename: object typename, e.g. tensor, dataframe, etc.
+                                 - type: object type, e.g. global, local, etc.
+                                 - instance_id: object instance id. (default "id")
+```
+
+## `vineyardctl ls objects`
+
+List vineyard objects
+
+### Synopsis
+
+List vineyard objects and support IPC socket,
+RPC socket and vineyard deployment. If you don't specify the ipc socket or rpc socket
+every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or 
+VINEYARD_RPC_SOCKET.
+
+```
+vineyardctl ls objects [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl ls](#vineyardctl-ls)	 - List vineyard objects, metadatas or blobs
+
+### Examples
+
+```shell
+  # List no more than 10 vineyard objects
+  vineyardctl ls objects --limit 10 --ipc-socket /var/run/vineyard.sock
+  
+  # List any vineyard objects and no more than 1000 objects
+  vineyardctl ls objects --pattern "*" --ipc-socket /var/run/vineyard.sock --limit 1000
+  
+  # List vineyard objects with the name matching the regex pattern
+  vineyardctl ls objects --pattern "vineyard::Tensor<.*>" --regex --ipc-socket /var/run/vineyard.sock
+  
+  # List vineyard objects and output as json format
+  vineyardctl ls objects --format json --ipc-socket /var/run/vineyard.sock
+  
+  # List vineyard objects sorted by the typename
+  vineyardctl ls objects --sorted-key typename --limit 1000 --ipc-socket /var/run/vineyard.sock
+```
+
+### Options
+
+```
+      --deployment-name string   the name of vineyard deployment
+  -o, --format string            the output format, support table or json, default is table (default "table")
+      --forward-port int         the forward port of vineyard deployment (default 9600)
+  -h, --help                     help for objects
+      --ipc-socket string        vineyard IPC socket path
+  -l, --limit int                maximum number of objects to return (default 5)
+  -p, --pattern string           string that will be matched against the object’s typenames (default "*")
+      --port int                 the port of vineyard deployment (default 9600)
+  -r, --regex                    regex pattern to match the object’s typenames
+      --rpc-socket string        vineyard RPC socket path
+  -k, --sorted-key string        key to sort the objects, support:
+                                 - id: object id, the default value.
+                                 - typename: object typename, e.g. tensor, dataframe, etc.
+                                 - type: object type, e.g. global, local, etc.
+                                 - instance_id: object instance id. (default "id")
 ```
 
 ## `vineyardctl manager`
