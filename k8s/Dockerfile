@@ -7,16 +7,10 @@ ENV GOOS=linux
 
 WORKDIR /workspace
 
-# Copy the Go Modules manifests
-#COPY go.mod go.mod
-#COPY go.sum go.sum
-
-# cache deps before building and copying source so that we don't need to re-download as much
-# and so that source changes don't invalidate our downloaded layer
-#RUN go mod download
-
+# Copy the vineyard Go SDK
 COPY go/ go/
-# Copy the go source
+
+# Copy the Go source for vineyardctl
 COPY k8s/ k8s/
 
 # Update the working directory
