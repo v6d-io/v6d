@@ -286,16 +286,7 @@ except Exception:  # pylint: disable=broad-except
 del _init_vineyard_modules
 
 
-def connect(
-    socket: Optional[str] = None,
-    endpoint: Tuple[str, Union[int, str]] = None,
-    host: Optional[str] = None,
-    port: Optional[Union[int, str]] = None,
-    *,
-    session_id: Optional[int] = None,
-    username: Optional[str] = None,
-    password: Optional[str] = None
-):
+def connect(*args, **kwargs):
     """
     Connect to vineyard by specified UNIX-domain socket or TCP endpoint.
 
@@ -303,6 +294,8 @@ def connect(
     variables :code:`VINEYARD_IPC_SOCKET` and :code:`VINEYARD_RPC_ENDPOINT`,
     it will launch a standalone vineyardd server in the background and then
     connect to it.
+
+    The `connect()` method has various overloading:
 
     .. function:: connect(socket: str,
                         username: str = None,
@@ -393,20 +386,6 @@ def connect(
         Raises:
             ConnectionFailed
     """
-    args, kwargs = [], dict()
-    if socket is not None:
-        args.append(socket)
-    elif endpoint is not None:
-        args.extend(endpoint)
-    elif host is not None and port is not None:
-        args.extend([host, port])
-    if session_id is not None:
-        kwargs['session_id'] = session_id
-    if username is not None:
-        kwargs['username'] = username
-    if password is not None:
-        kwargs['password'] = password
-
     if (
         not args
         and not kwargs
