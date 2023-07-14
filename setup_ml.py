@@ -52,26 +52,19 @@ def find_ml_packages(root):
 
 
 with open(
-    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'),
+    os.path.join(
+        os.path.abspath(os.path.dirname(__file__)),
+        'python',
+        'vineyard',
+        'contrib',
+        'ml',
+        'README.md',
+    ),
     encoding='utf-8',
     mode='r',
 ) as fp:
     long_description = fp.read()
 
-    # Github doesn't respect "align: center", and pypi disables `.. raw`.
-    replacement = textwrap.dedent(
-        '''
-        .. image:: https://v6d.io/_static/vineyard_logo.png
-           :target: https://v6d.io
-           :align: center
-           :alt: vineyard
-           :width: 397px
-
-        vineyard: an in-memory immutable data manager
-        ---------------------------------------------
-        '''
-    )
-    long_description = replacement + '\n'.join(long_description.split('\n')[8:])
 
 setup(
     name='vineyard-ml',
@@ -79,7 +72,7 @@ setup(
     author_email='developers@v6d.io',
     description='Vineyard integration with machine learning frameworks',
     long_description=long_description,
-    long_description_content_type='text/x-rst',
+    long_description_content_type='text/markdown',
     url='https://v6d.io',
     package_dir={'vineyard.contrib.ml': 'python/vineyard/contrib/ml'},
     packages=find_ml_packages('python'),

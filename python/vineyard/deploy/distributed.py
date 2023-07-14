@@ -25,8 +25,8 @@ import time
 
 import pkg_resources
 
-from .utils import ssh_base_cmd
-from .utils import start_etcd
+from vineyard.deploy.utils import ssh_base_cmd
+from vineyard.deploy.utils import start_etcd
 
 logger = logging.getLogger('vineyard')
 

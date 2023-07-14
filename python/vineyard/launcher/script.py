@@ -21,8 +21,8 @@ import os
 import subprocess
 import threading
 
-from .launcher import Launcher
-from .launcher import LauncherStatus
+from vineyard.launcher.launcher import Launcher
+from vineyard.launcher.launcher import LauncherStatus
 
 logger = logging.getLogger('vineyard')
 
@@ -36,7 +36,7 @@ class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
     def __init__(self, script):
         super().__init__()
         self._script = script
-        self._proc = None
+        self._proc: subprocess.Popen = None
         self._listen_out_thrd = None
         self._listen_err_thrd = None
         self._cmd = None

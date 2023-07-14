@@ -18,7 +18,7 @@
 
 from kedro.runner import ThreadRunner as KedroThreadRunner
 
-from ..io import VineyardDataSet
+from vineyard.contrib.kedro.io import VineyardDataSet
 
 
 class ThreadRunner(KedroThreadRunner):

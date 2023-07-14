@@ -18,7 +18,7 @@
 
 from kedro.runner import SequentialRunner as KedroSequentialRunner
 
-from ..io import VineyardDataSet
+from vineyard.contrib.kedro.io import VineyardDataSet
 
 
 class SequentialRunner(KedroSequentialRunner):

@@ -16,17 +16,22 @@
 # limitations under the License.
 #
 
+import contextlib
+
 import numpy as np
 
-import tensorflow as tf
+import lazy_import
 
 from vineyard._C import ObjectMeta
+from vineyard.core import context
 from vineyard.core.resolver import default_resolver_context
 from vineyard.core.resolver import resolver_context
 from vineyard.data.utils import build_numpy_buffer
 from vineyard.data.utils import from_json
 from vineyard.data.utils import normalize_dtype
 from vineyard.data.utils import to_json
+
+tf = lazy_import.lazy_module("tensorflow")
 
 
 def tf_tensor_builder(client, value, **kw):
@@ -168,7 +173,7 @@ def tf_global_dataframe_resolver(obj, resolver, **kw):
     return tf_data
 
 
-def register_tf_types(builder_ctx, resolver_ctx):
+def register_tensorflow_types(builder_ctx, resolver_ctx):
     if builder_ctx is not None:
         builder_ctx.register(tf.data.Dataset, tf_builder)
 
@@ -179,3 +184,11 @@ def register_tf_types(builder_ctx, resolver_ctx):
         resolver_ctx.register('vineyard::Table', tf_table_resolver)
         resolver_ctx.register('vineyard::GlobalTensor', tf_global_tensor_resolver)
         resolver_ctx.register('vineyard::GlobalDataFrame', tf_global_dataframe_resolver)
+
+
+@contextlib.contextmanager
+def tensorflow_context():
+    with context() as (builder_ctx, resolver_ctx):
+        with contextlib.suppress(ImportError):
+            register_tensorflow_types(builder_ctx, resolver_ctx)
+        yield builder_ctx, resolver_ctx

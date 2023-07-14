@@ -30,9 +30,9 @@ try:
 except ImportError:
     kubernetes = None
 
-from .utils import check_socket
-from .utils import find_port
-from .utils import ssh_base_cmd
+from vineyard.deploy.utils import check_socket
+from vineyard.deploy.utils import find_port
+from vineyard.deploy.utils import ssh_base_cmd
 
 logger = logging.getLogger('vineyard')
 

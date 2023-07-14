@@ -20,7 +20,7 @@ import os
 
 from kedro.runner import ParallelRunner as KedroParallelRunner
 
-from ..io import VineyardDataSet
+from vineyard.contrib.kedro.io import VineyardDataSet
 
 
 class ParallelRunner(KedroParallelRunner):

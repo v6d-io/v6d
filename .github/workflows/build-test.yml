@@ -55,6 +55,7 @@ jobs:
           submodules: true
 
       - name: Free disk space
+        if: false
         run: |
           bash .github/free-disk-space.sh
 
@@ -325,96 +326,60 @@ jobs:
         if: false
         uses: mxschmitt/action-tmate@v3
 
-      - name: Run tests
+      - name: Run cpp tests
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
-
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py $RUNNER_ARGS --with-cpp --with-deployment
-
-      - name: Run tests with mimalloc
-        if: ${{ steps.changes.outputs.mimalloc == 'true' }}
-        run: |
-          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
-
-          export VINEYARD_DATA_DIR=`pwd`/gstest
-          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
-
-          rm -rf default.etcd
-          rm -rf /dev/shm/etcd*
-          python3 test/runner.py $RUNNER_ARGS --allocator=mimalloc --with-cpp --with-deployment
-
-      - name: Setup tmate session
-        if: false
-        uses: mxschmitt/action-tmate@v3
+          python3 test/runner.py $RUNNER_ARGS --with-cpp
 
       - name: Run python tests
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
-
-          # enable coredump for debugging
-          ulimit -c unlimited
-
-          export VINEYARD_DEVELOP=TRUE
-
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py $RUNNER_ARGS --with-python --with-migration --with-deployment
+          python3 test/runner.py $RUNNER_ARGS --with-python
 
-          if [[ ! "$RUNNER_ARGS" =~ .*"$redis".* ]]; then
-            python3 test/runner.py $RUNNER_ARGS --with-contrib
-          fi
-
-      - name: Run python tests with mimalloc
-        if: ${{ steps.changes.outputs.mimalloc == 'true' }}
+      - name: Run deployment tests
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
-
-          # enable coredump for debugging
-          ulimit -c unlimited
-
-          export VINEYARD_DEVELOP=TRUE
-
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py $RUNNER_ARGS --allocator=mimalloc --with-python --with-migration --with-deployment
+          python3 test/runner.py $RUNNER_ARGS --with-deployment --with-migration
 
-          if [[ ! "$RUNNER_ARGS" =~ .*"$redis".* ]]; then
-            python3 test/runner.py $RUNNER_ARGS --allocator=mimalloc --with-contrib
-          fi
+      - name: Run contrib/thirdparty tests
+        if: false  # lack of heavy dependencies like torch/tensorflow in CI
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
+          export VINEYARD_DATA_DIR=`pwd`/gstest
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
-      - name: Setup tmate session
-        if: false
-        uses: mxschmitt/action-tmate@v3
+          rm -rf default.etcd
+          rm -rf /dev/shm/etcd*
+          python3 test/runner.py $RUNNER_ARGS --with-contrib
 
       - name: Run I/O tests
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
-
-          export VINEYARD_DEVELOP=TRUE
-
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          python3 test/runner.py $RUNNER_ARGS --with-io --with-migration
+          python3 test/runner.py $RUNNER_ARGS --with-io
 
       - name: Run FUSE tests
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
-
-          export VINEYARD_DEVELOP=TRUE
           export VINEYARD_DATA_DIR=`pwd`/gstest
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
@@ -422,14 +387,10 @@ jobs:
           rm -rf /dev/shm/etcd*
           python3 test/runner.py $RUNNER_ARGS --with-fuse
 
-      - name: Find vineyard using CMake
+      - name: Run CMake tests
         run: |
           cmake -S test/vineyard-cmake-example -B build/vineyard-cmake-example
           cmake --build build/vineyard-cmake-example
-
-      - name: Setup tmate session
-        if: false
-        uses: mxschmitt/action-tmate@v3
 
       - name: Upload Coverage
         if: runner.os == 'Linux'

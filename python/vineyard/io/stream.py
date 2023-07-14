@@ -88,9 +88,9 @@ def read(
         from environment variables.
     """
     parsed = urlparse(path)
-    if read.__factory and read.__factory.get(parsed.scheme):
+    if read._factory and read._factory.get(parsed.scheme):
         errors = []
-        for reader in read.__factory[parsed.scheme][::-1]:
+        for reader in read._factory[parsed.scheme][::-1]:
             try:
                 proc_kwargs = kwargs.copy()
                 r = reader(
@@ -160,9 +160,9 @@ def write(
         vineyard's IPC or RPC endpoints from environment variables.
     """
     parsed = urlparse(path)
-    if write.__factory and write.__factory.get(parsed.scheme):
+    if write._factory and write._factory.get(parsed.scheme):
         errors = []
-        for writer in write.__factory[parsed.scheme][::-1]:
+        for writer in write._factory[parsed.scheme][::-1]:
             try:
                 proc_kwargs = kwargs.copy()
                 writer(

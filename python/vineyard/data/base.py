@@ -29,10 +29,9 @@ from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 from vineyard.core.builder import BuilderContext
 from vineyard.core.resolver import ResolverContext
-
-from .tensor import ndarray
-from .utils import build_buffer
-from .utils import normalize_dtype
+from vineyard.data.tensor import ndarray
+from vineyard.data.utils import build_buffer
+from vineyard.data.utils import normalize_dtype
 
 
 def int_builder(client: IPCClient, value: int, **kwargs):

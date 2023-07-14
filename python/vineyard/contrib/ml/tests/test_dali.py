@@ -18,43 +18,32 @@
 
 import numpy as np
 
+import lazy_import
 import pytest
 
-try:
-    from nvidia import dali  # pylint: disable=import-error
-    from nvidia.dali import pipeline_def  # pylint: disable=import-error
-    from nvidia.dali import types  # pylint: disable=import-error
-except ImportError:
-    dali = None
+from vineyard.contrib.ml.dali import dali_context
 
-from vineyard.contrib.ml.dali import register_dali_types
-from vineyard.core.builder import builder_context
-from vineyard.core.resolver import resolver_context
+dali = lazy_import.lazy_module("nvidia.dali")
 
 
 @pytest.fixture(scope="module", autouse=True)
 def vineyard_for_dali():
-    with builder_context() as builder:
-        with resolver_context() as resolver:
-            register_dali_types(builder, resolver)
-            yield builder, resolver
+    with dali_context():
+        yield
 
 
-num_gpus = 1
-device_id = 0
-batch_size = 2
-num_threads = 4
-
-
-@pytest.mark.skipif(dali is None, reason="nvidia-dali is not available")
 def test_dali_tensor(vineyard_client):
-    @pipeline_def()
+    @dali.pipeline_def()
     def pipe():
         data = np.array([np.random.rand(1, 2) for i in range(10)])
         label = np.array([np.random.rand(1, 3) for i in range(10)])
-        fdata = types.Constant(data)
-        flabel = types.Constant(label)
+        fdata = dali.types.Constant(data)
+        flabel = dali.types.Constant(label)
         return fdata, flabel
+
+    device_id = 0
+    batch_size = 2
+    num_threads = 4
 
     pipeline = pipe(  # pylint: disable=unexpected-keyword-arg
         device_id=device_id, num_threads=num_threads, batch_size=batch_size

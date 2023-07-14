@@ -28,9 +28,8 @@ except ImportError:
 from pandas.core.internals.managers import SingleBlockManager
 
 from vineyard._C import ObjectMeta
-
-from .utils import from_json
-from .utils import to_json
+from vineyard.data.utils import from_json
+from vineyard.data.utils import to_json
 
 
 def pandas_series_builder(client, value, builder, **kw):

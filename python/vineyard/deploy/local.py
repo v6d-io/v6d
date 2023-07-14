@@ -28,10 +28,9 @@ import textwrap
 import time
 
 from vineyard._C import connect
-
-from .etcd import start_etcd
-from .utils import check_socket
-from .utils import find_vineyardd_path
+from vineyard.deploy.etcd import start_etcd
+from vineyard.deploy.utils import check_socket
+from vineyard.deploy.utils import find_vineyardd_path
 
 logger = logging.getLogger('vineyard')
 
@@ -113,7 +112,7 @@ def start_vineyardd(
 
     env = os.environ.copy()
     if debug:
-        env['GLOG_v'] = 11
+        env['GLOG_v'] = '11'
 
     command = [
         vineyardd_path,
@@ -206,7 +205,7 @@ def init(num_instances=1, **kw):
     sockets or clients later in the process, use :code:`get_current_socket` or
     :code:`get_current_client` respectively.
     """
-    assert __default_instance_contexts == {}
+    assert not __default_instance_contexts
 
     if 'VINEYARD_IPC_SOCKET' in os.environ:
         raise ValueError(

@@ -22,6 +22,7 @@ import pandas as pd
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
+from vineyard.data.dataframe import NDArrayArray
 
 register_builtin_types(default_builder_context, default_resolver_context)
 
@@ -115,6 +116,19 @@ def test_dataframe_with_datetime(vineyard_client):
     df = pd.DataFrame(pd.Series(dates))
     object_id = vineyard_client.put(df)
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
+
+
+def test_dataframe_with_multidimensional(vineyard_client):
+    df = pd.DataFrame(
+        {
+            'data': NDArrayArray(np.random.rand(1000, 10)),
+            'label': np.random.randint(0, 2, size=(1000,)),
+        }
+    )
+    object_id = vineyard_client.put(df)
+    value = vineyard_client.get(object_id)
+
+    assert value.shape == df.shape
 
 
 def test_dataframe_reusing(vineyard_client):

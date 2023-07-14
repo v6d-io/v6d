@@ -34,9 +34,8 @@ from vineyard._C import Object
 from vineyard._C import ObjectMeta
 from vineyard.core.builder import BuilderContext
 from vineyard.core.resolver import ResolverContext
-
-from .utils import build_buffer
-from .utils import normalize_dtype
+from vineyard.data.utils import build_buffer
+from vineyard.data.utils import normalize_dtype
 
 
 def buffer_builder(

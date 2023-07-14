@@ -23,7 +23,7 @@ from jinja2 import Environment
 from jinja2 import FileSystemLoader
 from kedro.framework.cli.utils import call
 
-from .cli import vineyard as vineyard_cli
+from vineyard.contrib.kedro.plugins.cli import vineyard as vineyard_cli
 
 TEMPLATE_PATH = Path("templates")
 DOCKER_FILE_TMPL = "Dockerfile.tmpl"

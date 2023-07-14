@@ -38,8 +38,8 @@ static bool check_connectable(asio::io_context& context,
   return !ec;
 }
 
-static bool check_listable(asio::io_context& context, std::string const& path,
-                           std::string& error_message) {
+static bool check_listenable(asio::io_context& context, std::string const& path,
+                             std::string& error_message) {
   // create parent directory
   std::error_code ec;
   auto socket_path = ghc::filesystem::absolute(ghc::filesystem::path(path), ec);
@@ -153,7 +153,7 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
   std::string error_message;
   if (ipc_socket.empty()) {
     ipc_socket = "/var/run/vineyard.sock";
-    if (detail::check_listable(context, ipc_socket, error_message)) {
+    if (detail::check_listenable(context, ipc_socket, error_message)) {
       ::unlink(ipc_socket.c_str());
       ipc_spec_["socket"] = ipc_socket;
       return asio::local::stream_protocol::endpoint(ipc_socket);
@@ -162,13 +162,13 @@ asio::local::stream_protocol::endpoint IPCServer::getEndpoint(
     LOG(WARNING)
         << "Failed to listen on default socket '/var/run/vineyard.sock'";
     LOG(INFO) << "Falling back to '" << ipc_socket << "' ...";
-    if (detail::check_listable(context, ipc_socket, error_message)) {
+    if (detail::check_listenable(context, ipc_socket, error_message)) {
       ::unlink(ipc_socket.c_str());
       ipc_spec_["socket"] = ipc_socket;
       return asio::local::stream_protocol::endpoint(ipc_socket);
     }
   } else {
-    if (detail::check_listable(context, ipc_socket, error_message)) {
+    if (detail::check_listenable(context, ipc_socket, error_message)) {
       ::unlink(ipc_socket.c_str());
       return asio::local::stream_protocol::endpoint(ipc_socket);
     }
