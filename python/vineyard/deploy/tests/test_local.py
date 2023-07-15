@@ -17,26 +17,25 @@
 #
 
 import vineyard
+import vineyard.deploy.local
 
 
-def test_local_cluster():
-    client1, client2, client3 = vineyard.init(num_instances=3)
-    assert client1 != client2
-    assert client1 != client3
-    assert client2 != client3
-    obj_id = client1.put([1024, 1024])
-    client1.persist(obj_id)
-    meta2 = client2.get_meta(obj_id)
-    meta3 = client3.get_meta(obj_id)
-    assert str(meta2) == str(meta3)
-    vineyard.shutdown()
-
-
-def test_local_single():
-    client = vineyard.init()
+def test_local_instances():
+    vineyard.deploy.local.try_init()
+    client = vineyard.connect()
     obj_id = client.put(1024)
     client1 = vineyard.connect()
     assert client1.get(obj_id) == 1024
-    client2 = vineyard.get_current_client()
-    assert client == client2
-    vineyard.shutdown()
+    client2 = vineyard.connect()
+    assert client.instance_id == client2.instance_id
+    vineyard.deploy.local.shutdown()
+
+
+def test_local_instances_connect():
+    client = vineyard.connect()
+    obj_id = client.put(1024)
+    client1 = vineyard.connect()
+    assert client1.get(obj_id) == 1024
+    client2 = vineyard.connect()
+    assert client.instance_id == client2.instance_id
+    vineyard.deploy.local.shutdown()

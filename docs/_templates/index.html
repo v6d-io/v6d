@@ -89,11 +89,11 @@
           <span data-ty="input">pip install vineyard</span>
           <span data-ty="progress" class="breaking-word-all"></span>
           <span data-ty>Successfully installed vineyard</span>
-          <span data-ty="input">python -m vineyard</span>
-          <span data-ty>Hello vineyard!</span>
-          <span data-ty>Starting the etcd server ...</span>
-          <span data-ty>Vineyard will listen on "/var/run/vineyard.sock" for IPC</span>
-          <span data-ty>Vineyard will listen on 0.0.0.0:9600 for RPC</span>
+          <span data-ty="input">python</span>
+          <span data-ty="input" data-ty-prompt=">>>">client = vineyard.connect()</span>
+          <span data-ty="input" data-ty-prompt=">>>">object_id = client.put('Hello, vineyard!')</span>
+          <span data-ty="input" data-ty-prompt=">>>">client.get(object_id)</span>
+          <span data-ty>'Hello, vineyard!'</span>
         </div>
       </div>
     </section>

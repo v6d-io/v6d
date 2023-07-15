@@ -24,6 +24,9 @@ import subprocess
 import tempfile
 import textwrap
 import time
+from typing import Generator
+from typing import Optional
+from typing import Tuple
 
 try:
     import kubernetes
@@ -38,7 +41,11 @@ logger = logging.getLogger('vineyard')
 
 
 @contextlib.contextmanager
-def start_etcd(host=None, etcd_executable=None, data_dir=None):
+def start_etcd(
+    host: Optional[str] = None,
+    etcd_executable: Optional[str] = None,
+    data_dir: Optional[str] = None,
+) -> Generator[Tuple[subprocess.Popen, str], None, None]:
     if etcd_executable is None:
         etcd_executable = shutil.which('etcd')
 

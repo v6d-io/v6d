@@ -883,7 +883,7 @@ void bind_client(py::module& mod) {
       });
 
   mod.def(
-         "connect",
+         "_connect",
          [](std::nullptr_t, const std::string& username,
             const std::string& password) -> py::object {
            if (!read_env("VINEYARD_IPC_SOCKET").empty()) {
@@ -903,7 +903,7 @@ void bind_client(py::module& mod) {
          py::arg("target") = py::none(), py::kw_only(),
          py::arg("username") = "", py::arg("password") = "", doc::connect)
       .def(
-          "connect",
+          "_connect",
           [](std::string const& socket, const std::string& username,
              const std::string& password) -> py::object {
             return py::cast(ClientManager<Client>::GetManager()->Connect(
@@ -912,7 +912,7 @@ void bind_client(py::module& mod) {
           "socket"_a, py::kw_only(), py::arg("username") = "",
           py::arg("password") = "")
       .def(
-          "connect",
+          "_connect",
           [](std::string const& host, const uint32_t port,
              const SessionID session_id, const std::string& username,
              const std::string& password) {
@@ -923,7 +923,7 @@ void bind_client(py::module& mod) {
           "host"_a, "port"_a, py::arg("session") = RootSessionID(),
           py::kw_only(), py::arg("username") = "", py::arg("password") = "")
       .def(
-          "connect",
+          "_connect",
           [](std::string const& host, std::string const& port,
              const SessionID session_id, const std::string& username,
              const std::string& password) {
@@ -934,7 +934,7 @@ void bind_client(py::module& mod) {
           "host"_a, "port"_a, py::arg("session") = RootSessionID(),
           py::kw_only(), py::arg("username") = "", py::arg("password") = "")
       .def(
-          "connect",
+          "_connect",
           [](std::pair<std::string, uint32_t> const& endpoint,
              const SessionID session_id, const std::string& username,
              const std::string& password) {
@@ -946,7 +946,7 @@ void bind_client(py::module& mod) {
           "endpoint"_a, py::arg("session") = RootSessionID(), py::kw_only(),
           py::arg("username") = "", py::arg("password") = "")
       .def(
-          "connect",
+          "_connect",
           [](std::pair<std::string, std::string> const& endpoint,
              const SessionID session_id, const std::string& username,
              const std::string& password) {

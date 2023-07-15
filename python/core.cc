@@ -691,7 +691,6 @@ void bind_blobs(py::module& mod) {
             if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &length)) {
               py::pybind11_fail("Unable to extract bytes contents!");
             }
-            std::cout << "length = " << length << std::endl;
             return RemoteBlobWriter::Wrap(
                 reinterpret_cast<const uint8_t*>(buffer), length);
           },
