@@ -93,13 +93,11 @@ class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
         self._listen_out_thrd = threading.Thread(
             target=self.read_output, args=(self._proc.stdout,)
         )
-        self._listen_out_thrd.daemon = True
         self._listen_out_thrd.start()
         self._err_message = []
         self._listen_err_thrd = threading.Thread(
             target=self.read_err, args=(self._proc.stderr,)
         )
-        self._listen_err_thrd.daemon = True
         self._listen_err_thrd.start()
 
     def wait(self, timeout=None):
@@ -135,6 +133,8 @@ class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
             cmd = ' '.join(self._cmd[0:5]) + ' ...'
         else:
             cmd = self._cmd
+        # closing the pipe
+        self._proc.communicate()
         raise RuntimeError(
             "Failed to launch job [%s], exited with %r: \n%s\n"
             "extra diagnostics are as follows: %s"
@@ -175,6 +175,8 @@ class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
         else:
             self._status = LauncherStatus.SUCCEED
 
+        # closing the pipe
+        self._proc.communicate()
         # makes the listen thread exits.
         self._listen_out_thrd.join()
         self._listen_err_thrd.join()

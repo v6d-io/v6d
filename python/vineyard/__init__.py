@@ -298,8 +298,8 @@ def connect(*args, **kwargs):
     The `connect()` method has various overloading:
 
     .. function:: connect(socket: str,
-                        username: str = None,
-                        password: str = None) -> IPCClient
+                          username: str = None,
+                          password: str = None) -> IPCClient
         :noindex:
 
         Connect to vineyard via UNIX domain socket for IPC service:
@@ -320,9 +320,9 @@ def connect(*args, **kwargs):
             IPCClient: The connected IPC client.
 
     .. function:: connect(host: str,
-                        port: int or str,
-                        username: str = None,
-                        password: str = None) -> RPCClient
+                          port: int or str,
+                          username: str = None,
+                          password: str = None) -> RPCClient
         :noindex:
 
         Connect to vineyard via TCP socket.
@@ -341,8 +341,8 @@ def connect(*args, **kwargs):
             RPCClient: The connected RPC client.
 
     .. function:: connect(endpoint: (str, int or str),
-                        username: str = None,
-                        password: str = None) -> RPCClient
+                          username: str = None,
+                          password: str = None) -> RPCClient
         :noindex:
 
         Connect to vineyard via TCP socket.
@@ -361,7 +361,7 @@ def connect(*args, **kwargs):
             RPCClient: The connected RPC client.
 
     .. function:: connect(username: str = None,
-                        password: str = None) -> IPCClient or RPCClient
+                          password: str = None) -> IPCClient or RPCClient
         :noindex:
 
         Connect to vineyard via UNIX domain socket or TCP endpoint. This method normally
