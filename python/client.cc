@@ -946,7 +946,7 @@ void bind_client(py::module& mod) {
           "endpoint"_a, py::arg("session") = RootSessionID(), py::kw_only(),
           py::arg("username") = "", py::arg("password") = "")
       .def(
-          "connect",
+          "_connect",
           [](std::pair<std::string, std::string> const& endpoint,
              const SessionID session_id, const std::string& username,
              const std::string& password) {
