@@ -16,9 +16,8 @@ COPY k8s/ k8s/
 # Update the working directory
 WORKDIR /workspace/k8s
 
-RUN go mod download
-
 # Build
+RUN go mod download
 RUN go build -a -o vineyardctl cmd/main.go && \
     strip vineyardctl || true
 

@@ -209,7 +209,7 @@ vendor:
 # Build the docker image
 .PHONY: docker-build
 docker-build:
-	cd .. &&\
+	cd .. && \
 	if docker build --help | grep -q load; then \
 		docker build --load -f k8s/Dockerfile . -t $(IMG); \
 	else \
@@ -217,7 +217,8 @@ docker-build:
 	fi
 
 docker-build-push-multi-arch:
-	docker buildx build . -t $(IMG) --platform linux/amd64,linux/arm64 --push
+	cd .. && \
+	docker buildx build -f k8s/Dockerfile . -t $(IMG) --platform linux/amd64,linux/arm64 --push
 
 # Push the docker image
 .PHONY: docker-push
