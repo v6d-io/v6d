@@ -239,6 +239,22 @@ const char* grin_get_static_storage_feature_msg() {
 #ifdef GRIN_ENABLE_EDGE_PK_INDEX
   feature->set_grin_enable_edge_pk_index(true);
 #endif
+
+#ifdef GRIN_ENABLE_VERTEX_EXTERNAL_ID_OF_INT64
+  feature->set_grin_enable_vertex_external_id_of_int64(true);
+#endif
+
+#ifdef GRIN_ENABLE_VERTEX_EXTERNAL_ID_OF_STRING
+  feature->set_grin_enable_vertex_external_id_of_string(true);
+#endif
+}
+
+{
+  auto storage_feature = g.add_features();
+  auto feature = storage_feature->mutable_common_feature();
+#ifdef GRIN_TRAIT_LOOSE_SCHEMA
+  feature->set_grin_trait_loose_schema(true);
+#endif
 }
 
   std::string graph_def;
