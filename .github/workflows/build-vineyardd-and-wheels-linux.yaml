@@ -27,7 +27,7 @@ concurrency:
 jobs:
   build-vineyardd:
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
@@ -104,7 +104,7 @@ jobs:
   build-vineyardd-manifest:
     needs: [build-vineyardd]
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
@@ -143,7 +143,7 @@ jobs:
 
   build-vineyardctl:
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
@@ -188,7 +188,7 @@ jobs:
   build-bdist-wheels:
     needs: [build-vineyardd, build-vineyardctl]
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
@@ -240,14 +240,14 @@ jobs:
           body: "vineyard ${{ steps.tag.outputs.TAG }}"
 
       - uses: actions/upload-artifact@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         with:
           name: vineyard-bdist-linux-${{ matrix.platform }}-wheels
           path: fixed_wheels/*.whl
 
   build-wheels:
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
@@ -316,7 +316,7 @@ jobs:
           body: "vineyard ${{ steps.tag.outputs.TAG }}"
 
       - uses: actions/upload-artifact@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         with:
           name: vineyard-linux-${{ matrix.platform }}-wheels
           path: fixed_wheels/*.whl

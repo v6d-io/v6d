@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import contextlib
 import logging
 import os
 import subprocess
@@ -41,7 +42,7 @@ class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
         self._listen_err_thrd = None
         self._cmd = None
 
-        self._err_message = None
+        self._err_message = []
         self._exit_code = None
         self._stopped = False
 
@@ -153,16 +154,18 @@ class ScriptLauncher(Launcher):  # pylint: disable=too-many-instance-attributes
                 self.parse(line)
 
         # consume all extra lines if the proc exits.
-        for line in stdout.readlines():
-            if line:
-                self.parse(line)
+        with contextlib.suppress(Exception):
+            for line in stdout.readlines():
+                if line:
+                    self.parse(line)
 
     def read_err(self, stderr):
         while self._proc.poll() is None:
             line = stderr.readline()
             if line:
                 self._err_message.append(line)
-        self._err_message.extend(stderr.readlines())
+        with contextlib.suppress(Exception):
+            self._err_message.extend(stderr.readlines())
 
     def join(self):
         if self._stopped:
