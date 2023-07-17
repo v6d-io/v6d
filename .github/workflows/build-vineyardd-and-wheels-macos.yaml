@@ -30,7 +30,7 @@ env:
 jobs:
   build-vineyardd:
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         os: [macos-11]
@@ -86,9 +86,9 @@ jobs:
 
           echo "Installing apache-arrow ..."
           cd /tmp
-          curl -L https://github.com/apache/arrow/archive/refs/tags/apache-arrow-8.0.1.tar.gz --output apache-arrow-8.0.1.tar.gz
-          tar zxf apache-arrow-8.0.1.tar.gz
-          cd arrow-apache-arrow-8.0.1
+          curl -L https://github.com/apache/arrow/archive/refs/tags/apache-arrow-12.0.1.tar.gz --output apache-arrow-12.0.1.tar.gz
+          tar zxf apache-arrow-12.0.1.tar.gz
+          cd arrow-apache-arrow-12.0.1
           mkdir -p build-dir
           cd build-dir
           cmake ../cpp \
@@ -196,7 +196,7 @@ jobs:
 
   build-vineyardctl:
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         os: [macos-11]
@@ -239,7 +239,7 @@ jobs:
   build-wheels:
     needs: [build-vineyardd, build-vineyardctl]
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
     strategy:
       matrix:
         os: [macos-11]
@@ -335,9 +335,9 @@ jobs:
 
           echo "Installing apache-arrow ..."
           cd /tmp
-          curl -L https://github.com/apache/arrow/archive/refs/tags/apache-arrow-8.0.1.tar.gz --output apache-arrow-8.0.1.tar.gz
-          tar zxf apache-arrow-8.0.1.tar.gz
-          cd arrow-apache-arrow-8.0.1
+          curl -L https://github.com/apache/arrow/archive/refs/tags/apache-arrow-12.0.1.tar.gz --output apache-arrow-12.0.1.tar.gz
+          tar zxf apache-arrow-12.0.1.tar.gz
+          cd arrow-apache-arrow-12.0.1
           mkdir -p build-dir
           cd build-dir
           cmake ../cpp \
@@ -444,7 +444,7 @@ jobs:
           body: "vineyard ${{ steps.tag.outputs.TAG }}"
 
       - uses: actions/upload-artifact@v3
-        if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
+        if: ${{ github.event_name == 'workflow_dispatch' }}
         with:
           name: vineyard-macosx-wheels-${{ matrix.python }}
           path: fixed_wheels/*.whl
