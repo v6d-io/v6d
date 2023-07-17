@@ -151,6 +151,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     @Override
     public void close(boolean abort) throws IOException {
         Table oldTable = null;
+        tableBuilder = new TableBuilder(client, schemaBuilder);
         try {
             ObjectID objectID = client.getName(tableName, false);
             if (objectID == null) {
@@ -186,7 +187,6 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private void fillRecordBatchBuilder(VectorSchemaRoot root) throws IOException{
         org.apache.arrow.vector.types.pojo.Schema schema = root.getSchema();
         schemaBuilder = SchemaBuilder.fromSchema(schema);
-        tableBuilder = new TableBuilder(client, schemaBuilder);
         try {
             // TBD : more clear error message.
             recordBatchBuilder = new RecordBatchBuilder(client, schema, root.getRowCount());
