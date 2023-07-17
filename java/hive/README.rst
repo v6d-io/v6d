@@ -131,14 +131,14 @@ Hive and Vineyard
         set hive.vectorized.use.vector.serde.deserialize=true;
         set hive.vectorized.execution.enabled=true;
         set hive.vectorized.execution.reduce.enabled=true;
-        set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardBatchInputFormat;
+        set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardInputFormat;
 
         create table hive_example(
                             field_1 int,
                             field_2 int)
         row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
         stored as
-            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardBatchInputFormat'
+            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
         LOCATION "file:///opt/hive/data/warehouse/hive_example";
 
@@ -162,7 +162,7 @@ Hive and Vineyard
         set hive.vectorized.use.vector.serde.deserialize=true;
         set hive.vectorized.execution.enabled=true;
         set hive.vectorized.execution.reduce.enabled=true;
-        set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardBatchInputFormat;
+        set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardInputFormat;
         set hive.arrow.batch.size=2000000;
 
         create table hive_example(
@@ -170,7 +170,7 @@ Hive and Vineyard
                             dst_id int)
         row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
         stored as
-            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardBatchInputFormat'
+            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
         create table hive_test_data_livejournal(
                             src_id int,
