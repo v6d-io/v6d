@@ -18,8 +18,6 @@ import org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hive.conf.HiveConf;
-import static org.apache.hadoop.hive.conf.HiveConf.ConfVars.HIVE_ARROW_BATCH_SIZE;
 
 import java.util.Properties;
 

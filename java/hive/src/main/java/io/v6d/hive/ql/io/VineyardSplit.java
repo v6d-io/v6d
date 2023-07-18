@@ -8,6 +8,8 @@ import org.apache.hadoop.fs.Path;
 
 public class VineyardSplit extends FileSplit {
     String customPath;
+    int batchStartIndex;
+    int batchSize;
 
     protected VineyardSplit() {
         super();
@@ -39,10 +41,27 @@ public class VineyardSplit extends FileSplit {
     @Override
     public void readFields(DataInput in) throws IOException {
         super.readFields(in);
+        batchStartIndex = in.readInt();
+        batchSize = in.readInt();
     }
 
     @Override
     public void write(DataOutput out) throws IOException {
         super.write(out);
+        out.writeInt(batchStartIndex);
+        out.writeInt(batchSize);
+    }
+
+    public void setBatch(int batchStartIndex, int batchSize) {
+        this.batchStartIndex = batchStartIndex;
+        this.batchSize = batchSize;
+    }
+
+    public int getBatchStartIndex() {
+        return batchStartIndex;
+    }
+
+    public int getBatchSize() {
+        return batchSize;
     }
 }
