@@ -172,6 +172,19 @@ jobs:
           x86_64-linux-gnu-strip ./vineyardctl || true
           aarch64-linux-gnu-strip ./vineyardctl || true
 
+      - name: Upload vineyardctl to tagged release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./vineyardctl
+          asset_name: vineyardctl-${{ steps.tag.outputs.TAG }}-linux-${{ matrix.platform == 'x86_64' && 'amd64' || 'arm64' }}
+          file_glob: false
+          tag: ${{ steps.tag.outputs.TAG }}
+          prerelease: false
+          overwrite: true
+          body: "vineyard ${{ steps.tag.outputs.TAG }}"
+
       - name: Package vineyardctl artifact on Linux
         run: |
           sha512sum vineyardctl > vineyardctl.${{ matrix.platform }}.${{ github.sha }}.sha512sum

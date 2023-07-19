@@ -200,6 +200,7 @@ jobs:
     strategy:
       matrix:
         os: [macos-11]
+        platform: [x86_64, aarch64]
 
     steps:
       - uses: actions/checkout@v3
@@ -220,10 +221,31 @@ jobs:
 
       - name: Build vineyardctl
         run: |
+          export arch="${{ matrix.platform }}"
+          export arch="${arch/x86_64/amd64}"
+          export arch="${arch/aarch64/arm64}"
+          echo "arch = $arch"
+
+          env CGO_ENABLED=0 GOARCH=$arch go build -a -o vineyardctl k8s/cmd/main.go
+
           go build -a -o vineyardctl k8s/cmd/main.go
           strip ./vineyardctl || true
 
+      - name: Upload wheels to tagged release
+        uses: svenstaro/upload-release-action@v2
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./vineyardctl
+          asset_name: vineyardctl-${{ steps.tag.outputs.TAG }}-darwin-${{ matrix.platform == 'x86_64' && 'amd64' || 'arm64' }}
+          file_glob: false
+          tag: ${{ steps.tag.outputs.TAG }}
+          prerelease: false
+          overwrite: true
+          body: "vineyard ${{ steps.tag.outputs.TAG }}"
+
       - name: Package vineyardctl artifact on Linux
+        if: ${{ matrix.platform == 'x86_64' }}
         run: |
           sha512sum vineyardctl > vineyardctl.${{ github.sha }}.sha512sum
           echo "Checksum is: "
@@ -231,6 +253,7 @@ jobs:
           tar zcvfh vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz ./vineyardctl vineyardctl.${{ github.sha }}.sha512sum
 
       - name: Upload CI artifacts
+        if: ${{ matrix.platform == 'x86_64' }}
         uses: actions/upload-artifact@v3
         with:
           name: vineyardctl.${{ runner.os }}-generic.${{ github.sha }}.tar.gz
