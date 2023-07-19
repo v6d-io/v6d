@@ -26,7 +26,10 @@ Option #1: Install from helm chart (recommended)
 
     $ helm repo add vineyard https://vineyard.oss-ap-southeast-1.aliyuncs.com/charts/
     $ helm repo update
-    $ helm install vineyard-operator vineyard/vineyard-operator -n vineyard-system --create-namespace
+    $ helm install vineyard-operator vineyard/vineyard-operator \
+          --namespace vineyard-system \
+          --create-namespace \
+          --wait
 
 Wait for the vineyard operator until ready.
 
@@ -115,6 +118,7 @@ replicas:
       # don't use default namespace
       namespace: vineyard-system
     spec:
+      replicas: 3
       service:
         type: ClusterIP
         port: 9600

@@ -247,7 +247,7 @@ setup(
     distclass=BinDistribution,
     zip_safe=False,
     entry_points={
-        'vineyardctl': ['vineyard-codegen=vineyard.deploy.ctl:_main'],
+        'vineyardctl': ['vineyardctl=vineyard.deploy.ctl:_main'],
         'console_scripts': ['vineyard-codegen=vineyard.core.codegen:main'],
     },
     setup_requires=load_requirements_txt("-setup"),

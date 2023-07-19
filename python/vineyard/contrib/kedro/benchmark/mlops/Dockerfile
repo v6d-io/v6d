@@ -4,13 +4,11 @@ FROM $BASE_IMAGE as runtime-environment
 # install project requirements
 COPY src/requirements.txt /tmp/requirements.txt
 
-RUN pip install --no-cache -r /tmp/requirements.txt && rm -f /tmp/requirements.txt
+RUN pip install --no-cache-dir -r /tmp/requirements.txt
 RUN pip install --no-cache-dir semver
 
-{% if with_vineyard %}
 # install vineyard dependencies
 RUN pip install --no-cache-dir vineyard-kedro
-{% endif %}
 
 # add kedro user
 ARG KEDRO_UID=999
@@ -23,15 +21,8 @@ USER kedro_docker
 
 FROM runtime-environment
 
-# copy the whole project except what is in .dockerignore
 ARG KEDRO_UID=999
 ARG KEDRO_GID=0
 COPY --chown=${KEDRO_UID}:${KEDRO_GID} . .
-
-EXPOSE 8888
-
-{% if with_vineyard %}
-RUN kedro vineyard catalog create -p __default__
-{% endif %}
 
 CMD ["kedro", "run"]

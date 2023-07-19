@@ -12,12 +12,16 @@
    ones with VineyardDataSet.
 """
 
+import os
+import warnings
+
 import click
 import yaml
 from click import secho
 from kedro.framework.cli.catalog import _create_session
 from kedro.framework.cli.catalog import _map_type_to_datasets
 from kedro.framework.cli.utils import KedroCliError
+from kedro.framework.cli.utils import command_with_verbosity
 from kedro.framework.cli.utils import env_option
 from kedro.framework.cli.utils import split_string
 from kedro.framework.project import pipelines
@@ -32,7 +36,7 @@ def catalog():
     """Commands for working with catalog."""
 
 
-@catalog.command("list")
+@command_with_verbosity(catalog, 'list')
 @env_option
 @click.option(
     "--pipeline",
@@ -44,7 +48,7 @@ def catalog():
     callback=split_string,
 )
 @click.pass_obj
-def list_datasets(metadata: ProjectMetadata, pipeline, env):
+def list_datasets(metadata: ProjectMetadata, pipeline, env, verbose):
     """Show datasets per type."""
     title = "DataSets in '{}' pipeline"
     not_mentioned = "Datasets not mentioned in pipeline"
@@ -84,8 +88,11 @@ def list_datasets(metadata: ProjectMetadata, pipeline, env):
     secho(yaml.dump(result))
 
 
-@catalog.command("create")
-@env_option(help="Environment to create Data Catalog YAML file in. Defaults to `base`.")
+@command_with_verbosity(catalog, 'create')
+@env_option(
+    default='vineyard',
+    help="Environment to create Data Catalog YAML file in. Defaults to `vineyard`.",
+)
 @click.option(
     "--pipeline",
     "-p",
@@ -95,7 +102,7 @@ def list_datasets(metadata: ProjectMetadata, pipeline, env):
     help="Name of a pipeline.",
 )
 @click.pass_obj
-def create_catalog(metadata: ProjectMetadata, pipeline_name, env):
+def create_catalog(metadata: ProjectMetadata, pipeline_name, env, verbose):
     """Create Data Catalog YAML configuration with missing datasets.
 
     Add `MemoryDataSet` datasets to Data Catalog YAML configuration file
@@ -106,6 +113,16 @@ def create_catalog(metadata: ProjectMetadata, pipeline_name, env):
     `<conf_source>/<env>/catalog/<pipeline_name>.yml` file.
     """
     env = env or "base"
+
+    # ensure the config directory for given env exists
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        session = _create_session(metadata.package_name, env='base')
+    context = session.load_context()
+    os.makedirs(context.project_path / settings.CONF_SOURCE / env, exist_ok=True)
+
+    # with warnings.catch_warnings():
+    #     warnings.simplefilter('ignore')
     session = _create_session(metadata.package_name, env=env)
     context = session.load_context()
 

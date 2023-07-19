@@ -17,6 +17,7 @@ from pathlib import Path
 import click
 from jinja2 import Environment
 from jinja2 import FileSystemLoader
+from kedro.framework.cli.utils import command_with_verbosity
 from kedro.framework.project import pipelines
 from kedro.framework.startup import bootstrap_project
 
@@ -31,7 +32,7 @@ def argo():
     """Commands for working with argo."""
 
 
-@argo.command("generate")
+@command_with_verbosity(argo, "generate")
 @click.option("--image", "-i", "image", type=str, required=True, default="")
 @click.option("--pipeline", "-p", "pipeline_name", type=str, default=None)
 @click.option(
@@ -56,6 +57,7 @@ def generate_argo_config(
     vineyardd_namespace,
     with_vineyard_operator,
     output_path,
+    verbose,
 ):
     """Generates an Argo workflow configuration file from a Kedro pipeline.
 

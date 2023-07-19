@@ -1,0 +1,49 @@
+outliers:
+    GrLivArea: 4000
+    SalePrice: 300000
+cols_to_drop:
+    - SalePrice
+    - Utilities
+none_cols:
+    - PoolQC
+    - MiscFeature
+    - Alley
+    - Fence
+    - FireplaceQu
+    - GarageType
+    - GarageFinish
+    - GarageQual
+    - GarageCond
+    - BsmtQual
+    - BsmtCond
+    - BsmtExposure
+    - BsmtFinType1
+    - BsmtFinType2
+    - MasVnrType
+    - MSSubClass
+zero_cols:
+    - GarageYrBlt
+    - GarageArea
+    - GarageCars
+    - BsmtFinSF1
+    - BsmtFinSF2
+    - BsmtUnfSF
+    - TotalBsmtSF
+    - BsmtFullBath
+    - BsmtHalfBath
+    - MasVnrArea
+mode_cols:
+    - Functional
+    - MSZoning
+    - Electrical
+    - KitchenQual
+    - Exterior1st
+    - Exterior2nd
+    - SaleType
+str_cols:
+    - MSSubClass
+    - OverallCond
+    - YrSold
+    - MoSold
+label_enc_cols:
+    - OverallCond

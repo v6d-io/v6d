@@ -1,0 +1,23 @@
+# Here you can define all your data sets by using simple YAML syntax.
+#
+# Documentation for this file format can be found in "The Data Catalog"
+# Link: https://docs.kedro.org/en/stable/data/data_catalog.html
+house_prices:
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/train.csv
+
+house_prices_clean:
+  ds_name: house_prices_clean
+  type: vineyard.contrib.kedro.io.dataset.VineyardDataSet
+house_prices_drop:
+  ds_name: house_prices_drop
+  type: vineyard.contrib.kedro.io.dataset.VineyardDataSet
+house_prices_no_na:
+  ds_name: house_prices_no_na
+  type: vineyard.contrib.kedro.io.dataset.VineyardDataSet
+house_prices_no_outliers:
+  ds_name: house_prices_no_outliers
+  type: vineyard.contrib.kedro.io.dataset.VineyardDataSet
+y_train:
+  ds_name: y_train
+  type: vineyard.contrib.kedro.io.dataset.VineyardDataSet
