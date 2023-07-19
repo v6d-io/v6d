@@ -849,9 +849,9 @@ Framework`_, and its overall scheduling strategy can be summarized as follows:
 
   .. code::
 
-    node0: 0-8
-    node1: 9-11
-    node2: 12
+    node1: 0-8
+    node2: 9-11
+    node3: 12
 
   The next workload has 3 replicas, and the best-effort policy will schedule it as follows:
 
@@ -1852,7 +1852,7 @@ object ID during backup and the object ID during recovery as follows:
   NAMESPACE            NAME             MAPPING                                                                                                                     STATE
   vineyard-system      recover-sample   {"o000ef92379fd8850":"o000ef9ea5189718d","o000ef9237a3a5432":"o000ef9eb5d26ad5e","o000ef97a8289973f":"o000ef9ed586ef1d3"}   Succeed
 
-If you want to get more details about failover of vineyard cluster, please refer
+If you want to get more details about the failover mechanism of vineyard cluster, please refer
 the `failover e2e test`_.
 
 .. _kind: https://kind.sigs.k8s.io
