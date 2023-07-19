@@ -14,6 +14,7 @@ from importlib import import_module
 from pathlib import Path
 from sys import version_info
 from typing import List
+from typing import Optional
 from typing import Sequence
 from typing import Tuple
 from typing import Union
@@ -22,6 +23,7 @@ import click
 from jinja2 import Environment
 from jinja2 import FileSystemLoader
 from kedro.framework.cli.utils import call
+from kedro.framework.cli.utils import command_with_verbosity
 
 from vineyard.contrib.kedro.plugins.cli import vineyard as vineyard_cli
 
@@ -35,16 +37,16 @@ def docker():
     """Commands for working with docker."""
 
 
-@docker.command("init")
+@command_with_verbosity(docker, 'init')
 @click.option(
-    "--with_vineyard",
-    "-w",
+    "--with-vineyard",
+    "",
     "with_vineyard",
     type=bool,
-    default=False,
-    help="Whether to install vineyard in the dockerfile.",
+    default=True,
+    help="Whether to install vineyard dependencies in the dockerfile.",
 )
-def docker_init(with_vineyard):
+def docker_init(with_vineyard, verbose):
     """Initialize a Dockerfile for the project."""
     project_path = Path.cwd()
 
@@ -58,7 +60,7 @@ def docker_init(with_vineyard):
     )
 
 
-@docker.command("build")
+@command_with_verbosity(docker, 'build')
 @click.option(
     "--uid",
     type=int,
@@ -95,17 +97,24 @@ def docker_init(with_vineyard):
     help="Extra arguments to pass to `docker build` command.",
 )
 @click.option(
-    "--with_vineyard",
-    "-w",
+    "--with-vineyard",
+    "",
     "with_vineyard",
     type=bool,
     default=False,
     show_default=True,
-    help="Whether to install vineyard in the dockerfile.",
+    help="Whether to install vineyard dependencies in the dockerfile.",
 )
 @click.pass_context
 def docker_build(
-    ctx, uid, gid, base_image, image, docker_args, with_vineyard
+    ctx,
+    uid,
+    gid,
+    base_image,
+    image,
+    docker_args,
+    with_vineyard,
+    verbose,
 ):  # pylint: disable=too-many-arguments
     """Build a Docker image for the project."""
     uid, gid = get_uid_gid(uid, gid)
@@ -164,7 +173,9 @@ def generate_dockerfile(
         print(f"Created `{dest}`")
 
 
-def get_uid_gid(uid: int = None, gid: int = None) -> Tuple[int, int]:
+def get_uid_gid(
+    uid: Optional[int] = None, gid: Optional[int] = None
+) -> Tuple[int, int]:
     """
     Get UID and GID to be passed into the Docker container.
     Defaults to the current user's UID and GID on Unix and (999, 0) on Windows.

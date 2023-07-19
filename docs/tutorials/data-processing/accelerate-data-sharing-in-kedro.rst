@@ -8,6 +8,11 @@ sharing between tasks in Kedro pipelines using our
 `vineyard-kedro <https://pypi.org/project/vineyard-kedro/>`_ plugin, when data
 scales and the pipeline are deployed on Kubernetes.
 
+.. note::
+
+    This tutorial is based on the `Developing and Learning MLOps at Home <https://github.com/AdamShafi92/mlops-at-home>`_ project,
+    a tutorial about orchestrating a machine learning pipeline with Kedro.
+
 Prepare the Kubernetes cluster
 ------------------------------
 
@@ -68,17 +73,28 @@ Deploy Vineyard
        $ helm repo update
        $ helm install vineyard-operator vineyard/vineyard-operator \
            --namespace vineyard-system \
-           --create-namespace
+           --create-namespace \
+           --wait
 
 2. Create a vineyard cluster:
 
    .. tip::
 
-       To handle the large data, we set the memory of vineyard cluster to 4G.
+       To handle the large data, we set the memory of vineyard cluster to 8G.
 
    .. code:: bash
 
-       $ python3 -m vineyard.ctl deploy vineyardd --vineyardd-memory=4Gi
+       $ python3 -m vineyard.ctl deploy vineyardd --vineyardd.memory=8Gi
+
+   .. note::
+
+       The above command will try to create a vineyard cluster with 3 replicas
+       by default. If you are working with Minikube, Kind, or other Kubernetes
+       that has less nodes available, try reduce the replicas by
+
+       .. code:: bash
+
+           $ python3 -m vineyard.ctl deploy vineyardd --replicas=1 --vineyardd.memory=8Gi
 
 Prepare the S3 Service
 ----------------------
@@ -92,7 +108,7 @@ Prepare the S3 Service
 
    .. code:: bash
 
-       $ kubectl apply -f python/vineyard/contrib/kedro/benchmark/minio-s3/minio-dev.yaml
+       $ kubectl apply -f python/vineyard/contrib/kedro/benchmark/mlops/minio-dev.yaml
 
    .. tip::
 
@@ -148,14 +164,13 @@ Prepare the Docker images
 
    .. code:: bash
 
-       $ cd python/vineyard/contrib/kedro/benchmark
+       $ cd python/vineyard/contrib/kedro/benchmark/mlops
 
 2. Configure the credentials configurations of AWS S3:
 
    .. code:: bash
 
-       $ cd aws-s3
-       $ cat conf/local/credentials.yml
+       $ cat conf/aws-s3/credentials.yml
        benchmark_aws_s3:
            client_kwargs:
                aws_access_key_id: Your AWS/Minio Access Key ID
@@ -172,26 +187,14 @@ Prepare the Docker images
 
      .. code:: bash
 
-         $ make -C vineyard/
+         $ make docker-build
 
      You will see Docker images for different data size are generated:
 
      .. code:: bash
 
-         $ docker images | grep vineyard-benchmark
-         vineyard-benchmark-with-500m-data   latest  982c6a376597   About a minute ago   1.66GB
-         vineyard-benchmark-with-100m-data   latest  e58ca1cada98   About a minute ago   1.25GB
-         vineyard-benchmark-with-10m-data    latest  f7c618b48913   About a minute ago   1.16GB
-         vineyard-benchmark-with-1m-data     latest  8f9e74ff5116   About a minute ago   1.15GB
-
-   - Similarly, for running Kedro on AWS S3 or Minio:
-
-     .. code:: bash
-
-         # for AWS S3
-         $ make -C aws-s3/
-         # for Minio
-         $ make -C minio-s3/
+         $ docker images | grep mlops
+         mlops-benchmark    latest    fceaeb5a6688   17 seconds ago   1.03GB
 
 4. To make those images available for your Kubernetes cluster, they need to be
    pushed to your registry (or load to kind cluster if you setup your Kubernetes
@@ -201,42 +204,14 @@ Prepare the Docker images
 
      .. code:: bash
 
-         # for vineyard
-         $ for sz in 1m 10m 100m 500m; do \
-               docker tag vineyard-benchmark-with-${sz}-data <Your Registry>/vineyard-benchmark-with-${sz}-data; \
-               docker push <Your Registry>/vineyard-benchmark-with-${sz}-data; \
-           done
-
-         # for AWS S3
-         $ for sz in 1m 10m 100m 500m; do \
-               docker tag aws-s3-benchmark-with-${sz}-data <Your Registry>/vineyard-benchmark-with-${sz}-data; \
-               docker push <Your Registry>/vineyard-benchmark-with-${sz}-data; \
-           done
-
-         # for Minio
-         $ for sz in 1m 10m 100m 500m; do \
-               docker tag minio-s3-benchmark-with-${sz}-data <Your Registry>/vineyard-benchmark-with-${sz}-data; \
-               docker push <Your Registry>/vineyard-benchmark-with-${sz}-data; \
-           done
+         $ docker tag mlops-benchmark:latest <Your Registry>/mlops-benchmark:latest
+         $ docker push <Your Registry>/mlops-benchmark:latest
 
    - Load to kind cluster:
 
      .. code:: bash
 
-         # for vineyard
-         $ for sz in 1m 10m 100m 500m; do \
-               kind load docker-image vineyard-benchmark-with-${sz}-data; \
-           done
-
-         # for AWS S3
-         $ for sz in 1m 10m 100m 500m; do \
-               kind load docker-image aws-s3-benchmark-with-${sz}-data; \
-           done
-
-         # for Minio
-         $ for sz in 1m 10m 100m 500m; do \
-               kind load docker-image minio-s3-benchmark-with-${sz}-data; \
-           done
+         $ kind load docker-image mlops-benchmark:latest
 
 Deploy the Kedro Pipelines
 --------------------------
@@ -245,15 +220,10 @@ Deploy the Kedro Pipelines
 
    .. code:: bash
 
-       $ pushd vineyard
        $ kubectl create namespace vineyard
-
-       $ for sz in 1m 10m 100m 500m; do \
-             sed -i "s/vineyard-benchmark/vineyard-benchmark-with-${sz}-data/g" argo-vineyard-benchmark.yml && \
-             argo submit -n vineyard --watch argo-vineyard-benchmark.yml; \
+       $ for multiplier in 1 10 100 500; do \
+            argo submit -n vineyard --watch argo-vineyard-benchmark.yml -p multiplier=${multiplier}; \
          done
-
-       $ popd
 
 2. Similarly, using AWS S3 or Minio for intermediate data sharing:
 
@@ -261,29 +231,19 @@ Deploy the Kedro Pipelines
 
      .. code:: bash
 
-         $ pushd vineyard
          $ kubectl create namespace aws-s3
-
-         $ for sz in 1m 10m 100m 500m; do \
-               sed -i "s/aws-s3-benchmark/aws-s3-benchmark-with-${sz}-data/g" argo-aws-s3-benchmark.yml && \
-               argo submit -n aws-s3 --watch argo-aws-s3-benchmark.yml; \
+         $ for multiplier in 1 10 100 500; do \
+              argo submit -n vineyard --watch argo-aws-s3-benchmark.yml -p multiplier=${multiplier}; \
            done
-
-         $ popd
 
    - Using Minio:
 
      .. code:: bash
 
-         $ pushd aws-s3
          $ kubectl create namespace minio-s3
-
-         $ for sz in 1m 10m 100m 500m; do \
-               sed -i "s/minio-s3-benchmark/minio-s3-benchmark-with-${sz}-data/g" argo-minio-s3-benchmark.yml && \
-               argo submit -n minio-s3 --watch argo-minio-s3-benchmark.yml; \
+         $ for multiplier in 1 10 100 500; do \
+              argo submit -n vineyard --watch argo-minio-s3-benchmark.yml -p multiplier=${multiplier}; \
            done
-
-         $ popd
 
 Performance
 -----------
@@ -291,14 +251,14 @@ Performance
 After running the benchmark above on Kubernetes, we recorded the following end-to-end execution time under
 different settings:
 
-=========    =========    =========    =========
-Data size    Vineyard     AWS S3       Minio S3
-=========    =========    =========    =========
-1M                 30s          50s          30s
-10M                30s          63s          30s
-100M               60s         144s          64s
-500M               91s         457s         177s
-=========    =========    =========    =========
+==========    =========    =========    =========
+Data Scale    Vineyard     AWS S3       Minio S3
+==========    =========    =========    =========
+1                   30s          50s          30s
+10                  30s          63s          30s
+100                 60s         144s          64s
+500                 91s         457s         177s
+==========    =========    =========    =========
 
 We have the following observations from above comparison:
 

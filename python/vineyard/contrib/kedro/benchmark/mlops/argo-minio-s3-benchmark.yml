@@ -1,0 +1,69 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName:  mlops-benchmark-minio-s3-
+spec:
+  entrypoint: dag
+  arguments:
+    parameters:
+    - name: multiplier
+      value: "1"
+  templates:
+  - name: kedro
+    metadata:
+      labels:
+        app: kedro-argo
+    retryStrategy:
+      limit: 1
+    inputs:
+      parameters:
+      - name: kedro_node
+    container:
+      imagePullPolicy: IfNotPresent
+      image: mlops-benchmark:latest
+      env:
+        - name: DATA_AUGMENT_MULTIPLIER
+          value: "{{workflow.parameters.multiplier}}"
+      command: [kedro]
+      args: ["run", "-e", "minio-s3", "-n",  "{{inputs.parameters.kedro_node}}"]
+  - name: dag
+    dag:
+      tasks:
+      - name: outliers-node
+        template: kedro
+        arguments:
+          parameters:
+          - name: kedro_node
+            value: outliers_node
+      - name: create-target-node
+        template: kedro
+        dependencies:
+          - outliers-node
+        arguments:
+          parameters:
+          - name: kedro_node
+            value: create_target_node
+      - name: drop-cols-node
+        template: kedro
+        dependencies:
+          - outliers-node
+        arguments:
+          parameters:
+          - name: kedro_node
+            value: drop_cols_node
+      - name: fill-na-node
+        template: kedro
+        dependencies:
+          - drop-cols-node
+        arguments:
+          parameters:
+          - name: kedro_node
+            value: fill_na_node
+      - name: total-sf-node
+        template: kedro
+        dependencies:
+          - drop-cols-node
+        arguments:
+          parameters:
+          - name: kedro_node
+            value: total_sf_node

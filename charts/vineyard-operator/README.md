@@ -19,7 +19,7 @@ The webhook is enabled by default, please make sure you have the [Cert-Manager](
 installed, then deploy it in the `default` namespace as follows:
 
 ```shell
-$ helm install vineyard-operator vineyard/vineyard-operator
+$ helm install vineyard-operator vineyard/vineyard-operator --wait
 ```
 
 If you want to deploy it in a specific namespace, you can use the `--namespace` option:
@@ -27,14 +27,17 @@ If you want to deploy it in a specific namespace, you can use the `--namespace` 
 ```shell
 $ helm install vineyard-operator vineyard/vineyard-operator \
       --namespace vineyard-system \
-      --create-namespace
+      --create-namespace \
+      --wait
 ```
 
 If you want to set the value of the chart, you can use the `--set` option:
 
 ```shell
 $ helm install vineyard-operator vineyard/vineyard-operator \
-      --set controllerManager.manager.image.tag=v0.10.1
+      --namespace vineyard-system \
+      --set controllerManager.manager.image.tag=v0.10.1 \
+      --wait
 ```
 
 Refer to the [helm install](https://helm.sh/docs/helm/helm_install/) for more command information.
