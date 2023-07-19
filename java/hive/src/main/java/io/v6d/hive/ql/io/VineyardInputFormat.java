@@ -35,7 +35,6 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.Reporter;
 
 import org.apache.arrow.vector.*;
-import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.*;
 import org.apache.hadoop.fs.Path;
 
@@ -60,35 +59,99 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, Vectorize
     @Override
     public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
         List<InputSplit> splits = new ArrayList<InputSplit>();
-        Path path = FileInputFormat.getInputPaths(job)[0];
-        int index = path.toString().lastIndexOf("/");
-        String tableName = path.toString().substring(index + 1);
+        Path paths[] = FileInputFormat.getInputPaths(job);
+
         IPCClient client;
-        ObjectID tableObjectID;
-        Table table;
-        Arrow.instantiate();
+        ObjectID tableObjectID[];
+        Table table[];
         try {
             client = new IPCClient("/tmp/vineyard/vineyard.sock");
-            tableObjectID = client.getName(tableName);
-            table = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(tableObjectID));
         } catch (Exception e) {
-            System.out.println("Get table failed");
-            return null;
+            System.out.println("Connect vineyard failed.");
+            return splits.toArray(new VineyardSplit[splits.size()]);
+        }
+        Arrow.instantiate();
+
+        table = new Table[paths.length];
+        tableObjectID = new ObjectID[paths.length];
+        for (int i = 0; i < paths.length; i++) {
+            // int index = path.toString().lastIndexOf("/");
+            // System.out.println("Path:" + path.toString());
+            // String tableName = path.toString().substring(index + 1);
+
+            // Construct table name.
+            Path path = paths[i];
+            String tableName = path.toString();
+            tableName = tableName.replace("/", "#");
+            System.out.println("table name:" + tableName);
+
+            // Get table from vineyard.
+            try {
+                tableObjectID[i] = client.getName(tableName);
+                table[i] = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(tableObjectID[i]));
+            } catch (Exception e) {
+                System.out.println("Get table failed");
+                VineyardSplit vineyardSplit = new VineyardSplit(path, 0, 0, job);
+                splits.add(vineyardSplit);
+                return splits.toArray(new VineyardSplit[splits.size()]);
+            }
         }
 
-        int batchSize = table.getBatches().size();
-        int realNumSplits = batchSize < numSplits ? batchSize : numSplits;
-        int size =  table.getBatches().size() / realNumSplits;
-       
-        // fill splits
-        for (int i = 0; i < realNumSplits; i++) {
-            VineyardSplit vineyardSplit = new VineyardSplit(path, 0, 0, job);
-            if (i == realNumSplits - 1) {
-                vineyardSplit.setBatch(i * size, table.getBatches().size() - i * size);
-            } else {
-                vineyardSplit.setBatch(i * size, size);
+        // Split table.
+        int batchSize, realNumSplits;
+        int totalRecordBatchCount = 0;
+        int partitionsSplitCount[] = new int[table.length];
+        
+        if (numSplits <= table.length) {
+            realNumSplits = table.length;
+            for (int i = 0; i < table.length; i++) {
+                partitionsSplitCount[i] = 1;
             }
-            splits.add(vineyardSplit);
+        } else {
+            realNumSplits = 0;
+            for (int i = 0; i < table.length; i++) {
+                totalRecordBatchCount += table[i].getBatches().size();
+            }
+            batchSize = totalRecordBatchCount / numSplits == 0 ? 1 : totalRecordBatchCount / numSplits;
+            for (int i = 0; i < table.length; i++) {
+                partitionsSplitCount[i] = (table[i].getBatches().size() + batchSize - 1) / batchSize;
+                realNumSplits += partitionsSplitCount[i];
+            }
+        }
+
+        for (int i = 0; i < partitionsSplitCount.length; i++) {
+            int partitionSplitCount = partitionsSplitCount[i];
+            int partitionBatchSize = table[i].getBatches().size() / partitionSplitCount;
+            System.out.println("partitionBatchSize:" + partitionBatchSize);
+            for (int j = 0; j < partitionSplitCount; j++) {
+                VineyardSplit vineyardSplit = new VineyardSplit(paths[i], 0, 0, job);
+                if (j == partitionSplitCount - 1) {
+                    vineyardSplit.setBatch(j * partitionBatchSize, table[i].getBatches().size() - j * partitionBatchSize);
+                } else {
+                    vineyardSplit.setBatch(j * partitionBatchSize, partitionBatchSize);
+                }
+                splits.add(vineyardSplit);
+            }
+        }
+            // int batchSize = table.getBatches().size();
+            // int realNumSplits = batchSize < numSplits ? batchSize : numSplits;
+            // int size =  table.getBatches().size() / realNumSplits;
+        
+            // Fill splits
+            // for (int i = 0; i < realNumSplits; i++) {
+            //     VineyardSplit vineyardSplit = new VineyardSplit(path, 0, 0, job);
+            //     if (i == realNumSplits - 1) {
+            //         vineyardSplit.setBatch(i * size, table.getBatches().size() - i * size);
+            //     } else {
+            //         vineyardSplit.setBatch(i * size, size);
+            //     }
+            //     splits.add(vineyardSplit);
+            // }
+        System.out.println("num split:" + numSplits + " real num split:" + realNumSplits);
+        System.out.println("table length:" + table.length);
+        for (int i = 0; i < table.length; i++) {
+            System.out.println("table[" + i + "] batch size:" + table[i].getBatches().size());
+            System.out.println("table[" + i + "] split count:" + partitionsSplitCount[i]);
         }
         client.disconnect();
         return splits.toArray(new VineyardSplit[splits.size()]);
@@ -111,10 +174,15 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
     private int batchStartIndex;
     private int batchSize;
 
-    VineyardBatchRecordReader(JobConf job, VineyardSplit split) {
+    private Object[] partitionValues;
+    private boolean addPartitionCols = true;
+
+    VineyardBatchRecordReader(JobConf job, VineyardSplit split) throws IOException {
         String path = split.getPath().toString();
-        int index = path.lastIndexOf("/");
-        tableName = path.substring(index + 1);
+        // int index = path.lastIndexOf("/");
+        // tableName = path.substring(index + 1);
+        tableName = path.replace('/', '#');
+        System.out.println("Table name:" + tableName);
         tableNameValid = true;
 
         batchStartIndex = split.getBatchStartIndex();
@@ -140,6 +208,10 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
 
         Arrow.instantiate();
         ctx = Utilities.getVectorizedRowBatchCtx(job);
+
+        int partitionColumnCount = ctx.getPartitionColumnCount();
+        partitionValues = new Object[partitionColumnCount];
+        VectorizedRowBatchCtx.getPartitionValues(ctx, job, (VineyardSplit)split, partitionValues);
     }
 
     @Override
@@ -179,6 +251,8 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
     private void arrowToVectorizedRowBatch(VectorizedRowBatch batch) {
         // batch.numCols = recordBatch.getFieldVectors().size();
         int remaining = vectorSchemaRoot.getRowCount() - recordBatchInnerIndex;
+        System.out.println("partition column:" + batch.getPartitionColumnCount());
+        System.out.println("Data column count:" + batch.getDataColumnCount());
 
         /*
          * When we use SQL with condition to query data, the recordBatchSize may be large than VectorizedRowBatch.DEFAULT_SIZE, 
@@ -260,10 +334,14 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
 
     @Override
     public boolean next(NullWritable key, VectorizedRowBatch value) throws IOException {
+        System.out.println("next");
         if (tableNameValid) {
             if (table == null) {
                 try {
+                    System.out.println("Get objdect id:" + tableName);
                     ObjectID objectID = client.getName(tableName, false);
+                    if (objectID != null)
+                        System.out.println("get object done");
                     table = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID));
                 } catch (Exception e) {
                     System.out.println("Get objectID failed.");
@@ -281,6 +359,10 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                 return false;
             }
 
+            if (addPartitionCols) {
+                ctx.addPartitionColsToBatch(value, partitionValues);
+                addPartitionCols = false;
+            }
             this.arrowToVectorizedRowBatch(value);
             return true;
         }

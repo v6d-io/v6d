@@ -89,6 +89,33 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private List<RecordBatchBuilder> recordBatchBuilders;
     RecordBatchBuilder recordBatchBuilder;
     private String tableName;
+    private List<String> partitions;
+    private boolean hasData = false;
+
+    private void getTableName(Properties tableProperties) {
+        String location = tableProperties.getProperty("location");
+        // int index = location.lastIndexOf("/");
+        // tableName = location.substring(index + 1);
+        String partition = tableProperties.getProperty("partition_columns.types");
+        int index = -1;
+        int partitionCount= 0;
+        if (partition != null) {
+            do {
+                partitionCount++;
+                index = partition.indexOf(":", index + 1);
+            } while(index != -1);
+        }
+        System.out.println("Partition count:" + partitionCount);
+        index = location.length() + 1;
+        for (int i = 0; i < partitionCount; i++) {
+            index = finalOutPath.toString().indexOf("/", index + 1);
+        }
+        tableName = finalOutPath.toString().substring(0, index);
+        tableName = tableName.replace('/', '#');
+        System.out.println("Table name:" + tableName);
+        System.out.println("fina path:" + finalOutPath.toString());
+
+    }
 
     @lombok.SneakyThrows
     public SinkRecordWriter(
@@ -109,14 +136,10 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         this.tableProperties = tableProperties;
         this.progress = progress;
 
-        // for (Object key : tableProperties.keySet()) {
-        //     System.out.printf("table property: %s, %s\n", key, tableProperties.getProperty((String) key));
-        // }
-        String path = tableProperties.getProperty("location");
-        int index = path.lastIndexOf("/");
-        tableName = path.substring(index + 1);
-        System.out.println("Table name:" + tableName);
-
+        for (Object key : tableProperties.keySet()) {
+            System.out.printf("table property: %s, %s\n", key, tableProperties.getProperty((String) key));
+        }
+        getTableName(tableProperties);
 
         // connect to vineyard
         if (client == null) {
@@ -136,6 +159,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
     @Override
     public void write(Writable w) throws IOException {
+        System.out.println("write");
         if (w == null) {
             return;
         }
@@ -144,6 +168,8 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         if (root == null || root.getRowCount() == 0) {
             return;
         }
+        System.out.println("Row count:" + root.getRowCount() + " Field size:" + root.getSchema().getFields().size() + " vector size:" + root.getFieldVectors().size());
+        hasData = true;
         fillRecordBatchBuilder(root);
     }
     
@@ -152,7 +178,14 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     // if yes, append the data to the table.(Get from vineyard, and seal it in a new table) 
     @Override
     public void close(boolean abort) throws IOException {
+        System.out.println("close");
+        System.out.println("table name:" + tableName);
         Table oldTable = null;
+        if (!hasData) {
+            client.disconnect();
+            System.out.println("Bye, vineyard!");
+            return;
+        }
         tableBuilder = new TableBuilder(client, schemaBuilder);
         try {
             ObjectID objectID = client.getName(tableName, false);
@@ -178,6 +211,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             ObjectMeta meta = tableBuilder.seal(client);
             System.out.println("Table id in vineyard:" + meta.getId().value());
             client.persist(meta.getId());
+            System.out.println("Table persisted, name:" + tableName);
             client.putName(meta.getId(), tableName);
         } catch (Exception e) {
             throw new IOException("Seal TableBuilder failed");
@@ -216,8 +250,10 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                 }
             } else if (field.getType().equals(Arrow.Type.Int)) {
                 IntVector vector= (IntVector) root.getFieldVectors().get(i);
+                // System.out.println("row count:" + root.getRowCount());
                 for (int j = 0; j < root.getRowCount(); j++) {
                     column.setInt(j, vector.get(j));
+                    // System.out.println("int value:" + vector.get(j));
                 }
             } else if (field.getType().equals(Arrow.Type.Int64)) {
                 BigIntVector vector = (BigIntVector) root.getFieldVectors().get(i);

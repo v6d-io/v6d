@@ -193,4 +193,32 @@ Hive and Vineyard
         insert into hive_example values(1, 1), (2, 2), (3, 3);
         explain vectorization select * from hive_example_orc;
 
+- Test static partition:
+
+    .. code:: sql
+
+        set hive.fetch.task.conversion=none;
+        set hive.vectorized.use.vectorized.input.format=true;
+        set hive.vectorized.use.row.serde.deserialize=false;
+        set hive.vectorized.use.vector.serde.deserialize=true;
+        set hive.vectorized.execution.enabled=true;
+        set hive.vectorized.execution.reduce.enabled=true;
+        set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardInputFormat;
+        set hive.arrow.batch.size=500;
+
+        create table hive_static_partition(
+            src_id int,
+            dst_id int
+        )
+        partitioned by (value int)
+        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+        stored as
+            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
+            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
+        insert into table hive_static_partition partition(value=666) values (1, 2);
+        insert into table hive_static_partition partition(value=666) values (3, 4);
+        insert into table hive_static_partition partition(value=114514) values (1, 2);
+        select * from hive_static_partition;
+        select * from hive_static_partition where value=666;
+        select * from hive_static_partition where value=114514;
 
