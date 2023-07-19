@@ -136,8 +136,14 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
     @Override
     public void write(Writable w) throws IOException {
+        if (w == null) {
+            return;
+        }
         ArrowWrapperWritable arrowWrapperWritable = (ArrowWrapperWritable) w;
         VectorSchemaRoot root = arrowWrapperWritable.getVectorSchemaRoot();
+        if (root == null || root.getRowCount() == 0) {
+            return;
+        }
         fillRecordBatchBuilder(root);
     }
     
