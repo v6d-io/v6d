@@ -222,3 +222,32 @@ Hive and Vineyard
         select * from hive_static_partition where value=666;
         select * from hive_static_partition where value=114514;
 
+- Test static partition(BUG):
+
+    .. code:: sql
+        set hive.fetch.task.conversion=none;
+        set hive.vectorized.use.vectorized.input.format=true;
+        set hive.vectorized.use.row.serde.deserialize=false;
+        set hive.vectorized.use.vector.serde.deserialize=true;
+        set hive.vectorized.execution.enabled=true;
+        set hive.vectorized.execution.reduce.enabled=true;
+        set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardInputFormat;
+        set hive.arrow.batch.size=500;
+        set hive.exec.dynamic.partition=true;
+        set hive.exec.dynamic.partition.mode=nonstrict;
+        create table hive_dynamic_partition_data
+        (src_id int,
+         dst_id int,
+         year int);
+        insert into table hive_dynamic_partition_data values (1, 2, 2018),(3, 4, 2018),(1, 2, 2017);
+
+        create table hive_dynamic_partition_test
+        (
+            src_id int,
+            dst_id int
+        )partitioned by(year int)
+        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+        stored as
+            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
+            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
+        insert into table hive_dynamic_partition_test partition(year) select src_id,dst_id,year from hive_dynamic_partition_data;
