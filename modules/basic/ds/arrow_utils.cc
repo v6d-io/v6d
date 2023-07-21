@@ -420,6 +420,27 @@ Status RecordBatchesToTable(
   }
 }
 
+Status RecordBatchesToTableWithCast(
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Table>* table) {
+  std::shared_ptr<arrow::Schema> out;
+  RETURN_ON_ERROR(TypeLoosen(batches, out));
+  return RecordBatchesToTableWithCast(out, batches, table);
+}
+
+Status RecordBatchesToTableWithCast(
+    const std::shared_ptr<arrow::Schema> schema,
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Table>* table) {
+  std::vector<std::shared_ptr<arrow::RecordBatch>> outs;
+  for (auto const& batch : batches) {
+    std::shared_ptr<arrow::RecordBatch> out;
+    RETURN_ON_ERROR(CastBatchToSchema(batch, schema, out));
+    outs.push_back(out);
+  }
+  return RecordBatchesToTable(schema, outs, table);
+}
+
 Status CombineRecordBatches(
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
     std::shared_ptr<arrow::RecordBatch>* batch) {
@@ -873,6 +894,31 @@ Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Schema>>& schemas,
   return Status::OK();
 }
 
+Status TypeLoosen(
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Schema>& schema) {
+  std::vector<std::shared_ptr<arrow::Schema>> schemas;
+  schemas.reserve(batches.size());
+  for (const auto& batch : batches) {
+    if (batch != nullptr) {
+      schemas.push_back(batch->schema());
+    }
+  }
+  return TypeLoosen(schemas, schema);
+}
+
+Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Table>>& tables,
+                  std::shared_ptr<arrow::Schema>& schema) {
+  std::vector<std::shared_ptr<arrow::Schema>> schemas;
+  schemas.reserve(tables.size());
+  for (const auto& table : tables) {
+    if (table != nullptr) {
+      schemas.push_back(table->schema());
+    }
+  }
+  return TypeLoosen(schemas, schema);
+}
+
 Status CastStringToBigString(const std::shared_ptr<arrow::Array>& in,
                              const std::shared_ptr<arrow::DataType>& to_type,
                              std::shared_ptr<arrow::Array>& out) {
@@ -922,6 +968,46 @@ Status GeneralCast(const std::shared_ptr<arrow::Array>& in,
 #else
   CHECK_ARROW_ERROR_AND_ASSIGN(out, arrow::compute::Cast(*in, to_type));
 #endif
+  return Status::OK();
+}
+
+Status CastBatchToSchema(const std::shared_ptr<arrow::RecordBatch>& batch,
+                         const std::shared_ptr<arrow::Schema>& schema,
+                         std::shared_ptr<arrow::RecordBatch>& out) {
+  if (batch->schema()->Equals(schema)) {
+    out = batch;
+    return Status::OK();
+  }
+
+  RETURN_ON_ASSERT(batch->num_columns() == schema->num_fields(),
+                   "The schema of original recordbatch and expected schema is "
+                   "not consistent");
+  std::vector<std::shared_ptr<arrow::Array>> new_columns;
+  for (int64_t i = 0; i < batch->num_columns(); ++i) {
+    auto col = batch->column(i);
+    if (batch->schema()->field(i)->type()->Equals(schema->field(i)->type())) {
+      new_columns.push_back(col);
+      continue;
+    }
+    auto from_type = batch->schema()->field(i)->type();
+    auto to_type = schema->field(i)->type();
+    auto array = col;
+    std::shared_ptr<arrow::Array> out;
+    if (arrow::compute::CanCast(*from_type, *to_type)) {
+      RETURN_ON_ERROR(GeneralCast(array, to_type, out));
+    } else if (from_type->Equals(arrow::utf8()) &&
+               to_type->Equals(arrow::large_utf8())) {
+      RETURN_ON_ERROR(CastStringToBigString(array, to_type, out));
+    } else if (from_type->Equals(arrow::null())) {
+      RETURN_ON_ERROR(CastNullToOthers(array, to_type, out));
+    } else {
+      return Status::Invalid(
+          "Unsupported cast: To type: " + to_type->ToString() +
+          " vs. origin type: " + from_type->ToString());
+    }
+    new_columns.push_back(out);
+  }
+  out = arrow::RecordBatch::Make(schema, batch->num_rows(), new_columns);
   return Status::OK();
 }
 

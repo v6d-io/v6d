@@ -281,7 +281,7 @@ Status ReadTableFromVineyardDataFrame(Client& client,
     VLOG(10) << "read table from vineyard: total rows = " << 0;
     return Status::OK();
   } else {
-    auto status = RecordBatchesToTable(batches, &table);
+    auto status = RecordBatchesToTableWithCast(batches, &table);
     if (status.ok()) {
       VLOG(10) << "read table from vineyard: total rows = "
                << table->num_rows();
@@ -389,7 +389,7 @@ GatherETables(Client& client,
       if (subgroup.second.empty()) {
         table = nullptr;  // no tables at current worker
       } else {
-        VY_OK_OR_RAISE(RecordBatchesToTable(subgroup.second, &table));
+        VY_OK_OR_RAISE(RecordBatchesToTableWithCast(subgroup.second, &table));
       }
       subtables.emplace_back(table);
     }
@@ -448,7 +448,7 @@ boost::leaf::result<std::vector<std::shared_ptr<arrow::Table>>> GatherVTables(
     if (group.second.empty()) {
       table = nullptr;  // no tables at current worker
     } else {
-      VY_OK_OR_RAISE(RecordBatchesToTable(group.second, &table));
+      VY_OK_OR_RAISE(RecordBatchesToTableWithCast(group.second, &table));
     }
     tables.emplace_back(table);
   }
