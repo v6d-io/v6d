@@ -29,6 +29,9 @@ import (
 var (
 	// PodKind is the kind of the kubernetes pod.
 	PodKind = "Pod"
+
+	// SocketEnv is the env of vineyard ipc socket.
+	SocketEnv = "VINEYARD_IPC_SOCKET"
 )
 
 // GetLabels returns the labels of the given unstructured kubernetes object.
@@ -144,6 +147,30 @@ func GetContainersAndVolumes(obj *unstructured.Unstructured) ([]interface{}, []i
 	return containers, volumes, nil
 }
 
+// InjectEnv injects the vineyard ipc socket env into the containers env.
+func InjectEnv(containers *[]interface{}, mountPath string) {
+	// check if the vineyard ipc socket env is already exist
+	// if exist, update the value
+	for _, c := range *containers {
+		if c.(map[string]interface{})["env"] == nil {
+			c.(map[string]interface{})["env"] = make([]interface{}, 0)
+		}
+		env := c.(map[string]interface{})["env"].([]interface{})
+		newEnv := make([]interface{}, 0)
+		for _, e := range env {
+			if e.(map[string]interface{})["name"] == SocketEnv {
+				continue
+			}
+			newEnv = append(newEnv, e)
+		}
+		newEnv = append(newEnv, map[string]interface{}{
+			"name":  SocketEnv,
+			"value": mountPath + "/vineyard.sock",
+		})
+		c.(map[string]interface{})["env"] = newEnv
+	}
+}
+
 // injectContainersAndVolumes injects the sidecar containers and volumes into the workload containers and volumes.
 func injectContainersAndVolumes(workloadContainers []interface{},
 	workloadVolumes []interface{},
@@ -194,6 +221,8 @@ func injectContainersAndVolumes(workloadContainers []interface{},
 		c["volumeMounts"] = volumeMounts
 	}
 
+	InjectEnv(&workloadContainers, mountPath)
+
 	containers = append(workloadContainers, sidecarContainers...)
 	volumes = append(workloadVolumes, sidecarVolumes...)
 
@@ -231,6 +260,9 @@ func InjectSidecar(workload, sidecar *unstructured.Unstructured, s *v1alpha1.Sid
 		return err
 	}
 
+	if labels == nil {
+		labels = make(map[string]string)
+	}
 	selectors := strings.Split(selector, ",")
 	for i := range selectors {
 		s := strings.Split(selectors[i], "=")

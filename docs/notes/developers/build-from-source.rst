@@ -150,6 +150,8 @@ Vineyardctl is available on the Github release page, you can download the binary
     export OS=$(uname -s | tr '[:upper:]' '[:lower:]')
     export ARCH=${$(uname -m)/x86_64/amd64}
     curl -Lo vineyardctl https://github.com/v6d-io/v6d/releases/download/$LATEST_TAG/vineyardctl-$LATEST_TAG-$OS-$ARCH
+    chmod +x vineyardctl
+    sudo mv vineyardctl /usr/local/bin/
 
 
 Building the documentation
