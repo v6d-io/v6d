@@ -68,12 +68,15 @@ RUN cd /work/v6d && \
 # debug has busybox
 FROM gcr.io/distroless/base:debug
 
+SHELL ["/bin/bash", "-c"]
+
 COPY --from=builder /usr/bin/bash-linux /bin/bash
 COPY --from=builder /usr/bin/dumb-init /usr/bin/dumb-init
 COPY --from=builder /usr/bin/wait-for-it.sh /usr/bin/wait-for-it.sh
 COPY --from=builder /usr/bin/etcd /usr/bin/etcd
 COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
 COPY --from=builder /work/v6d/build/bin/vineyardd /usr/local/bin/vineyardd
+RUN ln -s /busybox/env /usr/bin/env
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["/usr/local/bin/vineyardd"]
