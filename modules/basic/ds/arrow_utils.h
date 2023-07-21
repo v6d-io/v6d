@@ -267,6 +267,15 @@ Status RecordBatchesToTable(
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
     std::shared_ptr<arrow::Table>* table);
 
+Status RecordBatchesToTableWithCast(
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Table>* table);
+
+Status RecordBatchesToTableWithCast(
+    const std::shared_ptr<arrow::Schema> schema,
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Table>* table);
+
 Status CombineRecordBatches(
     const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
     std::shared_ptr<arrow::RecordBatch>* batch);
@@ -348,6 +357,13 @@ const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array);
 Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Schema>>& schemas,
                   std::shared_ptr<arrow::Schema>& schema);
 
+Status TypeLoosen(
+    const std::vector<std::shared_ptr<arrow::RecordBatch>>& batches,
+    std::shared_ptr<arrow::Schema>& schema);
+
+Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Table>>& tables,
+                  std::shared_ptr<arrow::Schema>& schema);
+
 Status CastStringToBigString(const std::shared_ptr<arrow::Array>& in,
                              const std::shared_ptr<arrow::DataType>& to_type,
                              std::shared_ptr<arrow::Array>& out);
@@ -359,6 +375,10 @@ Status CastNullToOthers(const std::shared_ptr<arrow::Array>& in,
 Status GeneralCast(const std::shared_ptr<arrow::Array>& in,
                    const std::shared_ptr<arrow::DataType>& to_type,
                    std::shared_ptr<arrow::Array>& out);
+
+Status CastBatchToSchema(const std::shared_ptr<arrow::RecordBatch>& batch,
+                         const std::shared_ptr<arrow::Schema>& schema,
+                         std::shared_ptr<arrow::RecordBatch>& out);
 
 Status CastTableToSchema(const std::shared_ptr<arrow::Table>& table,
                          const std::shared_ptr<arrow::Schema>& schema,
