@@ -215,16 +215,21 @@ Hive and Vineyard
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
-        insert into table hive_static_partition partition(value=666) values (1, 2);
+        insert into table hive_static_partition partition(value=666) values (999, 2), (999, 2), (999, 2);
         insert into table hive_static_partition partition(value=666) values (3, 4);
         insert into table hive_static_partition partition(value=114514) values (1, 2);
         select * from hive_static_partition;
         select * from hive_static_partition where value=666;
         select * from hive_static_partition where value=114514;
 
-- Test static partition(BUG):
+- Test dynamic partition:
+
+    We must set the batch size to 1. Because ArrowColumnarBatchSerDe do not process dynamic partitioning. If
+    the batch size is not set to 1, ArrowColumnarBatchSerDe will batch data from different partitions together,
+    and the data will be written to the same partition, which will cause the data to be written incorrectly.
 
     .. code:: sql
+
         set hive.fetch.task.conversion=none;
         set hive.vectorized.use.vectorized.input.format=true;
         set hive.vectorized.use.row.serde.deserialize=false;
@@ -232,7 +237,7 @@ Hive and Vineyard
         set hive.vectorized.execution.enabled=true;
         set hive.vectorized.execution.reduce.enabled=true;
         set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardInputFormat;
-        set hive.arrow.batch.size=500;
+        set hive.arrow.batch.size=1;
         set hive.exec.dynamic.partition=true;
         set hive.exec.dynamic.partition.mode=nonstrict;
         create table hive_dynamic_partition_data
@@ -245,9 +250,10 @@ Hive and Vineyard
         (
             src_id int,
             dst_id int
-        )partitioned by(year int)
+        )partitioned by(mounth int, year int)
         row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
-        insert into table hive_dynamic_partition_test partition(year) select src_id,dst_id,year from hive_dynamic_partition_data;
+        insert into table hive_dynamic_partition_test partition(mounth=1, year) select src_id,dst_id,year from hive_dynamic_partition_data;
+        select * from hive_dynamic_partition_test;

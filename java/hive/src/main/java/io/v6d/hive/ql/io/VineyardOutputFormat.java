@@ -25,17 +25,23 @@ import io.v6d.modules.basic.arrow.Table;
 import io.v6d.modules.basic.arrow.Arrow;
 import io.v6d.modules.basic.arrow.RecordBatchBuilder;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+
 import lombok.val;
 
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.*;
 import org.apache.arrow.vector.*;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
 import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
@@ -45,6 +51,7 @@ import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
+import org.apache.hadoop.hive.common.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,6 +88,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private Path finalOutPath;
     private Properties tableProperties;
     private Progressable progress;
+    private FileSystem fs;
 
     // vineyard
     private IPCClient client;
@@ -92,10 +100,21 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private List<String> partitions;
     private boolean hasData = false;
 
+    public static final PathFilter VINEYARD_FILES_PATH_FILTER = new PathFilter() {
+        @Override
+        public boolean accept(Path p) {
+            String name = p.getName();
+            return name.startsWith("_task_tmp.") && (!name.substring(10, name.length()).startsWith("-"));
+        }
+    };
+
     private void getTableName(Properties tableProperties) {
         String location = tableProperties.getProperty("location");
         // int index = location.lastIndexOf("/");
         // tableName = location.substring(index + 1);
+        System.out.println("finalOutPath : "+ finalOutPath.toString());
+
+        // Get partition count
         String partition = tableProperties.getProperty("partition_columns.types");
         int index = -1;
         int partitionCount= 0;
@@ -106,14 +125,57 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             } while(index != -1);
         }
         System.out.println("Partition count:" + partitionCount);
-        index = location.length() + 1;
-        for (int i = 0; i < partitionCount; i++) {
-            index = finalOutPath.toString().indexOf("/", index + 1);
+
+        // Construct table name
+        String path = finalOutPath.toString();
+        path = path.substring(location.length(), path.length());
+        String pathSplits[] = path.split("/");
+        PathFilter vineyardPathFilter = VINEYARD_FILES_PATH_FILTER;
+        PathFilter hiddernPathFilter = FileUtils.HIDDEN_FILES_PATH_FILTER;
+        if (pathSplits.length == 0) {
+            return;
         }
-        tableName = finalOutPath.toString().substring(0, index);
-        tableName = tableName.replace('/', '#');
+        tableName = location;
+        for (int i = 1; i < pathSplits.length; i++) {
+            if (pathSplits[i].length() > 0 && hiddernPathFilter.accept(new Path(pathSplits[i]))) {
+                System.out.println("path split:" + pathSplits[i]);
+                tableName += "/" + pathSplits[i];
+            } else if (pathSplits[i].length() > 0 && vineyardPathFilter.accept(new Path(pathSplits[i]))) {
+                System.out.println("path split:" + pathSplits[i].substring(10, pathSplits[i].length()));
+                tableName += "/" + pathSplits[i].substring(10, pathSplits[i].length());
+            }
+        }
+        tableName = tableName.replaceAll("/", "#");
         System.out.println("Table name:" + tableName);
-        System.out.println("fina path:" + finalOutPath.toString());
+
+        // Create temp file
+        String tmpFilePath = finalOutPath.toString();
+        tmpFilePath = tmpFilePath.substring(0, tmpFilePath.lastIndexOf("/"));
+        System.out.println("out path:" + tmpFilePath);
+        // File file = FileUtils.createTempFile(outPath, "vineyard", ".tmp");
+        tmpFilePath = tmpFilePath.replaceAll("_task", "");
+        Path tmpPath = new Path(tmpFilePath, "vineyard.tmp");
+        try {
+            fs = finalOutPath.getFileSystem(jc);
+            System.out.println("tmp path:" + tmpPath.toString());
+            FSDataOutputStream output = FileSystem.create(fs, tmpPath, new FsPermission("777"));
+            if (output != null) {
+                System.out.println("Create succeed!");
+                output.write("test".getBytes(), 0, 4);
+                output.close();
+            }
+            // System.in.read();
+        } catch (Exception e) {
+            System.out.println("Create failed!");
+        }
+        // index = location.length() + 1;
+        // for (int i = 0; i < partitionCount; i++) {
+        //     index = finalOutPath.toString().indexOf("/", index + 1);
+        // }
+        // tableName = finalOutPath.toString().substring(0, index);
+        // tableName = tableName.replace('/', '#');
+        // System.out.println("Table name:" + tableName);
+        // System.out.println("fina path:" + finalOutPath.toString());
 
     }
 
@@ -161,6 +223,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     public void write(Writable w) throws IOException {
         System.out.println("write");
         if (w == null) {
+            System.out.println("w is null");
             return;
         }
         ArrowWrapperWritable arrowWrapperWritable = (ArrowWrapperWritable) w;
@@ -181,7 +244,9 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         System.out.println("close");
         System.out.println("table name:" + tableName);
         Table oldTable = null;
-        if (!hasData) {
+        System.out.println("has data:" + hasData);
+        if (schemaBuilder == null) {
+            System.out.println("No data to write.");
             client.disconnect();
             System.out.println("Bye, vineyard!");
             return;
@@ -217,6 +282,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             throw new IOException("Seal TableBuilder failed");
         }
         client.disconnect();
+
         System.out.println("Bye, vineyard!");
     }
 
@@ -305,3 +371,12 @@ class MapredRecordWriter<K extends NullWritable, V extends ArrowWrapperWritable>
         System.out.printf("closing\n");
     }
 }
+
+// file:/opt/hive/data/warehouse/hive_dynamic_partition_test6/.hive-staging_hive_2023-07-19_10-49-12_537_8312530081206971822-1/_task_tmp.-ext-10000/year=2017/_tmp.000000_0
+// file:/opt/hive/data/warehouse/hive_dynamic_partition_test6/.hive-staging_hive_2023-07-19_10-49-12_537_8312530081206971822-1/-ext-10000
+
+// file:/opt/hive/data/warehouse/hive_dynamic_partition_test6/year=2018/.hive-staging_hive_2023-07-19_10-52-50_144_3570501016920325767-1/_task_tmp.-ext-10000/_tmp.000000_0
+// file:/opt/hive/data/warehouse/hive_dynamic_partition_test6/year=2018/.hive-staging_hive_2023-07-19_10-52-50_144_3570501016920325767-1/-ext-10000
+
+//file:/opt/hive/data/warehouse/hive_dynamic_partition_test6/.hive-staging_hive_2023-07-19_11-15-58_433_128099267613906011-1/-ext-10000
+//file:/opt/hive/data/warehouse/hive_dynamic_partition_test7/.hive-staging_hive_2023-07-19_11-14-48_835_1857436151368976840-1/-ext-10000
