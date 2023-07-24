@@ -80,11 +80,12 @@ Deploy Vineyard
 
    .. tip::
 
-       To handle the large data, we set the memory of vineyard cluster to 8G.
+       To handle the large data, we set the memory of vineyard cluster to 8G and 
+        the shared memory to 8G.
 
    .. code:: bash
 
-       $ python3 -m vineyard.ctl deploy vineyardd --vineyardd.memory=8Gi
+       $ python3 -m vineyard.ctl deploy vineyardd --vineyardd.memory=8Gi --vineyardd.size=8Gi
 
    .. note::
 
@@ -94,7 +95,7 @@ Deploy Vineyard
 
        .. code:: bash
 
-           $ python3 -m vineyard.ctl deploy vineyardd --replicas=1 --vineyardd.memory=8Gi
+           $ python3 -m vineyard.ctl deploy vineyardd --replicas=1 --vineyardd.memory=8Gi --vineyardd.size=8Gi
 
 Prepare the S3 Service
 ----------------------
@@ -194,7 +195,7 @@ Prepare the Docker images
      .. code:: bash
 
          $ docker images | grep mlops
-         mlops-benchmark    latest    fceaeb5a6688   17 seconds ago   1.03GB
+         mlops-benchmark    latest    fceaeb5a6688   17 seconds ago   1.07GB
 
 4. To make those images available for your Kubernetes cluster, they need to be
    pushed to your registry (or load to kind cluster if you setup your Kubernetes
@@ -232,8 +233,25 @@ Deploy the Kedro Pipelines
      .. code:: bash
 
          $ kubectl create namespace aws-s3
-         $ for multiplier in 1 10 100 500; do \
-              argo submit -n vineyard --watch argo-aws-s3-benchmark.yml -p multiplier=${multiplier}; \
+         # create the aws secrets from your ENV
+         $ kubectl create secret generic aws-secrets -n aws-s3 \
+              --from-literal=access_key_id=$AWS_ACCESS_KEY_ID \
+              --from-literal=secret_access_key=$AWS_SECRET_ACCESS_KEY
+         $ for multiplier in 1 10 100 500 1000 2000; do \
+              argo submit -n aws-s3 --watch argo-aws-s3-benchmark.yml -p multiplier=${multiplier}; \
+           done
+
+   - Using `Cloudpickle dataset <https://github.com/getindata/kedro-sagemaker/blob/dbd78fd6c1781cc9e8cf046e14b3ab96faf63719/kedro_sagemaker/datasets.py#L126>`_:
+
+     .. code:: bash
+
+         $ kubectl create namespace cloudpickle
+         # create the aws secrets from your ENV
+         $ kubectl create secret generic aws-secrets -n cloudpickle \
+              --from-literal=access_key_id=$AWS_ACCESS_KEY_ID \
+              --from-literal=secret_access_key=$AWS_SECRET_ACCESS_KEY
+         $ for multiplier in 1 10 100 500 1000 2000; do \
+              argo submit -n cloudpickle --watch argo-cloudpickle-benchmark.yml -p multiplier=${multiplier}; \
            done
 
    - Using Minio:
@@ -241,24 +259,27 @@ Deploy the Kedro Pipelines
      .. code:: bash
 
          $ kubectl create namespace minio-s3
-         $ for multiplier in 1 10 100 500; do \
-              argo submit -n vineyard --watch argo-minio-s3-benchmark.yml -p multiplier=${multiplier}; \
+         $ for multiplier in 1 10 100 500 1000 2000; do \
+              argo submit -n minio-s3 --watch argo-minio-s3-benchmark.yml -p multiplier=${multiplier}; \
            done
 
 Performance
 -----------
 
-After running the benchmark above on Kubernetes, we recorded the following end-to-end execution time under
-different settings:
+After running the benchmark above on Kubernetes, we recorded each node's execution time from the logs
+of the argo workflow and calculated the sum of all nodes as the following end-to-end execution time 
+for each data scale:
 
-==========    =========    =========    =========
-Data Scale    Vineyard     AWS S3       Minio S3
-==========    =========    =========    =========
-1                   30s          50s          30s
-10                  30s          63s          30s
-100                 60s         144s          64s
-500                 91s         457s         177s
-==========    =========    =========    =========
+==========    =========    ========    ==============    =========
+Data Scale    Vineyard     Minio S3    Cloudpickle S3     AWS S3
+==========    =========    ========    ==============    =========
+1                  4.2s        4.3s             22.5s        16.9s
+10                 4.9s        5.5s             28.6s        23.3s
+100               13.2s       20.3s             64.4s          74s
+500               53.6s       84.5s            173.2s       267.9s
+1000             109.8s      164.2s            322.7s       510.6s
+2000             231.6s      335.9s            632.8s      1069.7s
+==========    =========    ========    ==============    =========
 
 We have the following observations from above comparison:
 
@@ -268,3 +289,5 @@ We have the following observations from above comparison:
   cost becomes more dominant in end-to-end execution;
 - Even compared with local Minio, Vineyard still outperforms it by a large margin, thanks to the ability
   of Vineyard to avoid (de)serialization, file I/O and excessive memory copies.
+- When using the Cloudpickle dataset(pickle + zstd), the performance is better than AWS S3, as the dataset
+  will be compressed before uploading to S3.
