@@ -56,7 +56,7 @@ Save the following yaml as `pod.yaml`.
         - bash
         - -c
         - |
-          pip install vineyard numpy pandas > /dev/null 2>&1;
+          pip install vineyard numpy pandas;
           cat << EOF >> producer.py
           import vineyard;
           import numpy as np;
@@ -78,7 +78,7 @@ Save the following yaml as `pod.yaml`.
         - |
           # wait for the producer to finish
           sleep 10;
-          pip install vineyard numpy pandas > /dev/null 2>&1;
+          pip install vineyard numpy pandas;
           cat << EOF >> consumer.py
           import vineyard;
           client = vineyard.connect();
@@ -179,7 +179,7 @@ The producer yaml file is as follows.
             - bash
             - -c
             - |
-              pip install vineyard numpy pandas > /dev/null 2>&1;
+              pip install vineyard numpy pandas;
               cat << EOF >> producer.py
               import vineyard
               import numpy as np
@@ -220,7 +220,7 @@ The consumer yaml file is as follows.
             - bash
             - -c
             - |
-              pip install vineyard numpy pandas > /dev/null 2>&1;
+              pip install vineyard numpy pandas;
               cat << EOF >> consumer.py
               import vineyard
               client = vineyard.connect()
