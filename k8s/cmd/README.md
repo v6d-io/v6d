@@ -1065,12 +1065,187 @@ Inject the vineyard sidecar container into a workload
 
 Inject the vineyard sidecar container into a workload. You can
 input a workload yaml or a workload json and then get the injected
-workload and some etcd manifests from the output.
+workload and some etcd manifests from the output. The workload can
+be a pod or a deployment or a statefulset, etc.
 
 The output is a set of manifests that includes the injected workload,
 the rpc service, the etcd service and the etcd cluster(e.g. several
-pods and services). Next, we will introduce a simple example to show
-the injection.
+pods and services). 
+
+If you have a pod yaml: 
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: python
+spec:
+  containers:
+  - name: python
+    image: python:3.10
+    command: ["python", "-c", "import time; time.sleep(100000)"]
+```
+Then, you can use the following command to inject the vineyard sidecar
+
+$ vineyardctl inject -f pod.yaml
+
+After running the command, the output is as follows:
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    app.vineyard.io/name: vineyard-sidecar
+    app.vineyard.io/role: etcd
+    etcd_node: vineyard-sidecar-etcd-0
+  name: vineyard-sidecar-etcd-0
+  namespace: null
+  ownerReferences: []
+spec:
+  containers:
+  - command:
+    - etcd
+    - --name
+    - vineyard-sidecar-etcd-0
+    - --initial-advertise-peer-urls
+    - http://vineyard-sidecar-etcd-0:2380
+    - --advertise-client-urls
+    - http://vineyard-sidecar-etcd-0:2379
+    - --listen-peer-urls
+    - http://0.0.0.0:2380
+    - --listen-client-urls
+    - http://0.0.0.0:2379
+    - --initial-cluster
+    - vineyard-sidecar-etcd-0=http://vineyard-sidecar-etcd-0:2380
+    - --initial-cluster-state
+    - new
+    image: vineyardcloudnative/vineyardd:latest
+    name: etcd
+    ports:
+    - containerPort: 2379
+      name: client
+      protocol: TCP
+    - containerPort: 2380
+      name: server
+      protocol: TCP
+  restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    etcd_node: vineyard-sidecar-etcd-0
+  name: vineyard-sidecar-etcd-0
+  namespace: null
+  ownerReferences: []
+spec:
+  ports:
+  - name: client
+    port: 2379
+    protocol: TCP
+    targetPort: 2379
+  - name: server
+    port: 2380
+    protocol: TCP
+    targetPort: 2380
+  selector:
+    app.vineyard.io/role: etcd
+    etcd_node: vineyard-sidecar-etcd-0
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vineyard-sidecar-etcd-service
+  namespace: null
+  ownerReferences: []
+spec:
+  ports:
+  - name: vineyard-sidecar-etcd-for-vineyard-port
+    port: 2379
+    protocol: TCP
+    targetPort: 2379
+  selector:
+    app.vineyard.io/name: vineyard-sidecar
+    app.vineyard.io/role: etcd
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.vineyard.io/name: vineyard-sidecar
+  name: vineyard-sidecar-rpc
+  namespace: null
+  ownerReferences: []
+spec:
+  ports:
+  - name: vineyard-rpc
+    port: 9600
+    protocol: TCP
+  selector:
+    app.vineyard.io/name: vineyard-sidecar
+    app.vineyard.io/role: vineyardd
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    app.vineyard.io/name: vineyard-sidecar
+    app.vineyard.io/role: vineyardd
+  name: python
+  ownerReferences: []
+spec:
+  containers:
+  - command:
+    - python
+    - -c
+    - while [ ! -e /var/run/vineyard.sock ]; do sleep 1; done;import time; time.sleep(100000)
+    env:
+    - name: VINEYARD_IPC_SOCKET
+      value: /var/run/vineyard.sock
+    image: python:3.10
+    name: python
+    resources: {}
+    volumeMounts:
+    - mountPath: /var/run
+      name: vineyard-socket
+  - command:
+    - /bin/bash
+    - -c
+    - |
+      /usr/bin/wait-for-it.sh -t 60 vineyard-sidecar-etcd-service..svc.cluster.local:2379; \
+      sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock --size \
+      --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard --etcd_endpoint http://vineyard-sidecar-etcd-service:2379
+    env:
+    - name: VINEYARDD_UID
+      value: null
+    - name: VINEYARDD_NAME
+      value: vineyard-sidecar
+    - name: VINEYARDD_NAMESPACE
+      value: null
+    image: vineyardcloudnative/vineyardd:latest
+    imagePullPolicy: IfNotPresent
+    name: vineyard-sidecar
+    ports:
+    - containerPort: 9600
+      name: vineyard-rpc
+      protocol: TCP
+    resources:
+      limits: null
+      requests: null
+    volumeMounts:
+    - mountPath: /var/run
+      name: vineyard-socket
+  volumes:
+  - emptyDir: {}
+    name: vineyard-socket
+status: {}
+```
+
+Next, we will introduce a simple example to show the injection with
+the apply-resources flag.
 
 Assume you have the following workload yaml:
 
@@ -1098,6 +1273,8 @@ spec:
 ```
 
 Then, you can use the following command to inject the vineyard sidecar
+which means that all resources will be created during the injection except
+the workload itself. The workload should be created by users.
 
 $ vineyardctl inject -f workload.yaml --apply-resources
 
@@ -1561,7 +1738,87 @@ Schedule the workload to a vineyard cluster
 
 Schedule the workload to a vineyard cluster.
 It will add the podAffinity to the workload so that the workload
-will be scheduled to the vineyard cluster.
+will be scheduled to the vineyard cluster. Besides, if the workload
+does not have the socket volumeMount and volume, it will add one.
+
+Assume you have the following workload yaml:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: python-client
+  # Notice, you must set the namespace here
+  namespace: vineyard-job
+spec:
+  selector:
+    matchLabels:
+      app: python
+  template:
+    metadata:
+      labels:
+        app: python
+    spec:
+      containers:
+      - name: python
+        image: python:3.10
+        command: ["python", "-c", "import time; time.sleep(100000)"]
+```
+
+Then you can run the following command to add the podAffinity and socket volume 
+to the workload yaml:
+
+$ vineyard schedule workload -f workload.yaml -o yaml
+
+After that, you will get the following workload yaml: 
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  name: python-client
+  namespace: vineyard-job
+spec:
+  selector:
+    matchLabels:
+      app: python
+  strategy: {}
+  template:
+   metadata:
+      creationTimestamp: null
+      labels:
+        app: python
+    spec:
+      affinity:
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app.kubernetes.io/instance
+                operator: In
+                values:
+                - vineyard-system-vineyardd-sample
+            topologyKey: kubernetes.io/hostname
+      containers:
+      - command:
+        - python
+        - -c
+        - import time; time.sleep(100000)
+        env:
+        - name: VINEYARD_IPC_SOCKET
+          value: /var/run/vineyard.sock
+        image: python:3.10
+        name: python
+        resources: {}
+        volumeMounts:
+        - mountPath: /var/run
+          name: vineyard-socket
+      volumes:
+      - hostPath:
+          path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+        name: vineyard-socket
+```
 
 ```
 vineyardctl schedule workload [flags]
@@ -1650,7 +1907,9 @@ vineyardctl schedule workload [flags]
 ### Options
 
 ```
+  -f, --file string                  the file path of workload
   -h, --help                         help for workload
+  -o, --output string                the output format for vineyardctl schedule workload command (default "json")
       --resource string              the json string of kubernetes workload
       --vineyardd-name string        the namespace of vineyard cluster (default "vineyardd-sample")
       --vineyardd-namespace string   the namespace of vineyard cluster (default "vineyard-system")

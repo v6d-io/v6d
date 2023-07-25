@@ -23,11 +23,20 @@ var (
 
 	// the namespace of vineyard cluster
 	VineyarddNamespace string
+
+	// the output format for vineyardctl schedule workload command
+	ScheduleOutputFormat string
+
+	// the file path of workload
+	WorkloadFile string
 )
 
 func ApplySchedulerWorkloadOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&Resource, "resource", "", "",
 		"the json string of kubernetes workload")
+	cmd.Flags().StringVarP(&WorkloadFile, "file", "f", "", "the file path of workload")
+	cmd.Flags().StringVarP(&ScheduleOutputFormat, "output", "o", "json",
+		"the output format for vineyardctl schedule workload command")
 	cmd.Flags().
 		StringVarP(&VineyarddName, "vineyardd-name", "", "vineyardd-sample",
 			"the namespace of vineyard cluster")
