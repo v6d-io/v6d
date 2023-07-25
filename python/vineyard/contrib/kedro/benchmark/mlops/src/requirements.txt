@@ -15,4 +15,5 @@ s3fs
 numpy
 pandas
 scikit-learn
+kedro-sagemaker==0.3.0
 vineyard-kedro

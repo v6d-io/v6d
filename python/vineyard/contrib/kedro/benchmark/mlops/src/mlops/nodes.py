@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from typing import Dict, Tuple, Any
 
+from .utils import generate_random_dataframe
+
 from sklearn.preprocessing import LabelEncoder, RobustScaler, OneHotEncoder, PowerTransformer
 from sklearn.impute import SimpleImputer
 
@@ -10,7 +12,8 @@ from sklearn.impute import SimpleImputer
 def data_augment(train: pd.DataFrame, multiplier: int = None) -> pd.DataFrame:
     if multiplier is None:
         multiplier = int(os.environ.get('DATA_AUGMENT_MULTIPLIER', '1'))
-    train = pd.concat([train]*multiplier, ignore_index=True)
+    random_dataframe = generate_random_dataframe(len(train)*(multiplier-1))
+    train = pd.concat([train, random_dataframe], ignore_index=True)
     return train
 
 def remove_outliers(train: pd.DataFrame, parameters: Dict[str, Any]) -> pd.DataFrame:

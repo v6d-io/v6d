@@ -1,0 +1,34 @@
+# Here you can define all your data sets by using simple YAML syntax.
+#
+# Documentation for this file format can be found in "The Data Catalog"
+# Link: https://docs.kedro.org/en/stable/data/data_catalog.html
+
+house_prices:
+  type: pandas.CSVDataSet
+  filepath: data/01_raw/train.csv
+
+house_prices_clean:
+  type: kedro_sagemaker.datasets.CloudpickleDataset
+  dataset_name: house_prices_clean
+  bucket: kedro-benchmark-sagemaker
+  run_id: 0
+house_prices_drop:
+  type: kedro_sagemaker.datasets.CloudpickleDataset
+  dataset_name: house_prices_drop
+  bucket: kedro-benchmark-sagemaker
+  run_id: 0
+house_prices_no_na:
+  type: kedro_sagemaker.datasets.CloudpickleDataset
+  dataset_name: house_prices_no_na
+  bucket: kedro-benchmark-sagemaker
+  run_id: 0
+house_prices_no_outliers:
+  type: kedro_sagemaker.datasets.CloudpickleDataset
+  dataset_name: house_prices_no_outliers
+  bucket: kedro-benchmark-sagemaker
+  run_id: 0
+y_train:
+  type: kedro_sagemaker.datasets.CloudpickleDataset
+  dataset_name: y_train
+  bucket: kedro-benchmark-sagemaker
+  run_id: 0
