@@ -1831,6 +1831,11 @@ vineyardctl schedule workload [flags]
 ### Examples
 
 ```shell
+  # Add the podAffinity to the workload yaml
+  vineyardctl schedule workload -f workload.yaml \
+  --vineyardd-name vineyardd-sample \
+  --vineyardd-namespace vineyard-system
+
   # Add the podAffinity to the workload for the specific vineyard cluster
   vineyardctl schedule workload --resource '{
     "apiVersion": "apps/v1",
