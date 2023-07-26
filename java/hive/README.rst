@@ -81,7 +81,7 @@ Hive and Vineyard
         create table hive_example(
             a string,
             b int)
-        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
@@ -96,7 +96,7 @@ Hive and Vineyard
         create table hive_example2(
                     field_1 int,
                     field_2 int)
-        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
@@ -111,7 +111,7 @@ Hive and Vineyard
     .. code:: sql
 
         create table hive_example(
-                            field_1 int,
+                            field_1 string,
                             field_2 int)
         row format serde "io.v6d.hive.ql.io.VineyardSerDe"
         stored as
@@ -135,24 +135,27 @@ Hive and Vineyard
 
         create table hive_example(
                             field_1 int,
-                            field_2 int)
-        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+                            field_2 bigint,
+                            field_3 boolean,
+                            field_4 string,
+                            field_5 double,
+                            field_6 float)
+        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
-            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
+            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
+        insert into hive_example values(1, 1, true, 'a', 1.0, 1.0), (2, 2, true, 'b', 2.0, 2.0), (3, 3, false, 'c', 3.0, 3.0);
         LOCATION "file:///opt/hive/data/warehouse/hive_example";
 
-        select * from hive_example;
+        select * from hive_example1;
         explain vectorization select * from hive_example;
 
-        insert into hive_example values('a', 1), ('a', 2), ('b',3);
+        insert into hive_example values(1, 1), (2, 2), (3,3);
 
 - Test large data sets:
 
-    Test large data sets must point out the `hive.arrow.batch.size` to avoid etcd failure. The default value is 1000.
-    The recommended value for the field is one-tenth of the number of rows in the table.
     The following sql statement reads the livejournal dataset (a 27 million line csv file) and stores it in vineyard.
-    You must place the dataset in the correct directory.
+    The dataset must be placed in the correct directory.
 
     .. code:: sql
 
@@ -163,12 +166,11 @@ Hive and Vineyard
         set hive.vectorized.execution.enabled=true;
         set hive.vectorized.execution.reduce.enabled=true;
         set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardInputFormat;
-        set hive.arrow.batch.size=2000000;
 
         create table hive_example(
                             src_id int,
                             dst_id int)
-        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
@@ -204,14 +206,13 @@ Hive and Vineyard
         set hive.vectorized.execution.enabled=true;
         set hive.vectorized.execution.reduce.enabled=true;
         set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardInputFormat;
-        set hive.arrow.batch.size=500;
 
         create table hive_static_partition(
             src_id int,
             dst_id int
         )
         partitioned by (value int)
-        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
@@ -224,10 +225,6 @@ Hive and Vineyard
 
 - Test dynamic partition:
 
-    We must set the batch size to 1. Because ArrowColumnarBatchSerDe do not process dynamic partitioning. If
-    the batch size is not set to 1, ArrowColumnarBatchSerDe will batch data from different partitions together,
-    and the data will be written to the same partition, which will cause the data to be written incorrectly.
-
     .. code:: sql
 
         set hive.fetch.task.conversion=none;
@@ -237,7 +234,6 @@ Hive and Vineyard
         set hive.vectorized.execution.enabled=true;
         set hive.vectorized.execution.reduce.enabled=true;
         set hive.vectorized.row.serde.inputformat.excludes=io.v6d.hive.ql.io.VineyardInputFormat;
-        set hive.arrow.batch.size=1;
         set hive.exec.dynamic.partition=true;
         set hive.exec.dynamic.partition.mode=nonstrict;
         create table hive_dynamic_partition_data
@@ -251,7 +247,7 @@ Hive and Vineyard
             src_id int,
             dst_id int
         )partitioned by(mounth int, year int)
-        row format serde "org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe"
+        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';

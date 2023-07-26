@@ -20,23 +20,20 @@ import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.arrow.TableBuilder;
+import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
 import io.v6d.modules.basic.arrow.SchemaBuilder;
 import io.v6d.modules.basic.arrow.Table;
 import io.v6d.modules.basic.arrow.Arrow;
 import io.v6d.modules.basic.arrow.RecordBatchBuilder;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Properties;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
-import lombok.val;
-
-import org.apache.arrow.vector.VectorSchemaRoot;
+import org.apache.arrow.vector.types.TimeUnit;
+import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.*;
-import org.apache.arrow.vector.*;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -45,7 +42,16 @@ import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
 import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
+import org.apache.hadoop.hive.serde2.io.DoubleWritable;
+import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
+import org.apache.hadoop.io.BooleanWritable;
+import org.apache.hadoop.io.FloatWritable;
+import org.apache.hadoop.io.IntWritable;
+import org.apache.hadoop.io.LongWritable;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
@@ -55,7 +61,7 @@ import org.apache.hadoop.hive.common.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class VineyardOutputFormat<K extends NullWritable, V extends ArrowWrapperWritable>
+public class VineyardOutputFormat<K extends NullWritable, V extends VineyardRowWritable>
         implements HiveOutputFormat<K, V> {
     private static Logger logger = LoggerFactory.getLogger(VineyardOutputFormat.class);
 
@@ -86,19 +92,18 @@ public class VineyardOutputFormat<K extends NullWritable, V extends ArrowWrapper
 class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private JobConf jc;
     private Path finalOutPath;
+    private FileSystem fs;
+    private List<VineyardRowWritable> objects;
+    private Schema schema;
     private Properties tableProperties;
     private Progressable progress;
-    private FileSystem fs;
 
     // vineyard
     private IPCClient client;
     private TableBuilder tableBuilder;
     private SchemaBuilder schemaBuilder;
-    private List<RecordBatchBuilder> recordBatchBuilders;
     RecordBatchBuilder recordBatchBuilder;
     private String tableName;
-    private List<String> partitions;
-    private boolean hasData = false;
 
     public static final PathFilter VINEYARD_FILES_PATH_FILTER = new PathFilter() {
         @Override
@@ -108,23 +113,21 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         }
     };
 
-    private void getTableName(Properties tableProperties) {
+    private void getTableName() {
         String location = tableProperties.getProperty("location");
-        // int index = location.lastIndexOf("/");
-        // tableName = location.substring(index + 1);
-        System.out.println("finalOutPath : "+ finalOutPath.toString());
+        // System.out.println("finalOutPath : "+ finalOutPath.toString());
 
         // Get partition count
-        String partition = tableProperties.getProperty("partition_columns.types");
-        int index = -1;
-        int partitionCount= 0;
-        if (partition != null) {
-            do {
-                partitionCount++;
-                index = partition.indexOf(":", index + 1);
-            } while(index != -1);
-        }
-        System.out.println("Partition count:" + partitionCount);
+        // String partition = tableProperties.getProperty("partition_columns.types");
+        // int index = -1;
+        // int partitionCount= 0;
+        // if (partition != null) {
+        //     do {
+        //         partitionCount++;
+        //         index = partition.indexOf(":", index + 1);
+        //     } while(index != -1);
+        // }
+        // System.out.println("Partition count:" + partitionCount);
 
         // Construct table name
         String path = finalOutPath.toString();
@@ -146,13 +149,12 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             }
         }
         tableName = tableName.replaceAll("/", "#");
-        System.out.println("Table name:" + tableName);
+        // System.out.println("Table name:" + tableName);
 
         // Create temp file
         String tmpFilePath = finalOutPath.toString();
         tmpFilePath = tmpFilePath.substring(0, tmpFilePath.lastIndexOf("/"));
-        System.out.println("out path:" + tmpFilePath);
-        // File file = FileUtils.createTempFile(outPath, "vineyard", ".tmp");
+        // System.out.println("out path:" + tmpFilePath);
         tmpFilePath = tmpFilePath.replaceAll("_task", "");
         Path tmpPath = new Path(tmpFilePath, "vineyard.tmp");
         try {
@@ -161,22 +163,12 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             FSDataOutputStream output = FileSystem.create(fs, tmpPath, new FsPermission("777"));
             if (output != null) {
                 System.out.println("Create succeed!");
-                output.write("test".getBytes(), 0, 4);
+                // output.write("test".getBytes(), 0, 4);
                 output.close();
             }
-            // System.in.read();
         } catch (Exception e) {
             System.out.println("Create failed!");
         }
-        // index = location.length() + 1;
-        // for (int i = 0; i < partitionCount; i++) {
-        //     index = finalOutPath.toString().indexOf("/", index + 1);
-        // }
-        // tableName = finalOutPath.toString().substring(0, index);
-        // tableName = tableName.replace('/', '#');
-        // System.out.println("Table name:" + tableName);
-        // System.out.println("fina path:" + finalOutPath.toString());
-
     }
 
     @lombok.SneakyThrows
@@ -201,7 +193,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         for (Object key : tableProperties.keySet()) {
             System.out.printf("table property: %s, %s\n", key, tableProperties.getProperty((String) key));
         }
-        getTableName(tableProperties);
+        getTableName();
 
         // connect to vineyard
         if (client == null) {
@@ -215,25 +207,19 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             System.out.printf("Hello vineyard!\n");
         }
 
-        recordBatchBuilders = new ArrayList<RecordBatchBuilder>();
+        objects = new ArrayList<VineyardRowWritable>();
         Arrow.instantiate();
     }
 
     @Override
-    public void write(Writable w) throws IOException {
-        System.out.println("write");
+    public void write(Writable w) throws IOException {   
         if (w == null) {
             System.out.println("w is null");
             return;
         }
-        ArrowWrapperWritable arrowWrapperWritable = (ArrowWrapperWritable) w;
-        VectorSchemaRoot root = arrowWrapperWritable.getVectorSchemaRoot();
-        if (root == null || root.getRowCount() == 0) {
-            return;
-        }
-        System.out.println("Row count:" + root.getRowCount() + " Field size:" + root.getSchema().getFields().size() + " vector size:" + root.getFieldVectors().size());
-        hasData = true;
-        fillRecordBatchBuilder(root);
+
+        VineyardRowWritable rowWritable = (VineyardRowWritable) w;
+        objects.add(rowWritable);
     }
     
     // check if the table is already created.
@@ -241,16 +227,16 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     // if yes, append the data to the table.(Get from vineyard, and seal it in a new table) 
     @Override
     public void close(boolean abort) throws IOException {
-        System.out.println("close");
-        System.out.println("table name:" + tableName);
         Table oldTable = null;
-        System.out.println("has data:" + hasData);
-        if (schemaBuilder == null) {
+        if (objects.size() == 0) {
             System.out.println("No data to write.");
             client.disconnect();
             System.out.println("Bye, vineyard!");
             return;
         }
+
+        // construct record batch
+        constructRecordBatch();
         tableBuilder = new TableBuilder(client, schemaBuilder);
         try {
             ObjectID objectID = client.getName(tableName, false);
@@ -269,9 +255,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             }
         }
 
-        for (int i = 0; i < recordBatchBuilders.size(); i++) {
-            tableBuilder.addBatch(recordBatchBuilders.get(i));
-        }
+        tableBuilder.addBatch(recordBatchBuilder);
         try {
             ObjectMeta meta = tableBuilder.seal(client);
             System.out.println("Table id in vineyard:" + meta.getId().value());
@@ -286,75 +270,165 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         System.out.println("Bye, vineyard!");
     }
 
-    private void fillRecordBatchBuilder(VectorSchemaRoot root) throws IOException{
-        org.apache.arrow.vector.types.pojo.Schema schema = root.getSchema();
-        schemaBuilder = SchemaBuilder.fromSchema(schema);
-        try {
-            // TBD : more clear error message.
-            recordBatchBuilder = new RecordBatchBuilder(client, schema, root.getRowCount());
-            fillColumns(root, schema);
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
-            throw new IOException("Add field failed");
+    private static ArrowType toArrowType(TypeInfo typeInfo) {
+        switch (typeInfo.getCategory()) {
+            case PRIMITIVE:
+                switch (((PrimitiveTypeInfo) typeInfo).getPrimitiveCategory()) {
+                    case BOOLEAN:
+                        return Types.MinorType.BIT.getType();
+                    case BYTE:
+                        return Types.MinorType.TINYINT.getType();
+                    case SHORT:
+                        return Types.MinorType.SMALLINT.getType();
+                    case INT:
+                        return Types.MinorType.INT.getType();
+                    case LONG:
+                        return Types.MinorType.BIGINT.getType();
+                    case FLOAT:
+                        return Types.MinorType.FLOAT4.getType();
+                    case DOUBLE:
+                        return Types.MinorType.FLOAT8.getType();
+                    case STRING:
+                    case VARCHAR:
+                    case CHAR:
+                        return Types.MinorType.VARCHAR.getType();
+                    case DATE:
+                        return Types.MinorType.DATEDAY.getType();
+                    case TIMESTAMP:
+                        return new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC");
+                    case BINARY:
+                        return Types.MinorType.VARBINARY.getType();
+                    case DECIMAL:
+                        final DecimalTypeInfo decimalTypeInfo = (DecimalTypeInfo) typeInfo;
+                        return new ArrowType.Decimal(decimalTypeInfo.precision(), decimalTypeInfo.scale(), 128);
+                    case INTERVAL_YEAR_MONTH:
+                        return Types.MinorType.INTERVALYEAR.getType();
+                    case INTERVAL_DAY_TIME:
+                        return Types.MinorType.INTERVALDAY.getType();
+                    case VOID:
+                    case TIMESTAMPLOCALTZ:
+                    case UNKNOWN:
+                    default:
+                        throw new IllegalArgumentException();
+                }
+            case LIST:
+                return ArrowType.List.INSTANCE;
+            case STRUCT:
+                return ArrowType.Struct.INSTANCE;
+            case MAP:
+                return new ArrowType.Map(false);
+            case UNION:
+                default:
+                throw new IllegalArgumentException();
         }
-        recordBatchBuilders.add(recordBatchBuilder);
     }
 
-    private void fillColumns(VectorSchemaRoot root, Schema schema)
-        throws VineyardException {
+    private void constructRecordBatch() {
+        // construct schema
+        // StructVector rootVector = StructVector.empty(null, allocator);
+        List<Field> fields = new ArrayList<Field>();
+        int columns = objects.get(0).getTargetTypeInfos().length;
+        for (int i = 0; i < columns; i++) {
+            Field field = Field.nullable(objects.get(0).getTargetTypeInfos()[i].getTypeName(), toArrowType(objects.get(0).getTargetTypeInfos()[i]));
+            fields.add(field);
+        }
+        schema = new Schema((Iterable<Field>)fields);
+        schemaBuilder = SchemaBuilder.fromSchema(schema);
+
+        // construct recordBatch
+        try {
+            recordBatchBuilder = new RecordBatchBuilder(client, schema, objects.size());
+            System.out.println("Create done!");
+            fillRecordBatchBuilder(schema);
+            System.out.println("Fill done!");
+        } catch (Exception e) {
+            System.out.println("Create record batch builder failed");
+        }
+    }
+
+    private void fillRecordBatchBuilder(Schema schema) {
+        int rowCount = objects.size();
         for (int i = 0; i < schema.getFields().size(); i++) {
-            val column = recordBatchBuilder.getColumnBuilder(i);
+            ColumnarDataBuilder column;
+            try {
+                column = recordBatchBuilder.getColumnBuilder(i);
+            } catch (Exception e) {
+                System.out.println("Create column builder failed");
+                return;
+            }
             Field field = schema.getFields().get(i);
             if (field.getType().equals(Arrow.Type.Boolean)) {
-                BitVector vector = (BitVector) root.getFieldVectors().get(i);
-                for (int j = 0; j < root.getRowCount(); j++) {
-                    if (vector.get(j) != 0) {
-                        column.setBoolean(j, true);
+                for (int j = 0; j < rowCount; j++) {
+                    boolean value;
+                    if (objects.get(j).getValues().get(i) instanceof Boolean) {
+                        value = (Boolean) objects.get(j).getValues().get(i);
                     } else {
-                        column.setBoolean(j, false);
+                        value = ((BooleanWritable) objects.get(j).getValues().get(i)).get();
                     }
+                    column.setBoolean(j, value);
                 }
             } else if (field.getType().equals(Arrow.Type.Int)) {
-                IntVector vector= (IntVector) root.getFieldVectors().get(i);
-                // System.out.println("row count:" + root.getRowCount());
-                for (int j = 0; j < root.getRowCount(); j++) {
-                    column.setInt(j, vector.get(j));
-                    // System.out.println("int value:" + vector.get(j));
+                for (int j = 0; j < rowCount; j++) {
+                    int value;
+                    if (objects.get(j).getValues().get(i) instanceof Integer) {
+                        value = (Integer) objects.get(j).getValues().get(i);
+                    } else {
+                        value = ((IntWritable) objects.get(j).getValues().get(i)).get();
+                    }
+                    column.setInt(j, value);
                 }
             } else if (field.getType().equals(Arrow.Type.Int64)) {
-                BigIntVector vector = (BigIntVector) root.getFieldVectors().get(i);
-                for (int j = 0; j < root.getRowCount(); j++) {
-                    column.setLong(j, vector.get(j));
+                for (int j = 0; j < rowCount; j++) {
+                    long value;
+                    if (objects.get(j).getValues().get(i) instanceof Long) {
+                        value = (Long) objects.get(j).getValues().get(i);
+                    } else {
+                        value = ((LongWritable) objects.get(j).getValues().get(i)).get();
+                    }
+                    column.setLong(j, value);
                 }
             } else if (field.getType().equals(Arrow.Type.Float)) {
-                Float4Vector vector = (Float4Vector) root.getFieldVectors().get(i);
-                for (int j = 0; j < root.getRowCount(); j++) {
-                    column.setFloat(j, vector.get(j));
+                for (int j = 0; j < rowCount; j++) {
+                    float value;
+                    if (objects.get(j).getValues().get(i) instanceof Float) {
+                        value = (Float) objects.get(j).getValues().get(i);
+                    } else {
+                        value = ((FloatWritable) objects.get(j).getValues().get(i)).get();
+                    }
+                    column.setFloat(j, value);
                 }
             } else if (field.getType().equals(Arrow.Type.Double)) {
-                Float8Vector vector = (Float8Vector) root.getFieldVectors().get(i);
-                for (int j = 0; j < root.getRowCount(); j++) {
-                    column.setDouble(j, vector.get(j));
-                } 
-            } else if (field.getType().equals(Arrow.Type.LargeVarChar)) {
-                LargeVarCharVector vector = (LargeVarCharVector) root.getFieldVectors().get(i);
-                for (int j = 0; j < root.getRowCount(); j++) {
-                    column.setUTF8String(j, vector.getObject(j));
-                } 
+                for (int j = 0; j < rowCount; j++) {
+                    double value;
+                    if (objects.get(j).getValues().get(i) instanceof Double) {
+                        value = (Double) objects.get(j).getValues().get(i);
+                    } else {
+                        value = ((DoubleWritable) objects.get(j).getValues().get(i)).get();
+                    }
+                    column.setDouble(j, value);
+                }
             } else if (field.getType().equals(Arrow.Type.VarChar)) {
-                VarCharVector vector = (VarCharVector) root.getFieldVectors().get(i);
-                for (int j = 0; j < root.getRowCount(); j++) {
-                    column.setUTF8String(j, vector.getObject(j));
-                } 
+                System.out.println("var char");
+                // may be not correct
+                for (int j = 0; j < rowCount; j++) {
+                    String value;
+                    if (objects.get(j).getValues().get(i) instanceof String) {
+                        value = (String) objects.get(j).getValues().get(i);
+                    } else {
+                        value = ((Text) objects.get(j).getValues().get(i)).toString();
+                    }
+                    column.setUTF8String(j, new org.apache.arrow.vector.util.Text(value));
+                }
             } else {
-                throw new VineyardException.NotImplemented(
-                        "array builder for type " + field.getType() + " is not supported");
+                System.out.println("Type:" + field.getType() + " is not supported");
+                // throw new VineyardException.NotImplemented(
+                //         "array builder for type " + field.getType() + " is not supported");
             }
         }
     }
 }
 
-class MapredRecordWriter<K extends NullWritable, V extends ArrowWrapperWritable>
+class MapredRecordWriter<K extends NullWritable, V extends VineyardRowWritable>
         implements RecordWriter<K, V> {
     MapredRecordWriter() throws IOException {
         System.out.printf("creating vineyard record writer\n");
@@ -371,12 +445,3 @@ class MapredRecordWriter<K extends NullWritable, V extends ArrowWrapperWritable>
         System.out.printf("closing\n");
     }
 }
-
-// file:/opt/hive/data/warehouse/hive_dynamic_partition_test6/.hive-staging_hive_2023-07-19_10-49-12_537_8312530081206971822-1/_task_tmp.-ext-10000/year=2017/_tmp.000000_0
-// file:/opt/hive/data/warehouse/hive_dynamic_partition_test6/.hive-staging_hive_2023-07-19_10-49-12_537_8312530081206971822-1/-ext-10000
-
-// file:/opt/hive/data/warehouse/hive_dynamic_partition_test6/year=2018/.hive-staging_hive_2023-07-19_10-52-50_144_3570501016920325767-1/_task_tmp.-ext-10000/_tmp.000000_0
-// file:/opt/hive/data/warehouse/hive_dynamic_partition_test6/year=2018/.hive-staging_hive_2023-07-19_10-52-50_144_3570501016920325767-1/-ext-10000
-
-//file:/opt/hive/data/warehouse/hive_dynamic_partition_test6/.hive-staging_hive_2023-07-19_11-15-58_433_128099267613906011-1/-ext-10000
-//file:/opt/hive/data/warehouse/hive_dynamic_partition_test7/.hive-staging_hive_2023-07-19_11-14-48_835_1857436151368976840-1/-ext-10000
