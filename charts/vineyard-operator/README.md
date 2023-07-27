@@ -15,8 +15,7 @@ $ helm repo update
 
 Refer to the [helm repo](https://helm.sh/docs/helm/helm_repo/) for more repo information.
 
-The webhook is enabled by default, please make sure you have the [Cert-Manager](https://cert-manager.io/docs/installation/) 
-installed, then deploy it in the `default` namespace as follows:
+Install `vineyard-operator` as follows.
 
 > **NOTE:** DON'T add the flag `--wait` during the helm install, the operator will not be installed successfully if you add it. For more detail, please refer to [issue](https://github.com/v6d-io/v6d/issues/1490).
 
