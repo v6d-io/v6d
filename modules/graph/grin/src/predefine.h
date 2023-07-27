@@ -158,6 +158,7 @@ struct _GRAPH_CACHE {
     std::vector<std::vector<std::shared_ptr<arrow::Array>>> earrays;
     std::vector<std::vector<const void*>> varrs;
     std::vector<std::vector<const void*>> earrs;
+    unsigned feature_size;
 };
 
 struct GRIN_GRAPH_T {
@@ -202,6 +203,10 @@ inline const void* _GetArrowArrayData(
   } else if (array->type()->Equals(arrow::utf8())) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::StringArray>(array).get());
+  } else if (array->type()->id() == arrow::Type::FIXED_SIZE_LIST) {
+    auto list_array = std::dynamic_pointer_cast<arrow::FixedSizeListArray>(array);
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::FloatArray>(list_array->values())->raw_values());
   } else if (array->type()->Equals(arrow::large_utf8())) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get());
@@ -222,6 +227,7 @@ inline const void* _GetArrowArrayData(
 
 inline void _prepare_cache(GRIN_GRAPH_T* g) {
     g->cache = new _GRAPH_CACHE();
+    g->cache->feature_size = 0;
     g->cache->id_parser = vineyard::IdParser<_GRIN_GRAPH_T::vid_t>();
     g->cache->id_parser.Init(g->g->fnum(), g->g->vertex_label_num());
 
@@ -239,7 +245,12 @@ inline void _prepare_cache(GRIN_GRAPH_T* g) {
             g->cache->vprop_names[i][j] = g->g->schema().GetVertexPropertyName(i, j);
             g->cache->varrays[i][j] = g->g->vertex_data_table(i)->column(j)->chunk(0);
             g->cache->varrs[i][j] = _GetArrowArrayData(g->g->vertex_data_table(i)->column(j)->chunk(0));
-        } 
+            if (g->g->vertex_data_table(i)->column(j)->chunk(0)->type()->id() == arrow::Type::FIXED_SIZE_LIST) {
+                assert(g->cache->feature_size == 0);
+                auto arr = std::dynamic_pointer_cast<arrow::FixedSizeListArray>(g->g->vertex_data_table(i)->column(j)->chunk(0));
+                g->cache->feature_size = arr->list_type()->list_size();
+            } 
+        }
     }
 
     g->cache->etype_names.resize(g->g->edge_label_num());
@@ -355,8 +366,9 @@ inline const void* _get_arrow_array_data_element(std::shared_ptr<arrow::Array> c
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::LargeListArray>(array).get() + offset);
   } else if (array->type()->id() == arrow::Type::FIXED_SIZE_LIST) {
+    auto list_array = std::dynamic_pointer_cast<arrow::FixedSizeListArray>(array);
     return reinterpret_cast<const void*>(
-        std::dynamic_pointer_cast<arrow::FixedSizeListArray>(array).get() + offset);
+        static_cast<const float*>(std::dynamic_pointer_cast<arrow::FloatArray>(list_array->values())->raw_values()) + offset * list_array->list_type()->list_size());
   } else if (array->type()->Equals(arrow::null())) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::NullArray>(array).get() + offset);

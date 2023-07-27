@@ -29,6 +29,8 @@ limitations under the License.
 
 void grin_destroy_string_value(GRIN_GRAPH g, const char* value) {}
 
+void grin_destroy_float_array_value(GRIN_GRAPH g, const float* value) {}
+
 #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
 const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY vp) {
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
@@ -160,6 +162,10 @@ long long int grin_get_vertex_property_value_of_timestamp64(GRIN_GRAPH g, GRIN_V
     return static_cast<const long long int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
+const float* grin_get_vertex_property_value_of_float_array(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+    GET_VERTEX_VALUE
+    return static_cast<const float*>(_cache->varrs[vtype][vprop]) + _cache->id_parser.GetOffset(v) * _cache->feature_size;
+}
 
 GRIN_VERTEX_TYPE grin_get_vertex_type_from_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
     return _grin_get_type_from_property(vp);
@@ -229,6 +235,10 @@ int grin_get_edge_property_value_of_time32(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_
 long long int grin_get_edge_property_value_of_timestamp64(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
     GET_EDGE_VALUE
     return static_cast<const long long int*>(_cache->earrs[etype][eprop])[e.eid];
+}
+
+const float* grin_get_edge_property_value_of_float_array(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+    return NULL;
 }
 
 GRIN_EDGE_TYPE grin_get_edge_type_from_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
