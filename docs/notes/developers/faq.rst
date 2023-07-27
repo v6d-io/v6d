@@ -95,19 +95,10 @@ concerns, please feel free to `open an issue`_ or `post it to discussions`_.
 
 10. *Why the vineyard operator can't be deployed on Kubernetes?*
 
-  If you deploy the vineyard operator directly on Kubernetes, you may encounter the 
-  following error:
-
-  .. code:: shell
-
-      resource mapping not found for name: "vineyard-serving-cert" namespace: "vineyard-system" from "STDIN": no matches for kind "Certificate" in version "cert-manager.io/v1"
-      ensure CRDs are installed first
-      resource mapping not found for name: "vineyard-selfsigned-issuer" namespace: "vineyard-system" from "STDIN": no matches for kind "Issuer" in version "cert-manager.io/v1"
-      ensure CRDs are installed first
-
-  It is because the vineyard operator depends on the `cert-manager`_ to 
-  generate the TLS certificate for the vineyard cluster. So you need to install the 
-  cert-manager first.
+  If you use the helm to deploy the vineyard operator, you may find the vineyard operator
+  can't be deployed successfully after a long time. In this case, you should check whether
+  the command contains the flag `--wait`. If so, you should remove the flag `--wait` and
+  try to install the operator again.
 
 11. *How to connect to the vineyard cluster deployed by the vineyard operator?*
 

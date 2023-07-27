@@ -73,8 +73,7 @@ Deploy Vineyard
        $ helm repo update
        $ helm install vineyard-operator vineyard/vineyard-operator \
            --namespace vineyard-system \
-           --create-namespace \
-           --wait
+           --create-namespace
 
 2. Create a vineyard cluster:
 
