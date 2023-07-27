@@ -18,8 +18,10 @@ Refer to the [helm repo](https://helm.sh/docs/helm/helm_repo/) for more repo inf
 The webhook is enabled by default, please make sure you have the [Cert-Manager](https://cert-manager.io/docs/installation/) 
 installed, then deploy it in the `default` namespace as follows:
 
+> **NOTE:** DON'T add the flag `--wait` during the helm install, the operator will not be installed successfully if you add it. For more detail, please refer to [issue](https://github.com/v6d-io/v6d/issues/1490).
+
 ```shell
-$ helm install vineyard-operator vineyard/vineyard-operator --wait
+$ helm install vineyard-operator vineyard/vineyard-operator
 ```
 
 If you want to deploy it in a specific namespace, you can use the `--namespace` option:
@@ -27,8 +29,7 @@ If you want to deploy it in a specific namespace, you can use the `--namespace` 
 ```shell
 $ helm install vineyard-operator vineyard/vineyard-operator \
       --namespace vineyard-system \
-      --create-namespace \
-      --wait
+      --create-namespace
 ```
 
 If you want to set the value of the chart, you can use the `--set` option:
@@ -36,8 +37,7 @@ If you want to set the value of the chart, you can use the `--set` option:
 ```shell
 $ helm install vineyard-operator vineyard/vineyard-operator \
       --namespace vineyard-system \
-      --set controllerManager.manager.image.tag=v0.10.1 \
-      --wait
+      --set controllerManager.manager.image.tag=v0.10.1
 ```
 
 Refer to the [helm install](https://helm.sh/docs/helm/helm_install/) for more command information.
