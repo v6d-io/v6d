@@ -115,6 +115,8 @@ inline std::string GetDataTypeName(GRIN_DATATYPE type) {
     return "time32";
   case GRIN_DATATYPE::Timestamp64:
     return "timestamp64";
+  case GRIN_DATATYPE::FloatArray:
+    return "float_array";
   default:
     return "undefined";
   }
@@ -139,7 +141,9 @@ inline GRIN_DATATYPE ArrowToDataType(std::shared_ptr<arrow::DataType> type) {
     return GRIN_DATATYPE::String;
   } else if (arrow::large_utf8()->Equals(type)) {
     return GRIN_DATATYPE::String;
-  } 
+  } else if (type->id() == arrow::Type::FIXED_SIZE_LIST) {
+    return GRIN_DATATYPE::FloatArray;
+  }
   return GRIN_DATATYPE::Undefined;
 }
 
@@ -230,7 +234,6 @@ inline void _prepare_cache(GRIN_GRAPH_T* g) {
     g->cache->feature_size = 0;
     g->cache->id_parser = vineyard::IdParser<_GRIN_GRAPH_T::vid_t>();
     g->cache->id_parser.Init(g->g->fnum(), g->g->vertex_label_num());
-
     g->cache->vtype_names.resize(g->g->vertex_label_num());
     g->cache->varrays.resize(g->g->vertex_label_num());
     g->cache->varrs.resize(g->g->vertex_label_num());
