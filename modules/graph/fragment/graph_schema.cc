@@ -195,8 +195,8 @@ void Entry::RemoveProperty(const std::string& name) {
 }
 
 void Entry::RemoveProperty(const size_t index) {
-  props_.erase(props_.begin() + index);
-  valid_properties.erase(valid_properties.begin() + index);
+  // the next new property id will be generated based on the property size.
+  valid_properties[index] = 0;
 }
 
 void Entry::AddPrimaryKey(const std::string& key_name) {
