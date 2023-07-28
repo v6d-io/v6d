@@ -219,6 +219,11 @@ jobs:
 
           brew install coreutils || true
 
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
       - name: Build vineyardctl
         run: |
           export arch="${{ matrix.platform }}"
