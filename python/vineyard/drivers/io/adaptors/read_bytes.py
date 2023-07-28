@@ -150,10 +150,12 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
     # when reading from directories
     first_header_row = read_options.get("first_header_row", False)
     for k, v in read_options.items():
-        if k in ("header_row", "first_header_row", "include_all_columns"):
+        if k in ("header_row", "first_header_row", "include_all_columns", "accumulate"):
             params[k] = "1" if v else "0"
         elif k == "delimiter":
             params[k] = bytes(v, "utf-8").decode("unicode_escape")
+        elif not isinstance(v, str):
+            params[k] = repr(v)
         else:
             params[k] = v
 
