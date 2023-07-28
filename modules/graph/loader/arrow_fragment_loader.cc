@@ -149,7 +149,9 @@ Status ReadRecordBatchesFromVineyard(
     int part_num) {
   VLOG(10) << "loading table from vineyard: " << ObjectIDToString(object_id)
            << ", part id = " << part_id << ", part num = " << part_num;
-  auto source = client.GetObject(object_id);
+
+  std::shared_ptr<Object> source;
+  RETURN_ON_ERROR(client.GetObject(object_id, source));
   RETURN_ON_ASSERT(source != nullptr,
                    "Object not exists: " + ObjectIDToString(object_id));
   if (auto pstream = std::dynamic_pointer_cast<ParallelStream>(source)) {
