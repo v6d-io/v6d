@@ -240,12 +240,14 @@ inline void _prepare_cache(GRIN_GRAPH_T* g) {
     g->cache->vprop_names.resize(g->g->vertex_label_num());
 
     for (int i = 0; i < g->g->vertex_label_num(); ++i) {
+//    auto properties = _g->schema().GetEntry(vtype, "VERTEX").properties();
         g->cache->vtype_names[i] = g->g->schema().GetVertexLabelName(i);
         g->cache->varrays[i].resize(g->g->vertex_property_num(i));
         g->cache->varrs[i].resize(g->g->vertex_property_num(i));
         g->cache->vprop_names[i].resize(g->g->vertex_property_num(i));
+        auto properties = g->g->schema().GetEntry(i, "VERTEX").properties();
         for (int j = 0; j < g->g->vertex_property_num(i); ++j) {
-            g->cache->vprop_names[i][j] = g->g->schema().GetVertexPropertyName(i, j);
+            g->cache->vprop_names[i][j] = properties[j].name; //g->g->schema().GetVertexPropertyName(i, j);
             g->cache->varrays[i][j] = g->g->vertex_data_table(i)->column(j)->chunk(0);
             g->cache->varrs[i][j] = _GetArrowArrayData(g->g->vertex_data_table(i)->column(j)->chunk(0));
             if (g->g->vertex_data_table(i)->column(j)->chunk(0)->type()->id() == arrow::Type::FIXED_SIZE_LIST) {

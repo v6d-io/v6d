@@ -107,7 +107,8 @@ void grin_destroy_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {}
 
 GRIN_DATATYPE grin_get_vertex_property_datatype(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
-    auto dt = _g->schema().GetVertexPropertyType(_grin_get_type_from_property(vp), _grin_get_prop_from_property(vp));
+    auto properties = _g->schema().GetEntry(_grin_get_type_from_property(vp), "VERTEX").properties();
+    auto dt = _g->schema().GetVertexPropertyType(_grin_get_type_from_property(vp), properties[_grin_get_prop_from_property(vp)].id);
     return ArrowToDataType(dt);
 }
 
