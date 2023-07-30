@@ -67,7 +67,7 @@ func ApplyVineyardContainerOpts(c *v1alpha1.VineyardConfig,
 		"The directory on host for the IPC socket file. "+
 			"The namespace and name will be replaced with your vineyard config")
 	cmd.Flags().StringVarP(&c.Size, prefix+".size",
-		"", "",
+		"", "256Mi",
 		"The size of vineyardd. You can use the power-of-two equivalents: "+
 			"Ei, Pi, Ti, Gi, Mi, Ki. Defaults \"\", means not limited")
 	cmd.Flags().BoolVarP(&c.ReserveMemory, prefix+".reserve_memory",
