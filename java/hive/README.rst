@@ -8,42 +8,21 @@ Using docker to launch the hive server:
 
 .. code:: bash
 
-    export HIVE_VERSION=4.0.0-alpha-2
-    docker run \
-        --rm \
-        -it \
-        -p 10000:10000 \
-        -p 10002:10002 \
-        -v `pwd`/hive-warehouse:/opt/hive/data/warehouse \
-        -v `pwd`/java/hive/target:/opt/hive/auxlib \
-        --env HIVE_AUX_JARS_PATH=/opt/hive/auxlib/ \
-        --env SERVICE_NAME=hiveserver2 \
-        --env SERVICE_OPTS="-Djnr.ffi.asm.enabled=false" \
-        --name hive \
-        apache/hive:${HIVE_VERSION}
+    docker-compose up -d --force-recreate --remove-orphans
 
-If the result query is large, you may need to increase the memory of the hive server(e.g. Set max memory to 8G):
+If the result query is large, you may need to increase the memory of the hive server (e.g. Set max memory to 8G):
+
+Update the `SERVICE_O`
 
 .. code:: bash
 
-    docker run \
-        --rm \
-        -it \
-        -p 10000:10000 \
-        -p 10002:10002 \
-        -v `pwd`/hive-warehouse:/opt/hive/data/warehouse \
-        -v `pwd`/java/hive/target:/opt/hive/auxlib \
-        --env HIVE_AUX_JARS_PATH=/opt/hive/auxlib/ \
-        --env SERVICE_NAME=hiveserver2 \
-        --env SERVICE_OPTS="-Djnr.ffi.asm.enabled=false -Xmx8g" \
-        --name hive \
-        apache/hive:${HIVE_VERSION}
+    docker-compose up -d -e SERVICE_OPTS="-Xmx8G" --force-recreate --remove-orphans
 
 Connecting to the hive server:
 
 .. code:: bash
 
-    docker exec -it hive beeline -u 'jdbc:hive2://localhost:10000/'
+    docker exec -it hive beeline -u 'jdbc:hive2://localhost:10000/;transportMode=http;httpPath=cliservice'
 
 Refer to `apache/hive <https://hub.docker.com/r/apache/hive>`_ for detailed documentation.
 
@@ -253,3 +232,47 @@ Hive and Vineyard
             OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
         insert into table hive_dynamic_partition_test partition(mounth=1, year) select src_id,dst_id,year from hive_dynamic_partition_data;
         select * from hive_dynamic_partition_test;
+
+Connect to Hive from Spark
+--------------------------
+
+- Download hive 3.1.3, and unpack to somewhere:
+
+  .. code:: bash
+
+      wget https://downloads.apache.org/hive/hive-3.1.3/apache-hive-3.1.3-bin.tar.gz
+
+- Configure Spark session:
+
+  .. code:: scala
+
+      val conf = new SparkConf()
+      conf.setAppName("Spark on Vineyard")
+          // use local executor for development & testing
+          .setMaster("local[*]")
+          // ensure all executor ready
+          .set("spark.scheduler.minRegisteredResourcesRatio", "1.0")
+
+      val spark = SparkSession
+          .builder()
+          .config(conf)
+          .config("hive.metastore.uris", "thrift://localhost:9083")
+          .config("hive.metastore.sasl.enabled", "false")
+          .config("hive.server2.authentication", "NOSASL")
+          .config("hive.metastore.execute.setugi", "false")
+          .config("spark.sql.hive.metastore.version", "3.1.3")
+          .config("spark.sql.hive.metastore.jars", "path")
+          .config("spark.sql.hive.metastore.jars.path", "/opt/apache-hive-3.1.3-bin/lib/*")
+          .enableHiveSupport()
+          .getOrCreate()
+      val sc: SparkContext = spark.sparkContext
+
+- Use the session:
+
+  .. code:: scala
+
+      spark.sql(".....")
+
+      sc.stop()
+
+  Refer to `Spark/Hive <https://spark.apache.org/docs/latest/sql-data-sources-hive-tables.html>`_ for detailed documentation.

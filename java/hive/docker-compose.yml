@@ -1,0 +1,59 @@
+version: '3.5'
+
+services:
+  metastore:
+    image: apache/hive:3.1.3
+    restart: unless-stopped
+    container_name: metastore
+    hostname: metastore
+    environment:
+      DB_DRIVER: derby
+      SERVICE_NAME: 'metastore'
+      SERVICE_OPTS: '-Xmx1G
+                     -Dhive.server2.thrift.max.worker.threads=100
+                     -Djnr.ffi.asm.enabled=false
+                     ${SERVICE_OPTS}'
+      HIVE_AUX_JARS_PATH: /opt/hive/auxlib
+    networks:
+      - hive
+    ports:
+      - '9083:9083'
+    volumes:
+      - ../../hive-warehouse:/opt/hive/data/warehouse
+      - ../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
+      - ../../java/hive/hive-3.1.3-entrypoint.sh:/entrypoint.sh
+      - ../../java/hive/target:/opt/hive/auxlib
+      - ../../build:/tmp
+
+  hive:
+    image: apache/hive:3.1.3
+    depends_on:
+      - metastore
+    restart: unless-stopped
+    container_name: hive
+    environment:
+      HIVE_SERVER2_THRIFT_PORT: 10000
+      SERVICE_OPTS: '-Xmx1G
+                     -Dhive.metastore.uris=thrift://metastore:9083
+                     -Dhive.server2.thrift.max.worker.threads=100
+                     -Djnr.ffi.asm.enabled=false
+                     ${SERVICE_OPTS}'
+      IS_RESUME: 'true'
+      SERVICE_NAME: 'hiveserver2'
+      HIVE_AUX_JARS_PATH: '/opt/hive/auxlib'
+    networks:
+      - hive
+    ports:
+      - '10000:10000'
+      - '10002:10002'
+    volumes:
+      - ../../hive-warehouse:/opt/hive/data/warehouse
+      - ../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
+      - ../../java/hive/hive-3.1.3-entrypoint.sh:/entrypoint.sh
+      - ../../java/hive/target:/opt/hive/auxlib
+      - ../../build:/tmp
+
+networks:
+  hive:
+    name: hive-ns
+    driver: bridge

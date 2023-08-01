@@ -14,6 +14,7 @@
  */
 package io.v6d.hive.ql.io;
 
+import java.util.Arrays;
 import java.util.Properties;
 import java.util.List;
 import java.util.ArrayList;
@@ -26,6 +27,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 
 public class VineyardSerDe extends ArrowColumnarBatchSerDe {
     StructTypeInfo rowTypeInfo;
@@ -34,7 +36,23 @@ public class VineyardSerDe extends ArrowColumnarBatchSerDe {
     public void initialize(Configuration configuration, Properties tableProperties, Properties partitionProperties)
         throws SerDeException {
         super.initialize(configuration, tableProperties, partitionProperties);
-        rowTypeInfo = (StructTypeInfo) TypeInfoFactory.getStructTypeInfo(getColumnNames(), getColumnTypes());
+        String columnNameProperty = tableProperties.getProperty("columns");
+        String columnTypeProperty = tableProperties.getProperty("columns.types");
+        String columnNameDelimiter = tableProperties.containsKey("column.name.delimiter") ? tableProperties.getProperty("column.name.delimiter") : String.valueOf(',');
+        Object columnNames;
+        if (columnNameProperty.length() == 0) {
+            columnNames = new ArrayList();
+        } else {
+            columnNames = Arrays.asList(columnNameProperty.split(columnNameDelimiter));
+        }
+
+        ArrayList columnTypes;
+        if (columnTypeProperty.length() == 0) {
+            columnTypes = new ArrayList();
+        } else {
+            columnTypes = TypeInfoUtils.getTypeInfosFromTypeString(columnTypeProperty);
+        }
+        rowTypeInfo = (StructTypeInfo) TypeInfoFactory.getStructTypeInfo((List)columnNames, columnTypes);
     }
 
     @Override
