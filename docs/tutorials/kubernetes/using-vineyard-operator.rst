@@ -159,7 +159,7 @@ Deploy the vineyard operator in the namespace ``vineyard-system``.
 
 .. code:: bash
 
-    $ helm install vineyard-operator vineyard/vineyard-operator -n vineyard-system --wait
+    $ helm install vineyard-operator vineyard/vineyard-operator -n vineyard-system
 
 .. admonition:: Expected output
    :class: admonition-details

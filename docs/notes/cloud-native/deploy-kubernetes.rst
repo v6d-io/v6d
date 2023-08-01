@@ -28,8 +28,7 @@ Option #1: Install from helm chart (recommended)
     $ helm repo update
     $ helm install vineyard-operator vineyard/vineyard-operator \
           --namespace vineyard-system \
-          --create-namespace \
-          --wait
+          --create-namespace
 
 Wait for the vineyard operator until ready.
 
