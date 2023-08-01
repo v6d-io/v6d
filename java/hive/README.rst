@@ -12,8 +12,6 @@ Using docker to launch the hive server:
 
 If the result query is large, you may need to increase the memory of the hive server (e.g. Set max memory to 8G):
 
-Update the `SERVICE_O`
-
 .. code:: bash
 
     docker-compose up -d -e SERVICE_OPTS="-Xmx8G" --force-recreate --remove-orphans
