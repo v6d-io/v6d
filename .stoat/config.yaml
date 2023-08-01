@@ -63,3 +63,8 @@ plugins:
         name: "deploy-raw-backup-and-recover-logs"
       path: e2e-tests-deploy-raw-backup-and-recover-logs
       file_viewer: true
+    e2e-tests-schedule-workload-logs:
+      metadata:
+        name: "schedule-workload-logs"
+      path: e2e-tests-schedule-workload-logs
+      file_viewer: true

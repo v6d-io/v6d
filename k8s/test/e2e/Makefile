@@ -358,7 +358,7 @@ e2e-tests-vineyardctl: prepare-e2e-test build-local-cluster load-vineyardd-image
 	@make delete-local-cluster
 .PHONY: e2e-tests-vineyardctl
 
-############# vineyardctl testing ################################################
+############# backup and recover testing ################################################
 
 e2e-tests-deploy-raw-backup-and-recover: prepare-e2e-test build-local-cluster load-vineyardd-image
 	@echo "Running vineyardctl backup and recover e2e test..."
@@ -366,6 +366,15 @@ e2e-tests-deploy-raw-backup-and-recover: prepare-e2e-test build-local-cluster lo
 	@echo "vineyardctl backup and recover e2e test passed."
 	@make delete-local-cluster
 .PHONY: e2e-tests-deploy-raw-backup-and-recover
+
+############# schedule workload testing ################################################
+
+e2e-tests-schedule-workload: prepare-e2e-test build-local-cluster load-vineyardd-image
+	@echo "Running schedule workload e2e test..."
+	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/schedule-workload/e2e.yaml
+	@echo "schedule workload e2e test passed."
+	@make delete-local-cluster
+.PHONY: e2e-tests-schedule-workload
 
 # publish all images to ghcr registry
 ALL-IMAGES ?= \
