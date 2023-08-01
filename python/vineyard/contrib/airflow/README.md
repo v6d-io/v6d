@@ -55,6 +55,10 @@ Configuration <a name="configuration"/>
    or
 
        export VINEYARD_IPC_SOCKET=/tmp/vineyard.sock
+    
+    If you have deployed a distributed vineyard cluster, you can also specify the `persist` environment to enable the vineyard client to persist the data to the vineyard cluster.
+
+       export AIRFLOW__VINEYARD__PERSIST=true
 
 Usage <a name="usage"/>
 -----
@@ -128,14 +132,30 @@ Deploy using Docker Compose <a name="deploy-using-docker-compose"/>
 ---------------------------
 
 We provide a reference docker-compose settings (see [docker-compose.yaml](./docker/docker-compose.yaml))
-for deploying airflow with vineyard as the XCom backend on Docker Compose.
+for deploying airflow with vineyard as the XCom backend on Docker Compose. For more details, please refer to [the official documentation](https://airflow.apache.org/docs/apache-airflow/stable/howto/docker-compose/index.html).
 
-The docker-compose containers cloud be deployed as
+Before deploying the docker-compose, you need to initialize the environment as follows.
+
+```bash
+$ mkdir -p ./dags ./logs ./plugins ./config
+$ echo -e "AIRFLOW_UID=$(id -u)" > .env
+```
+
+Then, copy the example dags to the `./dags` directory.
+
+```bash
+$ cp examples_dags/v6d*.py ./dags
+```
+
+After that, the docker-compose containers could be deployed as
 
 ```bash
 $ cd docker/
+$ docker build . -f Dockerfile -t vineyardcloudnative/vineyard-airflow:2.6.3
 $ docker compose up
 ```
+
+You can see the added DAGs and run them via [web ui](https://airflow.apache.org/docs/apache-airflow/stable/ui.html) or [cli](https://airflow.apache.org/docs/apache-airflow/stable/howto/usage-cli.html).
 
 We have also included a diff file [docker-compose.yaml.diff](./docker/docker-compose.yaml.diff) that shows
 the changed pieces that can be introduced into your own docker compose deployment.
@@ -146,12 +166,13 @@ Deploy on Kubernetes <a name="deploy-on-kubernetes"/>
 We provide a reference settings (see [values.yaml](./values.yaml)) for deploying
 airflow with vineyard as the XCom backend on Kubernetes, based on [the official helm charts][3].
 
-Deploying vineyard requires etcd, to ease to deploy process, you first need to
-setup a standalone etcd cluster. A _test_ etcd cluster with only one instance can
-be deployed by
+Next, we will show how to deploy airflow with vineyard on Kubernetes using the helm chart.
+
+You are supposed to deploy the vineyard cluster on the
+kubernetes cluster first. For example, you can deploy a vineyard cluster with the [vineyardctl command](https://github.com/v6d-io/v6d/tree/main/k8s/cmd#vineyardctl).
 
 ```bash
-$ kubectl create -f etcd.yaml
+$ vineyardctl deploy vineyard-deployment --create-namespace
 ```
 
 The [values.yaml](./values.yaml) mainly tweak the following settings:
@@ -172,8 +193,16 @@ $ helm repo add apache-airflow https://airflow.apache.org
 $ helm repo update
 
 # deploy airflow
-$ helm install -f values.yaml $RELEASE_NAME apache-airflow/airflow --namespace $NAMESPACE
+$ helm install -f values.yaml airflow apache-airflow/airflow --namespace airflow --create-namespace
 ```
+
+If you want to put the vineyard example DAGs into the airflow scheduler pods, you can use the following command.
+
+```bash
+$ kubectl cp ./example_dags/v6d_etl.py $(kubectl get pod -lcomponent=scheduler -n airflow -o jsonpath='{.items[0].metadata.name}'):/opt/airflow/dags -c scheduler -n airflow
+```
+
+You may wait for a while until the scheduler pod detects the DAGs under the `/opt/airflow/dags` directory.
 
 [1]: https://v6d.io/notes/getting-started.html#starting-vineyard-server
 [2]: https://airflow.apache.org/docs/apache-airflow/stable/tutorial_taskflow_api.html
