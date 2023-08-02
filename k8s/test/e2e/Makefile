@@ -376,6 +376,15 @@ e2e-tests-schedule-workload: prepare-e2e-test build-local-cluster load-vineyardd
 	@make delete-local-cluster
 .PHONY: e2e-tests-schedule-workload
 
+############# airflow integration testing ################################################
+
+e2e-tests-airflow-integration: prepare-e2e-test build-local-cluster load-vineyardd-image
+	@echo "Running airflow integration e2e test..."
+	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/airflow-integration/e2e.yaml
+	@echo "airflow integration e2e test passed."
+	@make delete-local-cluster
+.PHONY: e2e-tests-airflow-integration
+
 # publish all images to ghcr registry
 ALL-IMAGES ?= \
 publish-local-assembly-images \

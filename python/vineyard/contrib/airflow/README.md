@@ -56,7 +56,7 @@ Configuration <a name="configuration"/>
 
        export VINEYARD_IPC_SOCKET=/tmp/vineyard.sock
     
-    If you have deployed a distributed vineyard cluster, you can also specify the `persist` environment to enable the vineyard client to persist the data to the vineyard cluster.
+   If you have deployed a distributed vineyard cluster, you can also specify the `persist` environment to enable the vineyard client to persist the data to the vineyard cluster.
 
        export AIRFLOW__VINEYARD__PERSIST=true
 
@@ -196,13 +196,13 @@ $ helm repo update
 $ helm install -f values.yaml airflow apache-airflow/airflow --namespace airflow --create-namespace
 ```
 
-If you want to put the vineyard example DAGs into the airflow scheduler pods, you can use the following command.
+If you want to put the vineyard example DAGs into the airflow scheduler pod and the worker pod, you can use the following command.
 
 ```bash
 $ kubectl cp ./example_dags/v6d_etl.py $(kubectl get pod -lcomponent=scheduler -n airflow -o jsonpath='{.items[0].metadata.name}'):/opt/airflow/dags -c scheduler -n airflow
-```
+$ kubectl cp ./example_dags/v6d_etl.py $(kubectl get pod -lcomponent=worker -n airflow -o jsonpath='{.items[0].metadata.name}'):/opt/airflow/dags -c worker -n airflow
 
-You may wait for a while until the scheduler pod detects the DAGs under the `/opt/airflow/dags` directory.
+```
 
 [1]: https://v6d.io/notes/getting-started.html#starting-vineyard-server
 [2]: https://airflow.apache.org/docs/apache-airflow/stable/tutorial_taskflow_api.html

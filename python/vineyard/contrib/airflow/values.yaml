@@ -79,6 +79,9 @@ workers:
 
 # Airflow scheduler settings
 scheduler:
+  env:
+  - name: AIRFLOW__SCHEDULER__DAG_DIR_LIST_INTERVAL
+    value: "10"
   # Mount additional volumes into scheduler. It can be templated like in the following example:
   #   extraVolumes:
   #     - name: my-templated-extra-volume

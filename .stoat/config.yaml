@@ -3,6 +3,11 @@ version: 1
 enabled: true
 plugins:
   static_hosting:
+    e2e-tests-airflow-integration-logs:
+      metadata:
+        name: "airflow-integration-logs"
+      path: e2e-tests-airflow-integration-logs
+      file_viewer: true
     e2e-tests-assembly-local-logs:
       metadata:
         name: "assembly-local-logs"
