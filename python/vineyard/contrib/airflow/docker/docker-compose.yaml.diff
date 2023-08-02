@@ -1,14 +1,11 @@
-diff --git a/docker-compose-origin.2.3.2.yaml b/docker-compose.yaml
-index 3f890839..bd51ae08 100644
---- a/docker-compose-origin.2.3.2.yaml
-+++ b/docker-compose.yaml
-@@ -44,8 +44,13 @@ x-airflow-common:
+--- docker-compose.origin.2.6.3.yaml	2023-08-01 14:06:19.556794935 +0800
++++ docker-compose.yaml	2023-08-01 14:04:30.552640301 +0800
+@@ -50,8 +50,12 @@
    # In order to add custom dependencies or upgrade provider packages you can use your extended image.
    # Comment the image line, place your Dockerfile in the directory where you placed the docker-compose.yaml
    # and uncomment the "build" line below, Then run `docker-compose build` to build the images.
--  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.3.2}
-+  # image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.3.2}
-+  image: vineyardcloudnative/vineyard-airflow:2.3.2
+-  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:2.6.3}
++  image: vineyardcloudnative/vineyard-airflow:2.6.3
    # build: .
 +  build:
 +    context: .
@@ -17,7 +14,7 @@ index 3f890839..bd51ae08 100644
    environment:
      &airflow-common-env
      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
-@@ -129,7 +134,25 @@ services:
+@@ -147,7 +151,25 @@
  
    airflow-worker:
      <<: *airflow-common

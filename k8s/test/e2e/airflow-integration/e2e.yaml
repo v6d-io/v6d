@@ -1,0 +1,56 @@
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+setup:
+  env: kind
+  kubeconfig: /tmp/e2e-k8s.config
+  steps:
+    - name: create the vineyard deployment
+      command: |
+        go run k8s/cmd/main.go deploy vineyard-deployment \
+          --vineyardd.image="localhost:5001/vineyardd:alpine-latest" \
+          --create-namespace
+    - name: deploy the airflow
+      command: |
+        helm repo add apache-airflow https://airflow.apache.org
+        helm repo update
+        cd python/vineyard/contrib/airflow
+        helm install -f values.yaml airflow apache-airflow/airflow \
+          --namespace airflow --create-namespace
+    - name: put the vineyard example DAGs into the airflow scheduler pod
+      command: |
+        cd python/vineyard/contrib/airflow
+        kubectl cp ./example_dags/v6d_etl.py $(kubectl get pod -lcomponent=scheduler -n airflow -o jsonpath='{.items[0].metadata.name}'):/opt/airflow/dags -c scheduler -n airflow
+    - name: trigger the DAG
+      command: |
+        kubectl exec -n airflow -c scheduler $(kubectl get pod -lcomponent=scheduler -n airflow -o jsonpath='{.items[0].metadata.name}') -- airflow dags test taskflow_etl
+  timeout: 20m
+
+cleanup:
+  # always never success failure
+  on: success
+
+verify:
+  # verify with retry strategy
+  retry:
+    # max retry count
+    count: 10
+    # the interval between two attempts, e.g. 10s, 1m.
+    interval: 10s
+  cases:
+    - query: |
+        kubectl exec -n airflow -c webserver $(kubectl get pod -lcomponent=webserver -n airflow -o jsonpath='{.items[0].metadata.name}') -- \
+        airflow dags list-runs -d taskflow_etl | grep -q "success" && echo "DAG is successful" || echo "DAG is failed"
+      expected: ../verify/dag-success.yaml
