@@ -63,7 +63,7 @@ jobs:
           - e2e-tests-failover
           - e2e-tests-repartition-dask
           - e2e-tests-scheduler-outside-cluster
-          - e2e-tests-schedule-workload-logs
+          - e2e-tests-schedule-workload
           - e2e-tests-serialize
           - e2e-tests-sidecar
           - e2e-tests-spill
