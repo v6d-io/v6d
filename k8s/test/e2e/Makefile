@@ -331,14 +331,14 @@ e2e-tests-workflow: prepare-e2e-test install-vineyard-cluster
 	@make delete-local-cluster
 .PHONY: e2e-tests-workflow
 
-############# scheduler outside cluster testing ################################################
+############# schedule workflow testing ################################################
 
-e2e-tests-scheduler-outside-cluster: prepare-e2e-test install-vineyard-cluster
-	@echo "Running scheduler outside cluster e2e test..."
-	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/scheduling-outside-cluster/e2e.yaml
-	@echo "scheduler outside cluster e2e test passed."
+e2e-tests-schedule-workflow: prepare-e2e-test install-vineyard-cluster
+	@echo "Running schedule workflow e2e test..."
+	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/schedule-workflow/e2e.yaml
+	@echo "schedule workflow e2e test passed."
 	@make delete-local-cluster
-.PHONY: e2e-tests-scheduler-outside-cluster
+.PHONY: e2e-tests-schedule-workflow
 
 ############# mars showcase testing ################################################
 

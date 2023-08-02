@@ -28,10 +28,10 @@ plugins:
         name: "repartition-dask-logs"
       path: e2e-tests-repartition-dask-logs
       file_viewer: true
-    e2e-tests-scheduler-outside-cluster-logs:
+    e2e-tests-schedule-workflow-logs:
       metadata:
-        name: "scheduler-outside-cluster-logs"
-      path: e2e-tests-scheduler-outside-cluster-logs
+        name: "schedule-workflow-logs"
+      path: e2e-tests-schedule-workflow-logs
       file_viewer: true
     e2e-tests-serialize-logs:
       metadata:
