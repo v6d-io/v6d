@@ -19,7 +19,6 @@ setup:
   steps:
     - name: scheduling workload
       command: |
-        exit
         kubectl create ns vineyard-job
         go run k8s/cmd/main.go schedule workflow -f k8s/test/e2e/schedule-workflow-demo/test.yaml
   timeout: 20m

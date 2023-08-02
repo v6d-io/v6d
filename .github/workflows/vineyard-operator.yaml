@@ -311,7 +311,7 @@ jobs:
               signed_url_key=3d07
               ;;
             e2e-tests-schedule-workflow)
-              signed_url_key=0c6a
+              signed_url_key=44c1
               ;;
             e2e-tests-deploy-raw-backup-and-recover)
               signed_url_key=6552
