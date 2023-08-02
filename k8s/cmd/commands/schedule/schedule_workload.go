@@ -102,7 +102,10 @@ var (
 	                operator: In
 	                values:
 	                - vineyard-system-vineyardd-sample
+	            namespaces:
+	            - vineyard-system
 	            topologyKey: kubernetes.io/hostname
+
 	      containers:
 	      - command:
 	        - python
@@ -299,6 +302,7 @@ func SchedulingWorkload(c client.Client,
 				},
 			},
 			"topologyKey": "kubernetes.io/hostname",
+			"namespaces":  []interface{}{flags.VineyarddNamespace},
 		},
 	}
 

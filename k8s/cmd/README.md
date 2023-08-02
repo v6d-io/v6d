@@ -1799,7 +1799,10 @@ spec:
                 operator: In
                 values:
                 - vineyard-system-vineyardd-sample
+            namespaces:
+            - vineyard-system
             topologyKey: kubernetes.io/hostname
+
       containers:
       - command:
         - python

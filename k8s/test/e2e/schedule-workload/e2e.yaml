@@ -1,0 +1,55 @@
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+setup:
+  env: kind
+  kubeconfig: /tmp/e2e-k8s.config
+  steps:
+    - name: deploy the vineyard deployment
+      command: |
+        go run k8s/cmd/main.go deploy vineyard-deployment --vineyardd.image="localhost:5001/vineyardd:alpine-latest" --create-namespace
+    - name: schedule the produce workload
+      command: |
+        kubectl create ns vineyard-job
+        go run k8s/cmd/main.go schedule workload -f k8s/test/e2e/schedule-workload-demo/producer.yaml | kubectl apply -f -
+      wait:
+        - namespace: vineyard-job
+          resource: deployment/producer
+          for: condition=Available
+    - name: schedule the consume workload
+      command: |
+        go run k8s/cmd/main.go schedule workload -f k8s/test/e2e/schedule-workload-demo/consumer.yaml | kubectl apply -f -
+      wait:
+        - namespace: vineyard-job
+          resource: deployment/consumer
+          for: condition=Available
+  timeout: 20m
+
+cleanup:
+  # always never success failure
+  on: success
+
+verify:
+  # verify with retry strategy
+  retry:
+    # max retry count
+    count: 10
+    # the interval between two attempts, e.g. 10s, 1m.
+    interval: 10s
+  cases:
+    - query: |
+        kubectl logs --tail 1 $(kubectl get pod -lapp=consumer -n vineyard-job -o jsonpath='{.items[0].metadata.name}') \
+        -n vineyard-job
+      expected: ../verify/basic-types-unit.yaml
