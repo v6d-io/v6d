@@ -32,7 +32,7 @@ public class DoubleArrayBuilder implements ArrayBuilder {
         this.array = new Float8Vector("", Arrow.default_allocator);
         this.buffer = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode((int)length, 0), Arrays.asList(null, buffer.getBuffer()));
     }
 
     @Override

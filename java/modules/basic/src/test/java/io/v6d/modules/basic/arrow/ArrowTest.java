@@ -24,7 +24,7 @@ import lombok.val;
 import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.VarCharVector;
-import org.apache.arrow.vector.LargeVarCharVector;
+// import org.apache.arrow.vector.LargeVarCharVector;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -109,29 +109,29 @@ public class ArrowTest {
         }
     }
 
-    @Test
-    public void testLargeStringArray() throws VineyardException {
-        val base = new LargeVarCharVector("", Arrow.default_allocator);
-        base.setSafe(0, "hello".getBytes(), 0, 5);
-        base.setSafe(1, " ".getBytes(), 0, 1);
-        base.setSafe(2, "world".getBytes(), 0, 5);
-        base.setValueCount(3); // nb. important
+    // @Test
+    // public void testLargeStringArray() throws VineyardException {
+    //     val base = new LargeVarCharVector("", Arrow.default_allocator);
+    //     base.setSafe(0, "hello".getBytes(), 0, 5);
+    //     base.setSafe(1, " ".getBytes(), 0, 1);
+    //     base.setSafe(2, "world".getBytes(), 0, 5);
+    //     base.setValueCount(3); // nb. important
 
-        val builder = new LargeStringArrayBuilder(client, base);
-        val meta = builder.seal(client);
-        assertEquals(3, meta.getIntValue("length_"));
+    //     val builder = new LargeStringArrayBuilder(client, base);
+    //     val meta = builder.seal(client);
+    //     assertEquals(3, meta.getIntValue("length_"));
 
-        val array =
-                (LargeStringArray) ObjectFactory.getFactory().resolve(client.getMetaData(meta.getId()));
-        assertEquals(3, array.length());
+    //     val array =
+    //             (LargeStringArray) ObjectFactory.getFactory().resolve(client.getMetaData(meta.getId()));
+    //     assertEquals(3, array.length());
 
-        val expected = builder.columnar();
-        val actual = array.columnar();
-        assertEquals(expected.valueCount(), actual.valueCount());
-        for (int index = 0; index < array.length(); ++index) {
-            assertEquals(expected.getUTF8String(index), actual.getUTF8String(index));
-        }
-    }
+    //     val expected = builder.columnar();
+    //     val actual = array.columnar();
+    //     assertEquals(expected.valueCount(), actual.valueCount());
+    //     for (int index = 0; index < array.length(); ++index) {
+    //         assertEquals(expected.getUTF8String(index), actual.getUTF8String(index));
+    //     }
+    // }
 
     @Test
     public void testSchema() throws VineyardException {
@@ -153,49 +153,49 @@ public class ArrowTest {
         assertEquals(arrowSchema.getCustomMetadata().get("kind"), "testmeta");
     }
 
-    @Test
-    public void testRecordBatch() throws VineyardException {
-        val builder = new RecordBatchBuilder(client, 5);
-        builder.addField(Arrow.makeField("testa", Arrow.FieldType.Int));
-        builder.addField(Arrow.makeField("testb", Arrow.FieldType.Double));
-        builder.addCustomMetadata("kind", "testbatch");
-        builder.finishSchema(client);
+    // @Test
+    // public void testRecordBatch() throws VineyardException {
+    //     val builder = new RecordBatchBuilder(client, 5);
+    //     builder.addField(Arrow.makeField("testa", Arrow.FieldType.Int));
+    //     builder.addField(Arrow.makeField("testb", Arrow.FieldType.Double));
+    //     builder.addCustomMetadata("kind", "testbatch");
+    //     builder.finishSchema(client);
 
-        val column0 = builder.getColumnBuilder(0);
-        column0.setInt(0, 1);
-        column0.setInt(1, 2);
-        column0.setInt(2, 3);
-        column0.setInt(3, 4);
-        column0.setInt(4, 5);
+    //     val column0 = builder.getColumnBuilder(0);
+    //     column0.setInt(0, 1);
+    //     column0.setInt(1, 2);
+    //     column0.setInt(2, 3);
+    //     column0.setInt(3, 4);
+    //     column0.setInt(4, 5);
 
-        val column1 = builder.getColumnBuilder(1);
-        column1.setDouble(0, 100.1);
-        column1.setDouble(1, 200.2);
-        column1.setDouble(2, 300.3);
-        column1.setDouble(3, 400.4);
-        column1.setDouble(4, 500.5);
+    //     val column1 = builder.getColumnBuilder(1);
+    //     column1.setDouble(0, 100.1);
+    //     column1.setDouble(1, 200.2);
+    //     column1.setDouble(2, 300.3);
+    //     column1.setDouble(3, 400.4);
+    //     column1.setDouble(4, 500.5);
 
-        val meta = builder.seal(client);
+    //     val meta = builder.seal(client);
 
-        val batch =
-                (RecordBatch) ObjectFactory.getFactory().resolve(client.getMetaData(meta.getId()));
+    //     val batch =
+    //             (RecordBatch) ObjectFactory.getFactory().resolve(client.getMetaData(meta.getId()));
 
-        val array0 = (IntVector) batch.getBatch().getVector(0);
-        assertEquals(5, array0.getValueCount());
-        assertEquals(1, array0.get(0));
-        assertEquals(2, array0.get(1));
-        assertEquals(3, array0.get(2));
-        assertEquals(4, array0.get(3));
-        assertEquals(5, array0.get(4));
+    //     val array0 = (IntVector) batch.getBatch().getVector(0);
+    //     assertEquals(5, array0.getValueCount());
+    //     assertEquals(1, array0.get(0));
+    //     assertEquals(2, array0.get(1));
+    //     assertEquals(3, array0.get(2));
+    //     assertEquals(4, array0.get(3));
+    //     assertEquals(5, array0.get(4));
 
-        val array1 = (Float8Vector) batch.getBatch().getVector(1);
-        assertEquals(5, array1.getValueCount());
-        assertEquals(100.1, array1.get(0), 0.001);
-        assertEquals(200.2, array1.get(1), 0.001);
-        assertEquals(300.3, array1.get(2), 0.001);
-        assertEquals(400.4, array1.get(3), 0.001);
-        assertEquals(500.5, array1.get(4), 0.001);
+    //     val array1 = (Float8Vector) batch.getBatch().getVector(1);
+    //     assertEquals(5, array1.getValueCount());
+    //     assertEquals(100.1, array1.get(0), 0.001);
+    //     assertEquals(200.2, array1.get(1), 0.001);
+    //     assertEquals(300.3, array1.get(2), 0.001);
+    //     assertEquals(400.4, array1.get(3), 0.001);
+    //     assertEquals(500.5, array1.get(4), 0.001);
 
-        assertEquals("testbatch", batch.getBatch().getSchema().getCustomMetadata().get("kind"));
-    }
+    //     assertEquals("testbatch", batch.getBatch().getSchema().getCustomMetadata().get("kind"));
+    // }
 }

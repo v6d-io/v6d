@@ -24,7 +24,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public final class Arrow {
-    public static final RootAllocator default_allocator = new RootAllocator();
+    public static final RootAllocator default_allocator = new RootAllocator(Long.MAX_VALUE);
     public static final Logger logger = LoggerFactory.getLogger(Arrow.class);
 
     public static class Type {
@@ -38,9 +38,9 @@ public final class Arrow {
         public static final ArrowType Double =
                 new ArrowType.FloatingPoint(FloatingPointPrecision.DOUBLE);
         public static final ArrowType Boolean = new ArrowType.Bool();
-        public static final ArrowType LargeVarChar = new ArrowType.LargeUtf8();
+        // public static final ArrowType LargeVarChar = new ArrowType.LargeUtf8();
         public static final ArrowType VarChar = new ArrowType.Utf8();
-        public static final ArrowType VarBinary = new ArrowType.LargeBinary();
+        // public static final ArrowType VarBinary = new ArrowType.LargeBinary();
     }
 
     public static class FieldType {
@@ -60,12 +60,12 @@ public final class Arrow {
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.Double, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType Boolean =
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.Boolean, null);
-        public static final org.apache.arrow.vector.types.pojo.FieldType LargeVarChar =
-                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.LargeVarChar, null);
+        // public static final org.apache.arrow.vector.types.pojo.FieldType LargeVarChar =
+        //         new org.apache.arrow.vector.types.pojo.FieldType(false, Type.LargeVarChar, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType VarChar =
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.VarChar, null);
-        public static final org.apache.arrow.vector.types.pojo.FieldType VarBinary =
-                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.VarBinary, null);
+        // public static final org.apache.arrow.vector.types.pojo.FieldType VarBinary =
+        //         new org.apache.arrow.vector.types.pojo.FieldType(false, Type.VarBinary, null);
     }
 
     public static Field makeField(

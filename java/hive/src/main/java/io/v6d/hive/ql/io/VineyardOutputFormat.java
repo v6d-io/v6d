@@ -263,6 +263,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             System.out.println("Table persisted, name:" + tableName);
             client.putName(meta.getId(), tableName);
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             throw new IOException("Seal TableBuilder failed");
         }
         client.disconnect();
@@ -298,9 +299,9 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                         return new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC");
                     case BINARY:
                         return Types.MinorType.VARBINARY.getType();
-                    case DECIMAL:
-                        final DecimalTypeInfo decimalTypeInfo = (DecimalTypeInfo) typeInfo;
-                        return new ArrowType.Decimal(decimalTypeInfo.precision(), decimalTypeInfo.scale(), 128);
+                    // case DECIMAL:
+                    //     final DecimalTypeInfo decimalTypeInfo = (DecimalTypeInfo) typeInfo;
+                    //     return new ArrowType.Decimal(decimalTypeInfo.precision(), decimalTypeInfo.scale(), 128);
                     case INTERVAL_YEAR_MONTH:
                         return Types.MinorType.INTERVALYEAR.getType();
                     case INTERVAL_DAY_TIME:
@@ -315,8 +316,8 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                 return ArrowType.List.INSTANCE;
             case STRUCT:
                 return ArrowType.Struct.INSTANCE;
-            case MAP:
-                return new ArrowType.Map(false);
+            // case MAP:
+            //     return new ArrowType.Map(false);
             case UNION:
                 default:
                 throw new IllegalArgumentException();
@@ -342,6 +343,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             fillRecordBatchBuilder(schema);
             System.out.println("Fill done!");
         } catch (Exception e) {
+            System.out.println(e.getMessage());
             System.out.println("Create record batch builder failed");
         }
     }

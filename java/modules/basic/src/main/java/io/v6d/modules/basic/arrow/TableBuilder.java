@@ -69,6 +69,7 @@ public class TableBuilder implements ObjectBuilder {
 
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
+        System.out.println("seal table");
         this.build(client);
 
         val meta = ObjectMeta.empty();
@@ -79,12 +80,16 @@ public class TableBuilder implements ObjectBuilder {
         meta.setValue("num_columns_", schemaBuilder.getFields().size());
         meta.addMember("schema_", schemaBuilder.seal(client));
 
+        System.out.println("seal schema done.");
         meta.setValue("__batches_-size", batches.size());
+        System.out.println("Seal batches");
+        System.out.println("batches size: " + batches.size());
         for (int index = 0; index < batches.size(); ++index) {
             meta.addMember("__batches_-" + index, batches.get(index).seal(client));
         }
         meta.setNBytes(0); // FIXME
 
+        System.out.println("create table meta data");
         return client.createMetaData(meta);
     }
 }

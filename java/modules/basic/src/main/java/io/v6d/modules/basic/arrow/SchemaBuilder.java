@@ -42,8 +42,11 @@ public class SchemaBuilder implements ObjectBuilder {
 
     public static SchemaBuilder fromSchema(Schema schema) {
         val builder = new SchemaBuilder();
+        System.out.println("construct fields");
         builder.fields = schema.getFields();
+        System.out.println("construct metadata");
         builder.customMetadata = schema.getCustomMetadata();
+        System.out.println("return builder");
         return builder;
     }
 
@@ -72,16 +75,20 @@ public class SchemaBuilder implements ObjectBuilder {
     @SneakyThrows(IOException.class)
     public void build(Client client) throws VineyardException {
         val bytes = SchemaSerializer.serialize(new Schema(fields, customMetadata));
+        System.out.println("copy data to buffer");
         this.buffer = BufferBuilder.fromByteArray((IPCClient) client, bytes);
+        System.out.println("Write done");
     }
 
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
+        System.out.println("seal schema");
         this.build(client);
         val meta = ObjectMeta.empty();
         meta.setTypename("vineyard::SchemaProxy");
         meta.setNBytes(buffer.length());
         meta.addMember("buffer_", buffer.seal(client));
+        System.out.println("return schema meta");
         return client.createMetaData(meta);
     }
 }

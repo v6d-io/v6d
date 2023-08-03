@@ -22,37 +22,68 @@ import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.io.arrow.ArrowColumnarBatchSerDe;
 import org.apache.hadoop.hive.serde2.SerDeException;
+import org.apache.hadoop.hive.serde2.SerDeUtils;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoFactory;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 
 public class VineyardSerDe extends ArrowColumnarBatchSerDe {
     StructTypeInfo rowTypeInfo;
-    
+    ArrayList<TypeInfo> columnTypeInfos;
+
     @Override
-    public void initialize(Configuration configuration, Properties tableProperties, Properties partitionProperties)
-        throws SerDeException {
-        super.initialize(configuration, tableProperties, partitionProperties);
-        String columnNameProperty = tableProperties.getProperty("columns");
-        String columnTypeProperty = tableProperties.getProperty("columns.types");
-        String columnNameDelimiter = tableProperties.containsKey("column.name.delimiter") ? tableProperties.getProperty("column.name.delimiter") : String.valueOf(',');
-        Object columnNames;
+    public void initialize(Configuration configuration, Properties tbl) throws SerDeException {
+        super.initialize(configuration, tbl);
+        String columnNameProperty = tbl.getProperty("columns");
+        String columnTypeProperty = tbl.getProperty("columns.types");
+        String columnNameDelimiter = tbl.containsKey("column.name.delimiter") ? tbl.getProperty("column.name.delimiter") : String.valueOf(',');
+        List<String> columnNames;
         if (columnNameProperty.length() == 0) {
-            columnNames = new ArrayList();
+            columnNames = new ArrayList<String>();
         } else {
             columnNames = Arrays.asList(columnNameProperty.split(columnNameDelimiter));
         }
 
-        ArrayList columnTypes;
+        // ArrayList columnTypes;
         if (columnTypeProperty.length() == 0) {
-            columnTypes = new ArrayList();
+            columnTypeInfos = new ArrayList<TypeInfo>();
         } else {
-            columnTypes = TypeInfoUtils.getTypeInfosFromTypeString(columnTypeProperty);
+            columnTypeInfos = TypeInfoUtils.getTypeInfosFromTypeString(columnTypeProperty);
         }
-        rowTypeInfo = (StructTypeInfo) TypeInfoFactory.getStructTypeInfo((List)columnNames, columnTypes);
+        rowTypeInfo = (StructTypeInfo) TypeInfoFactory.getStructTypeInfo(columnNames, columnTypeInfos);
+        if (rowTypeInfo == null) {
+            throw new SerDeException("rowTypeInfo is null");
+        }
+    }
+
+    @Override
+    public void initialize(Configuration configuration, Properties tableProperties, Properties partitionProperties)
+        throws SerDeException {
+        super.initialize(configuration, tableProperties, partitionProperties);
+        // String columnNameProperty = tableProperties.getProperty("columns");
+        // String columnTypeProperty = tableProperties.getProperty("columns.types");
+        // String columnNameDelimiter = tableProperties.containsKey("column.name.delimiter") ? tableProperties.getProperty("column.name.delimiter") : String.valueOf(',');
+        // List<String> columnNames;
+        // if (columnNameProperty.length() == 0) {
+        //     columnNames = new ArrayList<String>();
+        // } else {
+        //     columnNames = Arrays.asList(columnNameProperty.split(columnNameDelimiter));
+        // }
+
+        // // ArrayList columnTypes;
+        // if (columnTypeProperty.length() == 0) {
+        //     columnTypeInfos = new ArrayList<TypeInfo>();
+        // } else {
+        //     columnTypeInfos = TypeInfoUtils.getTypeInfosFromTypeString(columnTypeProperty);
+        // }
+        // rowTypeInfo = (StructTypeInfo) TypeInfoFactory.getStructTypeInfo(columnNames, columnTypeInfos);
+        // if (rowTypeInfo == null) {
+        //     throw new SerDeException("rowTypeInfo is null");
+        // }
     }
 
     @Override
@@ -64,7 +95,7 @@ public class VineyardSerDe extends ArrowColumnarBatchSerDe {
     }
 
     private VineyardRowWritable getRowWritable(List<Object> standardObjects) {
-        VineyardRowWritable rowWritable = new VineyardRowWritable(standardObjects, rowTypeInfo);
+        VineyardRowWritable rowWritable = new VineyardRowWritable(standardObjects, columnTypeInfos);
         if (rowWritable.getValues() == null) {
             System.out.println("get row writable is null");
         }

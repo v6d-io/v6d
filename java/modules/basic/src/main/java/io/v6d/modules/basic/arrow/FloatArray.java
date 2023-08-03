@@ -37,7 +37,7 @@ public class FloatArray extends Array {
         super(meta);
         this.array = new Float4Vector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode((int)length, 0), Arrays.asList(null, buffer.getBuffer()));
     }
 
     public float get(int index) {

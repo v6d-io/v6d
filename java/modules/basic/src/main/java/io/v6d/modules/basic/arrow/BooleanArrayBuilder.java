@@ -32,7 +32,7 @@ public class BooleanArrayBuilder implements ArrayBuilder {
         this.array = new BitVector("", Arrow.default_allocator);
         this.buffer = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode((int)length, 0), Arrays.asList(null, buffer.getBuffer()));
     }
 
     @Override
@@ -48,7 +48,6 @@ public class BooleanArrayBuilder implements ArrayBuilder {
         meta.setValue("null_count_", 0);
         meta.setValue("offset_", 0);
         meta.addMember("buffer_", buffer.seal(client));
-        meta.addMember("null_bitmap_", BufferBuilder.empty(client));
         return client.createMetaData(meta);
     }
 

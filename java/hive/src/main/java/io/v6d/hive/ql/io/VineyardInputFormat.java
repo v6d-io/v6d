@@ -302,15 +302,17 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                     vector.vector[k] = float8Vector.get(k + recordBatchInnerIndex);
                 }
                 batch.cols[i] = vector;
-            } else if (field.getType().equals(Arrow.Type.LargeVarChar)) {
-                BytesColumnVector vector = new BytesColumnVector(batch.size);
-                LargeVarCharVector largeVarCharVector = (LargeVarCharVector) vectorSchemaRoot.getFieldVectors().get(i);
-                for (int k = 0; k < batch.size; k++) {
-                    vector.isNull[k] = false;
-                    vector.setRef(k, largeVarCharVector.get(k + recordBatchInnerIndex), 0, largeVarCharVector.get(k + recordBatchInnerIndex).length);
-                }
-                batch.cols[i] = vector;
-            } else if (field.getType().equals(Arrow.Type.VarChar)) {
+            }
+            // else if (field.getType().equals(Arrow.Type.LargeVarChar)) {
+            //     BytesColumnVector vector = new BytesColumnVector(batch.size);
+            //     LargeVarCharVector largeVarCharVector = (LargeVarCharVector) vectorSchemaRoot.getFieldVectors().get(i);
+            //     for (int k = 0; k < batch.size; k++) {
+            //         vector.isNull[k] = false;
+            //         vector.setRef(k, largeVarCharVector.get(k + recordBatchInnerIndex), 0, largeVarCharVector.get(k + recordBatchInnerIndex).length);
+            //     }
+            //     batch.cols[i] = vector;
+            // }
+            else if (field.getType().equals(Arrow.Type.VarChar)) {
                 BytesColumnVector vector = new BytesColumnVector(batch.size);
                 vector.init();
                 VarCharVector varCharVector = (VarCharVector) vectorSchemaRoot.getFieldVectors().get(i);

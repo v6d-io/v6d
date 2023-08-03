@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.*;
-import org.apache.arrow.util.Collections2;
+// import org.apache.arrow.util.Collections2;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -107,11 +107,12 @@ public class DataFrame extends Object {
         for (int index = 0; index < columnCount; ++index) {
             val field = values.get(index).getArray().getField();
             val name = columns.get(index).asText();
-            fields.add(
-                    new Field(
-                            name,
-                            field.getFieldType(),
-                            Collections2.immutableListCopy(field.getChildren())));
+            // fields.add(
+            //         new Field(
+            //                 name,
+            //                 field.getFieldType(),
+            //                 Collections2.immutableListCopy(field.getChildren())));
+            fields.add(field);
         }
         return new Schema(fields);
     }

@@ -17,7 +17,8 @@ package io.v6d.modules.basic.arrow.util;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SeekableByteChannel;
-import org.apache.arrow.memory.ArrowBuf;
+// import org.apache.arrow.memory.ArrowBuf;
+import io.netty.buffer.ArrowBuf;
 
 /** A {@link SeekableByteChannel} backed by a byte array. */
 public class ArrowBufSeekableByteChannel implements SeekableByteChannel {

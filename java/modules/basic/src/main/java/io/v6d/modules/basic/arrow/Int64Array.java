@@ -39,7 +39,7 @@ public class Int64Array extends Array {
         super(meta);
         this.array = new BigIntVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode((int)length, 0), Arrays.asList(null, buffer.getBuffer()));
     }
 
     public double get(int index) {

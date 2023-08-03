@@ -14,15 +14,19 @@
  */
 package io.v6d.modules.basic.arrow.util;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
-import org.apache.arrow.memory.ArrowBuf;
+import io.netty.buffer.ArrowBuf;
+
+import org.apache.arrow.flatbuf.Message;
+// import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.memory.BufferAllocator;
 import org.apache.arrow.vector.ipc.ReadChannel;
 import org.apache.arrow.vector.ipc.WriteChannel;
 import org.apache.arrow.vector.ipc.message.MessageChannelReader;
-import org.apache.arrow.vector.ipc.message.MessageResult;
+// import org.apache.arrow.vector.ipc.message.MessageResult;
 import org.apache.arrow.vector.ipc.message.MessageSerializer;
 import org.apache.arrow.vector.types.pojo.Schema;
 
@@ -30,21 +34,28 @@ public class SchemaSerializer {
     /** Deserialize Arrow schema from byte array. */
     public static Schema deserialize(final ArrowBuf buffer, final BufferAllocator allocator)
             throws IOException {
-        try (MessageChannelReader schemaReader =
-                new MessageChannelReader(
-                        new ReadChannel(new ArrowBufSeekableByteChannel(buffer)), allocator)) {
+        // try (MessageChannelReader schemaReader =
+        //         new MessageChannelReader(
+        //                 new ReadChannel(new ArrowBufSeekableByteChannel(buffer)), allocator)) {
 
-            MessageResult result = schemaReader.readNext();
-            if (result == null) {
-                throw new IOException("Unexpected end of input. Missing schema.");
-            }
-            return MessageSerializer.deserializeSchema(result.getMessage());
-        }
+        //     MessageResult result = schemaReader.readNext();
+        //     if (result == null) {
+        //         throw new IOException("Unexpected end of input. Missing schema.");
+        //     }
+        //     return MessageSerializer.deserializeSchema(result.getMessage());
+        // }
+        ByteArrayInputStream in = new ByteArrayInputStream(buffer.array());
+
+        ReadChannel channel = new ReadChannel(Channels.newChannel(in));
+        return MessageSerializer.deserializeSchema(channel);
     }
 
     public static byte[] serialize(Schema schema) throws IOException {
+        System.out.println("serialize schema");
         final ByteArrayOutputStream out = new ByteArrayOutputStream();
+        System.out.println("create string");
         MessageSerializer.serialize(new WriteChannel(Channels.newChannel(out)), schema);
+        System.out.println("serialize schema done");
         return out.toByteArray();
     }
 }

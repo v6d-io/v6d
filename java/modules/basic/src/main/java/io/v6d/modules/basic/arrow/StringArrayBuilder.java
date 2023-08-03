@@ -21,6 +21,7 @@ import io.v6d.core.common.util.VineyardException;
 import lombok.*;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VarCharVector;
+import org.apache.arrow.vector.holders.VarCharHolder;
 import org.apache.arrow.vector.util.Text;
 
 public class StringArrayBuilder implements ArrayBuilder {
@@ -46,7 +47,7 @@ public class StringArrayBuilder implements ArrayBuilder {
 
         val data_buffer_size =
                 offset_buffer.getLong(
-                        ((long) this.array.getValueCount()) * VarCharVector.OFFSET_WIDTH);
+                        ( this.array.getValueCount()) * VarCharVector.OFFSET_WIDTH);
         val data_buffer = this.array.getDataBuffer();
 
         this.data_buffer_builder =
@@ -57,6 +58,7 @@ public class StringArrayBuilder implements ArrayBuilder {
 
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
+        System.out.println("seal string array");
         this.build(client);
         val meta = ObjectMeta.empty();
         meta.setTypename("vineyard::BaseBinaryArray<arrow::StringArray>");
@@ -67,6 +69,7 @@ public class StringArrayBuilder implements ArrayBuilder {
         meta.addMember("buffer_data_", data_buffer_builder.seal(client));
         meta.addMember("buffer_offsets_", offset_buffer_builder.seal(client));
         meta.addMember("null_bitmap_", BufferBuilder.empty(client));
+        System.out.println("seal string array done");
         return client.createMetaData(meta);
     }
 
@@ -75,7 +78,7 @@ public class StringArrayBuilder implements ArrayBuilder {
     }
 
     void set(int index, Text value) {
-        this.array.set(index, value);
+        this.array.set(index, value.getBytes());
     }
 
     @Override

@@ -18,8 +18,8 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-    <dependency.arrow.version>5.0.0</dependency.arrow.version>
-    <dependency.guava.version>32.0.0-jre</dependency.guava.version>
+    <dependency.arrow.version>0.8.0</dependency.arrow.version>
+    <dependency.guava.version>18.0</dependency.guava.version>
     <dependency.jackson.version>2.14.0-rc1</dependency.jackson.version>
     <dependency.jnr-posix.version>3.1.17</dependency.jnr-posix.version>
     <dependency.jnr-unixsocket.version>0.38.20</dependency.jnr-unixsocket.version>
@@ -34,7 +34,7 @@
     <module>core</module>
     <module>modules</module>
     <module>hive</module>
-    <module>spark</module>
+    <!-- <module>spark</module> -->
   </modules>
 
   <dependencyManagement>

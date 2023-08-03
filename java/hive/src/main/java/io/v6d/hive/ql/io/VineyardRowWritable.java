@@ -3,6 +3,7 @@ package io.v6d.hive.ql.io;
 import java.io.DataOutput;
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
@@ -18,20 +19,21 @@ class VineyardRowWritable extends ArrowWrapperWritable {
     private List<Object> colValues;
     private TypeInfo[] targetTypeInfos;
 
-    public VineyardRowWritable(final List<Object> colValues, StructTypeInfo rowTypeInfo) {
+    public VineyardRowWritable(final List<Object> colValues, ArrayList<TypeInfo> rowTypeInfo) {
         this.colValues = colValues;
-        StructObjectInspector rowObjectInspector = (StructObjectInspector) getStandardWritableObjectInspectorFromTypeInfo(rowTypeInfo);
-        final List<? extends StructField> fields = rowObjectInspector.getAllStructFieldRefs();
-        final int count = fields.size();
-        targetTypeInfos = new TypeInfo[count];
-        for (int i = 0; i < count; i++) {
-            final StructField field = fields.get(i);
-            final ObjectInspector fieldInspector = field.getFieldObjectInspector();
-            final TypeInfo typeInfo =
-                TypeInfoUtils.getTypeInfoFromTypeString(fieldInspector.getTypeName());
+        // StructObjectInspector rowObjectInspector = (StructObjectInspector) getStandardWritableObjectInspectorFromTypeInfo(rowTypeInfo);
+        // final List<? extends StructField> fields = rowObjectInspector.getAllStructFieldRefs();
+        // final int count = rowTypeInfo.size();//fields.size();
+        // targetTypeInfos = new TypeInfo[count];
+        // for (int i = 0; i < count; i++) {
+            // final StructField field = fields.get(i);
+            // final ObjectInspector fieldInspector = field.getFieldObjectInspector();
+            // final TypeInfo typeInfo =
+            //     TypeInfoUtils.getTypeInfoFromTypeString(fieldInspector.getTypeName());
 
-            targetTypeInfos[i] = typeInfo;
-        }
+        //     targetTypeInfos[i] = typeInfo;
+        // }
+        targetTypeInfos = rowTypeInfo.toArray(new TypeInfo[rowTypeInfo.size()]);
     }
 
     public List<Object> getValues() {

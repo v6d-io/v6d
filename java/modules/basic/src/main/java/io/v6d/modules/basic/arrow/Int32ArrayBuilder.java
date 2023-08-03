@@ -31,8 +31,10 @@ public class Int32ArrayBuilder implements ArrayBuilder {
     public Int32ArrayBuilder(IPCClient client, long length) throws VineyardException {
         this.array = new IntVector("", Arrow.default_allocator);
         this.buffer = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
+        System.out.println("load field buffers");
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode((int)length, 0), Arrays.asList(null, buffer.getBuffer()));
+        System.out.println("load field buffers done");
     }
 
     @Override

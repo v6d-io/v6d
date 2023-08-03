@@ -42,7 +42,7 @@ public class StringArray extends Array {
         super(meta);
         this.array = new VarCharVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0),
+                new ArrowFieldNode((int)length, 0),
                 Arrays.asList(null, offset.getBuffer(), buffer.getBuffer()));
         this.array.setValueCount((int) length);
     }

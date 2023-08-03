@@ -48,8 +48,11 @@ public class RecordBatchBuilder implements ObjectBuilder {
     public RecordBatchBuilder(final IPCClient client, final Schema schema, int rows)
             throws VineyardException {
         this.rows = rows;
+        System.out.println("from schema");
         schemaBuilder = SchemaBuilder.fromSchema(schema);
+        System.out.println("finish schema");
         this.finishSchema(client);
+        System.out.println("finish schema done");
     }
 
     public RecordBatchBuilder(
@@ -104,16 +107,21 @@ public class RecordBatchBuilder implements ObjectBuilder {
 
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
+        System.out.println("Seal record batch");
         this.build(client);
 
         val meta = ObjectMeta.empty();
 
         meta.setTypename("vineyard::RecordBatch");
+        System.out.println("set array size");
         meta.setValue("column_num_", arrayBuilders.size());
         meta.setValue("row_num_", rows);
+        System.out.println("set array size 2");
         meta.setValue("__columns_-size", arrayBuilders.size());
+        System.out.println("seal schema");
         meta.addMember("schema_", schemaBuilder.seal(client));
 
+        System.out.println("seal array builder");
         for (int index = 0; index < arrayBuilders.size(); ++index) {
             meta.addMember("__columns_-" + index, arrayBuilders.get(index).seal(client));
         }
@@ -123,6 +131,7 @@ public class RecordBatchBuilder implements ObjectBuilder {
     }
 
     private ArrayBuilder arrayBuilderFor(IPCClient client, Field field) throws VineyardException {
+        System.out.println("arrayBulderFor, type:" + field.getType().getTypeID());
         if (field.getType().equals(Arrow.Type.Boolean)) {
             return new BooleanArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.Int)) {
@@ -133,13 +142,18 @@ public class RecordBatchBuilder implements ObjectBuilder {
             return new FloatArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.Double)) {
             return new DoubleArrayBuilder(client, rows);
-        } else if (field.getType().equals(Arrow.Type.LargeVarChar)) {
-            return new LargeStringArrayBuilder(client, rows);
-        } else if (field.getType().equals(Arrow.Type.VarChar)) {
+        }
+        // else if (field.getType().equals(Arrow.Type.LargeVarChar)) {
+        //     return new LargeStringArrayBuilder(client, rows);
+        // }
+        else if (field.getType().equals(Arrow.Type.VarChar)) {
             return new StringArrayBuilder(client, rows);
-        } else if (field.getType().equals(Arrow.Type.Null)) {
-            return new NullArrayBuilder(client, rows);
-        } else {
+        }
+        // else if (field.getType().equals(Arrow.Type.Null)) {
+        //     return new NullArrayBuilder(client, rows);
+        // }
+        else {
+            System.out.println("type not implemented");
             throw new VineyardException.NotImplemented(
                     "array builder for type " + field.getType() + " is not supported");
         }

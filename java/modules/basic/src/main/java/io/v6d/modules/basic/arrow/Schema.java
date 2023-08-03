@@ -28,7 +28,7 @@ import java.util.Map;
 import lombok.SneakyThrows;
 import lombok.val;
 import org.apache.arrow.memory.RootAllocator;
-import org.apache.arrow.util.Collections2;
+// import org.apache.arrow.util.Collections2;
 import org.apache.arrow.vector.types.pojo.Field;
 
 /** Hello world! */
@@ -47,17 +47,19 @@ public class Schema extends Object implements Serializable {
 
     public Schema(final ObjectMeta meta, List<Field> fields) {
         super(meta);
-        this.schema =
-                new org.apache.arrow.vector.types.pojo.Schema(
-                        Collections2.immutableListCopy(fields));
+        // this.schema =
+        //         new org.apache.arrow.vector.types.pojo.Schema(
+        //                 Collections2.immutableListCopy(fields));
+        this.schema = new org.apache.arrow.vector.types.pojo.Schema(fields);
     }
 
     public Schema(final ObjectMeta meta, List<Field> fields, Map<String, String> metadata) {
         super(meta);
-        this.schema =
-                new org.apache.arrow.vector.types.pojo.Schema(
-                        Collections2.immutableListCopy(fields),
-                        Collections2.immutableMapCopy(metadata));
+        // this.schema =
+        //         new org.apache.arrow.vector.types.pojo.Schema(
+        //                 Collections2.immutableListCopy(fields),
+        //                 Collections2.immutableMapCopy(metadata));
+        this.schema = new org.apache.arrow.vector.types.pojo.Schema(fields, metadata);
     }
 
     public org.apache.arrow.vector.types.pojo.Schema getSchema() {

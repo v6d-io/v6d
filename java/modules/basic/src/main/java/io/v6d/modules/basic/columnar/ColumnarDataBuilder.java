@@ -41,9 +41,9 @@ import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.IntervalDayVector;
 import org.apache.arrow.vector.IntervalYearVector;
-import org.apache.arrow.vector.LargeVarBinaryVector;
-import org.apache.arrow.vector.LargeVarCharVector;
-import org.apache.arrow.vector.NullVector;
+// import org.apache.arrow.vector.LargeVarBinaryVector;
+// import org.apache.arrow.vector.LargeVarCharVector;
+// import org.apache.arrow.vector.NullVector;
 import org.apache.arrow.vector.SmallIntVector;
 import org.apache.arrow.vector.TimeStampMicroTZVector;
 import org.apache.arrow.vector.TimeStampMicroVector;
@@ -90,21 +90,27 @@ public class ColumnarDataBuilder {
             accessor = new DecimalAccessor((DecimalVector) vector);
         } else if (vector instanceof VarCharVector) {
             accessor = new StringAccessor((VarCharVector) vector);
-        } else if (vector instanceof LargeVarCharVector) {
-            accessor = new LargeStringAccessor((LargeVarCharVector) vector);
-        } else if (vector instanceof VarBinaryVector) {
+        } 
+        // else if (vector instanceof LargeVarCharVector) {
+        //     accessor = new LargeStringAccessor((LargeVarCharVector) vector);
+        // } 
+        else if (vector instanceof VarBinaryVector) {
             accessor = new BinaryAccessor((VarBinaryVector) vector);
-        } else if (vector instanceof LargeVarBinaryVector) {
-            accessor = new LargeBinaryAccessor((LargeVarBinaryVector) vector);
-        } else if (vector instanceof DateDayVector) {
+        } 
+        // else if (vector instanceof LargeVarBinaryVector) {
+        //     accessor = new LargeBinaryAccessor((LargeVarBinaryVector) vector);
+        // }
+         else if (vector instanceof DateDayVector) {
             accessor = new DateAccessor((DateDayVector) vector);
         } else if (vector instanceof TimeStampMicroTZVector) {
             accessor = new TimestampAccessor((TimeStampMicroTZVector) vector);
         } else if (vector instanceof TimeStampMicroVector) {
             accessor = new TimestampNTZAccessor((TimeStampMicroVector) vector);
-        } else if (vector instanceof NullVector) {
-            accessor = new NullAccessor((NullVector) vector);
-        } else if (vector instanceof IntervalYearVector) {
+        } 
+        // else if (vector instanceof NullVector) {
+        //     accessor = new NullAccessor((NullVector) vector);
+        // } 
+        else if (vector instanceof IntervalYearVector) {
             accessor = new IntervalYearAccessor((IntervalYearVector) vector);
         } else if (vector instanceof IntervalDayVector) {
             accessor = new IntervalDayAccessor((IntervalDayVector) vector);
@@ -670,35 +676,35 @@ public class ColumnarDataBuilder {
 
         @Override
         final void setUTF8String(int rowId, Text value) {
-            accessor.setSafe(rowId, value);
+            accessor.setSafe(rowId, value.getBytes());
         }
     }
 
-    private static class LargeStringAccessor extends ArrowVectorAccessor {
+    // private static class LargeStringAccessor extends ArrowVectorAccessor {
 
-        private final LargeVarCharVector accessor;
-        private final NullableVarCharHolder stringResult = new NullableVarCharHolder();
+    //     private final LargeVarCharVector accessor;
+    //     private final NullableVarCharHolder stringResult = new NullableVarCharHolder();
 
-        LargeStringAccessor(LargeVarCharVector vector) {
-            super(vector);
-            this.accessor = vector;
-        }
+    //     LargeStringAccessor(LargeVarCharVector vector) {
+    //         super(vector);
+    //         this.accessor = vector;
+    //     }
 
-        @Override
-        Object getObject(int rowId) {
-            return getUTF8String(rowId);
-        }
+    //     @Override
+    //     Object getObject(int rowId) {
+    //         return getUTF8String(rowId);
+    //     }
 
-        @Override
-        final Text getUTF8String(int rowId) {
-            return accessor.getObject(rowId);
-        }
+    //     @Override
+    //     final Text getUTF8String(int rowId) {
+    //         return accessor.getObject(rowId);
+    //     }
 
-        @Override
-        final void setUTF8String(int rowId, Text value) {
-            accessor.setSafe(rowId, value);
-        }
-    }
+    //     @Override
+    //     final void setUTF8String(int rowId, Text value) {
+    //         accessor.setSafe(rowId, value);
+    //     }
+    // }
 
     private static class BinaryAccessor extends ArrowVectorAccessor {
 
@@ -725,30 +731,30 @@ public class ColumnarDataBuilder {
         }
     }
 
-    private static class LargeBinaryAccessor extends ArrowVectorAccessor {
+    // private static class LargeBinaryAccessor extends ArrowVectorAccessor {
 
-        private final LargeVarBinaryVector accessor;
+    //     private final LargeVarBinaryVector accessor;
 
-        LargeBinaryAccessor(LargeVarBinaryVector vector) {
-            super(vector);
-            this.accessor = vector;
-        }
+    //     LargeBinaryAccessor(LargeVarBinaryVector vector) {
+    //         super(vector);
+    //         this.accessor = vector;
+    //     }
 
-        @Override
-        Object getObject(int rowId) {
-            return getBinary(rowId);
-        }
+    //     @Override
+    //     Object getObject(int rowId) {
+    //         return getBinary(rowId);
+    //     }
 
-        @Override
-        final byte[] getBinary(int rowId) {
-            return accessor.getObject(rowId);
-        }
+    //     @Override
+    //     final byte[] getBinary(int rowId) {
+    //         return accessor.getObject(rowId);
+    //     }
 
-        @Override
-        final void setBinary(int rowId, byte[] value) {
-            accessor.set(rowId, value);
-        }
-    }
+    //     @Override
+    //     final void setBinary(int rowId, byte[] value) {
+    //         accessor.set(rowId, value);
+    //     }
+    // }
 
     private static class DateAccessor extends ArrowVectorAccessor {
 
@@ -825,11 +831,11 @@ public class ColumnarDataBuilder {
         }
     }
 
-    private static class NullAccessor extends ArrowVectorAccessor {
-        NullAccessor(NullVector vector) {
-            super(vector);
-        }
-    }
+    // private static class NullAccessor extends ArrowVectorAccessor {
+    //     NullAccessor(NullVector vector) {
+    //         super(vector);
+    //     }
+    // }
 
     private static class IntervalYearAccessor extends ArrowVectorAccessor {
 
