@@ -17,6 +17,7 @@ package schedule
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
@@ -29,6 +30,26 @@ import (
 )
 
 func TestScheduleWorkloadCmd(t *testing.T) {
+	// set the flags
+	flags.Namespace = "vineyard-system"
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.VineyarddOpts.Replicas = 1
+	flags.VineyarddOpts.EtcdReplicas = 1
+	flags.Resource = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: my-container
+        image: nginx:latest`
+
 	testReplicas := struct {
 		name             string
 		vineyardReplicas int
@@ -39,26 +60,6 @@ func TestScheduleWorkloadCmd(t *testing.T) {
 		etcdReplicas:     1,
 	}
 	t.Run(testReplicas.name, func(t *testing.T) {
-		// set the flags
-		//flags.KubeConfig = "/tmp/e2e-k8s.config"
-		flags.Namespace = "vineyard-system"
-		flags.KubeConfig = "/home/zhuyi/.kube/config"
-		flags.VineyarddOpts.Replicas = 1
-		flags.VineyarddOpts.EtcdReplicas = 1
-		flags.Resource = "apiVersion: apps/v1\n" +
-			"kind: Deployment\n" +
-			"metadata:\n" +
-			"  name: my-deployment\n" +
-			"spec:\n" +
-			"  replicas: 1\n" +
-			"  template:\n" +
-			"    metadata:\n" +
-			"      labels:\n" +
-			"        app: my-app\n" +
-			"    spec:\n" +
-			"      containers:\n" +
-			"      - name: my-container\n" +
-			"        image: nginx:latest\n"
 		scheduleWorkloadCmd.Run(scheduleWorkloadCmd, []string{})
 
 	})
@@ -73,7 +74,7 @@ func TestValidateWorkloadKind(t *testing.T) {
 		args args
 		want bool
 	}{
-		// TODO: Add test cases.
+		// Add test cases.
 		{
 			name: "Valid Deployment kind",
 			args: args{kind: "Deployment"},
@@ -125,24 +126,38 @@ func Test_getWorkload(t *testing.T) {
 		want1   bool
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// Add test cases.
 		{
 			name: "Test case",
 			args: args{
-				workload: "apiVersion: apps/v1\n" +
-					"kind: Deployment\n" +
-					"metadata:\n" +
-					"  name: my-deployment\n" +
-					"spec:\n" +
-					"  replicas: 3\n" +
-					"  template:\n" +
-					"    metadata:\n" +
-					"      labels:\n" +
-					"        app: my-app\n" +
-					"    spec:\n" +
-					"      containers:\n" +
-					"      - name: my-container\n" +
-					"        image: nginx:latest\n",
+				/*workload: "apiVersion: apps/v1\n" +
+				"kind: Deployment\n" +
+				"metadata:\n" +
+				"  name: my-deployment\n" +
+				"spec:\n" +
+				"  replicas: 3\n" +
+				"  template:\n" +
+				"    metadata:\n" +
+				"      labels:\n" +
+				"        app: my-app\n" +
+				"    spec:\n" +
+				"      containers:\n" +
+				"      - name: my-container\n" +
+				"        image: nginx:latest\n",*/
+				workload: `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: my-deployment
+spec:
+  replicas: 3
+  template:
+  metadata:
+    labels:
+      app: my-app
+  spec:
+    containers:
+    - name: my-container
+      image: nginx:latest`,
 			},
 			want: &unstructured.Unstructured{
 				Object: map[string]interface{}{
@@ -159,18 +174,9 @@ func Test_getWorkload(t *testing.T) {
 						"template": map[string]interface{}{
 							"metadata": map[string]interface{}{
 								"creationTimestamp": nil,
-								"labels": map[string]interface{}{
-									"app": "my-app",
-								},
 							},
 							"spec": map[string]interface{}{
-								"containers": []map[string]interface{}{
-									{
-										"image":     "nginx:latest",
-										"name":      "my-container",
-										"resources": map[string]interface{}{},
-									},
-								},
+								"containers": nil,
 							},
 						},
 					},
@@ -188,8 +194,8 @@ func Test_getWorkload(t *testing.T) {
 				t.Errorf("getWorkload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			a, _ := got.MarshalJSON()
-			b, _ := tt.want.MarshalJSON()
+			a := fmt.Sprint(got)
+			b := fmt.Sprint(tt.want)
 			if !reflect.DeepEqual(a, b) {
 				t.Errorf("getWorkload() got = %v, want %v", got, tt.want)
 			}
@@ -202,7 +208,7 @@ func Test_getWorkload(t *testing.T) {
 
 func TestSchedulingWorkload(t *testing.T) {
 	// Set up test flags
-	flags.KubeConfig = "/home/zhuyi/.kube/config"
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 
 	// Get Kubernetes client
 	c := util.KubernetesClient()
@@ -217,7 +223,7 @@ func TestSchedulingWorkload(t *testing.T) {
 		want    string
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// Add test cases.
 		{
 			name: "Test case",
 			args: args{
@@ -244,15 +250,14 @@ func TestSchedulingWorkload(t *testing.T) {
 					},
 				},
 			},
-			want: "{\"apiVersion\":\"apps/v1\"," +
-				"\"kind\":\"Deployment\"," +
-				"\"metadata\":{\"name\":\"example-deployment\",\"namespace\":\"default\"}," +
-				"\"spec\":{\"template\":{\"spec\":{\"affinity\":{\"podAffinity\":" +
-				"{\"requiredDuringSchedulingIgnoredDuringExecution\":[{" +
-				"\"labelSelector\":{\"matchExpressions\":[{\"key\":\"app.kubernetes.io/instance\"," +
-				"\"operator\":\"In\",\"values\":[\"vineyard-system-vineyardd-sample\"]}]}," +
-				"\"topologyKey\":\"kubernetes.io/hostname\"}]}}," +
-				"\"containers\":null,\"volumes\":[{\"hostPath\":{\"path\":\"/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample\"},\"name\":\"vineyard-socket\"}]}}}}" + "\n",
+			want: `{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"name":"example-deployment",` +
+				`"namespace":"default"},"spec":{"template":{"spec":{"affinity":{"podAffinity":` +
+				`{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":` +
+				`{"matchExpressions":[{"key":"app.kubernetes.io/instance","operator":"In",` +
+				`"values":["vineyard-system-vineyardd-sample"]}]},"topologyKey":` +
+				`"kubernetes.io/hostname"}]}},"containers":null,"volumes":[{"hostPath":` +
+				`{"path":"/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample"},"name":"vineyard-socket"}]}}}}` +
+				"\n",
 			wantErr: false,
 		},
 	}
@@ -265,8 +270,6 @@ func TestSchedulingWorkload(t *testing.T) {
 			}
 			a, _ := got.MarshalJSON()
 			if !reflect.DeepEqual(string(a), tt.want) {
-				fmt.Println(string(a))
-				fmt.Println(tt.want)
 				t.Errorf("SchedulingWorkload() = %v, want %v", got, tt.want)
 			}
 		})

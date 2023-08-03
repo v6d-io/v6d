@@ -16,40 +16,23 @@ limitations under the License.
 package deploy
 
 import (
+	"os"
 	"reflect"
 	"testing"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"fmt"
-
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-/*func TestNewDeployRecoverJobCmd(t *testing.T) {
-	tests := []struct {
-		name string
-		want *cobra.Command
-	}{
-		// TODO: Add test cases.
-		{
-			name: "Test Case 1",
-			want: deployRecoverJobCmd, // 指定预期的 *cobra.Command 值
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewDeployRecoverJobCmd(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewDeployRecoverJobCmd() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}*/
-
 func Test_getRecoverObjectsFromTemplate(t *testing.T) {
-	flags.KubeConfig = "/home/zhuyi/.kube/config"
+	// set the flags
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.VineyardDeploymentName = "vineyardd-sample"
+	flags.VineyardDeploymentNamespace = "vineyard-system"
+	flags.Namespace = "vineyard-system"
 	c := util.KubernetesClient()
 
 	type args struct {
@@ -61,9 +44,9 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 		want    []*unstructured.Unstructured
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// Add test cases.
 		{
-			name: "Test case 1",
+			name: "Test case",
 			args: args{
 				c: c,
 			},
@@ -77,7 +60,7 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 							"namespace": "vineyard-system",
 						},
 						"spec": map[string]interface{}{
-							"parallelism": int64(1),
+							"parallelism": int64(3),
 							"template": map[string]interface{}{
 								"metadata": map[string]interface{}{
 									"labels": map[string]interface{}{
@@ -95,7 +78,7 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 																"key":      "app.kubernetes.io/instance",
 																"operator": "In",
 																"values": []interface{}{
-																	"vineyard-system-vineyard-operator-cert-manager",
+																	"vineyard-system-vineyardd-sample",
 																},
 															},
 														},
@@ -132,7 +115,7 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 												},
 												map[string]interface{}{
 													"name":  "ENDPOINT",
-													"value": "vineyard-operator-cert-manager-rpc.vineyard-system",
+													"value": "vineyardd-sample-rpc.vineyard-system",
 												},
 												map[string]interface{}{
 													"name":  "SELECTOR",
@@ -140,7 +123,7 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 												},
 												map[string]interface{}{
 													"name":  "ALLINSTANCES",
-													"value": "1",
+													"value": "3",
 												},
 												map[string]interface{}{
 													"name": "POD_NAME",
@@ -178,7 +161,7 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 									"volumes": []interface{}{
 										map[string]interface{}{
 											"hostPath": map[string]interface{}{
-												"path": "/var/run/vineyard-kubernetes/vineyard-system/vineyard-operator-cert-manager",
+												"path": "/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample",
 											},
 											"name": "vineyard-sock",
 										},
@@ -272,9 +255,6 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags.VineyardDeploymentName = "vineyard-operator-cert-manager"
-			flags.VineyardDeploymentNamespace = "vineyard-system"
-			flags.Namespace = "vineyard-system"
 			got, err := getRecoverObjectsFromTemplate(tt.args.c)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getRecoverObjectsFromTemplate() error = %v, wantErr %v", err, tt.wantErr)
@@ -282,9 +262,6 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 			}
 			for i := range got {
 				if !reflect.DeepEqual(*got[i], *(tt.want)[i]) {
-					fmt.Println(i)
-					fmt.Println(*got[i])
-					fmt.Println(*(tt.want)[i])
 					t.Errorf("getRecoverObjectsFromTemplate() = %+v, want %+v", got, tt.want)
 
 				}
@@ -293,38 +270,7 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 	}
 }
 
-/*func Test_waitRecoverJobReady(t *testing.T) {
-	flags.KubeConfig = "/home/zhuyi/.kube/config"
-	c := util.KubernetesClient()
-	type args struct {
-		c client.Client
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-		{
-			name: "Job succeeded",
-			args: args{
-				c: c,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			flags.Namespace = "vineyard-system"
-			if err := waitRecoverJobReady(tt.args.c); (err != nil) != tt.wantErr {
-				t.Errorf("waitRecoverJobReady() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
-
-// not implemented
-func Test_createMappingTableConfigmap(t *testing.T) {
+/*func Test_createMappingTableConfigmap(t *testing.T) {
 	flags.KubeConfig = "/home/zhuyi/.kube/config"
 	c := util.KubernetesClient()
 

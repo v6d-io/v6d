@@ -17,7 +17,10 @@ package util
 
 import (
 	_ "embed"
+	"os"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
@@ -25,44 +28,121 @@ import (
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-func TestRenderManifestAsObj(t *testing.T) {
-	path := "etcd/service.yaml"
-	opts := &flags.VineyarddOpts
-	value := &v1alpha1.Vineyardd{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      flags.VineyarddName,
-			Namespace: flags.GetDefaultVineyardNamespace(),
-		},
-		Spec: *opts,
-	}
+func Test_RenderManifestAsObj(t *testing.T) {
 	var etcdConfig k8s.EtcdConfig
-	tmplFunc := map[string]interface{}{
-		"getStorage": func(q resource.Quantity) string {
-			return q.String()
-		},
-		"getEtcdConfig": func() k8s.EtcdConfig {
-			return etcdConfig
+	opts := &flags.VineyarddOpts
+	type args struct {
+		path     string
+		value    interface{}
+		tmplFunc map[string]interface{}
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *unstructured.Unstructured
+		wantErr bool
+	}{
+		{
+			name: "Test Case 1",
+			args: args{
+				path:  "etcd/service.yaml",
+				value: *opts,
+				tmplFunc: map[string]interface{}{
+					"getStorage": func(q resource.Quantity) string {
+						return q.String()
+					},
+					"getEtcdConfig": func() k8s.EtcdConfig {
+						return etcdConfig
+					},
+				},
+			},
+			want: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Service",
+					"metadata": map[string]interface{}{
+						"labels": map[string]interface{}{
+							"etcd_node": "-etcd-0",
+						},
+						"name":      "-etcd-0",
+						"namespace": nil,
+					},
+					"spec": map[string]interface{}{
+						"ports": []interface{}{
+							map[string]interface{}{
+								"name":       "client",
+								"port":       int64(2379),
+								"protocol":   "TCP",
+								"targetPort": int64(2379),
+							},
+							map[string]interface{}{
+								"name":       "server",
+								"port":       int64(2380),
+								"protocol":   "TCP",
+								"targetPort": int64(2380),
+							},
+						},
+						"selector": map[string]interface{}{
+							"app.vineyard.io/role": "etcd",
+							"etcd_node":            "-etcd-0",
+						},
+					},
+				},
+			},
+			wantErr: false,
 		},
 	}
-
-	obj, err := RenderManifestAsObj(path, value, tmplFunc)
-
-	assert.NoError(t, err)
-	assert.NotNil(t, obj)
-
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := RenderManifestAsObj(tt.args.path, tt.args.value, tt.args.tmplFunc)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("RenderManifestAsObj() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("RenderManifestAsObj() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
 func TestBuildObjsFromEtcdManifests(t *testing.T) {
-
-	opts := &flags.VineyarddOpts
 	value := &v1alpha1.Vineyardd{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      flags.VineyarddName,
+			Name:      "test-vineyardd",
 			Namespace: flags.GetDefaultVineyardNamespace(),
 		},
-		Spec: *opts,
+		Spec: v1alpha1.VineyarddSpec{
+			Replicas:     10,
+			EtcdReplicas: 10,
+			Service:      v1alpha1.ServiceConfig{Type: "ClusterIP", Port: 8888},
+			Vineyard: v1alpha1.VineyardConfig{
+				Image:           "test-image",
+				ImagePullPolicy: "IfNotPresent",
+				SyncCRDs:        true,
+				Socket:          "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}",
+				ReserveMemory:   false,
+				StreamThreshold: 80,
+				Spill: v1alpha1.SpillConfig{
+					SpillLowerRate: "0.3",
+					SpillUpperRate: "0.8",
+				},
+			},
+			PluginImage: v1alpha1.PluginImageConfig{
+				BackupImage:              "ghcr.io/v6d-io/v6d/backup-job",
+				RecoverImage:             "ghcr.io/v6d-io/v6d/recover-job",
+				DaskRepartitionImage:     "ghcr.io/v6d-io/v6d/dask-repartition",
+				LocalAssemblyImage:       "ghcr.io/v6d-io/v6d/local-assembly",
+				DistributedAssemblyImage: "ghcr.io/v6d-io/v6d/distributed-assembly",
+			},
+			Metric: v1alpha1.MetricConfig{
+				Image:           "vineyardcloudnative/vineyard-grok-exporter:latest",
+				ImagePullPolicy: "IfNotPresent",
+			},
+		},
 	}
 	var etcdConfig k8s.EtcdConfig
 	tmplFunc := map[string]interface{}{
@@ -79,21 +159,53 @@ func TestBuildObjsFromEtcdManifests(t *testing.T) {
 	replicas := vineyardd.Spec.EtcdReplicas
 	image := vineyardd.Spec.Vineyard.Image
 
-	_, _, err := BuildObjsFromEtcdManifests(&etcdConfig, name, namespace, replicas, image, value, tmplFunc)
+	podObjs, svcObjs, err := BuildObjsFromEtcdManifests(&etcdConfig, name, namespace, replicas, image, value, tmplFunc)
 
 	assert.NoError(t, err)
+	if len(podObjs) != 10 {
+		t.Errorf("Expected %d objects, but got %d", 10, len(podObjs))
+	}
+	if len(svcObjs) != 10 {
+		t.Errorf("Expected %d objects, but got %d", 10, len(svcObjs))
+	}
 
 }
 
 func TestBuildObjsFromVineyarddManifests(t *testing.T) {
-	files := []string{"etcd/service.yaml"}
-	opts := &flags.VineyarddOpts
+	files := []string{}
 	value := &v1alpha1.Vineyardd{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      flags.VineyarddName,
+			Name:      "test-vineyardd",
 			Namespace: flags.GetDefaultVineyardNamespace(),
 		},
-		Spec: *opts,
+		Spec: v1alpha1.VineyarddSpec{
+			Replicas:     10,
+			EtcdReplicas: 10,
+			Service:      v1alpha1.ServiceConfig{Type: "ClusterIP", Port: 8888},
+			Vineyard: v1alpha1.VineyardConfig{
+				Image:           "test-image",
+				ImagePullPolicy: "IfNotPresent",
+				SyncCRDs:        true,
+				Socket:          "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}",
+				ReserveMemory:   false,
+				StreamThreshold: 80,
+				Spill: v1alpha1.SpillConfig{
+					SpillLowerRate: "0.3",
+					SpillUpperRate: "0.8",
+				},
+			},
+			PluginImage: v1alpha1.PluginImageConfig{
+				BackupImage:              "ghcr.io/v6d-io/v6d/backup-job",
+				RecoverImage:             "ghcr.io/v6d-io/v6d/recover-job",
+				DaskRepartitionImage:     "ghcr.io/v6d-io/v6d/dask-repartition",
+				LocalAssemblyImage:       "ghcr.io/v6d-io/v6d/local-assembly",
+				DistributedAssemblyImage: "ghcr.io/v6d-io/v6d/distributed-assembly",
+			},
+			Metric: v1alpha1.MetricConfig{
+				Image:           "vineyardcloudnative/vineyard-grok-exporter:latest",
+				ImagePullPolicy: "IfNotPresent",
+			},
+		},
 	}
 	var etcdConfig k8s.EtcdConfig
 	tmplFunc := map[string]interface{}{
@@ -111,13 +223,13 @@ func TestBuildObjsFromVineyarddManifests(t *testing.T) {
 		t.Fatalf("Failed to build objects from Vineyardd manifests: %v", err)
 	}
 
-	if len(objs) != 0 {
-		t.Errorf("Expected %d objects, but got %d", 0, len(objs))
+	if len(objs) != 3 {
+		t.Errorf("Expected %d objects, but got %d", 3, len(objs))
 	}
 
 }
 
-/*func TestBuildObjsFromManifests(t *testing.T) {
+func TestBuildObjsFromManifests(t *testing.T) {
 	templateName := "backup"
 
 	backup := &v1alpha1.Backup{
@@ -139,15 +251,18 @@ func TestBuildObjsFromVineyarddManifests(t *testing.T) {
 		},
 	}
 
-	flags.KubeConfig = "/home/zhuyi/.kube/config"
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	c := KubernetesClient()
 
-	useVineyardScheduler := false
-	path := flags.BackupOpts.BackupPath
 	// set the vineyardd name and namespace as the vineyard deployment
 	backup.Spec.VineyarddName = flags.VineyardDeploymentName
 	backup.Spec.VineyarddNamespace = flags.VineyardDeploymentNamespace
-	backupCfg, err := k8s.buildBackupCfg(c, flags.BackupName, backup, path, useVineyardScheduler)
+	opts := k8s.NewBackupOpts(
+		flags.BackupName,
+		flags.PVCName,
+		flags.BackupOpts.BackupPath,
+	)
+	backupCfg, _ := opts.BuildCfgForVineyarctl(c, backup)
 
 	tmplFunc := map[string]interface{}{
 		"getResourceStorage": func(q resource.Quantity) string {
@@ -161,6 +276,8 @@ func TestBuildObjsFromVineyarddManifests(t *testing.T) {
 	objs, err := BuildObjsFromManifests(templateName, backup, tmplFunc)
 
 	assert.NoError(t, err)
-	assert.NotEmpty(t, objs)
+	if len(objs) != 3 {
+		t.Errorf("Expected %d objects, but got %d", 3, len(objs))
+	}
 
-}*/
+}

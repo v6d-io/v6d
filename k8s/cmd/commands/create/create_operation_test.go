@@ -25,19 +25,25 @@ import (
 )
 
 func Test_buildOperation(t *testing.T) {
+	flags.OperationName = "test-operation"
+	flags.Namespace = "test"
+	flags.OperationOpts.Name = "test-operation-opts"
 	tests := []struct {
 		name string
 		want *v1alpha1.Operation
 	}{
-		// TODO: Add test cases.
+		// Add test cases.
 		{
 			name: "Test Case 1",
 			want: &v1alpha1.Operation{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      flags.OperationName,
+					Name:      "test-operation",
 					Namespace: flags.GetDefaultVineyardNamespace(),
 				},
-				Spec: flags.OperationOpts,
+				Spec: v1alpha1.OperationSpec{
+					Name:           "test-operation-opts",
+					TimeoutSeconds: int64(600),
+				},
 			},
 		},
 	}
@@ -49,23 +55,3 @@ func Test_buildOperation(t *testing.T) {
 		})
 	}
 }
-
-/*func TestNewCreateOperationCmd(t *testing.T) {
-	tests := []struct {
-		name string
-		want *cobra.Command
-	}{
-		// TODO: Add test cases.
-		{
-			name: "Test Case 1",
-			want: createOperationCmd, // 指定预期的 *cobra.Command 值
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewCreateOperationCmd(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewCreateOperationCmd() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}*/

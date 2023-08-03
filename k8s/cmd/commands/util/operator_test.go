@@ -17,6 +17,7 @@ package util
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -51,7 +52,7 @@ func TestGetKustomizeDir(t *testing.T) {
 
 func TestBuildKustomizeInDir(t *testing.T) {
 	// Test valid directory
-	kustomizeDir := "/home/zhuyi/v6d/k8s/config/certmanager/" // replace this with a valid Kustomize directory path
+	kustomizeDir := os.Getenv("HOME") + "/v6d/k8s/config/certmanager/" // replace this with a valid Kustomize directory path
 	_, err := BuildKustomizeInDir(kustomizeDir)
 	assert.Nil(t, err)
 

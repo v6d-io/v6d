@@ -16,7 +16,8 @@ limitations under the License.
 package deploy
 
 import (
-	"fmt"
+	"context"
+	"os"
 	"reflect"
 	"testing"
 
@@ -25,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	//"k8s.io/apimachinery/pkg/runtime/schema"
+	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	//"k8s.io/client-go/kubernetes/fake"
 	//"github.com/stretchr/testify/assert"
@@ -32,31 +34,38 @@ import (
 	//"k8s.io/api/apps/v1"
 )
 
-/*func TestNewDeployBackupJobCmd(t *testing.T) {
-	tests := []struct {
-		name string
-		want *cobra.Command
-	}{
-		// TODO: Add test cases.
-		{
-			name: "Test Case 1",
-			want: deployBackupJobCmd, // 指定预期的 *cobra.Command 值
-		},
+func TestDeployBackupJobCmd(t *testing.T) {
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.BackupOpts.BackupPath = "/var/vineyard/dump"
+	flags.PVCName = "pvc-for-backup-and-recover-demo"
+	flags.Namespace = "vineyard-system"
+	flags.VineyardDeploymentName = "vineyardd-sample"
+	flags.VineyardDeploymentNamespace = "vineyard-system"
+	deployBackupJobCmd.Run(deployBackupJobCmd, []string{})
+	c := util.KubernetesClient()
+
+	if util.Wait(func() (bool, error) {
+		jobName := flags.BackupName
+		name := client.ObjectKey{Name: jobName, Namespace: flags.Namespace}
+		job := batchv1.Job{}
+		if err := c.Get(context.TODO(), name, &job); err != nil {
+			return false, err
+		}
+		if job.Status.Succeeded == *job.Spec.Parallelism {
+			return true, nil
+		}
+		return false, nil
+	}) != nil {
+		t.Errorf("backup job can not be deployed successfully")
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewDeployBackupJobCmd(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewDeployBackupJobCmd() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}*/
+}
 
 func Test_getBackupObjectsFromTemplate(t *testing.T) {
-	flags.KubeConfig = "/home/zhuyi/.kube/config"
+	// set the flags
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.VineyardDeploymentName = "vineyardd-sample"
+	flags.VineyardDeploymentNamespace = "vineyard-system"
 	c := util.KubernetesClient()
-	//backup, _ := create.BuildBackup(c, []string{})
-	//fmt.Println(backup)
 
 	type args struct {
 		c    client.Client
@@ -68,9 +77,9 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 		want    []*unstructured.Unstructured
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// Add test cases.
 		{
-			name: "Test case 1",
+			name: "Test case ",
 			args: args{
 				c:    c,
 				args: []string{},
@@ -107,7 +116,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 							"namespace": nil,
 						},
 						"spec": map[string]interface{}{
-							"parallelism": int64(1),
+							"parallelism": int64(3),
 							"template": map[string]interface{}{
 								"metadata": map[string]interface{}{
 									"labels": map[string]interface{}{
@@ -125,7 +134,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 																"key":      "app.kubernetes.io/instance",
 																"operator": "In",
 																"values": []interface{}{
-																	"vineyard-system-vineyard-operator-cert-manager",
+																	"vineyard-system-vineyardd-sample",
 																},
 															},
 														},
@@ -163,7 +172,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 												},
 												map[string]interface{}{
 													"name":  "ENDPOINT",
-													"value": "vineyard-operator-cert-manager-rpc.vineyard-system",
+													"value": "vineyardd-sample-rpc.vineyard-system",
 												},
 												map[string]interface{}{
 													"name":  "SELECTOR",
@@ -171,7 +180,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 												},
 												map[string]interface{}{
 													"name":  "ALLINSTANCES",
-													"value": "1",
+													"value": "3",
 												},
 												map[string]interface{}{
 													"name": "POD_NAME",
@@ -209,7 +218,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 									"volumes": []interface{}{
 										map[string]interface{}{
 											"hostPath": map[string]interface{}{
-												"path": "/var/run/vineyard-kubernetes/vineyard-system/vineyard-operator-cert-manager",
+												"path": "/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample",
 											},
 											"name": "vineyard-sock",
 										},
@@ -297,14 +306,12 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 						},
 					},
 				},
-			}, // 期望的结果
-			wantErr: false, // 是否期望出错
+			},
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags.VineyardDeploymentName = "vineyard-operator-cert-manager"
-			flags.VineyardDeploymentNamespace = "vineyard-system"
 			got, err := getBackupObjectsFromTemplate(tt.args.c, tt.args.args)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getBackupObjectsFromTemplate() error = %v, wantErr %v", err, tt.wantErr)
@@ -313,45 +320,11 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 
 			for i := range got {
 				if !reflect.DeepEqual(*got[i], *(tt.want)[i]) {
-					fmt.Println(i)
-					fmt.Println(*got[i])
-					fmt.Println(*(tt.want)[i])
 					t.Errorf("getBackupObjectsFromTemplate() = %+v, want %+v", got, tt.want)
 
 				}
 			}
 
-		})
-	}
-}
-
-func Test_waitBackupJobReady(t *testing.T) {
-	flags.KubeConfig = "/home/zhuyi/.kube/config"
-	c := util.KubernetesClient()
-
-	type args struct {
-		c client.Client
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-		{
-			name: "Job succeeded",
-			args: args{
-				c: c,
-			},
-			wantErr: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			flags.Namespace = "vinyard-system"
-			if err := waitBackupJobReady(tt.args.c); (err != nil) != tt.wantErr {
-				t.Errorf("waitBackupJobReady() error = %v, wantErr %v", err, tt.wantErr)
-			}
 		})
 	}
 }

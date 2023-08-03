@@ -24,42 +24,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-/*func TestNewCreateRecoverCmd(t *testing.T) {
-	tests := []struct {
-		name string
-		want *cobra.Command
-	}{
-		// TODO: Add test cases.
-		{
-			name: "Test Case 1",
-			want: createRecoverCmd, // 指定预期的 *cobra.Command 值
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewCreateRecoverCmd(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewCreateRecoverCmd() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}*/
-
 func TestBuildV1alphaRecoverCR(t *testing.T) {
+	flags.RecoverName = "test-recover"
+	flags.Namespace = "test"
+	flags.BackupName = "test-backup"
+
 	tests := []struct {
 		name    string
 		want    *v1alpha1.Recover
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// Add test cases.
 		{
 			name: "Test Case 1",
 			want: &v1alpha1.Recover{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      flags.RecoverName,
+					Name:      "test-recover",
 					Namespace: flags.GetDefaultVineyardNamespace(),
 				},
 				Spec: v1alpha1.RecoverSpec{
-					BackupName:      flags.BackupName,
+					BackupName:      "test-backup",
 					BackupNamespace: flags.GetDefaultVineyardNamespace(),
 				},
 			},

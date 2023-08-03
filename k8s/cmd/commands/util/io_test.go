@@ -19,25 +19,71 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
-func TestReadFromFile(t *testing.T) {
-	// 创建一个临时文件并写入内容
+func Test_ReadFromFile(t *testing.T) {
 	tempFileContent := ""
 	tempFile, err := ioutil.TempFile("", "testfile")
-	assert.NoError(t, err, "Failed to create temporary file")
+	if err != nil {
+		t.Fatalf("Failed to create temporary file: %v", err)
+	}
 	defer tempFile.Close()
 	defer ioutil.WriteFile(tempFile.Name(), []byte(tempFileContent), 0644)
+	type args struct {
+		path string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "Test case 1",
+			args: args{
+				path: tempFile.Name(),
+			},
+			want:    tempFileContent,
+			wantErr: false,
+		},
+		// Add more test cases if needed
+	}
 
-	// 调用 ReadFromFile 函数读取文件内容
-	result, err := ReadFromFile(tempFile.Name())
-	assert.NoError(t, err, "ReadFromFile should not return an error")
-	assert.Equal(t, tempFileContent, result, "File contents should match")
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ReadFromFile(tt.args.path)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReadFromFile() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ReadFromFile() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
 
-func TestReadFromStdin(t *testing.T) {
+func Test_ReadFromStdin(t *testing.T) {
+	type args struct {
+		args []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "Test case 1",
+			args: args{
+				args: []string{"-"},
+			},
+			want:    "Test input",
+			wantErr: false,
+		},
+		// Add more test cases if needed
+	}
+
 	expected := "Test input"
 	r, w, _ := os.Pipe()
 	os.Stdin = r
@@ -46,17 +92,41 @@ func TestReadFromStdin(t *testing.T) {
 		w.Write([]byte(expected))
 	}()
 
-	result, err := ReadFromStdin([]string{"-"})
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-
-	if result != expected {
-		t.Errorf("Expected %q, but got %q", expected, result)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ReadFromStdin(tt.args.args)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReadFromStdin() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ReadFromStdin() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
-func TestReadJsonFromStdin(t *testing.T) {
+func Test_ReadJsonFromStdin(t *testing.T) {
+	type args struct {
+		args []string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{
+			name: "Test case 1",
+			args: args{
+				args: []string{"-"},
+			},
+			want:    `{"test": "input"}`,
+			wantErr: false,
+		},
+		// Add more test cases if needed
+	}
+
 	expected := `{"test": "input"}`
 	r, w, _ := os.Pipe()
 	os.Stdin = r
@@ -65,12 +135,16 @@ func TestReadJsonFromStdin(t *testing.T) {
 		w.Write([]byte(expected))
 	}()
 
-	result, err := ReadJsonFromStdin([]string{"-"})
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-
-	if result != expected {
-		t.Errorf("Expected %q, but got %q", expected, result)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ReadJsonFromStdin(tt.args.args)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ReadJsonFromStdin() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("ReadJsonFromStdin() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

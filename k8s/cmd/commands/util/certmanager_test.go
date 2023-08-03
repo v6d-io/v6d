@@ -25,7 +25,7 @@ func Test_getCertManagerManifestsFromLocal(t *testing.T) {
 		want    Manifests
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// Add test cases.
 		{
 			name:    "ValidManifests",
 			wantErr: false,
@@ -49,7 +49,7 @@ func TestGetCertManager(t *testing.T) {
 		want    Manifests
 		wantErr bool
 	}{
-		// TODO: Add test cases.
+		// Add test cases.
 		{
 			name:    "ValidManifests",
 			wantErr: false,

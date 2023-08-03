@@ -16,6 +16,8 @@ limitations under the License.
 package create
 
 import (
+	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
@@ -26,36 +28,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-/*func TestNewCreateBackupCmd(t *testing.T) {
-	tests := []struct {
-		name string
-		want *cobra.Command
-	}{
-		{
-			name: "EmptyArgs",
-			want: createBackupCmd,
-		},
-		{
-			name: "WithArgs",
-			want: createBackupCmd,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := NewCreateBackupCmd(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("NewCreateBackupCmd() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}*/
-
 func Test_buildBackupCR(t *testing.T) {
+	flags.BackupName = "test-backup"
+	flags.Namespace = "test"
+	flags.BackupOpts.BackupPath = "backup/path/to/test"
+
 	want := &v1alpha1.Backup{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      flags.BackupName,
-			Namespace: flags.Namespace,
+			Name:      "test-backup",
+			Namespace: "test",
 		},
-		Spec: flags.BackupOpts,
+		Spec: v1alpha1.BackupSpec{
+			BackupPath: "backup/path/to/test",
+		},
 	}
 
 	got, err := buildBackupCR()
@@ -65,27 +50,30 @@ func Test_buildBackupCR(t *testing.T) {
 		return
 	}
 
-	if !reflect.DeepEqual(got, want) {
+	a := fmt.Sprint(got)
+	b := fmt.Sprint(want)
+	if !reflect.DeepEqual(a, b) {
 		t.Errorf("buildBackupCR() = %v, want %v", got, want)
 	}
 }
 
 func TestBuildBackup(t *testing.T) {
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.BackupName = "test-backup"
+	flags.Namespace = "test"
+	flags.BackupOpts.BackupPath = "backup/path/to/test"
+	c := util.KubernetesClient()
+
 	type args struct {
 		c    client.Client
 		args []string
 	}
-
-	flags.KubeConfig = "/home/zhuyi/.kube/config"
-	c := util.KubernetesClient()
-
 	tests := []struct {
 		name    string
 		args    args
 		want    *v1alpha1.Backup
 		wantErr bool
 	}{
-		// TODO: Add test cases.
 		{
 			name: "Valid JSON from stdin",
 			args: args{
@@ -95,10 +83,12 @@ func TestBuildBackup(t *testing.T) {
 			want: &v1alpha1.Backup{
 				// Expected Backup CR based on the provided JSON.
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      flags.BackupName,
-					Namespace: flags.Namespace,
+					Name:      "test-backup",
+					Namespace: "test",
 				},
-				Spec: flags.BackupOpts,
+				Spec: v1alpha1.BackupSpec{
+					BackupPath: "backup/path/to/test",
+				},
 			},
 			wantErr: false,
 		},
@@ -110,7 +100,9 @@ func TestBuildBackup(t *testing.T) {
 				t.Errorf("BuildBackup() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
+			a := fmt.Sprint(got)
+			b := fmt.Sprint(tt.want)
+			if !reflect.DeepEqual(a, b) {
 				t.Errorf("BuildBackup() = %v, want %v", got, tt.want)
 			}
 		})

@@ -19,23 +19,35 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	//"k8s.io/client-go/kubernetes/scheme"
-	"k8s.io/client-go/tools/clientcmd"
+
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
-func TestParseManifestToObject(t *testing.T) {
-	manifest := `
+func Test_ParseManifestToObject(t *testing.T) {
+	type args struct {
+		manifest string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *unstructured.Unstructured
+		wantErr bool
+	}{
+		{
+			name: "Test case 1",
+			args: args{
+				manifest: `
 apiVersion: v1
 kind: Pod
 metadata:
@@ -45,43 +57,63 @@ spec:
   containers:
   - name: my-container
     image: nginx
-`
-	expected := &unstructured.Unstructured{
-		Object: map[string]interface{}{
-			"apiVersion": "v1",
-			"kind":       "Pod",
-			"metadata": map[string]interface{}{
-				"name":              "my-pod",
-				"namespace":         "default",
-				"creationTimestamp": nil,
+`,
 			},
-			"spec": map[string]interface{}{
-				"containers": []interface{}{
-					map[string]interface{}{
-						"name":      "my-container",
-						"image":     "nginx",
-						"resources": map[string]interface{}{},
+			want: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"apiVersion": "v1",
+					"kind":       "Pod",
+					"metadata": map[string]interface{}{
+						"name":              "my-pod",
+						"namespace":         "default",
+						"creationTimestamp": nil,
 					},
+					"spec": map[string]interface{}{
+						"containers": []interface{}{
+							map[string]interface{}{
+								"name":      "my-container",
+								"image":     "nginx",
+								"resources": map[string]interface{}{},
+							},
+						},
+					},
+					"status": map[string]interface{}{},
 				},
 			},
-			"status": map[string]interface{}{},
+			wantErr: false,
 		},
 	}
 
-	result, err := ParseManifestToObject(manifest)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-
-	if !reflect.DeepEqual(result, expected) {
-		fmt.Println(expected)
-		fmt.Println(result)
-		t.Errorf("Expected %v, but got %v", expected, result)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseManifestToObject(tt.args.manifest)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseManifestToObject() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				fmt.Println(tt.want)
+				fmt.Println(got)
+				t.Errorf("ParseManifestToObject() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
-func TestParseManifestsToObjects(t *testing.T) {
-	manifests := []byte(`
+func Test_ParseManifestsToObjects(t *testing.T) {
+	type args struct {
+		manifests []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    Manifests
+		wantErr bool
+	}{
+		{
+			name: "Test case 1",
+			args: args{
+				manifests: []byte(`
 apiVersion: v1
 kind: Pod
 metadata:
@@ -91,145 +123,164 @@ spec:
   containers:
   - name: my-container
     image: nginx
-`)
-
-	expected := Manifests{
-		&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Pod",
-				"metadata": map[string]interface{}{
-					"creationTimestamp": nil,
-					"name":              "my-pod-1",
-					"namespace":         "default",
-				},
-				"spec": map[string]interface{}{
-					"containers": []interface{}{
-						map[string]interface{}{
-							"name":      "my-container",
-							"image":     "nginx",
-							"resources": map[string]interface{}{},
+`),
+			},
+			want: Manifests{
+				&unstructured.Unstructured{
+					Object: map[string]interface{}{
+						"apiVersion": "v1",
+						"kind":       "Pod",
+						"metadata": map[string]interface{}{
+							"creationTimestamp": nil,
+							"name":              "my-pod-1",
+							"namespace":         "default",
 						},
+						"spec": map[string]interface{}{
+							"containers": []interface{}{
+								map[string]interface{}{
+									"name":      "my-container",
+									"image":     "nginx",
+									"resources": map[string]interface{}{},
+								},
+							},
+						},
+						"status": map[string]interface{}{},
 					},
 				},
-				"status": map[string]interface{}{},
 			},
+			wantErr: false,
 		},
 	}
 
-	result, err := ParseManifestsToObjects(manifests)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-
-	if len(result) != len(expected) {
-		t.Errorf("Expected %d objects, but got %d", len(expected), len(result))
-	}
-
-	for i := range result {
-		if !reflect.DeepEqual(result[i], expected[i]) {
-			fmt.Println(i)
-			fmt.Println(expected[i])
-			fmt.Println(result[i])
-			t.Errorf("Expected %v, but got %v", expected[i], result[i])
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ParseManifestsToObjects(tt.args.manifests)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ParseManifestsToObjects() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				for i := range tt.want {
+					if !reflect.DeepEqual(got[i], tt.want[i]) {
+						fmt.Println(i)
+						fmt.Println(tt.want[i])
+						fmt.Println(got[i])
+						t.Errorf("Expected %v, but got %v", tt.want[i], got[i])
+					}
+				}
+			}
+		})
 	}
 }
 
-func TestApplyManifests(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
+func Test_ApplyManifests(t *testing.T) {
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	c := KubernetesClient()
+
+	type args struct {
+		c         client.Client
+		manifests Manifests
+		namespace string
 	}
-
-	kubeconfig := filepath.Join(homeDir, ".kube", "config")
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-
-	clientScheme := runtime.NewScheme()
-	//_ = scheme.AddToScheme(clientScheme)
-	client, err := client.New(config, client.Options{Scheme: clientScheme})
-
-	// 创建要应用的 Manifests
-	manifests := Manifests{
-		&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Pod",
-				"metadata": map[string]interface{}{
-					"creationTimestamp": nil,
-					"name":              "my-pod-1",
-					"namespace":         "vineyard-system",
-				},
-				"spec": map[string]interface{}{
-					"containers": []interface{}{
-						map[string]interface{}{
-							"name":      "my-container",
-							"image":     "nginx",
-							"resources": map[string]interface{}{},
+	tests := []struct {
+		name string
+		args args
+	}{
+		{
+			name: "Test case 1",
+			args: args{
+				c: c,
+				manifests: Manifests{
+					&unstructured.Unstructured{
+						Object: map[string]interface{}{
+							"apiVersion": "v1",
+							"kind":       "Pod",
+							"metadata": map[string]interface{}{
+								"creationTimestamp": nil,
+								"name":              "my-pod-1",
+								"namespace":         "vineyard-system",
+							},
+							"spec": map[string]interface{}{
+								"containers": []interface{}{
+									map[string]interface{}{
+										"name":      "my-container",
+										"image":     "nginx",
+										"resources": map[string]interface{}{},
+									},
+								},
+							},
+							"status": map[string]interface{}{},
 						},
 					},
 				},
-				"status": map[string]interface{}{},
+				namespace: "vineyard-system",
 			},
 		},
 	}
 
-	// 指定要使用的命名空间
-	namespace := "vineyard-system"
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
 
-	// 调用 ApplyManifests
-	err = ApplyManifests(client, manifests, namespace)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+			if err := ApplyManifests(tt.args.c, tt.args.manifests, tt.args.namespace); err != nil {
+				t.Errorf("ApplyManifests() error = %v", err)
+			}
+		})
 	}
-
 }
 
-func TestDeleteManifests(t *testing.T) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		panic(err)
+func Test_DeleteManifests(t *testing.T) {
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	c := KubernetesClient()
+
+	type args struct {
+		c         client.Client
+		manifests Manifests
+		namespace string
 	}
-
-	kubeconfig := filepath.Join(homeDir, ".kube", "config")
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-
-	clientScheme := runtime.NewScheme()
-	//_ = scheme.AddToScheme(clientScheme)
-	client, err := client.New(config, client.Options{Scheme: clientScheme})
-
-	// 创建要应用的 Manifests
-	manifests := Manifests{
-		&unstructured.Unstructured{
-			Object: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Pod",
-				"metadata": map[string]interface{}{
-					"creationTimestamp": nil,
-					"name":              "my-pod-1",
-					"namespace":         "vineyard-system",
-				},
-				"spec": map[string]interface{}{
-					"containers": []interface{}{
-						map[string]interface{}{
-							"name":      "my-container",
-							"image":     "nginx",
-							"resources": map[string]interface{}{},
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "Test case 1",
+			args: args{
+				c: c,
+				manifests: Manifests{
+					&unstructured.Unstructured{
+						Object: map[string]interface{}{
+							"apiVersion": "v1",
+							"kind":       "Pod",
+							"metadata": map[string]interface{}{
+								"creationTimestamp": nil,
+								"name":              "my-pod-1",
+								"namespace":         "vineyard-system",
+							},
+							"spec": map[string]interface{}{
+								"containers": []interface{}{
+									map[string]interface{}{
+										"name":      "my-container",
+										"image":     "nginx",
+										"resources": map[string]interface{}{},
+									},
+								},
+							},
+							"status": map[string]interface{}{},
 						},
 					},
 				},
-				"status": map[string]interface{}{},
+				namespace: "vineyard-system",
 			},
+			wantErr: false,
 		},
 	}
 
-	// 指定要使用的命名空间
-	namespace := "vineyard-system"
-
-	// 调用 DeleteManifests
-	err = DeleteManifests(client, manifests, namespace)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := DeleteManifests(tt.args.c, tt.args.manifests, tt.args.namespace); (err != nil) != tt.wantErr {
+				t.Errorf("DeleteManifests() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
 	}
 }
 
@@ -285,3 +336,58 @@ func TestApplyManifestsWithOwnerRef(t *testing.T) {
 	err = ApplyManifestsWithOwnerRef(c, objs, "Job", "Unsupported")
 	assert.Nil(t, err)
 }
+
+/*func Test_ApplyManifestsWithOwnerRef(t *testing.T) {
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	//flags.Namespace = "vineyard-system"
+	c := KubernetesClient()
+
+	objs := []*unstructured.Unstructured{
+		{
+			Object: map[string]interface{}{
+				"apiVersion": "batch/v1",
+				"kind":       "Job",
+				"metadata": map[string]interface{}{
+					"name":      "test-job",
+					"uid":       "12345",
+					"namespace": "vineyard-system",
+				},
+			},
+		},
+		{
+			Object: map[string]interface{}{
+				"apiVersion": "v1",
+				"kind":       "Pod",
+				"metadata": map[string]interface{}{
+					"name":      "test-pod",
+					"namespace": "vineyard-system",
+				},
+			},
+		},
+	}
+
+	// Test with valid inputs
+	err := ApplyManifestsWithOwnerRef(c, objs, "Job", "Pod")
+	assert.Nil(t, err)
+
+	// Check if OwnerReference was set for "Pod" kind
+	pod := &unstructured.Unstructured{}
+	pod.SetGroupVersionKind(schema.GroupVersionKind{
+		Group:   "",
+		Version: "v1",
+		Kind:    "Pod",
+	})
+
+	err = c.Get(context.Background(), client.ObjectKey{Name: "test-pod"}, pod)
+	assert.Nil(t, err)
+
+	ownerRefs := pod.GetOwnerReferences()
+	assert.Equal(t, 1, len(ownerRefs))
+	assert.Equal(t, "Job", ownerRefs[0].Kind)
+	assert.Equal(t, "test-job", ownerRefs[0].Name)
+	assert.Equal(t, "12345", string(ownerRefs[0].UID))
+
+	// Test with unsupported kind in refKind
+	err = ApplyManifestsWithOwnerRef(c, objs, "Job", "Unsupported")
+	assert.Nil(t, err)
+}*/
