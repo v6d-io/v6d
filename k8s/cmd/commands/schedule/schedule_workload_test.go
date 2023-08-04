@@ -164,20 +164,6 @@ func Test_getWorkload(t *testing.T) {
 		{
 			name: "Test case",
 			args: args{
-				/*workload: "apiVersion: apps/v1\n" +
-				"kind: Deployment\n" +
-				"metadata:\n" +
-				"  name: my-deployment\n" +
-				"spec:\n" +
-				"  replicas: 3\n" +
-				"  template:\n" +
-				"    metadata:\n" +
-				"      labels:\n" +
-				"        app: my-app\n" +
-				"    spec:\n" +
-				"      containers:\n" +
-				"      - name: my-container\n" +
-				"        image: nginx:latest\n",*/
 				workload: `apiVersion: apps/v1
 kind: Deployment
 metadata:

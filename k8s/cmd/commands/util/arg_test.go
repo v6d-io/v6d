@@ -21,24 +21,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-/*func Test_AssertNoArgs(t *testing.T) {
-	// 创建一个命令
-	cmd := &cobra.Command{
-		Use: "mycmd",
-		Run: func(cmd *cobra.Command, args []string) {
-			// 在运行函数中调用 AssertNoArgs 函数
-			AssertNoArgs(cmd, args)
-			log.Println("No positional arguments")
-		},
-	}
-
-	// 执行命令并传递一些位置参数
-	err := cmd.Execute()
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-}*/
-
 func TestAssertNoArgs(t *testing.T) {
 	cmd := &cobra.Command{
 		Use: "mycmd",
@@ -51,7 +33,7 @@ func TestAssertNoArgs(t *testing.T) {
 		name string
 		args args
 	}{
-		// TODO: Add test cases.
+		// Add test cases.
 		{
 			name: "NoArgs",
 			args: args{
@@ -66,30 +48,6 @@ func TestAssertNoArgs(t *testing.T) {
 		})
 	}
 }
-
-/*func Test_AssertNoArgsOrInput(t *testing.T) {
-	// 创建一个命令
-	cmd := &cobra.Command{
-		Use: "mycmd",
-		Run: func(cmd *cobra.Command, args []string) {
-			// 在运行函数中调用 AssertNoArgsOrInput 函数
-			AssertNoArgsOrInput(cmd, args)
-			log.Println("No positional arguments or input")
-		},
-	}
-
-	// 执行命令并传递一些位置参数
-	err := cmd.Execute()
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-
-	// 执行命令并传递输入为 "-" 的参数
-	_, err = cmd.ExecuteC()
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-	}
-}*/
 
 func TestAssertNoArgsOrInput(t *testing.T) {
 	cmd := &cobra.Command{

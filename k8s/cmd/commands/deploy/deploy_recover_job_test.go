@@ -16,16 +16,52 @@ limitations under the License.
 package deploy
 
 import (
+	"context"
 	"os"
 	"reflect"
 	"testing"
 
+	batchv1 "k8s.io/api/batch/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
+
+func TestDeployRecoverJobCmd(t *testing.T) {
+	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.RecoverPath = "/var/vineyard/dump"
+	flags.PVCName = "pvc-for-backup-and-recover-demo"
+	flags.Namespace = "vineyard-system"
+	flags.VineyardDeploymentName = "vineyardd-sample"
+	flags.VineyardDeploymentNamespace = "vineyard-system"
+	deployRecoverJobCmd.Run(deployRecoverJobCmd, []string{})
+	c := util.KubernetesClient()
+
+	if util.Wait(func() (bool, error) {
+		jobName := flags.RecoverName
+		name := client.ObjectKey{Name: jobName, Namespace: flags.Namespace}
+		job := batchv1.Job{}
+		if err := c.Get(context.TODO(), name, &job); err != nil {
+			return false, err
+		}
+		if job.Status.Succeeded == *job.Spec.Parallelism {
+			return true, nil
+		}
+		return false, nil
+	}) != nil {
+		t.Errorf("recover job can not be deployed successfully")
+	}
+
+	// get the ConfigMap
+	name := client.ObjectKey{Name: flags.RecoverName + "-mapping-table", Namespace: flags.Namespace}
+	cm := corev1.ConfigMap{}
+	if err := c.Get(context.TODO(), name, &cm); err != nil {
+		t.Errorf("can not get MappingTableConfigmap")
+	}
+}
 
 func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 	// set the flags
@@ -269,40 +305,3 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 		})
 	}
 }
-
-/*func Test_createMappingTableConfigmap(t *testing.T) {
-	flags.KubeConfig = "/home/zhuyi/.kube/config"
-	c := util.KubernetesClient()
-
-	config, _ := clientcmd.BuildConfigFromFlags("", flags.KubeConfig)
-
-	cs, _ := kubernetes.NewForConfig(config)
-
-	type args struct {
-		c  client.Client
-		cs kubernetes.Clientset
-	}
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		// TODO: Add test cases.
-		{
-			name: "test case",
-			args: args{
-				c:  c,
-				cs: *cs,
-			},
-			wantErr: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			flags.Namespace = "vineyard-system"
-			if err := createMappingTableConfigmap(tt.args.c, tt.args.cs); (err != nil) != tt.wantErr {
-				t.Errorf("createMappingTableConfigmap() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}*/

@@ -17,21 +17,18 @@ package util
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	//"k8s.io/client-go/kubernetes/scheme"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
 func Test_ParseManifestToObject(t *testing.T) {
@@ -92,8 +89,6 @@ spec:
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				fmt.Println(tt.want)
-				fmt.Println(got)
 				t.Errorf("ParseManifestToObject() = %v, want %v", got, tt.want)
 			}
 		})
@@ -162,9 +157,6 @@ spec:
 			if !reflect.DeepEqual(got, tt.want) {
 				for i := range tt.want {
 					if !reflect.DeepEqual(got[i], tt.want[i]) {
-						fmt.Println(i)
-						fmt.Println(tt.want[i])
-						fmt.Println(got[i])
 						t.Errorf("Expected %v, but got %v", tt.want[i], got[i])
 					}
 				}
@@ -220,11 +212,16 @@ func Test_ApplyManifests(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-
 			if err := ApplyManifests(tt.args.c, tt.args.manifests, tt.args.namespace); err != nil {
 				t.Errorf("ApplyManifests() error = %v", err)
 			}
 		})
+		pod := &unstructured.Unstructured{}
+		pod.SetKind("Pod")
+		pod.SetAPIVersion("v1")
+		err := c.Get(context.Background(), client.ObjectKey{Name: "my-pod-1", Namespace: "vineyard-system"}, pod)
+		assert.Nil(t, err)
+
 	}
 }
 
@@ -281,65 +278,17 @@ func Test_DeleteManifests(t *testing.T) {
 				t.Errorf("DeleteManifests() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
+		pod := &unstructured.Unstructured{}
+		pod.SetKind("Pod")
+		pod.SetAPIVersion("v1")
+		err := c.Get(context.Background(), client.ObjectKey{Name: "my-pod-1", Namespace: "vineyard-system"}, pod)
+		assert.NotNil(t, err)
 	}
 }
 
-func TestApplyManifestsWithOwnerRef(t *testing.T) {
-	scheme := runtime.NewScheme()
-
-	c := fake.NewFakeClientWithScheme(scheme)
-
-	objs := []*unstructured.Unstructured{
-		{
-			Object: map[string]interface{}{
-				"apiVersion": "batch/v1",
-				"kind":       "Job",
-				"metadata": map[string]interface{}{
-					"name": "test-job",
-					"uid":  "12345",
-				},
-			},
-		},
-		{
-			Object: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Pod",
-				"metadata": map[string]interface{}{
-					"name": "test-pod",
-				},
-			},
-		},
-	}
-
-	// Test with valid inputs
-	err := ApplyManifestsWithOwnerRef(c, objs, "Job", "Pod")
-	assert.Nil(t, err)
-
-	// Check if OwnerReference was set for "Pod" kind
-	pod := &unstructured.Unstructured{}
-	pod.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "",
-		Version: "v1",
-		Kind:    "Pod",
-	})
-
-	err = c.Get(context.Background(), client.ObjectKey{Name: "test-pod"}, pod)
-	assert.Nil(t, err)
-
-	ownerRefs := pod.GetOwnerReferences()
-	assert.Equal(t, 1, len(ownerRefs))
-	assert.Equal(t, "Job", ownerRefs[0].Kind)
-	assert.Equal(t, "test-job", ownerRefs[0].Name)
-	assert.Equal(t, "12345", string(ownerRefs[0].UID))
-
-	// Test with unsupported kind in refKind
-	err = ApplyManifestsWithOwnerRef(c, objs, "Job", "Unsupported")
-	assert.Nil(t, err)
-}
-
-/*func Test_ApplyManifestsWithOwnerRef(t *testing.T) {
+func Test_ApplyManifestsWithOwnerRef(t *testing.T) {
 	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	//flags.Namespace = "vineyard-system"
+	flags.Namespace = "vineyard-system"
 	c := KubernetesClient()
 
 	objs := []*unstructured.Unstructured{
@@ -348,46 +297,220 @@ func TestApplyManifestsWithOwnerRef(t *testing.T) {
 				"apiVersion": "batch/v1",
 				"kind":       "Job",
 				"metadata": map[string]interface{}{
-					"name":      "test-job",
-					"uid":       "12345",
+					"name":      "vineyard-backup",
 					"namespace": "vineyard-system",
+				},
+				"spec": map[string]interface{}{
+					"parallelism": int64(3),
+					"template": map[string]interface{}{
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"app.kubernetes.io/name": "vineyard-backup",
+							},
+						},
+						"spec": map[string]interface{}{
+							"affinity": map[string]interface{}{
+								"podAffinity": map[string]interface{}{
+									"requiredDuringSchedulingIgnoredDuringExecution": []interface{}{
+										map[string]interface{}{
+											"labelSelector": map[string]interface{}{
+												"matchExpressions": []interface{}{
+													map[string]interface{}{
+														"key":      "app.kubernetes.io/instance",
+														"operator": "In",
+														"values": []interface{}{
+															"vineyard-system-vineyardd-sample",
+														},
+													},
+												},
+											},
+											"topologyKey": "kubernetes.io/hostname",
+										},
+									},
+								},
+								"podAntiAffinity": map[string]interface{}{
+									"requiredDuringSchedulingIgnoredDuringExecution": []interface{}{
+										map[string]interface{}{
+											"labelSelector": map[string]interface{}{
+												"matchExpressions": []interface{}{
+													map[string]interface{}{
+														"key":      "app.kubernetes.io/name",
+														"operator": "In",
+														"values": []interface{}{
+															"vineyard-backup",
+														},
+													},
+												},
+											},
+											"topologyKey": "kubernetes.io/hostname",
+										},
+									},
+								},
+							},
+							"containers": []interface{}{
+								map[string]interface{}{
+									"env": []interface{}{
+
+										map[string]interface{}{
+											"name":  "BACKUP_PATH",
+											"value": "/var/vineyard/dump",
+										},
+										map[string]interface{}{
+											"name":  "ENDPOINT",
+											"value": "vineyardd-sample-rpc.vineyard-system",
+										},
+										map[string]interface{}{
+											"name":  "SELECTOR",
+											"value": "vineyard-backup",
+										},
+										map[string]interface{}{
+											"name":  "ALLINSTANCES",
+											"value": "3",
+										},
+										map[string]interface{}{
+											"name": "POD_NAME",
+											"valueFrom": map[string]interface{}{
+												"fieldRef": map[string]interface{}{
+													"fieldPath": "metadata.name",
+												},
+											},
+										},
+										map[string]interface{}{
+											"name": "POD_NAMESPACE",
+											"valueFrom": map[string]interface{}{
+												"fieldRef": map[string]interface{}{
+													"fieldPath": "metadata.namespace",
+												},
+											},
+										},
+									},
+									"image":           "ghcr.io/v6d-io/v6d/backup-job",
+									"imagePullPolicy": "IfNotPresent",
+									"name":            "engine",
+									"volumeMounts": []interface{}{
+										map[string]interface{}{
+											"mountPath": "/var/run",
+											"name":      "vineyard-sock",
+										},
+										map[string]interface{}{
+											"mountPath": "/var/vineyard/dump",
+											"name":      "backup-path",
+										},
+									},
+								},
+							},
+							"restartPolicy": "Never",
+							"volumes": []interface{}{
+								map[string]interface{}{
+									"hostPath": map[string]interface{}{
+										"path": "/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample",
+									},
+									"name": "vineyard-sock",
+								},
+								map[string]interface{}{
+									"name": "backup-path",
+									"persistentVolumeClaim": map[string]interface{}{
+										"claimName": "pvc-for-backup-and-recover-demo",
+									},
+								},
+							},
+						},
+					},
+					"ttlSecondsAfterFinished": int64(80),
 				},
 			},
 		},
 		{
 			Object: map[string]interface{}{
-				"apiVersion": "v1",
-				"kind":       "Pod",
+				"apiVersion": "rbac.authorization.k8s.io/v1",
+				"kind":       "RoleBinding",
 				"metadata": map[string]interface{}{
-					"name":      "test-pod",
+					"labels": map[string]interface{}{
+						"app.kubernetes.io/name": "backup",
+					},
+					"name":      "vineyard-backup",
 					"namespace": "vineyard-system",
+				},
+				"roleRef": map[string]interface{}{
+					"apiGroup": "rbac.authorization.k8s.io",
+					"kind":     "Role",
+					"name":     "vineyard-backup",
+				},
+				"subjects": []interface{}{
+					map[string]interface{}{
+						"kind":      "ServiceAccount",
+						"name":      "default",
+						"namespace": "vineyard-system",
+					},
+				},
+			},
+		},
+		{
+			Object: map[string]interface{}{
+				"apiVersion": "rbac.authorization.k8s.io/v1",
+				"kind":       "Role",
+				"metadata": map[string]interface{}{
+					"labels": map[string]interface{}{
+						"app.kubernetes.io/instance": "backup",
+					},
+					"name":      "vineyard-backup",
+					"namespace": "vineyard-system",
+				},
+				"rules": []interface{}{
+					map[string]interface{}{
+						"apiGroups": []interface{}{
+							"",
+						},
+						"resources": []interface{}{
+							"pods",
+							"pods/log",
+						},
+						"verbs": []interface{}{
+							"get",
+							"list",
+						},
+					},
+					map[string]interface{}{
+						"apiGroups": []interface{}{
+							"",
+						},
+						"resources": []interface{}{
+							"pods/exec",
+						},
+						"verbs": []interface{}{
+							"create",
+						},
+					},
+				},
+				"subjects": []interface{}{
+					map[string]interface{}{
+						"kind":      "ServiceAccount",
+						"name":      "default",
+						"namespace": "vineyard-system",
+					},
 				},
 			},
 		},
 	}
 
 	// Test with valid inputs
-	err := ApplyManifestsWithOwnerRef(c, objs, "Job", "Pod")
+	err := ApplyManifestsWithOwnerRef(c, objs, "Job", "Role,Rolebinding")
 	assert.Nil(t, err)
 
-	// Check if OwnerReference was set for "Pod" kind
-	pod := &unstructured.Unstructured{}
-	pod.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "",
-		Version: "v1",
-		Kind:    "Pod",
-	})
+	// Check if OwnerReference was set for "Role" kind
+	RoleBinding := &unstructured.Unstructured{}
+	RoleBinding.SetKind("Role")
+	RoleBinding.SetAPIVersion("rbac.authorization.k8s.io/v1")
 
-	err = c.Get(context.Background(), client.ObjectKey{Name: "test-pod"}, pod)
+	err = c.Get(context.Background(), client.ObjectKey{Name: "vineyard-backup", Namespace: "vineyard-system"}, RoleBinding)
 	assert.Nil(t, err)
-
-	ownerRefs := pod.GetOwnerReferences()
+	time.Sleep(2 * time.Second)
+	ownerRefs := RoleBinding.GetOwnerReferences()
 	assert.Equal(t, 1, len(ownerRefs))
 	assert.Equal(t, "Job", ownerRefs[0].Kind)
-	assert.Equal(t, "test-job", ownerRefs[0].Name)
-	assert.Equal(t, "12345", string(ownerRefs[0].UID))
+	assert.Equal(t, "vineyard-backup", ownerRefs[0].Name)
 
 	// Test with unsupported kind in refKind
 	err = ApplyManifestsWithOwnerRef(c, objs, "Job", "Unsupported")
 	assert.Nil(t, err)
-}*/
+}

@@ -156,7 +156,6 @@ func TestDeployVineyarddCmd(t *testing.T) {
 		// get the pvc object
 		pvcList := corev1.PersistentVolumeClaimList{}
 		err = k8sclient.List(context.Background(), &pvcList, client.InNamespace(flags.Namespace))
-		//fmt.Println(&pvcList)
 		if err != nil {
 			t.Errorf("list PVCs error: %v", err)
 		}

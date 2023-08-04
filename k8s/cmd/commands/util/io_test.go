@@ -46,7 +46,6 @@ func Test_ReadFromFile(t *testing.T) {
 			want:    tempFileContent,
 			wantErr: false,
 		},
-		// Add more test cases if needed
 	}
 
 	for _, tt := range tests {
@@ -81,7 +80,6 @@ func Test_ReadFromStdin(t *testing.T) {
 			want:    "Test input",
 			wantErr: false,
 		},
-		// Add more test cases if needed
 	}
 
 	expected := "Test input"
@@ -124,7 +122,6 @@ func Test_ReadJsonFromStdin(t *testing.T) {
 			want:    `{"test": "input"}`,
 			wantErr: false,
 		},
-		// Add more test cases if needed
 	}
 
 	expected := `{"test": "input"}`

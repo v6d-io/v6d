@@ -559,17 +559,16 @@ func Test_applyVineyarddFromTemplate(t *testing.T) {
 		c client.Client
 	}
 	tests := []struct {
-		name                   string
-		args                   args
-		vineyardReplicas       int
-		etcdReplicas           int
-		expectedImage          string
-		expectedCpu            string
-		expectedMemery         string
-		expectedService_port   int
-		expectedService_type   string
-		expectedSolume_pvcname string
-		wantErr                bool
+		name                 string
+		args                 args
+		vineyardReplicas     int
+		etcdReplicas         int
+		expectedImage        string
+		expectedCpu          string
+		expectedMemery       string
+		expectedService_port int
+		expectedService_type string
+		wantErr              bool
 	}{
 		// Add test cases.
 		{
@@ -577,15 +576,14 @@ func Test_applyVineyarddFromTemplate(t *testing.T) {
 			args: args{
 				c: c,
 			},
-			vineyardReplicas:       3,
-			etcdReplicas:           1,
-			expectedImage:          "vineyardcloudnative/vineyardd:alpine-latest",
-			expectedCpu:            "",
-			expectedMemery:         "",
-			expectedService_port:   9600,
-			expectedService_type:   "ClusterIP",
-			expectedSolume_pvcname: "",
-			wantErr:                false,
+			vineyardReplicas:     3,
+			etcdReplicas:         1,
+			expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
+			expectedCpu:          "",
+			expectedMemery:       "",
+			expectedService_port: 9600,
+			expectedService_type: "ClusterIP",
+			wantErr:              false,
 		},
 	}
 	for _, tt := range tests {

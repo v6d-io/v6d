@@ -44,7 +44,6 @@ func Test_Scheme(t *testing.T) {
 			name: "Test case 1",
 			want: expectedScheme,
 		},
-		// Add more test cases if needed
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -94,7 +93,6 @@ func Test_GetKubernetesConfig(t *testing.T) {
 			name:           "Test case 1",
 			kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
 		},
-		// Add more test cases if needed
 	}
 
 	for _, tt := range tests {
@@ -117,7 +115,6 @@ func Test_KubernetesClient(t *testing.T) {
 			name:           "Test case 1",
 			kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
 		},
-		// Add more test cases if needed
 	}
 
 	for _, tt := range tests {
@@ -141,7 +138,6 @@ func Test_KubernetesClientset(t *testing.T) {
 			name:           "Test case 1",
 			kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
 		},
-		// Add more test cases if needed
 	}
 
 	for _, tt := range tests {
@@ -184,7 +180,6 @@ func Test_Create(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		// Add more test cases if needed
 	}
 
 	for _, tt := range tests {
@@ -241,7 +236,6 @@ func Test_CreateIfNotExists(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		// Add more test cases if needed
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -302,7 +296,6 @@ func Test_CreateWithContext(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		// Add more test cases if needed
 	}
 
 	for _, tt := range tests {
@@ -364,7 +357,6 @@ func Test_Delete(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		// Add more test cases if needed
 	}
 
 	for _, tt := range tests {
@@ -428,7 +420,6 @@ func Test_DeleteWithContext(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		// Add more test cases if needed
 	}
 
 	for _, tt := range tests {
@@ -485,7 +476,6 @@ func Test_Wait(t *testing.T) {
 			},
 			wantErr: false,
 		},
-		// Add more test cases if needed
 	}
 
 	for _, tt := range tests {
@@ -513,7 +503,6 @@ func Test_CreateNamespaceIfNotExist(t *testing.T) {
 			},
 			expectedNsName: "expected-namespace",
 		},
-		// Add more test cases if needed
 	}
 
 	for _, tt := range tests {

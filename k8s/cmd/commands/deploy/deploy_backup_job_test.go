@@ -63,6 +63,9 @@ func TestDeployBackupJobCmd(t *testing.T) {
 func Test_getBackupObjectsFromTemplate(t *testing.T) {
 	// set the flags
 	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.BackupOpts.BackupPath = "/var/vineyard/dump"
+	flags.PVCName = "pvc-for-backup-and-recover-demo"
+	flags.Namespace = "vineyard-system"
 	flags.VineyardDeploymentName = "vineyardd-sample"
 	flags.VineyardDeploymentNamespace = "vineyard-system"
 	c := util.KubernetesClient()
@@ -85,35 +88,13 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 				args: []string{},
 			},
 			want: []*unstructured.Unstructured{
-
-				{
-					Object: map[string]interface{}{
-						"apiVersion": "v1",
-						"kind":       "PersistentVolumeClaim",
-						"metadata": map[string]interface{}{
-							"labels": map[string]interface{}{
-								"app.kubernetes.io/name": "vineyard-backup",
-							},
-							"name":      "vineyard-backup",
-							"namespace": nil,
-						},
-						"spec": map[string]interface{}{
-							"resources": nil,
-							"selector": map[string]interface{}{
-								"matchLabels": map[string]interface{}{
-									"app.kubernetes.io/name": "vineyard-backup",
-								},
-							},
-						},
-					},
-				},
 				{
 					Object: map[string]interface{}{
 						"apiVersion": "batch/v1",
 						"kind":       "Job",
 						"metadata": map[string]interface{}{
 							"name":      "vineyard-backup",
-							"namespace": nil,
+							"namespace": "vineyard-system",
 						},
 						"spec": map[string]interface{}{
 							"parallelism": int64(3),
@@ -168,7 +149,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 
 												map[string]interface{}{
 													"name":  "BACKUP_PATH",
-													"value": nil,
+													"value": "/var/vineyard/dump",
 												},
 												map[string]interface{}{
 													"name":  "ENDPOINT",
@@ -208,7 +189,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 													"name":      "vineyard-sock",
 												},
 												map[string]interface{}{
-													"mountPath": nil,
+													"mountPath": "/var/vineyard/dump",
 													"name":      "backup-path",
 												},
 											},
@@ -225,7 +206,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 										map[string]interface{}{
 											"name": "backup-path",
 											"persistentVolumeClaim": map[string]interface{}{
-												"claimName": nil,
+												"claimName": "pvc-for-backup-and-recover-demo",
 											},
 										},
 									},
@@ -244,7 +225,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 								"app.kubernetes.io/name": "backup",
 							},
 							"name":      "vineyard-backup",
-							"namespace": nil,
+							"namespace": "vineyard-system",
 						},
 						"roleRef": map[string]interface{}{
 							"apiGroup": "rbac.authorization.k8s.io",
@@ -255,7 +236,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 							map[string]interface{}{
 								"kind":      "ServiceAccount",
 								"name":      "default",
-								"namespace": nil,
+								"namespace": "vineyard-system",
 							},
 						},
 					},
@@ -269,7 +250,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 								"app.kubernetes.io/instance": "backup",
 							},
 							"name":      "vineyard-backup",
-							"namespace": nil,
+							"namespace": "vineyard-system",
 						},
 						"rules": []interface{}{
 							map[string]interface{}{
@@ -301,7 +282,28 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 							map[string]interface{}{
 								"kind":      "ServiceAccount",
 								"name":      "default",
-								"namespace": nil,
+								"namespace": "vineyard-system",
+							},
+						},
+					},
+				},
+				{
+					Object: map[string]interface{}{
+						"apiVersion": "v1",
+						"kind":       "PersistentVolumeClaim",
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"app.kubernetes.io/name": "vineyard-backup",
+							},
+							"name":      "vineyard-backup",
+							"namespace": "vineyard-system",
+						},
+						"spec": map[string]interface{}{
+							"resources": nil,
+							"selector": map[string]interface{}{
+								"matchLabels": map[string]interface{}{
+									"app.kubernetes.io/name": "vineyard-backup",
+								},
 							},
 						},
 					},
