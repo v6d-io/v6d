@@ -17,8 +17,10 @@ package schedule
 
 import (
 	"fmt"
+	"io/ioutil"
 	"os"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -60,8 +62,40 @@ spec:
 		etcdReplicas:     1,
 	}
 	t.Run(testReplicas.name, func(t *testing.T) {
-		scheduleWorkloadCmd.Run(scheduleWorkloadCmd, []string{})
+		// Save the original os.Stdout for recovery after testing is completed
+		oldStdout := os.Stdout
+		var mu sync.Mutex
+		mu.Lock() // add a lock
 
+		// Create a pipeline and redirect os.Stdout to the pipeline
+		r, w, _ := os.Pipe()
+		os.Stdout = w
+
+		// In a Go process, execute your command and then close the write end
+		go func() {
+			scheduleWorkloadCmd.Run(scheduleWorkloadCmd, []string{})
+			w.Close()
+		}()
+
+		// In the main Go process, read data from the pipeline
+		out, _ := ioutil.ReadAll(r)
+
+		// 'out' now includes the content printed by log.Output
+		yamlStr := string(out)
+		mu.Unlock()           // unlock
+		os.Stdout = oldStdout // redirect os.Stdout to the original one
+		want := `{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"creationTimestamp":null,` +
+			`"name":"my-deployment"},"spec":{"replicas":1,"selector":null,"strategy":{},"template":{"metadata":` +
+			`{"creationTimestamp":null,"labels":{"app":"my-app"}},"spec":{"affinity":{"podAffinity":` +
+			`{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchExpressions":` +
+			`[{"key":"app.kubernetes.io/instance","operator":"In","values":["vineyard-system-vineyardd-sample"]}]},` +
+			`"topologyKey":"kubernetes.io/hostname"}]}},"containers":[{"env":[{"name":"VINEYARD_IPC_SOCKET",` +
+			`"value":"/var/run/vineyard.sock"}],"image":"nginx:latest","name":"my-container","resources":{},"volumeMounts":` +
+			`[{"mountPath":"/var/run","name":"vineyard-socket"}]}],"volumes":[{"hostPath":{"path":` +
+			`"/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample"},"name":"vineyard-socket"}]}}},"status":{}}` + "\n\n"
+		if !reflect.DeepEqual(yamlStr, want) {
+			t.Errorf("getWorkload() got = %v, want %v", yamlStr, want)
+		}
 	})
 }
 
