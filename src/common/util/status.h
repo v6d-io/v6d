@@ -232,8 +232,8 @@ enum class StatusCode : unsigned char {
   kObjectNotSealed = 14,
   kObjectIsBlob = 15,
   kObjectTypeError = 16,
-  kObjectSpilled = 13,
-  kObjectNotSpilled = 14,
+  kObjectSpilled = 17,
+  kObjectNotSpilled = 18,
 
   kMetaTreeInvalid = 21,
   kMetaTreeTypeInvalid = 22,

@@ -1,1 +1,1 @@
-# Native Rust implementation of Vineyard
+# Vineyard Rust SDK

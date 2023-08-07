@@ -12,20 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[allow(clippy::module_inception)]
-pub mod client;
-pub mod ds;
-pub mod io;
-pub mod ipc_client;
-pub mod ipc_client_test;
-pub mod rpc_client;
-pub mod rpc_client_test;
+#[cfg(test)]
+mod tests {
+    use std::rc::Rc;
 
-pub use super::common::util::status::*;
-pub use super::common::util::typename::*;
-pub use super::common::util::uuid::*;
+    use super::super::*;
 
-pub use client::*;
-pub use ds::*;
-pub use ipc_client::*;
-pub use rpc_client::*;
+    #[test]
+    fn test_ipc_connect() {
+        let mut conn = IPCClient::default().unwrap();
+        let client = Rc::get_mut(&mut conn).unwrap();
+        assert!(client.connected());
+    }
+}

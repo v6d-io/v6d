@@ -1,121 +1,77 @@
-use std::cell::RefCell;
+// Copyright 2020-2023 Alibaba Group Holding Limited.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::collections::HashMap;
-/** Copyright 2020-2023 Alibaba Group Holding Limited.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-use std::io;
 use std::sync::{Arc, Mutex};
 
-use lazy_static::lazy_static;
+use crate::common::util::status::*;
+use crate::common::util::typename::typename;
 
-use super::object::Object;
+use super::object::{Create, Object};
 use super::object_meta::ObjectMeta;
-use super::typename::type_name;
 
 pub struct ObjectFactory {}
 
 type ObjectInitializer = fn() -> Box<dyn Object>;
 
-pub trait Create {
-    fn create() -> &'static Arc<Mutex<Box<dyn Object>>>;
-}
-
 impl ObjectFactory {
-    pub fn register<T: Create>() -> bool {
-        let typename = type_name::<T>();
-        println!("Register data type: {}", typename);
-        let KNOWN_TYPES = ObjectFactory::get_known_types();
-        let closure: ObjectInitializer = || (T::create().lock().unwrap()).clone();
-        // 如果create返回不是引用的话：Arc::try_unwrap(*T::create()).unwrap().into_inner().unwrap()
-        // dyn_clone. Otherwise:
-        // cannot move out of dereference of `MutexGuard<'_, Box<dyn object::Object>>`
-        KNOWN_TYPES.lock().unwrap().insert(typename, closure);
-
-        true
-    }
-
-    pub fn create_by_type_name(type_name: &String) -> io::Result<Box<dyn Object>> {
+    pub fn register<T: Create>() -> Result<bool> {
+        let typename = typename::<T>();
         let known_types = ObjectFactory::get_known_types();
-        let known_types = &(**known_types).lock().unwrap();
-        let creator = known_types.get(&type_name as &str);
-        match creator {
-            None => panic!(
-                "Failed to create an instance due to the unknown typename: {}",
-                type_name
-            ),
-            Some(initialized_object) => Ok((*initialized_object)()),
-        }
+        let closure: ObjectInitializer = || T::create();
+        let inserted = known_types.lock()?.insert(typename, closure);
+        return Ok(inserted.is_none());
     }
 
-    pub fn create_by_metadata(metadata: ObjectMeta) -> io::Result<Box<dyn Object>> {
-        ObjectFactory::create(&metadata.get_type_name(), metadata)
-    }
-
-    pub fn create(type_name: &String, metadata: ObjectMeta) -> io::Result<Box<dyn Object>> {
+    pub fn create(typename: &str) -> Result<Box<dyn Object>> {
         let known_types = ObjectFactory::get_known_types();
-        let known_types = &(**known_types).lock().unwrap();
-        let creator = known_types.get(&type_name as &str);
-        match creator {
-            None => panic!(
+        return match known_types.lock()?.get(typename) {
+            None => Err(VineyardError::invalid(format!(
                 "Failed to create an instance due to the unknown typename: {}",
-                type_name
-            ),
-            Some(target) => {
-                let mut target = (target)();
-
-                target.construct(&metadata);
-                return Ok(target);
+                typename
+            ))),
+            Some(initializer) => {
+                return Ok((*initializer)());
             }
-        }
+        };
     }
 
-    pub fn factory_ref() -> &'static Mutex<HashMap<&'static str, ObjectInitializer>> {
+    pub fn create_from_metadata(metadata: ObjectMeta) -> Result<Box<dyn Object>> {
+        let mut object = ObjectFactory::create(metadata.get_typename()?)?;
+        object.construct(metadata)?;
+        return Ok(object);
+    }
+
+    pub fn create_from_typename_and_metadata(
+        typename: &str,
+        metadata: ObjectMeta,
+    ) -> Result<Box<dyn Object>> {
+        let mut object = ObjectFactory::create(typename)?;
+        object.construct(metadata)?;
+        return Ok(object);
+    }
+
+    pub fn factory_ref() -> &'static Mutex<HashMap<String, ObjectInitializer>> {
         return &**ObjectFactory::get_known_types();
     }
 
-    fn get_known_types() -> &'static Arc<Mutex<HashMap<&'static str, ObjectInitializer>>> {
+    fn get_known_types() -> &'static Arc<Mutex<HashMap<String, ObjectInitializer>>> {
         lazy_static! {
-            static ref KNOWN_TYPES: Arc<Mutex<HashMap<&'static str, ObjectInitializer>>> =
+            static ref KNOWN_TYPES: Arc<Mutex<HashMap<String, ObjectInitializer>>> =
                 Arc::new(Mutex::new(HashMap::new()));
         }
-        &KNOWN_TYPES
+        return &KNOWN_TYPES;
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     #[ignore]
-//     fn test_singleton() {
-//         let KNOWN_TYPES = ObjectFactory::get_known_types();
-//         println!(
-//             "Length before insert: {}",
-//             KNOWN_TYPES.lock().unwrap().len()
-//         );
-//         KNOWN_TYPES
-//             .lock()
-//             .unwrap()
-//             .insert("1", Box::new(Object::default()));
-//         KNOWN_TYPES
-//             .lock()
-//             .unwrap()
-//             .insert("2", Box::new(Object::default()));
-//         println!(
-//             "Length after insert: {}",
-//             ObjectFactory::get_known_types().lock().unwrap().len()
-//         );
-//     }
-// }

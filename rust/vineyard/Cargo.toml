@@ -1,7 +1,7 @@
 [package]
 name = "vineyard"
-version = "0.2.5"
-description = "Rust implementation of Vineyard"
+version = "0.16.2"
+description = "Vineyard Rust SDK"
 homepage = "https://github.com/v6d-io/v6d"
 repository = "https://github.com/v6d-io/v6d"
 license = "Apache-2.0"
@@ -10,18 +10,32 @@ include = [
     "src/**/*.rs",
     "Cargo.toml",
 ]
-edition = "2018"
+edition = "2021"
+
+[features]
+default = ["nightly"]
+nightly = []
 
 [lib]
 name = "vineyard"
 path = "src/lib.rs"
 
 [dependencies]
+arrow = "44"
+const_format = "0.2"
+downcast-rs = "1.2"
+env_logger = "0.9"
+lazy_static = "1"
+log = "0.4"
+memmap2 = "0.7"
+num-traits = "0.2"
+num-derive = "0.4"
+rand = "0.8"
+sendfd = "0.4"
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
-rand = "0.8.0"
-lazy_static = "1.4.0"
-arrow = "5.0"
-dyn-clone = "1.0"
+thiserror = "1.0"
 
+[dev-dependencies]
+spectral = "*"

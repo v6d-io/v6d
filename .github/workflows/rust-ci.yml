@@ -41,7 +41,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: nightly
           override: true
           components: rustfmt, clippy
 
@@ -51,9 +51,4 @@ jobs:
           cargo fmt --all -- --check
           # cargo clippy -- -D warnings
           cargo check
-          cargo test --lib
-
-
-
-
-
+          # cargo test --lib

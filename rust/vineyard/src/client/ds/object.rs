@@ -1,91 +1,57 @@
+// Copyright 2020-2023 Alibaba Group Holding Limited.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use std::any::Any;
-/** Copyright 2020-2023 Alibaba Group Holding Limited.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
-    http://www.apache.org/licenses/LICENSE-2.0
-
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
-use std::io;
 use std::rc::Rc;
 
-use dyn_clone::DynClone;
+use downcast_rs::impl_downcast;
+use downcast_rs::Downcast;
 
-use serde_json::json;
+use crate::common::util::status::*;
+use crate::common::util::typename::*;
+use crate::common::util::uuid::*;
 
+use super::super::IPCClient;
 use super::object_meta::ObjectMeta;
-use super::status::*;
-use super::uuid::ObjectID;
-use super::Client;
-use super::IPCClient;
 
-pub trait ObjectBase {
-    fn build(&mut self, client: &IPCClient) -> io::Result<()> {
-        Ok(())
-    }
-    fn seal(&mut self, client: &IPCClient) -> Rc<dyn Object> {
-        panic!()
-    }
+pub trait Create: TypeName {
+    fn create() -> Box<dyn Object>;
 }
 
-pub trait Object: ObjectBase + Send + std::fmt::Debug + DynClone {
-    fn meta(&self) -> &ObjectMeta;
-
-    fn meta_mut(&mut self) -> &mut ObjectMeta;
-
-    fn id(&self) -> ObjectID;
-
-    fn set_id(&mut self, id: ObjectID);
-
-    fn set_meta(&mut self, meta: &ObjectMeta);
-
-    fn as_any(self: &'_ Self) -> &'_ dyn Any
-    where
-        Self: Sized + 'static,
-    {
-        self
+pub trait ObjectBase: Downcast {
+    fn build(&mut self, _client: &mut IPCClient) -> Result<()> {
+        return Ok(());
     }
+
+    fn seal(self: Self, client: &mut IPCClient) -> Result<Box<dyn Object>>;
+}
+
+impl_downcast!(ObjectBase);
+
+pub trait ObjectMetaAttr {
+    fn id(&self) -> ObjectID {
+        self.meta().get_id()
+    }
+
+    fn meta(&self) -> &ObjectMeta;
 
     fn nbytes(&self) -> usize {
         self.meta().get_nbytes()
     }
 
-    fn construct(&mut self, meta: &ObjectMeta) {
-        self.set_id(meta.get_id());
-        self.set_meta(meta);
-    }
-
-    fn persist(&self, client: &mut dyn Client) -> io::Result<()> {
-        client.persist(self.id())
-    }
-
     fn is_local(&self) -> bool {
         self.meta().is_local()
-    }
-
-    fn is_persist(&mut self) -> bool {
-        let persist = !(self
-            .meta()
-            .get_key_value(&"transient".to_string())
-            .as_bool()
-            .unwrap());
-        if !persist {
-            let client = self.meta().get_client().unwrap().upgrade().unwrap();
-            VINEYARD_CHECK_OK(client.if_persist(self.id()));
-            let persist = client.if_persist(self.id()).unwrap();
-            if persist {
-                self.meta_mut()
-                    .add_json_key_value(&"transient".to_string(), &json!(false));
-            }
-        }
-        persist
     }
 
     fn is_global(&self) -> bool {
@@ -93,7 +59,54 @@ pub trait Object: ObjectBase + Send + std::fmt::Debug + DynClone {
     }
 }
 
-dyn_clone::clone_trait_object!(Object);
+pub trait Object: ObjectBase + ObjectMetaAttr {
+    fn as_any(self: &'_ Self) -> &'_ dyn Any
+    where
+        Self: Sized + 'static,
+    {
+        self
+    }
+
+    fn construct(&mut self, meta: ObjectMeta) -> Result<()>;
+}
+
+impl_downcast!(Object);
+
+pub fn downcast_object<T: Object + TypeName>(object: Box<dyn Object>) -> Result<Box<T>> {
+    return object.downcast::<T>().map_err(|_| {
+        VineyardError::invalid(format!(
+            "downcast object to type '{}' failed",
+            T::typename()
+        ))
+    });
+}
+
+pub fn downcast_object_ref<T: Object + TypeName>(object: &dyn Object) -> Result<&T> {
+    return object
+        .downcast_ref::<T>()
+        .ok_or(VineyardError::invalid(format!(
+            "downcast object to type '{}' failed",
+            T::typename()
+        )));
+}
+
+pub fn downcast_object_rc<T: Object + TypeName>(object: Rc<dyn Object>) -> Result<Rc<T>> {
+    return object.downcast_rc::<T>().map_err(|_| {
+        VineyardError::invalid(format!(
+            "downcast object to type '{}' failed",
+            T::typename()
+        ))
+    });
+}
+
+pub fn downcast_object_mut<T: Object + TypeName>(object: &mut dyn Object) -> Result<&mut T> {
+    return object
+        .downcast_mut::<T>()
+        .ok_or(VineyardError::invalid(format!(
+            "downcast object to type '{}' failed",
+            T::typename()
+        )));
+}
 
 pub trait GlobalObject {}
 
@@ -101,14 +114,75 @@ pub trait ObjectBuilder: ObjectBase {
     fn sealed(&self) -> bool;
 
     fn set_sealed(&mut self, sealed: bool);
-}
 
-pub trait Registered: Object {
-    fn registered() {}
-}
-
-pub fn ENSURE_NOT_SEALED(builder: &dyn ObjectBuilder) {
-    if builder.sealed() {
-        panic!("The builder has already been sealed");
+    fn ensure_not_sealed(&mut self) -> Result<()> {
+        return vineyard_assert(!self.sealed(), "The builder has already been sealed".into());
     }
 }
+
+impl_downcast!(ObjectBuilder);
+
+macro_rules! register_vineyard_object {
+    // match when no type parameters are present
+    ($t:tt) => {
+        impl Create for $t {
+            fn create() -> Box<dyn Object> {
+                lazy_static! {
+                    static ref __BLOB_REGISTERED: Result<bool> = ObjectFactory::register::<$t>();
+                }
+                return Box::new(Self::default());
+            }
+        }
+
+        impl ObjectMetaAttr for $t {
+            fn meta(&self) -> &ObjectMeta {
+                return &self.meta;
+            }
+        }
+
+        impl ObjectBase for $t {
+            fn build(&mut self, _client: &mut IPCClient) -> Result<()> {
+                return Ok(());
+            }
+
+            fn seal(self: Self, _client: &mut IPCClient) -> Result<Box<dyn Object>>
+            {
+                return Ok(Box::new(self));
+            }
+        }
+    };
+    // this evil monstrosity matches <A, B: T, C: S + T + 'a>
+    ($t:ident < $( $N:ident $(: $b0:ident $(+$bs:ident)* $(+$lts:lifetime)* )? ),* >) =>
+    {
+        impl< $( $N $(: $b0 $(+$bs)* $(+$lts)* )? ),* > Create for $t< $( $N ),* > {
+            fn create() -> Box<dyn Object> {
+                // As generic template type parameter cannot be used in static methods,
+                // we skip the registration here util we found a better way.
+                //
+                // lazy_static! {
+                //     static ref __BLOB_REGISTERED: Result<bool> = ObjectFactory::register::<$t< $( $N ),* >>();
+                // }
+                return Box::new(Self::default());
+            }
+        }
+
+        impl< $( $N $(: $b0 $(+$bs)* $(+$lts)* )? ),* > ObjectMetaAttr for $t< $( $N ),* > {
+            fn meta(&self) -> &ObjectMeta {
+                return &self.meta;
+            }
+        }
+
+        impl< $( $N $(: $b0 $(+$bs)* $(+$lts)* )? ),* > ObjectBase for $t< $( $N ),* > {
+            fn build(&mut self, _client: &mut IPCClient) -> Result<()> {
+                return Ok(());
+            }
+
+            fn seal(self: Self, _client: &mut IPCClient) -> Result<Box<dyn Object>>
+            {
+                return Ok(Box::new(self));
+            }
+        }
+    };
+}
+
+pub(crate) use register_vineyard_object;
