@@ -16,9 +16,10 @@ use std::collections::HashMap;
 use std::io;
 use std::net::Shutdown;
 use std::os::unix::net::UnixStream;
-use std::rc::Rc;
 
-use arrow::buffer as arrow;
+use arrow_buffer::Buffer;
+use parking_lot::ReentrantMutex;
+use parking_lot::ReentrantMutexGuard;
 
 use crate::common::util::arrow::*;
 use crate::common::util::protocol::*;
@@ -34,7 +35,7 @@ use super::io::*;
 
 mod memory {
 
-    use std::collections::{HashMap, HashSet};
+    use std::collections::{hash_map, HashMap, HashSet};
     use std::fs::File;
     use std::os::fd::{AsRawFd, FromRawFd};
     use std::os::unix::net::UnixStream;
@@ -110,14 +111,13 @@ mod memory {
 
         pub fn mmap(
             &mut self,
-            stream: &mut UnixStream,
+            stream: &UnixStream,
             fd: i32,
             map_size: usize,
             realign: bool,
         ) -> Result<*const u8> {
-            if !self.entries.contains_key(&fd) {
-                self.entries
-                    .insert(fd, MmapEntry::new(recv_fd(stream)?, map_size, realign));
+            if let hash_map::Entry::Vacant(entry) = self.entries.entry(fd) {
+                entry.insert(MmapEntry::new(recv_fd(stream)?, map_size, realign));
             }
             match self.entries.get_mut(&fd) {
                 Some(entry) => {
@@ -134,14 +134,13 @@ mod memory {
 
         pub fn mmap_mut(
             &mut self,
-            stream: &mut UnixStream,
+            stream: &UnixStream,
             fd: i32,
             map_size: usize,
             realign: bool,
         ) -> Result<*mut u8> {
-            if !self.entries.contains_key(&fd) {
-                self.entries
-                    .insert(fd, MmapEntry::new(recv_fd(stream)?, map_size, realign));
+            if let hash_map::Entry::Vacant(entry) = self.entries.entry(fd) {
+                entry.insert(MmapEntry::new(recv_fd(stream)?, map_size, realign));
             }
             match self.entries.get_mut(&fd) {
                 Some(entry) => {
@@ -185,11 +184,18 @@ pub struct IPCClient {
     pub support_rpc_compression: bool,
 
     stream: UnixStream,
+    lock: ReentrantMutex<()>,
     mmap: memory::MmapManager,
 }
 
+impl Drop for IPCClient {
+    fn drop(&mut self) {
+        self.disconnect();
+    }
+}
+
 impl Client for IPCClient {
-    fn disconnect(&mut self) -> () {
+    fn disconnect(&mut self) {
         if !self.connected() {
             return;
         }
@@ -211,7 +217,7 @@ impl Client for IPCClient {
 
     #[cfg(feature = "nightly")]
     fn connected(&mut self) -> bool {
-        if let Err(_) = self.stream.set_nonblocking(true) {
+        if self.stream.set_nonblocking(true).is_err() {
             return false;
         }
         match self.stream.peek(&mut [0]) {
@@ -230,6 +236,13 @@ impl Client for IPCClient {
         }
     }
 
+    fn ensure_connect(&mut self) -> Result<ReentrantMutexGuard<'_, ()>> {
+        if !self.connected() {
+            return Err(VineyardError::io_error("client not connected"));
+        }
+        return Ok(self.lock.lock());
+    }
+
     fn do_read(&mut self) -> Result<String> {
         return do_read(&mut self.stream);
     }
@@ -243,7 +256,6 @@ impl Client for IPCClient {
     }
 
     fn create_metadata(&mut self, metadata: &ObjectMeta) -> Result<ObjectMeta> {
-        self.ensure_connect()?;
         let mut meta = metadata.clone();
         meta.set_instance_id(self.instance_id());
         meta.set_transient(true);
@@ -277,7 +289,7 @@ impl Client for IPCClient {
         return Ok(meta);
     }
 
-    fn get_metadata_batch(&mut self, ids: &Vec<ObjectID>) -> Result<Vec<ObjectMeta>> {
+    fn get_metadata_batch(&mut self, ids: &[ObjectID]) -> Result<Vec<ObjectMeta>> {
         let data_vec = self.get_data_batch(ids)?;
         let mut metadatas = Vec::new();
         let mut buffer_id_vec: Vec<ObjectID> = Vec::new();
@@ -300,16 +312,17 @@ impl Client for IPCClient {
 }
 
 impl IPCClient {
-    pub fn default() -> Result<Rc<IPCClient>> {
+    #[allow(clippy::should_implement_trait)]
+    pub fn default() -> Result<IPCClient> {
         let default_ipc_socket = std::env::var(VINEYARD_IPC_SOCKET_KEY)?;
         return IPCClient::connect(&default_ipc_socket);
     }
 
-    pub fn connect(socket: &str) -> Result<Rc<IPCClient>> {
+    pub fn connect(socket: &str) -> Result<IPCClient> {
         let mut stream = connect_ipc_socket_retry(&socket)?;
         let message_out = write_register_request(RegisterRequest {
-            version: VERSION.to_string(),
-            store_type: "Normal".to_string(),
+            version: VERSION.into(),
+            store_type: "Normal".into(),
             session_id: 0,
             username: String::new(),
             password: String::new(),
@@ -317,7 +330,7 @@ impl IPCClient {
         })?;
         do_write(&mut stream, &message_out)?;
         let reply = read_register_reply(&do_read(&mut stream)?)?;
-        return Ok(Rc::new(IPCClient {
+        return Ok(IPCClient {
             connected: true,
             ipc_socket: reply.ipc_socket,
             rpc_endpoint: reply.rpc_endpoint,
@@ -325,12 +338,12 @@ impl IPCClient {
             server_version: reply.version,
             support_rpc_compression: reply.support_rpc_compression,
             stream: stream,
+            lock: ReentrantMutex::new(()),
             mmap: memory::MmapManager::new(),
-        }));
+        });
     }
 
     pub fn create_blob(&mut self, size: usize) -> Result<BlobWriter> {
-        self.ensure_connect()?;
         let (id, buffer) = self.create_buffer(size)?;
         return Ok(BlobWriter::new(id, buffer));
     }
@@ -341,36 +354,40 @@ impl IPCClient {
             Some(buffer) => buffer.len(),
             None => 0,
         };
-        let mut meta = ObjectMeta::from_typename(&typename::<Blob>());
+        let mut meta = ObjectMeta::new_from_typename(typename::<Blob>());
         meta.set_id(id);
         meta.set_instance_id(self.instance_id());
         meta.set_or_add_buffer(id, buffer.clone())?;
         return Ok(Blob::new(meta, size, buffer));
     }
 
-    fn create_buffer(&mut self, size: usize) -> Result<(ObjectID, Option<Rc<arrow::Buffer>>)> {
-        self.ensure_connect()?;
+    fn create_buffer(&mut self, size: usize) -> Result<(ObjectID, Option<Buffer>)> {
+        if size == 0 {
+            return Ok((empty_blob_id(), Some(arrow_buffer_null())));
+        }
+        let _ = self.ensure_connect()?;
         let message_out = write_create_buffer_request(size)?;
         self.do_write(&message_out)?;
         let reply = read_create_buffer_reply(&self.do_read()?)?;
         if reply.payload.data_size == 0 {
-            return Ok((reply.id, None));
+            return Ok((reply.id, Some(arrow_buffer_null())));
         }
         let pointer = self.mmap.mmap_mut(
-            &mut self.stream,
+            &self.stream,
             reply.payload.store_fd,
             reply.payload.map_size,
             true,
         )?;
-        let buffer = to_buffer_offset(pointer, reply.payload.data_offset, reply.payload.data_size);
-        return Ok((reply.id, Some(Rc::new(buffer))));
+        let buffer =
+            arrow_buffer_with_offset(pointer, reply.payload.data_offset, reply.payload.data_size);
+        return Ok((reply.id, Some(buffer)));
     }
 
-    fn get_buffer(&mut self, id: ObjectID, unsafe_: bool) -> Result<Option<Rc<arrow::Buffer>>> {
-        let buffers = self.get_buffers(&vec![id], unsafe_)?;
+    fn get_buffer(&mut self, id: ObjectID, unsafe_: bool) -> Result<Option<Buffer>> {
+        let buffers = self.get_buffers(&[id], unsafe_)?;
         return buffers
             .get(&id)
-            .map(|v| v.clone())
+            .cloned()
             .ok_or(VineyardError::object_not_exists(format!(
                 "buffer {} doesn't exist",
                 id
@@ -379,10 +396,10 @@ impl IPCClient {
 
     fn get_buffers(
         &mut self,
-        ids: &Vec<ObjectID>,
+        ids: &[ObjectID],
         unsafe_: bool,
-    ) -> Result<HashMap<ObjectID, Option<Rc<arrow::Buffer>>>> {
-        self.ensure_connect()?;
+    ) -> Result<HashMap<ObjectID, Option<Buffer>>> {
+        let _ = self.ensure_connect()?;
         let message_out = write_get_buffers_request(&ids, unsafe_)?;
         self.do_write(&message_out)?;
         let reply = read_get_buffers_reply(&self.do_read()?)?;
@@ -390,13 +407,14 @@ impl IPCClient {
         let mut buffers = HashMap::new();
         for payload in reply.payloads {
             if payload.data_size == 0 {
-                buffers.insert(payload.object_id, None);
+                buffers.insert(payload.object_id, Some(arrow_buffer_null()));
+                continue;
             }
-            let pointer =
-                self.mmap
-                    .mmap(&mut self.stream, payload.store_fd, payload.map_size, true)?;
-            let buffer = to_buffer_offset(pointer, payload.data_offset, payload.data_size);
-            buffers.insert(payload.object_id, Some(Rc::new(buffer)));
+            let pointer = self
+                .mmap
+                .mmap(&self.stream, payload.store_fd, payload.map_size, true)?;
+            let buffer = arrow_buffer_with_offset(pointer, payload.data_offset, payload.data_size);
+            buffers.insert(payload.object_id, Some(buffer));
         }
         return Ok(buffers);
     }

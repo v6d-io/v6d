@@ -1,4 +1,35 @@
-edition = "2021"
-
 [workspace]
-members = ["vineyard"]
+members = [
+    "vineyard",
+    "vineyard-polars",
+    "vineyard-integration-testing",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.16.5"
+homepage = "https://v6d.io"
+repository = "https://github.com/v6d-io/v6d.git"
+authors = ["Vineyard <vineyard@alibaba-inc.com>"]
+license = "Apache-2.0"
+keywords = ["vineyard"]
+include = [
+    "src/**/*.rs",
+    "Cargo.toml",
+]
+edition = "2021"
+readme = "README.md"
+
+[workspace.dependencies]
+arrow-array = ">=40, <44"
+arrow-buffer = ">=40, <44"
+arrow-ipc = ">=40, <44"
+arrow-schema = ">=40, <44"
+arrow2 = { version = "0.17", features = ["arrow"] }
+inline-python = "0.12"
+polars-core = "0.32"
+spectral = "0.6"
+
+vineyard = { version = "0.16.5", path = "./vineyard" }
+vineyard-polars = { version = "0.16.5", path = "./vineyard-polars" }
+vineyard-integration-testing = { version = "0.16.5", path = "./vineyard-integration-testing" }

@@ -13,8 +13,9 @@
 // limitations under the License.
 
 use std::collections::HashMap;
-
 use std::sync::{Arc, Mutex};
+
+use ctor::ctor;
 
 use crate::common::util::status::*;
 use crate::common::util::typename::typename;
@@ -25,6 +26,10 @@ use super::object_meta::ObjectMeta;
 pub struct ObjectFactory {}
 
 type ObjectInitializer = fn() -> Box<dyn Object>;
+
+#[ctor]
+static KNOWN_TYPES: Arc<Mutex<HashMap<&'static str, ObjectInitializer>>> =
+    Arc::new(Mutex::new(HashMap::new()));
 
 impl ObjectFactory {
     pub fn register<T: Create>() -> Result<bool> {
@@ -63,13 +68,13 @@ impl ObjectFactory {
         return Ok(object);
     }
 
-    pub fn factory_ref() -> &'static Mutex<HashMap<String, ObjectInitializer>> {
-        return &**ObjectFactory::get_known_types();
+    pub fn factory_ref() -> &'static Mutex<HashMap<&'static str, ObjectInitializer>> {
+        return ObjectFactory::get_known_types();
     }
 
-    fn get_known_types() -> &'static Arc<Mutex<HashMap<String, ObjectInitializer>>> {
+    fn get_known_types() -> &'static Arc<Mutex<HashMap<&'static str, ObjectInitializer>>> {
         lazy_static! {
-            static ref KNOWN_TYPES: Arc<Mutex<HashMap<String, ObjectInitializer>>> =
+            static ref KNOWN_TYPES: Arc<Mutex<HashMap<&'static str, ObjectInitializer>>> =
                 Arc::new(Mutex::new(HashMap::new()));
         }
         return &KNOWN_TYPES;

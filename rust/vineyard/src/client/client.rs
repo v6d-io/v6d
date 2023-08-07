@@ -14,6 +14,8 @@
 
 use std::collections::HashMap;
 
+use parking_lot::ReentrantMutexGuard;
+
 use crate::common::util::json::*;
 use crate::common::util::protocol::*;
 use crate::common::util::status::*;
@@ -55,7 +57,7 @@ impl InstanceStatus {
 
 pub trait Client {
     /// Disconnect this client.
-    fn disconnect(&mut self) -> ();
+    fn disconnect(&mut self);
 
     fn connected(&mut self) -> bool;
 
@@ -69,16 +71,14 @@ pub trait Client {
 
     fn get_metadata(&mut self, id: ObjectID) -> Result<ObjectMeta>;
 
-    fn get_metadata_batch(&mut self, ids: &Vec<ObjectID>) -> Result<Vec<ObjectMeta>>;
+    fn get_metadata_batch(&mut self, ids: &[ObjectID]) -> Result<Vec<ObjectMeta>>;
 
     fn fetch_and_get_metadata(&mut self, id: ObjectID) -> Result<ObjectMeta> {
-        self.ensure_connect()?;
         let local_id = self.migrate(id)?;
         return self.get_metadata(local_id);
     }
 
-    fn fetch_and_get_metadata_batch(&mut self, ids: &Vec<ObjectID>) -> Result<Vec<ObjectMeta>> {
-        self.ensure_connect()?;
+    fn fetch_and_get_metadata_batch(&mut self, ids: &[ObjectID]) -> Result<Vec<ObjectMeta>> {
         let mut local_ids = Vec::new();
         for id in ids {
             local_ids.push(self.migrate(*id)?);
@@ -87,28 +87,28 @@ pub trait Client {
     }
 
     fn drop_buffer(&mut self, id: ObjectID) -> Result<()> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_drop_buffer_request(id)?;
         self.do_write(&message_out)?;
         return read_drop_buffer_reply(&self.do_read()?);
     }
 
     fn seal_buffer(&mut self, id: ObjectID) -> Result<()> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_seal_request(id)?;
         self.do_write(&message_out)?;
         return read_seal_reply(&self.do_read()?);
     }
 
     fn get_data(&mut self, id: ObjectID, sync_remote: bool, wait: bool) -> Result<JSON> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_get_data_request(id, sync_remote, wait)?;
         self.do_write(&message_out)?;
         return read_get_data_reply(&self.do_read()?);
     }
 
-    fn get_data_batch(&mut self, ids: &Vec<ObjectID>) -> Result<Vec<JSON>> {
-        self.ensure_connect()?;
+    fn get_data_batch(&mut self, ids: &[ObjectID]) -> Result<Vec<JSON>> {
+        let _ = self.ensure_connect()?;
         let message_out = write_get_data_batch_request(&ids, false, false)?;
         self.do_write(&message_out)?;
         let reply = read_get_data_batch_reply(&self.do_read()?)?;
@@ -128,7 +128,7 @@ pub trait Client {
     }
 
     fn create_data(&mut self, data: &JSON) -> Result<(ObjectID, Signature, InstanceID)> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_create_data_request(data)?;
         self.do_write(&message_out)?;
         let reply = read_create_data_reply(&self.do_read()?)?;
@@ -145,14 +145,14 @@ pub trait Client {
     }
 
     fn delete(&mut self, id: ObjectID, force: bool, deep: bool) -> Result<()> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_delete_data_request(id, force, deep, false)?;
         self.do_write(&message_out)?;
         return read_delete_data_reply(&self.do_read()?);
     }
 
-    fn delete_batch(&mut self, ids: &Vec<ObjectID>, force: bool, deep: bool) -> Result<()> {
-        self.ensure_connect()?;
+    fn delete_batch(&mut self, ids: &[ObjectID], force: bool, deep: bool) -> Result<()> {
+        let _ = self.ensure_connect()?;
         let message_out = write_delete_data_batch_request(ids, force, deep, false)?;
         self.do_write(&message_out)?;
         return read_delete_data_reply(&self.do_read()?);
@@ -160,7 +160,7 @@ pub trait Client {
 
     /// @param pattern: The pattern of typename.
     fn list_data(&mut self, pattern: &str, regex: bool, limit: usize) -> Result<Vec<JSON>> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_list_data_request(pattern, regex, limit)?;
         self.do_write(&message_out)?;
         return read_list_data_reply(&self.do_read()?);
@@ -173,70 +173,70 @@ pub trait Client {
         regex: bool,
         limit: usize,
     ) -> Result<HashMap<String, ObjectID>> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_list_name_request(pattern, regex, limit)?;
         self.do_write(&message_out)?;
         return read_list_name_reply(&self.do_read()?);
     }
 
     fn persist(&mut self, id: ObjectID) -> Result<()> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_persist_request(id)?;
         self.do_write(&message_out)?;
         return read_persist_reply(&self.do_read()?);
     }
 
     fn if_persist(&mut self, id: ObjectID) -> Result<bool> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_if_persist_request(id)?;
         self.do_write(&message_out)?;
         return read_if_persist_reply(&self.do_read()?);
     }
 
     fn exists(&mut self, id: ObjectID) -> Result<bool> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_exists_request(id)?;
         self.do_write(&message_out)?;
         return read_exists_reply(&self.do_read()?);
     }
 
     fn put_name(&mut self, id: ObjectID, name: &str) -> Result<()> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_put_name_request(id, name)?;
         self.do_write(&message_out)?;
         return read_put_name_reply(&self.do_read()?);
     }
 
-    fn get_name(&mut self, name: &String, wait: bool) -> Result<ObjectID> {
-        self.ensure_connect()?;
+    fn get_name(&mut self, name: &str, wait: bool) -> Result<ObjectID> {
+        let _ = self.ensure_connect()?;
         let message_out = write_get_name_request(name, wait)?;
         self.do_write(&message_out)?;
         return read_get_name_reply(&self.do_read()?);
     }
 
-    fn drop_name(&mut self, name: &String) -> Result<()> {
-        self.ensure_connect()?;
+    fn drop_name(&mut self, name: &str) -> Result<()> {
+        let _ = self.ensure_connect()?;
         let message_out = write_drop_name_request(name)?;
         self.do_write(&message_out)?;
         return read_drop_name_reply(&self.do_read()?);
     }
 
     fn migrate(&mut self, id: ObjectID) -> Result<ObjectID> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_migrate_object_request(id)?;
         self.do_write(&message_out)?;
         return read_migrate_object_reply(&self.do_read()?);
     }
 
     fn clear(&mut self) -> Result<()> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let message_out = write_clear_request()?;
         self.do_write(&message_out)?;
         return read_clear_reply(&self.do_read()?);
     }
 
     fn label(&mut self, id: ObjectID, key: &str, value: &str) -> Result<()> {
-        self.ensure_connect()?;
+        let _ = self.ensure_connect()?;
         let keys: Vec<String> = vec![key.into()];
         let values: Vec<String> = vec![value.into()];
         let message_out = write_label_request(id, &keys, &values)?;
@@ -245,51 +245,46 @@ pub trait Client {
     }
 
     fn evict(&mut self, id: ObjectID) -> Result<()> {
-        self.ensure_connect()?;
-        let message_out = write_evict_request(&vec![id])?;
+        let _ = self.ensure_connect()?;
+        let message_out = write_evict_request(&[id])?;
         self.do_write(&message_out)?;
         return read_evict_reply(&self.do_read()?);
     }
 
-    fn evict_batch(&mut self, ids: &Vec<ObjectID>) -> Result<()> {
-        self.ensure_connect()?;
+    fn evict_batch(&mut self, ids: &[ObjectID]) -> Result<()> {
+        let _ = self.ensure_connect()?;
         let message_out = write_evict_request(ids)?;
         self.do_write(&message_out)?;
         return read_evict_reply(&self.do_read()?);
     }
 
     fn load(&mut self, id: ObjectID, pin: bool) -> Result<()> {
-        self.ensure_connect()?;
-        let message_out = write_load_request(&vec![id], pin)?;
+        let _ = self.ensure_connect()?;
+        let message_out = write_load_request(&[id], pin)?;
         self.do_write(&message_out)?;
         return read_load_reply(&self.do_read()?);
     }
 
-    fn load_batch(&mut self, ids: &Vec<ObjectID>, pin: bool) -> Result<()> {
-        self.ensure_connect()?;
+    fn load_batch(&mut self, ids: &[ObjectID], pin: bool) -> Result<()> {
+        let _ = self.ensure_connect()?;
         let message_out = write_load_request(ids, pin)?;
         self.do_write(&message_out)?;
         return read_load_reply(&self.do_read()?);
     }
 
     fn unpin(&mut self, id: ObjectID) -> Result<()> {
-        self.ensure_connect()?;
-        let message_out = write_unpin_request(&vec![id])?;
+        let _ = self.ensure_connect()?;
+        let message_out = write_unpin_request(&[id])?;
         self.do_write(&message_out)?;
         return read_unpin_reply(&self.do_read()?);
     }
 
-    fn unpin_batch(&mut self, ids: &Vec<ObjectID>) -> Result<()> {
-        self.ensure_connect()?;
+    fn unpin_batch(&mut self, ids: &[ObjectID]) -> Result<()> {
+        let _ = self.ensure_connect()?;
         let message_out = write_unpin_request(ids)?;
         self.do_write(&message_out)?;
         return read_unpin_reply(&self.do_read()?);
     }
 
-    fn ensure_connect(&mut self) -> Result<()> {
-        if !self.connected() {
-            return Err(VineyardError::io_error("client not connected".into()));
-        }
-        return Ok(());
-    }
+    fn ensure_connect(&mut self) -> Result<ReentrantMutexGuard<'_, ()>>;
 }

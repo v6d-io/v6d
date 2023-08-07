@@ -40,7 +40,10 @@ pub fn is_blob(id: ObjectID) -> bool {
 
 pub fn object_id_from_string(s: &str) -> Result<ObjectID> {
     if s.len() < 2 {
-        return Err(VineyardError::invalid("invalid object id".to_string()));
+        return Err(VineyardError::invalid(format!(
+            "invalid object id: '{}'",
+            s
+        )));
     }
     return Ok(ObjectID::from_str_radix(&s[1..], 16)?);
 }

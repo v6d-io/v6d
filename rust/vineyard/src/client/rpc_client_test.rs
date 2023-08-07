@@ -14,14 +14,13 @@
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
-
     use super::super::*;
 
     #[test]
-    fn test_rpc_connect() {
-        let mut conn = RPCClient::default().unwrap();
-        let client = Rc::get_mut(&mut conn).unwrap();
+    fn test_rpc_connect() -> Result<()> {
+        let mut client = RPCClient::default()?;
         assert!(client.connected());
+
+        return Ok(());
     }
 }

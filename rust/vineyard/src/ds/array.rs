@@ -12,11 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::convert::AsRef;
 use std::marker::PhantomData;
+use std::ops::{Deref, DerefMut};
+
+use static_str_ops::*;
 
 use crate::client::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Array<T> {
     meta: ObjectMeta,
     size: usize,
@@ -25,8 +29,8 @@ pub struct Array<T> {
 }
 
 impl<T: TypeName> TypeName for Array<T> {
-    fn typename() -> String {
-        return format!("vineyard::Array<{}>", T::typename());
+    fn typename() -> &'static str {
+        return staticize(format!("vineyard::Array<{}>", T::typename()));
     }
 }
 
@@ -43,7 +47,7 @@ impl<T> Default for Array<T> {
 
 impl<T: TypeName + 'static> Object for Array<T> {
     fn construct(&mut self, meta: ObjectMeta) -> Result<()> {
-        vineyard_assert_typename(meta.get_typename()?, &typename::<Array<T>>())?;
+        vineyard_assert_typename(typename::<Self>(), meta.get_typename()?)?;
         self.meta = meta;
 
         self.size = self.meta.get_usize("size_")?;
@@ -53,12 +57,24 @@ impl<T: TypeName + 'static> Object for Array<T> {
 }
 
 register_vineyard_object!(Array<T: TypeName + 'static>);
+register_vineyard_types! {
+    Array<i8>;
+    Array<u8>;
+    Array<i16>;
+    Array<u16>;
+    Array<i32>;
+    Array<u32>;
+    Array<i64>;
+    Array<u64>;
+    Array<f32>;
+    Array<f64>;
+}
 
 impl<T: TypeName + 'static> Array<T> {
     pub fn new_boxed(meta: ObjectMeta) -> Result<Box<dyn Object>> {
-        let mut array: Array<T> = Array::default();
+        let mut array = Box::<Self>::default();
         array.construct(meta)?;
-        return Ok(Box::new(array));
+        return Ok(array);
     }
 
     pub fn size(&self) -> usize {
@@ -73,6 +89,20 @@ impl<T: TypeName + 'static> Array<T> {
     pub fn as_slice(&self) -> &[T] {
         let ptr = self.buffer.as_ptr_unchecked();
         return unsafe { std::slice::from_raw_parts(ptr as *const T, self.size) };
+    }
+}
+
+impl<T: TypeName + 'static> Deref for Array<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        return self.as_slice();
+    }
+}
+
+impl<T: TypeName + 'static> AsRef<[T]> for Array<T> {
+    fn as_ref(&self) -> &[T] {
+        return self.as_slice();
     }
 }
 
@@ -94,16 +124,19 @@ impl<T: TypeName + 'static> ObjectBuilder for ArrayBuilder<T> {
 }
 
 impl<T: TypeName + 'static> ObjectBase for ArrayBuilder<T> {
-    fn build(&mut self, _client: &mut IPCClient) -> Result<()> {
-        if !self.sealed {
-            self.set_sealed(true);
+    fn build(&mut self, client: &mut IPCClient) -> Result<()> {
+        if self.sealed {
+            return Ok(());
         }
+        self.set_sealed(true);
+        self.buffer.build(client)?;
         return Ok(());
     }
 
-    fn seal(self: Self, client: &mut IPCClient) -> Result<Box<dyn Object>> {
+    fn seal(mut self, client: &mut IPCClient) -> Result<Box<dyn Object>> {
+        self.build(client)?;
         let buffer = self.buffer.seal(client)?;
-        let mut meta = ObjectMeta::from_typename(&typename::<Array<T>>());
+        let mut meta = ObjectMeta::new_from_typename(typename::<Array<T>>());
         meta.add_member("buffer_", buffer)?;
         meta.add_usize("size_", self.size);
         meta.set_nbytes(self.size * std::mem::size_of::<T>());
@@ -124,11 +157,11 @@ impl<T: TypeName + 'static> ArrayBuilder<T> {
         return Ok(builder);
     }
 
-    pub fn from_vec(client: &mut IPCClient, vec: &Vec<T>) -> Result<Self> {
+    pub fn from_vec(client: &mut IPCClient, vec: &[T]) -> Result<Self> {
         let mut builder = ArrayBuilder::new(client, vec.len())?;
         let dest: *mut T = builder.as_mut_ptr();
         unsafe {
-            std::ptr::copy_nonoverlapping(vec.as_ptr(), dest, vec.len() * std::mem::size_of::<T>());
+            std::ptr::copy_nonoverlapping(vec.as_ptr(), dest, vec.len());
         }
         return Ok(builder);
     }
@@ -137,7 +170,7 @@ impl<T: TypeName + 'static> ArrayBuilder<T> {
         let mut builder = ArrayBuilder::new(client, size)?;
         let dest: *mut T = builder.as_mut_ptr();
         unsafe {
-            std::ptr::copy_nonoverlapping(data, dest, size * std::mem::size_of::<T>());
+            std::ptr::copy_nonoverlapping(data, dest, size);
         }
         return Ok(builder);
     }
@@ -160,5 +193,25 @@ impl<T: TypeName + 'static> ArrayBuilder<T> {
 
     pub fn as_mut_slice(&mut self) -> &mut [T] {
         return unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), self.size) };
+    }
+}
+
+impl<T: TypeName + 'static> Deref for ArrayBuilder<T> {
+    type Target = [T];
+
+    fn deref(&self) -> &Self::Target {
+        return self.as_slice();
+    }
+}
+
+impl<T: TypeName + 'static> DerefMut for ArrayBuilder<T> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        return self.as_mut_slice();
+    }
+}
+
+impl<T: TypeName + 'static> AsRef<[T]> for ArrayBuilder<T> {
+    fn as_ref(&self) -> &[T] {
+        return self.as_slice();
     }
 }

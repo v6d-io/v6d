@@ -22,7 +22,7 @@ pub type JSONResult<T> = serde_json::Result<T>;
 
 pub fn parse_json_object<'a>(root: &'a Value) -> Result<&'a JSON> {
     return root.as_object().ok_or(VineyardError::io_error(
-        "incoming message is not a JSON object".into(),
+        "incoming message is not a JSON object",
     ));
 }
 

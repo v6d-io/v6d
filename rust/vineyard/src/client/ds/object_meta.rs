@@ -16,7 +16,7 @@ use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::rc::Rc;
 
-use arrow::buffer as arrow;
+use arrow_buffer::Buffer;
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use serde_json::{json, Value};
@@ -61,13 +61,13 @@ impl ObjectMeta {
         return Ok(meta);
     }
 
-    pub fn from_typename(typename: &str) -> Self {
+    pub fn new_from_typename(typename: &str) -> Self {
         let mut meta = ObjectMeta::default();
         meta.set_typename(typename);
         return meta;
     }
 
-    pub fn from_metadata(metadata: JSON) -> Result<Self> {
+    pub fn new_from_metadata(metadata: JSON) -> Result<Self> {
         let mut meta = ObjectMeta::default();
         meta.set_meta_data(std::ptr::null_mut(), metadata)?;
         return Ok(meta);
@@ -80,7 +80,7 @@ impl ObjectMeta {
     pub fn get_client(&self) -> Result<&mut IPCClient> {
         if self.client.is_null() {
             return Err(VineyardError::invalid(
-                "the associated client is not available".into(),
+                "the associated client is not available",
             ));
         } else {
             return Ok(unsafe { &mut *self.client });
@@ -251,7 +251,7 @@ impl ObjectMeta {
         return get_usize(&self.meta, key);
     }
 
-    pub fn add_string(&mut self, key: &str, value: &str) {
+    pub fn add_string<T: Into<String>>(&mut self, key: &str, value: T) {
         self.meta
             .insert(key.into(), serde_json::Value::String(value.into()));
     }
@@ -260,7 +260,7 @@ impl ObjectMeta {
         return get_string(&self.meta, key);
     }
 
-    pub fn add_vector<T: Serialize>(&mut self, key: &str, value: &Vec<T>) -> Result<()> {
+    pub fn add_vector<T: Serialize>(&mut self, key: &str, value: &[T]) -> Result<()> {
         self.add_value(key, serde_json::to_value(value)?);
         return Ok(());
     }
@@ -271,7 +271,11 @@ impl ObjectMeta {
         });
     }
 
-    pub fn add_set<T: Serialize>(&mut self, key: &str, value: &HashSet<T>) -> Result<()> {
+    pub fn add_set<T: Eq + Serialize + std::hash::Hash>(
+        &mut self,
+        key: &str,
+        value: &HashSet<T>,
+    ) -> Result<()> {
         self.add_value(key, serde_json::to_value(value)?);
         return Ok(());
     }
@@ -298,9 +302,10 @@ impl ObjectMeta {
     }
 
     pub fn add_member_meta(&mut self, key: &str, member: &ObjectMeta) -> Result<()> {
-        if let Some(_) = self
+        if self
             .meta
             .insert(key.into(), Value::Object(member.meta.clone()))
+            .is_some()
         {
             return Err(VineyardError::invalid(format!(
                 "key '{}' already exists",
@@ -348,11 +353,13 @@ impl ObjectMeta {
         }
     }
 
-    pub fn get_member<T: Object + Create>(&self, name: &str) -> Result<Box<dyn Object>> {
+    pub fn get_member<T: Object + Create>(&self, name: &str) -> Result<Box<T>> {
+        use crate::client::downcast_object;
+
         let meta = self.get_member_meta(name)?;
         let mut object = T::create();
         object.construct(meta)?;
-        return Ok(object);
+        return downcast_object::<T>(object);
     }
 
     pub fn get_member_untyped(&self, name: &str) -> Result<Box<dyn Object>> {
@@ -364,16 +371,13 @@ impl ObjectMeta {
         match self.meta.get(key) {
             Some(Value::Object(value)) => {
                 let mut meta = ObjectMeta::default();
-                meta.set_meta_data(self.client.clone(), value.clone())?;
+                meta.set_meta_data(self.client, value.clone())?;
 
                 let buffers = meta.get_buffers_mut()?;
                 for (id, buffer) in buffers.buffers_mut() {
-                    match self.buffers.get(*id) {
-                        Ok(Some(buf)) => {
-                            let _ = buffer.insert(buf);
-                        }
-                        // for remote object, the blob may not present here
-                        _ => {}
+                    // for remote object, the blob may not present here
+                    if let Ok(Some(buf)) = self.buffers.get(*id) {
+                        let _ = buffer.insert(buf);
                     }
                 }
                 if self.force_local {
@@ -396,7 +400,28 @@ impl ObjectMeta {
         }
     }
 
-    pub fn get_buffer(&self, blob_id: ObjectID) -> Result<Option<Rc<arrow::Buffer>>> {
+    pub fn get_member_id(&self, key: &str) -> Result<ObjectID> {
+        match self.meta.get(key) {
+            Some(Value::Object(value)) => {
+                let id = object_id_from_string(get_string(value, "id")?)?;
+                return Ok(id);
+            }
+            Some(_) => {
+                return Err(VineyardError::invalid(format!(
+                    "Invalid json value at key {}: not an object",
+                    key
+                )));
+            }
+            _ => {
+                return Err(VineyardError::invalid(format!(
+                    "Invalid json value: key {} not found",
+                    key
+                )));
+            }
+        }
+    }
+
+    pub fn get_buffer(&self, blob_id: ObjectID) -> Result<Option<Buffer>> {
         return self.buffers.get(blob_id).map_err(|err| {
             VineyardError::invalid(format!(
                 "The target blob {} doesn't exist: {}",
@@ -406,7 +431,7 @@ impl ObjectMeta {
         });
     }
 
-    pub fn set_buffer(&mut self, id: ObjectID, buffer: Option<Rc<arrow::Buffer>>) -> Result<()> {
+    pub fn set_buffer(&mut self, id: ObjectID, buffer: Option<Buffer>) -> Result<()> {
         match self.get_buffers_mut() {
             Ok(buffers) => {
                 buffers.emplace_buffer(id, buffer)?;
@@ -418,11 +443,7 @@ impl ObjectMeta {
         return Ok(());
     }
 
-    pub fn set_or_add_buffer(
-        &mut self,
-        id: ObjectID,
-        buffer: Option<Rc<arrow::Buffer>>,
-    ) -> Result<()> {
+    pub fn set_or_add_buffer(&mut self, id: ObjectID, buffer: Option<Buffer>) -> Result<()> {
         match self.get_buffers_mut() {
             Ok(buffers) => {
                 let _ = buffers.emplace(id); // ensure the id exists
@@ -482,7 +503,7 @@ impl ObjectMeta {
             None => {
                 warn!("Cannot extend buffers of a shared object meta.");
                 return Err(VineyardError::invalid(
-                    "Cannot manipulate buffers of a shared object meta.".into(),
+                    "Cannot manipulate buffers of a shared object meta.",
                 ));
             }
         };
