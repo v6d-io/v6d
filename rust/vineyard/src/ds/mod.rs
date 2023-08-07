@@ -12,20 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[allow(clippy::module_inception)]
-pub mod client;
-pub mod ds;
-pub mod io;
-pub mod ipc_client;
-pub mod ipc_client_test;
-pub mod rpc_client;
-pub mod rpc_client_test;
-
-pub use super::common::util::status::*;
-pub use super::common::util::typename::*;
-pub use super::common::util::uuid::*;
-
-pub use client::*;
-pub use ds::*;
-pub use ipc_client::*;
-pub use rpc_client::*;
+pub mod array;
+pub mod array_test;
+pub mod arrow;
+pub mod arrow_test;
+pub mod hashmap;
+pub mod hashmap_test;

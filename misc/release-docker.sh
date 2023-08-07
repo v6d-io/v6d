@@ -15,7 +15,7 @@ fi
 # - https://stackoverflow.com/questions/68317302/is-it-possible-to-copy-a-multi-os-image-from-one-docker-registry-to-another-on-a
 
 # vineyardd
-for tag in ${version} latest alpine-${version}; do
+for tag in ${version} latest alpine-${version} alpine-latest; do
     regctl image copy -v info ghcr.io/v6d-io/v6d/vineyardd:alpine-${version} \
                               vineyardcloudnative/vineyardd:${tag}
 done

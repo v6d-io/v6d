@@ -19,4 +19,6 @@ curl -s https://api.github.com/repos/v6d-io/v6d/releases/tags/$version | grep "b
 popd
 
 twine check ./wheels/$version/*.whl
-twine upload ./wheels/$version/*.whl
+for wheel in $(ls ./wheels/$version/*.whl); do
+    twine upload $wheel -u __token__ -p "$PYPI_TOKEN" || true
+done
