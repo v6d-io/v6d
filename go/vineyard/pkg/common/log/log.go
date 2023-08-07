@@ -44,15 +44,32 @@ import (
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common/log/zap"
 )
 
+const (
+	InfoLevel  = 0
+	Debuglevel = 1
+)
+
 var (
-	defaultLogger = zap.New(zap.UseOptions(&zap.Options{
-		Development: true,
-		TimeEncoder: zapcore.ISO8601TimeEncoder,
-	}))
+	defaultLogger = makeDefaultLogger(InfoLevel)
+
 	dlog = NewDelegatingLogSink(defaultLogger.GetSink())
 
 	Log = Logger{logr.New(dlog)}
 )
+
+func SetVerbose(level int) {
+	defaultLogger = makeDefaultLogger(-level)
+	dlog.Fulfill(defaultLogger.GetSink())
+	Log = Logger{logr.New(dlog)}
+}
+
+func makeDefaultLogger(verbose int) logr.Logger {
+	return zap.New(zap.UseOptions(&zap.Options{
+		Development: true,
+		TimeEncoder: zapcore.ISO8601TimeEncoder,
+		Level:       zapcore.Level(verbose),
+	}))
+}
 
 type Logger struct {
 	logr.Logger
@@ -78,10 +95,6 @@ func FromContext(ctx context.Context, keysAndValues ...any) Logger {
 // Use FromContext function to retrieve the logger.
 func IntoContext(ctx context.Context, log Logger) context.Context {
 	return logr.NewContext(ctx, log.Logger)
-}
-
-func Discard() {
-	SetLogger(Logger{logr.Discard()})
 }
 
 func V(level int) Logger {

@@ -61,7 +61,7 @@ func PortforwardDeployment(deploymentName, namespace string, forwardPort, port i
 
 	req := clientSet.CoreV1().RESTClient().Post().Namespace(namespace).
 		Resource("pods").Name(podName).SubResource("portforward")
-	log.Infof("porforward url is: ", req.URL())
+	log.V(log.Debuglevel).Info("req ", "url:", req.URL())
 	signals := make(chan os.Signal, 1)
 
 	defer signal.Stop(signals)

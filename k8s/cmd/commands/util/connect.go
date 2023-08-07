@@ -48,7 +48,7 @@ func NewClient() (Client, chan struct{}) {
 		}
 		client.rpcClient = rpcClient
 	} else if flags.DeploymentName != "" && flags.Namespace != "" {
-		log.Info("Connecting to vineyardd deployment via rpc...")
+		log.V(log.Debuglevel).Info("Connecting to vineyardd deployment via rpc...")
 		stopChannel = make(chan struct{})
 		readyChannel := make(chan struct{}, 1)
 		rpcClient, err := ConnectDeployment(flags.DeploymentName, flags.Namespace, readyChannel, stopChannel)
@@ -56,7 +56,7 @@ func NewClient() (Client, chan struct{}) {
 			log.Fatal(err, "failed to connect vineyard deployment via rpc")
 		}
 		<-readyChannel
-		log.Info("Connected to vineyardd deployment via rpc")
+		log.V(log.Debuglevel).Info("Connected to vineyardd deployment via rpc")
 		client.rpcClient = rpcClient
 	}
 	if client.ipcClient == nil && client.rpcClient == nil {

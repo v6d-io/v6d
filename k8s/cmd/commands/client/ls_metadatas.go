@@ -95,10 +95,9 @@ func init() {
 
 func DisableStdout() *os.File {
 	stdout := os.Stdout
-	if !flags.Debug {
-		os.Stdout, _ = os.Open(os.DevNull)
-		log.Discard()
-		gosdklog.Discard()
-	}
+	os.Stdout, _ = os.Open(os.DevNull)
+	log.SetVerbose(flags.Verbose)
+	gosdklog.SetVerbose(flags.Verbose)
+
 	return stdout
 }

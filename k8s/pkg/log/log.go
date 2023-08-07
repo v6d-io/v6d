@@ -31,17 +31,27 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-var (
-	defaultLogger = makeDefaultLogger()
-	dlog          = log.NewDelegatingLogSink(defaultLogger.GetSink())
-
-	Log = Logger{logr.New(dlog).WithName("vineyard")}
+const (
+	InfoLevel  = 0
+	Debuglevel = 1
 )
 
-func makeDefaultLogger() logr.Logger {
+var (
+	defaultLogger = makeDefaultLogger(InfoLevel)
+	dlog          = log.NewDelegatingLogSink(defaultLogger.GetSink())
+	Log           = Logger{logr.New(dlog).WithName("vineyard")}
+)
+
+func SetVerbose(level int) {
+	defaultLogger = makeDefaultLogger(-level)
+	dlog.Fulfill(defaultLogger.GetSink())
+}
+
+func makeDefaultLogger(verbose int) logr.Logger {
 	zapOpts := &zap.Options{
 		Development: true,
 		TimeEncoder: zapcore.ISO8601TimeEncoder,
+		Level:       zapcore.Level(verbose),
 	}
 	zapOpts.Encoder = &EscapeSeqJSONEncoder{
 		Encoder: zapcore.NewConsoleEncoder(uberzap.NewDevelopmentEncoderConfig()),
@@ -103,11 +113,6 @@ func IntoContext(ctx context.Context, log Logger) context.Context {
 
 func V(level int) Logger {
 	return Logger{Log.V(level)}
-}
-
-// return a logger that discards all logs
-func Discard() {
-	SetLogger(Logger{logr.Discard()})
 }
 
 func WithValues(keysAndValues ...any) Logger {
