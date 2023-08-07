@@ -16,11 +16,12 @@ limitations under the License.
 package client
 
 import (
-	"log"
+	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -54,6 +55,7 @@ var lsObjects = &cobra.Command{
 	Example: lsObjectsExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
+		stdout := DisableStdout()
 		// check the client socket
 		util.CheckClientSocket(cmd, args)
 
@@ -71,6 +73,7 @@ var lsObjects = &cobra.Command{
 			SortedKey(flags.SortedKey).
 			SetFormat(flags.Format)
 
+		os.Stdout = stdout
 		output.Print()
 	},
 }

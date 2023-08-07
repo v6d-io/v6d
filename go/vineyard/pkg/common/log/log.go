@@ -80,6 +80,10 @@ func IntoContext(ctx context.Context, log Logger) context.Context {
 	return logr.NewContext(ctx, log.Logger)
 }
 
+func Discard() {
+	SetLogger(Logger{logr.Discard()})
+}
+
 func V(level int) Logger {
 	return Logger{Log.V(level)}
 }

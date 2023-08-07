@@ -105,6 +105,11 @@ func V(level int) Logger {
 	return Logger{Log.V(level)}
 }
 
+// return a logger that discards all logs
+func Discard() {
+	SetLogger(Logger{logr.Discard()})
+}
+
 func WithValues(keysAndValues ...any) Logger {
 	return Logger{Log.WithValues(keysAndValues...)}
 }

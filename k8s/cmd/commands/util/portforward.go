@@ -17,8 +17,9 @@ package util
 
 import (
 	"context"
+	"fmt"
 	"io"
-	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -30,6 +31,8 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
+
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 const (
@@ -41,7 +44,6 @@ const (
 )
 
 func PortforwardDeployment(deploymentName, namespace string, forwardPort, port int, readyChannel, stopChannel chan struct{}) {
-	log.Println("start")
 	restConfig := GetKubernetesConfig()
 	clientSet := KubernetesClientset()
 
@@ -49,23 +51,22 @@ func PortforwardDeployment(deploymentName, namespace string, forwardPort, port i
 		LabelSelector: DeploymentLabel + "=" + deploymentName,
 	})
 	if err != nil {
-		log.Fatalf("failed to get pods for deployment %s: %v", deploymentName, err)
+		log.Fatalf(err, "failed to get pods for deployment %s", deploymentName)
 	}
 	if len(podList.Items) == 0 {
-		log.Fatalf("no pods found for deployment %s in namespace %s", deploymentName, namespace)
+		log.Fatalf(fmt.Errorf("no pods found for deployment %s in namespace %s", deploymentName, namespace), "failed to get pods")
 	}
 
 	podName := podList.Items[0].Name
 
 	req := clientSet.CoreV1().RESTClient().Post().Namespace(namespace).
 		Resource("pods").Name(podName).SubResource("portforward")
-	log.Println(req.URL())
+	log.Infof("porforward url is: ", req.URL())
 	signals := make(chan os.Signal, 1)
 
 	defer signal.Stop(signals)
 
 	signal.Notify(signals, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
-
 	go func() {
 		<-signals
 		close(stopChannel)
@@ -77,12 +78,57 @@ func PortforwardDeployment(deploymentName, namespace string, forwardPort, port i
 
 }
 
+func isPortAvailable(port int) bool {
+	// Check if the forward port is already bound
+	l, err := net.Listen("tcp", ":"+strconv.Itoa(port))
+	if err != nil {
+		return false
+	}
+	defer l.Close()
+	return true
+}
+
+func GetValidForwardPort(forwardPort int) (int, error) {
+	if isPortAvailable(forwardPort) {
+		return forwardPort, nil
+	}
+
+	// Port is already bound, generate an available port
+	forwardPort, err := getAvailablePort()
+	if err != nil {
+		return forwardPort, err
+	}
+
+	return forwardPort, nil
+}
+
+func getAvailablePort() (int, error) {
+	l, err := net.Listen("tcp", ":0")
+	if err != nil {
+		return 0, err
+	}
+	defer l.Close()
+
+	_, portStr, err := net.SplitHostPort(l.Addr().String())
+	if err != nil {
+		return 0, err
+	}
+
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return 0, err
+	}
+
+	return port, nil
+}
+
 func forwardPorts(method string, url *url.URL, config *rest.Config, stopChannel, readyChannel chan struct{}, forwardPort, port int) error {
 	transport, upgrader, err := spdy.RoundTripperFor(config)
 	if err != nil {
 		return err
 	}
 	address := []string{ForwardAddress}
+
 	ports := []string{strconv.Itoa(forwardPort) + ":" + strconv.Itoa(port)}
 
 	IOStreams := struct {
@@ -90,7 +136,6 @@ func forwardPorts(method string, url *url.URL, config *rest.Config, stopChannel,
 		Out    io.Writer
 		ErrOut io.Writer
 	}{os.Stdin, os.Stdout, os.Stderr}
-
 	dialer := spdy.NewDialer(upgrader, &http.Client{Transport: transport}, method, url)
 	fw, err := portforward.NewOnAddresses(dialer, address, ports, stopChannel, readyChannel, IOStreams.Out, IOStreams.ErrOut)
 	if err != nil {

@@ -18,7 +18,6 @@ package util
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"sort"
 	"strconv"
@@ -27,6 +26,7 @@ import (
 	"github.com/olekukonko/tablewriter"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/client"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common/types"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -125,7 +125,7 @@ func (o *Output) SortBy() *Output {
 		}
 	}
 	if !valid {
-		log.Fatal("invalid sorted key")
+		log.Fatal(fmt.Errorf("invalid sorted key: %s", sortedKey), "failed to sort the output")
 	}
 	data := []KeyValue{}
 	for k, v := range *o.metadatas {
@@ -159,7 +159,7 @@ func (o *Output) Format() {
 		}
 	}
 	if !valid {
-		log.Fatal("invalid output format")
+		log.Fatal(fmt.Errorf("invalid output format: %s", format), "failed to format the output")
 	}
 	if format == "table" {
 		o.formatAsTable()
@@ -180,7 +180,7 @@ func (o *Output) formatAsJson() {
 		if err != nil {
 			log.Fatal(err, "failed to marshal metadata")
 		}
-		log.Println(string(jsonMeta))
+		log.Output(string(jsonMeta))
 	}
 
 	type Object struct {
@@ -205,7 +205,7 @@ func (o *Output) formatAsJson() {
 		if err != nil {
 			log.Fatal(err, "failed to marshal buffers")
 		}
-		log.Println(string(jsonBuf))
+		log.Output(string(jsonBuf))
 	}
 }
 

@@ -86,6 +86,12 @@ func ConnectViaRPC(rpcSocket string) (*client.RPCClient, error) {
 // ConnectDeployment connects to the vineyardd deployment via rpc
 func ConnectDeployment(deployment, namespace string, readyChannel, stopChannel chan struct{}) (*client.RPCClient, error) {
 	if deployment != "" && namespace != "" {
+		// check if the port is available, if not, generate a new one
+		port, err := GetValidForwardPort(flags.ForwardPort)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get a valid forward port")
+		}
+		flags.ForwardPort = port
 		go func() {
 			PortforwardDeployment(deployment, namespace, flags.ForwardPort, flags.Port, readyChannel, stopChannel)
 			defer close(stopChannel)

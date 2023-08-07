@@ -37,6 +37,9 @@ var (
 
 	// ForwardPort is the forward port of vineyard deployment
 	ForwardPort int
+
+	// Debug represents whether to enable debug mode
+	Debug bool
 )
 
 // ls options
@@ -105,4 +108,5 @@ func ApplyConnectOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&DeploymentName, "deployment-name", "", "", "the name of vineyard deployment")
 	cmd.Flags().IntVarP(&Port, "port", "", 9600, "the port of vineyard deployment")
 	cmd.Flags().IntVarP(&ForwardPort, "forward-port", "", 9600, "the forward port of vineyard deployment")
+	cmd.Flags().BoolVarP(&Debug, "debug", "", false, "enable debug mode")
 }
