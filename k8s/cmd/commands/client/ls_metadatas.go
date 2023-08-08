@@ -16,10 +16,7 @@ limitations under the License.
 package client
 
 import (
-	"os"
-
 	"github.com/spf13/cobra"
-	gosdklog "github.com/v6d-io/v6d/go/vineyard/pkg/common/log"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
@@ -59,7 +56,6 @@ var lsMetadatas = &cobra.Command{
 	Long:    lsMetadatasLong,
 	Example: lsMetadatasExample,
 	Run: func(cmd *cobra.Command, args []string) {
-		stdout := DisableStdout()
 		util.AssertNoArgs(cmd, args)
 		// check the client socket
 		util.CheckClientSocket(cmd, args)
@@ -72,13 +68,12 @@ var lsMetadatas = &cobra.Command{
 			log.Fatal(err, "failed to list vineyard objects")
 		}
 		output := util.NewOutput(&metas, nil)
-		// set the oxutput options
+		// set the output options
 		output.WithFilter(false).
 			SortedKey(flags.SortedKey).
 			SetFormat(flags.Format)
 
-		// enable stdout
-		os.Stdout = stdout
+		EnableStdout()
 		output.Print()
 	},
 }
@@ -91,13 +86,4 @@ func init() {
 	flags.ApplyConnectOpts(lsMetadatas)
 	flags.ApplyLsOpts(lsMetadatas)
 	flags.ApplyOutputOpts(lsMetadatas)
-}
-
-func DisableStdout() *os.File {
-	stdout := os.Stdout
-	os.Stdout, _ = os.Open(os.DevNull)
-	log.SetVerbose(flags.Verbose)
-	gosdklog.SetVerbose(flags.Verbose)
-
-	return stdout
 }

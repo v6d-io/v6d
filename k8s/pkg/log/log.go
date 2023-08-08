@@ -31,19 +31,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
-const (
-	InfoLevel  = 0
-	Debuglevel = 1
-)
-
 var (
-	defaultLogger = makeDefaultLogger(InfoLevel)
+	defaultLogger = makeDefaultLogger(0)
 	dlog          = log.NewDelegatingLogSink(defaultLogger.GetSink())
 	Log           = Logger{logr.New(dlog).WithName("vineyard")}
 )
 
-func SetVerbose(level int) {
-	defaultLogger = makeDefaultLogger(-level)
+func SetLogLevel(level int) {
+	defaultLogger = makeDefaultLogger(level)
 	dlog.Fulfill(defaultLogger.GetSink())
 }
 

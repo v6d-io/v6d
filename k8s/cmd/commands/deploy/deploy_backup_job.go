@@ -143,10 +143,12 @@ var deployBackupJobCmd = &cobra.Command{
 			log.Fatal(err, "failed to get backup objects from template")
 		}
 
+		log.Info("applying backup manifests with owner reference")
 		if err := util.ApplyManifestsWithOwnerRef(c, objs, "Job", "Role,Rolebinding"); err != nil {
 			log.Fatal(err, "failed to apply backup objects")
 		}
 
+		log.Info("waiting backup job for ready")
 		if err := waitBackupJobReady(c); err != nil {
 			log.Fatal(err, "failed to wait backup job ready")
 		}

@@ -24,6 +24,7 @@ import (
 	// import as early as possible to introduce the "version" global flag
 	_ "k8s.io/component-base/version/verflag"
 
+	gosdklog "github.com/v6d-io/v6d/go/vineyard/pkg/common/log"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/client"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/create"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
@@ -75,8 +76,16 @@ func init() {
 
 func main() {
 	tryUsageAndDocs()
+	setLogLevel()
 	if err := cmd.Execute(); err != nil {
 		log.Fatal(err, "Failed to execute root command")
+	}
+}
+
+func setLogLevel() {
+	if !flags.Verbose {
+		log.SetLogLevel(1)
+		gosdklog.SetLogLevel(1)
 	}
 }
 

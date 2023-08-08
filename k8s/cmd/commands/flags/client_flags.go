@@ -37,9 +37,6 @@ var (
 
 	// ForwardPort is the forward port of vineyard deployment
 	ForwardPort int
-
-	// Verbose represents the log level to print
-	Verbose int
 )
 
 // ls options
@@ -108,10 +105,4 @@ func ApplyConnectOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&DeploymentName, "deployment-name", "", "", "the name of vineyard deployment")
 	cmd.Flags().IntVarP(&Port, "port", "", 9600, "the port of vineyard deployment")
 	cmd.Flags().IntVarP(&ForwardPort, "forward-port", "", 9600, "the forward port of vineyard deployment")
-	cmd.Flags().IntVarP(&Verbose, "log-verbose", "", 0,
-		"the log level to print, default is 0, support:"+"\n"+
-			"- info(0): print info log."+"\n"+
-			"- debug(1): print debug log."+"\n"+
-			"The output will be info log by default, if you set the verbose to 1, "+
-			"the output will be debug log and info log.")
 }

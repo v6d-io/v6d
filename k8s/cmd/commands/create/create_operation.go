@@ -69,6 +69,7 @@ var createOperationCmd = &cobra.Command{
 		util.CreateNamespaceIfNotExist(client)
 		operation := buildOperation()
 
+		log.Info("creating Operation cr")
 		if err := util.Create(client, operation, func(operation *v1alpha1.Operation) bool {
 			return operation.Status.State != v1alpha1.OperationSucceeded
 		}); err != nil {

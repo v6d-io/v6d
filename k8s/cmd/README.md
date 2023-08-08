@@ -29,6 +29,7 @@ drivers.
   -h, --help                help for vineyardctl
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --verbose             print verbose log, default false
   -v, --version             version for vineyardctl
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```
@@ -1507,10 +1508,6 @@ vineyardctl ls blobs [flags]
   -h, --help                     help for blobs
       --ipc-socket string        vineyard IPC socket path
   -l, --limit int                maximum number of objects to return (default 5)
-      --log-verbose int          the log level to print, default is 0, support:
-                                 - info(0): print info log.
-                                 - debug(1): print debug log.
-                                 The output will be info log by default, if you set the verbose to 1, the output will be debug log and info log.
       --port int                 the port of vineyard deployment (default 9600)
       --rpc-socket string        vineyard RPC socket path
 ```
@@ -1565,10 +1562,6 @@ vineyardctl ls metadatas [flags]
   -h, --help                     help for metadatas
       --ipc-socket string        vineyard IPC socket path
   -l, --limit int                maximum number of objects to return (default 5)
-      --log-verbose int          the log level to print, default is 0, support:
-                                 - info(0): print info log.
-                                 - debug(1): print debug log.
-                                 The output will be info log by default, if you set the verbose to 1, the output will be debug log and info log.
   -p, --pattern string           string that will be matched against the object’s typenames (default "*")
       --port int                 the port of vineyard deployment (default 9600)
   -r, --regex                    regex pattern to match the object’s typenames
@@ -1627,10 +1620,6 @@ vineyardctl ls objects [flags]
   -h, --help                     help for objects
       --ipc-socket string        vineyard IPC socket path
   -l, --limit int                maximum number of objects to return (default 5)
-      --log-verbose int          the log level to print, default is 0, support:
-                                 - info(0): print info log.
-                                 - debug(1): print debug log.
-                                 The output will be info log by default, if you set the verbose to 1, the output will be debug log and info log.
   -p, --pattern string           string that will be matched against the object’s typenames (default "*")
       --port int                 the port of vineyard deployment (default 9600)
   -r, --regex                    regex pattern to match the object’s typenames

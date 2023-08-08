@@ -43,6 +43,9 @@ var (
 	// DumpUsage
 	DumpUsage bool
 
+	// Verbose indicates whether to print verbose log
+	Verbose bool
+
 	GenDoc bool
 )
 
@@ -72,6 +75,8 @@ func ApplyGlobalFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().
 		BoolVarP(&CreateNamespace, "create-namespace", "", false,
 			"create the namespace if it does not exist, default false")
+	cmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "", false,
+		"print verbose log, default false")
 	cmd.Flags().BoolVarP(&DumpUsage, "dump-usage", "j", false, "Dump usage in JSON")
 	cmd.Flags().
 		BoolVarP(&GenDoc, "gen-doc", "g", false, "Generate reference docs, e.g., \"./cmd/README.md\"")

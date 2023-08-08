@@ -16,6 +16,8 @@ limitations under the License.
 package client
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
@@ -56,4 +58,17 @@ func init() {
 	lsCmd.AddCommand(NewLsMetadatasCmd())
 	lsCmd.AddCommand(NewLsObjectsCmd())
 	lsCmd.AddCommand(NewLsBlobsCmd())
+	DisableStdout()
+}
+
+var (
+	originalStdout = os.Stdout
+)
+
+func DisableStdout() {
+	os.Stdout, _ = os.Open(os.DevNull)
+}
+
+func EnableStdout() {
+	os.Stdout = originalStdout
 }

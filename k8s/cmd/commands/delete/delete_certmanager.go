@@ -42,11 +42,13 @@ var deleteCertManagerCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
+		log.Info("get Cert-Manager manifests from local")
 		certManagerManifests, err := util.GetCertManager()
 		if err != nil {
 			log.Fatal(err, "failed to get cert-manager manifests")
 		}
 
+		log.Info("deleting Cert-Manager manifests")
 		if err := util.DeleteManifests(client, certManagerManifests,
 			""); err != nil {
 			log.Fatal(err, "failed to delete cert-manager manifests")

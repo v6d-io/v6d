@@ -65,12 +65,14 @@ var deployCertManagerCmd = &cobra.Command{
 			log.Fatal(err, "failed to get cert-manager manifests")
 		}
 
+		log.Info("applying cert-manager manifests")
 		if err := util.ApplyManifests(client, certManagerManifests,
 			""); err != nil {
 			log.Fatal(err, "failed to apply cert-manager manifests")
 		}
 
 		if flags.Wait {
+			log.Info("waiting for cert-manager ready")
 			if err := waitCertManagerReady(client); err != nil {
 				log.Fatal(err, "failed to wait cert-manager ready")
 			}

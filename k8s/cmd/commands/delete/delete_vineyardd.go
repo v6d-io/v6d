@@ -42,6 +42,7 @@ var deleteVineyarddCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
+		log.Info("deleting Vineyardd cluster")
 		vineyardd := &vineyardv1alpha1.Vineyardd{}
 		if err := util.Delete(client, types.NamespacedName{
 			Name:      flags.VineyarddName,

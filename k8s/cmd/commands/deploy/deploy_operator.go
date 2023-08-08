@@ -75,12 +75,14 @@ var deployOperatorCmd = &cobra.Command{
 			log.Fatal(err, "failed to build kustomize dir")
 		}
 
+		log.Info("applying operator manifests")
 		if err := util.ApplyManifests(client, operatorManifests,
 			flags.GetDefaultVineyardNamespace()); err != nil {
 			log.Fatal(err, "failed to apply operator manifests")
 		}
 
 		if flags.Wait {
+			log.Info("waiting for the vineyard operator to be ready")
 			if err := waitOperatorReady(client); err != nil {
 				log.Fatal(err, "failed to wait operator ready")
 			}
