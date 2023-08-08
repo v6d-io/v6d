@@ -66,5 +66,5 @@ RUN cd /work/v6d && \
     rm -rf /work/v6d
 
 # Keep a minimal output artifacts
-FROM alpine:latest
+FROM alpine:3.18.3
 COPY --from=builder /work/fixed_wheels /work/fixed_wheels
