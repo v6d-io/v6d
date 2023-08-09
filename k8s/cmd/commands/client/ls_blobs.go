@@ -70,8 +70,6 @@ var lsBlobs = &cobra.Command{
 		output.WithFilter(false).
 			SortedKey(flags.SortedKey).
 			SetFormat(flags.Format)
-
-		EnableStdout()
 		output.Print()
 	},
 }

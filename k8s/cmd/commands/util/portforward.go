@@ -44,7 +44,7 @@ const (
 	DeploymentLabel = "app.vineyard.io/name"
 )
 
-func PortforwardDeployment(deploymentName, namespace string, forwardPort, port int, readyChannel, stopChannel chan struct{}) {
+func PortForwardDeployment(deploymentName, namespace string, forwardPort, port int, readyChannel, stopChannel chan struct{}) {
 	restConfig := GetKubernetesConfig()
 	clientSet := KubernetesClientset()
 

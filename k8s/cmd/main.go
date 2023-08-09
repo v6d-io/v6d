@@ -75,11 +75,22 @@ func init() {
 }
 
 func main() {
-	tryUsageAndDocs()
+	parseFlags()
 	setLogLevel()
+	tryUsageAndDocs()
 	if err := cmd.Execute(); err != nil {
 		log.Fatal(err, "Failed to execute root command")
 	}
+}
+
+func parseFlags() {
+	cmd.FParseErrWhitelist.UnknownFlags = true
+	if err := cmd.ParseFlags(os.Args); err != nil {
+		_ = cmd.Usage()
+		cmd.PrintErrf("\nError when parsing flags: %v\n", err)
+		os.Exit(-1)
+	}
+	cmd.FParseErrWhitelist.UnknownFlags = false
 }
 
 func setLogLevel() {
@@ -90,14 +101,6 @@ func setLogLevel() {
 }
 
 func tryUsageAndDocs() {
-	cmd.FParseErrWhitelist.UnknownFlags = true
-	if err := cmd.ParseFlags(os.Args); err != nil {
-		_ = cmd.Usage()
-		cmd.PrintErrf("\nError when parsing flags: %v\n", err)
-		os.Exit(-1)
-	}
-	cmd.FParseErrWhitelist.UnknownFlags = false
-
 	if flags.DumpUsage {
 		cmd.SetUsageFunc(usage.UsageJson)
 		if err := cmd.Usage(); err != nil {

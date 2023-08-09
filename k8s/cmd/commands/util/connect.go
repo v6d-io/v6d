@@ -93,7 +93,7 @@ func ConnectDeployment(deployment, namespace string, readyChannel, stopChannel c
 		}
 		flags.ForwardPort = port
 		go func() {
-			PortforwardDeployment(deployment, namespace, flags.ForwardPort, flags.Port, readyChannel, stopChannel)
+			PortForwardDeployment(deployment, namespace, flags.ForwardPort, flags.Port, readyChannel, stopChannel)
 		}()
 	}
 	return ConnectViaRPC("localhost" + ":" + strconv.Itoa(flags.ForwardPort))

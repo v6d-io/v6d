@@ -25,22 +25,22 @@ import (
 var (
 	lsObjectsLong = util.LongDesc(`List vineyard objects and support IPC socket,
 	RPC socket and vineyard deployment. If you don't specify the ipc socket or rpc socket
-	every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or 
+	every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or
 	VINEYARD_RPC_SOCKET.`)
 
 	lsObjectsExample = util.Examples(`
 	# List no more than 10 vineyard objects
 	vineyardctl ls objects --limit 10 --ipc-socket /var/run/vineyard.sock
-	
+
 	# List any vineyard objects and no more than 1000 objects
 	vineyardctl ls objects --pattern "*" --ipc-socket /var/run/vineyard.sock --limit 1000
-	
+
 	# List vineyard objects with the name matching the regex pattern
 	vineyardctl ls objects --pattern "vineyard::Tensor<.*>" --regex --ipc-socket /var/run/vineyard.sock
-	
+
 	# List vineyard objects and output as json format
 	vineyardctl ls objects --format json --ipc-socket /var/run/vineyard.sock
-	
+
 	# List vineyard objects sorted by the typename
 	vineyardctl ls objects --sorted-key typename --limit 1000 --ipc-socket /var/run/vineyard.sock`)
 )
@@ -69,8 +69,6 @@ var lsObjects = &cobra.Command{
 		output.WithFilter(true).
 			SortedKey(flags.SortedKey).
 			SetFormat(flags.Format)
-
-		EnableStdout()
 		output.Print()
 	},
 }
