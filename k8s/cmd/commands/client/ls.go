@@ -42,7 +42,7 @@ var lsExample = util.Examples(`
 	vineyardctl ls objects --deployment-name vineyardd-sample -n vineyard-system`)
 
 var (
-	stdout = os.Stdout
+	Stdout = os.Stdout
 	Output *util.Output
 )
 
@@ -57,7 +57,7 @@ var lsCmd = &cobra.Command{
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		// enable stdout
-		os.Stdout = stdout
+		os.Stdout = Stdout
 		Output.Print()
 	},
 }

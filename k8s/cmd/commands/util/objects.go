@@ -26,6 +26,7 @@ import (
 type Objects interface {
 	ListMetadatas(string, bool, int) (map[string]map[string]any, error)
 	ListBlobs() (map[types.ObjectID]client.Blob, error)
+	GetClusterInfo() (map[string]map[string]string, error)
 }
 
 // ListMetadatas lists all vineyard metadata
@@ -63,4 +64,15 @@ func (c *Client) ListBlobs(limit int) (map[types.ObjectID]client.Blob, error) {
 		return buffers, nil
 	}
 	return data, errors.Errorf("no ipc client")
+}
+
+// GetClusterInfo returns the cluster info
+func (c *Client) GetClusterInfo() (map[string]any, error) {
+	if c.ipcClient != nil {
+		return c.ipcClient.GetClusterInfo()
+	}
+	if c.rpcClient != nil {
+		return c.rpcClient.GetClusterInfo()
+	}
+	return nil, nil
 }

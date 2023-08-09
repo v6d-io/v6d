@@ -64,7 +64,7 @@ var lsObjects = &cobra.Command{
 		if err != nil {
 			log.Fatal(err, "failed to list vineyard objects")
 		}
-		output := util.NewOutput(&metas, nil)
+		output := util.NewOutput(&metas, nil, nil)
 		// set the output options
 		output.WithFilter(true).
 			SortedKey(flags.SortedKey).

@@ -72,6 +72,7 @@ func init() {
 	cmd.AddCommand(schedule.NewScheduleCmd())
 	cmd.AddCommand(sidecar.NewInjectCmd())
 	cmd.AddCommand(client.NewLsCmd())
+	cmd.AddCommand(client.NewGetCmd())
 }
 
 func main() {

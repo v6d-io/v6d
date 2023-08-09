@@ -228,6 +228,13 @@ func (c *IPCClient) GetObject(id types.ObjectID, object IObject) error {
 	return object.Construct(c, meta)
 }
 
+func (c *IPCClient) GetClusterInfo() (map[string]any, error) {
+	if !c.connected {
+		return nil, NOT_CONNECTED_ERR
+	}
+	return c.GetClusterMeta()
+}
+
 func (c *IPCClient) ListMetadata(pattern string, regex bool, limit int) (map[string]map[string]any, error) {
 	if !c.connected {
 		return nil, NOT_CONNECTED_ERR

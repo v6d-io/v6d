@@ -34,6 +34,9 @@ var (
 	// MetaHeaders are the headers for the less metadata output
 	MetaHeaders []string = []string{"ID", "TYPENAME", "LENGTH", "TRANSIENT", "TYPE", "MEMBERS", "INSTANCE ID"}
 
+	// ClusterInfoHeaders are the headers for the cluster info output
+	ClusterInfoHeaders []string = []string{"INSTANCE ID", "HOSTID", "HOSTNAME", "IPC_SOCKET", "NODENAME", "RPC_ENDPOINT", "TIMESTAMP"}
+
 	// BufferHeaders are the headers for the buffer output
 	BufferHeaders []string = []string{"ID", "BUFFER"}
 
@@ -59,9 +62,10 @@ type Options struct {
 // Output is the output of the metadata and buffers
 type Output struct {
 	Options
-	metadatas *map[string]map[string]any
-	buffers   *map[types.ObjectID]client.Blob
-	order     *[]KeyValue
+	metadatas   *map[string]map[string]any
+	buffers     *map[types.ObjectID]client.Blob
+	clusterInfo *map[string]any
+	order       *[]KeyValue
 }
 
 func (o *Output) SortedKey(key string) *Output {
@@ -81,11 +85,12 @@ func (o *Output) SetFormat(format string) *Output {
 
 func NewOutput(metadatas *map[string]map[string]any,
 	buffers *map[types.ObjectID]client.Blob,
-) *Output {
+	clusterInfo *map[string]any) *Output {
 	return &Output{
-		Options:   Options{},
-		metadatas: metadatas,
-		buffers:   buffers,
+		Options:     Options{},
+		metadatas:   metadatas,
+		buffers:     buffers,
+		clusterInfo: clusterInfo,
 	}
 }
 
@@ -209,6 +214,14 @@ func (o *Output) formatAsJson() {
 		}
 		log.Output(string(jsonBuf))
 	}
+
+	if o.clusterInfo != nil {
+		jsonClusterInfo, err := json.MarshalIndent(o.clusterInfo, "", "  ")
+		if err != nil {
+			log.Fatal(err, "failed to marshal cluster info")
+		}
+		log.Output(string(jsonClusterInfo))
+	}
 }
 
 // formatAsTable will format the data as table
@@ -268,5 +281,23 @@ func (o *Output) formatAsTable() {
 			bufferTable.Append([]string{types.ObjectIDToString(id), fmt.Sprintf("%v", data)})
 		}
 		bufferTable.Render()
+	}
+
+	if o.clusterInfo != nil {
+		clusterInfoTable := tablewriter.NewWriter(os.Stdout)
+
+		clusterInfoTable.SetHeader(ClusterInfoHeaders)
+		for instance, info := range *o.clusterInfo {
+			// set the default value
+			var hostid, hostname, ipcSocket, nodename, rpcEndpoint, timeStamp string
+			hostid = info.(map[string]any)["hostid"].(json.Number).String()
+			hostname = info.(map[string]any)["hostname"].(string)
+			ipcSocket = info.(map[string]any)["ipc_socket"].(string)
+			nodename = info.(map[string]any)["nodename"].(string)
+			rpcEndpoint = info.(map[string]any)["rpc_endpoint"].(string)
+			timeStamp = info.(map[string]any)["timestamp"].(json.Number).String()
+			clusterInfoTable.Append([]string{instance, hostid, hostname, ipcSocket, nodename, rpcEndpoint, timeStamp})
+		}
+		clusterInfoTable.Render()
 	}
 }
