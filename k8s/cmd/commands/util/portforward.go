@@ -27,6 +27,7 @@ import (
 	"strconv"
 	"syscall"
 
+	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
@@ -54,7 +55,7 @@ func PortforwardDeployment(deploymentName, namespace string, forwardPort, port i
 		log.Fatalf(err, "failed to get pods for deployment %s", deploymentName)
 	}
 	if len(podList.Items) == 0 {
-		log.Fatalf(fmt.Errorf("no pods found for deployment %s in namespace %s", deploymentName, namespace), "failed to get pods")
+		log.Fatalf(errors.Errorf("no pods found for deployment %s in namespace %s", deploymentName, namespace), "failed to get pods")
 	}
 
 	podName := podList.Items[0].Name
@@ -75,7 +76,6 @@ func PortforwardDeployment(deploymentName, namespace string, forwardPort, port i
 	if err := forwardPorts("POST", req.URL(), restConfig, stopChannel, readyChannel, forwardPort, port); err != nil {
 		log.Fatal(err, "Fail to forward ports")
 	}
-
 }
 
 func isPortAvailable(port int) bool {

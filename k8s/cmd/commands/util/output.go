@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/pkg/errors"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/client"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common/types"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
@@ -79,7 +80,8 @@ func (o *Output) SetFormat(format string) *Output {
 }
 
 func NewOutput(metadatas *map[string]map[string]any,
-	buffers *map[types.ObjectID]client.Blob) *Output {
+	buffers *map[types.ObjectID]client.Blob,
+) *Output {
 	return &Output{
 		Options:   Options{},
 		metadatas: metadatas,
@@ -125,7 +127,7 @@ func (o *Output) SortBy() *Output {
 		}
 	}
 	if !valid {
-		log.Fatal(fmt.Errorf("invalid sorted key: %s", sortedKey), "failed to sort the output")
+		log.Fatal(errors.Errorf("invalid sorted key: %s", sortedKey), "failed to sort the output")
 	}
 	data := []KeyValue{}
 	for k, v := range *o.metadatas {
@@ -159,7 +161,7 @@ func (o *Output) Format() {
 		}
 	}
 	if !valid {
-		log.Fatal(fmt.Errorf("invalid output format: %s", format), "failed to format the output")
+		log.Fatal(errors.Errorf("invalid output format: %s", format), "failed to format the output")
 	}
 	if format == "table" {
 		o.formatAsTable()
