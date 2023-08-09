@@ -16,11 +16,10 @@ limitations under the License.
 package client
 
 import (
-	"log"
-
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -71,8 +70,7 @@ var lsBlobs = &cobra.Command{
 		output.WithFilter(false).
 			SortedKey(flags.SortedKey).
 			SetFormat(flags.Format)
-
-		output.Print()
+		Output = output
 	},
 }
 

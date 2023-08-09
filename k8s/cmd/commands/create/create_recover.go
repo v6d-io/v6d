@@ -59,6 +59,7 @@ var createRecoverCmd = &cobra.Command{
 			log.Fatal(err, "failed to build recover cr")
 		}
 
+		log.Info("creating Recover cr")
 		if err := util.Create(client, recover, func(*v1alpha1.Recover) bool {
 			return recover.Status.State != k8s.SucceedState
 		}); err != nil {

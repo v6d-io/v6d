@@ -16,11 +16,10 @@ limitations under the License.
 package client
 
 import (
-	"log"
-
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 var (
@@ -60,7 +59,6 @@ var lsMetadatas = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 		// check the client socket
 		util.CheckClientSocket(cmd, args)
-
 		client, ch := util.NewClient()
 		if ch != nil {
 			defer close(ch)
@@ -74,8 +72,7 @@ var lsMetadatas = &cobra.Command{
 		output.WithFilter(false).
 			SortedKey(flags.SortedKey).
 			SetFormat(flags.Format)
-
-		output.Print()
+		Output = output
 	},
 }
 

@@ -77,10 +77,12 @@ var deployRecoverJobCmd = &cobra.Command{
 			log.Fatal(err, "failed to get recover objects from template")
 		}
 
+		log.Info("applying recover objects with owner ref")
 		if err := util.ApplyManifestsWithOwnerRef(client, objs, "Job", "Role,Rolebinding"); err != nil {
 			log.Fatal(err, "failed to apply recover objects")
 		}
 
+		log.Info("waiting recover job for ready")
 		if err := waitRecoverJobReady(client); err != nil {
 			log.Fatal(err, "failed to wait recover job ready")
 		}

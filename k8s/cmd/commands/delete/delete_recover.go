@@ -39,6 +39,7 @@ var deleteRecoverCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
+		log.Info("deleting Recover cr")
 		recover := &v1alpha1.Recover{}
 		if err := util.Delete(client, types.NamespacedName{
 			Name:      flags.RecoverName,

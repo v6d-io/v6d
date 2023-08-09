@@ -45,6 +45,7 @@ var deleteBackupCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
+		log.Info("deleting Backup cr")
 		backup := &v1alpha1.Backup{}
 		if err := util.Delete(client, types.NamespacedName{
 			Name:      flags.BackupName,

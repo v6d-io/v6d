@@ -119,10 +119,13 @@ var createBackupCmd = &cobra.Command{
 		util.AssertNoArgsOrInput(cmd, args)
 
 		client := util.KubernetesClient()
+		log.Info("building Backup cr")
 		backup, err := BuildBackup(client, args)
 		if err != nil {
 			log.Fatal(err, "failed to build backup cr")
 		}
+
+		log.Info("creating Backup cr")
 		if err := util.Create(client, backup, func(backup *v1alpha1.Backup) bool {
 			return backup.Status.State != k8s.SucceedState
 		}); err != nil {

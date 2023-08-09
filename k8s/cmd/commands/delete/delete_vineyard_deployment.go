@@ -44,6 +44,7 @@ var deleteVineyardDeploymentCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
+		log.Info("deleting vineyardd resources from template")
 		if err := deleteVineyarddFromTemplate(client); err != nil {
 			log.Fatal(err, "failed to delete vineyardd resources from template")
 		}

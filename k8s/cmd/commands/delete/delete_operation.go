@@ -40,6 +40,7 @@ var deleteOperationCmd = &cobra.Command{
 
 		client := util.KubernetesClient()
 
+		log.Info("deleting Operation cr")
 		operation := &vineyardV1alpha1.Operation{}
 		if err := util.Delete(client, types.NamespacedName{
 			Name:      flags.OperationName,

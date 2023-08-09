@@ -29,6 +29,7 @@ drivers.
   -h, --help                help for vineyardctl
       --kubeconfig string   kubeconfig path for the kubernetes cluster (default "$HOME/.kube/config")
   -n, --namespace string    the namespace for operation (default "vineyard-system")
+      --verbose             print verbose log, default false
   -v, --version             version for vineyardctl
       --wait                wait for the kubernetes resource to be ready, default true (default true)
 ```

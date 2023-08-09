@@ -32,16 +32,21 @@ import (
 )
 
 var (
-	defaultLogger = makeDefaultLogger()
+	defaultLogger = makeDefaultLogger(0)
 	dlog          = log.NewDelegatingLogSink(defaultLogger.GetSink())
-
-	Log = Logger{logr.New(dlog).WithName("vineyard")}
+	Log           = Logger{logr.New(dlog).WithName("vineyard")}
 )
 
-func makeDefaultLogger() logr.Logger {
+func SetLogLevel(level int) {
+	defaultLogger = makeDefaultLogger(level)
+	dlog.Fulfill(defaultLogger.GetSink())
+}
+
+func makeDefaultLogger(verbose int) logr.Logger {
 	zapOpts := &zap.Options{
 		Development: true,
 		TimeEncoder: zapcore.ISO8601TimeEncoder,
+		Level:       zapcore.Level(verbose),
 	}
 	zapOpts.Encoder = &EscapeSeqJSONEncoder{
 		Encoder: zapcore.NewConsoleEncoder(uberzap.NewDevelopmentEncoderConfig()),

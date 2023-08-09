@@ -43,11 +43,13 @@ var deleteOperatorCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 		client := util.KubernetesClient()
 
+		log.Info("building operator manifests from kustomize dir")
 		operatorManifests, err := util.BuildKustomizeInDir(util.GetKustomizeDir())
 		if err != nil {
 			log.Fatal(err, "failed to build kustomize dir")
 		}
 
+		log.Info("deleting operator manifests")
 		if err := util.DeleteManifests(client, operatorManifests,
 			flags.GetDefaultVineyardNamespace()); err != nil {
 			log.Fatal(err, "failed to delete operator manifests")

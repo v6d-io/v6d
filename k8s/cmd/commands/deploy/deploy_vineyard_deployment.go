@@ -70,6 +70,7 @@ var deployVineyardDeploymentCmd = &cobra.Command{
 			log.Fatal(err, "failed to apply vineyardd resources from template")
 		}
 
+		log.Info("waiting for vineyard deployment ready")
 		if err := waitVineyardDeploymentReady(client); err != nil {
 			log.Fatal(err, "failed to wait vineyard deployment for ready")
 		}

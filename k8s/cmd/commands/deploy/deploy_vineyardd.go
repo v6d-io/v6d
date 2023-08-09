@@ -138,6 +138,7 @@ var deployVineyarddCmd = &cobra.Command{
 			log.Fatal(err, "failed to build vineyardd")
 		}
 
+		log.Info("wait for the vineyardd to be ready")
 		var waitVineyarddFuc func(vineyardd *v1alpha1.Vineyardd) bool
 		if flags.Wait {
 			waitVineyarddFuc = func(vineyardd *v1alpha1.Vineyardd) bool {
