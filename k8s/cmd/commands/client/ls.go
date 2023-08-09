@@ -41,7 +41,10 @@ var lsExample = util.Examples(`
 	# List the vineyard objects no more than 1000
 	vineyardctl ls objects --deployment-name vineyardd-sample -n vineyard-system`)
 
-var stdout = os.Stdout
+var (
+	stdout = os.Stdout
+	Output *util.Output
+)
 
 // lsCmd is to list vineyard objects
 var lsCmd = &cobra.Command{
@@ -55,6 +58,7 @@ var lsCmd = &cobra.Command{
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		// enable stdout
 		os.Stdout = stdout
+		Output.Print()
 	},
 }
 

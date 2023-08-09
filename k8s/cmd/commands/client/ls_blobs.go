@@ -70,7 +70,7 @@ var lsBlobs = &cobra.Command{
 		output.WithFilter(false).
 			SortedKey(flags.SortedKey).
 			SetFormat(flags.Format)
-		output.Print()
+		Output = output
 	},
 }
 

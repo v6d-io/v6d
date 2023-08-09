@@ -69,7 +69,7 @@ var lsObjects = &cobra.Command{
 		output.WithFilter(true).
 			SortedKey(flags.SortedKey).
 			SetFormat(flags.Format)
-		output.Print()
+		Output = output
 	},
 }
 
