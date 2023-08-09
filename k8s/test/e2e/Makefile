@@ -340,6 +340,15 @@ e2e-tests-schedule-workflow: prepare-e2e-test install-vineyard-cluster
 	@make delete-local-cluster
 .PHONY: e2e-tests-schedule-workflow
 
+############# schedule workflow without CRD testing ################################################
+
+e2e-tests-schedule-workflow-without-crd: prepare-e2e-test build-local-cluster load-vineyardd-image
+	@echo "Running schedule workflow without CRD e2e test..."
+	@cd ${ROOT_DIR} && ${GOBIN}/e2e run --config=${E2E_DIR}/schedule-workflow-without-crd/e2e.yaml
+	@echo "schedule workflow e2e without CRD test passed."
+	@make delete-local-cluster
+.PHONY: e2e-tests-schedule-workflow-without-crd
+
 ############# mars showcase testing ################################################
 
 e2e-tests-mars-examples: prepare-e2e-test build-local-cluster load-vineyardd-image

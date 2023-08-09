@@ -20,9 +20,14 @@ import "github.com/spf13/cobra"
 var (
 	// WorkflowFile is the path of workflow file
 	WorkflowFile string
+
+	// WithoutCRD is the flag to indicate whether the CRD is installed
+	WithoutCRD bool
 )
 
 func ApplySchedulerWorkflowOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&WorkflowFile, "file", "f", "",
 		"the path of workflow file")
+	cmd.Flags().BoolVarP(&WithoutCRD, "without-crd", "", false,
+		"whether the CRD(especially for GlobalObject and LocalObject) is installed")
 }

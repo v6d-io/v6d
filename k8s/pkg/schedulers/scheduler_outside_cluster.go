@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -30,6 +31,7 @@ type VineyardSchedulerOutsideCluster struct {
 	annotations map[string]string
 	labels      map[string]string
 	config      SchedulerConfig
+	withoutCRD  bool
 }
 
 // NewVineyardSchedulerOutsideCluster returns a new vineyard scheduler outside cluster
@@ -49,6 +51,11 @@ func NewVineyardSchedulerOutsideCluster(
 			OwnerReference: &ownerReferences,
 		},
 	}
+}
+
+func (vs *VineyardSchedulerOutsideCluster) SetWithoutCRD(withoutCRD bool) *VineyardSchedulerOutsideCluster {
+	vs.withoutCRD = withoutCRD
+	return vs
 }
 
 // SetupConfig setups the scheduler config
@@ -103,8 +110,16 @@ func (vs *VineyardSchedulerOutsideCluster) Schedule(replica int) (string, error)
 		vs.config.OwnerReference,
 	)
 
+	deploymentName := vs.labels[labels.VineyarddName]
+	namespace := vs.labels[labels.VineyarddNamespace]
+	var node string
+	var err error
 	for i := 0; i < replica; i++ {
-		node, err := bestEffort.Compute(i)
+		if vs.withoutCRD {
+			node, err = bestEffort.TrackingChunksByAPI(deploymentName, namespace).Compute(i)
+		} else {
+			node, err = bestEffort.TrackingChunksByCRD().Compute(i)
+		}
 		if err != nil {
 			return "", err
 		}

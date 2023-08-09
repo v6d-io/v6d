@@ -1,0 +1,69 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: v6d-workflow-demo-job1
+  namespace: vineyard-job
+  labels:
+    app: v6d-workflow-demo-job1
+    # this label represents the vineyardd's name that need to be used
+    scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
+    scheduling.k8s.v6d.io/replicas: "1"
+    scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
+    scheduling.k8s.v6d.io/job: v6d-workflow-demo-job1
+spec:
+  restartPolicy: Never
+  containers:
+  - name: job1
+    image: ghcr.io/v6d-io/v6d/job1-with-scheduler
+    env:
+    - name: JOB_NAME
+      value: v6d-workflow-demo-job1
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - mountPath: /var/run
+      name: vineyard-sock
+  volumes:
+  - name: vineyard-sock
+    hostPath:
+      path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: v6d-workflow-demo-job2
+  namespace: vineyard-job
+  annotations:
+    # The label is limited to 63 characters, so we need to use the annotation here
+    scheduling.k8s.v6d.io/required: v6d-workflow-demo-job1
+  labels:
+    app: v6d-workflow-demo-job2
+    # this label represents the vineyardd's name that need to be used
+    scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
+    scheduling.k8s.v6d.io/replicas: "1"
+    scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
+    scheduling.k8s.v6d.io/job: v6d-workflow-demo-job2
+spec:
+  restartPolicy: Never
+  containers:
+  - name: job2
+    image: ghcr.io/v6d-io/v6d/job2-with-scheduler
+    imagePullPolicy: IfNotPresent
+    env:
+    - name: JOB_NAME
+      value: v6d-workflow-demo-job2
+    # pass node name to the environment
+    - name: NODENAME
+      valueFrom:
+        fieldRef:
+          fieldPath: spec.nodeName
+    # TODO: could we make it more native?
+    envFrom:
+      - configMapRef:
+          name: v6d-workflow-demo-job1
+    volumeMounts:
+    - mountPath: /var/run
+      name: vineyard-sock
+  volumes:
+  - name: vineyard-sock
+    hostPath:
+      path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample

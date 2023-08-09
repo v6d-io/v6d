@@ -18,10 +18,16 @@ package schedulers
 
 import (
 	"context"
+	"encoding/json"
+	"io"
+	"log"
+	"os"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 	"go.uber.org/multierr"
 
 	v1 "k8s.io/api/core/v1"
@@ -30,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	ctlclient "github.com/v6d-io/v6d/k8s/cmd/commands/client"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
 )
 
@@ -71,6 +78,12 @@ type BestEffortStrategy struct {
 	namespace string
 	// the ownerReference of created configmap
 	ownerReference *[]metav1.OwnerReference
+	// hostname -> localobject id
+	locations map[string][]string
+	// jobname -> globalobject id
+	jobGlobalObjectIDs map[string][]string
+	nchunks            int
+	nodes              []string
 }
 
 // NewBestEffortStrategy returns a new BestEffortStrategy.
@@ -88,6 +101,159 @@ func NewBestEffortStrategy(
 		namespace:      namespace,
 		ownerReference: ownerReference,
 	}
+}
+
+func (b *BestEffortStrategy) TrackingChunksByCRD() *BestEffortStrategy {
+	var errList error
+
+	// accumulates all global required objects
+	globalObjects, err := b.GetGlobalObjectsByID(b.required)
+	if err != nil {
+		_ = multierr.Append(errList, err)
+	}
+
+	localsigs := make([]string, 0)
+	for _, globalObject := range globalObjects {
+		localsigs = append(localsigs, globalObject.Spec.Members...)
+	}
+	localObjects, err := b.GetLocalObjectsBySignatures(localsigs)
+	if err != nil {
+		_ = multierr.Append(errList, err)
+	}
+
+	// if there is no local objects, return error
+	if len(localObjects) == 0 && len(globalObjects) != 0 {
+		_ = multierr.Append(errList, errors.Errorf("No local chunks found"))
+	}
+
+	if errList != nil {
+		log.Fatal(errList)
+	}
+	locations := b.GetLocationsByLocalObject(localObjects)
+	nchunks, nodes := b.GetObjectInfo(locations, len(localObjects), b.replica)
+	b.locations = locations
+	b.nchunks = nchunks
+	b.nodes = nodes
+	b.jobGlobalObjectIDs = make(map[string][]string)
+	// setup jobGlobalObjectIDs
+	for _, o := range globalObjects {
+		b.jobGlobalObjectIDs[(*o).Labels[labels.VineyardObjectJobLabel]] = append(
+			b.jobGlobalObjectIDs[(*o).Labels[labels.VineyardObjectJobLabel]],
+			(*o).Spec.ObjectID)
+	}
+	return b
+}
+
+func (b *BestEffortStrategy) TrackingChunksByAPI(deploymentName, namespace string) *BestEffortStrategy {
+	err := b.ConvertOutputToObjectInfo(deploymentName, namespace)
+	if err != nil {
+		log.Fatal(errors.Errorf("Failed to convert output to object info: %v", err))
+	}
+	return b
+}
+
+func (b *BestEffortStrategy) BuildLsMetadataCmd(deploymentName, namespace string) *cobra.Command {
+	cmd := ctlclient.NewLsMetadatasCmd()
+	_ = cmd.Flags().Set("limit", "100000")
+	_ = cmd.Flags().Set("namespace", namespace)
+	_ = cmd.Flags().Set("deployment-name", deploymentName)
+	_ = cmd.Flags().Set("format", "json")
+	return cmd
+}
+
+func (b *BestEffortStrategy) BuildGetClusterInfoCmd(deploymentName, namespace string) *cobra.Command {
+	cmd := ctlclient.NewGetClusterInfoCmd()
+	_ = cmd.Flags().Set("namespace", namespace)
+	_ = cmd.Flags().Set("deployment-name", deploymentName)
+	_ = cmd.Flags().Set("format", "json")
+	return cmd
+}
+
+// CaptureCmdOutput captures the output of command
+func (b *BestEffortStrategy) CaptureLsMetadatasOutput(cmd *cobra.Command) []byte {
+	// Create a buffer to capture the output
+	rescueStdout := os.Stdout
+	r, w, err := os.Pipe()
+	if err != nil {
+		log.Fatal(errors.Errorf("Failed to capture stdout: %v", err))
+	}
+
+	cmd.Parent().PersistentPreRun(cmd, []string{})
+	cmd.Run(cmd, []string{}) // this gets captured
+
+	os.Stdout = w
+	ctlclient.Output.Print()
+
+	w.Close()
+	out, err := io.ReadAll(r)
+	if err != nil {
+		log.Fatal(errors.Errorf("Failed to read from buffer: %v", err))
+	}
+	os.Stdout = rescueStdout
+
+	return out
+}
+
+// ConvertOutputToObjectInfo converts the output of "vineyardctl ls metadatas" to object info.
+func (b *BestEffortStrategy) ConvertOutputToObjectInfo(deploymentName, namespace string) error {
+	// get the output of "vineyardctl ls metadatas"
+	var metadataResult map[string]interface{}
+	metaOutput := b.CaptureLsMetadatasOutput(b.BuildLsMetadataCmd(deploymentName, namespace))
+	if err := json.Unmarshal(metaOutput, &metadataResult); err != nil {
+		return errors.Errorf("Failed to unmarshal metadata output: %v", err)
+	}
+
+	// get the output of "vineyardctl get cluster-info"
+	var clusterInfoResult map[string]interface{}
+	clusterInfoOutput := b.CaptureLsMetadatasOutput(b.BuildGetClusterInfoCmd(deploymentName, namespace))
+	if err := json.Unmarshal(clusterInfoOutput, &clusterInfoResult); err != nil {
+		return errors.Errorf("Failed to unmarshal cluster-info output: %v", err)
+	}
+
+	requiredJobs := make(map[string]bool)
+	for _, n := range b.required {
+		requiredJobs[n] = true
+	}
+
+	// get instances -> Nodename
+	instanceNodename := make(map[string]string)
+	for k, v := range clusterInfoResult {
+		instance := strings.Trim(k, "i")
+		instanceNodename[instance] = v.(map[string]interface{})["nodename"].(string)
+	}
+
+	// jobname -> globalobject id
+	jobGlobalObjectIDs := make(map[string][]string)
+	// instance -> localobject id
+	locations := make(map[string][]string)
+	localObjectSum := 0
+
+	for k, v := range metadataResult {
+		if strings.Contains(k, "o") && v.(map[string]interface{})["global"] != nil {
+			if v.(map[string]interface{})["global"].(bool) {
+				jobName := v.(map[string]interface{})["JOB_NAME"].(string)
+				jobGlobalObjectIDs[jobName] = append(jobGlobalObjectIDs[jobName], k)
+				if requiredJobs[jobName] {
+					// get all elements of the global object
+					size := v.(map[string]interface{})["__elements_-size"].(float64)
+					for i := 0; i < int(size); i++ {
+						// get the localobect id
+						localObjectID := v.(map[string]interface{})["__elements_-"+strconv.Itoa(i)].(map[string]interface{})["id"].(string)
+						instanceID := v.(map[string]interface{})["instance_id"].(float64)
+						nodeName := instanceNodename[strconv.Itoa(int(instanceID))]
+						locations[nodeName] = append(locations[nodeName], localObjectID)
+						localObjectSum++
+					}
+				}
+			}
+		}
+	}
+	nchunks, nodes := b.GetObjectInfo(locations, localObjectSum, b.replica)
+	b.locations = locations
+	b.nchunks = nchunks
+	b.nodes = nodes
+	b.jobGlobalObjectIDs = jobGlobalObjectIDs
+	return nil
 }
 
 // GetLocalObjectsBySignatures returns the local objects by the given signatures.
@@ -110,11 +276,7 @@ func (b *BestEffortStrategy) GetLocalObjectsBySignatures(
 	return objects, nil
 }
 
-// GetObjectInfo returns the local object info including the locations and average number of chunks per node.
-func (b *BestEffortStrategy) GetObjectInfo(
-	localObjects []*v1alpha1.LocalObject,
-	replica int,
-) (map[string][]string, int, []string) {
+func (b *BestEffortStrategy) GetLocationsByLocalObject(localObjects []*v1alpha1.LocalObject) map[string][]string {
 	locations := make(map[string][]string)
 	for _, localObject := range localObjects {
 		host := localObject.Spec.Hostname
@@ -123,9 +285,17 @@ func (b *BestEffortStrategy) GetObjectInfo(
 		}
 		locations[host] = append(locations[host], localObject.Spec.ObjectID)
 	}
+	return locations
+}
 
+// GetObjectInfo returns the local object info including the locations and average number of chunks per node.
+func (b *BestEffortStrategy) GetObjectInfo(
+	locations map[string][]string,
+	localObjectSum int,
+	replica int,
+) (int, []string) {
 	// total frags
-	totalfrags := len(localObjects)
+	totalfrags := localObjectSum
 	// frags for per pod
 	nchunks := totalfrags / replica
 	if totalfrags%replica != 0 {
@@ -138,7 +308,7 @@ func (b *BestEffortStrategy) GetObjectInfo(
 		nodes = append(nodes, k)
 	}
 	sort.Strings(nodes)
-	return locations, nchunks, nodes
+	return nchunks, nodes
 }
 
 // GetGlobalObjectsByID returns the global objects by the given jobname.
@@ -166,8 +336,8 @@ func (b *BestEffortStrategy) GetGlobalObjectsByID(
 // CreateConfigmapForID creates a configmap for the object id and the nodes.
 func (b *BestEffortStrategy) CreateConfigmapForID(
 	jobname []string,
-	localobjects []*v1alpha1.LocalObject,
-	globalobjects []*v1alpha1.GlobalObject,
+	locations map[string][]string,
+	jobGlobalObjectIDs map[string][]string,
 ) error {
 	for i := range jobname {
 		configmap := &v1.ConfigMap{}
@@ -182,29 +352,11 @@ func (b *BestEffortStrategy) CreateConfigmapForID(
 		// the configmap doesn't exist
 		if apierrors.IsNotFound(err) {
 			data := make(map[string]string)
-			localObjList := make(map[string][]string)
-			// get all local objects produced by the required job
-			// hostname -> localobject id
-			for _, o := range localobjects {
-				if (*o).Labels[labels.VineyardObjectJobLabel] == jobname[i] {
-					localObjList[(*o).Spec.Hostname] = append(
-						localObjList[(*o).Spec.Hostname],
-						(*o).Spec.ObjectID,
-					)
-				}
-			}
-			for nodeName, nodeObjs := range localObjList {
+			for nodeName, nodeObjs := range locations {
 				data[nodeName] = strings.Join(nodeObjs, ",")
 			}
 			// get all global objects produced by the required job
-			// jobname -> globalobject id
-			globalObjs := []string{}
-			for _, o := range globalobjects {
-				if (*o).Labels[labels.VineyardObjectJobLabel] == jobname[i] {
-					globalObjs = append(globalObjs, (*o).Spec.ObjectID)
-				}
-			}
-			data[jobname[i]] = strings.Join(globalObjs, ",")
+			data[jobname[i]] = strings.Join(jobGlobalObjectIDs[jobname[i]], ",")
 			cm := v1.ConfigMap{
 				TypeMeta: metav1.TypeMeta{
 					Kind:       "ConfigMap",
@@ -228,36 +380,12 @@ func (b *BestEffortStrategy) CreateConfigmapForID(
 
 // Compute return the target node for the given rank.
 func (b *BestEffortStrategy) Compute(rank int) (string, error) {
-	var errList error
 	target := ""
 
-	// accumulates all local required objects
-	globalObjects, err := b.GetGlobalObjectsByID(b.required)
-	if err != nil {
-		_ = multierr.Append(errList, err)
-	}
-
-	localsigs := make([]string, 0)
-	for _, globalObject := range globalObjects {
-		localsigs = append(localsigs, globalObject.Spec.Members...)
-	}
-	localObjects, err := b.GetLocalObjectsBySignatures(localsigs)
-	if err != nil {
-		_ = multierr.Append(errList, err)
-	}
-
-	// if there is no local objects, return error
-	if len(localObjects) == 0 && len(globalObjects) != 0 {
-		_ = multierr.Append(errList, errors.Errorf("No local chunks found"))
-		return target, errList
-	}
-
-	locations, nchunks, nodes := b.GetObjectInfo(localObjects, b.replica)
-
 	cnt := 0
-	for _, node := range nodes {
-		localfrags := len(locations[node])
-		if cnt+localfrags >= (nchunks*rank + (nchunks+1)/2) {
+	for _, node := range b.nodes {
+		localfrags := len(b.locations[node])
+		if cnt+localfrags >= (b.nchunks*rank + (b.nchunks+1)/2) {
 			target = node
 			break
 		}
@@ -265,9 +393,9 @@ func (b *BestEffortStrategy) Compute(rank int) (string, error) {
 	}
 
 	// create configmap for each job
-	if err := b.CreateConfigmapForID(b.required, localObjects, globalObjects); err != nil {
-		_ = multierr.Append(errList, err)
+	if err := b.CreateConfigmapForID(b.required, b.locations, b.jobGlobalObjectIDs); err != nil {
+		return target, err
 	}
 
-	return target, errList
+	return target, nil
 }

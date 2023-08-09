@@ -19,9 +19,11 @@ package schedule
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"go.uber.org/multierr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -42,7 +44,11 @@ var (
 
 	scheduleWorkflowExample = util.Examples(`
 	# schedule a workflow to the vineyard cluster with the best-fit strategy
-	vineyardctl schedule workflow --file workflow.yaml`)
+	vineyardctl schedule workflow --file workflow.yaml
+	
+	# schedule a workflow without CRD installed
+	# Notice, it only works for the workflow built by pods
+	vineyardctl schedule workflow --file pod-workflow.yaml --without-crd`)
 
 	ownerReferences []metav1.OwnerReference
 
@@ -89,39 +95,23 @@ func init() {
 
 // SchedulingWorkflow is used to schedule the workload of the workflow
 func SchedulingWorkflow(c client.Client, obj *unstructured.Unstructured) error {
-	// get template labels
-	l, _, err := unstructured.NestedStringMap(obj.Object, "spec", "template", "metadata", "labels")
-	if err != nil {
-		return errors.Wrap(err, "failed to get labels")
-	}
+	var errList error
 
-	// get template annotations
-	a, _, err := unstructured.NestedStringMap(
-		obj.Object,
-		"spec",
-		"template",
-		"metadata",
-		"annotations",
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to get annotations")
-	}
+	l, err := util.GetLabels(obj)
+	_ = multierr.Append(errList, err)
 
-	// get name and namespace
-	name, _, err := unstructured.NestedString(obj.Object, "metadata", "name")
-	if err != nil {
-		return errors.Wrap(err, "failed to get the name of resource")
-	}
-	namespace, _, err := unstructured.NestedString(obj.Object, "metadata", "namespace")
-	if err != nil {
-		return errors.Wrap(err, "failed to get the namespace of resource")
-	}
+	a, err := util.GetAnnotations(obj)
+	_ = multierr.Append(errList, err)
+
+	name, err := util.GetName(obj)
+	_ = multierr.Append(errList, err)
+
+	namespace, err := util.GetNamespace(obj)
+	_ = multierr.Append(errList, err)
 
 	// get obj kind
-	kind, _, err := unstructured.NestedString(obj.Object, "kind")
-	if err != nil {
-		return errors.Wrap(err, "failed to get the kind of resource")
-	}
+	kind := obj.GetKind()
+	_ = multierr.Append(errList, err)
 
 	isWorkload := ValidateWorkloadKind(kind)
 
@@ -148,20 +138,32 @@ func SchedulingWorkflow(c client.Client, obj *unstructured.Unstructured) error {
 		return errors.Wrap(err, "failed to setup scheduler config")
 	}
 
-	result, err := scheduler.Schedule(replicas)
+	result, err := scheduler.SetWithoutCRD(flags.WithoutCRD).Schedule(replicas)
 	if err != nil {
 		return errors.Wrap(err, "failed to schedule workload")
 	}
 
 	// setup annotations and labels
 	l[labels.SchedulingEnabledLabel] = "true"
-	if err := unstructured.SetNestedStringMap(obj.Object, l, "spec", "template", "metadata", "labels"); err != nil {
+	if err := util.SetLabels(obj, l); err != nil {
 		return errors.Wrap(err, "failed to set labels")
 	}
 
+	if a == nil {
+		a = make(map[string]string)
+	}
+
 	a["scheduledOrder"] = result
-	if err := unstructured.SetNestedStringMap(obj.Object, a, "spec", "template", "metadata", "annotations"); err != nil {
+	if err := util.SetAnnotations(obj, a); err != nil {
 		return errors.Wrap(err, "failed to set annotations")
+	}
+
+	// set the nodename for the pod directly if there is no CRD installed
+	if flags.WithoutCRD {
+		node := strings.Split(result, "=")[0]
+		if err := util.SetNodename(obj, node); err != nil {
+			return errors.Wrap(err, "failed to set node name")
+		}
 	}
 
 	var parallelism int64
@@ -173,7 +175,7 @@ func SchedulingWorkflow(c client.Client, obj *unstructured.Unstructured) error {
 		}
 	}
 	if err := util.Create(c, obj, func(obj *unstructured.Unstructured) bool {
-		status, _, err := unstructured.NestedMap(obj.Object, "status")
+		status, err := util.GetStatus(obj)
 		if err != nil {
 			return false
 		}
@@ -200,24 +202,17 @@ func SchedulingWorkflow(c client.Client, obj *unstructured.Unstructured) error {
 	}
 
 	// use the previous workload as ownerReference
-	if err := c.Get(context.TODO(), types.NamespacedName{Name: name, Namespace: namespace}, obj); err != nil {
+	if err := c.Get(context.TODO(), types.NamespacedName{Name: name,
+		Namespace: namespace}, obj); err != nil {
 		return errors.Wrap(err, "failed to get workload")
 	}
-	version, _, err := unstructured.NestedString(obj.Object, "apiVersion")
-	if err != nil {
-		return errors.Wrap(err, "failed to get apiVersion")
-	}
 
-	uid, _, err := unstructured.NestedString(obj.Object, "metadata", "uid")
-	if err != nil {
-		return errors.Wrap(err, "failed to get uid")
-	}
 	ownerReferences = []metav1.OwnerReference{
 		{
-			APIVersion: version,
+			APIVersion: obj.GetAPIVersion(),
 			Kind:       kind,
 			Name:       name,
-			UID:        types.UID(uid),
+			UID:        obj.GetUID(),
 		},
 	}
 	return nil

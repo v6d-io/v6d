@@ -162,7 +162,7 @@ func (vs *VineyardSchedulerInsideCluster) Schedule(nodeName string) (int, error)
 		vs.config.OwnerReference,
 	)
 
-	target, err := bestEffort.Compute(vs.rank)
+	target, err := bestEffort.TrackingChunksByCRD().Compute(vs.rank)
 	if err != nil {
 		return 0, err
 	}
