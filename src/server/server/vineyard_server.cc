@@ -496,9 +496,10 @@ Status put_members_recursively(
         InstanceID computed_instance_id = 0;
         std::vector<meta_tree::op_t> ops;
         VCATCH_JSON_ERROR(
-            meta, s,
+            sub_tree, s,
             meta_tree::PutDataOps(meta, instance_name, id, sub_tree, ops,
                                   computed_instance_id));
+        RETURN_ON_ERROR(s);
         metadata_service_ptr->RequestToDirectUpdate(ops);
 
         // annotate id into the subtree

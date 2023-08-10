@@ -16,20 +16,98 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_UUID_H_
 #define SRC_COMMON_UTIL_UUID_H_
 
-// The __VPP macro is used to avoid including <x86intrin.h> when parsing
-// and coding with libclang/clang tooling.
-#include <cstdint>
-#if defined(__x86_64__) && !defined(__VINEYARD_NO_RDTSC) && !defined(__VPP)
-#include <x86intrin.h>
+#include <sys/time.h>
+
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
 #endif
 
+#include <cstdint>
 #include <cstdlib>
+#include <ctime>
 #include <limits>
 #include <string>
 
 #include "common/util/base64.h"
 
 namespace vineyard {
+
+namespace detail {
+namespace cycleclock {
+static inline uint64_t timestamp_now() {
+  struct timespec ts;
+#ifdef __MACH__  // OS X does not have clock_gettime, use clock_get_time
+  clock_serv_t clock_serv;
+  mach_timespec_t mts;
+  host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &clock_serv);
+  clock_get_time(clock_serv, &mts);
+  mach_port_deallocate(mach_task_self(), clock_serv);
+  ts.tv_sec = mts.tv_sec;
+  ts.tv_nsec = mts.tv_nsec;
+#else
+  clock_gettime(CLOCK_REALTIME, &ts);
+#endif
+  return static_cast<uint64_t>(ts.tv_sec) * static_cast<uint64_t>(1000000000) +
+         static_cast<uint64_t>(ts.tv_nsec);
+}
+
+// the macro __VPP is used for codegen where libclang cannot process
+// these headers without extra warnings.
+#if !defined(__VPP)
+// the platform-specific implementation is referred from google/benchmark
+// project on Github, see also:
+//
+//  https://github.com/google/benchmark/blob/v1.1.0/src/cycleclock.h
+static inline uint64_t now() {
+#if defined(__i386__)
+  int64_t ret;
+  __asm__ volatile("rdtsc" : "=A"(ret));
+  return static_cast<uint64_t>(ret);
+#elif defined(__x86_64__) || defined(__amd64__)
+  uint64_t low, high;
+  __asm__ volatile("rdtsc" : "=a"(low), "=d"(high));
+  return static_cast<uint64_t>((high << 32) | low);
+#elif defined(__ia64__)
+  int64_t itc;
+  asm("mov %0 = ar.itc" : "=r"(itc));
+  return static_cast<uint64_t>(itc);
+#elif defined(__aarch64__)
+  // System timer of ARMv8 runs at a different frequency than the CPU's.
+  // The frequency is fixed, typically in the range 1-50MHz.  It can be
+  // read at CNTFRQ special register.  We assume the OS has set up
+  // the virtual timer properly.
+  int64_t virtual_timer_value;
+  asm volatile("mrs %0, cntvct_el0" : "=r"(virtual_timer_value));
+  return static_cast<uint64_t>(virtual_timer_value);
+#elif defined(__ARM_ARCH)
+#if (__ARM_ARCH >= 6)  // V6 is the earliest arch that has a standard cyclecount
+  uint32_t pmccntr;
+  uint32_t pmuseren;
+  uint32_t pmcntenset;
+  // Read the user mode perf monitor counter access permissions.
+  asm volatile("mrc p15, 0, %0, c9, c14, 0" : "=r"(pmuseren));
+  if (pmuseren & 1) {  // Allows reading perfmon counters for user mode code.
+    asm volatile("mrc p15, 0, %0, c9, c12, 1" : "=r"(pmcntenset));
+    if (pmcntenset & 0x80000000ul) {  // Is it counting?
+      asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(pmccntr));
+      // The counter is set up to count every 64th cycle
+      return static_cast<uint64_t>(pmccntr) * 64;  // Should optimize to << 6
+    }
+  }
+#endif
+  return timestamp_now();
+#else
+  // mips apparently only allows rdtsc for superusers, so we fall
+  // back to gettimeofday.  It's possible clock_gettime would be better.
+  return timestamp_now();
+#endif
+}
+#else
+inline int64_t now() { return timestamp_now(); }
+#endif
+}  // namespace cycleclock
+}  // namespace detail
 
 /**
  * @brief ObjectID is an opaque type for vineyard's object id. The object ID is
@@ -73,43 +151,21 @@ inline ObjectID GenerateBlobID(const uintptr_t ptr) {
       ptr == std::numeric_limits<uintptr_t>::max()) {
     return static_cast<uint64_t>(ptr) | 0x8000000000000000UL;
   }
-#if defined(__x86_64__) && !defined(__VINEYARD_NO_RDTSC) && !defined(__VPP)
-  auto rd = __rdtsc() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
-  return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(rd)) |
+  auto ts = detail::cycleclock::now() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
+  return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(ts)) |
          0x8000000000000000UL;
-#else
-  auto rd =
-      rand() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;  // NOLINT(runtime/threadsafe_fn)
-  return 0x8000000000000000UL |
-         (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(rd));
-#endif
 }
 
 inline SessionID GenerateSessionID() {
-#if defined(__x86_64__) && !defined(__VINEYARD_NO_RDTSC) && !defined(__VPP)
-  return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
-#else
-  return 0x7FFFFFFFFFFFFFFFUL &
-         static_cast<uint64_t>(rand());  // NOLINT(runtime/threadsafe_fn)
-#endif
+  return 0x7FFFFFFFFFFFFFFFUL & detail::cycleclock::now();
 }
 
 inline ObjectID GenerateObjectID() {
-#if defined(__x86_64__) && !defined(__VINEYARD_NO_RDTSC) && !defined(__VPP)
-  return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
-#else
-  return 0x7FFFFFFFFFFFFFFFUL &
-         static_cast<uint64_t>(rand());  // NOLINT(runtime/threadsafe_fn)
-#endif
+  return 0x7FFFFFFFFFFFFFFFUL & detail::cycleclock::now();
 }
 
 inline ObjectID GenerateSignature() {
-#if defined(__x86_64__) && !defined(__VINEYARD_NO_RDTSC) && !defined(__VPP)
-  return 0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(__rdtsc());
-#else
-  return 0x7FFFFFFFFFFFFFFFUL &
-         static_cast<uint64_t>(rand());  // NOLINT(runtime/threadsafe_fn)
-#endif
+  return 0x7FFFFFFFFFFFFFFFUL & detail::cycleclock::now();
 }
 
 inline bool IsBlob(ObjectID id) { return id & 0x8000000000000000UL; }
