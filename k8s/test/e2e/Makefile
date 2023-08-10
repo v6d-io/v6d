@@ -74,7 +74,7 @@ delete-local-cluster:
 install-vineyard-operator: load-vineyard-operator-image
 	@echo "Installing vineyard-operator..."
 	@export IMG=localhost:5001/vineyard-operator:latest && make -C ${K8S_DIR} update-registry
-	@go run ${CMD_DIR}/main.go deploy operator --local ${K8S_DIR}/config/default
+	@go run ${CMD_DIR}/main.go deploy operator
 	@echo "Vineyard-Operator Ready"
 
 # install the vineyardd and wait for ready

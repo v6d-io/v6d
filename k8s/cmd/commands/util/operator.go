@@ -17,33 +17,52 @@ package util
 
 import (
 	"bytes"
-	"fmt"
+	"io/fs"
+	"os"
+	"path/filepath"
 
 	"sigs.k8s.io/kustomize/kustomize/v4/commands/build"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/config"
 )
 
-// default kustomize dir from github repo
-var defaultKustomizeDir = "https://github.com/v6d-io/v6d/k8s/config/default?submodules=false"
-
-func GetKustomizeDir() string {
-	if flags.KustomizeDir != "" {
-		return flags.KustomizeDir
-	}
-	if flags.OperatorVersion != "dev" {
-		return fmt.Sprintf("%s&ref=v%s", defaultKustomizeDir, flags.OperatorVersion)
-	}
-	return defaultKustomizeDir
-}
-
-func BuildKustomizeInDir(kustomizeDir string) (Manifests, error) {
+func BuildKustomizeInEmbedDir() (Manifests, error) {
 	fSys := filesys.MakeFsOnDisk()
 	buffy := new(bytes.Buffer)
 	cmd := build.NewCmdBuild(fSys, build.MakeHelp("", ""), buffy)
 
-	if err := cmd.RunE(cmd, []string{kustomizeDir}); err != nil {
+	// Create a temporary directory to extract the embedded config files
+	tmpDir, err := os.MkdirTemp("", "v6d-operator-manifests-")
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Extract the embedded config files to the temporary directory
+	if err := fs.WalkDir(config.Manifests, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() {
+			data, err := config.Manifests.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			destPath := filepath.Join(tmpDir, path)
+			if err := os.MkdirAll(filepath.Dir(destPath), os.ModePerm); err != nil {
+				return err
+			}
+			if err := os.WriteFile(destPath, data, os.ModePerm); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	if err := cmd.RunE(cmd, []string{tmpDir + "/default"}); err != nil {
 		return nil, err
 	}
 	return ParseManifestsToObjects(buffy.Bytes())
