@@ -28,35 +28,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func Test_buildBackupCR(t *testing.T) {
-	flags.BackupName = "test-backup"
-	flags.Namespace = "test"
-	flags.BackupOpts.BackupPath = "backup/path/to/test"
-
-	want := &v1alpha1.Backup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-backup",
-			Namespace: "test",
-		},
-		Spec: v1alpha1.BackupSpec{
-			BackupPath: "backup/path/to/test",
-		},
-	}
-
-	got, err := buildBackupCR()
-
-	if err != nil {
-		t.Errorf("buildBackupCR() error = %v, wantErr false", err)
-		return
-	}
-
-	a := fmt.Sprint(got)
-	b := fmt.Sprint(want)
-	if !reflect.DeepEqual(a, b) {
-		t.Errorf("buildBackupCR() = %v, want %v", got, want)
-	}
-}
-
 func TestBuildBackup(t *testing.T) {
 	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.BackupName = "test-backup"

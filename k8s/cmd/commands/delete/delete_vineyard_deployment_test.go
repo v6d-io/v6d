@@ -28,10 +28,23 @@ import (
 )
 
 func TestDeleteVineyardDeploymentCmd(t *testing.T) {
+	// deploy a vineyardd for later delete operation
 	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.Namespace = "vineyard-system"
+	flags.VineyarddOpts.Replicas = 3
+	flags.VineyarddOpts.EtcdReplicas = 1
+	flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:alpine-latest"
+	flags.VineyarddOpts.Vineyard.CPU = ""
+	flags.VineyarddOpts.Vineyard.Memory = ""
+	flags.VineyarddOpts.Service.Port = 9600
+	flags.VineyarddOpts.Service.Type = "ClusterIP"
+	flags.VineyarddOpts.Volume.PvcName = ""
+	flags.VineyarddOpts.Vineyard.Size = "256Mi"
 	c := util.KubernetesClient()
+	deployVineyardDeploymentCmd := deploy.NewDeployVineyardDeploymentCmd()
+	deployVineyardDeploymentCmd.Run(deployVineyardDeploymentCmd, []string{})
 
+	// delete operation
 	deleteVineyardDeploymentCmd.Run(deleteVineyardDeploymentCmd, []string{})
 
 	objects, _ := deploy.GetVineyardDeploymentObjectsFromTemplate()

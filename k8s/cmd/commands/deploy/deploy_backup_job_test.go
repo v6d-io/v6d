@@ -35,10 +35,24 @@ import (
 )
 
 func TestDeployBackupJobCmd(t *testing.T) {
+	// deploy a vineyardd for later backup operation
 	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.Namespace = "vineyard-system"
+	flags.VineyarddOpts.Replicas = 3
+	flags.VineyarddOpts.EtcdReplicas = 1
+	flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:alpine-latest"
+	flags.VineyarddOpts.Vineyard.CPU = ""
+	flags.VineyarddOpts.Vineyard.Memory = ""
+	flags.VineyarddOpts.Service.Port = 9600
+	flags.VineyarddOpts.Service.Type = "ClusterIP"
+	flags.VineyarddOpts.Volume.PvcName = ""
+	flags.VineyarddOpts.Vineyard.Size = "256Mi"
+	deployVineyardDeploymentCmd := NewDeployVineyardDeploymentCmd()
+	deployVineyardDeploymentCmd.Run(deployVineyardDeploymentCmd, []string{})
+
+	//backup operation
 	flags.BackupOpts.BackupPath = "/var/vineyard/dump"
 	flags.PVCName = "pvc-for-backup-and-recover-demo"
-	flags.Namespace = "vineyard-system"
 	flags.VineyardDeploymentName = "vineyardd-sample"
 	flags.VineyardDeploymentNamespace = "vineyard-system"
 	deployBackupJobCmd.Run(deployBackupJobCmd, []string{})
