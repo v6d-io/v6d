@@ -401,8 +401,9 @@ Status ListAllData(const json& tree, std::vector<ObjectID>& objects) {
 
   for (auto const& item : tree["data"].items()) {
     if (!item.value().is_object() || item.value().empty()) {
-      LOG(INFO) << "Object meta shouldn't be empty";
-      return Status::MetaTreeInvalid();
+      LOG(INFO) << "metadata tree in vineyardd shouldn't be empty";
+      return Status::MetaTreeInvalid(
+          "metadata tree in vineyard server is empty in 'ListAllData'");
     }
     objects.emplace_back(ObjectIDFromString(item.key()));
   }
@@ -876,19 +877,20 @@ Status PutDataOps(const json& tree, std::string const& instance_name,
   json signatures;
   std::string name = ObjectIDToString(id);
   // recompute instance_id: check if it refers remote objects.
-  Status status = diff_data_meta_tree(tree, name, sub_tree, diff, signatures,
-                                      computed_instance_id);
-
-  if (!status.ok()) {
-    return status;
-  }
+  Status status;
+  VCATCH_JSON_ERROR(sub_tree, status,
+                    diff_data_meta_tree(tree, name, sub_tree, diff, signatures,
+                                        computed_instance_id));
+  RETURN_ON_ERROR(Status::Wrap(status, "failed to diff meta tree"));
 
   if (diff.is_null() || (diff.is_object() && diff.empty())) {
     return Status::OK();
   }
 
-  generate_put_ops(tree, instance_name, diff, signatures, name, ops);
-  return Status::OK();
+  VCATCH_JSON_ERROR_STATEMENT(
+      sub_tree, status,
+      generate_put_ops(tree, instance_name, diff, signatures, name, ops));
+  return Status::Wrap(status, "failed to generate put ops");
 }
 
 Status PersistOps(const json& tree, const std::string& instance_name,
