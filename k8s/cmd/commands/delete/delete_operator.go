@@ -26,13 +26,9 @@ import (
 var deleteOperatorExample = util.Examples(`
 	# delete the default vineyard operator in the vineyard-system namespace
 	vineyardctl delete operator
-
-	# delete the specific version of vineyard operator in the vineyard-system namespace
-	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator -v 0.12.2
-
-	# delete the vineyard operator from local kustomize dir in the vineyard-system namespace
-	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator \
-		--local ../config/default`)
+	
+	# delete the vineyard operator in a specific namespace
+	vineyardctl delete operator -n <namespace>`)
 
 // deleteOperatorCmd deletes the vineyard operator on kubernetes
 var deleteOperatorCmd = &cobra.Command{
@@ -44,7 +40,7 @@ var deleteOperatorCmd = &cobra.Command{
 		client := util.KubernetesClient()
 
 		log.Info("building operator manifests from kustomize dir")
-		operatorManifests, err := util.BuildKustomizeInDir(util.GetKustomizeDir())
+		operatorManifests, err := util.BuildKustomizeInEmbedDir()
 		if err != nil {
 			log.Fatal(err, "failed to build kustomize dir")
 		}
@@ -60,8 +56,4 @@ var deleteOperatorCmd = &cobra.Command{
 
 func NewDeleteOperatorCmd() *cobra.Command {
 	return deleteOperatorCmd
-}
-
-func init() {
-	flags.ApplyOperatorOpts(deleteOperatorCmd)
 }

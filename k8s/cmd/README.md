@@ -409,21 +409,15 @@ vineyardctl delete operator [flags]
 ```shell
   # delete the default vineyard operator in the vineyard-system namespace
   vineyardctl delete operator
-
-  # delete the specific version of vineyard operator in the vineyard-system namespace
-  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator -v 0.12.2
-
-  # delete the vineyard operator from local kustomize dir in the vineyard-system namespace
-  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator \
-    --local ../config/default
+  
+  # delete the vineyard operator in a specific namespace
+  vineyardctl delete operator -n <namespace>
 ```
 
 ### Options
 
 ```
-  -h, --help             help for operator
-  -l, --local string     the local kustomize dir
-  -v, --version string   the version of kustomize dir from github repo (default "dev")
+  -h, --help   help for operator
 ```
 
 ## `vineyardctl delete recover`
@@ -739,12 +733,7 @@ Deploy the vineyard operator on kubernetes
 
 ### Synopsis
 
-Deploy the vineyard operator on kubernetes. You could specify a
-stable or development version of the operator. The default
-kustomize dir is development version from github repo. Also, you
-can install the stable version from github repo or a local
-kustomize dir. Besides, you can also  deploy the vineyard
-operator in an existing namespace.
+Deploy the vineyard operator on kubernetes.
 
 ```
 vineyardctl deploy operator [flags]
@@ -757,31 +746,20 @@ vineyardctl deploy operator [flags]
 ### Examples
 
 ```shell
-  # install the development version in the vineyard-system namespace
-  # the default kustomize dir is the development version from github repo
-  # (https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false)
-  # and the default namespace is vineyard-system
-  # wait for the vineyard operator to be ready(default option)
+  # deploy the vineyard operator on the 'vineyard-system' namespace
   vineyardctl deploy operator
-
-  # not to wait for the vineyard operator to be ready
-  vineyardctl deploy operator --wait=false
-
-  # install the stable version from github repo in the test namespace
-  # the kustomize dir is
-  # (https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false&ref=v0.12.2)
-  vineyardctl -n test --kubeconfig $HOME/.kube/config deploy operator -v 0.12.2
-
-  # install the local kustomize dir
-  vineyardctl --kubeconfig $HOME/.kube/config deploy operator --local ../config/default
+  
+  # deploy the vineyard operator on the existing namespace
+  vineyardctl deploy operator -n my-custom-namespace
+  
+  # deploy the vineyard operator on the new namespace
+  vineyardctl deploy operator -n a-new-namespace-name --create-namespace
 ```
 
 ### Options
 
 ```
-  -h, --help             help for operator
-  -l, --local string     the local kustomize dir
-  -v, --version string   the version of kustomize dir from github repo (default "dev")
+  -h, --help   help for operator
 ```
 
 ## `vineyardctl deploy recover-job`
@@ -1449,7 +1427,7 @@ List vineyard objects, metadatas or blobs
   # Connect the vineyardd server with RPC client
   # List the vineyard metadatas no more than 1000
   vineyardctl ls metadatas --rpc-socket 127.0.0.1:9600 --limit 1000
-  
+
   # Connect the vineyard deployment with PRC client
   # List the vineyard objects no more than 1000
   vineyardctl ls objects --deployment-name vineyardd-sample -n vineyard-system
@@ -1581,7 +1559,7 @@ List vineyard objects
 
 List vineyard objects and support IPC socket,
 RPC socket and vineyard deployment. If you don't specify the ipc socket or rpc socket
-every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or 
+every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or
 VINEYARD_RPC_SOCKET.
 
 ```
@@ -1597,16 +1575,16 @@ vineyardctl ls objects [flags]
 ```shell
   # List no more than 10 vineyard objects
   vineyardctl ls objects --limit 10 --ipc-socket /var/run/vineyard.sock
-  
+
   # List any vineyard objects and no more than 1000 objects
   vineyardctl ls objects --pattern "*" --ipc-socket /var/run/vineyard.sock --limit 1000
-  
+
   # List vineyard objects with the name matching the regex pattern
   vineyardctl ls objects --pattern "vineyard::Tensor<.*>" --regex --ipc-socket /var/run/vineyard.sock
-  
+
   # List vineyard objects and output as json format
   vineyardctl ls objects --format json --ipc-socket /var/run/vineyard.sock
-  
+
   # List vineyard objects sorted by the typename
   vineyardctl ls objects --sorted-key typename --limit 1000 --ipc-socket /var/run/vineyard.sock
 ```
@@ -1923,4 +1901,3 @@ vineyardctl schedule workload [flags]
       --vineyardd-name string        the namespace of vineyard cluster (default "vineyardd-sample")
       --vineyardd-namespace string   the namespace of vineyard cluster (default "vineyard-system")
 ```
-

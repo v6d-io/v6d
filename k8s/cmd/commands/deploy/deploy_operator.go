@@ -31,32 +31,17 @@ import (
 )
 
 var (
-	deployOperatorLong = util.LongDesc(`
-	Deploy the vineyard operator on kubernetes. You could specify a
-	stable or development version of the operator. The default
-	kustomize dir is development version from github repo. Also, you
-	can install the stable version from github repo or a local
-	kustomize dir. Besides, you can also  deploy the vineyard
-	operator in an existing namespace.`)
+	deployOperatorLong = util.LongDesc(`Deploy the vineyard operator on kubernetes.`)
 
 	deployOperatorExample = util.Examples(`
-	# install the development version in the vineyard-system namespace
-	# the default kustomize dir is the development version from github repo
-	# (https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false)
-	# and the default namespace is vineyard-system
-	# wait for the vineyard operator to be ready(default option)
+	# deploy the vineyard operator on the 'vineyard-system' namespace
 	vineyardctl deploy operator
-
-	# not to wait for the vineyard operator to be ready
-	vineyardctl deploy operator --wait=false
-
-	# install the stable version from github repo in the test namespace
-	# the kustomize dir is
-	# (https://github.com/v6d-io/v6d/k8s/config/default\?submodules=false&ref=v0.12.2)
-	vineyardctl -n test --kubeconfig $HOME/.kube/config deploy operator -v 0.12.2
-
-	# install the local kustomize dir
-	vineyardctl --kubeconfig $HOME/.kube/config deploy operator --local ../config/default`)
+	
+	# deploy the vineyard operator on the existing namespace
+	vineyardctl deploy operator -n my-custom-namespace
+	
+	# deploy the vineyard operator on the new namespace
+	vineyardctl deploy operator -n a-new-namespace-name --create-namespace`)
 )
 
 // deployOperatorCmd deploys the vineyard operator on kubernetes
@@ -70,7 +55,7 @@ var deployOperatorCmd = &cobra.Command{
 		client := util.KubernetesClient()
 		util.CreateNamespaceIfNotExist(client)
 
-		operatorManifests, err := util.BuildKustomizeInDir(util.GetKustomizeDir())
+		operatorManifests, err := util.BuildKustomizeInEmbedDir()
 		if err != nil {
 			log.Fatal(err, "failed to build kustomize dir")
 		}
@@ -94,10 +79,6 @@ var deployOperatorCmd = &cobra.Command{
 
 func NewDeployOperatorCmd() *cobra.Command {
 	return deployOperatorCmd
-}
-
-func init() {
-	flags.ApplyOperatorOpts(deployOperatorCmd)
 }
 
 // wait for the vineyard operator to be ready
