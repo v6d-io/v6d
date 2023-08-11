@@ -18,7 +18,6 @@ package deploy
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"testing"
 
@@ -55,7 +54,8 @@ func TestDeployVineyardDeploymentCmd(t *testing.T) {
 	t.Run(test.name, func(t *testing.T) {
 		// set the flags
 		flags.Namespace = "vineyard-system"
-		flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+		//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+		flags.KubeConfig = "/tmp/e2e-k8s.config"
 		flags.VineyarddOpts.Replicas = 1
 		flags.VineyarddOpts.EtcdReplicas = 1
 		flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:alpine-latest"
@@ -542,7 +542,8 @@ func TestGetVineyardDeploymentObjectsFromTemplate(t *testing.T) {
 
 func Test_applyVineyarddFromTemplate(t *testing.T) {
 	// set the flags
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.Namespace = "vineyard-system"
 	flags.VineyarddOpts.Replicas = 3
 	flags.VineyarddOpts.EtcdReplicas = 1

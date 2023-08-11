@@ -17,7 +17,6 @@ package create
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"testing"
 
@@ -29,7 +28,8 @@ import (
 )
 
 func TestBuildBackup(t *testing.T) {
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.BackupName = "test-backup"
 	flags.Namespace = "test"
 	flags.BackupOpts.BackupPath = "backup/path/to/test"

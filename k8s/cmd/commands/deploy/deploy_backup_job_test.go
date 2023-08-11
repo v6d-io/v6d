@@ -17,6 +17,7 @@ package deploy
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"reflect"
 	"testing"
@@ -26,17 +27,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	//"k8s.io/apimachinery/pkg/runtime/schema"
+
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	//"k8s.io/client-go/kubernetes/fake"
 	//"github.com/stretchr/testify/assert"
-	//metav1"k8s.io/apimachinery/pkg/apis/meta/v1"
 	//"k8s.io/api/apps/v1"
 )
 
 func TestDeployBackupJobCmd(t *testing.T) {
 	// deploy a vineyardd for later backup operation
 	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	//flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.Namespace = "vineyard-system"
 	flags.VineyarddOpts.Replicas = 3
 	flags.VineyarddOpts.EtcdReplicas = 1
@@ -52,11 +54,48 @@ func TestDeployBackupJobCmd(t *testing.T) {
 
 	//backup operation
 	flags.BackupOpts.BackupPath = "/var/vineyard/dump"
-	flags.PVCName = "pvc-for-backup-and-recover-demo"
+	//flags.PVCName = "pvc-for-backup-and-recover-demo"
+
 	flags.VineyardDeploymentName = "vineyardd-sample"
 	flags.VineyardDeploymentNamespace = "vineyard-system"
-	deployBackupJobCmd.Run(deployBackupJobCmd, []string{})
+	flags.BackupPVandPVC = `{
+		"pv-spec": {
+		  "capacity": {
+			"storage": "1Gi"
+		  },
+		  "accessModes": [
+			"ReadWriteOnce"
+		  ],
+		  "storageClassName": "manual",
+		  "hostPath": {
+			"path": "/var/vineyard/dump"
+		  }
+		},
+		"pvc-spec": {
+		  "storageClassName": "manual",
+		  "accessModes": [
+			"ReadWriteOnce"
+		  ],
+		  "resources": {
+			"requests": {
+			"storage": "1Gi"
+            }
+          },
+		  "volumeName" : "backup-path",
+          "selector": {
+			"matchLabels": {
+				"app.kubernetes.io/name" : "vineyard-backup"
+			}
+		  }
+		}
+	}
+    `
 	c := util.KubernetesClient()
+	got, _ := getBackupObjectsFromTemplate(c, []string{})
+	for i := range got {
+		fmt.Println(*got[i])
+	}
+	deployBackupJobCmd.Run(deployBackupJobCmd, []string{})
 
 	if util.Wait(func() (bool, error) {
 		jobName := flags.BackupName
@@ -77,8 +116,9 @@ func TestDeployBackupJobCmd(t *testing.T) {
 func Test_getBackupObjectsFromTemplate(t *testing.T) {
 	// set the flags
 	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.BackupOpts.BackupPath = "/var/vineyard/dump"
+	//flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.PVCName = "pvc-for-backup-and-recover-demo"
+	flags.VineyarddOpts.Volume.PvcName = "pvc-for-backup-and-recover-demo"
 	flags.Namespace = "vineyard-system"
 	flags.VineyardDeploymentName = "vineyardd-sample"
 	flags.VineyardDeploymentNamespace = "vineyard-system"
@@ -336,6 +376,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 
 			for i := range got {
 				if !reflect.DeepEqual(*got[i], *(tt.want)[i]) {
+					fmt.Println(*got[i])
 					t.Errorf("getBackupObjectsFromTemplate() = %+v, want %+v", got, tt.want)
 
 				}

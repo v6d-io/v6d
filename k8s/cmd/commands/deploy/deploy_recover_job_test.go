@@ -17,7 +17,6 @@ package deploy
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"testing"
 
@@ -31,7 +30,8 @@ import (
 )
 
 func TestDeployRecoverJobCmd(t *testing.T) {
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.RecoverPath = "/var/vineyard/dump"
 	flags.PVCName = "pvc-for-backup-and-recover-demo"
 	flags.Namespace = "vineyard-system"
@@ -65,7 +65,8 @@ func TestDeployRecoverJobCmd(t *testing.T) {
 
 func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 	// set the flags
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.VineyardDeploymentName = "vineyardd-sample"
 	flags.VineyardDeploymentNamespace = "vineyard-system"
 	flags.Namespace = "vineyard-system"

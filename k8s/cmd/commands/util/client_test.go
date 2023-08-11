@@ -17,7 +17,6 @@ package util
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -90,8 +89,9 @@ func Test_GetKubernetesConfig(t *testing.T) {
 		kubeConfigPath string
 	}{
 		{
-			name:           "Test case 1",
-			kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
+			name: "Test case 1",
+			//kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
+			kubeConfigPath: "/tmp/e2e-k8s.config",
 		},
 	}
 
@@ -112,8 +112,9 @@ func Test_KubernetesClient(t *testing.T) {
 		kubeConfigPath string
 	}{
 		{
-			name:           "Test case 1",
-			kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
+			name: "Test case 1",
+			//kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
+			kubeConfigPath: "/tmp/e2e-k8s.config",
 		},
 	}
 
@@ -135,8 +136,9 @@ func Test_KubernetesClientset(t *testing.T) {
 		kubeConfigPath string
 	}{
 		{
-			name:           "Test case 1",
-			kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
+			name: "Test case 1",
+			//kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
+			kubeConfigPath: "/tmp/e2e-k8s.config",
 		},
 	}
 

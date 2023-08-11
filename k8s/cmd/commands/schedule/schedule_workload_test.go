@@ -17,7 +17,7 @@ package schedule
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"reflect"
 	"sync"
@@ -34,7 +34,8 @@ import (
 func TestScheduleWorkloadCmd(t *testing.T) {
 	// set the flags
 	flags.Namespace = "vineyard-system"
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.VineyarddOpts.Replicas = 1
 	flags.VineyarddOpts.EtcdReplicas = 1
 	flags.Resource = `apiVersion: apps/v1
@@ -78,7 +79,7 @@ spec:
 		}()
 
 		// In the main Go process, read data from the pipeline
-		out, _ := ioutil.ReadAll(r)
+		out, _ := io.ReadAll(r)
 
 		// 'out' now includes the content printed by log.Output
 		yamlStr := string(out)
@@ -88,7 +89,7 @@ spec:
 			`"name":"my-deployment"},"spec":{"replicas":1,"selector":null,"strategy":{},"template":{"metadata":` +
 			`{"creationTimestamp":null,"labels":{"app":"my-app"}},"spec":{"affinity":{"podAffinity":` +
 			`{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchExpressions":` +
-			`[{"key":"app.kubernetes.io/instance","operator":"In","values":["vineyard-system-vineyardd-sample"]}]},` +
+			`[{"key":"app.kubernetes.io/instance","operator":"In","values":["vineyard-system-vineyardd-sample"]}]},"namespaces":["vineyard-system"],` +
 			`"topologyKey":"kubernetes.io/hostname"}]}},"containers":[{"env":[{"name":"VINEYARD_IPC_SOCKET",` +
 			`"value":"/var/run/vineyard.sock"}],"image":"nginx:latest","name":"my-container","resources":{},"volumeMounts":` +
 			`[{"mountPath":"/var/run","name":"vineyard-socket"}]}],"volumes":[{"hostPath":{"path":` +
@@ -228,9 +229,8 @@ spec:
 
 func TestSchedulingWorkload(t *testing.T) {
 	// Set up test flags
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-
-	// Get Kubernetes client
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	c := util.KubernetesClient()
 
 	type args struct {

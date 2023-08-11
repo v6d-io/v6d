@@ -42,7 +42,8 @@ import (
 func TestInjectCmd(t *testing.T) {
 	// set the flags
 	flags.Namespace = "vineyard-system"
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.WorkloadResource = `{
 		"apiVersion": "apps/v1",
 		"kind": "Deployment",
@@ -506,7 +507,8 @@ func Test_deployDuringInjection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+			//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+			flags.KubeConfig = "/tmp/e2e-k8s.config"
 			if err := deployDuringInjection(tt.args.om); (err != nil) != tt.wantErr {
 				t.Errorf("deployDuringInjection() error = %v, wantErr %v", err, tt.wantErr)
 			}
