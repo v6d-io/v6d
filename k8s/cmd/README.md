@@ -15,6 +15,7 @@ drivers.
 * [vineyardctl create](#vineyardctl-create)	 - Create a vineyard jobs on kubernetes
 * [vineyardctl delete](#vineyardctl-delete)	 - Delete the vineyard components from kubernetes
 * [vineyardctl deploy](#vineyardctl-deploy)	 - Deploy the vineyard components on kubernetes
+* [vineyardctl get](#vineyardctl-get)	 - Get vineyard objects, metadatas, blobs or cluster-info
 * [vineyardctl inject](#vineyardctl-inject)	 - Inject the vineyard sidecar container into a workload
 * [vineyardctl ls](#vineyardctl-ls)	 - List vineyard objects, metadatas or blobs
 * [vineyardctl manager](#vineyardctl-manager)	 - Start the manager of vineyard operator
@@ -1034,6 +1035,85 @@ vineyardctl deploy vineyardd [flags]
       --vineyardd.syncCRDs                            enable metrics of vineyardd (default true)
       --vineyardd.volume.mountPath string             Set the mount path for the pvc
       --vineyardd.volume.pvcname string               Set the pvc name for storing the vineyard objects persistently
+```
+
+## `vineyardctl get`
+
+Get vineyard objects, metadatas, blobs or cluster-info
+
+**SEE ALSO**
+
+* [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
+* [vineyardctl get cluster-info](#vineyardctl-get-cluster-info)	 - Get vineyard cluster info
+
+### Examples
+
+```shell
+  # Connect the vineyardd server with IPC client
+  # List the vineyard objects no more than 10
+  vineyardctl ls objects --limit 10 --ipc-socket /var/run/vineyard.sock
+
+  # List the vineyard blobs no more than 10
+  vineyardctl ls blobs --limit 10 --ipc-socket /var/run/vineyard.sock
+
+  # List the vineyard objects with the specified pattern
+  vineyardctl ls objects --pattern "vineyard::Tensor<.*>" --regex --ipc-socket /var/run/vineyard.sock
+
+  # Connect the vineyardd server with RPC client
+  # List the vineyard metadatas no more than 1000
+  vineyardctl ls metadatas --rpc-socket 127.0.0.1:9600 --limit 1000
+
+  # Connect the vineyard deployment with PRC client
+  # List the vineyard objects no more than 1000
+  vineyardctl ls objects --deployment-name vineyardd-sample -n vineyard-system
+```
+
+### Options
+
+```
+  -h, --help   help for get
+```
+
+## `vineyardctl get cluster-info`
+
+Get vineyard cluster info
+
+### Synopsis
+
+Get vineyard cluster info, including
+the instanceId, hostName, node name and so on.
+
+```
+vineyardctl get cluster-info [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl get](#vineyardctl-get)	 - Get vineyard objects, metadatas, blobs or cluster-info
+
+### Examples
+
+```shell
+  # Get the cluster info of vineyard deployment and output as table
+  vineyardctl get cluster-info --deployment-name vineyardd-sample -n vineyard-system
+
+  # Get the cluster info of vineyard deployment and output as json
+  vineyardctl get cluster-info --deployment-name vineyardd-sample -n vineyard-system -o json
+  
+  # Get the cluster info via IPC socket
+  vineyardctl get cluster-info --ipc-socket /var/run/vineyard.sock
+```
+
+### Options
+
+```
+      --deployment-name string   the name of vineyard deployment
+  -o, --format string            the output format, support table or json, default is table (default "table")
+      --forward-port int         the forward port of vineyard deployment (default 9600)
+  -h, --help                     help for cluster-info
+      --ipc-socket string        vineyard IPC socket path
+      --port int                 the port of vineyard deployment (default 9600)
+      --rpc-socket string        vineyard RPC socket path
 ```
 
 ## `vineyardctl inject`

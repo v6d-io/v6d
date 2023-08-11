@@ -65,7 +65,7 @@ var lsBlobs = &cobra.Command{
 		if err != nil {
 			log.Fatal(err, "failed to list vineyard blobs")
 		}
-		output := util.NewOutput(nil, &blobs)
+		output := util.NewOutput(nil, &blobs, nil)
 		// set the output options
 		output.WithFilter(false).
 			SortedKey(flags.SortedKey).

@@ -194,6 +194,21 @@ func (c *ClientBase) GetData(
 	return objects, nil
 }
 
+func (c *ClientBase) GetClusterMeta() (map[string]any, error) {
+	if !c.connected {
+		return nil, NOT_CONNECTED_ERR
+	}
+	messageOut := common.WriteClusterMetaRequest()
+	if err := c.doWrite(messageOut); err != nil {
+		return nil, err
+	}
+	var reply common.ClusterMetaReply
+	if err := c.doReadReply(&reply); err != nil {
+		return nil, err
+	}
+	return reply.Meta.(map[string]any), nil
+}
+
 func (c *ClientBase) Delete(ids []types.ObjectID) error {
 	if !c.connected {
 		return NOT_CONNECTED_ERR

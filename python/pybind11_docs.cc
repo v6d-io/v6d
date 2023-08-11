@@ -785,7 +785,7 @@ The instance id of the connected vineyard server.
 )doc";
 
 const char* ClientBase_meta = R"doc(
-The metadata information of the vineyard server. The value is a  nested dict, the
+The metadata information of the vineyard server. The value is a nested dict, the
 first-level key is the instance id, and the second-level key is the cluster metadata
 fields.
 

@@ -132,8 +132,8 @@ const (
 	IS_IN_USE_REQUEST  = "is_in_use_request"
 	IS_IN_USE_REPLY    = "is_in_use_reply"
 
-	CLUSTER_META_REQUEST    = "cluster_meta_request"
-	CLUSTER_META_REPLY      = "cluster_meta_reply"
+	CLUSTER_META_REQUEST    = "cluster_meta"
+	CLUSTER_META_REPLY      = "cluster_meta"
 	INSTANCE_STATUS_REQUEST = "instance_status_request"
 	INSTANCE_STATUS_REPLY   = "instance_status_reply"
 	MIGRATE_OBJECT_REQUEST  = "migrate_object_request"

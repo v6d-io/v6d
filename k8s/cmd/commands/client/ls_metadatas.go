@@ -56,18 +56,21 @@ var lsMetadatas = &cobra.Command{
 	Long:    lsMetadatasLong,
 	Example: lsMetadatasExample,
 	Run: func(cmd *cobra.Command, args []string) {
+		//stdout := DisableStdout()
 		util.AssertNoArgs(cmd, args)
+
 		// check the client socket
 		util.CheckClientSocket(cmd, args)
 		client, ch := util.NewClient()
 		if ch != nil {
 			defer close(ch)
 		}
+
 		metas, err := client.ListMetadatas(flags.Pattern, flags.Regex, flags.Limit)
 		if err != nil {
 			log.Fatal(err, "failed to list vineyard objects")
 		}
-		output := util.NewOutput(&metas, nil)
+		output := util.NewOutput(&metas, nil, nil)
 		// set the output options
 		output.WithFilter(false).
 			SortedKey(flags.SortedKey).

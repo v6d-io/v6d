@@ -27,12 +27,12 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/pkg/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/portforward"
 	"k8s.io/client-go/transport/spdy"
 
+	"github.com/pkg/errors"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 

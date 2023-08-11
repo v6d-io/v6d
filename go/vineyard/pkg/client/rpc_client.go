@@ -117,6 +117,13 @@ func (c *RPCClient) GetMetaData(id types.ObjectID, syncRemote bool) (meta *Objec
 	return meta, nil
 }
 
+func (c *RPCClient) GetClusterInfo() (map[string]any, error) {
+	if !c.connected {
+		return nil, NOT_CONNECTED_ERR
+	}
+	return c.GetClusterMeta()
+}
+
 func (c *RPCClient) ListMetaData(pattern string, regex bool, limit int) (map[string]map[string]any, error) {
 	if !c.connected {
 		return nil, NOT_CONNECTED_ERR
