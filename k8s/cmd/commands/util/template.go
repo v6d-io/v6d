@@ -130,7 +130,7 @@ func BuildObjsFromManifests(templateName string, value interface{},
 			return objs, err
 		}
 
-		if flags.PVCName != "" && obj.GetKind() == "PersistentVolumeClaim" || obj.GetKind() == "PersistentVolume" {
+		if flags.PVCName != "" && (obj.GetKind() == "PersistentVolumeClaim" || obj.GetKind() == "PersistentVolume") {
 			continue
 		}
 		if obj.GetName() != "" {

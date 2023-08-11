@@ -144,7 +144,8 @@ var deployBackupJobCmd = &cobra.Command{
 		}
 
 		log.Info("applying backup manifests with owner reference")
-		if err := util.ApplyManifestsWithOwnerRef(c, objs, "Job", "Role,Rolebinding"); err != nil {
+		if err := util.ApplyManifestsWithOwnerRef(c, objs, "Job",
+			"Role,Rolebinding"); err != nil {
 			log.Fatal(err, "failed to apply backup objects")
 		}
 
@@ -174,9 +175,13 @@ func getBackupObjectsFromTemplate(c client.Client, args []string) ([]*unstructur
 	// set the vineyardd name and namespace as the vineyard deployment
 	backup.Spec.VineyarddName = flags.VineyardDeploymentName
 	backup.Spec.VineyarddNamespace = flags.VineyardDeploymentNamespace
+	pvcName := flags.PVCName
+	if pvcName == "" {
+		pvcName = flags.BackupName
+	}
 	opts := k8s.NewBackupOpts(
 		flags.BackupName,
-		flags.PVCName,
+		pvcName,
 		flags.BackupOpts.BackupPath,
 	)
 	backupCfg, err := opts.BuildCfgForVineyarctl(c, backup)
