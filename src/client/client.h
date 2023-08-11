@@ -869,6 +869,15 @@ class Client final : public BasicIPCClient,
   Status DropBuffer(const ObjectID id, const int fd);
 
   /**
+   * @brief An (unsafe) internal-usage method that shrink the buffer, without
+   * allocating a new buffer and copying. The buffer to be shrink shouldn't
+   * be sealed.
+   *
+   * In the underlying server-side implementation, `madvise` is used.
+   */
+  Status ShrinkBuffer(const ObjectID id, const size_t size);
+
+  /**
    * @brief mark the blob as sealed to control the visibility of a blob, client
    * can never `Get` an unsealed blob.
    */

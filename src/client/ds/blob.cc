@@ -214,9 +214,21 @@ Status BlobWriter::Build(Client& client) { return Status::OK(); }
 
 Status BlobWriter::Abort(Client& client) {
   if (this->sealed()) {
-    return Status::ObjectSealed();
+    return Status::ObjectSealed("Cannot abort a sealed buffer");
   }
   return client.DropBuffer(this->object_id_, this->payload_.store_fd);
+}
+
+Status BlobWriter::Shrink(Client& client, const size_t size) {
+  if (this->sealed()) {
+    return Status::ObjectSealed("Cannot shrink a sealed buffer.");
+  }
+  RETURN_ON_ERROR(client.ShrinkBuffer(this->object_id_, size));
+  this->payload_.data_size = size;
+  if (buffer_) {
+    buffer_.reset(new MutableBuffer(buffer_->mutable_data(), size));
+  }
+  return Status::OK();
 }
 
 void BlobWriter::AddKeyValue(std::string const& key, std::string const& value) {

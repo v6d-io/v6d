@@ -55,6 +55,16 @@ int main(int argc, char** argv) {
   VINEYARD_ASSERT(blob != nullptr);
   CHECK_EQ(blob_writer->id(), blob->id());
 
+  // shrink blob test
+  VINEYARD_CHECK_OK(client1.CreateBlob(16 * 1024 * 1024, blob_writer));
+  VINEYARD_CHECK_OK(blob_writer->Shrink(client1, 1024 * 1024));
+  std::shared_ptr<Object> blob_object;
+  VINEYARD_CHECK_OK(blob_writer->Seal(client1, blob_object));
+  VINEYARD_ASSERT(blob_object != nullptr);
+
+  // cannot be shrink after sealed
+  CHECK(blob_writer->Shrink(client1, 1024 * 1024).IsObjectSealed());
+
   LOG(INFO) << "Passed various ways to get blob tests...";
 
   client1.Disconnect();

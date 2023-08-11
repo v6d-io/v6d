@@ -542,6 +542,12 @@ void bind_blobs(py::module& mod) {
           },
           "client"_a, doc::BlobBuilder_abort)
       .def(
+          "shrink",
+          [](BlobWriter* self, Client& client, const size_t size) {
+            throw_on_error(self->Shrink(client, size));
+          },
+          "client"_a, "size"_a, doc::BlobBuilder_shrink)
+      .def(
           "copy",
           [](BlobWriter* self, size_t const offset, uintptr_t ptr,
              size_t const size) {

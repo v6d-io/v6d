@@ -65,6 +65,8 @@ const std::string command_t::GET_GPU_BUFFERS_REQUEST =
 const std::string command_t::GET_GPU_BUFFERS_REPLY = "get_gpu_buffers_reply";
 const std::string command_t::DROP_BUFFER_REQUEST = "drop_buffer_request";
 const std::string command_t::DROP_BUFFER_REPLY = "drop_buffer_reply";
+const std::string command_t::SHRINK_BUFFER_REQUEST = "shrink_buffer_request";
+const std::string command_t::SHRINK_BUFFER_REPLY = "shrink_buffer_reply";
 
 const std::string command_t::REQUEST_FD_REQUEST = "request_fd_request";
 const std::string command_t::REQUEST_FD_REPLY = "request_fd_reply";
@@ -625,6 +627,35 @@ void WriteDropBufferReply(std::string& msg) {
 
 Status ReadDropBufferReply(const json& root) {
   CHECK_IPC_ERROR(root, command_t::DROP_BUFFER_REPLY);
+  return Status::OK();
+}
+
+void WriteShrinkBufferRequest(const ObjectID id, const size_t size,
+                              std::string& msg) {
+  json root;
+  root["type"] = command_t::SHRINK_BUFFER_REQUEST;
+  root["id"] = id;
+  root["size"] = size;
+
+  encode_msg(root, msg);
+}
+
+Status ReadShrinkBufferRequest(const json& root, ObjectID& id, size_t& size) {
+  RETURN_ON_ASSERT(root["type"] == command_t::SHRINK_BUFFER_REQUEST);
+  id = root["id"].get<ObjectID>();
+  size = root["size"].get<size_t>();
+  return Status::OK();
+}
+
+void WriteShrinkBufferReply(std::string& msg) {
+  json root;
+  root["type"] = command_t::SHRINK_BUFFER_REPLY;
+
+  encode_msg(root, msg);
+}
+
+Status ReadShrinkBufferReply(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::SHRINK_BUFFER_REPLY);
   return Status::OK();
 }
 

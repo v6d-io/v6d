@@ -64,6 +64,7 @@ extern const char* BlobBuilder;
 extern const char* BlobBuilder_id;
 extern const char* BlobBuilder__len__;
 extern const char* BlobBuilder_abort;
+extern const char* BlobBuilder_shrink;
 extern const char* BlobBuilder_copy;
 extern const char* BlobBuilder_address;
 extern const char* BlobBuilder_buffer;
