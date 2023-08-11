@@ -76,6 +76,7 @@ inline std::string normalize_datatype(const std::string& str) {
 }
 
 inline std::string random_string(size_t length) {
+  srand(rand() ^ time(0));
   auto randchar = []() -> char {
     const char charset[] =
         "0123456789"
