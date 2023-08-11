@@ -195,6 +195,11 @@ class BulkStore
    */
   Status OnDelete(ObjectID const& id);
 
+  /**
+   * @brief Shrink the blob to the given size.
+   */
+  Status Shrink(ObjectID const& id, size_t const& size);
+
  private:
   inline std::shared_ptr<BulkStore> shared_from_self() override {
     return shared_from_this();

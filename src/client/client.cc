@@ -913,6 +913,19 @@ Status Client::DropBuffer(const ObjectID id, const int fd) {
   return Status::OK();
 }
 
+Status Client::ShrinkBuffer(const ObjectID id, const size_t size) {
+  ENSURE_CONNECTED(this);
+
+  RETURN_ON_ASSERT(IsBlob(id));
+  std::string message_out;
+  WriteShrinkBufferRequest(id, size, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadShrinkBufferReply(message_in));
+  return Status::OK();
+}
+
 Status Client::Seal(ObjectID const& object_id) {
   ENSURE_CONNECTED(this);
   std::string message_out;

@@ -342,6 +342,12 @@ class BlobWriter : public ObjectBuilder {
   Status Abort(Client& client);
 
   /**
+   * @brief Shrink the blob builder to the given size without reallocating
+   *        and copying.
+   */
+  Status Shrink(Client& client, const size_t size);
+
+  /**
    * @brief Add key-value metadata for the blob.
    *
    * @param key The key of the metadata.

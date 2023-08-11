@@ -228,6 +228,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doGetGPUBuffers(root);
   } else if (cmd == command_t::DROP_BUFFER_REQUEST) {
     return doDropBuffer(root);
+  } else if (cmd == command_t::SHRINK_BUFFER_REQUEST) {
+    return doShrinkBuffer(root);
   } else if (cmd == command_t::CREATE_REMOTE_BUFFER_REQUEST) {
     return doCreateRemoteBuffer(root);
   } else if (cmd == command_t::GET_REMOTE_BUFFERS_REQUEST) {
@@ -552,6 +554,25 @@ bool SocketConnection::doDropBuffer(const json& root) {
   std::string message_out;
   if (status.ok()) {
     WriteDropBufferReply(message_out);
+  } else {
+    WriteErrorReply(status, message_out);
+  }
+  this->doWrite(message_out);
+  LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+              bulk_store_->Footprint());
+  return false;
+}
+
+bool SocketConnection::doShrinkBuffer(const json& root) {
+  auto self(shared_from_this());
+  ObjectID object_id = InvalidObjectID();
+  size_t size = 0;
+  TRY_READ_REQUEST(ReadShrinkBufferRequest, root, object_id, size);
+  // Delete ignore reference count.
+  auto status = bulk_store_->Shrink(object_id, size);
+  std::string message_out;
+  if (status.ok()) {
+    WriteShrinkBufferReply(message_out);
   } else {
     WriteErrorReply(status, message_out);
   }

@@ -54,6 +54,8 @@ struct command_t {
   static const std::string GET_GPU_BUFFERS_REPLY;
   static const std::string DROP_BUFFER_REQUEST;
   static const std::string DROP_BUFFER_REPLY;
+  static const std::string SHRINK_BUFFER_REQUEST;
+  static const std::string SHRINK_BUFFER_REPLY;
 
   static const std::string REQUEST_FD_REQUEST;
   static const std::string REQUEST_FD_REPLY;
@@ -281,6 +283,15 @@ Status ReadDropBufferRequest(const json& root, ObjectID& id);
 void WriteDropBufferReply(std::string& msg);
 
 Status ReadDropBufferReply(const json& root);
+
+void WriteShrinkBufferRequest(const ObjectID id, const size_t size,
+                              std::string& msg);
+
+Status ReadShrinkBufferRequest(const json& root, ObjectID& id, size_t& size);
+
+void WriteShrinkBufferReply(std::string& msg);
+
+Status ReadShrinkBufferReply(const json& root);
 
 void WriteRequestFDRequest(std::vector<int> fds, std::string& msg);
 

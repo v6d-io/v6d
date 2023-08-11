@@ -368,6 +368,10 @@ const char* BlobBuilder_abort = R"doc(
 Abort the blob builder if it is not sealed yet.
 )doc";
 
+const char* BlobBuilder_shrink = R"doc(
+Shrink the blob builder to the given size if it is not sealed yet.
+)doc";
+
 const char* BlobBuilder_copy = R"doc(
 .. method:: copy(self, offset: int, ptr: int, size: int)
     :noindex:

@@ -77,6 +77,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   bool doGetBuffers(json const& root);
   bool doGetGPUBuffers(json const& root);
   bool doDropBuffer(json const& root);
+  bool doShrinkBuffer(json const& root);
 
   /**
    * @brief doCreateBuffer differs from doCreateRemoteBuffer, that the content

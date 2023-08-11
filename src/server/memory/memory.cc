@@ -573,6 +573,32 @@ Status BulkStore::OnDelete(ObjectID const& id) {
   return Delete(id);
 }
 
+Status BulkStore::Shrink(ObjectID const& id, size_t const& size) {
+  Status status;
+  bool found = objects_.update_fn(
+      id, [&status, size](std::shared_ptr<Payload>& object) -> void {
+        if (object->is_sealed) {
+          status = Status::ObjectSealed(
+              "cannot shrink as the blob has already been sealed");
+        } else if (object->data_size < size) {
+          status =
+              Status::Invalid("cannot shrink to size " + std::to_string(size) +
+                              " since the current size is " +
+                              std::to_string(object->data_size));
+        } else {
+          memory::recycle_resident_memory(
+              reinterpret_cast<uintptr_t>(object->pointer), size,
+              object->data_size);
+          object->data_size = size;
+        }
+      });
+  RETURN_ON_ERROR(status);
+  if (!found) {
+    status = Status::ObjectNotExists("blob '" + IDToString(id) + "' not found");
+  }
+  return status;
+}
+
 Status BulkStore::CreateGPU(const size_t data_size, ObjectID& object_id,
                             std::shared_ptr<Payload>& object) {
 #ifndef ENABLE_GPU
