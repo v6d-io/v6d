@@ -19,7 +19,6 @@ setup:
   steps:
     - name: apply the vineyard deployment
       command: |
-        exit
         go run k8s/cmd/main.go deploy vineyard-deployment \
           --vineyardd.image="localhost:5001/vineyardd:alpine-latest" \
           --create-namespace

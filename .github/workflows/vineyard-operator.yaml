@@ -327,6 +327,9 @@ jobs:
             e2e-tests-schedule-workflow)
               signed_url_key=44c1
               ;;
+            e2e-tests-schedule-workflow-without-crd)
+              signed_url_key=9a01
+              ;;
             e2e-tests-deploy-raw-backup-and-recover)
               signed_url_key=6552
               ;;
