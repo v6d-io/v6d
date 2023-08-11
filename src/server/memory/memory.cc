@@ -68,7 +68,7 @@ static inline uintptr_t align_down(const uintptr_t address,
 
 static inline void recycle_resident_memory(const uintptr_t aligned_left,
                                            const uintptr_t aligned_right) {
-  if (aligned_left != aligned_right) {
+  if (aligned_left < aligned_right) {
     /**
      * Notes [Recycle Pages with madvise]:
      *
@@ -80,7 +80,11 @@ static inline void recycle_resident_memory(const uintptr_t aligned_left,
      */
     if (madvise(reinterpret_cast<void*>(aligned_left),
                 aligned_right - aligned_left, MADV_DONTNEED)) {
-      LOG(ERROR) << "madvise: " << errno << " -> " << strerror(errno);
+      LOG(ERROR) << "madvise failed: " << errno << " -> " << strerror(errno)
+                 << ", arguments: base = "
+                 << reinterpret_cast<void*>(aligned_left)
+                 << ", length = " << (aligned_right - aligned_left)
+                 << ", advice = MADV_DONTNEED";
     }
   }
 }
@@ -580,7 +584,7 @@ Status BulkStore::Shrink(ObjectID const& id, size_t const& size) {
         if (object->is_sealed) {
           status = Status::ObjectSealed(
               "cannot shrink as the blob has already been sealed");
-        } else if (object->data_size < size) {
+        } else if (static_cast<size_t>(object->data_size) < size) {
           status =
               Status::Invalid("cannot shrink to size " + std::to_string(size) +
                               " since the current size is " +

@@ -139,10 +139,10 @@ boost::leaf::result<void> varint_encoding_edges(
     Client& client, const bool directed,
     const property_graph_types::LABEL_ID_TYPE vertex_label_num,
     const property_graph_types::LABEL_ID_TYPE edge_label_num,
-    const std::vector<std::vector<std::shared_ptr<
+    std::vector<std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>>&
         ie_lists,
-    const std::vector<std::vector<std::shared_ptr<
+    std::vector<std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>>&
         oe_lists,
     std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>&

@@ -39,7 +39,7 @@ template <typename T>
 class ArrayBuilder : public ArrayBaseBuilder<T> {
  public:
   ArrayBuilder(Client& client, size_t size)
-      : ArrayBaseBuilder<T>(client), size_(size) {
+      : ArrayBaseBuilder<T>(client), client_(client), size_(size) {
     VINEYARD_CHECK_OK(client.CreateBlob(size_ * sizeof(T), buffer_writer_));
     this->data_ = reinterpret_cast<T*>(buffer_writer_->data());
   }
@@ -65,6 +65,12 @@ class ArrayBuilder : public ArrayBaseBuilder<T> {
   ArrayBuilder(Client& client, const T* data, size_t size)
       : ArrayBuilder(client, size) {
     memcpy(data_, data, size_ * sizeof(T));
+  }
+
+  ~ArrayBuilder() {
+    if (!this->sealed() && buffer_writer_ != nullptr) {
+      VINEYARD_DISCARD(buffer_writer_->Abort(client_));
+    }
   }
 
   /**
@@ -108,6 +114,7 @@ class ArrayBuilder : public ArrayBaseBuilder<T> {
   }
 
  private:
+  Client& client_;
   std::unique_ptr<BlobWriter> buffer_writer_;
   T* data_;
   size_t size_;

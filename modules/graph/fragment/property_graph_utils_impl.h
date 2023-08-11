@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <algorithm>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "basic/utils.h"
@@ -690,7 +691,7 @@ boost::leaf::result<void> generate_undirected_csr_memopt(
 template <typename VID_T, typename EID_T>
 boost::leaf::result<void> varint_encoding_edges_impl(
     Client& client,
-    const std::shared_ptr<
+    std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>& e_lists,
     std::shared_ptr<FixedUInt8Builder>& ce_lists,
     const std::shared_ptr<FixedInt64Builder>& e_offsets,
@@ -698,12 +699,12 @@ boost::leaf::result<void> varint_encoding_edges_impl(
     const int concurrency = std::thread::hardware_concurrency()) {
   const int64_t* offsets = e_offsets->data();
   property_graph_utils::NbrUnit<VID_T, EID_T>* edges = e_lists->data();
-
   const VID_T vnum = e_offsets->size() - 1;
-  std::vector<uint8_t*> compact_edges(vnum);
-  std::vector<int64_t> compact_degree(vnum);  // degree in bytes
 
-  auto before_encoding_timestamp = GetCurrentTime();
+  // optimization: encoding in batch mode, then compute the new byte
+  // offsets array by a decoding pass
+
+  auto before_delta_timestamp = GetCurrentTime();
   constexpr size_t element_size =
       sizeof(property_graph_utils::NbrUnit<VID_T, EID_T>) / sizeof(uint32_t);
   parallel_for(
@@ -712,8 +713,6 @@ boost::leaf::result<void> varint_encoding_edges_impl(
         // use malloc rather std::vector::reserve() to avoid touching unused
         // pages
         if (offsets[v] == offsets[v + 1]) {
-          compact_edges[v] = nullptr;
-          compact_degree[v] = 0;
           return;
         }
         int64_t last_vid = 0;
@@ -721,54 +720,58 @@ boost::leaf::result<void> varint_encoding_edges_impl(
           edges[e].vid -= last_vid;
           last_vid += edges[e].vid;
         }
-        const int64_t reserved_memory_size =
-            9 * 2 * (offsets[v + 1] - offsets[v]);
-        compact_edges[v] = static_cast<uint8_t*>(malloc(reserved_memory_size));
-        uint8_t* ptr = compact_edges[v];
-        for (int64_t i = offsets[v]; i < offsets[v + 1];
-             i += VARINT_ENCODING_BATCH_SIZE) {
-          ptr = v8enc32(reinterpret_cast<uint32_t*>(edges + i),
-                        (i + VARINT_ENCODING_BATCH_SIZE < offsets[v + 1]
-                             ? VARINT_ENCODING_BATCH_SIZE
-                             : (offsets[v + 1] - i)) *
-                            element_size,
-                        ptr);
-        }
-        assert(ptr - compact_edges[v] <= reserved_memory_size);  // no overflow
-        compact_degree[v] = ptr - compact_edges[v];
       },
       concurrency, 16);
 
-  auto before_prefix_sum_timestamp = GetCurrentTime();
+  auto before_encoding_timestamp = GetCurrentTime();
+
+  // reuse the buffer
+  std::unique_ptr<BlobWriter> encoded;
+  VY_OK_OR_RAISE(e_lists->Release(encoded));
+
+  // batch encoding
+  uint8_t* encoded_begin = reinterpret_cast<uint8_t*>(encoded->data());
   e_boffsets = std::make_shared<FixedInt64Builder>(client, vnum + 1);
   int64_t* boffsets = e_boffsets->data();
   boffsets[0] = 0;
-  parallel_prefix_sum(compact_degree.data(),
-                      boffsets + 1 /* exclusive prefix sum */, vnum,
-                      concurrency);
 
-  auto before_memcpy_timestamp = GetCurrentTime();
-  ce_lists = std::make_shared<FixedUInt8Builder>(client, boffsets[vnum]);
-  parallel_for(
-      static_cast<VID_T>(0), vnum,
-      [&](const VID_T v) {
-        if (compact_degree[v] == 0) {
-          return;
-        }
-        memcpy(ce_lists->data() + boffsets[v], compact_edges[v],
-               compact_degree[v]);
-        free(compact_edges[v]);
-      },
-      concurrency);
+  for (VID_T v = 0; v < vnum; ++v) {
+    uint8_t* ptr = encoded_begin + boffsets[v];
+    size_t encoded_size = offsets[v], size_limit = offsets[v + 1];
+    while (encoded_size < size_limit) {
+      size_t batch_size =
+          std::min(static_cast<size_t>(VARINT_ENCODING_BATCH_SIZE),
+                   size_limit - encoded_size);
+      ptr = v8enc32(reinterpret_cast<uint32_t*>(edges + encoded_size),
+                    batch_size * element_size, ptr);
+      encoded_size += batch_size;
+    }
+    boffsets[v + 1] = ptr - encoded_begin;
+  }
+  // should be no overflow
+  if (static_cast<size_t>(boffsets[vnum]) >= encoded->size()) {
+    VY_OK_OR_RAISE(
+        Status::Invalid("failed to compact the nbr list as it overflowed, "
+                        "try set the parameter `compact_edges` to false"));
+  }
+  // we may failed to shrink due the limitation of old version of
+  // vineyardd, in such case, we shouldn't fail
+  VINEYARD_SUPPRESS(encoded->Shrink(client, boffsets[vnum]));
+  VY_OK_OR_RAISE(FixedUInt8Builder::Make(client, std::move(encoded),
+                                         boffsets[vnum], ce_lists));
+
+  // release the original id lists, note that the e_offsets is still needed
+  e_lists.reset();
 
   auto now = GetCurrentTime();
-  VLOG(100) << "Varint + Delta encoding edges use "
-            << (now - before_encoding_timestamp) << " seconds\n\tencoding use "
-            << (before_prefix_sum_timestamp - before_encoding_timestamp)
-            << " seconds\n\tprefix sum use "
-            << (before_memcpy_timestamp - before_prefix_sum_timestamp)
-            << " seconds\n\tmemory compact (copy) use "
-            << (now - before_memcpy_timestamp) << " seconds";
+  VLOG(100) << "Varint + delta encoding edges use "
+            << (now - before_delta_timestamp)
+            << " seconds\n\tdelta encoding use "
+            << (before_encoding_timestamp - before_delta_timestamp)
+            << " seconds\n\tvarint encoding use "
+            << (now - before_encoding_timestamp) << " seconds";
+  VLOG(100) << "Finish compact edges: " << get_rss_pretty()
+            << ", peak = " << get_peak_rss_pretty();
   return {};
 }
 
@@ -777,10 +780,10 @@ boost::leaf::result<void> varint_encoding_edges(
     Client& client, const bool directed,
     const property_graph_types::LABEL_ID_TYPE vertex_label_num,
     const property_graph_types::LABEL_ID_TYPE edge_label_num,
-    const std::vector<std::vector<std::shared_ptr<
+    std::vector<std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>>&
         ie_lists,
-    const std::vector<std::vector<std::shared_ptr<
+    std::vector<std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<VID_T, EID_T>>>>>&
         oe_lists,
     std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>&
@@ -812,17 +815,17 @@ boost::leaf::result<void> varint_encoding_edges(
     }
 
     for (int e_label = 0; e_label < edge_label_num; e_label++) {
-      varint_encoding_edges_impl(client, oe_lists[v_label][e_label],
-                                 compact_oe_lists[v_label][e_label],
-                                 oe_offsets_lists[v_label][e_label],
-                                 oe_boffsets_lists[v_label][e_label],
-                                 concurrency);
+      BOOST_LEAF_CHECK(varint_encoding_edges_impl(
+          client, oe_lists[v_label][e_label],
+          compact_oe_lists[v_label][e_label],
+          oe_offsets_lists[v_label][e_label],
+          oe_boffsets_lists[v_label][e_label], concurrency));
       if (directed) {
-        varint_encoding_edges_impl(client, ie_lists[v_label][e_label],
-                                   compact_ie_lists[v_label][e_label],
-                                   ie_offsets_lists[v_label][e_label],
-                                   ie_boffsets_lists[v_label][e_label],
-                                   concurrency);
+        BOOST_LEAF_CHECK(varint_encoding_edges_impl(
+            client, ie_lists[v_label][e_label],
+            compact_ie_lists[v_label][e_label],
+            ie_offsets_lists[v_label][e_label],
+            ie_boffsets_lists[v_label][e_label], concurrency));
       }
     }
   }

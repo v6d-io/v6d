@@ -1353,11 +1353,11 @@ BasicArrowFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initEdges(
             << (vineyard::GetCurrentTime() - gen_edge_start_time) << " seconds";
 
   if (this->compact_edges_) {
-    varint_encoding_edges(client_, this->directed_, this->vertex_label_num_,
-                          this->edge_label_num_, ie_lists_, oe_lists_,
-                          compact_ie_lists_, compact_oe_lists_,
-                          ie_offsets_lists_, oe_offsets_lists_,
-                          ie_boffsets_lists_, oe_boffsets_lists_, concurrency);
+    BOOST_LEAF_CHECK(varint_encoding_edges(
+        client_, this->directed_, this->vertex_label_num_,
+        this->edge_label_num_, ie_lists_, oe_lists_, compact_ie_lists_,
+        compact_oe_lists_, ie_offsets_lists_, oe_offsets_lists_,
+        ie_boffsets_lists_, oe_boffsets_lists_, concurrency));
   }
   return {};
 }

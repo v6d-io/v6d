@@ -91,6 +91,19 @@ class FixedNumericArrayBuilder : public NumericArrayBaseBuilder<T> {
 
   FixedNumericArrayBuilder(Client& client, const size_t size);
 
+  ~FixedNumericArrayBuilder();
+
+  static Status Make(Client& client, const size_t size,
+                     std::shared_ptr<FixedNumericArrayBuilder<T>>& out);
+
+  static Status Make(Client& client, std::unique_ptr<BlobWriter> writer,
+                     const size_t size,
+                     std::shared_ptr<FixedNumericArrayBuilder<T>>& out);
+
+  Status Shrink(const size_t size);
+
+  Status Release(std::unique_ptr<BlobWriter>& writer);
+
   size_t size() const;
 
   T* MutablePointer(int64_t i) const;
@@ -100,6 +113,9 @@ class FixedNumericArrayBuilder : public NumericArrayBaseBuilder<T> {
   Status Build(Client& client) override;
 
  private:
+  explicit FixedNumericArrayBuilder(Client& client);
+
+  Client& client_;
   size_t size_ = 0;
   std::unique_ptr<BlobWriter> writer_ = nullptr;
   T* data_ = nullptr;
@@ -225,12 +241,67 @@ class FixedSizeBinaryArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
 template <typename T>
 class PodArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
  public:
-  explicit PodArrayBuilder(Client& client, size_t size)
-      : FixedSizeBinaryArrayBaseBuilder(client), size_(size) {
+  PodArrayBuilder(Client& client, size_t size)
+      : FixedSizeBinaryArrayBaseBuilder(client), client_(client), size_(size) {
     if (size != 0) {
       VINEYARD_CHECK_OK(client.CreateBlob(size * sizeof(T), buffer_));
       data_ = reinterpret_cast<T*>(buffer_->Buffer()->mutable_data());
     }
+  }
+
+  ~PodArrayBuilder() {
+    if (!this->sealed() && buffer_) {
+      VINEYARD_DISCARD(buffer_->Abort(client_));
+    }
+  }
+
+  static Status Make(Client& client, const size_t size,
+                     std::shared_ptr<PodArrayBuilder<T>>& out) {
+    out = std::shared_ptr<PodArrayBuilder<T>>(new PodArrayBuilder<T>(client));
+    out->size_ = size;
+    if (out->size_ > 0) {
+      RETURN_ON_ERROR(client.CreateBlob(out->size_ * sizeof(T), out->writer_));
+      out->data_ = reinterpret_cast<T*>(out->writer_->data());
+    }
+    return Status::OK();
+  }
+
+  static Status Make(Client& client, std::unique_ptr<BlobWriter> buffer,
+                     const size_t size,
+                     std::shared_ptr<PodArrayBuilder<T>>& out) {
+    out = std::shared_ptr<PodArrayBuilder<T>>(new PodArrayBuilder<T>(client));
+    out->size_ = size;
+    if (out->size_ > 0) {
+      if (!buffer) {
+        return Status::Invalid(
+            "cannot make builder of size > 0 with a null buffer");
+      }
+      out->buffer_ = std::move(buffer);
+      out->data_ = reinterpret_cast<T*>(out->buffer_->data());
+    }
+    return Status::OK();
+  }
+
+  Status Shrink(const size_t size) {
+    Status s;
+    if (buffer_) {
+      s = buffer_->Shrink(client_, size * sizeof(T));
+      if (s.ok()) {
+        size_ = size;
+      }
+    }
+    return s;
+  }
+
+  Status Release(std::unique_ptr<BlobWriter>& buffer) {
+    if (this->sealed()) {
+      return Status::ObjectSealed(
+          "sealed builder cannot release its internal buffer");
+    }
+    buffer = std::move(buffer_);
+    data_ = nullptr;
+    size_ = 0;
+    return Status::OK();
   }
 
   T* MutablePointer(int64_t i) const {
@@ -260,6 +331,10 @@ class PodArrayBuilder : public FixedSizeBinaryArrayBaseBuilder {
   }
 
  private:
+  explicit PodArrayBuilder(Client& client)
+      : FixedSizeBinaryArrayBaseBuilder(client), client_(client) {}
+
+  Client& client_;
   size_t size_;
   std::unique_ptr<BlobWriter> buffer_;
   T* data_ = nullptr;
