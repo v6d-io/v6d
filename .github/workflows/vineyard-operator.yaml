@@ -64,6 +64,7 @@ jobs:
           - e2e-tests-failover
           - e2e-tests-repartition-dask
           - e2e-tests-schedule-workflow
+          - e2e-tests-schedule-workflow-without-crd
           - e2e-tests-schedule-workload
           - e2e-tests-serialize
           - e2e-tests-sidecar
@@ -170,6 +171,7 @@ jobs:
                      e2e-tests-failover \
                      e2e-tests-repartition-dask \
                      e2e-tests-schedule-workflow \
+                     e2e-tests-schedule-workflow-without-crd \
                      e2e-tests-schedule-workload \
                      e2e-tests-serialize \
                      e2e-tests-sidecar \
@@ -225,6 +227,11 @@ jobs:
         if: ${{ matrix.job == 'e2e-tests-schedule-workflow' }}
         run: |
           make -C k8s/test/e2e e2e-tests-schedule-workflow
+
+      - name: e2e-tests-schedule-workflow-without-crd
+        if: ${{ matrix.job == 'e2e-tests-schedule-workflow-without-crd' }}
+        run: |
+          make -C k8s/test/e2e e2e-tests-schedule-workflow-without-crd
 
       - name: e2e-tests-schedule-workload
         if: ${{ matrix.job == 'e2e-tests-schedule-workload' }}
@@ -319,6 +326,9 @@ jobs:
               ;;
             e2e-tests-schedule-workflow)
               signed_url_key=44c1
+              ;;
+            e2e-tests-schedule-workflow-without-crd)
+              signed_url_key=9a01
               ;;
             e2e-tests-deploy-raw-backup-and-recover)
               signed_url_key=6552

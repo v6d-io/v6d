@@ -28,6 +28,7 @@ var scheduleExamples = util.Examples(`
 	vineyardctl schedule workload --resource '{kubernetes workload json string}'
 
 	# schedule a workflow to the vineyard cluster
+	# it will use the best-effort scheduling strategy
 	vineyardctl schedule workflow --file workflow.yaml`)
 
 var scheduleCmd = &cobra.Command{

@@ -39,6 +39,10 @@ type Injector struct {
 	decoder *admission.Decoder
 }
 
+func ComputeNode() {
+
+}
+
 // Handle handles admission requests.
 func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := log.FromContext(ctx).WithName("injector").WithName("Assembly")

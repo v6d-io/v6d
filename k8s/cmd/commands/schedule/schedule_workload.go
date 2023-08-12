@@ -265,6 +265,8 @@ func ValidateWorkloadKind(kind string) bool {
 		return isWorkload
 	case "CronJob":
 		return isWorkload
+	case "Pod":
+		return isWorkload
 	}
 	return !isWorkload
 }
@@ -305,22 +307,21 @@ func SchedulingWorkload(c client.Client,
 			"namespaces":  []interface{}{flags.VineyarddNamespace},
 		},
 	}
-
-	var required []interface{}
-	required, _, _ = unstructured.NestedSlice(unstructuredObj.Object,
-		"spec", "template", "spec", "affinity", "podAffinity", "requiredDuringSchedulingIgnoredDuringExecution")
+	required, err := util.GetRequiredPodAffinity(unstructuredObj)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get the required podAffinity")
+	}
 	required = append(required, requiredDuringSchedulingIgnoredDuringExecution...)
 
-	err := unstructured.SetNestedSlice(unstructuredObj.Object, required,
-		"spec", "template", "spec", "affinity", "podAffinity", "requiredDuringSchedulingIgnoredDuringExecution")
+	err = util.SetRequiredPodAffinity(unstructuredObj, required)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to set the nested slice")
+		return nil, errors.Wrap(err, "failed to set the required podAffinity")
 	}
 
 	// check the socket's volumeMount and volume exist or not
 	// if not, add the socket's volumeMount and volume to the workload
 	socketPath := VineyardDeploymentSocketPrefix + flags.VineyarddNamespace + "/" + flags.VineyarddName
-	volumes, err := injector.GetVolume(unstructuredObj)
+	volumes, err := util.GetVolume(unstructuredObj)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get the volumes")
 	}
@@ -342,12 +343,12 @@ func SchedulingWorkload(c client.Client,
 		},
 	}
 	volumes = append(volumes, socketVolume)
-	err = injector.SetVolume(unstructuredObj, volumes)
+	err = util.SetVolume(unstructuredObj, volumes)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set the volumes")
 	}
 
-	containers, err := injector.GetContainer(unstructuredObj)
+	containers, err := util.GetContainer(unstructuredObj)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get the containers")
 	}
@@ -366,7 +367,7 @@ func SchedulingWorkload(c client.Client,
 
 	injector.InjectEnv(&containers, ScheduleWorkloadMountPath)
 
-	err = injector.SetContainer(unstructuredObj, containers)
+	err = util.SetContainer(unstructuredObj, containers)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set the containers")
 	}

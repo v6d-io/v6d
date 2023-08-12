@@ -640,14 +640,14 @@ func deployDuringInjection(om *OutputManifests) error {
 func outputInjectedResult(om OutputManifests) error {
 	if flags.OutputFormat == JSONFormat {
 		outputJSON, _ := json.Marshal(om)
-		fmt.Println(string(outputJSON))
+		log.Output(string(outputJSON))
 		return nil
 	}
 	yamls, err := parseManifestsAsYAML(om)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse manifests as yaml")
 	}
-	fmt.Println(strings.Join(yamls, "---\n"))
+	log.Output(strings.Join(yamls, "---\n"))
 	return nil
 }
 

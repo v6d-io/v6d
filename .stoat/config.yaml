@@ -38,6 +38,11 @@ plugins:
         name: "schedule-workflow-logs"
       path: e2e-tests-schedule-workflow-logs
       file_viewer: true
+    e2e-tests-schedule-workflow-without-crd-logs:
+      metadata:
+        name: "schedule-workflow-without-crd-logs"
+      path: e2e-tests-schedule-workflow-without-crd-logs
+      file_viewer: true
     e2e-tests-serialize-logs:
       metadata:
         name: "serialize-logs"

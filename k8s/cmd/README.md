@@ -1049,23 +1049,9 @@ Get vineyard objects, metadatas, blobs or cluster-info
 ### Examples
 
 ```shell
-  # Connect the vineyardd server with IPC client
-  # List the vineyard objects no more than 10
-  vineyardctl ls objects --limit 10 --ipc-socket /var/run/vineyard.sock
-
-  # List the vineyard blobs no more than 10
-  vineyardctl ls blobs --limit 10 --ipc-socket /var/run/vineyard.sock
-
-  # List the vineyard objects with the specified pattern
-  vineyardctl ls objects --pattern "vineyard::Tensor<.*>" --regex --ipc-socket /var/run/vineyard.sock
-
-  # Connect the vineyardd server with RPC client
-  # List the vineyard metadatas no more than 1000
-  vineyardctl ls metadatas --rpc-socket 127.0.0.1:9600 --limit 1000
-
-  # Connect the vineyard deployment with PRC client
-  # List the vineyard objects no more than 1000
-  vineyardctl ls objects --deployment-name vineyardd-sample -n vineyard-system
+  # Connect the vineyardd deployment with IPC client
+  # Get the cluster info and output as table
+  vineyardctl get cluster-info --deployment-name vineyardd-sample -n vineyard-system
 ```
 
 ### Options
@@ -1748,6 +1734,7 @@ Schedule a workload or a workflow to existing vineyard cluster.
   vineyardctl schedule workload --resource '{kubernetes workload json string}'
 
   # schedule a workflow to the vineyard cluster
+  # it will use the best-effort scheduling strategy
   vineyardctl schedule workflow --file workflow.yaml
 ```
 
@@ -1780,6 +1767,10 @@ vineyardctl schedule workflow [flags]
 ```shell
   # schedule a workflow to the vineyard cluster with the best-fit strategy
   vineyardctl schedule workflow --file workflow.yaml
+  
+  # schedule a workflow without CRD installed
+  # Notice, it only works for the workflow built by pods
+  vineyardctl schedule workflow --file pod-workflow.yaml --without-crd
 ```
 
 ### Options
@@ -1787,6 +1778,7 @@ vineyardctl schedule workflow [flags]
 ```
   -f, --file string   the path of workflow file
   -h, --help          help for workflow
+      --without-crd   whether the CRD(especially for GlobalObject and LocalObject) is installed
 ```
 
 ## `vineyardctl schedule workload`

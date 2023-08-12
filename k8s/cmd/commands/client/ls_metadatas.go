@@ -16,6 +16,8 @@ limitations under the License.
 package client
 
 import (
+	"os"
+
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
@@ -56,7 +58,6 @@ var lsMetadatas = &cobra.Command{
 	Long:    lsMetadatasLong,
 	Example: lsMetadatasExample,
 	Run: func(cmd *cobra.Command, args []string) {
-		//stdout := DisableStdout()
 		util.AssertNoArgs(cmd, args)
 
 		// check the client socket
@@ -87,4 +88,11 @@ func init() {
 	flags.ApplyConnectOpts(lsMetadatas)
 	flags.ApplyLsOpts(lsMetadatas)
 	flags.ApplyOutputOpts(lsMetadatas)
+}
+
+func DisableStdout() *os.File {
+	stdout := os.Stdout
+	os.Stdout, _ = os.Open(os.DevNull)
+
+	return stdout
 }
