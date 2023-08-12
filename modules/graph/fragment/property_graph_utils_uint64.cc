@@ -101,10 +101,10 @@ template boost::leaf::result<void> varint_encoding_edges<uint64_t, uint64_t>(
     Client& client, const bool directed,
     const property_graph_types::LABEL_ID_TYPE vertex_label_num,
     const property_graph_types::LABEL_ID_TYPE edge_label_num,
-    const std::vector<std::vector<std::shared_ptr<
+    std::vector<std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<uint64_t, uint64_t>>>>>&
         ie_lists,
-    const std::vector<std::vector<std::shared_ptr<
+    std::vector<std::vector<std::shared_ptr<
         PodArrayBuilder<property_graph_utils::NbrUnit<uint64_t, uint64_t>>>>>&
         oe_lists,
     std::vector<std::vector<std::shared_ptr<FixedUInt8Builder>>>&

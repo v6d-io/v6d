@@ -381,11 +381,79 @@ template class NumericArrayBuilder<double>;
 template <typename T>
 FixedNumericArrayBuilder<T>::FixedNumericArrayBuilder(Client& client,
                                                       const size_t size)
-    : NumericArrayBaseBuilder<T>(client), size_(size) {
+    : NumericArrayBaseBuilder<T>(client), client_(client), size_(size) {
   if (size_ > 0) {
     VINEYARD_CHECK_OK(client.CreateBlob(size_ * sizeof(T), writer_));
     data_ = reinterpret_cast<T*>(writer_->data());
   }
+}
+
+template <typename T>
+FixedNumericArrayBuilder<T>::FixedNumericArrayBuilder(Client& client)
+    : NumericArrayBaseBuilder<T>(client), client_(client) {}
+
+template <typename T>
+FixedNumericArrayBuilder<T>::~FixedNumericArrayBuilder() {
+  if (!this->sealed() && writer_) {
+    VINEYARD_DISCARD(writer_->Abort(client_));
+  }
+}
+
+template <typename T>
+Status FixedNumericArrayBuilder<T>::Make(
+    Client& client, const size_t size,
+    std::shared_ptr<FixedNumericArrayBuilder<T>>& out) {
+  out = std::shared_ptr<FixedNumericArrayBuilder<T>>(
+      new FixedNumericArrayBuilder<T>(client));
+  out->size_ = size;
+  if (out->size_ > 0) {
+    RETURN_ON_ERROR(client.CreateBlob(out->size_ * sizeof(T), out->writer_));
+    out->data_ = reinterpret_cast<T*>(out->writer_->data());
+  }
+  return Status::OK();
+}
+
+template <typename T>
+Status FixedNumericArrayBuilder<T>::Make(
+    Client& client, std::unique_ptr<BlobWriter> writer, const size_t size,
+    std::shared_ptr<FixedNumericArrayBuilder<T>>& out) {
+  out = std::shared_ptr<FixedNumericArrayBuilder<T>>(
+      new FixedNumericArrayBuilder<T>(client));
+  out->size_ = size;
+  if (out->size_ > 0) {
+    if (!writer) {
+      return Status::Invalid(
+          "cannot make builder of size > 0 with a null buffer");
+    }
+    out->writer_ = std::move(writer);
+    out->data_ = reinterpret_cast<T*>(out->writer_->data());
+  }
+  return Status::OK();
+}
+
+template <typename T>
+Status FixedNumericArrayBuilder<T>::Shrink(const size_t size) {
+  Status s;
+  if (writer_) {
+    s = writer_->Shrink(client_, size * sizeof(T));
+    if (s.ok()) {
+      size_ = size;
+    }
+  }
+  return s;
+}
+
+template <typename T>
+Status FixedNumericArrayBuilder<T>::Release(
+    std::unique_ptr<BlobWriter>& writer) {
+  if (this->sealed()) {
+    return Status::ObjectSealed(
+        "sealed builder cannot release its internal buffer");
+  }
+  writer = std::move(writer_);
+  data_ = nullptr;
+  size_ = 0;
+  return Status::OK();
 }
 
 template <typename T>
