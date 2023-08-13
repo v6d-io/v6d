@@ -17,7 +17,6 @@ package delete
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
@@ -29,8 +28,8 @@ import (
 
 func TestDeleteVineyardDeploymentCmd(t *testing.T) {
 	// deploy a vineyardd for later delete operation
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	//flags.KubeConfig = "/tmp/e2e-k8s.config"
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.Namespace = "vineyard-system"
 	flags.VineyarddOpts.Replicas = 3
 	flags.VineyarddOpts.EtcdReplicas = 1

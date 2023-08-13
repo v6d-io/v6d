@@ -240,7 +240,7 @@ func TestSchedulingWorkload(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    string
+		want    *unstructured.Unstructured
 		wantErr bool
 	}{
 		// Add test cases.
@@ -259,10 +259,54 @@ func TestSchedulingWorkload(t *testing.T) {
 						"spec": map[string]interface{}{
 							"template": map[string]interface{}{
 								"spec": map[string]interface{}{
-									"affinity": map[string]interface{}{
-										"podAffinity": map[string]interface{}{
-											"requiredDuringSchedulingIgnoredDuringExecution": []interface{}{},
+									"affinity": map[string]interface{}{},
+								},
+							},
+						},
+					},
+				},
+			},
+			want: &unstructured.Unstructured{
+				Object: map[string]interface{}{
+					"kind":       "Deployment",
+					"apiVersion": "apps/v1",
+					"metadata": map[string]interface{}{
+						"name":      "example-deployment",
+						"namespace": "default",
+					},
+					"spec": map[string]interface{}{
+						"template": map[string]interface{}{
+							"spec": map[string]interface{}{
+								"affinity": map[string]interface{}{
+									"podAffinity": map[string]interface{}{
+										"requiredDuringSchedulingIgnoredDuringExecution": []interface{}{
+											map[string]interface{}{
+												"labelSelector": map[string]interface{}{
+													"matchExpressions": []interface{}{
+														map[string]interface{}{
+															"key":      "app.kubernetes.io/instance",
+															"operator": "In",
+															"values": []interface{}{
+																"vineyard-system-vineyardd-sample",
+															},
+														},
+													},
+												},
+												"namespaces": []interface{}{
+													"vineyard-system",
+												},
+												"topologyKey": "kubernetes.io/hostname",
+											},
 										},
+									},
+								},
+								"containers": []interface{}{},
+								"volumes": []interface{}{
+									map[string]interface{}{
+										"hostPath": map[string]interface{}{
+											"path": "/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample",
+										},
+										"name": "vineyard-socket",
 									},
 								},
 							},
@@ -270,14 +314,6 @@ func TestSchedulingWorkload(t *testing.T) {
 					},
 				},
 			},
-			want: `{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"name":"example-deployment",` +
-				`"namespace":"default"},"spec":{"template":{"spec":{"affinity":{"podAffinity":` +
-				`{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":` +
-				`{"matchExpressions":[{"key":"app.kubernetes.io/instance","operator":"In",` +
-				`"values":["vineyard-system-vineyardd-sample"]}]},"topologyKey":` +
-				`"kubernetes.io/hostname"}]}},"containers":null,"volumes":[{"hostPath":` +
-				`{"path":"/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample"},"name":"vineyard-socket"}]}}}}` +
-				"\n",
 			wantErr: false,
 		},
 	}
@@ -288,8 +324,11 @@ func TestSchedulingWorkload(t *testing.T) {
 				t.Errorf("SchedulingWorkload() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			a, _ := got.MarshalJSON()
-			if !reflect.DeepEqual(string(a), tt.want) {
+			a := fmt.Sprint(got)
+			b := fmt.Sprint(tt.want)
+			if !reflect.DeepEqual(a, b) {
+				//fmt.Println(got)
+				//fmt.Println(tt.want)
 				t.Errorf("SchedulingWorkload() = %v, want %v", got, tt.want)
 			}
 		})

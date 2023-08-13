@@ -276,8 +276,8 @@ func TestBuildObjsFromManifests(t *testing.T) {
 	objs, err := BuildObjsFromManifests(templateName, backup, tmplFunc)
 
 	assert.NoError(t, err)
-	if len(objs) != 3 {
-		t.Errorf("Expected %d objects, but got %d", 3, len(objs))
+	if len(objs) != 4 {
+		t.Errorf("Expected %d objects, but got %d", 4, len(objs))
 	}
 
 }

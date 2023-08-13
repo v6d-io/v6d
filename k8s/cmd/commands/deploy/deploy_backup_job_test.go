@@ -17,8 +17,6 @@ package deploy
 
 import (
 	"context"
-	"fmt"
-	"os"
 	"reflect"
 	"testing"
 
@@ -37,8 +35,8 @@ import (
 
 func TestDeployBackupJobCmd(t *testing.T) {
 	// deploy a vineyardd for later backup operation
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	//flags.KubeConfig = "/tmp/e2e-k8s.config"
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.Namespace = "vineyard-system"
 	flags.VineyarddOpts.Replicas = 3
 	flags.VineyarddOpts.EtcdReplicas = 1
@@ -81,7 +79,7 @@ func TestDeployBackupJobCmd(t *testing.T) {
 			"storage": "1Gi"
             }
           },
-		  "volumeName" : "backup-path",
+		  "volumeName" : "vineyard-backup",
           "selector": {
 			"matchLabels": {
 				"app.kubernetes.io/name" : "vineyard-backup"
@@ -91,10 +89,10 @@ func TestDeployBackupJobCmd(t *testing.T) {
 	}
     `
 	c := util.KubernetesClient()
-	got, _ := getBackupObjectsFromTemplate(c, []string{})
-	for i := range got {
+	//got, _ := getBackupObjectsFromTemplate(c, []string{})
+	/*for i := range got {
 		fmt.Println(*got[i])
-	}
+	}*/
 	deployBackupJobCmd.Run(deployBackupJobCmd, []string{})
 
 	if util.Wait(func() (bool, error) {
@@ -115,10 +113,10 @@ func TestDeployBackupJobCmd(t *testing.T) {
 
 func Test_getBackupObjectsFromTemplate(t *testing.T) {
 	// set the flags
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	//flags.KubeConfig = "/tmp/e2e-k8s.config"
-	flags.PVCName = "pvc-for-backup-and-recover-demo"
-	flags.VineyarddOpts.Volume.PvcName = "pvc-for-backup-and-recover-demo"
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	//flags.PVCName = "pvc-for-backup-and-recover-demo"
+	flags.BackupOpts.BackupPath = "/var/vineyard/dump"
 	flags.Namespace = "vineyard-system"
 	flags.VineyardDeploymentName = "vineyardd-sample"
 	flags.VineyardDeploymentNamespace = "vineyard-system"
@@ -142,6 +140,41 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 				args: []string{},
 			},
 			want: []*unstructured.Unstructured{
+				{
+					Object: map[string]interface{}{
+						"apiVersion": "v1",
+						"kind":       "PersistentVolume",
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"app.kubernetes.io/name": "vineyard-backup",
+							},
+							"name":      "vineyard-backup",
+							"namespace": "vineyard-system",
+						},
+						"spec": nil,
+					},
+				},
+				{
+					Object: map[string]interface{}{
+						"apiVersion": "v1",
+						"kind":       "PersistentVolumeClaim",
+						"metadata": map[string]interface{}{
+							"labels": map[string]interface{}{
+								"app.kubernetes.io/name": "vineyard-backup",
+							},
+							"name":      "vineyard-backup",
+							"namespace": "vineyard-system",
+						},
+						"spec": map[string]interface{}{
+							"resources": nil,
+							"selector": map[string]interface{}{
+								"matchLabels": map[string]interface{}{
+									"app.kubernetes.io/name": "vineyard-backup",
+								},
+							},
+						},
+					},
+				},
 				{
 					Object: map[string]interface{}{
 						"apiVersion": "batch/v1",
@@ -260,7 +293,7 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 										map[string]interface{}{
 											"name": "backup-path",
 											"persistentVolumeClaim": map[string]interface{}{
-												"claimName": "pvc-for-backup-and-recover-demo",
+												"claimName": "vineyard-backup",
 											},
 										},
 									},
@@ -341,27 +374,6 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 						},
 					},
 				},
-				{
-					Object: map[string]interface{}{
-						"apiVersion": "v1",
-						"kind":       "PersistentVolumeClaim",
-						"metadata": map[string]interface{}{
-							"labels": map[string]interface{}{
-								"app.kubernetes.io/name": "vineyard-backup",
-							},
-							"name":      "vineyard-backup",
-							"namespace": "vineyard-system",
-						},
-						"spec": map[string]interface{}{
-							"resources": nil,
-							"selector": map[string]interface{}{
-								"matchLabels": map[string]interface{}{
-									"app.kubernetes.io/name": "vineyard-backup",
-								},
-							},
-						},
-					},
-				},
 			},
 			wantErr: false,
 		},
@@ -376,7 +388,8 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 
 			for i := range got {
 				if !reflect.DeepEqual(*got[i], *(tt.want)[i]) {
-					fmt.Println(*got[i])
+					//fmt.Println(*got[i])
+					//fmt.Println(*(tt.want)[i])
 					t.Errorf("getBackupObjectsFromTemplate() = %+v, want %+v", got, tt.want)
 
 				}

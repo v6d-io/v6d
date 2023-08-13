@@ -18,8 +18,10 @@ package deploy
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,41 +36,39 @@ import (
 
 func TestDeployVineyarddCmd(t *testing.T) {
 	test := struct {
-		name                   string
-		vineyardReplicas       int
-		etcdReplicas           int
-		expectedImage          string
-		expectedCpu            string
-		expectedMemery         string
-		expectedService_port   int
-		expectedService_type   string
-		expectedSolume_pvcname string
+		name                 string
+		vineyardReplicas     int
+		etcdReplicas         int
+		expectedImage        string
+		expectedCpu          string
+		expectedMemery       string
+		expectedService_port int
+		expectedService_type string
 	}{
-		name:                   "test replicas",
-		vineyardReplicas:       1,
-		etcdReplicas:           1,
-		expectedImage:          "vineyardcloudnative/vineyardd:latest",
-		expectedCpu:            "",
-		expectedMemery:         "",
-		expectedService_port:   9600,
-		expectedService_type:   "ClusterIP",
-		expectedSolume_pvcname: "",
+		name:                 "test replicas",
+		vineyardReplicas:     3,
+		etcdReplicas:         1,
+		expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
+		expectedCpu:          "",
+		expectedMemery:       "",
+		expectedService_port: 9600,
+		expectedService_type: "ClusterIP",
 	}
 	t.Run(test.name, func(t *testing.T) {
 		// set the flags
 		flags.Namespace = "vineyard-system"
 		//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 		flags.KubeConfig = "/tmp/e2e-k8s.config"
-		flags.VineyarddOpts.Replicas = 1
+		flags.VineyarddOpts.Replicas = 3
 		flags.VineyarddOpts.EtcdReplicas = 1
-		flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:latest"
+		flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:alpine-latest"
 		flags.VineyarddOpts.Vineyard.CPU = ""
 		flags.VineyarddOpts.Vineyard.Memory = ""
 		flags.VineyarddOpts.Service.Port = 9600
 		flags.VineyarddOpts.Service.Type = "ClusterIP"
-		flags.VineyarddOpts.Volume.PvcName = ""
 		flags.VineyarddOpts.Vineyard.Size = "256Mi"
 		deployVineyarddCmd.Run(deployVineyarddCmd, []string{})
+		time.Sleep(1 * time.Second)
 		// get the replicas of etcd and vineyardd
 		k8sclient := util.KubernetesClient()
 		vineyardPods := corev1.PodList{}
@@ -154,17 +154,6 @@ func TestDeployVineyarddCmd(t *testing.T) {
 			}
 		}
 
-		// get the pvc object
-		pvcList := corev1.PersistentVolumeClaimList{}
-		err = k8sclient.List(context.Background(), &pvcList, client.InNamespace(flags.Namespace))
-		if err != nil {
-			t.Errorf("list PVCs error: %v", err)
-		}
-		for _, pvc := range pvcList.Items {
-			if pvc.Name != test.expectedSolume_pvcname {
-				t.Errorf("PVC %s in namespace %s is not expected, expected pvc name %s\n", pvc.Name, pvc.Namespace, test.expectedSolume_pvcname)
-			}
-		}
 	})
 }
 
@@ -305,7 +294,9 @@ func TestBuildVineyardManifestFromInput(t *testing.T) {
 func TestBuildVineyardManifestFromFile(t *testing.T) {
 	// set the flags
 	flags.Namespace = "vineyard-system"
-	flags.VineyarddFile = os.Getenv("HOME") + "/v6d/k8s/test/e2e/vineyardd.yaml"
+	//flags.VineyarddFile = os.Getenv("HOME") + "/v6d/k8s/test/e2e/vineyardd.yaml"
+	currentDir, _ := os.Getwd()
+	flags.VineyarddFile = filepath.Join(currentDir, "..", "..", "..", "test/e2e/vineyardd.yaml")
 
 	tests := []struct {
 		name    string

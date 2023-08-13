@@ -17,7 +17,6 @@ package util
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"testing"
 	"time"
@@ -197,7 +196,7 @@ func Test_ApplyManifests(t *testing.T) {
 								"containers": []interface{}{
 									map[string]interface{}{
 										"name":      "my-container",
-										"image":     "nginx",
+										"image":     "hello-world",
 										"resources": map[string]interface{}{},
 									},
 								},
@@ -259,7 +258,7 @@ func Test_DeleteManifests(t *testing.T) {
 								"containers": []interface{}{
 									map[string]interface{}{
 										"name":      "my-container",
-										"image":     "nginx",
+										"image":     "hello-world",
 										"resources": map[string]interface{}{},
 									},
 								},
@@ -289,8 +288,8 @@ func Test_DeleteManifests(t *testing.T) {
 }
 
 func Test_ApplyManifestsWithOwnerRef(t *testing.T) {
-	flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	//flags.KubeConfig = "/tmp/e2e-k8s.config"
+	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
+	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.Namespace = "vineyard-system"
 	c := KubernetesClient()
 

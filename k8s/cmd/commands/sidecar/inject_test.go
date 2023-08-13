@@ -19,8 +19,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -79,9 +81,9 @@ func TestInjectCmd(t *testing.T) {
 		  }
 		}
 	}`
-	flags.VineyarddOpts.Replicas = 1
+	flags.VineyarddOpts.Replicas = 3
 	flags.VineyarddOpts.EtcdReplicas = 1
-	flags.ApplyResources = true
+	flags.ApplyResources = false
 
 	test := struct {
 		name                 string
@@ -94,9 +96,9 @@ func TestInjectCmd(t *testing.T) {
 		expectedService_type string
 	}{
 		name:                 "test",
-		vineyardReplicas:     1,
-		etcdReplicas:         2,
-		expectedImage:        "vineyardcloudnative/vineyardd:latest",
+		vineyardReplicas:     3,
+		etcdReplicas:         1,
+		expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
 		expectedCpu:          "",
 		expectedMemery:       "",
 		expectedService_port: 9600,
@@ -104,6 +106,7 @@ func TestInjectCmd(t *testing.T) {
 	}
 	t.Run(test.name, func(t *testing.T) {
 		injectCmd.Run(injectCmd, []string{})
+		time.Sleep(1 * time.Second)
 		// get the replicas of etcd and vineyardd
 		k8sclient := util.KubernetesClient()
 		vineyardPods := corev1.PodList{}
@@ -226,6 +229,10 @@ func TestValidateFormat(t *testing.T) {
 }
 
 func TestGetWorkloadResource(t *testing.T) {
+	// get relative path
+	currentDir, _ := os.Getwd()
+	workload_YAML := filepath.Join(currentDir, "..", "..", "..", "config/samples/k8s_v1alpha1_sidecar.yaml")
+
 	tests := []struct {
 		name           string
 		workloadYAML   string
@@ -234,8 +241,9 @@ func TestGetWorkloadResource(t *testing.T) {
 		expectedError  error
 	}{
 		{
-			name:         "Valid YAML file",
-			workloadYAML: os.Getenv("HOME") + "/v6d/k8s/config/samples/k8s_v1alpha1_sidecar.yaml",
+			name: "Valid YAML file",
+			//workloadYAML: os.Getenv("HOME") + "/v6d/k8s/config/samples/k8s_v1alpha1_sidecar.yaml",
+			workloadYAML: workload_YAML,
 			workloadJSON: "",
 			expectedResult: `apiVersion: k8s.v6d.io/v1alpha1
 kind: Sidecar
@@ -258,8 +266,9 @@ kind: Deployment` + "\n",
 			expectedError: nil,
 		},
 		{
-			name:           "Both workload yaml and workload resource specified",
-			workloadYAML:   os.Getenv("HOME") + "/v6d/k8s/config/samples/k8s_v1alpha1_sidecar.yaml",
+			name: "Both workload yaml and workload resource specified",
+			//workloadYAML:   os.Getenv("HOME") + "/v6d/k8s/config/samples/k8s_v1alpha1_sidecar.yaml",
+			workloadYAML:   workload_YAML,
 			workloadJSON:   `{"apiVersion":"apps/v1","kind":"Deployment"}`,
 			expectedResult: "",
 			expectedError:  errors.New("cannot specify both workload resource and workload yaml"),

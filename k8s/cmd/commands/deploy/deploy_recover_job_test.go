@@ -17,6 +17,7 @@ package deploy
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -30,10 +31,25 @@ import (
 )
 
 func TestDeployRecoverJobCmd(t *testing.T) {
+	// deploy a vineyardd for later backup operation
 	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	flags.Namespace = "vineyard-system"
+	flags.VineyarddOpts.Replicas = 3
+	flags.VineyarddOpts.EtcdReplicas = 1
+	flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:alpine-latest"
+	flags.VineyarddOpts.Vineyard.CPU = ""
+	flags.VineyarddOpts.Vineyard.Memory = ""
+	flags.VineyarddOpts.Service.Port = 9600
+	flags.VineyarddOpts.Service.Type = "ClusterIP"
+	flags.VineyarddOpts.Volume.PvcName = ""
+	flags.VineyarddOpts.Vineyard.Size = "256Mi"
+	deployVineyardDeploymentCmd := NewDeployVineyardDeploymentCmd()
+	deployVineyardDeploymentCmd.Run(deployVineyardDeploymentCmd, []string{})
+
+	// recover operation
 	flags.RecoverPath = "/var/vineyard/dump"
-	flags.PVCName = "pvc-for-backup-and-recover-demo"
+	flags.PVCName = "vineyard-backup"
 	flags.Namespace = "vineyard-system"
 	flags.VineyardDeploymentName = "vineyardd-sample"
 	flags.VineyardDeploymentNamespace = "vineyard-system"
@@ -70,6 +86,8 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 	flags.VineyardDeploymentName = "vineyardd-sample"
 	flags.VineyardDeploymentNamespace = "vineyard-system"
 	flags.Namespace = "vineyard-system"
+	flags.PVCName = "vineyard-backup"
+	flags.RecoverPath = "/var/vineyard/dump"
 	c := util.KubernetesClient()
 
 	type args struct {
@@ -148,7 +166,7 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 											"env": []interface{}{
 												map[string]interface{}{
 													"name":  "RECOVER_PATH",
-													"value": nil,
+													"value": "/var/vineyard/dump",
 												},
 												map[string]interface{}{
 													"name":  "ENDPOINT",
@@ -188,7 +206,7 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 													"name":      "vineyard-sock",
 												},
 												map[string]interface{}{
-													"mountPath": nil,
+													"mountPath": "/var/vineyard/dump",
 													"name":      "recover-path",
 												},
 											},
@@ -299,8 +317,8 @@ func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 			}
 			for i := range got {
 				if !reflect.DeepEqual(*got[i], *(tt.want)[i]) {
+					fmt.Println(*got[i])
 					t.Errorf("getRecoverObjectsFromTemplate() = %+v, want %+v", got, tt.want)
-
 				}
 			}
 		})
