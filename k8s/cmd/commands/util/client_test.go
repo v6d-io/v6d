@@ -169,7 +169,7 @@ func Test_Create(t *testing.T) {
 		{
 			name: "Test case 1",
 			args: args{
-				c: fake.NewFakeClient(),
+				c: fake.NewClientBuilder().Build(),
 				v: &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-configmap",
@@ -225,7 +225,7 @@ func Test_CreateIfNotExists(t *testing.T) {
 		{
 			name: "Test case 1",
 			args: args{
-				c: fake.NewFakeClient(),
+				c: fake.NewClientBuilder().Build(),
 				v: &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "my-configmap",
@@ -283,7 +283,7 @@ func Test_CreateWithContext(t *testing.T) {
 		{
 			name: "Test case 1",
 			args: args{
-				c:   fake.NewFakeClient(),
+				c:   fake.NewClientBuilder().Build(),
 				ctx: context.TODO(),
 				v: &corev1.ConfigMap{
 					ObjectMeta: metav1.ObjectMeta{
@@ -342,7 +342,7 @@ func Test_Delete(t *testing.T) {
 		{
 			name: "Test case 1",
 			args: args{
-				c: fake.NewFakeClient(),
+				c: fake.NewClientBuilder().Build(),
 				key: types.NamespacedName{
 					Name:      "my-configmap",
 					Namespace: "default",
@@ -404,7 +404,7 @@ func Test_DeleteWithContext(t *testing.T) {
 		{
 			name: "Test case 1",
 			args: args{
-				c:   fake.NewFakeClient(),
+				c:   fake.NewClientBuilder().Build(),
 				ctx: context.TODO(),
 				key: types.NamespacedName{
 					Name:      "my-configmap",
@@ -501,7 +501,7 @@ func Test_CreateNamespaceIfNotExist(t *testing.T) {
 		{
 			name: "Test case 1",
 			args: args{
-				c: fake.NewFakeClientWithScheme(scheme),
+				c: fake.NewClientBuilder().Build(),
 			},
 			expectedNsName: "expected-namespace",
 		},

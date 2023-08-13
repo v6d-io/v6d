@@ -16,19 +16,18 @@ limitations under the License.
 package util
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 )
 
 func Test_ReadFromFile(t *testing.T) {
 	tempFileContent := ""
-	tempFile, err := ioutil.TempFile("", "testfile")
+	tempFile, err := os.CreateTemp("", "testfile")
 	if err != nil {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer tempFile.Close()
-	defer ioutil.WriteFile(tempFile.Name(), []byte(tempFileContent), 0644)
+	defer os.WriteFile(tempFile.Name(), []byte(tempFileContent), 0644)
 	type args struct {
 		path string
 	}

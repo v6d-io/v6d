@@ -396,6 +396,49 @@ e2e-tests-airflow-integration: prepare-e2e-test build-local-cluster load-vineyar
 	@make delete-local-cluster
 .PHONY: e2e-tests-airflow-integration
 
+############# unit testing ################################################
+
+unittest: prepare-e2e-test build-local-cluster load-vineyardd-image
+	@echo "Running vineyardctl unit test..."
+# delete test
+	@cd ${CMD_DIR}/commands/delete && go test -run TestDeleteVineyardDeploymentCmd 
+# create test
+	@cd ${CMD_DIR}/commands/create && go test -run TestBuildBackup & go test -run Test_buildOperation & go test -run TestBuildV1alphaRecoverCR
+# deploy and delete test
+	@cd ${CMD_DIR}/commands/deploy && go test -run Test_getBackupObjectsFromTemplate & go test -run Test_getRecoverObjectsFromTemplate & \
+		go test -run TestGetVineyardDeploymentObjectsFromTemplate & go test -run TestBuildVineyard & \
+		go test -run TestBuildVineyardManifestFromInput & go test -run TestBuildVineyardManifestFromFile & 
+	@go test -run TestDeployVineyardDeploymentCmd && go test -run TestDeployBackupJobCmd && \
+		cd ${CMD_DIR}/commands/delete && go test -run TestDeleteVineyardDeploymentCmd && cd ${CMD_DIR}/commands/deploy
+	@go test -run Test_applyVineyarddFromTemplate && cd ${CMD_DIR}/commands/delete && go test -run TestDeleteVineyardDeploymentCmd && cd ${CMD_DIR}/commands/deploy
+	@go test -run TestDeployVineyarddCmd
+# schedule test
+	@cd ${CMD_DIR}/commands/schedule && go test -run TestScheduleWorkloadCmd && go test -run  TestSchedulingWorkload && \
+		go test -run Test_getWorkload & go test -run TestValidateWorkloadKind & 
+# sidecar test 
+	@cd ${CMD_DIR}/commands/delete && go test -run TestDeleteVineyardDeploymentCmd && \
+		cd ${CMD_DIR}/commands/sidecar && go test -run TestInjectCmd && go test -run Test_deployDuringInjection && go test -run TestValidateFormat & \
+		go test -run TestGetWorkloadResource & go test -run TestGetWorkloadObj & \
+		go test -run TestGetManifestFromTemplate & go test -run Test_outputInjectedResult & \
+		go test -run Test_buildSidecar & go test -run TestInjectSidecarConfig &
+# util test
+	@cd ${CMD_DIR}/commands/util && go test -run TestAssertNoArgs & go test -run TestAssertNoArgsOrInput & \
+		go test -run Test_getCertManagerManifestsFromLocal & go test -run TestGetCertManager & go test -run Test_Scheme && \
+		go test -run Test_Deserializer & go test -run Test_GetKubernetesConfig & go test -run Test_KubernetesClient && \
+		go test -run Test_KubernetesClientset & go test -run Test_Create & go test -run Test_CreateIfNotExists && \
+		go test -run Test_CreateWithContext & go test -run Test_Delete & go test -run Test_DeleteWithContext && \
+		go test -run Test_Wait & go test -run Test_CreateNamespaceIfNotExist & go test -run Test_ReadFromFile && \
+		go test -run Test_ReadFromStdin & go test -run Test_ReadJsonFromStdin & go test -run Test_ParseManifestToObject & \
+		go test -run Test_ParseManifestsToObjects & go test -run Test_ApplyManifests && go test -run Test_DeleteManifests && \
+		go test -runTest_ApplyManifestsWithOwnerRef && go test -run TestGetKustomizeDir & go test -run TestBuildKustomizeInDir && \
+		go test -run TestConvertToJson & go test -run TestConvertToYaml & go test -run TestParseEnvs && \
+		go test -run TestParsePVSpec & go test -run TestParsePVCSpec & go test -run TestParsePVandPVCSpec && \
+		go test -run TestGetPVAndPVC & go test -run TestParseOwnerRef & go test -run Test_RenderManifestAsObj && \
+		go test -run TestBuildObjsFromEtcdManifests & go test -run TestBuildObjsFromVineyarddManifests & go test -run TestBuildObjsFromManifests & 
+	@echo "vineyardctl unit test passed."
+	@make delete-local-cluster
+.PHONY: unittest
+
 # publish all images to ghcr registry
 ALL-IMAGES ?= \
 publish-local-assembly-images \

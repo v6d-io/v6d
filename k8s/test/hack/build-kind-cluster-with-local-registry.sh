@@ -2,7 +2,7 @@
 set -o errexit
 
 kind_name=kind
-kubeconfig_path=/tmp/e2e-k8s.config
+kubeconfig_path="/tmp/e2e-k8s.config"
 
 if [ ! -z "$1" ] ; then
     kind_name=$1
