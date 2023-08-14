@@ -49,7 +49,7 @@ func TestDeleteVineyardDeploymentCmd(t *testing.T) {
 
 	objects, _ := deploy.GetVineyardDeploymentObjectsFromTemplate()
 
-	// test if the vineyardd has been deleted sucessfully
+	// test if the vineyardd has been deleted
 	for _, obj := range objects {
 		if err := c.Get(context.TODO(), client.ObjectKeyFromObject(obj), obj); err == nil {
 			log.Error(err, "failed to deleted object")

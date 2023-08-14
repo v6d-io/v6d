@@ -93,16 +93,19 @@ func TestDeployVineyardDeploymentCmd(t *testing.T) {
 		for _, pod := range vineyardPods.Items {
 			for _, container := range pod.Spec.Containers {
 				if container.Image != test.expectedImage {
-					t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n", pod.Name, pod.Namespace, container.Image, test.expectedImage)
+					t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
+						pod.Name, pod.Namespace, container.Image, test.expectedImage)
 				}
 				if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
 					if cpuRequest.String() != test.expectedCpu {
-						t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n", pod.Name, pod.Namespace, cpuRequest.String(), test.expectedCpu)
+						t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
+							pod.Name, pod.Namespace, cpuRequest.String(), test.expectedCpu)
 					}
 				}
 				if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
 					if memoryRequest.String() != test.expectedMemery {
-						t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n", pod.Name, pod.Namespace, memoryRequest.String(), test.expectedMemery)
+						t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
+							pod.Name, pod.Namespace, memoryRequest.String(), test.expectedMemery)
 					}
 				}
 			}
@@ -114,16 +117,19 @@ func TestDeployVineyardDeploymentCmd(t *testing.T) {
 		for _, pod := range etcdPod.Items {
 			for _, container := range pod.Spec.Containers {
 				if container.Image != test.expectedImage {
-					t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n", pod.Name, pod.Namespace, container.Image, test.expectedImage)
+					t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
+						pod.Name, pod.Namespace, container.Image, test.expectedImage)
 				}
 				if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
 					if cpuRequest.String() != test.expectedCpu {
-						t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n", pod.Name, pod.Namespace, cpuRequest.String(), test.expectedCpu)
+						t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
+							pod.Name, pod.Namespace, cpuRequest.String(), test.expectedCpu)
 					}
 				}
 				if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
 					if memoryRequest.String() != test.expectedMemery {
-						t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n", pod.Name, pod.Namespace, memoryRequest.String(), test.expectedMemery)
+						t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
+							pod.Name, pod.Namespace, memoryRequest.String(), test.expectedMemery)
 					}
 				}
 			}
@@ -140,10 +146,12 @@ func TestDeployVineyardDeploymentCmd(t *testing.T) {
 		}
 		for _, svc := range svcList.Items {
 			if svc.Spec.Ports[0].Port != int32(test.expectedService_port) {
-				t.Errorf("Service %s in namespace %s uses the port %d, expected port %d\n", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port, test.expectedService_port)
+				t.Errorf("Service %s in namespace %s uses the port %d, expected port %d\n",
+					svc.Name, svc.Namespace, svc.Spec.Ports[0].Port, test.expectedService_port)
 			}
 			if string(svc.Spec.Type) != test.expectedService_type {
-				t.Errorf("Service %s in namespace %s uses the type %s, expected type %s\n", svc.Name, svc.Namespace, string(svc.Spec.Type), test.expectedService_type)
+				t.Errorf("Service %s in namespace %s uses the type %s, expected type %s\n",
+					svc.Name, svc.Namespace, string(svc.Spec.Type), test.expectedService_type)
 			}
 		}
 
@@ -396,7 +404,10 @@ func TestGetVineyardDeploymentObjectsFromTemplate(t *testing.T) {
 											"command": []interface{}{
 												"/bin/bash",
 												"-c",
-												"/usr/bin/wait-for-it.sh -t 60 test-vineyardd-sample-etcd-service.test-vineyard-system.svc.cluster.local:2379; sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket /var/run/vineyard.sock --size  --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard --etcd_endpoint http://test-vineyardd-sample-etcd-service:2379\n",
+												"/usr/bin/wait-for-it.sh -t 60 test-vineyardd-sample-etcd-service.test-vineyard-system." +
+													"svc.cluster.local:2379; sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket " +
+													"/var/run/vineyard.sock --size  --stream_threshold 80 --etcd_cmd etcd --etcd_prefix " +
+													"/vineyard --etcd_endpoint http://test-vineyardd-sample-etcd-service:2379\n",
 											},
 											"image":           "vineyardcloudnative/vineyardd:latest",
 											"imagePullPolicy": "IfNotPresent",
@@ -608,16 +619,19 @@ func Test_applyVineyarddFromTemplate(t *testing.T) {
 			for _, pod := range vineyardPods.Items {
 				for _, container := range pod.Spec.Containers {
 					if container.Image != tt.expectedImage {
-						t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n", pod.Name, pod.Namespace, container.Image, tt.expectedImage)
+						t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
+							pod.Name, pod.Namespace, container.Image, tt.expectedImage)
 					}
 					if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
 						if cpuRequest.String() != tt.expectedCpu {
-							t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n", pod.Name, pod.Namespace, cpuRequest.String(), tt.expectedCpu)
+							t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
+								pod.Name, pod.Namespace, cpuRequest.String(), tt.expectedCpu)
 						}
 					}
 					if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
 						if memoryRequest.String() != tt.expectedMemery {
-							t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n", pod.Name, pod.Namespace, memoryRequest.String(), tt.expectedMemery)
+							t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
+								pod.Name, pod.Namespace, memoryRequest.String(), tt.expectedMemery)
 						}
 					}
 				}
@@ -629,16 +643,19 @@ func Test_applyVineyarddFromTemplate(t *testing.T) {
 			for _, pod := range etcdPod.Items {
 				for _, container := range pod.Spec.Containers {
 					if container.Image != tt.expectedImage {
-						t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n", pod.Name, pod.Namespace, container.Image, tt.expectedImage)
+						t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
+							pod.Name, pod.Namespace, container.Image, tt.expectedImage)
 					}
 					if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
 						if cpuRequest.String() != tt.expectedCpu {
-							t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n", pod.Name, pod.Namespace, cpuRequest.String(), tt.expectedCpu)
+							t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
+								pod.Name, pod.Namespace, cpuRequest.String(), tt.expectedCpu)
 						}
 					}
 					if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
 						if memoryRequest.String() != tt.expectedMemery {
-							t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n", pod.Name, pod.Namespace, memoryRequest.String(), tt.expectedMemery)
+							t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
+								pod.Name, pod.Namespace, memoryRequest.String(), tt.expectedMemery)
 						}
 					}
 				}
@@ -655,10 +672,12 @@ func Test_applyVineyarddFromTemplate(t *testing.T) {
 			}
 			for _, svc := range svcList.Items {
 				if svc.Spec.Ports[0].Port != int32(tt.expectedService_port) {
-					t.Errorf("Service %s in namespace %s uses the port %d, expected port %d\n", svc.Name, svc.Namespace, svc.Spec.Ports[0].Port, tt.expectedService_port)
+					t.Errorf("Service %s in namespace %s uses the port %d, expected port %d\n",
+						svc.Name, svc.Namespace, svc.Spec.Ports[0].Port, tt.expectedService_port)
 				}
 				if string(svc.Spec.Type) != tt.expectedService_type {
-					t.Errorf("Service %s in namespace %s uses the type %s, expected type %s\n", svc.Name, svc.Namespace, string(svc.Spec.Type), tt.expectedService_type)
+					t.Errorf("Service %s in namespace %s uses the type %s, expected type %s\n",
+						svc.Name, svc.Namespace, string(svc.Spec.Type), tt.expectedService_type)
 				}
 			}
 		})

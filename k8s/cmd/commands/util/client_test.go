@@ -68,10 +68,6 @@ func Test_Deserializer(t *testing.T) {
 				if decoder == nil {
 					t.Error("Decoder should not be nil")
 				}
-				_, ok := decoder.(runtime.Decoder)
-				if !ok {
-					t.Error("Decoder should be of type runtime.Decoder")
-				}
 				return decoder
 			}(),
 		},
