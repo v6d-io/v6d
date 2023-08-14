@@ -64,19 +64,6 @@ func TestDeployVineyardDeploymentCmd(t *testing.T) {
 		deployVineyardDeploymentCmd.Run(deployVineyardDeploymentCmd, []string{})
 		// get the replicas of etcd and vineyardd
 		k8sclient := util.KubernetesClient()
-		vineyardPods := corev1.PodList{}
-		vineyarddOpts := []client.ListOption{
-			client.InNamespace(flags.Namespace),
-			client.MatchingLabels{
-				"app.vineyard.io/name": flags.VineyarddName,
-				"app.vineyard.io/role": "vineyardd",
-			},
-		}
-		err := k8sclient.List(context.Background(), &vineyardPods, vineyarddOpts...)
-		if err != nil {
-			t.Errorf("list vineyardd pods error: %v", err)
-		}
-
 		etcdPod := corev1.PodList{}
 		etcdOpts := []client.ListOption{
 			client.InNamespace(flags.Namespace),
@@ -85,9 +72,22 @@ func TestDeployVineyardDeploymentCmd(t *testing.T) {
 				"app.vineyard.io/role": "etcd",
 			},
 		}
-		err = k8sclient.List(context.Background(), &etcdPod, etcdOpts...)
+		err := k8sclient.List(context.Background(), &etcdPod, etcdOpts...)
 		if err != nil {
 			t.Errorf("list etcd pods error: %v", err)
+		}
+
+		vineyardPods := corev1.PodList{}
+		vineyarddOpts := []client.ListOption{
+			client.InNamespace(flags.Namespace),
+			client.MatchingLabels{
+				"app.vineyard.io/name": flags.VineyarddName,
+				"app.vineyard.io/role": "vineyardd",
+			},
+		}
+		err = k8sclient.List(context.Background(), &vineyardPods, vineyarddOpts...)
+		if err != nil {
+			t.Errorf("list vineyardd pods error: %v", err)
 		}
 
 		for _, pod := range vineyardPods.Items {

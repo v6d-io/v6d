@@ -97,30 +97,6 @@ func TestDeployVineyarddCmd(t *testing.T) {
 			t.Errorf("list etcd pods error: %v", err)
 		}
 
-		for _, pod := range vineyardPods.Items {
-			for _, container := range pod.Spec.Containers {
-				if container.Image != test.expectedImage {
-					t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
-						pod.Name, pod.Namespace, container.Image, test.expectedImage)
-				}
-				if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
-					if cpuRequest.String() != test.expectedCpu {
-						t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
-							pod.Name, pod.Namespace, cpuRequest.String(), test.expectedCpu)
-					}
-				}
-				if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
-					if memoryRequest.String() != test.expectedMemery {
-						t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
-							pod.Name, pod.Namespace, memoryRequest.String(), test.expectedMemery)
-					}
-				}
-			}
-		}
-		if len(vineyardPods.Items) != test.vineyardReplicas {
-			t.Errorf("vineyardd replicas want: %d, got: %d", test.vineyardReplicas, len(vineyardPods.Items))
-		}
-
 		for _, pod := range etcdPod.Items {
 			for _, container := range pod.Spec.Containers {
 				if container.Image != test.expectedImage {
@@ -143,6 +119,30 @@ func TestDeployVineyarddCmd(t *testing.T) {
 		}
 		if len(etcdPod.Items) != test.etcdReplicas {
 			t.Errorf("etcd replicas want: %d, got: %d", test.etcdReplicas, len(etcdPod.Items))
+		}
+
+		for _, pod := range vineyardPods.Items {
+			for _, container := range pod.Spec.Containers {
+				if container.Image != test.expectedImage {
+					t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
+						pod.Name, pod.Namespace, container.Image, test.expectedImage)
+				}
+				if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
+					if cpuRequest.String() != test.expectedCpu {
+						t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
+							pod.Name, pod.Namespace, cpuRequest.String(), test.expectedCpu)
+					}
+				}
+				if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
+					if memoryRequest.String() != test.expectedMemery {
+						t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
+							pod.Name, pod.Namespace, memoryRequest.String(), test.expectedMemery)
+					}
+				}
+			}
+		}
+		if len(vineyardPods.Items) != test.vineyardReplicas {
+			t.Errorf("vineyardd replicas want: %d, got: %d", test.vineyardReplicas, len(vineyardPods.Items))
 		}
 
 		// get the service object

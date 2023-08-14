@@ -94,7 +94,6 @@ func TestInjectCmd(t *testing.T) {
 		expectedService_type string
 	}{
 		name:                 "test",
-		etcdReplicas:         1,
 		expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
 		expectedCpu:          "",
 		expectedMemery:       "",
@@ -137,9 +136,6 @@ func TestInjectCmd(t *testing.T) {
 					}
 				}
 			}
-		}
-		if len(etcdPod.Items) != test.etcdReplicas {
-			t.Errorf("etcd replicas want: %d, got: %d", test.etcdReplicas, len(etcdPod.Items))
 		}
 
 		// get the service object

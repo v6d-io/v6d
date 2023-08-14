@@ -403,44 +403,80 @@ unittest: prepare-e2e-test build-local-cluster load-vineyardd-image
 	@make -C ${E2E_DIR} install-vineyard-operator
 	@echo "Running vineyardctl unit test..." 
 # create test
-	@cd ${CMD_DIR}/commands/create && go test -run TestBuildBackup & go test -run Test_buildOperation & go test -run TestBuildV1alphaRecoverCR
+	@cd ${CMD_DIR}/commands/create && go test -run TestBuildBackup & \
+		cd ${CMD_DIR}/commands/create && go test -run Test_buildOperation & \
+		cd ${CMD_DIR}/commands/create && go test -run TestBuildV1alphaRecoverCR
 # deploy_deployment
-	@cd ${CMD_DIR}/commands/deploy && go test -run TestDeployVineyardDeploymentCmd && go test -run Test_applyVineyarddFromTemplate
-	@go test -run TestGetVineyardDeploymentObjectsFromTemplate
+	@cd ${CMD_DIR}/commands/deploy && go test -run TestDeployVineyardDeploymentCmd \
+		&& go test -run Test_applyVineyarddFromTemplate
+	@cd ${CMD_DIR}/commands/deploy && go test -run TestGetVineyardDeploymentObjectsFromTemplate
 # deploy_backup_and_recover
-	@go test -run Test_getBackupObjectsFromTemplate & go test -run TestDeployBackupJobCmd
-	@go test -run Test_getRecoverObjectsFromTemplate & go test -run TestDeployRecoverJobCmd
+	@cd ${CMD_DIR}/commands/deploy && go test -run Test_getBackupObjectsFromTemplate & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestDeployBackupJobCmd
+	@cd ${CMD_DIR}/commands/deploy && go test -run Test_getRecoverObjectsFromTemplate & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestDeployRecoverJobCmd
 # delete and deploy_vineyardd
-	@cd ${CMD_DIR}/commands/delete && go test -run TestDeleteVineyardDeploymentCmd && cd ${CMD_DIR}/commands/deploy
-	@go test -run TestDeployVineyarddCmd & go test -run TestBuildVineyard & go test -run TestBuildVineyardManifestFromInput 
-	@go test -run TestBuildVineyardManifestFromFile 
+	@cd ${CMD_DIR}/commands/delete && go test -run TestDeleteVineyardDeploymentCmd 
+	@cd ${CMD_DIR}/commands/deploy && go test -run TestDeployVineyarddCmd & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestBuildVineyard & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestBuildVineyardManifestFromInput 
+	@cd ${CMD_DIR}/commands/deploy && go test -run TestBuildVineyardManifestFromFile 
 # schedule test
-	@cd ${CMD_DIR}/commands/schedule && go test -run TestScheduleWorkloadCmd & go test -run TestSchedulingWorkload 
-	@go test -run Test_getWorkload & go test -run TestValidateWorkloadKind 
+	@cd ${CMD_DIR}/commands/schedule && go test -run TestScheduleWorkloadCmd & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestSchedulingWorkload 
+	@cd ${CMD_DIR}/commands/schedule && go test -run Test_getWorkload & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestValidateWorkloadKind 
 # sidecar test 
-	@cd ${CMD_DIR}/commands/sidecar && go test -run TestInjectCmd && go test -run Test_deployDuringInjection & go test -run TestValidateFormat  
-	@go test -run TestGetWorkloadResource & go test -run TestGetWorkloadObj & go test -run TestGetManifestFromTemplate
-	@go test -run Test_outputInjectedResult & go test -run Test_buildSidecar & go test -run TestInjectSidecarConfig 
+	@cd ${CMD_DIR}/commands/sidecar && go test -run TestInjectCmd && go test -run Test_deployDuringInjection & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestValidateFormat  
+	@cd ${CMD_DIR}/commands/sidecar && go test -run TestGetWorkloadResource & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestGetWorkloadObj & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestGetManifestFromTemplate
+	@cd ${CMD_DIR}/commands/sidecar && go test -run Test_outputInjectedResult & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_buildSidecar & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestInjectSidecarConfig 
 # util_arg
-	@cd ${CMD_DIR}/commands/util && go test -run TestAssertNoArgs & go test -run TestAssertNoArgsOrInput 
+	@cd ${CMD_DIR}/commands/util && go test -run TestAssertNoArgs & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestAssertNoArgsOrInput 
 # util_certmanager
-	@go test -run Test_getCertManagerManifestsFromLocal & go test -run TestGetCertManager 
+	@cd ${CMD_DIR}/commands/util && go test -run Test_getCertManagerManifestsFromLocal & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestGetCertManager 
 # util_client
-	@go test -run Test_Scheme & go test -run Test_Deserializer & go test -run Test_GetKubernetesConfig & go test -run Test_KubernetesClient 
-	@go test -run Test_KubernetesClientset & go test -run Test_Create & go test -run Test_CreateIfNotExists 
-	@go test -run Test_CreateWithContext & go test -run Test_Delete & go test -run Test_DeleteWithContext 
-	@go test -run Test_Wait & go test -run Test_CreateNamespaceIfNotExist 
+	@cd ${CMD_DIR}/commands/util && go test -run Test_Scheme & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_Deserializer & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_GetKubernetesConfig & \
+			cd ${CMD_DIR}/commands/deploy && go test -run Test_KubernetesClient 
+	@cd ${CMD_DIR}/commands/util && go test -run Test_KubernetesClientset & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_Create & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_CreateIfNotExists 
+	@cd ${CMD_DIR}/commands/util && go test -run Test_CreateWithContext & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_Delete & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_DeleteWithContext 
+	@cd ${CMD_DIR}/commands/util && go test -run Test_Wait & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_CreateNamespaceIfNotExist 
 # util_io
-	@go test -run Test_ReadFromFile & go test -run Test_ReadFromStdin & go test -run Test_ReadJsonFromStdin 
+	@cd ${CMD_DIR}/commands/util && go test -run Test_ReadFromFile & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_ReadFromStdin & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_ReadJsonFromStdin 
 # util_parse
-	@go test -run TestConvertToJson & go test -run TestConvertToYaml & go test -run TestParseEnvs  
-	@go test -run TestParsePVSpec & go test -run TestParsePVCSpec & go test -run TestParsePVandPVCSpec 
-	@go test -run TestGetPVAndPVC & go test -run TestParseOwnerRef 
+	@cd ${CMD_DIR}/commands/util && go test -run TestConvertToJson & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestConvertToYaml & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestParseEnvs  
+	@cd ${CMD_DIR}/commands/util && go test -run TestParsePVSpec & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestParsePVCSpec & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestParsePVandPVCSpec 
+	@cd ${CMD_DIR}/commands/util && go test -run TestGetPVAndPVC & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestParseOwnerRef 
 # util_template
-	@go test -run Test_RenderManifestAsObj & go test -run TestBuildObjsFromEtcdManifests & go test -run TestBuildObjsFromVineyarddManifests & go test -run TestBuildObjsFromManifests 
+	@cd ${CMD_DIR}/commands/util && go test -run Test_RenderManifestAsObj & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestBuildObjsFromEtcdManifests & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestBuildObjsFromVineyarddManifests & \
+		cd ${CMD_DIR}/commands/deploy && go test -run TestBuildObjsFromManifests 
 # util_manifests
-	@go test -run Test_ParseManifestToObject & go test -run Test_ParseManifestsToObjects 
-	@go test -run Test_ApplyManifests && go test -run Test_DeleteManifests && go test -run Test_ApplyManifestsWithOwnerRef
+	@cd ${CMD_DIR}/commands/util && go test -run Test_ParseManifestToObject & \
+		cd ${CMD_DIR}/commands/deploy && go test -run Test_ParseManifestsToObjects 
+	@cd ${CMD_DIR}/commands/util && go test -run Test_ApplyManifests && go test -run Test_DeleteManifests && \
+		go test -run Test_ApplyManifestsWithOwnerRef
 	@echo "vineyardctl unit test passed."
 	@make delete-local-cluster
 .PHONY: unittest
