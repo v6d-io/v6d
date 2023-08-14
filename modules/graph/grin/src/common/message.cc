@@ -9,259 +9,173 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include <google/protobuf/util/json_util.h>
 
 #include "graph/grin/src/predefine.h"
 #include "common/message.h"
+#include "partition/partition.h"
+#include "property/type.h"
+#include "property/propertylist.h"
+#include "property/property.h"
+#include "property/primarykey.h"
 #include "graph.pb.h"
 
-const char* grin_get_static_storage_feature_msg() {
-  grin::Graph g;
-  g.set_uri("v6d://<object_id>");
-  g.set_grin_version("0.1.0");
-
-{
-  auto storage_feature = g.add_features();
-  // topology
-  auto feature = storage_feature->mutable_topology_feature();
-
-#ifdef GRIN_ASSUME_HAS_DIRECTED_GRAPH
-  feature->set_grin_assume_has_directed_graph(true);
-#endif
-
-#ifdef GRIN_ASSUME_HAS_UNDIRECTED_GRAPH
-  feature->set_grin_assume_has_undirected_graph(true);
-#endif
-
-#ifdef GRIN_ASSUME_HAS_MULTI_EDGE_GRAPH
-  feature->set_grin_assume_has_multi_edge_graph(true);
-#endif
-
-#ifdef GRIN_WITH_VERTEX_DATA
-  feature->set_grin_with_vertex_data(true);
-#endif
-
-#ifdef GRIN_WITH_EDGE_DATA
-  feature->set_grin_with_edge_data(true);
-#endif
-
-#ifdef GRIN_ENABLE_VERTEX_LIST_ARRAY
-  #ifndef GRIN_ENABLE_VERTEX_LIST
-  LOG(ERROR) << "GRIN_ENABLE_VERTEX_LIST_ARRAY requires GRIN_ENABLE_VERTEX_LIST"
-  #endif
-  feature->add_vertex_list_retrievals(grin::ListRetrieval::LR_ARRAY_LIKE);
-#endif
-
-#ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
-  #ifndef GRIN_ENABLE_VERTEX_LIST
-  LOG(ERROR) << "GRIN_ENABLE_VERTEX_LIST_ITERATOR requires GRIN_ENABLE_VERTEX_LIST"
-  #endif
-  feature->add_vertex_list_retrievals(grin::ListRetrieval::LR_ITERATOR);
-#endif
-
-#ifdef GRIN_ENABLE_EDGE_LIST_ARRAY
-  #ifndef GRIN_ENABLE_EDGE_LIST
-  LOG(ERROR) << "GRIN_ENABLE_EDGE_LIST_ARRAY requires GRIN_ENABLE_EDGE_LIST"
-  #endif
-  feature->add_edge_list_retrievals(grin::ListRetrieval::LR_ARRAY_LIKE);
-#endif
-
-#ifdef GRIN_ENABLE_EDGE_LIST_ITERATOR
-  #ifndef GRIN_ENABLE_EDGE_LIST
-  LOG(ERROR) << "GRIN_ENABLE_EDGE_LIST_ITERATOR requires GRIN_ENABLE_EDGE_LIST"
-  #endif
-  feature->add_edge_list_retrievals(grin::ListRetrieval::LR_ITERATOR);
-#endif
-
-#ifdef GRIN_ENABLE_ADJACENT_LIST_ARRAY
-  #ifndef GRIN_ENABLE_ADJACENT_LIST
-  LOG(ERROR) << "GRIN_ENABLE_ADJACENT_LIST_ARRAY requires GRIN_ENABLE_ADJACENT_LIST"
-  #endif
-  feature->add_adjacent_list_retrievals(grin::ListRetrieval::LR_ARRAY_LIKE);
-#endif
-
-#ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
-  #ifndef GRIN_ENABLE_ADJACENT_LIST
-  LOG(ERROR) << "GRIN_ENABLE_ADJACENT_LIST_ITERATOR requires GRIN_ENABLE_ADJACENT_LIST"
-  #endif
-  feature->add_adjacent_list_retrievals(grin::ListRetrieval::LR_ITERATOR);
-#endif
+void grin_destroy_msg(char* s) {
+  delete[] s;
 }
 
-{
-  auto storage_feature = g.add_features();
-  auto feature = storage_feature->mutable_partition_feature();
-
-#ifdef GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
-  feature->set_grin_trait_natural_id_for_partition(true);
-#endif
-
-#ifdef GRIN_ENABLE_VERTEX_REF
-  feature->set_grin_enable_vertex_ref(true);
-#endif
-
-#ifdef GRIN_TRAIT_FAST_VERTEX_REF
-  feature->set_grin_trait_fast_vertex_ref(true);
-#endif
-
-#ifdef GRIN_ENABLE_EDGE_REF
-  feature->set_grin_enable_edge_ref(true);
-#endif
-
-  auto mpl_feature = feature->mutable_mirror_partition_list_feature();
-#ifdef GRIN_TRAIT_MASTER_VERTEX_MIRROR_PARTITION_LIST
-  mpl_feature->set_grin_trait_master_vertex_mirror_partition_list(true);
-#endif
-
-#ifdef GRIN_TRAIT_MIRROR_VERTEX_MIRROR_PARTITION_LIST
-  mpl_feature->set_grin_trait_mirror_vertex_mirror_partition_list(true);
-#endif
-
-#ifdef GRIN_TRAIT_MASTER_EDGE_MIRROR_PARTITION_LIST
-  mpl_feature->set_grin_trait_master_edge_mirror_partition_list(true);
-#endif
-
-#ifdef GRIN_TRAIT_MIRROR_EDGE_MIRROR_PARTITION_LIST
-  mpl_feature->set_grin_trait_mirror_edge_mirror_partition_list(true);
-#endif
-
-#ifdef GRIN_TRAIT_SELECT_MASTER_FOR_VERTEX_LIST
-  feature->set_grin_trait_select_master_for_vertex_list(true);
-#endif
-
-#ifdef GRIN_TRAIT_SELECT_PARTITION_FOR_VERTEX_LIST
-  feature->set_grin_trait_select_partition_for_vertex_list(true);
-#endif
-
-#ifdef GRIN_TRAIT_SELECT_MASTER_FOR_EDGE_LIST
-  feature->set_grin_trait_select_master_for_edge_list(true);
-#endif
-
-#ifdef GRIN_TRAIT_SELECT_PARTITION_FOR_EDGE_LIST
-  feature->set_grin_trait_select_partition_for_edge_list(true);
-#endif
-
-#ifdef GRIN_TRAIT_SELECT_MASTER_NEIGHBOR_FOR_ADJACENT_LIST
-  feature->set_grin_trait_select_master_neighbor_for_adjacent_list(true);
-#endif
-
-#ifdef GRIN_TRAIT_SELECT_NEIGHBOR_PARTITION_FOR_ADJACENT_LIST
-  feature->set_grin_trait_select_partition_neighbor_for_adjacent_list(true);
-#endif
+void _set_storage_data_type(grin::StorageDataType* sdt, GRIN_DATATYPE dt) {
+  switch (dt) {
+    case GRIN_DATATYPE::Undefined:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_ANY);
+      break;
+    case GRIN_DATATYPE::Int32:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_SIGNED_INT32);
+      break;
+    case GRIN_DATATYPE::UInt32:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_UNSIGNED_INT32);
+      break;
+    case GRIN_DATATYPE::Int64:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_SIGNED_INT64);
+      break;
+    case GRIN_DATATYPE::UInt64:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_UNSIGNED_INT64);
+      break;
+    case GRIN_DATATYPE::Float:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_FLOAT);
+      break;
+    case GRIN_DATATYPE::Double:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_DOUBLE);
+      break;
+    case GRIN_DATATYPE::String:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_STRING);
+      break;
+    case GRIN_DATATYPE::Date32:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_SIGNED_INT32);
+      break;
+    case GRIN_DATATYPE::Time32:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_SIGNED_INT32);
+      break;
+    case GRIN_DATATYPE::Timestamp64:
+      sdt->set_primitive_type(grin::PrimitiveType::DT_SIGNED_INT64);
+      break;
+    case GRIN_DATATYPE::FloatArray:
+      auto arr = sdt->mutable_array();
+      arr->set_max_length(1024 * 1024);
+      auto comp = arr->mutable_component_type();
+      comp->set_primitive_type(grin::PrimitiveType::DT_FLOAT);
+      break;
+  }
 }
 
-{
-  auto storage_feature = g.add_features();
-  auto feature = storage_feature->mutable_property_feature();
-#ifdef GRIN_ENABLE_ROW
-  feature->set_grin_enable_row(true);
-#endif
+const char* grin_get_graph_schema_msg(const char* uri) {
+  GRIN_PARTITIONED_GRAPH pg =
+      grin_get_partitioned_graph_from_storage(uri);
+  GRIN_PARTITION_LIST local_partitions = grin_get_local_partition_list(pg);
+  GRIN_PARTITION partition =
+      grin_get_partition_from_list(pg, local_partitions, 0);
+  GRIN_GRAPH g = grin_get_local_graph_by_partition(pg, partition);
+  grin_destroy_partition(pg, partition);
+  grin_destroy_partition_list(pg, local_partitions);
+  grin_destroy_partitioned_graph(pg);
 
-  auto vfeature = feature->mutable_vertex_property_feature();
-#ifdef GRIN_WITH_VERTEX_PROPERTY
-  vfeature->set_grin_with_vertex_property(true);
-#endif
+  grin::Graph s;
+  s.set_uri(uri);
+  auto schema = s.mutable_schema();
 
-#ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
-  vfeature->set_grin_with_vertex_property_name(true);
-#endif
+  GRIN_VERTEX_TYPE_LIST vtl = grin_get_vertex_type_list(g);
+  size_t vtl_sz = grin_get_vertex_type_list_size(g, vtl);
 
-#ifdef GRIN_WITH_VERTEX_TYPE_NAME
-  vfeature->set_grin_with_vertex_type_name(true);
-#endif
+  for (size_t i = 0; i < vtl_sz; ++i) {
+    GRIN_VERTEX_TYPE vt = grin_get_vertex_type_from_list(g, vtl, i);
+    auto svt = schema->add_vertex_types();
+    svt->set_type_id(i);
+    svt->set_type_name(grin_get_vertex_type_name(g, vt));
+    
+    GRIN_VERTEX_PROPERTY_LIST vpl = grin_get_vertex_property_list_by_type(g, vt);
+    size_t vpl_sz = grin_get_vertex_property_list_size(g, vpl);
+    for (size_t j = 0; j < vpl_sz; ++j) {
+      GRIN_VERTEX_PROPERTY vp = grin_get_vertex_property_from_list(g, vpl, j);
+      auto svp = svt->add_properties();
+      svp->set_property_id(j);
+      svp->set_property_name(grin_get_vertex_property_name(g, vt, vp));
+      auto svpdt = svp->mutable_property_type();
+      _set_storage_data_type(svpdt, grin_get_vertex_property_datatype(g, vp));
+      grin_destroy_vertex_property(g, vp);
+    }
+    grin_destroy_vertex_property_list(g, vpl);
 
-#ifdef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
-  vfeature->set_grin_enable_vertex_primary_keys(true);
-#endif
+    GRIN_VERTEX_PROPERTY_LIST pks = grin_get_primary_keys_by_vertex_type(g, vt);
+    size_t pks_sz = grin_get_vertex_property_list_size(g, vpl);
+    for (size_t j = 0; j < pks_sz; ++j) {
+      GRIN_VERTEX_PROPERTY vp = grin_get_vertex_property_from_list(g, pks, j);
+      svt->add_primary_key_ids(grin_get_vertex_property_id(g, vt, vp));
+      grin_destroy_vertex_property(g, vp);
+    }
+    grin_destroy_vertex_property_list(g, pks);
+    grin_destroy_vertex_type(g, vt);
+  }
+  grin_destroy_vertex_type_list(g, vtl);
 
-#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
-  vfeature->set_grin_trait_natural_id_for_vertex_type(true);
-#endif
+  GRIN_EDGE_TYPE_LIST etl = grin_get_edge_type_list(g);
+  size_t etl_sz = grin_get_edge_type_list_size(g, etl);
 
-#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
-  vfeature->set_grin_trait_natural_id_for_vertex_property(true);
-#endif
+  for (size_t i = 0; i < etl_sz; ++i) {
+    GRIN_EDGE_TYPE et = grin_get_edge_type_from_list(g, etl, i);
+    auto set = schema->add_edge_types();
+    set->set_type_id(i);
+    set->set_type_name(grin_get_edge_type_name(g, et));
+    
+    GRIN_EDGE_PROPERTY_LIST epl = grin_get_edge_property_list_by_type(g, et);
+    size_t epl_sz = grin_get_edge_property_list_size(g, epl);
+    for (size_t j = 0; j < epl_sz; ++j) {
+      GRIN_EDGE_PROPERTY ep = grin_get_edge_property_from_list(g, epl, j);
+      auto sep = set->add_properties();
+      sep->set_property_id(j);
+      sep->set_property_name(grin_get_edge_property_name(g, et, ep));
+      auto sepdt = sep->mutable_property_type();
+      _set_storage_data_type(sepdt, grin_get_edge_property_datatype(g, ep));
+      grin_destroy_edge_property(g, ep);
+    }
+    grin_destroy_edge_property_list(g, epl);
 
-  auto efeature = feature->mutable_edge_property_feature();
-#ifdef GRIN_WITH_EDGE_PROPERTY
-  efeature->set_grin_with_edge_property(true);
-#endif
+    GRIN_VERTEX_TYPE_LIST src_vtl = grin_get_src_types_by_edge_type(g, et);
+    GRIN_VERTEX_TYPE_LIST dst_vtl = grin_get_dst_types_by_edge_type(g, et);
+    size_t vtl_sz = grin_get_vertex_type_list_size(g, src_vtl);
+    for (size_t j = 0; j < vtl_sz; ++j) {
+      auto srel = set->add_vertex_type_pair_relations();
+      GRIN_VERTEX_TYPE src_vt = grin_get_vertex_type_from_list(g, src_vtl, j);
+      GRIN_VERTEX_TYPE dst_vt = grin_get_vertex_type_from_list(g, dst_vtl, j);
+      srel->set_src_type_id(grin_get_vertex_type_id(g, src_vt));
+      srel->set_dst_type_id(grin_get_vertex_type_id(g, dst_vt));
+      grin_destroy_vertex_type(g, src_vt);
+      grin_destroy_vertex_type(g, dst_vt);
+    }
+    grin_destroy_vertex_type_list(g, src_vtl);
+    grin_destroy_vertex_type_list(g, dst_vtl);
+    grin_destroy_edge_type(g, et);
+  }
+  grin_destroy_edge_type_list(g, etl);
 
-#ifdef GRIN_WITH_EDGE_PROPERTY_NAME
-  efeature->set_grin_with_edge_property_name(true);
-#endif
+  auto sp = s.mutable_partition();
+  auto sps = sp->add_partition_strategies();
+  auto spse = sps->mutable_edge_cut();
+  auto spsed = spse->mutable_directed_cut_edge_placement_strategies();
+  spsed->add_cut_edge_placement_strategies(grin::PartitionStrategy_EdgeCut_DirectedEdgePlacementStrategy_DEPS_TO_SRC);
+  spsed->add_cut_edge_placement_strategies(grin::PartitionStrategy_EdgeCut_DirectedEdgePlacementStrategy_DEPS_TO_DST);
 
-#ifdef GRIN_WITH_EDGE_TYPE_NAME
-  efeature->set_grin_with_edge_type_name(true);
-#endif
+  sp->add_vertex_property_placement_strategies(grin::PPS_ON_MASTER);
+  sp->add_edge_property_placement_strategies(grin::PPS_ON_MASTER);
+  sp->add_edge_property_placement_strategies(grin::PPS_ON_MIRROR);
 
-#ifdef GRIN_ENABLE_EDGE_PRIMARY_KEYS
-  efeature->set_grin_enable_edge_primary_keys(true);
-#endif
+  sp->add_master_vertices_sparse_index_strategies(grin::SIS_CSR);
+  sp->add_master_vertices_sparse_index_strategies(grin::SIS_CSC);
 
-#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
-  efeature->set_grin_trait_natural_id_for_edge_type(true);
-#endif
-
-#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
-  efeature->set_grin_trait_natural_id_for_edge_property(true);
-#endif
-
-#ifdef GRIN_TRAIT_CONST_VALUE_PTR
-  feature->set_grin_trait_const_value_ptr(true);
-#endif
-}
-
-{
-  auto storage_feature = g.add_features();
-  auto feature = storage_feature->mutable_index_feature();
-#ifdef GRIN_WITH_VERTEX_LABEL
-  feature->set_grin_with_vertex_label(true);
-#endif
-
-#ifdef GRIN_WITH_EDGE_LABEL
-  feature->set_grin_with_edge_label(true);
-#endif
-
-#ifdef GRIN_ASSUME_ALL_VERTEX_LIST_SORTED
-  feature->set_grin_assume_all_vertex_list_sorted(true);
-#endif
-
-#ifdef GRIN_ENABLE_VERTEX_INTERNAL_ID_INDEX
-  feature->set_grin_enable_vertex_internal_id_index(true);
-#endif
-
-#ifdef GRIN_ENABLE_VERTEX_PK_INDEX
-  feature->set_grin_enable_vertex_pk_index(true);
-#endif
-
-#ifdef GRIN_ENABLE_EDGE_PK_INDEX
-  feature->set_grin_enable_edge_pk_index(true);
-#endif
-
-#ifdef GRIN_ENABLE_VERTEX_EXTERNAL_ID_OF_INT64
-  feature->set_grin_enable_vertex_external_id_of_int64(true);
-#endif
-
-#ifdef GRIN_ENABLE_VERTEX_EXTERNAL_ID_OF_STRING
-  feature->set_grin_enable_vertex_external_id_of_string(true);
-#endif
-}
-
-{
-  auto storage_feature = g.add_features();
-  auto feature = storage_feature->mutable_common_feature();
-#ifdef GRIN_TRAIT_LOOSE_SCHEMA
-  feature->set_grin_trait_loose_schema(true);
-#endif
-}
-
-  std::string graph_def;
-  google::protobuf::util::MessageToJsonString(g, &graph_def);
+  std::string msg;
+  google::protobuf::util::MessageToJsonString(s, &msg);
   
-  int len = graph_def.length() + 1;
+  int len = msg.length() + 1;
   char* out = new char[len];
-  snprintf(out, len, "%s", graph_def.c_str());
+  snprintf(out, len, "%s", msg.c_str());
   return out;
 }

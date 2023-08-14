@@ -27,10 +27,6 @@ limitations under the License.
     unsigned eprop = _grin_get_prop_from_property(ep); \
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
 
-void grin_destroy_string_value(GRIN_GRAPH g, const char* value) {}
-
-void grin_destroy_float_array_value(GRIN_GRAPH g, const float* value) {}
-
 #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
 const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY vp) {
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
@@ -99,6 +95,10 @@ GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const cha
 
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
+void grin_destroy_vertex_property_value_of_string(GRIN_GRAPH g, const char* value) {}
+
+void grin_destroy_float_array_value(GRIN_GRAPH g, const float* value) {}
+
 bool grin_equal_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp1, GRIN_VERTEX_PROPERTY vp2) {
     return (vp1 == vp2);
 }
@@ -175,6 +175,10 @@ GRIN_VERTEX_TYPE grin_get_vertex_type_from_property(GRIN_GRAPH g, GRIN_VERTEX_PR
 
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
+void grin_destroy_edge_property_value_of_string(GRIN_GRAPH, const char*) {}
+
+void grin_destroy_edge_property_value_of_float_array(GRIN_GRAPH, const float*) {}
+
 bool grin_equal_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep1, GRIN_EDGE_PROPERTY ep2) {
     return (ep1 == ep2);
 }

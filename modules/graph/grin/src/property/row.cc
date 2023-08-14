@@ -20,6 +20,10 @@ void grin_destroy_row(GRIN_GRAPH g, GRIN_ROW r) {
     delete _r;
 }
 
+void grin_destroy_row_value_of_string(GRIN_GRAPH g, const char* value) {
+    delete[] value;
+}
+
 int grin_get_int32_from_row(GRIN_GRAPH g, GRIN_ROW r, size_t idx) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
     return *static_cast<const int32_t*>((*_r)[idx]);

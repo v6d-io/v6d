@@ -4,6 +4,7 @@
 #include <sys/time.h>     
 #include "predefine.h"
 #include "common/error.h"
+#include "common/message.h"
 #include "index/external_id.h"
 #include "index/internal_id.h"
 #include "index/label.h"
@@ -372,8 +373,8 @@ FOR_VERTEX_LIST_SELECT_MASTER_BEGIN(g, vl)
       #else
         printf("%s %zu: %s\n", v_names[__vt][vid], j, pv);
       #endif
-        grin_destroy_string_value(g, pv);
-        grin_destroy_string_value(g, rv);
+        grin_destroy_vertex_property_value_of_string(g, pv);
+        grin_destroy_row_value_of_string(g, rv);
       }
       grin_destroy_vertex_property(g, vp);
     }
@@ -734,7 +735,7 @@ FOR_VERTEX_LIST_BEGIN(g0, vl0)
 #else
       const char* sref = grin_serialize_vertex_ref(g0, vref0);
       GRIN_VERTEX_REF vref1 = grin_deserialize_vertex_ref(g0, sref);
-      grin_destroy_string_value(g0, sref);
+      grin_destroy_serialized_vertex_ref(g0, sref);
 #endif
       GRIN_VERTEX v1 = grin_get_vertex_from_vertex_ref(g0, vref1);
       if (!grin_equal_vertex(g0, v0, v1)) {
@@ -754,7 +755,7 @@ FOR_VERTEX_LIST_BEGIN(g0, vl0)
 #else
       const char* sref = grin_serialize_vertex_ref(g0, vref0);
       GRIN_VERTEX_REF vref1 = grin_deserialize_vertex_ref(g1, sref);
-      grin_destroy_string_value(g0, sref);
+      grin_destroy_serialized_vertex_ref(g0, sref);
 #endif
       GRIN_VERTEX v1 = grin_get_vertex_from_vertex_ref(g1, vref1);
       if (!grin_is_master_vertex(g1, v1)) {
@@ -1061,7 +1062,13 @@ void test_perf(int argc, char** argv) {
   test_vertex_property_value(argc, argv);
 }
 
+void test_message(int argc, char** argv) {
+  const char* msg = grin_get_graph_schema_msg(argv[1]);
+  printf("Schema Msg:\n%s\n", msg);
+}
+
 int main(int argc, char** argv) {
+  test_message(argc, argv);
   test_index(argc, argv);
   test_property(argc, argv);
   test_partition(argc, argv);
