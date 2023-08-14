@@ -729,6 +729,10 @@ boost::leaf::result<void> varint_encoding_edges_impl(
   std::unique_ptr<BlobWriter> encoded;
   VY_OK_OR_RAISE(e_lists->Release(encoded));
 
+  // Leave the first 4kb buffer to avoid inplace override issue. In certain
+  // cases and values, the inplace encoding would cause value error.
+  static uint8_t inplace_buffer[VARINT_ENCODING_BATCH_SIZE * (2 * 8)];
+
   // batch encoding
   uint8_t* encoded_begin = reinterpret_cast<uint8_t*>(encoded->data());
   e_boffsets = std::make_shared<FixedInt64Builder>(client, vnum + 1);
@@ -742,18 +746,28 @@ boost::leaf::result<void> varint_encoding_edges_impl(
       size_t batch_size =
           std::min(static_cast<size_t>(VARINT_ENCODING_BATCH_SIZE),
                    size_limit - encoded_size);
-      ptr = v8enc32(reinterpret_cast<uint32_t*>(edges + encoded_size),
-                    batch_size * element_size, ptr);
+      if (unlikely(ptr - encoded_begin < 4096)) {
+        uint8_t* dest =
+            v8enc32(reinterpret_cast<uint32_t*>(edges + encoded_size),
+                    batch_size * element_size, inplace_buffer);
+        memcpy(ptr, inplace_buffer, dest - inplace_buffer);
+        ptr += dest - inplace_buffer;
+      } else {
+        ptr = v8enc32(reinterpret_cast<uint32_t*>(edges + encoded_size),
+                      batch_size * element_size, ptr);
+      }
       encoded_size += batch_size;
+      // should be no overflow
+      if (reinterpret_cast<uint32_t*>(ptr) >
+          reinterpret_cast<uint32_t*>(edges + encoded_size + batch_size)) {
+        VY_OK_OR_RAISE(
+            Status::Invalid("failed to compact the nbr list as it overflowed, "
+                            "try set the parameter `compact_edges` to false"));
+      }
     }
     boffsets[v + 1] = ptr - encoded_begin;
   }
-  // should be no overflow
-  if (static_cast<size_t>(boffsets[vnum]) >= encoded->size()) {
-    VY_OK_OR_RAISE(
-        Status::Invalid("failed to compact the nbr list as it overflowed, "
-                        "try set the parameter `compact_edges` to false"));
-  }
+
   // we may failed to shrink due the limitation of old version of
   // vineyardd, in such case, we shouldn't fail
   VINEYARD_SUPPRESS(encoded->Shrink(client, boffsets[vnum]));
