@@ -95,22 +95,30 @@ struct memfd_create_compat {
       std::string file_template = "vineyard-bulk-XXXXXX";
       std::vector<char> file_name(file_template.begin(), file_template.end());
       file_name.push_back('\0');
-      return memfd_create_fn(&file_name[0], 0);
-    } else {
-      std::string file_template = "/dev/shm/vineyard-bulk-XXXXXX";
-      std::vector<char> file_name(file_template.begin(), file_template.end());
-      file_name.push_back('\0');
-      int fd = mkstemp(&file_name[0]);
-      if (fd < 0) {
-        return fd;
+      int fd = memfd_create_fn(&file_name[0], 0);
+      if (fd < 0 && errno == ENOSYS) {
+        LOG(WARNING) << "Looks like that we are working inside WSL 1 ("
+                     << strerror(errno)
+                     << "), fallback to mkstemp(3) for shared memory";
+        // disable memfd_create, and fall through
+        memfd_create_fn = nullptr;
+      } else {
+        return fd;  // propogate the error
       }
-      if (unlink(&file_name[0]) != 0) {
-        LOG(ERROR) << "failed to unlink file " << &file_name[0];
-        close(fd);
-        return -1;
-      }
+    }
+    std::string file_template = "/dev/shm/vineyard-bulk-XXXXXX";
+    std::vector<char> file_name(file_template.begin(), file_template.end());
+    file_name.push_back('\0');
+    int fd = mkstemp(&file_name[0]);
+    if (fd < 0) {
       return fd;
     }
+    if (unlink(&file_name[0]) != 0) {
+      LOG(ERROR) << "failed to unlink file " << &file_name[0];
+      close(fd);
+      return -1;
+    }
+    return fd;
   }
 
   ~memfd_create_compat() {
