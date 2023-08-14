@@ -26,8 +26,8 @@ import (
 
 func TestConvertToJson(t *testing.T) {
 	// Test case 1: Valid JSON input
-	jsonStr := `{"name": "John", "age": 30}`
-	expectedJSON := `{"name":"John","age":30}`
+	jsonStr := `{"name":"John", "age": 31}`
+	expectedJSON := `{"name":"John","age":31}`
 	result, err := ConvertToJson(jsonStr)
 	assert.NoError(t, err)
 	assert.JSONEq(t, expectedJSON, result)
@@ -35,9 +35,9 @@ func TestConvertToJson(t *testing.T) {
 	// Test case 2: Valid YAML input
 	yamlStr := `
 name: John
-age: 30
+age: 32
 `
-	expectedYAML := `{"name":"John","age":30}`
+	expectedYAML := `{"name":"John","age":32}`
 	result, err = ConvertToJson(yamlStr)
 	assert.NoError(t, err)
 	assert.JSONEq(t, expectedYAML, result)
@@ -46,8 +46,8 @@ age: 30
 
 func TestConvertToYaml(t *testing.T) {
 	// Test case 1: Valid JSON input
-	jsonStr := `{"name":"John","age":30}`
-	expectedYAML := `age: 30
+	jsonStr := `{"name":"John","age":33}`
+	expectedYAML := `age: 33
 name: John
 `
 	result, err := ConvertToYaml(jsonStr)
@@ -129,9 +129,9 @@ func TestParsePVCSpec(t *testing.T) {
 				"storage": "1Gi"
 			}
 		},
-		"storageClassName": "standard"
+		"storageClassName": "standard_1"
 	}`
-	storageClassName := "standard"
+	storageClassName := "standard_1"
 	expectedSpec := corev1.PersistentVolumeClaimSpec{
 		AccessModes: []corev1.PersistentVolumeAccessMode{
 			corev1.ReadWriteOnce,
@@ -155,7 +155,7 @@ func TestParsePVCSpec(t *testing.T) {
 				"storage": "1Gi"
 			}
 		},
-		"storageClassName": "standard"
+		"storageClassName": "standard_1"
 	}`
 	_, err = ParsePVCSpec(invalidSpec)
 	assert.Error(t, err)
@@ -178,7 +178,7 @@ func TestParsePVandPVCSpec(t *testing.T) {
 					"storage": "1Gi"
 				}
 			},
-			"storageClassName": "standard"
+			"storageClassName": "standard_2"
 		}
 	}`
 	expectedPVSpec := corev1.PersistentVolumeSpec{
@@ -190,7 +190,7 @@ func TestParsePVandPVCSpec(t *testing.T) {
 		},
 		PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRetain,
 	}
-	storageClassName := "standard"
+	storageClassName := "standard_2"
 	expectedPVCSpec := corev1.PersistentVolumeClaimSpec{
 		AccessModes: []corev1.PersistentVolumeAccessMode{
 			corev1.ReadWriteOnce,
@@ -226,7 +226,7 @@ func TestGetPVAndPVC(t *testing.T) {
 					"storage": "1Gi"
 				}
 			},
-			"storageClassName": "standard"
+			"storageClassName": "standard_3"
 		}
 	}`
 	expectedPVSpec := corev1.PersistentVolumeSpec{
@@ -238,7 +238,7 @@ func TestGetPVAndPVC(t *testing.T) {
 		},
 		PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRetain,
 	}
-	storageClassName := "standard"
+	storageClassName := "standard_3"
 	expectedPVCSpec := corev1.PersistentVolumeClaimSpec{
 		AccessModes: []corev1.PersistentVolumeAccessMode{
 			corev1.ReadWriteOnce,

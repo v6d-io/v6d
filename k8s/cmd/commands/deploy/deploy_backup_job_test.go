@@ -33,29 +33,38 @@ import (
 	//"k8s.io/api/apps/v1"
 )
 
+const kube_config = string("/tmp/e2e-k8s.config")
+const size = string("256Mi")
+const service_type = string("ClusterIP")
+const vineyard_deployment_name = string("vineyardd-sample")
+const vineyard_deployment_namespace = string("vineyard-system")
+const vineyard_image = string("vineyardcloudnative/vineyardd:alpine-latest")
+const vineyard_default_namespace = string("vineyard-system")
+const backup_path = string("/var/vineyard/dump")
+
 func TestDeployBackupJobCmd(t *testing.T) {
 	// deploy a vineyardd for later backup operation
 	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
-	flags.Namespace = "vineyard-system"
+	flags.KubeConfig = kube_config
+	flags.Namespace = vineyard_default_namespace
 	flags.VineyarddOpts.Replicas = 3
 	flags.VineyarddOpts.EtcdReplicas = 1
-	flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:alpine-latest"
+	flags.VineyarddOpts.Vineyard.Image = vineyard_image
 	flags.VineyarddOpts.Vineyard.CPU = ""
 	flags.VineyarddOpts.Vineyard.Memory = ""
 	flags.VineyarddOpts.Service.Port = 9600
-	flags.VineyarddOpts.Service.Type = "ClusterIP"
+	flags.VineyarddOpts.Service.Type = service_type
 	flags.VineyarddOpts.Volume.PvcName = ""
-	flags.VineyarddOpts.Vineyard.Size = "256Mi"
+	flags.VineyarddOpts.Vineyard.Size = size
 	deployVineyardDeploymentCmd := NewDeployVineyardDeploymentCmd()
 	deployVineyardDeploymentCmd.Run(deployVineyardDeploymentCmd, []string{})
 
 	//backup operation
-	flags.BackupOpts.BackupPath = "/var/vineyard/dump"
+	flags.BackupOpts.BackupPath = backup_path
 	//flags.PVCName = "pvc-for-backup-and-recover-demo"
 
-	flags.VineyardDeploymentName = "vineyardd-sample"
-	flags.VineyardDeploymentNamespace = "vineyard-system"
+	flags.VineyardDeploymentName = vineyard_deployment_name
+	flags.VineyardDeploymentNamespace = vineyard_deployment_namespace
 	flags.BackupPVandPVC = `{
 		"pv-spec": {
 		  "capacity": {
@@ -114,12 +123,12 @@ func TestDeployBackupJobCmd(t *testing.T) {
 func Test_getBackupObjectsFromTemplate(t *testing.T) {
 	// set the flags
 	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	flags.KubeConfig = kube_config
 	//flags.PVCName = "pvc-for-backup-and-recover-demo"
-	flags.BackupOpts.BackupPath = "/var/vineyard/dump"
-	flags.Namespace = "vineyard-system"
-	flags.VineyardDeploymentName = "vineyardd-sample"
-	flags.VineyardDeploymentNamespace = "vineyard-system"
+	flags.BackupOpts.BackupPath = backup_path
+	flags.Namespace = vineyard_default_namespace
+	flags.VineyardDeploymentName = vineyard_deployment_name
+	flags.VineyardDeploymentNamespace = vineyard_deployment_namespace
 	c := util.KubernetesClient()
 
 	type args struct {

@@ -33,26 +33,25 @@ import (
 func TestDeployRecoverJobCmd(t *testing.T) {
 	// deploy a vineyardd for later backup operation
 	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
-	flags.Namespace = "vineyard-system"
+	flags.KubeConfig = kube_config
+	flags.Namespace = vineyard_default_namespace
 	flags.VineyarddOpts.Replicas = 3
 	flags.VineyarddOpts.EtcdReplicas = 1
-	flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:alpine-latest"
+	flags.VineyarddOpts.Vineyard.Image = vineyard_image
 	flags.VineyarddOpts.Vineyard.CPU = ""
 	flags.VineyarddOpts.Vineyard.Memory = ""
 	flags.VineyarddOpts.Service.Port = 9600
-	flags.VineyarddOpts.Service.Type = "ClusterIP"
+	flags.VineyarddOpts.Service.Type = service_type
 	flags.VineyarddOpts.Volume.PvcName = ""
-	flags.VineyarddOpts.Vineyard.Size = "256Mi"
+	flags.VineyarddOpts.Vineyard.Size = size
 	deployVineyardDeploymentCmd := NewDeployVineyardDeploymentCmd()
 	deployVineyardDeploymentCmd.Run(deployVineyardDeploymentCmd, []string{})
 
 	// recover operation
-	flags.RecoverPath = "/var/vineyard/dump"
+	flags.RecoverPath = backup_path
 	flags.PVCName = "vineyard-backup"
-	flags.Namespace = "vineyard-system"
-	flags.VineyardDeploymentName = "vineyardd-sample"
-	flags.VineyardDeploymentNamespace = "vineyard-system"
+	flags.VineyardDeploymentName = vineyard_deployment_name
+	flags.VineyardDeploymentNamespace = vineyard_deployment_namespace
 	deployRecoverJobCmd.Run(deployRecoverJobCmd, []string{})
 	c := util.KubernetesClient()
 
@@ -82,12 +81,12 @@ func TestDeployRecoverJobCmd(t *testing.T) {
 func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 	// set the flags
 	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
-	flags.VineyardDeploymentName = "vineyardd-sample"
-	flags.VineyardDeploymentNamespace = "vineyard-system"
-	flags.Namespace = "vineyard-system"
+	flags.KubeConfig = kube_config
+	flags.VineyardDeploymentName = vineyard_deployment_name
+	flags.VineyardDeploymentNamespace = vineyard_deployment_namespace
+	flags.Namespace = vineyard_default_namespace
 	flags.PVCName = "vineyard-backup"
-	flags.RecoverPath = "/var/vineyard/dump"
+	flags.RecoverPath = backup_path
 	c := util.KubernetesClient()
 
 	type args struct {

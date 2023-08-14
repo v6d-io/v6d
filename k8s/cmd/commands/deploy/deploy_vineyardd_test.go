@@ -56,17 +56,17 @@ func TestDeployVineyarddCmd(t *testing.T) {
 	}
 	t.Run(test.name, func(t *testing.T) {
 		// set the flags
-		flags.Namespace = "vineyard-system"
+		flags.Namespace = vineyard_default_namespace
 		//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-		flags.KubeConfig = "/tmp/e2e-k8s.config"
+		flags.KubeConfig = kube_config
 		flags.VineyarddOpts.Replicas = 3
 		flags.VineyarddOpts.EtcdReplicas = 1
-		flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:alpine-latest"
+		flags.VineyarddOpts.Vineyard.Image = vineyard_image
 		flags.VineyarddOpts.Vineyard.CPU = ""
 		flags.VineyarddOpts.Vineyard.Memory = ""
 		flags.VineyarddOpts.Service.Port = 9600
-		flags.VineyarddOpts.Service.Type = "ClusterIP"
-		flags.VineyarddOpts.Vineyard.Size = "256Mi"
+		flags.VineyarddOpts.Service.Type = service_type
+		flags.VineyarddOpts.Vineyard.Size = size
 		deployVineyarddCmd.Run(deployVineyarddCmd, []string{})
 		time.Sleep(1 * time.Second)
 		// get the replicas of etcd and vineyardd
@@ -159,11 +159,11 @@ func TestDeployVineyarddCmd(t *testing.T) {
 
 func TestBuildVineyard(t *testing.T) {
 	// set the different flags
-	flags.VineyarddName = "test-vineyardd"
+	flags.VineyarddName = "test-vineyardd-1"
 	flags.VineyarddOpts.Replicas = 10
 	flags.VineyarddOpts.EtcdReplicas = 10
 	flags.VineyarddOpts.Service.Port = 8888
-	flags.VineyarddOpts.Vineyard.Image = "test-image"
+	flags.VineyarddOpts.Vineyard.Image = "test-image-1"
 
 	tests := []struct {
 		name    string
@@ -175,7 +175,7 @@ func TestBuildVineyard(t *testing.T) {
 			name: "Test Case",
 			want: &v1alpha1.Vineyardd{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-vineyardd",
+					Name:      "test-vineyardd-1",
 					Namespace: flags.GetDefaultVineyardNamespace(),
 				},
 				Spec: v1alpha1.VineyarddSpec{
@@ -183,7 +183,7 @@ func TestBuildVineyard(t *testing.T) {
 					EtcdReplicas: 10,
 					Service:      v1alpha1.ServiceConfig{Type: "ClusterIP", Port: 8888},
 					Vineyard: v1alpha1.VineyardConfig{
-						Image:           "test-image",
+						Image:           "test-image-1",
 						ImagePullPolicy: "IfNotPresent",
 						SyncCRDs:        true,
 						Socket:          "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}",
@@ -226,11 +226,11 @@ func TestBuildVineyard(t *testing.T) {
 
 func TestBuildVineyardManifestFromInput(t *testing.T) {
 	// set the different flags
-	flags.VineyarddName = "test-vineyardd"
+	flags.VineyarddName = "test-vineyardd-2"
 	flags.VineyarddOpts.Replicas = 10
 	flags.VineyarddOpts.EtcdReplicas = 10
 	flags.VineyarddOpts.Service.Port = 8888
-	flags.VineyarddOpts.Vineyard.Image = "test-image"
+	flags.VineyarddOpts.Vineyard.Image = "test-image-2"
 
 	tests := []struct {
 		name    string
@@ -242,7 +242,7 @@ func TestBuildVineyardManifestFromInput(t *testing.T) {
 			name: "Test Case 1",
 			want: &v1alpha1.Vineyardd{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-vineyardd",
+					Name:      "test-vineyardd-2",
 					Namespace: flags.GetDefaultVineyardNamespace(),
 				},
 				Spec: v1alpha1.VineyarddSpec{
@@ -250,7 +250,7 @@ func TestBuildVineyardManifestFromInput(t *testing.T) {
 					EtcdReplicas: 10,
 					Service:      v1alpha1.ServiceConfig{Type: "ClusterIP", Port: 8888},
 					Vineyard: v1alpha1.VineyardConfig{
-						Image:           "test-image",
+						Image:           "test-image-2",
 						ImagePullPolicy: "IfNotPresent",
 						SyncCRDs:        true,
 						Socket:          "/var/run/vineyard-kubernetes/{{.Namespace}}/{{.Name}}",
@@ -293,7 +293,7 @@ func TestBuildVineyardManifestFromInput(t *testing.T) {
 
 func TestBuildVineyardManifestFromFile(t *testing.T) {
 	// set the flags
-	flags.Namespace = "vineyard-system"
+	flags.Namespace = vineyard_default_namespace
 	//flags.VineyarddFile = os.Getenv("HOME") + "/v6d/k8s/test/e2e/vineyardd.yaml"
 	currentDir, _ := os.Getwd()
 	flags.VineyarddFile = filepath.Join(currentDir, "..", "..", "..", "test/e2e/vineyardd.yaml")

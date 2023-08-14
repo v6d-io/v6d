@@ -344,7 +344,7 @@ jobs:
           esac
 
           echo "::notice:: ${{ matrix.job }}: https://www.stoat.dev/file-viewer?root=https://v6d-io--v6d--$short_sha--e2e-tests-$signed_url_key.stoat.page"
-      
+
       - name: unit test
         run: |
           make -C k8s/test/e2e unittest

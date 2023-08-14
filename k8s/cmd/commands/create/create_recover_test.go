@@ -26,7 +26,6 @@ import (
 
 func TestBuildV1alphaRecoverCR(t *testing.T) {
 	flags.RecoverName = "test-recover"
-	flags.Namespace = "test"
 	flags.BackupName = "test-backup"
 
 	tests := []struct {

@@ -27,7 +27,10 @@ func Test_ReadFromFile(t *testing.T) {
 		t.Fatalf("Failed to create temporary file: %v", err)
 	}
 	defer tempFile.Close()
-	defer os.WriteFile(tempFile.Name(), []byte(tempFileContent), 0644)
+	if err = os.WriteFile(tempFile.Name(), []byte(tempFileContent), 0644); err != nil {
+		t.Errorf("Failed to write file: %v", err)
+	}
+
 	type args struct {
 		path string
 	}
@@ -86,7 +89,9 @@ func Test_ReadFromStdin(t *testing.T) {
 	os.Stdin = r
 	go func() {
 		defer w.Close()
-		w.Write([]byte(expected))
+		if _, err := w.Write([]byte(expected)); err != nil {
+			t.Errorf("Failed to write file: %v", err)
+		}
 	}()
 
 	for _, tt := range tests {
@@ -128,7 +133,9 @@ func Test_ReadJsonFromStdin(t *testing.T) {
 	os.Stdin = r
 	go func() {
 		defer w.Close()
-		w.Write([]byte(expected))
+		if _, err := w.Write([]byte(expected)); err != nil {
+			t.Errorf("Failed to write file: %v", err)
+		}
 	}()
 
 	for _, tt := range tests {

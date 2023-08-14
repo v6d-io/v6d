@@ -166,7 +166,7 @@ spec:
 
 func Test_ApplyManifests(t *testing.T) {
 	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	flags.KubeConfig = kube_config
 	c := KubernetesClient()
 
 	type args struct {
@@ -227,7 +227,7 @@ func Test_ApplyManifests(t *testing.T) {
 
 func Test_DeleteManifests(t *testing.T) {
 	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	flags.KubeConfig = kube_config
 	c := KubernetesClient()
 
 	type args struct {
@@ -289,7 +289,7 @@ func Test_DeleteManifests(t *testing.T) {
 
 func Test_ApplyManifestsWithOwnerRef(t *testing.T) {
 	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	flags.KubeConfig = kube_config
 	flags.Namespace = "vineyard-system"
 	c := KubernetesClient()
 

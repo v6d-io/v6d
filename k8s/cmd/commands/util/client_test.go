@@ -32,6 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
 
+const kube_config = string("/tmp/e2e-k8s.config")
+
 func Test_Scheme(t *testing.T) {
 	expectedScheme := scheme
 
@@ -91,7 +93,7 @@ func Test_GetKubernetesConfig(t *testing.T) {
 		{
 			name: "Test case 1",
 			//kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
-			kubeConfigPath: "/tmp/e2e-k8s.config",
+			kubeConfigPath: kube_config,
 		},
 	}
 
@@ -114,7 +116,7 @@ func Test_KubernetesClient(t *testing.T) {
 		{
 			name: "Test case 1",
 			//kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
-			kubeConfigPath: "/tmp/e2e-k8s.config",
+			kubeConfigPath: kube_config,
 		},
 	}
 
@@ -138,7 +140,7 @@ func Test_KubernetesClientset(t *testing.T) {
 		{
 			name: "Test case 1",
 			//kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
-			kubeConfigPath: "/tmp/e2e-k8s.config",
+			kubeConfigPath: kube_config,
 		},
 	}
 

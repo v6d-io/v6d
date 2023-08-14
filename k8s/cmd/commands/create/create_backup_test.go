@@ -31,7 +31,7 @@ func TestBuildBackup(t *testing.T) {
 	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = "/tmp/e2e-k8s.config"
 	flags.BackupName = "test-backup"
-	flags.Namespace = "test"
+	flags.Namespace = "test_backup"
 	flags.BackupOpts.BackupPath = "backup/path/to/test"
 	c := util.KubernetesClient()
 
@@ -55,7 +55,7 @@ func TestBuildBackup(t *testing.T) {
 				// Expected Backup CR based on the provided JSON.
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-backup",
-					Namespace: "test",
+					Namespace: "test_backup",
 				},
 				Spec: v1alpha1.BackupSpec{
 					BackupPath: "backup/path/to/test",

@@ -251,7 +251,7 @@ func TestBuildObjsFromManifests(t *testing.T) {
 	}
 
 	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	flags.KubeConfig = kube_config
 	c := KubernetesClient()
 
 	// set the vineyardd name and namespace as the vineyard deployment

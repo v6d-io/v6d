@@ -26,7 +26,6 @@ import (
 
 func Test_buildOperation(t *testing.T) {
 	flags.OperationName = "test-operation"
-	flags.Namespace = "test"
 	flags.OperationOpts.Name = "test-operation-opts"
 	tests := []struct {
 		name string
