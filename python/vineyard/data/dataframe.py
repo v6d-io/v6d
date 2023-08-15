@@ -30,11 +30,15 @@ from typing import Union
 import numpy as np
 import pandas as pd
 from numpy.lib.mixins import NDArrayOperatorsMixin
-from pandas.core.arrays import PandasArray
 from pandas.core.dtypes.common import pandas_dtype
 from pandas.core.dtypes.dtypes import PandasExtensionDtype
 from pandas.core.indexers import check_array_indexer
 from pandas.core.internals.managers import BlockManager
+
+try:
+    from pandas.core.arrays import PandasArray
+except ImportError:
+    from pandas.core.arrays import NumpyExtensionArray as PandasArray
 
 try:
     from pandas.core.internals.blocks import BlockPlacement
@@ -42,6 +46,7 @@ try:
 except ImportError:
     BlockPlacement = None
     from pandas.core.internals.blocks import Block
+
 try:
     from pandas.core.indexes.base import ensure_index
 except ImportError:
@@ -65,7 +70,6 @@ except ImportError:
         from pandas.core.arrays import DatetimeArray
     except ImportError:
         DatetimeArray = None
-
 
 from vineyard._C import Object
 from vineyard._C import ObjectID
