@@ -16,6 +16,8 @@ package io.v6d.modules.basic.arrow;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
@@ -107,8 +109,13 @@ class SchemaResolver extends ObjectFactory.Resolver {
     @Override
     @SneakyThrows(IOException.class)
     public Object resolve(final ObjectMeta meta) {
-        val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        val schema = SchemaSerializer.deserialize(buffer.getBuffer(), Arrow.default_allocator);
-        return new Schema(meta, schema);
+        val mapper = new ObjectMapper();
+        val node = mapper.readTree(meta.getStringValue("schema_binary_"));
+        val buffer = (ArrayNode) node.get("bytes");
+        val bytes = new byte[buffer.size()];
+        for (int i = 0; i < buffer.size(); ++i) {
+            bytes[i] = (byte) buffer.get(i).asInt();
+        }
+        return new Schema(meta, SchemaSerializer.deserialize(bytes, Arrow.default_allocator));
     }
 }
