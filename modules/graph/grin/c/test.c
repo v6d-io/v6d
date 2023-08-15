@@ -1065,6 +1065,7 @@ void test_perf(int argc, char** argv) {
 void test_message(int argc, char** argv) {
   const char* msg = grin_get_graph_schema_msg(argv[1]);
   printf("Schema Msg:\n%s\n", msg);
+  grin_destroy_msg(msg);
 }
 
 int main(int argc, char** argv) {

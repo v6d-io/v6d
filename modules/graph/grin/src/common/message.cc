@@ -20,7 +20,7 @@ limitations under the License.
 #include "property/primarykey.h"
 #include "graph.pb.h"
 
-void grin_destroy_msg(char* s) {
+void grin_destroy_msg(const char* s) {
   delete[] s;
 }
 
