@@ -61,6 +61,7 @@ typedef enum {
   UNKNOWN_ERROR = 1,         ///< unknown error
   INVALID_VALUE = 2,         ///< invalid value
   UNKNOWN_DATATYPE = 3,      ///< unknown datatype
+  NULL_VALUE = 4,            ///< null value
 } GRIN_ERROR_CODE;
 
 /* Define supported macros based on storage features */
@@ -76,6 +77,7 @@ typedef enum {
 #define GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 // Partition
 #define GRIN_ENABLE_GRAPH_PARTITION
+#define GRIN_ASSUME_EDGE_CUT_PARTITION
 #define GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
 #define GRIN_ENABLE_VERTEX_REF
 #define GRIN_TRAIT_FAST_VERTEX_REF
