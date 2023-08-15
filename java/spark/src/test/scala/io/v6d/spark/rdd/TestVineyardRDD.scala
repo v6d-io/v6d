@@ -55,7 +55,7 @@ object TestVineyardRDD {
     val client: IPCClient = new IPCClient(SOCKET)
     val meta = client.getMetaData(SOURCE)
     val vineyardRDD =
-      new VineyardRDD(sc, meta, "__batches_", SOCKET, client.getClusterStatus)
+      new VineyardRDD(sc, meta, "partitions_", SOCKET, client.getClusterStatus)
 
     println(
       "chunks inside a table: ",

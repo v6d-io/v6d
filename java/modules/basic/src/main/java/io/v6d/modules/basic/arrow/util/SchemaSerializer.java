@@ -14,6 +14,7 @@
  */
 package io.v6d.modules.basic.arrow.util;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.channels.Channels;
@@ -34,6 +35,20 @@ public class SchemaSerializer {
                 new MessageChannelReader(
                         new ReadChannel(new ArrowBufSeekableByteChannel(buffer)), allocator)) {
 
+            MessageResult result = schemaReader.readNext();
+            if (result == null) {
+                throw new IOException("Unexpected end of input. Missing schema.");
+            }
+            return MessageSerializer.deserializeSchema(result.getMessage());
+        }
+    }
+
+    public static Schema deserialize(final byte[] buffer, final BufferAllocator allocator)
+            throws IOException {
+        try (MessageChannelReader schemaReader =
+                new MessageChannelReader(
+                        new ReadChannel(Channels.newChannel(new ByteArrayInputStream(buffer))),
+                        allocator)) {
             MessageResult result = schemaReader.readNext();
             if (result == null) {
                 throw new IOException("Unexpected end of input. Missing schema.");

@@ -14,8 +14,9 @@
  */
 package io.v6d.modules.basic.arrow;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.v6d.core.client.Client;
-import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
@@ -33,7 +34,7 @@ public class SchemaBuilder implements ObjectBuilder {
     private List<Field> fields;
     private Map<String, String> customMetadata;
 
-    private BufferBuilder buffer;
+    private byte[] buffer;
 
     public SchemaBuilder() {
         fields = new ArrayList<>();
@@ -71,17 +72,20 @@ public class SchemaBuilder implements ObjectBuilder {
     @Override
     @SneakyThrows(IOException.class)
     public void build(Client client) throws VineyardException {
-        val bytes = SchemaSerializer.serialize(new Schema(fields, customMetadata));
-        this.buffer = BufferBuilder.fromByteArray((IPCClient) client, bytes);
+        this.buffer = SchemaSerializer.serialize(new Schema(fields, customMetadata));
     }
 
+    @SneakyThrows(JsonProcessingException.class)
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
         this.build(client);
         val meta = ObjectMeta.empty();
         meta.setTypename("vineyard::SchemaProxy");
-        meta.setNBytes(buffer.length());
-        meta.addMember("buffer_", buffer.seal(client));
+        meta.setNBytes(buffer.length);
+        val mapper = new ObjectMapper();
+        val schema_binary = mapper.createObjectNode();
+        schema_binary.put("bytes", buffer);
+        meta.setValue("schema_binary_", mapper.writeValueAsString(schema_binary));
         return client.createMetaData(meta);
     }
 }
