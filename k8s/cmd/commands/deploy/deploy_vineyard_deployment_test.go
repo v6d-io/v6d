@@ -20,17 +20,21 @@ import (
 	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/spf13/cobra"
+	//"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
+
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-func TestDeployVineyardDeploymentCmd(t *testing.T) {
-	test := struct {
+func TestDeployVineyardDeploymentCmd_DeployVineyarddCmd_first(t *testing.T) {
+	test := []struct {
 		name                 string
 		vineyardReplicas     int
 		etcdReplicas         int
@@ -39,125 +43,143 @@ func TestDeployVineyardDeploymentCmd(t *testing.T) {
 		expectedMemery       string
 		expectedService_port int
 		expectedService_type string
+		test_cmd             *cobra.Command
 	}{
-		name:                 "test replicas",
-		vineyardReplicas:     3,
-		etcdReplicas:         1,
-		expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
-		expectedCpu:          "",
-		expectedMemery:       "",
-		expectedService_port: 9600,
-		expectedService_type: "ClusterIP",
+		{
+			name:                 "test replicas",
+			vineyardReplicas:     3,
+			etcdReplicas:         1,
+			expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
+			expectedCpu:          "",
+			expectedMemery:       "",
+			expectedService_port: 9600,
+			expectedService_type: "ClusterIP",
+			test_cmd:             deployVineyarddCmd,
+		},
+		{
+			name:                 "test replicas",
+			vineyardReplicas:     3,
+			etcdReplicas:         1,
+			expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
+			expectedCpu:          "",
+			expectedMemery:       "",
+			expectedService_port: 9600,
+			expectedService_type: "ClusterIP",
+			test_cmd:             deployVineyardDeploymentCmd,
+		},
 	}
-	t.Run(test.name, func(t *testing.T) {
-		// set the flags
-		flags.Namespace = vineyard_default_namespace
-		flags.KubeConfig = kube_config
-		flags.VineyarddOpts.Replicas = 3
-		flags.VineyarddOpts.EtcdReplicas = 1
-		flags.VineyarddOpts.Vineyard.Image = vineyard_image
-		flags.VineyarddOpts.Vineyard.Memory = ""
-		flags.VineyarddOpts.Service.Port = 9600
-		flags.VineyarddOpts.Service.Type = service_type
-		flags.VineyarddOpts.Vineyard.Size = size
-		deployVineyardDeploymentCmd.Run(deployVineyardDeploymentCmd, []string{})
-		// get the replicas of etcd and vineyardd
-		k8sclient := util.KubernetesClient()
-		etcdPod := corev1.PodList{}
-		etcdOpts := []client.ListOption{
-			client.InNamespace(flags.Namespace),
-			client.MatchingLabels{
-				"app.vineyard.io/name": flags.VineyarddName,
-				"app.vineyard.io/role": "etcd",
-			},
-		}
-		err := k8sclient.List(context.Background(), &etcdPod, etcdOpts...)
-		if err != nil {
-			t.Errorf("list etcd pods error: %v", err)
-		}
-
-		vineyardPods := corev1.PodList{}
-		vineyarddOpts := []client.ListOption{
-			client.InNamespace(flags.Namespace),
-			client.MatchingLabels{
-				"app.vineyard.io/name": flags.VineyarddName,
-				"app.vineyard.io/role": "vineyardd",
-			},
-		}
-		err = k8sclient.List(context.Background(), &vineyardPods, vineyarddOpts...)
-		if err != nil {
-			t.Errorf("list vineyardd pods error: %v", err)
-		}
-
-		for _, pod := range vineyardPods.Items {
-			for _, container := range pod.Spec.Containers {
-				if container.Image != test.expectedImage {
-					t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
-						pod.Name, pod.Namespace, container.Image, test.expectedImage)
-				}
-				if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
-					if cpuRequest.String() != test.expectedCpu {
-						t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
-							pod.Name, pod.Namespace, cpuRequest.String(), test.expectedCpu)
-					}
-				}
-				if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
-					if memoryRequest.String() != test.expectedMemery {
-						t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
-							pod.Name, pod.Namespace, memoryRequest.String(), test.expectedMemery)
-					}
-				}
+	for _, tt := range test {
+		t.Run(tt.name, func(t *testing.T) {
+			// set the flags
+			flags.Namespace = vineyard_default_namespace
+			flags.KubeConfig = kube_config
+			flags.VineyarddOpts.Replicas = 3
+			flags.VineyarddOpts.EtcdReplicas = 1
+			flags.VineyarddOpts.Vineyard.Image = vineyard_image
+			flags.VineyarddOpts.Vineyard.Memory = ""
+			flags.VineyarddOpts.Service.Port = 9600
+			flags.VineyarddOpts.Service.Type = service_type
+			flags.VineyarddOpts.Vineyard.Size = size
+			tt.test_cmd.Run(tt.test_cmd, []string{})
+			time.Sleep(1 * time.Second)
+			// get the replicas of etcd and vineyardd
+			k8sclient := util.KubernetesClient()
+			etcdPod := corev1.PodList{}
+			etcdOpts := []client.ListOption{
+				client.InNamespace(flags.Namespace),
+				client.MatchingLabels{
+					"app.vineyard.io/name": flags.VineyarddName,
+					"app.vineyard.io/role": "etcd",
+				},
 			}
-		}
-		if len(vineyardPods.Items) != test.vineyardReplicas {
-			t.Errorf("vineyardd replicas want: %d, got: %d", test.vineyardReplicas, len(vineyardPods.Items))
-		}
+			err := k8sclient.List(context.Background(), &etcdPod, etcdOpts...)
+			if err != nil {
+				t.Errorf("list etcd pods error: %v", err)
+			}
 
-		for _, pod := range etcdPod.Items {
-			for _, container := range pod.Spec.Containers {
-				if container.Image != test.expectedImage {
-					t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
-						pod.Name, pod.Namespace, container.Image, test.expectedImage)
-				}
-				if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
-					if cpuRequest.String() != test.expectedCpu {
-						t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
-							pod.Name, pod.Namespace, cpuRequest.String(), test.expectedCpu)
+			vineyardPods := corev1.PodList{}
+			vineyarddOpts := []client.ListOption{
+				client.InNamespace(flags.Namespace),
+				client.MatchingLabels{
+					"app.vineyard.io/name": flags.VineyarddName,
+					"app.vineyard.io/role": "vineyardd",
+				},
+			}
+			err = k8sclient.List(context.Background(), &vineyardPods, vineyarddOpts...)
+			if err != nil {
+				t.Errorf("list vineyardd pods error: %v", err)
+			}
+
+			for _, pod := range vineyardPods.Items {
+				for _, container := range pod.Spec.Containers {
+					if container.Image != tt.expectedImage {
+						t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
+							pod.Name, pod.Namespace, container.Image, tt.expectedImage)
 					}
-				}
-				if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
-					if memoryRequest.String() != test.expectedMemery {
-						t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
-							pod.Name, pod.Namespace, memoryRequest.String(), test.expectedMemery)
+					if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
+						if cpuRequest.String() != tt.expectedCpu {
+							t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
+								pod.Name, pod.Namespace, cpuRequest.String(), tt.expectedCpu)
+						}
+					}
+					if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
+						if memoryRequest.String() != tt.expectedMemery {
+							t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
+								pod.Name, pod.Namespace, memoryRequest.String(), tt.expectedMemery)
+						}
 					}
 				}
 			}
-		}
-		if len(etcdPod.Items) != test.etcdReplicas {
-			t.Errorf("etcd replicas want: %d, got: %d", test.etcdReplicas, len(etcdPod.Items))
-		}
-
-		// get the service object
-		svcList := corev1.ServiceList{}
-		err = k8sclient.List(context.Background(), &svcList, client.MatchingLabels{"app.vineyard.io/name": "vineyardd-sample"})
-		if err != nil {
-			t.Errorf("list services error: %v", err)
-		}
-		for _, svc := range svcList.Items {
-			if svc.Spec.Ports[0].Port != int32(test.expectedService_port) {
-				t.Errorf("Service %s in namespace %s uses the port %d, expected port %d\n",
-					svc.Name, svc.Namespace, svc.Spec.Ports[0].Port, test.expectedService_port)
+			if len(vineyardPods.Items) != tt.vineyardReplicas {
+				t.Errorf("vineyardd replicas want: %d, got: %d", tt.vineyardReplicas, len(vineyardPods.Items))
 			}
-			if string(svc.Spec.Type) != test.expectedService_type {
-				t.Errorf("Service %s in namespace %s uses the type %s, expected type %s\n",
-					svc.Name, svc.Namespace, string(svc.Spec.Type), test.expectedService_type)
-			}
-		}
 
-	})
+			for _, pod := range etcdPod.Items {
+				for _, container := range pod.Spec.Containers {
+					if container.Image != tt.expectedImage {
+						t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
+							pod.Name, pod.Namespace, container.Image, tt.expectedImage)
+					}
+					if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
+						if cpuRequest.String() != tt.expectedCpu {
+							t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
+								pod.Name, pod.Namespace, cpuRequest.String(), tt.expectedCpu)
+						}
+					}
+					if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
+						if memoryRequest.String() != tt.expectedMemery {
+							t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
+								pod.Name, pod.Namespace, memoryRequest.String(), tt.expectedMemery)
+						}
+					}
+				}
+			}
+			if len(etcdPod.Items) != tt.etcdReplicas {
+				t.Errorf("etcd replicas want: %d, got: %d", tt.etcdReplicas, len(etcdPod.Items))
+			}
+
+			// get the service object
+			svcList := corev1.ServiceList{}
+			err = k8sclient.List(context.Background(), &svcList, client.MatchingLabels{"app.vineyard.io/name": "vineyardd-sample"})
+			if err != nil {
+				t.Errorf("list services error: %v", err)
+			}
+			for _, svc := range svcList.Items {
+				if svc.Spec.Ports[0].Port != int32(tt.expectedService_port) {
+					t.Errorf("Service %s in namespace %s uses the port %d, expected port %d\n",
+						svc.Name, svc.Namespace, svc.Spec.Ports[0].Port, tt.expectedService_port)
+				}
+				if string(svc.Spec.Type) != tt.expectedService_type {
+					t.Errorf("Service %s in namespace %s uses the type %s, expected type %s\n",
+						svc.Name, svc.Namespace, string(svc.Spec.Type), tt.expectedService_type)
+				}
+			}
+		})
+	}
+
 }
 
-func TestGetVineyardDeploymentObjectsFromTemplate(t *testing.T) {
+func TestGetVineyardDeploymentObjectsFromTemplate_third(t *testing.T) {
 	// set different flags
 	flags.Namespace = "test-vineyard-system"
 	flags.VineyarddOpts.Replicas = 10
@@ -529,153 +551,6 @@ func TestGetVineyardDeploymentObjectsFromTemplate(t *testing.T) {
 				if !reflect.DeepEqual(*got[i], *(tt.want)[i]) {
 					t.Errorf("getDeploymentObjectsFromTemplate() = %+v, want %+v", got, tt.want)
 
-				}
-			}
-		})
-	}
-}
-
-func Test_applyVineyarddFromTemplate(t *testing.T) {
-	// set the flags
-	flags.KubeConfig = kube_config
-	flags.Namespace = vineyard_default_namespace
-	flags.VineyarddOpts.Replicas = 3
-	flags.VineyarddOpts.EtcdReplicas = 1
-	flags.VineyarddOpts.Vineyard.Image = vineyard_image
-	flags.VineyarddOpts.Vineyard.CPU = ""
-	flags.VineyarddOpts.Vineyard.Memory = ""
-	flags.VineyarddOpts.Service.Port = 9600
-	flags.VineyarddOpts.Service.Type = service_type
-	flags.VineyarddOpts.Volume.PvcName = ""
-	flags.VineyarddOpts.Vineyard.Size = size
-	c := util.KubernetesClient()
-
-	type args struct {
-		c client.Client
-	}
-	tests := []struct {
-		name                 string
-		args                 args
-		vineyardReplicas     int
-		etcdReplicas         int
-		expectedImage        string
-		expectedCpu          string
-		expectedMemery       string
-		expectedService_port int
-		expectedService_type string
-		wantErr              bool
-	}{
-		// Add test cases.
-		{
-			name: "test case",
-			args: args{
-				c: c,
-			},
-			vineyardReplicas:     3,
-			etcdReplicas:         1,
-			expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
-			expectedCpu:          "",
-			expectedMemery:       "",
-			expectedService_port: 9600,
-			expectedService_type: "ClusterIP",
-			wantErr:              false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if err := applyVineyarddFromTemplate(tt.args.c); (err != nil) != tt.wantErr {
-				t.Errorf("applyVineyarddFromTemplate() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			// get the replicas of etcd and vineyardd
-			k8sclient := util.KubernetesClient()
-			vineyardPods := corev1.PodList{}
-			vineyarddOpts := []client.ListOption{
-				client.InNamespace(flags.Namespace),
-				client.MatchingLabels{
-					"app.vineyard.io/name": flags.VineyarddName,
-					"app.vineyard.io/role": "vineyardd",
-				},
-			}
-			err := k8sclient.List(context.Background(), &vineyardPods, vineyarddOpts...)
-			if err != nil {
-				t.Errorf("list vineyardd pods error: %v", err)
-			}
-
-			etcdPod := corev1.PodList{}
-			etcdOpts := []client.ListOption{
-				client.InNamespace(flags.Namespace),
-				client.MatchingLabels{
-					"app.vineyard.io/name": flags.VineyarddName,
-					"app.vineyard.io/role": "etcd",
-				},
-			}
-			err = k8sclient.List(context.Background(), &etcdPod, etcdOpts...)
-			if err != nil {
-				t.Errorf("list etcd pods error: %v", err)
-			}
-
-			for _, pod := range vineyardPods.Items {
-				for _, container := range pod.Spec.Containers {
-					if container.Image != tt.expectedImage {
-						t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
-							pod.Name, pod.Namespace, container.Image, tt.expectedImage)
-					}
-					if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
-						if cpuRequest.String() != tt.expectedCpu {
-							t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
-								pod.Name, pod.Namespace, cpuRequest.String(), tt.expectedCpu)
-						}
-					}
-					if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
-						if memoryRequest.String() != tt.expectedMemery {
-							t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
-								pod.Name, pod.Namespace, memoryRequest.String(), tt.expectedMemery)
-						}
-					}
-				}
-			}
-			if len(vineyardPods.Items) != tt.vineyardReplicas {
-				t.Errorf("vineyardd replicas want: %d, got: %d", tt.vineyardReplicas, len(vineyardPods.Items))
-			}
-
-			for _, pod := range etcdPod.Items {
-				for _, container := range pod.Spec.Containers {
-					if container.Image != tt.expectedImage {
-						t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
-							pod.Name, pod.Namespace, container.Image, tt.expectedImage)
-					}
-					if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
-						if cpuRequest.String() != tt.expectedCpu {
-							t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
-								pod.Name, pod.Namespace, cpuRequest.String(), tt.expectedCpu)
-						}
-					}
-					if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
-						if memoryRequest.String() != tt.expectedMemery {
-							t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
-								pod.Name, pod.Namespace, memoryRequest.String(), tt.expectedMemery)
-						}
-					}
-				}
-			}
-			if len(etcdPod.Items) != tt.etcdReplicas {
-				t.Errorf("etcd replicas want: %d, got: %d", tt.etcdReplicas, len(etcdPod.Items))
-			}
-
-			// get the service object
-			svcList := corev1.ServiceList{}
-			err = k8sclient.List(context.Background(), &svcList, client.MatchingLabels{"app.vineyard.io/name": "vineyardd-sample"})
-			if err != nil {
-				t.Errorf("list services error: %v", err)
-			}
-			for _, svc := range svcList.Items {
-				if svc.Spec.Ports[0].Port != int32(tt.expectedService_port) {
-					t.Errorf("Service %s in namespace %s uses the port %d, expected port %d\n",
-						svc.Name, svc.Namespace, svc.Spec.Ports[0].Port, tt.expectedService_port)
-				}
-				if string(svc.Spec.Type) != tt.expectedService_type {
-					t.Errorf("Service %s in namespace %s uses the type %s, expected type %s\n",
-						svc.Name, svc.Namespace, string(svc.Spec.Type), tt.expectedService_type)
 				}
 			}
 		})

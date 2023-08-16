@@ -17,7 +17,6 @@ package deploy
 
 import (
 	"context"
-	"os"
 	"reflect"
 	"testing"
 
@@ -29,7 +28,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-var kube_config = os.Getenv("KUBECONFIG")
+var kube_config = "/tmp/e2e-k8s.config"
 var size = string("256Mi")
 var service_type = string("ClusterIP")
 var vineyard_deployment_name = string("vineyardd-sample")
@@ -38,7 +37,7 @@ var vineyard_image = string("vineyardcloudnative/vineyardd:alpine-latest")
 var vineyard_default_namespace = string("vineyard-system")
 var backup_path = string("/var/vineyard/dump")
 
-func TestDeployBackupJobCmd(t *testing.T) {
+func TestDeployBackupJobCmd_second(t *testing.T) {
 	// deploy a vineyardd for later backup operation
 	flags.KubeConfig = kube_config
 	flags.Namespace = vineyard_default_namespace
@@ -109,7 +108,7 @@ func TestDeployBackupJobCmd(t *testing.T) {
 	}
 }
 
-func Test_GetBackupObjectsFromTemplate(t *testing.T) {
+func Test_GetBackupObjectsFromTemplate_third(t *testing.T) {
 	// set the flags
 	flags.KubeConfig = kube_config
 	flags.BackupOpts.BackupPath = backup_path

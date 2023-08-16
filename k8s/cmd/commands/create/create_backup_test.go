@@ -17,7 +17,6 @@ package create
 
 import (
 	"fmt"
-	"os"
 	"reflect"
 	"testing"
 
@@ -30,7 +29,9 @@ import (
 )
 
 func Test_BuildBackup(t *testing.T) {
-	flags.KubeConfig = os.Getenv("KUBECONFIG")
+	//flags.KubeConfig = os.Getenv("KUBECONFIG")
+	//a := flags.GetDefaultVineyardNamespace()
+	fmt.Println(flags.GetDefaultVineyardNamespace())
 	flags.BackupName = "test-backup"
 	flags.Namespace = "test_backup"
 	flags.BackupOpts.BackupPath = "backup/path/to/test"

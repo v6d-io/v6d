@@ -153,7 +153,7 @@ func TestInjectCmd(t *testing.T) {
 	})
 }
 
-func TestValidateFormat(t *testing.T) {
+func TestValidateFormat_slow(t *testing.T) {
 	type args struct {
 		format string
 	}
@@ -187,7 +187,7 @@ func TestValidateFormat(t *testing.T) {
 	}
 }
 
-func TestGetWorkloadResource(t *testing.T) {
+func TestGetWorkloadResource_slow(t *testing.T) {
 	// get relative path
 	workload_YAML := "../../../config/samples/k8s_v1alpha1_sidecar.yaml"
 
@@ -257,7 +257,7 @@ kind: Deployment` + "\n",
 	}
 }
 
-func TestGetWorkloadObj(t *testing.T) {
+func TestGetWorkloadObj_slow(t *testing.T) {
 	type args struct {
 		workload string
 	}
@@ -573,7 +573,7 @@ var etcd_pod = `{
     }
 }`
 
-func TestGetManifestFromTemplate(t *testing.T) {
+func TestGetManifestFromTemplate_slow(t *testing.T) {
 	resource := `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -684,7 +684,7 @@ func Test_deployDuringInjection(t *testing.T) {
 	}
 }
 
-func Test_outputInjectedResult(t *testing.T) {
+func Test_outputInjectedResult_slow(t *testing.T) {
 	type args struct {
 		om OutputManifests
 	}
@@ -722,7 +722,7 @@ func Test_outputInjectedResult(t *testing.T) {
 	}
 }
 
-func Test_buildSidecar(t *testing.T) {
+func Test_buildSidecar_slow(t *testing.T) {
 	type args struct {
 		namespace string
 	}
@@ -816,7 +816,7 @@ func Test_buildSidecar(t *testing.T) {
 	}
 }
 
-func TestInjectSidecarConfig(t *testing.T) {
+func TestInjectSidecarConfig_slow(t *testing.T) {
 	sidecar := &v1alpha1.Sidecar{
 		TypeMeta: metav1.TypeMeta{Kind: "", APIVersion: ""},
 		ObjectMeta: metav1.ObjectMeta{

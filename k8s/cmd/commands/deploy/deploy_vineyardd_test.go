@@ -16,151 +16,16 @@ limitations under the License.
 package deploy
 
 import (
-	"context"
 	"reflect"
 	"testing"
-	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-func TestDeployVineyarddCmd(t *testing.T) {
-	test := struct {
-		name                 string
-		vineyardReplicas     int
-		etcdReplicas         int
-		expectedImage        string
-		expectedCpu          string
-		expectedMemery       string
-		expectedService_port int
-		expectedService_type string
-	}{
-		name:                 "test replicas",
-		vineyardReplicas:     3,
-		etcdReplicas:         1,
-		expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
-		expectedCpu:          "",
-		expectedMemery:       "",
-		expectedService_port: 9600,
-		expectedService_type: "ClusterIP",
-	}
-	t.Run(test.name, func(t *testing.T) {
-		// set the flags
-		flags.Namespace = vineyard_default_namespace
-		flags.KubeConfig = kube_config
-		flags.VineyarddOpts.Replicas = 3
-		flags.VineyarddOpts.EtcdReplicas = 1
-		flags.VineyarddOpts.Vineyard.Image = vineyard_image
-		flags.VineyarddOpts.Vineyard.CPU = ""
-		flags.VineyarddOpts.Vineyard.Memory = ""
-		flags.VineyarddOpts.Service.Port = 9600
-		flags.VineyarddOpts.Service.Type = service_type
-		flags.VineyarddOpts.Vineyard.Size = size
-		deployVineyarddCmd.Run(deployVineyarddCmd, []string{})
-		time.Sleep(1 * time.Second)
-		// get the replicas of etcd and vineyardd
-		k8sclient := util.KubernetesClient()
-		vineyardPods := corev1.PodList{}
-		vineyarddOpts := []client.ListOption{
-			client.InNamespace(flags.Namespace),
-			client.MatchingLabels{
-				"app.vineyard.io/name": flags.VineyarddName,
-				"app.vineyard.io/role": "vineyardd",
-			},
-		}
-		err := k8sclient.List(context.Background(), &vineyardPods, vineyarddOpts...)
-		if err != nil {
-			t.Errorf("list vineyardd pods error: %v", err)
-		}
-
-		etcdPod := corev1.PodList{}
-		etcdOpts := []client.ListOption{
-			client.InNamespace(flags.Namespace),
-			client.MatchingLabels{
-				"app.vineyard.io/name": flags.VineyarddName,
-				"app.vineyard.io/role": "etcd",
-			},
-		}
-		err = k8sclient.List(context.Background(), &etcdPod, etcdOpts...)
-		if err != nil {
-			t.Errorf("list etcd pods error: %v", err)
-		}
-
-		for _, pod := range etcdPod.Items {
-			for _, container := range pod.Spec.Containers {
-				if container.Image != test.expectedImage {
-					t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
-						pod.Name, pod.Namespace, container.Image, test.expectedImage)
-				}
-				if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
-					if cpuRequest.String() != test.expectedCpu {
-						t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
-							pod.Name, pod.Namespace, cpuRequest.String(), test.expectedCpu)
-					}
-				}
-				if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
-					if memoryRequest.String() != test.expectedMemery {
-						t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
-							pod.Name, pod.Namespace, memoryRequest.String(), test.expectedMemery)
-					}
-				}
-			}
-		}
-		if len(etcdPod.Items) != test.etcdReplicas {
-			t.Errorf("etcd replicas want: %d, got: %d", test.etcdReplicas, len(etcdPod.Items))
-		}
-
-		for _, pod := range vineyardPods.Items {
-			for _, container := range pod.Spec.Containers {
-				if container.Image != test.expectedImage {
-					t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
-						pod.Name, pod.Namespace, container.Image, test.expectedImage)
-				}
-				if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
-					if cpuRequest.String() != test.expectedCpu {
-						t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
-							pod.Name, pod.Namespace, cpuRequest.String(), test.expectedCpu)
-					}
-				}
-				if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
-					if memoryRequest.String() != test.expectedMemery {
-						t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
-							pod.Name, pod.Namespace, memoryRequest.String(), test.expectedMemery)
-					}
-				}
-			}
-		}
-		if len(vineyardPods.Items) != test.vineyardReplicas {
-			t.Errorf("vineyardd replicas want: %d, got: %d", test.vineyardReplicas, len(vineyardPods.Items))
-		}
-
-		// get the service object
-		svcList := corev1.ServiceList{}
-		err = k8sclient.List(context.Background(), &svcList, client.MatchingLabels{"app.vineyard.io/name": "vineyardd-sample"})
-		if err != nil {
-			t.Errorf("list services error: %v", err)
-		}
-		for _, svc := range svcList.Items {
-			if svc.Spec.Ports[0].Port != int32(test.expectedService_port) {
-				t.Errorf("Service %s in namespace %s uses the port %d, expected port %d\n",
-					svc.Name, svc.Namespace, svc.Spec.Ports[0].Port, test.expectedService_port)
-			}
-			if string(svc.Spec.Type) != test.expectedService_type {
-				t.Errorf("Service %s in namespace %s uses the type %s, expected type %s\n",
-					svc.Name, svc.Namespace, string(svc.Spec.Type), test.expectedService_type)
-			}
-		}
-
-	})
-}
-
-func TestBuildVineyard(t *testing.T) {
+func TestBuildVineyard_third(t *testing.T) {
 	// set the different flags
 	flags.VineyarddName = "test-vineyardd-1"
 	flags.VineyarddOpts.Replicas = 10
@@ -227,7 +92,7 @@ func TestBuildVineyard(t *testing.T) {
 	}
 }
 
-func TestBuildVineyardManifestFromInput(t *testing.T) {
+func TestBuildVineyardManifestFromInput_third(t *testing.T) {
 	// set the different flags
 	flags.VineyarddName = "test-vineyardd-2"
 	flags.VineyarddOpts.Replicas = 10
@@ -294,7 +159,7 @@ func TestBuildVineyardManifestFromInput(t *testing.T) {
 	}
 }
 
-func TestBuildVineyardManifestFromFile(t *testing.T) {
+func TestBuildVineyardManifestFromFile_first(t *testing.T) {
 	// set the flags
 	flags.Namespace = vineyard_default_namespace
 	flags.VineyarddFile = "../../../test/e2e/vineyardd.yaml"

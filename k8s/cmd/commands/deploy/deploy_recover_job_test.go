@@ -30,7 +30,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-func TestDeployRecoverJobCmd(t *testing.T) {
+func TestDeployRecoverJobCmd_second(t *testing.T) {
 	// deploy a vineyardd for later backup operation
 	flags.KubeConfig = kube_config
 	flags.Namespace = vineyard_default_namespace
@@ -77,7 +77,7 @@ func TestDeployRecoverJobCmd(t *testing.T) {
 	}
 }
 
-func Test_getRecoverObjectsFromTemplate(t *testing.T) {
+func Test_getRecoverObjectsFromTemplate_third(t *testing.T) {
 	// set the flags
 	flags.KubeConfig = kube_config
 	flags.VineyardDeploymentName = vineyard_deployment_name
