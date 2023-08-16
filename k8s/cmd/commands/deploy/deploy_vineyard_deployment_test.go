@@ -33,6 +33,33 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
+func validatePodAttributes(t *testing.T, pods corev1.PodList, expectedImage, expectedCpu, expectedMemory string, vineyardReplicas int) {
+	for _, pod := range pods.Items {
+		for _, container := range pod.Spec.Containers {
+			if container.Image != expectedImage {
+				t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
+					pod.Name, pod.Namespace, container.Image, expectedImage)
+			}
+			if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
+				if cpuRequest.String() != expectedCpu {
+					t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
+						pod.Name, pod.Namespace, cpuRequest.String(), expectedCpu)
+				}
+			}
+			if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
+				if memoryRequest.String() != expectedMemory {
+					t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
+						pod.Name, pod.Namespace, memoryRequest.String(), expectedMemory)
+				}
+			}
+
+		}
+	}
+	if len(pods.Items) != vineyardReplicas {
+		t.Errorf("vineyardd replicas want: %d, got: %d", vineyardReplicas, len(pods.Items))
+	}
+}
+
 func TestDeployVineyardDeploymentCmd_DeployVineyarddCmd_first(t *testing.T) {
 	test := []struct {
 		name                 string
@@ -40,7 +67,7 @@ func TestDeployVineyardDeploymentCmd_DeployVineyarddCmd_first(t *testing.T) {
 		etcdReplicas         int
 		expectedImage        string
 		expectedCpu          string
-		expectedMemery       string
+		expectedMemory       string
 		expectedService_port int
 		expectedService_type string
 		test_cmd             *cobra.Command
@@ -51,7 +78,7 @@ func TestDeployVineyardDeploymentCmd_DeployVineyarddCmd_first(t *testing.T) {
 			etcdReplicas:         1,
 			expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
 			expectedCpu:          "",
-			expectedMemery:       "",
+			expectedMemory:       "",
 			expectedService_port: 9600,
 			expectedService_type: "ClusterIP",
 			test_cmd:             deployVineyarddCmd,
@@ -62,7 +89,7 @@ func TestDeployVineyardDeploymentCmd_DeployVineyarddCmd_first(t *testing.T) {
 			etcdReplicas:         1,
 			expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
 			expectedCpu:          "",
-			expectedMemery:       "",
+			expectedMemory:       "",
 			expectedService_port: 9600,
 			expectedService_type: "ClusterIP",
 			test_cmd:             deployVineyardDeploymentCmd,
@@ -84,20 +111,8 @@ func TestDeployVineyardDeploymentCmd_DeployVineyarddCmd_first(t *testing.T) {
 			time.Sleep(1 * time.Second)
 			// get the replicas of etcd and vineyardd
 			k8sclient := util.KubernetesClient()
-			etcdPod := corev1.PodList{}
-			etcdOpts := []client.ListOption{
-				client.InNamespace(flags.Namespace),
-				client.MatchingLabels{
-					"app.vineyard.io/name": flags.VineyarddName,
-					"app.vineyard.io/role": "etcd",
-				},
-			}
-			err := k8sclient.List(context.Background(), &etcdPod, etcdOpts...)
-			if err != nil {
-				t.Errorf("list etcd pods error: %v", err)
-			}
-
 			vineyardPods := corev1.PodList{}
+			etcdPod := corev1.PodList{}
 			vineyarddOpts := []client.ListOption{
 				client.InNamespace(flags.Namespace),
 				client.MatchingLabels{
@@ -105,58 +120,24 @@ func TestDeployVineyardDeploymentCmd_DeployVineyarddCmd_first(t *testing.T) {
 					"app.vineyard.io/role": "vineyardd",
 				},
 			}
-			err = k8sclient.List(context.Background(), &vineyardPods, vineyarddOpts...)
+			err := k8sclient.List(context.Background(), &vineyardPods, vineyarddOpts...)
 			if err != nil {
 				t.Errorf("list vineyardd pods error: %v", err)
 			}
-
-			for _, pod := range vineyardPods.Items {
-				for _, container := range pod.Spec.Containers {
-					if container.Image != tt.expectedImage {
-						t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
-							pod.Name, pod.Namespace, container.Image, tt.expectedImage)
-					}
-					if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
-						if cpuRequest.String() != tt.expectedCpu {
-							t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
-								pod.Name, pod.Namespace, cpuRequest.String(), tt.expectedCpu)
-						}
-					}
-					if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
-						if memoryRequest.String() != tt.expectedMemery {
-							t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
-								pod.Name, pod.Namespace, memoryRequest.String(), tt.expectedMemery)
-						}
-					}
-				}
+			etcdOpts := []client.ListOption{
+				client.InNamespace(flags.Namespace),
+				client.MatchingLabels{
+					"app.vineyard.io/name": flags.VineyarddName,
+					"app.vineyard.io/role": "etcd",
+				},
 			}
-			if len(vineyardPods.Items) != tt.vineyardReplicas {
-				t.Errorf("vineyardd replicas want: %d, got: %d", tt.vineyardReplicas, len(vineyardPods.Items))
+			err = k8sclient.List(context.Background(), &etcdPod, etcdOpts...)
+			if err != nil {
+				t.Errorf("list etcd pods error: %v", err)
 			}
 
-			for _, pod := range etcdPod.Items {
-				for _, container := range pod.Spec.Containers {
-					if container.Image != tt.expectedImage {
-						t.Errorf("Pod %s in namespace %s uses the image %s, expected image %s\n",
-							pod.Name, pod.Namespace, container.Image, tt.expectedImage)
-					}
-					if cpuRequest, ok := container.Resources.Requests[corev1.ResourceCPU]; ok {
-						if cpuRequest.String() != tt.expectedCpu {
-							t.Errorf("Pod %s in namespace %s has cpu request %s, expected cpu request %s\n",
-								pod.Name, pod.Namespace, cpuRequest.String(), tt.expectedCpu)
-						}
-					}
-					if memoryRequest, ok := container.Resources.Requests[corev1.ResourceMemory]; ok {
-						if memoryRequest.String() != tt.expectedMemery {
-							t.Errorf("Pod %s in namespace %s has memory request %s, expected memory request %s\n",
-								pod.Name, pod.Namespace, memoryRequest.String(), tt.expectedMemery)
-						}
-					}
-				}
-			}
-			if len(etcdPod.Items) != tt.etcdReplicas {
-				t.Errorf("etcd replicas want: %d, got: %d", tt.etcdReplicas, len(etcdPod.Items))
-			}
+			validatePodAttributes(t, vineyardPods, tt.expectedImage, tt.expectedCpu, tt.expectedMemory, tt.vineyardReplicas)
+			validatePodAttributes(t, etcdPod, tt.expectedImage, tt.expectedCpu, tt.expectedMemory, tt.etcdReplicas)
 
 			// get the service object
 			svcList := corev1.ServiceList{}
