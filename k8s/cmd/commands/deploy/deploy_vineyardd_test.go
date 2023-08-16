@@ -17,21 +17,17 @@ package deploy
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
-	corev1 "k8s.io/api/core/v1"
-
-	//corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDeployVineyarddCmd(t *testing.T) {
@@ -57,7 +53,6 @@ func TestDeployVineyarddCmd(t *testing.T) {
 	t.Run(test.name, func(t *testing.T) {
 		// set the flags
 		flags.Namespace = vineyard_default_namespace
-		//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 		flags.KubeConfig = kube_config
 		flags.VineyarddOpts.Replicas = 3
 		flags.VineyarddOpts.EtcdReplicas = 1
@@ -302,9 +297,7 @@ func TestBuildVineyardManifestFromInput(t *testing.T) {
 func TestBuildVineyardManifestFromFile(t *testing.T) {
 	// set the flags
 	flags.Namespace = vineyard_default_namespace
-	//flags.VineyarddFile = os.Getenv("HOME") + "/v6d/k8s/test/e2e/vineyardd.yaml"
-	currentDir, _ := os.Getwd()
-	flags.VineyarddFile = filepath.Join(currentDir, "..", "..", "..", "test/e2e/vineyardd.yaml")
+	flags.VineyarddFile = "../../../test/e2e/vineyardd.yaml"
 
 	tests := []struct {
 		name    string

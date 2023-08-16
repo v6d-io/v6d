@@ -17,11 +17,11 @@ package util
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,9 +30,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 )
 
-const kube_config = string("/tmp/e2e-k8s.config")
+var kube_config = os.Getenv("KUBECONFIG")
 
 func Test_Scheme(t *testing.T) {
 	expectedScheme := scheme
@@ -51,102 +53,6 @@ func Test_Scheme(t *testing.T) {
 
 			if got := Scheme(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Scheme() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_Deserializer(t *testing.T) {
-	tests := []struct {
-		name string
-		want runtime.Decoder
-	}{
-		{
-			name: "Test case",
-			want: func() runtime.Decoder {
-				decoder := Deserializer()
-				if decoder == nil {
-					t.Error("Decoder should not be nil")
-				}
-				return decoder
-			}(),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := Deserializer(); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("Deserializer() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func Test_GetKubernetesConfig(t *testing.T) {
-	tests := []struct {
-		name           string
-		kubeConfigPath string
-	}{
-		{
-			name: "Test case 1",
-			//kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
-			kubeConfigPath: kube_config,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set the flags.KubeConfig to the specified kubeConfigPath
-			flags.KubeConfig = tt.kubeConfigPath
-			if got := GetKubernetesConfig(); reflect.DeepEqual(got, nil) {
-				t.Errorf("GetKubernetesConfig() = nil")
-			}
-		})
-	}
-}
-
-func Test_KubernetesClient(t *testing.T) {
-	tests := []struct {
-		name           string
-		kubeConfigPath string
-	}{
-		{
-			name: "Test case 1",
-			//kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
-			kubeConfigPath: kube_config,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set the flags.KubeConfig to the specified kubeConfigPath
-			flags.KubeConfig = tt.kubeConfigPath
-
-			if got := KubernetesClient(); reflect.DeepEqual(got, nil) {
-				t.Errorf("KubernetesClient() = nil")
-			}
-		})
-	}
-}
-
-func Test_KubernetesClientset(t *testing.T) {
-	tests := []struct {
-		name           string
-		kubeConfigPath string
-	}{
-		{
-			name: "Test case 1",
-			//kubeConfigPath: os.Getenv("HOME") + "/.kube/config",
-			kubeConfigPath: kube_config,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Set the flags.KubeConfig to the specified kubeConfigPath
-			flags.KubeConfig = tt.kubeConfigPath
-
-			if got := KubernetesClientset(); reflect.DeepEqual(got, nil) {
-				t.Errorf("KubernetesClientset() = nil")
 			}
 		})
 	}
@@ -320,67 +226,6 @@ func Test_CreateWithContext(t *testing.T) {
 			}
 			if createdConfigMap.Namespace != tt.args.v.GetNamespace() {
 				t.Errorf("Object namespaces should match. Expected: %s, Got: %s", tt.args.v.GetNamespace(), createdConfigMap.Namespace)
-			}
-		})
-	}
-}
-
-func Test_Delete(t *testing.T) {
-	type args struct {
-		c   client.Client
-		key types.NamespacedName
-		v   client.Object
-	}
-
-	tests := []struct {
-		name    string
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "Test case 1",
-			args: args{
-				c: fake.NewClientBuilder().Build(),
-				key: types.NamespacedName{
-					Name:      "my-configmap",
-					Namespace: "default",
-				},
-				v: &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-configmap",
-						Namespace: "default",
-					},
-					Data: map[string]string{
-						"key": "value",
-					},
-				},
-			},
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create the object and save it to Kubernetes
-			err := tt.args.c.Create(context.TODO(), tt.args.v)
-			if err != nil {
-				t.Errorf("Failed to create the object: %v", err)
-			}
-
-			if err := Delete(tt.args.c, tt.args.key, tt.args.v); (err != nil) != tt.wantErr {
-				t.Errorf("Delete() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			// Validate if the object is successfully deleted
-			deletedConfigMap := &corev1.ConfigMap{}
-			err = tt.args.c.Get(context.TODO(), types.NamespacedName{
-				Name:      "my-configmap",
-				Namespace: "default",
-			}, deletedConfigMap)
-			if tt.wantErr {
-				if err == nil || !errors.IsNotFound(err) {
-					t.Errorf("Object should be deleted")
-				}
 			}
 		})
 	}

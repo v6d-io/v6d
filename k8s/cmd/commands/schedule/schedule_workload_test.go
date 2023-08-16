@@ -20,22 +20,21 @@ import (
 	"io"
 	"os"
 	"reflect"
+	"regexp"
 	"sync"
 	"testing"
 
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
-
-	//corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
 func TestScheduleWorkloadCmd(t *testing.T) {
 	// set the flags
 	flags.Namespace = "vineyard-system"
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	flags.KubeConfig = os.Getenv("KUBECONFIG")
 	flags.VineyarddOpts.Replicas = 1
 	flags.VineyarddOpts.EtcdReplicas = 1
 	flags.Resource = `apiVersion: apps/v1
@@ -85,15 +84,85 @@ spec:
 		yamlStr := string(out)
 		mu.Unlock()           // unlock
 		os.Stdout = oldStdout // redirect os.Stdout to the original one
-		want := `{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"creationTimestamp":null,` +
-			`"name":"my-deployment"},"spec":{"replicas":1,"selector":null,"strategy":{},"template":{"metadata":` +
-			`{"creationTimestamp":null,"labels":{"app":"my-app"}},"spec":{"affinity":{"podAffinity":` +
-			`{"requiredDuringSchedulingIgnoredDuringExecution":[{"labelSelector":{"matchExpressions":` +
-			`[{"key":"app.kubernetes.io/instance","operator":"In","values":["vineyard-system-vineyardd-sample"]}]},"namespaces":["vineyard-system"],` +
-			`"topologyKey":"kubernetes.io/hostname"}]}},"containers":[{"env":[{"name":"VINEYARD_IPC_SOCKET",` +
-			`"value":"/var/run/vineyard.sock"}],"image":"nginx:latest","name":"my-container","resources":{},"volumeMounts":` +
-			`[{"mountPath":"/var/run","name":"vineyard-socket"}]}],"volumes":[{"hostPath":{"path":` +
-			`"/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample"},"name":"vineyard-socket"}]}}},"status":{}}` + "\n\n"
+		want :=
+			`{
+			"apiVersion":"apps/v1",
+			"kind":"Deployment",
+			"metadata":{
+				"creationTimestamp":null,
+				"name":"my-deployment"
+			},
+			"spec": {
+				"replicas":1,
+				"selector":null,
+				"strategy":{},
+				"template":{
+					"metadata":{
+						"creationTimestamp":null,
+						"labels":{
+							"app":"my-app"
+						}
+					},
+					"spec":{
+						"affinity":{
+							"podAffinity":{
+								"requiredDuringSchedulingIgnoredDuringExecution":[
+									{
+										"labelSelector":{
+											"matchExpressions":[
+												{
+													"key":"app.kubernetes.io/instance",
+													"operator":"In",
+													"values":[
+														"vineyard-system-vineyardd-sample"
+													]
+												}
+											]
+										},
+										"namespaces":[
+											"vineyard-system"
+										],
+										"topologyKey":"kubernetes.io/hostname"
+									}
+								]
+							}
+						},
+						"containers":[
+							{
+								"env":[
+									{
+										"name":"VINEYARD_IPC_SOCKET",
+										"value":"/var/run/vineyard.sock"
+									}
+								],
+								"image":"nginx:latest",
+								"name":"my-container",
+								"resources":{},
+								"volumeMounts":[
+									{
+										"mountPath":"/var/run",
+										"name":"vineyard-socket"
+									}
+								]
+							}
+						],
+						"volumes":[
+							{
+								"hostPath":{
+									"path":"/var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample"
+								},
+								"name":"vineyard-socket"
+							}
+						]
+					}
+				}
+			},
+			"status":{}
+		}`
+		// Remove all line breaks and indents
+		re := regexp.MustCompile(`\s+`)
+		want = re.ReplaceAllString(want, "")
+		want = want + "\n\n"
 		if !reflect.DeepEqual(yamlStr, want) {
 			t.Errorf("getWorkload() got = %v, want %v", yamlStr, want)
 		}
@@ -229,8 +298,7 @@ spec:
 
 func TestSchedulingWorkload(t *testing.T) {
 	// Set up test flags
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	flags.KubeConfig = os.Getenv("KUBECONFIG")
 	c := util.KubernetesClient()
 
 	type args struct {
@@ -327,8 +395,6 @@ func TestSchedulingWorkload(t *testing.T) {
 			a := fmt.Sprint(got)
 			b := fmt.Sprint(tt.want)
 			if !reflect.DeepEqual(a, b) {
-				//fmt.Println(got)
-				//fmt.Println(tt.want)
 				t.Errorf("SchedulingWorkload() = %v, want %v", got, tt.want)
 			}
 		})

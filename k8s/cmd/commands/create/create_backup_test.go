@@ -17,19 +17,20 @@ package create
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-func TestBuildBackup(t *testing.T) {
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
+func Test_BuildBackup(t *testing.T) {
+	flags.KubeConfig = os.Getenv("KUBECONFIG")
 	flags.BackupName = "test-backup"
 	flags.Namespace = "test_backup"
 	flags.BackupOpts.BackupPath = "backup/path/to/test"

@@ -19,33 +19,28 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"reflect"
+	"regexp"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	//"sigs.k8s.io/kustomize/kyaml/ext"
-
-	//"github.com/stretchr/testify/assert"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/controllers/k8s"
-
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestInjectCmd(t *testing.T) {
 	// set the flags
 	flags.Namespace = "vineyard-system"
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	flags.KubeConfig = os.Getenv("KUBECONFIG")
 	flags.SidecarOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:alpine-latest"
 	flags.WorkloadResource = `{
 		"apiVersion": "apps/v1",
@@ -194,8 +189,7 @@ func TestValidateFormat(t *testing.T) {
 
 func TestGetWorkloadResource(t *testing.T) {
 	// get relative path
-	currentDir, _ := os.Getwd()
-	workload_YAML := filepath.Join(currentDir, "..", "..", "..", "config/samples/k8s_v1alpha1_sidecar.yaml")
+	workload_YAML := "../../../config/samples/k8s_v1alpha1_sidecar.yaml"
 
 	tests := []struct {
 		name           string
@@ -205,8 +199,7 @@ func TestGetWorkloadResource(t *testing.T) {
 		expectedError  error
 	}{
 		{
-			name: "Valid YAML file",
-			//workloadYAML: os.Getenv("HOME") + "/v6d/k8s/config/samples/k8s_v1alpha1_sidecar.yaml",
+			name:         "Valid YAML file",
 			workloadYAML: workload_YAML,
 			workloadJSON: "",
 			expectedResult: `apiVersion: k8s.v6d.io/v1alpha1
@@ -230,8 +223,7 @@ kind: Deployment` + "\n",
 			expectedError: nil,
 		},
 		{
-			name: "Both workload yaml and workload resource specified",
-			//workloadYAML:   os.Getenv("HOME") + "/v6d/k8s/config/samples/k8s_v1alpha1_sidecar.yaml",
+			name:           "Both workload yaml and workload resource specified",
 			workloadYAML:   workload_YAML,
 			workloadJSON:   `{"apiVersion":"apps/v1","kind":"Deployment"}`,
 			expectedResult: "",
@@ -331,6 +323,256 @@ spec:
 	}
 }
 
+var workload = `{
+    "apiVersion": "apps/v1",
+    "kind": "Deployment",
+    "metadata": {
+        "creationTimestamp": null,
+        "name": "nginx-deployment",
+        "namespace": "vineyard-system",
+        "ownerReferences": []
+    },
+    "spec": {
+        "selector": {
+            "matchLabels": {
+                "app": "nginx"
+            }
+        },
+        "strategy": {},
+        "template": {
+            "metadata": {
+                "creationTimestamp": null,
+                "labels": {
+                    "app": "nginx",
+                    "app.vineyard.io/name": "vineyard-sidecar",
+                    "app.vineyard.io/role": "vineyardd"
+                }
+            },
+            "spec": {
+                "containers": [
+                    {
+                        "command": null,
+                        "env": [
+                            {
+                                "name": "VINEYARD_IPC_SOCKET",
+                                "value": "/var/run/vineyard.sock"
+                            }
+                        ],
+                        "image": "nginx:1.14.2",
+                        "name": "nginx",
+                        "ports": [
+                            {
+                                "containerPort": 80
+                            }
+                        ],
+                        "resources": {},
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run",
+                                "name": "vineyard-socket"
+                            }
+                        ]
+                    },
+                    {
+                        "command": [
+                            "/bin/bash",
+                            "-c",
+                            "/usr/bin/wait-for-it.sh__-t__60__vineyard-sidecar-etcd-service.vineyard-system.` +
+	`svc.cluster.local:2379;__sleep__1;__/usr/local/bin/vineyardd__--sync_crds__true__` +
+	`--socket__/var/run/vineyard.sock__--size____--stream_threshold__80__--etcd_cmd__etcd` +
+	`__--etcd_prefix__/vineyard__--etcd_endpoint__http://vineyard-sidecar-etcd-service:2379\n"
+                        ],
+                        "env": [
+                            {
+                                "name": "VINEYARDD_UID",
+                                "value": null
+                            },
+                            {
+                                "name": "VINEYARDD_NAME",
+                                "value": "vineyard-sidecar"
+                            },
+                            {
+                                "name": "VINEYARDD_NAMESPACE",
+                                "value": "vineyard-system"
+                            }
+                        ],
+                        "image": "vineyardcloudnative/vineyardd:latest",
+                        "imagePullPolicy": "IfNotPresent",
+                        "name": "vineyard-sidecar",
+                        "ports": [
+                            {
+                                "containerPort": 9600,
+                                "name": "vineyard-rpc",
+                                "protocol": "TCP"
+                            }
+                        ],
+                        "resources": {
+                            "limits": null,
+                            "requests": null
+                        },
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/var/run",
+                                "name": "vineyard-socket"
+                            }
+                        ]
+                    }
+                ],
+                "volumes": [
+                    {
+                        "emptyDir": {},
+                        "name": "vineyard-socket"
+                    }
+                ]
+            }
+        }
+    },
+    "status": {}
+}`
+
+var rpc_service = `{
+    "apiVersion": "v1",
+    "kind": "Service",
+    "metadata": {
+        "labels": {
+            "app.vineyard.io/name": "vineyard-sidecar"
+        },
+        "name": "vineyard-sidecar-rpc",
+        "namespace": "vineyard-system",
+        "ownerReferences": [
+            
+        ]
+    },
+    "spec": {
+        "ports": [
+            {
+                "name": "vineyard-rpc",
+                "port": 9600,
+                "protocol": "TCP"
+            }
+        ],
+        "selector": {
+            "app.vineyard.io/name": "vineyard-sidecar",
+            "app.vineyard.io/role": "vineyardd"
+        },
+        "type": "ClusterIP"
+    }
+}`
+
+var etcd_service = `{
+    "apiVersion": "v1",
+    "kind": "Service",
+    "metadata": {
+        "name": "vineyard-sidecar-etcd-service",
+        "namespace": "vineyard-system",
+        "ownerReferences": []
+    },
+    "spec": {
+        "ports": [
+            {
+                "name": "vineyard-sidecar-etcd-for-vineyard-port",
+                "port": 2379,
+                "protocol": "TCP",
+                "targetPort": 2379
+            }
+        ],
+        "selector": {
+            "app.vineyard.io/name": "vineyard-sidecar",
+            "app.vineyard.io/role": "etcd"
+        }
+    }
+}`
+
+var etcd_internal_service = `{
+    "apiVersion": "v1",
+    "kind": "Service",
+    "metadata": {
+        "labels": {
+            "etcd_node": "vineyard-sidecar-etcd-0"
+        },
+        "name": "vineyard-sidecar-etcd-0",
+        "namespace": "vineyard-system",
+        "ownerReferences": [
+            
+        ]
+    },
+    "spec": {
+        "ports": [
+            {
+                "name": "client",
+                "port": 2379,
+                "protocol": "TCP",
+                "targetPort": 2379
+            },
+            {
+                "name": "server",
+                "port": 2380,
+                "protocol": "TCP",
+                "targetPort": 2380
+            }
+        ],
+        "selector": {
+            "app.vineyard.io/role": "etcd",
+            "etcd_node": "vineyard-sidecar-etcd-0"
+        }
+    }
+}`
+
+var etcd_pod = `{
+    "apiVersion": "v1",
+    "kind": "Pod",
+    "metadata": {
+        "labels": {
+            "app.vineyard.io/name": "vineyard-sidecar",
+            "app.vineyard.io/role": "etcd",
+            "etcd_node": "vineyard-sidecar-etcd-0"
+        },
+        "name": "vineyard-sidecar-etcd-0",
+        "namespace": "vineyard-system",
+        "ownerReferences": [
+            
+        ]
+    },
+    "spec": {
+        "containers": [
+            {
+                "command": [
+                    "etcd",
+                    "--name",
+                    "vineyard-sidecar-etcd-0",
+                    "--initial-advertise-peer-urls",
+                    "http://vineyard-sidecar-etcd-0:2380",
+                    "--advertise-client-urls",
+                    "http://vineyard-sidecar-etcd-0:2379",
+                    "--listen-peer-urls",
+                    "http://0.0.0.0:2380",
+                    "--listen-client-urls",
+                    "http://0.0.0.0:2379",
+                    "--initial-cluster",
+                    "vineyard-sidecar-etcd-0=http://vineyard-sidecar-etcd-0:2380",
+                    "--initial-cluster-state",
+                    "new"
+                ],
+                "image": "vineyardcloudnative/vineyardd:latest",
+                "name": "etcd",
+                "ports": [
+                    {
+                        "containerPort": 2379,
+                        "name": "client",
+                        "protocol": "TCP"
+                    },
+                    {
+                        "containerPort": 2380,
+                        "name": "server",
+                        "protocol": "TCP"
+                    }
+                ]
+            }
+        ],
+        "restartPolicy": "Always"
+    }
+}`
+
 func TestGetManifestFromTemplate(t *testing.T) {
 	resource := `apiVersion: apps/v1
 kind: Deployment
@@ -352,6 +594,15 @@ spec:
         ports:
         - containerPort: 80
 `
+	// Remove all line breaks and indents
+	re := regexp.MustCompile(`\s+`)
+	workload = strings.ReplaceAll(workload, "__", "__SPECIAL_SPACE__")
+	workload = re.ReplaceAllString(workload, "")
+	workload = strings.ReplaceAll(workload, "__SPECIAL_SPACE__", " ")
+	rpc_service = re.ReplaceAllString(rpc_service, "")
+	etcd_service = re.ReplaceAllString(etcd_service, "")
+	etcd_internal_service = re.ReplaceAllString(etcd_internal_service, "")
+	etcd_pod = re.ReplaceAllString(etcd_pod, "")
 	type args struct {
 		workload string
 	}
@@ -366,44 +617,14 @@ spec:
 			name: "Test case",
 			args: args{workload: resource},
 			want: OutputManifests{
-				Workload: `{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"creationTimestamp":null,"name":"nginx-deployment",` +
-					`"namespace":"vineyard-system","ownerReferences":[]},"spec":{"selector":{"matchLabels":{"app":"nginx"}},"strategy":{},` +
-					`"template":{"metadata":{"creationTimestamp":null,"labels":{"app":"nginx","app.vineyard.io/name":"vineyard-sidecar",` +
-					`"app.vineyard.io/role":"vineyardd"}},"spec":{"containers":[{"command":null,"env":[{"name":"VINEYARD_IPC_SOCKET","value":` +
-					`"/var/run/vineyard.sock"}],"image":"nginx:1.14.2","name":"nginx","ports":[{"containerPort":80}],"resources":{},"volumeMounts":` +
-					`[{"mountPath":"/var/run","name":"vineyard-socket"}]},{"command":["/bin/bash","-c","/usr/bin/wait-for-it.sh -t 60 ` +
-					`vineyard-sidecar-etcd-service.vineyard-system.svc.cluster.local:2379; sleep 1; /usr/local/bin/vineyardd --sync_crds ` +
-					`true --socket /var/run/vineyard.sock --size  --stream_threshold 80 --etcd_cmd etcd --etcd_prefix /vineyard --etcd_endpoint` +
-					` http://vineyard-sidecar-etcd-service:2379\n"],"env":[{"name":"VINEYARDD_UID","value":null},{"name":"VINEYARDD_NAME",` +
-					`"value":"vineyard-sidecar"},{"name":"VINEYARDD_NAMESPACE","value":"vineyard-system"}],"image":"vineyardcloudnative/vineyardd:latest",` +
-					`"imagePullPolicy":"IfNotPresent","name":"vineyard-sidecar","ports":[{"containerPort":9600,"name":"vineyard-rpc","protocol":"TCP"}],` +
-					`"resources":{"limits":null,"requests":null},"volumeMounts":[{"mountPath":"/var/run","name":"vineyard-socket"}]}],"volumes":` +
-					`[{"emptyDir":{},"name":"vineyard-socket"}]}}},"status":{}}` + "\n",
-				RPCService: `{"apiVersion":"v1","kind":"Service","metadata":{"labels":{"app.vineyard.io/name":"vineyard-sidecar"},` +
-					`"name":"vineyard-sidecar-rpc","namespace":"vineyard-system","ownerReferences":[]},"spec":{"ports":[{"name":"vineyard-rpc",` +
-					`"port":9600,"protocol":"TCP"}],"selector":{"app.vineyard.io/name":"vineyard-sidecar","app.vineyard.io/role":"vineyardd"},` +
-					`"type":"ClusterIP"}}` + "\n",
-				EtcdService: `{"apiVersion":"v1","kind":"Service","metadata":{"name":"vineyard-sidecar-etcd-service",` +
-					`"namespace":"vineyard-system","ownerReferences":[]},"spec":{"ports":[{"name":"vineyard-sidecar-etcd-for-vineyard-port",` +
-					`"port":2379,"protocol":"TCP","targetPort":2379}],"selector":{"app.vineyard.io/name":"vineyard-sidecar",` +
-					`"app.vineyard.io/role":"etcd"}}}` + "\n",
+				Workload:    workload + "\n",
+				RPCService:  rpc_service + "\n",
+				EtcdService: etcd_service + "\n",
 				EtcdInternalService: []string{
-					`{"apiVersion":"v1","kind":"Service","metadata":{"labels":{"etcd_node":"vineyard-sidecar-etcd-0"},` +
-						`"name":"vineyard-sidecar-etcd-0","namespace":"vineyard-system","ownerReferences":[]},"spec":{"ports":` +
-						`[{"name":"client","port":2379,"protocol":"TCP","targetPort":2379},{"name":"server","port":2380,` +
-						`"protocol":"TCP","targetPort":2380}],"selector":{"app.vineyard.io/role":"etcd","etcd_node":` +
-						`"vineyard-sidecar-etcd-0"}}}` + "\n",
+					etcd_internal_service + "\n",
 				},
 				EtcdPod: []string{
-					`{"apiVersion":"v1","kind":"Pod","metadata":{"labels":{"app.vineyard.io/name":"vineyard-sidecar",` +
-						`"app.vineyard.io/role":"etcd","etcd_node":"vineyard-sidecar-etcd-0"},"name":"vineyard-sidecar-etcd-0",` +
-						`"namespace":"vineyard-system","ownerReferences":[]},"spec":{"containers":[{"command":["etcd","--name",` +
-						`"vineyard-sidecar-etcd-0","--initial-advertise-peer-urls","http://vineyard-sidecar-etcd-0:2380",` +
-						`"--advertise-client-urls","http://vineyard-sidecar-etcd-0:2379","--listen-peer-urls","http://0.0.0.0:2380",` +
-						`"--listen-client-urls","http://0.0.0.0:2379","--initial-cluster","vineyard-sidecar-etcd-0=http://vineyard-sidecar-etcd-0:2380",` +
-						`"--initial-cluster-state","new"],"image":"vineyardcloudnative/vineyardd:latest","name":"etcd","ports":` +
-						`[{"containerPort":2379,"name":"client","protocol":"TCP"},{"containerPort":2380,"name":"server",` +
-						`"protocol":"TCP"}]}],"restartPolicy":"Always"}}` + "\n",
+					etcd_pod + "\n",
 				},
 			},
 			wantErr: false,
@@ -417,6 +638,8 @@ spec:
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
+				fmt.Println(got.EtcdPod[0])
+				//fmt.Println(etcd_service)
 				t.Errorf("GetManifestFromTemplate() = %v, want %v", got, tt.want)
 			}
 		})
@@ -437,41 +660,14 @@ func Test_deployDuringInjection(t *testing.T) {
 			name: "Test Case 1",
 			args: args{
 				om: &OutputManifests{
-					Workload: `{"apiVersion":"apps/v1","kind":"Deployment","metadata":{"creationTimestamp":null,"name":` +
-						`"nginx-deployment","namespace":"vineyard-system","ownerReferences":[]},"spec":{"selector":{"matchLabels":` +
-						`{"app":"nginx"}},"strategy":{},"template":{"metadata":{"creationTimestamp":null,"labels":{"app":"nginx",` +
-						`"app.vineyard.io/name":"vineyard-sidecar"}},"spec":{"containers":[{"command":null,"image":"nginx:1.14.2",` +
-						`"name":"nginx","ports":[{"containerPort":80}],"resources":{},"volumeMounts":[{"mountPath":"/var/run","name":` +
-						`"vineyard-socket"}]},{"command":["/bin/bash","-c","/usr/bin/wait-for-it.sh -t 60 ` +
-						`vineyard-sidecar-etcd-service.vineyard-system.svc.cluster.local:2379; sleep 1; /usr/local/bin/vineyardd ` +
-						`--sync_crds true --socket /var/run/vineyard.sock --size 256Mi --stream_threshold 80 --etcd_cmd etcd ` +
-						`--etcd_prefix /vineyard --etcd_endpoint http://vineyard-sidecar-etcd-service:2379\n"],"env":[{"name":"VINEYARDD_UID",` +
-						`"value":null},{"name":"VINEYARDD_NAME","value":"vineyard-sidecar"},{"name":"VINEYARDD_NAMESPACE","value":"vineyard-system"}],` +
-						`"image":"vineyardcloudnative/vineyardd:latest","imagePullPolicy":"IfNotPresent","name":"vineyard-sidecar","ports":` +
-						`[{"containerPort":9600,"name":"vineyard-rpc","protocol":"TCP"}],"resources":{"limits":null,"requests":null},` +
-						`"volumeMounts":[{"mountPath":"/var/run","name":"vineyard-socket"}]}],"volumes":[{"emptyDir":{},"name":"vineyard-socket"}]}}},` +
-						`"status":{}`,
-					RPCService: `{"apiVersion":"v1","kind":"Service","metadata":{"labels":{"app.vineyard.io/name":"vineyard-sidecar"},` +
-						`"name":"vineyard-sidecar-rpc","namespace":"vineyard-system","ownerReferences":[]},"spec":{"ports":[{"name":"vineyard-rpc",` +
-						`"port":9600,"protocol":"TCP"}],"selector":{"app.vineyard.io/name":"vineyard-sidecar","app.vineyard.io/role":"vineyardd"},` +
-						`"type":"ClusterIP"}}`,
-					EtcdService: `{"apiVersion":"v1","kind":"Service","metadata":{"name":"vineyard-sidecar-etcd-service","namespace":"vineyard-system",` +
-						`"ownerReferences":[]},"spec":{"ports":[{"name":"vineyard-sidecar-etcd-for-vineyard-port","port":2379,"protocol":"TCP",` +
-						`"targetPort":2379}],"selector":{"app.vineyard.io/name":"vineyard-sidecar","app.vineyard.io/role":"etcd"}}}`,
+					Workload:    workload,
+					RPCService:  rpc_service,
+					EtcdService: etcd_service,
 					EtcdInternalService: []string{
-						`{"apiVersion":"v1","kind":"Service","metadata":{"labels":{"etcd_node":"vineyard-sidecar-etcd-0"},"name":"vineyard-sidecar-etcd-0",` +
-							`"namespace":"vineyard-system","ownerReferences":[]},"spec":{"ports":[{"name":"client","port":2379,"protocol":"TCP",` +
-							`"targetPort":2379},{"name":"server","port":2380,"protocol":"TCP","targetPort":2380}],"selector":{"app.vineyard.io/role":"etcd",` +
-							`"etcd_node":"vineyard-sidecar-etcd-0"}}}`,
+						etcd_internal_service,
 					},
 					EtcdPod: []string{
-						`{"apiVersion":"v1","kind":"Pod","metadata":{"labels":{"app.vineyard.io/name":"vineyard-sidecar","app.vineyard.io/role":"etcd",` +
-							`"etcd_node":"vineyard-sidecar-etcd-0"},"name":"vineyard-sidecar-etcd-0","namespace":"vineyard-system","ownerReferences":[]},` +
-							`"spec":{"containers":[{"command":["etcd","--name","vineyard-sidecar-etcd-0","--initial-advertise-peer-urls","http://vineyard-sidecar-etcd-0:2380",` +
-							`"--advertise-client-urls","http://vineyard-sidecar-etcd-0:2379","--listen-peer-urls","http://0.0.0.0:2380","--listen-client-urls",` +
-							`"http://0.0.0.0:2379","--initial-cluster","vineyard-sidecar-etcd-0=http://vineyard-sidecar-etcd-0:2380","--initial-cluster-state","new"],` +
-							`"image":"vineyardcloudnative/vineyardd:latest","name":"etcd","ports":[{"containerPort":2379,"name":"client","protocol":"TCP"},` +
-							`{"containerPort":2380,"name":"server","protocol":"TCP"}]}],"restartPolicy":"Always"}}`,
+						etcd_pod,
 					},
 				},
 			},
@@ -480,8 +676,7 @@ func Test_deployDuringInjection(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-			flags.KubeConfig = "/tmp/e2e-k8s.config"
+			flags.KubeConfig = os.Getenv("KUBECONFIG")
 			if err := deployDuringInjection(tt.args.om); (err != nil) != tt.wantErr {
 				t.Errorf("deployDuringInjection() error = %v, wantErr %v", err, tt.wantErr)
 			}
@@ -639,8 +834,7 @@ func TestInjectSidecarConfig(t *testing.T) {
 			Annotations:                nil,
 			OwnerReferences:            []metav1.OwnerReference{},
 			Finalizers:                 []string{},
-			//ZZZ_DeprecatedClusterName:  "",
-			ManagedFields: []metav1.ManagedFieldsEntry{},
+			ManagedFields:              []metav1.ManagedFieldsEntry{},
 		},
 		Spec: v1alpha1.SidecarSpec{
 			Selector:     "",

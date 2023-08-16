@@ -73,7 +73,6 @@ jobs:
           - e2e-tests-mars-examples
           - e2e-tests-vineyardctl
           - e2e-tests-deploy-raw-backup-and-recover
-          - unit-tests
     steps:
       - uses: actions/checkout@v3
         with:
@@ -178,8 +177,7 @@ jobs:
                      e2e-tests-workflow \
                      e2e-tests-mars-examples \
                      e2e-tests-vineyardctl \
-                     e2e-tests-deploy-raw-backup-and-recover \
-                     unit-tests; do
+                     e2e-tests-deploy-raw-backup-and-recover; do
             mkdir -p $job-logs
             chmod a+rwx $job-logs
           done
@@ -275,7 +273,7 @@ jobs:
           make -C k8s/test/e2e e2e-tests-deploy-raw-backup-and-recover
 
       - name: unit-tests
-        if: ${{ matrix.job == 'unit-tests' }}
+        if: ${{ matrix.job != 'release' }}
         run: |
           make -C k8s/test/e2e unittest
 

@@ -32,7 +32,6 @@ import (
 
 func TestDeployRecoverJobCmd(t *testing.T) {
 	// deploy a vineyardd for later backup operation
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = kube_config
 	flags.Namespace = vineyard_default_namespace
 	flags.VineyarddOpts.Replicas = 3
@@ -80,7 +79,6 @@ func TestDeployRecoverJobCmd(t *testing.T) {
 
 func Test_getRecoverObjectsFromTemplate(t *testing.T) {
 	// set the flags
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = kube_config
 	flags.VineyardDeploymentName = vineyard_deployment_name
 	flags.VineyardDeploymentNamespace = vineyard_deployment_namespace

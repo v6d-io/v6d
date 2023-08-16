@@ -22,12 +22,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/controllers/k8s"
 )
 
 func Test_RenderManifestAsObj(t *testing.T) {
@@ -250,7 +251,6 @@ func TestBuildObjsFromManifests(t *testing.T) {
 		},
 	}
 
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = kube_config
 	c := KubernetesClient()
 

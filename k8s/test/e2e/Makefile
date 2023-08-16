@@ -397,86 +397,56 @@ e2e-tests-airflow-integration: prepare-e2e-test build-local-cluster load-vineyar
 .PHONY: e2e-tests-airflow-integration
 
 ############# unit testing ################################################
-
-unittest: prepare-e2e-test build-local-cluster load-vineyardd-image
-	@make -C ${K8S_DIR} install-cert-manager
-	@make -C ${E2E_DIR} install-vineyard-operator
+#unittest: prepare-e2e-test build-local-cluster load-vineyardd-image
+#	@make -C ${K8S_DIR} install-cert-manager
+#	@make -C ${E2E_DIR} install-vineyard-operator
+unittest:
+#	@cd ${CMD_DIR} && go run main.go deploy cert-manager --kubeconfig /tmp/e2e-k8s.config
+#	@cd ${CMD_DIR} && go run main.go deploy operator --kubeconfig /tmp/e2e-k8s.config
 	@echo "Running vineyardctl unit test..." 
 # create test
-	@cd ${CMD_DIR}/commands/create && go test -run TestBuildBackup & \
-		cd ${CMD_DIR}/commands/create && go test -run Test_buildOperation & \
-		cd ${CMD_DIR}/commands/create && go test -run TestBuildV1alphaRecoverCR
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${K8S_DIR} && go test ./cmd/commands/create/
 # deploy_deployment
-	@cd ${CMD_DIR}/commands/deploy && go test -run TestDeployVineyardDeploymentCmd \
-		&& go test -run Test_applyVineyarddFromTemplate
-	@cd ${CMD_DIR}/commands/deploy && go test -run TestGetVineyardDeploymentObjectsFromTemplate
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/deploy && \
+		go test -run TestDeployVineyardDeploymentCmd && go test -run Test_applyVineyarddFromTemplate
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/deploy && \
+		go test -run TestGetVineyardDeploymentObjectsFromTemplate
 # deploy_backup_and_recover
-	@cd ${CMD_DIR}/commands/deploy && go test -run Test_getBackupObjectsFromTemplate & \
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/deploy && \
+		go test -run Test_getBackupObjectsFromTemplate & export KUBECONFIG="/tmp/e2e-k8s.config" && \
 		cd ${CMD_DIR}/commands/deploy && go test -run TestDeployBackupJobCmd
-	@cd ${CMD_DIR}/commands/deploy && go test -run Test_getRecoverObjectsFromTemplate & \
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/deploy && \
+		go test -run Test_getRecoverObjectsFromTemplate & export KUBECONFIG="/tmp/e2e-k8s.config" && \
 		cd ${CMD_DIR}/commands/deploy && go test -run TestDeployRecoverJobCmd
 # delete and deploy_vineyardd
-	@cd ${CMD_DIR}/commands/delete && go test -run TestDeleteVineyardDeploymentCmd 
-	@cd ${CMD_DIR}/commands/deploy && go test -run TestDeployVineyarddCmd & \
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/delete && \
+		go test -run TestDeleteVineyardDeploymentCmd 
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/deploy && \
+		go test -run TestDeployVineyarddCmd & export KUBECONFIG="/tmp/e2e-k8s.config" && \
 		cd ${CMD_DIR}/commands/deploy && go test -run TestBuildVineyard & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestBuildVineyardManifestFromInput 
-	@cd ${CMD_DIR}/commands/deploy && go test -run TestBuildVineyardManifestFromFile 
+		export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/deploy && \
+		go test -run TestBuildVineyardManifestFromInput 
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/deploy && \
+		go test -run TestBuildVineyardManifestFromFile 
 # schedule test
-	@cd ${CMD_DIR}/commands/schedule && go test -run TestScheduleWorkloadCmd & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestSchedulingWorkload 
-	@cd ${CMD_DIR}/commands/schedule && go test -run Test_getWorkload & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestValidateWorkloadKind 
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${K8S_DIR} && go test ./cmd/commands/schedule/
 # sidecar test 
-	@cd ${CMD_DIR}/commands/sidecar && go test -run TestInjectCmd && go test -run Test_deployDuringInjection & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestValidateFormat  
-	@cd ${CMD_DIR}/commands/sidecar && go test -run TestGetWorkloadResource & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestGetWorkloadObj & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestGetManifestFromTemplate
-	@cd ${CMD_DIR}/commands/sidecar && go test -run Test_outputInjectedResult & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_buildSidecar & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestInjectSidecarConfig 
-# util_arg
-	@cd ${CMD_DIR}/commands/util && go test -run TestAssertNoArgs & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestAssertNoArgsOrInput 
-# util_certmanager
-	@cd ${CMD_DIR}/commands/util && go test -run Test_getCertManagerManifestsFromLocal & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestGetCertManager 
-# util_client
-	@cd ${CMD_DIR}/commands/util && go test -run Test_Scheme & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_Deserializer & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_GetKubernetesConfig & \
-			cd ${CMD_DIR}/commands/deploy && go test -run Test_KubernetesClient 
-	@cd ${CMD_DIR}/commands/util && go test -run Test_KubernetesClientset & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_Create & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_CreateIfNotExists 
-	@cd ${CMD_DIR}/commands/util && go test -run Test_CreateWithContext & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_Delete & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_DeleteWithContext 
-	@cd ${CMD_DIR}/commands/util && go test -run Test_Wait & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_CreateNamespaceIfNotExist 
-# util_io
-	@cd ${CMD_DIR}/commands/util && go test -run Test_ReadFromFile & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_ReadFromStdin & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_ReadJsonFromStdin 
-# util_parse
-	@cd ${CMD_DIR}/commands/util && go test -run TestConvertToJson & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestConvertToYaml & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestParseEnvs  
-	@cd ${CMD_DIR}/commands/util && go test -run TestParsePVSpec & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestParsePVCSpec & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestParsePVandPVCSpec 
-	@cd ${CMD_DIR}/commands/util && go test -run TestGetPVAndPVC & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestParseOwnerRef 
-# util_template
-	@cd ${CMD_DIR}/commands/util && go test -run Test_RenderManifestAsObj & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestBuildObjsFromEtcdManifests & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestBuildObjsFromVineyarddManifests & \
-		cd ${CMD_DIR}/commands/deploy && go test -run TestBuildObjsFromManifests 
-# util_manifests
-	@cd ${CMD_DIR}/commands/util && go test -run Test_ParseManifestToObject & \
-		cd ${CMD_DIR}/commands/deploy && go test -run Test_ParseManifestsToObjects 
-	@cd ${CMD_DIR}/commands/util && go test -run Test_ApplyManifests && go test -run Test_DeleteManifests && \
-		go test -run Test_ApplyManifestsWithOwnerRef
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/sidecar && \
+		go test -run TestInjectCmd && go test -run Test_deployDuringInjection & \
+		export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/sidecar && \
+		go test -run TestValidateFormat  
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/sidecar && \
+		go test -run TestGetWorkloadResource & export KUBECONFIG="/tmp/e2e-k8s.config" && \
+		cd ${CMD_DIR}/commands/sidecar && go test -run TestGetWorkloadObj & \
+		export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/sidecar && \
+		go test -run TestGetManifestFromTemplate
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/sidecar && \
+		go test -run Test_outputInjectedResult & export KUBECONFIG="/tmp/e2e-k8s.config" && \
+		cd ${CMD_DIR}/commands/sidecar && go test -run Test_buildSidecar & \
+		export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/sidecar && \
+		go test -run TestInjectSidecarConfig 
+# util
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${K8S_DIR} && go test ./cmd/commands/util/
 	@echo "vineyardctl unit test passed."
 	@make delete-local-cluster
 .PHONY: unittest

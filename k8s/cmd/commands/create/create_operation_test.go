@@ -19,12 +19,13 @@ import (
 	"reflect"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func Test_buildOperation(t *testing.T) {
+func Test_BuildOperation(t *testing.T) {
 	flags.OperationName = "test-operation"
 	flags.OperationOpts.Name = "test-operation-opts"
 	tests := []struct {

@@ -52,7 +52,6 @@ func TestDeployVineyardDeploymentCmd(t *testing.T) {
 	t.Run(test.name, func(t *testing.T) {
 		// set the flags
 		flags.Namespace = vineyard_default_namespace
-		//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 		flags.KubeConfig = kube_config
 		flags.VineyarddOpts.Replicas = 3
 		flags.VineyarddOpts.EtcdReplicas = 1
@@ -538,7 +537,6 @@ func TestGetVineyardDeploymentObjectsFromTemplate(t *testing.T) {
 
 func Test_applyVineyarddFromTemplate(t *testing.T) {
 	// set the flags
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = kube_config
 	flags.Namespace = vineyard_default_namespace
 	flags.VineyarddOpts.Replicas = 3

@@ -17,19 +17,20 @@ package delete
 
 import (
 	"context"
+	"os"
 	"testing"
+
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 func TestDeleteVineyardDeploymentCmd(t *testing.T) {
 	// deploy a vineyardd for later delete operation
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
-	flags.KubeConfig = "/tmp/e2e-k8s.config"
+	flags.KubeConfig = os.Getenv("KUBECONFIG")
 	flags.Namespace = "vineyard-system"
 	flags.VineyarddOpts.Replicas = 3
 	flags.VineyarddOpts.EtcdReplicas = 1

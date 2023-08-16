@@ -22,12 +22,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-
-	//"k8s.io/client-go/kubernetes/scheme"
-
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 )
 
 func Test_ParseManifestToObject(t *testing.T) {
@@ -165,7 +163,6 @@ spec:
 }
 
 func Test_ApplyManifests(t *testing.T) {
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = kube_config
 	c := KubernetesClient()
 
@@ -226,7 +223,6 @@ func Test_ApplyManifests(t *testing.T) {
 }
 
 func Test_DeleteManifests(t *testing.T) {
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = kube_config
 	c := KubernetesClient()
 
@@ -288,7 +284,6 @@ func Test_DeleteManifests(t *testing.T) {
 }
 
 func Test_ApplyManifestsWithOwnerRef(t *testing.T) {
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = kube_config
 	flags.Namespace = "vineyard-system"
 	c := KubernetesClient()

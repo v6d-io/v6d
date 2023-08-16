@@ -17,34 +17,29 @@ package deploy
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"testing"
 
-	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	//"k8s.io/apimachinery/pkg/runtime/schema"
-
 	batchv1 "k8s.io/api/batch/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	//"k8s.io/client-go/kubernetes/fake"
-	//"github.com/stretchr/testify/assert"
-	//"k8s.io/api/apps/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-const kube_config = string("/tmp/e2e-k8s.config")
-const size = string("256Mi")
-const service_type = string("ClusterIP")
-const vineyard_deployment_name = string("vineyardd-sample")
-const vineyard_deployment_namespace = string("vineyard-system")
-const vineyard_image = string("vineyardcloudnative/vineyardd:alpine-latest")
-const vineyard_default_namespace = string("vineyard-system")
-const backup_path = string("/var/vineyard/dump")
+var kube_config = os.Getenv("KUBECONFIG")
+var size = string("256Mi")
+var service_type = string("ClusterIP")
+var vineyard_deployment_name = string("vineyardd-sample")
+var vineyard_deployment_namespace = string("vineyard-system")
+var vineyard_image = string("vineyardcloudnative/vineyardd:alpine-latest")
+var vineyard_default_namespace = string("vineyard-system")
+var backup_path = string("/var/vineyard/dump")
 
 func TestDeployBackupJobCmd(t *testing.T) {
 	// deploy a vineyardd for later backup operation
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = kube_config
 	flags.Namespace = vineyard_default_namespace
 	flags.VineyarddOpts.Replicas = 3
@@ -61,8 +56,6 @@ func TestDeployBackupJobCmd(t *testing.T) {
 
 	//backup operation
 	flags.BackupOpts.BackupPath = backup_path
-	//flags.PVCName = "pvc-for-backup-and-recover-demo"
-
 	flags.VineyardDeploymentName = vineyard_deployment_name
 	flags.VineyardDeploymentNamespace = vineyard_deployment_namespace
 	flags.BackupPVandPVC = `{
@@ -98,10 +91,6 @@ func TestDeployBackupJobCmd(t *testing.T) {
 	}
     `
 	c := util.KubernetesClient()
-	//got, _ := getBackupObjectsFromTemplate(c, []string{})
-	/*for i := range got {
-		fmt.Println(*got[i])
-	}*/
 	deployBackupJobCmd.Run(deployBackupJobCmd, []string{})
 
 	if util.Wait(func() (bool, error) {
@@ -120,11 +109,9 @@ func TestDeployBackupJobCmd(t *testing.T) {
 	}
 }
 
-func Test_getBackupObjectsFromTemplate(t *testing.T) {
+func Test_GetBackupObjectsFromTemplate(t *testing.T) {
 	// set the flags
-	//flags.KubeConfig = os.Getenv("HOME") + "/.kube/config"
 	flags.KubeConfig = kube_config
-	//flags.PVCName = "pvc-for-backup-and-recover-demo"
 	flags.BackupOpts.BackupPath = backup_path
 	flags.Namespace = vineyard_default_namespace
 	flags.VineyardDeploymentName = vineyard_deployment_name
@@ -397,8 +384,6 @@ func Test_getBackupObjectsFromTemplate(t *testing.T) {
 
 			for i := range got {
 				if !reflect.DeepEqual(*got[i], *(tt.want)[i]) {
-					//fmt.Println(*got[i])
-					//fmt.Println(*(tt.want)[i])
 					t.Errorf("getBackupObjectsFromTemplate() = %+v, want %+v", got, tt.want)
 
 				}
