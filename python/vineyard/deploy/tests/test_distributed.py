@@ -30,6 +30,7 @@ import numpy as np
 import pytest
 
 import vineyard
+from vineyard import ObjectMeta
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
@@ -56,6 +57,37 @@ def test_get_after_persist(vineyard_ipc_sockets):
     client1.persist(o)
     meta = client2.get_meta(o, True)
     assert data.shape == tuple(json.loads(meta['shape_']))
+
+
+def test_persist_both_global_and_member(vineyard_ipc_sockets):
+    client1, client2 = generate_vineyard_ipc_clients(vineyard_ipc_sockets, 2)
+
+    tensor = client1.put(np.arange(10))
+    # client1.persist(tensor)    # n.b.: without this persist, it should be as well
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::Sequence'
+    meta['size_'] = 1
+    meta.set_global(True)
+    meta.add_member('__elements_-0', tensor)
+    meta['__elements_-size'] = 1
+    tup = client1.create_metadata(meta)
+    client1.persist(tup)
+
+    # now, it should be available on the second client
+    client2.sync_meta()
+
+    # tup is persisted
+    metas = client2.list_metadatas("vineyard::Sequence", limit=100000)
+    ids = [meta.id for meta in metas]
+    assert tup.id in ids
+
+    # tensor is persisted
+    metas = client2.list_metadatas("vineyard::Tensor*", limit=100000)
+    ids = [meta.id for meta in metas]
+    assert tensor in ids
+
+    # test get
+    client2.get_meta(vineyard.ObjectID(tup.id))
 
 
 def test_add_remote_placeholder(vineyard_ipc_sockets):

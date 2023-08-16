@@ -583,6 +583,15 @@ static void generate_persist_ops(json& diff, const std::string& instance_name,
       std::string sub_type, sub_name;
       VINEYARD_SUPPRESS(get_type_name(item.value(), sub_type, sub_name));
 
+      // Don't persist blob into etcd
+      if (item.value()["transient"].get<bool>() &&
+          sub_type != "vineyard::Blob") {
+        // otherwise, skip recursively generate ops
+        // n.b.: here the sub_name should be object id, rather than signature
+        generate_persist_ops(item.value(), instance_name,
+                             sub_name /* object id */, ops, dedup, false);
+      }
+
       // persist the signature record.
       if (global_object) {
         std::string sub_sig =
@@ -599,13 +608,7 @@ static void generate_persist_ops(json& diff, const std::string& instance_name,
         sub_name = sub_sig;
       }
 
-      // Don't persist blob into etcd, but the link cannot be omitted.
-      if (item.value()["transient"].get<bool>() &&
-          sub_type != "vineyard::Blob") {
-        // otherwise, skip recursively generate ops
-        generate_persist_ops(item.value(), instance_name, sub_name, ops, dedup,
-                             false);
-      }
+      // But the link to blobs cannot be omitted.
       std::string link;
       if (sub_type == "vineyard::Blob") {
         generate_link(sub_type, sub_name,
