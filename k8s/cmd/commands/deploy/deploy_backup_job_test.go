@@ -17,6 +17,7 @@ package deploy
 
 import (
 	"context"
+	"os"
 	"reflect"
 	"testing"
 
@@ -28,7 +29,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 )
 
-var kube_config = "/tmp/e2e-k8s.config"
+var kube_config = os.Getenv("KUBECONFIG")
 var size = string("256Mi")
 var service_type = string("ClusterIP")
 var vineyard_deployment_name = string("vineyardd-sample")

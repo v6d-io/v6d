@@ -22,12 +22,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-	"github.com/spf13/cobra"
-	//"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
 
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
