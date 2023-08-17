@@ -40,6 +40,7 @@ endif
 
 GOLINT = $(shell command -v $(GOBIN)/golangci-lint 2> /dev/null)
 HELMIFY = $(shell command -v $(GOBIN)/helmify 2> /dev/null)
+CRD_REF_DOCS = $(shell command -v $(GOBIN)/crd-ref-docs 2> /dev/null)
 E2E = $(shell command -v $(GOBIN)/e2e 2> /dev/null)
 KUSTOMIZE = $(shell command -v $(GOBIN)/kustomize 2> /dev/null)
 CONTROLLER_GEN = $(shell command -v $(GOBIN)/controller-gen 2> /dev/null)
@@ -49,6 +50,7 @@ KUSTOMIZE_VERSION ?= v4@v4.5.5
 CONTROLLER_TOOLS_VERSION ?= v0.11.0
 GOLANGCI_LINT_VERSION ?= v1.49.0
 HELMIFY_VERSION ?= v0.3.34
+CRD_REF_DOCS_VERSION ?= latest
 E2E_VERSION ?= 2631e76926604c4e30ca170bed916804c86980b6
 
 all: vineyardctl
@@ -169,6 +171,16 @@ helmify:
 	@echo "helmify installed"
 	$(eval HELMIFY = $(GOBIN)/helmify)
 
+# Install crd-ref-docs if not exist
+.PHONY: crd-ref-docs
+crd-ref-docs:
+    ifeq ($(CRD_REF_DOCS),)
+		@echo "crd-ref-docs not exist, installing it..."
+		go install github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
+    endif
+	@echo "crd-ref-docs installed"
+	$(eval CRD_REF_DOCS = $(GOBIN)/crd-ref-docs)
+
 # Install e2e if not exist
 .PHONY: e2e
 e2e:
@@ -199,6 +211,11 @@ vet:
 .PHONY: generate
 generate: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+.PHONY: generate-crd-docs
+generate-crd-docs: crd-ref-docs
+	$(CRD_REF_DOCS) --source-path=apis/k8s/v1alpha1 --config=config.yaml \
+	--renderer=markdown --output-path=apis/k8s/v1alpha1/README.md
 
 # Vendor modules for code-generate
 .PHONY: vendor

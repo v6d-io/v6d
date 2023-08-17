@@ -13,7 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group
 package v1alpha1
 
 import (
@@ -52,7 +51,16 @@ type OperationStatus struct {
 // +kubebuilder:printcolumn:name="Type",type=string,JSONPath=`.spec.type`
 // +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 
-// Operation is the Schema for the operations API
+// Operation describes an operation between workloads, such as assembly and repartition.
+//
+// As for the `assembly` operation, there are several kinds of computing engines, some
+// may not support the stream data, so we need to insert an `assembly` operation to
+// assemble the stream data into a batch data, so that the next computing engines can
+// process the data.
+//
+// As for the `repartition` operation, the vineyard has integrated with the distributed
+// computing engines, such as Dask. If you want to repartition the data to adapt the dask
+// workers, then the `repartition` operation is essential for such scenario.
 type Operation struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

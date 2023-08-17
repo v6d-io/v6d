@@ -13,7 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group
 package v1alpha1
 
 import (
@@ -47,7 +46,8 @@ type RecoverStatus struct {
 // +kubebuilder:printcolumn:name="Mapping",type=string,JSONPath=`.status.objectMapping`
 // +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 
-// Recover is the Schema for the recovers API
+// Recover describes a recover operation of vineyard objects, which is used to recover
+// a specific backup operation.
 type Recover struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

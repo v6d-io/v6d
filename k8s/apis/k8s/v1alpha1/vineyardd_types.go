@@ -13,7 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group
 package v1alpha1
 
 import (
@@ -192,7 +191,7 @@ type PluginImageConfig struct {
 
 // VineyarddSpec holds all configuration about vineyardd
 type VineyarddSpec struct {
-	// the replicas of vineyardd
+	// Replicas is the number of vineyardd pods to deploy
 	// +kubebuilder:validation:Required
 	// +kubebuilder:default:=3
 	Replicas int `json:"replicas,omitempty"`
@@ -244,7 +243,13 @@ type VineyarddStatus struct {
 // +kubebuilder:printcolumn:name="Desired",type=string,JSONPath=`.spec.replicas`
 // +genclient
 
-// Vineyardd is the Schema for the vineyardd API
+// Vineyardd is used to deploy a vineyard cluster on kubernetes, which can simplify the
+// configurations of the vineyard binary, the external etcd cluster and the
+// vineyard [Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/).
+// As vineyard is bound to a specific socket on the hostpath by default, the vineyard pod cannot be
+// deployed on the same node. Before deploying vineyardd, you should know how many nodes
+// are available for vineyard pod to deploy on and make sure the vineyardd pod number is
+// less than the number of available nodes.
 type Vineyardd struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

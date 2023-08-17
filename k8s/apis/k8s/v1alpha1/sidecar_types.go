@@ -13,7 +13,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group
 package v1alpha1
 
 import (
@@ -71,7 +70,7 @@ type SidecarStatus struct {
 // +kubebuilder:printcolumn:name="Current",type=string,JSONPath=`.status.current`
 // +kubebuilder:printcolumn:name="Desired",type=string,JSONPath=`.spec.replicas`
 
-// Sidecar is the Schema for the sidecars API
+// Sidecar is used for configuring and managing the vineyard sidecar container.
 type Sidecar struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

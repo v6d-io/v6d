@@ -9,6 +9,7 @@ API Reference
    references/python-api.rst
    references/cpp-api.rst
    references/ctl.rst
+   Kubernetes CRDs <references/crds.md>
 
 Vineyard offers a comprehensive suite of SDKs, including Python and C++ versions.
 For detailed API references, please explore the following pages:
