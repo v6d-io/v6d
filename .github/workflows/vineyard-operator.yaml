@@ -159,6 +159,11 @@ jobs:
         run: |
           make -C k8s/test/e2e build-base-images
 
+      - name: unit-tests
+        if: ${{ matrix.job != 'release' }}
+        run: |
+          make -C k8s/test/e2e unittest
+
       - name: Prepare directories for logs
         run: |
           # create log directories for all tasks to prevent the "Path to upload does not exist" warnings
@@ -271,11 +276,6 @@ jobs:
         if: ${{ matrix.job == 'e2e-tests-deploy-raw-backup-and-recover' }}
         run: |
           make -C k8s/test/e2e e2e-tests-deploy-raw-backup-and-recover
-
-      - name: unit-tests
-        if: ${{ matrix.job != 'release' }}
-        run: |
-          make -C k8s/test/e2e unittest
 
       - name: Stop to export kubernetes logs
         uses: dashanji/kubernetes-log-export-action@v6

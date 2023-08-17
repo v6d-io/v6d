@@ -397,10 +397,9 @@ e2e-tests-airflow-integration: prepare-e2e-test build-local-cluster load-vineyar
 .PHONY: e2e-tests-airflow-integration
 
 ############# unit testing ################################################
-#unittest: prepare-e2e-test build-local-cluster load-vineyardd-image
-#	@make -C ${K8S_DIR} install-cert-manager
-#	@make -C ${E2E_DIR} install-vineyard-operator
-unittest:
+unittest: prepare-e2e-test build-local-cluster load-vineyardd-image
+	@make -C ${K8S_DIR} install-cert-manager
+	@make -C ${E2E_DIR} install-vineyard-operator
 #	@cd ${CMD_DIR} && go run main.go deploy cert-manager --kubeconfig /tmp/e2e-k8s.config
 #	@cd ${CMD_DIR} && go run main.go deploy operator --kubeconfig /tmp/e2e-k8s.config
 	@echo "Running vineyardctl unit test..." 
@@ -419,7 +418,7 @@ unittest:
 # util test
 	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${K8S_DIR} && go test ./cmd/commands/util/
 	@echo "vineyardctl unit test passed."
-#	@make delete-local-cluster
+	@make delete-local-cluster
 .PHONY: unittest
 
 # publish all images to ghcr registry
