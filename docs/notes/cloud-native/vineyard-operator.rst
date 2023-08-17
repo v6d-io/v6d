@@ -84,7 +84,7 @@ components will be created and managed by the vineyard operator:
         replicaset.apps/vineyard-controller-manager-5c6f4bc454   1         1         1       72s
         replicaset.apps/vineyardd-sample-5cc797668f              3         3         3       48s
 
-For detailed configuration entries of vineyardd, please refer to `vineyardd CRD <../references/crds.md#vineyardd>`.
+For detailed configuration entries of vineyardd, please refer to `vineyardd CRD <../references/crds.md#vineyardd>`_.
 
 Installing vineyard as sidecar
 ------------------------------
@@ -622,7 +622,7 @@ Operations and drivers
 
 The **Operation** custom resource definition (CRD) elegantly defines the configurable
 pluggable drivers, primarily `assembly` and `repartition`, within a Kubernetes cluster.
-The fields of the Operation CRD are listed `here <../references/crds.md#operation>`_.
+You could refer the `Operation CRD <../references/crds.md#operation>`_ to get more details.
 
 The Operation Custom Resource (CR) is created by the vineyard scheduler while scheduling vineyard jobs.
 You can retrieve the created Operation CRs as follows:
@@ -1221,10 +1221,11 @@ Failover mechanism of vineyard cluster
 If you want to back up data for the current vineyard cluster, you can create a Backup CR to
 perform a backup operation. As the Backup CR will use the default service account of the 
 namespace the vineyard operator is deployed, you need to set up the same namespace as
-the vineyard operator. The main fields are described `here <../references/crds.md#backup>`_.
+the vineyard operator. Please refer the `Backup CRD <../references/crds.md#backup>`_
+for more details.
 
 After data backup, you can create a Recover CR to restore a certain vineyard backup data.
-Its fields are described `here <../references/crds.md#recover>`_.
+Please refer the `Recover CRD <../references/crds.md#recover>`_ for more details.
 
 Next, we will show how to use the failover mechanism in vineyard operator. Assuming that
 we have a vineyard cluster that contains some objects, then we create a backup cr to back
