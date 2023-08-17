@@ -21,7 +21,6 @@ spec:
       containers:
       - name: job1
         image: ghcr.io/v6d-io/v6d/job1-with-scheduler
-        command: ["/bin/bash", "-c", "sleep infinity"]
         env:
         - name: JOB_NAME
           value: v6d-workflow-demo-job1

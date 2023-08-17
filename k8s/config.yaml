@@ -2,12 +2,6 @@
 # Copy from https://github.com/elastic/crd-ref-docs/blob/master/config.yaml
 
 processor:
-  ignoreTypes:
-    - "(Elasticsearch|Kibana|ApmServer)List$"
-    - "(Elasticsearch|Kibana|ApmServer)Health$"
-    - "(Elasticsearch|Kibana|ApmServer|Reconciler)Status$"
-    - "ElasticsearchSettings$"
-    - "Associa(ted|tor|tionStatus|tionConf)$"
   ignoreFields:
     - "status$"
     - "TypeMeta$"
