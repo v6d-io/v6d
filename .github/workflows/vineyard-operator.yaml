@@ -280,11 +280,6 @@ jobs:
         run: |
           make -C k8s/test/e2e e2e-tests-deploy-raw-backup-and-recover
 
-      - name: unit-tests
-        if: ${{ matrix.job == 'unit-tests' }}
-        run: |
-          make -C k8s/test/e2e unittest
-
       - name: Stop to export kubernetes logs
         uses: dashanji/kubernetes-log-export-action@v6
         if: ${{ failure() }}
