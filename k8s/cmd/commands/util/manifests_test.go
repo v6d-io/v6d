@@ -407,7 +407,7 @@ func Test_ApplyManifestsWithOwnerRef(t *testing.T) {
 								map[string]interface{}{
 									"name": "backup-path",
 									"persistentVolumeClaim": map[string]interface{}{
-										"claimName": "pvc-for-backup-and-recover-demo",
+										"claimName": "vineyard-backup",
 									},
 								},
 							},
