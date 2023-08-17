@@ -59,7 +59,10 @@ type BackupStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`
 
-// Backup is the Schema for the backups API
+// Backup describes a backup operation of vineyard objects, which uses the
+// [Kubernetes PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/)
+// to store the backup data. Every backup operation will be binded with the
+// name of Backup.
 type Backup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -54,7 +54,8 @@ type GlobalObjectStatus struct {
 // +kubebuilder:printcolumn:name="Typename",type=string,JSONPath=`.spec.typename`
 // +genclient
 
-// GlobalObject is the Schema for the globalobjects API
+// GlobalObject describes a global object in vineyard, whose metadata
+// will be stored in etcd.
 type GlobalObject struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

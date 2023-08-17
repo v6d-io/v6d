@@ -70,7 +70,7 @@ type SidecarStatus struct {
 // +kubebuilder:printcolumn:name="Current",type=string,JSONPath=`.status.current`
 // +kubebuilder:printcolumn:name="Desired",type=string,JSONPath=`.spec.replicas`
 
-// Sidecar is the Schema for the sidecars API
+// Sidecar is used for configuring and managing the vineyard sidecar container.
 type Sidecar struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

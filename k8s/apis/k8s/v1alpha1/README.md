@@ -30,7 +30,7 @@ Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group
 
 
 
-Backup is the Schema for the backups API
+Backup describes a backup operation of vineyard objects, which uses the [Kubernetes PersistentVolume](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) to store the backup data. Every backup operation will be binded with the name of Backup.
 
 _Appears in:_
 - [BackupList](#backuplist)
@@ -84,7 +84,7 @@ _Appears in:_
 
 
 
-GlobalObject is the Schema for the globalobjects API
+GlobalObject describes a global object in vineyard, whose metadata will be stored in etcd.
 
 _Appears in:_
 - [GlobalObjectList](#globalobjectlist)
@@ -138,7 +138,7 @@ _Appears in:_
 
 
 
-LocalObject is the Schema for the localobjects API
+LocalObject describes a local object in vineyard, whose metadata will only be stored in local vineyard.
 
 _Appears in:_
 - [LocalObjectList](#localobjectlist)
@@ -210,7 +210,9 @@ _Appears in:_
 
 
 
-Operation is the Schema for the operations API
+Operation describes an operation between workloads, such as assembly and repartition. 
+ As for the `assembly` operation, there are several kinds of computing engines, some may not support the stream data, so we need to insert an `assembly` operation to assemble the stream data into a batch data, so that the next computing engines can process the data. 
+ As for the `repartition` operation, the vineyard has integrated with the distributed computing engines, such as Dask. If you want to repartition the data to adapt the dask workers, then the `repartition` operation is essential for such scenario.
 
 _Appears in:_
 - [OperationList](#operationlist)
@@ -281,7 +283,7 @@ _Appears in:_
 
 
 
-Recover is the Schema for the recovers API
+Recover describes a recover operation of vineyard objects, which is used to recover a specific backup operation.
 
 _Appears in:_
 - [RecoverList](#recoverlist)
@@ -347,7 +349,7 @@ _Appears in:_
 
 
 
-Sidecar is the Schema for the sidecars API
+Sidecar is used for configuring and managing the vineyard sidecar container.
 
 _Appears in:_
 - [SidecarList](#sidecarlist)

@@ -58,7 +58,8 @@ type LocalObjectStatus struct {
 // +kubebuilder:printcolumn:name="Hostname",type=string,JSONPath=`.spec.hostname`
 // +genclient
 
-// LocalObject is the Schema for the localobjects API
+// LocalObject describes a local object in vineyard, whose metadata
+// will only be stored in local vineyard.
 type LocalObject struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
