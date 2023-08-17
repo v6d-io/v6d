@@ -23,7 +23,6 @@ import vineyard
 client = vineyard.connect('/var/run/vineyard.sock')
 
 object = client.put(np.arange(10))
-client.persist(object)
 meta = vineyard.ObjectMeta()
 meta['typename'] = 'vineyard::Sequence'
 meta['size_'] = 1
