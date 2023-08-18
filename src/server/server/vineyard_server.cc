@@ -172,7 +172,8 @@ void VineyardServer::BackendReady() {
     LOG(ERROR) << "Failed to start vineyard IPC server: " << ex.what()
                << ", or please try to cleanup existing "
                << spec_["ipc_spec"]["socket"];
-    serve_status_ = Status::IOError();
+    serve_status_ = Status::IOError(
+        std::string("Failed to start vineyard RPC server: ") + ex.what());
     VINEYARD_DISCARD(callback_(serve_status_, IPCSocket()));
     context_.stop();
     return;
@@ -187,7 +188,8 @@ void VineyardServer::BackendReady() {
     }
   } catch (std::exception const& ex) {
     LOG(ERROR) << "Failed to start vineyard RPC server: " << ex.what();
-    serve_status_ = Status::IOError();
+    serve_status_ = Status::IOError(
+        std::string("Failed to start vineyard RPC server: ") + ex.what());
     VINEYARD_DISCARD(callback_(serve_status_, IPCSocket()));
     context_.stop();
     return;

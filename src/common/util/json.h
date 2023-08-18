@@ -33,47 +33,59 @@ using json = nlohmann::json;
 
 // Any operation on meta_tree (json) shouldn't break down the vineyard server
 #ifndef CATCH_JSON_ERROR
-#define CATCH_JSON_ERROR_RETURN_ANY(var, status, expr)                         \
-  do {                                                                         \
-    try {                                                                      \
-      var = expr;                                                              \
-    } catch (std::out_of_range const& err) {                                   \
-      std::string message = std::string("json: out of range: ") + err.what() + \
-                            " in '" #expr "'";                                 \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    } catch (std::invalid_argument const& err) {                               \
-      std::string message = std::string("json: invalid argument: ") +          \
-                            err.what() + " in '" #expr "'";                    \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    } catch (vineyard::json::exception const& err) {                           \
-      std::string message =                                                    \
-          std::string("json: ") + err.what() + " in '" #expr "'";              \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    }                                                                          \
+#define CATCH_JSON_ERROR_RETURN_ANY(var, status, expr)                \
+  do {                                                                \
+    try {                                                             \
+      var = expr;                                                     \
+    } catch (std::out_of_range const& err) {                          \
+      std::stringstream err_message;                                  \
+      err_message << "json: out of range: " << err.what()             \
+                  << " in '" #expr "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    } catch (std::invalid_argument const& err) {                      \
+      std::stringstream err_message;                                  \
+      err_message << "json: invalid argument: " << err.what()         \
+                  << " in '" #expr "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    } catch (vineyard::json::exception const& err) {                  \
+      std::stringstream err_message;                                  \
+      err_message << "json: " << err.what()                           \
+                  << " in '" #expr "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    }                                                                 \
   } while (0)
-#define CATCH_JSON_ERROR_STATEMENT(status, stmt)                               \
-  do {                                                                         \
-    try {                                                                      \
-      stmt;                                                                    \
-    } catch (std::out_of_range const& err) {                                   \
-      std::string message = std::string("json: out of range: ") + err.what() + \
-                            " in '" #stmt "'";                                 \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    } catch (std::invalid_argument const& err) {                               \
-      std::string message = std::string("json: invalid argument: ") +          \
-                            err.what() + " in '" #stmt "'";                    \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    } catch (vineyard::json::exception const& err) {                           \
-      std::string message =                                                    \
-          std::string("json: ") + err.what() + " in '" #stmt "'";              \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    }                                                                          \
+#define CATCH_JSON_ERROR_STATEMENT(status, stmt)                      \
+  do {                                                                \
+    try {                                                             \
+      stmt;                                                           \
+    } catch (std::out_of_range const& err) {                          \
+      std::stringstream err_message;                                  \
+      err_message << "json: out of range: " << err.what()             \
+                  << " in '" #stmt "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    } catch (std::invalid_argument const& err) {                      \
+      std::stringstream err_message;                                  \
+      err_message << "json: invalid argument: " << err.what()         \
+                  << " in '" #stmt "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    } catch (vineyard::json::exception const& err) {                  \
+      std::stringstream err_message;                                  \
+      err_message << "json: " << err.what()                           \
+                  << " in '" #stmt "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    }                                                                 \
   } while (0)
 
 #define CATCH_JSON_ERROR_RETURN_STATUS(var, expr) \
@@ -85,53 +97,65 @@ using json = nlohmann::json;
 #endif  // CATCH_JSON_ERROR
 
 #ifndef VCATCH_JSON_ERROR
-#define VCATCH_JSON_ERROR_RETURN_ANY(data, var, status, expr)                  \
-  do {                                                                         \
-    try {                                                                      \
-      var = expr;                                                              \
-    } catch (std::out_of_range const& err) {                                   \
-      std::string message = std::string("json: out of range: ") + err.what() + \
-                            " in '" #expr "'";                                 \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    } catch (std::invalid_argument const& err) {                               \
-      std::string message = std::string("json: invalid argument: ") +          \
-                            err.what() + " in '" #expr "'";                    \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    } catch (vineyard::json::exception const& err) {                           \
-      std::string message =                                                    \
-          std::string("json: ") + err.what() + " in '" #expr "'";              \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    }                                                                          \
-    if (VLOG_IS_ON(100) && !status.ok()) {                                     \
-      std::clog << "[error] json: " << data.dump(2) << std::endl;              \
-    }                                                                          \
+#define VCATCH_JSON_ERROR_RETURN_ANY(data, var, status, expr)         \
+  do {                                                                \
+    try {                                                             \
+      var = expr;                                                     \
+    } catch (std::out_of_range const& err) {                          \
+      std::stringstream err_message;                                  \
+      err_message << "json: out of range: " << err.what()             \
+                  << " in '" #expr "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    } catch (std::invalid_argument const& err) {                      \
+      std::stringstream err_message;                                  \
+      err_message << "json: invalid argument: " << err.what()         \
+                  << " in '" #expr "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    } catch (vineyard::json::exception const& err) {                  \
+      std::stringstream err_message;                                  \
+      err_message << "json: " << err.what()                           \
+                  << " in '" #expr "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    }                                                                 \
+    if (VLOG_IS_ON(100) && !status.ok()) {                            \
+      std::clog << "[error] json: " << data.dump(2) << std::endl;     \
+    }                                                                 \
   } while (0)
-#define VCATCH_JSON_ERROR_STATEMENT(data, status, stmt)                        \
-  do {                                                                         \
-    try {                                                                      \
-      stmt;                                                                    \
-    } catch (std::out_of_range const& err) {                                   \
-      std::string message = std::string("json: out of range: ") + err.what() + \
-                            " in '" #stmt "'";                                 \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    } catch (std::invalid_argument const& err) {                               \
-      std::string message = std::string("json: invalid argument: ") +          \
-                            err.what() + " in '" #stmt "'";                    \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    } catch (vineyard::json::exception const& err) {                           \
-      std::string message =                                                    \
-          std::string("json: ") + err.what() + " in '" #stmt "'";              \
-      std::clog << "[error] " << message << std::endl;                         \
-      status = vineyard::Status::MetaTreeInvalid(message);                     \
-    }                                                                          \
-    if (VLOG_IS_ON(100) && !status.ok()) {                                     \
-      std::clog << "[error] json: " << data.dump(2) << std::endl;              \
-    }                                                                          \
+#define VCATCH_JSON_ERROR_STATEMENT(data, status, stmt)               \
+  do {                                                                \
+    try {                                                             \
+      stmt;                                                           \
+    } catch (std::out_of_range const& err) {                          \
+      std::stringstream err_message;                                  \
+      err_message << "json: out of range: " << err.what()             \
+                  << " in '" #stmt "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    } catch (std::invalid_argument const& err) {                      \
+      std::stringstream err_message;                                  \
+      err_message << "json: invalid argument: " << err.what()         \
+                  << " in '" #stmt "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    } catch (vineyard::json::exception const& err) {                  \
+      std::stringstream err_message;                                  \
+      err_message << "json: " << err.what()                           \
+                  << " in '" #stmt "', at " __FILE__ ":" << __LINE__; \
+      std::string message = err_message.str();                        \
+      std::clog << "[error] " << message << std::endl;                \
+      status = vineyard::Status::MetaTreeInvalid(message);            \
+    }                                                                 \
+    if (VLOG_IS_ON(100) && !status.ok()) {                            \
+      std::clog << "[error] json: " << data.dump(2) << std::endl;     \
+    }                                                                 \
   } while (0)
 
 #define VCATCH_JSON_ERROR_RETURN_STATUS(data, var, expr) \

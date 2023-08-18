@@ -1495,7 +1495,9 @@ Status UsageTracker<ID, P, Der>::FetchOnLocal(ID const& id, P& payload) {
     if (payload.IsSealed()) {
       return Status::OK();
     } else {
-      return Status::ObjectNotSealed();
+      return Status::ObjectNotSealed(
+          "UsageTracker: failed to fetch the blob as it is not sealed: " +
+          ObjectIDToString(id));
     }
   }
   return Status::ObjectNotExists(

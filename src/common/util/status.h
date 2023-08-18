@@ -377,6 +377,12 @@ class VINEYARD_MUST_USE_TYPE Status {
   /// creating such object.
   static Status ObjectExists() { return Status(StatusCode::kObjectExists, ""); }
 
+  /// Return an error when the object exists if the user are still trying to
+  /// creating such object.
+  static Status ObjectExists(std::string const& message) {
+    return Status(StatusCode::kObjectExists, message);
+  }
+
   /// Return an error when user want to get an object however the target object
   /// not exists.
   static Status ObjectNotExists(std::string const& message = "") {

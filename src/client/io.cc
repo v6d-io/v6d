@@ -117,7 +117,8 @@ Status connect_ipc_socket_retry(const std::string& pathname, int& socket_fd) {
     --num_retries;
   }
   if (!status.ok()) {
-    status = Status::ConnectionFailed();
+    status = Status::ConnectionFailed("Failed to connect to IPC socket: " +
+                                      pathname);
   }
   return status;
 }
@@ -138,7 +139,9 @@ Status connect_rpc_socket_retry(const std::string& host, const uint32_t port,
     --num_retries;
   }
   if (!status.ok()) {
-    status = Status::ConnectionFailed();
+    status =
+        Status::ConnectionFailed("Failed to connect to RPC socket: " + host +
+                                 ":" + std::to_string(port));
   }
   return status;
 }
@@ -216,7 +219,7 @@ Status recv_message(int fd, std::string& msg) {
 Status check_fd(int fd) {
   int r = fcntl(fd, F_GETFL);
   if (r == -1) {
-    return Status::Invalid("fd error.");
+    return Status::Invalid(std::string("fd error: ") + strerror(errno));
   } else if (r & O_RDONLY) {
     return Status::Invalid("fd is read-only.");
   } else if (r & O_WRONLY) {

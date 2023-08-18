@@ -30,7 +30,9 @@ namespace vineyard {
       Status st = Status(static_cast<StatusCode>(tree.value("code", 0)), \
                          tree.value("message", ""));                     \
       if (!st.ok()) {                                                    \
-        return st;                                                       \
+        std::stringstream err_message;                                   \
+        err_message << "IPC error at " << __FILE__ << ":" << __LINE__;   \
+        return Status::Wrap(st, err_message.str());                      \
       }                                                                  \
     }                                                                    \
     RETURN_ON_ASSERT(root.value("type", "UNKNOWN") == (type));           \
@@ -226,7 +228,7 @@ void WriteRegisterRequest(std::string& msg, StoreType const& bulk_store_type,
 Status ReadRegisterRequest(const json& root, std::string& version,
                            StoreType& store_type, SessionID& session_id,
                            std::string& username, std::string& password) {
-  RETURN_ON_ASSERT(root["type"] == command_t::REGISTER_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::REGISTER_REQUEST);
 
   // When the "version" field is missing from the client, we treat it
   // as default unknown version number: 0.0.0.
@@ -308,7 +310,7 @@ void WriteCreateBufferRequest(const size_t size, std::string& msg) {
 }
 
 Status ReadCreateBufferRequest(const json& root, size_t& size) {
-  RETURN_ON_ASSERT(root["type"] == command_t::CREATE_BUFFER_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::CREATE_BUFFER_REQUEST);
   size = root["size"].get<size_t>();
   return Status::OK();
 }
@@ -349,7 +351,7 @@ void WriteCreateDiskBufferRequest(const size_t size, const std::string& path,
 
 Status ReadCreateDiskBufferRequest(const json& root, size_t& size,
                                    std::string& path) {
-  RETURN_ON_ASSERT(root["type"] == command_t::CREATE_DISK_BUFFER_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::CREATE_DISK_BUFFER_REQUEST);
   size = root["size"].get<size_t>();
   path = root["path"].get<std::string>();
   return Status::OK();
@@ -389,7 +391,7 @@ void WriteCreateGPUBufferRequest(const size_t size, std::string& msg) {
 }
 
 Status ReadCreateGPUBufferRequest(const json& root, size_t& size) {
-  RETURN_ON_ASSERT(root["type"] == command_t::CREATE_GPU_BUFFER_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::CREATE_GPU_BUFFER_REQUEST);
   size = root["size"].get<size_t>();
   return Status::OK();
 }
@@ -429,7 +431,7 @@ void WriteSealRequest(ObjectID const& object_id, std::string& msg) {
 }
 
 Status ReadSealRequest(json const& root, ObjectID& object_id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::SEAL_BUFFER_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::SEAL_BUFFER_REQUEST);
   object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
@@ -475,7 +477,7 @@ void WriteGetBuffersRequest(const std::unordered_set<ObjectID>& ids,
 
 Status ReadGetBuffersRequest(const json& root, std::vector<ObjectID>& ids,
                              bool& unsafe) {
-  RETURN_ON_ASSERT(root["type"] == command_t::GET_BUFFERS_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::GET_BUFFERS_REQUEST);
   if (root.contains("ids") && root["ids"].is_array()) {
     root["ids"].get_to(ids);
   } else {
@@ -556,7 +558,7 @@ void WriteGetGPUBuffersRequest(const std::set<ObjectID>& ids, const bool unsafe,
 
 Status ReadGetGPUBuffersRequest(const json& root, std::vector<ObjectID>& ids,
                                 bool& unsafe) {
-  RETURN_ON_ASSERT(root["type"] == command_t::GET_GPU_BUFFERS_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::GET_GPU_BUFFERS_REQUEST);
   size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {
     ids.push_back(root[std::to_string(i)].get<ObjectID>());
@@ -613,7 +615,7 @@ void WriteDropBufferRequest(const ObjectID id, std::string& msg) {
 }
 
 Status ReadDropBufferRequest(const json& root, ObjectID& id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::DROP_BUFFER_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::DROP_BUFFER_REQUEST);
   id = root["id"].get<ObjectID>();
   return Status::OK();
 }
@@ -641,7 +643,7 @@ void WriteShrinkBufferRequest(const ObjectID id, const size_t size,
 }
 
 Status ReadShrinkBufferRequest(const json& root, ObjectID& id, size_t& size) {
-  RETURN_ON_ASSERT(root["type"] == command_t::SHRINK_BUFFER_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::SHRINK_BUFFER_REQUEST);
   id = root["id"].get<ObjectID>();
   size = root["size"].get<size_t>();
   return Status::OK();
@@ -675,7 +677,7 @@ void WriteCreateRemoteBufferRequest(const size_t size, const bool compress,
 
 Status ReadCreateRemoteBufferRequest(const json& root, size_t& size,
                                      bool& compress) {
-  RETURN_ON_ASSERT(root["type"] == command_t::CREATE_REMOTE_BUFFER_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::CREATE_REMOTE_BUFFER_REQUEST);
   size = root["size"].get<size_t>();
   compress = root.value("compress", false);
   return Status::OK();
@@ -725,7 +727,7 @@ void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
 
 Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
                                    bool& unsafe, bool& compress) {
-  RETURN_ON_ASSERT(root["type"] == command_t::GET_REMOTE_BUFFERS_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::GET_REMOTE_BUFFERS_REQUEST);
   size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {
     ids.push_back(root[std::to_string(i)].get<ObjectID>());
@@ -745,7 +747,7 @@ void WriteIncreaseReferenceCountRequest(const std::vector<ObjectID>& ids,
 
 Status ReadIncreaseReferenceCountRequest(json const& root,
                                          std::vector<ObjectID>& ids) {
-  RETURN_ON_ASSERT(root["type"] == command_t::INCREASE_REFERENCE_COUNT_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::INCREASE_REFERENCE_COUNT_REQUEST);
   root["ids"].get_to(ids);
   return Status::OK();
 }
@@ -769,7 +771,7 @@ void WriteReleaseRequest(ObjectID const& object_id, std::string& msg) {
 }
 
 Status ReadReleaseRequest(json const& root, ObjectID& object_id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::RELEASE_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::RELEASE_REQUEST);
   object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
@@ -801,7 +803,7 @@ void WriteDelDataWithFeedbacksRequest(const std::vector<ObjectID>& id,
 Status ReadDelDataWithFeedbacksRequest(json const& root,
                                        std::vector<ObjectID>& ids, bool& force,
                                        bool& deep, bool& fastpath) {
-  RETURN_ON_ASSERT(root["type"] == command_t::DEL_DATA_WITH_FEEDBACKS_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::DEL_DATA_WITH_FEEDBACKS_REQUEST);
   root["id"].get_to(ids);
   force = root.value("force", false);
   deep = root.value("deep", false);
@@ -840,7 +842,7 @@ void WriteCreateBufferByPlasmaRequest(PlasmaID const plasma_id,
 
 Status ReadCreateBufferByPlasmaRequest(json const& root, PlasmaID& plasma_id,
                                        size_t& size, size_t& plasma_size) {
-  RETURN_ON_ASSERT(root["type"] == command_t::CREATE_BUFFER_PLASMA_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::CREATE_BUFFER_PLASMA_REQUEST);
   plasma_id = root["plasma_id"].get<PlasmaID>();
   size = root["size"].get<size_t>();
   plasma_size = root["plasma_size"].get<size_t>();
@@ -891,7 +893,7 @@ void WriteGetBuffersByPlasmaRequest(std::set<PlasmaID> const& plasma_ids,
 Status ReadGetBuffersByPlasmaRequest(const json& root,
                                      std::vector<PlasmaID>& plasma_ids,
                                      bool& unsafe) {
-  RETURN_ON_ASSERT(root["type"] == command_t::GET_BUFFERS_PLASMA_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::GET_BUFFERS_PLASMA_REQUEST);
   size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {
     plasma_ids.push_back(root[std::to_string(i)].get<PlasmaID>());
@@ -934,7 +936,7 @@ void WritePlasmaSealRequest(PlasmaID const& plasma_id, std::string& msg) {
 }
 
 Status ReadPlasmaSealRequest(json const& root, PlasmaID& plasma_id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::PLASMA_SEAL_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::PLASMA_SEAL_REQUEST);
   plasma_id = root["plasma_id"].get<PlasmaID>();
   return Status::OK();
 }
@@ -946,7 +948,7 @@ void WritePlasmaReleaseRequest(PlasmaID const& plasma_id, std::string& msg) {
 }
 
 Status ReadPlasmaReleaseRequest(json const& root, PlasmaID& plasma_id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::PLASMA_RELEASE_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::PLASMA_RELEASE_REQUEST);
   plasma_id = root["plasma_id"].get<PlasmaID>();
   return Status::OK();
 }
@@ -970,7 +972,7 @@ void WritePlasmaDelDataRequest(PlasmaID const& plasma_id, std::string& msg) {
 }
 
 Status ReadPlasmaDelDataRequest(json const& root, PlasmaID& plasma_id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::PLASMA_DEL_DATA_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::PLASMA_DEL_DATA_REQUEST);
   plasma_id = root["plasma_id"].get<PlasmaID>();
   return Status::OK();
 }
@@ -995,7 +997,7 @@ void WriteCreateDataRequest(const json& content, std::string& msg) {
 }
 
 Status ReadCreateDataRequest(const json& root, json& content) {
-  RETURN_ON_ASSERT(root["type"] == command_t::CREATE_DATA_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::CREATE_DATA_REQUEST);
   content = root["content"];
   return Status::OK();
 }
@@ -1045,7 +1047,7 @@ void WriteGetDataRequest(const std::vector<ObjectID>& ids,
 
 Status ReadGetDataRequest(const json& root, std::vector<ObjectID>& ids,
                           bool& sync_remote, bool& wait) {
-  RETURN_ON_ASSERT(root["type"] == command_t::GET_DATA_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::GET_DATA_REQUEST);
   root["id"].get_to(ids);
   sync_remote = root.value("sync_remote", false);
   wait = root.value("wait", false);
@@ -1094,7 +1096,7 @@ void WriteListDataRequest(std::string const& pattern, bool const regex,
 
 Status ReadListDataRequest(const json& root, std::string& pattern, bool& regex,
                            size_t& limit) {
-  RETURN_ON_ASSERT(root["type"] == command_t::LIST_DATA_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::LIST_DATA_REQUEST);
   pattern = root["pattern"].get_ref<std::string const&>();
   regex = root.value("regex", false);
   limit = root["limit"].get<size_t>();
@@ -1128,7 +1130,7 @@ void WriteDelDataRequest(const std::vector<ObjectID>& ids, const bool force,
 
 Status ReadDelDataRequest(const json& root, std::vector<ObjectID>& ids,
                           bool& force, bool& deep, bool& fastpath) {
-  RETURN_ON_ASSERT(root["type"] == command_t::DELETE_DATA_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::DELETE_DATA_REQUEST);
   root["id"].get_to(ids);
   force = root.value("force", false);
   deep = root.value("deep", false);
@@ -1157,7 +1159,7 @@ void WriteExistsRequest(const ObjectID id, std::string& msg) {
 }
 
 Status ReadExistsRequest(const json& root, ObjectID& id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::EXISTS_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::EXISTS_REQUEST);
   id = root["id"].get<ObjectID>();
   return Status::OK();
 }
@@ -1185,7 +1187,7 @@ void WritePersistRequest(const ObjectID id, std::string& msg) {
 }
 
 Status ReadPersistRequest(const json& root, ObjectID& id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::PERSIST_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::PERSIST_REQUEST);
   id = root["id"].get<ObjectID>();
   return Status::OK();
 }
@@ -1211,7 +1213,7 @@ void WriteIfPersistRequest(const ObjectID id, std::string& msg) {
 }
 
 Status ReadIfPersistRequest(const json& root, ObjectID& id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::IF_PERSIST_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::IF_PERSIST_REQUEST);
   id = root["id"].get<ObjectID>();
   return Status::OK();
 }
@@ -1270,7 +1272,7 @@ void WriteLabelRequest(const ObjectID id,
 Status ReadLabelRequest(json const& root, ObjectID& id,
                         std::vector<std::string>& keys,
                         std::vector<std::string>& values) {
-  RETURN_ON_ASSERT(root["type"] == command_t::LABEL_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::LABEL_REQUEST);
   id = root["id"].get<ObjectID>();
   root["keys"].get_to(keys);
   root["values"].get_to(values);
@@ -1296,7 +1298,7 @@ void WriteClearRequest(std::string& msg) {
 }
 
 Status ReadClearRequest(const json& root) {
-  RETURN_ON_ASSERT(root["type"] == command_t::CLEAR_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::CLEAR_REQUEST);
   return Status::OK();
 }
 
@@ -1319,7 +1321,7 @@ void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg) {
 }
 
 Status ReadCreateStreamRequest(const json& root, ObjectID& object_id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::CREATE_STREAM_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::CREATE_STREAM_REQUEST);
   object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
@@ -1348,7 +1350,7 @@ void WriteOpenStreamRequest(const ObjectID& object_id, const int64_t& mode,
 
 Status ReadOpenStreamRequest(const json& root, ObjectID& object_id,
                              int64_t& mode) {
-  RETURN_ON_ASSERT(root["type"] == command_t::OPEN_STREAM_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::OPEN_STREAM_REQUEST);
   object_id = root["object_id"].get<ObjectID>();
   mode = root["mode"].get<int64_t>();
   return Status::OK();
@@ -1378,7 +1380,7 @@ void WriteGetNextStreamChunkRequest(const ObjectID stream_id, const size_t size,
 
 Status ReadGetNextStreamChunkRequest(const json& root, ObjectID& stream_id,
                                      size_t& size) {
-  RETURN_ON_ASSERT(root["type"] == command_t::GET_NEXT_STREAM_CHUNK_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::GET_NEXT_STREAM_CHUNK_REQUEST);
   stream_id = root["id"].get<ObjectID>();
   size = root["size"].get<size_t>();
   return Status::OK();
@@ -1416,7 +1418,7 @@ void WritePushNextStreamChunkRequest(const ObjectID stream_id,
 
 Status ReadPushNextStreamChunkRequest(const json& root, ObjectID& stream_id,
                                       ObjectID& chunk) {
-  RETURN_ON_ASSERT(root["type"] == command_t::PUSH_NEXT_STREAM_CHUNK_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::PUSH_NEXT_STREAM_CHUNK_REQUEST);
   stream_id = root["id"].get<ObjectID>();
   chunk = root["chunk"].get<ObjectID>();
   return Status::OK();
@@ -1443,7 +1445,7 @@ void WritePullNextStreamChunkRequest(const ObjectID stream_id,
 }
 
 Status ReadPullNextStreamChunkRequest(const json& root, ObjectID& stream_id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::PULL_NEXT_STREAM_CHUNK_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::PULL_NEXT_STREAM_CHUNK_REQUEST);
   stream_id = root["id"].get<ObjectID>();
   return Status::OK();
 }
@@ -1474,7 +1476,7 @@ void WriteStopStreamRequest(const ObjectID stream_id, const bool failed,
 
 Status ReadStopStreamRequest(const json& root, ObjectID& stream_id,
                              bool& failed) {
-  RETURN_ON_ASSERT(root["type"] == command_t::STOP_STREAM_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::STOP_STREAM_REQUEST);
   stream_id = root["id"].get<ObjectID>();
   failed = root["failed"].get<bool>();
   return Status::OK();
@@ -1501,7 +1503,7 @@ void WriteDropStreamRequest(const ObjectID stream_id, std::string& msg) {
 }
 
 Status ReadDropStreamRequest(const json& root, ObjectID& stream_id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::DROP_STREAM_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::DROP_STREAM_REQUEST);
   stream_id = root["id"].get<ObjectID>();
   return Status::OK();
 }
@@ -1530,7 +1532,7 @@ void WritePutNameRequest(const ObjectID object_id, const std::string& name,
 
 Status ReadPutNameRequest(const json& root, ObjectID& object_id,
                           std::string& name) {
-  RETURN_ON_ASSERT(root["type"] == command_t::PUT_NAME_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::PUT_NAME_REQUEST);
   object_id = root["object_id"].get<ObjectID>();
   name = root["name"].get_ref<std::string const&>();
   return Status::OK();
@@ -1559,7 +1561,7 @@ void WriteGetNameRequest(const std::string& name, const bool wait,
 }
 
 Status ReadGetNameRequest(const json& root, std::string& name, bool& wait) {
-  RETURN_ON_ASSERT(root["type"] == command_t::GET_NAME_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::GET_NAME_REQUEST);
   name = root["name"].get_ref<std::string const&>();
   wait = root["wait"].get<bool>();
   return Status::OK();
@@ -1592,7 +1594,7 @@ void WriteListNameRequest(std::string const& pattern, bool const regex,
 
 Status ReadListNameRequest(const json& root, std::string& pattern, bool& regex,
                            size_t& limit) {
-  RETURN_ON_ASSERT(root["type"] == command_t::LIST_NAME_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::LIST_NAME_REQUEST);
   pattern = root["pattern"].get_ref<std::string const&>();
   regex = root.value("regex", false);
   limit = root["limit"].get<size_t>();
@@ -1625,7 +1627,7 @@ void WriteDropNameRequest(const std::string& name, std::string& msg) {
 }
 
 Status ReadDropNameRequest(const json& root, std::string& name) {
-  RETURN_ON_ASSERT(root["type"] == command_t::DROP_NAME_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::DROP_NAME_REQUEST);
   name = root["name"].get_ref<std::string const&>();
   return Status::OK();
 }
@@ -1651,7 +1653,7 @@ void WriteMakeArenaRequest(const size_t size, std::string& msg) {
 }
 
 Status ReadMakeArenaRequest(const json& root, size_t& size) {
-  RETURN_ON_ASSERT(root["type"] == command_t::MAKE_ARENA_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::MAKE_ARENA_REQUEST);
   size = root["size"].get<size_t>();
   return Status::OK();
 }
@@ -1691,7 +1693,7 @@ void WriteFinalizeArenaRequest(const int fd, std::vector<size_t> const& offsets,
 Status ReadFinalizeArenaRequest(const json& root, int& fd,
                                 std::vector<size_t>& offsets,
                                 std::vector<size_t>& sizes) {
-  RETURN_ON_ASSERT(root["type"] == command_t::FINALIZE_ARENA_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::FINALIZE_ARENA_REQUEST);
   fd = root["fd"].get<int>();
   offsets = root["offsets"].get<std::vector<size_t>>();
   sizes = root["sizes"].get<std::vector<size_t>>();
@@ -1718,7 +1720,7 @@ void WriteNewSessionRequest(std::string& msg,
 }
 
 Status ReadNewSessionRequest(json const& root, StoreType& bulk_store_type) {
-  RETURN_ON_ASSERT(root["type"] == command_t::NEW_SESSION_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::NEW_SESSION_REQUEST);
   bulk_store_type =
       root.value("bulk_store_type", /* default */ StoreType::kDefault);
   return Status::OK();
@@ -1799,7 +1801,7 @@ Status ReadMoveBuffersOwnershipRequest(json const& root,
                                        std::map<ObjectID, PlasmaID>& id_to_pid,
                                        std::map<PlasmaID, PlasmaID>& pid_to_pid,
                                        SessionID& session_id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::MOVE_BUFFERS_OWNERSHIP_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::MOVE_BUFFERS_OWNERSHIP_REQUEST);
   id_to_id = root.value<std::map<ObjectID, ObjectID>>("id_to_id", {});
   pid_to_id = root.value<std::map<PlasmaID, ObjectID>>("pid_to_id", {});
   id_to_pid = root.value<std::map<ObjectID, PlasmaID>>("id_to_pid", {});
@@ -1827,7 +1829,7 @@ void WriteEvictRequest(const std::vector<ObjectID>& ids, std::string& msg) {
 }
 
 Status ReadEvictRequest(json const& root, std::vector<ObjectID>& ids) {
-  RETURN_ON_ASSERT(root["type"] == command_t::EVICT_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::EVICT_REQUEST);
   root["ids"].get_to(ids);
   return Status::OK();
 }
@@ -1854,7 +1856,7 @@ void WriteLoadRequest(const std::vector<ObjectID>& ids, const bool pin,
 
 Status ReadLoadRequest(json const& root, std::vector<ObjectID>& ids,
                        bool& pin) {
-  RETURN_ON_ASSERT(root["type"] == command_t::LOAD_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::LOAD_REQUEST);
   root["ids"].get_to(ids);
   pin = root.value("pin", false);
   return Status::OK();
@@ -1879,7 +1881,7 @@ void WriteUnpinRequest(const std::vector<ObjectID>& ids, std::string& msg) {
 }
 
 Status ReadUnpinRequest(json const& root, std::vector<ObjectID>& ids) {
-  RETURN_ON_ASSERT(root["type"] == command_t::UNPIN_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::UNPIN_REQUEST);
   root["ids"].get_to(ids);
   return Status::OK();
 }
@@ -1903,7 +1905,7 @@ void WriteIsSpilledRequest(const ObjectID& id, std::string& msg) {
 }
 
 Status ReadIsSpilledRequest(json const& root, ObjectID& id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::IS_SPILLED_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::IS_SPILLED_REQUEST);
   id = root["id"].get<ObjectID>();
   return Status::OK();
 }
@@ -1929,7 +1931,7 @@ void WriteIsInUseRequest(const ObjectID& id, std::string& msg) {
 }
 
 Status ReadIsInUseRequest(json const& root, ObjectID& id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::IS_IN_USE_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::IS_IN_USE_REQUEST);
   id = root["id"].get<ObjectID>();
   return Status::OK();
 }
@@ -1955,7 +1957,7 @@ void WriteClusterMetaRequest(std::string& msg) {
 }
 
 Status ReadClusterMetaRequest(const json& root) {
-  RETURN_ON_ASSERT(root["type"] == command_t::CLUSTER_META_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::CLUSTER_META_REQUEST);
   return Status::OK();
 }
 
@@ -1981,7 +1983,7 @@ void WriteInstanceStatusRequest(std::string& msg) {
 }
 
 Status ReadInstanceStatusRequest(const json& root) {
-  RETURN_ON_ASSERT(root["type"] == command_t::INSTANCE_STATUS_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::INSTANCE_STATUS_REQUEST);
   return Status::OK();
 }
 
@@ -2008,7 +2010,7 @@ void WriteMigrateObjectRequest(const ObjectID object_id, std::string& msg) {
 }
 
 Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id) {
-  RETURN_ON_ASSERT(root["type"] == command_t::MIGRATE_OBJECT_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::MIGRATE_OBJECT_REQUEST);
   object_id = root["object_id"].get<ObjectID>();
   return Status::OK();
 }
@@ -2031,7 +2033,7 @@ void WriteMigrateObjectRequest(const ObjectID object_id, const bool local,
 Status ReadMigrateObjectRequest(const json& root, ObjectID& object_id,
                                 bool& local, bool& is_stream, std::string& peer,
                                 std::string& peer_rpc_endpoint) {
-  RETURN_ON_ASSERT(root["type"] == command_t::MIGRATE_OBJECT_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::MIGRATE_OBJECT_REQUEST);
   object_id = root["object_id"].get<ObjectID>();
   local = root["local"].get<bool>();
   is_stream = root["is_stream"].get<bool>();
@@ -2074,7 +2076,7 @@ void WriteShallowCopyRequest(const ObjectID id, json const& extra_metadata,
 
 Status ReadShallowCopyRequest(const json& root, ObjectID& id,
                               json& extra_metadata) {
-  RETURN_ON_ASSERT(root["type"] == command_t::SHALLOW_COPY_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::SHALLOW_COPY_REQUEST);
   id = root["id"].get<ObjectID>();
   extra_metadata = root.value("extra", json::object());
   return Status::OK();
@@ -2102,7 +2104,7 @@ void WriteDebugRequest(const json& debug, std::string& msg) {
 }
 
 Status ReadDebugRequest(const json& root, json& debug) {
-  RETURN_ON_ASSERT(root["type"] == command_t::DEBUG_REQUEST);
+  CHECK_IPC_ERROR(root, command_t::DEBUG_REQUEST);
   debug = root["debug"];
   return Status::OK();
 }

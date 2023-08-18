@@ -1004,7 +1004,7 @@ Status DecodeObjectID(const json& tree, const std::string& instance_name,
       return Status::OK();
     }
   }
-  return Status::Invalid();
+  return Status::Invalid("Not a link to another object: " + value);
 }
 
 bool HasEquivalent(const json& tree, ObjectID const object_id,

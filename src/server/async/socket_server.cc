@@ -141,26 +141,54 @@ void SocketConnection::doReadBody() {
 #define __REPORT_JSON_ERROR(err, data) \
   LOG(ERROR) << "json: " << err.what() << " when parsing" << data
 #else
-#define __REPORT_JSON_ERROR(err, data) LOG(ERROR) << "json: " << err.what()
+#define __REPORT_JSON_ERROR(err, data) \
+  LOG(ERROR) << "json error: " << err.what()
 #endif  // NDEBUG
 #endif  // __REPORT_JSON_ERROR
 
 #ifndef TRY_READ_FROM_JSON
-#define TRY_READ_FROM_JSON(read_action, data)                  \
-  try {                                                        \
-    read_action;                                               \
-  } catch (std::out_of_range const& err) {                     \
-    __REPORT_JSON_ERROR(err, data);                            \
-    std::string message_out;                                   \
-    WriteErrorReply(Status::Invalid(err.what()), message_out); \
-    this->doWrite(message_out);                                \
-    return false;                                              \
-  } catch (json::exception const& err) {                       \
-    __REPORT_JSON_ERROR(err, data);                            \
-    std::string message_out;                                   \
-    WriteErrorReply(Status::Invalid(err.what()), message_out); \
-    this->doWrite(message_out);                                \
-    return false;                                              \
+#define TRY_READ_FROM_JSON(read_action, data)                              \
+  try {                                                                    \
+    read_action;                                                           \
+  } catch (std::out_of_range const& err) {                                 \
+    __REPORT_JSON_ERROR(err, data);                                        \
+    std::stringstream err_message;                                         \
+    err_message << std::string(                                            \
+                       "Failed to parse the JSON message: out of range: ") \
+                << err.what();                                             \
+    err_message << ", at " << __FILE__ << ":" << __LINE__ << "@"           \
+                << #read_action;                                           \
+    err_message << ", input is '" << data << "'";                          \
+    std::string message_out;                                               \
+    WriteErrorReply(Status::Invalid(err_message.str()), message_out);      \
+    this->doWrite(message_out);                                            \
+    return false;                                                          \
+  } catch (json::exception const& err) {                                   \
+    __REPORT_JSON_ERROR(err, data);                                        \
+    std::stringstream err_message;                                         \
+    err_message << std::string(                                            \
+                       "Failed to parse the JSON message: json error: ")   \
+                << err.what();                                             \
+    err_message << ", at " << __FILE__ << ":" << __LINE__ << "@"           \
+                << #read_action;                                           \
+    err_message << ", input is '" << data << "'";                          \
+    std::string message_out;                                               \
+    WriteErrorReply(Status::Invalid(err_message.str()), message_out);      \
+    this->doWrite(message_out);                                            \
+    return false;                                                          \
+  } catch (std::exception const& err) {                                    \
+    __REPORT_JSON_ERROR(err, data);                                        \
+    std::stringstream err_message;                                         \
+    err_message << std::string(                                            \
+                       "Failed to parse the JSON message: exception: ")    \
+                << err.what();                                             \
+    err_message << ", at " << __FILE__ << ":" << __LINE__ << "@"           \
+                << #read_action;                                           \
+    err_message << ", input is '" << data << "'";                          \
+    std::string message_out;                                               \
+    WriteErrorReply(Status::Invalid(err_message.str()), message_out);      \
+    this->doWrite(message_out);                                            \
+    return false;                                                          \
   }
 
 #endif  // TRY_READ_FROM_JSON
