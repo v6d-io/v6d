@@ -17,9 +17,7 @@
 #
 
 import contextlib
-import sys
 
-import numpy as np
 import pandas as pd
 
 import pyspark.sql.functions as F

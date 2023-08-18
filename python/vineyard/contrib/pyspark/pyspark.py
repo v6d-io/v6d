@@ -26,7 +26,6 @@ from pyspark.mllib.common import _java2py
 from pyspark.sql import SparkSession
 
 import vineyard
-from vineyard._C import ObjectID
 from vineyard.core import context
 from vineyard.data.dataframe import make_global_dataframe
 

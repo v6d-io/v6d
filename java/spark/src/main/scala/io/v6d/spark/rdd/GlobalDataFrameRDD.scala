@@ -55,7 +55,7 @@ class GlobalDataFrameRDD(rdd: VineyardRDD)
     columnarBatch.rowIterator().asScala
   }
 
-  override protected def getPartitions: Array[Partition] = 
+  override protected def getPartitions: Array[Partition] =
     firstParent[VineyardRDD].partitions
 
   override protected def getPreferredLocations(

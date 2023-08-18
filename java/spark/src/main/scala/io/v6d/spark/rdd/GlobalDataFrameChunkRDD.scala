@@ -45,7 +45,7 @@ class GlobalDataFrameChunkRDD(rdd: VineyardRDD)
       })
   }
 
-  override protected def getPartitions: Array[Partition] = 
+  override protected def getPartitions: Array[Partition] =
     firstParent[VineyardRDD].partitions
 
   override protected def getPreferredLocations(

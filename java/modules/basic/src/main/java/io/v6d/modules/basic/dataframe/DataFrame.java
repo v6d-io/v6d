@@ -20,7 +20,6 @@ import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.tensor.Tensor;
-import io.v6d.modules.basic.arrow.Buffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
