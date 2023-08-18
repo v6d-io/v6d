@@ -1,0 +1,98 @@
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite our paper using the
+  metadata from this file.
+title: 'Vineyard: Optimizing Data Sharing in Data-Intensive Analytics'
+authors:
+  - given-names: Wenyuan
+    family-names: Yu
+    affiliation: Alibaba Group
+  - given-names: Tao
+    family-names: He
+    affiliation: Alibaba Group
+  - given-names: Lei
+    family-names: Wang
+    affiliation: Alibaba Group
+  - given-names: Ke
+    family-names: Meng
+    affiliation: Alibaba Group
+  - given-names: Ye
+    family-names: Cao
+    affiliation: Alibaba Group
+  - given-names: Diwen
+    family-names: Zhu
+    affiliation: Alibaba Group
+  - given-names: Sanhong
+    family-names: Li
+    affiliation: Alibaba Group
+  - given-names: Jingren
+    family-names: Zhou
+    affiliation: Alibaba Group
+license: Apache-2.0
+identifiers:
+  - type: doi
+    value: 10.1145/3589780
+repository-code: 'https://github.com/v6d-io/v6d'
+url: 'https://v6d.io'
+abstract: >-
+  Modern data analytics and AI jobs become increasingly complex and involve
+  multiple tasks performed on specialized systems. Sharing of intermediate
+  data between different systems is often a significant bottleneck in such
+  jobs. When the intermediate data is large, it is mostly exchanged through
+  files in standard formats (e.g., CSV and ORC), causing high I/O and
+  (de)serialization overheads. To solve these problems, we develop Vineyard,
+  a high-performance, extensible, and cloud-native object store, trying to
+  provide an intuitive experience for users to share data across systems in
+  complex real-life workflows. Since different systems usually work on data
+  structures (e.g., dataframes, graphs, hashmaps) with similar interfaces,
+  and their computation logic is often loosely-coupled with how such interfaces
+  are implemented over specific memory layouts, it enables Vineyard to conduct
+  data sharing efficiently at a high level via memory mapping and method sharing.
+  Vineyard provides an IDL named VCDL to facilitate users to register their
+  own intermediate data types into Vineyard such that objects of the registered
+  types can then be efficiently shared across systems in a polyglot workflow.
+  As a cloud-native system, Vineyard is designed to work closely with Kubernetes,
+  as well as achieve fault-tolerance and high performance in production
+  environments. Evaluations on real-life datasets and data analytics jobs show
+  that the above optimizations of Vineyard can significantly improve the end-to-end
+  performance of data analytics jobs, by reducing their data-sharing time up
+  to 68.4x.
+preferred-citation:
+  type: article
+  title: 'Vineyard: Optimizing Data Sharing in Data-Intensive Analytics'
+  authors:
+  - given-names: Wenyuan
+    family-names: Yu
+    affiliation: Alibaba Group
+  - given-names: Tao
+    family-names: He
+    affiliation: Alibaba Group
+  - given-names: Lei
+    family-names: Wang
+    affiliation: Alibaba Group
+  - given-names: Ke
+    family-names: Meng
+    affiliation: Alibaba Group
+  - given-names: Ye
+    family-names: Cao
+    affiliation: Alibaba Group
+  - given-names: Diwen
+    family-names: Zhu
+    affiliation: Alibaba Group
+  - given-names: Sanhong
+    family-names: Li
+    affiliation: Alibaba Group
+  - given-names: Jingren
+    family-names: Zhou
+    affiliation: Alibaba Group
+  year: 2023
+  journal: "Proc. ACM Manag. Data"
+  doi: 10.1145/3589780
+  month: 06
+  volume: 1
+  number: 2
+  publisher:
+    name: Association for Computing Machinery
+  keywords:
+  - data sharing
+    in-memory object store

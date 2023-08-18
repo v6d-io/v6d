@@ -256,6 +256,28 @@ Publications
   `Vineyard: Optimizing Data Sharing in Data-Intensive Analytics <https://v6d.io/vineyard-sigmod-2023.pdf>`_.
   ACM SIG Conference on Management of Data (SIGMOD), industry, 2023. |ACM DL|.
 
+If you use this software, please cite our paper using the following metadata:
+
+```bibtex
+@article{yu2023vineyard,
+   author = {Yu, Wenyuan and He, Tao and Wang, Lei and Meng, Ke and Cao, Ye and Zhu, Diwen and Li, Sanhong and Zhou, Jingren},
+   title = {Vineyard: Optimizing Data Sharing in Data-Intensive Analytics},
+   year = {2023},
+   issue_date = {June 2023},
+   publisher = {Association for Computing Machinery},
+   address = {New York, NY, USA},
+   volume = {1},
+   number = {2},
+   url = {https://doi.org/10.1145/3589780},
+   doi = {10.1145/3589780},
+   journal = {Proc. ACM Manag. Data},
+   month = {jun},
+   articleno = {200},
+   numpages = {27},
+   keywords = {data sharing, in-memory object store}
+}
+```
+
 Acknowledgements
 ----------------
 
