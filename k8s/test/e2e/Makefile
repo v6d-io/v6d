@@ -402,7 +402,7 @@ unittest: prepare-e2e-test build-local-cluster load-vineyardd-image
 	@make -C ${E2E_DIR} install-vineyard-operator
 #	@cd ${CMD_DIR} && go run main.go deploy cert-manager --kubeconfig /tmp/e2e-k8s.config
 #	@cd ${CMD_DIR} && go run main.go deploy operator --kubeconfig /tmp/e2e-k8s.config
-	@echo "Running vineyardctl unit test..." 
+	@echo "Running vineyardctl unit test.." 
 # create test
 	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${K8S_DIR} && go test ./cmd/commands/create/
 # delete test 
