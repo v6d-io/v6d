@@ -42,7 +42,7 @@ def pytest_addoption(parser):
         "--vineyard-ipc-sockets",
         action="store",
         default=None,
-        help='Location of vineyard IPC sockes, separated by ","',
+        help='Location of vineyard IPC sockets, separated by ","',
     )
 
     parser.addoption(
