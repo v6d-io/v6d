@@ -20,6 +20,7 @@ import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.tensor.Tensor;
+import io.v6d.modules.basic.arrow.Buffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,6 +28,8 @@ import java.util.stream.IntStream;
 import lombok.*;
 import org.apache.arrow.util.Collections2;
 import org.apache.arrow.vector.ValueVector;
+import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 
@@ -91,18 +94,29 @@ public class DataFrame extends Object {
         }
         return new Schema(fields);
     }
+
+    public VectorSchemaRoot asBatch() {
+      List<Tensor> values = this.values();
+      List<FieldVector> vectors = new ArrayList<>();
+      Schema schema = this.schema();
+      for (int index = 0; index < this.columnCount; ++index) {
+        val array = values.get(index).getArray();
+        vectors.add(array);
+      }
+      return new VectorSchemaRoot(schema, vectors, rowCount);
+    }
 }
 
 class DataFrameResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
-        val rowCount = meta.getIntValue("partition_index_row_");
-        val columnCount = meta.getIntValue("partition_index_column_");
         val columns = ImmutableList.copyOf(meta.getArrayValue("columns_"));
+        val columnCount = columns.size();
         val values =
                 IntStream.range(0, columnCount)
                         .mapToObj(index -> (Tensor) meta.getMember("__values_-value-" + index))
                         .collect(Collectors.toList());
+        val rowCount = values.get(0).getArray().getValueCount(); 
         return new DataFrame(meta, rowCount, columnCount, columns, values);
     }
 }

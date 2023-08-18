@@ -42,7 +42,7 @@ def pytest_addoption(parser):
         "--vineyard-ipc-sockets",
         action="store",
         default=None,
-        help='Location of vineyard IPC sockets, separated by ","',
+        help='Location of vineyard IPC sockes, separated by ","',
     )
 
     parser.addoption(
@@ -99,6 +99,13 @@ def pytest_addoption(parser):
         action='store_true',
         default=False,
         help='Test with object migration enabled',
+    )
+
+    parser.addoption(
+        '--vineyard-spark-jar-path',
+        action="store",
+        default=os.path.expandvars('$VINEYARD_SPARK_PATH'),
+        help='Location of the jar that enables vineyard-spark interoperation',
     )
 
 
@@ -187,6 +194,11 @@ def vineyard_rpc_client(request):
         return vineyard.connect(endpoint=tuple(rpc_endpoint.split(':')))
     else:
         return None
+
+
+@pytest.fixture(scope='session')
+def vineyard_spark_jar_path(request):
+    return request.config.option.vineyard_spark_jar_path
 
 
 def pytest_configure(config):

@@ -22,14 +22,14 @@ import org.apache.arrow.vector.VectorSchemaRoot
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{OneToOneDependency, Partition, TaskContext}
 
-class TableChunkRDD(rdd: VineyardRDD)
+class GlobalDataFrameChunkRDD(rdd: VineyardRDD)
     extends RDD[VectorSchemaRoot](
       rdd.sparkContext,
       Seq(new OneToOneDependency(rdd))
     ) {
   override def compute(
-      split: Partition,
-      context: TaskContext
+    split: Partition,
+    context: TaskContext
   ): Iterator[VectorSchemaRoot] = {
     // Initialize vineyard context.
     Arrow.instantiate()
@@ -40,13 +40,12 @@ class TableChunkRDD(rdd: VineyardRDD)
       .iterator(split, context)
       .map(record => {
         val meta = partition.client.getMetaData(record)
-        val batch =
-          ObjectFactory.getFactory.resolve(meta).asInstanceOf[RecordBatch]
-        batch.getBatch
+        val df = ObjectFactory.getFactory.resolve(meta).asInstanceOf[DataFrame]
+        df.asBatch
       })
   }
 
-  override protected def getPartitions: Array[Partition] =
+  override protected def getPartitions: Array[Partition] = 
     firstParent[VineyardRDD].partitions
 
   override protected def getPreferredLocations(
@@ -57,6 +56,6 @@ class TableChunkRDD(rdd: VineyardRDD)
   }
 }
 
-object TableChunkRDD {
-  def fromVineyardRDD(rdd: VineyardRDD): TableChunkRDD = new TableChunkRDD(rdd)
+object GlobalDataFrameChunkRDD {
+  def fromVineyardRDD(rdd: VineyardRDD): GlobalDataFrameChunkRDD = new GlobalDataFrameChunkRDD(rdd)
 }

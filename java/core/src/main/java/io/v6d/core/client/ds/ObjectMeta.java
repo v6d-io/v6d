@@ -305,7 +305,7 @@ public class ObjectMeta implements Serializable, Iterable<Map.Entry<String, Json
 
     @SneakyThrows(IOException.class)
     public <T> Collection<T> getListValue(String key) {
-        val value = getValue(key);
+        val value = getArrayValue(key);
         assert value.isArray();
         val reader = mapper.readerFor(new TypeReference<List<T>>() {});
         return reader.readValue(value);
@@ -340,9 +340,13 @@ public class ObjectMeta implements Serializable, Iterable<Map.Entry<String, Json
     }
 
     public ArrayNode getArrayValue(String key) {
-        val value = getValue(key);
-        assert value.isObject();
-        return (ArrayNode) value;
+        val value = this.meta.get(key);
+        try{
+            ArrayNode arrayNode = mapper.readValue(value.asText(), ArrayNode.class);
+            return arrayNode;
+        } catch(Exception e) {
+            throw new UnsupportedOperationException("Not a ArrayNode");
+        }
     }
 
     public void setArrayNode(String key, ArrayNode values) {

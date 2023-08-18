@@ -17,10 +17,9 @@ package io.v6d.spark.rdd
 import io.v6d.core.client.IPCClient
 import io.v6d.core.common.util.{Env, ObjectID}
 import org.apache.spark.{SparkConf, SparkContext}
-import org.apache.spark.scheduler.cluster.vineyard.DeployContext
 import org.apache.spark.sql.SparkSession
 
-object TestVineyardRDD {
+object TestGlobalDataFrameRDD {
   def main(args: Array[String]): Unit = {
     val conf = new SparkConf()
     conf
@@ -31,9 +30,7 @@ object TestVineyardRDD {
     val spark = SparkSession.builder().config(conf).getOrCreate()
     val sc = spark.sparkContext
 
-    inspectExecutorContext(spark, sc)
-
-    var input = "o0097ec37edc4072a"
+    var input = "o00022c46d22d1b7c"
     if (args.length > 1) {
       input = args(1)
     }
@@ -58,13 +55,18 @@ object TestVineyardRDD {
       new VineyardRDD(sc, meta, "partitions_", SOCKET, client.getClusterStatus)
 
     println(
-      "chunks inside a table: ",
+      "chunks inside a dataframe: ",
       vineyardRDD.collect.mkString("[", ", ", "]")
     )
-  }
 
-  def inspectExecutorContext(spark: SparkSession, sc: SparkContext): Unit = {
-    val executors = DeployContext.getExecutors(sc)
-    println("executors: ", executors)
+    val dataframeRDD = GlobalDataFrameRDD.fromVineyard(vineyardRDD)
+    val df = dataframeRDD.toDF(spark)
+
+    df.show()
+    println("df.schema = ", df.schema)
+
+    df.createGlobalTempView("count")
+    val result = spark.sql("select * from global_temp.count limit 5")
+    result.show()
   }
 }
