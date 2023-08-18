@@ -57,6 +57,7 @@ jobs:
       matrix:
         job:
           - release
+          - unit-tests
           - e2e-tests-airflow-integration
           - e2e-tests-assembly-local
           - e2e-tests-assembly-distributed
@@ -160,7 +161,7 @@ jobs:
           make -C k8s/test/e2e build-base-images
 
       - name: unit-tests
-        if: ${{ matrix.job != 'release' }}
+        if: ${{ matrix.job == 'unit-tests' }}
         run: |
           make -C k8s/test/e2e unittest
 
