@@ -42,7 +42,9 @@ namespace vineyard {
 Status StreamStore::Create(ObjectID const stream_id) {
   std::lock_guard<std::recursive_mutex> __guard(this->mutex_);
   if (streams_.find(stream_id) != streams_.end()) {
-    return Status::ObjectExists();
+    return Status::ObjectExists(
+        "Failed to create the stream as it is already exists: " +
+        ObjectIDToString(stream_id));
   }
   streams_.emplace(stream_id, std::make_shared<StreamHolder>());
   return Status::OK();
