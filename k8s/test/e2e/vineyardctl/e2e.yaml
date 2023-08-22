@@ -20,9 +20,9 @@ setup:
     - name: download all workflow images into kind cluster
       command: |
         make -C k8s/test/e2e publish-workflow-images REGISTRY=localhost:5001
-    - name: install vineyard cluster(with operator)
+    - name: install vineyardd
       command: |
-        go run k8s/cmd/main.go deploy vineyard-cluster
+        go run k8s/cmd/main.go deploy vineyardd --vineyardd.image="localhost:5001/vineyardd:alpine-latest"
     - name: install job1
       command: |
         kubectl create namespace vineyard-job
