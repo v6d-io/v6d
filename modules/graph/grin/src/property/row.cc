@@ -24,6 +24,8 @@ void grin_destroy_row_value_of_string(GRIN_GRAPH g, const char* value) {
     delete[] value;
 }
 
+void grin_destroy_row_value_of_float_array(GRIN_GRAPH g, const float* value, size_t length) {}
+
 int grin_get_int32_from_row(GRIN_GRAPH g, GRIN_ROW r, size_t idx) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
     return *static_cast<const int32_t*>((*_r)[idx]);
@@ -78,8 +80,11 @@ long long int grin_get_timestamp64_from_row(GRIN_GRAPH g, GRIN_ROW r, size_t idx
     return *static_cast<const int64_t*>((*_r)[idx]);
 }
 
-const float* grin_get_float_array_from_row(GRIN_GRAPH g, GRIN_ROW r, size_t idx) {
+const float* grin_get_float_array_from_row(GRIN_GRAPH g, GRIN_ROW r, size_t idx, size_t* length) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     auto _r = static_cast<GRIN_ROW_T*>(r);
+    *length = _cache->feature_size;
     return static_cast<const float*>((*_r)[idx]);
 }
 
@@ -148,7 +153,7 @@ bool grin_insert_timestamp64_to_row(GRIN_GRAPH g, GRIN_ROW r, long long int valu
     return true;
 }
 
-bool grin_insert_float_array_to_row(GRIN_GRAPH g, GRIN_ROW r, const float* value, size_t len) {
+bool grin_insert_float_array_to_row(GRIN_GRAPH g, GRIN_ROW r, const float* value, size_t length) {
     return false;
 }
 #endif

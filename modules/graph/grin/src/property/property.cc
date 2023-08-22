@@ -97,7 +97,7 @@ GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const cha
 #ifdef GRIN_WITH_VERTEX_PROPERTY
 void grin_destroy_vertex_property_value_of_string(GRIN_GRAPH g, const char* value) {}
 
-void grin_destroy_float_array_value(GRIN_GRAPH g, const float* value) {}
+void grin_destroy_float_array_value(GRIN_GRAPH g, const float* value, size_t length) {}
 
 bool grin_equal_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp1, GRIN_VERTEX_PROPERTY vp2) {
     return (vp1 == vp2);
@@ -163,8 +163,9 @@ long long int grin_get_vertex_property_value_of_timestamp64(GRIN_GRAPH g, GRIN_V
     return static_cast<const long long int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
 }
 
-const float* grin_get_vertex_property_value_of_float_array(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
+const float* grin_get_vertex_property_value_of_float_array(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp, size_t* length) {
     GET_VERTEX_VALUE
+    *length = _cache->feature_size;
     return static_cast<const float*>(_cache->varrs[vtype][vprop]) + _cache->id_parser.GetOffset(v) * _cache->feature_size;
 }
 
@@ -175,9 +176,9 @@ GRIN_VERTEX_TYPE grin_get_vertex_type_from_property(GRIN_GRAPH g, GRIN_VERTEX_PR
 
 
 #ifdef GRIN_WITH_EDGE_PROPERTY
-void grin_destroy_edge_property_value_of_string(GRIN_GRAPH, const char*) {}
+void grin_destroy_edge_property_value_of_string(GRIN_GRAPH g, const char* value) {}
 
-void grin_destroy_edge_property_value_of_float_array(GRIN_GRAPH, const float*) {}
+void grin_destroy_edge_property_value_of_float_array(GRIN_GRAPH g, const float* value, size_t length) {}
 
 bool grin_equal_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep1, GRIN_EDGE_PROPERTY ep2) {
     return (ep1 == ep2);
@@ -242,7 +243,8 @@ long long int grin_get_edge_property_value_of_timestamp64(GRIN_GRAPH g, GRIN_EDG
     return static_cast<const long long int*>(_cache->earrs[etype][eprop])[e.eid];
 }
 
-const float* grin_get_edge_property_value_of_float_array(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
+const float* grin_get_edge_property_value_of_float_array(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep, size_t* length) {
+    *length = 0;
     return NULL;
 }
 
