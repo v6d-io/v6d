@@ -156,12 +156,10 @@ jobs:
           make -C k8s docker-build-push-multi-arch REGISTRY=${{ env.REGISTRY }} VERSION=latest
 
       - name: Generate the python and vineyardd image for tests
-        if: ${{ matrix.job != 'release' }}
         run: |
           make -C k8s/test/e2e build-base-images
 
       - name: Prepare directories for logs
-        if: ${{ matrix.job != 'release' }}
         run: |
           # create log directories for all tasks to prevent the "Path to upload does not exist" warnings
           for job in e2e-tests-airflow-integration \
@@ -186,7 +184,6 @@ jobs:
 
       - name: Start to export kubernetes logs
         uses: dashanji/kubernetes-log-export-action@v5
-        if: ${{ matrix.job != 'release'}}
         env:
           SHOW_TIMESTAMPS: 'true'
           OUTPUT_DIR: ${{ github.workspace }}/${{ matrix.job }}-logs
@@ -276,20 +273,23 @@ jobs:
 
       - name: Stop to export kubernetes logs
         uses: dashanji/kubernetes-log-export-action@v5
-        if: ${{ matrix.job != 'release' && failure() }}
+        if: ${{ failure() }}
         env:
           MODE: stop
           OUTPUT_DIR: ${{ github.workspace }}/${{ matrix.job }}-logs
           WITH_STOAT: true
 
       - uses: stoat-dev/stoat-action@v0
-        if: ${{ matrix.job != 'release' && failure() }}
+        if: ${{ failure() }}
 
       - name: Leave a message for logs URL
-        if: ${{ matrix.job != 'release' && failure() }}
+        if: ${{ failure() }}
         run: |
-          short_sha=$(git rev-parse --short ${{ github.event.pull_request.head.sha }})
-
+          if [[ -n ${{ github.event.pull_request.head.sha }} ]]; then
+              short_sha=$(git rev-parse --short ${{ github.event.pull_request.head.sha }})
+          else
+              short_sha=$(git rev-parse --short ${{ github.event.push.head.sha }})
+          fi
           case ${{ matrix.job }} in
             e2e-tests-spill)
               signed_url_key=0707
