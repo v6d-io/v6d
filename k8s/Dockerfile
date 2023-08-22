@@ -1,3 +1,4 @@
+ARG BASE_IMAGE=gcr.io/distroless/static:nonroot
 # Build the manager binary
 FROM golang:1.19 as builder
 
@@ -21,14 +22,12 @@ RUN go mod download
 RUN go build -a -o vineyardctl cmd/main.go && \
     strip vineyardctl || true
 
+
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot
+FROM ${BASE_IMAGE}
 WORKDIR /
 
 COPY k8s/config/scheduler/config.yaml /etc/kubernetes/scheduler.yaml
 
 COPY --from=builder /workspace/k8s/vineyardctl /vineyardctl
-USER nonroot:nonroot
-
-ENTRYPOINT ["/vineyardctl", "manager"]

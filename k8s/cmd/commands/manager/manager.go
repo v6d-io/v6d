@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package start contains the start command of vineyard operator
+// Package manager contains the start command of vineyard operator
 package manager
 
 import (
@@ -164,6 +164,14 @@ func startManager(
 		log.Fatal(err, "unable to create recover controller")
 	}
 
+	if err := (&controllers.CSIDriverReconciler{
+		Client:        mgr.GetClient(),
+		Scheme:        mgr.GetScheme(),
+		EventRecorder: mgr.GetEventRecorderFor("csidriver-controller"),
+	}).SetupWithManager(mgr); err != nil {
+		log.Fatal(err, "unable to create csidriver controller")
+	}
+
 	if flags.EnableWebhook {
 		// register the webhooks of CRDs
 		if err := (&v1alpha1.LocalObject{}).SetupWebhookWithManager(mgr); err != nil {
@@ -186,6 +194,9 @@ func startManager(
 		}
 		if err := (&v1alpha1.Recover{}).SetupWebhookWithManager(mgr); err != nil {
 			log.Fatal(err, "unable to create recover webhook")
+		}
+		if err := (&v1alpha1.CSIDriver{}).SetupWebhookWithManager(mgr); err != nil {
+			log.Fatal(err, "unable to create csidriver webhook")
 		}
 
 		// register the assembly webhook

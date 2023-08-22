@@ -11,6 +11,8 @@ Package v1alpha1 contains API Schema definitions for the k8s v1alpha1 API group
 ### Resource Types
 - [Backup](#backup)
 - [BackupList](#backuplist)
+- [CSIDriver](#csidriver)
+- [CSIDriverList](#csidriverlist)
 - [GlobalObject](#globalobject)
 - [GlobalObjectList](#globalobjectlist)
 - [LocalObject](#localobject)
@@ -78,6 +80,80 @@ _Appears in:_
 | `persistentVolumeClaimSpec` _[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core)_ | the PersistentVolumeClaimSpec of the backup data |
 
 
+
+
+#### CSIDriver
+
+
+
+CSIDriver is the Schema for the csidrivers API
+
+_Appears in:_
+- [CSIDriverList](#csidriverlist)
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `k8s.v6d.io/v1alpha1`
+| `kind` _string_ | `CSIDriver`
+| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[CSIDriverSpec](#csidriverspec)_ |  |
+
+
+#### CSIDriverList
+
+
+
+CSIDriverList contains a list of CSIDriver
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `k8s.v6d.io/v1alpha1`
+| `kind` _string_ | `CSIDriverList`
+| `metadata` _[ListMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#listmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `items` _[CSIDriver](#csidriver) array_ |  |
+
+
+#### CSIDriverSpec
+
+
+
+CSIDriverSpec defines the desired state of CSIDriver
+
+_Appears in:_
+- [CSIDriver](#csidriver)
+
+| Field | Description |
+| --- | --- |
+| `image` _string_ | Image is the name of the csi driver image |
+| `imagePullPolicy` _string_ | ImagePullPolicy is the image pull policy of the csi driver |
+| `storageClassName` _string_ | StorageClassName is the name of the storage class |
+| `volumeBindingMode` _string_ | VolumeBindingMode is the volume binding mode of the storage class |
+| `sidecar` _[CSISidecar](#csisidecar)_ | Sidecar is the configuration for the CSI sidecar container nolint: lll |
+| `clusters` _[VineyardClusters](#vineyardclusters) array_ | Clusters are the list of vineyard clusters |
+| `enableToleration` _boolean_ | EnableToleration is the flag to enable toleration for the csi driver |
+
+
+
+
+#### CSISidecar
+
+
+
+CSISidecar holds the configuration for the CSI sidecar container
+
+_Appears in:_
+- [CSIDriverSpec](#csidriverspec)
+
+| Field | Description |
+| --- | --- |
+| `provisionerImage` _string_ | ProvisionerImage is the image of the provisioner sidecar |
+| `attacherImage` _string_ | AttacherImage is the image of the attacher sidecar |
+| `nodeRegistrarImage` _string_ | NodeRegistrarImage is the image of the node registrar sidecar |
+| `livenessProbeImage` _string_ | LivenessProbeImage is the image of the liveness probe sidecar |
+| `imagePullPolicy` _string_ | ImagePullPolicy is the image pull policy of all sidecar containers |
+| `enableTopology` _boolean_ | EnableTopology is the flag to enable topology for the csi driver |
 
 
 #### GlobalObject
@@ -417,6 +493,21 @@ _Appears in:_
 | `spillUpperRate` _string_ | high watermark of triggering spilling |
 | `persistentVolumeSpec` _[PersistentVolumeSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumespec-v1-core)_ | the PersistentVolumeSpec of the spilling PV |
 | `persistentVolumeClaimSpec` _[PersistentVolumeClaimSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#persistentvolumeclaimspec-v1-core)_ | the PersistentVolumeClaimSpec of the spill file |
+
+
+#### VineyardClusters
+
+
+
+VineyardClusters contains the list of vineyard clusters
+
+_Appears in:_
+- [CSIDriverSpec](#csidriverspec)
+
+| Field | Description |
+| --- | --- |
+| `namespace` _string_ | Namespace is the namespace of the vineyard cluster |
+| `name` _string_ | Name is the name of the vineyard deployment |
 
 
 #### VineyardConfig

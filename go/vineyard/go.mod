@@ -1,6 +1,6 @@
 module github.com/v6d-io/v6d/go/vineyard
 
-go 1.18
+go 1.19
 
 require (
 	github.com/apache/arrow/go/v11 v11.0.0

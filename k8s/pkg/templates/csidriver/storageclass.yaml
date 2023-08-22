@@ -1,0 +1,10 @@
+{{- $storage := getStorageConfig }}
+kind: StorageClass
+apiVersion: storage.k8s.io/v1
+metadata:
+  name: {{ $storage.Namespace -}}.{{- $storage.Name -}}.csi
+provisioner: csi.vineyard.v6d.io
+parameters:
+  k8s.v6d.io/vineyard/namespace: {{ $storage.Namespace }}
+  k8s.v6d.io/vineyard/name: {{ $storage.Name }}
+volumeBindingMode: {{ $storage.VolumeBindingMode }}

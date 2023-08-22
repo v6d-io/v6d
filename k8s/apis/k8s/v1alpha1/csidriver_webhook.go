@@ -24,47 +24,46 @@ import (
 )
 
 // log is for logging in this package.
-var sidecarlog = log.WithName("sidecar-resource")
+var csidriverlog = log.WithName("csidriver-resource")
 
-// SetupWebhookWithManager sets up the webhook with the manager
-func (r *Sidecar) SetupWebhookWithManager(mgr ctrl.Manager) error {
+func (r *CSIDriver) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
 		Complete()
 }
 
 // nolint: lll
-//+kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-sidecar,mutating=true,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=sidecars,verbs=create;update,versions=v1alpha1,name=msidecar.kb.io,admissionReviewVersions=v1
-
-var _ webhook.Defaulter = &Sidecar{}
+// +kubebuilder:webhook:path=/mutate-k8s-v6d-io-v1alpha1-csidriver,mutating=true,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=csidrivers,verbs=create;update,versions=v1alpha1,name=mcsidriver.kb.io,admissionReviewVersions=v1
+var _ webhook.Defaulter = &CSIDriver{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type
-func (r *Sidecar) Default() {
-	sidecarlog.Info("default", "name", r.Name)
+func (r *CSIDriver) Default() {
+	csidriverlog.Info("default", "name", r.Name)
+
 }
 
-// nolint: lll
-//+kubebuilder:webhook:path=/validate-k8s-v6d-io-v1alpha1-sidecar,mutating=false,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=sidecars,verbs=create;update,versions=v1alpha1,name=vsidecar.kb.io,admissionReviewVersions=v1
+//nolint: lll
+//+kubebuilder:webhook:path=/validate-k8s-v6d-io-v1alpha1-csidriver,mutating=false,failurePolicy=fail,sideEffects=None,groups=k8s.v6d.io,resources=csidrivers,verbs=create;update,versions=v1alpha1,name=vcsidriver.kb.io,admissionReviewVersions=v1
 
-var _ webhook.Validator = &Sidecar{}
+var _ webhook.Validator = &CSIDriver{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *Sidecar) ValidateCreate() error {
-	sidecarlog.Info("validate create", "name", r.Name)
+func (r *CSIDriver) ValidateCreate() error {
+	csidriverlog.Info("validate create", "name", r.Name)
 
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *Sidecar) ValidateUpdate(old runtime.Object) error {
-	sidecarlog.Info("validate update", "name", r.Name)
+func (r *CSIDriver) ValidateUpdate(old runtime.Object) error {
+	csidriverlog.Info("validate update", "name", r.Name)
 
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *Sidecar) ValidateDelete() error {
-	sidecarlog.Info("validate delete", "name", r.Name)
+func (r *CSIDriver) ValidateDelete() error {
+	csidriverlog.Info("validate delete", "name", r.Name)
 
 	return nil
 }
