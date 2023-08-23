@@ -118,17 +118,17 @@ class GlobalDataFrameBuilder(
           }
         }}
       }}
-      recordBatchBuilder.seal(client).iterator
-    }).collect().toIterator()
+      Array(recordBatchBuilder.seal(client).getId).iterator
+    }).collect()
     meta.setTypename("vineyard::Table")
-    meta.setValue("batch_num_", batches.size())
+    meta.setValue("batch_num_", batches.length)
     meta.setValue("num_rows_", -1) // FIXME
     meta.setValue("num_columns_", sdf.schema.size)
     meta.addMember("schema", schemaBuilder.seal(client))
     meta.setGlobal()
     meta.setValue("__partitions_-size", batches.length);
     for((batch, i) <- batches.zipWithIndex) {
-      meta.addmember("__partitions_-" + i, batch)
+      meta.addMember("__partitions_-" + i, batch)
     }
     meta.setNBytes(0) // FIXME
     return this.client.createMetaData(meta)
