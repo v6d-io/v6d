@@ -14,21 +14,17 @@
  */
 package io.v6d.spark.rdd
 
-import io.v6d.core.client.ds.{ObjectFactory, ObjectMeta, ObjectBuilder}
+import io.v6d.core.client.ds.{ObjectBuilder, ObjectFactory, ObjectMeta}
 import io.v6d.core.client.{Client, IPCClient}
-import io.v6d.core.common.util.VineyardException
-import io.v6d.modules.basic.arrow.{Arrow, RecordBatchBuilder, SchemaBuilder, Schema}
+import io.v6d.core.common.util.{ObjectID, VineyardException}
+import io.v6d.modules.basic.arrow.{Arrow, RecordBatchBuilder, Schema, SchemaBuilder}
 import io.v6d.modules.basic.dataframe.{DataFrame => VineyardDataFrame}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{OneToOneDependency, Partition, TaskContext}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.vectorized.{
-  ArrowColumnVector,
-  ColumnVector,
-  ColumnarBatch
-}
+import org.apache.spark.sql.vectorized.{ArrowColumnVector, ColumnVector, ColumnarBatch}
 import org.apache.spark.sql.vineyard.DataContext
 import org.apache.spark.sql.internal.SQLConf
 
@@ -97,27 +93,27 @@ class GlobalDataFrameBuilder(
     val timeZoneId = SQLConf.get.sessionLocalTimeZone
     val arrowSchema = DataContext.toArrowSchema(sdf.schema, timeZoneId)
     val schemaBuilder = SchemaBuilder.fromSchema(arrowSchema)
-    val batches = sdf.rdd.zipWithIndex.mapPartitions(iterator => {
+    val batches: Array[ObjectID] = sdf.rdd.zipWithIndex.mapPartitions(iterator => {
       val recordBatchBuilder = new RecordBatchBuilder(this.client, arrowSchema, iterator.length);
       recordBatchBuilder.finishSchema(this.client);
-      iterator.foreach{ case (row, rowId) => {
-        row.schema.toList.zipWithIndex.foreach{ case (field, fid) => {
-          val builder = recordBatchBuilder.getColumnBuilder(fid.toInt)
+      iterator.foreach { case (row, rowId) =>
+        row.schema.toList.zipWithIndex.foreach { case (field, fid) =>
+          val builder = recordBatchBuilder.getColumnBuilder(fid)
           if (field.dataType.isInstanceOf[BooleanType]) {
-            builder.setBoolean(rowId.toInt, row.getBoolean(fid.toInt))
+            builder.setBoolean(rowId.toInt, row.getBoolean(fid))
           } else if (field.dataType.isInstanceOf[IntegerType]) {
-            builder.setInt(rowId.toInt, row.getInt(fid.toInt))
+            builder.setInt(rowId.toInt, row.getInt(fid))
           } else if (field.dataType.isInstanceOf[LongType]) {
-            builder.setLong(rowId.toInt, row.getLong(fid.toInt))
+            builder.setLong(rowId.toInt, row.getLong(fid))
           } else if (field.dataType.isInstanceOf[FloatType]) {
-            builder.setFloat(rowId.toInt, row.getFloat(fid.toInt))
+            builder.setFloat(rowId.toInt, row.getFloat(fid))
           } else if (field.dataType.isInstanceOf[DoubleType]) {
-            builder.setDouble(rowId.toInt, row.getDouble(fid.toInt))
+            builder.setDouble(rowId.toInt, row.getDouble(fid))
           } else {
             throw new Exception("Columnar builder for type " + field.dataType + " is not supported")
           }
-        }}
-      }}
+        }
+      }
       Array(recordBatchBuilder.seal(client).getId).iterator
     }).collect()
     meta.setTypename("vineyard::Table")
