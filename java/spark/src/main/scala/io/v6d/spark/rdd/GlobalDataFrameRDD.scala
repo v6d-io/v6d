@@ -14,11 +14,14 @@
  */
 package io.v6d.spark.rdd
 
-import io.v6d.core.client.ds.ObjectFactory
-import io.v6d.modules.basic.arrow.{Arrow, RecordBatch}
+import io.v6d.core.client.ds.{ObjectFactory, ObjectMeta, ObjectBuilder}
+import io.v6d.core.client.{Client, IPCClient}
+import io.v6d.core.common.util.VineyardException
+import io.v6d.modules.basic.arrow.{Arrow, RecordBatchBuilder, SchemaBuilder, Schema}
 import io.v6d.modules.basic.dataframe.{DataFrame => VineyardDataFrame}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{OneToOneDependency, Partition, TaskContext}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.vectorized.{
@@ -27,15 +30,16 @@ import org.apache.spark.sql.vectorized.{
   ColumnarBatch
 }
 import org.apache.spark.sql.vineyard.DataContext
+import org.apache.spark.sql.internal.SQLConf
 
 import scala.collection.JavaConverters._
 
 
 class GlobalDataFrameRDD(rdd: VineyardRDD)
-    extends RDD[InternalRow](
-      rdd.sparkContext,
-      Seq(new OneToOneDependency(rdd))
-    ) {
+extends RDD[InternalRow](
+  rdd.sparkContext,
+  Seq(new OneToOneDependency(rdd))
+) {
 
   override def compute(
     split: Partition,
@@ -59,7 +63,7 @@ class GlobalDataFrameRDD(rdd: VineyardRDD)
     firstParent[VineyardRDD].partitions
 
   override protected def getPreferredLocations(
-      split: Partition
+    split: Partition
   ): Seq[String] = {
     val partition = split.asInstanceOf[VineyardPartition]
     Seq(partition.host)
@@ -70,10 +74,63 @@ class GlobalDataFrameRDD(rdd: VineyardRDD)
     val types = globalDataFrameChunkRDD
       .map(chunk => DataContext.fromArrowSchema(chunk.getSchema))
       .first()
-    DataContext.createDataFrame(spark, this, types)
+      DataContext.createDataFrame(spark, this, types)
   }
 }
 
 object GlobalDataFrameRDD {
   def fromVineyard(rdd: VineyardRDD): GlobalDataFrameRDD = new GlobalDataFrameRDD(rdd)
+}
+
+class GlobalDataFrameBuilder(
+  private val client: IPCClient,
+  private val sdf: DataFrame
+) extends ObjectBuilder () {
+
+  @throws(classOf[VineyardException])
+  override def build(client:Client) = {}
+
+  @throws(classOf[VineyardException])
+  override def seal(client:Client): ObjectMeta = {
+    this.build(client);
+    val meta = ObjectMeta.empty();
+    val timeZoneId = SQLConf.get.sessionLocalTimeZone
+    val arrowSchema = DataContext.toArrowSchema(sdf.schema, timeZoneId)
+    val schemaBuilder = SchemaBuilder.fromSchema(arrowSchema)
+    val batches = sdf.rdd.zipWithIndex.mapPartitions(iterator => {
+      val recordBatchBuilder = new RecordBatchBuilder(this.client, arrowSchema, iterator.length);
+      recordBatchBuilder.finishSchema(this.client);
+      iterator.foreach{ case (row, rowId) => {
+        row.schema.toList.zipWithIndex.foreach{ case (field, fid) => {
+          val builder = recordBatchBuilder.getColumnBuilder(fid.toInt)
+          if (field.dataType.isInstanceOf[BooleanType]) {
+            builder.setBoolean(rowId.toInt, row.getBoolean(fid.toInt))
+          } else if (field.dataType.isInstanceOf[IntegerType]) {
+            builder.setInt(rowId.toInt, row.getInt(fid.toInt))
+          } else if (field.dataType.isInstanceOf[LongType]) {
+            builder.setLong(rowId.toInt, row.getLong(fid.toInt))
+          } else if (field.dataType.isInstanceOf[FloatType]) {
+            builder.setFloat(rowId.toInt, row.getFloat(fid.toInt))
+          } else if (field.dataType.isInstanceOf[DoubleType]) {
+            builder.setDouble(rowId.toInt, row.getDouble(fid.toInt))
+          } else {
+            throw new Exception("Columnar builder for type " + field.dataType + " is not supported")
+          }
+        }}
+      }}
+      recordBatchBuilder.seal(client).iterator
+    }).collect().toIterator()
+    meta.setTypename("vineyard::Table")
+    meta.setValue("batch_num_", batches.size())
+    meta.setValue("num_rows_", -1) // FIXME
+    meta.setValue("num_columns_", sdf.schema.size)
+    meta.addMember("schema", schemaBuilder.seal(client))
+    meta.setGlobal()
+    meta.setValue("__partitions_-size", batches.length);
+    for((batch, i) <- batches.zipWithIndex) {
+      meta.addmember("__partitions_-" + i, batch)
+    }
+    meta.setNBytes(0) // FIXME
+    return this.client.createMetaData(meta)
+  }
 }

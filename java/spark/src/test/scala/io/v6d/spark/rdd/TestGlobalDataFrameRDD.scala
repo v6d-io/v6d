@@ -64,9 +64,11 @@ object TestGlobalDataFrameRDD {
 
     df.show()
     println("df.schema = ", df.schema)
-
     df.createGlobalTempView("count")
     val result = spark.sql("select * from global_temp.count limit 5")
     result.show()
+
+    val globalDataFrameBuilder = new GlobalDataFrameBuilder(client, df)
+    val new_meta = globalDataFrameBuilder.seal(client)
   }
 }

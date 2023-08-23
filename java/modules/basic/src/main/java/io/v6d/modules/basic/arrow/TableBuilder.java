@@ -79,9 +79,9 @@ public class TableBuilder implements ObjectBuilder {
         meta.setValue("num_columns_", schemaBuilder.getFields().size());
         meta.addMember("schema_", schemaBuilder.seal(client));
 
-        meta.setValue("__batches_-size", batches.size());
+        meta.setValue("__partitions_-size", batches.size());
         for (int index = 0; index < batches.size(); ++index) {
-            meta.addMember("__batches_-" + index, batches.get(index).seal(client));
+            meta.addMember("__partitions_-" + index, batches.get(index).seal(client));
         }
         meta.setNBytes(0); // FIXME
 
