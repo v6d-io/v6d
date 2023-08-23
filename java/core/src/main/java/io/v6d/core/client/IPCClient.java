@@ -308,6 +308,18 @@ public class IPCClient extends Client {
         return buffer;
     }
 
+    @Override
+    public void sealBuffer(ObjectID objectID) throws VineyardException {
+        VineyardException.asserts(
+                objectID.isBlob(), "Not a blob object id: " + objectID.toString());
+
+        val root = mapper.createObjectNode();
+        SealBufferRequest.put(root, objectID);
+        this.doWrite(root);
+        val reply = new SealBufferReply();
+        reply.get(this.doReadJson());
+    }
+
     private void connectIPCSocket(UnixSocketAddress address) throws VineyardException.IOError {
         try {
             channel = UnixSocketChannel.open(address);
