@@ -114,7 +114,7 @@ class GlobalDataFrameBuilder(
           }
         }
       }
-      Array(recordBatchBuilder.seal(client).getId).iterator
+      Iterable(recordBatchBuilder.seal(client).getId).iterator
     }).collect()
     meta.setTypename("vineyard::Table")
     meta.setValue("batch_num_", batches.length)
