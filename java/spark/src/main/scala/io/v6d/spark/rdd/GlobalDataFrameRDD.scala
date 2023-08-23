@@ -91,11 +91,15 @@ class GlobalDataFrameBuilder(
     this.build(client);
     val meta = ObjectMeta.empty();
     val timeZoneId = SQLConf.get.sessionLocalTimeZone
-    val arrowSchema = DataContext.toArrowSchema(sdf.schema, timeZoneId)
+    val schema = sdf.schema
+    val arrowSchema = DataContext.toArrowSchema(schema, timeZoneId)
     val schemaBuilder = SchemaBuilder.fromSchema(arrowSchema)
+    val SOCKET = client.getIPCSocket()
     val batches: Array[ObjectID] = sdf.rdd.zipWithIndex.mapPartitions(iterator => {
-      val recordBatchBuilder = new RecordBatchBuilder(this.client, arrowSchema, iterator.length);
-      recordBatchBuilder.finishSchema(this.client);
+      val localClient = new IPCClient(SOCKET)
+      val localArrowSchema = DataContext.toArrowSchema(schema, timeZoneId)
+      val recordBatchBuilder = new RecordBatchBuilder(localClient, localArrowSchema, iterator.length);
+      recordBatchBuilder.finishSchema(localClient);
       iterator.foreach { case (row, rowId) =>
         row.schema.toList.zipWithIndex.foreach { case (field, fid) =>
           val builder = recordBatchBuilder.getColumnBuilder(fid)
@@ -114,8 +118,12 @@ class GlobalDataFrameBuilder(
           }
         }
       }
-      Iterable(recordBatchBuilder.seal(client).getId).iterator
+      val batchMeta = recordBatchBuilder.seal(localClient)
+      println(batchMeta.toPrettyString())
+      val id = batchMeta.getId
+      Iterable(id).iterator
     }).collect()
+    batches.foreach(println)
     meta.setTypename("vineyard::Table")
     meta.setValue("batch_num_", batches.length)
     meta.setValue("num_rows_", -1) // FIXME
@@ -127,6 +135,7 @@ class GlobalDataFrameBuilder(
       meta.addMember("__partitions_-" + i, batch)
     }
     meta.setNBytes(0) // FIXME
-    return this.client.createMetaData(meta)
+    println(meta.toPrettyString())
+    return client.createMetaData(meta)
   }
 }

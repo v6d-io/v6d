@@ -93,6 +93,7 @@ public class IPCClient extends Client {
         this.doWrite(root);
         val reply = new CreateDataReply();
         reply.get(this.doReadJson());
+        System.out.println("######## " + reply.getId());
         if (meta.isIncomplete()) {
             return getMetaData(reply.getId());
         } else {
