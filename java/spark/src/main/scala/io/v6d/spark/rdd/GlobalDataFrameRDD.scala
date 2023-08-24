@@ -14,23 +14,74 @@
  */
 package io.v6d.spark.rdd
 
-import io.v6d.core.client.ds.{ObjectBuilder, ObjectFactory, ObjectMeta}
-import io.v6d.core.client.{Client, IPCClient}
-import io.v6d.core.common.util.{ObjectID, VineyardException}
-import io.v6d.modules.basic.arrow.{Arrow, RecordBatchBuilder, Schema, SchemaBuilder}
+import io.v6d.core.client.IPCClient
+import io.v6d.core.client.ds.{ObjectFactory, ObjectMeta}
+import io.v6d.core.common.util.ObjectID
+import io.v6d.modules.basic.arrow.Arrow
 import io.v6d.modules.basic.dataframe.{DataFrame => VineyardDataFrame}
+import org.apache.spark.sql.vineyard.DataContext
+
+import org.apache.arrow.vector.VectorSchemaRoot
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{OneToOneDependency, Partition, TaskContext}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.vectorized.{ArrowColumnVector, ColumnVector, ColumnarBatch}
-import org.apache.spark.sql.vineyard.DataContext
 import org.apache.spark.sql.internal.SQLConf
 
 import scala.collection.JavaConverters._
 
+/**
+ * Provides a RDD to process each partition of Vineyard::GlobalDataFrame.
+ *
+ * This is useful to convert a Vineyard::GlobalDataFrame to spark.sql.dataframe
+ * with mapPartitions.
+ */
+class GlobalDataFrameChunkRDD(rdd: VineyardRDD)
+extends RDD[VectorSchemaRoot](
+  rdd.sparkContext,
+  Seq(new OneToOneDependency(rdd))
+) {
+  override def compute(
+    split: Partition,
+    context: TaskContext
+  ): Iterator[VectorSchemaRoot] = {
+    // Initialize vineyard context.
+    Arrow.instantiate()
+    VineyardDataFrame.instantiate()
 
+    val partition = split.asInstanceOf[VineyardPartition]
+    firstParent[ObjectID]
+      .iterator(split, context)
+      .map(record => {
+        val meta = partition.client.getMetaData(record)
+        val df = ObjectFactory.getFactory.resolve(meta).asInstanceOf[VineyardDataFrame]
+        df.asBatch
+      })
+  }
+
+  override protected def getPartitions: Array[Partition] =
+    firstParent[VineyardRDD].partitions
+
+  override protected def getPreferredLocations(
+    split: Partition
+  ): Seq[String] = {
+    val partition = split.asInstanceOf[VineyardPartition]
+    Seq(partition.host)
+  }
+}
+
+object GlobalDataFrameChunkRDD {
+  def fromVineyardRDD(rdd: VineyardRDD): GlobalDataFrameChunkRDD = new GlobalDataFrameChunkRDD(rdd)
+}
+
+/**
+ * Provides a RDD to process each row of Vineyard::GlobalDataFrame.
+ *
+ * This is useful to apply RDD-level transformation directly on
+ * vineyard::GlobalDataFrame without creating a new spark.sql.DataFrame.
+ */
 class GlobalDataFrameRDD(rdd: VineyardRDD)
 extends RDD[InternalRow](
   rdd.sparkContext,
@@ -76,66 +127,10 @@ extends RDD[InternalRow](
 
 object GlobalDataFrameRDD {
   def fromVineyard(rdd: VineyardRDD): GlobalDataFrameRDD = new GlobalDataFrameRDD(rdd)
-}
 
-class GlobalDataFrameBuilder(
-  private val client: IPCClient,
-  private val sdf: DataFrame
-) extends ObjectBuilder () {
-
-  @throws(classOf[VineyardException])
-  override def build(client:Client) = {}
-
-  @throws(classOf[VineyardException])
-  override def seal(client:Client): ObjectMeta = {
-    this.build(client);
-    val meta = ObjectMeta.empty();
-    val timeZoneId = SQLConf.get.sessionLocalTimeZone
-    val schema = sdf.schema
-    val arrowSchema = DataContext.toArrowSchema(schema, timeZoneId)
-    val schemaBuilder = SchemaBuilder.fromSchema(arrowSchema)
-    val SOCKET = client.getIPCSocket()
-    val batches: Array[ObjectID] = sdf.rdd.zipWithIndex.mapPartitions(iterator => {
-      val localClient = new IPCClient(SOCKET)
-      val localArrowSchema = DataContext.toArrowSchema(schema, timeZoneId)
-      val recordBatchBuilder = new RecordBatchBuilder(localClient, localArrowSchema, iterator.length);
-      recordBatchBuilder.finishSchema(localClient);
-      iterator.foreach { case (row, rowId) =>
-        row.schema.toList.zipWithIndex.foreach { case (field, fid) =>
-          val builder = recordBatchBuilder.getColumnBuilder(fid)
-          if (field.dataType.isInstanceOf[BooleanType]) {
-            builder.setBoolean(rowId.toInt, row.getBoolean(fid))
-          } else if (field.dataType.isInstanceOf[IntegerType]) {
-            builder.setInt(rowId.toInt, row.getInt(fid))
-          } else if (field.dataType.isInstanceOf[LongType]) {
-            builder.setLong(rowId.toInt, row.getLong(fid))
-          } else if (field.dataType.isInstanceOf[FloatType]) {
-            builder.setFloat(rowId.toInt, row.getFloat(fid))
-          } else if (field.dataType.isInstanceOf[DoubleType]) {
-            builder.setDouble(rowId.toInt, row.getDouble(fid))
-          } else {
-            throw new Exception("Columnar builder for type " + field.dataType + " is not supported")
-          }
-        }
-      }
-      val batchMeta = recordBatchBuilder.seal(localClient)
-      println(batchMeta.toPrettyString())
-      val id = batchMeta.getId
-      Iterable(id).iterator
-    }).collect()
-    batches.foreach(println)
-    meta.setTypename("vineyard::Table")
-    meta.setValue("batch_num_", batches.length)
-    meta.setValue("num_rows_", -1) // FIXME
-    meta.setValue("num_columns_", sdf.schema.size)
-    meta.addMember("schema", schemaBuilder.seal(client))
-    meta.setGlobal()
-    meta.setValue("__partitions_-size", batches.length);
-    for((batch, i) <- batches.zipWithIndex) {
-      meta.addMember("__partitions_-" + i, batch)
-    }
-    meta.setNBytes(0) // FIXME
-    println(meta.toPrettyString())
-    return client.createMetaData(meta)
+  def makeDataFrame(client: IPCClient, spark: SparkSession, meta: ObjectMeta): DataFrame= {
+    val vineyardRDD =
+      new VineyardRDD(spark.sparkContext, meta, "partitions_", client.getIPCSocket(), client.getClusterStatus)
+    this.fromVineyard(vineyardRDD).toDF(spark)
   }
 }

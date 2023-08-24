@@ -18,7 +18,7 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.SparkSession
 import io.v6d.core.client.IPCClient
 import io.v6d.core.common.util.ObjectID
-import io.v6d.spark.rdd.GlobalDataFrameBuilder
+import io.v6d.spark.rdd.DataFrameBuilder
 
 object SparkApp {
   def main(args: Array[String]): Unit = {
@@ -37,8 +37,8 @@ object SparkApp {
 
   def testBuilder(
     spark: SparkSession,
-    sc:SparkContext,
-    ):Unit = {
+    sc: SparkContext,
+    ): Unit = {
       import spark.implicits._
       val SOCKET = "/var/run/vineyard.sock"
       val client: IPCClient = new IPCClient(SOCKET)
@@ -46,9 +46,8 @@ object SparkApp {
       val rdd = sc.parallelize(Seq((1, 1.3), (2, 2.6), (3, 3.9)), 3)
       val df = spark.createDataFrame(rdd).toDF("A", "B")
 
-      df.show()
-      val globalDataFrameBuilder = new GlobalDataFrameBuilder(client, df)
-      val new_meta = globalDataFrameBuilder.seal(client)
+      val dataFrameBuilder = new DataFrameBuilder(client, df)
+      val new_meta = dataFrameBuilder.seal(client)
+      println(new_meta.getId())
   }
-
 }

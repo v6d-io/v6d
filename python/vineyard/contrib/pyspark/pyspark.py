@@ -33,20 +33,15 @@ from vineyard.data.dataframe import make_global_dataframe
 def pyspark_dataframe_builder(
     client, value, builder, **kw
 ):  # pylint: disable=unused-argument
-    def put_partition(rdd):
-        import os
-
-        sock = os.environ.get('VINEYARD_IPC_SOCKET')
-        rows = (row.asDict() for row in rdd)
-        pandas_df = pd.DataFrame(rows)
-        client = vineyard.connect(sock)
-        obj_id = client.put(pandas_df)
-        client.persist(obj_id)
-        yield pd.DataFrame([{'id': int(obj_id)}])
-
-    res = value.rdd.mapPartitions(put_partition).collect()
-    blocks = [res[i]['id'][0] for i in range(len(res))]
-    return make_global_dataframe(client, blocks)
+    def py4j_wrapper(df, spark_conf, socket):
+        sparkSession = SparkSession.builder.config(conf=spark_conf).getOrCreate()
+        sc = sparkSession.sparkContext
+        jvm = sc._jvm
+        _jclient = jvm.io.v6d.core.client.IPCClient(socket)
+        _jbuilder = jvm.io.v6d.spark.rdd.DataFrameBuilder(_jclient, df._jdf)
+        _jmeta = _jbuilder.seal(_jclient)
+        return vineyard.ObjectID(_jmeta.getId().toString())
+    return py4j_wrapper(value, kw["spark_conf"], kw["socket"])
 
 
 def pyspark_dataframe_resolver(obj, resolver, **kw):  # pylint: disable=unused-argument
