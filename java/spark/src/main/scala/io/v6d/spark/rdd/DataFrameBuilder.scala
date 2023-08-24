@@ -52,13 +52,14 @@ class DataFrameBuilder(
     val arrowSchema = DataContext.toArrowSchema(schema, timeZoneId)
     val schemaBuilder = SchemaBuilder.fromSchema(arrowSchema)
     val SOCKET = client.getIPCSocket()
-    val batches: Array[ObjectID] = sparkDF.rdd.zipWithIndex.mapPartitions(iterator => {
+    val batches: Array[ObjectID] = sparkDF.rdd.mapPartitions(iterator => {
+      val localArray = iterator.toArray // FIXME: persist stream to get size
       val localClient = new IPCClient(SOCKET)
       val localArrowSchema = DataContext.toArrowSchema(schema, timeZoneId)
-      val recordBatchBuilder = new RecordBatchBuilder(localClient, localArrowSchema, iterator.length);
+      val recordBatchBuilder = new RecordBatchBuilder(localClient, localArrowSchema, localArray.length);
       recordBatchBuilder.finishSchema(localClient);
-      iterator.foreach { case (row, rowId) =>
-        row.schema.toList.zipWithIndex.foreach { case (field, fid) =>
+      localArray.zipWithIndex.foreach { case (row, rowId) =>
+        schema.toList.zipWithIndex.foreach{ case (field, fid) =>
           val builder = recordBatchBuilder.getColumnBuilder(fid)
           if (field.dataType.isInstanceOf[BooleanType]) {
             builder.setBoolean(rowId.toInt, row.getBoolean(fid))

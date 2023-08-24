@@ -31,23 +31,6 @@ object SparkApp {
         val spark = SparkSession.builder().config(conf).getOrCreate()
         val sc: SparkContext = spark.sparkContext
 
-        testBuilder(spark, sc)
         sc.stop()
-  }
-
-  def testBuilder(
-    spark: SparkSession,
-    sc: SparkContext,
-    ): Unit = {
-      import spark.implicits._
-      val SOCKET = "/var/run/vineyard.sock"
-      val client: IPCClient = new IPCClient(SOCKET)
-
-      val rdd = sc.parallelize(Seq((1, 1.3), (2, 2.6), (3, 3.9)), 3)
-      val df = spark.createDataFrame(rdd).toDF("A", "B")
-
-      val dataFrameBuilder = new DataFrameBuilder(client, df)
-      val new_meta = dataFrameBuilder.seal(client)
-      println(new_meta.getId())
   }
 }
