@@ -13,21 +13,33 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "property/property.h"
 
-#define GET_VERTEX_VALUE \
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR; \
-    unsigned vtype = _grin_get_type_from_property(vp); \
-    unsigned vprop = _grin_get_prop_from_property(vp); \
-    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache; \
-    assert((unsigned)_cache->id_parser.GetLabelId(v) == vtype);
+#if defined(GRIN_ENABLE_SCHEMA) && defined(GRIN_WITH_VERTEX_PROPERTY)
+/**
+ * @brief Get the vertex property list of the graph.
+ * This API is only available for property graph.
+ * @param GRIN_GRAPH The graph.
+ * @return The vertex property list.
+*/
+GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_property_list_by_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto vpl = new GRIN_VERTEX_PROPERTY_LIST_T();
+    vpl->resize(_g->vertex_property_num(vtype));
+    for (auto p = 0; p < _g->vertex_property_num(vtype); ++p) {
+        (*vpl)[p] = _grin_create_property(vtype, p);
+    }
+    return vpl;
+}
 
-#define GET_EDGE_VALUE \
-    grin_error_code = GRIN_ERROR_CODE::NO_ERROR; \
-    unsigned etype = _grin_get_type_from_property(ep); \
-    assert(etype == e.etype); \
-    unsigned eprop = _grin_get_prop_from_property(ep); \
-    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
+/**
+ * @brief Get the vertex type that a given vertex property belongs to.
+ * @param GRIN_GRAPH The graph
+ * @param GRIN_VERTEX_PROPERTY The vertex property
+ * @return The vertex type
+*/
+GRIN_VERTEX_TYPE grin_get_vertex_type_from_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
+    return _grin_get_type_from_property(vp);
+}
 
-#ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
 const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY vp) {
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     return _cache->vprop_names[_grin_get_type_from_property(vp)][_grin_get_prop_from_property(vp)].c_str();
@@ -58,9 +70,78 @@ GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const
     }
     return vpl;
 }
+
+
+/**
+ * @brief Get the vertex property handle by id.
+ * In strict schema, storage has naturally increasing ids for vertex properties
+ * under a certain vertex type.
+ * @param GRIN_GRAPH The graph.
+ * @param GRIN_VERTEX_TYPE The vertex type.
+ * @param GRIN_VERTEX_PROPERTY_ID The vertex property id.
+ * @return The vertex property handle.
+*/
+GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_id(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY_ID vpi) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    if (static_cast<int>(vpi) >= _g->vertex_property_num(vtype)) return GRIN_NULL_VERTEX_PROPERTY;
+    return _grin_create_property(vtype, vpi);
+}
+
+/**
+ * @brief Get the vertex property's natural id.
+ * In strict schema, the storage has naturally increasing ids for vertex properties
+ * under a certain vertex type.
+ * @param GRIN_GRAPH The graph.
+ * @param GRIN_VERTEX_TYPE The vertex type.
+ * @param GRIN_VERTEX_PROPERTY The vertex property handle.
+ * @return The vertex property id.
+*/
+GRIN_VERTEX_PROPERTY_ID grin_get_vertex_property_id(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, GRIN_VERTEX_PROPERTY vp) {
+    if (vtype != _grin_get_type_from_property(vp)) return GRIN_NULL_VERTEX_PROPERTY_ID;
+    return _grin_get_prop_from_property(vp);
+}
 #endif
 
-#ifdef GRIN_WITH_EDGE_PROPERTY_NAME
+#if !defined(GRIN_ENABLE_SCHEMA) && defined(GRIN_WITH_VERTEX_PROPERTY)
+/**
+ * @brief Get the vertex property list of the vertex.
+ * When schema is not enabled, each vertex has its own property list.
+ * @param GRIN_GRAPH The graph.
+ * @param GRIN_VERTEX The vertex.
+ * @return The vertex property list.
+*/
+GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_property_list(GRIN_GRAPH, GRIN_VERTEX);
+
+/**
+ * @brief Get the vertex property name
+ * @param GRIN_GRAPH The graph
+ * @param GRIN_VERTEX The vertex
+ * @param GRIN_VERTEX_PROPERTY The vertex property
+ * @return The property's name as string
+ */
+const char* grin_get_vertex_property_name(GRIN_GRAPH, GRIN_VERTEX, GRIN_VERTEX_PROPERTY);
+
+/**
+ * @brief Get the vertex property with a given name under a specific vertex
+ * @param GRIN_GRAPH The graph
+ * @param GRIN_VERTEX The specific vertex
+ * @param name The name
+ * @return The vertex property
+ */
+GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH, GRIN_VERTEX, const char* name);
+#endif
+
+#if defined(GRIN_ENABLE_SCHEMA) && defined(GRIN_WITH_EDGE_PROPERTY)
+GRIN_EDGE_PROPERTY_LIST grin_get_edge_property_list_by_type(GRIN_GRAPH g, GRIN_EDGE_TYPE etype) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto epl = new GRIN_EDGE_PROPERTY_LIST_T();
+    epl->resize(_g->edge_property_num(etype) - 1);
+    for (auto p = 1; p < _g->edge_property_num(etype); ++p) {
+        (*epl)[p - 1] = _grin_create_property(etype, p);
+    }
+    return epl;
+}
+
 const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_EDGE_PROPERTY ep) {
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     return _cache->eprop_names[_grin_get_type_from_property(ep)][_grin_get_prop_from_property(ep)].c_str();
@@ -91,95 +172,55 @@ GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const cha
     }
     return epl;
 }
+
+GRIN_EDGE_TYPE grin_get_edge_type_from_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
+    return _grin_get_type_from_property(ep);
+}
+
+GRIN_EDGE_PROPERTY grin_get_edge_property_by_id(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_EDGE_PROPERTY_ID epi) {
+    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    if (static_cast<int>(epi) >= _g->edge_property_num(etype) - 1) return GRIN_NULL_EDGE_PROPERTY;
+    return _grin_create_property(etype, epi + 1);
+}
+
+GRIN_EDGE_PROPERTY_ID grin_get_edge_property_id(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN_EDGE_PROPERTY ep) {
+    if (etype != _grin_get_type_from_property(ep)) return GRIN_NULL_EDGE_PROPERTY_ID;
+    return _grin_get_prop_from_property(ep) - 1;
+}
+#endif
+
+
+#if !defined(GRIN_ENABLE_SCHEMA) && defined(GRIN_WITH_EDGE_PROPERTY)
+GRIN_EDGE_PROPERTY_LIST grin_get_edge_property_list(GRIN_GRAPH, GRIN_EDGE);
+
+const char* grin_get_edge_property_name(GRIN_GRAPH, GRIN_EDGE, GRIN_EDGE_PROPERTY);
+
+GRIN_EDGE_PROPERTY grin_get_edge_property_by_name(GRIN_GRAPH, GRIN_EDGE, const char* name);
 #endif
 
 
 #ifdef GRIN_WITH_VERTEX_PROPERTY
-void grin_destroy_vertex_property_value_of_string(GRIN_GRAPH g, const char* value) {}
-
-void grin_destroy_float_array_value(GRIN_GRAPH g, const float* value, size_t length) {}
-
 bool grin_equal_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp1, GRIN_VERTEX_PROPERTY vp2) {
     return (vp1 == vp2);
 }
 
 void grin_destroy_vertex_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {}
 
+/**
+ * @brief Get the datatype of the vertex property
+ * @param GRIN_GRAPH The graph
+ * @param GRIN_VERTEX_PROPERTY The vertex property
+ * @return The datatype of the vertex property
+*/
 GRIN_DATATYPE grin_get_vertex_property_datatype(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto properties = _g->schema().GetEntry(_grin_get_type_from_property(vp), "VERTEX").properties();
     auto dt = _g->schema().GetVertexPropertyType(_grin_get_type_from_property(vp), properties[_grin_get_prop_from_property(vp)].id);
     return ArrowToDataType(dt);
 }
-
-int grin_get_vertex_property_value_of_int32(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    GET_VERTEX_VALUE
-    return static_cast<const int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
-}
-
-unsigned int grin_get_vertex_property_value_of_uint32(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    GET_VERTEX_VALUE
-    return static_cast<const unsigned int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
-}
-
-long long int grin_get_vertex_property_value_of_int64(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    GET_VERTEX_VALUE
-    return static_cast<const long long int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
-}
-
-unsigned long long int grin_get_vertex_property_value_of_uint64(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    GET_VERTEX_VALUE
-    return static_cast<const unsigned long long int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
-}
-
-float grin_get_vertex_property_value_of_float(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    GET_VERTEX_VALUE
-    return static_cast<const float*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
-}
-
-double grin_get_vertex_property_value_of_double(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    GET_VERTEX_VALUE
-    return static_cast<const double*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
-}
-
-const char* grin_get_vertex_property_value_of_string(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    GET_VERTEX_VALUE
-    auto result = _get_arrow_array_data_element(_cache->varrays[vtype][vprop], _cache->id_parser.GetOffset(v));
-    return static_cast<const std::string*>(result)->c_str();
-}
-
-int grin_get_vertex_property_value_of_date32(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    GET_VERTEX_VALUE
-    return static_cast<const int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
-}
-
-int grin_get_vertex_property_value_of_time32(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    GET_VERTEX_VALUE
-    return static_cast<const int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
-}
-
-long long int grin_get_vertex_property_value_of_timestamp64(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
-    GET_VERTEX_VALUE
-    return static_cast<const long long int*>(_cache->varrs[vtype][vprop])[_cache->id_parser.GetOffset(v)];
-}
-
-const float* grin_get_vertex_property_value_of_float_array(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp, size_t* length) {
-    GET_VERTEX_VALUE
-    *length = _cache->feature_size;
-    return static_cast<const float*>(_cache->varrs[vtype][vprop]) + _cache->id_parser.GetOffset(v) * _cache->feature_size;
-}
-
-GRIN_VERTEX_TYPE grin_get_vertex_type_from_property(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY vp) {
-    return _grin_get_type_from_property(vp);
-}
 #endif
 
-
 #ifdef GRIN_WITH_EDGE_PROPERTY
-void grin_destroy_edge_property_value_of_string(GRIN_GRAPH g, const char* value) {}
-
-void grin_destroy_edge_property_value_of_float_array(GRIN_GRAPH g, const float* value, size_t length) {}
-
 bool grin_equal_edge_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep1, GRIN_EDGE_PROPERTY ep2) {
     return (ep1 == ep2);
 }
@@ -190,65 +231,5 @@ GRIN_DATATYPE grin_get_edge_property_datatype(GRIN_GRAPH g, GRIN_EDGE_PROPERTY e
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto dt = _g->schema().GetEdgePropertyType(_grin_get_type_from_property(ep), _grin_get_prop_from_property(ep));
     return ArrowToDataType(dt);
-}
-
-int grin_get_edge_property_value_of_int32(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    GET_EDGE_VALUE
-    return static_cast<const int*>(_cache->earrs[etype][eprop])[e.eid];
-}
-
-unsigned int grin_get_edge_property_value_of_uint32(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    GET_EDGE_VALUE
-    return static_cast<const unsigned int*>(_cache->earrs[etype][eprop])[e.eid];
-}
-
-long long int grin_get_edge_property_value_of_int64(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    GET_EDGE_VALUE
-    return static_cast<const long long int*>(_cache->earrs[etype][eprop])[e.eid];
-}
-
-unsigned long long int grin_get_edge_property_value_of_uint64(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    GET_EDGE_VALUE
-    return static_cast<const unsigned long long int*>(_cache->earrs[etype][eprop])[e.eid];
-}
-
-float grin_get_edge_property_value_of_float(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    GET_EDGE_VALUE
-    return static_cast<const float*>(_cache->earrs[etype][eprop])[e.eid];
-}
-
-double grin_get_edge_property_value_of_double(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    GET_EDGE_VALUE
-    return static_cast<const double*>(_cache->earrs[etype][eprop])[e.eid];
-}
-
-const char* grin_get_edge_property_value_of_string(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    GET_EDGE_VALUE
-    auto result = _get_arrow_array_data_element(_cache->earrays[etype][eprop], e.eid);
-    return static_cast<const std::string*>(result)->c_str();
-}
-
-int grin_get_edge_property_value_of_date32(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    GET_EDGE_VALUE
-    return static_cast<const int*>(_cache->earrs[etype][eprop])[e.eid];
-}
-
-int grin_get_edge_property_value_of_time32(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    GET_EDGE_VALUE
-    return static_cast<const int*>(_cache->earrs[etype][eprop])[e.eid];
-}
-
-long long int grin_get_edge_property_value_of_timestamp64(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep) {
-    GET_EDGE_VALUE
-    return static_cast<const long long int*>(_cache->earrs[etype][eprop])[e.eid];
-}
-
-const float* grin_get_edge_property_value_of_float_array(GRIN_GRAPH g, GRIN_EDGE e, GRIN_EDGE_PROPERTY ep, size_t* length) {
-    *length = 0;
-    return NULL;
-}
-
-GRIN_EDGE_TYPE grin_get_edge_type_from_property(GRIN_GRAPH g, GRIN_EDGE_PROPERTY ep) {
-    return _grin_get_type_from_property(ep);
 }
 #endif

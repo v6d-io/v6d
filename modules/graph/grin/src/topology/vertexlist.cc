@@ -17,7 +17,7 @@ limitations under the License.
 #include "topology/vertexlist.h"
 
 
-#if defined(GRIN_ENABLE_VERTEX_LIST) && !defined(GRIN_WITH_VERTEX_PROPERTY)
+#if defined(GRIN_ENABLE_VERTEX_LIST) && !defined(GRIN_ENABLE_SCHEMA)
 GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH);
 #endif
 

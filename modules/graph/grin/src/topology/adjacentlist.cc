@@ -17,7 +17,7 @@ limitations under the License.
 #include "topology/adjacentlist.h"
 
 
-#if defined(GRIN_ENABLE_ADJACENT_LIST) && !defined(GRIN_ENABLE_EDGE_PROPERTY)
+#if defined(GRIN_ENABLE_ADJACENT_LIST) && !defined(GRIN_ENABLE_SCHEMA)
 GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH, GRIN_DIRECTION, GRIN_VERTEX);
 #endif
 

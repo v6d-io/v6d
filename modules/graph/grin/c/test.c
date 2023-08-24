@@ -19,6 +19,7 @@
 #include "property/row.h"
 #include "property/topology.h"
 #include "property/type.h"
+#include "property/value.h"
 #include "topology/adjacentlist.h"
 #include "topology/edgelist.h"
 #include "topology/structure.h"
@@ -188,7 +189,7 @@ void test_property_type(int argc, char** argv) {
   for (size_t i = 0; i < vtl_size; ++i) {
     printf("------------ Iterate the %zu-th vertex type ------------\n", i);
     GRIN_VERTEX_TYPE vt = grin_get_vertex_type_from_list(g, vtl, i);
-#ifdef GRIN_WITH_VERTEX_TYPE_NAME
+#ifdef GRIN_ENABLE_SCHEMA
     const char* vt_name = grin_get_vertex_type_name(g, vt);
     printf("vertex type name: %s\n", vt_name);
     GRIN_VERTEX_TYPE vt0 = grin_get_vertex_type_by_name(g, vt_name);
@@ -196,8 +197,6 @@ void test_property_type(int argc, char** argv) {
       printf("vertex type name not match\n");
     }
     grin_destroy_vertex_type(g, vt0);
-#endif
-#ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_TYPE
     printf("vertex type id: %u\n", grin_get_vertex_type_id(g, vt));
     GRIN_VERTEX_TYPE vt1 =
         grin_get_vertex_type_by_id(g, grin_get_vertex_type_id(g, vt));
@@ -213,7 +212,7 @@ void test_property_type(int argc, char** argv) {
       "------------ Create a vertex type list of one type \"person\" "
       "------------\n");
   GRIN_VERTEX_TYPE_LIST vtl2 = grin_create_vertex_type_list(g);
-#ifdef GRIN_WITH_VERTEX_TYPE_NAME
+#ifdef GRIN_ENABLE_SCHEMA
   GRIN_VERTEX_TYPE vt2_w = grin_get_vertex_type_by_name(g, "knows");
   if (vt2_w == GRIN_NULL_VERTEX_TYPE) {
     printf("(Correct) vertex type of knows does not exists\n");
@@ -248,7 +247,7 @@ void test_property_type(int argc, char** argv) {
   for (size_t i = 0; i < etl_size; ++i) {
     printf("------------ Iterate the %zu-th edge type ------------\n", i);
     GRIN_EDGE_TYPE et = grin_get_edge_type_from_list(g, etl, i);
-#ifdef GRIN_WITH_EDGE_TYPE_NAME
+#ifdef GRIN_ENABLE_SCHEMA
     const char* et_name = grin_get_edge_type_name(g, et);
     printf("edge type name: %s\n", et_name);
     GRIN_EDGE_TYPE et0 = grin_get_edge_type_by_name(g, et_name);
@@ -256,8 +255,7 @@ void test_property_type(int argc, char** argv) {
       printf("edge type name not match\n");
     }
     grin_destroy_edge_type(g, et0);
-#endif
-#ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_TYPE
+
     printf("edge type id: %u\n", grin_get_edge_type_id(g, et));
     GRIN_EDGE_TYPE et1 =
         grin_get_edge_type_by_id(g, grin_get_edge_type_id(g, et));
@@ -297,7 +295,7 @@ void test_property_type(int argc, char** argv) {
       "------------ Create an edge type list of one type \"created\" "
       "------------\n");
   GRIN_EDGE_TYPE_LIST etl2 = grin_create_edge_type_list(g);
-#ifdef GRIN_WITH_EDGE_TYPE_NAME
+#ifdef GRIN_ENABLE_SCHEMA
   GRIN_EDGE_TYPE et2_w = grin_get_edge_type_by_name(g, "person");
   if (et2_w == GRIN_NULL_EDGE_TYPE) {
     printf("(Correct) edge type of person does not exists\n");
@@ -355,7 +353,7 @@ FOR_VERTEX_LIST_SELECT_MASTER_BEGIN(g, vl)
         long long int rv = grin_get_int64_from_row(g, row, j);
         assert(pv == rv);
       #endif
-      #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
+      #ifdef GRIN_ENABLE_SCHEMA
         printf("%s %s: %lld\n", v_names[__vt][vid], grin_get_vertex_property_name(g, __vt, vp), pv);
       #else
         printf("%s %zu: %lld\n", v_names[__vt][vid], j, pv);
@@ -368,7 +366,7 @@ FOR_VERTEX_LIST_SELECT_MASTER_BEGIN(g, vl)
         const char* rv = grin_get_string_from_row(g, row, j);
         assert(strcmp(pv, rv) == 0);
       #endif
-      #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
+      #ifdef GRIN_ENABLE_SCHEMA
         printf("%s %s: %s\n", v_names[__vt][vid], grin_get_vertex_property_name(g, __vt, vp), pv);
       #else
         printf("%s %zu: %s\n", v_names[__vt][vid], j, pv);
@@ -399,7 +397,7 @@ FOR_VERTEX_LIST_END(g, vl)
       assert(grin_equal_vertex_type(g, vt, vt1));
       grin_destroy_vertex_type(g, vt1);
 
-    #ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
+    #ifdef GRIN_ENABLE_SCHEMA
       unsigned int id = grin_get_vertex_property_id(g, vt, vp);
       GRIN_VERTEX_PROPERTY vp1 = grin_get_vertex_property_by_id(g, vt, id);
       assert(grin_equal_vertex_property(g, vp, vp1));
@@ -408,7 +406,7 @@ FOR_VERTEX_LIST_END(g, vl)
       unsigned int id = i;
     #endif
 
-    #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
+    #ifdef GRIN_ENABLE_SCHEMA
       const char* vp_name = grin_get_vertex_property_name(g, vt, vp);
       GRIN_VERTEX_PROPERTY vp2 =
           grin_get_vertex_property_by_name(g, vt, vp_name);
@@ -421,12 +419,12 @@ FOR_VERTEX_LIST_END(g, vl)
     grin_destroy_vertex_property_list(g, vpl);
 
     // corner case
-  #ifdef GRIN_TRAIT_NATURAL_ID_FOR_VERTEX_PROPERTY
+  #ifdef GRIN_ENABLE_SCHEMA
     GRIN_VERTEX_PROPERTY vp3 = grin_get_vertex_property_by_id(g, vt, vpl_size);
     assert(vp3 == GRIN_NULL_VERTEX_PROPERTY);
   #endif
 
-  #ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
+  #ifdef GRIN_ENABLE_SCHEMA
     GRIN_VERTEX_PROPERTY vp4 =
         grin_get_vertex_property_by_name(g, vt, "unknown");
     assert(vp4 == GRIN_NULL_VERTEX_PROPERTY);
@@ -436,7 +434,7 @@ FOR_VERTEX_LIST_END(g, vl)
   grin_destroy_vertex_type_list(g, vtl);
 
   // corner case
-#ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
+#ifdef GRIN_ENABLE_SCHEMA
   GRIN_VERTEX_PROPERTY_LIST vpl1 =
       grin_get_vertex_properties_by_name(g, "unknown");
   assert(vpl1 == GRIN_NULL_VERTEX_PROPERTY_LIST);
@@ -499,7 +497,7 @@ FOR_VERTEX_LIST_SELECT_MASTER_BEGIN(g, vl)
             long long int rv = grin_get_int64_from_row(g, row, j);
             assert(pv == rv);
           #endif
-          #ifdef GRIN_WITH_EDGE_PROPERTY_NAME
+          #ifdef GRIN_ENABLE_SCHEMA
             printf("%s %s %s: %lld\n", v_names[__vt][vid], v_names[ut][uid], 
               grin_get_edge_property_name(g, __et, ep), pv);
           #else
@@ -512,7 +510,7 @@ FOR_VERTEX_LIST_SELECT_MASTER_BEGIN(g, vl)
             double rv = grin_get_double_from_row(g, row, j);
             assert(pv == rv);
           #endif
-          #ifdef GRIN_WITH_EDGE_PROPERTY_NAME
+          #ifdef GRIN_ENABLE_SCHEMA
             printf("%s %s %s: %lf\n", v_names[__vt][vid], v_names[ut][uid], 
               grin_get_edge_property_name(g, __et, ep), pv);
           #else
@@ -525,7 +523,7 @@ FOR_VERTEX_LIST_SELECT_MASTER_BEGIN(g, vl)
             const char* rv = grin_get_string_from_row(g, row, j);
             assert(strcmp(pv, rv) == 0);
           #endif
-          #ifdef GRIN_WITH_EDGE_PROPERTY_NAME
+          #ifdef GRIN_ENABLE_SCHEMA
             printf("%s %s %s: %s\n", v_names[__vt][vid], v_names[ut][uid], 
               grin_get_edge_property_name(g, __et, ep), pv);
           #else
@@ -561,7 +559,7 @@ FOR_VERTEX_LIST_END(g, vl)
       assert(grin_equal_edge_type(g, et, et1));
       grin_destroy_edge_type(g, et1);
 
-    #ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
+    #ifdef GRIN_ENABLE_SCHEMA
       unsigned int id = grin_get_edge_property_id(g, et, ep);
       GRIN_EDGE_PROPERTY ep1 = grin_get_edge_property_by_id(g, et, id);
       assert(grin_equal_edge_property(g, ep, ep1));
@@ -570,7 +568,7 @@ FOR_VERTEX_LIST_END(g, vl)
       unsigned int id = i;
     #endif
 
-    #ifdef GRIN_WITH_EDGE_PROPERTY_NAME
+    #ifdef GRIN_ENABLE_SCHEMA
       const char* ep_name = grin_get_edge_property_name(g, et, ep);
       GRIN_EDGE_PROPERTY ep2 =
           grin_get_edge_property_by_name(g, et, ep_name);
@@ -583,12 +581,12 @@ FOR_VERTEX_LIST_END(g, vl)
     grin_destroy_edge_property_list(g, epl);
 
     // corner case
-  #ifdef GRIN_TRAIT_NATURAL_ID_FOR_EDGE_PROPERTY
+  #ifdef GRIN_ENABLE_SCHEMA
     GRIN_EDGE_PROPERTY ep3 = grin_get_edge_property_by_id(g, et, epl_size);
     assert(ep3 == GRIN_NULL_EDGE_PROPERTY);
   #endif
 
-  #ifdef GRIN_WITH_EDGE_PROPERTY_NAME
+  #ifdef GRIN_ENABLE_SCHEMA
     GRIN_EDGE_PROPERTY ep4 =
         grin_get_edge_property_by_name(g, et, "unknown");
     assert(ep4 == GRIN_NULL_EDGE_PROPERTY);
@@ -598,7 +596,7 @@ FOR_VERTEX_LIST_END(g, vl)
   grin_destroy_edge_type_list(g, etl);
 
   // corner case
-#ifdef GRIN_WITH_EDGE_PROPERTY_NAME
+#ifdef GRIN_ENABLE_SCHEMA
   GRIN_EDGE_PROPERTY_LIST epl1 =
       grin_get_edge_properties_by_name(g, "unknown");
   assert(epl1 == GRIN_NULL_EDGE_PROPERTY_LIST);
@@ -680,24 +678,6 @@ void test_property_primary_key(int argc, char** argv) {
 }
 #endif
 
-void test_error_code(int argc, char** argv) {
-  printf("+++++++++++++++++++++ Test error code +++++++++++++++++++++\n");
-  GRIN_GRAPH g = get_graph(argc, argv, 0);
-
-  GRIN_VERTEX_TYPE vt1 = grin_get_vertex_type_by_name(g, "person");
-  GRIN_VERTEX_TYPE vt2 = grin_get_vertex_type_by_name(g, "software");
-  GRIN_VERTEX_PROPERTY vp = grin_get_vertex_property_by_name(g, vt2, "lang");
-#ifdef GRIN_ENABLE_GRAPH_PARTITION
-  GRIN_VERTEX v = get_one_master_person(g);
-#else
-  GRIN_VERTEX v = get_one_person(g);
-#endif
-
-  const char* value = grin_get_vertex_property_value_of_string(g, v, vp);
-  assert(grin_get_last_error_code() == INVALID_VALUE);
-}
-
-
 void test_property(int argc, char** argv) {
   test_property_type(argc, argv);
   test_property_vertex_property_value(argc, argv);
@@ -705,9 +685,6 @@ void test_property(int argc, char** argv) {
   test_property_edge_property_value(argc, argv, IN);
 #ifdef GRIN_ENABLE_VERTEX_PRIMARY_KEYS
   test_property_primary_key(argc, argv);
-#endif
-#ifdef GRIN_WITH_VERTEX_PROPERTY_NAME
-  // test_error_code(argc, argv);
 #endif
 }
 
@@ -1065,7 +1042,7 @@ void test_perf(int argc, char** argv) {
 void test_message(int argc, char** argv) {
   const char* msg = grin_get_graph_schema_msg(argv[1]);
   printf("Schema Msg:\n%s\n", msg);
-  grin_destroy_msg(msg);
+  grin_destroy_graph_schema_msg(msg);
 }
 
 int main(int argc, char** argv) {

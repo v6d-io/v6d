@@ -107,6 +107,7 @@ bool grin_equal_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p1, GRIN_PAR
 void grin_destroy_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {}
 
 const void* grin_get_partition_info(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
+    // will be deprecated
     return NULL;
 }
 

@@ -20,7 +20,8 @@ limitations under the License.
 #include "property/primarykey.h"
 #include "graph.pb.h"
 
-void grin_destroy_msg(const char* s) {
+#ifdef GRIN_ENABLE_SCHEMA
+void grin_destroy_graph_schema_msg(const char* s) {
   delete[] s;
 }
 
@@ -179,3 +180,4 @@ const char* grin_get_graph_schema_msg(const char* uri) {
   snprintf(out, len, "%s", msg.c_str());
   return out;
 }
+#endif
