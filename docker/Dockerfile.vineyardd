@@ -45,6 +45,16 @@ RUN cd /work/v6d && \
     sed -i 's/Boost::regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake && \
     sed -i 's/regex//g' thirdparty/cpprestsdk/Release/cmake/cpprest_find_boost.cmake
 
+# Install libunwind, static linked
+RUN cd /tmp && \
+    curl -LO https://github.com/libunwind/libunwind/releases/download/v1.7.2/libunwind-1.7.2.tar.gz && \
+    tar zxf libunwind-1.7.2.tar.gz && \
+    cd libunwind-1.7.2 && \
+    ./configure --enable-static --disable-shared --enable-debug-frame && \
+    make install -j`nproc` && \
+    cd /tmp && \
+    rm -rf libunwind-1.7.2.tar.gz libunwind-1.7.2/
+
 RUN cd /work/v6d && \
     mkdir -p /work/v6d/build && \
     cd /work/v6d/build && \
