@@ -16,7 +16,8 @@ install-docker-gsa/
 .vscode
 .idea
 .DS_store
-cmake-build-debug
+cmake-build-debug/
+modules/graph/thirdparty/**/build/
 
 # for python packaging
 dist/
@@ -41,7 +42,10 @@ docker/dist/
 docs/_build/
 
 # go vendor
-vendor/
+/**/vendor/
+
+# Rust build
+/**/target/
 
 # k8s
 k8s/bin/

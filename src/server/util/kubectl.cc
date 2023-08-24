@@ -25,6 +25,7 @@ limitations under the License.
 #include "gulrak/filesystem.hpp"
 
 #include "common/util/asio.h"
+#include "common/util/env.h"
 
 namespace vineyard {
 
@@ -44,9 +45,9 @@ static std::string generate_local_object(
   std::string client_pod_namespace = object.value("POD_NAMESPACE", "\"\"");
 
   InstanceID instance_id = object["instance_id"].get<InstanceID>();
-  std::string vineyardd_name = getenv("VINEYARDD_NAME");
-  std::string namespace_ = getenv("VINEYARDD_NAMESPACE");
-  std::string uid = getenv("VINEYARDD_UID");
+  std::string vineyardd_name = read_env("VINEYARDD_NAME");
+  std::string namespace_ = read_env("VINEYARDD_NAMESPACE");
+  std::string uid = read_env("VINEYARDD_UID");
 
   std::string hostname = "0.0.0.0";
   if (instances.find(instance_id) != instances.end()) {
@@ -97,9 +98,9 @@ static std::string generate_global_object(
   std::string client_pod_name = object.value("POD_NAME", "\"\"");
   std::string client_pod_namespace = object.value("POD_NAMESPACE", "\"\"");
 
-  std::string vineyardd_name = getenv("VINEYARDD_NAME");
-  std::string namespace_ = getenv("VINEYARDD_NAMESPACE");
-  std::string uid = getenv("VINEYARDD_UID");
+  std::string vineyardd_name = read_env("VINEYARDD_NAME");
+  std::string namespace_ = read_env("VINEYARDD_NAMESPACE");
+  std::string uid = read_env("VINEYARDD_UID");
 
   std::string crds;
   for (auto const& kv : object.items()) {
@@ -182,7 +183,7 @@ void Kubectl::Create(const std::string& content, callback_t<> callback) {
     // TODO: improve the error diagnostic
     if (!status.ok()) {
       for (auto const& line : Diagnostic()) {
-        VLOG(10) << "kubectl: " << line;
+        VLOG(10) << "kubectl apply output: " << line;
       }
     }
     return callback(status);
@@ -196,7 +197,7 @@ void Kubectl::Delete(const std::string& content, callback_t<> callback) {
     // TODO: improve the error diagnostic
     if (!status.ok()) {
       for (auto const& line : Diagnostic()) {
-        VLOG(10) << "kubectl: " << line;
+        VLOG(10) << "kubectl delete output: " << line;
       }
     }
     return callback(status);
@@ -206,7 +207,7 @@ void Kubectl::Delete(const std::string& content, callback_t<> callback) {
 void Kubectl::Finish() {
   proc_->Finish();
   for (auto const& line : Diagnostic()) {
-    VLOG(10) << "kubectl apply: " << line;
+    VLOG(10) << "kubectl output: " << line;
   }
   proc_->Wait();
   VLOG(10) << "kubectl exit with: " << proc_->ExitCode();

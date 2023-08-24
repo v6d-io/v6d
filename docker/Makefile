@@ -36,6 +36,8 @@ PYTHON_DEV_REGISTRY			:= $(REGISTRY)
 PYTHON_DEV_IMAGE			:= vineyard-python-dev
 PYTHON_DEV_TAG				:= latest_$(PLATFORM)
 
+BUILD_PROGRESS  			?= auto
+
 all: docker-build docker-push
 
 # builder for building standalone vineyardd binary
@@ -43,6 +45,7 @@ builder:
 	docker build ./vineyardd/ \
 		-f ./vineyardd/Dockerfile.alpine-builder \
 		-t $(BUILDER_REGISTRY)/$(BUILDER_IMAGE):$(BUILDER_TAG) \
+		--progress=$(BUILD_PROGRESS) \
 		--build-arg PLATFORM=$(PLATFORM) \
 		--build-arg ARCH=$(ARCH)
 .PHONY: builder
@@ -56,6 +59,7 @@ builder-manifest:
 # building standalone vineyardd
 vineyardd:
 	docker buildx build ../ \
+		--progress=$(BUILD_PROGRESS) \
 		--file ./Dockerfile.vineyardd \
 		-t ghcr.io/v6d-io/v6d/vineyardd:$(ALPINE_TAG) \
 		--load \
@@ -71,6 +75,7 @@ vineyardd-manifest:
 # builder for building python wheel packages
 wheel-builder:
 	docker build ./pypa/ \
+		--progress=$(BUILD_PROGRESS) \
 		-f ./pypa/Dockerfile.manylinux1 \
 		-t $(WHEEL_BUILDER_REGISTRY)/$(WHEEL_BUILDER_IMAGE):$(WHEEL_BUILDER_TAG) \
 		--build-arg PLATFORM=$(PLATFORM) \
@@ -86,6 +91,7 @@ wheel-builder-manifest:
 # building python wheel packages
 python-wheel:
 	docker buildx build ../ \
+		--progress=$(BUILD_PROGRESS) \
 		-f ./pypa/Dockerfile.manylinux1-wheel \
     	-t $(WHEEL_REGISTRY)/$(WHEEL_IMAGE):$(WHEEL_TAG) \
         --build-arg BASE_VERSION=$(WHEEL_BUILDER_MANIFEST_TAG) \
@@ -97,6 +103,7 @@ python-wheel:
 # build dev image
 build-dev:
 	docker build ./dev/ \
+		--progress=$(BUILD_PROGRESS) \
 		-f ./dev/Dockerfile.dev \
 		-t $(DEV_REGISTRY)/$(DEV_IMAGE):$(DEV_TAG)
 .PHONY: build-dev
@@ -104,6 +111,7 @@ build-dev:
 # build python-dev image
 build-python-dev:
 	docker build ../ \
+		--progress=$(BUILD_PROGRESS) \
 		-f ./Dockerfile.vineyard-python-dev \
 		-t $(PYTHON_DEV_REGISTRY)/$(PYTHON_DEV_IMAGE):$(PYTHON_DEV_TAG)
 .PHONY: build-python-dev
