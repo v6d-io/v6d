@@ -17,4 +17,4 @@
 #
 
 from vineyard.conftest import vineyard_ipc_socket  # pylint: disable=unused-import
-from vineyard.conftest import vineyard_spark_jar_path
+from vineyard.conftest import vineyard_spark_jar_path  # pylint: disable=unused-import

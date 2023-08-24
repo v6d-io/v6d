@@ -18,17 +18,12 @@
 
 import contextlib
 
-import numpy as np
-import pandas as pd
-
 import pyspark
 from pyspark.mllib.common import _java2py
 from pyspark.sql import SparkSession
 
 import vineyard
 from vineyard.core import context
-from vineyard.data.dataframe import make_global_dataframe
-
 
 def pyspark_dataframe_builder(
     client, value, builder, **kw

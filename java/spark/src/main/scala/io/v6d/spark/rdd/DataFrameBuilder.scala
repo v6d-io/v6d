@@ -108,6 +108,6 @@ class DataFrameBuilder(
       meta.addMember("partitions_-" + i, batch)
     }
     meta.setNBytes(0) // FIXME
-    return client.createMetaData(meta)
+    client.createMetaData(meta)
   }
 }
