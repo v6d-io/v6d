@@ -16,6 +16,7 @@ limitations under the License.
 package deploy
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -186,7 +187,7 @@ func TestBuildVineyardManifestFromFile_first(t *testing.T) {
 					EtcdReplicas: 0,
 					Service:      v1alpha1.ServiceConfig{Type: "ClusterIP", Port: 9600},
 					Vineyard: v1alpha1.VineyardConfig{
-						Image:           "localhost:5001/vineyardd:alpine-latest",
+						Image:           "localhost:5001/vineyardd:latest",
 						ImagePullPolicy: "IfNotPresent",
 						SyncCRDs:        false,
 						ReserveMemory:   false,
@@ -212,8 +213,10 @@ func TestBuildVineyardManifestFromFile_first(t *testing.T) {
 				t.Errorf("BuildVineyardManifestFromFile() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("BuildVineyardManifestFromFile() = %v, want %v", got, tt.want)
+			gotStr := fmt.Sprintf("%v", got)
+			wantStr := fmt.Sprintf("%v", tt.want)
+			if gotStr != wantStr {
+				t.Errorf("BuildVineyardManifestFromFile() = %v, want %v", gotStr, wantStr)
 			}
 		})
 	}

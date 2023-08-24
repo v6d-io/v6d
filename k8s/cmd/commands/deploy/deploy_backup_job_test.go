@@ -30,13 +30,13 @@ import (
 )
 
 var kube_config = os.Getenv("KUBECONFIG")
-var size = string("256Mi")
-var service_type = string("ClusterIP")
-var vineyard_deployment_name = string("vineyardd-sample")
-var vineyard_deployment_namespace = string("vineyard-system")
-var vineyard_image = string("vineyardcloudnative/vineyardd:alpine-latest")
-var vineyard_default_namespace = string("vineyard-system")
-var backup_path = string("/var/vineyard/dump")
+var size = "256Mi"
+var service_type = "ClusterIP"
+var vineyard_deployment_name = "vineyardd-sample"
+var vineyard_deployment_namespace = "vineyard-system"
+var vineyard_image = "vineyardcloudnative/vineyardd:latest"
+var vineyard_default_namespace = "vineyard-system"
+var backup_path = "/var/vineyard/dump"
 
 func TestDeployBackupJobCmd_second(t *testing.T) {
 	// deploy a vineyardd for later backup operation

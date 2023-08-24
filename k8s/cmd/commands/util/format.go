@@ -29,6 +29,10 @@ func Examples(examples string) string {
 	return formatter{examples}.trim().tab().indent().string
 }
 
+func Docs(yamls string) string {
+	return formatter{yamls}.doc().string
+}
+
 type formatter struct {
 	string
 }

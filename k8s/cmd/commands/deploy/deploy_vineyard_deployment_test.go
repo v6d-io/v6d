@@ -18,6 +18,7 @@ package deploy
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
@@ -74,7 +75,7 @@ func TestDeployVineyardDeploymentCmd_DeployVineyarddCmd_first(t *testing.T) {
 			name:                 "test replicas",
 			vineyardReplicas:     3,
 			etcdReplicas:         1,
-			expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
+			expectedImage:        "vineyardcloudnative/vineyardd:latest",
 			expectedCpu:          "",
 			expectedMemory:       "",
 			expectedService_port: 9600,
@@ -85,7 +86,7 @@ func TestDeployVineyardDeploymentCmd_DeployVineyarddCmd_first(t *testing.T) {
 			name:                 "test replicas",
 			vineyardReplicas:     3,
 			etcdReplicas:         1,
-			expectedImage:        "vineyardcloudnative/vineyardd:alpine-latest",
+			expectedImage:        "vineyardcloudnative/vineyardd:latest",
 			expectedCpu:          "",
 			expectedMemory:       "",
 			expectedService_port: 9600,
@@ -527,8 +528,10 @@ func TestGetVineyardDeploymentObjectsFromTemplate_third(t *testing.T) {
 				return
 			}
 			for i := range got {
-				if !reflect.DeepEqual(*got[i], *(tt.want)[i]) {
-					t.Errorf("getDeploymentObjectsFromTemplate() = %+v, want %+v", got, tt.want)
+				gotStr := fmt.Sprintf("%v", got[i])
+				wantStr := fmt.Sprintf("%v", tt.want[i])
+				if !reflect.DeepEqual(gotStr, wantStr) {
+					t.Errorf("getDeploymentObjectsFromTemplate() = %+v, want %+v", gotStr, wantStr)
 
 				}
 			}

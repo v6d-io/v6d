@@ -26,15 +26,17 @@ import (
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 func TestDeleteVineyardDeploymentCmd(t *testing.T) {
 	// deploy a vineyardd for later delete operation
 	flags.KubeConfig = os.Getenv("KUBECONFIG")
+	flags.VineyarddName = "test-vineyardd-deployment-name"
 	flags.Namespace = "vineyard-system"
 	flags.VineyarddOpts.Replicas = 3
 	flags.VineyarddOpts.EtcdReplicas = 1
-	flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:alpine-latest"
+	flags.VineyarddOpts.Vineyard.Image = "vineyardcloudnative/vineyardd:latest"
 	flags.VineyarddOpts.Vineyard.CPU = ""
 	flags.VineyarddOpts.Vineyard.Memory = ""
 	flags.VineyarddOpts.Service.Port = 9600
@@ -52,7 +54,8 @@ func TestDeleteVineyardDeploymentCmd(t *testing.T) {
 
 	// test if the vineyardd has been deleted
 	for _, obj := range objects {
-		if err := c.Get(context.TODO(), client.ObjectKeyFromObject(obj), obj); err == nil {
+		err := c.Get(context.TODO(), client.ObjectKeyFromObject(obj), obj)
+		if (err == nil) || !apierrors.IsNotFound(err) {
 			log.Error(err, "failed to deleted object")
 		}
 	}

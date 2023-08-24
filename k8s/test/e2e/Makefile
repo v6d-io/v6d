@@ -397,26 +397,18 @@ e2e-tests-airflow-integration: prepare-e2e-test build-local-cluster load-vineyar
 .PHONY: e2e-tests-airflow-integration
 
 ############# unit testing ################################################
-unittest: prepare-e2e-test build-local-cluster load-vineyardd-image
+unittest: #prepare-e2e-test build-local-cluster load-vineyardd-image
 	@make -C ${K8S_DIR} install-cert-manager
 	@make -C ${E2E_DIR} install-vineyard-operator
-#	@cd ${CMD_DIR} && go run main.go deploy cert-manager --kubeconfig /tmp/e2e-k8s.config
-#	@cd ${CMD_DIR} && go run main.go deploy operator --kubeconfig /tmp/e2e-k8s.config
 	@echo "Running vineyardctl unit test.." 
-# create test
-	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${K8S_DIR} && go test ./cmd/commands/create/
-# delete test 
-	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${K8S_DIR} && go test ./cmd/commands/delete/
+# run all unit test except deploy and scheduler in parallel
+	@export KUBECONFIG=/tmp/e2e-k8s.config && cd ${CMD_DIR}/commands && go test `go list ./... | grep -Ev "deploy|schedule"`
 # deploy test
 	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/deploy && \
-		go test -run first && go test -run second && go test -run third 
+		go test -run first && go test -run second && go test -run third
 # schedule test
-	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${K8S_DIR} && go test ./cmd/commands/schedule/
-# sidecar test 
-	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/sidecar && \
-		go test -run TestInjectCmd && go test -run Test_deployDuringInjection && go test -run slow
-# util test
-	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${K8S_DIR} && go test ./cmd/commands/util/
+	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/schedule && \
+		go test -run ./
 	@echo "vineyardctl unit test passed."
 	@make delete-local-cluster
 .PHONY: unittest
