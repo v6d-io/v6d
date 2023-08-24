@@ -341,10 +341,10 @@ public class ObjectMeta implements Serializable, Iterable<Map.Entry<String, Json
 
     public ArrayNode getArrayValue(String key) {
         val value = this.meta.get(key);
-        try{
+        try {
             ArrayNode arrayNode = mapper.readValue(value.asText(), ArrayNode.class);
             return arrayNode;
-        } catch(Exception e) {
+        } catch (Exception e) {
             throw new UnsupportedOperationException("Not a ArrayNode");
         }
     }

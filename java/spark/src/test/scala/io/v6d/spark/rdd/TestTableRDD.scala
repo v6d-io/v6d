@@ -38,7 +38,7 @@ object TestTableRDD {
 
   def testBuilder(
       spark: SparkSession,
-      sc: SparkContext,
+      sc: SparkContext
   ): ObjectID = {
     import spark.implicits._
 

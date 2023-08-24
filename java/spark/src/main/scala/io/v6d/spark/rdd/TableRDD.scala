@@ -24,25 +24,28 @@ import org.apache.spark.{OneToOneDependency, Partition, TaskContext}
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.vectorized.{ArrowColumnVector, ColumnVector, ColumnarBatch}
+import org.apache.spark.sql.vectorized.{
+  ArrowColumnVector,
+  ColumnVector,
+  ColumnarBatch
+}
 import org.apache.arrow.vector.VectorSchemaRoot
 
 import scala.collection.JavaConverters._
 
-/**
- * Provides a RDD to process each partition of Vineyard::Table.
- *
- * This is useful to convert a Vineyard::Table to spark.sql.dataframe
- * with mapPartitions.
- */
+/** Provides a RDD to process each partition of Vineyard::Table.
+  *
+  * This is useful to convert a Vineyard::Table to spark.sql.dataframe with
+  * mapPartitions.
+  */
 class TableChunkRDD(rdd: VineyardRDD)
-extends RDD[VectorSchemaRoot](
-  rdd.sparkContext,
-  Seq(new OneToOneDependency(rdd))
-) {
+    extends RDD[VectorSchemaRoot](
+      rdd.sparkContext,
+      Seq(new OneToOneDependency(rdd))
+    ) {
   override def compute(
-    split: Partition,
-    context: TaskContext
+      split: Partition,
+      context: TaskContext
   ): Iterator[VectorSchemaRoot] = {
     // Initialize vineyard context.
     Arrow.instantiate()
@@ -62,7 +65,7 @@ extends RDD[VectorSchemaRoot](
     firstParent[VineyardRDD].partitions
 
   override protected def getPreferredLocations(
-    split: Partition
+      split: Partition
   ): Seq[String] = {
     val partition = split.asInstanceOf[VineyardPartition]
     Seq(partition.host)
@@ -73,21 +76,20 @@ object TableChunkRDD {
   def fromVineyardRDD(rdd: VineyardRDD): TableChunkRDD = new TableChunkRDD(rdd)
 }
 
-/**
- * Provides a RDD to process each row of Vineyard::Table.
- *
- * This is useful to apply RDD-level transformation directly on vineyard::Table
- * without creating a new spark.sql.DataFrame.
- */
+/** Provides a RDD to process each row of Vineyard::Table.
+  *
+  * This is useful to apply RDD-level transformation directly on vineyard::Table
+  * without creating a new spark.sql.DataFrame.
+  */
 class TableRDD(rdd: VineyardRDD)
-extends RDD[InternalRow](
-  rdd.sparkContext,
-  Seq(new OneToOneDependency(rdd))
-) {
+    extends RDD[InternalRow](
+      rdd.sparkContext,
+      Seq(new OneToOneDependency(rdd))
+    ) {
 
   override def compute(
-    split: Partition,
-    context: TaskContext
+      split: Partition,
+      context: TaskContext
   ): Iterator[InternalRow] = {
     // Initialize vineyard context.
     Arrow.instantiate()
@@ -106,7 +108,7 @@ extends RDD[InternalRow](
     firstParent[VineyardRDD].partitions
 
   override protected def getPreferredLocations(
-    split: Partition
+      split: Partition
   ): Seq[String] = {
     val partition = split.asInstanceOf[VineyardPartition]
     Seq(partition.host)
@@ -117,15 +119,25 @@ extends RDD[InternalRow](
     val types = tableChunkRDD
       .map(chunk => DataContext.fromArrowSchema(chunk.getSchema))
       .first()
-      DataContext.createDataFrame(spark, this, types)
+    DataContext.createDataFrame(spark, this, types)
   }
 }
 
 object TableRDD {
   def fromVineyard(rdd: VineyardRDD): TableRDD = new TableRDD(rdd)
-  def makeDataFrame(client: IPCClient, spark: SparkSession, meta: ObjectMeta): DataFrame= {
+  def makeDataFrame(
+      client: IPCClient,
+      spark: SparkSession,
+      meta: ObjectMeta
+  ): DataFrame = {
     val vineyardRDD =
-      new VineyardRDD(spark.sparkContext, meta, "partitions_", client.getIPCSocket(), client.getClusterStatus)
+      new VineyardRDD(
+        spark.sparkContext,
+        meta,
+        "partitions_",
+        client.getIPCSocket(),
+        client.getClusterStatus
+      )
     this.fromVineyard(vineyardRDD).toDF(spark)
   }
 }

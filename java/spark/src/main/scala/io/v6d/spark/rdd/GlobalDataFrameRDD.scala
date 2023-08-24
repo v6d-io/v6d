@@ -27,25 +27,28 @@ import org.apache.spark.{OneToOneDependency, Partition, TaskContext}
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.vectorized.{ArrowColumnVector, ColumnVector, ColumnarBatch}
+import org.apache.spark.sql.vectorized.{
+  ArrowColumnVector,
+  ColumnVector,
+  ColumnarBatch
+}
 import org.apache.spark.sql.internal.SQLConf
 
 import scala.collection.JavaConverters._
 
-/**
- * Provides a RDD to process each partition of Vineyard::GlobalDataFrame.
- *
- * This is useful to convert a Vineyard::GlobalDataFrame to spark.sql.dataframe
- * with mapPartitions.
- */
+/** Provides a RDD to process each partition of Vineyard::GlobalDataFrame.
+  *
+  * This is useful to convert a Vineyard::GlobalDataFrame to spark.sql.dataframe
+  * with mapPartitions.
+  */
 class GlobalDataFrameChunkRDD(rdd: VineyardRDD)
-extends RDD[VectorSchemaRoot](
-  rdd.sparkContext,
-  Seq(new OneToOneDependency(rdd))
-) {
+    extends RDD[VectorSchemaRoot](
+      rdd.sparkContext,
+      Seq(new OneToOneDependency(rdd))
+    ) {
   override def compute(
-    split: Partition,
-    context: TaskContext
+      split: Partition,
+      context: TaskContext
   ): Iterator[VectorSchemaRoot] = {
     // Initialize vineyard context.
     Arrow.instantiate()
@@ -56,7 +59,8 @@ extends RDD[VectorSchemaRoot](
       .iterator(split, context)
       .map(record => {
         val meta = partition.client.getMetaData(record)
-        val df = ObjectFactory.getFactory.resolve(meta).asInstanceOf[VineyardDataFrame]
+        val df =
+          ObjectFactory.getFactory.resolve(meta).asInstanceOf[VineyardDataFrame]
         df.asBatch
       })
   }
@@ -65,7 +69,7 @@ extends RDD[VectorSchemaRoot](
     firstParent[VineyardRDD].partitions
 
   override protected def getPreferredLocations(
-    split: Partition
+      split: Partition
   ): Seq[String] = {
     val partition = split.asInstanceOf[VineyardPartition]
     Seq(partition.host)
@@ -73,24 +77,24 @@ extends RDD[VectorSchemaRoot](
 }
 
 object GlobalDataFrameChunkRDD {
-  def fromVineyardRDD(rdd: VineyardRDD): GlobalDataFrameChunkRDD = new GlobalDataFrameChunkRDD(rdd)
+  def fromVineyardRDD(rdd: VineyardRDD): GlobalDataFrameChunkRDD =
+    new GlobalDataFrameChunkRDD(rdd)
 }
 
-/**
- * Provides a RDD to process each row of Vineyard::GlobalDataFrame.
- *
- * This is useful to apply RDD-level transformation directly on
- * vineyard::GlobalDataFrame without creating a new spark.sql.DataFrame.
- */
+/** Provides a RDD to process each row of Vineyard::GlobalDataFrame.
+  *
+  * This is useful to apply RDD-level transformation directly on
+  * vineyard::GlobalDataFrame without creating a new spark.sql.DataFrame.
+  */
 class GlobalDataFrameRDD(rdd: VineyardRDD)
-extends RDD[InternalRow](
-  rdd.sparkContext,
-  Seq(new OneToOneDependency(rdd))
-) {
+    extends RDD[InternalRow](
+      rdd.sparkContext,
+      Seq(new OneToOneDependency(rdd))
+    ) {
 
   override def compute(
-    split: Partition,
-    context: TaskContext
+      split: Partition,
+      context: TaskContext
   ): Iterator[InternalRow] = {
     // Initialize vineyard context.
     Arrow.instantiate()
@@ -99,7 +103,10 @@ extends RDD[InternalRow](
     val partition = split.asInstanceOf[VineyardPartition]
     val meta = partition.client.getMetaData(partition.chunkId)
     val batch =
-      ObjectFactory.getFactory.resolve(meta).asInstanceOf[VineyardDataFrame].asBatch
+      ObjectFactory.getFactory
+        .resolve(meta)
+        .asInstanceOf[VineyardDataFrame]
+        .asBatch
     val columns: Array[ColumnVector] =
       batch.getFieldVectors.asScala.map(new ArrowColumnVector(_)).toArray
     val columnarBatch = new ColumnarBatch(columns, batch.getRowCount)
@@ -110,7 +117,7 @@ extends RDD[InternalRow](
     firstParent[VineyardRDD].partitions
 
   override protected def getPreferredLocations(
-    split: Partition
+      split: Partition
   ): Seq[String] = {
     val partition = split.asInstanceOf[VineyardPartition]
     Seq(partition.host)
@@ -121,16 +128,27 @@ extends RDD[InternalRow](
     val types = globalDataFrameChunkRDD
       .map(chunk => DataContext.fromArrowSchema(chunk.getSchema))
       .first()
-      DataContext.createDataFrame(spark, this, types)
+    DataContext.createDataFrame(spark, this, types)
   }
 }
 
 object GlobalDataFrameRDD {
-  def fromVineyard(rdd: VineyardRDD): GlobalDataFrameRDD = new GlobalDataFrameRDD(rdd)
+  def fromVineyard(rdd: VineyardRDD): GlobalDataFrameRDD =
+    new GlobalDataFrameRDD(rdd)
 
-  def makeDataFrame(client: IPCClient, spark: SparkSession, meta: ObjectMeta): DataFrame= {
+  def makeDataFrame(
+      client: IPCClient,
+      spark: SparkSession,
+      meta: ObjectMeta
+  ): DataFrame = {
     val vineyardRDD =
-      new VineyardRDD(spark.sparkContext, meta, "partitions_", client.getIPCSocket(), client.getClusterStatus)
+      new VineyardRDD(
+        spark.sparkContext,
+        meta,
+        "partitions_",
+        client.getIPCSocket(),
+        client.getClusterStatus
+      )
     this.fromVineyard(vineyardRDD).toDF(spark)
   }
 }

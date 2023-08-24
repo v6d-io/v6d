@@ -31,65 +31,65 @@ import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 
 public class SchemaBuilder implements ObjectBuilder {
-  private List<Field> fields;
-  private Map<String, String> customMetadata;
+    private List<Field> fields;
+    private Map<String, String> customMetadata;
 
-  private byte[] buffer;
+    private byte[] buffer;
 
-  public SchemaBuilder() {
-    fields = new ArrayList<>();
-    customMetadata = new TreeMap<>();
-  }
-
-  public static SchemaBuilder fromSchema(Schema schema) {
-    val builder = new SchemaBuilder();
-    builder.fields = schema.getFields();
-    builder.customMetadata = schema.getCustomMetadata();
-    return builder;
-  }
-
-  public static SchemaBuilder fromSchema(io.v6d.modules.basic.arrow.Schema schema) {
-    // FIXME: should be able to reusing
-    return fromSchema(schema.getSchema());
-  }
-
-  public void addField(final Field field) {
-    fields.add(field);
-  }
-
-  public void addMetadata(final String key, final String value) {
-    customMetadata.put(key, value);
-  }
-
-  public List<Field> getFields() {
-    return fields;
-  }
-
-  public Map<String, String> getCustomMetadata() {
-    return customMetadata;
-  }
-
-  @Override
-  @SneakyThrows(IOException.class)
-  public void build(Client client) throws VineyardException {
-    this.buffer = SchemaSerializer.serialize(new Schema(fields, customMetadata));
-  }
-
-  @SneakyThrows(JsonProcessingException.class)
-  @Override
-  public ObjectMeta seal(Client client) throws VineyardException {
-    this.build(client);
-    val meta = ObjectMeta.empty();
-    meta.setTypename("vineyard::SchemaProxy");
-    meta.setNBytes(buffer.length);
-    val mapper = new ObjectMapper();
-    val schema_binary = mapper.createObjectNode();
-    val array = mapper.createArrayNode();
-    for (val item: buffer) {
-      array.add(Byte.toUnsignedInt(item));
+    public SchemaBuilder() {
+        fields = new ArrayList<>();
+        customMetadata = new TreeMap<>();
     }
-    schema_binary.put("bytes", array);
-    meta.setValue("schema_binary_", mapper.writeValueAsString(schema_binary));
-    return client.createMetaData(meta);
-  }
+
+    public static SchemaBuilder fromSchema(Schema schema) {
+        val builder = new SchemaBuilder();
+        builder.fields = schema.getFields();
+        builder.customMetadata = schema.getCustomMetadata();
+        return builder;
+    }
+
+    public static SchemaBuilder fromSchema(io.v6d.modules.basic.arrow.Schema schema) {
+        // FIXME: should be able to reusing
+        return fromSchema(schema.getSchema());
+    }
+
+    public void addField(final Field field) {
+        fields.add(field);
+    }
+
+    public void addMetadata(final String key, final String value) {
+        customMetadata.put(key, value);
+    }
+
+    public List<Field> getFields() {
+        return fields;
+    }
+
+    public Map<String, String> getCustomMetadata() {
+        return customMetadata;
+    }
+
+    @Override
+    @SneakyThrows(IOException.class)
+    public void build(Client client) throws VineyardException {
+        this.buffer = SchemaSerializer.serialize(new Schema(fields, customMetadata));
+    }
+
+    @SneakyThrows(JsonProcessingException.class)
+    @Override
+    public ObjectMeta seal(Client client) throws VineyardException {
+        this.build(client);
+        val meta = ObjectMeta.empty();
+        meta.setTypename("vineyard::SchemaProxy");
+        meta.setNBytes(buffer.length);
+        val mapper = new ObjectMapper();
+        val schema_binary = mapper.createObjectNode();
+        val array = mapper.createArrayNode();
+        for (val item : buffer) {
+            array.add(Byte.toUnsignedInt(item));
+        }
+        schema_binary.put("bytes", array);
+        meta.setValue("schema_binary_", mapper.writeValueAsString(schema_binary));
+        return client.createMetaData(meta);
+    }
 }

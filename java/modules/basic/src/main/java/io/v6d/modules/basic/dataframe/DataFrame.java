@@ -26,8 +26,8 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import lombok.*;
 import org.apache.arrow.util.Collections2;
-import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.FieldVector;
+import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -95,14 +95,14 @@ public class DataFrame extends Object {
     }
 
     public VectorSchemaRoot asBatch() {
-      List<Tensor> values = this.values();
-      List<FieldVector> vectors = new ArrayList<>();
-      Schema schema = this.schema();
-      for (int index = 0; index < this.columnCount; ++index) {
-        val array = values.get(index).getArray();
-        vectors.add(array);
-      }
-      return new VectorSchemaRoot(schema, vectors, rowCount);
+        List<Tensor> values = this.values();
+        List<FieldVector> vectors = new ArrayList<>();
+        Schema schema = this.schema();
+        for (int index = 0; index < this.columnCount; ++index) {
+            val array = values.get(index).getArray();
+            vectors.add(array);
+        }
+        return new VectorSchemaRoot(schema, vectors, rowCount);
     }
 }
 
@@ -115,7 +115,7 @@ class DataFrameResolver extends ObjectFactory.Resolver {
                 IntStream.range(0, columnCount)
                         .mapToObj(index -> (Tensor) meta.getMember("__values_-value-" + index))
                         .collect(Collectors.toList());
-        val rowCount = values.get(0).getArray().getValueCount(); 
+        val rowCount = values.get(0).getArray().getValueCount();
         return new DataFrame(meta, rowCount, columnCount, columns, values);
     }
 }

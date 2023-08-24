@@ -27,10 +27,10 @@ object SparkApp {
       .setAppName("Spark on Vineyard")
       .setMaster("local[*]")
       // ensure all executor ready
-        .set("spark.scheduler.minRegisteredResourcesRatio", "1.0")
-        val spark = SparkSession.builder().config(conf).getOrCreate()
-        val sc: SparkContext = spark.sparkContext
+      .set("spark.scheduler.minRegisteredResourcesRatio", "1.0")
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    val sc: SparkContext = spark.sparkContext
 
-        sc.stop()
+    sc.stop()
   }
 }
