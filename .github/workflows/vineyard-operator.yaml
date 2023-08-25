@@ -280,6 +280,10 @@ jobs:
           OUTPUT_DIR: ${{ github.workspace }}/${{ matrix.job }}-logs
           WITH_STOAT: true
 
+      - name: Setup tmate session
+        if: ${{ failure() }}
+        uses: mxschmitt/action-tmate@v3
+
       - uses: stoat-dev/stoat-action@v0
         if: ${{ failure() }}
 

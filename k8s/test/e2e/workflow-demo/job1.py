@@ -33,4 +33,4 @@ tup = client.create_metadata(meta)
 client.persist(tup)
 
 # avoid CrashLoopBackOff
-time.sleep(600)
+time.sleep(3600)
