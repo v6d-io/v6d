@@ -373,27 +373,6 @@ func (b *BestEffortStrategy) CreateConfigmapForID(
 			if err := b.Create(context.TODO(), &cm); err != nil {
 				return err
 			}
-			continue
-		}
-		_, exist := configmap.Data[jobname[i]]
-		if !exist {
-			configmap.Data[jobname[i]] = strings.Join(jobGlobalObjectIDs[jobname[i]], ",")
-		} else {
-			data := configmap.Data[jobname[i]] + "," + strings.Join(jobGlobalObjectIDs[jobname[i]], ",")
-			configmap.Data[jobname[i]] = RemoveDuplicates(data)
-		}
-		for nodeName, nodeObjs := range locations {
-			_, exist := configmap.Data[nodeName]
-			if !exist {
-				configmap.Data[nodeName] = strings.Join(nodeObjs, ",")
-			} else {
-				data := configmap.Data[nodeName] + "," + strings.Join(nodeObjs, ",")
-				configmap.Data[nodeName] = RemoveDuplicates(data)
-			}
-		}
-		// update the configmap
-		if err := b.Update(context.TODO(), configmap); err != nil {
-			return err
 		}
 	}
 
@@ -420,21 +399,4 @@ func (b *BestEffortStrategy) Compute(rank int) (string, error) {
 	}
 
 	return target, nil
-}
-
-func RemoveDuplicates(str string) string {
-	encountered := map[string]bool{}
-	result := []string{}
-
-	slices := strings.Split(str, ",")
-
-	for _, val := range slices {
-		if encountered[val] {
-			continue
-		}
-		encountered[val] = true
-		result = append(result, val)
-	}
-
-	return strings.Join(result, ",")
 }

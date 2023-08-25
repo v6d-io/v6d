@@ -31,16 +31,9 @@ setup:
         - namespace: vineyard-job
           resource: job/v6d-workflow-demo-job1
           for: condition=Complete
-    #- name: wait globalobjects ready
-    #  command: |
-    #    while [[ -z $(kubectl get globalobjects -n vineyard-system -oname) ]]; \
-    #    do \
-    #      sleep 0.1; \
-    #    done
     - name: install job2
       command: |
         kubectl apply -f k8s/test/e2e/workflow-demo/workflow-job2.yaml
-        sleep infinity
       wait:
         - namespace: vineyard-job
           resource: job/v6d-workflow-demo-job2
