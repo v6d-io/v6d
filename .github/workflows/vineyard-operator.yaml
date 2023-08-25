@@ -183,11 +183,12 @@ jobs:
           done
 
       - name: Start to export kubernetes logs
-        uses: dashanji/kubernetes-log-export-action@v5
+        uses: dashanji/kubernetes-log-export-action@v6
         env:
           SHOW_TIMESTAMPS: 'true'
           OUTPUT_DIR: ${{ github.workspace }}/${{ matrix.job }}-logs
           NAMESPACES: vineyard*
+          RESOURCES: configmap
           MODE: start
 
       - name: e2e-tests-airflow-integration
@@ -272,7 +273,7 @@ jobs:
           make -C k8s/test/e2e e2e-tests-deploy-raw-backup-and-recover
 
       - name: Stop to export kubernetes logs
-        uses: dashanji/kubernetes-log-export-action@v5
+        uses: dashanji/kubernetes-log-export-action@v6
         if: ${{ failure() }}
         env:
           MODE: stop
