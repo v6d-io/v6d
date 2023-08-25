@@ -40,8 +40,6 @@ import (
 	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
-var slog = log.WithName("vineyard-scheduler-in-cluster")
-
 const (
 	// Name is the name of the plugin used in Registry and configurations.
 	Name = "Vineyard"
@@ -72,7 +70,7 @@ func New(
 	obj runtime.Object,
 	handle framework.Handle,
 ) (framework.Plugin, error) {
-	slog.Info("Initializing the vineyard scheduler plugin ...")
+	log.Infof("Initializing the vineyard scheduler plugin ...")
 	timeout := Timeout * time.Second
 	scheduling := &VineyardScheduling{
 		Client:          client,
@@ -104,7 +102,7 @@ func (vs *VineyardScheduling) Score(
 	pod *v1.Pod,
 	nodeName string,
 ) (int64, *framework.Status) {
-	slog.Info(fmt.Sprintf("scoring for pod %v on node %v", GetNamespacedName(pod), nodeName))
+	log.Infof("scoring for pod %v on node %v", GetNamespacedName(pod), nodeName)
 	replica, err := vs.getJobReplica(pod)
 	if err != nil {
 		return 0, framework.NewStatus(framework.Unschedulable, err.Error())
@@ -126,7 +124,7 @@ func (vs *VineyardScheduling) Score(
 	if score == 0 {
 		return int64(score), framework.NewStatus(framework.Unschedulable, "Computed store is zero")
 	}
-	slog.Info(fmt.Sprintf("score for pod %v on node %v is: %v", pod.Name, nodeName, score))
+	log.Infof("score for pod %v (rank %d) on node %v is: %v", pod.Name, rank, nodeName, score)
 	return int64(score), framework.NewStatus(framework.Success, "")
 }
 
@@ -163,7 +161,7 @@ func (vs *VineyardScheduling) PostBind(
 	pod *v1.Pod,
 	nodeName string,
 ) {
-	slog.Info(fmt.Sprintf("Bind pod %v on node %v", GetNamespacedName(pod), nodeName))
+	log.Infof("Bind pod %v on node %v", GetNamespacedName(pod), nodeName)
 }
 
 func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int, error) {
@@ -205,7 +203,7 @@ func (vs *VineyardScheduling) getJobReplica(pod *v1.Pod) (int, error) {
 		case "Workflow":
 			return vs.GetArgoWorkflowReplicas(name, pod)
 		default:
-			slog.Info(fmt.Sprintf("Unknown owner kind: %v", owner.Kind))
+			log.Infof("Unknown owner kind: %v", owner.Kind)
 		}
 	}
 
@@ -224,7 +222,7 @@ func (vs *VineyardScheduling) GetArgoWorkflowReplicas(name types.NamespacedName,
 	// Get the Argo workflow's spec.
 	err := vs.Get(context.TODO(), name, workflow)
 	if err != nil {
-		slog.Errorf(err, "Failed to get Argo workflow spec")
+		log.Errorf(err, "Failed to get Argo workflow spec")
 		return -1, err
 	}
 
@@ -248,7 +246,7 @@ func (vs *VineyardScheduling) AddArgoWorkflowScheme() error {
 		once.Do(func() {
 			err := wfv1.AddToScheme(vs.Client.Scheme())
 			if err != nil {
-				slog.Error(err, "Failed to add Argo workflow scheme")
+				log.Error(err, "Failed to add Argo workflow scheme")
 			}
 		})
 	}

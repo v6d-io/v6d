@@ -281,7 +281,7 @@ jobs:
           WITH_STOAT: true
 
       - name: Setup tmate session
-        if: ${{ failure() }}
+        if: false
         uses: mxschmitt/action-tmate@v3
 
       - uses: stoat-dev/stoat-action@v0

@@ -13,16 +13,13 @@
 # limitations under the License.
 #
 
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: batch/v1
+kind: Job
 metadata:
-  name: v6d-workflow-demo-job2-deployment
+  name: v6d-workflow-demo-job2
   namespace: vineyard-job
 spec:
-  selector:
-    matchLabels:
-      app: v6d-workflow-demo-job2
-  replicas: 3
+  parallelism: 3
   template:
     metadata:
       annotations:
@@ -35,6 +32,7 @@ spec:
         scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
         scheduling.k8s.v6d.io/job: v6d-workflow-demo-job2
     spec:
+      restartPolicy: Never
       schedulerName: vineyard-scheduler
       containers:
       - name: job2

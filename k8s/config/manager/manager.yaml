@@ -31,6 +31,7 @@ spec:
         - /vineyardctl
         args:
         - manager
+        - --verbose
         image: controller:latest
         imagePullPolicy: IfNotPresent
         livenessProbe:
