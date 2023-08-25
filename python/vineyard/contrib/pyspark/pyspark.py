@@ -25,6 +25,7 @@ from pyspark.sql import SparkSession
 import vineyard
 from vineyard.core import context
 
+
 def pyspark_dataframe_builder(
     client, value, builder, **kw
 ):  # pylint: disable=unused-argument

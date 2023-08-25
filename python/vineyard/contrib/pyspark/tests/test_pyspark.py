@@ -102,6 +102,4 @@ def test_pyspark_dataframe_resolver(pyspark_cluster):
 
     gdf = make_global_dataframe(client, chunks)
     pdf = client.get(gdf.id, spark_conf=conf, socket=sock)
-    assert (
-        pdf.select(F.sum('x'), F.sum('y')).rdd.map(sum).collect()[0] == 60
-    )
+    assert pdf.select(F.sum('x'), F.sum('y')).rdd.map(sum).collect()[0] == 60
