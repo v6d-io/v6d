@@ -25,8 +25,8 @@ push-%: %
 
 # update the docker image for vineyardd & vineyard-operator inside the kind cluster
 load-vineyardd-image:
-	@docker tag vineyardcloudnative/vineyardd:alpine-latest localhost:5001/vineyardd:alpine-latest
-	@docker push localhost:5001/vineyardd:alpine-latest
+	@docker tag vineyardcloudnative/vineyardd:latest localhost:5001/vineyardd:latest
+	@docker push localhost:5001/vineyardd:latest
 .PHONY: load-vineyardd-image
 
 load-vineyard-operator-image:
@@ -51,7 +51,7 @@ build-base-images:
 	@docker tag ghcr.io/v6d-io/v6d/vineyard-python-dev:latest_x86_64 ghcr.io/v6d-io/v6d/vineyard-python-dev:latest
 	@echo "Building the vineyardd image"
 	@make -C ${ROOT_DIR}/docker vineyardd
-	@docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-latest_x86_64 vineyardcloudnative/vineyardd:alpine-latest
+	@docker tag ghcr.io/v6d-io/v6d/vineyardd:alpine-latest_x86_64 vineyardcloudnative/vineyardd:latest
 
 # Build a 4-nodes(1 master and 3 workers) kind cluster with local registry
 build-local-cluster:

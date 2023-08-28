@@ -27,6 +27,7 @@ spec:
   containers:
   - name: etcd
     image: {{ $etcd.Image }}
+    imagePullPolicy: IfNotPresent
     command:
     - etcd
     - --name

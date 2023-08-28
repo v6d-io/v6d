@@ -22,6 +22,7 @@ spec:
   replicas: 2
   selector: app=job-deployment-with-custom-sidecar
   vineyard:
+    image: localhost:5001/vineyardd:latest
     socket: /var/run/vineyard.sock
 ---
 apiVersion: apps/v1
