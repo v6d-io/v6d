@@ -190,6 +190,7 @@ func TestInjectCmd(t *testing.T) {
 		  ]
 		}
 	  }`
+	//nolint: lll
 	injectedWorkload := `apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -254,6 +255,7 @@ spec:
 status: {}
 
 `
+	//nolint: lll
 	injectedPod := `apiVersion: v1
 kind: Pod
 metadata:
