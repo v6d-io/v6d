@@ -101,6 +101,13 @@ def pytest_addoption(parser):
         help='Test with object migration enabled',
     )
 
+    parser.addoption(
+        '--vineyard-spark-jar-path',
+        action="store",
+        default=os.path.expandvars('$VINEYARD_SPARK_PATH'),
+        help='Location of the jar that enables vineyard-spark interoperation',
+    )
+
 
 @pytest.fixture(scope='session')
 def vineyard_ipc_sockets(request):
@@ -187,6 +194,11 @@ def vineyard_rpc_client(request):
         return vineyard.connect(endpoint=tuple(rpc_endpoint.split(':')))
     else:
         return None
+
+
+@pytest.fixture(scope='session')
+def vineyard_spark_jar_path(request):
+    return request.config.option.vineyard_spark_jar_path
 
 
 def pytest_configure(config):

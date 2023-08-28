@@ -84,7 +84,11 @@ public class SchemaBuilder implements ObjectBuilder {
         meta.setNBytes(buffer.length);
         val mapper = new ObjectMapper();
         val schema_binary = mapper.createObjectNode();
-        schema_binary.put("bytes", buffer);
+        val array = mapper.createArrayNode();
+        for (val item : buffer) {
+            array.add(Byte.toUnsignedInt(item));
+        }
+        schema_binary.put("bytes", array);
         meta.setValue("schema_binary_", mapper.writeValueAsString(schema_binary));
         return client.createMetaData(meta);
     }

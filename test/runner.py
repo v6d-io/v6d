@@ -846,6 +846,12 @@ def parse_sys_args():
         default=False,
         help="Whether to run python contrib dask tests",
     )
+    arg_parser.add_argument(
+        '--with-contrib-pyspark',
+        action='store_true',
+        default=False,
+        help="Whether to run python contrib pyspark tests",
+    )
 
     arg_parser.add_argument(
         '--with-fuse',
@@ -897,6 +903,12 @@ def execute_tests(args):
                 args.meta, args.allocator, endpoints, python_test_args, 'dask'
             )
 
+    if args.with_contrib or args.with_contrib_pyspark:
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_python_contrib_tests(
+                args.meta, args.allocator, endpoints, python_test_args, 'pyspark'
+            )
+
     if args.with_deployment:
         with start_metadata_engine(args.meta) as (_, endpoints):
             run_scale_in_out_tests(
@@ -931,6 +943,7 @@ def main():
         or args.with_contrib
         or args.with_contrib_ml
         or args.with_contrib_dask
+        or args.with_contrib_pyspark
         or args.with_deployment
         or args.with_io
         or args.with_fuse

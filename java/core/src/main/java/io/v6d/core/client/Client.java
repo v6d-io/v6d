@@ -29,6 +29,8 @@ public abstract class Client {
     protected String rpc_endpoint;
     protected InstanceID instanceId;
 
+    public abstract void sealBuffer(ObjectID objectID) throws VineyardException;
+
     public abstract ObjectMeta createMetaData(ObjectMeta metadata) throws VineyardException;
 
     public ObjectMeta getMetaData(ObjectID id) throws VineyardException {

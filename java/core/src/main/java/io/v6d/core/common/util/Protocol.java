@@ -176,6 +176,22 @@ public class Protocol {
         }
     }
 
+    public static class SealBufferRequest extends Request {
+        public static void put(ObjectNode root, ObjectID id) {
+            root.put("type", "seal_request");
+            root.put("object_id", id.value());
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class SealBufferReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "seal_reply");
+        }
+    }
+
     public static class ListDataRequest extends Request {
         public static void put(ObjectNode root, String pattern, boolean regex, int limit) {
             root.put("type", "list_data_request");

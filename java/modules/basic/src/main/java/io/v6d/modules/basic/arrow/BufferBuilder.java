@@ -94,6 +94,7 @@ public class BufferBuilder implements ObjectBuilder {
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
         this.build(client);
+        client.sealBuffer(buffer.getObjectId());
         val meta = ObjectMeta.empty();
         meta.setId(buffer.getObjectId()); // blob's builder is a special case
         meta.setInstanceId(client.getInstanceId());

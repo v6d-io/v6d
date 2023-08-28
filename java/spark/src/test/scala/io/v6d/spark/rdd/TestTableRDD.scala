@@ -30,13 +30,25 @@ object TestTableRDD {
     val spark = SparkSession.builder().config(conf).getOrCreate()
     val sc = spark.sparkContext
 
-    var input = "o00022c46d22d1b7c"
-    if (args.length > 1) {
-      input = args(1)
-    }
-    testVineyardRDD(spark, sc, input)
+    val oid = testBuilder(spark, sc)
+    testVineyardRDD(spark, sc, oid.toString())
 
     sc.stop()
+  }
+
+  def testBuilder(
+      spark: SparkSession,
+      sc: SparkContext
+  ): ObjectID = {
+    import spark.implicits._
+
+    val SOCKET = Env.getEnv(Env.VINEYARD_IPC_SOCKET)
+    val client: IPCClient = new IPCClient(SOCKET)
+
+    val rdd = sc.parallelize(Seq((1.3, 1), (2.6, 2), (3.9, 3)), 3)
+    val df = spark.createDataFrame(rdd).toDF("value", "count")
+    val dataFrameBuilder = new DataFrameBuilder(client, df)
+    dataFrameBuilder.seal(client).getId()
   }
 
   def testVineyardRDD(

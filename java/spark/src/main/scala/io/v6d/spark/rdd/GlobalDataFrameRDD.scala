@@ -17,11 +17,14 @@ package io.v6d.spark.rdd
 import io.v6d.core.client.IPCClient
 import io.v6d.core.client.ds.{ObjectFactory, ObjectMeta}
 import io.v6d.core.common.util.ObjectID
-import io.v6d.modules.basic.arrow.{Arrow, RecordBatch}
+import io.v6d.modules.basic.arrow.Arrow
+import io.v6d.modules.basic.dataframe.{DataFrame => VineyardDataFrame}
 import org.apache.spark.sql.vineyard.DataContext
 
-import org.apache.spark.{OneToOneDependency, Partition, TaskContext}
+import org.apache.arrow.vector.VectorSchemaRoot
 import org.apache.spark.rdd.RDD
+import org.apache.spark.{OneToOneDependency, Partition, TaskContext}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.catalyst.InternalRow
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.vectorized.{
@@ -29,16 +32,16 @@ import org.apache.spark.sql.vectorized.{
   ColumnVector,
   ColumnarBatch
 }
-import org.apache.arrow.vector.VectorSchemaRoot
+import org.apache.spark.sql.internal.SQLConf
 
 import scala.collection.JavaConverters._
 
-/** Provides a RDD to process each partition of Vineyard::Table.
+/** Provides a RDD to process each partition of Vineyard::GlobalDataFrame.
   *
-  * This is useful to convert a Vineyard::Table to spark.sql.dataframe with
-  * mapPartitions.
+  * This is useful to convert a Vineyard::GlobalDataFrame to spark.sql.dataframe
+  * with mapPartitions.
   */
-class TableChunkRDD(rdd: VineyardRDD)
+class GlobalDataFrameChunkRDD(rdd: VineyardRDD)
     extends RDD[VectorSchemaRoot](
       rdd.sparkContext,
       Seq(new OneToOneDependency(rdd))
@@ -49,15 +52,16 @@ class TableChunkRDD(rdd: VineyardRDD)
   ): Iterator[VectorSchemaRoot] = {
     // Initialize vineyard context.
     Arrow.instantiate()
+    VineyardDataFrame.instantiate()
 
     val partition = split.asInstanceOf[VineyardPartition]
     firstParent[ObjectID]
       .iterator(split, context)
       .map(record => {
         val meta = partition.client.getMetaData(record)
-        val batch =
-          ObjectFactory.getFactory.resolve(meta).asInstanceOf[RecordBatch]
-        batch.getBatch
+        val df =
+          ObjectFactory.getFactory.resolve(meta).asInstanceOf[VineyardDataFrame]
+        df.asBatch
       })
   }
 
@@ -72,16 +76,17 @@ class TableChunkRDD(rdd: VineyardRDD)
   }
 }
 
-object TableChunkRDD {
-  def fromVineyardRDD(rdd: VineyardRDD): TableChunkRDD = new TableChunkRDD(rdd)
+object GlobalDataFrameChunkRDD {
+  def fromVineyardRDD(rdd: VineyardRDD): GlobalDataFrameChunkRDD =
+    new GlobalDataFrameChunkRDD(rdd)
 }
 
-/** Provides a RDD to process each row of Vineyard::Table.
+/** Provides a RDD to process each row of Vineyard::GlobalDataFrame.
   *
-  * This is useful to apply RDD-level transformation directly on vineyard::Table
-  * without creating a new spark.sql.DataFrame.
+  * This is useful to apply RDD-level transformation directly on
+  * vineyard::GlobalDataFrame without creating a new spark.sql.DataFrame.
   */
-class TableRDD(rdd: VineyardRDD)
+class GlobalDataFrameRDD(rdd: VineyardRDD)
     extends RDD[InternalRow](
       rdd.sparkContext,
       Seq(new OneToOneDependency(rdd))
@@ -93,11 +98,15 @@ class TableRDD(rdd: VineyardRDD)
   ): Iterator[InternalRow] = {
     // Initialize vineyard context.
     Arrow.instantiate()
+    VineyardDataFrame.instantiate()
 
     val partition = split.asInstanceOf[VineyardPartition]
     val meta = partition.client.getMetaData(partition.chunkId)
     val batch =
-      ObjectFactory.getFactory.resolve(meta).asInstanceOf[RecordBatch].getBatch
+      ObjectFactory.getFactory
+        .resolve(meta)
+        .asInstanceOf[VineyardDataFrame]
+        .asBatch
     val columns: Array[ColumnVector] =
       batch.getFieldVectors.asScala.map(new ArrowColumnVector(_)).toArray
     val columnarBatch = new ColumnarBatch(columns, batch.getRowCount)
@@ -115,16 +124,18 @@ class TableRDD(rdd: VineyardRDD)
   }
 
   def toDF(spark: SparkSession): DataFrame = {
-    val tableChunkRDD = TableChunkRDD.fromVineyardRDD(rdd)
-    val types = tableChunkRDD
+    val globalDataFrameChunkRDD = GlobalDataFrameChunkRDD.fromVineyardRDD(rdd)
+    val types = globalDataFrameChunkRDD
       .map(chunk => DataContext.fromArrowSchema(chunk.getSchema))
       .first()
     DataContext.createDataFrame(spark, this, types)
   }
 }
 
-object TableRDD {
-  def fromVineyard(rdd: VineyardRDD): TableRDD = new TableRDD(rdd)
+object GlobalDataFrameRDD {
+  def fromVineyard(rdd: VineyardRDD): GlobalDataFrameRDD =
+    new GlobalDataFrameRDD(rdd)
+
   def makeDataFrame(
       client: IPCClient,
       spark: SparkSession,

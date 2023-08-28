@@ -16,6 +16,9 @@ package io.v6d.spark
 
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.sql.SparkSession
+import io.v6d.core.client.IPCClient
+import io.v6d.core.common.util.ObjectID
+import io.v6d.spark.rdd.DataFrameBuilder
 
 object SparkApp {
   def main(args: Array[String]): Unit = {

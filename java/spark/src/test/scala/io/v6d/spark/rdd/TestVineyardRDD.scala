@@ -33,7 +33,7 @@ object TestVineyardRDD {
 
     inspectExecutorContext(spark, sc)
 
-    var input = "o00022c46d22d1b7c"
+    var input = "o0097ec37edc4072a"
     if (args.length > 1) {
       input = args(1)
     }

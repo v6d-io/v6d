@@ -103,7 +103,6 @@ public class RecordBatchBuilder implements ObjectBuilder {
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
         this.build(client);
-
         val meta = ObjectMeta.empty();
 
         meta.setTypename("vineyard::RecordBatch");
