@@ -19,7 +19,7 @@ setup:
   steps:
     - name: deploy the vineyard deployment
       command: |
-        go run k8s/cmd/main.go deploy vineyard-deployment --vineyardd.image="localhost:5001/vineyardd:alpine-latest" --create-namespace
+        go run k8s/cmd/main.go deploy vineyard-deployment --vineyardd.image="localhost:5001/vineyardd:latest" --create-namespace
     - name: schedule the produce workload
       command: |
         kubectl create ns vineyard-job

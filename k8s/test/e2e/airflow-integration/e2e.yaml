@@ -20,7 +20,7 @@ setup:
     - name: create the vineyard deployment
       command: |
         go run k8s/cmd/main.go deploy vineyard-deployment \
-          --vineyardd.image="localhost:5001/vineyardd:alpine-latest" \
+          --vineyardd.image="localhost:5001/vineyardd:latest" \
           --create-namespace
     - name: deploy the airflow
       command: |

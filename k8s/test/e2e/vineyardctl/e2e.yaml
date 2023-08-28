@@ -22,7 +22,7 @@ setup:
         make -C k8s/test/e2e publish-workflow-images REGISTRY=localhost:5001
     - name: install vineyardd
       command: |
-        go run k8s/cmd/main.go deploy vineyardd --vineyardd.image="localhost:5001/vineyardd:alpine-latest"
+        go run k8s/cmd/main.go deploy vineyardd --vineyardd.image="localhost:5001/vineyardd:latest"
     - name: install job1
       command: |
         kubectl create namespace vineyard-job

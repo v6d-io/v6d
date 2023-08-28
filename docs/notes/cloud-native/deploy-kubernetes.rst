@@ -122,7 +122,7 @@ replicas:
         type: ClusterIP
         port: 9600
       vineyard:
-        image: vineyardcloudnative/vineyardd:alpine-latest
+        image: vineyardcloudnative/vineyardd:latest
         imagePullPolicy: IfNotPresent
     EOF
 

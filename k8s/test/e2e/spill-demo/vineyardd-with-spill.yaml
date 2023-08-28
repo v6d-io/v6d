@@ -25,7 +25,7 @@ spec:
     type: ClusterIP
     port: 9600
   vineyard:
-    image: localhost:5001/vineyardd:alpine-latest
+    image: localhost:5001/vineyardd:latest
     imagePullPolicy: IfNotPresent
     size: "2048"
     # spill configuration
