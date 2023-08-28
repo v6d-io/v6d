@@ -31,6 +31,3 @@ meta.add_member('__elements_-0', object)
 meta['__elements_-size'] = 1
 tup = client.create_metadata(meta)
 client.persist(tup)
-
-# avoid CrashLoopBackOff
-time.sleep(600)

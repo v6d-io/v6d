@@ -31,6 +31,7 @@ import (
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
 	"github.com/v6d-io/v6d/k8s/pkg/config/labels"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // Scheduler is the interface for all vineyard schedulers
@@ -143,6 +144,7 @@ func (vs *VineyardSchedulerInsideCluster) Schedule(nodeName string) (int, error)
 	roundRobin := NewRoundRobinStrategy(vs.config.Nodes)
 
 	if len(vs.config.Required) == 0 {
+		log.Infof("Start scheduling with round robin strategy...")
 		target, err := roundRobin.Compute(vs.rank)
 		if err != nil {
 			return 1, err
@@ -153,6 +155,7 @@ func (vs *VineyardSchedulerInsideCluster) Schedule(nodeName string) (int, error)
 		return 1, nil
 	}
 
+	log.Infof("Start scheduling with best effort strategy...")
 	// if there are required jobs, use best effort strategy
 	bestEffort := NewBestEffortStrategy(
 		vs.Client,
@@ -177,7 +180,8 @@ func (vs *VineyardSchedulerInsideCluster) Schedule(nodeName string) (int, error)
 
 	// make sure every pod will be deployed in a node
 	if target == "" {
-		if nodeName == vs.config.Nodes[0] {
+		if nodeName == bestEffort.nodes[0] {
+			log.Infof("No available node, choose the first node %s to deploy the pod", nodeName)
 			return 100, nil
 		}
 		return 1, nil
