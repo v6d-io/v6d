@@ -51,6 +51,7 @@ class DataFrameBuilder(
   @throws(classOf[VineyardException])
   override def build(client: Client): Unit = {}
 
+  // scalastyle:off method.length
   @throws(classOf[VineyardException])
   override def seal(client: Client): ObjectMeta = {
     this.build(client);
@@ -59,11 +60,11 @@ class DataFrameBuilder(
     val schema = sparkDF.schema
     val arrowSchema = DataContext.toArrowSchema(schema, timeZoneId)
     val schemaBuilder = SchemaBuilder.fromSchema(arrowSchema)
-    val SOCKET = client.getIPCSocket()
+    val sock = client.getIPCSocket()
     val batches: Array[ObjectID] = sparkDF.rdd
       .mapPartitions(iterator => {
-        val localArray = iterator.toArray // FIXME: persist stream to get size
-        val localClient = new IPCClient(SOCKET)
+        val localArray = iterator.toArray
+        val localClient = new IPCClient(sock)
         val localArrowSchema = DataContext.toArrowSchema(schema, timeZoneId)
         val recordBatchBuilder = new RecordBatchBuilder(
           localClient,
@@ -85,7 +86,6 @@ class DataFrameBuilder(
             } else if (field.dataType.isInstanceOf[DoubleType]) {
               builder.setDouble(rowId.toInt, row.getDouble(fid))
             } else {
-              // FIXME: Add columna builder for other DataType. e.g. StringType
               throw new Exception(
                 "Columnar builder for type " + field.dataType + " is not supported"
               )
@@ -99,7 +99,7 @@ class DataFrameBuilder(
       .collect()
     meta.setTypename("vineyard::Table")
     meta.setValue("batch_num_", batches.length)
-    meta.setValue("num_rows_", -1) // FIXME
+    meta.setValue("num_rows_", -1)
     meta.setValue("num_columns_", sparkDF.schema.size)
     meta.addMember("schema_", schemaBuilder.seal(client))
     meta.setGlobal()
@@ -107,7 +107,8 @@ class DataFrameBuilder(
     for ((batch, i) <- batches.zipWithIndex) {
       meta.addMember("partitions_-" + i, batch)
     }
-    meta.setNBytes(0) // FIXME
+    meta.setNBytes(0)
     client.createMetaData(meta)
   }
+  // scalastyle:on method.length
 }
