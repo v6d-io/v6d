@@ -17,13 +17,11 @@ limitations under the License.
 #define SRC_SERVER_UTIL_META_TREE_H_
 
 #include <map>
-#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 
 #include "common/util/json.h"
-#include "common/util/logging.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 

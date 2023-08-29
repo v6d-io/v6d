@@ -22,10 +22,9 @@ limitations under the License.
 #include <memory>
 #include <set>
 #include <string>
-#include <thread>
 #include <vector>
 
-#include "common/util/asio.h"
+#include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/protocols.h"

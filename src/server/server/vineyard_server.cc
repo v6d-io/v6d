@@ -22,14 +22,13 @@ limitations under the License.
 #include <mutex>
 #include <set>
 #include <string>
-#include <thread>
 #include <vector>
 
 #include "gulrak/filesystem.hpp"
 
 #include "common/util/callback.h"
 #include "common/util/json.h"
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "server/async/ipc_server.h"
 #include "server/async/rpc_server.h"
 #include "server/services/meta_service.h"

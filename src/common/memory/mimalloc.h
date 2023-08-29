@@ -24,7 +24,6 @@ limitations under the License.
 #include "mimalloc/include/mimalloc.h"
 
 #include "common/util/likely.h"
-#include "common/util/logging.h"
 
 #ifndef MIMALLOC_SEGMENT_ALIGNED_SIZE
 #define MIMALLOC_SEGMENT_ALIGNED_SIZE ((uintptr_t) 1 << 26)

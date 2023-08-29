@@ -43,12 +43,12 @@ static_assert(
 #pragma clang diagnostic ignored "-Wexit-time-destructors"
 std::unique_ptr<std::remove_pointer_t<std::terminate_handler>,
                 decltype(std::set_terminate)&>
-    terminate_handler{std::set_terminate(backtrace_on_terminate),
+    terminate_handler{std::set_terminate(backtrace_on_terminate),  // NOLINT
                       std::set_terminate};
 #pragma clang diagnostic pop
 
 #if __cplusplus >= 201703L
-[[noreturn]] void backtrace_on_terminate() {
+[[noreturn]] void backtrace_on_terminate() {  // NOLINT
 #else
 [[noreturn]] void backtrace_on_terminate() noexcept {
 #endif

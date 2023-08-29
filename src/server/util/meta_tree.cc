@@ -24,7 +24,7 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "boost/lexical_cast.hpp"
+#include "boost/lexical_cast.hpp"  // IWYU pragma: keep
 
 #include "server/util/metrics.h"
 

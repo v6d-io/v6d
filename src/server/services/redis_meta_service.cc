@@ -15,8 +15,6 @@ limitations under the License.
 
 #include "server/services/redis_meta_service.h"
 
-#if defined(BUILD_VINEYARDD_REDIS)
-
 #include <chrono>
 #include <string>
 #include <vector>
@@ -26,6 +24,8 @@ limitations under the License.
 #include "common/util/logging.h"
 #include "server/util/metrics.h"
 #include "server/util/redis_launcher.h"
+
+#if defined(BUILD_VINEYARDD_REDIS)
 
 #define BACKOFF_RETRY_TIME 10
 

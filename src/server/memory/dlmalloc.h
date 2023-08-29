@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef SRC_SERVER_MEMORY_DLMALLOC_H_
 #define SRC_SERVER_MEMORY_DLMALLOC_H_
 
-#include "common/util/status.h"
+#include <cstddef>
 
 namespace vineyard {
 

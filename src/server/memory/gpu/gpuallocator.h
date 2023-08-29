@@ -24,7 +24,7 @@ limitations under the License.
 #include <cuda_runtime.h>
 #endif
 
-#include "common/memory/gpu/unified_memory.h"
+#include "common/memory/gpu/unified_memory.h"  // IWYU pragma: keep
 
 namespace vineyard {
 

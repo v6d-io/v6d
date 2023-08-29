@@ -85,9 +85,9 @@ bool SocketConnection::Stop() {
   // On Mac the state of socket may be "not connected" after the client has
   // already closed the socket, hence there will be an exception.
   boost::system::error_code ec;
-  socket_.cancel(ec);
-  socket_.shutdown(stream_protocol::socket::shutdown_both, ec);
-  socket_.close(ec);
+  ec = socket_.cancel(ec);
+  ec = socket_.shutdown(stream_protocol::socket::shutdown_both, ec);
+  ec = socket_.close(ec);
 
   return true;
 }

@@ -17,7 +17,6 @@ limitations under the License.
 
 #include <mutex>
 
-#include "common/util/status.h"
 #include "server/memory/malloc.h"
 
 #if defined(WITH_MIMALLOC)

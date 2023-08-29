@@ -23,7 +23,6 @@ limitations under the License.
 #include <set>
 #include <string>
 #include <unordered_map>
-#include <utility>
 
 #include "client/ds/i_object.h"
 #include "common/memory/payload.h"

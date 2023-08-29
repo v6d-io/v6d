@@ -23,7 +23,6 @@ limitations under the License.
 
 #include "common/util/env.h"
 #include "common/util/json.h"
-#include "common/util/logging.h"
 #include "server/server/vineyard_server.h"
 
 namespace vineyard {
@@ -34,7 +33,7 @@ static bool check_connectable(asio::io_context& context,
                               std::string const& path) {
   asio::local::stream_protocol::socket socket(context);
   boost::system::error_code ec;
-  socket.connect(path, ec);
+  ec = socket.connect(path, ec);
   return !ec;
 }
 
@@ -141,7 +140,7 @@ void IPCServer::Start() {
 void IPCServer::Close() {
   SocketServer::Close();
   boost::system::error_code ec;
-  acceptor_.cancel(ec);
+  ec = acceptor_.cancel(ec);
   if (ec) {
     LOG(ERROR) << "Failed to close the IPC server: " << ec.message();
   }

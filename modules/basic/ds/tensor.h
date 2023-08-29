@@ -16,28 +16,22 @@ limitations under the License.
 #ifndef MODULES_BASIC_DS_TENSOR_H_
 #define MODULES_BASIC_DS_TENSOR_H_
 
-#include <algorithm>
 #include <functional>
-#include <map>
 #include <memory>
 #include <numeric>
-#include <set>
 #include <string>
-#include <tuple>
 #include <utility>
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
+#include "arrow/api.h"     // IWYU pragma: keep
+#include "arrow/io/api.h"  // IWYU pragma: keep
 
-#include "basic/ds/array.h"
 #include "basic/ds/tensor.vineyard.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/collection.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
-#include "common/util/json.h"
 
 namespace vineyard {
 

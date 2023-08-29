@@ -15,6 +15,10 @@ limitations under the License.
 
 #include "basic/ds/dataframe.h"  // NOLINT(build/include)
 
+#include <string>
+
+#include "common/util/logging.h"  // IWYU pragma: keep
+
 namespace vineyard {
 
 class DataFrameBuilder;

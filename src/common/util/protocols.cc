@@ -18,7 +18,6 @@ limitations under the License.
 #include <sstream>
 #include <unordered_set>
 
-#include "common/util/logging.h"
 #include "common/util/uuid.h"
 #include "common/util/version.h"
 

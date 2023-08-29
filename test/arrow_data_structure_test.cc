@@ -25,6 +25,7 @@ limitations under the License.
 #include "basic/ds/arrow_utils.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
+#include "common/util/env.h"
 #include "common/util/logging.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)

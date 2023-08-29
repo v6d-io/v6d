@@ -16,19 +16,12 @@ limitations under the License.
 #ifndef MODULES_BASIC_DS_DATAFRAME_H_
 #define MODULES_BASIC_DS_DATAFRAME_H_
 
-#include <algorithm>
-#include <functional>
-#include <map>
 #include <memory>
-#include <set>
-#include <string>
-#include <tuple>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "basic/ds/array.h"
-#include "basic/ds/arrow.h"
+#include "basic/ds/arrow.h"  // IWYU pragma: keep
 #include "basic/ds/dataframe.vineyard.h"
 #include "basic/ds/tensor.h"
 #include "client/client.h"

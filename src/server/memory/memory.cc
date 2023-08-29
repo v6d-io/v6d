@@ -35,11 +35,10 @@
 #include <limits>
 #include <map>
 #include <memory>
-#include <mutex>
 #include <string>
 #include <vector>
 
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "common/util/status.h"
 #include "server/memory/allocator.h"
 #include "server/memory/malloc.h"

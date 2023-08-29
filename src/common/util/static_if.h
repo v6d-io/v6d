@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_STATIC_IF_H_
 #define SRC_COMMON_UTIL_STATIC_IF_H_
 
-#include <utility>
+#include <type_traits>
 
 namespace vineyard {
 

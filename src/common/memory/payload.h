@@ -17,11 +17,11 @@ limitations under the License.
 #define SRC_COMMON_MEMORY_PAYLOAD_H_
 
 #include <atomic>
+#include <iostream>
 #include <memory>
 
 #include "common/util/json.h"
 #include "common/util/likely.h"
-#include "common/util/status.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {

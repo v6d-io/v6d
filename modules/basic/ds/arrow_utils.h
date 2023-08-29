@@ -20,16 +20,14 @@ limitations under the License.
 #include <memory>
 #include <string>
 #include <unordered_map>
-#include <utility>
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
+#include "arrow/api.h"     // IWYU pragma: keep
+#include "arrow/io/api.h"  // IWYU pragma: keep
 
 #include "basic/ds/types.h"
 #include "client/ds/blob.h"
 #include "common/util/arrow.h"
-#include "common/util/logging.h"
 #include "common/util/status.h"
 
 namespace vineyard {

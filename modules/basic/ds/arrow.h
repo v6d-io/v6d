@@ -16,16 +16,14 @@ limitations under the License.
 #ifndef MODULES_BASIC_DS_ARROW_H_
 #define MODULES_BASIC_DS_ARROW_H_
 
-#include <algorithm>
-#include <iostream>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-#include "arrow/ipc/api.h"
+#include "arrow/api.h"      // IWYU pragma: keep
+#include "arrow/io/api.h"   // IWYU pragma: keep
+#include "arrow/ipc/api.h"  // IWYU pragma: keep
 
 #include "basic/ds/arrow.vineyard.h"
 #include "basic/ds/arrow_utils.h"

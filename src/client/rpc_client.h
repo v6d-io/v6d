@@ -16,9 +16,7 @@ limitations under the License.
 #ifndef SRC_CLIENT_RPC_CLIENT_H_
 #define SRC_CLIENT_RPC_CLIENT_H_
 
-#include <map>
 #include <memory>
-#include <set>
 #include <string>
 #include <vector>
 

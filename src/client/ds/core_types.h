@@ -26,8 +26,8 @@ limitations under the License.
 
 namespace vineyard {
 
-#ifndef DECLARE_DEFAULT_WARPPER
-#define DECLARE_DEFAULT_WARPPER(T)              \
+#ifndef DECLARE_DEFAULT_WRAPPER
+#define DECLARE_DEFAULT_WRAPPER(T)              \
   T() : base_type() {}                          \
   T(base_type const& v) : base_type(v) {}       \
   T(base_type&& v) : base_type(std::move(v)) {} \
@@ -46,20 +46,20 @@ template <typename T>
 class Tuple final : public std::vector<T> {
  public:
   using base_type = std::vector<T>;
-  DECLARE_DEFAULT_WARPPER(Tuple)
+  DECLARE_DEFAULT_WRAPPER(Tuple)
 };
 
 template <typename T>
 class List final : public std::vector<T> {
  public:
   using base_type = std::vector<T>;
-  DECLARE_DEFAULT_WARPPER(List)
+  DECLARE_DEFAULT_WRAPPER(List)
 };
 
 class String final : public std::string {
  public:
   using base_type = std::string;
-  DECLARE_DEFAULT_WARPPER(String)
+  DECLARE_DEFAULT_WRAPPER(String)
 };
 
 inline void to_json(json& j, const String& str) { j = json(std::string(str)); }
@@ -72,7 +72,7 @@ template <typename Key, typename T>
 class Map final : public std::map<Key, T> {
  public:
   using base_type = std::map<Key, T>;
-  DECLARE_DEFAULT_WARPPER(Map)
+  DECLARE_DEFAULT_WRAPPER(Map)
 
   using __other_type = std::unordered_map<Key, T>;
 
@@ -89,7 +89,7 @@ template <typename Key, typename T>
 class UnorderedMap final : public std::unordered_map<Key, T> {
  public:
   using base_type = std::unordered_map<Key, T>;
-  DECLARE_DEFAULT_WARPPER(UnorderedMap)
+  DECLARE_DEFAULT_WRAPPER(UnorderedMap)
 
   using __other_type = std::map<Key, T>;
 
@@ -101,7 +101,7 @@ class UnorderedMap final : public std::unordered_map<Key, T> {
   }
 };
 
-#undef DECLARE_DEFAULT_WARPPER
+#undef DECLARE_DEFAULT_WRAPPER
 
 }  // namespace vineyard
 

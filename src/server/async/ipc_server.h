@@ -19,10 +19,8 @@ limitations under the License.
 #include <memory>
 #include <string>
 
-#include "common/util/asio.h"
-#include "common/util/protocols.h"
+#include "common/util/asio.h"  // IWYU pragma: keep
 #include "server/async/socket_server.h"
-#include "server/memory/memory.h"
 
 namespace vineyard {
 

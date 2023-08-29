@@ -20,9 +20,8 @@ limitations under the License.
 #include <utility>
 
 #include "common/util/callback.h"
-#include "common/util/logging.h"
-#include "server/memory/memory.h"
-#include "server/server/vineyard_server.h"
+#include "common/util/logging.h"            // IWYU pragma: keep
+#include "server/server/vineyard_server.h"  // IWYU pragma: keep
 
 namespace vineyard {
 

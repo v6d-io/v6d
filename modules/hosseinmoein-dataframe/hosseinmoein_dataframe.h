@@ -29,6 +29,7 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
+#include "common/util/logging.h"
 
 using namespace hmdf;  // NOLINT(build/namespaces)
 

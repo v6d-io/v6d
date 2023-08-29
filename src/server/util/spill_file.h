@@ -16,8 +16,6 @@ limitations under the License.
 #ifndef SRC_SERVER_UTIL_SPILL_FILE_H_
 #define SRC_SERVER_UTIL_SPILL_FILE_H_
 
-#include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <string>
 

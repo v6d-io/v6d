@@ -16,22 +16,19 @@ limitations under the License.
 #ifndef MODULES_BASIC_DS_ARROW_VINEYARD_MOD_
 #define MODULES_BASIC_DS_ARROW_VINEYARD_MOD_
 
-#include <iostream>
 #include <memory>
-#include <string>
-#include <utility>
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-#include "arrow/ipc/api.h"
+#include "arrow/api.h"      // IWYU pragma: keep
+#include "arrow/io/api.h"   // IWYU pragma: keep
+#include "arrow/ipc/api.h"  // IWYU pragma: keep
 
 #include "basic/ds/arrow_utils.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/collection.h"
 #include "client/ds/core_types.h"
-#include "client/ds/stream.h"
+#include "client/ds/stream.h"  // IWYU pragma: keep
 
 namespace vineyard {
 

@@ -28,14 +28,12 @@ limitations under the License.
 #include "wyhash/wyhash.hpp"
 
 #include "basic/ds/array.vineyard.h"
-#include "basic/ds/arrow.vineyard.h"
+#include "basic/ds/arrow.vineyard.h"  // IWYU pragma: keep
 #include "basic/ds/arrow_utils.h"
 #include "basic/utils.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
-#include "common/util/functions.h"
-#include "common/util/uuid.h"
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push

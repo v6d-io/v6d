@@ -37,7 +37,7 @@ RemoteClient::RemoteClient(const std::shared_ptr<VineyardServer> server_ptr)
 
 RemoteClient::~RemoteClient() {
   boost::system::error_code ec;
-  socket_.close(ec);
+  ec = socket_.close(ec);
 }
 
 Status RemoteClient::Connect(const std::string& rpc_endpoint,

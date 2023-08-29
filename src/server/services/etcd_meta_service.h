@@ -23,7 +23,6 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "boost/process.hpp"
 #include "etcd/Client.hpp"
 
 #include "server/services/meta_service.h"

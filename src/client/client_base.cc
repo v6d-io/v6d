@@ -17,14 +17,9 @@ limitations under the License.
 
 #include <sys/socket.h>
 
-#include <future>
-#include <iostream>
-#include <set>
-#include <utility>
-
-#include "client/client.h"
+#include "client/ds/i_object.h"
+#include "client/ds/object_factory.h"
 #include "client/io.h"
-#include "client/rpc_client.h"
 #include "client/utils.h"
 #include "common/util/env.h"
 #include "common/util/protocols.h"

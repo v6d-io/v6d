@@ -33,7 +33,6 @@
 
 #include "arrow/type_fwd.h"
 #include "arrow/util/macros.h"
-#include "arrow/util/visibility.h"
 
 namespace vineyard {
 

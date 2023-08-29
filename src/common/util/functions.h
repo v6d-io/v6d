@@ -23,7 +23,7 @@ limitations under the License.
 #include <string>
 #include <utility>
 
-#include "boost/algorithm/string.hpp"
+#include "boost/algorithm/string/replace.hpp"
 
 #include "common/util/env.h"
 

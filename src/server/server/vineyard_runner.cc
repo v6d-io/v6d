@@ -15,18 +15,16 @@ limitations under the License.
 
 #include "server/server/vineyard_runner.h"
 
-#include <iostream>
 #include <memory>
-#include <set>
 #include <string>
 #include <thread>
 #include <vector>
 
-#include "boost/bind.hpp"
+#include "boost/bind/bind.hpp"  // IWYU pragma: keep
 
 #include "common/util/json.h"
 #include "common/util/likely.h"
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "server/server/vineyard_server.h"
 
 namespace vineyard {

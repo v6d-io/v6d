@@ -15,13 +15,11 @@ limitations under the License.
 
 #include "basic/ds/arrow_shim/memory_pool.h"
 
-#include <limits>
 #include <memory>
 #include <string>
 #include <utility>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
+#include "arrow/buffer.h"
 
 #include "client/ds/blob.h"
 #include "common/memory/memcpy.h"

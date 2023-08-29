@@ -16,7 +16,6 @@ limitations under the License.
 #include "client/rpc_client.h"
 
 #include <iostream>
-#include <map>
 #include <mutex>
 #include <set>
 #include <string>
@@ -31,6 +30,7 @@ limitations under the License.
 #include "common/compression/compressor.h"
 #include "common/util/env.h"
 #include "common/util/protocols.h"
+#include "common/util/version.h"
 
 namespace vineyard {
 

@@ -16,9 +16,7 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_ASIO_H_
 #define SRC_COMMON_UTIL_ASIO_H_
 
-#include "boost/asio.hpp"
-
-#include "common/util/status.h"
+#include "boost/asio.hpp"  // IWYU pragma: keep
 
 #if BOOST_VERSION < 106600
 
@@ -34,7 +32,7 @@ using io_context = io_service;
 
 namespace vineyard {
 
-namespace asio = boost::asio;
+namespace asio = boost::asio;  // NOLINT
 
 // return the status if the boost::system:error_code is not OK.
 #ifndef RETURN_ON_ASIO_ERROR

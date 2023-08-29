@@ -17,7 +17,6 @@ limitations under the License.
 #define SRC_CLIENT_DS_CORE_TYPES_H_
 
 #include "client/ds/core_types.h"
-#include "common/util/json.h"
 
 namespace vineyard {}  // namespace vineyard
 

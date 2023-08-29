@@ -17,11 +17,9 @@ limitations under the License.
 
 #include <cstdio>
 #include <cstring>
-#include <string>
 
-#include "common/util/env.h"
-#include "common/util/logging.h"
-#include "server/memory/malloc.h"
+#include "common/util/logging.h"   // IWYU pragma: keep
+#include "server/memory/malloc.h"  // IWYU pragma: keep
 
 #if defined(__linux__) || defined(__linux) || defined(linux) || \
     defined(__gnu_linux__)

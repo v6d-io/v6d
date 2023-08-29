@@ -19,7 +19,7 @@ limitations under the License.
 #include "gflags/gflags.h"
 
 #include "common/util/env.h"
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "common/util/macros.h"
 #include "server/util/spec_resolvers.h"
 

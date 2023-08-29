@@ -16,11 +16,9 @@ limitations under the License.
 #include "common/compression/compressor.h"
 
 #include <algorithm>
+#include <string>
 
 #include "zstd/lib/zstd.h"
-#include "zstd/lib/zstd_errors.h"
-
-#include "common/util/logging.h"
 
 namespace vineyard {
 

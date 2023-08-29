@@ -21,12 +21,13 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "boost/algorithm/string/erase.hpp"
 #include "boost/asio/steady_timer.hpp"
 #include "etcd/Client.hpp"
 #include "etcd/Watcher.hpp"
 #include "etcd/v3/Transaction.hpp"
 
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "server/util/etcd_launcher.h"
 #include "server/util/metrics.h"
 

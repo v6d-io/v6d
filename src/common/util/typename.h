@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_TYPENAME_H_
 #define SRC_COMMON_UTIL_TYPENAME_H_
 
-#include <functional>
 #include <string>
 #include <vector>
 

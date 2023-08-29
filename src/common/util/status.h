@@ -24,11 +24,9 @@
 #ifndef SRC_COMMON_UTIL_STATUS_H_
 #define SRC_COMMON_UTIL_STATUS_H_
 
-#include <cstring>
 #include <iosfwd>
 #include <iostream>
 #include <sstream>
-#include <stdexcept>
 #include <string>
 #include <utility>
 

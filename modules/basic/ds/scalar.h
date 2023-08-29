@@ -16,18 +16,10 @@ limitations under the License.
 #ifndef MODULES_BASIC_DS_SCALAR_H_
 #define MODULES_BASIC_DS_SCALAR_H_
 
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "boost/lexical_cast.hpp"
-
 #include "basic/ds/scalar.vineyard.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
-#include "common/util/uuid.h"
 
 namespace vineyard {
 

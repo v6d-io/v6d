@@ -12,11 +12,8 @@ limitations under the License.
 
 #include "server/services/local_meta_service.h"
 
-#include <chrono>
 #include <string>
 #include <vector>
-
-#include "common/util/logging.h"
 
 namespace vineyard {
 

@@ -17,16 +17,14 @@ limitations under the License.
 #define SRC_SERVER_SERVER_VINEYARD_RUNNER_H_
 
 #include <atomic>
-#include <list>
 #include <memory>
-#include <set>
 #include <string>
 #include <thread>
 #include <vector>
 
 #include "libcuckoo/cuckoohash_map.hh"
 
-#include "common/util/asio.h"
+#include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/callback.h"
 #include "common/util/json.h"
 #include "common/util/protocols.h"

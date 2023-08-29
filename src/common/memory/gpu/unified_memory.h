@@ -16,9 +16,7 @@ limitations under the License.
 #define SRC_COMMON_MEMORY_GPU_UNIFIED_MEMORY_H_
 
 #include <cstdint>
-#include <memory>
 #include <string>
-#include <utility>
 #include <vector>
 
 #ifdef ENABLE_GPU
