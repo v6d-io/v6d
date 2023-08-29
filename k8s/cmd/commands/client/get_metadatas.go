@@ -17,7 +17,6 @@ package client
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -26,38 +25,23 @@ import (
 )
 
 var (
-	lsMetadatasLong = util.LongDesc(`List vineyard metadatas and support IPC socket,
+	getMetadatasLong = util.LongDesc(`List vineyard metadatas and support IPC socket,
 	RPC socket and vineyard deployment. If you don't specify the ipc socket or rpc socket
 	every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or 
 	VINEYARD_RPC_SOCKET.`)
 
-	lsMetadatasExample = util.Examples(`
+	getMetadatasExample = util.Examples(`
 	# List no more than 10 vineyard metadatas
 	vineyardctl ls metadatas --limit 10 --ipc-socket /var/run/vineyard.sock
-	
-	# List no more than 1000 vineyard metadatas
-	vineyardctl ls metadatas --rpc-socket 127.0.0.1:9600 --limit 1000
-	
-	# List vineyard metadatas with the name matching the regex pattern
-	vineyardctl ls metadatas --pattern "vineyard::Blob" --ipc-socket /var/run/vineyard.sock
-
-	# List vineyard metadatas of the vineyard deployment
-	vineyardctl ls metadatas --deployment-name vineyardd-sample -n vineyard-system --limit 1000
-	
-	# List vineyard metadatas sorted by the instance id
-	vineyardctl ls metadatas --sorted-key instance_id --limit 1000 --ipc-socket /var/run/vineyard.sock
-
-	# List vineyard metadatas sorted by the type and print the output as json format
-	vineyardctl ls metadatas --sorted-key type --limit 1000 --format json --ipc-socket /var/run/vineyard.sock
 	`)
 )
 
 // lsMetadatas is to list vineyard objects
-var lsMetadatas = &cobra.Command{
+var getMetadatas = &cobra.Command{
 	Use:     "metadatas",
-	Short:   "List vineyard metadatas",
-	Long:    lsMetadatasLong,
-	Example: lsMetadatasExample,
+	Short:   "Get vineyard metadatas",
+	Long:    getMetadatasLong,
+	Example: getMetadatasExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 
@@ -68,12 +52,15 @@ var lsMetadatas = &cobra.Command{
 			defer close(ch)
 		}
 
-		metas, err := client.ListMetadatas(flags.Pattern, flags.Regex, flags.Limit)
-		fmt.Println(metas)
+		metas, err := client.GetMetaDatas(flags.Object_id, flags.SyncRemote)
 		if err != nil {
 			log.Fatal(err, "failed to list vineyard objects")
 		}
-		output := util.NewOutput(&metas, nil, nil)
+		meta := metas.MetaData()
+		fmt.Println(meta)
+		metadatas := make(map[string]map[string]interface{})
+		metadatas[flags.Object_id] = meta
+		output := util.NewOutput(&metadatas, nil, nil)
 		// set the output options
 		output.WithFilter(false).
 			SortedKey(flags.SortedKey).
@@ -82,19 +69,12 @@ var lsMetadatas = &cobra.Command{
 	},
 }
 
-func NewLsMetadatasCmd() *cobra.Command {
-	return lsMetadatas
+func NewGetMetadatasCmd() *cobra.Command {
+	return getMetadatas
 }
 
 func init() {
-	flags.ApplyConnectOpts(lsMetadatas)
-	flags.ApplyLsOpts(lsMetadatas)
-	flags.ApplyOutputOpts(lsMetadatas)
-}
-
-func DisableStdout() *os.File {
-	stdout := os.Stdout
-	os.Stdout, _ = os.Open(os.DevNull)
-
-	return stdout
+	flags.ApplyConnectOpts(getMetadatas)
+	flags.ApplyGetOpts(getMetadatas)
+	flags.ApplyOutputOpts(getMetadatas)
 }

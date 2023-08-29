@@ -27,6 +27,7 @@ type Objects interface {
 	ListMetadatas(string, bool, int) (map[string]map[string]any, error)
 	ListBlobs() (map[types.ObjectID]client.Blob, error)
 	GetClusterInfo() (map[string]map[string]string, error)
+	GetMetaDatas(id string, syncRemote bool) (meta *client.ObjectMeta, err error)
 }
 
 // ListMetadatas lists all vineyard metadata
@@ -73,6 +74,18 @@ func (c *Client) GetClusterInfo() (map[string]any, error) {
 	}
 	if c.rpcClient != nil {
 		return c.rpcClient.GetClusterInfo()
+	}
+	return nil, nil
+}
+
+// GetMetadatas
+func (c *Client) GetMetaDatas(id string, syncRemote bool) (meta *client.ObjectMeta, err error) {
+	object_id, _ := types.ObjectIDFromString(id)
+	if c.ipcClient != nil {
+		return c.ipcClient.GetMetaData(object_id, syncRemote)
+	}
+	if c.rpcClient != nil {
+		return c.rpcClient.GetMetaData(object_id, syncRemote)
 	}
 	return nil, nil
 }
