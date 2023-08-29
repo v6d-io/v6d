@@ -59,11 +59,6 @@ all: vineyardctl
 .PHONY: check
 check: lint e2e-test
 
-# install the cert-manager and wait for ready
-.PHONY: install-cert-manager
-install-cert-manager:
-	@go run cmd/main.go deploy cert-manager
-
 # Build vineyardctl binary
 .PHONY: vineyardctl
 vineyardctl: generate fmt

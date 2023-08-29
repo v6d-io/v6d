@@ -207,8 +207,9 @@ func TestGetVineyardDeploymentObjectsFromTemplate_third(t *testing.T) {
 										"--initial-cluster-state",
 										"new",
 									},
-									"image": "vineyardcloudnative/vineyardd:latest",
-									"name":  "etcd",
+									"image":           "vineyardcloudnative/vineyardd:latest",
+									"imagePullPolicy": "IfNotPresent",
+									"name":            "etcd",
 									"ports": []interface{}{
 										map[string]interface{}{
 											"containerPort": int64(2379),
