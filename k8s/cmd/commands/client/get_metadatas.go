@@ -16,8 +16,6 @@ limitations under the License.
 package client
 
 import (
-	"fmt"
-
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
@@ -25,14 +23,14 @@ import (
 )
 
 var (
-	getMetadatasLong = util.LongDesc(`List vineyard metadatas and support IPC socket,
+	getMetadatasLong = util.LongDesc(`Get vineyard metadatas and support IPC socket,
 	RPC socket and vineyard deployment. If you don't specify the ipc socket or rpc socket
 	every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or 
 	VINEYARD_RPC_SOCKET.`)
 
 	getMetadatasExample = util.Examples(`
 	# List no more than 10 vineyard metadatas
-	vineyardctl ls metadatas --limit 10 --ipc-socket /var/run/vineyard.sock
+	vineyardctl get metadatas --object_id xxxxxxxx --ipc-socket /var/run/vineyard.sock
 	`)
 )
 
@@ -54,10 +52,10 @@ var getMetadatas = &cobra.Command{
 
 		metas, err := client.GetMetaDatas(flags.Object_id, flags.SyncRemote)
 		if err != nil {
-			log.Fatal(err, "failed to list vineyard objects")
+			log.Fatal(err, "failed to get vineyard object's metadata")
 		}
 		meta := metas.MetaData()
-		fmt.Println(meta)
+		//fmt.Println(meta)
 		metadatas := make(map[string]map[string]interface{})
 		metadatas[flags.Object_id] = meta
 		output := util.NewOutput(&metadatas, nil, nil)

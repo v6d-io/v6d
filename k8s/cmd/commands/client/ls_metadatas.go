@@ -16,7 +16,6 @@ limitations under the License.
 package client
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -69,7 +68,6 @@ var lsMetadatas = &cobra.Command{
 		}
 
 		metas, err := client.ListMetadatas(flags.Pattern, flags.Regex, flags.Limit)
-		fmt.Println(metas)
 		if err != nil {
 			log.Fatal(err, "failed to list vineyard objects")
 		}

@@ -53,7 +53,7 @@ var lsCmd = &cobra.Command{
 	Example: lsExample,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// disable stdout
-		//os.Stdout, _ = os.Open(os.DevNull)
+		os.Stdout, _ = os.Open(os.DevNull)
 	},
 	PersistentPostRun: func(cmd *cobra.Command, args []string) {
 		// enable stdout
