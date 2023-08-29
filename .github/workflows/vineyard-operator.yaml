@@ -57,6 +57,7 @@ jobs:
       matrix:
         job:
           - release
+          - unit-tests
           - e2e-tests-airflow-integration
           - e2e-tests-assembly-local
           - e2e-tests-assembly-distributed
@@ -159,6 +160,11 @@ jobs:
         run: |
           make -C k8s/test/e2e build-base-images
 
+      - name: unit-tests
+        if: ${{ matrix.job == 'unit-tests' }}
+        run: |
+          make -C k8s/test/e2e unittest
+
       - name: Prepare directories for logs
         run: |
           # create log directories for all tasks to prevent the "Path to upload does not exist" warnings
@@ -177,7 +183,8 @@ jobs:
                      e2e-tests-workflow \
                      e2e-tests-mars-examples \
                      e2e-tests-vineyardctl \
-                     e2e-tests-deploy-raw-backup-and-recover; do
+                     e2e-tests-deploy-raw-backup-and-recover \
+                     unit-tests; do
             mkdir -p $job-logs
             chmod a+rwx $job-logs
           done

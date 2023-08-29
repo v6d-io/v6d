@@ -20,6 +20,8 @@ import (
 	"os"
 
 	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // ReadFromFile reads the file and returns the content as a string.
@@ -59,4 +61,26 @@ func ReadJsonFromStdin(args []string) (string, error) {
 		return "", errors.Wrap(err, "failed to convert to json")
 	}
 	return j, nil
+}
+
+func CaptureCmdOutput(cmd *cobra.Command) string {
+	// Create a buffer to capture the output
+	r, w, err := os.Pipe()
+	if err != nil {
+		log.Fatalf(err, "Failed to create pipe")
+	}
+	originalStdout := os.Stdout
+	os.Stdout = w
+
+	cmd.Run(cmd, []string{}) // this gets captured
+
+	w.Close()
+	defer r.Close()
+	out, err := io.ReadAll(r)
+	if err != nil {
+		log.Fatal(err, "Failed to read from buffer")
+	}
+	os.Stdout = originalStdout
+
+	return string(out)
 }
