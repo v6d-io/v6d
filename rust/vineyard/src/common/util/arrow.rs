@@ -15,6 +15,8 @@
 use std::ptr::NonNull;
 use std::sync::Arc;
 
+use arrow_buffer::{alloc, Buffer};
+
 /// An `arrow::alloc::Allocation` implementation to prevent the pointer
 /// been freed by `arrow::Buffer`.
 ///
@@ -25,27 +27,27 @@ use std::sync::Arc;
 ///
 /// Instead, we cast pointers (`*const u8` and `*mut u8`) to the expected type.
 pub struct MmapAllocation {}
-impl arrow::alloc::Allocation for MmapAllocation {}
+impl alloc::Allocation for MmapAllocation {}
 
 lazy_static! {
     static ref MMAP_ALLOCATION: Arc<MmapAllocation> = Arc::new(MmapAllocation {});
 }
 
-pub fn to_buffer(pointer: *const u8, len: usize) -> arrow::buffer::Buffer {
-    return to_buffer_mut(pointer as *mut u8, len);
+pub fn arrow_buffer(pointer: *const u8, len: usize) -> Buffer {
+    return arrow_buffer_mut(pointer as *mut u8, len);
 }
 
-pub fn to_buffer_offset(pointer: *const u8, offset: isize, len: usize) -> arrow::buffer::Buffer {
-    return to_buffer_offset_mut(pointer as *mut u8, offset, len);
+pub fn arrow_buffer_with_offset(pointer: *const u8, offset: isize, len: usize) -> Buffer {
+    return arrow_buffer_with_offset_mut(pointer as *mut u8, offset, len);
 }
 
-pub fn to_buffer_mut(pointer: *mut u8, len: usize) -> arrow::buffer::Buffer {
-    return to_buffer_offset_mut(pointer as *mut u8, 0, len);
+pub fn arrow_buffer_mut(pointer: *mut u8, len: usize) -> Buffer {
+    return arrow_buffer_with_offset_mut(pointer as *mut u8, 0, len);
 }
 
-pub fn to_buffer_offset_mut(pointer: *mut u8, offset: isize, len: usize) -> arrow::buffer::Buffer {
+pub fn arrow_buffer_with_offset_mut(pointer: *mut u8, offset: isize, len: usize) -> Buffer {
     return unsafe {
-        arrow::buffer::Buffer::from_custom_allocation(
+        Buffer::from_custom_allocation(
             NonNull::new_unchecked(pointer.offset(offset) as *mut u8),
             len,
             MMAP_ALLOCATION.clone(),
@@ -53,6 +55,6 @@ pub fn to_buffer_offset_mut(pointer: *mut u8, offset: isize, len: usize) -> arro
     };
 }
 
-pub fn to_buffer_null() -> arrow::buffer::Buffer {
-    return to_buffer_mut(std::ptr::null_mut(), 0);
+pub fn arrow_buffer_null() -> Buffer {
+    return arrow_buffer_mut(std::ptr::null_mut(), 0);
 }

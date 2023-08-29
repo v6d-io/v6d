@@ -14,7 +14,8 @@
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
+    use std::mem::ManuallyDrop;
+    use std::sync::atomic::{AtomicUsize, Ordering};
 
     use spectral::prelude::*;
 
@@ -22,46 +23,102 @@ mod tests {
     use super::super::*;
 
     #[test]
-    fn test_blob() {
+    fn test_manually_drop() {
+        static mut drop_a_called: AtomicUsize = AtomicUsize::new(0);
+        static mut drop_b_called: AtomicUsize = AtomicUsize::new(0);
+
+        struct A {}
+
+        impl Drop for A {
+            fn drop(&mut self) {
+                // record a's dtor
+                unsafe {
+                    drop_a_called.fetch_add(1, Ordering::SeqCst);
+                }
+            }
+        }
+
+        impl A {
+            pub fn tell(&self) {}
+        }
+
+        struct B {
+            a: ManuallyDrop<A>,
+        }
+
+        impl Drop for B {
+            fn drop(&mut self) {
+                // a should live
+                assert!(unsafe { drop_a_called.load(Ordering::SeqCst) } == 0);
+                // record b's dtor
+                unsafe {
+                    drop_b_called.fetch_add(1, Ordering::SeqCst);
+                }
+            }
+        }
+
+        impl B {
+            pub fn release(mut self) -> A {
+                return unsafe { ManuallyDrop::take(&mut self.a) };
+            }
+        }
+
+        let b = B {
+            a: ManuallyDrop::new(A {}),
+        };
+        assert!(unsafe { drop_a_called.load(Ordering::SeqCst) } == 0);
+        assert!(unsafe { drop_b_called.load(Ordering::SeqCst) } == 0);
+        let a = b.release();
+        assert!(unsafe { drop_a_called.load(Ordering::SeqCst) } == 0);
+        assert!(unsafe { drop_b_called.load(Ordering::SeqCst) } == 1);
+        a.tell();
+        drop(a);
+        assert!(unsafe { drop_a_called.load(Ordering::SeqCst) } == 1);
+        assert!(unsafe { drop_b_called.load(Ordering::SeqCst) } == 1);
+    }
+
+    #[test]
+    fn test_blob() -> Result<()> {
         const N: usize = 1024;
 
-        let mut conn = IPCClient::default().unwrap();
-        let client = Rc::get_mut(&mut conn).unwrap();
+        let mut client = IPCClient::default()?;
 
-        let blob_writer = client.create_blob(N).unwrap();
+        let mut blob_writer = client.create_blob(N)?;
         let blob_writer_id = blob_writer.id();
-        assert_that(&blob_writer_id).is_greater_than(0);
+        assert_that!(blob_writer_id).is_greater_than(0);
 
         let slice_mut = blob_writer.as_mut_slice();
-        for i in 0..N {
-            slice_mut[i] = i as u8;
+        for (idx, item) in slice_mut.iter_mut().enumerate() {
+            *item = idx as u8;
         }
 
         // test seal
         {
-            let object = blob_writer.seal(client).unwrap();
-            let blob = downcast_object::<Blob>(object).unwrap();
+            let object = blob_writer.seal(&mut client)?;
+            let blob = downcast_object::<Blob>(object)?;
             let blob_id = blob.id();
-            assert_that(&blob_id).is_greater_than(0);
-            assert_that(&blob_id).is_equal_to(blob_writer_id);
+            assert_that!(blob_id).is_greater_than(0);
+            assert_that!(blob_id).is_equal_to(blob_writer_id);
 
-            let slice = blob.as_slice().unwrap();
-            for i in 0..N {
-                assert_that(&slice[i]).is_equal_to(i as u8);
+            let slice = blob.as_slice()?;
+            for (idx, item) in slice.iter().enumerate() {
+                assert_that!(*item).is_equal_to(idx as u8);
             }
         }
 
         // test get blob
         {
-            let blob = client.get_blob(blob_writer_id).unwrap();
+            let blob = client.get_blob(blob_writer_id)?;
             let blob_id = blob.id();
-            assert_that(&blob_id).is_greater_than(0);
-            assert_that(&blob_id).is_equal_to(blob_writer_id);
+            assert_that!(blob_id).is_greater_than(0);
+            assert_that!(blob_id).is_equal_to(blob_writer_id);
 
-            let slice = blob.as_slice().unwrap();
-            for i in 0..N {
-                assert_that(&slice[i]).is_equal_to(i as u8);
+            let slice = blob.as_slice()?;
+            for (idx, item) in slice.iter().enumerate() {
+                assert_that!(*item).is_equal_to(idx as u8);
             }
         }
+
+        return Ok(());
     }
 }

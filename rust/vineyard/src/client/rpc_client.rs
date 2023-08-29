@@ -14,7 +14,8 @@
 
 use std::io;
 use std::net::{Shutdown, TcpStream};
-use std::rc::Rc;
+
+use parking_lot::{ReentrantMutex, ReentrantMutexGuard};
 
 use crate::common::util::protocol::*;
 use crate::common::util::status::*;
@@ -34,10 +35,17 @@ pub struct RPCClient {
     pub support_rpc_compression: bool,
 
     stream: TcpStream,
+    lock: ReentrantMutex<()>,
+}
+
+impl Drop for RPCClient {
+    fn drop(&mut self) {
+        self.disconnect();
+    }
 }
 
 impl Client for RPCClient {
-    fn disconnect(&mut self) -> () {
+    fn disconnect(&mut self) {
         if !self.connected() {
             return;
         }
@@ -59,7 +67,7 @@ impl Client for RPCClient {
 
     #[cfg(feature = "nightly")]
     fn connected(&mut self) -> bool {
-        if let Err(_) = self.stream.set_nonblocking(true) {
+        if self.stream.set_nonblocking(true).is_err() {
             return false;
         }
         match self.stream.peek(&mut [0]) {
@@ -78,6 +86,13 @@ impl Client for RPCClient {
         }
     }
 
+    fn ensure_connect(&mut self) -> Result<ReentrantMutexGuard<'_, ()>> {
+        if !self.connected() {
+            return Err(VineyardError::io_error("client not connected"));
+        }
+        return Ok(self.lock.lock());
+    }
+
     fn do_read(&mut self) -> Result<String> {
         return do_read(&mut self.stream);
     }
@@ -91,7 +106,6 @@ impl Client for RPCClient {
     }
 
     fn create_metadata(&mut self, metadata: &ObjectMeta) -> Result<ObjectMeta> {
-        self.ensure_connect()?;
         let mut meta = metadata.clone();
         meta.set_instance_id(self.instance_id());
         meta.set_transient(true);
@@ -113,15 +127,15 @@ impl Client for RPCClient {
 
     fn get_metadata(&mut self, id: ObjectID) -> Result<ObjectMeta> {
         let data = self.get_data(id, false, false)?;
-        let meta = ObjectMeta::from_metadata(data)?;
+        let meta = ObjectMeta::new_from_metadata(data)?;
         return Ok(meta);
     }
 
-    fn get_metadata_batch(&mut self, ids: &Vec<ObjectID>) -> Result<Vec<ObjectMeta>> {
+    fn get_metadata_batch(&mut self, ids: &[ObjectID]) -> Result<Vec<ObjectMeta>> {
         let data_vec = self.get_data_batch(ids)?;
         let mut metadatas = Vec::new();
         for data in data_vec {
-            let meta = ObjectMeta::from_metadata(data)?;
+            let meta = ObjectMeta::new_from_metadata(data)?;
             metadatas.push(meta);
         }
         return Ok(metadatas);
@@ -129,7 +143,8 @@ impl Client for RPCClient {
 }
 
 impl RPCClient {
-    pub fn default() -> Result<Rc<RPCClient>> {
+    #[allow(clippy::should_implement_trait)]
+    pub fn default() -> Result<RPCClient> {
         let rpc_endpoint = std::env::var(VINEYARD_RPC_ENDPOINT_KEY)?;
         let (host, port) = match rpc_endpoint.rfind(':') {
             Some(idx) => (
@@ -141,11 +156,11 @@ impl RPCClient {
         return RPCClient::connect(host, port);
     }
 
-    pub fn connect(host: &str, port: u16) -> Result<Rc<RPCClient>> {
+    pub fn connect(host: &str, port: u16) -> Result<RPCClient> {
         let mut stream = connect_rpc_endpoint_retry(host, port)?;
         let message_out = write_register_request(RegisterRequest {
-            version: VERSION.to_string(),
-            store_type: "Normal".to_string(),
+            version: VERSION.into(),
+            store_type: "Normal".into(),
             session_id: 0,
             username: String::new(),
             password: String::new(),
@@ -153,7 +168,7 @@ impl RPCClient {
         })?;
         do_write(&mut stream, &message_out)?;
         let reply = read_register_reply(&do_read(&mut stream)?)?;
-        return Ok(Rc::new(RPCClient {
+        return Ok(RPCClient {
             connected: true,
             ipc_socket: reply.ipc_socket,
             rpc_endpoint: reply.rpc_endpoint,
@@ -161,6 +176,7 @@ impl RPCClient {
             server_version: reply.version,
             support_rpc_compression: reply.support_rpc_compression,
             stream: stream,
-        }));
+            lock: ReentrantMutex::new(()),
+        });
     }
 }

@@ -13,11 +13,11 @@
 // limitations under the License.
 
 use std::collections::{HashMap, HashSet};
-
 use std::fmt::{Debug, Display, Formatter};
-use std::rc::Rc;
+use std::mem::ManuallyDrop;
+use std::ops::{Deref, DerefMut};
 
-use arrow::buffer as arrow;
+use arrow_buffer::Buffer;
 
 use crate::common::util::arrow::*;
 use crate::common::util::status::*;
@@ -36,7 +36,7 @@ use super::object_meta::ObjectMeta;
 pub struct Blob {
     meta: ObjectMeta,
     size: usize,
-    buffer: Option<Rc<arrow::Buffer>>,
+    buffer: Option<Buffer>,
 }
 
 impl_typename!(Blob, "vineyard::Blob");
@@ -46,17 +46,17 @@ impl Default for Blob {
         Blob {
             meta: ObjectMeta::default(),
             size: usize::MAX,
-            buffer: None as Option<Rc<arrow::Buffer>>,
+            buffer: None as Option<Buffer>,
         }
     }
 }
 
 impl Object for Blob {
     fn construct(&mut self, meta: ObjectMeta) -> Result<()> {
-        vineyard_assert_typename(meta.get_typename()?, &typename::<Blob>())?;
+        vineyard_assert_typename(typename::<Self>(), meta.get_typename()?)?;
         self.meta = meta;
 
-        if let Some(_) = self.buffer {
+        if self.buffer.is_some() {
             return Ok(());
         }
         if self.meta.get_id() == empty_blob_id() {
@@ -87,7 +87,7 @@ impl Display for Blob {
 }
 
 impl Blob {
-    pub fn new(meta: ObjectMeta, size: usize, buffer: Option<Rc<arrow::Buffer>>) -> Self {
+    pub fn new(meta: ObjectMeta, size: usize, buffer: Option<Buffer>) -> Self {
         Blob {
             meta: meta,
             size: size,
@@ -99,19 +99,24 @@ impl Blob {
         self.size
     }
 
-    pub fn empty(client: *mut IPCClient) -> Box<Blob> {
-        let mut blob = Blob::default();
-        blob.size = 0;
+    pub fn empty(client: *mut IPCClient) -> Result<Box<Blob>> {
+        let mut blob = Blob {
+            size: 0,
+            ..Blob::default()
+        };
         blob.meta.set_id(empty_blob_id());
         blob.meta.set_signature(empty_blob_id() as Signature);
-        blob.meta.set_typename(&typename::<Blob>());
+        blob.meta.set_typename(typename::<Blob>());
         blob.meta.add_int("length", 0);
         blob.meta.set_nbytes(0);
         blob.meta
             .add_uint("instance_id", unsafe { &*client }.instance_id());
         blob.meta.add_bool("transient", true);
         blob.meta.set_client(client);
-        return Box::new(blob);
+        blob.buffer = Some(arrow_buffer_null());
+        blob.meta
+            .set_or_add_buffer(empty_blob_id(), Some(arrow_buffer_null()))?;
+        return Ok(Box::new(blob));
     }
 
     pub fn as_ptr(&self) -> Result<*const u8> {
@@ -119,8 +124,17 @@ impl Blob {
         return Ok(buffer.as_ptr());
     }
 
+    pub fn as_typed_ptr<T>(&self) -> Result<*const T> {
+        let ptr = self.as_ptr()?;
+        return Ok(ptr as *const T);
+    }
+
     pub fn as_ptr_unchecked(&self) -> *const u8 {
         return self.buffer_unchecked().as_ptr();
+    }
+
+    pub fn as_typed_ptr_unchecked<T>(&self) -> *const T {
+        return self.as_ptr_unchecked() as *const T;
     }
 
     pub fn as_slice(&self) -> Result<&[u8]> {
@@ -131,7 +145,7 @@ impl Blob {
         return unsafe { std::slice::from_raw_parts(self.as_ptr_unchecked(), self.size) };
     }
 
-    pub fn buffer(&self) -> Result<Rc<arrow::Buffer>> {
+    pub fn buffer(&self) -> Result<Buffer> {
         match &self.buffer {
             None => {
                 if self.size > 0 {
@@ -141,11 +155,11 @@ impl Blob {
                         object_id_to_string(self.meta().get_id())
                     )));
                 }
-                let buffer = to_buffer_null();
-                return Ok(Rc::new(buffer));
+                let buffer = arrow_buffer_null();
+                return Ok(buffer);
             }
             Some(buffer) => {
-                if self.size > 0 && buffer.len() == 0 {
+                if self.size > 0 && buffer.is_empty() {
                     return Err(VineyardError::invalid(format!(
                         "The object might be a (partially) remote object and the payload data
                     is not locally available: {}",
@@ -157,11 +171,11 @@ impl Blob {
         }
     }
 
-    pub fn buffer_unchecked(&self) -> Rc<arrow::Buffer> {
+    pub fn buffer_unchecked(&self) -> Buffer {
         match &self.buffer {
             None => {
-                let buffer = to_buffer_null();
-                return Rc::new(buffer);
+                let buffer = arrow_buffer_null();
+                return buffer;
             }
             Some(buffer) => {
                 return buffer.clone();
@@ -170,11 +184,26 @@ impl Blob {
     }
 }
 
+impl Deref for Blob {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        return self.as_slice_unchecked();
+    }
+}
+
+impl AsRef<[u8]> for Blob {
+    fn as_ref(&self) -> &[u8] {
+        return self.as_slice_unchecked();
+    }
+}
+
 #[derive(Debug)]
 pub struct BlobWriter {
     sealed: bool,
+    client: *mut IPCClient,
     object_id: ObjectID,
-    buffer: Option<Rc<arrow::Buffer>>,
+    buffer: ManuallyDrop<Option<Buffer>>,
     metadata: HashMap<String, String>,
 }
 
@@ -190,25 +219,28 @@ impl ObjectBuilder for BlobWriter {
 
 impl ObjectBase for BlobWriter {
     fn build(&mut self, _client: &mut IPCClient) -> Result<()> {
-        if !self.sealed {
-            self.set_sealed(true);
+        if self.sealed {
+            return Ok(());
         }
+        self.set_sealed(true);
         return Ok(());
     }
 
-    fn seal(self: Self, client: &mut IPCClient) -> Result<Box<dyn Object>> {
+    fn seal(self, client: &mut IPCClient) -> Result<Box<dyn Object>> {
         client.seal_buffer(self.object_id)?;
-        let mut blob = Blob::default();
-        blob.size = self.size();
+        let mut blob = Blob {
+            size: self.size(),
+            ..Blob::default()
+        };
         blob.meta.set_id(self.object_id);
-        blob.meta.set_typename(&typename::<Blob>());
+        blob.meta.set_typename(typename::<Blob>());
         blob.meta.set_nbytes(self.size());
         blob.meta
             .add_uint("length", TryInto::<u64>::try_into(self.size())?);
         blob.meta.add_uint("instance_id", client.instance_id());
         blob.meta.add_bool("transient", true);
 
-        blob.buffer = Some(Rc::new(to_buffer(self.as_ptr(), self.size())));
+        blob.buffer = Some(arrow_buffer(self.as_ptr(), self.size()));
         blob.meta
             .set_or_add_buffer(self.object_id, blob.buffer.clone())?;
         return Ok(Box::new(blob));
@@ -216,11 +248,22 @@ impl ObjectBase for BlobWriter {
 }
 
 impl BlobWriter {
-    pub fn new(id: ObjectID, buffer: Option<Rc<arrow::Buffer>>) -> Self {
+    pub fn new(id: ObjectID, buffer: Option<Buffer>) -> Self {
         BlobWriter {
             sealed: false,
+            client: std::ptr::null_mut(),
             object_id: id,
-            buffer: buffer,
+            buffer: ManuallyDrop::new(buffer),
+            metadata: HashMap::new(),
+        }
+    }
+
+    pub fn new_with_client(client: *mut IPCClient, id: ObjectID, buffer: Option<Buffer>) -> Self {
+        BlobWriter {
+            sealed: false,
+            client: client,
+            object_id: id,
+            buffer: ManuallyDrop::new(buffer),
             metadata: HashMap::new(),
         }
     }
@@ -230,59 +273,102 @@ impl BlobWriter {
     }
 
     pub fn size(&self) -> usize {
-        match &self.buffer {
+        match &self.buffer.deref() {
             None => 0,
             Some(buf) => buf.len(),
         }
     }
 
     pub fn as_ptr(&self) -> *const u8 {
-        return match &self.buffer {
+        return match &self.buffer.deref() {
             None => std::ptr::null(),
             Some(buf) => buf.as_ptr(),
         };
     }
 
-    pub fn as_mut_ptr(&self) -> *mut u8 {
+    pub fn as_typed_ptr<T>(&self) -> *const T {
+        return self.as_ptr() as *const T;
+    }
+
+    pub fn as_mut_ptr(&mut self) -> *mut u8 {
         return self.as_ptr() as *mut u8;
+    }
+
+    pub fn as_typed_mut_ptr<T>(&mut self) -> *mut T {
+        return self.as_mut_ptr() as *mut T;
     }
 
     pub fn as_slice(&self) -> &[u8] {
         return unsafe { std::slice::from_raw_parts(self.as_ptr(), self.size()) };
     }
 
-    pub fn as_mut_slice(&self) -> &mut [u8] {
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
         return unsafe { std::slice::from_raw_parts_mut(self.as_mut_ptr(), self.size()) };
     }
 
-    pub fn buffer(&self) -> Option<Rc<arrow::Buffer>> {
-        return self.buffer.clone();
+    pub fn buffer(&self) -> Option<&Buffer> {
+        return self.buffer.as_ref();
     }
 
-    pub fn abort(&self, mut client: IPCClient) -> Result<()> {
+    pub fn release(mut self) -> Option<Buffer> {
+        return unsafe { ManuallyDrop::take(&mut self.buffer) };
+    }
+
+    pub fn abort(&self) -> Result<()> {
         if self.sealed {
             return Err(VineyardError::object_sealed(
-                "The blob write has already been sealed and cannot be aborted".into(),
+                "The blob write has already been sealed and cannot be aborted",
             ));
         }
-        return client.drop_buffer(self.object_id);
+        if let Some(client) = unsafe { self.client.as_mut() } {
+            return client.drop_buffer(self.object_id);
+        }
+        return Ok(());
     }
 
-    pub fn add_key_value(&mut self, key: &String, value: &String) {
-        self.metadata.insert(key.to_string(), value.to_string());
+    pub fn add_key_value(&mut self, key: &str, value: &str) {
+        self.metadata.insert(key.into(), value.into());
+    }
+}
+
+impl Drop for BlobWriter {
+    fn drop(&mut self) {
+        if let Err(err) = self.abort() {
+            error!("Failed to abort blob writer: {}, {}", self.object_id, err);
+        }
+    }
+}
+
+impl Deref for BlobWriter {
+    type Target = [u8];
+
+    fn deref(&self) -> &Self::Target {
+        return self.as_slice();
+    }
+}
+
+impl DerefMut for BlobWriter {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        return self.as_mut_slice();
+    }
+}
+
+impl AsRef<[u8]> for BlobWriter {
+    fn as_ref(&self) -> &[u8] {
+        return self.as_slice();
     }
 }
 
 pub struct BufferSet {
     buffer_ids: HashSet<ObjectID>,
-    buffers: HashMap<ObjectID, Option<Rc<arrow::Buffer>>>,
+    buffers: HashMap<ObjectID, Option<Buffer>>,
 }
 
 impl Default for BufferSet {
     fn default() -> BufferSet {
         BufferSet {
             buffer_ids: HashSet::new() as HashSet<ObjectID>,
-            buffers: HashMap::new() as HashMap<ObjectID, Option<Rc<arrow::Buffer>>>,
+            buffers: HashMap::new() as HashMap<ObjectID, Option<Buffer>>,
         }
     }
 }
@@ -313,11 +399,11 @@ impl BufferSet {
         return &self.buffer_ids;
     }
 
-    pub fn buffers(&self) -> &HashMap<ObjectID, Option<Rc<arrow::Buffer>>> {
+    pub fn buffers(&self) -> &HashMap<ObjectID, Option<Buffer>> {
         return &self.buffers;
     }
 
-    pub fn buffers_mut(&mut self) -> &mut HashMap<ObjectID, Option<Rc<arrow::Buffer>>> {
+    pub fn buffers_mut(&mut self) -> &mut HashMap<ObjectID, Option<Buffer>> {
         return &mut self.buffers;
     }
 
@@ -337,11 +423,7 @@ impl BufferSet {
         }
     }
 
-    pub fn emplace_buffer(
-        &mut self,
-        id: ObjectID,
-        buffer: Option<Rc<arrow::Buffer>>,
-    ) -> Result<()> {
+    pub fn emplace_buffer(&mut self, id: ObjectID, buffer: Option<Buffer>) -> Result<()> {
         match self.buffers.get(&id) {
             Some(Some(_)) => {
                 return Err(VineyardError::invalid(format!(
@@ -366,12 +448,12 @@ impl BufferSet {
         for (key, value) in others.buffers.iter() {
             match value {
                 None => {
-                    self.buffer_ids.insert(key.clone());
-                    self.buffers.insert(key.clone(), None);
+                    self.buffer_ids.insert(*key);
+                    self.buffers.insert(*key, None);
                 }
                 Some(buffer) => {
-                    self.buffer_ids.insert(key.clone());
-                    self.buffers.insert(key.clone(), Some(Rc::clone(buffer)));
+                    self.buffer_ids.insert(*key);
+                    self.buffers.insert(*key, Some(buffer.clone()));
                 }
             }
         }
@@ -381,7 +463,7 @@ impl BufferSet {
         return self.buffers.get(&id).is_some();
     }
 
-    pub fn get(&self, id: ObjectID) -> Result<Option<Rc<arrow::Buffer>>> {
+    pub fn get(&self, id: ObjectID) -> Result<Option<Buffer>> {
         return self
             .buffers
             .get(&id)

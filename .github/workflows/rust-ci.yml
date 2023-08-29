@@ -45,10 +45,15 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Test
+      - name: Check
         run: |
           cd rust
           cargo fmt --all -- --check
-          # cargo clippy -- -D warnings
+          cargo clippy -- -D warnings
           cargo check
-          # cargo test --lib
+
+      - name: Unittest
+        if: false
+        run: |
+          cd rust
+          cargo test --lib

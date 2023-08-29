@@ -1,0 +1,29 @@
+[package]
+name = "vineyard-integration-testing"
+version = { workspace = true }
+description = "Vineyard Rust SDK: integration testing"
+homepage = { workspace = true }
+repository = { workspace = true }
+license = { workspace = true }
+keywords = { workspace = true }
+include = { workspace = true }
+edition = { workspace = true }
+readme = { workspace = true }
+
+[features]
+default = ["nightly"]
+nightly = []
+
+[lib]
+name = "vineyard_integration_testing"
+path = "src/lib.rs"
+
+[dependencies]
+
+[dev-dependencies]
+arrow-array = { workspace = true }
+inline-python = { workspace = true }
+polars-core = { workspace = true }
+spectral = { workspace = true }
+vineyard = { workspace = true }
+vineyard-polars = { workspace = true }

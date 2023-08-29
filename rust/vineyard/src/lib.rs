@@ -12,10 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![allow(clippy::box_default)]
+#![allow(clippy::needless_borrow)]
+#![allow(clippy::needless_lifetimes)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::nonminimal_bool)]
+#![allow(clippy::not_unsafe_ptr_arg_deref)]
+#![allow(clippy::redundant_field_names)]
+#![allow(clippy::unnecessary_cast)]
+#![allow(clippy::vec_box)]
 #![allow(incomplete_features)]
+#![allow(non_upper_case_globals)]
 #![cfg_attr(feature = "nightly", feature(associated_type_defaults))]
 #![cfg_attr(feature = "nightly", feature(box_into_inner))]
 #![cfg_attr(feature = "nightly", feature(specialization))]
+#![cfg_attr(feature = "nightly", feature(trait_alias))]
 #![cfg_attr(feature = "nightly", feature(unix_socket_peek))]
 
 #[macro_use]

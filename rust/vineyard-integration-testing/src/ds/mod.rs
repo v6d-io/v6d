@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(test)]
-mod tests {
-    use super::super::*;
-
-    #[test]
-    fn test_ipc_connect() -> Result<()> {
-        let mut client = IPCClient::default()?;
-        assert!(client.connected());
-
-        return Ok(());
-    }
-}
+pub mod arrow_test;
+pub mod numpy_test;
+pub mod pandas_test;
+pub mod polars_test;

@@ -12,15 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[cfg(test)]
-mod tests {
-    use super::super::*;
+#![allow(clippy::needless_return)]
 
-    #[test]
-    fn test_ipc_connect() -> Result<()> {
-        let mut client = IPCClient::default()?;
-        assert!(client.connected());
-
-        return Ok(());
-    }
-}
+pub mod ds;

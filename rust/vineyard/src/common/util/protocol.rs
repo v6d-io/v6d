@@ -182,7 +182,7 @@ fn check_ipc_error<'a>(root: &'a JSON, reply_type: &str) -> Result<()> {
             format!("unexpected reply type: '{}'", message_type),
         );
     } else {
-        return vineyard_assert(false, "no 'type' field in the response".into());
+        return vineyard_assert(false, "no 'type' field in the response");
     }
 }
 
@@ -288,7 +288,7 @@ pub fn read_create_disk_buffer_reply(message: &str) -> Result<CreateBufferReply>
         fd: get_int::<i64>(root, "fd")?
             .to_i32()
             .ok_or(VineyardError::io_error(
-                "fd received from server must be a 32-bit integter".into(),
+                "fd received from server must be a 32-bit integer",
             ))?,
     });
 }
@@ -317,11 +317,11 @@ pub fn read_create_gpu_buffer_reply(message: &str) -> Result<CreateGPUBufferRepl
 
     let handle = root["handle"]
         .as_array()
-        .ok_or(VineyardError::io_error("handle is not an array".into()))?
+        .ok_or(VineyardError::io_error("handle is not an array"))?
         .iter()
         .map(|v| {
             v.as_i64()
-                .ok_or(VineyardError::io_error("handle is not an integer".into()))
+                .ok_or(VineyardError::io_error("handle is not an integer"))
         })
         .collect::<Result<Vec<i64>>>()?;
 
@@ -354,7 +354,7 @@ pub struct GetBuffersReply {
     pub compress: bool,
 }
 
-pub fn write_get_buffers_request(ids: &Vec<ObjectID>, unsafe_: bool) -> JSONResult<String> {
+pub fn write_get_buffers_request(ids: &[ObjectID], unsafe_: bool) -> JSONResult<String> {
     return serde_json::to_string(&json!({
         "type": Command::GET_BUFFERS_REQUEST,
         "ids": ids,
@@ -368,26 +368,18 @@ pub fn read_get_buffers_reply(message: &str) -> Result<GetBuffersReply> {
     check_ipc_error(&root, Command::GET_BUFFERS_REPLY)?;
 
     let mut reply = GetBuffersReply::default();
-    let mut parsed = false;
 
-    match root["payloads"] {
-        Value::Array(ref payloads) => {
-            parsed = true;
-            for payload in payloads {
-                reply
-                    .payloads
-                    .push(Payload::from_json(
-                        payload.as_object().ok_or(VineyardError::io_error(
-                            "invalid get_buffers reply: payload in message is not a JSON object"
-                                .into(),
-                        ))?,
-                    )?);
-            }
+    if let Some(Value::Array(ref payloads)) = root.get("payloads") {
+        for payload in payloads {
+            reply
+                .payloads
+                .push(Payload::from_json(payload.as_object().ok_or(
+                    VineyardError::io_error(
+                        "invalid get_buffers reply: payload in message is not a JSON object",
+                    ),
+                )?)?);
         }
-        _ => {}
-    }
-
-    if !parsed {
+    } else {
         let num: i64 = get_int(root, "num")?;
         for i in 0..num {
             match root[&i.to_string()] {
@@ -396,27 +388,25 @@ pub fn read_get_buffers_reply(message: &str) -> Result<GetBuffersReply> {
                 }
                 _ => {
                     return Err(VineyardError::io_error(
-                        "invalid get_buffers reply: payload in message is not a JSON object"
-                            .to_string(),
+                        "invalid get_buffers reply: payload in message is not a JSON object",
                     ));
                 }
             }
         }
     }
 
-    if root.contains_key("fds") && root["fds"].is_array() {
-        for fd in root["fds"].as_array().unwrap() {
+    if let Some(Value::Array(ref fds)) = root.get("fds") {
+        for fd in fds {
             reply.fds.push(
                 fd.as_i64()
-                    .ok_or(VineyardError::io_error("fd is not an integer".into()))?
+                    .ok_or(VineyardError::io_error("fd is not an integer"))?
                     .to_i32()
                     .ok_or(VineyardError::io_error(
-                        "fd received from server must be a 32-bit integter".into(),
+                        "fd received from server must be a 32-bit integer",
                     ))?,
             );
         }
     }
-
     return Ok(reply);
 }
 
@@ -447,7 +437,7 @@ pub fn read_create_remote_buffer_reply(message: &str) -> Result<CreateBufferRepl
     return read_create_buffer_reply(message);
 }
 
-pub fn write_get_remote_buffers_request(ids: &Vec<ObjectID>) -> JSONResult<String> {
+pub fn write_get_remote_buffers_request(ids: &[ObjectID]) -> JSONResult<String> {
     return serde_json::to_string(&json!({
         "type": Command::GET_REMOTE_BUFFERS_REQUEST,
         "ids": ids,
@@ -458,7 +448,7 @@ pub fn read_get_remote_buffers_reply(message: &str) -> Result<GetBuffersReply> {
     return read_get_buffers_reply(message);
 }
 
-pub fn write_increase_reference_count_request(id: &Vec<ObjectID>) -> JSONResult<String> {
+pub fn write_increase_reference_count_request(id: &[ObjectID]) -> JSONResult<String> {
     return serde_json::to_string(&json!({
         "type": Command::INCREASE_REFERENCE_COUNT_REQUEST,
         "ids": id,
@@ -532,7 +522,7 @@ pub fn read_get_data_reply(message: &str) -> Result<JSON> {
         Value::Array(ref content) => {
             if content.len() != 1 {
                 return Err(VineyardError::io_error(
-                    "failed to read get_data reply: content array's length is not 1".into(),
+                    "failed to read get_data reply: content array's length is not 1",
                 ));
             }
             return Ok(parse_json_object(&content[0])?.clone());
@@ -540,7 +530,7 @@ pub fn read_get_data_reply(message: &str) -> Result<JSON> {
         Value::Object(ref content) => match content.iter().next() {
             None => {
                 return Err(VineyardError::io_error(
-                    "failed to read get_data reply: content dict's length is not 1".into(),
+                    "failed to read get_data reply: content dict's length is not 1",
                 ));
             }
             Some((_, meta)) => {
@@ -549,14 +539,14 @@ pub fn read_get_data_reply(message: &str) -> Result<JSON> {
         },
         _ => {
             return Err(VineyardError::io_error(
-                "failed to read get_data reply: content is not an array or a dict".into(),
+                "failed to read get_data reply: content is not an array or a dict",
             ));
         }
     }
 }
 
 pub fn write_get_data_batch_request(
-    ids: &Vec<ObjectID>,
+    ids: &[ObjectID],
     sync_remote: bool,
     wait: bool,
 ) -> JSONResult<String> {
@@ -597,7 +587,7 @@ pub fn read_get_data_batch_reply(message: &str) -> Result<HashMap<ObjectID, JSON
         }
         _ => {
             return Err(VineyardError::io_error(
-                "failed to read get_data reply: content is not an array or a dict".into(),
+                "failed to read get_data reply: content is not an array or a dict",
             ));
         }
     }
@@ -627,7 +617,7 @@ pub fn read_list_data_reply(message: &str) -> Result<Vec<JSON>> {
         }
         _ => {
             return Err(VineyardError::io_error(
-                "failed to read list_data reply: data is not an array".into(),
+                "failed to read list_data reply: data is not an array",
             ));
         }
     }
@@ -649,7 +639,7 @@ pub fn write_delete_data_request(
 }
 
 pub fn write_delete_data_batch_request(
-    ids: &Vec<ObjectID>,
+    ids: &[ObjectID],
     force: bool,
     deep: bool,
     fastpath: bool,
@@ -716,11 +706,7 @@ pub fn read_if_persist_reply(message: &str) -> Result<bool> {
     return Ok(get_bool_or(root, "persist", false));
 }
 
-pub fn write_label_request(
-    id: ObjectID,
-    keys: &Vec<String>,
-    values: &Vec<String>,
-) -> JSONResult<String> {
+pub fn write_label_request(id: ObjectID, keys: &[String], values: &[String]) -> JSONResult<String> {
     return serde_json::to_string(&json!({
         "type": Command::LABEL_REQUEST,
         "id": id,
@@ -797,9 +783,10 @@ pub fn read_list_name_reply(message: &str) -> Result<HashMap<String, ObjectID>> 
     let root = parse_json_object(&root)?;
     check_ipc_error(&root, Command::LIST_NAME_REPLY)?;
 
-    let names = parse_json_object(root.get("names").ok_or(VineyardError::io_error(
-        "message does not contain names".into(),
-    ))?)?;
+    let names = parse_json_object(
+        root.get("names")
+            .ok_or(VineyardError::io_error("message does not contain names"))?,
+    )?;
     let mut result = HashMap::new();
     for (name, value) in names {
         match value.as_u64() {
@@ -827,7 +814,7 @@ pub fn read_drop_name_reply(message: &str) -> Result<()> {
     return Ok(());
 }
 
-pub fn write_evict_request(ids: &Vec<ObjectID>) -> JSONResult<String> {
+pub fn write_evict_request(ids: &[ObjectID]) -> JSONResult<String> {
     return serde_json::to_string(&json!({
         "type": Command::EVICT_REQUEST,
         "ids": ids,
@@ -842,7 +829,7 @@ pub fn read_evict_reply(message: &str) -> Result<()> {
     return Ok(());
 }
 
-pub fn write_load_request(ids: &Vec<ObjectID>, pin: bool) -> JSONResult<String> {
+pub fn write_load_request(ids: &[ObjectID], pin: bool) -> JSONResult<String> {
     return serde_json::to_string(&json!({
         "type": Command::LOAD_REQUEST,
         "ids": ids,
@@ -858,7 +845,7 @@ pub fn read_load_reply(message: &str) -> Result<()> {
     return Ok(());
 }
 
-pub fn write_unpin_request(ids: &Vec<ObjectID>) -> JSONResult<String> {
+pub fn write_unpin_request(ids: &[ObjectID]) -> JSONResult<String> {
     return serde_json::to_string(&json!({
         "type": Command::UNPIN_REQUEST,
         "ids": ids,

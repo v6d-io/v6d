@@ -15,38 +15,39 @@
 #[cfg(test)]
 mod tests {
     use std::fmt::Debug;
-    use std::rc::Rc;
 
     use num_traits::FromPrimitive;
     use spectral::prelude::*;
 
-    use super::super::super::client::*;
     use super::super::array::*;
+    use crate::client::*;
 
-    fn test_array_generic<T: TypeName + FromPrimitive + PartialEq + Debug + 'static>() {
+    fn test_array_generic<T: TypeName + FromPrimitive + PartialEq + Debug + 'static>() -> Result<()>
+    {
         const N: usize = 1024;
 
-        let mut conn = IPCClient::default().unwrap();
-        let client = Rc::get_mut(&mut conn).unwrap();
+        let mut client = IPCClient::default()?;
 
-        let mut builder = ArrayBuilder::<T>::new(client, N).unwrap();
+        let mut builder = ArrayBuilder::<T>::new(&mut client, N)?;
 
         let slice_mut = builder.as_mut_slice();
-        for i in 0..N {
-            slice_mut[i] = T::from_usize(i).unwrap();
+        for (idx, item) in slice_mut.iter_mut().enumerate() {
+            *item = T::from_usize(idx).ok_or(VineyardError::invalid("cannot convert to T"))?;
         }
 
         let array_object_id: ObjectID;
         // test seal
         {
-            let object = builder.seal(client).unwrap();
-            let array = downcast_object::<Array<T>>(object).unwrap();
+            let object = builder.seal(&mut client)?;
+            let array = downcast_object::<Array<T>>(object)?;
             let blob_id = array.id();
-            assert_that(&blob_id).is_greater_than(0);
+            assert_that!(blob_id).is_greater_than(0);
 
             let slice = array.as_slice();
-            for i in 0..N {
-                assert_that(&slice[i]).is_equal_to(T::from_usize(i).unwrap());
+            for (idx, item) in slice.iter().enumerate() {
+                assert_that!(*item).is_equal_to(
+                    T::from_usize(idx).ok_or(VineyardError::invalid("cannot convert to T"))?,
+                );
             }
             array_object_id = array.id();
         }
@@ -55,33 +56,37 @@ mod tests {
         {
             let array = client.get::<Array<T>>(array_object_id).unwrap();
             let array_id = array.id();
-            assert_that(&array_id).is_greater_than(0);
-            assert_that(&array_id).is_equal_to(array_object_id);
+            assert_that!(array_id).is_greater_than(0);
+            assert_that!(array_id).is_equal_to(array_object_id);
 
             let slice = array.as_slice();
-            for i in 0..N {
-                assert_that(&slice[i]).is_equal_to(T::from_usize(i).unwrap());
+            for (idx, item) in slice.iter().enumerate() {
+                assert_that!(*item).is_equal_to(
+                    T::from_usize(idx).ok_or(VineyardError::invalid("cannot convert to T"))?,
+                );
             }
         }
+
+        return Ok(());
     }
 
     #[test]
-    fn test_array_int32() {
-        test_array_generic::<i32>();
+    fn test_array_int32() -> Result<()> {
+        return test_array_generic::<i32>();
     }
 
     #[test]
-    fn test_array_int64() {
-        test_array_generic::<i64>();
+    fn test_array_int64() -> Result<()> {
+        return test_array_generic::<i64>();
     }
 
     #[test]
-    fn test_array_float() {
-        test_array_generic::<f32>();
+    fn test_array_float() -> Result<()> {
+        return test_array_generic::<f32>();
     }
 
     #[test]
-    fn test_array_double() {
-        test_array_generic::<f64>();
+    fn test_array_double() -> Result<()> {
+        return test_array_generic::<f64>();
     }
 }
