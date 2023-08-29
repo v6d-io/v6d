@@ -17,13 +17,9 @@ limitations under the License.
 #define SRC_CLIENT_DS_REMOTE_BLOB_H_
 
 #include <cstdint>
-#include <limits>
 #include <memory>
-#include <string>
-#include <utility>
 
 #include "client/ds/i_object.h"
-#include "common/memory/payload.h"
 #include "common/util/uuid.h"
 
 namespace arrow {

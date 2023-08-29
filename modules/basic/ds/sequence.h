@@ -17,16 +17,13 @@ limitations under the License.
 #define MODULES_BASIC_DS_SEQUENCE_H_
 
 #include <memory>
-#include <string>
-#include <utility>
 #include <vector>
 
 #include "basic/ds/sequence.vineyard.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
-#include "common/util/logging.h"
-#include "common/util/uuid.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 
 namespace vineyard {
 

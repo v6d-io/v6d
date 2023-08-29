@@ -16,9 +16,6 @@ limitations under the License.
 #ifndef SRC_COMMON_COMPRESSION_COMPRESSOR_H_
 #define SRC_COMMON_COMPRESSION_COMPRESSOR_H_
 
-#include <memory>
-#include <string>
-
 #include "common/util/status.h"
 
 // forward declaration to avoid including zstd.h

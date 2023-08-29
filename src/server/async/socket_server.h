@@ -21,23 +21,17 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <mutex>
-#include <set>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
-#include <vector>
 
-#include "common/memory/gpu/unified_memory.h"
 #include "common/memory/payload.h"
-#include "common/util/asio.h"
+#include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/callback.h"
-#include "common/util/logging.h"
-#include "common/util/protocols.h"
 #include "common/util/uuid.h"
 
 namespace vineyard {
 
-namespace asio = boost::asio;
 using boost::asio::generic::stream_protocol;
 
 class SocketServer;

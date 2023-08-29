@@ -36,8 +36,7 @@
 #include <string>
 #include <vector>
 
-#include "common/util/flags.h"
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 
 namespace vineyard {
 

@@ -19,9 +19,7 @@ limitations under the License.
 
 #include <vector>
 
-#include "arrow/api.h"
 #include "arrow/filesystem/filesystem.h"
-#include "arrow/io/api.h"
 
 #include "common/util/arrow.h"
 

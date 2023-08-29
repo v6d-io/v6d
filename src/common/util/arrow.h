@@ -17,14 +17,11 @@ limitations under the License.
 #define SRC_COMMON_UTIL_ARROW_H_
 
 #include <memory>
-#include <utility>
+#include <utility>  // IWYU pragma: keep
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-
-#include "cityhash/cityhash.hpp"
-#include "wyhash/wyhash.hpp"
+#include "arrow/api.h"     // IWYU pragma: keep
+#include "arrow/io/api.h"  // IWYU pragma: keep
 
 #include "common/util/status.h"
 
@@ -41,20 +38,22 @@ using array_vec_t = std::vector<std::shared_ptr<arrow::Array>>;
 
 }  // namespace vineyard
 
-namespace wy {
 #if !nssv_USES_STD_STRING_VIEW && \
     ((!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10)
+#include "wyhash/wyhash.hpp"  // IWYU pragma: keep
+namespace wy {
 template <>
 struct hash<vineyard::arrow_string_view>
     : public internal::hash_string_base<vineyard::arrow_string_view> {
   using hash_string_base::hash_string_base;  // Inherit constructors
 };
-#endif
 }  // namespace wy
+#endif
 
-namespace city {
 #if !nssv_USES_STD_STRING_VIEW && \
     ((!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10)
+#include "cityhash/cityhash.hpp"  // IWYU pragma: keep
+namespace city {
 template <>
 class hash<vineyard::arrow_string_view> {
   inline uint64_t operator()(
@@ -63,8 +62,8 @@ class hash<vineyard::arrow_string_view> {
                               data.size());
   }
 };
-#endif
 }  // namespace city
+#endif
 
 namespace vineyard {
 

@@ -20,6 +20,7 @@ limitations under the License.
 #include "arrow/api.h"
 #include "arrow/io/api.h"
 
+#include "basic/ds/array.h"
 #include "basic/ds/tensor.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"

@@ -22,10 +22,9 @@ limitations under the License.
 #include <set>
 #include <string>
 
-#include "boost/process.hpp"
+#include "boost/process/child.hpp"  // IWYU pragma: keep
 #include "etcd/Client.hpp"
 
-#include "common/util/logging.h"
 #include "common/util/status.h"
 
 namespace vineyard {

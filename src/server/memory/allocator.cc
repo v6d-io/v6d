@@ -35,11 +35,9 @@ https://github.com/apache/arrow/blob/master/cpp/src/plasma/plasma_allocator.cc
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <thread>
 
-#include "common/util/env.h"
-#include "common/util/logging.h"
 #include "server/memory/allocator.h"
-#include "server/memory/malloc.h"
 
 #include "server/memory/dlmalloc.h"
 #include "server/memory/mimalloc.h"

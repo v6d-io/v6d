@@ -12,7 +12,6 @@ target_link_libraries(vineyard_fuse PUBLIC vineyard_client
                                            vineyard_basic
                                            ${ARROW_SHARED_LIB}
 )
-set_target_properties(vineyard_fuse PROPERTIES    CXX_STANDARD 14)
 target_link_libraries(vineyard_fuse PUBLIC FUSE3::FUSE3)
 target_compile_options(vineyard_fuse PUBLIC -DWITH_ARROW_IPC)
 if(BUILD_VINEYARD_FUSE_PARQUET)

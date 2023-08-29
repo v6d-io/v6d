@@ -18,7 +18,7 @@ limitations under the License.
 
 #include <string>
 
-#include "common/util/flags.h"
+#include "common/util/flags.h"  // IWYU pragma: keep
 #include "common/util/json.h"
 
 namespace vineyard {

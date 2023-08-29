@@ -17,17 +17,13 @@ limitations under the License.
 #define SRC_SERVER_MEMORY_USAGE_H_
 
 #include <algorithm>
-#include <atomic>
 #include <list>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <set>
-#include <shared_mutex>
 #include <string>
 #include <unordered_set>
 #include <utility>
-#include <vector>
 
 #include "flat_hash_map/flat_hash_map.hpp"
 #include "libcuckoo/cuckoohash_map.hh"
@@ -35,7 +31,7 @@ limitations under the License.
 #include "common/memory/payload.h"
 #include "common/util/arrow.h"
 #include "common/util/lifecycle.h"
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "common/util/status.h"
 #include "server/memory/allocator.h"
 #include "server/util/file_io_adaptor.h"

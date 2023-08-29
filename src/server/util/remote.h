@@ -23,7 +23,7 @@ limitations under the License.
 #include <vector>
 
 #include "common/memory/payload.h"
-#include "common/util/asio.h"
+#include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/callback.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"

@@ -21,12 +21,11 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "boost/process.hpp"
+#include "boost/process.hpp"  // IWYU pragma: keep
 #include "gulrak/filesystem.hpp"
 
-#include "common/util/asio.h"
+#include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/callback.h"
-#include "common/util/logging.h"
 #include "common/util/status.h"
 
 namespace vineyard {

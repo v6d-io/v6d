@@ -18,16 +18,18 @@ limitations under the License.
 #include <algorithm>
 #include <map>
 #include <unordered_map>
+#include <utility>
 
 #include "arrow/api.h"
 #include "arrow/compute/api.h"
-#include "arrow/io/api.h"
-#include "arrow/ipc/api.h"
-
-#include "boost/algorithm/string.hpp"
+#include "arrow/ipc/api.h"  // IWYU pragma: keep
+#include "boost/algorithm/string/classification.hpp"
+#include "boost/algorithm/string/join.hpp"
+#include "boost/algorithm/string/split.hpp"
 
 #include "client/ds/blob.h"
 #include "client/ds/remote_blob.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "common/util/typename.h"
 
 namespace vineyard {

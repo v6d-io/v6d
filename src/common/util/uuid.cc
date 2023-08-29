@@ -21,7 +21,6 @@ limitations under the License.
 #include "common/util/uuid.h"
 
 #include <cstdio>
-#include <cstdlib>
 
 namespace vineyard {
 

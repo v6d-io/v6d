@@ -15,17 +15,17 @@ limitations under the License.
 
 #include "basic/ds/arrow.h"  // NOLINT(build/include)
 
-#include <iostream>
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
-#include "arrow/ipc/api.h"
+#include "arrow/api.h"      // IWYU pragma: keep
+#include "arrow/io/api.h"   // IWYU pragma: keep
+#include "arrow/ipc/api.h"  // IWYU pragma: keep
 #if defined(ARROW_VERSION) && ARROW_VERSION >= 7000000
-#include "arrow/visit_type_inline.h"
+#include "arrow/visit_type_inline.h"  // IWYU pragma: keep
 #else
 #include "arrow/visitor_inline.h"
 #endif
@@ -35,7 +35,7 @@ limitations under the License.
 #include "basic/ds/arrow_utils.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
-#include "common/memory/memcpy.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 
 namespace vineyard {
 

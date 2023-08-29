@@ -31,9 +31,11 @@ limitations under the License.
 #include "client/io.h"
 #include "client/utils.h"
 #include "common/memory/fling.h"
+#include "common/util/env.h"
 #include "common/util/protocols.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
+#include "common/util/version.h"
 
 namespace vineyard {
 

@@ -21,8 +21,8 @@ limitations under the License.
 #include <iostream>
 #include <string>
 
-#include "arrow/api.h"
-#include "arrow/io/api.h"
+#include "arrow/api.h"     // IWYU pragma: keep
+#include "arrow/io/api.h"  // IWYU pragma: keep
 
 #include "common/util/json.h"
 

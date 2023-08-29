@@ -16,11 +16,11 @@ limitations under the License.
 #ifndef SRC_SERVER_UTIL_METRICS_H_
 #define SRC_SERVER_UTIL_METRICS_H_
 
-#include <string>
+#include <string>  // IWYU pragma: keep
 
-#include "common/util/env.h"
-#include "common/util/logging.h"
-#include "server/util/spec_resolvers.h"
+#include "common/util/env.h"             // IWYU pragma: keep
+#include "common/util/logging.h"         // IWYU pragma: keep
+#include "server/util/spec_resolvers.h"  // IWYU pragma: keep
 
 namespace vineyard {
 

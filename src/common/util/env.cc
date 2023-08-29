@@ -15,7 +15,7 @@ limitations under the License.
 
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
-#include <cinttypes>
+#include <cinttypes>  // IWYU pragma: keep
 #endif
 
 #include <cstdio>
@@ -46,8 +46,6 @@ limitations under the License.
 #endif
 #include <sys/stat.h>
 #include <sys/types.h>
-
-#include <iostream>
 
 namespace vineyard {
 

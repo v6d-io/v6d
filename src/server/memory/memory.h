@@ -36,17 +36,16 @@
 #include <set>
 #include <string>
 #include <unordered_map>
-#include <unordered_set>
 #include <vector>
 
 #include "libcuckoo/cuckoohash_map.hh"
 
-#include "common/memory/gpu/unified_memory.h"
+#include "common/memory/gpu/unified_memory.h"  // IWYU pragma: keep
 #include "common/memory/payload.h"
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "common/util/macros.h"
 #include "common/util/status.h"
-#include "server/memory/gpu/gpuallocator.h"
+#include "server/memory/gpu/gpuallocator.h"  // IWYU pragma: keep
 #include "server/memory/usage.h"
 
 namespace vineyard {

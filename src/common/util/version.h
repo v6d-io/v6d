@@ -16,11 +16,9 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_VERSION_H_
 #define SRC_COMMON_UTIL_VERSION_H_
 
-#include <limits>
 #include <string>
 
 #include "common/util/config.h"
-#include "common/util/macros.h"
 
 namespace vineyard {
 

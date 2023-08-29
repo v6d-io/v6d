@@ -17,11 +17,10 @@ limitations under the License.
 
 #include <memory>
 #include <mutex>
-#include <string>
 #include <utility>
 
 #include "common/util/json.h"
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "server/server/vineyard_server.h"
 
 namespace vineyard {

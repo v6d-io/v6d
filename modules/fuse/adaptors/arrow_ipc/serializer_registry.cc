@@ -29,6 +29,7 @@ limitations under the License.
 #include "basic/ds/arrow.h"
 #include "basic/ds/arrow_utils.h"
 #include "basic/ds/dataframe.h"
+#include "common/util/logging.h"
 
 namespace vineyard {
 namespace fuse {

@@ -16,17 +16,9 @@ limitations under the License.
 #ifndef SRC_COMMON_UTIL_LIFECYCLE_H_
 #define SRC_COMMON_UTIL_LIFECYCLE_H_
 
-#include <map>
-#include <memory>
-#include <mutex>
-#include <string>
-#include <unordered_map>
 #include <unordered_set>
-#include <vector>
 
-#include "common/memory/payload.h"
 #include "common/util/status.h"
-#include "common/util/uuid.h"
 
 namespace vineyard {
 

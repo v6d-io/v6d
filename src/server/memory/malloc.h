@@ -29,8 +29,7 @@
 #ifndef SRC_SERVER_MEMORY_MALLOC_H_
 #define SRC_SERVER_MEMORY_MALLOC_H_
 
-#include <inttypes.h>
-#include <stddef.h>
+#include <cstddef>
 
 #include <string>
 #include <unordered_map>

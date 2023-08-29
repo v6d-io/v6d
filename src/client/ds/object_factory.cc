@@ -22,11 +22,8 @@ limitations under the License.
 #include <libproc.h>
 #elif defined(__linux__) || defined(__linux) || defined(linux) || \
     defined(__gnu_linux__)
-#include <limits.h>
 #include <unistd.h>
 #endif
-
-#include <iostream>
 
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"

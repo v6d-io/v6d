@@ -21,8 +21,6 @@ limitations under the License.
 #include <thread>
 #include <vector>
 
-#include "common/util/logging.h"
-
 namespace vineyard {
 
 template <typename ITER_T, typename FUNC_T>

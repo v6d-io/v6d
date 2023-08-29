@@ -20,13 +20,10 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
 #include "client/client.h"
 #include "client/ds/blob.h"
-#include "client/ds/core_types.h"
 #include "client/ds/i_object.h"
 #include "common/util/uuid.h"
 

@@ -30,10 +30,8 @@
 
 #include <cstddef>
 #include <mutex>
-#include <string>
-#include <vector>
 
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "server/memory/dlmalloc.h"
 #include "server/memory/malloc.h"
 

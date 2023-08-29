@@ -35,6 +35,7 @@ limitations under the License.
 #include "grape/worker/comm_spec.h"
 
 #include "basic/ds/arrow_utils.h"
+#include "common/util/env.h"
 #include "common/util/status.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/utils/error.h"

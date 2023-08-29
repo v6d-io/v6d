@@ -19,7 +19,7 @@ limitations under the License.
 #include <glog/logging.h>
 
 namespace vineyard {
-namespace logging = google;
+namespace logging = google;  // NOLINT
 }  // namespace vineyard
 
 #endif  // SRC_COMMON_UTIL_LOGGING_H_

@@ -19,16 +19,15 @@ limitations under the License.
 #include <algorithm>
 #include <functional>
 #include <memory>
-#include <string>
 #include <utility>
-#include <vector>
 
 #include "flat_hash_map/flat_hash_map.hpp"
-#include "wyhash/wyhash.hpp"
+#include "wyhash/wyhash.hpp"  // IWYU pragma: keep
 
-#include "basic/ds/hashmap.h"
+#include "basic/ds/hashmap.h"  // IWYU pragma: keep
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "common/util/uuid.h"
 
 namespace vineyard {

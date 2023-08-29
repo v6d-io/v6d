@@ -20,7 +20,6 @@ limitations under the License.
 
 #include <chrono>
 #include <cstdlib>
-#include <iostream>
 #include <thread>
 
 #if defined(WITH_PROFILING)
@@ -28,9 +27,7 @@ limitations under the License.
 #endif
 
 #include "common/backtrace/backtrace_on_terminate.hpp"
-#include "common/util/env.h"
-#include "common/util/flags.h"
-#include "common/util/logging.h"
+#include "common/util/logging.h"  // IWYU pragma: keep
 #include "common/util/version.h"
 #include "server/server/vineyard_runner.h"
 #include "server/util/spec_resolvers.h"

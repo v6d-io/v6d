@@ -19,6 +19,7 @@ limitations under the License.
 
 #include "client/client.h"
 #include "client/ds/blob.h"
+#include "common/util/env.h"
 
 namespace vineyard {
 

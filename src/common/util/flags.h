@@ -21,7 +21,7 @@ limitations under the License.
 namespace vineyard {
 
 #ifdef GFLAGS_NAMESPACE
-namespace flags = GFLAGS_NAMESPACE;
+namespace flags = GFLAGS_NAMESPACE;  // NOLINT
 #else
 namespace flags = gflags;
 #endif

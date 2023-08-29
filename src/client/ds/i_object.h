@@ -16,9 +16,7 @@ limitations under the License.
 #ifndef SRC_CLIENT_DS_I_OBJECT_H_
 #define SRC_CLIENT_DS_I_OBJECT_H_
 
-#include <iostream>
 #include <memory>
-#include <type_traits>
 
 #include "client/ds/object_factory.h"
 #include "client/ds/object_meta.h"

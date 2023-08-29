@@ -19,7 +19,6 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <mutex>
-#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -27,7 +26,6 @@ limitations under the License.
 #include "client/ds/object_meta.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
-#include "common/util/version.h"
 
 namespace vineyard {
 

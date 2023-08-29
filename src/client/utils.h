@@ -16,10 +16,6 @@ limitations under the License.
 #ifndef SRC_CLIENT_UTILS_H_
 #define SRC_CLIENT_UTILS_H_
 
-#include <stdexcept>
-
-#include "common/util/status.h"
-
 namespace vineyard {
 
 #ifndef ENSURE_CONNECTED

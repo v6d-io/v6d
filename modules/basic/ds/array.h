@@ -17,7 +17,6 @@ limitations under the License.
 #define MODULES_BASIC_DS_ARRAY_H_
 
 #include <memory>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -25,7 +24,6 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
-#include "common/util/uuid.h"
 
 namespace vineyard {
 
