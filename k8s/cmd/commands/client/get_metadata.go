@@ -23,23 +23,30 @@ import (
 )
 
 var (
-	getMetadatasLong = util.LongDesc(`Get vineyard metadatas and support IPC socket,
+	getMetadataLong = util.LongDesc(`Get vineyard metadata and support IPC socket,
 	RPC socket and vineyard deployment. If you don't specify the ipc socket or rpc socket
 	every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or 
 	VINEYARD_RPC_SOCKET.`)
 
-	getMetadatasExample = util.Examples(`
-	# List no more than 10 vineyard metadatas
-	vineyardctl get metadatas --object_id xxxxxxxx --ipc-socket /var/run/vineyard.sock
+	getMetadataExample = util.Examples(`
+	# Get vineyard metadata with the given vineyard object_id and the ipc socket
+	vineyardctl get metadata --object_id xxxxxxxx --ipc-socket /var/run/vineyard.sock
+
+	# Get vineyard metadata with the given vineyard object_id and the ipc socket
+	# and set the syncRemote to be true
+	vineyardctl get metadata --object_id xxxxxxxx --syncRemote --ipc-socket /var/run/vineyard.sock
+
+	# Get vineyard metadata with the given vineyard object_id and the rpc socket
+	vineyardctl get metadata --object_id xxxxxxxx --rpc-socket 127.0.0.1:9600
 	`)
 )
 
 // lsMetadatas is to list vineyard objects
-var getMetadatas = &cobra.Command{
-	Use:     "metadatas",
-	Short:   "Get vineyard metadatas",
-	Long:    getMetadatasLong,
-	Example: getMetadatasExample,
+var getMetadata = &cobra.Command{
+	Use:     "metadata",
+	Short:   "Get vineyard metadata",
+	Long:    getMetadataLong,
+	Example: getMetadataExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 
@@ -50,13 +57,13 @@ var getMetadatas = &cobra.Command{
 			defer close(ch)
 		}
 
-		metas, err := client.GetMetaDatas(flags.Object_id, flags.SyncRemote)
+		metas, err := client.GetMetaData(flags.Object_id, flags.SyncRemote)
 		if err != nil {
 			log.Fatal(err, "failed to get vineyard object's metadata")
 		}
 		meta := metas.MetaData()
 		//fmt.Println(meta)
-		metadatas := make(map[string]map[string]interface{})
+		metadatas := make(map[string]map[string]any)
 		metadatas[flags.Object_id] = meta
 		output := util.NewOutput(&metadatas, nil, nil)
 		// set the output options
@@ -67,12 +74,12 @@ var getMetadatas = &cobra.Command{
 	},
 }
 
-func NewGetMetadatasCmd() *cobra.Command {
-	return getMetadatas
+func NewGetMetadataCmd() *cobra.Command {
+	return getMetadata
 }
 
 func init() {
-	flags.ApplyConnectOpts(getMetadatas)
-	flags.ApplyGetOpts(getMetadatas)
-	flags.ApplyOutputOpts(getMetadatas)
+	flags.ApplyConnectOpts(getMetadata)
+	flags.ApplyGetOpts(getMetadata)
+	flags.ApplyOutputOpts(getMetadata)
 }

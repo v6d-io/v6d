@@ -27,7 +27,8 @@ type Objects interface {
 	ListMetadatas(string, bool, int) (map[string]map[string]any, error)
 	ListBlobs() (map[types.ObjectID]client.Blob, error)
 	GetClusterInfo() (map[string]map[string]string, error)
-	GetMetaDatas(id string, syncRemote bool) (meta *client.ObjectMeta, err error)
+	GetBlob(id string, unsafe bool) (blob map[types.ObjectID]client.Blob, err error)
+	GetMetaData(id string, syncRemote bool) (meta *client.ObjectMeta, err error)
 }
 
 // ListMetadatas lists all vineyard metadata
@@ -78,14 +79,33 @@ func (c *Client) GetClusterInfo() (map[string]any, error) {
 	return nil, nil
 }
 
-// GetMetadatas
-func (c *Client) GetMetaDatas(id string, syncRemote bool) (meta *client.ObjectMeta, err error) {
+// GetMetadata
+func (c *Client) GetMetaData(id string, syncRemote bool) (meta *client.ObjectMeta, err error) {
 	object_id, _ := types.ObjectIDFromString(id)
 	if c.ipcClient != nil {
 		return c.ipcClient.GetMetaData(object_id, syncRemote)
 	}
 	if c.rpcClient != nil {
 		return c.rpcClient.GetMetaData(object_id, syncRemote)
+	}
+	return nil, nil
+}
+
+// GetBlob
+func (c *Client) GetBlob(id string, unsafe bool) (blob map[types.ObjectID]client.Blob, err error) {
+	meta, err := c.GetMetaData(id, false)
+	if err != nil {
+		return nil, errors.Errorf("failed to get metadata: %s", err)
+	}
+	object_id := meta.GetBuffers().GetBufferIds()
+	if c.ipcClient != nil {
+		Blob, err := c.ipcClient.GetBuffer(object_id[0], unsafe)
+		if err != nil {
+			return nil, errors.Errorf("failed to get blob: %s", err)
+		}
+		blob := make(map[types.ObjectID]client.Blob)
+		blob[object_id[0]] = Blob
+		return blob, nil
 	}
 	return nil, nil
 }

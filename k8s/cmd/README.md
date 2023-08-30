@@ -15,7 +15,7 @@ drivers.
 * [vineyardctl create](#vineyardctl-create)	 - Create a vineyard jobs on kubernetes
 * [vineyardctl delete](#vineyardctl-delete)	 - Delete the vineyard components from kubernetes
 * [vineyardctl deploy](#vineyardctl-deploy)	 - Deploy the vineyard components on kubernetes
-* [vineyardctl get](#vineyardctl-get)	 - Get vineyard objects, metadatas, blobs or cluster-info
+* [vineyardctl get](#vineyardctl-get)	 - Get vineyard object, metadata, blob or cluster-info
 * [vineyardctl inject](#vineyardctl-inject)	 - Inject the vineyard sidecar container into a workload
 * [vineyardctl ls](#vineyardctl-ls)	 - List vineyard objects, metadatas or blobs
 * [vineyardctl manager](#vineyardctl-manager)	 - Start the manager of vineyard operator
@@ -1039,12 +1039,15 @@ vineyardctl deploy vineyardd [flags]
 
 ## `vineyardctl get`
 
-Get vineyard objects, metadatas, blobs or cluster-info
+Get vineyard object, metadata, blob or cluster-info
 
 **SEE ALSO**
 
 * [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
+* [vineyardctl get blob](#vineyardctl-get-blob)	 - Get vineyard blob
 * [vineyardctl get cluster-info](#vineyardctl-get-cluster-info)	 - Get vineyard cluster info
+* [vineyardctl get metadata](#vineyardctl-get-metadata)	 - Get vineyard metadata
+* [vineyardctl get object](#vineyardctl-get-object)	 - Get vineyard object
 
 ### Examples
 
@@ -1058,6 +1061,54 @@ Get vineyard objects, metadatas, blobs or cluster-info
 
 ```
   -h, --help   help for get
+```
+
+## `vineyardctl get blob`
+
+Get vineyard blob
+
+### Synopsis
+
+Get vineyard blob and only support IPC socket.
+If you don't specify the ipc socket every time, you can set it as the 
+environment variable VINEYARD_IPC_SOCKET.
+
+```
+vineyardctl get blob [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl get](#vineyardctl-get)	 - Get vineyard object, metadata, blob or cluster-info
+
+### Examples
+
+```shell
+  # Get vineyard blob with the given vineyard object_id and the ipc socket
+  vineyardctl get blob --object_id xxxxxxxx --ipc-socket /var/run/vineyard.sock
+
+  # Get vineyard blob with the given vineyard object_id and the ipc socket
+  # and set the unsafe to be true
+  vineyardctl get blob --object_id xxxxxxxx --unsafe --ipc-socket /var/run/vineyard.sock
+  
+  # If you set the environment variable VINEYARD_IPC_SOCKET
+  # you can use the following command to get vineyard blob
+  vineyardctl get blob --object_id xxxxxxxx
+```
+
+### Options
+
+```
+      --deployment-name string   the name of vineyard deployment
+  -o, --format string            the output format, support table or json, default is table (default "table")
+      --forward-port int         the forward port of vineyard deployment (default 9600)
+  -h, --help                     help for blob
+      --ipc-socket string        vineyard IPC socket path
+      --object_id string         The object id to get
+      --port int                 the port of vineyard deployment (default 9600)
+      --rpc-socket string        vineyard RPC socket path
+      --syncRemote               If the target object is a remote object,code_remote=True will force a meta synchronization on the vineyard server.
+      --unsafe                   unsafe means getting the blob even the blob is not sealed yet.Default is False.
 ```
 
 ## `vineyardctl get cluster-info`
@@ -1075,7 +1126,7 @@ vineyardctl get cluster-info [flags]
 
 **SEE ALSO**
 
-* [vineyardctl get](#vineyardctl-get)	 - Get vineyard objects, metadatas, blobs or cluster-info
+* [vineyardctl get](#vineyardctl-get)	 - Get vineyard object, metadata, blob or cluster-info
 
 ### Examples
 
@@ -1100,6 +1151,98 @@ vineyardctl get cluster-info [flags]
       --ipc-socket string        vineyard IPC socket path
       --port int                 the port of vineyard deployment (default 9600)
       --rpc-socket string        vineyard RPC socket path
+```
+
+## `vineyardctl get metadata`
+
+Get vineyard metadata
+
+### Synopsis
+
+Get vineyard metadata and support IPC socket,
+RPC socket and vineyard deployment. If you don't specify the ipc socket or rpc socket
+every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or 
+VINEYARD_RPC_SOCKET.
+
+```
+vineyardctl get metadata [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl get](#vineyardctl-get)	 - Get vineyard object, metadata, blob or cluster-info
+
+### Examples
+
+```shell
+  # Get vineyard metadata with the given vineyard object_id and the ipc socket
+  vineyardctl get metadata --object_id xxxxxxxx --ipc-socket /var/run/vineyard.sock
+
+  # Get vineyard metadata with the given vineyard object_id and the ipc socket
+  # and set the syncRemote to be true
+  vineyardctl get metadata --object_id xxxxxxxx --syncRemote --ipc-socket /var/run/vineyard.sock
+
+  # Get vineyard metadata with the given vineyard object_id and the rpc socket
+  vineyardctl get metadata --object_id xxxxxxxx --rpc-socket 127.0.0.1:9600
+```
+
+### Options
+
+```
+      --deployment-name string   the name of vineyard deployment
+  -o, --format string            the output format, support table or json, default is table (default "table")
+      --forward-port int         the forward port of vineyard deployment (default 9600)
+  -h, --help                     help for metadata
+      --ipc-socket string        vineyard IPC socket path
+      --object_id string         The object id to get
+      --port int                 the port of vineyard deployment (default 9600)
+      --rpc-socket string        vineyard RPC socket path
+      --syncRemote               If the target object is a remote object,code_remote=True will force a meta synchronization on the vineyard server.
+      --unsafe                   unsafe means getting the blob even the blob is not sealed yet.Default is False.
+```
+
+## `vineyardctl get object`
+
+Get vineyard object
+
+### Synopsis
+
+Get vineyard object and support IPC socket,
+RPC socket and vineyard deployment. If you don't specify the ipc socket or rpc socket
+every time, you can set it as the environment variable VINEYARD_IPC_SOCKET or
+VINEYARD_RPC_SOCKET.
+
+```
+vineyardctl get object [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl get](#vineyardctl-get)	 - Get vineyard object, metadata, blob or cluster-info
+
+### Examples
+
+```shell
+  # Get vineyard object with the given vineyard object_id and the ipc socket
+  vineyardctl get object --object_id xxxxxxxx --ipc-socket /var/run/vineyard.sock
+
+  # Get vineyard object with the given vineyard object_id and the rpc socket
+  vineyardctl get object --object_id xxxxxxxx --rpc-socket 127.0.0.1:9600
+```
+
+### Options
+
+```
+      --deployment-name string   the name of vineyard deployment
+  -o, --format string            the output format, support table or json, default is table (default "table")
+      --forward-port int         the forward port of vineyard deployment (default 9600)
+  -h, --help                     help for object
+      --ipc-socket string        vineyard IPC socket path
+      --object_id string         The object id to get
+      --port int                 the port of vineyard deployment (default 9600)
+      --rpc-socket string        vineyard RPC socket path
+      --syncRemote               If the target object is a remote object,code_remote=True will force a meta synchronization on the vineyard server.
+      --unsafe                   unsafe means getting the blob even the blob is not sealed yet.Default is False.
 ```
 
 ## `vineyardctl inject`
@@ -1973,3 +2116,4 @@ vineyardctl schedule workload [flags]
       --vineyardd-name string        the namespace of vineyard cluster (default "vineyardd-sample")
       --vineyardd-namespace string   the namespace of vineyard cluster (default "vineyard-system")
 ```
+

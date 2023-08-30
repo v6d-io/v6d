@@ -23,26 +23,29 @@ import (
 )
 
 var (
-	getBlobsLong = util.LongDesc(`Get vineyard cluster info, including
-	the instanceId, hostName, node name and so on.`)
+	getBlobLong = util.LongDesc(`Get vineyard blob and only support IPC socket.
+	If you don't specify the ipc socket every time, you can set it as the 
+	environment variable VINEYARD_IPC_SOCKET.`)
 
-	getBlobsExample = util.Examples(`
-	# Get the cluster info of vineyard deployment and output as table
-	vineyardctl get cluster-info --deployment-name vineyardd-sample -n vineyard-system
+	getBlobExample = util.Examples(`
+	# Get vineyard blob with the given vineyard object_id and the ipc socket
+	vineyardctl get blob --object_id xxxxxxxx --ipc-socket /var/run/vineyard.sock 
 
-	# Get the cluster info of vineyard deployment and output as json
-	vineyardctl get cluster-info --deployment-name vineyardd-sample -n vineyard-system -o json
+	# Get vineyard blob with the given vineyard object_id and the ipc socket
+	# and set the unsafe to be true
+	vineyardctl get blob --object_id xxxxxxxx --unsafe --ipc-socket /var/run/vineyard.sock 
 	
-	# Get the cluster info via IPC socket
-	vineyardctl get cluster-info --ipc-socket /var/run/vineyard.sock`)
+	# If you set the environment variable VINEYARD_IPC_SOCKET
+	# you can use the following command to get vineyard blob
+	vineyardctl get blob --object_id xxxxxxxx`)
 )
 
 // getBLobs is to get vineyard blobs
-var getBlobs = &cobra.Command{
-	Use:     "blobs",
-	Short:   "Get vineyard blobs",
-	Long:    getBlobsLong,
-	Example: getBlobsExample,
+var getBlob = &cobra.Command{
+	Use:     "blob",
+	Short:   "Get vineyard blob",
+	Long:    getBlobLong,
+	Example: getBlobExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 		// check the client socket
@@ -53,27 +56,26 @@ var getBlobs = &cobra.Command{
 			defer close(ch)
 		}
 
-		// get the blobs
-		blobs, err := client.ListBlobs(flags.Limit)
+		// get the blob
+		blob, err := client.GetBlob(flags.Object_id, flags.Unsafe)
 		if err != nil {
-			log.Fatal(err, "failed to get vineyard blobs")
+			log.Fatal(err, "failed to get vineyard blob")
 		}
-		output := util.NewOutput(nil, &blobs, nil)
+		output := util.NewOutput(nil, &blob, nil)
 		// set the output options
 		output.WithFilter(false).
 			SortedKey(flags.SortedKey).
 			SetFormat(flags.Format)
-
 		Output = output
 	},
 }
 
-func NewGetBlobsCmd() *cobra.Command {
-	return getBlobs
+func NewGetBlobCmd() *cobra.Command {
+	return getBlob
 }
 
 func init() {
-	flags.ApplyConnectOpts(getBlobs)
-	flags.ApplyLimitOpt(getBlobs)
-	flags.ApplyOutputOpts(getBlobs)
+	flags.ApplyConnectOpts(getBlob)
+	flags.ApplyGetOpts(getBlob)
+	flags.ApplyOutputOpts(getBlob)
 }
