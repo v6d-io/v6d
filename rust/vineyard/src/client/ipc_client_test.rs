@@ -23,4 +23,13 @@ mod tests {
 
         return Ok(());
     }
+
+    #[test]
+    fn test_ipc_client_manager() -> Result<()> {
+        let client = IPCClientManager::get_default()?;
+        let mut client = client.lock()?;
+        assert!(client.connected());
+
+        return Ok(());
+    }
 }

@@ -16,6 +16,8 @@ use std::collections::HashMap;
 use std::io;
 use std::net::Shutdown;
 use std::os::unix::net::UnixStream;
+use std::sync::Arc;
+use std::sync::Mutex;
 
 use arrow_buffer::Buffer;
 use parking_lot::ReentrantMutex;
@@ -193,6 +195,9 @@ impl Drop for IPCClient {
         self.disconnect();
     }
 }
+
+unsafe impl Send for IPCClient {}
+unsafe impl Sync for IPCClient {}
 
 impl Client for IPCClient {
     fn disconnect(&mut self) {
@@ -431,5 +436,51 @@ impl IPCClient {
         let mut object = T::create();
         object.construct(meta)?;
         return Ok(object);
+    }
+}
+
+pub struct IPCClientManager {}
+
+impl IPCClientManager {
+    pub fn get_default() -> Result<Arc<Mutex<IPCClient>>> {
+        let default_ipc_socket = std::env::var(VINEYARD_IPC_SOCKET_KEY)?;
+        return IPCClientManager::get(default_ipc_socket);
+    }
+
+    pub fn get<S: Into<String>>(socket: S) -> Result<Arc<Mutex<IPCClient>>> {
+        let mut clients = IPCClientManager::get_clients().lock()?;
+        let socket = socket.into();
+        if let Some(client) = clients.get(&socket) {
+            if client.lock()?.connected() {
+                return Ok(client.clone());
+            }
+        }
+        let client = Arc::new(Mutex::new(IPCClient::connect(&socket)?));
+        clients.insert(socket, client.clone());
+        return Ok(client);
+    }
+
+    pub fn close<S: Into<String>>(socket: S) -> Result<()> {
+        let mut clients = IPCClientManager::get_clients().lock()?;
+        let socket = socket.into();
+        if let Some(client) = clients.get(&socket) {
+            if Arc::strong_count(client) == 1 {
+                clients.remove(&socket);
+            }
+            return Ok(());
+        } else {
+            return Err(VineyardError::invalid(format!(
+                "Failed to close the client due to the unknown socket: {}",
+                socket
+            )));
+        }
+    }
+
+    fn get_clients() -> &'static Arc<Mutex<HashMap<String, Arc<Mutex<IPCClient>>>>> {
+        lazy_static! {
+            static ref CONNECTED_CLIENTS: Arc<Mutex<HashMap<String, Arc<Mutex<IPCClient>>>>> =
+                Arc::new(Mutex::new(HashMap::new()));
+        }
+        return &CONNECTED_CLIENTS;
     }
 }
