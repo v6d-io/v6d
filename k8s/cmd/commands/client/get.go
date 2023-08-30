@@ -32,7 +32,7 @@ var (
 // getCmd is to get vineyard objects, metadatas, blobs or cluster-info
 var getCmd = &cobra.Command{
 	Use:     "get",
-	Short:   "Get vineyard objects, metadatas, blobs or cluster-info",
+	Short:   "Get vineyard object, metadata, blob or cluster-info",
 	Example: getExample,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		// disable stdout
@@ -51,4 +51,7 @@ func NewGetCmd() *cobra.Command {
 
 func init() {
 	getCmd.AddCommand(NewGetClusterInfoCmd())
+	getCmd.AddCommand(NewGetMetadataCmd())
+	getCmd.AddCommand(NewGetBlobCmd())
+	getCmd.AddCommand(NewGetObjectCmd())
 }

@@ -39,6 +39,18 @@ var (
 	ForwardPort int
 )
 
+// get options
+var (
+	// The object id to get
+	Object_id string
+
+	// If the target object is a remote object, code_remote=True will force a meta synchronization on the vineyard server.
+	SyncRemote bool
+
+	// unsafe means getting the blob even the blob is not sealed yet. Default is False.
+	Unsafe bool
+)
+
 // ls options
 var (
 	// Pattern string that will be matched against the object’s typenames
@@ -78,6 +90,14 @@ func GetRPCSocket() string {
 
 func ApplyLimitOpt(cmd *cobra.Command) {
 	cmd.Flags().IntVarP(&Limit, "limit", "l", 5, "maximum number of objects to return")
+}
+
+func ApplyGetOpts(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&Object_id, "object_id", "", "", "The object id to get")
+	cmd.Flags().BoolVarP(&SyncRemote, "syncRemote", "", false, "If the target object is a remote object,"+
+		"code_remote=True will force a meta synchronization on the vineyard server.")
+	cmd.Flags().BoolVarP(&Unsafe, "unsafe", "", false, "unsafe means getting the blob even the blob is not sealed yet."+
+		"Default is False.")
 }
 
 func ApplyLsOpts(cmd *cobra.Command) {
