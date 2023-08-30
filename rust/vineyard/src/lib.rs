@@ -19,6 +19,7 @@
 #![allow(clippy::nonminimal_bool)]
 #![allow(clippy::not_unsafe_ptr_arg_deref)]
 #![allow(clippy::redundant_field_names)]
+#![allow(clippy::type_complexity)]
 #![allow(clippy::unnecessary_cast)]
 #![allow(clippy::vec_box)]
 #![allow(incomplete_features)]

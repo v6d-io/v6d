@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::collections::HashMap;
 use std::io;
 use std::net::{Shutdown, TcpStream};
+use std::sync::{Arc, Mutex};
 
 use parking_lot::{ReentrantMutex, ReentrantMutexGuard};
 
@@ -142,18 +144,14 @@ impl Client for RPCClient {
     }
 }
 
+unsafe impl Send for RPCClient {}
+unsafe impl Sync for RPCClient {}
+
 impl RPCClient {
     #[allow(clippy::should_implement_trait)]
     pub fn default() -> Result<RPCClient> {
         let rpc_endpoint = std::env::var(VINEYARD_RPC_ENDPOINT_KEY)?;
-        let (host, port) = match rpc_endpoint.rfind(':') {
-            Some(idx) => (
-                &rpc_endpoint[..idx],
-                rpc_endpoint[idx + 1..].parse::<u16>()?,
-            ),
-            None => (rpc_endpoint.as_str(), DEFAULT_RPC_PORT),
-        };
-        return RPCClient::connect(host, port);
+        return RPCClient::connect_with_endpoint(rpc_endpoint.as_str());
     }
 
     pub fn connect(host: &str, port: u16) -> Result<RPCClient> {
@@ -178,5 +176,67 @@ impl RPCClient {
             stream: stream,
             lock: ReentrantMutex::new(()),
         });
+    }
+
+    pub fn connect_with_endpoint(endpoint: &str) -> Result<RPCClient> {
+        let (host, port) = match endpoint.rfind(':') {
+            Some(idx) => (&endpoint[..idx], endpoint[idx + 1..].parse::<u16>()?),
+            None => (endpoint, DEFAULT_RPC_PORT),
+        };
+        return RPCClient::connect(host, port);
+    }
+}
+
+pub struct RPCClientManager {}
+
+impl RPCClientManager {
+    pub fn get_default() -> Result<Arc<Mutex<RPCClient>>> {
+        let default_rpc_endpoint = std::env::var(VINEYARD_RPC_ENDPOINT_KEY)?;
+        return RPCClientManager::get_with_endpoint(default_rpc_endpoint);
+    }
+
+    pub fn get<S: Into<String>>(host: &str, port: u16) -> Result<Arc<Mutex<RPCClient>>> {
+        let endpoint = format!("{}:{}", host, port);
+        return RPCClientManager::get_with_endpoint(endpoint);
+    }
+
+    pub fn get_with_endpoint<S: Into<String>>(endpoint: S) -> Result<Arc<Mutex<RPCClient>>> {
+        let mut clients: std::sync::MutexGuard<'_, _> = RPCClientManager::get_clients().lock()?;
+        let endpoint: String = endpoint.into();
+        if let Some(client) = clients.get(endpoint.as_str()) {
+            return Ok(client.clone());
+        }
+        let client = Arc::new(Mutex::new(RPCClient::connect_with_endpoint(&endpoint)?));
+        clients.insert(endpoint, client.clone());
+        return Ok(client);
+    }
+
+    pub fn close<S: Into<String>>(host: &str, port: u16) -> Result<()> {
+        let endpoint = format!("{}:{}", host, port);
+        return RPCClientManager::close_with_endpoint(endpoint);
+    }
+
+    pub fn close_with_endpoint<S: Into<String>>(endpoint: S) -> Result<()> {
+        let mut clients = RPCClientManager::get_clients().lock()?;
+        let endpoint = endpoint.into();
+        if let Some(client) = clients.get(&endpoint) {
+            if Arc::strong_count(client) == 1 {
+                clients.remove(&endpoint);
+            }
+            return Ok(());
+        } else {
+            return Err(VineyardError::invalid(format!(
+                "Failed to close the client due to the unknown endpoint: {}",
+                endpoint
+            )));
+        }
+    }
+
+    fn get_clients() -> &'static Arc<Mutex<HashMap<String, Arc<Mutex<RPCClient>>>>> {
+        lazy_static! {
+            static ref CONNECTED_CLIENTS: Arc<Mutex<HashMap<String, Arc<Mutex<RPCClient>>>>> =
+                Arc::new(Mutex::new(HashMap::new()));
+        }
+        return &CONNECTED_CLIENTS;
     }
 }
