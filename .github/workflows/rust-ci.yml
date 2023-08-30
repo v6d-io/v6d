@@ -33,7 +33,7 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     if: ${{ github.repository == 'v6d-io/v6d' }}
     steps:
       - uses: actions/checkout@v3
