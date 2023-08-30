@@ -451,7 +451,9 @@ impl IPCClientManager {
         let mut clients = IPCClientManager::get_clients().lock()?;
         let socket = socket.into();
         if let Some(client) = clients.get(&socket) {
-            return Ok(client.clone());
+            if client.lock()?.connected() {
+                return Ok(client.clone());
+            }
         }
         let client = Arc::new(Mutex::new(IPCClient::connect(&socket)?));
         clients.insert(socket, client.clone());

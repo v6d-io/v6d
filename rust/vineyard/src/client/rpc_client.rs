@@ -204,7 +204,9 @@ impl RPCClientManager {
         let mut clients: std::sync::MutexGuard<'_, _> = RPCClientManager::get_clients().lock()?;
         let endpoint: String = endpoint.into();
         if let Some(client) = clients.get(endpoint.as_str()) {
-            return Ok(client.clone());
+            if client.lock()?.connected() {
+                return Ok(client.clone());
+            }
         }
         let client = Arc::new(Mutex::new(RPCClient::connect_with_endpoint(&endpoint)?));
         clients.insert(endpoint, client.clone());
