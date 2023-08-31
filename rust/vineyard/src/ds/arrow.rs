@@ -239,20 +239,7 @@ impl<T: TypeName + NumericType + 'static> ObjectBase for NumericBuilder<T> {
 }
 
 impl<T: NumericType> NumericBuilder<T> {
-    pub fn new(client: &mut IPCClient, length: usize) -> Result<Self> {
-        let buffer = client.create_blob(std::mem::size_of::<T>() * length)?;
-        return Ok(NumericBuilder {
-            sealed: false,
-            length,
-            offset: 0,
-            null_count: 0,
-            buffer,
-            null_bitmap: None,
-            phantom: PhantomData,
-        });
-    }
-
-    pub fn new_from_array(client: &mut IPCClient, array: &TypedArray<T>) -> Result<Self> {
+    pub fn new(client: &mut IPCClient, array: &TypedArray<T>) -> Result<Self> {
         use arrow_array::Array;
 
         let buffer = build_scalar_buffer::<T>(client, array.values())?;
@@ -268,9 +255,22 @@ impl<T: NumericType> NumericBuilder<T> {
         });
     }
 
+    pub fn new_allocated(client: &mut IPCClient, length: usize) -> Result<Self> {
+        let buffer = client.create_blob(std::mem::size_of::<T>() * length)?;
+        return Ok(NumericBuilder {
+            sealed: false,
+            length,
+            offset: 0,
+            null_count: 0,
+            buffer,
+            null_bitmap: None,
+            phantom: PhantomData,
+        });
+    }
+
     pub fn new_from_builder(client: &mut IPCClient, builder: &mut TypedBuilder<T>) -> Result<Self> {
         let array = builder.finish();
-        return Self::new_from_array(client, &array);
+        return Self::new(client, &array);
     }
 
     pub fn len(&self) -> usize {
@@ -455,7 +455,7 @@ impl<O: OffsetSizeTrait> ObjectBase for BaseStringBuilder<O> {
 }
 
 impl<O: OffsetSizeTrait> BaseStringBuilder<O> {
-    pub fn new_from_array(client: &mut IPCClient, array: &GenericStringArray<O>) -> Result<Self> {
+    pub fn new(client: &mut IPCClient, array: &GenericStringArray<O>) -> Result<Self> {
         use arrow_array::Array;
 
         let value_data = build_buffer(client, array.values())?;
@@ -478,7 +478,7 @@ impl<O: OffsetSizeTrait> BaseStringBuilder<O> {
         builder: &mut GenericStringBuilder<O>,
     ) -> Result<Self> {
         let array = builder.finish();
-        return Self::new_from_array(client, &array);
+        return Self::new(client, &array);
     }
 
     pub fn len(&self) -> usize {
@@ -554,7 +554,7 @@ pub fn build_array(client: &mut IPCClient, array: ArrayRef) -> Result<Box<dyn Ob
     macro_rules! build {
         ($array: ident, $array_ty: ty, $builder_ty: ty) => {
             |$array| match $array.as_any().downcast_ref::<$array_ty>() {
-                Some(array) => match <$builder_ty>::new_from_array(client, array) {
+                Some(array) => match <$builder_ty>::new(client, array) {
                     Ok(builder) => match builder.seal(client) {
                         Ok(object) => Ok(object),
                         Err(_) => Err(array as &dyn array::Array),
@@ -717,7 +717,7 @@ impl ObjectBase for SchemaProxyBuilder {
 }
 
 impl SchemaProxyBuilder {
-    pub fn new(schema: &schema::Schema) -> Result<Self> {
+    pub fn new(_client: &mut IPCClient, schema: &schema::Schema) -> Result<Self> {
         let buffer: Vec<u8> = Vec::new();
         let writer = arrow_ipc::writer::StreamWriter::try_new(buffer, schema)?;
         let schema_binary = writer.into_inner()?;
@@ -729,8 +729,11 @@ impl SchemaProxyBuilder {
         });
     }
 
-    pub fn new_from_builder(builder: schema::SchemaBuilder) -> Result<Self> {
-        return Self::new(&builder.finish());
+    pub fn new_from_builder(
+        client: &mut IPCClient,
+        builder: schema::SchemaBuilder,
+    ) -> Result<Self> {
+        return Self::new(client, &builder.finish());
     }
 }
 
@@ -842,8 +845,24 @@ impl ObjectBase for RecordBatchBuilder {
 }
 
 impl RecordBatchBuilder {
-    pub fn new(
-        _client: &mut IPCClient,
+    pub fn new(client: &mut IPCClient, batch: &array::RecordBatch) -> Result<Self> {
+        let mut columns = Vec::with_capacity(batch.num_columns());
+        for i in 0..batch.num_columns() {
+            let array = batch.column(i);
+            let array = build_array(client, array.clone())?;
+            columns.push(array);
+        }
+        return Self::new_from_columns(
+            client,
+            batch.schema().as_ref(),
+            batch.num_rows(),
+            batch.num_columns(),
+            columns,
+        );
+    }
+
+    pub fn new_from_columns(
+        client: &mut IPCClient,
         schema: &arrow_schema::Schema,
         row_num: usize,
         column_num: usize,
@@ -851,30 +870,11 @@ impl RecordBatchBuilder {
     ) -> Result<Self> {
         return Ok(RecordBatchBuilder {
             sealed: false,
-            schema: SchemaProxyBuilder::new(schema)?,
+            schema: SchemaProxyBuilder::new(client, schema)?,
             row_num: row_num,
             column_num: column_num,
             columns: columns,
         });
-    }
-
-    pub fn new_from_recordbatch(
-        client: &mut IPCClient,
-        batch: &array::RecordBatch,
-    ) -> Result<Self> {
-        let mut columns = Vec::with_capacity(batch.num_columns());
-        for i in 0..batch.num_columns() {
-            let array = batch.column(i);
-            let array = build_array(client, array.clone())?;
-            columns.push(array);
-        }
-        return Self::new(
-            client,
-            batch.schema().as_ref(),
-            batch.num_rows(),
-            batch.num_columns(),
-            columns,
-        );
     }
 }
 
@@ -1008,7 +1008,33 @@ impl ObjectBase for TableBuilder {
 
 impl TableBuilder {
     pub fn new(
-        _client: &mut IPCClient,
+        client: &mut IPCClient,
+        schema: &schema::Schema,
+        table: &[array::RecordBatch],
+    ) -> Result<Self> {
+        let schema = SchemaProxyBuilder::new(client, schema)?;
+
+        let mut batches = Vec::with_capacity(table.len());
+        let mut num_rows = 0;
+        let mut num_columns = 0;
+        for batch in table {
+            num_rows += batch.num_rows();
+            num_columns = batch.num_columns();
+            let batch = RecordBatchBuilder::new(client, batch)?;
+            batches.push(batch.seal(client)?);
+        }
+        return Ok(TableBuilder {
+            sealed: false,
+            global: false,
+            schema: schema,
+            num_rows: num_rows,
+            num_columns: num_columns,
+            batches: batches,
+        });
+    }
+
+    pub fn new_from_batches(
+        client: &mut IPCClient,
         schema: &schema::Schema,
         num_rows: usize,
         num_columns: usize,
@@ -1017,14 +1043,14 @@ impl TableBuilder {
         return Ok(TableBuilder {
             sealed: false,
             global: false,
-            schema: SchemaProxyBuilder::new(schema)?,
+            schema: SchemaProxyBuilder::new(client, schema)?,
             num_rows: num_rows,
             num_columns: num_columns,
             batches: batches,
         });
     }
 
-    pub fn new_from_bathes(
+    pub fn new_from_batch_columns(
         client: &mut IPCClient,
         schema: &schema::Schema,
         num_rows: Vec<usize>,
@@ -1035,42 +1061,17 @@ impl TableBuilder {
         let mut total_num_rows = 0;
         for (num_row, batch) in izip!(num_rows, batches) {
             total_num_rows += num_row;
-            let batch = RecordBatchBuilder::new(client, schema, num_row, num_columns, batch)?;
+            let batch =
+                RecordBatchBuilder::new_from_columns(client, schema, num_row, num_columns, batch)?;
             chunks.push(batch.seal(client)?);
         }
         return Ok(TableBuilder {
             sealed: false,
             global: false,
-            schema: SchemaProxyBuilder::new(schema)?,
+            schema: SchemaProxyBuilder::new(client, schema)?,
             num_rows: total_num_rows,
             num_columns: num_columns,
             batches: chunks,
-        });
-    }
-
-    pub fn new_from_recordbatches(
-        client: &mut IPCClient,
-        schema: &schema::Schema,
-        table: &[array::RecordBatch],
-    ) -> Result<Self> {
-        let schema = SchemaProxyBuilder::new(schema)?;
-
-        let mut batches = Vec::with_capacity(table.len());
-        let mut num_rows = 0;
-        let mut num_columns = 0;
-        for batch in table {
-            num_rows += batch.num_rows();
-            num_columns = batch.num_columns();
-            let batch = RecordBatchBuilder::new_from_recordbatch(client, batch)?;
-            batches.push(batch.seal(client)?);
-        }
-        return Ok(TableBuilder {
-            sealed: false,
-            global: false,
-            schema: schema,
-            num_rows: num_rows,
-            num_columns: num_columns,
-            batches: batches,
         });
     }
 }

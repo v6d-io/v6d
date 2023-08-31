@@ -36,7 +36,7 @@ mod tests {
 
         // build into vineyard
         {
-            let builder = Int32Builder::new_from_array(&mut client, &array)?;
+            let builder = Int32Builder::new(&mut client, &array)?;
             let object = builder.seal(&mut client)?;
             let array = downcast_object::<Int32Array>(object)?;
             array_object_id = array.id();
@@ -78,7 +78,7 @@ mod tests {
 
         // build into vineyard
         {
-            let builder = Float64Builder::new_from_array(&mut client, &array)?;
+            let builder = Float64Builder::new(&mut client, &array)?;
             let object = builder.seal(&mut client)?;
             let array = downcast_object::<Float64Array>(object)?;
             array_object_id = array.id();
@@ -120,7 +120,7 @@ mod tests {
 
         // build into vineyard
         {
-            let builder = LargeStringBuilder::new_from_array(&mut client, &array)?;
+            let builder = LargeStringBuilder::new(&mut client, &array)?;
             let object = builder.seal(&mut client)?;
 
             let array = downcast_object::<LargeStringArray>(object)?;
@@ -177,7 +177,7 @@ mod tests {
 
         // build into vineyard
         {
-            let builder = RecordBatchBuilder::new_from_recordbatch(&mut client, &batch)?;
+            let builder = RecordBatchBuilder::new(&mut client, &batch)?;
             let object = builder.seal(&mut client)?;
             let recordbatch = downcast_object::<RecordBatch>(object)?;
             recordbatch_object_id = recordbatch.id();

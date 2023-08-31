@@ -122,15 +122,7 @@ impl ObjectBase for DataFrameBuilder {
 }
 
 impl DataFrameBuilder {
-    pub fn new(names: Vec<String>, columns: Vec<Box<dyn Object>>) -> Result<Self> {
-        return Ok(DataFrameBuilder {
-            sealed: false,
-            names,
-            columns,
-        });
-    }
-
-    pub fn new_from_arrays(
+    pub fn new(
         client: &mut IPCClient,
         names: Vec<String>,
         arrays: Vec<arrow_array::ArrayRef>,
@@ -143,6 +135,14 @@ impl DataFrameBuilder {
             sealed: false,
             names,
             columns: columns,
+        });
+    }
+
+    pub fn new_from_columns(names: Vec<String>, columns: Vec<Box<dyn Object>>) -> Result<Self> {
+        return Ok(DataFrameBuilder {
+            sealed: false,
+            names,
+            columns,
         });
     }
 }

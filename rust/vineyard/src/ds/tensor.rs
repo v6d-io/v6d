@@ -211,7 +211,17 @@ impl<T: TypeName + NumericType + 'static> ObjectBase for NumericTensorBuilder<T>
 }
 
 impl<T: NumericType> NumericTensorBuilder<T> {
-    pub fn new(client: &mut IPCClient, shape: &[usize]) -> Result<Self> {
+    pub fn new(client: &mut IPCClient, shape: &[usize], array: &TypedArray<T>) -> Result<Self> {
+        let buffer = build_scalar_buffer::<T>(client, array.values())?;
+        return Ok(NumericTensorBuilder {
+            sealed: false,
+            shape: shape.to_vec(),
+            buffer,
+            phantom: PhantomData,
+        });
+    }
+
+    pub fn new_allocated(client: &mut IPCClient, shape: &[usize]) -> Result<Self> {
         let length = shape.iter().product::<usize>();
         let buffer = client.create_blob(std::mem::size_of::<T>() * length)?;
         return Ok(NumericTensorBuilder {
@@ -222,22 +232,8 @@ impl<T: NumericType> NumericTensorBuilder<T> {
         });
     }
 
-    pub fn new_from_array(
-        client: &mut IPCClient,
-        shape: &[usize],
-        array: &TypedArray<T>,
-    ) -> Result<Self> {
-        let buffer = build_scalar_buffer::<T>(client, array.values())?;
-        return Ok(NumericTensorBuilder {
-            sealed: false,
-            shape: shape.to_vec(),
-            buffer,
-            phantom: PhantomData,
-        });
-    }
-
     pub fn new_from_array_1d(client: &mut IPCClient, array: &TypedArray<T>) -> Result<Self> {
-        return Self::new_from_array(client, &[array.len()], array);
+        return Self::new(client, &[array.len()], array);
     }
 
     pub fn new_from_builder(
@@ -246,7 +242,7 @@ impl<T: NumericType> NumericTensorBuilder<T> {
         builder: &mut TypedBuilder<T>,
     ) -> Result<Self> {
         let array = builder.finish();
-        return Self::new_from_array(client, shape, &array);
+        return Self::new(client, shape, &array);
     }
 
     pub fn shape(&self) -> &[usize] {
@@ -395,7 +391,7 @@ impl<O: OffsetSizeTrait> ObjectBase for BaseStringTensorBuilder<O> {
 }
 
 impl<O: OffsetSizeTrait> BaseStringTensorBuilder<O> {
-    pub fn new_from_array(
+    pub fn new(
         client: &mut IPCClient,
         shape: &[usize],
         array: &array::GenericStringArray<O>,
@@ -403,7 +399,7 @@ impl<O: OffsetSizeTrait> BaseStringTensorBuilder<O> {
         return Ok(BaseStringTensorBuilder {
             sealed: false,
             shape: shape.to_vec(),
-            tensor: BaseStringBuilder::<O>::new_from_array(client, array)?,
+            tensor: BaseStringBuilder::<O>::new(client, array)?,
         });
     }
 
@@ -412,7 +408,7 @@ impl<O: OffsetSizeTrait> BaseStringTensorBuilder<O> {
         array: &array::GenericStringArray<O>,
     ) -> Result<Self> {
         use array::Array;
-        return Self::new_from_array(client, &[array.len()], array);
+        return Self::new(client, &[array.len()], array);
     }
 
     pub fn new_from_builder(
@@ -421,7 +417,7 @@ impl<O: OffsetSizeTrait> BaseStringTensorBuilder<O> {
         builder: &mut builder::GenericStringBuilder<O>,
     ) -> Result<Self> {
         let array = builder.finish();
-        return Self::new_from_array(client, shape, &array);
+        return Self::new(client, shape, &array);
     }
 
     pub fn shape(&self) -> &[usize] {

@@ -7,7 +7,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.16.5"
+version = "0.17.0-dev1"
 homepage = "https://v6d.io"
 repository = "https://github.com/v6d-io/v6d.git"
 authors = ["Vineyard <vineyard@alibaba-inc.com>"]
@@ -30,6 +30,6 @@ inline-python = "0.12"
 polars-core = "0.32"
 spectral = "0.6"
 
-vineyard = { version = "0.16.5", path = "./vineyard" }
-vineyard-polars = { version = "0.16.5", path = "./vineyard-polars" }
-vineyard-integration-testing = { version = "0.16.5", path = "./vineyard-integration-testing" }
+vineyard = { version = "0.17.0-dev1", path = "./vineyard" }
+vineyard-polars = { version = "0.17.0-dev1", path = "./vineyard-polars" }
+vineyard-integration-testing = { version = "0.17.0-dev1", path = "./vineyard-integration-testing" }
