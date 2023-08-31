@@ -48,8 +48,8 @@ mod tests {
         let object_id = ctx.get::<ObjectID>("object_id");
 
         let mut client = IPCClient::default()?;
-        let batch = client.get::<DataFrame>(object_id)?;
-        let dataframe = batch.as_ref().as_ref();
+        let dataframe = client.get::<DataFrame>(object_id)?;
+        let dataframe = dataframe.as_ref().as_ref();
         assert_that!(dataframe.width()).is_equal_to(3);
         let mut names = Vec::with_capacity(dataframe.width());
         for column in dataframe.get_columns() {

@@ -484,3 +484,20 @@ impl IPCClientManager {
         return &CONNECTED_CLIENTS;
     }
 }
+
+#[macro_export]
+macro_rules! get {
+    ($client: ident, $object_ty: ty, $object_id: expr) => {
+        $client.get::<$object_ty>($object_id)
+    };
+}
+
+#[macro_export]
+macro_rules! put {
+    ($client: expr, $builder_ty: ty, $($arg: expr),* $(,)?) => {
+        match <$builder_ty>::new($client, $($arg),*) {
+            Ok(builder) => builder.seal($client),
+            Err(e) => Err(e),
+        }
+    };
+}

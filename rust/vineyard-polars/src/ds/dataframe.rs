@@ -27,7 +27,7 @@ use vineyard::ds::dataframe::DataFrame as VineyardDataFrame;
 ///
 /// Usage:
 ///
-/// ```no_run
+/// ```ignore
 /// let x = polars::DataFrame::new(...).map_err(error)?;
 /// ```
 fn error(error: polars::PolarsError) -> VineyardError {
@@ -90,6 +90,7 @@ impl DataFrame {
                 }
             })
             .collect::<Vec<_>>();
+        self.meta = dataframe.metadata();
         self.dataframe = polars::DataFrame::new(series).map_err(error)?;
         return Ok(());
     }
@@ -127,6 +128,7 @@ impl DataFrame {
                 )
             })
             .collect::<Vec<_>>();
+        self.meta = table.metadata();
         self.dataframe = polars::DataFrame::new(series).map_err(error)?;
         return Ok(());
     }
@@ -184,7 +186,18 @@ impl ObjectBase for PandasDataFrameBuilder {
 }
 
 impl PandasDataFrameBuilder {
-    pub fn new(names: Vec<String>, columns: Vec<Box<dyn Object>>) -> Result<Self> {
+    pub fn new(client: &mut IPCClient, dataframe: &polars::DataFrame) -> Result<Self> {
+        let mut names = Vec::with_capacity(dataframe.width());
+        let mut columns = Vec::with_capacity(dataframe.width());
+        for column in dataframe.get_columns() {
+            let column = column.rechunk(); // FIXME(avoid copying)
+            names.push(column.name().into());
+            columns.push(column.chunks()[0].clone());
+        }
+        return Self::new_from_arrays(client, names, columns);
+    }
+
+    pub fn new_from_columns(names: Vec<String>, columns: Vec<Box<dyn Object>>) -> Result<Self> {
         return Ok(PandasDataFrameBuilder {
             sealed: false,
             names,
@@ -208,20 +221,6 @@ impl PandasDataFrameBuilder {
             names,
             columns,
         });
-    }
-
-    pub fn new_from_dataframe(
-        client: &mut IPCClient,
-        dataframe: &polars::DataFrame,
-    ) -> Result<Self> {
-        let mut names = Vec::with_capacity(dataframe.width());
-        let mut columns = Vec::with_capacity(dataframe.width());
-        for column in dataframe.get_columns() {
-            let column = column.rechunk(); // FIXME(avoid copying)
-            names.push(column.name().into());
-            columns.push(column.chunks()[0].clone());
-        }
-        return Self::new_from_arrays(client, names, columns);
     }
 }
 
@@ -250,9 +249,21 @@ impl ObjectBase for ArrowDataFrameBuilder {
 }
 
 impl ArrowDataFrameBuilder {
+    pub fn new(client: &mut IPCClient, dataframe: &polars::DataFrame) -> Result<Self> {
+        let mut names = Vec::with_capacity(dataframe.width());
+        let mut datatypes = Vec::with_capacity(dataframe.width());
+        let mut columns = Vec::with_capacity(dataframe.width());
+        for column in dataframe.get_columns() {
+            names.push(column.name().into());
+            datatypes.push(column.dtype().to_arrow());
+            columns.push(column.chunks().clone());
+        }
+        return Self::new_from_columns(client, names, datatypes, columns);
+    }
+
     /// batches[0]: the first record batch
     /// batches[0][0]: the first column of the first record batch
-    pub fn new(
+    pub fn new_from_batch_columns(
         client: &mut IPCClient,
         names: Vec<String>,
         datatypes: Vec<datatypes::DataType>,
@@ -267,7 +278,7 @@ impl ArrowDataFrameBuilder {
                 })
                 .collect::<Vec<_>>(),
         );
-        return Ok(ArrowDataFrameBuilder(TableBuilder::new_from_bathes(
+        return Ok(ArrowDataFrameBuilder(TableBuilder::new_from_batch_columns(
             client,
             &schema,
             num_rows,
@@ -302,7 +313,14 @@ impl ArrowDataFrameBuilder {
             }
             chunks.push(columns);
         }
-        return Self::new(client, names, datatypes, num_rows, num_columns, chunks);
+        return Self::new_from_batch_columns(
+            client,
+            names,
+            datatypes,
+            num_rows,
+            num_columns,
+            chunks,
+        );
     }
 
     /// columns[0]: the first column
@@ -327,21 +345,13 @@ impl ArrowDataFrameBuilder {
                 chunks[chunk_index].push(build_array(client, chunk.into())?);
             }
         }
-        return Self::new(client, names, datatypes, num_rows, num_columns, chunks);
-    }
-
-    pub fn new_from_dataframe(
-        client: &mut IPCClient,
-        dataframe: &polars::DataFrame,
-    ) -> Result<Self> {
-        let mut names = Vec::with_capacity(dataframe.width());
-        let mut datatypes = Vec::with_capacity(dataframe.width());
-        let mut columns = Vec::with_capacity(dataframe.width());
-        for column in dataframe.get_columns() {
-            names.push(column.name().into());
-            datatypes.push(column.dtype().to_arrow());
-            columns.push(column.chunks().clone());
-        }
-        return Self::new_from_columns(client, names, datatypes, columns);
+        return Self::new_from_batch_columns(
+            client,
+            names,
+            datatypes,
+            num_rows,
+            num_columns,
+            chunks,
+        );
     }
 }
