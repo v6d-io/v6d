@@ -51,6 +51,13 @@ var (
 	Unsafe bool
 )
 
+// put options
+var emptyValue []uint
+var (
+	// The object id to get
+	Value []uint
+)
+
 // ls options
 var (
 	// Pattern string that will be matched against the object’s typenames
@@ -98,6 +105,10 @@ func ApplyGetOpts(cmd *cobra.Command) {
 		"code_remote=True will force a meta synchronization on the vineyard server.")
 	cmd.Flags().BoolVarP(&Unsafe, "unsafe", "", false, "unsafe means getting the blob even the blob is not sealed yet."+
 		"Default is False.")
+}
+
+func ApplyPutOpts(cmd *cobra.Command) {
+	cmd.Flags().UintSliceVarP(&Value, "value", "", emptyValue, "vineyard blob value")
 }
 
 func ApplyLsOpts(cmd *cobra.Command) {

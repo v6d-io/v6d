@@ -109,3 +109,11 @@ func (c *Client) GetBlob(id string, unsafe bool) (blob map[types.ObjectID]client
 	}
 	return nil, nil
 }
+
+// Put
+func (c *Client) PutBlob(size uint64) (blob client.BlobWriter, err error) {
+	if c.ipcClient != nil {
+		return c.ipcClient.CreateBuffer(size)
+	}
+	return client.BlobWriter{}, nil
+}

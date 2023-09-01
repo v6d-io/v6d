@@ -73,6 +73,7 @@ func init() {
 	cmd.AddCommand(sidecar.NewInjectCmd())
 	cmd.AddCommand(client.NewLsCmd())
 	cmd.AddCommand(client.NewGetCmd())
+	cmd.AddCommand(client.NewPutCmd())
 }
 
 func main() {
