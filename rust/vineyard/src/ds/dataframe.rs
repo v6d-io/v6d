@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use arrow_array::ArrayRef;
+use std::sync::Arc;
+
+use arrow_array::{ArrayRef, RecordBatch};
+use arrow_schema::{DataType, Field, Schema};
+use itertools::izip;
 use serde_json::Value;
 
 use super::tensor::*;
@@ -74,6 +78,26 @@ impl DataFrame {
 
     pub fn column(&self, index: usize) -> ArrayRef {
         self.columns[index].array()
+    }
+
+    pub fn recordbatch(&self) -> Result<RecordBatch> {
+        let mut columns = Vec::with_capacity(self.columns.len());
+        for column in &self.columns {
+            columns.push(column.array());
+        }
+        let types: Vec<DataType> = columns
+            .iter()
+            .map(|column| column.data_type().clone())
+            .collect();
+        let batch = RecordBatch::try_new(
+            Arc::new(Schema::new(
+                izip!(self.names.clone(), types)
+                    .map(|(name, datatype)| Field::new(name, datatype, true))
+                    .collect::<Vec<Field>>(),
+            )),
+            columns,
+        )?;
+        return Ok(batch);
     }
 }
 

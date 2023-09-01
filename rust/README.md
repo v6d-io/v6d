@@ -162,11 +162,38 @@ Inter-op with Python: `polars.DataFrame`
 - Rust
 
     ```rust
+    use vineyard_polars::ds::dataframe::DataFrame;
+
     let mut client = IPCClient::default()?;
-    let batch = client.get::<DataFrame>(object_id)?;
-    let dataframe = batch.as_ref().as_ref();
+    let dataframe = client.get::<DataFrame>(object_id)?;
+    let dataframe = dataframe.as_ref().as_ref();
     assert_that!(dataframe.width()).is_equal_to(3);
     for column in dataframe.get_columns() {
         // ...
     }
+    ```
+
+Inter-op with Python: `polars.DataFrame`
+----------------------------------------
+
+- Python
+
+    ```python
+    batches = [batch] * 5
+    table = pa.Table.from_batches(batches)
+    object_id = int(client.put(table))
+    ```
+
+- Rust
+
+    ```rust
+    use vineyard_datafusion::ds::dataframe::DataFrame;
+
+    let mut client = IPCClient::default()?;
+    let dataframe = client.get::<DataFrame>(object_id)?;
+
+    let ctx = SessionContext::new();
+    let table = ctx.read_table(dataframe.table_provider()).unwrap();
+
+    assert_that!(block_on(table.count()).unwrap()).is_equal_to(1000);
     ```
