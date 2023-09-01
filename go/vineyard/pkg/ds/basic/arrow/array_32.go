@@ -129,7 +129,7 @@ func (arr *Int32Builder) Seal(c *client.IPCClient) (types.ObjectID, error) {
 		return types.InvalidObjectID(), err
 	}
 	meta := client.NewObjectMeta()
-	meta.SetTypeName("vineyard::Numeric<int32>")
+	meta.SetTypeName("vineyard::NumericArray<int32>")
 	meta.AddKeyValue("length_", arr.Length)
 	meta.AddKeyValue("null_count_", arr.NullCount)
 	meta.AddKeyValue("offset_", arr.Offset)
@@ -251,7 +251,7 @@ func (arr *Uint32Builder) Seal(c *client.IPCClient) (types.ObjectID, error) {
 		return types.InvalidObjectID(), err
 	}
 	meta := client.NewObjectMeta()
-	meta.SetTypeName("vineyard::Numeric<uint32>")
+	meta.SetTypeName("vineyard::NumericArray<uint32>")
 	meta.AddKeyValue("length_", arr.Length)
 	meta.AddKeyValue("null_count_", arr.NullCount)
 	meta.AddKeyValue("offset_", arr.Offset)
@@ -373,7 +373,7 @@ func (arr *Float32Builder) Seal(c *client.IPCClient) (types.ObjectID, error) {
 		return types.InvalidObjectID(), err
 	}
 	meta := client.NewObjectMeta()
-	meta.SetTypeName("vineyard::Numeric<float>")
+	meta.SetTypeName("vineyard::NumericArray<float>")
 	meta.AddKeyValue("length_", arr.Length)
 	meta.AddKeyValue("null_count_", arr.NullCount)
 	meta.AddKeyValue("offset_", arr.Offset)

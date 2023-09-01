@@ -19,6 +19,8 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/v6d-io/v6d/go/vineyard/pkg/client"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common/types"
 )
@@ -106,9 +108,7 @@ func TestLargeStringArray(t *testing.T) {
 	// validate array content
 	{
 		for i = 0; i < N; i++ {
-			if array.Value(int(i)) != strconv.Itoa(int(i)) {
-				t.Fatalf("array content not match % d", i)
-			}
+			assert.Equal(t, array.Value(int(i)), strconv.Itoa(int(i)), "array content not match")
 		}
 	}
 }

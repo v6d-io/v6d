@@ -18,19 +18,19 @@ package types
 import (
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestObjectID(t *testing.T) {
 	var s string = ObjectIDToString(1234)
-	var o, _ = ObjectIDFromString(s)
+	o, _ := ObjectIDFromString(s)
 	assert.Equal(t, s, "o00000000000004d2")
 	assert.Equal(t, o, uint64(1234))
 }
 
 func TestSignature(t *testing.T) {
 	var s string = SignatureToString(1234)
-	var o, _ = SignatureFromString(s)
+	o, _ := SignatureFromString(s)
 	assert.Equal(t, s, "s00000000000004d2")
 	assert.Equal(t, o, uint64(1234))
 }

@@ -18,6 +18,8 @@ package arrow
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/v6d-io/v6d/go/vineyard/pkg/client"
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common/types"
 )
@@ -60,9 +62,7 @@ func TestInt32Array(t *testing.T) {
 	// validate array content
 	{
 		for i = 0; i < N; i++ {
-			if array.Value(int(i)) != int32(i) {
-				t.Fatalf("array content not match % d", i)
-			}
+			assert.Equal(t, array.Value(int(i)), int32(i), "array content not match")
 		}
 	}
 }
