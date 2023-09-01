@@ -30,7 +30,7 @@ use vineyard::ds::dataframe::DataFrame as VineyardDataFrame;
 /// ```ignore
 /// let x = polars::DataFrame::new(...).map_err(error)?;
 /// ```
-fn error(error: polars::PolarsError) -> VineyardError {
+pub fn error(error: polars::PolarsError) -> VineyardError {
     VineyardError::invalid(format!("{}", error))
 }
 

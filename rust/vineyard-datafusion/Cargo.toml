@@ -1,7 +1,7 @@
 [package]
-name = "vineyard-polars"
+name = "vineyard-datafusion"
 version = { workspace = true }
-description = "Vineyard Rust SDK: polars integration for DataFrame"
+description = "Vineyard Rust SDK: arrow datafusion integration for DataFrame"
 homepage = { workspace = true }
 repository = { workspace = true }
 license = { workspace = true }
@@ -15,17 +15,17 @@ default = ["nightly"]
 nightly = []
 
 [lib]
-name = "vineyard_polars"
+name = "vineyard_datafusion"
 path = "src/lib.rs"
 
 [dependencies]
 arrow-array = { workspace = true }
 arrow-schema = { workspace = true }
-arrow2 = { workspace = true }
+datafusion = { workspace = true }
 itertools = { workspace = true }
-polars-core = { workspace = true }
 serde_json = { workspace = true }
 vineyard = { workspace = true }
 
 [dev-dependencies]
 spectral = { workspace = true }
+futures = { workspace = true }
