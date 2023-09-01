@@ -38,13 +38,13 @@ func ConstructArray(c *client.IPCClient, meta *client.ObjectMeta) (array Array, 
 		array = &Int32Array{}
 	case "vineyard::NumericArray<uint32>":
 		array = &Uint32Array{}
-	case "vineyard::NumericArray<float32>":
+	case "vineyard::NumericArray<float>":
 		array = &Float32Array{}
 	case "vineyard::NumericArray<int64>":
 		array = &Int64Array{}
 	case "vineyard::NumericArray<uint64>":
 		array = &Uint64Array{}
-	case "vineyard::NumericArray<float64>":
+	case "vineyard::NumericArray<double>":
 		array = &Float64Array{}
 	case "vineyard::StringArray":
 		array = &StringArray{}

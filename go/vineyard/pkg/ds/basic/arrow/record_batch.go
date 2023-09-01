@@ -17,6 +17,7 @@ package arrow
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"github.com/apache/arrow/go/v11/arrow"
@@ -28,9 +29,29 @@ import (
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common/types"
 )
 
+func byteArrayToInt64Array(data []byte) []int64 {
+	ret := make([]int64, len(data))
+	for i, v := range data {
+		ret[i] = int64(v)
+	}
+	return ret
+}
+
+func int64ArrayToByteArray(data []int64) []byte {
+	ret := make([]byte, len(data))
+	for i, v := range data {
+		ret[i] = byte(v)
+	}
+	return ret
+}
+
 type Schema struct {
 	client.Object
 	*arrow.Schema
+}
+
+type SchemaBinaryWrapper struct {
+	Bytes []int64 `json:"bytes"`
 }
 
 func (s *Schema) Construct(c *client.IPCClient, meta *client.ObjectMeta) (err error) {
@@ -38,15 +59,17 @@ func (s *Schema) Construct(c *client.IPCClient, meta *client.ObjectMeta) (err er
 		return err
 	}
 	s.Meta = meta
-	schema, err := s.Meta.GetKeyValue("schema_binary_")
+	schema, err := s.Meta.GetKeyValueString("schema_binary_")
 	if err != nil {
 		return err
 	}
-	binary, ok := schema.(map[string]any)["bytes"]
-	if !ok {
+	fmt.Println("binary to construct ", schema)
+	var binary SchemaBinaryWrapper
+	err = json.Unmarshal([]byte(schema), &binary)
+	if err != nil {
 		return errors.New("schema_binary_ doesn't contain the bytes")
 	}
-	reader, err := ipc.NewReader(bytes.NewReader(binary.([]byte)))
+	reader, err := ipc.NewReader(bytes.NewReader(int64ArrayToByteArray(binary.Bytes)))
 	if err != nil {
 		return err
 	}
@@ -84,16 +107,23 @@ func (s *SchemaBuilder) Seal(c *client.IPCClient) (types.ObjectID, error) {
 	}
 	meta := client.NewObjectMeta()
 	meta.SetTypeName("vineyard::SchemaProxy")
-	meta.AddKeyValue("schema_binary_", map[string]any{"bytes": s.binary})
+	fmt.Println("binary", s.binary)
+	binary, err := json.Marshal(SchemaBinaryWrapper{Bytes: byteArrayToInt64Array(s.binary)})
+	if err != nil {
+		return types.InvalidObjectID(), err
+	}
+	fmt.Println("binary before add: ", byteArrayToInt64Array(s.binary))
+	meta.AddKeyValue("schema_binary_", string(binary))
+	meta.AddKeyValue("schema_textual_", s.Schema.String())
 	return c.CreateMetaData(meta)
 }
 
-type Record struct {
+type RecordBatch struct {
 	client.Object
 	arrow.Record
 }
 
-func (r *Record) Construct(c *client.IPCClient, meta *client.ObjectMeta) (err error) {
+func (r *RecordBatch) Construct(c *client.IPCClient, meta *client.ObjectMeta) (err error) {
 	if r.Id, err = meta.GetId(); err != nil {
 		return err
 	}

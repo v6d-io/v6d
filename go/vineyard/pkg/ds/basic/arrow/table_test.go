@@ -27,7 +27,7 @@ import (
 	"github.com/v6d-io/v6d/go/vineyard/pkg/common/types"
 )
 
-func TestRecordBatch(t *testing.T) {
+func TestTable(t *testing.T) {
 	client, err := client.NewIPCClient(client.GetDefaultIPCSocket())
 	if err != nil {
 		t.Fatalf("connect to ipc server failed: %+v", err)
@@ -58,36 +58,45 @@ func TestRecordBatch(t *testing.T) {
 		b.Field(1).(*array.Float64Builder).AppendValues(
 			[]float64{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, nil)
 		record := b.NewRecord()
-		defer record.Release()
+		table := array.NewTableFromRecords(schema, []arrow.Record{record})
+		defer table.Release()
 
-		builder := NewRecordBuilderFromRecord(record)
+		builder := NewTableBuilder(table)
 		objectId, err = builder.Seal(client)
 		if err != nil {
-			t.Fatalf("seal recordbatch failed: %+v", err)
+			t.Fatalf("seal table failed: %+v", err)
 		}
 	}
 
 	// get record batch
-	var recordBatch RecordBatch
+	var table Table
 	{
-		err := client.GetObject(objectId, &recordBatch)
+		err := client.GetObject(objectId, &table)
 		if err != nil {
-			t.Fatalf("get recordbatch failed: %+v", err)
+			t.Fatalf("get table failed: %+v", err)
 		}
 	}
 
 	// valid record batch content
 	{
 		// check schema
-		schema := recordBatch.Schema()
+		schema := table.Schema()
 		assert.Equal(t, schema.Field(0).Name, "f0-i32", "schema field name not match")
 		assert.Equal(t, schema.Field(0).Type.ID(), arrow.INT32, "schema field type not match")
 		assert.Equal(t, schema.Field(1).Name, "f1-f64", "schema field name not match")
 		assert.Equal(t, schema.Field(1).Type.ID(), arrow.FLOAT64, "schema field type not match")
 
 		// check value
-		assert.Equal(t, recordBatch.NumRows(), int64(10), "recordbatch row number not match")
-		assert.Equal(t, recordBatch.NumCols(), int64(2), "recordbatch column number not match")
+		assert.Equal(t, table.NumRows(), int64(10), "recordbatch row number not match")
+		assert.Equal(t, table.NumCols(), int64(2), "recordbatch column number not match")
+
+		batches := make([]arrow.Record, 0)
+		reader := array.NewTableReader(table.Table, -1)
+		for reader.Next() {
+			batches = append(batches, reader.Record())
+		}
+
+		recordBatch := batches[0]
 
 		// check column 0
 		column0 := recordBatch.Column(0).(*array.Int32)

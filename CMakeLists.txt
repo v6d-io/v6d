@@ -819,6 +819,9 @@ endif()
 
 if(BUILD_VINEYARD_PYTHON_BINDINGS)
     set(PYBIND11_PYTHON_VERSION 3)
+    if(NOT (CMAKE_VERSION VERSION_LESS "3.27"))
+        set(PYBIND11_FINDPYTHON ON)
+    endif()
     add_subdirectory_static(thirdparty/pybind11)
     set(PYTHON_BIND_FILES "python/client.cc"
                           "python/core.cc"
