@@ -16,6 +16,7 @@ limitations under the License.
 package client
 
 import (
+	"fmt"
 	"net"
 	"syscall"
 
@@ -117,6 +118,25 @@ func (c *IPCClient) CreateBuffer(size uint64) (blob BlobWriter, err error) {
 	v := memory.Slice(pointer, payload.DataOffset, payload.DataSize)
 	blob.Reset(payload.ID, payload.DataSize, arrow.NewBufferBytes(v), c.InstanceID)
 	return blob, nil
+}
+
+func (c *IPCClient) BuildBuffer(address []byte, size uint64) (types.ObjectID, error) {
+	if size == 0 {
+		empty_blob_writer := EmptyBlobWriter(c)
+		return empty_blob_writer.Seal(c)
+	}
+	if address == nil {
+		empty_blob_writer := EmptyBlobWriter(c)
+		return empty_blob_writer.Seal(c)
+	}
+	buffer, err := c.CreateBuffer(size)
+	if err != nil {
+		return uint64(0), nil
+	}
+	buffer.Reset(buffer.Id, buffer.Size, arrow.NewBufferBytes(address), c.InstanceID)
+	fmt.Println(buffer.Buffer.Buf())
+	fmt.Println(buffer.Buffer.Bytes())
+	return buffer.Seal(c)
 }
 
 func (c *IPCClient) GetBuffer(id types.ObjectID, unsafe bool) (Blob, error) {

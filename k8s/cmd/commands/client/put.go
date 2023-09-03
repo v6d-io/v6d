@@ -45,8 +45,16 @@ var putCmd = &cobra.Command{
 			defer close(ch)
 		}
 
-		buffer, _ := client.PutBlob(64)
-		fmt.Println(buffer)
+		flags.Value = []uint{1}
+		// Convert flags.Value (type [] uint) to type [] byte
+		value := make([]byte, len(flags.Value))
+		for i, v := range flags.Value {
+			value[i] = byte(v)
+		}
+		//object_id, _ := client.PutBlob(value, uint64(len(flags.Value)))
+		object_id, _ := client.PutBlob(value, 64)
+		a := fmt.Sprintf("o%016x", object_id)
+		fmt.Println(a)
 		/*output := util.NewOutput(nil, &blob, nil)
 		// set the output options
 		output.WithFilter(false).
