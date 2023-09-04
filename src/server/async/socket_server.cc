@@ -1218,6 +1218,7 @@ bool SocketConnection::doPutName(const json& root) {
   ObjectID object_id;
   std::string name;
   TRY_READ_REQUEST(ReadPutNameRequest, root, object_id, name);
+  name = escape_json_pointer(name);
   RESPONSE_ON_ERROR(
       server_ptr_->PutName(object_id, name, [self](const Status& status) {
         std::string message_out;
@@ -1238,6 +1239,10 @@ bool SocketConnection::doGetName(const json& root) {
   std::string name;
   bool wait;
   TRY_READ_REQUEST(ReadGetNameRequest, root, name, wait);
+  // n.b.: no need for escape for `get`, as the translation has been handled
+  // by nlohmann/json when compare keys.
+  //
+  // name = escape_json_pointer(name);
   RESPONSE_ON_ERROR(server_ptr_->GetName(
       name, wait, [self]() { return self->running_.load(); },
       [self](const Status& status, const ObjectID& object_id) {
@@ -1264,6 +1269,11 @@ bool SocketConnection::doListName(const json& root) {
       pattern, regex, limit,
       [self](const Status& status,
              const std::map<std::string, ObjectID>& names) {
+        std::map<std::string, ObjectID> unescaped_names;
+        for (auto const& item : names) {
+          std::string name = item.first;
+          unescaped_names.emplace(unescape_json_pointer(name), item.second);
+        }
         std::string message_out;
         if (status.ok()) {
           WriteListNameReply(names, message_out);
@@ -1281,6 +1291,10 @@ bool SocketConnection::doDropName(const json& root) {
   auto self(shared_from_this());
   std::string name;
   TRY_READ_REQUEST(ReadDropNameRequest, root, name);
+  // n.b.: no need for escape for `drop` here, as the translation has been
+  // handled by during composing` the `Del` op in vineyard_server.cc.
+  //
+  // name = escape_json_pointer(name);
   RESPONSE_ON_ERROR(server_ptr_->DropName(name, [self](const Status& status) {
     std::string message_out;
     if (status.ok()) {

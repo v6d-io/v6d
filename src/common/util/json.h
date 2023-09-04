@@ -198,6 +198,32 @@ void get_container(json const& tree, std::string const& path,
   }
 }
 
+inline void json_replace_substring(std::string& s, const std::string& f,
+                                   const std::string& t) {
+  if (f.empty()) {
+    return;
+  }
+  for (auto pos = s.find(f);             // find first occurrence of f
+       pos != std::string::npos;         // make sure f was found
+       s.replace(pos, f.size(), t),      // replace with t, and
+       pos = s.find(f, pos + t.size()))  // find next occurrence of f
+  {}
+}
+
+/// escape "~" to "~0" and "/" to "~1"
+inline std::string escape_json_pointer(std::string s) {
+  json_replace_substring(s, "~", "~0");
+  json_replace_substring(s, "/", "~1");
+  return s;
+}
+
+/// unescape "~1" to tilde and "~0" to slash (order is important!)
+inline std::string unescape_json_pointer(std::string& s) {
+  json_replace_substring(s, "~1", "/");
+  json_replace_substring(s, "~0", "~");
+  return s;
+}
+
 }  //  namespace vineyard
 
 #endif  // SRC_COMMON_UTIL_JSON_H_

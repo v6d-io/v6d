@@ -887,7 +887,8 @@ Status VineyardServer::DropName(const std::string& name,
           if (names.is_object()) {
             auto iter = names.find(name);
             if (iter != names.end()) {
-              ops.emplace_back(meta_tree::op_t::Del("/names/" + name));
+              ops.emplace_back(
+                  meta_tree::op_t::Del("/names/" + escape_json_pointer(name)));
               auto object_id = iter->get<ObjectID>();
               // delete the name in the object meta as well.
               bool exists = false;
