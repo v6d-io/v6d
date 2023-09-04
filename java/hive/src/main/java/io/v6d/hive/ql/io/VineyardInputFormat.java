@@ -91,7 +91,9 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritab
                     try {
                         ObjectID tableID = ObjectID.fromString(objectID);
                         Table table =
-                                (Table) ObjectFactory.getFactory().resolve(client.getMetaData(tableID));
+                                (Table)
+                                        ObjectFactory.getFactory()
+                                                .resolve(client.getMetaData(tableID));
                         numBatches += table.getBatches().size();
                     } catch (Exception e) {
                         // Skip some invalid file.

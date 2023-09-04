@@ -204,6 +204,11 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         Context.println("Table persisted, name:" + finalOutPath);
 
         output.write((meta.getId().toString() + "\n").getBytes(StandardCharsets.UTF_8));
+        client.putName(
+                meta.getId(),
+                finalOutPath
+                        .toString()
+                        .substring(finalOutPath.toString().indexOf("vineyard:") + 1));
         output.close();
     }
 

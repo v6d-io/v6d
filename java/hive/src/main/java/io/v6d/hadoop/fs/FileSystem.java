@@ -17,7 +17,14 @@ package io.v6d.hadoop.fs;
 import com.google.common.base.StopwatchContext;
 import com.google.common.jimfs.Jimfs;
 import io.v6d.core.client.Context;
+import io.v6d.core.client.IPCClient;
+import io.v6d.core.client.ds.ObjectFactory;
+import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.core.common.util.ObjectID;
 import io.v6d.hive.ql.io.CloseableReentrantLock;
+import io.v6d.modules.basic.arrow.SchemaBuilder;
+import io.v6d.modules.basic.arrow.Table;
+import io.v6d.modules.basic.arrow.TableBuilder;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -32,6 +39,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Queue;
 import lombok.*;
+import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
@@ -266,6 +274,15 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                 deleteInternal(p, b);
             }
             stream.close();
+        } else {
+            // drop name
+            String name = nioFilePath.getFileName().toString();
+            IPCClient client = Context.getClient();
+            try {
+                client.dropName(name);
+            } catch (Exception e) {
+                Context.println("Exception: " + e.getMessage());
+            }
         }
         Files.deleteIfExists(nioFilePath);
 
@@ -285,16 +302,59 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     private void mergeFile(java.nio.file.Path path, java.nio.file.Path path1) throws IOException {
         FileChannel channel = FileChannel.open(path, StandardOpenOption.READ);
-        FileChannel channel1 = FileChannel.open(path1, StandardOpenOption.APPEND);
-        channel.transferTo(0, channel.size(), channel1);
+        FileChannel channel1 = FileChannel.open(path1, StandardOpenOption.READ);
+        // channel.transferTo(0, channel.size(), channel1);
+
+        // channel1 = FileChannel.open(path1, StandardOpenOption.READ);
+        ByteBuffer bytes = ByteBuffer.allocate(255);
+        int len = channel.read(bytes);
+        String objectIDStr =
+                new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
+        bytes = ByteBuffer.allocate(255);
+        len = channel1.read(bytes);
+        String objectIDStr1 =
+                new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
+
+        ObjectID mergedTableObjectID = null;
+        try {
+            IPCClient client = Context.getClient();
+            ObjectID objectID = ObjectID.fromString(objectIDStr);
+            ObjectID objectID1 = ObjectID.fromString(objectIDStr1);
+            Table table = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID));
+            Table table1 =
+                    (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID1));
+
+            // merge table
+            Schema schema = table.getSchema().getSchema();
+            SchemaBuilder mergedSchemaBuilder = SchemaBuilder.fromSchema(schema);
+            TableBuilder mergedTableBuilder = new TableBuilder(client, mergedSchemaBuilder);
+
+            for (int i = 0; i < table.getBatches().size(); i++) {
+                mergedTableBuilder.addBatch(table.getBatches().get(i));
+            }
+
+            for (int i = 0; i < table1.getBatches().size(); i++) {
+                mergedTableBuilder.addBatch(table1.getBatches().get(i));
+            }
+
+            ObjectMeta meta = mergedTableBuilder.seal(client);
+            Context.println("record batch size:" + mergedTableBuilder.getBatchSize());
+            Context.println("Table id in vineyard:" + meta.getId().value());
+            client.persist(meta.getId());
+            Context.println("Table persisted, name:" + path1.toString());
+            client.putName(meta.getId(), path1.toString());
+            mergedTableObjectID = meta.getId();
+        } catch (Exception e) {
+            Context.println("Exception: " + e.getMessage());
+        }
         channel.close();
         channel1.close();
-
-        channel1 = FileChannel.open(path1, StandardOpenOption.READ);
-        ByteBuffer bytes = ByteBuffer.allocate(255);
-        int len = channel1.read(bytes);
-        String objectIDStr = new String(bytes.array(), 0, len, StandardCharsets.UTF_8);
-        System.out.println();
+        if (mergedTableObjectID != null) {
+            channel1 = FileChannel.open(path1, StandardOpenOption.WRITE);
+            String mergedTableIDStr = mergedTableObjectID.toString() + "\n";
+            bytes = ByteBuffer.allocate(mergedTableIDStr.getBytes(StandardCharsets.UTF_8).length);
+            channel1.write(ByteBuffer.wrap(mergedTableIDStr.getBytes(StandardCharsets.UTF_8)));
+        }
     }
 
     public boolean renameInternal(Path path, Path path1) throws IOException {
@@ -306,6 +366,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         java.nio.file.Path nioParentDirPath = nioFilePath.getParent();
         Files.createDirectories(nioParentDirPath);
         if (Files.exists(nioFilePath1)) {
+            printAllFile();
             mergeFile(nioFilePath, nioFilePath1);
             Files.delete(nioFilePath);
         } else {
@@ -415,44 +476,52 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public void moveFromLocalFile(Path src, Path dst) throws IOException {
-        throw new UnsupportedOperationException("Vineyard file system not support moveFromLocalFile.");
+        throw new UnsupportedOperationException(
+                "Vineyard file system not support moveFromLocalFile.");
     }
 
     @Override
     public void copyFromLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
-        throw new UnsupportedOperationException("Vineyard file system not support copyFromLocalFile.");
+        throw new UnsupportedOperationException(
+                "Vineyard file system not support copyFromLocalFile.");
     }
 
     @Override
     public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path[] srcs, Path dst)
             throws IOException {
-        throw new UnsupportedOperationException("Vineyard file system not support copyFromLocalFile.");
+        throw new UnsupportedOperationException(
+                "Vineyard file system not support copyFromLocalFile.");
     }
 
     @Override
     public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src, Path dst)
             throws IOException {
-        throw new UnsupportedOperationException("Vineyard file system not support copyFromLocalFile.");
+        throw new UnsupportedOperationException(
+                "Vineyard file system not support copyFromLocalFile.");
     }
 
     @Override
     public void copyToLocalFile(Path src, Path dst) throws IOException {
-        throw new UnsupportedOperationException("Vineyard file system not support copyToLocalFile.");
+        throw new UnsupportedOperationException(
+                "Vineyard file system not support copyToLocalFile.");
     }
 
     @Override
     public void moveToLocalFile(Path src, Path dst) throws IOException {
-        throw new UnsupportedOperationException("Vineyard file system not support moveToLocalFile.");
+        throw new UnsupportedOperationException(
+                "Vineyard file system not support moveToLocalFile.");
     }
 
     @Override
     public void copyToLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
-        throw new UnsupportedOperationException("Vineyard file system not support copyToLocalFile.");
+        throw new UnsupportedOperationException(
+                "Vineyard file system not support copyToLocalFile.");
     }
 
     @Override
     public void copyToLocalFile(boolean delSrc, Path src, Path dst, boolean useRawLocalFileSystem)
             throws IOException {
-        throw new UnsupportedOperationException("Vineyard file system not support copyToLocalFile.");
+        throw new UnsupportedOperationException(
+                "Vineyard file system not support copyToLocalFile.");
     }
 }
