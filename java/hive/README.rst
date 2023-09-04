@@ -65,6 +65,7 @@ Hive and Vineyard
         LOCATION "vineyard:///opt/hive/data/warehouse/hive_example";
 
         insert into hive_example values('a', 1), ('a', 2), ('b',3);
+        select * from hive_example;
 
 - Create table and select
 
@@ -144,7 +145,8 @@ Hive and Vineyard
         row format serde "io.v6d.hive.ql.io.VineyardSerDe"
         stored as
             INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
-            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat';
+            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
+        LOCATION "vineyard:///opt/hive/data/warehouse/hive_example";
         create table hive_test_data_livejournal(
                             src_id int,
                             dst_id int

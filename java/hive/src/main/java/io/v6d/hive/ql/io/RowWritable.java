@@ -23,7 +23,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
 import lombok.val;
-import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.SettableStructObjectInspector;
