@@ -21,24 +21,26 @@ import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import lombok.*;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.VarCharVector;
+import org.apache.arrow.vector.LargeVarCharVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 import org.apache.arrow.vector.util.Text;
 
 /** Hello world! */
-public class StringArray extends Array {
-    private VarCharVector array;
+public class LargeStringArray extends Array {
+    private LargeVarCharVector array;
 
     public static void instantiate() {
         ObjectFactory.getFactory()
                 .register(
-                        "vineyard::BaseBinaryArray<arrow::StringArray>", new StringArrayResolver());
-        ObjectFactory.getFactory().register("vineyard::StringArray", new StringArrayResolver());
+                        "vineyard::BaseBinaryArray<arrow::LargeStringArray>",
+                        new LargeStringArrayResolver());
+        ObjectFactory.getFactory()
+                .register("vineyard::LargeStringArray", new LargeStringArrayResolver());
     }
 
-    public StringArray(final ObjectMeta meta, Buffer buffer, Buffer offset, long length) {
+    public LargeStringArray(final ObjectMeta meta, Buffer buffer, Buffer offset, long length) {
         super(meta);
-        this.array = new VarCharVector("", Arrow.default_allocator);
+        this.array = new LargeVarCharVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
                 new ArrowFieldNode(length, 0),
                 Arrays.asList(null, offset.getBuffer(), buffer.getBuffer()));
@@ -66,7 +68,7 @@ public class StringArray extends Array {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        StringArray that = (StringArray) o;
+        LargeStringArray that = (LargeStringArray) o;
         return Objects.equal(array, that.array);
     }
 
@@ -76,13 +78,13 @@ public class StringArray extends Array {
     }
 }
 
-class StringArrayResolver extends ObjectFactory.Resolver {
+class LargeStringArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
         val buffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_data_"));
         val offsets_buffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
-        return new StringArray(meta, buffer, offsets_buffer, meta.getLongValue("length_"));
+        return new LargeStringArray(meta, buffer, offsets_buffer, meta.getLongValue("length_"));
     }
 }

@@ -126,6 +126,13 @@ public class Protocol {
         }
     }
 
+    public static class SealRequest extends Request {
+        public static void put(ObjectNode root, ObjectID id) {
+            root.put("type", "seal_request");
+            root.put("object_id", id.value());
+        }
+    }
+
     @Data
     @EqualsAndHashCode(callSuper = false)
     public static class CreateBufferReply extends Reply {
@@ -137,6 +144,13 @@ public class Protocol {
             check(root, "create_buffer_reply");
             this.id = new ObjectID(JSON.getLong(root, "id"));
             this.payload = Payload.fromJson(root.get("created"));
+        }
+    }
+
+    public static class SealReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "seal_reply");
         }
     }
 
@@ -189,6 +203,23 @@ public class Protocol {
         @Override
         public void get(JsonNode root) throws VineyardException {
             check(root, "seal_reply");
+        }
+    }
+
+    public static class ShrinkBufferRequest extends Request {
+        public static void put(ObjectNode root, ObjectID id, long size) {
+            root.put("type", "shrink_buffer_request");
+            root.put("id", id.value());
+            root.put("size", size);
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class ShrinkBufferReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "shrink_buffer_reply");
         }
     }
 

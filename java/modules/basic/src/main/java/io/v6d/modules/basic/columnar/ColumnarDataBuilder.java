@@ -146,6 +146,10 @@ public class ColumnarDataBuilder {
         return accessor.getObject(rowId);
     }
 
+    public void setObject(int rowId, Object object) {
+        accessor.setObject(rowId, object);
+    }
+
     public boolean getBoolean(int rowId) {
         return accessor.getBoolean(rowId);
     }
@@ -266,6 +270,10 @@ public class ColumnarDataBuilder {
             throw new UnsupportedOperationException();
         }
 
+        void setObject(int rowId, Object value) {
+            throw new UnsupportedOperationException();
+        }
+
         boolean getBoolean(int rowId) {
             throw new UnsupportedOperationException();
         }
@@ -363,6 +371,11 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            this.setBoolean(rowId, (Boolean) value);
+        }
+
+        @Override
         final boolean getBoolean(int rowId) {
             return accessor.get(rowId) == 1;
         }
@@ -413,6 +426,11 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            this.setByte(rowId, (Byte) value);
+        }
+
+        @Override
         final byte getByte(int rowId) {
             return accessor.get(rowId);
         }
@@ -435,6 +453,11 @@ public class ColumnarDataBuilder {
         @Override
         Object getObject(int rowId) {
             return getShort(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setShort(rowId, (Short) value);
         }
 
         @Override
@@ -463,6 +486,11 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            this.setShort(rowId, (Short) value);
+        }
+
+        @Override
         final short getShort(int rowId) {
             return (short) accessor.get(rowId);
         }
@@ -485,6 +513,11 @@ public class ColumnarDataBuilder {
         @Override
         Object getObject(int rowId) {
             return getInt(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setInt(rowId, (Integer) value);
         }
 
         @Override
@@ -513,6 +546,11 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            this.setInt(rowId, (Integer) value);
+        }
+
+        @Override
         final int getInt(int rowId) {
             return accessor.get(rowId);
         }
@@ -535,6 +573,11 @@ public class ColumnarDataBuilder {
         @Override
         Object getObject(int rowId) {
             return getLong(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setLong(rowId, (Long) value);
         }
 
         @Override
@@ -563,6 +606,11 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            this.setLong(rowId, (Long) value);
+        }
+
+        @Override
         final long getLong(int rowId) {
             return accessor.get(rowId);
         }
@@ -585,6 +633,11 @@ public class ColumnarDataBuilder {
         @Override
         Object getObject(int rowId) {
             return getFloat(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setFloat(rowId, (Float) value);
         }
 
         @Override
@@ -613,6 +666,11 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            this.setDouble(rowId, (Double) value);
+        }
+
+        @Override
         final double getDouble(int rowId) {
             return accessor.get(rowId);
         }
@@ -635,6 +693,11 @@ public class ColumnarDataBuilder {
         @Override
         Object getObject(int rowId) {
             return getDecimal(rowId, 24, 8);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setDecimal(rowId, (BigDecimal) value);
         }
 
         @Override
@@ -664,13 +727,22 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            if (value instanceof String) {
+                this.setUTF8String(rowId, new Text((String) value));
+            } else {
+                this.setUTF8String(rowId, (Text) value);
+            }
+        }
+
+        @Override
         final Text getUTF8String(int rowId) {
             return accessor.getObject(rowId);
         }
 
         @Override
         final void setUTF8String(int rowId, Text value) {
-            accessor.set(rowId, value);
+            accessor.setSafe(rowId, value);
         }
     }
 
@@ -690,13 +762,22 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            if (value instanceof String) {
+                this.setUTF8String(rowId, new Text((String) value));
+            } else {
+                this.setUTF8String(rowId, (Text) value);
+            }
+        }
+
+        @Override
         final Text getUTF8String(int rowId) {
             return accessor.getObject(rowId);
         }
 
         @Override
         final void setUTF8String(int rowId, Text value) {
-            accessor.set(rowId, value);
+            accessor.setSafe(rowId, value);
         }
     }
 
@@ -712,6 +793,11 @@ public class ColumnarDataBuilder {
         @Override
         Object getObject(int rowId) {
             return getBinary(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setBinary(rowId, (byte[]) value);
         }
 
         @Override
@@ -740,6 +826,11 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            this.setBinary(rowId, (byte[]) value);
+        }
+
+        @Override
         final byte[] getBinary(int rowId) {
             return accessor.getObject(rowId);
         }
@@ -762,6 +853,11 @@ public class ColumnarDataBuilder {
         @Override
         Object getObject(int rowId) {
             return getInt(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setInt(rowId, (Integer) value);
         }
 
         @Override
@@ -790,6 +886,11 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            this.setLong(rowId, (Long) value);
+        }
+
+        @Override
         final long getLong(int rowId) {
             return accessor.get(rowId);
         }
@@ -812,6 +913,11 @@ public class ColumnarDataBuilder {
         @Override
         Object getObject(int rowId) {
             return getLong(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setLong(rowId, (Long) value);
         }
 
         @Override
@@ -846,6 +952,11 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            this.setInt(rowId, (Integer) value);
+        }
+
+        @Override
         int getInt(int rowId) {
             return accessor.get(rowId);
         }
@@ -869,6 +980,11 @@ public class ColumnarDataBuilder {
         @Override
         Object getObject(int rowId) {
             return getLong(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setLong(rowId, (Long) value);
         }
 
         @Override

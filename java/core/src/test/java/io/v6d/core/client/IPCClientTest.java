@@ -17,67 +17,11 @@ package io.v6d.core.client;
 import static org.junit.Assert.*;
 
 import com.google.common.collect.ImmutableList;
-import io.v6d.core.client.ds.Object;
-import io.v6d.core.client.ds.ObjectBuilder;
-import io.v6d.core.client.ds.ObjectFactory;
-import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.core.client.ds.*;
 import io.v6d.core.common.util.VineyardException;
 import lombok.val;
 import org.junit.Before;
 import org.junit.Test;
-
-class StringObject extends Object {
-    private final String str;
-
-    public StringObject(final ObjectMeta meta, String str) {
-        super(meta);
-        this.str = str;
-    }
-
-    public String getStr() {
-        return str;
-    }
-}
-
-class SgtringObjectResolver extends ObjectFactory.Resolver {
-
-    @Override
-    public Object resolve(ObjectMeta meta) {
-        return new StringObject(meta, meta.getStringValue("value_"));
-    }
-}
-
-class StringObjectBuilder implements ObjectBuilder {
-    private final String str;
-
-    public StringObjectBuilder(final String str) {
-        this.str = str;
-    }
-
-    @Override
-    public void build(Client client) throws VineyardException {}
-
-    @Override
-    public ObjectMeta seal(Client client) throws VineyardException {
-        this.build(client);
-        val meta = ObjectMeta.empty();
-        meta.setTypename("vineyard::Scalar<std::string>");
-
-        meta.setValue("type_", "str");
-        meta.setValue("value_", str);
-
-        return client.createMetaData(meta);
-    }
-
-    public String getStr() {
-        return str;
-    }
-
-    @Override
-    public String toString() {
-        return str;
-    }
-}
 
 /** Unit test for IPC client. */
 public class IPCClientTest {
@@ -88,7 +32,7 @@ public class IPCClientTest {
         client = new IPCClient();
 
         val factory = ObjectFactory.getFactory();
-        factory.register("vineyard::Scalar<std::string>", new SgtringObjectResolver());
+        factory.register("vineyard::Scalar<std::string>", new StringObjectResolver());
     }
 
     @Test

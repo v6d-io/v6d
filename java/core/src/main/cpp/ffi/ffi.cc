@@ -18,12 +18,79 @@ limitations under the License.
 #include <stdio.h>
 #include <string.h>
 #include <sys/mman.h>
-
-#include "vineyard/common/memory/fling.h"
+#include <sys/socket.h>
+#include <sys/uio.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+static void init_msg(struct msghdr* msg, struct iovec* iov, char* buf,
+              size_t buf_len) {
+  iov->iov_base = buf;
+  iov->iov_len = 1;
+
+  msg->msg_iov = iov;
+  msg->msg_iovlen = 1;
+  msg->msg_control = buf;
+  msg->msg_controllen = static_cast<socklen_t>(buf_len);
+  msg->msg_name = NULL;
+  msg->msg_namelen = 0;
+}
+
+static int recv_fd(int conn) {
+  struct msghdr msg;
+  struct iovec iov;
+  char buf[CMSG_SPACE(sizeof(int))];
+  init_msg(&msg, &iov, buf, sizeof(buf));
+
+  while (true) {
+    ssize_t r = recvmsg(conn, &msg, 0);
+    if (r == -1) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK || errno == EINTR) {
+        continue;
+      } else {
+        fprintf(stderr, "[error] Error in recv_fd (errno = %d: %s)\n", errno, strerror(errno));
+        return -1;
+      }
+    } else {
+      break;
+    }
+  }
+
+  int found_fd = -1;
+  int oh_noes = 0;
+  for (struct cmsghdr* header = CMSG_FIRSTHDR(&msg); header != NULL;
+       header = CMSG_NXTHDR(&msg, header))
+    if (header->cmsg_level == SOL_SOCKET && header->cmsg_type == SCM_RIGHTS) {
+      ssize_t count =
+          (header->cmsg_len -
+           (CMSG_DATA(header) - reinterpret_cast<unsigned char*>(header))) /
+          sizeof(int);
+      for (int i = 0; i < count; ++i) {
+        int fd = (reinterpret_cast<int*>(CMSG_DATA(header)))[i];
+        if (found_fd == -1) {
+          found_fd = fd;
+        } else {
+          close(fd);
+          oh_noes = 1;
+        }
+      }
+    }
+
+  // The sender sent us more than one file descriptor. We've closed
+  // them all to prevent fd leaks but notify the caller that we got
+  // a bad message.
+  if (oh_noes) {
+    close(found_fd);
+    errno = EBADMSG;
+    fprintf(stderr, "[error] Error in recv_fd: more than one fd received in message\n");
+    return -1;
+  }
+
+  return found_fd;
+}
 
 /*
  * Class:     io_v6d_core_common_memory_ffi_Fling
@@ -32,7 +99,8 @@ extern "C" {
  */
 JNIEXPORT jint JNICALL Java_io_v6d_core_common_memory_ffi_Fling_sendFD(
     JNIEnv*, jclass, jint conn, jint fd) {
-  return send_fd(conn, fd);
+  // return send_fd(conn, fd);
+  return -1;
 }
 
 /*

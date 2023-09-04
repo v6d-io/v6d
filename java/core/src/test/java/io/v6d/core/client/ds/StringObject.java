@@ -12,20 +12,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.modules.basic.arrow;
+package io.v6d.core.client.ds;
 
-import io.v6d.core.client.Client;
-import io.v6d.core.client.ds.ObjectBuilder;
-import io.v6d.core.common.util.VineyardException;
-import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
-import org.apache.arrow.vector.FieldVector;
+public class StringObject extends Object {
+    private final String str;
 
-public interface ArrayBuilder extends ObjectBuilder {
-    public abstract FieldVector getArray();
-
-    public default ColumnarDataBuilder columnar() {
-        return new ColumnarDataBuilder(getArray());
+    public StringObject(final ObjectMeta meta, String str) {
+        super(meta);
+        this.str = str;
     }
 
-    public abstract void shrink(Client client, long size) throws VineyardException;
+    public String getStr() {
+        return str;
+    }
 }
