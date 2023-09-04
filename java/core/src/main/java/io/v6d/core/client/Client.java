@@ -36,6 +36,8 @@ public abstract class Client {
 
     public abstract void sealBuffer(ObjectID objectID) throws VineyardException;
 
+    public abstract void shrinkBuffer(ObjectID objectID, long size) throws VineyardException;
+
     public abstract ObjectMeta createMetaData(ObjectMeta metadata) throws VineyardException;
 
     public ObjectMeta getMetaData(ObjectID id) throws VineyardException {

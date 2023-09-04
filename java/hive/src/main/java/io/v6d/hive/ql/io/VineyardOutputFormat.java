@@ -189,6 +189,9 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         Context.println("create schema builder use " + watch);
         val tableBuilder = new TableBuilder(client, schemaBuilder);
         Context.println("create schema & table builder use " + watch);
+        if (chunks.size() > 0) {
+            chunks.get(chunks.size() - 1).shrink(client, currentLoc);
+        }
         for (int i = 0; i < chunks.size(); i++) {
             val chunk = chunks.get(i);
             Context.println("record batch builder: " + i + ", row size: " + chunk.getNumRows());

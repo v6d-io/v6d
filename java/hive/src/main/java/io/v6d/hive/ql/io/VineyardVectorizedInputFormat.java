@@ -339,7 +339,7 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                     vector.vector[k] = float8Vector.get(k + recordBatchInnerIndex);
                 }
                 batch.cols[i] = vector;
-            } else if (field.getType().equals(Arrow.Type.VarChar)) {
+            } else if (field.getType().equals(Arrow.Type.LargeVarChar)) {
                 BytesColumnVector vector = new BytesColumnVector(batch.size);
                 LargeVarCharVector largeVarCharVector =
                         (LargeVarCharVector) vectorSchemaRoot.getFieldVectors().get(i);
@@ -352,7 +352,7 @@ class VineyardBatchRecordReader implements RecordReader<NullWritable, Vectorized
                             largeVarCharVector.get(k + recordBatchInnerIndex).length);
                 }
                 batch.cols[i] = vector;
-            } else if (field.getType().equals(Arrow.Type.ShortVarChar)) {
+            } else if (field.getType().equals(Arrow.Type.VarChar)) {
                 BytesColumnVector vector = new BytesColumnVector(batch.size);
                 vector.init();
                 VarCharVector varCharVector =

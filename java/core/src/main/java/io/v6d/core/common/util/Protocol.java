@@ -18,7 +18,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.v6d.core.common.memory.Payload;
-import java.io.*;
 import java.util.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -204,6 +203,23 @@ public class Protocol {
         @Override
         public void get(JsonNode root) throws VineyardException {
             check(root, "seal_reply");
+        }
+    }
+
+    public static class ShrinkBufferRequest extends Request {
+        public static void put(ObjectNode root, ObjectID id, long size) {
+            root.put("type", "shrink_buffer_request");
+            root.put("id", id.value());
+            root.put("size", size);
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class ShrinkBufferReply extends Reply {
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "shrink_buffer_reply");
         }
     }
 

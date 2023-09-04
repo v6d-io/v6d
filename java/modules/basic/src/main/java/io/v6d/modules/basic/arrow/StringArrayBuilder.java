@@ -82,4 +82,9 @@ public class StringArrayBuilder implements ArrayBuilder {
     public FieldVector getArray() {
         return this.array;
     }
+
+    @Override
+    public void shrink(Client client, long size) throws VineyardException {
+        this.array.setValueCount((int) size);
+    }
 }

@@ -41,9 +41,8 @@ public class RecordBatch extends Object {
         Int64Array.instantiate();
         FloatArray.instantiate();
         DoubleArray.instantiate();
-        LargeStringArray.instantiate();
-        // TBD : test construct (Large) string array.
         StringArray.instantiate();
+        LargeStringArray.instantiate();
         NullArray.instantiate();
         ObjectFactory.getFactory().register("vineyard::RecordBatch", new RecordBatchResolver());
     }

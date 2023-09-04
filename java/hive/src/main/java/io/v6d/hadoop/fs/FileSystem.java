@@ -56,13 +56,12 @@ class VineyardOutputStream extends FSDataOutputStream {
 
     @Override
     public String toString() {
-        return new String("vineyard");
+        return "vineyard";
     }
 
     @Override
     public void write(int b) throws IOException {
-        Context.println("should not call this function.");
-        throw new IOException("should not call this function.");
+        throw new UnsupportedOperationException("should not call this function.");
     }
 
     @Override
@@ -78,25 +77,25 @@ class VineyardInputStream extends FSInputStream {
     public VineyardInputStream(FileChannel channel) throws IOException {
         this.channel = channel;
         // content = new byte[channel.size()];
-
     }
 
     @Override
     public void seek(long offset) throws IOException {
         // this.offset = (int) offset;
-        throw new IOException("Vineyard input stream not support seek.");
+        throw new UnsupportedOperationException("Vineyard input stream not support seek.");
     }
 
     @Override
     public long getPos() throws IOException {
         // return offset;
-        throw new IOException("Vineyard input stream not support getPos.");
+        throw new UnsupportedOperationException("Vineyard input stream not support getPos.");
     }
 
     @Override
     public boolean seekToNewSource(long l) throws IOException {
-        throw new IOException("Vineyard input stream not support seekToNewSource.");
         // return false;
+        throw new UnsupportedOperationException(
+                "Vineyard input stream not support seekToNewSource.");
     }
 
     @Override
@@ -163,33 +162,20 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public String getScheme() {
-        // Context.println("=================");
-        // Context.println("getScheme: " + SCHEME);
-        // Context.println("=================");
         return SCHEME;
     }
 
     @Override
     public URI getUri() {
-        // Context.println("=================");
-        // Context.println("getUri: " + uri);
-        // Context.println("=================");
         return uri;
     }
 
     @Override
     public void setXAttr(Path path, String name, byte[] value, EnumSet<XAttrSetFlag> flag)
-            throws IOException {
-        // Context.println("=================");
-        // Context.println("setXAttr: " + path.toString());
-        // Context.println("=================");
-    }
+            throws IOException {}
 
     @Override
     protected URI canonicalizeUri(URI uri) {
-        // Context.println("=================");
-        // Context.println("canonicalizeUri: " + uri);
-        // Context.println("=================");
         return uri;
     }
 
@@ -214,16 +200,11 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public FSDataInputStream open(Path path, int i) throws IOException {
-        // Context.println("=================");
-        // Context.println("open: " + path.toString());
-        // Context.println("=================");
-
         FileChannel channel =
                 FileChannel.open(
                         jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1)),
                         StandardOpenOption.READ);
         return new FSDataInputStream(new VineyardInputStream(channel));
-        // return null;
     }
 
     @Override
@@ -340,46 +321,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         Context.println(objectIDStr);
     }
 
-    // private void mergeFile (java.nio.file.Path path, java.nio.file.Path path1) throws IOException
-    // {
-    //     Context.println("mergeFile: " + path + " to " + path1);
-    //     FileChannel channel = FileChannel.open(path, StandardOpenOption.READ);
-    //     FileChannel channel1 = FileChannel.open(path1, StandardOpenOption.READ);
-    //     ByteBuffer bytes = ByteBuffer.allocate(255);
-    //     ByteBuffer bytes1 = ByteBuffer.allocate(255);
-    //     int len = channel.read(bytes);
-    //     int len1 = channel1.read(bytes1);
-    //     if (len == 0) {
-    //         channel.close();
-    //         channel1.close();
-    //         return;
-    //     }
-
-    //     if (len1 == 0) {
-    //         Files.delete(path1);
-    //         Files.move(path, path1);
-    //         channel.close();
-    //         channel1.close();
-    //         return;
-    //     }
-
-    //     String objectIDStr = new String(bytes.array(), 0, len, StandardCharsets.UTF_8);
-    //     String objectIDStr1 = new String(bytes1.array(), 0, len1, StandardCharsets.UTF_8);
-    //     ObjectID id = new ObjectID(Long.parseLong(objectIDStr.replaceAll("[^0-9]", "")));
-    //     ObjectID id1 = new ObjectID(Long.parseLong(objectIDStr1.replaceAll("[^0-9]", "")));
-
-    //     channel.close();
-    //     channel1.close();
-    //     Files.delete(path1);
-
-    //     Files.createFile(path1);
-    //     channel = FileChannel.open(path1, StandardOpenOption.WRITE);
-    //     try {
-    //         Table table = (Table)
-    // ObjectFactory.getFactory().resolve(client.getMetaData(objectID));
-    //     }
-    // }
-
     public boolean renameInternal(Path path, Path path1) throws IOException {
         // now we create the new file and delete old file to simulate rename
         Context.println("=================");
@@ -436,18 +377,12 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public void setWorkingDirectory(Path path) {
-        // Context.println("=================");
-        // Context.println("setWorkingDirectory: " + path);
-        // Context.println("=================");
         workingDir = path;
     }
 
     @Override
     public Path getWorkingDirectory() {
-        // Context.println("=================");
-        // Context.println("getWorkingDirectory");
-        // Context.println("=================");
-        return workingDir; // new Path("/");
+        return workingDir;
     }
 
     @Override
@@ -458,13 +393,9 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     }
 
     private boolean mkdirsInternal(Path path, FsPermission fsPermission) throws IOException {
-        // Context.println("=================");
-        // Context.println("mkdirs: " + path);
-
         java.nio.file.Path nioDirPath =
                 jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1));
         Files.createDirectories(nioDirPath);
-        // Context.println("=================");
         printAllFile();
         return true;
     }
@@ -477,9 +408,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     }
 
     public FileStatus getFileStatusInternal(Path path) throws IOException {
-        // Context.println("=================");
-        // Context.println("getFileStatus: " + path.toString());
-        // Context.println("=================");
         String pathStr = path.toString().substring(path.toString().indexOf(":") + 1);
         java.nio.file.Path nioFilePath = jimfs.getPath(pathStr);
         if (Files.exists(nioFilePath)) {

@@ -28,18 +28,18 @@ public class Context {
         if (client == null) {
             Stopwatch watch = StopwatchContext.create();
             client = new IPCClient();
-            System.out.println(
+            Context.println(
                     "Connected to vineyard: " + client.getIPCSocket() + " uses " + watch.stop());
         }
         return client;
     }
 
     public static void println(String message) {
-        System.out.printf("[%s] %s\n", formatter.get().format(System.currentTimeMillis()), message);
+        System.err.printf("[%s] %s\n", formatter.get().format(System.currentTimeMillis()), message);
     }
 
     public static void printf(String format, Object... args) {
-        System.out.printf("[%s] ", formatter.get().format(System.currentTimeMillis()));
-        System.out.printf(format, args);
+        System.err.printf("[%s] ", formatter.get().format(System.currentTimeMillis()));
+        System.err.printf(format, args);
     }
 }

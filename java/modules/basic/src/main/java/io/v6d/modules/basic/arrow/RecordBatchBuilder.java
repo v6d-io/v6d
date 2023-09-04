@@ -55,6 +55,7 @@ public class RecordBatchBuilder implements ObjectBuilder {
     public RecordBatchBuilder(
             final IPCClient client,
             final Schema schema,
+            List<ArrayBuilder> arrayBuilders,
             List<ColumnarDataBuilder> columnBuilders,
             int rows)
             throws VineyardException {
@@ -63,16 +64,8 @@ public class RecordBatchBuilder implements ObjectBuilder {
         this.rows = rows;
 
         // Fill array builder in the future.
+        this.arrayBuilders = requireNonNull(arrayBuilders, "array builders is null");
         this.columnBuilders = requireNonNull(columnBuilders, "column builders is null");
-    }
-
-    public void addField(final Field field) throws VineyardException {
-        VineyardException.asserts(schemaMutable, "cannot continue to add columns");
-        this.schemaBuilder.addField(field);
-    }
-
-    public void addCustomMetadata(String key, String value) {
-        this.schemaBuilder.addMetadata(key, value);
     }
 
     public void finishSchema(IPCClient client) throws VineyardException {
@@ -92,6 +85,15 @@ public class RecordBatchBuilder implements ObjectBuilder {
         }
     }
 
+    public void addField(final Field field) throws VineyardException {
+        VineyardException.asserts(schemaMutable, "cannot continue to add columns");
+        this.schemaBuilder.addField(field);
+    }
+
+    public void addCustomMetadata(String key, String value) {
+        this.schemaBuilder.addMetadata(key, value);
+    }
+
     public List<ColumnarDataBuilder> getColumnBuilders() throws VineyardException {
         VineyardException.asserts(!schemaMutable, "the schema builder is not finished yet");
         return columnBuilders;
@@ -108,6 +110,13 @@ public class RecordBatchBuilder implements ObjectBuilder {
 
     public long getNumColumns() {
         return this.columnBuilders.size();
+    }
+
+    public void shrink(Client client, long size) throws VineyardException {
+        for (val builder : arrayBuilders) {
+            builder.shrink(client, size);
+        }
+        this.rows = size;
     }
 
     @Override
@@ -144,9 +153,13 @@ public class RecordBatchBuilder implements ObjectBuilder {
         } else if (field.getType().equals(Arrow.Type.Double)) {
             return new DoubleArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.VarChar)) {
-            return new LargeStringArrayBuilder(client, rows);
-        } else if (field.getType().equals(Arrow.Type.ShortVarChar)) {
             return new StringArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.LargeVarChar)) {
+            return new LargeStringArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.VarBinary)) {
+            return new StringArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.LargeVarBinary)) {
+            return new LargeStringArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.Null)) {
             return new NullArrayBuilder(client, rows);
         } else {

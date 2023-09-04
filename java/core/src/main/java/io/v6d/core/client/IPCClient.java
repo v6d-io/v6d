@@ -324,14 +324,24 @@ public class IPCClient extends Client {
     }
 
     @Override
-    public void sealBuffer(ObjectID objectID) throws VineyardException {
-        VineyardException.asserts(
-                objectID.isBlob(), "Not a blob object id: " + objectID.toString());
+    public synchronized void sealBuffer(ObjectID objectID) throws VineyardException {
+        VineyardException.asserts(objectID.isBlob(), "Not a blob object id: " + objectID);
 
         val root = mapper.createObjectNode();
         SealBufferRequest.put(root, objectID);
         this.doWrite(root);
         val reply = new SealBufferReply();
+        reply.get(this.doReadJson());
+    }
+
+    @Override
+    public synchronized void shrinkBuffer(ObjectID objectID, long size) throws VineyardException {
+        VineyardException.asserts(objectID.isBlob(), "Not a blob object id: " + objectID);
+
+        val root = mapper.createObjectNode();
+        ShrinkBufferRequest.put(root, objectID, size);
+        this.doWrite(root);
+        val reply = new ShrinkBufferReply();
         reply.get(this.doReadJson());
     }
 

@@ -86,6 +86,11 @@ public class BufferBuilder implements ObjectBuilder {
         return meta; // n.b.: blob: no create meta action
     }
 
+    public void shrink(Client client, long size) throws VineyardException {
+        client.shrinkBuffer(this.buffer.getObjectId(), size);
+        this.buffer.setSize(size);
+    }
+
     @Override
     public void build(Client client) throws VineyardException {
         // TODO: re-mmap as readonly
@@ -106,7 +111,7 @@ public class BufferBuilder implements ObjectBuilder {
         // to make resolving the returned object metadata possible
         meta.setBufferUnchecked(buffer.getObjectId(), buffer);
 
-        ((IPCClient) client).sealBuffer(buffer.getObjectId());
+        client.sealBuffer(buffer.getObjectId());
         return meta; // n.b.: blob: no create meta action
     }
 

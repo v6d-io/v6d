@@ -61,9 +61,9 @@ public class RowWritable implements Writable {
                 this.values[i] = new DoubleWritable();
                 this.setters[i] = RowWritable::setDouble;
             } else if (Arrow.Type.VarChar.equals(dtype)
-                    || Arrow.Type.ShortVarChar.equals(dtype)
+                    || Arrow.Type.LargeVarChar.equals(dtype)
                     || Arrow.Type.VarBinary.equals(dtype)
-                    || Arrow.Type.ShortVarBinary.equals(dtype)) {
+                    || Arrow.Type.LargeVarBinary.equals(dtype)) {
                 this.values[i] = new Text();
                 this.setters[i] = RowWritable::setString;
             } else {
@@ -183,7 +183,7 @@ public class RowWritable implements Writable {
     }
 
     private static void setString(Writable w, Object value) {
-        ((Text) w).set((String) value);
+        ((Text) w).set(((org.apache.arrow.vector.util.Text) value).toString());
     }
 
     static class Field implements StructField {

@@ -327,30 +327,34 @@ public class ObjectMeta implements Serializable, Iterable<Map.Entry<String, Json
         this.meta.set(key, value);
     }
 
-    public ObjectNode getDictValue(String key) {
-        // FIXME
-        val value = getValue(key);
-        assert value.isObject();
-        return (ObjectNode) value;
+    public ObjectNode getDictValue(String key) throws VineyardException {
+        val value = this.meta.get(key);
+        try {
+            ObjectNode dictNode = mapper.readValue(value.asText(), ObjectNode.class);
+            return dictNode;
+        } catch (Exception e) {
+            throw new VineyardException.MetaTreeInvalid(
+                    "Not an ObjectNode: field '" + key + "' in " + value + ": " + e);
+        }
     }
 
     public void setDictNode(String key, ObjectNode values) {
-        // FIXME
-        this.meta.set(key, values);
+        this.meta.put(key, values.toString());
     }
 
-    public ArrayNode getArrayValue(String key) {
+    public ArrayNode getArrayValue(String key) throws VineyardException {
         val value = this.meta.get(key);
         try {
             ArrayNode arrayNode = mapper.readValue(value.asText(), ArrayNode.class);
             return arrayNode;
         } catch (Exception e) {
-            throw new UnsupportedOperationException("Not a ArrayNode");
+            throw new VineyardException.MetaTreeInvalid(
+                    "Not an ArrayNode: field '" + key + "' in " + value + ": " + e);
         }
     }
 
     public void setArrayNode(String key, ArrayNode values) {
-        this.meta.set(key, values);
+        this.meta.put(key, values.toString());
     }
 
     public boolean has(String key) {
