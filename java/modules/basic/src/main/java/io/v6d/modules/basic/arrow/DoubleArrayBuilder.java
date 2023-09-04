@@ -57,6 +57,12 @@ public class DoubleArrayBuilder implements ArrayBuilder {
         return this.array;
     }
 
+    @Override
+    public void shrink(Client client, long size) throws VineyardException {
+        this.buffer.shrink(client, this.array.getBufferSizeFor((int) size));
+        this.array.setValueCount((int) size);
+    }
+
     void set(int index, double value) {
         this.array.set(index, value);
     }

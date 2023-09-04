@@ -19,6 +19,7 @@ import com.google.common.collect.ImmutableList;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.core.common.util.VineyardException;
 import io.v6d.modules.basic.tensor.Tensor;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,6 +57,14 @@ public class DataFrame extends Object {
         this.values = values;
     }
 
+    public DataFrame() {
+        super(ObjectMeta.empty());
+        this.rowCount = 0;
+        this.columnCount = 0;
+        this.columns = new ArrayList<>();
+        this.values = new ArrayList<>();
+    }
+
     public int getRowCount() {
         return this.rowCount;
     }
@@ -74,6 +83,22 @@ public class DataFrame extends Object {
 
     public Tensor value(int index) {
         return values.get(index);
+    }
+
+    public void setColumns(List<JsonNode> columns) {
+        this.columns = columns;
+    }
+
+    public void setRowCount(int rowCount) {
+        this.rowCount = rowCount;
+    }
+
+    public void setColumnCount(int columnCount) {
+        this.columnCount = columnCount;
+    }
+
+    public void setValues(List<Tensor> values) {
+        this.values = values;
     }
 
     public ValueVector valueArray(int index) {
@@ -107,6 +132,7 @@ public class DataFrame extends Object {
 }
 
 class DataFrameResolver extends ObjectFactory.Resolver {
+    @SneakyThrows(VineyardException.class)
     @Override
     public Object resolve(final ObjectMeta meta) {
         val columns = ImmutableList.copyOf(meta.getArrayValue("columns_"));

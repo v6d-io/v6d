@@ -12,20 +12,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.modules.basic.arrow;
+package com.google.common.base;
 
-import io.v6d.core.client.Client;
-import io.v6d.core.client.ds.ObjectBuilder;
-import io.v6d.core.common.util.VineyardException;
-import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
-import org.apache.arrow.vector.FieldVector;
-
-public interface ArrayBuilder extends ObjectBuilder {
-    public abstract FieldVector getArray();
-
-    public default ColumnarDataBuilder columnar() {
-        return new ColumnarDataBuilder(getArray());
+public class StopwatchContext {
+    public static Stopwatch create() {
+        return new Stopwatch().start();
     }
 
-    public abstract void shrink(Client client, long size) throws VineyardException;
+    public static Stopwatch createUnstarted() {
+        return new Stopwatch();
+    }
 }

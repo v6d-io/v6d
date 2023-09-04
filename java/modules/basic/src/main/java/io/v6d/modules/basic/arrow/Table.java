@@ -104,7 +104,7 @@ class TableResolver extends ObjectFactory.Resolver {
     public Object resolve(final ObjectMeta meta) {
         val ncol = meta.getIntValue("num_columns_");
         val nrow = meta.getIntValue("num_rows_");
-        val nbatch = meta.getIntValue("batch_num_");
+        val nbatch = meta.getIntValue("partitions_-size");
 
         val schema = (Schema) new SchemaResolver().resolve(meta.getMemberMeta("schema_"));
 
@@ -112,7 +112,7 @@ class TableResolver extends ObjectFactory.Resolver {
                 IntStream.range(0, nbatch)
                         .mapToObj(
                                 index -> {
-                                    val batch = meta.getMemberMeta("__batches_-" + index);
+                                    val batch = meta.getMemberMeta("partitions_-" + index);
                                     return (RecordBatch) ObjectFactory.getFactory().resolve(batch);
                                 })
                         .collect(Collectors.toList());

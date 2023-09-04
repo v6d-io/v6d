@@ -20,33 +20,33 @@ import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import lombok.*;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.VarCharVector;
+import org.apache.arrow.vector.LargeVarCharVector;
 import org.apache.arrow.vector.util.Text;
 
-public class StringArrayBuilder implements ArrayBuilder {
-    private VarCharVector array;
+public class LargeStringArrayBuilder implements ArrayBuilder {
+    private LargeVarCharVector array;
 
     private BufferBuilder data_buffer_builder;
     private BufferBuilder offset_buffer_builder;
 
-    public StringArrayBuilder(IPCClient client, final VarCharVector vector)
+    public LargeStringArrayBuilder(IPCClient client, final LargeVarCharVector vector)
             throws VineyardException {
         this.array = vector;
     }
 
-    public StringArrayBuilder(IPCClient client, long length) throws VineyardException {
-        this.array = new VarCharVector("", Arrow.default_allocator);
+    public LargeStringArrayBuilder(IPCClient client, long length) throws VineyardException {
+        this.array = new LargeVarCharVector("", Arrow.default_allocator);
         this.array.setValueCount((int) length);
     }
 
     @Override
     public void build(Client client) throws VineyardException {
-        val offset_buffer_size = (this.array.getValueCount() + 1) * VarCharVector.OFFSET_WIDTH;
+        val offset_buffer_size = (this.array.getValueCount() + 1) * LargeVarCharVector.OFFSET_WIDTH;
         val offset_buffer = this.array.getOffsetBuffer();
 
         val data_buffer_size =
                 offset_buffer.getLong(
-                        ((long) this.array.getValueCount()) * VarCharVector.OFFSET_WIDTH);
+                        ((long) this.array.getValueCount()) * LargeVarCharVector.OFFSET_WIDTH);
         val data_buffer = this.array.getDataBuffer();
 
         this.data_buffer_builder =
@@ -59,7 +59,7 @@ public class StringArrayBuilder implements ArrayBuilder {
     public ObjectMeta seal(Client client) throws VineyardException {
         this.build(client);
         val meta = ObjectMeta.empty();
-        meta.setTypename("vineyard::BaseBinaryArray<arrow::StringArray>");
+        meta.setTypename("vineyard::BaseBinaryArray<arrow::LargeStringArray>");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", 0);
