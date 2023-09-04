@@ -79,15 +79,26 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritab
                 FileStatus fileStatus = fs.getFileStatus(tableFilePath);
                 byte[] buffer = new byte[(int) fileStatus.getLen()];
                 int len = in.read(buffer, 0, (int) fileStatus.getLen());
-                if (len == -1) {
+                /*
+                 * Here must check with the condition of len <= 0, rather than len == -1.
+                 * Because Spark will create a empty file, which will cause the len == 0.
+                 */
+                if (len <= 0) {
                     continue;
                 }
                 String[] objectIDs = new String(buffer, StandardCharsets.UTF_8).split("\n");
                 for (val objectID : objectIDs) {
-                    ObjectID tableID = ObjectID.fromString(objectID);
-                    Table table =
-                            (Table) ObjectFactory.getFactory().resolve(client.getMetaData(tableID));
-                    numBatches += table.getBatches().size();
+                    try {
+                        ObjectID tableID = ObjectID.fromString(objectID);
+                        Table table =
+                                (Table) ObjectFactory.getFactory().resolve(client.getMetaData(tableID));
+                        numBatches += table.getBatches().size();
+                    } catch (Exception e) {
+                        // Skip some invalid file.
+                        Context.println("Skip invalid file:" + tableFilePath);
+                        Context.println("File content:" + new String(buffer, StandardCharsets.UTF_8));
+                        break;
+                    }
                 }
             }
             // TODO: would generating a split for each record batch be better?
@@ -133,18 +144,25 @@ class VineyardRecordReader implements RecordReader<NullWritable, RowWritable> {
             FileStatus fileStatus = fs.getFileStatus(tableFilePath);
             byte[] buffer = new byte[(int) fileStatus.getLen()];
             int len = in.read(buffer, 0, (int) fileStatus.getLen());
-            if (len == -1) {
+            if (len <= 0) {
                 continue;
             }
             String[] objectIDs = new String(buffer, StandardCharsets.UTF_8).split("\n");
             for (val objectID : objectIDs) {
-                ObjectID tableID = ObjectID.fromString(objectID);
-                Table table =
-                        (Table) ObjectFactory.getFactory().resolve(client.getMetaData(tableID));
-                for (val batch : table.getBatches()) {
-                    recordTotal += batch.getRowCount();
-                    this.batches[this.recordBatchIndex++] = batch;
-                    schema = table.getSchema().getSchema();
+                try {
+                    ObjectID tableID = ObjectID.fromString(objectID);
+                    Table table =
+                            (Table) ObjectFactory.getFactory().resolve(client.getMetaData(tableID));
+                    for (val batch : table.getBatches()) {
+                        recordTotal += batch.getRowCount();
+                        this.batches[this.recordBatchIndex++] = batch;
+                        schema = table.getSchema().getSchema();
+                    }
+                } catch (Exception e) {
+                    // Skip some invalid file.
+                    Context.println("Skip invalid file:" + tableFilePath);
+                    Context.println("File content:" + new String(buffer, StandardCharsets.UTF_8));
+                    break;
                 }
             }
         }
