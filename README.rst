@@ -9,8 +9,7 @@
 
 |Vineyard CI| |Coverage| |Docs| |FAQ| |Discussion| |Slack| |License| |CII Best Practices| |FOSSA|
 
-|PyPI| |Docker HUB| |Artifact HUB| |ACM DL|
-
+|PyPI| |crates.io| |Docker HUB| |Artifact HUB| |ACM DL|
 
 Vineyard (v6d) is an innovative in-memory immutable data manager that offers **out-of-the-box
 high-level** abstractions and **zero-copy in-memory** sharing for distributed data in various
@@ -338,6 +337,8 @@ third-party libraries may not have the same license as vineyard.
    :target: https://slack.cncf.io/
 .. |PyPI| image:: https://img.shields.io/pypi/v/vineyard?color=blue
    :target: https://pypi.org/project/vineyard
+.. |crates.io| image:: https://img.shields.io/crates/v/vineyard.svg
+   :target: https://crates.io/crates/vineyard
 .. |Docker HUB| image:: https://img.shields.io/badge/docker-ready-blue.svg
    :target: https://hub.docker.com/u/vineyardcloudnative
 .. |Artifact HUB| image:: https://img.shields.io/endpoint?url=https://artifacthub.io/badge/repository/vineyard

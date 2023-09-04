@@ -21,6 +21,7 @@ limitations under the License.
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <iostream>
 
 #include "common/util/env.h"
 
