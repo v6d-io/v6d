@@ -72,28 +72,41 @@ public class VineyardSerDe extends AbstractSerDe {
 
     @Override
     public RecordWrapperWritable serialize(Object obj, ObjectInspector objInspector) {
-        // VineyardException.asserts(obj.getClass().isArray(), "expect an array of object as the
-        // row");
-
         val inspectors =
                 ((StructObjectInspector) objInspector)
                         .getAllStructFieldRefs().stream()
                                 .map(f -> f.getFieldObjectInspector())
                                 .toArray(ObjectInspector[]::new);
-        // serializeWatch.start();
         val values =
-                ObjectInspectorUtils.copyToStandardObject(
+                copyToStandardObject(
                         (Object[]) obj,
                         inspectors,
                         ObjectInspectorUtils.ObjectInspectorCopyOption.JAVA);
         writable.record = values;
-        // serializeWatch.stop();
-        // elements++;
-        // if (elements % 1000000 == 0){
-        //     Context.printf("serialize %d elements use %s\n", elements,
-        // serializeWatch.toString());
-        // }
         return writable;
+    }
+
+    /**
+     * Like `ObjectInspectorUtils.copyToStandardObject`, but respects the inspector's size, rather
+     * than object's size.
+     *
+     * <p>Referred from OrcOutputFormat (more specifically, orc.WriterImpl).
+     */
+    public static Object[] copyToStandardObject(
+            Object[] o,
+            ObjectInspector[] oi,
+            ObjectInspectorUtils.ObjectInspectorCopyOption objectInspectorOption) {
+        if (o == null) {
+            return null;
+        }
+        assert (o.length >= oi.length);
+
+        Object[] result = new Object[oi.length];
+        for (int i = 0; i < oi.length; i++) {
+            result[i] =
+                    ObjectInspectorUtils.copyToStandardObject(o[i], oi[i], objectInspectorOption);
+        }
+        return result;
     }
 
     @Override
