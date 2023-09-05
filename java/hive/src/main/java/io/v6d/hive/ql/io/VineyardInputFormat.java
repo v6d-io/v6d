@@ -96,7 +96,10 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                     } catch (Exception e) {
                         // Skip some invalid file.
                         Context.println(
-                                "Skipping invalid file: " + tableFilePath + ", content: " + new String(buffer, StandardCharsets.UTF_8));
+                                "Skipping invalid file: "
+                                        + tableFilePath
+                                        + ", content: "
+                                        + new String(buffer, StandardCharsets.UTF_8));
                         break;
                     }
                 }
@@ -160,7 +163,11 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
                     }
                 } catch (Exception e) {
                     // Skip some invalid file.
-                    Context.println("Skipping invalid file: " + tableFilePath + ", content: " + new String(buffer, StandardCharsets.UTF_8));
+                    Context.println(
+                            "Skipping invalid file: "
+                                    + tableFilePath
+                                    + ", content: "
+                                    + new String(buffer, StandardCharsets.UTF_8));
                     break;
                 }
             }

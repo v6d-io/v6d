@@ -14,8 +14,6 @@
  */
 package io.v6d.hive.ql.io;
 
-import com.google.common.base.Stopwatch;
-import com.google.common.base.StopwatchContext;
 import java.util.Properties;
 import lombok.val;
 import org.apache.hadoop.conf.Configuration;

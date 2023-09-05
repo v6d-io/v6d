@@ -355,8 +355,11 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             if (mergedTableObjectID != null) {
                 channelDst = FileChannel.open(dst, StandardOpenOption.WRITE);
                 String mergedTableIDStr = mergedTableObjectID.toString() + "\n";
-                bytes = ByteBuffer.allocate(mergedTableIDStr.getBytes(StandardCharsets.UTF_8).length);
-                channelDst.write(ByteBuffer.wrap(mergedTableIDStr.getBytes(StandardCharsets.UTF_8)));
+                bytes =
+                        ByteBuffer.allocate(
+                                mergedTableIDStr.getBytes(StandardCharsets.UTF_8).length);
+                channelDst.write(
+                        ByteBuffer.wrap(mergedTableIDStr.getBytes(StandardCharsets.UTF_8)));
             }
         }
     }
