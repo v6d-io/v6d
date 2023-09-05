@@ -181,6 +181,25 @@ public class IPCClient extends Client {
     }
 
     @Override
+    public synchronized Map<String, ObjectID> listNames(
+            String pattern, boolean regex, int limit) throws VineyardException {
+        val root = mapper.createObjectNode();
+        ListNameRequest.put(root, pattern, regex, limit);
+        this.doWrite(root);
+        val reply = new ListNameReply();
+        reply.get(this.doReadJson());
+        val contents = reply.getContents();
+
+        Map<String, ObjectID> result = new HashMap<>();
+        for (val item : contents.entrySet()) {
+            result.put(item.getKey(), item.getValue());
+            Context.println(item.getKey() + " -> " + item.getValue());
+        }
+
+        return result;
+    }
+
+    @Override
     public synchronized void persist(ObjectID id) throws VineyardException {
         val root = mapper.createObjectNode();
         PersistRequest.put(root, id);
