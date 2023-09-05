@@ -34,13 +34,8 @@ public class VineyardSerDe extends AbstractSerDe {
     private StructObjectInspector objectInspector;
     private ObjectInspector[] objectInspectors;
 
-    private RowWritable.VineyardStructInspector inspector;
-
+    private RecordWrapperWritable.VineyardStructInspector inspector;
     private RecordWrapperWritable writable = new RecordWrapperWritable();
-
-    private long elements = 0;
-    private Stopwatch serializeWatch = StopwatchContext.createUnstarted();
-    private Stopwatch deserializeWatch = StopwatchContext.createUnstarted();
 
     @Override
     public void initialize(Configuration configuration, Properties tableProperties)
@@ -62,7 +57,7 @@ public class VineyardSerDe extends AbstractSerDe {
                         .map(f -> f.getFieldObjectInspector())
                         .toArray(ObjectInspector[]::new);
 
-        this.inspector = new RowWritable.VineyardStructInspector(this.rowTypeInfo);
+        this.inspector = new RecordWrapperWritable.VineyardStructInspector(this.rowTypeInfo);
     }
 
     @Override
@@ -82,7 +77,7 @@ public class VineyardSerDe extends AbstractSerDe {
                         (Object[]) obj,
                         inspectors,
                         ObjectInspectorUtils.ObjectInspectorCopyOption.JAVA);
-        writable.record = values;
+        writable.setValues(values);
         return writable;
     }
 

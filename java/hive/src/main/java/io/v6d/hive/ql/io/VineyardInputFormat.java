@@ -42,10 +42,10 @@ import org.apache.hadoop.mapred.Reporter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritable>
+public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWrapperWritable>
         implements VectorizedInputFormatInterface {
     @Override
-    public RecordReader<NullWritable, RowWritable> getRecordReader(
+    public RecordReader<NullWritable, RecordWrapperWritable> getRecordReader(
             InputSplit genericSplit, JobConf job, Reporter reporter) throws IOException {
         reporter.setStatus(genericSplit.toString());
         return new VineyardRecordReader(job, (VineyardSplit) genericSplit);
@@ -79,10 +79,8 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritab
                 FileStatus fileStatus = fs.getFileStatus(tableFilePath);
                 byte[] buffer = new byte[(int) fileStatus.getLen()];
                 int len = in.read(buffer, 0, (int) fileStatus.getLen());
-                /*
-                 * Here must check with the condition of len <= 0, rather than len == -1.
-                 * Because Spark will create a empty file, which will cause the len == 0.
-                 */
+                // Here must check with the condition of len <= 0, rather than len == -1.
+                // Because Spark will create an empty file, which will cause the len == 0.
                 if (len <= 0) {
                     continue;
                 }
@@ -97,9 +95,8 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritab
                         numBatches += table.getBatches().size();
                     } catch (Exception e) {
                         // Skip some invalid file.
-                        Context.println("Skip invalid file:" + tableFilePath);
                         Context.println(
-                                "File content:" + new String(buffer, StandardCharsets.UTF_8));
+                                "Skipping invalid file: " + tableFilePath + ", content: " + new String(buffer, StandardCharsets.UTF_8));
                         break;
                     }
                 }
@@ -111,7 +108,7 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritab
     }
 }
 
-class VineyardRecordReader implements RecordReader<NullWritable, RowWritable> {
+class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWritable> {
     private static Logger logger = LoggerFactory.getLogger(VineyardRecordReader.class);
 
     private RecordBatch[] batches;
@@ -163,8 +160,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, RowWritable> {
                     }
                 } catch (Exception e) {
                     // Skip some invalid file.
-                    Context.println("Skip invalid file:" + tableFilePath);
-                    Context.println("File content:" + new String(buffer, StandardCharsets.UTF_8));
+                    Context.println("Skipping invalid file: " + tableFilePath + ", content: " + new String(buffer, StandardCharsets.UTF_8));
                     break;
                 }
             }
@@ -185,8 +181,8 @@ class VineyardRecordReader implements RecordReader<NullWritable, RowWritable> {
     }
 
     @Override
-    public RowWritable createValue() {
-        return new RowWritable(schema);
+    public RecordWrapperWritable createValue() {
+        return new RecordWrapperWritable(schema);
     }
 
     /** N.B.: this method must be accurate and is important for selection performance. */
@@ -201,7 +197,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, RowWritable> {
     }
 
     @Override
-    public boolean next(NullWritable key, RowWritable value) throws IOException {
+    public boolean next(NullWritable key, RecordWrapperWritable value) throws IOException {
         watch.start();
         // initialize the current batch
         while (batch == null || recordBatchInnerIndex >= batch.getRowCount()) {
@@ -215,15 +211,10 @@ class VineyardRecordReader implements RecordReader<NullWritable, RowWritable> {
             batch = batches[recordBatchIndex].getBatch();
             columns = batches[recordBatchIndex].columar();
             recordBatchInnerIndex = 0;
-            Context.println(
-                    "record batch length: "
-                            + batch.getRowCount()
-                            + " time usage util now: "
-                            + watch);
         }
 
         // update the value
-        value.setValues(columns, recordBatchInnerIndex);
+        value.setWritables(columns, recordBatchInnerIndex);
 
         // move cursor to next record
         recordBatchInnerIndex++;

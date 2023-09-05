@@ -128,7 +128,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     private Configuration conf = null;
 
     static java.nio.file.FileSystem jimfs = null;
-    static boolean enablePrintAllFile = false;
+    static boolean enablePrintAllFiles = false;
 
     Path workingDir = new Path("vineyard:/");
 
@@ -136,7 +136,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         super();
     }
 
-    public static void printAllFile(java.nio.file.Path root, java.nio.file.FileSystem fs)
+    public static void printAllFiles(java.nio.file.Path root, java.nio.file.FileSystem fs)
             throws IOException {
         DirectoryStream<java.nio.file.Path> stream = Files.newDirectoryStream(root);
         Queue<java.nio.file.Path> queue = new java.util.LinkedList<java.nio.file.Path>();
@@ -147,19 +147,19 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             java.nio.file.Path p = queue.poll();
             Context.println(p.toString());
             if (Files.isDirectory(p)) {
-                DirectoryStream<java.nio.file.Path> stream1 = Files.newDirectoryStream(p);
-                for (java.nio.file.Path p1 : stream1) {
+                DirectoryStream<java.nio.file.Path> streamTemp = Files.newDirectoryStream(p);
+                for (java.nio.file.Path p1 : streamTemp) {
                     queue.add(p1);
                 }
-                stream1.close();
+                streamTemp.close();
             }
         }
         stream.close();
     }
 
-    public static void printAllFile() throws IOException {
-        if (enablePrintAllFile) {
-            printAllFile(jimfs.getPath("/"), jimfs);
+    private static void printAllFiles() throws IOException {
+        if (enablePrintAllFiles) {
+            printAllFiles(jimfs.getPath("/"), jimfs);
         }
     }
 
@@ -246,7 +246,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         }
         Files.createFile(nioFilePath);
         FileChannel channel = FileChannel.open(nioFilePath, StandardOpenOption.WRITE);
-        printAllFile();
+        printAllFiles();
         return new FSDataOutputStream(new VineyardOutputStream(channel), null);
     }
 
@@ -282,37 +282,35 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             try {
                 client.dropName(name);
             } catch (Exception e) {
-                Context.println("Exception: " + e.getMessage());
+                Context.println("Failed to drop name from vineyard: " + e.getMessage());
             }
         }
         Files.deleteIfExists(nioFilePath);
 
-        printAllFile();
+        printAllFiles();
         return false;
     }
 
     @Override
-    public boolean rename(Path path, Path path1) throws IOException {
+    public boolean rename(Path src, Path dst) throws IOException {
         try (val lock = this.lock.open()) {
             val watch = StopwatchContext.create();
-            val renamed = this.renameInternal(path, path1);
+            val renamed = this.renameInternal(src, dst);
             Context.println("filesystem rename uses: " + watch.stop());
             return renamed;
         }
     }
 
-    private void mergeFile(java.nio.file.Path path, java.nio.file.Path path1) throws IOException {
-        FileChannel channel = FileChannel.open(path, StandardOpenOption.READ);
-        FileChannel channel1 = FileChannel.open(path1, StandardOpenOption.READ);
-        // channel.transferTo(0, channel.size(), channel1);
+    private void mergeFile(java.nio.file.Path src, java.nio.file.Path dst) throws IOException {
+        FileChannel channelSrc = FileChannel.open(src, StandardOpenOption.READ);
+        FileChannel channelDst = FileChannel.open(dst, StandardOpenOption.READ);
 
-        // channel1 = FileChannel.open(path1, StandardOpenOption.READ);
         ByteBuffer bytes = ByteBuffer.allocate(255);
-        int len = channel.read(bytes);
+        int len = channelSrc.read(bytes);
         String objectIDStr =
                 new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
         bytes = ByteBuffer.allocate(255);
-        len = channel1.read(bytes);
+        len = channelDst.read(bytes);
         String objectIDStr1 =
                 new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
 
@@ -342,8 +340,8 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             Context.println("record batch size:" + mergedTableBuilder.getBatchSize());
             Context.println("Table id in vineyard:" + meta.getId().value());
             client.persist(meta.getId());
-            Context.println("Table persisted, name:" + path1.toString());
-            client.putName(meta.getId(), path1.toString());
+            Context.println("Table persisted, name:" + dst.toString());
+            client.putName(meta.getId(), dst.toString());
             mergedTableObjectID = meta.getId();
 
             // drop old table
@@ -351,16 +349,15 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             ids.add(objectID);
             ids.add(objectID1);
             client.delete(ids, false, false);
-        } catch (Exception e) {
-            Context.println("Exception: " + e.getMessage());
-        }
-        channel.close();
-        channel1.close();
-        if (mergedTableObjectID != null) {
-            channel1 = FileChannel.open(path1, StandardOpenOption.WRITE);
-            String mergedTableIDStr = mergedTableObjectID.toString() + "\n";
-            bytes = ByteBuffer.allocate(mergedTableIDStr.getBytes(StandardCharsets.UTF_8).length);
-            channel1.write(ByteBuffer.wrap(mergedTableIDStr.getBytes(StandardCharsets.UTF_8)));
+        } finally {
+            channelSrc.close();
+            channelDst.close();
+            if (mergedTableObjectID != null) {
+                channelDst = FileChannel.open(dst, StandardOpenOption.WRITE);
+                String mergedTableIDStr = mergedTableObjectID.toString() + "\n";
+                bytes = ByteBuffer.allocate(mergedTableIDStr.getBytes(StandardCharsets.UTF_8).length);
+                channelDst.write(ByteBuffer.wrap(mergedTableIDStr.getBytes(StandardCharsets.UTF_8)));
+            }
         }
     }
 
@@ -373,13 +370,13 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         java.nio.file.Path nioParentDirPath = nioFilePath.getParent();
         Files.createDirectories(nioParentDirPath);
         if (Files.exists(nioFilePath1)) {
-            printAllFile();
+            printAllFiles();
             mergeFile(nioFilePath, nioFilePath1);
             Files.delete(nioFilePath);
         } else {
             Files.move(nioFilePath, nioFilePath1);
         }
-        printAllFile();
+        printAllFiles();
 
         return true;
     }
@@ -409,7 +406,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                 stream.close();
             }
         }
-        printAllFile();
+        printAllFiles();
         return result.toArray(new FileStatus[result.size()]);
     }
 
@@ -434,7 +431,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         java.nio.file.Path nioDirPath =
                 jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1));
         Files.createDirectories(nioDirPath);
-        printAllFile();
+        printAllFiles();
         return true;
     }
 
@@ -449,7 +446,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         String pathStr = path.toString().substring(path.toString().indexOf(":") + 1);
         java.nio.file.Path nioFilePath = jimfs.getPath(pathStr);
         if (Files.exists(nioFilePath)) {
-            printAllFile();
+            printAllFiles();
             return new FileStatus(
                     Files.size(nioFilePath),
                     Files.isDirectory(nioFilePath),
@@ -468,11 +465,11 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         if (stageDirIndex >= 0 && pathStr.substring(stageDirIndex).split("/").length == 1) {
             Context.println("Staging dir not exists, create file as dir!");
             Files.createDirectories(nioFilePath);
-            printAllFile();
+            printAllFiles();
             return new FileStatus(
                     1, true, 1, 1, 0, 0, new FsPermission((short) 777), null, null, path);
         }
-        printAllFile();
+        printAllFiles();
         throw new FileNotFoundException();
     }
 

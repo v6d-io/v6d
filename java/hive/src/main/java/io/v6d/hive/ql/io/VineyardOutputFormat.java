@@ -158,7 +158,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         }
 
         val record = (RecordWrapperWritable) w;
-        val values = record.getRecord();
+        val values = record.getValues();
         VineyardException.asserts(
                 values.length == current.size(),
                 "The length of record doesn't match with the length of builders");
