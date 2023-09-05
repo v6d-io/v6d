@@ -17,7 +17,6 @@ package io.v6d.core.common.util;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import io.v6d.core.client.Context;
 import io.v6d.core.common.memory.Payload;
 import java.util.*;
 import lombok.Data;
@@ -127,14 +126,11 @@ public class Protocol {
 
         @Override
         public void get(JsonNode root) throws VineyardException {
-            Context.println("get list name reply");
-            Context.println(root.toString());
             check(root, "list_name_reply");
             this.contents = new HashMap<>();
             val fields = root.get("names").fields();
             while (fields.hasNext()) {
                 val field = fields.next();
-                Context.println("!!! " + field.getKey() + " " + field.getValue());
                 this.contents.put(field.getKey(), new ObjectID(field.getValue().asLong()));
             }
         }

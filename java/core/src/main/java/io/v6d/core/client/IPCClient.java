@@ -193,7 +193,6 @@ public class IPCClient extends Client {
         Map<String, ObjectID> result = new HashMap<>();
         for (val item : contents.entrySet()) {
             result.put(item.getKey(), item.getValue());
-            Context.println(item.getKey() + " -> " + item.getValue());
         }
 
         return result;
