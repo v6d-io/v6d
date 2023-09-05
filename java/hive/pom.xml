@@ -19,8 +19,9 @@
     <maven.compiler.source>1.8</maven.compiler.source>
     <maven.compiler.target>1.8</maven.compiler.target>
     <encoding>UTF-8</encoding>
-    <hive.version>4.0.0-alpha-2</hive.version>
+    <hive.version>2.3.9</hive.version>
     <hadoop.version>3.3.5</hadoop.version>
+    <jimfs.version>1.0</jimfs.version>
   </properties>
 
   <dependencies>
@@ -54,12 +55,36 @@
       <artifactId>hive-common</artifactId>
       <version>${hive.version}</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>jdk.tools</artifactId>
+          <groupId>jdk.tools</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.apache.hive</groupId>
       <artifactId>hive-exec</artifactId>
       <version>${hive.version}</version>
       <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>jdk.tools</artifactId>
+          <groupId>jdk.tools</groupId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hive</groupId>
+      <artifactId>hive-llap-ext-client</artifactId>
+      <version>${hive.version}</version>
+      <scope>provided</scope>
+      <exclusions>
+        <exclusion>
+          <artifactId>jdk.tools</artifactId>
+          <groupId>jdk.tools</groupId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
     <!-- Apache Arrow -->
@@ -89,6 +114,18 @@
       <artifactId>arrow-vector</artifactId>
     </dependency>
 
+    <dependency>
+      <groupId>com.google.jimfs</groupId>
+      <artifactId>jimfs</artifactId>
+      <version>${jimfs.version}</version>
+    </dependency>
+
+    <!-- Utils -->
+    <dependency>
+      <groupId>com.google.guava</groupId>
+      <artifactId>guava</artifactId>
+    </dependency>
+
     <!-- Test -->
     <dependency>
       <groupId>junit</groupId>
@@ -96,6 +133,16 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
+  <!-- Override the conjars url as the original server has down -->
+  <repositories>
+    <repository>
+      <id>conjars</id>
+      <name>conjars</name>
+      <layout>default</layout>
+      <url>https://repository.mapr.com/nexus/content/groups/mapr-public/conjars</url>
+    </repository>
+  </repositories>
 
   <build>
     <plugins>
@@ -119,6 +166,30 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <artifactId>maven-shade-plugin</artifactId>
+        <executions>
+          <execution>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <filters>
+                <filter>
+                  <artifact>com.google.jimfs:jimfs</artifact>
+                  <includes>
+                    <include>**</include>
+                  </includes>
+                  <excludes>
+                    <exclude>com/google/common/jimfs/FileSystemState.class</exclude>
+                  </excludes>
+                </filter>
+              </filters>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

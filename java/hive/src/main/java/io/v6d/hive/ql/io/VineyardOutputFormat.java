@@ -14,14 +14,34 @@
  */
 package io.v6d.hive.ql.io;
 
+import com.google.common.base.Stopwatch;
+import com.google.common.base.StopwatchContext;
+import io.v6d.core.client.Context;
+import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
+import io.v6d.modules.basic.arrow.*;
+import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
+import lombok.*;
+import org.apache.arrow.vector.types.TimeUnit;
+import org.apache.arrow.vector.types.Types;
+import org.apache.arrow.vector.types.pojo.*;
+import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
-import org.apache.hadoop.hive.ql.io.arrow.ArrowWrapperWritable;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
+import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.JobConf;
@@ -31,7 +51,7 @@ import org.apache.hadoop.util.Progressable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class VineyardOutputFormat<K extends NullWritable, V extends ArrowWrapperWritable>
+public class VineyardOutputFormat<K extends NullWritable, V extends RecordWrapperWritable>
         implements HiveOutputFormat<K, V> {
     private static Logger logger = LoggerFactory.getLogger(VineyardOutputFormat.class);
 
@@ -60,46 +80,218 @@ public class VineyardOutputFormat<K extends NullWritable, V extends ArrowWrapper
 }
 
 class SinkRecordWriter implements FileSinkOperator.RecordWriter {
+    private static Logger logger = LoggerFactory.getLogger(SinkRecordWriter.class);
+
+    static {
+        Arrow.instantiate();
+    }
+
+    // FIXME: read from configuration
+    public static final int RECORD_BATCH_SIZE = 256000;
+
     private JobConf jc;
     private Path finalOutPath;
-    private Properties tableProperties;
+    private FileSystem fs;
     private Progressable progress;
 
-    @lombok.SneakyThrows
+    // vineyard
+    private FSDataOutputStream output;
+    private static CloseableReentrantLock lock = new CloseableReentrantLock();
+    private Schema schema;
+
+    List<RecordBatchBuilder> chunks = new ArrayList<>();
+    List<ColumnarDataBuilder> current;
+    private int currentLoc = RECORD_BATCH_SIZE;
+
+    // profiling
+    private Stopwatch writeTimer = StopwatchContext.createUnstarted();
+
+    public static final PathFilter VINEYARD_FILES_PATH_FILTER =
+            new PathFilter() {
+                @Override
+                public boolean accept(Path p) {
+                    String name = p.getName();
+                    return name.startsWith("_task_tmp.")
+                            && (!name.substring(10, name.length()).startsWith("-"));
+                }
+            };
+
     public SinkRecordWriter(
             JobConf jc,
             Path finalOutPath,
             Class<? extends Writable> valueClass,
             boolean isCompressed,
             Properties tableProperties,
-            Progressable progress) {
+            Progressable progress)
+            throws IOException {
+        val watch = StopwatchContext.create();
         this.jc = jc;
-        if (!ArrowWrapperWritable.class.isAssignableFrom(valueClass)) {
-            throw new VineyardException.Invalid("value class must be ArrowWrapperWritable");
+        if (!RecordWrapperWritable.class.isAssignableFrom(valueClass)) {
+            throw new VineyardException.Invalid(
+                    "value class must be RecordWrapperWritable, while it is " + valueClass);
         }
         if (isCompressed) {
             throw new VineyardException.Invalid("compressed output is not supported");
         }
         this.finalOutPath = finalOutPath;
-        this.tableProperties = tableProperties;
         this.progress = progress;
+
+        // initialize the schema
+        this.initializeTableFile();
+        this.schema = this.initializeTableSchema(tableProperties);
+        Context.println("creating a sink record writer uses: " + watch.stop());
     }
 
     @Override
     public void write(Writable w) throws IOException {
-        System.out.printf("vineard filesink record writer: %s, %s\n", w, w.getClass());
+        if (w == null) {
+            Context.println("warning: null writable, skipping ...");
+            return;
+        }
+
+        writeTimer.start();
+        if (currentLoc == RECORD_BATCH_SIZE) {
+            val builder = new RecordBatchBuilder(Context.getClient(), schema, RECORD_BATCH_SIZE);
+            chunks.add(builder);
+            current = builder.getColumnBuilders();
+            currentLoc = 0;
+        }
+
+        val record = (RecordWrapperWritable) w;
+        val values = record.getValues();
+        VineyardException.asserts(
+                values.length == current.size(),
+                "The length of record doesn't match with the length of builders");
+        for (int i = 0; i < values.length; ++i) {
+            current.get(i).setObject(currentLoc, values[i]);
+        }
+        currentLoc += 1;
+        writeTimer.stop();
     }
 
+    // check if the table is already created.
+    // if not, create a new table.
+    // if yes, append the data to the table.(Get from vineyard, and seal it in a new table)
+    @SneakyThrows(VineyardException.class)
     @Override
     public void close(boolean abort) throws IOException {
-        System.out.println("vineyard filesink operator closing\n");
+        Context.println(
+                "closing SinkRecordWriter: chunks size:"
+                        + chunks.size()
+                        + ", write uses "
+                        + writeTimer);
+
+        // construct table from existing record batch builders
+        val watch = StopwatchContext.create();
+
+        val client = Context.getClient();
+        val schemaBuilder = SchemaBuilder.fromSchema(schema);
+        Context.println("create schema builder use " + watch);
+        val tableBuilder = new TableBuilder(client, schemaBuilder);
+        Context.println("create schema & table builder use " + watch);
+        if (chunks.size() > 0) {
+            chunks.get(chunks.size() - 1).shrink(client, currentLoc);
+        }
+        for (int i = 0; i < chunks.size(); i++) {
+            val chunk = chunks.get(i);
+            Context.println("record batch builder: " + i + ", row size: " + chunk.getNumRows());
+            tableBuilder.addBatch(chunk);
+        }
+        Context.println("record batch size:" + tableBuilder.getBatchSize());
+        ObjectMeta meta = tableBuilder.seal(client);
+        Context.println("Table id in vineyard:" + meta.getId().value());
+        client.persist(meta.getId());
+        Context.println("Table persisted, name:" + finalOutPath);
+
+        output.write((meta.getId().toString() + "\n").getBytes(StandardCharsets.UTF_8));
+        client.putName(
+                meta.getId(),
+                finalOutPath
+                        .toString()
+                        .substring(finalOutPath.toString().indexOf("vineyard:") + 1));
+        output.close();
+    }
+
+    private void initializeTableFile() throws IOException {
+        fs = finalOutPath.getFileSystem(jc);
+        this.output = FileSystem.create(fs, finalOutPath, new FsPermission("777"));
+        if (output == null) {
+            throw new VineyardException.Invalid("Create table file failed.");
+        }
+    }
+
+    private Schema initializeTableSchema(Properties tableProperties) {
+        val structTypeInfo = TypeContext.computeStructTypeInfo(tableProperties);
+        val targetTypeInfos =
+                TypeContext.computeTargetTypeInfos(
+                        structTypeInfo, ObjectInspectorUtils.ObjectInspectorCopyOption.WRITABLE);
+
+        List<Field> fields = new ArrayList<>();
+        for (val typeInfo : targetTypeInfos) {
+            Field field = Field.nullable(typeInfo.getTypeName(), toArrowType(typeInfo));
+            fields.add(field);
+        }
+        return new Schema(fields);
+    }
+
+    private static ArrowType toArrowType(TypeInfo typeInfo) {
+        switch (typeInfo.getCategory()) {
+            case PRIMITIVE:
+                switch (((PrimitiveTypeInfo) typeInfo).getPrimitiveCategory()) {
+                    case BOOLEAN:
+                        return Types.MinorType.BIT.getType();
+                    case BYTE:
+                        return Types.MinorType.TINYINT.getType();
+                    case SHORT:
+                        return Types.MinorType.SMALLINT.getType();
+                    case INT:
+                        return Types.MinorType.INT.getType();
+                    case LONG:
+                        return Types.MinorType.BIGINT.getType();
+                    case FLOAT:
+                        return Types.MinorType.FLOAT4.getType();
+                    case DOUBLE:
+                        return Types.MinorType.FLOAT8.getType();
+                    case STRING:
+                    case CHAR:
+                    case VARCHAR:
+                        return Types.MinorType.LARGEVARCHAR.getType();
+                    case DATE:
+                        return Types.MinorType.DATEDAY.getType();
+                    case TIMESTAMP:
+                        return new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC");
+                    case BINARY:
+                        return Types.MinorType.VARBINARY.getType();
+                    case DECIMAL:
+                        final DecimalTypeInfo decimalTypeInfo = (DecimalTypeInfo) typeInfo;
+                        return new ArrowType.Decimal(
+                                decimalTypeInfo.precision(), decimalTypeInfo.scale(), 128);
+                    case INTERVAL_YEAR_MONTH:
+                        return Types.MinorType.INTERVALYEAR.getType();
+                    case INTERVAL_DAY_TIME:
+                        return Types.MinorType.INTERVALDAY.getType();
+                    case VOID:
+                        // case TIMESTAMPLOCALTZ:
+                    case UNKNOWN:
+                    default:
+                        throw new IllegalArgumentException();
+                }
+            case LIST:
+                return ArrowType.List.INSTANCE;
+            case STRUCT:
+                return ArrowType.Struct.INSTANCE;
+            case MAP:
+                return new ArrowType.Map(false);
+            case UNION:
+            default:
+                throw new IllegalArgumentException();
+        }
     }
 }
 
-class MapredRecordWriter<K extends NullWritable, V extends ArrowWrapperWritable>
+class MapredRecordWriter<K extends NullWritable, V extends RecordWrapperWritable>
         implements RecordWriter<K, V> {
     MapredRecordWriter() throws IOException {
-        System.out.printf("creating vineyard record writer\n");
         throw new RuntimeException("mapred record writter: unimplemented");
     }
 

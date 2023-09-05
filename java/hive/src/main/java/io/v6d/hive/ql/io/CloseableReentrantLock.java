@@ -12,17 +12,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.v6d.hadoop.fs;
+package io.v6d.hive.ql.io;
 
-import java.io.IOException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.DelegateToFileSystem;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class VineyardFileSystem extends DelegateToFileSystem {
-    VineyardFileSystem(final URI uri, final Configuration conf)
-            throws IOException, URISyntaxException {
-        super(uri, new FileSystem(), conf, FileSystem.SCHEME, false);
+public class CloseableReentrantLock extends ReentrantLock implements AutoCloseable {
+    public CloseableReentrantLock open() {
+        this.lock();
+        return this;
+    }
+
+    @Override
+    public void close() {
+        this.unlock();
     }
 }
