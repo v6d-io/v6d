@@ -17,8 +17,8 @@ package client
 
 import (
 	"fmt"
+	"log"
 
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
@@ -50,7 +50,7 @@ var putCmd = &cobra.Command{
 		value := []byte(flags.Value)
 		object_id, err := client.PutBlob(value, uint64(len(flags.Value)))
 		if err != nil {
-			errors.Errorf("failed to put value: %s", err)
+			log.Printf("failed to put value: %s", err)
 		}
 		objectId := fmt.Sprintf("o%016x", object_id)
 		fmt.Println("object id : ", objectId)
