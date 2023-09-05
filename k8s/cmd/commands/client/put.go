@@ -25,16 +25,26 @@ import (
 )
 
 var (
+	putLong = util.LongDesc(`Put basic data type into vineyard and only support IPC socket.
+	It receives the flag --value as string and will print object id if succeed.
+	If you don't specify the ipc socket every time, you can set it as the 
+	environment variable VINEYARD_IPC_SOCKET.`)
+
 	putExample = util.Examples(`
-	# Connect the vineyardd deployment with IPC client
-	# Get the cluster info and output as table
-	vineyardctl get cluster-info --deployment-name vineyardd-sample -n vineyard-system`)
+	# put value into vineyard with the given ipc socket
+	vineyardctl put --value 12345 --ipc-socket /var/run/vineyard.sock 
+	vineyardctl put --value hello,world --ipc-socket /var/run/vineyard.sock
+	
+	# If you set the environment variable VINEYARD_IPC_SOCKET
+	# you can use the following command to get vineyard blob
+	vineyardctl put --value 12345`)
 )
 
-// getCmd is to get vineyard objects, metadatas, blobs or cluster-info
+// putCmd is to put basic data type into vineyard
 var putCmd = &cobra.Command{
 	Use:     "put",
-	Short:   "Put vineyard object, metadata, blob or cluster-info",
+	Short:   "Put basic data type into vineyard",
+	Long:    putLong,
 	Example: putExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)

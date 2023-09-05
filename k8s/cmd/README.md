@@ -19,6 +19,7 @@ drivers.
 * [vineyardctl inject](#vineyardctl-inject)	 - Inject the vineyard sidecar container into a workload
 * [vineyardctl ls](#vineyardctl-ls)	 - List vineyard objects, metadatas or blobs
 * [vineyardctl manager](#vineyardctl-manager)	 - Start the manager of vineyard operator
+* [vineyardctl put](#vineyardctl-put)	 - Put basic data type into vineyard
 * [vineyardctl schedule](#vineyardctl-schedule)	 - Schedule a workload or a workflow to existing vineyard cluster.
 
 ## Options
@@ -1859,6 +1860,50 @@ vineyardctl manager [flags]
       --scheduler-config-file string       The location of scheduler plugin's configuration file. (default "/etc/kubernetes/scheduler.yaml")
 ```
 
+## `vineyardctl put`
+
+Put basic data type into vineyard
+
+### Synopsis
+
+Put basic data type into vineyard and only support IPC socket.
+It receives the flag --value as string and will print object id if succeed.
+If you don't specify the ipc socket every time, you can set it as the 
+environment variable VINEYARD_IPC_SOCKET.
+
+```
+vineyardctl put [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
+
+### Examples
+
+```shell
+  # put value into vineyard with the given ipc socket
+  vineyardctl put --value 12345 --ipc-socket /var/run/vineyard.sock
+  vineyardctl put --value hello,world --ipc-socket /var/run/vineyard.sock
+  
+  # If you set the environment variable VINEYARD_IPC_SOCKET
+  # you can use the following command to get vineyard blob
+  vineyardctl put --value 12345
+```
+
+### Options
+
+```
+      --deployment-name string   the name of vineyard deployment
+  -o, --format string            the output format, support table or json, default is table (default "table")
+      --forward-port int         the forward port of vineyard deployment (default 9600)
+  -h, --help                     help for put
+      --ipc-socket string        vineyard IPC socket path
+      --port int                 the port of vineyard deployment (default 9600)
+      --rpc-socket string        vineyard RPC socket path
+      --value string             vineyard blob value
+```
+
 ## `vineyardctl schedule`
 
 Schedule a workload or a workflow to existing vineyard cluster.
@@ -2115,5 +2160,8 @@ vineyardctl schedule workload [flags]
       --resource string              the json string of kubernetes workload
       --vineyardd-name string        the namespace of vineyard cluster (default "vineyardd-sample")
       --vineyardd-namespace string   the namespace of vineyard cluster (default "vineyard-system")
+```
+
+er (default "vineyard-system")
 ```
 
