@@ -181,8 +181,8 @@ public class IPCClient extends Client {
     }
 
     @Override
-    public synchronized Map<String, ObjectID> listNames(
-            String pattern, boolean regex, int limit) throws VineyardException {
+    public synchronized Map<String, ObjectID> listNames(String pattern, boolean regex, int limit)
+            throws VineyardException {
         val root = mapper.createObjectNode();
         ListNameRequest.put(root, pattern, regex, limit);
         this.doWrite(root);

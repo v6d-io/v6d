@@ -17,7 +17,6 @@ package io.v6d.core.common.util;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import io.v6d.core.client.Context;
 import io.v6d.core.common.memory.Payload;
 import java.util.*;
@@ -136,8 +135,7 @@ public class Protocol {
             while (fields.hasNext()) {
                 val field = fields.next();
                 Context.println("!!! " + field.getKey() + " " + field.getValue());
-                this.contents.put(field.getKey(),
-                        new ObjectID(field.getValue().asLong()));
+                this.contents.put(field.getKey(), new ObjectID(field.getValue().asLong()));
             }
         }
     }
