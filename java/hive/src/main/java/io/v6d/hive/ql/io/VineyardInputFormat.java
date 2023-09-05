@@ -98,7 +98,8 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RowWritab
                     } catch (Exception e) {
                         // Skip some invalid file.
                         Context.println("Skip invalid file:" + tableFilePath);
-                        Context.println("File content:" + new String(buffer, StandardCharsets.UTF_8));
+                        Context.println(
+                                "File content:" + new String(buffer, StandardCharsets.UTF_8));
                         break;
                     }
                 }

@@ -35,6 +35,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Queue;
@@ -344,6 +345,12 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             Context.println("Table persisted, name:" + path1.toString());
             client.putName(meta.getId(), path1.toString());
             mergedTableObjectID = meta.getId();
+
+            // drop old table
+            Collection<ObjectID> ids = new ArrayList<ObjectID>();
+            ids.add(objectID);
+            ids.add(objectID1);
+            client.delete(ids, false, false);
         } catch (Exception e) {
             Context.println("Exception: " + e.getMessage());
         }
