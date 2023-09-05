@@ -18,6 +18,7 @@ package client
 import (
 	"fmt"
 
+	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
@@ -45,22 +46,14 @@ var putCmd = &cobra.Command{
 			defer close(ch)
 		}
 
-		flags.Value = []uint{1}
-		// Convert flags.Value (type [] uint) to type [] byte
-		value := make([]byte, len(flags.Value))
-		for i, v := range flags.Value {
-			value[i] = byte(v)
+		// Convert flags.Value (type string) to type [] byte
+		value := []byte(flags.Value)
+		object_id, err := client.PutBlob(value, uint64(len(flags.Value)))
+		if err != nil {
+			errors.Errorf("failed to put value: %s", err)
 		}
-		//object_id, _ := client.PutBlob(value, uint64(len(flags.Value)))
-		object_id, _ := client.PutBlob(value, 64)
-		a := fmt.Sprintf("o%016x", object_id)
-		fmt.Println(a)
-		/*output := util.NewOutput(nil, &blob, nil)
-		// set the output options
-		output.WithFilter(false).
-			SortedKey(flags.SortedKey).
-			SetFormat(flags.Format)
-		Output = output*/
+		objectId := fmt.Sprintf("o%016x", object_id)
+		fmt.Println("object id : ", objectId)
 	},
 }
 
@@ -70,6 +63,6 @@ func NewPutCmd() *cobra.Command {
 
 func init() {
 	flags.ApplyConnectOpts(putCmd)
-	flags.ApplyGetOpts(putCmd)
+	flags.ApplyPutOpts(putCmd)
 	flags.ApplyOutputOpts(putCmd)
 }

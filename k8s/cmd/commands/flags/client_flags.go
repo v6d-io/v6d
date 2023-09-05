@@ -52,10 +52,9 @@ var (
 )
 
 // put options
-var emptyValue []uint
 var (
-	// The object id to get
-	Value []uint
+	// The value to put
+	Value string
 )
 
 // ls options
@@ -108,7 +107,7 @@ func ApplyGetOpts(cmd *cobra.Command) {
 }
 
 func ApplyPutOpts(cmd *cobra.Command) {
-	cmd.Flags().UintSliceVarP(&Value, "value", "", emptyValue, "vineyard blob value")
+	cmd.Flags().StringVarP(&Value, "value", "", "", "vineyard blob value")
 }
 
 func ApplyLsOpts(cmd *cobra.Command) {

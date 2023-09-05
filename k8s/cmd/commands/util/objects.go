@@ -110,7 +110,7 @@ func (c *Client) GetBlob(id string, unsafe bool) (blob map[types.ObjectID]client
 	return nil, nil
 }
 
-// Put
+// PutBlob
 func (c *Client) PutBlob(address []byte, size uint64) (types.ObjectID, error) {
 	if c.ipcClient != nil {
 		return c.ipcClient.BuildBuffer(address, size)

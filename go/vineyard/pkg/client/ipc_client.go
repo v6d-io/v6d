@@ -16,7 +16,6 @@ limitations under the License.
 package client
 
 import (
-	"fmt"
 	"net"
 	"syscall"
 
@@ -129,13 +128,27 @@ func (c *IPCClient) BuildBuffer(address []byte, size uint64) (types.ObjectID, er
 		empty_blob_writer := EmptyBlobWriter(c)
 		return empty_blob_writer.Seal(c)
 	}
-	buffer, err := c.CreateBuffer(size)
-	if err != nil {
-		return uint64(0), nil
+	messageOut := common.WriteCreateBufferRequest(size)
+	if err := c.doWrite(messageOut); err != nil {
+		return uint64(0), err
 	}
-	buffer.Reset(buffer.Id, buffer.Size, arrow.NewBufferBytes(address), c.InstanceID)
-	fmt.Println(buffer.Buffer.Buf())
-	fmt.Println(buffer.Buffer.Bytes())
+	var reply common.CreateBufferReply
+	if err := c.doReadReply(&reply); err != nil {
+		return uint64(0), err
+	}
+	payload := reply.Created
+	if size != payload.DataSize {
+		return uint64(0), errors.New("data size not match")
+	}
+	pointer, err := c.mmapToClient(payload.StoreFd, int64(payload.MapSize), false, true)
+	if err != nil {
+		return uint64(0), err
+	}
+	v := memory.Slice(pointer, payload.DataOffset, payload.DataSize)
+	copy(v, address)
+	buffer := EmptyBlobWriter(c)
+	buffer.Reset(payload.ID, payload.DataSize, arrow.NewBufferBytes(v), c.InstanceID)
+	//fmt.Println(buffer.Buffer.Buf())
 	return buffer.Seal(c)
 }
 
