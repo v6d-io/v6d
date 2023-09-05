@@ -119,6 +119,23 @@ public class Protocol {
         }
     }
 
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class ListNameReply extends Reply {
+        private Map<String, ObjectID> contents;
+
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "list_name_reply");
+            this.contents = new HashMap<>();
+            val fields = root.get("names").fields();
+            while (fields.hasNext()) {
+                val field = fields.next();
+                this.contents.put(field.getKey(), new ObjectID(field.getValue().asLong()));
+            }
+        }
+    }
+
     public static class CreateBufferRequest extends Request {
         public static void put(ObjectNode root, long size) {
             root.put("type", "create_buffer_request");
@@ -226,6 +243,15 @@ public class Protocol {
     public static class ListDataRequest extends Request {
         public static void put(ObjectNode root, String pattern, boolean regex, int limit) {
             root.put("type", "list_data_request");
+            root.put("pattern", pattern);
+            root.put("regex", regex);
+            root.put("limit", limit);
+        }
+    }
+
+    public static class ListNameRequest extends Request {
+        public static void put(ObjectNode root, String pattern, boolean regex, int limit) {
+            root.put("type", "list_name_request");
             root.put("pattern", pattern);
             root.put("regex", regex);
             root.put("limit", limit);

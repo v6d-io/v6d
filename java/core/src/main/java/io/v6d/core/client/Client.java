@@ -59,6 +59,9 @@ public abstract class Client {
     public abstract Collection<ObjectMeta> listMetaData(String pattern, boolean regex, int limit)
             throws VineyardException;
 
+    public abstract Map<String, ObjectID> listNames(String pattern, boolean regex, int limit)
+            throws VineyardException;
+
     public abstract void persist(ObjectID id) throws VineyardException;
 
     public void persist(ObjectMeta meta) throws VineyardException {
