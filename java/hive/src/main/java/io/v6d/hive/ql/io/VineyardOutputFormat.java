@@ -206,9 +206,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         output.write((meta.getId().toString() + "\n").getBytes(StandardCharsets.UTF_8));
         client.putName(
                 meta.getId(),
-                finalOutPath
-                        .toString()
-                        .substring(finalOutPath.toString().indexOf("vineyard:") + 1));
+                finalOutPath.toString().substring(finalOutPath.toString().indexOf(":") + 1));
         output.close();
     }
 

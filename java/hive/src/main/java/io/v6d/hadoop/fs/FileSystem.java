@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import lombok.*;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -342,6 +343,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             client.persist(meta.getId());
             Context.println("Table persisted, name:" + dst.toString());
             client.putName(meta.getId(), dst.toString());
+            client.dropName(src.toString());
             mergedTableObjectID = meta.getId();
 
             // drop old table
@@ -378,18 +380,54 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             Files.delete(nioFilePath);
         } else {
             Files.move(nioFilePath, nioFilePath1);
+            ByteBuffer bytes = ByteBuffer.allocate(255);
+            FileChannel channel = FileChannel.open(nioFilePath1, StandardOpenOption.READ);
+            int len = channel.read(bytes);
+            String objectIDStr =
+                    new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
+            IPCClient client = Context.getClient();
+            client.putName(ObjectID.fromString(objectIDStr), nioFilePath1.toString());
+            try {
+                client.dropName(nioFilePath.toString());
+            } catch (Exception e) {
+                Context.println("Drop name error: " + e.getMessage());
+            }
         }
         printAllFiles();
 
         return true;
     }
 
+    private void syncWithVineyard(String prefix) throws IOException {
+        IPCClient client = Context.getClient();
+        try {
+            String reg = "^" + prefix + ".*";
+            Map<String, ObjectID> objects = client.listNames(reg, true, 255);
+            for (val object : objects.entrySet()) {
+                if (Files.exists(jimfs.getPath(object.getKey()))) {
+                    continue;
+                }
+                Files.createFile(jimfs.getPath(object.getKey()));
+                FileChannel channel =
+                        FileChannel.open(jimfs.getPath(object.getKey()), StandardOpenOption.WRITE);
+                ObjectID id = object.getValue();
+                channel.write(
+                        ByteBuffer.wrap((id.toString() + "\n").getBytes(StandardCharsets.UTF_8)));
+                channel.close();
+            }
+        } catch (Exception e) {
+            Context.println("Exception: " + e.getMessage());
+        }
+    }
+
     @Override
     public FileStatus[] listStatus(Path path) throws FileNotFoundException, IOException {
+        Context.println("listStatus:" + path.toString());
         List<FileStatus> result = new ArrayList<FileStatus>();
         try (val lock = this.lock.open()) {
             java.nio.file.Path nioFilePath =
                     jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1));
+            syncWithVineyard(nioFilePath.toString());
             if (Files.isDirectory(nioFilePath)) {
                 DirectoryStream<java.nio.file.Path> stream = Files.newDirectoryStream(nioFilePath);
                 for (java.nio.file.Path p : stream) {
