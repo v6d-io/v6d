@@ -21,6 +21,14 @@
         <value>false</value>
     </property>
     <property>
+        <name>hive.default.fileformat</name>
+        <value>Vineyard</value>
+    </property>
+    <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>vineyard:///opt/hive/data/warehouse</value>
+    </property>
+    <property>
         <name>hive.fetch.task.conversion</name>
         <value>none</value>
     </property>

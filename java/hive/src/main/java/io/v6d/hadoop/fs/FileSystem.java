@@ -373,25 +373,39 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                 jimfs.getPath(src.toString().substring(src.toString().indexOf(":") + 1));
         java.nio.file.Path dstNioFilePath =
                 jimfs.getPath(dst.toString().substring(dst.toString().indexOf(":") + 1));
-        java.nio.file.Path srcNioParentDirPath = srcNioFilePath.getParent();
-        Files.createDirectories(srcNioParentDirPath);
-        if (Files.exists(dstNioFilePath)) {
-            printAllFiles();
-            mergeFile(srcNioFilePath, dstNioFilePath);
+        java.nio.file.Path dstNioParentDirPath = dstNioFilePath.getParent();
+        Files.createDirectories(dstNioParentDirPath);
+
+        if (Files.isDirectory(srcNioFilePath)) {
+            DirectoryStream<java.nio.file.Path> stream = Files.newDirectoryStream(srcNioFilePath);
+            for (java.nio.file.Path p : stream) {
+                renameInternal(
+                        new Path(SCHEME + ":/" + p.toString()),
+                        new Path(
+                                SCHEME + ":/" + dstNioFilePath.toString() + "/" + p.getFileName()));
+            }
+            stream.close();
             Files.delete(srcNioFilePath);
         } else {
-            Files.move(srcNioFilePath, dstNioFilePath);
-            ByteBuffer bytes = ByteBuffer.allocate(255);
-            FileChannel channel = FileChannel.open(dstNioFilePath, StandardOpenOption.READ);
-            int len = channel.read(bytes);
-            String objectIDStr =
-                    new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
-            IPCClient client = Context.getClient();
-            client.putName(ObjectID.fromString(objectIDStr), dstNioFilePath.toString());
-            try {
-                client.dropName(srcNioFilePath.toString());
-            } catch (Exception e) {
-                Context.println("Drop name error: " + e.getMessage());
+            if (Files.exists(dstNioFilePath)) {
+                printAllFiles();
+                mergeFile(srcNioFilePath, dstNioFilePath);
+                Files.delete(srcNioFilePath);
+            } else {
+                Files.move(srcNioFilePath, dstNioFilePath);
+                ByteBuffer bytes = ByteBuffer.allocate(255);
+                FileChannel channel = FileChannel.open(dstNioFilePath, StandardOpenOption.READ);
+                int len = channel.read(bytes);
+                String objectIDStr =
+                        new String(bytes.array(), 0, len, StandardCharsets.UTF_8)
+                                .replaceAll("\n", "");
+                IPCClient client = Context.getClient();
+                client.putName(ObjectID.fromString(objectIDStr), dstNioFilePath.toString());
+                try {
+                    client.dropName(srcNioFilePath.toString());
+                } catch (Exception e) {
+                    Context.println("Drop name error: " + e.getMessage());
+                }
             }
         }
         printAllFiles();
