@@ -18,7 +18,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.Set;
 import org.apache.hadoop.hive.ql.io.AbstractStorageFormatDescriptor;
 
-public class VineyardFileStorageFormatDescriptor extends AbstractStorageFormatDescriptor {
+public class VineyardStorageFormatDescriptor extends AbstractStorageFormatDescriptor {
     @Override
     public Set<String> getNames() {
         return ImmutableSet.of("Vineyard", "Vineyard");

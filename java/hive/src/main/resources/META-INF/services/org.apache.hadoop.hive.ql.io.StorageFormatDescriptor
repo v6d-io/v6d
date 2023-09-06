@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Register vineyard storage format descriptor to hadoop.
+# Register vineyard storage format descriptor to hive.
 
-io.v6d.hive.ql.io.VineyardFileStorageFormatDescriptor
+io.v6d.hive.ql.io.VineyardStorageFormatDescriptor
