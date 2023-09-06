@@ -21,7 +21,7 @@ import org.apache.hadoop.hive.ql.io.AbstractStorageFormatDescriptor;
 public class VineyardFileStorageFormatDescriptor extends AbstractStorageFormatDescriptor {
     @Override
     public Set<String> getNames() {
-        return ImmutableSet.of("VineyardFile", "VineyardFile");
+        return ImmutableSet.of("Vineyard", "Vineyard");
     }
 
     @Override

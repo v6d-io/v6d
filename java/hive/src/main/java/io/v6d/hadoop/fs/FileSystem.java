@@ -308,48 +308,49 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
         ByteBuffer bytes = ByteBuffer.allocate(255);
         int len = channelSrc.read(bytes);
-        String objectIDStr =
+        String srcObjectIDStr =
                 new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
         bytes = ByteBuffer.allocate(255);
         len = channelDst.read(bytes);
-        String objectIDStr1 =
+        String dstObjectIDStr =
                 new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
 
         ObjectID mergedTableObjectID = null;
         try {
             IPCClient client = Context.getClient();
-            ObjectID objectID = ObjectID.fromString(objectIDStr);
-            ObjectID objectID1 = ObjectID.fromString(objectIDStr1);
-            Table table = (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID));
-            Table table1 =
-                    (Table) ObjectFactory.getFactory().resolve(client.getMetaData(objectID1));
+            ObjectID srcObjectID = ObjectID.fromString(srcObjectIDStr);
+            ObjectID dstObjectID = ObjectID.fromString(dstObjectIDStr);
+            Table srcTable =
+                    (Table) ObjectFactory.getFactory().resolve(client.getMetaData(srcObjectID));
+            Table dstTable =
+                    (Table) ObjectFactory.getFactory().resolve(client.getMetaData(dstObjectID));
 
             // merge table
-            Schema schema = table.getSchema().getSchema();
+            Schema schema = srcTable.getSchema().getSchema();
             SchemaBuilder mergedSchemaBuilder = SchemaBuilder.fromSchema(schema);
             TableBuilder mergedTableBuilder = new TableBuilder(client, mergedSchemaBuilder);
 
-            for (int i = 0; i < table.getBatches().size(); i++) {
-                mergedTableBuilder.addBatch(table.getBatches().get(i));
+            for (int i = 0; i < srcTable.getBatches().size(); i++) {
+                mergedTableBuilder.addBatch(srcTable.getBatches().get(i));
             }
 
-            for (int i = 0; i < table1.getBatches().size(); i++) {
-                mergedTableBuilder.addBatch(table1.getBatches().get(i));
+            for (int i = 0; i < dstTable.getBatches().size(); i++) {
+                mergedTableBuilder.addBatch(dstTable.getBatches().get(i));
             }
 
             ObjectMeta meta = mergedTableBuilder.seal(client);
             Context.println("record batch size:" + mergedTableBuilder.getBatchSize());
             Context.println("Table id in vineyard:" + meta.getId().value());
             client.persist(meta.getId());
-            Context.println("Table persisted, name:" + dst.toString());
+            Context.println("Table persisted, name:" + dst);
             client.putName(meta.getId(), dst.toString());
             client.dropName(src.toString());
             mergedTableObjectID = meta.getId();
 
             // drop old table
             Collection<ObjectID> ids = new ArrayList<ObjectID>();
-            ids.add(objectID);
-            ids.add(objectID1);
+            ids.add(srcObjectID);
+            ids.add(dstObjectID);
             client.delete(ids, false, false);
         } finally {
             channelSrc.close();
@@ -366,29 +367,29 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         }
     }
 
-    public boolean renameInternal(Path path, Path path1) throws IOException {
+    public boolean renameInternal(Path src, Path dst) throws IOException {
         // now we create new file and delete old file to simulate rename
-        java.nio.file.Path nioFilePath =
-                jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1));
-        java.nio.file.Path nioFilePath1 =
-                jimfs.getPath(path1.toString().substring(path1.toString().indexOf(":") + 1));
-        java.nio.file.Path nioParentDirPath = nioFilePath.getParent();
-        Files.createDirectories(nioParentDirPath);
-        if (Files.exists(nioFilePath1)) {
+        java.nio.file.Path srcNioFilePath =
+                jimfs.getPath(src.toString().substring(src.toString().indexOf(":") + 1));
+        java.nio.file.Path dstNioFilePath =
+                jimfs.getPath(dst.toString().substring(dst.toString().indexOf(":") + 1));
+        java.nio.file.Path srcNioParentDirPath = srcNioFilePath.getParent();
+        Files.createDirectories(srcNioParentDirPath);
+        if (Files.exists(dstNioFilePath)) {
             printAllFiles();
-            mergeFile(nioFilePath, nioFilePath1);
-            Files.delete(nioFilePath);
+            mergeFile(srcNioFilePath, dstNioFilePath);
+            Files.delete(srcNioFilePath);
         } else {
-            Files.move(nioFilePath, nioFilePath1);
+            Files.move(srcNioFilePath, dstNioFilePath);
             ByteBuffer bytes = ByteBuffer.allocate(255);
-            FileChannel channel = FileChannel.open(nioFilePath1, StandardOpenOption.READ);
+            FileChannel channel = FileChannel.open(dstNioFilePath, StandardOpenOption.READ);
             int len = channel.read(bytes);
             String objectIDStr =
                     new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
             IPCClient client = Context.getClient();
-            client.putName(ObjectID.fromString(objectIDStr), nioFilePath1.toString());
+            client.putName(ObjectID.fromString(objectIDStr), dstNioFilePath.toString());
             try {
-                client.dropName(nioFilePath.toString());
+                client.dropName(srcNioFilePath.toString());
             } catch (Exception e) {
                 Context.println("Drop name error: " + e.getMessage());
             }
@@ -422,7 +423,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public FileStatus[] listStatus(Path path) throws FileNotFoundException, IOException {
-        Context.println("listStatus:" + path.toString());
         List<FileStatus> result = new ArrayList<FileStatus>();
         try (val lock = this.lock.open()) {
             java.nio.file.Path nioFilePath =

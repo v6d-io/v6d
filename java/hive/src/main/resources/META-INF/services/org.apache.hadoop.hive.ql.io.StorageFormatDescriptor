@@ -12,8 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Register vineyard filesystem to hadoop-fs, see also:
-#  - https://stackoverflow.com/questions/17265002/hadoop-no-filesystem-for-scheme-file
-#  - https://github.com/apache/hadoop/blob/trunk/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileSystem.java#L3510
+# Register vineyard storage format descriptor to hadoop.
 
 io.v6d.hive.ql.io.VineyardFileStorageFormatDescriptor
