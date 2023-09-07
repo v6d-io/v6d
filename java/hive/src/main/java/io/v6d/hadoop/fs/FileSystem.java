@@ -401,11 +401,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                                 .replaceAll("\n", "");
                 IPCClient client = Context.getClient();
                 client.putName(ObjectID.fromString(objectIDStr), dstNioFilePath.toString());
-                try {
-                    client.dropName(srcNioFilePath.toString());
-                } catch (Exception e) {
-                    Context.println("Drop name error: " + e.getMessage());
-                }
+                client.dropName(srcNioFilePath.toString());
             }
         }
         printAllFiles();
