@@ -31,6 +31,8 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.PathFilter;
+import org.apache.hadoop.hive.common.FileUtils;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedInputFormatInterface;
 import org.apache.hadoop.hive.ql.io.HiveInputFormat;
 import org.apache.hadoop.io.*;
@@ -66,7 +68,7 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
 
             // get object id from vineyard filesystem
             FileSystem fs = path.getFileSystem(job);
-            FileStatus[] status = fs.listStatus(path);
+            FileStatus[] status = fs.listStatus(path, FileUtils.HIDDEN_FILES_PATH_FILTER);
             if (status.length == 0) {
                 return new VineyardSplit[0];
             }
@@ -74,6 +76,9 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
             // Maybe there exists more than one table file.
             long numBatches = 0;
             for (int j = 0; j < status.length; j++) {
+                if (status[j].isDirectory()) {
+                    continue;
+                }
                 Path tableFilePath = status[j].getPath();
                 FSDataInputStream in = fs.open(tableFilePath);
                 FileStatus fileStatus = fs.getFileStatus(tableFilePath);
@@ -142,6 +147,9 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
         this.recordBatchIndex = 0;
 
         for (int j = 0; j < status.length; j++) {
+            if (status[j].isDirectory()) {
+                continue;
+            }
             Path tableFilePath = status[j].getPath();
             FSDataInputStream in = fs.open(tableFilePath);
             FileStatus fileStatus = fs.getFileStatus(tableFilePath);

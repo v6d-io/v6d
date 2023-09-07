@@ -1265,6 +1265,8 @@ bool SocketConnection::doListName(const json& root) {
   bool regex;
   size_t limit;
   TRY_READ_REQUEST(ReadListNameRequest, root, pattern, regex, limit);
+  LOG(INFO) << "pattern: " << pattern << ", regex: " << regex
+            << ", limit: " << limit;
   RESPONSE_ON_ERROR(server_ptr_->ListName(
       pattern, regex, limit,
       [self](const Status& status,
@@ -1273,6 +1275,7 @@ bool SocketConnection::doListName(const json& root) {
         for (auto const& item : names) {
           std::string name = item.first;
           unescaped_names.emplace(unescape_json_pointer(name), item.second);
+          LOG(INFO) << "name:" << name << " id:" << item.second;
         }
         std::string message_out;
         if (status.ok()) {

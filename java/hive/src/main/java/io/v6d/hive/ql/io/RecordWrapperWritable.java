@@ -24,19 +24,31 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import lombok.val;
 import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.hadoop.hive.common.type.HiveChar;
+import org.apache.hadoop.hive.common.type.HiveVarchar;
+import org.apache.hadoop.hive.serde2.lazy.ByteArrayRef;
+import org.apache.hadoop.hive.serde2.lazy.LazyHiveChar;
+import org.apache.hadoop.hive.serde2.lazy.LazyHiveVarchar;
+import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyHiveCharObjectInspector;
+import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyHiveVarcharObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.SettableStructObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.WritableStringObjectInspector;
+import org.apache.hadoop.hive.serde2.typeinfo.BaseCharTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.CharTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.VarcharTypeInfo;
 import org.apache.hadoop.io.*;
 
 public class RecordWrapperWritable implements WritableComparable {
     // output format: raw java objects, e.g., integer, string
     // input format: writable
     private Object[] values;
+    private int[] cLen;
 
     // for input format
     private boolean[] nullIndicators;
@@ -119,6 +131,10 @@ public class RecordWrapperWritable implements WritableComparable {
                     this.setters[i] = RecordWrapperWritable::setDouble;
                     break;
                 case STRING:
+                case CHAR:
+                case VARCHAR:
+                    this.values[i] = new Text();
+                    this.setters[i] = RecordWrapperWritable::setString;
                     this.values[i] = new Text();
                     this.setters[i] = RecordWrapperWritable::setString;
                     break;
@@ -135,6 +151,15 @@ public class RecordWrapperWritable implements WritableComparable {
     // for output format
     public void setValues(Object[] values) {
         this.values = values;
+        for (int i = 0; i < values.length; i++) {
+            if (values[i] instanceof HiveChar) {
+                this.values[i] =
+                        new org.apache.arrow.vector.util.Text(((HiveChar) values[i]).getValue());
+            } else if (values[i] instanceof HiveVarchar) {
+                this.values[i] =
+                        new org.apache.arrow.vector.util.Text(((HiveVarchar) values[i]).getValue());
+            }
+        }
     }
 
     // for input format
@@ -144,8 +169,42 @@ public class RecordWrapperWritable implements WritableComparable {
         }
     }
 
-    public Object getValue(int index) {
-        return values[index];
+    public Object getValue(int index, int cLen, ObjectInspector oi) {
+        if (index >= values.length) {
+            return null;
+        }
+        if (!(values[index] instanceof Text)) {
+            return values[index];
+        }
+        if (oi instanceof WritableStringObjectInspector) {
+            return values[index];
+        }
+
+        if (oi instanceof LazyHiveCharObjectInspector) {
+            LazyHiveChar result = new LazyHiveChar((LazyHiveCharObjectInspector) oi);
+            ByteArrayRef data = new ByteArrayRef();
+            String str = values[index].toString();
+            data.setData(str.getBytes());
+            if (str.length() >= cLen) {
+                result.init(data, 0, cLen);
+            } else {
+                result.init(data, 0, str.length());
+            }
+            return result;
+        } else if (oi instanceof LazyHiveVarcharObjectInspector) {
+            LazyHiveVarchar result = new LazyHiveVarchar((LazyHiveVarcharObjectInspector) oi);
+            ByteArrayRef data = new ByteArrayRef();
+            String str = values[index].toString();
+            data.setData(str.getBytes());
+            if (str.length() >= cLen) {
+                result.init(data, 0, cLen);
+            } else {
+                result.init(data, 0, str.length());
+            }
+            return result;
+        } else {
+            throw new UnsupportedOperationException("Unsupported type: " + oi.getClass());
+        }
     }
 
     // for output format
@@ -154,10 +213,14 @@ public class RecordWrapperWritable implements WritableComparable {
     }
 
     // for input format
-    public void setWritable(int index, Writable value) {
+    public void setWritable(int index, Writable value, int cLen) {
         // n.b.: need to use setters, as values from "setStructFieldData"
         // are already writables.
-        values[index] = value;
+        if (cLen == -1) {
+            values[index] = value;
+        } else {
+            values[index] = new Text(value.toString().substring(0, cLen));
+        }
     }
 
     @Override
@@ -254,14 +317,30 @@ public class RecordWrapperWritable implements WritableComparable {
         private List<String> fieldNames;
         private List<TypeInfo> fieldTypes;
         private List<StructField> fields;
+        private int[] cLen;
 
         public VineyardStructInspector(StructTypeInfo info) {
             this.fieldNames = info.getAllStructFieldNames();
             this.fieldTypes = info.getAllStructFieldTypeInfos();
             this.fields = new ArrayList<>(fieldNames.size());
+            cLen = new int[fieldTypes.size()];
             for (int i = 0; i < fieldNames.size(); ++i) {
                 this.fields.add(
                         new Field(fieldNames.get(i), createObjectInspector(fieldTypes.get(i)), i));
+            }
+            for (int i = 0; i < fieldTypes.size(); ++i) {
+                cLen[i] = -1;
+                TypeInfo fieldType = fieldTypes.get(i);
+                switch (((PrimitiveTypeInfo) fieldType).getPrimitiveCategory()) {
+                    case CHAR:
+                        cLen[i] = ((BaseCharTypeInfo) fieldType).getLength();
+                        break;
+                    case VARCHAR:
+                        cLen[i] = ((VarcharTypeInfo) fieldType).getLength();
+                        break;
+                    default:
+                        break;
+                }
             }
         }
 
@@ -284,7 +363,7 @@ public class RecordWrapperWritable implements WritableComparable {
         public Object setStructFieldData(Object struct, StructField field, Object fieldValue) {
             int offset = ((Field) field).offset;
             RecordWrapperWritable writable = (RecordWrapperWritable) struct;
-            writable.setWritable(offset, (Writable) fieldValue);
+            writable.setWritable(offset, (Writable) fieldValue, cLen[offset]);
             return struct;
         }
 
@@ -310,7 +389,7 @@ public class RecordWrapperWritable implements WritableComparable {
             }
             int offset = ((Field) field).offset;
             RecordWrapperWritable writable = (RecordWrapperWritable) data;
-            return writable.getValue(offset);
+            return writable.getValue(offset, cLen[offset], field.getFieldObjectInspector());
         }
 
         @Override
@@ -367,6 +446,11 @@ public class RecordWrapperWritable implements WritableComparable {
                 return PrimitiveObjectInspectorFactory.writableDoubleObjectInspector;
             case STRING:
                 return PrimitiveObjectInspectorFactory.writableStringObjectInspector;
+            case CHAR:
+                // return PrimitiveObjectInspectorFactory.writableHiveCharObjectInspector;
+                return new LazyHiveCharObjectInspector((CharTypeInfo) info);
+            case VARCHAR:
+                return new LazyHiveVarcharObjectInspector((VarcharTypeInfo) info);
             default:
                 throw new UnsupportedOperationException("Unsupported type: " + info);
         }
