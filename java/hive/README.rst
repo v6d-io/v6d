@@ -27,16 +27,21 @@ Refer to `apache/hive <https://hub.docker.com/r/apache/hive>`_ for detailed docu
 Hive Usage
 ----------
 
+In this repo, we set ```hive.default.fileformat``` as ```Vineyard``` and set ```hive.metastore.warehouse.dir``` as 
+```vineyard:///user/hive/warehouse```(In java/hive/conf/hive-size.xml), so the default storage format of hive is vineyard.
+If you want to use local file system or HDFS, you need to change the configuration or point out the storage format when
+creating table.
+
 - Create table and insert some data:
 
     .. code:: sql
 
         show tables;
-        create table hive_example_test(
+        create table hive_example(
             a string,
             b int)
         stored as TEXTFILE
-        LOCATION "file:///opt/hive/data/warehouse/hive_example_test";
+        LOCATION "file:///opt/hive/data/warehouse/hive_example";
 
         insert into hive_example values('a', 1), ('a', 2), ('b',3);
         select count(distinct a) from hive_example;
@@ -57,49 +62,20 @@ Hive and Vineyard
 
         create table hive_example(
             a string,
-            b int)
-        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
-        stored as
-            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
-            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
-        LOCATION "vineyard:///opt/hive/data/warehouse/hive_example";
-
-        insert into hive_example values('a', 1), ('a', 2), ('b',3);
-        select * from hive_example;
+            b int);
+        describe formatted hive_example;
 
 - Create table and select
 
     .. code:: sql
 
         create table hive_example2(
-                    field_1 int,
-                    field_2 int)
-        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
-        stored as
-            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
-            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
-        LOCATION "vineyard:///opt/hive/data/warehouse/hive_example2";
-
+                    field_1 string,
+                    field_2 int);
+        insert into hive_example2 values('a', 1), ('b', 2), ('c', 3);
         select * from hive_example2;
 
         explain vectorization only select * from hive_example2;
-
-- Insert using `VineyardSerDe`:
-
-    .. code:: sql
-
-        create table hive_example(
-                            field_1 string,
-                            field_2 int)
-        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
-        stored as
-            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
-            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
-        LOCATION "vineyard:///opt/hive/data/warehouse/hive_example";
-
-        insert into hive_example values('a', 1), ('a', 2), ('b',3);
-
-        select * from hive_example;
 
 - Vectorized Input (and output, currently unavaliabe):
 
@@ -139,14 +115,9 @@ Hive and Vineyard
 
     .. code:: sql
 
-        create table hive_example(
+        create table hive_example3(
                             src_id int,
-                            dst_id int)
-        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
-        stored as
-            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
-            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
-        LOCATION "vineyard:///opt/hive/data/warehouse/hive_example";
+                            dst_id int);
         create table hive_test_data_livejournal(
                             src_id int,
                             dst_id int
@@ -154,7 +125,7 @@ Hive and Vineyard
         row format serde 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
         stored as textfile;
         load data local inpath "file:///opt/hive/data/warehouse/soc-livejournal.csv" into table hive_test_data_livejournal;
-        insert into hive_example select * from hive_test_data_livejournal; 
+        insert into hive_example3 select * from hive_test_data_livejournal; 
 
 - Test output format:
 
@@ -175,15 +146,9 @@ Hive and Vineyard
         create table hive_static_partition(
             src_id int,
             dst_id int
-        )
-        partitioned by (value int)
-        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
-        stored as
-            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
-            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
-        LOCATION "vineyard:///opt/hive/data/warehouse/hive_static_partition";
-        insert into table hive_static_partition partition(value=666) values (999, 2), (999, 2), (999, 2);
+        ) partitioned by (value int);
         insert into table hive_static_partition partition(value=666) values (3, 4);
+        insert into table hive_static_partition partition(value=666) values (999, 2), (999, 2), (999, 2);
         insert into table hive_static_partition partition(value=114514) values (1, 2);
         select * from hive_static_partition;
         select * from hive_static_partition where value=666;
@@ -193,22 +158,19 @@ Hive and Vineyard
 
     .. code:: sql
 
-        create table hive_dynamic_partition_data
-        (src_id int,
-         dst_id int,
-         year int);
+        create table hive_dynamic_partition_data(
+            src_id int,
+            dst_id int,
+            year int)
+        stored as TEXTFILE
+        LOCATION "file:///opt/hive/data/warehouse/hive_dynamic_partition_data";
         insert into table hive_dynamic_partition_data values (1, 2, 2018),(3, 4, 2018),(1, 2, 2017);
 
         create table hive_dynamic_partition_test
         (
             src_id int,
             dst_id int
-        )partitioned by(mounth int, year int)
-        row format serde "io.v6d.hive.ql.io.VineyardSerDe"
-        stored as
-            INPUTFORMAT 'io.v6d.hive.ql.io.VineyardInputFormat'
-            OUTPUTFORMAT 'io.v6d.hive.ql.io.VineyardOutputFormat'
-        LOCATION "vineyard:///opt/hive/data/warehouse/hive_dynamic_partition_test";
+        )partitioned by(mounth int, year int);
         insert into table hive_dynamic_partition_test partition(mounth=1, year) select src_id,dst_id,year from hive_dynamic_partition_data;
         select * from hive_dynamic_partition_test;
 

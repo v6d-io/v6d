@@ -68,7 +68,7 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
             FileSystem fs = path.getFileSystem(job);
             FileStatus[] status = fs.listStatus(path);
             if (status.length == 0) {
-                throw new VineyardException.ObjectNotExists("Table not found: " + tableName);
+                return new VineyardSplit[0];
             }
 
             // Maybe there exists more than one table file.
