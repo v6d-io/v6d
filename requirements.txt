@@ -1,7 +1,7 @@
 argcomplete
 click
 etcd-distro
-lazy-imports
+lazy-import
 makefun
 numpy>=1.18.5
 pandas<1.0.0; python_version<"3.6"
