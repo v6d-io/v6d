@@ -69,7 +69,6 @@ vineyardctl: generate fmt
 bdist_wheel:
 	@cp vineyardctl ../python/vineyard/bdist/vineyardctl
 	@strip ../python/vineyard/bdist/vineyardctl
-	@upx -9 ../python/vineyard/bdist/vineyardctl
 
 # Run vineyardctl binary
 .PHONY: run
