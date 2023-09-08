@@ -235,6 +235,8 @@ jobs:
 
           go build -a -o vineyardctl k8s/cmd/main.go
           strip ./vineyardctl || true
+          brew install upx || true
+          upx -9 ./vineyardctl || true
 
       - name: Upload wheels to tagged release
         uses: svenstaro/upload-release-action@v2
