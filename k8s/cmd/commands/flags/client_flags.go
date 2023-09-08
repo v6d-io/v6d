@@ -51,6 +51,12 @@ var (
 	Unsafe bool
 )
 
+// put options
+var (
+	// The value to put
+	Value string
+)
+
 // ls options
 var (
 	// Pattern string that will be matched against the object’s typenames
@@ -98,6 +104,10 @@ func ApplyGetOpts(cmd *cobra.Command) {
 		"code_remote=True will force a meta synchronization on the vineyard server.")
 	cmd.Flags().BoolVarP(&Unsafe, "unsafe", "", false, "unsafe means getting the blob even the blob is not sealed yet."+
 		"Default is False.")
+}
+
+func ApplyPutOpts(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&Value, "value", "", "", "vineyard blob value")
 }
 
 func ApplyLsOpts(cmd *cobra.Command) {
