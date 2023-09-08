@@ -137,6 +137,7 @@ del _init_global_context
 
 
 from . import core
+from . import csi
 from . import data
 from . import deploy
 from . import io
