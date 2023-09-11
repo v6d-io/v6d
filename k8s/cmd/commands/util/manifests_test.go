@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -217,8 +216,9 @@ func Test_ApplyManifests(t *testing.T) {
 		pod.SetKind("Pod")
 		pod.SetAPIVersion("v1")
 		err := c.Get(context.Background(), client.ObjectKey{Name: "my-pod-1", Namespace: "vineyard-system"}, pod)
-		assert.Nil(t, err)
-
+		if err != nil {
+			t.Errorf("Error: %d", err)
+		}
 	}
 }
 
@@ -279,7 +279,9 @@ func Test_DeleteManifests(t *testing.T) {
 		pod.SetKind("Pod")
 		pod.SetAPIVersion("v1")
 		err := c.Get(context.Background(), client.ObjectKey{Name: "my-pod-1", Namespace: "vineyard-system"}, pod)
-		assert.NotNil(t, err)
+		if err == nil {
+			t.Errorf("There should exist an error")
+		}
 	}
 }
 
@@ -492,7 +494,9 @@ func Test_ApplyManifestsWithOwnerRef(t *testing.T) {
 
 	// Test with valid inputs
 	err := ApplyManifestsWithOwnerRef(c, objs, "Job", "Role,Rolebinding")
-	assert.Nil(t, err)
+	if err != nil {
+		t.Errorf("Error: %d", err)
+	}
 
 	// Check if OwnerReference was set for "Role" kind
 	RoleBinding := &unstructured.Unstructured{}
@@ -500,14 +504,24 @@ func Test_ApplyManifestsWithOwnerRef(t *testing.T) {
 	RoleBinding.SetAPIVersion("rbac.authorization.k8s.io/v1")
 
 	err = c.Get(context.Background(), client.ObjectKey{Name: "vineyard-backup", Namespace: "vineyard-system"}, RoleBinding)
-	assert.Nil(t, err)
+	if err != nil {
+		t.Errorf("Error: %d", err)
+	}
 	time.Sleep(2 * time.Second)
 	ownerRefs := RoleBinding.GetOwnerReferences()
-	assert.Equal(t, 1, len(ownerRefs))
-	assert.Equal(t, "Job", ownerRefs[0].Kind)
-	assert.Equal(t, "vineyard-backup", ownerRefs[0].Name)
+	if !reflect.DeepEqual(1, len(ownerRefs)) {
+		t.Errorf("got %+v, want %+v", len(ownerRefs), 1)
+	}
+	if !reflect.DeepEqual("Job", ownerRefs[0].Kind) {
+		t.Errorf("got %+v, want %+v", ownerRefs[0].Kind, "Job")
+	}
+	if !reflect.DeepEqual("vineyard-backup", ownerRefs[0].Name) {
+		t.Errorf("got %+v, want %+v", ownerRefs[0].Name, "vineyard-backup")
+	}
 
 	// Test with unsupported kind in refKind
 	err = ApplyManifestsWithOwnerRef(c, objs, "Job", "Unsupported")
-	assert.Nil(t, err)
+	if err != nil {
+		t.Errorf("Error: %d", err)
+	}
 }

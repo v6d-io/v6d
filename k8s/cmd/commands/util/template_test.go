@@ -21,7 +21,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -160,8 +159,10 @@ func TestBuildObjsFromEtcdManifests(t *testing.T) {
 	image := vineyardd.Spec.Vineyard.Image
 
 	podObjs, svcObjs, err := BuildObjsFromEtcdManifests(&etcdConfig, name, namespace, replicas, image, value, tmplFunc)
+	if err != nil {
+		t.Errorf("Error: %d", err)
+	}
 
-	assert.NoError(t, err)
 	if len(podObjs) != 10 {
 		t.Errorf("Expected %d objects, but got %d", 10, len(podObjs))
 	}
@@ -275,7 +276,9 @@ func TestBuildObjsFromManifests(t *testing.T) {
 
 	objs, err := BuildObjsFromManifests(templateName, backup, tmplFunc)
 
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("Error: %d", err)
+	}
 	if len(objs) != 4 {
 		t.Errorf("Expected %d objects, but got %d", 4, len(objs))
 	}
