@@ -16,9 +16,9 @@ limitations under the License.
 package util
 
 import (
-	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -27,28 +27,20 @@ import (
 func TestConvertToJson(t *testing.T) {
 	// Test case 1: Valid JSON input
 	jsonStr := `{"name":"John", "age": 31}`
-	expectedJSON := `{"name":"John", "age": 31}`
+	expectedJSON := `{"name":"John","age":31}`
 	result, err := ConvertToJson(jsonStr)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if !reflect.DeepEqual(expectedJSON, result) {
-		t.Errorf("got %+v, want %+v", result, expectedJSON)
-	}
+	assert.NoError(t, err)
+	assert.JSONEq(t, expectedJSON, result)
 
 	// Test case 2: Valid YAML input
 	yamlStr := `
 name: John
 age: 32
 `
-	expectedYAML := `{"age":32,"name":"John"}`
+	expectedYAML := `{"name":"John","age":32}`
 	result, err = ConvertToJson(yamlStr)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if !reflect.DeepEqual(expectedYAML, result) {
-		t.Errorf("got %+v, want %+v", result, expectedYAML)
-	}
+	assert.NoError(t, err)
+	assert.JSONEq(t, expectedYAML, result)
 
 }
 
@@ -59,12 +51,9 @@ func TestConvertToYaml(t *testing.T) {
 name: John
 `
 	result, err := ConvertToYaml(jsonStr)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if !reflect.DeepEqual(expectedYAML, result) {
-		t.Errorf("got %+v, want %+v", result, expectedYAML)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, expectedYAML, result)
+
 }
 
 func TestParseEnvs(t *testing.T) {
@@ -75,42 +64,26 @@ func TestParseEnvs(t *testing.T) {
 		{Name: "KEY2=Value2", Value: "KEY2=Value2"},
 	}
 	result, err := ParseEnvs(envArray)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if !reflect.DeepEqual(expectedEnvs, result) {
-		t.Errorf("got %+v, want %+v", result, expectedEnvs)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, expectedEnvs, result)
 
 	// Test case 2: Invalid env string without "=" separator
 	invalidEnv := []string{"KEY1:Value1"}
 	_, err = ParseEnvs(invalidEnv)
-	if err == nil {
-		t.Errorf("There should exist an error")
-	}
-	if !reflect.DeepEqual(err.Error(), "invalid env string") {
-		t.Errorf("got wrong err: %+v", err)
-	}
+	assert.Error(t, err)
+	assert.EqualError(t, err, "invalid env string")
 
 	// Test case 3: Invalid env with empty name
 	emptyNameEnv := []string{"=Value1"}
 	_, err = ParseEnvs(emptyNameEnv)
-	if err == nil {
-		t.Errorf("There should exist an error")
-	}
-	if !reflect.DeepEqual(err.Error(), "the name of env can not be empty") {
-		t.Errorf("got wrong err: %+v", err)
-	}
+	assert.Error(t, err)
+	assert.EqualError(t, err, "the name of env can not be empty")
 
 	// Test case 4: Invalid env with empty value
 	emptyValueEnv := []string{"KEY1="}
 	_, err = ParseEnvs(emptyValueEnv)
-	if err == nil {
-		t.Errorf("There should exist an error")
-	}
-	if !reflect.DeepEqual(err.Error(), "the value of env can not be empty") {
-		t.Errorf("got wrong err: %+v", err)
-	}
+	assert.Error(t, err)
+	assert.EqualError(t, err, "the value of env can not be empty")
 }
 
 func TestParsePVSpec(t *testing.T) {
@@ -132,12 +105,8 @@ func TestParsePVSpec(t *testing.T) {
 		PersistentVolumeReclaimPolicy: corev1.PersistentVolumeReclaimRetain,
 	}
 	result, err := ParsePVSpec(pvSpec)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if !reflect.DeepEqual(expectedSpec, *result) {
-		t.Errorf("got %+v, want %+v", *result, expectedSpec)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, expectedSpec, *result)
 
 	// Test case 2: Invalid PV spec
 	invalidSpec := `{
@@ -148,9 +117,7 @@ func TestParsePVSpec(t *testing.T) {
 		"persistentVolumeReclaimPolicy": "Retain"
 	}`
 	_, err = ParsePVSpec(invalidSpec)
-	if err == nil {
-		t.Errorf("There should exist an error")
-	}
+	assert.Error(t, err)
 }
 
 func TestParsePVCSpec(t *testing.T) {
@@ -177,12 +144,8 @@ func TestParsePVCSpec(t *testing.T) {
 		StorageClassName: &storageClassName,
 	}
 	result, err := ParsePVCSpec(pvcSpec)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if !reflect.DeepEqual(expectedSpec, *result) {
-		t.Errorf("got %+v, want %+v", *result, expectedSpec)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, expectedSpec, *result)
 
 	// Test case 2: Invalid PVC spec
 	invalidSpec := `{
@@ -195,9 +158,7 @@ func TestParsePVCSpec(t *testing.T) {
 		"storageClassName": "standard_1"
 	}`
 	_, err = ParsePVCSpec(invalidSpec)
-	if err == nil {
-		t.Errorf("There should exist an error")
-	}
+	assert.Error(t, err)
 }
 
 func TestParsePVandPVCSpec(t *testing.T) {
@@ -242,15 +203,10 @@ func TestParsePVandPVCSpec(t *testing.T) {
 		StorageClassName: &storageClassName,
 	}
 	pvSpec, pvcSpec, err := ParsePVandPVCSpec(jsonStr)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if !reflect.DeepEqual(expectedPVSpec, *pvSpec) {
-		t.Errorf("got %+v, want %+v", *pvSpec, expectedPVSpec)
-	}
-	if !reflect.DeepEqual(expectedPVCSpec, *pvcSpec) {
-		t.Errorf("got %+v, want %+v", *pvcSpec, expectedPVCSpec)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, expectedPVSpec, *pvSpec)
+	assert.Equal(t, expectedPVCSpec, *pvcSpec)
+
 }
 
 func TestGetPVAndPVC(t *testing.T) {
@@ -295,28 +251,17 @@ func TestGetPVAndPVC(t *testing.T) {
 		StorageClassName: &storageClassName,
 	}
 	pvSpec, pvcSpec, err := GetPVAndPVC(pvAndPVC)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if !reflect.DeepEqual(expectedPVSpec, *pvSpec) {
-		t.Errorf("got %+v, want %+v", *pvSpec, expectedPVSpec)
-	}
-	if !reflect.DeepEqual(expectedPVCSpec, *pvcSpec) {
-		t.Errorf("got %+v, want %+v", *pvcSpec, expectedPVCSpec)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, expectedPVSpec, *pvSpec)
+	assert.Equal(t, expectedPVCSpec, *pvcSpec)
 
 	// Test case 2: Empty input
 	emptyInput := ""
 	pvSpec, pvcSpec, err = GetPVAndPVC(emptyInput)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if pvSpec != nil {
-		t.Errorf("pvSpec should be nil")
-	}
-	if pvcSpec != nil {
-		t.Errorf("pvcSpec should be nil")
-	}
+	assert.NoError(t, err)
+	assert.Nil(t, pvSpec)
+	assert.Nil(t, pvcSpec)
+
 }
 
 func TestParseOwnerRef(t *testing.T) {
@@ -340,29 +285,19 @@ func TestParseOwnerRef(t *testing.T) {
 		},
 	}
 	result, err := ParseOwnerRef(ownerRefJSON)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if !reflect.DeepEqual(expectedOwnerRef, result) {
-		t.Errorf("got %+v, want %+v", result, expectedOwnerRef)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, expectedOwnerRef, result)
 
 	// Test case 2: Empty input
 	emptyInput := ""
 	result, err = ParseOwnerRef(emptyInput)
-	if err != nil {
-		t.Errorf("Error: %d", err)
-	}
-	if len(result) != 0 {
-		t.Errorf("result should be nil")
-	}
+	assert.NoError(t, err)
+	assert.Empty(t, result)
 
 	// Test case 3: Invalid input
 	invalidInput := `{"apiVersion": "v1", "kind": "Pod", "name": "my-pod"}`
 	_, err = ParseOwnerRef(invalidInput)
-	if err == nil {
-		t.Errorf("There should exist an error")
-	}
+	assert.Error(t, err)
 }
 
 // Helper function to return pointer to a boolean value
