@@ -39,7 +39,7 @@ var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 
-func Test_BeforeSuite(t *testing.T) {
+func Test_controller(t *testing.T) {
 	var GinkgoWriter io.Writer
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
