@@ -290,6 +290,8 @@ class [[vineyard]] ArrowFragment
     return IsInnerVertex(u) ? fid_ : vid_parser_.GetFid(GetOuterVertexGid(u));
   }
 
+  fid_t GetFragId(const gid_t& u) const { return vid_parser_.GetFid(u); }
+
   size_t GetTotalNodesNum() const { return vm_ptr_->GetTotalNodesNum(); }
   size_t GetTotalVerticesNum() const { return vm_ptr_->GetTotalNodesNum(); }
   size_t GetTotalVerticesNum(label_id_t label) const {
