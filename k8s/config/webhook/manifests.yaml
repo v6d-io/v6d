@@ -6,7 +6,7 @@ metadata:
   name: mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -26,7 +26,7 @@ webhooks:
     - backups
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -46,7 +46,7 @@ webhooks:
     - globalobjects
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -66,7 +66,7 @@ webhooks:
     - localobjects
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -86,7 +86,7 @@ webhooks:
     - operations
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -106,7 +106,7 @@ webhooks:
     - recovers
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -126,7 +126,7 @@ webhooks:
     - sidecars
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -146,7 +146,7 @@ webhooks:
     - vineyardds
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -166,7 +166,7 @@ webhooks:
     - pods
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -185,7 +185,7 @@ webhooks:
     - pods
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -212,7 +212,7 @@ metadata:
   name: validating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -232,7 +232,7 @@ webhooks:
     - backups
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -252,7 +252,7 @@ webhooks:
     - globalobjects
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -272,7 +272,7 @@ webhooks:
     - localobjects
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -292,7 +292,7 @@ webhooks:
     - operations
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -312,7 +312,7 @@ webhooks:
     - recovers
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
@@ -332,7 +332,7 @@ webhooks:
     - sidecars
   sideEffects: None
 - admissionReviewVersions:
-  - v1beta1
+  - v1
   clientConfig:
     service:
       name: webhook-service
