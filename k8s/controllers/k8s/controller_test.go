@@ -16,6 +16,7 @@ import (
 	"io"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -62,10 +63,9 @@ func Test_BeforeSuite(t *testing.T) {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	assert.NoError(t, err)
 	assert.NotNil(t, k8sClient)
-}
 
-func Test_AfterSuite(t *testing.T) {
+	time.Sleep(1 * time.Second)
 	log.Info("tearing down the test environment")
-	err := testEnv.Stop()
+	err = testEnv.Stop()
 	assert.NoError(t, err)
 }

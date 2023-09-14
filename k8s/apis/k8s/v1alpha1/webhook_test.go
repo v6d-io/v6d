@@ -49,7 +49,7 @@ var (
 	cancel    context.CancelFunc
 )
 
-func Test_BeforeSuite(t *testing.T) {
+func Test_webhook(t *testing.T) {
 	var GinkgoWriter io.Writer
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
@@ -60,7 +60,7 @@ func Test_BeforeSuite(t *testing.T) {
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: false,
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
+			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook", "manifests.yaml")},
 		},
 	}
 
@@ -135,11 +135,10 @@ func Test_BeforeSuite(t *testing.T) {
 		return nil
 	})
 	assert.NoError(t, err)
-}
 
-func Test_AfterSuite(t *testing.T) {
+	time.Sleep(1 * time.Second)
 	cancel()
 	log.Info("tearing down the test environment")
-	err := testEnv.Stop()
+	err = testEnv.Stop()
 	assert.NoError(t, err)
 }
