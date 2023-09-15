@@ -136,8 +136,8 @@ func Test_webhook(t *testing.T) {
 	})
 	assert.NoError(t, err)
 
-	time.Sleep(1 * time.Second)
 	cancel()
+	time.Sleep(1 * time.Second)
 	log.Info("tearing down the test environment")
 	err = testEnv.Stop()
 	assert.NoError(t, err)
