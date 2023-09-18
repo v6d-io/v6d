@@ -237,11 +237,11 @@ csidriver:
 	cd .. && \
 	if docker build --help | grep -q load; then \
 		docker build --load -f k8s/Dockerfile . \
-		--build-arg BASE_IMAGE=golang:1.19-buster \
+		--build-arg BASE_IMAGE=gcr.io/distroless/base:debug \
 		-t $(VINEYARD_CSI_IMAGE); \
 	else \
 		docker build -f k8s/Dockerfile . \
-		--build-arg BASE_IMAGE=golang:1.19-buster \
+		--build-arg BASE_IMAGE=gcr.io/distroless/base:debug \
 		-t $(VINEYARD_CSI_IMAGE); \
 	fi
 

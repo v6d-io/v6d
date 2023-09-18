@@ -38,6 +38,9 @@ spec:
                       type: string
                   type: object
                 type: array
+              enableDebugLog:
+                default: false
+                type: boolean
               enableToleration:
                 default: false
                 type: boolean

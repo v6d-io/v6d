@@ -47,7 +47,7 @@ spec:
       securityContext:
         privileged: true
       env:
-      - name: ENABLE_VINEYARD
+      - name: WITH_VINEYARD
         value: "true"
       - name: DATA_MULTIPLIER
         value: "{{workflow.parameters.data_multiplier}}"
@@ -87,7 +87,7 @@ spec:
       securityContext:
         privileged: true
       env:
-      - name: ENABLE_VINEYARD
+      - name: WITH_VINEYARD
         value: "true"
       - name: DATA_MULTIPLIER
         value: "{{workflow.parameters.data_multiplier}}"
@@ -119,7 +119,7 @@ spec:
       securityContext:
         privileged: true
       env:
-      - name: ENABLE_VINEYARD
+      - name: WITH_VINEYARD
         value: "true"
       - name: DATA_MULTIPLIER
         value: "{{workflow.parameters.data_multiplier}}"

@@ -13,7 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package pkg
+package csidriver
 
 import (
 	"context"
@@ -57,8 +57,9 @@ func (d *Driver) Run() {
 	vineyardCSI := NewVineyardCSI(flags.StateFilePath, d.nodeID)
 	identity := NewIdentityServer()
 
-	opts := []grpc.ServerOption{
-		grpc.UnaryInterceptor(logGRPC),
+	opts := []grpc.ServerOption{}
+	if flags.Verbose {
+		opts = append(opts, grpc.UnaryInterceptor(logGRPC))
 	}
 
 	srv := grpc.NewServer(opts...)

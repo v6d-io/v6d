@@ -8,10 +8,10 @@ import pandas as pd
 import vineyard
 
 def test_model():
-    os.system('echo 3 > /proc/sys/vm/drop_caches')
-    enable_vineyard = os.environ.get('ENABLE_VINEYARD', False)
+    os.system('sync; echo 3 > /proc/sys/vm/drop_caches')
+    with_vineyard = os.environ.get('WITH_VINEYARD', False)
     st = time.time()
-    if enable_vineyard:
+    if with_vineyard:
         x_test_data = vineyard.csi.read("/data/x_test.pkl")
         y_test_data = vineyard.csi.read("/data/y_test.pkl")
     else:

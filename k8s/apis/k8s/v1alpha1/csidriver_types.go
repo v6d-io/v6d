@@ -102,6 +102,11 @@ type CSIDriverSpec struct {
 	// +kubebuilder:validation:Required
 	// +kubebuilder:default:=false
 	EnableToleration bool `json:"enableToleration,omitempty"`
+
+	// EnableDebugLog is the flag to enable debug log for the csi driver
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default:=false
+	EnableDebugLog bool `json:"enableDebugLog,omitempty"`
 }
 
 // CSIDriverStatus defines the observed state of CSIDriver

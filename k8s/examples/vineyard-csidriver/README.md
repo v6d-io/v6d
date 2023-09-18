@@ -160,11 +160,11 @@ The time of argo workflow execution of the pipeline is as follows:
 
 ### Argo workflow duration
 
-| data_multiplier | without vineyard | with vineyard |
+|    data scale   | without vineyard | with vineyard |
 | --------------- | ---------------- | ------------- |
-| 3000(8.5G)      |    186s          |      169s     |
-| 4000(12G)       |    250s          |      203s     |
-| 5000(15G)       |    332s          |      286s     |
+|     8500 Mi     |    186s          |      169s     |
+|     12000 Mi    |    250s          |      203s     |
+|     15000 Mi    |    332s          |      286s     |
 
 
 Actually, the cost time of argo workflow is affected by lots of factors, such as the network, the cpu and memory of the cluster, the data volume, etc. So the time of argo workflow execution of the pipeline is not stable. But we can still find that the time of argo workflow execution of the pipeline with vineyard is shorter than that without vineyard.
@@ -173,32 +173,32 @@ Also, we record the whole execution time via logs. The result is as follows:
 
 ### Actual execution time
 
-| data_multiplier | without vineyard | with vineyard |
+|    data scale   | without vineyard | with vineyard |
 | --------------- | ---------------- | ------------- |
-| 3000            |    139.3s        |      92.3s    |
-| 4000            |    204.3s        |      131.1s   |
-| 5000            |    289.3s        |      209.7s   |
+|     8500 Mi     |    139.3s        |      92.3s    |
+|     12000 Mi    |    204.3s        |      131.1s   |
+|     15000 Mi    |    289.3s        |      209.7s   |
 
 According to the above results, we can find that the time of actual execution of the pipeline with vineyard is shorter than that without vineyard. To be specific, we record the write/read time of the following steps:
 
 ### Write time
 
-| data_multiplier | without vineyard | with vineyard |
+|    data scale   | without vineyard | with vineyard |
 | --------------- | ---------------- | ------------- |
-| 3000            |    21s           |      5.4s     |
-| 4000            |    26s           |      7s       |
-| 5000            |    32.2s         |      9.4s     |
+|     8500 Mi     |    21s           |      5.4s     |
+|     12000 Mi    |    26s           |      7s       |
+|     15000 Mi    |    32.2s         |      9.4s     |
 
 From the above results, we can find that the time of write of the pipeline with vineyard is nearly 4 times shorter than that without vineyard. The reason is that the data is stored in the vineyard cluster, so it's actually a memory copy operation, which is faster than the write operation of the nfs volume.
 
 
 ### Read time(Delete the time of init data loading)
 
-| data_multiplier | without vineyard | with vineyard |
+|    data scale   | without vineyard | with vineyard |
 | --------------- | ---------------- | ------------- |
-| 3000            |    36.7s         |      0.02s    |
-| 4000            |    45.7s         |      0.02s    |
-| 5000            |    128.6s        |      0.04s    |
+|     8500 Mi     |    36.7s         |      0.02s    |
+|     12000 Mi    |    45.7s         |      0.02s    |
+|     15000 Mi    |    128.6s        |      0.04s    |
 
 Based on the above results, we can find that the read time of vineyard is nearly a constant, which is not affected by the data scale. The reason is that the data is stored in the shared memory of vineyard cluster, so it's actually a pointer copy operation.
 

@@ -25,8 +25,8 @@ import (
 	"testing"
 
 	"github.com/kubernetes-csi/csi-test/v4/pkg/sanity"
-	"github.com/v6d-io/v6d/k8s/cmd/commands/csi/pkg"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
+	"github.com/v6d-io/v6d/k8s/pkg/csidriver"
 )
 
 func TestVineyardCSIDriver(t *testing.T) {
@@ -41,7 +41,7 @@ func TestVineyardCSIDriver(t *testing.T) {
 	flags.Endpoint = csiEndpoint
 	flags.NodeID = "test-node-id"
 
-	vineyardSocket := filepath.Join(pkg.VineyardSocketPrefix, pkg.VineyardSocket)
+	vineyardSocket := filepath.Join(csidriver.VineyardSocketPrefix, csidriver.VineyardSocket)
 	if _, err := os.OpenFile(vineyardSocket, os.O_CREATE|os.O_RDONLY, 0666); err != nil {
 		t.Errorf("failed to open vineyard socket file %s: %v", vineyardSocket, err)
 	}

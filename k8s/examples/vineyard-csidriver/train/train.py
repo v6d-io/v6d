@@ -11,8 +11,8 @@ import vineyard
 def train_model():
     os.system('echo 3 > /proc/sys/vm/drop_caches')
     st = time.time()
-    enable_vineyard = os.environ.get('ENABLE_VINEYARD', False)
-    if enable_vineyard:
+    with_vineyard = os.environ.get('WITH_VINEYARD', False)
+    if with_vineyard:
         x_train_data = vineyard.csi.read("/data/x_train.pkl")
         y_train_data = vineyard.csi.read("/data/y_train.pkl")
     else:

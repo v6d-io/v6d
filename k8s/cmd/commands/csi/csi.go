@@ -20,9 +20,9 @@ package csi
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/v6d-io/v6d/k8s/cmd/commands/csi/pkg"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
+	"github.com/v6d-io/v6d/k8s/pkg/csidriver"
 )
 
 var csiExample = util.Examples(`
@@ -36,7 +36,7 @@ var csiCmd = &cobra.Command{
 	Example: csiExample,
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
-		d := pkg.NewDriver(flags.NodeID, flags.Endpoint)
+		d := csidriver.NewDriver(flags.NodeID, flags.Endpoint)
 		d.Run()
 	},
 }

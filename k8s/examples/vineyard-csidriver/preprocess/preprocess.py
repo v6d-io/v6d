@@ -10,7 +10,7 @@ import vineyard
 
 
 def preprocess_data():
-    os.system('echo 3 > /proc/sys/vm/drop_caches')
+    os.system('sync; echo 3 > /proc/sys/vm/drop_caches')
     data_multiplier = os.environ.get('DATA_MULTIPLIER', 1)
     st = time.time()
     df = pd.read_pickle('/data/df_{0}.pkl'.format(data_multiplier))
@@ -59,8 +59,8 @@ def preprocess_data():
     del X, y
 
     st = time.time()
-    enable_vineyard = os.environ.get('ENABLE_VINEYARD', False)
-    if enable_vineyard:
+    with_vineyard = os.environ.get('WITH_VINEYARD', False)
+    if with_vineyard:
         vineyard.csi.write(X_train, "/data/x_train.pkl")
         vineyard.csi.write(X_test, "/data/x_test.pkl")
         vineyard.csi.write(y_train, "/data/y_train.pkl")
