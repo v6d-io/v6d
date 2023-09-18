@@ -30,7 +30,6 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 REGISTRY	:= vineyardcloudnative
 IMG 		?= $(REGISTRY)/vineyard-operator:$(VERSION)
 VINEYARD_CSI_IMAGE ?= $(REGISTRY)/vineyard-csi-driver:$(VERSION)
-VINEYARD_CSI_TEST_IMAGE ?= $(REGISTRY)/vineyard-csi-driver-test:$(VERSION)
 
 temp=$(shell mktemp -d)
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -231,31 +230,6 @@ docker-build:
 		docker build -f k8s/Dockerfile . \
 		-t $(IMG); \
 	fi
-
-.PHONY: csidriver
-csidriver:
-	cd .. && \
-	if docker build --help | grep -q load; then \
-		docker build --load -f k8s/Dockerfile . \
-		--build-arg BASE_IMAGE=gcr.io/distroless/base:debug \
-		-t $(VINEYARD_CSI_IMAGE); \
-	else \
-		docker build -f k8s/Dockerfile . \
-		--build-arg BASE_IMAGE=gcr.io/distroless/base:debug \
-		-t $(VINEYARD_CSI_IMAGE); \
-	fi
-
-.PHONY: csidriver-test
-csidriver-test:
-	cd .. && \
-	if docker build --help | grep -q load; then \
-		docker build --load -f k8s/csitest.Dockerfile . \
-		-t $(VINEYARD_CSI_TEST_IMAGE); \
-	else \
-		docker build -f k8s/csitest.Dockerfile . \
-		-t $(VINEYARD_CSI_TEST_IMAGE); \
-	fi && \
-	docker run --rm -it --privileged=true $(VINEYARD_CSI_TEST_IMAGE)
 
 docker-build-push-multi-arch:
 	cd .. && \

@@ -26,8 +26,8 @@ import (
 )
 
 var csiExample = util.Examples(`
-	# start the csidriver with the specific endpoint and node id
-	vineyardctl csidriver --endpoint=unix:///csi/csi.sock --nodeid=csinode1`)
+	# start the csi with the specific endpoint and node id
+	vineyardctl csi --endpoint=unix:///csi/csi.sock --nodeid=csinode1`)
 
 // csiCmd starts the vineyard csi driver
 var csiCmd = &cobra.Command{

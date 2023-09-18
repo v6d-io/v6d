@@ -16,7 +16,6 @@ spec:
       - name: prepare-data
         image: prepare-data
         imagePullPolicy: IfNotPresent
-        #command: ["bash", "-c", "sleep infinity"]
         command: ["python3", "/prepare-data.py"]
         volumeMounts:
         - mountPath: /data

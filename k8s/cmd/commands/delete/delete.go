@@ -55,4 +55,5 @@ func init() {
 	deleteCmd.AddCommand(NewDeleteRecoverCmd())
 	deleteCmd.AddCommand(NewDeleteVineyardDeploymentCmd())
 	deleteCmd.AddCommand(NewDeleteOperationCmd())
+	deleteCmd.AddCommand(NewDeleteCSIDriverCmd())
 }

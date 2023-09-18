@@ -11,6 +11,7 @@ metadata:
   name: {{ include "vineyard-operator.fullname" . }}-controller-manager
   labels:
     control-plane: controller-manager
+    k8s.v6d.io/instance: vineyard-operator
   {{- include "vineyard-operator.labels" . | nindent 4 }}
 spec:
   replicas: {{ .Values.controllerManager.replicas }}
@@ -30,6 +31,7 @@ spec:
       containers:
       - args:
         - manager
+        - --verbose
         command:
         - /vineyardctl
         env:

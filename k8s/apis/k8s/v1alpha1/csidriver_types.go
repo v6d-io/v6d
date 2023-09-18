@@ -69,7 +69,7 @@ type VineyardClusters struct {
 type CSIDriverSpec struct {
 	// Image is the name of the csi driver image
 	// +kubebuilder:validation:Required
-	// +kubebuilder:default:="vineyardcloudnative/vineyard-csi-driver"
+	// +kubebuilder:default:="vineyardcloudnative/vineyard-operator"
 	Image string `json:"image,omitempty"`
 
 	// ImagePullPolicy is the image pull policy of the csi driver
@@ -103,10 +103,10 @@ type CSIDriverSpec struct {
 	// +kubebuilder:default:=false
 	EnableToleration bool `json:"enableToleration,omitempty"`
 
-	// EnableDebugLog is the flag to enable debug log for the csi driver
+	// EnableVerboseLog is the flag to enable verbose log for the csi driver
 	// +kubebuilder:validation:Required
 	// +kubebuilder:default:=false
-	EnableDebugLog bool `json:"enableDebugLog,omitempty"`
+	EnableVerboseLog bool `json:"enableVerboseLog,omitempty"`
 }
 
 // CSIDriverStatus defines the observed state of CSIDriver

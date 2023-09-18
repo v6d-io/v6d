@@ -111,7 +111,7 @@ func Test_webhook(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = (&CSIDriver{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	//+kubebuilder:scaffold:webhook
 

@@ -133,6 +133,7 @@ _Appears in:_
 | `sidecar` _[CSISidecar](#csisidecar)_ | Sidecar is the configuration for the CSI sidecar container nolint: lll |
 | `clusters` _[VineyardClusters](#vineyardclusters) array_ | Clusters are the list of vineyard clusters |
 | `enableToleration` _boolean_ | EnableToleration is the flag to enable toleration for the csi driver |
+| `enableVerboseLog` _boolean_ | EnableVerboseLog is the flag to enable verbose log for the csi driver |
 
 
 
