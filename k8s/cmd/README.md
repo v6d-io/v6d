@@ -2269,7 +2269,3 @@ vineyardctl schedule workload [flags]
       --vineyardd-name string        the namespace of vineyard cluster (default "vineyardd-sample")
       --vineyardd-namespace string   the namespace of vineyard cluster (default "vineyard-system")
 ```
-
-stem")
-```
-

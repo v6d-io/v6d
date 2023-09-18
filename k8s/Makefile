@@ -224,11 +224,9 @@ vendor:
 docker-build:
 	cd .. && \
 	if docker build --help | grep -q load; then \
-		docker build --load -f k8s/Dockerfile . \
-		-t $(IMG); \
+		docker build --load -f k8s/Dockerfile . -t $(IMG); \
 	else \
-		docker build -f k8s/Dockerfile . \
-		-t $(IMG); \
+		docker build -f k8s/Dockerfile . -t $(IMG); \
 	fi
 
 docker-build-push-multi-arch:

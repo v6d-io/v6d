@@ -1,5 +1,5 @@
-Speed up pipelines based on volumes with Vineyard CSI Driver
-============================================================
+Efficient data sharing in Kubeflow with Vineyard CSI Driver
+===========================================================
 
 If you are using `Kubeflow Pipeline`_ or `Argo Workflow`_ to manage your machine learning workflow, 
 you may find that the data saving/loading to the volumes is slow.
@@ -11,7 +11,7 @@ Prerequisites
 -------------
 
 - A kubernetes cluster with version >= 1.25.10. If you don't have one by hand, you can refer to the 
-guide `Prepare the Kubernetes Cluster`_ to create one.
+guide `Initialize Kubernetes Cluster`_ to create one.
 - Install the `Vineyardctl`_ by following the official guide.
 - Install the `Argo Workflow CLI`_ by following the official guide.
 
@@ -306,6 +306,6 @@ Delete the data volume:
 
 .. _Kubeflow Pipeline: https://github.com/kubeflow/kubeflow
 .. _Argo Workflow: https://github.com/argoproj/argo-workflows
-.. _Prepare the Kubernetes Cluster: https://v6d.io/tutorials/data-processing/accelerate-data-sharing-in-kedro.html#prepare-the-kubernetes-cluster
+.. _Initialize Kubernetes Cluster: https://v6d.io/tutorials/kubernetes/using-vineyard-operator.html#step-0-optional-initialize-kubernetes-cluster
 .. _Vineyardctl: https://v6d.io/notes/developers/build-from-source.html#install-vineyardctl
 .. _Argo Workflow CLI: https://github.com/argoproj/argo-workflows/releases/
