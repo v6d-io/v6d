@@ -503,8 +503,6 @@ spec:
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				fmt.Println(got)
-				fmt.Println(tt.want)
 				t.Errorf("GetWorkloadObj() = %v, want %v", got, tt.want)
 			}
 		})

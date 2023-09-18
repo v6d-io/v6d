@@ -16,13 +16,15 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"io"
 	"net"
 	"path/filepath"
 	"testing"
 	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/avast/retry-go"
+	"github.com/stretchr/testify/assert"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 
 	admissionv1beta1 "k8s.io/api/admission/v1beta1"
 	//+kubebuilder:scaffold:imports
@@ -47,45 +49,39 @@ var (
 	cancel    context.CancelFunc
 )
 
-func TestAPIs(t *testing.T) {
-	RegisterFailHandler(Fail)
-
-	RunSpecs(t,
-		"Webhook Suite")
-}
-
-var _ = BeforeSuite(func() {
+func Test_webhook(t *testing.T) {
+	var GinkgoWriter io.Writer
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
 	ctx, cancel = context.WithCancel(context.TODO())
 
-	By("bootstrapping test environment")
+	log.Info("Bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: false,
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
-			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
+			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook", "manifests.yaml")},
 		},
 	}
 
 	var err error
 	// cfg is defined in this file globally.
 	cfg, err = testEnv.Start()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(cfg).NotTo(BeNil())
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg)
 
 	scheme := runtime.NewScheme()
 	err = AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	err = admissionv1beta1.AddToScheme(scheme)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient).NotTo(BeNil())
+	assert.NoError(t, err)
+	assert.NotNil(t, k8sClient)
 
 	// start webhook server using Manager
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
@@ -97,26 +93,25 @@ var _ = BeforeSuite(func() {
 		LeaderElection:     false,
 		MetricsBindAddress: "0",
 	})
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	err = (&Operation{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	err = (&Sidecar{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	err = (&Backup{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	err = (&Recover{}).SetupWebhookWithManager(mgr)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	//+kubebuilder:scaffold:webhook
 
 	go func() {
-		defer GinkgoRecover()
 		err = mgr.Start(ctx)
-		Expect(err).NotTo(HaveOccurred())
+		assert.NoError(t, err)
 	}()
 
 	// wait for the webhook server to get ready
@@ -126,7 +121,7 @@ var _ = BeforeSuite(func() {
 		webhookInstallOptions.LocalServingHost,
 		webhookInstallOptions.LocalServingPort,
 	)
-	Eventually(func() error {
+	err = retry.Do(func() error {
 		conn, err := tls.DialWithDialer(
 			dialer,
 			"tcp",
@@ -138,12 +133,12 @@ var _ = BeforeSuite(func() {
 		}
 		conn.Close()
 		return nil
-	}).Should(Succeed())
-}, 60)
+	})
+	assert.NoError(t, err)
 
-var _ = AfterSuite(func() {
 	cancel()
-	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
-})
+	time.Sleep(1 * time.Second)
+	log.Info("tearing down the test environment")
+	err = testEnv.Stop()
+	assert.NoError(t, err)
+}
