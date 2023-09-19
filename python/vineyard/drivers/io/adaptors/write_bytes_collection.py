@@ -27,6 +27,7 @@ from queue import Queue as ConcurrentQueue
 from typing import Dict
 
 import fsspec
+from fsspec.core import get_fs_token_paths
 
 import vineyard
 from vineyard._C import ObjectID
@@ -54,7 +55,10 @@ def write_metadata(streams: StreamCollection, prefix: str, storage_options: Dict
         prefix, metadata[StreamCollection.KEY_OF_PATH], 'metadata.json'
     )
     logger.info('creating metadata for %r ...', metadata_path)
-    with fsspec.open(metadata_path, 'wb', **storage_options) as fp:
+    fs, _, _ = get_fs_token_paths(metadata_path, storage_options=storage_options)
+    if hasattr(fs, 'auto_mkdir'):
+        fs.auto_mkdir = True
+    with fs.open(metadata_path, 'wb', **storage_options) as fp:
         fp.write(json.dumps(metadata).encode('utf-8'))
 
 
@@ -62,7 +66,13 @@ def write_byte_stream(client, stream: ByteStream, prefix: str, storage_options: 
     path = stream.params[StreamCollection.KEY_OF_PATH]
     try:
         reader = stream.open_reader(client)
-        of = fsspec.open(os.path.join(prefix, path), "wb", **storage_options)
+
+        fs, _, _ = get_fs_token_paths(
+            os.path.join(prefix, path), storage_options=storage_options
+        )
+        if hasattr(fs, 'auto_mkdir'):
+            fs.auto_mkdir = True
+        of = fs.open(os.path.join(prefix, path), "wb", **storage_options)
     except Exception:  # pylint: disable=broad-except
         report_exception()
         sys.exit(-1)
