@@ -17,9 +17,11 @@ package util
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/ghodss/yaml"
+	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 
 	"github.com/pkg/errors"
 
@@ -179,4 +181,23 @@ func ParseOwnerRef(of string) ([]metav1.OwnerReference, error) {
 	}
 
 	return ownerRef, nil
+}
+
+//	ParseVineyardClusters parse the []string to nested []{
+//		"namespace": "vineyard-cluster-namespace",
+//	    "name": "vineyard-cluster-name",
+//	}
+func ParseVineyardClusters(clusters []string) (*[]v1alpha1.VineyardClusters, error) {
+	vineyardClusters := make([]v1alpha1.VineyardClusters, 0)
+	for i := range clusters {
+		s := strings.Split(clusters[i], "/")
+		if len(s) != 2 {
+			return nil, errors.Wrap(fmt.Errorf("invalid vineyard cluster %s", clusters[i]), "parse vineyard cluster")
+		}
+		vineyardClusters = append(vineyardClusters, v1alpha1.VineyardClusters{
+			Namespace: s[0],
+			Name:      s[1],
+		})
+	}
+	return &vineyardClusters, nil
 }

@@ -13,6 +13,7 @@ drivers.
 **SEE ALSO**
 
 * [vineyardctl create](#vineyardctl-create)	 - Create a vineyard jobs on kubernetes
+* [vineyardctl csi](#vineyardctl-csi)	 - Start the vineyard csi driver
 * [vineyardctl delete](#vineyardctl-delete)	 - Delete the vineyard components from kubernetes
 * [vineyardctl deploy](#vineyardctl-deploy)	 - Deploy the vineyard components on kubernetes
 * [vineyardctl get](#vineyardctl-get)	 - Get vineyard object, metadata, blob or cluster-info
@@ -270,6 +271,34 @@ vineyardctl create recover [flags]
       --recover-name string   the name of recover job (default "vineyard-recover")
 ```
 
+## `vineyardctl csi`
+
+Start the vineyard csi driver
+
+```
+vineyardctl csi [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
+
+### Examples
+
+```shell
+  # start the csi with the specific endpoint and node id
+  vineyardctl csi --endpoint=unix:///csi/csi.sock --nodeid=csinode1
+```
+
+### Options
+
+```
+  -f, --endpoint string          the endpoint of vineyard csi driver
+  -h, --help                     help for csi
+      --nodeid string            the node id of vineyard csi driver
+      --state-file-path string   the path of state file (default "/csi/state")
+```
+
 ## `vineyardctl delete`
 
 Delete the vineyard components from kubernetes
@@ -279,6 +308,7 @@ Delete the vineyard components from kubernetes
 * [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
 * [vineyardctl delete backup](#vineyardctl-delete-backup)	 - Delete the backup job on kubernetes
 * [vineyardctl delete cert-manager](#vineyardctl-delete-cert-manager)	 - Delete the cert-manager on kubernetes
+* [vineyardctl delete csidriver](#vineyardctl-delete-csidriver)	 - Delete the vineyard csi driver on kubernetes
 * [vineyardctl delete operation](#vineyardctl-delete-operation)	 - Delete the operation from kubernetes
 * [vineyardctl delete operator](#vineyardctl-delete-operator)	 - Delete the vineyard operator from kubernetes
 * [vineyardctl delete recover](#vineyardctl-delete-recover)	 - Delete the recover job from kubernetes
@@ -366,6 +396,32 @@ vineyardctl delete cert-manager [flags]
 
 ```
   -h, --help   help for cert-manager
+```
+
+## `vineyardctl delete csidriver`
+
+Delete the vineyard csi driver on kubernetes
+
+```
+vineyardctl delete csidriver [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl delete](#vineyardctl-delete)	 - Delete the vineyard components from kubernetes
+
+### Examples
+
+```shell
+  # delete the csi driver named "csidriver-test"
+  vineyardctl delete csidriver --name csidriver-test
+```
+
+### Options
+
+```
+  -h, --help          help for csidriver
+      --name string   The name of the csi driver cr. (default "csidriver-sample")
 ```
 
 ## `vineyardctl delete operation`
@@ -541,6 +597,7 @@ Deploy the vineyard components on kubernetes
 * [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
 * [vineyardctl deploy backup-job](#vineyardctl-deploy-backup-job)	 - Deploy a backup job of vineyard cluster on kubernetes
 * [vineyardctl deploy cert-manager](#vineyardctl-deploy-cert-manager)	 - Deploy the cert-manager on kubernetes
+* [vineyardctl deploy csidriver](#vineyardctl-deploy-csidriver)	 - Deploy the vineyard csi driver on kubernetes
 * [vineyardctl deploy operator](#vineyardctl-deploy-operator)	 - Deploy the vineyard operator on kubernetes
 * [vineyardctl deploy recover-job](#vineyardctl-deploy-recover-job)	 - Deploy a recover job to recover a backup of current vineyard cluster on kubernetes
 * [vineyardctl deploy vineyard-cluster](#vineyardctl-deploy-vineyard-cluster)	 - Deploy the vineyard cluster from kubernetes
@@ -561,6 +618,10 @@ Deploy the vineyard components on kubernetes
 
   # deploy the vineyardd on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
+  
+  # deploy the vineyard csi driver on kubernetes
+  vineyardctl deploy csidriver --name vineyard-csi-sample \
+    --clusters vineyard-system/vineyardd-sample,default/vineyardd-sample
 ```
 
 ### Options
@@ -727,6 +788,53 @@ vineyardctl deploy cert-manager [flags]
 
 ```
   -h, --help   help for cert-manager
+```
+
+## `vineyardctl deploy csidriver`
+
+Deploy the vineyard csi driver on kubernetes
+
+### Synopsis
+
+Deploy the Vineyard CSI Driver on kubernetes. 
+The CR is a cluster-scoped resource, and can only be created once.
+
+```
+vineyardctl deploy csidriver [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl deploy](#vineyardctl-deploy)	 - Deploy the vineyard components on kubernetes
+
+### Examples
+
+```shell
+  # deploy the Vineyard CSI Driver named vineyard-csi-sample on kubernetes
+  # Notice, the clusters are built as {vineyard-deployment-namespace}/{vineyard-deployment-name}
+  # and sperated by comma, e.g. vineyard-system/vineyardd-sample, default/vineyardd-sample
+  # They must be created before deploying the Vineyard CSI Driver.
+  vineyardctl deploy csidriver --name vineyard-csi-sample \
+    --clusters vineyard-system/vineyardd-sample,default/vineyardd-sample
+```
+
+### Options
+
+```
+      --attacherImage string             The image of csi attacher. (default "registry.k8s.io/sig-storage/csi-attacher:v4.0.0")
+      --clusters strings                 The list of vineyard clusters.
+      --enableToleration                 Enable toleration for vineyard csi driver.
+  -h, --help                             help for csidriver
+  -i, --image string                     The image of vineyard csi driver. (default "vineyardcloudnative/vineyard-csi-driver")
+      --imagePullPolicy string           The image pull policy of vineyard csi driver. (default "IfNotPresent")
+      --livenessProbeImage string        The image of livenessProbe. (default "registry.k8s.io/sig-storage/livenessprobe:v2.8.0")
+      --name string                      The name of the csi driver cr. (default "csidriver-sample")
+      --nodeRegistrarImage string        The image of csi nodeRegistrar. (default "registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.6.0")
+      --provisionerImage string          The image of csi provisioner. (default "registry.k8s.io/sig-storage/csi-provisioner:v3.3.0")
+      --sidecar.enableTopology           Enable topology for the csi driver.
+      --sidecar.imagePullPolicy string   The image pull policy of all sidecar containers. (default "Always")
+  -s, --storageClassName string          The name of storage class. (default "vineyard-csi")
+  -m, --volumeBindingMode string         The volume binding mode of the storage class. (default "WaitForFirstConsumer")
 ```
 
 ## `vineyardctl deploy operator`

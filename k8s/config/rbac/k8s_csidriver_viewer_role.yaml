@@ -1,0 +1,20 @@
+# permissions for end users to view csidrivers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: csidriver-viewer-role
+rules:
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - csidrivers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - csidrivers/status
+  verbs:
+  - get

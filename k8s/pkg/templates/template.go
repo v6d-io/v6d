@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:embed vineyardd etcd operation sidecar backup recover certmanager
+//go:embed vineyardd etcd operation sidecar backup recover certmanager csidriver
 var fs embed.FS
 
 // ReadFile reads a file from the embed.FS

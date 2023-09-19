@@ -33,6 +33,26 @@ webhooks:
     service:
       name: '{{ include "vineyard-operator.fullname" . }}-webhook-service'
       namespace: '{{ .Release.Namespace }}'
+      path: /validate-k8s-v6d-io-v1alpha1-csidriver
+  failurePolicy: Fail
+  name: vcsidriver.kb.io
+  rules:
+  - apiGroups:
+    - k8s.v6d.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - csidrivers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: '{{ include "vineyard-operator.fullname" . }}-webhook-service'
+      namespace: '{{ .Release.Namespace }}'
       path: /validate-k8s-v6d-io-v1alpha1-globalobject
   failurePolicy: Fail
   name: vglobalobject.kb.io

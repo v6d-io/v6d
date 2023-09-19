@@ -29,6 +29,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # Image URL to use all building/pushing image targets
 REGISTRY	:= vineyardcloudnative
 IMG 		?= $(REGISTRY)/vineyard-operator:$(VERSION)
+VINEYARD_CSI_IMAGE ?= $(REGISTRY)/vineyard-csi-driver:$(VERSION)
 
 temp=$(shell mktemp -d)
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)

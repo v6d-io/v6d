@@ -32,7 +32,11 @@ var deployExample = util.Examples(`
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy cert-manager
 
 	# deploy the vineyardd on kubernetes
-	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd`)
+	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
+	
+	# deploy the vineyard csi driver on kubernetes
+	vineyardctl deploy csidriver --name vineyard-csi-sample \
+		--clusters vineyard-system/vineyardd-sample,default/vineyardd-sample`)
 
 // deployCmd deploys all vineyard components on kubernetes
 var deployCmd = &cobra.Command{
@@ -53,4 +57,5 @@ func init() {
 	deployCmd.AddCommand(NewDeployVineyardDeploymentCmd())
 	deployCmd.AddCommand(NewDeployBackupJobCmd())
 	deployCmd.AddCommand(NewDeployRecoverJobCmd())
+	deployCmd.AddCommand(NewDeployCSIDriverCmd())
 }
