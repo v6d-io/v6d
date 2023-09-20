@@ -1,5 +1,5 @@
 Efficient data sharing in Kubeflow with Vineyard CSI Driver
-===========================================================
+-----------------------------------------------------------
 
 If you are using `Kubeflow Pipeline`_ or `Argo Workflow`_ to manage your machine learning workflow, 
 you may find that the data saving/loading to the volumes is slow.
@@ -8,7 +8,7 @@ map each vineyard object to a volume, and the data saving/loading is handled by 
 Next, we will show you how to use the Vineyard CSI Driver to speed up a kubeflow pipeline.
 
 Prerequisites
--------------
+=============
 
 - A kubernetes cluster with version >= 1.25.10. If you don't have one by hand, you can refer to the 
 guide `Initialize Kubernetes Cluster`_ to create one.
@@ -16,7 +16,7 @@ guide `Initialize Kubernetes Cluster`_ to create one.
 - Install the `Argo Workflow CLI`_ by following the official guide.
 
 Deploy the Vineyard Cluster
----------------------------
+===========================
 
 .. code:: bash
 
@@ -36,7 +36,7 @@ You can check as follows:
     vineyardd-sample-etcd-0                          1/1     Running   0          4d3h
 
 Deploy the Vineyard CSI Driver
-------------------------------
+==============================
 
 Before deploying the Vineyard CSI Driver, you are supposed to check the vineyard 
 deployment is ready as follows:
@@ -71,7 +71,7 @@ Then check the status of the Vineyard CSI Driver:
     vineyardd-sample-etcd-0                          1/1     Running   0          4d3h
 
 Deploy Argo Workflows
----------------------
+=====================
 
 Install the argo server on Kubernetes:
 
@@ -90,22 +90,22 @@ Then check the status of the argo server:
     workflow-controller-b888f4458-sfrjd   1/1     Running   0          4d1h
 
 Running a Kubeflow Pipeline example
------------------------------------
+===================================
 
-The example is under the directory `k8s/examples/vineyard-csidriver`, and `pipeline.py` under this
+The example is under the directory ``k8s/examples/vineyard-csidriver``, and ``pipeline.py`` under this
 directory is the original pipeline definition. To use the Vineyard CSI Driver, we need to do two 
 modifications:
 
-1. Change APIs like `pd.read_pickle/write_pickle` to `vineyard.csi.write/read` in the source code.
+1. Change APIs like **pd.read_pickle/write_pickle** to **vineyard.csi.write/read** in the source code.
 
-2. Add the `vineyard object` VolumeOp to the pipeline's dependencies. The path in the API changed 
+2. Add the ``vineyard object`` VolumeOp to the pipeline's dependencies. The path in the API changed 
 in the first step will be mapped to a volume. Notice, the volume used in any task needs to be 
 explicitly mounted to the corresponding path in the source code, and the storageclass_name 
-format of each VolumeOp is `{vineyard-deployment-namespace}.{vineyard-deployment-name}.csi`.
+format of each VolumeOp is ``{vineyard-deployment-namespace}.{vineyard-deployment-name}.csi``.
 
-You may get some insights from the modified pipeline `pipeline-with-vineyard.py`. Then, we need to
+You may get some insights from the modified pipeline ``pipeline-with-vineyard.py``. Then, we need to
 compile the pipeline to an argo-workflow yaml. To be compatible with benchmark test, we update the
-generated `pipeline.yaml` and `pipeline-with-vineyard.yaml`.
+generated ``pipeline.yaml`` and ``pipeline-with-vineyard.yaml``.
 
 Now, we can build the docker images for the pipeline:
 
@@ -132,7 +132,7 @@ we use the kind cluster in this example, we can load the image to the clusters:
     $ make load-images
 
 To simulate the data loading/saving of the actual pipeline, we use the nfs volume
-to store the data. The nfs volume is mounted to the `/mnt/data` directory of the 
+to store the data. The nfs volume is mounted to the ``/mnt/data`` directory of the 
 kind cluster. Then apply the data volume as follows:
 
 .. tip::
@@ -173,28 +173,22 @@ Submit the kubeflow example with vineyard to the argo server:
     done
 
 Result Analysis
----------------
-
-+------------+------------------+---------------+
-| data scale | without vineyard | with vineyard |
-+============+==================+===============+
-| 8500 Mi    | 21s              | 5.4s          |
-| 12000 Mi   | 26s              | 7s            |
-| 15000 Mi   | 32.2s            | 9.4s          |
-+------------+------------------+---------------+
+===============
 
 The data scale are 8500 Mi, 12000 Mi and 15000 Mi, which correspond to 
 the 3000, 4000 and 5000 in the previous data_multiplier respectively, 
 and the time of argo workflow execution of the pipeline is as follows:
 
 Argo workflow duration
-======================
+""""""""""""""""""""""
 
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
 | 8500 Mi    | 186s             | 169s          |
++------------+------------------+---------------+
 | 12000 Mi   | 250s             | 203s          |
++------------+------------------+---------------+
 | 15000 Mi   | 332s             | 286s          |
 +------------+------------------+---------------+
 
@@ -208,13 +202,15 @@ with vineyard is shorter than that without vineyard.
 Also, we record the whole execution time via logs. The result is as follows:
 
 Actual execution time
-=====================
+"""""""""""""""""""""
 
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
 | 8500 Mi    | 139.3s           | 92.3s         |
++------------+------------------+---------------+
 | 12000 Mi   | 204.3s           | 131.1s        |
++------------+------------------+---------------+
 | 15000 Mi   | 289.3s           | 209.7s        |
 +------------+------------------+---------------+
 
@@ -224,13 +220,15 @@ execution of the pipeline with vineyard is shorter than that without vineyard.
 To be specific, we record the write/read time of the following steps:
 
 Writing time
-============
+""""""""""""
 
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
 | 8500 Mi    | 21s              | 5.4s          |
++------------+------------------+---------------+
 | 12000 Mi   | 26s              | 7s            |
++------------+------------------+---------------+
 | 15000 Mi   | 32.2s            | 9.4s          |
 +------------+------------------+---------------+
 
@@ -243,7 +241,7 @@ write operation of the nfs volume.
 
 
 Reading time
-============
+""""""""""""
 
 We delete the time of init data loading, and the results are as follows:
 
@@ -251,7 +249,9 @@ We delete the time of init data loading, and the results are as follows:
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
 | 8500 Mi    | 36.7s            | 0.02s         |
++------------+------------------+---------------+
 | 12000 Mi   | 45.7s            | 0.02s         |
++------------+------------------+---------------+
 | 15000 Mi   | 128.6s           | 0.04s         |
 +------------+------------------+---------------+
 
@@ -266,7 +266,7 @@ execution time of the pipeline is reduced by about 30%.
 
 
 Clean up
---------
+========
 
 Delete the rbac for the kubeflow example:
 
