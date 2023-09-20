@@ -1,5 +1,4 @@
 /** Copyright 2020 Alibaba Group Holding Limited.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -16,19 +15,11 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "topology/vertexlist.h"
 
-
-#if defined(GRIN_ENABLE_VERTEX_LIST) && !defined(GRIN_ENABLE_SCHEMA)
-GRIN_VERTEX_LIST grin_get_vertex_list(GRIN_GRAPH);
-#endif
-
-#ifdef GRIN_ENABLE_VERTEX_LIST
 void grin_destroy_vertex_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     delete _vl;
 }
-#endif
 
-#ifdef GRIN_ENABLE_VERTEX_LIST_ARRAY
 size_t grin_get_vertex_list_size(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     return _vl->size();
@@ -38,9 +29,7 @@ GRIN_VERTEX grin_get_vertex_from_list(GRIN_GRAPH g, GRIN_VERTEX_LIST vl, size_t 
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     return _vl->begin_value() + idx;
 }
-#endif
 
-#ifdef GRIN_ENABLE_VERTEX_LIST_ITERATOR
 GRIN_VERTEX_LIST_ITERATOR grin_get_vertex_list_begin(GRIN_GRAPH g, GRIN_VERTEX_LIST vl) {
     auto _vl = static_cast<GRIN_VERTEX_LIST_T*>(vl);
     auto _vli = new GRIN_VERTEX_LIST_ITERATOR_T();
@@ -68,4 +57,3 @@ GRIN_VERTEX grin_get_vertex_from_iter(GRIN_GRAPH g, GRIN_VERTEX_LIST_ITERATOR vl
     auto _vli = static_cast<GRIN_VERTEX_LIST_ITERATOR_T*>(vli);
     return _vli->current;
 }
-#endif

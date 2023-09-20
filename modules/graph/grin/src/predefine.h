@@ -295,7 +295,7 @@ struct GRIN_ADJACENT_LIST_ITERATOR_T {
     const _GRIN_GRAPH_T::nbr_unit_t* current;
     const _GRIN_GRAPH_T::nbr_unit_t* end;
     _GRIN_GRAPH_T::vid_t vid;
-    GRIN_DIRECTION dir;
+    int dir;
     unsigned etype;
 };
 #endif

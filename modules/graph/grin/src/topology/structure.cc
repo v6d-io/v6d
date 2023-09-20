@@ -1,5 +1,4 @@
 /** Copyright 2020 Alibaba Group Holding Limited.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -54,25 +53,15 @@ void grin_destroy_graph(GRIN_GRAPH g) {
     delete _g;
 }
 
-#if defined(GRIN_ASSUME_HAS_DIRECTED_GRAPH) && defined(GRIN_ASSUME_HAS_UNDIRECTED_GRAPH)
 bool grin_is_directed(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     return _g->directed();
 }
-#endif
 
-#ifdef GRIN_ASSUME_HAS_MULTI_EDGE_GRAPH
 bool grin_is_multigraph(GRIN_GRAPH g) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     return _g->is_multigraph();
 }
-#endif
-
-#ifndef GRIN_ENABLE_SCHEMA
-size_t grin_get_vertex_num(GRIN_GRAPH);
-
-size_t grin_get_edge_num(GRIN_GRAPH);
-#endif
 
 // Vertex
 void grin_destroy_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {}
@@ -80,13 +69,6 @@ void grin_destroy_vertex(GRIN_GRAPH g, GRIN_VERTEX v) {}
 bool grin_equal_vertex(GRIN_GRAPH g, GRIN_VERTEX v1, GRIN_VERTEX v2) {
     return v1 == v2;
 }
-
-// Data
-#ifdef GRIN_WITH_VERTEX_DATA
-GRIN_DATATYPE grin_get_vertex_data_datatype(GRIN_GRAPH, GRIN_VERTEX);
-
-const void* grin_get_vertex_data_value(GRIN_GRAPH, GRIN_VERTEX);
-#endif
 
 // Edge
 void grin_destroy_edge(GRIN_GRAPH g, GRIN_EDGE e) {}
@@ -98,9 +80,3 @@ GRIN_VERTEX grin_get_src_vertex_from_edge(GRIN_GRAPH g, GRIN_EDGE e) {
 GRIN_VERTEX grin_get_dst_vertex_from_edge(GRIN_GRAPH g, GRIN_EDGE e) {
     return e.dst;
 }
-
-#ifdef GRIN_WITH_EDGE_DATA
-GRIN_DATATYPE grin_get_edge_data_datatype(GRIN_GRAPH, GRIN_EDGE);
-
-const void* grin_get_edge_data_value(GRIN_GRAPH, GRIN_EDGE);
-#endif

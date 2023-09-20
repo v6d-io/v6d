@@ -1,5 +1,4 @@
 /** Copyright 2020 Alibaba Group Holding Limited.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -16,16 +15,8 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "topology/adjacentlist.h"
 
-
-#if defined(GRIN_ENABLE_ADJACENT_LIST) && !defined(GRIN_ENABLE_SCHEMA)
-GRIN_ADJACENT_LIST grin_get_adjacent_list(GRIN_GRAPH, GRIN_DIRECTION, GRIN_VERTEX);
-#endif
-
-#ifdef GRIN_ENABLE_ADJACENT_LIST
 void grin_destroy_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {}
-#endif
 
-#ifdef GRIN_ENABLE_ADJACENT_LIST_ARRAY
 size_t grin_get_adjacent_list_size(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
     return static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al.end)
          - static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al.begin);
@@ -50,9 +41,7 @@ GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, 
     }
     return e;
 }
-#endif
 
-#ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
 GRIN_ADJACENT_LIST_ITERATOR grin_get_adjacent_list_begin(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
     auto ali = new GRIN_ADJACENT_LIST_ITERATOR_T();
     ali->vid = al.vid;
@@ -99,4 +88,3 @@ GRIN_EDGE grin_get_edge_from_adjacent_list_iter(GRIN_GRAPH g, GRIN_ADJACENT_LIST
     }
     return e;     
 }
-#endif

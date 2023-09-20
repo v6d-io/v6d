@@ -2,7 +2,9 @@
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -28,10 +30,9 @@ limitations under the License.
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
 
 
-#ifdef GRIN_WITH_VERTEX_PROPERTY
 void grin_destroy_vertex_property_value_of_string(GRIN_GRAPH g, const char* value) {}
 
-void grin_destroy_float_array_value(GRIN_GRAPH g, const float* value, size_t length) {}
+void grin_destroy_vertex_property_value_of_float_array(GRIN_GRAPH g, const float* value, size_t length) {}
 
 int grin_get_vertex_property_value_of_int32(GRIN_GRAPH g, GRIN_VERTEX v, GRIN_VERTEX_PROPERTY vp) {
     GET_VERTEX_VALUE
@@ -89,10 +90,7 @@ const float* grin_get_vertex_property_value_of_float_array(GRIN_GRAPH g, GRIN_VE
     *length = _cache->feature_size;
     return static_cast<const float*>(_cache->varrs[vtype][vprop]) + _cache->id_parser.GetOffset(v) * _cache->feature_size;
 }
-#endif
 
-
-#ifdef GRIN_WITH_EDGE_PROPERTY
 void grin_destroy_edge_property_value_of_string(GRIN_GRAPH g, const char* value) {}
 
 void grin_destroy_edge_property_value_of_float_array(GRIN_GRAPH g, const float* value, size_t length) {}
@@ -152,4 +150,4 @@ const float* grin_get_edge_property_value_of_float_array(GRIN_GRAPH g, GRIN_EDGE
     *length = 0;
     return NULL;
 }
-#endif
+

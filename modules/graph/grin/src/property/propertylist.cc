@@ -2,7 +2,9 @@
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,8 +15,6 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "property/propertylist.h"
 
-
-#ifdef GRIN_WITH_VERTEX_PROPERTY
 size_t grin_get_vertex_property_list_size(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST vpl) {
     auto _vpl = static_cast<GRIN_VERTEX_PROPERTY_LIST_T*>(vpl);
     return _vpl->size();
@@ -40,10 +40,7 @@ bool grin_insert_vertex_property_to_list(GRIN_GRAPH g, GRIN_VERTEX_PROPERTY_LIST
     _vpl->push_back(vp);
     return true;
 }
-#endif
 
-
-#ifdef GRIN_WITH_EDGE_PROPERTY
 size_t grin_get_edge_property_list_size(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl) {
     auto _epl = static_cast<GRIN_EDGE_PROPERTY_LIST_T*>(epl);
     return _epl->size();
@@ -69,4 +66,3 @@ bool grin_insert_edge_property_to_list(GRIN_GRAPH g, GRIN_EDGE_PROPERTY_LIST epl
     _epl->push_back(ep);
     return true;
 }
-#endif

@@ -2,7 +2,9 @@
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -13,8 +15,6 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "property/type.h"
 
-
-#ifdef GRIN_ENABLE_SCHEMA
 /**************** vertex type ****************/
 bool grin_equal_vertex_type(GRIN_GRAPH g, GRIN_VERTEX_TYPE vt1, GRIN_VERTEX_TYPE vt2) {
     return (vt1 == vt2);
@@ -196,4 +196,3 @@ GRIN_EDGE_TYPE_LIST grin_get_edge_types_by_vertex_type_pair(GRIN_GRAPH g, GRIN_V
     }
     return etl; // TODO
 }
-#endif

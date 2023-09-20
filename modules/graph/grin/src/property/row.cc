@@ -2,7 +2,9 @@
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
+
     http://www.apache.org/licenses/LICENSE-2.0
+
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,7 +16,6 @@ limitations under the License.
 #include "property/row.h"
 #include "common/error.h"
 
-#ifdef GRIN_ENABLE_ROW
 void grin_destroy_row(GRIN_GRAPH g, GRIN_ROW r) {
     auto _r = static_cast<GRIN_ROW_T*>(r);
     delete _r;
@@ -81,7 +82,6 @@ long long int grin_get_timestamp64_from_row(GRIN_GRAPH g, GRIN_ROW r, size_t idx
 }
 
 const float* grin_get_float_array_from_row(GRIN_GRAPH g, GRIN_ROW r, size_t idx, size_t* length) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     auto _r = static_cast<GRIN_ROW_T*>(r);
     *length = _cache->feature_size;
@@ -156,43 +156,7 @@ bool grin_insert_timestamp64_to_row(GRIN_GRAPH g, GRIN_ROW r, long long int valu
 bool grin_insert_float_array_to_row(GRIN_GRAPH g, GRIN_ROW r, const float* value, size_t length) {
     return false;
 }
-#endif
 
-#if defined(GRIN_ENABLE_ROW) && defined(GRIN_TRAIT_CONST_VALUE_PTR)
-const void* grin_get_value_from_row(GRIN_GRAPH g, GRIN_ROW r, GRIN_DATATYPE dt, size_t idx) {
-    auto _r = static_cast<GRIN_ROW_T*>(r);
-    switch (dt) {
-    case GRIN_DATATYPE::Int32:
-        return static_cast<const int32_t*>((*_r)[idx]);
-    case GRIN_DATATYPE::UInt32:
-        return static_cast<const  uint32_t*>((*_r)[idx]);
-    case GRIN_DATATYPE::Int64:
-        return static_cast<const int64_t*>((*_r)[idx]);
-    case GRIN_DATATYPE::UInt64:
-        return static_cast<const uint64_t*>((*_r)[idx]);
-    case GRIN_DATATYPE::Float:
-        return static_cast<const float*>((*_r)[idx]);
-    case GRIN_DATATYPE::Double:
-        return static_cast<const double*>((*_r)[idx]);
-    case GRIN_DATATYPE::String: {
-        auto s = static_cast<const std::string*>((*_r)[idx]);
-        return s->c_str();
-    }
-    case GRIN_DATATYPE::Date32:
-        return static_cast<const int32_t*>((*_r)[idx]);
-    case GRIN_DATATYPE::Time32:
-        return static_cast<const int32_t*>((*_r)[idx]);
-    case GRIN_DATATYPE::Timestamp64:
-        return static_cast<const int64_t*>((*_r)[idx]);
-    default:
-        return NULL;
-    }
-    return NULL;
-}
-#endif
-
-
-#if defined(GRIN_WITH_VERTEX_PROPERTY) && defined(GRIN_ENABLE_ROW)
 GRIN_ROW grin_get_vertex_row(GRIN_GRAPH g, GRIN_VERTEX v) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
@@ -207,9 +171,7 @@ GRIN_ROW grin_get_vertex_row(GRIN_GRAPH g, GRIN_VERTEX v) {
     }
     return r;
 }
-#endif
 
-#if defined(GRIN_WITH_EDGE_PROPERTY) && defined(GRIN_ENABLE_ROW)
 GRIN_ROW grin_get_edge_row(GRIN_GRAPH g, GRIN_EDGE e) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
@@ -224,4 +186,4 @@ GRIN_ROW grin_get_edge_row(GRIN_GRAPH g, GRIN_EDGE e) {
     }
     return r;
 }
-#endif
+

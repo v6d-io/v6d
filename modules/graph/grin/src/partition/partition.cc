@@ -1,5 +1,4 @@
 /** Copyright 2020 Alibaba Group Holding Limited.
-
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -17,7 +16,6 @@ limitations under the License.
 #include "partition/partition.h"
 #include "graph/fragment/property_graph_types.h"
 
-#ifdef GRIN_ENABLE_GRAPH_PARTITION
 GRIN_PARTITIONED_GRAPH grin_get_partitioned_graph_from_storage(const char* uri) {
     std::string uri_str(uri);
     std::string ipc_socket;
@@ -120,9 +118,7 @@ GRIN_GRAPH grin_get_local_graph_by_partition(GRIN_PARTITIONED_GRAPH pg, GRIN_PAR
     _prepare_cache(g);
     return g;
 }
-#endif
 
-#ifdef GRIN_TRAIT_NATURAL_ID_FOR_PARTITION
 GRIN_PARTITION grin_get_partition_by_id(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION_ID pid) {
     return pid;
 }
@@ -130,5 +126,4 @@ GRIN_PARTITION grin_get_partition_by_id(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITIO
 GRIN_PARTITION_ID grin_get_partition_id(GRIN_PARTITIONED_GRAPH pg, GRIN_PARTITION p) {
     return p;
 }
-#endif
 
