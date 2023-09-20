@@ -92,20 +92,20 @@ Then check the status of the argo server:
 Running a Kubeflow Pipeline example
 -----------------------------------
 
-The example is under the directory `k8s/examples/vineyard-csidriver`, and `pipeline.py` under this
+The example is under the directory ``k8s/examples/vineyard-csidriver``, and ``pipeline.py`` under this
 directory is the original pipeline definition. To use the Vineyard CSI Driver, we need to do two 
 modifications:
 
-1. Change APIs like `pd.read_pickle/write_pickle` to `vineyard.csi.write/read` in the source code.
+1. Change APIs like **pd.read_pickle/write_pickle** to **vineyard.csi.write/read** in the source code.
 
-2. Add the `vineyard object` VolumeOp to the pipeline's dependencies. The path in the API changed 
+2. Add the ``vineyard object`` VolumeOp to the pipeline's dependencies. The path in the API changed 
 in the first step will be mapped to a volume. Notice, the volume used in any task needs to be 
 explicitly mounted to the corresponding path in the source code, and the storageclass_name 
-format of each VolumeOp is `{vineyard-deployment-namespace}.{vineyard-deployment-name}.csi`.
+format of each VolumeOp is ``{vineyard-deployment-namespace}.{vineyard-deployment-name}.csi``.
 
-You may get some insights from the modified pipeline `pipeline-with-vineyard.py`. Then, we need to
+You may get some insights from the modified pipeline ``pipeline-with-vineyard.py``. Then, we need to
 compile the pipeline to an argo-workflow yaml. To be compatible with benchmark test, we update the
-generated `pipeline.yaml` and `pipeline-with-vineyard.yaml`.
+generated ``pipeline.yaml`` and ``pipeline-with-vineyard.yaml``.
 
 Now, we can build the docker images for the pipeline:
 
@@ -132,7 +132,7 @@ we use the kind cluster in this example, we can load the image to the clusters:
     $ make load-images
 
 To simulate the data loading/saving of the actual pipeline, we use the nfs volume
-to store the data. The nfs volume is mounted to the `/mnt/data` directory of the 
+to store the data. The nfs volume is mounted to the ``/mnt/data`` directory of the 
 kind cluster. Then apply the data volume as follows:
 
 .. tip::
@@ -179,7 +179,9 @@ Result Analysis
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
 | 8500 Mi    | 21s              | 5.4s          |
++------------+------------------+---------------+
 | 12000 Mi   | 26s              | 7s            |
++------------+------------------+---------------+
 | 15000 Mi   | 32.2s            | 9.4s          |
 +------------+------------------+---------------+
 
@@ -194,7 +196,9 @@ Argo workflow duration
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
 | 8500 Mi    | 186s             | 169s          |
++------------+------------------+---------------+
 | 12000 Mi   | 250s             | 203s          |
++------------+------------------+---------------+
 | 15000 Mi   | 332s             | 286s          |
 +------------+------------------+---------------+
 
@@ -214,7 +218,9 @@ Actual execution time
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
 | 8500 Mi    | 139.3s           | 92.3s         |
++------------+------------------+---------------+
 | 12000 Mi   | 204.3s           | 131.1s        |
++------------+------------------+---------------+
 | 15000 Mi   | 289.3s           | 209.7s        |
 +------------+------------------+---------------+
 
@@ -230,7 +236,9 @@ Writing time
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
 | 8500 Mi    | 21s              | 5.4s          |
++------------+------------------+---------------+
 | 12000 Mi   | 26s              | 7s            |
++------------+------------------+---------------+
 | 15000 Mi   | 32.2s            | 9.4s          |
 +------------+------------------+---------------+
 
@@ -251,7 +259,9 @@ We delete the time of init data loading, and the results are as follows:
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
 | 8500 Mi    | 36.7s            | 0.02s         |
++------------+------------------+---------------+
 | 12000 Mi   | 45.7s            | 0.02s         |
++------------+------------------+---------------+
 | 15000 Mi   | 128.6s           | 0.04s         |
 +------------+------------------+---------------+
 
