@@ -27,7 +27,8 @@ setup:
         helm install vineyard-operator charts/vineyard-operator \
             --create-namespace \
             --namespace vineyard-system \
-            --set controllerManager.manager.image.repository=localhost:5001/vineyard-operator
+            --set controllerManager.manager.image.repository=localhost:5001/vineyard-operator \
+            --set controllerManager.manager.image.tag=latest
       wait:
         - namespace: vineyard-system
           resource: deployment/vineyard-operator-controller-manager
