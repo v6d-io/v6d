@@ -297,11 +297,8 @@ jobs:
       - name: Leave a message for logs URL
         if: ${{ failure() }}
         run: |
-          if [[ -n ${{ github.event.pull_request.head.sha }} ]]; then
-              short_sha=$(git rev-parse --short ${{ github.event.pull_request.head.sha }})
-          else
-              short_sha=$(git rev-parse --short ${{ github.event.push.head.sha }})
-          fi
+          sha=${{ github.event.pull_request.head.sha || github.sha }}
+          short_sha=$(git rev-parse --short $sha)
           case ${{ matrix.job }} in
             e2e-tests-spill)
               signed_url_key=0707
