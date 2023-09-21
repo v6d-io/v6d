@@ -58,7 +58,7 @@ func ApplyCSIDriverClustersOpts(cmd *cobra.Command) {
 func ApplyCSIDriverOpts(cmd *cobra.Command) {
 	ApplyCSIDriverNameOpts(cmd)
 	cmd.Flags().StringVarP(&CSIDriverOpts.Image, "image", "i",
-		"vineyardcloudnative/vineyard-csi-driver",
+		"vineyardcloudnative/vineyard-operator",
 		"The image of vineyard csi driver.")
 	cmd.Flags().StringVarP(&CSIDriverOpts.ImagePullPolicy, "imagePullPolicy", "",
 		"IfNotPresent", "The image pull policy of vineyard csi driver.")

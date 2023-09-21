@@ -825,7 +825,7 @@ vineyardctl deploy csidriver [flags]
       --clusters strings                 The list of vineyard clusters.
       --enableToleration                 Enable toleration for vineyard csi driver.
   -h, --help                             help for csidriver
-  -i, --image string                     The image of vineyard csi driver. (default "vineyardcloudnative/vineyard-csi-driver")
+  -i, --image string                     The image of vineyard csi driver. (default "vineyardcloudnative/vineyard-operator")
       --imagePullPolicy string           The image pull policy of vineyard csi driver. (default "IfNotPresent")
       --livenessProbeImage string        The image of livenessProbe. (default "registry.k8s.io/sig-storage/livenessprobe:v2.8.0")
       --name string                      The name of the csi driver cr. (default "csidriver-sample")

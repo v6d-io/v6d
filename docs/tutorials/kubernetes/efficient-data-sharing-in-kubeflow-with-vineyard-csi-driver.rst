@@ -10,8 +10,7 @@ Next, we will show you how to use the Vineyard CSI Driver to speed up a kubeflow
 Prerequisites
 =============
 
-- A kubernetes cluster with version >= 1.25.10. If you don't have one by hand, you can refer to the 
-guide `Initialize Kubernetes Cluster`_ to create one.
+- A kubernetes cluster with version >= 1.25.10. If you don't have one by hand, you can refer to the guide `Initialize Kubernetes Cluster`_ to create one.
 - Install the `Vineyardctl`_ by following the official guide.
 - Install the `Argo Workflow CLI`_ by following the official guide.
 
@@ -49,6 +48,11 @@ deployment is ready as follows:
     vineyardd-sample                 3/3     3            3           4d3h
 
 Then deploy the vineyard csi driver which specifies the vineyard cluster to use:
+
+.. tip::
+
+    If you want to look into the debug logs of the vineyard csi driver, you can add a
+    flag ``--verbose`` in the following command.
 
 .. code:: bash
 
@@ -138,7 +142,7 @@ kind cluster. Then apply the data volume as follows:
 .. tip::
 
     If you already have nfs volume that can be accessed by the kubernetes cluster,
-    you can update the prepare-data.yaml to use your nfs volume.
+    you can update the ``prepare-data.yaml`` to use your nfs volume.
 
 .. code:: bash
 
