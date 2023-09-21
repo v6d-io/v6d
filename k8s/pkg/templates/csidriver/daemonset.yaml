@@ -22,7 +22,7 @@ spec:
         - --endpoint=$(CSI_ENDPOINT)
         - --nodeid=$(KUBE_NODE_NAME)
         - --state-file-path=/csi/state
-        {{ if .Spec.EnableDebugLog }}
+        {{ if .Spec.EnableVerboseLog }}
         - --verbose
         {{ end }}
         env:
