@@ -21,6 +21,8 @@ import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
+import io.v6d.core.common.util.VineyardException;
+import io.v6d.core.common.util.VineyardException.ObjectNotExists;
 import io.v6d.hive.ql.io.CloseableReentrantLock;
 import io.v6d.modules.basic.arrow.SchemaBuilder;
 import io.v6d.modules.basic.arrow.Table;
@@ -131,7 +133,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     // static java.nio.file.FileSystem jimfs = null;
     static RawLocalFileSystem fs = null;
-    static boolean enablePrintAllFiles = true;
+    static boolean enablePrintAllFiles = false;
 
     Path workingDir = new Path("vineyard:/");
 
@@ -315,7 +317,66 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         }
     }
 
+    private void printAllObjectsWithName() throws IOException {
+        IPCClient client = Context.getClient();
+        Context.println("print all objects with name");
+        Context.println("====================================");
+        try {
+            Map<String, ObjectID> objects = client.listNames(".*", true, 255);
+            for (val object : objects.entrySet()) {
+                Context.println("object name:" + object.getKey() + ", object id:" + object.getValue().value());
+            }
+        } catch (Exception e) {
+            Context.println("Exception: " + e.getMessage());
+        }
+        Context.println("====================================");
+    }
+
+    public void cleanObjectInVineyard(Path filePath) throws IOException {
+        IPCClient client = Context.getClient();
+        Queue<Path> queue = new java.util.LinkedList<Path>();
+        Context.println("clean object in vineyard with file name: " + filePath.toString());
+        Collection<ObjectID> objectIDs = new ArrayList<ObjectID>();
+        queue.add(filePath);
+        while (!queue.isEmpty()) {
+            try {
+                Path path = queue.peek();
+                FileStatus fileStatus = fs.getFileStatus(path);
+                if (fileStatus.isDirectory()) {
+                    FileStatus[] fileStatusArray = fs.listStatus(path);
+                    for (FileStatus s : fileStatusArray) {
+                        if (s.getPath().compareTo(filePath) == 0) {
+                            continue;
+                        }
+                        queue.add(s.getPath());
+                    }
+                }
+
+                String objectName = path.toString().substring(path.toString().indexOf(":") + 1);
+                Context.println("try to get objectid from name:" + objectName);
+                ObjectID objectID = client.getName(objectName);
+                objectIDs.add(objectID);
+                client.dropName(objectName);
+            } catch (FileNotFoundException e) {
+                // file not exist
+                Context.println("File not exist.");
+                continue;
+            } catch (ObjectNotExists e) {
+                // object not exist
+                Context.println("Object not exist.");
+                continue;
+            } finally {
+                queue.poll();
+            }
+        }
+        client.delete(objectIDs, false, false);
+        printAllObjectsWithName(); 
+    }
+
     private boolean deleteInternal(Path path, boolean b) throws IOException {
+        Context.println("Delete file: " + path.toString());
+        // TODO: how to ensure that the consistency between vineyard and local file system?
+        cleanObjectInVineyard(path);
         return fs.delete(path, b);
     }
 
