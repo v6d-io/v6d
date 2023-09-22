@@ -3,29 +3,12 @@ from kfp import dsl
 def PreProcess():
     #############################################################
     # user need to add the volume Op for vineyard object manully
-    v1op = dsl.VolumeOp(name="vineyard-object1",
-                    resource_name="vineyard-object1-pvc", size="1Mi",
+    vop = dsl.VolumeOp(name="vineyard-objects",
+                    resource_name="vineyard-objects-pvc", size="1Mi",
                     storage_class="vineyard-system.vineyardd-sample.csi",
                     modes=dsl.VOLUME_MODE_RWM,
                     set_owner_reference=True)
 
-    v2op = dsl.VolumeOp(name="vineyard-object2",
-                resource_name="vineyard-object2-pvc", size="1Mi",
-                storage_class="vineyard-system.vineyardd-sample.csi",
-                modes=dsl.VOLUME_MODE_RWM,
-                set_owner_reference=True)
-
-    v3op = dsl.VolumeOp(name="vineyard-object3",
-            resource_name="vineyard-object3-pvc", size="1Mi",
-            storage_class="vineyard-system.vineyardd-sample.csi",
-            modes=dsl.VOLUME_MODE_RWM,
-            set_owner_reference=True)
-
-    v4op = dsl.VolumeOp(name="vineyard-object4",
-                    resource_name="vineyard-object4-pvc", size="1Mi",
-                    storage_class="vineyard-system.vineyardd-sample.csi",
-                    modes=dsl.VOLUME_MODE_RWM,
-                    set_owner_reference=True)
     #############################################################
 
     return dsl.ContainerOp(
@@ -34,10 +17,7 @@ def PreProcess():
         container_kwargs={'image_pull_policy':"IfNotPresent"},
         pvolumes={
             "/data": dsl.PipelineVolume(pvc="benchmark-data"),
-            '/data/x_train.pkl': v1op.volume,
-            '/data/y_train.pkl': v2op.volume,
-            '/data/x_test.pkl': v3op.volume,
-            '/data/y_test.pkl': v4op.volume
+            "/vineyard/data": vop.volume
         },
         command = ['python3', 'preprocess.py']
     )
@@ -49,8 +29,7 @@ def Train(comp1):
         container_kwargs={'image_pull_policy':"IfNotPresent"},
         pvolumes={
             "/data": comp1.pvolumes['/data'],
-            '/data/x_train.pkl': comp1.pvolumes['/data/x_train.pkl'],
-            '/data/y_train.pkl': comp1.pvolumes['/data/y_train.pkl']
+            "/vineyard/data": comp1.pvolumes['/vineyard/data'],
         },
         command = ['python3', 'train.py'],
     )
@@ -62,8 +41,7 @@ def Test(comp1, comp2):
         container_kwargs={'image_pull_policy':"IfNotPresent"},
         pvolumes={
             "/data": comp2.pvolumes['/data'],
-            '/data/x_test.pkl': comp1.pvolumes['/data/x_test.pkl'],
-            '/data/y_test.pkl': comp1.pvolumes['/data/y_test.pkl']
+            "/vineyard/data": comp1.pvolumes['/vineyard/data']
         },
         command = ['python3', 'test.py']
     )
