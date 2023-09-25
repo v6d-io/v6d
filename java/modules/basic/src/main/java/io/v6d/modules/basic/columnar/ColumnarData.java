@@ -32,6 +32,9 @@ package io.v6d.modules.basic.columnar;
  * under the License.
  */
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateDayVector;
@@ -47,6 +50,12 @@ import org.apache.arrow.vector.NullVector;
 import org.apache.arrow.vector.SmallIntVector;
 import org.apache.arrow.vector.TimeStampMicroTZVector;
 import org.apache.arrow.vector.TimeStampMicroVector;
+import org.apache.arrow.vector.TimeStampMilliTZVector;
+import org.apache.arrow.vector.TimeStampMilliVector;
+import org.apache.arrow.vector.TimeStampNanoTZVector;
+import org.apache.arrow.vector.TimeStampNanoVector;
+import org.apache.arrow.vector.TimeStampSecTZVector;
+import org.apache.arrow.vector.TimeStampSecVector;
 import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.UInt1Vector;
 import org.apache.arrow.vector.UInt2Vector;
@@ -55,9 +64,17 @@ import org.apache.arrow.vector.UInt8Vector;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.VarCharVector;
+import org.apache.arrow.vector.complex.ListVector;
+import org.apache.arrow.vector.complex.impl.UnionListReader;
+import org.apache.arrow.vector.complex.impl.UnionListWriter;
+import org.apache.arrow.vector.complex.reader.FieldReader;
+import org.apache.arrow.vector.complex.reader.IntReader;
 import org.apache.arrow.vector.holders.NullableIntervalDayHolder;
 import org.apache.arrow.vector.holders.NullableVarCharHolder;
+import org.apache.arrow.vector.holders.UnionHolder;
 import org.apache.arrow.vector.util.Text;
+
+import io.v6d.core.client.Context;
 
 /** A visitor for arrow arrays. */
 public class ColumnarData {
@@ -99,16 +116,31 @@ public class ColumnarData {
         } else if (vector instanceof DateDayVector) {
             accessor = new DateAccessor((DateDayVector) vector);
         } else if (vector instanceof TimeStampMicroTZVector) {
-            accessor = new TimestampAccessor((TimeStampMicroTZVector) vector);
+            accessor = new TimestampMicroAccessor((TimeStampMicroTZVector) vector);
         } else if (vector instanceof TimeStampMicroVector) {
-            accessor = new TimestampNTZAccessor((TimeStampMicroVector) vector);
+            accessor = new TimestampMicroNTZAccessor((TimeStampMicroVector) vector);
+        } else if (vector instanceof TimeStampSecTZVector) {
+            accessor = new TimestampSecAccessor((TimeStampSecTZVector) vector);
+        } else if (vector instanceof TimeStampSecVector) {
+            accessor = new TimestampSecNTZAccessor((TimeStampSecVector) vector);
+        } else if (vector instanceof TimeStampMilliTZVector) {
+            accessor = new TimestampMilliAccessor((TimeStampMilliTZVector) vector);
+        } else if (vector instanceof TimeStampMilliVector) {
+            accessor = new TimestampMilliNTZAccessor((TimeStampMilliVector) vector);
+        } else if (vector instanceof TimeStampNanoTZVector) {
+            accessor = new TimestampNanoAccessor((TimeStampNanoTZVector) vector);
+        } else if (vector instanceof TimeStampNanoVector) {
+            accessor = new TimestampNanoNTZAccessor((TimeStampNanoVector) vector);
         } else if (vector instanceof NullVector) {
             accessor = new NullAccessor((NullVector) vector);
         } else if (vector instanceof IntervalYearVector) {
             accessor = new IntervalYearAccessor((IntervalYearVector) vector);
         } else if (vector instanceof IntervalDayVector) {
             accessor = new IntervalDayAccessor((IntervalDayVector) vector);
-        } else {
+        } else if (vector instanceof ListVector) {
+            accessor = new ListVectorAccessor((ListVector) vector);
+        }
+        else {
             throw new UnsupportedOperationException(
                     "array type is not supported yet: " + vector.getClass());
         }
@@ -610,11 +642,11 @@ public class ColumnarData {
         }
     }
 
-    private static class TimestampAccessor extends ArrowVectorAccessor {
+    private static class TimestampMicroAccessor extends ArrowVectorAccessor {
 
         private final TimeStampMicroTZVector accessor;
 
-        TimestampAccessor(TimeStampMicroTZVector vector) {
+        TimestampMicroAccessor(TimeStampMicroTZVector vector) {
             super(vector);
             this.accessor = vector;
         }
@@ -630,11 +662,131 @@ public class ColumnarData {
         }
     }
 
-    private static class TimestampNTZAccessor extends ArrowVectorAccessor {
+    private static class TimestampMicroNTZAccessor extends ArrowVectorAccessor {
 
         private final TimeStampMicroVector accessor;
 
-        TimestampNTZAccessor(TimeStampMicroVector vector) {
+        TimestampMicroNTZAccessor(TimeStampMicroVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class TimestampMilliAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampMilliTZVector accessor;
+
+        TimestampMilliAccessor(TimeStampMilliTZVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class TimestampMilliNTZAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampMilliVector accessor;
+
+        TimestampMilliNTZAccessor(TimeStampMilliVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class TimestampSecAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampSecTZVector accessor;
+
+        TimestampSecAccessor(TimeStampSecTZVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class TimestampSecNTZAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampSecVector accessor;
+
+        TimestampSecNTZAccessor(TimeStampSecVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class TimestampNanoAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampNanoTZVector accessor;
+
+        TimestampNanoAccessor(TimeStampNanoTZVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+    }
+
+    private static class TimestampNanoNTZAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampNanoVector accessor;
+
+        TimestampNanoNTZAccessor(TimeStampNanoVector vector) {
             super(vector);
             this.accessor = vector;
         }
@@ -698,6 +850,41 @@ public class ColumnarData {
             return Math.addExact(
                     Math.multiplyExact(intervalDayHolder.days, DateTimeConstants.MICROS_PER_DAY),
                     intervalDayHolder.milliseconds * DateTimeConstants.MICROS_PER_MILLIS);
+        }
+    }
+
+    private static class ListVectorAccessor extends ArrowVectorAccessor {
+
+        private final ListVector accessor;
+
+        ListVectorAccessor(ListVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            List<Object> value = new ArrayList<>();
+            UnionListReader reader = this.accessor.getReader();
+            Context.println("List rows:" + accessor.getValueCount());
+            reader.setPosition(rowId);
+            switch(accessor.getField().getType().getTypeID()) {
+                case Int:
+                    while (reader.next()) {
+                        IntReader intReader = reader.reader();
+                        if (intReader.isSet()) {
+                            int v = intReader.readInteger();
+                            Context.println("read value:" + v);
+                            value.add(v);
+                        }
+                    }
+                    break;
+                default:
+                    throw new UnsupportedOperationException(
+                            "array type is not supported yet: " + accessor.getField().getType().getTypeID());
+            }
+            return value;
+            // return accessor.getDataVector().getObject(rowId);
         }
     }
 

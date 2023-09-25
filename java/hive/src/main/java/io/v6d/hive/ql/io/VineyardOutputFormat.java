@@ -22,6 +22,7 @@ import io.v6d.core.common.util.VineyardException;
 import io.v6d.modules.basic.arrow.*;
 import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,15 +32,18 @@ import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.*;
 import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.ListTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.io.NullWritable;
@@ -98,6 +102,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private FSDataOutputStream output;
     private static CloseableReentrantLock lock = new CloseableReentrantLock();
     private Schema schema;
+    private TypeInfo[] infos;
 
     List<RecordBatchBuilder> chunks = new ArrayList<>();
     List<ColumnarDataBuilder> current;
@@ -163,7 +168,18 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                 values.length == current.size(),
                 "The length of record doesn't match with the length of builders");
         for (int i = 0; i < values.length; ++i) {
-            current.get(i).setObject(currentLoc, values[i]);
+            // current.get(i).setObject(currentLoc, values[i]);
+            if (values[i] instanceof HiveDecimal) {
+                BigDecimal decimal = ((HiveDecimal) values[i]).bigDecimalValue();
+                if (decimal.precision() > ((DecimalTypeInfo)infos[i]).getPrecision() || decimal.scale() > ((DecimalTypeInfo)infos[i]).getScale()) {
+                    // TODO: insert null if the value precision is larger than the column precision
+                    throw new VineyardException.NotImplemented("The precision of the value is larger than the column precision.");
+                } else {
+                    current.get(i).setObject(currentLoc, decimal);
+                }
+            } else {
+                current.get(i).setObject(currentLoc, values[i]);
+            }
         }
         currentLoc += 1;
         writeTimer.stop();
@@ -218,6 +234,28 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         }
     }
 
+    private Field getField(TypeInfo typeInfo) {
+        Field field = null;
+        switch (typeInfo.getCategory()) {
+            case LIST:
+                List<Field> children = new ArrayList<>();
+                Field chField = getField(((ListTypeInfo)typeInfo).getListElementTypeInfo());
+                children.add(chField);
+                field = new Field(typeInfo.getTypeName(), FieldType.nullable(toArrowType(typeInfo)), children);
+                break;
+            case MAP:
+                throw new NotImplementedException();
+            case STRUCT:
+                throw new NotImplementedException();
+            case UNION:
+                throw new NotImplementedException();
+            default:
+                field = Field.nullable(typeInfo.getTypeName(), toArrowType(typeInfo));
+                break;
+        }
+        return field;
+    }
+
     private Schema initializeTableSchema(Properties tableProperties) {
         val structTypeInfo = TypeContext.computeStructTypeInfo(tableProperties);
         val targetTypeInfos =
@@ -226,9 +264,9 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
         List<Field> fields = new ArrayList<>();
         for (val typeInfo : targetTypeInfos) {
-            Field field = Field.nullable(typeInfo.getTypeName(), toArrowType(typeInfo));
-            fields.add(field);
+            fields.add(getField(typeInfo));
         }
+        infos = targetTypeInfos;
         return new Schema(fields);
     }
 
@@ -257,7 +295,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                     case DATE:
                         return Types.MinorType.DATEDAY.getType();
                     case TIMESTAMP:
-                        return new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC");
+                        return new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC");
                     case BINARY:
                         return Types.MinorType.VARBINARY.getType();
                     case DECIMAL:

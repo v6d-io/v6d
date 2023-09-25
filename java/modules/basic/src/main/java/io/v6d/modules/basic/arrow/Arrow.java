@@ -17,7 +17,9 @@ package io.v6d.modules.basic.arrow;
 import com.google.common.collect.ImmutableList;
 import io.v6d.modules.basic.stream.RecordBatchStream;
 import org.apache.arrow.memory.RootAllocator;
+import org.apache.arrow.vector.types.DateUnit;
 import org.apache.arrow.vector.types.FloatingPointPrecision;
+import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.slf4j.Logger;
@@ -44,6 +46,12 @@ public final class Arrow {
         public static final ArrowType LargeVarChar = new ArrowType.LargeUtf8();
         public static final ArrowType VarBinary = new ArrowType.Binary();
         public static final ArrowType LargeVarBinary = new ArrowType.LargeBinary();
+        public static final ArrowType Date = new ArrowType.Date(DateUnit.DAY);
+        public static final ArrowType TimeStampSec = new ArrowType.Timestamp(TimeUnit.SECOND, "UTC");
+        public static final ArrowType TimeStampMilli = new ArrowType.Timestamp(TimeUnit.MILLISECOND, "UTC");
+        public static final ArrowType TimeStampMicro = new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC");
+        public static final ArrowType TimeStampNano = new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC");
+        public static final ArrowType List = new ArrowType.List();
     }
 
     public static class FieldType {
@@ -75,6 +83,18 @@ public final class Arrow {
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.VarBinary, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType LargeVarBinary =
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.LargeVarBinary, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType Date =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.Date, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType TimeStampMilli =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.TimeStampMilli, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType TimeStampMicro =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.TimeStampMicro, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType TimeStampNano =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.TimeStampNano, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType TimeStampSec =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.TimeStampSec, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType List =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.List, null);
     }
 
     public static Field makeField(

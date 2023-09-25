@@ -14,6 +14,8 @@
  */
 package io.v6d.modules.basic.columnar;
 
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 /**
  * The implementation is heavily referred from spark, see also
  *
@@ -32,6 +34,10 @@ package io.v6d.modules.basic.columnar;
  * under the License.
  */
 import java.math.BigDecimal;
+import java.sql.Date;
+import java.util.ArrayList;
+
+import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateDayVector;
@@ -47,6 +53,12 @@ import org.apache.arrow.vector.NullVector;
 import org.apache.arrow.vector.SmallIntVector;
 import org.apache.arrow.vector.TimeStampMicroTZVector;
 import org.apache.arrow.vector.TimeStampMicroVector;
+import org.apache.arrow.vector.TimeStampMilliTZVector;
+import org.apache.arrow.vector.TimeStampMilliVector;
+import org.apache.arrow.vector.TimeStampNanoTZVector;
+import org.apache.arrow.vector.TimeStampNanoVector;
+import org.apache.arrow.vector.TimeStampSecTZVector;
+import org.apache.arrow.vector.TimeStampSecVector;
 import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.UInt1Vector;
 import org.apache.arrow.vector.UInt2Vector;
@@ -55,9 +67,15 @@ import org.apache.arrow.vector.UInt8Vector;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.VarCharVector;
+import org.apache.arrow.vector.complex.ListVector;
+import org.apache.arrow.vector.complex.impl.UnionListWriter;
 import org.apache.arrow.vector.holders.NullableIntervalDayHolder;
 import org.apache.arrow.vector.holders.NullableVarCharHolder;
+import org.apache.arrow.vector.types.pojo.ArrowType;
+import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.util.Text;
+
+import io.v6d.core.client.Context;
 
 /** A visitor for arrow arrays. */
 public class ColumnarDataBuilder {
@@ -99,15 +117,29 @@ public class ColumnarDataBuilder {
         } else if (vector instanceof DateDayVector) {
             accessor = new DateAccessor((DateDayVector) vector);
         } else if (vector instanceof TimeStampMicroTZVector) {
-            accessor = new TimestampAccessor((TimeStampMicroTZVector) vector);
+            accessor = new TimestampMicroAccessor((TimeStampMicroTZVector) vector);
         } else if (vector instanceof TimeStampMicroVector) {
-            accessor = new TimestampNTZAccessor((TimeStampMicroVector) vector);
+            accessor = new TimestampMicroNTZAccessor((TimeStampMicroVector) vector);
+        } else if (vector instanceof TimeStampSecTZVector) {
+            accessor = new TimestampSecAccessor((TimeStampSecTZVector) vector);
+        } else if (vector instanceof TimeStampSecVector) {
+            accessor = new TimestampSecNTZAccessor((TimeStampSecVector) vector);
+        } else if (vector instanceof TimeStampMilliTZVector) {
+            accessor = new TimestampMilliAccessor((TimeStampMilliTZVector) vector);
+        } else if (vector instanceof TimeStampMilliVector) {
+            accessor = new TimestampMilliNTZAccessor((TimeStampMilliVector) vector);
+        } else if (vector instanceof TimeStampNanoTZVector) {
+            accessor = new TimestampNanoAccessor((TimeStampNanoTZVector) vector);
+        } else if (vector instanceof TimeStampNanoVector) {
+            accessor = new TimestampNanoNTZAccessor((TimeStampNanoVector) vector);
         } else if (vector instanceof NullVector) {
             accessor = new NullAccessor((NullVector) vector);
         } else if (vector instanceof IntervalYearVector) {
             accessor = new IntervalYearAccessor((IntervalYearVector) vector);
         } else if (vector instanceof IntervalDayVector) {
             accessor = new IntervalDayAccessor((IntervalDayVector) vector);
+        } else if (vector instanceof ListVector) {
+            accessor = new ListVectorAccessor((ListVector) vector);
         } else {
             throw new UnsupportedOperationException(
                     "array type is not supported yet: " + vector.getClass());
@@ -865,7 +897,11 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setInt(rowId, (Integer) value);
+            if (value instanceof Integer) {
+                this.setInt(rowId, (Integer) value);
+            } else {
+                accessor.set(rowId, (int)(((Date)value).getTime() / (24 * 60 * 60 * 1000)));
+            }
         }
 
         @Override
@@ -879,11 +915,11 @@ public class ColumnarDataBuilder {
         }
     }
 
-    private static class TimestampAccessor extends ArrowVectorAccessor {
+    private static class TimestampMicroAccessor extends ArrowVectorAccessor {
 
         private final TimeStampMicroTZVector accessor;
 
-        TimestampAccessor(TimeStampMicroTZVector vector) {
+        TimestampMicroAccessor(TimeStampMicroTZVector vector) {
             super(vector);
             this.accessor = vector;
         }
@@ -909,11 +945,45 @@ public class ColumnarDataBuilder {
         }
     }
 
-    private static class TimestampNTZAccessor extends ArrowVectorAccessor {
+    private static class TimestampMicroNTZAccessor extends ArrowVectorAccessor {
 
         private final TimeStampMicroVector accessor;
 
-        TimestampNTZAccessor(TimeStampMicroVector vector) {
+        TimestampMicroNTZAccessor(TimeStampMicroVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            if (value instanceof Long) {
+                this.setLong(rowId, (Long) value);
+            } else {
+                accessor.set(rowId, (long)(((java.sql.Timestamp)value).getTime()) * 1000 + (((java.sql.Timestamp)value).getNanos() % 1000000) / 1000);
+            }
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+
+        @Override
+        final void setLong(int rowId, long value) {
+            accessor.set(rowId, value);
+        }
+    }
+
+    private static class TimestampMilliAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampMilliTZVector accessor;
+
+        TimestampMilliAccessor(TimeStampMilliTZVector vector) {
             super(vector);
             this.accessor = vector;
         }
@@ -926,6 +996,168 @@ public class ColumnarDataBuilder {
         @Override
         void setObject(int rowId, Object value) {
             this.setLong(rowId, (Long) value);
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+
+        @Override
+        final void setLong(int rowId, long value) {
+            accessor.set(rowId, value);
+        }
+    }
+
+    private static class TimestampMilliNTZAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampMilliVector accessor;
+
+        TimestampMilliNTZAccessor(TimeStampMilliVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            if (value instanceof Long) {
+                this.setLong(rowId, (Long) value);
+            } else {
+                accessor.set(rowId, (long)(((java.sql.Timestamp)value).getTime()));
+            }
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+
+        @Override
+        final void setLong(int rowId, long value) {
+            accessor.set(rowId, value);
+        }
+    }
+
+    private static class TimestampSecAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampSecTZVector accessor;
+
+        TimestampSecAccessor(TimeStampSecTZVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setLong(rowId, (Long) value);
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+
+        @Override
+        final void setLong(int rowId, long value) {
+            accessor.set(rowId, value);
+        }
+    }
+
+    private static class TimestampSecNTZAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampSecVector accessor;
+
+        TimestampSecNTZAccessor(TimeStampSecVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            if (value instanceof Long) {
+                this.setLong(rowId, (Long) value);
+            } else {
+                accessor.set(rowId, (long)(((java.sql.Timestamp)value).getTime()) / 1000);
+            }
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+
+        @Override
+        final void setLong(int rowId, long value) {
+            accessor.set(rowId, value);
+        }
+    }
+
+    private static class TimestampNanoAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampNanoTZVector accessor;
+
+        TimestampNanoAccessor(TimeStampNanoTZVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            this.setLong(rowId, (Long) value);
+        }
+
+        @Override
+        final long getLong(int rowId) {
+            return accessor.get(rowId);
+        }
+
+        @Override
+        final void setLong(int rowId, long value) {
+            accessor.set(rowId, value);
+        }
+    }
+
+    private static class TimestampNanoNTZAccessor extends ArrowVectorAccessor {
+
+        private final TimeStampNanoVector accessor;
+
+        TimestampNanoNTZAccessor(TimeStampNanoVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return getLong(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            if (value instanceof Long) {
+                this.setLong(rowId, (Long) value);
+            } else {
+                accessor.set(rowId, (long)(((java.sql.Timestamp)value).getTime()) * 1000 * 1000 + (((java.sql.Timestamp)value).getNanos() % 1000000));
+            }
         }
 
         @Override
@@ -1009,6 +1241,44 @@ public class ColumnarDataBuilder {
                     (int) Math.floorMod(value, DateTimeConstants.MICROS_PER_MILLIS);
             intervalDayHolder.days = (int) Math.floorDiv(value, DateTimeConstants.MICROS_PER_DAY);
             accessor.set(rowId, intervalDayHolder);
+        }
+    }
+
+    private static class ListVectorAccessor extends ArrowVectorAccessor {
+
+        private final ListVector accessor;
+
+        ListVectorAccessor(ListVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            return this.accessor.getDataVector().getObject(rowId);
+        }
+
+        @Override
+        void setObject(int rowId, Object value) {
+            ArrayList list = (ArrayList) value;
+            UnionListWriter writer =  this.accessor.getWriter();
+            writer.startList();
+            writer.setPosition(rowId);
+            switch(list.get(0).getClass().getName()) {
+                case "java.lang.Integer":
+                    Context.println("Integer");
+                    for (int i = 0; i < list.size(); i++) {
+                        writer.writeInt((Integer)list.get(i));
+                        Context.println("write value[" + i + "] = " + list.get(i));
+                    }
+                    writer.setValueCount(list.size());
+                    writer.endList();
+                    accessor.setValueCount(accessor.getValueCount() + 1);
+                    break;
+            }
+            // if (vector != null) {
+            //     vector.close();
+            // }
         }
     }
 

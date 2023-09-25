@@ -19,20 +19,33 @@ import io.v6d.modules.basic.arrow.Arrow;
 import io.v6d.modules.basic.columnar.ColumnarData;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.math.BigDecimal;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
 import lombok.val;
 import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.arrow.vector.types.pojo.ArrowType.Decimal;
 import org.apache.hadoop.hive.common.type.HiveChar;
+import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.common.type.HiveVarchar;
+import org.apache.hadoop.hive.serde2.io.DateWritable;
+import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
+import org.apache.hadoop.hive.serde2.io.TimestampWritable;
 import org.apache.hadoop.hive.serde2.lazy.ByteArrayRef;
+import org.apache.hadoop.hive.serde2.lazy.LazyArray;
+import org.apache.hadoop.hive.serde2.lazy.LazyFactory;
 import org.apache.hadoop.hive.serde2.lazy.LazyHiveChar;
 import org.apache.hadoop.hive.serde2.lazy.LazyHiveVarchar;
+import org.apache.hadoop.hive.serde2.lazy.objectinspector.LazyListObjectInspector;
+import org.apache.hadoop.hive.serde2.lazy.objectinspector.LazyObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyHiveCharObjectInspector;
 import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyHiveVarcharObjectInspector;
+import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyObjectInspectorParameters;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.SettableStructObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
@@ -40,6 +53,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.primitive.WritableBinaryObj
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.WritableStringObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.BaseCharTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.CharTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.ListTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
@@ -93,13 +107,29 @@ public class RecordWrapperWritable implements WritableComparable {
             } else if (Arrow.Type.SmallInt.equals(dtype)) {
                 this.values[i] = new org.apache.hadoop.hive.serde2.io.ShortWritable();
                 this.setters[i] = RecordWrapperWritable::setShort;
-            } else {
+            } else if (Arrow.Type.Date.equals(dtype)) {
+                this.values[i] = new DateWritable();
+                this.setters[i] = RecordWrapperWritable::setDate;
+            } else if (Arrow.Type.TimeStampMicro.equals(dtype)
+                    || Arrow.Type.TimeStampMilli.equals(dtype)
+                    || Arrow.Type.TimeStampNano.equals(dtype)
+                    || Arrow.Type.TimeStampSec.equals(dtype)) {
+                this.values[i] = new TimestampWritable();
+                this.setters[i] = RecordWrapperWritable::setTimestamp;
+            } else if (dtype instanceof Decimal) {
+                this.values[i] = new HiveDecimalWritable();
+                this.setters[i] = RecordWrapperWritable::setDecimal;
+            } else if (Arrow.Type.List.equals(dtype)) {
+                this.values = new Object[schema.getFields().size()][];
+                break;
+            }
+            else {
                 throw new UnsupportedOperationException("Unsupported type: " + dtype);
             }
         }
     }
 
-    // for output format
+    // for input format
     public RecordWrapperWritable(List<TypeInfo> fieldTypes) {
         this.values = new Writable[fieldTypes.size()];
         this.nullIndicators = new boolean[fieldTypes.size()];
@@ -107,47 +137,76 @@ public class RecordWrapperWritable implements WritableComparable {
         for (int i = 0; i < fieldTypes.size(); i++) {
             val info = fieldTypes.get(i);
             if (info.getCategory() != ObjectInspector.Category.PRIMITIVE) {
-                throw new UnsupportedOperationException("Unsupported type: " + info);
-            }
-            Context.println("type :" + info);
-            switch (((PrimitiveTypeInfo) info).getPrimitiveCategory()) {
-                case BOOLEAN:
-                    this.values[i] = new BooleanWritable();
-                    this.setters[i] = RecordWrapperWritable::setBool;
-                    break;
-                case BYTE:
-                    this.values[i] = new ByteWritable();
-                    this.setters[i] = RecordWrapperWritable::setByte;
-                    break;
-                case SHORT:
-                    this.values[i] = new ShortWritable();
-                    this.setters[i] = RecordWrapperWritable::setShort;
-                    break;
-                case INT:
-                    this.values[i] = new IntWritable();
-                    this.setters[i] = RecordWrapperWritable::setInt;
-                    break;
-                case LONG:
-                    this.values[i] = new LongWritable();
-                    this.setters[i] = RecordWrapperWritable::setLong;
-                    break;
-                case FLOAT:
-                    this.values[i] = new FloatWritable();
-                    this.setters[i] = RecordWrapperWritable::setFloat;
-                    break;
-                case DOUBLE:
-                    this.values[i] = new DoubleWritable();
-                    this.setters[i] = RecordWrapperWritable::setDouble;
-                    break;
-                case STRING:
-                case CHAR:
-                case VARCHAR:
-                case BINARY:
-                    this.values[i] = new Text();
-                    this.setters[i] = RecordWrapperWritable::setString;
-                    break;
-                default:
-                    throw new UnsupportedOperationException("Unsupported type: " + info);
+                switch (info.getCategory()) {
+                    case LIST:
+                        Context.println("type:" + info);
+                        break;
+                    case MAP:
+                        Context.println("type:" + info);
+                        throw new UnsupportedOperationException("Unsupported type: " + info);
+                    case STRUCT:
+                        Context.println("type:" + info);
+                        throw new UnsupportedOperationException("Unsupported type: " + info);
+                    case UNION:
+                        Context.println("type:" + info);
+                        throw new UnsupportedOperationException("Unsupported type: " + info);
+                    default:
+                        throw new UnsupportedOperationException("Unsupported type: " + info);
+                }
+                this.values = new Object[fieldTypes.size()][];
+                break;
+            } else {
+                switch (((PrimitiveTypeInfo) info).getPrimitiveCategory()) {
+                    case BOOLEAN:
+                        this.values[i] = new BooleanWritable();
+                        this.setters[i] = RecordWrapperWritable::setBool;
+                        break;
+                    case BYTE:
+                        this.values[i] = new ByteWritable();
+                        this.setters[i] = RecordWrapperWritable::setByte;
+                        break;
+                    case SHORT:
+                        this.values[i] = new ShortWritable();
+                        this.setters[i] = RecordWrapperWritable::setShort;
+                        break;
+                    case INT:
+                        this.values[i] = new IntWritable();
+                        this.setters[i] = RecordWrapperWritable::setInt;
+                        break;
+                    case LONG:
+                        this.values[i] = new LongWritable();
+                        this.setters[i] = RecordWrapperWritable::setLong;
+                        break;
+                    case FLOAT:
+                        this.values[i] = new FloatWritable();
+                        this.setters[i] = RecordWrapperWritable::setFloat;
+                        break;
+                    case DOUBLE:
+                        this.values[i] = new DoubleWritable();
+                        this.setters[i] = RecordWrapperWritable::setDouble;
+                        break;
+                    case STRING:
+                    case CHAR:
+                    case VARCHAR:
+                    case BINARY:
+                        this.values[i] = new Text();
+                        this.setters[i] = RecordWrapperWritable::setString;
+                        break;
+                    case DATE:
+                        this.values[i] = new DateWritable();
+                        this.setters[i] = RecordWrapperWritable::setDate;
+                        break;
+                    case TIMESTAMP:
+                        this.values[i] = new TimestampWritable();
+                        this.setters[i] = RecordWrapperWritable::setTimestamp;
+                        break;
+                    case DECIMAL:
+                        this.values[i] = new HiveDecimalWritable();
+                        this.setters[i] = RecordWrapperWritable::setDecimal;
+                        break;
+                    default:
+                        throw new UnsupportedOperationException("Unsupported type: " + info);
+                }
             }
         }
     }
@@ -158,6 +217,7 @@ public class RecordWrapperWritable implements WritableComparable {
 
     // for output format
     public void setValues(Object[] values) {
+        Context.println("setValues");
         this.values = values;
         for (int i = 0; i < values.length; i++) {
             if (values[i] instanceof HiveChar) {
@@ -172,12 +232,31 @@ public class RecordWrapperWritable implements WritableComparable {
 
     // for input format
     public void setWritables(ColumnarData[] columns, int index) {
+        Context.println("setWritables");
         for (int i = 0; i < columns.length; i++) {
-            setters[i].accept((Writable) values[i], columns[i].getObject(index));
+            if (values[i] != null) {
+                setters[i].accept((Writable) values[i], columns[i].getObject(index));
+            } else {
+                List value = (List)columns[i].getObject(index);
+                if (value instanceof ArrayList) {
+                    ArrayList<Writable> list = new ArrayList<Writable>();
+                    Context.println("list size:" + value.size());
+                    for (int j = 0; j < value.size(); j++) {
+                        // FIXME: now only support int
+                        Context.println("value[" + i + "]=" + value.get(j));
+                        list.add(new IntWritable((int)value.get(j)));
+                    }
+                    list.add(new IntWritable(9999));
+                    this.values[i] = (list.toArray());
+                } else {
+                    throw new UnsupportedOperationException("Unsupported type: " + value.getClass());
+                }
+            }
         }
     }
 
     public Object getValue(int index, int cLen, ObjectInspector oi) {
+        Context.println("getValue, oi:" + oi.getTypeName());
         if (index >= values.length) {
             return null;
         }
@@ -221,7 +300,12 @@ public class RecordWrapperWritable implements WritableComparable {
 
     // for output format
     public void setValue(int index, Object value) {
+        Context.println("setValue, class:" + value.getClass().getName() + ", value:" + value);
         values[index] = value;
+        Object[] objects = (Object[])value;
+        for (int i = 0; i < objects.length; i++) {
+            Context.println("objects[" + i + "]=" + objects[i]);
+        }
     }
 
     // for input format
@@ -292,6 +376,28 @@ public class RecordWrapperWritable implements WritableComparable {
         ((Text) w).set(((org.apache.arrow.vector.util.Text) value).toString());
     }
 
+    private static void setDate(Writable w, Object value) {
+        ((DateWritable) w).set((int)value);
+    }
+
+    private static void setTimestamp(Writable w, Object value) {
+        Timestamp t = new Timestamp(0);
+        t.setTime((long) value / 1000000000 * 1000);
+        t.setNanos((int) ((long) value % 1000000000));
+        ((TimestampWritable) w).set(t);
+    }
+
+    private static void setDecimal(Writable w, Object value) {
+        BigDecimal decimal = (BigDecimal) value;
+        HiveDecimal hiveDecimal = HiveDecimal.create(decimal);
+        ((HiveDecimalWritable) w).set(hiveDecimal, decimal.precision(), decimal.scale());
+    }
+
+    private static void setList(Writable w, Object value) {
+        ((ArrayList) w).clear();
+        ((ArrayList) w).addAll((ArrayList) value);
+    }
+
     static class Field implements StructField {
 
         private final String name;
@@ -343,6 +449,9 @@ public class RecordWrapperWritable implements WritableComparable {
             for (int i = 0; i < fieldTypes.size(); ++i) {
                 cLen[i] = -1;
                 TypeInfo fieldType = fieldTypes.get(i);
+                if (fieldType.getCategory() != ObjectInspector.Category.PRIMITIVE) {
+                    continue;
+                }
                 switch (((PrimitiveTypeInfo) fieldType).getPrimitiveCategory()) {
                     case CHAR:
                         cLen[i] = ((BaseCharTypeInfo) fieldType).getLength();
@@ -375,7 +484,11 @@ public class RecordWrapperWritable implements WritableComparable {
         public Object setStructFieldData(Object struct, StructField field, Object fieldValue) {
             int offset = ((Field) field).offset;
             RecordWrapperWritable writable = (RecordWrapperWritable) struct;
-            writable.setWritable(offset, (Writable) fieldValue, cLen[offset]);
+            if (fieldValue instanceof Writable) {
+                writable.setWritable(offset, (Writable) fieldValue, cLen[offset]);
+            } else {
+                writable.setValue(offset, fieldValue);
+            }
             return struct;
         }
 
@@ -439,34 +552,58 @@ public class RecordWrapperWritable implements WritableComparable {
             return createObjectInspector((StructTypeInfo) info);
         }
         if (info.getCategory() != ObjectInspector.Category.PRIMITIVE) {
-            throw new UnsupportedOperationException("Unsupported type: " + info);
-        }
-        switch (((PrimitiveTypeInfo) info).getPrimitiveCategory()) {
-            case BOOLEAN:
-                return PrimitiveObjectInspectorFactory.writableBooleanObjectInspector;
-            case BYTE:
-                return PrimitiveObjectInspectorFactory.writableByteObjectInspector;
-            case SHORT:
-                return PrimitiveObjectInspectorFactory.writableShortObjectInspector;
-            case INT:
-                return PrimitiveObjectInspectorFactory.writableIntObjectInspector;
-            case LONG:
-                return PrimitiveObjectInspectorFactory.writableLongObjectInspector;
-            case FLOAT:
-                return PrimitiveObjectInspectorFactory.writableFloatObjectInspector;
-            case DOUBLE:
-                return PrimitiveObjectInspectorFactory.writableDoubleObjectInspector;
-            case STRING:
-                return PrimitiveObjectInspectorFactory.writableStringObjectInspector;
-            case CHAR:
-                // return PrimitiveObjectInspectorFactory.writableHiveCharObjectInspector;
-                return new LazyHiveCharObjectInspector((CharTypeInfo) info);
-            case VARCHAR:
-                return new LazyHiveVarcharObjectInspector((VarcharTypeInfo) info);
-            case BINARY:
-                return PrimitiveObjectInspectorFactory.writableBinaryObjectInspector;
-            default:
-                throw new UnsupportedOperationException("Unsupported type: " + info);
+            switch (info.getCategory()) {
+                case LIST:
+                    Context.println("type1:" + info);
+                    TypeInfo elementInfo = ((ListTypeInfo)info).getListElementTypeInfo();
+                    return ObjectInspectorFactory.getStandardListObjectInspector(createObjectInspector(elementInfo));
+                case MAP:
+                    Context.println("type2:" + info);
+                    throw new UnsupportedOperationException("Unsupported type: " + info);
+                case STRUCT:
+                    Context.println("type3:" + info);
+                    throw new UnsupportedOperationException("Unsupported type: " + info);
+                case UNION:
+                    Context.println("type4:" + info);
+                    throw new UnsupportedOperationException("Unsupported type: " + info);
+                default:
+                    throw new UnsupportedOperationException("Unsupported type: " + info);
+            }
+        } else {
+            switch (((PrimitiveTypeInfo) info).getPrimitiveCategory()) {
+                case BOOLEAN:
+                    return PrimitiveObjectInspectorFactory.writableBooleanObjectInspector;
+                case BYTE:
+                    return PrimitiveObjectInspectorFactory.writableByteObjectInspector;
+                case SHORT:
+                    return PrimitiveObjectInspectorFactory.writableShortObjectInspector;
+                case INT:
+                    Context.println("type int!!!!");
+                    return PrimitiveObjectInspectorFactory.writableIntObjectInspector;
+                case LONG:
+                    return PrimitiveObjectInspectorFactory.writableLongObjectInspector;
+                case FLOAT:
+                    return PrimitiveObjectInspectorFactory.writableFloatObjectInspector;
+                case DOUBLE:
+                    return PrimitiveObjectInspectorFactory.writableDoubleObjectInspector;
+                case STRING:
+                    return PrimitiveObjectInspectorFactory.writableStringObjectInspector;
+                case CHAR:
+                    // return PrimitiveObjectInspectorFactory.writableHiveCharObjectInspector;
+                    return new LazyHiveCharObjectInspector((CharTypeInfo) info);
+                case VARCHAR:
+                    return new LazyHiveVarcharObjectInspector((VarcharTypeInfo) info);
+                case BINARY:
+                    return PrimitiveObjectInspectorFactory.writableBinaryObjectInspector;
+                case DATE:
+                    return PrimitiveObjectInspectorFactory.writableDateObjectInspector;
+                case TIMESTAMP:
+                    return PrimitiveObjectInspectorFactory.writableTimestampObjectInspector;
+                case DECIMAL:
+                    return PrimitiveObjectInspectorFactory.writableHiveDecimalObjectInspector;
+                default:
+                    throw new UnsupportedOperationException("Unsupported type: " + info);
+            }
         }
     }
 }

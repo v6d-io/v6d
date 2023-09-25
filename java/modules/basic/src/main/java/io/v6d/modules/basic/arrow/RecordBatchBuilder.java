@@ -17,6 +17,7 @@ package io.v6d.modules.basic.arrow;
 import static java.util.Objects.requireNonNull;
 
 import io.v6d.core.client.Client;
+import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -25,6 +26,9 @@ import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.*;
+
+import org.apache.arrow.vector.types.TimeUnit;
+import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.slf4j.Logger;
@@ -166,6 +170,21 @@ public class RecordBatchBuilder implements ObjectBuilder {
             return new Int8ArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.SmallInt)) {
             return new Int16ArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.Date)) {
+            return new DateArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.TimeStampMicro)) {
+            return new TimestampArrayBuilder(client, rows, TimeUnit.MICROSECOND);
+        } else if (field.getType().equals(Arrow.Type.TimeStampMilli)) {
+            return new TimestampArrayBuilder(client, rows, TimeUnit.MILLISECOND);
+        } else if (field.getType().equals(Arrow.Type.TimeStampNano)) {
+            return new TimestampArrayBuilder(client, rows, TimeUnit.NANOSECOND);
+        } else if (field.getType().equals(Arrow.Type.TimeStampSec)) {
+            return new TimestampArrayBuilder(client, rows, TimeUnit.SECOND);
+        } else if (field.getType() instanceof ArrowType.Decimal) {
+            ArrowType.Decimal decimal = (ArrowType.Decimal) field.getType();
+            return new DecimalArrayBuilder(client, rows, decimal.getPrecision(), decimal.getScale(), decimal.getBitWidth());
+        } else if (field.getType().equals(Arrow.Type.List)) {
+            return new ListArrayBuilder(client, rows, field.getChildren().get(0));
         } else {
             throw new VineyardException.NotImplemented(
                     "array builder for type " + field.getType() + " is not supported");

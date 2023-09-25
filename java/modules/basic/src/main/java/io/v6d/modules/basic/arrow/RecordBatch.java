@@ -46,6 +46,10 @@ public class RecordBatch extends Object {
         StringArray.instantiate();
         LargeStringArray.instantiate();
         NullArray.instantiate();
+        DateArray.instantiate();
+        TimestampArray.instantiate();
+        DecimalArray.instantiate();
+        ListArray.instantiate();
         ObjectFactory.getFactory().register("vineyard::RecordBatch", new RecordBatchResolver());
     }
 

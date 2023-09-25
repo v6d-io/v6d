@@ -167,8 +167,8 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
                     for (val batch : table.getBatches()) {
                         recordTotal += batch.getRowCount();
                         this.batches[this.recordBatchIndex++] = batch;
-                        schema = table.getSchema().getSchema();
                     }
+                    schema = table.getSchema().getSchema();
                 } catch (Exception e) {
                     // Skip some invalid file.
                     Context.println(
