@@ -6,7 +6,6 @@ set -o pipefail
 
 # python dependencies
 pip3 install -U "Pygments>=2.4.1"
-pip3 install -U "sphinx>=7.2.3"
 pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt
 
 # linters

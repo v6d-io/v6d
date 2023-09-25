@@ -16,7 +16,7 @@ pytest
 pytest-benchmark
 pytest-datafiles
 pytest-timeout
-sphinx>=7.2.3
+sphinx>=7.1.2
 sphinx-copybutton
 sphinx-panels
 sphinxemoji
