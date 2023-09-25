@@ -32,7 +32,7 @@ The unified memory abstractions provides the following utilities:
   :code:`syncFromGPU()`.
 
 Example
--------
+~~~~~~~
 
 .. note::
 
