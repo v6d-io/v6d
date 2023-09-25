@@ -345,7 +345,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                 if (fileStatus.isDirectory()) {
                     FileStatus[] fileStatusArray = fs.listStatus(path);
                     for (FileStatus s : fileStatusArray) {
-                        if (s.getPath().compareTo(filePath) == 0) {
+                        if (s.getPath().toString().compareTo(filePath.toString()) == 0) {
                             continue;
                         }
                         queue.add(s.getPath());

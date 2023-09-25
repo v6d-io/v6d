@@ -401,6 +401,11 @@ public class ColumnarDataBuilder {
         }
 
         @Override
+        void setObject(int rowId, Object value) {
+            setByte(rowId, (byte)value);
+        }
+
+        @Override
         final byte getByte(int rowId) {
             return accessor.get(rowId);
         }
@@ -730,7 +735,10 @@ public class ColumnarDataBuilder {
         void setObject(int rowId, Object value) {
             if (value instanceof String) {
                 this.setUTF8String(rowId, new Text((String) value));
-            } else {
+            } else if(value instanceof byte[]) {
+                this.setUTF8String(rowId, new Text((byte[]) value));
+            }
+            else {
                 this.setUTF8String(rowId, (Text) value);
             }
         }

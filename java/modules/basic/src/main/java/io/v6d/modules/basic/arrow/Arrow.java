@@ -29,6 +29,8 @@ public final class Arrow {
 
     public static class Type {
         public static final ArrowType Null = new ArrowType.Null();
+        public static final ArrowType TinyInt = new ArrowType.Int(8, true);
+        public static final ArrowType SmallInt = new ArrowType.Int(16, true);
         public static final ArrowType Int = new ArrowType.Int(32, true);
         public static final ArrowType UInt = new ArrowType.Int(32, false);
         public static final ArrowType Int64 = new ArrowType.Int(64, true);
@@ -49,6 +51,10 @@ public final class Arrow {
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.Null, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType Int =
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Arrow.Type.Int, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType TinyInt =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.TinyInt, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType SmallInt =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.SmallInt, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType UInt =
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.UInt, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType Int64 =

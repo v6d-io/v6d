@@ -14,6 +14,7 @@
  */
 package io.v6d.hive.ql.io;
 
+import io.v6d.core.client.Context;
 import io.v6d.modules.basic.arrow.Arrow;
 import io.v6d.modules.basic.columnar.ColumnarData;
 import java.io.DataInput;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.SettableStructObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.WritableBinaryObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.WritableStringObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.BaseCharTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.CharTypeInfo;
@@ -85,13 +87,19 @@ public class RecordWrapperWritable implements WritableComparable {
                     || Arrow.Type.LargeVarBinary.equals(dtype)) {
                 this.values[i] = new Text();
                 this.setters[i] = RecordWrapperWritable::setString;
+            } else if (Arrow.Type.TinyInt.equals(dtype)) {
+                this.values[i] = new ByteWritable();
+                this.setters[i] = RecordWrapperWritable::setByte;
+            } else if (Arrow.Type.SmallInt.equals(dtype)) {
+                this.values[i] = new org.apache.hadoop.hive.serde2.io.ShortWritable();
+                this.setters[i] = RecordWrapperWritable::setShort;
             } else {
                 throw new UnsupportedOperationException("Unsupported type: " + dtype);
             }
         }
     }
 
-    // for input format
+    // for output format
     public RecordWrapperWritable(List<TypeInfo> fieldTypes) {
         this.values = new Writable[fieldTypes.size()];
         this.nullIndicators = new boolean[fieldTypes.size()];
@@ -101,6 +109,7 @@ public class RecordWrapperWritable implements WritableComparable {
             if (info.getCategory() != ObjectInspector.Category.PRIMITIVE) {
                 throw new UnsupportedOperationException("Unsupported type: " + info);
             }
+            Context.println("type :" + info);
             switch (((PrimitiveTypeInfo) info).getPrimitiveCategory()) {
                 case BOOLEAN:
                     this.values[i] = new BooleanWritable();
@@ -133,8 +142,7 @@ public class RecordWrapperWritable implements WritableComparable {
                 case STRING:
                 case CHAR:
                 case VARCHAR:
-                    this.values[i] = new Text();
-                    this.setters[i] = RecordWrapperWritable::setString;
+                case BINARY:
                     this.values[i] = new Text();
                     this.setters[i] = RecordWrapperWritable::setString;
                     break;
@@ -202,6 +210,10 @@ public class RecordWrapperWritable implements WritableComparable {
                 result.init(data, 0, str.length());
             }
             return result;
+        } else if (oi instanceof WritableBinaryObjectInspector) {
+            byte[] bytes = ((Text) values[index]).getBytes();
+            BytesWritable result = new BytesWritable(bytes);
+            return result;
         } else {
             throw new UnsupportedOperationException("Unsupported type: " + oi.getClass());
         }
@@ -256,7 +268,7 @@ public class RecordWrapperWritable implements WritableComparable {
     }
 
     private static void setShort(Writable w, Object value) {
-        ((ShortWritable) w).set((short) value);
+        ((org.apache.hadoop.hive.serde2.io.ShortWritable) w).set((short) value);
     }
 
     private static void setInt(Writable w, Object value) {
@@ -451,6 +463,8 @@ public class RecordWrapperWritable implements WritableComparable {
                 return new LazyHiveCharObjectInspector((CharTypeInfo) info);
             case VARCHAR:
                 return new LazyHiveVarcharObjectInspector((VarcharTypeInfo) info);
+            case BINARY:
+                return PrimitiveObjectInspectorFactory.writableBinaryObjectInspector;
             default:
                 throw new UnsupportedOperationException("Unsupported type: " + info);
         }

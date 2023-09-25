@@ -37,6 +37,8 @@ public class RecordBatch extends Object {
     public static void instantiate() {
         Schema.instantiate();
         BooleanArray.instantiate();
+        Int8Array.instantiate();
+        Int16Array.instantiate();
         Int32Array.instantiate();
         Int64Array.instantiate();
         FloatArray.instantiate();

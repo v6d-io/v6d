@@ -162,6 +162,10 @@ public class RecordBatchBuilder implements ObjectBuilder {
             return new LargeStringArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.Null)) {
             return new NullArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.TinyInt)) {
+            return new Int8ArrayBuilder(client, rows);
+        } else if (field.getType().equals(Arrow.Type.SmallInt)) {
+            return new Int16ArrayBuilder(client, rows);
         } else {
             throw new VineyardException.NotImplemented(
                     "array builder for type " + field.getType() + " is not supported");
