@@ -126,3 +126,21 @@ Streams
 
 .. autoclass:: vineyard.io.recordbatch.RecordBatchStream
     :members:
+
+Interacting with the CSI Driver
+-------------------------------
+
+.. autofunction:: vineyard.csi.read
+.. autofunction:: vineyard.csi.write
+
+Vineyard Cli Tool
+-----------------
+
+You can also use the Python API to interact with internal
+`Vineyard Cli Tool`_.
+
+.. code-block:: bash
+
+    $ python -m vineyard.cli <command> [options]
+
+.. _Vineyard Cli Tool: https://v6d.io/notes/cloud-native/vineyardctl.html
