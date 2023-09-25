@@ -127,8 +127,8 @@ Streams
 .. autoclass:: vineyard.io.recordbatch.RecordBatchStream
     :members:
 
-CSI Driver
-----------
+Interacting with the CSI Driver
+-------------------------------
 
 .. autofunction:: vineyard.csi.read
 .. autofunction:: vineyard.csi.write
