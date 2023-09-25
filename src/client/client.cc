@@ -666,6 +666,20 @@ Status Client::GetGPUBuffers(const std::set<ObjectID>& ids, const bool unsafe,
   return Status::OK();
 }
 
+Status Client::GetGPUBuffer(const ObjectID id, const bool unsafe,
+                            GPUUnifiedAddress& gua) {
+  std::set<ObjectID> ids;
+  ids.insert(id);
+  std::map<ObjectID, GPUUnifiedAddress> guas;
+  RETURN_ON_ERROR(GetGPUBuffers(ids, unsafe, guas));
+  if (guas.empty()) {
+    return Status::ObjectNotExists("buffer not exists: " +
+                                   ObjectIDToString(id));
+  }
+  gua = guas.at(id);
+  return Status::OK();
+}
+
 Status Client::GetBuffer(const ObjectID id, std::shared_ptr<Buffer>& buffer) {
   std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
   RETURN_ON_ERROR(GetBuffers({id}, buffers));

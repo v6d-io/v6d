@@ -11,6 +11,7 @@ Data processing
    ./data-processing/python-sharedmemory.rst
    ./data-processing/distributed-learning.rst
    ./data-processing/accelerate-data-sharing-in-kedro.rst
+   ./data-processing/gpu-memory-sharing.rst
 
 In these comprehensive case studies, we demonstrate how to seamlessly integrate vineyard's
 capabilities with existing data-intensive tasks. By incorporating vineyard into complex
@@ -57,3 +58,13 @@ improvements in both performance and ease of use.
    Vineyard serves as the :code:`DataSet` backend for Kedro pipelines, enabling
    efficient data sharing between tasks without intrusive code modification, even
    when the pipeline is deployed to Kubernetes.
+
+   ---
+
+   .. link-button:: ./data-processing/gpu-memory-sharing
+      :type: ref
+      :text: GPU Memory Sharing
+      :classes: btn-block stretched-link
+   ^^^^^^^^^^^^
+   Vineyard supports sharing GPU memory in zero-copy manner, enabling efficient data sharing
+   between GPU-accelerated tasks.

@@ -79,17 +79,20 @@ int main(int argc, char** argv) {
   std::string ipc_socket = std::string(argv[1]);
   //connection test
   Client client;
-  VINEYARD_CHECK_OK(client.BasicIPCClient::Open(ipc_socket, StoreType::kDefault));
-  LOG(INFO) << "Connected to IPCServer: type kGPU" << ipc_socket;
+  VINEYARD_CHECK_OK(client.Connect(ipc_socket));
+  LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
+
   std::vector<std::string> data;
   data.emplace_back("Create Success.");
   data.emplace_back("hello world!");
+
   std::vector<ObjectID> oids(data.size());
   LOG(INFO) << "Create GPU Object tests\n"; 
-  create_gpu_objects(client, data, false, oids);
+  VINEYARD_CHECK_OK(create_gpu_objects(client, data, false, oids));
   LOG(INFO) << "Passed GPU create test...";
+
   LOG(INFO) << "Get GPU Object tests\n"; 
-  get_gpu_objects(client, data, oids, false);
+  VINEYARD_CHECK_OK(get_gpu_objects(client, data, oids, false));
   LOG(INFO) << "Passed GPU get test...";
   client.Disconnect();
 
