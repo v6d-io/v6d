@@ -13,6 +13,7 @@ Prerequisites
 - A kubernetes cluster with version >= 1.25.10. If you don't have one by hand, you can refer to the guide `Initialize Kubernetes Cluster`_ to create one.
 - Install the `Vineyardctl`_ by following the official guide.
 - Install the `Argo Workflow CLI`_ by following the official guide.
+- Install the kfp package with version < 2.0.0.
 
 Deploy the Vineyard Cluster
 ===========================
@@ -107,6 +108,14 @@ in the first step will be mapped to a volume. Notice, the volume used in any tas
 explicitly mounted to the corresponding path in the source code, and the storageclass_name 
 format of each VolumeOp is ``{vineyard-deployment-namespace}.{vineyard-deployment-name}.csi``.
 
+There are two ways to add the ``vineyard object`` VolumeOp to the pipeline's dependencies:
+
+- Each path in the source code is mapped to a volume, and each volume is mounted to the actual path
+in the source code. The benefit is that the source path does not need to be modified.
+- Create a volume for the paths with the same prefix in the source code. You can add the prefix ``/vineyard``
+for the paths in the source code, and mount a volume to the path ``/vineyard``. In this way, you can
+only create one volume for multiple paths/vineyard objects.
+
 You may get some insights from the modified pipeline ``pipeline-with-vineyard.py``. Then, we need to
 compile the pipeline to an argo-workflow yaml. To be compatible with benchmark test, we update the
 generated ``pipeline.yaml`` and ``pipeline-with-vineyard.yaml``.
@@ -189,11 +198,11 @@ Argo workflow duration
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
-| 8500 Mi    | 186s             | 169s          |
+| 8500 Mi    | 189s             | 164s          |
 +------------+------------------+---------------+
-| 12000 Mi   | 250s             | 203s          |
+| 12000 Mi   | 234s             | 199s          |
 +------------+------------------+---------------+
-| 15000 Mi   | 332s             | 286s          |
+| 15000 Mi   | 298s             | 252s          |
 +------------+------------------+---------------+
 
 
@@ -211,11 +220,11 @@ Actual execution time
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
-| 8500 Mi    | 139.3s           | 92.3s         |
+| 8500 Mi    | 142.2s           | 94.3s         |
 +------------+------------------+---------------+
-| 12000 Mi   | 204.3s           | 131.1s        |
+| 12000 Mi   | 191.2s           | 123.1s        |
 +------------+------------------+---------------+
-| 15000 Mi   | 289.3s           | 209.7s        |
+| 15000 Mi   | 253.5s           | 181.4s        |
 +------------+------------------+---------------+
 
 
@@ -229,11 +238,11 @@ Writing time
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
-| 8500 Mi    | 21s              | 5.4s          |
+| 8500 Mi    | 21.6s            | 5.5s          |
 +------------+------------------+---------------+
-| 12000 Mi   | 26s              | 7s            |
+| 12000 Mi   | 26.6s            | 6.8s          |
 +------------+------------------+---------------+
-| 15000 Mi   | 32.2s            | 9.4s          |
+| 15000 Mi   | 32.7s            | 9.2s          |
 +------------+------------------+---------------+
 
 
@@ -252,11 +261,11 @@ We delete the time of init data loading, and the results are as follows:
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
-| 8500 Mi    | 36.7s            | 0.02s         |
+| 8500 Mi    | 37.3s            | 0.04s         |
 +------------+------------------+---------------+
-| 12000 Mi   | 45.7s            | 0.02s         |
+| 12000 Mi   | 49.5s            | 0.04s         |
 +------------+------------------+---------------+
-| 15000 Mi   | 128.6s           | 0.04s         |
+| 15000 Mi   | 61.7s            | 0.04s         |
 +------------+------------------+---------------+
 
 Based on the above results, we can find that the read time of vineyard is

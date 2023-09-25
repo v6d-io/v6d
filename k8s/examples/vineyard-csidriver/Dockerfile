@@ -8,5 +8,3 @@ ARG APP
 ENV APP ${APP}
 
 COPY ${APP} /${APP}
-
-

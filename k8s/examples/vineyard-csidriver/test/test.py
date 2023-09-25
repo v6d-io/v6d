@@ -12,8 +12,8 @@ def test_model():
     with_vineyard = os.environ.get('WITH_VINEYARD', False)
     st = time.time()
     if with_vineyard:
-        x_test_data = vineyard.csi.read("/data/x_test.pkl")
-        y_test_data = vineyard.csi.read("/data/y_test.pkl")
+        x_test_data = vineyard.csi.read("/vineyard/data/x_test.pkl")
+        y_test_data = vineyard.csi.read("/vineyard/data/y_test.pkl")
     else:
         x_test_data = pd.read_pickle("/data/x_test.pkl")
         y_test_data = pd.read_pickle("/data/y_test.pkl")

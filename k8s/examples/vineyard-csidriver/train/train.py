@@ -9,12 +9,12 @@ import vineyard
 
 
 def train_model():
-    os.system('echo 3 > /proc/sys/vm/drop_caches')
+    os.system('sync; echo 3 > /proc/sys/vm/drop_caches')
     st = time.time()
     with_vineyard = os.environ.get('WITH_VINEYARD', False)
     if with_vineyard:
-        x_train_data = vineyard.csi.read("/data/x_train.pkl")
-        y_train_data = vineyard.csi.read("/data/y_train.pkl")
+        x_train_data = vineyard.csi.read("/vineyard/data/x_train.pkl")
+        y_train_data = vineyard.csi.read("/vineyard/data/y_train.pkl")
     else:
         x_train_data = pd.read_pickle("/data/x_train.pkl")
         y_train_data = pd.read_pickle("/data/y_train.pkl")

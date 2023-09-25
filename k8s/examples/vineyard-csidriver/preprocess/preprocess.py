@@ -61,10 +61,10 @@ def preprocess_data():
     st = time.time()
     with_vineyard = os.environ.get('WITH_VINEYARD', False)
     if with_vineyard:
-        vineyard.csi.write(X_train, "/data/x_train.pkl")
-        vineyard.csi.write(X_test, "/data/x_test.pkl")
-        vineyard.csi.write(y_train, "/data/y_train.pkl")
-        vineyard.csi.write(y_test, "/data/y_test.pkl")
+        vineyard.csi.write(X_train, "/vineyard/data/x_train.pkl")
+        vineyard.csi.write(X_test, "/vineyard/data/x_test.pkl")
+        vineyard.csi.write(y_train, "/vineyard/data/y_train.pkl")
+        vineyard.csi.write(y_test, "/vineyard/data/y_test.pkl")
     else:
         X_train.to_pickle('/data/x_train.pkl')
         X_test.to_pickle('/data/x_test.pkl')
