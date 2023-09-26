@@ -27,6 +27,7 @@ import (
 	gosdklog "github.com/v6d-io/v6d/go/vineyard/pkg/common/log"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/client"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/create"
+	"github.com/v6d-io/v6d/k8s/cmd/commands/csi"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/delete"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/deploy"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -47,7 +48,7 @@ var cmdLong = util.LongDesc(`
 
 var cmd = &cobra.Command{
 	Use:     "vineyardctl [command]",
-	Version: "v0.17.1",
+	Version: "v0.17.3",
 	Short:   "vineyardctl is the command-line tool for interact with the Vineyard Operator.",
 	Long:    cmdLong,
 }
@@ -74,6 +75,7 @@ func init() {
 	cmd.AddCommand(client.NewLsCmd())
 	cmd.AddCommand(client.NewGetCmd())
 	cmd.AddCommand(client.NewPutCmd())
+	cmd.AddCommand(csi.NewCsiCmd())
 }
 
 func main() {

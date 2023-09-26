@@ -12,7 +12,7 @@ pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.t
 pip3 install black isort flake8
 
 # build vineyard_client_python
-mkdir build
+mkdir -p build
 pushd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug \
          -DBUILD_SHARED_LIBS=ON \

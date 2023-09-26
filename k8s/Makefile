@@ -29,6 +29,7 @@ BUNDLE_METADATA_OPTS ?= $(BUNDLE_CHANNELS) $(BUNDLE_DEFAULT_CHANNEL)
 # Image URL to use all building/pushing image targets
 REGISTRY	:= vineyardcloudnative
 IMG 		?= $(REGISTRY)/vineyard-operator:$(VERSION)
+VINEYARD_CSI_IMAGE ?= $(REGISTRY)/vineyard-csi-driver:$(VERSION)
 
 temp=$(shell mktemp -d)
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
@@ -286,5 +287,6 @@ generate-helm-chart: helmify kustomize
 	cd ../charts && $(KUSTOMIZE) build ../k8s/config/default | $(HELMIFY) --cert-manager-as-subchart vineyard-operator && \
 	sed -i 's/\/var\/run\/vineyard-kubernetes\/{{.Namespace}}\/{{.Name}}/\/var\/run\/vineyard-kubernetes\/{{ \"{{.Namespace}}\/{{.Name}}\" }}/g' \
 	vineyard-operator/templates/vineyardd-crd.yaml && \
+	sed -i '/tag: latest/d' vineyard-operator/values.yaml && \
 	sed -i 's/certManager/cert-manager/g' vineyard-operator/values.yaml && \
 	sed -i '4i\  extraArgs:\n    - --enable-certificate-owner-ref=true' vineyard-operator/values.yaml

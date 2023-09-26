@@ -131,6 +131,7 @@ func (b *BestEffortStrategy) TrackingChunksByCRD() *BestEffortStrategy {
 	}
 	locations := b.GetLocationsByLocalObject(localObjects)
 	nchunks, nodes := b.GetObjectInfo(locations, len(localObjects), b.replica)
+
 	b.locations = locations
 	b.nchunks = nchunks
 	b.nodes = nodes

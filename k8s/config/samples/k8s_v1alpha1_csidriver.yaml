@@ -1,0 +1,10 @@
+apiVersion: k8s.v6d.io/v1alpha1
+kind: CSIDriver
+metadata:
+  name: csidriver-sample
+spec:
+  clusters:
+  - namespace: vineyard-system
+    name: vineyardd-sample
+  - namespace: default
+    name: vineyardd-sample

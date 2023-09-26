@@ -23,7 +23,6 @@ controllerManager:
   manager:
     image:
       repository: vineyardcloudnative/vineyard-operator
-      tag: latest
     imagePullPolicy: IfNotPresent
     resources:
       limits:

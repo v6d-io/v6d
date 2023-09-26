@@ -1,0 +1,112 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ .Name }}-csi-nodes
+  namespace: {{ .Namespace }}
+spec:
+  selector:
+    matchLabels:
+      app: {{ .Name }}-csi-nodes
+  template:
+    metadata:
+      labels:
+        app: {{ .Name }}-csi-nodes
+        app.vineyard.io/name: {{ .Name }}
+        app.vineyard.io/role: csi-nodes
+    spec:
+      containers:
+      - command:
+        - /vineyardctl
+        args:
+        - csi
+        - --endpoint=$(CSI_ENDPOINT)
+        - --nodeid=$(KUBE_NODE_NAME)
+        - --state-file-path=/csi/state
+        {{ if .Spec.EnableVerboseLog }}
+        - --verbose
+        {{ end }}
+        env:
+        - name: CSI_ENDPOINT
+          value: unix:///csi/csi.sock
+        - name: KUBE_NODE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: spec.nodeName
+        image: {{ .Spec.Image }}
+        imagePullPolicy: {{ .Spec.ImagePullPolicy }}
+        name: vineyard-csi-driver
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /var/lib/kubelet
+          mountPropagation: Bidirectional
+          name: kubelet-dir
+        - mountPath: /csi
+          name: plugin-dir
+        - mountPath: /dev
+          name: device-dir
+        - mountPath: /var/run/vineyard-kubernetes
+          name: vineyard-sockets
+      - args:
+        - --csi-address=$(ADDRESS)
+        - --kubelet-registration-path=$(DRIVER_REG_SOCK_PATH)
+        - --v=5
+        env:
+        - name: ADDRESS
+          value: /csi/csi.sock
+        - name: DRIVER_REG_SOCK_PATH
+          value: /var/lib/kubelet/plugins/csi.vineyard.v6d.io/csi.sock
+        image: {{ .Spec.Sidecar.NodeRegistrarImage }}
+        imagePullPolicy: {{ .Spec.Sidecar.ImagePullPolicy }}
+        lifecycle:
+          preStop:
+            exec:
+              command:
+              - /bin/sh
+              - -c
+              - rm -rf /registration/csi.vineyard.v6d.io-reg.sock /csi/csi.sock
+        name: node-driver-registrar
+        volumeMounts:
+        - mountPath: /csi
+          name: plugin-dir
+        - mountPath: /registration
+          name: registration-dir
+        - mountPath: /var/run/vineyard-kubernetes
+          name: vineyard-sockets
+      - args:
+        - --csi-address=/csi/csi.sock
+        - --v=5
+        image: {{ .Spec.Sidecar.LivenessProbeImage }}
+        imagePullPolicy: {{ .Spec.Sidecar.ImagePullPolicy }}
+        name: liveness-probe
+        volumeMounts:
+        - mountPath: /csi
+          name: plugin-dir
+        - mountPath: /var/run/vineyard-kubernetes
+          name: vineyard-sockets
+      {{- if .Spec.EnableToleration }}
+      tolerations:
+        - operator: Exists
+      {{- end }}
+      volumes:
+      - hostPath:
+          path: /var/lib/kubelet
+          type: Directory
+        name: kubelet-dir
+      - hostPath:
+          path: /var/lib/kubelet/plugins/csi.vineyard.v6d.io/
+          type: DirectoryOrCreate
+        name: plugin-dir
+      - hostPath:
+          path: /var/lib/kubelet/plugins_registry/
+          type: Directory
+        name: registration-dir
+      - hostPath:
+          path: /dev
+          type: Directory
+        name: device-dir
+      - hostPath:
+          path: /var/run/vineyard-kubernetes
+          type: Directory
+        name: vineyard-sockets

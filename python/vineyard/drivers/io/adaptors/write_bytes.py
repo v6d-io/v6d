@@ -22,6 +22,7 @@ import logging
 import sys
 
 import fsspec
+from fsspec.core import get_fs_token_paths
 
 import vineyard
 from vineyard.io.byte import ByteStream
@@ -73,7 +74,13 @@ def write_bytes(
     instream: ByteStream = streams[proc_index]
     try:
         reader = instream.open_reader(client)
-        of = fsspec.open(f"{path}_{proc_index}", "wb", **storage_options)
+
+        fs, _, _ = get_fs_token_paths(
+            f"{path}_{proc_index}", storage_options=storage_options
+        )
+        if hasattr(fs, 'auto_mkdir'):
+            fs.auto_mkdir = True
+        of = fs.open(f"{path}_{proc_index}", "wb", **storage_options)
     except Exception:  # pylint: disable=broad-except
         report_exception()
         sys.exit(-1)

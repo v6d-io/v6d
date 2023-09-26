@@ -16,6 +16,7 @@ maintainers are listed in the [GOVERNANCE.md](GOVERNANCE.md) file.
 | Siyuan Zhang | [siyuan0322](https://github.com/siyuan0322)     | Alibaba     | [siyuanzhang.zsy@alibaba-inc.com](mailto:siyuanzhang.zsy@alibaba-inc.com) |
 | Diwen Zhu    | [andydiwenzhu](https://github.com/andydiwenzhu) | Alibaba     | [diwen.zdw@alibaba-inc.com](mailto:diwen.zdw@alibaba-inc.com)             |
 | Shumin Yuan  | [vegetableysm](https://github.com/vegetableysm) | Alibaba     | [yuanshumin.ysm@alibaba-inc.com](mailto:yuanshumin.ysm@alibaba-inc.com)   |
+| Denghao Li  | [lidh15](https://github.com/lidh15)              | PingAn Tech | [lidhrandom@gmail.com](mailto:lidhrandom@gmail.com)                       |
 
 ## Project Committers
 

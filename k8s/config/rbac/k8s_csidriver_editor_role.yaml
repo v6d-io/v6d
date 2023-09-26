@@ -1,0 +1,24 @@
+# permissions for end users to edit csidrivers.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: csidriver-editor-role
+rules:
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - csidrivers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - k8s.v6d.io
+  resources:
+  - csidrivers/status
+  verbs:
+  - get

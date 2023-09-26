@@ -1,0 +1,106 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: {{ .Name }}-csi-driver
+  namespace: {{ .Namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Name }}-csi-driver
+  template:
+    metadata:
+      labels:
+        app: {{ .Name }}-csi-driver
+        app.vineyard.io/name: {{ .Name }}
+        app.vineyard.io/role: csi-driver
+    spec:
+      containers:
+        - name: vineyard-csi-driver
+          image: {{ .Spec.Image }}
+          imagePullPolicy: {{ .Spec.ImagePullPolicy }}
+          command:
+          - /vineyardctl
+          args:
+          - csi
+          - --endpoint=$(CSI_ENDPOINT)
+          - --nodeid=$(KUBE_NODE_NAME)
+          - --state-file-path=/csi/state
+          {{ if .Spec.EnableVerboseLog }}
+          - --verbose
+          {{ end }}
+          env:
+            - name: CSI_ENDPOINT
+              value: unix:///csi/csi.sock
+            - name: KUBE_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: spec.nodeName
+          securityContext:
+            privileged: true
+          volumeMounts:
+            - name: kubelet-dir
+              mountPath: /var/lib/kubelet
+              mountPropagation: "Bidirectional"
+            - name: plugin-dir
+              mountPath: /csi
+            - name: device-dir
+              mountPath: /dev
+        #Sidecar: livenessprobe
+        - name: liveness-probe
+          image: {{ .Spec.Sidecar.LivenessProbeImage }}
+          imagePullPolicy: {{ .Spec.Sidecar.ImagePullPolicy }}
+          args:
+            - "--csi-address=/csi/csi.sock"
+            - "--v=5"
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+        #Sidecar: csi-provisioner
+        - name: csi-provisioner
+          image: {{ .Spec.Sidecar.ProvisionerImage }}
+          args:
+            - "--csi-address=$(ADDRESS)"
+            - "--v=5"
+            {{- if .Spec.Sidecar.EnableTopology }}
+            - "--feature-gates=Topology=True"
+            {{- end }}
+            - "--extra-create-metadata"
+          env:
+            - name: ADDRESS
+              value: unix:///csi/csi.sock
+          imagePullPolicy: {{ .Spec.Sidecar.ImagePullPolicy }}
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+        #Sidecar: csi-attacher
+        - name: csi-attacher
+          image: {{ .Spec.Sidecar.AttacherImage }}
+          args:
+            - "--v=5"
+            - "--csi-address=$(ADDRESS)"
+          env:
+            - name: ADDRESS
+              value: /csi/csi.sock
+          imagePullPolicy: {{ .Spec.Sidecar.ImagePullPolicy }}
+          volumeMounts:
+            - name: plugin-dir
+              mountPath: /csi
+      volumes:
+        - name: kubelet-dir
+          hostPath:
+            path: /var/lib/kubelet
+            type: Directory
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/csi.v6d.io/
+            type: DirectoryOrCreate
+        - name: registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry/
+            type: Directory
+        - name: device-dir
+          hostPath:
+            path: /dev
+            type: Directory

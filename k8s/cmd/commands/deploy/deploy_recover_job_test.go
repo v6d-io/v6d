@@ -17,7 +17,6 @@ package deploy
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -314,7 +313,6 @@ func Test_getRecoverObjectsFromTemplate_third(t *testing.T) {
 			}
 			for i := range got {
 				if !reflect.DeepEqual(*got[i], *(tt.want)[i]) {
-					fmt.Println(*got[i])
 					t.Errorf("getRecoverObjectsFromTemplate() = %+v, want %+v", got, tt.want)
 				}
 			}

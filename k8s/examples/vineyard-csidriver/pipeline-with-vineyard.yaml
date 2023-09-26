@@ -1,0 +1,149 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: machine-learning-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.0, pipelines.kubeflow.org/pipeline_compilation_time: '2023-09-21T19:11:42.500362',
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "An example pipeline that
+      trains and logs a regression model.", "name": "Machine learning Pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.0}
+spec:
+  entrypoint: machine-learning-pipeline
+  templates:
+  - name: machine-learning-pipeline
+    dag:
+      tasks:
+      - name: preprocess-data
+        template: preprocess-data
+        dependencies: [vineyard-objects]
+        arguments:
+          parameters:
+          - {name: vineyard-objects-name, value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'}
+      - name: test-data
+        template: test-data
+        dependencies: [preprocess-data, train-data, vineyard-objects]
+        arguments:
+          parameters:
+          - {name: vineyard-objects-name, value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'}
+      - name: train-data
+        template: train-data
+        dependencies: [preprocess-data, vineyard-objects]
+        arguments:
+          parameters:
+          - {name: vineyard-objects-name, value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'}
+      - {name: vineyard-objects, template: vineyard-objects}
+  - name: preprocess-data
+    container:
+      command: [python3, preprocess.py]
+      image: preprocess-data
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        privileged: true
+      env:
+      - name: WITH_VINEYARD
+        value: "true"
+      - name: DATA_MULTIPLIER
+        value: "{{workflow.parameters.data_multiplier}}"
+      volumeMounts:
+      - {mountPath: /data, name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4}
+      - {mountPath: /vineyard/data, name: vineyard-objects}
+    inputs:
+      parameters:
+      - {name: vineyard-objects-name}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.0
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+    volumes:
+    - name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4
+      persistentVolumeClaim: {claimName: benchmark-data}
+    - name: vineyard-objects
+      persistentVolumeClaim: {claimName: '{{inputs.parameters.vineyard-objects-name}}'}
+  - name: test-data
+    container:
+      command: [python3, test.py]
+      image: test-data
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        privileged: true
+      env:
+      - name: WITH_VINEYARD
+        value: "true"
+      - name: DATA_MULTIPLIER
+        value: "{{workflow.parameters.data_multiplier}}"
+      volumeMounts:
+      - {mountPath: /data, name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4}
+      - {mountPath: /vineyard/data, name: vineyard-objects}
+    inputs:
+      parameters:
+      - {name: vineyard-objects-name}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.0
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+    volumes:
+    - name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4
+      persistentVolumeClaim: {claimName: benchmark-data}
+    - name: vineyard-objects
+      persistentVolumeClaim: {claimName: '{{inputs.parameters.vineyard-objects-name}}'}
+  - name: train-data
+    container:
+      command: [python3, train.py]
+      image: train-data
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        privileged: true
+      env:
+      - name: WITH_VINEYARD
+        value: "true"
+      - name: DATA_MULTIPLIER
+        value: "{{workflow.parameters.data_multiplier}}"
+      volumeMounts:
+      - {mountPath: /data, name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4}
+      - {mountPath: /vineyard/data, name: vineyard-objects}
+    inputs:
+      parameters:
+      - {name: vineyard-objects-name}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.0
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+    volumes:
+    - name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4
+      persistentVolumeClaim: {claimName: benchmark-data}
+    - name: vineyard-objects
+      persistentVolumeClaim: {claimName: '{{inputs.parameters.vineyard-objects-name}}'}
+  - name: vineyard-objects
+    resource:
+      action: create
+      setOwnerReference: true
+      manifest: |
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: '{{workflow.name}}-vineyard-objects-pvc'
+        spec:
+          accessModes:
+          - ReadWriteMany
+          resources:
+            requests:
+              storage: 1Mi
+          storageClassName: vineyard-system.vineyardd-sample.csi
+    outputs:
+      parameters:
+      - name: vineyard-objects-manifest
+        valueFrom: {jsonPath: '{}'}
+      - name: vineyard-objects-name
+        valueFrom: {jsonPath: '{.metadata.name}'}
+      - name: vineyard-objects-size
+        valueFrom: {jsonPath: '{.status.capacity.storage}'}
+    metadata:
+      labels:
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.0
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+  arguments:
+    parameters: []
+  serviceAccountName: pipeline-runner

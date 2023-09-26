@@ -25,6 +25,7 @@ import pyarrow as pa
 
 import cloudpickle
 import fsspec
+from fsspec.core import get_fs_token_paths
 
 import vineyard
 from vineyard.io.dataframe import DataframeStream
@@ -59,7 +60,12 @@ def write_orc(
     chunk_hook = write_options.get('chunk_hook', None)
 
     writer = None
-    with fsspec.open(f"{path}_{proc_index}", "wb", **storage_options) as fp:
+    fs, _, _ = get_fs_token_paths(
+        f"{path}_{proc_index}", storage_options=storage_options
+    )
+    if hasattr(fs, 'auto_mkdir'):
+        fs.auto_mkdir = True
+    with fs.open(f"{path}_{proc_index}", "wb", **storage_options) as fp:
         while True:
             try:
                 batch = reader.next()

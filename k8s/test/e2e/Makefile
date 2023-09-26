@@ -407,7 +407,8 @@ unittest: prepare-e2e-test build-local-cluster load-vineyardd-image
 	@make -C ${E2E_DIR} install-vineyard-operator
 	@echo "Running vineyardctl unit test.." 
 # run all unit test except deploy and scheduler in parallel
-	@export KUBECONFIG=/tmp/e2e-k8s.config && cd ${CMD_DIR}/commands && go test `go list ./... | grep -Ev "deploy|schedule"`
+# dsiable vineyard csi driver test here
+	@export KUBECONFIG=/tmp/e2e-k8s.config && cd ${CMD_DIR}/commands && go test `go list ./... | grep -Ev "deploy|schedule|csi"`
 # deploy test
 	@export KUBECONFIG="/tmp/e2e-k8s.config" && cd ${CMD_DIR}/commands/deploy && \
 		go test -run first && go test -run second && go test -run third

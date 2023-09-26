@@ -790,12 +790,23 @@ class Client final : public BasicIPCClient,
    * @brief Get a set of blobs from vineyard server. See also `GetBuffer`.
    *
    * @param ids Object ids for the blobs to get.
-   * @param buffers: The result result cudaIpcMemhandles related to GPU blobs.
+   * @param GUAs: The result unified memory objects related to GPU blobs.
    *
    * @return Status that indicates whether the get action has succeeded.
    */
   Status GetGPUBuffers(const std::set<ObjectID>& ids, const bool unsafe,
                        std::map<ObjectID, GPUUnifiedAddress>& GUAs);
+
+  /**
+   * @brief Get a single GPU blob from vineyard server. See also `GetBuffer`.
+   *
+   * @param id Object id for the blob to get.
+   * @param buffer: The result unified memory object related to the GPU blob.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
+  Status GetGPUBuffer(const ObjectID id, const bool unsafe,
+                      GPUUnifiedAddress& gua);
 
  protected:
   /**

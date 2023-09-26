@@ -13,11 +13,12 @@ limitations under the License.
 package k8s
 
 import (
+	"io"
 	"path/filepath"
 	"testing"
+	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/assert"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -27,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	k8sv1alpha1 "github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -37,16 +39,11 @@ var cfg *rest.Config
 var k8sClient client.Client
 var testEnv *envtest.Environment
 
-func TestAPIs(t *testing.T) {
-	RegisterFailHandler(Fail)
-
-	RunSpecs(t, "Controller Suite")
-}
-
-var _ = BeforeSuite(func() {
+func Test_controller(t *testing.T) {
+	var GinkgoWriter io.Writer
 	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
 
-	By("bootstrapping test environment")
+	log.Info("Bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
 		ErrorIfCRDPathMissing: true,
@@ -55,22 +52,20 @@ var _ = BeforeSuite(func() {
 	var err error
 	// cfg is defined in this file globally.
 	cfg, err = testEnv.Start()
-	Expect(err).NotTo(HaveOccurred())
-	Expect(cfg).NotTo(BeNil())
+	assert.NoError(t, err)
+	assert.NotNil(t, cfg)
 
 	err = k8sv1alpha1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
+	assert.NoError(t, err)
 
 	//+kubebuilder:scaffold:scheme
 
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
-	Expect(err).NotTo(HaveOccurred())
-	Expect(k8sClient).NotTo(BeNil())
+	assert.NoError(t, err)
+	assert.NotNil(t, k8sClient)
 
-}, 60)
-
-var _ = AfterSuite(func() {
-	By("tearing down the test environment")
-	err := testEnv.Stop()
-	Expect(err).NotTo(HaveOccurred())
-})
+	time.Sleep(1 * time.Second)
+	log.Info("tearing down the test environment")
+	err = testEnv.Stop()
+	assert.NoError(t, err)
+}

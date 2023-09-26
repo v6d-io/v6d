@@ -11,6 +11,7 @@ metadata:
   name: controller-manager
   namespace: system
   labels:
+    k8s.v6d.io/instance: vineyard-operator
     control-plane: controller-manager
 spec:
   selector:

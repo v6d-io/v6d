@@ -16,10 +16,11 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"github.com/v6d-io/v6d/k8s/pkg/log"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+
+	"github.com/v6d-io/v6d/k8s/pkg/log"
 )
 
 // log is for logging in this package.
