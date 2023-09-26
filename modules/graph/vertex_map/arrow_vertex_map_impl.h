@@ -20,17 +20,23 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "basic/ds/arrow.h"
+#include "basic/ds/arrow_utils.h"
 #include "basic/ds/hashmap.h"
+#include "basic/ds/hashmap.vineyard.h"
 #include "client/client.h"
-#include "common/util/env.h"
 #include "common/util/functions.h"
+#include "common/util/status.h"
 #include "common/util/typename.h"
 
+#include "common/util/uuid.h"
+#include "flat_hash_map/flat_hash_map.hpp"
 #include "graph/fragment/property_graph_types.h"
+#include "graph/utils/error.h"
 #include "graph/utils/thread_group.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
 
@@ -232,6 +238,7 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::AddVertices(
         oid_arrays_map) {
   int extra_label_num = oid_arrays_map.size();
   std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>> oid_arrays;
+  // oid
   oid_arrays.resize(extra_label_num);
   for (auto& pair : oid_arrays_map) {
     oid_arrays[pair.first - label_num_] = pair.second;
@@ -240,14 +247,40 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::AddVertices(
 }
 
 template <typename OID_T, typename VID_T>
+ObjectID ArrowVertexMap<OID_T, VID_T>::UpdateLabelVertexMap(
+    Client& client, PropertyGraphSchema::LabelId label_id,
+    const std::vector<std::shared_ptr<oid_array_t>>& oid_list) {
+  std::vector<std::vector<std::shared_ptr<oid_array_t>>> arrays(fnum_);
+  for (size_t j = 0; j < fnum_; ++j) {
+    arrays[j] = {oid_list[j]};
+  }
+  return updateLabelVertexMap(client, label_id, std::move(arrays));
+}
+
+template <typename OID_T, typename VID_T>
+ObjectID ArrowVertexMap<OID_T, VID_T>::UpdateLabelVertexMap(
+    Client& client, PropertyGraphSchema::LabelId label_id,
+    const std::vector<std::shared_ptr<arrow::ChunkedArray>>& oid_list) {
+  std::vector<std::vector<std::shared_ptr<oid_array_t>>> arrays(fnum_);
+  for (size_t j = 0; j < fnum_; ++j) {
+    for (auto const& chunk : oid_list[j]->chunks()) {
+      arrays[j].emplace_back(std::dynamic_pointer_cast<oid_array_t>(chunk));
+    }
+  }
+  return updateLabelVertexMap(client, label_id, std::move(arrays));
+}
+
+template <typename OID_T, typename VID_T>
 ObjectID ArrowVertexMap<OID_T, VID_T>::AddNewVertexLabels(
     Client& client,
     std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays) {
+  // oid_array.size() == extra_label_num
   std::vector<std::vector<std::vector<std::shared_ptr<oid_array_t>>>> arrays(
       oid_arrays.size());
   for (size_t i = 0; i < oid_arrays.size(); ++i) {
     arrays[i].resize(fnum_);
     for (size_t j = 0; j < fnum_; ++j) {
+      // jth worker stores ith extra_label at which worker
       arrays[i][j] = {oid_arrays[i][j]};
     }
   }
@@ -258,6 +291,11 @@ template <typename OID_T, typename VID_T>
 ObjectID ArrowVertexMap<OID_T, VID_T>::AddNewVertexLabels(
     Client& client,
     std::vector<std::vector<std::shared_ptr<arrow::ChunkedArray>>> oid_arrays) {
+  // oid_arrays.size() equals to newly added label size
+  // arrays[i][j][k]:
+  // i newly added label size
+  // j current worker id
+  // k oids loaded by current worker
   std::vector<std::vector<std::vector<std::shared_ptr<oid_array_t>>>> arrays(
       oid_arrays.size());
   for (size_t i = 0; i < oid_arrays.size(); ++i) {
@@ -281,8 +319,9 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::addNewVertexLabels(
       typename InternalType<oid_t>::vineyard_array_type;
 
   label_id_t extra_label_num = oid_arrays.size();
-
+  // vineyard every worker has its own oid_array
   std::vector<std::vector<vineyard_oid_array_t>> vy_oid_arrays;
+  // object_id to global_id
   std::vector<std::vector<vineyard::Hashmap<oid_t, vid_t>>> vy_o2g;
   int total_label_num = label_num_ + extra_label_num;
   vy_oid_arrays.resize(fnum_);
@@ -302,7 +341,6 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::addNewVertexLabels(
       RETURN_ON_ERROR(array_builder.Seal(client, object));
       varray = std::dynamic_pointer_cast<vineyard_oid_array_t>(object);
       vy_oid_arrays[fid][label - label_num_] = *varray;
-
       // release the reference
       oid_arrays[label - label_num_][fid].clear();
     }
@@ -376,6 +414,139 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::addNewVertexLabels(
 
         new_meta.AddMember(map_name, vy_o2g[fid][label - label_num_].meta());
         nbytes += vy_o2g[fid][label - label_num_].nbytes();
+      }
+    }
+  }
+
+  new_meta.SetNBytes(nbytes);
+  ObjectID ret;
+  VINEYARD_CHECK_OK(client.CreateMetaData(new_meta, ret));
+  VLOG(100) << "vertex map memory usage: "
+            << prettyprint_memory_size(new_meta.MemoryUsage());
+  return ret;
+}
+
+template <typename OID_T, typename VID_T>
+ObjectID ArrowVertexMap<OID_T, VID_T>::updateLabelVertexMap(
+    Client& client, PropertyGraphSchema::LabelId label_id,
+    std::vector<std::vector<std::shared_ptr<oid_array_t>>> oid_arrays) {
+  using vineyard_oid_array_t =
+      typename InternalType<oid_t>::vineyard_array_type;
+  std::vector<vineyard_oid_array_t> vy_oid_array(fnum_);
+  std::vector<vineyard::Hashmap<oid_t, vid_t>> vy_o2g(fnum_);
+  int total_label_num = label_num_;
+  // every worker should update vm using their own oid_array
+  auto update_vm_and_seal =
+      [this, &label_id, &client, &oid_arrays, &vy_oid_array, &vy_o2g](
+          const label_id_t label, const fid_t fid) -> Status {
+    std::shared_ptr<Object> object;
+    std::shared_ptr<vineyard_oid_array_t> varray;
+    // get the length of previous array for gid offset
+    std::shared_ptr<oid_array_t> prev_array = this->GetOidArray(fid, label);
+    size_t offset = prev_array->length();
+    std::vector<std::shared_ptr<oid_array_t>> incremental_array;
+
+    std::shared_ptr<oid_array_t> array_to_add;
+    arrow::MemoryPool* pool = arrow::default_memory_pool();
+    ArrowBuilderType<OID_T> builder(pool);
+    std::unordered_map<typename InternalType<oid_t>::type, int64_t> prev_oids;
+    // TODO: here need a review again.
+    for (int64_t i = 0; i < prev_array->length(); ++i) {
+      prev_oids[prev_array->GetView(i)] = i;
+    }
+    for (int i = 0; i < oid_arrays[fid].size(); ++i) {
+      for (int64_t j = 0; j < oid_arrays[fid][i]->length(); ++j) {
+        if (prev_oids.find(oid_arrays[fid][i]->GetView(j)) == prev_oids.end()) {
+          builder.Append(oid_arrays[fid][i]->GetView(j));
+        }
+      }
+    }
+    ARROW_CHECK_OK(builder.Finish(&array_to_add));
+
+    incremental_array.push_back(prev_array);
+    incremental_array.push_back(array_to_add);
+    oid_arrays[fid].clear();
+    {
+      typename InternalType<oid_t>::vineyard_builder_type array_builder(
+          client, std::move(incremental_array));
+      RETURN_ON_ERROR(array_builder.Seal(client, object));
+      varray = std::dynamic_pointer_cast<vineyard_oid_array_t>(object);
+      vy_oid_array[fid] = *varray;
+      // release the reference
+      incremental_array.clear();
+    }
+    {
+      vineyard::HashmapBuilder<oid_t, vid_t> builder(client);
+      builder.AssociateDataBuffer(varray->GetBuffer());
+
+      auto array = varray->GetArray();
+      vid_t cur_gid = id_parser_.GenerateId(fid, label, offset);
+      int64_t vnum = array->length();
+      builder.reserve(static_cast<size_t>(vnum));
+      for (int64_t k = 0; k < vnum; ++k) {
+        // check whether has been added before
+        if (o2g_[fid][label_id].find(array->GetView(k)) !=
+            o2g_[fid][label_id].end()) {
+          auto it = o2g_[fid][label_id].find(array->GetView(k));
+          if (it != o2g_[fid][label_id].end()) {
+            builder.emplace(array->GetView(k), it->second);
+          }
+          continue;
+        }
+        if (!builder.emplace(array->GetView(k), cur_gid)) {
+          LOG(WARNING)
+              << "The vertex '" << array->GetView(k) << "' has been added "
+              << "more than once, please double check your vertices data";
+        }
+        ++cur_gid;
+      }
+      RETURN_ON_ERROR(builder.Seal(client, object));
+      vy_o2g[fid] =
+          *std::dynamic_pointer_cast<vineyard::Hashmap<oid_t, vid_t>>(object);
+    }
+    return Status::OK();
+  };
+
+  ThreadGroup tg(
+      (static_cast<fid_t>(std::thread::hardware_concurrency()) + (fnum_ - 1)) /
+      fnum_);
+  // fn
+  for (fid_t fid = 0; fid < fnum_; ++fid) {
+    tg.AddTask(update_vm_and_seal, label_id, fid);
+  }
+  // check Status
+  Status status;
+  for (auto const& s : tg.TakeResults()) {
+    status += s;
+  }
+  VINEYARD_CHECK_OK(status);
+
+  vineyard::ObjectMeta old_meta, new_meta;
+  VINEYARD_CHECK_OK(client.GetMetaData(this->id(), old_meta));
+  new_meta.SetTypeName(type_name<ArrowVertexMap<oid_t, vid_t>>());
+  new_meta.AddKeyValue("fnum", fnum_);
+  new_meta.AddKeyValue("label_num", total_label_num);
+
+  size_t nbytes = 0;
+  for (fid_t fid = 0; fid < fnum_; ++fid) {
+    for (label_id_t label = 0; label < total_label_num; ++label) {
+      std::string array_name =
+          "oid_arrays_" + std::to_string(fid) + "_" + std::to_string(label);
+      std::string map_name =
+          "o2g_" + std::to_string(fid) + "_" + std::to_string(label);
+      if (label != label_id) {
+        auto array_meta = old_meta.GetMemberMeta(array_name);
+        new_meta.AddMember(array_name, array_meta);
+        nbytes += array_meta.GetNBytes();
+        auto map_meta = old_meta.GetMemberMeta(map_name);
+        new_meta.AddMember(map_name, map_meta);
+        nbytes += map_meta.GetNBytes();
+      } else {
+        new_meta.AddMember(array_name, vy_oid_array[fid].meta());
+        nbytes += vy_oid_array[fid].nbytes();
+
+        new_meta.AddMember(map_name, vy_o2g[fid].meta());
+        nbytes += vy_o2g[fid].nbytes();
       }
     }
   }
@@ -592,7 +763,6 @@ BasicArrowVertexMapBuilder<OID_T, VID_T>::BasicArrowVertexMapBuilder(
   id_parser_.Init(fnum_, label_num_);
   use_perfect_hash_ = use_perfect_hash;
 }
-
 template <typename OID_T, typename VID_T>
 vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
     vineyard::Client& client) {
@@ -619,7 +789,6 @@ vineyard::Status BasicArrowVertexMapBuilder<OID_T, VID_T>::Build(
       if (!use_perfect_hash_) {
         vineyard::HashmapBuilder<oid_t, vid_t> builder(client);
         builder.AssociateDataBuffer(varray->GetBuffer());
-
         auto array = varray->GetArray();
         vid_t cur_gid = id_parser_.GenerateId(fid, label, 0);
         int64_t vnum = array->length();

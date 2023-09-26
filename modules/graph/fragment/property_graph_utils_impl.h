@@ -25,6 +25,7 @@ limitations under the License.
 #include "common/util/functions.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/fragment/property_graph_utils.h"
+#include "graph/utils/error.h"
 
 namespace vineyard {
 
@@ -234,6 +235,8 @@ boost::leaf::result<void> generate_directed_csr(
   using nbr_unit_t = property_graph_utils::NbrUnit<VID_T, EID_T>;
 
   int64_t num_chunks = src_chunks.size();
+  // compute the outgoing degrees of src vertices
+  // degree row: vertex_label_num  col: all other vertex this vertex points to
   std::vector<std::vector<int>> degree(vertex_label_num);
   std::vector<int64_t> actual_edge_num(vertex_label_num, 0);
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
@@ -248,6 +251,8 @@ boost::leaf::result<void> generate_directed_csr(
 
         for (int64_t i = 0; i < src_array->length(); ++i) {
           VID_T src_id = src_list_ptr[i];
+          // if src_id in the src_array, means it must have a dst
+          // so we need to add the out_degree of src_id
           grape::atomic_add(
               degree[parser.GetLabelId(src_id)][parser.GetOffset(src_id)], 1);
         }
@@ -272,6 +277,8 @@ boost::leaf::result<void> generate_directed_csr(
         std::make_shared<FixedInt64Builder>(client, tvnum + 1);
     memcpy(edge_offsets[v_label]->data(), offset_vec.data(),
            (tvnum + 1) * sizeof(int64_t));
+    // due to prefix sum, offset_vec[tvnum] sums up all the offsets
+    // and finally got the real edge number
     actual_edge_num[v_label] = offset_vec[tvnum];
   }
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {

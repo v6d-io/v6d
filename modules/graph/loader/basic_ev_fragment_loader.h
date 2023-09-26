@@ -24,10 +24,12 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "common/util/uuid.h"
 #include "grape/worker/comm_spec.h"
 
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/arrow_fragment_group.h"
+#include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/utils/table_pipeline.h"
 #include "graph/vertex_map/arrow_local_vertex_map.h"
@@ -88,8 +90,59 @@ class BasicEVFragmentLoader {
   boost::leaf::result<void> AddVertexTable(
       const std::string& label, std::shared_ptr<arrow::Table> vertex_table);
 
+  /**
+   * @brief construct output_vertex_table for addVerticesToFragment usage
+   *
+   * @param vm_id the vm needs to be updated
+   * @return
+   */
   boost::leaf::result<void> ConstructVertices(
       ObjectID vm_id = InvalidObjectID());
+
+  /**
+   * @brief reconstruct vertex map for a specific label
+   *
+   * @param vm_id the vm needs to be updated
+   * @param label_id the label id of the vertex table
+   * @return
+   */
+  boost::leaf::result<void> ProcessIncrementalVertices(
+      ObjectID vm_id, PropertyGraphSchema::LabelId label_id = -1);
+
+  /**
+   * @brief Add incremental(means add new data to existed label)
+   * vertex table to fragment
+   *
+   * @param frag: frag to be updated
+   * @param id: existed label id
+   * @return ObjectId if success
+   */
+  boost::leaf::result<ObjectID> AddIncrementalVerticesToFragment(
+      std::shared_ptr<ArrowFragmentBase> frag, PropertyGraphSchema::LabelId id);
+
+  /**
+   * @brief Add incremental(means add new data to existed label)
+   * edge table to fragment
+   *
+   * @param frag: frag to be updated
+   * @param id: existed label id
+   * @return ObjectId if success
+   */
+  boost::leaf::result<ObjectID> AddIncrementalEdgesToFragment(
+      std::shared_ptr<ArrowFragmentBase> frag, PropertyGraphSchema::LabelId id);
+
+  boost::leaf::result<void> ReconstructVertices(
+      ObjectID vm_id, PropertyGraphSchema::LabelId label_id = -1);
+
+  /**
+   * @brief process incremental edges
+   *
+   * @param vm_id the vm needs to be updated
+   * @param label_id the label id of the vertex table
+   * @return
+   */
+  boost::leaf::result<void> ProcessIncrementalEdges(
+      ObjectID vm_id, PropertyGraphSchema::LabelId label_id = -1);
 
   /**
    * @brief Add a loaded edge table.
@@ -105,8 +158,9 @@ class BasicEVFragmentLoader {
       const std::string& src_label, const std::string& dst_label,
       const std::string& edge_label, std::shared_ptr<arrow::Table> edge_table);
 
-  boost::leaf::result<void> ConstructEdges(int label_offset = 0,
-                                           int vertex_label_num = 0);
+  boost::leaf::result<void> ConstructEdges(
+      int label_offset = 0, int vertex_label_num = 0,
+      PropertyGraphSchema::LabelId existed_elabel_id = -1, int eid_offset = 0);
 
   boost::leaf::result<ObjectID> AddVerticesToFragment(
       std::shared_ptr<ArrowFragmentBase> frag);
@@ -125,6 +179,25 @@ class BasicEVFragmentLoader {
 
   std::map<std::string, label_id_t> get_vertex_label_to_index() {
     return vertex_label_to_index_;
+  }
+
+  void set_vm_ptr(ObjectID vm_id) {
+    if (local_vertex_map_) {
+      LOG_IF(ERROR, !local_vertex_map_)
+          << "Unsupport operation, local vertex map is enabled and you are "
+             "trying to access a global vertex map";
+    }
+    vm_ptr_ = std::dynamic_pointer_cast<vertex_map_t>(client_.GetObject(vm_id));
+  }
+  // FIXME error if not valid
+  void set_local_vm_ptr(ObjectID vm_id) {
+    LOG_IF(ERROR, !local_vertex_map_)
+        << "Unsupport operation, local vertex map is not enabled";
+    if (!local_vertex_map_) {
+      return;
+    }
+    local_vm_ptr_ =
+        std::dynamic_pointer_cast<local_vertex_map_t>(client_.GetObject(vm_id));
   }
 
  private:
@@ -148,10 +221,14 @@ class BasicEVFragmentLoader {
       std::vector<std::vector<std::pair<std::pair<label_id_t, label_id_t>,
                                         std::shared_ptr<ITablePipeline>>>>&
           edge_tables,
-      int label_offset);
+      int label_offset, int exited_elabel_id = -1, int eid_offset = 0);
 
   // constructVertices implementation for ArrowVertexMap
   boost::leaf::result<void> constructVerticesImpl(ObjectID vm_id);
+
+  // reconstructVertices implementation for ArrowVertexMap
+  boost::leaf::result<void> processIncrementalVerticesImpl(
+      ObjectID vm_id, PropertyGraphSchema::LabelId label_id);
 
   // constructVertices implementation for ArrowLocalVertexMap
   boost::leaf::result<void> constructVerticesImplLocal(ObjectID vm_id);
@@ -183,7 +260,6 @@ class BasicEVFragmentLoader {
   std::vector<std::string> vertex_labels_;
   std::map<std::string, label_id_t> edge_label_to_index_;
   std::vector<std::string> edge_labels_;
-
   std::map<std::string, std::shared_ptr<arrow::Table>> input_vertex_tables_;
   std::map<std::string, std::vector<std::pair<std::pair<label_id_t, label_id_t>,
                                               std::shared_ptr<arrow::Table>>>>

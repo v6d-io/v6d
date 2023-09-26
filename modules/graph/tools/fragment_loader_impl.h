@@ -50,12 +50,10 @@ ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
                          options.generate_eid, options.retain_oid,
                          options.local_vertex_map, options.compact_edges,
                          options.use_perfect_hash);
-
   MPI_Barrier(comm_spec.comm());
   auto fn = [&]() -> boost::leaf::result<ObjectID> {
     return loader.LoadFragmentAsFragmentGroup(options.efiles, options.vfiles);
   };
-
   auto wholefn = [&]() -> boost::leaf::result<ObjectID> {
     ObjectID frag = InvalidObjectID();
     BOOST_LEAF_ASSIGN(frag, loader.LoadFragment());
@@ -63,21 +61,43 @@ ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
                    options.directed, options.generate_eid, options.retain_oid);
     return adder.AddLabelsToFragmentAsFragmentGroup(frag);
   };
-
   auto stepbystepfn = [&]() -> boost::leaf::result<ObjectID> {
     ObjectID frag = InvalidObjectID();
     BOOST_LEAF_ASSIGN(frag, loader.LoadFragment());
+    int64_t vlabel_num = 0;
     for (auto vfile : options.vfiles) {
-      loader_t adder(client, comm_spec, std::vector<std::string>{},
-                     std::vector<std::string>{vfile}, options.directed,
-                     options.generate_eid, options.retain_oid);
-      BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
+      std::vector<std::string> sub_files;
+      boost::split(sub_files, vfile, boost::is_any_of(";"));
+      for (int64_t i = 0; i < sub_files.size(); ++i) {
+        loader_t adder(client, comm_spec, std::vector<std::string>{},
+                       std::vector<std::string>{sub_files[i]}, options.directed,
+                       options.generate_eid, options.retain_oid);
+        if (i == 0) {
+          BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
+        } else {
+          BOOST_LEAF_ASSIGN(frag,
+                            adder.AddDataToExistedVLabel(frag, vlabel_num));
+        }
+      }
+      vlabel_num++;
     }
+    int64_t elabel_num = 0;
     for (auto efile : options.efiles) {
-      loader_t adder(client, comm_spec, std::vector<std::string>{efile},
-                     std::vector<std::string>{}, options.directed,
-                     options.generate_eid, options.retain_oid);
-      BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
+      std::vector<std::string> sub_files;
+      boost::split(sub_files, efile, boost::is_any_of(";"));
+      for (int64_t i = 0; i < sub_files.size(); ++i) {
+        loader_t adder(client, comm_spec,
+                       std::vector<std::string>{sub_files[i]},
+                       std::vector<std::string>{}, options.directed,
+                       options.generate_eid, options.retain_oid);
+        if (i == 0) {
+          BOOST_LEAF_ASSIGN(frag, adder.AddLabelsToFragment(frag));
+        } else {
+          BOOST_LEAF_ASSIGN(frag,
+                            adder.AddDataToExistedELabel(frag, elabel_num));
+        }
+      }
+      elabel_num++;
     }
     return vineyard::ConstructFragmentGroup(client, frag, comm_spec);
   };

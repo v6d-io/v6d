@@ -70,6 +70,33 @@ class ArrowFragmentBase : public vineyard::Object {
     VINEYARD_ASSERT(false, "Not implemented");
     return vineyard::InvalidObjectID();
   }
+  // Add vertices progressively to existed vertex label.
+  virtual boost::leaf::result<ObjectID> AddVerticesToExistedLabel(
+      Client& client, PropertyGraphSchema::LabelId label_id,
+      std::shared_ptr<arrow::Table>&& vertex_table, ObjectID vm_id,
+      const int concurrency = std::thread::hardware_concurrency()) {
+    VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
+  }
+
+  /**
+   * @brief Add edges progressively to existed vertex label.
+   *
+   * @param client
+   * @param label_id the label id of the existed vertex label.
+   * @param edge_table the newly added edges
+   * @param edge_relations
+   * @param concurrency
+   * @return boost::leaf::result<ObjectID>
+   */
+  virtual boost::leaf::result<ObjectID> AddEdgesToExistedLabel(
+      Client& client, PropertyGraphSchema::LabelId label_id,
+      std::shared_ptr<arrow::Table>&& edge_table,
+      const std::set<std::pair<std::string, std::string>>& edge_relations,
+      const int concurrency = std::thread::hardware_concurrency()) {
+    VINEYARD_ASSERT(false, "Not implemented");
+    return vineyard::InvalidObjectID();
+  }
 
   virtual boost::leaf::result<ObjectID> AddEdges(
       Client& client,
