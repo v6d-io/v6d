@@ -454,10 +454,10 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::updateLabelVertexMap(
     for (int64_t i = 0; i < prev_array->length(); ++i) {
       prev_oids[prev_array->GetView(i)] = i;
     }
-    for (int i = 0; i < oid_arrays[fid].size(); ++i) {
+    for (size_t i = 0; i < oid_arrays[fid].size(); ++i) {
       for (int64_t j = 0; j < oid_arrays[fid][i]->length(); ++j) {
         if (prev_oids.find(oid_arrays[fid][i]->GetView(j)) == prev_oids.end()) {
-          builder.Append(oid_arrays[fid][i]->GetView(j));
+          RETURN_ON_ARROW_ERROR(builder.Append(oid_arrays[fid][i]->GetView(j)));
         }
       }
     }
