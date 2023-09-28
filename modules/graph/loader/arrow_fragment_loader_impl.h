@@ -251,7 +251,6 @@ ArrowFragmentLoader<OID_T, VID_T>::addDataToExistedVLabel(
   std::shared_ptr<ArrowFragmentBase> frag;
 
   VY_OK_OR_RAISE(client_.GetObject(frag_id, frag));
-  const PropertyGraphSchema& schema = frag->schema();
 
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "PROCESS-INPUTS-0";
 

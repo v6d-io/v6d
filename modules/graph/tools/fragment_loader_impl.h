@@ -68,7 +68,7 @@ ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
     for (auto vfile : options.vfiles) {
       std::vector<std::string> sub_files;
       boost::split(sub_files, vfile, boost::is_any_of(";"));
-      for (int64_t i = 0; i < sub_files.size(); ++i) {
+      for (size_t i = 0; i < sub_files.size(); ++i) {
         loader_t adder(client, comm_spec, std::vector<std::string>{},
                        std::vector<std::string>{sub_files[i]}, options.directed,
                        options.generate_eid, options.retain_oid);
@@ -85,7 +85,7 @@ ObjectID load_graph(Client& client, grape::CommSpec& comm_spec,
     for (auto efile : options.efiles) {
       std::vector<std::string> sub_files;
       boost::split(sub_files, efile, boost::is_any_of(";"));
-      for (int64_t i = 0; i < sub_files.size(); ++i) {
+      for (size_t i = 0; i < sub_files.size(); ++i) {
         loader_t adder(client, comm_spec,
                        std::vector<std::string>{sub_files[i]},
                        std::vector<std::string>{}, options.directed,

@@ -627,7 +627,6 @@ void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::initDestFidList(
     for (auto e_label_id = 0; e_label_id < edge_label_num_; e_label_id++) {
       std::vector<int> id_num(ivnum_, 0);
       std::set<fid_t> dstset;
-      vertex_t v = *inner_vertices.begin();
 
       auto& fid_list = fid_lists[v_label_id][e_label_id];
       auto& fid_list_offset = fid_lists_offset[v_label_id][e_label_id];
