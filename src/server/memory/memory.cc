@@ -41,13 +41,14 @@
 #include "common/util/logging.h"  // IWYU pragma: keep
 #include "common/util/status.h"
 #include "server/memory/allocator.h"
+#include "server/memory/cuda_allocator.h"
 #include "server/memory/malloc.h"
 
 namespace vineyard {
 
 using memory::GetMallocMapinfo;
 using memory::kBlockSize;
-constexpr int64_t gpukBlockSize = 64;
+using memory::kCUDABlockSize;
 
 namespace memory {
 
@@ -170,7 +171,7 @@ template <typename ID, typename P>
 uint8_t* BulkStoreBase<ID, P>::AllocateMemoryGPU(size_t size) {
   uint8_t* pointer = nullptr;
   pointer = reinterpret_cast<uint8_t*>(
-      GPUBulkAllocator::Memalign(size, gpukBlockSize));
+      CUDABulkAllocator::Memalign(size, kCUDABlockSize));
   if (pointer == nullptr) {
     DVLOG(10) << "Failed to allocate GPU memory of size '" << size << "'";
   }
@@ -348,8 +349,8 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
 
 template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::DeleteGPU(ID const& object_id) {
-#ifndef ENABLE_GPU
-  return Status::NotImplemented("GPU support is to be implemented...");
+#ifndef ENABLE_CUDA
+  return Status::NotImplemented("GPU memory support is not enabled.");
 #endif
   if (object_id == EmptyBlobID<ID>() ||
       object_id == GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max())) {
@@ -362,7 +363,7 @@ Status BulkStoreBase<ID, P>::DeleteGPU(ID const& object_id) {
         }
         if (object->arena_fd == -1) {
           auto buff_size = object->data_size;
-          GPUBulkAllocator::Free(object->pointer, buff_size);
+          CUDABulkAllocator::Free(object->pointer, buff_size);
           DVLOG(10) << "after free: " << IDToString(object_id) << ": "
                     << this->FootprintGPU() << "(" << this->FootprintLimitGPU()
                     << ")";
@@ -387,7 +388,7 @@ size_t BulkStoreBase<ID, P>::Footprint() const {
 
 template <typename ID, typename P>
 size_t BulkStoreBase<ID, P>::FootprintGPU() const {
-  return GPUBulkAllocator::Allocated();
+  return CUDABulkAllocator::Allocated();
 }
 
 template <typename ID, typename P>
@@ -397,7 +398,7 @@ size_t BulkStoreBase<ID, P>::FootprintLimit() const {
 
 template <typename ID, typename P>
 size_t BulkStoreBase<ID, P>::FootprintLimitGPU() const {
-  return GPUBulkAllocator::GetFootprintLimit();
+  return CUDABulkAllocator::GetFootprintLimit();
 }
 template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::MakeArena(size_t const size, int& fd,
@@ -604,8 +605,8 @@ Status BulkStore::Shrink(ObjectID const& id, size_t const& size) {
 
 Status BulkStore::CreateGPU(const size_t data_size, ObjectID& object_id,
                             std::shared_ptr<Payload>& object) {
-#ifndef ENABLE_GPU
-  return Status::NotImplemented("GPU support is to be implemented...");
+#ifndef ENABLE_CUDA
+  return Status::NotImplemented("GPU memory support is not enabled.");
 #endif
   if (data_size == 0) {
     object_id = EmptyBlobID<ObjectID>();
@@ -666,7 +667,7 @@ Status BulkStore::CreateDisk(const size_t data_size, const std::string& path,
 }
 
 Status BulkStore::Release_GPU(ObjectID const& id, int conn) {
-#ifndef ENABLE_GPU
+#ifndef ENABLE_CUDA
   return Status::NotImplemented("GPU support is to be implemented...");
 #endif
   return this->RemoveDependency(id, conn);

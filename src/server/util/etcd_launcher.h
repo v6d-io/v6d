@@ -22,6 +22,8 @@ limitations under the License.
 #include <set>
 #include <string>
 
+#if defined(BUILD_VINEYARDD_ETCD)
+
 #include "boost/process/child.hpp"  // IWYU pragma: keep
 #include "etcd/Client.hpp"
 
@@ -58,5 +60,7 @@ class EtcdLauncher {
 };
 
 }  // namespace vineyard
+
+#endif  // BUILD_VINEYARDD_ETCD
 
 #endif  // SRC_SERVER_UTIL_ETCD_LAUNCHER_H_

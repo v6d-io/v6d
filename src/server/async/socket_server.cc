@@ -23,6 +23,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "common/memory/cuda_ipc.h"
 #include "common/memory/fling.h"
 #include "common/util/callback.h"
 #include "common/util/functions.h"
@@ -465,7 +466,7 @@ bool SocketConnection::doCreateGPUBuffer(json const& root) {
 
   TRY_READ_REQUEST(ReadCreateGPUBufferRequest, root, size);
 
-#ifndef ENABLE_GPU
+#ifndef ENABLE_CUDA
   WriteErrorReply(Status::Invalid("GPU support is not enabled"), message_out);
 #else
   ObjectID object_id;
@@ -475,9 +476,10 @@ bool SocketConnection::doCreateGPUBuffer(json const& root) {
         "Failed to create GPU buffer: invalid GPU memory pointer"));
   }
 
-  // cudaIpcMemHandle_t cuda_handle;
-  GPUUnifiedAddress gua(true, reinterpret_cast<void*>(object->pointer));
-  WriteGPUCreateBufferReply(object_id, object, gua, message_out);
+  std::vector<int64_t> handle(8 /* CUDA_IPC_HANDLE_SIZE = 64 */);
+  send_cuda_pointer(reinterpret_cast<void*>(object->pointer),
+                    reinterpret_cast<uint8_t*>(handle.data()));
+  WriteGPUCreateBufferReply(object_id, object, handle, message_out);
 #endif
 
   this->doWrite(message_out, [this, self](const Status& status) {
@@ -547,29 +549,27 @@ bool SocketConnection::doGetGPUBuffers(json const& root) {
   std::vector<ObjectID> ids;
   bool unsafe = false;
   std::vector<std::shared_ptr<Payload>> objects;
-  std::vector<std::vector<int64_t>> handle_to_send;
+  std::vector<std::vector<int64_t>> handles;
   std::string message_out;
 
   TRY_READ_REQUEST(ReadGetGPUBuffersRequest, root, ids, unsafe);
-#ifndef ENABLE_GPU
+#ifndef ENABLE_CUDA
   WriteErrorReply(Status::Invalid("GPU support is not enabled"), message_out);
 #else
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
-  // get the uva of the objects.
+  std::vector<int64_t> handle(8 /* CUDA_IPC_HANDLE_SIZE = 64 */);
   for (auto object : objects) {
-    GPUUnifiedAddress gua(true);
-    gua.setGPUMemPtr(object->pointer);
-    std::vector<int64_t> handle_vec = gua.getIpcHandleVec();
-    handle_to_send.emplace_back(handle_vec);
+    send_cuda_pointer(reinterpret_cast<void*>(object->pointer),
+                      reinterpret_cast<uint8_t*>(handle.data()));
+    handles.emplace_back(handle);
   }
-  WriteGetGPUBuffersReply(objects, handle_to_send, message_out);
+  WriteGetGPUBuffersReply(objects, handles, message_out);
 #endif
 
-  this->doWrite(message_out,
-                [self, objects, handle_to_send](const Status& status) {
-                  // no need for sending fds for GPU buffers
-                  return Status::OK();
-                });
+  this->doWrite(message_out, [self](const Status& status) {
+    // no need for sending fds for GPU buffers
+    return Status::OK();
+  });
   return false;
 }
 

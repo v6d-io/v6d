@@ -43,6 +43,13 @@ class Buffer {
         size_(size),
         capacity_(size) {}
 
+  Buffer(const uint8_t* data, int64_t size, bool is_cpu)
+      : is_mutable_(false),
+        is_cpu_(is_cpu),
+        data_(data),
+        size_(size),
+        capacity_(size) {}
+
   virtual ~Buffer() = default;
 
   uint8_t operator[](std::size_t i) const { return data_[i]; }
@@ -53,11 +60,18 @@ class Buffer {
                                     static_cast<int64_t>(sizeof(T) * length));
   }
 
-  const uint8_t* data() const { return likely(is_cpu_) ? data_ : nullptr; }
+  template <typename T, typename SizeType = int64_t>
+  static std::shared_ptr<Buffer> Wrap(const T* data, SizeType length,
+                                      bool is_cpu) {
+    return std::make_shared<Buffer>(reinterpret_cast<const uint8_t*>(data),
+                                    static_cast<int64_t>(sizeof(T) * length),
+                                    is_cpu);
+  }
+
+  const uint8_t* data() const { return data_; }
 
   uint8_t* mutable_data() {
-    return likely(is_cpu_ && is_mutable_) ? const_cast<uint8_t*>(data_)
-                                          : nullptr;
+    return likely(is_mutable_) ? const_cast<uint8_t*>(data_) : nullptr;
   }
 
   uintptr_t address() const { return reinterpret_cast<uintptr_t>(data_); }
@@ -96,11 +110,23 @@ class MutableBuffer : public Buffer {
     is_mutable_ = true;
   }
 
+  MutableBuffer(uint8_t* data, const int64_t size, const bool is_cpu)
+      : Buffer(data, size, is_cpu) {
+    is_mutable_ = true;
+  }
+
   template <typename T, typename SizeType = int64_t>
   static std::shared_ptr<Buffer> Wrap(T* data, SizeType length) {
     return std::make_shared<MutableBuffer>(
         reinterpret_cast<uint8_t*>(data),
         static_cast<int64_t>(sizeof(T) * length));
+  }
+
+  template <typename T, typename SizeType = int64_t>
+  static std::shared_ptr<Buffer> Wrap(T* data, SizeType length, bool is_cpu) {
+    return std::make_shared<MutableBuffer>(
+        reinterpret_cast<uint8_t*>(data),
+        static_cast<int64_t>(sizeof(T) * length), is_cpu);
   }
 
  protected:
@@ -130,6 +156,28 @@ class MallocBuffer : public MutableBuffer {
         buffer_(buffer) {}
 
   void* buffer_ = nullptr;
+};
+
+/**
+ * Like CUDA unified memory, provides host access to the GPU buffer for both
+ * immutable and mutable buffers.
+ */
+class CUDABufferMirror {
+ public:
+  explicit CUDABufferMirror(Buffer& buffer, const bool initializing = false);
+
+  const uint8_t* data() const {
+    return reinterpret_cast<uint8_t*>(host_pointer_);
+  }
+
+  uint8_t* mutable_data() { return reinterpret_cast<uint8_t*>(host_pointer_); }
+
+  ~CUDABufferMirror();
+
+ private:
+  size_t size_ = 0;
+  void* cuda_pointer_ = nullptr;
+  void* host_pointer_ = nullptr;
 };
 
 class BlobWriter;

@@ -19,13 +19,13 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#if defined(BUILD_VINEYARDD_REDIS)
+
 #include "pplx/pplxtasks.h"
 
 #include "common/util/logging.h"
 #include "server/util/metrics.h"
 #include "server/util/redis_launcher.h"
-
-#if defined(BUILD_VINEYARDD_REDIS)
 
 #define BACKOFF_RETRY_TIME 10
 

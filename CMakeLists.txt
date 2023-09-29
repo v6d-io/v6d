@@ -19,6 +19,14 @@ if(POLICY CMP0069)
     cmake_policy(SET CMP0069 NEW)
     set(CMAKE_POLICY_DEFAULT_CMP0069 NEW)
 endif()
+if(POLICY CMP0104)
+    cmake_policy(SET CMP0104 OLD)
+    set(CMAKE_POLICY_DEFAULT_CMP0104 OLD)
+endif()
+if(POLICY CMP0146)
+    cmake_policy(SET CMP0146 OLD)
+    set(CMAKE_POLICY_DEFAULT_CMP0146 OLD)
+endif()
 
 project(vineyard LANGUAGES C CXX VERSION ${VINEYARD_VERSION})
 
@@ -32,10 +40,12 @@ option(VINEYARD_USE_LTO "Using IPO/LTO support for link-time optimization" OFF)
 option(USE_LIBUNWIND "Using libunwind to retrieve the stack backtrace when exception occurs" ON)
 option(USE_INCLUDE_WHAT_YOU_USE "Simply the intra-module dependencies with iwyu" OFF)
 option(USE_JSON_DIAGNOSTICS "Using json diagnostics to check the validity of metadata" OFF)
-option(USE_GPU "Using gpu support" OFF)
+option(USE_CUDA "Enabling GPU (CUDA) support" OFF)
 
 option(BUILD_VINEYARD_SERVER "Build vineyard's server" ON)
 option(BUILD_VINEYARD_SERVER_REDIS "Enable redis as the metadata backend" OFF)
+option(BUILD_VINEYARD_SERVER_ETCD "Enable redis as the metadata backend" ON)
+option(BUILD_VINEYARD_SERVER_SPILLING "Enable spilling functionalities in vineyardd" ON)
 option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
 option(BUILD_VINEYARD_CLIENT_VERBOSE "Build vineyard's client with the most verbose logs" OFF)
 option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
@@ -310,7 +320,7 @@ macro(find_boost)
         set(Boost_USE_STATIC_LIBS ON CACHE BOOL "Use static version of boost libraries.")
         set(Boost_USE_STATIC_RUNTIME ON CACHE BOOL "Use static version of boost runtimes.")
     endif()
-    find_package(Boost COMPONENTS system)
+    find_package(Boost COMPONENTS system filesystem)
     # Make boost::property_tree thread safe.
     add_compile_options(-DBOOST_SPIRIT_THREADSAFE)
     # Don't depends on the boost::system library.
@@ -473,11 +483,9 @@ macro(find_pthread)
 endmacro()
 
 macro(find_cuda)
-  #find cuda
-  enable_language(CUDA)
-  include(CheckLanguage)
-  check_language(CUDA)
-  find_package(CUDA REQUIRED)
+    # find cuda runtime library
+    set(CUDA_USE_STATIC_CUDA_RUNTIME ON)
+    find_package(CUDA REQUIRED)
 endmacro(find_cuda)
 
 macro(find_zstd)
@@ -649,15 +657,22 @@ endif()
 
 # build vineyardd
 if(BUILD_VINEYARD_SERVER)
-    find_apache_arrow()
-    find_etcd_cpp_apiv3()
     find_gflags()
     find_mimalloc()
-    find_openssl_libraries(REQUIRED)
 
     if(BUILD_VINEYARD_SERVER_REDIS)
         find_hiredis()
         find_redis_plus_plus()
+    endif()
+    if(BUILD_VINEYARD_SERVER_ETCD)
+        find_etcd_cpp_apiv3()
+        find_openssl_libraries(REQUIRED)
+    endif()
+    if(BUILD_VINEYARD_SERVER_SPILLING)
+        find_apache_arrow()
+    endif()
+    if(USE_CUDA)
+        find_cuda()
     endif()
 
     file(GLOB_RECURSE SERVER_SRC_FILES "src/server/*.cc"
@@ -674,32 +689,13 @@ if(BUILD_VINEYARD_SERVER)
     target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD)
     target_link_libraries(vineyardd PRIVATE ${Boost_LIBRARIES}
                                             ${CMAKE_DL_LIBS}
-                                            ${CPPREST_LIB}
-                                            ${ETCD_CPP_LIBRARIES}
                                             ${GFLAGS_LIBRARIES}
                                             ${GLOG_LIBRARIES}
-                                            ${OPENSSL_LIBRARIES}
                                             libzstd_static
                                             mimalloc-static
     )
-    target_include_directories(vineyardd PRIVATE ${ARROW_INCLUDE_DIR}
-                                                 ${GFLAGS_INCLUDE_DIR}
-    )
-    if(ARROW_SHARED_LIB)
-        target_link_libraries(vineyardd PRIVATE ${ARROW_SHARED_LIB})
-    else()
-        target_link_libraries(vineyardd PRIVATE ${ARROW_STATIC_LIB})
-    endif()
+    target_include_directories(vineyardd PRIVATE ${GFLAGS_INCLUDE_DIR})
 
-    if(USE_GPU)
-        enable_language(CUDA)
-        find_package(CUDA REQUIRED)
-        add_definitions(-DENABLE_GPU)
-        include_directories(${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES})
-        target_link_libraries(vineyardd PUBLIC ${CUDA_LIBRARIES})
-    endif()
-
-    target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
     if(BUILD_VINEYARD_SERVER_REDIS)
         target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD_REDIS)
         target_include_directories(vineyardd PRIVATE ${HIREDIS_INCLUDE_DIR}
@@ -708,6 +704,29 @@ if(BUILD_VINEYARD_SERVER)
         target_link_libraries(vineyardd PRIVATE ${HIREDIS_LIBRARIES}
                                                 ${REDIS_PLUS_PLUS_LIBRARIES}
         )
+    endif()
+    if(BUILD_VINEYARD_SERVER_ETCD)
+        target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD_ETCD)
+        target_include_directories(vineyardd PRIVATE ${ETCD_CPP_INCLUDE_DIR})
+        target_link_libraries(vineyardd PRIVATE ${CPPREST_LIB}
+                                                ${ETCD_CPP_LIBRARIES}
+                                                ${OPENSSL_LIBRARIES}
+        )
+    endif()
+    if(BUILD_VINEYARD_SERVER_SPILLING)
+        target_compile_options(vineyardd PRIVATE -DBUILD_VINEYARDD_SPILLING)
+        target_include_directories(vineyardd PRIVATE ${ARROW_INCLUDE_DIR})
+        if(ARROW_SHARED_LIB)
+            target_link_libraries(vineyardd PRIVATE ${ARROW_SHARED_LIB})
+        else()
+            target_link_libraries(vineyardd PRIVATE ${ARROW_STATIC_LIB})
+        endif()
+    endif()
+
+    if(USE_CUDA)
+        target_compile_options(vineyardd PRIVATE -DENABLE_CUDA)
+        target_include_directories(vineyardd PRIVATE ${CUDA_INCLUDE_DIRS})
+        target_link_libraries(vineyardd PRIVATE ${CUDA_LIBRARIES})
     endif()
 
     if(${LIBUNWIND_FOUND})
@@ -771,9 +790,13 @@ if(BUILD_VINEYARD_CLIENT)
                                                  Threads::Threads
     )
     target_link_libraries(vineyard_client PRIVATE libzstd_static)
-    if(USE_GPU)
-        find_package(CUDA REQUIRED)
-        target_link_libraries(vineyard_client PUBLIC ${CUDA_LIBRARIES})
+
+    if(USE_CUDA)
+        find_cuda()
+
+        target_compile_options(vineyard_client PRIVATE -DENABLE_CUDA)
+        target_include_directories(vineyard_client PRIVATE ${CUDA_INCLUDE_DIRS})
+        target_link_libraries(vineyard_client PRIVATE ${CUDA_LIBRARIES})
     endif()
 
     # make sure `vineyard_internal_registry` been built.

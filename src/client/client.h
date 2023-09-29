@@ -28,7 +28,6 @@ limitations under the License.
 #include "client/client_base.h"
 #include "client/ds/i_object.h"
 #include "client/ds/object_meta.h"
-#include "common/memory/gpu/unified_memory.h"
 #include "common/memory/payload.h"
 #include "common/util/lifecycle.h"
 #include "common/util/protocols.h"
@@ -784,29 +783,40 @@ class Client final : public BasicIPCClient,
   Status DelData(const std::vector<ObjectID>& ids, const bool force = false,
                  const bool deep = true);
 
+  /**
+   * @brief Create a GPU buffer on vineyard server. See also `CreateBuffer`.
+   *
+   * @param size The size of requested GPU buffer.
+   * @param id: The result GPU buffer object id.
+   * @param payload: The result GPU buffer payload.
+   * @param buffer: The result mutable GPU buffer object related to the GPU
+   * blob.
+   *
+   * @return Status that indicates whether the get action has succeeded.
+   */
   Status CreateGPUBuffer(const size_t size, ObjectID& id, Payload& payload,
-                         std::shared_ptr<GPUUnifiedAddress>& gua);
+                         std::shared_ptr<MutableBuffer>& buffer);
   /**
    * @brief Get a set of blobs from vineyard server. See also `GetBuffer`.
    *
    * @param ids Object ids for the blobs to get.
-   * @param GUAs: The result unified memory objects related to GPU blobs.
+   * @param buffers The result GPU buffer objects related to GPU blobs.
    *
    * @return Status that indicates whether the get action has succeeded.
    */
   Status GetGPUBuffers(const std::set<ObjectID>& ids, const bool unsafe,
-                       std::map<ObjectID, GPUUnifiedAddress>& GUAs);
+                       std::map<ObjectID, std::shared_ptr<Buffer>>& buffers);
 
   /**
    * @brief Get a single GPU blob from vineyard server. See also `GetBuffer`.
    *
    * @param id Object id for the blob to get.
-   * @param buffer: The result unified memory object related to the GPU blob.
+   * @param buffer The result gpu buffer object related to the GPU blob.
    *
    * @return Status that indicates whether the get action has succeeded.
    */
   Status GetGPUBuffer(const ObjectID id, const bool unsafe,
-                      GPUUnifiedAddress& gua);
+                      std::shared_ptr<Buffer>& buffer);
 
  protected:
   /**

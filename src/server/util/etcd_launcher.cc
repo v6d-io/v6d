@@ -22,6 +22,8 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#if defined(BUILD_VINEYARDD_ETCD)
+
 #include "boost/process.hpp"  // IWYU pragma: keep
 #include "gulrak/filesystem.hpp"
 
@@ -319,3 +321,5 @@ bool EtcdLauncher::probeEtcdServer(std::unique_ptr<etcd::Client>& etcd_client,
 }
 
 }  // namespace vineyard
+
+#endif  // BUILD_VINEYARDD_ETCD
