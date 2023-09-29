@@ -397,28 +397,26 @@ Status ReadCreateGPUBufferRequest(const json& root, size_t& size) {
 
 void WriteGPUCreateBufferReply(const ObjectID id,
                                const std::shared_ptr<Payload>& object,
-                               GPUUnifiedAddress uva, std::string& msg) {
+                               const std::vector<int64_t>& handle,
+                               std::string& msg) {
   json root;
   root["type"] = command_t::CREATE_GPU_BUFFER_REPLY;
   root["id"] = id;
   std::cout << std::endl;
-  root["handle"] = uva.getIpcHandleVec();
+  root["handle"] = handle;
   json tree;
   object->ToJSON(tree);
   root["created"] = tree;
   encode_msg(root, msg);
 }
 
-Status ReadGPUCreateBufferReply(
-    const json& root, ObjectID& id, Payload& Object,
-    std::shared_ptr<vineyard::GPUUnifiedAddress> uva) {
+Status ReadGPUCreateBufferReply(const json& root, ObjectID& id, Payload& object,
+                                std::vector<int64_t>& handle) {
   CHECK_IPC_ERROR(root, command_t::CREATE_GPU_BUFFER_REPLY);
   json tree = root["created"];
   id = root["id"].get<ObjectID>();
-  Object.FromJSON(tree);
-  std::vector<int64_t> handle_vec = root["handle"].get<std::vector<int64_t>>();
-  uva->setIpcHandleVec(handle_vec);
-  uva->setSize(Object.data_size);
+  object.FromJSON(tree);
+  handle = root["handle"].get<std::vector<int64_t>>();
   return Status::OK();
 }
 
@@ -568,7 +566,7 @@ Status ReadGetGPUBuffersRequest(const json& root, std::vector<ObjectID>& ids,
 
 void WriteGetGPUBuffersReply(
     const std::vector<std::shared_ptr<Payload>>& objects,
-    const std::vector<std::vector<int64_t>>& handle_to_send, std::string& msg) {
+    const std::vector<std::vector<int64_t>>& handles, std::string& msg) {
   json root;
   root["type"] = command_t::GET_GPU_BUFFERS_REPLY;
   for (size_t i = 0; i < objects.size(); ++i) {
@@ -576,14 +574,14 @@ void WriteGetGPUBuffersReply(
     objects[i]->ToJSON(tree);
     root[std::to_string(i)] = tree;
   }
-  root["handles"] = handle_to_send;
+  root["handles"] = handles;
   root["num"] = objects.size();
 
   encode_msg(root, msg);
 }
 
 Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
-                              std::vector<GPUUnifiedAddress>& gua_sent) {
+                              std::vector<std::vector<int64_t>>& handles) {
   CHECK_IPC_ERROR(root, command_t::GET_GPU_BUFFERS_REPLY);
   for (size_t i = 0; i < root["num"]; ++i) {
     json tree = root[std::to_string(i)];
@@ -591,16 +589,8 @@ Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
     object.FromJSON(tree);
     objects.emplace_back(object);
   }
-  std::vector<std::vector<int64_t>> handle_vec;
   if (root.contains("handles")) {
-    handle_vec = root["handles"].get<std::vector<std::vector<int64_t>>>();
-  }
-  // get cuda handle
-  for (size_t i = 0; i < root["num"]; i++) {
-    GPUUnifiedAddress gua(false);
-    gua.setIpcHandleVec(handle_vec[i]);
-    gua.setSize(objects[i].data_size);
-    gua_sent.emplace_back(gua);
+    handles = root["handles"].get<std::vector<std::vector<int64_t>>>();
   }
   return Status::OK();
 }

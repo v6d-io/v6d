@@ -24,12 +24,8 @@ kinds of implementation (GPU, PPU, etc.) as the abstraction to share GPU memory
 between different processes, as well as sharing memory between the host and
 device.
 
-The unified memory abstractions provides the following utilities:
-
-- Accessing the memory from GPU or CPU using an unified abstraction: the
-  :code:`GPUData()` and :code:`CPUData()`;
-- Synchronizing the memory between GPU and CPU: the :code:`syncFromCPU()` and
-  :code:`syncFromGPU()`.
+The unified memory abstraction is able to automatically synchronize the memory
+between host and devices by leverage the RAII mechanism of C++.
 
 Example
 ~~~~~~~
@@ -45,48 +41,66 @@ Example
 
       ObjectID object_id;
       Payload object;
-      std::shared_ptr<GPUUnifiedAddress> gua = nullptr;
-      RETURN_ON_ERROR(client.CreateGPUBuffer(data_size(), object_id, object, gua));
+      std::shared_ptr<MutableBuffer> buffer = nullptr;
+      RETURN_ON_ERROR(client.CreateGPUBuffer(data_size(), object_id, object, buffer));
 
-- Write data to the GPU buffer:
+      CHECK(!buffer->is_cpu());
+      CHECK(buffer->is_mutable());
 
-  .. code:: c++
-
-      void* gpu_ptr = nullptr;
-      RETURN_ON_ERROR(gua->GPUData(&gpu_ptr));
-      cudaMemcpy(gpu_ptr, data, data_size(), cudaMemcpyHostToDevice);
-
-  or, copy to CPU memory first and then synchronize to GPU memory (like CUDA unified memory):
+  The result buffer's data :code:`buffer->mutable_data()` is a GPU memory pointer,
+  which can be directly passed to GPU kernels, e.g.,
 
   .. code:: c++
 
-      void* cpu_ptr = nullptr;
-      RETURN_ON_ERROR(gua->CPUData(&cpu_ptr));
-      memcpy(cpu_ptr, data, data_size());
-      RETURN_ON_ERROR(gua->syncFromCPU());
+      printKernel<<<1, 1>>>(buffer->data());
+
+- Composing the buffer content from host code like Unified Memory:
+
+  .. code:: c++
+
+      {
+        CUDABufferMirror mirror(*buffer, false);
+        memcpy(mirror.mutable_data(), "hello world", 12);
+      }
+
+  Here the :code:`mirror`'s :code:`data()` and :code:`mutable_data()` are host memory pointers
+  allocated using the :code:`cudaHostAlloc()` API. When :code:`CUDABufferMirror` destructing,
+  the host memory will be copied back to the GPU memory automatically.
+
+  The second argument of :code:`CUDABufferMirror` indicates whether the initial memory of the
+  GPU buffer needs to be copied to the host memory. Defaults to :code:`false`.
 
 - Accessing the GPU buffer from another process:
 
   .. code:: c++
 
       ObjectID object_id = ...;
-      std::shared_ptr<GPUUnifiedAddress> gua = nullptr;
-      RETURN_ON_ERROR(client.GetGPUBuffer(object_id, true, gua));
+      std::shared_ptr<Buffer> buffer = nullptr;
+      RETURN_ON_ERROR(client.GetGPUBuffer(object_id, true, buffer));
+      CHECK(!buffer->is_cpu());
+      CHECK(!buffer->is_mutable());
 
-      void* gpu_ptr = nullptr;
-      RETURN_ON_ERROR(gua->GPUData(&gpu_ptr));
+  The result buffer's data :code:`buffer->data()` is a GPU memory pointer, which can be directly
+  passed to GPU kernels, e.g.,
+
+  .. code:: c++
+
+      printKernel<<<1, 1>>>(buffer->data());
 
 - Accessing the shared GPU buffer from CPU:
 
   .. code:: c++
 
-      ObjectID object_id = ...;
-      std::shared_ptr<GPUUnifiedAddress> gua = nullptr;
-      RETURN_ON_ERROR(client.GetGPUBuffer(object_id, true, gua));
+      {
+        CUDABufferMirror mirror(*buffer, true);
+        printf("CPU data from GPU is: %s\n",
+              reinterpret_cast<const char*>(mirror.data()));
+      }
 
-      void* cpu_ptr = nullptr;
-      RETURN_ON_ERROR(gua->CPUData(&cpu_ptr));
-      RETURN_ON_ERROR(gua->syncFromGPU());
+  Using the :code:`CUDABufferMirror` to access the GPU buffer from CPU, the mirror's :code:`data()`
+  is a host memory pointer allocated using the :code:`cudaHostAlloc()` API. For immutable :code:`Buffer`,
+  the second argument of :code:`CUDABufferMirror` must be :code:`true`, and the GPU memory will be
+  copied to the host memory when the mirror is constructed.
 
 - Freeing the shared GPU buffer:
 
@@ -95,133 +109,5 @@ Example
       ObjectID object_id = ...;
       RETURN_ON_ERROR(client.DelData(object_id));
 
-:code:`UnifiedMemory` APIs
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The complete :code:`UnifiedMemory` APIs are defined as:
-
-.. code:: c++
-
-    class GPUUnifiedAddress {
-      /**
-      * @brief get the cpu memry address
-      *
-      * @param ptr the return cpu data address
-      * @return GUAError_t the error type
-      */
-      GUAError_t CPUData(void** ptr);
-
-      /**
-      * @brief get the gpu memory address
-      *
-      * @param ptr the return gpu data address
-      * @return GUAError_t the error type
-      */
-      GUAError_t GPUData(void** ptr);
-
-      /**
-      * @brief sync data from GPU related to this gua
-      *
-      * @return GUAError_t the error type
-      */
-      GUAError_t syncFromCPU();
-
-      /**
-      * @brief sync data from CPU related to this gua
-      *
-      * @return GUAError_t the error type
-      */
-      GUAError_t syncFromGPU();
-
-      /**
-      * @brief  Malloc memory related to this gua if needed.
-      *
-      * @param size the memory size to be allocated
-      * @param ptr the memory address on cpu or GPU
-      * @param is_GPU allocate on GPU
-      * @return GUAError_t the error type
-      */
-
-      GUAError_t ManagedMalloc(size_t size, void** ptr, bool is_GPU = false);
-      /**
-      * @brief Free the memory
-      *
-      */
-      void ManagedFree();
-
-      /**
-      * @brief GUA to json
-      *
-      */
-      void GUAToJSON();
-
-      /**
-      * @brief Get the Ipc Handle object
-      *
-      * @param handle the returned handle
-      * @return GUAError_t the error type
-      */
-
-      GUAError_t getIpcHandle(cudaIpcMemHandle_t& handle);
-      /**
-      * @brief Set the IpcHandle of this GUA
-      *
-      * @param handle
-      */
-      void setIpcHandle(cudaIpcMemHandle_t handle);
-
-      /**
-      * @brief Get the IpcHandle of this GUA as vector
-      *
-      * @return std::vector<int64_t>
-      */
-      std::vector<int64_t> getIpcHandleVec();
-
-      /**
-      * @brief Set the IpcHandle vector of this GUA
-      *
-      * @param handle_vec
-      */
-      void setIpcHandleVec(std::vector<int64_t> handle_vec);
-
-      /**
-      * @brief Set the GPU Mem Ptr object
-      *
-      * @param ptr
-      */
-      void setGPUMemPtr(void* ptr);
-
-      /**
-      * @brief return the GPU memory pointer
-      *
-      * @return void* the GPU-side memory address
-      */
-      void* getGPUMemPtr();
-      /**
-      * @brief Set the Cpu Mem Ptr object
-      *
-      * @param ptr
-      */
-      void setCPUMemPtr(void* ptr);
-
-      /**
-      * @brief Get the Cpu Mem Ptr object
-      *
-      * @return void*
-      */
-      void* getCPUMemPtr();
-
-      /**
-      * @brief Get the Size object
-      *
-      * @return int64_t
-      */
-      int64_t getSize();
-
-      /**
-      * @brief Set the Size object
-      *
-      * @param data_size
-      */
-      void setSize(int64_t data_size);
-    };
+For complete example about GPU memory sharing, please refer to
+`gpumalloc_test.cu <https://github.com/v6d-io/v6d/blob/main/test/gpumalloc_test.cu>`_

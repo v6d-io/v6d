@@ -19,12 +19,15 @@ limitations under the License.
 
 #include <vector>
 
+#if defined(BUILD_VINEYARDD_SPILLING)
 #include "arrow/filesystem/filesystem.h"
-
 #include "common/util/arrow.h"
+#endif
 
 namespace vineyard {
 namespace io {
+
+#if defined(BUILD_VINEYARDD_SPILLING)
 
 FileIOAdaptor::FileIOAdaptor(const std::string& location) {
   // TODO(ZjuYTW): Maybe we should check the validation of dir_path
@@ -127,6 +130,64 @@ Status FileIOAdaptor::RemoveFile(const std::string& path) {
   auto _ = fs_->DeleteFile(path);  // discard the deletion error
   return Status::OK();
 }
+
+#else
+
+FileIOAdaptor::FileIOAdaptor(const std::string& location) {
+  // TODO(ZjuYTW): Maybe we should check the validation of dir_path
+  location_ = location;
+}
+
+FileIOAdaptor::~FileIOAdaptor() {}
+
+Status FileIOAdaptor::Open() { return this->Open("r"); }
+
+Status FileIOAdaptor::Open(const char* mode) {
+  return Status::NotImplemented(
+      "The spilling functionality is not built into vineyardd");
+}
+
+Status FileIOAdaptor::Write(const char* buffer, size_t size) {
+  return Status::NotImplemented(
+      "The spilling functionality is not built into vineyardd");
+}
+
+Status FileIOAdaptor::Flush() {
+  return Status::NotImplemented(
+      "The spilling functionality is not built into vineyardd");
+}
+
+Status FileIOAdaptor::Close() {
+  return Status::NotImplemented(
+      "The spilling functionality is not built into vineyardd");
+}
+
+Status FileIOAdaptor::Read(void* buffer, size_t size) {
+  return Status::NotImplemented(
+      "The spilling functionality is not built into vineyardd");
+}
+
+Status FileIOAdaptor::CreateDir(const std::string& path) {
+  return Status::NotImplemented(
+      "The spilling functionality is not built into vineyardd");
+}
+
+Status FileIOAdaptor::DeleteDir() {
+  return Status::NotImplemented(
+      "The spilling functionality is not built into vineyardd");
+}
+
+Status FileIOAdaptor::RemoveFiles(const std::vector<std::string>& paths) {
+  return Status::NotImplemented(
+      "The spilling functionality is not built into vineyardd");
+}
+
+Status FileIOAdaptor::RemoveFile(const std::string& path) {
+  return Status::NotImplemented(
+      "The spilling functionality is not built into vineyardd");
+}
+
+#endif
 
 }  // namespace io
 }  // namespace vineyard

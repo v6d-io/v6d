@@ -24,7 +24,6 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
-#include "common/memory/gpu/unified_memory.h"
 #include "common/memory/payload.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
@@ -230,11 +229,11 @@ Status ReadCreateGPUBufferRequest(const json& root, size_t& size);
 
 void WriteGPUCreateBufferReply(const ObjectID id,
                                const std::shared_ptr<Payload>& object,
-                               GPUUnifiedAddress uva, std::string& msg);
+                               const std::vector<int64_t>& handle,
+                               std::string& msg);
 
-Status ReadGPUCreateBufferReply(
-    const json& root, ObjectID& id, Payload& Object,
-    std::shared_ptr<vineyard::GPUUnifiedAddress> uva);
+Status ReadGPUCreateBufferReply(const json& root, ObjectID& id, Payload& object,
+                                std::vector<int64_t>& handle);
 
 void WriteSealRequest(ObjectID const& object_id, std::string& message_out);
 
@@ -271,10 +270,10 @@ Status ReadGetGPUBuffersRequest(const json& root, std::vector<ObjectID>& ids,
 
 void WriteGetGPUBuffersReply(
     const std::vector<std::shared_ptr<Payload>>& objects,
-    const std::vector<std::vector<int64_t>>& handle_to_send, std::string& msg);
+    const std::vector<std::vector<int64_t>>& handles, std::string& msg);
 
 Status ReadGetGPUBuffersReply(const json& root, std::vector<Payload>& objects,
-                              std::vector<GPUUnifiedAddress>& uva_sent);
+                              std::vector<std::vector<int64_t>>& handles);
 
 void WriteDropBufferRequest(const ObjectID id, std::string& msg);
 

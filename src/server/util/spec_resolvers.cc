@@ -29,15 +29,25 @@ namespace vineyard {
 DEFINE_string(deployment, "local", "Deployment mode: 'local', 'distributed'");
 
 // meta data
-DEFINE_string(meta, "etcd",
-              "Metadata storage, can be one of: 'etcd'"
-#if defined(BUILD_VINEYARDD_REDIS)
-              ", 'redis'"
+DEFINE_string(meta,
+#if defined(BUILD_VINEYARDD_ETCD)
+              "etcd",
+#else
+              "local",
 #endif
-              " and 'local'");
+              "Metadata storage, can be one of: 'local'"
+#if defined(BUILD_VINEYARDD_ETCD)
+              ", 'etcd'"
+#endif
+#if defined(BUILD_VINEYARDD_REDIS)
+              " and 'redis'"
+#endif
+);
+#if defined(BUILD_VINEYARDD_ETCD)
 DEFINE_string(etcd_endpoint, "http://127.0.0.1:2379", "endpoint of etcd");
 DEFINE_string(etcd_prefix, "vineyard", "metadata path prefix in etcd");
 DEFINE_string(etcd_cmd, "", "path of etcd executable");
+#endif
 
 #if defined(BUILD_VINEYARDD_REDIS)
 DEFINE_string(redis_endpoint, "redis://127.0.0.1:6379", "endpoint of redis");
@@ -126,9 +136,11 @@ json MetaStoreSpecResolver::resolve() const {
   spec["meta"] = FLAGS_meta;
 
   // resolve for etcd
+#if defined(BUILD_VINEYARDD_ETCD)
   spec["etcd_prefix"] = FLAGS_etcd_prefix;
   spec["etcd_endpoint"] = FLAGS_etcd_endpoint;
   spec["etcd_cmd"] = FLAGS_etcd_cmd;
+#endif
 
   // resolve for redis
 #if defined(BUILD_VINEYARDD_REDIS)

@@ -21,6 +21,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#if defined(BUILD_VINEYARDD_ETCD)
+
 #include "boost/algorithm/string/erase.hpp"
 #include "boost/asio/steady_timer.hpp"
 #include "etcd/Client.hpp"
@@ -392,3 +394,5 @@ Status EtcdMetaService::preStart() {
 }
 
 }  // namespace vineyard
+
+#endif  // BUILD_VINEYARDD_ETCD

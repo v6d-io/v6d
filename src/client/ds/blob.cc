@@ -21,6 +21,11 @@ limitations under the License.
 #include <memory>
 #include <utility>
 
+#if defined(ENABLE_CUDA)
+#include <cuda.h>
+#include <cuda_runtime.h>
+#endif
+
 #include "client/client.h"
 #include "common/memory/memcpy.h"
 #include "common/memory/payload.h"
@@ -28,6 +33,49 @@ limitations under the License.
 #include "common/util/uuid.h"
 
 namespace vineyard {
+
+CUDABufferMirror::CUDABufferMirror(Buffer& buffer, const bool initializing) {
+#if defined(ENABLE_CUDA)
+  if (!buffer.is_cpu() && (buffer.size() > 0)) {
+    VINEYARD_ASSERT(buffer.is_mutable() || initializing,
+                    "For immutable buffer, initializing must be true.");
+    size_ = buffer.size();
+    if (buffer.is_mutable()) {
+      // for immutable buffer, no need to copy it back.
+      cuda_pointer_ = buffer.mutable_data();
+    }
+    VINEYARD_ASSERT(cudaHostAlloc(&(host_pointer_), buffer.size(),
+                                  cudaHostAllocDefault) == 0,
+                    "Failed to allocate unified memory");
+    if (initializing) {
+      VINEYARD_ASSERT(cudaMemcpy(host_pointer_, buffer.data(), buffer.size(),
+                                 cudaMemcpyDeviceToHost) == 0,
+                      "Failed to copy memory from device to host");
+    }
+  } else {
+    size_ = 0 /* no allocation */;
+    cuda_pointer_ = nullptr;
+    host_pointer_ = buffer.mutable_data();
+  }
+#else
+  size_ = 0;
+  cuda_pointer_ = nullptr;
+  host_pointer_ = buffer.mutable_data();
+#endif
+}
+
+CUDABufferMirror::~CUDABufferMirror() {
+#if defined(ENABLE_CUDA)
+  if (cuda_pointer_ != nullptr && host_pointer_ != nullptr) {
+    VINEYARD_ASSERT(cudaMemcpy(cuda_pointer_, host_pointer_, size_,
+                               cudaMemcpyHostToDevice) == 0,
+                    "Failed to copy memory from host to device");
+  }
+  if (host_pointer_ != nullptr && size_ != 0) {
+    cudaFreeHost(host_pointer_);
+  }
+#endif
+}
 
 size_t Blob::size() const { return allocated_size(); }
 

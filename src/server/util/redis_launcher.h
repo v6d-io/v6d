@@ -24,10 +24,6 @@ limitations under the License.
 
 #if defined(BUILD_VINEYARDD_REDIS)
 
-#include "redis++/async_redis++.h"
-#include "redis++/redis++.h"
-#include "redis-plus-plus-shim/recipes/redlock.h"
-
 #include "common/util/logging.h"
 #include "common/util/status.h"
 

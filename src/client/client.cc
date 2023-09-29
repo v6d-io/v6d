@@ -30,6 +30,7 @@ limitations under the License.
 #include "client/ds/blob.h"
 #include "client/io.h"
 #include "client/utils.h"
+#include "common/memory/cuda_ipc.h"
 #include "common/memory/fling.h"
 #include "common/util/env.h"
 #include "common/util/protocols.h"
@@ -629,22 +630,30 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
 
 Status Client::CreateGPUBuffer(const size_t size, ObjectID& id,
                                Payload& payload,
-                               std::shared_ptr<GPUUnifiedAddress>& gua) {
+                               std::shared_ptr<MutableBuffer>& buffer) {
   ENSURE_CONNECTED(this);
   std::string message_out;
   WriteCreateGPUBufferRequest(size, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
-  gua = std::make_shared<GPUUnifiedAddress>(false);
-  RETURN_ON_ERROR(ReadGPUCreateBufferReply(message_in, id, payload, gua));
+  std::vector<int64_t> handle;
+  RETURN_ON_ERROR(ReadGPUCreateBufferReply(message_in, id, payload, handle));
   RETURN_ON_ASSERT(static_cast<size_t>(payload.data_size) == size);
-
+  void* cuda_pointer = nullptr;
+  int r = recv_cuda_pointer(reinterpret_cast<uint8_t*>(handle.data()),
+                            &cuda_pointer);
+  RETURN_ON_ASSERT(r == 0, "Failed to open the IPC handle as CUDA pointer: " +
+                               std::to_string(r));
+  buffer = std::make_shared<MutableBuffer>(
+      reinterpret_cast<uint8_t*>(cuda_pointer), payload.data_size,
+      /* is_cpu */ false);
   return Status::OK();
 }
 
-Status Client::GetGPUBuffers(const std::set<ObjectID>& ids, const bool unsafe,
-                             std::map<ObjectID, GPUUnifiedAddress>& GUAs) {
+Status Client::GetGPUBuffers(
+    const std::set<ObjectID>& ids, const bool unsafe,
+    std::map<ObjectID, std::shared_ptr<Buffer>>& buffers) {
   if (ids.empty()) {
     return Status::OK();
   }
@@ -657,26 +666,34 @@ Status Client::GetGPUBuffers(const std::set<ObjectID>& ids, const bool unsafe,
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::vector<Payload> payloads;
-  std::vector<GPUUnifiedAddress> gua_vec;
-  RETURN_ON_ERROR(ReadGetGPUBuffersReply(message_in, payloads, gua_vec));
+  std::vector<std::vector<int64_t>> handles;
+  RETURN_ON_ERROR(ReadGetGPUBuffersReply(message_in, payloads, handles));
   for (size_t i = 0; i < payloads.size(); i++) {
-    GUAs.emplace(payloads[i].object_id, gua_vec[i]);
+    void* cuda_pointer = nullptr;
+    int r = recv_cuda_pointer(reinterpret_cast<uint8_t*>(handles[i].data()),
+                              &cuda_pointer);
+    RETURN_ON_ASSERT(r == 0, "Failed to open the IPC handle as CUDA pointer: " +
+                                 std::to_string(r));
+    buffers.emplace(
+        payloads[i].object_id,
+        std::make_shared<Buffer>(reinterpret_cast<uint8_t*>(cuda_pointer),
+                                 payloads[i].data_size,
+                                 /* is_cpu */ false));
   }
-
   return Status::OK();
 }
 
 Status Client::GetGPUBuffer(const ObjectID id, const bool unsafe,
-                            GPUUnifiedAddress& gua) {
+                            std::shared_ptr<Buffer>& buffer) {
   std::set<ObjectID> ids;
   ids.insert(id);
-  std::map<ObjectID, GPUUnifiedAddress> guas;
-  RETURN_ON_ERROR(GetGPUBuffers(ids, unsafe, guas));
-  if (guas.empty()) {
+  std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
+  RETURN_ON_ERROR(GetGPUBuffers(ids, unsafe, buffers));
+  if (buffers.empty() || buffers.find(id) == buffers.end()) {
     return Status::ObjectNotExists("buffer not exists: " +
                                    ObjectIDToString(id));
   }
-  gua = guas.at(id);
+  buffer = buffers.at(id);
   return Status::OK();
 }
 

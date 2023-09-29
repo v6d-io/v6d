@@ -20,8 +20,10 @@ limitations under the License.
 
 #include "common/util/logging.h"  // IWYU pragma: keep
 
-#include "server/services/etcd_meta_service.h"
 #include "server/services/local_meta_service.h"
+#if defined(BUILD_VINEYARDD_ETCD)
+#include "server/services/etcd_meta_service.h"
+#endif  // BUILD_VINEYARDD_ETCD
 #if defined(BUILD_VINEYARDD_REDIS)
 #include "server/services/redis_meta_service.h"
 #endif  // BUILD_VINEYARDD_REDIS
@@ -33,11 +35,20 @@ std::shared_ptr<IMetaService> IMetaService::Get(
     std::shared_ptr<VineyardServer> server_ptr) {
   std::string meta = server_ptr->GetSpec()["metastore_spec"]["meta"]
                          .get_ref<const std::string&>();
-  VINEYARD_ASSERT(meta == "etcd" || meta == "redis" || meta == "local",
+  VINEYARD_ASSERT(false
+#if defined(BUILD_VINEYARDD_ETCD)
+                      || meta == "etcd"
+#endif  // BUILD_VINEYARDD_ETCD
+#if defined(BUILD_VINEYARDD_REDIS)
+                      || meta == "redis"
+#endif  // BUILD_VINEYARDD_REDIS
+                      || meta == "local",
                   "Invalid metastore: " + meta);
+#if defined(BUILD_VINEYARDD_ETCD)
   if (meta == "etcd") {
     return std::shared_ptr<IMetaService>(new EtcdMetaService(server_ptr));
   }
+#endif  // BUILD_VINEYARDD_ETCD
 #if defined(BUILD_VINEYARDD_REDIS)
   if (meta == "redis") {
     return std::shared_ptr<IMetaService>(new RedisMetaService(server_ptr));

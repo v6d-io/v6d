@@ -23,6 +23,8 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#if defined(BUILD_VINEYARDD_ETCD)
+
 #include "etcd/Client.hpp"
 
 #include "server/services/meta_service.h"
@@ -184,5 +186,7 @@ class EtcdMetaService : public IMetaService {
   friend class IMetaService;
 };
 }  // namespace vineyard
+
+#endif  // BUILD_VINEYARDD_ETCD
 
 #endif  // SRC_SERVER_SERVICES_ETCD_META_SERVICE_H_

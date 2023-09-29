@@ -13,22 +13,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef SRC_SERVER_MEMORY_GPU_GPUALLOCATOR_H_
-#define SRC_SERVER_MEMORY_GPU_GPUALLOCATOR_H_
+#ifndef SRC_SERVER_MEMORY_CUDA_ALLOCATOR_H_
+#define SRC_SERVER_MEMORY_CUDA_ALLOCATOR_H_
 
 #include <cstddef>
 #include <cstdint>
 
-#ifdef ENABLE_GPU
+#ifdef ENABLE_CUDA
 #include <cuda.h>
 #include <cuda_runtime.h>
 #endif
 
-#include "common/memory/gpu/unified_memory.h"  // IWYU pragma: keep
-
 namespace vineyard {
 
-class GPUBulkAllocator {
+class CUDABulkAllocator {
  public:
   /**
    * @brief GPU memory allocator to be complished
@@ -81,16 +79,11 @@ class GPUBulkAllocator {
    */
   static int64_t Allocated();
 
-// GPU memory Allocator to be finished
-#if defined(WITH_GPUALLOCATOR)
-  using Allocator = vineyard::memory::GPUAllocator;
-#endif
-
  private:
-  static int64_t gpu_allocated_;
-  static int64_t gpu_footprint_limit_;
+  static int64_t cuda_allocated_;
+  static int64_t cuda_footprint_limit_;
 };
 
 }  // namespace vineyard
 
-#endif  // SRC_SERVER_MEMORY_GPU_GPUALLOCATOR_H_
+#endif  // SRC_SERVER_MEMORY_CUDA_ALLOCATOR_H_

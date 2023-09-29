@@ -1,5 +1,12 @@
 enable_testing()
 
+if(USE_CUDA)
+    include(CheckLanguage)
+
+    enable_language(CUDA)
+    check_language(CUDA)
+endif()
+
 macro(add_test_case testname testfile)
     if(BUILD_VINEYARD_TESTS_ALL)
         add_executable(${testname} ${testfile})
@@ -7,11 +14,14 @@ macro(add_test_case testname testfile)
         add_executable(${testname} EXCLUDE_FROM_ALL ${testfile})
     endif()
 
-    target_link_libraries(${testname} PRIVATE ${VINEYARD_INSTALL_LIBS})
-    if(ARROW_SHARED_LIB)
-        target_link_libraries(${testname} PRIVATE ${ARROW_SHARED_LIB})
-    else()
-        target_link_libraries(${testname} PRIVATE ${ARROW_STATIC_LIB})
+    target_include_directories(${testname} PRIVATE ${GLOG_INCLUDE_DIRS})
+    target_link_libraries(${testname} PRIVATE ${VINEYARD_INSTALL_LIBS} ${GLOG_LIBRARIES})
+    if(NOT ("${VINEYARD_INSTALL_LIBS}" STREQUAL "vineyard_client"))
+        if(ARROW_SHARED_LIB)
+            target_link_libraries(${testname} PRIVATE ${ARROW_SHARED_LIB})
+        else()
+            target_link_libraries(${testname} PRIVATE ${ARROW_STATIC_LIB})
+        endif()
     endif()
 
     if(${LIBUNWIND_FOUND})
@@ -30,12 +40,16 @@ foreach(testfile ${TEST_FILES})
     string(REGEX MATCH "^(.*)\\.[^.]*$" dummy ${testfile})
     set(testname ${CMAKE_MATCH_1})
 
-    if(${testname} STREQUAL "gpumalloc_test" AND NOT USE_GPU)
+    if(${testname} STREQUAL "gpumalloc_test" AND NOT USE_CUDA)
         continue()
     endif()
 
     message(STATUS "Found unit_test - " ${testname})
     add_test_case(${testname} ${testfile})
+
+    if(USE_CUDA)
+        target_compile_options(${testname} PRIVATE $<$<COMPILE_LANGUAGE:CUDA>:-Xcudafe "--diag_suppress=284 --diag_suppress=815 --diag_suppress=997">)
+    endif()
 
     if(${testname} STREQUAL "delete_test" OR ${testname} STREQUAL "rpc_delete_test")
         target_compile_options(${testname} PRIVATE "-fno-access-control")

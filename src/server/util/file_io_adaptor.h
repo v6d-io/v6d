@@ -20,8 +20,11 @@ limitations under the License.
 #include <string>
 #include <vector>
 
+#if defined(BUILD_VINEYARDD_SPILLING)
 #include "arrow/filesystem/api.h"
 #include "arrow/io/interfaces.h"
+#endif
+
 #include "common/util/status.h"
 
 namespace vineyard {
@@ -50,9 +53,11 @@ class FileIOAdaptor {
   Status CreateDir(const std::string& path);
 
   std::string location_;
+#if defined(BUILD_VINEYARDD_SPILLING)
   std::shared_ptr<arrow::fs::FileSystem> fs_;
   std::shared_ptr<arrow::io::RandomAccessFile> ifp_;
   std::shared_ptr<arrow::io::OutputStream> ofp_;
+#endif
 };
 
 }  // namespace io
