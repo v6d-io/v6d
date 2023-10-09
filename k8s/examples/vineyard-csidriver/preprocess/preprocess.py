@@ -1,3 +1,4 @@
+import argparse
 import os
 import time
 
@@ -9,9 +10,8 @@ import pandas as pd
 import vineyard
 
 
-def preprocess_data():
+def preprocess_data(data_multiplier, with_vineyard):
     os.system('sync; echo 3 > /proc/sys/vm/drop_caches')
-    data_multiplier = os.environ.get('DATA_MULTIPLIER', 1)
     st = time.time()
     df = pd.read_pickle('/data/df_{0}.pkl'.format(data_multiplier))
 
@@ -59,7 +59,6 @@ def preprocess_data():
     del X, y
 
     st = time.time()
-    with_vineyard = os.environ.get('WITH_VINEYARD', False)
     if with_vineyard:
         vineyard.csi.write(X_train, "/vineyard/data/x_train.pkl")
         vineyard.csi.write(X_test, "/vineyard/data/x_test.pkl")
@@ -77,9 +76,13 @@ def preprocess_data():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_multiplier', type=int, default=1, help='Multiplier for data')
+    parser.add_argument('--with_vineyard', type=bool, default=False, help='Whether to use vineyard')
+    args = parser.parse_args()
     st = time.time()
     print('Preprocessing data...')
-    preprocess_data()
+    preprocess_data(args.data_multiplier, args.with_vineyard)
     ed = time.time()
     print('##################################')
     print('Preprocessing data time: ', ed - st)

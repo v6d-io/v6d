@@ -1,12 +1,12 @@
 from kfp import dsl
 
-def PreProcess():
+def PreProcess(data_multiplier: int):
     return dsl.ContainerOp(
         name='Preprocess Data',
         image = 'preprocess-data',
         container_kwargs={'image_pull_policy':"IfNotPresent"},
         command = ['python3', 'preprocess.py'],
-
+        arguments = [f'--data_multiplier={data_multiplier}'],
         # add the existing volume to the pipeline
         pvolumes={"/data": dsl.PipelineVolume(pvc="benchmark-data")},
     )
@@ -35,8 +35,8 @@ def Test(comp2):
    name='Machine Learning Pipeline',
    description='An example pipeline that trains and logs a regression model.'
 )
-def pipeline():
-    comp1 = PreProcess()
+def pipeline(data_multiplier: int):
+    comp1 = PreProcess(data_multiplier=data_multiplier)
     comp2 = Train(comp1)
     comp3 = Test(comp2)
 

@@ -1,0 +1,220 @@
+# PIPELINE DEFINITION
+# Name: machine-learning-pipeline-with-vineyard
+# Description: An example pipeline that trains and logs a regression model.
+# Inputs:
+#    data_multiplier: int
+components:
+  comp-createpvc:
+    executorLabel: exec-createpvc
+    inputDefinitions:
+      parameters:
+        access_modes:
+          description: 'AccessModes to request for the provisioned PVC. May
+
+            be one or more of ``''ReadWriteOnce''``, ``''ReadOnlyMany''``, ``''ReadWriteMany''``,
+            or
+
+            ``''ReadWriteOncePod''``. Corresponds to `PersistentVolumeClaim.spec.accessModes
+            <https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes>`_.'
+          parameterType: LIST
+        annotations:
+          description: Annotations for the PVC's metadata. Corresponds to `PersistentVolumeClaim.metadata.annotations
+            <https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/#PersistentVolumeClaim>`_.
+          isOptional: true
+          parameterType: STRUCT
+        pvc_name:
+          description: 'Name of the PVC. Corresponds to `PersistentVolumeClaim.metadata.name
+            <https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/#PersistentVolumeClaim>`_.
+            Only one of ``pvc_name`` and ``pvc_name_suffix`` can
+
+            be provided.'
+          isOptional: true
+          parameterType: STRING
+        pvc_name_suffix:
+          description: 'Prefix to use for a dynamically generated name, which
+
+            will take the form ``<argo-workflow-name>-<pvc_name_suffix>``. Only one
+
+            of ``pvc_name`` and ``pvc_name_suffix`` can be provided.'
+          isOptional: true
+          parameterType: STRING
+        size:
+          description: The size of storage requested by the PVC that will be provisioned.
+            For example, ``'5Gi'``. Corresponds to `PersistentVolumeClaim.spec.resources.requests.storage
+            <https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/#PersistentVolumeClaimSpec>`_.
+          parameterType: STRING
+        storage_class_name:
+          defaultValue: ''
+          description: 'Name of StorageClass from which to provision the PV
+
+            to back the PVC. ``None`` indicates to use the cluster''s default
+
+            storage_class_name. Set to ``''''`` for a statically specified PVC.'
+          isOptional: true
+          parameterType: STRING
+        volume_name:
+          description: 'Pre-existing PersistentVolume that should back the
+
+            provisioned PersistentVolumeClaim. Used for statically
+
+            specified PV only. Corresponds to `PersistentVolumeClaim.spec.volumeName
+            <https://kubernetes.io/docs/reference/kubernetes-api/config-and-storage-resources/persistent-volume-claim-v1/#PersistentVolumeClaimSpec>`_.'
+          isOptional: true
+          parameterType: STRING
+    outputDefinitions:
+      parameters:
+        name:
+          parameterType: STRING
+  comp-deletepvc:
+    executorLabel: exec-deletepvc
+    inputDefinitions:
+      parameters:
+        pvc_name:
+          description: Name of the PVC to delete. Supports passing a runtime-generated
+            name, such as a name provided by ``kubernetes.CreatePvcOp().outputs['name']``.
+          parameterType: STRING
+  comp-preprocess:
+    executorLabel: exec-preprocess
+    inputDefinitions:
+      parameters:
+        data_multiplier:
+          parameterType: NUMBER_INTEGER
+  comp-test:
+    executorLabel: exec-test
+  comp-train:
+    executorLabel: exec-train
+deploymentSpec:
+  executors:
+    exec-createpvc:
+      container:
+        image: argostub/createpvc
+    exec-deletepvc:
+      container:
+        image: argostub/deletepvc
+    exec-preprocess:
+      container:
+        args:
+        - --data_multiplier={{$.inputs.parameters['data_multiplier']}}
+        - --with_vineyard=True
+        command:
+        - python3
+        - preprocess.py
+        image: ghcr.io/v6d-io/v6d/kubeflow-example/preprocess-data
+    exec-test:
+      container:
+        args:
+        - --with_vineyard=True
+        command:
+        - python3
+        - test.py
+        image: ghcr.io/v6d-io/v6d/kubeflow-example/test-data
+    exec-train:
+      container:
+        args:
+        - --with_vineyard=True
+        command:
+        - python3
+        - train.py
+        image: ghcr.io/v6d-io/v6d/kubeflow-example/train-data
+pipelineInfo:
+  description: An example pipeline that trains and logs a regression model.
+  name: machine-learning-pipeline-with-vineyard
+root:
+  dag:
+    tasks:
+      createpvc:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-createpvc
+        inputs:
+          parameters:
+            access_modes:
+              runtimeValue:
+                constant:
+                - ReadWriteMany
+            pvc_name:
+              runtimeValue:
+                constant: vineyard-objects
+            size:
+              runtimeValue:
+                constant: 1Mi
+            storage_class_name:
+              runtimeValue:
+                constant: vineyard-system.vineyardd-sample.csi
+        taskInfo:
+          name: createpvc
+      deletepvc:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-deletepvc
+        dependentTasks:
+        - test
+        inputs:
+          parameters:
+            pvc_name:
+              runtimeValue:
+                constant: vineyard-objects
+        taskInfo:
+          name: deletepvc
+      preprocess:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-preprocess
+        dependentTasks:
+        - createpvc
+        inputs:
+          parameters:
+            data_multiplier:
+              componentInputParameter: data_multiplier
+        taskInfo:
+          name: preprocess
+      test:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-test
+        dependentTasks:
+        - train
+        taskInfo:
+          name: test
+      train:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train
+        dependentTasks:
+        - preprocess
+        taskInfo:
+          name: train
+  inputDefinitions:
+    parameters:
+      data_multiplier:
+        parameterType: NUMBER_INTEGER
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.3.0
+---
+platforms:
+  kubernetes:
+    deploymentSpec:
+      executors:
+        exec-preprocess:
+          pvcMount:
+          - constant: benchmark-data
+            mountPath: /data
+          - constant: vineyard-objects
+            mountPath: /vineyard/data
+        exec-test:
+          pvcMount:
+          - constant: benchmark-data
+            mountPath: /data
+          - constant: vineyard-objects
+            mountPath: /vineyard/data
+        exec-train:
+          pvcMount:
+          - constant: benchmark-data
+            mountPath: /data
+          - constant: vineyard-objects
+            mountPath: /vineyard/data

@@ -1,6 +1,6 @@
 from kfp import dsl
 
-def PreProcess():
+def PreProcess(data_multiplier: int):
     #############################################################
     # user need to add the volume Op for vineyard object manully
     vop = dsl.VolumeOp(name="vineyard-objects",
@@ -19,7 +19,8 @@ def PreProcess():
             "/data": dsl.PipelineVolume(pvc="benchmark-data"),
             "/vineyard/data": vop.volume
         },
-        command = ['python3', 'preprocess.py']
+        command = ['python3', 'preprocess.py'],
+        arguments=[f'--data_multiplier={data_multiplier}', '--with_vineyard=True'],
     )
 
 def Train(comp1):
@@ -32,6 +33,7 @@ def Train(comp1):
             "/vineyard/data": comp1.pvolumes['/vineyard/data'],
         },
         command = ['python3', 'train.py'],
+        arguments=['--with_vineyard=True'],
     )
 
 def Test(comp1, comp2):
@@ -43,15 +45,16 @@ def Test(comp1, comp2):
             "/data": comp2.pvolumes['/data'],
             "/vineyard/data": comp1.pvolumes['/vineyard/data']
         },
-        command = ['python3', 'test.py']
+        command = ['python3', 'test.py'],
+        arguments=['--with_vineyard=True'],
     )
 
 @dsl.pipeline(
    name='Machine learning Pipeline',
    description='An example pipeline that trains and logs a regression model.'
 )
-def pipeline():
-    comp1 = PreProcess()
+def pipeline(data_multiplier: int):
+    comp1 = PreProcess(data_multiplier=data_multiplier)
     comp2 = Train(comp1)
     comp3 = Test(comp1, comp2)
 

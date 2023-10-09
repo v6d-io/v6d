@@ -1,3 +1,4 @@
+import argparse
 import os
 import time
 
@@ -7,9 +8,8 @@ import joblib
 import pandas as pd
 import vineyard
 
-def test_model():
+def test_model(with_vineyard):
     os.system('sync; echo 3 > /proc/sys/vm/drop_caches')
-    with_vineyard = os.environ.get('WITH_VINEYARD', False)
     st = time.time()
     if with_vineyard:
         x_test_data = vineyard.csi.read("/vineyard/data/x_test.pkl")
@@ -34,9 +34,12 @@ def test_model():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--with_vineyard', type=bool, default=False, help='Whether to use vineyard')
+    args = parser.parse_args()
     st = time.time()
     print('Testing model...')
-    test_model()
+    test_model(args.with_vineyard)
     ed = time.time()
     print('##################################')
     print('Testing model data time: ', ed - st)
