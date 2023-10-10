@@ -28,7 +28,7 @@ setup:
         helm repo update
         cd python/vineyard/contrib/airflow
         helm install -f values.yaml airflow apache-airflow/airflow \
-          --namespace airflow --create-namespace
+          --namespace airflow --create-namespace --version 1.10.0
     - name: put the vineyard example DAGs into the airflow scheduler pod
       command: |
         cd python/vineyard/contrib/airflow

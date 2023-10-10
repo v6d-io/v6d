@@ -422,7 +422,9 @@ The execution time of the pipeline shown in the kubeflow dashboard is as follows
 
 Based on the above result, we can find that the execution time of kubeflow pipeline with vineyard 
 is reduced by 10% on the dashboard. However, the execution time contains the time of pulling the
-docker image, and it's also affected by lots of factors, such as the network, etc.
+docker image, and it's also affected by lots of factors, such as the network, etc. Also, you may find
+the kfp v2 is slower than the kfp v1, that's because the kfp v2 always pulls the docker image from 
+the remote registry, and the kfp v1 will use the local docker image.
 
 In a word, vineyard can optimize the data sharing between the kubeflow components, and reduce the
 execution time of the complete kubeflow pipeline.
