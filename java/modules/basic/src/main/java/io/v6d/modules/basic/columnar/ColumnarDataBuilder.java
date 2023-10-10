@@ -35,13 +35,16 @@ import java.lang.reflect.Type;
  */
 import java.math.BigDecimal;
 import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
-import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateDayVector;
 import org.apache.arrow.vector.DecimalVector;
+import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
@@ -68,14 +71,17 @@ import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.complex.ListVector;
-import org.apache.arrow.vector.complex.impl.UnionListWriter;
+import org.apache.arrow.vector.complex.MapVector;
+import org.apache.arrow.vector.complex.StructVector;
 import org.apache.arrow.vector.holders.NullableIntervalDayHolder;
 import org.apache.arrow.vector.holders.NullableVarCharHolder;
-import org.apache.arrow.vector.types.pojo.ArrowType;
-import org.apache.arrow.vector.types.pojo.FieldType;
 import org.apache.arrow.vector.util.Text;
 
+
 import io.v6d.core.client.Context;
+import io.v6d.core.common.util.VineyardException;
+import io.v6d.core.common.util.VineyardException.NotImplemented;
+import io.v6d.modules.basic.arrow.util.ArrowVectorUtils;
 
 /** A visitor for arrow arrays. */
 public class ColumnarDataBuilder {
@@ -139,12 +145,24 @@ public class ColumnarDataBuilder {
         } else if (vector instanceof IntervalDayVector) {
             accessor = new IntervalDayAccessor((IntervalDayVector) vector);
         } else if (vector instanceof ListVector) {
-            accessor = new ListVectorAccessor((ListVector) vector);
-        } else {
+            accessor = new NestedVectorAccessor((ListVector) vector);
+        } else if (vector instanceof StructVector) {
+            accessor = new NestedVectorAccessor((StructVector) vector);
+        } 
+        else {
             throw new UnsupportedOperationException(
                     "array type is not supported yet: " + vector.getClass());
         }
     }
+
+    // public ColumnarDataBuilder(ArrayBuilder []vectors, ArrowTypeID type) {
+    //     if (type == ArrowTypeID.List) {
+    //         accessor = new ListNestVectorAccessor(vectors);
+    //     } else {
+    //         throw new UnsupportedOperationException(
+    //                 "array type is not supported yet: " + type.getClass());
+    //     }
+    // }
 
     public ArrowVectorAccessor getAccessor() {
         return accessor;
@@ -386,6 +404,14 @@ public class ColumnarDataBuilder {
         void setBinary(int rowId, byte[] value) {
             throw new UnsupportedOperationException();
         }
+
+        // Object getAllObjects() {
+        //     throw new UnsupportedOperationException();
+        // }
+
+        // void setValueCount(int valueCount) {
+        //     throw new UnsupportedOperationException();
+        // }
     }
 
     private static class BooleanAccessor extends ArrowVectorAccessor {
@@ -566,6 +592,20 @@ public class ColumnarDataBuilder {
         final void setInt(int rowId, int value) {
             accessor.set(rowId, value);
         }
+
+        // @Override
+        // Object getAllObjects() {
+        //     List<Integer> result = new ArrayList<>();
+        //     for (int i = 0; i < accessor.getValueCount(); i++) {
+        //         result.add(accessor.get(i));
+        //     }
+        //     return result;
+        // }
+
+        // @Override
+        // void setValueCount(int valueCount) {
+        //     accessor.setValueCount(valueCount);
+        // }
     }
 
     private static class UIntAccessor extends ArrowVectorAccessor {
@@ -760,29 +800,12 @@ public class ColumnarDataBuilder {
 
         @Override
         Object getObject(int rowId) {
-            return getUTF8String(rowId);
+            return accessor.getObject(rowId).toString();
         }
 
         @Override
         void setObject(int rowId, Object value) {
-            if (value instanceof String) {
-                this.setUTF8String(rowId, new Text((String) value));
-            } else if(value instanceof byte[]) {
-                this.setUTF8String(rowId, new Text((byte[]) value));
-            }
-            else {
-                this.setUTF8String(rowId, (Text) value);
-            }
-        }
-
-        @Override
-        final Text getUTF8String(int rowId) {
-            return accessor.getObject(rowId);
-        }
-
-        @Override
-        final void setUTF8String(int rowId, Text value) {
-            accessor.setSafe(rowId, value);
+            accessor.setSafe(rowId, new Text(value.toString()));
         }
     }
 
@@ -847,7 +870,7 @@ public class ColumnarDataBuilder {
 
         @Override
         final void setBinary(int rowId, byte[] value) {
-            accessor.set(rowId, value);
+            accessor.setSafe(rowId, value);
         }
     }
 
@@ -1244,41 +1267,140 @@ public class ColumnarDataBuilder {
         }
     }
 
-    private static class ListVectorAccessor extends ArrowVectorAccessor {
+    private static class NestedVectorAccessor extends ArrowVectorAccessor {
 
-        private final ListVector accessor;
+        private final FieldVector accessor;
 
-        ListVectorAccessor(ListVector vector) {
+        NestedVectorAccessor(FieldVector vector) {
             super(vector);
             this.accessor = vector;
         }
 
         @Override
-        Object getObject(int rowId) {
-            return this.accessor.getDataVector().getObject(rowId);
+        void setObject(int rowId, Object value) {
+            try {
+                setObject(accessor, rowId, value);
+                FieldVector fv = accessor;
+                Context.println("********************");
+                while(fv instanceof ListVector) {
+                    for (int i = 0; i < fv.getValueCount(); i++) {
+                        int start = (fv).getOffsetBuffer().getInt((long)(i * 4));
+                        int end = (fv).getOffsetBuffer().getInt((long)((i + 1) * 4));
+                        Context.println("start:" + start + " end:" + end);
+                    }
+                    fv = ((ListVector)fv).getDataVector();
+                }
+                Context.println("********************");
+            } catch (VineyardException e){
+                Context.println("Failed to set object! Error msg:" + e.getMessage());
+            }
         }
 
-        @Override
-        void setObject(int rowId, Object value) {
-            ArrayList list = (ArrayList) value;
-            UnionListWriter writer =  this.accessor.getWriter();
-            writer.startList();
-            writer.setPosition(rowId);
-            switch(list.get(0).getClass().getName()) {
-                case "java.lang.Integer":
-                    Context.println("Integer");
-                    for (int i = 0; i < list.size(); i++) {
-                        writer.writeInt((Integer)list.get(i));
-                        Context.println("write value[" + i + "] = " + list.get(i));
-                    }
-                    writer.setValueCount(list.size());
-                    writer.endList();
-                    accessor.setValueCount(accessor.getValueCount() + 1);
-                    break;
+        private void setObject(FieldVector vector, int rowId, Object value) throws VineyardException {
+            Context.println("set Value:" + value);
+            if (vector instanceof StructVector) {
+                ArrayList valueList = (ArrayList) value;
+                StructVector structVector = (StructVector)vector;
+
+                List<FieldVector> childVectors = structVector.getChildrenFromFields();
+                for (int i = 0; i < valueList.size(); i++) {
+                    setObject(childVectors.get(i), rowId, valueList.get(i));
+                }
+                structVector.setValueCount(structVector.getValueCount() + 1);
+            } else if (vector instanceof MapVector) {
+                MapVector mapVector = (MapVector)vector;
+                HashMap valueMap = (HashMap) value;
+                List<Object> objects = new ArrayList<>();
+
+                for (Object key : valueMap.keySet()) {
+                    List<Object> temp = new ArrayList<>();
+                    temp.add(key);
+                    temp.add(valueMap.get(key));
+                    Context.println("key: " + key + " value:" + valueMap.get(key));
+                    objects.add(temp);
+                    Context.println("objects:" + objects);
+                }
+
+                mapVector.startNewValue(rowId);
+                int childRowId = mapVector.getDataVector().getValueCount();
+                for (int i = 0; i < objects.size(); i++) {
+                    setObject(mapVector.getDataVector(), childRowId + i, objects.get(i));
+                }
+                mapVector.endValue(rowId,  objects.size());
+                vector.setValueCount(vector.getValueCount() + objects.size());
+            } else if (vector instanceof ListVector) {
+                ArrayList valueList = (ArrayList) value;
+                ListVector listVector = (ListVector)vector;
+                listVector.startNewValue(rowId);
+                int childRowId = listVector.getDataVector().getValueCount();
+                for (int i = 0; i < valueList.size(); i++) {
+                    setObject(listVector.getDataVector(), childRowId + i, valueList.get(i));
+                }
+                listVector.endValue(rowId, valueList.size());
+                vector.setValueCount(vector.getValueCount() + valueList.size());
+            } else {
+                if (vector instanceof IntVector) {
+                    IntVector intVector = (IntVector)vector;
+                    intVector.setSafe(rowId, (int) value);
+                    intVector.setValueCount(intVector.getValueCount() + 1);
+                } else if (vector instanceof BigIntVector) {
+                    BigIntVector bigIntVector = (BigIntVector)vector;
+                    bigIntVector.setSafe(rowId, (long) value);
+                    bigIntVector.setValueCount(bigIntVector.getValueCount() + 1);
+                } else if (vector instanceof SmallIntVector) {
+                    SmallIntVector smallIntVector = (SmallIntVector)vector;
+                    smallIntVector.setSafe(rowId, (short) value);
+                    smallIntVector.setValueCount(smallIntVector.getValueCount() + 1);
+                } else if (vector instanceof TinyIntVector) {
+                    TinyIntVector tinyIntVector = (TinyIntVector)vector;
+                    tinyIntVector.setSafe(rowId, (byte) value);
+                    tinyIntVector.setValueCount(tinyIntVector.getValueCount() + 1);
+                } else if (vector instanceof Float8Vector) {
+                    Float8Vector doubleVector = (Float8Vector)vector;
+                    doubleVector.setSafe(rowId, (double) value);
+                    doubleVector.setValueCount(doubleVector.getValueCount() + 1);
+                } else if (vector instanceof Float4Vector){
+                    Float4Vector floatVector = (Float4Vector)vector;
+                    floatVector.setSafe(rowId, (float) value);
+                    floatVector.setValueCount(floatVector.getValueCount() + 1);
+                } else if (vector instanceof BitVector) {
+                    BitVector bitVector = (BitVector)vector;
+                    bitVector.setSafe(rowId, (boolean) value ? 1 : 0);
+                    bitVector.setValueCount(bitVector.getValueCount() + 1);
+                } else if (vector instanceof DateDayVector) {
+                    DateDayVector dateDayVector = (DateDayVector)vector;
+                    dateDayVector.setSafe(rowId, (int)(((Date)value).getTime() / (DateTimeConstants.MILLIS_PER_DAY)));
+                    dateDayVector.setValueCount(dateDayVector.getValueCount() + 1);
+                } else if (vector instanceof TimeStampNanoTZVector) {
+                    TimeStampNanoTZVector timeStampNanoTZVector = (TimeStampNanoTZVector)vector;
+                    timeStampNanoTZVector.setSafe(rowId, (long)(((Timestamp)value).getTime()) * DateTimeConstants.NANOS_PER_MILLIS + (((Timestamp)value).getNanos() % DateTimeConstants.NANOS_PER_MILLIS));
+                    timeStampNanoTZVector.setValueCount(timeStampNanoTZVector.getValueCount() + 1);
+                } else if (vector instanceof DecimalVector) {
+                    DecimalVector decimalVector = (DecimalVector)vector;
+                    BigDecimal bigDecimal = ArrowVectorUtils.TransHiveDecimalToBigDecimal(value);
+                    decimalVector.setSafe(rowId, bigDecimal);
+                    decimalVector.setValueCount(decimalVector.getValueCount() + 1);
+                } else if (vector instanceof LargeVarCharVector) {
+                    LargeVarCharVector largeVarCharVector = (LargeVarCharVector)vector;
+                    largeVarCharVector.setSafe(rowId, ((String)value).getBytes());
+                    largeVarCharVector.setValueCount(largeVarCharVector.getValueCount() + 1);
+                } else if (vector instanceof VarCharVector) {
+                    VarCharVector varCharVector = (VarCharVector)vector;
+                    varCharVector.setSafe(rowId, (value.toString()).getBytes());
+                    varCharVector.setValueCount(varCharVector.getValueCount() + 1);
+                } else if (vector instanceof VarBinaryVector) {
+                    VarBinaryVector varBinaryVector = (VarBinaryVector)vector;
+                    varBinaryVector.setSafe(rowId, ((String)value).getBytes());
+                    varBinaryVector.setValueCount(varBinaryVector.getValueCount() + 1);
+                } else if (vector instanceof LargeVarBinaryVector) {
+                    LargeVarBinaryVector largeVarBinaryVector = (LargeVarBinaryVector)vector;
+                    largeVarBinaryVector.setSafe(rowId, ((String)value).getBytes());
+                    largeVarBinaryVector.setValueCount(largeVarBinaryVector.getValueCount() + 1);
+                } else {
+                    throw new NotImplemented("Unsupported vector type:" + vector.getClass().getName());
+                }
+                Context.println("now vector value count:" + vector.getValueCount());
             }
-            // if (vector != null) {
-            //     vector.close();
-            // }
         }
     }
 

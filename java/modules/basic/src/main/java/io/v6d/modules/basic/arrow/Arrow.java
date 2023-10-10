@@ -52,6 +52,8 @@ public final class Arrow {
         public static final ArrowType TimeStampMicro = new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC");
         public static final ArrowType TimeStampNano = new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC");
         public static final ArrowType List = new ArrowType.List();
+        public static final ArrowType Struct = new ArrowType.Struct();
+        public static final ArrowType Map = new ArrowType.Map(true);
     }
 
     public static class FieldType {
@@ -95,6 +97,10 @@ public final class Arrow {
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.TimeStampSec, null);
         public static final org.apache.arrow.vector.types.pojo.FieldType List =
                 new org.apache.arrow.vector.types.pojo.FieldType(false, Type.List, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType Struct =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.Struct, null);
+        public static final org.apache.arrow.vector.types.pojo.FieldType Map =
+                new org.apache.arrow.vector.types.pojo.FieldType(false, Type.Map, null);
     }
 
     public static Field makeField(

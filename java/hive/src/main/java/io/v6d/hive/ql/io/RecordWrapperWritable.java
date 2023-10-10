@@ -23,37 +23,30 @@ import java.math.BigDecimal;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.BiConsumer;
 import lombok.val;
 import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.arrow.vector.types.pojo.ArrowType.Decimal;
-import org.apache.hadoop.hive.common.type.HiveChar;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
-import org.apache.hadoop.hive.common.type.HiveVarchar;
 import org.apache.hadoop.hive.serde2.io.DateWritable;
 import org.apache.hadoop.hive.serde2.io.HiveDecimalWritable;
 import org.apache.hadoop.hive.serde2.io.TimestampWritable;
-import org.apache.hadoop.hive.serde2.lazy.ByteArrayRef;
-import org.apache.hadoop.hive.serde2.lazy.LazyArray;
-import org.apache.hadoop.hive.serde2.lazy.LazyFactory;
-import org.apache.hadoop.hive.serde2.lazy.LazyHiveChar;
-import org.apache.hadoop.hive.serde2.lazy.LazyHiveVarchar;
-import org.apache.hadoop.hive.serde2.lazy.objectinspector.LazyListObjectInspector;
-import org.apache.hadoop.hive.serde2.lazy.objectinspector.LazyObjectInspectorFactory;
-import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyHiveCharObjectInspector;
-import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyHiveVarcharObjectInspector;
-import org.apache.hadoop.hive.serde2.lazy.objectinspector.primitive.LazyObjectInspectorParameters;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorFactory;
 import org.apache.hadoop.hive.serde2.objectinspector.SettableStructObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.StructField;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.JavaHiveCharObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.JavaHiveDecimalObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.JavaHiveVarcharObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.PrimitiveObjectInspectorFactory;
-import org.apache.hadoop.hive.serde2.objectinspector.primitive.WritableBinaryObjectInspector;
-import org.apache.hadoop.hive.serde2.objectinspector.primitive.WritableStringObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.WritableHiveDecimalObjectInspector;
 import org.apache.hadoop.hive.serde2.typeinfo.BaseCharTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.CharTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.ListTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.MapTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
@@ -64,7 +57,6 @@ public class RecordWrapperWritable implements WritableComparable {
     // output format: raw java objects, e.g., integer, string
     // input format: writable
     private Object[] values;
-    private int[] cLen;
 
     // for input format
     private boolean[] nullIndicators;
@@ -75,7 +67,7 @@ public class RecordWrapperWritable implements WritableComparable {
 
     // for input format
     public RecordWrapperWritable(Schema schema) {
-        this.values = new Writable[schema.getFields().size()];
+        this.values = new Object[schema.getFields().size()];
         this.nullIndicators = new boolean[schema.getFields().size()];
         this.setters = new BiConsumer[schema.getFields().size()];
         for (int i = 0; i < schema.getFields().size(); i++) {
@@ -95,12 +87,11 @@ public class RecordWrapperWritable implements WritableComparable {
             } else if (Arrow.Type.Double.equals(dtype)) {
                 this.values[i] = new DoubleWritable();
                 this.setters[i] = RecordWrapperWritable::setDouble;
-            } else if (Arrow.Type.VarChar.equals(dtype)
-                    || Arrow.Type.LargeVarChar.equals(dtype)
-                    || Arrow.Type.VarBinary.equals(dtype)
-                    || Arrow.Type.LargeVarBinary.equals(dtype)) {
-                this.values[i] = new Text();
-                this.setters[i] = RecordWrapperWritable::setString;
+            } else if (Arrow.Type.VarChar.equals(dtype) || Arrow.Type.LargeVarChar.equals(dtype)) {
+                continue;
+            } else if (Arrow.Type.VarBinary.equals(dtype)) {
+                this.values[i] = new BytesWritable();
+                this.setters[i] = RecordWrapperWritable::setBytes;
             } else if (Arrow.Type.TinyInt.equals(dtype)) {
                 this.values[i] = new ByteWritable();
                 this.setters[i] = RecordWrapperWritable::setByte;
@@ -120,10 +111,13 @@ public class RecordWrapperWritable implements WritableComparable {
                 this.values[i] = new HiveDecimalWritable();
                 this.setters[i] = RecordWrapperWritable::setDecimal;
             } else if (Arrow.Type.List.equals(dtype)) {
-                this.values = new Object[schema.getFields().size()][];
+                this.values = new List[schema.getFields().size()];
                 break;
-            }
-            else {
+            } else if (Arrow.Type.Struct.equals(dtype)) {
+                this.values = new List[schema.getFields().size()];
+            } else if (Arrow.Type.Map.equals(dtype)) {
+                this.values = new HashMap[schema.getFields().size()];
+            } else {
                 throw new UnsupportedOperationException("Unsupported type: " + dtype);
             }
         }
@@ -131,7 +125,7 @@ public class RecordWrapperWritable implements WritableComparable {
 
     // for input format
     public RecordWrapperWritable(List<TypeInfo> fieldTypes) {
-        this.values = new Writable[fieldTypes.size()];
+        this.values = new Object[fieldTypes.size()];
         this.nullIndicators = new boolean[fieldTypes.size()];
         this.setters = new BiConsumer[fieldTypes.size()];
         for (int i = 0; i < fieldTypes.size(); i++) {
@@ -139,21 +133,20 @@ public class RecordWrapperWritable implements WritableComparable {
             if (info.getCategory() != ObjectInspector.Category.PRIMITIVE) {
                 switch (info.getCategory()) {
                     case LIST:
-                        Context.println("type:" + info);
+                        this.values = new List[fieldTypes.size()];
                         break;
                     case MAP:
-                        Context.println("type:" + info);
-                        throw new UnsupportedOperationException("Unsupported type: " + info);
+                        this.values = new HashMap[fieldTypes.size()];
+                        break;
                     case STRUCT:
-                        Context.println("type:" + info);
-                        throw new UnsupportedOperationException("Unsupported type: " + info);
+                        this.values = new List[fieldTypes.size()];
+                        break;
                     case UNION:
                         Context.println("type:" + info);
                         throw new UnsupportedOperationException("Unsupported type: " + info);
                     default:
                         throw new UnsupportedOperationException("Unsupported type: " + info);
                 }
-                this.values = new Object[fieldTypes.size()][];
                 break;
             } else {
                 switch (((PrimitiveTypeInfo) info).getPrimitiveCategory()) {
@@ -185,12 +178,13 @@ public class RecordWrapperWritable implements WritableComparable {
                         this.values[i] = new DoubleWritable();
                         this.setters[i] = RecordWrapperWritable::setDouble;
                         break;
-                    case STRING:
+                    case BINARY:
+                        this.values[i] = new BytesWritable();
+                        this.setters[i] = RecordWrapperWritable::setBytes;
+                        break;
                     case CHAR:
                     case VARCHAR:
-                    case BINARY:
-                        this.values[i] = new Text();
-                        this.setters[i] = RecordWrapperWritable::setString;
+                    case STRING:
                         break;
                     case DATE:
                         this.values[i] = new DateWritable();
@@ -219,104 +213,46 @@ public class RecordWrapperWritable implements WritableComparable {
     public void setValues(Object[] values) {
         Context.println("setValues");
         this.values = values;
-        for (int i = 0; i < values.length; i++) {
-            if (values[i] instanceof HiveChar) {
-                this.values[i] =
-                        new org.apache.arrow.vector.util.Text(((HiveChar) values[i]).getValue());
-            } else if (values[i] instanceof HiveVarchar) {
-                this.values[i] =
-                        new org.apache.arrow.vector.util.Text(((HiveVarchar) values[i]).getValue());
-            }
-        }
     }
 
     // for input format
     public void setWritables(ColumnarData[] columns, int index) {
         Context.println("setWritables");
         for (int i = 0; i < columns.length; i++) {
-            if (values[i] != null) {
+            if (values[i] instanceof Writable) {
                 setters[i].accept((Writable) values[i], columns[i].getObject(index));
             } else {
-                List value = (List)columns[i].getObject(index);
-                if (value instanceof ArrayList) {
-                    ArrayList<Writable> list = new ArrayList<Writable>();
-                    Context.println("list size:" + value.size());
-                    for (int j = 0; j < value.size(); j++) {
-                        // FIXME: now only support int
-                        Context.println("value[" + i + "]=" + value.get(j));
-                        list.add(new IntWritable((int)value.get(j)));
-                    }
-                    list.add(new IntWritable(9999));
-                    this.values[i] = (list.toArray());
-                } else {
-                    throw new UnsupportedOperationException("Unsupported type: " + value.getClass());
-                }
+                values[i] = columns[i].getObject(index);
             }
         }
     }
 
-    public Object getValue(int index, int cLen, ObjectInspector oi) {
-        Context.println("getValue, oi:" + oi.getTypeName());
+    public Object getValue(int index) {
         if (index >= values.length) {
             return null;
         }
-        if (!(values[index] instanceof Text)) {
-            return values[index];
-        }
-        if (oi instanceof WritableStringObjectInspector) {
-            return values[index];
-        }
-
-        if (oi instanceof LazyHiveCharObjectInspector) {
-            LazyHiveChar result = new LazyHiveChar((LazyHiveCharObjectInspector) oi);
-            ByteArrayRef data = new ByteArrayRef();
-            String str = values[index].toString();
-            data.setData(str.getBytes());
-            if (str.length() >= cLen) {
-                result.init(data, 0, cLen);
-            } else {
-                result.init(data, 0, str.length());
-            }
-            return result;
-        } else if (oi instanceof LazyHiveVarcharObjectInspector) {
-            LazyHiveVarchar result = new LazyHiveVarchar((LazyHiveVarcharObjectInspector) oi);
-            ByteArrayRef data = new ByteArrayRef();
-            String str = values[index].toString();
-            data.setData(str.getBytes());
-            if (str.length() >= cLen) {
-                result.init(data, 0, cLen);
-            } else {
-                result.init(data, 0, str.length());
-            }
-            return result;
-        } else if (oi instanceof WritableBinaryObjectInspector) {
-            byte[] bytes = ((Text) values[index]).getBytes();
-            BytesWritable result = new BytesWritable(bytes);
-            return result;
-        } else {
-            throw new UnsupportedOperationException("Unsupported type: " + oi.getClass());
-        }
+        return values[index];
     }
 
     // for output format
     public void setValue(int index, Object value) {
         Context.println("setValue, class:" + value.getClass().getName() + ", value:" + value);
         values[index] = value;
-        Object[] objects = (Object[])value;
-        for (int i = 0; i < objects.length; i++) {
-            Context.println("objects[" + i + "]=" + objects[i]);
+        if (value instanceof Object[]) {
+            Object[] objects = (Object[])value;
+            for (int i = 0; i < objects.length; i++) {
+                Context.println("objects[" + i + "]=" + objects[i]);
+            }
+        } else {
+            Context.println("objects[" + index + "]=" + value);
         }
     }
 
     // for input format
-    public void setWritable(int index, Writable value, int cLen) {
+    public void setWritable(int index, Writable value) {
         // n.b.: need to use setters, as values from "setStructFieldData"
         // are already writables.
-        if (cLen == -1) {
-            values[index] = value;
-        } else {
-            values[index] = new Text(value.toString().substring(0, cLen));
-        }
+        values[index] = value;
     }
 
     @Override
@@ -339,16 +275,16 @@ public class RecordWrapperWritable implements WritableComparable {
         return true;
     }
 
-    private BooleanWritable makeWritable(boolean value) {
-        return new BooleanWritable(value);
-    }
-
     private static void setBool(Writable w, Object value) {
         ((BooleanWritable) w).set((boolean) value);
     }
 
     private static void setByte(Writable w, Object value) {
         ((ByteWritable) w).set((byte) value);
+    }
+
+    private static void setBytes(Writable w, Object value) {
+        ((BytesWritable) w).set((byte[]) value, 0, ((byte[]) value).length);
     }
 
     private static void setShort(Writable w, Object value) {
@@ -371,11 +307,6 @@ public class RecordWrapperWritable implements WritableComparable {
         ((DoubleWritable) w).set((double) value);
     }
 
-    private static void setString(Writable w, Object value) {
-        // keep the casting as a type sanity check
-        ((Text) w).set(((org.apache.arrow.vector.util.Text) value).toString());
-    }
-
     private static void setDate(Writable w, Object value) {
         ((DateWritable) w).set((int)value);
     }
@@ -391,11 +322,6 @@ public class RecordWrapperWritable implements WritableComparable {
         BigDecimal decimal = (BigDecimal) value;
         HiveDecimal hiveDecimal = HiveDecimal.create(decimal);
         ((HiveDecimalWritable) w).set(hiveDecimal, decimal.precision(), decimal.scale());
-    }
-
-    private static void setList(Writable w, Object value) {
-        ((ArrayList) w).clear();
-        ((ArrayList) w).addAll((ArrayList) value);
     }
 
     static class Field implements StructField {
@@ -435,33 +361,18 @@ public class RecordWrapperWritable implements WritableComparable {
         private List<String> fieldNames;
         private List<TypeInfo> fieldTypes;
         private List<StructField> fields;
-        private int[] cLen;
 
         public VineyardStructInspector(StructTypeInfo info) {
             this.fieldNames = info.getAllStructFieldNames();
             this.fieldTypes = info.getAllStructFieldTypeInfos();
             this.fields = new ArrayList<>(fieldNames.size());
-            cLen = new int[fieldTypes.size()];
             for (int i = 0; i < fieldNames.size(); ++i) {
                 this.fields.add(
                         new Field(fieldNames.get(i), createObjectInspector(fieldTypes.get(i)), i));
             }
-            for (int i = 0; i < fieldTypes.size(); ++i) {
-                cLen[i] = -1;
-                TypeInfo fieldType = fieldTypes.get(i);
-                if (fieldType.getCategory() != ObjectInspector.Category.PRIMITIVE) {
-                    continue;
-                }
-                switch (((PrimitiveTypeInfo) fieldType).getPrimitiveCategory()) {
-                    case CHAR:
-                        cLen[i] = ((BaseCharTypeInfo) fieldType).getLength();
-                        break;
-                    case VARCHAR:
-                        cLen[i] = ((VarcharTypeInfo) fieldType).getLength();
-                        break;
-                    default:
-                        break;
-                }
+            List<String> names = info.getAllStructFieldNames();
+            for (int i = 0; i < names.size(); i++) {
+                Context.println("name:" + names.get(i) + ", type:" + fieldTypes.get(i));
             }
         }
 
@@ -484,11 +395,7 @@ public class RecordWrapperWritable implements WritableComparable {
         public Object setStructFieldData(Object struct, StructField field, Object fieldValue) {
             int offset = ((Field) field).offset;
             RecordWrapperWritable writable = (RecordWrapperWritable) struct;
-            if (fieldValue instanceof Writable) {
-                writable.setWritable(offset, (Writable) fieldValue, cLen[offset]);
-            } else {
-                writable.setValue(offset, fieldValue);
-            }
+            writable.setValue(offset, fieldValue);
             return struct;
         }
 
@@ -514,7 +421,7 @@ public class RecordWrapperWritable implements WritableComparable {
             }
             int offset = ((Field) field).offset;
             RecordWrapperWritable writable = (RecordWrapperWritable) data;
-            return writable.getValue(offset, cLen[offset], field.getFieldObjectInspector());
+            return writable.getValue(offset);
         }
 
         @Override
@@ -548,21 +455,31 @@ public class RecordWrapperWritable implements WritableComparable {
     }
 
     static ObjectInspector createObjectInspector(TypeInfo info) {
-        if (info.getCategory() == ObjectInspector.Category.STRUCT) {
-            return createObjectInspector((StructTypeInfo) info);
-        }
+        return createObjectInspector(info, 0);
+    }
+
+    static ObjectInspector createObjectInspector(TypeInfo info, int level) {
         if (info.getCategory() != ObjectInspector.Category.PRIMITIVE) {
             switch (info.getCategory()) {
                 case LIST:
                     Context.println("type1:" + info);
                     TypeInfo elementInfo = ((ListTypeInfo)info).getListElementTypeInfo();
-                    return ObjectInspectorFactory.getStandardListObjectInspector(createObjectInspector(elementInfo));
+                    return ObjectInspectorFactory.getStandardListObjectInspector(createObjectInspector(elementInfo, level + 1));
                 case MAP:
                     Context.println("type2:" + info);
-                    throw new UnsupportedOperationException("Unsupported type: " + info);
+                    TypeInfo keyTypeInfo = ((MapTypeInfo)info).getMapKeyTypeInfo();
+                    TypeInfo valueTypeInfo = ((MapTypeInfo)info).getMapValueTypeInfo();
+                    return ObjectInspectorFactory.getStandardMapObjectInspector(createObjectInspector(keyTypeInfo, level + 1), createObjectInspector(valueTypeInfo, level + 1));
                 case STRUCT:
                     Context.println("type3:" + info);
-                    throw new UnsupportedOperationException("Unsupported type: " + info);
+                    List<TypeInfo> elemTypes = ((StructTypeInfo)info).getAllStructFieldTypeInfos();
+                    List<String> elemNames = ((StructTypeInfo)info).getAllStructFieldNames();
+                    List<ObjectInspector> elemInspectors = new ArrayList<ObjectInspector>();
+                    
+                    for (int i = 0; i < elemTypes.size(); i++) {
+                        elemInspectors.add(createObjectInspector(elemTypes.get(i), level + 1));
+                    }
+                    return ObjectInspectorFactory.getStandardStructObjectInspector(elemNames, elemInspectors);
                 case UNION:
                     Context.println("type4:" + info);
                     throw new UnsupportedOperationException("Unsupported type: " + info);
@@ -572,35 +489,81 @@ public class RecordWrapperWritable implements WritableComparable {
         } else {
             switch (((PrimitiveTypeInfo) info).getPrimitiveCategory()) {
                 case BOOLEAN:
-                    return PrimitiveObjectInspectorFactory.writableBooleanObjectInspector;
+                    if (level == 0) {
+                        return PrimitiveObjectInspectorFactory.writableBooleanObjectInspector;
+                    } else {
+                        return PrimitiveObjectInspectorFactory.javaBooleanObjectInspector;
+                    }
                 case BYTE:
-                    return PrimitiveObjectInspectorFactory.writableByteObjectInspector;
+                    if (level == 0) {
+                        return PrimitiveObjectInspectorFactory.writableByteObjectInspector;
+                    } else {
+                        return PrimitiveObjectInspectorFactory.javaByteObjectInspector;
+                    }
                 case SHORT:
-                    return PrimitiveObjectInspectorFactory.writableShortObjectInspector;
+                    if (level == 0) {
+                        return PrimitiveObjectInspectorFactory.writableShortObjectInspector;
+                    } else {
+                        return PrimitiveObjectInspectorFactory.javaShortObjectInspector;
+                    }
                 case INT:
-                    Context.println("type int!!!!");
-                    return PrimitiveObjectInspectorFactory.writableIntObjectInspector;
+                    if (level == 0) {
+                        return PrimitiveObjectInspectorFactory.writableIntObjectInspector;
+                    } else {
+                        return PrimitiveObjectInspectorFactory.javaIntObjectInspector;
+                    }
                 case LONG:
-                    return PrimitiveObjectInspectorFactory.writableLongObjectInspector;
+                    if (level == 0) {
+                        return PrimitiveObjectInspectorFactory.writableLongObjectInspector;
+                    } else {
+                        return PrimitiveObjectInspectorFactory.javaLongObjectInspector;
+                    }
                 case FLOAT:
-                    return PrimitiveObjectInspectorFactory.writableFloatObjectInspector;
+                    if (level == 0) {
+                        return PrimitiveObjectInspectorFactory.writableFloatObjectInspector;
+                    } else {
+                        return PrimitiveObjectInspectorFactory.javaFloatObjectInspector;
+                    }
                 case DOUBLE:
-                    return PrimitiveObjectInspectorFactory.writableDoubleObjectInspector;
+                    if (level == 0) {
+                        return PrimitiveObjectInspectorFactory.writableDoubleObjectInspector;
+                    } else {
+                        return PrimitiveObjectInspectorFactory.javaDoubleObjectInspector;
+                    }
                 case STRING:
-                    return PrimitiveObjectInspectorFactory.writableStringObjectInspector;
+                    return PrimitiveObjectInspectorFactory.javaStringObjectInspector;
                 case CHAR:
-                    // return PrimitiveObjectInspectorFactory.writableHiveCharObjectInspector;
-                    return new LazyHiveCharObjectInspector((CharTypeInfo) info);
+                    return new JavaHiveCharObjectInspector((CharTypeInfo) info);
                 case VARCHAR:
-                    return new LazyHiveVarcharObjectInspector((VarcharTypeInfo) info);
+                    return new JavaHiveVarcharObjectInspector((VarcharTypeInfo) info);
                 case BINARY:
-                    return PrimitiveObjectInspectorFactory.writableBinaryObjectInspector;
+                    if (level == 0) {
+                        return PrimitiveObjectInspectorFactory.writableBinaryObjectInspector;
+                    } else {
+                        return PrimitiveObjectInspectorFactory.javaByteArrayObjectInspector;
+                    }
                 case DATE:
-                    return PrimitiveObjectInspectorFactory.writableDateObjectInspector;
+                    if (level == 0) {
+                        return PrimitiveObjectInspectorFactory.writableDateObjectInspector;
+                    } else {
+                        return PrimitiveObjectInspectorFactory.javaDateObjectInspector;
+                    }
                 case TIMESTAMP:
-                    return PrimitiveObjectInspectorFactory.writableTimestampObjectInspector;
+                    if (level == 0) {
+                        return PrimitiveObjectInspectorFactory.writableTimestampObjectInspector;
+                    } else {
+                        return PrimitiveObjectInspectorFactory.javaTimestampObjectInspector;
+                    }
                 case DECIMAL:
-                    return PrimitiveObjectInspectorFactory.writableHiveDecimalObjectInspector;
+                    if (level == 0) {
+                        WritableHiveDecimalObjectInspector oi = new WritableHiveDecimalObjectInspector((DecimalTypeInfo)info);
+                        Context.println("Create io:" + oi.getTypeName());
+                        Context.println("Typeinfo :" + info.getTypeName());
+                        return oi;
+                    } else {
+                        ObjectInspector oi = new JavaHiveDecimalObjectInspector((DecimalTypeInfo)info);
+                        return oi;
+                    }
                 default:
                     throw new UnsupportedOperationException("Unsupported type: " + info);
             }

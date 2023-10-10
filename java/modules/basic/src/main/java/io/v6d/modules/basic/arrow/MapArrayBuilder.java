@@ -19,64 +19,57 @@ import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
-import io.v6d.core.common.util.VineyardException.NotImplemented;
 import io.v6d.modules.basic.arrow.util.ArrowVectorUtils;
 
 import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import lombok.val;
 
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.ValueVector;
-import org.apache.arrow.vector.complex.ListVector;
+import org.apache.arrow.vector.complex.MapVector;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.arrow.vector.types.pojo.ArrowType.ArrowTypeID;
 
-public class ListArrayBuilder implements ArrayBuilder {
-    // private BufferBuilder offset_buffer_builder;
+public class MapArrayBuilder implements ArrayBuilder {
     private BufferBuilder []data_buffer_builder;
-    private ListVector array;
-
+    private MapVector array;
     private List<Integer> valueCountList;
-    private SchemaBuilder listVectorSchemaBuilder;
+    private SchemaBuilder structVectorSchemaBuilder;
 
-    public ListArrayBuilder(IPCClient client, Field field) throws VineyardException {
-        List<Field> childFields = field.getChildren();
-        if (childFields.size() != 1) {
-            throw new NotImplemented("ListArrayBuilder only support one child field");
+    public MapArrayBuilder(IPCClient client, Field field) throws VineyardException {
+        this.array = MapVector.empty("", Arrow.default_allocator, true);
+        Queue<Field> fieldQueue = new LinkedList<>();
+        fieldQueue.add(field);
+        Context.println("+++++++++++++++++++");
+        while (!fieldQueue.isEmpty()) {
+            Field f = fieldQueue.poll();
+            Context.println("type:" + f.getType().getTypeID().name());
+            List<Field> chFields = f.getChildren();
+            if (chFields != null) {
+                for (Field chField : chFields) {
+                    fieldQueue.add(chField);
+                }
+            }
         }
-
-        this.array = ListVector.empty("", Arrow.default_allocator);
-        // this.array.addOrGetVector(childFields.get(0).getFieldType());
+        Context.println("+++++++++++++++++++");
         ArrowVectorUtils.buildArrowVector(this.array, field);
-
-        while(childFields.get(0).getType().getTypeID() == ArrowTypeID.List) {
-            Context.println("field:" + childFields.get(0).getType().getTypeID().name());
-            childFields = childFields.get(0).getChildren();
-        }
-        Context.println("field:" + childFields.get(0).getType().getTypeID().name());
-        FieldVector vector = array;
-        while (vector instanceof ListVector) {
-            Context.println("this.array:" + vector);
-            vector = ((ListVector)vector).getDataVector();
-        }
-        Context.println("this.array:" + vector);
 
         List<Field> fields = new ArrayList<>();
         fields.add(field);
         Schema schema = new Schema(fields);
-        listVectorSchemaBuilder = SchemaBuilder.fromSchema(schema);
+        structVectorSchemaBuilder = SchemaBuilder.fromSchema(schema);
     }
 
     @Override
     public void build(Client client) throws VineyardException {
-        Context.println("array length:" + array.getValueCount());
-
         valueCountList = ArrowVectorUtils.getValueCountOfArrowVector(array);
         ArrowBuf[] buffers = ArrowVectorUtils.getArrowBuffers(array);
+
         this.data_buffer_builder = new BufferBuilder[buffers.length];
         for (int i = 0; i < buffers.length; i++) {
             Context.println("data_buffer[" + i + "]:" + buffers[i].toString());
@@ -89,7 +82,7 @@ public class ListArrayBuilder implements ArrayBuilder {
         this.build(client);
         val meta = ObjectMeta.empty();
 
-        meta.setTypename("vineyard::ListArray");
+        meta.setTypename("vineyard::MapArray");
         meta.setValue("bufsNum_", this.data_buffer_builder.length);
         for (int i = 0; i < this.data_buffer_builder.length; i++) {
             meta.addMember("buffer_" + String.valueOf(i) + "_", this.data_buffer_builder[i].seal(client));
@@ -100,7 +93,7 @@ public class ListArrayBuilder implements ArrayBuilder {
             meta.setValue("valueCount_" + String.valueOf(i) + "_", valueCountList.get(i));
         }
 
-        meta.addMember("schema_", listVectorSchemaBuilder.seal(client));
+        meta.addMember("schema_", structVectorSchemaBuilder.seal(client));
         return client.createMetaData(meta);
     }
 

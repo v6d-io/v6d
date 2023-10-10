@@ -161,7 +161,7 @@ public class RecordBatchBuilder implements ObjectBuilder {
         } else if (field.getType().equals(Arrow.Type.LargeVarChar)) {
             return new LargeStringArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.VarBinary)) {
-            return new StringArrayBuilder(client, rows);
+            return new VarBinaryArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.LargeVarBinary)) {
             return new LargeStringArrayBuilder(client, rows);
         } else if (field.getType().equals(Arrow.Type.Null)) {
@@ -184,7 +184,11 @@ public class RecordBatchBuilder implements ObjectBuilder {
             ArrowType.Decimal decimal = (ArrowType.Decimal) field.getType();
             return new DecimalArrayBuilder(client, rows, decimal.getPrecision(), decimal.getScale(), decimal.getBitWidth());
         } else if (field.getType().equals(Arrow.Type.List)) {
-            return new ListArrayBuilder(client, rows, field.getChildren().get(0));
+            return new ListArrayBuilder(client, field);
+        } else if (field.getType().equals(Arrow.Type.Struct)) {
+            return new StructArrayBuilder(client, field);
+        } else if (field.getType().equals(Arrow.Type.Map)) {
+            return new MapArrayBuilder(client, field);
         } else {
             throw new VineyardException.NotImplemented(
                     "array builder for type " + field.getType() + " is not supported");

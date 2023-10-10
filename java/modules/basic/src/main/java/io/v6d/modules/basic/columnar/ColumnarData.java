@@ -32,13 +32,17 @@ package io.v6d.modules.basic.columnar;
  * under the License.
  */
 import java.math.BigDecimal;
+import java.sql.Date;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateDayVector;
 import org.apache.arrow.vector.DecimalVector;
+import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.IntVector;
@@ -56,6 +60,7 @@ import org.apache.arrow.vector.TimeStampNanoTZVector;
 import org.apache.arrow.vector.TimeStampNanoVector;
 import org.apache.arrow.vector.TimeStampSecTZVector;
 import org.apache.arrow.vector.TimeStampSecVector;
+import org.apache.arrow.vector.TimeStampVector;
 import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.UInt1Vector;
 import org.apache.arrow.vector.UInt2Vector;
@@ -65,16 +70,14 @@ import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.complex.ListVector;
-import org.apache.arrow.vector.complex.impl.UnionListReader;
-import org.apache.arrow.vector.complex.impl.UnionListWriter;
-import org.apache.arrow.vector.complex.reader.FieldReader;
-import org.apache.arrow.vector.complex.reader.IntReader;
+import org.apache.arrow.vector.complex.MapVector;
+import org.apache.arrow.vector.complex.StructVector;
 import org.apache.arrow.vector.holders.NullableIntervalDayHolder;
 import org.apache.arrow.vector.holders.NullableVarCharHolder;
-import org.apache.arrow.vector.holders.UnionHolder;
 import org.apache.arrow.vector.util.Text;
 
 import io.v6d.core.client.Context;
+import io.v6d.modules.basic.arrow.util.ArrowVectorUtils;
 
 /** A visitor for arrow arrays. */
 public class ColumnarData {
@@ -138,13 +141,26 @@ public class ColumnarData {
         } else if (vector instanceof IntervalDayVector) {
             accessor = new IntervalDayAccessor((IntervalDayVector) vector);
         } else if (vector instanceof ListVector) {
-            accessor = new ListVectorAccessor((ListVector) vector);
-        }
-        else {
+            accessor = new NestedVectorAccessor((FieldVector)vector);
+        } else if (vector instanceof StructVector) {
+            accessor = new NestedVectorAccessor((FieldVector) vector);
+        } else if (vector instanceof MapVector) {
+            accessor = new NestedVectorAccessor((FieldVector) vector);
+        } else {
             throw new UnsupportedOperationException(
                     "array type is not supported yet: " + vector.getClass());
         }
     }
+
+    // public ColumnarData(FieldVector []vectors, ArrowTypeID type) {
+    //     Context.println("columndata 2");
+    //     if (type == ArrowTypeID.List) {
+    //         accessor = new ListNestVectorAccessor(vectors);
+    //     } else {
+    //         throw new UnsupportedOperationException(
+    //                 "array type is not supported yet: " + type);
+    //     }
+    // }
 
     public ArrowVectorAccessor getAccessor() {
         return accessor;
@@ -298,6 +314,10 @@ public class ColumnarData {
         byte[] getBinary(int rowId) {
             throw new UnsupportedOperationException();
         }
+
+        // Object getAllObjects() {
+        //     throw new UnsupportedOperationException();
+        // }
     }
 
     private static class BooleanAccessor extends ArrowVectorAccessor {
@@ -418,6 +438,15 @@ public class ColumnarData {
         final int getInt(int rowId) {
             return accessor.get(rowId);
         }
+
+        // @Override
+        // Object getAllObjects() {
+        //     List<Integer> result = new ArrayList<>();
+        //     for (int i = 0; i < accessor.getValueCount(); i++) {
+        //         result.add(accessor.get(i));
+        //     }
+        //     return result;
+        // }
     }
 
     private static class UIntAccessor extends ArrowVectorAccessor {
@@ -552,12 +581,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getUTF8String(rowId);
-        }
-
-        @Override
-        final Text getUTF8String(int rowId) {
-            return accessor.getObject(rowId);
+            return accessor.getObject(rowId).toString();
         }
     }
 
@@ -864,27 +888,217 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            List<Object> value = new ArrayList<>();
-            UnionListReader reader = this.accessor.getReader();
-            Context.println("List rows:" + accessor.getValueCount());
-            reader.setPosition(rowId);
-            switch(accessor.getField().getType().getTypeID()) {
-                case Int:
-                    while (reader.next()) {
-                        IntReader intReader = reader.reader();
-                        if (intReader.isSet()) {
-                            int v = intReader.readInteger();
-                            Context.println("read value:" + v);
-                            value.add(v);
+            Object value = GetNestedObjectUtils.getObject(accessor, rowId);
+            Context.println("value type:" + value.getClass().getName() + " value:" + value);
+            return value;
+        }
+    }
+
+    private static class StructVectorAccessor extends ArrowVectorAccessor {
+
+        private final StructVector accessor;
+
+        StructVectorAccessor(StructVector vector) {
+            super(vector);
+            this.accessor = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            Object value = GetNestedObjectUtils.getObject(accessor, rowId);
+            return value;
+        }
+    }
+
+    private static class NestedVectorAccessor extends ArrowVectorAccessor {
+    
+        private final FieldVector vector;
+
+        NestedVectorAccessor(FieldVector vector) {
+            super(vector);
+            this.vector = vector;
+        }
+
+        @Override
+        Object getObject(int rowId) {
+            Object value = getObject(vector, rowId, 1);
+            Context.println("value type:" + value.getClass().getName() + " value:" + value);
+            return ((Object[])value)[0];
+        }
+
+        private Object getObject(FieldVector vector, int rowId, int rows) {
+            List<Object> result = new ArrayList<>();
+            Context.println("rows:" + rows);
+            if (vector.getValueCount() == 0) {
+                return null;
+            }
+
+            if (vector instanceof ListVector) {
+                Context.println("ListVector");
+                /*
+                 * TODO:
+                 * This code refer to apache arrow. Call ListVector.getObject will trigger Exception.
+                 * So we need to get the value by ourself. It may be fixed in the future.
+                 */
+                if (vector instanceof MapVector) {
+                    HashMap<Object, Object> map = new HashMap<>();
+                    FieldVector fv = ((ListVector)vector).getDataVector();
+
+                    for (int i = rowId; i < rowId + rows; i++) {
+                        List<Object> vals = new ArrayList<>();
+                        int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(i * 4));
+                        int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((i + 1) * 4));
+                        Context.println("start:" + start + " end:" + end);
+
+                        // struct<typeA, typeB>, struct<typeA, typeB> .....
+                        Object value = getObject(fv, start, end - start); 
+                        for (int j = 0; j < ((Object[])value).length; j++) {
+                            // value[j] is struct<typeA, typeB>
+                            List<Object> kvList = (List)(((Object[])value)[j]);
+                            map.put(kvList.get(0), kvList.get(1));
+                        }
+                        Context.println("map:" + map);
+                    }
+                    result.add(map);
+                } else {
+                    FieldVector fv = ((ListVector)vector).getDataVector();
+
+                    for (int i = rowId; i < rowId + rows; i++) {
+                        List<Object> vals = new ArrayList<>();
+                        int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(i * 4));
+                        int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((i + 1) * 4));
+                        Context.println("start:" + start + " end:" + end);
+
+                        Object value = getObject(fv, start, end - start);
+                        for (int j = 0; j < ((Object[])value).length; j++) {
+                            vals.add(((Object[])value)[j]);
+                        }
+                        result.add(vals);
+                        Context.println("result:" + result);
+                    }
+                }
+            } else if (vector instanceof StructVector) {
+                Context.println("StructVector");
+                List<FieldVector> childFieldVectors =  ((StructVector)vector).getChildrenFromFields();
+                for (int i = rowId; i < rowId + rows; i++) {
+                    List<Object> vals = new ArrayList<>();
+                    for (int j = 0; j < childFieldVectors.size(); j++) {
+                        Object value = getObject(childFieldVectors.get(j), i, 1);
+                        for (int k = 0; k < ((Object[])value).length; k++) {
+                            vals.add(((Object[])value)[k]);
                         }
                     }
-                    break;
-                default:
-                    throw new UnsupportedOperationException(
-                            "array type is not supported yet: " + accessor.getField().getType().getTypeID());
+                    result.add(vals);
+                }
+            } else {
+                // primitive type
+                Context.println("Primitive vector");
+                if (vector instanceof DateDayVector) {
+                    for (int i = 0; i < rows; i++) {
+                        Date date = new Date(((long)((DateDayVector)vector).get(rowId)) * (DateTimeConstants.MILLIS_PER_DAY));
+                        result.add(date);
+                    }
+                } else if (vector instanceof TimeStampNanoTZVector) {
+                    for (int i = 0; i < rows; i++) {
+                        long value = ((TimeStampVector)vector).get(rowId + i);
+                        Timestamp t = new Timestamp(0);
+                        t.setTime((long) value / DateTimeConstants.NANOS_PER_SECOND * DateTimeConstants.NANOS_PER_MICROS);
+                        t.setNanos((int) ((long) value % DateTimeConstants.NANOS_PER_SECOND));
+                        result.add(t);
+                    }
+                } else if (vector instanceof DecimalVector) {
+                    for (int i = 0; i < rows; i++) {
+                        BigDecimal bigDecimal = (BigDecimal)vector.getObject(rowId + i);
+                        Context.println("Trans:" + ArrowVectorUtils.TransBigDecimalToHiveDecimal(bigDecimal));
+                        result.add(ArrowVectorUtils.TransBigDecimalToHiveDecimal(bigDecimal));
+                        Context.println("read:" + vector.getObject(rowId + i));
+                    }
+                } else if (vector instanceof VarCharVector) {
+                    for (int i = 0; i < rows; i++) {
+                        result.add(vector.getObject(rowId + i).toString());
+                        Context.println("read:" + vector.getObject(rowId + i));
+                    }
+                } else {
+                    for (int i = 0; i < rows; i++) {
+                        result.add(vector.getObject(rowId + i));
+                        Context.println("read:" + vector.getObject(rowId + i));
+                    }
+                }
             }
-            return value;
-            // return accessor.getDataVector().getObject(rowId);
+            return result.toArray();
+        }
+    }
+
+    private static class GetNestedObjectUtils {
+        public static Object getObject(ValueVector vector, int index) {
+            if (vector.getValueCount() == 0) {
+                return null;
+            } else {
+                if (vector instanceof ListVector) {
+                    /*
+                     * TODO:
+                     * This code refer to apache arrow. Call ListVector.getObject will trigger Exception.
+                     * So we need to get the value by ourself. It may be fixed in the future.
+                     */
+                    java.util.List<Object> vals = new ArrayList<>();
+                    int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(index * 4));
+                    int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((index + 1) * 4));
+                    ValueVector vv = ((ListVector)vector).getDataVector();
+                    Context.println("start:" + start + " end:" + end);
+
+                    if (vv instanceof ListVector || vv instanceof StructVector) {
+                        for(int i = start; i < end; ++i) {
+                            vals.add(getObject(vv, i));
+                        }
+                    } else {
+                        for(int i = start; i < end; ++i) {
+                            if (vv instanceof TimeStampVector) {
+                                long value = ((TimeStampVector)vv).get(i);
+                                Timestamp t = new Timestamp(0);
+                                t.setTime((long) value / 1000000000 * 1000);
+                                t.setNanos((int) ((long) value % 1000000000));
+                                vals.add(t);
+                            } else if (vv instanceof DateDayVector) {
+                                Date date = new Date((((long)((DateDayVector)vv).get(i))) * (24 * 60 * 60 * 1000));
+                                vals.add(date);
+                            } 
+                            else {
+                                vals.add(vv.getObject(i));
+                            }
+                        }
+                    }
+                    return vals;
+                } else if (vector instanceof StructVector) {
+                    Context.println("StructVector");
+                    java.util.List<Object> vals = new ArrayList<>();
+                    StructVector sv = (StructVector)vector;
+                    for (int i = 0; i < sv.getChildrenFromFields().size(); i++) {
+                        FieldVector fv = sv.getChildrenFromFields().get(i);
+                        if (fv instanceof ListVector || fv instanceof StructVector) {
+                            vals.add(getObject(sv.getChildrenFromFields().get(index), i));
+                        } else if (fv instanceof DateDayVector) {
+                            Context.println("index:" + index);
+                            Context.println("day:" + ((DateDayVector)fv).get(index));
+                            Context.println("day:" + ((long)((DateDayVector)fv).get(index)) * (24 * 60 * 60 * 1000));
+                            Date date = new Date(((long)((DateDayVector)fv).get(index)) * (24 * 60 * 60 * 1000));
+                            vals.add(date);
+                        } else if (fv instanceof TimeStampNanoTZVector) {
+                            long value = ((TimeStampVector)fv).get(index);
+                            Timestamp t = new Timestamp(0);
+                            t.setTime((long) value / 1000000000 * 1000);
+                            t.setNanos((int) ((long) value % 1000000000));
+                            vals.add(t);
+                        } else {
+                            for (int j = 0; j < fv.getValueCount(); j++) {
+                                vals.add(fv.getObject(j));
+                            }
+                        }
+                    }
+                    return vals;
+                } else {
+                    return vector.getObject(index);
+                }
+            }
         }
     }
 

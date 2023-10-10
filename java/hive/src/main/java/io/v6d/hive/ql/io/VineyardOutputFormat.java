@@ -44,7 +44,9 @@ import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.ListTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.MapTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
@@ -238,15 +240,32 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         Field field = null;
         switch (typeInfo.getCategory()) {
             case LIST:
-                List<Field> children = new ArrayList<>();
+                List<Field> listChildren = new ArrayList<>();
                 Field chField = getField(((ListTypeInfo)typeInfo).getListElementTypeInfo());
-                children.add(chField);
-                field = new Field(typeInfo.getTypeName(), FieldType.nullable(toArrowType(typeInfo)), children);
+                listChildren.add(chField);
+                field = new Field(typeInfo.getTypeName(), FieldType.nullable(toArrowType(typeInfo)), listChildren);
+                break;
+            case STRUCT:
+                List<Field> structChildren = new ArrayList<>();
+                for (val child : ((StructTypeInfo)typeInfo).getAllStructFieldTypeInfos()) {
+                    structChildren.add(getField(child));
+                }
+                field = new Field(typeInfo.getTypeName(), FieldType.nullable(toArrowType(typeInfo)), structChildren);
                 break;
             case MAP:
-                throw new NotImplementedException();
-            case STRUCT:
-                throw new NotImplementedException();
+                listChildren = new ArrayList<>();
+                structChildren = new ArrayList<>();
+                List<Field> mapChildren = new ArrayList<>();
+                Field keyField = getField(((MapTypeInfo)typeInfo).getMapKeyTypeInfo());
+                Field valueField = getField(((MapTypeInfo)typeInfo).getMapValueTypeInfo());
+                structChildren.add(keyField);
+                structChildren.add(valueField);
+                Field structField = new Field(typeInfo.getTypeName(), FieldType.notNullable(ArrowType.Struct.INSTANCE), structChildren);
+                listChildren.add(structField);
+                Field listField = new Field(typeInfo.getTypeName(), FieldType.notNullable(ArrowType.List.INSTANCE), listChildren);
+                mapChildren.add(listField);
+                field = new Field(typeInfo.getTypeName(), FieldType.nullable(toArrowType(typeInfo)), mapChildren);
+                break;
             case UNION:
                 throw new NotImplementedException();
             default:
@@ -289,9 +308,10 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                     case DOUBLE:
                         return Types.MinorType.FLOAT8.getType();
                     case STRING:
+                        return Types.MinorType.LARGEVARCHAR.getType();
                     case CHAR:
                     case VARCHAR:
-                        return Types.MinorType.LARGEVARCHAR.getType();
+                        return Types.MinorType.VARCHAR.getType();
                     case DATE:
                         return Types.MinorType.DATEDAY.getType();
                     case TIMESTAMP:
@@ -317,7 +337,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             case STRUCT:
                 return ArrowType.Struct.INSTANCE;
             case MAP:
-                return new ArrowType.Map(false);
+                return new ArrowType.Map(true);
             case UNION:
             default:
                 throw new IllegalArgumentException();

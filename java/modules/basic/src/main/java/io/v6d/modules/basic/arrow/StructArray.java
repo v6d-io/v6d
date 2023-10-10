@@ -20,6 +20,7 @@ import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.core.common.util.VineyardException;
 import io.v6d.modules.basic.arrow.util.ArrowVectorUtils;
 
 import java.util.LinkedList;
@@ -28,35 +29,35 @@ import java.util.Queue;
 
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.complex.ListVector;
+import org.apache.arrow.vector.complex.StructVector;
 import org.apache.arrow.vector.types.pojo.Field;
 
 /** Hello world! */
-public class ListArray extends Array {
-    private ListVector array;
+public class StructArray extends Array {
+    private StructVector array;
 
     public static void instantiate() {
         ObjectFactory.getFactory()
                 .register(
-                        "vineyard::ListArray",
-                        new ListArrayResolver());
+                        "vineyard::StructArray",
+                        new StructArrayResolver());
     }
 
-    public ListArray(ObjectMeta meta, Queue<ArrowBuf> bufs, Queue<Integer> valueCountList, Field listVectorField) {
+    public StructArray(ObjectMeta meta, Queue<ArrowBuf> bufs, Queue<Integer> valueCountList, Field structVectorField) {
         super(meta);
         Context.println("stage 5");
-        this.array = ListVector.empty("", Arrow.default_allocator);
+        this.array = StructVector.empty("", Arrow.default_allocator);
         Context.println("stage 6");
 
         try {
-            ArrowVectorUtils.buildArrowVector(this.array, bufs, valueCountList, listVectorField);
+            ArrowVectorUtils.buildArrowVector(this.array, bufs, valueCountList, structVectorField);
         } catch (Exception e) {
-            Context.println("Create list array error! Message:" + e.getMessage());
+            Context.println("Create struct array error! Message:" + e.getMessage());
         }
     }
 
-    public List get(int index) {
-        return this.array.getObject(index);
+    public List get(int index) throws VineyardException {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -72,7 +73,7 @@ public class ListArray extends Array {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        ListArray that = (ListArray) o;
+        StructArray that = (StructArray) o;
         return Objects.equal(array, that.array);
     }
 
@@ -82,7 +83,7 @@ public class ListArray extends Array {
     }
 }
 
-class ListArrayResolver extends ObjectFactory.Resolver {
+class StructArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
         Queue<ArrowBuf> bufs = new LinkedList<>();
@@ -103,6 +104,8 @@ class ListArrayResolver extends ObjectFactory.Resolver {
         for (int i = 0; i < fields.size(); i++) {
             ArrowVectorUtils.printFields(fields.get(i));
         }
-        return new ListArray(meta, bufs, valueCountQueue, fields.get(0));
+
+        return new StructArray(meta, bufs, valueCountQueue, fields.get(0));
     }
 }
+

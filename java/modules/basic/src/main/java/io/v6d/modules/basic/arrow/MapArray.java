@@ -22,36 +22,36 @@ import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.arrow.util.ArrowVectorUtils;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.complex.ListVector;
+import org.apache.arrow.vector.complex.MapVector;
+import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
+import org.apache.arrow.vector.types.pojo.ArrowType.ArrowTypeID;
 import org.apache.arrow.vector.types.pojo.Field;
 
 /** Hello world! */
-public class ListArray extends Array {
-    private ListVector array;
+public class MapArray extends Array {
+    private MapVector array;
 
     public static void instantiate() {
         ObjectFactory.getFactory()
                 .register(
-                        "vineyard::ListArray",
-                        new ListArrayResolver());
+                        "vineyard::MapArray",
+                        new MapArrayResolver());
     }
 
-    public ListArray(ObjectMeta meta, Queue<ArrowBuf> bufs, Queue<Integer> valueCountList, Field listVectorField) {
+    public MapArray(ObjectMeta meta, Queue<ArrowBuf> bufs, Queue<Integer> valueCountList, Field structVectorField) {
         super(meta);
-        Context.println("stage 5");
-        this.array = ListVector.empty("", Arrow.default_allocator);
-        Context.println("stage 6");
-
+        this.array = MapVector.empty("", Arrow.default_allocator, true);
         try {
-            ArrowVectorUtils.buildArrowVector(this.array, bufs, valueCountList, listVectorField);
+            ArrowVectorUtils.buildArrowVector(this.array, bufs, valueCountList, structVectorField);
         } catch (Exception e) {
-            Context.println("Create list array error! Message:" + e.getMessage());
+            Context.println("Create map array error! Message:" + e.getMessage());
         }
     }
 
@@ -72,7 +72,7 @@ public class ListArray extends Array {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        ListArray that = (ListArray) o;
+        MapArray that = (MapArray) o;
         return Objects.equal(array, that.array);
     }
 
@@ -82,7 +82,7 @@ public class ListArray extends Array {
     }
 }
 
-class ListArrayResolver extends ObjectFactory.Resolver {
+class MapArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
         Queue<ArrowBuf> bufs = new LinkedList<>();
@@ -103,6 +103,9 @@ class ListArrayResolver extends ObjectFactory.Resolver {
         for (int i = 0; i < fields.size(); i++) {
             ArrowVectorUtils.printFields(fields.get(i));
         }
-        return new ListArray(meta, bufs, valueCountQueue, fields.get(0));
+
+        // bufs
+        return new MapArray(meta, bufs, valueCountQueue, fields.get(0));
     }
 }
+
