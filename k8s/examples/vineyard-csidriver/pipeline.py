@@ -1,31 +1,31 @@
 from kfp import dsl
 
-def PreProcess():
+def PreProcess(data_multiplier: int, registry: str):
     return dsl.ContainerOp(
         name='Preprocess Data',
-        image = 'preprocess-data',
-        container_kwargs={'image_pull_policy':"IfNotPresent"},
+        image = f'{registry}/preprocess-data',
+        container_kwargs={'image_pull_policy':"Always"},
         command = ['python3', 'preprocess.py'],
-
+        arguments = [f'--data_multiplier={data_multiplier}'],
         # add the existing volume to the pipeline
         pvolumes={"/data": dsl.PipelineVolume(pvc="benchmark-data")},
     )
 
-def Train(comp1):
+def Train(comp1, registry: str):
     return dsl.ContainerOp(
         name='Train Data',
-        image='train-data',
-        container_kwargs={'image_pull_policy':"IfNotPresent"},
+        image=f'{registry}/train-data',
+        container_kwargs={'image_pull_policy':"Always"},
         command = ['python3', 'train.py'],
         
         pvolumes={"/data": comp1.pvolumes['/data']},
     )
 
-def Test(comp2):
+def Test(comp2, registry: str):
     return dsl.ContainerOp(
         name='Test Data',
-        image='test-data',
-        container_kwargs={'image_pull_policy':"IfNotPresent"},
+        image=f'{registry}/test-data',
+        container_kwargs={'image_pull_policy':"Always"},
         command = ['python3', 'test.py'],
 
         pvolumes={"/data": comp2.pvolumes['/data']},
@@ -35,10 +35,10 @@ def Test(comp2):
    name='Machine Learning Pipeline',
    description='An example pipeline that trains and logs a regression model.'
 )
-def pipeline():
-    comp1 = PreProcess()
-    comp2 = Train(comp1)
-    comp3 = Test(comp2)
+def pipeline(data_multiplier: int, registry: str):
+    comp1 = PreProcess(data_multiplier=data_multiplier, registry=registry)
+    comp2 = Train(comp1, registry=registry)
+    comp3 = Test(comp2, registry=registry)
 
 if __name__ == '__main__':
     from kfp import compiler

@@ -1,3 +1,4 @@
+import argparse
 import os
 import time
 
@@ -8,10 +9,9 @@ import pandas as pd
 import vineyard
 
 
-def train_model():
+def train_model(with_vineyard):
     os.system('sync; echo 3 > /proc/sys/vm/drop_caches')
     st = time.time()
-    with_vineyard = os.environ.get('WITH_VINEYARD', False)
     if with_vineyard:
         x_train_data = vineyard.csi.read("/vineyard/data/x_train.pkl")
         y_train_data = vineyard.csi.read("/vineyard/data/y_train.pkl")
@@ -32,9 +32,12 @@ def train_model():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--with_vineyard', type=bool, default=False, help='Whether to use vineyard')
+    args = parser.parse_args()
     st = time.time()
     print('Training model...')
-    train_model()
+    train_model(args.with_vineyard)
     ed = time.time()
     print('##################################')
     print('Training model data time: ', ed - st)

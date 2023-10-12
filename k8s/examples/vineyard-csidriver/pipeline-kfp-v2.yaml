@@ -1,0 +1,96 @@
+# PIPELINE DEFINITION
+# Name: machine-learning-pipeline
+# Description: An example pipeline that trains and logs a regression model.
+# Inputs:
+#    data_multiplier: int
+components:
+  comp-preprocess:
+    executorLabel: exec-preprocess
+    inputDefinitions:
+      parameters:
+        data_multiplier:
+          parameterType: NUMBER_INTEGER
+  comp-test:
+    executorLabel: exec-test
+  comp-train:
+    executorLabel: exec-train
+deploymentSpec:
+  executors:
+    exec-preprocess:
+      container:
+        args:
+        - --data_multiplier={{$.inputs.parameters['data_multiplier']}}
+        command:
+        - python3
+        - preprocess.py
+        image: ghcr.io/v6d-io/v6d/kubeflow-example/preprocess-data
+    exec-test:
+      container:
+        command:
+        - python3
+        - test.py
+        image: ghcr.io/v6d-io/v6d/kubeflow-example/test-data
+    exec-train:
+      container:
+        command:
+        - python3
+        - train.py
+        image: ghcr.io/v6d-io/v6d/kubeflow-example/train-data
+pipelineInfo:
+  description: An example pipeline that trains and logs a regression model.
+  name: machine-learning-pipeline
+root:
+  dag:
+    tasks:
+      preprocess:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-preprocess
+        inputs:
+          parameters:
+            data_multiplier:
+              componentInputParameter: data_multiplier
+        taskInfo:
+          name: preprocess
+      test:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-test
+        dependentTasks:
+        - train
+        taskInfo:
+          name: test
+      train:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train
+        dependentTasks:
+        - preprocess
+        taskInfo:
+          name: train
+  inputDefinitions:
+    parameters:
+      data_multiplier:
+        parameterType: NUMBER_INTEGER
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.3.0
+---
+platforms:
+  kubernetes:
+    deploymentSpec:
+      executors:
+        exec-preprocess:
+          pvcMount:
+          - constant: benchmark-data
+            mountPath: /data
+        exec-test:
+          pvcMount:
+          - constant: benchmark-data
+            mountPath: /data
+        exec-train:
+          pvcMount:
+          - constant: benchmark-data
+            mountPath: /data

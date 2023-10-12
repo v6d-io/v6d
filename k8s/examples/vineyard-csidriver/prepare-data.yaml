@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: prepare-data
+  namespace: kubeflow
 spec:
   selector:
     matchLabels:
@@ -14,8 +15,8 @@ spec:
     spec:
       containers:
       - name: prepare-data
-        image: prepare-data
-        imagePullPolicy: IfNotPresent
+        image: ghcr.io/v6d-io/v6d/kubeflow-example/prepare-data
+        imagePullPolicy: Always
         command: ["python3", "/prepare-data.py"]
         volumeMounts:
         - mountPath: /data
@@ -29,6 +30,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: benchmark-data
+  namespace: kubeflow
 spec:
   storageClassName: manual
   accessModes:
@@ -41,6 +43,7 @@ apiVersion: v1
 kind: PersistentVolume
 metadata:
   name: benchmark-data
+  namespace: kubeflow
   labels:
     type: local
 spec:
