@@ -1,4 +1,4 @@
-REGISTRY := "docker.io/library"
+REGISTRY := "ghcr.io/v6d-io/v6d/kubeflow-example"
 docker-build:
 	docker build prepare-data/ -f Dockerfile \
 		--build-arg APP=prepare-data.py \
@@ -15,12 +15,6 @@ docker-build:
 	docker build test/ -f Dockerfile \
 		--build-arg APP=test.py \
 		-t $(REGISTRY)/test-data
-
-load-images:
-	kind load docker-image $(REGISTRY)/prepare-data
-	kind load docker-image $(REGISTRY)/preprocess-data
-	kind load docker-image $(REGISTRY)/train-data
-	kind load docker-image $(REGISTRY)/test-data
 
 push-images:
 	docker push $(REGISTRY)/prepare-data

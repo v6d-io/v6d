@@ -41,6 +41,14 @@ def generate_random_dataframe(num_rows):
             'ScreenPorch': np.random.randint(0, 201, num_rows),
             'PoolArea': np.random.randint(0, 301, num_rows),
             'MiscVal': np.random.randint(0, 5001, num_rows),
+            'TotalRooms': np.random.randint(2, 11, num_rows),
+            "GarageAge": np.random.randint(1, 31, num_rows),
+            "RemodAge": np.random.randint(1, 31, num_rows),
+            "HouseAge": np.random.randint(1, 31, num_rows),
+            "TotalBath": np.random.randint(1, 5, num_rows),
+            "TotalPorchSF": np.random.randint(1, 1001, num_rows),
+            "TotalSF": np.random.randint(1000, 6001, num_rows),
+            "TotalArea": np.random.randint(1000, 6001, num_rows),
             'MoSold': np.random.randint(1, 13, num_rows),
             'YrSold': np.random.randint(2006, 2022, num_rows),
             'SalePrice': np.random.randint(50000, 800001, num_rows),
@@ -49,7 +57,7 @@ def generate_random_dataframe(num_rows):
 def prepare_data():
     print('Start preparing data....', flush=True)
     st = time.time()
-    for multiplier in 3000, 4000, 5000:
+    for multiplier in 4000, 5000, 6000:
         df = generate_random_dataframe(10000*(multiplier))
         df.to_pickle('/data/df_{}.pkl'.format(multiplier))
         del df

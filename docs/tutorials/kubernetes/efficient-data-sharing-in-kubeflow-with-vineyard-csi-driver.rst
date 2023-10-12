@@ -128,14 +128,7 @@ Or build the docker images with your docker registry:
     prepare-data             latest    5aab1b120261   15 seconds ago   1.47GB
     preprocess-data          latest    5246d09e6f5e   15 seconds ago   1.47GB
 
-3. Push the image to a docker registry that your kubernetes cluster can access, as
-we use the kind cluster in this example, we can load the image to the clusters:
-
-.. code:: bash
-
-    $ make load-images
-
-Or push the image to your docker registry:
+3. Push the image to a docker registry that your kubernetes cluster can access.
 
 .. code:: bash
 
@@ -165,6 +158,27 @@ kind cluster. Then apply the data volume as follows:
 .. code:: bash
 
     $ kubectl apply -f rbac.yaml
+
+
+7. **(important)** Download all need images to all kind workers:
+
+.. code:: bash
+
+    registry="ghcr.io/v6d-io/v6d/kubeflow-example"
+    kubeflow_registry="gcr.io/ml-pipeline"
+    worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}'))
+    for c in ${worker[@]}; do
+        docker exec -it $c sh -c "
+            crictl pull ${registry}/preprocess-data && \
+            crictl pull ${registry}/train-data && \
+            crictl pull ${registry}/test-data &&\
+            # change the following image to compatible with the installed kubeflow version
+            crictl pull ${kubeflow_registry}/argoexec:v3.3.10-license-compliance && \
+            crictl pull ${kubeflow_registry}/kfp-driver@sha256:0ce9bf20ac9cbb21e84ff0762d5ae508d21e9c85fde2b14b51363bd1b8cd7528
+            # change the following image to compatible with the installed argo workflow version
+            crictl pull quay.io/argoproj/argoexec:v3.4.8
+        "
+    done
 
 
 Running KFP V1 Example
@@ -199,8 +213,14 @@ run the **KFP v1** pipeline, we need to install the argo workflow server as foll
 
 .. code:: bash
 
-    $ for data_multiplier in 3000 4000 5000; do \
-        argo submit --watch pipeline.yaml -n kubeflow -p data_multiplier=${data_multiplier}; \
+    $ for data_multiplier in 4000 5000 6000; do \
+        # clean the previous argo workflow
+        argo delete --all -n kubeflow; \
+        # submit the pipeline without vineyard
+        argo submit --watch pipeline.yaml -n kubeflow  \
+        -p data_multiplier=${data_multiplier} -p registry="ghcr.io/v6d-io/v6d/kubeflow-example"; \
+        # sleep 60s to record the actual execution time
+        sleep 60; \
     done
 
 4. Clear the previous resources:
@@ -214,12 +234,23 @@ run the **KFP v1** pipeline, we need to install the argo workflow server as foll
 .. code:: bash
 
     $ for data_multiplier in 3000 4000 5000; do \
-        argo submit --watch pipeline-with-vineyard.yaml -p data_multiplier=${data_multiplier}; \
+        # clean the previous argo workflow
+        argo delete --all -n kubeflow; \
+        # submit the pipeline without vineyard
+        argo submit --watch pipeline-with-vineyard.yaml -n kubeflow  \
+        -p data_multiplier=${data_multiplier} -p registry="ghcr.io/v6d-io/v6d/kubeflow-example"; \
+        # sleep 60s to record the actual execution time
+        sleep 60; \
     done
 
 
 Running KFP V2 Example
 ^^^^^^^^^^^^^^^^^^^^^^
+
+.. tip::
+
+    If you have installed the argo workflow server, you need to delete it first. As the KFP resources
+    contain the argo workflow server, and the argo workflow server will conflict with the KFP resources.
 
 The original **KFP V2** code is shown in ``pipeline-kfp-v2.py`` under the directory ``k8s/examples/vineyard-csidriver`` and the 
 ``pipeline-kfp-v2-with-vineyard.py`` is modified to be compatible with the Vineyard CSI Driver. As it can only be compiled to 
@@ -264,13 +295,19 @@ the IR YAML, which only recognized by the kubeflow server. Thus, we need to inst
         proxy-agent-77d7b57c99-plrpb                                  0/1     CrashLoopBackOff   14 (2m17s ago)   49m
         workflow-controller-6c85bc4f95-dw889                          1/1     Running            0                49m
 
-3. Open a terminal to portforward the KFP UI to your local machine:
+3. Delete the proxy deployment as it's not used in the example and will slow down the pipeline:
+
+.. code:: bash
+
+    $ kubectl delete deployment proxy-agent -n kubeflow
+
+4. Open a terminal to portforward the KFP UI to your local machine:
 
 .. code:: bash
 
     $ kubectl port-forward -n kubeflow svc/ml-pipeline-ui 8088:80
 
-4. Upload the ``pipeline-kfp-v2.yaml`` and ``pipeline-kfp-v2-with-vineyard.yaml`` to the KFP instance:
+5. Upload the ``pipeline-kfp-v2.yaml`` and ``pipeline-kfp-v2-with-vineyard.yaml`` to the KFP instance:
 
 .. tip::
 
@@ -283,7 +320,24 @@ the IR YAML, which only recognized by the kubeflow server. Thus, we need to inst
 
    Upload pipeline in the kubeflow Dashboard
 
-5. Create the runs using the previously uploaded pipelines:
+6. **(Important)** Clean the file system cache of the kubeflow server.
+
+As the KFP V2 doesn't support to configure the ``SecurityContext`` of the container, which means
+we can't run the command ``sync; echo 3 > /proc/sys/vm/drop_caches`` in the container to clean the 
+file system cache. Thus before creating a new run, we need to clean the file system cache manually 
+as follows:
+
+.. code:: bash
+
+    # clean all the file system cache and image cache of all kind workers
+    $ worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); \
+        for c in ${worker[@]}; do docker exec --privileged -it $c \
+        sh -c 'sync && echo 3 > /proc/sys/vm/drop_caches'; done;
+
+If you use the actual kubernetes cluster, you can login to the kubernetes node and clean the file 
+system cache manually.
+
+7. Create the runs using the previously uploaded pipelines:
 
 .. figure:: ../../images/kubeflow_create_run.png
    :width: 75%
@@ -291,28 +345,11 @@ the IR YAML, which only recognized by the kubeflow server. Thus, we need to inst
 
    Create runs in the kubeflow Dashboard
 
-6. **(Important)**Clean the file system cache of the kubeflow server.
-
-As the KFP V2 doesn't support to configure the ``SecurityContext`` of the container, which means
-we can't run the command ``sync; echo 3 > /proc/sys/vm/drop_caches`` in the container to clean the 
-file system cache. Thus, we need to clean the file system cache of the kubeflow server manually as
-follows:
-
-.. code:: bash
-
-    # clean all the file system cache of all kind workers
-    $ worker=($(docker ps | grep kind-worker | awk -F ' ' '{print $1}')); \
-        for c in ${worker[@]}; do docker exec --privileged -it $c \
-        sh -c "sync && echo 3 > /proc/sys/vm/drop_caches"; done
-
-If you use the actual kubernetes cluster, you can login to the kubernetes node and clean the file 
-system cache manually.
-
 KFP V1 Result Analysis
 ^^^^^^^^^^^^^^^^^^^^^^
 
-The data scale are 8500 Mi, 12000 Mi and 15000 Mi, which correspond to 
-the 3000, 4000 and 5000 in the previous data_multiplier respectively, 
+The data scale are 14000 Mi, 18000 Mi and 21000 Mi, which correspond to 
+the 4000, 5000 and 6000 in the previous data_multiplier respectively, 
 and the time of argo workflow execution of the pipeline is as follows:
 
 Argo workflow duration
@@ -321,11 +358,11 @@ Argo workflow duration
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
-| 8500 Mi    | 189s             | 164s          |
+| 14000 Mi   | 317s             | 270s          |
 +------------+------------------+---------------+
-| 12000 Mi   | 234s             | 199s          |
+| 18000 Mi   | 403s             | 331s          |
 +------------+------------------+---------------+
-| 15000 Mi   | 298s             | 252s          |
+| 21000 Mi   | 504s             | 389s          |
 +------------+------------------+---------------+
 
 
@@ -333,7 +370,7 @@ Actually, the cost time of argo workflow is affected by lots of factors,
 such as the network, the cpu and memory of the cluster, the data volume, etc.
 So the time of argo workflow execution of the pipeline is not stable. 
 But we can still find that the time of argo workflow execution of the pipeline
-with vineyard is shorter than that without vineyard.
+with vineyard reduced by 15%~25%.
 
 Also, we record the whole execution time via logs. The result is as follows:
 
@@ -343,17 +380,17 @@ Actual execution time
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
-| 8500 Mi    | 142.2s           | 94.3s         |
+| 14000 Mi   | 215.1s           | 140.3s        |
 +------------+------------------+---------------+
-| 12000 Mi   | 191.2s           | 123.1s        |
+| 18000 Mi   | 298.2s           | 198.1s        |
 +------------+------------------+---------------+
-| 15000 Mi   | 253.5s           | 181.4s        |
+| 21000 Mi   | 398.7s           | 257.5s        |
 +------------+------------------+---------------+
 
 
 According to the above results, we can find that the time of actual 
-execution of the pipeline with vineyard is shorter than that without vineyard.
-To be specific, we record the write/read time of the following steps:
+execution of the pipeline with vineyard reduced by 30%~40%. To be specific,
+we record the write/read time of the following steps:
 
 Writing time
 """"""""""""
@@ -361,19 +398,18 @@ Writing time
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
-| 8500 Mi    | 21.6s            | 5.5s          |
+| 14000 Mi   | 33.2s            | 8.8s          |
 +------------+------------------+---------------+
-| 12000 Mi   | 26.6s            | 6.8s          |
+| 18000 Mi   | 40.8s            | 11.6s         |
 +------------+------------------+---------------+
-| 15000 Mi   | 32.7s            | 9.2s          |
+| 21000 Mi   | 48.6s            | 13.9s         |
 +------------+------------------+---------------+
 
 
 From the above results, we can find that the writing time the pipeline 
-with vineyard is nearly 4 times shorter than that without vineyard. 
-The reason is that the data is stored in the vineyard cluster, 
-so it's actually a memory copy operation, which is faster than the 
-write operation of the nfs volume.
+with vineyard reduced by 70%~75%. The reason is that the data is stored 
+in the vineyard cluster, so it's actually a memory copy operation, which 
+is faster than the write operation of the nfs volume.
 
 
 Reading time
@@ -384,11 +420,11 @@ We delete the time of init data loading, and the results are as follows:
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
-| 8500 Mi    | 37.3s            | 0.04s         |
+| 14000 Mi   | 56.6s            | 0.02s         |
 +------------+------------------+---------------+
-| 12000 Mi   | 49.5s            | 0.04s         |
+| 18000 Mi   | 76.3s            | 0.02s         |
 +------------+------------------+---------------+
-| 15000 Mi   | 61.7s            | 0.04s         |
+| 21000 Mi   | 93.7s            | 0.02s         |
 +------------+------------------+---------------+
 
 Based on the above results, we can find that the read time of vineyard is
@@ -397,37 +433,98 @@ The reason is that the data is stored in the shared memory of vineyard cluster,
 so it's actually a pointer copy operation.
 
 As a result, we can find that with vineyard, the argo workflow 
-duration of the pipeline is reduced by 10%~20% and the actual 
-execution time of the pipeline is reduced by about 30%.
+duration of the pipeline is reduced by 15%~25% and the actual 
+execution time of the pipeline is reduced by about 30%~40%.
 
 KFP V2 Result Analysis
 ^^^^^^^^^^^^^^^^^^^^^^
 
-As the KFP V2 sets the ``image_pull_policy`` to ``Always`` by default, which means
-that the image will be pulled every time the pipeline is executed. However, after pulling
-the docker image to the kubelet node, the image will be cached. To avoid the cached image,
-we delete the run after each execution.
+Different with the previous KFP V1, the KFP V2 will compile the pipeline to the IR YAML,
+and the IR YAML will be submitted to the kubeflow server. Before each component of the
+pipeline is executed, the kubeflow server will create a preprocess container to parse
+the IR YAML and generate the relevant kubernetes resources. That means the kubeflow server
+will create more pods than the previous argo workflow, thereby slowing down the execution 
+speed of the entire pipeline.
 
 The execution time of the pipeline shown in the kubeflow dashboard is as follows:
+
+Kubeflow dashboard duration
+"""""""""""""""""""""""""""
 
 +------------+------------------+---------------+
 | data scale | without vineyard | with vineyard |
 +============+==================+===============+
-| 8500 Mi    | 252s             | 228s          |
+| 14000 Mi   | 276s             | 229s          |
 +------------+------------------+---------------+
-| 12000 Mi   | 299s             | 265s          |
+| 18000 Mi   | 365s             | 291s          |
 +------------+------------------+---------------+
-| 15000 Mi   | 354s             | 316s          |
+| 21000 Mi   | 440s             | 352s          |
 +------------+------------------+---------------+
 
-Based on the above result, we can find that the execution time of kubeflow pipeline with vineyard 
-is reduced by 10% on the dashboard. However, the execution time contains the time of pulling the
-docker image, and it's also affected by lots of factors, such as the network, etc. Also, you may find
-the kfp v2 is slower than the kfp v1, that's because the kfp v2 always pulls the docker image from 
-the remote registry, and the kfp v1 will use the local docker image.
+Based on the above result, we can find that the execution time of kubeflow pipeline with vineyard
+is reduced by 15%~20% on the dashboard. Compared to the kfp v1, the vineyard effect is slightly
+reduced. The reason is that in the kfp v2, CreateVolume and DeleteVolume are regarded as two components,
+and that means more worker pods will be created. The time to create these pods is the main factor 
+that reduces vineyard efficiency. 
 
-In a word, vineyard can optimize the data sharing between the kubeflow components, and reduce the
-execution time of the complete kubeflow pipeline.
+Actual execution time
+"""""""""""""""""""""
+
++------------+------------------+---------------+
+| data scale | without vineyard | with vineyard |
++============+==================+===============+
+| 14000 Mi   | 213s             | 133.4s        |
++------------+------------------+---------------+
+| 18000 Mi   | 302.7s           | 208.1s        |
++------------+------------------+---------------+
+| 21000 Mi   | 377.6s           | 265.9s        |
++------------+------------------+---------------+
+
+From the above results, we can find that the actual execution time of the pipeline with vineyard
+is reduced by 30%~40%. To be specific, we record the write/read time of the following steps:
+
+
+Writing time
+""""""""""""
+
++------------+------------------+---------------+
+| data scale | without vineyard | with vineyard |
++============+==================+===============+
+| 14000 Mi   | 33.2s            | 8.1s          |
++------------+------------------+---------------+
+| 18000 Mi   | 41s              | 10.8s         |
++------------+------------------+---------------+
+| 21000 Mi   | 48.3s            | 13.7s         |
++------------+------------------+---------------+
+
+Similarly, since writing to vineyard is just a memory copy operation, its execution time 
+will be greatly reduced.
+
+
+Reading time
+""""""""""""
+
+We delete the time of init data loading, and the results are as follows:
+
++------------+------------------+---------------+
+| data scale | without vineyard | with vineyard |
++============+==================+===============+
+| 8500 Mi    | 54.5s            | 0.04s         |
++------------+------------------+---------------+
+| 12000 Mi   | 73.5s            | 0.02s         |
++------------+------------------+---------------+
+| 15000 Mi   | 88.9s            | 0.02s         |
++------------+------------------+---------------+
+
+
+As the result in kfp v1, reading the vineyard data only requires a 
+single operation to get the memory pointer. So the reading time of
+vineyard is almost 0.
+
+In summary, regardless of whether you are using KFP V1 or KFP V2, and whether the backend 
+is Argo server or Kubeflow manifests, integrating Vineyard can effectively optimize the data 
+sharing among Kubeflow components. This optimization, in turn, leads to a significant reduction 
+in the overall execution time of the Kubeflow pipeline.
 
 Clean up
 ========
@@ -449,12 +546,6 @@ Delete the argo server:
 .. code:: bash
 
     $ kubectl delete ns argo
-
-Delete the csi driver:
-
-.. code:: bash
-
-    $ vineyardctl delete csidriver
 
 Delete the vineyard cluster:
 

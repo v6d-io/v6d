@@ -2,10 +2,11 @@ apiVersion: argoproj.io/v1alpha1
 kind: Workflow
 metadata:
   generateName: machine-learning-pipeline-
-  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.0, pipelines.kubeflow.org/pipeline_compilation_time: '2023-10-09T16:33:59.363121',
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.0, pipelines.kubeflow.org/pipeline_compilation_time: '2023-10-10T15:14:12.195049',
     pipelines.kubeflow.org/pipeline_spec: '{"description": "An example pipeline that
       trains and logs a regression model.", "inputs": [{"name": "data_multiplier",
-      "type": "Integer"}], "name": "Machine Learning Pipeline"}'}
+      "type": "Integer"}, {"name": "registry", "type": "String"}], "name": "Machine
+      Learning Pipeline"}'}
   labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.0}
 spec:
   entrypoint: machine-learning-pipeline
@@ -14,6 +15,7 @@ spec:
     inputs:
       parameters:
       - {name: data_multiplier}
+      - {name: registry}
     dag:
       tasks:
       - name: preprocess-data
@@ -21,23 +23,33 @@ spec:
         arguments:
           parameters:
           - {name: data_multiplier, value: '{{inputs.parameters.data_multiplier}}'}
+          - {name: registry, value: '{{inputs.parameters.registry}}'}
       - name: test-data
         template: test-data
         dependencies: [train-data]
+        arguments:
+          parameters:
+          - {name: registry, value: '{{inputs.parameters.registry}}'}
       - name: train-data
         template: train-data
         dependencies: [preprocess-data]
+        arguments:
+          parameters:
+          - {name: registry, value: '{{inputs.parameters.registry}}'}
   - name: preprocess-data
     container:
       args: ['--data_multiplier={{inputs.parameters.data_multiplier}}']
       command: [python3, preprocess.py]
-      image: preprocess-data
-      imagePullPolicy: IfNotPresent
+      image: '{{inputs.parameters.registry}}/preprocess-data'
+      imagePullPolicy: Always
+      securityContext:
+        privileged: true
       volumeMounts:
       - {mountPath: /data, name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4}
     inputs:
       parameters:
       - {name: data_multiplier}
+      - {name: registry}
     metadata:
       labels:
         pipelines.kubeflow.org/kfp_sdk_version: 1.8.0
@@ -49,10 +61,15 @@ spec:
   - name: test-data
     container:
       command: [python3, test.py]
-      image: test-data
-      imagePullPolicy: IfNotPresent
+      image: '{{inputs.parameters.registry}}/test-data'
+      imagePullPolicy: Always
+      securityContext:
+        privileged: true
       volumeMounts:
       - {mountPath: /data, name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4}
+    inputs:
+      parameters:
+      - {name: registry}
     metadata:
       labels:
         pipelines.kubeflow.org/kfp_sdk_version: 1.8.0
@@ -64,10 +81,15 @@ spec:
   - name: train-data
     container:
       command: [python3, train.py]
-      image: train-data
-      imagePullPolicy: IfNotPresent
+      image: '{{inputs.parameters.registry}}/train-data'
+      imagePullPolicy: Always
+      securityContext:
+        privileged: true
       volumeMounts:
       - {mountPath: /data, name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4}
+    inputs:
+      parameters:
+      - {name: registry}
     metadata:
       labels:
         pipelines.kubeflow.org/kfp_sdk_version: 1.8.0
@@ -79,4 +101,5 @@ spec:
   arguments:
     parameters:
     - {name: data_multiplier}
+    - {name: registry}
   serviceAccountName: pipeline-runner

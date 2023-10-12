@@ -1,6 +1,6 @@
 from kfp import dsl
 
-def PreProcess(data_multiplier: int):
+def PreProcess(data_multiplier: int, registry: str):
     #############################################################
     # user need to add the volume Op for vineyard object manully
     vop = dsl.VolumeOp(name="vineyard-objects",
@@ -13,8 +13,8 @@ def PreProcess(data_multiplier: int):
 
     return dsl.ContainerOp(
         name='Preprocess Data',
-        image = 'preprocess-data',
-        container_kwargs={'image_pull_policy':"IfNotPresent"},
+        image = f'{registry}/preprocess-data',
+        container_kwargs={'image_pull_policy':"Always"},
         pvolumes={
             "/data": dsl.PipelineVolume(pvc="benchmark-data"),
             "/vineyard/data": vop.volume
@@ -23,11 +23,11 @@ def PreProcess(data_multiplier: int):
         arguments=[f'--data_multiplier={data_multiplier}', '--with_vineyard=True'],
     )
 
-def Train(comp1):
+def Train(comp1, registry: str):
     return dsl.ContainerOp(
         name='Train Data',
-        image='train-data',
-        container_kwargs={'image_pull_policy':"IfNotPresent"},
+        image=f'{registry}/train-data',
+        container_kwargs={'image_pull_policy':"Always"},
         pvolumes={
             "/data": comp1.pvolumes['/data'],
             "/vineyard/data": comp1.pvolumes['/vineyard/data'],
@@ -36,11 +36,11 @@ def Train(comp1):
         arguments=['--with_vineyard=True'],
     )
 
-def Test(comp1, comp2):
+def Test(comp1, comp2, registry: str):
     return dsl.ContainerOp(
         name='Test Data',
-        image='test-data',
-        container_kwargs={'image_pull_policy':"IfNotPresent"},
+        image=f'{registry}/test-data',
+        container_kwargs={'image_pull_policy':"Always"},
         pvolumes={
             "/data": comp2.pvolumes['/data'],
             "/vineyard/data": comp1.pvolumes['/vineyard/data']
@@ -53,10 +53,10 @@ def Test(comp1, comp2):
    name='Machine learning Pipeline',
    description='An example pipeline that trains and logs a regression model.'
 )
-def pipeline(data_multiplier: int):
-    comp1 = PreProcess(data_multiplier=data_multiplier)
-    comp2 = Train(comp1)
-    comp3 = Test(comp1, comp2)
+def pipeline(data_multiplier: int, registry: str):
+    comp1 = PreProcess(data_multiplier=data_multiplier, registry=registry)
+    comp2 = Train(comp1, registry=registry)
+    comp3 = Test(comp1, comp2, registry=registry)
 
 if __name__ == '__main__':
     from kfp import compiler
