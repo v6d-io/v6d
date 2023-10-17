@@ -22,8 +22,6 @@ import (
 )
 
 var (
-	// the following label is for vineyard rpc service
-
 	// SidecarName is the name of sidecar
 	// it is also the label selector value of sidecar
 	SidecarName string
