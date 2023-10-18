@@ -29,7 +29,8 @@ setup:
       command: |
         helm repo add dask https://helm.dask.org/
         helm repo update
-        helm install my-release dask/dask -f k8s/test/e2e/repartition-demo/repartition-dask-helm-values.yaml
+        helm install my-release dask/dask -f k8s/test/e2e/repartition-demo/repartition-dask-helm-values.yaml \
+            --version 2022.8.1
       wait:
         - namespace: default
           resource: deployment/my-release-dask-scheduler
