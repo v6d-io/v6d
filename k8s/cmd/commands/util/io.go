@@ -34,6 +34,20 @@ func ReadFromFile(path string) (string, error) {
 	return string(contents), nil
 }
 
+// WriteToFile writes the content to the file.
+func WriteToFile(path string, content string) error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = file.WriteString(content)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // ReadFromStdin read the stdin to string
 func ReadFromStdin(args []string) (string, error) {
 	// Check if the input is coming from '-'

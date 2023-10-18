@@ -1647,6 +1647,7 @@ vineyardctl inject [flags]
 **SEE ALSO**
 
 * [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
+* [vineyardctl inject argo-workflow](#vineyardctl-inject-argo-workflow)	 - Inject the vineyard volumes into the argo workflow
 
 ### Examples
 
@@ -1716,6 +1717,357 @@ vineyardctl inject [flags]
       --sidecar.syncCRDs                        enable metrics of vineyardd (default true)
       --sidecar.volume.mountPath string         Set the mount path for the pvc
       --sidecar.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently
+```
+
+## `vineyardctl inject argo-workflow`
+
+Inject the vineyard volumes into the argo workflow
+
+### Synopsis
+
+Inject the vineyard volumes into the argo workflow DAGs. You can input
+the workflow manifest file and the injected manifest file with 
+vineyard volume will be output to the file with the suffix 
+"_with_vineyard", such as "workflow_with_vineyard.yaml".
+
+Suppose the workflow manifest named "workflow.yaml" is as follows:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: mlops-
+spec:
+  entrypoint: dag
+  templates:
+  - name: producer
+    container:
+      image: producer:latest
+      command: [python]
+      args: ["/producer.py"]
+  - name: consumer
+    container:
+      image: consumer:latest
+      command: [python]
+      args: ["/consumer.py"]
+  - name: dag
+    dag:
+      tasks:
+      - name: producer
+        template: producer
+      - name: consumer
+        template: consumer
+        dependencies:
+          - producer
+```
+
+Assume the 'producer' and 'consumer' task all need to use vineyard 
+volume, you can inject the vineyard volume into the workflow manifest 
+with the following command:
+
+$ vineyardctl inject argo-workflow -f workflow.yaml \
+      --templates="producer,consumer" \
+  --vineyard-cluster="vineyard-system/vineyardd-sample" \
+  --mount-path="/vineyard/data" \
+  --dag="dag" \
+  --tasks="producer,consumer" \
+  --output-as-file
+
+The injected manifest will be output to the file named "workflow_with_vineyard.yaml".
+
+$ cat workflow_with_vineyard.yaml
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: mlops-
+spec:
+  entrypoint: dag
+  templates:
+  - name: producer
+    container:
+      image: producer:latest
+      command: [python]
+      args: ["/producer.py"]
+      ################## Injected #################
+      volumeMounts: 
+      - name: vineyard-objects
+        mountPath: /vineyard/data
+      #############################################
+    ######################## Injected #######################
+    volumes:
+    - name: vineyard-objects
+      persistentVolumeClaim: 
+        claimName: '{{inputs.parameters.vineyard-objects-name}}'
+    #########################################################
+    ############## Injected #############
+    inputs:
+      parameters:
+      - {name: vineyard-objects-name}
+    #####################################
+  - name: consumer
+    container:
+      image: consumer:latest
+      command: [python]
+      args: ["/consumer.py"]
+      ################## Injected #################
+      volumeMounts: 
+      - name: vineyard-objects
+        mountPath: /vineyard/data
+      #############################################
+    ######################## Injected #######################
+    volumes:
+    - name: vineyard-objects
+      persistentVolumeClaim: 
+        claimName: '{{inputs.parameters.vineyard-objects-name}}'
+    #########################################################
+    ############## Injected #############
+    inputs:
+      parameters:
+      - {name: vineyard-objects-name}
+    #####################################
+  - name: dag
+    dag:
+      tasks:
+      - name: producer
+        template: producer
+        arguments:
+          parameters:
+          ################################# Injected ################################
+          - name: vineyard-objects-name
+            value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'
+          ###########################################################################
+        dependencies:
+          ########### Injected ##########
+          - vineyard-objects
+          ###############################
+      - name: consumer
+        template: consumer
+        arguments:
+          parameters:
+          ################################# Injected ################################
+          - name: vineyard-objects-name
+            value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'
+          ###########################################################################
+        dependencies:
+          - producer
+          ########### Injected ##########
+          - vineyard-objects
+          ###############################
+      ########## Injected #########
+      - name: vineyard-objects
+        template: vineyard-objects
+      #############################
+############################# Injected ##########################
+  - name: vineyard-objects
+    resource:
+      action: create
+      setOwnerReference: true
+      manifest: |
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: '{{workflow.name}}-vineyard-objects-pvc'
+        spec:
+          accessModes:
+          - ReadWriteMany
+          resources:
+            requests:
+              storage: 1Mi
+          storageClassName: vineyard-system.vineyardd-sample.csi
+    outputs:
+      parameters:
+      - name: vineyard-objects-name
+        valueFrom:
+          jsonPath: '{.metadata.name}'  
+##############################################################
+```
+Suppose your workflow YAML only has a single template as follows.
+$ cat workflow.yaml
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: mlops-
+spec:
+  entrypoint: dag
+  templates:
+  - name: MLops
+    inputs:
+      parameters:
+      - name: functions
+    container:
+      imagePullPolicy: IfNotPresent
+      image: mlops-benchmark:latest
+      command: [python]
+      args: ["-m",  "{{inputs.parameters.functions}}"]
+  - name: dag
+    dag:
+      tasks:
+      - name: producer
+        template: MLops
+        arguments:
+          parameters:
+          - name: functions
+            value: producer.py
+      - name: consumer
+        template: MLops
+        dependencies:
+          - producer
+        arguments:
+          parameters:
+          - name: functions
+            value: consumer.py
+```
+Suppose only the 'consumer' task need to use vineyard volume,
+you can inject the vineyard volume into the workflow manifest
+with the following command:
+$ vineyardctl inject argo-workflow -f workflow.yaml \
+     --templates="MLops" \
+     --vineyard-cluster="vineyard-system/vineyardd-sample" \
+     --mount-path="/vineyard/data" \
+     --dag="dag" \
+     --tasks="consumer"
+
+Then the injected manifest will be as follows:
+
+```yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: mlops-
+spec:
+  entrypoint: dag
+  templates:
+  - container:
+      args:
+      - -m
+      - '{{inputs.parameters.functions}}'
+      command:
+      - python
+      image: mlops-benchmark:latest
+      imagePullPolicy: IfNotPresent
+      ############# Injected ############
+      volumeMounts:
+      - name: vineyard-objects
+        mountPath: /vineyard/data
+      ###################################
+    inputs:
+      parameters:
+      - name: functions
+      ############# Injected ############
+      - name: vineyard-objects-name
+      ###################################
+    name: MLops
+    ######################### Injected ########################
+    volumes:
+    - name: vineyard-objects
+      persistentVolumeClaim:
+        claimName: '{{inputs.parameters.vineyard-objects-name}}'
+    ###########################################################
+  - dag:
+      tasks:
+      - arguments:
+          parameters:
+          - name: functions
+            value: producer.py
+          ################################# Injected #################################
+          - name: vineyard-objects-name
+            value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'
+          ############################################################################
+        dependencies:
+        ##### Injected #####
+        - vineyard-objects
+        ####################
+        name: producer
+        template: MLops
+      - arguments:
+          parameters:
+          - name: functions
+            value: consumer.py
+          ################################# Injected #################################
+          - name: vineyard-objects-name
+            value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'
+          ############################################################################
+        dependencies:
+        - producer
+        ##### Injected #####
+        - vineyard-objects
+        ####################
+        name: consumer
+        template: MLops
+      ########### Injected ###########
+      - name: vineyard-objects
+        template: vineyard-objects
+      ################################
+    name: dag
+  ################################# Injected #################################
+  - name: vineyard-objects
+    outputs:
+      parameters:
+      - name: vineyard-objects-name
+        valueFrom:
+          jsonPath: '{.metadata.name}'
+    resource:
+      action: create
+      manifest: |-
+        apiVersion: v1
+        kind: PersistentVolumeClaim
+        metadata:
+          name: '{{workflow.name}}-vineyard-objects-pvc'
+        spec:
+          accessModes:
+          - ReadWriteMany
+          resources:
+            requests:
+              storage: 1Mi
+          storageClassName: vineyard-system.vineyardd-sample.csi
+      setOwnerReference: true
+      ############################################################################
+```
+
+```
+vineyardctl inject argo-workflow [flags]
+```
+
+**SEE ALSO**
+
+* [vineyardctl inject](#vineyardctl-inject)	 - Inject the vineyard sidecar container into a workload
+
+### Examples
+
+```shell
+  # Inject the vineyard volumes into the argo workflow
+  $ vineyardctl inject argo-workflow -f workflow.yaml \
+  --templates="preprocess-data,train-data" \
+  --vineyard-cluster="vineyard-system/vineyardd-sample" \
+  --mount-path="/vineyard/data" \
+  --dag="dag" \
+  --tasks="preprocess-data,train-data"
+  
+  # Suppose you only have a single template in the workflow
+  # you could set only one template name in the --templates flag
+  $ vineyardctl inject argo-workflow -f workflow.yaml \
+--templates="mlops" \
+    --vineyard-cluster="vineyard-system/vineyardd-sample" \
+    --mount-path="/vineyard/data" \
+    --dag="dag" \
+    --tasks="preprocess-data,test-data"
+```
+
+### Options
+
+```
+      --dag string                The name of dag which will be injected with vineyard volumes
+  -f, --file string               The file name of argo workflow
+  -h, --help                      help for argo-workflow
+      --mount-path string         The mount path of vineyard volumes
+      --output-as-file            Whether to output the injected workflow as a file, default is falseThe output file name will add a suffix '_with_vineyard' to the original file name
+      --tasks strings             The set of task names under the dag
+  -t, --templates strings         The name of workflow template which will be injected with vineyard volumes
+      --vineyard-cluster string   The name of vineyard cluster which the argo workflow will use
 ```
 
 ## `vineyardctl ls`
