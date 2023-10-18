@@ -20,9 +20,10 @@ import (
 	"reflect"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/util"
-	"gopkg.in/yaml.v3"
 )
 
 func TestInjectArgoWorkflowCmd(t *testing.T) {

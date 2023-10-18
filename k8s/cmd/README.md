@@ -1740,55 +1740,38 @@ metadata:
 spec:
   entrypoint: dag
   templates:
-  - name: prepare-data
+  - name: producer
     container:
-      image: prepare-data:latest
+      image: producer:latest
       command: [python]
-      args: ["/prepare-data.py"]
-  - name: preprocess-data
+      args: ["/producer.py"]
+  - name: consumer
     container:
-      image: preprocess-data:latest
+      image: consumer:latest
       command: [python]
-      args: ["/preprocess-data.py"]
-  - name: train-data
-    container:
-      image: train-data:latest
-      command: [python]
-      args: ["/train-data.py"]
-  - name: test-data
-    container:
-      image: test-data:latest
-      command: [python]
-      args: ["/test-data.py"]
+      args: ["/consumer.py"]
   - name: dag
     dag:
       tasks:
-      - name: prepare-data
-        template: prepare-data
-      - name: preprocess-data
-        template: preprocess-data
+      - name: producer
+        template: producer
+      - name: consumer
+        template: consumer
         dependencies:
-          - prepare-data
-      - name: train-data
-        template: train-data
-        dependencies:
-          - preprocess-data
-      - name: test-data
-        template: test-data
-        dependencies:
-          - train-data
+          - producer
 ```
 
-Assume the 'preprocess-data' and 'train-data' task need to use vineyard 
+Assume the 'producer' and 'consumer' task all need to use vineyard 
 volume, you can inject the vineyard volume into the workflow manifest 
 with the following command:
 
 $ vineyardctl inject argo-workflow -f workflow.yaml \
-      --templates="preprocess-data,train-data" \
+      --templates="producer,consumer" \
   --vineyard-cluster="vineyard-system/vineyardd-sample" \
   --mount-path="/vineyard/data" \
   --dag="dag" \
-  --tasks="preprocess-data,train-data"
+  --tasks="producer,consumer" \
+  --output-as-file
 
 The injected manifest will be output to the file named "workflow_with_vineyard.yaml".
 
@@ -1802,16 +1785,11 @@ metadata:
 spec:
   entrypoint: dag
   templates:
-  - name: prepare-data
+  - name: producer
     container:
-      image: prepare-data:latest
+      image: producer:latest
       command: [python]
-      args: ["/prepare-data.py"]
-  - name: preprocess-data
-    container:
-      image: preprocess-data:latest
-      command: [python]
-      args: ["/preprocess-data.py"]
+      args: ["/producer.py"]
       ################## Injected #################
       volumeMounts: 
       - name: vineyard-objects
@@ -1828,11 +1806,11 @@ spec:
       parameters:
       - {name: vineyard-objects-name}
     #####################################
-  - name: train-data
+  - name: consumer
     container:
-      image: train-data:latest
+      image: consumer:latest
       command: [python]
-      args: ["/train-data.py"]
+      args: ["/consumer.py"]
       ################## Injected #################
       volumeMounts: 
       - name: vineyard-objects
@@ -1849,18 +1827,11 @@ spec:
       parameters:
       - {name: vineyard-objects-name}
     #####################################
-  - name: test-data
-    container:
-      image: test-data:latest
-      command: [python]
-      args: ["/test-data.py"]
   - name: dag
     dag:
       tasks:
-      - name: prepare-data
-        template: prepare-data
-      - name: preprocess-data
-        template: preprocess-data
+      - name: producer
+        template: producer
         arguments:
           parameters:
           ################################# Injected ################################
@@ -1868,12 +1839,11 @@ spec:
             value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'
           ###########################################################################
         dependencies:
-          - prepare-data
           ########### Injected ##########
           - vineyard-objects
           ###############################
-      - name: train-data
-        template: train-data
+      - name: consumer
+        template: consumer
         arguments:
           parameters:
           ################################# Injected ################################
@@ -1881,14 +1851,10 @@ spec:
             value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'
           ###########################################################################
         dependencies:
-          - preprocess-data
+          - producer
           ########### Injected ##########
           - vineyard-objects
           ###############################
-      - name: test-data
-        template: test-data
-        dependencies:
-          - train-data
       ########## Injected #########
       - name: vineyard-objects
         template: vineyard-objects
@@ -1940,46 +1906,30 @@ spec:
   - name: dag
     dag:
       tasks:
-      - name: prepare-data
+      - name: producer
         template: MLops
         arguments:
           parameters:
           - name: functions
-            value: prepare-data.py
-      - name: preprocess-data
-        template: MLops
-        dependencies:
-          - prepare-data
-        arguments:
-          parameters:
-          - name: functions
-            value: preprocess-data.py
-      - name: train-data
+            value: producer.py
+      - name: consumer
         template: MLops
         dependencies:
-          - preprocess-data
+          - producer
         arguments:
           parameters:
           - name: functions
-            value: train-data.py
-      - name: test-data
-        template: MLops
-        dependencies:
-          - train-data
-        arguments:
-          parameters:
-          - name: functions
-            value: test-data.py
+            value: consumer.py
 ```
-Suppose the 'preprocess-data' and 'test-data' task need to use vineyard
-volume, you can inject the vineyard volume into the workflow manifest
+Suppose only the 'consumer' task need to use vineyard volume,
+you can inject the vineyard volume into the workflow manifest
 with the following command:
 $ vineyardctl inject argo-workflow -f workflow.yaml \
      --templates="MLops" \
      --vineyard-cluster="vineyard-system/vineyardd-sample" \
      --mount-path="/vineyard/data" \
      --dag="dag" \
-     --tasks="preprocess-data,test-data"
+     --tasks="consumer"
 
 Then the injected manifest will be as follows:
 
@@ -1999,62 +1949,61 @@ spec:
       - python
       image: mlops-benchmark:latest
       imagePullPolicy: IfNotPresent
+      ############# Injected ############
+      volumeMounts:
+      - name: vineyard-objects
+        mountPath: /vineyard/data
+      ###################################
     inputs:
       parameters:
       - name: functions
+      ############# Injected ############
+      - name: vineyard-objects-name
+      ###################################
     name: MLops
+    ######################### Injected ########################
     volumes:
     - name: vineyard-objects
       persistentVolumeClaim:
         claimName: '{{inputs.parameters.vineyard-objects-name}}'
+    ###########################################################
   - dag:
       tasks:
       - arguments:
           parameters:
           - name: functions
-            value: prepare-data.py
+            value: producer.py
+          ################################# Injected #################################
           - name: vineyard-objects-name
             value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'
+          ############################################################################
         dependencies:
+        ##### Injected #####
         - vineyard-objects
-        name: prepare-data
+        ####################
+        name: producer
         template: MLops
       - arguments:
           parameters:
           - name: functions
-            value: preprocess-data.py
+            value: consumer.py
+          ################################# Injected #################################
           - name: vineyard-objects-name
             value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'
+          ############################################################################
         dependencies:
-        - prepare-data
+        - producer
+        ##### Injected #####
         - vineyard-objects
-        name: preprocess-data
+        ####################
+        name: consumer
         template: MLops
-      - arguments:
-          parameters:
-          - name: functions
-            value: train-data.py
-          - name: vineyard-objects-name
-            value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'
-        dependencies:
-        - preprocess-data
-        - vineyard-objects
-        name: train-data
-        template: MLops
-      - arguments:
-          parameters:
-          - name: functions
-            value: test-data.py
-          - name: vineyard-objects-name
-            value: '{{tasks.vineyard-objects.outputs.parameters.vineyard-objects-name}}'
-        dependencies:
-        - train-data
-        - vineyard-objects
-        name: test-data
-        template: MLops
+      ########### Injected ###########
       - name: vineyard-objects
         template: vineyard-objects
+      ################################
     name: dag
+  ################################# Injected #################################
   - name: vineyard-objects
     outputs:
       parameters:
@@ -2076,6 +2025,7 @@ spec:
               storage: 1Mi
           storageClassName: vineyard-system.vineyardd-sample.csi
       setOwnerReference: true
+      ############################################################################
 ```
 
 ```
@@ -2671,4 +2621,3 @@ vineyardctl schedule workload [flags]
       --vineyardd-name string        the namespace of vineyard cluster (default "vineyardd-sample")
       --vineyardd-namespace string   the namespace of vineyard cluster (default "vineyard-system")
 ```
-
