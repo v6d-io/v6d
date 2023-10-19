@@ -1,0 +1,23 @@
+apiVersion: data.fluid.io/v1alpha1
+kind: ThinRuntimeProfile
+metadata:
+  name: vineyard-profile
+spec:
+  fileSystemType: fuse
+  volumes:
+  - name: vineyard
+    hostPath:
+      # This path should be the same as the vineyard socket path in the vineyard deployment
+      path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+      type: DirectoryOrCreate
+  fuse:
+    image: configure-vineyard-socket
+    imageTag: latest
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: vineyard-socket
+      mountPath: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+    command:
+    - sh
+    - -c
+    - "python3 /configure-vineyard-socket.py && chmod u+x ./mount-vineyard-socket.sh && ./mount-vineyard-socket.sh"

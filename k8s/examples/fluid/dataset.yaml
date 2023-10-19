@@ -1,0 +1,18 @@
+apiVersion: data.fluid.io/v1alpha1
+kind: Dataset
+metadata:
+  name: vineyard
+spec:
+  mounts:
+  # This directory should be the same as the vineyard socket directory in the vineyard deployment
+  - mountPoint: local:///var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample
+    name: vineyard
+  accessModes:
+  - ReadWriteMany
+---
+apiVersion: data.fluid.io/v1alpha1
+kind: ThinRuntime
+metadata:
+  name: vineyard
+spec:
+  profileName: vineyard-profile

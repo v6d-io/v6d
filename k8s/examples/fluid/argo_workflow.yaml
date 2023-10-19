@@ -1,0 +1,97 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: mlops-
+spec:
+  entrypoint: dag
+  templates:
+  - name: producer
+    volumes:
+    - name: data
+      hostPath:
+        path: /data
+        type: DirectoryOrCreate
+    container:
+      image: python:3.10
+      volumeMounts:
+      - name: data
+        mountPath: /data
+      command: [bash, -c]
+      args:
+        - |
+          pip install numpy pandas;
+          cat << EOF >> producer.py
+          import time
+
+          import numpy as np
+          import pandas as pd
+
+          def generate_random_dataframe(num_rows):
+              return pd.DataFrame({
+                      'Id': np.random.randint(1, 100000, num_rows),
+                      'TotalRooms': np.random.randint(2, 11, num_rows),
+                      "GarageAge": np.random.randint(1, 31, num_rows),
+                      "RemodAge": np.random.randint(1, 31, num_rows),
+                      "HouseAge": np.random.randint(1, 31, num_rows),
+                      "TotalBath": np.random.randint(1, 5, num_rows),
+                      "TotalPorchSF": np.random.randint(1, 1001, num_rows),
+                      "TotalSF": np.random.randint(1000, 6001, num_rows),
+                      "TotalArea": np.random.randint(1000, 6001, num_rows),
+                      'MoSold': np.random.randint(1, 13, num_rows),
+                      'YrSold': np.random.randint(2006, 2022, num_rows),
+                      'SalePrice': np.random.randint(50000, 800001, num_rows),
+              })
+
+          def producer():
+              st = time.time()
+              print('Generating data....', flush=True)
+              df = generate_random_dataframe(1000000000)
+              ed = time.time()
+              print('##################################')
+              print('Generating data time: ', ed - st, flush=True)
+              st = time.time()
+              print('Serializing data....', flush=True)
+              df.to_pickle('/data/df.pkl')
+              ed = time.time()
+              print('##################################')
+              print('Serializing data time: ', ed - st, flush=True)
+          EOF
+          python producer.py;
+  - name: consumer
+    volumes:
+    - name: data
+      hostPath:
+        path: /data
+        type: DirectoryOrCreate
+    container:
+      image: python:3.10
+      volumeMounts:
+      - name: data
+        mountPath: /data
+      command: [bash, -c]
+      args:
+        - |
+          pip install pandas;
+          cat << EOF >> consumer.py
+          import time
+
+          import pandas as pd
+
+          def consumer():
+              st = time.time()
+              print('Deserializing data....', flush=True)
+              df = pd.read_pickle('/data/df.pkl')
+              ed = time.time()
+              print('##################################')
+              print('Deserializing data time: ', ed - st, flush=True)
+          EOF
+          python consumer.py;
+  - name: dag
+    dag:
+      tasks:
+      - name: producer
+        template: producer
+      - name: consumer
+        template: consumer
+        dependencies:
+          - producer
