@@ -178,7 +178,8 @@ std::vector<std::vector<std::shared_ptr<arrow::Table>>> makeETables(
 
 int main(int argc, char** argv) {
   if (argc < 2) {
-    printf("usage: ./relabel_test <ipc_socket> [directed]\n");
+    printf(
+        "usage: ./arrow_fragment_label_data_extend <ipc_socket> [directed]\n");
     return 1;
   }
   int index = 1;
@@ -202,16 +203,15 @@ int main(int argc, char** argv) {
   {
     grape::CommSpec comm_spec;
     comm_spec.Init(MPI_COMM_WORLD);
-    auto floader = loader_t(client, comm_spec, std::vector<std::string>{},
-                            std::vector<std::string>{}, directed != 0);
     vineyard::ObjectID frag_group_id = vineyard::InvalidObjectID();
 
     // first construct a basic graph
     {
       auto vtables = ::detail::makeVTables(0);
       auto etables = ::detail::makeETables(0);
-      auto loader = std::make_unique<loader_t>(client, comm_spec, vtables,
-                                               etables, directed != 0);
+      auto loader = std::make_unique<loader_t>(
+          client, comm_spec, vtables, etables, directed != 0,
+          /*generate_eid*/ false, /*retain_oid*/ true);
       frag_group_id = loader->LoadFragmentAsFragmentGroup().value();
       WriteOut(client, comm_spec, frag_group_id);
     }
@@ -219,8 +219,9 @@ int main(int argc, char** argv) {
     for (int i = 1; i < 3; ++i) {
       auto vtables = ::detail::makeVTables(i);
       auto etables = std::vector<std::vector<std::shared_ptr<arrow::Table>>>();
-      auto loader = std::make_unique<loader_t>(client, comm_spec, vtables,
-                                               etables, directed != 0);
+      auto loader = std::make_unique<loader_t>(
+          client, comm_spec, vtables, etables, directed != 0,
+          /*generate_eid*/ false, /*retain_oid*/ true);
       std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
           std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
               client.GetObject(frag_group_id));
@@ -242,8 +243,9 @@ int main(int argc, char** argv) {
     for (int i = 1; i < 3; ++i) {
       auto vtables = std::vector<std::shared_ptr<arrow::Table>>();
       auto etables = ::detail::makeETables(i);
-      auto loader = std::make_unique<loader_t>(client, comm_spec, vtables,
-                                               etables, directed != 0);
+      auto loader = std::make_unique<loader_t>(
+          client, comm_spec, vtables, etables, directed != 0,
+          /*generate_eid*/ false, /*retain_oid*/ true);
       std::shared_ptr<vineyard::ArrowFragmentGroup> fg =
           std::dynamic_pointer_cast<vineyard::ArrowFragmentGroup>(
               client.GetObject(frag_group_id));
