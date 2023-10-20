@@ -323,8 +323,8 @@ third-party libraries may not have the same license as vineyard.
 .. _FAQ: https://v6d.io/notes/faq.html
 .. _CNCF sandbox project: https://www.cncf.io/sandbox-projects/
 
-.. |Vineyard CI| image:: https://github.com/v6d-io/v6d/workflows/Vineyard%20CI/badge.svg
-   :target: https://github.com/v6d-io/v6d/actions?workflow=Vineyard%20CI
+.. |Vineyard CI| image:: https://github.com/v6d-io/v6d/actions/workflows/build-test.yml/badge.svg
+   :target: https://github.com/v6d-io/v6d/actions/workflows/build-test.yml
 .. |Coverage| image:: https://codecov.io/gh/v6d-io/v6d/branch/main/graph/badge.svg
    :target: https://codecov.io/gh/v6d-io/v6d
 .. |Docs| image:: https://img.shields.io/badge/docs-latest-brightgreen.svg
