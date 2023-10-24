@@ -1014,6 +1014,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddEdgesToExistedLabel(
         } else {
           if (vis.count(std::to_string(src_id) + std::to_string(dst_id)))
             continue;
+          vis[std::to_string(src_id) + std::to_string(dst_id)] = 1;
           prev_src_ids.push_back(src_id);
           prev_dst_ids.push_back(dst_id);
         }
@@ -1022,7 +1023,7 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddEdgesToExistedLabel(
   }
 
   auto gen_prev_fn =
-      [](std::vector<VID_T> vids, arrow::MemoryPool* pool,
+      [](const std::vector<VID_T>& vids, arrow::MemoryPool* pool,
          std::shared_ptr<vid_array_t>& lid_list) -> boost::leaf::result<void> {
     ArrowBuilderType<VID_T> builder(pool);
     ARROW_OK_OR_RAISE(builder.AppendValues(vids.data(), vids.size()));
@@ -1030,7 +1031,9 @@ ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::AddEdgesToExistedLabel(
     return {};
   };
   gen_prev_fn(prev_src_ids, pool, prev_src_id_list);
+  prev_src_ids.clear();
   gen_prev_fn(prev_dst_ids, pool, prev_dst_id_list);
+  prev_dst_ids.clear();
   // check duplicates
   auto src_id_array = edge_src[0];
   auto dst_id_array = edge_dst[0];
