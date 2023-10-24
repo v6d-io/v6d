@@ -461,6 +461,7 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::updateLabelVertexMap(
         }
       }
     }
+    prev_oids.clear();
     ARROW_CHECK_OK(builder.Finish(&array_to_add));
 
     incremental_array.push_back(prev_array);
@@ -485,12 +486,9 @@ ObjectID ArrowVertexMap<OID_T, VID_T>::updateLabelVertexMap(
       builder.reserve(static_cast<size_t>(vnum));
       for (int64_t k = 0; k < vnum; ++k) {
         // check whether has been added before
-        if (o2g_[fid][label_id].find(array->GetView(k)) !=
-            o2g_[fid][label_id].end()) {
-          auto it = o2g_[fid][label_id].find(array->GetView(k));
-          if (it != o2g_[fid][label_id].end()) {
-            builder.emplace(array->GetView(k), it->second);
-          }
+        auto it = o2g_[fid][label_id].find(array->GetView(k));
+        if (it != o2g_[fid][label_id].end()) {
+          builder.emplace(array->GetView(k), it->second);
           continue;
         }
         if (!builder.emplace(array->GetView(k), cur_gid)) {
