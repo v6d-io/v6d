@@ -110,6 +110,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertex(
   auto num_rows = vertex_table->num_rows();
   if (frag_->fid() != frag_->fnum() - 1 &&
       num_rows % vertex_info.GetChunkSize() != 0) {
+    // Append nulls if the number of rows is not a multiple of chunk size.
     vertex_table = AppendNullsToArrowTable(
         vertex_table,
         vertex_info.GetChunkSize() - num_rows % vertex_info.GetChunkSize());

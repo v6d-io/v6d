@@ -55,6 +55,9 @@ class GARFragmentBuilder
         client_(client),
         vm_ptr_(vm_ptr) {
     Base::set_compact_edges_(false);
+    VINEYARD_ASSERT(
+        !Base::compact_edges_,
+        "Compacting edges is not supported when loading from GraphAr.");
   }
 
   vineyard::Status Build(vineyard::Client& client) override;

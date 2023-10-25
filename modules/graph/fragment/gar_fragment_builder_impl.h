@@ -146,8 +146,8 @@ boost::leaf::result<void> generate_csr(
       memcpy(offsets_buffer->mutable_data(),
              reinterpret_cast<const uint8_t*>(offset_array->raw_values()),
              offset_array->length() * sizeof(int64_t));
-      // we not store the edge offset of outer vertices, so fill edge_num of the
-      // outer vertices
+      // we do not store the edge offset of outer vertices, so fill edge_num
+      // to the outer vertices offset
       std::fill_n(
           reinterpret_cast<int64_t*>(offsets_buffer->mutable_data() +
                                      offset_array->length() * sizeof(int64_t)),
@@ -468,10 +468,6 @@ GARFragmentBuilder<OID_T, VID_T, VERTEX_MAP_T>::initEdges(
             client_, vid_parser_, std::move(csc_edge_dst[e_label]),
             std::move(csc_edge_src[e_label]), tvnums_, this->vertex_label_num_,
             concurrency, sub_ie_lists, sub_ie_offset_lists);
-        LOG(INFO) << "reuse the offset array: tvnum_" << tvnums_[1]
-                  << ", edge_label: " << e_label
-                  << " sub_oe_offset_lists size: "
-                  << sub_ie_offset_lists[1]->length();
       } else {
         generate_csr<vid_t, eid_t>(
             client_, vid_parser_, std::move(csc_edge_dst[e_label]),
