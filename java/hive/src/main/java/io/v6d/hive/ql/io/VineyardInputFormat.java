@@ -229,7 +229,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
         }
 
         // update the value
-        value.setWritables(columns, recordBatchInnerIndex);
+        value.setValues(columns, recordBatchInnerIndex);
 
         // move cursor to next record
         recordBatchInnerIndex++;
