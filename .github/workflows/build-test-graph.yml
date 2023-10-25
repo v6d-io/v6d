@@ -105,15 +105,15 @@ jobs:
           wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt update
-          sudo apt install -y libarrow-dev=11.0.0-1 \
-                              libarrow-dataset-dev=11.0.0-1 \
-                              libparquet-dev=11.0.0-1 \
-                              libarrow-acero-dev=11.0.0-1 \
-                              libarrow-flight-dev=11.0.0-1 \
-                              libgandiva-dev=11.0.0-1 \
-                              libparquet-dev=11.0.0-1 \
-                              libplasma-dev=11.0.0-1 \
-                              libarrow-cuda-dev=11.0.0-1
+          sudo apt install -y libarrow-dev=12.0.1-1 \
+                              libarrow-dataset-dev=12.0.1-1 \
+                              libparquet-dev=12.0.1-1 \
+                              libarrow-acero-dev=12.0.1-1 \
+                              libarrow-flight-dev=12.0.1-1 \
+                              libgandiva-dev=12.0.1-1 \
+                              libparquet-dev=12.0.1-1 \
+                              libplasma-dev=12.0.1-1 \
+                              libarrow-cuda-dev=12.0.1-1
 
           # install clang-format
           sudo curl -L https://github.com/muttleyxd/clang-tools-static-binaries/releases/download/master-1d7ec53d/clang-format-11_linux-amd64 --output /usr/bin/clang-format
