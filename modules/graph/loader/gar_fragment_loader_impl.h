@@ -25,7 +25,7 @@ limitations under the License.
 #include <vector>
 
 #include "gar/reader/arrow_chunk_reader.h"
-#include "gar/utils/general_params.h"
+#include "gar/util/general_params.h"
 
 #include "graph/fragment/property_graph_utils.h"
 #include "graph/fragment/property_graph_utils_impl.h"
