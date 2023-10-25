@@ -64,6 +64,9 @@ void InitializeArrayArrayBuilders(
     const property_graph_types::LABEL_ID_TYPE edge_label,
     const PropertyGraphSchema& graph_schema);
 
+std::shared_ptr<arrow::Table> AppendNullsToArrowTable(
+    const std::shared_ptr<arrow::Table>& table, size_t num_rows_to_append);
+
 template <typename FRAG_T>
 class ArrowFragmentWriter {
   using oid_t = typename FRAG_T::oid_t;
@@ -118,6 +121,7 @@ class ArrowFragmentWriter {
   std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag_;
   grape::CommSpec comm_spec_;
   std::shared_ptr<GraphArchive::GraphInfo> graph_info_;
+  std::map<label_id_t, int64_t> label_id_to_vnum_;
 };
 
 }  // namespace vineyard

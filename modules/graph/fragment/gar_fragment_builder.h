@@ -53,7 +53,9 @@ class GARFragmentBuilder
                               std::shared_ptr<vertex_map_t> vm_ptr)
       : ArrowFragmentBaseBuilder<oid_t, vid_t, vertex_map_t>(client),
         client_(client),
-        vm_ptr_(vm_ptr) {}
+        vm_ptr_(vm_ptr) {
+    Base::set_compact_edges_(false);
+  }
 
   vineyard::Status Build(vineyard::Client& client) override;
 
