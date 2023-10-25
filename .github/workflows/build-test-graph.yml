@@ -107,6 +107,8 @@ jobs:
           sudo apt update
           sudo apt install -y libarrow-dev=11.0.0-1 \
                               libarrow-dataset-dev=11.0.0-1 \
+                              libparquet-dev=11.0.0-1 \
+                              libarrow-acero-dev=11.0.0-1 \
                               libarrow-flight-dev=11.0.0-1 \
                               libgandiva-dev=11.0.0-1 \
                               libparquet-dev=11.0.0-1 \
