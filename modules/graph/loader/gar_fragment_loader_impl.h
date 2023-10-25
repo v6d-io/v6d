@@ -25,7 +25,7 @@ limitations under the License.
 #include <vector>
 
 #include "gar/reader/arrow_chunk_reader.h"
-#include "gar/utils/general_params.h"
+#include "gar/util/general_params.h"
 
 #include "graph/fragment/property_graph_utils.h"
 #include "graph/fragment/property_graph_utils_impl.h"
@@ -202,7 +202,7 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::distributeVertices() {
     }
     vertex_labels_.push_back(label);
     vertex_chunk_sizes_.push_back(vertex_info.GetChunkSize());
-    auto chunk_num_result = GraphArchive::utils::GetVertexChunkNum(
+    auto chunk_num_result = GraphArchive::util::GetVertexChunkNum(
         graph_info_->GetPrefix(), vertex_info);
     RETURN_GS_ERROR_IF_NOT_OK(chunk_num_result.status());
     // distribute the vertex chunks for fragments
