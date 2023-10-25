@@ -136,24 +136,31 @@ boost::leaf::result<void> generate_csr(
 
   int64_t num_chunks = src_chunks.size();
   int64_t edge_num = offset_array->Value(offset_array->length() - 1);
-
   for (int v_label = 0; v_label != vertex_label_num; ++v_label) {
+    auto tvnum = tvnums[v_label];
+    // build the arrow's offset array
+    std::shared_ptr<arrow::Buffer> offsets_buffer;
+    ARROW_OK_ASSIGN_OR_RAISE(
+        offsets_buffer, arrow::AllocateBuffer((tvnum + 1) * sizeof(int64_t)));
     if (v_label == vertex_label) {
-      edge_offsets[v_label] = offset_array;
+      memcpy(offsets_buffer->mutable_data(),
+             reinterpret_cast<const uint8_t*>(offset_array->raw_values()),
+             offset_array->length() * sizeof(int64_t));
+      // we do not store the edge offset of outer vertices, so fill edge_num
+      // to the outer vertices offset
+      std::fill_n(
+          reinterpret_cast<int64_t*>(offsets_buffer->mutable_data() +
+                                     offset_array->length() * sizeof(int64_t)),
+          (tvnum + 1) - offset_array->length(), edge_num);
       edges[v_label] =
           std::make_shared<PodArrayBuilder<nbr_unit_t>>(client, edge_num);
     } else {
-      auto tvnum = tvnums[v_label];
-      // build the arrow's offset array
-      std::shared_ptr<arrow::Buffer> offsets_buffer;
-      ARROW_OK_ASSIGN_OR_RAISE(
-          offsets_buffer, arrow::AllocateBuffer((tvnum + 1) * sizeof(int64_t)));
       std::fill_n(reinterpret_cast<int64_t*>(offsets_buffer->mutable_data()),
                   tvnum + 1, 0);
-      edge_offsets[v_label] = std::make_shared<arrow::Int64Array>(
-          arrow::int64(), tvnum + 1, offsets_buffer, nullptr, 0, 0);
       edges[v_label] = std::make_shared<PodArrayBuilder<nbr_unit_t>>(client, 0);
     }
+    edge_offsets[v_label] = std::make_shared<arrow::Int64Array>(
+        arrow::int64(), tvnum + 1, offsets_buffer, nullptr, 0, 0);
   }
 
   std::vector<int64_t> chunk_offsets(num_chunks + 1, 0);

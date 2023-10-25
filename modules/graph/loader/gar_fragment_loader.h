@@ -44,10 +44,14 @@ limitations under the License.
 namespace GraphArchive {
 class GraphInfo;
 class EdgeInfo;
+class PropertyGroup;
 enum class AdjListType : std::uint8_t;
 }  // namespace GraphArchive
 
 namespace vineyard {
+
+std::shared_ptr<arrow::Schema> ConstructSchemaFromPropertyGroup(
+    const GraphArchive::PropertyGroup& property_group);
 
 template <typename OID_T = property_graph_types::OID_TYPE,
           typename VID_T = property_graph_types::VID_TYPE,

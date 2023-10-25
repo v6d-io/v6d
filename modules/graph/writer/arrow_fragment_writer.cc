@@ -70,6 +70,31 @@ void InitializeArrayArrayBuilders(
   }
 }
 
+std::shared_ptr<arrow::Table> AppendNullsToArrowTable(
+    const std::shared_ptr<arrow::Table>& table, size_t num_rows_to_append) {
+  std::vector<std::shared_ptr<arrow::Array>> columns;
+  for (int i = 0; i < table->num_columns(); ++i) {
+    auto type = table->field(i)->type();
+    std::unique_ptr<arrow::ArrayBuilder> builder;
+    auto st = arrow::MakeBuilder(arrow::default_memory_pool(), type, &builder);
+    if (!st.ok()) {
+      LOG(FATAL) << "Failed to create array builder: " << st.message();
+    }
+    st = builder->AppendNulls(num_rows_to_append);
+    if (!st.ok()) {
+      LOG(FATAL) << "Failed to append null to arrow table: " << st.message();
+    }
+    std::shared_ptr<arrow::Array> nulls;
+    st = builder->Finish(&nulls);
+    if (!st.ok()) {
+      LOG(FATAL) << "Failed to finish null builder: " << st.message();
+    }
+    columns.push_back(nulls);
+  }
+  auto null_table = arrow::Table::Make(table->schema(), columns);
+  return arrow::ConcatenateTables({table, null_table}).ValueOrDie();
+}
+
 }  // namespace vineyard
 
 #endif  // ENABLE_GAR
