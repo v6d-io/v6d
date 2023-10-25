@@ -121,9 +121,18 @@ func (b *BestEffortStrategy) TrackingChunksByCRD() *BestEffortStrategy {
 		_ = multierr.Append(errList, err)
 	}
 
-	// if there is no local objects, return error
-	if len(localObjects) == 0 && len(globalObjects) != 0 {
-		_ = multierr.Append(errList, errors.Errorf("No local chunks found"))
+	if len(localObjects) == 0 {
+		if len(globalObjects) == 0 {
+			localObjects, err = b.GetLocalObjectsByID(b.required)
+			// if there is no local objects, return error
+			if err != nil {
+				_ = multierr.Append(errList, err)
+			}
+		} else {
+			// if there is no local objects, return error
+			_ = multierr.Append(errList, errors.Errorf("Failed to get local objects"))
+		}
+
 	}
 
 	if errList != nil {
@@ -329,6 +338,28 @@ func (b *BestEffortStrategy) GetGlobalObjectsByID(
 	for i, obj := range globalObjects.Items {
 		if jobname, exist := obj.Labels[labels.VineyardObjectJobLabel]; exist && requiredJobs[jobname] {
 			objects = append(objects, &globalObjects.Items[i])
+		}
+	}
+
+	return objects, nil
+}
+
+// GetLocalObjectsByID returns the local objects by the given jobname.
+func (b *BestEffortStrategy) GetLocalObjectsByID(
+	jobNames []string,
+) ([]*v1alpha1.LocalObject, error) {
+	requiredJobs := make(map[string]bool)
+	for _, n := range jobNames {
+		requiredJobs[n] = true
+	}
+	objects := []*v1alpha1.LocalObject{}
+	localObjects := &v1alpha1.LocalObjectList{}
+	if err := b.List(context.TODO(), localObjects); err != nil {
+		return nil, err
+	}
+	for i, obj := range localObjects.Items {
+		if jobname, exist := obj.Labels[labels.VineyardObjectJobLabel]; exist && requiredJobs[jobname] {
+			objects = append(objects, &localObjects.Items[i])
 		}
 	}
 
