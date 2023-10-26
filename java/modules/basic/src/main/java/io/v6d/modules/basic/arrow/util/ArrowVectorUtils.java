@@ -179,11 +179,15 @@ public class ArrowVectorUtils {
         Context.println("--------------------------");
     }
 
-    public static BigDecimal TransHiveDecimalToBigDecimal(Object obj) {
+    public static BigDecimal TransHiveDecimalToBigDecimal(Object obj, int scale) {
         try {
             Class<?> c = Class.forName("org.apache.hadoop.hive.common.type.HiveDecimal");
             java.lang.reflect.Method m = c.getMethod("bigDecimalValue");
-            return (BigDecimal)m.invoke(obj);
+            BigDecimal value = (BigDecimal)m.invoke(obj);
+            if (value.scale() != scale) {
+                value = value.setScale(scale);
+            }
+            return value;
         } catch (Exception e) {
             e.printStackTrace();
             return null;

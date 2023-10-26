@@ -34,6 +34,7 @@ import java.lang.reflect.Type;
  * under the License.
  */
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -774,7 +775,8 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setDecimal(rowId, (BigDecimal) value);
+            // this.setDecimal(rowId, (BigDecimal) value);
+            this.accessor.setSafe(rowId, ArrowVectorUtils.TransHiveDecimalToBigDecimal(value, accessor.getScale()));
         }
 
         @Override
@@ -782,10 +784,10 @@ public class ColumnarDataBuilder {
             return accessor.getObject(rowId);
         }
 
-        @Override
-        final void setDecimal(int rowId, BigDecimal value) {
-            accessor.set(rowId, value);
-        }
+        // @Override
+        // final void setDecimal(int rowId, BigDecimal value) {
+        //     accessor.setSafe(rowId, value);
+        // }
     }
 
     private static class StringAccessor extends ArrowVectorAccessor {
@@ -805,7 +807,7 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            accessor.setSafe(rowId, new Text(value.toString()));
+            accessor.setSafe(rowId, (value.toString().getBytes(StandardCharsets.UTF_8)));
         }
     }
 
@@ -826,11 +828,7 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            if (value instanceof String) {
-                this.setUTF8String(rowId, new Text((String) value));
-            } else {
-                this.setUTF8String(rowId, (Text) value);
-            }
+            this.accessor.setSafe(rowId, value.toString().getBytes(StandardCharsets.UTF_8));
         }
 
         @Override
@@ -1377,16 +1375,16 @@ public class ColumnarDataBuilder {
                     timeStampNanoTZVector.setValueCount(timeStampNanoTZVector.getValueCount() + 1);
                 } else if (vector instanceof DecimalVector) {
                     DecimalVector decimalVector = (DecimalVector)vector;
-                    BigDecimal bigDecimal = ArrowVectorUtils.TransHiveDecimalToBigDecimal(value);
+                    BigDecimal bigDecimal = ArrowVectorUtils.TransHiveDecimalToBigDecimal(value, decimalVector.getScale());
                     decimalVector.setSafe(rowId, bigDecimal);
                     decimalVector.setValueCount(decimalVector.getValueCount() + 1);
                 } else if (vector instanceof LargeVarCharVector) {
                     LargeVarCharVector largeVarCharVector = (LargeVarCharVector)vector;
-                    largeVarCharVector.setSafe(rowId, ((String)value).getBytes());
+                    largeVarCharVector.setSafe(rowId, (value.toString()).getBytes(StandardCharsets.UTF_8));
                     largeVarCharVector.setValueCount(largeVarCharVector.getValueCount() + 1);
                 } else if (vector instanceof VarCharVector) {
                     VarCharVector varCharVector = (VarCharVector)vector;
-                    varCharVector.setSafe(rowId, (value.toString()).getBytes());
+                    varCharVector.setSafe(rowId, (value.toString()).getBytes(StandardCharsets.UTF_8));
                     varCharVector.setValueCount(varCharVector.getValueCount() + 1);
                 } else if (vector instanceof VarBinaryVector) {
                     VarBinaryVector varBinaryVector = (VarBinaryVector)vector;

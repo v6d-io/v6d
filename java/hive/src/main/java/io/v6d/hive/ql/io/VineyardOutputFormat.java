@@ -170,18 +170,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                 values.length == current.size(),
                 "The length of record doesn't match with the length of builders");
         for (int i = 0; i < values.length; ++i) {
-            // current.get(i).setObject(currentLoc, values[i]);
-            if (values[i] instanceof HiveDecimal) {
-                BigDecimal decimal = ((HiveDecimal) values[i]).bigDecimalValue();
-                if (decimal.precision() > ((DecimalTypeInfo)infos[i]).getPrecision() || decimal.scale() > ((DecimalTypeInfo)infos[i]).getScale()) {
-                    // TODO: insert null if the value precision is larger than the column precision
-                    throw new VineyardException.NotImplemented("The precision of the value is larger than the column precision.");
-                } else {
-                    current.get(i).setObject(currentLoc, decimal);
-                }
-            } else {
-                current.get(i).setObject(currentLoc, values[i]);
-            }
+            current.get(i).setObject(currentLoc, values[i]);
         }
         currentLoc += 1;
         writeTimer.stop();

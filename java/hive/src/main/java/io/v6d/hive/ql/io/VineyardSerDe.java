@@ -45,7 +45,7 @@ public class VineyardSerDe extends AbstractSerDe {
         this.rowTypeInfo = TypeContext.computeStructTypeInfo(tableProperties);
         this.targetTypeInfos =
                 TypeContext.computeTargetTypeInfos(
-                        this.rowTypeInfo, ObjectInspectorUtils.ObjectInspectorCopyOption.WRITABLE);
+                        this.rowTypeInfo, ObjectInspectorUtils.ObjectInspectorCopyOption.JAVA);
         this.objectInspector =
                 (StructObjectInspector)
                         TypeInfoUtils.getStandardWritableObjectInspectorFromTypeInfo(

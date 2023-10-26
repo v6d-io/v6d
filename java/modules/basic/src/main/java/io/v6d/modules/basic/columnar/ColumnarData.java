@@ -37,6 +37,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
@@ -560,12 +561,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getDecimal(rowId, 24, 8);
-        }
-
-        @Override
-        final BigDecimal getDecimal(int rowId, int precision, int scale) {
-            return accessor.getObject(rowId);
+            return ArrowVectorUtils.TransBigDecimalToHiveDecimal(accessor.getObject(rowId));
         }
     }
 
@@ -597,7 +593,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getUTF8String(rowId);
+            return getUTF8String(rowId).toString();
         }
 
         @Override
@@ -657,7 +653,9 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getInt(rowId);
+            int day = getInt(rowId);
+            Date date = new Date(((long)day) * (DateTimeConstants.MILLIS_PER_DAY));
+            return date;
         }
 
         @Override
@@ -817,7 +815,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getLong(rowId);
+            Timestamp t = new Timestamp(0);
+            long value = getLong(rowId);
+            t.setTime((long) value / DateTimeConstants.NANOS_PER_SECOND * DateTimeConstants.NANOS_PER_MICROS);
+            t.setNanos((int) ((long) value % DateTimeConstants.NANOS_PER_SECOND));
+            return t;
         }
 
         @Override
@@ -957,7 +959,6 @@ public class ColumnarData {
                             List<Object> kvList = (List)(((Object[])value)[j]);
                             map.put(kvList.get(0), kvList.get(1));
                         }
-                        Context.println("map:" + map);
                     }
                     result.add(map);
                 } else {
@@ -1013,7 +1014,8 @@ public class ColumnarData {
                         result.add(ArrowVectorUtils.TransBigDecimalToHiveDecimal(bigDecimal));
                         Context.println("read:" + vector.getObject(rowId + i));
                     }
-                } else if (vector instanceof VarCharVector) {
+                } else if (vector instanceof VarCharVector || vector instanceof LargeVarCharVector) {
+                    Context.println("String!");
                     for (int i = 0; i < rows; i++) {
                         result.add(vector.getObject(rowId + i).toString());
                         Context.println("read:" + vector.getObject(rowId + i));

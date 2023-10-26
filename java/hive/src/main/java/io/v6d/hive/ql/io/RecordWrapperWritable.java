@@ -267,6 +267,7 @@ public class RecordWrapperWritable implements WritableComparable {
                     Context.println("type2:" + info);
                     TypeInfo keyTypeInfo = ((MapTypeInfo)info).getMapKeyTypeInfo();
                     TypeInfo valueTypeInfo = ((MapTypeInfo)info).getMapValueTypeInfo();
+                    Context.println("key type:" + keyTypeInfo + ", value type:" + valueTypeInfo);
                     return ObjectInspectorFactory.getStandardMapObjectInspector(createObjectInspector(keyTypeInfo, level + 1), createObjectInspector(valueTypeInfo, level + 1));
                 case STRUCT:
                     Context.println("type3:" + info);
