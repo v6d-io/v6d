@@ -332,6 +332,9 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
             return getBoolean(rowId);
         }
 
@@ -352,7 +355,10 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getByte(rowId);
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
+            return accessor.getObject(rowId);
         }
 
         @Override
@@ -392,7 +398,10 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getShort(rowId);
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
+            return accessor.getObject(rowId);
         }
 
         @Override
@@ -432,22 +441,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getInt(rowId);
-        }
-
-        @Override
-        final int getInt(int rowId) {
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
             return accessor.get(rowId);
         }
-
-        // @Override
-        // Object getAllObjects() {
-        //     List<Integer> result = new ArrayList<>();
-        //     for (int i = 0; i < accessor.getValueCount(); i++) {
-        //         result.add(accessor.get(i));
-        //     }
-        //     return result;
-        // }
     }
 
     private static class UIntAccessor extends ArrowVectorAccessor {
@@ -481,7 +479,10 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getLong(rowId);
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
+            return accessor.getObject(rowId);
         }
 
         @Override
@@ -521,12 +522,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getFloat(rowId);
-        }
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
+            return accessor.getObject(rowId);
 
-        @Override
-        final float getFloat(int rowId) {
-            return accessor.get(rowId);
         }
     }
 
@@ -541,12 +541,10 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getDouble(rowId);
-        }
-
-        @Override
-        final double getDouble(int rowId) {
-            return accessor.get(rowId);
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
+            return accessor.getObject(rowId);
         }
     }
 
@@ -561,6 +559,9 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
             return ArrowVectorUtils.TransBigDecimalToHiveDecimal(accessor.getObject(rowId));
         }
     }
@@ -577,6 +578,9 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
             return accessor.getObject(rowId).toString();
         }
     }
@@ -593,7 +597,10 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getUTF8String(rowId).toString();
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
+            return accessor.getObject(rowId).toString();
         }
 
         @Override
@@ -613,6 +620,9 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
             return getBinary(rowId);
         }
 
@@ -653,7 +663,10 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            int day = getInt(rowId);
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
+            int day = accessor.get(rowId);
             Date date = new Date(((long)day) * (DateTimeConstants.MILLIS_PER_DAY));
             return date;
         }
@@ -815,6 +828,9 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
             Timestamp t = new Timestamp(0);
             long value = getLong(rowId);
             t.setTime((long) value / DateTimeConstants.NANOS_PER_SECOND * DateTimeConstants.NANOS_PER_MICROS);
@@ -879,39 +895,6 @@ public class ColumnarData {
         }
     }
 
-    private static class ListVectorAccessor extends ArrowVectorAccessor {
-
-        private final ListVector accessor;
-
-        ListVectorAccessor(ListVector vector) {
-            super(vector);
-            this.accessor = vector;
-        }
-
-        @Override
-        Object getObject(int rowId) {
-            Object value = GetNestedObjectUtils.getObject(accessor, rowId);
-            Context.println("value type:" + value.getClass().getName() + " value:" + value);
-            return value;
-        }
-    }
-
-    private static class StructVectorAccessor extends ArrowVectorAccessor {
-
-        private final StructVector accessor;
-
-        StructVectorAccessor(StructVector vector) {
-            super(vector);
-            this.accessor = vector;
-        }
-
-        @Override
-        Object getObject(int rowId) {
-            Object value = GetNestedObjectUtils.getObject(accessor, rowId);
-            return value;
-        }
-    }
-
     private static class NestedVectorAccessor extends ArrowVectorAccessor {
     
         private final FieldVector vector;
@@ -924,6 +907,9 @@ public class ColumnarData {
         @Override
         Object getObject(int rowId) {
             Object value = getObject(vector, rowId, 1);
+            if (value == null) {
+                return null;
+            }
             Context.println("value type:" + value.getClass().getName() + " value:" + value);
             return ((Object[])value)[0];
         }
@@ -947,7 +933,6 @@ public class ColumnarData {
                     FieldVector fv = ((ListVector)vector).getDataVector();
 
                     for (int i = rowId; i < rowId + rows; i++) {
-                        List<Object> vals = new ArrayList<>();
                         int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(i * 4));
                         int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((i + 1) * 4));
                         Context.println("start:" + start + " end:" + end);
@@ -965,17 +950,21 @@ public class ColumnarData {
                     FieldVector fv = ((ListVector)vector).getDataVector();
 
                     for (int i = rowId; i < rowId + rows; i++) {
-                        List<Object> vals = new ArrayList<>();
-                        int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(i * 4));
-                        int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((i + 1) * 4));
-                        Context.println("start:" + start + " end:" + end);
+                        if (vector.isNull(i)) {
+                            result.add(null);
+                        } else {
+                            List<Object> vals = new ArrayList<>();
+                            int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(i * 4));
+                            int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((i + 1) * 4));
+                            Context.println("start:" + start + " end:" + end);
 
-                        Object value = getObject(fv, start, end - start);
-                        for (int j = 0; j < ((Object[])value).length; j++) {
-                            vals.add(((Object[])value)[j]);
+                            Object value = getObject(fv, start, end - start);
+                            for (int j = 0; j < ((Object[])value).length; j++) {
+                                vals.add(((Object[])value)[j]);
+                            }
+                            result.add(vals);
+                            Context.println("result:" + result);
                         }
-                        result.add(vals);
-                        Context.println("result:" + result);
                     }
                 }
             } else if (vector instanceof StructVector) {
@@ -996,34 +985,54 @@ public class ColumnarData {
                 Context.println("Primitive vector");
                 if (vector instanceof DateDayVector) {
                     for (int i = 0; i < rows; i++) {
-                        Date date = new Date(((long)((DateDayVector)vector).get(rowId)) * (DateTimeConstants.MILLIS_PER_DAY));
-                        result.add(date);
+                        if (vector.isNull(i)) {
+                            result.add(null);
+                        } else {
+                            Date date = new Date(((long)((DateDayVector)vector).get(rowId)) * (DateTimeConstants.MILLIS_PER_DAY));
+                            result.add(date);
+                        }
                     }
                 } else if (vector instanceof TimeStampNanoTZVector) {
                     for (int i = 0; i < rows; i++) {
-                        long value = ((TimeStampVector)vector).get(rowId + i);
-                        Timestamp t = new Timestamp(0);
-                        t.setTime((long) value / DateTimeConstants.NANOS_PER_SECOND * DateTimeConstants.NANOS_PER_MICROS);
-                        t.setNanos((int) ((long) value % DateTimeConstants.NANOS_PER_SECOND));
-                        result.add(t);
+                        if (vector.isNull(i)) {
+                            result.add(null);
+                        } else {
+                            long value = ((TimeStampVector)vector).get(rowId + i);
+                            Timestamp t = new Timestamp(0);
+                            t.setTime((long) value / DateTimeConstants.NANOS_PER_SECOND * DateTimeConstants.NANOS_PER_MICROS);
+                            t.setNanos((int) ((long) value % DateTimeConstants.NANOS_PER_SECOND));
+                            result.add(t);
+                        }
                     }
                 } else if (vector instanceof DecimalVector) {
                     for (int i = 0; i < rows; i++) {
-                        BigDecimal bigDecimal = (BigDecimal)vector.getObject(rowId + i);
-                        Context.println("Trans:" + ArrowVectorUtils.TransBigDecimalToHiveDecimal(bigDecimal));
-                        result.add(ArrowVectorUtils.TransBigDecimalToHiveDecimal(bigDecimal));
-                        Context.println("read:" + vector.getObject(rowId + i));
+                        if (vector.isNull(i)) {
+                            result.add(null);
+                        } else {
+                            BigDecimal bigDecimal = (BigDecimal)vector.getObject(rowId + i);
+                            Context.println("Trans:" + ArrowVectorUtils.TransBigDecimalToHiveDecimal(bigDecimal));
+                            result.add(ArrowVectorUtils.TransBigDecimalToHiveDecimal(bigDecimal));
+                            Context.println("read:" + vector.getObject(rowId + i));
+                        }
                     }
                 } else if (vector instanceof VarCharVector || vector instanceof LargeVarCharVector) {
                     Context.println("String!");
                     for (int i = 0; i < rows; i++) {
-                        result.add(vector.getObject(rowId + i).toString());
-                        Context.println("read:" + vector.getObject(rowId + i));
+                        if (vector.isNull(i)) {
+                            result.add(null);
+                        } else {
+                            result.add(vector.getObject(rowId + i).toString());
+                            Context.println("read:" + vector.getObject(rowId + i));
+                        }
                     }
                 } else {
                     for (int i = 0; i < rows; i++) {
-                        result.add(vector.getObject(rowId + i));
-                        Context.println("read:" + vector.getObject(rowId + i));
+                        if (vector.isNull(i)) {
+                            result.add(null);
+                        } else {
+                            result.add(vector.getObject(rowId + i));
+                            Context.println("read:" + vector.getObject(rowId + i));
+                        }
                     }
                 }
             }

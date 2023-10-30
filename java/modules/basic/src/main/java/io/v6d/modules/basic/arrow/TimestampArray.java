@@ -19,8 +19,11 @@ import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
+import java.util.List;
+
 import lombok.val;
 
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.TimeStampMicroVector;
 import org.apache.arrow.vector.TimeStampMilliVector;
@@ -44,7 +47,7 @@ public class TimestampArray extends Array {
         }
     }
 
-    public TimestampArray(ObjectMeta meta, Buffer buffer, long length, short timeUnitID) {
+    public TimestampArray(ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount, short timeUnitID) {
         super(meta);
         switch(TimeUnit.values()[timeUnitID]) {
             case MICROSECOND:
@@ -61,7 +64,7 @@ public class TimestampArray extends Array {
                 break;
         }
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode(length, nullCount), buffers);
         this.timeUnit = TimeUnit.values()[timeUnitID];
     }
 
@@ -95,7 +98,11 @@ public class TimestampArray extends Array {
 class TimestampArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
-        val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        return new TimestampArray(meta, buffer, meta.getLongValue("length_"), (short)meta.getLongValue("timeUnitID_"));
+        Buffer data_buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
+        Buffer validity_buffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        int null_count = meta.getIntValue("null_count_");
+        int length = meta.getIntValue("length_");
+        return new TimestampArray(meta, Arrays.asList(validity_buffer.getBuffer(), data_buffer.getBuffer()), length, null_count, (short)meta.getLongValue("timeUnitID_"));
     }
 }

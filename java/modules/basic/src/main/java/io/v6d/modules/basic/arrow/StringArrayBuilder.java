@@ -19,6 +19,8 @@ import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import lombok.*;
+
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.util.Text;
@@ -28,6 +30,7 @@ public class StringArrayBuilder implements ArrayBuilder {
 
     private BufferBuilder data_buffer_builder;
     private BufferBuilder offset_buffer_builder;
+    private BufferBuilder validity_buffer_builder;
 
     public StringArrayBuilder(IPCClient client, final VarCharVector vector)
             throws VineyardException {
@@ -49,10 +52,15 @@ public class StringArrayBuilder implements ArrayBuilder {
                         ((long) this.array.getValueCount()) * VarCharVector.OFFSET_WIDTH);
         val data_buffer = this.array.getDataBuffer();
 
+        ArrowBuf validity_buffer = this.array.getValidityBuffer();
+        val validity_buffer_size = validity_buffer.capacity();
+
         this.data_buffer_builder =
                 new BufferBuilder((IPCClient) client, data_buffer, data_buffer_size);
         this.offset_buffer_builder =
                 new BufferBuilder((IPCClient) client, offset_buffer, offset_buffer_size);
+        this.validity_buffer_builder =
+                new BufferBuilder((IPCClient) client, validity_buffer, validity_buffer_size);
     }
 
     @Override
@@ -62,11 +70,11 @@ public class StringArrayBuilder implements ArrayBuilder {
         meta.setTypename("vineyard::BaseBinaryArray<arrow::StringArray>");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
-        meta.setValue("null_count_", 0);
+        meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
         meta.addMember("buffer_data_", data_buffer_builder.seal(client));
         meta.addMember("buffer_offsets_", offset_buffer_builder.seal(client));
-        meta.addMember("null_bitmap_", BufferBuilder.empty(client));
+        meta.addMember("null_bitmap_", validity_buffer_builder.seal(client));
         return client.createMetaData(meta);
     }
 

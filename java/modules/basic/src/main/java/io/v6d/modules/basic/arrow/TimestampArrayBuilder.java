@@ -24,6 +24,7 @@ import io.v6d.core.common.util.VineyardException.NotImplemented;
 import java.util.Arrays;
 import lombok.val;
 
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.TimeStampMicroVector;
 import org.apache.arrow.vector.TimeStampMilliVector;
@@ -34,7 +35,8 @@ import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 import org.apache.arrow.vector.types.TimeUnit;
 
 public class TimestampArrayBuilder implements ArrayBuilder {
-    private BufferBuilder buffer;
+    private BufferBuilder dataBufferBuilder;
+    private BufferBuilder validityBufferBuilder;
     private TimeStampVector array;
     private TimeUnit timeUnit;
 
@@ -56,13 +58,16 @@ public class TimestampArrayBuilder implements ArrayBuilder {
             default:
                 throw new NotImplemented("Unsupported time unit: " + timeUnit);
         }
-        this.buffer = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
+        this.dataBufferBuilder = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode(length, 0), Arrays.asList(null, dataBufferBuilder.getBuffer()));
     }
 
     @Override
-    public void build(Client client) throws VineyardException {}
+    public void build(Client client) throws VineyardException {
+        ArrowBuf validityBuffer = this.array.getValidityBuffer();
+        validityBufferBuilder = new BufferBuilder((IPCClient)client, validityBuffer, validityBuffer.capacity());
+    }
 
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
@@ -71,10 +76,10 @@ public class TimestampArrayBuilder implements ArrayBuilder {
         meta.setTypename("vineyard::Timestamp<" + timeUnit.toString() + ">");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
-        meta.setValue("null_count_", 0);
+        meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
-        meta.addMember("buffer_", buffer.seal(client));
-        meta.addMember("null_bitmap_", BufferBuilder.empty(client));
+        meta.addMember("buffer_", dataBufferBuilder.seal(client));
+        meta.addMember("null_bitmap_", validityBufferBuilder.seal(client));
         meta.setValue("timeUnitID_", timeUnit.getFlatbufID());
         return client.createMetaData(meta);
     }
@@ -86,7 +91,7 @@ public class TimestampArrayBuilder implements ArrayBuilder {
 
     @Override
     public void shrink(Client client, long size) throws VineyardException {
-        this.buffer.shrink(client, this.array.getBufferSizeFor((int) size));
+        this.dataBufferBuilder.shrink(client, this.array.getBufferSizeFor((int) size));
         this.array.setValueCount((int) size);
     }
 

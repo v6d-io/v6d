@@ -22,6 +22,7 @@ import io.v6d.core.common.util.VineyardException;
 import java.util.Arrays;
 import lombok.val;
 
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.BaseFixedWidthVector;
 import org.apache.arrow.vector.Decimal256Vector;
 import org.apache.arrow.vector.DecimalVector;
@@ -33,6 +34,7 @@ import org.apache.arrow.vector.types.pojo.ArrowType.Decimal;
 public class DecimalArrayBuilder implements ArrayBuilder {
     private BufferBuilder buffer;
     private BaseFixedWidthVector array;
+    private BufferBuilder validityBufferBuilder;
     int maxPrecision;
     int maxScale;
     int bitWidth;
@@ -52,7 +54,11 @@ public class DecimalArrayBuilder implements ArrayBuilder {
     }
 
     @Override
-    public void build(Client client) throws VineyardException {}
+    public void build(Client client) throws VineyardException {
+        ArrowBuf validityBuffer = array.getValidityBuffer();
+
+        validityBufferBuilder = new BufferBuilder((IPCClient)client, validityBuffer, validityBuffer.capacity());
+    }
 
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
@@ -62,10 +68,10 @@ public class DecimalArrayBuilder implements ArrayBuilder {
         Context.println("vineyard::DecimalArray<" + String.valueOf(bitWidth) + ">");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
-        meta.setValue("null_count_", 0);
+        meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
         meta.addMember("buffer_", buffer.seal(client));
-        meta.addMember("null_bitmap_", BufferBuilder.empty(client));
+        meta.addMember("null_bitmap_", validityBufferBuilder.seal(client));
         meta.setValue("maxPrecision_", maxPrecision);
         meta.setValue("maxScale_", maxScale);
         meta.setValue("bitWidth_", bitWidth);

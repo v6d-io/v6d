@@ -21,7 +21,11 @@ import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
+import java.util.List;
+
 import lombok.*;
+
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
@@ -37,13 +41,13 @@ public class VarBinaryArray extends Array {
                         new VarBinaryArrayResolver());
     }
 
-    public VarBinaryArray(final ObjectMeta meta, Buffer buffer, Buffer offset, long length) {
+    public VarBinaryArray(final ObjectMeta meta, List<ArrowBuf> buffers, int length, int nullCount) {
         super(meta);
         Context.println("VarBinaryArray: " + meta.toString());
         this.array = new VarBinaryVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0),
-                Arrays.asList(null, offset.getBuffer(), buffer.getBuffer()));
+                new ArrowFieldNode(length, nullCount),
+                buffers);
         Context.println("length:" + length);
         this.array.setValueCount((int) length);
     }
@@ -74,10 +78,14 @@ public class VarBinaryArray extends Array {
 class VarBinaryArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
-        val buffer =
+        Buffer data_buffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_data_"));
-        val offsets_buffer =
+        Buffer offsets_buffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
-        return new VarBinaryArray(meta, buffer, offsets_buffer, meta.getLongValue("length_"));
+        Buffer validityBuffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        int nullCount = meta.getIntValue("null_count_");
+        int length = meta.getIntValue("length_");
+        return new VarBinaryArray(meta, Arrays.asList(validityBuffer.getBuffer(), offsets_buffer.getBuffer(), data_buffer.getBuffer()), length, nullCount);
     }
 }

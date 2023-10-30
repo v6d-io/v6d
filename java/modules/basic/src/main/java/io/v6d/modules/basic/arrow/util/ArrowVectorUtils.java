@@ -116,7 +116,6 @@ public class ArrowVectorUtils {
                 }
                 currentBufs.add(bufs.poll());
                 currentBufs.add(bufs.poll());
-                currentBufs.set(0, null);
                 vector.loadFieldBuffers(new ArrowFieldNode(valueCount, 0), currentBufs);
                 ((ListVector)vector).addOrGetVector(childFields.get(0).getFieldType());
                 FieldVector childFieldVector = ((ListVector)vector).getDataVector();
@@ -134,7 +133,6 @@ public class ArrowVectorUtils {
                     case Timestamp:
                         currentBufs.add(bufs.poll());
                         currentBufs.add(bufs.poll());
-                        currentBufs.set(0, null);
                         vector.loadFieldBuffers(new ArrowFieldNode(valueCount, 0), currentBufs);
                         Context.println("vector value count: " + vector.getValueCount());
                         break;
@@ -143,7 +141,6 @@ public class ArrowVectorUtils {
                         currentBufs.add(bufs.poll());
                         currentBufs.add(bufs.poll());
                         currentBufs.add(bufs.poll());
-                        currentBufs.set(0, null);
                         vector.loadFieldBuffers(new ArrowFieldNode(valueCount, 0), currentBufs);
                         Context.println("vector value count: " + vector.getValueCount());
                         break;

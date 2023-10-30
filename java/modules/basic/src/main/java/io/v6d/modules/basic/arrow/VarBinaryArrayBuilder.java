@@ -19,6 +19,8 @@ import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import lombok.*;
+
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VarBinaryVector;
 
@@ -27,6 +29,7 @@ public class VarBinaryArrayBuilder implements ArrayBuilder {
 
     private BufferBuilder data_buffer_builder;
     private BufferBuilder offset_buffer_builder;
+    private BufferBuilder validity_buffer_builder;
 
     public VarBinaryArrayBuilder(IPCClient client, long length) throws VineyardException {
         this.array = new VarBinaryVector("", Arrow.default_allocator);
@@ -43,10 +46,16 @@ public class VarBinaryArrayBuilder implements ArrayBuilder {
                         ((long) this.array.getValueCount()) * VarBinaryVector.OFFSET_WIDTH);
         val data_buffer = this.array.getDataBuffer();
 
+        ArrowBuf validityBuffer = array.getValidityBuffer();
+        validity_buffer_builder =
+                new BufferBuilder((IPCClient) client, validityBuffer, validityBuffer.capacity());
+
         this.data_buffer_builder =
                 new BufferBuilder((IPCClient) client, data_buffer, data_buffer_size);
         this.offset_buffer_builder =
                 new BufferBuilder((IPCClient) client, offset_buffer, offset_buffer_size);
+        this.validity_buffer_builder =
+                new BufferBuilder((IPCClient) client, validityBuffer, validityBuffer.capacity());
     }
 
     @Override
@@ -56,11 +65,11 @@ public class VarBinaryArrayBuilder implements ArrayBuilder {
         meta.setTypename("vineyard::VarBinaryArray");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
-        meta.setValue("null_count_", 0);
+        meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
         meta.addMember("buffer_data_", data_buffer_builder.seal(client));
         meta.addMember("buffer_offsets_", offset_buffer_builder.seal(client));
-        meta.addMember("null_bitmap_", BufferBuilder.empty(client));
+        meta.addMember("null_bitmap_", validity_buffer_builder.seal(client));
         return client.createMetaData(meta);
     }
 

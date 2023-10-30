@@ -19,7 +19,11 @@ import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
+import java.util.List;
+
 import lombok.val;
+
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
@@ -33,11 +37,11 @@ public class FloatArray extends Array {
                 .register("vineyard::NumericArray<float>", new FloatArrayResolver());
     }
 
-    public FloatArray(final ObjectMeta meta, Buffer buffer, long length) {
+    public FloatArray(final ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
         this.array = new Float4Vector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode(length, nullCount), buffers);
     }
 
     public float get(int index) {
@@ -70,7 +74,10 @@ public class FloatArray extends Array {
 class FloatArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
-        val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        return new FloatArray(meta, buffer, meta.getLongValue("length_"));
+        Buffer dataBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
+        Buffer validityBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        int nullCount = meta.getIntValue("null_count_");
+        int length = meta.getIntValue("length_");
+        return new FloatArray(meta, Arrays.asList(validityBuffer.getBuffer(), dataBuffer.getBuffer()), length, nullCount);
     }
 }

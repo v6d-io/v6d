@@ -20,23 +20,29 @@ import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import java.util.Arrays;
 import lombok.val;
+
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
 public class Int8ArrayBuilder implements ArrayBuilder {
-    private BufferBuilder buffer;
+    private BufferBuilder dataBuffer;
+    private BufferBuilder validityBuilder;
     private TinyIntVector array;
 
     public Int8ArrayBuilder(IPCClient client, long length) throws VineyardException {
         this.array = new TinyIntVector("", Arrow.default_allocator);
-        this.buffer = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
+        this.dataBuffer = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode(length, 0), Arrays.asList(null, dataBuffer.getBuffer()));
     }
 
     @Override
-    public void build(Client client) throws VineyardException {}
+    public void build(Client client) throws VineyardException {
+        ArrowBuf buf = array.getValidityBuffer();
+        validityBuilder = new BufferBuilder((IPCClient)client, buf, buf.capacity());
+    }
 
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
@@ -45,10 +51,10 @@ public class Int8ArrayBuilder implements ArrayBuilder {
         meta.setTypename("vineyard::NumericArray<int8>");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
-        meta.setValue("null_count_", 0);
+        meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
-        meta.addMember("buffer_", buffer.seal(client));
-        meta.addMember("null_bitmap_", BufferBuilder.empty(client));
+        meta.addMember("buffer_", dataBuffer.seal(client));
+        meta.addMember("null_bitmap_", validityBuilder.seal(client));
         return client.createMetaData(meta);
     }
 
@@ -59,7 +65,7 @@ public class Int8ArrayBuilder implements ArrayBuilder {
 
     @Override
     public void shrink(Client client, long size) throws VineyardException {
-        this.buffer.shrink(client, this.array.getBufferSizeFor((int) size));
+        this.dataBuffer.shrink(client, this.array.getBufferSizeFor((int) size));
         this.array.setValueCount((int) size);
     }
 

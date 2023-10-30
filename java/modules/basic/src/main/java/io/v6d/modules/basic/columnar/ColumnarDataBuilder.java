@@ -431,7 +431,11 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setBoolean(rowId, (Boolean) value);
+            if (value == null) {
+                this.accessor.setNull(rowId);
+            } else {
+                this.setBoolean(rowId, (Boolean) value);
+            }
         }
 
         @Override
@@ -461,7 +465,11 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            setByte(rowId, (byte)value);
+            if (value == null) {
+                accessor.setNull(rowId);
+            } else {
+                this.setByte(rowId, (Byte) value);
+            }
         }
 
         @Override
@@ -521,7 +529,11 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setShort(rowId, (Short) value);
+            if (value == null) {
+                accessor.setNull(rowId);
+            } else {
+                this.setShort(rowId, (Short) value);
+            }
         }
 
         @Override
@@ -581,7 +593,11 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setInt(rowId, (Integer) value);
+            if (value != null) {
+                this.setInt(rowId, (Integer) value);
+            } else {
+                accessor.setNull(rowId);
+            }
         }
 
         @Override
@@ -655,7 +671,11 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setLong(rowId, (Long) value);
+            if (value == null) {
+                accessor.setNull(rowId);
+            } else {
+                accessor.setSafe(rowId, (Long) value);
+            }
         }
 
         @Override
@@ -715,7 +735,13 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setFloat(rowId, (Float) value);
+            if (value == null) {
+                Context.println("set null: " + value);
+                this.accessor.setNull(rowId);
+            } else {
+                Context.println("set float: " + value);
+                this.accessor.setSafe(rowId, (float)value);
+            }
         }
 
         @Override
@@ -745,7 +771,11 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setDouble(rowId, (Double) value);
+            if (value == null) {
+                accessor.setNull(rowId);
+            } else {
+                this.setDouble(rowId, (Double) value);
+            }
         }
 
         @Override
@@ -776,7 +806,11 @@ public class ColumnarDataBuilder {
         @Override
         void setObject(int rowId, Object value) {
             // this.setDecimal(rowId, (BigDecimal) value);
-            this.accessor.setSafe(rowId, ArrowVectorUtils.TransHiveDecimalToBigDecimal(value, accessor.getScale()));
+            if (value == null) {
+                accessor.setNull(rowId);
+            } else {
+                this.accessor.setSafe(rowId, ArrowVectorUtils.TransHiveDecimalToBigDecimal(value, accessor.getScale()));
+            }
         }
 
         @Override
@@ -807,7 +841,11 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            accessor.setSafe(rowId, (value.toString().getBytes(StandardCharsets.UTF_8)));
+            if (value == null) {
+                accessor.setNull(rowId);
+            } else {
+                accessor.setSafe(rowId, (value.toString().getBytes(StandardCharsets.UTF_8)));
+            }
         }
     }
 
@@ -828,17 +866,11 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.accessor.setSafe(rowId, value.toString().getBytes(StandardCharsets.UTF_8));
-        }
-
-        @Override
-        final Text getUTF8String(int rowId) {
-            return accessor.getObject(rowId);
-        }
-
-        @Override
-        final void setUTF8String(int rowId, Text value) {
-            accessor.setSafe(rowId, value);
+            if (value == null) {
+                accessor.setNull(rowId);
+            } else {
+                this.accessor.setSafe(rowId, value.toString().getBytes(StandardCharsets.UTF_8));
+            }
         }
     }
 
@@ -858,7 +890,11 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setBinary(rowId, (byte[]) value);
+            if (value == null) {
+                accessor.setNull(rowId);
+            } else {
+                this.setBinary(rowId, (byte[]) value);
+            }
         }
 
         @Override
@@ -918,8 +954,8 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            if (value instanceof Integer) {
-                this.setInt(rowId, (Integer) value);
+            if (value == null) {
+                accessor.setNull(rowId);
             } else {
                 accessor.set(rowId, (int)(((Date)value).getTime() / (24 * 60 * 60 * 1000)));
             }
@@ -1174,8 +1210,8 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            if (value instanceof Long) {
-                this.setLong(rowId, (Long) value);
+            if (value == null) {
+                accessor.setNull(rowId);
             } else {
                 accessor.set(rowId, (long)(((java.sql.Timestamp)value).getTime()) * 1000 * 1000 + (((java.sql.Timestamp)value).getNanos() % 1000000));
             }
@@ -1307,37 +1343,48 @@ public class ColumnarDataBuilder {
                 structVector.setValueCount(structVector.getValueCount() + 1);
             } else if (vector instanceof MapVector) {
                 MapVector mapVector = (MapVector)vector;
-                HashMap valueMap = (HashMap) value;
-                List<Object> objects = new ArrayList<>();
+                if (value == null) {
+                    mapVector.setNull(rowId);
+                } else {
+                    HashMap valueMap = (HashMap) value;
+                    List<Object> objects = new ArrayList<>();
 
-                for (Object key : valueMap.keySet()) {
-                    List<Object> temp = new ArrayList<>();
-                    temp.add(key);
-                    temp.add(valueMap.get(key));
-                    Context.println("key: " + key + " value:" + valueMap.get(key));
-                    objects.add(temp);
-                    Context.println("objects:" + objects);
-                }
+                    for (Object key : valueMap.keySet()) {
+                        List<Object> temp = new ArrayList<>();
+                        temp.add(key);
+                        temp.add(valueMap.get(key));
+                        Context.println("key: " + key + " value:" + valueMap.get(key));
+                        objects.add(temp);
+                        Context.println("objects:" + objects);
+                    }
 
-                mapVector.startNewValue(rowId);
-                int childRowId = mapVector.getDataVector().getValueCount();
-                for (int i = 0; i < objects.size(); i++) {
-                    setObject(mapVector.getDataVector(), childRowId + i, objects.get(i));
+                    mapVector.startNewValue(rowId);
+                    int childRowId = mapVector.getDataVector().getValueCount();
+                    for (int i = 0; i < objects.size(); i++) {
+                        setObject(mapVector.getDataVector(), childRowId + i, objects.get(i));
+                    }
+                    mapVector.endValue(rowId,  objects.size());
+                    vector.setValueCount(vector.getValueCount() + objects.size());
                 }
-                mapVector.endValue(rowId,  objects.size());
-                vector.setValueCount(vector.getValueCount() + objects.size());
             } else if (vector instanceof ListVector) {
-                ArrayList valueList = (ArrayList) value;
                 ListVector listVector = (ListVector)vector;
-                listVector.startNewValue(rowId);
-                int childRowId = listVector.getDataVector().getValueCount();
-                for (int i = 0; i < valueList.size(); i++) {
-                    setObject(listVector.getDataVector(), childRowId + i, valueList.get(i));
+                if (value == null) {
+                    listVector.setNull(rowId);
+                } else {
+                    ArrayList valueList = (ArrayList) value;
+                    listVector.startNewValue(rowId);
+                    int childRowId = listVector.getDataVector().getValueCount();
+                    for (int i = 0; i < valueList.size(); i++) {
+                        setObject(listVector.getDataVector(), childRowId + i, valueList.get(i));
+                    }
+                    listVector.endValue(rowId, valueList.size());
+                    vector.setValueCount(vector.getValueCount() + valueList.size());
                 }
-                listVector.endValue(rowId, valueList.size());
-                vector.setValueCount(vector.getValueCount() + valueList.size());
             } else {
-                if (vector instanceof IntVector) {
+                if (value == null) {
+                    vector.setNull(rowId);
+                    vector.setValueCount(vector.getValueCount() + 1);
+                } else if (vector instanceof IntVector) {
                     IntVector intVector = (IntVector)vector;
                     intVector.setSafe(rowId, (int) value);
                     intVector.setValueCount(intVector.getValueCount() + 1);

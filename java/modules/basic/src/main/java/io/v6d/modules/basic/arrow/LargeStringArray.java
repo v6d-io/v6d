@@ -19,7 +19,11 @@ import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
+import java.util.List;
+
 import lombok.*;
+
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.LargeVarCharVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
@@ -38,13 +42,12 @@ public class LargeStringArray extends Array {
                 .register("vineyard::LargeStringArray", new LargeStringArrayResolver());
     }
 
-    public LargeStringArray(final ObjectMeta meta, Buffer buffer, Buffer offset, long length) {
+    public LargeStringArray(final ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
         this.array = new LargeVarCharVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0),
-                Arrays.asList(null, offset.getBuffer(), buffer.getBuffer()));
-        this.array.setValueCount((int) length);
+                new ArrowFieldNode(length, nullCount),
+                buffers);
     }
 
     public byte[] get(int index) {
@@ -81,10 +84,14 @@ public class LargeStringArray extends Array {
 class LargeStringArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
-        val buffer =
+        Buffer data_buffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_data_"));
-        val offsets_buffer =
+        Buffer offsets_buffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
-        return new LargeStringArray(meta, buffer, offsets_buffer, meta.getLongValue("length_"));
+        Buffer validity_buffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        int null_count = meta.getIntValue("null_count_");
+        int length = meta.getIntValue("length_");
+        return new LargeStringArray(meta, Arrays.asList(validity_buffer.getBuffer(), offsets_buffer.getBuffer(), data_buffer.getBuffer()), length, null_count);
     }
 }

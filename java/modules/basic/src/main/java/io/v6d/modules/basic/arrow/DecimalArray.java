@@ -19,8 +19,11 @@ import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
+import java.util.List;
+
 import lombok.val;
 
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.BaseFixedWidthVector;
 import org.apache.arrow.vector.Decimal256Vector;
 import org.apache.arrow.vector.DecimalVector;
@@ -39,7 +42,7 @@ public class DecimalArray extends Array {
                 .register("vineyard::DecimalArray<256>", new DecimalArrayResolver());
     }
 
-    public DecimalArray(ObjectMeta meta, Buffer buffer, long length, int maxPrecision, int maxScale, int bitWidth) {
+    public DecimalArray(ObjectMeta meta, List<ArrowBuf> buffers, int nullCount, long length, int maxPrecision, int maxScale, int bitWidth) {
         super(meta);
         if (bitWidth == 128) {
             this.array = new DecimalVector("", Arrow.default_allocator, maxPrecision, maxScale);
@@ -47,7 +50,7 @@ public class DecimalArray extends Array {
             this.array = new Decimal256Vector("", Arrow.default_allocator, maxPrecision, maxScale);
         }
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode(length, nullCount), buffers);
     }
 
     @Override
@@ -76,7 +79,9 @@ public class DecimalArray extends Array {
 class DecimalArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
-        val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        return new DecimalArray(meta, buffer, meta.getLongValue("length_"), meta.getIntValue("maxPrecision_"), meta.getIntValue("maxScale_"), meta.getIntValue("bitWidth_"));
+        Buffer buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
+        Buffer validityBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        int nullCount = meta.getIntValue("null_count_");
+        return new DecimalArray(meta, Arrays.asList(validityBuffer.getBuffer(), buffer.getBuffer()), nullCount, meta.getLongValue("length_"), meta.getIntValue("maxPrecision_"), meta.getIntValue("maxScale_"), meta.getIntValue("bitWidth_"));
     }
 }

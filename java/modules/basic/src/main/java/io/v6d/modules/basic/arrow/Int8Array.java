@@ -19,7 +19,11 @@ import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
+import java.util.List;
+
 import lombok.val;
+
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
@@ -35,11 +39,11 @@ public class Int8Array extends Array {
                 .register("vineyard::NumericArray<uint8>", new Int8ArrayResolver());
     }
 
-    public Int8Array(ObjectMeta meta, Buffer buffer, long length) {
+    public Int8Array(ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
         this.array = new TinyIntVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode(length, nullCount), buffers);
     }
 
     public byte get(int index) {
@@ -72,7 +76,10 @@ public class Int8Array extends Array {
 class Int8ArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
-        val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        return new Int8Array(meta, buffer, meta.getLongValue("length_"));
+        Buffer dataBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
+        Buffer validityBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        int length = meta.getIntValue("length_");
+        int nullCount = meta.getIntValue("null_count_");
+        return new Int8Array(meta, Arrays.asList(validityBuffer.getBuffer(), dataBuffer.getBuffer()), length, nullCount);
     }
 }
