@@ -34,14 +34,17 @@ package io.v6d.modules.basic.columnar;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
-import org.apache.arrow.vector.DateDayVector;
+import org.apache.arrow.vector.DateMilliVector;
 import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.Float4Vector;
@@ -117,8 +120,8 @@ public class ColumnarData {
             accessor = new BinaryAccessor((VarBinaryVector) vector);
         } else if (vector instanceof LargeVarBinaryVector) {
             accessor = new LargeBinaryAccessor((LargeVarBinaryVector) vector);
-        } else if (vector instanceof DateDayVector) {
-            accessor = new DateAccessor((DateDayVector) vector);
+        } else if (vector instanceof DateMilliVector) {
+            accessor = new DateAccessor((DateMilliVector) vector);
         } else if (vector instanceof TimeStampMicroTZVector) {
             accessor = new TimestampMicroAccessor((TimeStampMicroTZVector) vector);
         } else if (vector instanceof TimeStampMicroVector) {
@@ -654,9 +657,9 @@ public class ColumnarData {
 
     private static class DateAccessor extends ArrowVectorAccessor {
 
-        private final DateDayVector accessor;
+        private final DateMilliVector accessor;
 
-        DateAccessor(DateDayVector vector) {
+        DateAccessor(DateMilliVector vector) {
             super(vector);
             this.accessor = vector;
         }
@@ -666,13 +669,21 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            int day = accessor.get(rowId);
-            Date date = new Date(((long)day) * (DateTimeConstants.MILLIS_PER_DAY));
+            // int day = accessor.get(rowId);
+            // Context.println("read days:" + day);
+            long millis = accessor.get(rowId);
+            // long millisLocal = day * DateTimeConstants.MILLIS_PER_DAY;
+            // long millisUtc = millisLocal - Calendar.getInstance().getTimeZone().getOffset(millisLocal);
+            // Context.println("read milli:" + millisLocal + " utc:" + millisUtc);
+            // Context.println("read day with timezone:" + millisUtc / DateTimeConstants.MILLIS_PER_DAY);
+            Date date = new Date(millis);
             return date;
+            // long millis = ((long)day) * DateTimeConstants.MILLIS_PER_SECOND * DateTimeConstants.SECONDS_PER_DAY;
+            // return ArrowVectorUtils.FillDateWritable(millis);
         }
 
         @Override
-        final int getInt(int rowId) {
+        final long getLong(int rowId) {
             return accessor.get(rowId);
         }
     }
@@ -748,7 +759,13 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getLong(rowId);
+            if (accessor.isNull(rowId)) {
+                return null;
+            }
+            // mills
+            long value = getLong(rowId);
+            Timestamp t = new Timestamp(value);
+            return t;
         }
 
         @Override
@@ -829,12 +846,19 @@ public class ColumnarData {
         @Override
         Object getObject(int rowId) {
             if (accessor.isNull(rowId)) {
+                Context.println("read value is null");
                 return null;
             }
-            Timestamp t = new Timestamp(0);
             long value = getLong(rowId);
-            t.setTime((long) value / DateTimeConstants.NANOS_PER_SECOND * DateTimeConstants.NANOS_PER_MICROS);
-            t.setNanos((int) ((long) value % DateTimeConstants.NANOS_PER_SECOND));
+            long nano = value % DateTimeConstants.NANOS_PER_SECOND;
+            long second = value / DateTimeConstants.NANOS_PER_SECOND;
+            if (nano < 0) {
+                nano += DateTimeConstants.NANOS_PER_SECOND;
+                second -= 1;
+            }
+            Timestamp t = new Timestamp(second * DateTimeConstants.MILLIS_PER_SECOND);
+            t.setNanos((int)nano);
+            Context.println("read nano:" + nano + " mill:" + second * DateTimeConstants.MILLIS_PER_SECOND);
             return t;
         }
 
@@ -935,7 +959,7 @@ public class ColumnarData {
                     for (int i = rowId; i < rowId + rows; i++) {
                         int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(i * 4));
                         int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((i + 1) * 4));
-                        Context.println("start:" + start + " end:" + end);
+                        // Context.println("start:" + start + " end:" + end);
 
                         // struct<typeA, typeB>, struct<typeA, typeB> .....
                         Object value = getObject(fv, start, end - start); 
@@ -956,14 +980,14 @@ public class ColumnarData {
                             List<Object> vals = new ArrayList<>();
                             int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(i * 4));
                             int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((i + 1) * 4));
-                            Context.println("start:" + start + " end:" + end);
+                            // Context.println("start:" + start + " end:" + end);
 
                             Object value = getObject(fv, start, end - start);
                             for (int j = 0; j < ((Object[])value).length; j++) {
                                 vals.add(((Object[])value)[j]);
                             }
                             result.add(vals);
-                            Context.println("result:" + result);
+                            // Context.println("result:" + result);
                         }
                     }
                 }
@@ -983,24 +1007,39 @@ public class ColumnarData {
             } else {
                 // primitive type
                 Context.println("Primitive vector");
-                if (vector instanceof DateDayVector) {
+                if (vector instanceof DateMilliVector) {
                     for (int i = 0; i < rows; i++) {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            Date date = new Date(((long)((DateDayVector)vector).get(rowId)) * (DateTimeConstants.MILLIS_PER_DAY));
+                            Date date = new Date(((DateMilliVector)vector).get(rowId));
                             result.add(date);
                         }
                     }
-                } else if (vector instanceof TimeStampNanoTZVector) {
+                } else if (vector instanceof TimeStampNanoVector) {
                     for (int i = 0; i < rows; i++) {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
                             long value = ((TimeStampVector)vector).get(rowId + i);
-                            Timestamp t = new Timestamp(0);
-                            t.setTime((long) value / DateTimeConstants.NANOS_PER_SECOND * DateTimeConstants.NANOS_PER_MICROS);
-                            t.setNanos((int) ((long) value % DateTimeConstants.NANOS_PER_SECOND));
+                            long nano = value % DateTimeConstants.NANOS_PER_SECOND;
+                            long second = value / DateTimeConstants.NANOS_PER_SECOND;
+                            if (nano < 0) {
+                                nano += DateTimeConstants.NANOS_PER_SECOND;
+                                second -= 1;
+                            }
+                            Timestamp t = new Timestamp(second * DateTimeConstants.MILLIS_PER_SECOND);
+                            t.setNanos((int)nano);
+                            result.add(t);
+                        }
+                    }
+                } else if (vector instanceof TimeStampMilliVector) {
+                    for (int i = 0; i < rows; i++) {
+                        if (vector.isNull(i)) {
+                            result.add(null);
+                        } else {
+                            long value = ((TimeStampVector)vector).get(rowId + i);
+                            Timestamp t = new Timestamp(value);
                             result.add(t);
                         }
                     }
@@ -1037,79 +1076,6 @@ public class ColumnarData {
                 }
             }
             return result.toArray();
-        }
-    }
-
-    private static class GetNestedObjectUtils {
-        public static Object getObject(ValueVector vector, int index) {
-            if (vector.getValueCount() == 0) {
-                return null;
-            } else {
-                if (vector instanceof ListVector) {
-                    /*
-                     * TODO:
-                     * This code refer to apache arrow. Call ListVector.getObject will trigger Exception.
-                     * So we need to get the value by ourself. It may be fixed in the future.
-                     */
-                    java.util.List<Object> vals = new ArrayList<>();
-                    int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(index * 4));
-                    int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((index + 1) * 4));
-                    ValueVector vv = ((ListVector)vector).getDataVector();
-                    Context.println("start:" + start + " end:" + end);
-
-                    if (vv instanceof ListVector || vv instanceof StructVector) {
-                        for(int i = start; i < end; ++i) {
-                            vals.add(getObject(vv, i));
-                        }
-                    } else {
-                        for(int i = start; i < end; ++i) {
-                            if (vv instanceof TimeStampVector) {
-                                long value = ((TimeStampVector)vv).get(i);
-                                Timestamp t = new Timestamp(0);
-                                t.setTime((long) value / 1000000000 * 1000);
-                                t.setNanos((int) ((long) value % 1000000000));
-                                vals.add(t);
-                            } else if (vv instanceof DateDayVector) {
-                                Date date = new Date((((long)((DateDayVector)vv).get(i))) * (24 * 60 * 60 * 1000));
-                                vals.add(date);
-                            } 
-                            else {
-                                vals.add(vv.getObject(i));
-                            }
-                        }
-                    }
-                    return vals;
-                } else if (vector instanceof StructVector) {
-                    Context.println("StructVector");
-                    java.util.List<Object> vals = new ArrayList<>();
-                    StructVector sv = (StructVector)vector;
-                    for (int i = 0; i < sv.getChildrenFromFields().size(); i++) {
-                        FieldVector fv = sv.getChildrenFromFields().get(i);
-                        if (fv instanceof ListVector || fv instanceof StructVector) {
-                            vals.add(getObject(sv.getChildrenFromFields().get(index), i));
-                        } else if (fv instanceof DateDayVector) {
-                            Context.println("index:" + index);
-                            Context.println("day:" + ((DateDayVector)fv).get(index));
-                            Context.println("day:" + ((long)((DateDayVector)fv).get(index)) * (24 * 60 * 60 * 1000));
-                            Date date = new Date(((long)((DateDayVector)fv).get(index)) * (24 * 60 * 60 * 1000));
-                            vals.add(date);
-                        } else if (fv instanceof TimeStampNanoTZVector) {
-                            long value = ((TimeStampVector)fv).get(index);
-                            Timestamp t = new Timestamp(0);
-                            t.setTime((long) value / 1000000000 * 1000);
-                            t.setNanos((int) ((long) value % 1000000000));
-                            vals.add(t);
-                        } else {
-                            for (int j = 0; j < fv.getValueCount(); j++) {
-                                vals.add(fv.getObject(j));
-                            }
-                        }
-                    }
-                    return vals;
-                } else {
-                    return vector.getObject(index);
-                }
-            }
         }
     }
 

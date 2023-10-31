@@ -24,6 +24,11 @@ import io.v6d.modules.basic.arrow.*;
 import io.v6d.modules.basic.columnar.ColumnarData;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
+
 import lombok.val;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -58,7 +63,9 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
         Path paths[] = FileInputFormat.getInputPaths(job);
 
         val client = Context.getClient();
-        val splits = new VineyardSplit[paths.length];
+        // split table by paths
+        // val splits = new VineyardSplit[paths.length];
+        List<VineyardSplit> splits = new ArrayList<>();
         Arrow.instantiate();
 
         for (int i = 0; i < paths.length; i++) {
@@ -68,51 +75,67 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
 
             // get object id from vineyard filesystem
             FileSystem fs = path.getFileSystem(job);
-            FileStatus[] status = fs.listStatus(path, FileUtils.HIDDEN_FILES_PATH_FILTER);
-            if (status.length == 0) {
-                return new VineyardSplit[0];
+            FileStatus[] tableStatus = fs.listStatus(path, FileUtils.HIDDEN_FILES_PATH_FILTER);
+            if (tableStatus.length == 0) {
+                // splits[i] = new VineyardSplit(path, 0, 0, job);
+                continue;
             }
+            Queue<FileStatus[]> dirStatus = new LinkedList<>();
+            dirStatus.add(tableStatus);
 
             // Maybe there exists more than one table file.
             long numBatches = 0;
-            for (int j = 0; j < status.length; j++) {
-                if (status[j].isDirectory()) {
-                    continue;
-                }
-                Path tableFilePath = status[j].getPath();
-                FSDataInputStream in = fs.open(tableFilePath);
-                FileStatus fileStatus = fs.getFileStatus(tableFilePath);
-                byte[] buffer = new byte[(int) fileStatus.getLen()];
-                int len = in.read(buffer, 0, (int) fileStatus.getLen());
-                // Here must check with the condition of len <= 0, rather than len == -1.
-                // Because Spark will create an empty file, which will cause the len == 0.
-                if (len <= 0) {
-                    continue;
-                }
-                String[] objectIDs = new String(buffer, StandardCharsets.UTF_8).split("\n");
-                for (val objectID : objectIDs) {
-                    try {
-                        ObjectID tableID = ObjectID.fromString(objectID);
-                        Table table =
-                                (Table)
-                                        ObjectFactory.getFactory()
-                                                .resolve(client.getMetaData(tableID));
-                        numBatches += table.getBatches().size();
-                    } catch (Exception e) {
-                        // Skip some invalid file.
-                        Context.println(
-                                "Skipping invalid file: "
-                                        + tableFilePath
-                                        + ", content: "
-                                        + new String(buffer, StandardCharsets.UTF_8));
-                        break;
+
+            while (!dirStatus.isEmpty()) {
+                Context.println("Try to get table");
+                FileStatus[] status = dirStatus.poll();
+                for (int j = 0; j < status.length; j++) {
+                    if (status[j].isDirectory()) {
+                        Context.println("path is directory: " + status[j].getPath());
+                        dirStatus.add(fs.listStatus(status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
+                        continue;
+                    }
+                    Path tableFilePath = status[j].getPath();
+                    FSDataInputStream in = fs.open(tableFilePath);
+                    FileStatus fileStatus = fs.getFileStatus(tableFilePath);
+                    byte[] buffer = new byte[(int) fileStatus.getLen()];
+                    int len = in.read(buffer, 0, (int) fileStatus.getLen());
+                    // Here must check with the condition of len <= 0, rather than len == -1.
+                    // Because Spark will create an empty file, which will cause the len == 0.
+                    if (len <= 0) {
+                        continue;
+                    }
+                    String[] objectIDs = new String(buffer, StandardCharsets.UTF_8).split("\n");
+                    for (val objectID : objectIDs) {
+                        try {
+                            ObjectID tableID = ObjectID.fromString(objectID);
+                            Table table =
+                                    (Table)
+                                            ObjectFactory.getFactory()
+                                                    .resolve(client.getMetaData(tableID));
+                            Context.println("get table succeed!");
+                            numBatches += table.getBatches().size();
+                        } catch (Exception e) {
+                            // Skip some invalid file.
+                            Context.println(
+                                    "Skipping invalid file: "
+                                            + tableFilePath
+                                            + ", content: "
+                                            + new String(buffer, StandardCharsets.UTF_8));
+                            break;
+                        }
                     }
                 }
             }
             // TODO: would generating a split for each record batch be better?
-            splits[i] = new VineyardSplit(path, 0, numBatches, job);
+            Context.println("numBatches:" + numBatches);
+            // splits[i] = new VineyardSplit(path, 0, numBatches, job);
+            if (numBatches > 0) {
+                splits.add(new VineyardSplit(path, 0, numBatches, job));
+            }
         }
-        return splits;
+        // return splits;
+        return splits.toArray(new VineyardSplit[splits.size()]);
     }
 }
 
@@ -131,54 +154,61 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
     private long recordConsumed = 0;
 
     VineyardRecordReader(JobConf job, VineyardSplit split) throws IOException {
+        this.batches = new RecordBatch[(int) split.getLength()];
+        this.recordBatchIndex = 0;
+
         Path path = split.getPath();
         String tableName = path.toString();
 
         FileSystem fs = path.getFileSystem(job);
-        FileStatus[] status = fs.listStatus(path);
-        if (status.length == 0) {
+        FileStatus[] tableStatus = fs.listStatus(path);
+        if (tableStatus.length == 0) {
             throw new VineyardException.ObjectNotExists("Table not found: " + tableName);
         }
+        Queue<FileStatus[]> dirStatus = new LinkedList<>();
+        dirStatus.add(tableStatus);
 
         val client = Context.getClient();
         Arrow.instantiate();
 
-        this.batches = new RecordBatch[(int) split.getLength()];
-        this.recordBatchIndex = 0;
-
-        for (int j = 0; j < status.length; j++) {
-            if (status[j].isDirectory()) {
-                continue;
-            }
-            Path tableFilePath = status[j].getPath();
-            FSDataInputStream in = fs.open(tableFilePath);
-            FileStatus fileStatus = fs.getFileStatus(tableFilePath);
-            byte[] buffer = new byte[(int) fileStatus.getLen()];
-            int len = in.read(buffer, 0, (int) fileStatus.getLen());
-            if (len <= 0) {
-                continue;
-            }
-            String[] objectIDs = new String(buffer, StandardCharsets.UTF_8).split("\n");
-            for (val objectID : objectIDs) {
-                try {
-                    ObjectID tableID = ObjectID.fromString(objectID);
-                    Table table =
-                            (Table) ObjectFactory.getFactory().resolve(client.getMetaData(tableID));
-                    for (val batch : table.getBatches()) {
-                        recordTotal += batch.getRowCount();
-                        this.batches[this.recordBatchIndex++] = batch;
+        while (!dirStatus.isEmpty()) {
+            FileStatus[] status = dirStatus.poll();
+                for (int j = 0; j < status.length; j++) {
+                    if (status[j].isDirectory()) {
+                        dirStatus.add(fs.listStatus(status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
+                        continue;
                     }
-                    schema = table.getSchema().getSchema();
-                } catch (Exception e) {
-                    // Skip some invalid file.
-                    Context.println(
-                            "Skipping invalid file: "
-                                    + tableFilePath
-                                    + ", content: "
-                                    + new String(buffer, StandardCharsets.UTF_8));
-                    break;
+                    Path tableFilePath = status[j].getPath();
+                    FSDataInputStream in = fs.open(tableFilePath);
+                    FileStatus fileStatus = fs.getFileStatus(tableFilePath);
+                    byte[] buffer = new byte[(int) fileStatus.getLen()];
+                    int len = in.read(buffer, 0, (int) fileStatus.getLen());
+                    if (len <= 0) {
+                        continue;
+                    }
+                    String[] objectIDs = new String(buffer, StandardCharsets.UTF_8).split("\n");
+                    for (val objectID : objectIDs) {
+                        try {
+                            ObjectID tableID = ObjectID.fromString(objectID);
+                            Table table =
+                                    (Table) ObjectFactory.getFactory().resolve(client.getMetaData(tableID));
+                            for (val batch : table.getBatches()) {
+                                recordTotal += batch.getRowCount();
+                                this.batches[this.recordBatchIndex++] = batch;
+                            }
+                            schema = table.getSchema().getSchema();
+                            break;
+                        } catch (Exception e) {
+                            // Skip some invalid file.
+                            Context.println(
+                                    "Skipping invalid file: "
+                                            + tableFilePath
+                                            + ", content: "
+                                            + new String(buffer, StandardCharsets.UTF_8));
+                            break;
+                        }
+                    }
                 }
-            }
         }
         // reset to the beginning
         this.recordBatchIndex = -1;

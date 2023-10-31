@@ -38,12 +38,13 @@ import java.nio.charset.StandardCharsets;
 import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
-import org.apache.arrow.vector.DateDayVector;
+import org.apache.arrow.vector.DateMilliVector;
 import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.Float4Vector;
@@ -121,8 +122,8 @@ public class ColumnarDataBuilder {
             accessor = new BinaryAccessor((VarBinaryVector) vector);
         } else if (vector instanceof LargeVarBinaryVector) {
             accessor = new LargeBinaryAccessor((LargeVarBinaryVector) vector);
-        } else if (vector instanceof DateDayVector) {
-            accessor = new DateAccessor((DateDayVector) vector);
+        } else if (vector instanceof DateMilliVector) {
+            accessor = new DateAccessor((DateMilliVector) vector);
         } else if (vector instanceof TimeStampMicroTZVector) {
             accessor = new TimestampMicroAccessor((TimeStampMicroTZVector) vector);
         } else if (vector instanceof TimeStampMicroVector) {
@@ -940,9 +941,9 @@ public class ColumnarDataBuilder {
 
     private static class DateAccessor extends ArrowVectorAccessor {
 
-        private final DateDayVector accessor;
+        private final DateMilliVector accessor;
 
-        DateAccessor(DateDayVector vector) {
+        DateAccessor(DateMilliVector vector) {
             super(vector);
             this.accessor = vector;
         }
@@ -957,17 +958,26 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 accessor.setNull(rowId);
             } else {
-                accessor.set(rowId, (int)(((Date)value).getTime() / (24 * 60 * 60 * 1000)));
+                Context.println("value type:" + value.getClass().getName());
+
+                // long millisLocal = ((Date)value).getTime();
+                // long millisUtc = millisLocal - Calendar.getInstance().getTimeZone().getOffset(millisLocal);
+                // Context.println("write milli:" + millisLocal + " utc:" + millisUtc);
+                // Context.println("write day with timezone:" + millisUtc / DateTimeConstants.MILLIS_PER_DAY);
+
+                // int days = (int) (millisUtc / DateTimeConstants.MILLIS_PER_DAY);
+                long millis = ((Date)value).getTime();
+                accessor.set(rowId, millis);
             }
         }
 
         @Override
-        final int getInt(int rowId) {
+        final long getLong(int rowId) {
             return accessor.get(rowId);
         }
 
         @Override
-        final void setInt(int rowId, int value) {
+        final void setLong(int rowId, long value) {
             accessor.set(rowId, value);
         }
     }
@@ -1082,8 +1092,8 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            if (value instanceof Long) {
-                this.setLong(rowId, (Long) value);
+            if (value == null) {
+                accessor.setNull(rowId);
             } else {
                 accessor.set(rowId, (long)(((java.sql.Timestamp)value).getTime()));
             }
@@ -1211,9 +1221,14 @@ public class ColumnarDataBuilder {
         @Override
         void setObject(int rowId, Object value) {
             if (value == null) {
+                Context.println("set null");
                 accessor.setNull(rowId);
             } else {
-                accessor.set(rowId, (long)(((java.sql.Timestamp)value).getTime()) * 1000 * 1000 + (((java.sql.Timestamp)value).getNanos() % 1000000));
+                Context.println("set timestamp nano: " + value);
+                Context.println("get time:" + ((java.sql.Timestamp)value).getTime() + " get nano:" + ((java.sql.Timestamp)value).getNanos());
+                Context.println("get total time: + " + (((java.sql.Timestamp)value).getTime()) * 1000 * 1000 + (((java.sql.Timestamp)value).getNanos() % 1000000));
+                // accessor.set(rowId, (long)(((java.sql.Timestamp)value).getTime()) * 1000 * 1000 + (((java.sql.Timestamp)value).getNanos() % 1000000));
+                accessor.setSafe(rowId, (long)(((java.sql.Timestamp)value).getTime()) * 1000 * 1000 + (((java.sql.Timestamp)value).getNanos() % 1000000));
             }
         }
 
@@ -1314,17 +1329,17 @@ public class ColumnarDataBuilder {
         void setObject(int rowId, Object value) {
             try {
                 setObject(accessor, rowId, value);
-                FieldVector fv = accessor;
-                Context.println("********************");
-                while(fv instanceof ListVector) {
-                    for (int i = 0; i < fv.getValueCount(); i++) {
-                        int start = (fv).getOffsetBuffer().getInt((long)(i * 4));
-                        int end = (fv).getOffsetBuffer().getInt((long)((i + 1) * 4));
-                        Context.println("start:" + start + " end:" + end);
-                    }
-                    fv = ((ListVector)fv).getDataVector();
-                }
-                Context.println("********************");
+                // FieldVector fv = accessor;
+                // Context.println("********************");
+                // while(fv instanceof ListVector) {
+                //     for (int i = 0; i < fv.getValueCount(); i++) {
+                //         int start = (fv).getOffsetBuffer().getInt((long)(i * 4));
+                //         int end = (fv).getOffsetBuffer().getInt((long)((i + 1) * 4));
+                //         Context.println("start:" + start + " end:" + end);
+                //     }
+                //     fv = ((ListVector)fv).getDataVector();
+                // }
+                // Context.println("********************");
             } catch (VineyardException e){
                 Context.println("Failed to set object! Error msg:" + e.getMessage());
             }
@@ -1412,14 +1427,18 @@ public class ColumnarDataBuilder {
                     BitVector bitVector = (BitVector)vector;
                     bitVector.setSafe(rowId, (boolean) value ? 1 : 0);
                     bitVector.setValueCount(bitVector.getValueCount() + 1);
-                } else if (vector instanceof DateDayVector) {
-                    DateDayVector dateDayVector = (DateDayVector)vector;
-                    dateDayVector.setSafe(rowId, (int)(((Date)value).getTime() / (DateTimeConstants.MILLIS_PER_DAY)));
-                    dateDayVector.setValueCount(dateDayVector.getValueCount() + 1);
-                } else if (vector instanceof TimeStampNanoTZVector) {
-                    TimeStampNanoTZVector timeStampNanoTZVector = (TimeStampNanoTZVector)vector;
-                    timeStampNanoTZVector.setSafe(rowId, (long)(((Timestamp)value).getTime()) * DateTimeConstants.NANOS_PER_MILLIS + (((Timestamp)value).getNanos() % DateTimeConstants.NANOS_PER_MILLIS));
-                    timeStampNanoTZVector.setValueCount(timeStampNanoTZVector.getValueCount() + 1);
+                } else if (vector instanceof DateMilliVector) {
+                    DateMilliVector dateMilliVector = (DateMilliVector)vector;
+                    dateMilliVector.setSafe(rowId, ((Date)value).getTime());
+                    dateMilliVector.setValueCount(dateMilliVector.getValueCount() + 1);
+                } else if (vector instanceof TimeStampNanoVector) {
+                    TimeStampNanoVector timeStampNanoVector = (TimeStampNanoVector)vector;
+                    timeStampNanoVector.setSafe(rowId, (long)(((Timestamp)value).getTime()) * DateTimeConstants.NANOS_PER_MILLIS + (((Timestamp)value).getNanos() % DateTimeConstants.NANOS_PER_MILLIS));
+                    timeStampNanoVector.setValueCount(timeStampNanoVector.getValueCount() + 1);
+                } else if (vector instanceof TimeStampMilliVector) {
+                    TimeStampMilliVector timeStampMilliVector = (TimeStampMilliVector)vector;
+                    timeStampMilliVector.setSafe(rowId, (long)(((Timestamp)value).getTime()));
+                    timeStampMilliVector.setValueCount(timeStampMilliVector.getValueCount() + 1);
                 } else if (vector instanceof DecimalVector) {
                     DecimalVector decimalVector = (DecimalVector)vector;
                     BigDecimal bigDecimal = ArrowVectorUtils.TransHiveDecimalToBigDecimal(value, decimalVector.getScale());

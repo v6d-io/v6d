@@ -66,25 +66,11 @@ public class RecordWrapperWritable implements WritableComparable {
 
     // for output format
     public void setValue(int index, Object value) {
-        if (value != null) {
-            Context.println("setValue, class:" + value.getClass().getName() + ", value:" + value);
-        } else {
-            Context.println("setValue, value is null");
-        }
         values[index] = value;
-        if (value instanceof Object[]) {
-            Object[] objects = (Object[])value;
-            for (int i = 0; i < objects.length; i++) {
-                Context.println("objects[" + i + "]=" + objects[i]);
-            }
-        } else {
-            Context.println("objects[" + index + "]=" + value);
-        }
     }
 
     // for output format, serde
     public void setValues(Object[] values) {
-        Context.println("setValues");
         this.values = values;
     }
 

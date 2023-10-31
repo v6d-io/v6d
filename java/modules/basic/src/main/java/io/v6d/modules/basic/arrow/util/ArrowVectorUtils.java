@@ -29,15 +29,6 @@ public class ArrowVectorUtils {
                 result.addAll(Arrays.asList(getArrowBuffers(child)));
             }
         } else if (vector instanceof ListVector) {
-            Context.println("--------------------------");
-            Context.println(vector.getField().getName());
-            Context.println("value count:" + vector.getValueCount());
-            for (int rowId = 0; rowId < 5; rowId++) {
-                int start = (vector).getOffsetBuffer().getInt((long)(rowId * 4));
-                int end = (vector).getOffsetBuffer().getInt((long)((rowId + 1) * 4));
-                Context.println("start:" + start + " end:" + end);
-            }
-            Context.println("--------------------------");
             result.add(vector.getValidityBuffer());
             result.add(vector.getOffsetBuffer());
             result.addAll(Arrays.asList(getArrowBuffers(((ListVector)vector).getDataVector())));

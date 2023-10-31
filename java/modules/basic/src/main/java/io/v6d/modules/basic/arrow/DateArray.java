@@ -24,28 +24,28 @@ import java.util.List;
 import lombok.val;
 
 import org.apache.arrow.memory.ArrowBuf;
-import org.apache.arrow.vector.DateDayVector;
+import org.apache.arrow.vector.DateMilliVector;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
 /** Hello world! */
 public class DateArray extends Array {
-    private DateDayVector array;
+    private DateMilliVector array;
 
     public static void instantiate() {
         ObjectFactory.getFactory()
-                .register("vineyard::Date<Day>", new DateArrayResolver());
+                .register("vineyard::Date<Milli>", new DateArrayResolver());
     }
 
     public DateArray(ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
-        this.array = new DateDayVector("", Arrow.default_allocator);
+        this.array = new DateMilliVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(
                 new ArrowFieldNode(length, nullCount), buffers);
     }
 
-    public int get(int index) {
+    public long get(int index) {
         return this.array.get(index);
     }
 

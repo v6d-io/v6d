@@ -15,6 +15,7 @@
 package io.v6d.modules.basic.arrow;
 
 import io.v6d.core.client.Client;
+import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
