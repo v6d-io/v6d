@@ -6,10 +6,10 @@ containerdConfigPatches:
     endpoint = ["http://kind-registry:5000"]
 nodes:
 - role: control-plane
-  image: kindest/node:v1.24.0
+  image: kindest/node:v1.25.11
 - role: worker
-  image: kindest/node:v1.24.0
+  image: kindest/node:v1.25.11
 - role: worker
-  image: kindest/node:v1.24.0
+  image: kindest/node:v1.25.11
 - role: worker
-  image: kindest/node:v1.24.0
+  image: kindest/node:v1.25.11
