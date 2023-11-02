@@ -13,6 +13,8 @@ import time
 from argparse import ArgumentParser
 from typing import Union
 
+import pandas as pd
+
 if 'NON_RANDOM_IPC_SOCKET' in os.environ:
     VINEYARD_CI_IPC_SOCKET = '/tmp/vineyard.ci.sock'
 else:
@@ -486,6 +488,31 @@ def run_vineyard_spill_tests(meta, allocator, endpoints, tests):
         run_test(tests, 'spill_test')
 
 
+def run_graph_extend_test(tests):
+    data_dir = os.getenv('VINEYARD_DATA_DIR')
+    vdata = pd.read_csv(data_dir + '/p2p_v.csv')
+    edata = pd.read_csv(data_dir + '/p2p_e.csv')
+    n1, n2 = vdata.shape[0] // 3, edata.shape[0] // 3
+    for i in range(1, 4):
+        if i == 3:
+            m1 = vdata.iloc[2 * n1 :, :]
+            m2 = edata.iloc[2 * n2 :, :]
+        else:
+            m1 = vdata.iloc[(i - 1) * n1 : i * n1, :]
+            m2 = edata.iloc[(i - 1) * n2 : i * n2, :]
+        m1.to_csv(data_dir + '/p2p_v_%d.csv' % i, index=False)
+        m2.to_csv(data_dir + '/p2p_e_%d.csv' % i, index=False)
+    run_test(
+        tests,
+        'arrow_fragment_extend_test',
+        '$VINEYARD_DATA_DIR/p2p_v',
+        '$VINEYARD_DATA_DIR/p2p_e',
+    )
+    for i in range(1, 4):
+        os.remove(data_dir + '/p2p_v_%d.csv' % i)
+        os.remove(data_dir + '/p2p_e_%d.csv' % i)
+
+
 def run_graph_tests(meta, allocator, endpoints, tests):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
@@ -495,6 +522,7 @@ def run_graph_tests(meta, allocator, endpoints, tests):
         default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
     ) as (_, rpc_socket_port):
         run_test(tests, 'arrow_fragment_test')
+        run_graph_extend_test(tests)
         run_test(
             tests,
             'arrow_fragment_gar_test',
