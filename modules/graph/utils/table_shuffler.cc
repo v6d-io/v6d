@@ -344,7 +344,11 @@ Status TableAppender::Apply(
   }
   if (builder->GetField(0)->length() == builder->initial_capacity()) {
     std::shared_ptr<arrow::RecordBatch> tmp_batch;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
     RETURN_ON_ARROW_ERROR(builder->Flush(&tmp_batch));
+#else
+    RETURN_ON_ARROW_ERROR_AND_ASSIGN(tmp_batch, builder->Flush());
+#endif
     batches_out.emplace_back(std::move(tmp_batch));
   }
   return Status::OK();
@@ -356,7 +360,11 @@ Status TableAppender::Flush(
   // If there's no batch, we need an empty batch to make an empty table
   if (builder->GetField(0)->length() != 0 || batches_out.size() == 0) {
     std::shared_ptr<arrow::RecordBatch> batch;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
     RETURN_ON_ARROW_ERROR(builder->Flush(&batch));
+#else
+    RETURN_ON_ARROW_ERROR_AND_ASSIGN(batch, builder->Flush());
+#endif
     batches_out.emplace_back(std::move(batch));
   }
   return Status::OK();
@@ -633,13 +641,23 @@ void DeserializeSelectedRows(grape::OutArchive& arc,
   int64_t row_num;
   arc >> row_num;
   std::unique_ptr<arrow::RecordBatchBuilder> builder;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
   ARROW_CHECK_OK(arrow::RecordBatchBuilder::Make(
       schema, arrow::default_memory_pool(), row_num, &builder));
+#else
+  ARROW_CHECK_OK_AND_ASSIGN(builder,
+                            arrow::RecordBatchBuilder::Make(
+                                schema, arrow::default_memory_pool(), row_num));
+#endif
   int col_num = builder->num_fields();
   for (int col_id = 0; col_id != col_num; ++col_id) {
     DeserializeSelectedItems(arc, row_num, builder->GetField(col_id));
   }
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
   ARROW_CHECK_OK(builder->Flush(&batch_out));
+#else
+  ARROW_CHECK_OK_AND_ASSIGN(batch_out, builder->Flush());
+#endif
 }
 
 void SelectItems(std::shared_ptr<arrow::Array> array,
@@ -687,15 +705,26 @@ void SelectRows(std::shared_ptr<arrow::RecordBatch> record_batch_in,
     return;
   }
   std::unique_ptr<arrow::RecordBatchBuilder> builder;
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
   ARROW_CHECK_OK(arrow::RecordBatchBuilder::Make(record_batch_in->schema(),
                                                  arrow::default_memory_pool(),
                                                  row_num, &builder));
+#else
+  ARROW_CHECK_OK_AND_ASSIGN(
+      builder,
+      arrow::RecordBatchBuilder::Make(record_batch_in->schema(),
+                                      arrow::default_memory_pool(), row_num));
+#endif
   int col_num = builder->num_fields();
   for (int col_id = 0; col_id != col_num; ++col_id) {
     SelectItems(record_batch_in->column(col_id), offset,
                 builder->GetField(col_id));
   }
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
   ARROW_CHECK_OK(builder->Flush(&record_batch_out));
+#else
+  ARROW_CHECK_OK_AND_ASSIGN(record_batch_out, builder->Flush());
+#endif
 }
 
 boost::leaf::result<void> ShuffleTableByOffsetLists(

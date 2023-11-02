@@ -395,7 +395,11 @@ Status DeserializeRecordBatches(
   std::shared_ptr<arrow::RecordBatchReader> batch_reader;
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
   RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(batches));
+#else
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(*batches, batch_reader->ToRecordBatches());
+#endif
   return Status::OK();
 }
 
@@ -567,7 +571,11 @@ Status DeserializeTable(const std::shared_ptr<arrow::Buffer> buffer,
   std::shared_ptr<arrow::RecordBatchReader> batch_reader;
   RETURN_ON_ARROW_ERROR_AND_ASSIGN(
       batch_reader, arrow::ipc::RecordBatchStreamReader::Open(&reader));
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
   RETURN_ON_ARROW_ERROR(batch_reader->ReadAll(table));
+#else
+  RETURN_ON_ARROW_ERROR_AND_ASSIGN(*table, batch_reader->ToTable());
+#endif
   return Status::OK();
 }
 
