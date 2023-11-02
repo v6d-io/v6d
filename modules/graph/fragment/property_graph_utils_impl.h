@@ -155,24 +155,28 @@ boost::leaf::result<void> generate_local_id_list(
       static_cast<size_t>(0), chunks.size(),
       [pool, fid, &parser, &ovg2l_maps, &chunks,
        &lid_list](size_t chunk_index) -> boost::leaf::result<void> {
-        ArrowBuilderType<VID_T> builder(pool);
+        arrow::BufferBuilder builder(pool);
         auto chunk = std::dynamic_pointer_cast<ArrowArrayType<VID_T>>(
             chunks[chunk_index]);
         chunks[chunk_index].reset();  // release the used chunks
-        ARROW_OK_OR_RAISE(builder.Resize(chunk->length()));
+        ARROW_OK_OR_RAISE(builder.Resize(chunk->length() * sizeof(VID_T)));
+        builder.UnsafeAdvance(chunk->length() * sizeof(VID_T));
 
         const VID_T* vec = chunk->raw_values();
+        VID_T* builder_data = reinterpret_cast<VID_T*>(builder.mutable_data());
         for (int64_t i = 0; i < chunk->length(); ++i) {
           VID_T gid = vec[i];
           if (parser.GetFid(gid) == fid) {
-            builder[i] = parser.GenerateId(0, parser.GetLabelId(gid),
-                                           parser.GetOffset(gid));
+            builder_data[i] = parser.GenerateId(0, parser.GetLabelId(gid),
+                                                parser.GetOffset(gid));
           } else {
-            builder[i] = ovg2l_maps[parser.GetLabelId(gid)].at(gid);
+            builder_data[i] = ovg2l_maps[parser.GetLabelId(gid)].at(gid);
           }
         }
-        ARROW_OK_OR_RAISE(builder.Advance(chunk->length()));
-        ARROW_OK_OR_RAISE(builder.Finish(&lid_list[chunk_index]));
+        std::shared_ptr<arrow::Buffer> buffer;
+        ARROW_OK_OR_RAISE(builder.Finish(&buffer));
+        lid_list[chunk_index] =
+            std::make_shared<ArrowArrayType<VID_T>>(chunk->length(), buffer);
         return {};
       },
       concurrency);

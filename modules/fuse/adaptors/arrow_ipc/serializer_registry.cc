@@ -98,7 +98,11 @@ static void from_arrow_view(Client* client, std::string const& path,
   std::shared_ptr<arrow::Table> table;
   std::vector<std::shared_ptr<arrow::RecordBatch>> batches;
 
-  VINEYARD_CHECK_OK(reader->ReadAll(&batches));
+#if defined(ARROW_VERSION) && ARROW_VERSION < 9000000
+  CHECK_ARROW_ERROR(reader->ReadAll(&batches));
+#else
+  CHECK_ARROW_ERROR_AND_ASSIGN(batches, reader->ToRecordBatches());
+#endif
 
   VINEYARD_CHECK_OK(RecordBatchesToTable(batches, &table));
 
