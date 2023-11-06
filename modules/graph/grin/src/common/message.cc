@@ -30,43 +30,40 @@ void grin_destroy_graph_schema_msg(const char* s) {
 void _set_storage_data_type(grin::StorageDataType* sdt, GRIN_DATATYPE dt) {
   switch (dt) {
     case GRIN_DATATYPE::Undefined:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_ANY);
+      sdt->set_datatype(grin::DataType::DT_ANY);
       break;
     case GRIN_DATATYPE::Int32:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_SIGNED_INT32);
+      sdt->set_datatype(grin::DataType::DT_SIGNED_INT32);
       break;
     case GRIN_DATATYPE::UInt32:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_UNSIGNED_INT32);
+      sdt->set_datatype(grin::DataType::DT_UNSIGNED_INT32);
       break;
     case GRIN_DATATYPE::Int64:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_SIGNED_INT64);
+      sdt->set_datatype(grin::DataType::DT_SIGNED_INT64);
       break;
     case GRIN_DATATYPE::UInt64:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_UNSIGNED_INT64);
+      sdt->set_datatype(grin::DataType::DT_UNSIGNED_INT64);
       break;
     case GRIN_DATATYPE::Float:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_FLOAT);
+      sdt->set_datatype(grin::DataType::DT_FLOAT);
       break;
     case GRIN_DATATYPE::Double:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_DOUBLE);
+      sdt->set_datatype(grin::DataType::DT_DOUBLE);
       break;
     case GRIN_DATATYPE::String:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_STRING);
+      sdt->set_datatype(grin::DataType::DT_STRING);
       break;
     case GRIN_DATATYPE::Date32:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_SIGNED_INT32);
+      sdt->set_datatype(grin::DataType::DT_SIGNED_INT32);
       break;
     case GRIN_DATATYPE::Time32:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_SIGNED_INT32);
+      sdt->set_datatype(grin::DataType::DT_SIGNED_INT32);
       break;
     case GRIN_DATATYPE::Timestamp64:
-      sdt->set_primitive_type(grin::PrimitiveType::DT_SIGNED_INT64);
+      sdt->set_datatype(grin::DataType::DT_SIGNED_INT64);
       break;
     case GRIN_DATATYPE::FloatArray:
-      auto arr = sdt->mutable_array();
-      arr->set_max_length(1024 * 1024);
-      auto comp = arr->mutable_component_type();
-      comp->set_primitive_type(grin::PrimitiveType::DT_FLOAT);
+      sdt->set_datatype(grin::DataType::DT_FLOAT_ARRAY);
       break;
   }
 }
