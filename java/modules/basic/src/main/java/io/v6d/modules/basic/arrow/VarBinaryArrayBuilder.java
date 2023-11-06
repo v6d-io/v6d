@@ -19,7 +19,6 @@ import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import lombok.*;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VarBinaryVector;
@@ -27,9 +26,9 @@ import org.apache.arrow.vector.VarBinaryVector;
 public class VarBinaryArrayBuilder implements ArrayBuilder {
     private VarBinaryVector array;
 
-    private BufferBuilder data_buffer_builder;
-    private BufferBuilder offset_buffer_builder;
-    private BufferBuilder validity_buffer_builder;
+    private BufferBuilder dataBufferBuilder;
+    private BufferBuilder offsetBufferBuilder;
+    private BufferBuilder validityBufferBuilder;
 
     public VarBinaryArrayBuilder(IPCClient client, long length) throws VineyardException {
         this.array = new VarBinaryVector("", Arrow.default_allocator);
@@ -47,14 +46,14 @@ public class VarBinaryArrayBuilder implements ArrayBuilder {
         val data_buffer = this.array.getDataBuffer();
 
         ArrowBuf validityBuffer = array.getValidityBuffer();
-        validity_buffer_builder =
+        validityBufferBuilder =
                 new BufferBuilder((IPCClient) client, validityBuffer, validityBuffer.capacity());
 
-        this.data_buffer_builder =
+        this.dataBufferBuilder =
                 new BufferBuilder((IPCClient) client, data_buffer, data_buffer_size);
-        this.offset_buffer_builder =
+        this.offsetBufferBuilder =
                 new BufferBuilder((IPCClient) client, offset_buffer, offset_buffer_size);
-        this.validity_buffer_builder =
+        this.validityBufferBuilder =
                 new BufferBuilder((IPCClient) client, validityBuffer, validityBuffer.capacity());
     }
 
@@ -67,9 +66,9 @@ public class VarBinaryArrayBuilder implements ArrayBuilder {
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
-        meta.addMember("buffer_data_", data_buffer_builder.seal(client));
-        meta.addMember("buffer_offsets_", offset_buffer_builder.seal(client));
-        meta.addMember("null_bitmap_", validity_buffer_builder.seal(client));
+        meta.addMember("data_buffer_", dataBufferBuilder.seal(client));
+        meta.addMember("offset_buffer_", offsetBufferBuilder.seal(client));
+        meta.addMember("validity_buffer_", validityBufferBuilder.seal(client));
         return client.createMetaData(meta);
     }
 

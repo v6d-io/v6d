@@ -14,7 +14,6 @@
  */
 package io.v6d.hive.ql.io;
 
-import io.v6d.core.client.Context;
 import io.v6d.modules.basic.columnar.ColumnarData;
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -46,22 +45,17 @@ public class RecordWrapperWritable implements WritableComparable {
     // input format: writable
     private Object[] values;
 
-    // for input format
-    private boolean[] nullIndicators;
-
     // for output format
     public RecordWrapperWritable() {}
 
     // for input format
     public RecordWrapperWritable(Schema schema) {
         this.values = new Object[schema.getFields().size()];
-        this.nullIndicators = new boolean[schema.getFields().size()];
     }
 
     // for input format
     public RecordWrapperWritable(List<TypeInfo> fieldTypes) {
         this.values = new Object[fieldTypes.size()];
-        this.nullIndicators = new boolean[fieldTypes.size()];
     }
 
     // for output format
@@ -158,10 +152,6 @@ public class RecordWrapperWritable implements WritableComparable {
                 this.fields.add(
                         new Field(fieldNames.get(i), createObjectInspector(fieldTypes.get(i)), i));
             }
-            List<String> names = info.getAllStructFieldNames();
-            for (int i = 0; i < names.size(); i++) {
-                Context.println("name:" + names.get(i) + ", type:" + fieldTypes.get(i));
-            }
         }
 
         @Override
@@ -250,28 +240,25 @@ public class RecordWrapperWritable implements WritableComparable {
         if (info.getCategory() != ObjectInspector.Category.PRIMITIVE) {
             switch (info.getCategory()) {
                 case LIST:
-                    Context.println("type1:" + info);
-                    TypeInfo elementInfo = ((ListTypeInfo)info).getListElementTypeInfo();
-                    return ObjectInspectorFactory.getStandardListObjectInspector(createObjectInspector(elementInfo, level + 1));
+                    TypeInfo elementInfo = ((ListTypeInfo) info).getListElementTypeInfo();
+                    return ObjectInspectorFactory.getStandardListObjectInspector(
+                            createObjectInspector(elementInfo, level + 1));
                 case MAP:
-                    Context.println("type2:" + info);
-                    TypeInfo keyTypeInfo = ((MapTypeInfo)info).getMapKeyTypeInfo();
-                    TypeInfo valueTypeInfo = ((MapTypeInfo)info).getMapValueTypeInfo();
-                    Context.println("key type:" + keyTypeInfo + ", value type:" + valueTypeInfo);
-                    return ObjectInspectorFactory.getStandardMapObjectInspector(createObjectInspector(keyTypeInfo, level + 1), createObjectInspector(valueTypeInfo, level + 1));
+                    TypeInfo keyTypeInfo = ((MapTypeInfo) info).getMapKeyTypeInfo();
+                    TypeInfo valueTypeInfo = ((MapTypeInfo) info).getMapValueTypeInfo();
+                    return ObjectInspectorFactory.getStandardMapObjectInspector(
+                            createObjectInspector(keyTypeInfo, level + 1),
+                            createObjectInspector(valueTypeInfo, level + 1));
                 case STRUCT:
-                    Context.println("type3:" + info);
-                    List<TypeInfo> elemTypes = ((StructTypeInfo)info).getAllStructFieldTypeInfos();
-                    List<String> elemNames = ((StructTypeInfo)info).getAllStructFieldNames();
+                    List<TypeInfo> elemTypes = ((StructTypeInfo) info).getAllStructFieldTypeInfos();
+                    List<String> elemNames = ((StructTypeInfo) info).getAllStructFieldNames();
                     List<ObjectInspector> elemInspectors = new ArrayList<ObjectInspector>();
-                    
+
                     for (int i = 0; i < elemTypes.size(); i++) {
                         elemInspectors.add(createObjectInspector(elemTypes.get(i), level + 1));
                     }
-                    return ObjectInspectorFactory.getStandardStructObjectInspector(elemNames, elemInspectors);
-                case UNION:
-                    Context.println("type4:" + info);
-                    throw new UnsupportedOperationException("Unsupported type: " + info);
+                    return ObjectInspectorFactory.getStandardStructObjectInspector(
+                            elemNames, elemInspectors);
                 default:
                     throw new UnsupportedOperationException("Unsupported type: " + info);
             }
@@ -304,7 +291,7 @@ public class RecordWrapperWritable implements WritableComparable {
                 case TIMESTAMP:
                     return PrimitiveObjectInspectorFactory.javaTimestampObjectInspector;
                 case DECIMAL:
-                    return new JavaHiveDecimalObjectInspector((DecimalTypeInfo)info);
+                    return new JavaHiveDecimalObjectInspector((DecimalTypeInfo) info);
                 default:
                     throw new UnsupportedOperationException("Unsupported type: " + info);
             }

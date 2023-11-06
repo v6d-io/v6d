@@ -20,13 +20,9 @@ import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import java.util.List;
-
-import lombok.val;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.DateMilliVector;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
 /** Hello world! */
@@ -34,15 +30,13 @@ public class DateArray extends Array {
     private DateMilliVector array;
 
     public static void instantiate() {
-        ObjectFactory.getFactory()
-                .register("vineyard::Date<Milli>", new DateArrayResolver());
+        ObjectFactory.getFactory().register("vineyard::Date<Milli>", new DateArrayResolver());
     }
 
     public DateArray(ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
         this.array = new DateMilliVector("", Arrow.default_allocator);
-        this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, nullCount), buffers);
+        this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
     }
 
     public long get(int index) {
@@ -75,10 +69,16 @@ public class DateArray extends Array {
 class DateArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
-        Buffer dataBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        Buffer validityBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        Buffer dataBuffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("data_buffer_"));
+        Buffer validityBuffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("validity_buffer"));
         int nullCount = meta.getIntValue("null_count_");
         int length = meta.getIntValue("length_");
-        return new DateArray(meta, Arrays.asList(validityBuffer.getBuffer(), dataBuffer.getBuffer()), length, nullCount);
+        return new DateArray(
+                meta,
+                Arrays.asList(validityBuffer.getBuffer(), dataBuffer.getBuffer()),
+                length,
+                nullCount);
     }
 }

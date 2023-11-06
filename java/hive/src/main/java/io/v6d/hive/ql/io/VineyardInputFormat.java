@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-
 import lombok.val;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -36,7 +35,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hive.common.FileUtils;
 import org.apache.hadoop.hive.ql.exec.vector.VectorizedInputFormatInterface;
 import org.apache.hadoop.hive.ql.io.HiveInputFormat;
@@ -92,7 +90,9 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                 for (int j = 0; j < status.length; j++) {
                     if (status[j].isDirectory()) {
                         Context.println("path is directory: " + status[j].getPath());
-                        dirStatus.add(fs.listStatus(status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
+                        dirStatus.add(
+                                fs.listStatus(
+                                        status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
                         continue;
                     }
                     Path tableFilePath = status[j].getPath();
@@ -173,42 +173,45 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
 
         while (!dirStatus.isEmpty()) {
             FileStatus[] status = dirStatus.poll();
-                for (int j = 0; j < status.length; j++) {
-                    if (status[j].isDirectory()) {
-                        dirStatus.add(fs.listStatus(status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
-                        continue;
-                    }
-                    Path tableFilePath = status[j].getPath();
-                    FSDataInputStream in = fs.open(tableFilePath);
-                    FileStatus fileStatus = fs.getFileStatus(tableFilePath);
-                    byte[] buffer = new byte[(int) fileStatus.getLen()];
-                    int len = in.read(buffer, 0, (int) fileStatus.getLen());
-                    if (len <= 0) {
-                        continue;
-                    }
-                    String[] objectIDs = new String(buffer, StandardCharsets.UTF_8).split("\n");
-                    for (val objectID : objectIDs) {
-                        try {
-                            ObjectID tableID = ObjectID.fromString(objectID);
-                            Table table =
-                                    (Table) ObjectFactory.getFactory().resolve(client.getMetaData(tableID));
-                            for (val batch : table.getBatches()) {
-                                recordTotal += batch.getRowCount();
-                                this.batches[this.recordBatchIndex++] = batch;
-                            }
-                            schema = table.getSchema().getSchema();
-                            break;
-                        } catch (Exception e) {
-                            // Skip some invalid file.
-                            Context.println(
-                                    "Skipping invalid file: "
-                                            + tableFilePath
-                                            + ", content: "
-                                            + new String(buffer, StandardCharsets.UTF_8));
-                            break;
+            for (int j = 0; j < status.length; j++) {
+                if (status[j].isDirectory()) {
+                    dirStatus.add(
+                            fs.listStatus(status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
+                    continue;
+                }
+                Path tableFilePath = status[j].getPath();
+                FSDataInputStream in = fs.open(tableFilePath);
+                FileStatus fileStatus = fs.getFileStatus(tableFilePath);
+                byte[] buffer = new byte[(int) fileStatus.getLen()];
+                int len = in.read(buffer, 0, (int) fileStatus.getLen());
+                if (len <= 0) {
+                    continue;
+                }
+                String[] objectIDs = new String(buffer, StandardCharsets.UTF_8).split("\n");
+                for (val objectID : objectIDs) {
+                    try {
+                        ObjectID tableID = ObjectID.fromString(objectID);
+                        Table table =
+                                (Table)
+                                        ObjectFactory.getFactory()
+                                                .resolve(client.getMetaData(tableID));
+                        for (val batch : table.getBatches()) {
+                            recordTotal += batch.getRowCount();
+                            this.batches[this.recordBatchIndex++] = batch;
                         }
+                        schema = table.getSchema().getSchema();
+                        break;
+                    } catch (Exception e) {
+                        // Skip some invalid file.
+                        Context.println(
+                                "Skipping invalid file: "
+                                        + tableFilePath
+                                        + ", content: "
+                                        + new String(buffer, StandardCharsets.UTF_8));
+                        break;
                     }
                 }
+            }
         }
         // reset to the beginning
         this.recordBatchIndex = -1;

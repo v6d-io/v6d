@@ -15,13 +15,11 @@
 package io.v6d.hadoop.fs;
 
 import com.google.common.base.StopwatchContext;
-import com.google.common.jimfs.Jimfs;
 import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
-import io.v6d.core.common.util.VineyardException;
 import io.v6d.core.common.util.VineyardException.ObjectNotExists;
 import io.v6d.hive.ql.io.CloseableReentrantLock;
 import io.v6d.modules.basic.arrow.SchemaBuilder;
@@ -35,7 +33,6 @@ import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -47,10 +44,8 @@ import org.apache.arrow.vector.types.pojo.Schema;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hive.conf.HiveConf;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FSParentQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -162,8 +157,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         stream.close();
     }
 
-    public static void printAllFiles(Path p)
-            throws IOException {
+    public static void printAllFiles(Path p) throws IOException {
         FileStatus[] status = fs.listStatus(p);
         Queue<FileStatus> queue = new java.util.LinkedList<FileStatus>();
         for (FileStatus s : status) {
@@ -183,7 +177,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     private static void printAllFiles() throws IOException {
         if (enablePrintAllFiles) {
-            // printAllFiles(jimfs.getPath("/"), jimfs);
             Context.println("------------------");
             printAllFiles(new Path("/opt/hive/data/warehouse"));
         }
@@ -214,14 +207,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         super.initialize(name, conf);
         this.conf = conf;
         this.uri = name;
-        // try {
-        //     if (jimfs == null) {
-        //         jimfs = Jimfs.newFileSystem(com.google.common.jimfs.Configuration.unix());
-        //     }
-        // } catch (Exception e) {
-        //     Context.println("Exception: " + e.getMessage());
-        //     throw e;
-        // }
+
         fs = new RawLocalFileSystem();
         fs.initialize(URI.create("file:///"), conf);
         mkdirs(new Path(uri.toString().replaceAll("///", "/")));
@@ -229,15 +215,9 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public FSDataInputStream open(Path path, int i) throws IOException {
-        Context.println("open file: " + path.toString());
-        // FileChannel channel =
-        //         FileChannel.open(
-        //                 jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1)),
-        //                 StandardOpenOption.READ);
         Path newPath = new Path(path.toString().replaceAll("vineyard", "file"));
         FSDataInputStream result = fs.open(newPath);
         return result;
-        // return new FSDataInputStream(new VineyardInputStream(channel));
     }
 
     @Override
@@ -271,21 +251,8 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             long blockSize,
             Progressable progressable)
             throws IOException {
-        Context.println("create file: " + path.toString());
-        // java.nio.file.Path nioFilePath =
-        //         jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1));
-        // java.nio.file.Path nioParentDirPath = nioFilePath.getParent();
-        // if (nioParentDirPath != null) {
-        //     Files.createDirectories(nioParentDirPath);
-        // }
-        // Files.createFile(nioFilePath);
-        // FileChannel channel = FileChannel.open(nioFilePath, StandardOpenOption.WRITE);
-        // printAllFiles();
-        // return new FSDataOutputStream(new VineyardOutputStream(channel), null);
         Path newPath = new Path(path.toString().replaceAll("vineyard", "file"));
-        Context.println("new file:" + newPath.toString());
         Path parentPath = newPath.getParent();
-        Context.println("parent file:" + parentPath.toString());
         try {
             FileStatus parentStatus = fs.getFileStatus(parentPath);
             if (!parentStatus.isDirectory()) {
@@ -293,11 +260,19 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             }
         } catch (FileNotFoundException e) {
             // parent path not exist
-            Context.println("create parent dir");
+            Context.println("Parent dir not exists. Create parent dir first!");
             fs.mkdirs(parentPath);
         }
         printAllFiles();
-        FSDataOutputStream result = fs.create(newPath, fsPermission, overwrite, bufferSize, replication, blockSize, progressable);
+        FSDataOutputStream result =
+                fs.create(
+                        newPath,
+                        fsPermission,
+                        overwrite,
+                        bufferSize,
+                        replication,
+                        blockSize,
+                        progressable);
         return result;
     }
 
@@ -310,8 +285,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     @Override
     public boolean delete(Path path, boolean b) throws IOException {
         try (val lock = this.lock.open()) {
-            // return this.deleteInternal(
-            //         jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1)), b);
             Path newPath = new Path(path.toString().replaceAll("vineyard", "file"));
             return this.deleteInternal(newPath, b);
         }
@@ -324,7 +297,11 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         try {
             Map<String, ObjectID> objects = client.listNames(".*", true, 255);
             for (val object : objects.entrySet()) {
-                Context.println("object name:" + object.getKey() + ", object id:" + object.getValue().value());
+                Context.println(
+                        "object name:"
+                                + object.getKey()
+                                + ", object id:"
+                                + object.getValue().value());
             }
         } catch (Exception e) {
             Context.println("Exception: " + e.getMessage());
@@ -335,7 +312,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     public void cleanObjectInVineyard(Path filePath) throws IOException {
         IPCClient client = Context.getClient();
         Queue<Path> queue = new java.util.LinkedList<Path>();
-        Context.println("clean object in vineyard with file name: " + filePath.toString());
         Collection<ObjectID> objectIDs = new ArrayList<ObjectID>();
         queue.add(filePath);
         while (!queue.isEmpty()) {
@@ -353,7 +329,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                 }
 
                 String objectName = path.toString().substring(path.toString().indexOf(":") + 1);
-                Context.println("try to get objectid from name:" + objectName);
                 ObjectID objectID = client.getName(objectName);
                 objectIDs.add(objectID);
                 client.dropName(objectName);
@@ -370,121 +345,25 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             }
         }
         client.delete(objectIDs, false, false);
-        printAllObjectsWithName(); 
+        printAllObjectsWithName();
     }
 
     private boolean deleteInternal(Path path, boolean b) throws IOException {
-        Context.println("Delete file: " + path.toString());
-        // TODO: how to ensure that the consistency between vineyard and local file system?
         cleanObjectInVineyard(path);
         return fs.delete(path, b);
     }
-
-    // private boolean deleteInternal(java.nio.file.Path path, boolean b) throws IOException {
-    //     Context.println("delete file: " + path.toString());
-    //     java.nio.file.Path nioFilePath =
-    //             jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1));
-
-    //     // check if the path is a directory
-    //     if (Files.isDirectory(nioFilePath)) {
-    //         DirectoryStream<java.nio.file.Path> stream = Files.newDirectoryStream(nioFilePath);
-    //         for (java.nio.file.Path p : stream) {
-    //             deleteInternal(p, b);
-    //         }
-    //         stream.close();
-    //     } else {
-    //         // drop name
-    //         String name = nioFilePath.getFileName().toString();
-    //         IPCClient client = Context.getClient();
-    //         try {
-    //             client.dropName(name);
-    //         } catch (Exception e) {
-    //             Context.println("Failed to drop name from vineyard: " + e.getMessage());
-    //         }
-    //     }
-    //     Files.deleteIfExists(nioFilePath);
-
-    //     printAllFiles();
-    //     return true;
-    // }
 
     @Override
     public boolean rename(Path src, Path dst) throws IOException {
         try (val lock = this.lock.open()) {
             val watch = StopwatchContext.create();
             val renamed = this.renameInternal(src, dst);
-            Context.println("filesystem rename uses: " + watch.stop());
+            Context.println("Filesystem rename uses: " + watch.stop());
             return renamed;
         }
     }
 
-    private void mergeFile(java.nio.file.Path src, java.nio.file.Path dst) throws IOException {
-        FileChannel channelSrc = FileChannel.open(src, StandardOpenOption.READ);
-        FileChannel channelDst = FileChannel.open(dst, StandardOpenOption.READ);
-
-        ByteBuffer bytes = ByteBuffer.allocate(255);
-        int len = channelSrc.read(bytes);
-        String srcObjectIDStr =
-                new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
-        bytes = ByteBuffer.allocate(255);
-        len = channelDst.read(bytes);
-        String dstObjectIDStr =
-                new String(bytes.array(), 0, len, StandardCharsets.UTF_8).replaceAll("\n", "");
-
-        ObjectID mergedTableObjectID = null;
-        try {
-            IPCClient client = Context.getClient();
-            ObjectID srcObjectID = ObjectID.fromString(srcObjectIDStr);
-            ObjectID dstObjectID = ObjectID.fromString(dstObjectIDStr);
-            Table srcTable =
-                    (Table) ObjectFactory.getFactory().resolve(client.getMetaData(srcObjectID));
-            Table dstTable =
-                    (Table) ObjectFactory.getFactory().resolve(client.getMetaData(dstObjectID));
-
-            // merge table
-            Schema schema = srcTable.getSchema().getSchema();
-            SchemaBuilder mergedSchemaBuilder = SchemaBuilder.fromSchema(schema);
-            TableBuilder mergedTableBuilder = new TableBuilder(client, mergedSchemaBuilder);
-
-            for (int i = 0; i < srcTable.getBatches().size(); i++) {
-                mergedTableBuilder.addBatch(srcTable.getBatches().get(i));
-            }
-
-            for (int i = 0; i < dstTable.getBatches().size(); i++) {
-                mergedTableBuilder.addBatch(dstTable.getBatches().get(i));
-            }
-
-            ObjectMeta meta = mergedTableBuilder.seal(client);
-            Context.println("record batch size:" + mergedTableBuilder.getBatchSize());
-            Context.println("Table id in vineyard:" + meta.getId().value());
-            client.persist(meta.getId());
-            Context.println("Table persisted, name:" + dst);
-            client.putName(meta.getId(), dst.toString());
-            client.dropName(src.toString());
-            mergedTableObjectID = meta.getId();
-
-            // drop old table
-            Collection<ObjectID> ids = new ArrayList<ObjectID>();
-            ids.add(srcObjectID);
-            ids.add(dstObjectID);
-            client.delete(ids, false, false);
-        } finally {
-            channelSrc.close();
-            channelDst.close();
-            if (mergedTableObjectID != null) {
-                channelDst = FileChannel.open(dst, StandardOpenOption.WRITE);
-                String mergedTableIDStr = mergedTableObjectID.toString() + "\n";
-                bytes =
-                        ByteBuffer.allocate(
-                                mergedTableIDStr.getBytes(StandardCharsets.UTF_8).length);
-                channelDst.write(
-                        ByteBuffer.wrap(mergedTableIDStr.getBytes(StandardCharsets.UTF_8)));
-            }
-        }
-    }
-
     private void mergeFile(Path src, Path dst) throws IOException {
-        Context.println("merge file: " + src.toString() + " to " + dst.toString());
         FSDataInputStream srcInput = fs.open(src);
         FSDataInputStream dstInput = fs.open(dst);
         byte[] objectIDByteArray = new byte[255];
@@ -502,9 +381,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         try {
             IPCClient client = Context.getClient();
             ObjectID srcObjectID = ObjectID.fromString(srcObjectIDStr);
-            Context.println("src object id:" + srcObjectID.value());
             ObjectID dstObjectID = ObjectID.fromString(dstObjectIDStr);
-            Context.println("dst object id:" + dstObjectID.value());
             Table srcTable =
                     (Table) ObjectFactory.getFactory().resolve(client.getMetaData(srcObjectID));
             Table dstTable =
@@ -524,7 +401,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             }
 
             ObjectMeta meta = mergedTableBuilder.seal(client);
-            Context.println("record batch size:" + mergedTableBuilder.getBatchSize());
             Context.println("Table id in vineyard:" + meta.getId().value());
             client.persist(meta.getId());
             Context.println("Table persisted, name:" + dst);
@@ -550,66 +426,26 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     }
 
     public boolean renameInternal(Path src, Path dst) throws IOException {
-        Context.println("rename file: " + src.toString() + " to " + dst.toString());
-        // now we create new file and delete old file to simulate rename
-        // java.nio.file.Path srcNioFilePath =
-        //         jimfs.getPath(src.toString().substring(src.toString().indexOf(":") + 1));
-        // java.nio.file.Path dstNioFilePath =
-        //         jimfs.getPath(dst.toString().substring(dst.toString().indexOf(":") + 1));
-        // java.nio.file.Path dstNioParentDirPath = dstNioFilePath.getParent();
-        // Files.createDirectories(dstNioParentDirPath);
-
-        // if (Files.isDirectory(srcNioFilePath)) {
-        //     DirectoryStream<java.nio.file.Path> stream = Files.newDirectoryStream(srcNioFilePath);
-        //     for (java.nio.file.Path p : stream) {
-        //         renameInternal(
-        //                 new Path(SCHEME + ":/" + p.toString()),
-        //                 new Path(
-        //                         SCHEME + ":/" + dstNioFilePath.toString() + "/" + p.getFileName()));
-        //     }
-        //     stream.close();
-        //     Files.delete(srcNioFilePath);
-        // } else {
-        //     // TODO:
-        //     // Next step: design a better way to sync at init function.
-        //     syncWithVineyard(dstNioFilePath.toString());
-        //     if (Files.exists(dstNioFilePath)) {
-        //         printAllFiles();
-        //         mergeFile(srcNioFilePath, dstNioFilePath);
-        //         Files.delete(srcNioFilePath);
-        //     } else {
-        //         Files.move(srcNioFilePath, dstNioFilePath);
-        //         ByteBuffer bytes = ByteBuffer.allocate(255);
-        //         FileChannel channel = FileChannel.open(dstNioFilePath, StandardOpenOption.READ);
-        //         int len = channel.read(bytes);
-        //         if (len > 0) {
-        //             String objectIDStr =
-        //                     new String(bytes.array(), 0, len, StandardCharsets.UTF_8)
-        //                             .replaceAll("\n", "");
-        //             IPCClient client = Context.getClient();
-        //             try {
-        //                 client.putName(ObjectID.fromString(objectIDStr), dstNioFilePath.toString());
-        //                 client.dropName(srcNioFilePath.toString());
-        //             } catch (Exception e) {
-        //                 // Skip some invalid file.
-        //                 // File content may be not a valid object id.
-        //                 Context.println("Failed to put name to vineyard: " + e.getMessage());
-        //             }
-        //         }
-        //     }
-        // }
 
         Path newSrc = new Path(src.toString().replaceAll("vineyard", "file"));
         Path newDst = new Path(dst.toString().replaceAll("vineyard", "file"));
-        String newTableName = dst.toString().substring(dst.toString().indexOf(":") + 1).replaceAll("///", "/").replaceAll("//", "/");
-        String oldTableName = src.toString().substring(src.toString().indexOf(":") + 1).replaceAll("///", "/").replaceAll("//", "/");
-        Context.println("new table name:" + newTableName + ", old table name:" + oldTableName);
+        String newTableName =
+                dst.toString()
+                        .substring(dst.toString().indexOf(":") + 1)
+                        .replaceAll("///", "/")
+                        .replaceAll("//", "/");
+        String oldTableName =
+                src.toString()
+                        .substring(src.toString().indexOf(":") + 1)
+                        .replaceAll("///", "/")
+                        .replaceAll("//", "/");
         try {
             FileStatus srcStatus = fs.getFileStatus(newSrc);
             if (srcStatus.isDirectory()) {
                 FileStatus[] status = fs.listStatus(newSrc);
                 for (FileStatus s : status) {
-                    renameInternal(s.getPath(), new Path(newDst.toString() + "/" + s.getPath().getName()));
+                    renameInternal(
+                            s.getPath(), new Path(newDst.toString() + "/" + s.getPath().getName()));
                 }
                 fs.delete(newSrc, true);
                 return true;
@@ -623,8 +459,9 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                     byte[] objectIDByteArray = new byte[255];
                     int len = in.read(objectIDByteArray);
                     if (len > 0) {
-                        String objectIDStr = new String(objectIDByteArray, 0, len, StandardCharsets.UTF_8)
-                                .replaceAll("\n", "");
+                        String objectIDStr =
+                                new String(objectIDByteArray, 0, len, StandardCharsets.UTF_8)
+                                        .replaceAll("\n", "");
                         IPCClient client = Context.getClient();
                         try {
                             client.putName(ObjectID.fromString(objectIDStr), newTableName);
@@ -659,16 +496,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             String reg = "^" + prefix + ".*";
             Map<String, ObjectID> objects = client.listNames(reg, true, 255);
             for (val object : objects.entrySet()) {
-                // if (Files.exists(jimfs.getPath(object.getKey()))) {
-                //     continue;
-                // }
-                // Files.createFile(jimfs.getPath(object.getKey()));
-                // FileChannel channel =
-                //         FileChannel.open(jimfs.getPath(object.getKey()), StandardOpenOption.WRITE);
-                // ObjectID id = object.getValue();
-                // channel.write(
-                //         ByteBuffer.wrap((id.toString() + "\n").getBytes(StandardCharsets.UTF_8)));
-                // channel.close();
                 try {
                     fs.getFileStatus(new Path("file://" + object.getKey()));
                 } catch (FileNotFoundException e) {
@@ -687,50 +514,43 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public FileStatus[] listStatus(Path path) throws FileNotFoundException, IOException {
-        Context.println("listStatus: " + path.toString());
         List<FileStatus> result = new ArrayList<FileStatus>();
         try (val lock = this.lock.open()) {
-            // java.nio.file.Path nioFilePath =
-            //         jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1));
-            // syncWithVineyard(nioFilePath.toString());
-            // if (Files.isDirectory(nioFilePath)) {
-            //     DirectoryStream<java.nio.file.Path> stream = Files.newDirectoryStream(nioFilePath);
-            //     for (java.nio.file.Path p : stream) {
-            //         result.add(
-            //                 new FileStatus(
-            //                         Files.size(p),
-            //                         Files.isDirectory(p),
-            //                         1,
-            //                         1,
-            //                         0,
-            //                         0,
-            //                         new FsPermission((short) 777),
-            //                         null,
-            //                         null,
-            //                         new Path(SCHEME + ":///" + p.toString())));
-            //         System.out.println("path get name:" + new Path(SCHEME + ":///" + p.toString()).getName());
-            //     }
-            //     stream.close();
-            // }
-            String prefix = path.toString().substring(path.toString().indexOf(":") + 1).replaceAll("///", "/").replaceAll("//", "/");
+            String prefix =
+                    path.toString()
+                            .substring(path.toString().indexOf(":") + 1)
+                            .replaceAll("///", "/")
+                            .replaceAll("//", "/");
             syncWithVineyard(prefix);
             try {
-                FileStatus status = fs.getFileStatus(new Path(path.toString().replaceAll("vineyard", "file")));
-                FileStatus[] statusArray = fs.listStatus(new Path(path.toString().replaceAll("vineyard", "file")));
+                FileStatus status =
+                        fs.getFileStatus(new Path(path.toString().replaceAll("vineyard", "file")));
+                FileStatus[] statusArray =
+                        fs.listStatus(new Path(path.toString().replaceAll("vineyard", "file")));
                 for (FileStatus s : statusArray) {
-                    FileStatus temp = new FileStatus(
-                        s.getLen(),
-                        s.isDirectory(),
-                        s.getReplication(),
-                        s.getBlockSize(),
-                        s.getModificationTime(),
-                        s.getAccessTime(),
-                        new FsPermission((short)777),
-                        s.getOwner(),
-                        s.getGroup(),
-                        new Path(SCHEME + ":///" + s.getPath().toString().substring(s.getPath().toString().indexOf(":") + 1).replaceAll("///", "//").replaceAll("//", "/"))
-                    );
-                    Context.println("file:" + temp.getPath().toString());
+                    FileStatus temp =
+                            new FileStatus(
+                                    s.getLen(),
+                                    s.isDirectory(),
+                                    s.getReplication(),
+                                    s.getBlockSize(),
+                                    s.getModificationTime(),
+                                    s.getAccessTime(),
+                                    new FsPermission((short) 777),
+                                    s.getOwner(),
+                                    s.getGroup(),
+                                    new Path(
+                                            SCHEME
+                                                    + ":///"
+                                                    + s.getPath()
+                                                            .toString()
+                                                            .substring(
+                                                                    s.getPath()
+                                                                                    .toString()
+                                                                                    .indexOf(":")
+                                                                            + 1)
+                                                            .replaceAll("///", "//")
+                                                            .replaceAll("//", "/")));
                     result.add(temp);
                 }
             } catch (FileNotFoundException e) {
@@ -760,16 +580,9 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     }
 
     private boolean mkdirsInternal(Path path, FsPermission fsPermission) throws IOException {
-        Context.println("mkdirs: " + path.toString());
-        // java.nio.file.Path nioDirPath =
-        //         jimfs.getPath(path.toString().substring(path.toString().indexOf(":") + 1));
-        // if (Files.exists(nioDirPath)) {
-        //     return false;
-        // }
-        // Files.createDirectories(nioDirPath);
 
         Path newPath = new Path(path.toString().replaceAll("vineyard", "file"));
-        try{
+        try {
             fs.getFileStatus(newPath);
         } catch (FileNotFoundException e) {
             // file not exist
@@ -788,37 +601,29 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     }
 
     public FileStatus getFileStatusInternal(Path path) throws IOException {
-        Context.println("getFileStatus: " + path.toString());
-        // String pathStr = path.toString().substring(path.toString().indexOf(":") + 1);
-        // java.nio.file.Path nioFilePath = jimfs.getPath(pathStr);
-        // if (Files.exists(nioFilePath)) {
-        //     printAllFiles();
-        //     return new FileStatus(
-        //             Files.size(nioFilePath),
-        //             Files.isDirectory(nioFilePath),
-        //             1,
-        //             1,
-        //             0,
-        //             0,
-        //             new FsPermission((short) 777),
-        //             null,
-        //             null,
-        //             new Path(SCHEME + ":///" + pathStr));
-        // }
         printAllFiles();
-        FileStatus temp = fs.getFileStatus(new Path(path.toString().replaceAll("vineyard", "file")));
-        FileStatus result = new FileStatus(
-            temp.getLen(),
-            temp.isDirectory(),
-            temp.getReplication(),
-            temp.getBlockSize(),
-            temp.getModificationTime(),
-            temp.getAccessTime(),
-            new FsPermission((short)777),
-            temp.getOwner(),
-            temp.getGroup(),
-            new Path(SCHEME + ":///" + temp.getPath().toString().substring(temp.getPath().toString().indexOf(":") + 1).replaceAll("///", "//").replaceAll("//", "/"))
-        );
+        FileStatus temp =
+                fs.getFileStatus(new Path(path.toString().replaceAll("vineyard", "file")));
+        FileStatus result =
+                new FileStatus(
+                        temp.getLen(),
+                        temp.isDirectory(),
+                        temp.getReplication(),
+                        temp.getBlockSize(),
+                        temp.getModificationTime(),
+                        temp.getAccessTime(),
+                        new FsPermission((short) 777),
+                        temp.getOwner(),
+                        temp.getGroup(),
+                        new Path(
+                                SCHEME
+                                        + ":///"
+                                        + temp.getPath()
+                                                .toString()
+                                                .substring(
+                                                        temp.getPath().toString().indexOf(":") + 1)
+                                                .replaceAll("///", "//")
+                                                .replaceAll("//", "/")));
         return result;
         // throw new FileNotFoundException();
     }
@@ -845,21 +650,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                         + delSrc);
         throw new UnsupportedOperationException(
                 "Vineyard file system not support copyFromLocalFile.");
-        // org.apache.hadoop.fs.FileSystem srcFS = src.getFileSystem(conf);
-        // FSDataInputStream in = srcFS.open(src);
-        // FSDataOutputStream out = create(dst, false);
-        // byte[] buffer = new byte[1024];
-        // do {
-        //     int len = in.read(buffer);
-        //     if (len <= 0) {
-        //         break;
-        //     }
-        //     out.write(buffer, 0, len);
-        // } while (true);
-        // in.close();
-        // out.close();
-        // Context.println("copy done!");
-        // printAllFiles();
     }
 
     @Override

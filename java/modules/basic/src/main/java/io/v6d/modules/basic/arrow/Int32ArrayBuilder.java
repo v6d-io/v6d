@@ -15,34 +15,33 @@
 package io.v6d.modules.basic.arrow;
 
 import io.v6d.core.client.Client;
-import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import java.util.Arrays;
 import lombok.val;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
 public class Int32ArrayBuilder implements ArrayBuilder {
-    private BufferBuilder dataBuffer;
-    private BufferBuilder validityBuffer;
+    private BufferBuilder dataBufferBuilder;
+    private BufferBuilder validityBufferBuilder;
     private IntVector array;
 
     public Int32ArrayBuilder(IPCClient client, long length) throws VineyardException {
         this.array = new IntVector("", Arrow.default_allocator);
-        this.dataBuffer = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
+        this.dataBufferBuilder =
+                new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, dataBuffer.getBuffer()));
+                new ArrowFieldNode(length, 0), Arrays.asList(null, dataBufferBuilder.getBuffer()));
     }
 
     @Override
     public void build(Client client) throws VineyardException {
         ArrowBuf buf = array.getValidityBuffer();
-        validityBuffer = new BufferBuilder((IPCClient)client, buf, buf.capacity());
+        validityBufferBuilder = new BufferBuilder((IPCClient) client, buf, buf.capacity());
     }
 
     @Override
@@ -54,8 +53,8 @@ public class Int32ArrayBuilder implements ArrayBuilder {
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
-        meta.addMember("buffer_", dataBuffer.seal(client));
-        meta.addMember("null_bitmap_", validityBuffer.seal(client));
+        meta.addMember("data_buffer_", dataBufferBuilder.seal(client));
+        meta.addMember("validity_buffer_", validityBufferBuilder.seal(client));
         return client.createMetaData(meta);
     }
 
@@ -66,7 +65,7 @@ public class Int32ArrayBuilder implements ArrayBuilder {
 
     @Override
     public void shrink(Client client, long size) throws VineyardException {
-        this.dataBuffer.shrink(client, this.array.getBufferSizeFor((int) size));
+        this.dataBufferBuilder.shrink(client, this.array.getBufferSizeFor((int) size));
         this.array.setValueCount((int) size);
     }
 

@@ -20,15 +20,11 @@ import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import java.util.List;
-
-import lombok.val;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.BaseFixedWidthVector;
 import org.apache.arrow.vector.Decimal256Vector;
 import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
 /** Hello world! */
@@ -42,15 +38,21 @@ public class DecimalArray extends Array {
                 .register("vineyard::DecimalArray<256>", new DecimalArrayResolver());
     }
 
-    public DecimalArray(ObjectMeta meta, List<ArrowBuf> buffers, int nullCount, long length, int maxPrecision, int maxScale, int bitWidth) {
+    public DecimalArray(
+            ObjectMeta meta,
+            List<ArrowBuf> buffers,
+            int nullCount,
+            long length,
+            int maxPrecision,
+            int maxScale,
+            int bitWidth) {
         super(meta);
         if (bitWidth == 128) {
             this.array = new DecimalVector("", Arrow.default_allocator, maxPrecision, maxScale);
         } else {
             this.array = new Decimal256Vector("", Arrow.default_allocator, maxPrecision, maxScale);
         }
-        this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, nullCount), buffers);
+        this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
     }
 
     @Override
@@ -79,9 +81,18 @@ public class DecimalArray extends Array {
 class DecimalArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
-        Buffer buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        Buffer validityBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        Buffer buffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("data_buffer_"));
+        Buffer validityBuffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("validity_buffer_"));
         int nullCount = meta.getIntValue("null_count_");
-        return new DecimalArray(meta, Arrays.asList(validityBuffer.getBuffer(), buffer.getBuffer()), nullCount, meta.getLongValue("length_"), meta.getIntValue("maxPrecision_"), meta.getIntValue("maxScale_"), meta.getIntValue("bitWidth_"));
+        return new DecimalArray(
+                meta,
+                Arrays.asList(validityBuffer.getBuffer(), buffer.getBuffer()),
+                nullCount,
+                meta.getLongValue("length_"),
+                meta.getIntValue("max_precision_"),
+                meta.getIntValue("max_scale_"),
+                meta.getIntValue("bit_width_"));
     }
 }

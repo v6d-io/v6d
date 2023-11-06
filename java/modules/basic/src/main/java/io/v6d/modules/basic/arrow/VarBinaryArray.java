@@ -15,16 +15,12 @@
 package io.v6d.modules.basic.arrow;
 
 import com.google.common.base.Objects;
-
-import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import java.util.List;
-
 import lombok.*;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VarBinaryVector;
@@ -36,19 +32,14 @@ public class VarBinaryArray extends Array {
 
     public static void instantiate() {
         ObjectFactory.getFactory()
-                .register(
-                        "vineyard::VarBinaryArray",
-                        new VarBinaryArrayResolver());
+                .register("vineyard::VarBinaryArray", new VarBinaryArrayResolver());
     }
 
-    public VarBinaryArray(final ObjectMeta meta, List<ArrowBuf> buffers, int length, int nullCount) {
+    public VarBinaryArray(
+            final ObjectMeta meta, List<ArrowBuf> buffers, int length, int nullCount) {
         super(meta);
-        Context.println("VarBinaryArray: " + meta.toString());
         this.array = new VarBinaryVector("", Arrow.default_allocator);
-        this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, nullCount),
-                buffers);
-        Context.println("length:" + length);
+        this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
         this.array.setValueCount((int) length);
     }
 
@@ -79,13 +70,20 @@ class VarBinaryArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
         Buffer data_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_data_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("data_buffer_"));
         Buffer offsets_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("offset_buffer_"));
         Buffer validityBuffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("validity_buffer_"));
         int nullCount = meta.getIntValue("null_count_");
         int length = meta.getIntValue("length_");
-        return new VarBinaryArray(meta, Arrays.asList(validityBuffer.getBuffer(), offsets_buffer.getBuffer(), data_buffer.getBuffer()), length, nullCount);
+        return new VarBinaryArray(
+                meta,
+                Arrays.asList(
+                        validityBuffer.getBuffer(),
+                        offsets_buffer.getBuffer(),
+                        data_buffer.getBuffer()),
+                length,
+                nullCount);
     }
 }

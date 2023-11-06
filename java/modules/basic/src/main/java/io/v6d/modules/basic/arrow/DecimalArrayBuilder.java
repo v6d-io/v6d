@@ -15,31 +15,29 @@
 package io.v6d.modules.basic.arrow;
 
 import io.v6d.core.client.Client;
-import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import java.util.Arrays;
 import lombok.val;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.BaseFixedWidthVector;
 import org.apache.arrow.vector.Decimal256Vector;
 import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
-import org.apache.arrow.vector.types.pojo.ArrowType.Decimal;
 
 public class DecimalArrayBuilder implements ArrayBuilder {
-    private BufferBuilder buffer;
+    private BufferBuilder dataBufferBuilder;
     private BaseFixedWidthVector array;
     private BufferBuilder validityBufferBuilder;
     int maxPrecision;
     int maxScale;
     int bitWidth;
 
-    public DecimalArrayBuilder(IPCClient client, long length, int maxPrecision, int maxScale, int bitWidth) throws VineyardException {
+    public DecimalArrayBuilder(
+            IPCClient client, long length, int maxPrecision, int maxScale, int bitWidth)
+            throws VineyardException {
         this.maxPrecision = maxPrecision;
         this.maxScale = maxScale;
         this.bitWidth = bitWidth;
@@ -48,16 +46,18 @@ public class DecimalArrayBuilder implements ArrayBuilder {
         } else {
             this.array = new Decimal256Vector("", Arrow.default_allocator, maxPrecision, maxScale);
         }
-        this.buffer = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
+        this.dataBufferBuilder =
+                new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+                new ArrowFieldNode(length, 0), Arrays.asList(null, dataBufferBuilder.getBuffer()));
     }
 
     @Override
     public void build(Client client) throws VineyardException {
         ArrowBuf validityBuffer = array.getValidityBuffer();
 
-        validityBufferBuilder = new BufferBuilder((IPCClient)client, validityBuffer, validityBuffer.capacity());
+        validityBufferBuilder =
+                new BufferBuilder((IPCClient) client, validityBuffer, validityBuffer.capacity());
     }
 
     @Override
@@ -65,16 +65,15 @@ public class DecimalArrayBuilder implements ArrayBuilder {
         this.build(client);
         val meta = ObjectMeta.empty();
         meta.setTypename("vineyard::DecimalArray<" + String.valueOf(bitWidth) + ">");
-        Context.println("vineyard::DecimalArray<" + String.valueOf(bitWidth) + ">");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
-        meta.addMember("buffer_", buffer.seal(client));
-        meta.addMember("null_bitmap_", validityBufferBuilder.seal(client));
-        meta.setValue("maxPrecision_", maxPrecision);
-        meta.setValue("maxScale_", maxScale);
-        meta.setValue("bitWidth_", bitWidth);
+        meta.addMember("data_buffer_", dataBufferBuilder.seal(client));
+        meta.addMember("validity_buffer_", validityBufferBuilder.seal(client));
+        meta.setValue("max_precision_", maxPrecision);
+        meta.setValue("max_scale_", maxScale);
+        meta.setValue("bit_width_", bitWidth);
         return client.createMetaData(meta);
     }
 
@@ -85,7 +84,7 @@ public class DecimalArrayBuilder implements ArrayBuilder {
 
     @Override
     public void shrink(Client client, long size) throws VineyardException {
-        this.buffer.shrink(client, this.array.getBufferSizeFor((int) size));
+        this.dataBufferBuilder.shrink(client, this.array.getBufferSizeFor((int) size));
         this.array.setValueCount((int) size);
     }
 }

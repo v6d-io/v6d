@@ -20,7 +20,6 @@ import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import java.util.Arrays;
 import lombok.*;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.FieldVector;
@@ -33,7 +32,8 @@ public class BooleanArrayBuilder implements ArrayBuilder {
 
     public BooleanArrayBuilder(IPCClient client, long length) throws VineyardException {
         this.array = new BitVector("", Arrow.default_allocator);
-        this.dataBufferBuilder = new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
+        this.dataBufferBuilder =
+                new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
                 new ArrowFieldNode(length, 0), Arrays.asList(null, dataBufferBuilder.getBuffer()));
     }
@@ -41,7 +41,8 @@ public class BooleanArrayBuilder implements ArrayBuilder {
     @Override
     public void build(Client client) throws VineyardException {
         ArrowBuf validityBuffer = array.getValidityBuffer();
-        validityBufferBuilder = new BufferBuilder((IPCClient)client, validityBuffer, validityBuffer.capacity());
+        validityBufferBuilder =
+                new BufferBuilder((IPCClient) client, validityBuffer, validityBuffer.capacity());
     }
 
     @Override
@@ -53,8 +54,8 @@ public class BooleanArrayBuilder implements ArrayBuilder {
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
-        meta.addMember("buffer_", dataBufferBuilder.seal(client));
-        meta.addMember("null_bitmap_", validityBufferBuilder.seal(client));
+        meta.addMember("data_buffer_", dataBufferBuilder.seal(client));
+        meta.addMember("validity_buffer_", validityBufferBuilder.seal(client));
         return client.createMetaData(meta);
     }
 

@@ -15,17 +15,14 @@
 package io.v6d.modules.basic.arrow;
 
 import com.google.common.base.Objects;
-
 import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.modules.basic.arrow.util.ArrowVectorUtils;
-
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.complex.ListVector;
@@ -36,17 +33,16 @@ public class ListArray extends Array {
     private ListVector array;
 
     public static void instantiate() {
-        ObjectFactory.getFactory()
-                .register(
-                        "vineyard::ListArray",
-                        new ListArrayResolver());
+        ObjectFactory.getFactory().register("vineyard::ListArray", new ListArrayResolver());
     }
 
-    public ListArray(ObjectMeta meta, Queue<ArrowBuf> bufs, Queue<Integer> valueCountList, Field listVectorField) {
+    public ListArray(
+            ObjectMeta meta,
+            Queue<ArrowBuf> bufs,
+            Queue<Integer> valueCountList,
+            Field listVectorField) {
         super(meta);
-        Context.println("stage 5");
         this.array = ListVector.empty("", Arrow.default_allocator);
-        Context.println("stage 6");
 
         try {
             ArrowVectorUtils.buildArrowVector(this.array, bufs, valueCountList, listVectorField);
@@ -89,20 +85,23 @@ class ListArrayResolver extends ObjectFactory.Resolver {
         Queue<Integer> valueCountQueue = new LinkedList<>();
 
         // bufs
-        int bufsNum = meta.getIntValue("bufsNum_");
-        int valueCountNum = meta.getIntValue("valueCountNum_");
+        int bufsNum = meta.getIntValue("bufs_num_");
+        int valueCountNum = meta.getIntValue("value_count_num_");
         for (int i = 0; i < bufsNum; i++) {
-            bufs.add(((Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_" + String.valueOf(i) + "_"))).getBuffer());
+            bufs.add(
+                    ((Buffer)
+                                    ObjectFactory.getFactory()
+                                            .resolve(
+                                                    meta.getMemberMeta(
+                                                            "buffer_" + String.valueOf(i) + "_")))
+                            .getBuffer());
         }
         for (int i = 0; i < valueCountNum; i++) {
-            valueCountQueue.add(meta.getIntValue("valueCount_" + String.valueOf(i) + "_"));
+            valueCountQueue.add(meta.getIntValue("value_count_" + String.valueOf(i) + "_"));
         }
 
         Schema schema = (Schema) new SchemaResolver().resolve(meta.getMemberMeta("schema_"));
         List<Field> fields = schema.getSchema().getFields();
-        for (int i = 0; i < fields.size(); i++) {
-            ArrowVectorUtils.printFields(fields.get(i));
-        }
         return new ListArray(meta, bufs, valueCountQueue, fields.get(0));
     }
 }

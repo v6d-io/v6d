@@ -20,9 +20,6 @@ import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import java.util.List;
-
-import lombok.val;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.TimeStampMicroVector;
@@ -47,9 +44,10 @@ public class TimestampArray extends Array {
         }
     }
 
-    public TimestampArray(ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount, short timeUnitID) {
+    public TimestampArray(
+            ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount, short timeUnitID) {
         super(meta);
-        switch(TimeUnit.values()[timeUnitID]) {
+        switch (TimeUnit.values()[timeUnitID]) {
             case MICROSECOND:
                 this.array = new TimeStampMicroVector("", Arrow.default_allocator);
                 break;
@@ -63,8 +61,7 @@ public class TimestampArray extends Array {
                 this.array = new TimeStampMilliVector("", Arrow.default_allocator);
                 break;
         }
-        this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, nullCount), buffers);
+        this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
         this.timeUnit = TimeUnit.values()[timeUnitID];
     }
 
@@ -98,11 +95,17 @@ public class TimestampArray extends Array {
 class TimestampArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
-        Buffer data_buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
+        Buffer data_buffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("data_buffer_"));
         Buffer validity_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("validity_buffer_"));
         int null_count = meta.getIntValue("null_count_");
         int length = meta.getIntValue("length_");
-        return new TimestampArray(meta, Arrays.asList(validity_buffer.getBuffer(), data_buffer.getBuffer()), length, null_count, (short)meta.getLongValue("timeUnitID_"));
+        return new TimestampArray(
+                meta,
+                Arrays.asList(validity_buffer.getBuffer(), data_buffer.getBuffer()),
+                length,
+                null_count,
+                (short) meta.getLongValue("time_unit_id_"));
     }
 }

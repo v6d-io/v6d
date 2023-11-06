@@ -31,17 +31,13 @@ package io.v6d.modules.basic.columnar;
  * or implied. * See the License for the specific language governing permissions and * limitations
  * under the License.
  */
+import io.v6d.modules.basic.arrow.util.ArrowVectorUtils;
 import java.math.BigDecimal;
 import java.sql.Date;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateMilliVector;
@@ -79,9 +75,6 @@ import org.apache.arrow.vector.complex.StructVector;
 import org.apache.arrow.vector.holders.NullableIntervalDayHolder;
 import org.apache.arrow.vector.holders.NullableVarCharHolder;
 import org.apache.arrow.vector.util.Text;
-
-import io.v6d.core.client.Context;
-import io.v6d.modules.basic.arrow.util.ArrowVectorUtils;
 
 /** A visitor for arrow arrays. */
 public class ColumnarData {
@@ -145,7 +138,7 @@ public class ColumnarData {
         } else if (vector instanceof IntervalDayVector) {
             accessor = new IntervalDayAccessor((IntervalDayVector) vector);
         } else if (vector instanceof ListVector) {
-            accessor = new NestedVectorAccessor((FieldVector)vector);
+            accessor = new NestedVectorAccessor((FieldVector) vector);
         } else if (vector instanceof StructVector) {
             accessor = new NestedVectorAccessor((FieldVector) vector);
         } else if (vector instanceof MapVector) {
@@ -155,16 +148,6 @@ public class ColumnarData {
                     "array type is not supported yet: " + vector.getClass());
         }
     }
-
-    // public ColumnarData(FieldVector []vectors, ArrowTypeID type) {
-    //     Context.println("columndata 2");
-    //     if (type == ArrowTypeID.List) {
-    //         accessor = new ListNestVectorAccessor(vectors);
-    //     } else {
-    //         throw new UnsupportedOperationException(
-    //                 "array type is not supported yet: " + type);
-    //     }
-    // }
 
     public ArrowVectorAccessor getAccessor() {
         return accessor;
@@ -529,7 +512,6 @@ public class ColumnarData {
                 return null;
             }
             return accessor.getObject(rowId);
-
         }
     }
 
@@ -565,7 +547,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return ArrowVectorUtils.TransBigDecimalToHiveDecimal(accessor.getObject(rowId));
+            return ArrowVectorUtils.transBigDecimalToHiveDecimal(accessor.getObject(rowId));
         }
     }
 
@@ -669,17 +651,9 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            // int day = accessor.get(rowId);
-            // Context.println("read days:" + day);
             long millis = accessor.get(rowId);
-            // long millisLocal = day * DateTimeConstants.MILLIS_PER_DAY;
-            // long millisUtc = millisLocal - Calendar.getInstance().getTimeZone().getOffset(millisLocal);
-            // Context.println("read milli:" + millisLocal + " utc:" + millisUtc);
-            // Context.println("read day with timezone:" + millisUtc / DateTimeConstants.MILLIS_PER_DAY);
             Date date = new Date(millis);
             return date;
-            // long millis = ((long)day) * DateTimeConstants.MILLIS_PER_SECOND * DateTimeConstants.SECONDS_PER_DAY;
-            // return ArrowVectorUtils.FillDateWritable(millis);
         }
 
         @Override
@@ -846,7 +820,6 @@ public class ColumnarData {
         @Override
         Object getObject(int rowId) {
             if (accessor.isNull(rowId)) {
-                Context.println("read value is null");
                 return null;
             }
             long value = getLong(rowId);
@@ -857,8 +830,7 @@ public class ColumnarData {
                 second -= 1;
             }
             Timestamp t = new Timestamp(second * DateTimeConstants.MILLIS_PER_SECOND);
-            t.setNanos((int)nano);
-            Context.println("read nano:" + nano + " mill:" + second * DateTimeConstants.MILLIS_PER_SECOND);
+            t.setNanos((int) nano);
             return t;
         }
 
@@ -920,7 +892,6 @@ public class ColumnarData {
     }
 
     private static class NestedVectorAccessor extends ArrowVectorAccessor {
-    
         private final FieldVector vector;
 
         NestedVectorAccessor(FieldVector vector) {
@@ -934,19 +905,16 @@ public class ColumnarData {
             if (value == null) {
                 return null;
             }
-            Context.println("value type:" + value.getClass().getName() + " value:" + value);
-            return ((Object[])value)[0];
+            return ((Object[]) value)[0];
         }
 
         private Object getObject(FieldVector vector, int rowId, int rows) {
             List<Object> result = new ArrayList<>();
-            Context.println("rows:" + rows);
             if (vector.getValueCount() == 0) {
                 return null;
             }
 
             if (vector instanceof ListVector) {
-                Context.println("ListVector");
                 /*
                  * TODO:
                  * This code refer to apache arrow. Call ListVector.getObject will trigger Exception.
@@ -954,65 +922,68 @@ public class ColumnarData {
                  */
                 if (vector instanceof MapVector) {
                     HashMap<Object, Object> map = new HashMap<>();
-                    FieldVector fv = ((ListVector)vector).getDataVector();
+                    FieldVector fv = ((ListVector) vector).getDataVector();
 
                     for (int i = rowId; i < rowId + rows; i++) {
-                        int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(i * 4));
-                        int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((i + 1) * 4));
-                        // Context.println("start:" + start + " end:" + end);
+                        int start = ((ListVector) vector).getOffsetBuffer().getInt((long) (i * 4));
+                        int end =
+                                ((ListVector) vector)
+                                        .getOffsetBuffer()
+                                        .getInt((long) ((i + 1) * 4));
 
                         // struct<typeA, typeB>, struct<typeA, typeB> .....
-                        Object value = getObject(fv, start, end - start); 
-                        for (int j = 0; j < ((Object[])value).length; j++) {
+                        Object value = getObject(fv, start, end - start);
+                        for (int j = 0; j < ((Object[]) value).length; j++) {
                             // value[j] is struct<typeA, typeB>
-                            List<Object> kvList = (List)(((Object[])value)[j]);
+                            List<Object> kvList = (List) (((Object[]) value)[j]);
                             map.put(kvList.get(0), kvList.get(1));
                         }
                     }
                     result.add(map);
                 } else {
-                    FieldVector fv = ((ListVector)vector).getDataVector();
+                    FieldVector fv = ((ListVector) vector).getDataVector();
 
                     for (int i = rowId; i < rowId + rows; i++) {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
                             List<Object> vals = new ArrayList<>();
-                            int start = ((ListVector)vector).getOffsetBuffer().getInt((long)(i * 4));
-                            int end = ((ListVector)vector).getOffsetBuffer().getInt((long)((i + 1) * 4));
-                            // Context.println("start:" + start + " end:" + end);
+                            int start =
+                                    ((ListVector) vector).getOffsetBuffer().getInt((long) (i * 4));
+                            int end =
+                                    ((ListVector) vector)
+                                            .getOffsetBuffer()
+                                            .getInt((long) ((i + 1) * 4));
 
                             Object value = getObject(fv, start, end - start);
-                            for (int j = 0; j < ((Object[])value).length; j++) {
-                                vals.add(((Object[])value)[j]);
+                            for (int j = 0; j < ((Object[]) value).length; j++) {
+                                vals.add(((Object[]) value)[j]);
                             }
                             result.add(vals);
-                            // Context.println("result:" + result);
                         }
                     }
                 }
             } else if (vector instanceof StructVector) {
-                Context.println("StructVector");
-                List<FieldVector> childFieldVectors =  ((StructVector)vector).getChildrenFromFields();
+                List<FieldVector> childFieldVectors =
+                        ((StructVector) vector).getChildrenFromFields();
                 for (int i = rowId; i < rowId + rows; i++) {
                     List<Object> vals = new ArrayList<>();
                     for (int j = 0; j < childFieldVectors.size(); j++) {
                         Object value = getObject(childFieldVectors.get(j), i, 1);
-                        for (int k = 0; k < ((Object[])value).length; k++) {
-                            vals.add(((Object[])value)[k]);
+                        for (int k = 0; k < ((Object[]) value).length; k++) {
+                            vals.add(((Object[]) value)[k]);
                         }
                     }
                     result.add(vals);
                 }
             } else {
                 // primitive type
-                Context.println("Primitive vector");
                 if (vector instanceof DateMilliVector) {
                     for (int i = 0; i < rows; i++) {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            Date date = new Date(((DateMilliVector)vector).get(rowId));
+                            Date date = new Date(((DateMilliVector) vector).get(rowId));
                             result.add(date);
                         }
                     }
@@ -1021,15 +992,16 @@ public class ColumnarData {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            long value = ((TimeStampVector)vector).get(rowId + i);
+                            long value = ((TimeStampVector) vector).get(rowId + i);
                             long nano = value % DateTimeConstants.NANOS_PER_SECOND;
                             long second = value / DateTimeConstants.NANOS_PER_SECOND;
                             if (nano < 0) {
                                 nano += DateTimeConstants.NANOS_PER_SECOND;
                                 second -= 1;
                             }
-                            Timestamp t = new Timestamp(second * DateTimeConstants.MILLIS_PER_SECOND);
-                            t.setNanos((int)nano);
+                            Timestamp t =
+                                    new Timestamp(second * DateTimeConstants.MILLIS_PER_SECOND);
+                            t.setNanos((int) nano);
                             result.add(t);
                         }
                     }
@@ -1038,7 +1010,7 @@ public class ColumnarData {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            long value = ((TimeStampVector)vector).get(rowId + i);
+                            long value = ((TimeStampVector) vector).get(rowId + i);
                             Timestamp t = new Timestamp(value);
                             result.add(t);
                         }
@@ -1048,20 +1020,17 @@ public class ColumnarData {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            BigDecimal bigDecimal = (BigDecimal)vector.getObject(rowId + i);
-                            Context.println("Trans:" + ArrowVectorUtils.TransBigDecimalToHiveDecimal(bigDecimal));
-                            result.add(ArrowVectorUtils.TransBigDecimalToHiveDecimal(bigDecimal));
-                            Context.println("read:" + vector.getObject(rowId + i));
+                            BigDecimal bigDecimal = (BigDecimal) vector.getObject(rowId + i);
+                            result.add(ArrowVectorUtils.transBigDecimalToHiveDecimal(bigDecimal));
                         }
                     }
-                } else if (vector instanceof VarCharVector || vector instanceof LargeVarCharVector) {
-                    Context.println("String!");
+                } else if (vector instanceof VarCharVector
+                        || vector instanceof LargeVarCharVector) {
                     for (int i = 0; i < rows; i++) {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
                             result.add(vector.getObject(rowId + i).toString());
-                            Context.println("read:" + vector.getObject(rowId + i));
                         }
                     }
                 } else {
@@ -1070,7 +1039,6 @@ public class ColumnarData {
                             result.add(null);
                         } else {
                             result.add(vector.getObject(rowId + i));
-                            Context.println("read:" + vector.getObject(rowId + i));
                         }
                     }
                 }

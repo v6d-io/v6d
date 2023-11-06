@@ -17,7 +17,6 @@ package io.v6d.modules.basic.arrow;
 import static java.util.Objects.requireNonNull;
 
 import io.v6d.core.client.Client;
-import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -26,7 +25,6 @@ import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.*;
-
 import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.pojo.ArrowType;
 import org.apache.arrow.vector.types.pojo.Field;
@@ -182,7 +180,12 @@ public class RecordBatchBuilder implements ObjectBuilder {
             return new TimestampArrayBuilder(client, rows, TimeUnit.SECOND);
         } else if (field.getType() instanceof ArrowType.Decimal) {
             ArrowType.Decimal decimal = (ArrowType.Decimal) field.getType();
-            return new DecimalArrayBuilder(client, rows, decimal.getPrecision(), decimal.getScale(), decimal.getBitWidth());
+            return new DecimalArrayBuilder(
+                    client,
+                    rows,
+                    decimal.getPrecision(),
+                    decimal.getScale(),
+                    decimal.getBitWidth());
         } else if (field.getType().equals(Arrow.Type.List)) {
             return new ListArrayBuilder(client, field);
         } else if (field.getType().equals(Arrow.Type.Struct)) {

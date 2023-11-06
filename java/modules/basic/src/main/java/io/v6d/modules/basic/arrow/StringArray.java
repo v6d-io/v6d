@@ -20,9 +20,7 @@ import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import java.util.List;
-
 import lombok.*;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VarCharVector;
@@ -43,9 +41,7 @@ public class StringArray extends Array {
     public StringArray(final ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
         this.array = new VarCharVector("", Arrow.default_allocator);
-        this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, nullCount),
-                buffers);
+        this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
     }
 
     public byte[] get(int index) {
@@ -83,13 +79,20 @@ class StringArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
         Buffer data_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_data_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("data_buffer_"));
         Buffer offsets_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("offset_buffer_"));
         Buffer validity_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("validity_buffer_"));
         int null_count = meta.getIntValue("null_count_");
         int length = meta.getIntValue("length_");
-        return new StringArray(meta, Arrays.asList(validity_buffer.getBuffer(), offsets_buffer.getBuffer(), data_buffer.getBuffer()), length, null_count);
+        return new StringArray(
+                meta,
+                Arrays.asList(
+                        validity_buffer.getBuffer(),
+                        offsets_buffer.getBuffer(),
+                        data_buffer.getBuffer()),
+                length,
+                null_count);
     }
 }

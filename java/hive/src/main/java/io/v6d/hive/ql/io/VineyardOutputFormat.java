@@ -22,7 +22,6 @@ import io.v6d.core.common.util.VineyardException;
 import io.v6d.modules.basic.arrow.*;
 import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
 import java.io.IOException;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
@@ -230,30 +228,50 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         switch (typeInfo.getCategory()) {
             case LIST:
                 List<Field> listChildren = new ArrayList<>();
-                Field chField = getField(((ListTypeInfo)typeInfo).getListElementTypeInfo());
+                Field chField = getField(((ListTypeInfo) typeInfo).getListElementTypeInfo());
                 listChildren.add(chField);
-                field = new Field(typeInfo.getTypeName(), FieldType.nullable(toArrowType(typeInfo)), listChildren);
+                field =
+                        new Field(
+                                typeInfo.getTypeName(),
+                                FieldType.nullable(toArrowType(typeInfo)),
+                                listChildren);
                 break;
             case STRUCT:
                 List<Field> structChildren = new ArrayList<>();
-                for (val child : ((StructTypeInfo)typeInfo).getAllStructFieldTypeInfos()) {
+                for (val child : ((StructTypeInfo) typeInfo).getAllStructFieldTypeInfos()) {
                     structChildren.add(getField(child));
                 }
-                field = new Field(typeInfo.getTypeName(), FieldType.nullable(toArrowType(typeInfo)), structChildren);
+                field =
+                        new Field(
+                                typeInfo.getTypeName(),
+                                FieldType.nullable(toArrowType(typeInfo)),
+                                structChildren);
                 break;
             case MAP:
                 listChildren = new ArrayList<>();
                 structChildren = new ArrayList<>();
                 List<Field> mapChildren = new ArrayList<>();
-                Field keyField = getField(((MapTypeInfo)typeInfo).getMapKeyTypeInfo());
-                Field valueField = getField(((MapTypeInfo)typeInfo).getMapValueTypeInfo());
+                Field keyField = getField(((MapTypeInfo) typeInfo).getMapKeyTypeInfo());
+                Field valueField = getField(((MapTypeInfo) typeInfo).getMapValueTypeInfo());
                 structChildren.add(keyField);
                 structChildren.add(valueField);
-                Field structField = new Field(typeInfo.getTypeName(), FieldType.notNullable(ArrowType.Struct.INSTANCE), structChildren);
+                Field structField =
+                        new Field(
+                                typeInfo.getTypeName(),
+                                FieldType.notNullable(ArrowType.Struct.INSTANCE),
+                                structChildren);
                 listChildren.add(structField);
-                Field listField = new Field(typeInfo.getTypeName(), FieldType.notNullable(ArrowType.List.INSTANCE), listChildren);
+                Field listField =
+                        new Field(
+                                typeInfo.getTypeName(),
+                                FieldType.notNullable(ArrowType.List.INSTANCE),
+                                listChildren);
                 mapChildren.add(listField);
-                field = new Field(typeInfo.getTypeName(), FieldType.nullable(toArrowType(typeInfo)), mapChildren);
+                field =
+                        new Field(
+                                typeInfo.getTypeName(),
+                                FieldType.nullable(toArrowType(typeInfo)),
+                                mapChildren);
                 break;
             case UNION:
                 throw new NotImplementedException();

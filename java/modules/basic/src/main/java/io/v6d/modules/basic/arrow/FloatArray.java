@@ -20,9 +20,6 @@ import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import java.util.List;
-
-import lombok.val;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.Float4Vector;
@@ -40,8 +37,7 @@ public class FloatArray extends Array {
     public FloatArray(final ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
         this.array = new Float4Vector("", Arrow.default_allocator);
-        this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, nullCount), buffers);
+        this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
     }
 
     public float get(int index) {
@@ -74,10 +70,16 @@ public class FloatArray extends Array {
 class FloatArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
-        Buffer dataBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        Buffer validityBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        Buffer dataBuffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("data_buffer_"));
+        Buffer validityBuffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("validity_buffer_"));
         int nullCount = meta.getIntValue("null_count_");
         int length = meta.getIntValue("length_");
-        return new FloatArray(meta, Arrays.asList(validityBuffer.getBuffer(), dataBuffer.getBuffer()), length, nullCount);
+        return new FloatArray(
+                meta,
+                Arrays.asList(validityBuffer.getBuffer(), dataBuffer.getBuffer()),
+                length,
+                nullCount);
     }
 }

@@ -15,29 +15,25 @@
 package io.v6d.modules.basic.arrow;
 
 import io.v6d.core.client.Client;
-import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import io.v6d.core.common.util.VineyardException.NotImplemented;
 import io.v6d.modules.basic.arrow.util.ArrowVectorUtils;
-
 import java.util.ArrayList;
 import java.util.List;
-
 import lombok.val;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.ValueVector;
 import org.apache.arrow.vector.complex.ListVector;
+import org.apache.arrow.vector.types.pojo.ArrowType.ArrowTypeID;
 import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.arrow.vector.types.pojo.ArrowType.ArrowTypeID;
 
 public class ListArrayBuilder implements ArrayBuilder {
     // private BufferBuilder offset_buffer_builder;
-    private BufferBuilder []data_buffer_builder;
+    private BufferBuilder[] bufferBuilders;
     private ListVector array;
 
     private List<Integer> valueCountList;
@@ -53,17 +49,13 @@ public class ListArrayBuilder implements ArrayBuilder {
         // this.array.addOrGetVector(childFields.get(0).getFieldType());
         ArrowVectorUtils.buildArrowVector(this.array, field);
 
-        while(childFields.get(0).getType().getTypeID() == ArrowTypeID.List) {
-            Context.println("field:" + childFields.get(0).getType().getTypeID().name());
+        while (childFields.get(0).getType().getTypeID() == ArrowTypeID.List) {
             childFields = childFields.get(0).getChildren();
         }
-        Context.println("field:" + childFields.get(0).getType().getTypeID().name());
         FieldVector vector = array;
         while (vector instanceof ListVector) {
-            Context.println("this.array:" + vector);
-            vector = ((ListVector)vector).getDataVector();
+            vector = ((ListVector) vector).getDataVector();
         }
-        Context.println("this.array:" + vector);
 
         List<Field> fields = new ArrayList<>();
         fields.add(field);
@@ -73,14 +65,12 @@ public class ListArrayBuilder implements ArrayBuilder {
 
     @Override
     public void build(Client client) throws VineyardException {
-        Context.println("array length:" + array.getValueCount());
-
         valueCountList = ArrowVectorUtils.getValueCountOfArrowVector(array);
         ArrowBuf[] buffers = ArrowVectorUtils.getArrowBuffers(array);
-        this.data_buffer_builder = new BufferBuilder[buffers.length];
+        this.bufferBuilders = new BufferBuilder[buffers.length];
         for (int i = 0; i < buffers.length; i++) {
-            Context.println("data_buffer[" + i + "]:" + buffers[i].toString());
-            this.data_buffer_builder[i] = new BufferBuilder((IPCClient)client, buffers[i], buffers[i].capacity());
+            this.bufferBuilders[i] =
+                    new BufferBuilder((IPCClient) client, buffers[i], buffers[i].capacity());
         }
     }
 
@@ -90,14 +80,15 @@ public class ListArrayBuilder implements ArrayBuilder {
         val meta = ObjectMeta.empty();
 
         meta.setTypename("vineyard::ListArray");
-        meta.setValue("bufsNum_", this.data_buffer_builder.length);
-        for (int i = 0; i < this.data_buffer_builder.length; i++) {
-            meta.addMember("buffer_" + String.valueOf(i) + "_", this.data_buffer_builder[i].seal(client));
+        meta.setValue("bufs_num_", this.bufferBuilders.length);
+        for (int i = 0; i < this.bufferBuilders.length; i++) {
+            meta.addMember(
+                    "buffer_" + String.valueOf(i) + "_", this.bufferBuilders[i].seal(client));
         }
 
-        meta.setValue("valueCountNum_", valueCountList.size());
+        meta.setValue("value_count_num_", valueCountList.size());
         for (int i = 0; i < valueCountList.size(); i++) {
-            meta.setValue("valueCount_" + String.valueOf(i) + "_", valueCountList.get(i));
+            meta.setValue("value_count_" + String.valueOf(i) + "_", valueCountList.get(i));
         }
 
         meta.addMember("schema_", listVectorSchemaBuilder.seal(client));
@@ -111,7 +102,7 @@ public class ListArrayBuilder implements ArrayBuilder {
 
     @Override
     public void shrink(Client client, long size) throws VineyardException {
-        this.array.setValueCount((int)size);
+        this.array.setValueCount((int) size);
     }
 
     void set(int index, ValueVector value) {

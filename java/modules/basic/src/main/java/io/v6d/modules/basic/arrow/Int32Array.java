@@ -15,16 +15,12 @@
 package io.v6d.modules.basic.arrow;
 
 import com.google.common.base.Objects;
-
 import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import java.util.List;
-
-import lombok.val;
-
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.IntVector;
@@ -45,8 +41,7 @@ public class Int32Array extends Array {
         super(meta);
         this.array = new IntVector("", Arrow.default_allocator);
         Context.println("Length:" + length + " nullCount:" + nullCount);
-        this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, nullCount), buffers);
+        this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
     }
 
     public double get(int index) {
@@ -79,10 +74,15 @@ public class Int32Array extends Array {
 class Int32ArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
-        Buffer dataBuffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
+        Buffer dataBuffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("data_buffer_"));
         Buffer validityBuffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("validity_buffer_"));
         int nullCount = meta.getIntValue("null_count_");
-        return new Int32Array(meta, Arrays.asList(validityBuffer.getBuffer(), dataBuffer.getBuffer()), meta.getLongValue("length_"), nullCount);
+        return new Int32Array(
+                meta,
+                Arrays.asList(validityBuffer.getBuffer(), dataBuffer.getBuffer()),
+                meta.getLongValue("length_"),
+                nullCount);
     }
 }

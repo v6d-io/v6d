@@ -47,10 +47,14 @@ public final class Arrow {
         public static final ArrowType VarBinary = new ArrowType.Binary();
         public static final ArrowType LargeVarBinary = new ArrowType.LargeBinary();
         public static final ArrowType Date = new ArrowType.Date(DateUnit.DAY);
-        public static final ArrowType TimeStampSec = new ArrowType.Timestamp(TimeUnit.SECOND, "UTC");
-        public static final ArrowType TimeStampMilli = new ArrowType.Timestamp(TimeUnit.MILLISECOND, "UTC");
-        public static final ArrowType TimeStampMicro = new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC");
-        public static final ArrowType TimeStampNano = new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC");
+        public static final ArrowType TimeStampSec =
+                new ArrowType.Timestamp(TimeUnit.SECOND, "UTC");
+        public static final ArrowType TimeStampMilli =
+                new ArrowType.Timestamp(TimeUnit.MILLISECOND, "UTC");
+        public static final ArrowType TimeStampMicro =
+                new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC");
+        public static final ArrowType TimeStampNano =
+                new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC");
         public static final ArrowType List = new ArrowType.List();
         public static final ArrowType Struct = new ArrowType.Struct();
         public static final ArrowType Map = new ArrowType.Map(true);
