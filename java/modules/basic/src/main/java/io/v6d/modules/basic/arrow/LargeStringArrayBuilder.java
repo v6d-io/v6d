@@ -38,7 +38,6 @@ public class LargeStringArrayBuilder implements ArrayBuilder {
 
     public LargeStringArrayBuilder(IPCClient client, long length) throws VineyardException {
         this.array = new LargeVarCharVector("", Arrow.default_allocator);
-        // this.array.setValueCount((int) length);
     }
 
     @Override

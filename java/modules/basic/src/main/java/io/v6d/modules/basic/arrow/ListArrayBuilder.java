@@ -32,7 +32,6 @@ import org.apache.arrow.vector.types.pojo.Field;
 import org.apache.arrow.vector.types.pojo.Schema;
 
 public class ListArrayBuilder implements ArrayBuilder {
-    // private BufferBuilder offset_buffer_builder;
     private BufferBuilder[] bufferBuilders;
     private ListVector array;
 
@@ -46,7 +45,6 @@ public class ListArrayBuilder implements ArrayBuilder {
         }
 
         this.array = ListVector.empty("", Arrow.default_allocator);
-        // this.array.addOrGetVector(childFields.get(0).getFieldType());
         ArrowVectorUtils.buildArrowVector(this.array, field);
 
         while (childFields.get(0).getType().getTypeID() == ArrowTypeID.List) {

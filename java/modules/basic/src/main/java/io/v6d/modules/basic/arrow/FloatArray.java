@@ -25,7 +25,6 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.Float4Vector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-/** Hello world! */
 public class FloatArray extends Array {
     private Float4Vector array;
 

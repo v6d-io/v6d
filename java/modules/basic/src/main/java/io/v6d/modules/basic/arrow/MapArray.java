@@ -28,7 +28,6 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.complex.MapVector;
 import org.apache.arrow.vector.types.pojo.Field;
 
-/** Hello world! */
 public class MapArray extends Array {
     private MapVector array;
 
@@ -83,7 +82,6 @@ class MapArrayResolver extends ObjectFactory.Resolver {
         Queue<ArrowBuf> bufs = new LinkedList<>();
         Queue<Integer> valueCountQueue = new LinkedList<>();
 
-        // bufs
         int bufsNum = meta.getIntValue("bufs_num_");
         int valueCountNum = meta.getIntValue("value_count_num_");
         for (int i = 0; i < bufsNum; i++) {
@@ -101,11 +99,6 @@ class MapArrayResolver extends ObjectFactory.Resolver {
 
         Schema schema = (Schema) new SchemaResolver().resolve(meta.getMemberMeta("schema_"));
         List<Field> fields = schema.getSchema().getFields();
-        // for (int i = 0; i < fields.size(); i++) {
-        //     ArrowVectorUtils.printFields(fields.get(i));
-        // }
-
-        // bufs
         return new MapArray(meta, bufs, valueCountQueue, fields.get(0));
     }
 }

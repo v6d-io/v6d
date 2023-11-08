@@ -26,7 +26,6 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VarBinaryVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-/** Hello world! */
 public class VarBinaryArray extends Array {
     private VarBinaryVector array;
 

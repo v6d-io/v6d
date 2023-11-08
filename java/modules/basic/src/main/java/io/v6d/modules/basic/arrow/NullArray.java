@@ -23,7 +23,6 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.NullVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-/** Hello world! */
 public class NullArray extends Array {
     private NullVector array;
 

@@ -334,7 +334,6 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                     case INTERVAL_DAY_TIME:
                         return Types.MinorType.INTERVALDAY.getType();
                     case VOID:
-                        // case TIMESTAMPLOCALTZ:
                     case UNKNOWN:
                     default:
                         throw new IllegalArgumentException();

@@ -25,7 +25,6 @@ import org.apache.arrow.vector.DateMilliVector;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-/** Hello world! */
 public class DateArray extends Array {
     private DateMilliVector array;
 

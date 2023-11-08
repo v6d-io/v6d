@@ -28,7 +28,6 @@ import org.apache.arrow.vector.VectorSchemaRoot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Hello world! */
 public class RecordBatch extends Object {
     private static final Logger logger = LoggerFactory.getLogger(RecordBatch.class);
 

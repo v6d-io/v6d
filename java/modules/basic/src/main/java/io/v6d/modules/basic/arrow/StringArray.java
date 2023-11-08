@@ -27,7 +27,6 @@ import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 import org.apache.arrow.vector.util.Text;
 
-/** Hello world! */
 public class StringArray extends Array {
     private VarCharVector array;
 

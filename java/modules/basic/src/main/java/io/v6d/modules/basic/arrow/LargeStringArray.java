@@ -27,7 +27,6 @@ import org.apache.arrow.vector.LargeVarCharVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 import org.apache.arrow.vector.util.Text;
 
-/** Hello world! */
 public class LargeStringArray extends Array {
     private LargeVarCharVector array;
 

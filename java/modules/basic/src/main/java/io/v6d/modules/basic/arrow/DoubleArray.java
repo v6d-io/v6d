@@ -26,7 +26,6 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-/** Hello world! */
 public class DoubleArray extends Array {
     private Float8Vector array;
 

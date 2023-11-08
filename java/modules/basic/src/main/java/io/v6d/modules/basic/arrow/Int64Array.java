@@ -25,7 +25,6 @@ import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-/** Hello world! */
 public class Int64Array extends Array {
     private BigIntVector array;
 

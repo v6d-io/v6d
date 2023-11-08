@@ -62,7 +62,6 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
 
         val client = Context.getClient();
         // split table by paths
-        // val splits = new VineyardSplit[paths.length];
         List<VineyardSplit> splits = new ArrayList<>();
         Arrow.instantiate();
 
@@ -75,7 +74,6 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
             FileSystem fs = path.getFileSystem(job);
             FileStatus[] tableStatus = fs.listStatus(path, FileUtils.HIDDEN_FILES_PATH_FILTER);
             if (tableStatus.length == 0) {
-                // splits[i] = new VineyardSplit(path, 0, 0, job);
                 continue;
             }
             Queue<FileStatus[]> dirStatus = new LinkedList<>();
@@ -129,12 +127,10 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
             }
             // TODO: would generating a split for each record batch be better?
             Context.println("numBatches:" + numBatches);
-            // splits[i] = new VineyardSplit(path, 0, numBatches, job);
             if (numBatches > 0) {
                 splits.add(new VineyardSplit(path, 0, numBatches, job));
             }
         }
-        // return splits;
         return splits.toArray(new VineyardSplit[splits.size()]);
     }
 }

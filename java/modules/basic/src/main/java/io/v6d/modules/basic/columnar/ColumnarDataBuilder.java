@@ -150,15 +150,6 @@ public class ColumnarDataBuilder {
         }
     }
 
-    // public ColumnarDataBuilder(ArrayBuilder []vectors, ArrowTypeID type) {
-    //     if (type == ArrowTypeID.List) {
-    //         accessor = new ListNestVectorAccessor(vectors);
-    //     } else {
-    //         throw new UnsupportedOperationException(
-    //                 "array type is not supported yet: " + type.getClass());
-    //     }
-    // }
-
     public ArrowVectorAccessor getAccessor() {
         return accessor;
     }
@@ -399,14 +390,6 @@ public class ColumnarDataBuilder {
         void setBinary(int rowId, byte[] value) {
             throw new UnsupportedOperationException();
         }
-
-        // Object getAllObjects() {
-        //     throw new UnsupportedOperationException();
-        // }
-
-        // void setValueCount(int valueCount) {
-        //     throw new UnsupportedOperationException();
-        // }
     }
 
     private static class BooleanAccessor extends ArrowVectorAccessor {
@@ -603,20 +586,6 @@ public class ColumnarDataBuilder {
         final void setInt(int rowId, int value) {
             accessor.set(rowId, value);
         }
-
-        // @Override
-        // Object getAllObjects() {
-        //     List<Integer> result = new ArrayList<>();
-        //     for (int i = 0; i < accessor.getValueCount(); i++) {
-        //         result.add(accessor.get(i));
-        //     }
-        //     return result;
-        // }
-
-        // @Override
-        // void setValueCount(int valueCount) {
-        //     accessor.setValueCount(valueCount);
-        // }
     }
 
     private static class UIntAccessor extends ArrowVectorAccessor {
@@ -797,7 +766,6 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            // this.setDecimal(rowId, (BigDecimal) value);
             if (value == null) {
                 accessor.setNull(rowId);
             } else {
@@ -811,11 +779,6 @@ public class ColumnarDataBuilder {
         final BigDecimal getDecimal(int rowId, int precision, int scale) {
             return accessor.getObject(rowId);
         }
-
-        // @Override
-        // final void setDecimal(int rowId, BigDecimal value) {
-        //     accessor.setSafe(rowId, value);
-        // }
     }
 
     private static class StringAccessor extends ArrowVectorAccessor {

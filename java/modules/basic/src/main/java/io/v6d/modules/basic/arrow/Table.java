@@ -24,7 +24,6 @@ import java.util.stream.IntStream;
 import lombok.val;
 import org.apache.arrow.vector.VectorSchemaRoot;
 
-/** Hello world! */
 public class Table extends Object {
     private final int rows;
     private final int columns;

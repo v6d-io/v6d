@@ -301,10 +301,6 @@ public class ColumnarData {
         byte[] getBinary(int rowId) {
             throw new UnsupportedOperationException();
         }
-
-        // Object getAllObjects() {
-        //     throw new UnsupportedOperationException();
-        // }
     }
 
     private static class BooleanAccessor extends ArrowVectorAccessor {

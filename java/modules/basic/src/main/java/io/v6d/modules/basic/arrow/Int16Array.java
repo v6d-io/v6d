@@ -25,7 +25,6 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.SmallIntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-/** Hello world! */
 public class Int16Array extends Array {
     private SmallIntVector array;
 

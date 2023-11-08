@@ -29,7 +29,6 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.complex.StructVector;
 import org.apache.arrow.vector.types.pojo.Field;
 
-/** Hello world! */
 public class StructArray extends Array {
     private StructVector array;
 

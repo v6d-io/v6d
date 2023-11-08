@@ -28,7 +28,6 @@ import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.complex.ListVector;
 import org.apache.arrow.vector.types.pojo.Field;
 
-/** Hello world! */
 public class ListArray extends Array {
     private ListVector array;
 

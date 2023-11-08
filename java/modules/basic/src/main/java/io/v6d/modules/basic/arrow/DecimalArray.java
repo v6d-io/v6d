@@ -27,7 +27,6 @@ import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-/** Hello world! */
 public class DecimalArray extends Array {
     private BaseFixedWidthVector array;
 

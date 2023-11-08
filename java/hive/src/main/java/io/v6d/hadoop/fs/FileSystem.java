@@ -126,7 +126,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     static final CloseableReentrantLock lock = new CloseableReentrantLock();
     private Configuration conf = null;
 
-    // static java.nio.file.FileSystem jimfs = null;
     static RawLocalFileSystem fs = null;
     static boolean enablePrintAllFiles = false;
 
@@ -210,7 +209,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
         fs = new RawLocalFileSystem();
         fs.initialize(URI.create("file:///"), conf);
-        mkdirs(new Path(uri.toString().replaceAll("///", "/")));
+        mkdirs(new Path(uri.toString().replaceAll("/*", "/")));
     }
 
     @Override
@@ -430,15 +429,9 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         Path newSrc = new Path(src.toString().replaceAll("vineyard", "file"));
         Path newDst = new Path(dst.toString().replaceAll("vineyard", "file"));
         String newTableName =
-                dst.toString()
-                        .substring(dst.toString().indexOf(":") + 1)
-                        .replaceAll("///", "/")
-                        .replaceAll("//", "/");
+                dst.toString().substring(dst.toString().indexOf(":") + 1).replaceAll("/*", "/");
         String oldTableName =
-                src.toString()
-                        .substring(src.toString().indexOf(":") + 1)
-                        .replaceAll("///", "/")
-                        .replaceAll("//", "/");
+                src.toString().substring(src.toString().indexOf(":") + 1).replaceAll("/*", "/");
         try {
             FileStatus srcStatus = fs.getFileStatus(newSrc);
             if (srcStatus.isDirectory()) {
@@ -519,8 +512,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             String prefix =
                     path.toString()
                             .substring(path.toString().indexOf(":") + 1)
-                            .replaceAll("///", "/")
-                            .replaceAll("//", "/");
+                            .replaceAll("/*", "/");
             syncWithVineyard(prefix);
             try {
                 FileStatus status =
@@ -549,8 +541,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                                                                                     .toString()
                                                                                     .indexOf(":")
                                                                             + 1)
-                                                            .replaceAll("///", "//")
-                                                            .replaceAll("//", "/")));
+                                                            .replaceAll("/*", "/")));
                     result.add(temp);
                 }
             } catch (FileNotFoundException e) {
@@ -622,10 +613,8 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                                                 .toString()
                                                 .substring(
                                                         temp.getPath().toString().indexOf(":") + 1)
-                                                .replaceAll("///", "//")
-                                                .replaceAll("//", "/")));
+                                                .replaceAll("/*", "/")));
         return result;
-        // throw new FileNotFoundException();
     }
 
     @Override

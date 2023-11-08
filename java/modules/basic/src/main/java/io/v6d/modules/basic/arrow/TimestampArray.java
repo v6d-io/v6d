@@ -30,7 +30,6 @@ import org.apache.arrow.vector.TimeStampVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 import org.apache.arrow.vector.types.TimeUnit;
 
-/** Hello world! */
 public class TimestampArray extends Array {
     private TimeStampVector array;
     private TimeUnit timeUnit;
