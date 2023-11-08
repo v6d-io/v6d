@@ -36,22 +36,26 @@ const char* grin_get_vertex_property_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype, 
 
 GRIN_VERTEX_PROPERTY grin_get_vertex_property_by_name(GRIN_GRAPH g, GRIN_VERTEX_TYPE vtype,
                                            const char* name) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     auto s = std::string(name);
-    auto _id = _g->schema().GetVertexPropertyId(vtype, s);
-    if (_id < 0) return GRIN_NULL_VERTEX_PROPERTY;
-    return _grin_create_property(vtype, _id);
+    for (auto i = 0; i < _cache->vprop_names[vtype].size(); ++i) {
+        if (_cache->vprop_names[vtype][i] == s) return _grin_create_property(vtype, i);
+    }
+    return GRIN_NULL_VERTEX_PROPERTY;
 }
 
 GRIN_VERTEX_PROPERTY_LIST grin_get_vertex_properties_by_name(GRIN_GRAPH g, const char* name) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     auto s = std::string(name);
     auto vpl = new GRIN_VERTEX_PROPERTY_LIST_T();
     for (auto vtype = 0; vtype < _g->vertex_label_num(); ++vtype) {
-        auto pid = _g->schema().GetVertexPropertyId(vtype, s);
-        if (pid >= 0) {
-            vpl->push_back(_grin_create_property(vtype, pid));
-        }
+        for (auto i = 0; i < _cache->vprop_names[vtype].size(); ++i) {
+            if (_cache->vprop_names[vtype][i] == s) {
+                vpl->push_back(_grin_create_property(vtype, i));
+                break;
+            }
+        }   
     }
     if (vpl->empty()) {
         delete vpl;
@@ -88,22 +92,26 @@ const char* grin_get_edge_property_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype, GRIN
 
 GRIN_EDGE_PROPERTY grin_get_edge_property_by_name(GRIN_GRAPH g, GRIN_EDGE_TYPE etype,
                                            const char* name) {
-    auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     auto s = std::string(name);
-    auto _id = _g->schema().GetEdgePropertyId(etype, s);
-    if (_id < 0) return GRIN_NULL_EDGE_PROPERTY;
-    return _grin_create_property(etype, _id);
+    for (auto i = 0; i < _cache->eprop_names[etype].size(); ++i) {
+        if (_cache->vprop_names[etype][i] == s) return _grin_create_property(etype, i);
+    }
+    return GRIN_NULL_EDGE_PROPERTY;
 }
 
 GRIN_EDGE_PROPERTY_LIST grin_get_edge_properties_by_name(GRIN_GRAPH g, const char* name) {
     auto _g = static_cast<GRIN_GRAPH_T*>(g)->g;
+    auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     auto s = std::string(name);
     auto epl = new GRIN_EDGE_PROPERTY_LIST_T();
     for (auto etype = 0; etype < _g->edge_label_num(); ++etype) {
-        auto pid = _g->schema().GetEdgePropertyId(etype, s);
-        if (pid >= 0) {
-            epl->push_back(_grin_create_property(etype, pid));
-        }
+        for (auto i = 0; i < _cache->eprop_names[etype].size(); ++i) {
+            if (_cache->eprop_names[etype][i] == s) {
+                epl->push_back(_grin_create_property(etype, i));
+                break;
+            }
+        }   
     }
     if (epl->empty()) {
         delete epl;
