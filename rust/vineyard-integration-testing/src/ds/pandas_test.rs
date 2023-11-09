@@ -46,7 +46,6 @@ mod tests {
         return Ok(());
     }
 
-    #[ignore = "ndarray with string type in python side needs to be fixed"]
     #[test]
     fn test_pandas_string() -> Result<()> {
         let ctx = Context::new();
