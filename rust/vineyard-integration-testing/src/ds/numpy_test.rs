@@ -60,7 +60,6 @@ mod tests {
         return Ok(());
     }
 
-    #[ignore = "ndarray with string type in python side needs to be fixed"]
     #[test]
     fn test_numpy_string() -> Result<()> {
         use arrow_array::array::Array;

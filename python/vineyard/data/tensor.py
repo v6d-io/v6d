@@ -19,6 +19,7 @@
 import pickle
 
 import numpy as np
+import pyarrow as pa
 
 from vineyard._C import Object
 from vineyard._C import ObjectID
@@ -54,14 +55,39 @@ ndarray.__doc__ = np.ndarray.__doc__
 
 def numpy_ndarray_builder(client, value, **kw):
     meta = ObjectMeta()
-    meta['typename'] = 'vineyard::Tensor<%s>' % normalize_cpptype(value.dtype)
-    meta['value_type_'] = value.dtype.name
-    meta['value_type_meta_'] = value.dtype.str
     meta['shape_'] = to_json(value.shape)
     meta['partition_index_'] = to_json(kw.get('partition_index', []))
     meta['nbytes'] = value.nbytes
     meta['order_'] = to_json(('C' if value.flags['C_CONTIGUOUS'] else 'F'))
-    meta.add_member('buffer_', build_numpy_buffer(client, value))
+
+    if value.dtype.name == 'object' or value.dtype.name.startswith('str'):
+        # check if it can be used as a string array
+        try:
+            from vineyard.core.builder import get_current_builders
+            from vineyard.data.arrow import string_array_builder
+
+            # string tensors in numpy like np.array(['a', 'b']) cannot be
+            # converted to pa.large_string_array directly.
+            try:
+                array = pa.array(value, type=pa.large_string())
+            except:  # noqa: E722, pylint: disable=bare-except
+                array = pa.array(value, type=pa.string())
+            meta['typename'] = 'vineyard::Tensor<std::string>'
+            meta['value_type_'] = 'string'
+            meta['value_type_meta_'] = 'str'
+            meta.add_member(
+                'buffer_', string_array_builder(client, array, get_current_builders())
+            )
+        except:  # noqa: E722, pylint: disable=bare-except
+            meta['typename'] = 'vineyard::Tensor<%s>' % normalize_cpptype(value.dtype)
+            meta['value_type_'] = value.dtype.name
+            meta['value_type_meta_'] = value.dtype.str
+            meta.add_member('buffer_', build_numpy_buffer(client, value))
+    else:
+        meta['typename'] = 'vineyard::Tensor<%s>' % normalize_cpptype(value.dtype)
+        meta['value_type_'] = value.dtype.name
+        meta['value_type_meta_'] = value.dtype.str
+        meta.add_member('buffer_', build_numpy_buffer(client, value))
     return client.create_metadata(meta)
 
 
