@@ -95,7 +95,7 @@ GRIN_EDGE_PROPERTY grin_get_edge_property_by_name(GRIN_GRAPH g, GRIN_EDGE_TYPE e
     auto _cache = static_cast<GRIN_GRAPH_T*>(g)->cache;
     auto s = std::string(name);
     for (auto i = 0; i < _cache->eprop_names[etype].size(); ++i) {
-        if (_cache->vprop_names[etype][i] == s) return _grin_create_property(etype, i);
+        if (_cache->eprop_names[etype][i] == s) return _grin_create_property(etype, i);
     }
     return GRIN_NULL_EDGE_PROPERTY;
 }
