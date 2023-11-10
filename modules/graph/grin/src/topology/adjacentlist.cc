@@ -15,40 +15,47 @@ limitations under the License.
 #include "graph/grin/src/predefine.h"
 #include "topology/adjacentlist.h"
 
-void grin_destroy_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {}
+void grin_destroy_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
+    auto al_ = static_cast<GRIN_ADJACENT_LIST_T*>(al);
+    delete al_;
+}
 
 size_t grin_get_adjacent_list_size(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
-    return static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al.end)
-         - static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al.begin);
+    auto al_ = static_cast<GRIN_ADJACENT_LIST_T*>(al);
+    return static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al_->end)
+         - static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al_->begin);
 }
 
 GRIN_VERTEX grin_get_neighbor_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
-    return (static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al.begin) + idx)->vid;
+    auto al_ = static_cast<GRIN_ADJACENT_LIST_T*>(al);
+    return (static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al_->begin) + idx)->vid;
 }
 
 GRIN_EDGE grin_get_edge_from_adjacent_list(GRIN_GRAPH g, GRIN_ADJACENT_LIST al, size_t idx) {
-    auto nbr = static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al.begin) + idx;
+    auto al_ = static_cast<GRIN_ADJACENT_LIST_T*>(al);
+    auto nbr = static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al_->begin) + idx;
     GRIN_EDGE e;     
-    e.dir = al.dir;
-    e.etype = al.etype;
+    e.dir = al_->dir;
+    e.etype = al_->etype;
     e.eid = nbr->eid;
-    if (al.dir == GRIN_DIRECTION::OUT) {
-        e.src = al.vid;
+    if (al_->dir == GRIN_DIRECTION::OUT) {
+        e.src = al_->vid;
         e.dst = nbr->vid;
     } else {
         e.src = nbr->vid;
-        e.dst = al.vid;
+        e.dst = al_->vid;
     }
     return e;
 }
 
 GRIN_ADJACENT_LIST_ITERATOR grin_get_adjacent_list_begin(GRIN_GRAPH g, GRIN_ADJACENT_LIST al) {
     auto ali = new GRIN_ADJACENT_LIST_ITERATOR_T();
-    ali->vid = al.vid;
-    ali->dir = al.dir;
-    ali->etype = al.etype;
-    ali->current = static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al.begin);
-    ali->end = static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al.end);
+    auto al_ = static_cast<GRIN_ADJACENT_LIST_T*>(al);
+    ali->vid = al_->vid;
+    ali->dir = al_->dir;
+    ali->etype = al_->etype;
+    ali->current = static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al_->begin);
+    ali->end = static_cast<const _GRIN_GRAPH_T::nbr_unit_t*>(al_->end);
     return ali;
 }
 

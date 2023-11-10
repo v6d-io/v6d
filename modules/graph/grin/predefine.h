@@ -88,13 +88,14 @@ typedef void* GRIN_VERTEX_LIST_ITERATOR;
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
-typedef struct GRIN_ADJACENT_LIST {
+typedef struct GRIN_ADJACENT_LIST_T {
   const void* begin;
   const void* end;
   GRIN_VERTEX vid;
   int dir;
   unsigned etype;
-} GRIN_ADJACENT_LIST;           
+} GRIN_ADJACENT_LIST_T;
+typedef void* GRIN_ADJACENT_LIST;   
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST_ITERATOR
@@ -167,7 +168,7 @@ typedef void* GRIN_LABEL_LIST;
 #define GRIN_NULL_EDGE GRIN_EDGE{GRIN_NULL_VERTEX, GRIN_NULL_VERTEX, BOTH, (unsigned)~0, (unsigned long long int)~0}
 #define GRIN_NULL_VERTEX_LIST NULL
 #define GRIN_NULL_VERTEX_LIST_ITERATOR NULL
-#define GRIN_NULL_ADJACENT_LIST GRIN_ADJACENT_LIST{NULL, NULL, GRIN_NULL_VERTEX, BOTH, (unsigned)~0}
+#define GRIN_NULL_ADJACENT_LIST NULL
 #define GRIN_NULL_ADJACENT_LIST_ITERATOR NULL
 #define GRIN_NULL_PARTITIONED_GRAPH NULL
 #define GRIN_NULL_PARTITION (unsigned)~0
