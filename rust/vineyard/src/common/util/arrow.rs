@@ -15,7 +15,7 @@
 use std::ptr::NonNull;
 use std::sync::Arc;
 
-use arrow_buffer::{alloc, Buffer};
+use arrow_buffer::{alloc, Buffer, MutableBuffer};
 
 /// An `arrow::alloc::Allocation` implementation to prevent the pointer
 /// been freed by `arrow::Buffer`.
@@ -46,13 +46,17 @@ pub fn arrow_buffer_mut(pointer: *mut u8, len: usize) -> Buffer {
 }
 
 pub fn arrow_buffer_with_offset_mut(pointer: *mut u8, offset: isize, len: usize) -> Buffer {
-    return unsafe {
-        Buffer::from_custom_allocation(
-            NonNull::new_unchecked(pointer.offset(offset) as *mut u8),
-            len,
-            MMAP_ALLOCATION.clone(),
-        )
-    };
+    if pointer.is_null() {
+        return MutableBuffer::new(0).into();
+    } else {
+        return unsafe {
+            Buffer::from_custom_allocation(
+                NonNull::new_unchecked(pointer.offset(offset)),
+                len,
+                MMAP_ALLOCATION.clone(),
+            )
+        };
+    }
 }
 
 pub fn arrow_buffer_null() -> Buffer {
