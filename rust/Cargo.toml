@@ -8,7 +8,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.18.0"
+version = "0.18.1"
 homepage = "https://v6d.io"
 repository = "https://github.com/v6d-io/v6d.git"
 authors = ["Vineyard <vineyard@alibaba-inc.com>"]
@@ -22,11 +22,11 @@ edition = "2021"
 readme = "README.md"
 
 [workspace.dependencies]
-arrow-array = ">=40, <47"
-arrow-buffer = ">=40, <47"
-arrow-ipc = ">=40, <47"
-arrow-schema = ">=40, <47"
-arrow2 = { version = ">=0.17, <0.19", features = ["arrow"] }
+arrow-array = ">=40, <45"
+arrow-buffer = ">=40, <45"
+arrow-ipc = ">=40, <45"
+arrow-schema = ">=40, <45"
+arrow2 = { version = ">=0.17, <0.18", features = ["arrow"] }
 ctor = "0.2"
 datafusion = ">= 28"
 downcast-rs = "1.2"
@@ -41,6 +41,7 @@ memmap2 = "0.7"
 num-traits = ">= 0.2"
 num-derive = ">= 0.4"
 parking_lot = "0.12"
+polars-arrow = ">=0.32, <34"
 polars-core = ">=0.32, <34"
 rand = "0.8"
 sendfd = "0.4"
@@ -50,7 +51,7 @@ serde_json = "1.0"
 spectral = "0.6"
 static_str_ops = "0.1.2"
 
-vineyard = { version = "0.18.0", path = "./vineyard" }
-vineyard-datafusion = { version = "0.18.0", path = "./vineyard-datafusion" }
-vineyard-polars = { version = "0.18.0", path = "./vineyard-polars" }
-vineyard-integration-testing = { version = "0.18.0", path = "./vineyard-integration-testing" }
+vineyard = { version = "0.18.1", path = "./vineyard" }
+vineyard-datafusion = { version = "0.18.1", path = "./vineyard-datafusion" }
+vineyard-polars = { version = "0.18.1", path = "./vineyard-polars" }
+vineyard-integration-testing = { version = "0.18.1", path = "./vineyard-integration-testing" }
