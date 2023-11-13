@@ -31,8 +31,6 @@ import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.EnumSet;
@@ -128,6 +126,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     static RawLocalFileSystem fs = null;
     static boolean enablePrintAllFiles = false;
+    static boolean enablePrintAllObjects = false;
 
     Path workingDir = new Path("vineyard:/");
 
@@ -135,28 +134,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         super();
     }
 
-    public static void printAllFiles(java.nio.file.Path root, java.nio.file.FileSystem fs)
-            throws IOException {
-        DirectoryStream<java.nio.file.Path> stream = Files.newDirectoryStream(root);
-        Queue<java.nio.file.Path> queue = new java.util.LinkedList<java.nio.file.Path>();
-        for (java.nio.file.Path p : stream) {
-            queue.add(p);
-        }
-        while (!queue.isEmpty()) {
-            java.nio.file.Path p = queue.poll();
-            Context.println(p.toString());
-            if (Files.isDirectory(p)) {
-                DirectoryStream<java.nio.file.Path> streamTemp = Files.newDirectoryStream(p);
-                for (java.nio.file.Path p1 : streamTemp) {
-                    queue.add(p1);
-                }
-                streamTemp.close();
-            }
-        }
-        stream.close();
-    }
-
-    public static void printAllFiles(Path p) throws IOException {
+    private static void printAllFiles(Path p) throws IOException {
         FileStatus[] status = fs.listStatus(p);
         Queue<FileStatus> queue = new java.util.LinkedList<FileStatus>();
         for (FileStatus s : status) {
@@ -171,6 +149,23 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                     queue.add(s);
                 }
             }
+        }
+    }
+
+    private void printAllObjectsWithName() throws IOException {
+        if (enablePrintAllObjects) {
+            IPCClient client = Context.getClient();
+            Context.println("print all objects with name");
+            Context.println("====================================");
+            Map<String, ObjectID> objects = client.listNames(".*", true, 255);
+            for (val object : objects.entrySet()) {
+                Context.println(
+                        "object name:"
+                                + object.getKey()
+                                + ", object id:"
+                                + object.getValue().value());
+            }
+            Context.println("====================================");
         }
     }
 
@@ -202,14 +197,14 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public void initialize(URI name, Configuration conf) throws IOException {
-        Context.println("initialize vineyard file system: " + name.toString());
+        Context.println("Initialize vineyard file system: " + name.toString());
         super.initialize(name, conf);
         this.conf = conf;
         this.uri = name;
 
         fs = new RawLocalFileSystem();
         fs.initialize(URI.create("file:///"), conf);
-        mkdirs(new Path(uri.toString().replaceAll("/*", "/")));
+        mkdirs(new Path(uri.toString().replaceAll("/+", "/")));
     }
 
     @Override
@@ -289,33 +284,14 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         }
     }
 
-    private void printAllObjectsWithName() throws IOException {
-        IPCClient client = Context.getClient();
-        Context.println("print all objects with name");
-        Context.println("====================================");
-        try {
-            Map<String, ObjectID> objects = client.listNames(".*", true, 255);
-            for (val object : objects.entrySet()) {
-                Context.println(
-                        "object name:"
-                                + object.getKey()
-                                + ", object id:"
-                                + object.getValue().value());
-            }
-        } catch (Exception e) {
-            Context.println("Exception: " + e.getMessage());
-        }
-        Context.println("====================================");
-    }
-
     public void cleanObjectInVineyard(Path filePath) throws IOException {
         IPCClient client = Context.getClient();
         Queue<Path> queue = new java.util.LinkedList<Path>();
         Collection<ObjectID> objectIDs = new ArrayList<ObjectID>();
         queue.add(filePath);
         while (!queue.isEmpty()) {
+            Path path = queue.peek();
             try {
-                Path path = queue.peek();
                 FileStatus fileStatus = fs.getFileStatus(path);
                 if (fileStatus.isDirectory()) {
                     FileStatus[] fileStatusArray = fs.listStatus(path);
@@ -332,12 +308,12 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                 objectIDs.add(objectID);
                 client.dropName(objectName);
             } catch (FileNotFoundException e) {
-                // file not exist
-                Context.println("File not exist.");
+                // file not exist, skip
+                Context.println("File: " + path.toString() + " not exist.");
                 continue;
             } catch (ObjectNotExists e) {
                 // object not exist
-                Context.println("Object not exist.");
+                Context.println("Object of file: " + path.toString() + " not exist.");
                 continue;
             } finally {
                 queue.poll();
@@ -412,6 +388,8 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             ids.add(srcObjectID);
             ids.add(dstObjectID);
             client.delete(ids, false, false);
+        } catch (ObjectNotExists e) {
+            // Skip invalid file.
         } finally {
             srcInput.close();
             dstInput.close();
@@ -429,79 +407,76 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         Path newSrc = new Path(src.toString().replaceAll("vineyard", "file"));
         Path newDst = new Path(dst.toString().replaceAll("vineyard", "file"));
         String newTableName =
-                dst.toString().substring(dst.toString().indexOf(":") + 1).replaceAll("/*", "/");
+                dst.toString().substring(dst.toString().indexOf(":") + 1).replaceAll("/+", "/");
         String oldTableName =
-                src.toString().substring(src.toString().indexOf(":") + 1).replaceAll("/*", "/");
+                src.toString().substring(src.toString().indexOf(":") + 1).replaceAll("/+", "/");
+        FileStatus srcStatus;
         try {
-            FileStatus srcStatus = fs.getFileStatus(newSrc);
-            if (srcStatus.isDirectory()) {
-                FileStatus[] status = fs.listStatus(newSrc);
-                for (FileStatus s : status) {
-                    renameInternal(
-                            s.getPath(), new Path(newDst.toString() + "/" + s.getPath().getName()));
-                }
-                fs.delete(newSrc, true);
-                return true;
-            } else {
-                try {
-                    FileStatus dstStatus = fs.getFileStatus(newDst);
-                } catch (FileNotFoundException e) {
-                    // dst file not exist
-                    fs.rename(newSrc, newDst);
-                    FSDataInputStream in = fs.open(newDst);
-                    byte[] objectIDByteArray = new byte[255];
-                    int len = in.read(objectIDByteArray);
-                    if (len > 0) {
-                        String objectIDStr =
-                                new String(objectIDByteArray, 0, len, StandardCharsets.UTF_8)
-                                        .replaceAll("\n", "");
-                        IPCClient client = Context.getClient();
-                        try {
-                            client.putName(ObjectID.fromString(objectIDStr), newTableName);
-                            client.dropName(oldTableName);
-                        } catch (Exception e1) {
-                            // Skip some invalid file.
-                            // File content may be not a valid object id.
-                            Context.println("Failed to put name to vineyard: " + e1.getMessage());
-                        }
-                    }
-                    printAllFiles();
-                    return true;
-                }
-                // dst file exist
-                mergeFile(newSrc, newDst);
-                deleteInternal(newSrc, true);
+            srcStatus = fs.getFileStatus(newSrc);
+        } catch (FileNotFoundException e) {
+            // src file not exist
+            Context.println("Src file not exist");
+            return false;
+        }
 
+        if (srcStatus.isDirectory()) {
+            FileStatus[] status = fs.listStatus(newSrc);
+            for (FileStatus s : status) {
+                renameInternal(
+                        s.getPath(), new Path(newDst.toString() + "/" + s.getPath().getName()));
+            }
+            fs.delete(newSrc, true);
+            return true;
+        } else {
+            try {
+                fs.getFileStatus(newDst);
+            } catch (FileNotFoundException e) {
+                // dst file not exist
+                fs.rename(newSrc, newDst);
+                FSDataInputStream in = fs.open(newDst);
+                byte[] objectIDByteArray = new byte[255];
+                int len = in.read(objectIDByteArray);
+                if (len > 0) {
+                    String objectIDStr =
+                            new String(objectIDByteArray, 0, len, StandardCharsets.UTF_8)
+                                    .replaceAll("\n", "");
+                    IPCClient client = Context.getClient();
+                    try {
+                        client.putName(ObjectID.fromString(objectIDStr), newTableName);
+                        client.dropName(oldTableName);
+                    } catch (Exception e1) {
+                        // Skip some invalid file.
+                        // File content may be not a valid object id.
+                        Context.println("Failed to put name to vineyard: " + e1.getMessage());
+                    }
+                }
                 printAllFiles();
                 return true;
             }
-        } catch (FileNotFoundException e) {
-            // src file not exist
-            Context.println("src file not exist");
-            return false;
+            // dst file exist
+            mergeFile(newSrc, newDst);
+            deleteInternal(newSrc, true);
+
+            printAllFiles();
+            return true;
         }
     }
 
     public void syncWithVineyard(String prefix) throws IOException {
         IPCClient client = Context.getClient();
-        System.out.println("sync with vineyard: " + prefix);
-        try {
-            String reg = "^" + prefix + ".*";
-            Map<String, ObjectID> objects = client.listNames(reg, true, 255);
-            for (val object : objects.entrySet()) {
-                try {
-                    fs.getFileStatus(new Path("file://" + object.getKey()));
-                } catch (FileNotFoundException e) {
-                    // file not exist
-                    Path path = new Path("file://" + object.getKey());
-                    FSDataOutputStream out = fs.create(path);
-                    ObjectID id = object.getValue();
-                    out.write((id.toString() + "\n").getBytes(StandardCharsets.UTF_8));
-                    out.close();
-                }
+        String reg = "^" + prefix + ".*";
+        Map<String, ObjectID> objects = client.listNames(reg, true, 255);
+        for (val object : objects.entrySet()) {
+            try {
+                fs.getFileStatus(new Path("file://" + object.getKey()));
+            } catch (FileNotFoundException e) {
+                // file not exist
+                Path path = new Path("file://" + object.getKey());
+                FSDataOutputStream out = fs.create(path);
+                ObjectID id = object.getValue();
+                out.write((id.toString() + "\n").getBytes(StandardCharsets.UTF_8));
+                out.close();
             }
-        } catch (Exception e) {
-            Context.println("Exception: " + e.getMessage());
         }
     }
 
@@ -512,7 +487,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             String prefix =
                     path.toString()
                             .substring(path.toString().indexOf(":") + 1)
-                            .replaceAll("/*", "/");
+                            .replaceAll("/+", "/");
             syncWithVineyard(prefix);
             try {
                 FileStatus status =
@@ -541,7 +516,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                                                                                     .toString()
                                                                                     .indexOf(":")
                                                                             + 1)
-                                                            .replaceAll("/*", "/")));
+                                                            .replaceAll("/+", "/")));
                     result.add(temp);
                 }
             } catch (FileNotFoundException e) {
@@ -613,7 +588,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                                                 .toString()
                                                 .substring(
                                                         temp.getPath().toString().indexOf(":") + 1)
-                                                .replaceAll("/*", "/")));
+                                                .replaceAll("/+", "/")));
         return result;
     }
 

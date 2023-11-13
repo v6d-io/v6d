@@ -21,6 +21,7 @@ import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
+import io.v6d.modules.basic.arrow.util.ObjectTransformer;
 import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +40,7 @@ public class RecordBatchBuilder implements ObjectBuilder {
     private final SchemaBuilder schemaBuilder;
     private List<ArrayBuilder> arrayBuilders;
     private List<ColumnarDataBuilder> columnBuilders;
+    private ObjectTransformer transformers;
 
     private boolean schemaMutable = true;
 
@@ -49,8 +51,15 @@ public class RecordBatchBuilder implements ObjectBuilder {
 
     public RecordBatchBuilder(final IPCClient client, final Schema schema, int rows)
             throws VineyardException {
+        this(client, schema, rows, new ObjectTransformer());
+    }
+
+    public RecordBatchBuilder(
+            final IPCClient client, final Schema schema, int rows, ObjectTransformer transformers)
+            throws VineyardException {
         this.rows = rows;
         schemaBuilder = SchemaBuilder.fromSchema(schema);
+        this.transformers = transformers;
         this.finishSchema(client);
     }
 
@@ -83,7 +92,8 @@ public class RecordBatchBuilder implements ObjectBuilder {
         for (val field : schemaBuilder.getFields()) {
             val builder = arrayBuilderFor(client, field);
             arrayBuilders.add(builder);
-            columnBuilders.add(builder.columnar());
+            ColumnarDataBuilder columnarDataBuilder = builder.columnar(transformers);
+            columnBuilders.add(columnarDataBuilder);
         }
     }
 

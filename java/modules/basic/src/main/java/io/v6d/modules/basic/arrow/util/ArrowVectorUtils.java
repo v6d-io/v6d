@@ -17,10 +17,11 @@ package io.v6d.modules.basic.arrow.util;
 import io.v6d.core.client.Context;
 import io.v6d.core.common.util.VineyardException;
 import io.v6d.core.common.util.VineyardException.NotImplemented;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
@@ -29,9 +30,13 @@ import org.apache.arrow.vector.complex.MapVector;
 import org.apache.arrow.vector.complex.StructVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 import org.apache.arrow.vector.types.pojo.ArrowType;
+import org.apache.arrow.vector.types.pojo.ArrowType.ArrowTypeID;
 import org.apache.arrow.vector.types.pojo.Field;
 
 public class ArrowVectorUtils {
+    private static Map<ArrowType.ArrowTypeID, ObjectTransformer> defaultTransformers;
+    private static Map<ArrowType.ArrowTypeID, ObjectResolver> defaultResolvers;
+
     public static ArrowBuf[] getArrowBuffers(FieldVector vector) throws VineyardException {
         List<ArrowBuf> result = new ArrayList<>();
         if (vector instanceof StructVector) {
@@ -90,8 +95,7 @@ public class ArrowVectorUtils {
     }
 
     public static void buildArrowVector(
-            FieldVector vector, Queue<ArrowBuf> bufs, Queue<Integer> valueCountQueue, Field field)
-            throws VineyardException {
+            FieldVector vector, Queue<ArrowBuf> bufs, Queue<Integer> valueCountQueue, Field field) {
         int valueCount = valueCountQueue.poll();
         List<Field> childFields = field.getChildren();
         List<ArrowBuf> currentBufs = new ArrayList<>();
@@ -117,9 +121,7 @@ public class ArrowVectorUtils {
                 // Map type is map->list->struct
                 childFields = childFields.get(0).getChildren();
             case List:
-                if (childFields.size() != 1) {
-                    throw new NotImplemented("ListArrayBuilder only support one child field");
-                }
+                assert childFields.size() == 1 : "ListArrayBuilder only support one child field";
                 currentBufs.add(bufs.poll());
                 currentBufs.add(bufs.poll());
                 vector.loadFieldBuffers(new ArrowFieldNode(valueCount, 0), currentBufs);
@@ -148,14 +150,13 @@ public class ArrowVectorUtils {
                         vector.loadFieldBuffers(new ArrowFieldNode(valueCount, 0), currentBufs);
                         break;
                     default:
-                        Context.println("Unsupported type: " + field.getType().getTypeID().name());
-                        assert (false);
+                        assert false : "Unsupported type: " + field.getType().getTypeID().name();
                 }
         }
     }
 
-    public static void printFields(Field field) {
-        Context.println("--------------------------");
+    public static void printFields(Field field, int level) {
+        Context.println("--------------------------".substring(level * 3));
         Context.println("Field type:" + field.getType().getTypeID().name());
         Context.println("Field name:" + field.getName());
         switch (field.getType().getTypeID()) {
@@ -175,7 +176,7 @@ public class ArrowVectorUtils {
                 break;
             case Struct:
                 for (int i = 0; i < field.getChildren().size(); i++) {
-                    printFields(field.getChildren().get(i));
+                    printFields(field.getChildren().get(i), level + 1);
                 }
             default:
                 break;
@@ -183,29 +184,25 @@ public class ArrowVectorUtils {
         Context.println("--------------------------");
     }
 
-    public static BigDecimal transHiveDecimalToBigDecimal(Object obj, int scale) {
-        try {
-            Class<?> c = Class.forName("org.apache.hadoop.hive.common.type.HiveDecimal");
-            java.lang.reflect.Method m = c.getMethod("bigDecimalValue");
-            BigDecimal value = (BigDecimal) m.invoke(obj);
-            if (value.scale() != scale) {
-                value = value.setScale(scale);
+    public static Map<ArrowType.ArrowTypeID, ObjectTransformer> getDefaultTransformers() {
+        if (defaultTransformers == null) {
+            defaultTransformers = new HashMap<>();
+            ArrowTypeID[] arrowTypeIDs = ArrowTypeID.values();
+            for (ArrowTypeID arrowTypeID : arrowTypeIDs) {
+                defaultTransformers.put(arrowTypeID, new ObjectTransformer());
             }
-            return value;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
         }
+        return defaultTransformers;
     }
 
-    public static Object transBigDecimalToHiveDecimal(BigDecimal obj) {
-        try {
-            Class<?> c = Class.forName("org.apache.hadoop.hive.common.type.HiveDecimal");
-            java.lang.reflect.Method m = c.getMethod("create", BigDecimal.class);
-            return m.invoke(null, obj);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+    public static Map<ArrowType.ArrowTypeID, ObjectResolver> getDefaultResolver() {
+        if (defaultResolvers == null) {
+            defaultResolvers = new HashMap<>();
+            ArrowTypeID[] arrowTypeIDs = ArrowTypeID.values();
+            for (ArrowTypeID arrowTypeID : arrowTypeIDs) {
+                defaultResolvers.put(arrowTypeID, new ObjectResolver());
+            }
         }
+        return defaultResolvers;
     }
 }

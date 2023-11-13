@@ -15,7 +15,6 @@
 package io.v6d.modules.basic.arrow;
 
 import com.google.common.base.Objects;
-import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -43,11 +42,7 @@ public class ListArray extends Array {
         super(meta);
         this.array = ListVector.empty("", Arrow.default_allocator);
 
-        try {
-            ArrowVectorUtils.buildArrowVector(this.array, bufs, valueCountList, listVectorField);
-        } catch (Exception e) {
-            Context.println("Create list array error! Message:" + e.getMessage());
-        }
+        ArrowVectorUtils.buildArrowVector(this.array, bufs, valueCountList, listVectorField);
     }
 
     public List get(int index) {

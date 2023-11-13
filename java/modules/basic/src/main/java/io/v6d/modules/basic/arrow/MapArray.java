@@ -15,7 +15,6 @@
 package io.v6d.modules.basic.arrow;
 
 import com.google.common.base.Objects;
-import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -42,11 +41,7 @@ public class MapArray extends Array {
             Field structVectorField) {
         super(meta);
         this.array = MapVector.empty("", Arrow.default_allocator, true);
-        try {
-            ArrowVectorUtils.buildArrowVector(this.array, bufs, valueCountList, structVectorField);
-        } catch (Exception e) {
-            Context.println("Create map array error! Message:" + e.getMessage());
-        }
+        ArrowVectorUtils.buildArrowVector(this.array, bufs, valueCountList, structVectorField);
     }
 
     public List get(int index) {

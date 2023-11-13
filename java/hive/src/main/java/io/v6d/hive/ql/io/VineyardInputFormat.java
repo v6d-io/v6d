@@ -20,7 +20,9 @@ import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
+import io.v6d.core.common.util.VineyardException.ObjectNotExists;
 import io.v6d.modules.basic.arrow.*;
+import io.v6d.modules.basic.arrow.util.ObjectResolver;
 import io.v6d.modules.basic.columnar.ColumnarData;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -83,11 +85,9 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
             long numBatches = 0;
 
             while (!dirStatus.isEmpty()) {
-                Context.println("Try to get table");
                 FileStatus[] status = dirStatus.poll();
                 for (int j = 0; j < status.length; j++) {
                     if (status[j].isDirectory()) {
-                        Context.println("path is directory: " + status[j].getPath());
                         dirStatus.add(
                                 fs.listStatus(
                                         status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
@@ -111,22 +111,24 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                                     (Table)
                                             ObjectFactory.getFactory()
                                                     .resolve(client.getMetaData(tableID));
-                            Context.println("get table succeed!");
                             numBatches += table.getBatches().size();
                         } catch (Exception e) {
                             // Skip some invalid file.
-                            Context.println(
-                                    "Skipping invalid file: "
-                                            + tableFilePath
-                                            + ", content: "
-                                            + new String(buffer, StandardCharsets.UTF_8));
-                            break;
+                            if (e instanceof ObjectNotExists
+                                    || e instanceof NumberFormatException) {
+                                Context.println(
+                                        "Skipping invalid file: "
+                                                + tableFilePath
+                                                + ", content: "
+                                                + new String(buffer, StandardCharsets.UTF_8));
+                                break;
+                            }
+                            throw e;
                         }
                     }
                 }
             }
             // TODO: would generating a split for each record batch be better?
-            Context.println("numBatches:" + numBatches);
             if (numBatches > 0) {
                 splits.add(new VineyardSplit(path, 0, numBatches, job));
             }
@@ -145,6 +147,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
     private VectorSchemaRoot batch;
     private ColumnarData[] columns;
     private Stopwatch watch = StopwatchContext.createUnstarted();
+    private ObjectResolver resolver;
 
     private long recordTotal = 0;
     private long recordConsumed = 0;
@@ -166,6 +169,8 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
 
         val client = Context.getClient();
         Arrow.instantiate();
+
+        resolver = new HiveTypeResolver();
 
         while (!dirStatus.isEmpty()) {
             FileStatus[] status = dirStatus.poll();
@@ -193,18 +198,22 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
                                                 .resolve(client.getMetaData(tableID));
                         for (val batch : table.getBatches()) {
                             recordTotal += batch.getRowCount();
+                            batch.setResolver(resolver);
                             this.batches[this.recordBatchIndex++] = batch;
                         }
                         schema = table.getSchema().getSchema();
                         break;
                     } catch (Exception e) {
                         // Skip some invalid file.
-                        Context.println(
-                                "Skipping invalid file: "
-                                        + tableFilePath
-                                        + ", content: "
-                                        + new String(buffer, StandardCharsets.UTF_8));
-                        break;
+                        if (e instanceof ObjectNotExists || e instanceof NumberFormatException) {
+                            Context.println(
+                                    "Skipping invalid file: "
+                                            + tableFilePath
+                                            + ", content: "
+                                            + new String(buffer, StandardCharsets.UTF_8));
+                            break;
+                        }
+                        throw e;
                     }
                 }
             }

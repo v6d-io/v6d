@@ -41,34 +41,26 @@ import org.apache.hadoop.hive.serde2.typeinfo.VarcharTypeInfo;
 import org.apache.hadoop.io.*;
 
 public class RecordWrapperWritable implements WritableComparable {
-    // output format: raw java objects, e.g., integer, string
-    // input format: writable
     private Object[] values;
 
-    // for output format
     public RecordWrapperWritable() {}
 
-    // for input format
     public RecordWrapperWritable(Schema schema) {
         this.values = new Object[schema.getFields().size()];
     }
 
-    // for input format
     public RecordWrapperWritable(List<TypeInfo> fieldTypes) {
         this.values = new Object[fieldTypes.size()];
     }
 
-    // for output format
     public void setValue(int index, Object value) {
         values[index] = value;
     }
 
-    // for output format, serde
     public void setValues(Object[] values) {
         this.values = values;
     }
 
-    // for input format
     public void setValues(ColumnarData[] columns, int index) {
         for (int i = 0; i < columns.length; i++) {
             values[i] = columns[i].getObject(index);

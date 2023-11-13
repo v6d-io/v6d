@@ -20,6 +20,7 @@ import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import io.v6d.modules.basic.arrow.*;
+import io.v6d.modules.basic.arrow.util.ObjectTransformer;
 import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -97,6 +98,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private Path finalOutPath;
     private FileSystem fs;
     private Progressable progress;
+    private final ObjectTransformer transformer;
 
     // vineyard
     private FSDataOutputStream output;
@@ -144,6 +146,8 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         // initialize the schema
         this.initializeTableFile();
         this.schema = this.initializeTableSchema(tableProperties);
+
+        this.transformer = new HiveTypeTransformer();
         Context.println("creating a sink record writer uses: " + watch.stop());
     }
 
@@ -156,7 +160,9 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
         writeTimer.start();
         if (currentLoc == RECORD_BATCH_SIZE) {
-            val builder = new RecordBatchBuilder(Context.getClient(), schema, RECORD_BATCH_SIZE);
+            val builder =
+                    new RecordBatchBuilder(
+                            Context.getClient(), schema, RECORD_BATCH_SIZE, this.transformer);
             chunks.add(builder);
             current = builder.getColumnBuilders();
             currentLoc = 0;
@@ -199,10 +205,8 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         }
         for (int i = 0; i < chunks.size(); i++) {
             val chunk = chunks.get(i);
-            Context.println("record batch builder: " + i + ", row size: " + chunk.getNumRows());
             tableBuilder.addBatch(chunk);
         }
-        Context.println("record batch size:" + tableBuilder.getBatchSize());
         ObjectMeta meta = tableBuilder.seal(client);
         Context.println("Table id in vineyard:" + meta.getId().value());
         client.persist(meta.getId());

@@ -15,7 +15,6 @@
 package io.v6d.modules.basic.arrow;
 
 import com.google.common.base.Objects;
-import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -39,7 +38,6 @@ public class Int32Array extends Array {
     public Int32Array(ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
         this.array = new IntVector("", Arrow.default_allocator);
-        Context.println("Length:" + length + " nullCount:" + nullCount);
         this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
     }
 
