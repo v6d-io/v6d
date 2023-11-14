@@ -78,11 +78,11 @@ class StringArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
         Buffer data_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("data_buffer_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
         Buffer offsets_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("offset_buffer_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
         Buffer validity_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("validity_buffer_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
         int null_count = meta.getIntValue("null_count_");
         int length = meta.getIntValue("length_");
         return new StringArray(

@@ -22,7 +22,7 @@ public class HiveTypeTransformer extends ObjectTransformer {
     public HiveTypeTransformer() {}
 
     @Override
-    public final BigDecimal decimalTransform(
+    public final BigDecimal transformDecimal(
             Object object, int precision, int scale, int bitWidth) {
         HiveDecimal hiveDecimal = (HiveDecimal) (object);
         BigDecimal bigDecimal = hiveDecimal.bigDecimalValue();

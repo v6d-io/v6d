@@ -311,7 +311,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.booleanResolve(accessor.get(rowId));
+            return resolver.resolveBoolean(accessor.get(rowId));
         }
 
         @Override
@@ -336,7 +336,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.byteResolve(accessor.getObject(rowId));
+            return resolver.resolveByte(accessor.getObject(rowId));
         }
 
         @Override
@@ -358,7 +358,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.byteResolve(getByte(rowId));
+            return resolver.resolveByte(getByte(rowId));
         }
 
         @Override
@@ -383,7 +383,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.shortResolve(accessor.getObject(rowId));
+            return resolver.resolveShort(accessor.getObject(rowId));
         }
 
         @Override
@@ -405,7 +405,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.shortResolve(getShort(rowId));
+            return resolver.resolveShort(getShort(rowId));
         }
 
         @Override
@@ -430,7 +430,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.intResolve(accessor.get(rowId));
+            return resolver.resolveInt(accessor.get(rowId));
         }
     }
 
@@ -447,7 +447,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.intResolve(getInt(rowId));
+            return resolver.resolveInt(getInt(rowId));
         }
 
         @Override
@@ -472,7 +472,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.longResolve(accessor.getObject(rowId));
+            return resolver.resolveLong(accessor.getObject(rowId));
         }
 
         @Override
@@ -494,7 +494,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.longResolve(getLong(rowId));
+            return resolver.resolveLong(getLong(rowId));
         }
 
         @Override
@@ -519,7 +519,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.floatResolve(accessor.getObject(rowId));
+            return resolver.resolveFloat(accessor.getObject(rowId));
         }
     }
 
@@ -539,7 +539,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.doubleResolve(accessor.getObject(rowId));
+            return resolver.resolveDouble(accessor.getObject(rowId));
         }
     }
 
@@ -559,7 +559,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.decimalResolve(
+            return resolver.resolveDecimal(
                     accessor.getObject(rowId), accessor.getPrecision(), accessor.getScale(), 128);
         }
     }
@@ -581,7 +581,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.utf8Resolve(accessor.getObject(rowId).toString());
+            return resolver.resolveUtf8(accessor.getObject(rowId).toString());
         }
     }
 
@@ -602,7 +602,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.largeUtf8Resolve(accessor.getObject(rowId).toString());
+            return resolver.resolveLargeUtf8(accessor.getObject(rowId).toString());
         }
 
         @Override
@@ -627,7 +627,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.binaryResolve(getBinary(rowId));
+            return resolver.resolveBinary(getBinary(rowId));
         }
 
         @Override
@@ -649,7 +649,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.largeBinaryResolve(getBinary(rowId));
+            return resolver.resolveLargeBinary(getBinary(rowId));
         }
 
         @Override
@@ -676,7 +676,7 @@ public class ColumnarData {
             }
             long millis = accessor.get(rowId);
             Date date = new Date(millis);
-            return resolver.dateResolve(date);
+            return resolver.resolveDate(date);
         }
 
         @Override
@@ -824,7 +824,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.defaultResolve(getLong(rowId));
+            return resolver.resolve(getLong(rowId));
         }
 
         @Override
@@ -858,7 +858,7 @@ public class ColumnarData {
             }
             Timestamp t = new Timestamp(second * DateTimeConstants.MILLIS_PER_SECOND);
             t.setNanos((int) nano);
-            return resolver.timestampResolve(t);
+            return resolver.resolveTimestamp(t);
         }
 
         @Override
@@ -887,7 +887,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.defaultResolve(getInt(rowId));
+            return resolver.resolve(getInt(rowId));
         }
 
         @Override
@@ -910,7 +910,7 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.defaultResolve(getLong(rowId));
+            return resolver.resolve(getLong(rowId));
         }
 
         @Override
@@ -1017,7 +1017,7 @@ public class ColumnarData {
                             result.add(null);
                         } else {
                             Date date = new Date(((DateMilliVector) vector).get(rowId));
-                            result.add(resolver.dateResolve(date));
+                            result.add(resolver.resolveDate(date));
                         }
                     }
                 } else if (vector instanceof TimeStampNanoVector) {
@@ -1035,7 +1035,7 @@ public class ColumnarData {
                             Timestamp t =
                                     new Timestamp(second * DateTimeConstants.MILLIS_PER_SECOND);
                             t.setNanos((int) nano);
-                            result.add(resolver.timestampResolve(t));
+                            result.add(resolver.resolveTimestamp(t));
                         }
                     }
                 } else if (vector instanceof DecimalVector) {
@@ -1046,7 +1046,7 @@ public class ColumnarData {
                             DecimalVector decimalVector = (DecimalVector) vector;
                             BigDecimal bigDecimal = (BigDecimal) vector.getObject(rowId + i);
                             result.add(
-                                    resolver.decimalResolve(
+                                    resolver.resolveDecimal(
                                             bigDecimal,
                                             decimalVector.getPrecision(),
                                             decimalVector.getScale(),
@@ -1059,7 +1059,7 @@ public class ColumnarData {
                             result.add(null);
                         } else {
                             result.add(
-                                    resolver.utf8Resolve(vector.getObject(rowId + i).toString()));
+                                    resolver.resolveUtf8(vector.getObject(rowId + i).toString()));
                         }
                     }
                 } else if (vector instanceof LargeVarCharVector) {
@@ -1068,7 +1068,7 @@ public class ColumnarData {
                             result.add(null);
                         } else {
                             result.add(
-                                    resolver.largeUtf8Resolve(
+                                    resolver.resolveLargeUtf8(
                                             vector.getObject(rowId + i).toString()));
                         }
                     }
@@ -1078,7 +1078,7 @@ public class ColumnarData {
                             result.add(null);
                         } else {
                             result.add(
-                                    resolver.binaryResolve((byte[]) vector.getObject(rowId + i)));
+                                    resolver.resolveBinary((byte[]) vector.getObject(rowId + i)));
                         }
                     }
                 } else if (vector instanceof LargeVarBinaryVector) {
@@ -1087,7 +1087,7 @@ public class ColumnarData {
                             result.add(null);
                         } else {
                             result.add(
-                                    resolver.largeBinaryResolve(
+                                    resolver.resolveLargeBinary(
                                             (byte[]) vector.getObject(rowId + i)));
                         }
                     }
@@ -1096,7 +1096,7 @@ public class ColumnarData {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            result.add(resolver.intResolve((int) vector.getObject(rowId + i)));
+                            result.add(resolver.resolveInt((int) vector.getObject(rowId + i)));
                         }
                     }
                 } else if (vector instanceof BigIntVector) {
@@ -1104,7 +1104,7 @@ public class ColumnarData {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            result.add(resolver.longResolve((long) vector.getObject(rowId + i)));
+                            result.add(resolver.resolveLong((long) vector.getObject(rowId + i)));
                         }
                     }
                 } else if (vector instanceof SmallIntVector) {
@@ -1112,7 +1112,7 @@ public class ColumnarData {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            result.add(resolver.shortResolve((short) vector.getObject(rowId + i)));
+                            result.add(resolver.resolveShort((short) vector.getObject(rowId + i)));
                         }
                     }
                 } else if (vector instanceof TinyIntVector) {
@@ -1120,7 +1120,7 @@ public class ColumnarData {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            result.add(resolver.byteResolve((byte) vector.getObject(rowId + i)));
+                            result.add(resolver.resolveByte((byte) vector.getObject(rowId + i)));
                         }
                     }
                 } else if (vector instanceof Float4Vector) {
@@ -1128,7 +1128,7 @@ public class ColumnarData {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            result.add(resolver.floatResolve((float) vector.getObject(rowId + i)));
+                            result.add(resolver.resolveFloat((float) vector.getObject(rowId + i)));
                         }
                     }
                 } else if (vector instanceof Float8Vector) {
@@ -1137,7 +1137,7 @@ public class ColumnarData {
                             result.add(null);
                         } else {
                             result.add(
-                                    resolver.doubleResolve((double) vector.getObject(rowId + i)));
+                                    resolver.resolveDouble((double) vector.getObject(rowId + i)));
                         }
                     }
                 } else if (vector instanceof BitVector) {
@@ -1145,7 +1145,7 @@ public class ColumnarData {
                         if (vector.isNull(i)) {
                             result.add(null);
                         } else {
-                            result.add(resolver.booleanResolve((int) vector.getObject(rowId + i)));
+                            result.add(resolver.resolveBoolean((int) vector.getObject(rowId + i)));
                         }
                     }
                 } else {

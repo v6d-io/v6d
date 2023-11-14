@@ -379,7 +379,7 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 this.accessor.setNull(rowId);
             } else {
-                this.accessor.setSafe(rowId, transformer.booleanTransform(value));
+                this.accessor.setSafe(rowId, transformer.transformBoolean(value));
             }
         }
 
@@ -415,7 +415,7 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 accessor.setNull(rowId);
             } else {
-                this.setByte(rowId, transformer.byteTransform(value));
+                this.setByte(rowId, transformer.transformByte(value));
             }
         }
 
@@ -448,7 +448,7 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setByte(rowId, transformer.byteTransform(value));
+            this.setByte(rowId, transformer.transformByte(value));
         }
 
         @Override
@@ -483,7 +483,7 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 accessor.setNull(rowId);
             } else {
-                this.setShort(rowId, transformer.shortTransform(value));
+                this.setShort(rowId, transformer.transformShort(value));
             }
         }
 
@@ -516,7 +516,7 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setShort(rowId, transformer.shortTransform(value));
+            this.setShort(rowId, transformer.transformShort(value));
         }
 
         @Override
@@ -549,7 +549,7 @@ public class ColumnarDataBuilder {
         @Override
         void setObject(int rowId, Object value) {
             if (value != null) {
-                this.setInt(rowId, transformer.intTransform(value));
+                this.setInt(rowId, transformer.transformInt(value));
             } else {
                 accessor.setNull(rowId);
             }
@@ -584,7 +584,7 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setInt(rowId, transformer.intTransform(value));
+            this.setInt(rowId, transformer.transformInt(value));
         }
 
         @Override
@@ -619,7 +619,7 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 accessor.setNull(rowId);
             } else {
-                accessor.setSafe(rowId, transformer.longTransform(value));
+                accessor.setSafe(rowId, transformer.transformLong(value));
             }
         }
 
@@ -652,7 +652,7 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setLong(rowId, transformer.longTransform(value));
+            this.setLong(rowId, transformer.transformLong(value));
         }
 
         @Override
@@ -687,7 +687,7 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 this.accessor.setNull(rowId);
             } else {
-                this.accessor.setSafe(rowId, transformer.floatTransform(value));
+                this.accessor.setSafe(rowId, transformer.transformFloat(value));
             }
         }
 
@@ -723,7 +723,7 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 accessor.setNull(rowId);
             } else {
-                this.setDouble(rowId, transformer.doubleTransform(value));
+                this.setDouble(rowId, transformer.transformDouble(value));
             }
         }
 
@@ -761,7 +761,7 @@ public class ColumnarDataBuilder {
             } else {
                 this.accessor.setSafe(
                         rowId,
-                        transformer.decimalTransform(
+                        transformer.transformDecimal(
                                 value, accessor.getPrecision(), accessor.getScale(), 128));
             }
         }
@@ -794,7 +794,7 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 accessor.setNull(rowId);
             } else {
-                accessor.setSafe(rowId, transformer.utf8Transform(value));
+                accessor.setSafe(rowId, transformer.transformUtf8(value));
             }
         }
     }
@@ -821,7 +821,7 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 accessor.setNull(rowId);
             } else {
-                this.accessor.setSafe(rowId, transformer.largeUtf8Transform(value));
+                this.accessor.setSafe(rowId, transformer.transformLargeUtf8(value));
             }
         }
     }
@@ -847,7 +847,7 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 accessor.setNull(rowId);
             } else {
-                this.setBinary(rowId, transformer.binaryTransform(value));
+                this.setBinary(rowId, transformer.transformBinary(value));
             }
         }
 
@@ -880,7 +880,7 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setBinary(rowId, transformer.largeBinaryTransform(value));
+            this.setBinary(rowId, transformer.transformLargeBinary(value));
         }
 
         @Override
@@ -915,7 +915,7 @@ public class ColumnarDataBuilder {
             if (value == null) {
                 accessor.setNull(rowId);
             } else {
-                long millis = ((Date) transformer.dateTransform(value)).getTime();
+                long millis = ((Date) transformer.transformDate(value)).getTime();
                 accessor.set(rowId, millis);
             }
         }
@@ -1146,7 +1146,7 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setLong(rowId, (Long) transformer.timestampTransform(value).getTime());
+            this.setLong(rowId, (Long) transformer.transformTimestamp(value).getTime());
         }
 
         @Override
@@ -1185,11 +1185,11 @@ public class ColumnarDataBuilder {
                         rowId,
                         (long)
                                                 (((java.sql.Timestamp)
-                                                                transformer.timestampTransform(
+                                                                transformer.transformTimestamp(
                                                                         value))
                                                         .getTime())
                                         * DateTimeConstants.NANOS_PER_MILLIS
-                                + (((java.sql.Timestamp) transformer.timestampTransform(value))
+                                + (((java.sql.Timestamp) transformer.transformTimestamp(value))
                                                 .getNanos()
                                         % DateTimeConstants.NANOS_PER_MILLIS));
             }
@@ -1230,7 +1230,7 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setInt(rowId, (Integer) transformer.defaultTransform(value));
+            this.setInt(rowId, (Integer) transformer.transform(value));
         }
 
         @Override
@@ -1263,7 +1263,7 @@ public class ColumnarDataBuilder {
 
         @Override
         void setObject(int rowId, Object value) {
-            this.setLong(rowId, (Long) transformer.defaultTransform(value));
+            this.setLong(rowId, (Long) transformer.transform(value));
         }
 
         @Override
@@ -1351,49 +1351,49 @@ public class ColumnarDataBuilder {
                     vector.setValueCount(vector.getValueCount() + 1);
                 } else if (vector instanceof IntVector) {
                     IntVector intVector = (IntVector) vector;
-                    intVector.setSafe(rowId, transformer.intTransform(value));
+                    intVector.setSafe(rowId, transformer.transformInt(value));
                     intVector.setValueCount(intVector.getValueCount() + 1);
                 } else if (vector instanceof BigIntVector) {
                     BigIntVector bigIntVector = (BigIntVector) vector;
-                    bigIntVector.setSafe(rowId, transformer.longTransform(value));
+                    bigIntVector.setSafe(rowId, transformer.transformLong(value));
                     bigIntVector.setValueCount(bigIntVector.getValueCount() + 1);
                 } else if (vector instanceof SmallIntVector) {
                     SmallIntVector smallIntVector = (SmallIntVector) vector;
-                    smallIntVector.setSafe(rowId, transformer.shortTransform(value));
+                    smallIntVector.setSafe(rowId, transformer.transformShort(value));
                     smallIntVector.setValueCount(smallIntVector.getValueCount() + 1);
                 } else if (vector instanceof TinyIntVector) {
                     TinyIntVector tinyIntVector = (TinyIntVector) vector;
-                    tinyIntVector.setSafe(rowId, transformer.byteTransform(value));
+                    tinyIntVector.setSafe(rowId, transformer.transformByte(value));
                     tinyIntVector.setValueCount(tinyIntVector.getValueCount() + 1);
                 } else if (vector instanceof Float8Vector) {
                     Float8Vector doubleVector = (Float8Vector) vector;
-                    doubleVector.setSafe(rowId, transformer.doubleTransform(value));
+                    doubleVector.setSafe(rowId, transformer.transformDouble(value));
                     doubleVector.setValueCount(doubleVector.getValueCount() + 1);
                 } else if (vector instanceof Float4Vector) {
                     Float4Vector floatVector = (Float4Vector) vector;
-                    floatVector.setSafe(rowId, transformer.floatTransform(value));
+                    floatVector.setSafe(rowId, transformer.transformFloat(value));
                     floatVector.setValueCount(floatVector.getValueCount() + 1);
                 } else if (vector instanceof BitVector) {
                     BitVector bitVector = (BitVector) vector;
-                    bitVector.setSafe(rowId, transformer.booleanTransform(value));
+                    bitVector.setSafe(rowId, transformer.transformBoolean(value));
                     bitVector.setValueCount(bitVector.getValueCount() + 1);
                 } else if (vector instanceof DateMilliVector) {
                     DateMilliVector dateMilliVector = (DateMilliVector) vector;
-                    dateMilliVector.setSafe(rowId, (transformer.dateTransform(value)).getTime());
+                    dateMilliVector.setSafe(rowId, (transformer.transformDate(value)).getTime());
                     dateMilliVector.setValueCount(dateMilliVector.getValueCount() + 1);
                 } else if (vector instanceof TimeStampNanoVector) {
                     TimeStampNanoVector timeStampNanoVector = (TimeStampNanoVector) vector;
                     timeStampNanoVector.setSafe(
                             rowId,
-                            (long) ((transformer.timestampTransform(value)).getTime())
+                            (long) ((transformer.transformTimestamp(value)).getTime())
                                             * DateTimeConstants.NANOS_PER_MILLIS
-                                    + ((transformer.timestampTransform(value)).getNanos()
+                                    + ((transformer.transformTimestamp(value)).getNanos()
                                             % DateTimeConstants.NANOS_PER_MILLIS));
                     timeStampNanoVector.setValueCount(timeStampNanoVector.getValueCount() + 1);
                 } else if (vector instanceof DecimalVector) {
                     DecimalVector decimalVector = (DecimalVector) vector;
                     BigDecimal bigDecimal =
-                            transformer.decimalTransform(
+                            transformer.transformDecimal(
                                     value,
                                     decimalVector.getPrecision(),
                                     decimalVector.getScale(),
@@ -1402,19 +1402,19 @@ public class ColumnarDataBuilder {
                     decimalVector.setValueCount(decimalVector.getValueCount() + 1);
                 } else if (vector instanceof LargeVarCharVector) {
                     LargeVarCharVector largeVarCharVector = (LargeVarCharVector) vector;
-                    largeVarCharVector.setSafe(rowId, transformer.largeUtf8Transform(value));
+                    largeVarCharVector.setSafe(rowId, transformer.transformLargeUtf8(value));
                     largeVarCharVector.setValueCount(largeVarCharVector.getValueCount() + 1);
                 } else if (vector instanceof VarCharVector) {
                     VarCharVector varCharVector = (VarCharVector) vector;
-                    varCharVector.setSafe(rowId, transformer.utf8Transform(value));
+                    varCharVector.setSafe(rowId, transformer.transformUtf8(value));
                     varCharVector.setValueCount(varCharVector.getValueCount() + 1);
                 } else if (vector instanceof VarBinaryVector) {
                     VarBinaryVector varBinaryVector = (VarBinaryVector) vector;
-                    varBinaryVector.setSafe(rowId, transformer.binaryTransform(value));
+                    varBinaryVector.setSafe(rowId, transformer.transformBinary(value));
                     varBinaryVector.setValueCount(varBinaryVector.getValueCount() + 1);
                 } else if (vector instanceof LargeVarBinaryVector) {
                     LargeVarBinaryVector largeVarBinaryVector = (LargeVarBinaryVector) vector;
-                    largeVarBinaryVector.setSafe(rowId, transformer.largeBinaryTransform(value));
+                    largeVarBinaryVector.setSafe(rowId, transformer.transformLargeBinary(value));
                     largeVarBinaryVector.setValueCount(largeVarBinaryVector.getValueCount() + 1);
                 } else {
                     assert false : "Unsupported vector type:" + vector.getClass().getName();

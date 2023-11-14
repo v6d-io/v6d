@@ -22,63 +22,63 @@ import java.sql.Timestamp;
 public class ObjectTransformer {
     public ObjectTransformer() {}
 
-    public Object defaultTransform(Object object) {
+    public Object transform(Object object) {
         return object;
     }
 
-    public int intTransform(Object object) {
+    public int transformInt(Object object) {
         return (int) object;
     }
 
-    public long longTransform(Object object) {
+    public long transformLong(Object object) {
         return (long) object;
     }
 
-    public short shortTransform(Object object) {
+    public short transformShort(Object object) {
         return (short) object;
     }
 
-    public byte byteTransform(Object object) {
+    public byte transformByte(Object object) {
         return (byte) object;
     }
 
-    public float floatTransform(Object object) {
+    public float transformFloat(Object object) {
         return (float) object;
     }
 
-    public double doubleTransform(Object object) {
+    public double transformDouble(Object object) {
         return (double) object;
     }
 
-    public int booleanTransform(Object object) {
+    public int transformBoolean(Object object) {
         return (boolean) object == true ? 1 : 0;
     }
 
-    public byte[] utf8Transform(Object object) {
+    public byte[] transformUtf8(Object object) {
         return object.toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    public byte[] largeUtf8Transform(Object object) {
+    public byte[] transformLargeUtf8(Object object) {
         return object.toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    public byte[] binaryTransform(Object object) {
+    public byte[] transformBinary(Object object) {
         return (byte[]) object;
     }
 
-    public byte[] largeBinaryTransform(Object object) {
+    public byte[] transformLargeBinary(Object object) {
         return (byte[]) object;
     }
 
-    public BigDecimal decimalTransform(Object object, int precision, int scale, int bitWidth) {
+    public BigDecimal transformDecimal(Object object, int precision, int scale, int bitWidth) {
         return (BigDecimal) object;
     }
 
-    public Timestamp timestampTransform(Object object) {
+    public Timestamp transformTimestamp(Object object) {
         return (Timestamp) object;
     }
 
-    public Date dateTransform(Object object) {
+    public Date transformDate(Object object) {
         return (Date) object;
     }
 }

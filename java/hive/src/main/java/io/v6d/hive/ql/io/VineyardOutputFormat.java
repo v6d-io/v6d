@@ -319,10 +319,9 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                     case DOUBLE:
                         return Types.MinorType.FLOAT8.getType();
                     case STRING:
-                        return Types.MinorType.LARGEVARCHAR.getType();
                     case CHAR:
                     case VARCHAR:
-                        return Types.MinorType.VARCHAR.getType();
+                        return Types.MinorType.LARGEVARCHAR.getType();
                     case DATE:
                         return Types.MinorType.DATEDAY.getType();
                     case TIMESTAMP:

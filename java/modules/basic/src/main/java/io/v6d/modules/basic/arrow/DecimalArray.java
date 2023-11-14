@@ -80,10 +80,9 @@ public class DecimalArray extends Array {
 class DecimalArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(ObjectMeta meta) {
-        Buffer buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("data_buffer_"));
+        Buffer buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
         Buffer validityBuffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("validity_buffer_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
         int nullCount = meta.getIntValue("null_count_");
         return new DecimalArray(
                 meta,

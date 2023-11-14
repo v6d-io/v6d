@@ -82,13 +82,8 @@ class ListArrayResolver extends ObjectFactory.Resolver {
         int bufsNum = meta.getIntValue("bufs_num_");
         int valueCountNum = meta.getIntValue("value_count_num_");
         for (int i = 0; i < bufsNum; i++) {
-            bufs.add(
-                    ((Buffer)
-                                    ObjectFactory.getFactory()
-                                            .resolve(
-                                                    meta.getMemberMeta(
-                                                            "buffer_" + String.valueOf(i) + "_")))
-                            .getBuffer());
+            ObjectMeta bufMeta = meta.getMemberMeta("buffer_" + String.valueOf(i) + "_");
+            bufs.add(((Buffer) ObjectFactory.getFactory().resolve(bufMeta)).getBuffer());
         }
         for (int i = 0; i < valueCountNum; i++) {
             valueCountQueue.add(meta.getIntValue("value_count_" + String.valueOf(i) + "_"));

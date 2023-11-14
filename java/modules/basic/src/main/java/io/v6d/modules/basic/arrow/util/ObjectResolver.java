@@ -21,63 +21,63 @@ import java.sql.Timestamp;
 public class ObjectResolver {
     public ObjectResolver() {}
 
-    public Object defaultResolve(Object object) {
+    public Object resolve(Object object) {
         return object;
     }
 
-    public Object intResolve(int object) {
+    public Object resolveInt(int object) {
         return object;
     }
 
-    public Object longResolve(long object) {
+    public Object resolveLong(long object) {
         return object;
     }
 
-    public Object shortResolve(short object) {
+    public Object resolveShort(short object) {
         return object;
     }
 
-    public byte byteResolve(byte object) {
+    public byte resolveByte(byte object) {
         return object;
     }
 
-    public float floatResolve(float object) {
+    public float resolveFloat(float object) {
         return object;
     }
 
-    public double doubleResolve(double object) {
+    public double resolveDouble(double object) {
         return object;
     }
 
-    public Object booleanResolve(int object) {
+    public Object resolveBoolean(int object) {
         return object == 1;
     }
 
-    public Object utf8Resolve(String object) {
+    public Object resolveUtf8(String object) {
         return object;
     }
 
-    public Object largeUtf8Resolve(String object) {
+    public Object resolveLargeUtf8(String object) {
         return object;
     }
 
-    public Object binaryResolve(byte[] object) {
+    public Object resolveBinary(byte[] object) {
         return object;
     }
 
-    public Object largeBinaryResolve(byte[] object) {
+    public Object resolveLargeBinary(byte[] object) {
         return object;
     }
 
-    public Object decimalResolve(BigDecimal object, int precision, int scale, int bitWidth) {
+    public Object resolveDecimal(BigDecimal object, int precision, int scale, int bitWidth) {
         return object;
     }
 
-    public Object timestampResolve(Timestamp object) {
+    public Object resolveTimestamp(Timestamp object) {
         return object;
     }
 
-    public Object dateResolve(Date object) {
+    public Object resolveDate(Date object) {
         return object;
     }
 }

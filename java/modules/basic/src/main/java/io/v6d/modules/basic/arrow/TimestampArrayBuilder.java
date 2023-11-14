@@ -78,8 +78,8 @@ public class TimestampArrayBuilder implements ArrayBuilder {
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
-        meta.addMember("data_buffer_", dataBufferBuilder.seal(client));
-        meta.addMember("validity_buffer_", validityBufferBuilder.seal(client));
+        meta.addMember("buffer_", dataBufferBuilder.seal(client));
+        meta.addMember("null_bitmap_", validityBufferBuilder.seal(client));
         meta.setValue("time_unit_id_", timeUnit.getFlatbufID());
         return client.createMetaData(meta);
     }

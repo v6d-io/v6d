@@ -22,7 +22,7 @@ public class HiveTypeResolver extends ObjectResolver {
     public HiveTypeResolver() {}
 
     @Override
-    public final Object decimalResolve(BigDecimal object, int precision, int scale, int bitWidth) {
+    public final Object resolveDecimal(BigDecimal object, int precision, int scale, int bitWidth) {
         return HiveDecimal.create(object);
     }
 }

@@ -71,10 +71,9 @@ public class Int64Array extends Array {
 class Int64ArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
-        Buffer buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("data_buffer_"));
+        Buffer buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
         Buffer validityBuffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("validity_buffer_"));
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
         int nullCount = meta.getIntValue("null_count_");
         int length = meta.getIntValue("length_");
         return new Int64Array(

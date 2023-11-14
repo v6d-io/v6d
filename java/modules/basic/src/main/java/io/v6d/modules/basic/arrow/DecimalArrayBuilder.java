@@ -69,8 +69,8 @@ public class DecimalArrayBuilder implements ArrayBuilder {
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
-        meta.addMember("data_buffer_", dataBufferBuilder.seal(client));
-        meta.addMember("validity_buffer_", validityBufferBuilder.seal(client));
+        meta.addMember("buffer_", dataBufferBuilder.seal(client));
+        meta.addMember("null_bitmap_", validityBufferBuilder.seal(client));
         meta.setValue("max_precision_", maxPrecision);
         meta.setValue("max_scale_", maxScale);
         meta.setValue("bit_width_", bitWidth);
