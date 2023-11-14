@@ -88,13 +88,6 @@ typedef void* GRIN_VERTEX_LIST_ITERATOR;
 #endif
 
 #ifdef GRIN_ENABLE_ADJACENT_LIST
-typedef struct GRIN_ADJACENT_LIST_T {
-  const void* begin;
-  const void* end;
-  GRIN_VERTEX vid;
-  int dir;
-  unsigned etype;
-} GRIN_ADJACENT_LIST_T;
 typedef void* GRIN_ADJACENT_LIST;   
 #endif
 
