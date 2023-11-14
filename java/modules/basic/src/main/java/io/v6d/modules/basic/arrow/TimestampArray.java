@@ -20,38 +20,52 @@ import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import java.util.List;
-import lombok.*;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.LargeVarCharVector;
+import org.apache.arrow.vector.TimeStampMicroVector;
+import org.apache.arrow.vector.TimeStampMilliVector;
+import org.apache.arrow.vector.TimeStampNanoVector;
+import org.apache.arrow.vector.TimeStampSecVector;
+import org.apache.arrow.vector.TimeStampVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
-import org.apache.arrow.vector.util.Text;
+import org.apache.arrow.vector.types.TimeUnit;
 
-public class LargeStringArray extends Array {
-    private LargeVarCharVector array;
+public class TimestampArray extends Array {
+    private TimeStampVector array;
+    private TimeUnit timeUnit;
 
     public static void instantiate() {
-        ObjectFactory.getFactory()
-                .register(
-                        "vineyard::BaseBinaryArray<arrow::LargeStringArray>",
-                        new LargeStringArrayResolver());
-        ObjectFactory.getFactory()
-                .register("vineyard::LargeStringArray", new LargeStringArrayResolver());
+        for (TimeUnit timeUnit : TimeUnit.values()) {
+            ObjectFactory.getFactory()
+                    .register(
+                            "vineyard::Timestamp<" + timeUnit.toString() + ">",
+                            new TimestampArrayResolver());
+        }
     }
 
-    public LargeStringArray(
-            final ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
+    public TimestampArray(
+            ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount, short timeUnitID) {
         super(meta);
-        this.array = new LargeVarCharVector("", Arrow.default_allocator);
+        switch (TimeUnit.values()[timeUnitID]) {
+            case MICROSECOND:
+                this.array = new TimeStampMicroVector("", Arrow.default_allocator);
+                break;
+            case NANOSECOND:
+                this.array = new TimeStampNanoVector("", Arrow.default_allocator);
+                break;
+            case SECOND:
+                this.array = new TimeStampSecVector("", Arrow.default_allocator);
+                break;
+            case MILLISECOND:
+                this.array = new TimeStampMilliVector("", Arrow.default_allocator);
+                break;
+        }
         this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
+        this.timeUnit = TimeUnit.values()[timeUnitID];
     }
 
-    public byte[] get(int index) {
+    public long get(int index) {
         return this.array.get(index);
-    }
-
-    public Text getObject(int index) {
-        return this.array.getObject(index);
     }
 
     @Override
@@ -67,7 +81,7 @@ public class LargeStringArray extends Array {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        LargeStringArray that = (LargeStringArray) o;
+        TimestampArray that = (TimestampArray) o;
         return Objects.equal(array, that.array);
     }
 
@@ -77,24 +91,20 @@ public class LargeStringArray extends Array {
     }
 }
 
-class LargeStringArrayResolver extends ObjectFactory.Resolver {
+class TimestampArrayResolver extends ObjectFactory.Resolver {
     @Override
-    public Object resolve(final ObjectMeta meta) {
+    public Object resolve(ObjectMeta meta) {
         Buffer data_buffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        Buffer offsets_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
         Buffer validity_buffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
         int null_count = meta.getIntValue("null_count_");
         int length = meta.getIntValue("length_");
-        return new LargeStringArray(
+        return new TimestampArray(
                 meta,
-                Arrays.asList(
-                        validity_buffer.getBuffer(),
-                        offsets_buffer.getBuffer(),
-                        data_buffer.getBuffer()),
+                Arrays.asList(validity_buffer.getBuffer(), data_buffer.getBuffer()),
                 length,
-                null_count);
+                null_count,
+                (short) meta.getLongValue("time_unit_id_"));
     }
 }

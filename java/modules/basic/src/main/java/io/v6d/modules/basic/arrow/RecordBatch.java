@@ -18,6 +18,7 @@ import com.google.common.base.Objects;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.modules.basic.arrow.util.ObjectResolver;
 import io.v6d.modules.basic.columnar.ColumnarData;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -28,28 +29,38 @@ import org.apache.arrow.vector.VectorSchemaRoot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Hello world! */
 public class RecordBatch extends Object {
     private static final Logger logger = LoggerFactory.getLogger(RecordBatch.class);
 
     private final VectorSchemaRoot batch;
+    private ObjectResolver resolver;
 
     public static void instantiate() {
         Schema.instantiate();
         BooleanArray.instantiate();
+        Int8Array.instantiate();
+        Int16Array.instantiate();
         Int32Array.instantiate();
         Int64Array.instantiate();
         FloatArray.instantiate();
         DoubleArray.instantiate();
         StringArray.instantiate();
+        VarBinaryArray.instantiate();
         LargeStringArray.instantiate();
         NullArray.instantiate();
+        DateArray.instantiate();
+        TimestampArray.instantiate();
+        DecimalArray.instantiate();
+        ListArray.instantiate();
+        StructArray.instantiate();
+        MapArray.instantiate();
         ObjectFactory.getFactory().register("vineyard::RecordBatch", new RecordBatchResolver());
     }
 
     public RecordBatch(final ObjectMeta meta, Schema schema, List<FieldVector> vectors, int nrow) {
         super(meta);
         this.batch = new VectorSchemaRoot(schema.getSchema(), vectors, nrow);
+        resolver = new ObjectResolver();
     }
 
     public VectorSchemaRoot getBatch() {
@@ -64,8 +75,17 @@ public class RecordBatch extends Object {
         return batch.getFieldVectors().size();
     }
 
+    public void setResolver(ObjectResolver resolver) {
+        this.resolver = resolver;
+    }
+
     public ColumnarData[] columar() {
-        return batch.getFieldVectors().stream().map(ColumnarData::new).toArray(ColumnarData[]::new);
+        List<FieldVector> vectors = batch.getFieldVectors();
+        ColumnarData[] columnarData = new ColumnarData[vectors.size()];
+        for (int i = 0; i < vectors.size(); i++) {
+            columnarData[i] = new ColumnarData(vectors.get(i), resolver);
+        }
+        return columnarData;
     }
 
     @Override

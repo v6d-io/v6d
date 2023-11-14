@@ -19,13 +19,14 @@ import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
+import java.util.List;
 import lombok.*;
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 import org.apache.arrow.vector.util.Text;
 
-/** Hello world! */
 public class StringArray extends Array {
     private VarCharVector array;
 
@@ -36,13 +37,10 @@ public class StringArray extends Array {
         ObjectFactory.getFactory().register("vineyard::StringArray", new StringArrayResolver());
     }
 
-    public StringArray(final ObjectMeta meta, Buffer buffer, Buffer offset, long length) {
+    public StringArray(final ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
         this.array = new VarCharVector("", Arrow.default_allocator);
-        this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0),
-                Arrays.asList(null, offset.getBuffer(), buffer.getBuffer()));
-        this.array.setValueCount((int) length);
+        this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
     }
 
     public byte[] get(int index) {
@@ -79,10 +77,21 @@ public class StringArray extends Array {
 class StringArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
-        val buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_data_"));
-        val offsets_buffer =
+        Buffer data_buffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
+        Buffer offsets_buffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
-        return new StringArray(meta, buffer, offsets_buffer, meta.getLongValue("length_"));
+        Buffer validity_buffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        int null_count = meta.getIntValue("null_count_");
+        int length = meta.getIntValue("length_");
+        return new StringArray(
+                meta,
+                Arrays.asList(
+                        validity_buffer.getBuffer(),
+                        offsets_buffer.getBuffer(),
+                        data_buffer.getBuffer()),
+                length,
+                null_count);
     }
 }

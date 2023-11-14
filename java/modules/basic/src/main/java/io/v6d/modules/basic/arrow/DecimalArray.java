@@ -20,38 +20,38 @@ import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import java.util.List;
-import lombok.*;
 import org.apache.arrow.memory.ArrowBuf;
+import org.apache.arrow.vector.BaseFixedWidthVector;
+import org.apache.arrow.vector.Decimal256Vector;
+import org.apache.arrow.vector.DecimalVector;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.LargeVarCharVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
-import org.apache.arrow.vector.util.Text;
 
-public class LargeStringArray extends Array {
-    private LargeVarCharVector array;
+public class DecimalArray extends Array {
+    private BaseFixedWidthVector array;
 
     public static void instantiate() {
         ObjectFactory.getFactory()
-                .register(
-                        "vineyard::BaseBinaryArray<arrow::LargeStringArray>",
-                        new LargeStringArrayResolver());
+                .register("vineyard::DecimalArray<128>", new DecimalArrayResolver());
         ObjectFactory.getFactory()
-                .register("vineyard::LargeStringArray", new LargeStringArrayResolver());
+                .register("vineyard::DecimalArray<256>", new DecimalArrayResolver());
     }
 
-    public LargeStringArray(
-            final ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
+    public DecimalArray(
+            ObjectMeta meta,
+            List<ArrowBuf> buffers,
+            int nullCount,
+            long length,
+            int maxPrecision,
+            int maxScale,
+            int bitWidth) {
         super(meta);
-        this.array = new LargeVarCharVector("", Arrow.default_allocator);
+        if (bitWidth == 128) {
+            this.array = new DecimalVector("", Arrow.default_allocator, maxPrecision, maxScale);
+        } else {
+            this.array = new Decimal256Vector("", Arrow.default_allocator, maxPrecision, maxScale);
+        }
         this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
-    }
-
-    public byte[] get(int index) {
-        return this.array.get(index);
-    }
-
-    public Text getObject(int index) {
-        return this.array.getObject(index);
     }
 
     @Override
@@ -67,7 +67,7 @@ public class LargeStringArray extends Array {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        LargeStringArray that = (LargeStringArray) o;
+        DecimalArray that = (DecimalArray) o;
         return Objects.equal(array, that.array);
     }
 
@@ -77,24 +77,20 @@ public class LargeStringArray extends Array {
     }
 }
 
-class LargeStringArrayResolver extends ObjectFactory.Resolver {
+class DecimalArrayResolver extends ObjectFactory.Resolver {
     @Override
-    public Object resolve(final ObjectMeta meta) {
-        Buffer data_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        Buffer offsets_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
-        Buffer validity_buffer =
+    public Object resolve(ObjectMeta meta) {
+        Buffer buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
+        Buffer validityBuffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
-        int null_count = meta.getIntValue("null_count_");
-        int length = meta.getIntValue("length_");
-        return new LargeStringArray(
+        int nullCount = meta.getIntValue("null_count_");
+        return new DecimalArray(
                 meta,
-                Arrays.asList(
-                        validity_buffer.getBuffer(),
-                        offsets_buffer.getBuffer(),
-                        data_buffer.getBuffer()),
-                length,
-                null_count);
+                Arrays.asList(validityBuffer.getBuffer(), buffer.getBuffer()),
+                nullCount,
+                meta.getLongValue("length_"),
+                meta.getIntValue("max_precision_"),
+                meta.getIntValue("max_scale_"),
+                meta.getIntValue("bit_width_"));
     }
 }

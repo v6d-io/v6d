@@ -19,6 +19,7 @@ import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import lombok.*;
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.LargeVarCharVector;
 import org.apache.arrow.vector.util.Text;
@@ -26,8 +27,9 @@ import org.apache.arrow.vector.util.Text;
 public class LargeStringArrayBuilder implements ArrayBuilder {
     private LargeVarCharVector array;
 
-    private BufferBuilder data_buffer_builder;
-    private BufferBuilder offset_buffer_builder;
+    private BufferBuilder dataBufferBuilder;
+    private BufferBuilder offsetBufferBuilder;
+    private BufferBuilder validityBufferBuilder;
 
     public LargeStringArrayBuilder(IPCClient client, final LargeVarCharVector vector)
             throws VineyardException {
@@ -36,7 +38,6 @@ public class LargeStringArrayBuilder implements ArrayBuilder {
 
     public LargeStringArrayBuilder(IPCClient client, long length) throws VineyardException {
         this.array = new LargeVarCharVector("", Arrow.default_allocator);
-        this.array.setValueCount((int) length);
     }
 
     @Override
@@ -49,10 +50,15 @@ public class LargeStringArrayBuilder implements ArrayBuilder {
                         ((long) this.array.getValueCount()) * LargeVarCharVector.OFFSET_WIDTH);
         val data_buffer = this.array.getDataBuffer();
 
-        this.data_buffer_builder =
+        ArrowBuf validity_buffer = this.array.getValidityBuffer();
+        val validity_buffer_size = validity_buffer.capacity();
+
+        this.dataBufferBuilder =
                 new BufferBuilder((IPCClient) client, data_buffer, data_buffer_size);
-        this.offset_buffer_builder =
+        this.offsetBufferBuilder =
                 new BufferBuilder((IPCClient) client, offset_buffer, offset_buffer_size);
+        this.validityBufferBuilder =
+                new BufferBuilder((IPCClient) client, validity_buffer, validity_buffer_size);
     }
 
     @Override
@@ -62,11 +68,11 @@ public class LargeStringArrayBuilder implements ArrayBuilder {
         meta.setTypename("vineyard::BaseBinaryArray<arrow::LargeStringArray>");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
-        meta.setValue("null_count_", 0);
+        meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
-        meta.addMember("buffer_data_", data_buffer_builder.seal(client));
-        meta.addMember("buffer_offsets_", offset_buffer_builder.seal(client));
-        meta.addMember("null_bitmap_", BufferBuilder.empty(client));
+        meta.addMember("buffer_", dataBufferBuilder.seal(client));
+        meta.addMember("buffer_offsets_", offsetBufferBuilder.seal(client));
+        meta.addMember("null_bitmap_", validityBufferBuilder.seal(client));
         return client.createMetaData(meta);
     }
 

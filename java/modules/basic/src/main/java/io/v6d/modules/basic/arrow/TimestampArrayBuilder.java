@@ -18,20 +18,44 @@ import io.v6d.core.client.Client;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
+import io.v6d.core.common.util.VineyardException.NotImplemented;
 import java.util.Arrays;
-import lombok.*;
+import lombok.val;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.Float8Vector;
+import org.apache.arrow.vector.TimeStampMicroVector;
+import org.apache.arrow.vector.TimeStampMilliVector;
+import org.apache.arrow.vector.TimeStampNanoVector;
+import org.apache.arrow.vector.TimeStampSecVector;
+import org.apache.arrow.vector.TimeStampVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
+import org.apache.arrow.vector.types.TimeUnit;
 
-public class DoubleArrayBuilder implements ArrayBuilder {
+public class TimestampArrayBuilder implements ArrayBuilder {
     private BufferBuilder dataBufferBuilder;
     private BufferBuilder validityBufferBuilder;
-    private Float8Vector array;
+    private TimeStampVector array;
+    private TimeUnit timeUnit;
 
-    public DoubleArrayBuilder(IPCClient client, long length) throws VineyardException {
-        this.array = new Float8Vector("", Arrow.default_allocator);
+    public TimestampArrayBuilder(IPCClient client, long length, TimeUnit timeUnit)
+            throws VineyardException {
+        this.timeUnit = timeUnit;
+        switch (timeUnit) {
+            case SECOND:
+                this.array = new TimeStampSecVector("", Arrow.default_allocator);
+                break;
+            case MILLISECOND:
+                this.array = new TimeStampMilliVector("", Arrow.default_allocator);
+                break;
+            case MICROSECOND:
+                this.array = new TimeStampMicroVector("", Arrow.default_allocator);
+                break;
+            case NANOSECOND:
+                this.array = new TimeStampNanoVector("", Arrow.default_allocator);
+                break;
+            default:
+                throw new NotImplemented("Unsupported time unit: " + timeUnit);
+        }
         this.dataBufferBuilder =
                 new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
@@ -40,21 +64,23 @@ public class DoubleArrayBuilder implements ArrayBuilder {
 
     @Override
     public void build(Client client) throws VineyardException {
-        ArrowBuf buf = array.getValidityBuffer();
-        validityBufferBuilder = new BufferBuilder((IPCClient) client, buf, buf.capacity());
+        ArrowBuf validityBuffer = this.array.getValidityBuffer();
+        validityBufferBuilder =
+                new BufferBuilder((IPCClient) client, validityBuffer, validityBuffer.capacity());
     }
 
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
         this.build(client);
         val meta = ObjectMeta.empty();
-        meta.setTypename("vineyard::NumericArray<double>");
+        meta.setTypename("vineyard::Timestamp<" + timeUnit.toString() + ">");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", array.getNullCount());
         meta.setValue("offset_", 0);
         meta.addMember("buffer_", dataBufferBuilder.seal(client));
         meta.addMember("null_bitmap_", validityBufferBuilder.seal(client));
+        meta.setValue("time_unit_id_", timeUnit.getFlatbufID());
         return client.createMetaData(meta);
     }
 
@@ -69,7 +95,7 @@ public class DoubleArrayBuilder implements ArrayBuilder {
         this.array.setValueCount((int) size);
     }
 
-    void set(int index, double value) {
+    void set(int index, long value) {
         this.array.set(index, value);
     }
 }

@@ -20,38 +20,29 @@ import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
 import java.util.List;
-import lombok.*;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.LargeVarCharVector;
+import org.apache.arrow.vector.SmallIntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
-import org.apache.arrow.vector.util.Text;
 
-public class LargeStringArray extends Array {
-    private LargeVarCharVector array;
+public class Int16Array extends Array {
+    private SmallIntVector array;
 
     public static void instantiate() {
         ObjectFactory.getFactory()
-                .register(
-                        "vineyard::BaseBinaryArray<arrow::LargeStringArray>",
-                        new LargeStringArrayResolver());
+                .register("vineyard::NumericArray<int16>", new Int16ArrayResolver());
         ObjectFactory.getFactory()
-                .register("vineyard::LargeStringArray", new LargeStringArrayResolver());
+                .register("vineyard::NumericArray<uint16>", new Int16ArrayResolver());
     }
 
-    public LargeStringArray(
-            final ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
+    public Int16Array(ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
-        this.array = new LargeVarCharVector("", Arrow.default_allocator);
+        this.array = new SmallIntVector("", Arrow.default_allocator);
         this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
     }
 
-    public byte[] get(int index) {
+    public short get(int index) {
         return this.array.get(index);
-    }
-
-    public Text getObject(int index) {
-        return this.array.getObject(index);
     }
 
     @Override
@@ -67,7 +58,7 @@ public class LargeStringArray extends Array {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        LargeStringArray that = (LargeStringArray) o;
+        Int16Array that = (Int16Array) o;
         return Objects.equal(array, that.array);
     }
 
@@ -77,24 +68,19 @@ public class LargeStringArray extends Array {
     }
 }
 
-class LargeStringArrayResolver extends ObjectFactory.Resolver {
+class Int16ArrayResolver extends ObjectFactory.Resolver {
     @Override
-    public Object resolve(final ObjectMeta meta) {
-        Buffer data_buffer =
+    public Object resolve(ObjectMeta meta) {
+        Buffer dataBuffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        Buffer offsets_buffer =
-                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_offsets_"));
-        Buffer validity_buffer =
+        Buffer validityBuffer =
                 (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
-        int null_count = meta.getIntValue("null_count_");
+        int nullCount = meta.getIntValue("null_count_");
         int length = meta.getIntValue("length_");
-        return new LargeStringArray(
+        return new Int16Array(
                 meta,
-                Arrays.asList(
-                        validity_buffer.getBuffer(),
-                        offsets_buffer.getBuffer(),
-                        data_buffer.getBuffer()),
+                Arrays.asList(validityBuffer.getBuffer(), dataBuffer.getBuffer()),
                 length,
-                null_count);
+                nullCount);
     }
 }

@@ -20,6 +20,7 @@ import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import io.v6d.modules.basic.arrow.*;
+import io.v6d.modules.basic.arrow.util.ObjectTransformer;
 import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -31,6 +32,7 @@ import org.apache.arrow.vector.types.TimeUnit;
 import org.apache.arrow.vector.types.Types;
 import org.apache.arrow.vector.types.pojo.*;
 import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.commons.lang.NotImplementedException;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,7 +42,10 @@ import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
 import org.apache.hadoop.hive.serde2.objectinspector.ObjectInspectorUtils;
 import org.apache.hadoop.hive.serde2.typeinfo.DecimalTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.ListTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.MapTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
+import org.apache.hadoop.hive.serde2.typeinfo.StructTypeInfo;
 import org.apache.hadoop.hive.serde2.typeinfo.TypeInfo;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Writable;
@@ -93,11 +98,13 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
     private Path finalOutPath;
     private FileSystem fs;
     private Progressable progress;
+    private final ObjectTransformer transformer;
 
     // vineyard
     private FSDataOutputStream output;
     private static CloseableReentrantLock lock = new CloseableReentrantLock();
     private Schema schema;
+    private TypeInfo[] infos;
 
     List<RecordBatchBuilder> chunks = new ArrayList<>();
     List<ColumnarDataBuilder> current;
@@ -139,6 +146,8 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         // initialize the schema
         this.initializeTableFile();
         this.schema = this.initializeTableSchema(tableProperties);
+
+        this.transformer = new HiveTypeTransformer();
         Context.println("creating a sink record writer uses: " + watch.stop());
     }
 
@@ -151,7 +160,9 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
         writeTimer.start();
         if (currentLoc == RECORD_BATCH_SIZE) {
-            val builder = new RecordBatchBuilder(Context.getClient(), schema, RECORD_BATCH_SIZE);
+            val builder =
+                    new RecordBatchBuilder(
+                            Context.getClient(), schema, RECORD_BATCH_SIZE, this.transformer);
             chunks.add(builder);
             current = builder.getColumnBuilders();
             currentLoc = 0;
@@ -194,10 +205,8 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         }
         for (int i = 0; i < chunks.size(); i++) {
             val chunk = chunks.get(i);
-            Context.println("record batch builder: " + i + ", row size: " + chunk.getNumRows());
             tableBuilder.addBatch(chunk);
         }
-        Context.println("record batch size:" + tableBuilder.getBatchSize());
         ObjectMeta meta = tableBuilder.seal(client);
         Context.println("Table id in vineyard:" + meta.getId().value());
         client.persist(meta.getId());
@@ -218,6 +227,65 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
         }
     }
 
+    private Field getField(TypeInfo typeInfo) {
+        Field field = null;
+        switch (typeInfo.getCategory()) {
+            case LIST:
+                List<Field> listChildren = new ArrayList<>();
+                Field chField = getField(((ListTypeInfo) typeInfo).getListElementTypeInfo());
+                listChildren.add(chField);
+                field =
+                        new Field(
+                                typeInfo.getTypeName(),
+                                FieldType.nullable(toArrowType(typeInfo)),
+                                listChildren);
+                break;
+            case STRUCT:
+                List<Field> structChildren = new ArrayList<>();
+                for (val child : ((StructTypeInfo) typeInfo).getAllStructFieldTypeInfos()) {
+                    structChildren.add(getField(child));
+                }
+                field =
+                        new Field(
+                                typeInfo.getTypeName(),
+                                FieldType.nullable(toArrowType(typeInfo)),
+                                structChildren);
+                break;
+            case MAP:
+                listChildren = new ArrayList<>();
+                structChildren = new ArrayList<>();
+                List<Field> mapChildren = new ArrayList<>();
+                Field keyField = getField(((MapTypeInfo) typeInfo).getMapKeyTypeInfo());
+                Field valueField = getField(((MapTypeInfo) typeInfo).getMapValueTypeInfo());
+                structChildren.add(keyField);
+                structChildren.add(valueField);
+                Field structField =
+                        new Field(
+                                typeInfo.getTypeName(),
+                                FieldType.notNullable(ArrowType.Struct.INSTANCE),
+                                structChildren);
+                listChildren.add(structField);
+                Field listField =
+                        new Field(
+                                typeInfo.getTypeName(),
+                                FieldType.notNullable(ArrowType.List.INSTANCE),
+                                listChildren);
+                mapChildren.add(listField);
+                field =
+                        new Field(
+                                typeInfo.getTypeName(),
+                                FieldType.nullable(toArrowType(typeInfo)),
+                                mapChildren);
+                break;
+            case UNION:
+                throw new NotImplementedException();
+            default:
+                field = Field.nullable(typeInfo.getTypeName(), toArrowType(typeInfo));
+                break;
+        }
+        return field;
+    }
+
     private Schema initializeTableSchema(Properties tableProperties) {
         val structTypeInfo = TypeContext.computeStructTypeInfo(tableProperties);
         val targetTypeInfos =
@@ -226,9 +294,9 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
         List<Field> fields = new ArrayList<>();
         for (val typeInfo : targetTypeInfos) {
-            Field field = Field.nullable(typeInfo.getTypeName(), toArrowType(typeInfo));
-            fields.add(field);
+            fields.add(getField(typeInfo));
         }
+        infos = targetTypeInfos;
         return new Schema(fields);
     }
 
@@ -257,7 +325,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                     case DATE:
                         return Types.MinorType.DATEDAY.getType();
                     case TIMESTAMP:
-                        return new ArrowType.Timestamp(TimeUnit.MICROSECOND, "UTC");
+                        return new ArrowType.Timestamp(TimeUnit.NANOSECOND, "UTC");
                     case BINARY:
                         return Types.MinorType.VARBINARY.getType();
                     case DECIMAL:
@@ -269,7 +337,6 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
                     case INTERVAL_DAY_TIME:
                         return Types.MinorType.INTERVALDAY.getType();
                     case VOID:
-                        // case TIMESTAMPLOCALTZ:
                     case UNKNOWN:
                     default:
                         throw new IllegalArgumentException();
@@ -279,7 +346,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
             case STRUCT:
                 return ArrowType.Struct.INSTANCE;
             case MAP:
-                return new ArrowType.Map(false);
+                return new ArrowType.Map(true);
             case UNION:
             default:
                 throw new IllegalArgumentException();

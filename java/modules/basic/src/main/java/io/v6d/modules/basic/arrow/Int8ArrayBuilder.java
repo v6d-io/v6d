@@ -19,19 +19,19 @@ import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import java.util.Arrays;
-import lombok.*;
+import lombok.val;
 import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.Float8Vector;
+import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-public class DoubleArrayBuilder implements ArrayBuilder {
+public class Int8ArrayBuilder implements ArrayBuilder {
     private BufferBuilder dataBufferBuilder;
     private BufferBuilder validityBufferBuilder;
-    private Float8Vector array;
+    private TinyIntVector array;
 
-    public DoubleArrayBuilder(IPCClient client, long length) throws VineyardException {
-        this.array = new Float8Vector("", Arrow.default_allocator);
+    public Int8ArrayBuilder(IPCClient client, long length) throws VineyardException {
+        this.array = new TinyIntVector("", Arrow.default_allocator);
         this.dataBufferBuilder =
                 new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
@@ -48,7 +48,7 @@ public class DoubleArrayBuilder implements ArrayBuilder {
     public ObjectMeta seal(Client client) throws VineyardException {
         this.build(client);
         val meta = ObjectMeta.empty();
-        meta.setTypename("vineyard::NumericArray<double>");
+        meta.setTypename("vineyard::NumericArray<int8>");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", array.getNullCount());
@@ -69,7 +69,7 @@ public class DoubleArrayBuilder implements ArrayBuilder {
         this.array.setValueCount((int) size);
     }
 
-    void set(int index, double value) {
+    void set(int index, byte value) {
         this.array.set(index, value);
     }
 }

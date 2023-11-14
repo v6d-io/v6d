@@ -19,19 +19,19 @@ import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import java.util.Arrays;
-import lombok.*;
+import lombok.val;
 import org.apache.arrow.memory.ArrowBuf;
+import org.apache.arrow.vector.DateMilliVector;
 import org.apache.arrow.vector.FieldVector;
-import org.apache.arrow.vector.Float8Vector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-public class DoubleArrayBuilder implements ArrayBuilder {
+public class DateArrayBuilder implements ArrayBuilder {
     private BufferBuilder dataBufferBuilder;
     private BufferBuilder validityBufferBuilder;
-    private Float8Vector array;
+    private DateMilliVector array;
 
-    public DoubleArrayBuilder(IPCClient client, long length) throws VineyardException {
-        this.array = new Float8Vector("", Arrow.default_allocator);
+    public DateArrayBuilder(IPCClient client, long length) throws VineyardException {
+        this.array = new DateMilliVector("", Arrow.default_allocator);
         this.dataBufferBuilder =
                 new BufferBuilder(client, this.array.getBufferSizeFor((int) length));
         this.array.loadFieldBuffers(
@@ -40,15 +40,16 @@ public class DoubleArrayBuilder implements ArrayBuilder {
 
     @Override
     public void build(Client client) throws VineyardException {
-        ArrowBuf buf = array.getValidityBuffer();
-        validityBufferBuilder = new BufferBuilder((IPCClient) client, buf, buf.capacity());
+        ArrowBuf validityBuf = array.getValidityBuffer();
+        validityBufferBuilder =
+                new BufferBuilder((IPCClient) client, validityBuf, validityBuf.capacity());
     }
 
     @Override
     public ObjectMeta seal(Client client) throws VineyardException {
         this.build(client);
         val meta = ObjectMeta.empty();
-        meta.setTypename("vineyard::NumericArray<double>");
+        meta.setTypename("vineyard::Date<Milli>");
         meta.setNBytes(array.getBufferSizeFor(array.getValueCount()));
         meta.setValue("length_", array.getValueCount());
         meta.setValue("null_count_", array.getNullCount());
@@ -69,7 +70,7 @@ public class DoubleArrayBuilder implements ArrayBuilder {
         this.array.setValueCount((int) size);
     }
 
-    void set(int index, double value) {
+    void set(int index, long value) {
         this.array.set(index, value);
     }
 }

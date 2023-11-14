@@ -33,7 +33,6 @@ import org.apache.arrow.memory.RootAllocator;
 import org.apache.arrow.util.Collections2;
 import org.apache.arrow.vector.types.pojo.Field;
 
-/** Hello world! */
 public class Schema extends Object implements Serializable {
     private org.apache.arrow.vector.types.pojo.Schema schema;
 

@@ -19,12 +19,12 @@ import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import java.util.Arrays;
-import lombok.val;
+import java.util.List;
+import org.apache.arrow.memory.ArrowBuf;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.FieldVector;
 import org.apache.arrow.vector.ipc.message.ArrowFieldNode;
 
-/** Hello world! */
 public class Int64Array extends Array {
     private BigIntVector array;
 
@@ -35,11 +35,10 @@ public class Int64Array extends Array {
                 .register("vineyard::NumericArray<uint64>", new Int64ArrayResolver());
     }
 
-    public Int64Array(final ObjectMeta meta, Buffer buffer, long length) {
+    public Int64Array(final ObjectMeta meta, List<ArrowBuf> buffers, long length, int nullCount) {
         super(meta);
         this.array = new BigIntVector("", Arrow.default_allocator);
-        this.array.loadFieldBuffers(
-                new ArrowFieldNode(length, 0), Arrays.asList(null, buffer.getBuffer()));
+        this.array.loadFieldBuffers(new ArrowFieldNode(length, nullCount), buffers);
     }
 
     public double get(int index) {
@@ -72,7 +71,15 @@ public class Int64Array extends Array {
 class Int64ArrayResolver extends ObjectFactory.Resolver {
     @Override
     public Object resolve(final ObjectMeta meta) {
-        val buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
-        return new Int64Array(meta, buffer, meta.getLongValue("length_"));
+        Buffer buffer = (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("buffer_"));
+        Buffer validityBuffer =
+                (Buffer) ObjectFactory.getFactory().resolve(meta.getMemberMeta("null_bitmap_"));
+        int nullCount = meta.getIntValue("null_count_");
+        int length = meta.getIntValue("length_");
+        return new Int64Array(
+                meta,
+                Arrays.asList(validityBuffer.getBuffer(), buffer.getBuffer()),
+                length,
+                nullCount);
     }
 }

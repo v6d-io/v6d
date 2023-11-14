@@ -32,7 +32,7 @@ In this repo, we set ```hive.default.fileformat``` as ```Vineyard``` and set ```
 If you want to use local file system or HDFS, you need to change the configuration or point out the storage format when
 creating table.
 
-- Create table and insert some data:
+- Create table as textfile and insert some data:
 
     .. code:: sql
 
@@ -41,7 +41,7 @@ creating table.
             a string,
             b int)
         stored as TEXTFILE
-        LOCATION "file:///opt/hive/data/warehouse/hive_example";
+        location "file:///opt/hive/data/warehouse/hive_example";
 
         insert into hive_example values('a', 1), ('a', 2), ('b',3);
         select count(distinct a) from hive_example;
@@ -56,7 +56,16 @@ creating table.
 Hive and Vineyard
 -----------------
 
-- Create hive table on vineyard (using :code:`file:///` is enough as we won't touch filesystem input/output format):
+- Start vineyard server:
+
+    The socket file must be placed in the correct directory. Please refer to the docker-compose.yml file for details.
+    You can change the socket file path as you like and change the docker-compose.yml file accordingly.
+
+      .. code:: bash
+  
+          vineyardd --socket=./vineyard/vineyard.sock --meta=local
+
+- Create hive table on vineyard:
 
     .. code:: sql
 
@@ -64,6 +73,7 @@ Hive and Vineyard
             a string,
             b int);
         describe formatted hive_example;
+        drop table hive_example;
 
 - Create table and select
 
@@ -76,8 +86,9 @@ Hive and Vineyard
         select * from hive_example2;
 
         explain vectorization only select * from hive_example2;
+        drop table hive_example2;
 
-- Vectorized Input (and output, currently unavaliabe):
+- Vectorized input and output(Currently unavaliabe):
 
     .. code:: sql
 
@@ -107,6 +118,7 @@ Hive and Vineyard
         explain vectorization select * from hive_example;
 
         insert into hive_example values(1, 1), (2, 2), (3,3);
+        drop table hive_example;
 
 - Test large data sets:
 
@@ -125,19 +137,9 @@ Hive and Vineyard
         row format serde 'org.apache.hadoop.hive.serde2.OpenCSVSerde'
         stored as textfile;
         load data local inpath "file:///opt/hive/data/warehouse/soc-livejournal.csv" into table hive_test_data_livejournal;
-        insert into hive_example3 select * from hive_test_data_livejournal; 
-
-- Test output format:
-
-    .. code:: sql
-
-        create table hive_example_orc(
-                                    field_1 int,
-                                    field_2 int)
-        stored as orc
-        LOCATION "file:///opt/hive/data/warehouse/hive_example_orc";
-        insert into hive_example values(1, 1), (2, 2), (3, 3);
-        explain vectorization select * from hive_example_orc;
+        insert into hive_example3 select * from hive_test_data_livejournal;
+        drop table hive_test_data_livejournal;
+        select * from hive_example3;
 
 - Test static partition:
 
@@ -153,6 +155,7 @@ Hive and Vineyard
         select * from hive_static_partition;
         select * from hive_static_partition where value=666;
         select * from hive_static_partition where value=114514;
+        drop table hive_static_partition;
 
 - Test dynamic partition:
 
@@ -163,7 +166,7 @@ Hive and Vineyard
             dst_id int,
             year int)
         stored as TEXTFILE
-        LOCATION "file:///opt/hive/data/warehouse/hive_dynamic_partition_data";
+        location "file:///opt/hive/data/warehouse/hive_dynamic_partition_data";
         insert into table hive_dynamic_partition_data values (1, 2, 2018),(3, 4, 2018),(1, 2, 2017);
 
         create table hive_dynamic_partition_test
@@ -173,6 +176,73 @@ Hive and Vineyard
         )partitioned by(mounth int, year int);
         insert into table hive_dynamic_partition_test partition(mounth=1, year) select src_id,dst_id,year from hive_dynamic_partition_data;
         select * from hive_dynamic_partition_test;
+        drop table hive_dynamic_partition_test;
+        drop table hive_dynamic_partition_data;
+
+- Test all primitive types:
+  
+    Now vineyard support to store tinyint, smallint, int, bigint, boolean, string, float, double, date, timestamp, binary and decimal.
+
+    .. code:: sql
+  
+        create table test_all_primitive_types (
+            field_1 tinyint,
+            field_2 smallint,
+            field_3 bigint,
+            field_4 int,
+            field_5 double,
+            field_6 float,
+            field_7 string,
+            field_9 varchar(10),
+            field_10 char(10),
+            field_8 binary,
+            field_11 date,
+            field_12 boolean,
+            field_13 timestamp,
+            field_14 decimal(6, 2)
+        );
+
+        insert into test_all_primitive_types select
+            tinyint(1),
+            smallint(1),
+            42,
+            bigint(1),
+            double(2.0),
+            float(1.0),
+            'hello world1!',
+            'hello world2!',
+            'hello world3!',
+            cast('hello world4!' as binary),
+            date('2023-12-31'),
+            true,
+            timestamp('2023-12-31 23:59:59'),
+            cast(1234.56 as decimal);
+
+        select * from test_all_primitive_types;
+        drop table test_all_primitive_types;
+
+- Test nested types:
+
+    Now vineyard support to store array, map and struct.
+
+    .. code:: sql
+
+        CREATE TABLE nested_table (
+            field_1 map<int,
+                        array<struct<field_1:int,
+                                     field_2:string>>>
+        );
+
+        insert INTO nested_table select
+            map(
+                42,
+                array(named_struct('field_1', 1,
+                                   'field_2', 'hello'),
+                      named_struct('field_1', 2,
+                                   'field_2', 'world!')));
+
+        select * from nested_table;
+        drop table nested_table;
 
 Connect to Hive from Spark
 --------------------------
