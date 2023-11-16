@@ -53,7 +53,7 @@ def buffer_builder(
 def as_arrow_buffer(blob: Blob):
     buffer = blob.buffer
     if buffer is None:
-        return None
+        return pa.py_buffer(bytearray())
     return pa.py_buffer(buffer)
 
 
