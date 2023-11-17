@@ -5,6 +5,32 @@ Deploy on Kubernetes
 
 Vineyard is managed by the :ref:`vineyard-operator` on Kubernetes.
 
+Quick start
+-----------
+
+If you want to install vineyard cluster quickly, you can 
+use the following command.
+
+Install `vineyardctl`_ as follows.
+
+.. code:: bash
+
+    export LATEST_TAG=$(curl -s "https://api.github.com/repos/v6d-io/v6d/tags" | jq -r '.[0].name')
+    export OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+    export ARCH=${$(uname -m)/x86_64/amd64}
+    curl -Lo vineyardctl https://github.com/v6d-io/v6d/releases/download/$LATEST_TAG/vineyardctl-$LATEST_TAG-$OS-$ARCH
+    chmod +x vineyardctl
+    sudo mv vineyardctl /usr/local/bin/
+
+Use the vineyardctl to install vineyard cluster.
+
+.. code:: bash
+
+    vineyardctl install vineyard-cluster --create-namespace
+
+Also, you could follow the next guide to install vineyard cluster steps
+by steps.
+
 Install vineyard-operator
 -------------------------
 
@@ -196,5 +222,6 @@ automates much of the boilerplate configuration required when deploying workflow
    ^^^^^^^^^^^^
    :code:`vineyardctl` is the command-line tool for working with the Vineyard Operator.
 
+.. _vineyardctl: https://github.com/v6d-io/v6d/blob/main/k8s/cmd/README.md
 .. _kind: https://kind.sigs.k8s.io
 .. _CRD: https://kubernetes.io/docs/tasks/extend-kubernetes/custom-resources/custom-resource-definitions

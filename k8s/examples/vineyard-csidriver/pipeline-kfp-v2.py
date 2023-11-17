@@ -4,7 +4,7 @@ from kfp import kubernetes
 @dsl.container_component
 def PreProcess(data_multiplier: int):
     return dsl.ContainerSpec(
-        image = 'ghcr.io/v6d-io/v6d/kubeflow-example/preprocess-data',
+        image = 'ghcr.io/v6d-io/v6d/csidriver-example/preprocess-data',
         command = ['python3', 'preprocess.py'],
         args=[f'--data_multiplier={data_multiplier}'],
     )
@@ -12,14 +12,14 @@ def PreProcess(data_multiplier: int):
 @dsl.container_component
 def Train():
     return dsl.ContainerSpec(
-        image='ghcr.io/v6d-io/v6d/kubeflow-example/train-data',
+        image='ghcr.io/v6d-io/v6d/csidriver-example/train-data',
         command = ['python3', 'train.py'],
     )
 
 @dsl.container_component
 def Test():
     return dsl.ContainerSpec(
-        image='ghcr.io/v6d-io/v6d/kubeflow-example/test-data',
+        image='ghcr.io/v6d-io/v6d/csidriver-example/test-data',
         command = ['python3', 'test.py'],
     )
 

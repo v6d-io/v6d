@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: prepare-data
-        image: ghcr.io/v6d-io/v6d/kubeflow-example/prepare-data
+        image: ghcr.io/v6d-io/v6d/csidriver-example/prepare-data
         imagePullPolicy: Always
         command: ["python3", "/prepare-data.py"]
         volumeMounts:

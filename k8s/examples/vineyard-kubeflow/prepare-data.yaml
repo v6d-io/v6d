@@ -53,5 +53,5 @@ spec:
   accessModes:
     - ReadWriteMany
   hostPath:
-    # mount a nfs volume to the kind nodes
+    # mount a nfs volume to the kubernetes nodes
     path: "/mnt/csi-benchmark"

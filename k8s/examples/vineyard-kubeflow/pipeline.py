@@ -1,35 +1,47 @@
 from kfp import dsl
 
 def PreProcess(data_multiplier: int, registry: str):
-    return dsl.ContainerOp(
+    op =  dsl.ContainerOp(
         name='Preprocess Data',
         image = f'{registry}/preprocess-data',
-        container_kwargs={'image_pull_policy':"Always"},
+        container_kwargs={
+            'image_pull_policy': "Always",
+        },
+        pvolumes={
+            "/data": dsl.PipelineVolume(pvc="benchmark-data"),
+        },
         command = ['python3', 'preprocess.py'],
         arguments = [f'--data_multiplier={data_multiplier}'],
-        # add the existing volume to the pipeline
-        pvolumes={"/data": dsl.PipelineVolume(pvc="benchmark-data")},
     )
+    return op
 
 def Train(comp1, registry: str):
-    return dsl.ContainerOp(
+    op = dsl.ContainerOp(
         name='Train Data',
         image=f'{registry}/train-data',
-        container_kwargs={'image_pull_policy':"Always"},
+        container_kwargs={
+            'image_pull_policy': "Always",
+        },
+        pvolumes={
+            "/data": comp1.pvolumes['/data'],
+        },
         command = ['python3', 'train.py'],
-        
-        pvolumes={"/data": comp1.pvolumes['/data']},
     )
+    return op
 
 def Test(comp2, registry: str):
-    return dsl.ContainerOp(
+    op = dsl.ContainerOp(
         name='Test Data',
         image=f'{registry}/test-data',
-        container_kwargs={'image_pull_policy':"Always"},
+        container_kwargs={
+            'image_pull_policy': "Always",
+        },
+        pvolumes={
+            "/data": comp2.pvolumes['/data'],
+        },
         command = ['python3', 'test.py'],
-
-        pvolumes={"/data": comp2.pvolumes['/data']},
     )
+    return op
 
 @dsl.pipeline(
    name='Machine Learning Pipeline',

@@ -1,4 +1,4 @@
-REGISTRY := "ghcr.io/v6d-io/v6d/kubeflow-example"
+REGISTRY := "ghcr.io/v6d-io/v6d/csidriver-example"
 docker-build:
 	docker build prepare-data/ -f Dockerfile \
 		--build-arg APP=prepare-data.py \
