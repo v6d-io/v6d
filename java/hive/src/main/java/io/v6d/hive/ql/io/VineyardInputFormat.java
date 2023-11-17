@@ -103,7 +103,7 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                     if (len <= 0) {
                         continue;
                     }
-                    String[] objectIDs = new String(buffer, StandardCharsets.UTF_8).split("\n");
+                    String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
                     for (val objectID : objectIDs) {
                         try {
                             ObjectID tableID = ObjectID.fromString(objectID);
@@ -118,7 +118,7 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                                     "Skipping invalid file: "
                                             + tableFilePath
                                             + ", content: "
-                                            + new String(buffer, StandardCharsets.UTF_8));
+                                            + new String(buffer, StandardCharsets.US_ASCII));
                             break;
                         }
                     }
@@ -184,7 +184,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
                 if (len <= 0) {
                     continue;
                 }
-                String[] objectIDs = new String(buffer, StandardCharsets.UTF_8).split("\n");
+                String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
                 for (val objectID : objectIDs) {
                     try {
                         ObjectID tableID = ObjectID.fromString(objectID);
@@ -198,14 +198,13 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
                             this.batches[this.recordBatchIndex++] = batch;
                         }
                         schema = table.getSchema().getSchema();
-                        break;
                     } catch (ObjectNotExists | NumberFormatException e) {
                         // Skip some invalid file.
                         Context.println(
                                 "Skipping invalid file: "
                                         + tableFilePath
                                         + ", content: "
-                                        + new String(buffer, StandardCharsets.UTF_8));
+                                        + new String(buffer, StandardCharsets.US_ASCII));
                         break;
                     }
                 }
