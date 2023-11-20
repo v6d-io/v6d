@@ -79,7 +79,6 @@ class VineyardOutputStream extends OutputStream {
         fileMeta.setTypename("vineyard::File");
         fileMeta.setValue("is_dir_", false);
 
-        Context.println("length:" + length);
         Buffer buffer = client.createBuffer(length);
         output = new UnsafeMemoryOutput(buffer.getPointer(), (int) buffer.getSize());
         output.write(content, 0, length);
@@ -353,7 +352,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         Set<ObjectID> objectIDs = new HashSet<ObjectID>();
         for (String objectIDStr : objectIDStrs) {
             try {
-                Context.println("delete id:" + ObjectID.fromString(objectIDStr).value());
                 ObjectID objectID = ObjectID.fromString(objectIDStr);
                 objectIDs.add(objectID);
             } catch (Exception e) {
@@ -398,6 +396,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             deleteVineyardObjectWithName(new String[] {path.toString()});
         } catch (Exception e) {
             Context.println("Failed to delete file: " + e.getMessage());
+            return false;
         }
         printAllFiles();
         return true;
@@ -456,8 +455,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         try {
             getFileStatusInternal(dstParentPath);
         } catch (FileNotFoundException e) {
-            // dst parent not exist
-            Context.println("Dst parent not exist");
+            // dst parent not exist, create first
             mkdirsInternal(dstParentPath, new FsPermission((short) 777));
         }
 
@@ -483,13 +481,11 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
                 ObjectID objectID = client.getName(src.toString());
                 client.putName(objectID, dst.toString());
-                Context.println("put name:" + dst.toString());
                 client.dropName(src.toString());
                 printAllFiles();
                 return true;
             }
             // dst file exist
-            Context.println("dst exist!");
             mergeFile(src, dst);
             deleteFileWithoutObject(src);
 
@@ -541,7 +537,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                     continue;
                 }
                 boolean isDir = meta.getBooleanValue("is_dir_");
-                int len = isDir ? DIR_LEN : meta.getIntValue("length_");
+                int len = meta.getIntValue("length_");
                 long modifyTime = meta.getLongValue("modify_time_");
                 Path objectPath = new Path(object.getKey());
                 FileStatus temp =
@@ -582,7 +578,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     }
 
     private boolean mkdirsInternal(Path path, FsPermission fsPermission) throws IOException {
-        Context.println("mkdir:" + path);
         try {
             getFileStatusInternal(path);
         } catch (FileNotFoundException e) {
@@ -592,7 +587,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                 mkdirsInternal(parentPath, fsPermission);
             }
 
-            Context.println("file not found, create dir!");
             ObjectMeta dirMeta = ObjectMeta.empty();
             dirMeta.setTypename("vineyard::File");
             dirMeta.setValue("is_dir_", true);
@@ -600,7 +594,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             dirMeta.setValue("modify_time_", System.currentTimeMillis());
             dirMeta = client.createMetaData(dirMeta);
             client.persist(dirMeta.getId());
-            Context.println("put name:" + path.toString());
             client.putName(dirMeta.getId(), path.toString());
             printAllFiles();
             return true;
