@@ -44,8 +44,9 @@ public class VineyardFile {
     public VineyardFile(String path, boolean isDir, Mode mode, boolean overwrite)
             throws IOException {
         this.filePath = path;
-        this.client = new IPCClient();
+        this.client = Context.getClient();
         this.mode = mode;
+        this.isDir = isDir;
         if (isDir) {
             makeDir();
             return;
@@ -109,7 +110,7 @@ public class VineyardFile {
     }
 
     public void close() throws IOException {
-        if (this.mode == Mode.READ) {
+        if (this.isDir || this.mode == Mode.READ) {
             // do nothing
             return;
         }
