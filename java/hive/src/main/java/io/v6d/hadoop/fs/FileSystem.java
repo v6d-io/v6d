@@ -17,11 +17,11 @@ package io.v6d.hadoop.fs;
 import com.google.common.base.StopwatchContext;
 import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
-import io.v6d.core.client.ds.Buffer;
-import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
-import io.v6d.core.common.util.VineyardException.ObjectNotExists;
 import io.v6d.hive.ql.io.CloseableReentrantLock;
+import io.v6d.modules.basic.filesystem.VineyardFile;
+import io.v6d.modules.basic.filesystem.VineyardFileStat;
+import io.v6d.modules.basic.filesystem.VineyardFileUtils;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -31,77 +31,25 @@ import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import lombok.*;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.Progressable;
-import org.apache.hive.com.esotericsoftware.kryo.io.UnsafeMemoryInput;
-import org.apache.hive.com.esotericsoftware.kryo.io.UnsafeMemoryOutput;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 class VineyardOutputStream extends OutputStream {
-    private byte[] content;
-    private int length = 0;
-    private Path filePath;
-    private IPCClient client;
-    private UnsafeMemoryOutput output;
+    private final VineyardFile file;
 
     public VineyardOutputStream(Path filePath, boolean overwrite) throws IOException {
-        content = new byte[1];
-        client = Context.getClient();
-        ObjectID fileObjectID;
-        this.filePath = filePath;
-        try {
-            fileObjectID = client.getName(filePath.toString());
-        } catch (ObjectNotExists e) {
-            // file not exist
-            client = Context.getClient();
-            return;
-        }
-        if (overwrite) {
-            Set<ObjectID> objectIDs = new HashSet<ObjectID>();
-            objectIDs.add(fileObjectID);
-            client.delete(objectIDs, false, false);
-            client.dropName(filePath.toString());
-        } else {
-            throw new IOException("File already exist.");
-        }
+        file = new VineyardFile(filePath.toString(), false, VineyardFile.Mode.WRITE, overwrite);
     }
 
     @Override
     public void close() throws IOException {
-        // Write to vineyard
-        ObjectMeta fileMeta = ObjectMeta.empty();
-        fileMeta.setTypename("vineyard::File");
-        fileMeta.setValue("is_dir_", false);
-
-        Buffer buffer = client.createBuffer(length);
-        output = new UnsafeMemoryOutput(buffer.getPointer(), (int) buffer.getSize());
-        output.write(content, 0, length);
-        output.flush();
-
-        ObjectMeta bufferMeta = ObjectMeta.empty();
-        bufferMeta.setId(buffer.getObjectId()); // blob's builder is a special case
-        bufferMeta.setInstanceId(client.getInstanceId());
-
-        bufferMeta.setTypename("vineyard::Blob");
-        bufferMeta.setNBytes(buffer.getSize());
-
-        // to make resolving the returned object metadata possible
-        bufferMeta.setBufferUnchecked(buffer.getObjectId(), buffer);
-        client.sealBuffer(buffer.getObjectId());
-
-        fileMeta.addMember("content_", bufferMeta);
-
-        fileMeta.setValue("length_", length);
-        fileMeta.setValue("modify_time_", System.currentTimeMillis());
-        fileMeta = client.createMetaData(fileMeta);
-        client.persist(fileMeta.getId());
-        client.putName(fileMeta.getId(), filePath.toString());
+        file.close();
     }
 
     @Override
@@ -109,56 +57,27 @@ class VineyardOutputStream extends OutputStream {
         return "vineyard";
     }
 
-    private void expandContent() {
-        byte[] newContent = new byte[content.length * 2];
-        System.arraycopy(content, 0, newContent, 0, length);
-        content = newContent;
-    }
-
     @Override
     public void write(int b) throws IOException {
-        byte byteValue = (byte) (b & 0xff);
-        if (length >= content.length) {
-            expandContent();
-        }
-        content[length] = byteValue;
-        length++;
+        file.write(b);
     }
 }
 
 class VineyardInputStream extends FSInputStream {
-    private byte[] content;
-    private IPCClient client;
-    private int pos = 0;
-    private UnsafeMemoryInput input;
+    private final VineyardFile file;
 
     public VineyardInputStream(Path filePath) throws IOException {
-        client = Context.getClient();
-
-        ObjectID objectID = client.getName(filePath.toString());
-        ObjectMeta meta = client.getMetaData(objectID);
-        if (meta.getBooleanValue("is_dir_")) {
-            throw new IOException("Can not open a directory.");
-        }
-        ObjectID contentObjectID = meta.getMemberMeta("content_").getId();
-        ObjectMeta contentObjectMeta = client.getMetaData(contentObjectID);
-        Buffer buffer = contentObjectMeta.getBuffer(contentObjectID);
-        content = new byte[(int) buffer.getSize()];
-        input = new UnsafeMemoryInput(buffer.getPointer(), (int) buffer.getSize());
-        input.read(content);
+        file = new VineyardFile(filePath.toString(), false, VineyardFile.Mode.READ, false);
     }
 
     @Override
     public void seek(long offset) throws IOException {
-        if (offset > content.length) {
-            throw new IOException("Seek offset is out of range.");
-        }
-        pos = (int) offset;
+        file.seek(offset);
     }
 
     @Override
     public long getPos() throws IOException {
-        return pos;
+        return file.getPos();
     }
 
     @Override
@@ -169,18 +88,12 @@ class VineyardInputStream extends FSInputStream {
 
     @Override
     public int read() throws IOException {
-        int result = -1;
-        if (pos >= content.length) {
-            return result;
-        }
-        result = (content[pos] & 0xff);
-        pos++;
-        return result;
+        return file.read();
     }
 
     @Override
     public void close() throws IOException {
-        // Nothint to do.
+        file.close();
     }
 }
 
@@ -199,9 +112,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     static final CloseableReentrantLock lock = new CloseableReentrantLock();
     private Configuration conf = null;
 
-    static RawLocalFileSystem fs = null;
-    static boolean enablePrintAllFiles = false;
-    static boolean enablePrintAllObjects = true;
+    private boolean enablePrintAllFiles = false;
 
     private IPCClient client;
     private static final int DIR_LEN = 1;
@@ -210,33 +121,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     public FileSystem() {
         super();
-    }
-
-    private void printAllFiles() throws IOException {
-        if (enablePrintAllFiles) {
-            Context.println("-----------------------------------");
-            Map<String, ObjectID> objects;
-            try {
-                objects = client.listNames(".*", true, 255);
-            } catch (Exception e) {
-                Context.println("Failed to list names: " + e.getMessage());
-                return;
-            }
-            for (val object : objects.entrySet()) {
-                try {
-                    ObjectMeta meta = client.getMetaData(object.getValue());
-                    if (meta.getTypename().compareTo("vineyard::File") == 0) {
-                        String type = meta.getBooleanValue("is_dir_") ? "dir" : "file";
-                        Context.println("Type:" + type + " " + object.getKey());
-                    }
-                } catch (Exception e) {
-                    // Skip some invalid object id.
-                    Context.println("Failed to get object meta: " + e.getMessage());
-                    continue;
-                }
-            }
-            Context.println("-----------------------------------");
-        }
     }
 
     @Override
@@ -267,6 +151,12 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         this.client = Context.getClient();
 
         mkdirs(new Path(uri.toString()), new FsPermission((short) 777));
+    }
+
+    private void printAllFiles() throws IOException {
+        if (this.enablePrintAllFiles) {
+            VineyardFileUtils.printAllFiles(this.client);
+        }
     }
 
     @Override
@@ -503,57 +393,22 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     private FileStatus[] listStatusInternal(Path path) throws FileNotFoundException, IOException {
         List<FileStatus> result = new ArrayList<FileStatus>();
-        ObjectID fileObjectID;
-        try {
-            fileObjectID = client.getName(path.toString());
-        } catch (ObjectNotExists e) {
-            throw new FileNotFoundException(path.toString() + " is not found.");
-        }
-        ObjectMeta fileMeta = client.getMetaData(fileObjectID);
-        if (!fileMeta.getBooleanValue("is_dir_")) {
-            // file
+        VineyardFileStat[] vineyardFileStats =
+                VineyardFileUtils.listFileStats(client, path.toString());
+        for (VineyardFileStat vineyardFileStat : vineyardFileStats) {
             FileStatus temp =
                     new FileStatus(
-                            fileMeta.getIntValue("length_"),
-                            false,
-                            1,
-                            1,
-                            fileMeta.getLongValue("modify_time_"),
-                            System.currentTimeMillis(),
-                            new FsPermission((short) 777),
+                            vineyardFileStat.getLength(),
+                            vineyardFileStat.isDir(),
+                            vineyardFileStat.getBlockReplication(),
+                            vineyardFileStat.getBlockSize(),
+                            vineyardFileStat.getModifyTime(),
+                            vineyardFileStat.getAccessTime(),
+                            new FsPermission(vineyardFileStat.getPermission()),
                             null,
                             null,
-                            new Path(path.toString()));
+                            new Path(vineyardFileStat.getFilePath()));
             result.add(temp);
-        } else {
-            // dir
-            Path newPath = new Path(path.toString().replaceAll("/+", "/"));
-            String pattern = "^" + newPath.toString() + "/[^/]*";
-            Map<String, ObjectID> objects = Context.getClient().listNames(pattern, true, 255);
-            for (val object : objects.entrySet()) {
-                ObjectID objectID = object.getValue();
-                ObjectMeta meta = client.getMetaData(objectID);
-                if (meta.getTypename().compareTo("vineyard::File") != 0) {
-                    continue;
-                }
-                boolean isDir = meta.getBooleanValue("is_dir_");
-                int len = meta.getIntValue("length_");
-                long modifyTime = meta.getLongValue("modify_time_");
-                Path objectPath = new Path(object.getKey());
-                FileStatus temp =
-                        new FileStatus(
-                                len,
-                                isDir,
-                                1,
-                                1,
-                                1,
-                                modifyTime,
-                                new FsPermission((short) 777),
-                                null,
-                                null,
-                                objectPath);
-                result.add(temp);
-            }
         }
         printAllFiles();
         return result.toArray(new FileStatus[result.size()]);
@@ -587,14 +442,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                 mkdirsInternal(parentPath, fsPermission);
             }
 
-            ObjectMeta dirMeta = ObjectMeta.empty();
-            dirMeta.setTypename("vineyard::File");
-            dirMeta.setValue("is_dir_", true);
-            dirMeta.setValue("length_", DIR_LEN);
-            dirMeta.setValue("modify_time_", System.currentTimeMillis());
-            dirMeta = client.createMetaData(dirMeta);
-            client.persist(dirMeta.getId());
-            client.putName(dirMeta.getId(), path.toString());
+            new VineyardFile(path.toString(), true, VineyardFile.Mode.WRITE, false);
             printAllFiles();
             return true;
         }
@@ -610,25 +458,17 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     public FileStatus getFileStatusInternal(Path path) throws IOException {
         printAllFiles();
-        ObjectID fileObjectID;
-        try {
-            fileObjectID = client.getName(path.toString());
-        } catch (ObjectNotExists e) {
-            throw new FileNotFoundException(path.toString() + " is not found.");
-        }
-        ObjectMeta meta = client.getMetaData(fileObjectID);
-        boolean isDir = meta.getBooleanValue("is_dir_");
-        int len = meta.getIntValue("length_");
-        long modifyTime = meta.getLongValue("modify_time_");
+        VineyardFileStat vineyardFileStat =
+                VineyardFileUtils.getFileStatus(client, path.toString());
         FileStatus result =
                 new FileStatus(
-                        len,
-                        isDir,
-                        1,
-                        1,
-                        1,
-                        modifyTime,
-                        new FsPermission((short) 777),
+                        vineyardFileStat.getLength(),
+                        vineyardFileStat.isDir(),
+                        vineyardFileStat.getBlockReplication(),
+                        vineyardFileStat.getBlockSize(),
+                        vineyardFileStat.getModifyTime(),
+                        vineyardFileStat.getAccessTime(),
+                        new FsPermission(vineyardFileStat.getPermission()),
                         null,
                         null,
                         path);
