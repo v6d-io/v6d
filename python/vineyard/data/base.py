@@ -130,6 +130,7 @@ def register_base_types(
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Blob', bytes_resolver)
+        resolver_ctx.register('vineyard::RemoteBlob', bytes_resolver)
         resolver_ctx.register('vineyard::Scalar', scalar_resolver)
         resolver_ctx.register('vineyard::Array', array_resolver)
         resolver_ctx.register('vineyard::Sequence', sequence_resolver)

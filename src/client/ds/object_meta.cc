@@ -107,6 +107,22 @@ bool const ObjectMeta::IsLocal() const {
   }
 }
 
+bool const ObjectMeta::IsLocated() const {
+  auto instance_id = meta_["instance_id"];
+  if (instance_id.is_null()) {
+    // it is a newly created metadata
+    return true;
+  } else {
+    if (client_) {
+      std::shared_ptr<struct InstanceStatus> instance_status = nullptr;
+      VINEYARD_CHECK_OK(client_->InstanceStatus(instance_status));
+      return instance_status->instance_id == instance_id.get<InstanceID>();
+    } else {
+      return false;
+    }
+  }
+}
+
 void ObjectMeta::ForceLocal() const { this->force_local_ = true; }
 
 bool const ObjectMeta::Haskey(std::string const& key) const {
@@ -347,9 +363,15 @@ void ObjectMeta::SetMetaData(ClientBase* client, const json& meta) {
     ObjectID member_id =
         ObjectIDFromString(tree["id"].get_ref<std::string const&>());
     if (IsBlob(member_id)) {
-      if (client_ == nullptr /* traverse to account blobs */ ||
-          tree["instance_id"].get<InstanceID>() == client_->instance_id()) {
+      if (client_ == nullptr) {
         VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
+      } else {
+        std::shared_ptr<struct InstanceStatus> instance_status = nullptr;
+        VINEYARD_CHECK_OK(client_->InstanceStatus(instance_status));
+        if (tree["instance_id"].get<InstanceID>() ==
+            instance_status->instance_id) {
+          VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
+        }
       }
     } else {
       for (auto& item : tree) {

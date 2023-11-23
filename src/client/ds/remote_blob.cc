@@ -18,6 +18,7 @@ limitations under the License.
 #include <cstring>
 #include <iomanip>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "client/ds/blob.h"
@@ -147,6 +148,48 @@ const std::shared_ptr<MutableBuffer>& RemoteBlobWriter::Buffer() const {
 }
 
 Status RemoteBlobWriter::Abort() { return Status::OK(); }
+
+void RemoteBlob::Construct(ObjectMeta const& meta) {
+  std::string __type_name = type_name<RemoteBlob>();
+  VINEYARD_ASSERT(meta.GetTypeName() == __type_name,
+                  "Expect typename '" + __type_name + "', but got '" +
+                      meta.GetTypeName() + "'");
+  this->meta_ = meta;
+  this->id_ = meta.GetId();
+
+  if (this->buffer_ != nullptr) {
+    return;
+  }
+  if (this->id_ == EmptyBlobID() || meta.GetNBytes() == 0) {
+    this->size_ = 0;
+    return;
+  }
+
+  if (!meta.IsLocated()) {
+    throw std::runtime_error(
+        "RemoteBlob::Construct(): Invalid internal state: remote blob found "
+        "but it "
+        "is not located with rpc client");
+    return;
+  }
+
+  if (meta.GetBuffer(meta.GetId(), this->buffer_).ok()) {
+    if (this->buffer_ == nullptr) {
+      throw std::runtime_error(
+          "RemoteBlob::Construct(): Invalid internal state: remote blob found "
+          "but it "
+          "is nullptr: " +
+          ObjectIDToString(meta.GetId()));
+    }
+    this->size_ = this->buffer_->size();
+  } else {
+    throw std::runtime_error(
+        "RemoteBlob::Construct(): Invalid internal state: failed to construct "
+        "local "
+        "blob since payload is missing: " +
+        ObjectIDToString(meta.GetId()));
+  }
+}
 
 void RemoteBlobWriter::Dump() const {
 #ifndef NDEBUG

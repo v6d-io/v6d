@@ -16,6 +16,7 @@ limitations under the License.
 #include "client/rpc_client.h"
 
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <set>
 #include <string>
@@ -23,6 +24,7 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
+#include "client/ds/blob.h"
 #include "client/ds/object_factory.h"
 #include "client/ds/remote_blob.h"
 #include "client/io.h"
@@ -180,11 +182,49 @@ Status RPCClient::GetObject(const ObjectID id,
   ObjectMeta meta;
   RETURN_ON_ERROR(this->GetMetaData(id, meta, true));
   RETURN_ON_ASSERT(!meta.MetaData().empty());
-  object = ObjectFactory::Create(meta.GetTypeName());
+  std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
+  std::function<json&(json&)> travel = [&](json& meta_tree) -> json& {
+    if (meta_tree.is_object()) {
+      auto sub_id =
+          ObjectIDFromString(meta_tree["id"].get_ref<std::string const&>());
+      if (IsBlob(sub_id)) {
+        std::shared_ptr<RemoteBlob> remote_blob;
+        VINEYARD_CHECK_OK(GetRemoteBlob(sub_id, remote_blob));
+        ObjectMeta sub_meta;
+        sub_meta.Reset();
+        VINEYARD_CHECK_OK(GetMetaData(sub_id, sub_meta));
+        sub_meta.SetTypeName(type_name<RemoteBlob>());
+        VINEYARD_CHECK_OK(sub_meta.buffer_set_->EmplaceBuffer(sub_id));
+        VINEYARD_CHECK_OK(
+            sub_meta.buffer_set_->EmplaceBuffer(sub_id, remote_blob->Buffer()));
+        buffers.emplace(sub_id, remote_blob->Buffer());
+        meta_tree = sub_meta.MetaData();
+        return meta_tree;
+      } else {
+        for (auto& item : meta_tree.items()) {
+          if (item.value().is_object() && !item.value().empty()) {
+            meta_tree[item.key()] = travel(item.value());
+          }
+        }
+      }
+    }
+    return meta_tree;
+  };
+  auto meta_tree = meta.MetaData();
+  auto new_meta_tree = travel(meta_tree);
+  ObjectMeta new_meta;
+  new_meta.Reset();
+  new_meta.SetMetaData(this, new_meta_tree);
+  for (auto& item : buffers) {
+    VINEYARD_CHECK_OK(new_meta.buffer_set_->EmplaceBuffer(item.first));
+    VINEYARD_CHECK_OK(
+        new_meta.buffer_set_->EmplaceBuffer(item.first, item.second));
+  }
+  object = ObjectFactory::Create(new_meta.GetTypeName());
   if (object == nullptr) {
     object = std::unique_ptr<Object>(new Object());
   }
-  object->Construct(meta);
+  object->Construct(new_meta);
   return Status::OK();
 }
 

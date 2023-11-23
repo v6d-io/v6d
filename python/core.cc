@@ -605,7 +605,7 @@ void bind_blobs(py::module& mod) {
       });
 
   // RemoteBlob
-  py::class_<RemoteBlob, std::shared_ptr<RemoteBlob>>(
+  py::class_<RemoteBlob, std::shared_ptr<RemoteBlob>, Object>(
       mod, "RemoteBlob", py::buffer_protocol(), doc::RemoteBlob)
       .def_property_readonly(
           "id", [](RemoteBlob* self) -> ObjectIDWrapper { return self->id(); },

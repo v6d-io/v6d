@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import ctypes
 import json
 import pickle
 from typing import Union
@@ -26,6 +27,8 @@ import pyarrow as pa
 from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
+from vineyard._C import RemoteBlobBuilder
+from vineyard._C import RPCClient
 
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle  # pylint: disable=import-error
@@ -144,15 +147,30 @@ def ensure_ipc_client(client, error_message=None):
 def build_buffer(
     client, address, size, *args, **kwargs
 ) -> Union["Object", "ObjectMeta", "ObjectID"]:
-    '''Build a blob in vineyard server for the given bytes or memoryview.
+    '''Build a blob or a remote blob in vineyard server
+        for the given bytes or memoryview.
 
     If address is None or size is 0, an empty blob will be returned.
     '''
-    ensure_ipc_client(
-        client,
-        "Vineyard RPC client cannot be used to create local blobs, "
-        "try using an IPC client or `rpc_client.create_remote_blob()`",
-    )
+    if isinstance(client, RPCClient):
+        # copy the address with size to a local payloads
+        if size == 0 or address is None:
+            meta = ObjectMeta()
+            meta.id = ObjectID("o8000000000000000")
+            meta.nbytes = 0
+            meta.typename = "vineyard::RemoteBlob"
+            return client.create_metadata(meta)
+        if isinstance(address, bytes):
+            payload = address
+        else:
+            payload = bytearray(size)
+            address_bytes = (ctypes.c_byte * size).from_address(address)
+            payload[:size] = memoryview(address_bytes)[:size]
+        buffer = RemoteBlobBuilder(size)
+        buffer.copy(0, payload)
+        id = client.create_remote_blob(buffer)
+        meta = client.get_meta(id)
+        return meta
 
     if size == 0:
         return client.create_empty_blob()
