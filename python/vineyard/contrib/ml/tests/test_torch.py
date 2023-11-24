@@ -36,6 +36,10 @@ def vineyard_for_torch():
         yield
 
 
+def test_torch_tensor_with_rpc_client(vineyard_rpc_client):
+    test_torch_tensor(vineyard_rpc_client)
+
+
 def test_torch_tensor(vineyard_client):
     tensor = torch.ones(5, 2)
     object_id = vineyard_client.put(tensor)
@@ -45,6 +49,10 @@ def test_torch_tensor(vineyard_client):
     assert value.shape == tensor.shape
     assert value.dtype == tensor.dtype
     assert torch.equal(value, tensor)
+
+
+def test_torch_dataset_with_rpc_client(vineyard_rpc_client):
+    test_torch_dataset(vineyard_rpc_client)
 
 
 def test_torch_dataset(vineyard_client):
@@ -62,6 +70,10 @@ def test_torch_dataset(vineyard_client):
         assert torch.isclose(t1, t2).all()
 
 
+def test_torch_dataset_dataframe_with_rpc_client(vineyard_rpc_client):
+    test_torch_dataset_dataframe(vineyard_rpc_client)
+
+
 def test_torch_dataset_dataframe(vineyard_client):
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
     object_id = vineyard_client.put(df)
@@ -75,6 +87,10 @@ def test_torch_dataset_dataframe(vineyard_client):
     assert torch.isclose(
         value.tensors[2], torch.tensor([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
     ).all()
+
+
+def test_torch_dataset_dataframe_multidimensional_with_rpc_client(vineyard_rpc_client):
+    test_torch_dataset_dataframe_multidimensional(vineyard_rpc_client)
 
 
 def test_torch_dataset_dataframe_multidimensional(vineyard_client):
@@ -91,6 +107,10 @@ def test_torch_dataset_dataframe_multidimensional(vineyard_client):
     assert len(df.columns) == len(value.tensors)
 
 
+def test_torch_dataset_recordbatch_with_rpc_client(vineyard_rpc_client):
+    test_torch_dataset_recordbatch(vineyard_rpc_client)
+
+
 def test_torch_dataset_recordbatch(vineyard_client):
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
     batch = pa.RecordBatch.from_pandas(df)
@@ -105,6 +125,10 @@ def test_torch_dataset_recordbatch(vineyard_client):
     assert torch.isclose(
         value.tensors[2], torch.tensor([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
     ).all()
+
+
+def test_torch_dataset_table_with_rpc_client(vineyard_rpc_client):
+    test_torch_dataset_table(vineyard_rpc_client)
 
 
 def test_torch_dataset_table(vineyard_client):

@@ -33,7 +33,6 @@ from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
-from vineyard._C import RemoteBlob
 from vineyard.core.builder import BuilderContext
 from vineyard.core.resolver import ResolverContext
 from vineyard.data.utils import build_buffer

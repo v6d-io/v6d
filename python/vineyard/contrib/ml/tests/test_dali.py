@@ -32,6 +32,10 @@ def vineyard_for_dali():
         yield
 
 
+def test_dali_tensor_with_rpc_client(vineyard_rpc_client):
+    test_dali_tensor(vineyard_rpc_client)
+
+
 def test_dali_tensor(vineyard_client):
     @dali.pipeline_def()
     def pipe():

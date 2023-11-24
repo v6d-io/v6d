@@ -36,6 +36,10 @@ def vineyard_for_tensorflow():
         yield
 
 
+def test_tensorflow_tensor_with_rpc_client(vineyard_rpc_client):
+    test_tensorflow_tensor(vineyard_rpc_client)
+
+
 def test_tensorflow_tensor(vineyard_client):
     data = [np.random.rand(2, 3) for i in range(10)]
     label = [np.random.rand(2, 3) for i in range(10)]
@@ -51,6 +55,10 @@ def test_tensorflow_tensor(vineyard_client):
     assert xdata == xdtrain
     assert ydata == ydtrain
     assert len(dataset) == len(dtrain)
+
+
+def test_tensorflow_dataframe_with_rpc_client(vineyard_rpc_client):
+    test_tensorflow_dataframe(vineyard_rpc_client)
 
 
 def test_tensorflow_dataframe(vineyard_client):
@@ -69,6 +77,10 @@ def test_tensorflow_dataframe(vineyard_client):
     assert data_ncols == dtrain_ncols
 
 
+def test_tensorflow_record_batch_with_rpc_client(vineyard_rpc_client):
+    test_tensorflow_record_batch(vineyard_rpc_client)
+
+
 def test_tensorflow_record_batch(vineyard_client):
     arrays = [
         pa.array([1, 2, 3, 4]),
@@ -82,6 +94,10 @@ def test_tensorflow_record_batch(vineyard_client):
         ncols = len(list(x.keys()))
     assert ncols == 2
     assert len(dtrain) == 4
+
+
+def test_tensorflow_table_with_rpc_client(vineyard_rpc_client):
+    test_tensorflow_table(vineyard_rpc_client)
 
 
 def test_tensorflow_table(vineyard_client):
