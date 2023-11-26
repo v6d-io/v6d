@@ -34,10 +34,6 @@ def vineyard_for_mxnet():
         yield
 
 
-def test_mxnet_tensor_with_rpc_client(vineyard_rpc_client):
-    test_mxnet_tensor(vineyard_rpc_client)
-
-
 def test_mxnet_tensor(vineyard_client):
     data = [np.random.rand(2, 3) for i in range(10)]
     label = [np.random.rand(2, 3) for i in range(10)]
@@ -47,10 +43,6 @@ def test_mxnet_tensor(vineyard_client):
     assert len(dataset[0]) == len(dtrain[0])
     assert dataset[0][0].shape == dtrain[0][0].shape
     assert dataset[1][0].shape == dtrain[1][0].shape
-
-
-def test_mxnet_dataframe_with_rpc_client(vineyard_rpc_client):
-    test_mxnet_dataframe(vineyard_rpc_client)
 
 
 def test_mxnet_dataframe(vineyard_client):
@@ -67,10 +59,6 @@ def test_mxnet_dataframe(vineyard_client):
     assert dataset[1].shape == dtrain[1].shape
 
 
-def test_mxnet_record_batch_with_rpc_client(vineyard_rpc_client):
-    test_mxnet_record_batch(vineyard_rpc_client)
-
-
 def test_mxnet_record_batch(vineyard_client):
     arrays = [
         pa.array([1, 2, 3, 4]),
@@ -82,10 +70,6 @@ def test_mxnet_record_batch(vineyard_client):
     dtrain = vineyard_client.get(object_id, label='target')
     assert len(dtrain[0]) == 4
     assert len(dtrain[0][0]) == 2
-
-
-def test_mxnet_table_with_rpc_client(vineyard_rpc_client):
-    test_mxnet_table(vineyard_rpc_client)
 
 
 def test_mxnet_table(vineyard_client):
