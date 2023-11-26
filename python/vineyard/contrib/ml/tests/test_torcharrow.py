@@ -30,10 +30,6 @@ def vineyard_for_torcharrow():
         yield
 
 
-def test_torch_arrow_column_with_rpc_client(vineyard_rpc_client):
-    test_torch_arrow_column(vineyard_rpc_client)
-
-
 def test_torch_arrow_column(vineyard_client):
     s = ta.column([1, 2, None, 4])
     assert s.sum() == 7
@@ -41,10 +37,6 @@ def test_torch_arrow_column(vineyard_client):
     s = vineyard_client.get(vineyard_client.put(s))
     assert isinstance(s, ta.Column)
     assert s.sum() == 7
-
-
-def test_torch_arrow_dataframe_with_rpc_client(vineyard_rpc_client):
-    test_torch_arrow_dataframe(vineyard_rpc_client)
 
 
 def test_torch_arrow_dataframe(vineyard_client):

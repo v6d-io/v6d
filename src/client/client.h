@@ -904,13 +904,6 @@ class Client final : public BasicIPCClient,
    */
   Status Seal(ObjectID const& object_id);
 
-  /**
-   * @brief Check if the client is an IPC client.
-   *
-   * @return True means the client is an IPC client.
-   */
-  bool IsIPC() const override { return true; }
-
  private:
   Status GetBuffers(const std::set<ObjectID>& ids, const bool unsafe,
                     std::map<ObjectID, std::shared_ptr<Buffer>>& buffers);

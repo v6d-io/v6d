@@ -625,7 +625,6 @@ def run_python_contrib_distributed_tests(
             ['%s.%d' % (VINEYARD_CI_IPC_SOCKET, i) for i in range(instance_size)]
         )
         start_time = time.time()
-        rpc_socket_port = instances[0][1]
         subprocess.check_call(
             [
                 'pytest',
@@ -638,7 +637,6 @@ def run_python_contrib_distributed_tests(
                 'python/vineyard/contrib/%s' % contrib,
                 *test_args,
                 '--vineyard-ipc-sockets=%s' % vineyard_ipc_sockets,
-                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
             ],
             cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
         )

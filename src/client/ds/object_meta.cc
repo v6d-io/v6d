@@ -18,7 +18,6 @@ limitations under the License.
 #include <iostream>
 
 #include "client/client.h"
-#include "client/client_base.h"
 #include "client/ds/blob.h"
 #include "common/util/env.h"
 
@@ -348,15 +347,9 @@ void ObjectMeta::SetMetaData(ClientBase* client, const json& meta) {
     ObjectID member_id =
         ObjectIDFromString(tree["id"].get_ref<std::string const&>());
     if (IsBlob(member_id)) {
-      if (client_ == nullptr) {
+      if (client_ == nullptr /* traverse to account blobs */ ||
+          tree["instance_id"].get<InstanceID>() == client_->instance_id()) {
         VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
-      } else {
-        if ((client_->IsIPC() &&
-             tree["instance_id"].get<InstanceID>() == client_->instance_id()) ||
-            (client_->IsRPC() && tree["instance_id"].get<InstanceID>() ==
-                                     client_->remote_instance_id())) {
-          VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
-        }
       }
     } else {
       for (auto& item : tree) {

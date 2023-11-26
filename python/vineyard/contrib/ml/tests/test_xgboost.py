@@ -31,20 +31,12 @@ def vineyard_for_xgboost():
         yield
 
 
-def test_numpy_ndarray_with_rpc_client(vineyard_rpc_client):
-    test_numpy_ndarray(vineyard_rpc_client)
-
-
 def test_numpy_ndarray(vineyard_client):
     arr = np.random.rand(4, 5)
     object_id = vineyard_client.put(arr)
     dtrain = vineyard_client.get(object_id)
     assert dtrain.num_col() == 5
     assert dtrain.num_row() == 4
-
-
-def test_pandas_dataframe_specify_label_with_rpc_client(vineyard_rpc_client):
-    test_pandas_dataframe_specify_label(vineyard_rpc_client)
 
 
 def test_pandas_dataframe_specify_label(vineyard_client):
@@ -58,10 +50,6 @@ def test_pandas_dataframe_specify_label(vineyard_client):
     assert dtrain.feature_names == ['b', 'c']
 
 
-def test_pandas_dataframe_specify_data_with_rpc_client(vineyard_rpc_client):
-    test_pandas_dataframe_specify_data(vineyard_rpc_client)
-
-
 def test_pandas_dataframe_specify_data(vineyard_client):
     df = pd.DataFrame(
         {'a': [1, 2, 3, 4], 'b': [[5, 1.0], [6, 2.0], [7, 3.0], [8, 9.0]]}
@@ -72,10 +60,6 @@ def test_pandas_dataframe_specify_data(vineyard_client):
     assert dtrain.num_row() == 4
     arr = np.array([1, 2, 3, 4])
     assert np.allclose(arr, dtrain.get_label())
-
-
-def test_record_batch_xgb_resolver_with_rpc_client(vineyard_rpc_client):
-    test_record_batch_xgb_resolver(vineyard_rpc_client)
 
 
 def test_record_batch_xgb_resolver(vineyard_client):
@@ -92,10 +76,6 @@ def test_record_batch_xgb_resolver(vineyard_client):
     arr = np.array([0, 1, 0, 1])
     assert np.allclose(arr, dtrain.get_label())
     assert dtrain.feature_names == ['f0', 'f1']
-
-
-def test_table_xgb_resolver_with_rpc_client(vineyard_rpc_client):
-    test_table_xgb_resolver(vineyard_rpc_client)
 
 
 def test_table_xgb_resolver(vineyard_client):

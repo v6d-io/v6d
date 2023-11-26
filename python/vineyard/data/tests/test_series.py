@@ -19,8 +19,6 @@
 import numpy as np
 import pandas as pd
 
-import pytest
-
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
@@ -28,7 +26,6 @@ from vineyard.data import register_builtin_types
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
-@pytest.mark.parametrize("vineyard_client", ["vineyard_client", "vineyard_rpc_client"])
 def test_pandas_series(vineyard_client):
     s = pd.Series([1, 3, 5, np.nan, 6, 8], name='foo')
     object_id = vineyard_client.put(s)
