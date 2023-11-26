@@ -14,6 +14,7 @@ limitations under the License.
 */
 
 #include "client/ds/remote_blob.h"
+#include "client/client_base.h"
 
 #include <cstring>
 #include <iomanip>
@@ -165,28 +166,25 @@ void RemoteBlob::Construct(ObjectMeta const& meta) {
     return;
   }
 
-  if (!meta.IsLocated()) {
+  if (meta.GetClient()->IsRPC() &&
+      meta.GetClient()->remote_instance_id() != meta.GetInstanceId()) {
     throw std::runtime_error(
         "RemoteBlob::Construct(): Invalid internal state: remote blob found "
-        "but it "
-        "is not located with rpc client");
-    return;
+        "but it is not located with the instance connected by rpc client");
   }
 
   if (meta.GetBuffer(meta.GetId(), this->buffer_).ok()) {
     if (this->buffer_ == nullptr) {
       throw std::runtime_error(
           "RemoteBlob::Construct(): Invalid internal state: remote blob found "
-          "but it "
-          "is nullptr: " +
+          "but it is nullptr: " +
           ObjectIDToString(meta.GetId()));
     }
     this->size_ = this->buffer_->size();
   } else {
     throw std::runtime_error(
         "RemoteBlob::Construct(): Invalid internal state: failed to construct "
-        "local "
-        "blob since payload is missing: " +
+        "remote blob since payload is missing: " +
         ObjectIDToString(meta.GetId()));
   }
 }

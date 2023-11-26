@@ -32,6 +32,7 @@ from vineyard.data import register_builtin_types
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
+@pytest.mark.parametrize("vineyard_client", ["vineyard_client", "vineyard_rpc_client"])
 def test_arrow_array(vineyard_client):
     arr = pa.array([1, 2, None, 3])
     object_id = vineyard_client.put(arr)
@@ -66,15 +67,6 @@ def test_arrow_array(vineyard_client):
     assert vineyard_client.get(object_id).values.equals(nested_arr.values)
 
 
-def test_arrow_array_with_rpc_client(vineyard_rpc_client):
-    test_arrow_array(vineyard_rpc_client)
-
-
-def test_record_batch_with_rpc_client(vineyard_rpc_client):
-    test_record_batch(vineyard_rpc_client)
-
-
-@pytest.mark.skip
 def build_record_batch():
     arrays = [
         pa.array([1, 2, 3, 4]),
@@ -85,6 +77,7 @@ def build_record_batch():
     return batch
 
 
+@pytest.mark.parametrize("vineyard_client", ["vineyard_client", "vineyard_rpc_client"])
 def test_record_batch(vineyard_client):
     batch = build_record_batch()
     _object_id = vineyard_client.put(batch)  # noqa: F841
@@ -94,12 +87,8 @@ def test_record_batch(vineyard_client):
     # assert batch.equals(vineyard_client.get(object_id))
 
 
-def test_table_with_rpc_client(vineyard_rpc_client):
-    test_table(vineyard_rpc_client)
-
-
 @pytest.mark.skip
-def build_tabel():
+def build_table():
     arrays = [
         pa.array([1, 2, 3, 4]),
         pa.array(['foo', 'bar', 'baz', None]),
@@ -112,7 +101,7 @@ def build_tabel():
 
 
 def test_table(vineyard_client):
-    table = build_tabel()
+    table = build_table()
     _object_id = vineyard_client.put(table)  # noqa: F841
     # processing tables that contains string is not roundtrip, as StringArray
     # will be transformed to LargeStringArray
@@ -121,11 +110,7 @@ def test_table(vineyard_client):
 
 
 @pytest.mark.skipif(polars is None, reason='polars is not installed')
-def test_polars_dataframe_with_rpc_client(vineyard_rpc_client):
-    test_polars_dataframe(vineyard_rpc_client)
-
-
-@pytest.mark.skipif(polars is None, reason='polars is not installed')
+@pytest.mark.parametrize("vineyard_client", ["vineyard_client", "vineyard_rpc_client"])
 def test_polars_dataframe(vineyard_client):
     arrays = [
         pa.array([1, 2, 3, 4]),
@@ -150,10 +135,12 @@ def test_polars_dataframe(vineyard_client):
         pa.array(["a", None, None, None]),
         pa.array([True, False, True, False]),
         build_record_batch(),
-        build_tabel(),
+        build_table(),
     ],
 )
-def test_with_ipc_and_rpc(value, vineyard_client, vineyard_rpc_client):
+def test_data_consistency_between_ipc_and_rpc(
+    value, vineyard_client, vineyard_rpc_client
+):
     object_id = vineyard_client.put(value)
     assert vineyard_client.get(object_id) == vineyard_rpc_client.get(object_id)
     object_id = vineyard_rpc_client.put(value)

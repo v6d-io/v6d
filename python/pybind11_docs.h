@@ -113,6 +113,8 @@ extern const char* ClientBase_status;
 extern const char* ClientBase_ipc_socket;
 extern const char* ClientBase_rpc_endpoint;
 extern const char* ClientBase_version;
+extern const char* ClientBase_is_ipc;
+extern const char* ClientBase_is_rpc;
 
 extern const char* IPCClient;
 extern const char* IPCClient_create_blob;

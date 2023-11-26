@@ -53,13 +53,10 @@ def as_arrow_buffer(blob: Blob):
     if isinstance(blob, Blob):
         buffer = blob.buffer
     else:
-        if (
-            blob.id == ObjectID("o8000000000000000")
-            or (int(blob.id) & int(ObjectID("o8000000000000000"))) == 0
-        ):
-            buffer = b''
-        else:
+        if not blob.is_empty():
             buffer = memoryview(blob)
+        else:
+            buffer = memoryview(b'')
     if buffer is None:
         return pa.py_buffer(bytearray())
     return pa.py_buffer(buffer)

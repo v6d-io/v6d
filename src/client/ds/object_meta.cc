@@ -18,6 +18,7 @@ limitations under the License.
 #include <iostream>
 
 #include "client/client.h"
+#include "client/client_base.h"
 #include "client/ds/blob.h"
 #include "common/util/env.h"
 
@@ -101,22 +102,6 @@ bool const ObjectMeta::IsLocal() const {
   } else {
     if (client_) {
       return client_->instance_id() == instance_id.get<InstanceID>();
-    } else {
-      return false;
-    }
-  }
-}
-
-bool const ObjectMeta::IsLocated() const {
-  auto instance_id = meta_["instance_id"];
-  if (instance_id.is_null()) {
-    // it is a newly created metadata
-    return true;
-  } else {
-    if (client_) {
-      std::shared_ptr<struct InstanceStatus> instance_status = nullptr;
-      VINEYARD_CHECK_OK(client_->InstanceStatus(instance_status));
-      return instance_status->instance_id == instance_id.get<InstanceID>();
     } else {
       return false;
     }
@@ -366,10 +351,10 @@ void ObjectMeta::SetMetaData(ClientBase* client, const json& meta) {
       if (client_ == nullptr) {
         VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
       } else {
-        std::shared_ptr<struct InstanceStatus> instance_status = nullptr;
-        VINEYARD_CHECK_OK(client_->InstanceStatus(instance_status));
-        if (tree["instance_id"].get<InstanceID>() ==
-            instance_status->instance_id) {
+        if ((client_->IsIPC() &&
+             tree["instance_id"].get<InstanceID>() == client_->instance_id()) ||
+            (client_->IsRPC() && tree["instance_id"].get<InstanceID>() ==
+                                     client_->remote_instance_id())) {
           VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
         }
       }
