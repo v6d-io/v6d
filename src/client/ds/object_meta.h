@@ -132,11 +132,6 @@ class ObjectMeta {
   bool const IsLocal() const;
 
   /**
-   * @brief Whether the object meta and rpc client is located on the same node.
-   */
-  bool const IsLocated() const;
-
-  /**
    * @brief Mark the metadata as a "local" metadata to make sure the construct
    * process proceed.
    */
@@ -801,7 +796,6 @@ class ObjectMeta {
   friend class RPCClient;
 
   friend class Blob;
-  friend class RemoteBlob;
   friend class BlobWriter;
 };
 

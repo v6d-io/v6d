@@ -131,19 +131,11 @@ def test_bytes_io_roundtrip(block_size, value):
         assert target == value
 
 
-def test_bytes_io_numpy_ndarray_with_rpc_client(vineyard_rpc_client):
-    test_bytes_io_numpy_ndarray(vineyard_rpc_client)
-
-
 def test_bytes_io_numpy_ndarray(vineyard_client):
     arr = np.random.rand(4, 5, 6)
     object_id = vineyard_client.put(arr)
     target = read_and_build(b1m, vineyard_client.get(object_id))
     np.testing.assert_allclose(arr, target)
-
-
-def test_bytes_io_empty_ndarray_with_rpc_client(vineyard_rpc_client):
-    test_bytes_io_empty_ndarray(vineyard_rpc_client)
 
 
 def test_bytes_io_empty_ndarray(vineyard_client):
@@ -188,19 +180,11 @@ def test_bytes_io_empty_ndarray(vineyard_client):
     np.testing.assert_allclose(arr, target)
 
 
-def test_bytes_io_str_ndarray_with_rpc_client(vineyard_rpc_client):
-    test_bytes_io_str_ndarray(vineyard_rpc_client)
-
-
 def test_bytes_io_str_ndarray(vineyard_client):
     arr = np.array(['', 'x', 'yz', 'uvw'])
     object_id = vineyard_client.put(arr)
     target = read_and_build(b1m, vineyard_client.get(object_id))
     np.testing.assert_equal(arr, target)
-
-
-def test_object_ndarray_with_rpc_client(vineyard_rpc_client):
-    test_object_ndarray(vineyard_rpc_client)
 
 
 def test_object_ndarray(vineyard_client):
@@ -215,20 +199,12 @@ def test_object_ndarray(vineyard_client):
     np.testing.assert_equal(arr, target)
 
 
-def test_bytes_io_tensor_order_with_rpc_client(vineyard_rpc_client):
-    test_bytes_io_tensor_order(vineyard_rpc_client)
-
-
 def test_bytes_io_tensor_order(vineyard_client):
     arr = np.asfortranarray(np.random.rand(10, 7))
     object_id = vineyard_client.put(arr)
     res = read_and_build(b1m, vineyard_client.get(object_id))
     assert res.flags['C_CONTIGUOUS'] == arr.flags['C_CONTIGUOUS']
     assert res.flags['F_CONTIGUOUS'] == arr.flags['F_CONTIGUOUS']
-
-
-def test_bytes_io_pandas_dataframe_with_rpc_client(vineyard_rpc_client):
-    test_bytes_io_pandas_dataframe(vineyard_rpc_client)
 
 
 def test_bytes_io_pandas_dataframe(vineyard_client):
@@ -238,19 +214,11 @@ def test_bytes_io_pandas_dataframe(vineyard_client):
     pd.testing.assert_frame_equal(df, target)
 
 
-def test_bytes_io_pandas_dataframe_int_columns_with_rpc_client(vineyard_rpc_client):
-    test_bytes_io_pandas_dataframe_int_columns(vineyard_rpc_client)
-
-
 def test_bytes_io_pandas_dataframe_int_columns(vineyard_client):
     df = pd.DataFrame({1: [1, 2, 3, 4], 2: [5, 6, 7, 8]})
     object_id = vineyard_client.put(df)
     target = read_and_build(b1m, vineyard_client.get(object_id))
     pd.testing.assert_frame_equal(df, target)
-
-
-def test_bytes_io_pandas_dataframe_mixed_columns_with_rpc_client(vineyard_rpc_client):
-    test_bytes_io_pandas_dataframe_mixed_columns(vineyard_rpc_client)
 
 
 def test_bytes_io_pandas_dataframe_mixed_columns(vineyard_client):
@@ -262,35 +230,8 @@ def test_bytes_io_pandas_dataframe_mixed_columns(vineyard_client):
     pd.testing.assert_frame_equal(df, target)
 
 
-def test_bytes_io_pandas_series_with_rpc_client(vineyard_rpc_client):
-    test_bytes_io_pandas_series(vineyard_rpc_client)
-
-
 def test_bytes_io_pandas_series(vineyard_client):
     s = pd.Series([1, 3, 5, np.nan, 6, 8], name='foo')
     object_id = vineyard_client.put(s)
     target = read_and_build(b1m, vineyard_client.get(object_id))
     pd.testing.assert_series_equal(s, target)
-
-
-@pytest.mark.parametrize(
-    "value",
-    [
-        np.ones((0, 1, 2, 3)),
-        np.zeros((0, 1, 2, 3), dtype='int'),
-        np.array(['', 'x', 'ht', 'yyds']),
-        np.array([1, 'x', 3.14, (1, 4)], dtype=object),
-        np.ones((), dtype='object'),
-        np.asfortranarray(np.random.rand(10, 7)),
-    ],
-)
-def test_ipc_and_rpc(value, vineyard_client, vineyard_rpc_client):
-    object_id = vineyard_client.put(value)
-    v1 = vineyard_client.get(object_id)
-    v2 = vineyard_rpc_client.get(object_id)
-    assert np.array_equal(v1, v2)
-
-    object_id = vineyard_rpc_client.put(value)
-    v1 = vineyard_client.get(object_id)
-    v2 = vineyard_rpc_client.get(object_id)
-    assert np.array_equal(v1, v2)
