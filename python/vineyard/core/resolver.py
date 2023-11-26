@@ -230,12 +230,10 @@ def get(
         object_id = client.get_name(name)
 
     # run resolver
-    if client.is_rpc():
+    if isinstance(client, RPCClient):
         obj = client.get_object(object_id)
-    elif client.is_ipc():
-        obj = client.get_object(object_id, fetch=fetch)
     else:
-        raise RuntimeError('Unknown vineyard client type: %s' % type(client))
+        obj = client.get_object(object_id, fetch=fetch)
 
     if resolver is None:
         resolver = get_current_resolvers()

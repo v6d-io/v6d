@@ -72,8 +72,10 @@ Status ClientBase::CreateData(const json& tree, ObjectID& id,
 }
 
 Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
-  if (this->IsRPC()) {
-    this->instance_id_ = this->remote_instance_id();
+  if (this->instance_id_ == UnspecifiedInstanceID() - 1) {
+    std::shared_ptr<struct InstanceStatus> instance_status = nullptr;
+    VINEYARD_CHECK_OK(this->InstanceStatus(instance_status));
+    this->instance_id_ = instance_status->instance_id;
   }
   return this->CreateMetaData(meta_data, this->instance_id_, std::ref(id));
 }

@@ -183,7 +183,7 @@ Status RPCClient::GetObject(const ObjectID id,
   RETURN_ON_ERROR(this->GetMetaData(id, meta, true));
   RETURN_ON_ASSERT(!meta.MetaData().empty());
   std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
-  std::function<json&(json&)> traverse = [&](json& meta_tree) -> json& {
+  std::function<json&(json&)> travel = [&](json& meta_tree) -> json& {
     if (meta_tree.is_object()) {
       auto sub_id =
           ObjectIDFromString(meta_tree["id"].get_ref<std::string const&>());
@@ -203,7 +203,7 @@ Status RPCClient::GetObject(const ObjectID id,
       } else {
         for (auto& item : meta_tree.items()) {
           if (item.value().is_object() && !item.value().empty()) {
-            meta_tree[item.key()] = traverse(item.value());
+            meta_tree[item.key()] = travel(item.value());
           }
         }
       }
@@ -211,7 +211,7 @@ Status RPCClient::GetObject(const ObjectID id,
     return meta_tree;
   };
   auto meta_tree = meta.MetaData();
-  auto new_meta_tree = traverse(meta_tree);
+  auto new_meta_tree = travel(meta_tree);
   ObjectMeta new_meta;
   new_meta.Reset();
   new_meta.SetMetaData(this, new_meta_tree);
@@ -349,15 +349,6 @@ Status recv_and_decompress(std::shared_ptr<Decompressor> const& decompressor,
 }
 
 }  // namespace detail
-
-bool RPCClient::IsFetchable(const ObjectMeta& meta) {
-  auto instance_id = meta.meta_["instance_id"];
-  if (instance_id.is_null()) {
-    // it is a newly created metadata
-    return true;
-  }
-  return remote_instance_id_ == instance_id.get<InstanceID>();
-}
 
 Status RPCClient::CreateRemoteBlob(
     std::shared_ptr<RemoteBlobWriter> const& buffer, ObjectID& id) {

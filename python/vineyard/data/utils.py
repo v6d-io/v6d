@@ -131,7 +131,9 @@ def ensure_ipc_client(client, error_message=None):
     '''Check if the given client is an instance of IPCClient,
     raise ValueError if not.
     '''
-    if not client.is_ipc():
+    from vineyard._C import IPCClient
+
+    if not isinstance(client, IPCClient):
         if error_message is None:
             error_message = "Vineyard IPC client is required, got %s" % type(client)
         else:
@@ -150,10 +152,11 @@ def build_buffer(
 
     If address is None or size is 0, an empty blob will be returned.
     '''
-    if client.is_rpc():
+    if isinstance(client, RPCClient):
         # copy the address with size to a local payloads
         if size == 0 or address is None:
             meta = ObjectMeta()
+            meta.id = ObjectID("o8000000000000000")
             meta.nbytes = 0
             meta.typename = "vineyard::RemoteBlob"
             return client.create_metadata(meta)

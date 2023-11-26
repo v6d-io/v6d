@@ -830,14 +830,6 @@ The version number string of connected vineyard server, in the format of semver:
 :code:`MAJOR.MINOR.PATCH`.
 )doc";
 
-const char* ClientBase_is_ipc = R"doc(
-Whether the client is connected to vineyard server via UNIX domain socket.
-)doc";
-
-const char* ClientBase_is_rpc = R"doc(
-Whether the client is connected to vineyard server via RPC endpoint.
-)doc";
-
 const char* IPCClient = R"doc(
 IPC client that connects to vineyard instance's UNIX domain socket.
 )doc";

@@ -287,21 +287,6 @@ class RPCClient final : public ClientBase {
     return remote_instance_id_;
   }
 
-  /**
-   * @brief Check if the client is a RPC client.
-   *
-   * @return True means the client is a RPC client.
-   */
-  bool IsRPC() const override { return true; }
-
-  /**
-   * @brief Whether the instance connected by rpc client is the same as object
-   * metadata's instance.
-   *
-   * @return True means the instance is the same as object metadata's instance.
-   */
-  bool IsFetchable(const ObjectMeta& meta);
-
   Status CreateRemoteBlob(std::shared_ptr<RemoteBlobWriter> const& buffer,
                           ObjectID& id);
 

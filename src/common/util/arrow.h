@@ -56,8 +56,8 @@ struct hash<vineyard::arrow_string_view>
 namespace city {
 template <>
 class hash<vineyard::arrow_string_view> {
-  inline uint64_t operator()(const vineyard::arrow_string_view& data) const
-      noexcept {
+  inline uint64_t operator()(
+      const vineyard::arrow_string_view& data) const noexcept {
     return detail::CityHash64(reinterpret_cast<const char*>(data.data()),
                               data.size());
   }

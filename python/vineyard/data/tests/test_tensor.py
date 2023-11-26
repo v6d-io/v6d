@@ -178,7 +178,7 @@ def test_dia_matrix(vineyard_client):
 
 
 @pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
-def test_data_consistency_between_ipc_and_rpc(vineyard_client, vineyard_rpc_client):
+def test_ipc_and_rpc(vineyard_client, vineyard_rpc_client):
     value = sp.sparse.bsr_matrix((3, 4), dtype=np.int8)
     object_id = vineyard_client.put(value)
     v1 = vineyard_client.get(object_id)
