@@ -16,6 +16,7 @@ limitations under the License.
 #include "client/rpc_client.h"
 
 #include <iostream>
+#include <map>
 #include <mutex>
 #include <set>
 #include <string>
@@ -23,6 +24,7 @@ limitations under the License.
 #include <unordered_set>
 #include <vector>
 
+#include "client/ds/blob.h"
 #include "client/ds/object_factory.h"
 #include "client/ds/remote_blob.h"
 #include "client/io.h"
@@ -180,11 +182,56 @@ Status RPCClient::GetObject(const ObjectID id,
   ObjectMeta meta;
   RETURN_ON_ERROR(this->GetMetaData(id, meta, true));
   RETURN_ON_ASSERT(!meta.MetaData().empty());
-  object = ObjectFactory::Create(meta.GetTypeName());
+  std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
+  std::function<Status(json&, json&)> traverse =
+      [&](json& meta_tree, json& sub_meta_tree) -> Status {
+    if (meta_tree.is_object()) {
+      auto sub_id =
+          ObjectIDFromString(meta_tree["id"].get_ref<std::string const&>());
+      if (IsBlob(sub_id)) {
+        std::shared_ptr<RemoteBlob> remote_blob;
+        RETURN_ON_ERROR(GetRemoteBlob(sub_id, remote_blob));
+        ObjectMeta sub_meta;
+        sub_meta.Reset();
+        RETURN_ON_ERROR(GetMetaData(sub_id, sub_meta));
+        sub_meta.SetTypeName(type_name<RemoteBlob>());
+        RETURN_ON_ERROR(sub_meta.buffer_set_->EmplaceBuffer(sub_id));
+        RETURN_ON_ERROR(
+            sub_meta.buffer_set_->EmplaceBuffer(sub_id, remote_blob->Buffer()));
+        buffers.emplace(sub_id, remote_blob->Buffer());
+        sub_meta_tree = sub_meta.MetaData();
+        return Status::OK();
+      } else {
+        for (auto& item : meta_tree.items()) {
+          if (item.value().is_object() && !item.value().empty()) {
+            json new_meta_tree;
+            RETURN_ON_ERROR(traverse(item.value(), new_meta_tree));
+            if (!new_meta_tree.empty()) {
+              meta_tree[item.key()] = new_meta_tree;
+            }
+          }
+        }
+      }
+    }
+    return Status::OK();
+  };
+  auto meta_tree = meta.MetaData();
+  json& sub_meta_tree = meta_tree;
+  RETURN_ON_ERROR(traverse(meta_tree, sub_meta_tree));
+  ObjectMeta new_meta;
+  new_meta.Reset();
+  new_meta.SetMetaData(this, meta_tree);
+
+  for (auto& item : buffers) {
+    RETURN_ON_ERROR(new_meta.buffer_set_->EmplaceBuffer(item.first));
+    RETURN_ON_ERROR(
+        new_meta.buffer_set_->EmplaceBuffer(item.first, item.second));
+  }
+  object = ObjectFactory::Create(new_meta.GetTypeName());
   if (object == nullptr) {
     object = std::unique_ptr<Object>(new Object());
   }
-  object->Construct(meta);
+  object->Construct(new_meta);
   return Status::OK();
 }
 
@@ -309,6 +356,15 @@ Status recv_and_decompress(std::shared_ptr<Decompressor> const& decompressor,
 }
 
 }  // namespace detail
+
+bool RPCClient::IsFetchable(const ObjectMeta& meta) {
+  auto instance_id = meta.meta_["instance_id"];
+  if (instance_id.is_null()) {
+    // it is a newly created metadata
+    return true;
+  }
+  return remote_instance_id_ == instance_id.get<InstanceID>();
+}
 
 Status RPCClient::CreateRemoteBlob(
     std::shared_ptr<RemoteBlobWriter> const& buffer, ObjectID& id) {

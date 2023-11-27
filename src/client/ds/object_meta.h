@@ -796,6 +796,7 @@ class ObjectMeta {
   friend class RPCClient;
 
   friend class Blob;
+  friend class RemoteBlob;
   friend class BlobWriter;
 };
 

@@ -19,12 +19,15 @@
 import pyarrow as pa
 
 import pytest
+import pytest_cases
 
 try:
     import polars
 except ImportError:
     polars = None
 
+from vineyard.conftest import vineyard_client
+from vineyard.conftest import vineyard_rpc_client
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
@@ -32,6 +35,7 @@ from vineyard.data import register_builtin_types
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_arrow_array(vineyard_client):
     arr = pa.array([1, 2, None, 3])
     object_id = vineyard_client.put(arr)
@@ -66,13 +70,19 @@ def test_arrow_array(vineyard_client):
     assert vineyard_client.get(object_id).values.equals(nested_arr.values)
 
 
-def test_record_batch(vineyard_client):
+def build_record_batch():
     arrays = [
         pa.array([1, 2, 3, 4]),
         pa.array(['foo', 'bar', 'baz', None]),
         pa.array([True, None, False, True]),
     ]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'f2'])
+    return batch
+
+
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_record_batch(vineyard_client):
+    batch = build_record_batch()
     _object_id = vineyard_client.put(batch)  # noqa: F841
     # processing tables that contains string is not roundtrip, as StringArray
     # will be transformed to LargeStringArray
@@ -80,7 +90,8 @@ def test_record_batch(vineyard_client):
     # assert batch.equals(vineyard_client.get(object_id))
 
 
-def test_table(vineyard_client):
+@pytest.mark.skip
+def build_table():
     arrays = [
         pa.array([1, 2, 3, 4]),
         pa.array(['foo', 'bar', 'baz', None]),
@@ -89,6 +100,11 @@ def test_table(vineyard_client):
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'f2'])
     batches = [batch] * 5
     table = pa.Table.from_batches(batches)
+    return table
+
+
+def test_table(vineyard_client):
+    table = build_table()
     _object_id = vineyard_client.put(table)  # noqa: F841
     # processing tables that contains string is not roundtrip, as StringArray
     # will be transformed to LargeStringArray
@@ -97,6 +113,7 @@ def test_table(vineyard_client):
 
 
 @pytest.mark.skipif(polars is None, reason='polars is not installed')
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_polars_dataframe(vineyard_client):
     arrays = [
         pa.array([1, 2, 3, 4]),
@@ -112,3 +129,22 @@ def test_polars_dataframe(vineyard_client):
     # will be transformed to LargeStringArray
     #
     # assert table.equals(vineyard_client.get(object_id))
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        pa.array([1, 2, None, 3]),
+        pa.array(["a", None, None, None]),
+        pa.array([True, False, True, False]),
+        build_record_batch(),
+        build_table(),
+    ],
+)
+def test_data_consistency_between_ipc_and_rpc(
+    value, vineyard_client, vineyard_rpc_client
+):
+    object_id = vineyard_client.put(value)
+    assert vineyard_client.get(object_id) == vineyard_rpc_client.get(object_id)
+    object_id = vineyard_rpc_client.put(value)
+    assert vineyard_client.get(object_id) == vineyard_rpc_client.get(object_id)

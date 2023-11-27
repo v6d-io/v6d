@@ -504,6 +504,20 @@ class ClientBase {
   std::string const& RPCEndpoint() { return this->rpc_endpoint_; }
 
   /**
+   * @brief Check if the client is an IPC client.
+   *
+   * @return True if the client is an IPC client, otherwise false.
+   */
+  virtual bool IsIPC() const { return false; }
+
+  /**
+   * @brief Check if the client is a RPC client.
+   *
+   * @return True if the client is a RPC client, otherwise false.
+   */
+  virtual bool IsRPC() const { return false; }
+
+  /**
    * @brief Get the instance id of the connected vineyard server.
    *
    * Note that for RPC client the instance id is not available.

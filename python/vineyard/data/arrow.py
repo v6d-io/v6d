@@ -38,9 +38,7 @@ from vineyard.data.utils import build_buffer
 from vineyard.data.utils import normalize_dtype
 
 
-def buffer_builder(
-    client: IPCClient, buffer: Union[bytes, memoryview], builder: BuilderContext
-):
+def buffer_builder(client, buffer: Union[bytes, memoryview], builder: BuilderContext):
     if buffer is None:
         address = None
         size = 0
@@ -51,7 +49,13 @@ def buffer_builder(
 
 
 def as_arrow_buffer(blob: Blob):
-    buffer = blob.buffer
+    if isinstance(blob, Blob):
+        buffer = blob.buffer
+    else:
+        if not blob.is_empty:
+            buffer = memoryview(blob)
+        else:
+            buffer = memoryview(b'')
     if buffer is None:
         return pa.py_buffer(bytearray())
     return pa.py_buffer(buffer)

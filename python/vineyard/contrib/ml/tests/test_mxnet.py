@@ -22,7 +22,10 @@ import pyarrow as pa
 
 import lazy_import
 import pytest
+import pytest_cases
 
+from vineyard.conftest import vineyard_client
+from vineyard.conftest import vineyard_rpc_client
 from vineyard.contrib.ml.mxnet import mxnet_context
 
 mx = lazy_import.lazy_module("mxnet")
@@ -34,6 +37,7 @@ def vineyard_for_mxnet():
         yield
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_mxnet_tensor(vineyard_client):
     data = [np.random.rand(2, 3) for i in range(10)]
     label = [np.random.rand(2, 3) for i in range(10)]
@@ -45,6 +49,7 @@ def test_mxnet_tensor(vineyard_client):
     assert dataset[1][0].shape == dtrain[1][0].shape
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_mxnet_dataframe(vineyard_client):
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
     label = df['c'].values.astype(np.float32)
@@ -59,6 +64,7 @@ def test_mxnet_dataframe(vineyard_client):
     assert dataset[1].shape == dtrain[1].shape
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_mxnet_record_batch(vineyard_client):
     arrays = [
         pa.array([1, 2, 3, 4]),
@@ -72,6 +78,7 @@ def test_mxnet_record_batch(vineyard_client):
     assert len(dtrain[0][0]) == 2
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_mxnet_table(vineyard_client):
     arrays = [pa.array([1, 2]), pa.array([0, 1]), pa.array([0.1, 0.2])]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'target'])

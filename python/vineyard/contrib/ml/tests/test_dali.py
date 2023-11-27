@@ -20,7 +20,10 @@ import numpy as np
 
 import lazy_import
 import pytest
+import pytest_cases
 
+from vineyard.conftest import vineyard_client
+from vineyard.conftest import vineyard_rpc_client
 from vineyard.contrib.ml.dali import dali_context
 
 dali = lazy_import.lazy_module("nvidia.dali")
@@ -32,6 +35,7 @@ def vineyard_for_dali():
         yield
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_dali_tensor(vineyard_client):
     @dali.pipeline_def()
     def pipe():

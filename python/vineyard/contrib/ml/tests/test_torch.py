@@ -22,7 +22,10 @@ import pyarrow as pa
 
 import lazy_import
 import pytest
+import pytest_cases
 
+from vineyard.conftest import vineyard_client
+from vineyard.conftest import vineyard_rpc_client
 from vineyard.contrib.ml.torch import torch_context
 from vineyard.data.dataframe import NDArrayArray
 
@@ -36,6 +39,7 @@ def vineyard_for_torch():
         yield
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_torch_tensor(vineyard_client):
     tensor = torch.ones(5, 2)
     object_id = vineyard_client.put(tensor)
@@ -47,6 +51,7 @@ def test_torch_tensor(vineyard_client):
     assert torch.equal(value, tensor)
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_torch_dataset(vineyard_client):
     dataset = torch.utils.data.TensorDataset(
         *[torch.tensor(np.random.rand(2, 3)), torch.tensor(np.random.rand(2, 3))],
@@ -62,6 +67,7 @@ def test_torch_dataset(vineyard_client):
         assert torch.isclose(t1, t2).all()
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_torch_dataset_dataframe(vineyard_client):
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
     object_id = vineyard_client.put(df)
@@ -77,6 +83,7 @@ def test_torch_dataset_dataframe(vineyard_client):
     ).all()
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_torch_dataset_dataframe_multidimensional(vineyard_client):
     df = pd.DataFrame(
         {
@@ -91,6 +98,7 @@ def test_torch_dataset_dataframe_multidimensional(vineyard_client):
     assert len(df.columns) == len(value.tensors)
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_torch_dataset_recordbatch(vineyard_client):
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
     batch = pa.RecordBatch.from_pandas(df)
@@ -107,6 +115,7 @@ def test_torch_dataset_recordbatch(vineyard_client):
     ).all()
 
 
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_torch_dataset_table(vineyard_client):
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
     table = pa.Table.from_pandas(df)
