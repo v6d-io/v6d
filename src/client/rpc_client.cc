@@ -183,41 +183,48 @@ Status RPCClient::GetObject(const ObjectID id,
   RETURN_ON_ERROR(this->GetMetaData(id, meta, true));
   RETURN_ON_ASSERT(!meta.MetaData().empty());
   std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
-  std::function<json&(json&)> traverse = [&](json& meta_tree) -> json& {
+  std::function<Status(json&, json&)> traverse =
+      [&](json& meta_tree, json& sub_meta_tree) -> Status {
     if (meta_tree.is_object()) {
       auto sub_id =
           ObjectIDFromString(meta_tree["id"].get_ref<std::string const&>());
       if (IsBlob(sub_id)) {
         std::shared_ptr<RemoteBlob> remote_blob;
-        VINEYARD_CHECK_OK(GetRemoteBlob(sub_id, remote_blob));
+        RETURN_ON_ERROR(GetRemoteBlob(sub_id, remote_blob));
         ObjectMeta sub_meta;
         sub_meta.Reset();
-        VINEYARD_CHECK_OK(GetMetaData(sub_id, sub_meta));
+        RETURN_ON_ERROR(GetMetaData(sub_id, sub_meta));
         sub_meta.SetTypeName(type_name<RemoteBlob>());
-        VINEYARD_CHECK_OK(sub_meta.buffer_set_->EmplaceBuffer(sub_id));
-        VINEYARD_CHECK_OK(
+        RETURN_ON_ERROR(sub_meta.buffer_set_->EmplaceBuffer(sub_id));
+        RETURN_ON_ERROR(
             sub_meta.buffer_set_->EmplaceBuffer(sub_id, remote_blob->Buffer()));
         buffers.emplace(sub_id, remote_blob->Buffer());
-        meta_tree = sub_meta.MetaData();
-        return meta_tree;
+        sub_meta_tree = sub_meta.MetaData();
+        return Status::OK();
       } else {
         for (auto& item : meta_tree.items()) {
           if (item.value().is_object() && !item.value().empty()) {
-            meta_tree[item.key()] = traverse(item.value());
+            json new_meta_tree;
+            RETURN_ON_ERROR(traverse(item.value(), new_meta_tree));
+            if (!new_meta_tree.empty()) {
+              meta_tree[item.key()] = new_meta_tree;
+            }
           }
         }
       }
     }
-    return meta_tree;
+    return Status::OK();
   };
   auto meta_tree = meta.MetaData();
-  auto new_meta_tree = traverse(meta_tree);
+  json& sub_meta_tree = meta_tree;
+  RETURN_ON_ERROR(traverse(meta_tree, sub_meta_tree));
   ObjectMeta new_meta;
   new_meta.Reset();
-  new_meta.SetMetaData(this, new_meta_tree);
+  new_meta.SetMetaData(this, meta_tree);
+
   for (auto& item : buffers) {
-    VINEYARD_CHECK_OK(new_meta.buffer_set_->EmplaceBuffer(item.first));
-    VINEYARD_CHECK_OK(
+    RETURN_ON_ERROR(new_meta.buffer_set_->EmplaceBuffer(item.first));
+    RETURN_ON_ERROR(
         new_meta.buffer_set_->EmplaceBuffer(item.first, item.second));
   }
   object = ObjectFactory::Create(new_meta.GetTypeName());

@@ -22,7 +22,10 @@ import pyarrow as pa
 
 import lazy_import
 import pytest
+import pytest_cases
 
+from vineyard.conftest import vineyard_client
+from vineyard.conftest import vineyard_rpc_client
 from vineyard.contrib.ml.tensorflow import tensorflow_context
 from vineyard.core.builder import builder_context
 from vineyard.core.resolver import resolver_context
@@ -36,9 +39,8 @@ def vineyard_for_tensorflow():
         yield
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_tensorflow_tensor(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_tensorflow_tensor(vineyard_client):
     data = [np.random.rand(2, 3) for i in range(10)]
     label = [np.random.rand(2, 3) for i in range(10)]
     dataset = tf.data.Dataset.from_tensor_slices((data, label))
@@ -55,9 +57,8 @@ def test_tensorflow_tensor(vineyard_client, request):
     assert len(dataset) == len(dtrain)
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_tensorflow_dataframe(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_tensorflow_dataframe(vineyard_client):
     df = pd.DataFrame(
         {'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'target': [1.0, 2.0, 3.0, 4.0]}
     )
@@ -73,9 +74,8 @@ def test_tensorflow_dataframe(vineyard_client, request):
     assert data_ncols == dtrain_ncols
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_tensorflow_record_batch(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_tensorflow_record_batch(vineyard_client):
     arrays = [
         pa.array([1, 2, 3, 4]),
         pa.array([3.0, 4.0, 5.0, 6.0]),
@@ -90,9 +90,8 @@ def test_tensorflow_record_batch(vineyard_client, request):
     assert len(dtrain) == 4
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_tensorflow_table(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_tensorflow_table(vineyard_client):
     arrays = [pa.array([1, 2]), pa.array([0, 1]), pa.array([0.1, 0.2])]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'label'])
     batches = [batch] * 4

@@ -20,7 +20,10 @@ import numpy as np
 import pandas as pd
 
 import pytest
+import pytest_cases
 
+from vineyard.conftest import vineyard_client
+from vineyard.conftest import vineyard_rpc_client
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
@@ -29,43 +32,47 @@ from vineyard.data.dataframe import NDArrayArray
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_pandas_dataframe(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_pandas_dataframe(vineyard_client):
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8]})
     object_id = vineyard_client.put(df)
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_pandas_dataframe_string(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_pandas_dataframe_string(vineyard_client):
     # see gh#533
     df = pd.DataFrame({'a': ['1', '2', '3', '4'], 'b': ['5', '6', '7', '8']})
     object_id = vineyard_client.put(df)
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_pandas_dataframe_complex_columns(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_pandas_dataframe_empty(vineyard_client):
+    # see gh#533
+    df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': ['5', '6', '7', '8']})
+    df = df.iloc[0:0]
+    object_id = vineyard_client.put(df)
+    pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
+
+
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_pandas_dataframe_complex_columns(vineyard_client):
     # see gh#533
     df = pd.DataFrame([1, 2, 3, 4], columns=[['x']])
     object_id = vineyard_client.put(df)
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_pandas_dataframe_int_columns(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_pandas_dataframe_int_columns(vineyard_client):
     df = pd.DataFrame({1: [1, 2, 3, 4], 2: [5, 6, 7, 8]})
     object_id = vineyard_client.put(df)
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_pandas_dataframe_mixed_columns(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_pandas_dataframe_mixed_columns(vineyard_client):
     df = pd.DataFrame(
         {'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 1: [9, 10, 11, 12], 2: [13, 14, 15, 16]}
     )
@@ -73,18 +80,16 @@ def test_pandas_dataframe_mixed_columns(vineyard_client, request):
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_dataframe_reindex(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_dataframe_reindex(vineyard_client):
     df = pd.DataFrame(np.random.rand(10, 5), columns=['c1', 'c2', 'c3', 'c4', 'c5'])
     expected = df.reindex(index=np.arange(10, 1, -1))
     object_id = vineyard_client.put(expected)
     pd.testing.assert_frame_equal(expected, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_dataframe_set_index(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_dataframe_set_index(vineyard_client):
     df1 = pd.DataFrame(
         [[1, 3, 3], [4, 2, 6], [7, 8, 9]],
         index=['a1', 'a2', 'a3'],
@@ -95,9 +100,8 @@ def test_dataframe_set_index(vineyard_client, request):
     pd.testing.assert_frame_equal(expected, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_sparse_array(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_sparse_array(vineyard_client):
     arr = np.random.randn(10)
     arr[2:5] = np.nan
     arr[7:8] = np.nan
@@ -106,9 +110,8 @@ def test_sparse_array(vineyard_client, request):
     pd.testing.assert_extension_array_equal(sparr, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_dataframe_with_sparse_array(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_dataframe_with_sparse_array(vineyard_client):
     df = pd.DataFrame(np.random.randn(100, 4), columns=['x', 'y', 'z', 'a'])
     df.iloc[:98] = np.nan
     sdf = df.astype(pd.SparseDtype("float", np.nan))
@@ -116,9 +119,8 @@ def test_dataframe_with_sparse_array(vineyard_client, request):
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_dataframe_with_sparse_array_int_columns(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_dataframe_with_sparse_array_int_columns(vineyard_client):
     df = pd.DataFrame(np.random.randn(100, 4), columns=[1, 2, 3, 4])
     df.iloc[:98] = np.nan
     sdf = df.astype(pd.SparseDtype("float", np.nan))
@@ -126,9 +128,8 @@ def test_dataframe_with_sparse_array_int_columns(vineyard_client, request):
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_dataframe_with_sparse_array_mixed_columns(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_dataframe_with_sparse_array_mixed_columns(vineyard_client):
     df = pd.DataFrame(np.random.randn(100, 4), columns=['x', 'y', 'z', 0])
     df.iloc[:98] = np.nan
     sdf = df.astype(pd.SparseDtype("float", np.nan))
@@ -136,9 +137,8 @@ def test_dataframe_with_sparse_array_mixed_columns(vineyard_client, request):
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_dataframe_with_datetime(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_dataframe_with_datetime(vineyard_client):
     # GH-575
     dates = [
         pd.Timestamp("2012-05-01"),
@@ -151,9 +151,8 @@ def test_dataframe_with_datetime(vineyard_client, request):
     pd.testing.assert_frame_equal(df, vineyard_client.get(object_id))
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_dataframe_with_multidimensional(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_dataframe_with_multidimensional(vineyard_client):
     df = pd.DataFrame(
         {
             'data': NDArrayArray(np.random.rand(1000, 10)),
@@ -232,11 +231,13 @@ def test_dataframe_reusing(vineyard_client):
 def test_data_consistency_between_ipc_and_rpc(
     value, vineyard_client, vineyard_rpc_client
 ):
+    if isinstance(value, pd.arrays.SparseArray):
+        value = pd.DataFrame(value)
     object_id = vineyard_client.put(value)
-    df1 = vineyard_client.get(object_id)
-    df2 = vineyard_rpc_client.get(object_id)
-    assert df1.equals(df2)
+    pd.testing.assert_frame_equal(
+        vineyard_client.get(object_id), vineyard_rpc_client.get(object_id)
+    )
     object_id = vineyard_rpc_client.put(value)
-    df1 = vineyard_client.get(object_id)
-    df2 = vineyard_rpc_client.get(object_id)
-    assert df1.equals(df2)
+    pd.testing.assert_frame_equal(
+        vineyard_client.get(object_id), vineyard_rpc_client.get(object_id)
+    )

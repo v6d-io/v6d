@@ -20,7 +20,10 @@ import numpy as np
 import pandas as pd
 
 import pytest
+import pytest_cases
 
+from vineyard.conftest import vineyard_client
+from vineyard.conftest import vineyard_rpc_client
 from vineyard.data.pickle import PickledReader
 from vineyard.data.pickle import PickledWriter
 
@@ -131,18 +134,16 @@ def test_bytes_io_roundtrip(block_size, value):
         assert target == value
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_bytes_io_numpy_ndarray(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_bytes_io_numpy_ndarray(vineyard_client):
     arr = np.random.rand(4, 5, 6)
     object_id = vineyard_client.put(arr)
     target = read_and_build(b1m, vineyard_client.get(object_id))
     np.testing.assert_allclose(arr, target)
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_bytes_io_empty_ndarray(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_bytes_io_empty_ndarray(vineyard_client):
     arr = np.ones(())
     object_id = vineyard_client.put(arr)
     target = read_and_build(b1m, vineyard_client.get(object_id))
@@ -184,18 +185,16 @@ def test_bytes_io_empty_ndarray(vineyard_client, request):
     np.testing.assert_allclose(arr, target)
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_bytes_io_str_ndarray(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_bytes_io_str_ndarray(vineyard_client):
     arr = np.array(['', 'x', 'yz', 'uvw'])
     object_id = vineyard_client.put(arr)
     target = read_and_build(b1m, vineyard_client.get(object_id))
     np.testing.assert_equal(arr, target)
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_object_ndarray(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_object_ndarray(vineyard_client):
     arr = np.array([1, 'x', 3.14, (1, 4)], dtype=object)
     object_id = vineyard_client.put(arr)
     target = read_and_build(b1m, vineyard_client.get(object_id))
@@ -207,9 +206,8 @@ def test_object_ndarray(vineyard_client, request):
     np.testing.assert_equal(arr, target)
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_bytes_io_tensor_order(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_bytes_io_tensor_order(vineyard_client):
     arr = np.asfortranarray(np.random.rand(10, 7))
     object_id = vineyard_client.put(arr)
     res = read_and_build(b1m, vineyard_client.get(object_id))
@@ -217,27 +215,24 @@ def test_bytes_io_tensor_order(vineyard_client, request):
     assert res.flags['F_CONTIGUOUS'] == arr.flags['F_CONTIGUOUS']
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_bytes_io_pandas_dataframe(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_bytes_io_pandas_dataframe(vineyard_client):
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8]})
     object_id = vineyard_client.put(df)
     target = read_and_build(b1m, vineyard_client.get(object_id))
     pd.testing.assert_frame_equal(df, target)
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_bytes_io_pandas_dataframe_int_columns(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_bytes_io_pandas_dataframe_int_columns(vineyard_client):
     df = pd.DataFrame({1: [1, 2, 3, 4], 2: [5, 6, 7, 8]})
     object_id = vineyard_client.put(df)
     target = read_and_build(b1m, vineyard_client.get(object_id))
     pd.testing.assert_frame_equal(df, target)
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_bytes_io_pandas_dataframe_mixed_columns(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_bytes_io_pandas_dataframe_mixed_columns(vineyard_client):
     df = pd.DataFrame(
         {'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 1: [9, 10, 11, 12], 2: [13, 14, 15, 16]}
     )
@@ -246,9 +241,8 @@ def test_bytes_io_pandas_dataframe_mixed_columns(vineyard_client, request):
     pd.testing.assert_frame_equal(df, target)
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_bytes_io_pandas_series(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_bytes_io_pandas_series(vineyard_client):
     s = pd.Series([1, 3, 5, np.nan, 6, 8], name='foo')
     object_id = vineyard_client.put(s)
     target = read_and_build(b1m, vineyard_client.get(object_id))

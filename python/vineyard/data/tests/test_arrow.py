@@ -19,12 +19,15 @@
 import pyarrow as pa
 
 import pytest
+import pytest_cases
 
 try:
     import polars
 except ImportError:
     polars = None
 
+from vineyard.conftest import vineyard_client
+from vineyard.conftest import vineyard_rpc_client
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
@@ -32,9 +35,8 @@ from vineyard.data import register_builtin_types
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_arrow_array(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_arrow_array(vineyard_client):
     arr = pa.array([1, 2, None, 3])
     object_id = vineyard_client.put(arr)
     assert arr.equals(vineyard_client.get(object_id))
@@ -78,9 +80,8 @@ def build_record_batch():
     return batch
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_record_batch(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_record_batch(vineyard_client):
     batch = build_record_batch()
     _object_id = vineyard_client.put(batch)  # noqa: F841
     # processing tables that contains string is not roundtrip, as StringArray
@@ -112,9 +113,8 @@ def test_table(vineyard_client):
 
 
 @pytest.mark.skipif(polars is None, reason='polars is not installed')
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_polars_dataframe(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_polars_dataframe(vineyard_client):
     arrays = [
         pa.array([1, 2, 3, 4]),
         pa.array(['foo', 'bar', 'baz', None]),

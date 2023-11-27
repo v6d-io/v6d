@@ -18,7 +18,10 @@
 
 import lazy_import
 import pytest
+import pytest_cases
 
+from vineyard.conftest import vineyard_client
+from vineyard.conftest import vineyard_rpc_client
 from vineyard.contrib.ml.torcharrow import torcharrow_context
 
 ta = lazy_import.lazy_module("torcharrow")
@@ -30,9 +33,8 @@ def vineyard_for_torcharrow():
         yield
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_torch_arrow_column(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_torch_arrow_column(vineyard_client):
     s = ta.column([1, 2, None, 4])
     assert s.sum() == 7
 
@@ -41,9 +43,8 @@ def test_torch_arrow_column(vineyard_client, request):
     assert s.sum() == 7
 
 
-@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
-def test_torch_arrow_dataframe(vineyard_client, request):
-    vineyard_client = request.getfixturevalue(vineyard_client)
+@pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
+def test_torch_arrow_dataframe(vineyard_client):
     s = ta.dataframe({"a": [1, 2, None, 4], "b": [5, 6, None, 8]})
     assert s.sum()['a'][0] == 7
     assert s.sum()['b'][0] == 19

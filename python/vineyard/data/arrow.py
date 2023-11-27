@@ -31,7 +31,6 @@ except ImportError:
 from vineyard._C import Blob
 from vineyard._C import IPCClient
 from vineyard._C import Object
-from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 from vineyard.core.builder import BuilderContext
 from vineyard.core.resolver import ResolverContext
@@ -53,7 +52,7 @@ def as_arrow_buffer(blob: Blob):
     if isinstance(blob, Blob):
         buffer = blob.buffer
     else:
-        if not blob.is_empty():
+        if not blob.is_empty:
             buffer = memoryview(blob)
         else:
             buffer = memoryview(b'')

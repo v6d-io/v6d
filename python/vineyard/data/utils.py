@@ -28,7 +28,6 @@ from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 from vineyard._C import RemoteBlobBuilder
-from vineyard._C import RPCClient
 
 if pickle.HIGHEST_PROTOCOL < 5:
     import pickle5 as pickle  # pylint: disable=import-error

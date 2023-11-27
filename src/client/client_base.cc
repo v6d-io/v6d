@@ -72,10 +72,11 @@ Status ClientBase::CreateData(const json& tree, ObjectID& id,
 }
 
 Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
+  auto instance_id = this->instance_id_;
   if (this->IsRPC()) {
-    this->instance_id_ = this->remote_instance_id();
+    instance_id = this->remote_instance_id();
   }
-  return this->CreateMetaData(meta_data, this->instance_id_, std::ref(id));
+  return this->CreateMetaData(meta_data, instance_id, std::ref(id));
 }
 
 Status ClientBase::CreateMetaData(ObjectMeta& meta_data,
