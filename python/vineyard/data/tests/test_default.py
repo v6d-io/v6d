@@ -18,6 +18,8 @@
 
 import numpy as np
 
+import pytest
+
 from vineyard.core import default_builder_context
 from vineyard.core import default_resolver_context
 from vineyard.data import register_builtin_types
@@ -25,7 +27,9 @@ from vineyard.data import register_builtin_types
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
-def test_bool(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_bool(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     value = True
     object_id = vineyard_client.put(value)
     assert vineyard_client.get(object_id) == value
@@ -35,7 +39,9 @@ def test_bool(vineyard_client):
     assert vineyard_client.get(object_id) == value
 
 
-def test_np_bool(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_np_bool(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     value = np.bool_(True)
     object_id = vineyard_client.put(value)
     assert vineyard_client.get(object_id) == value
@@ -45,13 +51,38 @@ def test_np_bool(vineyard_client):
     assert vineyard_client.get(object_id) == value
 
 
-def test_list(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_list(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     value = [1, 2, 3, 4, 5, 6, None, None, 9]
     object_id = vineyard_client.put(value)
     assert vineyard_client.get(object_id) == tuple(value)
 
 
-def test_dict(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_dict(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     value = {1: 2, 3: 4, 5: None, None: 6}
     object_id = vineyard_client.put(value)
     assert vineyard_client.get(object_id) == value
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        True,
+        False,
+        np.bool_(True),
+        np.bool_(False),
+        [1, 2, 3, 4, 5, 6, None, None, 9],
+        {1: 2, 3: 4, 5: None, None: 6},
+    ],
+)
+def test_data_consistency_between_ipc_and_rpc(
+    value, vineyard_client, vineyard_rpc_client
+):
+    object_id = vineyard_client.put(value)
+    assert vineyard_client.get(object_id) == vineyard_rpc_client.get(object_id)
+
+    object_id = vineyard_rpc_client.put(value)
+    assert vineyard_client.get(object_id) == vineyard_rpc_client.get(object_id)

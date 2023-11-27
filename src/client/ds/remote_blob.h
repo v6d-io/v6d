@@ -17,6 +17,7 @@ limitations under the License.
 #define SRC_CLIENT_DS_REMOTE_BLOB_H_
 
 #include <cstdint>
+#include <limits>
 #include <memory>
 
 #include "client/ds/i_object.h"
@@ -41,7 +42,7 @@ class RPCClient;
  * a chunk of memory from its memory space to the client space in a
  * zero-copy fashion.
  */
-class RemoteBlob {
+class RemoteBlob : public Registered<RemoteBlob> {
  public:
   ObjectID id() const;
 
@@ -84,6 +85,13 @@ class RemoteBlob {
   const std::shared_ptr<vineyard::Buffer>& Buffer() const;
 
   /**
+   * @brief Construct the blob locally for the given object meta.
+   *
+   * @param meta The given object meta.
+   */
+  void Construct(ObjectMeta const& meta) override;
+
+  /**
    * @brief Get the arrow buffer of the blob.
    *
    * @return The buffer which holds the data payload
@@ -109,12 +117,26 @@ class RemoteBlob {
    */
   const std::shared_ptr<arrow::Buffer> ArrowBufferOrEmpty() const;
 
+  static std::unique_ptr<Object> Create() __attribute__((used)) {
+    return std::static_pointer_cast<Object>(
+        std::unique_ptr<RemoteBlob>{new RemoteBlob()});
+  }
+
   /**
    * @brief Dump the buffer for debugging.
    */
   void Dump() const;
 
  private:
+  /**
+   * @brief Construct an empty RemoteBlob
+   */
+  RemoteBlob() {
+    this->id_ = InvalidObjectID();
+    this->size_ = std::numeric_limits<size_t>::max();
+    this->buffer_ = nullptr;
+  }
+
   RemoteBlob(const ObjectID id, const InstanceID instance_id,
              const size_t size);
 
@@ -127,6 +149,7 @@ class RemoteBlob {
 
   friend class RPCClient;
   friend class RemoteBlobWriter;
+  friend class ObjectMeta;
 };
 
 /**

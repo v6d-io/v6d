@@ -72,6 +72,9 @@ Status ClientBase::CreateData(const json& tree, ObjectID& id,
 }
 
 Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
+  if (this->IsRPC()) {
+    this->instance_id_ = this->remote_instance_id();
+  }
   return this->CreateMetaData(meta_data, this->instance_id_, std::ref(id));
 }
 

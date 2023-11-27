@@ -115,15 +115,6 @@ def test_remote_blob_create_and_get_large_object(vineyard_endpoint):
     assert memoryview(remote_blob) == memoryview(large_payload)
 
 
-def test_remote_blob_error(vineyard_endpoint):
-    vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
-
-    with pytest.raises(
-        ValueError, match="Vineyard RPC client cannot be used to create local blobs"
-    ):
-        vineyard_rpc_client.put(np.ones((2, 3, 4)))
-
-
 def test_multiple_remote_blobs(vineyard_endpoint):
     vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
 

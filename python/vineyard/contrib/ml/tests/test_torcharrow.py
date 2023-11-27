@@ -30,7 +30,9 @@ def vineyard_for_torcharrow():
         yield
 
 
-def test_torch_arrow_column(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_torch_arrow_column(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     s = ta.column([1, 2, None, 4])
     assert s.sum() == 7
 
@@ -39,7 +41,9 @@ def test_torch_arrow_column(vineyard_client):
     assert s.sum() == 7
 
 
-def test_torch_arrow_dataframe(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_torch_arrow_dataframe(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     s = ta.dataframe({"a": [1, 2, None, 4], "b": [5, 6, None, 8]})
     assert s.sum()['a'][0] == 7
     assert s.sum()['b'][0] == 19

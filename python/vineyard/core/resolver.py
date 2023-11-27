@@ -230,12 +230,13 @@ def get(
         object_id = client.get_name(name)
 
     # run resolver
-    obj = client.get_object(object_id, fetch=fetch)
-    meta = obj.meta
-    if not meta.islocal and not meta.isglobal:
-        raise ValueError(
-            "Not a local object: for remote object, you can only get its metadata"
-        )
+    if client.is_rpc:
+        obj = client.get_object(object_id)
+    elif client.is_ipc:
+        obj = client.get_object(object_id, fetch=fetch)
+    else:
+        raise RuntimeError('Unknown vineyard client type: %s' % type(client))
+
     if resolver is None:
         resolver = get_current_resolvers()
     return resolver(obj, __vineyard_client=client, **kw)

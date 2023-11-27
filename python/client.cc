@@ -566,7 +566,11 @@ void bind_client(py::module& mod) {
       .def_property_readonly("rpc_endpoint", &ClientBase::RPCEndpoint,
                              doc::ClientBase_rpc_endpoint)
       .def_property_readonly("version", &ClientBase::Version,
-                             doc::ClientBase_version);
+                             doc::ClientBase_version)
+      .def_property_readonly("is_ipc", &ClientBase::IsIPC,
+                             doc::ClientBase_is_ipc)
+      .def_property_readonly("is_rpc", &ClientBase::IsRPC,
+                             doc::ClientBase_is_rpc);
 
   // Client
   py::class_<Client, std::shared_ptr<Client>, ClientBase>(mod, "IPCClient",

@@ -32,7 +32,10 @@ def vineyard_for_dali():
         yield
 
 
-def test_dali_tensor(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_dali_tensor(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
+
     @dali.pipeline_def()
     def pipe():
         data = np.array([np.random.rand(1, 2) for i in range(10)])

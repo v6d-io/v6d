@@ -132,7 +132,7 @@ void Blob::Construct(ObjectMeta const& meta) {
   if (meta.GetBuffer(meta.GetId(), this->buffer_).ok()) {
     if (this->buffer_ == nullptr) {
       throw std::runtime_error(
-          "Blob::Construct(): Invalid internal state: local blob found bit it "
+          "Blob::Construct(): Invalid internal state: local blob found but it "
           "is nullptr: " +
           ObjectIDToString(meta.GetId()));
     }

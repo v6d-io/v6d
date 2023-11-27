@@ -34,7 +34,9 @@ def vineyard_for_mxnet():
         yield
 
 
-def test_mxnet_tensor(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_mxnet_tensor(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     data = [np.random.rand(2, 3) for i in range(10)]
     label = [np.random.rand(2, 3) for i in range(10)]
     dataset = mx.gluon.data.ArrayDataset((data, label))
@@ -45,7 +47,9 @@ def test_mxnet_tensor(vineyard_client):
     assert dataset[1][0].shape == dtrain[1][0].shape
 
 
-def test_mxnet_dataframe(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_mxnet_dataframe(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
     label = df['c'].values.astype(np.float32)
     data = df.drop('c', axis=1).values.astype(np.float32)
@@ -59,7 +63,9 @@ def test_mxnet_dataframe(vineyard_client):
     assert dataset[1].shape == dtrain[1].shape
 
 
-def test_mxnet_record_batch(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_mxnet_record_batch(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arrays = [
         pa.array([1, 2, 3, 4]),
         pa.array([3.0, 4.0, 5.0, 6.0]),
@@ -72,7 +78,9 @@ def test_mxnet_record_batch(vineyard_client):
     assert len(dtrain[0][0]) == 2
 
 
-def test_mxnet_table(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_mxnet_table(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arrays = [pa.array([1, 2]), pa.array([0, 1]), pa.array([0.1, 0.2])]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'f1', 'target'])
     batches = [batch] * 4

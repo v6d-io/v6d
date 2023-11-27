@@ -31,7 +31,9 @@ def vineyard_for_xgboost():
         yield
 
 
-def test_numpy_ndarray(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_numpy_ndarray(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = np.random.rand(4, 5)
     object_id = vineyard_client.put(arr)
     dtrain = vineyard_client.get(object_id)
@@ -39,7 +41,9 @@ def test_numpy_ndarray(vineyard_client):
     assert dtrain.num_row() == 4
 
 
-def test_pandas_dataframe_specify_label(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_pandas_dataframe_specify_label(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
     object_id = vineyard_client.put(df)
     dtrain = vineyard_client.get(object_id, label='a')
@@ -50,7 +54,9 @@ def test_pandas_dataframe_specify_label(vineyard_client):
     assert dtrain.feature_names == ['b', 'c']
 
 
-def test_pandas_dataframe_specify_data(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_pandas_dataframe_specify_data(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     df = pd.DataFrame(
         {'a': [1, 2, 3, 4], 'b': [[5, 1.0], [6, 2.0], [7, 3.0], [8, 9.0]]}
     )
@@ -62,7 +68,9 @@ def test_pandas_dataframe_specify_data(vineyard_client):
     assert np.allclose(arr, dtrain.get_label())
 
 
-def test_record_batch_xgb_resolver(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_record_batch_xgb_resolver(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arrays = [
         pa.array([1, 2, 3, 4]),
         pa.array([3.0, 4.0, 5.0, 6.0]),
@@ -78,7 +86,9 @@ def test_record_batch_xgb_resolver(vineyard_client):
     assert dtrain.feature_names == ['f0', 'f1']
 
 
-def test_table_xgb_resolver(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_table_xgb_resolver(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arrays = [pa.array([1, 2]), pa.array([0, 1]), pa.array([0.1, 0.2])]
     batch = pa.RecordBatch.from_arrays(arrays, ['f0', 'label', 'f2'])
     batches = [batch] * 3

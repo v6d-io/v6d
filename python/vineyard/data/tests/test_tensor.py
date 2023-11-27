@@ -33,13 +33,17 @@ from vineyard.data import register_builtin_types
 register_builtin_types(default_builder_context, default_resolver_context)
 
 
-def test_numpy_ndarray(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_numpy_ndarray(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = np.random.rand(4, 5, 6)
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr, vineyard_client.get(object_id))
 
 
-def test_empty_ndarray(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_empty_ndarray(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = np.ones(())
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr, vineyard_client.get(object_id))
@@ -73,13 +77,17 @@ def test_empty_ndarray(vineyard_client):
     np.testing.assert_allclose(arr, vineyard_client.get(object_id))
 
 
-def test_str_ndarray(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_str_ndarray(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = np.array(['', 'x', 'yz', 'uvw'])
     object_id = vineyard_client.put(arr)
     np.testing.assert_equal(arr, vineyard_client.get(object_id))
 
 
-def test_object_ndarray(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_object_ndarray(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = np.array([1, 'x', 3.14, (1, 4)], dtype=object)
     object_id = vineyard_client.put(arr)
     np.testing.assert_equal(arr, vineyard_client.get(object_id))
@@ -89,7 +97,9 @@ def test_object_ndarray(vineyard_client):
     np.testing.assert_equal(arr, vineyard_client.get(object_id))
 
 
-def test_tensor_order(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_tensor_order(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = np.asfortranarray(np.random.rand(10, 7))
     object_id = vineyard_client.put(arr)
     res = vineyard_client.get(object_id)
@@ -98,35 +108,56 @@ def test_tensor_order(vineyard_client):
 
 
 @pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
-def test_bsr_matrix(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_bsr_matrix(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = sp.sparse.bsr_matrix((3, 4), dtype=np.int8)
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr.A, vineyard_client.get(object_id).A)
 
 
-@pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
-def test_coo_matrix(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_coo_matrix(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = sp.sparse.coo_matrix((3, 4), dtype=np.int8)
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr.A, vineyard_client.get(object_id).A)
 
 
-@pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
-def test_csc_matrix(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_csc_matrix(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = sp.sparse.csc_matrix((3, 4), dtype=np.int8)
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr.A, vineyard_client.get(object_id).A)
 
 
 @pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
-def test_csr_matrix(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_csr_matrix(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = sp.sparse.csr_matrix((3, 4), dtype=np.int8)
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr.A, vineyard_client.get(object_id).A)
 
 
-@pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
-def test_dia_matrix(vineyard_client):
+@pytest.mark.parametrize("vineyard_client", ['vineyard_client', 'vineyard_rpc_client'])
+def test_dia_matrix(vineyard_client, request):
+    vineyard_client = request.getfixturevalue(vineyard_client)
     arr = sp.sparse.dia_matrix((3, 4), dtype=np.int8)
     object_id = vineyard_client.put(arr)
     np.testing.assert_allclose(arr.A, vineyard_client.get(object_id).A)
+
+
+@pytest.mark.skipif(sp is None, reason="scipy.sparse is not available")
+def test_data_consistency_between_ipc_and_rpc(vineyard_client, vineyard_rpc_client):
+    value = sp.sparse.bsr_matrix((3, 4), dtype=np.int8)
+    object_id = vineyard_client.put(value)
+    v1 = vineyard_client.get(object_id)
+    v2 = vineyard_rpc_client.get(object_id)
+    assert np.array_equal(v1.todense(), v2.todense())
+
+    object_id = vineyard_rpc_client.put(value)
+    v1 = vineyard_client.get(object_id)
+    v2 = vineyard_rpc_client.get(object_id)
+    assert np.array_equal(v1.todense(), v2.todense())
