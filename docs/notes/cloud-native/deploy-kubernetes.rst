@@ -15,18 +15,13 @@ Install `vineyardctl`_ as follows.
 
 .. code:: bash
 
-    export LATEST_TAG=$(curl -s "https://api.github.com/repos/v6d-io/v6d/tags" | jq -r '.[0].name')
-    export OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-    export ARCH=${$(uname -m)/x86_64/amd64}
-    curl -Lo vineyardctl https://github.com/v6d-io/v6d/releases/download/$LATEST_TAG/vineyardctl-$LATEST_TAG-$OS-$ARCH
-    chmod +x vineyardctl
-    sudo mv vineyardctl /usr/local/bin/
+    pip3 install vineyard
 
 Use the vineyardctl to install vineyard cluster.
 
 .. code:: bash
 
-    vineyardctl install vineyard-cluster --create-namespace
+    python3 -m vineyard.ctl install vineyard-cluster --create-namespace
 
 Also, you could follow the next guide to install vineyard cluster steps
 by steps.
