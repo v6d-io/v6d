@@ -170,6 +170,34 @@ Vineyard offers low-level APIs for creating and accessing local blobs with enhan
 Remote Objects
 --------------
 
+Creating and accessing remote objects in vineyard can be easily achieved using :code:`put` and :code:`get` methods (see
+:meth:`vineyard.RPCClient.put` and :meth:`vineyard.RPCClient.get`).
+
+.. code:: python
+   :caption: Effortlessly create and access remote objects using :code:`put` and :code:`get`
+
+    >>> import pandas as pd
+    >>> import vineyard
+    >>> import numpy as np
+    >>>
+    >>> vineyard_rpc_client = vineyard.connect("localhost", 9600)
+    >>>
+    >>> df = pd.DataFrame(np.random.rand(10, 2))
+    >>>
+    >>> # put object into vineyard
+    >>> r = vineyard_rpc_client.put(df)
+    >>> r, type(r)
+    (o000a45730a85f8fe, vineyard._C.ObjectID)
+    >>>
+    >>> # get object from vineyard using object id
+    >>> data = vineyard_rpc_client.get(r)
+    >>> data
+              0         1
+    0  0.884227  0.576031
+    1  0.863040  0.069815
+    2  0.297906  0.911874
+    ...
+
 The RPC client enables inspection of remote object metadata and facilitates operations on blobs
 within the remote cluster, while taking into account the associated network transfer costs.
 

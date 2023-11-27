@@ -1053,9 +1053,6 @@ Close the client.
 
 const char* RPCClient = R"doc(
 RPC client that connects to vineyard instance's RPC endpoints.
-
-The RPC client can only access the metadata of objects, any access to the blob payload
-will trigger a :code:`RuntimeError` exception.
 )doc";
 
 const char* RPCClient_get_object = R"doc(
