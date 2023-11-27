@@ -139,20 +139,6 @@ After building the vineyard library successfully, you can package an install whe
 
     python3 setup.py bdist_wheel
 
-Install vineyardctl
--------------------
-
-Vineyardctl is available on the Github release page, you can download the binary as follows:
-
-.. code:: shell
-
-    export LATEST_TAG=$(curl -s "https://api.github.com/repos/v6d-io/v6d/tags" | jq -r '.[0].name')
-    export OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-    export ARCH=${$(uname -m)/x86_64/amd64}
-    curl -Lo vineyardctl https://github.com/v6d-io/v6d/releases/download/$LATEST_TAG/vineyardctl-$LATEST_TAG-$OS-$ARCH
-    chmod +x vineyardctl
-    sudo mv vineyardctl /usr/local/bin/
-
 
 Building the documentation
 --------------------------

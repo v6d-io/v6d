@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: prepare-data
-        image: ghcr.io/v6d-io/v6d/csidriver-example/prepare-data
+        image: ghcr.io/v6d-io/v6d/kubeflow-example/prepare-data
         imagePullPolicy: Always
         command: ["python3", "/prepare-data.py"]
         volumeMounts:
@@ -53,5 +53,5 @@ spec:
   accessModes:
     - ReadWriteMany
   hostPath:
-    # mount a nfs volume to the kind nodes
+    # mount a nfs volume to the kubernetes nodes
     path: "/mnt/csi-benchmark"

@@ -1,0 +1,128 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: machine-learning-pipeline-
+  annotations: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.21, pipelines.kubeflow.org/pipeline_compilation_time: '2023-11-17T16:10:29.221000',
+    pipelines.kubeflow.org/pipeline_spec: '{"description": "An example pipeline that
+      trains and logs a regression model.", "inputs": [{"name": "data_multiplier",
+      "type": "Integer"}, {"name": "registry", "type": "String"}], "name": "Machine
+      learning Pipeline"}'}
+  labels: {pipelines.kubeflow.org/kfp_sdk_version: 1.8.21}
+spec:
+  entrypoint: machine-learning-pipeline
+  templates:
+  - name: machine-learning-pipeline
+    inputs:
+      parameters:
+      - {name: data_multiplier}
+      - {name: registry}
+    dag:
+      tasks:
+      - name: preprocess-data
+        template: preprocess-data
+        arguments:
+          parameters:
+          - {name: data_multiplier, value: '{{inputs.parameters.data_multiplier}}'}
+          - {name: registry, value: '{{inputs.parameters.registry}}'}
+      - name: test-data
+        template: test-data
+        dependencies: [train-data]
+        arguments:
+          parameters:
+          - {name: registry, value: '{{inputs.parameters.registry}}'}
+      - name: train-data
+        template: train-data
+        dependencies: [preprocess-data]
+        arguments:
+          parameters:
+          - {name: registry, value: '{{inputs.parameters.registry}}'}
+  - name: preprocess-data
+    container:
+      args: ['--data_multiplier={{inputs.parameters.data_multiplier}}', --with_vineyard=True]
+      command: [python3, preprocess.py]
+      env:
+      - {name: VINEYARD_IPC_SOCKET, value: /var/run/vineyard.sock}
+      image: '{{inputs.parameters.registry}}/preprocess-data'
+      imagePullPolicy: Always
+      volumeMounts:
+      - {mountPath: /data, name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4}
+      - {mountPath: /var/run, name: vineyard-socket}
+    inputs:
+      parameters:
+      - {name: data_multiplier}
+      - {name: registry}
+    metadata:
+      annotations: {scheduling.k8s.v6d.io/required: ''}
+      labels:
+        scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
+        scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
+        scheduling.k8s.v6d.io/job: preprocess-data
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.21
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+    volumes:
+    - name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4
+      persistentVolumeClaim: {claimName: benchmark-data}
+    - hostPath: {path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample}
+      name: vineyard-socket
+  - name: test-data
+    container:
+      args: [--with_vineyard=True]
+      command: [python3, test.py]
+      env:
+      - {name: VINEYARD_IPC_SOCKET, value: /var/run/vineyard.sock}
+      image: '{{inputs.parameters.registry}}/test-data'
+      imagePullPolicy: Always
+      volumeMounts:
+      - {mountPath: /data, name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4}
+      - {mountPath: /var/run, name: vineyard-socket}
+    inputs:
+      parameters:
+      - {name: registry}
+    metadata:
+      annotations: {scheduling.k8s.v6d.io/required: train-data}
+      labels:
+        scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
+        scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
+        scheduling.k8s.v6d.io/job: test-data
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.21
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+    volumes:
+    - name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4
+      persistentVolumeClaim: {claimName: benchmark-data}
+    - hostPath: {path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample}
+      name: vineyard-socket
+  - name: train-data
+    container:
+      args: [--with_vineyard=True]
+      command: [python3, train.py]
+      env:
+      - {name: VINEYARD_IPC_SOCKET, value: /var/run/vineyard.sock}
+      image: '{{inputs.parameters.registry}}/train-data'
+      imagePullPolicy: Always
+      volumeMounts:
+      - {mountPath: /data, name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4}
+      - {mountPath: /var/run, name: vineyard-socket}
+    inputs:
+      parameters:
+      - {name: registry}
+    metadata:
+      annotations: {scheduling.k8s.v6d.io/required: preprocess-data}
+      labels:
+        scheduling.k8s.v6d.io/vineyardd-namespace: vineyard-system
+        scheduling.k8s.v6d.io/vineyardd: vineyardd-sample
+        scheduling.k8s.v6d.io/job: train-data
+        pipelines.kubeflow.org/kfp_sdk_version: 1.8.21
+        pipelines.kubeflow.org/pipeline-sdk-type: kfp
+        pipelines.kubeflow.org/enable_caching: "true"
+    volumes:
+    - name: pvolume-d9c6725a1237b14c08a2567cb12c489bec539873deeddba7d87f5b4
+      persistentVolumeClaim: {claimName: benchmark-data}
+    - hostPath: {path: /var/run/vineyard-kubernetes/vineyard-system/vineyardd-sample}
+      name: vineyard-socket
+  arguments:
+    parameters:
+    - {name: data_multiplier}
+    - {name: registry}
+  serviceAccountName: pipeline-runner
