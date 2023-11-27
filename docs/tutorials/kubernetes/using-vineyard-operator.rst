@@ -252,7 +252,7 @@ Check the status of all relevant resources managed by the ``vineyardd-sample`` c
 
 .. code:: bash
 
-    $ kubectl get all -l app.kubernetes.io/instance=vineyardd -n vineyard-system
+    $ kubectl get all -l app.kubernetes.io/instance=vineyard-system-vineyardd-sample -n vineyard-system
 
 .. admonition:: Expected output
    :class: admonition-details
@@ -307,11 +307,11 @@ First, let's deploy the Python client on two Vineyard nodes as follows.
           containers:
           - name: vineyard-python
             imagePullPolicy: IfNotPresent
-            image: vineyardcloudnative/vineyard-python:v0.11.4
+            image: python:3.10
             command:
             - /bin/bash
             - -c
-            - sleep infinity
+            - pip3 install vineyard && sleep infinity
             volumeMounts:
             - mountPath: /var/run
               name: vineyard-sock
@@ -341,7 +341,8 @@ Wait for the vineyard python client pod ready.
     .. code:: bash
 
         NAME                                      READY   STATUS    RESTARTS   AGE
-        vineyard-python-client-6fd8c47c98-7btkv   1/1     Running   0          93s
+        vineyard-python-client-6fd84bc897-27glp   1/1     Running   0          93s
+        vineyard-python-client-6fd84bc897-tlb22   1/1     Running   0          93s
 
 Use the kubectl exec command to enter the first vineyard python client pod.
 
