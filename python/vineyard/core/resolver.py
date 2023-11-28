@@ -31,6 +31,7 @@ from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import RPCClient
+from vineyard.core.client import Client
 from vineyard.core.utils import find_most_precise_match
 
 
@@ -229,21 +230,14 @@ def get(
     elif name is not None:
         object_id = client.get_name(name)
 
-    # run resolver
-    if client.is_rpc:
-        obj = client.get_object(object_id)
-    elif client.is_ipc:
-        obj = client.get_object(object_id, fetch=fetch)
-    else:
-        raise RuntimeError('Unknown vineyard client type: %s' % type(client))
+    obj = client.get_object(object_id)
 
     if resolver is None:
         resolver = get_current_resolvers()
     return resolver(obj, __vineyard_client=client, **kw)
 
 
-setattr(IPCClient, 'get', get)
-setattr(RPCClient, 'get', get)
+setattr(Client, 'get', get)
 
 __all__ = [
     'default_resolver_context',

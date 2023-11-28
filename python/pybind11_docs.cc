@@ -1238,6 +1238,12 @@ const char* RPCClient_close = R"doc(
 Close the client.
 )doc";
 
+const char* RPCClient_is_fetchable = R"doc(
+Whether the rpc client is able to fetch objects from the connected vineyard server.
+When the instance connected by the rpc client is not the same as the instance
+of metadata, the rpc client is not able to fetch the object.
+)doc";
+
 const char* RPCClient_remote_instance_id = R"doc(
 The instance id of the connected remote vineyard server.
 )doc";

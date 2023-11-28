@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <sys/stat.h>
 #include <memory>
 #include <sstream>
 
@@ -580,7 +581,7 @@ void bind_client(py::module& mod) {
       .def_property_readonly("is_rpc", &ClientBase::IsRPC,
                              doc::ClientBase_is_rpc);
 
-  // Client
+  // IPCClient
   py::class_<Client, std::shared_ptr<Client>, ClientBase>(mod, "IPCClient",
                                                           doc::IPCClient)
       .def(
@@ -886,6 +887,12 @@ void bind_client(py::module& mod) {
              throw_on_error(self->Fork(*rpc_client));
              return rpc_client;
            })
+      .def(
+          "is_fetchable",
+          [](RPCClient* self, ObjectMeta& metadata) -> bool {
+            return self->IsFetchable(metadata);
+          },
+          doc::RPCClient_is_fetchable)
       .def_property_readonly("remote_instance_id",
                              &RPCClient::remote_instance_id,
                              doc::RPCClient_remote_instance_id)
@@ -896,33 +903,13 @@ void bind_client(py::module& mod) {
 
   mod.def(
          "_connect",
-         [](std::nullptr_t, const std::string& username,
+         [](std::string const& socket, const std::string& username,
             const std::string& password) -> py::object {
-           if (!read_env("VINEYARD_IPC_SOCKET").empty()) {
-             return py::cast(ClientManager<Client>::GetManager()->Connect(
-                 username, password));
-           }
-           if (!read_env("VINEYARD_RPC_ENDPOINT").empty()) {
-             return py::cast(ClientManager<RPCClient>::GetManager()->Connect(
-                 username, password));
-           }
-           throw_on_error(Status::ConnectionFailed(
-               "Failed to resolve IPC socket or RPC endpoint of vineyard "
-               "server from environment variables VINEYARD_IPC_SOCKET or "
-               "VINEYARD_RPC_ENDPOINT."));
-           return py::none();
+           return py::cast(ClientManager<Client>::GetManager()->Connect(
+               socket, username, password));
          },
-         py::arg("target") = py::none(), py::kw_only(),
-         py::arg("username") = "", py::arg("password") = "", doc::connect)
-      .def(
-          "_connect",
-          [](std::string const& socket, const std::string& username,
-             const std::string& password) -> py::object {
-            return py::cast(ClientManager<Client>::GetManager()->Connect(
-                socket, username, password));
-          },
-          "socket"_a, py::kw_only(), py::arg("username") = "",
-          py::arg("password") = "")
+         "socket"_a, py::kw_only(), py::arg("username") = "",
+         py::arg("password") = "")
       .def(
           "_connect",
           [](std::string const& host, const uint32_t port,

@@ -710,6 +710,7 @@ def run_python_deploy_tests(meta, allocator, endpoints, test_args, with_migratio
                 '--durations=0',
                 '--log-cli-level',
                 'DEBUG',
+                'python/vineyard/core/tests/test_client_on_distributed_vineyard.py',
                 'python/vineyard/deploy/tests',
                 'python/vineyard/drivers/io/tests/test_migrate_stream.py',
                 *test_args,

@@ -32,6 +32,7 @@ from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 from vineyard._C import RPCClient
+from vineyard.core.client import Client
 
 
 class BuilderContext:
@@ -168,7 +169,7 @@ def put(
         00002ec13bc81226
 
     Parameters:
-        client: IPCClient
+        client: IPCClient or RPCClient
             The vineyard client to use.
         value:
             The python value that will be put to vineyard. Supported python value
@@ -217,8 +218,7 @@ def put(
     return r
 
 
-setattr(IPCClient, 'put', put)
-setattr(RPCClient, 'put', put)
+setattr(Client, 'put', put)
 
 __all__ = [
     'default_builder_context',

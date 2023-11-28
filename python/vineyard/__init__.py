@@ -186,6 +186,7 @@ from ._C import UserInputErrorException
 from ._C import VineyardServerNotReadyException
 from ._C import _connect
 from ._C import memory_copy
+from .core import Client
 from .core import builder_context
 from .core import default_builder_context
 from .core import default_driver_context
@@ -398,4 +399,4 @@ def connect(*args, **kwargs):
             'try to launch a standalone one.'
         )
         try_init()
-    return _connect(*args, **kwargs)
+    return Client().connect(*args, **kwargs)
