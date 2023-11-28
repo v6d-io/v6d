@@ -42,16 +42,21 @@ public abstract class Client {
     public abstract ObjectMeta createMetaData(ObjectMeta metadata) throws VineyardException;
 
     public ObjectMeta getMetaData(ObjectID id) throws VineyardException {
-        return this.getMetaData(id, false);
+        return this.getMetaData(id, false, false, false);
     }
 
-    public ObjectMeta getMetaData(ObjectID id, boolean sync_remote) throws VineyardException {
+    public ObjectMeta getMetaData(ObjectID id, boolean fetch) throws VineyardException {
+        return this.getMetaData(id, fetch, false);
+    }
+
+    public ObjectMeta getMetaData(ObjectID id, boolean fetch, boolean sync_remote)
+            throws VineyardException {
         // return this.getMetaData(this.migrateObject(id), false, false);
-        return this.getMetaData(id, sync_remote, false);
+        return this.getMetaData(id, fetch, sync_remote, false);
     }
 
-    public abstract ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait)
-            throws VineyardException;
+    public abstract ObjectMeta getMetaData(
+            ObjectID id, boolean fetch, boolean sync_remote, boolean wait) throws VineyardException;
 
     public abstract Collection<ObjectMeta> listMetaData(String pattern) throws VineyardException;
 

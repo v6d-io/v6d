@@ -109,25 +109,7 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                         try {
                             ObjectID tableID = ObjectID.fromString(objectID);
                             Context.println("try to build table");
-                            ObjectMeta tableMeta = client.getMetaData(tableID);
-                            Context.println(
-                                    "instance id is same or not: "
-                                            + (tableMeta
-                                                                    .getInstanceId()
-                                                                    .compareTo(
-                                                                            client.getInstanceId())
-                                                            == 0
-                                                    ? "true"
-                                                    : "false"));
-                            Context.println(
-                                    "meta id:"
-                                            + tableMeta.getInstanceId()
-                                            + ", client id:"
-                                            + client.getInstanceId());
-                            if (tableMeta.getInstanceId().compareTo(client.getInstanceId()) != 0) {
-                                tableID = client.migrateObject(tableID);
-                                tableMeta = client.getMetaData(tableID);
-                            }
+                            ObjectMeta tableMeta = client.getMetaData(tableID, true);
                             Table table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
                             numBatches += table.getBatches().size();
                         } catch (ObjectNotExists | NumberFormatException e) {
@@ -207,24 +189,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
                     try {
                         ObjectID tableID = ObjectID.fromString(objectID);
                         Context.println("try to build table in reader");
-                        ObjectMeta tableMeta = client.getMetaData(tableID);
-                        Context.println(
-                                "instance id is same or not: "
-                                        + (tableMeta
-                                                                .getInstanceId()
-                                                                .compareTo(client.getInstanceId())
-                                                        == 0
-                                                ? "true"
-                                                : "false"));
-                        Context.println(
-                                "meta id:"
-                                        + tableMeta.getInstanceId()
-                                        + ", client id:"
-                                        + client.getInstanceId());
-                        if (tableMeta.getInstanceId().compareTo(client.getInstanceId()) != 0) {
-                            tableID = client.migrateObject(tableID);
-                            tableMeta = client.getMetaData(tableID);
-                        }
+                        ObjectMeta tableMeta = client.getMetaData(tableID, true);
                         Table table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
                         for (val batch : table.getBatches()) {
                             recordTotal += batch.getRowCount();
