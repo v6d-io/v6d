@@ -299,6 +299,40 @@ public class Protocol {
         }
     }
 
+    public static class MigrateObjectRequest extends Request {
+        public static void put(
+                ObjectNode root,
+                ObjectID id,
+                boolean local,
+                boolean isStream,
+                String peer,
+                String peerRpcEndpoint) {
+            root.put("type", "migrate_object_request");
+            root.put("object_id", id.value());
+            root.put("local", local);
+            root.put("is_stream", isStream);
+            root.put("peer", peer);
+            root.put("peer_rpc_endpoint", peerRpcEndpoint);
+        }
+
+        public static void put(ObjectNode root, ObjectID id) {
+            root.put("type", "migrate_object_request");
+            root.put("object_id", id.value());
+        }
+    }
+
+    @Data
+    @EqualsAndHashCode(callSuper = false)
+    public static class MigrateObjectReply extends Reply {
+        private ObjectID objectID;
+
+        @Override
+        public void get(JsonNode root) throws VineyardException {
+            check(root, "migrate_object_reply");
+            objectID = new ObjectID(JSON.getLong(root, "object_id"));
+        }
+    }
+
     public static class PutNameRequest extends Request {
         public static void put(ObjectNode root, ObjectID id, String name) {
             root.put("type", "put_name_request");

@@ -141,6 +141,16 @@ public class IPCClient extends Client {
     }
 
     @Override
+    public synchronized ObjectID migrateObject(ObjectID id) throws VineyardException {
+        val root = mapper.createObjectNode();
+        MigrateObjectRequest.put(root, id);
+        this.doWrite(root);
+        val reply = new MigrateObjectReply();
+        reply.get(this.doReadJson());
+        return reply.getObjectID();
+    }
+
+    @Override
     public Collection<ObjectMeta> listMetaData(String pattern) throws VineyardException {
         return listMetaData(pattern, false);
     }

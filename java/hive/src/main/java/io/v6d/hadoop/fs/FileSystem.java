@@ -113,9 +113,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     private Configuration conf = null;
 
     private boolean enablePrintAllFiles = false;
-
     private IPCClient client;
-    private static final int DIR_LEN = 1;
 
     Path workingDir = new Path("vineyard:/");
 

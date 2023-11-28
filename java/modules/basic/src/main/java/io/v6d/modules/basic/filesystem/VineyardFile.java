@@ -76,6 +76,10 @@ public class VineyardFile {
     private void initializeRead() throws IOException {
         ObjectID objectID = client.getName(filePath);
         ObjectMeta meta = client.getMetaData(objectID);
+        if (meta.getInstanceId().compareTo(client.getInstanceId()) != 0) {
+            objectID = client.migrateObject(objectID);
+            meta = client.getMetaData(objectID);
+        }
         if (meta.getTypename().equals("vineyard::File") == false) {
             throw new IOException("Not a vineyard file.");
         }

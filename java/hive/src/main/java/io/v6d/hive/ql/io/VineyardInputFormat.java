@@ -18,6 +18,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.base.StopwatchContext;
 import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.ObjectFactory;
+import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.core.common.util.VineyardException;
 import io.v6d.core.common.util.VineyardException.ObjectNotExists;
@@ -107,10 +108,27 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                     for (val objectID : objectIDs) {
                         try {
                             ObjectID tableID = ObjectID.fromString(objectID);
-                            Table table =
-                                    (Table)
-                                            ObjectFactory.getFactory()
-                                                    .resolve(client.getMetaData(tableID));
+                            Context.println("try to build table");
+                            ObjectMeta tableMeta = client.getMetaData(tableID);
+                            Context.println(
+                                    "instance id is same or not: "
+                                            + (tableMeta
+                                                                    .getInstanceId()
+                                                                    .compareTo(
+                                                                            client.getInstanceId())
+                                                            == 0
+                                                    ? "true"
+                                                    : "false"));
+                            Context.println(
+                                    "meta id:"
+                                            + tableMeta.getInstanceId()
+                                            + ", client id:"
+                                            + client.getInstanceId());
+                            if (tableMeta.getInstanceId().compareTo(client.getInstanceId()) != 0) {
+                                tableID = client.migrateObject(tableID);
+                                tableMeta = client.getMetaData(tableID);
+                            }
+                            Table table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
                             numBatches += table.getBatches().size();
                         } catch (ObjectNotExists | NumberFormatException e) {
                             // Skip some invalid file.
@@ -188,10 +206,26 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
                 for (val objectID : objectIDs) {
                     try {
                         ObjectID tableID = ObjectID.fromString(objectID);
-                        Table table =
-                                (Table)
-                                        ObjectFactory.getFactory()
-                                                .resolve(client.getMetaData(tableID));
+                        Context.println("try to build table in reader");
+                        ObjectMeta tableMeta = client.getMetaData(tableID);
+                        Context.println(
+                                "instance id is same or not: "
+                                        + (tableMeta
+                                                                .getInstanceId()
+                                                                .compareTo(client.getInstanceId())
+                                                        == 0
+                                                ? "true"
+                                                : "false"));
+                        Context.println(
+                                "meta id:"
+                                        + tableMeta.getInstanceId()
+                                        + ", client id:"
+                                        + client.getInstanceId());
+                        if (tableMeta.getInstanceId().compareTo(client.getInstanceId()) != 0) {
+                            tableID = client.migrateObject(tableID);
+                            tableMeta = client.getMetaData(tableID);
+                        }
+                        Table table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
                         for (val batch : table.getBatches()) {
                             recordTotal += batch.getRowCount();
                             batch.setResolver(resolver);

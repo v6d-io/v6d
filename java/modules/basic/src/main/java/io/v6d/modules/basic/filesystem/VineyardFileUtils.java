@@ -35,6 +35,10 @@ public class VineyardFileUtils {
             throw new FileNotFoundException(path + " is not found.");
         }
         ObjectMeta meta = client.getMetaData(fileObjectID);
+        if (meta.getInstanceId().compareTo(client.getInstanceId()) != 0) {
+            fileObjectID = client.migrateObject(fileObjectID);
+            meta = client.getMetaData(fileObjectID);
+        }
         boolean isDir = meta.getBooleanValue("is_dir_");
         int len = meta.getIntValue("length_");
         long modifyTime = meta.getLongValue("modify_time_");
@@ -62,6 +66,10 @@ public class VineyardFileUtils {
             for (val object : objects.entrySet()) {
                 ObjectID objectID = object.getValue();
                 ObjectMeta meta = client.getMetaData(objectID);
+                if (meta.getInstanceId().compareTo(client.getInstanceId()) != 0) {
+                    objectID = client.migrateObject(objectID);
+                    meta = client.getMetaData(objectID);
+                }
                 if (meta.getTypename().compareTo("vineyard::File") != 0) {
                     continue;
                 }
