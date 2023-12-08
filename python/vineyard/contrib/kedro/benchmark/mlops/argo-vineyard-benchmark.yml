@@ -32,6 +32,8 @@ spec:
       command: [kedro]
       args: ["run", "-e", "vineyard", "-n",  "{{inputs.parameters.kedro_node}}"]
       env:
+        - name: JOB_NAME
+          value: "{{inputs.parameters.job}}"
         - name: VINEYARD_IPC_SOCKET
           value: /var/run/vineyard.sock
         - name: DATA_AUGMENT_MULTIPLIER
