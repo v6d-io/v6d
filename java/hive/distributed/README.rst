@@ -14,14 +14,14 @@ Build Hive Docker Image with Hadoop
 
 ### Start sql server for hive metastore
 ```bash
-    cd v6d/java/hive/distributed/docker/.workdir
+    cd v6d/java/hive/distributed/docker/mysql
     docker-compose -f mysql-compose.yaml up -d
     # You can change the password in mysql-compose.yaml and hive-site.xml
 ```
 
 ### Run hadoop & hive docker images
 ```bash
-    cd v6d/java/hive/distributed/docker/.workdir
+    cd v6d/java/hive/distributed/docker
     docker-compose -f docker-compose.yaml up -d
 ```
 
@@ -35,7 +35,7 @@ Build Hive Docker Image with Hadoop
 
 ### Restart all services
 ```bash
-    cd v6d/java/hive/distributed/docker/.workdir
+    cd v6d/java/hive/distributed/docker
     docker-compose -f docker-compose.yaml restart
 ```
 
