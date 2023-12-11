@@ -1,0 +1,27 @@
+version: '3'
+services:
+  db:
+    image: registry.cn-hangzhou.aliyuncs.com/bigdata_cloudnative/mysql:5.7 #mysql版本
+    container_name: mysql
+    hostname: mysql
+    volumes:
+      - ./data/db:/var/lib/mysql
+      - ./conf/my.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf
+    restart: always
+    ports:
+      - 13306:3306
+    networks:
+      - hadoop-network
+    environment:
+      MYSQL_ROOT_PASSWORD: 123456 # for test
+      secure_file_priv:
+    healthcheck:
+      test: ["CMD-SHELL", "curl -I localhost:3306 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+# 连接外部网络
+networks:
+  hadoop-network:
+    external: true
