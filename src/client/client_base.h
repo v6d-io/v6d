@@ -424,6 +424,13 @@ class ClientBase {
   Status Clear();
 
   /**
+   * @brief Trim the memory pool inside the shared memory allocator to return
+   *        the unused physical memory back to the OS kernel, like the
+   *        `malloc_trim` API from glibc.
+   */
+  Status MemoryTrim(bool& trimmed);
+
+  /**
    * @brief Associate given labels to an existing object.
    *
    * @param object Object to be labeled.

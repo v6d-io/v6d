@@ -366,6 +366,17 @@ Status ClientBase::Clear() {
   return Status::OK();
 }
 
+Status ClientBase::MemoryTrim(bool& trimmed) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteMemoryTrimRequest(message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadMemoryTrimReply(message_in, trimmed));
+  return Status::OK();
+}
+
 Status ClientBase::Label(const ObjectID object, std::string const& key,
                          std::string const& value) {
   ENSURE_CONNECTED(this);

@@ -48,6 +48,12 @@ void GetMallocMapinfo(void* addr, int* fd, int64_t* map_length,
 struct MmapRecord {
   int fd = -1;
   int64_t size = -1;
+  enum class Kind {
+    kMalloc = 0,
+    kAllocator = 1,
+    kDiskMMap = 2,
+  };
+  Kind kind = Kind::kMalloc;
 };
 
 /// Hashtable that contains one entry per segment that we got from the OS
@@ -68,7 +74,8 @@ int create_buffer(int64_t size, std::string const& path);
 void* mmap_buffer(int64_t size, bool* is_committed, bool* is_zero);
 
 // Create a buffer, and mmap the buffer as the shared memory space.
-void* mmap_buffer(int fd, int64_t size, bool* is_committed, bool* is_zero);
+void* mmap_buffer(int fd, int64_t size, bool gap, bool* is_committed,
+                  bool* is_zero);
 
 // Unmap the buffer.
 int munmap_buffer(void* addr, int64_t size);

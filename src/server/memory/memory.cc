@@ -36,6 +36,7 @@
 #include <map>
 #include <memory>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include "common/util/logging.h"  // IWYU pragma: keep
@@ -66,8 +67,9 @@ static inline uintptr_t align_down(const uintptr_t address,
   return address & ~(alignment - 1);
 }
 
-static inline void recycle_resident_memory(const uintptr_t aligned_left,
-                                           const uintptr_t aligned_right) {
+static inline size_t recycle_resident_memory(const uintptr_t aligned_left,
+                                             const uintptr_t aligned_right,
+                                             const bool release_immediately) {
   if (aligned_left < aligned_right) {
     /**
      * Notes [Recycle Pages with madvise]:
@@ -78,27 +80,40 @@ static inline void recycle_resident_memory(const uintptr_t aligned_left,
      *
      * See also: https://man7.org/linux/man-pages/man2/madvise.2.html
      */
+#if defined(__linux__) || defined(__linux) || defined(linux) || \
+    defined(__gnu_linux__)
+    int advice = release_immediately ? MADV_REMOVE : MADV_DONTNEED;
+#else
+    int advice = MADV_DONTNEED;
+#endif
     if (madvise(reinterpret_cast<void*>(aligned_left),
-                aligned_right - aligned_left, MADV_DONTNEED)) {
+                aligned_right - aligned_left, advice)) {
       LOG(ERROR) << "madvise failed: " << errno << " -> " << strerror(errno)
                  << ", arguments: base = "
                  << reinterpret_cast<void*>(aligned_left)
                  << ", length = " << (aligned_right - aligned_left)
-                 << ", advice = MADV_DONTNEED";
+                 << ", advice = "
+                 << (advice == MADV_DONTNEED ? "MADV_DONTNEED" : "MADV_REMOVE");
+    } else {
+      return aligned_right - aligned_left;
     }
   }
+  return 0;
 }
 
-static inline void recycle_resident_memory(const uintptr_t base, size_t left,
-                                           size_t right) {
+static inline size_t recycle_resident_memory(const uintptr_t base, size_t left,
+                                             size_t right,
+                                             const bool release_immediately) {
   static size_t page_size = system_page_size();
   uintptr_t aligned_left = align_up(base + left, page_size),
             aligned_right = align_down(base + right, page_size);
   DVLOG(10) << "recycle memory: " << reinterpret_cast<void*>(base + left) << "("
             << reinterpret_cast<void*>(aligned_left) << ") to "
             << reinterpret_cast<void*>(base + right) << "("
-            << reinterpret_cast<void*>(aligned_right) << ")";
-  recycle_resident_memory(aligned_left, aligned_right);
+            << reinterpret_cast<void*>(aligned_right)
+            << "), sizes: " << (right - left);
+  return recycle_resident_memory(aligned_left, aligned_right,
+                                 release_immediately);
 }
 
 /**
@@ -106,30 +121,34 @@ static inline void recycle_resident_memory(const uintptr_t base, size_t left,
  *
  * n.b.: the intervals may overlap.
  */
-static void recycle_arena(const uintptr_t base, const size_t size,
-                          std::vector<size_t> const& offsets,
-                          std::vector<size_t> const& sizes) {
-  std::map<size_t, int32_t> points;
-  points[0] = 0;
-  points[size] = 0;
+size_t recycle_arena(const uintptr_t base, const size_t size,
+                     std::vector<size_t> const& offsets,
+                     std::vector<size_t> const& sizes,
+                     const bool release_immediately = false) {
+  std::map<size_t, int32_t> pointers;
+  pointers[0] = 0;
+  pointers[size] = 0;
   for (size_t idx = 0; idx < offsets.size(); ++idx) {
-    points[offsets[idx]] += 1;
-    points[offsets[idx] + sizes[idx]] -= 1;
+    pointers[offsets[idx]] += 1;
+    pointers[offsets[idx] + sizes[idx]] -= 1;
   }
-  auto head = points.begin();
+  auto head = pointers.begin();
   int markersum = 0;
+  size_t released = 0;
   while (true) {
     markersum += head->second;
     auto next = std::next(head);
-    if (next == points.end()) {
+    if (next == pointers.end()) {
       break;
     }
     if (markersum == 0) {
       // release memory in the untouched interval.
-      recycle_resident_memory(base, head->first, next->first);
+      released += recycle_resident_memory(base, head->first, next->first,
+                                          release_immediately);
     }
     head = next;
   }
+  return released;
 }
 }  // namespace memory
 
@@ -341,7 +360,7 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
                 << "), recycle: (" << std::max(lower, lower_bound) << ", "
                 << std::min(upper, upper_bound) << ")";
       memory::recycle_resident_memory(std::max(lower, lower_bound),
-                                      std::min(upper, upper_bound));
+                                      std::min(upper, upper_bound), false);
     }
   }
   return Status::OK();
@@ -379,6 +398,51 @@ Status BulkStoreBase<ID, P>::DeleteGPU(ID const& object_id) {
 template <typename ID, typename P>
 bool BulkStoreBase<ID, P>::Exists(const ID& object_id) {
   return objects_.contains(object_id);
+}
+
+template <typename ID, typename P>
+bool BulkStoreBase<ID, P>::MemoryTrim() {
+  auto locked = objects_.lock_table();
+  std::map<int /* fd */,
+           std::tuple<const uintptr_t /* base */, const size_t /* size */,
+                      std::vector<size_t> /*offsets*/,
+                      std::vector<size_t> /* sizes */>>
+      kepts;
+
+  for (auto const& record : memory::mmap_records) {
+    if (record.second.kind == memory::MmapRecord::Kind::kMalloc) {
+      kepts.emplace(record.second.fd,
+                    std::make_tuple(reinterpret_cast<uintptr_t>(record.first),
+                                    record.second.size, std::vector<size_t>(),
+                                    std::vector<size_t>()));
+    }
+  }
+  for (auto iter = locked.begin(); iter != locked.end(); iter++) {
+    auto& object = iter->second;
+    if (IsPlaceholderBlobID(object->id())) {
+      continue;
+    }
+    if (!object->pointer) {
+      continue;
+    }
+    if (kepts.find(object->store_fd) == kepts.end()) {
+      continue;
+    }
+    auto& kept = kepts[object->store_fd];
+    auto& offsets = std::get<2>(kept);
+    auto& sizes = std::get<3>(kept);
+    offsets.emplace_back(object->data_offset);
+    sizes.emplace_back(object->data_size);
+  }
+  size_t released = 0;
+  for (auto& kept : kepts) {
+    auto& base = std::get<0>(kept.second);
+    auto& size = std::get<1>(kept.second);
+    auto& offsets = std::get<2>(kept.second);
+    auto& sizes = std::get<3>(kept.second);
+    released += memory::recycle_arena(base, size, offsets, sizes, true);
+  }
+  return released > 0;
 }
 
 template <typename ID, typename P>
@@ -428,7 +492,7 @@ Status BulkStoreBase<ID, P>::PreAllocate(const size_t size,
   }
 
   // insert a special marker for obtaining the whole shared memory range
-  ID object_id = GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max());
+  ID object_id = PlaceholderBlobID<ID>();
   int fd = -1;
   int64_t map_size = 0;
   ptrdiff_t offset = 0;
@@ -478,6 +542,7 @@ Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
         memory::mmap_records[reinterpret_cast<void*>(mmap_base)];
     record.fd = fd;
     record.size = mmap_size;
+    record.kind = memory::MmapRecord::Kind::kAllocator;
     arenas_.erase(arena);
   }
   return Status::OK();
@@ -647,7 +712,8 @@ Status BulkStore::CreateDisk(const size_t data_size, const std::string& path,
     fd = memory::create_buffer(data_size, path);
   }
   uint8_t* pointer = static_cast<uint8_t*>(
-      memory::mmap_buffer(fd, data_size, &is_committed, &is_zero));
+      memory::mmap_buffer(fd, data_size, false, &is_committed, &is_zero));
+  memory::mmap_records[pointer].kind = memory::MmapRecord::Kind::kDiskMMap;
   if (data_size == 0) {
     object_id = EmptyBlobID<ObjectID>();
     object = Payload::MakeEmpty();

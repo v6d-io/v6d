@@ -487,6 +487,14 @@ void bind_client(py::module& mod) {
           "clear", [](ClientBase* self) { throw_on_error(self->Clear()); },
           doc::ClientBase_clear)
       .def(
+          "memory_trim",
+          [](ClientBase* self) -> bool {
+            bool trimmed = false;
+            throw_on_error(self->MemoryTrim(trimmed));
+            return trimmed;
+          },
+          doc::ClientBase_memory_trim)
+      .def(
           "label",
           [](ClientBase* self, ObjectID id, std::string const& key,
              std::string const& value) -> void {

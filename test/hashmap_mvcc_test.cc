@@ -31,7 +31,8 @@ limitations under the License.
 using namespace vineyard;  // NOLINT(build/namespaces)
 
 void testHashmapMVCC(Client& client) {
-  using hashmap_t = HashmapMVCC<int, double>;
+  using hashmap_t = HashmapMVCC<int64_t, double>;
+  LOG(INFO) << "entry element size: " << sizeof(hashmap_t::Entry) << " bytes";
 
   std::shared_ptr<hashmap_t> hashmap;
   VINEYARD_CHECK_OK(hashmap_t::Make(client, 1, hashmap));

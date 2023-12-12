@@ -168,8 +168,6 @@ inline ObjectID GenerateSignature() {
   return 0x7FFFFFFFFFFFFFFFUL & detail::cycleclock::now();
 }
 
-inline bool IsBlob(ObjectID id) { return id & 0x8000000000000000UL; }
-
 const std::string ObjectIDToString(const ObjectID id);
 
 const std::string ObjectIDToString(const PlasmaID id);
@@ -267,8 +265,25 @@ inline ID GenerateBlobID(const void* ptr) {
 }
 
 template <typename ID = ObjectID>
-ID EmptyBlobID() {
+inline ID EmptyBlobID() {
   return GenerateBlobID<ID>(0x8000000000000000UL);
+}
+
+template <typename ID = ObjectID>
+inline ID PlaceholderBlobID() {
+  return GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max());
+}
+
+inline bool IsBlob(ObjectID id) { return id & 0x8000000000000000UL; }
+
+template <typename ID = ObjectID>
+inline bool IsEmptyBlobID(ID id) {
+  return EmptyBlobID<ID>() == id;
+}
+
+template <typename ID = ObjectID>
+inline bool IsPlaceholderBlobID(ID id) {
+  return PlaceholderBlobID<ID>() == id;
 }
 
 template <typename ID>

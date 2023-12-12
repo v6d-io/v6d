@@ -99,6 +99,8 @@ struct command_t {
   static const std::string LABEL_REPLY;
   static const std::string CLEAR_REQUEST;
   static const std::string CLEAR_REPLY;
+  static const std::string MEMORY_TRIM_REQUEST;
+  static const std::string MEMORY_TRIM_REPLY;
 
   // Stream APIs
   static const std::string CREATE_STREAM_REQUEST;
@@ -515,6 +517,14 @@ Status ReadClearRequest(const json& root);
 void WriteClearReply(std::string& msg);
 
 Status ReadClearReply(const json& root);
+
+void WriteMemoryTrimRequest(std::string& msg);
+
+Status ReadMemoryTrimRequest(const json& root);
+
+void WriteMemoryTrimReply(const bool trimmed, std::string& msg);
+
+Status ReadMemoryTrimReply(const json& root, bool& trimmed);
 
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg);
 
