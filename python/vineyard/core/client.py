@@ -38,12 +38,7 @@ class Client:
     and provides a high-level interface to fetch objects from the Vineyard cluster.
     """
 
-    def __init__(self):
-        # Initialize ipc and rpc clients based on the type of the given client
-        self._ipc_client = None
-        self._rpc_client = None
-
-    def connect(self, *args, **kwargs) -> 'Client':
+    def __init__(self, *args, **kwargs):
         """
         Connects to the vineyard IPC socket and RPC socket.
 
@@ -57,6 +52,8 @@ class Client:
         the RPC endpoint environment variable is set at the same time, the
         RPC endpoint will be used as well.
         """
+        self._ipc_client = None
+        self._rpc_client = None
 
         try:
             client = _connect(*args, **kwargs)
@@ -100,7 +97,6 @@ class Client:
                 "Failed to resolve IPC socket or RPC endpoint of vineyard server from "
                 "environment variables VINEYARD_IPC_SOCKET or VINEYARD_RPC_ENDPOINT."
             )
-        return self
 
     def _get_preferred_client(self):
         if self._ipc_client:
@@ -210,9 +206,9 @@ class Client:
 
     def reset(self) -> None:
         if self._ipc_client:
-            return self._ipc_client.reset()
+            self._ipc_client.reset()
         if self._rpc_client:
-            return self._rpc_client.reset()
+            self._rpc_client.reset()
 
     @property
     def connected(self):
@@ -261,32 +257,46 @@ class Client:
     def create_blob(self, size: int) -> BlobBuilder:
         if self._ipc_client:
             return self._ipc_client.create_blob(size)
+        warnings.warn("IPC client not available, returning None")
+        return None
 
     def create_empty_blob(self) -> BlobBuilder:
         if self._ipc_client:
             return self._ipc_client.create_empty_blob()
+        warnings.warn("IPC client not available, returning None")
+        return None
 
     def create_remote_blob(self, blob_builder: RemoteBlobBuilder) -> ObjectID:
         if self._rpc_client:
             return self._rpc_client.create_remote_blob(blob_builder)
+        warnings.warn("RPC client not available, returning None")
+        return None
 
     def get_remote_blob(self, object_id: ObjectID, unsafe: bool = False) -> RemoteBlob:
         if self._rpc_client:
             return self._rpc_client.get_remote_blob(object_id, unsafe)
+        warnings.warn("RPC client not available, returning None")
+        return None
 
     def get_remote_blobs(
         self, object_ids: List[ObjectID], unsafe: bool = False
     ) -> List[RemoteBlob]:
         if self._rpc_client:
             return self._rpc_client.get_remote_blobs(object_ids, unsafe)
+        warnings.warn("RPC client not available, returning None")
+        return None
 
     def get_blob(self, object_id: ObjectID, unsafe: bool = False) -> Blob:
         if self._ipc_client:
             return self._ipc_client.get_blob(object_id, unsafe)
+        warnings.warn("IPC client not available, returning None")
+        return None
 
     def get_blobs(self, object_ids: List[ObjectID], unsafe: bool = False) -> List[Blob]:
         if self._ipc_client:
             return self._ipc_client.get_blobs(object_ids, unsafe)
+        warnings.warn("IPC client not available, returning None")
+        return None
 
     def get_object(self, object_id: ObjectID) -> Object:
         """
@@ -334,27 +344,39 @@ class Client:
     def new_buffer_chunk(self, stream: ObjectID, size: int) -> memoryview:
         if self._ipc_client:
             return self._ipc_client.new_buffer_chunk(stream, size)
+        warnings.warn("IPC client not available, returning None")
+        return None
 
     def next_buffer_chunk(self, stream: ObjectID) -> memoryview:
         if self._ipc_client:
             return self._ipc_client.next_buffer_chunk(stream)
+        warnings.warn("IPC client not available, returning None")
+        return None
 
     def allocated_size(self, object_id: Union[Object, ObjectID]) -> int:
         if self._ipc_client:
             return self._ipc_client.allocated_size(object_id)
+        warnings.warn("IPC client not available, returning None")
+        return None
 
     def is_shared_memory(self, pointer: int) -> bool:
         if self._ipc_client:
             return self._ipc_client.is_shared_memory(pointer)
+        warnings.warn("IPC client not available, returning None")
+        return None
 
     def find_shared_memory(self, pointer: int) -> ObjectID:
         if self._ipc_client:
             return self._ipc_client.find_shared_memory(pointer)
+        warnings.warn("IPC client not available, returning None")
+        return None
 
     @property
     def remote_instance_id(self) -> int:
         if self._rpc_client:
             return self._rpc_client.remote_instance_id
+        warnings.warn("RPC client not available, returning None")
+        return None
 
     def close(self) -> None:
         if self._ipc_client:
@@ -386,6 +408,8 @@ class Client:
                 return self._rpc_client.get_object(object_id)
             else:
                 return self._fetch_object_from_other_instance(meta)
+        warnings.warn("No IPC or RPC client available, returning None")
+        return None
 
     def _fetch_object_from_other_instance(self, meta) -> Object:
         """

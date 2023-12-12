@@ -237,6 +237,8 @@ def get(
     return resolver(obj, __vineyard_client=client, **kw)
 
 
+setattr(IPCClient, 'get', get)
+setattr(RPCClient, 'get', get)
 setattr(Client, 'get', get)
 
 __all__ = [

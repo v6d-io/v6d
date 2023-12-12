@@ -399,4 +399,4 @@ def connect(*args, **kwargs):
             'try to launch a standalone one.'
         )
         try_init()
-    return Client().connect(*args, **kwargs)
+    return Client(*args, **kwargs)

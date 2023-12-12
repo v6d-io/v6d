@@ -218,6 +218,8 @@ def put(
     return r
 
 
+setattr(IPCClient, 'put', put)
+setattr(RPCClient, 'put', put)
 setattr(Client, 'put', put)
 
 __all__ = [
