@@ -640,5 +640,7 @@ def test_get_and_put_with_different_vineyard_instances(
             np.testing.assert_equal(value, v)
         elif isinstance(value, pd.DataFrame):
             pd.testing.assert_frame_equal(value, v)
+        elif isinstance(value, pd.Series):
+            pd.testing.assert_series_equal(value, v)
         else:
             assert value == v
