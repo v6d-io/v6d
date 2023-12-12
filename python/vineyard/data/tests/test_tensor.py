@@ -151,9 +151,9 @@ def test_data_consistency_between_ipc_and_rpc(vineyard_client, vineyard_rpc_clie
     object_id = vineyard_client.put(value)
     v1 = vineyard_client.get(object_id)
     v2 = vineyard_rpc_client.get(object_id)
-    assert np.array_equal(v1.todense(), v2.todense())
+    np.testing.assert_equal(v1.todense(), v2.todense())
 
     object_id = vineyard_rpc_client.put(value)
     v1 = vineyard_client.get(object_id)
     v2 = vineyard_rpc_client.get(object_id)
-    assert np.array_equal(v1.todense(), v2.todense())
+    np.testing.assert_equal(v1.todense(), v2.todense())

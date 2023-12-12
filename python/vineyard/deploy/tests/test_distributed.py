@@ -637,8 +637,8 @@ def test_get_and_put_with_different_vineyard_instances(
 
     for v in values:
         if isinstance(value, np.ndarray):
-            assert np.array_equal(value, v)
+            np.testing.assert_equal(value, v)
         elif isinstance(value, pd.DataFrame):
             pd.testing.assert_frame_equal(value, v)
         else:
-            value == v
+            assert value == v

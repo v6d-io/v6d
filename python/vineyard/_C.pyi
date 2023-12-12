@@ -282,6 +282,22 @@ class ClientBase:
     def version(self) -> str: ...
 
 class IPCClient(ClientBase):
+    def get(
+        self,
+        object_id: ObjectID = None,
+        name: str = None,
+        resolver: "ResolverContext" = None,
+        fetch: bool = False,
+        **kw,
+    ): ...
+    def put(
+        self,
+        value: Any,
+        builder: "BuilderContext" = None,
+        persist: bool = False,
+        name: str = None,
+        **kwargs,
+    ): ...
     def create_blob(self, size: int) -> BlobBuilder: ...
     def create_empty_blob(self) -> BlobBuilder: ...
     def get_blob(self, object_id: ObjectID, unsafe: bool = False) -> Blob: ...
@@ -313,6 +329,22 @@ class IPCClient(ClientBase):
     def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None: ...
 
 class RPCClient(ClientBase):
+    def get(
+        self,
+        object_id: ObjectID = None,
+        name: str = None,
+        resolver: "ResolverContext" = None,
+        fetch: bool = False,
+        **kw,
+    ): ...
+    def put(
+        self,
+        value: Any,
+        builder: "BuilderContext" = None,
+        persist: bool = False,
+        name: str = None,
+        **kwargs,
+    ): ...
     def create_remote_blob(self, blob_builder: RemoteBlobBuilder) -> ObjectID: ...
     def get_remote_blob(
         self, object_id: ObjectID, unsafe: bool = False
