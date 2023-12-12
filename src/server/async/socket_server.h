@@ -104,6 +104,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   bool doIfPersist(json const& root);
   bool doLabelObject(json const& root);
   bool doClear(json const& root);
+  bool doMemoryTrim(json const& root);
 
   bool doCreateStream(json const& root);
   bool doOpenStream(json const& root);

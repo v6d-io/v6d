@@ -82,6 +82,8 @@ class BulkStoreBase {
 
   object_map_t& List() { return objects_; }
 
+  bool MemoryTrim();
+
   size_t Footprint() const;
   size_t FootprintLimit() const;
   size_t FootprintGPU() const;

@@ -236,10 +236,11 @@ void* mmap_buffer(int64_t size, bool* is_committed, bool* is_zero) {
   size += kMmapRegionsGap;
 
   int fd = create_buffer(size);
-  return mmap_buffer(fd, size, is_committed, is_zero);
+  return mmap_buffer(fd, size, true, is_committed, is_zero);
 }
 
-void* mmap_buffer(int fd, int64_t size, bool* is_committed, bool* is_zero) {
+void* mmap_buffer(int fd, int64_t size, bool gap, bool* is_committed,
+                  bool* is_zero) {
   if (fd < 0) {
     LOG(ERROR) << "failed to create buffer during mmap: " << strerror(errno);
     return nullptr;
@@ -268,9 +269,12 @@ void* mmap_buffer(int fd, int64_t size, bool* is_committed, bool* is_zero) {
   MmapRecord& record = mmap_records[pointer];
   record.fd = fd;
   record.size = size;
+  record.kind = MmapRecord::Kind::kMalloc;
 
-  // We lie to dlmalloc/mimalloc about where mapped memory actually lives.
-  pointer = pointer_advance(pointer, kMmapRegionsGap);
+  if (gap) {
+    // We lie to dlmalloc/mimalloc about where mapped memory actually lives.
+    pointer = pointer_advance(pointer, kMmapRegionsGap);
+  }
   return pointer;
 }
 

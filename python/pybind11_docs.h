@@ -105,6 +105,7 @@ extern const char* ClientBase_list_names;
 extern const char* ClientBase_drop_name;
 extern const char* ClientBase_sync_meta;
 extern const char* ClientBase_clear;
+extern const char* ClientBase_memory_trim;
 extern const char* ClientBase_reset;
 extern const char* ClientBase_connected;
 extern const char* ClientBase_instance_id;

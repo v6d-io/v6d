@@ -297,6 +297,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doLabelObject(root);
   } else if (cmd == command_t::CLEAR_REQUEST) {
     return doClear(root);
+  } else if (cmd == command_t::MEMORY_TRIM_REQUEST) {
+    return doMemoryTrim(root);
   } else if (cmd == command_t::CREATE_STREAM_REQUEST) {
     return doCreateStream(root);
   } else if (cmd == command_t::OPEN_STREAM_REQUEST) {
@@ -1075,6 +1077,17 @@ bool SocketConnection::doClear(const json& root) {
         }
         return Status::OK();
       }));
+  return false;
+}
+
+bool SocketConnection::doMemoryTrim(const json& root) {
+  auto self(shared_from_this());
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadMemoryTrimRequest, root);
+  bool trimmed = bulk_store_->MemoryTrim();
+  WriteMemoryTrimReply(trimmed, message_out);
+  self->doWrite(message_out);
   return false;
 }
 

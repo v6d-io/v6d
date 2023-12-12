@@ -123,6 +123,8 @@ const std::string command_t::LABEL_REQUEST = "label_request";
 const std::string command_t::LABEL_REPLY = "label_reply";
 const std::string command_t::CLEAR_REQUEST = "clear_request";
 const std::string command_t::CLEAR_REPLY = "clear_reply";
+const std::string command_t::MEMORY_TRIM_REQUEST = "memory_trim_request";
+const std::string command_t::MEMORY_TRIM_REPLY = "memory_trim_reply";
 
 // Stream APIs
 const std::string command_t::CREATE_STREAM_REQUEST = "create_stream_request";
@@ -1301,6 +1303,33 @@ Status ReadClearReply(const json& root) {
   CHECK_IPC_ERROR(root, command_t::CLEAR_REPLY);
   return Status::OK();
 }
+
+void WriteMemoryTrimRequest(std::string& msg) {
+  json root;
+  root["type"] = command_t::MEMORY_TRIM_REQUEST;
+
+  encode_msg(root, msg);
+}
+
+Status ReadMemoryTrimRequest(const json& root) {
+  CHECK_IPC_ERROR(root, command_t::MEMORY_TRIM_REQUEST);
+  return Status::OK();
+}
+
+void WriteMemoryTrimReply(const bool trimmed, std::string& msg) {
+  json root;
+  root["type"] = command_t::MEMORY_TRIM_REPLY;
+  root["trimmed"] = trimmed;
+
+  encode_msg(root, msg);
+}
+
+Status ReadMemoryTrimReply(const json& root, bool& trimmed) {
+  CHECK_IPC_ERROR(root, command_t::MEMORY_TRIM_REPLY);
+  trimmed = root.value("trimmed", false);
+  return Status::OK();
+}
+
 void WriteCreateStreamRequest(const ObjectID& object_id, std::string& msg) {
   json root;
   root["type"] = command_t::CREATE_STREAM_REQUEST;

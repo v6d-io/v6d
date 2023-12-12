@@ -281,3 +281,43 @@ def test_concurrent_blob_mp(  # noqa: C901, pylint: disable=too-many-statements
         r, message = rs.get(block=True)
         if not r:
             pytest.fail(message)
+
+
+def parse_shared_memory_usage():
+    '''Parse the shared memory usage from /proc/meminfo, in KB.'''
+    with open('/proc/meminfo', 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+    for line in lines:
+        if line.startswith('Shmem:'):
+            parts = line.split()
+            return int(parts[1])
+
+
+def test_memory_trim(vineyard_client):
+    data = np.ones((1000, 1000, 16))
+
+    # cleanup the instance
+    vineyard_client.clear()
+    vineyard_client.memory_trim()
+
+    original_memory_usage = parse_shared_memory_usage()
+
+    data = np.ones((1000, 1000, 16))
+    data_kbytes = data.nbytes / 1024
+
+    rs = []
+    for i in range(8):
+        r = vineyard_client.put(data)
+        rs.append(r)
+        current_memory_usage = parse_shared_memory_usage()
+        assert current_memory_usage >= original_memory_usage + i * data_kbytes
+
+    for r in rs:
+        vineyard_client.delete(r)
+
+    current_memory_usage = parse_shared_memory_usage()
+    assert current_memory_usage >= original_memory_usage + (8 - 1) * data_kbytes
+
+    vineyard_client.memory_trim()
+    # there might be some fragmentation overhead
+    assert parse_shared_memory_usage() <= original_memory_usage + 1 * data_kbytes

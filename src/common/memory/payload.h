@@ -69,6 +69,8 @@ struct Payload {
 
   bool operator==(const Payload& other) const;
 
+  inline ObjectID id() const { return object_id; }
+
   inline void Reset() { is_sealed = false, is_owner = true; }
 
   inline void MarkAsSealed() { is_sealed = true; }
@@ -161,6 +163,8 @@ struct PlasmaPayload : public Payload {
             (plasma_size == other.plasma_size) &&
             (plasma_id == other.plasma_id) && (data_size == other.data_size));
   }
+
+  inline PlasmaID id() const { return plasma_id; }
 
   Payload ToNormalPayload() const {
     return Payload(object_id, data_size, pointer, store_fd, arena_fd, map_size,

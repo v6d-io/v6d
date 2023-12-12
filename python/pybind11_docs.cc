@@ -773,6 +773,16 @@ const char* ClientBase_clear = R"doc(
 Drop all objects that visible to the current instance in the vineyard cluster.
 )doc";
 
+const char* ClientBase_memory_trim = R"doc(
+.. method:: memory_trim() -> bool
+    :noindex:
+
+Trim the memory pool inside the shared memory allocator to return the unused
+physical memory back to the OS kernel, like the `malloc_trim` API from glibc.
+
+Returns True if it actually released any memory.
+)doc";
+
 const char* ClientBase_reset = R"doc(
 .. method:: reset() -> None
     :noindex:
