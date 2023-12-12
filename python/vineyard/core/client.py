@@ -184,6 +184,9 @@ class Client:
     def clear(self) -> None:
         return self._get_preferred_client().clear()
 
+    def memory_trim(self) -> bool:
+        return self._get_preferred_client().memory_trim()
+
     def label(
         self,
         object_id: ObjectID,
