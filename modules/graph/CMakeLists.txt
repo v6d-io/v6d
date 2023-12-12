@@ -155,7 +155,7 @@ if(VINEYARD_JAVA_GENERATES)
     add_dependencies(vineyard_codegen_java vineyard_graph_java_gen)
 endif()
 
-install_vineyard_target(vineyard_graph)
+install_export_vineyard_target(vineyard_graph)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
 
 # add the vineyard-graph-loader target
