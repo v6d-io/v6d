@@ -739,10 +739,11 @@ BasicEVFragmentLoader<OID_T, VID_T, PARTITIONER_T>::generateEdgeId(
     auto& edge_table_list = edge_tables[e_label];
     uint64_t cur_id;
     if (existed_elabel_id != -1) {
-      eid_parser.GenerateId(comm_spec.fid(), existed_elabel_id, eid_offset);
+      cur_id =
+          eid_parser.GenerateId(comm_spec.fid(), existed_elabel_id, eid_offset);
     } else {
-      eid_parser.GenerateId(comm_spec.fid(), e_label + label_offset,
-                            eid_offset);
+      cur_id = eid_parser.GenerateId(comm_spec.fid(), e_label + label_offset,
+                                     eid_offset);
     }
     for (size_t edge_table_index = 0;
          edge_table_index != edge_table_list.size(); ++edge_table_index) {
