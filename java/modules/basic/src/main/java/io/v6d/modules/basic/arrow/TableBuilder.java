@@ -17,6 +17,7 @@ package io.v6d.modules.basic.arrow;
 import static java.util.Objects.requireNonNull;
 
 import io.v6d.core.client.Client;
+import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectBase;
 import io.v6d.core.client.ds.ObjectBuilder;
@@ -36,14 +37,14 @@ public class TableBuilder implements ObjectBuilder {
     private final List<ObjectBase> batches;
 
     public TableBuilder(
-            final IPCClient client,
+            final Client client,
             final SchemaBuilder schemaBuilder,
             final List<RecordBatchBuilder> batchBuilders) {
         this.schemaBuilder = requireNonNull(schemaBuilder, "schema is null");
         this.batches = new ArrayList<>(requireNonNull(batchBuilders, "batches are null"));
     }
 
-    public TableBuilder(final IPCClient client, final SchemaBuilder schemaBuilder) {
+    public TableBuilder(final Client client, final SchemaBuilder schemaBuilder) {
         this.schemaBuilder = requireNonNull(schemaBuilder, "schema is null");
         this.batches = new LinkedList<>();
     }
@@ -86,5 +87,43 @@ public class TableBuilder implements ObjectBuilder {
         meta.setNBytes(0); // FIXME
 
         return client.createMetaData(meta);
+    }
+
+    public static ObjectMeta fromRecordMeta(Client client, ObjectMeta schemaMeta, List<ObjectMeta> recordBatchMetas, int columns) throws VineyardException {
+        val meta = ObjectMeta.empty();
+
+        meta.setTypename("vineyard::Table");
+        meta.setValue("batch_num_", recordBatchMetas.size());
+        meta.setValue("num_rows_", -1);
+        meta.setValue("num_columns_", columns);
+        meta.addMember("schema_", schemaMeta);
+
+        meta.setValue("partitions_-size", recordBatchMetas.size());
+        for (int index = 0; index < recordBatchMetas.size(); ++index) {
+            meta.addMember("partitions_-" + index, recordBatchMetas.get(index));
+        }
+        meta.setNBytes(0); // FIXME
+        return client.createMetaData(meta);
+    }
+
+    public static ObjectMeta mergeTables(Client client, ObjectMeta[] tableMetas) throws VineyardException {
+        if (tableMetas.length == 0) {
+            return null;
+        }
+
+        List<ObjectMeta> recordBatchMetas = new ArrayList<>();
+        ObjectMeta schemaMeta = tableMetas[0].getMemberMeta("schema_");
+        int columns = 0;
+
+        for (int i = 0; i < tableMetas.length; i++) {
+            columns += tableMetas[i].getIntValue("num_columns_");
+            int batchNum = tableMetas[i].getIntValue("batch_num_");
+            for (int j = 0; j < batchNum; j++) {
+                recordBatchMetas.add(tableMetas[i].getMemberMeta("partitions_-" + j));
+            }
+        }
+        Context.println("merged table batch num:" + recordBatchMetas.size());
+        return fromRecordMeta(client, schemaMeta, recordBatchMetas, columns);
+
     }
 }

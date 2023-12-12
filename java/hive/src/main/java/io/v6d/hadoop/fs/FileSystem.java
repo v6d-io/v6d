@@ -17,8 +17,13 @@ package io.v6d.hadoop.fs;
 import com.google.common.base.StopwatchContext;
 import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
+import io.v6d.core.client.ds.ObjectFactory;
+import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.hive.ql.io.CloseableReentrantLock;
+import io.v6d.modules.basic.arrow.SchemaBuilder;
+import io.v6d.modules.basic.arrow.Table;
+import io.v6d.modules.basic.arrow.TableBuilder;
 import io.v6d.modules.basic.filesystem.VineyardFile;
 import io.v6d.modules.basic.filesystem.VineyardFileStat;
 import io.v6d.modules.basic.filesystem.VineyardFileUtils;
@@ -321,12 +326,43 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         dstInput.read(dstContent);
         srcInput.close();
         dstInput.close();
+        // check if source file store object id
+        String srcContentStr = new String(srcContent, StandardCharsets.US_ASCII);
+        String srcObjectIDStr = srcContentStr.substring(0, srcContentStr.length() - 1);
+        ObjectID srcObjectID;
+        try {
+            srcObjectID = ObjectID.fromString(srcObjectIDStr);
+        } catch (Exception e) {
+            // invalid object id, merge file directly.
+            FSDataOutputStream out =
+                    createInternal(dst, new FsPermission((short) 777), true, 0, (short) 1, 1, null);
+            out.write(srcContent);
+            out.write(dstContent);
+            out.close();
+            return;
+        }
+        ObjectMeta srcTableMeta = client.getMetaData(srcObjectID, true);
 
-        FSDataOutputStream out =
-                createInternal(dst, new FsPermission((short) 777), true, 0, (short) 1, 1, null);
-        out.write(srcContent);
-        out.write(dstContent);
+        String dstContentStr = new String(dstContent, StandardCharsets.US_ASCII);
+        String dstObjectIDStr = dstContentStr.substring(0, dstContentStr.length() - 1);
+        ObjectID dstObjectID;
+        // if dst do not store object id, throw exception.
+        dstObjectID = ObjectID.fromString(dstObjectIDStr);
+        ObjectMeta dstTableMeta = client.getMetaData(dstObjectID, true);
+
+        // Merge src tables and dst tables
+        ObjectMeta mergedTableMeta = TableBuilder.mergeTables(client, new ObjectMeta[] {srcTableMeta, dstTableMeta});
+        ObjectID mergObjectID = mergedTableMeta.getId();
+        client.persist(mergObjectID);
+        FSDataOutputStream out = createInternal(dst, new FsPermission((short) 777), true, 0, (short) 1, 1, null);
+        out.write((mergObjectID.toString() + "\n").getBytes(StandardCharsets.US_ASCII));
         out.close();
+
+        // clean up
+        Set<ObjectID> objectIDs = new HashSet<ObjectID>();
+        objectIDs.add(srcObjectID);
+        objectIDs.add(dstObjectID);
+        client.delete(objectIDs, false, true);
     }
 
     private boolean renameInternal(Path src, Path dst) throws IOException {
@@ -476,6 +512,12 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     @Override
     public byte[] getXAttr(Path path, String name) throws IOException {
         throw new UnsupportedOperationException("Vineyard file system not support getXAttr.");
+    }
+
+    @Override
+    public BlockLocation[] getFileBlockLocations(Path path, long start, long len)
+            throws IOException {
+        return getFileBlockLocations(this.getFileStatus(path), start, len);
     }
 
     @Override
