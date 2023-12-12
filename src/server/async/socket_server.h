@@ -236,7 +236,7 @@ class SocketServer {
    * Cancel the "async_accept" action on the acceptor to stop accepting
    * further connections.
    */
-  virtual void Close() { closable_.store(true); }
+  virtual void Close();
 
   /**
    * Check if @conn_id@ exists in the connection pool.

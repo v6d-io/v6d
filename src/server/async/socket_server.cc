@@ -1720,13 +1720,18 @@ void SocketServer::Stop() {
   if (stopped_.exchange(true)) {
     return;
   }
+  // stop accepting further connections
+  this->Close();
 
   std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
   std::vector<int> connection_ids_;
   for (auto& pair : connections_) {
     pair.second->Stop();
   }
+  connections_.clear();
 }
+
+void SocketServer::Close() { closable_.store(true); }
 
 bool SocketServer::ExistsConnection(int conn_id) const {
   std::lock_guard<std::recursive_mutex> scope_lock(this->connections_mutex_);
