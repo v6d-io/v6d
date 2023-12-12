@@ -578,6 +578,14 @@ endmacro()
 
 macro(install_vineyard_target target)
     install(TARGETS ${target}
+        ARCHIVE DESTINATION lib
+        LIBRARY DESTINATION lib
+        RUNTIME DESTINATION bin
+    )
+endmacro()
+
+macro(install_export_vineyard_target target)
+    install(TARGETS ${target}
         EXPORT vineyard-targets
         ARCHIVE DESTINATION lib
         LIBRARY DESTINATION lib
@@ -768,7 +776,7 @@ if(BUILD_VINEYARD_CLIENT)
         target_add_link_options(vineyard_internal_registry PRIVATE OPTIONS -Os)
         target_add_link_options(vineyard_internal_registry PRIVATE OPTIONS -Os)
     endif()
-    install_vineyard_target(vineyard_internal_registry)
+    install_export_vineyard_target(vineyard_internal_registry)
     target_add_link_options(vineyard_internal_registry PRIVATE
                             OPTIONS -Wl,-rpath,.:$ORIGIN:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64
     )
@@ -835,7 +843,7 @@ if(BUILD_VINEYARD_CLIENT)
         add_dependencies(vineyard_codegen_java vineyard_client_gen_java)
     endif()
 
-    install_vineyard_target(vineyard_client)
+    install_export_vineyard_target(vineyard_client)
     install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/client")
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_client)
 endif()

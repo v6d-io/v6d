@@ -26,7 +26,7 @@ target_include_directories(vineyard_fuse PRIVATE ${CMAKE_SOURCE_DIR})
 
 target_compile_options(vineyard_fuse PRIVATE -DDEFAULT_ALLOCATOR=dlmalloc)
 
-install_vineyard_target(vineyard_fuse)
+install_export_vineyard_target(vineyard_fuse)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
 
 set(FUSE_MOUNT_SRC_FILES)

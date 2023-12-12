@@ -14,5 +14,5 @@ if(BUILD_VINEYARD_MALLOC_OVERRIDE)
     target_compile_options(vineyard_malloc PRIVATE -DVINEYARD_MALLOC_OVERRIDE)
 endif()
 
-install_vineyard_target(vineyard_malloc)
+install_export_vineyard_target(vineyard_malloc)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")

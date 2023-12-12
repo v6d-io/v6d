@@ -26,5 +26,5 @@ install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/DataFrame/include/DataF
         PATTERN "*.hpp"                         # select C++ template header files
 )
 
-install_vineyard_target(vineyard_hosseinmoein_dataframe)
+install_export_vineyard_target(vineyard_hosseinmoein_dataframe)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")

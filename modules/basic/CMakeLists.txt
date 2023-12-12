@@ -91,5 +91,5 @@ if(VINEYARD_JAVA_GENERATES)
     add_dependencies(vineyard_codegen_java vineyard_basic_gen_java)
 endif()
 
-install_vineyard_target(vineyard_basic)
+install_export_vineyard_target(vineyard_basic)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")

@@ -30,5 +30,5 @@ if(Rdkafka_FOUND)
     target_link_libraries(vineyard_io PUBLIC ${Rdkafka_LIBRARIES})
 endif()
 
-install_vineyard_target(vineyard_io)
+install_export_vineyard_target(vineyard_io)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}/io" "include/vineyard/io")

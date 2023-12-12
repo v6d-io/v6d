@@ -8,7 +8,7 @@ target_link_libraries(vineyard_msgpack PUBLIC vineyard_client
 )
 target_link_libraries(vineyard_msgpack PRIVATE msgpackc-cxx)
 
-install_vineyard_target(vineyard_msgpack)
+install_export_vineyard_target(vineyard_msgpack)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
 
 if(BUILD_VINEYARD_TESTS)
