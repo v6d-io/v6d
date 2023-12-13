@@ -56,13 +56,13 @@ class Client:
 
     def __init__(
         self,
-        socket: str = None,
+        socket_or_host: str = None,
         host: str = None,
         port: Union[int, str] = None,
         endpoint: Tuple[str, Union[str, int]] = None,
-        session: int = 0,
-        username: str = "",
-        password: str = "",
+        session: int = None,
+        username: str = None,
+        password: str = None,
     ):
         """Connects to the vineyard IPC socket and RPC socket.
 
@@ -76,12 +76,20 @@ class Client:
         self._rpc_client: RPCClient = None
 
         kwargs = {}
-        if session:
+        if session is not None:
             kwargs['session'] = session
-        if socket:
+        if username is not None:
             kwargs['username'] = username
-        if password:
+        if password is not None:
             kwargs['password'] = password
+
+        if socket_or_host is not None:
+            if port is not None:
+                socket, host = None, socket_or_host
+            else:
+                socket, host = socket_or_host, None
+        else:
+            socket, host = None, None
 
         if not socket:
             socket = os.getenv('VINEYARD_IPC_SOCKET', None)
