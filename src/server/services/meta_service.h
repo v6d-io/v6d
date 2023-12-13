@@ -93,9 +93,22 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
       std::shared_ptr<VineyardServer> vs_ptr);
 
   inline Status Start() {
-    LOG(INFO) << "meta service is starting ...";
+    LOG(INFO) << "meta service is starting, waiting the metadata backend "
+                 "service becoming ready ...";
     RETURN_ON_ERROR(this->preStart());
-    RETURN_ON_ERROR(this->probe());
+    auto current = std::chrono::system_clock::now();
+    auto timeout =
+        std::chrono::seconds(server_ptr_->GetSpec()["metastore_spec"].value(
+            "meta_timeout", 60 /* 1 minutes */));
+    Status s;
+    while (std::chrono::system_clock::now() - current < timeout) {
+      s = this->probe();
+      if (s.ok()) {
+        break;
+      }
+      std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
+    RETURN_ON_ERROR(s);
     auto self(shared_from_this());
     requestValues("", [self](const Status& status, const json& meta,
                              unsigned rev) {

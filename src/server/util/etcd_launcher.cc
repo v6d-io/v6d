@@ -101,8 +101,9 @@ Status EtcdLauncher::LaunchEtcdServer(
 
   std::string etcd_endpoint_ip;
   if (!validate_advertise_hostname(etcd_endpoint_ip, endpoint_host_)) {
-    return Status::Invalid("Cannot resolve the etcd endpoint '" +
-                           endpoint_host_ + "'");
+    // resolving failure means we need to wait the srv name becomes ready in the
+    // DNS side
+    return Status::OK();
   }
 
   etcd_client.reset(new etcd::Client(etcd_endpoint));
