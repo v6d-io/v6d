@@ -341,14 +341,14 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             out.close();
             return;
         }
-        ObjectMeta srcTableMeta = client.getMetaData(srcObjectID, true);
+        ObjectMeta srcTableMeta = client.getMetaData(srcObjectID, false);
 
         String dstContentStr = new String(dstContent, StandardCharsets.US_ASCII);
         String dstObjectIDStr = dstContentStr.substring(0, dstContentStr.length() - 1);
         ObjectID dstObjectID;
         // if dst do not store object id, throw exception.
         dstObjectID = ObjectID.fromString(dstObjectIDStr);
-        ObjectMeta dstTableMeta = client.getMetaData(dstObjectID, true);
+        ObjectMeta dstTableMeta = client.getMetaData(dstObjectID, false);
 
         // Merge src tables and dst tables
         ObjectMeta mergedTableMeta = TableBuilder.mergeTables(client, new ObjectMeta[] {srcTableMeta, dstTableMeta});
@@ -362,7 +362,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         Set<ObjectID> objectIDs = new HashSet<ObjectID>();
         objectIDs.add(srcObjectID);
         objectIDs.add(dstObjectID);
-        client.delete(objectIDs, false, true);
+        client.delete(objectIDs, false, false);
     }
 
     private boolean renameInternal(Path src, Path dst) throws IOException {

@@ -34,6 +34,7 @@ public class VineyardFileUtils {
         } catch (ObjectNotExists e) {
             throw new FileNotFoundException(path + " is not found.");
         }
+        // File must be migrated if it is not at local.
         ObjectMeta meta = client.getMetaData(fileObjectID, true);
         boolean isDir = meta.getBooleanValue("is_dir_");
         int len = meta.getIntValue("length_");
@@ -61,6 +62,7 @@ public class VineyardFileUtils {
             Map<String, ObjectID> objects = Context.getClient().listNames(pattern, true, 255);
             for (val object : objects.entrySet()) {
                 ObjectID objectID = object.getValue();
+                // File must be migrated if it is not at local.
                 ObjectMeta meta = client.getMetaData(objectID, true);
                 if (meta.getTypename().compareTo("vineyard::File") != 0) {
                     continue;
@@ -98,7 +100,8 @@ public class VineyardFileUtils {
         }
         for (val object : objects.entrySet()) {
             try {
-                ObjectMeta meta = client.getMetaData(object.getValue());
+                // File must be migrated if it is not at local.
+                ObjectMeta meta = client.getMetaData(object.getValue(), true);
                 if (meta.getTypename().compareTo("vineyard::File") == 0) {
                     String type = meta.getBooleanValue("is_dir_") ? "dir" : "file";
                     Context.println("Type:" + type + " " + object.getKey());

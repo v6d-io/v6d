@@ -79,6 +79,7 @@ public class TableBuilder implements ObjectBuilder {
         meta.setValue("num_rows_", -1);
         meta.setValue("num_columns_", schemaBuilder.getFields().size());
         meta.addMember("schema_", schemaBuilder.seal(client));
+        meta.setGlobal(true);
 
         meta.setValue("partitions_-size", batches.size());
         for (int index = 0; index < batches.size(); ++index) {
@@ -102,6 +103,7 @@ public class TableBuilder implements ObjectBuilder {
         for (int index = 0; index < recordBatchMetas.size(); ++index) {
             meta.addMember("partitions_-" + index, recordBatchMetas.get(index));
         }
+        meta.setGlobal(true);
         meta.setNBytes(0); // FIXME
         return client.createMetaData(meta);
     }

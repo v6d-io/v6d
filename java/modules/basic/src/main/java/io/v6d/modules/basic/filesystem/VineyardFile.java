@@ -75,6 +75,7 @@ public class VineyardFile {
 
     private void initializeRead() throws IOException {
         ObjectID objectID = client.getName(filePath);
+        // File must be migrated if it is not at local.
         ObjectMeta meta = client.getMetaData(objectID, true);
         if (meta.getTypename().equals("vineyard::File") == false) {
             throw new IOException("Not a vineyard file.");

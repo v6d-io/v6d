@@ -121,7 +121,8 @@ public class IPCClient extends Client {
             ObjectID id, boolean migrate, boolean sync_remote, boolean wait)
             throws VineyardException {
         ObjectMeta meta = getMetaDataInternal(id, sync_remote, wait);
-        if (meta.getInstanceId().compareTo(this.instanceId) != 0 && migrate) {
+        if (meta.getInstanceId().compareTo(this.instanceId) != 0 && migrate && (!meta.isGlobal())) {
+            Context.println("try to migrate object id:" + id);
             return getMetaDataInternal(this.migrateObject(id), sync_remote, wait);
         }
         return meta;

@@ -34,6 +34,7 @@ import java.util.Queue;
 import lombok.val;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
+import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -56,12 +57,15 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
     public RecordReader<NullWritable, RecordWrapperWritable> getRecordReader(
             InputSplit genericSplit, JobConf job, Reporter reporter) throws IOException {
         reporter.setStatus(genericSplit.toString());
-        return new VineyardRecordReader(job, (VineyardSplit) genericSplit);
+        return new VineyardRecordReader(job, (VineyardSplit) ((VineyardSplit)genericSplit));
     }
 
     @Override
-    public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
+    public VineyardSplit[] getSplits(JobConf job, int numSplits) throws IOException {
         Path paths[] = FileInputFormat.getInputPaths(job);
+        for (int i = 0; i < paths.length ;i++) {
+            Context.println("Get splits of path:" + paths[i].toString());
+        }
 
         val client = Context.getClient();
         // split table by paths
@@ -71,7 +75,6 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
         for (int i = 0; i < paths.length; i++) {
             // Construct table name.
             Path path = paths[i];
-            String tableName = path.toString();
 
             // get object id from vineyard filesystem
             FileSystem fs = path.getFileSystem(job);
@@ -83,52 +86,56 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
             dirStatus.add(tableStatus);
 
             // Maybe there exists more than one table file.
-            long numBatches = 0;
 
-            while (!dirStatus.isEmpty()) {
-                FileStatus[] status = dirStatus.poll();
-                for (int j = 0; j < status.length; j++) {
-                    if (status[j].isDirectory()) {
-                        dirStatus.add(
-                                fs.listStatus(
-                                        status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
-                        continue;
+            FileStatus[] status = dirStatus.poll();
+            for (int j = 0; j < status.length; j++) {
+                int batchesPerFile = 0;
+                if (status[j].isDirectory()) {
+                    dirStatus.add(
+                            fs.listStatus(
+                                    status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
+                    continue;
+                }
+                Path tableFilePath = status[j].getPath();
+                FSDataInputStream in = fs.open(tableFilePath);
+                FileStatus fileStatus = fs.getFileStatus(tableFilePath);
+                byte[] buffer = new byte[(int) fileStatus.getLen()];
+                int len = in.read(buffer, 0, (int) fileStatus.getLen());
+                // Here must check with the condition of len <= 0, rather than len == -1.
+                // Because Spark will create an empty file, which will cause the len == 0.
+                if (len <= 0) {
+                    continue;
+                }
+                String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
+                for (val objectID : objectIDs) {
+                    ObjectMeta tableMeta;
+                    Table table;
+                    try {
+                        ObjectID tableID = ObjectID.fromString(objectID);
+                        Context.println("try to build table");
+                        tableMeta = client.getMetaData(tableID, false); 
+                    } catch (ObjectNotExists | NumberFormatException e) {
+                        // Skip some invalid file.
+                        Context.println(
+                                "Skipping invalid file: "
+                                        + tableFilePath
+                                        + ", content: "
+                                        + new String(buffer, StandardCharsets.US_ASCII));
+                        break;
                     }
-                    Path tableFilePath = status[j].getPath();
-                    FSDataInputStream in = fs.open(tableFilePath);
-                    FileStatus fileStatus = fs.getFileStatus(tableFilePath);
-                    byte[] buffer = new byte[(int) fileStatus.getLen()];
-                    int len = in.read(buffer, 0, (int) fileStatus.getLen());
-                    // Here must check with the condition of len <= 0, rather than len == -1.
-                    // Because Spark will create an empty file, which will cause the len == 0.
-                    if (len <= 0) {
-                        continue;
-                    }
-                    String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
-                    for (val objectID : objectIDs) {
-                        try {
-                            ObjectID tableID = ObjectID.fromString(objectID);
-                            Context.println("try to build table");
-                            ObjectMeta tableMeta = client.getMetaData(tableID, true);
-                            Table table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
-                            numBatches += table.getBatches().size();
-                        } catch (ObjectNotExists | NumberFormatException e) {
-                            // Skip some invalid file.
-                            Context.println(
-                                    "Skipping invalid file: "
-                                            + tableFilePath
-                                            + ", content: "
-                                            + new String(buffer, StandardCharsets.US_ASCII));
-                            break;
-                        }
-                    }
+                    table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
+                    batchesPerFile += table.getBatchNum();
+                }
+                for (int k = 0; k < batchesPerFile; k++) {
+                    splits.add(new VineyardSplit(status[j].getPath(), k, 1, job));
                 }
             }
             // TODO: would generating a split for each record batch be better?
-            if (numBatches > 0) {
-                splits.add(new VineyardSplit(path, 0, numBatches, job));
-            }
+            // if (numBatches > 0) {
+                // splits.add(new VineyardSplit(path, 0, numBatches, job));
+            // }
         }
+        Context.println("total splits:" + splits.size());
         return splits.toArray(new VineyardSplit[splits.size()]);
     }
 }
@@ -156,62 +163,50 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
         String tableName = path.toString();
 
         FileSystem fs = path.getFileSystem(job);
-        FileStatus[] tableStatus = fs.listStatus(path);
-        if (tableStatus.length == 0) {
-            throw new VineyardException.ObjectNotExists("Table not found: " + tableName);
-        }
-        Queue<FileStatus[]> dirStatus = new LinkedList<>();
-        dirStatus.add(tableStatus);
+        // FileStatus[] tableStatus = fs.listStatus(path);
+        // if (tableStatus.length == 0) {
+        //     throw new VineyardException.ObjectNotExists("Table not found: " + tableName);
+        // }
+        // Queue<FileStatus[]> dirStatus = new LinkedList<>();
+        // dirStatus.add(tableStatus);
+        FileStatus tableStatus = fs.getFileStatus(path);
 
         val client = Context.getClient();
         Arrow.instantiate();
 
         resolver = new HiveTypeResolver();
 
-        while (!dirStatus.isEmpty()) {
-            FileStatus[] status = dirStatus.poll();
-            for (int j = 0; j < status.length; j++) {
-                if (status[j].isDirectory()) {
-                    dirStatus.add(
-                            fs.listStatus(status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
-                    continue;
-                }
-                Path tableFilePath = status[j].getPath();
-                FSDataInputStream in = fs.open(tableFilePath);
-                FileStatus fileStatus = fs.getFileStatus(tableFilePath);
-                byte[] buffer = new byte[(int) fileStatus.getLen()];
-                int len = in.read(buffer, 0, (int) fileStatus.getLen());
-                if (len <= 0) {
-                    continue;
-                }
-                String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
-                for (val objectID : objectIDs) {
-                    try {
-                        ObjectID tableID = ObjectID.fromString(objectID);
-                        Context.println("try to build table in reader");
-                        ObjectMeta tableMeta = client.getMetaData(tableID, true);
-                        Table table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
-                        for (val batch : table.getBatches()) {
-                            recordTotal += batch.getRowCount();
-                            batch.setResolver(resolver);
-                            this.batches[this.recordBatchIndex++] = batch;
-                        }
-                        schema = table.getSchema().getSchema();
-                    } catch (ObjectNotExists | NumberFormatException e) {
-                        // Skip some invalid file.
-                        Context.println(
-                                "Skipping invalid file: "
-                                        + tableFilePath
-                                        + ", content: "
-                                        + new String(buffer, StandardCharsets.US_ASCII));
-                        break;
-                    }
-                }
-            }
+        if (tableStatus.isDirectory()) {
+            throw new IOException("Path of table is a dir!");
         }
+
+        FSDataInputStream in = fs.open(path);
+        byte[] buffer = new byte[(int) tableStatus.getLen()];
+        int len = in.read(buffer, 0, (int) tableStatus.getLen());
+        if (len <= 0) {
+            in.close();
+            return;
+        }
+
+        // getSplits will ensure that the file referenced by path is a valid table.
+        String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
+        ObjectID tableID = ObjectID.fromString(objectIDs[0]);
+        Context.println("try to build table in reader");
+        ObjectMeta tableMeta = client.getMetaData(tableID, false);
+        Table table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
+
+        recordTotal = split.getLength();
+        Context.println("Start:" + split.getStart() + " length:" + split.getLength());
+        for (int i = (int)split.getStart(); i < split.getLength() + split.getStart(); i++) {
+            val batch = table.getBatch(i);
+            batch.setResolver(resolver);
+            this.batches[this.recordBatchIndex++] = batch;
+        }
+        schema = table.getSchema().getSchema();
         // reset to the beginning
         this.recordBatchIndex = -1;
         this.recordBatchInnerIndex = 0;
+        in.close();
     }
 
     @Override
