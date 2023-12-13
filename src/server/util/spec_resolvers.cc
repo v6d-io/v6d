@@ -43,6 +43,9 @@ DEFINE_string(meta,
               " and 'redis'"
 #endif
 );
+DEFINE_int64(meta_timeout, 60 /* 1 minutes */,
+             "Timeout period before waiting the metadata service to be ready, "
+             "in seconds");
 #if defined(BUILD_VINEYARDD_ETCD)
 DEFINE_string(etcd_endpoint, "http://127.0.0.1:2379", "endpoint of etcd");
 DEFINE_string(etcd_prefix, "vineyard", "metadata path prefix in etcd");
@@ -134,6 +137,7 @@ json MetaStoreSpecResolver::resolve() const {
   json spec;
   // resolve for meta
   spec["meta"] = FLAGS_meta;
+  spec["meta_timeout"] = FLAGS_meta_timeout;
 
   // resolve for etcd
 #if defined(BUILD_VINEYARDD_ETCD)
