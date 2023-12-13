@@ -339,11 +339,6 @@ const char* Blob_address = R"doc(
 The memory address value of this blob.
 )doc";
 
-const char* Blob_buffer = R"doc(
-The readonly buffer behind this blob. The result buffer has type
-:code:`memoryview`.
-)doc";
-
 const char* BlobBuilder = R"doc(
 :class:`BlobBuilder` is the builder for creating a finally immutable blob in
 vineyard server.
@@ -373,7 +368,7 @@ Shrink the blob builder to the given size if it is not sealed yet.
 )doc";
 
 const char* BlobBuilder_copy = R"doc(
-.. method:: copy(self, offset: int, ptr: int, size: int)
+.. method:: copy(self, offset: int, ptr: int, size: int, concurrency: int = 6)
     :noindex:
 
 Copy the given address to the given offset.
@@ -381,11 +376,6 @@ Copy the given address to the given offset.
 
 const char* BlobBuilder_address = R"doc(
 The memory address value of this blob builder.
-)doc";
-
-const char* BlobBuilder_buffer = R"doc(
-The writeable buffer behind this blob builder. The result buffer has type
-:code:`memoryview`, and it is a mutable one.
 )doc";
 
 const char* RemoteBlob = R"doc(
@@ -412,11 +402,6 @@ The size of this blob.
 
 const char* RemoteBlob_address = R"doc(
 The memory address value of this blob.
-)doc";
-
-const char* RemoteBlob_buffer = R"doc(
-The readonly buffer behind this blob. The result buffer has type
-:code:`memoryview`.
 )doc";
 
 const char* RemoteBlobBuilder = R"doc(
@@ -476,7 +461,7 @@ Abort the blob builder if it is not sealed yet.
 )doc";
 
 const char* RemoteBlobBuilder_copy = R"doc(
-.. method:: copy(self, offset: int, ptr: int, size: int)
+.. method:: copy(self, offset: int, ptr: int, size: int, concurrency: int = 6)
     :noindex:
 
 Copy the given address to the given offset.
@@ -484,11 +469,6 @@ Copy the given address to the given offset.
 
 const char* RemoteBlobBuilder_address = R"doc(
 The memory address value of this blob builder.
-)doc";
-
-const char* RemoteBlobBuilder_buffer = R"doc(
-The writeable buffer behind this blob builder. The result buffer has type
-:code:`memoryview`, and it is a mutable one.
 )doc";
 
 const char* InstanceStatus = R"doc(

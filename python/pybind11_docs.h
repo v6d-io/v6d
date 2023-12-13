@@ -58,7 +58,6 @@ extern const char* Blob_is_empty;
 extern const char* Blob_empty;
 extern const char* Blob__len__;
 extern const char* Blob_address;
-extern const char* Blob_buffer;
 
 extern const char* BlobBuilder;
 extern const char* BlobBuilder_id;
@@ -67,7 +66,6 @@ extern const char* BlobBuilder_abort;
 extern const char* BlobBuilder_shrink;
 extern const char* BlobBuilder_copy;
 extern const char* BlobBuilder_address;
-extern const char* BlobBuilder_buffer;
 
 extern const char* RemoteBlob;
 extern const char* RemoteBlob_id;
@@ -75,14 +73,12 @@ extern const char* RemoteBlob_instance_id;
 extern const char* RemoteBlob_is_empty;
 extern const char* RemoteBlob__len__;
 extern const char* RemoteBlob_address;
-extern const char* RemoteBlob_buffer;
 
 extern const char* RemoteBlobBuilder;
 extern const char* RemoteBlobBuilder_size;
 extern const char* RemoteBlobBuilder_abort;
 extern const char* RemoteBlobBuilder_copy;
 extern const char* RemoteBlobBuilder_address;
-extern const char* RemoteBlobBuilder_buffer;
 
 extern const char* InstanceStatus;
 extern const char* InstanceStatus_instance_id;

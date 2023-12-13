@@ -22,6 +22,7 @@ limitations under the License.
 #include <string>
 #include <utility>
 
+#include "common/memory/memcpy.h"
 #include "common/util/json.h"
 #include "common/util/status.h"
 #include "common/util/uuid.h"
@@ -107,17 +108,18 @@ void throw_on_error(Status const& status);
  *
  * @size: capacity of the dst memory block.
  */
-Status copy_memoryview(PyObject* src, void* dst, size_t const size,
-                       size_t const offset = 0);
+Status copy_memoryview(
+    PyObject* src, void* dst, size_t const size, size_t const offset = 0,
+    size_t const concurrency = memory::default_memcpy_concurrency);
 
 /**
  * Copy a memoryview/buffer to a dst pointer.
  *
  * @size: capacity of the dst memoryview.
  */
-Status copy_memoryview_to_memoryview(PyObject* src, PyObject* dst,
-                                     size_t const size,
-                                     size_t const offset = 0);
+Status copy_memoryview_to_memoryview(
+    PyObject* src, PyObject* dst, size_t const size, size_t const offset = 0,
+    size_t const concurrency = memory::default_memcpy_concurrency);
 
 namespace detail {
 py::object from_json(const json& value);

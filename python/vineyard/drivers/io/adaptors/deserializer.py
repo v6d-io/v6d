@@ -69,7 +69,7 @@ def copy_bytestream_to_blob(client, bs: ByteStream, blob: BlobBuilder):
         serialization_options = json.loads(serialization_options)
     offset = 0
     reader = bs.open_reader(client)
-    buffer = blob.buffer
+    buffer = memoryview(blob)
     raw_buffer = io.BytesIO()
     while True:
         try:
