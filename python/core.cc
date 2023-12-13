@@ -447,23 +447,8 @@ void bind_core(py::module& mod) {
           "seal",
           [](ObjectBuilder* self, py::object client) {
             std::shared_ptr<Object> object;
-            if (!py::hasattr(client, "_ipc_client")) {
-              throw std::runtime_error(
-                  "The provided client object does not have an _ipc_client "
-                  "attribute.");
-            }
-            auto ipc_client = client.attr("_ipc_client");
-            if (!py::isinstance<Client>(ipc_client)) {
-              throw std::runtime_error(
-                  "The _ipc_client attribute must be an instance of Client.");
-            }
-            Client* client_ptr = py::cast<Client*>(ipc_client);
-            if (client_ptr == nullptr) {
-              throw std::runtime_error(
-                  "Failed to cast _ipc_client to Client* as the _ipc_client is "
-                  "null.");
-            }
-            throw_on_error(self->Seal(*client_ptr, object));
+            Client* ipc_client = py::cast<Client*>(client.attr("ipc_client"));
+            throw_on_error(self->Seal(*ipc_client, object));
             return object;
           },
           "client"_a)

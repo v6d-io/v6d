@@ -903,13 +903,14 @@ void bind_client(py::module& mod) {
 
   mod.def(
          "_connect",
-         [](std::string const& socket, const std::string& username,
+         [](std::string const& socket, const SessionID session_id,
+            const std::string& username,
             const std::string& password) -> py::object {
            return py::cast(ClientManager<Client>::GetManager()->Connect(
-               socket, username, password));
+               socket, session_id, username, password));
          },
-         "socket"_a, py::kw_only(), py::arg("username") = "",
-         py::arg("password") = "")
+         "socket"_a, py::kw_only(), py::arg("session") = RootSessionID(),
+         py::arg("username") = "", py::arg("password") = "")
       .def(
           "_connect",
           [](std::string const& host, const uint32_t port,
@@ -919,8 +920,9 @@ void bind_client(py::module& mod) {
             return py::cast(ClientManager<RPCClient>::GetManager()->Connect(
                 rpc_endpoint, session_id, username, password));
           },
-          "host"_a, "port"_a, py::arg("session") = RootSessionID(),
-          py::kw_only(), py::arg("username") = "", py::arg("password") = "")
+          "host"_a, "port"_a, py::kw_only(),
+          py::arg("session") = RootSessionID(), py::arg("username") = "",
+          py::arg("password") = "")
       .def(
           "_connect",
           [](std::string const& host, std::string const& port,
@@ -930,8 +932,9 @@ void bind_client(py::module& mod) {
             return ClientManager<RPCClient>::GetManager()->Connect(
                 rpc_endpoint, session_id, username, password);
           },
-          "host"_a, "port"_a, py::arg("session") = RootSessionID(),
-          py::kw_only(), py::arg("username") = "", py::arg("password") = "")
+          "host"_a, "port"_a, py::kw_only(),
+          py::arg("session") = RootSessionID(), py::arg("username") = "",
+          py::arg("password") = "")
       .def(
           "_connect",
           [](std::pair<std::string, uint32_t> const& endpoint,
@@ -942,7 +945,7 @@ void bind_client(py::module& mod) {
             return ClientManager<RPCClient>::GetManager()->Connect(
                 rpc_endpoint, session_id, username, password);
           },
-          "endpoint"_a, py::arg("session") = RootSessionID(), py::kw_only(),
+          "endpoint"_a, py::kw_only(), py::arg("session") = RootSessionID(),
           py::arg("username") = "", py::arg("password") = "")
       .def(
           "_connect",
@@ -953,7 +956,7 @@ void bind_client(py::module& mod) {
             return ClientManager<RPCClient>::GetManager()->Connect(
                 rpc_endpoint, session_id, username, password);
           },
-          "endpoint"_a, py::arg("session") = RootSessionID(), py::kw_only(),
+          "endpoint"_a, py::kw_only(), py::arg("session") = RootSessionID(),
           py::arg("username") = "", py::arg("password") = "");
 }  // NOLINT(readability/fn_size)
 
