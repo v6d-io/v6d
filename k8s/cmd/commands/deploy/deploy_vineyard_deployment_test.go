@@ -406,8 +406,7 @@ func TestGetVineyardDeploymentObjectsFromTemplate_third(t *testing.T) {
 											"command": []interface{}{
 												"/bin/bash",
 												"-c",
-												"/usr/bin/wait-for-it.sh -t 60 test-vineyardd-sample-etcd-service.test-vineyard-system." +
-													"svc.cluster.local:2379; sleep 1; /usr/local/bin/vineyardd --sync_crds true --socket " +
+												"/usr/local/bin/vineyardd --sync_crds true --socket " +
 													"/var/run/vineyard.sock --size  --stream_threshold 80 --etcd_cmd etcd --etcd_prefix " +
 													"/vineyard --etcd_endpoint http://test-vineyardd-sample-etcd-service:2379\n",
 											},
