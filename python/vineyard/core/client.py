@@ -56,9 +56,10 @@ class Client:
 
     def __init__(
         self,
-        socket_or_host: str = None,
-        host: str = None,
+        socket: str = None,
         port: Union[int, str] = None,
+        # move host after port to make sure unnamed (host, port) works
+        host: str = None,
         endpoint: Tuple[str, Union[str, int]] = None,
         session: int = None,
         username: str = None,
@@ -83,13 +84,8 @@ class Client:
         if password is not None:
             kwargs['password'] = password
 
-        if socket_or_host is not None:
-            if port is not None:
-                socket, host = None, socket_or_host
-            else:
-                socket, host = socket_or_host, None
-        else:
-            socket, host = None, None
+        if socket is not None and port is not None and host is None:
+            socket, host = None, socket
 
         if not socket:
             socket = os.getenv('VINEYARD_IPC_SOCKET', None)
