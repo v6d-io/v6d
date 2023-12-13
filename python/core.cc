@@ -445,9 +445,10 @@ void bind_core(py::module& mod) {
       // NB: don't expose the "Build" method to python.
       .def(
           "seal",
-          [](ObjectBuilder* self, Client* client) {
+          [](ObjectBuilder* self, py::object client) {
             std::shared_ptr<Object> object;
-            throw_on_error(self->Seal(*client, object));
+            Client* ipc_client = py::cast<Client*>(client.attr("ipc_client"));
+            throw_on_error(self->Seal(*ipc_client, object));
             return object;
           },
           "client"_a)

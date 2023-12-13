@@ -191,7 +191,7 @@ def get(
     name: Optional[str] = None,
     resolver: Optional[ResolverContext] = None,
     fetch: bool = False,
-    **kw
+    **kwargs
 ):
     """Get vineyard object as python value.
 
@@ -229,17 +229,11 @@ def get(
     elif name is not None:
         object_id = client.get_name(name)
 
-    # run resolver
-    if client.is_rpc:
-        obj = client.get_object(object_id)
-    elif client.is_ipc:
-        obj = client.get_object(object_id, fetch=fetch)
-    else:
-        raise RuntimeError('Unknown vineyard client type: %s' % type(client))
+    obj = client.get_object(object_id)
 
     if resolver is None:
         resolver = get_current_resolvers()
-    return resolver(obj, __vineyard_client=client, **kw)
+    return resolver(obj, __vineyard_client=client, **kwargs)
 
 
 setattr(IPCClient, 'get', get)

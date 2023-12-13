@@ -168,7 +168,7 @@ def put(
         00002ec13bc81226
 
     Parameters:
-        client: IPCClient
+        client: IPCClient or RPCClient
             The vineyard client to use.
         value:
             The python value that will be put to vineyard. Supported python value

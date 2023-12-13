@@ -26,6 +26,8 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
+import pandas as pd
+import pyarrow as pa
 
 import pytest
 
@@ -595,3 +597,50 @@ def test_concurrent_meta_sync(  # noqa: C901, pylint: disable=too-many-statement
         r, message = rs.get(block=True)
         if not r:
             pytest.fail(message)
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        1,
+        'abcde',
+        True,
+        (1, "2", pytest.approx(3.456), 4444, "5.5.5.5.5.5.5"),
+        {1: 2, 3: 4, 5: None, None: 6},
+        np.asfortranarray(np.random.rand(10, 7)),
+        np.zeros((0, 1, 2, 3), dtype='int'),
+        pa.array([1, 2, None, 3]),
+        pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8]}),
+        pd.Series([1, 3, 5, np.nan, 6, 8], name='foo'),
+    ],
+)
+def test_get_and_put_with_different_vineyard_instances(
+    value, vineyard_rpc_client, vineyard_ipc_sockets
+):
+    ipc_clients = generate_vineyard_ipc_clients(vineyard_ipc_sockets, 4)
+    objects = []
+
+    if isinstance(value, pd.arrays.SparseArray):
+        value = pd.DataFrame(value)
+
+    for client in ipc_clients:
+        o = client.put(value, persist=True)
+        objects.append(o)
+    o = vineyard_rpc_client.put(value, persist=True)
+    objects.append(o)
+
+    values = []
+    for o in objects:
+        for client in ipc_clients:
+            values.append(client.get(vineyard.ObjectID(o)))
+        values.append(vineyard_rpc_client.get(vineyard.ObjectID(o)))
+
+    for v in values:
+        if isinstance(value, np.ndarray):
+            np.testing.assert_equal(value, v)
+        elif isinstance(value, pd.DataFrame):
+            pd.testing.assert_frame_equal(value, v)
+        elif isinstance(value, pd.Series):
+            pd.testing.assert_series_equal(value, v)
+        else:
+            assert value == v

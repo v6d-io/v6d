@@ -266,9 +266,9 @@ def test_data_consistency_between_ipc_and_rpc(
     object_id = vineyard_client.put(value)
     v1 = vineyard_client.get(object_id)
     v2 = vineyard_rpc_client.get(object_id)
-    assert np.array_equal(v1, v2)
+    np.testing.assert_equal(v1, v2)
 
     object_id = vineyard_rpc_client.put(value)
     v1 = vineyard_client.get(object_id)
     v2 = vineyard_rpc_client.get(object_id)
-    assert np.array_equal(v1, v2)
+    np.testing.assert_equal(v1, v2)

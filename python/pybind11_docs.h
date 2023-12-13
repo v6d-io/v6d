@@ -140,6 +140,7 @@ extern const char* RPCClient_get_metas;
 extern const char* RPCClient_list_objects;
 extern const char* RPCClient_list_metadatas;
 extern const char* RPCClient_close;
+extern const char* RPCClient_is_fetchable;
 extern const char* RPCClient_remote_instance_id;
 
 extern const char* connect;

@@ -29,6 +29,7 @@ from vineyard.core.resolver import ResolverContext
 
 from .builder import builder_context
 from .builder import default_builder_context
+from .client import Client
 from .driver import default_driver_context
 from .driver import driver_context
 from .resolver import default_resolver_context
