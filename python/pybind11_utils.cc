@@ -18,7 +18,6 @@ limitations under the License.
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <unordered_map>
 #include <utility>
 
 #include "common/memory/memcpy.h"
@@ -133,11 +132,13 @@ void bind_utils(py::module& mod) {
   mod.def(
       "memory_copy",
       [](py::buffer const dst, size_t offset, py::buffer const src,
-         size_t const size) {
-        throw_on_error(
-            copy_memoryview_to_memoryview(src.ptr(), dst.ptr(), size, offset));
+         size_t const size,
+         size_t const concurrency = memory::default_memcpy_concurrency) {
+        throw_on_error(copy_memoryview_to_memoryview(src.ptr(), dst.ptr(), size,
+                                                     offset, concurrency));
       },
-      "dst"_a, "offset"_a, "src"_a, py::arg("size") = 0 /* not checked */);
+      "dst"_a, "offset"_a, "src"_a, py::arg("size") = 0 /* not checked */,
+      py::arg("concurrency") = memory::default_memcpy_concurrency);
 
   PyModule_AddFunctions(mod.ptr(), vineyard_utils_methods);
 }
@@ -177,7 +178,7 @@ class PyBufferGetter {
 }  // namespace detail
 
 Status copy_memoryview(PyObject* src, void* dst, size_t const size,
-                       size_t const offset) {
+                       size_t const offset, size_t const concurrency) {
   detail::PyBufferGetter src_buffer(src);
   if (!src_buffer.has_buffer()) {
     return Status::AssertionFailed(
@@ -201,15 +202,17 @@ Status copy_memoryview(PyObject* src, void* dst, size_t const size,
   {
     py::gil_scoped_release release;
     // memcpy
-    memory::inline_memcpy(reinterpret_cast<uint8_t*>(dst) + offset,
-                          src_buffer.data(), src_buffer.size());
+    memory::concurrent_memcpy(reinterpret_cast<uint8_t*>(dst) + offset,
+                              src_buffer.data(), src_buffer.size(),
+                              concurrency);
   }
 
   return Status::OK();
 }
 
 Status copy_memoryview_to_memoryview(PyObject* src, PyObject* dst,
-                                     size_t const size, size_t const offset) {
+                                     size_t const size, size_t const offset,
+                                     size_t const concurrency) {
   detail::PyBufferGetter src_buffer(src);
   if (!src_buffer.has_buffer()) {
     return Status::AssertionFailed(
@@ -256,8 +259,8 @@ Status copy_memoryview_to_memoryview(PyObject* src, PyObject* dst,
   {
     py::gil_scoped_release release;
     // memcpy
-    memory::inline_memcpy(dst_buffer.data() + offset, src_buffer.data(),
-                          src_buffer.size());
+    memory::concurrent_memcpy(dst_buffer.data() + offset, src_buffer.data(),
+                              src_buffer.size(), concurrency);
   }
 
   return Status::OK();
