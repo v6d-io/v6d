@@ -92,7 +92,9 @@ class Client:
         if not endpoint and not (host and port):
             endpoint = os.getenv('VINEYARD_RPC_ENDPOINT', None)
         if endpoint:
-            host, port = endpoint.split(':')
+            if not isinstance(endpoint, (tuple, list)):
+                endpoint = endpoint.split(':')
+            host, port = endpoint
 
         if socket:
             self._ipc_client = _connect(socket, **kwargs)
