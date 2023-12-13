@@ -18,19 +18,35 @@
 
 import os
 import warnings
+from typing import Any
 from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 from typing import Union
 
 from vineyard._C import Blob
 from vineyard._C import BlobBuilder
+from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 from vineyard._C import RemoteBlob
 from vineyard._C import RemoteBlobBuilder
+from vineyard._C import RPCClient
 from vineyard._C import _connect
+from vineyard.core.builder import BuilderContext
+from vineyard.core.builder import put
+from vineyard.core.resolver import ResolverContext
+from vineyard.core.resolver import get
+
+
+def _apply_docstring(func):
+    def _apply(fn):
+        fn.__doc__ = func.__doc__
+        return fn
+
+    return _apply
 
 
 class Client:
@@ -56,8 +72,8 @@ class Client:
           which further takes precedence over environment variable
           `VINEYARD_RPC_ENDPOINT` for RPC client.
         """
-        self._ipc_client = None
-        self._rpc_client = None
+        self._ipc_client: IPCClient = None
+        self._rpc_client: RPCClient = None
 
         kwargs = {}
         if session:
@@ -87,12 +103,12 @@ class Client:
             )
 
     @property
-    def ipc_client(self):
+    def ipc_client(self) -> IPCClient:
         assert self._ipc_client is not None, "IPC client is not available."
         return self._ipc_client
 
     @property
-    def rpc_client(self):
+    def rpc_client(self) -> RPCClient:
         assert self._rpc_client is not None, "RPC client is not available."
         return self._rpc_client
 
@@ -102,12 +118,13 @@ class Client:
     def has_rpc_client(self):
         return self._rpc_client is not None
 
-    def default_client(self):
+    def default_client(self) -> Union[IPCClient, RPCClient]:
         return self._ipc_client if self._ipc_client else self._rpc_client
 
     # The following functions are wrappers of the corresponding functions in the
     # ClientBase class.
 
+    @_apply_docstring(IPCClient.create_metadata)
     def create_metadata(
         self, metadata: ObjectMeta, instance_id: int = None
     ) -> ObjectMeta:
@@ -115,6 +132,7 @@ class Client:
             return self.default_client().create_metadata(metadata, instance_id)
         return self.default_client().create_metadata(metadata)
 
+    @_apply_docstring(IPCClient.delete)
     def delete(
         self,
         object: Union[ObjectID, Object, ObjectMeta, List[ObjectID]],
@@ -123,36 +141,47 @@ class Client:
     ) -> None:
         return self.default_client().delete(object, force, deep)
 
+    @_apply_docstring(IPCClient.create_stream)
     def create_stream(self, id: ObjectID) -> None:
         return self.default_client().create_stream(id)
 
+    @_apply_docstring(IPCClient.open_stream)
     def open_stream(self, id: ObjectID, mode: str) -> None:
         return self.default_client().open_stream(id, mode)
 
+    @_apply_docstring(IPCClient.push_chunk)
     def push_chunk(self, stream_id: ObjectID, chunk: ObjectID) -> None:
         return self.default_client().push_chunk(stream_id, chunk)
 
+    @_apply_docstring(IPCClient.next_chunk_id)
     def next_chunk_id(self, stream_id: ObjectID) -> ObjectID:
         return self.default_client().next_chunk_id(stream_id)
 
+    @_apply_docstring(IPCClient.next_chunk_meta)
     def next_chunk_meta(self, stream_id: ObjectID) -> ObjectMeta:
         return self.default_client().next_chunk_meta(stream_id)
 
+    @_apply_docstring(IPCClient.next_chunk)
     def next_chunk(self, stream_id: ObjectID) -> Object:
         return self.default_client().next_chunk(stream_id)
 
+    @_apply_docstring(IPCClient.stop_stream)
     def stop_stream(self, stream_id: ObjectID, failed: bool) -> None:
         return self.default_client().stop_stream(stream_id, failed)
 
+    @_apply_docstring(IPCClient.drop_stream)
     def drop_stream(self, stream_id: ObjectID) -> None:
         return self.default_client().drop_stream(stream_id)
 
+    @_apply_docstring(IPCClient.persist)
     def persist(self, object: Union[ObjectID, Object, ObjectMeta]) -> None:
         return self.default_client().persist(object)
 
+    @_apply_docstring(IPCClient.exists)
     def exists(self, object: ObjectID) -> bool:
         return self.default_client().exists(object)
 
+    @_apply_docstring(IPCClient.shallow_copy)
     def shallow_copy(
         self, object_id: ObjectID, extra_metadata: dict = None
     ) -> ObjectID:
@@ -160,32 +189,41 @@ class Client:
             return self.default_client().shallow_copy(object_id, extra_metadata)
         return self.default_client().shallow_copy(object_id)
 
+    @_apply_docstring(IPCClient.list_names)
     def list_names(
         self, pattern: str, regex: bool = False, limit: int = 5
     ) -> List[str]:
         return self.default_client().list_names(pattern, regex, limit)
 
+    @_apply_docstring(IPCClient.put_name)
     def put_name(self, object: Union[Object, ObjectMeta, ObjectID], name: str) -> None:
         return self.default_client().put_name(object, name)
 
+    @_apply_docstring(IPCClient.get_name)
     def get_name(self, name: str, wait: bool = False) -> ObjectID:
         return self.default_client().get_name(name, wait)
 
+    @_apply_docstring(IPCClient.drop_name)
     def drop_name(self, name: str) -> None:
         return self.default_client().drop_name(name)
 
+    @_apply_docstring(IPCClient.sync_meta)
     def sync_meta(self) -> None:
         return self.default_client().sync_meta()
 
+    @_apply_docstring(IPCClient.migrate)
     def migrate(self, object_id: ObjectID) -> ObjectID:
         return self.default_client().migrate(object_id)
 
+    @_apply_docstring(IPCClient.clear)
     def clear(self) -> None:
         return self.default_client().clear()
 
+    @_apply_docstring(IPCClient.memory_trim)
     def memory_trim(self) -> bool:
         return self.default_client().memory_trim()
 
+    @_apply_docstring(IPCClient.label)
     def label(
         self,
         object_id: ObjectID,
@@ -197,15 +235,19 @@ class Client:
         else:
             return self.default_client().label(object_id, key_or_labels, value)
 
+    @_apply_docstring(IPCClient.evict)
     def evict(self, objects: List[ObjectID]) -> None:
         return self.default_client().evict(objects)
 
+    @_apply_docstring(IPCClient.load)
     def load(self, objects: List[ObjectID], pin: bool = False) -> None:
         return self.default_client().load(objects, pin)
 
+    @_apply_docstring(IPCClient.unpin)
     def unpin(self, objects: List[ObjectID]) -> None:
         return self.default_client().unpin(objects)
 
+    @_apply_docstring(IPCClient.reset)
     def reset(self) -> None:
         if self._ipc_client:
             self._ipc_client.reset()
@@ -213,72 +255,90 @@ class Client:
             self._rpc_client.reset()
 
     @property
+    @_apply_docstring(IPCClient.connected)
     def connected(self):
         return self.default_client().connected
 
     @property
+    @_apply_docstring(IPCClient.instance_id)
     def instance_id(self):
         return self.default_client().instance_id
 
     @property
+    @_apply_docstring(IPCClient.meta)
     def meta(self):
         return self.default_client().meta
 
     @property
+    @_apply_docstring(IPCClient.status)
     def status(self):
         return self.default_client().status
 
+    @_apply_docstring(IPCClient.debug)
     def debug(self, debug: dict):
         return self.default_client().debug(debug)
 
     @property
+    @_apply_docstring(IPCClient.ipc_socket)
     def ipc_socket(self):
         return self.default_client().ipc_socket
 
     @property
+    @_apply_docstring(IPCClient.rpc_endpoint)
     def rpc_endpoint(self):
         if self._rpc_client:
             return self._rpc_client.rpc_endpoint
         return self.default_client().rpc_endpoint
 
     @property
+    @_apply_docstring(IPCClient.is_ipc)
     def is_ipc(self):
         return self.default_client().is_ipc
 
     @property
+    @_apply_docstring(IPCClient.is_rpc)
     def is_rpc(self):
         return self.default_client().is_rpc
 
     @property
+    @_apply_docstring(IPCClient.version)
     def version(self):
         return self.default_client().version
 
     # The following functions are wrappers of the corresponding functions in the
     # IPCClient and RPCClient classes.
 
+    @_apply_docstring(IPCClient.create_blob)
     def create_blob(self, size: int) -> BlobBuilder:
         return self.ipc_client.create_blob(size)
 
+    @_apply_docstring(IPCClient.create_empty_blob)
     def create_empty_blob(self) -> BlobBuilder:
         return self.ipc_client.create_empty_blob()
 
+    @_apply_docstring(IPCClient.get_blob)
+    def get_blob(self, object_id: ObjectID, unsafe: bool = False) -> Blob:
+        return self.ipc_client.get_blob(object_id, unsafe)
+
+    @_apply_docstring(IPCClient.get_blobs)
+    def get_blobs(self, object_ids: List[ObjectID], unsafe: bool = False) -> List[Blob]:
+        return self.ipc_client.get_blobs(object_ids, unsafe)
+
+    @_apply_docstring(RPCClient.create_remote_blob)
     def create_remote_blob(self, blob_builder: RemoteBlobBuilder) -> ObjectID:
         return self.rpc_client.create_remote_blob(blob_builder)
 
+    @_apply_docstring(RPCClient.get_remote_blob)
     def get_remote_blob(self, object_id: ObjectID, unsafe: bool = False) -> RemoteBlob:
         return self.rpc_client.get_remote_blob(object_id, unsafe)
 
+    @_apply_docstring(RPCClient.get_remote_blobs)
     def get_remote_blobs(
         self, object_ids: List[ObjectID], unsafe: bool = False
     ) -> List[RemoteBlob]:
         return self.rpc_client.get_remote_blobs(object_ids, unsafe)
 
-    def get_blob(self, object_id: ObjectID, unsafe: bool = False) -> Blob:
-        return self.ipc_client.get_blob(object_id, unsafe)
-
-    def get_blobs(self, object_ids: List[ObjectID], unsafe: bool = False) -> List[Blob]:
-        return self.ipc_client.get_blobs(object_ids, unsafe)
-
+    @_apply_docstring(IPCClient.get_object)
     def get_object(self, object_id: ObjectID) -> Object:
         """
         Fetches the object associated with the given object_id from Vineyard.
@@ -286,17 +346,22 @@ class Client:
         """
         return self._fetch_object(object_id)
 
+    @_apply_docstring(IPCClient.get_objects)
     def get_objects(self, object_ids: List[ObjectID]) -> List[Object]:
         objects = []
         for object_id in object_ids:
             objects.append(self.get_object(object_id))
         return objects
 
+    @_apply_docstring(IPCClient.get_meta)
     def get_meta(
-        self, object_id: ObjectID, sync_remote: bool = False, fetch: bool = False
+        self,
+        object_id: ObjectID,
+        sync_remote: bool = False,
     ) -> ObjectMeta:
-        return self.default_client().get_meta(object_id, sync_remote, fetch)
+        return self.default_client().get_meta(object_id, sync_remote)
 
+    @_apply_docstring(IPCClient.get_metas)
     def get_metas(
         self, object_ids: List[ObjectID], sync_remote: bool = False
     ) -> List[ObjectMeta]:
@@ -305,41 +370,51 @@ class Client:
             metas.append(self.get_meta(object_id, sync_remote))
         return metas
 
+    @_apply_docstring(IPCClient.list_objects)
     def list_objects(
         self, pattern: str, regex: bool = False, limit: int = 5
     ) -> List[ObjectID]:
         return self.default_client().list_objects(pattern, regex, limit)
 
+    @_apply_docstring(IPCClient.list_metadatas)
     def list_metadatas(
         self, pattern: str, regex: bool = False, limit: int = 5, nobuffer: bool = False
     ) -> List[ObjectMeta]:
         return self.default_client().list_metadatas(pattern, regex, limit, nobuffer)
 
+    @_apply_docstring(IPCClient.new_buffer_chunk)
     def new_buffer_chunk(self, stream: ObjectID, size: int) -> memoryview:
         return self.ipc_client.new_buffer_chunk(stream, size)
 
+    @_apply_docstring(IPCClient.next_buffer_chunk)
     def next_buffer_chunk(self, stream: ObjectID) -> memoryview:
         return self.ipc_client.next_buffer_chunk(stream)
 
+    @_apply_docstring(IPCClient.allocated_size)
     def allocated_size(self, object_id: Union[Object, ObjectID]) -> int:
         return self.ipc_client.allocated_size(object_id)
 
+    @_apply_docstring(IPCClient.is_shared_memory)
     def is_shared_memory(self, pointer: int) -> bool:
         return self.ipc_client.is_shared_memory(pointer)
 
+    @_apply_docstring(IPCClient.find_shared_memory)
     def find_shared_memory(self, pointer: int) -> ObjectID:
         return self.ipc_client.find_shared_memory(pointer)
 
     @property
+    @_apply_docstring(RPCClient.remote_instance_id)
     def remote_instance_id(self) -> int:
         return self.rpc_client.remote_instance_id
 
+    @_apply_docstring(IPCClient.close)
     def close(self) -> None:
         if self._ipc_client:
             self._ipc_client.close()
         if self._rpc_client:
             self._rpc_client.close()
 
+    @_apply_docstring(IPCClient.fork)
     def fork(self) -> 'Client':
         if self._ipc_client:
             self._ipc_client = self._ipc_client.fork()
@@ -390,6 +465,28 @@ class Client:
             f"{meta.instance_id} at {host}:{port}."
         )
         return remote_client.get_object(meta.id)
+
+    @_apply_docstring(get)
+    def get(
+        self,
+        object_id: Optional[ObjectID] = None,
+        name: Optional[str] = None,
+        resolver: Optional[ResolverContext] = None,
+        fetch: bool = False,
+        **kwargs,
+    ):
+        return get(self, object_id, name, resolver, fetch, **kwargs)
+
+    @_apply_docstring(put)
+    def put(
+        self,
+        value: Any,
+        builder: Optional[BuilderContext] = None,
+        persist: bool = False,
+        name: Optional[str] = None,
+        **kwargs,
+    ):
+        return put(self, value, builder, persist, name, **kwargs)
 
 
 __all__ = ['Client']

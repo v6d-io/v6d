@@ -32,7 +32,6 @@ from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 from vineyard._C import RPCClient
-from vineyard.core.client import Client
 
 
 class BuilderContext:
@@ -220,7 +219,6 @@ def put(
 
 setattr(IPCClient, 'put', put)
 setattr(RPCClient, 'put', put)
-setattr(Client, 'put', put)
 
 __all__ = [
     'default_builder_context',

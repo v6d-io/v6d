@@ -31,7 +31,6 @@ from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectID
 from vineyard._C import RPCClient
-from vineyard.core.client import Client
 from vineyard.core.utils import find_most_precise_match
 
 
@@ -192,7 +191,7 @@ def get(
     name: Optional[str] = None,
     resolver: Optional[ResolverContext] = None,
     fetch: bool = False,
-    **kw
+    **kwargs
 ):
     """Get vineyard object as python value.
 
@@ -234,12 +233,11 @@ def get(
 
     if resolver is None:
         resolver = get_current_resolvers()
-    return resolver(obj, __vineyard_client=client, **kw)
+    return resolver(obj, __vineyard_client=client, **kwargs)
 
 
 setattr(IPCClient, 'get', get)
 setattr(RPCClient, 'get', get)
-setattr(Client, 'get', get)
 
 __all__ = [
     'default_resolver_context',

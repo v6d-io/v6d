@@ -645,20 +645,13 @@ void bind_client(py::module& mod) {
       .def(
           "get_meta",
           [](Client* self, ObjectIDWrapper const& object_id,
-             bool const sync_remote, bool const fetch) -> ObjectMeta {
+             bool const sync_remote) -> ObjectMeta {
             ObjectMeta meta;
-            // FIXME: do we really not need to sync from etcd? We assume the
-            // object is a local object
-            if (fetch) {
-              throw_on_error(
-                  self->FetchAndGetMetaData(object_id, meta, sync_remote));
-            } else {
-              throw_on_error(self->GetMetaData(object_id, meta, sync_remote));
-            }
+            throw_on_error(self->GetMetaData(object_id, meta, sync_remote));
             return meta;
           },
           "object_id"_a, py::arg("sync_remote") = false,
-          py::arg("fetch") = false, doc::IPCClient_get_meta)
+          doc::IPCClient_get_meta)
       .def(
           "get_metas",
           [](Client* self, std::vector<ObjectIDWrapper> const& object_ids,
