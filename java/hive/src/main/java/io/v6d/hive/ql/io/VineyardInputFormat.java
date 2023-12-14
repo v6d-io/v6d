@@ -25,6 +25,8 @@ import io.v6d.core.common.util.VineyardException.ObjectNotExists;
 import io.v6d.modules.basic.arrow.*;
 import io.v6d.modules.basic.arrow.util.ObjectResolver;
 import io.v6d.modules.basic.columnar.ColumnarData;
+import io.v6d.modules.basic.filesystem.VineyardFileUtils;
+
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -86,54 +88,56 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
             dirStatus.add(tableStatus);
 
             // Maybe there exists more than one table file.
-
-            FileStatus[] status = dirStatus.poll();
-            for (int j = 0; j < status.length; j++) {
-                int batchesPerFile = 0;
-                if (status[j].isDirectory()) {
-                    dirStatus.add(
-                            fs.listStatus(
-                                    status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
-                    continue;
-                }
-                Path tableFilePath = status[j].getPath();
-                FSDataInputStream in = fs.open(tableFilePath);
-                FileStatus fileStatus = fs.getFileStatus(tableFilePath);
-                byte[] buffer = new byte[(int) fileStatus.getLen()];
-                int len = in.read(buffer, 0, (int) fileStatus.getLen());
-                // Here must check with the condition of len <= 0, rather than len == -1.
-                // Because Spark will create an empty file, which will cause the len == 0.
-                if (len <= 0) {
-                    continue;
-                }
-                String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
-                for (val objectID : objectIDs) {
-                    ObjectMeta tableMeta;
-                    Table table;
-                    try {
-                        ObjectID tableID = ObjectID.fromString(objectID);
-                        Context.println("try to build table");
-                        tableMeta = client.getMetaData(tableID, false); 
-                    } catch (ObjectNotExists | NumberFormatException e) {
-                        // Skip some invalid file.
-                        Context.println(
-                                "Skipping invalid file: "
-                                        + tableFilePath
-                                        + ", content: "
-                                        + new String(buffer, StandardCharsets.US_ASCII));
-                        break;
+            VineyardFileUtils.printAllFiles(Context.getClient());
+            while (!dirStatus.isEmpty()) {
+                FileStatus[] status = dirStatus.poll();
+                for (int j = 0; j < status.length; j++) {
+                    int batchesPerFile = 0;
+                    if (status[j].isDirectory()) {
+                        dirStatus.add(
+                                fs.listStatus(
+                                        status[j].getPath(), FileUtils.HIDDEN_FILES_PATH_FILTER));
+                        continue;
                     }
-                    table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
-                    batchesPerFile += table.getBatchNum();
+                    Path tableFilePath = status[j].getPath();
+                    FSDataInputStream in = fs.open(tableFilePath);
+                    FileStatus fileStatus = fs.getFileStatus(tableFilePath);
+                    byte[] buffer = new byte[(int) fileStatus.getLen()];
+                    int len = in.read(buffer, 0, (int) fileStatus.getLen());
+                    // Here must check with the condition of len <= 0, rather than len == -1.
+                    // Because Spark will create an empty file, which will cause the len == 0.
+                    if (len <= 0) {
+                        continue;
+                    }
+                    String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
+                    for (val objectID : objectIDs) {
+                        ObjectMeta tableMeta;
+                        Table table;
+                        try {
+                            ObjectID tableID = ObjectID.fromString(objectID);
+                            Context.println("try to build table");
+                            tableMeta = client.getMetaData(tableID, false); 
+                        } catch (ObjectNotExists | NumberFormatException e) {
+                            // Skip some invalid file.
+                            Context.println(
+                                    "Skipping invalid file: "
+                                            + tableFilePath
+                                            + ", content: "
+                                            + new String(buffer, StandardCharsets.US_ASCII));
+                            break;
+                        }
+                        table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
+                        batchesPerFile += table.getBatchNum();
+                    }
+                    for (int k = 0; k < batchesPerFile; k++) {
+                        splits.add(new VineyardSplit(status[j].getPath(), k, 1, job));
+                    }
                 }
-                for (int k = 0; k < batchesPerFile; k++) {
-                    splits.add(new VineyardSplit(status[j].getPath(), k, 1, job));
-                }
+                // TODO: would generating a split for each record batch be better?
+                // if (numBatches > 0) {
+                    // splits.add(new VineyardSplit(path, 0, numBatches, job));
+                // }
             }
-            // TODO: would generating a split for each record batch be better?
-            // if (numBatches > 0) {
-                // splits.add(new VineyardSplit(path, 0, numBatches, job));
-            // }
         }
         Context.println("total splits:" + splits.size());
         return splits.toArray(new VineyardSplit[splits.size()]);
