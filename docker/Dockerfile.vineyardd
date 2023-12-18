@@ -26,9 +26,6 @@ RUN export arch="$PLATFORM" && \
     curl -LO https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_$arch && \
     chmod +x dumb-init_1.2.2_$arch && \
     mv /tmp/dumb-init_1.2.2_$arch /usr/bin/dumb-init && \
-    curl -LO https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh && \
-    chmod +x wait-for-it.sh && \
-    mv /tmp/wait-for-it.sh /usr/bin/wait-for-it.sh && \
     curl -LO https://github.com/etcd-io/etcd/releases/download/v3.5.9/etcd-v3.5.9-linux-$arch.tar.gz && \
     tar zxf etcd-v3.5.9-linux-$arch.tar.gz && \
     mv /tmp/etcd-v3.5.9-linux-$arch/etcd /usr/bin/etcd && \
@@ -82,7 +79,6 @@ SHELL ["/bin/bash", "-c"]
 
 COPY --from=builder /usr/bin/bash-linux /bin/bash
 COPY --from=builder /usr/bin/dumb-init /usr/bin/dumb-init
-COPY --from=builder /usr/bin/wait-for-it.sh /usr/bin/wait-for-it.sh
 COPY --from=builder /usr/bin/etcd /usr/bin/etcd
 COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
 COPY --from=builder /work/v6d/build/bin/vineyardd /usr/local/bin/vineyardd

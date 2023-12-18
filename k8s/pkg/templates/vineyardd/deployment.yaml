@@ -49,8 +49,6 @@ spec:
           - /bin/bash
           - -c
           - >
-            /usr/bin/wait-for-it.sh -t 60 {{ .Name }}-etcd-service.{{ .Namespace }}.svc.cluster.local:2379;
-            sleep 1;
             /usr/local/bin/vineyardd
             --sync_crds {{ .Spec.Vineyard.SyncCRDs }}
             {{- if .Spec.Volume.MountPath }}

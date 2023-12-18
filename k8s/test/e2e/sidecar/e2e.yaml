@@ -28,17 +28,19 @@ setup:
             --sidecar.image="localhost:5001/vineyardd:latest"| kubectl apply -f -
       wait:
         - namespace: vineyard-job
-          resource: deployment/job-deployment-with-default-sidecar
+          resource: deployment/job-deployment
           for: condition=Available
     - name: install app with default sidecar via kubectl
       command: |
         kubectl create namespace vineyard-job1
         kubectl label namespace vineyard-job1 sidecar-injection=enabled
+        docker tag localhost:5001/vineyardd:latest vineyardcloudnative/vineyardd:latest
+        kind load docker-image vineyardcloudnative/vineyardd:latest
         sed -e 's/vineyard-job/vineyard-job1/g' k8s/test/e2e/sidecar-demo/sidecar-with-default-sidecar.yaml | \
           kubectl apply -f -
       wait:
         - namespace: vineyard-job1
-          resource: deployment/job-deployment-with-default-sidecar
+          resource: deployment/job-deployment
           for: condition=Available
     - name: install app with custom sidecar
       command: |
@@ -46,7 +48,7 @@ setup:
         kubectl apply -f k8s/test/e2e/sidecar-demo/sidecar-with-custom-sidecar.yaml
       wait:
         - namespace: vineyard-job
-          resource: deployment/job-deployment-with-custom-sidecar
+          resource: deployment/job-deployment
           for: condition=Available
   timeout: 20m
 
