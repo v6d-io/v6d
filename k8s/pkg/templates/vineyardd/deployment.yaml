@@ -51,8 +51,8 @@ spec:
           - >
             /usr/local/bin/vineyardd
             --sync_crds {{ .Spec.Vineyard.SyncCRDs }}
-            {{- if .Spec.Volume.MountPath }}
-            --socket {{ .Spec.Volume.MountPath }}/vineyard.sock
+            {{- if .Spec.SocketVolume.MountPath }}
+            --socket {{ .Spec.SocketVolume.MountPath }}/vineyard.sock
             {{- else }}
             --socket /var/run/vineyard.sock
             {{- end }}
@@ -124,19 +124,20 @@ spec:
             exec:
               command:
               - ls
-              {{- if .Spec.Volume.MountPath }}
-              - {{ .Spec.Volume.MountPath }}/vineyard.sock
+              {{- if .Spec.SocketVolume.MountPath }}
+              - {{ .Spec.SocketVolume.MountPath }}/vineyard.sock
               {{- else }}
               - /var/run/vineyard.sock
               {{- end }}
           volumeMounts:
-          {{- if .Spec.Volume.MountPath }}
+          {{- if .Spec.SocketVolume.MountPath }}
           - name: vineyard-socket
-            mountPath: {{ .Spec.Volume.MountPath }}
+            mountPath: {{ .Spec.SocketVolume.MountPath }}
           {{- else }}
           - name: vineyard-socket
             mountPath: /var/run
           {{- end }}
+{{ toYaml .Spec.VolumeMounts | indent 10 }}
           {{- if .Spec.Vineyard.Spill.Name }}
           - name: {{ .Spec.Vineyard.Spill.Name }}
             mountPath: {{ .Spec.Vineyard.Spill.Path }}
@@ -175,15 +176,16 @@ spec:
             mountPath: /var/log/vineyard
         {{- end }}
       volumes:
-      {{- if .Spec.Volume.PvcName }}
+      {{- if .Spec.SocketVolume.PvcName }}
       - name: vineyard-socket
         persistentVolumeClaim:
-          claimName: {{ .Spec.Volume.PvcName }}
+          claimName: {{ .Spec.SocketVolume.PvcName }}
       {{- else }}
       - name: vineyard-socket
         hostPath:
           path: {{ .Spec.Vineyard.Socket }}
       {{- end }}
+{{ toYaml .Spec.Volumes | indent 6 }}
       {{- if .Spec.Vineyard.Spill.Name }}
       - name: {{ .Spec.Vineyard.Spill.Name }}
         persistentVolumeClaim:

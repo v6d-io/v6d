@@ -223,10 +223,20 @@ type VineyarddSpec struct {
 	// +kubebuilder:default:={enable: false, image: "vineyardcloudnative/vineyard-grok-exporter:latest", imagePullPolicy: "IfNotPresent"}
 	Metric MetricConfig `json:"metric,omitempty"`
 
-	// Volume configuration
+	// Socket Volume configuration
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={pvcName: "", mountPath: ""}
-	Volume VolumeConfig `json:"volume,omitempty"`
+	SocketVolume VolumeConfig `json:"socketVolume,omitempty"`
+
+	// Volumes is the list of Kubernetes volumes that can be mounted by the vineyard deployment.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// VolumeMounts specifies the volumes listed in ".spec.volumes" to mount into the vineyard deployment.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 // VineyarddStatus defines the observed state of Vineyardd

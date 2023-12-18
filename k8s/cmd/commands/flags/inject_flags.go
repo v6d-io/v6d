@@ -54,7 +54,7 @@ func ApplySidecarOpts(cmd *cobra.Command) {
 	// setup the vineyard service configuration of vineyard sidecar
 	ApplyServiceOpts(&SidecarOpts.Service, "sidecar", cmd)
 	// setup the vineyard volumes if needed
-	ApplyVolumeOpts(&SidecarOpts.Volume, "sidecar", cmd)
+	ApplySocketVolumeOpts(&SidecarOpts.Volume, "sidecar", cmd)
 	cmd.Flags().StringVarP(&SidecarName, "name", "", "vineyard-sidecar",
 		"The name of sidecar")
 	cmd.Flags().IntVarP(&SidecarOpts.Replicas, "etcd-replicas", "", 1,

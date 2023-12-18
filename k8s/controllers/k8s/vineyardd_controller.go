@@ -18,6 +18,7 @@ package k8s
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/pkg/errors"
@@ -28,6 +29,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 
@@ -87,6 +89,18 @@ func (r *VineyarddReconciler) Reconcile(
 		TmplFunc: map[string]interface{}{
 			"getStorage": func(q resource.Quantity) string {
 				return q.String()
+			},
+			"toYaml": func(v interface{}) string {
+				bs, error := yaml.Marshal(v)
+				if error != nil {
+					logger.Error(error, "failed to marshal object %v to yaml", v)
+					return ""
+				}
+				return string(bs)
+			},
+			"indent": func(spaces int, s string) string {
+				prefix := strings.Repeat(" ", spaces)
+				return prefix + strings.Replace(s, "\n", "\n"+prefix, -1)
 			},
 		},
 	}

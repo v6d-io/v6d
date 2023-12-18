@@ -104,11 +104,11 @@ func ApplyServiceOpts(s *v1alpha1.ServiceConfig, prefix string, cmd *cobra.Comma
 		"the service port of vineyard service")
 }
 
-// ApplyVolumeOpts represents the option of pvc volume configuration
-func ApplyVolumeOpts(v *v1alpha1.VolumeConfig, prefix string, cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&v.PvcName, prefix+".volume.pvcname", "",
+// ApplySocketVolumeOpts represents the option of pvc volume configuration
+func ApplySocketVolumeOpts(v *v1alpha1.VolumeConfig, prefix string, cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&v.PvcName, prefix+".socketVolume.pvcname", "",
 		"", "Set the pvc name for storing the vineyard objects persistently")
-	cmd.Flags().StringVarP(&v.MountPath, prefix+".volume.mountPath", "",
+	cmd.Flags().StringVarP(&v.MountPath, prefix+".socketVolume.mountPath", "",
 		"", "Set the mount path for the pvc")
 }
 
@@ -167,7 +167,7 @@ func ApplyVineyarddOpts(cmd *cobra.Command) {
 	// setup the vineyard service configuration of vineyardd
 	ApplyServiceOpts(&VineyarddOpts.Service, "vineyardd", cmd)
 	// setup the vineyard volumes if needed
-	ApplyVolumeOpts(&VineyarddOpts.Volume, "vineyardd", cmd)
+	ApplySocketVolumeOpts(&VineyarddOpts.SocketVolume, "vineyardd", cmd)
 	// setup the plugin images in a vineyard workflow
 	ApplyPluginImageOpts(cmd)
 }
