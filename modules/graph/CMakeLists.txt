@@ -63,8 +63,10 @@ file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
 
 add_library(vineyard_graph ${GRAPH_SRC_FILES} ${powturbo-target-objects})
 target_add_debuginfo(vineyard_graph)
-target_compile_options(vineyard_graph PUBLIC "-fopenmp")
-target_link_options(vineyard_graph PUBLIC "-fopenmp")
+if(NOT APPLE)
+    target_compile_options(vineyard_graph PUBLIC "-fopenmp")
+    target_link_options(vineyard_graph PUBLIC "-fopenmp")
+endif()
 target_include_directories(vineyard_graph PUBLIC ${MPI_CXX_INCLUDE_PATH})
 
 find_package(Boost COMPONENTS leaf)
