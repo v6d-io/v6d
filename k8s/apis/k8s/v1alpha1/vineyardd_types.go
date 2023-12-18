@@ -228,6 +228,11 @@ type VineyarddSpec struct {
 	// +kubebuilder:default:={pvcName: "", mountPath: ""}
 	SocketVolume VolumeConfig `json:"socketVolume,omitempty"`
 
+	// Privileged is a flag that indicates whether the vineyardd container should be run in privileged mode.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:=false
+	Privileged bool `json:"privileged,omitempty"`
+
 	// Volumes is the list of Kubernetes volumes that can be mounted by the vineyard deployment.
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={}

@@ -34,9 +34,6 @@ spec:
             type: object
           spec:
             properties:
-              createSocketVolume:
-                default: true
-                type: boolean
               etcdReplicas:
                 default: 1
                 type: integer
@@ -80,6 +77,9 @@ spec:
                     default: ghcr.io/v6d-io/v6d/recover-job
                     type: string
                 type: object
+              privileged:
+                default: false
+                type: boolean
               replicas:
                 default: 3
                 type: integer

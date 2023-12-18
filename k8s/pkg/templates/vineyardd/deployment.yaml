@@ -73,6 +73,8 @@ spec:
             --metrics
             -log_dir /var/log/vineyard/
             {{- end }}
+          securityContext:
+            privileged: {{ .Spec.Privileged }}
           env:
           - name: VINEYARDD_UID
             value: {{ .UID }}
@@ -135,9 +137,11 @@ spec:
             mountPath: {{ .Spec.SocketVolume.MountPath }}
           {{- else }}
           - name: vineyard-socket
-            mountPath: /var/run
+            mountPath: {{ .Spec.Vineyard.Socket }}
           {{- end }}
+{{- if .Spec.VolumeMounts }}
 {{ toYaml .Spec.VolumeMounts | indent 10 }}
+{{- end }}
           {{- if .Spec.Vineyard.Spill.Name }}
           - name: {{ .Spec.Vineyard.Spill.Name }}
             mountPath: {{ .Spec.Vineyard.Spill.Path }}
@@ -185,7 +189,9 @@ spec:
         hostPath:
           path: {{ .Spec.Vineyard.Socket }}
       {{- end }}
+{{- if .Spec.Volumes }}
 {{ toYaml .Spec.Volumes | indent 6 }}
+{{- end }}
       {{- if .Spec.Vineyard.Spill.Name }}
       - name: {{ .Spec.Vineyard.Spill.Name }}
         persistentVolumeClaim:

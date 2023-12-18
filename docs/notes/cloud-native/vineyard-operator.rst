@@ -84,6 +84,31 @@ components will be created and managed by the vineyard operator:
         replicaset.apps/vineyard-controller-manager-5c6f4bc454   1         1         1       72s
         replicaset.apps/vineyardd-sample-5cc797668f              3         3         3       48s
 
+Also, if you want to use the custom vineyard socket path and mount something like /dev to the
+vineyard container, you could use the following YAML file:
+
+.. code:: yaml
+
+    $ cat <<EOF | kubectl apply -f -
+    apiVersion: k8s.v6d.io/v1alpha1
+    kind: Vineyardd
+    metadata:
+      name: vineyardd-sample
+    spec:
+      vineyard:
+        # only for host path
+        socket: /your/vineyard/socket/path
+      # you should set privileged to true if you want to mount /dev to the vineyard container
+      privileged: true
+      volumes:
+      - name: dev-volumes
+        hostPath:
+          path: /dev
+      volumeMounts:
+      - name: dev-volumes
+        mountPath: /dev
+    EOF
+
 For detailed configuration entries of vineyardd, please refer to `vineyardd CRD <../references/crds.md#vineyardd>`_.
 
 Installing vineyard as sidecar
