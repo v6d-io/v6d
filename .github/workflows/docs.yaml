@@ -21,6 +21,7 @@ on:
       - main
       - docs
       - dev/docs
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
