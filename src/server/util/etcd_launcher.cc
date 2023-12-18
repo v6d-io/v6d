@@ -111,6 +111,17 @@ Status EtcdLauncher::LaunchEtcdServer(
     return Status::OK();
   }
 
+  RETURN_ON_ERROR(initHostInfo());
+  bool try_launch = false;
+  if (local_hostnames_.find(endpoint_host_) != local_hostnames_.end() ||
+      local_ip_addresses_.find(endpoint_host_) != local_ip_addresses_.end()) {
+    try_launch = true;
+  }
+
+  if (!try_launch) {
+    return Status::OK();
+  }
+
   LOG(INFO) << "Starting the etcd server";
 
   // resolve etcd binary
@@ -120,31 +131,6 @@ Status EtcdLauncher::LaunchEtcdServer(
     etcd_cmd = boost::process::search_path("etcd").string();
   }
   LOG(INFO) << "Found etcd at: " << etcd_cmd;
-
-  RETURN_ON_ERROR(initHostInfo());
-  bool try_launch = false;
-  if (local_hostnames_.find(endpoint_host_) != local_hostnames_.end() ||
-      local_ip_addresses_.find(endpoint_host_) != local_ip_addresses_.end()) {
-    try_launch = true;
-  }
-
-  if (!try_launch) {
-    LOG(INFO) << "Will not launch an etcd instance.";
-    int retries = 0;
-    while (retries < max_probe_retries) {
-      if (probeEtcdServer(etcd_client, sync_lock)) {
-        break;
-      }
-      retries += 1;
-      sleep(1);
-    }
-    if (retries >= max_probe_retries) {
-      return Status::EtcdError(
-          "Etcd has been launched but failed to connect to it");
-    } else {
-      return Status::OK();
-    }
-  }
 
   std::string host_to_advertise;
   if (host_to_advertise.empty()) {

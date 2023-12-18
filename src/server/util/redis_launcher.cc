@@ -73,6 +73,17 @@ Status RedisLauncher::LaunchRedisServer(
     return Status::OK();
   }
 
+  RETURN_ON_ERROR(initHostInfo());
+  bool try_launch = false;
+  if (local_hostnames_.find(endpoint_host_) != local_hostnames_.end() ||
+      local_ip_addresses_.find(endpoint_host_) != local_ip_addresses_.end()) {
+    try_launch = true;
+  }
+
+  if (!try_launch) {
+    return Status::OK();
+  }
+
   LOG(INFO) << "Starting the redis server";
 
   // resolve redis binary
@@ -83,31 +94,6 @@ Status RedisLauncher::LaunchRedisServer(
     redis_cmd = boost::process::search_path("redis-server").string();
   }
   LOG(INFO) << "Found redis at: " << redis_cmd;
-
-  RETURN_ON_ERROR(initHostInfo());
-  bool try_launch = false;
-  if (local_hostnames_.find(endpoint_host_) != local_hostnames_.end() ||
-      local_ip_addresses_.find(endpoint_host_) != local_ip_addresses_.end()) {
-    try_launch = true;
-  }
-
-  if (!try_launch) {
-    LOG(INFO) << "Will not launch a redis instance.";
-    int retries = 0;
-    while (retries < max_probe_retries) {
-      if (probeRedisServer(redis_client, syncredis_client, watch_client)) {
-        break;
-      }
-      retries += 1;
-      sleep(1);
-    }
-    if (retries >= max_probe_retries) {
-      return Status::RedisError(
-          "Redis has been launched but failed to connect to it");
-    } else {
-      return Status::OK();
-    }
-  }
 
   std::vector<std::string> args;
   args.emplace_back("--port");

@@ -380,6 +380,9 @@ void EtcdMetaService::retryDaeminWatch(
 }
 
 Status EtcdMetaService::probe() {
+  std::string const& etcd_endpoint =
+      etcd_spec_["etcd_endpoint"].get_ref<std::string const&>();
+  etcd_.reset(new etcd::Client(etcd_endpoint));
   if (EtcdLauncher::probeEtcdServer(etcd_, prefix_)) {
     return Status::OK();
   } else {
