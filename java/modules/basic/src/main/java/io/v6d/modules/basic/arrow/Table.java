@@ -33,6 +33,7 @@ public class Table extends Object {
     private final int columns;
     private final Schema schema;
     private final List<RecordBatch> batches;
+    private List<ObjectMeta> batchMetas;
     private final int batchNum;
 
     public static void instantiate() {
@@ -52,6 +53,9 @@ public class Table extends Object {
         this.columns = columns;
         this.batches = batches;
         this.batchNum = batches.size();
+        for (int i = 0; i < this.batchNum; i++) {
+            batchMetas.add(meta.getMemberMeta("partitions_-" + i));
+        }
     }
 
     public Schema getSchema() {
@@ -87,6 +91,18 @@ public class Table extends Object {
             batches.set(index, (RecordBatch) ObjectFactory.getFactory().resolve(batchMeta));
         }
         return batches.get(index);
+    }
+
+    public synchronized String[] getHostsOfRecordBatches(int start, int length) {
+        if (start + length > batchNum) {
+            return null;
+        }
+        String[] hosts = new String[length];
+        for (int i = 0; i < length; i++) {
+            hosts[i] = batchMetas.get(start + i).getStringValue("host_");
+            Context.println("host name is:" + hosts[i]);
+        }
+        return hosts;
     }
 
     public VectorSchemaRoot getArrowBatch(int index) {

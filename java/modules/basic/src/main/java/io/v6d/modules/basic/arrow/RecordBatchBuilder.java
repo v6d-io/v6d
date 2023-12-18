@@ -16,7 +16,10 @@ package io.v6d.modules.basic.arrow;
 
 import static java.util.Objects.requireNonNull;
 
+import java.net.InetAddress;
+
 import io.v6d.core.client.Client;
+import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -144,6 +147,18 @@ public class RecordBatchBuilder implements ObjectBuilder {
         meta.setValue("row_num_", rows);
         meta.setValue("__columns_-size", arrayBuilders.size());
         meta.addMember("schema_", schemaBuilder.seal(client));
+
+        // Currently each vineyardd and each namenode manager are on the same node.
+        InetAddress localhost;
+        String hostname;
+        try {
+            localhost = InetAddress.getLocalHost();
+            hostname = localhost.getHostName();
+        } catch (Exception e) {
+            hostname = "unknown";
+        }
+        Context.println("create file host: " + hostname);
+        meta.setValue("host_", hostname);
 
         for (int index = 0; index < arrayBuilders.size(); ++index) {
             meta.addMember("__columns_-" + index, arrayBuilders.get(index).seal(client));

@@ -30,9 +30,12 @@ import io.v6d.modules.basic.filesystem.VineyardFileUtils;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.Set;
+
 import lombok.val;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
@@ -109,6 +112,9 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                     if (len <= 0) {
                         continue;
                     }
+
+                    // FIXME: Shoule be only one object id in each file.
+                    Set<String> hostSet = new HashSet<>();
                     String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
                     for (val objectID : objectIDs) {
                         ObjectMeta tableMeta;
@@ -128,10 +134,15 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                         }
                         table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
                         batchesPerFile += table.getBatchNum();
+                        for (String host : table.getHostsOfRecordBatches(0, table.getBatchNum())) {
+                            hostSet.add(host);
+                        }
                     }
-                    for (int k = 0; k < batchesPerFile; k++) {
-                        splits.add(new VineyardSplit(status[j].getPath(), k, 1, job));
-                    }
+
+                    splits.add(new VineyardSplit(status[j].getPath(), 0, batchesPerFile, hostSet.toArray(new String[hostSet.size()]), hostSet.toArray(new String[hostSet.size()])));
+                    // for (int k = 0; k < batchesPerFile; k++) {
+                        // splits.add(new VineyardSplit(status[j].getPath(), k, 1, job));
+                    // }
                 }
                 // TODO: would generating a split for each record batch be better?
                 // if (numBatches > 0) {

@@ -515,12 +515,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     }
 
     @Override
-    public BlockLocation[] getFileBlockLocations(Path path, long start, long len)
-            throws IOException {
-        return getFileBlockLocations(this.getFileStatus(path), start, len);
-    }
-
-    @Override
     public void moveFromLocalFile(Path src, Path dst) throws IOException {
         throw new UnsupportedOperationException(
                 "Vineyard file system not support moveFromLocalFile.");
