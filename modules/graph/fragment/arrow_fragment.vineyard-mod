@@ -580,6 +580,8 @@ class [[vineyard]] ArrowFragment
                            iodoffset_[v_label][e_label][offset + 1]);
   }
 
+  const std::shared_ptr<vertex_map_t> GetVertexMap() const { return vm_ptr_; }
+
   std::shared_ptr<vertex_map_t> GetVertexMap() { return vm_ptr_; }
 
   void PrepareToRunApp(const grape::CommSpec& comm_spec,
