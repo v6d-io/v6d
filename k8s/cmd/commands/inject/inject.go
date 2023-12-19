@@ -692,21 +692,27 @@ func buildSidecar(namespace string) (*v1alpha1.Sidecar, error) {
 		},
 		Spec: *opts,
 	}
-	securityContext, err := util.ParseSecurityContext(flags.VineyardSecurityContext)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse security context of vineyard sidecar container")
+	if flags.VineyardSecurityContext != "" {
+		securityContext, err := util.ParseSecurityContext(flags.VineyardSecurityContext)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse security context of vineyard sidecar container")
+		}
+		sidecar.Spec.SecurityContext = *securityContext
 	}
-	volumes, err := util.ParseVolume(flags.VineyardVolume)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse volumes of vineyard sidecar container")
+	if flags.VineyardVolume != "" {
+		volumes, err := util.ParseVolume(flags.VineyardVolume)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse volumes of vineyard sidecar container")
+		}
+		sidecar.Spec.Volumes = *volumes
 	}
-	volumeMounts, err := util.ParseVolumeMount(flags.VineyardVolumeMount)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse volume mounts of vineyard sidecar container")
+	if flags.VineyardVolumeMount != "" {
+		volumeMounts, err := util.ParseVolumeMount(flags.VineyardVolumeMount)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse volume mounts of vineyard sidecar container")
+		}
+		sidecar.Spec.VolumeMounts = *volumeMounts
 	}
-	sidecar.Spec.SecurityContext = *securityContext
-	sidecar.Spec.Volumes = *volumes
-	sidecar.Spec.VolumeMounts = *volumeMounts
 	return sidecar, nil
 }
 

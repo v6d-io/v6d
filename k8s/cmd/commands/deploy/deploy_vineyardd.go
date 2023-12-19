@@ -181,21 +181,27 @@ func BuildVineyard() (*v1alpha1.Vineyardd, error) {
 		log.Fatal(err, "failed to build the vineyardd from input")
 	}
 	// parse the volume and volume mounts
-	volumes, err := util.ParseVolume(flags.VineyardVolume)
-	if err != nil {
-		log.Fatal(err, "failed to parse the volumes")
+	if flags.VineyardVolume != "" {
+		volumes, err := util.ParseVolume(flags.VineyardVolume)
+		if err != nil {
+			log.Fatal(err, "failed to parse the volumes")
+		}
+		vineyardd.Spec.Volumes = *volumes
 	}
-	volumeMounts, err := util.ParseVolumeMount(flags.VineyardVolumeMount)
-	if err != nil {
-		log.Fatal(err, "failed to parse the volume mounts")
+	if flags.VineyardVolumeMount != "" {
+		volumeMounts, err := util.ParseVolumeMount(flags.VineyardVolumeMount)
+		if err != nil {
+			log.Fatal(err, "failed to parse the volume mounts")
+		}
+		vineyardd.Spec.VolumeMounts = *volumeMounts
 	}
-	securityContext, err := util.ParseSecurityContext(flags.VineyardSecurityContext)
-	if err != nil {
-		log.Fatal(err, "failed to parse the security context")
+	if flags.VineyardSecurityContext != "" {
+		securityContext, err := util.ParseSecurityContext(flags.VineyardSecurityContext)
+		if err != nil {
+			log.Fatal(err, "failed to parse the security context")
+		}
+		vineyardd.Spec.SecurityContext = *securityContext
 	}
-	vineyardd.Spec.Volumes = *volumes
-	vineyardd.Spec.VolumeMounts = *volumeMounts
-	vineyardd.Spec.SecurityContext = *securityContext
 	return vineyardd, nil
 }
 
