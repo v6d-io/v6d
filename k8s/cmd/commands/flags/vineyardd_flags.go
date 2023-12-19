@@ -34,8 +34,8 @@ var (
 	// VineyarddName is the name of vineyardd
 	VineyarddName string
 
-	// VineyardContainerPrivileged is the privileged of vineyard container
-	VineyardContainerPrivileged bool
+	// VineyardSecurityContext is the json string of security context of vineyardd
+	VineyardSecurityContext string
 
 	// VineyarddOpts holds all configuration of vineyardd Spec
 	VineyarddOpts v1alpha1.VineyarddSpec
@@ -56,8 +56,11 @@ var (
 	// VineyardRPCSocket is the path of vineyardd RPC socket
 	VineyardRPCSocket string
 
-	// VineyardVolumeConfigFile is the path of vineyardd volume config file that contains the volume and volume mount
-	VineyardVolumeConfigFile string
+	// VineyardVolume is the json string of vineyardd volume
+	VineyardVolume string
+
+	// VineyardVolumeMount is the json string of vineyardd volume mount
+	VineyardVolumeMount string
 
 	// NamespacedVineyardDeployment is the namespaced name of vineyard deployment
 	NamespacedVineyardDeployment string
@@ -118,9 +121,9 @@ func ApplyServiceOpts(s *v1alpha1.ServiceConfig, prefix string, cmd *cobra.Comma
 
 // ApplySocketVolumeOpts represents the option of pvc volume configuration
 func ApplySocketVolumeOpts(v *v1alpha1.VolumeConfig, prefix string, cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&v.PvcName, prefix+".socketVolume.pvcname", "",
+	cmd.Flags().StringVarP(&v.PvcName, prefix+".volume.pvcname", "",
 		"", "Set the pvc name for storing the vineyard objects persistently")
-	cmd.Flags().StringVarP(&v.MountPath, prefix+".socketVolume.mountPath", "",
+	cmd.Flags().StringVarP(&v.MountPath, prefix+".volume.mountPath", "",
 		"", "Set the mount path for the pvc")
 }
 
@@ -164,13 +167,15 @@ func ApplyVineyarddNameOpts(cmd *cobra.Command) {
 
 // ApplyVineyardVolumeAndVolumeMountOpts represents the option of vineyardd volume and volume mount
 func ApplyVineyardVolumeAndVolumeMountOpts(cmd *cobra.Command) {
-	cmd.Flags().StringVarP(&VineyardVolumeConfigFile, "volume.file", "", "",
-		"the path of vineyardd volume config file")
+	cmd.Flags().StringVarP(&VineyardVolume, "volume", "", "",
+		"the json string of vineyardd volume")
+	cmd.Flags().StringVarP(&VineyardVolumeMount, "volumeMount", "", "",
+		"the json string of vineyardd volume mount")
 }
 
-// ApplyVineyarddPrivilegedOpts represents the option of vineyardd name
+// ApplyVineyarddSecurityContextOpts represents the option of vineyard security context
 func ApplyVineyarddPrivilegedOpts(cmd *cobra.Command) {
-	cmd.Flags().BoolVarP(&VineyarddOpts.Privileged, "privileged", "", false,
+	cmd.Flags().StringVarP(&VineyardSecurityContext, "securityContext", "", "",
 		"the name of vineyardd")
 }
 

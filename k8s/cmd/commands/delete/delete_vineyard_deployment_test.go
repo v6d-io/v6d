@@ -41,7 +41,7 @@ func TestDeleteVineyardDeploymentCmd(t *testing.T) {
 	flags.VineyarddOpts.Vineyard.Memory = ""
 	flags.VineyarddOpts.Service.Port = 9600
 	flags.VineyarddOpts.Service.Type = "ClusterIP"
-	flags.VineyarddOpts.Volume.PvcName = ""
+	flags.VineyarddOpts.SocketVolume.PvcName = ""
 	flags.VineyarddOpts.Vineyard.Size = "256Mi"
 	c := util.KubernetesClient()
 	deployVineyardDeploymentCmd := deploy.NewDeployVineyardDeploymentCmd()

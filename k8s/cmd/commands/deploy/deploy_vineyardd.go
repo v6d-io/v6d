@@ -16,16 +16,13 @@ limitations under the License.
 package deploy
 
 import (
-	"io/ioutil"
 	"strings"
 	"time"
 
 	"github.com/avast/retry-go"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
@@ -184,14 +181,21 @@ func BuildVineyard() (*v1alpha1.Vineyardd, error) {
 		log.Fatal(err, "failed to build the vineyardd from input")
 	}
 	// parse the volume and volume mounts
-	volumeConfig, err := loadVolumeConfigFromFile(flags.VineyardVolumeConfigFile)
+	volumes, err := util.ParseVolume(flags.VineyardVolume)
 	if err != nil {
-		log.Fatal(err, "failed to load volume config")
+		log.Fatal(err, "failed to parse the volumes")
 	}
-	vineyardd.Spec.Volumes = make([]corev1.Volume, 0)
-	vineyardd.Spec.Volumes = append(vineyardd.Spec.Volumes, volumeConfig.Volumes...)
-	vineyardd.Spec.VolumeMounts = make([]corev1.VolumeMount, 0)
-	vineyardd.Spec.VolumeMounts = append(vineyardd.Spec.VolumeMounts, volumeConfig.VolumeMounts...)
+	volumeMounts, err := util.ParseVolumeMount(flags.VineyardVolumeMount)
+	if err != nil {
+		log.Fatal(err, "failed to parse the volume mounts")
+	}
+	securityContext, err := util.ParseSecurityContext(flags.VineyardSecurityContext)
+	if err != nil {
+		log.Fatal(err, "failed to parse the security context")
+	}
+	vineyardd.Spec.Volumes = *volumes
+	vineyardd.Spec.VolumeMounts = *volumeMounts
+	vineyardd.Spec.SecurityContext = *securityContext
 	return vineyardd, nil
 }
 
@@ -225,21 +229,6 @@ func BuildVineyardManifestFromInput() (*v1alpha1.Vineyardd, error) {
 		Spec: *opts,
 	}
 	return vineyardd, nil
-}
-
-func loadVolumeConfigFromFile(filePath string) (flags.VolumeConfig, error) {
-	data, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return flags.VolumeConfig{}, err
-	}
-
-	var volumeConfig flags.VolumeConfig
-	err = yaml.Unmarshal(data, &volumeConfig)
-	if err != nil {
-		return flags.VolumeConfig{}, err
-	}
-
-	return volumeConfig, nil
 }
 
 // BuildVineyardManifestFromFile builds the vineyardd from file

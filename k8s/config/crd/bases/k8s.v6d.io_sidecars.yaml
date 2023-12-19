@@ -365,7 +365,6 @@ spec:
                               uid:
                                 type: string
                             type: object
-                            x-kubernetes-map-type: granular
                           csi:
                             properties:
                               controllerExpandSecretRef:
@@ -386,13 +385,6 @@ spec:
                                 type: string
                               fsType:
                                 type: string
-                              nodeExpandSecretRef:
-                                properties:
-                                  name:
-                                    type: string
-                                  namespace:
-                                    type: string
-                                type: object
                               nodePublishSecretRef:
                                 properties:
                                   name:

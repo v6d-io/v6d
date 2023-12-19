@@ -18,6 +18,7 @@ package deploy
 
 import (
 	"context"
+	"strings"
 
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -27,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/yaml"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -101,6 +103,18 @@ func GetVineyardDeploymentObjectsFromTemplate() ([]*unstructured.Unstructured, e
 		},
 		"getEtcdConfig": func() k8s.EtcdConfig {
 			return etcdConfig
+		},
+		"toYaml": func(v interface{}) string {
+			bs, error := yaml.Marshal(v)
+			if error != nil {
+				log.Error(error, "failed to marshal object %v to yaml", v)
+				return ""
+			}
+			return string(bs)
+		},
+		"indent": func(spaces int, s string) string {
+			prefix := strings.Repeat(" ", spaces)
+			return prefix + strings.Replace(s, "\n", "\n"+prefix, -1)
 		},
 	}
 

@@ -45,6 +45,10 @@ spec:
         - name: vineyardd
           image: {{ .Spec.Vineyard.Image }}
           imagePullPolicy: {{ .Spec.Vineyard.ImagePullPolicy }}
+          {{- if .Spec.SecurityContext }}
+          securityContext:
+{{ toYaml .Spec.SecurityContext | indent 12 }}
+          {{- end }}
           command:
           - /bin/bash
           - -c
@@ -73,8 +77,6 @@ spec:
             --metrics
             -log_dir /var/log/vineyard/
             {{- end }}
-          securityContext:
-            privileged: {{ .Spec.Privileged }}
           env:
           - name: VINEYARDD_UID
             value: {{ .UID }}
@@ -137,7 +139,7 @@ spec:
             mountPath: {{ .Spec.SocketVolume.MountPath }}
           {{- else }}
           - name: vineyard-socket
-            mountPath: {{ .Spec.Vineyard.Socket }}
+            mountPath: /var/run
           {{- end }}
 {{- if .Spec.VolumeMounts }}
 {{ toYaml .Spec.VolumeMounts | indent 10 }}

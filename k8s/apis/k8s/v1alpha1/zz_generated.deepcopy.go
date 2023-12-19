@@ -862,6 +862,7 @@ func (in *VineyarddSpec) DeepCopyInto(out *VineyarddSpec) {
 	out.PluginImage = in.PluginImage
 	out.Metric = in.Metric
 	out.SocketVolume = in.SocketVolume
+	in.SecurityContext.DeepCopyInto(&out.SecurityContext)
 	if in.Volumes != nil {
 		in, out := &in.Volumes, &out.Volumes
 		*out = make([]v1.Volume, len(*in))

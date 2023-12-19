@@ -989,6 +989,7 @@ vineyardctl deploy vineyard-deployment [flags]
       --pluginImage.localAssemblyImage string         the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
       --pluginImage.recoverImage string               the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
       --replicas int                                  the number of vineyardd replicas (default 3)
+      --securityContext string                        the name of vineyardd
       --vineyardd.cpu string                          the cpu requests and limits of vineyard container
       --vineyardd.envs strings                        The environment variables of vineyardd
       --vineyardd.image string                        the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
@@ -1011,6 +1012,8 @@ vineyardctl deploy vineyard-deployment [flags]
       --vineyardd.syncCRDs                            enable metrics of vineyardd (default true)
       --vineyardd.volume.mountPath string             Set the mount path for the pvc
       --vineyardd.volume.pvcname string               Set the pvc name for storing the vineyard objects persistently
+      --volume string                                 the json string of vineyardd volume
+      --volumeMount string                            the json string of vineyardd volume mount
 ```
 
 ## `vineyardctl deploy vineyardd`
@@ -1122,6 +1125,7 @@ vineyardctl deploy vineyardd [flags]
       --pluginImage.localAssemblyImage string         the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
       --pluginImage.recoverImage string               the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
       --replicas int                                  the number of vineyardd replicas (default 3)
+      --securityContext string                        the name of vineyardd
       --vineyardd.cpu string                          the cpu requests and limits of vineyard container
       --vineyardd.envs strings                        The environment variables of vineyardd
       --vineyardd.image string                        the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
@@ -1144,6 +1148,8 @@ vineyardctl deploy vineyardd [flags]
       --vineyardd.syncCRDs                            enable metrics of vineyardd (default true)
       --vineyardd.volume.mountPath string             Set the mount path for the pvc
       --vineyardd.volume.pvcname string               Set the pvc name for storing the vineyard objects persistently
+      --volume string                                 the json string of vineyardd volume
+      --volumeMount string                            the json string of vineyardd volume mount
 ```
 
 ## `vineyardctl get`
@@ -2619,3 +2625,4 @@ vineyardctl schedule workload [flags]
       --vineyardd-name string        the namespace of vineyard cluster (default "vineyardd-sample")
       --vineyardd-namespace string   the namespace of vineyard cluster (default "vineyard-system")
 ```
+
