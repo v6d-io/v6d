@@ -98,8 +98,10 @@ vineyard container, you could use the following YAML file:
       vineyard:
         # only for host path
         socket: /your/vineyard/socket/path
-      # you should set privileged to true if you want to mount /dev to the vineyard container
-      privileged: true
+      # you should set the securityContext.privileged to true
+      # if you want to mount /dev to the vineyard container
+      securityContext:
+        privileged: true
       volumes:
       - name: dev-volumes
         hostPath:
@@ -313,6 +315,63 @@ sidecar cr as follows:
       vineyard:
         socket: /var/run/vineyard.sock
         size: 1024Mi
+    ---
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: job-deployment-with-custom-sidecar
+      namespace: vineyard-job
+    spec:
+      selector:
+        matchLabels:
+          app: job-deployment-with-custom-sidecar
+      replicas: 2
+      template:
+        metadata:
+          annotations:
+            sidecar.v6d.io/name: "sidecar-sample"
+          labels:
+            app: job-deployment-with-custom-sidecar
+            sidecar.v6d.io/enabled: "true"
+        spec:
+          containers:
+          - name: job
+            image: ghcr.io/v6d-io/v6d/sidecar-job
+            imagePullPolicy: IfNotPresent
+            command: ["/bin/sh", "-c", "python3 /job.py"]
+            env:
+            - name: JOB_NAME
+              value: v6d-workflow-demo-job
+    EOF
+
+Also, if you want to use the custom vineyard socket path and mount something like /dev to the
+vineyard container, you could use the following YAML file:
+
+.. code:: yaml
+
+    $ cat <<EOF | kubectl apply -f -
+    apiVersion: k8s.v6d.io/v1alpha1
+    kind: Sidecar
+    metadata:
+      name: sidecar-sample
+      namespace: vineyard-job
+    spec:
+      replicas: 2
+      selector: app=job-deployment-with-custom-sidecar
+      vineyard:
+        socket: /var/run/vineyard.sock
+        size: 1024Mi
+      # you should set the securityContext.privileged to true
+      # if you want to mount /dev to the vineyard container
+      securityContext:
+        privileged: true
+      volumes:
+      - name: dev-volumes
+        hostPath:
+          path: /dev
+      volumeMounts:
+      - name: dev-volumes
+        mountPath: /dev
     ---
     apiVersion: apps/v1
     kind: Deployment

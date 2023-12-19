@@ -989,7 +989,7 @@ vineyardctl deploy vineyard-deployment [flags]
       --pluginImage.localAssemblyImage string         the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
       --pluginImage.recoverImage string               the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
       --replicas int                                  the number of vineyardd replicas (default 3)
-      --securityContext string                        the name of vineyardd
+      --securityContext string                        the json string of security context of vineyardd
       --vineyardd.cpu string                          the cpu requests and limits of vineyard container
       --vineyardd.envs strings                        The environment variables of vineyardd
       --vineyardd.image string                        the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
@@ -1125,7 +1125,7 @@ vineyardctl deploy vineyardd [flags]
       --pluginImage.localAssemblyImage string         the local assembly image of vineyardd workflow (default "ghcr.io/v6d-io/v6d/local-assembly")
       --pluginImage.recoverImage string               the recover image of vineyardd (default "ghcr.io/v6d-io/v6d/recover-job")
       --replicas int                                  the number of vineyardd replicas (default 3)
-      --securityContext string                        the name of vineyardd
+      --securityContext string                        the json string of security context of vineyardd
       --vineyardd.cpu string                          the cpu requests and limits of vineyard container
       --vineyardd.envs strings                        The environment variables of vineyardd
       --vineyardd.image string                        the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
@@ -1699,6 +1699,7 @@ vineyardctl inject [flags]
   -o, --output string                           The output format of the command, support yaml and json (default "yaml")
       --owner-references string                 The owner reference of all injectied resources
       --resource string                         The resource of workload
+      --securityContext string                  the json string of security context of vineyard sidecar container
       --sidecar.cpu string                      the cpu requests and limits of vineyard container
       --sidecar.envs strings                    The environment variables of vineyardd
       --sidecar.image string                    the image of vineyardd (default "vineyardcloudnative/vineyardd:latest")
@@ -1721,6 +1722,8 @@ vineyardctl inject [flags]
       --sidecar.syncCRDs                        enable metrics of vineyardd (default true)
       --sidecar.volume.mountPath string         Set the mount path for the pvc
       --sidecar.volume.pvcname string           Set the pvc name for storing the vineyard objects persistently
+      --volume string                           the json string of vineyard sidecar container volume
+      --volumeMount string                      the json string of vineyard sidecar container volume mount
 ```
 
 ## `vineyardctl inject argo-workflow`

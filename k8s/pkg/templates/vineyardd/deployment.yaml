@@ -45,18 +45,18 @@ spec:
         - name: vineyardd
           image: {{ .Spec.Vineyard.Image }}
           imagePullPolicy: {{ .Spec.Vineyard.ImagePullPolicy }}
-          {{- if .Spec.SecurityContext }}
+{{- if .Spec.SecurityContext }}
           securityContext:
 {{ toYaml .Spec.SecurityContext | indent 12 }}
-          {{- end }}
+{{- end }}
           command:
           - /bin/bash
           - -c
           - >
             /usr/local/bin/vineyardd
             --sync_crds {{ .Spec.Vineyard.SyncCRDs }}
-            {{- if .Spec.SocketVolume.MountPath }}
-            --socket {{ .Spec.SocketVolume.MountPath }}/vineyard.sock
+            {{- if .Spec.Volume.MountPath }}
+            --socket {{ .Spec.Volume.MountPath }}/vineyard.sock
             {{- else }}
             --socket /var/run/vineyard.sock
             {{- end }}
@@ -128,15 +128,15 @@ spec:
             exec:
               command:
               - ls
-              {{- if .Spec.SocketVolume.MountPath }}
-              - {{ .Spec.SocketVolume.MountPath }}/vineyard.sock
+              {{- if .Spec.Volume.MountPath }}
+              - {{ .Spec.Volume.MountPath }}/vineyard.sock
               {{- else }}
               - /var/run/vineyard.sock
               {{- end }}
           volumeMounts:
-          {{- if .Spec.SocketVolume.MountPath }}
+          {{- if .Spec.Volume.MountPath }}
           - name: vineyard-socket
-            mountPath: {{ .Spec.SocketVolume.MountPath }}
+            mountPath: {{ .Spec.Volume.MountPath }}
           {{- else }}
           - name: vineyard-socket
             mountPath: /var/run
@@ -182,10 +182,10 @@ spec:
             mountPath: /var/log/vineyard
         {{- end }}
       volumes:
-      {{- if .Spec.SocketVolume.PvcName }}
+      {{- if .Spec.Volume.PvcName }}
       - name: vineyard-socket
         persistentVolumeClaim:
-          claimName: {{ .Spec.SocketVolume.PvcName }}
+          claimName: {{ .Spec.Volume.PvcName }}
       {{- else }}
       - name: vineyard-socket
         hostPath:

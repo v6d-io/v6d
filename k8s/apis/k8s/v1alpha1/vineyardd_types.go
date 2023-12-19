@@ -223,10 +223,10 @@ type VineyarddSpec struct {
 	// +kubebuilder:default:={enable: false, image: "vineyardcloudnative/vineyard-grok-exporter:latest", imagePullPolicy: "IfNotPresent"}
 	Metric MetricConfig `json:"metric,omitempty"`
 
-	// Socket Volume configuration
+	// Volume configuration
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={pvcName: "", mountPath: ""}
-	SocketVolume VolumeConfig `json:"socketVolume,omitempty"`
+	Volume VolumeConfig `json:"volume,omitempty"`
 
 	// SecurityContext holds the security context settings for the vineyardd container.
 	// +kubebuilder:validation:Optional

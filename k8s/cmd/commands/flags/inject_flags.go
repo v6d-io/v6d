@@ -54,7 +54,7 @@ func ApplySidecarOpts(cmd *cobra.Command) {
 	// setup the vineyard service configuration of vineyard sidecar
 	ApplyServiceOpts(&SidecarOpts.Service, "sidecar", cmd)
 	// setup the vineyard volumes if needed
-	ApplySocketVolumeOpts(&SidecarOpts.Volume, "sidecar", cmd)
+	ApplyVolumeOpts(&SidecarOpts.Volume, "sidecar", cmd)
 	cmd.Flags().StringVarP(&SidecarName, "name", "", "vineyard-sidecar",
 		"The name of sidecar")
 	cmd.Flags().IntVarP(&SidecarOpts.Replicas, "etcd-replicas", "", 1,
@@ -69,4 +69,10 @@ func ApplySidecarOpts(cmd *cobra.Command) {
 			"the injection")
 	cmd.Flags().StringVarP(&OutputFormat, "output", "o", "yaml",
 		"The output format of the command, support yaml and json")
+	cmd.Flags().StringVarP(&VineyardSecurityContext, "securityContext", "", "",
+		"the json string of security context of vineyard sidecar container")
+	cmd.Flags().StringVarP(&VineyardVolume, "volume", "", "",
+		"the json string of vineyard sidecar container volume")
+	cmd.Flags().StringVarP(&VineyardVolumeMount, "volumeMount", "", "",
+		"the json string of vineyard sidecar container volume mount")
 }

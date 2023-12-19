@@ -119,8 +119,8 @@ func ApplyServiceOpts(s *v1alpha1.ServiceConfig, prefix string, cmd *cobra.Comma
 		"the service port of vineyard service")
 }
 
-// ApplySocketVolumeOpts represents the option of pvc volume configuration
-func ApplySocketVolumeOpts(v *v1alpha1.VolumeConfig, prefix string, cmd *cobra.Command) {
+// ApplyVolumeOpts represents the option of pvc volume configuration
+func ApplyVolumeOpts(v *v1alpha1.VolumeConfig, prefix string, cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&v.PvcName, prefix+".volume.pvcname", "",
 		"", "Set the pvc name for storing the vineyard objects persistently")
 	cmd.Flags().StringVarP(&v.MountPath, prefix+".volume.mountPath", "",
@@ -159,7 +159,7 @@ func ApplyPluginImageOpts(cmd *cobra.Command) {
 		"the distributed image of vineyard workflow")
 }
 
-// ApplyVineyarddNameOpts represents the option of vineyard container privileged
+// ApplyVineyarddNameOpts represents the option of vineyardd name
 func ApplyVineyarddNameOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&VineyarddName, "name", "", "vineyardd-sample",
 		"the name of vineyardd")
@@ -176,7 +176,7 @@ func ApplyVineyardVolumeAndVolumeMountOpts(cmd *cobra.Command) {
 // ApplyVineyarddSecurityContextOpts represents the option of vineyard security context
 func ApplyVineyarddPrivilegedOpts(cmd *cobra.Command) {
 	cmd.Flags().StringVarP(&VineyardSecurityContext, "securityContext", "", "",
-		"the name of vineyardd")
+		"the json string of security context of vineyardd")
 }
 
 // ApplyVineyarddOpts represents the option of vineyardd configuration
@@ -196,7 +196,7 @@ func ApplyVineyarddOpts(cmd *cobra.Command) {
 	// setup the vineyard service configuration of vineyardd
 	ApplyServiceOpts(&VineyarddOpts.Service, "vineyardd", cmd)
 	// setup the vineyard socket volumes if needed
-	ApplySocketVolumeOpts(&VineyarddOpts.SocketVolume, "vineyardd", cmd)
+	ApplyVolumeOpts(&VineyarddOpts.Volume, "vineyardd", cmd)
 	// setup the plugin images in a vineyard workflow
 	ApplyPluginImageOpts(cmd)
 	// setup the privileged of vineyard container

@@ -153,18 +153,6 @@ spec:
                     default: ClusterIP
                     type: string
                 type: object
-              socketVolume:
-                default:
-                  mountPath: ""
-                  pvcName: ""
-                properties:
-                  mountPath:
-                    default: ""
-                    type: string
-                  pvcName:
-                    default: ""
-                    type: string
-                type: object
               vineyard:
                 default:
                   image: vineyardcloudnative/vineyardd:latest
@@ -857,6 +845,18 @@ spec:
                   syncCRDs:
                     default: true
                     type: boolean
+                type: object
+              volume:
+                default:
+                  mountPath: ""
+                  pvcName: ""
+                properties:
+                  mountPath:
+                    default: ""
+                    type: string
+                  pvcName:
+                    default: ""
+                    type: string
                 type: object
               volumeMounts:
                 items:

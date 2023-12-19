@@ -49,7 +49,7 @@ func TestDeployBackupJobCmd_second(t *testing.T) {
 	flags.VineyarddOpts.Vineyard.Memory = ""
 	flags.VineyarddOpts.Service.Port = 9600
 	flags.VineyarddOpts.Service.Type = service_type
-	flags.VineyarddOpts.SocketVolume.PvcName = ""
+	flags.VineyarddOpts.Volume.PvcName = ""
 	flags.VineyarddOpts.Vineyard.Size = size
 	deployVineyardDeploymentCmd := NewDeployVineyardDeploymentCmd()
 	deployVineyardDeploymentCmd.Run(deployVineyardDeploymentCmd, []string{})
