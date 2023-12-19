@@ -103,46 +103,47 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                         continue;
                     }
                     Path tableFilePath = status[j].getPath();
-                    FSDataInputStream in = fs.open(tableFilePath);
-                    FileStatus fileStatus = fs.getFileStatus(tableFilePath);
-                    byte[] buffer = new byte[(int) fileStatus.getLen()];
-                    int len = in.read(buffer, 0, (int) fileStatus.getLen());
-                    // Here must check with the condition of len <= 0, rather than len == -1.
-                    // Because Spark will create an empty file, which will cause the len == 0.
-                    if (len <= 0) {
-                        continue;
-                    }
-
-                    // FIXME: Shoule be only one object id in each file.
-                    Set<String> hostSet = new HashSet<>();
-                    String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
-                    for (val objectID : objectIDs) {
-                        ObjectMeta tableMeta;
-                        Table table;
-                        try {
-                            ObjectID tableID = ObjectID.fromString(objectID);
-                            Context.println("try to build table");
-                            tableMeta = client.getMetaData(tableID, false); 
-                        } catch (ObjectNotExists | NumberFormatException e) {
-                            // Skip some invalid file.
-                            Context.println(
-                                    "Skipping invalid file: "
-                                            + tableFilePath
-                                            + ", content: "
-                                            + new String(buffer, StandardCharsets.US_ASCII));
-                            break;
+                    try (FSDataInputStream in = fs.open(tableFilePath)) {
+                        FileStatus fileStatus = fs.getFileStatus(tableFilePath);
+                        byte[] buffer = new byte[(int) fileStatus.getLen()];
+                        int len = in.read(buffer, 0, (int) fileStatus.getLen());
+                        // Here must check with the condition of len <= 0, rather than len == -1.
+                        // Because Spark will create an empty file, which will cause the len == 0.
+                        if (len <= 0) {
+                            continue;
                         }
-                        table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
-                        batchesPerFile += table.getBatchNum();
-                        for (String host : table.getHostsOfRecordBatches(0, table.getBatchNum())) {
-                            hostSet.add(host);
-                        }
-                    }
 
-                    splits.add(new VineyardSplit(status[j].getPath(), 0, batchesPerFile, hostSet.toArray(new String[hostSet.size()]), hostSet.toArray(new String[hostSet.size()])));
-                    // for (int k = 0; k < batchesPerFile; k++) {
-                        // splits.add(new VineyardSplit(status[j].getPath(), k, 1, job));
-                    // }
+                        // FIXME: Shoule be only one object id in each file.
+                        Set<String> hostSet = new HashSet<>();
+                        String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
+                        for (val objectID : objectIDs) {
+                            ObjectMeta tableMeta;
+                            Table table;
+                            try {
+                                ObjectID tableID = ObjectID.fromString(objectID);
+                                Context.println("try to build table");
+                                tableMeta = client.getMetaData(tableID, false); 
+                            } catch (ObjectNotExists | NumberFormatException e) {
+                                // Skip some invalid file.
+                                Context.println(
+                                        "Skipping invalid file: "
+                                                + tableFilePath
+                                                + ", content: "
+                                                + new String(buffer, StandardCharsets.US_ASCII));
+                                break;
+                            }
+                            table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
+                            batchesPerFile += table.getBatchNum();
+                            for (String host : table.getHostsOfRecordBatches(0, table.getBatchNum())) {
+                                hostSet.add(host);
+                            }
+                        }
+
+                        splits.add(new VineyardSplit(status[j].getPath(), 0, batchesPerFile, hostSet.toArray(new String[hostSet.size()]), hostSet.toArray(new String[hostSet.size()])));
+                        // for (int k = 0; k < batchesPerFile; k++) {
+                            // splits.add(new VineyardSplit(status[j].getPath(), k, 1, job));
+                        // }
+                    }
                 }
                 // TODO: would generating a split for each record batch be better?
                 // if (numBatches > 0) {
@@ -195,33 +196,32 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
             throw new IOException("Path of table is a dir!");
         }
 
-        FSDataInputStream in = fs.open(path);
-        byte[] buffer = new byte[(int) tableStatus.getLen()];
-        int len = in.read(buffer, 0, (int) tableStatus.getLen());
-        if (len <= 0) {
-            in.close();
-            return;
-        }
+        try (FSDataInputStream in = fs.open(path)) {        
+            byte[] buffer = new byte[(int) tableStatus.getLen()];
+            int len = in.read(buffer, 0, (int) tableStatus.getLen());
+            if (len <= 0) {
+                return;
+            }
 
-        // getSplits will ensure that the file referenced by path is a valid table.
-        String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
-        ObjectID tableID = ObjectID.fromString(objectIDs[0]);
-        Context.println("try to build table in reader");
-        ObjectMeta tableMeta = client.getMetaData(tableID, false);
-        Table table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
+            // getSplits will ensure that the file referenced by path is a valid table.
+            String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
+            ObjectID tableID = ObjectID.fromString(objectIDs[0]);
+            Context.println("try to build table in reader");
+            ObjectMeta tableMeta = client.getMetaData(tableID, false);
+            Table table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
 
-        recordTotal = split.getLength();
-        Context.println("Start:" + split.getStart() + " length:" + split.getLength());
-        for (int i = (int)split.getStart(); i < split.getLength() + split.getStart(); i++) {
-            val batch = table.getBatch(i);
-            batch.setResolver(resolver);
-            this.batches[this.recordBatchIndex++] = batch;
+            recordTotal = split.getLength();
+            Context.println("Start:" + split.getStart() + " length:" + split.getLength());
+            for (int i = (int)split.getStart(); i < split.getLength() + split.getStart(); i++) {
+                val batch = table.getBatch(i);
+                batch.setResolver(resolver);
+                this.batches[this.recordBatchIndex++] = batch;
+            }
+            schema = table.getSchema().getSchema();
+            // reset to the beginning
+            this.recordBatchIndex = -1;
+            this.recordBatchInnerIndex = 0;
         }
-        schema = table.getSchema().getSchema();
-        // reset to the beginning
-        this.recordBatchIndex = -1;
-        this.recordBatchInnerIndex = 0;
-        in.close();
     }
 
     @Override

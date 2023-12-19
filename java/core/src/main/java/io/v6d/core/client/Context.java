@@ -36,7 +36,7 @@ public class Context {
         return client;
     }
 
-    public static synchronized InstanceID getClientInstanceId() {
+    public static synchronized InstanceID getInstanceID() {
         if (client == null) {
             return null;
         }

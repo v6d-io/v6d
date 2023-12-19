@@ -90,7 +90,7 @@ public class TableBuilder implements ObjectBuilder {
         return client.createMetaData(meta);
     }
 
-    public static ObjectMeta fromRecordMeta(Client client, ObjectMeta schemaMeta, List<ObjectMeta> recordBatchMetas, int columns) throws VineyardException {
+    public static ObjectMeta fromRecordBatchMeta(Client client, ObjectMeta schemaMeta, List<ObjectMeta> recordBatchMetas, int columns) throws VineyardException {
         val meta = ObjectMeta.empty();
 
         meta.setTypename("vineyard::Table");
@@ -125,7 +125,7 @@ public class TableBuilder implements ObjectBuilder {
             }
         }
         Context.println("merged table batch num:" + recordBatchMetas.size());
-        return fromRecordMeta(client, schemaMeta, recordBatchMetas, columns);
+        return fromRecordBatchMeta(client, schemaMeta, recordBatchMetas, columns);
 
     }
 }

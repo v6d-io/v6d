@@ -280,12 +280,13 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         }
 
         try {
-            FSDataInputStream in = open(path, 0);
-            byte[] objectIDByteArray = new byte[(int) fileStatus.getLen()];
-            int len = in.read(objectIDByteArray);
-            String[] objectIDStrs =
-                    new String(objectIDByteArray, 0, len, StandardCharsets.US_ASCII).split("\n");
-            deleteVineyardObjectWithObjectIDStr(objectIDStrs);
+            try(FSDataInputStream in = open(path, 0)) {
+                byte[] objectIDByteArray = new byte[(int) fileStatus.getLen()];
+                int len = in.read(objectIDByteArray);
+                String[] objectIDStrs =
+                        new String(objectIDByteArray, 0, len, StandardCharsets.US_ASCII).split("\n");
+                deleteVineyardObjectWithObjectIDStr(objectIDStrs);
+            }
             deleteVineyardObjectWithName(new String[] {path.toString()});
         } catch (Exception e) {
             Context.println("Failed to delete file: " + e.getMessage());

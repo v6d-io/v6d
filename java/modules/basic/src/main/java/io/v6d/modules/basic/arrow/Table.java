@@ -150,8 +150,8 @@ class TableResolver extends ObjectFactory.Resolver {
                         .mapToObj(
                                 index -> {
                                     val batch = meta.getMemberMeta("partitions_-" + index);
-                                    Context.println("partition:" + index + " object id is:" + batch.getId() + " instance id is:" + batch.getInstanceId() + " current client id is:" + Context.getClientInstanceId());
-                                    if (batch.getInstanceId().compareTo(Context.getClientInstanceId()) == 0) {
+                                    Context.println("partition:" + index + " object id is:" + batch.getId() + " instance id is:" + batch.getInstanceId() + " current client id is:" + Context.getInstanceID());
+                                    if (batch.getInstanceId().compareTo(Context.getInstanceID()) == 0) {
                                         return (RecordBatch) ObjectFactory.getFactory().resolve(batch);
                                     }
                                     return null;
