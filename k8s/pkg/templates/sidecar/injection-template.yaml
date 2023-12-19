@@ -8,6 +8,10 @@ spec:
     - name: vineyard-sidecar
       image: {{ .Spec.Vineyard.Image }}
       imagePullPolicy: {{ .Spec.Vineyard.ImagePullPolicy }}
+{{- if .Spec.SecurityContext }}
+          securityContext:
+{{ toYaml .Spec.SecurityContext | indent 12 }}
+{{- end }}
       env:
       - name: VINEYARDD_UID
         value: {{ .UID }}
@@ -54,6 +58,9 @@ spec:
       {{- else }}
         mountPath: /var/run
       {{- end }}
+{{- if .Spec.VolumeMounts }}
+{{ toYaml .Spec.VolumeMounts | indent 6 }}
+{{- end }}
       resources:
         requests:
           {{- if .Spec.Vineyard.CPU }}
@@ -91,6 +98,9 @@ spec:
   {{- else }}
     emptyDir: {}
   {{- end }}
+{{- if .Spec.Volumes }}
+{{ toYaml .Spec.Volumes | indent 4 }}
+{{- end }}
   {{- if .Spec.Metric.Enable }}
   - name: log
     emptyDir: {}

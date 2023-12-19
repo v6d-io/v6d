@@ -45,6 +45,10 @@ spec:
         - name: vineyardd
           image: {{ .Spec.Vineyard.Image }}
           imagePullPolicy: {{ .Spec.Vineyard.ImagePullPolicy }}
+{{- if .Spec.SecurityContext }}
+          securityContext:
+{{ toYaml .Spec.SecurityContext | indent 12 }}
+{{- end }}
           command:
           - /bin/bash
           - -c
@@ -137,6 +141,9 @@ spec:
           - name: vineyard-socket
             mountPath: /var/run
           {{- end }}
+{{- if .Spec.VolumeMounts }}
+{{ toYaml .Spec.VolumeMounts | indent 10 }}
+{{- end }}
           {{- if .Spec.Vineyard.Spill.Name }}
           - name: {{ .Spec.Vineyard.Spill.Name }}
             mountPath: {{ .Spec.Vineyard.Spill.Path }}
@@ -184,6 +191,9 @@ spec:
         hostPath:
           path: {{ .Spec.Vineyard.Socket }}
       {{- end }}
+{{- if .Spec.Volumes }}
+{{ toYaml .Spec.Volumes | indent 6 }}
+{{- end }}
       {{- if .Spec.Vineyard.Spill.Name }}
       - name: {{ .Spec.Vineyard.Spill.Name }}
         persistentVolumeClaim:

@@ -180,6 +180,28 @@ func BuildVineyard() (*v1alpha1.Vineyardd, error) {
 	if err != nil {
 		log.Fatal(err, "failed to build the vineyardd from input")
 	}
+	// parse the volume and volume mounts
+	if flags.VineyardVolume != "" {
+		volumes, err := util.ParseVolume(flags.VineyardVolume)
+		if err != nil {
+			log.Fatal(err, "failed to parse the volumes")
+		}
+		vineyardd.Spec.Volumes = *volumes
+	}
+	if flags.VineyardVolumeMount != "" {
+		volumeMounts, err := util.ParseVolumeMount(flags.VineyardVolumeMount)
+		if err != nil {
+			log.Fatal(err, "failed to parse the volume mounts")
+		}
+		vineyardd.Spec.VolumeMounts = *volumeMounts
+	}
+	if flags.VineyardSecurityContext != "" {
+		securityContext, err := util.ParseSecurityContext(flags.VineyardSecurityContext)
+		if err != nil {
+			log.Fatal(err, "failed to parse the security context")
+		}
+		vineyardd.Spec.SecurityContext = *securityContext
+	}
 	return vineyardd, nil
 }
 

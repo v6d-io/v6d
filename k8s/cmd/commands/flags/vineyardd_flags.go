@@ -19,7 +19,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
+	corev1 "k8s.io/api/core/v1"
 )
+
+type VolumeConfig struct {
+	Volumes      []corev1.Volume      `yaml:"volumes"`
+	VolumeMounts []corev1.VolumeMount `yaml:"volumeMounts"`
+}
 
 var (
 	// DefaultVineyardSocket is the default vineyard socket path
@@ -27,6 +33,9 @@ var (
 
 	// VineyarddName is the name of vineyardd
 	VineyarddName string
+
+	// VineyardSecurityContext is the json string of security context of vineyardd
+	VineyardSecurityContext string
 
 	// VineyarddOpts holds all configuration of vineyardd Spec
 	VineyarddOpts v1alpha1.VineyarddSpec
@@ -46,6 +55,12 @@ var (
 
 	// VineyardRPCSocket is the path of vineyardd RPC socket
 	VineyardRPCSocket string
+
+	// VineyardVolume is the json string of vineyardd volume
+	VineyardVolume string
+
+	// VineyardVolumeMount is the json string of vineyardd volume mount
+	VineyardVolumeMount string
 
 	// NamespacedVineyardDeployment is the namespaced name of vineyard deployment
 	NamespacedVineyardDeployment string
@@ -150,6 +165,20 @@ func ApplyVineyarddNameOpts(cmd *cobra.Command) {
 		"the name of vineyardd")
 }
 
+// ApplyVineyardVolumeAndVolumeMountOpts represents the option of vineyardd volume and volume mount
+func ApplyVineyardVolumeAndVolumeMountOpts(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&VineyardVolume, "volume", "", "",
+		"the json string of vineyardd volume")
+	cmd.Flags().StringVarP(&VineyardVolumeMount, "volumeMount", "", "",
+		"the json string of vineyardd volume mount")
+}
+
+// ApplyVineyarddSecurityContextOpts represents the option of vineyard security context
+func ApplyVineyarddPrivilegedOpts(cmd *cobra.Command) {
+	cmd.Flags().StringVarP(&VineyardSecurityContext, "securityContext", "", "",
+		"the json string of security context of vineyardd")
+}
+
 // ApplyVineyarddOpts represents the option of vineyardd configuration
 func ApplyVineyarddOpts(cmd *cobra.Command) {
 	// setup the vineyardd configuration
@@ -166,8 +195,12 @@ func ApplyVineyarddOpts(cmd *cobra.Command) {
 	ApplyMetricContainerOpts(&VineyarddOpts.Metric, "vineyardd", cmd)
 	// setup the vineyard service configuration of vineyardd
 	ApplyServiceOpts(&VineyarddOpts.Service, "vineyardd", cmd)
-	// setup the vineyard volumes if needed
+	// setup the vineyard socket volumes if needed
 	ApplyVolumeOpts(&VineyarddOpts.Volume, "vineyardd", cmd)
 	// setup the plugin images in a vineyard workflow
 	ApplyPluginImageOpts(cmd)
+	// setup the privileged of vineyard container
+	ApplyVineyarddPrivilegedOpts(cmd)
+	// setup the vineyardd volume and volume mount
+	ApplyVineyardVolumeAndVolumeMountOpts(cmd)
 }

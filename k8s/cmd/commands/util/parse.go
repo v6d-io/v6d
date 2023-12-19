@@ -201,3 +201,33 @@ func ParseVineyardClusters(clusters []string) (*[]v1alpha1.VineyardClusters, err
 	}
 	return &vineyardClusters, nil
 }
+
+// ParseVolume parse the json string to corev1.Volume
+func ParseVolume(volumeJSON string) (*[]corev1.Volume, error) {
+	var volume []corev1.Volume
+	err := json.Unmarshal([]byte(volumeJSON), &volume)
+	if err != nil {
+		return nil, err
+	}
+	return &volume, nil
+}
+
+// ParseVolumeMount parse the json string to corev1.VolumeMount
+func ParseVolumeMount(volumeMountJSON string) (*[]corev1.VolumeMount, error) {
+	var volumeMount []corev1.VolumeMount
+	err := json.Unmarshal([]byte(volumeMountJSON), &volumeMount)
+	if err != nil {
+		return nil, err
+	}
+	return &volumeMount, nil
+}
+
+// ParseSecurityContext parse the json string to corev1.SecurityContext
+func ParseSecurityContext(securityContextJSON string) (*corev1.SecurityContext, error) {
+	var securityContext corev1.SecurityContext
+	err := json.Unmarshal([]byte(securityContextJSON), &securityContext)
+	if err != nil {
+		return nil, err
+	}
+	return &securityContext, nil
+}

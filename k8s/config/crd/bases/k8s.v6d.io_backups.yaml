@@ -3,7 +3,7 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.11.0
+    controller-gen.kubebuilder.io/version: v0.8.0
   creationTimestamp: null
   name: backups.k8s.v6d.io
 spec:
@@ -55,7 +55,6 @@ spec:
                     - kind
                     - name
                     type: object
-                    x-kubernetes-map-type: atomic
                   dataSourceRef:
                     properties:
                       apiGroup:
@@ -68,7 +67,6 @@ spec:
                     - kind
                     - name
                     type: object
-                    x-kubernetes-map-type: atomic
                   resources:
                     properties:
                       limits:
@@ -111,7 +109,6 @@ spec:
                           type: string
                         type: object
                     type: object
-                    x-kubernetes-map-type: atomic
                   storageClassName:
                     type: string
                   volumeMode:
@@ -198,7 +195,6 @@ spec:
                           namespace:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                       user:
                         type: string
                     required:
@@ -217,7 +213,6 @@ spec:
                           namespace:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                       volumeID:
                         type: string
                     required:
@@ -240,7 +235,6 @@ spec:
                       uid:
                         type: string
                     type: object
-                    x-kubernetes-map-type: granular
                   csi:
                     properties:
                       controllerExpandSecretRef:
@@ -250,7 +244,6 @@ spec:
                           namespace:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                       controllerPublishSecretRef:
                         properties:
                           name:
@@ -258,19 +251,10 @@ spec:
                           namespace:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                       driver:
                         type: string
                       fsType:
                         type: string
-                      nodeExpandSecretRef:
-                        properties:
-                          name:
-                            type: string
-                          namespace:
-                            type: string
-                        type: object
-                        x-kubernetes-map-type: atomic
                       nodePublishSecretRef:
                         properties:
                           name:
@@ -278,7 +262,6 @@ spec:
                           namespace:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                       nodeStageSecretRef:
                         properties:
                           name:
@@ -286,7 +269,6 @@ spec:
                           namespace:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                       readOnly:
                         type: boolean
                       volumeAttributes:
@@ -336,7 +318,6 @@ spec:
                           namespace:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                     required:
                     - driver
                     type: object
@@ -414,7 +395,6 @@ spec:
                           namespace:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                       targetPortal:
                         type: string
                     required:
@@ -487,12 +467,10 @@ spec:
                                     type: object
                                   type: array
                               type: object
-                              x-kubernetes-map-type: atomic
                             type: array
                         required:
                         - nodeSelectorTerms
                         type: object
-                        x-kubernetes-map-type: atomic
                     type: object
                   persistentVolumeReclaimPolicy:
                     type: string
@@ -557,7 +535,6 @@ spec:
                           namespace:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                       user:
                         type: string
                     required:
@@ -581,7 +558,6 @@ spec:
                           namespace:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                       sslEnabled:
                         type: boolean
                       storageMode:
@@ -622,7 +598,6 @@ spec:
                           uid:
                             type: string
                         type: object
-                        x-kubernetes-map-type: atomic
                       volumeName:
                         type: string
                       volumeNamespace:
@@ -659,3 +634,9 @@ spec:
     storage: true
     subresources:
       status: {}
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

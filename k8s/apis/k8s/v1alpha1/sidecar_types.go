@@ -16,6 +16,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -56,6 +57,21 @@ type SidecarSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={type: "ClusterIP", port: 9600}
 	Service ServiceConfig `json:"service,omitempty"`
+
+	// SecurityContext holds the security context settings for the vineyardd container.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	SecurityContext corev1.SecurityContext `json:"securityContext,omitempty"`
+
+	// Volumes is the list of Kubernetes volumes that can be mounted by the vineyard container.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// VolumeMounts specifies the volumes listed in ".spec.volumes" to mount into the vineyard container.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 // SidecarStatus defines the observed state of Sidecar

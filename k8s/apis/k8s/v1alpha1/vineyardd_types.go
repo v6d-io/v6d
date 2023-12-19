@@ -227,6 +227,21 @@ type VineyarddSpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default:={pvcName: "", mountPath: ""}
 	Volume VolumeConfig `json:"volume,omitempty"`
+
+	// SecurityContext holds the security context settings for the vineyardd container.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	SecurityContext corev1.SecurityContext `json:"securityContext,omitempty"`
+
+	// Volumes is the list of Kubernetes volumes that can be mounted by the vineyard deployment.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	Volumes []corev1.Volume `json:"volumes,omitempty"`
+
+	// VolumeMounts specifies the volumes listed in ".spec.volumes" to mount into the vineyard deployment.
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default:={}
+	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
 // VineyarddStatus defines the observed state of Vineyardd

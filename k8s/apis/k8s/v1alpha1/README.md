@@ -473,6 +473,9 @@ _Appears in:_
 | `metric` _[MetricConfig](#metricconfig)_ | metric container configuration |
 | `volume` _[VolumeConfig](#volumeconfig)_ | metric configurations |
 | `service` _[ServiceConfig](#serviceconfig)_ | rpc service configuration |
+| `securityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#securitycontext-v1-core)_ | SecurityContext holds the security context settings for the vineyardd container. |
+| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volume-v1-core) array_ | Volumes is the list of Kubernetes volumes that can be mounted by the vineyard container. |
+| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volumemount-v1-core) array_ | VolumeMounts specifies the volumes listed in ".spec.volumes" to mount into the vineyard container. |
 
 
 
@@ -587,6 +590,9 @@ _Appears in:_
 | `pluginImage` _[PluginImageConfig](#pluginimageconfig)_ | operation container configuration nolint: lll |
 | `metric` _[MetricConfig](#metricconfig)_ | metric container configuration |
 | `volume` _[VolumeConfig](#volumeconfig)_ | Volume configuration |
+| `securityContext` _[SecurityContext](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#securitycontext-v1-core)_ | SecurityContext holds the security context settings for the vineyardd container. |
+| `volumes` _[Volume](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volume-v1-core) array_ | Volumes is the list of Kubernetes volumes that can be mounted by the vineyard deployment. |
+| `volumeMounts` _[VolumeMount](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.25/#volumemount-v1-core) array_ | VolumeMounts specifies the volumes listed in ".spec.volumes" to mount into the vineyard deployment. |
 
 
 

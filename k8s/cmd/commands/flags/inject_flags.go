@@ -69,4 +69,10 @@ func ApplySidecarOpts(cmd *cobra.Command) {
 			"the injection")
 	cmd.Flags().StringVarP(&OutputFormat, "output", "o", "yaml",
 		"The output format of the command, support yaml and json")
+	cmd.Flags().StringVarP(&VineyardSecurityContext, "securityContext", "", "",
+		"the json string of security context of vineyard sidecar container")
+	cmd.Flags().StringVarP(&VineyardVolume, "volume", "", "",
+		"the json string of vineyard sidecar container volume")
+	cmd.Flags().StringVarP(&VineyardVolumeMount, "volumeMount", "", "",
+		"the json string of vineyard sidecar container volume mount")
 }
