@@ -313,11 +313,6 @@ jobs:
             python3 setup_${pkg}.py bdist_wheel
           done
 
-          # build java SDK
-          pushd java
-          mvn clean package -T 1C -DskipTests
-          popd
-
           # install python packages
           twine check dist/*.whl
           sudo pip3 install dist/*.whl -U
