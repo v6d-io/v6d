@@ -16,7 +16,6 @@ package io.v6d.core.client;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.base.StopwatchContext;
-
 import io.v6d.core.common.util.InstanceID;
 import io.v6d.core.common.util.VineyardException;
 import java.text.SimpleDateFormat;

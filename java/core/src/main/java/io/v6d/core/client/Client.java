@@ -51,7 +51,6 @@ public abstract class Client {
 
     public ObjectMeta getMetaData(ObjectID id, boolean fetch, boolean sync_remote)
             throws VineyardException {
-        // return this.getMetaData(this.migrateObject(id), false, false);
         return this.getMetaData(id, fetch, sync_remote, false);
     }
 

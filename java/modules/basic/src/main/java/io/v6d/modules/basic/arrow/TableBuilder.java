@@ -17,8 +17,6 @@ package io.v6d.modules.basic.arrow;
 import static java.util.Objects.requireNonNull;
 
 import io.v6d.core.client.Client;
-import io.v6d.core.client.Context;
-import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectBase;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
@@ -90,7 +88,9 @@ public class TableBuilder implements ObjectBuilder {
         return client.createMetaData(meta);
     }
 
-    public static ObjectMeta fromRecordBatchMeta(Client client, ObjectMeta schemaMeta, List<ObjectMeta> recordBatchMetas, int columns) throws VineyardException {
+    public static ObjectMeta fromRecordBatchMeta(
+            Client client, ObjectMeta schemaMeta, List<ObjectMeta> recordBatchMetas, int columns)
+            throws VineyardException {
         val meta = ObjectMeta.empty();
 
         meta.setTypename("vineyard::Table");
@@ -108,7 +108,8 @@ public class TableBuilder implements ObjectBuilder {
         return client.createMetaData(meta);
     }
 
-    public static ObjectMeta mergeTables(Client client, ObjectMeta[] tableMetas) throws VineyardException {
+    public static ObjectMeta mergeTables(Client client, ObjectMeta[] tableMetas)
+            throws VineyardException {
         if (tableMetas.length == 0) {
             return null;
         }
@@ -124,8 +125,6 @@ public class TableBuilder implements ObjectBuilder {
                 recordBatchMetas.add(tableMetas[i].getMemberMeta("partitions_-" + j));
             }
         }
-        Context.println("merged table batch num:" + recordBatchMetas.size());
         return fromRecordBatchMeta(client, schemaMeta, recordBatchMetas, columns);
-
     }
 }

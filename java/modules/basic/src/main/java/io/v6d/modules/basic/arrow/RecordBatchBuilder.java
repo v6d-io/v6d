@@ -16,16 +16,14 @@ package io.v6d.modules.basic.arrow;
 
 import static java.util.Objects.requireNonNull;
 
-import java.net.InetAddress;
-
 import io.v6d.core.client.Client;
-import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
 import io.v6d.core.client.ds.ObjectBuilder;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.VineyardException;
 import io.v6d.modules.basic.arrow.util.ObjectTransformer;
 import io.v6d.modules.basic.columnar.ColumnarDataBuilder;
+import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.*;
@@ -149,6 +147,7 @@ public class RecordBatchBuilder implements ObjectBuilder {
         meta.addMember("schema_", schemaBuilder.seal(client));
 
         // Currently each vineyardd and each namenode manager are on the same node.
+        // FIXME: This property does not seem to work in yarn.
         InetAddress localhost;
         String hostname;
         try {
@@ -157,7 +156,6 @@ public class RecordBatchBuilder implements ObjectBuilder {
         } catch (Exception e) {
             hostname = "unknown";
         }
-        Context.println("create file host: " + hostname);
         meta.setValue("host_", hostname);
 
         for (int index = 0; index < arrayBuilders.size(); ++index) {

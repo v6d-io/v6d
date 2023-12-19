@@ -20,13 +20,11 @@ import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
-import io.v6d.core.common.util.VineyardException;
 import io.v6d.core.common.util.VineyardException.ObjectNotExists;
 import io.v6d.modules.basic.arrow.*;
 import io.v6d.modules.basic.arrow.util.ObjectResolver;
 import io.v6d.modules.basic.columnar.ColumnarData;
 import io.v6d.modules.basic.filesystem.VineyardFileUtils;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -35,11 +33,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.Set;
-
 import lombok.val;
 import org.apache.arrow.vector.VectorSchemaRoot;
 import org.apache.arrow.vector.types.pojo.Schema;
-import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -62,15 +58,12 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
     public RecordReader<NullWritable, RecordWrapperWritable> getRecordReader(
             InputSplit genericSplit, JobConf job, Reporter reporter) throws IOException {
         reporter.setStatus(genericSplit.toString());
-        return new VineyardRecordReader(job, (VineyardSplit) ((VineyardSplit)genericSplit));
+        return new VineyardRecordReader(job, (VineyardSplit) ((VineyardSplit) genericSplit));
     }
 
     @Override
     public VineyardSplit[] getSplits(JobConf job, int numSplits) throws IOException {
         Path paths[] = FileInputFormat.getInputPaths(job);
-        for (int i = 0; i < paths.length ;i++) {
-            Context.println("Get splits of path:" + paths[i].toString());
-        }
 
         val client = Context.getClient();
         // split table by paths
@@ -115,14 +108,14 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
 
                         // FIXME: Shoule be only one object id in each file.
                         Set<String> hostSet = new HashSet<>();
-                        String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
+                        String[] objectIDs =
+                                new String(buffer, StandardCharsets.US_ASCII).split("\n");
                         for (val objectID : objectIDs) {
                             ObjectMeta tableMeta;
                             Table table;
                             try {
                                 ObjectID tableID = ObjectID.fromString(objectID);
-                                Context.println("try to build table");
-                                tableMeta = client.getMetaData(tableID, false); 
+                                tableMeta = client.getMetaData(tableID, false);
                             } catch (ObjectNotExists | NumberFormatException e) {
                                 // Skip some invalid file.
                                 Context.println(
@@ -134,24 +127,23 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
                             }
                             table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
                             batchesPerFile += table.getBatchNum();
-                            for (String host : table.getHostsOfRecordBatches(0, table.getBatchNum())) {
+                            for (String host :
+                                    table.getHostsOfRecordBatches(0, table.getBatchNum())) {
                                 hostSet.add(host);
                             }
                         }
 
-                        splits.add(new VineyardSplit(status[j].getPath(), 0, batchesPerFile, hostSet.toArray(new String[hostSet.size()]), hostSet.toArray(new String[hostSet.size()])));
-                        // for (int k = 0; k < batchesPerFile; k++) {
-                            // splits.add(new VineyardSplit(status[j].getPath(), k, 1, job));
-                        // }
+                        splits.add(
+                                new VineyardSplit(
+                                        status[j].getPath(),
+                                        0,
+                                        batchesPerFile,
+                                        hostSet.toArray(new String[hostSet.size()]),
+                                        hostSet.toArray(new String[hostSet.size()])));
                     }
                 }
-                // TODO: would generating a split for each record batch be better?
-                // if (numBatches > 0) {
-                    // splits.add(new VineyardSplit(path, 0, numBatches, job));
-                // }
             }
         }
-        Context.println("total splits:" + splits.size());
         return splits.toArray(new VineyardSplit[splits.size()]);
     }
 }
@@ -176,15 +168,8 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
         this.recordBatchIndex = 0;
 
         Path path = split.getPath();
-        String tableName = path.toString();
 
         FileSystem fs = path.getFileSystem(job);
-        // FileStatus[] tableStatus = fs.listStatus(path);
-        // if (tableStatus.length == 0) {
-        //     throw new VineyardException.ObjectNotExists("Table not found: " + tableName);
-        // }
-        // Queue<FileStatus[]> dirStatus = new LinkedList<>();
-        // dirStatus.add(tableStatus);
         FileStatus tableStatus = fs.getFileStatus(path);
 
         val client = Context.getClient();
@@ -196,7 +181,7 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
             throw new IOException("Path of table is a dir!");
         }
 
-        try (FSDataInputStream in = fs.open(path)) {        
+        try (FSDataInputStream in = fs.open(path)) {
             byte[] buffer = new byte[(int) tableStatus.getLen()];
             int len = in.read(buffer, 0, (int) tableStatus.getLen());
             if (len <= 0) {
@@ -206,13 +191,11 @@ class VineyardRecordReader implements RecordReader<NullWritable, RecordWrapperWr
             // getSplits will ensure that the file referenced by path is a valid table.
             String[] objectIDs = new String(buffer, StandardCharsets.US_ASCII).split("\n");
             ObjectID tableID = ObjectID.fromString(objectIDs[0]);
-            Context.println("try to build table in reader");
             ObjectMeta tableMeta = client.getMetaData(tableID, false);
             Table table = (Table) ObjectFactory.getFactory().resolve(tableMeta);
 
             recordTotal = split.getLength();
-            Context.println("Start:" + split.getStart() + " length:" + split.getLength());
-            for (int i = (int)split.getStart(); i < split.getLength() + split.getStart(); i++) {
+            for (int i = (int) split.getStart(); i < split.getLength() + split.getStart(); i++) {
                 val batch = table.getBatch(i);
                 batch.setResolver(resolver);
                 this.batches[this.recordBatchIndex++] = batch;

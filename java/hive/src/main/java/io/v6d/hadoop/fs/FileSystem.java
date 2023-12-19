@@ -17,12 +17,9 @@ package io.v6d.hadoop.fs;
 import com.google.common.base.StopwatchContext;
 import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
-import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.hive.ql.io.CloseableReentrantLock;
-import io.v6d.modules.basic.arrow.SchemaBuilder;
-import io.v6d.modules.basic.arrow.Table;
 import io.v6d.modules.basic.arrow.TableBuilder;
 import io.v6d.modules.basic.filesystem.VineyardFile;
 import io.v6d.modules.basic.filesystem.VineyardFileStat;
@@ -280,11 +277,12 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         }
 
         try {
-            try(FSDataInputStream in = open(path, 0)) {
+            try (FSDataInputStream in = open(path, 0)) {
                 byte[] objectIDByteArray = new byte[(int) fileStatus.getLen()];
                 int len = in.read(objectIDByteArray);
                 String[] objectIDStrs =
-                        new String(objectIDByteArray, 0, len, StandardCharsets.US_ASCII).split("\n");
+                        new String(objectIDByteArray, 0, len, StandardCharsets.US_ASCII)
+                                .split("\n");
                 deleteVineyardObjectWithObjectIDStr(objectIDStrs);
             }
             deleteVineyardObjectWithName(new String[] {path.toString()});
@@ -352,10 +350,12 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         ObjectMeta dstTableMeta = client.getMetaData(dstObjectID, false);
 
         // Merge src tables and dst tables
-        ObjectMeta mergedTableMeta = TableBuilder.mergeTables(client, new ObjectMeta[] {srcTableMeta, dstTableMeta});
+        ObjectMeta mergedTableMeta =
+                TableBuilder.mergeTables(client, new ObjectMeta[] {srcTableMeta, dstTableMeta});
         ObjectID mergObjectID = mergedTableMeta.getId();
         client.persist(mergObjectID);
-        FSDataOutputStream out = createInternal(dst, new FsPermission((short) 777), true, 0, (short) 1, 1, null);
+        FSDataOutputStream out =
+                createInternal(dst, new FsPermission((short) 777), true, 0, (short) 1, 1, null);
         out.write((mergObjectID.toString() + "\n").getBytes(StandardCharsets.US_ASCII));
         out.close();
 

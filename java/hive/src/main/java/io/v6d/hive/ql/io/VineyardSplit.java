@@ -30,7 +30,8 @@ public class VineyardSplit extends FileSplit {
         super(file, start, length, hosts);
     }
 
-    public VineyardSplit(Path file, long start, long length, String[] hosts, String[] inMemoryHosts) {
+    public VineyardSplit(
+            Path file, long start, long length, String[] hosts, String[] inMemoryHosts) {
         super(file, start, length, hosts, inMemoryHosts);
     }
 }
