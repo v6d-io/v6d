@@ -1,0 +1,157 @@
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Vineyard Java CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'java/**'
+      - '.github/workflows/java-ci.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'java/**'
+      - '.github/workflows/java-ci.yml'
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  CMAKE_C_COMPILER_LAUNCHER: ccache
+  CMAKE_CXX_COMPILER_LAUNCHER: ccache
+
+jobs:
+  ci:
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        malloc: [dlmalloc]
+        metadata: [etcd]
+    env:
+      RUNNER_ARGS: "--meta=${{ matrix.metadata }}"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Cache for ccache
+        uses: actions/cache@v3
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-${{ matrix.metadata }}-ccache-${{ hashFiles('**/git-modules.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.metadata }}-ccache-
+
+      - name: Install Dependencies for Linux
+        if: runner.os == 'Linux'
+        run: |
+          export PATH=/usr/lib/ccache:$PATH
+
+          sudo apt update -y
+          sudo apt-get install -y ca-certificates \
+                            ccache \
+                            cmake \
+                            doxygen \
+                            libboost-all-dev \
+                            libcurl4-openssl-dev \
+                            libgflags-dev \
+                            libgoogle-glog-dev \
+                            libgrpc-dev \
+                            libgrpc++-dev \
+                            libmpich-dev \
+                            libprotobuf-dev \
+                            libssl-dev \
+                            libunwind-dev \
+                            libz-dev \
+                            protobuf-compiler-grpc \
+                            python3-pip \
+                            openjdk-8-jdk \
+                            default-jdk \
+                            wget
+
+          # install apache-arrow
+          wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+          sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+          sudo apt update
+          sudo apt install -y libarrow-dev=14.0.1-1 \
+                              libarrow-dataset-dev=14.0.1-1 \
+                              libarrow-acero-dev=14.0.1-1 \
+                              libarrow-flight-dev=14.0.1-1 \
+                              libgandiva-dev=14.0.1-1 \
+                              libparquet-dev=14.0.1-1
+
+          # install python packages for codegen, and io adaptors
+          sudo pip3 install -U "Pygments>=2.4.1"
+          sudo pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt
+
+          # install deps for java
+          sudo apt install -y default-jdk-headless maven
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v3
+
+      - name: CMake
+        run: |
+          export PATH=/usr/lib/ccache:$PATH
+          export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+
+          mkdir build
+          cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug \
+                   -DBUILD_VINEYARD_JAVA=ON
+
+          if [ "${{ matrix.metadata }}" == "redis" ]; then
+            cmake .. -DBUILD_VINEYARD_SERVER_REDIS=ON
+          fi
+  
+      - name: Build
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+
+          pushd build
+          make -j`nproc`
+          sudo make install
+          popd
+
+      - name: Java test
+        run: |
+          # start vineyardd
+          export VINEYARD_IPC_SOCKET=/tmp/vineyard.ci.sock
+          start_port=8000
+          end_port=9000
+
+          function is_port_taken() {
+              (echo >/dev/tcp/localhost/$1) >/dev/null 2>&1
+          }
+
+          for (( port=start_port; port<=end_port; port++ )); do
+              if ! is_port_taken $port; then
+                  export FREE_PORT=$port
+                  break
+              fi
+          done
+
+          ./build/bin/vineyardd --socket=/tmp/vineyard.ci.sock -rpc_socket_port=$FREE_PORT --etcd_endpoint="0.0.0.0:2382" &
+
+          pushd java
+          mvn test -e
+          popd
