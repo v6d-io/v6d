@@ -232,8 +232,7 @@ services:
       retries: 5
     volumes:
       - ~/vineyard_sock/metastore/:/tmp/vineyard_sock
-      - /home/yuansm/v6d/share:/auxlib/
-      - ~/hive-2.3.9/apache-hive-2.3.9-src:/hive-2.3.9
+      - ~/share:/auxlib/
     environment:
       VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
   hive-hiveserver2:
@@ -258,7 +257,7 @@ services:
       retries: 5
     volumes:
       - ~/vineyard_sock/hiveserver/:/tmp/vineyard_sock
-      - /home/yuansm/v6d/share:/auxlib/
+      - ~/share:/auxlib/
     environment:
       VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
 

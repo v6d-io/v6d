@@ -51,6 +51,7 @@ public class Table extends Object {
         this.columns = columns;
         this.batches = batches;
         this.batchNum = batches.size();
+        batchMetas = new java.util.ArrayList<>();
         for (int i = 0; i < this.batchNum; i++) {
             batchMetas.add(meta.getMemberMeta("partitions_-" + i));
         }

@@ -104,7 +104,7 @@ public class TableBuilder implements ObjectBuilder {
             meta.addMember("partitions_-" + index, recordBatchMetas.get(index));
         }
         meta.setGlobal(true);
-        meta.setNBytes(0); // FIXME
+        meta.setNBytes(0);
         return client.createMetaData(meta);
     }
 

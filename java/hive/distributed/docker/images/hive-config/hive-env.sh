@@ -61,19 +61,21 @@ export TEZ_HOME=/opt/apache/tez
 
 export TEZ_JARS=""
 
-for jar in `ls $TEZ_HOME |grep jar`; do
-export TEZ_JARS=$TEZ_JARS:$TEZ_HOME/$jar
+export TEZ_JARS=""
+    for jar in $(find $TEZ_HOME -maxdepth 1 -type f -name "*.jar"); do
+        export TEZ_JARS=$TEZ_JARS:$jar
 done
 
-for jar in `ls $TEZ_HOME/lib`; do
-export TEZ_JARS=$TEZ_JARS:$TEZ_HOME/lib/$jar
+for jar in $(find $TEZ_HOME/lib -maxdepth 1 -type f -name "*.jar"); do
+    export TEZ_JARS=$TEZ_JARS:$jar
 done
 
-for jar in `ls /auxlib`; do
-export TEZ_JARS=$TEZ_JARS:/auxlib/$jar
+for jar in $(find /auxlib/ -maxdepth 1 -type f -name "*.jar"); do
+    export TEZ_JARS=$TEZ_JARS:$jar
 done
 
 export TEZ_JARS=${TEZ_JARS:1}
 export HIVE_AUX_JARS_PATH=$TEZ_JARS
 export HADOOP_CLIENT_OPTS="$HADOOP_CLIENT_OPTS -Xmx1G -Djnr.ffi.asm.enabled=false"
+echo $TEZ_JARS
 

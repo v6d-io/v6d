@@ -27,7 +27,7 @@ Build Hive Docker Image with Hadoop
 
 ### Prepare tez jars
 ```bash
-    docker exet -it hive-master bash
+    docker exet -it hive-metastore bash
     # in docker
     hdfs dfs -put /tez.tar.gz /
     exit
@@ -77,9 +77,10 @@ Using vineyard as storage
 
 ### Copy vineyard jars to share dir
 ```bash
+    mkdir -p ~/share
     cd v6d/java/hive
     # you can change share dir in docker-compose.yaml
-    cp target/vineyard-hive-0.1-SNAPSHOT.jar ../../share/
+    cp target/vineyard-hive-0.1-SNAPSHOT.jar ~/share
 ```
 
 ### Create table with vineyard
