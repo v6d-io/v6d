@@ -16,7 +16,6 @@
 # limitations under the License.
 #
 
-import ctypes
 import json
 import pickle
 from typing import Union
@@ -150,37 +149,25 @@ def build_buffer(
     If address is None or size is 0, an empty blob will be returned.
     '''
     if client.is_rpc:
-        # copy the address with size to a local payloads
-        if size == 0 or address is None:
-            meta = ObjectMeta()
-            meta.nbytes = 0
-            meta.typename = "vineyard::RemoteBlob"
-            return client.create_metadata(meta)
-        if isinstance(address, bytes):
-            payload = address
-        else:
-            payload = bytearray(size)
-            address_bytes = (ctypes.c_byte * size).from_address(address)
-            payload[:size] = memoryview(address_bytes)[:size]
         buffer = RemoteBlobBuilder(size)
-        buffer.copy(0, payload)
-        id = client.create_remote_blob(buffer)
-        meta = client.get_meta(id)
-        return meta
+        if isinstance(address, (int, np.integer)):
+            buffer.copy(0, int(address), size)
+        elif address is not None:
+            buffer.copy(0, address)
+        return client.get_meta(client.create_remote_blob(buffer))
 
-    if size == 0:
-        return client.create_empty_blob()
-    if address is None:
-        return client.create_empty_blob()
-    existing = client.find_shared_memory(address)
-    if existing is not None:
-        return client.get_meta(existing)
-    buffer = client.create_blob(size)
-    if isinstance(address, (int, np.integer)):
-        buffer.copy(0, int(address), size)
-    else:
-        buffer.copy(0, address)
-    return buffer.seal(client)
+    if client.is_ipc:
+        if size == 0 or address is None:
+            return client.create_empty_blob()
+        existing = client.find_shared_memory(address)
+        if existing is not None:
+            return client.get_meta(existing)
+        buffer = client.create_blob(size)
+        if isinstance(address, (int, np.integer)):
+            buffer.copy(0, int(address), size)
+        elif address is not None:
+            buffer.copy(0, address)
+        return buffer.seal(client)
 
 
 def build_numpy_buffer(client, array):

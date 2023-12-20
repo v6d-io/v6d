@@ -393,7 +393,7 @@ Status RPCClient::CreateRemoteBlob(
   if (compressor && buffer->size() > 0) {
     RETURN_ON_ERROR(detail::compress_and_send(compressor, vineyard_conn_,
                                               buffer->data(), buffer->size()));
-  } else {
+  } else if (buffer->size() > 0) {
     RETURN_ON_ERROR(send_bytes(vineyard_conn_, buffer->data(), buffer->size()));
   }
   json message_in;
@@ -437,7 +437,7 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
     RETURN_ON_ERROR(detail::recv_and_decompress(decompressor, vineyard_conn_,
                                                 buffer->mutable_data(),
                                                 payloads[0].data_size));
-  } else {
+  } else if (payloads[0].data_size > 0) {
     RETURN_ON_ERROR(recv_bytes(vineyard_conn_, buffer->mutable_data(),
                                payloads[0].data_size));
   }
