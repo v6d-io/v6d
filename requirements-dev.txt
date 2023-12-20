@@ -17,6 +17,7 @@ pytest-benchmark
 pytest-cases
 pytest-datafiles
 pytest-timeout
+pyyaml
 sphinx>=7.1.2
 sphinx-copybutton
 sphinx-panels

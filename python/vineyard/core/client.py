@@ -64,14 +64,28 @@ class Client:
         session: int = None,
         username: str = None,
         password: str = None,
+        config: str = None,
     ):
         """Connects to the vineyard IPC socket and RPC socket.
 
-        - The argument `socket` takes precedence over environment variable
-          `VINEYARD_IPC_SOCKET` for IPC client.
-        - The argument `endpoint` takes precedence over arguments (`host`, `port`),
-          which further takes precedence over environment variable
-          `VINEYARD_RPC_ENDPOINT` for RPC client.
+        - For the IPC Client, the argument `socket` takes precedence over the
+        environment variable `VINEYARD_IPC_SOCKET`, which in turn takes precedence
+        over the `IPCSocket` field in the config file."
+        - For the RPC Client, the argument `endpoint` takes precedence over the
+        argument `host` and `port`, which in turn takes precedence over the
+        environment variable `VINEYARD_RPC_ENDPOINT`, which again takes precedence
+        over the `RPCEndpoint` field in the config file.
+
+        This parameter `config` can either be a path to a YAML configuration file or
+        a path to a directory containing the default config file `vineyard.yaml`.
+        The content of the configuration file should look like this:
+
+        .. code:: yaml
+
+            Vineyard:
+            IPCSocket: '/path/to/vineyard.sock'
+            RPCEndpoint: 'hostname1:port1,hostname2:port2,...'
+
         """
         self._ipc_client: IPCClient = None
         self._rpc_client: RPCClient = None
@@ -87,6 +101,8 @@ class Client:
         if socket is not None and port is not None and host is None:
             socket, host = None, socket
 
+        hosts = []
+        ports = []
         if not socket:
             socket = os.getenv('VINEYARD_IPC_SOCKET', None)
         if not endpoint and not (host and port):
@@ -95,17 +111,55 @@ class Client:
             if not isinstance(endpoint, (tuple, list)):
                 endpoint = endpoint.split(':')
             host, port = endpoint
+        if not (host and port) and config:
+            try:
+                # pylint: disable=import-outside-toplevel
+                import yaml
+            except ImportError:
+                yaml = None
+            if os.path.isdir(config):
+                config = os.path.join(config, 'vineyard.yaml')
+
+            if os.path.isfile(config):
+                with open(config, 'r', encoding='utf-8') as f:
+                    vineyard_config = yaml.safe_load(f).get('Vineyard', {})
+
+            if not socket and vineyard_config:
+                socket_path = vineyard_config.get('IPCSocket', None)
+                if os.path.isabs(socket_path):
+                    socket = socket_path
+                else:
+                    base_dir = (
+                        os.path.dirname(config) if os.path.isfile(config) else config
+                    )
+                    socket = os.path.join(base_dir, socket_path)
+
+            if vineyard_config:
+                endpoint = vineyard_config.get('RPCEndpoint', None)
+                for ep in endpoint.split(','):
+                    h, p = [e.strip() for e in ep.split(':')]
+                    hosts.append(h)
+                    ports.append(p)
 
         if socket:
             self._ipc_client = _connect(socket, **kwargs)
         if host and port:
             self._rpc_client = _connect(host, port, **kwargs)
+        if hosts and ports:
+            # try to connect the first available rpc endpoint
+            for h, p in zip(hosts, ports):
+                try:
+                    self._rpc_client = _connect(host, port, **kwargs)
+                    break
+                except Exception:
+                    continue
 
         if self._ipc_client is None and self._rpc_client is None:
             raise ConnectionError(
                 "Failed to connect to vineyard via both IPC and RPC connection. "
-                "Arguments are not and environment variables VINEYARD_IPC_SOCKET "
-                "and VINEYARD_RPC_ENDPOINT are not available."
+                "Arguments, environment variables VINEYARD_IPC_SOCKET "
+                "and VINEYARD_RPC_ENDPOINT, as well as the configuraion file, "
+                "are all unavailable."
             )
 
     @property
