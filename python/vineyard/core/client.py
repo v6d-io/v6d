@@ -27,6 +27,7 @@ from typing import Union
 
 from vineyard._C import Blob
 from vineyard._C import BlobBuilder
+from vineyard._C import IOErrorException
 from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectID
@@ -151,7 +152,7 @@ class Client:
                 try:
                     self._rpc_client = _connect(host, port, **kwargs)
                     break
-                except Exception:
+                except IOErrorException:
                     continue
 
         if self._ipc_client is None and self._rpc_client is None:
