@@ -201,8 +201,8 @@ class Client:
         if self._ipc_client is None and self._rpc_client is None:
             raise ConnectionError(
                 "Failed to connect to vineyard via both IPC and RPC connection. "
-                "Arguments, environment variables VINEYARD_IPC_SOCKET "
-                "and VINEYARD_RPC_ENDPOINT, as well as the configuraion file, "
+                "Arguments, environment variables `VINEYARD_IPC_SOCKET` "
+                "and `VINEYARD_RPC_ENDPOINT`, as well as the configuration file, "
                 "are all unavailable."
             )
 
