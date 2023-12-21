@@ -10,6 +10,7 @@ pandas>=1.0.0; python_version>="3.7"
 pickle5; python_version<="3.7"
 psutil
 pyarrow
+pyyaml
 setuptools
 shared-memory38; python_version<="3.7"
 sortedcontainers

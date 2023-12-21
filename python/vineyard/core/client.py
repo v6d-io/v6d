@@ -150,7 +150,7 @@ class Client:
             # try to connect the first available rpc endpoint
             for h, p in zip(hosts, ports):
                 try:
-                    self._rpc_client = _connect(host, port, **kwargs)
+                    self._rpc_client = _connect(h, p, **kwargs)
                     break
                 except IOErrorException:
                     continue
