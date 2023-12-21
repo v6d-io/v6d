@@ -27,7 +27,6 @@ from typing import Union
 
 from vineyard._C import Blob
 from vineyard._C import BlobBuilder
-from vineyard._C import IOErrorException
 from vineyard._C import IPCClient
 from vineyard._C import Object
 from vineyard._C import ObjectID
@@ -35,6 +34,7 @@ from vineyard._C import ObjectMeta
 from vineyard._C import RemoteBlob
 from vineyard._C import RemoteBlobBuilder
 from vineyard._C import RPCClient
+from vineyard._C import VineyardException
 from vineyard._C import _connect
 from vineyard.core.builder import BuilderContext
 from vineyard.core.builder import put
@@ -48,6 +48,44 @@ def _apply_docstring(func):
         return fn
 
     return _apply
+
+
+def _parse_configuration(config) -> Tuple[Optional[str], Optional[str]]:
+    '''Parse vineyard IPC socket and RPC endpoints from configuration.
+
+    Parameters:
+        config: Path to a YAML configuration file or a directory containing
+                the default config file `vineyard.yaml`.
+
+    Returns:
+        (socket, endpoints): IPC socket path and RPC endpoints.
+    '''
+    if not config:
+        return None, None
+
+    try:
+        import yaml  # pylint: disable=import-outside-toplevel
+    except ImportError:
+        return None, None
+
+    if os.path.isdir(config):
+        config = os.path.join(config, 'vineyard.yaml')
+    if not os.path.isfile(config):
+        return None, None
+
+    try:
+        with open(config, 'r', encoding='utf-8') as f:
+            vineyard_config = yaml.safe_load(f).get('Vineyard', {})
+    except:  # noqa: E722, pylint: disable=bare-except
+        return None, None
+
+    ipc_socket = vineyard_config.get('IPCSocket', None)
+    rpc_endpoint = vineyard_config.get('RPCEndpoint', None)
+
+    if ipc_socket and not os.path.isabs(ipc_socket):
+        base_dir = os.path.dirname(config) if os.path.isfile(config) else config
+        ipc_socket = os.path.join(base_dir, ipc_socket)
+    return ipc_socket, rpc_endpoint
 
 
 class Client:
@@ -70,23 +108,48 @@ class Client:
         """Connects to the vineyard IPC socket and RPC socket.
 
         - For the IPC Client, the argument `socket` takes precedence over the
-        environment variable `VINEYARD_IPC_SOCKET`, which in turn takes precedence
-        over the `IPCSocket` field in the config file."
+          environment variable `VINEYARD_IPC_SOCKET`, which in turn takes precedence
+          over the `IPCSocket` field in the config file."
         - For the RPC Client, the argument `endpoint` takes precedence over the
-        argument `host` and `port`, which in turn takes precedence over the
-        environment variable `VINEYARD_RPC_ENDPOINT`, which again takes precedence
-        over the `RPCEndpoint` field in the config file.
+          argument `host` and `port`, which in turn takes precedence over the
+          environment variable `VINEYARD_RPC_ENDPOINT`, which further takes precedence
+          over the `RPCEndpoint` field in the config file.
 
-        This parameter `config` can either be a path to a YAML configuration file or
-        a path to a directory containing the default config file `vineyard.yaml`.
-        The content of the configuration file should look like this:
+        The `connect()` API can be used in following ways:
+
+        - `connect()` without any arguments, which will try to connect to the vineyard
+          by resolving endpoints from the environment variables.
+        - `connect('/path/to/vineyard.sock')`, which will try to establish an IPC
+          connection.
+        - `connect('hostname:port')`, which will try to establish an RPC connection.
+        - `connect('hostname', port)`, which will try to establish an RPC connection.
+        - `connect(endpoint=('hostname', port))`, which will try to establish an RPC
+          connection.
+        - `connect(config='/path/to/vineyard.yaml')`, which will try to resolve the IPC
+          socket and RPC endpoints from the configuration file.
+
+        Parameters:
+            socket: Optional, the path to the IPC socket, or RPC endpoints of format
+                    `host:port`.
+            port: Optional, the port of the RPC endpoint.
+            host: Optional, the host of the RPC endpoint.
+            endpoint: Optional, the RPC endpoint of format `host:port`.
+            session: Optional, the session id to connect.
+            username: Optional, the required username of vineyardd when authentication
+                      is enabled.
+            password: Optional, the required password of vineyardd when authentication
+                      is enabled.
+            config: Optional, can either be a path to a YAML configuration file or
+                    a path to a directory containing the default config file
+                    `vineyard.yaml`.
+
+        The content of the configuration file should has the following content:
 
         .. code:: yaml
 
             Vineyard:
-            IPCSocket: '/path/to/vineyard.sock'
-            RPCEndpoint: 'hostname1:port1,hostname2:port2,...'
-
+                IPCSocket: '/path/to/vineyard.sock'
+                RPCEndpoint: 'hostname1:port1,hostname2:port2,...'
         """
         self._ipc_client: IPCClient = None
         self._rpc_client: RPCClient = None
@@ -102,8 +165,6 @@ class Client:
         if socket is not None and port is not None and host is None:
             socket, host = None, socket
 
-        hosts = []
-        ports = []
         if not socket:
             socket = os.getenv('VINEYARD_IPC_SOCKET', None)
         if not endpoint and not (host and port):
@@ -112,48 +173,30 @@ class Client:
             if not isinstance(endpoint, (tuple, list)):
                 endpoint = endpoint.split(':')
             host, port = endpoint
-        if not (host and port) and config:
-            try:
-                # pylint: disable=import-outside-toplevel
-                import yaml
-            except ImportError:
-                yaml = None
-            if os.path.isdir(config):
-                config = os.path.join(config, 'vineyard.yaml')
 
-            if os.path.isfile(config):
-                with open(config, 'r', encoding='utf-8') as f:
-                    vineyard_config = yaml.safe_load(f).get('Vineyard', {})
+        hosts, ports = [], []
+        if host and port:
+            hosts.append(host)
+            ports.append(port)
 
-            if not socket and vineyard_config:
-                socket_path = vineyard_config.get('IPCSocket', None)
-                if os.path.isabs(socket_path):
-                    socket = socket_path
-                else:
-                    base_dir = (
-                        os.path.dirname(config) if os.path.isfile(config) else config
-                    )
-                    socket = os.path.join(base_dir, socket_path)
-
-            if vineyard_config:
-                endpoint = vineyard_config.get('RPCEndpoint', None)
-                for ep in endpoint.split(','):
+        if config and ((not socket) or (not (hosts and ports))):
+            ipc_socket, rpc_endpoint = _parse_configuration(config)
+            if ipc_socket and not socket:
+                socket = ipc_socket
+            if rpc_endpoint and not (hosts and ports):
+                for ep in rpc_endpoint.split(','):
                     h, p = [e.strip() for e in ep.split(':')]
                     hosts.append(h)
                     ports.append(p)
 
         if socket:
             self._ipc_client = _connect(socket, **kwargs)
-        if host and port:
-            self._rpc_client = _connect(host, port, **kwargs)
-        if hosts and ports:
-            # try to connect the first available rpc endpoint
-            for h, p in zip(hosts, ports):
-                try:
-                    self._rpc_client = _connect(h, p, **kwargs)
-                    break
-                except IOErrorException:
-                    continue
+        for host, port in zip(hosts, ports):
+            try:
+                self._rpc_client = _connect(host, port, **kwargs)
+                break
+            except VineyardException:
+                continue
 
         if self._ipc_client is None and self._rpc_client is None:
             raise ConnectionError(
