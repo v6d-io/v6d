@@ -542,6 +542,9 @@ void bind_blobs(py::module& mod) {
           [](BlobWriter* self, size_t const offset, uintptr_t ptr,
              size_t const size,
              size_t const concurrency = memory::default_memcpy_concurrency) {
+            if (size == 0) {
+              return;
+            }
             memory::concurrent_memcpy(self->data() + offset,
                                       reinterpret_cast<void*>(ptr), size,
                                       concurrency);
@@ -553,6 +556,9 @@ void bind_blobs(py::module& mod) {
           "copy",
           [](BlobWriter* self, size_t offset, py::buffer const& buffer,
              size_t const concurrency = memory::default_memcpy_concurrency) {
+            if (self->size() == 0) {
+              return;
+            }
             throw_on_error(copy_memoryview(buffer.ptr(), self->data(),
                                            self->size(), offset, concurrency));
           },
@@ -564,18 +570,20 @@ void bind_blobs(py::module& mod) {
           [](BlobWriter* self, size_t offset, py::bytes const& bs,
              size_t const concurrency = memory::default_memcpy_concurrency) {
             char* buffer = nullptr;
-            ssize_t length = 0;
-            if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &length)) {
+            ssize_t size = 0;
+            if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &size)) {
               py::pybind11_fail("Unable to extract bytes contents!");
             }
-            if (offset + length > self->size()) {
+            if (size == 0) {
+              return;
+            }
+            if (offset + size > self->size()) {
               throw_on_error(Status::AssertionFailed(
                   "Expect a source buffer with size at most '" +
                   std::to_string(self->size() - offset) +
-                  "', but the buffer size is '" + std::to_string(length) +
-                  "'"));
+                  "', but the buffer size is '" + std::to_string(size) + "'"));
             }
-            memory::concurrent_memcpy(self->data() + offset, buffer, length,
+            memory::concurrent_memcpy(self->data() + offset, buffer, size,
                                       concurrency);
           },
           "offset"_a, "bytes"_a,
@@ -670,12 +678,12 @@ void bind_blobs(py::module& mod) {
           "wrap",
           [](py::bytes const& bs) -> std::shared_ptr<RemoteBlobWriter> {
             char* buffer = nullptr;
-            ssize_t length = 0;
-            if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &length)) {
+            ssize_t size = 0;
+            if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &size)) {
               py::pybind11_fail("Unable to extract bytes contents!");
             }
             return RemoteBlobWriter::Wrap(
-                reinterpret_cast<const uint8_t*>(buffer), length);
+                reinterpret_cast<const uint8_t*>(buffer), size);
           },
           "data"_a)
       .def_property_readonly("size", &RemoteBlobWriter::size,
@@ -712,6 +720,9 @@ void bind_blobs(py::module& mod) {
           [](RemoteBlobWriter* self, size_t const offset, uintptr_t ptr,
              size_t const size,
              size_t const concurrency = memory::default_memcpy_concurrency) {
+            if (size == 0) {
+              return;
+            }
             memory::concurrent_memcpy(self->data() + offset,
                                       reinterpret_cast<void*>(ptr), size,
                                       concurrency);
@@ -723,6 +734,9 @@ void bind_blobs(py::module& mod) {
           "copy",
           [](RemoteBlobWriter* self, size_t offset, py::buffer const& buffer,
              size_t const concurrency = memory::default_memcpy_concurrency) {
+            if (self->size() == 0) {
+              return;
+            }
             throw_on_error(copy_memoryview(buffer.ptr(), self->data(),
                                            self->size(), offset, concurrency));
           },
@@ -734,18 +748,20 @@ void bind_blobs(py::module& mod) {
           [](RemoteBlobWriter* self, size_t offset, py::bytes const& bs,
              size_t const concurrency = memory::default_memcpy_concurrency) {
             char* buffer = nullptr;
-            ssize_t length = 0;
-            if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &length)) {
+            ssize_t size = 0;
+            if (PYBIND11_BYTES_AS_STRING_AND_SIZE(bs.ptr(), &buffer, &size)) {
               py::pybind11_fail("Unable to extract bytes contents!");
             }
-            if (offset + length > self->size()) {
+            if (size == 0) {
+              return;
+            }
+            if (offset + size > self->size()) {
               throw_on_error(Status::AssertionFailed(
                   "Expect a source buffer with size at most '" +
                   std::to_string(self->size() - offset) +
-                  "', but the buffer size is '" + std::to_string(length) +
-                  "'"));
+                  "', but the buffer size is '" + std::to_string(size) + "'"));
             }
-            memory::concurrent_memcpy(self->data() + offset, buffer, length,
+            memory::concurrent_memcpy(self->data() + offset, buffer, size,
                                       concurrency);
           },
           "offset"_a, "bytes"_a,
