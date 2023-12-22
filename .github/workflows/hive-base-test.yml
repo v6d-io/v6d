@@ -12,21 +12,21 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: Vineyard Java CI
+name: Vineyard Hive base CI
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'java/**'
-      - '.github/workflows/java-ci.yml'
+      - 'java/hive/**'
+      - '.github/workflows/hive-base-test.yml'
   pull_request:
     branches:
       - main
     paths:
-      - 'java/**'
-      - '.github/workflows/java-ci.yml'
+      - 'java/hive/**'
+      - '.github/workflows/hive-base-test.yml'
 
 concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
@@ -39,7 +39,7 @@ env:
 jobs:
   ci:
     runs-on: ${{ matrix.os }}
-    if: ${{ github.repository == 'v6d-io/v6d' }}
+    if: true #${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
@@ -47,6 +47,7 @@ jobs:
         metadata: [etcd]
     env:
       RUNNER_ARGS: "--meta=${{ matrix.metadata }}"
+      VINEYARD_IPC_SOCKET: "/tmp/vineyard.ci.sock"
     steps:
       - uses: actions/checkout@v3
         with:
@@ -67,25 +68,26 @@ jobs:
 
           sudo apt update -y
           sudo apt-get install -y ca-certificates \
-                            ccache \
-                            cmake \
-                            doxygen \
-                            libboost-all-dev \
-                            libcurl4-openssl-dev \
-                            libgflags-dev \
-                            libgoogle-glog-dev \
-                            libgrpc-dev \
-                            libgrpc++-dev \
-                            libmpich-dev \
-                            libprotobuf-dev \
-                            libssl-dev \
-                            libunwind-dev \
-                            libz-dev \
-                            protobuf-compiler-grpc \
-                            python3-pip \
-                            openjdk-8-jdk \
-                            default-jdk \
-                            wget
+                                  ccache \
+                                  cmake \
+                                  doxygen \
+                                  libboost-all-dev \
+                                  libcurl4-openssl-dev \
+                                  libgflags-dev \
+                                  libgoogle-glog-dev \
+                                  libgrpc-dev \
+                                  libgrpc++-dev \
+                                  libmpich-dev \
+                                  libprotobuf-dev \
+                                  libssl-dev \
+                                  libunwind-dev \
+                                  libz-dev \
+                                  protobuf-compiler-grpc \
+                                  python3-pip \
+                                  openjdk-11-jdk \
+                                  default-jdk \
+                                  docker  \
+                                  wget
 
           # install apache-arrow
           wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
@@ -99,11 +101,11 @@ jobs:
                               libparquet-dev=14.0.1-1
 
           # install python packages for codegen, and io adaptors
-          sudo pip3 install -U "Pygments>=2.4.1"
-          sudo pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt
+          sudo pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple -U "Pygments>=2.4.1"
+          sudo pip3 install -i https://pypi.tuna.tsinghua.edu.cn/simple -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt
 
           # install deps for java
-          sudo apt install -y default-jdk-headless maven
+          sudo apt install -y maven
 
       - name: Setup tmate session
         if: false
@@ -112,19 +114,19 @@ jobs:
       - name: CMake
         run: |
           export PATH=/usr/lib/ccache:$PATH
-          export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
 
           mkdir build
-          cd build
+          pushd build
           cmake .. -DCMAKE_BUILD_TYPE=Debug \
                    -DBUILD_VINEYARD_JAVA=ON
 
           if [ "${{ matrix.metadata }}" == "redis" ]; then
             cmake .. -DBUILD_VINEYARD_SERVER_REDIS=ON
           fi
-          cd ..
+          popd
   
-      - name: Build
+      - name: Build Vineyard
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
 
@@ -132,14 +134,20 @@ jobs:
           make -j`nproc`
           sudo make install
           popd
-
-      - name: Java test
+      
+      - name: Prepare java package
         run: |
-          # start vineyardd
-          export VINEYARD_IPC_SOCKET=/tmp/vineyard.ci.sock
+          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          mkdir share
+          pushd java
+          mvn clean package -DskipTests -e
+          cp hive/target/vineyard-hive-0.1-SNAPSHOT.jar ../share/
+          popd
+
+      - name: Start vineyard server
+        run: |
           start_port=8000
           end_port=9000
-
           function is_port_taken() {
               (echo >/dev/tcp/localhost/$1) >/dev/null 2>&1
           }
@@ -151,8 +159,30 @@ jobs:
               fi
           done
 
-          ./build/bin/vineyardd --socket=/tmp/vineyard.ci.sock -rpc_socket_port=$FREE_PORT --etcd_endpoint="0.0.0.0:2382" &
+          ./build/bin/vineyardd --socket=./build/metastore/vineyard.sock -rpc_socket_port=8000 --etcd_endpoint="0.0.0.0:2382" &
+          ./build/bin/vineyardd --socket=./build/hiveserver/vineyard.sock -rpc_socket_port=8001 --etcd_endpoint="0.0.0.0:2382" &
 
-          pushd java
-          mvn test -e
+      - name: Builder hive docker
+        run: |
+          # build hive docker
+          pushd java/hive/docker
+          ./build.sh
+          popd
+
+          # start hive docker
+          pushd java/hive
+          docker-compose up -d --force-recreate --remove-orphans
+          popd
+
+          # wait for hive docker ready
+          sleep 90
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v3
+
+      - name: Test
+        run: |
+          pushd java/hive/test
+          ./test.sh
           popd

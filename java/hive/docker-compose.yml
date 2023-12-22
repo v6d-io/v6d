@@ -22,9 +22,8 @@ services:
     volumes:
       - /user/hive/warehouse:/opt/hive/data/warehouse
       - /user/hive/warehouse:/user/hive/warehouse
-      - ~/performance/spark:/spark
       - ../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
-      - ../../build/vineyard:/tmp/vineyard
+      - ../../build/metastore:/tmp/vineyard
       - ../../share:/opt/hive/auxlib
 
   hive:
@@ -52,10 +51,10 @@ services:
     volumes:
       - /user/hive/warehouse:/opt/hive/data/warehouse
       - /user/hive/warehouse:/user/hive/warehouse
-      - ~/performance/spark:/spark
       - ../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
       - ../../java/hive/target:/opt/hive/auxlib
-      - ../../build/vineyard:/tmp/vineyard
+      - ../../build/hiveserver:/tmp/vineyard
+
 
 networks:
   hive:
