@@ -20,13 +20,13 @@ on:
       - main
     paths:
       - 'java/hive/**'
-      - '.github/workflows/hive-base-test.yml'
+      - '.github/workflows/java-ci.yaml'
   pull_request:
     branches:
       - main
     paths:
       - 'java/hive/**'
-      - '.github/workflows/hive-base-test.yml'
+      - '.github/workflows/java-ci.yaml'
 
 concurrency:
   group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
@@ -39,7 +39,7 @@ env:
 jobs:
   ci:
     runs-on: ${{ matrix.os }}
-    if: true #${{ github.repository == 'v6d-io/v6d' }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
     strategy:
       matrix:
         os: [ubuntu-20.04]
