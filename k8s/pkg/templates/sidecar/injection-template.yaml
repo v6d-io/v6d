@@ -9,8 +9,8 @@ spec:
       image: {{ .Spec.Vineyard.Image }}
       imagePullPolicy: {{ .Spec.Vineyard.ImagePullPolicy }}
 {{- if .Spec.SecurityContext }}
-          securityContext:
-{{ toYaml .Spec.SecurityContext | indent 12 }}
+      securityContext:
+{{ toYaml .Spec.SecurityContext | indent 8 }}
 {{- end }}
       env:
       - name: VINEYARDD_UID

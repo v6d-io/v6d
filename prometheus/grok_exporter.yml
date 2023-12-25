@@ -1,5 +1,6 @@
 global:
   config_version: 3
+  retention_check_interval: 5s
 input:
   type: file
   path: /var/log/vineyard/vineyard.*.log.INFO.*
