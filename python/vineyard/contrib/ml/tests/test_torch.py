@@ -16,6 +16,11 @@
 # limitations under the License.
 #
 
+import copy
+import itertools
+from typing import Any
+from typing import Dict
+
 import numpy as np
 import pandas as pd
 import pyarrow as pa
@@ -30,6 +35,8 @@ from vineyard.contrib.ml.torch import torch_context
 from vineyard.data.dataframe import NDArrayArray
 
 torch = lazy_import.lazy_module("torch")
+nn = lazy_import.lazy_module("torch.nn")
+F = lazy_import.lazy_module("torch.nn.functional")
 torchdata = lazy_import.lazy_module("torchdata")
 
 
@@ -130,3 +137,41 @@ def test_torch_dataset_table(vineyard_client):
     assert torch.isclose(
         value.tensors[2], torch.tensor([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
     ).all()
+
+
+class Model(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 20, 5)
+        self.conv2 = nn.Conv2d(20, 20, 5)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        return F.relu(self.conv2(x))
+
+
+def assert_torch_module_equal(model1, model2):
+    assert isinstance(model1, nn.Module)
+    assert isinstance(model2, nn.Module)
+    assert len(list(model1.parameters())) == len(list(model2.parameters()))
+    for p1, p2 in zip(model1.parameters(), model2.parameters()):
+        assert torch.allclose(p1, p2), f'{p1} != {p2}'
+
+
+@pytest_cases.parametrize(
+    "vineyard_client,model",
+    itertools.product(
+        [vineyard_client, vineyard_rpc_client],
+        [nn.Linear(5, 2), nn.Conv2d(1, 20, 5), Model()],
+    ),
+)
+def test_torch_module(vineyard_client, model):
+    object_id = vineyard_client.put(model)
+    value: Dict[str, Any] = vineyard_client.get(object_id)
+
+    result = copy.deepcopy(model)
+    result.to(torch.device('meta'))
+    result.load_state_dict(value, assign=True)
+
+    # check the module's equality
+    assert_torch_module_equal(model, result)

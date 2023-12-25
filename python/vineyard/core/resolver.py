@@ -45,6 +45,9 @@ class ResolverContext:
     def __str__(self) -> str:
         return str(self._factory)
 
+    def __repr__(self) -> str:
+        return repr(self._factory)
+
     @property
     def parent_context(self) -> "ResolverContext":
         return self._parent_context
