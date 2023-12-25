@@ -1,6 +1,15 @@
 Build Hive Docker Image with Hadoop
 -----------------
 
+### Prepare vineyard jars
+```bash
+    # Currently, the vineyard jar cannot run directly on hive because of
+    # dependency conflicts. You can run it temporarily by reverting to an
+    # older version of guava (such as 14.0.1) dependent by vineyard.
+    # This problem will be fixed in the future.
+    mvn clean package
+```
+
 ### Build docker images
 ```bash
     cd v6d/java/hive/distributed

@@ -88,7 +88,6 @@
                         /opt/apache/hadoop/share/hadoop/mapreduce/lib/*,
                         /opt/apache/hadoop/share/hadoop/yarn/*,
                         /opt/apache/hadoop/share/hadoop/yarn/lib/*
-                        /*
                 </value>
         </property>
 
