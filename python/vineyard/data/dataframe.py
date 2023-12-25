@@ -41,11 +41,25 @@ except ImportError:
     from pandas.core.arrays import NumpyExtensionArray as PandasArray
 
 try:
+    from pandas.core.arrays._mixins import NDArrayBackedExtensionArray
+
+    NDArrayBacked = None
+except ImportError:
+    from pandas._libs.arrays import NDArrayBacked
+
+    NDArrayBackedExtensionArray = None
+
+try:
     from pandas.core.internals.blocks import BlockPlacement
     from pandas.core.internals.blocks import NumpyBlock as Block
 except ImportError:
     BlockPlacement = None
     from pandas.core.internals.blocks import Block
+
+try:
+    from pandas.core.internals.blocks import NDArrayBackedExtensionBlock
+except ImportError:
+    NDArrayBackedExtensionBlock = None
 
 try:
     from pandas.core.indexes.base import ensure_index
@@ -175,9 +189,15 @@ class NDArrayDtype(PandasExtensionDtype, metaclass=registry_type):
 
 
 class NDArrayArray(
-    pd.api.extensions.ExtensionArray,
-    pd._libs.arrays.NDArrayBacked,
-    NDArrayOperatorsMixin,
+    *(
+        (NDArrayBackedExtensionArray, NDArrayOperatorsMixin)
+        if NDArrayBackedExtensionArray
+        else (
+            pd.api.extensions.ExtensionArray,
+            NDArrayBacked,
+            NDArrayOperatorsMixin,
+        )
+    ),
 ):
     def __init__(self, data, dim=1):
         """Initialize from an nd-array or list of arrays."""
@@ -192,7 +212,10 @@ class NDArrayArray(
         else:
             ndarray = np.stack(data)
         self._dim = dim
-        pd._libs.arrays.NDArrayBacked.__init__(self, ndarray, ndarray.dtype)
+        if NDArrayBackedExtensionArray:
+            NDArrayBackedExtensionArray.__init__(self, ndarray, ndarray.dtype)
+        else:
+            NDArrayBacked.__init__(self, ndarray, ndarray.dtype)
 
     # Attributes
     @property
@@ -393,15 +416,29 @@ class NDArrayAccessor:
         return self.ndarray.ndarray_shape
 
 
-class NDArrayBlock(pd.core.internals.blocks.NDArrayBackedExtensionBlock):
-    """Block for multi-dimensional ndarray."""
+if NDArrayBackedExtensionBlock:
 
-    __slots__ = ()
-    is_numeric = False
-    values: NDArrayArray
+    class NDArrayBlock(pd.core.internals.blocks.NDArrayBackedExtensionBlock):
+        """Block for multi-dimensional ndarray."""
 
-    def values_for_json(self) -> np.ndarray:
-        return self.values._ndarray
+        __slots__ = ()
+        is_numeric = False
+        values: NDArrayArray
+
+        def values_for_json(self) -> np.ndarray:
+            return self.values._ndarray
+
+else:
+
+    class NDArrayBlock(Block):
+        """Block for multi-dimensional ndarray."""
+
+        __slots__ = ()
+        is_numeric = False
+        values: NDArrayArray
+
+        def get_block_values_for_json(self) -> np.ndarray:
+            return np.asarray(self.values).reshape(self.shape)
 
 
 def pandas_dataframe_builder(client, value, builder, **kw):
