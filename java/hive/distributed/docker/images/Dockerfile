@@ -1,7 +1,16 @@
 FROM registry.cn-hangzhou.aliyuncs.com/bigdata_cloudnative/hadoop:v1
 
+COPY ./vineyard-hive-0.1-SNAPSHOT.jar /
+COPY ./vineyard-hive-0.1-SNAPSHOT.jar ${HIVE_HOME}/share/hadoop/yarn/
+COPY ./vineyard-hive-0.1-SNAPSHOT.jar ${HIVE_HOME}/share/hadoop/common/
+COPY ./vineyard-hive-0.1-SNAPSHOT.jar ${HIVE_HOME}/share/hadoop/client/
+COPY ./vineyard-hive-0.1-SNAPSHOT.jar ${HIVE_HOME}/share/hadoop/hdfs/
+COPY ./vineyard-hive-0.1-SNAPSHOT.jar ${HIVE_HOME}/share/hadoop/tools/
+COPY ./vineyard-hive-0.1-SNAPSHOT.jar ${HIVE_HOME}/share/hadoop/mapreduce/
+
 # prepare hdoop config
 COPY ./hadoop-config/yarn-site.xml ${HADOOP_HOME}/etc/hadoop/
+COPY ./hadoop-config/core-site.xml ${HADOOP_HOME}/etc/hadoop/
 
 # prepare tez
 RUN sudo mkdir -p /opt/apache/tez && sudo chown -R hadoop:hadoop /opt/apache/tez

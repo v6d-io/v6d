@@ -75,7 +75,7 @@
         </property>
         <property>
                 <name>yarn.nodemanager.env-whitelist</name>
-                <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_HDFS_HOME,HADOOP_CONF_DIR,CLASSPATH_PERPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_MAPRED_HOME,VINEYARD_IPC_SOCKET</value>
+                <value>JAVA_HOME,HADOOP_COMMON_HOME,HADOOP_CONF_DIR,CLASSPATH_PERPEND_DISTCACHE,HADOOP_YARN_HOME,HADOOP_MAPRED_HOME,VINEYARD_IPC_SOCKET</value>
         </property>
 
         <property>
@@ -84,12 +84,11 @@
                         /opt/apache/hadoop/etc/hadoop,
                         /opt/apache/hadoop/share/hadoop/common/*,
                         /opt/apache/hadoop/share/hadoop/common/lib/*,
-                        /opt/apache/hadoop/share/hadoop/hdfs/*,
-                        /opt/apache/hadoop/share/hadoop/hdfs/lib/*,
                         /opt/apache/hadoop/share/hadoop/mapreduce/*,
                         /opt/apache/hadoop/share/hadoop/mapreduce/lib/*,
                         /opt/apache/hadoop/share/hadoop/yarn/*,
                         /opt/apache/hadoop/share/hadoop/yarn/lib/*
+                        /*
                 </value>
         </property>
 

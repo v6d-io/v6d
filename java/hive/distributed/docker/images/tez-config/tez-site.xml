@@ -2,6 +2,6 @@
   <!-- 指定在hdfs上的tez包文件 -->
   <property>
     <name>tez.lib.uris</name>
-    <value>hdfs://hadoop-hdfs-nn:9000/tez.tar.gz</value>
+    <value>file:///tez.tar.gz</value>
   </property>
 </configuration>

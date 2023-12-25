@@ -41,7 +41,7 @@ public class VineyardFileUtils {
         long modifyTime = meta.getLongValue("modify_time_");
         long accessTime = meta.getLongValue("access_time_");
         return new VineyardFileStat(
-                path, isDir, modifyTime, len, accessTime, 1, 1, null, null, (short) 777);
+                path, isDir, modifyTime, len, accessTime, 1, 1, null, null, (short) 0777);
     }
 
     public static VineyardFileStat[] listFileStats(IPCClient client, String path)
@@ -82,7 +82,7 @@ public class VineyardFileUtils {
                                 1,
                                 null,
                                 null,
-                                (short) 777);
+                                (short) 0777);
                 result.add(temp);
             }
         }

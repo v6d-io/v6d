@@ -1,84 +1,5 @@
 version: '3'
 services:
-  hadoop-hdfs-nn:
-    image: apache/hadoop_hive:v1
-    user: "root:root"
-    container_name: hadoop-hdfs-nn
-    hostname: hadoop-hdfs-nn
-    restart: always
-    privileged: true
-    env_file:
-      - .env
-    ports:
-      - "30070:${HADOOP_HDFS_NN_PORT}"
-    command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-hdfs-nn"]
-    networks:
-      - hadoop-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://localhost:${HADOOP_HDFS_NN_PORT} || exit 1"]
-      interval: 20s
-      timeout: 20s
-      retries: 3
-  hadoop-hdfs-dn-0:
-    image: apache/hadoop_hive:v1
-    user: "root:root"
-    container_name: hadoop-hdfs-dn-0
-    hostname: hadoop-hdfs-dn-0
-    restart: always
-    depends_on:
-      - hadoop-hdfs-nn
-    env_file:
-      - .env
-    ports:
-      - "30864:${HADOOP_HDFS_DN_PORT}"
-    command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-hdfs-dn hadoop-hdfs-nn ${HADOOP_HDFS_NN_PORT}"]
-    networks:
-      - hadoop-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://localhost:${HADOOP_HDFS_DN_PORT} || exit 1"]
-      interval: 30s
-      timeout: 30s
-      retries: 3
-  hadoop-hdfs-dn-1:
-    image: apache/hadoop_hive:v1
-    user: "root:root"
-    container_name: hadoop-hdfs-dn-1
-    hostname: hadoop-hdfs-dn-1
-    restart: always
-    depends_on:
-      - hadoop-hdfs-nn
-    env_file:
-      - .env
-    ports:
-      - "30865:${HADOOP_HDFS_DN_PORT}"
-    command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-hdfs-dn hadoop-hdfs-nn ${HADOOP_HDFS_NN_PORT}"]
-    networks:
-      - hadoop-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://localhost:${HADOOP_HDFS_DN_PORT} || exit 1"]
-      interval: 30s
-      timeout: 30s
-      retries: 3
-  hadoop-hdfs-dn-2:
-    image: apache/hadoop_hive:v1
-    user: "root:root"
-    container_name: hadoop-hdfs-dn-2
-    hostname: hadoop-hdfs-dn-2
-    restart: always
-    depends_on:
-      - hadoop-hdfs-nn
-    env_file:
-      - .env
-    ports:
-      - "30866:${HADOOP_HDFS_DN_PORT}"
-    command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-hdfs-dn hadoop-hdfs-nn ${HADOOP_HDFS_NN_PORT}"]
-    networks:
-      - hadoop-network
-    healthcheck:
-      test: ["CMD-SHELL", "curl --fail http://localhost:${HADOOP_HDFS_DN_PORT} || exit 1"]
-      interval: 30s
-      timeout: 30s
-      retries: 3
   hadoop-yarn-rm:
     image: apache/hadoop_hive:v1
     user: "root:root"
@@ -92,6 +13,11 @@ services:
     command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-yarn-rm"]
     networks:
       - hadoop-network
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/vineyard_sock/0/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
     healthcheck:
       test: ["CMD-SHELL", "netstat -tnlp|grep :${HADOOP_YARN_RM_PORT} || exit 1"]
       interval: 20s
@@ -118,7 +44,10 @@ services:
       timeout: 30s
       retries: 3
     volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
       - ~/vineyard_sock/0/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
     environment:
       VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
   hadoop-yarn-nm-1:
@@ -142,7 +71,10 @@ services:
       timeout: 30s
       retries: 3
     volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
       - ~/vineyard_sock/1/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
     environment:
       VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
   hadoop-yarn-nm-2:
@@ -166,7 +98,10 @@ services:
       timeout: 30s
       retries: 3
     volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
       - ~/vineyard_sock/2/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
     environment:
       VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
   hadoop-yarn-proxyserver:
@@ -184,6 +119,11 @@ services:
     command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-yarn-proxyserver hadoop-yarn-rm ${HADOOP_YARN_RM_PORT}"]
     networks:
       - hadoop-network
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/share:/auxlib/
+      - ~/hive-test:/test/
     healthcheck:
       test: ["CMD-SHELL", "netstat -tnlp|grep :${HADOOP_YARN_PROXYSERVER_PORT} || exit 1"]
       interval: 30s
@@ -204,6 +144,11 @@ services:
     command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-mr-historyserver hadoop-yarn-rm ${HADOOP_YARN_RM_PORT}"]
     networks:
       - hadoop-network
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/vineyard_sock/historyserver/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
     healthcheck:
       test: ["CMD-SHELL", "netstat -tnlp|grep :${HADOOP_MR_HISTORYSERVER_PORT} || exit 1"]
       interval: 30s
@@ -216,13 +161,11 @@ services:
     container_name: hive-metastore
     hostname: hive-metastore
     restart: always
-    depends_on:
-      - hadoop-hdfs-dn-2
     env_file:
       - .env
     ports:
       - "30983:${HIVE_METASTORE_PORT}"
-    command: ["sh","-c","/opt/apache/bootstrap.sh hive-metastore hadoop-hdfs-dn-2 ${HADOOP_HDFS_DN_PORT}"]
+    command: ["sh","-c","/opt/apache/bootstrap.sh hive-metastore"]
     networks:
       - hadoop-network
     healthcheck:
@@ -231,6 +174,8 @@ services:
       timeout: 30s
       retries: 5
     volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
       - ~/vineyard_sock/metastore/:/tmp/vineyard_sock
       - ~/share:/auxlib/
     environment:
@@ -256,6 +201,8 @@ services:
       timeout: 30s
       retries: 5
     volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
       - ~/vineyard_sock/hiveserver/:/tmp/vineyard_sock
       - ~/share:/auxlib/
     environment:

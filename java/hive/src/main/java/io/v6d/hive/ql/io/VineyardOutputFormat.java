@@ -217,7 +217,7 @@ class SinkRecordWriter implements FileSinkOperator.RecordWriter {
 
     private void initializeTableFile() throws IOException {
         fs = finalOutPath.getFileSystem(jc);
-        this.output = FileSystem.create(fs, finalOutPath, new FsPermission("777"));
+        this.output = FileSystem.create(fs, finalOutPath, new FsPermission((short) 0777));
         if (output == null) {
             throw new VineyardException.Invalid("Create table file failed.");
         }

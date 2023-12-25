@@ -150,7 +150,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         this.conf = conf;
         this.client = Context.getClient();
 
-        mkdirs(new Path(uri.toString()), new FsPermission((short) 777));
+        mkdirs(new Path(uri.toString()), new FsPermission((short) 0777));
     }
 
     private void printAllFiles() throws IOException {
@@ -202,11 +202,12 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             Progressable progressable)
             throws IOException {
         Path parentPath = path.getParent();
+        Context.println("Create file: " + path.toString());
         try {
             getFileStatusInternal(parentPath);
         } catch (FileNotFoundException e) {
             // parent not exist
-            mkdirsInternal(parentPath, new FsPermission((short) 777));
+            mkdirsInternal(parentPath, new FsPermission((short) 0777));
         }
         FSDataOutputStream result =
                 new FSDataOutputStream(new VineyardOutputStream(path, overwrite), null);
@@ -334,7 +335,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         } catch (Exception e) {
             // invalid object id, merge file directly.
             FSDataOutputStream out =
-                    createInternal(dst, new FsPermission((short) 777), true, 0, (short) 1, 1, null);
+                    createInternal(dst, new FsPermission((short) 0777), true, 0, (short) 1, 1, null);
             out.write(srcContent);
             out.write(dstContent);
             out.close();
@@ -355,7 +356,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         ObjectID mergObjectID = mergedTableMeta.getId();
         client.persist(mergObjectID);
         FSDataOutputStream out =
-                createInternal(dst, new FsPermission((short) 777), true, 0, (short) 1, 1, null);
+                createInternal(dst, new FsPermission((short) 0777), true, 0, (short) 1, 1, null);
         out.write((mergObjectID.toString() + "\n").getBytes(StandardCharsets.US_ASCII));
         out.close();
 
@@ -381,7 +382,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             getFileStatusInternal(dstParentPath);
         } catch (FileNotFoundException e) {
             // dst parent not exist, create first
-            mkdirsInternal(dstParentPath, new FsPermission((short) 777));
+            mkdirsInternal(dstParentPath, new FsPermission((short) 0777));
         }
 
         if (srcStatus.isDirectory()) {
@@ -443,6 +444,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                             null,
                             null,
                             new Path(vineyardFileStat.getFilePath()));
+            Context.println("list file permission: " + temp.getPermission().toString());
             result.add(temp);
         }
         printAllFiles();
@@ -468,6 +470,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     }
 
     private boolean mkdirsInternal(Path path, FsPermission fsPermission) throws IOException {
+        Context.println("Create dir: " + path.toString());
         try {
             getFileStatusInternal(path);
         } catch (FileNotFoundException e) {
@@ -507,6 +510,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
                         null,
                         null,
                         path);
+        Context.println("file permission: " + result.getPermission().toString());
         return result;
     }
 
@@ -524,7 +528,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     @Override
     public void copyFromLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
         Context.println(
-                "copyFromLocalFile: "
+                "copyFromLocalFile1: "
                         + src.toString()
                         + " to "
                         + dst.toString()
@@ -537,6 +541,15 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     @Override
     public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path[] srcs, Path dst)
             throws IOException {
+        Context.println(
+                "copyFromLocalFile2: "
+                        + srcs.toString()
+                        + " to "
+                        + dst.toString()
+                        + " delSrc: "
+                        + delSrc
+                        + " overwrite: "
+                        + overwrite);
         throw new UnsupportedOperationException(
                 "Vineyard file system not support copyFromLocalFile.");
     }
@@ -544,24 +557,37 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     @Override
     public void copyFromLocalFile(boolean delSrc, boolean overwrite, Path src, Path dst)
             throws IOException {
+        Context.println(
+                "copyFromLocalFile3: "
+                        + src.toString()
+                        + " to "
+                        + dst.toString()
+                        + " delSrc: "
+                        + delSrc
+                        + " overwrite: "
+                        + overwrite);
         throw new UnsupportedOperationException(
                 "Vineyard file system not support copyFromLocalFile.");
     }
 
     @Override
     public void copyToLocalFile(Path src, Path dst) throws IOException {
+        Context.println("copyToLocalFile1: " + src.toString() + " to " + dst.toString());
         throw new UnsupportedOperationException(
                 "Vineyard file system not support copyToLocalFile.");
     }
 
     @Override
     public void moveToLocalFile(Path src, Path dst) throws IOException {
+        Context.println("moveToLocalFile: " + src.toString() + " to " + dst.toString());
         throw new UnsupportedOperationException(
                 "Vineyard file system not support moveToLocalFile.");
     }
 
     @Override
     public void copyToLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
+        Context.println(
+                "copyToLocalFile2: " + src.toString() + " to " + dst.toString() + " delSrc: ");
         throw new UnsupportedOperationException(
                 "Vineyard file system not support copyToLocalFile.");
     }
@@ -569,6 +595,15 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     @Override
     public void copyToLocalFile(boolean delSrc, Path src, Path dst, boolean useRawLocalFileSystem)
             throws IOException {
+        Context.println(
+                "copyToLocalFile3: "
+                        + src.toString()
+                        + " to "
+                        + dst.toString()
+                        + " delSrc: "
+                        + delSrc
+                        + " useRawLocalFileSystem: "
+                        + useRawLocalFileSystem);
         throw new UnsupportedOperationException(
                 "Vineyard file system not support copyToLocalFile.");
     }
