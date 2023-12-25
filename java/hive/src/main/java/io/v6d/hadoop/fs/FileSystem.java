@@ -544,22 +544,18 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public void copyToLocalFile(Path src, Path dst) throws IOException {
-        Context.println("copyToLocalFile1: " + src.toString() + " to " + dst.toString());
         throw new UnsupportedOperationException(
                 "Vineyard file system not support copyToLocalFile.");
     }
 
     @Override
     public void moveToLocalFile(Path src, Path dst) throws IOException {
-        Context.println("moveToLocalFile: " + src.toString() + " to " + dst.toString());
         throw new UnsupportedOperationException(
                 "Vineyard file system not support moveToLocalFile.");
     }
 
     @Override
     public void copyToLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
-        Context.println(
-                "copyToLocalFile2: " + src.toString() + " to " + dst.toString() + " delSrc: ");
         throw new UnsupportedOperationException(
                 "Vineyard file system not support copyToLocalFile.");
     }
