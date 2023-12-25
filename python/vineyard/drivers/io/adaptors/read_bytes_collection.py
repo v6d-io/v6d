@@ -28,7 +28,6 @@ from typing import Dict
 from typing import Tuple  # pylint: disable=unused-import
 
 import fsspec
-from fsspec.core import get_fs_token_paths
 from fsspec.spec import AbstractFileSystem
 from fsspec.utils import read_block
 
@@ -47,7 +46,7 @@ try:
     from vineyard.drivers.io import fsspec_adaptors
 except Exception:  # pylint: disable=broad-except
     logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc")
-
+from vineyard.drivers.io.fsspec_adaptors import infer_fsspec_paths  # noqa: E402
 
 CHUNK_SIZE = 1024 * 1024 * 128
 
@@ -178,7 +177,7 @@ def read_bytes_collection(
     client = vineyard.connect(vineyard_socket)
 
     # files would be empty if it's a glob pattern and globbed nothing.
-    fs, _, files = get_fs_token_paths(prefix, storage_options=storage_options)
+    fs, _, files = infer_fsspec_paths(prefix, storage_options=storage_options)
     prefix_path = files[0]
 
     worker_prefix = os.path.join(prefix_path, '%s-%s' % (proc_num, proc_index))

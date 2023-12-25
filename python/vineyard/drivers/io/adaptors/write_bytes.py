@@ -22,7 +22,6 @@ import logging
 import sys
 
 import fsspec
-from fsspec.core import get_fs_token_paths
 
 import vineyard
 from vineyard.io.byte import ByteStream
@@ -36,6 +35,7 @@ try:
     from vineyard.drivers.io import fsspec_adaptors
 except Exception:  # pylint: disable=broad-except
     logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc.")
+from vineyard.drivers.io.fsspec_adaptors import infer_fsspec_paths  # noqa: E402
 
 
 def write_bytes(
@@ -75,7 +75,7 @@ def write_bytes(
     try:
         reader = instream.open_reader(client)
 
-        fs, _, _ = get_fs_token_paths(
+        fs, _, _ = infer_fsspec_paths(
             f"{path}_{proc_index}", storage_options=storage_options
         )
         if hasattr(fs, 'auto_mkdir'):

@@ -23,7 +23,6 @@ import sys
 
 import cloudpickle
 import fsspec
-from fsspec.core import get_fs_token_paths
 
 import vineyard
 from vineyard.io.dataframe import DataframeStream
@@ -35,6 +34,7 @@ try:
     from vineyard.drivers.io import fsspec_adaptors
 except Exception:  # pylint: disable=broad-except
     logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc.")
+from vineyard.drivers.io.fsspec_adaptors import infer_fsspec_paths  # noqa: E402
 
 
 def write_parquet(
@@ -58,7 +58,7 @@ def write_parquet(
     chunk_hook = write_options.get('chunk_hook', None)
 
     writer = None
-    fs, _, _ = get_fs_token_paths(
+    fs, _, _ = infer_fsspec_paths(
         f"{path}_{proc_index}", storage_options=storage_options
     )
     if hasattr(fs, 'auto_mkdir'):
