@@ -24,7 +24,6 @@ import traceback
 from typing import Dict
 
 import fsspec
-from fsspec.core import get_fs_token_paths
 from fsspec.utils import read_block
 
 import vineyard
@@ -42,7 +41,7 @@ try:
     from vineyard.drivers.io import fsspec_adaptors
 except Exception:  # pylint: disable=broad-except
     logger.warning("Failed to import fsspec adaptors for hdfs, oss, etc")
-
+from vineyard.drivers.io.fsspec_adaptors import infer_fsspec_paths  # noqa: E402
 
 # Note [Semantic of read_block with delimiter]:
 #
@@ -161,7 +160,7 @@ def read_bytes(  # noqa: C901, pylint: disable=too-many-statements
 
     try:
         # files would be empty if it's a glob pattern and globbed nothing.
-        fs, _, files = get_fs_token_paths(path, storage_options=storage_options)
+        fs, _, files = infer_fsspec_paths(path, storage_options=storage_options)
     except Exception:  # pylint: disable=broad-except
         report_error(
             f"Cannot initialize such filesystem for '{path}', "

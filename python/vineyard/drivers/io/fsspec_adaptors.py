@@ -21,7 +21,17 @@ import pyarrow
 import pyarrow.fs
 
 import fsspec
-import fsspec.implementations.arrow
+
+try:
+    from fsspec.implementations.arrow import ArrowFile as FSSpecArrowFile
+except ImportError:
+    FSSpecArrowFile = None
+try:
+    from fsspec.implementations.arrow import HadoopFileSystem as FSSpecHadoopFileSystem
+except ImportError:
+    FSSpecHadoopFileSystem = None
+
+from fsspec.core import get_fs_token_paths
 
 # register OSS
 try:
@@ -33,41 +43,55 @@ if ossfs:
     fsspec.register_implementation("oss", ossfs.OSSFileSystem, clobber=True)
 
 
-class ArrowFile(fsspec.implementations.arrow.ArrowFile):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+if FSSpecArrowFile:
 
-    def size(self):
-        return self.stream.size()
+    class ArrowFile(FSSpecArrowFile):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
 
-
-class HDFSFileSystem(fsspec.implementations.arrow.HadoopFileSystem):
-    @fsspec.implementations.arrow.wrap_exceptions
-    def _open(self, path, mode="rb", block_size=None, **kwargs):
-        if mode == "rb":
-            method = self.fs.open_input_file
-        elif mode == "wb":
-            method = self.fs.open_output_stream
-        elif mode == "ab":
-            method = self.fs.open_append_stream
-        else:
-            raise ValueError(f"unsupported mode for Arrow filesystem: {mode!r}")
-
-        _kwargs = {}
-        pyarrow_version = fsspec.implementations.arrow.PYARROW_VERSION
-        if isinstance(pyarrow_version, str):
-            pyarrow_version_major = int(pyarrow_version.split(".")[0])
-        else:
-            pyarrow_version_major = pyarrow_version[0]
-        if pyarrow_version_major >= 4:
-            # disable compression auto-detection
-            _kwargs["compression"] = None
-        if mode == 'rb':
-            stream = method(path)
-        else:
-            stream = method(path, **_kwargs)
-
-        return ArrowFile(self, stream, path, mode, block_size, **kwargs)
+        def size(self):
+            return self.stream.size()
 
 
-fsspec.register_implementation("hdfs", HDFSFileSystem, clobber=True)
+if FSSpecHadoopFileSystem:
+
+    class HDFSFileSystem(fsspec.implementations.arrow.HadoopFileSystem):
+        @fsspec.implementations.arrow.wrap_exceptions
+        def _open(self, path, mode="rb", block_size=None, **kwargs):
+            if mode == "rb":
+                method = self.fs.open_input_file
+            elif mode == "wb":
+                method = self.fs.open_output_stream
+            elif mode == "ab":
+                method = self.fs.open_append_stream
+            else:
+                raise ValueError(f"unsupported mode for Arrow filesystem: {mode!r}")
+
+            _kwargs = {}
+            pyarrow_version = fsspec.implementations.arrow.PYARROW_VERSION
+            if isinstance(pyarrow_version, str):
+                pyarrow_version_major = int(pyarrow_version.split(".")[0])
+            else:
+                pyarrow_version_major = pyarrow_version[0]
+            if pyarrow_version_major >= 4:
+                # disable compression auto-detection
+                _kwargs["compression"] = None
+            if mode == 'rb':
+                stream = method(path)
+            else:
+                stream = method(path, **_kwargs)
+
+            return ArrowFile(self, stream, path, mode, block_size, **kwargs)
+
+    fsspec.register_implementation("hdfs", HDFSFileSystem, clobber=True)
+
+
+def infer_fsspec_paths(prefix, storage_options):
+    '''Infer the paths from the prefix and storage options.'''
+    fs, token, files = get_fs_token_paths(prefix, storage_options=storage_options)
+    if fs.isfile(prefix):
+        return fs, token, [prefix]
+    else:
+        if '*' not in prefix:
+            prefix = prefix + '*'
+        return fs, token, fs.glob(prefix)
