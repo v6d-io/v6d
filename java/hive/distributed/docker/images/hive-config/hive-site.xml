@@ -71,11 +71,6 @@
 		<value>10000</value>
 	</property>
 
-	<!-- <property>
-		<name>hive.exec.scratchdir</name> -->
-
-
-
 	<property>
 		<name>hive.server2.active.passive.ha.enable</name>
 		<value>true</value>

@@ -30,7 +30,6 @@ cmake-build-debug
 /java/hive/distributed/docker/mysql/conf/
 /java/hive/distributed/docker/mysql/data/
 
-
 # coredump
 core.*.*
 

@@ -62,7 +62,7 @@ public class VineyardInputFormat extends HiveInputFormat<NullWritable, RecordWra
     }
 
     @Override
-    public VineyardSplit[] getSplits(JobConf job, int numSplits) throws IOException {
+    public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException {
         Path paths[] = FileInputFormat.getInputPaths(job);
 
         val client = Context.getClient();
