@@ -52,8 +52,8 @@ services:
       - /user/hive/warehouse:/opt/hive/data/warehouse
       - /user/hive/warehouse:/user/hive/warehouse
       - ../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
-      - ../../java/hive/target:/opt/hive/auxlib
       - ../../build/hiveserver:/tmp/vineyard
+      - ../../share:/opt/hive/auxlib
 
 
 networks:
