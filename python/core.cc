@@ -224,6 +224,19 @@ void bind_core(py::module& mod) {
             return py::cast(self->GetMember(key));
           },
           doc::ObjectMeta_get_member)
+      .def(
+          "member" /* alias for get_member() */,
+          [](ObjectMeta* self, std::string const& key) -> py::object {
+            auto const& tree = self->MetaData();
+            auto iter = tree.find(key);
+            if (iter == tree.end()) {
+              return py::none();
+            }
+            VINEYARD_ASSERT(iter->is_object() && !iter->empty(),
+                            "The value is not a member, but a meta");
+            return py::cast(self->GetMember(key));
+          },
+          doc::ObjectMeta_get_member)
       .def("get_buffer",
            [](ObjectMeta* self, const ObjectID key) -> py::memoryview {
              std::shared_ptr<Buffer> buffer;

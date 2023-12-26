@@ -30,10 +30,10 @@ import lazy_import
 
 from vineyard._C import ObjectMeta
 from vineyard.core import context
+from vineyard.data.utils import from_json
 from vineyard.data.utils import to_json
 
 torch = lazy_import.lazy_module("torch")
-torchdata = lazy_import.lazy_module("torchdata")
 
 
 class WholeBatchSampler(torch.utils.data.Sampler[List[int]]):
@@ -137,25 +137,9 @@ def torch_global_dataframe_resolver(obj, resolver, **_kw):
     return torch.utils.data.ConcatDataset(data)
 
 
-def register_torch_types(builder_ctx, resolver_ctx):
-    if builder_ctx is not None:
-        builder_ctx.register(torch.Tensor, torch_tensor_builder)
-        builder_ctx.register(torch.utils.data.Dataset, torch_dataset_builder)
-
-    if resolver_ctx is not None:
-        resolver_ctx.register('vineyard::Tensor', torch_tensor_resolver)
-        resolver_ctx.register('vineyard::DataFrame', torch_dataset_resolver)
-        resolver_ctx.register('vineyard::RecordBatch', torch_dataset_resolver)
-        resolver_ctx.register('vineyard::Table', torch_dataset_resolver)
-        resolver_ctx.register('vineyard::GlobalTensor', torch_global_tensor_resolver)
-        resolver_ctx.register(
-            'vineyard::GlobalDataFrame', torch_global_dataframe_resolver
-        )
-
-
 def datapipe(
     dataset: torch.utils.data.Dataset,
-) -> torchdata.datapipes.iter.IterableWrapper:
+):  # -> "torchdata.datapipes.iter.IterableWrapper":
     '''Convert a torch.utils.data.Dataset to a torchdata.datapipes.iter.IterableWrapper.
 
         e.g.,
@@ -182,7 +166,89 @@ def datapipe(
     Returns:
         A torchdata.datapipes.iter.IterableWrapper.
     '''
+    import torchdata
+
     return torchdata.datapipes.iter.IterableWrapper(dataset)
+
+
+def torch_module_builder(client, value, builder, **kw):
+    def go(state_dict, key_prefix, tensors):
+        if isinstance(state_dict, torch.Tensor):
+            r = builder.run(client, state_dict, **kw)
+            tensors[key_prefix] = r
+            if isinstance(r, ObjectMeta):
+                r = r.id
+            return r
+        elif isinstance(state_dict, dict):
+            keys = list(state_dict.keys())
+            for key in keys:
+                state_dict[key] = go(state_dict[key], f'{key_prefix}.{key}', tensors)
+            return state_dict
+        elif isinstance(state_dict, (tuple, list)):
+            return [
+                go(element, f'{key_prefix}.{i}', tensors)
+                for i, element in enumerate(state_dict)
+            ]
+        else:
+            return state_dict
+
+    if isinstance(value, torch.nn.Module):
+        value = value.state_dict()
+
+    tensors = dict()
+    value = go(value, 'tensor', tensors)
+
+    meta = ObjectMeta()
+    meta['typename'] = 'vineyard::torch::Module'
+    meta['state_dict'] = to_json(value)
+    for key, tensor in tensors.items():
+        meta.add_member(key, tensor)
+    return client.create_metadata(meta)
+
+
+def torch_module_resolver(obj, resolver, **kw):
+    def go(state_dict, key_prefix, tensors):
+        if key_prefix in tensors:
+            return tensors[key_prefix]
+        elif isinstance(state_dict, dict):
+            keys = list(state_dict.keys())
+            for key in keys:
+                state_dict[key] = go(state_dict[key], f'{key_prefix}.{key}', tensors)
+            return state_dict
+        elif isinstance(state_dict, (tuple, list)):
+            return [
+                go(element, f'{key_prefix}.{i}', tensors)
+                for i, element in enumerate(state_dict)
+            ]
+        else:
+            return state_dict
+
+    meta = obj.meta
+    state_dict = from_json(meta['state_dict'])
+    tensors = dict()
+    for key, value in meta.items():
+        if key.startswith('tensor.'):
+            tensors[key] = resolver.run(value, **kw)
+    state_dict = go(state_dict, 'tensor', tensors)
+    return state_dict
+
+
+def register_torch_types(builder_ctx, resolver_ctx):
+    if builder_ctx is not None:
+        builder_ctx.register(torch.Tensor, torch_tensor_builder)
+        builder_ctx.register(torch.utils.data.Dataset, torch_dataset_builder)
+        builder_ctx.register(torch.nn.Module, torch_module_builder)
+
+    if resolver_ctx is not None:
+        resolver_ctx.register('vineyard::Tensor', torch_tensor_resolver)
+        resolver_ctx.register('vineyard::DataFrame', torch_dataset_resolver)
+        resolver_ctx.register('vineyard::RecordBatch', torch_dataset_resolver)
+        resolver_ctx.register('vineyard::Table', torch_dataset_resolver)
+        resolver_ctx.register('vineyard::GlobalTensor', torch_global_tensor_resolver)
+        resolver_ctx.register(
+            'vineyard::GlobalDataFrame', torch_global_dataframe_resolver
+        )
+        resolver_ctx.register('vineyard::torch::Module', torch_module_resolver)
 
 
 @contextlib.contextmanager

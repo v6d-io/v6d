@@ -184,6 +184,8 @@ def build_numpy_buffer(client, array):
 def default_json_encoder(value):
     if isinstance(value, (np.integer, np.floating)):
         return value.item()
+    if isinstance(value, ObjectID):
+        return int(value)
     raise TypeError
 
 
