@@ -66,45 +66,58 @@ done
 
 SOURCE_DIR=${SOURCE_DIR:-"../../.."}
 repo=${REPO:-apache}
-WORK_DIR="$(mktemp -d)"
-#WORK_DIR="/opt/tao/hive-docker-build"
+WORK_DIR=../../../hive-base-workdir
 mkdir -p "$WORK_DIR"
-# HADOOP_VERSION=${HADOOP_VERSION:-$(mvn -f "$SOURCE_DIR/pom.xml" -q help:evaluate -Dexpression=hadoop.version -DforceStdout)}
-# TEZ_VERSION=${TEZ_VERSION:-$(mvn -f "$SOURCE_DIR/pom.xml" -q help:evaluate -Dexpression=tez.version -DforceStdout)}
+find "$WORK_DIR" -maxdepth 1 -mindepth 1 ! -name '*.tar.gz' -exec rm -rf {} \;
 HADOOP_VERSION=${HADOOP_VERSION:-"3.3.4"}
 TEZ_VERSION=${TEZ_VERSION:-"0.9.1"}
 HIVE_VERSION=${HIVE_VERSION:-"2.3.9"}
 
-HADOOP_URL=${HADOOP_URL:-"https://archive.apache.org/dist/hadoop/core/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz"}
-echo "Downloading Hadoop from $HADOOP_URL..."
-if ! curl --fail -L "$HADOOP_URL" -o "$WORK_DIR/hadoop-$HADOOP_VERSION.tar.gz"; then
-  echo "Fail to download Hadoop, exiting...."
-  exit 1
-fi
-
-TEZ_URL=${TEZ_URL:-"https://archive.apache.org/dist/tez/$TEZ_VERSION/apache-tez-$TEZ_VERSION-bin.tar.gz"}
-echo "Downloading Tez from $TEZ_URL..."
-if ! curl --fail -L "$TEZ_URL" -o "$WORK_DIR/apache-tez-$TEZ_VERSION-bin.tar.gz"; then
-  echo "Failed to download Tez, exiting..."
-  exit 1
-fi
-
-if [ -n "$HIVE_VERSION" ]; then
-  HIVE_URL=${HIVE_URL:-"https://archive.apache.org/dist/hive/hive-$HIVE_VERSION/apache-hive-$HIVE_VERSION-bin.tar.gz"}
-  echo "Downloading Hive from $HIVE_URL..."
-  if ! curl --fail -L "$HIVE_URL" -o "$WORK_DIR/apache-hive-$HIVE_VERSION-bin.tar.gz"; then
-    echo "Failed to download Hive, exiting..."
+if [ -f "$WORK_DIR/hadoop-$HADOOP_VERSION.tar.gz" ]; then
+  echo "Hadoop exists, skipping download..."
+else
+  echo "Download Hadoop..."
+  HADOOP_URL=${HADOOP_URL:-"https://archive.apache.org/dist/hadoop/core/hadoop-$HADOOP_VERSION/hadoop-$HADOOP_VERSION.tar.gz"}
+  echo "Downloading Hadoop from $HADOOP_URL..."
+  if ! curl --fail -L "$HADOOP_URL" -o "$WORK_DIR/hadoop-$HADOOP_VERSION.tar.gz"; then
+    echo "Fail to download Hadoop, exiting...."
     exit 1
   fi
-  hive_package="$WORK_DIR/apache-hive-$HIVE_VERSION-bin.tar.gz"
+fi
+
+if [ -f "$WORK_DIR/apache-tez-$TEZ_VERSION-bin.tar.gz" ]; then
+    echo "Tez exists, skipping download..."
 else
-    HIVE_VERSION=$(mvn -f "$SOURCE_DIR/pom.xml" -q help:evaluate -Dexpression=project.version -DforceStdout)
-    HIVE_TAR="$SOURCE_DIR/packaging/target/apache-hive-$HIVE_VERSION-bin.tar.gz"
-    if  ls $HIVE_TAR || mvn -f $SOURCE_DIR/pom.xml clean package -DskipTests -Pdist; then
-      cp "$HIVE_TAR" "$WORK_DIR/"
-    else
-      echo "Failed to compile Hive Project, exiting..."
+    echo "Download Tez..."
+    TEZ_URL=${TEZ_URL:-"https://archive.apache.org/dist/tez/$TEZ_VERSION/apache-tez-$TEZ_VERSION-bin.tar.gz"}
+    echo "Downloading Tez from $TEZ_URL..."
+    if ! curl --fail -L "$TEZ_URL" -o "$WORK_DIR/apache-tez-$TEZ_VERSION-bin.tar.gz"; then
+      echo "Failed to download Tez, exiting..."
       exit 1
+    fi
+fi
+
+if [ -f "$WORK_DIR/apache-hive-$HIVE_VERSION-bin.tar.gz" ]; then
+    echo "Hive exists, skipping download..."
+else
+    echo "Download Hive..."
+    if [ -n "$HIVE_VERSION" ]; then
+      HIVE_URL=${HIVE_URL:-"https://archive.apache.org/dist/hive/hive-$HIVE_VERSION/apache-hive-$HIVE_VERSION-bin.tar.gz"}
+      echo "Downloading Hive from $HIVE_URL..."
+      if ! curl --fail -L "$HIVE_URL" -o "$WORK_DIR/apache-hive-$HIVE_VERSION-bin.tar.gz"; then
+        echo "Failed to download Hive, exiting..."
+        exit 1
+      fi
+      hive_package="$WORK_DIR/apache-hive-$HIVE_VERSION-bin.tar.gz"
+    else
+      HIVE_VERSION=$(mvn -f "$SOURCE_DIR/pom.xml" -q help:evaluate -Dexpression=project.version -DforceStdout)
+      HIVE_TAR="$SOURCE_DIR/packaging/target/apache-hive-$HIVE_VERSION-bin.tar.gz"
+      if  ls $HIVE_TAR || mvn -f $SOURCE_DIR/pom.xml clean package -DskipTests -Pdist; then
+        cp "$HIVE_TAR" "$WORK_DIR/"
+      else
+        echo "Failed to compile Hive Project, exiting..."
+        exit 1
+      fi
     fi
 fi
 
@@ -118,5 +131,5 @@ docker build \
         --build-arg "HIVE_VERSION=$HIVE_VERSION" \
         --build-arg "HADOOP_VERSION=$HADOOP_VERSION" \
         --build-arg "TEZ_VERSION=$TEZ_VERSION" \
+        --no-cache
 
-rm -r "${WORK_DIR}"

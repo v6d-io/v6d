@@ -11,6 +11,10 @@
 compile_commands.json
 cmake-build-debug
 
+#for hive
+/hivelog/
+/hive-base-workdir/
+
 # for python packaging
 /dist/
 *.egg-info/

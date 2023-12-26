@@ -1,0 +1,187 @@
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Vineyard Java CI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'java/hive/**'
+      - '.github/workflows/java-ci.yaml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'java/hive/**'
+      - '.github/workflows/java-ci.yaml'
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.event.number || github.head_ref || github.sha }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+env:
+  CMAKE_C_COMPILER_LAUNCHER: ccache
+  CMAKE_CXX_COMPILER_LAUNCHER: ccache
+
+jobs:
+  ci:
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        malloc: [dlmalloc]
+        metadata: [etcd]
+    env:
+      RUNNER_ARGS: "--meta=${{ matrix.metadata }}"
+      VINEYARD_IPC_SOCKET: "/tmp/vineyard.ci.sock"
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Cache for ccache
+        uses: actions/cache@v3
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-${{ matrix.metadata }}-ccache-${{ hashFiles('**/git-modules.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.metadata }}-ccache-
+
+      - name: Install Dependencies for Linux
+        if: runner.os == 'Linux'
+        run: |
+          export PATH=/usr/lib/ccache:$PATH
+
+          sudo apt update -y
+          sudo apt-get install -y ca-certificates \
+                                  ccache \
+                                  cmake \
+                                  doxygen \
+                                  libboost-all-dev \
+                                  libcurl4-openssl-dev \
+                                  libgflags-dev \
+                                  libgoogle-glog-dev \
+                                  libgrpc-dev \
+                                  libgrpc++-dev \
+                                  libmpich-dev \
+                                  libprotobuf-dev \
+                                  libssl-dev \
+                                  libunwind-dev \
+                                  libz-dev \
+                                  protobuf-compiler-grpc \
+                                  python3-pip \
+                                  openjdk-11-jdk \
+                                  default-jdk \
+                                  docker  \
+                                  wget
+
+          # install apache-arrow
+          wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+          sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
+          sudo apt update
+          sudo apt install -y libarrow-dev=14.0.1-1 \
+                              libarrow-dataset-dev=14.0.1-1 \
+                              libarrow-acero-dev=14.0.1-1 \
+                              libarrow-flight-dev=14.0.1-1 \
+                              libgandiva-dev=14.0.1-1 \
+                              libparquet-dev=14.0.1-1
+
+          # install python packages for codegen, and io adaptors
+          sudo pip3 install -U "Pygments>=2.4.1"
+          sudo pip3 install -r requirements-setup.txt -r requirements.txt -r requirements-dev.txt
+
+          # install deps for java
+          sudo apt install -y maven
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v3
+
+      - name: CMake
+        run: |
+          export PATH=/usr/lib/ccache:$PATH
+          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+
+          mkdir build
+          pushd build
+          cmake .. -DCMAKE_BUILD_TYPE=Debug \
+                   -DBUILD_VINEYARD_JAVA=ON
+
+          if [ "${{ matrix.metadata }}" == "redis" ]; then
+            cmake .. -DBUILD_VINEYARD_SERVER_REDIS=ON
+          fi
+          popd
+  
+      - name: Build Vineyard
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64
+
+          pushd build
+          make -j`nproc`
+          sudo make install
+          popd
+
+      - name: Vineyard java test
+        run: |
+          export VINEYARD_IPC_SOCKET=/tmp/vineyard.ci.sock
+          ./build/bin/vineyardd --socket=/tmp/vineyard.ci.sock -rpc_socket_port=18890 --etcd_endpoint="0.0.0.0:2383" &
+
+          pushd java
+          mvn clean test -e
+          popd
+
+      - name: Prepare java package
+        run: |
+          export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64
+          mkdir share
+
+          pushd java
+          mvn clean package -T 1C -DskipTests
+
+          cp hive/target/vineyard-hive-0.1-SNAPSHOT.jar ../share/
+
+          popd
+
+      - name: Start vineyard server for hive test
+        run: |
+          ./build/bin/vineyardd --socket=./build/metastore/vineyard.sock -rpc_socket_port=18888 --etcd_endpoint="0.0.0.0:2382" &
+          ./build/bin/vineyardd --socket=./build/hiveserver/vineyard.sock -rpc_socket_port=18889 --etcd_endpoint="0.0.0.0:2382" &
+
+      - name: Builder hive docker
+        run: |
+          # build hive docker
+          pushd java/hive/docker
+          ./build.sh
+          popd
+
+          # start hive docker
+          pushd java/hive
+          docker-compose up -d --force-recreate --remove-orphans
+          popd
+
+          # wait for hive docker ready
+          sleep 120
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v3
+
+      - name: Hive test
+        run: |
+          pushd java/hive/test
+          ./test.sh
+          popd

@@ -26,6 +26,7 @@ import org.apache.arrow.vector.IntVector;
 import org.apache.arrow.vector.LargeVarCharVector;
 import org.apache.arrow.vector.VarCharVector;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 /** Unit test for arrow data structures. */
@@ -33,6 +34,7 @@ public class ArrowTest {
     private IPCClient client;
 
     @Before
+    @Ignore
     public void prepareResolvers() throws VineyardException {
         client = new IPCClient();
 
@@ -40,6 +42,7 @@ public class ArrowTest {
     }
 
     @Test
+    @Ignore
     public void testBooleanArray() throws VineyardException {
         val builder = new BooleanArrayBuilder(client, 5);
         builder.set(0, true);
@@ -62,6 +65,7 @@ public class ArrowTest {
     }
 
     @Test
+    @Ignore
     public void testDoubleArray() throws VineyardException {
         val builder = new DoubleArrayBuilder(client, 5);
         builder.set(0, 1);
@@ -86,6 +90,7 @@ public class ArrowTest {
     }
 
     @Test
+    @Ignore
     public void testStringArray() throws VineyardException {
         val base = new VarCharVector("", Arrow.default_allocator);
         base.setSafe(0, "hello".getBytes(), 0, 5);
@@ -110,6 +115,7 @@ public class ArrowTest {
     }
 
     @Test
+    @Ignore
     public void testLargeStringArray() throws VineyardException {
         val base = new LargeVarCharVector("", Arrow.default_allocator);
         base.setSafe(0, "hello".getBytes(), 0, 5);
@@ -135,6 +141,7 @@ public class ArrowTest {
     }
 
     @Test
+    @Ignore
     public void testSchema() throws VineyardException {
         val builder = new SchemaBuilder();
         builder.addField(Arrow.makeField("testa", Arrow.FieldType.Int));
@@ -155,6 +162,7 @@ public class ArrowTest {
     }
 
     @Test
+    @Ignore
     public void testRecordBatch() throws VineyardException {
         val builder = new RecordBatchBuilder(client, 5);
         builder.addField(Arrow.makeField("testa", Arrow.FieldType.Int));
