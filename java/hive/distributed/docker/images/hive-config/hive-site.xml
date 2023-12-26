@@ -1,92 +1,85 @@
 <?xml version="1.0"?>
 <?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
 <configuration>
-	<!-- 配置hdfs存储目录 -->
     <property>
         <name>hive.default.fileformat</name>
         <value>Vineyard</value>
     </property>
-	<property>
-		<name>hive.metastore.warehouse.dir</name>
-		<value>vineyard:///user/hive_remote/warehouse</value>
-	</property>
+    <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>vineyard:///user/hive_remote/warehouse</value>
+    </property>
 
-	<property>
-		<name>hive.metastore.local</name>
-		<value>false</value>
-	</property>
+    <property>
+        <name>hive.metastore.local</name>
+        <value>false</value>
+    </property>
 
-	<!-- 所连接的 MySQL 数据库的地址，hive_local是数据库，程序会自动创建，自定义就行 -->
-	<property>
-		<name>javax.jdo.option.ConnectionURL</name>
-		<value>jdbc:mysql://mysql:3306/hive_metastore?createDatabaseIfNotExist=true&amp;useSSL=false&amp;serverTimezone=Asia/Shanghai</value>
-	</property>
+    <property>
+        <name>javax.jdo.option.ConnectionURL</name>
+        <value>jdbc:mysql://mysql:3306/hive_metastore?createDatabaseIfNotExist=true&amp;useSSL=false&amp;serverTimezone=Asia/Shanghai</value>
+    </property>
 
-	<!-- MySQL 驱动 -->
-	<property>
-		<name>javax.jdo.option.ConnectionDriverName</name>
-		<!--<value>com.mysql.cj.jdbc.Driver</value>-->
-		<value>com.mysql.jdbc.Driver</value>
-	</property>
+    <property>
+        <name>javax.jdo.option.ConnectionDriverName</name>
+        <!--<value>com.mysql.cj.jdbc.Driver</value>-->
+        <value>com.mysql.jdbc.Driver</value>
+    </property>
 
-	<!-- mysql连接用户 -->
-	<property>
-		<name>javax.jdo.option.ConnectionUserName</name>
-		<value>root</value>
-	</property>
+    <property>
+        <name>javax.jdo.option.ConnectionUserName</name>
+        <value>root</value>
+    </property>
 
-	<!-- mysql连接密码 -->
-	<property>
-		<name>javax.jdo.option.ConnectionPassword</name>
-		<value>123456</value>
-	</property>
+    <property>
+        <name>javax.jdo.option.ConnectionPassword</name>
+        <value>123456</value>
+    </property>
 
-	<!--元数据是否校验-->
-	<property>
-		<name>hive.metastore.schema.verification</name>
-		<value>false</value>
-	</property>
+    <property>
+        <name>hive.metastore.schema.verification</name>
+        <value>false</value>
+    </property>
 
-	<property>
-		<name>system:user.name</name>
-		<value>root</value>
-		<description>user name</description>
-	</property>
+    <property>
+        <name>system:user.name</name>
+        <value>root</value>
+        <description>user name</description>
+    </property>
 
-	<property>
-		<name>hive.metastore.uris</name>
-		<value>thrift://hive-metastore:9083</value>
-	</property>
+    <property>
+        <name>hive.metastore.uris</name>
+        <value>thrift://hive-metastore:9083</value>
+    </property>
 
-	<!-- host -->
-	<property>
-		<name>hive.server2.thrift.bind.host</name>
-		<value>0.0.0.0</value>
-		<description>Bind host on which to run the HiveServer2 Thrift service.</description>
-	</property>
+    <property>
+        <name>hive.server2.thrift.bind.host</name>
+        <value>0.0.0.0</value>
+        <description>Bind host on which to run the HiveServer2 Thrift service.</description>
+    </property>
 
-	<!-- hs2端口 默认是10000-->
-  	<property>
-		<name>hive.server2.thrift.port</name>
-		<value>10000</value>
-	</property>
+    <property>
+        <name>hive.server2.thrift.port</name>
+        <value>10000</value>
+    </property>
 
-	<property>
-		<name>hive.server2.active.passive.ha.enable</name>
-		<value>true</value>
-	</property>
+    <property>
+        <name>hive.server2.active.passive.ha.enable</name>
+        <value>true</value>
+    </property>
 
     <property>
         <name>hive.fetch.task.conversion</name>
         <value>none</value>
     </property>
+
     <property>
         <name>hive.exec.dynamic.partition.mode</name>
         <value>nonstrict</value>
     </property>
+
     <property>
         <name>hive.execution.engine</name>
         <value>tez</value>
     </property>
-
 </configuration>

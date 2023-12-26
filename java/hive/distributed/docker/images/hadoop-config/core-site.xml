@@ -17,76 +17,65 @@
 <!-- Put site-specific property overrides in this file. -->
 
 <configuration>
-        <!--配置namenode的地址 -->
-        <property>
-                <name>fs.defaultFS</name>
-                <value>file:///</value>
-        </property>
+    <!--config default fs of hadoop -->
+    <property>
+        <name>fs.defaultFS</name>
+        <value>file:///</value>
+    </property>
 
-        <!-- 文件的缓冲区大小(128KB),默认值是4KB -->
-        <property>
-                <name>io.file.buffer.size</name>
-                <value>131072</value>
-        </property>
+    <property>
+        <name>io.file.buffer.size</name>
+        <value>131072</value>
+    </property>
 
-        <!-- 文件系统垃圾桶保存时间 -->
-        <property>
-                <name>fs.trash.interval</name>
-                <value>1440</value>
-        </property>
+    <property>
+        <name>fs.trash.interval</name>
+        <value>1440</value>
+    </property>
 
-        <!-- 配置hadoop临时目录，存储元数据用的，请确保该目录(/opt/apache/hadoop/data/hdfs/)已被手动创建，tmp目录会自动创建 -->
-        <property>
-                <name>hadoop.tmp.dir</name>
-                <value>file:///tmp/</value>
-        </property>
+    <property>
+        <name>hadoop.tmp.dir</name>
+        <value>file:///tmp/</value>
+    </property>
 
-        <!--配置HDFS网页登录使用的静态用户为root-->
-        <property>
-                <name>hadoop.http.staticuser.user</name>
-                <value>root</value>
-        </property>
+    <property>
+        <name>hadoop.http.staticuser.user</name>
+        <value>root</value>
+    </property>
 
-        <!--配置root(超级用户)允许通过代理访问的主机节点-->
-        <property>
-                <name>hadoop.proxyuser.root.hosts</name>
-                <value>*</value>
-        </property>
+    <property>
+        <name>hadoop.proxyuser.root.hosts</name>
+        <value>*</value>
+    </property>
 
-        <!--配置root(超级用户)允许通过代理用户所属组-->
-        <property>
-                <name>hadoop.proxyuser.root.groups</name>
-                <value>*</value>
-        </property>
+    <property>
+        <name>hadoop.proxyuser.root.groups</name>
+        <value>*</value>
+    </property>
 
-        <!--配置root(超级用户)允许通过代理的用户-->
-        <property>
-                <name>hadoop.proxyuser.root.user</name>
-                <value>*</value>
-        </property>
+    <property>
+        <name>hadoop.proxyuser.root.user</name>
+        <value>*</value>
+    </property>
 
-        <!--配置hive允许通过代理访问的主机节点-->
-        <property>
-                <name>hadoop.proxyuser.hive.hosts</name>
-                <value>*</value>
-        </property>
+    <property>
+        <name>hadoop.proxyuser.hive.hosts</name>
+        <value>*</value>
+    </property>
 
-        <!--配置hive允许通过代理用户所属组-->
-        <property>
-                <name>hadoop.proxyuser.hive.groups</name>
-                <value>*</value>
-        </property>
+    <property>
+        <name>hadoop.proxyuser.hive.groups</name>
+        <value>*</value>
+    </property>
 
-        <!--配置hive允许通过代理访问的主机节点-->
-        <property>
-                <name>hadoop.proxyuser.hadoop.hosts</name>
-                <value>*</value>
-        </property>
+    <property>
+        <name>hadoop.proxyuser.hadoop.hosts</name>
+        <value>*</value>
+    </property>
 
-        <!--配置hive允许通过代理用户所属组-->
-        <property>
-                <name>hadoop.proxyuser.hadoop.groups</name>
-                <value>*</value>
-        </property>
+    <property>
+        <name>hadoop.proxyuser.hadoop.groups</name>
+        <value>*</value>
+    </property>
     
 </configuration>
