@@ -1464,7 +1464,7 @@ metadata:
   ownerReferences: []
 spec:
   ports:
-  - name: vineyard-sidecar-etcd-for-vineyard-port
+  - name: etcd-for-vineyard-port
     port: 2379
     protocol: TCP
     targetPort: 2379

@@ -37,6 +37,7 @@ import (
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
+	"sigs.k8s.io/yaml"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/pkg/config/annotations"
@@ -59,6 +60,7 @@ type Injector struct {
 func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.Response {
 	logger := log.FromContext(ctx).WithName("Injector")
 
+	sidecar := &v1alpha1.Sidecar{}
 	templatePod := &corev1.Pod{}
 	pod := &corev1.Pod{}
 	if err := r.decoder.Decode(req, pod); err != nil {
@@ -67,8 +69,6 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 
 	anno := pod.Annotations
 	if v, ok := anno[annotations.SidecarNameAnno]; ok && v == "default" {
-		// create the default sidecar cr
-		sidecar := &v1alpha1.Sidecar{}
 		// get the pod's label as cr's name
 		l := pod.Labels
 		keys := []string{}
@@ -131,28 +131,52 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 				return admission.Errored(http.StatusInternalServerError, err)
 			}
 		}
-
-		buf, err := templates.ReadFile("sidecar/injection-template.yaml")
-		if err != nil {
-			logger.Error(err, "failed to read injection template")
+	} else {
+		// get the sidecar cr
+		if err := r.Get(
+			ctx,
+			types.NamespacedName{Name: v, Namespace: pod.Namespace},
+			sidecar,
+		); err != nil {
+			logger.Error(err, "get custom sidecar cr failed")
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
+	}
+	buf, err := templates.ReadFile("sidecar/injection-template.yaml")
+	if err != nil {
+		logger.Error(err, "failed to read injection template")
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
 
-		if tpl, err := template.New("sidecar").Parse(string(buf)); err == nil {
-			var buf bytes.Buffer
-			if err := tpl.Execute(&buf, sidecar); err == nil {
-				decode := scheme.Codecs.UniversalDeserializer().Decode
-				obj, _, _ := decode(buf.Bytes(), nil, nil)
-				templatePod = obj.(*corev1.Pod)
-			} else {
-				logger.Error(err, "failed to execute template")
-				return admission.Errored(http.StatusInternalServerError, err)
+	tmplFunc := map[string]interface{}{
+		"toYaml": func(v interface{}) string {
+			bs, err := yaml.Marshal(v)
+			if err != nil {
+				logger.Error(err, "failed to marshal object %v to yaml", v)
+				return ""
 			}
-		}
-		if err := r.ApplyToSidecar(sidecar, templatePod, pod, true); err != nil {
-			logger.Error(err, "failed to apply sidecar cr to pod")
+			return string(bs)
+		},
+		"indent": func(spaces int, s string) string {
+			prefix := strings.Repeat(" ", spaces)
+			return prefix + strings.Replace(s, "\n", "\n"+prefix, -1)
+		},
+	}
+
+	if tpl, err := template.New("sidecar").Funcs(tmplFunc).Parse(string(buf)); err == nil {
+		var buf bytes.Buffer
+		if err := tpl.Execute(&buf, sidecar); err == nil {
+			decode := scheme.Codecs.UniversalDeserializer().Decode
+			obj, _, _ := decode(buf.Bytes(), nil, nil)
+			templatePod = obj.(*corev1.Pod)
+		} else {
+			logger.Error(err, "failed to execute template")
 			return admission.Errored(http.StatusInternalServerError, err)
 		}
+	}
+	if err := r.ApplyToSidecar(sidecar, templatePod, pod, true); err != nil {
+		logger.Error(err, "failed to apply sidecar cr to pod")
+		return admission.Errored(http.StatusInternalServerError, err)
 	}
 
 	marshaledPod, err := json.Marshal(pod)

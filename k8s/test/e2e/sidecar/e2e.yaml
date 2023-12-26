@@ -28,7 +28,7 @@ setup:
             --sidecar.image="localhost:5001/vineyardd:latest"| kubectl apply -f -
       wait:
         - namespace: vineyard-job
-          resource: deployment/job-deployment
+          resource: deployment/job-with-default-sidecar
           for: condition=Available
     - name: install app with default sidecar via kubectl
       command: |
@@ -40,7 +40,7 @@ setup:
           kubectl apply -f -
       wait:
         - namespace: vineyard-job1
-          resource: deployment/job-deployment
+          resource: deployment/job-with-default-sidecar
           for: condition=Available
     - name: install app with custom sidecar
       command: |
@@ -48,7 +48,7 @@ setup:
         kubectl apply -f k8s/test/e2e/sidecar-demo/sidecar-with-custom-sidecar.yaml
       wait:
         - namespace: vineyard-job
-          resource: deployment/job-deployment
+          resource: deployment/job-with-custom-sidecar
           for: condition=Available
   timeout: 20m
 
@@ -65,7 +65,7 @@ verify:
     interval: 10s
   cases:
     - query: |
-        kubectl get pod -l app=job-deployment-with-default-sidecar -n vineyard-job -oname | \
+        kubectl get pod -l app=job-with-default-sidecar -n vineyard-job -oname | \
           awk -F '/' '{print $2}' | \
           head -n 1 | \
           xargs kubectl logs -c job -n vineyard-job | \
@@ -73,7 +73,7 @@ verify:
           yq e 'to_entries' -
       expected: ../verify/values.yaml
     - query: |
-        kubectl get pod -l app=job-deployment-with-default-sidecar -n vineyard-job1 -oname | \
+        kubectl get pod -l app=job-with-default-sidecar -n vineyard-job1 -oname | \
           awk -F '/' '{print $2}' | \
           head -n 1 | \
           xargs kubectl logs -c job -n vineyard-job1 | \
@@ -81,7 +81,7 @@ verify:
           yq e 'to_entries' -
       expected: ../verify/values.yaml
     - query: |
-        kubectl get pod -l app=job-deployment-with-custom-sidecar -n vineyard-job -oname | \
+        kubectl get pod -l app=job-with-custom-sidecar -n vineyard-job -oname | \
           awk -F '/' '{print $2}' | \
           head -n 1 | \
           xargs kubectl logs -c job -n vineyard-job | \

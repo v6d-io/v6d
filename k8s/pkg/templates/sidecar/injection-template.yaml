@@ -9,8 +9,8 @@ spec:
       image: {{ .Spec.Vineyard.Image }}
       imagePullPolicy: {{ .Spec.Vineyard.ImagePullPolicy }}
 {{- if .Spec.SecurityContext }}
-          securityContext:
-{{ toYaml .Spec.SecurityContext | indent 12 }}
+      securityContext:
+{{ toYaml .Spec.SecurityContext | indent 8 }}
 {{- end }}
       env:
       - name: VINEYARDD_UID
@@ -99,7 +99,7 @@ spec:
     emptyDir: {}
   {{- end }}
 {{- if .Spec.Volumes }}
-{{ toYaml .Spec.Volumes | indent 4 }}
+{{ toYaml .Spec.Volumes | indent 2 }}
 {{- end }}
   {{- if .Spec.Metric.Enable }}
   - name: log

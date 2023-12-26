@@ -476,7 +476,7 @@ func TestGetVineyardDeploymentObjectsFromTemplate_third(t *testing.T) {
 						"spec": map[string]interface{}{
 							"ports": []interface{}{
 								map[string]interface{}{
-									"name":       "test-vineyardd-sample-etcd-for-vineyard-port",
+									"name":       "etcd-for-vineyard-port",
 									"port":       int64(2379),
 									"protocol":   "TCP",
 									"targetPort": int64(2379),
