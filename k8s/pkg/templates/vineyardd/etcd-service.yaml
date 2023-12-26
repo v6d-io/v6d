@@ -20,7 +20,7 @@ metadata:
   namespace: {{ .Namespace }}
 spec:
   ports:
-  - name: {{ .Name }}-etcd-for-vineyard-port
+  - name: etcd-for-vineyard-port
     port: 2379
     protocol: TCP
     targetPort: 2379

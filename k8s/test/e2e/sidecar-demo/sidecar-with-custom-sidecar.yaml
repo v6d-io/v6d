@@ -20,7 +20,7 @@ metadata:
   namespace: vineyard-job
 spec:
   replicas: 2
-  selector: app=job-deployment-with-custom-sidecar
+  selector: app=job-with-custom-sidecar
   vineyard:
     image: localhost:5001/vineyardd:latest
     socket: /var/run/vineyard.sock
@@ -28,19 +28,19 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: job-deployment-with-custom-sidecar
+  name: job-with-custom-sidecar
   namespace: vineyard-job
 spec:
   selector:
     matchLabels:
-      app: job-deployment-with-custom-sidecar
+      app: job-with-custom-sidecar
   replicas: 2
   template:
     metadata:
       annotations:
         sidecar.v6d.io/name: "sidecar-sample"
       labels:
-        app: job-deployment-with-custom-sidecar
+        app: job-with-custom-sidecar
         sidecar.v6d.io/enabled: "true"
     spec:
       containers:

@@ -99,7 +99,7 @@ spec:
     emptyDir: {}
   {{- end }}
 {{- if .Spec.Volumes }}
-{{ toYaml .Spec.Volumes | indent 4 }}
+{{ toYaml .Spec.Volumes | indent 2 }}
 {{- end }}
   {{- if .Spec.Metric.Enable }}
   - name: log
