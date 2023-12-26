@@ -48,7 +48,7 @@ var cmdLong = util.LongDesc(`
 
 var cmd = &cobra.Command{
 	Use:     "vineyardctl [command]",
-	Version: "v0.19.2",
+	Version: "v0.19.3",
 	Short:   "vineyardctl is the command-line tool for interact with the Vineyard Operator.",
 	Long:    cmdLong,
 }
