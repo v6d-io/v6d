@@ -1,8 +1,6 @@
 FROM registry.cn-hangzhou.aliyuncs.com/bigdata_cloudnative/hadoop:v1
 
 COPY ./vineyard-hive-0.1-SNAPSHOT.jar ${HIVE_HOME}/share/hadoop/common/
-COPY ./entrypoint.sh /opt/apache/
-RUN sudo chmod +x /opt/apache/entrypoint.sh
 
 # prepare hdoop config
 COPY ./hadoop-config/* ${HADOOP_HOME}/etc/hadoop/

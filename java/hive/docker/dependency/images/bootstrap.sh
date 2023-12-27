@@ -7,55 +7,45 @@ wait_for() {
 }
 
 start_hdfs_namenode() {
-  
 	if [ ! -f /tmp/namenode-formated ];then
 		${HADOOP_HOME}/bin/hdfs namenode -format >/tmp/namenode-formated 
 	fi
-
 	${HADOOP_HOME}/bin/hdfs --loglevel INFO namenode
 	
 	tail -f ${HADOOP_HOME}/logs/*namenode*.log
 }
 
 start_hdfs_datanode() {
-
-        wait_for $1 $2
+    wait_for $1 $2
 	
 	${HADOOP_HOME}/bin/hdfs --loglevel INFO --daemon start datanode
-
     tail -f ${HADOOP_HOME}/logs/*datanode*.log	
 }
 
 start_yarn_resourcemanager() {
-
-        ${HADOOP_HOME}/bin/yarn --loglevel INFO --daemon start resourcemanager
-
-        tail -f ${HADOOP_HOME}/logs/*resourcemanager*.log
+    ${HADOOP_HOME}/bin/yarn --loglevel INFO --daemon start resourcemanager
+    tail -f ${HADOOP_HOME}/logs/*resourcemanager*.log
 }
 
 start_yarn_nodemanager() {
+	wait_for $1 $2
 
-        wait_for $1 $2
-
-        ${HADOOP_HOME}/bin/yarn --loglevel INFO --daemon start nodemanager
-
-        tail -f ${HADOOP_HOME}/logs/*nodemanager*.log
+	${HADOOP_HOME}/bin/yarn --loglevel INFO --daemon start nodemanager
+	tail -f ${HADOOP_HOME}/logs/*nodemanager*.log
 }
 
 start_yarn_proxyserver() {
+	wait_for $1 $2
 
-        wait_for $1 $2
-
-        ${HADOOP_HOME}/bin/yarn --loglevel INFO --daemon start proxyserver
-        tail -f ${HADOOP_HOME}/logs/*proxyserver*.log
+	${HADOOP_HOME}/bin/yarn --loglevel INFO --daemon start proxyserver
+	tail -f ${HADOOP_HOME}/logs/*proxyserver*.log
 }
 
 start_mr_historyserver() {
        
-        wait_for $1 $2
+    wait_for $1 $2
 
 	${HADOOP_HOME}/bin/mapred --loglevel INFO  --daemon  start historyserver
-
 	tail -f ${HADOOP_HOME}/logs/*historyserver*.log
 }
 

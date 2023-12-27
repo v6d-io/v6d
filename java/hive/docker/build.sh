@@ -44,7 +44,6 @@ fi
 
 cp -R ./dependency/* "$WORK_DIR/"
 cp ../target/vineyard-hive-0.1-SNAPSHOT.jar "$WORK_DIR/images/"
-cp ./entrypoint.sh "$WORK_DIR/images/"
 
 tar -xzf "$WORK_DIR/apache-hive-$HIVE_VERSION-bin.tar.gz" -C "$WORK_DIR/"
 tar -xzf "$WORK_DIR/apache-tez-$TEZ_VERSION-bin.tar.gz" -C "$WORK_DIR/"
