@@ -5,6 +5,7 @@ insert into hive_example values('a', 1), ('b', 2), ('c', 3);
 
 insert overwrite directory '/tmp/out/test_insert/'
 row format delimited fields terminated by ','
-select * from hive_example;
+select * from hive_example
+order by field_1 asc;
 
 drop table hive_example;

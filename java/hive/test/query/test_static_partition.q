@@ -23,7 +23,8 @@ select * from hive_static_partition where value=114514;
 
 insert overwrite directory '/tmp/out/test_hive_static_partition/'
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-select * from result;
+select * from result
+order by field_1 asc;
 
 drop table hive_static_partition;
 drop table result;
