@@ -167,7 +167,7 @@ jobs:
           ./build.sh
 
           # start hive docker
-          docker-compose -f docker-compose.yml up -d --force-recreate --remove-orphans
+          docker-compose -f docker-compose.yaml up -d --force-recreate --remove-orphans
           popd
 
           # wait for hive docker ready
