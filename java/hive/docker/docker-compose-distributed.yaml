@@ -165,7 +165,7 @@ services:
       - .env
     ports:
       - "30983:${HIVE_METASTORE_PORT}"
-    command: ["sh","-c","/opt/apache/bootstrap.sh hive-metastore"]
+    command: ["sh","-c","/opt/apache/bootstrap.sh hive-metastore distributed"]
     networks:
       - hadoop-network
     healthcheck:
@@ -192,7 +192,7 @@ services:
       - .env
     ports:
       - "31000:${HIVE_HIVESERVER2_PORT}"
-    command: ["sh","-c","/opt/apache/bootstrap.sh hive-hiveserver2 hive-metastore ${HIVE_METASTORE_PORT}"]
+    command: ["sh","-c","/opt/apache/bootstrap.sh hive-hiveserver2 distributed"]
     networks:
       - hadoop-network
     healthcheck:

@@ -53,4 +53,6 @@ elif [ "${SERVICE_NAME}" == "metastore" ]; then
   export METASTORE_PORT=${METASTORE_PORT:-9083}
 fi
 
+cp /hive-config/* $HIVE_CONF_DIR/
+
 exec $HIVE_HOME/bin/hive --skiphadoopversion --skiphbasecp --service $SERVICE_NAME

@@ -2,7 +2,7 @@ version: '3.5'
 
 services:
   metastore:
-    image: apache/hive:2.3.9
+    image: apache/hadoop_hive:v1
     restart: unless-stopped
     container_name: metastore
     hostname: metastore
@@ -19,15 +19,16 @@ services:
       - hive
     ports:
       - '9083:9083'
+    command: ["sh","-c","/opt/apache/bootstrap.sh hive-metastore local"]
     volumes:
       - /user/hive/warehouse:/opt/hive/data/warehouse
       - /user/hive/warehouse:/user/hive/warehouse
-      - ../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
-      - ../../build/metastore:/tmp/vineyard
-      - ../../share:/opt/hive/auxlib
+      - ../../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
+      - ../../../build/vineyard:/tmp/vineyard
+      - ../../../share:/opt/hive/auxlib
 
   hive:
-    image: apache/hive:2.3.9
+    image: apache/hadoop_hive:v1
     depends_on:
       - metastore
     restart: unless-stopped
@@ -48,12 +49,13 @@ services:
     ports:
       - '10000:10000'
       - '10002:10002'
+    command: ["sh","-c","/opt/apache/bootstrap.sh hive-hiveserver2 local"]
     volumes:
       - /user/hive/warehouse:/opt/hive/data/warehouse
       - /user/hive/warehouse:/user/hive/warehouse
-      - ../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
-      - ../../build/hiveserver:/tmp/vineyard
-      - ../../share:/opt/hive/auxlib
+      - ../../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
+      - ../../../build/vineyard:/tmp/vineyard
+      - ../../../share:/opt/hive/auxlib
 
 
 networks:

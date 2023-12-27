@@ -1,6 +1,8 @@
 FROM registry.cn-hangzhou.aliyuncs.com/bigdata_cloudnative/hadoop:v1
 
 COPY ./vineyard-hive-0.1-SNAPSHOT.jar ${HIVE_HOME}/share/hadoop/common/
+COPY ./entrypoint.sh /opt/apache/
+RUN sudo chmod +x /opt/apache/entrypoint.sh
 
 # prepare hdoop config
 COPY ./hadoop-config/* ${HADOOP_HOME}/etc/hadoop/
@@ -16,7 +18,8 @@ COPY tez/share/tez.tar.gz /
 # prepare hive
 RUN sudo rm -r ${HIVE_HOME}
 COPY hive /opt/apache/hive/
-COPY hive-config/* ${HIVE_HOME}/conf/
+COPY hive-config/ /hive-config
+COPY hive-config-distributed/ /hive-config-distributed
 
 COPY bootstrap.sh /opt/apache/
 COPY mysql-connector-java-5.1.49/mysql-connector-java-5.1.49-bin.jar ${HIVE_HOME}/lib/

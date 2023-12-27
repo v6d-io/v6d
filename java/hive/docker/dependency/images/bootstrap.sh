@@ -60,17 +60,29 @@ start_mr_historyserver() {
 }
 
 start_hive_metastore() {
+	DB_DRIVER=derby
+	if [ "$1" = "local" ]; then
+		cp /hive-config/* $HIVE_HOME/conf/
+	else
+		cp /hive-config-distributed/* $HIVE_HOME/conf/
+		DB_DRIVER=mysql
+	fi
 
 	if [ ! -f ${HIVE_HOME}/formated ];then
-		schematool -initSchema -dbType mysql --verbose >  ${HIVE_HOME}/formated
+		schematool -initSchema -dbType $DB_DRIVER --verbose >  ${HIVE_HOME}/formated
 	fi
-	$HIVE_HOME/bin/hive --service metastore
+	$HIVE_HOME/bin/hive --skiphbasecp --service metastore
 
 }
 
 start_hive_hiveserver2() {
+	if [ "$1" = "local" ]; then
+		cp /hive-config/* $HIVE_HOME/conf/
+	else
+		cp /hive-config-distributed/* $HIVE_HOME/conf/
+	fi
 
-	$HIVE_HOME/bin/hive --service hiveserver2
+	$HIVE_HOME/bin/hive --skiphbasecp --service hiveserver2
 }
 
 
@@ -94,10 +106,10 @@ case $1 in
 		start_mr_historyserver $2 $3
 		;;
 	hive-metastore)
-		start_hive_metastore $2 $3
+		start_hive_metastore $2 $3 $4
 		;;
 	hive-hiveserver2)
-		start_hive_hiveserver2 $2 $3
+		start_hive_hiveserver2 $2 $3 $4
 		;;
 	*)
 		echo "请输入正确的服务启动命令~"

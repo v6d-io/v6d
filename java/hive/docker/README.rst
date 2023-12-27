@@ -55,10 +55,10 @@ Build Hive Docker Image with Hadoop
 
 ```sql
     -- in beeline
-    drop table test_hive;
-    create table test_hive(field int);
-    insert into table test_hive values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
-    select * from test_hive;
+    drop table test_hive1;
+    create table test_hive1(field int);
+    insert into table test_hive1 values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
+    select * from test_hive1;
 ```
 
 Using vineyard as storage

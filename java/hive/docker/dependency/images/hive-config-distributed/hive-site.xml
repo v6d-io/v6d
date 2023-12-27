@@ -82,4 +82,8 @@
         <name>hive.execution.engine</name>
         <value>tez</value>
     </property>
+    <property>
+        <name>hive.metastore.client.connect.retry.delay</name>
+        <value>5s</value>
+    </property>
 </configuration>
