@@ -4,8 +4,8 @@ create table hive_dynamic_partition_data(
     dst_id int,
     year int)
 stored as TEXTFILE
-location "file:///tmp/hive_test/hive_dynamic_partition_data";
-insert into table hive_dynamic_partition_data values (1, 2, 2018),(3, 4, 2018),(1, 2, 2017);
+location "file:///tmp/hive_dynamic_partition_data";
+insert into table hive_dynamic_partition_data values (1, 2, 2018),(3, 4, 2018),(2, 3, 2017);
 
 drop table if exists hive_dynamic_partition_test;
 create table hive_dynamic_partition_test
@@ -17,7 +17,8 @@ insert into table hive_dynamic_partition_test partition(mounth=1, year) select s
 
 insert overwrite directory '/tmp/out/test_hive_dynamic_partition/'
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
-select * from hive_dynamic_partition_test;
+select * from hive_dynamic_partition_test
+order by src_id asc;
 
 drop table hive_dynamic_partition_test;
 drop table hive_dynamic_partition_data;
