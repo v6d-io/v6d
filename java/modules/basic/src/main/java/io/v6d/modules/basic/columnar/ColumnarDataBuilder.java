@@ -20,6 +20,7 @@ import java.sql.Date;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateMilliVector;
@@ -858,11 +859,31 @@ public class ColumnarDataBuilder {
 
         private final FieldVector accessor;
         private final ObjectTransformer transformer;
+        private Map<FieldVector, ColumnarDataBuilder> childBuilders;
 
         NestedVectorAccessor(FieldVector vector, ObjectTransformer transformer) {
             super(vector);
             this.accessor = vector;
             this.transformer = transformer;
+            this.childBuilders = new HashMap<>();
+            cacheChildVector(accessor);
+        }
+
+        private void cacheChildVector(FieldVector vector) {
+            if (vector instanceof StructVector) {
+                List<FieldVector> childVectors = ((StructVector) vector).getChildrenFromFields();
+                for (FieldVector childVector : childVectors) {
+                    cacheChildVector(childVector);
+                }
+            } else if (vector instanceof MapVector) {
+                FieldVector childVector = ((MapVector) vector).getDataVector();
+                cacheChildVector(childVector);
+            } else if (vector instanceof ListVector) {
+                FieldVector childVector = ((ListVector) vector).getDataVector();
+                cacheChildVector(childVector);
+            } else {
+                childBuilders.put(vector, new ColumnarDataBuilder(vector, transformer));
+            }
         }
 
         @Override
@@ -918,8 +939,7 @@ public class ColumnarDataBuilder {
                 }
             } else {
                 // Primitive type
-                ColumnarDataBuilder columnarDataBuilder =
-                        new ColumnarDataBuilder(vector, transformer);
+                ColumnarDataBuilder columnarDataBuilder = childBuilders.get(vector);
                 columnarDataBuilder.setObject(rowId, value);
                 vector.setValueCount(rowId + 1);
             }

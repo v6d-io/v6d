@@ -38,6 +38,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateMilliVector;
@@ -176,7 +177,7 @@ public class ColumnarData {
         return (boolean) accessor.getObject(rowId);
     }
 
-    public byte getByte(int rowId) {
+    public Byte getByte(int rowId) {
         return (byte) accessor.getObject(rowId);
     }
 
@@ -744,11 +745,33 @@ public class ColumnarData {
     private static class NestedVectorAccessor extends ArrowFieldVectorAccessor {
         private final FieldVector vector;
         private final ObjectResolver resolver;
+        private Map<FieldVector, ColumnarData> childColumnarData;
 
         NestedVectorAccessor(FieldVector vector, ObjectResolver resolver) {
             super(vector);
             this.vector = vector;
             this.resolver = resolver;
+            this.childColumnarData = new HashMap<>();
+            cacheChildVector(vector);
+        }
+
+        private void cacheChildVector(FieldVector vector) {
+            if (vector instanceof StructVector) {
+                List<FieldVector> childFieldVectors =
+                        ((StructVector) vector).getChildrenFromFields();
+                for (FieldVector childFieldVector : childFieldVectors) {
+                    cacheChildVector(childFieldVector);
+                }
+            } else if (vector instanceof ListVector) {
+                FieldVector childFieldVector = ((ListVector) vector).getDataVector();
+                cacheChildVector(childFieldVector);
+            } else if (vector instanceof MapVector) {
+                FieldVector childFieldVector = ((MapVector) vector).getDataVector();
+                cacheChildVector(childFieldVector);
+            } else {
+                // primitive type
+                childColumnarData.put(vector, new ColumnarData(vector, resolver));
+            }
         }
 
         @Override
@@ -830,7 +853,7 @@ public class ColumnarData {
                 }
             } else {
                 // primitive type
-                ColumnarData columnarData = new ColumnarData(vector, resolver);
+                ColumnarData columnarData = childColumnarData.get(vector);
                 for (int i = 0; i < rows; i++) {
                     result.add(columnarData.getObject(rowId + i));
                 }
