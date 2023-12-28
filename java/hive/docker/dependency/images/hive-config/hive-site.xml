@@ -21,6 +21,38 @@
         <value>false</value>
     </property>
     <property>
+        <name>hive.default.fileformat</name>
+        <value>Vineyard</value>
+    </property>
+    <property>
+        <name>hive.metastore.warehouse.dir</name>
+        <value>vineyard:///opt/hive/data/warehouse</value>
+    </property>
+    <property>
+        <name>hive.fetch.task.conversion</name>
+        <value>none</value>
+    </property>
+    <property>
+        <name>hive.exec.dynamic.partition.mode</name>
+        <value>nonstrict</value>
+    </property>
+    <property>
+        <name>hive.vectorized.use.vectorized.input.format</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hive.vectorized.use.row.serde.deserialize</name>
+        <value>false</value>
+    </property>
+    <property>
+        <name>hive.vectorized.use.vector.serde.deserialize</name>
+        <value>true</value>
+    </property>
+    <property>
+        <name>hive.vectorized.execution.reduce.enabled</name>
+        <value>true</value>
+    </property>
+    <property>
         <name>hive.tez.exec.inplace.progress</name>
         <value>false</value>
     </property>
@@ -57,7 +89,27 @@
         <value>/opt/hive/data/warehouse</value>
     </property>
     <property>
-        <name>metastore.metastore.event.db.notification.api.auth</name>
+        <name>hive.server2.authentication</name>
+        <value>NOSASL</value>
+    </property>
+    <property>
+        <name>hive.metastore.event.db.notification.api.auth</name>
         <value>false</value>
+    </property>
+    <property>
+        <name>hive.server2.transport.mode</name>
+        <value>http</value>
+    </property>
+    <property>
+        <name>hive.server2.thrift.http.port</name>
+        <value>10000</value>
+    </property>
+    <property>
+        <name>hive.server2.thrift.http.path</name>
+        <value>cliservice</value>
+    </property>
+    <property>
+        <name>hive.metastore.client.connect.retry.delay</name>
+        <value>5s</value>
     </property>
 </configuration>

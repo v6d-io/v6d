@@ -158,23 +158,20 @@ jobs:
 
       - name: Start vineyard server for hive test
         run: |
-          ./build/bin/vineyardd --socket=./build/metastore/vineyard.sock -rpc_socket_port=18888 --etcd_endpoint="0.0.0.0:2382" &
-          ./build/bin/vineyardd --socket=./build/hiveserver/vineyard.sock -rpc_socket_port=18889 --etcd_endpoint="0.0.0.0:2382" &
+          ./build/bin/vineyardd --socket=./build/vineyard/vineyard.sock -rpc_socket_port=18888 --etcd_endpoint="0.0.0.0:2382" &
 
       - name: Builder hive docker
         run: |
           # build hive docker
           pushd java/hive/docker
           ./build.sh
-          popd
 
           # start hive docker
-          pushd java/hive
-          docker-compose up -d --force-recreate --remove-orphans
+          docker-compose -f docker-compose.yaml up -d --force-recreate --remove-orphans
           popd
 
           # wait for hive docker ready
-          sleep 120
+          sleep 60
 
       - name: Setup tmate session
         if: false

@@ -16,6 +16,7 @@ package io.v6d.core.client;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.base.StopwatchContext;
+import io.v6d.core.common.util.InstanceID;
 import io.v6d.core.common.util.VineyardException;
 import java.text.SimpleDateFormat;
 
@@ -32,6 +33,13 @@ public class Context {
                     "Connected to vineyard: " + client.getIPCSocket() + " uses " + watch.stop());
         }
         return client;
+    }
+
+    public static synchronized InstanceID getInstanceID() {
+        if (client == null) {
+            return null;
+        }
+        return client.getInstanceId();
     }
 
     public static void println(String message) {

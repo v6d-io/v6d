@@ -1,0 +1,214 @@
+version: '3'
+services:
+  hadoop-yarn-rm:
+    image: apache/hadoop_hive:v1
+    user: "root:root"
+    container_name: hadoop-yarn-rm
+    hostname: hadoop-yarn-rm
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "30888:${HADOOP_YARN_RM_PORT}"
+    command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-yarn-rm"]
+    networks:
+      - hadoop-network
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/vineyard_sock/0/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tnlp|grep :${HADOOP_YARN_RM_PORT} || exit 1"]
+      interval: 20s
+      timeout: 20s
+      retries: 3
+  hadoop-yarn-nm-0:
+    image: apache/hadoop_hive:v1
+    user: "root:root"
+    container_name: hadoop-yarn-nm-0
+    hostname: hadoop-yarn-nm-0
+    restart: always
+    depends_on:
+      - hadoop-yarn-rm
+    env_file:
+      - .env
+    ports:
+      - "30042:${HADOOP_YARN_NM_PORT}"
+    command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-yarn-nm hadoop-yarn-rm ${HADOOP_YARN_RM_PORT}"]
+    networks:
+      - hadoop-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:${HADOOP_YARN_NM_PORT} || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/vineyard_sock/0/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
+    environment:
+      VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
+  hadoop-yarn-nm-1:
+    image: apache/hadoop_hive:v1
+    user: "root:root"
+    container_name: hadoop-yarn-nm-1
+    hostname: hadoop-yarn-nm-1
+    restart: always
+    depends_on:
+      - hadoop-yarn-rm
+    env_file:
+      - .env
+    ports:
+      - "30043:${HADOOP_YARN_NM_PORT}"
+    command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-yarn-nm hadoop-yarn-rm ${HADOOP_YARN_RM_PORT}"]
+    networks:
+      - hadoop-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:${HADOOP_YARN_NM_PORT} || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/vineyard_sock/1/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
+    environment:
+      VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
+  hadoop-yarn-nm-2:
+    image: apache/hadoop_hive:v1
+    user: "root:root"
+    container_name: hadoop-yarn-nm-2
+    hostname: hadoop-yarn-nm-2
+    restart: always
+    depends_on:
+      - hadoop-yarn-rm
+    env_file:
+      - .env
+    ports:
+      - "30044:${HADOOP_YARN_NM_PORT}"
+    command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-yarn-nm hadoop-yarn-rm ${HADOOP_YARN_RM_PORT}"]
+    networks:
+      - hadoop-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://localhost:${HADOOP_YARN_NM_PORT} || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/vineyard_sock/2/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
+    environment:
+      VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
+  hadoop-yarn-proxyserver:
+    image: apache/hadoop_hive:v1
+    user: "root:root"
+    container_name: hadoop-yarn-proxyserver
+    hostname: hadoop-yarn-proxyserver
+    restart: always
+    depends_on:
+      - hadoop-yarn-rm
+    env_file:
+      - .env
+    ports:
+      - "30911:${HADOOP_YARN_PROXYSERVER_PORT}"
+    command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-yarn-proxyserver hadoop-yarn-rm ${HADOOP_YARN_RM_PORT}"]
+    networks:
+      - hadoop-network
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/share:/auxlib/
+      - ~/hive-test:/test/
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tnlp|grep :${HADOOP_YARN_PROXYSERVER_PORT} || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+  hadoop-mr-historyserver:
+    image: apache/hadoop_hive:v1
+    user: "root:root"
+    container_name: hadoop-mr-historyserver
+    hostname: hadoop-mr-historyserver
+    restart: always
+    depends_on:
+      - hadoop-yarn-rm
+    env_file:
+      - .env
+    ports:
+      - "31988:${HADOOP_MR_HISTORYSERVER_PORT}"
+    command: ["sh","-c","/opt/apache/bootstrap.sh hadoop-mr-historyserver hadoop-yarn-rm ${HADOOP_YARN_RM_PORT}"]
+    networks:
+      - hadoop-network
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/vineyard_sock/historyserver/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tnlp|grep :${HADOOP_MR_HISTORYSERVER_PORT} || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 3
+
+  hive-metastore:
+    image: apache/hadoop_hive:v1
+    user: "root:root"
+    container_name: hive-metastore
+    hostname: hive-metastore
+    restart: always
+    env_file:
+      - .env
+    ports:
+      - "30983:${HIVE_METASTORE_PORT}"
+    command: ["sh","-c","/opt/apache/bootstrap.sh hive-metastore distributed"]
+    networks:
+      - hadoop-network
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tnlp|grep :${HIVE_METASTORE_PORT} || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/vineyard_sock/metastore/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
+    environment:
+      VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
+  hive-hiveserver2:
+    image: apache/hadoop_hive:v1
+    user: "root:root"
+    container_name: hive-hiveserver2
+    hostname: hive-hiveserver2
+    restart: always
+    depends_on:
+      - hive-metastore
+    env_file:
+      - .env
+    ports:
+      - "31000:${HIVE_HIVESERVER2_PORT}"
+    command: ["sh","-c","/opt/apache/bootstrap.sh hive-hiveserver2 distributed"]
+    networks:
+      - hadoop-network
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -tnlp|grep :${HIVE_HIVESERVER2_PORT} || exit 1"]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+    volumes:
+      - ~/hive-tmp:/tmp/
+      - ~/hive-user:/user/
+      - ~/vineyard_sock/hiveserver/:/tmp/vineyard_sock
+      - ~/share:/auxlib/
+    environment:
+      VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
+
+# 连接外部网络
+networks:
+  hadoop-network:
+    external: true

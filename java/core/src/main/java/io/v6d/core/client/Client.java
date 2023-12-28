@@ -24,6 +24,7 @@ import io.v6d.core.common.util.VineyardException;
 import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.Map;
+import lombok.val;
 
 /** Vineyard IPC client. */
 public abstract class Client {
@@ -41,15 +42,20 @@ public abstract class Client {
     public abstract ObjectMeta createMetaData(ObjectMeta metadata) throws VineyardException;
 
     public ObjectMeta getMetaData(ObjectID id) throws VineyardException {
-        return this.getMetaData(id, false);
+        return this.getMetaData(id, false, false, false);
     }
 
-    public ObjectMeta getMetaData(ObjectID id, boolean sync_remote) throws VineyardException {
-        return this.getMetaData(id, sync_remote, false);
+    public ObjectMeta getMetaData(ObjectID id, boolean fetch) throws VineyardException {
+        return this.getMetaData(id, fetch, false);
     }
 
-    public abstract ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait)
-            throws VineyardException;
+    public ObjectMeta getMetaData(ObjectID id, boolean fetch, boolean sync_remote)
+            throws VineyardException {
+        return this.getMetaData(id, fetch, sync_remote, false);
+    }
+
+    public abstract ObjectMeta getMetaData(
+            ObjectID id, boolean fetch, boolean sync_remote, boolean wait) throws VineyardException;
 
     public abstract Collection<ObjectMeta> listMetaData(String pattern) throws VineyardException;
 
@@ -78,6 +84,8 @@ public abstract class Client {
     public void delete(Collection<ObjectID> ids) throws VineyardException {
         this.delete(ids, false, true);
     }
+
+    public abstract ObjectID migrateObject(ObjectID id) throws VineyardException;
 
     public abstract void putName(ObjectID id, String name) throws VineyardException;
 

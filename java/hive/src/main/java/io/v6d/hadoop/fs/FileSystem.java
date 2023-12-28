@@ -17,8 +17,10 @@ package io.v6d.hadoop.fs;
 import com.google.common.base.StopwatchContext;
 import io.v6d.core.client.Context;
 import io.v6d.core.client.IPCClient;
+import io.v6d.core.client.ds.ObjectMeta;
 import io.v6d.core.common.util.ObjectID;
 import io.v6d.hive.ql.io.CloseableReentrantLock;
+import io.v6d.modules.basic.arrow.TableBuilder;
 import io.v6d.modules.basic.filesystem.VineyardFile;
 import io.v6d.modules.basic.filesystem.VineyardFileStat;
 import io.v6d.modules.basic.filesystem.VineyardFileUtils;
@@ -113,9 +115,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
     private Configuration conf = null;
 
     private boolean enablePrintAllFiles = false;
-
     private IPCClient client;
-    private static final int DIR_LEN = 1;
 
     Path workingDir = new Path("vineyard:/");
 
@@ -150,7 +150,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         this.conf = conf;
         this.client = Context.getClient();
 
-        mkdirs(new Path(uri.toString()), new FsPermission((short) 777));
+        mkdirs(new Path(uri.toString()), new FsPermission((short) 0777));
     }
 
     private void printAllFiles() throws IOException {
@@ -206,7 +206,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             getFileStatusInternal(parentPath);
         } catch (FileNotFoundException e) {
             // parent not exist
-            mkdirsInternal(parentPath, new FsPermission((short) 777));
+            mkdirsInternal(parentPath, new FsPermission((short) 0777));
         }
         FSDataOutputStream result =
                 new FSDataOutputStream(new VineyardOutputStream(path, overwrite), null);
@@ -277,12 +277,14 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         }
 
         try {
-            FSDataInputStream in = open(path, 0);
-            byte[] objectIDByteArray = new byte[(int) fileStatus.getLen()];
-            int len = in.read(objectIDByteArray);
-            String[] objectIDStrs =
-                    new String(objectIDByteArray, 0, len, StandardCharsets.US_ASCII).split("\n");
-            deleteVineyardObjectWithObjectIDStr(objectIDStrs);
+            try (FSDataInputStream in = open(path, 0)) {
+                byte[] objectIDByteArray = new byte[(int) fileStatus.getLen()];
+                int len = in.read(objectIDByteArray);
+                String[] objectIDStrs =
+                        new String(objectIDByteArray, 0, len, StandardCharsets.US_ASCII)
+                                .split("\n");
+                deleteVineyardObjectWithObjectIDStr(objectIDStrs);
+            }
             deleteVineyardObjectWithName(new String[] {path.toString()});
         } catch (Exception e) {
             Context.println("Failed to delete file: " + e.getMessage());
@@ -323,12 +325,46 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
         dstInput.read(dstContent);
         srcInput.close();
         dstInput.close();
+        // check if source file store object id
+        String srcContentStr = new String(srcContent, StandardCharsets.US_ASCII);
+        String srcObjectIDStr = srcContentStr.substring(0, srcContentStr.length() - 1);
+        ObjectID srcObjectID;
+        try {
+            srcObjectID = ObjectID.fromString(srcObjectIDStr);
+        } catch (Exception e) {
+            // invalid object id, merge file directly.
+            FSDataOutputStream out =
+                    createInternal(
+                            dst, new FsPermission((short) 0777), true, 0, (short) 1, 1, null);
+            out.write(srcContent);
+            out.write(dstContent);
+            out.close();
+            return;
+        }
+        ObjectMeta srcTableMeta = client.getMetaData(srcObjectID, false);
 
+        String dstContentStr = new String(dstContent, StandardCharsets.US_ASCII);
+        String dstObjectIDStr = dstContentStr.substring(0, dstContentStr.length() - 1);
+        ObjectID dstObjectID;
+        // if dst do not store object id, throw exception.
+        dstObjectID = ObjectID.fromString(dstObjectIDStr);
+        ObjectMeta dstTableMeta = client.getMetaData(dstObjectID, false);
+
+        // Merge src tables and dst tables
+        ObjectMeta mergedTableMeta =
+                TableBuilder.mergeTables(client, new ObjectMeta[] {srcTableMeta, dstTableMeta});
+        ObjectID mergObjectID = mergedTableMeta.getId();
+        client.persist(mergObjectID);
         FSDataOutputStream out =
-                createInternal(dst, new FsPermission((short) 777), true, 0, (short) 1, 1, null);
-        out.write(srcContent);
-        out.write(dstContent);
+                createInternal(dst, new FsPermission((short) 0777), true, 0, (short) 1, 1, null);
+        out.write((mergObjectID.toString() + "\n").getBytes(StandardCharsets.US_ASCII));
         out.close();
+
+        // clean up
+        Set<ObjectID> objectIDs = new HashSet<ObjectID>();
+        objectIDs.add(srcObjectID);
+        objectIDs.add(dstObjectID);
+        client.delete(objectIDs, false, false);
     }
 
     private boolean renameInternal(Path src, Path dst) throws IOException {
@@ -346,7 +382,7 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
             getFileStatusInternal(dstParentPath);
         } catch (FileNotFoundException e) {
             // dst parent not exist, create first
-            mkdirsInternal(dstParentPath, new FsPermission((short) 777));
+            mkdirsInternal(dstParentPath, new FsPermission((short) 0777));
         }
 
         if (srcStatus.isDirectory()) {
@@ -488,13 +524,6 @@ public class FileSystem extends org.apache.hadoop.fs.FileSystem {
 
     @Override
     public void copyFromLocalFile(boolean delSrc, Path src, Path dst) throws IOException {
-        Context.println(
-                "copyFromLocalFile: "
-                        + src.toString()
-                        + " to "
-                        + dst.toString()
-                        + " delSrc: "
-                        + delSrc);
         throw new UnsupportedOperationException(
                 "Vineyard file system not support copyFromLocalFile.");
     }

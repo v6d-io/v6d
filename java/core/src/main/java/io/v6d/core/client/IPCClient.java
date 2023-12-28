@@ -117,8 +117,18 @@ public class IPCClient extends Client {
     }
 
     @Override
-    public synchronized ObjectMeta getMetaData(ObjectID id, boolean sync_remote, boolean wait)
+    public synchronized ObjectMeta getMetaData(
+            ObjectID id, boolean migrate, boolean sync_remote, boolean wait)
             throws VineyardException {
+        ObjectMeta meta = getMetaDataInternal(id, sync_remote, wait);
+        if (meta.getInstanceId().compareTo(this.instanceId) != 0 && migrate && (!meta.isGlobal())) {
+            return getMetaDataInternal(this.migrateObject(id), sync_remote, wait);
+        }
+        return meta;
+    }
+
+    private synchronized ObjectMeta getMetaDataInternal(
+            ObjectID id, boolean sync_remote, boolean wait) throws VineyardException {
         val root = mapper.createObjectNode();
         GetDataRequest.put(root, id, sync_remote, wait);
         this.doWrite(root);
@@ -138,6 +148,16 @@ public class IPCClient extends Client {
             }
         }
         return meta;
+    }
+
+    @Override
+    public synchronized ObjectID migrateObject(ObjectID id) throws VineyardException {
+        val root = mapper.createObjectNode();
+        MigrateObjectRequest.put(root, id);
+        this.doWrite(root);
+        val reply = new MigrateObjectReply();
+        reply.get(this.doReadJson());
+        return reply.getObjectID();
     }
 
     @Override
@@ -289,7 +309,7 @@ public class IPCClient extends Client {
     @Override
     public synchronized ObjectMeta pullStreamChunkMeta(final ObjectID id) throws VineyardException {
         val chunk = this.pullStreamChunkID(id);
-        return this.getMetaData(chunk, false);
+        return this.getMetaData(chunk);
     }
 
     @Override

@@ -34,13 +34,14 @@ public class VineyardFileUtils {
         } catch (ObjectNotExists e) {
             throw new FileNotFoundException(path + " is not found.");
         }
-        ObjectMeta meta = client.getMetaData(fileObjectID);
+        // File must be migrated if it is not at local.
+        ObjectMeta meta = client.getMetaData(fileObjectID, true);
         boolean isDir = meta.getBooleanValue("is_dir_");
         int len = meta.getIntValue("length_");
         long modifyTime = meta.getLongValue("modify_time_");
         long accessTime = meta.getLongValue("access_time_");
         return new VineyardFileStat(
-                path, isDir, modifyTime, len, accessTime, 1, 1, null, null, (short) 777);
+                path, isDir, modifyTime, len, accessTime, 1, 1, null, null, (short) 0777);
     }
 
     public static VineyardFileStat[] listFileStats(IPCClient client, String path)
@@ -61,7 +62,8 @@ public class VineyardFileUtils {
             Map<String, ObjectID> objects = Context.getClient().listNames(pattern, true, 255);
             for (val object : objects.entrySet()) {
                 ObjectID objectID = object.getValue();
-                ObjectMeta meta = client.getMetaData(objectID);
+                // File must be migrated if it is not at local.
+                ObjectMeta meta = client.getMetaData(objectID, true);
                 if (meta.getTypename().compareTo("vineyard::File") != 0) {
                     continue;
                 }
@@ -80,7 +82,7 @@ public class VineyardFileUtils {
                                 1,
                                 null,
                                 null,
-                                (short) 777);
+                                (short) 0777);
                 result.add(temp);
             }
         }
@@ -98,7 +100,8 @@ public class VineyardFileUtils {
         }
         for (val object : objects.entrySet()) {
             try {
-                ObjectMeta meta = client.getMetaData(object.getValue());
+                // File must be migrated if it is not at local.
+                ObjectMeta meta = client.getMetaData(object.getValue(), true);
                 if (meta.getTypename().compareTo("vineyard::File") == 0) {
                     String type = meta.getBooleanValue("is_dir_") ? "dir" : "file";
                     Context.println("Type:" + type + " " + object.getKey());

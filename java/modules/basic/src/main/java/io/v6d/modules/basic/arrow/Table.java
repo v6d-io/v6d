@@ -15,9 +15,11 @@
 package io.v6d.modules.basic.arrow;
 
 import com.google.common.base.Objects;
+import io.v6d.core.client.Context;
 import io.v6d.core.client.ds.Object;
 import io.v6d.core.client.ds.ObjectFactory;
 import io.v6d.core.client.ds.ObjectMeta;
+import io.v6d.core.common.util.VineyardException;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -29,6 +31,8 @@ public class Table extends Object {
     private final int columns;
     private final Schema schema;
     private final List<RecordBatch> batches;
+    private List<ObjectMeta> batchMetas;
+    private final int batchNum;
 
     public static void instantiate() {
         RecordBatch.instantiate();
@@ -46,6 +50,11 @@ public class Table extends Object {
         this.rows = rows;
         this.columns = columns;
         this.batches = batches;
+        this.batchNum = batches.size();
+        batchMetas = new java.util.ArrayList<>();
+        for (int i = 0; i < this.batchNum; i++) {
+            batchMetas.add(meta.getMemberMeta("partitions_-" + i));
+        }
     }
 
     public Schema getSchema() {
@@ -64,8 +73,37 @@ public class Table extends Object {
         return batches;
     }
 
-    public RecordBatch getBatch(int index) {
+    public int getBatchNum() {
+        return batchNum;
+    }
+
+    public synchronized RecordBatch getBatch(int index) {
+        if (batches.get(index) == null) {
+            // Batch is not at local. Find it from remote.
+            ObjectMeta batchMeta;
+            try {
+                batchMeta =
+                        Context.getClient()
+                                .getMetaData(
+                                        meta.getMemberMeta("partitions_-" + index).getId(), true);
+            } catch (VineyardException e) {
+                Context.println("Get remote batch failed!");
+                return null;
+            }
+            batches.set(index, (RecordBatch) ObjectFactory.getFactory().resolve(batchMeta));
+        }
         return batches.get(index);
+    }
+
+    public synchronized String[] getHostsOfRecordBatches(int start, int length) {
+        if (start + length > batchNum) {
+            return null;
+        }
+        String[] hosts = new String[length];
+        for (int i = 0; i < length; i++) {
+            hosts[i] = batchMetas.get(start + i).getStringValue("host_");
+        }
+        return hosts;
     }
 
     public VectorSchemaRoot getArrowBatch(int index) {
@@ -112,7 +150,12 @@ class TableResolver extends ObjectFactory.Resolver {
                         .mapToObj(
                                 index -> {
                                     val batch = meta.getMemberMeta("partitions_-" + index);
-                                    return (RecordBatch) ObjectFactory.getFactory().resolve(batch);
+                                    if (batch.getInstanceId().compareTo(Context.getInstanceID())
+                                            == 0) {
+                                        return (RecordBatch)
+                                                ObjectFactory.getFactory().resolve(batch);
+                                    }
+                                    return null;
                                 })
                         .collect(Collectors.toList());
         return new Table(meta, schema, nrow, ncol, batches);
