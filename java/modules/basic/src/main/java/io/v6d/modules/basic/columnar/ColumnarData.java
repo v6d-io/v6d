@@ -38,6 +38,7 @@ import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.arrow.vector.BigIntVector;
 import org.apache.arrow.vector.BitVector;
 import org.apache.arrow.vector.DateMilliVector;
@@ -60,7 +61,6 @@ import org.apache.arrow.vector.TimeStampNanoTZVector;
 import org.apache.arrow.vector.TimeStampNanoVector;
 import org.apache.arrow.vector.TimeStampSecTZVector;
 import org.apache.arrow.vector.TimeStampSecVector;
-import org.apache.arrow.vector.TimeStampVector;
 import org.apache.arrow.vector.TinyIntVector;
 import org.apache.arrow.vector.UInt1Vector;
 import org.apache.arrow.vector.UInt2Vector;
@@ -78,13 +78,13 @@ import org.apache.arrow.vector.util.Text;
 
 /** A visitor for arrow arrays. */
 public class ColumnarData {
-    private final ArrowVectorAccessor accessor;
+    private final ArrowFieldVectorAccessor accessor;
 
-    public ColumnarData(ValueVector vector) {
+    public ColumnarData(FieldVector vector) {
         this(vector, new ObjectResolver());
     }
 
-    public ColumnarData(ValueVector vector, ObjectResolver resolver) {
+    public ColumnarData(FieldVector vector, ObjectResolver resolver) {
         if (vector instanceof BitVector) {
             accessor = new BooleanAccessor((BitVector) vector, resolver);
         } else if (vector instanceof TinyIntVector) {
@@ -141,7 +141,7 @@ public class ColumnarData {
         }
     }
 
-    public ArrowVectorAccessor getAccessor() {
+    public ArrowFieldVectorAccessor getAccessor() {
         return accessor;
     }
 
@@ -174,128 +174,55 @@ public class ColumnarData {
     }
 
     public boolean getBoolean(int rowId) {
-        return accessor.getBoolean(rowId);
+        return (boolean) accessor.getObject(rowId);
     }
 
-    public byte getByte(int rowId) {
-        return accessor.getByte(rowId);
+    public Byte getByte(int rowId) {
+        return (byte) accessor.getObject(rowId);
     }
 
     public short getShort(int rowId) {
-        return accessor.getShort(rowId);
+        return (short) accessor.getObject(rowId);
     }
 
     public int getInt(int rowId) {
-        return accessor.getInt(rowId);
+        return (int) accessor.getObject(rowId);
     }
 
     public long getLong(int rowId) {
-        return accessor.getLong(rowId);
+        return (long) accessor.getObject(rowId);
     }
 
     public float getFloat(int rowId) {
-        return accessor.getFloat(rowId);
+        return (float) accessor.getObject(rowId);
     }
 
     public double getDouble(int rowId) {
-        return accessor.getDouble(rowId);
+        return (double) accessor.getObject(rowId);
     }
 
     public BigDecimal getDecimal(int rowId, int precision, int scale) {
         if (isNullAt(rowId)) {
             return null;
         }
-        return accessor.getDecimal(rowId, precision, scale);
+        return (BigDecimal) accessor.getObject(rowId);
     }
 
     public Text getUTF8String(int rowId) {
         if (isNullAt(rowId)) {
             return null;
         }
-        return accessor.getUTF8String(rowId);
+        return new Text(accessor.getObject(rowId).toString());
     }
 
     public byte[] getBinary(int rowId) {
         if (isNullAt(rowId)) {
             return null;
         }
-        return accessor.getBinary(rowId);
+        return (byte[]) accessor.getObject(rowId);
     }
 
-    private abstract static class ArrowVectorAccessor {
-        private final ValueVector vector;
-
-        ArrowVectorAccessor(ValueVector vector) {
-            this.vector = vector;
-        }
-
-        public final ValueVector getVector() {
-            return vector;
-        }
-
-        final boolean isNullAt(int rowId) {
-            return vector.isNull(rowId);
-        }
-
-        final int getNullCount() {
-            return vector.getNullCount();
-        }
-
-        final int getValueCount() {
-            return vector.getValueCount();
-        }
-
-        final void close() {
-            vector.close();
-        }
-
-        Object getObject(int rowId) {
-            throw new UnsupportedOperationException();
-        }
-
-        boolean getBoolean(int rowId) {
-            throw new UnsupportedOperationException();
-        }
-
-        byte getByte(int rowId) {
-            throw new UnsupportedOperationException();
-        }
-
-        short getShort(int rowId) {
-            throw new UnsupportedOperationException();
-        }
-
-        int getInt(int rowId) {
-            throw new UnsupportedOperationException();
-        }
-
-        long getLong(int rowId) {
-            throw new UnsupportedOperationException();
-        }
-
-        float getFloat(int rowId) {
-            throw new UnsupportedOperationException();
-        }
-
-        double getDouble(int rowId) {
-            throw new UnsupportedOperationException();
-        }
-
-        BigDecimal getDecimal(int rowId, int precision, int scale) {
-            throw new UnsupportedOperationException();
-        }
-
-        // FIXME: avoid the underlying copy
-        Text getUTF8String(int rowId) {
-            throw new UnsupportedOperationException();
-        }
-
-        byte[] getBinary(int rowId) {
-            throw new UnsupportedOperationException();
-        }
-    }
-
-    private static class BooleanAccessor extends ArrowVectorAccessor {
+    private static class BooleanAccessor extends ArrowFieldVectorAccessor {
 
         private final BitVector accessor;
         private final ObjectResolver resolver;
@@ -313,14 +240,9 @@ public class ColumnarData {
             }
             return resolver.resolveBoolean(accessor.get(rowId));
         }
-
-        @Override
-        final boolean getBoolean(int rowId) {
-            return accessor.get(rowId) == 1;
-        }
     }
 
-    private static class ByteAccessor extends ArrowVectorAccessor {
+    private static class ByteAccessor extends ArrowFieldVectorAccessor {
 
         private final TinyIntVector accessor;
         private final ObjectResolver resolver;
@@ -338,14 +260,9 @@ public class ColumnarData {
             }
             return resolver.resolveByte(accessor.getObject(rowId));
         }
-
-        @Override
-        final byte getByte(int rowId) {
-            return accessor.get(rowId);
-        }
     }
 
-    private static class UByteAccessor extends ArrowVectorAccessor {
+    private static class UByteAccessor extends ArrowFieldVectorAccessor {
 
         private final UInt1Vector accessor;
         private final ObjectResolver resolver;
@@ -358,16 +275,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.resolveByte(getByte(rowId));
-        }
-
-        @Override
-        final byte getByte(int rowId) {
-            return accessor.get(rowId);
+            return resolver.resolveByte(accessor.getObject(rowId));
         }
     }
 
-    private static class ShortAccessor extends ArrowVectorAccessor {
+    private static class ShortAccessor extends ArrowFieldVectorAccessor {
 
         private final SmallIntVector accessor;
         private final ObjectResolver resolver;
@@ -385,14 +297,9 @@ public class ColumnarData {
             }
             return resolver.resolveShort(accessor.getObject(rowId));
         }
-
-        @Override
-        final short getShort(int rowId) {
-            return accessor.get(rowId);
-        }
     }
 
-    private static class UShortAccessor extends ArrowVectorAccessor {
+    private static class UShortAccessor extends ArrowFieldVectorAccessor {
 
         private final UInt2Vector accessor;
         private final ObjectResolver resolver;
@@ -405,16 +312,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.resolveShort(getShort(rowId));
-        }
-
-        @Override
-        final short getShort(int rowId) {
-            return (short) accessor.get(rowId);
+            return resolver.resolveInt(accessor.getObject(rowId));
         }
     }
 
-    private static class IntAccessor extends ArrowVectorAccessor {
+    private static class IntAccessor extends ArrowFieldVectorAccessor {
 
         private final IntVector accessor;
         private final ObjectResolver resolver;
@@ -434,7 +336,7 @@ public class ColumnarData {
         }
     }
 
-    private static class UIntAccessor extends ArrowVectorAccessor {
+    private static class UIntAccessor extends ArrowFieldVectorAccessor {
 
         private final UInt4Vector accessor;
         private final ObjectResolver resolver;
@@ -447,16 +349,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.resolveInt(getInt(rowId));
-        }
-
-        @Override
-        final int getInt(int rowId) {
-            return accessor.get(rowId);
+            return resolver.resolveInt(accessor.getObject(rowId));
         }
     }
 
-    private static class LongAccessor extends ArrowVectorAccessor {
+    private static class LongAccessor extends ArrowFieldVectorAccessor {
 
         private final BigIntVector accessor;
         private final ObjectResolver resolver;
@@ -474,14 +371,9 @@ public class ColumnarData {
             }
             return resolver.resolveLong(accessor.getObject(rowId));
         }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
-        }
     }
 
-    private static class ULongAccessor extends ArrowVectorAccessor {
+    private static class ULongAccessor extends ArrowFieldVectorAccessor {
 
         private final UInt8Vector accessor;
         private final ObjectResolver resolver;
@@ -494,16 +386,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.resolveLong(getLong(rowId));
-        }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
+            return resolver.resolveLong(accessor.getObject(rowId));
         }
     }
 
-    private static class FloatAccessor extends ArrowVectorAccessor {
+    private static class FloatAccessor extends ArrowFieldVectorAccessor {
 
         private final Float4Vector accessor;
         private final ObjectResolver resolver;
@@ -523,7 +410,7 @@ public class ColumnarData {
         }
     }
 
-    private static class DoubleAccessor extends ArrowVectorAccessor {
+    private static class DoubleAccessor extends ArrowFieldVectorAccessor {
 
         private final Float8Vector accessor;
         private final ObjectResolver resolver;
@@ -543,7 +430,7 @@ public class ColumnarData {
         }
     }
 
-    private static class DecimalAccessor extends ArrowVectorAccessor {
+    private static class DecimalAccessor extends ArrowFieldVectorAccessor {
 
         private final DecimalVector accessor;
         private ObjectResolver resolver;
@@ -564,7 +451,7 @@ public class ColumnarData {
         }
     }
 
-    private static class StringAccessor extends ArrowVectorAccessor {
+    private static class StringAccessor extends ArrowFieldVectorAccessor {
 
         private final VarCharVector accessor;
         private final NullableVarCharHolder stringResult = new NullableVarCharHolder();
@@ -585,7 +472,7 @@ public class ColumnarData {
         }
     }
 
-    private static class LargeStringAccessor extends ArrowVectorAccessor {
+    private static class LargeStringAccessor extends ArrowFieldVectorAccessor {
 
         private final LargeVarCharVector accessor;
         private final NullableVarCharHolder stringResult = new NullableVarCharHolder();
@@ -604,14 +491,9 @@ public class ColumnarData {
             }
             return resolver.resolveLargeUtf8(accessor.getObject(rowId).toString());
         }
-
-        @Override
-        final Text getUTF8String(int rowId) {
-            return accessor.getObject(rowId);
-        }
     }
 
-    private static class BinaryAccessor extends ArrowVectorAccessor {
+    private static class BinaryAccessor extends ArrowFieldVectorAccessor {
 
         private final VarBinaryVector accessor;
         private final ObjectResolver resolver;
@@ -627,16 +509,11 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            return resolver.resolveBinary(getBinary(rowId));
-        }
-
-        @Override
-        final byte[] getBinary(int rowId) {
-            return accessor.getObject(rowId);
+            return resolver.resolveBinary(accessor.getObject(rowId));
         }
     }
 
-    private static class LargeBinaryAccessor extends ArrowVectorAccessor {
+    private static class LargeBinaryAccessor extends ArrowFieldVectorAccessor {
 
         private final LargeVarBinaryVector accessor;
         private final ObjectResolver resolver;
@@ -649,16 +526,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.resolveLargeBinary(getBinary(rowId));
-        }
-
-        @Override
-        final byte[] getBinary(int rowId) {
-            return accessor.getObject(rowId);
+            return resolver.resolveLargeBinary(accessor.getObject(rowId));
         }
     }
 
-    private static class DateAccessor extends ArrowVectorAccessor {
+    private static class DateAccessor extends ArrowFieldVectorAccessor {
 
         private final DateMilliVector accessor;
         private final ObjectResolver resolver;
@@ -678,14 +550,9 @@ public class ColumnarData {
             Date date = new Date(millis);
             return resolver.resolveDate(date);
         }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
-        }
     }
 
-    private static class TimestampMicroAccessor extends ArrowVectorAccessor {
+    private static class TimestampMicroAccessor extends ArrowFieldVectorAccessor {
 
         private final TimeStampMicroTZVector accessor;
 
@@ -696,16 +563,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getLong(rowId);
-        }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
+            return accessor.getObject(rowId);
         }
     }
 
-    private static class TimestampMicroNTZAccessor extends ArrowVectorAccessor {
+    private static class TimestampMicroNTZAccessor extends ArrowFieldVectorAccessor {
 
         private final TimeStampMicroVector accessor;
 
@@ -716,16 +578,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getLong(rowId);
-        }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
+            return accessor.getObject(rowId);
         }
     }
 
-    private static class TimestampMilliAccessor extends ArrowVectorAccessor {
+    private static class TimestampMilliAccessor extends ArrowFieldVectorAccessor {
 
         private final TimeStampMilliTZVector accessor;
 
@@ -736,16 +593,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getLong(rowId);
-        }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
+            return accessor.getObject(rowId);
         }
     }
 
-    private static class TimestampMilliNTZAccessor extends ArrowVectorAccessor {
+    private static class TimestampMilliNTZAccessor extends ArrowFieldVectorAccessor {
 
         private final TimeStampMilliVector accessor;
 
@@ -760,18 +612,13 @@ public class ColumnarData {
                 return null;
             }
             // mills
-            long value = getLong(rowId);
+            long value = accessor.get(rowId);
             Timestamp t = new Timestamp(value);
             return t;
         }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
-        }
     }
 
-    private static class TimestampSecAccessor extends ArrowVectorAccessor {
+    private static class TimestampSecAccessor extends ArrowFieldVectorAccessor {
 
         private final TimeStampSecTZVector accessor;
 
@@ -782,16 +629,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getLong(rowId);
-        }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
+            return accessor.getObject(rowId);
         }
     }
 
-    private static class TimestampSecNTZAccessor extends ArrowVectorAccessor {
+    private static class TimestampSecNTZAccessor extends ArrowFieldVectorAccessor {
 
         private final TimeStampSecVector accessor;
 
@@ -802,16 +644,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return getLong(rowId);
-        }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
+            return accessor.getObject(rowId);
         }
     }
 
-    private static class TimestampNanoAccessor extends ArrowVectorAccessor {
+    private static class TimestampNanoAccessor extends ArrowFieldVectorAccessor {
 
         private final TimeStampNanoTZVector accessor;
         private final ObjectResolver resolver;
@@ -824,16 +661,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.resolve(getLong(rowId));
-        }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
+            return resolver.resolve(accessor.getObject(rowId));
         }
     }
 
-    private static class TimestampNanoNTZAccessor extends ArrowVectorAccessor {
+    private static class TimestampNanoNTZAccessor extends ArrowFieldVectorAccessor {
 
         private final TimeStampNanoVector accessor;
         private final ObjectResolver resolver;
@@ -849,7 +681,7 @@ public class ColumnarData {
             if (accessor.isNull(rowId)) {
                 return null;
             }
-            long value = getLong(rowId);
+            long value = accessor.get(rowId);
             long nano = value % DateTimeConstants.NANOS_PER_SECOND;
             long second = value / DateTimeConstants.NANOS_PER_SECOND;
             if (nano < 0) {
@@ -860,21 +692,16 @@ public class ColumnarData {
             t.setNanos((int) nano);
             return resolver.resolveTimestamp(t);
         }
-
-        @Override
-        final long getLong(int rowId) {
-            return accessor.get(rowId);
-        }
     }
 
-    private static class NullAccessor extends ArrowVectorAccessor {
+    private static class NullAccessor extends ArrowFieldVectorAccessor {
 
         NullAccessor(NullVector vector, ObjectResolver resolver) {
             super(vector);
         }
     }
 
-    private static class IntervalYearAccessor extends ArrowVectorAccessor {
+    private static class IntervalYearAccessor extends ArrowFieldVectorAccessor {
 
         private final IntervalYearVector accessor;
         private final ObjectResolver resolver;
@@ -887,16 +714,11 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.resolve(getInt(rowId));
-        }
-
-        @Override
-        int getInt(int rowId) {
-            return accessor.get(rowId);
+            return resolver.resolve(accessor.getObject(rowId));
         }
     }
 
-    private static class IntervalDayAccessor extends ArrowVectorAccessor {
+    private static class IntervalDayAccessor extends ArrowFieldVectorAccessor {
 
         private final IntervalDayVector accessor;
         private final NullableIntervalDayHolder intervalDayHolder = new NullableIntervalDayHolder();
@@ -910,26 +732,46 @@ public class ColumnarData {
 
         @Override
         Object getObject(int rowId) {
-            return resolver.resolve(getLong(rowId));
-        }
-
-        @Override
-        long getLong(int rowId) {
             accessor.get(rowId, intervalDayHolder);
-            return Math.addExact(
-                    Math.multiplyExact(intervalDayHolder.days, DateTimeConstants.MICROS_PER_DAY),
-                    intervalDayHolder.milliseconds * DateTimeConstants.MICROS_PER_MILLIS);
+            Object value =
+                    Math.addExact(
+                            Math.multiplyExact(
+                                    intervalDayHolder.days, DateTimeConstants.MICROS_PER_DAY),
+                            intervalDayHolder.milliseconds * DateTimeConstants.MICROS_PER_MILLIS);
+            return resolver.resolve(value);
         }
     }
 
-    private static class NestedVectorAccessor extends ArrowVectorAccessor {
+    private static class NestedVectorAccessor extends ArrowFieldVectorAccessor {
         private final FieldVector vector;
         private final ObjectResolver resolver;
+        private Map<FieldVector, ColumnarData> childColumnarData;
 
         NestedVectorAccessor(FieldVector vector, ObjectResolver resolver) {
             super(vector);
             this.vector = vector;
             this.resolver = resolver;
+            this.childColumnarData = new HashMap<>();
+            cacheChildVector(vector);
+        }
+
+        private void cacheChildVector(FieldVector vector) {
+            if (vector instanceof StructVector) {
+                List<FieldVector> childFieldVectors =
+                        ((StructVector) vector).getChildrenFromFields();
+                for (FieldVector childFieldVector : childFieldVectors) {
+                    cacheChildVector(childFieldVector);
+                }
+            } else if (vector instanceof ListVector) {
+                FieldVector childFieldVector = ((ListVector) vector).getDataVector();
+                cacheChildVector(childFieldVector);
+            } else if (vector instanceof MapVector) {
+                FieldVector childFieldVector = ((MapVector) vector).getDataVector();
+                cacheChildVector(childFieldVector);
+            } else {
+                // primitive type
+                childColumnarData.put(vector, new ColumnarData(vector, resolver));
+            }
         }
 
         @Override
@@ -1011,146 +853,9 @@ public class ColumnarData {
                 }
             } else {
                 // primitive type
-                if (vector instanceof DateMilliVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            Date date = new Date(((DateMilliVector) vector).get(rowId));
-                            result.add(resolver.resolveDate(date));
-                        }
-                    }
-                } else if (vector instanceof TimeStampNanoVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            long value = ((TimeStampVector) vector).get(rowId + i);
-                            long nano = value % DateTimeConstants.NANOS_PER_SECOND;
-                            long second = value / DateTimeConstants.NANOS_PER_SECOND;
-                            if (nano < 0) {
-                                nano += DateTimeConstants.NANOS_PER_SECOND;
-                                second -= 1;
-                            }
-                            Timestamp t =
-                                    new Timestamp(second * DateTimeConstants.MILLIS_PER_SECOND);
-                            t.setNanos((int) nano);
-                            result.add(resolver.resolveTimestamp(t));
-                        }
-                    }
-                } else if (vector instanceof DecimalVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            DecimalVector decimalVector = (DecimalVector) vector;
-                            BigDecimal bigDecimal = (BigDecimal) vector.getObject(rowId + i);
-                            result.add(
-                                    resolver.resolveDecimal(
-                                            bigDecimal,
-                                            decimalVector.getPrecision(),
-                                            decimalVector.getScale(),
-                                            128));
-                        }
-                    }
-                } else if (vector instanceof VarCharVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(
-                                    resolver.resolveUtf8(vector.getObject(rowId + i).toString()));
-                        }
-                    }
-                } else if (vector instanceof LargeVarCharVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(
-                                    resolver.resolveLargeUtf8(
-                                            vector.getObject(rowId + i).toString()));
-                        }
-                    }
-                } else if (vector instanceof VarBinaryVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(
-                                    resolver.resolveBinary((byte[]) vector.getObject(rowId + i)));
-                        }
-                    }
-                } else if (vector instanceof LargeVarBinaryVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(
-                                    resolver.resolveLargeBinary(
-                                            (byte[]) vector.getObject(rowId + i)));
-                        }
-                    }
-                } else if (vector instanceof IntVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(resolver.resolveInt((int) vector.getObject(rowId + i)));
-                        }
-                    }
-                } else if (vector instanceof BigIntVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(resolver.resolveLong((long) vector.getObject(rowId + i)));
-                        }
-                    }
-                } else if (vector instanceof SmallIntVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(resolver.resolveShort((short) vector.getObject(rowId + i)));
-                        }
-                    }
-                } else if (vector instanceof TinyIntVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(resolver.resolveByte((byte) vector.getObject(rowId + i)));
-                        }
-                    }
-                } else if (vector instanceof Float4Vector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(resolver.resolveFloat((float) vector.getObject(rowId + i)));
-                        }
-                    }
-                } else if (vector instanceof Float8Vector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(
-                                    resolver.resolveDouble((double) vector.getObject(rowId + i)));
-                        }
-                    }
-                } else if (vector instanceof BitVector) {
-                    for (int i = 0; i < rows; i++) {
-                        if (vector.isNull(i)) {
-                            result.add(null);
-                        } else {
-                            result.add(resolver.resolveBoolean((int) vector.getObject(rowId + i)));
-                        }
-                    }
-                } else {
-                    throw new UnsupportedOperationException(
-                            "array type is not supported yet: " + vector.getClass());
+                ColumnarData columnarData = childColumnarData.get(vector);
+                for (int i = 0; i < rows; i++) {
+                    result.add(columnarData.getObject(rowId + i));
                 }
             }
             return result.toArray();
