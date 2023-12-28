@@ -939,6 +939,11 @@ public class ColumnarDataBuilder {
                 }
             } else {
                 // Primitive type
+                /* 
+                 * Due to the fact that FieldVector does not determine the equality of
+                 * two FieldVectors by comparing their contained values, doing so will
+                 * not incur a significant overhead.
+                 */
                 ColumnarDataBuilder columnarDataBuilder = childBuilders.get(vector);
                 columnarDataBuilder.setObject(rowId, value);
                 vector.setValueCount(rowId + 1);
