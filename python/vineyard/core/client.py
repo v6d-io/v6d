@@ -190,7 +190,10 @@ class Client:
                     ports.append(p)
 
         if socket:
-            self._ipc_client = _connect(socket, **kwargs)
+            try:
+                self._ipc_client = _connect(socket, **kwargs)
+            except VineyardException:
+                pass
         for host, port in zip(hosts, ports):
             try:
                 self._rpc_client = _connect(host, port, **kwargs)
