@@ -186,6 +186,22 @@
                     <exclude>com/google/common/jimfs/FileSystemState.class</exclude>
                   </excludes>
                 </filter>
+                <filter>
+                  <artifact>com.google.guava:guava</artifact>
+                  <includes>
+                    <include>**</include>
+                  </includes>
+                  <excludes>
+                    <exclude>com/google/common/base/Objects.class</exclude>
+                    <exclude>com/google/common/base/CharMatcher.class</exclude>
+                    <exclude>com/google/common/base/Splitter.class</exclude>
+                    <exclude>com/google/common/util/concurrent/AbstractCheckedFuture.class</exclude>
+                    <exclude>com/google/common/util/concurrent/CheckedFuture.class</exclude>
+                    <exclude>com/google/common/util/concurrent/Futures.class</exclude>
+                    <exclude>com/google/common/util/concurrent/ListeningScheduledExecutorService.class</exclude>
+                    <exclude>com/google/common/util/concurrent/MoreExecutors.class</exclude>
+                  </excludes>
+                </filter>
               </filters>
             </configuration>
           </execution>

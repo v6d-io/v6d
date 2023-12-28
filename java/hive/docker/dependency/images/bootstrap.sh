@@ -12,33 +12,33 @@ start_hdfs_namenode() {
 	fi
 	${HADOOP_HOME}/bin/hdfs --loglevel INFO namenode
 	
-	tail -f ${HADOOP_HOME}/logs/*namenode*.log
+	tail -f /var/log/hadoop/*namenode*.log
 }
 
 start_hdfs_datanode() {
     wait_for $1 $2
 	
 	${HADOOP_HOME}/bin/hdfs --loglevel INFO --daemon start datanode
-    tail -f ${HADOOP_HOME}/logs/*datanode*.log	
+    tail -f /var/log/hadoop/*datanode*.log	
 }
 
 start_yarn_resourcemanager() {
     ${HADOOP_HOME}/bin/yarn --loglevel INFO --daemon start resourcemanager
-    tail -f ${HADOOP_HOME}/logs/*resourcemanager*.log
+    tail -f /var/log/hadoop/*resourcemanager*.log
 }
 
 start_yarn_nodemanager() {
 	wait_for $1 $2
 
 	${HADOOP_HOME}/bin/yarn --loglevel INFO --daemon start nodemanager
-	tail -f ${HADOOP_HOME}/logs/*nodemanager*.log
+	tail -f /var/log/hadoop/*nodemanager*.log
 }
 
 start_yarn_proxyserver() {
 	wait_for $1 $2
 
 	${HADOOP_HOME}/bin/yarn --loglevel INFO --daemon start proxyserver
-	tail -f ${HADOOP_HOME}/logs/*proxyserver*.log
+	tail -f /var/log/hadoop/*proxyserver*.log
 }
 
 start_mr_historyserver() {
@@ -46,7 +46,7 @@ start_mr_historyserver() {
     wait_for $1 $2
 
 	${HADOOP_HOME}/bin/mapred --loglevel INFO  --daemon  start historyserver
-	tail -f ${HADOOP_HOME}/logs/*historyserver*.log
+	tail -f /var/log/hadoop/*historyserver*.log
 }
 
 start_hive_metastore() {
