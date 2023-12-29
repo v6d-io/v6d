@@ -240,6 +240,7 @@ var (
 	    resources:
 	      limits: null
 	      requests: null
+	    securityContext: {}
 	    volumeMounts:
 	    - mountPath: /var/run
 	      name: vineyard-socket
@@ -487,9 +488,9 @@ func GetManifestFromTemplate(workload string) (OutputManifests, error) {
 			return etcdConfig
 		},
 		"toYaml": func(v interface{}) string {
-			bs, error := yaml.Marshal(v)
-			if error != nil {
-				log.Error(error, "failed to marshal object %v to yaml", v)
+			bs, err := yaml.Marshal(v)
+			if err != nil {
+				log.Error(err, "failed to marshal object %v to yaml", v)
 				return ""
 			}
 			return string(bs)

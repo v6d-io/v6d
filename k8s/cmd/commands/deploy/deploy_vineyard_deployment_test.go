@@ -403,6 +403,7 @@ func TestGetVineyardDeploymentObjectsFromTemplate_third(t *testing.T) {
 												"limits":   nil,
 												"requests": nil,
 											},
+											"securityContext": map[string]interface{}{},
 											"command": []interface{}{
 												"/bin/bash",
 												"-c",
