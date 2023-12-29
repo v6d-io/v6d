@@ -3,6 +3,7 @@ version: '3.5'
 services:
   metastore:
     image: apache/hadoop_hive:v1
+    user: "root:root"
     restart: unless-stopped
     container_name: metastore
     hostname: metastore
@@ -29,6 +30,7 @@ services:
 
   hive:
     image: apache/hadoop_hive:v1
+    user: "root:root"
     depends_on:
       - metastore
     restart: unless-stopped
