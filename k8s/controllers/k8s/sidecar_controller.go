@@ -70,9 +70,9 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		TmplFunc: map[string]interface{}{
 			"getEtcdConfig": nil,
 			"toYaml": func(v interface{}) string {
-				bs, error := yaml.Marshal(v)
-				if error != nil {
-					logger.Error(error, "failed to marshal object %v to yaml", v)
+				bs, err := yaml.Marshal(v)
+				if err != nil {
+					logger.Error(err, "failed to marshal object %v to yaml", v)
 					return ""
 				}
 				return string(bs)

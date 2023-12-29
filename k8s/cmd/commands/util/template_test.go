@@ -18,6 +18,7 @@ package util
 import (
 	_ "embed"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
@@ -56,6 +58,18 @@ func Test_RenderManifestAsObj(t *testing.T) {
 					},
 					"getEtcdConfig": func() k8s.EtcdConfig {
 						return etcdConfig
+					},
+					"toYaml": func(v interface{}) string {
+						bs, err := yaml.Marshal(v)
+						if err != nil {
+							t.Error(err, "failed to marshal object %v to yaml", v)
+							return ""
+						}
+						return string(bs)
+					},
+					"indent": func(spaces int, s string) string {
+						prefix := strings.Repeat(" ", spaces)
+						return prefix + strings.Replace(s, "\n", "\n"+prefix, -1)
 					},
 				},
 			},
@@ -152,6 +166,18 @@ func TestBuildObjsFromEtcdManifests(t *testing.T) {
 		"getEtcdConfig": func() k8s.EtcdConfig {
 			return etcdConfig
 		},
+		"toYaml": func(v interface{}) string {
+			bs, err := yaml.Marshal(v)
+			if err != nil {
+				t.Error(err, "failed to marshal object %v to yaml", v)
+				return ""
+			}
+			return string(bs)
+		},
+		"indent": func(spaces int, s string) string {
+			prefix := strings.Repeat(" ", spaces)
+			return prefix + strings.Replace(s, "\n", "\n"+prefix, -1)
+		},
 	}
 	vineyardd := value
 	name := vineyardd.Name
@@ -215,6 +241,18 @@ func TestBuildObjsFromVineyarddManifests(t *testing.T) {
 		"getEtcdConfig": func() k8s.EtcdConfig {
 			return etcdConfig
 		},
+		"toYaml": func(v interface{}) string {
+			bs, err := yaml.Marshal(v)
+			if err != nil {
+				t.Error(err, "failed to marshal object %v to yaml", v)
+				return ""
+			}
+			return string(bs)
+		},
+		"indent": func(spaces int, s string) string {
+			prefix := strings.Repeat(" ", spaces)
+			return prefix + strings.Replace(s, "\n", "\n"+prefix, -1)
+		},
 	}
 
 	objs, err := BuildObjsFromVineyarddManifests(files, value, tmplFunc)
@@ -270,6 +308,18 @@ func TestBuildObjsFromManifests(t *testing.T) {
 		},
 		"getBackupConfig": func() k8s.BackupConfig {
 			return backupCfg
+		},
+		"toYaml": func(v interface{}) string {
+			bs, err := yaml.Marshal(v)
+			if err != nil {
+				t.Error(err, "failed to marshal object %v to yaml", v)
+				return ""
+			}
+			return string(bs)
+		},
+		"indent": func(spaces int, s string) string {
+			prefix := strings.Repeat(" ", spaces)
+			return prefix + strings.Replace(s, "\n", "\n"+prefix, -1)
 		},
 	}
 

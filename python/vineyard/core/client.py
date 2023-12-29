@@ -530,7 +530,7 @@ class Client:
         meta = self.get_meta(object_id)
 
         if self.has_ipc_client():
-            if meta.instance_id == self._ipc_client.instance_id:
+            if meta.instance_id == self._ipc_client.instance_id or meta.isglobal:
                 return self._ipc_client.get_object(object_id, fetch=False)
             else:
                 warnings.warn(

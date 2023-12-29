@@ -246,6 +246,7 @@ spec:
         resources:
           limits: null
           requests: null
+        securityContext: {}
         volumeMounts:
         - mountPath: /var/run
           name: vineyard-socket
@@ -303,6 +304,7 @@ spec:
     resources:
       limits: null
       requests: null
+    securityContext: {}
     volumeMounts:
     - mountPath: /var/run
       name: vineyard-socket

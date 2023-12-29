@@ -105,9 +105,9 @@ func GetVineyardDeploymentObjectsFromTemplate() ([]*unstructured.Unstructured, e
 			return etcdConfig
 		},
 		"toYaml": func(v interface{}) string {
-			bs, error := yaml.Marshal(v)
-			if error != nil {
-				log.Error(error, "failed to marshal object %v to yaml", v)
+			bs, err := yaml.Marshal(v)
+			if err != nil {
+				log.Error(err, "failed to marshal object %v to yaml", v)
 				return ""
 			}
 			return string(bs)
