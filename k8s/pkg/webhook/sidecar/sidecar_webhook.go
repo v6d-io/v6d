@@ -63,6 +63,7 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 	sidecar := &v1alpha1.Sidecar{}
 	templatePod := &corev1.Pod{}
 	pod := &corev1.Pod{}
+	namespace := req.Namespace
 	if err := r.decoder.Decode(req, pod); err != nil {
 		return admission.Errored(http.StatusBadRequest, err)
 	}
@@ -93,7 +94,7 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 		// replace the invalid characters in the name
 		re := regexp.MustCompile(`[^a-zA-Z0-9.-]+`)
 		sidecar.Name = re.ReplaceAllString(sidecar.Name, "-")
-		sidecar.Namespace = pod.Namespace
+		sidecar.Namespace = namespace
 		sidecar.OwnerReferences = pod.OwnerReferences
 		err := r.Get(
 			ctx,
@@ -107,9 +108,9 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 		// if the default sidecar cr doesn't exist, create it
 		if apierrors.IsNotFound(err) {
 			sidecar.Spec.Replicas = 1
+			sidecar.Namespace = namespace
 			// use default configurations
 			sidecar.Spec.Selector = keys[0] + "=" + l[keys[0]]
-
 			if err := r.Create(ctx, sidecar); err != nil {
 				logger.Error(err, "failed to create default sidecar cr")
 				return admission.Errored(http.StatusInternalServerError, err)
@@ -135,7 +136,7 @@ func (r *Injector) Handle(ctx context.Context, req admission.Request) admission.
 		// get the sidecar cr
 		if err := r.Get(
 			ctx,
-			types.NamespacedName{Name: v, Namespace: pod.Namespace},
+			types.NamespacedName{Name: v, Namespace: namespace},
 			sidecar,
 		); err != nil {
 			logger.Error(err, "get custom sidecar cr failed")

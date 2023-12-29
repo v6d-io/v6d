@@ -28,10 +28,10 @@ setup:
         sed 's/$job/job1/' k8s/test/e2e/assembly-demo/assembly-job.yaml | \
           gomplate -d config=k8s/test/e2e/assembly-demo/assembly-job-config.yaml | \
           kubectl apply -f -
-      wait:
-        - namespace: vineyard-job
-          resource: deployment/assembly-job1
-          for: condition=Available
+        while [[ -z $(kubectl logs -l app=assembly-job1 -n vineyard-job | grep "writer finished") ]]; \
+        do \
+          sleep 1; \
+        done
     - name: install job2
       command: |
         sed 's/$job/job2/' k8s/test/e2e/assembly-demo/assembly-job.yaml | \
@@ -45,7 +45,7 @@ setup:
 
 cleanup:
   # always never success failure
-  on: success
+  on: always
 
 verify:
   # verify with retry strategy

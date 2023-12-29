@@ -33,8 +33,6 @@ const (
 	VINEYARD_DEFAULT_RPC_PORT = 9600
 )
 
-var logger = log.Log.WithName("client")
-
 var NOT_CONNECTED_ERR = common.NotConnected()
 
 func GetDefaultIPCSocket() string {

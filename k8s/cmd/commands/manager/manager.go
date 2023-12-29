@@ -19,15 +19,18 @@ package manager
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubernetes/cmd/kube-scheduler/app"
-	"k8s.io/kubernetes/pkg/scheduler/framework"
+
+	framework "k8s.io/kubernetes/pkg/scheduler/framework/v1alpha1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -67,6 +70,10 @@ var managerCmd = &cobra.Command{
 		util.AssertNoArgs(cmd, args)
 
 		ctrl.SetLogger(log.Log.Logger)
+		schedulerStartable, err := checkKubernetesVersionForScheduler()
+		if err != nil {
+			log.Errorf(err, "failed to check kubernetes version for scheduler")
+		}
 		// start the controller
 		mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 			Scheme:                 util.Scheme(),
@@ -83,7 +90,7 @@ var managerCmd = &cobra.Command{
 
 		wg := sync.WaitGroup{}
 
-		if flags.EnableScheduler {
+		if flags.EnableScheduler && schedulerStartable {
 			wg.Add(1)
 			go startScheduler(mgr, flags.SchedulerConfigFile)
 		}
@@ -227,10 +234,10 @@ func startManager(
 			})
 		log.Info("the scheduling webhook is registered")
 
-		if err := mgr.AddHealthzCheck("healthz", mgr.GetWebhookServer().StartedChecker()); err != nil {
+		if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 			log.Fatal(err, "unable to set up health check for webhook")
 		}
-		if err := mgr.AddReadyzCheck("readyz", mgr.GetWebhookServer().StartedChecker()); err != nil {
+		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 			log.Fatal(err, "unable to set up ready check for webhook")
 		}
 	} else {
@@ -270,7 +277,7 @@ func startScheduler(mgr manager.Manager, schedulerConfigFile string) {
 
 	command := app.NewSchedulerCommand(
 		app.WithPlugin(schedulers.Name,
-			func(obj runtime.Object, handle framework.Handle) (framework.Plugin, error) {
+			func(obj runtime.Object, handle framework.FrameworkHandle) (framework.Plugin, error) {
 				return schedulers.New(mgr.GetClient(), mgr.GetConfig(), obj, handle)
 			},
 		),
@@ -287,4 +294,36 @@ func startScheduler(mgr manager.Manager, schedulerConfigFile string) {
 	if err := command.Execute(); err != nil {
 		log.Fatal(err, "failed to execute scheduler")
 	}
+}
+
+// checkKubernetesVersionForScheduler checks the kubernetes version for the scheduler
+// the scheduler only supports kubernetes version 1.19-1.24
+func checkKubernetesVersionForScheduler() (bool, error) {
+	config := util.GetKubernetesConfig()
+
+	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		return false, err
+	}
+
+	information, err := discoveryClient.ServerVersion()
+	if err != nil {
+		return false, err
+	}
+
+	major, err := strconv.Atoi(information.Major)
+	if err != nil {
+		return false, err
+	}
+
+	minor, err := strconv.Atoi(information.Minor)
+	if err != nil {
+		return false, err
+	}
+
+	if major != 1 || minor < 19 || minor > 24 {
+		return false, fmt.Errorf("the scheduler only supports kubernetes version 1.19-1.24")
+	}
+
+	return true, nil
 }
