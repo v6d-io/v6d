@@ -1,5 +1,4 @@
-/*
-Copyright 2018 The Kubernetes Authors.
+/** Copyright 2020-2023 Alibaba Group Holding Limited.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -14,42 +13,27 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package log contains utilities for fetching a new logger
-// when one is not already available.
-//
-// # The Log Handle
-//
-// This package contains a root logr.Logger Log.  It may be used to
-// get a handle to whatever the root logging implementation is.  By
-// default, no implementation exists, and the handle returns "promises"
-// to loggers.  When the implementation is set using SetLogger, these
-// "promises" will be converted over to real loggers.
-//
-// # Logr
-//
-// All logging in controller-runtime is structured, using a set of interfaces
-// defined by a package called logr
-// (https://pkg.go.dev/github.com/go-logr/logr).  The sub-package zap provides
-// helpers for setting up logr backed by Zap (go.uber.org/zap).
+// Package log contains the global logger for the vineyard operator.
 package log
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
 
 	"github.com/go-logr/logr"
+	uberzap "go.uber.org/zap"
+	"go.uber.org/zap/buffer"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/v6d-io/v6d/go/vineyard/pkg/common/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 var (
 	defaultLogger = makeDefaultLogger(0)
-
-	dlog = NewDelegatingLogSink(defaultLogger)
-
-	Log = Logger{newLogrLogger(dlog).WithName("vineyard")}
+	dlog          = NewDelegatingLogSink(defaultLogger)
+	Log           = Logger{newLogrLogger(dlog).WithName("vineyard")}
 )
 
 // New returns a new Logger instance.  This is primarily used by libraries
@@ -68,12 +52,40 @@ func SetLogLevel(level int) {
 func makeDefaultLogger(verbose int) logr.Logger {
 	zapOpts := &zap.Options{
 		Development: true,
-		TimeEncoder: zapcore.ISO8601TimeEncoder,
 		Level:       zapcore.Level(verbose),
 	}
-	return zap.New(zap.UseOptions(zapOpts))
+	zapOpts.Encoder = &EscapeSeqJSONEncoder{
+		Encoder: zapcore.NewConsoleEncoder(uberzap.NewDevelopmentEncoderConfig()),
+	}
+	return zap.New(zap.UseFlagOptions(zapOpts))
 }
 
+type EscapeSeqJSONEncoder struct {
+	zapcore.Encoder
+}
+
+func (enc *EscapeSeqJSONEncoder) Clone() zapcore.Encoder {
+	return enc // TODO: change me
+}
+
+func (enc *EscapeSeqJSONEncoder) EncodeEntry(entry zapcore.Entry, fields []zapcore.Field) (*buffer.Buffer, error) {
+	// call EncodeEntry on the embedded interface to get the
+	// original output
+	b, err := enc.Encoder.EncodeEntry(entry, fields)
+	bs := b.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	newb := buffer.NewPool().Get()
+
+	// then manipulate that output into what you need it to be
+	bs = bytes.Replace(bs, []byte("\\n"), []byte("\n"), -1)
+	bs = bytes.Replace(bs, []byte("\\t"), []byte("\t"), -1)
+	_, err = newb.Write(bs)
+	return newb, err
+}
+
+// Extends the logr's logger with Fatal support
 type Logger struct {
 	logr.Logger
 }
@@ -89,6 +101,7 @@ func FromContext(ctx context.Context, keysAndValues ...any) Logger {
 	if ctx != nil {
 		log = logr.FromContext(ctx)
 	}
+
 	return Logger{log.WithValues(keysAndValues...)}
 }
 
@@ -127,6 +140,14 @@ func (l Logger) Fatalf(err error, format string, v ...any) {
 	l.Fatal(err, fmt.Sprintf(format, v...))
 }
 
+func (l Logger) Output(msg string) {
+	fmt.Println(msg)
+}
+
+func (l Logger) Outputf(format string, v ...any) {
+	fmt.Printf(format, v...)
+}
+
 func Info(msg string, keysAndValues ...any) {
 	Log.Info(msg, keysAndValues...)
 }
@@ -149,4 +170,12 @@ func Errorf(err error, format string, v ...any) {
 
 func Fatalf(err error, format string, v ...any) {
 	Log.Fatalf(err, format, v...)
+}
+
+func Output(msg string) {
+	Log.Output(msg)
+}
+
+func Outputf(msg string, keysAndValues ...any) {
+	Log.Outputf(msg, keysAndValues...)
 }

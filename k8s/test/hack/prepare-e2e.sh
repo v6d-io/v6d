@@ -57,3 +57,13 @@ if ! command -v gomplate &> /dev/null; then
         @echo "unable to install gomplate, please check."
     fi
 fi
+
+# install kind no more than v0.13.0
+if ! command -v kind &> /dev/null || [ $(kind version | awk '{print $2}' | cut -d'.' -f2) -gt 13 ]; then
+    @echo "installing kind..."
+    [ $(uname -m) = x86_64 ] && curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.13.0/kind-linux-amd64
+    chmod +x ./kind && sudo mv ./kind ${INSTALL_DIR}/kind
+    if [ $? -ne 0 ]; then
+        @echo "unable to install kind, please check."
+    fi
+fi

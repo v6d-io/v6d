@@ -27,7 +27,7 @@ to share the vineyard data via the command `vineyardctl schedule workload`.
 Prerequisites
 -------------
 
-- A kubernetes cluster with version >= 1.25.10.
+- A kubernetes cluster >= v1.19.
 - Install the latest vineyardctl command line tool refer to `vineyardctl installation`_.
 
 Data sharing between different containers
