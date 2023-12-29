@@ -23,7 +23,7 @@ To deploy Kedro pipelines on Kubernetes, you must have a kubernetes cluster.
     If you already have a K8s cluster, just skip this section and continue
     on deploying.
 
-We recommend `kind v0.20.0 <https://kind.sigs.k8s.io/>`_ to create a multi-node
+We recommend `kind v0.13.0 <https://kind.sigs.k8s.io/>`_ to create a multi-node
 Kubernetes cluster on your local machine as follows:
 
 .. code:: bash
@@ -33,13 +33,13 @@ Kubernetes cluster on your local machine as follows:
     apiVersion: kind.x-k8s.io/v1alpha4
     nodes:
     - role: control-plane
-      image: kindest/node:v1.25.11
+      image: kindest/node:v1.19.3
     - role: worker
-      image: kindest/node:v1.25.11
+      image: kindest/node:v1.19.3
     - role: worker
-      image: kindest/node:v1.25.11
+      image: kindest/node:v1.19.3
     - role: worker
-      image: kindest/node:v1.25.11
+      image: kindest/node:v1.19.3
     EOF
 
 
