@@ -1,12 +1,8 @@
 #!/bin/sh
 set -ex
-NAMESPACE=$MOUNT_NAMESPACE
-VINEYARD_NAME=$VINEYARD_FULL_NAME
-MARKER=$PRESTOP_MARKER
-MOUNT_DIR="/runtime-mnt/vineyard/$NAMESPACE/$VINEYARD_NAME"
-SOCKET_FILE="$MOUNT_DIR/vineyard-fuse/vineyard.sock"
-FUSE_DIR="$MOUNT_DIR/vineyard-fuse"
-RPC_CONFIG_FILE="$MOUNT_DIR/vineyard-fuse/rpc-conf/VINEYARD_RPC_ENDPOINT"
+
+SOCKET_FILE="$FUSE_DIR/vineyard.sock"
+RPC_CONFIG_FILE="$RPC_CONF_DIR/VINEYARD_RPC_ENDPOINT"
 VINEYARD_YAML_FILE="$FUSE_DIR/vineyard.yaml"
 
 # Write the IPCSocket and RPCEndpoints to the vineyard configurations YAML file
@@ -19,7 +15,7 @@ write_yaml_config() {
 mkdir -p $FUSE_DIR
 while true; do
     # check if prestop marker exists, if so, skip mounting
-    if [ -f $MARKER ]; then
+    if [ -f $PRESTOP_MARKER ]; then
         echo "PreStop hook is in progress, skip mounting."
         break
     fi
