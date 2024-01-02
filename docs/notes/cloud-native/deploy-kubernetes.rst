@@ -21,7 +21,7 @@ Use the vineyardctl to install vineyard cluster.
 
 .. code:: bash
 
-    python3 -m vineyard.ctl install vineyard-cluster --create-namespace
+    python3 -m vineyard.ctl deploy vineyard-cluster --create-namespace
 
 Also, you could follow the next guide to install vineyard cluster steps
 by steps.
