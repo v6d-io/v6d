@@ -112,4 +112,8 @@
         <name>hive.metastore.client.connect.retry.delay</name>
         <value>5s</value>
     </property>
+    <property>
+        <name>hive.metastore.uris</name>
+        <value>thrift://metastore:9083</value>
+    </property>
 </configuration>

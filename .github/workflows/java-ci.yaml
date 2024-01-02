@@ -173,12 +173,50 @@ jobs:
           # wait for hive docker ready
           sleep 60
 
-      - name: Setup tmate session
-        if: false
-        uses: mxschmitt/action-tmate@v3
-
       - name: Hive test
         run: |
           pushd java/hive/test
           ./test.sh
           popd
+
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v3
+
+      - name: Spark with hive test
+        run: |
+          pushd java/hive/test
+          ./spark-hive-test.sh
+          popd
+
+      - name: Stop hive docker
+        run: |
+          pushd java/hive/docker
+          docker-compose -f docker-compose.yaml stop
+          docker-compose -f docker-compose.yaml rm -f
+          popd
+
+      # - name: Build hadoop cluster
+      #   run: |
+      #     pushd java/hive/docker
+      #     docker-compose -f docker-compose-distributed.yaml up -d
+      #     popd
+
+      # - name: Hive distributed test
+      #   run: |
+      #     pushd java/hive/test
+      #     ./distributed-test.sh
+      #     popd
+
+      # - name: Spark with hive distribued test
+      #   run: |
+      #     pushd java/hive/test
+      #     ./spark-hive-distributed-test.sh
+      #     popd
+
+      # - name: Stop hadoop cluster
+      #   run: |
+      #     pushd java/hive/docker
+      #     docker-compose -f docker-compose-distributed.yaml stop
+      #     docker-compose -f docker-compose-distributed.yaml rm -f
+      #     popd

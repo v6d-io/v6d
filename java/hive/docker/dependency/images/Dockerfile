@@ -24,7 +24,13 @@ COPY hive /opt/apache/hive/
 COPY hive-config/ /hive-config
 COPY hive-config-distributed/ /hive-config-distributed
 
-ENV PATH=${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin:${HIVE_HOME}/bin:${PATH}
+# prepare spark
+COPY spark /opt/apache/spark/
+ENV SPARK_HOME=/opt/apache/spark
+COPY spark-config/* ${SPARK_HOME}/conf/
+COPY ./vineyard-hive-0.1-SNAPSHOT.jar ${SPARK_HOME}/jars/
+
+ENV PATH=${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin:${HIVE_HOME}/bin:${SPARK_HOME}/bin:${PATH}
 
 COPY bootstrap.sh /opt/apache/
 COPY mysql-connector-java-5.1.49/mysql-connector-java-5.1.49-bin.jar ${HIVE_HOME}/lib/
@@ -35,4 +41,4 @@ RUN sudo yum -y install unzip; \
     sudo rm /usr/lib64/libstdc++.so.6; \
     sudo ln -s /usr/lib64/libstdc++.so.6.0.26 /usr/lib64/libstdc++.so.6; \
     sudo yum -y install vim; \
-    rm libstdc.so_.6.0.26.zip libstdc++.so.6.0.26;
+    rm libstdc.so_.6.0.26.zip libstdc++.so.6.0.26

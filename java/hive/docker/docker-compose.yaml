@@ -59,6 +59,25 @@ services:
       - ../../../build/vineyard:/tmp/vineyard
       - ../../../share:/opt/hive/auxlib
 
+  spark:
+    image: apache/hadoop_hive:v1
+    user: "root:root"
+    depends_on:
+      - metastore
+    container_name: spark
+    environment:
+      IS_RESUME: 'true'
+    networks:
+      - hive
+    command: "tail -f /dev/null"
+    volumes:
+      - /user/hive/warehouse:/opt/hive/data/warehouse
+      - /user/hive/warehouse:/user/hive/warehouse
+      - ../../../java/hive/conf/hive-site.xml:/opt/hive/conf/hive-site.xml
+      - ../../../build/vineyard:/tmp/vineyard
+      - ../../../share:/auxlib
+    environment:
+      VINEYARD_IPC_SOCKET: /tmp/vineyard/vineyard.sock
 
 networks:
   hive:
