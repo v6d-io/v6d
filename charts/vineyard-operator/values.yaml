@@ -1,8 +1,3 @@
-cert-manager:
-  enabled: true
-  installCRDs: true
-  extraArgs:
-    - --enable-certificate-owner-ref=true
 controllerManager:
   kubeRbacProxy:
     containerSecurityContext:
@@ -23,6 +18,7 @@ controllerManager:
   manager:
     image:
       repository: vineyardcloudnative/vineyard-operator
+      tag: latest
     imagePullPolicy: IfNotPresent
     resources:
       limits:
@@ -45,3 +41,4 @@ webhookService:
     protocol: TCP
     targetPort: 9443
   type: ClusterIP
+fullnameOverride: vineyard

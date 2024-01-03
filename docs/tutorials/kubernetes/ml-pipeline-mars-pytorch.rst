@@ -20,7 +20,7 @@ with 3 worker nodes.
 
 .. code:: bash
 
-    $ cd k8s && make install-vineyard
+    $ cd k8s && make -C k8s/test/e2e install-vineyard-cluster
 
 .. admonition:: Expected output
    :class: admonition-details
@@ -45,57 +45,6 @@ with 3 worker nodes.
 
         Thanks for using kind! 😊
         configmap/local-registry-hosting created
-        Installing cert-manager...
-        namespace/cert-manager created
-        customresourcedefinition.apiextensions.k8s.io/certificaterequests.cert-manager.io created
-        customresourcedefinition.apiextensions.k8s.io/certificates.cert-manager.io created
-        customresourcedefinition.apiextensions.k8s.io/challenges.acme.cert-manager.io created
-        customresourcedefinition.apiextensions.k8s.io/clusterissuers.cert-manager.io created
-        customresourcedefinition.apiextensions.k8s.io/issuers.cert-manager.io created
-        customresourcedefinition.apiextensions.k8s.io/orders.acme.cert-manager.io created
-        serviceaccount/cert-manager-cainjector created
-        serviceaccount/cert-manager created
-        serviceaccount/cert-manager-webhook created
-        configmap/cert-manager-webhook created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-cainjector created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-controller-issuers created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-controller-clusterissuers created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-controller-certificates created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-controller-orders created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-controller-challenges created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-controller-ingress-shim created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-view created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-edit created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-controller-approve:cert-manager-io created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-controller-certificatesigningrequests created
-        clusterrole.rbac.authorization.k8s.io/cert-manager-webhook:subjectaccessreviews created
-        clusterrolebinding.rbac.authorization.k8s.io/cert-manager-cainjector created
-        clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-issuers created
-        clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-clusterissuers created
-        clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-certificates created
-        clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-orders created
-        clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-challenges created
-        clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-ingress-shim created
-        clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-approve:cert-manager-io created
-        clusterrolebinding.rbac.authorization.k8s.io/cert-manager-controller-certificatesigningrequests created
-        clusterrolebinding.rbac.authorization.k8s.io/cert-manager-webhook:subjectaccessreviews created
-        role.rbac.authorization.k8s.io/cert-manager-cainjector:leaderelection created
-        role.rbac.authorization.k8s.io/cert-manager:leaderelection created
-        role.rbac.authorization.k8s.io/cert-manager-webhook:dynamic-serving created
-        rolebinding.rbac.authorization.k8s.io/cert-manager-cainjector:leaderelection created
-        rolebinding.rbac.authorization.k8s.io/cert-manager:leaderelection created
-        rolebinding.rbac.authorization.k8s.io/cert-manager-webhook:dynamic-serving created
-        service/cert-manager created
-        service/cert-manager-webhook created
-        deployment.apps/cert-manager-cainjector created
-        deployment.apps/cert-manager created
-        deployment.apps/cert-manager-webhook created
-        mutatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook created
-        validatingwebhookconfiguration.admissionregistration.k8s.io/cert-manager-webhook created
-        pod/cert-manager-5dd59d9d9b-k9hkm condition met
-        pod/cert-manager-cainjector-8696fc9f89-bmjzh condition met
-        pod/cert-manager-webhook-7d4b5b8c56-fvmc2 condition met
-        Cert-Manager ready.
         Installing vineyard-operator...
         The push refers to repository [localhost:5001/vineyard-operator]
         c3a672704524: Pushed
@@ -131,8 +80,6 @@ with 3 worker nodes.
         service/vineyard-controller-manager-metrics-service created
         service/vineyard-webhook-service created
         deployment.apps/vineyard-controller-manager created
-        certificate.cert-manager.io/vineyard-serving-cert created
-        issuer.cert-manager.io/vineyard-selfsigned-issuer created
         mutatingwebhookconfiguration.admissionregistration.k8s.io/vineyard-mutating-webhook-configuration created
         validatingwebhookconfiguration.admissionregistration.k8s.io/vineyard-validating-webhook-configuration created
         make[1]: Leaving directory '/opt/caoye/v6d/k8s'

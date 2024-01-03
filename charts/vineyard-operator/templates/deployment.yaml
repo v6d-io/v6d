@@ -32,6 +32,9 @@ spec:
       - args:
         - manager
         - --verbose
+        - --namespace
+        - {{ .Release.Namespace }}
+
         command:
         - /vineyardctl
         env:
@@ -59,10 +62,6 @@ spec:
           periodSeconds: 10
         resources: {{- toYaml .Values.controllerManager.manager.resources | nindent 10
           }}
-        volumeMounts:
-        - mountPath: /tmp/k8s-webhook-server/serving-certs
-          name: cert
-          readOnly: true
       - args:
         - --secure-listen-address=0.0.0.0:8443
         - --upstream=http://127.0.0.1:8080/
@@ -84,8 +83,3 @@ spec:
           | nindent 10 }}
       serviceAccountName: {{ include "vineyard-operator.fullname" . }}-manager
       terminationGracePeriodSeconds: 10
-      volumes:
-      - name: cert
-        secret:
-          defaultMode: 420
-          secretName: vineyard-operator-webhook-server-cert

@@ -37,8 +37,6 @@ installing directly from the source code.
     Prior to installing the vineyard operator, ensure that you have a Kubernetes cluster and kubectl
     installed. In this guide, we will use `kind`_ to create a cluster.
 
-Before proceeding with the vineyard installation, it is essential to install cert-manager, as it is required
-by the webhook components within the vineyard operator:
 
 Option #1: Install from helm chart (recommended)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -77,18 +75,7 @@ Option #2: Install form source code
 
           $ kind load docker-image vineyardcloudnative/vineyard-operator:latest
 
-3. Install the cert-manager
-
-   .. code:: bash
-
-       $ kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.8.0/cert-manager.yaml
-
-   .. note::
-
-       Please wait the cert-manager for a while until it is ready before installing the
-       vineyard operator.
-
-4. Next, deploy the vineyard operator:
+3. Next, deploy the vineyard operator:
 
    .. code:: bash
 

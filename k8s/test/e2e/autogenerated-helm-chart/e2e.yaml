@@ -23,7 +23,6 @@ setup:
         docker push localhost:5001/vineyard-operator:latest
     - name: use helm chart to install the operator
       command: |
-        helm dep update charts/vineyard-operator
         helm install vineyard-operator charts/vineyard-operator \
             --create-namespace \
             --namespace vineyard-system \
@@ -31,7 +30,7 @@ setup:
             --set controllerManager.manager.image.tag=latest
       wait:
         - namespace: vineyard-system
-          resource: deployment/vineyard-operator-controller-manager
+          resource: deployment/vineyard-controller-manager
           for: condition=Available
     - name: download the local assembly images into kind cluster
       command: |

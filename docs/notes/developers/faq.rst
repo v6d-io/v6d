@@ -117,6 +117,5 @@ concerns, please feel free to `open an issue`_ or `post it to discussions`_.
 
 .. _open an issue: https://github.com/v6d-io/v6d/issues/new
 .. _post it to discussions: https://github.com/v6d-io/v6d/discussions/new
-.. _cert-manager: https://cert-manager.io/
 .. _guide: ../../tutorials/kubernetes/using-vineyard-operator.rst
 .. _command line tool: ../../notes/cloud-native/vineyardctl.md

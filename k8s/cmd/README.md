@@ -307,7 +307,6 @@ Delete the vineyard components from kubernetes
 
 * [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
 * [vineyardctl delete backup](#vineyardctl-delete-backup)	 - Delete the backup job on kubernetes
-* [vineyardctl delete cert-manager](#vineyardctl-delete-cert-manager)	 - Delete the cert-manager on kubernetes
 * [vineyardctl delete csidriver](#vineyardctl-delete-csidriver)	 - Delete the vineyard csi driver on kubernetes
 * [vineyardctl delete operation](#vineyardctl-delete-operation)	 - Delete the operation from kubernetes
 * [vineyardctl delete operator](#vineyardctl-delete-operator)	 - Delete the vineyard operator from kubernetes
@@ -324,9 +323,6 @@ Delete the vineyard components from kubernetes
 
   # delete the default vineyard operator on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator
-
-  # delete the default cert-manager on kubernetes
-  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete cert-manager
 
   # delete the default vineyardd on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyardd
@@ -366,36 +362,6 @@ vineyardctl delete backup [flags]
 ```
       --backup-name string   the name of backup job (default "vineyard-backup")
   -h, --help                 help for backup
-```
-
-## `vineyardctl delete cert-manager`
-
-Delete the cert-manager on kubernetes
-
-### Synopsis
-
-Delete the cert-manager in the cert-manager namespace. 
-The default version of cert-manager is v1.9.1.
-
-```
-vineyardctl delete cert-manager [flags]
-```
-
-**SEE ALSO**
-
-* [vineyardctl delete](#vineyardctl-delete)	 - Delete the vineyard components from kubernetes
-
-### Examples
-
-```shell
-  # delete the default version(v1.9.1) of cert-manager
-  vineyardctl --kubeconfig $HOME/.kube/config delete cert-manager
-```
-
-### Options
-
-```
-  -h, --help   help for cert-manager
 ```
 
 ## `vineyardctl delete csidriver`
@@ -596,7 +562,6 @@ Deploy the vineyard components on kubernetes
 
 * [vineyardctl](#vineyardctl)	 - vineyardctl is the command-line tool for interact with the Vineyard Operator.
 * [vineyardctl deploy backup-job](#vineyardctl-deploy-backup-job)	 - Deploy a backup job of vineyard cluster on kubernetes
-* [vineyardctl deploy cert-manager](#vineyardctl-deploy-cert-manager)	 - Deploy the cert-manager on kubernetes
 * [vineyardctl deploy csidriver](#vineyardctl-deploy-csidriver)	 - Deploy the vineyard csi driver on kubernetes
 * [vineyardctl deploy operator](#vineyardctl-deploy-operator)	 - Deploy the vineyard operator on kubernetes
 * [vineyardctl deploy recover-job](#vineyardctl-deploy-recover-job)	 - Deploy a recover job to recover a backup of current vineyard cluster on kubernetes
@@ -612,9 +577,6 @@ Deploy the vineyard components on kubernetes
 
   # deploy the vineyard operator on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy operator
-
-  # deploy the cert-manager on kubernetes
-  vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy cert-manager
 
   # deploy the vineyardd on kubernetes
   vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
@@ -750,44 +712,6 @@ vineyardctl deploy backup-job [flags]
       --pvc-name string                        the name of an existing PersistentVolumeClaim
       --vineyard-deployment-name string        the name of vineyard deployment
       --vineyard-deployment-namespace string   the namespace of vineyard deployment
-```
-
-## `vineyardctl deploy cert-manager`
-
-Deploy the cert-manager on kubernetes
-
-### Synopsis
-
-Deploy the cert-manager in the cert-manager namespace. The default
-version of cert-manager is v1.9.1.
-
-```
-vineyardctl deploy cert-manager [flags]
-```
-
-**SEE ALSO**
-
-* [vineyardctl deploy](#vineyardctl-deploy)	 - Deploy the vineyard components on kubernetes
-
-### Examples
-
-```shell
-  # install the default version(v1.9.1) in the cert-manager namespace
-  # wait for the cert-manager to be ready(default option)
-  vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager
-
-  # install the default version(v1.9.1) in the cert-manager namespace
-  # not to wait for the cert-manager to be ready, but we does not recommend
-  # to do this, because there may be errors caused by the cert-manager
-  # not ready
-  vineyardctl --kubeconfig $HOME/.kube/config deploy cert-manager \
-    --wait=false
-```
-
-### Options
-
-```
-  -h, --help   help for cert-manager
 ```
 
 ## `vineyardctl deploy csidriver`
@@ -1537,6 +1461,7 @@ spec:
     resources:
       limits: null
       requests: null
+    securityContext: {}
     volumeMounts:
     - mountPath: /var/run
       name: vineyard-socket
@@ -2325,6 +2250,7 @@ vineyardctl manager [flags]
       --leader-elect                       Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.
       --metrics-bind-address string        The address the metric endpoint binds to. (default "127.0.0.1:8080")
       --scheduler-config-file string       The location of scheduler plugin's configuration file. (default "/etc/kubernetes/scheduler.yaml")
+      --webhook-cert-dir string            The directory to store the generated certificates. (default "/etc/webhook/certs")
 ```
 
 ## `vineyardctl put`
@@ -2628,4 +2554,3 @@ vineyardctl schedule workload [flags]
       --vineyardd-name string        the namespace of vineyard cluster (default "vineyardd-sample")
       --vineyardd-namespace string   the namespace of vineyard cluster (default "vineyard-system")
 ```
-

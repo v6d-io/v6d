@@ -28,9 +28,6 @@ var deleteExample = util.Examples(`
 	# delete the default vineyard operator on kubernetes
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete operator
 
-	# delete the default cert-manager on kubernetes
-	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete cert-manager
-
 	# delete the default vineyardd on kubernetes
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config delete vineyardd`)
 
@@ -46,7 +43,6 @@ func NewDeleteCmd() *cobra.Command {
 }
 
 func init() {
-	deleteCmd.AddCommand(NewDeleteCertManagerCmd())
 	deleteCmd.AddCommand(NewDeleteOperatorCmd())
 	deleteCmd.AddCommand(NewDeleteVineyarddCmd())
 	deleteCmd.AddCommand(NewDeleteVineyardClusterCmd())

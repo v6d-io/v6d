@@ -3,8 +3,6 @@ kind: CustomResourceDefinition
 metadata:
   name: operations.k8s.v6d.io
   annotations:
-    cert-manager.io/inject-ca-from: '{{ .Release.Namespace }}/{{ include "vineyard-operator.fullname"
-      . }}-serving-cert'
     controller-gen.kubebuilder.io/version: v0.8.0
   labels:
   {{- include "vineyard-operator.labels" . | nindent 4 }}

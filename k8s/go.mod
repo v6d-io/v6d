@@ -6,7 +6,6 @@ require (
 	github.com/apache/skywalking-swck/operator v0.0.0-20220110123641-3161dedb3de0
 	github.com/argoproj/argo-workflows/v3 v3.3.6
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/cert-manager/cert-manager v1.8.0
 	github.com/container-storage-interface/spec v1.6.0
 	github.com/ghodss/yaml v1.0.1-0.20190212211648-25d852aebe32
 	github.com/go-logr/logr v1.3.0
@@ -35,6 +34,7 @@ require (
 	sigs.k8s.io/controller-runtime v0.11.1
 	sigs.k8s.io/kustomize/kustomize/v4 v4.4.1
 	sigs.k8s.io/kustomize/kyaml v0.13.0
+	sigs.k8s.io/yaml v1.3.0
 )
 
 require (
@@ -145,17 +145,14 @@ require (
 	k8s.io/kube-scheduler v0.23.0 // indirect
 	k8s.io/utils v0.0.0-20220728103510-ee6ede2d64ed // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.0.37 // indirect
-	sigs.k8s.io/gateway-api v0.4.1 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect
 	sigs.k8s.io/kustomize/api v0.10.1 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
 replace (
 	github.com/apache/skywalking-swck/operator => github.com/apache/skywalking-swck/operator v0.0.0-20220110123641-3161dedb3de0
 	github.com/argoproj/argo-workflows/v3 => github.com/argoproj/argo-workflows/v3 v3.3.6
-	github.com/cert-manager/cert-manager => github.com/cert-manager/cert-manager v1.8.0
 	//github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible
 	github.com/emicklei/go-restful => github.com/emicklei/go-restful v2.9.5+incompatible
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
