@@ -15,7 +15,7 @@ create table hive_dynamic_partition_test
 )partitioned by(mounth int, year int);
 insert into table hive_dynamic_partition_test partition(mounth=1, year) select src_id,dst_id,year from hive_dynamic_partition_data;
 
-insert overwrite directory '/tmp/out/test_hive_dynamic_partition/'
+insert overwrite directory 'file:///tmp/out/test_hive_dynamic_partition/'
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
 select * from hive_dynamic_partition_test
 order by src_id asc;

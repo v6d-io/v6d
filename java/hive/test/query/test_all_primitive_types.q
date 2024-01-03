@@ -32,7 +32,7 @@ insert into test_all_primitive_types select
     timestamp('2023-12-31 23:59:59'),
     cast(1234.56 as decimal);
 
-insert overwrite directory '/tmp/out/test_all_primitive_types/'
+insert overwrite directory 'file:///tmp/out/test_all_primitive_types/'
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
 select * from test_all_primitive_types;
 drop table test_all_primitive_types;

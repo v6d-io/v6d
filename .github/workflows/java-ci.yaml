@@ -53,14 +53,6 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Cache for ccache
-        uses: actions/cache@v3
-        with:
-          path: ~/.ccache
-          key: ${{ runner.os }}-${{ matrix.metadata }}-ccache-${{ hashFiles('**/git-modules.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ matrix.metadata }}-ccache-
-
       - name: Install Dependencies for Linux
         if: runner.os == 'Linux'
         run: |
@@ -179,10 +171,6 @@ jobs:
           ./test.sh
           popd
 
-      - name: Setup tmate session
-        if: false
-        uses: mxschmitt/action-tmate@v3
-
       - name: Spark with hive test
         run: |
           pushd java/hive/test
@@ -196,17 +184,34 @@ jobs:
           docker-compose -f docker-compose.yaml rm -f
           popd
 
-      # - name: Build hadoop cluster
-      #   run: |
-      #     pushd java/hive/docker
-      #     docker-compose -f docker-compose-distributed.yaml up -d
-      #     popd
+      - name: Build mysql container
+        run: |
+          pushd java/hive/docker/dependency/mysql
+          docker-compose -f ./mysql-compose.yaml up -d
+          popd
 
-      # - name: Hive distributed test
-      #   run: |
-      #     pushd java/hive/test
-      #     ./distributed-test.sh
-      #     popd
+      - name: Start vineyard server for hive distributed test
+        run: |
+          ./build/bin/vineyardd --socket=./build/vineyard_sock/metastore/vineyard.sock -rpc_socket_port=18880 --etcd_endpoint="0.0.0.0:2383" &
+          ./build/bin/vineyardd --socket=./build/vineyard_sock/hiveserver/vineyard.sock -rpc_socket_port=18881 --etcd_endpoint="0.0.0.0:2383" &
+          ./build/bin/vineyardd --socket=./build/vineyard_sock/0/vineyard.sock -rpc_socket_port=18882 --etcd_endpoint="0.0.0.0:2383" &
+          ./build/bin/vineyardd --socket=./build/vineyard_sock/1/vineyard.sock -rpc_socket_port=18883 --etcd_endpoint="0.0.0.0:2383" &
+          ./build/bin/vineyardd --socket=./build/vineyard_sock/2/vineyard.sock -rpc_socket_port=18884 --etcd_endpoint="0.0.0.0:2383" &
+
+      - name: Build hadoop cluster
+        run: |
+          pushd java/hive/docker
+          docker-compose -f docker-compose-distributed.yaml up -d
+          popd
+
+          # wait for hive docker ready
+          sleep 60
+
+      - name: Hive distributed test
+        run: |
+          pushd java/hive/test
+          ./distributed-test.sh
+          popd
 
       # - name: Spark with hive distribued test
       #   run: |
@@ -214,9 +219,19 @@ jobs:
       #     ./spark-hive-distributed-test.sh
       #     popd
 
-      # - name: Stop hadoop cluster
-      #   run: |
-      #     pushd java/hive/docker
-      #     docker-compose -f docker-compose-distributed.yaml stop
-      #     docker-compose -f docker-compose-distributed.yaml rm -f
-      #     popd
+      - name: Setup tmate session
+        if: false
+        uses: mxschmitt/action-tmate@v3
+
+      - name: Stop container
+        run: |
+          pushd java/hive/docker
+          docker-compose -f docker-compose-distributed.yaml stop
+          docker-compose -f docker-compose-distributed.yaml rm -f
+          popd
+
+          pushd java/hive/docker/dependency/mysql
+          docker-compose -f ./mysql-compose.yaml stop
+          docker-compose -f ./mysql-compose.yaml rm -f
+          popd
+

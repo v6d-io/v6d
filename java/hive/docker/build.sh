@@ -65,6 +65,15 @@ mv "$WORK_DIR/apache-hive-$HIVE_VERSION-bin" "$WORK_DIR/images/hive"
 mv "$WORK_DIR/apache-tez-$TEZ_VERSION-bin" "$WORK_DIR/images/tez"
 mv "$WORK_DIR/spark-$SPARK_VERSION-bin-hadoop3" "$WORK_DIR/images/spark"
 
+network_name="hadoop-network"
+
+if [[ -z $(docker network ls --filter name=^${network_name}$ --format="{{.Name}}") ]]; then
+    echo "Docker network ${network_name} does not exist, creating it..."
+    docker network create hadoop-network
+else
+    echo "Docker network ${network_name} already exists"
+fi
+
 docker build \
         "$WORK_DIR/images" \
         -f "$WORK_DIR/images/Dockerfile" \

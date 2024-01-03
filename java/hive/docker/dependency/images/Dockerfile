@@ -41,4 +41,5 @@ RUN sudo yum -y install unzip; \
     sudo rm /usr/lib64/libstdc++.so.6; \
     sudo ln -s /usr/lib64/libstdc++.so.6.0.26 /usr/lib64/libstdc++.so.6; \
     sudo yum -y install vim; \
-    rm libstdc.so_.6.0.26.zip libstdc++.so.6.0.26
+    rm libstdc.so_.6.0.26.zip libstdc++.so.6.0.26; \
+    sudo yum install -y net-tools
