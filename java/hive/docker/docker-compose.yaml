@@ -65,8 +65,6 @@ services:
     depends_on:
       - metastore
     container_name: spark
-    environment:
-      IS_RESUME: 'true'
     networks:
       - hive
     command: "tail -f /dev/null"
