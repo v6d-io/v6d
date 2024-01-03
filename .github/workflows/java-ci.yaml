@@ -213,11 +213,11 @@ jobs:
           ./distributed-test.sh
           popd
 
-      # - name: Spark with hive distribued test
-      #   run: |
-      #     pushd java/hive/test
-      #     ./spark-hive-distributed-test.sh
-      #     popd
+      - name: Spark with hive distribued test
+        run: |
+          pushd java/hive/test
+          ./spark-hive-distributed-test.sh
+          popd
 
       - name: Setup tmate session
         if: false

@@ -5,17 +5,17 @@ if [ -d "$outdir" ]; then
     rm -r "$outdir"
 fi
 
-docker exec spark sh -c 'cp /hive-config/hive-site.xml $SPARK_HOME/conf/'
-docker exec spark sh -c 'cp /spark-config/* $SPARK_HOME/conf/'
+docker exec hive-metastore sh -c 'cp /hive-config-distributed/hive-site.xml $SPARK_HOME/conf/'
+docker exec hive-metastore sh -c 'cp /spark-config-distributed/* $SPARK_HOME/conf/'
 
-docker cp ./spark-query spark:/tmp/
+docker cp ./spark-query hive-metastore:/tmp/
 
 for file in ./spark-query/*; do
     query=$(basename "$file")
-    docker exec spark spark-shell -i /tmp/spark-query/"$query"
+    docker exec hive-metastore spark-shell --master yarn -i /tmp/spark-query/"$query"
 done
 
-docker cp spark:/tmp/spark-out ./spark-query/
+docker cp hive-metastore:/tmp/spark-out ./spark-query/
 for dir in ./spark-query/spark-out/*; do
     cat $dir/part-* > ./spark-query/spark-out/$(basename "$dir").q.out
     rm -r $dir

@@ -27,7 +27,8 @@ COPY hive-config-distributed/ /hive-config-distributed
 # prepare spark
 COPY spark /opt/apache/spark/
 ENV SPARK_HOME=/opt/apache/spark
-COPY spark-config/* ${SPARK_HOME}/conf/
+COPY spark-config/ /spark-config
+COPY spark-config-distributed/ /spark-config-distributed
 COPY ./vineyard-hive-0.1-SNAPSHOT.jar ${SPARK_HOME}/jars/
 
 ENV PATH=${HADOOP_HOME}/bin:${HADOOP_HOME}/sbin:${HIVE_HOME}/bin:${SPARK_HOME}/bin:${PATH}
