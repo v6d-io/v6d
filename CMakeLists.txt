@@ -932,6 +932,11 @@ if(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_hosseinmoein_dataframe)
 endif()
 
+if(BUILD_VINEYARD_KVCACHE_CACHE)
+    add_subdirectory("modules/kv-cache-cache")
+    list(APPEND VINEYARD_INSTALL_LIBS vineyard_graph)
+endif()
+
 if(BUILD_VINEYARD_TESTS)
     add_subdirectory(test)
 endif()
