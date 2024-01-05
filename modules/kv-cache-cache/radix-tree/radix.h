@@ -16,28 +16,48 @@ limitations under the License.
 #include <vector>
 #include <types.h>
 
-namespace vineyard {
+class Node {
+ private:
+  std::vector<int> key;
+  void *data;
+  int data_length;
+  std::vector<Node *> children;
 
-class node {
+ public:
+  void set_data(void *data, int data_length) {
+    this->data = data;
+    this->data_length = data_length;
+  }
 
+  void *get_data() {
+    return this->data;
+  }
 };
 
 class RadixTree {
  public:
 
-	void insert(std::vector<int> key, void *data, int data_length) {
+	void insert(const std::vector<int> key, void *data, int data_length) {
 
   }
 
-  struct node *get(std::vector<int> key) {
+	void insert(const std::vector<int> &prefix, int key, void *data, int data_length) {
 
   }
 
-  void *serialize() {
+  struct Node *get(std::vector<int> key) {
+    return nullptr;
+  }
+
+  struct Node *get(std::vector<int> prefix, int key) {
+    return nullptr;
+  }
+
+  std::string serialize() {
     return NULL;
   }
 
-  void deserialize(void *data) {
+  RadixTree deserialize(std::string data) {
 
   }
 
@@ -57,5 +77,3 @@ class RadixTree {
 
   }
 };
-
-}  // namespace vineyard

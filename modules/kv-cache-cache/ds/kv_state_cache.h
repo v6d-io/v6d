@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_KV_CACHE_CACHE_H_
-#define MODULES_KV_CACHE_CACHE_H_
+#ifndef MODULES_KV_STATE_CACHE_H_
+#define MODULES_KV_STATE_CACHE_H_
 
 #include <iostream>
 #include <vector>
@@ -32,35 +32,44 @@ struct offset_data {
   short offset_v;
 };
 
-#define LIST_SIZE 50
+#define LIST_SIZE 256
 
 /**
- * @brief KVCacheCache is a cache for kv-cache of LLM. When a new prompt comes, LLM can
- * query KVCacheCache to get the state of the kv-cache to avoid caclulating the kv-cache
+ * @brief KVStateCache is a cache for kv-cache of LLM. When a new prompt comes, LLM can
+ * query KVStateCache to get the state of the kv-cache to avoid caclulating the kv-cache
  * again if the new prompt is similar to the previous one.
  * 
- * KVCacheCache is stored in vineyard as a vineyard object which contains a radix tree.
+ * KVStateCache is stored in vineyard as a vineyard object which contains a radix tree.
  * The token sequence is the key of the radix tree and the value point out the offset
  * of the kv-cache in the tensor list.
  * 
- * KVCacheCache can be shared by multiple machines.
+ * KVStateCache can be shared by multiple machines.
  */
 
-class KVCacheCache : public vineyard::Registered<KVCacheCache> {
+class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
   RadixTree tree;
-  TensorBuilder<int> *key_state_builder;
-  TensorBuilder<int> *value_state_builder;
+  std::array<std::unique_ptr<BlobWriter>, LIST_SIZE> key_state_writer_array;
+  std::array<std::unique_ptr<BlobWriter>, LIST_SIZE> value_state_writer_array;
+  uint64_t bitmap;
+  pthread_spinlock_t spin_lock;
+  ObjectID id;
+
 
  public:
   void Construct(const ObjectMeta& meta) override;
+
+ friend class KVStateCacheBuilder;
 };
 
-class KVCacheCacheBuilder : public vineyard::ObjectBuilder {
+class KVStateCacheBuilder : public vineyard::ObjectBuilder {
  private:
   RadixTree tree;
-  std::array<TensorBuilder<int> *, LIST_SIZE> key_state_builder_array;
-  std::array<TensorBuilder<int> *, LIST_SIZE> value_state_builder_array;
+  std::array<std::unique_ptr<BlobWriter>, LIST_SIZE> key_state_writer_array;
+  std::array<std::unique_ptr<BlobWriter>, LIST_SIZE> value_state_writer_array;
+  uint64_t bitmap;
+  pthread_spinlock_t spin_lock;
+  ObjectID id;
 
   /**
    * @brief Splits the radix-tree into several radix-trees if the number of kv-state
@@ -68,13 +77,20 @@ class KVCacheCacheBuilder : public vineyard::ObjectBuilder {
    */
   Status Splits();
 
+  Status UpdateInternal(Client &client, const std::vector<int> &token_list, int next_token, const std::map<int, std::pair<std::vector<double>, std::vector<double>>> &kv_state);
+
+  Status QueryInternal(Client &client, const std::vector<int> &token_list, int token, std::map<int, std::pair<std::vector<double>, std::vector<double>>> &kv_state);
+  
+
   /**
    * @brief Travel the radix-tree and update the kv-state when splitting the radix-tree.
    */
   Status TravelAndUpdateNode();
 
  public:
-  KVCacheCacheBuilder();
+  KVStateCacheBuilder();
+
+  KVStateCacheBuilder(KVStateCache &kv_state_cache);
 
   /**
    * @brief Update the kv-state using next token.
@@ -84,7 +100,7 @@ class KVCacheCacheBuilder : public vineyard::ObjectBuilder {
    * @param kv_state The kv-state of the prompt. A LLM inference can contain multiple kv-states
    * for each layer.
    */
-  Status Update(const std::vector<int> &token_list, int next_token, const std::map<int, std::vector<std::vector<int>, std::vector<int>>> &kv_state);
+  Status Update(Client &client, const std::vector<int> &token_list, int next_token, const std::map<int, std::pair<std::vector<double>, std::vector<double>>> &kv_state);
 
   /**
    * @brief Update the kv-state using the whole token list.
@@ -93,16 +109,7 @@ class KVCacheCacheBuilder : public vineyard::ObjectBuilder {
    * @param kv_state The kv-state of the prompt. A LLM inference can contain multiple kv-states
    * for each layer.
    */
-  Status Update(const std::vector<int> &token_list, const std::vector<std::map<int, std::pair<std::vector<int>, std::vector<int>>>> &kv_state);
-
-  /**
-   * @brief Query the kv-state using the whole token list.
-   * 
-   * @param token_list The token list of the prompt.
-   * @param kv_state The kv-state of the prompt returned by radix-tree. If the kv-state is not
-   * found, the kv-state will be empty.
-   */
-  Status Query(const std::vector<int> &token_list, std::vector<std::map<int, std::pair<std::vector<int>, std::vector<int>>>> &kv_state);
+  Status Update(Client &client, const std::vector<int> &token_list, const std::vector<std::map<int, std::pair<std::vector<double>, std::vector<double>>>> &kv_state);
 
   /**
    * @brief Query the kv-state using the whole token list.
@@ -110,9 +117,18 @@ class KVCacheCacheBuilder : public vineyard::ObjectBuilder {
    * @param token_list The token list of the prompt.
    * @param token The token of the prompt.
    * @param kv_state The kv-state of the prompt returned by radix-tree. If the kv-state is not
-   * found, the kv-state will be empty.
+   * found, the data of kv-state is invalid.
    */
-  Status Query(const std::vector<int> &token_list, int token, std::map<int, std::pair<std::vector<int>, std::vector<int>>> &kv_state);
+  Status Query(Client &client, const std::vector<int> &token_list, int token, std::map<int, std::pair<std::vector<double>, std::vector<double>>> &kv_state);
+
+  /**
+   * @brief Query the kv-state using the whole token list.
+   * 
+   * @param token_list The token list of the prompt.
+   * @param kv_state The kv-state of the prompt returned by radix-tree. If the kv-state is not
+   * found, the data of kv-state is invalid.
+   */
+  Status Query(Client &client, const std::vector<int> &token_list, std::vector<std::map<int, std::pair<std::vector<double>, std::vector<double>>>> &kv_state);
 
   Status Build(Client &client) override;
 
