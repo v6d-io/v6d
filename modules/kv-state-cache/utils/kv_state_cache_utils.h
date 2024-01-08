@@ -13,18 +13,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <vector>
 #include <map>
+#include <vector>
 
 #ifndef MODULES_KV_STATE_CACHE_UTILS_H_
 #define MODULES_KV_STATE_CACHE_UTILS_H_
 
-void Update(const std::vector<int> &token_list, int next_token, const std::map<int, std::vector<std::vector<double>, std::vector<double>>> &kv_state);
+void init_kv_state_cache();
 
-void Update(const std::vector<int> &token_list, const std::vector<std::map<int, std::pair<std::vector<double>, std::vector<double>>>> &kv_state);
+void update(
+    const std::vector<int>& token_list, int next_token,
+    const std::map<int, std::pair<std::vector<double>, std::vector<double>>>&
+        kv_state);
 
-std::vector<std::map<double, std::pair<std::vector<double>, std::vector<int>>>> Query(const std::vector<int> &token_list);
+void update(
+    const std::vector<int>& token_list,
+    const std::vector<
+        std::map<int, std::pair<std::vector<double>, std::vector<double>>>>&
+        kv_state);
 
-std::map<int, std::pair<std::vector<double>, std::vector<double>>> Query(const std::vector<int> &token_list, int token);
+std::vector<std::map<double, std::pair<std::vector<double>, std::vector<int>>>>
+query(const std::vector<int>& token_list);
+
+std::map<int, std::pair<std::vector<double>, std::vector<double>>> query(
+    const std::vector<int>& token_list, int token);
 
 #endif
