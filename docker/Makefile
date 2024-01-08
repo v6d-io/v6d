@@ -37,9 +37,9 @@ PYTHON_DEV_REGISTRY			:= $(REGISTRY)
 PYTHON_DEV_IMAGE			:= vineyard-python-dev
 PYTHON_DEV_TAG				:= latest_$(PLATFORM)
 
-VINEYARD_FLUID_MOUNT_REGISTRY	:= $(RELEASE_REGISTRY)
-VINEYARD_FLUID_MOUNT_IMAGE		:= vineyard-fluid-mount
-VINEYARD_FLUID_MOUNT_TAG		:= latest
+VINEYARD_FLUID_FUSE_REGISTRY	:= $(RELEASE_REGISTRY)
+VINEYARD_FLUID_FUSE_IMAGE		:= vineyard-fluid-fuse
+VINEYARD_FLUID_FUSE_TAG		:= latest
 
 BUILD_PROGRESS  			?= auto
 
@@ -122,8 +122,8 @@ build-python-dev:
 .PHONY: build-python-dev
 
 
-# build vineyard-fluid-mount image
-vineyard-fluid-mount:
-	docker build ./vineyard-fluid-mount \
-		-t $(VINEYARD_FLUID_MOUNT_REGISTRY)/$(VINEYARD_FLUID_MOUNT_IMAGE):$(VINEYARD_FLUID_MOUNT_TAG)
-.PHONY: vineyard-fluid-mount
+# build vineyard-fluid-fuse image
+vineyard-fluid-fuse:
+	docker build ./vineyard-fluid-fuse \
+		-t $(VINEYARD_FLUID_FUSE_REGISTRY)/$(VINEYARD_FLUID_FUSE_IMAGE):$(VINEYARD_FLUID_FUSE_TAG)
+.PHONY: vineyard-fluid-fuse
