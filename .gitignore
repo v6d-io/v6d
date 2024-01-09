@@ -27,8 +27,8 @@ cmake-build-debug
 *.whl
 
 # hive sql work directory
-/java/hive/distributed/docker/mysql/conf/
-/java/hive/distributed/docker/mysql/data/
+/java/hive/docker/dependency/mysql/conf/
+/java/hive/docker/dependency/mysql/data/
 
 # coredump
 core.*.*

@@ -7,8 +7,8 @@ create table test_all_primitive_types (
     field_5 double,
     field_6 float,
     field_7 string,
-    field_9 varchar(10),
-    field_10 char(10),
+    field_9 varchar(20),
+    field_10 char(20),
     field_8 binary,
     field_11 date,
     field_12 boolean,
@@ -32,7 +32,7 @@ insert into test_all_primitive_types select
     timestamp('2023-12-31 23:59:59'),
     cast(1234.56 as decimal);
 
-insert overwrite directory '/tmp/out/test_all_primitive_types/'
+insert overwrite directory 'file:///tmp/out/test_all_primitive_types/'
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
 select * from test_all_primitive_types;
 drop table test_all_primitive_types;

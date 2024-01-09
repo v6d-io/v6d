@@ -16,8 +16,7 @@ services:
     volumes:
       - ~/hive-tmp:/tmp/
       - ~/hive-user:/user/
-      - ~/vineyard_sock/0/:/tmp/vineyard_sock
-      - ~/share:/auxlib/
+      - ../../../share:/auxlib/
     healthcheck:
       test: ["CMD-SHELL", "netstat -tnlp|grep :${HADOOP_YARN_RM_PORT} || exit 1"]
       interval: 20s
@@ -46,8 +45,8 @@ services:
     volumes:
       - ~/hive-tmp:/tmp/
       - ~/hive-user:/user/
-      - ~/vineyard_sock/0/:/tmp/vineyard_sock
-      - ~/share:/auxlib/
+      - ../../../build/vineyard_sock/0/:/tmp/vineyard_sock
+      - ../../../share:/auxlib/
     environment:
       VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
   hadoop-yarn-nm-1:
@@ -73,8 +72,8 @@ services:
     volumes:
       - ~/hive-tmp:/tmp/
       - ~/hive-user:/user/
-      - ~/vineyard_sock/1/:/tmp/vineyard_sock
-      - ~/share:/auxlib/
+      - ../../../build/vineyard_sock/1/:/tmp/vineyard_sock
+      - ../../../share:/auxlib/
     environment:
       VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
   hadoop-yarn-nm-2:
@@ -100,8 +99,8 @@ services:
     volumes:
       - ~/hive-tmp:/tmp/
       - ~/hive-user:/user/
-      - ~/vineyard_sock/2/:/tmp/vineyard_sock
-      - ~/share:/auxlib/
+      - ../../../build/vineyard_sock/2/:/tmp/vineyard_sock
+      - ../../../share:/auxlib/
     environment:
       VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
   hadoop-yarn-proxyserver:
@@ -122,7 +121,7 @@ services:
     volumes:
       - ~/hive-tmp:/tmp/
       - ~/hive-user:/user/
-      - ~/share:/auxlib/
+      - ../../../share:/auxlib/
       - ~/hive-test:/test/
     healthcheck:
       test: ["CMD-SHELL", "netstat -tnlp|grep :${HADOOP_YARN_PROXYSERVER_PORT} || exit 1"]
@@ -147,8 +146,7 @@ services:
     volumes:
       - ~/hive-tmp:/tmp/
       - ~/hive-user:/user/
-      - ~/vineyard_sock/historyserver/:/tmp/vineyard_sock
-      - ~/share:/auxlib/
+      - ../../../share:/auxlib/
     healthcheck:
       test: ["CMD-SHELL", "netstat -tnlp|grep :${HADOOP_MR_HISTORYSERVER_PORT} || exit 1"]
       interval: 30s
@@ -176,8 +174,8 @@ services:
     volumes:
       - ~/hive-tmp:/tmp/
       - ~/hive-user:/user/
-      - ~/vineyard_sock/metastore/:/tmp/vineyard_sock
-      - ~/share:/auxlib/
+      - ../../../build/vineyard_sock/metastore/:/tmp/vineyard_sock
+      - ../../../share:/auxlib/
     environment:
       VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
   hive-hiveserver2:
@@ -203,8 +201,8 @@ services:
     volumes:
       - ~/hive-tmp:/tmp/
       - ~/hive-user:/user/
-      - ~/vineyard_sock/hiveserver/:/tmp/vineyard_sock
-      - ~/share:/auxlib/
+      - ../../../build/vineyard_sock/hiveserver/:/tmp/vineyard_sock
+      - ../../../share:/auxlib/
     environment:
       VINEYARD_IPC_SOCKET: /tmp/vineyard_sock/vineyard.sock
 

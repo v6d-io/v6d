@@ -306,7 +306,7 @@ Build Hive Docker Image with Hadoop
 
 ### Build docker images
 ```bash
-    cd v6d/java/hive/distributed
+    cd v6d/java/hive/docker
     ./build.sh
 ```
 
@@ -320,25 +320,6 @@ Build Hive Docker Image with Hadoop
     cd v6d/java/hive/docker/dependency/mysql
     docker-compose -f mysql-compose.yaml up -d
     # You can change the password in mysql-compose.yaml and hive-site.xml
-```
-
-### Run hadoop & hive docker images
-```bash
-    cd v6d/java/hive/docker
-    docker-compose -f docker-compose-distributed.yaml up -d
-```
-
-### Create table
-```bash
-    docker exec -it hive-hiveserver2 beeline -u "jdbc:hive2://hive-hiveserver2:10000" -n root
-```
-
-```sql
-    -- in beeline
-    drop table test_hive1;
-    create table test_hive1(field int);
-    insert into table test_hive1 values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
-    select * from test_hive1;
 ```
 
 Using vineyard as storage
@@ -366,23 +347,27 @@ Using vineyard as storage
 
 ### Copy vineyard jars to share dir
 ```bash
-    mkdir -p ~/share
+    mkdir -p v6d/share
     cd v6d/java/hive
     # you can change share dir in docker-compose.yaml
-    cp target/vineyard-hive-0.1-SNAPSHOT.jar ~/share
+    cp target/vineyard-hive-0.1-SNAPSHOT.jar ../../../share
 ```
 
-### Create table with vineyard
+### Run hadoop & hive docker images
+```bash
+    cd v6d/java/hive/docker
+    docker-compose -f docker-compose-distributed.yaml up -d
+```
+
+### Create table
 ```bash
     docker exec -it hive-hiveserver2 beeline -u "jdbc:hive2://hive-hiveserver2:10000" -n root
 ```
 
 ```sql
     -- in beeline
-    drop table test_vineyard;
-    create table test_vineyard(field int)
-    stored as Vineyard
-    location "vineyard:///user/hive_remote/warehouse/test_vineyard";
-    insert into table test_vineyard values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
-    select * from test_vineyard;
+    drop table test_hive;
+    create table test_hive(field int);
+    insert into table test_hive values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
+    select * from test_hive;
 ```

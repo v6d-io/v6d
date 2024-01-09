@@ -13,7 +13,7 @@ insert into nested_table select
                 named_struct('field_1', 2,
                             'field_2', 'world!')));
 
-insert overwrite directory '/tmp/out/test_nested_types/'
+insert overwrite directory 'file:///tmp/out/test_nested_types/'
 ROW FORMAT DELIMITED FIELDS TERMINATED BY ','
 select * from nested_table;
 drop table nested_table;
