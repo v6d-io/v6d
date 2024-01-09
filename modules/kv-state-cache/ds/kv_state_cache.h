@@ -31,12 +31,12 @@ typedef std::vector<
     std::map<int, std::pair<std::vector<double>, std::vector<double>>>>
     LIST_KV_STATE_WITH_LAYER;
 
-namespace vineyard {
-
 struct offset_data {
   short offset_k;
   short offset_v;
 };
+
+namespace vineyard {
 
 #define LIST_SIZE 2
 
@@ -68,7 +68,7 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
   friend class KVStateCacheBuilder;
 };
 
-class KVStateCacheBuilder : public vineyard::ObjectBuilder {
+class KVStateCacheBuilder : public ObjectBuilder {
  private:
   RadixTree *tree;
   std::array<std::unique_ptr<BlobWriter>, LIST_SIZE> key_state_writer_array;
@@ -77,18 +77,6 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   uint64_t bitmap;
   pthread_spinlock_t spin_lock;
   ObjectID id;
-
-  /**
-   * @brief Splits the radix-tree into several radix-trees if the number of
-   * kv-state is larger than LIST_SIZE.
-   */
-  Status Split();
-
-  Status UpdateInternal(Client& client, const std::vector<int>& token_list,
-                        int next_token, const KV_STATE_WITH_LAYER& kv_state);
-
-  Status QueryInternal(Client& client, const std::vector<int>& token_list,
-                       int token, KV_STATE_WITH_LAYER& kv_state);
 
   /**
    * @brief Travel the radix-tree and update the kv-state when splitting the
@@ -101,28 +89,18 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   KVStateCacheBuilder(KVStateCache& kv_state_cache);
 
+  KVStateCacheBuilder::KVStateCacheBuilder(RadixTree *tree);
+
   KVStateCacheBuilder(RadixTree* tree);
 
   /**
    * @brief Update the kv-state using next token.
    *
-   * @param token_list The token list of the prompt.
-   * @param next_token The next token of the prompt.
+   * @param client The vineyard client.
    * @param kv_state The kv-state of the prompt. A LLM inference can contain
    * multiple kv-states for each layer.
    */
-  Status Update(Client& client, const std::vector<int>& token_list,
-                int next_token, const KV_STATE_WITH_LAYER& kv_state);
-
-  /**
-   * @brief Update the kv-state using the whole token list.
-   *
-   * @param token_list The token list of the prompt.
-   * @param kv_state The kv-state of the prompt. A LLM inference can contain
-   * multiple kv-states for each layer.
-   */
-  Status Update(Client& client, const std::vector<int>& token_list,
-                const LIST_KV_STATE_WITH_LAYER& kv_state);
+  offset_data *Update(Client& client, const KV_STATE_WITH_LAYER& kv_state);
 
   /**
    * @brief Query the kv-state using the whole token list.
@@ -132,24 +110,24 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
    * @param kv_state The kv-state of the prompt returned by radix-tree. If the
    * kv-state is not found, the data of kv-state is invalid.
    */
-  Status Query(Client& client, const std::vector<int>& token_list, int token,
+  Status Query(Client& client, int index_k, int index_v,
                KV_STATE_WITH_LAYER& kv_state);
 
   /**
-   * @brief Query the kv-state using the whole token list.
-   *
-   * @param token_list The token list of the prompt.
-   * @param kv_state The kv-state of the prompt returned by radix-tree. If the
-   * kv-state is not found, the data of kv-state is invalid.
+   * @brief Splits the radix-tree into several radix-trees if the number of
+   * kv-state is larger than LIST_SIZE.
    */
-  Status Query(Client& client, const std::vector<int>& token_list,
-               LIST_KV_STATE_WITH_LAYER& kv_state);
+  Status Split();
+
+  bool isFull();
 
   Status Build(Client& client) override;
 
   std::shared_ptr<Object> _Seal(Client& client) override;
 
-  Status GetTree(RadixTree*& tree);
+  void Lock() { pthread_spin_lock(&(this->spin_lock)); }
+
+  void UnLock() { pthread_spin_unlock(&(this->spin_lock)); }
 };
 
 }  // namespace vineyard

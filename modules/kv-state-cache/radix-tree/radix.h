@@ -33,10 +33,45 @@ class Node {
   void* get_data() { return this->data; }
 };
 
+class NodeWithCustomData {
+ private:
+  Node *node;
+  void *custom_data;
+
+ public:
+  NodeWithCustomData(Node *node, void *custom_data) {
+    this->node = node;
+    this->custom_data = custom_data;
+  }
+
+  Node *get_node() { return node; }
+
+  void *get_custom_data() { return custom_data; }
+};
+
 static std::map<std::string, struct Node*> storage;
 
 class RadixTree {
+ private:
+   void *custom_data;
+   int custom_data_length;
  public:
+  RadixTree() {
+    LOG(INFO) << "init radix tree";
+    custom_data = NULL;
+    custom_data_length = 0;
+  }
+
+  RadixTree(void *custom_data, int custom_data_length) {
+    LOG(INFO) << "init radix tree with custom data";
+    this->custom_data = custom_data;
+    this->custom_data_length = custom_data_length;
+  }
+
+  void *GetCustomData() {
+    return custom_data;
+  }
+
   void insert(const std::vector<int> key, void* data, int data_length) {
     Node* node = new Node();
     node->set_data(data, data_length);
@@ -47,6 +82,30 @@ class RadixTree {
     storage.insert(std::make_pair(key_str, node));
   }
 
+  NodeWithCustomData *insert(const std::vector<int> tokens, int next_token) {
+    Node* node = new Node();
+    std::string key_str = "";
+    for (int i = 0; i < tokens.size(); ++i) {
+      key_str += std::to_string(tokens[i]);
+    }
+    key_str += std::to_string(next_token);
+    storage.insert(std::make_pair(key_str, node));
+    return new NodeWithCustomData(node, this->custom_data);
+  }
+
+  void Delete(const std::vector<int> tokens, int next_token) {
+    std::string key_str = "";
+    for (int i = 0; i < tokens.size(); ++i) {
+      key_str += std::to_string(tokens[i]);
+    }
+    key_str += std::to_string(next_token);
+    auto iter = storage.find(key_str);
+    if (iter != storage.end()) {
+      delete iter->second;
+      storage.erase(iter);
+    }
+  }
+
   void insert(const std::vector<int>& prefix, int key, void* data,
               int data_length) {
     std::vector<int> key_vec = prefix;
@@ -54,7 +113,7 @@ class RadixTree {
     insert(key_vec, data, data_length);
   }
 
-  struct Node* get(std::vector<int> key) {
+  NodeWithCustomData* get(std::vector<int> key) {
     std::string key_str = "";
     for (int i = 0; i < key.size(); ++i) {
       key_str += std::to_string(key[i]);
@@ -62,13 +121,13 @@ class RadixTree {
     auto iter = storage.find(key_str);
     if (iter != storage.end()) {
       LOG(INFO) << "find key of :" + key_str;
-      return iter->second;
+      return new NodeWithCustomData(iter->second, this->custom_data);
     }
     LOG(INFO) << "cannot find key of :" + key_str;
     return nullptr;
   }
 
-  struct Node* get(std::vector<int> prefix, int key) {
+  NodeWithCustomData* get(std::vector<int> prefix, int key) {
     std::vector<int> key_vec = prefix;
     key_vec.push_back(key);
     return get(key_vec);
@@ -103,10 +162,10 @@ class RadixTree {
     return nullptr;
   }
 
-  std::vector<Node *> traverse() {
-    std::vector<Node *> nodes;
+  std::vector<NodeWithCustomData *> traverse() {
+    std::vector<NodeWithCustomData *> nodes;
     for (auto iter = storage.begin(); iter != storage.end(); ++iter) {
-      nodes.push_back(iter->second);
+      nodes.push_back(new NodeWithCustomData(iter->second, this->custom_data));
     }
     return nodes;
   }

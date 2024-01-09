@@ -60,15 +60,23 @@ KVStateCacheBuilder::KVStateCacheBuilder(RadixTree *tree) {
   pthread_spin_init(&(this->spin_lock), 0);
   this->bitmap = UINT64_MAX;
   this->tree = tree;
+  // TBD:
+  // transfer the data from kv_state_cache to this builder
+}
+
+KVStateCacheBuilder::KVStateCacheBuilder(RadixTree *tree) {
+  pthread_spin_init(&(this->spin_lock), 0);
+  this->bitmap = UINT64_MAX;
+  this->tree = tree;
 }
 
 Status KVStateCacheBuilder::Split() {
   // Split the tree if the list of kv_state is full
   RadixTree *sub_tree = this->tree->split();
   KVStateCacheBuilder *child_kv_state_cache_builder = new KVStateCacheBuilder(sub_tree);
-  std::vector<Node *> sub_tree_node_list = sub_tree->traverse();
+  std::vector<NodeWithCustomData *> sub_tree_node_list = sub_tree->traverse();
   for (int i = 0; i < sub_tree_node_list.size(); i++) {
-    offset_data *data = (offset_data *) sub_tree_node_list[i]->get_data();
+    offset_data *data = (offset_data *) sub_tree_node_list[i]->get_node()->get_data();
     int index_k = data->offset_k;
     int index_v = data->offset_v;
 
@@ -86,97 +94,12 @@ Status KVStateCacheBuilder::Split() {
   return Status::OK();
 }
 
-Status KVStateCacheBuilder::UpdateInternal(
-    Client& client, const std::vector<int>& token_list, int next_token,
-    const KV_STATE_WITH_LAYER& kv_state) {
-  const std::vector<double>& key_state = (kv_state.find(1)->second).first;
-  const std::vector<double>& value_state = (kv_state.find(1)->second).second;
-
-  // set the key and value state
-  int index = ffsll(this->bitmap) - 1;
-  if (index < 0 || index > LIST_SIZE) {
-    // split the tree
-    Split();
-    // retry.
-    return Status::IOError();
-    // TBD
-    // check the status
-  }
-
-  // prepare blob writer
-  // TBD
-  // Here need to check the insert position. If the position is the subtree, we must
-  // find the subtree and insert the data into the subtree.
-
-  client.CreateBlob(key_state.size() * sizeof(double),
-                    this->key_state_writer_array[index]);
-  client.CreateBlob(value_state.size() * sizeof(double),
-                    this->value_state_writer_array[index]);
-  double* key_data = (double*) this->key_state_writer_array[index]->data();
-  double* value_data = (double*) this->value_state_writer_array[index]->data();
-
-  for (int i = 0; i < key_state.size(); ++i) {
-    key_data[i] = key_state[i];
-  }
-  for (int i = 0; i < value_state.size(); ++i) {
-    value_data[i] = value_state[i];
-  }
-
-  // construct the tree data and insert the key-value into the tree
-  offset_data* data = new offset_data();
-  data->offset_k = index;
-  data->offset_v = index;
-
-  tree->insert(token_list, next_token, data, (int) sizeof(offset_data));
-
-  SET_UINT64_BIT(this->bitmap, index);
-  LOG(INFO) << toBinaryString(this->bitmap);
-  return Status::OK();
-}
-
 // current we do not consider the layer.
-Status KVStateCacheBuilder::Update(Client& client,
-                                   const std::vector<int>& token_list,
-                                   int next_token,
-                                   const KV_STATE_WITH_LAYER& kv_state) {
-  pthread_spin_lock(&(this->spin_lock));
-  Status status =
-      this->UpdateInternal(client, token_list, next_token, kv_state);
-  pthread_spin_unlock(&(this->spin_lock));
-  return status;
-}
-
-Status KVStateCacheBuilder::Update(Client& client,
-                                   const std::vector<int>& token_list,
-                                   const LIST_KV_STATE_WITH_LAYER& kv_state) {
-  pthread_spin_lock(&(this->spin_lock));
-  std::vector<int> token_list_copy;
-  for (int i = 0; i < token_list.size(); ++i) {
-    int next_token = token_list[i];
-    const KV_STATE_WITH_LAYER& kv_state_map = kv_state[i];
-    this->UpdateInternal(client, token_list_copy, next_token, kv_state_map);
-    token_list_copy.push_back(token_list[i]);
-  }
-  pthread_spin_unlock(&(this->spin_lock));
-  return Status::OK();
-}
-
-// current we do not consider the layer.
-Status KVStateCacheBuilder::QueryInternal(Client& client,
-                                          const std::vector<int>& token_list,
-                                          int token,
+Status KVStateCacheBuilder::Query(Client& client, int index_k, int index_v,
                                           KV_STATE_WITH_LAYER& kv_state) {
-  Node* node = this->tree->get(token_list, token);
-  if (node == nullptr) {
-    return Status::ObjectNotExists();
-  }
-
   // TBD
   // Here need to check the insert position. If the position is the subtree, we must
   // find the subtree and insert the data into the subtree.
-  offset_data* data = (offset_data*) node->get_data();
-  int index_k = data->offset_k;
-  int index_v = data->offset_v;
   std::vector<double> k_state;
   std::vector<double> v_state;
 
@@ -194,36 +117,14 @@ Status KVStateCacheBuilder::QueryInternal(Client& client,
   return Status::OK();
 }
 
-Status KVStateCacheBuilder::Query(Client& client,
-                                  const std::vector<int>& token_list, int token,
-                                  KV_STATE_WITH_LAYER& kv_state) {
-  pthread_spin_lock(&(this->spin_lock));
-  Status query_status = QueryInternal(client, token_list, token, kv_state);
-  pthread_spin_unlock(&(this->spin_lock));
-  return query_status;
-}
-
-// current we do not consider the layer.
-Status KVStateCacheBuilder::Query(Client& client,
-                                  const std::vector<int>& token_list,
-                                  LIST_KV_STATE_WITH_LAYER& kv_state) {
-  pthread_spin_lock(&(this->spin_lock));
-  std::vector<int> token_list_copy;
-  for (int i = 0; i < token_list.size(); i++) {
-    KV_STATE_WITH_LAYER kv_state_map;
-    int next_token = token_list[i];
-    Status query_status =
-        QueryInternal(client, token_list_copy, next_token, kv_state_map);
-    // TBD check the query status
-    kv_state.push_back(kv_state_map);
-    token_list_copy.push_back(token_list[i]);
-  }
-  pthread_spin_unlock(&(this->spin_lock));
-  return Status::OK();
+bool KVStateCacheBuilder::isFull() {
+  int index = ffsll(this->bitmap) - 1;
+  return index < 0 || index > LIST_SIZE;
 }
 
 Status KVStateCacheBuilder::Build(Client& client) {
   // TBD craete vineyard object
+  pthread_spin_lock(&(this->spin_lock));
   ObjectMeta meta;
   meta.SetTypeName(type_name<KVStateCache>());
   meta.AddKeyValue("tree", this->tree->serialize());
@@ -238,6 +139,7 @@ Status KVStateCacheBuilder::Build(Client& client) {
   }
   // TBD check the status
   client.CreateMetaData(meta, id);
+  pthread_spin_unlock(&(this->spin_lock));
   return Status::OK();
 }
 
@@ -249,9 +151,30 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   return nullptr;
 }
 
-Status KVStateCacheBuilder::GetTree(RadixTree *&tree) {
-  tree = this->tree;
-  return Status::OK();
+offset_data *KVStateCacheBuilder::Update(Client &client, const KV_STATE_WITH_LAYER& kv_state) {
+  int index = ffsll(this->bitmap) - 1;
+  assert(index >= 0 && index < LIST_SIZE);
+  std::vector<double> k_state = (kv_state.find(1)->second).first;
+  std::vector<double> v_state = (kv_state.find(1)->second).second;
+
+  client.CreateBlob(k_state.size() * sizeof(double),
+                    this->key_state_writer_array[index]);
+  client.CreateBlob(v_state.size() * sizeof(double),
+                    this->value_state_writer_array[index]);
+  double* key_data = (double*) this->key_state_writer_array[index]->data();
+  double* value_data = (double*) this->value_state_writer_array[index]->data();
+
+  for (int i = 0; i < k_state.size(); ++i) {
+    key_data[i] = k_state[i];
+  }
+  for (int i = 0; i < v_state.size(); ++i) {
+    value_data[i] = v_state[i];
+  }
+  offset_data *data = new offset_data();
+  data->offset_k = index;
+  data->offset_v = index;
+  return data;
 }
+
 
 }  // namespace vineyard
