@@ -9,9 +9,9 @@ Build vineyard and vineyard test
 .. code:: bash
     mkdir build
     cd build
-    cmake ..
+    cmake .. -DBUILD_VINEYARD_TESTS=ON
     make -j$(nproc)
-    make vineyard-test -j$(nproc)
+    make vineyard_tests -j$(nproc)
 
 Start vineyard server
 
@@ -23,4 +23,5 @@ Run test
 
 .. code:: bash
     cd build
+    export VINEYARD_IPC_SOCKET=/tmp/vineyard_test.sock
     ./bin/kv_state_cache_test

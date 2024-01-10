@@ -1,165 +1,222 @@
-/** Copyright 2020-2023 Alibaba Group Holding Limited.
+/* Rax -- A radix tree implementation.
+ *
+ * Copyright (c) 2017-2018, Salvatore Sanfilippo <antirez at gmail dot com>
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ *   * Redistributions of source code must retain the above copyright notice,
+ *     this list of conditions and the following disclaimer.
+ *   * Redistributions in binary form must reproduce the above copyright
+ *     notice, this list of conditions and the following disclaimer in the
+ *     documentation and/or other materials provided with the distribution.
+ *   * Neither the name of Redis nor the names of its contributors may be used
+ *     to endorse or promote products derived from this software without
+ *     specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ */
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+#ifndef RADIX_H
+#define RADIX_H
 
-    http://www.apache.org/licenses/LICENSE-2.0
+#include <stdint.h>
+#include <stddef.h> 
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
-*/
+/* Representation of a radix tree as implemented in this file, that contains
+ * the strings "foo", "foobar" and "footer" after the insertion of each
+ * word. When the node represents a key inside the radix tree, we write it
+ * between [], otherwise it is written between ().
+ *
+ * This is the vanilla representation:
+ *
+ *              (f) ""
+ *                \
+ *                (o) "f"
+ *                  \
+ *                  (o) "fo"
+ *                    \
+ *                  [t   b] "foo"
+ *                  /     \
+ *         "foot" (e)     (a) "foob"
+ *                /         \
+ *      "foote" (r)         (r) "fooba"
+ *              /             \
+ *    "footer" []             [] "foobar"
+ *
+ * However, this implementation implements a very common optimization where
+ * successive nodes having a single child are "compressed" into the node
+ * itself as a string of characters, each representing a next-level child,
+ * and only the link to the node representing the last character node is
+ * provided inside the representation. So the above representation is turned
+ * into:
+ *
+ *                  ["foo"] ""
+ *                     |
+ *                  [t   b] "foo"
+ *                  /     \
+ *        "foot" ("er")    ("ar") "foob"
+ *                 /          \
+ *       "footer" []          [] "foobar"
+ *
+ * However this optimization makes the implementation a bit more complex.
+ * For instance if a key "first" is added in the above radix tree, a
+ * "node splitting" operation is needed, since the "foo" prefix is no longer
+ * composed of nodes having a single child one after the other. This is the
+ * above tree and the resulting node splitting after this event happens:
+ *
+ *
+ *                    (f) ""
+ *                    /
+ *                 (i o) "f"
+ *                 /   \
+ *    "firs"  ("rst")  (o) "fo"
+ *              /        \
+ *    "first" []       [t   b] "foo"
+ *                     /     \
+ *           "foot" ("er")    ("ar") "foob"
+ *                    /          \
+ *          "footer" []          [] "foobar"
+ *
+ * Similarly after deletion, if a new chain of nodes having a single child
+ * is created (the chain must also not include nodes that represent keys),
+ * it must be compressed back into a single node.
+ *
+ */
 
-#include <map>
-#include <vector>
-#include "common/util/logging.h"
+#define RAX_NODE_MAX_SIZE ((1<<29)-1)
+typedef struct raxNode {
+    uint32_t iskey:1;     /* Does this node contain a key? */
+    uint32_t isnull:1;    /* Associated value is NULL (don't store it). */
+    uint32_t iscompr:1;   /* Node is compressed. */
+    uint32_t size:29;     /* Number of children, or compressed string len. */
+    /* Data layout is as follows:
+     *
+     * If node is not compressed we have 'size' bytes, one for each children
+     * character, and 'size' raxNode pointers, point to each child node.
+     * Note how the character is not stored in the children but in the
+     * edge of the parents:
+     *
+     * [header iscompr=0][abc][a-ptr][b-ptr][c-ptr](value-ptr?)
+     *
+     * if node is compressed (iscompr bit is 1) the node has 1 children.
+     * In that case the 'size' bytes of the string stored immediately at
+     * the start of the data section, represent a sequence of successive
+     * nodes linked one after the other, for which only the last one in
+     * the sequence is actually represented as a node, and pointed to by
+     * the current compressed node.
+     *
+     * [header iscompr=1][xyz][z-ptr](value-ptr?)
+     *
+     * Both compressed and not compressed nodes can represent a key
+     * with associated data in the radix tree at any level (not just terminal
+     * nodes).
+     *
+     * If the node has an associated key (iskey=1) and is not NULL
+     * (isnull=0), then after the raxNode pointers poiting to the
+     * children, an additional value pointer is present (as you can see
+     * in the representation above as "value-ptr" field).
+     */
+    int data[];
+    //unsigned char data[];
+} raxNode;
 
-class Node {
- private:
-  std::vector<int> key;
-  std::shared_ptr<void> data;
-  int data_length;
-  std::vector<Node*> children;
+typedef struct rax {
+    raxNode *head;
+    uint64_t numele;
+    uint64_t numnodes;
+} rax;
 
- public:
-  void set_data(std::shared_ptr<void> data, int data_length) {
-    this->data = data;
-    this->data_length = data_length;
-  }
+/* Stack data structure used by raxLowWalk() in order to, optionally, return
+ * a list of parent nodes to the caller. The nodes do not have a "parent"
+ * field for space concerns, so we use the auxiliary stack when needed. */
+#define RAX_STACK_STATIC_ITEMS 32
+typedef struct raxStack {
+    void **stack; /* Points to static_items or an heap allocated array. */
+    size_t items, maxitems; /* Number of items contained and total space. */
+    /* Up to RAXSTACK_STACK_ITEMS items we avoid to allocate on the heap
+     * and use this static array of pointers instead. */
+    void *static_items[RAX_STACK_STATIC_ITEMS];
+    int oom; /* True if pushing into this stack failed for OOM at some point. */
+} raxStack;
 
-  std::shared_ptr<void> get_data() { return this->data; }
-};
+/* Optional callback used for iterators and be notified on each rax node,
+ * including nodes not representing keys. If the callback returns true
+ * the callback changed the node pointer in the iterator structure, and the
+ * iterator implementation will have to replace the pointer in the radix tree
+ * internals. This allows the callback to reallocate the node to perform
+ * very special operations, normally not needed by normal applications.
+ *
+ * This callback is used to perform very low level analysis of the radix tree
+ * structure, scanning each possible node (but the root node), or in order to
+ * reallocate the nodes to reduce the allocation fragmentation (this is the
+ * Redis application for this callback).
+ *
+ * This is currently only supported in forward iterations (raxNext) */
+typedef int (*raxNodeCallback)(raxNode **noderef);
 
-class RadixTree;
+/* Radix tree iterator state is encapsulated into this data structure. */
+#define RAX_ITER_STATIC_LEN 128
+#define RAX_ITER_JUST_SEEKED (1<<0) /* Iterator was just seeked. Return current
+                                       element for the first iteration and
+                                       clear the flag. */
+#define RAX_ITER_EOF (1<<1)    /* End of iteration reached. */
+#define RAX_ITER_SAFE (1<<2)   /* Safe iterator, allows operations while
+                                  iterating. But it is slower. */
+typedef struct raxIterator {
+    int flags;
+    rax *rt;                /* Radix tree we are iterating. */
+    int *key;     /* The current string. */
+    void *data;             /* Data associated to this key. */
+    size_t key_len;         /* Current key length. */
+    size_t key_max;         /* Max key len the current key buffer can hold. */
+    int key_static_string[RAX_ITER_STATIC_LEN];
+    raxNode *node;          /* Current node. Only for unsafe iteration. */
+    raxStack stack;         /* Stack used for unsafe iteration. */
+    raxNodeCallback node_cb; /* Optional node callback. Normally set to NULL. */
+} raxIterator;
 
-class NodeWithTreeAttri {
- private:
-  std::shared_ptr<Node> node;
-  RadixTree* belong_to;
+/* A special pointer returned for not found items. */
+extern void *raxNotFound;
 
- public:
-  NodeWithTreeAttri(std::shared_ptr<Node> node, void* belong_to) {
-    this->node = node;
-    this->belong_to = (RadixTree*) belong_to;
-  }
+/* Exported API. */
+rax *raxNew(void);
+int raxInsert(rax *rax, const int *s, size_t len, void *data, void **old);
+int raxTryInsert(rax *rax,const int *s, size_t len, void *data, void **old);
+raxNode *raxInsertAndReturnDataNode(rax *rax, const int *s, size_t len, void *data, void **old);
+int raxRemove(rax *rax, int *s, size_t len, void **old);
+void *raxFind(rax *rax, int *s, size_t len);
+raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len);
+void raxFree(rax *rax);
+void raxFreeWithCallback(rax *rax, void (*free_callback)(void*));
+void raxStart(raxIterator *it, rax *rt);
+int raxSeek(raxIterator *it, const char *op, int *ele, size_t len);
+int raxNext(raxIterator *it);
+int raxPrev(raxIterator *it);
+int raxRandomWalk(raxIterator *it, size_t steps);
+int raxCompare(raxIterator *iter, const char *op, int *key, size_t key_len);
+void raxStop(raxIterator *it);
+int raxEOF(raxIterator *it);
+void raxShow(rax *rax);
+uint64_t raxSize(rax *rax);
+unsigned long raxTouch(raxNode *n);
+void raxSetDebugMsg(int onoff);
+void raxTraverse(raxNode *rax, raxNode ***dataNodeList);
 
-  std::shared_ptr<Node> get_node() { return node; }
+/* Internal API. May be used by the node callback in order to access rax nodes
+ * in a low level way, so this function is exported as well. */
+void raxSetData(raxNode *n, void *data);
+void *raxGetData(raxNode *n);
 
-  RadixTree* get_tree() { return belong_to; }
-};
-
-static std::map<std::string, std::shared_ptr<Node>> storage;
-
-class RadixTree {
- private:
-  void* custom_data;
-  int custom_data_length;
-
- public:
-  RadixTree() {
-    LOG(INFO) << "init radix tree";
-    custom_data = NULL;
-    custom_data_length = 0;
-  }
-
-  RadixTree(void* custom_data, int custom_data_length) {
-    LOG(INFO) << "init radix tree with custom data";
-    this->custom_data = custom_data;
-    this->custom_data_length = custom_data_length;
-  }
-
-  void* GetCustomData() { return custom_data; }
-
-  void insert(const std::vector<int> key, std::shared_ptr<void> data,
-              int data_length) {
-    std::shared_ptr<Node> node = std::make_shared<Node>();
-    node->set_data(data, data_length);
-    std::string key_str = "";
-    for (size_t i = 0; i < key.size(); ++i) {
-      key_str += std::to_string(key[i]);
-    }
-    storage.insert(std::make_pair(key_str, node));
-  }
-
-  std::shared_ptr<NodeWithTreeAttri> insert(const std::vector<int> tokens,
-                                            int next_token) {
-    std::shared_ptr<Node> node = std::make_shared<Node>();
-    std::string key_str = "";
-    for (size_t i = 0; i < tokens.size(); ++i) {
-      key_str += std::to_string(tokens[i]);
-    }
-    key_str += std::to_string(next_token);
-    storage.insert(std::make_pair(key_str, node));
-    return std::make_shared<NodeWithTreeAttri>(node, this);
-  }
-
-  void Delete(const std::vector<int> tokens, int next_token) {
-    std::string key_str = "";
-    for (size_t i = 0; i < tokens.size(); ++i) {
-      key_str += std::to_string(tokens[i]);
-    }
-    key_str += std::to_string(next_token);
-    auto iter = storage.find(key_str);
-    if (iter != storage.end()) {
-      storage.erase(iter);
-    }
-  }
-
-  void insert(const std::vector<int>& prefix, int key,
-              std::shared_ptr<void> data, int data_length) {
-    std::vector<int> key_vec = prefix;
-    key_vec.push_back(key);
-    insert(key_vec, data, data_length);
-  }
-
-  std::shared_ptr<NodeWithTreeAttri> get(std::vector<int> key) {
-    std::string key_str = "";
-    for (size_t i = 0; i < key.size(); ++i) {
-      key_str += std::to_string(key[i]);
-    }
-    auto iter = storage.find(key_str);
-    if (iter != storage.end()) {
-      LOG(INFO) << "find key of :" + key_str;
-      return std::make_shared<NodeWithTreeAttri>(iter->second, this);
-    }
-    LOG(INFO) << "cannot find key of :" + key_str;
-    return nullptr;
-  }
-
-  std::shared_ptr<NodeWithTreeAttri> get(std::vector<int> prefix, int key) {
-    std::vector<int> key_vec = prefix;
-    key_vec.push_back(key);
-    return get(key_vec);
-  }
-
-  std::string serialize() { return std::string("this is a serialized string"); }
-
-  static RadixTree* deserialize(std::string data) {
-    LOG(INFO) << "deserialize with data:" + data;
-    return new RadixTree();
-  }
-
-  RadixTree* split() {
-    LOG(INFO) << "splits is not implemented";
-    return nullptr;
-  }
-
-  // Get child node list from this tree.
-  std::vector<std::shared_ptr<NodeWithTreeAttri>> traverse() {
-    std::vector<std::shared_ptr<NodeWithTreeAttri>> nodes;
-    for (auto iter = storage.begin(); iter != storage.end(); ++iter) {
-      nodes.push_back(std::make_shared<NodeWithTreeAttri>(iter->second, this));
-    }
-    return nodes;
-  }
-
-  void* get_custom_data() { return custom_data; }
-
-  void set_custom_data(void* custom_data, int custom_data_length) {
-    this->custom_data = custom_data;
-    this->custom_data_length = custom_data_length;
-  }
-};
+#endif

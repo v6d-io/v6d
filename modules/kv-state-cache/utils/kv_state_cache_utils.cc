@@ -18,7 +18,7 @@ limitations under the License.
 #include "client/client.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
-#include "kv-state-cache/radix-tree/radix.h"
+#include "kv-state-cache/radix-tree/radix-tree.h"
 #include "kv-state-cache/utils/kv_state_cache_utils.h"
 
 using namespace vineyard;
@@ -55,8 +55,8 @@ KVStateCacheBuilder* split(
   KVStateCacheBuilder* child_kv_state_cache_builder = new KVStateCacheBuilder(
       kv_state_cache_struct.client, kv_state_cache_struct.dimension);
   for (size_t i = 0; i < node_with_tree_attri_list.size(); i++) {
-    std::shared_ptr<offset_data> data = std::static_pointer_cast<offset_data>(
-        node_with_tree_attri_list[i]->get_node()->get_data());
+    offset_data *data_ptr = reinterpret_cast<offset_data *>(node_with_tree_attri_list[i]->get_node()->get_data());
+    std::shared_ptr<offset_data> data(data_ptr);
     int index = data->offset;
 
     // transfer the data from this builder to the child builder
@@ -69,7 +69,8 @@ KVStateCacheBuilder* split(
             k_builder->data() + index * kv_state_cache_struct.dimension,
             v_builder->data() + index * kv_state_cache_struct.dimension,
             kv_state_cache_struct.dimension * sizeof(double));
-    node_with_tree_attri_list[i]->get_node()->set_data(new_offset_data,
+    offset_data* rawPtr = new_offset_data.get();
+    node_with_tree_attri_list[i]->get_node()->set_data((void *)rawPtr,
                                                        sizeof(offset_data));
     // clear the bitmap
     kv_state_cache_builder->DeleteKVCache(index);
@@ -82,8 +83,9 @@ KVStateCacheBuilder* split(
 void update(const std::vector<int>& token_list, int next_token,
             const KV_STATE_WITH_LAYER& kv_state) {
   LOG(INFO) << "update";
-  std::shared_ptr<NodeWithTreeAttri> node_with_tree_attri =
-      kv_state_cache_struct.root_tree->insert(token_list, next_token);
+  std::shared_ptr<NodeWithTreeAttri> node_with_tree_attri(
+    kv_state_cache_struct.root_tree->insert(token_list, next_token)
+  );
   RadixTree* sub_tree = node_with_tree_attri->get_tree();
   KVStateCacheBuilder* kv_state_cache_builder =
       (KVStateCacheBuilder*) sub_tree->get_custom_data();
@@ -94,8 +96,12 @@ void update(const std::vector<int>& token_list, int next_token,
     kv_state_cache_struct.root_tree->Delete(token_list, next_token);
     RadixTree* new_tree = sub_tree->split();
 
-    std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list =
-        new_tree->traverse();
+    std::vector<NodeWithTreeAttri *> data_nodes_list = new_tree->traverse();
+    std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list;
+    for (NodeWithTreeAttri *node_with_tree_attri : data_nodes_list) {
+      node_with_tree_attri_list.push_back(
+          std::shared_ptr<NodeWithTreeAttri>(node_with_tree_attri));
+    }
     KVStateCacheBuilder* new_kv_state_cache_builder =
         split(kv_state_cache_builder, node_with_tree_attri_list);
     new_tree->set_custom_data(new_kv_state_cache_builder,
@@ -106,8 +112,9 @@ void update(const std::vector<int>& token_list, int next_token,
   } else {
     std::shared_ptr<offset_data> data =
         kv_state_cache_builder->Update(kv_state);
-    std::shared_ptr<Node> node = node_with_tree_attri->get_node();
-    node->set_data(data, sizeof(offset_data));
+    std::shared_ptr<Node> node(node_with_tree_attri->get_node());
+    offset_data *data_ptr = reinterpret_cast<offset_data *>(data.get());
+    node->set_data(data_ptr, sizeof(offset_data));
     kv_state_cache_builder->UnLock();
   }
 }
@@ -124,12 +131,12 @@ void update(const std::vector<int>& token_list,
 KV_STATE_WITH_LAYER query(const std::vector<int>& token_list, int token) {
   LOG(INFO) << "query";
   KV_STATE_WITH_LAYER kv_state;
-  std::shared_ptr<NodeWithTreeAttri> node_with_custom_data =
+  std::shared_ptr<NodeWithTreeAttri> node_with_custom_data(
       kv_state_cache_struct.root_tree->get(token_list,
-                                           token);  // offset data + tree
+                                           token));  // offset data + tree
   if (node_with_custom_data != nullptr) {
-    std::shared_ptr<offset_data> data = std::static_pointer_cast<offset_data>(
-        node_with_custom_data->get_node()->get_data());
+      offset_data *data_ptr = reinterpret_cast<offset_data *>(node_with_custom_data->get_node()->get_data());
+    std::shared_ptr<offset_data> data(data_ptr);
     int offset = data->offset;
 
     KVStateCacheBuilder* kv_state_cache_builder =
