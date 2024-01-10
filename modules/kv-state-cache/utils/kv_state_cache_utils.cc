@@ -70,7 +70,8 @@ KVStateCacheBuilder* split(
             v_builder->data() + index * kv_state_cache_struct.dimension,
             kv_state_cache_struct.dimension * sizeof(double));
     offset_data* rawPtr = new_offset_data.get();
-    node_with_tree_attri_list[i]->get_node()->set_data((void *)rawPtr,
+    void* voidPtr = static_cast<void*>(rawPtr);
+    node_with_tree_attri_list[i]->get_node()->set_data(&voidPtr,
                                                        sizeof(offset_data));
     // clear the bitmap
     kv_state_cache_builder->DeleteKVCache(index);
@@ -114,7 +115,7 @@ void update(const std::vector<int>& token_list, int next_token,
         kv_state_cache_builder->Update(kv_state);
     std::shared_ptr<Node> node(node_with_tree_attri->get_node());
     offset_data *data_ptr = reinterpret_cast<offset_data *>(data.get());
-    node->set_data(data_ptr, sizeof(offset_data));
+    node->set_data(&data_ptr, sizeof(offset_data));
     kv_state_cache_builder->UnLock();
   }
 }
@@ -137,7 +138,7 @@ KV_STATE_WITH_LAYER query(const std::vector<int>& token_list, int token) {
   if (node_with_custom_data != nullptr) {
       offset_data *data_ptr = reinterpret_cast<offset_data *>(node_with_custom_data->get_node()->get_data());
     std::shared_ptr<offset_data> data(data_ptr);
-    int offset = data->offset;
+    int offset = data_ptr->offset;
 
     KVStateCacheBuilder* kv_state_cache_builder =
         (KVStateCacheBuilder*) node_with_custom_data->get_tree()

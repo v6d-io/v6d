@@ -11,7 +11,7 @@ extern "C" {
 #include <vector>
 
 typedef struct nodeData {
-  void* data;
+  void** data;
   int data_length;
 }nodeData;
 
@@ -29,12 +29,12 @@ class Node {
   }
   void set_data(void *data, int data_length) {
     nodeData *node_data = new nodeData();
-    node_data->data = data;
+    node_data->data = &data;
     node_data->data_length = data_length;
     raxSetData(this->node, data);
   }
 
-  void* get_data() {
+  void** get_data() {
     nodeData *nodedata = (nodeData *)raxGetData(this->node);
     return nodedata->data; 
   }
@@ -82,7 +82,7 @@ class RadixTree {
     return custom_data;
   }
 
-  void insert(const std::vector<int> key, void* data, int data_length) {
+  void insert(const std::vector<int> key, void** data, int data_length) {
     const int* tokens = key.data();
     size_t tokens_len = key.size();
     
@@ -137,7 +137,7 @@ class RadixTree {
     }
   }
 
-  void insert(const std::vector<int>& prefix, int key, void* data,
+  void insert(const std::vector<int>& prefix, int key, void** data,
               int data_length) {
     std::vector<int> key_vec = prefix;
     key_vec.push_back(key);
