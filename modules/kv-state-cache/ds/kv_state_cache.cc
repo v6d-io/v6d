@@ -60,9 +60,6 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
 // current we do not consider the layer.
 Status KVStateCacheBuilder::Query(Client& client, int index,
                                   KV_STATE_WITH_LAYER& kv_state) {
-  // TBD
-  // Here need to check the insert position. If the position is the subtree, we
-  // must find the subtree and insert the data into the subtree.
   std::vector<double> k_state;
   std::vector<double> v_state;
 
