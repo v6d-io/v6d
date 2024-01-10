@@ -3,7 +3,7 @@ kind: MutatingWebhookConfiguration
 metadata:
   name: {{ include "vineyard-operator.fullname" . }}-mutating-webhook-configuration
   annotations:
-    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "vineyard-operator.fullname" . }}-serving-cert
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "vineyard-operator.fullname" . }}-
   labels:
   {{- include "vineyard-operator.labels" . | nindent 4 }}
 webhooks:

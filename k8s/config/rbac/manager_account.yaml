@@ -58,6 +58,15 @@ rules:
 - apiGroups: ["argoproj.io"]
   resources: ["workflows"]
   verbs: ["list", "get", "watch"]
+# add webhook permission
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["mutatingwebhookconfigurations"]
+  resourceNames: ["vineyard-mutating-webhook-configuration"]
+  verbs: ["get", "list", "watch", "patch"]
+- apiGroups: ["admissionregistration.k8s.io"]
+  resources: ["validatingwebhookconfigurations"]
+  resourceNames: ["vineyard-validating-webhook-configuration"]
+  verbs: ["get", "list", "watch", "patch"]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

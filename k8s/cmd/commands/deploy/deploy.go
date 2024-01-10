@@ -28,9 +28,6 @@ var deployExample = util.Examples(`
 	# deploy the vineyard operator on kubernetes
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy operator
 
-	# deploy the cert-manager on kubernetes
-	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy cert-manager
-
 	# deploy the vineyardd on kubernetes
 	vineyardctl -n vineyard-system --kubeconfig $HOME/.kube/config deploy vineyardd
 	
@@ -51,7 +48,6 @@ func NewDeployCmd() *cobra.Command {
 
 func init() {
 	deployCmd.AddCommand(NewDeployOperatorCmd())
-	deployCmd.AddCommand(NewDeployCertManagerCmd())
 	deployCmd.AddCommand(NewDeployVineyarddCmd())
 	deployCmd.AddCommand(NewDeployVineyardClusterCmd())
 	deployCmd.AddCommand(NewDeployVineyardDeploymentCmd())

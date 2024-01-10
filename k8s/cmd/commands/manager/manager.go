@@ -18,6 +18,7 @@ limitations under the License.
 package manager
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/spf13/cobra"
@@ -70,6 +71,7 @@ var managerCmd = &cobra.Command{
 		mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 			Scheme:                 util.Scheme(),
 			MetricsBindAddress:     flags.MetricsAddr,
+			CertDir:                flags.WebhookCertDir,
 			Port:                   9443,
 			HealthProbeBindAddress: flags.ProbeAddr,
 			LeaderElection:         flags.EnableLeaderElection,
@@ -238,6 +240,22 @@ func startManager(
 		if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 			log.Fatal(err, "unable to set up ready check")
 		}
+	}
+
+	webhookDNSName := fmt.Sprintf("vineyard-webhook-service.%s.svc", flags.Namespace)
+	certGenerator, err := util.NewCertGenerator(util.CACommonName, util.CAOrgainzation,
+		webhookDNSName, flags.WebhookCertDir)
+	if err != nil {
+		log.Fatal(err, "unable to build certificates generator")
+	}
+	if err := certGenerator.Generate(); err != nil {
+		log.Fatal(err, "unable to generate certificates with generator")
+	}
+	if err := certGenerator.PatchCABundleToMutatingWebhook("vineyard-mutating-webhook-configuration"); err != nil {
+		log.Fatal(err, "unable to patch CAbundle to mutating webhook configuration")
+	}
+	if err := certGenerator.PatchCABundleToValidatingWebhook("vineyard-validating-webhook-configuration"); err != nil {
+		log.Fatal(err, "unable to patch CAbundle to validating webhook configuration")
 	}
 
 	log.Info("starting manager")

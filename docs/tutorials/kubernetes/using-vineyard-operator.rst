@@ -118,9 +118,7 @@ Create a dedicated namespace for the Vineyard Operator.
 
         namespace/vineyard-system created
 
-The operator needs a certificate created by cert-manager for webhook(https),
-and the cert-manager is a sub chart of the vineyard operator chart. Also, the
-Vineyard CRDs、Controllers、Webhooks and Scheduler are packaged by `helm`_, you could
+The Vineyard CRDs、Controllers、Webhooks and Scheduler are packaged by `helm`_, you could
 deploy all resources as follows.
 
 .. note::
@@ -198,27 +196,16 @@ Check the status of all vineyard resources created by helm:
     .. code:: bash
 
         NAME                                                            READY   STATUS    RESTARTS   AGE
-        pod/vineyard-operator-cert-manager-cainjector-b865888cc-xj8x9   1/1     Running   0          2m30s
-        pod/vineyard-operator-cert-manager-d99dcb884-gq9j5              1/1     Running   0          2m30s
-        pod/vineyard-operator-cert-manager-webhook-5bc8fd5d48-vh4bg     1/1     Running   0          2m30s
         pod/vineyard-operator-controller-manager-5bcbb75fb6-cfdpk       2/2     Running   0          2m30s
 
         NAME                                                           TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
-        service/vineyard-operator-cert-manager                         ClusterIP   10.96.166.147   <none>        9402/TCP   2m30s
-        service/vineyard-operator-cert-manager-webhook                 ClusterIP   10.96.111.112   <none>        443/TCP    2m30s
         service/vineyard-operator-controller-manager-metrics-service   ClusterIP   10.96.153.134   <none>        8443/TCP   2m30s
         service/vineyard-operator-webhook-service                      ClusterIP   10.96.9.101     <none>        443/TCP    2m30s
 
         NAME                                                        READY   UP-TO-DATE   AVAILABLE   AGE
-        deployment.apps/vineyard-operator-cert-manager              1/1     1            1           2m30s
-        deployment.apps/vineyard-operator-cert-manager-cainjector   1/1     1            1           2m30s
-        deployment.apps/vineyard-operator-cert-manager-webhook      1/1     1            1           2m30s
         deployment.apps/vineyard-operator-controller-manager        1/1     1            1           2m30s
 
         NAME                                                                  DESIRED   CURRENT   READY   AGE
-        replicaset.apps/vineyard-operator-cert-manager-cainjector-b865888cc   1         1         1       2m30s
-        replicaset.apps/vineyard-operator-cert-manager-d99dcb884              1         1         1       2m30s
-        replicaset.apps/vineyard-operator-cert-manager-webhook-5bc8fd5d48     1         1         1       2m30s
         replicaset.apps/vineyard-operator-controller-manager-5bcbb75fb6       1         1         1       2m30s
 
 Step 2: Deploy a Vineyard Cluster

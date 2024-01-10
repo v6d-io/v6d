@@ -34,8 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
-
 	"github.com/v6d-io/v6d/k8s/apis/k8s/v1alpha1"
 	"github.com/v6d-io/v6d/k8s/cmd/commands/flags"
 	"github.com/v6d-io/v6d/k8s/pkg/log"
@@ -52,7 +50,6 @@ func init() {
 	_ = defaultscheme.AddToScheme(scheme)
 	_ = v1alpha1.AddToScheme(scheme)
 	_ = apiextensions.AddToScheme(scheme)
-	_ = certmanagerv1.AddToScheme(scheme)
 }
 
 func Scheme() *runtime.Scheme {

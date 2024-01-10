@@ -30,9 +30,3 @@ version: 0.19.3
 # incremented each time you make changes to the application. Versions are not expected to
 # follow Semantic Versioning. They should reflect the version the application is using.
 appVersion: 0.19.3
-
-dependencies:
-  - name: cert-manager
-    repository: https://charts.jetstack.io
-    version: v1.8.0
-    condition: cert-manager.enabled

@@ -34,9 +34,6 @@ var deployVineyardClusterCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		util.AssertNoArgs(cmd, args)
 
-		// deploy cert-manager
-		NewDeployCertManagerCmd().Run(cmd, args)
-
 		// deploy vineyard operator
 		NewDeployOperatorCmd().Run(cmd, args)
 

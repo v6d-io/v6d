@@ -40,9 +40,6 @@ var deleteVineyardClusterCmd = &cobra.Command{
 		// delete vineyard operator
 		NewDeleteOperatorCmd().Run(cmd, args)
 
-		// delete cert-manager
-		NewDeleteCertManagerCmd().Run(cmd, args)
-
 		log.Info("Vineyard Cluster is deleted.")
 	},
 }

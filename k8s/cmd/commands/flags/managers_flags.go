@@ -40,6 +40,9 @@ var (
 
 	// SchedulerConfigFile is the location of scheduler plugin's configuration file.
 	SchedulerConfigFile string
+
+	// WebhookCertDir is the directory to store the generated certificates.
+	WebhookCertDir string
 )
 
 func ApplyManagersOpts(cmd *cobra.Command) {
@@ -62,4 +65,7 @@ func ApplyManagersOpts(cmd *cobra.Command) {
 		StringVarP(&SchedulerConfigFile, "scheduler-config-file", "",
 			"/etc/kubernetes/scheduler.yaml",
 			"The location of scheduler plugin's configuration file.")
+	cmd.Flags().
+		StringVarP(&WebhookCertDir, "webhook-cert-dir", "", "/etc/webhook/certs",
+			"The directory to store the generated certificates.")
 }

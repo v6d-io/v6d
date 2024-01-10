@@ -40,6 +40,28 @@ rules:
   - list
   - get
   - watch
+- apiGroups:
+  - admissionregistration.k8s.io
+  resourceNames:
+  - vineyard-mutating-webhook-configuration
+  resources:
+  - mutatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+- apiGroups:
+  - admissionregistration.k8s.io
+  resourceNames:
+  - vineyard-validating-webhook-configuration
+  resources:
+  - validatingwebhookconfigurations
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
