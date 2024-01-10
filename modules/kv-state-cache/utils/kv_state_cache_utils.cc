@@ -19,6 +19,7 @@ limitations under the License.
 #include "common/util/logging.h"
 #include "common/util/status.h"
 #include "kv-state-cache/radix-tree/radix-tree.h"
+#include "kv-state-cache/strategy/LRU_strategy.h"
 #include "kv-state-cache/utils/kv_state_cache_utils.h"
 
 using namespace vineyard;
@@ -26,6 +27,7 @@ struct KVStateCacheStruct {
   Client client;
   KVStateCacheBuilder* kv_state_cache_builder;
   RadixTree* root_tree;
+  CacheStrategy* cache_strategy;
   int dimension;
 
   KVStateCacheStruct() {
@@ -35,11 +37,12 @@ struct KVStateCacheStruct {
     LOG(INFO) << "conneted";
   }
 
-  void SetDimension(int dimension) {
+  void SetDimension(int dimension, int cache_capacity = 10) {
     this->dimension = dimension;
     kv_state_cache_builder = new KVStateCacheBuilder(client, dimension);
     root_tree =
         new RadixTree(kv_state_cache_builder, sizeof(KVStateCacheBuilder));
+    cache_strategy = new LRUStrategy(cache_capacity);
   }
 } kv_state_cache_struct;
 
@@ -91,7 +94,9 @@ void update(const std::vector<int>& token_list, int next_token,
   KVStateCacheBuilder* kv_state_cache_builder =
       (KVStateCacheBuilder*) sub_tree->get_custom_data();
 
-  kv_state_cache_builder->Lock();
+  // TBD
+  // use lock to protect the kv_state_cache_builder
+  // kv_state_cache_builder->Lock();
 
   if (kv_state_cache_builder->isFull()) {
     kv_state_cache_struct.root_tree->Delete(token_list, next_token);
@@ -108,15 +113,43 @@ void update(const std::vector<int>& token_list, int next_token,
     new_tree->set_custom_data(new_kv_state_cache_builder,
                               sizeof(KVStateCacheBuilder));
 
-    kv_state_cache_builder->UnLock();
+    // kv_state_cache_builder->UnLock();
     update(token_list, next_token, kv_state);
   } else {
     std::shared_ptr<offset_data> data =
         kv_state_cache_builder->Update(kv_state);
-    std::shared_ptr<Node> node(node_with_tree_attri->get_node());
-    offset_data *data_ptr = reinterpret_cast<offset_data *>(data.get());
-    node->set_data(&data_ptr, sizeof(offset_data));
-    kv_state_cache_builder->UnLock();
+    std::shared_ptr<RaxNode> node = node_with_tree_attri->get_node();
+    node->set_data(data, sizeof(offset_data));
+
+    std::vector<int> evicted_tokens;
+    kv_state_cache_struct.cache_strategy->put(token_list, next_token,
+                                              evicted_tokens);
+
+    if (evicted_tokens.size() > 0) {
+      std::string evicted_tokens_str = "";
+      for (size_t i = 0; i < evicted_tokens.size(); i++) {
+        evicted_tokens_str += std::to_string(evicted_tokens[i]);
+      }
+      LOG(INFO) << "evicted tokens: " << evicted_tokens_str;
+
+      std::shared_ptr<NodeWithTreeAttri> evicted_node_with_tree_attri =
+          kv_state_cache_struct.root_tree->get(evicted_tokens);
+      KVStateCacheBuilder* evicted_kv_state_cache_builder =
+          (KVStateCacheBuilder*) evicted_node_with_tree_attri->get_tree()
+              ->get_custom_data();
+
+      LOG(INFO) << "evicted index: "
+                << std::static_pointer_cast<offset_data>(
+                       evicted_node_with_tree_attri->get_node()->get_data())
+                       ->offset;
+
+      evicted_kv_state_cache_builder->DeleteKVCache(
+          std::static_pointer_cast<offset_data>(
+              evicted_node_with_tree_attri->get_node()->get_data())
+              ->offset);
+      kv_state_cache_struct.root_tree->Delete(evicted_tokens);
+    }
+    // kv_state_cache_builder->UnLock();
   }
 }
 
@@ -143,10 +176,14 @@ KV_STATE_WITH_LAYER query(const std::vector<int>& token_list, int token) {
     KVStateCacheBuilder* kv_state_cache_builder =
         (KVStateCacheBuilder*) node_with_custom_data->get_tree()
             ->get_custom_data();
-    kv_state_cache_builder->Lock();
+    // kv_state_cache_builder->Lock();
     kv_state_cache_builder->Query(kv_state_cache_struct.client, offset,
                                   kv_state);
-    kv_state_cache_builder->UnLock();
+    // kv_state_cache_builder->UnLock();
+    std::vector<int> evicted_tokens;
+    kv_state_cache_struct.cache_strategy->put(token_list, token,
+                                              evicted_tokens);
+    assert(evicted_tokens.size() == 0);
   }
   return kv_state;
 }

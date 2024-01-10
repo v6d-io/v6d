@@ -27,12 +27,12 @@ using namespace vineyard;
 void init() { init_kv_state_cache(DEMENSION); }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
-  LOG(INFO) << "Current tokens: ";
   std::string tokens_str = "";
-  for (int i = 0; i < prefix.size(); ++i) {
-    tokens_str += std::to_string(prefix[i]) + " ";
+  for (size_t i = 0; i < prefix.size(); ++i) {
+    tokens_str += std::to_string(prefix[i]);
   }
   tokens_str += std::to_string(next_token);
+  LOG(INFO) << "Current tokens: " + tokens_str;
   LOG(INFO) << tokens_str;
 }
 
@@ -72,7 +72,7 @@ void inference(std::vector<int> tokens) {
   std::vector<int> inference_tokens;
   std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
 
-  for (int i = 0; i < tokens.size(); ++i) {
+  for (size_t i = 0; i < tokens.size(); ++i) {
     kv_state = query(inference_tokens, tokens[i]);
     if (kv_state.size() == 0) {
       LOG(INFO) << "======================================";
@@ -101,5 +101,6 @@ int main() {
   std::vector<int> round_2_tokens = {1, 2, 3, 4, 5, 7, 8, 9, 10};
   inference(round_2_tokens);
   inference(round_2_tokens);
+  inference(round_1_tokens);
   return 0;
 }

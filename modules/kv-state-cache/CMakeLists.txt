@@ -6,6 +6,8 @@ file(GLOB VINEYARD_KV_STATE_CACHE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                 "radix-tree/*.h"
                                 "utils/*.cc"
                                 "utils/*.h"
+                                "strategy/*.cc"
+                                "strategy/*.h"
 )
 
 add_library(vineyard_kv_state_cache ${VINEYARD_KV_STATE_CACHE_SRCS})
