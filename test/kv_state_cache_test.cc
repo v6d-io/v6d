@@ -20,9 +20,11 @@ limitations under the License.
 #include "common/util/logging.h"
 #include "kv-state-cache/utils/kv_state_cache_utils.h"
 
-// using namespace vineyard;
+using namespace vineyard;
 
 #define DEMENSION 10
+
+void init() { init_kv_state_cache(DEMENSION); }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
   LOG(INFO) << "Current tokens: ";
@@ -93,9 +95,11 @@ void inference(std::vector<int> tokens) {
 }
 
 int main() {
+  init();
   std::vector<int> round_1_tokens = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   inference(round_1_tokens);
   std::vector<int> round_2_tokens = {1, 2, 3, 4, 5, 7, 8, 9, 10};
+  inference(round_2_tokens);
   inference(round_2_tokens);
   return 0;
 }

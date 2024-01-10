@@ -20,41 +20,44 @@ limitations under the License.
 class Node {
  private:
   std::vector<int> key;
-  void* data;
+  std::shared_ptr<void> data;
   int data_length;
   std::vector<Node*> children;
 
  public:
-  void set_data(void* data, int data_length) {
+  void set_data(std::shared_ptr<void> data, int data_length) {
     this->data = data;
     this->data_length = data_length;
   }
 
-  void* get_data() { return this->data; }
+  std::shared_ptr<void> get_data() { return this->data; }
 };
 
-class NodeWithCustomData {
+class RadixTree;
+
+class NodeWithTreeAttri {
  private:
-  Node *node;
-  void *custom_data;
+  std::shared_ptr<Node> node;
+  RadixTree* belong_to;
 
  public:
-  NodeWithCustomData(Node *node, void *custom_data) {
+  NodeWithTreeAttri(std::shared_ptr<Node> node, void* belong_to) {
     this->node = node;
-    this->custom_data = custom_data;
+    this->belong_to = (RadixTree*) belong_to;
   }
 
-  Node *get_node() { return node; }
+  std::shared_ptr<Node> get_node() { return node; }
 
-  void *get_custom_data() { return custom_data; }
+  RadixTree* get_tree() { return belong_to; }
 };
 
-static std::map<std::string, struct Node*> storage;
+static std::map<std::string, std::shared_ptr<Node>> storage;
 
 class RadixTree {
  private:
-   void *custom_data;
-   int custom_data_length;
+  void* custom_data;
+  int custom_data_length;
+
  public:
   RadixTree() {
     LOG(INFO) << "init radix tree";
@@ -62,72 +65,71 @@ class RadixTree {
     custom_data_length = 0;
   }
 
-  RadixTree(void *custom_data, int custom_data_length) {
+  RadixTree(void* custom_data, int custom_data_length) {
     LOG(INFO) << "init radix tree with custom data";
     this->custom_data = custom_data;
     this->custom_data_length = custom_data_length;
   }
 
-  void *GetCustomData() {
-    return custom_data;
-  }
+  void* GetCustomData() { return custom_data; }
 
-  void insert(const std::vector<int> key, void* data, int data_length) {
-    Node* node = new Node();
+  void insert(const std::vector<int> key, std::shared_ptr<void> data,
+              int data_length) {
+    std::shared_ptr<Node> node = std::make_shared<Node>();
     node->set_data(data, data_length);
     std::string key_str = "";
-    for (int i = 0; i < key.size(); ++i) {
+    for (size_t i = 0; i < key.size(); ++i) {
       key_str += std::to_string(key[i]);
     }
     storage.insert(std::make_pair(key_str, node));
   }
 
-  NodeWithCustomData *insert(const std::vector<int> tokens, int next_token) {
-    Node* node = new Node();
+  std::shared_ptr<NodeWithTreeAttri> insert(const std::vector<int> tokens,
+                                            int next_token) {
+    std::shared_ptr<Node> node = std::make_shared<Node>();
     std::string key_str = "";
-    for (int i = 0; i < tokens.size(); ++i) {
+    for (size_t i = 0; i < tokens.size(); ++i) {
       key_str += std::to_string(tokens[i]);
     }
     key_str += std::to_string(next_token);
     storage.insert(std::make_pair(key_str, node));
-    return new NodeWithCustomData(node, this->custom_data);
+    return std::make_shared<NodeWithTreeAttri>(node, this);
   }
 
   void Delete(const std::vector<int> tokens, int next_token) {
     std::string key_str = "";
-    for (int i = 0; i < tokens.size(); ++i) {
+    for (size_t i = 0; i < tokens.size(); ++i) {
       key_str += std::to_string(tokens[i]);
     }
     key_str += std::to_string(next_token);
     auto iter = storage.find(key_str);
     if (iter != storage.end()) {
-      delete iter->second;
       storage.erase(iter);
     }
   }
 
-  void insert(const std::vector<int>& prefix, int key, void* data,
-              int data_length) {
+  void insert(const std::vector<int>& prefix, int key,
+              std::shared_ptr<void> data, int data_length) {
     std::vector<int> key_vec = prefix;
     key_vec.push_back(key);
     insert(key_vec, data, data_length);
   }
 
-  NodeWithCustomData* get(std::vector<int> key) {
+  std::shared_ptr<NodeWithTreeAttri> get(std::vector<int> key) {
     std::string key_str = "";
-    for (int i = 0; i < key.size(); ++i) {
+    for (size_t i = 0; i < key.size(); ++i) {
       key_str += std::to_string(key[i]);
     }
     auto iter = storage.find(key_str);
     if (iter != storage.end()) {
       LOG(INFO) << "find key of :" + key_str;
-      return new NodeWithCustomData(iter->second, this->custom_data);
+      return std::make_shared<NodeWithTreeAttri>(iter->second, this);
     }
     LOG(INFO) << "cannot find key of :" + key_str;
     return nullptr;
   }
 
-  NodeWithCustomData* get(std::vector<int> prefix, int key) {
+  std::shared_ptr<NodeWithTreeAttri> get(std::vector<int> prefix, int key) {
     std::vector<int> key_vec = prefix;
     key_vec.push_back(key);
     return get(key_vec);
@@ -135,26 +137,9 @@ class RadixTree {
 
   std::string serialize() { return std::string("this is a serialized string"); }
 
-  static RadixTree *deserialize(std::string data) {
+  static RadixTree* deserialize(std::string data) {
     LOG(INFO) << "deserialize with data:" + data;
     return new RadixTree();
-  }
-
-  void drop(std::vector<int> key) {
-    std::string key_str = "";
-    for (int i = 0; i < key.size(); ++i) {
-      key_str += std::to_string(key[i]);
-    }
-    auto iter = storage.find(key_str);
-    if (iter != storage.end()) {
-      storage.erase(iter);
-    }
-  }
-
-  void* getNodeData(void* node) { return NULL; }
-
-  void setNodeData(void* node, void* data, int data_length) {
-    ((Node*) node)->set_data(data, data_length);
   }
 
   RadixTree* split() {
@@ -162,16 +147,19 @@ class RadixTree {
     return nullptr;
   }
 
-  std::vector<NodeWithCustomData *> traverse() {
-    std::vector<NodeWithCustomData *> nodes;
+  // Get child node list from this tree.
+  std::vector<std::shared_ptr<NodeWithTreeAttri>> traverse() {
+    std::vector<std::shared_ptr<NodeWithTreeAttri>> nodes;
     for (auto iter = storage.begin(); iter != storage.end(); ++iter) {
-      nodes.push_back(new NodeWithCustomData(iter->second, this->custom_data));
+      nodes.push_back(std::make_shared<NodeWithTreeAttri>(iter->second, this));
     }
     return nodes;
   }
 
-  bool find_insert_position(std::vector<int> token_list, int next_token, RadixTree *&node) {
-    // if the position is in the subtree, return false
-    // else return true
+  void* get_custom_data() { return custom_data; }
+
+  void set_custom_data(void* custom_data, int custom_data_length) {
+    this->custom_data = custom_data;
+    this->custom_data_length = custom_data_length;
   }
 };

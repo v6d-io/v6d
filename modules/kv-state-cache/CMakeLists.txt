@@ -1,4 +1,4 @@
-file(GLOB vineyard_kv_state_cache_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
+file(GLOB VINEYARD_KV_STATE_CACHE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                 "ds/*.cc"
                                 "ds/*.h"
                                 "radix-tree/*.cc"
@@ -7,7 +7,7 @@ file(GLOB vineyard_kv_state_cache_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                 "utils/*.h"
 )
 
-add_library(vineyard_kv_state_cache ${vineyard_kv_state_cache_SRCS})
+add_library(vineyard_kv_state_cache ${VINEYARD_KV_STATE_CACHE_SRCS})
 target_link_libraries(vineyard_kv_state_cache PUBLIC vineyard_client vineyard_basic)
 install_export_vineyard_target(vineyard_kv_state_cache)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}/utils/")

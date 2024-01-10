@@ -15,11 +15,7 @@ limitations under the License.
 
 #include "kv_state_cache.h"
 #include "client/client.h"
-
-// Set the bit to 0, which means the resource is being used
-#define CLR_UINT64_BIT(value, bit) ((value) |= (((int64_t) 1) << (bit)))
-// Set the bit to 1, which means the resource is not being used
-#define SET_UINT64_BIT(value, bit) ((value) &= ~(((int64_t) 1) << (bit)))
+#include "common/util/logging.h"
 
 namespace vineyard {
 
@@ -37,80 +33,45 @@ void KVStateCache::Construct(const ObjectMeta& meta) {
   Object::Construct(meta);
   // TBD
   std::string tree_data;
-  meta.GetKeyValue("tree", tree_data);
   meta.GetKeyValue("bitmap", this->bitmap);
-  tree = RadixTree::deserialize(tree_data);
 }
 
-KVStateCacheBuilder::KVStateCacheBuilder() {
+KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension) {
   pthread_spin_init(&(this->spin_lock), 0);
   this->bitmap = UINT64_MAX;
-  this->tree = new RadixTree();
+  this->k_builder = new TensorBuilder<double>(client, {LIST_SIZE, dimension});
+  this->v_builder = new TensorBuilder<double>(client, {LIST_SIZE, dimension});
+  this->dimension = dimension;
 }
 
-KVStateCacheBuilder::KVStateCacheBuilder(KVStateCache& kv_state_cache) {
+KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
+                                         KVStateCache& kv_state_cache) {
   pthread_spin_init(&(this->spin_lock), 0);
   this->bitmap = kv_state_cache.bitmap;
-  this->tree = kv_state_cache.tree;
+  this->k_builder =
+      new TensorBuilder<double>(client, {LIST_SIZE, kv_state_cache.dimension});
+  this->v_builder =
+      new TensorBuilder<double>(client, {LIST_SIZE, kv_state_cache.dimension});
+  this->dimension = kv_state_cache.dimension;
   // TBD:
   // transfer the data from kv_state_cache to this builder
-}
-
-KVStateCacheBuilder::KVStateCacheBuilder(RadixTree *tree) {
-  pthread_spin_init(&(this->spin_lock), 0);
-  this->bitmap = UINT64_MAX;
-  this->tree = tree;
-  // TBD:
-  // transfer the data from kv_state_cache to this builder
-}
-
-KVStateCacheBuilder::KVStateCacheBuilder(RadixTree *tree) {
-  pthread_spin_init(&(this->spin_lock), 0);
-  this->bitmap = UINT64_MAX;
-  this->tree = tree;
-}
-
-Status KVStateCacheBuilder::Split() {
-  // Split the tree if the list of kv_state is full
-  RadixTree *sub_tree = this->tree->split();
-  KVStateCacheBuilder *child_kv_state_cache_builder = new KVStateCacheBuilder(sub_tree);
-  std::vector<NodeWithCustomData *> sub_tree_node_list = sub_tree->traverse();
-  for (int i = 0; i < sub_tree_node_list.size(); i++) {
-    offset_data *data = (offset_data *) sub_tree_node_list[i]->get_node()->get_data();
-    int index_k = data->offset_k;
-    int index_v = data->offset_v;
-
-    // transfer the data from this builder to the child builder
-    child_kv_state_cache_builder->key_state_writer_array[i] = std::move(this->key_state_writer_array[index_k]);
-    child_kv_state_cache_builder->value_state_writer_array[i] = std::move(this->value_state_writer_array[index_v]);
-
-    // clear the bitmap
-    SET_UINT64_BIT(this->bitmap, index_k);
-    SET_UINT64_BIT(this->bitmap, index_v);
-    CLR_UINT64_BIT(child_kv_state_cache_builder->bitmap, i);
-    CLR_UINT64_BIT(child_kv_state_cache_builder->bitmap, i);
-  }
-  this->kv_state_cache_builder_map.insert(std::make_pair(sub_tree, child_kv_state_cache_builder));
-  return Status::OK();
 }
 
 // current we do not consider the layer.
-Status KVStateCacheBuilder::Query(Client& client, int index_k, int index_v,
-                                          KV_STATE_WITH_LAYER& kv_state) {
+Status KVStateCacheBuilder::Query(Client& client, int index,
+                                  KV_STATE_WITH_LAYER& kv_state) {
   // TBD
-  // Here need to check the insert position. If the position is the subtree, we must
-  // find the subtree and insert the data into the subtree.
+  // Here need to check the insert position. If the position is the subtree, we
+  // must find the subtree and insert the data into the subtree.
   std::vector<double> k_state;
   std::vector<double> v_state;
 
-  for (int i = 0; i < key_state_writer_array[index_k]->size() / sizeof(double);
-       ++i) {
-    k_state.push_back(((double*) key_state_writer_array[index_k]->data())[i]);
+  for (int i = 0; i < this->dimension; ++i) {
+    k_state.push_back(((double*) k_builder->data())[index * dimension + i]);
   }
 
-  for (int i = 0;
-       i < value_state_writer_array[index_v]->size() / sizeof(double); ++i) {
-    v_state.push_back(((double*) value_state_writer_array[index_v]->data())[i]);
+  for (int i = 0; i < this->dimension; ++i) {
+    v_state.push_back(((double*) v_builder->data())[index * dimension + i]);
   }
 
   kv_state.insert(std::make_pair(1, std::make_pair(k_state, v_state)));
@@ -127,15 +88,10 @@ Status KVStateCacheBuilder::Build(Client& client) {
   pthread_spin_lock(&(this->spin_lock));
   ObjectMeta meta;
   meta.SetTypeName(type_name<KVStateCache>());
-  meta.AddKeyValue("tree", this->tree->serialize());
   meta.AddKeyValue("bitmap", this->bitmap);
   for (int i = 0; i < LIST_SIZE; ++i) {
-    if (this->bitmap & (((int64_t) 1) << i)) {
-      meta.AddMember("key_state_builder_array_" + std::to_string(i),
-                     this->key_state_writer_array[i]->id());
-      meta.AddMember("value_state_builder_array_" + std::to_string(i),
-                     this->value_state_writer_array[i]->id());
-    }
+    // TBD
+    // create tensor meta
   }
   // TBD check the status
   client.CreateMetaData(meta, id);
@@ -151,30 +107,54 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   return nullptr;
 }
 
-offset_data *KVStateCacheBuilder::Update(Client &client, const KV_STATE_WITH_LAYER& kv_state) {
+std::shared_ptr<offset_data> KVStateCacheBuilder::Update(
+    const KV_STATE_WITH_LAYER& kv_state) {
   int index = ffsll(this->bitmap) - 1;
   assert(index >= 0 && index < LIST_SIZE);
   std::vector<double> k_state = (kv_state.find(1)->second).first;
   std::vector<double> v_state = (kv_state.find(1)->second).second;
+  assert(k_state.size() == this->dimension);
+  assert(v_state.size() == this->dimension);
 
-  client.CreateBlob(k_state.size() * sizeof(double),
-                    this->key_state_writer_array[index]);
-  client.CreateBlob(v_state.size() * sizeof(double),
-                    this->value_state_writer_array[index]);
-  double* key_data = (double*) this->key_state_writer_array[index]->data();
-  double* value_data = (double*) this->value_state_writer_array[index]->data();
+  double* key_data = (double*) k_builder->data();
+  double* value_data = (double*) v_builder->data();
+  for (int i = 0; i < this->dimension; ++i) {
+    key_data[index * this->dimension + i] = k_state[i];
+  }
+  for (int i = 0; i < this->dimension; ++i) {
+    value_data[index * this->dimension + i] = v_state[i];
+  }
+  std::shared_ptr<offset_data> data = std::make_shared<offset_data>();
+  data->offset = index;
 
-  for (int i = 0; i < k_state.size(); ++i) {
-    key_data[i] = k_state[i];
-  }
-  for (int i = 0; i < v_state.size(); ++i) {
-    value_data[i] = v_state[i];
-  }
-  offset_data *data = new offset_data();
-  data->offset_k = index;
-  data->offset_v = index;
+  ACQUIRE_BIT_RESOURCE(this->bitmap, index);
   return data;
 }
 
+std::shared_ptr<offset_data> KVStateCacheBuilder::Update(
+    double* k_data, double* v_data, unsigned long data_length) {
+  int index = ffsll(this->bitmap) - 1;
+  assert(index >= 0 && index < LIST_SIZE);
+  double* key_data = (double*) k_builder->data();
+  double* value_data = (double*) v_builder->data();
+  assert(this->dimension == data_length);
+  for (unsigned long i = 0; i < data_length; ++i) {
+    key_data[index * this->dimension + i] = k_data[i];
+  }
+  for (unsigned long i = 0; i < data_length; ++i) {
+    value_data[index * this->dimension + i] = v_data[i];
+  }
+  std::shared_ptr<offset_data> data = std::make_shared<offset_data>();
+  data->offset = index;
+
+  ACQUIRE_BIT_RESOURCE(this->bitmap, index);
+  return data;
+}
+
+void KVStateCacheBuilder::SetChildKVStateCacheBuilder(
+    KVStateCacheBuilder* child_kv_state_cache_builder) {
+  this->child_kv_state_cache_builder_list.push_back(
+      child_kv_state_cache_builder);
+}
 
 }  // namespace vineyard

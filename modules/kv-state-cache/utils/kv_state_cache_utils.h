@@ -16,26 +16,21 @@ limitations under the License.
 #include <map>
 #include <vector>
 
+#include "kv-state-cache/ds/kv_state_cache.h"
+
 #ifndef MODULES_KV_STATE_CACHE_UTILS_H_
 #define MODULES_KV_STATE_CACHE_UTILS_H_
 
-void init_kv_state_cache();
+void init_kv_state_cache(int dimension);
 
-void update(
-    const std::vector<int>& token_list, int next_token,
-    const std::map<int, std::pair<std::vector<double>, std::vector<double>>>&
-        kv_state);
+void update(const std::vector<int>& token_list, int next_token,
+            const KV_STATE_WITH_LAYER& kv_state);
 
-void update(
-    const std::vector<int>& token_list,
-    const std::vector<
-        std::map<int, std::pair<std::vector<double>, std::vector<double>>>>&
-        kv_state);
+void update(const std::vector<int>& token_list,
+            const LIST_KV_STATE_WITH_LAYER& kv_state);
 
-std::vector<std::map<double, std::pair<std::vector<double>, std::vector<int>>>>
-query(const std::vector<int>& token_list);
+KV_STATE_WITH_LAYER query(const std::vector<int>& token_list, int token);
 
-std::map<int, std::pair<std::vector<double>, std::vector<double>>> query(
-    const std::vector<int>& token_list, int token);
+LIST_KV_STATE_WITH_LAYER query(const std::vector<int>& token_list);
 
 #endif

@@ -21,9 +21,9 @@ limitations under the License.
 #include <map>
 #include <vector>
 
+#include "basic/ds/tensor.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
-#include "kv-state-cache/radix-tree/radix.h"
 
 typedef std::map<int, std::pair<std::vector<double>, std::vector<double>>>
     KV_STATE_WITH_LAYER;
@@ -31,14 +31,19 @@ typedef std::vector<
     std::map<int, std::pair<std::vector<double>, std::vector<double>>>>
     LIST_KV_STATE_WITH_LAYER;
 
+// Set the bit to 1, which means the resource is not being used
+#define FREE_BIT_RESOURCE(value, bit) ((value) |= (((uint64_t) 1) << (bit)))
+
+// Set the bit to 0, which means the resource is being used
+#define ACQUIRE_BIT_RESOURCE(value, bit) ((value) &= ~(((uint64_t) 1) << (bit)))
+
 struct offset_data {
-  short offset_k;
-  short offset_v;
+  short offset;
 };
 
 namespace vineyard {
 
-#define LIST_SIZE 2
+#define LIST_SIZE 1000
 
 /**
  * @brief KVStateCache is a cache for kv-cache of LLM. When a new prompt comes,
@@ -55,12 +60,12 @@ namespace vineyard {
 
 class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
-  RadixTree *tree;
-  std::array<std::unique_ptr<BlobWriter>, LIST_SIZE> key_state_writer_array;
-  std::array<std::unique_ptr<BlobWriter>, LIST_SIZE> value_state_writer_array;
+  Tensor<double> k_tensor;
+  Tensor<double> v_tensor;
   uint64_t bitmap;
   pthread_spinlock_t spin_lock;
   ObjectID id;
+  int dimension;
 
  public:
   void Construct(const ObjectMeta& meta) override;
@@ -70,28 +75,18 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 
 class KVStateCacheBuilder : public ObjectBuilder {
  private:
-  RadixTree *tree;
-  std::array<std::unique_ptr<BlobWriter>, LIST_SIZE> key_state_writer_array;
-  std::array<std::unique_ptr<BlobWriter>, LIST_SIZE> value_state_writer_array;
-  std::map<RadixTree *, KVStateCacheBuilder *> kv_state_cache_builder_map;
+  TensorBuilder<double>* k_builder;
+  TensorBuilder<double>* v_builder;
+  std::vector<KVStateCacheBuilder*> child_kv_state_cache_builder_list;
   uint64_t bitmap;
   pthread_spinlock_t spin_lock;
   ObjectID id;
-
-  /**
-   * @brief Travel the radix-tree and update the kv-state when splitting the
-   * radix-tree.
-   */
-  Status TravelAndUpdateNode();
+  int dimension;
 
  public:
-  KVStateCacheBuilder();
+  KVStateCacheBuilder(Client& client, int dimension);
 
-  KVStateCacheBuilder(KVStateCache& kv_state_cache);
-
-  KVStateCacheBuilder::KVStateCacheBuilder(RadixTree *tree);
-
-  KVStateCacheBuilder(RadixTree* tree);
+  KVStateCacheBuilder(Client& client, KVStateCache& kv_state_cache);
 
   /**
    * @brief Update the kv-state using next token.
@@ -100,7 +95,10 @@ class KVStateCacheBuilder : public ObjectBuilder {
    * @param kv_state The kv-state of the prompt. A LLM inference can contain
    * multiple kv-states for each layer.
    */
-  offset_data *Update(Client& client, const KV_STATE_WITH_LAYER& kv_state);
+  std::shared_ptr<offset_data> Update(const KV_STATE_WITH_LAYER& kv_state);
+
+  std::shared_ptr<offset_data> Update(double* k_data, double* v_data,
+                                      unsigned long data_length);
 
   /**
    * @brief Query the kv-state using the whole token list.
@@ -110,14 +108,7 @@ class KVStateCacheBuilder : public ObjectBuilder {
    * @param kv_state The kv-state of the prompt returned by radix-tree. If the
    * kv-state is not found, the data of kv-state is invalid.
    */
-  Status Query(Client& client, int index_k, int index_v,
-               KV_STATE_WITH_LAYER& kv_state);
-
-  /**
-   * @brief Splits the radix-tree into several radix-trees if the number of
-   * kv-state is larger than LIST_SIZE.
-   */
-  Status Split();
+  Status Query(Client& client, int index, KV_STATE_WITH_LAYER& kv_state);
 
   bool isFull();
 
@@ -128,6 +119,15 @@ class KVStateCacheBuilder : public ObjectBuilder {
   void Lock() { pthread_spin_lock(&(this->spin_lock)); }
 
   void UnLock() { pthread_spin_unlock(&(this->spin_lock)); }
+
+  const TensorBuilder<double>* getKBuilder() { return k_builder; }
+
+  const TensorBuilder<double>* getVBuilder() { return v_builder; }
+
+  void DeleteKVCache(int bit) { FREE_BIT_RESOURCE(this->bitmap, bit); }
+
+  void SetChildKVStateCacheBuilder(
+      KVStateCacheBuilder* child_kv_state_cache_builder);
 };
 
 }  // namespace vineyard
