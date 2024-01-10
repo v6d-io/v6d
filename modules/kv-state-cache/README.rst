@@ -9,7 +9,7 @@ Build vineyard and vineyard test
 .. code:: bash
     mkdir build
     cd build
-    cmake .. -DBUILD_VINEYARD_TESTS=ON
+    cmake .. -DBUILD_VINEYARD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug
     make -j$(nproc)
     make vineyard_tests -j$(nproc)
 

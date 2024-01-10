@@ -117,7 +117,7 @@ class RadixTree {
       return NULL;
     }
     LOG(INFO) << "insert success";
-    return new NodeWithTreeAttri(new Node(dataNode), tree);
+    return new NodeWithTreeAttri(new Node(dataNode), this);
   }
 
   void Delete(const std::vector<int> tokens, int next_token) {
@@ -170,7 +170,7 @@ class RadixTree {
       return NULL;
     }
     LOG(INFO) << "get success";
-    return new NodeWithTreeAttri(new Node(dataNode), tree);
+    return new NodeWithTreeAttri(new Node(dataNode), this);
   }
 
   NodeWithTreeAttri* get(std::vector<int> prefix, int key) {
@@ -188,7 +188,7 @@ class RadixTree {
 
   RadixTree* split() {
     LOG(INFO) << "splits is not implemented";
-    return NULL;
+    return this;
   }
 
   // Get child node list from this tree.
@@ -205,7 +205,7 @@ class RadixTree {
     raxNode *headNode = this->tree->head;
     raxTraverse(headNode, &dataNodeList);
     for (int i = 0; i < numele; i++, current++) {
-        nodes.push_back(new NodeWithTreeAttri(new Node(*current), this->tree));
+        nodes.push_back(new NodeWithTreeAttri(new Node(*current), this));
     }
     return nodes;
   }
