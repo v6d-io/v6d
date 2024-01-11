@@ -37,7 +37,7 @@ void LRUStrategy::put(const std::vector<int>& prefix, int token,
   tokens.push_back(token);
 
   std::shared_ptr<NodeWithTreeAttri> node_with_tree_attri =
-      radix_tree->get(tokens);
+      radix_tree->Query(tokens);
   if (node_with_tree_attri != nullptr) {
     std::shared_ptr<LRUCacheNode> cache_node =
         std::static_pointer_cast<LRUCacheNode>(
@@ -52,7 +52,7 @@ void LRUStrategy::put(const std::vector<int>& prefix, int token,
     radix_tree->Delete(cache_node->tokens);
   }
 
-  node_with_tree_attri = radix_tree->insert(tokens);
+  node_with_tree_attri = radix_tree->Insert(tokens);
   std::shared_ptr<Node> rax_node = node_with_tree_attri->get_node();
   std::shared_ptr<LRUCacheNode> cache_node = std::make_shared<LRUCacheNode>();
 
@@ -105,12 +105,11 @@ std::shared_ptr<LRUCacheNode> LRUStrategy::Remove() {
 }
 
 void LRUStrategy::Remove(const std::vector<int>& prefix, int token) {
-
   std::vector<int> tokens = prefix;
   tokens.push_back(token);
 
   std::shared_ptr<NodeWithTreeAttri> node_with_tree_attri =
-      radix_tree->get(tokens);
+      radix_tree->Query(tokens);
   if (node_with_tree_attri == nullptr) {
     return;
   }

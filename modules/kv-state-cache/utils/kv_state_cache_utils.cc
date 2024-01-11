@@ -90,10 +90,10 @@ void update(const std::vector<int>& token_list, int next_token,
 
   // Create a empty node of tokens from radix tree.
   std::shared_ptr<NodeWithTreeAttri> node_with_tree_attri =
-      kv_state_cache_struct.root_tree->insert(token_list_copy);
+      kv_state_cache_struct.root_tree->Insert(token_list_copy);
   RadixTree* sub_tree = node_with_tree_attri->get_tree();
   KVStateCacheBuilder* kv_state_cache_builder =
-      (KVStateCacheBuilder*) sub_tree->get_custom_data();
+      (KVStateCacheBuilder*) sub_tree->GetCustomData();
 
   // TBD
   // Use lock to protect the kv_state_cache_builder
@@ -101,19 +101,19 @@ void update(const std::vector<int>& token_list, int next_token,
 
   if (kv_state_cache_builder->isFull()) {
     /**
-     * If the kv-state cache of the tree is full, triggle split. Delete the empty node from
-     * the radix tree and split the tree. Then, kv-state cache split according to the new
-     * tree.
+     * If the kv-state cache of the tree is full, triggle split. Delete the
+     * empty node from the radix tree and split the tree. Then, kv-state cache
+     * split according to the new tree.
      */
     kv_state_cache_struct.root_tree->Delete(token_list_copy);
-    RadixTree* new_tree = sub_tree->split();
+    RadixTree* new_tree = sub_tree->Split();
 
     std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list =
-        new_tree->traverse();
+        new_tree->Traverse();
     KVStateCacheBuilder* new_kv_state_cache_builder =
         split(kv_state_cache_builder, node_with_tree_attri_list);
-    new_tree->set_custom_data(new_kv_state_cache_builder,
-                              sizeof(KVStateCacheBuilder));
+    new_tree->SetCustomData(new_kv_state_cache_builder,
+                            sizeof(KVStateCacheBuilder));
 
     // kv_state_cache_builder->UnLock();
     update(token_list, next_token, kv_state);
@@ -137,10 +137,10 @@ void update(const std::vector<int>& token_list, int next_token,
       LOG(INFO) << "evicted tokens: " << evicted_tokens_str;
 
       std::shared_ptr<NodeWithTreeAttri> evicted_node_with_tree_attri =
-          kv_state_cache_struct.root_tree->get(evicted_tokens);
+          kv_state_cache_struct.root_tree->Query(evicted_tokens);
       KVStateCacheBuilder* evicted_kv_state_cache_builder =
           (KVStateCacheBuilder*) evicted_node_with_tree_attri->get_tree()
-              ->get_custom_data();
+              ->GetCustomData();
 
       LOG(INFO) << "evicted index: "
                 << std::static_pointer_cast<offset_data>(
@@ -174,7 +174,7 @@ KV_STATE_WITH_LAYER query(const std::vector<int>& token_list, int token) {
 
   KV_STATE_WITH_LAYER kv_state;
   std::shared_ptr<NodeWithTreeAttri> node_with_tree_attri =
-      kv_state_cache_struct.root_tree->get(token_list_copy);
+      kv_state_cache_struct.root_tree->Query(token_list_copy);
   if (node_with_tree_attri != nullptr) {
     std::shared_ptr<offset_data> data = std::static_pointer_cast<offset_data>(
         node_with_tree_attri->get_node()->get_data());
@@ -182,7 +182,7 @@ KV_STATE_WITH_LAYER query(const std::vector<int>& token_list, int token) {
 
     KVStateCacheBuilder* kv_state_cache_builder =
         (KVStateCacheBuilder*) node_with_tree_attri->get_tree()
-            ->get_custom_data();
+            ->GetCustomData();
     // kv_state_cache_builder->Lock();
     kv_state_cache_builder->Query(kv_state_cache_struct.client, offset,
                                   kv_state);

@@ -97,8 +97,8 @@ void inference(std::vector<int> tokens) {
 int main() {
   init();
   std::vector<int> round_1_tokens = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  inference(round_1_tokens);
   std::vector<int> round_2_tokens = {1, 2, 3, 4, 5, 7, 8, 9, 10};
+  inference(round_1_tokens);
   inference(round_2_tokens);
   inference(round_2_tokens);
   inference(round_1_tokens);
