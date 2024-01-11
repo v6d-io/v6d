@@ -16,7 +16,7 @@ limitations under the License.
 #include <memory>
 #include <vector>
 
-#include "kv-state-cache/radix-tree/radix.h"
+#include "kv-state-cache/radix-tree/radix-tree.h"
 
 #ifndef MODULES_CACHE_STRATEGY_H_
 #define MODULES_CACHE_STRATEGY_H_

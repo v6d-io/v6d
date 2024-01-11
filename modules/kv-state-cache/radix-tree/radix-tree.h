@@ -11,14 +11,14 @@ extern "C" {
 #include <vector>
 
 typedef struct nodeData {
-  void** data;
+  std::shared_ptr<void> data;
   int data_length;
 }nodeData;
 
 class Node {
  private:
   raxNode *node;
-  void* data;
+  std::shared_ptr<void> data;
   int data_length;
 
  public:
@@ -27,14 +27,14 @@ class Node {
     this->data = NULL;
     this->data_length = 0;
   }
-  void set_data(void *data, int data_length) {
+  void set_data(std::shared_ptr<void> data, int data_length) {
     nodeData *node_data = new nodeData();
-    node_data->data = &data;
+    node_data->data = data;
     node_data->data_length = data_length;
-    raxSetData(this->node, data);
+    raxSetData(this->node, node_data);
   }
 
-  void** get_data() {
+  std::shared_ptr<void> get_data() {
     nodeData *nodedata = (nodeData *)raxGetData(this->node);
     return nodedata->data; 
   }
@@ -44,16 +44,16 @@ class RadixTree;
 
 class NodeWithTreeAttri {
  private:
-  Node *node;
+  std::shared_ptr<Node> node;
   RadixTree *belong_to;
 
  public:
-  NodeWithTreeAttri(Node *node, void *belong_to) {
+  NodeWithTreeAttri(std::shared_ptr<Node> node, void *belong_to) {
     this->node = node;
     this->belong_to = (RadixTree *)belong_to;
   }
 
-  Node *get_node() { return node; }
+  std::shared_ptr<Node> get_node() { return node; }
 
   RadixTree *get_tree() { return belong_to; }
 };
@@ -82,34 +82,29 @@ class RadixTree {
     return custom_data;
   }
 
-  void insert(const std::vector<int> key, void** data, int data_length) {
-    const int* tokens = key.data();
-    size_t tokens_len = key.size();
+  // void insert(const std::vector<int> key, void** data, int data_length) {
+  //   const int* tokens = key.data();
+  //   size_t tokens_len = key.size();
     
-    nodeData *insert_data = new nodeData();
-    ((nodeData*)data)->data = data;
-    ((nodeData*)data)->data_length = data_length;
-    int retval = raxInsert(this->tree, tokens, tokens_len, insert_data, NULL);
-    if (retval == 0) {
-      if (errno == 0) {
-        LOG(INFO) << "overwrite an existing token list";
-      } else {
-        LOG(INFO) << "insert failed with errno:" + std::to_string(errno);
-      }
-    } else {
-        LOG(INFO) << "insert success";
-    }
-  }
+  //   nodeData *insert_data = new nodeData();
+  //   ((nodeData*)data)->data = data;
+  //   ((nodeData*)data)->data_length = data_length;
+  //   int retval = raxInsert(this->tree, tokens, tokens_len, insert_data, NULL);
+  //   if (retval == 0) {
+  //     if (errno == 0) {
+  //       LOG(INFO) << "overwrite an existing token list";
+  //     } else {
+  //       LOG(INFO) << "insert failed with errno:" + std::to_string(errno);
+  //     }
+  //   } else {
+  //       LOG(INFO) << "insert success";
+  //   }
+  // }
 
-  NodeWithTreeAttri *insert(const std::vector<int> tokens, int next_token) {
-    // build the token vector with next_token that will be deleted
-    const std::vector<int>& tokens_ref = tokens;
-    std::vector<int> insert_tokens = const_cast<std::vector<int>&>(tokens_ref);
-    insert_tokens.push_back(next_token);
-
+  std::shared_ptr<NodeWithTreeAttri> insert(std::vector<int> tokens) {
     // insert the token vector to the radix tree
-    int* insert_tokens_array = insert_tokens.data();
-    size_t insert_tokens_array_len = insert_tokens.size();
+    int* insert_tokens_array = tokens.data();
+    size_t insert_tokens_array_len = tokens.size();
     nodeData *dummy_data = new nodeData();
     raxNode *dataNode = raxInsertAndReturnDataNode(this->tree, insert_tokens_array, insert_tokens_array_len, dummy_data, NULL);
     if (dataNode == NULL) {
@@ -117,18 +112,14 @@ class RadixTree {
       return NULL;
     }
     LOG(INFO) << "insert success";
-    return new NodeWithTreeAttri(new Node(dataNode), this);
+    // return new NodeWithTreeAttri(new Node(dataNode), this);
+    return std::make_shared<NodeWithTreeAttri>(std::make_shared<Node>(dataNode), this);
   }
 
-  void Delete(const std::vector<int> tokens, int next_token) {
-    // build the token vector with next_token that will be deleted
-    const std::vector<int>& tokens_ref = tokens;
-    std::vector<int> delete_tokens = const_cast<std::vector<int>&>(tokens_ref);
-    delete_tokens.push_back(next_token);
-
+  void Delete(std::vector<int> tokens) {
     // remove the token vector from the radix tree
-    int* delete_tokens_array = delete_tokens.data();
-    size_t delete_tokens_array_len = delete_tokens.size();
+    int* delete_tokens_array = tokens.data();
+    size_t delete_tokens_array_len = tokens.size();
     int retval = raxRemove(this->tree, delete_tokens_array, delete_tokens_array_len, NULL);
     if (retval==1) {
       LOG(INFO) << "remove success";
@@ -137,30 +128,30 @@ class RadixTree {
     }
   }
 
-  void insert(const std::vector<int>& prefix, int key, void** data,
-              int data_length) {
-    std::vector<int> key_vec = prefix;
-    key_vec.push_back(key);
+  // void insert(const std::vector<int>& prefix, int key, void** data,
+  //             int data_length) {
+  //   std::vector<int> key_vec = prefix;
+  //   key_vec.push_back(key);
 
-    const int* tokens = key_vec.data();
-    size_t tokens_len = key_vec.size();
+  //   const int* tokens = key_vec.data();
+  //   size_t tokens_len = key_vec.size();
     
-    nodeData *insert_data = new nodeData();
-    ((nodeData*)data)->data = data;
-    ((nodeData*)data)->data_length = data_length;
-    int retval = raxInsert(this->tree, tokens, tokens_len, insert_data, NULL);
-    if (retval == 0) {
-      if (errno == 0) {
-        LOG(INFO) << "overwrite an existing token list";
-      } else {
-        LOG(INFO) << "insert failed with errno:" + std::to_string(errno);
-      }
-    } else {
-        LOG(INFO) << "insert success";
-    }
-  }
+  //   nodeData *insert_data = new nodeData();
+  //   ((nodeData*)data)->data = data;
+  //   ((nodeData*)data)->data_length = data_length;
+  //   int retval = raxInsert(this->tree, tokens, tokens_len, insert_data, NULL);
+  //   if (retval == 0) {
+  //     if (errno == 0) {
+  //       LOG(INFO) << "overwrite an existing token list";
+  //     } else {
+  //       LOG(INFO) << "insert failed with errno:" + std::to_string(errno);
+  //     }
+  //   } else {
+  //       LOG(INFO) << "insert success";
+  //   }
+  // }
 
-  NodeWithTreeAttri* get(std::vector<int> key) {
+  std::shared_ptr<NodeWithTreeAttri> get(std::vector<int> key) {
     int* tokens = key.data();
     size_t tokens_len = key.size();
 
@@ -170,14 +161,15 @@ class RadixTree {
       return NULL;
     }
     LOG(INFO) << "get success";
-    return new NodeWithTreeAttri(new Node(dataNode), this);
+    // return new NodeWithTreeAttri(new Node(dataNode), this);
+    return std::make_shared<NodeWithTreeAttri>(std::make_shared<Node>(dataNode), this);
   }
 
-  NodeWithTreeAttri* get(std::vector<int> prefix, int key) {
-    std::vector<int> key_vec = prefix;
-    key_vec.push_back(key);
-    return get(key_vec);
-  }
+  // std::shared_ptr<NodeWithTreeAttri> get(std::vector<int> prefix, int key) {
+  //   std::vector<int> key_vec = prefix;
+  //   key_vec.push_back(key);
+  //   return get(key_vec);
+  // }
 
   std::string serialize() { return std::string("this is a serialized string"); }
 
@@ -192,12 +184,13 @@ class RadixTree {
   }
 
   // Get child node list from this tree.
-  std::vector<NodeWithTreeAttri *> traverse() {
+  std::vector<std::shared_ptr<NodeWithTreeAttri>> traverse() {
     if (this->tree == NULL) {
       LOG(INFO) << "traverse failed";
-      return std::vector<NodeWithTreeAttri *>();
+      return std::vector<std::shared_ptr<NodeWithTreeAttri>>();
     }
-    std::vector<NodeWithTreeAttri *> nodes;
+    // std::vector<NodeWithTreeAttri *> nodes;
+    std::vector<std::shared_ptr<NodeWithTreeAttri>> nodes;
 
     int numele = this->tree->numele;
     raxNode **dataNodeList = (raxNode **)malloc(sizeof(raxNode*)*(numele));
@@ -205,7 +198,8 @@ class RadixTree {
     raxNode *headNode = this->tree->head;
     raxTraverse(headNode, &dataNodeList);
     for (int i = 0; i < numele; i++, current++) {
-        nodes.push_back(new NodeWithTreeAttri(new Node(*current), this));
+        // nodes.push_back(new NodeWithTreeAttri(new Node(*current), this));
+        nodes.push_back(std::make_shared<NodeWithTreeAttri>(std::make_shared<Node>(*current), this));
     }
     return nodes;
   }

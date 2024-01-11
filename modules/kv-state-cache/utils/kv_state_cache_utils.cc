@@ -58,8 +58,8 @@ KVStateCacheBuilder* split(
   KVStateCacheBuilder* child_kv_state_cache_builder = new KVStateCacheBuilder(
       kv_state_cache_struct.client, kv_state_cache_struct.dimension);
   for (size_t i = 0; i < node_with_tree_attri_list.size(); i++) {
-    offset_data *data_ptr = reinterpret_cast<offset_data *>(node_with_tree_attri_list[i]->get_node()->get_data());
-    std::shared_ptr<offset_data> data(data_ptr);
+    std::shared_ptr<offset_data> data = std::static_pointer_cast<offset_data>(
+        node_with_tree_attri_list[i]->get_node()->get_data());
     int index = data->offset;
 
     // Transfer the data from this builder to the child builder.
@@ -72,9 +72,7 @@ KVStateCacheBuilder* split(
             k_builder->data() + index * kv_state_cache_struct.dimension,
             v_builder->data() + index * kv_state_cache_struct.dimension,
             kv_state_cache_struct.dimension * sizeof(double));
-    offset_data* rawPtr = new_offset_data.get();
-    void* voidPtr = static_cast<void*>(rawPtr);
-    node_with_tree_attri_list[i]->get_node()->set_data(&voidPtr,
+    node_with_tree_attri_list[i]->get_node()->set_data(new_offset_data,
                                                        sizeof(offset_data));
     // Clear the bitmap.
     kv_state_cache_builder->DeleteKVCache(index);
@@ -87,9 +85,12 @@ KVStateCacheBuilder* split(
 void update(const std::vector<int>& token_list, int next_token,
             const KV_STATE_WITH_LAYER& kv_state) {
   LOG(INFO) << "update";
+  std::vector<int> token_list_copy = token_list;
+  token_list_copy.push_back(next_token);
+
   // Create a empty node of tokens from radix tree.
   std::shared_ptr<NodeWithTreeAttri> node_with_tree_attri =
-      kv_state_cache_struct.root_tree->insert(token_list, next_token);
+      kv_state_cache_struct.root_tree->insert(token_list_copy);
   RadixTree* sub_tree = node_with_tree_attri->get_tree();
   KVStateCacheBuilder* kv_state_cache_builder =
       (KVStateCacheBuilder*) sub_tree->get_custom_data();
@@ -104,15 +105,11 @@ void update(const std::vector<int>& token_list, int next_token,
      * the radix tree and split the tree. Then, kv-state cache split according to the new
      * tree.
      */
-    kv_state_cache_struct.root_tree->Delete(token_list, next_token);
+    kv_state_cache_struct.root_tree->Delete(token_list_copy);
     RadixTree* new_tree = sub_tree->split();
 
-    std::vector<NodeWithTreeAttri *> data_nodes_list = new_tree->traverse();
-    std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list;
-    for (NodeWithTreeAttri *node_with_tree_attri : data_nodes_list) {
-      node_with_tree_attri_list.push_back(
-          std::shared_ptr<NodeWithTreeAttri>(node_with_tree_attri));
-    }
+    std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list =
+        new_tree->traverse();
     KVStateCacheBuilder* new_kv_state_cache_builder =
         split(kv_state_cache_builder, node_with_tree_attri_list);
     new_tree->set_custom_data(new_kv_state_cache_builder,
@@ -124,7 +121,7 @@ void update(const std::vector<int>& token_list, int next_token,
     // Update the kv-state cache.
     std::shared_ptr<offset_data> data =
         kv_state_cache_builder->Update(kv_state);
-    std::shared_ptr<RaxNode> node = node_with_tree_attri->get_node();
+    std::shared_ptr<Node> node = node_with_tree_attri->get_node();
     node->set_data(data, sizeof(offset_data));
 
     std::vector<int> evicted_tokens;
@@ -171,10 +168,13 @@ void update(const std::vector<int>& token_list,
 
 KV_STATE_WITH_LAYER query(const std::vector<int>& token_list, int token) {
   LOG(INFO) << "query";
+
+  std::vector<int> token_list_copy = token_list;
+  token_list_copy.push_back(token);
+
   KV_STATE_WITH_LAYER kv_state;
   std::shared_ptr<NodeWithTreeAttri> node_with_tree_attri =
-      kv_state_cache_struct.root_tree->get(token_list,
-                                           token);
+      kv_state_cache_struct.root_tree->get(token_list_copy);
   if (node_with_tree_attri != nullptr) {
     std::shared_ptr<offset_data> data = std::static_pointer_cast<offset_data>(
         node_with_tree_attri->get_node()->get_data());
