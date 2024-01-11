@@ -13,15 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <map>
-#include <vector>
-
 #include "kv-state-cache/ds/kv_state_cache.h"
 
 #ifndef MODULES_KV_STATE_CACHE_UTILS_H_
 #define MODULES_KV_STATE_CACHE_UTILS_H_
 
-void init_kv_state_cache(int dimension);
+void init_kv_state_cache(int dimension = 10, int cache_capacity = 10);
 
 void update(const std::vector<int>& token_list, int next_token,
             const KV_STATE_WITH_LAYER& kv_state);
