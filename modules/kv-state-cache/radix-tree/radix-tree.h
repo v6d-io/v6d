@@ -202,7 +202,7 @@ class RadixTree {
   }
 
   // Get child node list from this tree.
-  std::vector<std::shared_ptr<NodeWithTreeAttri>> Traverse() {
+  std::vector<std::shared_ptr<NodeWithTreeAttri>> Travel() {
     if (this->tree == NULL) {
       LOG(INFO) << "traverse failed";
       return std::vector<std::shared_ptr<NodeWithTreeAttri>>();
