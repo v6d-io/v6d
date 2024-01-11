@@ -13,121 +13,58 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_KV_STATE_CACHE_H_
-#define MODULES_KV_STATE_CACHE_H_
-
-#include <array>
-#include <iostream>
 #include <map>
 #include <vector>
 
-#include "basic/ds/tensor.h"
-#include "client/ds/blob.h"
-#include "client/ds/i_object.h"
+#include "client/client.h"
+#include "common/util/logging.h"
+#include "common/util/status.h"
+#include "kv-state-cache/radix-tree/radix-tree.h"
+#include "kv-state-cache/strategy/LRU_strategy.h"
+#include "kv_state_cache_block.h"
 
-typedef std::map<int, std::pair<std::vector<double>, std::vector<double>>>
-    KV_STATE_WITH_LAYER;
-typedef std::vector<
-    std::map<int, std::pair<std::vector<double>, std::vector<double>>>>
-    LIST_KV_STATE_WITH_LAYER;
-
-// Set the bit to 1, which means the resource is not being used
-#define FREE_BIT_RESOURCE(value, bit) ((value) |= (((uint64_t) 1) << (bit)))
-
-// Set the bit to 0, which means the resource is being used
-#define ACQUIRE_BIT_RESOURCE(value, bit) ((value) &= ~(((uint64_t) 1) << (bit)))
-
-struct offset_data {
-  short offset;
-};
+#ifndef MODULES_KV_STATE_CACHE_H_
+#define MODULES_KV_STATE_CACHE_H_
 
 namespace vineyard {
 
-#define LIST_SIZE 1000
-
-/**
- * @brief KVStateCache is a cache for kv-cache of LLM. When a new prompt comes,
- * LLM can query KVStateCache to get the state of the kv-cache to avoid
- * caclulating the kv-cache again if the new prompt is similar to the previous
- * one.
- *
- * KVStateCache is stored in vineyard as a vineyard object which contains a
- * radix tree. The token sequence is the key of the radix tree and the value
- * point out the offset of the kv-cache in the tensor list.
- *
- * KVStateCache can be shared by multiple machines.
- */
-
 class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
-  Tensor<double> k_tensor;
-  Tensor<double> v_tensor;
-  uint64_t bitmap;
-  pthread_spinlock_t spin_lock;
-  ObjectID id;
+  KVStateCacheBlockBuilder* kv_state_cache_builder;
+  RadixTree* root_tree;
+  CacheStrategy* cache_strategy;
   int dimension;
+  ObjectID id;
 
  public:
   void Construct(const ObjectMeta& meta) override;
 
-  friend class KVStateCacheBuilder;
+  friend class KVStateCacheBlockBuilder;
 };
 
-class KVStateCacheBuilder : public ObjectBuilder {
- private:
-  TensorBuilder<double>* k_builder;
-  TensorBuilder<double>* v_builder;
-  std::vector<KVStateCacheBuilder*> child_kv_state_cache_builder_list;
-  uint64_t bitmap;
-  pthread_spinlock_t spin_lock;
-  ObjectID id;
+class KVStateCacheBuilder : public vineyard::ObjectBuilder {
+  KVStateCacheBlockBuilder* kv_state_cache_builder;
+  RadixTree* root_tree;
+  CacheStrategy* cache_strategy;
   int dimension;
 
  public:
-  KVStateCacheBuilder(Client& client, int dimension);
+  KVStateCacheBuilder(Client& client, int dimension, int cache_capacity);
 
-  KVStateCacheBuilder(Client& client, KVStateCache& kv_state_cache);
+  KVStateCacheBlockBuilder* split(
+      Client& client, KVStateCacheBlockBuilder* kv_state_cache_builder,
+      std::vector<std::shared_ptr<NodeWithTreeAttri>>
+          node_with_tree_attri_list);
 
-  /**
-   * @brief Update the kv-state using next token.
-   *
-   * @param client The vineyard client.
-   * @param kv_state The kv-state of the prompt. A LLM inference can contain
-   * multiple kv-states for each layer.
-   */
-  std::shared_ptr<offset_data> Update(const KV_STATE_WITH_LAYER& kv_state);
+  void update(Client& client, const std::vector<int>& token_list,
+              int next_token, const KV_STATE_WITH_LAYER& kv_state);
 
-  std::shared_ptr<offset_data> Update(double* k_data, double* v_data,
-                                      unsigned long data_length);
-
-  /**
-   * @brief Query the kv-state using the whole token list.
-   *
-   * @param token_list The token list of the prompt.
-   * @param token The token of the prompt.
-   * @param kv_state The kv-state of the prompt returned by radix-tree. If the
-   * kv-state is not found, the data of kv-state is invalid.
-   */
-  Status Query(Client& client, int index, KV_STATE_WITH_LAYER& kv_state);
-
-  bool isFull();
+  KV_STATE_WITH_LAYER query(Client& client, const std::vector<int>& token_list,
+                            int token);
 
   Status Build(Client& client) override;
 
   std::shared_ptr<Object> _Seal(Client& client) override;
-
-  void Lock() { pthread_spin_lock(&(this->spin_lock)); }
-
-  void UnLock() { pthread_spin_unlock(&(this->spin_lock)); }
-
-  const TensorBuilder<double>* getKBuilder() { return k_builder; }
-
-  const TensorBuilder<double>* getVBuilder() { return v_builder; }
-
-  void DeleteKVCache(int bit) { FREE_BIT_RESOURCE(this->bitmap, bit); }
-
-  void SetChildKVStateCacheBuilder(
-      KVStateCacheBuilder* child_kv_state_cache_builder);
 };
 
 }  // namespace vineyard
