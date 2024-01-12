@@ -817,6 +817,23 @@ class Client final : public BasicIPCClient,
    */
   Status GetGPUBuffer(const ObjectID id, const bool unsafe,
                       std::shared_ptr<Buffer>& buffer);
+  /**
+   * @brief Try to acquire a distributed lock.
+   *
+   * @param key The key of the lock.
+   *
+   * @return Status that indicates whether the lock process succeeds.
+   */
+  Status TryAcquireLock(std::string key, bool& result);
+
+  /**
+   * @brief Try to release a distributed lock.
+   *
+   * @param key The key of the lock.
+   *
+   * @return Status that indicates whether the unlock process succeeds.
+   */
+  Status TryReleaseLock(std::string key, bool& result);
 
  protected:
   /**
@@ -1003,6 +1020,14 @@ class PlasmaClient final
    * reference count reaches zero. See UsageTracker.
    */
   Status Delete(PlasmaID const& id);
+
+  Status TryAcquireLock(std::string key, bool& result) {
+    return Status::NotImplemented();
+  }
+
+  Status TryReleaseLock(std::string key, bool& result) {
+    return Status::NotImplemented();
+  }
 
  protected:
   /**

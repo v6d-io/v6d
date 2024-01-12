@@ -151,6 +151,24 @@ void EtcdMetaService::Stop() {
   }
 }
 
+void EtcdMetaService::TryAcquireLock(std::string const& key,
+                                     callback_t<bool> callback_after_try_lock) {
+  // TBD
+  LOG(INFO) << "TryAcquireLock, key:" << key;
+  static int i = 0;
+  i++;
+  callback_after_try_lock(Status::OK(), i % 2 == 0);
+}
+
+void EtcdMetaService::TryReleaseLock(
+    std::string const& key, callback_t<bool> callback_after_try_unlock) {
+  // TBD
+  LOG(INFO) << "TryReleaseLock, key:" << key;
+  static int j = 0;
+  j++;
+  callback_after_try_unlock(Status::OK(), j % 2 == 0);
+}
+
 void EtcdMetaService::requestLock(
     std::string lock_name,
     callback_t<std::shared_ptr<ILock>> callback_after_locked) {
