@@ -1645,10 +1645,10 @@ bool SocketConnection::doAcquireLock(const json& root) {
   TRY_READ_REQUEST(ReadTryAcquireLockRequest, root, key);
 
   RESPONSE_ON_ERROR(server_ptr_->TryAcquireLock(
-      key, [self](const Status& status, bool result) {
+      key, [self](const Status& status, bool result, std::string actual_key) {
         std::string message_out;
         if (status.ok()) {
-          WriteTryAcquireLockReply(result, message_out);
+          WriteTryAcquireLockReply(result, actual_key, message_out);
         } else {
           VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);

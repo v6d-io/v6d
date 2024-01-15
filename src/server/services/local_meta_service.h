@@ -50,13 +50,13 @@ class LocalMetaService : public IMetaService {
 
   ~LocalMetaService() override {}
 
-  void TryAcquireLock(std::string const& key,
-                      callback_t<bool> callback_after_try_locked) {
+  void TryAcquireLock(std::string key,
+                      callback_t<bool, std::string> callback_after_try_locked) {
     // TBD
     assert(false);
   }
 
-  void TryReleaseLock(std::string const& key,
+  void TryReleaseLock(std::string key,
                       callback_t<bool> callback_after_try_unlocked) {
     // TBD
     assert(false);

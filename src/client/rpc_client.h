@@ -347,7 +347,7 @@ class RPCClient final : public ClientBase {
    *
    * @return Status that indicates whether the lock process succeeds.
    */
-  Status TryAcquireLock(std::string key, bool& result) {
+  Status TryAcquireLock(std::string key, bool& result, std::string& actural_key) {
     // TBD
     return Status::NotImplemented("TryAcquireLock is not implemented yet.");
   }

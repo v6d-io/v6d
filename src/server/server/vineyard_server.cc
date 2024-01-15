@@ -991,16 +991,16 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
 }
 
 Status VineyardServer::TryAcquireLock(std::string& key,
-                                      callback_t<bool> callback) {
+                                      callback_t<bool, std::string> callback) {
   ENSURE_VINEYARDD_READY();
   auto self(shared_from_this());
   meta_service_ptr_->TryAcquireLock(
-      key, [self, callback](const Status& status, bool result) {
+      key, [self, callback](const Status& status, bool result, std::string actural_key) {
         if (status.ok()) {
           LOG(INFO) << "No error occurred. Gain lock:" << result;
-          return callback(status, result);
+          return callback(status, result, actural_key);
         } else {
-          return status;
+          return callback(status, result, actural_key);
         }
       });
 

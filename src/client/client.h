@@ -824,7 +824,7 @@ class Client final : public BasicIPCClient,
    *
    * @return Status that indicates whether the lock process succeeds.
    */
-  Status TryAcquireLock(std::string key, bool& result);
+  Status TryAcquireLock(std::string key, bool& result, std::string& actural_key);
 
   /**
    * @brief Try to release a distributed lock.
@@ -1021,7 +1021,7 @@ class PlasmaClient final
    */
   Status Delete(PlasmaID const& id);
 
-  Status TryAcquireLock(std::string key, bool& result) {
+  Status TryAcquireLock(std::string key, bool& result, std::string& actural_key) {
     return Status::NotImplemented();
   }
 

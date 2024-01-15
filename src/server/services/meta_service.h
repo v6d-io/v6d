@@ -134,10 +134,10 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
   bool stopped() const { return this->stopped_.load(); }
 
-  virtual void TryAcquireLock(std::string const& key,
-                              callback_t<bool> callback) = 0;
+  virtual void TryAcquireLock(std::string key,
+                              callback_t<bool, std::string> callback) = 0;
 
-  virtual void TryReleaseLock(std::string const& key,
+  virtual void TryReleaseLock(std::string key,
                               callback_t<bool> callback) = 0;
 
  private:

@@ -1084,7 +1084,7 @@ Status Client::IsSpilled(ObjectID const& id, bool& is_spilled) {
   return Status::OK();
 }
 
-Status Client::TryAcquireLock(std::string key, bool& result) {
+Status Client::TryAcquireLock(std::string key, bool& result, std::string& actural_key) {
   ENSURE_CONNECTED(this);
 
   std::string message_out;
@@ -1093,7 +1093,7 @@ Status Client::TryAcquireLock(std::string key, bool& result) {
 
   json message_in;
   VINEYARD_CHECK_OK(doRead(message_in));
-  VINEYARD_CHECK_OK(ReadTryAcquireLockReply(message_in, result));
+  VINEYARD_CHECK_OK(ReadTryAcquireLockReply(message_in, result, actural_key));
   return Status::OK();
 }
 

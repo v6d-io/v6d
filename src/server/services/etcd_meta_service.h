@@ -23,6 +23,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#define BUILD_VINEYARDD_ETCD
 #if defined(BUILD_VINEYARDD_ETCD)
 
 #include "etcd/Client.hpp"
@@ -127,9 +128,9 @@ class EtcdMetaService : public IMetaService {
 
   ~EtcdMetaService() override {}
 
-  void TryAcquireLock(std::string const& key, callback_t<bool>);
+  void TryAcquireLock(std::string key, callback_t<bool, std::string>);
 
-  void TryReleaseLock(std::string const& key, callback_t<bool>);
+  void TryReleaseLock(std::string key, callback_t<bool>);
 
  protected:
   explicit EtcdMetaService(std::shared_ptr<VineyardServer>& server_ptr)
