@@ -108,7 +108,7 @@ class RadixTree {
   LRUStrategy* lru_strategy;
 
  public:
-  RadixTree(int cache_capacity = 10) {
+  RadixTree(int cache_capacity) {
     LOG(INFO) << "init radix tree";
     this->tree = raxNew();
     this->sub_tree = this->tree;
@@ -117,8 +117,7 @@ class RadixTree {
     lru_strategy = new LRUStrategy(cache_capacity);
   }
 
-  RadixTree(void* custom_data, int custom_data_length,
-            int cache_capacity = 10) {
+  RadixTree(void* custom_data, int custom_data_length, int cache_capacity) {
     LOG(INFO) << "init radix tree with custom data";
     this->tree = raxNew();
     this->sub_tree = this->tree;
@@ -191,8 +190,15 @@ class RadixTree {
   }
 
   std::shared_ptr<NodeWithTreeAttri> Query(std::vector<int> key) {
+    LOG(INFO) << "Query";
     int* tokens = key.data();
     size_t tokens_len = key.size();
+
+    LOG(INFO) << "Query with tokens_len:" << tokens_len;
+    if (this->tree == nullptr) {
+      LOG(INFO) << "WTF!";
+      return NULL;
+    }
 
     raxNode* dataNode =
         raxFindAndReturnDataNode(this->tree, tokens, tokens_len);

@@ -35,7 +35,9 @@ void test(int i) {
 
   LOG(INFO) << "Thread: " << i << " try to acquire lock: test";
   client.TryAcquireLock("test", result, actural_key_of_lock);
-  LOG(INFO) << "Thread: " << i <<  " acquire Lock: " << (result == true ? "success" : "fail") << ", key is :" + actural_key_of_lock;
+  LOG(INFO) << "Thread: " << i
+            << " acquire Lock: " << (result == true ? "success" : "fail")
+            << ", key is :" + actural_key_of_lock;
 
   if (result) {
     count++;
@@ -45,7 +47,8 @@ void test(int i) {
 
     LOG(INFO) << "Thread: " << i << " try to release lock: test";
     client.TryReleaseLock(actural_key_of_lock, result);
-    LOG(INFO) << "Thread: " << i <<  " release Lock: " << (result == true ? "success" : "fail");
+    LOG(INFO) << "Thread: " << i
+              << " release Lock: " << (result == true ? "success" : "fail");
   }
 }
 

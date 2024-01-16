@@ -30,39 +30,72 @@ namespace vineyard {
 
 class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
-  KVStateCacheBlockBuilder* kv_state_cache_builder;
+  std::shared_ptr<KVStateCacheBlock> kv_state_cache_block;
   RadixTree* root_tree;
   int dimension;
-  ObjectID id;
+  int cache_capacity;
+  uint64_t version;
 
  public:
+  static std::unique_ptr<Object> Create() __attribute__((used)) {
+    return std::static_pointer_cast<Object>(
+        std::unique_ptr<KVStateCache>{new KVStateCache()});
+  }
+
   void Construct(const ObjectMeta& meta) override;
 
-  friend class KVStateCacheBlockBuilder;
+  void Resolve();
+
+  // for test
+  std::shared_ptr<KVStateCacheBlock> GetKVStateCacheBlock() {
+    return this->kv_state_cache_block;
+  }
+
+  int GetDemension() { return this->dimension; }
+
+  int GetCacheCapacity() { return this->cache_capacity; }
+
+  uint64_t GetVersion() { return this->version; }
+
+  friend class KVStateCacheBuilder;
 };
 
 class KVStateCacheBuilder : public vineyard::ObjectBuilder {
-  KVStateCacheBlockBuilder* kv_state_cache_builder;
+  std::shared_ptr<KVStateCacheBlockBuilder> kv_state_cache_block_builder;
   RadixTree* root_tree;
   int dimension;
+  uint64_t version;
 
  public:
   KVStateCacheBuilder(Client& client, int dimension, int cache_capacity);
 
-  KVStateCacheBlockBuilder* split(
-      Client& client, KVStateCacheBlockBuilder* kv_state_cache_builder,
+  KVStateCacheBuilder(Client& client, std::shared_ptr<KVStateCache> cache);
+
+  KVStateCacheBlockBuilder* Split(
+      Client& client, KVStateCacheBlockBuilder* kv_state_cache_block_builder,
       std::vector<std::shared_ptr<NodeWithTreeAttri>>
           node_with_tree_attri_list);
 
-  void update(Client& client, const std::vector<int>& token_list,
+  void Update(Client& client, const std::vector<int>& token_list,
               int next_token, const KV_STATE_WITH_LAYER& kv_state);
 
-  KV_STATE_WITH_LAYER query(Client& client, const std::vector<int>& token_list,
+  KV_STATE_WITH_LAYER Query(Client& client, const std::vector<int>& token_list,
                             int token);
+
+  std::shared_ptr<KVStateCacheBuilder> Merge(
+      Client& client, std::shared_ptr<KVStateCache> kv_state_cache);
+
+  uint64_t GetVersion() { return this->version; }
 
   Status Build(Client& client) override;
 
   std::shared_ptr<Object> _Seal(Client& client) override;
+
+  std::shared_ptr<KVStateCacheBlockBuilder> GetKVStateCacheBlockBuilder() {
+    return this->kv_state_cache_block_builder;
+  }
+
+  uint64_t GetDemension() { return this->dimension; }
 };
 
 }  // namespace vineyard

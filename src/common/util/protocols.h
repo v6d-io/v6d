@@ -790,9 +790,11 @@ void WriteTryAcquireLockRequest(const std::string& key, std::string& msg);
 
 Status ReadTryAcquireLockRequest(const json& root, std::string& key);
 
-void WriteTryAcquireLockReply(const bool result, const std::string actual_key, std::string& msg);
+void WriteTryAcquireLockReply(const bool result, const std::string actual_key,
+                              std::string& msg);
 
-Status ReadTryAcquireLockReply(const json& root, bool& result, std::string& key);
+Status ReadTryAcquireLockReply(const json& root, bool& result,
+                               std::string& key);
 
 void WriteTryReleaseLockRequest(const std::string& key, std::string& msg);
 

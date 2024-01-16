@@ -598,7 +598,8 @@ class ClientBase {
    *
    * @return Status that indicates whether the lock process succeeds.
    */
-  virtual Status TryAcquireLock(std::string key, bool& result, std::string& actural_key) = 0;
+  virtual Status TryAcquireLock(std::string key, bool& result,
+                                std::string& actural_key) = 0;
 
   /**
    * @brief Try to release a distributed lock.

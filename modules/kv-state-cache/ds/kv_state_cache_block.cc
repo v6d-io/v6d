@@ -20,20 +20,52 @@ limitations under the License.
 namespace vineyard {
 
 // this function will be removed in the future
-std::string toBinaryString(unsigned long long num) {
+std::string KVStateCacheBlock::GetBitmapStr() {
   std::string result;
   const int bits = 8 * sizeof(unsigned long long);
   for (int i = bits - 1; i >= 0; --i) {
-    result += ((num >> i) & 1) ? '1' : '0';
+    result += ((this->bitmap >> i) & 1) ? '1' : '0';
+  }
+  return result;
+}
+
+std::string KVStateCacheBlockBuilder::GetBitmapStr() {
+  std::string result;
+  LOG(INFO) << "bitmap1:" << this->bitmap;
+  const int bits = 8 * sizeof(unsigned long long);
+  for (int i = bits - 1; i >= 0; --i) {
+    result += ((this->bitmap >> i) & 1) ? '1' : '0';
   }
   return result;
 }
 
 void KVStateCacheBlock::Construct(const ObjectMeta& meta) {
   Object::Construct(meta);
+
+  std::string typeName = type_name<KVStateCacheBlock>();
+
+  VINEYARD_ASSERT(meta.GetTypeName() == typeName,
+                  "Expect typename '" + typeName + "', but got '" +
+                      meta.GetTypeName() + "'");
+
   // TBD
-  std::string tree_data;
-  meta.GetKeyValue("bitmap", this->bitmap);
+  // 1. construct the k_builder and v_builder
+  this->k_tensor = std::dynamic_pointer_cast<Tensor<double>>(
+      this->meta_.GetMember("k_builder"));
+  this->v_tensor = std::dynamic_pointer_cast<Tensor<double>>(
+      this->meta_.GetMember("v_builder"));
+  // 2. construct the child kv_state_cache_block_builder
+  int child_num = this->meta_.GetKeyValue<int>("child_num");
+  for (int i = 0; i < child_num; ++i) {
+    std::shared_ptr<KVStateCacheBlock> child_kv_state_cache_block_builder =
+        std::dynamic_pointer_cast<KVStateCacheBlock>(this->meta_.GetMember(
+            "child_kv_state_cache_block_" + std::to_string(i)));
+    this->child_kv_state_cache_block_list.push_back(
+        child_kv_state_cache_block_builder);
+  }
+  // 3. construct the member field
+  this->bitmap = this->meta_.GetKeyValue<unsigned long long>("bitmap");
+  this->dimension = this->meta_.GetKeyValue<int>("dimension");
 }
 
 KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(Client& client,
@@ -76,39 +108,22 @@ Status KVStateCacheBlockBuilder::Query(Client& client, int index,
   return Status::OK();
 }
 
-bool KVStateCacheBlockBuilder::isFull() {
+int KVStateCacheBlockBuilder::FindEmptySlot() {
   int index = ffsll(this->bitmap) - 1;
-  return index < 0 || index > LIST_SIZE;
+  LOG(INFO) << "index1:" << index;
+  assert(index >= 0 && index < LIST_SIZE);
+  return index;
 }
 
-Status KVStateCacheBlockBuilder::Build(Client& client) {
-  // TBD craete vineyard object
-  pthread_spin_lock(&(this->spin_lock));
-  ObjectMeta meta;
-  meta.SetTypeName(type_name<KVStateCacheBlock>());
-  meta.AddKeyValue("bitmap", this->bitmap);
-  for (int i = 0; i < LIST_SIZE; ++i) {
-    // TBD
-    // create tensor meta
-  }
-  // TBD check the status
-  client.CreateMetaData(meta, id);
-  pthread_spin_unlock(&(this->spin_lock));
-  return Status::OK();
-}
-
-std::shared_ptr<Object> KVStateCacheBlockBuilder::_Seal(Client& client) {
-  pthread_spin_lock(&(this->spin_lock));
-  // TBD
-  // Sync with vineyard server preriodically
-  pthread_spin_unlock(&(this->spin_lock));
-  return nullptr;
+bool KVStateCacheBlockBuilder::IsFull() {
+  int index = ffsll(this->bitmap) - 1;
+  return index < 0 || index >= LIST_SIZE;
 }
 
 std::shared_ptr<offset_data> KVStateCacheBlockBuilder::Update(
     const KV_STATE_WITH_LAYER& kv_state) {
-  int index = ffsll(this->bitmap) - 1;
-  assert(index >= 0 && index < LIST_SIZE);
+  int index = this->FindEmptySlot();
+  LOG(INFO) << "index:" << index;
   std::vector<double> k_state = (kv_state.find(1)->second).first;
   std::vector<double> v_state = (kv_state.find(1)->second).second;
   assert(k_state.size() == this->dimension);
@@ -125,14 +140,15 @@ std::shared_ptr<offset_data> KVStateCacheBlockBuilder::Update(
   std::shared_ptr<offset_data> data = std::make_shared<offset_data>();
   data->offset = index;
 
+  LOG(INFO) << "before:" << this->bitmap;
   ACQUIRE_BIT_RESOURCE(this->bitmap, index);
+  LOG(INFO) << "after:" << this->bitmap;
   return data;
 }
 
 std::shared_ptr<offset_data> KVStateCacheBlockBuilder::Update(
     double* k_data, double* v_data, unsigned long data_length) {
-  int index = ffsll(this->bitmap) - 1;
-  assert(index >= 0 && index < LIST_SIZE);
+  int index = FindEmptySlot();
   double* key_data = (double*) k_builder->data();
   double* value_data = (double*) v_builder->data();
   assert(this->dimension == data_length);
@@ -146,6 +162,7 @@ std::shared_ptr<offset_data> KVStateCacheBlockBuilder::Update(
   data->offset = index;
 
   ACQUIRE_BIT_RESOURCE(this->bitmap, index);
+  LOG(INFO) << "bitmap:" << this->GetBitmapStr();
   return data;
 }
 
@@ -153,6 +170,52 @@ void KVStateCacheBlockBuilder::SetChildKVStateCacheBlockBuilder(
     KVStateCacheBlockBuilder* child_kv_state_cache_builder) {
   this->child_kv_state_cache_builder_list.push_back(
       child_kv_state_cache_builder);
+}
+
+Status KVStateCacheBlockBuilder::Build(Client& client) {
+  // TBD craete vineyard object
+  // pthread_spin_lock(&(this->spin_lock));
+  // ObjectMeta meta;
+  // meta.SetTypeName(type_name<KVStateCacheBlock>());
+  // meta.AddKeyValue("bitmap", this->bitmap);
+  // for (int i = 0; i < LIST_SIZE; ++i) {
+  //   // TBD
+  //   // create tensor meta
+  // }
+  // // TBD check the status
+  // client.CreateMetaData(meta, id);
+  // pthread_spin_unlock(&(this->spin_lock));
+  return Status::OK();
+}
+
+std::shared_ptr<Object> KVStateCacheBlockBuilder::_Seal(Client& client) {
+  this->Build(client);
+  // pthread_spin_lock(&(this->spin_lock));
+  // pthread_spin_unlock(&(this->spin_lock));
+
+  std::shared_ptr<KVStateCacheBlock> kv_state_cache_block =
+      std::make_shared<KVStateCacheBlock>();
+  // TBD
+  // 1. seal k_builder and v_builder
+  kv_state_cache_block->meta_.AddMember("k_builder", k_builder->Seal(client));
+  kv_state_cache_block->meta_.AddMember("v_builder", v_builder->Seal(client));
+  // 2. seal child kv_state_cache_block_builder
+  for (size_t i = 0; i < this->child_kv_state_cache_builder_list.size(); ++i) {
+    kv_state_cache_block->meta_.AddMember(
+        "child_kv_state_cache_block_" + std::to_string(i),
+        this->child_kv_state_cache_builder_list[i]->_Seal(client));
+  }
+  kv_state_cache_block->meta_.AddKeyValue(
+      "child_num", this->child_kv_state_cache_builder_list.size());
+  // 3. store the member field to meta
+  kv_state_cache_block->meta_.AddKeyValue("bitmap", this->bitmap);
+  kv_state_cache_block->meta_.AddKeyValue("dimension", this->dimension);
+  // 4. set the object type to meta
+  kv_state_cache_block->meta_.SetTypeName(type_name<KVStateCacheBlock>());
+
+  VINEYARD_CHECK_OK(client.CreateMetaData(kv_state_cache_block->meta_,
+                                          kv_state_cache_block->id_));
+  return kv_state_cache_block;
 }
 
 }  // namespace vineyard

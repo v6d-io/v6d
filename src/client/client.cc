@@ -1084,7 +1084,8 @@ Status Client::IsSpilled(ObjectID const& id, bool& is_spilled) {
   return Status::OK();
 }
 
-Status Client::TryAcquireLock(std::string key, bool& result, std::string& actural_key) {
+Status Client::TryAcquireLock(std::string key, bool& result,
+                              std::string& actural_key) {
   ENSURE_CONNECTED(this);
 
   std::string message_out;

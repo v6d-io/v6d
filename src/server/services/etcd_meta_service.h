@@ -23,7 +23,6 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#define BUILD_VINEYARDD_ETCD
 #if defined(BUILD_VINEYARDD_ETCD)
 
 #include "etcd/Client.hpp"

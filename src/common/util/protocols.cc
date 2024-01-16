@@ -2160,7 +2160,8 @@ Status ReadTryAcquireLockRequest(const json& root, std::string& key) {
   return Status::OK();
 }
 
-void WriteTryAcquireLockReply(const bool result, const std::string actual_key, std::string& msg) {
+void WriteTryAcquireLockReply(const bool result, const std::string actual_key,
+                              std::string& msg) {
   json root;
   root["type"] = command_t::ACQUIRE_LOCK_REPLY;
   root["key"] = actual_key;
@@ -2168,7 +2169,8 @@ void WriteTryAcquireLockReply(const bool result, const std::string actual_key, s
   encode_msg(root, msg);
 }
 
-Status ReadTryAcquireLockReply(const json& root, bool& result, std::string& key) {
+Status ReadTryAcquireLockReply(const json& root, bool& result,
+                               std::string& key) {
   CHECK_IPC_ERROR(root, command_t::ACQUIRE_LOCK_REPLY);
   result = root["result"].get<bool>();
   key = root["key"].get<std::string>();
