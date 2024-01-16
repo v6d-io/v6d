@@ -20,38 +20,61 @@ extern "C" {
 #include "radix.h"
 }
 #include "common/util/logging.h"
+#include "kv-state-cache/strategy/LRU_strategy.h"
 
 #include <map>
 #include <memory>
 #include <vector>
 
+using namespace vineyard;
+
 typedef struct nodeData {
   std::shared_ptr<void> data;
   int data_length;
+  std::shared_ptr<LRUCacheNode> cache_node;
 } nodeData;
 
 class Node {
  private:
+  nodeData* data;
   raxNode* node;
-  std::shared_ptr<void> data;
-  int data_length;
 
  public:
   Node(raxNode* node) {
+    this->data = (nodeData*) raxGetData(node);
     this->node = node;
-    this->data = NULL;
-    this->data_length = 0;
-  }
-  void set_data(std::shared_ptr<void> data, int data_length) {
-    nodeData* node_data = new nodeData();
-    node_data->data = data;
-    node_data->data_length = data_length;
-    raxSetData(this->node, node_data);
   }
 
-  std::shared_ptr<void> get_data() {
-    nodeData* nodedata = (nodeData*) raxGetData(this->node);
-    return nodedata->data;
+  Node(nodeData* data) {
+    this->data = data;
+    this->node = NULL;
+  }
+
+  void set_data(std::shared_ptr<void> data, int data_length) {
+    if (this->node == NULL) {
+      LOG(INFO) << "set data failed, node is null";
+      return;
+    }
+    this->data->data = data;
+    this->data->data_length = data_length;
+    raxSetData(this->node, this->data);
+  }
+
+  void set_cache_node(std::shared_ptr<LRUCacheNode> cache_node) {
+    if (this->node == NULL) {
+      LOG(INFO) << "set data failed, node is null";
+      return;
+    }
+    this->data->cache_node = cache_node;
+    raxSetData(this->node, this->data);
+  }
+
+  std::shared_ptr<void> get_data() { return this->data->data; }
+
+  int get_data_length() { return this->data->data_length; }
+
+  std::shared_ptr<LRUCacheNode> get_cache_node() {
+    return this->data->cache_node;
   }
 };
 
@@ -78,42 +101,29 @@ class RadixTree {
   void* custom_data;
   int custom_data_length;
   rax* tree;
+  LRUStrategy* lru_strategy;
 
  public:
-  RadixTree() {
+  RadixTree(int cache_capacity = 10) {
     LOG(INFO) << "init radix tree";
     this->tree = raxNew();
     this->custom_data = NULL;
     this->custom_data_length = 0;
+    lru_strategy = new LRUStrategy(cache_capacity);
   }
 
-  RadixTree(void* custom_data, int custom_data_length) {
+  RadixTree(void* custom_data, int custom_data_length,
+            int cache_capacity = 10) {
     LOG(INFO) << "init radix tree with custom data";
     this->tree = raxNew();
     this->custom_data = custom_data;
     this->custom_data_length = custom_data_length;
+    this->lru_strategy = new LRUStrategy(cache_capacity);
   }
 
-  // void insert(const std::vector<int> key, void** data, int data_length) {
-  //   const int* tokens = key.data();
-  //   size_t tokens_len = key.size();
-
-  //   nodeData *insert_data = new nodeData();
-  //   ((nodeData*)data)->data = data;
-  //   ((nodeData*)data)->data_length = data_length;
-  //   int retval = raxInsert(this->tree, tokens, tokens_len, insert_data,
-  //   NULL); if (retval == 0) {
-  //     if (errno == 0) {
-  //       LOG(INFO) << "overwrite an existing token list";
-  //     } else {
-  //       LOG(INFO) << "insert failed with errno:" + std::to_string(errno);
-  //     }
-  //   } else {
-  //       LOG(INFO) << "insert success";
-  //   }
-  // }
-
-  std::shared_ptr<NodeWithTreeAttri> Insert(std::vector<int> tokens) {
+  std::shared_ptr<NodeWithTreeAttri> Insert(
+      std::vector<int> tokens,
+      std::shared_ptr<NodeWithTreeAttri> evicted_node) {
     // insert the token vector to the radix tree
     int* insert_tokens_array = tokens.data();
     size_t insert_tokens_array_len = tokens.size();
@@ -126,46 +136,43 @@ class RadixTree {
       return NULL;
     }
     LOG(INFO) << "insert success";
+
+    // refresh the lru cache
+    std::vector<int> evicted_tokens;
+    std::shared_ptr<LRUCacheNode> cache_node =
+        lru_strategy->InsertToHeader(tokens, evicted_tokens);
+    if (cache_node == nullptr) {
+      LOG(INFO) << "WTF?";
+    }
+    dummy_data->cache_node = cache_node;
+    raxSetData(dataNode, dummy_data);
+    if (evicted_tokens.size() > 0) {
+      this->Delete(evicted_tokens, evicted_node);
+    }
+
     // return new NodeWithTreeAttri(new Node(dataNode), this);
     return std::make_shared<NodeWithTreeAttri>(std::make_shared<Node>(dataNode),
                                                this);
   }
 
-  void Delete(std::vector<int> tokens) {
+  void Delete(std::vector<int> tokens,
+              std::shared_ptr<NodeWithTreeAttri>& evicted_node) {
     // remove the token vector from the radix tree
     int* delete_tokens_array = tokens.data();
     size_t delete_tokens_array_len = tokens.size();
+
+    nodeData* old_data;
     int retval = raxRemove(this->tree, delete_tokens_array,
-                           delete_tokens_array_len, NULL);
+                           delete_tokens_array_len, (void**) &old_data);
     if (retval == 1) {
       LOG(INFO) << "remove success";
+      std::shared_ptr<Node> node = std::make_shared<Node>(old_data);
+      evicted_node = std::make_shared<NodeWithTreeAttri>(node, this);
+      delete old_data;
     } else {
       LOG(INFO) << "remove failed";
     }
   }
-
-  // void insert(const std::vector<int>& prefix, int key, void** data,
-  //             int data_length) {
-  //   std::vector<int> key_vec = prefix;
-  //   key_vec.push_back(key);
-
-  //   const int* tokens = key_vec.data();
-  //   size_t tokens_len = key_vec.size();
-
-  //   nodeData *insert_data = new nodeData();
-  //   ((nodeData*)data)->data = data;
-  //   ((nodeData*)data)->data_length = data_length;
-  //   int retval = raxInsert(this->tree, tokens, tokens_len, insert_data,
-  //   NULL); if (retval == 0) {
-  //     if (errno == 0) {
-  //       LOG(INFO) << "overwrite an existing token list";
-  //     } else {
-  //       LOG(INFO) << "insert failed with errno:" + std::to_string(errno);
-  //     }
-  //   } else {
-  //       LOG(INFO) << "insert success";
-  //   }
-  // }
 
   std::shared_ptr<NodeWithTreeAttri> Query(std::vector<int> key) {
     int* tokens = key.data();
@@ -178,16 +185,14 @@ class RadixTree {
       return NULL;
     }
     LOG(INFO) << "get success";
-    // return new NodeWithTreeAttri(new Node(dataNode), this);
-    return std::make_shared<NodeWithTreeAttri>(std::make_shared<Node>(dataNode),
-                                               this);
-  }
 
-  // std::shared_ptr<NodeWithTreeAttri> get(std::vector<int> prefix, int key) {
-  //   std::vector<int> key_vec = prefix;
-  //   key_vec.push_back(key);
-  //   return get(key_vec);
-  // }
+    // refresh the lru cache
+    std::shared_ptr<Node> node = std::make_shared<Node>(dataNode);
+    std::shared_ptr<LRUCacheNode> cache_node = node->get_cache_node();
+    lru_strategy->MoveToHead(cache_node);
+
+    return std::make_shared<NodeWithTreeAttri>(node, this);
+  }
 
   std::string serialize() { return std::string("this is a serialized string"); }
 
@@ -207,7 +212,6 @@ class RadixTree {
       LOG(INFO) << "traverse failed";
       return std::vector<std::shared_ptr<NodeWithTreeAttri>>();
     }
-    // std::vector<NodeWithTreeAttri *> nodes;
     std::vector<std::shared_ptr<NodeWithTreeAttri>> nodes;
 
     int numele = this->tree->numele;
@@ -216,7 +220,6 @@ class RadixTree {
     raxNode* headNode = this->tree->head;
     raxTraverse(headNode, &dataNodeList);
     for (int i = 0; i < numele; i++, current++) {
-      // nodes.push_back(new NodeWithTreeAttri(new Node(*current), this));
       nodes.push_back(std::make_shared<NodeWithTreeAttri>(
           std::make_shared<Node>(*current), this));
     }

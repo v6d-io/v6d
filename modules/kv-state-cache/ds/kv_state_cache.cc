@@ -31,7 +31,6 @@ void KVStateCache::Construct(const ObjectMeta& meta) {
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
                                          int cache_capacity) {
   this->dimension = dimension;
-  this->cache_strategy = new LRUStrategy(cache_capacity);
   this->kv_state_cache_builder =
       new KVStateCacheBlockBuilder(client, this->dimension);
   this->root_tree = new RadixTree();
@@ -80,11 +79,23 @@ void KVStateCacheBuilder::update(Client& client,
   token_list_copy.push_back(next_token);
 
   // Create a empty node of tokens from radix tree.
+  std::shared_ptr<NodeWithTreeAttri> evicted_node = nullptr;
   std::shared_ptr<NodeWithTreeAttri> node_with_tree_attri =
-      this->root_tree->Insert(token_list_copy);
+      this->root_tree->Insert(token_list_copy, evicted_node);
+  if (node_with_tree_attri == nullptr) {
+    LOG(INFO) << "insert failed";
+    return;
+  }
   RadixTree* sub_tree = node_with_tree_attri->get_tree();
   KVStateCacheBlockBuilder* kv_state_cache_builder =
       (KVStateCacheBlockBuilder*) sub_tree->GetCustomData();
+  if (evicted_node != nullptr) {
+    std::shared_ptr<offset_data> data = std::static_pointer_cast<offset_data>(
+        evicted_node->get_node()->get_data());
+    KVStateCacheBlockBuilder* builder =
+        (KVStateCacheBlockBuilder*) evicted_node->get_tree()->GetCustomData();
+    builder->DeleteKVCache(data->offset);
+  }
 
   // TBD
   // Use lock to protect the kv_state_cache_builder
@@ -96,7 +107,8 @@ void KVStateCacheBuilder::update(Client& client,
      * empty node from the radix tree and split the tree. Then, kv-state cache
      * split according to the new tree.
      */
-    this->root_tree->Delete(token_list_copy);
+    std::shared_ptr<NodeWithTreeAttri> evicted_node = nullptr;
+    this->root_tree->Delete(token_list_copy, evicted_node);
     RadixTree* new_tree = sub_tree->Split();
 
     std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list =
@@ -114,36 +126,6 @@ void KVStateCacheBuilder::update(Client& client,
         kv_state_cache_builder->Update(kv_state);
     std::shared_ptr<Node> node = node_with_tree_attri->get_node();
     node->set_data(data, sizeof(offset_data));
-
-    std::vector<int> evicted_tokens;
-    this->cache_strategy->put(token_list, next_token, evicted_tokens);
-
-    // Delete the evicted kv-state cache.
-    if (evicted_tokens.size() > 0) {
-      std::string evicted_tokens_str = "";
-      for (size_t i = 0; i < evicted_tokens.size(); i++) {
-        evicted_tokens_str += std::to_string(evicted_tokens[i]);
-      }
-      LOG(INFO) << "evicted tokens: " << evicted_tokens_str;
-
-      std::shared_ptr<NodeWithTreeAttri> evicted_node_with_tree_attri =
-          this->root_tree->Query(evicted_tokens);
-      KVStateCacheBlockBuilder* evicted_kv_state_cache_builder =
-          (KVStateCacheBlockBuilder*) evicted_node_with_tree_attri->get_tree()
-              ->GetCustomData();
-
-      LOG(INFO) << "evicted index: "
-                << std::static_pointer_cast<offset_data>(
-                       evicted_node_with_tree_attri->get_node()->get_data())
-                       ->offset;
-
-      evicted_kv_state_cache_builder->DeleteKVCache(
-          std::static_pointer_cast<offset_data>(
-              evicted_node_with_tree_attri->get_node()->get_data())
-              ->offset);
-      this->root_tree->Delete(evicted_tokens);
-    }
-    // kv_state_cache_builder->UnLock();
   }
 }
 
@@ -169,7 +151,7 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::query(
     kv_state_cache_builder->Query(client, offset, kv_state);
     // kv_state_cache_builder->UnLock();
     std::vector<int> evicted_tokens;
-    this->cache_strategy->put(token_list, token, evicted_tokens);
+    // this->cache_strategy->put(token_list, token, evicted_tokens);
     assert(evicted_tokens.size() == 0);
   }
   return kv_state;
