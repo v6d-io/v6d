@@ -32,7 +32,6 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
   KVStateCacheBlockBuilder* kv_state_cache_builder;
   RadixTree* root_tree;
-  CacheStrategy* cache_strategy;
   int dimension;
   ObjectID id;
 
@@ -45,7 +44,6 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   KVStateCacheBlockBuilder* kv_state_cache_builder;
   RadixTree* root_tree;
-  CacheStrategy* cache_strategy;
   int dimension;
 
  public:

@@ -37,13 +37,9 @@ class LRUStrategy : public CacheStrategy {
 
   std::shared_ptr<LRUCacheNode> tail;
 
-  RadixTree* radix_tree;
-
   LRUStrategy();
 
   std::shared_ptr<LRUCacheNode> Remove();
-
-  void MoveToHead(std::shared_ptr<LRUCacheNode> cache_node);
 
   ~LRUStrategy();
 
@@ -52,11 +48,13 @@ class LRUStrategy : public CacheStrategy {
 
   LRUStrategy(const std::vector<std::vector<int>>& cache_list, int capacity);
 
-  void put(const std::vector<int>& prefix, int token,
-           std::vector<int>& evicted_tokens);
+  void MoveToHead(std::shared_ptr<LRUCacheNode> cache_node);
+
+  std::shared_ptr<LRUCacheNode> InsertToHeader(
+      const std::vector<int>& tokens, std::vector<int>& evicted_tokens);
 
   // for distributed sync
-  void Remove(const std::vector<int>& prefix, int token);
+  // void Remove(const std::vector<int>& prefix, int token);
 };
 
 }  // namespace vineyard
