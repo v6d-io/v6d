@@ -129,8 +129,8 @@ IPCServer::~IPCServer() {
 void IPCServer::Start() {
   std::string const& ipc_socket =
       ipc_spec_["socket"].get_ref<std::string const&>();
-  chmod(ipc_socket.c_str(),
-        S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH);
+  chmod(ipc_socket.c_str(), S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP |
+                                S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH);
 
   vs_ptr_->IPCReady();
   SocketServer::Start();
