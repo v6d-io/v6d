@@ -527,7 +527,7 @@ static inline size_t raxLowWalk(rax *rax, const int *s, size_t len, raxNode **st
  * function returns 0 as well but sets errno to ENOMEM, otherwise errno will
  * be set to 0.
  */
-int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old, int overwrite, void **dataNode) {
+int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int overwrite, void **dataNode) {
     size_t i;
     int j = 0; /* Split position. If raxLowWalk() stops in a compressed
                   node, the index 'j' represents the char we stopped within the
@@ -968,7 +968,7 @@ oom:
 
 /* Overwriting insert. Just a wrapper for raxGenericInsert() that will
  * update the element if there is already one for the same key. */
-int raxInsert(rax *rax, const int *s, size_t len, void *data, void **old) {
+int raxInsert(rax *rax, int *s, size_t len, void *data, void **old) {
     void *dataNode = NULL;
     return raxGenericInsert(rax,s,len,data,old,1,&dataNode);
 }
@@ -976,7 +976,7 @@ int raxInsert(rax *rax, const int *s, size_t len, void *data, void **old) {
 /* Non overwriting insert function: this if an element with the same key
  * exists, the value is not updated and the function returns 0.
  * This is a just a wrapper for raxGenericInsert(). */
-int raxTryInsert(rax *rax,const int *s, size_t len, void *data, void **old) {
+int raxTryInsert(rax *rax, int *s, size_t len, void *data, void **old) {
     void *dataNode = NULL;
     return raxGenericInsert(rax,s,len,data,old,0,dataNode);
 }
@@ -984,15 +984,8 @@ int raxTryInsert(rax *rax,const int *s, size_t len, void *data, void **old) {
 /*
 Overwriting insert. Return the raxNode that contains the key.
 */
-raxNode *raxInsertAndReturnDataNode(rax *rax,const int *s, size_t len, void *data, void **old) {
-    void *dataNode;
-    int retval = raxGenericInsert(rax,s,len,data,old,0, &dataNode);
-    if (retval != 0 || ((retval == 0) && (errno == 0))) {
-        if (dataNode != NULL) {
-            return dataNode;
-        }
-    }
-    return NULL;
+int raxInsertAndReturnDataNode(rax *rax, int *s, size_t len, void *data, raxNode *node, void **old) {
+    return raxGenericInsert(rax,s,len,data,old,1, (void **)&node);
 }
 
 /* Find a key in the rax, returns raxNotFound special void pointer value
@@ -2084,6 +2077,10 @@ unsigned long raxTouch(raxNode *n) {
     return sum;
 }
 
+/*
+* Traverse the tree and collect all the nodes that contain data.
+* these nodes are stored in the dataNodeList
+*/
 void raxTraverse(raxNode *n, raxNode ***dataNodeList) {
     unsigned long sum = 0;
     if (n->iskey) {
@@ -2102,28 +2099,68 @@ void raxTraverse(raxNode *n, raxNode ***dataNodeList) {
     }
 }
 
-raxNode *raxNodeSplit(rax *rax, int *s, size_t len, void *data){
+/*
+* Split the tree into two sub trees, and return the root node of the new sub tree
+*
+* Input a token list, and split the tree into two sub trees via the token list
+* It will find the node that nearest N/2 but not more than N/2, and split the tree
+* into two sub trees. If there is no node that has N/2 children, it will split the
+* tree from the root node.
+* 
+*/
+raxNode *raxSplit(rax *rax, int *s, size_t len, void *data){
     int retval = raxInsert(rax, s, len, data, NULL);
     if (retval == 0 && errno != 0) {
         return NULL;
     }
-    raxNode *preNode;
-    raxNode *splitNode;
+    raxNode *childNode = NULL;
+    raxNode *parentNode = NULL;
+    raxNode *splitNode = NULL;
     raxStack stack = raxFindWithStack(rax, s, len);
     int items = stack.items;
     while (items > 0) {
         raxNode *node = raxStackPop(&stack);
-        if (node->numnodes > (uint32_t)RAX_NODE_MAX_SIZE/2) {
-            splitNode = node;
+        if (node->numnodes >= (uint32_t)RAX_NODE_MAX_SIZE/2 || node->issubtree) {
+            splitNode = childNode;
+            raxStackPush(&stack, node);
             break;
         }
-        preNode = node; 
+        childNode = node; 
         items--;
     }
-    // if the splitNode is the root node
-    // we need to return the sub child of the root node
-    if (splitNode == rax->head) {
-        return preNode;
+    // if the splitNode is NULL, it means that the tree only has one node
+    if (splitNode == NULL) {
+        return rax->head;
     }
+
+    raxStackAddNumNodes(&stack, -(int)(splitNode->numnodes)); 
+    raxStackFree(&stack);
+
+    splitNode->issubtree = 1;
+
     return splitNode;
+}
+
+/*
+* Traverse the subtree and return all the nodes that contain data under the subtree 
+* these nodes are stored in the dataNodeList
+*/
+void raxTraverseSubTree(raxNode *n, raxNode ***dataNodeList) {
+    unsigned long sum = 0;
+    if (n->iskey) {
+        **dataNodeList = n;
+        (*dataNodeList)++;
+    }
+
+    int numchildren = n->iscompr ? 1 : n->size;
+    raxNode **cp = raxNodeFirstChildPtr(n);
+    int count = 0;
+    for (int i = 0; i < numchildren; i++) {
+        raxNode *child;
+        memcpy(&child,cp,sizeof(child));
+        if (!child->issubtree) {
+            raxTraverseSubTree(child, dataNodeList);
+        }
+        cp++;
+    }
 }
