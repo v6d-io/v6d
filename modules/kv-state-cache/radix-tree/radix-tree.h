@@ -16,9 +16,8 @@ limitations under the License.
 #ifndef RADIX_TREE_H
 #define RADIX_TREE_H
 
-extern "C" {
 #include "radix.h"
-}
+
 #include "common/util/logging.h"
 #include "kv-state-cache/strategy/LRU_strategy.h"
 
@@ -129,26 +128,31 @@ class RadixTree {
   std::shared_ptr<NodeWithTreeAttri> Insert(
       std::vector<int> tokens,
       std::shared_ptr<NodeWithTreeAttri> evicted_node) {
+    LOG(INFO) << "Insert...";
     // insert the token vector to the radix tree
     int* insert_tokens_array = tokens.data();
     size_t insert_tokens_array_len = tokens.size();
     nodeData* dummy_data = new nodeData();
+    nodeData* old_data;
     raxNode* dataNode = NULL;
     int retval = raxInsertAndReturnDataNode(this->tree, insert_tokens_array,
-                              insert_tokens_array_len, dummy_data, dataNode, NULL);
+                              insert_tokens_array_len, dummy_data, dataNode, (void**) &old_data);
     if (dataNode == NULL) {
       LOG(INFO) << "insert failed";
       return NULL;
     }
     LOG(INFO) << "insert success";
 
+  
     if (retval == 0) {
       // (retval == 0 ) means the token vector already exists in the radix tree
       // remove the token vector from the lru cache as it will be inserted again
-      std::shared_ptr<Node> node = std::make_shared<Node>(dataNode);
+      std::shared_ptr<Node> node = std::make_shared<Node>(old_data);
       std::shared_ptr<LRUCacheNode> cache_node = node->get_cache_node();
       lru_strategy->Remove(cache_node);
+      delete old_data;
     }
+
     // refresh the lru cache
     std::vector<int> evicted_tokens;
     std::shared_ptr<LRUCacheNode> cache_node =
@@ -168,6 +172,7 @@ class RadixTree {
 
   void Delete(std::vector<int> tokens,
               std::shared_ptr<NodeWithTreeAttri>& evicted_node) {
+    LOG(INFO) << "Delete...";
     // remove the token vector from the radix tree
     int* delete_tokens_array = tokens.data();
     size_t delete_tokens_array_len = tokens.size();
@@ -186,6 +191,7 @@ class RadixTree {
   }
 
   std::shared_ptr<NodeWithTreeAttri> Query(std::vector<int> key) {
+    LOG(INFO) << "Query...";
     int* tokens = key.data();
     size_t tokens_len = key.size();
 
@@ -202,6 +208,9 @@ class RadixTree {
     std::shared_ptr<LRUCacheNode> cache_node = node->get_cache_node();
     lru_strategy->MoveToHead(cache_node);
 
+    LOG(INFO) << "move to head success";
+    LOG(INFO) << "sub tree is :" << this->sub_tree;
+    LOG(INFO) << "get sub tree";
     return std::make_shared<NodeWithTreeAttri>(node, this);
   }
 
@@ -213,6 +222,7 @@ class RadixTree {
   }
 
   RadixTree* Split(std::vector<int> tokens) {
+    LOG(INFO) << "split with tokens";
     nodeData* dummy_data = new nodeData();
     raxNode* sub_tree_root_node = raxSplit(this->tree, tokens.data(),
                                            tokens.size(), dummy_data);
@@ -224,21 +234,23 @@ class RadixTree {
   }
 
   // Get child node list from this tree.
-  std::vector<std::shared_ptr<NodeWithTreeAttri>> Traverse() {
-    if (this->tree == NULL) {
+  std::vector<std::shared_ptr<NodeWithTreeAttri>> TraverseSubTree() {
+    LOG(INFO) << "TraverseSubTree...";
+    if (this->sub_tree == NULL) {
       LOG(INFO) << "traverse failed";
       return std::vector<std::shared_ptr<NodeWithTreeAttri>>();
     }
     std::vector<std::shared_ptr<NodeWithTreeAttri>> nodes;
 
-    int numele = this->tree->numele;
-    raxNode** dataNodeList = (raxNode**) malloc(sizeof(raxNode*) * (numele));
-    raxNode** current = dataNodeList;
-    raxNode* headNode = this->tree->head;
-    raxTraverse(headNode, &dataNodeList);
-    for (int i = 0; i < numele; i++, current++) {
+    std::vector<std::shared_ptr<raxNode>> dataNodeList;
+    //raxNode** dataNodeList = (raxNode**) malloc(sizeof(raxNode*) * (numele));
+    //raxNode** current = dataNodeList;
+    raxNode* headNode = this->sub_tree->head;
+    //raxTraverse(headNode, &dataNodeList);
+    raxTraverseSubTree(headNode, dataNodeList);
+    for (int i = 0; i < dataNodeList.size(); i++) {
       nodes.push_back(std::make_shared<NodeWithTreeAttri>(
-          std::make_shared<Node>(*current), this));
+          std::make_shared<Node>(dataNodeList[i].get()), this));
     }
     return nodes;
   }

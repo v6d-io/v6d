@@ -112,7 +112,7 @@ void KVStateCacheBuilder::update(Client& client,
     RadixTree* new_tree = sub_tree->Split(token_list_copy);
 
     std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list =
-        new_tree->Traverse();
+        new_tree->TraverseSubTree();
     KVStateCacheBlockBuilder* new_kv_state_cache_builder =
         split(client, kv_state_cache_builder, node_with_tree_attri_list);
     new_tree->SetCustomData(new_kv_state_cache_builder,

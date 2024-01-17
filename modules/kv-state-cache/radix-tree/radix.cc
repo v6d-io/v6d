@@ -102,7 +102,7 @@ static inline void raxStackInit(raxStack *ts) {
 static inline int raxStackPush(raxStack *ts, void *ptr) {
     if (ts->items == ts->maxitems) {
         if (ts->stack == ts->static_items) {
-            ts->stack = rax_malloc(sizeof(void*)*ts->maxitems*2);
+            ts->stack = (void **)rax_malloc(sizeof(void*)*ts->maxitems*2);
             if (ts->stack == NULL) {
                 ts->stack = ts->static_items;
                 ts->oom = 1;
@@ -111,7 +111,7 @@ static inline int raxStackPush(raxStack *ts, void *ptr) {
             }
             memcpy(ts->stack,ts->static_items,sizeof(void*)*ts->maxitems);
         } else {
-            void **newalloc = rax_realloc(ts->stack,sizeof(void*)*ts->maxitems*2);
+            void **newalloc = (void **)rax_realloc(ts->stack,sizeof(void*)*ts->maxitems*2);
             if (newalloc == NULL) {
                 ts->oom = 1;
                 errno = ENOMEM;
@@ -149,7 +149,7 @@ static inline void raxStackFree(raxStack *ts) {
 /* Add the number of nodes in the stack to each node. */
 void raxStackAddNumNodes(raxStack *stack, int num) {
     for (int i=0; i<stack->items; i++) {
-        raxNode *node = stack->stack[i];
+        raxNode *node = (raxNode *)stack->stack[i];
         node->numnodes+=(num);
     }
 }
@@ -197,7 +197,7 @@ raxNode *raxNewNode(size_t children, int datafield) {
     size_t nodesize = sizeof(raxNode) + children * sizeof(int)
         + raxPadding(children) + sizeof(raxNode*) * children;
     if (datafield) nodesize += sizeof(void*);
-    raxNode *node = rax_malloc(nodesize);
+    raxNode *node = (raxNode *)rax_malloc(nodesize);
     if (node == NULL) return NULL;
     node->iskey = 0;
     node->isnull = 0;
@@ -210,7 +210,7 @@ raxNode *raxNewNode(size_t children, int datafield) {
 /* Allocate a new rax and return its pointer. On out of memory the function
  * returns NULL. */
 rax *raxNew(void) {
-    rax *rax = rax_malloc(sizeof(*rax));
+    rax *rax = (struct rax *)rax_malloc(sizeof(*rax));
     if (rax == NULL) return NULL;
     rax->numele = 0;
     rax->numnodes = 1;
@@ -228,7 +228,7 @@ rax *raxNew(void) {
 raxNode *raxReallocForData(raxNode *n, void *data) {
     if (data == NULL) return n; /* No reallocation needed, setting isnull=1 */
     size_t curlen = raxNodeCurrentLength(n);
-    return rax_realloc(n,curlen+sizeof(void*));
+    return (raxNode *)rax_realloc(n,curlen+sizeof(void*));
 }
 
 /* Set the node auxiliary data to the specified pointer. */
@@ -277,7 +277,7 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
 
     int parent_numnodes = n->numnodes;
     /* Make space in the original node. */
-    raxNode *newn = rax_realloc(n,newlen);
+    raxNode *newn = (raxNode *)rax_realloc(n,newlen);
     if (newn == NULL) {
         rax_free(child);
         return NULL;
@@ -423,7 +423,7 @@ raxNode *raxCompressNode(raxNode *n, int *s, size_t len, raxNode **child) {
         data = raxGetData(n); /* To restore it later. */
         if (!n->isnull) newsize += sizeof(void*);
     }
-    raxNode *newn = rax_realloc(n,newsize);
+    raxNode *newn = (raxNode *)rax_realloc(n,newsize);
     if (newn == NULL) {
         rax_free(*child);
         return NULL;
@@ -518,6 +518,22 @@ static inline size_t raxLowWalk(rax *rax, const int *s, size_t len, raxNode **st
     if (plink) *plink = parentlink;
     if (splitpos && h->iscompr) *splitpos = j;
     return i;
+}
+
+int handleOutOfMemory(rax *rax, raxNode *h, int *s, size_t len, void **old){
+    /* This code path handles out of memory after part of the sub-tree was
+     * already modified. Set the node as a key, and then remove it. However we
+     * do that only if the node is a terminal node, otherwise if the OOM
+     * happened reallocating a node in the middle, we don't need to free
+     * anything. */
+    if (h->size == 0) {
+        h->isnull = 1;
+        h->iskey = 1;
+        rax->numele++; /* Compensate the next remove. */
+        assert(raxRemove(rax,s,len,NULL) != 0);
+    }
+    errno = ENOMEM;
+    return 0;
 }
 
 /* Insert the token list 's' of size 'len', setting as auxiliary data
@@ -734,13 +750,13 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
             nodesize = sizeof(raxNode)+trimmedlen * sizeof(int)+raxPadding(trimmedlen)+
                        sizeof(raxNode*);
             if (h->iskey && !h->isnull) nodesize += sizeof(void*);
-            trimmed = rax_malloc(nodesize);
+            trimmed = (raxNode *)rax_malloc(nodesize);
         }
 
         if (postfixlen) {
             nodesize = sizeof(raxNode)+postfixlen * sizeof(int)+raxPadding(postfixlen)+
                        sizeof(raxNode*);
-            postfix = rax_malloc(nodesize);
+            postfix = (raxNode *)rax_malloc(nodesize);
         }
 
         /* OOM? Abort now that the tree is untouched. */
@@ -836,11 +852,11 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
         size_t nodesize = sizeof(raxNode)+postfixlen*sizeof(int)+raxPadding(postfixlen)+
                           sizeof(raxNode*);
         if (data != NULL) nodesize += sizeof(void*);
-        raxNode *postfix = rax_malloc(nodesize);
+        raxNode *postfix = (raxNode *)rax_malloc(nodesize);
 
         nodesize = sizeof(raxNode)+j*sizeof(int)+raxPadding(j)+sizeof(raxNode*);
         if (h->iskey && !h->isnull) nodesize += sizeof(void*);
-        raxNode *trimmed = rax_malloc(nodesize);
+        raxNode *trimmed = (raxNode *)rax_malloc(nodesize);
 
         if (postfix == NULL || trimmed == NULL) {
             rax_free(postfix);
@@ -912,7 +928,9 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
             if (comprsize > RAX_NODE_MAX_SIZE)
                 comprsize = RAX_NODE_MAX_SIZE;
             raxNode *newh = raxCompressNode(h,s+i,comprsize,&child);
-            if (newh == NULL) goto oom;
+            if (newh == NULL) {
+                return handleOutOfMemory(rax, h, (int *)s, i, old);
+            }
             h = newh;
             memcpy(parentlink,&h,sizeof(h));
             parentlink = raxNodeLastChildPtr(h);
@@ -921,7 +939,9 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
             debugf("Inserting normal node %d\n", s[i]);
             raxNode **new_parentlink;
             raxNode *newh = raxAddChild(h,s[i],&child,&new_parentlink);
-            if (newh == NULL) goto oom;
+            if (newh == NULL) {
+                return handleOutOfMemory(rax, h, (int *)s, i, old);
+            }
             h = newh;
             memcpy(parentlink,&h,sizeof(h));
             parentlink = new_parentlink;
@@ -942,28 +962,15 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
     raxStackFree(&lowWalkStack);
     raxStackFree(&splitStack);
     raxNode *newh = raxReallocForData(h,data);
-    if (newh == NULL) goto oom;
+    if (newh == NULL) {
+        return handleOutOfMemory(rax, h, (int *)s, i, old);
+    }
     h = newh;
     if (!h->iskey) rax->numele++;
     raxSetData(h,data);
     memcpy(parentlink,&h,sizeof(h));
     *dataNode = h;
     return 1; /* Element inserted. */
-
-oom:
-    /* This code path handles out of memory after part of the sub-tree was
-     * already modified. Set the node as a key, and then remove it. However we
-     * do that only if the node is a terminal node, otherwise if the OOM
-     * happened reallocating a node in the middle, we don't need to free
-     * anything. */
-    if (h->size == 0) {
-        h->isnull = 1;
-        h->iskey = 1;
-        rax->numele++; /* Compensate the next remove. */
-        assert(raxRemove(rax,s,i,NULL) != 0);
-    }
-    errno = ENOMEM;
-    return 0;
 }
 
 /* Overwriting insert. Just a wrapper for raxGenericInsert() that will
@@ -978,7 +985,7 @@ int raxInsert(rax *rax, int *s, size_t len, void *data, void **old) {
  * This is a just a wrapper for raxGenericInsert(). */
 int raxTryInsert(rax *rax, int *s, size_t len, void *data, void **old) {
     void *dataNode = NULL;
-    return raxGenericInsert(rax,s,len,data,old,0,dataNode);
+    return raxGenericInsert(rax,s,len,data,old,0,&dataNode);
 }
 
 /*
@@ -1112,7 +1119,7 @@ raxNode *raxRemoveChild(raxNode *parent, raxNode *child) {
 
     /* realloc the node according to the theoretical memory usage, to free
      * data if we are over-allocating right now. */
-    raxNode *newnode = rax_realloc(parent,raxNodeCurrentLength(parent));
+    raxNode *newnode = (raxNode *)rax_realloc(parent,raxNodeCurrentLength(parent));
     if (newnode) {
         debugnode("raxRemoveChild after", newnode);
     }
@@ -1160,7 +1167,7 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
             rax_free(child);
             rax->numnodes--;
             added_nodes--;
-            h = raxStackPop(&ts);
+            h = (raxNode *)raxStackPop(&ts);
             h->numnodes += added_nodes; 
              /* If this node has more then one child, or actually holds
               * a key, stop here. */
@@ -1170,23 +1177,23 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
         if (child) {
             debugf("Unlinking child %p from parent %p\n",
                 (void*)child, (void*)h);
-            raxNode *new = raxRemoveChild(h,child);
-            if (new != h) {
-                raxNode *parent = raxStackPeek(&ts);
+            raxNode *newNode = (raxNode *)raxRemoveChild(h,child);
+            if (newNode != h) {
+                raxNode *parent = (raxNode *)raxStackPeek(&ts);
                 raxNode **parentlink;
                 if (parent == NULL) {
                     parentlink = &rax->head;
                 } else {
                     parentlink = raxFindParentLink(parent,h);
                 }
-                memcpy(parentlink,&new,sizeof(new));
+                memcpy(parentlink,&newNode,sizeof(newNode));
             }
 
             /* If after the removal the node has just a single child
              * and is not a key, we need to try to compress it. */
-            if (new->size == 1 && new->iskey == 0) {
+            if (newNode->size == 1 && newNode->iskey == 0) {
                 trycompress = 1;
-                h = new;
+                h = newNode;
             }
         }
     } else if (h->size == 1) {
@@ -1252,7 +1259,7 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
          * can try to compress and 'parent' to its parent. */
         raxNode *parent;
         while(1) {
-            parent = raxStackPop(&ts);
+            parent = (raxNode *)raxStackPop(&ts);
             if (!parent || parent->iskey ||
                 (!parent->iscompr && parent->size != 1)) break;
             h = parent;
@@ -1278,18 +1285,18 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
             /* If we can compress, create the new node and populate it. */
             size_t nodesize =
                 sizeof(raxNode)+comprsize*sizeof(int)+raxPadding(comprsize)+sizeof(raxNode*);
-            raxNode *new = rax_malloc(nodesize);
+            raxNode *newNode = (raxNode *)rax_malloc(nodesize);
             /* An out of memory here just means we cannot optimize this
              * node, but the tree is left in a consistent state. */
-            if (new == NULL) {
+            if (newNode == NULL) {
                 raxStackFree(&ts);
                 return 1;
             }
-            new->iskey = 0;
-            new->isnull = 0;
-            new->iscompr = 1;
-            new->size = comprsize;
-            new->numnodes = h->numnodes+1;
+            newNode->iskey = 0;
+            newNode->isnull = 0;
+            newNode->iscompr = 1;
+            newNode->size = comprsize;
+            newNode->numnodes = h->numnodes+1;
             all_added_node++;
             rax->numnodes++;
 
@@ -1299,7 +1306,7 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
             comprsize = 0;
             h = start;
             while(h->size != 0) {
-                memcpy((int*)new->data+comprsize,h->data,h->size*sizeof(int));
+                memcpy((int*)newNode->data+comprsize,h->data,h->size*sizeof(int));
                 comprsize += h->size;
                 raxNode **cp = raxNodeLastChildPtr(h);
                 raxNode *tofree = h;
@@ -1308,21 +1315,21 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
                 all_added_node--;
                 if (h->iskey || (!h->iscompr && h->size != 1)) break;
             }
-            new->numnodes = start_num_nodes+all_added_node;
+            newNode->numnodes = start_num_nodes+all_added_node;
             debugnode("New node",new);
 
             /* Now 'h' points to the first node that we still need to use,
              * so our new node child pointer will point to it. */
-            raxNode **cp = raxNodeLastChildPtr(new);
+            raxNode **cp = (raxNode **)raxNodeLastChildPtr(newNode);
             memcpy(cp,&h,sizeof(h));
 
             /* Fix parent link. */
             if (parent) {
                 parent->numnodes+=all_added_node;
                 raxNode **parentlink = raxFindParentLink(parent,start);
-                memcpy(parentlink,&new,sizeof(new));
+                memcpy(parentlink,&newNode,sizeof(newNode));
             } else {
-                rax->head = new;
+                rax->head = newNode;
             }
 
             debugf("Compressed %d nodes, %d total bytes\n",
@@ -1391,7 +1398,7 @@ int raxIteratorAddToken(raxIterator *it, int *s, size_t len) {
                                                                   it->key;
         size_t new_max = (it->key_len+len)*2;
         // update
-        it->key = rax_realloc(old,new_max * sizeof(int));
+        it->key = (int *)rax_realloc(old,new_max * sizeof(int));
         if (it->key == NULL) {
             it->key = (!old) ? it->key_static_tokens : old;
             errno = ENOMEM;
@@ -1486,7 +1493,7 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
                  * next child. */
                 int prevchild = it->key[it->key_len-1];
                 if (!noup) {
-                    it->node = raxStackPop(&it->stack);
+                    it->node = (raxNode *)raxStackPop(&it->stack);
                 } else {
                     noup = 0;
                 }
@@ -1577,7 +1584,7 @@ int raxIteratorPrevStep(raxIterator *it, int noup) {
 
         unsigned char prevchild = it->key[it->key_len-1];
         if (!noup) {
-            it->node = raxStackPop(&it->stack);
+            it->node = (raxNode *)raxStackPop(&it->stack);
         } else {
             noup = 0;
         }
@@ -1700,8 +1707,8 @@ int raxSeek(raxIterator *it, const char *op, int *ele, size_t len) {
          * the characters found along the way. */
         if (!raxStackPush(&it->stack,it->node)) return 0;
         for (size_t j = 1; j < it->stack.items; j++) {
-            raxNode *parent = it->stack.stack[j-1];
-            raxNode *child = it->stack.stack[j];
+            raxNode *parent = (raxNode *)it->stack.stack[j-1];
+            raxNode *child = (raxNode *)it->stack.stack[j];
             if (parent->iscompr) {
                 if (!raxIteratorAddToken(it,parent->data,parent->size))
                     return 0;
@@ -1870,7 +1877,7 @@ int raxRandomWalk(raxIterator *it, size_t steps) {
 
         if (r == numchildren) {
             /* Go up to parent. */
-            n = raxStackPop(&it->stack);
+            n = (raxNode *)raxStackPop(&it->stack);
             int todel = n->iscompr ? n->size : 1;
             raxIteratorDelChars(it,todel);
         } else {
@@ -2081,16 +2088,13 @@ unsigned long raxTouch(raxNode *n) {
 * Traverse the tree and collect all the nodes that contain data.
 * these nodes are stored in the dataNodeList
 */
-void raxTraverse(raxNode *n, raxNode ***dataNodeList) {
-    unsigned long sum = 0;
+void raxTraverse(raxNode *n, std::vector<std::shared_ptr<raxNode>> &dataNodeList) {
     if (n->iskey) {
-        **dataNodeList = n;
-        (*dataNodeList)++;
+        dataNodeList.push_back(std::shared_ptr<raxNode>(n, [](raxNode*){}));
     }
 
     int numchildren = n->iscompr ? 1 : n->size;
     raxNode **cp = raxNodeFirstChildPtr(n);
-    int count = 0;
     for (int i = 0; i < numchildren; i++) {
         raxNode *child;
         memcpy(&child,cp,sizeof(child));
@@ -2114,12 +2118,11 @@ raxNode *raxSplit(rax *rax, int *s, size_t len, void *data){
         return NULL;
     }
     raxNode *childNode = NULL;
-    raxNode *parentNode = NULL;
     raxNode *splitNode = NULL;
     raxStack stack = raxFindWithStack(rax, s, len);
     int items = stack.items;
     while (items > 0) {
-        raxNode *node = raxStackPop(&stack);
+        raxNode *node = (raxNode *)raxStackPop(&stack);
         if (node->numnodes >= (uint32_t)RAX_NODE_MAX_SIZE/2 || node->issubtree) {
             splitNode = childNode;
             raxStackPush(&stack, node);
@@ -2145,16 +2148,13 @@ raxNode *raxSplit(rax *rax, int *s, size_t len, void *data){
 * Traverse the subtree and return all the nodes that contain data under the subtree 
 * these nodes are stored in the dataNodeList
 */
-void raxTraverseSubTree(raxNode *n, raxNode ***dataNodeList) {
-    unsigned long sum = 0;
+void raxTraverseSubTree(raxNode *n, std::vector<std::shared_ptr<raxNode>> &dataNodeList) {
     if (n->iskey) {
-        **dataNodeList = n;
-        (*dataNodeList)++;
+        dataNodeList.push_back(std::shared_ptr<raxNode>(n, [](raxNode*){}));
     }
 
     int numchildren = n->iscompr ? 1 : n->size;
     raxNode **cp = raxNodeFirstChildPtr(n);
-    int count = 0;
     for (int i = 0; i < numchildren; i++) {
         raxNode *child;
         memcpy(&child,cp,sizeof(child));
