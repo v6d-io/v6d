@@ -16,9 +16,8 @@ limitations under the License.
 #ifndef RADIX_TREE_H
 #define RADIX_TREE_H
 
-extern "C" {
 #include "radix.h"
-}
+
 #include "common/util/logging.h"
 #include "kv-state-cache/strategy/LRU_strategy.h"
 
@@ -133,22 +132,26 @@ class RadixTree {
     int* insert_tokens_array = tokens.data();
     size_t insert_tokens_array_len = tokens.size();
     nodeData* dummy_data = new nodeData();
+    nodeData* old_data;
     raxNode* dataNode = NULL;
     int retval = raxInsertAndReturnDataNode(this->tree, insert_tokens_array,
-                              insert_tokens_array_len, dummy_data, dataNode, NULL);
+                              insert_tokens_array_len, dummy_data, (void**) &dataNode, (void**) &old_data);
     if (dataNode == NULL) {
       LOG(INFO) << "insert failed";
       return NULL;
     }
     LOG(INFO) << "insert success";
 
+  
     if (retval == 0) {
       // (retval == 0 ) means the token vector already exists in the radix tree
       // remove the token vector from the lru cache as it will be inserted again
-      std::shared_ptr<Node> node = std::make_shared<Node>(dataNode);
+      std::shared_ptr<Node> node = std::make_shared<Node>(old_data);
       std::shared_ptr<LRUCacheNode> cache_node = node->get_cache_node();
       lru_strategy->Remove(cache_node);
+      delete old_data;
     }
+
     // refresh the lru cache
     std::vector<int> evicted_tokens;
     std::shared_ptr<LRUCacheNode> cache_node =
@@ -224,21 +227,19 @@ class RadixTree {
   }
 
   // Get child node list from this tree.
-  std::vector<std::shared_ptr<NodeWithTreeAttri>> Traverse() {
-    if (this->tree == NULL) {
+  std::vector<std::shared_ptr<NodeWithTreeAttri>> TraverseSubTree() {
+    if (this->sub_tree == NULL) {
       LOG(INFO) << "traverse failed";
       return std::vector<std::shared_ptr<NodeWithTreeAttri>>();
     }
     std::vector<std::shared_ptr<NodeWithTreeAttri>> nodes;
 
-    int numele = this->tree->numele;
-    raxNode** dataNodeList = (raxNode**) malloc(sizeof(raxNode*) * (numele));
-    raxNode** current = dataNodeList;
-    raxNode* headNode = this->tree->head;
-    raxTraverse(headNode, &dataNodeList);
-    for (int i = 0; i < numele; i++, current++) {
+    std::vector<std::shared_ptr<raxNode>> dataNodeList;
+    raxNode* headNode = this->sub_tree->head;
+    raxTraverseSubTree(headNode, dataNodeList);
+    for (int i = 0; i < dataNodeList.size(); i++) {
       nodes.push_back(std::make_shared<NodeWithTreeAttri>(
-          std::make_shared<Node>(*current), this));
+          std::make_shared<Node>(dataNodeList[i].get()), this));
     }
     return nodes;
   }

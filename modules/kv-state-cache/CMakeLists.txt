@@ -1,7 +1,6 @@
 file(GLOB VINEYARD_KV_STATE_CACHE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                 "ds/*.cc"
                                 "ds/*.h"
-                                "radix-tree/*.c"
                                 "radix-tree/*.cc"
                                 "radix-tree/*.h"
                                 "utils/*.cc"

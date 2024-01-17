@@ -32,7 +32,9 @@
 #define RADIX_H
 
 #include <stdint.h>
-#include <stddef.h> 
+#include <stddef.h>
+#include <memory>
+#include <vector>
 
 /* Representation of a radix tree as implemented in this file, that contains
  * the token lists [1, 2, 3], [1, 2, 3, 4, 5, 6] and [1, 2, 3, 6, 7, 8] after 
@@ -94,7 +96,7 @@
  *
  */
 
-#define RAX_NODE_MAX_SIZE ((1<<29)-1)
+#define RAX_NODE_MAX_SIZE 1024
 typedef struct raxNode {
     uint32_t iskey:1;     /* Does this node contain a key? */
     uint32_t isnull:1;    /* Associated value is NULL (don't store it). */
@@ -194,7 +196,7 @@ extern void *raxNotFound;
 rax *raxNew(void);
 int raxInsert(rax *rax, int *s, size_t len, void *data, void **old);
 int raxTryInsert(rax *rax, int *s, size_t len, void *data, void **old);
-int raxInsertAndReturnDataNode(rax *rax, int *s, size_t len, void *data, raxNode *node, void **old);
+int raxInsertAndReturnDataNode(rax *rax, int *s, size_t len, void *data, void **node, void **old);
 int raxRemove(rax *rax, int *s, size_t len, void **old);
 void *raxFind(rax *rax, int *s, size_t len);
 raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len);
@@ -212,8 +214,8 @@ void raxShow(rax *rax);
 uint64_t raxSize(rax *rax);
 unsigned long raxTouch(raxNode *n);
 void raxSetDebugMsg(int onoff);
-void raxTraverse(raxNode *rax, raxNode ***dataNodeList);
-void raxTraverseSubTree(raxNode *n, raxNode ***dataNodeList);
+void raxTraverse(raxNode *rax, std::vector<std::shared_ptr<raxNode>> &dataNodeList);
+void raxTraverseSubTree(raxNode *n, std::vector<std::shared_ptr<raxNode>> &dataNodeList);
 raxNode *raxSplit(rax *rax, int *s, size_t len, void *data);
 
 /* Internal API. May be used by the node callback in order to access rax nodes
