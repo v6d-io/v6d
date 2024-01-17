@@ -991,8 +991,8 @@ int raxTryInsert(rax *rax, int *s, size_t len, void *data, void **old) {
 /*
 Overwriting insert. Return the raxNode that contains the key.
 */
-int raxInsertAndReturnDataNode(rax *rax, int *s, size_t len, void *data, raxNode *node, void **old) {
-    return raxGenericInsert(rax,s,len,data,old,1, (void **)&node);
+int raxInsertAndReturnDataNode(rax *rax, int *s, size_t len, void *data, void **node, void **old) {
+    return raxGenericInsert(rax,s,len,data,old,1, node);
 }
 
 /* Find a key in the rax, returns raxNotFound special void pointer value

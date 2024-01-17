@@ -96,7 +96,7 @@
  *
  */
 
-#define RAX_NODE_MAX_SIZE 1024000
+#define RAX_NODE_MAX_SIZE 1024
 typedef struct raxNode {
     uint32_t iskey:1;     /* Does this node contain a key? */
     uint32_t isnull:1;    /* Associated value is NULL (don't store it). */
@@ -196,7 +196,7 @@ extern void *raxNotFound;
 rax *raxNew(void);
 int raxInsert(rax *rax, int *s, size_t len, void *data, void **old);
 int raxTryInsert(rax *rax, int *s, size_t len, void *data, void **old);
-int raxInsertAndReturnDataNode(rax *rax, int *s, size_t len, void *data, raxNode *node, void **old);
+int raxInsertAndReturnDataNode(rax *rax, int *s, size_t len, void *data, void **node, void **old);
 int raxRemove(rax *rax, int *s, size_t len, void **old);
 void *raxFind(rax *rax, int *s, size_t len);
 raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len);
