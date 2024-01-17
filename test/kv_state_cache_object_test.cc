@@ -61,11 +61,12 @@ void prepareData(KVStateCacheBuilder* kv_state_cache_builder) {
 
 void updateTest(Client& client, KVStateCacheBuilder* builder) {
   std::vector<int> prefix;
-  KV_STATE_WITH_LAYER kv_state;
 
   for (size_t i = 0; i < tokens.size(); ++i) {
+    KV_STATE_WITH_LAYER kv_state;
     kv_state.insert(
         std::make_pair(1, std::make_pair(k_state_list[i], v_state_list[i])));
+    LOG(INFO) << "update test";
     builder->Update(client, prefix, tokens[i], kv_state);
     prefix.push_back(tokens[i]);
   }
@@ -80,12 +81,19 @@ void queryTest(Client& client, KVStateCacheBuilder* builder) {
     std::vector<double> key_state = kv_state[1].first;
     std::vector<double> value_state = kv_state[1].second;
 
-    assert(key_state.size() == DIMENSION);
-    assert(value_state.size() == DIMENSION);
-
+    VINEYARD_ASSERT(key_state.size() == (size_t)DIMENSION,
+                    "Expected key_state.size() == " + std::to_string(DIMENSION) + ", but got + key_state.size() == " +
+                        std::to_string(key_state.size()));
+    VINEYARD_ASSERT(value_state.size() == (size_t)DIMENSION,
+                    "Expected value_state.size() == " + std::to_string(DIMENSION) + ", but got + value_state.size() == " +
+                        std::to_string(value_state.size()));
     for (int j = 0; j < DIMENSION; ++j) {
-      assert(key_state[j] == k_state_list[i][j]);
-      assert(value_state[j] == v_state_list[i][j]);
+      VINEYARD_ASSERT(key_state[j] == k_state_list[i][j],
+                      "Expected key_state[" + std::to_string(j) + "] == " + std::to_string(k_state_list[i][j]) + ", but got + key_state[" +
+                          std::to_string(j) + "] == " + std::to_string(key_state[j]));
+      VINEYARD_ASSERT(value_state[j] == v_state_list[i][j],
+                      "Expected value_state[" + std::to_string(j) + "] == " + std::to_string(v_state_list[i][j]) + ", but got + value_state[" +
+                          std::to_string(j) + "] == " + std::to_string(value_state[j]));
     }
     prefix.push_back(tokens[i]);
   }
@@ -101,10 +109,10 @@ void sealAndConstructTest(Client& client, KVStateCacheBuilder* builder) {
       builder->GetKVStateCacheBlockBuilder();
 
   // compare kv_state_cache_block and kv_state_cache_block_builder
-  assert(kv_state_cache_block->GetDimension() ==
+  VINEYARD_ASSERT(kv_state_cache_block->GetDimension() ==
          kv_state_cache_block_builder->GetDimension());
 
-  assert(kv_state_cache_block->GetBitmap() ==
+  VINEYARD_ASSERT(kv_state_cache_block->GetBitmap() ==
          kv_state_cache_block_builder->GetBitmap());
 
   LOG(INFO) << "Bitmap:";
@@ -123,10 +131,10 @@ void sealAndConstructTest(Client& client, KVStateCacheBuilder* builder) {
 
   for (int i = 0; i < TOKEN_NUM; i++) {
     for (int j = 0; j < DIMENSION; j++) {
-      assert(k_tensor->data()[i * DIMENSION + j] ==
-             k_tensor_builder->data()[i * DIMENSION + j]);
-      assert(v_tensor->data()[i * DIMENSION + j] ==
-             v_tensor_builder->data()[i * DIMENSION + j]);
+      VINEYARD_ASSERT(k_tensor->data()[i * DIMENSION + j] ==
+              k_tensor_builder->data()[i * DIMENSION + j]);
+      VINEYARD_ASSERT(v_tensor->data()[i * DIMENSION + j] ==
+              v_tensor_builder->data()[i * DIMENSION + j]);
     }
   }
 }

@@ -72,7 +72,7 @@ void init_kv_state_cache(int dimension = 10, int cache_capacity = 10) {
 
     // // release the lock
     client.TryReleaseLock(actural_key, result);
-    assert(result == true);
+    VINEYARD_ASSERT(result == true);
 
     sync_thread = new std::thread(threadFunc);
     // TBD
@@ -160,7 +160,7 @@ void sync() {
       client, std::dynamic_pointer_cast<KVStateCache>(kv_state_cache));
   // 8. release the lock
   client.TryReleaseLock(actural_key, result);
-  assert(result == true);
+  VINEYARD_ASSERT(result == true);
 
   // TBD
   // use lease to prevent the deadlock if the client is down
@@ -169,6 +169,7 @@ void sync() {
 void threadFunc() {
   while (1) {
     sleep(5);
+    LOG(INFO) << "Try sync";
     // sync();
   }
 }

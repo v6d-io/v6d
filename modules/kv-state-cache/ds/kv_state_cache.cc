@@ -65,7 +65,7 @@ KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
     Client& client, KVStateCacheBlockBuilder* kv_state_cache_block_builder,
     std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list) {
   // Split the tree if the list of kv_state is full.
-  assert(node_with_tree_attri_list.size() > 0);
+  VINEYARD_ASSERT(node_with_tree_attri_list.size() > 0);
   KVStateCacheBlockBuilder* child_kv_state_cache_block_builder =
       new KVStateCacheBlockBuilder(client, this->dimension);
   for (size_t i = 0; i < node_with_tree_attri_list.size(); i++) {
@@ -180,7 +180,7 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
     // kv_state_cache_builder->UnLock();
     std::vector<int> evicted_tokens;
     // this->cache_strategy->put(token_list, token, evicted_tokens);
-    assert(evicted_tokens.size() == 0);
+    VINEYARD_ASSERT(evicted_tokens.size() == 0);
   }
   LOG(INFO) << "query success";
   return kv_state;
@@ -189,7 +189,7 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
 std::shared_ptr<KVStateCacheBuilder> KVStateCacheBuilder::Merge(
     Client& client, std::shared_ptr<KVStateCache> kv_state_cache) {
   // TBD
-  assert(false);
+  VINEYARD_ASSERT(false);
   return nullptr;
 }
 

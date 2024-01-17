@@ -31,7 +31,6 @@ std::string KVStateCacheBlock::GetBitmapStr() {
 
 std::string KVStateCacheBlockBuilder::GetBitmapStr() {
   std::string result;
-  LOG(INFO) << "bitmap1:" << this->bitmap;
   const int bits = 8 * sizeof(unsigned long long);
   for (int i = bits - 1; i >= 0; --i) {
     result += ((this->bitmap >> i) & 1) ? '1' : '0';
@@ -110,8 +109,7 @@ Status KVStateCacheBlockBuilder::Query(Client& client, int index,
 
 int KVStateCacheBlockBuilder::FindEmptySlot() {
   int index = ffsll(this->bitmap) - 1;
-  LOG(INFO) << "index1:" << index;
-  assert(index >= 0 && index < LIST_SIZE);
+  VINEYARD_ASSERT(index >= 0 && index < LIST_SIZE);
   return index;
 }
 
@@ -126,8 +124,8 @@ std::shared_ptr<offset_data> KVStateCacheBlockBuilder::Update(
   LOG(INFO) << "index:" << index;
   std::vector<double> k_state = (kv_state.find(1)->second).first;
   std::vector<double> v_state = (kv_state.find(1)->second).second;
-  assert(k_state.size() == this->dimension);
-  assert(v_state.size() == this->dimension);
+  VINEYARD_ASSERT(k_state.size() == (size_t)this->dimension);
+  VINEYARD_ASSERT(v_state.size() == (size_t)this->dimension);
 
   double* key_data = (double*) k_builder->data();
   double* value_data = (double*) v_builder->data();
@@ -151,7 +149,7 @@ std::shared_ptr<offset_data> KVStateCacheBlockBuilder::Update(
   int index = FindEmptySlot();
   double* key_data = (double*) k_builder->data();
   double* value_data = (double*) v_builder->data();
-  assert(this->dimension == data_length);
+  VINEYARD_ASSERT((unsigned long)this->dimension == data_length);
   for (unsigned long i = 0; i < data_length; ++i) {
     key_data[index * this->dimension + i] = k_data[i];
   }
