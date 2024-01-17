@@ -100,13 +100,17 @@ class RadixTree {
  private:
   void* custom_data;
   int custom_data_length;
+  // the whole radix tree for prefix match
   rax* tree;
+  // the sub tree for mapping a vineyard object
+  rax* sub_tree;
   LRUStrategy* lru_strategy;
 
  public:
   RadixTree(int cache_capacity = 10) {
     LOG(INFO) << "init radix tree";
     this->tree = raxNew();
+    this->sub_tree = this->tree;
     this->custom_data = NULL;
     this->custom_data_length = 0;
     lru_strategy = new LRUStrategy(cache_capacity);
@@ -116,6 +120,7 @@ class RadixTree {
             int cache_capacity = 10) {
     LOG(INFO) << "init radix tree with custom data";
     this->tree = raxNew();
+    this->sub_tree = this->tree;
     this->custom_data = custom_data;
     this->custom_data_length = custom_data_length;
     this->lru_strategy = new LRUStrategy(cache_capacity);
@@ -128,15 +133,22 @@ class RadixTree {
     int* insert_tokens_array = tokens.data();
     size_t insert_tokens_array_len = tokens.size();
     nodeData* dummy_data = new nodeData();
-    raxNode* dataNode =
-        raxInsertAndReturnDataNode(this->tree, insert_tokens_array,
-                                   insert_tokens_array_len, dummy_data, NULL);
+    raxNode* dataNode = NULL;
+    int retval = raxInsertAndReturnDataNode(this->tree, insert_tokens_array,
+                              insert_tokens_array_len, dummy_data, dataNode, NULL);
     if (dataNode == NULL) {
       LOG(INFO) << "insert failed";
       return NULL;
     }
     LOG(INFO) << "insert success";
 
+    if (retval == 0) {
+      // (retval == 0 ) means the token vector already exists in the radix tree
+      // remove the token vector from the lru cache as it will be inserted again
+      std::shared_ptr<Node> node = std::make_shared<Node>(dataNode);
+      std::shared_ptr<LRUCacheNode> cache_node = node->get_cache_node();
+      lru_strategy->Remove(cache_node);
+    }
     // refresh the lru cache
     std::vector<int> evicted_tokens;
     std::shared_ptr<LRUCacheNode> cache_node =
@@ -150,7 +162,6 @@ class RadixTree {
       this->Delete(evicted_tokens, evicted_node);
     }
 
-    // return new NodeWithTreeAttri(new Node(dataNode), this);
     return std::make_shared<NodeWithTreeAttri>(std::make_shared<Node>(dataNode),
                                                this);
   }
@@ -194,20 +205,26 @@ class RadixTree {
     return std::make_shared<NodeWithTreeAttri>(node, this);
   }
 
-  std::string serialize() { return std::string("this is a serialized string"); }
+  std::string Serialize() { return std::string("this is a serialized string"); }
 
   static RadixTree* Deserialize(std::string data) {
     LOG(INFO) << "deserialize with data:" + data;
     return new RadixTree();
   }
 
-  RadixTree* Split() {
-    LOG(INFO) << "splits is not implemented";
-    return this;
+  RadixTree* Split(std::vector<int> tokens) {
+    nodeData* dummy_data = new nodeData();
+    raxNode* sub_tree_root_node = raxSplit(this->tree, tokens.data(),
+                                           tokens.size(), dummy_data);
+    RadixTree* sub_tree = new RadixTree();
+    sub_tree->tree = this->tree;
+    this->sub_tree = raxNew();
+    this->sub_tree->head = sub_tree_root_node;
+    return sub_tree;
   }
 
   // Get child node list from this tree.
-  std::vector<std::shared_ptr<NodeWithTreeAttri>> Travel() {
+  std::vector<std::shared_ptr<NodeWithTreeAttri>> Traverse() {
     if (this->tree == NULL) {
       LOG(INFO) << "traverse failed";
       return std::vector<std::shared_ptr<NodeWithTreeAttri>>();

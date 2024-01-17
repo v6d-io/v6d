@@ -53,6 +53,9 @@ class LRUStrategy : public CacheStrategy {
   std::shared_ptr<LRUCacheNode> InsertToHeader(
       const std::vector<int>& tokens, std::vector<int>& evicted_tokens);
 
+  std::shared_ptr<LRUCacheNode> Remove(
+      std::shared_ptr<LRUCacheNode> cache_node);
+
   // for distributed sync
   // void Remove(const std::vector<int>& prefix, int token);
 };

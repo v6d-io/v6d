@@ -95,6 +95,20 @@ std::shared_ptr<LRUCacheNode> LRUStrategy::Remove() {
   return cache_node;
 }
 
+std::shared_ptr<LRUCacheNode> LRUStrategy::Remove(std::shared_ptr<LRUCacheNode> cache_node) {
+  if (cache_node == header) {
+    header = header->next;
+    header->prev = nullptr;
+  } else if (cache_node == tail) {
+    tail = tail->prev;
+    tail->next = nullptr;
+  } else {
+    cache_node->prev->next = cache_node->next;
+    cache_node->next->prev = cache_node->prev;
+  }
+  current_size--;
+}
+
 // void LRUStrategy::Remove(const std::vector<int>& prefix, int token) {
 //   std::vector<int> tokens = prefix;
 //   tokens.push_back(token);

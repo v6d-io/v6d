@@ -146,11 +146,18 @@ static inline void raxStackFree(raxStack *ts) {
     if (ts->stack != ts->static_items) rax_free(ts->stack);
 }
 
+/* Add the number of nodes in the stack to each node. */
+void raxStackAddNumNodes(raxStack *stack, int num) {
+    for (int i=0; i<stack->items; i++) {
+        raxNode *node = stack->stack[i];
+        node->numnodes+=(num);
+    }
+}
 /* ----------------------------------------------------------------------------
  * Radix tree implementation
  * --------------------------------------------------------------------------*/
 
-/* Return the padding needed in the characters section of a node having size
+/* Return the padding needed in the tokens section of a node having size
  * 'nodesize'. The padding is needed to store the child pointers to aligned
  * addresses. Note that we add 4 to the node size because the node has a four
  * bytes header. */
@@ -172,7 +179,7 @@ static inline void raxStackFree(raxStack *ts) {
     raxPadding((n)->size)))
 
 /* Return the current total size of the node. Note that the second line
- * computes the padding after the string of characters, needed in order to
+ * computes the padding after the list of tokens, needed in order to
  * save pointers to aligned addresses. */
 #define raxNodeCurrentLength(n) ( \
     sizeof(raxNode) + \
@@ -187,15 +194,15 @@ static inline void raxStackFree(raxStack *ts) {
  * associated data pointer.
  * Returns the new node pointer. On out of memory NULL is returned. */
 raxNode *raxNewNode(size_t children, int datafield) {
-    size_t characters_size = children * sizeof(int);
-    size_t nodesize = sizeof(raxNode) + characters_size + raxPadding(children) + sizeof(raxNode*) * children;
-    // end
+    size_t nodesize = sizeof(raxNode) + children * sizeof(int)
+        + raxPadding(children) + sizeof(raxNode*) * children;
     if (datafield) nodesize += sizeof(void*);
     raxNode *node = rax_malloc(nodesize);
     if (node == NULL) return NULL;
     node->iskey = 0;
     node->isnull = 0;
     node->iscompr = 0;
+    node->numnodes = 1;
     node->size = children;
     return node;
 }
@@ -246,7 +253,7 @@ void *raxGetData(raxNode *n) {
     return data;
 }
 
-/* Add a new child to the node 'n' representing the character 'c' and return
+/* Add a new child to the node 'n' representing the token 'c' and return
  * its new pointer, as well as the child pointer by reference. Additionally
  * '***parentlink' is populated with the raxNode pointer-to-pointer of where
  * the new child was stored, which is useful for the caller to replace the
@@ -268,6 +275,7 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
     raxNode *child = raxNewNode(0,0);
     if (child == NULL) return NULL;
 
+    int parent_numnodes = n->numnodes;
     /* Make space in the original node. */
     raxNode *newn = rax_realloc(n,newlen);
     if (newn == NULL) {
@@ -278,31 +286,31 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
 
     /* After the reallocation, we have up to 8/16 (depending on the system
      * pointer size, and the required node padding) bytes at the end, that is,
-     * the additional char in the 'data' section, plus one pointer to the new
+     * the additional token in the 'data' section, plus one pointer to the new
      * child, plus the padding needed in order to store addresses into aligned
      * locations.
      *
-     * So if we start with the following node, having "abde" edges.
+     * So if we start with the following node, having [1,2,4,5] edges.
      *
      * Note:
      * - We assume 4 bytes pointer for simplicity.
-     * - Each space below corresponds to one byte
+     * - Each space below corresponds to four byte
      *
-     * [HDR*][abde][Aptr][Bptr][Dptr][Eptr]|AUXP|
+     * [HDR*][1,2][4,5][1ptr][2ptr][4ptr][5ptr]|AUXP|
      *
-     * After the reallocation we need: 1 byte for the new edge character
+     * After the reallocation we need: 4 byte for the new edge token
      * plus 4 bytes for a new child pointer (assuming 32 bit machine).
-     * However after adding 1 byte to the edge char, the header + the edge
-     * characters are no longer aligned, so we also need 3 bytes of padding.
-     * In total the reallocation will add 1+4+3 bytes = 8 bytes:
+     * However after adding 4 byte to the edge tokens, the header + the edge
+     * tokens are no longer aligned, so we also need 4 bytes of padding.
+     * In total the reallocation will add 4+4 bytes = 8 bytes:
      *
      * (Blank bytes are represented by ".")
      *
-     * [HDR*][abde][Aptr][Bptr][Dptr][Eptr]|AUXP|[....][....]
+     * [HDR*][1,2][4,5][1ptr][2ptr][4ptr][5ptr]|AUXP|[....][....]
      *
      * Let's find where to insert the new child in order to make sure
      * it is inserted in-place lexicographically. Assuming we are adding
-     * a child "c" in our case pos will be = 2 after the end of the following
+     * a child token 3 in our case pos will be = 2 after the end of the following
      * loop. */
     int pos;
     for (pos = 0; pos < n->size; pos++) {
@@ -313,7 +321,7 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
      * so that we can mess with the other data without overwriting it.
      * We will obtain something like that:
      *
-     * [HDR*][abde][Aptr][Bptr][Dptr][Eptr][....][....]|AUXP|
+     * [HDR*][1,2][4,5][1ptr][2ptr][4ptr][5ptr][....][....]|AUXP|
      */
     char *src, *dst;
     if (n->iskey && !n->isnull) {
@@ -325,8 +333,8 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
     /* Compute the "shift", that is, how many bytes we need to move the
      * pointers section forward because of the addition of the new child
      * byte in the string section. Note that if we had no padding, that
-     * would be always "1", since we are adding a single byte in the string
-     * section of the node (where now there is "abde" basically).
+     * would be always "4", since we are adding a single token in the string
+     * section of the node (where now there is [1,2,4,5] basically).
      *
      * However we have padding, so it could be zero, or up to 8.
      *
@@ -335,15 +343,15 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
      * needed for the additional pointer itself. */
     size_t shift = newlen - curlen - sizeof(void*);
 
-    /* We said we are adding a node with edge 'c'. The insertion
-     * point is between 'b' and 'd', so the 'pos' variable value is
+    /* We said we are adding a node with edge token 3. The insertion
+     * point is between token 2 and token 4, so the 'pos' variable value is
      * the index of the first child pointer that we need to move forward
      * to make space for our new pointer.
      *
      * To start, move all the child pointers after the insertion point
      * of shift+sizeof(pointer) bytes on the right, to obtain:
      *
-     * [HDR*][abde][Aptr][Bptr][....][....][Dptr][Eptr]|AUXP|
+     * [HDR*][1,2][4,5][1ptr][2ptr][....][....][4ptr][5ptr]|AUXP|
      */
     src = (char *)n->data+(n->size)*sizeof(int)+
           raxPadding(n->size)+
@@ -353,11 +361,11 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
     /* Move the pointers to the left of the insertion position as well. Often
      * we don't need to do anything if there was already some padding to use. In
      * that case the final destination of the pointers will be the same, however
-     * in our example there was no pre-existing padding, so we added one byte
-     * plus thre bytes of padding. After the next memmove() things will look
-     * like thata:
+     * in our example there was no pre-existing padding, so we added 4 byte
+     * plus 4 bytes of padding. After the next memmove() things will look
+     * like that:
      *
-     * [HDR*][abde][....][Aptr][Bptr][....][Dptr][Eptr]|AUXP|
+     * [HDR*][1,2][4,5][....][1ptr][2ptr][....][4ptr][5ptr]|AUXP|
      */
     if (shift) {
         src = (char*) raxNodeFirstChildPtr(n);
@@ -368,17 +376,18 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
      * but also move the pointers before the insertion point to the right
      * by shift bytes, in order to obtain the following:
      *
-     * [HDR*][ab.d][e...][Aptr][Bptr][....][Dptr][Eptr]|AUXP|
+     * [HDR*][1,2][.4][5.][1ptr][2ptr][....][4ptr][5ptr]|AUXP|
      */
     src = (char*)n->data+pos*sizeof(int);
     memmove(src+4,src,(n->size-pos)*sizeof(int));
 
     /* We can now set the character and its child node pointer to get:
      *
-     * [HDR*][abcd][e...][Aptr][Bptr][....][Dptr][Eptr]|AUXP|
-     * [HDR*][abcd][e...][Aptr][Bptr][Cptr][Dptr][Eptr]|AUXP|
+     * [HDR*][1,2][3,4][5.][1ptr][2ptr][....][4ptr][5ptr]|AUXP|
+     * [HDR*][1,2][3,4][5.][1ptr][2ptr][3ptr][4ptr][5ptr]|AUXP|
      */
     n->data[pos] = c;
+    n->numnodes = parent_numnodes + 1;
     n->size++;
     src = (char*) raxNodeFirstChildPtr(n);
     raxNode **childfield = (raxNode**)(src+sizeof(raxNode*)*pos);
@@ -422,6 +431,7 @@ raxNode *raxCompressNode(raxNode *n, int *s, size_t len, raxNode **child) {
     n = newn;
 
     n->iscompr = 1;
+    n->numnodes++;
     n->size = len;
     memcpy(n->data,s,len * sizeof(int));
     if (n->iskey) raxSetData(n,data);
@@ -430,18 +440,18 @@ raxNode *raxCompressNode(raxNode *n, int *s, size_t len, raxNode **child) {
     return n;
 }
 
-/* Low level function that walks the tree looking for the string
- * 's' of 'len' bytes. The function returns the number of characters
+/* Low level function that walks the tree looking for the token list
+ * s of 'len' bytes. The function returns the number of tokens
  * of the key that was possible to process: if the returned integer
  * is the same as 'len', then it means that the node corresponding to the
- * string was found (however it may not be a key in case the node->iskey is
+ * token list was found (however it may not be a key in case the node->iskey is
  * zero or if simply we stopped in the middle of a compressed node, so that
  * 'splitpos' is non zero).
  *
  * Otherwise if the returned integer is not the same as 'len', there was an
- * early stop during the tree walk because of a character mismatch.
+ * early stop during the tree walk because of a token mismatch.
  *
- * The node where the search ended (because the full string was processed
+ * The node where the search ended (because the full token list was processed
  * or because there was an early stop) is returned by reference as
  * '*stopnode' if the passed pointer is not NULL. This node link in the
  * parent's node is returned as '*plink' if not NULL. Finally, if the
@@ -457,7 +467,7 @@ raxNode *raxCompressNode(raxNode *n, int *s, size_t len, raxNode **child) {
  *
  * When instead we stop at a compressed node and *splitpos is zero, it
  * means that the current node represents the key (that is, none of the
- * compressed node characters are needed to represent the key, just all
+ * compressed node tokens list are needed to represent the key, just all
  * its parents nodes). */
 static inline size_t raxLowWalk(rax *rax, const int *s, size_t len, raxNode **stopnode, raxNode ***plink, int *splitpos, raxStack *ts) {
     raxNode *h = rax->head;
@@ -510,14 +520,14 @@ static inline size_t raxLowWalk(rax *rax, const int *s, size_t len, raxNode **st
     return i;
 }
 
-/* Insert the element 's' of size 'len', setting as auxiliary data
+/* Insert the token list 's' of size 'len', setting as auxiliary data
  * the pointer 'data'. If the element is already present, the associated
  * data is updated (only if 'overwrite' is set to 1), and 0 is returned,
  * otherwise the element is inserted and 1 is returned. On out of memory the
  * function returns 0 as well but sets errno to ENOMEM, otherwise errno will
  * be set to 0.
  */
-int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old, int overwrite, void **dataNode) {
+int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int overwrite, void **dataNode) {
     size_t i;
     int j = 0; /* Split position. If raxLowWalk() stops in a compressed
                   node, the index 'j' represents the char we stopped within the
@@ -525,7 +535,12 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
                   node for insertion. */
     raxNode *h, **parentlink;
 
-    i = raxLowWalk(rax,s,len,&h,&parentlink,&j,NULL);
+    raxStack lowWalkStack, splitStack;
+    raxStackInit(&lowWalkStack);
+    raxStackInit(&splitStack);
+    int all_added_node = 0;
+
+    i = raxLowWalk(rax,s,len,&h,&parentlink,&j,&lowWalkStack);
     debugf("######## after raxLowWalk##########");
     /* If i == len we walked following the whole string. If we are not
      * in the middle of a compressed node, the string is either already
@@ -566,50 +581,50 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
      *
      * Splitting a compressed node have a few possible cases.
      * Imagine that the node 'h' we are currently at is a compressed
-     * node contaning the string "ANNIBALE" (it means that it represents
-     * nodes A -> N -> N -> I -> B -> A -> L -> E with the only child
-     * pointer of this node pointing at the 'E' node, because remember that
-     * we have characters at the edges of the graph, not inside the nodes
+     * node contaning the token list [1,2,3,4,5,6,7] (it means that it represents
+     * nodes 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 with the only child
+     * pointer of this node pointing at the 7 node, because remember that
+     * we have tokens at the edges of the graph, not inside the nodes
      * themselves.
      *
      * In order to show a real case imagine our node to also point to
      * another compressed node, that finally points at the node without
      * children, representing 'O':
      *
-     *     "ANNIBALE" -> "SCO" -> []
+     *     [1,2,3,4,5,6,7] -> [2,4,5] -> []
      *
      * When inserting we may face the following cases. Note that all the cases
      * require the insertion of a non compressed node with exactly two
      * children, except for the last case which just requires splitting a
      * compressed node.
      *
-     * 1) Inserting "ANNIENTARE"
+     * 1) Inserting [1,2,3,6,7,8]
      *
-     *               |B| -> "ALE" -> "SCO" -> []
-     *     "ANNI" -> |-|
-     *               |E| -> (... continue algo ...) "NTARE" -> []
+     *               |4| -> [5,6,7] -> [2,4,5] -> []
+     *    [1,2,3] -> |-|
+     *               |6| -> (... continue algo ...) [7,8] -> []
      *
-     * 2) Inserting "ANNIBALI"
+     * 2) Inserting [1,2,3,4,5,6,8]
      *
-     *                  |E| -> "SCO" -> []
-     *     "ANNIBAL" -> |-|
-     *                  |I| -> (... continue algo ...) []
+     *                  |7| -> [2,4,5] -> []
+     * [1,2,3,4,5,6] -> |-|
+     *                  |8| -> (... continue algo ...) []
      *
-     * 3) Inserting "AGO" (Like case 1, but set iscompr = 0 into original node)
+     * 3) Inserting [1,3,4] (Like case 1, but set iscompr = 0 into original node)
      *
-     *            |N| -> "NIBALE" -> "SCO" -> []
-     *     |A| -> |-|
-     *            |G| -> (... continue algo ...) |O| -> []
+     *            |2| -> [3,4,5,6,7] -> [2,4,5] -> []
+     *     |1| -> |-|
+     *            |3| -> (... continue algo ...) |4| -> []
      *
-     * 4) Inserting "CIAO"
+     * 4) Inserting [2,3,4]
      *
-     *     |A| -> "NNIBALE" -> "SCO" -> []
+     *     |1| -> [2,3,4,5,6,7] -> [2,4,5] -> []
      *     |-|
-     *     |C| -> (... continue algo ...) "IAO" -> []
+     *     |2| -> (... continue algo ...) [3,4] -> []
      *
-     * 5) Inserting "ANNI"
+     * 5) Inserting [1,2,3]
      *
-     *     "ANNI" -> "BALE" -> "SCO" -> []
+     *     [1,2,3] -> [4,5,6,7] -> [2,4,5] -> []
      *
      * The final algorithm for insertion covering all the above cases is as
      * follows.
@@ -621,15 +636,15 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
      *
      * Let $SPLITPOS be the zero-based index at which, in the
      * compressed node array of characters, we found the mismatching
-     * character. For example if the node contains "ANNIBALE" and we add
-     * "ANNIENTARE" the $SPLITPOS is 4, that is, the index at which the
-     * mismatching character is found.
+     * character. For example if the node contains [1,2,3,4,5,6,7] and we add
+     * [1,2,3,6,7,8] the $SPLITPOS is 3, that is, the index at which the
+     * mismatching token is found.
      *
      * 1. Save the current compressed node $NEXT pointer (the pointer to the
      *    child element, that is always present in compressed nodes).
      *
-     * 2. Create "split node" having as child the non common letter
-     *    at the compressed node. The other non common letter (at the key)
+     * 2. Create "split node" having as child the non common token
+     *    at the compressed node. The other non common token (at the key)
      *    will be added later as we continue the normal insertion algorithm
      *    at step "6".
      *
@@ -640,13 +655,13 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
      *
      * 3b. IF $SPLITPOS != 0:
      *     Trim the compressed node (reallocating it as well) in order to
-     *     contain $splitpos characters. Change chilid pointer in order to link
+     *     contain $splitpos tokens. Change chilid pointer in order to link
      *     to the split node. If new compressed node len is just 1, set
      *     iscompr to 0 (layout is the same). Fix parent's reference.
      *
-     * 4a. IF the postfix len (the length of the remaining string of the
-     *     original compressed node after the split character) is non zero,
-     *     create a "postfix node". If the postfix node has just one character
+     * 4a. IF the postfix len (the length of the remaining token list of the
+     *     original compressed node after the split token) is non zero,
+     *     create a "postfix node". If the postfix node has just one token
      *     set iscompr to 0, otherwise iscompr to 1. Set the postfix node
      *     child pointer to $NEXT.
      *
@@ -663,20 +678,20 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
      * node but no mismatch was found, do:
      *
      * Let $SPLITPOS be the zero-based index at which, in the
-     * compressed node array of characters, we stopped iterating because
+     * compressed node array of token list, we stopped iterating because
      * there were no more keys character to match. So in the example of
-     * the node "ANNIBALE", addig the string "ANNI", the $SPLITPOS is 4.
+     * the node [1,2,3,4,5,6,7], addig the token list [1,2,3,4], the $SPLITPOS is 4.
      *
      * 1. Save the current compressed node $NEXT pointer (the pointer to the
      *    child element, that is always present in compressed nodes).
      *
-     * 2. Create a "postfix node" containing all the characters from $SPLITPOS
+     * 2. Create a "postfix node" containing all the tokens from $SPLITPOS
      *    to the end. Use $NEXT as the postfix node child pointer.
      *    If the postfix node length is 1, set iscompr to 0.
      *    Set the node as a key with the associated value of the new
      *    inserted key.
      *
-     * 3. Trim the current node to contain the first $SPLITPOS characters.
+     * 3. Trim the current node to contain the first $SPLITPOS tokens.
      *    As usually if the new node length is just 1, set iscompr to 0.
      *    Take the iskey / associated value as it was in the orignal node.
      *    Fix the parent's reference.
@@ -740,6 +755,7 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
             return 0;
         }
         splitnode->data[0] = h->data[j];
+        splitnode->numnodes = h->numnodes;
         debugf("split node is %p, data is %d\n", &splitnode, splitnode->data[0]);
 
         if (j == 0) {
@@ -754,6 +770,7 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
             trimmed->size = j;
             memcpy(trimmed->data,h->data,j*sizeof(int));
             trimmed->iscompr = j > 1 ? 1 : 0;
+            trimmed->numnodes = h->numnodes;
             trimmed->iskey = h->iskey;
             trimmed->isnull = h->isnull;
             if (h->iskey && !h->isnull) {
@@ -764,6 +781,7 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
             memcpy(cp,&splitnode,sizeof(splitnode));
             memcpy(parentlink,&trimmed,sizeof(trimmed));
             parentlink = cp; /* Set parentlink to splitnode parent. */
+            all_added_node++;
             rax->numnodes++;
         }
 
@@ -773,15 +791,18 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
             /* 4a: create a postfix node. */
             postfix->iskey = 0;
             postfix->isnull = 0;
+            postfix->numnodes = h->numnodes;
             postfix->size = postfixlen;
             postfix->iscompr = postfixlen > 1;
             memcpy(postfix->data,h->data+j+1,postfixlen*sizeof(int));
             raxNode **cp = raxNodeLastChildPtr(postfix);
             memcpy(cp,&next,sizeof(next));
+            all_added_node++;
             rax->numnodes++;
         } else {
             /* 4b: just use next as postfix node. */
             postfix = next;
+            postfix->numnodes = next->numnodes;
         }
 
         /* 5: Set splitnode first child as the postfix node. */
@@ -789,23 +810,35 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
         memcpy(splitchild,&postfix,sizeof(postfix));
 
         /* 6. Continue insertion: this will cause the splitnode to
-         * get a new child (the non common character at the currently
-         * inserted key). */
+         * get a new child (the non common token at the currently
+         * inserted token list). */
         rax_free(h);
         h = splitnode;
+        if (trimmedlen != 0 && postfixlen == 0) {
+            trimmed->numnodes++;
+            raxStackPush(&splitStack, trimmed);
+        } else if (trimmedlen == 0 && postfixlen != 0) {
+            splitnode->numnodes++;
+            raxStackPush(&splitStack, splitnode);
+        } else {
+            trimmed->numnodes+=2;
+            splitnode->numnodes++;
+            raxStackPush(&splitStack, trimmed);
+            raxStackPush(&splitStack, splitnode);
+        }
     } else if (h->iscompr && i == len) {
     /* ------------------------- ALGORITHM 2 --------------------------- */
-        debugf("ALGO 2: Stopped at compressed node %.*s (%p) j = %d\n",
-            h->size, h->data, (void*)h, j);
+        debugf("ALGO 2: Stopped at compressed node %d (%p) j = %d\n",
+            ((int*)h->data)[j], (void*)h, j);
 
         /* Allocate postfix & trimmed nodes ASAP to fail for OOM gracefully. */
         size_t postfixlen = h->size - j;
-        size_t nodesize = sizeof(raxNode)+postfixlen+raxPadding(postfixlen)+
+        size_t nodesize = sizeof(raxNode)+postfixlen*sizeof(int)+raxPadding(postfixlen)+
                           sizeof(raxNode*);
         if (data != NULL) nodesize += sizeof(void*);
         raxNode *postfix = rax_malloc(nodesize);
 
-        nodesize = sizeof(raxNode)+j+raxPadding(j)+sizeof(raxNode*);
+        nodesize = sizeof(raxNode)+j*sizeof(int)+raxPadding(j)+sizeof(raxNode*);
         if (h->iskey && !h->isnull) nodesize += sizeof(void*);
         raxNode *trimmed = rax_malloc(nodesize);
 
@@ -824,17 +857,21 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
         /* 2: Create the postfix node. */
         postfix->size = postfixlen;
         postfix->iscompr = postfixlen > 1;
+        postfix->numnodes = h->numnodes;
         postfix->iskey = 1;
         postfix->isnull = 0;
         memcpy(postfix->data,h->data+j,postfixlen*sizeof(int));
         raxSetData(postfix,data);
+        *dataNode = postfix;
         raxNode **cp = raxNodeLastChildPtr(postfix);
         memcpy(cp,&next,sizeof(next));
         rax->numnodes++;
+        all_added_node++;
 
         /* 3: Trim the compressed node. */
         trimmed->size = j;
         trimmed->iscompr = j > 1;
+        trimmed->numnodes = h->numnodes+1;
         trimmed->iskey = 0;
         trimmed->isnull = 0;
         memcpy(trimmed->data,h->data,j*sizeof(int));
@@ -849,6 +886,8 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
         cp = raxNodeLastChildPtr(trimmed);
         memcpy(cp,&postfix,sizeof(postfix));
 
+        raxStackAddNumNodes(&lowWalkStack, all_added_node);
+        raxStackFree(&lowWalkStack);
         /* Finish! We don't need to continue with the insertion
          * algorithm for ALGO 2. The key is already inserted. */
         rax->numele++;
@@ -856,14 +895,16 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
         return 1; /* Key inserted. */
     }
 
+    raxNode *prev_node = NULL;
+    int insert_new_node = 0;
     /* We walked the radix tree as far as we could, but still there are left
-     * chars in our string. We need to insert the missing nodes. */
+     * tokens in our string. We need to insert the missing nodes. */
     while(i < len) {
         raxNode *child;
         // error
 
         /* If this node is going to have a single child, and there
-         * are other characters, so that that would result in a chain
+         * are other tokens, so that that would result in a chain
          * of single-childed nodes, turn it into a compressed node. */
         if (h->size == 0 && len-i > 1) {
             debugf("Inserting compressed node: [%d, \n", s[i]);
@@ -886,9 +927,20 @@ int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old,
             parentlink = new_parentlink;
             i++;
         }
+        if (prev_node != NULL) {
+            prev_node->numnodes++;
+        } else {
+            prev_node = h;
+        }
+        all_added_node++;
+        insert_new_node++;
         rax->numnodes++;
         h = child;
     }
+    raxStackAddNumNodes(&lowWalkStack, all_added_node);
+    raxStackAddNumNodes(&splitStack, insert_new_node);
+    raxStackFree(&lowWalkStack);
+    raxStackFree(&splitStack);
     raxNode *newh = raxReallocForData(h,data);
     if (newh == NULL) goto oom;
     h = newh;
@@ -916,29 +968,24 @@ oom:
 
 /* Overwriting insert. Just a wrapper for raxGenericInsert() that will
  * update the element if there is already one for the same key. */
-int raxInsert(rax *rax, const int *s, size_t len, void *data, void **old) {
-    return raxGenericInsert(rax,s,len,data,old,1,NULL);
+int raxInsert(rax *rax, int *s, size_t len, void *data, void **old) {
+    void *dataNode = NULL;
+    return raxGenericInsert(rax,s,len,data,old,1,&dataNode);
 }
 
 /* Non overwriting insert function: this if an element with the same key
  * exists, the value is not updated and the function returns 0.
  * This is a just a wrapper for raxGenericInsert(). */
-int raxTryInsert(rax *rax,const int *s, size_t len, void *data, void **old) {
-    return raxGenericInsert(rax,s,len,data,old,0,NULL);
+int raxTryInsert(rax *rax, int *s, size_t len, void *data, void **old) {
+    void *dataNode = NULL;
+    return raxGenericInsert(rax,s,len,data,old,0,dataNode);
 }
 
 /*
 Overwriting insert. Return the raxNode that contains the key.
 */
-raxNode *raxInsertAndReturnDataNode(rax *rax,const int *s, size_t len, void *data, void **old) {
-    void *dataNode;
-    int retval = raxGenericInsert(rax,s,len,data,old,0, &dataNode);
-    if (retval != 0 || ((retval == 0) && (errno == 0))) {
-        if (dataNode != NULL) {
-            return dataNode;
-        }
-    }
-    return NULL;
+int raxInsertAndReturnDataNode(rax *rax, int *s, size_t len, void *data, raxNode *node, void **old) {
+    return raxGenericInsert(rax,s,len,data,old,1, (void **)&node);
 }
 
 /* Find a key in the rax, returns raxNotFound special void pointer value
@@ -947,12 +994,27 @@ raxNode *raxInsertAndReturnDataNode(rax *rax,const int *s, size_t len, void *dat
 void *raxFind(rax *rax, int *s, size_t len) {
     raxNode *h;
 
-    debugf("### Lookup: %.*s\n", (int)len, s);
+    //debugf("### Lookup: %d\n", (int)len, s);
     int splitpos = 0;
     size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,NULL);
     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey)
         return raxNotFound;
     return raxGetData(h);
+}
+
+/* Find a key in the rax, returns the stack
+*/
+raxStack raxFindWithStack(rax *rax, int *s, size_t len) {
+    raxNode *h;
+
+    raxStack ts;
+    raxStackInit(&ts);
+    //debugf("### Lookup: %.*s\n", (int)len, s);
+    int splitpos = 0;
+    size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,&ts);
+    if (i != len || (h->iscompr && splitpos != 0) || !h->iskey)
+        return ts;
+    return ts;
 }
 
 /*
@@ -961,7 +1023,7 @@ Find a key in the rax, returns the raxNode that contains the key.
 raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len) {
     raxNode *h;
 
-    debugf("### Lookup: %.*s\n", (int)len, s);
+    //debugf("### Lookup: %.*s\n", (int)len, s);
     int splitpos = 0;
     size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,NULL);
     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey)
@@ -1030,10 +1092,10 @@ raxNode *raxRemoveChild(raxNode *parent, raxNode *child) {
     memmove(e,(int*)e+1,taillen*sizeof(int));
 
     /* Compute the shift, that is the amount of bytes we should move our
-     * child pointers to the left, since the removal of one edge character
+     * child pointers to the left, since the removal of one edge token
      * and the corresponding padding change, may change the layout.
      * We just check if in the old version of the node there was at the
-     * end just a single byte and all padding: in that case removing one char
+     * end just a single token and all padding: in that case removing one token
      * will remove a whole sizeof(void*) word. */
     size_t shift = ((parent->size * sizeof(int)+4) % sizeof(void*)) == 4 ? sizeof(void *) : 0;
 
@@ -1068,6 +1130,7 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
     debugf("### Delete: ");
     raxStackInit(&ts);
     int splitpos = 0;
+    int all_added_node = 0;
     size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,&ts);
     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey) {
         raxStackFree(&ts);
@@ -1089,17 +1152,21 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
     if (h->size == 0) {
         debugf("Key deleted in node without children. Cleanup needed.\n");
         raxNode *child = NULL;
+        int added_nodes = 0;
         while(h != rax->head) {
             child = h;
             debugf("Freeing child %p, ", (void*)child);
             debugf(" key:%d\n",  child->iskey)
             rax_free(child);
             rax->numnodes--;
+            added_nodes--;
             h = raxStackPop(&ts);
+            h->numnodes += added_nodes; 
              /* If this node has more then one child, or actually holds
               * a key, stop here. */
             if (h->iskey || (!h->iscompr && h->size != 1)) break;
         }
+        raxStackAddNumNodes(&ts, added_nodes);
         if (child) {
             debugf("Unlinking child %p from parent %p\n",
                 (void*)child, (void*)h);
@@ -1148,35 +1215,35 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
      * new one, fixing the child pointer to reference the first non
      * compressable node.
      *
-     * Example of case "1". A tree stores the keys "FOO" = 1 and
-     * "FOOBAR" = 2:
+     * Example of case "1". A tree stores the keys [1,2,3] = 1 and
+     * [1,2,3,4,5] = 2:
      *
      *
-     * "FOO" -> "BAR" -> [] (2)
-     *           (1)
+     * [1,2,3] -> [4,5] -> [] (2)
+     *             (1)
      *
-     * After the removal of "FOO" the tree can be compressed as:
+     * After the removal of [1,2,3] the tree can be compressed as:
      *
-     * "FOOBAR" -> [] (2)
+     * [1,2,3,4,5] -> [] (2)
      *
      *
-     * Example of case "2". A tree stores the keys "FOOBAR" = 1 and
-     * "FOOTER" = 2:
+     * Example of case "2". A tree stores the keys [1,2,3,4,5] = 1 and
+     * [1,2,3,5,6] = 2:
      *
-     *          |B| -> "AR" -> [] (1)
-     * "FOO" -> |-|
-     *          |T| -> "ER" -> [] (2)
+     *            |4| -> [5] -> [] (1)
+     * [1,2,3] -> |-|
+     *            |5| -> [6] -> [] (2)
      *
-     * After the removal of "FOOTER" the resulting tree is:
+     * After the removal of [1,2,3,5,6] the resulting tree is:
      *
-     * "FOO" -> |B| -> "AR" -> [] (1)
+     * [1,2,3] -> |4| -> [5] -> [] (1)
      *
      * That can be compressed into:
      *
-     * "FOOBAR" -> [] (1)
+     * [1,2,3,5,6] -> [] (1)
      */
     if (trycompress) {
-        debugf("After removing %.*s:\n", (int)len, s);
+        debugf("After removing %d len: %d:\n", s[0], (int)len);
         debugnode("Compression may be needed",h);
         debugf("Seek start node\n");
 
@@ -1192,6 +1259,7 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
             debugnode("Going up to",h);
         }
         raxNode *start = h; /* Compression starting node. */
+        int start_num_nodes = start->numnodes;
 
         /* Scan chain of nodes we can compress. */
         size_t comprsize = h->size;
@@ -1221,6 +1289,8 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
             new->isnull = 0;
             new->iscompr = 1;
             new->size = comprsize;
+            new->numnodes = h->numnodes+1;
+            all_added_node++;
             rax->numnodes++;
 
             /* Scan again, this time to populate the new node content and
@@ -1235,8 +1305,10 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
                 raxNode *tofree = h;
                 memcpy(&h,cp,sizeof(h));
                 rax_free(tofree); rax->numnodes--;
+                all_added_node--;
                 if (h->iskey || (!h->iscompr && h->size != 1)) break;
             }
+            new->numnodes = start_num_nodes+all_added_node;
             debugnode("New node",new);
 
             /* Now 'h' points to the first node that we still need to use,
@@ -1246,6 +1318,7 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
 
             /* Fix parent link. */
             if (parent) {
+                parent->numnodes+=all_added_node;
                 raxNode **parentlink = raxFindParentLink(parent,start);
                 memcpy(parentlink,&new,sizeof(new));
             } else {
@@ -1256,6 +1329,7 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
                 nodes, (int)comprsize);
         }
     }
+    raxStackAddNumNodes(&ts, all_added_node);
     raxStackFree(&ts);
     return 1;
 }
@@ -1301,30 +1375,30 @@ void raxStart(raxIterator *it, rax *rt) {
     it->flags = RAX_ITER_EOF; /* No crash if the iterator is not seeked. */
     it->rt = rt;
     it->key_len = 0;
-    it->key = it->key_static_string;
+    it->key = it->key_static_tokens;
     it->key_max = RAX_ITER_STATIC_LEN;
     it->data = NULL;
     it->node_cb = NULL;
     raxStackInit(&it->stack);
 }
 
-/* Append characters at the current key string of the iterator 'it'. This
+/* Append token at the current key string of the iterator 'it'. This
  * is a low level function used to implement the iterator, not callable by
  * the user. Returns 0 on out of memory, otherwise 1 is returned. */
-int raxIteratorAddChars(raxIterator *it, int *s, size_t len) {
+int raxIteratorAddToken(raxIterator *it, int *s, size_t len) {
     if (it->key_max < it->key_len+len) {
-        int *old = (it->key == it->key_static_string) ? NULL :
+        int *old = (it->key == it->key_static_tokens) ? NULL :
                                                                   it->key;
         size_t new_max = (it->key_len+len)*2;
         // update
         it->key = rax_realloc(old,new_max * sizeof(int));
         if (it->key == NULL) {
-            it->key = (!old) ? it->key_static_string : old;
+            it->key = (!old) ? it->key_static_tokens : old;
             errno = ENOMEM;
             return 0;
         }
         // update
-        if (old == NULL) memcpy(it->key,it->key_static_string,it->key_len * sizeof(int));
+        if (old == NULL) memcpy(it->key,it->key_static_tokens,it->key_len * sizeof(int));
         it->key_max = new_max;
     }
     /* Use memmove since there could be an overlap between 's' and
@@ -1378,7 +1452,7 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
              * of every successive node. */
             if (!raxStackPush(&it->stack,it->node)) return 0;
             raxNode **cp = raxNodeFirstChildPtr(it->node);
-            if (!raxIteratorAddChars(it,it->node->data,
+            if (!raxIteratorAddToken(it,it->node->data,
                 it->node->iscompr ? it->node->size : 1)) return 0;
             memcpy(&it->node,cp,sizeof(it->node));
             /* Call the node callback if any, and replace the node pointer
@@ -1434,7 +1508,7 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
                     }
                     if (i != it->node->size) {
                         debugf("SCAN found a new node\n");
-                        raxIteratorAddChars(it,it->node->data+i,1);
+                        raxIteratorAddToken(it,it->node->data+i,1);
                         if (!raxStackPush(&it->stack,it->node)) return 0;
                         memcpy(&it->node,cp,sizeof(it->node));
                         /* Call the node callback if any, and replace the node
@@ -1459,10 +1533,10 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
 int raxSeekGreatest(raxIterator *it) {
     while(it->node->size) {
         if (it->node->iscompr) {
-            if (!raxIteratorAddChars(it,it->node->data,
+            if (!raxIteratorAddToken(it,it->node->data,
                 it->node->size)) return 0;
         } else {
-            if (!raxIteratorAddChars(it,it->node->data+it->node->size-1,1))
+            if (!raxIteratorAddToken(it,it->node->data+it->node->size-1,1))
                 return 0;
         }
         raxNode **cp = raxNodeLastChildPtr(it->node);
@@ -1530,7 +1604,7 @@ int raxIteratorPrevStep(raxIterator *it, int noup) {
             if (i != -1) {
                 debugf("SCAN found a new node\n");
                 /* Enter the node we just found. */
-                if (!raxIteratorAddChars(it,it->node->data+i,1)) return 0;
+                if (!raxIteratorAddToken(it,it->node->data+i,1)) return 0;
                 if (!raxStackPush(&it->stack,it->node)) return 0;
                 memcpy(&it->node,cp,sizeof(it->node));
                 /* Seek sub-tree max. */
@@ -1616,7 +1690,7 @@ int raxSeek(raxIterator *it, const char *op, int *ele, size_t len) {
     {
         /* We found our node, since the key matches and we have an
          * "equal" condition. */
-        if (!raxIteratorAddChars(it,ele,len)) return 0; /* OOM. */
+        if (!raxIteratorAddToken(it,ele,len)) return 0; /* OOM. */
         it->data = raxGetData(it->node);
     } else if (lt || gt) {
         /* Exact key not found or eq flag not set. We have to set as current
@@ -1629,7 +1703,7 @@ int raxSeek(raxIterator *it, const char *op, int *ele, size_t len) {
             raxNode *parent = it->stack.stack[j-1];
             raxNode *child = it->stack.stack[j];
             if (parent->iscompr) {
-                if (!raxIteratorAddChars(it,parent->data,parent->size))
+                if (!raxIteratorAddToken(it,parent->data,parent->size))
                     return 0;
             } else {
                 raxNode **cp = raxNodeFirstChildPtr(parent);
@@ -1641,7 +1715,7 @@ int raxSeek(raxIterator *it, const char *op, int *ele, size_t len) {
                     cp++;
                     p++;
                 }
-                if (!raxIteratorAddChars(it,p,1)) return 0;
+                if (!raxIteratorAddToken(it,p,1)) return 0;
             }
         }
         raxStackPop(&it->stack);
@@ -1656,7 +1730,7 @@ int raxSeek(raxIterator *it, const char *op, int *ele, size_t len) {
              * and call the iterator with the 'noup' flag so that it will try
              * to seek the next/prev child in the current node directly based
              * on the mismatching character. */
-            if (!raxIteratorAddChars(it,ele+i,1)) return 0;
+            if (!raxIteratorAddToken(it,ele+i,1)) return 0;
             debugf("Seek normal node on mismatch: %.*s\n",
                 (int)it->key_len, (char*)it->key);
 
@@ -1678,7 +1752,7 @@ int raxSeek(raxIterator *it, const char *op, int *ele, size_t len) {
                 if (nodechar > keychar) {
                     if (!raxIteratorNextStep(it,0)) return 0;
                 } else {
-                    if (!raxIteratorAddChars(it,it->node->data,it->node->size))
+                    if (!raxIteratorAddToken(it,it->node->data,it->node->size))
                         return 0;
                     if (!raxIteratorNextStep(it,1)) return 0;
                 }
@@ -1692,7 +1766,7 @@ int raxSeek(raxIterator *it, const char *op, int *ele, size_t len) {
                     if (!raxSeekGreatest(it)) return 0;
                     it->data = raxGetData(it->node);
                 } else {
-                    if (!raxIteratorAddChars(it,it->node->data,it->node->size))
+                    if (!raxIteratorAddToken(it,it->node->data,it->node->size))
                         return 0;
                     if (!raxIteratorPrevStep(it,1)) return 0;
                 }
@@ -1802,9 +1876,9 @@ int raxRandomWalk(raxIterator *it, size_t steps) {
         } else {
             /* Select a random child. */
             if (n->iscompr) {
-                if (!raxIteratorAddChars(it,n->data,n->size)) return 0;
+                if (!raxIteratorAddToken(it,n->data,n->size)) return 0;
             } else {
-                if (!raxIteratorAddChars(it,n->data+r,1)) return 0;
+                if (!raxIteratorAddToken(it,n->data+r,1)) return 0;
             }
             raxNode **cp = raxNodeFirstChildPtr(n)+r;
             if (!raxStackPush(&it->stack,n)) return 0;
@@ -1851,7 +1925,7 @@ int raxCompare(raxIterator *iter, const char *op, int *key, size_t key_len) {
 
 /* Free the iterator. */
 void raxStop(raxIterator *it) {
-    if (it->key != it->key_static_string) rax_free(it->key);
+    if (it->key != it->key_static_tokens) rax_free(it->key);
     raxStackFree(&it->stack);
 }
 
@@ -1876,23 +1950,23 @@ uint64_t raxSize(rax *rax) {
  *
  * The representation is as follow:
  *
- *  "foobar" (compressed node)
- *  [abc] (normal node with three children)
- *  [abc]=0x12345678 (node is a key, pointing to value 0x12345678)
+ *  [1,2,3,4] (compressed node)
+ *  [5,6] (normal node with three children)
+ *  [5,6]=0x12345678 (node is a key, pointing to value 0x12345678)
  *  [] (a normal empty node)
  *
  *  Children are represented in new idented lines, each children prefixed by
  *  the "`-(x)" string, where "x" is the edge byte.
  *
- *  [abc]
- *   `-(a) "ladin"
- *   `-(b) [kj]
- *   `-(c) []
+ *  [1,2,3]
+ *   `-(1) [1,1,1,1]
+ *   `-(2) [3,4]
+ *   `-(3) []
  *
  *  However when a node has a single child the following representation
  *  is used instead:
  *
- *  [abc] -> "ladin" -> []
+ *  [1,2] -> [1,2,3,4] -> []
  */
 
 /* The actual implementation of raxShow(). */
@@ -1900,7 +1974,12 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
     char s = n->iscompr ? '"' : '[';
     char e = n->iscompr ? '"' : ']';
 
-    int numchars = printf("%c%.*s%c", s, n->size, n->data, e);
+    int numchars = printf("%c", s);
+    for (int i = 0; i < n->size; i++) {
+        numchars += printf("%d ", n->data[i]);
+    }
+    numchars += printf("%c %d ", e, n->numnodes);
+
     if (n->iskey) {
         numchars += printf("=%p",raxGetData(n));
     }
@@ -1914,7 +1993,7 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
     }
     raxNode **cp = raxNodeFirstChildPtr(n);
     for (int i = 0; i < numchildren; i++) {
-        char *branch = " `-(%c) ";
+        char *branch = " `-(%d) ";
         if (numchildren > 1) {
             printf("\n");
             for (int j = 0; j < lpad; j++) putchar(' ');
@@ -1928,6 +2007,7 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
         cp++;
     }
 }
+
 
 /* Show a tree, as outlined in the comment above. */
 void raxShow(rax *rax) {
@@ -1997,6 +2077,10 @@ unsigned long raxTouch(raxNode *n) {
     return sum;
 }
 
+/*
+* Traverse the tree and collect all the nodes that contain data.
+* these nodes are stored in the dataNodeList
+*/
 void raxTraverse(raxNode *n, raxNode ***dataNodeList) {
     unsigned long sum = 0;
     if (n->iskey) {
@@ -2011,6 +2095,72 @@ void raxTraverse(raxNode *n, raxNode ***dataNodeList) {
         raxNode *child;
         memcpy(&child,cp,sizeof(child));
         raxTraverse(child, dataNodeList);
+        cp++;
+    }
+}
+
+/*
+* Split the tree into two sub trees, and return the root node of the new sub tree
+*
+* Input a token list, and split the tree into two sub trees via the token list
+* It will find the node that nearest N/2 but not more than N/2, and split the tree
+* into two sub trees. If there is no node that has N/2 children, it will split the
+* tree from the root node.
+* 
+*/
+raxNode *raxSplit(rax *rax, int *s, size_t len, void *data){
+    int retval = raxInsert(rax, s, len, data, NULL);
+    if (retval == 0 && errno != 0) {
+        return NULL;
+    }
+    raxNode *childNode = NULL;
+    raxNode *parentNode = NULL;
+    raxNode *splitNode = NULL;
+    raxStack stack = raxFindWithStack(rax, s, len);
+    int items = stack.items;
+    while (items > 0) {
+        raxNode *node = raxStackPop(&stack);
+        if (node->numnodes >= (uint32_t)RAX_NODE_MAX_SIZE/2 || node->issubtree) {
+            splitNode = childNode;
+            raxStackPush(&stack, node);
+            break;
+        }
+        childNode = node; 
+        items--;
+    }
+    // if the splitNode is NULL, it means that the tree only has one node
+    if (splitNode == NULL) {
+        return rax->head;
+    }
+
+    raxStackAddNumNodes(&stack, -(int)(splitNode->numnodes)); 
+    raxStackFree(&stack);
+
+    splitNode->issubtree = 1;
+
+    return splitNode;
+}
+
+/*
+* Traverse the subtree and return all the nodes that contain data under the subtree 
+* these nodes are stored in the dataNodeList
+*/
+void raxTraverseSubTree(raxNode *n, raxNode ***dataNodeList) {
+    unsigned long sum = 0;
+    if (n->iskey) {
+        **dataNodeList = n;
+        (*dataNodeList)++;
+    }
+
+    int numchildren = n->iscompr ? 1 : n->size;
+    raxNode **cp = raxNodeFirstChildPtr(n);
+    int count = 0;
+    for (int i = 0; i < numchildren; i++) {
+        raxNode *child;
+        memcpy(&child,cp,sizeof(child));
+        if (!child->issubtree) {
+            raxTraverseSubTree(child, dataNodeList);
+        }
         cp++;
     }
 }

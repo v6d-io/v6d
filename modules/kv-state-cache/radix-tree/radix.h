@@ -35,59 +35,58 @@
 #include <stddef.h> 
 
 /* Representation of a radix tree as implemented in this file, that contains
- * the strings "foo", "foobar" and "footer" after the insertion of each
- * word. When the node represents a key inside the radix tree, we write it
- * between [], otherwise it is written between ().
+ * the token lists [1, 2, 3], [1, 2, 3, 4, 5, 6] and [1, 2, 3, 6, 7, 8] after 
+ * the insertion of each token list. When the node represents a key inside 
+ * the radix tree, we write it between [], otherwise it is written between ().
  *
  * This is the vanilla representation:
  *
- *              (f) ""
+ *              (1) []
  *                \
- *                (o) "f"
+ *                (2) [1]
  *                  \
- *                  (o) "fo"
+ *                  (3) [1,3]
  *                    \
- *                  [t   b] "foo"
+ *                  [4   6] [1,2,3]
  *                  /     \
- *         "foot" (e)     (a) "foob"
+ *      [1,2,3,4] (5)     (7) [1,2,3,6]
  *                /         \
- *      "foote" (r)         (r) "fooba"
- *              /             \
- *    "footer" []             [] "foobar"
+ *   [1,2,3,4,5] (6)         (8) [1,2,3,6,7]
+ *              /              \
+ *[1,2,3,4,5,6] []            [] [1,2,3,6,7,8]
  *
  * However, this implementation implements a very common optimization where
  * successive nodes having a single child are "compressed" into the node
- * itself as a string of characters, each representing a next-level child,
- * and only the link to the node representing the last character node is
+ * itself as a list of tokens, each representing a next-level child,
+ * and only the link to the node representing the last token node is
  * provided inside the representation. So the above representation is turned
  * into:
  *
- *                  ["foo"] ""
+ *                 ([1,2,3]) []
  *                     |
- *                  [t   b] "foo"
+ *                  [4   6] [1,2,3]
  *                  /     \
- *        "foot" ("er")    ("ar") "foob"
+ *     [1,2,3,4] ([5,6])    ([7,8]) [1,2,3,6]
  *                 /          \
- *       "footer" []          [] "foobar"
+ *  [1,2,3,4,5,6] []          [] [1,2,3,6,7,8]
  *
  * However this optimization makes the implementation a bit more complex.
- * For instance if a key "first" is added in the above radix tree, a
- * "node splitting" operation is needed, since the "foo" prefix is no longer
+ * For instance if a token list [1,1,2] is added in the above radix tree, a
+ * "node splitting" operation is needed, since the [1,2,3] prefix is no longer
  * composed of nodes having a single child one after the other. This is the
  * above tree and the resulting node splitting after this event happens:
  *
  *
- *                    (f) ""
- *                    /
- *                 (i o) "f"
- *                 /   \
- *    "firs"  ("rst")  (o) "fo"
- *              /        \
- *    "first" []       [t   b] "foo"
- *                     /     \
- *           "foot" ("er")    ("ar") "foob"
- *                    /          \
- *          "footer" []          [] "foobar"
+ *            (1) []
+ *            /  \
+ *   [1] ([1,2)  ([2,3]) [1]
+ *                     \
+ *                   [4   6] [1,2,3]
+ *                   /     \
+ *       [1,2,3,4] ([5,6])    ([7,8]) [1,2,3,6]
+ *                 /          \
+ *   [1,2,3,4,5,6] []          [] [1,2,3,6,7,8]
+ * 
  *
  * Similarly after deletion, if a new chain of nodes having a single child
  * is created (the chain must also not include nodes that represent keys),
@@ -100,15 +99,17 @@ typedef struct raxNode {
     uint32_t iskey:1;     /* Does this node contain a key? */
     uint32_t isnull:1;    /* Associated value is NULL (don't store it). */
     uint32_t iscompr:1;   /* Node is compressed. */
-    uint32_t size:29;     /* Number of children, or compressed string len. */
+    uint32_t issubtree:1; /* Node is the root node of a sub tree */
+    uint32_t size:28;     /* Number of children, or compressed string len. */
+    uint32_t numnodes; /* Number of the child nodes */
     /* Data layout is as follows:
      *
      * If node is not compressed we have 'size' bytes, one for each children
-     * character, and 'size' raxNode pointers, point to each child node.
+     * token, and 'size' raxNode pointers, point to each child node.
      * Note how the character is not stored in the children but in the
      * edge of the parents:
      *
-     * [header iscompr=0][abc][a-ptr][b-ptr][c-ptr](value-ptr?)
+     * [header iscompr=0][1,2,3][1-ptr][2-ptr][3-ptr](value-ptr?)
      *
      * if node is compressed (iscompr bit is 1) the node has 1 children.
      * In that case the 'size' bytes of the string stored immediately at
@@ -117,7 +118,7 @@ typedef struct raxNode {
      * the sequence is actually represented as a node, and pointed to by
      * the current compressed node.
      *
-     * [header iscompr=1][xyz][z-ptr](value-ptr?)
+     * [header iscompr=1][1,2,3][3-ptr](value-ptr?)
      *
      * Both compressed and not compressed nodes can represent a key
      * with associated data in the radix tree at any level (not just terminal
@@ -129,7 +130,6 @@ typedef struct raxNode {
      * in the representation above as "value-ptr" field).
      */
     int data[];
-    //unsigned char data[];
 } raxNode;
 
 typedef struct rax {
@@ -181,7 +181,7 @@ typedef struct raxIterator {
     void *data;             /* Data associated to this key. */
     size_t key_len;         /* Current key length. */
     size_t key_max;         /* Max key len the current key buffer can hold. */
-    int key_static_string[RAX_ITER_STATIC_LEN];
+    int key_static_tokens[RAX_ITER_STATIC_LEN];
     raxNode *node;          /* Current node. Only for unsafe iteration. */
     raxStack stack;         /* Stack used for unsafe iteration. */
     raxNodeCallback node_cb; /* Optional node callback. Normally set to NULL. */
@@ -192,9 +192,9 @@ extern void *raxNotFound;
 
 /* Exported API. */
 rax *raxNew(void);
-int raxInsert(rax *rax, const int *s, size_t len, void *data, void **old);
-int raxTryInsert(rax *rax,const int *s, size_t len, void *data, void **old);
-raxNode *raxInsertAndReturnDataNode(rax *rax, const int *s, size_t len, void *data, void **old);
+int raxInsert(rax *rax, int *s, size_t len, void *data, void **old);
+int raxTryInsert(rax *rax, int *s, size_t len, void *data, void **old);
+int raxInsertAndReturnDataNode(rax *rax, int *s, size_t len, void *data, raxNode *node, void **old);
 int raxRemove(rax *rax, int *s, size_t len, void **old);
 void *raxFind(rax *rax, int *s, size_t len);
 raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len);
@@ -213,6 +213,8 @@ uint64_t raxSize(rax *rax);
 unsigned long raxTouch(raxNode *n);
 void raxSetDebugMsg(int onoff);
 void raxTraverse(raxNode *rax, raxNode ***dataNodeList);
+void raxTraverseSubTree(raxNode *n, raxNode ***dataNodeList);
+raxNode *raxSplit(rax *rax, int *s, size_t len, void *data);
 
 /* Internal API. May be used by the node callback in order to access rax nodes
  * in a low level way, so this function is exported as well. */
