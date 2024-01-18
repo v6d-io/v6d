@@ -106,14 +106,14 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   // the whole radix tree for prefix match
   rax* tree;
   // the sub tree for mapping a vineyard object
-  rax* sub_tree;
+  // rax* sub_tree;
   LRUStrategy* lru_strategy;
 
  public:
   RadixTree(int cache_capacity) {
     LOG(INFO) << "init radix tree";
     this->tree = raxNew();
-    this->sub_tree = this->tree;
+    // this->sub_tree = this->tree;
     this->custom_data = NULL;
     this->custom_data_length = 0;
     lru_strategy = new LRUStrategy(cache_capacity);
@@ -122,7 +122,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   RadixTree(void* custom_data, int custom_data_length, int cache_capacity) {
     LOG(INFO) << "init radix tree with custom data";
     this->tree = raxNew();
-    this->sub_tree = this->tree;
+    // this->sub_tree = this->tree;
     this->custom_data = custom_data;
     this->custom_data_length = custom_data_length;
     this->lru_strategy = new LRUStrategy(cache_capacity);
@@ -438,25 +438,26 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     std::shared_ptr<RadixTree> sub_tree =
         std::make_shared<RadixTree>(this->lru_strategy->GetCapacity());
     sub_tree->tree = this->tree;
-    this->sub_tree = raxNew();
-    this->sub_tree->head = sub_tree_root_node;
+    rax* sub_rax = raxNew();
+    sub_rax->head = sub_tree_root_node;
     return sub_tree;
   }
 
   // Get child node list from this tree.
-  std::vector<std::shared_ptr<NodeWithTreeAttri>> TraverseSubTree() {
-    if (this->sub_tree == NULL) {
-      LOG(INFO) << "traverse failed";
-      return std::vector<std::shared_ptr<NodeWithTreeAttri>>();
-    }
+  static std::vector<std::shared_ptr<NodeWithTreeAttri>>
+  TraverseTreeWithoutSubTree(std::shared_ptr<RadixTree> radix_tree) {
     std::vector<std::shared_ptr<NodeWithTreeAttri>> nodes;
+    if (radix_tree == NULL) {
+      LOG(INFO) << "traverse failed";
+      return nodes;
+    }
 
     std::vector<std::shared_ptr<raxNode>> dataNodeList;
-    raxNode* headNode = this->sub_tree->head;
+    raxNode* headNode = radix_tree->tree->head;
     raxTraverseSubTree(headNode, dataNodeList);
     for (size_t i = 0; i < dataNodeList.size(); i++) {
       nodes.push_back(std::make_shared<NodeWithTreeAttri>(
-          std::make_shared<Node>(dataNodeList[i].get()), shared_from_this()));
+          std::make_shared<Node>(dataNodeList[i].get()), radix_tree));
     }
     return nodes;
   }
