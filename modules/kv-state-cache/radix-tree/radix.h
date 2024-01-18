@@ -217,6 +217,7 @@ void raxSetDebugMsg(int onoff);
 void raxTraverse(raxNode *rax, std::vector<std::shared_ptr<raxNode>> &dataNodeList);
 void raxTraverseSubTree(raxNode *n, std::vector<std::shared_ptr<raxNode>> &dataNodeList);
 raxNode *raxSplit(rax *rax, int *s, size_t len, void *data);
+void raxSerialize(rax *root, std::vector<std::vector<int>> &tokenList, std::vector<void*> &dataList);
 
 /* Internal API. May be used by the node callback in order to access rax nodes
  * in a low level way, so this function is exported as well. */

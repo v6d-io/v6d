@@ -2164,3 +2164,18 @@ void raxTraverseSubTree(raxNode *n, std::vector<std::shared_ptr<raxNode>> &dataN
         cp++;
     }
 }
+
+void raxSerialize(rax *root, std::vector<std::vector<int>> &tokenList, std::vector<void*> &dataList) {
+    raxIterator iter;
+    raxStart(&iter, root);
+    raxSeek(&iter, "^", NULL, 0);
+    while (raxNext(&iter)) {
+        std::vector<int> token;
+        for (int i = 0; i < iter.key_len; i++) {
+            token.push_back(iter.key[i]);
+        }
+        tokenList.push_back(token);
+        dataList.push_back(iter.data);
+    }
+    raxStop(&iter);
+}

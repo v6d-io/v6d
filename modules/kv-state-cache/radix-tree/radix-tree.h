@@ -20,16 +20,18 @@ limitations under the License.
 
 #include "common/util/logging.h"
 #include "kv-state-cache/strategy/LRU_strategy.h"
+#include "lz4.h"
 
 #include <map>
 #include <memory>
 #include <vector>
+#include <iomanip>
 
 using namespace vineyard;
 
 typedef struct nodeData {
-  std::shared_ptr<void> data;
   int data_length;
+  std::shared_ptr<void> data;
   std::shared_ptr<LRUCacheNode> cache_node;
 } nodeData;
 
@@ -208,11 +210,162 @@ class RadixTree {
     return std::make_shared<NodeWithTreeAttri>(node, this);
   }
 
-  std::string Serialize() { return std::string("this is a serialized string"); }
+  std::string Serialize() {
+    std::vector<std::vector<int>> token_list;
+    std::vector<void*> data_list;
+    raxSerialize(this->tree, token_list, data_list);
+
+    std::map<std::shared_ptr<LRUCacheNode>, bool> cache_node_map;
+    std::shared_ptr<LRUCacheNode> current_node = this->lru_strategy->GetHeader();
+
+    // the string format is:
+    // [token list] [data hex string]\n
+    // E.g
+    // 1|0900000009000000xxxx
+    // 1,2|0800000008000000xxxx
+    std::string serialized_str;
+    while (current_node != nullptr) {
+      cache_node_map[current_node] = true;
+      auto it = std::lower_bound(token_list.begin(), token_list.end(), current_node->tokens);
+      if (it != token_list.end() && *it == current_node->tokens) {
+        // get the index of the token vector via binary search
+        int index = std::distance(token_list.begin(), it);
+        for (int i = 0; i < (*it).size(); i++) {
+            serialized_str += std::to_string((*it)[i]);
+            if (i < (*it).size() - 1) {
+                serialized_str += ",";
+            }
+        }
+        serialized_str += std::to_string(index) + "|";
+        
+        // convert data to hex string
+        char* bytes = (char*)data_list[index];
+        std::ostringstream oss;
+
+        for (size_t i = 0; i < ((nodeData*)data_list[index])->data_length; ++i) {
+            oss << std::setfill('0') << std::setw(2) << std::hex
+                << static_cast<int>(static_cast<unsigned char>(bytes[i]));
+        }
+        serialized_str += oss.str() + "\n";
+      } else {
+        LOG(INFO) << "The token vector is not in the radix tree";
+      }
+      current_node = current_node->next;
+    }
+
+    // use LZ4 to compress the serialized string
+    const char* const src = serialized_str.c_str();
+    const int src_size = serialized_str.size();
+    const int max_dst_size = LZ4_compressBound(src_size);
+    char* compressed_data = (char*)malloc((size_t)max_dst_size);
+    if (compressed_data == NULL){
+      LOG(INFO) << "Failed to allocate memory for *compressed_data.";
+    }
+      
+    const int compressed_data_size = LZ4_compress_default(src, compressed_data, src_size, max_dst_size);
+    if (compressed_data_size <= 0){
+      LOG(INFO) << "A 0 or negative result from LZ4_compress_default() indicates a failure trying to compress the data. ";
+    }
+
+    if (compressed_data_size > 0){
+      LOG(INFO) << "We successfully compressed some data! Ratio: ", (float)(compressed_data_size/src_size);
+    }
+
+    compressed_data = (char *)realloc(compressed_data, (size_t)compressed_data_size);
+    if (compressed_data == NULL) {
+      LOG(INFO) << "Failed to re-alloc memory for compressed_data.  Sad :(";
+    }
+
+    std::string compressed_str = std::string(compressed_data, compressed_data_size);
+
+    return compressed_str;
+  }
 
   static RadixTree* Deserialize(std::string data) {
-    LOG(INFO) << "deserialize with data:" + data;
-    return new RadixTree();
+    // use LZ4 to decompress the serialized string
+    char* const decompress_buffer = (char*)malloc(data.size());
+    if (decompress_buffer == NULL) {
+      LOG(INFO) << "Failed to allocate memory for *decompress_buffer.";
+    }
+    const int decompressed_size = LZ4_decompress_safe(data.c_str(), decompress_buffer, data.size(), data.size());
+    if (decompressed_size < 0) {
+      LOG(INFO) << "A negative result from LZ4_decompress_safe indicates a failure trying to decompress the data.  See exit code (echo $?) for value returned.";
+    }
+    if (decompressed_size >= 0) {
+      LOG(INFO) << "We successfully decompressed some data!";
+    }
+    if (decompressed_size != data.size()) {
+        LOG(INFO) << "Decompressed data is different from original! \n";
+    }
+    data = std::string(decompress_buffer, decompressed_size);
+
+    std::vector<std::vector<int>> token_list;
+    std::vector<void*> data_list;
+    std::istringstream iss(data);
+    std::string line;
+
+    while (std::getline(iss, line)) {
+        std::istringstream lineStream(line);
+        std::string tokenListPart, dataPart;
+        
+        if (!std::getline(lineStream, tokenListPart, '|')) {
+            throw std::runtime_error("Invalid serialized string format in key part.");
+        }
+        if (!std::getline(lineStream, dataPart)) {
+            throw std::runtime_error("Invalid serialized string format in data part.");
+        }
+
+        std::istringstream keyStream(tokenListPart);
+        std::string token;
+        std::vector<int> keys;
+        while (std::getline(keyStream, token, ',')) {
+            keys.push_back(std::stoi(token));
+        }
+
+        size_t dataSize = dataPart.length() / 2;
+        auto* data = new char[dataSize];
+        std::istringstream dataStream(dataPart);
+        for (size_t i = 0; i < dataSize; ++i) {
+            // Temporary buffer to store two hexadecimal chars + null terminator
+            char hex[3] = {};
+            // Read two characters for one byte
+            if (!dataStream.read(hex, 2)) {
+                delete[] data;
+                LOG(INFO) << "Invalid data format.";
+                throw std::runtime_error("Invalid data format.");
+            }
+            // Convert the two hex characters to one byte
+            unsigned int byte;
+            std::istringstream hexStream(hex);
+            if (!(hexStream >> std::hex >> byte)) {
+                delete[] data;
+                LOG(INFO) << "Invalid data format.";
+                throw std::runtime_error("Invalid data format.");
+            }
+            reinterpret_cast<unsigned char*>(data)[i] = static_cast<unsigned char>(byte);
+        }
+
+        token_list.push_back(keys);
+        data_list.push_back(data);
+    }
+
+    RadixTree* radix_tree = new RadixTree();
+    nodeData* dummy_data = new nodeData();
+    rax *root = raxNew();
+    for (int i = token_list.size()-1; i >= 0; i--) {
+      if (raxInsert(root, token_list[i].data(), token_list[i].size(), dummy_data, NULL) != 1) {
+          LOG(INFO) << "Insert failed";
+          return NULL;
+      }
+      std::vector<int> evicted_tokens;
+      std::shared_ptr<LRUCacheNode> cache_node =
+          radix_tree->lru_strategy->InsertToHeader(token_list[i], evicted_tokens);
+      if (cache_node == nullptr) {
+        LOG(INFO) << "WTF?";
+      }
+      dummy_data->cache_node = cache_node;
+    }
+    return radix_tree;
   }
 
   RadixTree* Split(std::vector<int> tokens) {
