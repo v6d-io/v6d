@@ -152,7 +152,7 @@ void KVStateCacheBuilder::Update(Client& client,
     std::shared_ptr<RadixTree> new_tree = sub_tree->Split(token_list_copy);
 
     std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list =
-        new_tree->TraverseSubTree();
+        RadixTree::TraverseTreeWithoutSubTree(new_tree);
     KVStateCacheBlockBuilder* new_kv_state_cache_block_builder =
         Split(client, kv_state_cache_block_builder, node_with_tree_attri_list);
     new_tree->SetCustomData(new_kv_state_cache_block_builder,
@@ -246,7 +246,7 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
 KVStateCacheBuilder::~KVStateCacheBuilder() {
   // TBD
   std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list =
-      this->root_tree->TraverseSubTree();
+      RadixTree::TraverseTreeWithoutSubTree(this->root_tree);
   for (size_t i = 0; i < node_with_tree_attri_list.size(); i++) {
     delete (offset_data*) node_with_tree_attri_list[i]->get_node()->get_data();
   }
