@@ -19,6 +19,18 @@ among graph computing engines.
     * `Read Options <#read-options>`_
     * `Global Options <#global-options>`_
 
+CMake configure options
+-----------------------
+
+- :code:`VINEYARD_GRAPH_MAX_LABEL_ID`
+
+  The internal vertex id (aka. :code:`VID`) in vineyard is encoded as fragment id, vertex label id
+  and vertex offset. The option :code:`VINEYARD_GRAPH_MAX_LABEL_ID` decides the bit field width of
+  label id in :code:`VID`. Decreasing this value can be helpful to support larger number of vertices
+  when using :code:`int32_t` as :code:`VID_T`.
+
+  Defaults to `128`, can be `1`, `2`, `4`, `8`, `16`, `32`, `64`, or `128`.
+
 vineyard-graph-loader
 ---------------------
 
