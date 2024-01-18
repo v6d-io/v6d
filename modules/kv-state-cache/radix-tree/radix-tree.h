@@ -248,7 +248,7 @@ class RadixTree {
         }
         serialized_str += oss.str() + "\n";
       } else {
-        LOG(INFO) << "The token vector is not in the radix tree";
+        throw std::runtime_error("The token vector is not in the radix tree");
       }
       current_node = current_node->next;
     }
