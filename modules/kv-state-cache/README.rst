@@ -10,6 +10,7 @@ Build vineyard and vineyard test
     mkdir build
     cd build
     cmake .. -DBUILD_VINEYARD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug
+    make build_lz4
     make -j$(nproc)
     make vineyard_tests -j$(nproc)
 

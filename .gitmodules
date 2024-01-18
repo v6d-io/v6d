@@ -49,3 +49,6 @@
 [submodule "modules/graph/thirdparty/powturbo"]
 	path = modules/graph/thirdparty/powturbo
 	url = https://github.com/powturbo/TurboPFor-Integer-Compression.git
+[submodule "modules/kv-state-cache/lz4"]
+	path = modules/kv-state-cache/lz4
+	url = https://github.com/lz4/lz4.git
