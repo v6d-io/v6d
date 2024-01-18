@@ -109,9 +109,7 @@ void LRUStrategy::Remove(std::shared_ptr<LRUCacheNode> cache_node) {
   current_size--;
 }
 
-std::shared_ptr<LRUCacheNode> LRUStrategy::GetHeader() {
-  return header;
-}
+std::shared_ptr<LRUCacheNode> LRUStrategy::GetHeader() { return header; }
 
 // void LRUStrategy::Remove(const std::vector<int>& prefix, int token) {
 //   std::vector<int> tokens = prefix;

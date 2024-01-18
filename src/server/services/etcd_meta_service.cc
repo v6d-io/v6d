@@ -151,6 +151,48 @@ void EtcdMetaService::Stop() {
   }
 }
 
+void EtcdMetaService::TryAcquireLock(
+    std::string key, callback_t<bool, std::string> callback_after_try_lock) {
+  LOG(INFO) << "TryAcquireLock, key:" << key;
+  auto self(shared_from_base());
+
+  etcd_->lock(prefix_ + key)
+      .then([self, callback_after_try_lock](
+                pplx::task<etcd::Response> const& resp_task) {
+        auto const& resp = resp_task.get();
+        if (resp.is_ok()) {
+          LOG(INFO) << "lock success! key is :" + resp.lock_key();
+          self->server_ptr_->GetMetaContext().post(
+              boost::bind(callback_after_try_lock, Status::OK(), true,
+                          resp.lock_key().substr(self->prefix_.size())));
+        } else {
+          LOG(INFO) << "lock falied!";
+          self->server_ptr_->GetMetaContext().post(
+              boost::bind(callback_after_try_lock, Status::OK(), false, ""));
+        }
+      });
+}
+
+void EtcdMetaService::TryReleaseLock(
+    std::string key, callback_t<bool> callback_after_try_unlock) {
+  auto self(shared_from_base());
+
+  etcd_->unlock(prefix_ + key)
+      .then([self, callback_after_try_unlock](
+                pplx::task<etcd::Response> const& resp_task) {
+        auto const& resp = resp_task.get();
+        if (resp.is_ok()) {
+          LOG(INFO) << "unlock success!";
+          self->server_ptr_->GetMetaContext().post(
+              boost::bind(callback_after_try_unlock, Status::OK(), true));
+        } else {
+          LOG(INFO) << "unlock failed!";
+          self->server_ptr_->GetMetaContext().post(
+              boost::bind(callback_after_try_unlock, Status::OK(), true));
+        }
+      });
+}
+
 void EtcdMetaService::requestLock(
     std::string lock_name,
     callback_t<std::shared_ptr<ILock>> callback_after_locked) {

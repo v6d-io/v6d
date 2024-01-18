@@ -340,6 +340,31 @@ class RPCClient final : public ClientBase {
   Status GetRemoteBlobs(std::vector<ObjectID> const& ids, const bool unsafe,
                         std::vector<std::shared_ptr<RemoteBlob>>& remote_blobs);
 
+  /**
+   * @brief Try to acquire a distributed lock.
+   *
+   * @param key The key of the lock.
+   *
+   * @return Status that indicates whether the lock process succeeds.
+   */
+  Status TryAcquireLock(std::string key, bool& result,
+                        std::string& actural_key) {
+    // TBD
+    return Status::NotImplemented("TryAcquireLock is not implemented yet.");
+  }
+
+  /**
+   * @brief Try to release a distributed lock.
+   *
+   * @param key The key of the lock.
+   *
+   * @return Status that indicates whether the unlock process succeeds.
+   */
+  Status TryReleaseLock(std::string key, bool& result) {
+    // TBD
+    return Status::NotImplemented("TryAcquireLock is not implemented yet.");
+  }
+
  private:
   InstanceID remote_instance_id_;
   bool support_rpc_compression_ = false;
