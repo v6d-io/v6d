@@ -80,8 +80,11 @@ using LABEL_ID_TYPE = int;
 
 }  // namespace property_graph_types
 
-// Hardcoded the max vertex label num to 128
+#if defined(VINEYARD_GRAPH_MAX_LABEL_ID)
+constexpr int MAX_VERTEX_LABEL_NUM = VINEYARD_GRAPH_MAX_LABEL_ID;
+#else
 constexpr int MAX_VERTEX_LABEL_NUM = 128;
+#endif
 
 static inline int num_to_bitwidth(int num) {
   if (num <= 2) {
@@ -104,13 +107,11 @@ static inline int num_to_bitwidth(int num) {
  */
 template <typename ID_TYPE>
 class IdParser {
-  using LabelIDT = int;  // LABEL_ID_TYPE
-
  public:
   IdParser() {}
   ~IdParser() {}
 
-  void Init(fid_t fnum, LabelIDT label_num) {
+  void Init(fid_t fnum, property_graph_types::LABEL_ID_TYPE label_num) {
     CHECK_LE(label_num, MAX_VERTEX_LABEL_NUM);
     int fid_width = num_to_bitwidth(fnum);
     fid_offset_ = (sizeof(ID_TYPE) * 8) - fid_width;
@@ -125,7 +126,7 @@ class IdParser {
 
   fid_t GetFid(ID_TYPE v) const { return (v >> fid_offset_); }
 
-  LabelIDT GetLabelId(ID_TYPE v) const {
+  property_graph_types::LABEL_ID_TYPE GetLabelId(ID_TYPE v) const {
     return (v & label_id_mask_) >> label_id_offset_;
   }
 
@@ -133,10 +134,13 @@ class IdParser {
 
   ID_TYPE GetLid(ID_TYPE v) const { return v & lid_mask_; }
 
+  ID_TYPE GetMaxOffset() const { return offset_mask_; }
+
   /**
    * @brief Generate the LID
    */
-  ID_TYPE GenerateId(LabelIDT label, int64_t offset) const {
+  ID_TYPE GenerateId(property_graph_types::LABEL_ID_TYPE label,
+                     int64_t offset) const {
     return (((ID_TYPE) offset) & offset_mask_) |
            ((((ID_TYPE) label) << label_id_offset_) & label_id_mask_);
   }
@@ -144,7 +148,8 @@ class IdParser {
   /**
    * @brief Generate the GID
    */
-  ID_TYPE GenerateId(fid_t fid, LabelIDT label, int64_t offset) const {
+  ID_TYPE GenerateId(fid_t fid, property_graph_types::LABEL_ID_TYPE label,
+                     int64_t offset) const {
     return (((ID_TYPE) offset) & offset_mask_) |
            ((((ID_TYPE) label) << label_id_offset_) & label_id_mask_) |
            ((((ID_TYPE) fid) << fid_offset_) & fid_mask_);
@@ -170,13 +175,26 @@ struct NbrUnit {
 
   VID_T vid;
   EID_T eid;
+
   NbrUnit() = default;
   NbrUnit(VID_T v, EID_T e) : vid(v), eid(e) {}
 
   grape::Vertex<VID_T> get_neighbor() const {
     return grape::Vertex<VID_T>(vid);
   }
-};
+} __attribute__((packed, aligned(4)));
+
+static_assert(alignof(NbrUnit<int32_t, uint64_t>) == 4,
+              "int32_t vid alignment check");
+static_assert(sizeof(NbrUnit<int32_t, uint64_t>) ==
+                  sizeof(int32_t) + sizeof(uint64_t),
+              "int32_t vid size check");
+
+static_assert(alignof(NbrUnit<int64_t, uint64_t>) == 4,
+              "int64_t vid alignment check");
+static_assert(sizeof(NbrUnit<int64_t, uint64_t>) ==
+                  sizeof(int64_t) + sizeof(uint64_t),
+              "int64_t vid size check");
 
 template <typename VID_T>
 using NbrUnitDefault = NbrUnit<VID_T, property_graph_types::EID_TYPE>;

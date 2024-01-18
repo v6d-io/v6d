@@ -1,5 +1,18 @@
 include(GNUInstallDirs)
 
+# options to control several default behaviors of vineyard graph
+option(VINEYARD_GRAPH_MAX_LABEL_ID "Maximum label id value of vineyard graphs, defaults to 128" OFF)
+
+option(MY_OPTION "Description of My Option" OFF)
+set(VINEYARD_GRAPH_MAX_LABEL_ID_DEFAULT_VALUE 128 CACHE STRING "Default value for maximum label if for vineyard graphs")
+set_property(CACHE VINEYARD_GRAPH_MAX_LABEL_ID PROPERTY STRINGS "1;2;4;8;16;32;64;128")
+
+if (VINEYARD_GRAPH_MAX_LABEL_ID)
+    message(STATUS "Setting VINEYARD_GRAPH_MAX_LABEL_ID to '${VINEYARD_GRAPH_MAX_LABEL_ID}'")
+else()
+    message(STATUS "Setting VINEYARD_GRAPH_MAX_LABEL_ID to default value: '${VINEYARD_GRAPH_MAX_LABEL_ID_DEFAULT_VALUE}'")
+endif()
+
 # build vineyard-graph
 file(GLOB_RECURSE VINEYARD_MOD_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                     "*.vineyard-mod")
@@ -135,6 +148,10 @@ if(BUILD_VINEYARD_GRAPH_WITH_GAR)
         # depends on gar
         target_link_libraries(vineyard_graph PRIVATE gar)
     endif()
+endif()
+
+if (VINEYARD_GRAPH_MAX_LABEL_ID)
+    target_compile_options(vineyard_graph PUBLIC -DVINEYARD_GRAPH_MAX_LABEL_ID=${VINEYARD_GRAPH_MAX_LABEL_ID})
 endif()
 
 target_link_libraries(vineyard_graph PUBLIC vineyard_client
