@@ -71,22 +71,32 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(Client& client,
                                                    int dimension) {
   pthread_spin_init(&(this->spin_lock), 0);
   this->bitmap = UINT64_MAX;
-  this->k_builder = new TensorBuilder<double>(client, {LIST_SIZE, dimension});
-  this->v_builder = new TensorBuilder<double>(client, {LIST_SIZE, dimension});
+  std::vector<int64_t> shape = {LIST_SIZE, dimension};
+  this->k_builder = std::make_shared<TensorBuilder<double>>(client, shape);
+  this->v_builder = std::make_shared<TensorBuilder<double>>(client, shape);
   this->dimension = dimension;
 }
 
 KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
-    Client& client, KVStateCacheBlock& kv_state_cache) {
+    Client& client, std::shared_ptr<KVStateCacheBlock> kv_state_cache_block) {
   pthread_spin_init(&(this->spin_lock), 0);
-  this->bitmap = kv_state_cache.bitmap;
-  this->k_builder =
-      new TensorBuilder<double>(client, {LIST_SIZE, kv_state_cache.dimension});
-  this->v_builder =
-      new TensorBuilder<double>(client, {LIST_SIZE, kv_state_cache.dimension});
-  this->dimension = kv_state_cache.dimension;
-  // TBD:
+  this->bitmap = kv_state_cache_block->bitmap;
+  this->dimension = kv_state_cache_block->dimension;
+  std::vector<int64_t> shape = {LIST_SIZE, dimension};
+  this->k_builder = std::make_shared<TensorBuilder<double>>(client, shape);
+  this->v_builder = std::make_shared<TensorBuilder<double>>(client, shape);
+
   // transfer the data from kv_state_cache to this builder
+  memcpy(this->k_builder->data(), kv_state_cache_block->k_tensor->data(),
+         LIST_SIZE * this->dimension * sizeof(double));
+  memcpy(this->v_builder->data(), kv_state_cache_block->v_tensor->data(),
+         LIST_SIZE * this->dimension * sizeof(double));
+  for (size_t i = 0;
+       i < kv_state_cache_block->child_kv_state_cache_block_list.size(); ++i) {
+    this->child_kv_state_cache_builder_list.push_back(
+        new KVStateCacheBlockBuilder(
+            client, kv_state_cache_block->child_kv_state_cache_block_list[i]));
+  }
 }
 
 // current we do not consider the layer.
@@ -118,14 +128,14 @@ bool KVStateCacheBlockBuilder::IsFull() {
   return index < 0 || index >= LIST_SIZE;
 }
 
-std::shared_ptr<offset_data> KVStateCacheBlockBuilder::Update(
-    const KV_STATE_WITH_LAYER& kv_state) {
+void KVStateCacheBlockBuilder::Update(const KV_STATE_WITH_LAYER& kv_state,
+                                      offset_data* data) {
   int index = this->FindEmptySlot();
   LOG(INFO) << "index:" << index;
   std::vector<double> k_state = (kv_state.find(1)->second).first;
   std::vector<double> v_state = (kv_state.find(1)->second).second;
-  VINEYARD_ASSERT(k_state.size() == (size_t)this->dimension);
-  VINEYARD_ASSERT(v_state.size() == (size_t)this->dimension);
+  VINEYARD_ASSERT(k_state.size() == (size_t) this->dimension);
+  VINEYARD_ASSERT(v_state.size() == (size_t) this->dimension);
 
   double* key_data = (double*) k_builder->data();
   double* value_data = (double*) v_builder->data();
@@ -135,33 +145,30 @@ std::shared_ptr<offset_data> KVStateCacheBlockBuilder::Update(
   for (int i = 0; i < this->dimension; ++i) {
     value_data[index * this->dimension + i] = v_state[i];
   }
-  std::shared_ptr<offset_data> data = std::make_shared<offset_data>();
   data->offset = index;
 
   LOG(INFO) << "before:" << this->bitmap;
   ACQUIRE_BIT_RESOURCE(this->bitmap, index);
   LOG(INFO) << "after:" << this->bitmap;
-  return data;
 }
 
-std::shared_ptr<offset_data> KVStateCacheBlockBuilder::Update(
-    double* k_data, double* v_data, unsigned long data_length) {
+void KVStateCacheBlockBuilder::Update(double* k_data, double* v_data,
+                                      unsigned long data_length,
+                                      offset_data* data) {
   int index = FindEmptySlot();
   double* key_data = (double*) k_builder->data();
   double* value_data = (double*) v_builder->data();
-  VINEYARD_ASSERT((unsigned long)this->dimension == data_length);
+  VINEYARD_ASSERT((unsigned long) this->dimension == data_length);
   for (unsigned long i = 0; i < data_length; ++i) {
     key_data[index * this->dimension + i] = k_data[i];
   }
   for (unsigned long i = 0; i < data_length; ++i) {
     value_data[index * this->dimension + i] = v_data[i];
   }
-  std::shared_ptr<offset_data> data = std::make_shared<offset_data>();
   data->offset = index;
 
   ACQUIRE_BIT_RESOURCE(this->bitmap, index);
   LOG(INFO) << "bitmap:" << this->GetBitmapStr();
-  return data;
 }
 
 void KVStateCacheBlockBuilder::SetChildKVStateCacheBlockBuilder(
@@ -193,6 +200,7 @@ std::shared_ptr<Object> KVStateCacheBlockBuilder::_Seal(Client& client) {
 
   std::shared_ptr<KVStateCacheBlock> kv_state_cache_block =
       std::make_shared<KVStateCacheBlock>();
+
   // TBD
   // 1. seal k_builder and v_builder
   kv_state_cache_block->meta_.AddMember("k_builder", k_builder->Seal(client));

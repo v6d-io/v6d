@@ -92,8 +92,8 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
 
 class KVStateCacheBlockBuilder : public ObjectBuilder {
  private:
-  TensorBuilder<double>* k_builder;
-  TensorBuilder<double>* v_builder;
+  std::shared_ptr<TensorBuilder<double>> k_builder;
+  std::shared_ptr<TensorBuilder<double>> v_builder;
   std::vector<KVStateCacheBlockBuilder*> child_kv_state_cache_builder_list;
   // TBD
   // support more than 64 kv-state cache slots
@@ -106,7 +106,8 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
  public:
   KVStateCacheBlockBuilder(Client& client, int dimension);
 
-  KVStateCacheBlockBuilder(Client& client, KVStateCacheBlock& kv_state_cache);
+  KVStateCacheBlockBuilder(
+      Client& client, std::shared_ptr<KVStateCacheBlock> kv_state_cache_block);
 
   /**
    * @brief Update the kv-state using next token.
@@ -115,10 +116,10 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
    * @param kv_state The kv-state of the prompt. A LLM inference can contain
    * multiple kv-states for each layer.
    */
-  std::shared_ptr<offset_data> Update(const KV_STATE_WITH_LAYER& kv_state);
+  void Update(const KV_STATE_WITH_LAYER& kv_state, offset_data* data);
 
-  std::shared_ptr<offset_data> Update(double* k_data, double* v_data,
-                                      unsigned long data_length);
+  void Update(double* k_data, double* v_data, unsigned long data_length,
+              offset_data* data);
 
   /**
    * @brief Query the kv-state using the whole token list.
@@ -140,9 +141,13 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   void UnLock() { pthread_spin_unlock(&(this->spin_lock)); }
 
-  const TensorBuilder<double>* getKBuilder() { return k_builder; }
+  const std::shared_ptr<TensorBuilder<double>> getKBuilder() {
+    return k_builder;
+  }
 
-  const TensorBuilder<double>* getVBuilder() { return v_builder; }
+  const std::shared_ptr<TensorBuilder<double>> getVBuilder() {
+    return v_builder;
+  }
 
   void DeleteKVCache(int bit) { FREE_BIT_RESOURCE(this->bitmap, bit); }
 

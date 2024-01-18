@@ -24,7 +24,7 @@ using namespace vineyard;
 
 #define DEMENSION 10
 
-void init() { init_kv_state_cache(DEMENSION); }
+void init() { initKVStateCache(DEMENSION); }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
   std::string tokens_str = "";
@@ -67,7 +67,7 @@ generate_kv_state(int token) {
   return kv_state;
 }
 
-void inference(std::vector<int> tokens) {
+void inference(std::vector<int> tokens, bool block = false) {
   LOG(INFO) << "inference";
   std::vector<int> inference_tokens;
   std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
@@ -97,10 +97,14 @@ void inference(std::vector<int> tokens) {
 int main() {
   init();
   std::vector<int> round_1_tokens = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  std::vector<int> round_2_tokens = {1, 2, 3, 4, 5, 7, 8, 9, 10};
+  // std::vector<int> round_2_tokens = {1, 2, 3, 4, 5, 7, 8, 9, 10};
   inference(round_1_tokens);
-  inference(round_2_tokens);
-  inference(round_2_tokens);
   inference(round_1_tokens);
+  sleep(5);
+  // inference(round_2_tokens);
+  // inference(round_2_tokens);
+  inference(round_1_tokens, true);
+  while (1)
+    ;
   return 0;
 }

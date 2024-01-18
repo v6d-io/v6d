@@ -31,7 +31,7 @@ namespace vineyard {
 class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
   std::shared_ptr<KVStateCacheBlock> kv_state_cache_block;
-  RadixTree* root_tree;
+  std::shared_ptr<RadixTree> root_tree;
   int dimension;
   int cache_capacity;
   uint64_t version;
@@ -57,12 +57,16 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 
   uint64_t GetVersion() { return this->version; }
 
+  std::shared_ptr<RadixTree> GetRootTree() { return this->root_tree; }
+
+  ~KVStateCache();
+
   friend class KVStateCacheBuilder;
 };
 
 class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   std::shared_ptr<KVStateCacheBlockBuilder> kv_state_cache_block_builder;
-  RadixTree* root_tree;
+  std::shared_ptr<RadixTree> root_tree;
   int dimension;
   uint64_t version;
 
@@ -96,6 +100,10 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   }
 
   uint64_t GetDemension() { return this->dimension; }
+
+  std::shared_ptr<RadixTree> GetRootTree() { return this->root_tree; }
+
+  ~KVStateCacheBuilder();
 };
 
 }  // namespace vineyard

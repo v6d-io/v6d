@@ -56,6 +56,8 @@ class LRUStrategy : public CacheStrategy {
   void Remove(std::shared_ptr<LRUCacheNode> cache_node);
 
   std::shared_ptr<LRUCacheNode> GetHeader();
+
+  int GetCapacity() { return capacity; }
   // for distributed sync
   // void Remove(const std::vector<int>& prefix, int token);
 };
