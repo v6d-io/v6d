@@ -104,9 +104,9 @@ class FixedNumericArrayBuilder : public NumericArrayBaseBuilder<T> {
 
   size_t size() const;
 
-  T* MutablePointer(int64_t i) const;
+  ArrowValueType<T>* MutablePointer(int64_t i) const;
 
-  T* data() const;
+  ArrowValueType<T>* data() const;
 
   Status Build(Client& client) override;
 
@@ -116,7 +116,7 @@ class FixedNumericArrayBuilder : public NumericArrayBaseBuilder<T> {
   Client& client_;
   size_t size_ = 0;
   std::unique_ptr<BlobWriter> writer_ = nullptr;
-  T* data_ = nullptr;
+  ArrowValueType<T>* data_ = nullptr;
 };
 
 using Int8Builder = NumericArrayBuilder<int8_t>;
@@ -129,6 +129,11 @@ using UInt32Builder = NumericArrayBuilder<uint32_t>;
 using UInt64Builder = NumericArrayBuilder<uint64_t>;
 using FloatBuilder = NumericArrayBuilder<float>;
 using DoubleBuilder = NumericArrayBuilder<double>;
+using Date32Builder = NumericArrayBuilder<arrow::Date32Type>;
+using Date64Builder = NumericArrayBuilder<arrow::Date64Type>;
+using Time32Builder = NumericArrayBuilder<arrow::Time32Type>;
+using Time64Builder = NumericArrayBuilder<arrow::Time64Type>;
+using TimestampBuilder = NumericArrayBuilder<arrow::TimestampType>;
 
 using FixedInt8Builder = FixedNumericArrayBuilder<int8_t>;
 using FixedInt16Builder = FixedNumericArrayBuilder<int16_t>;
@@ -140,6 +145,11 @@ using FixedUInt32Builder = FixedNumericArrayBuilder<uint32_t>;
 using FixedUInt64Builder = FixedNumericArrayBuilder<uint64_t>;
 using FixedFloatBuilder = FixedNumericArrayBuilder<float>;
 using FixedDoubleBuilder = FixedNumericArrayBuilder<double>;
+using FixedDate32Builder = FixedNumericArrayBuilder<arrow::Date32Type>;
+using FixedDate64Builder = FixedNumericArrayBuilder<arrow::Date64Type>;
+using FixedTime32Builder = FixedNumericArrayBuilder<arrow::Time32Type>;
+using FixedTime64Builder = FixedNumericArrayBuilder<arrow::Time64Type>;
+using FixedTimestampBuilder = FixedNumericArrayBuilder<arrow::TimestampType>;
 
 /**
  * @brief BooleanArrayBuilder is designed for constructing  Arrow arrays of

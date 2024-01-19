@@ -53,9 +53,15 @@ std::shared_ptr<arrow::DataType> FromAnyType(AnyType type) {
   case AnyType::String:
     return arrow::large_utf8();
   case AnyType::Date32:
-    return arrow::int32();
+    return arrow::date32();
   case AnyType::Date64:
-    return arrow::int64();
+    return arrow::date64();
+  case AnyType::Time32:
+    return arrow::time32(DefaultTimeUnit);
+  case AnyType::Time64:
+    return arrow::time64(DefaultTimeUnit);
+  case AnyType::Timestamp:
+    return arrow::timestamp(DefaultTimeUnit);
   default:
     return arrow::null();
   }
@@ -197,58 +203,73 @@ Status EmptyTableBuilder::Build(const std::shared_ptr<arrow::Schema>& schema,
     std::shared_ptr<arrow::Array> dummy;
     auto type = schema->field(i)->type();
 
-    if (type == arrow::boolean()) {
+    if (arrow::boolean()->Equals(type)) {
       arrow::BooleanBuilder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
-    } else if (type == arrow::uint64()) {
+    } else if (arrow::uint64()->Equals(type)) {
       arrow::UInt64Builder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
-    } else if (type == arrow::int64()) {
+    } else if (arrow::int64()->Equals(type)) {
       arrow::Int64Builder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
-    } else if (type == arrow::uint32()) {
+    } else if (arrow::uint32()->Equals(type)) {
       arrow::UInt32Builder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
-    } else if (type == arrow::int32()) {
+    } else if (arrow::int32()->Equals(type)) {
       arrow::Int32Builder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
-    } else if (type == arrow::float32()) {
+    } else if (arrow::float32()->Equals(type)) {
       arrow::FloatBuilder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
-    } else if (type == arrow::float64()) {
+    } else if (arrow::float64()->Equals(type)) {
       arrow::DoubleBuilder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
-    } else if (type == arrow::utf8()) {
+    } else if (arrow::utf8()->Equals(type)) {
       arrow::StringBuilder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
-    } else if (type == arrow::large_utf8()) {
+    } else if (arrow::large_utf8()->Equals(type)) {
       arrow::LargeStringBuilder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
-    } else if (type == arrow::list(arrow::uint64())) {
+    } else if (arrow::date32()->Equals(type)) {
+      arrow::Date32Builder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (arrow::date64()->Equals(type)) {
+      arrow::Date64Builder builder;
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type->id() == arrow::Type::TIME32) {
+      arrow::Time32Builder builder(type, arrow::default_memory_pool());
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type->id() == arrow::Type::TIME64) {
+      arrow::Time64Builder builder(type, arrow::default_memory_pool());
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (type->id() == arrow::Type::TIMESTAMP) {
+      arrow::TimestampBuilder builder(type, arrow::default_memory_pool());
+      RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
+    } else if (arrow::list(arrow::uint64())->Equals(type)) {
       auto builder = std::make_shared<arrow::UInt64Builder>();
       arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
       RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
-    } else if (type == arrow::list(arrow::int64())) {
+    } else if (arrow::list(arrow::int64())->Equals(type)) {
       auto builder = std::make_shared<arrow::Int64Builder>();
       arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
       RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
-    } else if (type == arrow::list(arrow::uint32())) {
+    } else if (arrow::list(arrow::uint32())->Equals(type)) {
       auto builder = std::make_shared<arrow::UInt32Builder>();
       arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
       RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
-    } else if (type == arrow::list(arrow::int32())) {
+    } else if (arrow::list(arrow::int32())->Equals(type)) {
       auto builder = std::make_shared<arrow::Int32Builder>();
       arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
       RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
-    } else if (type == arrow::list(arrow::float64())) {
+    } else if (arrow::list(arrow::float64())->Equals(type)) {
       auto builder = std::make_shared<arrow::DoubleBuilder>();
       arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
       RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
-    } else if (type == arrow::list(arrow::int64())) {
+    } else if (arrow::list(arrow::int64())->Equals(type)) {
       auto builder = std::make_shared<arrow::FloatBuilder>();
       arrow::ListBuilder list_builder(arrow::default_memory_pool(), builder);
       RETURN_ON_ARROW_ERROR(list_builder.Finish(&dummy));
-    } else if (type == arrow::null()) {
+    } else if (arrow::null()->Equals(type)) {
       arrow::NullBuilder builder;
       RETURN_ON_ARROW_ERROR(builder.Finish(&dummy));
     } else {
@@ -659,6 +680,42 @@ std::shared_ptr<arrow::RecordBatch> AddMetadataToRecordBatch(
   return batch->ReplaceSchemaMetadata(metadata);
 }
 
+namespace detail {
+
+inline std::string type_name_from_arrow_date_unit(
+    arrow::TimeUnit::type const& unit) {
+  switch (unit) {
+  case arrow::TimeUnit::SECOND:
+    return "[S]";
+  case arrow::TimeUnit::MILLI:
+    return "[MS]";
+  case arrow::TimeUnit::MICRO:
+    return "[US]";
+  case arrow::TimeUnit::NANO:
+    return "[NS]";
+  default:
+    return "Unsupported time unit: '" + std::to_string(static_cast<int>(unit)) +
+           "'";
+  }
+}
+
+inline arrow::TimeUnit::type type_name_to_arrow_date_unit(const char* unit) {
+  if (std::strncmp(unit, "[S]", 3) == 0) {
+    return arrow::TimeUnit::SECOND;
+  } else if (std::strncmp(unit, "[MS]", 4) == 0) {
+    return arrow::TimeUnit::MILLI;
+  } else if (std::strncmp(unit, "[US]", 4) == 0) {
+    return arrow::TimeUnit::MICRO;
+  } else if (std::strncmp(unit, "[NS]", 4) == 0) {
+    return arrow::TimeUnit::NANO;
+  } else {
+    LOG(ERROR) << "Unsupported time unit: '" << unit << "'";
+    return arrow::TimeUnit::SECOND;
+  }
+}
+
+}  // namespace detail
+
 std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
     const std::string& name) {
   if (name == "bool") {
@@ -686,6 +743,41 @@ std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
   } else if (name == "string" || name == "std::string" || name == "str" ||
              name == "std::__1::string" || name == "std::__cxx11::string") {
     return vineyard::ConvertToArrowType<std::string>::TypeValue();
+  } else if (name == "date32[day]") {
+    return vineyard::ConvertToArrowType<arrow::Date32Type>::TypeValue();
+  } else if (name == "date64[ms]") {
+    return vineyard::ConvertToArrowType<arrow::Date64Type>::TypeValue();
+  } else if (name.substr(0, std::string("time[32]").length()) ==
+             std::string("time[32]")) {
+    const std::string unit_content =
+        name.substr(std::string("time[32]").length());
+    arrow::TimeUnit::type unit = DefaultTimeUnit;
+    if (unit_content.length() >= 3) {
+      unit = detail::type_name_to_arrow_date_unit(unit_content.c_str());
+    }
+    return arrow::time32(unit);
+  } else if (name.substr(0, std::string("time[64]").length()) ==
+             std::string("time[64]")) {
+    const std::string unit_content =
+        name.substr(std::string("time[64]").length());
+    arrow::TimeUnit::type unit = DefaultTimeUnit;
+    if (unit_content.length() >= 3) {
+      unit = detail::type_name_to_arrow_date_unit(unit_content.c_str());
+    }
+    return arrow::time64(unit);
+  } else if (name.substr(0, std::string("timestamp").length()) ==
+             std::string("timestamp")) {
+    const std::string unit_content =
+        name.substr(std::string("timestamp").length());
+    arrow::TimeUnit::type unit = DefaultTimeUnit;
+    if (unit_content.length() >= 3) {
+      unit = detail::type_name_to_arrow_date_unit(unit_content.c_str());
+      std::string timezone =
+          name.substr(std::string("timestamp").length() +
+                      detail::type_name_from_arrow_date_unit(unit).length());
+      return arrow::timestamp(unit, timezone);
+    }
+    return arrow::timestamp(unit);
   } else if (name.substr(0, std::string("list<item: ").length()) ==
              std::string("list<item: ")) {
     std::string inner_type_name =
@@ -747,6 +839,27 @@ std::string type_name_from_arrow_type(
   } else if (vineyard::ConvertToArrowType<std::string>::TypeValue()->Equals(
                  type)) {
     return type_name<std::string>();
+  } else if (vineyard::ConvertToArrowType<arrow::Date32Type>::TypeValue()
+                 ->Equals(type)) {
+    return "date32[day]";
+  } else if (vineyard::ConvertToArrowType<arrow::Date64Type>::TypeValue()
+                 ->Equals(type)) {
+    return "date64[ms]";
+  } else if (type->id() == arrow::Type::TIME32) {
+    auto time32_type = std::dynamic_pointer_cast<arrow::Time32Type>(type);
+    const std::string unit =
+        detail::type_name_from_arrow_date_unit(time32_type->unit());
+    return "time[32]" + unit;
+  } else if (type->id() == arrow::Type::TIME64) {
+    auto time64_type = std::dynamic_pointer_cast<arrow::Time64Type>(type);
+    const std::string unit =
+        detail::type_name_from_arrow_date_unit(time64_type->unit());
+    return "time[64]" + unit;
+  } else if (type->id() == arrow::Type::TIMESTAMP) {
+    auto timestamp_type = std::dynamic_pointer_cast<arrow::TimestampType>(type);
+    const std::string unit =
+        detail::type_name_from_arrow_date_unit(timestamp_type->unit());
+    return "timestamp" + unit + "[" + timestamp_type->timezone() + "]";
   } else if (type != nullptr && type->id() == arrow::Type::LIST) {
     auto list_type = std::static_pointer_cast<arrow::ListType>(type);
     return "list<item: " + type_name_from_arrow_type(list_type->value_type()) +
@@ -804,6 +917,21 @@ const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array) {
   } else if (array->type()->Equals(arrow::large_utf8())) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get());
+  } else if (array->type()->Equals(arrow::date32())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Date32Array>(array).get());
+  } else if (array->type()->Equals(arrow::date64())) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Date64Array>(array).get());
+  } else if (array->type()->id() == arrow::Type::TIME32) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Time32Array>(array).get());
+  } else if (array->type()->id() == arrow::Type::TIME64) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::Time64Array>(array).get());
+  } else if (array->type()->id() == arrow::Type::TIMESTAMP) {
+    return reinterpret_cast<const void*>(
+        std::dynamic_pointer_cast<arrow::TimestampArray>(array).get());
   } else if (array->type()->id() == arrow::Type::LIST) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::ListArray>(array).get());
@@ -847,8 +975,7 @@ Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Schema>>& schemas,
                    "Empty table list cannot be used for normalizing schema");
 
   // Perform type lossen.
-  // Date32 -> int32
-  // Timestamp -> int64 -> double -> utf8   binary (not supported)
+  // int64 -> double -> utf8   binary (not supported)
 
   // Timestamp value are stored as as number of seconds, milliseconds,
   // microseconds or nanoseconds since UNIX epoch.
@@ -872,15 +999,6 @@ Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Schema>>& schemas,
     if (res->Equals(arrow::boolean())) {
       res = arrow::int32();
     }
-    if (res->Equals(arrow::date32())) {
-      res = arrow::int32();
-    }
-    if (res->Equals(arrow::date64())) {
-      res = arrow::int64();
-    }
-    if (res->id() == arrow::Type::TIMESTAMP) {
-      res = arrow::int64();
-    }
     if (res->Equals(arrow::int64())) {
       for (size_t j = 1; j < fields[i].size(); ++j) {
         if (fields[i][j]->type()->Equals(arrow::float64())) {
@@ -897,6 +1015,42 @@ Status TypeLoosen(const std::vector<std::shared_ptr<arrow::Schema>>& schemas,
     }
     if (res->Equals(arrow::utf8())) {
       res = arrow::large_utf8();
+    }
+    // Note [date, time, and timestamp conversion rules]
+    //
+    // GIE has specific own unit and timezone conversion for dates, times and
+    // timestamps, see also:
+    // https://github.com/alibaba/GraphScope/blob/main/interactive_engine/executor/ir/proto/common.proto#L58-L72
+    //
+    // More specifically,
+    //
+    // - Date32: for int32 days since 1970-01-01
+    // - Time32: for int32 milliseconds past midnight
+    // - Timestamp: int64 milliseconds since 1970-01-01 00:00:00.000000 (in an
+    // unspecified timezone)
+    //              the default timezone when parsing value is UTC in GIE.
+    //
+    // Thus we got the following conversion rules:
+    //
+    //  - Date32: no change
+    //  - Date64 -> Timestamp
+    //  - Time32_* -> Time32_MS
+    //  - Time64_* -> Time32_MS
+    //  - Timestamp_* -> Timestamp_MS_UTC
+    if (res->Equals(arrow::date32())) {
+      res = arrow::date32();
+    }
+    if (res->Equals(arrow::date64())) {
+      res = arrow::timestamp(arrow::TimeUnit::MILLI, "UTC");
+    }
+    if (res->id() == arrow::Type::TIME32) {
+      res = arrow::time32(arrow::TimeUnit::MILLI);
+    }
+    if (res->id() == arrow::Type::TIME64) {
+      res = arrow::time32(arrow::TimeUnit::MILLI);
+    }
+    if (res->id() == arrow::Type::TIMESTAMP) {
+      res = arrow::timestamp(arrow::TimeUnit::MILLI, "UTC");
     }
     lossen_fields[i] = lossen_fields[i]->WithType(res);
   }
@@ -994,14 +1148,13 @@ Status CastBatchToSchema(const std::shared_ptr<arrow::RecordBatch>& batch,
                    "not consistent");
   std::vector<std::shared_ptr<arrow::Array>> new_columns;
   for (int64_t i = 0; i < batch->num_columns(); ++i) {
-    auto col = batch->column(i);
-    if (batch->schema()->field(i)->type()->Equals(schema->field(i)->type())) {
-      new_columns.push_back(col);
-      continue;
-    }
+    auto array = batch->column(i);
     auto from_type = batch->schema()->field(i)->type();
     auto to_type = schema->field(i)->type();
-    auto array = col;
+    if (from_type->Equals(to_type)) {
+      new_columns.push_back(array);
+      continue;
+    }
     std::shared_ptr<arrow::Array> out;
     if (arrow::compute::CanCast(*from_type, *to_type)) {
       RETURN_ON_ERROR(GeneralCast(array, to_type, out));
@@ -1034,16 +1187,16 @@ Status CastTableToSchema(const std::shared_ptr<arrow::Table>& table,
       "The schema of original table and expected schema is not consistent");
   std::vector<std::shared_ptr<arrow::ChunkedArray>> new_columns;
   for (int64_t i = 0; i < table->num_columns(); ++i) {
-    auto col = table->column(i);
+    auto chunked_column = table->column(i);
     if (table->field(i)->type()->Equals(schema->field(i)->type())) {
-      new_columns.push_back(col);
+      new_columns.push_back(chunked_column);
       continue;
     }
     auto from_type = table->field(i)->type();
     auto to_type = schema->field(i)->type();
     std::vector<std::shared_ptr<arrow::Array>> chunks;
-    for (int64_t j = 0; j < col->num_chunks(); ++j) {
-      auto array = col->chunk(j);
+    for (int64_t j = 0; j < chunked_column->num_chunks(); ++j) {
+      auto array = chunked_column->chunk(j);
       std::shared_ptr<arrow::Array> out;
       if (arrow::compute::CanCast(*from_type, *to_type)) {
         RETURN_ON_ERROR(GeneralCast(array, to_type, out));
@@ -1082,7 +1235,12 @@ inline bool IsDataTypeConsolidatable(std::shared_ptr<arrow::DataType> type) {
   case arrow::Type::UINT32:
   case arrow::Type::UINT64:
   case arrow::Type::FLOAT:
-  case arrow::Type::DOUBLE: {
+  case arrow::Type::DOUBLE:
+  case arrow::Type::DATE32:
+  case arrow::Type::DATE64:
+  case arrow::Type::TIME32:
+  case arrow::Type::TIME64:
+  case arrow::Type::TIMESTAMP: {
     return true;
   }
   default: {
@@ -1159,6 +1317,31 @@ inline void AssignArrayWithStrideUntyped(std::shared_ptr<arrow::Array> array,
   case arrow::Type::DOUBLE: {
     AssignArrayWithStride<double>(array->data()->buffers[1], target, length,
                                   stride, offset);
+    return;
+  }
+  case arrow::Type::DATE32: {
+    AssignArrayWithStride<arrow::Date32Type::c_type>(
+        array->data()->buffers[1], target, length, stride, offset);
+    return;
+  }
+  case arrow::Type::DATE64: {
+    AssignArrayWithStride<arrow::Date64Type::c_type>(
+        array->data()->buffers[1], target, length, stride, offset);
+    return;
+  }
+  case arrow::Type::TIME32: {
+    AssignArrayWithStride<arrow::Time32Type::c_type>(
+        array->data()->buffers[1], target, length, stride, offset);
+    return;
+  }
+  case arrow::Type::TIME64: {
+    AssignArrayWithStride<arrow::Time64Type::c_type>(
+        array->data()->buffers[1], target, length, stride, offset);
+    return;
+  }
+  case arrow::Type::TIMESTAMP: {
+    AssignArrayWithStride<arrow::TimestampType::c_type>(
+        array->data()->buffers[1], target, length, stride, offset);
     return;
   }
   default: {

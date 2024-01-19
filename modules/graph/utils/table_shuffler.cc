@@ -304,30 +304,34 @@ static inline void select_list_items(std::shared_ptr<arrow::Array> array,
 TableAppender::TableAppender(std::shared_ptr<arrow::Schema> schema) {
   for (const auto& field : schema->fields()) {
     std::shared_ptr<arrow::DataType> type = field->type();
-    if (type == arrow::uint64()) {
+    if (arrow::uint64()->Equals(type)) {
       funcs_.push_back(AppendHelper<uint64_t>::append);
-    } else if (type == arrow::int64()) {
+    } else if (arrow::int64()->Equals(type)) {
       funcs_.push_back(AppendHelper<int64_t>::append);
-    } else if (type == arrow::uint32()) {
+    } else if (arrow::uint32()->Equals(type)) {
       funcs_.push_back(AppendHelper<uint32_t>::append);
-    } else if (type == arrow::int32()) {
+    } else if (arrow::int32()->Equals(type)) {
       funcs_.push_back(AppendHelper<int32_t>::append);
-    } else if (type == arrow::float32()) {
+    } else if (arrow::float32()->Equals(type)) {
       funcs_.push_back(AppendHelper<float>::append);
-    } else if (type == arrow::float64()) {
+    } else if (arrow::float64()->Equals(type)) {
       funcs_.push_back(AppendHelper<double>::append);
-    } else if (type == arrow::large_binary()) {
+    } else if (arrow::large_binary()->Equals(type)) {
       funcs_.push_back(AppendHelper<std::string>::append);
-    } else if (type == arrow::large_utf8()) {
+    } else if (arrow::large_utf8()->Equals(type)) {
       funcs_.push_back(AppendHelper<std::string>::append);
-    } else if (type == arrow::null()) {
+    } else if (arrow::null()->Equals(type)) {
       funcs_.push_back(AppendHelper<void>::append);
+    } else if (arrow::date32()->Equals(type)) {
+      funcs_.push_back(AppendHelper<arrow::Date32Type>::append);
+    } else if (arrow::date64()->Equals(type)) {
+      funcs_.push_back(AppendHelper<arrow::Date64Type>::append);
+    } else if (type->id() == arrow::Type::TIME32) {
+      funcs_.push_back(AppendHelper<arrow::Time32Type>::append);
+    } else if (type->id() == arrow::Type::TIME64) {
+      funcs_.push_back(AppendHelper<arrow::Time64Type>::append);
     } else if (type->id() == arrow::Type::TIMESTAMP) {
       funcs_.push_back(AppendHelper<arrow::TimestampType>::append);
-    } else if (type == arrow::date32()) {
-      funcs_.push_back(AppendHelper<arrow::Date32Type>::append);
-    } else if (type == arrow::date64()) {
-      funcs_.push_back(AppendHelper<arrow::Date64Type>::append);
     } else {
       LOG(ERROR) << "Datatype [" << type->ToString() << "] not implemented...";
     }
@@ -554,7 +558,9 @@ Status CheckSchemaConsistency(const arrow::Schema& schema,
 void SerializeSelectedItems(grape::InArchive& arc,
                             std::shared_ptr<arrow::Array> array,
                             const std::vector<int64_t>& offset) {
-  if (array->type()->Equals(arrow::float64())) {
+  if (array->type()->Equals(arrow::null())) {
+    detail::serialize_null_items(arc, array, offset);
+  } else if (array->type()->Equals(arrow::float64())) {
     detail::serialize_typed_items<double>(arc, array, offset);
   } else if (array->type()->Equals(arrow::float32())) {
     detail::serialize_typed_items<float>(arc, array, offset);
@@ -570,6 +576,21 @@ void SerializeSelectedItems(grape::InArchive& arc,
     detail::serialize_string_items(arc, array, offset);
   } else if (array->type()->Equals(arrow::null())) {
     detail::serialize_null_items(arc, array, offset);
+  } else if (array->type()->Equals(arrow::date32())) {
+    detail::serialize_typed_items<arrow::Date32Type::c_type>(arc, array,
+                                                             offset);
+  } else if (array->type()->Equals(arrow::date64())) {
+    detail::serialize_typed_items<arrow::Date64Type::c_type>(arc, array,
+                                                             offset);
+  } else if (array->type()->id() == arrow::Type::TIME32) {
+    detail::serialize_typed_items<arrow::Time32Type::c_type>(arc, array,
+                                                             offset);
+  } else if (array->type()->id() == arrow::Type::TIME64) {
+    detail::serialize_typed_items<arrow::Time64Type::c_type>(arc, array,
+                                                             offset);
+  } else if (array->type()->id() == arrow::Type::TIMESTAMP) {
+    detail::serialize_typed_items<arrow::TimestampType::c_type>(arc, array,
+                                                                offset);
   } else if (array->type()->Equals(arrow::large_list(arrow::float64()))) {
     detail::serialize_list_items<double>(arc, array, offset);
   } else if (array->type()->Equals(arrow::large_list(arrow::float32()))) {
@@ -602,7 +623,9 @@ void SerializeSelectedRows(grape::InArchive& arc,
 
 void DeserializeSelectedItems(grape::OutArchive& arc, int64_t num,
                               arrow::ArrayBuilder* builder) {
-  if (builder->type()->Equals(arrow::float64())) {
+  if (builder->type()->Equals(arrow::null())) {
+    detail::deserialize_null_items(arc, num, builder);
+  } else if (builder->type()->Equals(arrow::float64())) {
     detail::deserialize_typed_items<double>(arc, num, builder);
   } else if (builder->type()->Equals(arrow::float32())) {
     detail::deserialize_typed_items<float>(arc, num, builder);
@@ -616,8 +639,21 @@ void DeserializeSelectedItems(grape::OutArchive& arc, int64_t num,
     detail::deserialize_typed_items<uint32_t>(arc, num, builder);
   } else if (builder->type()->Equals(arrow::large_utf8())) {
     detail::deserialize_string_items(arc, num, builder);
-  } else if (builder->type()->Equals(arrow::null())) {
-    detail::deserialize_null_items(arc, num, builder);
+  } else if (builder->type()->Equals(arrow::date32())) {
+    detail::deserialize_typed_items<arrow::Date32Type::c_type>(arc, num,
+                                                               builder);
+  } else if (builder->type()->Equals(arrow::date64())) {
+    detail::deserialize_typed_items<arrow::Date64Type::c_type>(arc, num,
+                                                               builder);
+  } else if (builder->type()->id() == arrow::Type::TIME32) {
+    detail::deserialize_typed_items<arrow::Time32Type::c_type>(arc, num,
+                                                               builder);
+  } else if (builder->type()->id() == arrow::Type::TIME64) {
+    detail::deserialize_typed_items<arrow::Time64Type::c_type>(arc, num,
+                                                               builder);
+  } else if (builder->type()->id() == arrow::Type::TIMESTAMP) {
+    detail::deserialize_typed_items<arrow::TimestampType::c_type>(arc, num,
+                                                                  builder);
   } else if (builder->type()->Equals(arrow::large_list(arrow::float64()))) {
     detail::deserialize_list_items<double>(arc, num, builder);
   } else if (builder->type()->Equals(arrow::large_list(arrow::float32()))) {
@@ -663,7 +699,9 @@ void DeserializeSelectedRows(grape::OutArchive& arc,
 void SelectItems(std::shared_ptr<arrow::Array> array,
                  const std::vector<int64_t> offset,
                  arrow::ArrayBuilder* builder) {
-  if (array->type()->Equals(arrow::float64())) {
+  if (array->type()->Equals(arrow::null())) {
+    detail::select_null_items(array, offset, builder);
+  } else if (array->type()->Equals(arrow::float64())) {
     detail::select_typed_items<double>(array, offset, builder);
   } else if (array->type()->Equals(arrow::float32())) {
     detail::select_typed_items<float>(array, offset, builder);
@@ -677,8 +715,16 @@ void SelectItems(std::shared_ptr<arrow::Array> array,
     detail::select_typed_items<uint32_t>(array, offset, builder);
   } else if (array->type()->Equals(arrow::large_utf8())) {
     detail::select_string_items(array, offset, builder);
-  } else if (array->type()->Equals(arrow::null())) {
-    detail::select_null_items(array, offset, builder);
+  } else if (array->type()->Equals(arrow::date32())) {
+    detail::select_typed_items<arrow::Date32Type>(array, offset, builder);
+  } else if (array->type()->Equals(arrow::date64())) {
+    detail::select_typed_items<arrow::Date64Type>(array, offset, builder);
+  } else if (array->type()->id() == arrow::Type::TIME32) {
+    detail::select_typed_items<arrow::Time32Type>(array, offset, builder);
+  } else if (array->type()->id() == arrow::Type::TIME64) {
+    detail::select_typed_items<arrow::Time64Type>(array, offset, builder);
+  } else if (array->type()->id() == arrow::Type::TIMESTAMP) {
+    detail::select_typed_items<arrow::TimestampType>(array, offset, builder);
   } else if (array->type()->Equals(arrow::large_list(arrow::float64()))) {
     detail::select_list_items<double>(array, offset, builder);
   } else if (array->type()->Equals(arrow::large_list(arrow::float32()))) {

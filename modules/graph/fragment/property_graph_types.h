@@ -209,6 +209,11 @@ class EdgeDataColumn {
             vineyard::ConvertToArrowType<DATA_T>::TypeValue())) {
       data_ = std::dynamic_pointer_cast<ArrowArrayType<DATA_T>>(array)
                   ->raw_values();
+    } else if (array->type()->id() == arrow::Type::TIME32 ||
+               array->type()->id() == arrow::Type::TIME64 ||
+               array->type()->id() == arrow::Type::TIMESTAMP) {
+      data_ =
+          reinterpret_cast<const DATA_T*>(array->data()->buffers[1]->data());
     } else {
       data_ = NULL;
     }
@@ -263,6 +268,12 @@ class VertexDataColumn {
       data_ = std::dynamic_pointer_cast<ArrowArrayType<DATA_T>>(array)
                   ->raw_values() -
               static_cast<ptrdiff_t>(range.begin().GetValue());
+    } else if (array->type()->id() == arrow::Type::TIME32 ||
+               array->type()->id() == arrow::Type::TIME64 ||
+               array->type()->id() == arrow::Type::TIMESTAMP) {
+      data_ =
+          reinterpret_cast<const DATA_T*>(array->data()->buffers[1]->data()) -
+          range.begin().GetValue();
     } else {
       data_ = NULL;
     }

@@ -138,6 +138,26 @@ struct AppendHelper<arrow::Date64Type> {
 };
 
 template <>
+struct AppendHelper<arrow::Time32Type> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::Time32Builder*>(builder)->Append(
+        std::dynamic_pointer_cast<arrow::Time32Array>(array)->GetView(offset)));
+    return Status::OK();
+  }
+};
+
+template <>
+struct AppendHelper<arrow::Time64Type> {
+  static Status append(arrow::ArrayBuilder* builder,
+                       std::shared_ptr<arrow::Array> array, size_t offset) {
+    RETURN_ON_ARROW_ERROR(dynamic_cast<arrow::Time64Builder*>(builder)->Append(
+        std::dynamic_pointer_cast<arrow::Time64Array>(array)->GetView(offset)));
+    return Status::OK();
+  }
+};
+
+template <>
 struct AppendHelper<arrow::TimestampType> {
   static Status append(arrow::ArrayBuilder* builder,
                        std::shared_ptr<arrow::Array> array, size_t offset) {
