@@ -46,5 +46,9 @@ namespace vineyard {
 #define GET_MACRO3(_1, _2, _3, _4, NAME, ...) NAME
 #endif
 
+// Allow comma in macro's argument, see also:
+// https://stackoverflow.com/a/13842612/5080177
+#define ARG(...) __VA_ARGS__
+
 }  // namespace vineyard
 #endif  // SRC_COMMON_UTIL_MACROS_H_

@@ -39,6 +39,9 @@ enum class AnyType {
   String = 7,
   Date32 = 8,
   Date64 = 9,
+  Time32 = 10,
+  Time64 = 11,
+  Timestamp = 12,
 };
 
 template <typename T>
@@ -91,6 +94,21 @@ struct AnyTypeEnum<arrow::Date64Type> {
   static constexpr AnyType value = AnyType::Date64;
 };
 
+template <>
+struct AnyTypeEnum<arrow::Time32Type> {
+  static constexpr AnyType value = AnyType::Time32;
+};
+
+template <>
+struct AnyTypeEnum<arrow::Time64Type> {
+  static constexpr AnyType value = AnyType::Time64;
+};
+
+template <>
+struct AnyTypeEnum<arrow::TimestampType> {
+  static constexpr AnyType value = AnyType::Timestamp;
+};
+
 enum class IdType {
   Undefined = 0,
   Int32 = 1,
@@ -100,6 +118,9 @@ enum class IdType {
   String = 5,
   Date32 = 6,
   Date64 = 7,
+  Time32 = 8,
+  Time64 = 9,
+  Timestamp = 10,
 };
 
 template <typename T>
@@ -140,6 +161,21 @@ struct IdTypeEnum<arrow::Date32Type> {
 template <>
 struct IdTypeEnum<arrow::Date64Type> {
   static constexpr IdType value = IdType::Date64;
+};
+
+template <>
+struct IdTypeEnum<arrow::Time32Type> {
+  static constexpr IdType value = IdType::Time32;
+};
+
+template <>
+struct IdTypeEnum<arrow::Time64Type> {
+  static constexpr IdType value = IdType::Time64;
+};
+
+template <>
+struct IdTypeEnum<arrow::TimestampType> {
+  static constexpr IdType value = IdType::Timestamp;
 };
 
 AnyType ParseAnyType(const std::string& type_name);

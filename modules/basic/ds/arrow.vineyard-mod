@@ -78,10 +78,11 @@ class [[vineyard]] NumericArray : public PrimitiveArray,
 
   const size_t length() const { return array_->length(); }
 
-  const T* raw_values() const { return array_->raw_values(); }
+  const ArrowValueType<T>* raw_values() const { return array_->raw_values(); }
 
  private:
   [[shared]] size_t length_;
+  [[shared(optional)]] String data_type_;
   [[shared]] int64_t null_count_, offset_;
   [[shared]] std::shared_ptr<Blob> buffer_, null_bitmap_;
 
@@ -100,6 +101,11 @@ using UInt32Array = NumericArray<uint32_t>;
 using UInt64Array = NumericArray<uint64_t>;
 using FloatArray = NumericArray<float>;
 using DoubleArray = NumericArray<double>;
+using Date32Array = NumericArray<arrow::Date32Type>;
+using Date64Array = NumericArray<arrow::Date64Type>;
+using Time32Array = NumericArray<arrow::Time32Type>;
+using Time64Array = NumericArray<arrow::Time64Type>;
+using TimestampArray = NumericArray<arrow::TimestampType>;
 
 class BooleanArrayBaseBuilder;
 

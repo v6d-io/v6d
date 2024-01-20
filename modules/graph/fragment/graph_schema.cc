@@ -34,6 +34,43 @@ namespace vineyard {
 
 namespace detail {
 
+inline std::string ArrowDateTypeUnitToString(
+    arrow::TimeUnit::type const& unit) {
+  switch (unit) {
+  case arrow::TimeUnit::SECOND:
+    return "[S]";
+  case arrow::TimeUnit::MILLI:
+    return "[MS]";
+  case arrow::TimeUnit::MICRO:
+    return "[US]";
+  case arrow::TimeUnit::NANO:
+    return "[NS]";
+  default:
+    return "Unsupported time unit: '" + std::to_string(static_cast<int>(unit)) +
+           "'";
+  }
+}
+
+inline arrow::TimeUnit::type ArrowDateTypeUnitFromString(const char* unit) {
+  if (std::strncmp(unit, "[S]", 3) == 0) {
+    return arrow::TimeUnit::SECOND;
+  } else if (std::strncmp(unit, "[MS]", 4) == 0) {
+    return arrow::TimeUnit::MILLI;
+  } else if (std::strncmp(unit, "[US]", 4) == 0) {
+    return arrow::TimeUnit::MICRO;
+  } else if (std::strncmp(unit, "[NS]", 4) == 0) {
+    return arrow::TimeUnit::NANO;
+  } else {
+    LOG(ERROR) << "Unsupported time unit: '" << unit << "'";
+    return arrow::TimeUnit::SECOND;
+  }
+}
+
+inline arrow::TimeUnit::type ArrowDateTypeUnitFromString(
+    std::string const& unit) {
+  return ArrowDateTypeUnitFromString(unit.c_str());
+}
+
 std::string PropertyTypeToString(PropertyType type) {
   if (type == nullptr) {
     return "NULL";
@@ -63,6 +100,23 @@ std::string PropertyTypeToString(PropertyType type) {
     return "STRING";
   } else if (arrow::large_utf8()->Equals(type)) {
     return "STRING";
+  } else if (arrow::date32()->Equals(type)) {
+    return "DATE32[DAY]";
+  } else if (arrow::date64()->Equals(type)) {
+    return "DATE64[MS]";
+  } else if (type->id() == arrow::Type::TIME32) {
+    auto time32_type = std::dynamic_pointer_cast<arrow::Time32Type>(type);
+    const std::string unit = ArrowDateTypeUnitToString(time32_type->unit());
+    return "TIME[32]" + unit;
+  } else if (type->id() == arrow::Type::TIME64) {
+    auto time64_type = std::dynamic_pointer_cast<arrow::Time64Type>(type);
+    const std::string unit = ArrowDateTypeUnitToString(time64_type->unit());
+    return "TIME[64]" + unit;
+  } else if (type->id() == arrow::Type::TIMESTAMP) {
+    auto timestamp_type = std::dynamic_pointer_cast<arrow::TimestampType>(type);
+    const std::string unit = ArrowDateTypeUnitToString(timestamp_type->unit());
+    const std::string timezone = timestamp_type->timezone();
+    return "TIMESTAMP" + unit + "[" + timezone + "]";
   } else if (type->id() == arrow::Type::LIST) {
     auto ty = std::dynamic_pointer_cast<arrow::ListType>(type);
     return "LIST" + PropertyTypeToString(ty->value_type());
@@ -113,6 +167,42 @@ PropertyType PropertyTypeFromString(const std::string& type) {
     return arrow::float64();
   } else if (type_upper == "STRING") {
     return arrow::large_utf8();
+  } else if (type_upper == "DATE32[DAY]") {
+    return arrow::date32();
+  } else if (type_upper == "DATE64[MS]") {
+    return arrow::date64();
+  } else if (type_upper.substr(0, std::string("TIME[32]").length()) ==
+             std::string("TIME[32]")) {
+    const std::string unit_content =
+        type_upper.substr(std::string("TIME[32]").length());
+    arrow::TimeUnit::type unit = DefaultTimeUnit;
+    if (unit_content.length() >= 3) {
+      unit = ArrowDateTypeUnitFromString(unit_content);
+    }
+    return arrow::time32(unit);
+  } else if (type_upper.substr(0, std::string("TIME[64]").length()) ==
+             std::string("TIME[64]")) {
+    const std::string unit_content =
+        type_upper.substr(std::string("TIME[64]").length());
+    arrow::TimeUnit::type unit = DefaultTimeUnit;
+    if (unit_content.length() >= 3) {
+      unit = ArrowDateTypeUnitFromString(unit_content);
+    }
+    return arrow::time64(unit);
+  } else if (type_upper.substr(0, std::string("TIMESTAMP").length()) ==
+             std::string("TIMESTAMP")) {
+    const std::string unit_content =
+        type_upper.substr(std::string("TIMESTAMP").length());
+    arrow::TimeUnit::type unit = DefaultTimeUnit;
+    if (unit_content.length() >= 3) {
+      unit = ArrowDateTypeUnitFromString(unit_content);
+      std::string timezone =
+          type_upper.substr(std::string("TIMESTAMP").length() +
+                            ArrowDateTypeUnitToString(unit).length());
+      timezone = timezone.substr(1, timezone.length() - 2);
+      return arrow::timestamp(unit);
+    }
+    return arrow::timestamp(DefaultTimeUnit);
   } else if (type_upper == "LISTINT") {
     return arrow::list(arrow::int32());
   } else if (type_upper == "LISTLONG") {

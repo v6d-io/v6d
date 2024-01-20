@@ -49,13 +49,14 @@ except ImportError:
 #
 #   __attribute__((annotate("vineyard"))): vineyard classes
 #   __attribute__((annotate("shared"))): shared member/method
-#   __attribute__((annotate("streamable"))): shared member/method
+#   __attribute__((annotate("shared(optional)"))): shared member/method, optional
+#   __attribute__((annotate("vineyard(streamable)"))): shared member/method
 #   __attribute__((annotate("distributed"))): shared member/method
 #
 
 
 class CodeGenKind:
-    def __init__(self, kind='meta', element_type=None):
+    def __init__(self, kind='meta', element_type=None, optional: bool = False):
         self.kind = kind
         if element_type is None:
             self.element_type = None
@@ -71,6 +72,13 @@ class CodeGenKind:
             self.deref = ''
         else:
             self.deref = '*'
+
+        # whether the metadata or member field is optional
+        self.optional = optional
+
+    @property
+    def is_optional(self):
+        return self.optional
 
     @property
     def is_meta(self):
@@ -98,19 +106,25 @@ class CodeGenKind:
 
     def __repr__(self):
         star_str = '*' if self.star else ''
+        rep = None
         if self.is_meta:
-            return 'meta'
+            rep = 'meta'
         if self.is_plain:
-            return '%s%s' % (self.element_type, star_str)
+            rep = '%s%s' % (self.element_type, star_str)
         if self.is_list:
-            return '[%s%s]' % (self.element_type, star_str)
+            rep = '[%s%s]' % (self.element_type, star_str)
         if self.is_dlist:
-            return '[[%s%s]]' % (self.element_type, star_str)
+            rep = '[[%s%s]]' % (self.element_type, star_str)
         if self.is_set:
-            return '{%s%s}' % (self.element_type, star_str)
+            rep = '{%s%s}' % (self.element_type, star_str)
         if self.is_dict:
-            return '{%s: %s%s}' % (self.element_type[0], self.element_type[1], star_str)
-        raise RuntimeError('Invalid codegen kind: %s' % self.kind)
+            rep = '{%s: %s%s}' % (self.element_type[0], self.element_type[1], star_str)
+        if rep is not None:
+            if self.is_optional:
+                rep = 'optional(%s)' % rep
+            return rep
+        else:
+            raise RuntimeError('Invalid codegen kind: %s' % self.kind)
 
 
 def figure_out_namespace(node: Cursor) -> Optional[str]:
@@ -215,6 +229,7 @@ def parse_codegen_spec_from_type(node: Cursor):
                 'Pointer of pointer %s is not supported' % node.type.spelling
             )
 
+    optional = check_serialize_attribute(node) == 'shared(optional)'
     basename = typename.split('<')[0]
     namespace = figure_out_namespace(node_type.get_declaration())
 
@@ -242,10 +257,12 @@ def parse_codegen_spec_from_type(node: Cursor):
                             'pointer of primitive types inside Tuple/List is not '
                             'supported: %s' % node.type.spelling
                         )
-                    return CodeGenKind('meta')
+                    return CodeGenKind('meta', optional=optional)
                 else:
                     typekind = 'list'
-            return CodeGenKind(typekind, (element_typename, inside_star))
+            return CodeGenKind(
+                typekind, (element_typename, inside_star), optional=optional
+            )
 
         if is_dict_type(namespace, basename):
             key_type = node_type.get_template_argument_type(0)
@@ -258,17 +275,19 @@ def parse_codegen_spec_from_type(node: Cursor):
                         'pointer of primitive types inside Map is not supported: %s'
                         % node.type.spelling
                     )
-                return CodeGenKind('meta')
+                return CodeGenKind('meta', optional=optional)
             else:
                 return CodeGenKind(
-                    'dict', ((key_typename,), (value_typename, inside_star))
+                    'dict',
+                    ((key_typename,), (value_typename, inside_star)),
+                    optional=optional,
                 )
 
     if is_primitive_types(node, node_type, typename, star):
-        return CodeGenKind('meta')
+        return CodeGenKind('meta', optional=optional)
     else:
         # directly return: generate data members, in pointer format
-        return CodeGenKind('plain', (basename, star))
+        return CodeGenKind('plain', (basename, star), optional=optional)
 
 
 ###############################################################################
@@ -392,6 +411,7 @@ def check_serialize_attribute(node):
                 'vineyard',
                 'vineyard(streamable)',
                 'shared',
+                'shared(optional)',
                 'distributed',
             ]:
                 if child.spelling.startswith(attr_kind):
@@ -474,7 +494,7 @@ def find_fields(definition):
 
         if child.kind == CursorKind.FIELD_DECL:
             attribute = check_serialize_attribute(child)
-            if attribute in ['shared', 'distributed']:
+            if attribute in ['shared', 'shared(optional)', 'distributed']:
                 fields.append(child)
             continue
 
@@ -484,7 +504,7 @@ def find_fields(definition):
                 raise ValueError(
                     'The annotation "[[distributed]]" is not allowed on methods'
                 )
-            if attribute == 'shared':
+            if attribute == 'shared' or attribute == 'shared(optional)':
                 fields.append(child)
             if not has_post_construct and child.spelling == 'PostConstruct':
                 for body in child.get_children():
@@ -587,7 +607,13 @@ def validate_and_strip_input_file(source):
     content = '\n'.join(content)
 
     # pass: rewrite `[[...]]` with `__attribute__((annotate(...)))`
-    attributes = ['vineyard', 'vineyard(streamable)', 'shared', 'distributed']
+    attributes = [
+        'vineyard',
+        'vineyard(streamable)',
+        'shared',
+        'shared(optional)',
+        'distributed',
+    ]
     for attr in attributes:
         content = content.replace(
             '[[%s]]' % attr, '__attribute__((annotate("%s")))' % attr

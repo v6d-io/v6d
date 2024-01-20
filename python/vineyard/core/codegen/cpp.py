@@ -114,6 +114,11 @@ post_construct_meth_tpl = '''
 construct_meta_tpl = '''
     meta.GetKeyValue("{name}", this->{name});'''
 
+construct_meta_optional_tpl = '''
+    if (meta.HasKey("{name}")) {{
+        meta.GetKeyValue("{name}", this->{name});
+    }}'''
+
 construct_plain_tpl = '''
     this->{name}.Construct(meta.GetMemberMeta("{name}"));'''
 
@@ -176,7 +181,10 @@ def codegen_construct(
         spec = parse_codegen_spec_from_type(field)
         name = field.spelling
         if spec.is_meta:
-            tpl = construct_meta_tpl
+            if spec.optional:
+                tpl = construct_meta_optional_tpl
+            else:
+                tpl = construct_meta_tpl
         if spec.is_plain:
             if spec.star:
                 tpl = construct_plain_star_tpl

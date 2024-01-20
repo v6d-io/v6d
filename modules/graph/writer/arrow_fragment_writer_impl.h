@@ -456,6 +456,34 @@ ArrowFragmentWriter<FRAG_T>::appendPropertiesToArrowArrayBuilders(
           builders[col_id]);
       ARROW_OK_OR_RAISE(
           builder->Append(edge.template get_data<std::string>(pid)));
+    } else if (arrow::date32()->Equals(prop_type)) {
+      auto builder =
+          std::dynamic_pointer_cast<arrow::Date32Builder>(builders[col_id]);
+      ARROW_OK_OR_RAISE(builder->Append(
+          edge.template get_data<arrow::Date32Type::c_type>(pid)));
+    } else if (arrow::date64()->Equals(prop_type)) {
+      auto builder =
+          std::dynamic_pointer_cast<arrow::Date64Builder>(builders[col_id]);
+      ARROW_OK_OR_RAISE(builder->Append(
+          edge.template get_data<arrow::Date64Type::c_type>(pid)));
+    } else if (prop_type->id() == arrow::Type::TIME32) {
+      auto builder =
+          std::dynamic_pointer_cast<arrow::Time32Builder>(builders[col_id]);
+      ARROW_OK_OR_RAISE(builder->Append(
+          edge.template get_data<arrow::Time32Type::c_type>(pid)));
+    } else if (prop_type->id() == arrow::Type::TIME64) {
+      auto builder =
+          std::dynamic_pointer_cast<arrow::Date64Builder>(builders[col_id]);
+      ARROW_OK_OR_RAISE(builder->Append(
+          edge.template get_data<arrow::Date64Type::c_type>(pid)));
+    } else if (prop_type->id() == arrow::Type::TIMESTAMP) {
+      auto builder =
+          std::dynamic_pointer_cast<arrow::TimestampBuilder>(builders[col_id]);
+      ARROW_OK_OR_RAISE(builder->Append(
+          edge.template get_data<arrow::TimestampType::c_type>(pid)));
+    } else {
+      RETURN_GS_ERROR(ErrorCode::kInvalidValueError,
+                      "Unsupported property type: " + prop_type->ToString());
     }
     ++col_id;
   }

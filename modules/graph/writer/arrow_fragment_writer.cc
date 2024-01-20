@@ -65,6 +65,21 @@ void InitializeArrayArrayBuilders(
       builders[col_id] = std::make_shared<arrow::StringBuilder>();
     } else if (arrow::large_utf8()->Equals(prop_type)) {
       builders[col_id] = std::make_shared<arrow::LargeStringBuilder>();
+    } else if (arrow::date32()->Equals(prop_type)) {
+      builders[col_id] = std::make_shared<arrow::Date32Builder>();
+    } else if (arrow::date64()->Equals(prop_type)) {
+      builders[col_id] = std::make_shared<arrow::Date64Builder>();
+    } else if (prop_type->id() == arrow::Type::TIME32) {
+      builders[col_id] = std::make_shared<arrow::Time32Builder>(
+          prop_type, arrow::default_memory_pool());
+    } else if (prop_type->id() == arrow::Type::TIME64) {
+      builders[col_id] = std::make_shared<arrow::Time64Builder>(
+          prop_type, arrow::default_memory_pool());
+    } else if (prop_type->id() == arrow::Type::TIMESTAMP) {
+      builders[col_id] = std::make_shared<arrow::TimestampBuilder>(
+          prop_type, arrow::default_memory_pool());
+    } else {
+      LOG(FATAL) << "Unsupported property type: " << prop_type->ToString();
     }
     ++col_id;
   }
