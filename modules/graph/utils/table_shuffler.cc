@@ -212,7 +212,7 @@ template <typename T>
 static inline void deserialize_typed_items(grape::OutArchive& arc, int64_t num,
                                            arrow::ArrayBuilder* builder) {
   auto casted_builder = dynamic_cast<ArrowBuilderType<T>*>(builder);
-  T val;
+  ArrowValueType<T> val;
   for (int64_t i = 0; i != num; ++i) {
     arc >> val;
     CHECK_ARROW_ERROR(casted_builder->Append(val));
@@ -577,20 +577,15 @@ void SerializeSelectedItems(grape::InArchive& arc,
   } else if (array->type()->Equals(arrow::null())) {
     detail::serialize_null_items(arc, array, offset);
   } else if (array->type()->Equals(arrow::date32())) {
-    detail::serialize_typed_items<arrow::Date32Type::c_type>(arc, array,
-                                                             offset);
+    detail::serialize_typed_items<arrow::Date32Type>(arc, array, offset);
   } else if (array->type()->Equals(arrow::date64())) {
-    detail::serialize_typed_items<arrow::Date64Type::c_type>(arc, array,
-                                                             offset);
+    detail::serialize_typed_items<arrow::Date64Type>(arc, array, offset);
   } else if (array->type()->id() == arrow::Type::TIME32) {
-    detail::serialize_typed_items<arrow::Time32Type::c_type>(arc, array,
-                                                             offset);
+    detail::serialize_typed_items<arrow::Time32Type>(arc, array, offset);
   } else if (array->type()->id() == arrow::Type::TIME64) {
-    detail::serialize_typed_items<arrow::Time64Type::c_type>(arc, array,
-                                                             offset);
+    detail::serialize_typed_items<arrow::Time64Type>(arc, array, offset);
   } else if (array->type()->id() == arrow::Type::TIMESTAMP) {
-    detail::serialize_typed_items<arrow::TimestampType::c_type>(arc, array,
-                                                                offset);
+    detail::serialize_typed_items<arrow::TimestampType>(arc, array, offset);
   } else if (array->type()->Equals(arrow::large_list(arrow::float64()))) {
     detail::serialize_list_items<double>(arc, array, offset);
   } else if (array->type()->Equals(arrow::large_list(arrow::float32()))) {
@@ -640,20 +635,15 @@ void DeserializeSelectedItems(grape::OutArchive& arc, int64_t num,
   } else if (builder->type()->Equals(arrow::large_utf8())) {
     detail::deserialize_string_items(arc, num, builder);
   } else if (builder->type()->Equals(arrow::date32())) {
-    detail::deserialize_typed_items<arrow::Date32Type::c_type>(arc, num,
-                                                               builder);
+    detail::deserialize_typed_items<arrow::Date32Type>(arc, num, builder);
   } else if (builder->type()->Equals(arrow::date64())) {
-    detail::deserialize_typed_items<arrow::Date64Type::c_type>(arc, num,
-                                                               builder);
+    detail::deserialize_typed_items<arrow::Date64Type>(arc, num, builder);
   } else if (builder->type()->id() == arrow::Type::TIME32) {
-    detail::deserialize_typed_items<arrow::Time32Type::c_type>(arc, num,
-                                                               builder);
+    detail::deserialize_typed_items<arrow::Time32Type>(arc, num, builder);
   } else if (builder->type()->id() == arrow::Type::TIME64) {
-    detail::deserialize_typed_items<arrow::Time64Type::c_type>(arc, num,
-                                                               builder);
+    detail::deserialize_typed_items<arrow::Time64Type>(arc, num, builder);
   } else if (builder->type()->id() == arrow::Type::TIMESTAMP) {
-    detail::deserialize_typed_items<arrow::TimestampType::c_type>(arc, num,
-                                                                  builder);
+    detail::deserialize_typed_items<arrow::TimestampType>(arc, num, builder);
   } else if (builder->type()->Equals(arrow::large_list(arrow::float64()))) {
     detail::deserialize_list_items<double>(arc, num, builder);
   } else if (builder->type()->Equals(arrow::large_list(arrow::float32()))) {
