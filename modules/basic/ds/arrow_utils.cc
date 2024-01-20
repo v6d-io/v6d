@@ -730,11 +730,11 @@ std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
     return vineyard::ConvertToArrowType<uint16_t>::TypeValue();
   } else if (name == "int32_t" || name == "int32" || name == "int") {
     return vineyard::ConvertToArrowType<int32_t>::TypeValue();
-  } else if (name == "uint32_t" || name == "uint32") {
+  } else if (name == "uint32_t" || name == "uint32" || name == "uint") {
     return vineyard::ConvertToArrowType<uint32_t>::TypeValue();
   } else if (name == "int64_t" || name == "int64" || name == "long") {
     return vineyard::ConvertToArrowType<int64_t>::TypeValue();
-  } else if (name == "uint64_t" || name == "uint64") {
+  } else if (name == "uint64_t" || name == "uint64" || name == "ulong") {
     return vineyard::ConvertToArrowType<uint64_t>::TypeValue();
   } else if (name == "float") {
     return vineyard::ConvertToArrowType<float>::TypeValue();
