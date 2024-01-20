@@ -129,20 +129,20 @@ bool Validate(vineyard::Client& client, const grape::CommSpec& comm_spec,
       LOG(ERROR) << "different inner edges number";
       return false;
     }
-    for (int j = 0; j < true_ivs[i].size(); ++j) {
+    for (size_t j = 0; j < true_ivs[i].size(); ++j) {
       if (true_ivs[i][j] != test_ivs[i][j]) {
         LOG(ERROR) << "ground-truth v is " << true_ivs[i][j]
                    << "and program is " << test_ivs[i][j];
         return false;
       }
     }
-    for (int j = 0; j < true_ies[i].size(); ++j) {
+    for (size_t j = 0; j < true_ies[i].size(); ++j) {
       if (true_ies[i][j] != test_ies[i][j]) {
         LOG(ERROR) << "different inner edge";
         return false;
       }
     }
-    for (int j = 0; j < true_oes[i].size(); ++j) {
+    for (size_t j = 0; j < true_oes[i].size(); ++j) {
       if (true_oes[i][j] != test_oes[i][j]) {
         LOG(ERROR) << "different outgoing edge";
         return false;

@@ -135,14 +135,14 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadEdgeTables() {
     const auto& edge_info = edge.second;
     if (edge_info.ContainAdjList(
             GraphArchive::AdjListType::ordered_by_source)) {
-      loadEdgeTableOfLabel(edge_info,
-                           GraphArchive::AdjListType::ordered_by_source);
+      BOOST_LEAF_CHECK(loadEdgeTableOfLabel(
+          edge_info, GraphArchive::AdjListType::ordered_by_source));
     }
     if (this->directed_) {
       if (edge_info.ContainAdjList(
               GraphArchive::AdjListType::ordered_by_dest)) {
-        loadEdgeTableOfLabel(edge_info,
-                             GraphArchive::AdjListType::ordered_by_dest);
+        BOOST_LEAF_CHECK(loadEdgeTableOfLabel(
+            edge_info, GraphArchive::AdjListType::ordered_by_dest));
       }
     }
   }
