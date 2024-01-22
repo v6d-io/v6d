@@ -603,6 +603,25 @@ class ClientBase {
   const std::string& Version() const { return server_version_; }
 
   /**
+   * @brief Try to acquire a distributed lock.
+   *
+   * @param key The key of the lock.
+   *
+   * @return Status that indicates whether the lock process succeeds.
+   */
+  virtual Status TryAcquireLock(std::string key, bool& result,
+                                std::string& actural_key) = 0;
+
+  /**
+   * @brief Try to release a distributed lock.
+   *
+   * @param key The key of the lock.
+   *
+   * @return Status that indicates whether the unlock process succeeds.
+   */
+  virtual Status TryReleaseLock(std::string key, bool& result) = 0;
+
+  /**
    * @brief Issue a debug request.
    *
    * @param debug The payload that will be sent to the debug handler.

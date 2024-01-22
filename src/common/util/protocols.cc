@@ -206,6 +206,12 @@ const std::string command_t::SHALLOW_COPY_REPLY = "shallow_copy_reply";
 const std::string command_t::DEBUG_REQUEST = "debug_command";
 const std::string command_t::DEBUG_REPLY = "debug_reply";
 
+// distributed lock
+const std::string command_t::ACQUIRE_LOCK_REQUEST = "acquire_lock_request";
+const std::string command_t::ACQUIRE_LOCK_REPLY = "acquire_lock_reply";
+const std::string command_t::RELEASE_LOCK_REQUEST = "release_lock_request";
+const std::string command_t::RELEASE_LOCK_REPLY = "release_lock_reply";
+
 void WriteErrorReply(Status const& status, std::string& msg) {
   encode_msg(status.ToJSON(), msg);
 }
@@ -2133,7 +2139,8 @@ void WriteInstanceStatusReply(const json& meta, std::string& msg) {
 
 Status ReadInstanceStatusReply(const json& root, json& meta) {
   CHECK_IPC_ERROR(root, command_t::INSTANCE_STATUS_REPLY);
-  meta = root["meta"];
+  meta = root["meta"].get<bool>();
+  ;
   return Status::OK();
 }
 
@@ -2255,6 +2262,64 @@ void WriteDebugReply(const json& result, std::string& msg) {
 Status ReadDebugReply(const json& root, json& result) {
   CHECK_IPC_ERROR(root, "debug_reply");
   result = root["result"];
+  return Status::OK();
+}
+
+void WriteTryAcquireLockRequest(const std::string& key, std::string& msg) {
+  json root;
+  root["type"] = command_t::ACQUIRE_LOCK_REQUEST;
+  root["key"] = key;
+  encode_msg(root, msg);
+}
+
+Status ReadTryAcquireLockRequest(const json& root, std::string& key) {
+  CHECK_IPC_ERROR(root, command_t::ACQUIRE_LOCK_REQUEST);
+  key = root["key"].get<std::string>();
+  return Status::OK();
+}
+
+void WriteTryAcquireLockReply(const bool result, const std::string actual_key,
+                              std::string& msg) {
+  json root;
+  root["type"] = command_t::ACQUIRE_LOCK_REPLY;
+  root["key"] = actual_key;
+  root["result"] = result;
+  encode_msg(root, msg);
+}
+
+Status ReadTryAcquireLockReply(const json& root, bool& result,
+                               std::string& key) {
+  CHECK_IPC_ERROR(root, command_t::ACQUIRE_LOCK_REPLY);
+  result = root["result"].get<bool>();
+  key = root["key"].get<std::string>();
+  return Status::OK();
+}
+
+void WriteTryReleaseLockRequest(const std::string& key, std::string& msg) {
+  json root;
+  root["type"] = command_t::RELEASE_LOCK_REQUEST;
+  root["key"] = key;
+  encode_msg(root, msg);
+}
+
+Status ReadTryReleaseLockRequest(const json& root, std::string& key) {
+  CHECK_IPC_ERROR(root, command_t::RELEASE_LOCK_REQUEST);
+  key = root["key"].get<std::string>();
+  ;
+  return Status::OK();
+}
+
+void WriteTryReleaseLockReply(const bool result, std::string& msg) {
+  json root;
+  root["type"] = command_t::RELEASE_LOCK_REPLY;
+  root["result"] = result;
+  encode_msg(root, msg);
+}
+
+Status ReadTryReleaseLockReply(const json& root, bool& result) {
+  CHECK_IPC_ERROR(root, command_t::RELEASE_LOCK_REPLY);
+  result = root["result"].get<bool>();
+  ;
   return Status::OK();
 }
 

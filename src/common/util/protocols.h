@@ -171,6 +171,12 @@ struct command_t {
   static const std::string SHALLOW_COPY_REPLY;
   static const std::string DEBUG_REQUEST;
   static const std::string DEBUG_REPLY;
+
+  // distributed lock
+  static const std::string ACQUIRE_LOCK_REQUEST;
+  static const std::string ACQUIRE_LOCK_REPLY;
+  static const std::string RELEASE_LOCK_REQUEST;
+  static const std::string RELEASE_LOCK_REPLY;
 };
 
 enum class StoreType {
@@ -819,6 +825,24 @@ Status ReadDebugRequest(const json& root, json& debug);
 void WriteDebugReply(const json& result, std::string& msg);
 
 Status ReadDebugReply(const json& root, json& result);
+
+void WriteTryAcquireLockRequest(const std::string& key, std::string& msg);
+
+Status ReadTryAcquireLockRequest(const json& root, std::string& key);
+
+void WriteTryAcquireLockReply(const bool result, const std::string actual_key,
+                              std::string& msg);
+
+Status ReadTryAcquireLockReply(const json& root, bool& result,
+                               std::string& key);
+
+void WriteTryReleaseLockRequest(const std::string& key, std::string& msg);
+
+Status ReadTryReleaseLockRequest(const json& root, std::string& key);
+
+void WriteTryReleaseLockReply(const bool result, std::string& msg);
+
+Status ReadTryReleaseLockReply(const json& root, bool& result);
 
 }  // namespace vineyard
 

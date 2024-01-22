@@ -127,6 +127,10 @@ class EtcdMetaService : public IMetaService {
 
   ~EtcdMetaService() override {}
 
+  void TryAcquireLock(std::string key, callback_t<bool, std::string>);
+
+  void TryReleaseLock(std::string key, callback_t<bool>);
+
  protected:
   explicit EtcdMetaService(std::shared_ptr<VineyardServer>& server_ptr)
       : IMetaService(server_ptr),
