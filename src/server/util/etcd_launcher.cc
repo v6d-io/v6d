@@ -125,10 +125,30 @@ Status EtcdLauncher::LaunchEtcdServer(
   LOG(INFO) << "Starting the etcd server";
 
   // resolve etcd binary
-  std::string etcd_cmd = etcd_spec_["etcd_cmd"].get_ref<std::string const&>();
+  std::string etcd_cmd = etcd_spec_.value("etcd_cmd", "");
   if (etcd_cmd.empty()) {
     setenv("LC_ALL", "C", 1);  // makes boost's path works as expected.
     etcd_cmd = boost::process::search_path("etcd").string();
+  }
+  if (etcd_cmd.empty()) {
+    // try en_US.UTF-8 and search again.
+    setenv("LC_ALL", "en_US.UTF-8", 1);
+    etcd_cmd = boost::process::search_path("etcd").string();
+  }
+  if (etcd_cmd.empty()) {
+    std::string error_message =
+        "Failed to find etcd binary, please specify its path using the "
+        "`--etcd_cmd` argument and try again.";
+    LOG(WARNING) << error_message;
+    return Status::EtcdError("Failed to find etcd binary");
+  }
+  if (!ghc::filesystem::exists(ghc::filesystem::path(etcd_cmd))) {
+    std::string error_message =
+        "The etcd binary '" + etcd_cmd +
+        "' does not exist, please specify the correct path using "
+        "the `--etcd_cmd` argument and try again.";
+    LOG(WARNING) << error_message;
+    return Status::EtcdError("The etcd binary does not exist");
   }
   LOG(INFO) << "Found etcd at: " << etcd_cmd;
 
