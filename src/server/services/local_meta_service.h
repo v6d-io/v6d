@@ -50,6 +50,18 @@ class LocalMetaService : public IMetaService {
 
   ~LocalMetaService() override {}
 
+  void TryAcquireLock(std::string key,
+                      callback_t<bool, std::string> callback_after_try_locked) {
+    // TBD
+    assert(false);
+  }
+
+  void TryReleaseLock(std::string key,
+                      callback_t<bool> callback_after_try_unlocked) {
+    // TBD
+    assert(false);
+  }
+
  protected:
   explicit LocalMetaService(std::shared_ptr<VineyardServer>& server_ptr)
       : IMetaService(server_ptr) {}
