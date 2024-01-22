@@ -200,13 +200,28 @@ Status EtcdLauncher::LaunchEtcdServer(
   args.emplace_back(peer_endpoint);
 
   // use a random etcd data dir
-  std::string file_template = "/tmp/vineyard-etcd-XXXXXX";
-  char* data_dir = mkdtemp(const_cast<char*>(file_template.c_str()));
-  if (data_dir == nullptr) {
-    return Status::EtcdError(
-        "Failed to create a temporary directory for etcd data");
+  etcd_data_dir_ = etcd_spec_.value("etcd_data_dir", "");
+  if (etcd_data_dir_.empty()) {
+    std::string file_template = "/tmp/vineyard-etcd-XXXXXX";
+    char* data_dir = mkdtemp(const_cast<char*>(file_template.c_str()));
+    if (data_dir == nullptr) {
+      return Status::EtcdError(
+          "Failed to create a temporary directory for etcd data");
+    }
+    etcd_data_dir_ = data_dir;
   }
-  etcd_data_dir_ = data_dir;
+  // prepare the data dir
+  if (!ghc::filesystem::exists(ghc::filesystem::path(etcd_data_dir_))) {
+    std::error_code err;
+    ghc::filesystem::create_directories(ghc::filesystem::path(etcd_data_dir_),
+                                        err);
+    if (err) {
+      return Status::EtcdError("Failed to create etcd data directory: " +
+                               err.message());
+    }
+  }
+  LOG(INFO) << "Vineyard will use '" << etcd_data_dir_
+            << "' as the data directory of etcd";
   args.emplace_back("--data-dir");
   args.emplace_back(etcd_data_dir_);
 
