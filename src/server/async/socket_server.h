@@ -142,6 +142,9 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
 
   bool doDebug(json const& root);
 
+  bool doAcquireLock(json const& root);
+  bool doReleaseLock(json const& root);
+
  protected:
   template <typename FROM, typename TO>
   Status MoveBuffers(std::map<FROM, TO> mapping,

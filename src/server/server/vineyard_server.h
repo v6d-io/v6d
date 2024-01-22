@@ -193,6 +193,11 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   Status Verify(const std::string& username, const std::string& password,
                 callback_t<> callback);
 
+  Status TryAcquireLock(std::string& key,
+                        callback_t<bool, std::string> callback);
+
+  Status TryReleaseLock(std::string& key, callback_t<bool> callback);
+
   inline SessionID session_id() const { return session_id_; }
   inline InstanceID instance_id() { return instance_id_; }
   inline std::string instance_name() { return instance_name_; }

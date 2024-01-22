@@ -1156,6 +1156,33 @@ Status Client::IsSpilled(ObjectID const& id, bool& is_spilled) {
   return Status::OK();
 }
 
+Status Client::TryAcquireLock(std::string key, bool& result,
+                              std::string& actural_key) {
+  ENSURE_CONNECTED(this);
+
+  std::string message_out;
+  WriteTryAcquireLockRequest(key, message_out);
+  VINEYARD_CHECK_OK(doWrite(message_out));
+
+  json message_in;
+  VINEYARD_CHECK_OK(doRead(message_in));
+  VINEYARD_CHECK_OK(ReadTryAcquireLockReply(message_in, result, actural_key));
+  return Status::OK();
+}
+
+Status Client::TryReleaseLock(std::string key, bool& result) {
+  ENSURE_CONNECTED(this);
+
+  std::string message_out;
+  WriteTryReleaseLockRequest(key, message_out);
+  VINEYARD_CHECK_OK(doWrite(message_out));
+
+  json message_in;
+  VINEYARD_CHECK_OK(doRead(message_in));
+  VINEYARD_CHECK_OK(ReadTryReleaseLockReply(message_in, result));
+  return Status::OK();
+}
+
 PlasmaClient::~PlasmaClient() {}
 
 // dummy implementation
