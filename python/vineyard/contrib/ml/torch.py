@@ -17,6 +17,7 @@
 #
 
 import contextlib
+from collections import OrderedDict
 from typing import Iterable
 from typing import Iterator
 from typing import List
@@ -96,18 +97,21 @@ def torch_dataset_builder(client, value, builder, **kw):
 
 def torch_tensor_resolver(obj, resolver, **kw):
     value = resolver.parent_context.run(obj, **kw)
-    return torch.tensor(value)
+    return torch.from_numpy(value)
 
 
 def torch_dataset_resolver(obj, resolver, **kw):
     value = resolver.parent_context.run(obj, **kw)
     if isinstance(value, pd.DataFrame):
         return torch.utils.data.TensorDataset(
-            *[torch.tensor(np.array(value[column].values)) for column in value.columns]
+            *[
+                torch.from_numpy(np.array(value[column].values))
+                for column in value.columns
+            ]
         )
     elif isinstance(value, (pa.Table, pa.RecordBatch)):
         return torch.utils.data.TensorDataset(
-            *[torch.tensor(column.to_numpy()) for column in value.columns]
+            *[torch.from_numpy(column.to_numpy()) for column in value.columns]
         )
     else:
         raise TypeError(f'torch dataset: unsupported type {type(value)}')
@@ -238,6 +242,8 @@ def register_torch_types(builder_ctx, resolver_ctx):
         builder_ctx.register(torch.Tensor, torch_tensor_builder)
         builder_ctx.register(torch.utils.data.Dataset, torch_dataset_builder)
         builder_ctx.register(torch.nn.Module, torch_module_builder)
+        builder_ctx.register(dict, torch_module_builder)
+        builder_ctx.register(OrderedDict, torch_module_builder)
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::Tensor', torch_tensor_resolver)

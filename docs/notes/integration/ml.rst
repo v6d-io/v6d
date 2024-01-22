@@ -93,8 +93,8 @@ Using Dataframe
 .. code:: python
 
      >>> df = pd.DataFrame({'a': [1, 2, 3, 4], 'b': [5, 6, 7, 8], 'c': [1.0, 2.0, 3.0, 4.0]})
-     >>> label = torch.tensor(df['c'].values.astype(np.float32))
-     >>> data = torch.tensor(df.drop('c', axis=1).values.astype(np.float32))
+     >>> label = torch.from_numpy(df['c'].values.astype(np.float32))
+     >>> data = torch.from_numpy(df.drop('c', axis=1).values.astype(np.float32))
      >>> dataset = torch.utils.data.TensorDataset(data, label)
      >>> data_id = vineyard_client.put(dataset, typename='Dataframe', cols=['a', 'b', 'c'], label='c')
      >>> vin_data = vineyard_client.get(data_id, label='c)

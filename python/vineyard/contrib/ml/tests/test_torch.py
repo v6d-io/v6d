@@ -61,7 +61,10 @@ def test_torch_tensor(vineyard_client):
 @pytest_cases.parametrize("vineyard_client", [vineyard_client, vineyard_rpc_client])
 def test_torch_dataset(vineyard_client):
     dataset = torch.utils.data.TensorDataset(
-        *[torch.tensor(np.random.rand(2, 3)), torch.tensor(np.random.rand(2, 3))],
+        *[
+            torch.from_numpy(np.random.rand(2, 3)),
+            torch.from_numpy(np.random.rand(2, 3)),
+        ],
     )
     object_id = vineyard_client.put(dataset)
     value = vineyard_client.get(object_id)
@@ -83,10 +86,10 @@ def test_torch_dataset_dataframe(vineyard_client):
     assert isinstance(value, torch.utils.data.TensorDataset)
     assert len(df.columns) == len(value.tensors)
 
-    assert torch.isclose(value.tensors[0], torch.tensor([1, 2, 3, 4])).all()
-    assert torch.isclose(value.tensors[1], torch.tensor([5, 6, 7, 8])).all()
+    assert torch.isclose(value.tensors[0], torch.from_numpy([1, 2, 3, 4])).all()
+    assert torch.isclose(value.tensors[1], torch.from_numpy([5, 6, 7, 8])).all()
     assert torch.isclose(
-        value.tensors[2], torch.tensor([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
+        value.tensors[2], torch.from_numpy([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
     ).all()
 
 
@@ -115,10 +118,10 @@ def test_torch_dataset_recordbatch(vineyard_client):
     assert isinstance(value, torch.utils.data.TensorDataset)
     assert len(df.columns) == len(value.tensors)
 
-    assert torch.isclose(value.tensors[0], torch.tensor([1, 2, 3, 4])).all()
-    assert torch.isclose(value.tensors[1], torch.tensor([5, 6, 7, 8])).all()
+    assert torch.isclose(value.tensors[0], torch.from_numpy([1, 2, 3, 4])).all()
+    assert torch.isclose(value.tensors[1], torch.from_numpy([5, 6, 7, 8])).all()
     assert torch.isclose(
-        value.tensors[2], torch.tensor([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
+        value.tensors[2], torch.from_numpy([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
     ).all()
 
 
@@ -132,10 +135,10 @@ def test_torch_dataset_table(vineyard_client):
     assert isinstance(value, torch.utils.data.TensorDataset)
     assert len(df.columns) == len(value.tensors)
 
-    assert torch.isclose(value.tensors[0], torch.tensor([1, 2, 3, 4])).all()
-    assert torch.isclose(value.tensors[1], torch.tensor([5, 6, 7, 8])).all()
+    assert torch.isclose(value.tensors[0], torch.from_numpy([1, 2, 3, 4])).all()
+    assert torch.isclose(value.tensors[1], torch.from_numpy([5, 6, 7, 8])).all()
     assert torch.isclose(
-        value.tensors[2], torch.tensor([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
+        value.tensors[2], torch.from_numpy([1.0, 2.0, 3.0, 4.0], dtype=torch.float64)
     ).all()
 
 
