@@ -139,6 +139,14 @@ class ArrowArrayBuilderVisitor {
     return Status::OK();
   }
 
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 15000000
+  Status Visit(const arrow::StringViewType* type) {
+    return Status::NotImplemented(
+        "Type not implemented: " + std::to_string(type->id()) + ", " +
+        type->ToString());
+  }
+#endif
+
   Status Visit(const arrow::LargeStringType*) {
     builder_ = std::make_shared<LargeStringArrayBuilder>(client_, array_);
     return Status::OK();
@@ -148,6 +156,14 @@ class ArrowArrayBuilderVisitor {
     builder_ = std::make_shared<BinaryArrayBuilder>(client_, array_);
     return Status::OK();
   }
+
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 15000000
+  Status Visit(const arrow::BinaryViewType* type) {
+    return Status::NotImplemented(
+        "Type not implemented: " + std::to_string(type->id()) + ", " +
+        type->ToString());
+  }
+#endif
 
   Status Visit(const arrow::LargeBinaryType*) {
     builder_ = std::make_shared<LargeBinaryArrayBuilder>(client_, array_);
@@ -163,10 +179,28 @@ class ArrowArrayBuilderVisitor {
     builder_ = std::make_shared<ListArrayBuilder>(client_, array_);
     return Status::OK();
   }
+
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 15000000
+  Status Visit(const arrow::ListViewType* type) {
+    return Status::NotImplemented(
+        "Type not implemented: " + std::to_string(type->id()) + ", " +
+        type->ToString());
+  }
+#endif
+
   Status Visit(const arrow::LargeListType*) {
     builder_ = std::make_shared<LargeListArrayBuilder>(client_, array_);
     return Status::OK();
   }
+
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 15000000
+  Status Visit(const arrow::LargeListViewType* type) {
+    return Status::NotImplemented(
+        "Type not implemented: " + std::to_string(type->id()) + ", " +
+        type->ToString());
+  }
+#endif
+
   Status Visit(const arrow::FixedSizeListType*) {
     builder_ = std::make_shared<FixedSizeListArrayBuilder>(client_, array_);
     return Status::OK();
