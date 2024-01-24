@@ -59,12 +59,13 @@ Status BasicIPCClient::Connect(const std::string& ipc_socket,
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   std::string ipc_socket_value, rpc_endpoint_value;
-  bool store_match = false, support_rpc_compression = false;
+  bool store_match = false;
   RETURN_ON_ERROR(ReadRegisterReply(
       message_in, ipc_socket_value, rpc_endpoint_value, instance_id_,
-      session_id_, server_version_, store_match, support_rpc_compression));
+      session_id_, server_version_, store_match, support_rpc_compression_));
   rpc_endpoint_ = rpc_endpoint_value;
   connected_ = true;
+  set_compression_enabled(support_rpc_compression_);
 
   if (!compatible_server(server_version_)) {
     std::clog << "[warn] Warning: this version of vineyard client may be "
@@ -233,6 +234,21 @@ Status Client::CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob) {
   std::shared_ptr<MutableBuffer> buffer = nullptr;
   RETURN_ON_ERROR(CreateBuffer(size, object_id, object, buffer));
   blob.reset(new BlobWriter(object_id, object, buffer));
+  return Status::OK();
+}
+
+Status Client::CreateBlobs(const std::vector<size_t>& sizes,
+                           std::vector<std::unique_ptr<BlobWriter>>& blobs) {
+  ENSURE_CONNECTED(this);
+  std::vector<ObjectID> object_ids;
+  std::vector<Payload> objects;
+  std::vector<std::shared_ptr<MutableBuffer>> buffers;
+  RETURN_ON_ERROR(CreateBuffers(sizes, object_ids, objects, buffers));
+  for (size_t i = 0; i < sizes.size(); ++i) {
+    std::unique_ptr<BlobWriter> blob = std::unique_ptr<BlobWriter>(
+        new BlobWriter(object_ids[i], objects[i], buffers[i]));
+    blobs.emplace_back(std::move(blob));
+  }
   return Status::OK();
 }
 
@@ -625,6 +641,62 @@ Status Client::CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
   buffer = std::make_shared<MutableBuffer>(dist, payload.data_size);
 
   RETURN_ON_ERROR(AddUsage(id, payload));
+  return Status::OK();
+}
+
+Status Client::CreateBuffers(
+    const std::vector<size_t>& sizes, std::vector<ObjectID>& ids,
+    std::vector<Payload>& payloads,
+    std::vector<std::shared_ptr<MutableBuffer>>& buffers) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteCreateBuffersRequest(sizes, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  std::vector<int> fds_sent, fds_recv;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(ReadCreateBuffersReply(message_in, ids, payloads, fds_sent));
+  RETURN_ON_ASSERT(payloads.size() == sizes.size());
+  for (size_t i = 0; i < payloads.size(); ++i) {
+    RETURN_ON_ASSERT(static_cast<size_t>(payloads[i].data_size) == sizes[i]);
+  }
+
+  std::set<int> fds_recv_set;
+  for (size_t i = 0; i < sizes.size(); ++i) {
+    if (payloads[i].data_size > 0) {
+      int fd_recv = shm_->PreMmap(payloads[i].store_fd);
+      if (fd_recv != -1) {
+        fds_recv_set.emplace(fd_recv);
+      }
+    }
+  }
+  fds_recv.assign(fds_recv_set.begin(), fds_recv_set.end());
+
+  if (message_in.contains("fds") && fds_recv != fds_sent) {
+    json error = json::object();
+    error["error"] =
+        "CreateBuffer: the fd is not matched between client and server";
+    error["fd_sent"] = fds_sent;
+    error["fd_recv"] = fds_recv;
+    error["response"] = message_in;
+    return Status::Invalid(error.dump());
+  }
+
+  for (size_t i = 0; i < sizes.size(); ++i) {
+    uint8_t *shared = nullptr, *dist = nullptr;
+    if (payloads[i].data_size > 0) {
+      RETURN_ON_ERROR(shm_->Mmap(
+          payloads[i].store_fd, payloads[i].object_id, payloads[i].map_size,
+          payloads[i].data_size, payloads[i].data_offset,
+          payloads[i].pointer - payloads[i].data_offset, false, true, &shared));
+      dist = shared + payloads[i].data_offset;
+    }
+    auto buffer = std::make_shared<MutableBuffer>(dist, payloads[i].data_size);
+
+    ids.emplace_back(payloads[i].object_id);
+    buffers.emplace_back(buffer);
+    RETURN_ON_ERROR(AddUsage(ids[i], payloads[i]));
+  }
   return Status::OK();
 }
 

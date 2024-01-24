@@ -65,6 +65,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   bool doRegister(json const& root);
 
   bool doCreateBuffer(json const& root);
+  bool doCreateBuffers(json const& root);
   bool doCreateDiskBuffer(json const& root);
   bool doCreateGPUBuffer(json const& root);
   bool doSealBlob(json const& root);
@@ -78,6 +79,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
    * of blob is in the request body, rather than via memory sharing.
    */
   bool doCreateRemoteBuffer(json const& root);
+  bool doCreateRemoteBuffers(json const& root);
 
   /**
    * @brief doGetRemoteBuffers differs from doGetRemoteBuffers, that the
@@ -96,6 +98,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
   bool doPlasmaDelData(json const& root);
 
   bool doCreateData(json const& root);
+  bool doCreateDatas(json const& root);
   bool doGetData(json const& root);
   bool doListData(json const& root);
   bool doDelData(json const& root);

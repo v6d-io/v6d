@@ -263,13 +263,13 @@ payloads over the network.
     >>> remote_buffer_builder.copy(0, payload)
     >>>
     >>> # create the remote blob using the RPCClient, with the `remote_buffer_builder` as argument
-    >>> remote_blob_id = vineyard_rpc_client.create_remote_blob(remote_buffer_builder)
+    >>> remote_blob_meta = vineyard_rpc_client.create_remote_blob(remote_buffer_builder)
 
 .. code:: python
    :caption: Accessing remote blobs
 
     >>> # get the remote blob from vineyard using object id
-    >>> remote_blob = vineyard_rpc_client.get_remote_blob(remote_blob_id)
+    >>> remote_blob = vineyard_rpc_client.get_remote_blob(remote_blob_meta.id)
     >>> remote_blob, type(remote_blob)
     (<vineyard._C.RemoteBlob at 0x142204870>, vineyard._C.RemoteBlob)
     >>>

@@ -520,6 +520,14 @@ Status VineyardServer::CreateData(
 }
 
 Status VineyardServer::CreateData(
+    const std::vector<json>& trees,
+    callback_t<const std::vector<ObjectID>, const std::vector<Signature>,
+               const std::vector<InstanceID>>
+        callback) {
+  return CreateData(trees, false, callback);
+}
+
+Status VineyardServer::CreateData(
     const json& tree, bool recursive,
     callback_t<const ObjectID, const Signature, const InstanceID> callback) {
   ENSURE_VINEYARDD_READY();
@@ -549,6 +557,62 @@ Status VineyardServer::CreateData(
               meta_tree::PutDataOps(meta, self->instance_name(), id,
                                     decorated_tree, ops, computed_instance_id));
           return s;
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          return status;
+        }
+      },
+      boost::bind(callback, _1, _2, _3, _4));
+  return Status::OK();
+}
+
+Status VineyardServer::CreateData(
+    const std::vector<json>& trees, bool recursive,
+    callback_t<const std::vector<ObjectID>, const std::vector<Signature>,
+               const std::vector<InstanceID>>
+        callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+  // update meta into json
+  meta_service_ptr_->RequestToBulkUpdate(
+      [self, trees, recursive](const Status& status, const json& meta,
+                               std::vector<meta_tree::op_t>& ops,
+                               std::vector<ObjectID>& ids,
+                               std::vector<Signature>& signatures,
+                               std::vector<InstanceID>& computed_instance_ids) {
+        if (status.ok()) {
+          std::vector<json> decorated_trees;
+          for (auto const& tree : trees) {
+            Signature signature;
+            auto decorated_tree = json::object();
+            RETURN_ON_ERROR(
+                detail::validate_metadata(tree, decorated_tree, signature));
+            signatures.emplace_back(signature);
+            decorated_trees.emplace_back(decorated_tree);
+          }
+
+          // expand trees: for putting many metadatas in a single call
+          if (recursive) {
+            for (auto& decorated_tree : decorated_trees) {
+              RETURN_ON_ERROR(detail::put_members_recursively(
+                  self->meta_service_ptr_, meta, decorated_tree,
+                  self->instance_name_));
+            }
+          }
+
+          for (auto& decorated_tree : decorated_trees) {
+            ObjectID id = GenerateObjectID();
+            InstanceID computed_instance_id = UnspecifiedInstanceID();
+            Status s;
+            VCATCH_JSON_ERROR(meta, s,
+                              meta_tree::PutDataOps(meta, self->instance_name(),
+                                                    id, decorated_tree, ops,
+                                                    computed_instance_id));
+            RETURN_ON_ERROR(s);
+            ids.emplace_back(id);
+            computed_instance_ids.emplace_back(computed_instance_id);
+          }
+          return Status::OK();
         } else {
           VLOG(100) << "Error: " << status.ToString();
           return status;

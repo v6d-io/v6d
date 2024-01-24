@@ -35,6 +35,13 @@ limitations under the License.
 
 namespace vineyard {
 
+// We set a hard limit for the message buffer size, since an evil client,
+// e.g., telnet.
+//
+// We don't revise the structure of protocol, for backwards compatible, as
+// we already released wheel packages on pypi.
+constexpr size_t MESSAGE_HEADER_LIMIT = 256 * 1024 * 1024;  // 256M bytes
+
 SocketConnection::SocketConnection(
     stream_protocol::socket socket, std::shared_ptr<VineyardServer> server_ptr,
     std::shared_ptr<SocketServer> socket_server_ptr, int conn_id)
@@ -109,12 +116,7 @@ void SocketConnection::doReadHeader() {
 }
 
 void SocketConnection::doReadBody() {
-  if (read_msg_header_ > 64 * 1024 * 1024) {  // 64M bytes
-    // We set a hard limit for the message buffer size, since an evil client,
-    // e.g., telnet.
-    //
-    // We don't revise the structure of protocol, for backwards compatible, as
-    // we already released wheel packages on pypi.
+  if (read_msg_header_ > MESSAGE_HEADER_LIMIT) {
     VLOG(10) << "invalid message header value: " << read_msg_header_;
     doStop();
     return;
@@ -245,6 +247,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return true;
   } else if (cmd == command_t::CREATE_BUFFER_REQUEST) {
     return doCreateBuffer(root);
+  } else if (cmd == command_t::CREATE_BUFFERS_REQUEST) {
+    return doCreateBuffers(root);
   } else if (cmd == command_t::CREATE_DISK_BUFFER_REQUEST) {
     return doCreateDiskBuffer(root);
   } else if (cmd == command_t::CREATE_GPU_BUFFER_REQUEST) {
@@ -261,6 +265,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doShrinkBuffer(root);
   } else if (cmd == command_t::CREATE_REMOTE_BUFFER_REQUEST) {
     return doCreateRemoteBuffer(root);
+  } else if (cmd == command_t::CREATE_REMOTE_BUFFERS_REQUEST) {
+    return doCreateRemoteBuffers(root);
   } else if (cmd == command_t::GET_REMOTE_BUFFERS_REQUEST) {
     return doGetRemoteBuffers(root);
   } else if (cmd == command_t::INCREASE_REFERENCE_COUNT_REQUEST) {
@@ -281,6 +287,8 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doPlasmaDelData(root);
   } else if (cmd == command_t::CREATE_DATA_REQUEST) {
     return doCreateData(root);
+  } else if (cmd == command_t::CREATE_DATAS_REQUEST) {
+    return doCreateDatas(root);
   } else if (cmd == command_t::GET_DATA_REQUEST) {
     return doGetData(root);
   } else if (cmd == command_t::DELETE_DATA_REQUEST) {
@@ -372,13 +380,13 @@ bool SocketConnection::doRegister(const json& root) {
         if (status.ok()) {
           Status s = self->socket_server_ptr_->Register(self, session_id);
           if (s.ok()) {
-            bool store_match =
-                (bulk_store_type == self->server_ptr_->GetBulkStoreType());
-            WriteRegisterReply(self->server_ptr_->IPCSocket(),
-                               self->server_ptr_->RPCEndpoint(),
-                               self->server_ptr_->instance_id(),
-                               self->server_ptr_->session_id(), store_match,
-                               true /* support_rpc_compression */, message_out);
+            WriteRegisterReply(
+                self->server_ptr_->IPCSocket(),
+                self->server_ptr_->RPCEndpoint(),
+                self->server_ptr_->instance_id(),
+                self->server_ptr_->session_id(),
+                self->server_ptr_->store_matched(bulk_store_type),
+                self->server_ptr_->compression_enabled(), message_out);
           } else {
             WriteErrorReply(s, message_out);
           }
@@ -414,6 +422,47 @@ bool SocketConnection::doCreateBuffer(const json& root) {
   this->doWrite(message_out, [this, self, fd_to_send](const Status& status) {
     if (fd_to_send != -1) {
       send_fd(self->nativeHandle(), fd_to_send);
+    }
+    LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
+                bulk_store_->Footprint());
+    return Status::OK();
+  });
+  return false;
+}
+
+bool SocketConnection::doCreateBuffers(const json& root) {
+  auto self(shared_from_this());
+  std::vector<size_t> sizes;
+  std::vector<ObjectID> object_ids;
+  std::vector<std::shared_ptr<Payload>> objects;
+  std::string message_out;
+
+  TRY_READ_REQUEST(ReadCreateBuffersRequest, root, sizes);
+  for (auto const& size : sizes) {
+    ObjectID object_id;
+    std::shared_ptr<Payload> object;
+    RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+    object_ids.emplace_back(object_id);
+    objects.emplace_back(object);
+  }
+
+  std::set<int> fds_to_send_set;
+  for (auto const& object : objects) {
+    if (object->data_size > 0 &&
+        self->used_fds_.find(object->store_fd) == self->used_fds_.end()) {
+      this->used_fds_.emplace(object->store_fd);
+      fds_to_send_set.emplace(object->store_fd);
+    }
+  }
+  std::vector<int> fds_to_send(fds_to_send_set.begin(), fds_to_send_set.end());
+
+  WriteCreateBuffersReply(object_ids, objects, fds_to_send, message_out);
+
+  this->doWrite(message_out, [this, self, fds_to_send](const Status& status) {
+    for (auto const& fd_to_send : fds_to_send) {
+      if (fd_to_send != -1) {
+        send_fd(self->nativeHandle(), fd_to_send);
+      }
     }
     LOG_SUMMARY("instances_memory_usage_bytes", server_ptr_->instance_id(),
                 bulk_store_->Footprint());
@@ -652,6 +701,55 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   return false;
 }
 
+bool SocketConnection::doCreateRemoteBuffers(const json& root) {
+  auto self(shared_from_this());
+  std::vector<size_t> sizes;
+  bool compress = false;
+  std::vector<ObjectID> object_ids;
+  std::vector<std::shared_ptr<Payload>> objects;
+
+  TRY_READ_REQUEST(ReadCreateRemoteBuffersRequest, root, sizes, compress);
+  for (auto const& size : sizes) {
+    ObjectID object_id;
+    std::shared_ptr<Payload> object;
+    RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+    RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
+    object_ids.emplace_back(object_id);
+    objects.emplace_back(object);
+  }
+
+  auto callback = [self, this, compress, object_ids,
+                   objects](const Status& status) -> Status {
+    ReceiveRemoteBuffers(
+        socket_, objects, 0, 0, compress,
+        [self, object_ids, objects](const Status& status) -> Status {
+          std::string message_out;
+          if (status.ok()) {
+            WriteCreateBuffersReply(object_ids, objects, std::vector<int>{},
+                                    message_out);
+          } else {
+            // cleanup
+            for (auto const& object : objects) {
+              VINEYARD_DISCARD(self->bulk_store_->Delete(object->object_id));
+            }
+            WriteErrorReply(status, message_out);
+          }
+          self->doWrite(message_out);
+          return Status::OK();
+        });
+    LOG_SUMMARY("instances_memory_usage_bytes",
+                self->server_ptr_->instance_id(),
+                self->bulk_store_->Footprint());
+    return Status::OK();
+  };
+
+  // ok to continue
+  std::string message_out;
+  WriteCreateBuffersReply(object_ids, objects, std::vector<int>{}, message_out);
+  self->doWrite(message_out, callback, true);
+  return false;
+}
+
 bool SocketConnection::doGetRemoteBuffers(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
@@ -877,6 +975,33 @@ bool SocketConnection::doCreateData(const json& root) {
                     std::to_string(instance_id) + " " +
                         tree.value("typename", json(nullptr)).dump(),
                     1);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doCreateDatas(const json& root) {
+  auto self(shared_from_this());
+  std::vector<json> tree;
+  double startTime = GetCurrentTime();
+  TRY_READ_REQUEST(ReadCreateDatasRequest, root, tree);
+  RESPONSE_ON_ERROR(server_ptr_->CreateData(
+      tree, [tree, self, startTime](
+                const Status& status, const std::vector<ObjectID> ids,
+                const std::vector<Signature> signatures,
+                const std::vector<InstanceID> instance_ids) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteCreateDatasReply(ids, signatures, instance_ids, message_out);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        double endTime = GetCurrentTime();
+        LOG_SUMMARY("data_request_duration_microseconds", "create",
+                    (endTime - startTime) * 1000000);
+        LOG_COUNTER("data_requests_total", "create");
         return Status::OK();
       }));
   return false;

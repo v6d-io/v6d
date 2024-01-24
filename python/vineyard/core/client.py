@@ -16,6 +16,7 @@
 # limitations under the License.
 #
 
+import contextlib
 import os
 import warnings
 from typing import Any
@@ -207,6 +208,18 @@ class Client:
             )
 
     @property
+    def compression(self) -> bool:
+        '''Whether the compression is enabled for underlying RPC client.'''
+        if self._rpc_client:
+            return self._rpc_client.compression
+        return None
+
+    @compression.setter
+    def compression(self, value: bool = True):
+        if self._rpc_client:
+            self._rpc_client.compression = value
+
+    @property
     def ipc_client(self) -> IPCClient:
         assert self._ipc_client is not None, "IPC client is not available."
         return self._ipc_client
@@ -230,8 +243,8 @@ class Client:
 
     @_apply_docstring(IPCClient.create_metadata)
     def create_metadata(
-        self, metadata: ObjectMeta, instance_id: int = None
-    ) -> ObjectMeta:
+        self, metadata: Union[ObjectMeta, List[ObjectMeta]], instance_id: int = None
+    ) -> Union[ObjectMeta, List[ObjectMeta]]:
         if instance_id is not None:
             return self.default_client().create_metadata(metadata, instance_id)
         return self.default_client().create_metadata(metadata)
@@ -413,7 +426,9 @@ class Client:
     # IPCClient and RPCClient classes.
 
     @_apply_docstring(IPCClient.create_blob)
-    def create_blob(self, size: int) -> BlobBuilder:
+    def create_blob(
+        self, size: Union[int, List[int]]
+    ) -> Union[BlobBuilder, List[BlobBuilder]]:
         return self.ipc_client.create_blob(size)
 
     @_apply_docstring(IPCClient.create_empty_blob)
@@ -429,7 +444,9 @@ class Client:
         return self.ipc_client.get_blobs(object_ids, unsafe)
 
     @_apply_docstring(RPCClient.create_remote_blob)
-    def create_remote_blob(self, blob_builder: RemoteBlobBuilder) -> ObjectID:
+    def create_remote_blob(
+        self, blob_builder: Union[RemoteBlobBuilder, List[RemoteBlobBuilder]]
+    ) -> Union[ObjectMeta, List[ObjectMeta]]:
         return self.rpc_client.create_remote_blob(blob_builder)
 
     @_apply_docstring(RPCClient.get_remote_blob)
@@ -591,6 +608,14 @@ class Client:
         **kwargs,
     ):
         return put(self, value, builder, persist, name, **kwargs)
+
+    @contextlib.contextmanager
+    def with_compression(self, enabled: bool = True):
+        """Disable compression for the following put operations."""
+        compression = self.compression
+        self.compression = enabled
+        yield
+        self.compression = compression
 
 
 __all__ = ['Client']

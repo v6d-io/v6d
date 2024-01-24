@@ -19,6 +19,7 @@ limitations under the License.
 #include <fcntl.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
@@ -100,7 +101,6 @@ Status connect_rpc_socket(const std::string& host, uint32_t port,
   setsockopt(socket_fd, SOL_SOCKET, SO_NOSIGPIPE, &option_value,
              sizeof(option_value));
 #endif
-
   return Status::OK();
 }
 

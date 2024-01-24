@@ -78,7 +78,7 @@ def read_byte_stream(
                 buffer = read_block(f, begin, min(chunk_size, end - begin))
                 if len(buffer) > 0:
                     chunk = writer.next(len(buffer))
-                    vineyard.memory_copy(chunk, 0, buffer)
+                    vineyard.memory_copy(chunk, buffer)
                     begin += len(buffer)
         except Exception:  # pylint: disable=broad-except
             report_exception()

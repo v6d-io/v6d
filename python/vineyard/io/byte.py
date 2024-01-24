@@ -34,7 +34,7 @@
     1024
     >>> chunk.readonly
     False
-    >>> vineyard.memory_copy(chunk, offset=0, src=b'abcde')
+    >>> vineyard.memory_copy(chunk, src=b'abcde', offset=0)
 
     # mark the stream as finished
     >>> writer.finish()
@@ -147,7 +147,7 @@ class ByteStream(BaseStream):
             if len(view) >= self._buffer_size_limit or (force and len(view) > 0):
                 if len(view) > 0:
                     chunk = self.next(len(view))
-                    memory_copy(chunk, 0, view)
+                    memory_copy(chunk, view)
                 self._buffer = BytesIO()
 
         def finish(self):

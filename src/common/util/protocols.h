@@ -41,6 +41,8 @@ struct command_t {
   // Blobs APIs
   static const std::string CREATE_BUFFER_REQUEST;
   static const std::string CREATE_BUFFER_REPLY;
+  static const std::string CREATE_BUFFERS_REQUEST;
+  static const std::string CREATE_BUFFERS_REPLY;
   static const std::string CREATE_DISK_BUFFER_REQUEST;
   static const std::string CREATE_DISK_BUFFER_REPLY;
   static const std::string CREATE_GPU_BUFFER_REQUEST;
@@ -60,6 +62,7 @@ struct command_t {
   static const std::string REQUEST_FD_REPLY;
 
   static const std::string CREATE_REMOTE_BUFFER_REQUEST;
+  static const std::string CREATE_REMOTE_BUFFERS_REQUEST;
   static const std::string GET_REMOTE_BUFFERS_REQUEST;
 
   static const std::string INCREASE_REFERENCE_COUNT_REQUEST;
@@ -83,6 +86,8 @@ struct command_t {
   // Metadata APIs
   static const std::string CREATE_DATA_REQUEST;
   static const std::string CREATE_DATA_REPLY;
+  static const std::string CREATE_DATAS_REQUEST;
+  static const std::string CREATE_DATAS_REPLY;
   static const std::string GET_DATA_REQUEST;
   static const std::string GET_DATA_REPLY;
   static const std::string LIST_DATA_REQUEST;
@@ -212,6 +217,20 @@ void WriteCreateBufferReply(const ObjectID id,
 Status ReadCreateBufferReply(const json& root, ObjectID& id, Payload& object,
                              int& fd_sent);
 
+void WriteCreateBuffersRequest(const std::vector<size_t>& sizes,
+                               std::string& msg);
+
+Status ReadCreateBuffersRequest(const json& root, std::vector<size_t>& sizes);
+
+void WriteCreateBuffersReply(
+    const std::vector<ObjectID>& ids,
+    const std::vector<std::shared_ptr<Payload>>& objects,
+    const std::vector<int>& fds_to_send, std::string& msg);
+
+Status ReadCreateBuffersReply(const json& root, std::vector<ObjectID>& ids,
+                              std::vector<Payload>& objects,
+                              std::vector<int>& fds_sent);
+
 void WriteCreateDiskBufferRequest(const size_t size, const std::string& path,
                                   std::string& msg);
 
@@ -312,6 +331,13 @@ void WriteCreateRemoteBufferRequest(const size_t size, const bool compress,
 
 Status ReadCreateRemoteBufferRequest(const json& root, size_t& size,
                                      bool& compress);
+
+void WriteCreateRemoteBuffersRequest(const std::vector<size_t>& sizes,
+                                     const bool compress, std::string& msg);
+
+Status ReadCreateRemoteBuffersRequest(const json& root,
+                                      std::vector<size_t>& size,
+                                      bool& compress);
 
 void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
                                   const bool unsafe, std::string& msg);
@@ -429,6 +455,20 @@ void WriteCreateDataReply(const ObjectID& id, const Signature& signature,
 
 Status ReadCreateDataReply(const json& root, ObjectID& id, Signature& signature,
                            InstanceID& instance_id);
+
+void WriteCreateDatasRequest(const std::vector<json>& contents,
+                             std::string& msg);
+
+Status ReadCreateDatasRequest(const json& root, std::vector<json>& contents);
+
+void WriteCreateDatasReply(const std::vector<ObjectID>& ids,
+                           const std::vector<Signature>& signatures,
+                           const std::vector<InstanceID>& instance_ids,
+                           std::string& msg);
+
+Status ReadCreateDatasReply(const json& root, std::vector<ObjectID>& ids,
+                            std::vector<Signature>& signatures,
+                            std::vector<InstanceID>& instance_ids);
 
 void WriteGetDataRequest(const ObjectID id, const bool sync_remote,
                          const bool wait, std::string& msg);

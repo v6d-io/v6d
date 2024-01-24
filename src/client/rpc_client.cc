@@ -22,6 +22,7 @@ limitations under the License.
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "client/ds/blob.h"
@@ -119,6 +120,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
       session_id_, server_version_, store_match, support_rpc_compression_));
   ipc_socket_ = ipc_socket_value;
   connected_ = true;
+  set_compression_enabled(support_rpc_compression_);
 
   if (!compatible_server(server_version_)) {
     std::clog << "[warn] Warning: this version of vineyard client may be "
@@ -182,56 +184,24 @@ Status RPCClient::GetObject(const ObjectID id,
   ObjectMeta meta;
   RETURN_ON_ERROR(this->GetMetaData(id, meta, true));
   RETURN_ON_ASSERT(!meta.MetaData().empty());
-  std::map<ObjectID, std::shared_ptr<Buffer>> buffers;
-  std::function<Status(json&, json&)> traverse =
-      [&](json& meta_tree, json& sub_meta_tree) -> Status {
-    if (meta_tree.is_object()) {
-      auto sub_id =
-          ObjectIDFromString(meta_tree["id"].get_ref<std::string const&>());
-      if (IsBlob(sub_id)) {
-        std::shared_ptr<RemoteBlob> remote_blob;
-        RETURN_ON_ERROR(GetRemoteBlob(sub_id, remote_blob));
-        ObjectMeta sub_meta;
-        sub_meta.Reset();
-        RETURN_ON_ERROR(GetMetaData(sub_id, sub_meta));
-        sub_meta.SetTypeName(type_name<RemoteBlob>());
-        RETURN_ON_ERROR(sub_meta.buffer_set_->EmplaceBuffer(sub_id));
-        RETURN_ON_ERROR(
-            sub_meta.buffer_set_->EmplaceBuffer(sub_id, remote_blob->Buffer()));
-        buffers.emplace(sub_id, remote_blob->Buffer());
-        sub_meta_tree = sub_meta.MetaData();
-        return Status::OK();
-      } else {
-        for (auto& item : meta_tree.items()) {
-          if (item.value().is_object() && !item.value().empty()) {
-            json new_meta_tree;
-            RETURN_ON_ERROR(traverse(item.value(), new_meta_tree));
-            if (!new_meta_tree.empty()) {
-              meta_tree[item.key()] = new_meta_tree;
-            }
-          }
-        }
-      }
-    }
-    return Status::OK();
-  };
-  auto meta_tree = meta.MetaData();
-  json& sub_meta_tree = meta_tree;
-  RETURN_ON_ERROR(traverse(meta_tree, sub_meta_tree));
-  ObjectMeta new_meta;
-  new_meta.Reset();
-  new_meta.SetMetaData(this, meta_tree);
 
-  for (auto& item : buffers) {
-    RETURN_ON_ERROR(new_meta.buffer_set_->EmplaceBuffer(item.first));
+  std::map<ObjectID, std::shared_ptr<RemoteBlob>> remote_blobs;
+  RETURN_ON_ERROR(
+      GetRemoteBlobs(meta.buffer_set_->AllBufferIds(), remote_blobs));
+  for (auto& item : remote_blobs) {
     RETURN_ON_ERROR(
-        new_meta.buffer_set_->EmplaceBuffer(item.first, item.second));
+        meta.buffer_set_->EmplaceBuffer(item.first, item.second->Buffer()));
   }
-  object = ObjectFactory::Create(new_meta.GetTypeName());
+
+  // as we now has these buffers, using force local to let `Blob` aware
+  // the buffer in `Construct()`.
+  meta.ForceLocal();
+
+  object = ObjectFactory::Create(meta.GetTypeName());
   if (object == nullptr) {
     object = std::unique_ptr<Object>(new Object());
   }
-  object->Construct(new_meta);
+  object->Construct(meta);
   return Status::OK();
 }
 
@@ -367,14 +337,15 @@ bool RPCClient::IsFetchable(const ObjectMeta& meta) {
 }
 
 Status RPCClient::CreateRemoteBlob(
-    std::shared_ptr<RemoteBlobWriter> const& buffer, ObjectID& id) {
+    std::shared_ptr<RemoteBlobWriter> const& buffer, ObjectMeta& meta) {
   ENSURE_CONNECTED(this);
   VINEYARD_ASSERT(buffer != nullptr, "Expects a non-null remote blob rewriter");
   std::shared_ptr<Compressor> compressor;
-  if (support_rpc_compression_) {
+  if (compression_enabled()) {
     compressor = std::make_shared<Compressor>();
   }
 
+  ObjectID id;
   Payload payload;
   int fd_sent = -1;
 
@@ -401,7 +372,95 @@ Status RPCClient::CreateRemoteBlob(
   RETURN_ON_ERROR(ReadCreateBufferReply(message_in, id, payload, fd_sent));
   RETURN_ON_ASSERT(
       static_cast<size_t>(payload.data_size) == buffer->size(),
-      "The result blob size doesn't match with the requested size");
+      "The result blob size doesn't match with the requested size, " +
+          std::to_string(payload.data_size) + " vs. " +
+          std::to_string(buffer->size()));
+
+  // add the metadata to allow adding the returned remote blob as member
+  // without an extra get operation.
+  meta.SetId(id);
+  meta.SetTypeName("vineyard::Blob");
+  meta.SetNBytes(payload.data_size);
+  meta.SetInstanceId(this->remote_instance_id_);
+  meta.AddKeyValue("length", 0);
+  meta.AddKeyValue("transient", true);
+
+  return Status::OK();
+}
+
+Status RPCClient::CreateRemoteBlobs(
+    std::vector<std::shared_ptr<RemoteBlobWriter>> const& buffers,
+    std::vector<ObjectMeta>& metas) {
+  ENSURE_CONNECTED(this);
+  std::vector<size_t> sizes;
+  for (auto const& buffer : buffers) {
+    VINEYARD_ASSERT(buffer != nullptr,
+                    "Expects a non-null remote blob rewriter");
+    sizes.emplace_back(buffer->size());
+  }
+  std::shared_ptr<Compressor> compressor;
+  if (compression_enabled()) {
+    compressor = std::make_shared<Compressor>();
+  }
+
+  std::vector<ObjectID> ids;
+  std::vector<Payload> payloads;
+  std::vector<int> fds_sent;
+
+  std::string message_out;
+  WriteCreateRemoteBuffersRequest(sizes, !!compressor, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+
+  // receive a confirm to continue
+  {
+    json message_in;
+    RETURN_ON_ERROR(doRead(message_in));
+    RETURN_ON_ERROR(
+        ReadCreateBuffersReply(message_in, ids, payloads, fds_sent));
+  }
+
+  // send the actual payload
+  for (auto const& buffer : buffers) {
+    if (compressor && buffer->size() > 0) {
+      RETURN_ON_ERROR(detail::compress_and_send(
+          compressor, vineyard_conn_, buffer->data(), buffer->size()));
+    } else if (buffer->size() > 0) {
+      RETURN_ON_ERROR(
+          send_bytes(vineyard_conn_, buffer->data(), buffer->size()));
+    }
+  }
+
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  ids.clear();
+  payloads.clear();
+  fds_sent.clear();
+  RETURN_ON_ERROR(ReadCreateBuffersReply(message_in, ids, payloads, fds_sent));
+  RETURN_ON_ASSERT(payloads.size() == buffers.size(),
+                   "The result size doesn't match with the requested sizes: " +
+                       std::to_string(payloads.size()) + " vs. " +
+                       std::to_string(buffers.size()));
+  for (size_t i = 0; i < payloads.size(); ++i) {
+    RETURN_ON_ASSERT(
+        static_cast<size_t>(payloads[i].data_size) == buffers[i]->size(),
+        "The result blob size doesn't match with the requested size: " +
+            std::to_string(payloads[i].data_size) + " vs. " +
+            std::to_string(buffers[i]->size()));
+  }
+
+  // add the metadata to allow adding the returned remote blob as member
+  // without an extra get operation.
+  for (size_t i = 0; i < payloads.size(); ++i) {
+    ObjectMeta meta;
+    meta.SetId(ids[i]);
+    meta.SetTypeName("vineyard::Blob");
+    meta.SetNBytes(payloads[i].data_size);
+    meta.SetInstanceId(this->remote_instance_id_);
+    meta.AddKeyValue("length", 0);
+    meta.AddKeyValue("transient", true);
+    metas.emplace_back(meta);
+  }
+
   return Status::OK();
 }
 
@@ -414,7 +473,7 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
                                 std::shared_ptr<RemoteBlob>& buffer) {
   ENSURE_CONNECTED(this);
   std::shared_ptr<Decompressor> decompressor;
-  if (support_rpc_compression_) {
+  if (compression_enabled()) {
     decompressor = std::make_shared<Decompressor>();
   }
 
@@ -451,11 +510,17 @@ Status RPCClient::GetRemoteBlobs(
 }
 
 Status RPCClient::GetRemoteBlobs(
+    std::set<ObjectID> const& ids,
+    std::map<ObjectID, std::shared_ptr<RemoteBlob>>& remote_blobs) {
+  return this->GetRemoteBlobs(ids, false, remote_blobs);
+}
+
+Status RPCClient::GetRemoteBlobs(
     std::vector<ObjectID> const& ids, const bool unsafe,
     std::vector<std::shared_ptr<RemoteBlob>>& remote_blobs) {
   ENSURE_CONNECTED(this);
   std::shared_ptr<Decompressor> decompressor;
-  if (support_rpc_compression_) {
+  if (compression_enabled()) {
     decompressor = std::make_shared<Decompressor>();
   }
 
@@ -497,6 +562,18 @@ Status RPCClient::GetRemoteBlobs(
     } else {
       remote_blobs.emplace_back(it->second);
     }
+  }
+  return Status::OK();
+}
+
+Status RPCClient::GetRemoteBlobs(
+    std::set<ObjectID> const& ids, const bool unsafe,
+    std::map<ObjectID, std::shared_ptr<RemoteBlob>>& remote_blobs) {
+  std::vector<ObjectID> ids_vec(ids.begin(), ids.end());
+  std::vector<std::shared_ptr<RemoteBlob>> remote_blobs_vec;
+  RETURN_ON_ERROR(GetRemoteBlobs(ids_vec, unsafe, remote_blobs_vec));
+  for (size_t i = 0; i < ids_vec.size(); ++i) {
+    remote_blobs[ids_vec[i]] = std::move(remote_blobs_vec[i]);
   }
   return Status::OK();
 }
