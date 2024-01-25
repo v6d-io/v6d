@@ -227,12 +227,31 @@ void bind_client(py::module& mod) {
           "metadata"_a, doc::ClientBase_create_metadata)
       .def(
           "create_metadata",
+          [](ClientBase* self,
+             std::vector<ObjectMeta>& metadatas) -> std::vector<ObjectMeta>& {
+            std::vector<ObjectID> object_ids;
+            throw_on_error(self->CreateMetaData(metadatas, object_ids));
+            return metadatas;
+          },
+          "metadata"_a, doc::ClientBase_create_metadata)
+      .def(
+          "create_metadata",
           [](ClientBase* self, ObjectMeta& metadata,
              InstanceID const& instance_id) -> ObjectMeta& {
             ObjectID object_id;
             throw_on_error(
                 self->CreateMetaData(metadata, instance_id, object_id));
             return metadata;
+          },
+          "metadata"_a, "instance_id"_a)
+      .def(
+          "create_metadata",
+          [](ClientBase* self, std::vector<ObjectMeta>& metadatas,
+             InstanceID const& instance_id) -> std::vector<ObjectMeta>& {
+            std::vector<ObjectID> object_ids;
+            throw_on_error(
+                self->CreateMetaData(metadatas, instance_id, object_ids));
+            return metadatas;
           },
           "metadata"_a, "instance_id"_a)
       .def(
@@ -570,6 +589,8 @@ void bind_client(py::module& mod) {
              throw_on_error(self->Debug(detail::to_json(debug), result));
              return detail::from_json(result);
            })
+      .def_property("compression", &ClientBase::compression_enabled,
+                    &ClientBase::set_compression_enabled)
       .def_property_readonly("ipc_socket", &ClientBase::IPCSocket,
                              doc::ClientBase_ipc_socket)
       .def_property_readonly("rpc_endpoint", &ClientBase::RPCEndpoint,
@@ -590,6 +611,18 @@ void bind_client(py::module& mod) {
             std::unique_ptr<BlobWriter> blob;
             throw_on_error(self->CreateBlob(size, blob));
             return std::shared_ptr<BlobWriter>(blob.release());
+          },
+          py::return_value_policy::move, "size"_a, doc::IPCClient_create_blob)
+      .def(
+          "create_blob",
+          [](Client* self, std::vector<size_t> const& sizes) {
+            std::vector<std::unique_ptr<BlobWriter>> blobs;
+            throw_on_error(self->CreateBlobs(sizes, blobs));
+            std::vector<std::shared_ptr<BlobWriter>> lived_blobs;
+            for (auto& blob : blobs) {
+              lived_blobs.emplace_back(blob.release());
+            }
+            return lived_blobs;
           },
           py::return_value_policy::move, "size"_a, doc::IPCClient_create_blob)
       .def(
@@ -781,11 +814,22 @@ void bind_client(py::module& mod) {
           "create_remote_blob",
           [](RPCClient* self,
              const std::shared_ptr<RemoteBlobWriter>& remote_blob_builder)
-              -> ObjectIDWrapper {
-            ObjectID blob_id = InvalidObjectID();
+              -> ObjectMeta {
+            ObjectMeta blob_meta;
             throw_on_error(
-                self->CreateRemoteBlob(remote_blob_builder, blob_id));
-            return blob_id;
+                self->CreateRemoteBlob(remote_blob_builder, blob_meta));
+            return blob_meta;
+          },
+          "remote_blob_builder"_a, doc::RPCClient_create_remote_blob)
+      .def(
+          "create_remote_blob",
+          [](RPCClient* self,
+             const std::vector<std::shared_ptr<RemoteBlobWriter>>&
+                 remote_blob_builders) -> std::vector<ObjectMeta> {
+            std::vector<ObjectMeta> blob_metas;
+            throw_on_error(
+                self->CreateRemoteBlobs(remote_blob_builders, blob_metas));
+            return blob_metas;
           },
           "remote_blob_builder"_a, doc::RPCClient_create_remote_blob)
       .def(

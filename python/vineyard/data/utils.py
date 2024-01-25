@@ -154,7 +154,7 @@ def build_buffer(
             buffer.copy(0, int(address), size)
         elif address is not None:
             buffer.copy(0, address)
-        return client.get_meta(client.create_remote_blob(buffer))
+        return client.create_remote_blob(buffer)
 
     if client.is_ipc:
         if size == 0 or address is None:

@@ -108,17 +108,30 @@ void throw_on_error(Status const& status);
  *
  * @size: capacity of the dst memory block.
  */
+// dst[offset:offset+src.size()] = src[:]
+// assert: dst.size() >= offset + src.size()
 Status copy_memoryview(
-    PyObject* src, void* dst, size_t const size, size_t const offset = 0,
+    PyObject* dst, PyObject* src, size_t const offset = 0,
     size_t const concurrency = memory::default_memcpy_concurrency);
 
-/**
- * Copy a memoryview/buffer to a dst pointer.
- *
- * @size: capacity of the dst memoryview.
- */
-Status copy_memoryview_to_memoryview(
-    PyObject* src, PyObject* dst, size_t const size, size_t const offset = 0,
+// dst[offset:offset+len(src)] = src[:]
+// assert: dst_size >= offset + src.size()
+Status copy_memoryview(
+    void* dst, size_t const dst_size, PyObject* src, size_t const offset = 0,
+    size_t const concurrency = memory::default_memcpy_concurrency);
+
+// dst[offset:offset+src_size] = src[:]
+// assert: dst.size() >= offset + src_size
+Status copy_memoryview(
+    PyObject* dst, const void* src, size_t const src_size,
+    size_t const offset = 0,
+    size_t const concurrency = memory::default_memcpy_concurrency);
+
+// dst[offset:offset+src_size] = src[:]
+// assert: dst_size >= offset + src_size
+Status copy_memoryview(
+    void* dst, size_t const dst_size, const void* src, size_t const src_size,
+    size_t const offset = 0,
     size_t const concurrency = memory::default_memcpy_concurrency);
 
 namespace detail {

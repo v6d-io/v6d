@@ -130,16 +130,16 @@ void IMetaService::RequestToBulkUpdate(
   auto self(shared_from_this());
   server_ptr_->GetMetaContext().post(
       [self, callback_after_ready, callback_after_finish]() {
-        if (self->stopped_.load()) {
-          VINEYARD_SUPPRESS(callback_after_finish(
-              Status::AlreadyStopped("etcd metadata service"),
-              UnspecifiedInstanceID(), InvalidObjectID(), InvalidSignature()));
-          return;
-        }
-        std::vector<op_t> ops;
         ObjectID object_id;
         Signature signature;
         InstanceID computed_instance_id;
+        if (self->stopped_.load()) {
+          VINEYARD_SUPPRESS(callback_after_finish(
+              Status::AlreadyStopped("etcd metadata service"),
+              InvalidObjectID(), InvalidSignature(), UnspecifiedInstanceID()));
+          return;
+        }
+        std::vector<op_t> ops;
         auto status =
             callback_after_ready(Status::OK(), self->meta_, ops, object_id,
                                  signature, computed_instance_id);
@@ -155,6 +155,45 @@ void IMetaService::RequestToBulkUpdate(
         }
         VINEYARD_SUPPRESS(callback_after_finish(status, object_id, signature,
                                                 computed_instance_id));
+      });
+}
+
+void IMetaService::RequestToBulkUpdate(
+    callback_t<const json&, std::vector<op_t>&, std::vector<ObjectID>&,
+               std::vector<Signature>&, std::vector<InstanceID>&>
+        callback_after_ready,
+    callback_t<const std::vector<ObjectID>, const std::vector<Signature>,
+               const std::vector<InstanceID>>
+        callback_after_finish) {
+  auto self(shared_from_this());
+  server_ptr_->GetMetaContext().post(
+      [self, callback_after_ready, callback_after_finish]() {
+        std::vector<ObjectID> object_ids;
+        std::vector<Signature> signatures;
+        std::vector<InstanceID> computed_instance_ids;
+
+        if (self->stopped_.load()) {
+          VINEYARD_SUPPRESS(callback_after_finish(
+              Status::AlreadyStopped("etcd metadata service"), object_ids,
+              signatures, computed_instance_ids));
+          return;
+        }
+        std::vector<op_t> ops;
+        auto status =
+            callback_after_ready(Status::OK(), self->meta_, ops, object_ids,
+                                 signatures, computed_instance_ids);
+        if (status.ok()) {
+#ifndef NDEBUG
+          // debugging
+          self->printDepsGraph();
+#endif
+          self->metaUpdate(ops, false);
+        } else {
+          VLOG(100) << "Error: failed to generated ops to update metadata: "
+                    << status.ToString();
+        }
+        VINEYARD_SUPPRESS(callback_after_finish(status, object_ids, signatures,
+                                                computed_instance_ids));
       });
 }
 

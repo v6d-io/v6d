@@ -37,8 +37,9 @@ void RemoteCreateTest(Client& ipc_client, RPCClient& rpc_client) {
       std::make_shared<RemoteBlobWriter>(double_array.size() * sizeof(double));
   std::memcpy(remote_blob_writer->data(), array_data,
               double_array.size() * sizeof(double));
-  ObjectID blob_id = InvalidObjectID();
-  VINEYARD_CHECK_OK(rpc_client.CreateRemoteBlob(remote_blob_writer, blob_id));
+  ObjectMeta blob_meta;
+  VINEYARD_CHECK_OK(rpc_client.CreateRemoteBlob(remote_blob_writer, blob_meta));
+  ObjectID blob_id = blob_meta.GetId();
   CHECK_NE(blob_id, InvalidObjectID());
 
   LOG(INFO) << "created blob: " << ObjectIDToString(blob_id);
@@ -106,8 +107,9 @@ void RemoteCreateAndGetTest(Client& ipc_client, RPCClient& rpc_client) {
       std::make_shared<RemoteBlobWriter>(double_array.size() * sizeof(double));
   std::memcpy(remote_blob_writer->data(), array_data,
               double_array.size() * sizeof(double));
-  ObjectID blob_id = InvalidObjectID();
-  VINEYARD_CHECK_OK(rpc_client.CreateRemoteBlob(remote_blob_writer, blob_id));
+  ObjectMeta blob_meta;
+  VINEYARD_CHECK_OK(rpc_client.CreateRemoteBlob(remote_blob_writer, blob_meta));
+  ObjectID blob_id = blob_meta.GetId();
   CHECK_NE(blob_id, InvalidObjectID());
 
   LOG(INFO) << "created blob: " << ObjectIDToString(blob_id);

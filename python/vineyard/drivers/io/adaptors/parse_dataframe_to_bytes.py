@@ -108,7 +108,7 @@ def parse_dataframe(vineyard_socket, stream_id, write_options, proc_num, proc_in
             first_write = False
             if len(csv_content) > 0:
                 chunk = stream_writer.next(len(csv_content))
-                vineyard.memory_copy(chunk, 0, csv_content)
+                vineyard.memory_copy(chunk, csv_content)
     except Exception:  # pylint: disable=broad-except
         report_exception()
         stream_writer.fail()

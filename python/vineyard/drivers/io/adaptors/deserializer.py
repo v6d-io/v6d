@@ -85,7 +85,7 @@ def copy_bytestream_to_blob(client, bs: ByteStream, blob: BlobBuilder):
         len(buffer),
     )
     if len(blob_data) > 0:
-        vineyard.memory_copy(buffer, offset, blob_data)
+        vineyard.memory_copy(buffer, blob_data, offset)
         offset += len(blob_data)
     return blob.seal(client)
 

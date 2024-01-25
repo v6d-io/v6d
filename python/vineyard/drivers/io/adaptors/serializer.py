@@ -65,7 +65,7 @@ def serialize_blob_to_stream(
         current_chunk_size = min(chunk_size, total_size - offset)
         if current_chunk_size > 0:
             chunk = writer.next(current_chunk_size)
-            vineyard.memory_copy(chunk, 0, blob[offset : offset + current_chunk_size])
+            vineyard.memory_copy(chunk, blob[offset : offset + current_chunk_size])
             offset += current_chunk_size
     logger.info('finished processing blob at %s', stream.params.get('path', 'UNKNOWN'))
     writer.finish()

@@ -143,7 +143,7 @@ class DataframeStream(BaseStream):
             view = sink.getbuffer()
             if len(view) > 0:
                 buffer = self.next(len(view))
-                memory_copy(buffer, 0, view)
+                memory_copy(buffer, view)
 
         def write_table(self, table: pa.Table):
             for batch in table.to_batches():

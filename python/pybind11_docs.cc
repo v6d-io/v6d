@@ -537,7 +537,8 @@ Base class for vineyard object builders.
 )doc";
 
 const char* ClientBase_create_metadata = R"doc(
-.. method:: create_metadata(metadata: ObjectMeta) -> ObjectMeta
+.. method:: create_metadata(metadata: Union[ObjectMeta, List[ObjectMeta]])
+                -> Union[ObjectMeta, List[ObjectMeta]]
     :noindex:
 
 Create metadata in vineyardd.
@@ -547,9 +548,12 @@ Parameters:
         The metadata that will be created on vineyardd.
 
 Returns:
-    The result created metadata.
+    Union[ObjectMeta, List[ObjectMeta]]:
+        The result created metadata.
 
-.. method:: create_metadata(metadata: ObjectMeta, instance_id: InstanceID) -> ObjectMeta
+.. method:: create_metadata(metadata: Union[ObjectMeta, List[ObjectMeta]],
+                            instance_id: InstanceID)
+                -> Union[ObjectMeta, List[ObjectMeta]]
     :noindex:
 
 Create metadata in vineyardd with a specified instance id.
@@ -561,7 +565,8 @@ Parameters:
         The instance to place the object metadata.
 
 Returns:
-    The result created metadata.
+    Union[ObjectMeta, List[ObjectMeta]]:
+        The result created metadata.
 )doc";
 
 const char* ClientBase_delete = R"doc(
@@ -833,17 +838,29 @@ IPC client that connects to vineyard instance's UNIX domain socket.
 )doc";
 
 const char* IPCClient_create_blob = R"doc(
-.. method:: create_blob(size: int) -> Blob
+.. method:: create_blob(size: int) -> BlobBuilder
     :noindex:
 
-Allocate a blob in vineyard server.
+    Allocate a blob in vineyard server.
 
-Parameters:
-    size: int
-        The size of blob that will be allocated on vineyardd.
+    Parameters:
+        size: int
+            The size of blob that will be allocated on vineyardd.
 
-Returns:
-    BlobBuilder
+    Returns:
+        BlobBuilder
+
+.. method:: create_blob(sizes: List[int]) -> List[BlobBuilder]
+    :noindex:
+
+    Allocate blobs in vineyard server.
+
+    Parameters:
+        size: List[int]
+            The size of blobs that will be allocated on vineyardd.
+
+    Returns:
+        List[BlobBuilder]
 )doc";
 
 const char* IPCClient_create_empty_blob = R"doc(
@@ -1083,34 +1100,51 @@ Returns:
 )doc";
 
 const char* RPCClient_create_remote_blob = R"doc(
-.. method:: create_remote_blob(blob_builder: RemoteBlobBuilder) -> ObjectID
+.. method:: create_remote_blob(blob_builder: RemoteBlobBuilder) -> ObjectMeta
     :noindex:
 
-Put the remote blob to connected remote vineyard instance. The :code:`blob_builder`
-is assumed to be ready and modification on the :code:`blob_builder` after creation
-won't take effect.
+    Put the remote blob to connected remote vineyard instance. The :code:`blob_builder`
+    is assumed to be ready and modification on the :code:`blob_builder` after creation
+    won't take effect.
 
-Note that creating remote blobs requires network transfer and may yields significate
-overhead.
+    Note that creating remote blobs requires network transfer and may yields significate
+    overhead.
 
-.. code:: python
+    .. code:: python
 
-    vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
+        vineyard_rpc_client = vineyard.connect(*vineyard_endpoint.split(':'))
 
-    buffer_writer = RemoteBlobBuilder(len(payload))
-    buffer_writer.copy(0, payload)
-    blob_id = vineyard_rpc_client.create_remote_blob(buffer_writer)
+        buffer_writer = RemoteBlobBuilder(len(payload))
+        buffer_writer.copy(0, payload)
+        blob_meta = vineyard_rpc_client.create_remote_blob(buffer_writer)
 
-Parameters:
-    blob_builder: RemoteBlobBuilder
-        The remote blob to create.
+    Parameters:
+        blob_builder: RemoteBlobBuilder
+            The remote blob to create.
 
-Returns:
-    ObjectID
+    Returns:
+        ObjectMeta
 
-See Also:
-    RPCClient.get_remote_blob
-    RPCClient.get_remote_blobs
+    See Also:
+        RPCClient.get_remote_blob
+        RPCClient.get_remote_blobs
+
+.. method:: create_remote_blob(blob_builders: List[RemoteBlobBuilder]) -> List[ObjectMeta]
+    :noindex:
+
+    Put the remote blobs to connected remote vineyard instance. The :code:`blob_builders`
+    is assumed to be ready and modification on the :code:`blob_builder` after creation
+    won't take effect.
+
+    Note that creating remote blobs requires network transfer and may yields significate
+    overhead.
+
+    Returns:
+        List[ObjectMeta]
+
+    See Also:
+        RPCClient.get_remote_blob
+        RPCClient.get_remote_blobs
 )doc";
 
 const char* RPCClient_get_remote_blob = R"doc(

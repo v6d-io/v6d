@@ -71,12 +71,36 @@ Status ClientBase::CreateData(const json& tree, ObjectID& id,
   return Status::OK();
 }
 
+Status ClientBase::CreateData(const std::vector<json>& trees,
+                              std::vector<ObjectID>& ids,
+                              std::vector<Signature>& signatures,
+                              std::vector<InstanceID>& instance_ids) {
+  ENSURE_CONNECTED(this);
+  std::string message_out;
+  WriteCreateDatasRequest(trees, message_out);
+  RETURN_ON_ERROR(doWrite(message_out));
+  json message_in;
+  RETURN_ON_ERROR(doRead(message_in));
+  RETURN_ON_ERROR(
+      ReadCreateDatasReply(message_in, ids, signatures, instance_ids));
+  return Status::OK();
+}
+
 Status ClientBase::CreateMetaData(ObjectMeta& meta_data, ObjectID& id) {
   auto instance_id = this->instance_id_;
   if (this->IsRPC()) {
     instance_id = this->remote_instance_id();
   }
   return this->CreateMetaData(meta_data, instance_id, std::ref(id));
+}
+
+Status ClientBase::CreateMetaData(std::vector<ObjectMeta>& meta_datas,
+                                  std::vector<ObjectID>& ids) {
+  auto instance_id = this->instance_id_;
+  if (this->IsRPC()) {
+    instance_id = this->remote_instance_id();
+  }
+  return this->CreateMetaData(meta_datas, instance_id, std::ref(ids));
 }
 
 Status ClientBase::CreateMetaData(ObjectMeta& meta_data,
@@ -101,22 +125,70 @@ Status ClientBase::CreateMetaData(ObjectMeta& meta_data,
     VINEYARD_SUPPRESS(SyncMetaData());
   }
   Signature signature;
-  auto status =
-      CreateData(meta_data.MetaData(), id, signature, computed_instance_id);
-  if (status.ok()) {
-    meta_data.SetId(id);
-    meta_data.SetSignature(signature);
-    meta_data.SetClient(this);
-    meta_data.SetInstanceId(computed_instance_id);
-    if (meta_data.incomplete()) {
+  RETURN_ON_ERROR(
+      CreateData(meta_data.MetaData(), id, signature, computed_instance_id));
+
+  meta_data.SetId(id);
+  meta_data.SetSignature(signature);
+  meta_data.SetClient(this);
+  meta_data.SetInstanceId(computed_instance_id);
+  if (meta_data.incomplete()) {
+    // N.B.: don't use `meta_data` directly to `GetMetaData` otherwise it may
+    // violate the invariant of `BufferSet` in `ObjectMeta`.
+    ObjectMeta result_meta;
+    RETURN_ON_ERROR(this->GetMetaData(id, result_meta));
+    meta_data = result_meta;
+  }
+  return Status::OK();
+}
+
+Status ClientBase::CreateMetaData(std::vector<ObjectMeta>& meta_datas,
+                                  InstanceID const& instance_id,
+                                  std::vector<ObjectID>& ids) {
+  const char* labels[3] = {"JOB_NAME", "POD_NAME", "POD_NAMESPACE"};
+  std::vector<InstanceID> computed_instance_ids(meta_datas.size(), instance_id);
+  bool has_incomplete = false;
+  for (auto& meta_data : meta_datas) {
+    meta_data.SetInstanceId(instance_id);
+    meta_data.AddKeyValue("transient", true);
+    // add the key from env to the metadata for k8s environment.
+    for (auto l : labels) {
+      auto value = read_env(l);
+      if (!value.empty()) {
+        meta_data.AddKeyValue(std::string(l), std::string(value));
+      }
+    }
+    // nbytes is optional
+    if (!meta_data.HasKey("nbytes")) {
+      meta_data.SetNBytes(0);
+    }
+    has_incomplete = has_incomplete || meta_data.incomplete();
+  }
+  // if the metadata has incomplete components, trigger an remote meta sync.
+  if (has_incomplete) {
+    VINEYARD_SUPPRESS(SyncMetaData());
+  }
+  std::vector<Signature> signatures;
+  std::vector<json> trees;
+  for (auto const& meta_data : meta_datas) {
+    trees.emplace_back(meta_data.MetaData());
+  }
+  RETURN_ON_ERROR(CreateData(trees, ids, signatures, computed_instance_ids));
+
+  for (size_t i = 0; i < meta_datas.size(); ++i) {
+    meta_datas[i].SetId(ids[i]);
+    meta_datas[i].SetSignature(signatures[i]);
+    meta_datas[i].SetClient(this);
+    meta_datas[i].SetInstanceId(computed_instance_ids[i]);
+    if (meta_datas[i].incomplete()) {
       // N.B.: don't use `meta_data` directly to `GetMetaData` otherwise it may
       // violate the invariant of `BufferSet` in `ObjectMeta`.
       ObjectMeta result_meta;
-      RETURN_ON_ERROR(this->GetMetaData(id, result_meta));
-      meta_data = result_meta;
+      RETURN_ON_ERROR(this->GetMetaData(ids[i], result_meta));
+      meta_datas[i] = result_meta;
     }
   }
-  return status;
+  return Status::OK();
 }
 
 Status ClientBase::SyncMetaData() {

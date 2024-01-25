@@ -572,8 +572,8 @@ void bind_blobs(py::module& mod) {
             if (self->size() == 0) {
               return;
             }
-            throw_on_error(copy_memoryview(buffer.ptr(), self->data(),
-                                           self->size(), offset, concurrency));
+            throw_on_error(copy_memoryview(self->data(), self->size(),
+                                           buffer.ptr(), offset, concurrency));
           },
           "offset"_a, "buffer"_a,
           py::arg("concurrency") = memory::default_memcpy_concurrency,
@@ -750,8 +750,8 @@ void bind_blobs(py::module& mod) {
             if (self->size() == 0) {
               return;
             }
-            throw_on_error(copy_memoryview(buffer.ptr(), self->data(),
-                                           self->size(), offset, concurrency));
+            throw_on_error(copy_memoryview(self->data(), self->size(),
+                                           buffer.ptr(), offset, concurrency));
           },
           "offset"_a, "buffer"_a,
           py::arg("concurrency") = memory::default_memcpy_concurrency,
@@ -774,8 +774,8 @@ void bind_blobs(py::module& mod) {
                   std::to_string(self->size() - offset) +
                   "', but the buffer size is '" + std::to_string(size) + "'"));
             }
-            memory::concurrent_memcpy(self->data() + offset, buffer, size,
-                                      concurrency);
+            throw_on_error(copy_memoryview(self->data(), self->size(), buffer,
+                                           size, offset, concurrency));
           },
           "offset"_a, "bytes"_a,
           py::arg("concurrency") = memory::default_memcpy_concurrency,

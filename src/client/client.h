@@ -385,6 +385,20 @@ class Client final : public BasicIPCClient,
   Status CreateBlob(size_t size, std::unique_ptr<BlobWriter>& blob);
 
   /**
+   * @brief Create blobs in vineyard server. When creating a blob, vineyard
+   * server's bulk allocator will prepare a block of memory of the requested
+   * size, then map the memory to client's process to share the allocated
+   * memory.
+   *
+   * @param sizes The size of requested blobs.
+   * @param blob The result mutable blob will be set in `blob`.
+   *
+   * @return Status that indicates whether the create action has succeeded.
+   */
+  Status CreateBlobs(const std::vector<size_t>& sizes,
+                     std::vector<std::unique_ptr<BlobWriter>>& blobs);
+
+  /**
    * @brief Get a blob from vineyard server.
    *
    * @param id the blob to get.
@@ -844,6 +858,11 @@ class Client final : public BasicIPCClient,
 
   Status CreateBuffer(const size_t size, ObjectID& id, Payload& payload,
                       std::shared_ptr<MutableBuffer>& buffer);
+
+  Status CreateBuffers(const std::vector<size_t>& sizes,
+                       std::vector<ObjectID>& ids,
+                       std::vector<Payload>& payloads,
+                       std::vector<std::shared_ptr<MutableBuffer>>& buffers);
 
   /**
    * @brief Get a blob from vineyard server. When obtaining blobs from vineyard

@@ -104,6 +104,14 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
       callback_t<const ObjectID, const Signature, const InstanceID>
           callback_after_finish);
 
+  void RequestToBulkUpdate(
+      callback_t<const json&, std::vector<op_t>&, std::vector<ObjectID>&,
+                 std::vector<Signature>&, std::vector<InstanceID>&>
+          callback_after_ready,
+      callback_t<const std::vector<ObjectID>, const std::vector<Signature>,
+                 const std::vector<InstanceID>>
+          callback_after_finish);
+
   // When requesting direct update, we already worked inside the meta context.
   void RequestToDirectUpdate(std::vector<op_t> const& ops,
                              const bool from_remote = false);

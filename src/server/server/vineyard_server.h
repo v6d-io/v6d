@@ -125,8 +125,20 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
       callback_t<const ObjectID, const Signature, const InstanceID> callback);
 
   Status CreateData(
+      const std::vector<json>& trees,
+      callback_t<const std::vector<ObjectID>, const std::vector<Signature>,
+                 const std::vector<InstanceID>>
+          callback);
+
+  Status CreateData(
       const json& tree, bool recursive,
       callback_t<const ObjectID, const Signature, const InstanceID> callback);
+
+  Status CreateData(
+      const std::vector<json>& trees, bool recursive,
+      callback_t<const std::vector<ObjectID>, const std::vector<Signature>,
+                 const std::vector<InstanceID>>
+          callback);
 
   Status Persist(const ObjectID id, callback_t<> callback);
 
@@ -197,6 +209,13 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
   inline std::string const& nodename() { return nodename_; }
   inline void set_nodename(std::string const& nodename) {
     nodename_ = nodename;
+  }
+
+  inline bool store_matched(StoreType const& store_type) {
+    return bulk_store_type_ == store_type;
+  }
+  inline bool compression_enabled() const {
+    return spec_.value("compression", true);
   }
 
   const std::string IPCSocket();

@@ -351,10 +351,10 @@ void ObjectMeta::SetMetaData(ClientBase* client, const json& meta) {
       if (client_ == nullptr) {
         VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
       } else {
-        if ((client_->IsIPC() &&
-             tree["instance_id"].get<InstanceID>() == client_->instance_id()) ||
-            (client_->IsRPC() && tree["instance_id"].get<InstanceID>() ==
-                                     client_->remote_instance_id())) {
+        InstanceID instance_id = tree["instance_id"].get<InstanceID>();
+        if ((client_->IsIPC() && instance_id == client_->instance_id()) ||
+            (client_->IsRPC() &&
+             instance_id == client_->remote_instance_id())) {
           VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(member_id));
         }
       }

@@ -131,13 +131,43 @@ static PyMethodDef vineyard_utils_methods[] = {
 void bind_utils(py::module& mod) {
   mod.def(
       "memory_copy",
-      [](py::buffer const dst, size_t offset, py::buffer const src,
-         size_t const size,
+      [](py::buffer const dst, py::buffer const src, size_t offset = 0,
          size_t const concurrency = memory::default_memcpy_concurrency) {
-        throw_on_error(copy_memoryview_to_memoryview(src.ptr(), dst.ptr(), size,
-                                                     offset, concurrency));
+        throw_on_error(
+            copy_memoryview(dst.ptr(), src.ptr(), offset, concurrency));
       },
-      "dst"_a, "offset"_a, "src"_a, py::arg("size") = 0 /* not checked */,
+      "dst"_a, "src"_a, py::arg("offset") = 0,
+      py::arg("concurrency") = memory::default_memcpy_concurrency);
+  mod.def(
+      "memory_copy",
+      [](uintptr_t dst, size_t dst_size, py::buffer const src,
+         size_t offset = 0,
+         size_t const concurrency = memory::default_memcpy_concurrency) {
+        throw_on_error(copy_memoryview(reinterpret_cast<void*>(dst), dst_size,
+                                       src.ptr(), offset, concurrency));
+      },
+      "dst"_a, "dst_size"_a, "src"_a, py::arg("offset") = 0,
+      py::arg("concurrency") = memory::default_memcpy_concurrency);
+  mod.def(
+      "memory_copy",
+      [](py::buffer const dst, uintptr_t src, size_t src_size,
+         size_t offset = 0,
+         size_t const concurrency = memory::default_memcpy_concurrency) {
+        throw_on_error(copy_memoryview(dst.ptr(), reinterpret_cast<void*>(src),
+                                       src_size, offset, concurrency));
+      },
+      "dst"_a, "src"_a, "src_size"_a, py::arg("offset") = 0,
+      py::arg("concurrency") = memory::default_memcpy_concurrency);
+  mod.def(
+      "memory_copy",
+      [](uintptr_t dst, size_t dst_size, uintptr_t src, size_t src_size,
+         size_t offset = 0,
+         size_t const concurrency = memory::default_memcpy_concurrency) {
+        throw_on_error(copy_memoryview(reinterpret_cast<void*>(dst), dst_size,
+                                       reinterpret_cast<void*>(src), src_size,
+                                       offset, concurrency));
+      },
+      "dst"_a, "dst_size"_a, "src"_a, "src_size"_a, py::arg("offset") = 0,
       py::arg("concurrency") = memory::default_memcpy_concurrency);
 
   PyModule_AddFunctions(mod.ptr(), vineyard_utils_methods);
@@ -177,92 +207,138 @@ class PyBufferGetter {
 
 }  // namespace detail
 
-Status copy_memoryview(PyObject* src, void* dst, size_t const size,
-                       size_t const offset, size_t const concurrency) {
+// dst[offset:offset+src.size()] = src[:]
+// assert: dst.size() >= offset + src.size()
+Status copy_memoryview(PyObject* dst, PyObject* src, size_t const offset,
+                       size_t const concurrency) {
   detail::PyBufferGetter src_buffer(src);
   if (!src_buffer.has_buffer()) {
     return Status::AssertionFailed(
-        "Not a contiguous memoryview, please consider translate to `bytes` "
-        "first.");
+        "Not a contiguous memoryview for src, please consider translate it "
+        "to `bytes` first.");
   }
-
   // skip none buffers
   if (src_buffer.data() == nullptr) {
     return Status::OK();
   }
+  size_t src_size = src_buffer.size();
+
+  detail::PyBufferGetter dst_buffer(dst);
+  if (!dst_buffer.has_buffer()) {
+    return Status::AssertionFailed(
+        "Not a contiguous memoryview for dst, please consider translate it "
+        "to `bytes` first.");
+  }
+  // skip none buffers
+  if (dst_buffer.data() == nullptr) {
+    return Status::OK();
+  }
+  size_t dst_size = dst_buffer.size();
 
   // validate expected size first
-  if ((size != 0) && (src_buffer.size() + offset > size)) {
+  if ((src_size != 0) && (src_size + offset > dst_size)) {
     return Status::AssertionFailed("Expect a source buffer with size at most'" +
-                                   std::to_string(size - offset) +
+                                   std::to_string(dst_size - offset) +
                                    "', but the buffer size is '" +
-                                   std::to_string(src_buffer.size()) + "'");
+                                   std::to_string(src_size) + "'");
+  }
+
+  {
+    py::gil_scoped_release release;
+    // memcpy
+    memory::concurrent_memcpy(
+        reinterpret_cast<uint8_t*>(dst_buffer.data()) + offset,
+        src_buffer.data(), src_size, concurrency);
+  }
+  return Status::OK();
+}
+
+// dst[offset:offset+len(src)] = src[:]
+// assert: dst_size >= offset + src.size()
+Status copy_memoryview(void* dst, size_t const dst_size, PyObject* src,
+                       size_t const offset, size_t const concurrency) {
+  detail::PyBufferGetter src_buffer(src);
+  if (!src_buffer.has_buffer()) {
+    return Status::AssertionFailed(
+        "Not a contiguous memoryview for src, please consider translate it "
+        "to `bytes` first.");
+  }
+  // skip none buffers
+  if (src_buffer.data() == nullptr) {
+    return Status::OK();
+  }
+  size_t src_size = src_buffer.size();
+
+  // validate expected size first
+  if ((src_size != 0) && (src_size + offset > dst_size)) {
+    return Status::AssertionFailed("Expect a source buffer with size at most'" +
+                                   std::to_string(dst_size - offset) +
+                                   "', but the buffer size is '" +
+                                   std::to_string(src_size) + "'");
   }
 
   {
     py::gil_scoped_release release;
     // memcpy
     memory::concurrent_memcpy(reinterpret_cast<uint8_t*>(dst) + offset,
-                              src_buffer.data(), src_buffer.size(),
-                              concurrency);
+                              src_buffer.data(), src_size, concurrency);
   }
-
   return Status::OK();
 }
 
-Status copy_memoryview_to_memoryview(PyObject* src, PyObject* dst,
-                                     size_t const size, size_t const offset,
-                                     size_t const concurrency) {
-  detail::PyBufferGetter src_buffer(src);
-  if (!src_buffer.has_buffer()) {
+// dst[offset:offset+src_size] = src[:]
+// assert: dst.size() >= offset + src_size
+Status copy_memoryview(PyObject* dst, const void* src, size_t const src_size,
+                       size_t const offset, size_t const concurrency) {
+  detail::PyBufferGetter dst_buffer(dst);
+  if (!dst_buffer.has_buffer()) {
     return Status::AssertionFailed(
-        "Not a contiguous memoryview, please consider translate to `bytes` "
-        "first.");
+        "Not a contiguous memoryview for dst, please consider translate it "
+        "to `bytes` first.");
   }
-
   // skip none buffers
-  if (src_buffer.data() == nullptr || src_buffer.size() == 0) {
+  if (dst_buffer.data() == nullptr) {
     return Status::OK();
   }
+  size_t dst_size = dst_buffer.size();
 
   // validate expected size first
-  if ((size != 0) && (src_buffer.size() + offset > size)) {
-    return Status::AssertionFailed(
-        "Expect a source buffer with size at most '" +
-        std::to_string(size - offset) + "', but the buffer size is '" +
-        std::to_string(src_buffer.size()) + "'");
-  }
-
-  detail::PyBufferGetter dst_buffer(dst);
-
-  if (!dst_buffer.has_buffer()) {
-    return Status::AssertionFailed("Not a contiguous memoryview as the target");
-  }
-
-  if (dst_buffer.data() == nullptr) {
-    return Status::AssertionFailed("The destination buffer is a null buffer");
-  }
-
-  if (dst_buffer.readonly()) {
-    return Status::AssertionFailed(
-        "The destination buffer is a readonly buffer");
-  }
-
-  // validate expected size first
-  if ((size != 0) && (static_cast<size_t>(dst_buffer.size()) < size)) {
-    return Status::AssertionFailed(
-        "Expect a destination buffer with size at least '" +
-        std::to_string(size) + "', but the buffer size is '" +
-        std::to_string(dst_buffer.size()) + "'");
+  if ((src_size != 0) && (src_size + offset > dst_size)) {
+    return Status::AssertionFailed("Expect a source buffer with size at most'" +
+                                   std::to_string(dst_size - offset) +
+                                   "', but the buffer size is '" +
+                                   std::to_string(src_size) + "'");
   }
 
   {
     py::gil_scoped_release release;
     // memcpy
-    memory::concurrent_memcpy(dst_buffer.data() + offset, src_buffer.data(),
-                              src_buffer.size(), concurrency);
+    memory::concurrent_memcpy(
+        reinterpret_cast<uint8_t*>(dst_buffer.data()) + offset, src, src_size,
+        concurrency);
+  }
+  return Status::OK();
+}
+
+// dst[offset:offset+src_size] = src[:]
+// assert: dst_size >= offset + src_size
+Status copy_memoryview(void* dst, size_t const dst_size, const void* src,
+                       size_t const src_size, size_t const offset,
+                       size_t const concurrency) {
+  // validate expected size first
+  if ((src_size != 0) && (src_size + offset > dst_size)) {
+    return Status::AssertionFailed("Expect a source buffer with size at most'" +
+                                   std::to_string(dst_size - offset) +
+                                   "', but the buffer size is '" +
+                                   std::to_string(src_size) + "'");
   }
 
+  {
+    py::gil_scoped_release release;
+    // memcpy
+    memory::concurrent_memcpy(reinterpret_cast<uint8_t*>(dst) + offset, src,
+                              src_size, concurrency);
+  }
   return Status::OK();
 }
 

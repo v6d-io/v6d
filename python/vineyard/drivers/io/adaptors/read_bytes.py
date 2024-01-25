@@ -97,7 +97,7 @@ def read_byte_blocks(
         begin += size
         if size > 0:
             chunk = writer.next(size)
-            vineyard.memory_copy(chunk, 0, buffer)
+            vineyard.memory_copy(chunk, buffer)
 
 
 def read_bytes(  # noqa: C901, pylint: disable=too-many-statements

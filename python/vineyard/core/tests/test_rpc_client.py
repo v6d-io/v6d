@@ -41,13 +41,13 @@ def test_remote_blob_create(vineyard_client, vineyard_endpoint):
 
     buffer_writer = RemoteBlobBuilder(len(payload))
     buffer_writer.copy(0, payload)
-    blob_id = vineyard_rpc_client.create_remote_blob(buffer_writer)
+    blob_meta = vineyard_rpc_client.create_remote_blob(buffer_writer)
 
     # get as local blob
-    local_blob = vineyard_client.get_blob(blob_id)
+    local_blob = vineyard_client.get_blob(blob_meta.id)
 
     # check local blob
-    assert local_blob.id == blob_id
+    assert local_blob.id == blob_meta.id
     assert local_blob.size == len(payload)
     assert memoryview(local_blob) == memoryview(payload)
 
@@ -75,13 +75,13 @@ def test_remote_blob_create_and_get(vineyard_endpoint):
 
     buffer_writer = RemoteBlobBuilder(len(payload))
     buffer_writer.copy(0, payload)
-    blob_id = vineyard_rpc_client.create_remote_blob(buffer_writer)
+    blob_meta = vineyard_rpc_client.create_remote_blob(buffer_writer)
 
     # get as remote blob
-    remote_blob = vineyard_rpc_client.get_remote_blob(blob_id)
+    remote_blob = vineyard_rpc_client.get_remote_blob(blob_meta.id)
 
     # check remote blob
-    assert remote_blob.id == blob_id
+    assert remote_blob.id == blob_meta.id
     assert remote_blob.size == len(payload)
     assert memoryview(remote_blob) == memoryview(payload)
 
@@ -92,25 +92,25 @@ def test_remote_blob_create_and_get_large_object(vineyard_endpoint):
     # allocate & copy
     buffer_writer = RemoteBlobBuilder(len(large_payload))
     buffer_writer.copy(0, large_payload)
-    blob_id = vineyard_rpc_client.create_remote_blob(buffer_writer)
+    blob_meta = vineyard_rpc_client.create_remote_blob(buffer_writer)
 
     # get as remote blob
-    remote_blob = vineyard_rpc_client.get_remote_blob(blob_id)
+    remote_blob = vineyard_rpc_client.get_remote_blob(blob_meta.id)
 
     # check remote blob
-    assert remote_blob.id == blob_id
+    assert remote_blob.id == blob_meta.id
     assert remote_blob.size == len(large_payload)
     assert memoryview(remote_blob) == memoryview(large_payload)
 
     # wrap
     buffer_writer = RemoteBlobBuilder.wrap(large_payload)
-    blob_id = vineyard_rpc_client.create_remote_blob(buffer_writer)
+    blob_meta = vineyard_rpc_client.create_remote_blob(buffer_writer)
 
     # get as remote blob
-    remote_blob = vineyard_rpc_client.get_remote_blob(blob_id)
+    remote_blob = vineyard_rpc_client.get_remote_blob(blob_meta.id)
 
     # check remote blob
-    assert remote_blob.id == blob_id
+    assert remote_blob.id == blob_meta.id
     assert remote_blob.size == len(large_payload)
     assert memoryview(remote_blob) == memoryview(large_payload)
 
@@ -127,10 +127,10 @@ def test_multiple_remote_blobs(vineyard_endpoint):
         have_written = False
         while not have_written:
             try:
-                blob_id = vineyard_rpc_client.create_remote_blob(blob_builder)
+                blob_meta = vineyard_rpc_client.create_remote_blob(blob_builder)
                 have_written = True
                 print(f"Successfully written {i} blob")
-                remote_blob = vineyard_rpc_client.get_remote_blob(blob_id)
+                remote_blob = vineyard_rpc_client.get_remote_blob(blob_meta.id)
                 assert remote_blob.size == len(payload)
                 print(f"Successfully read {i} blob")
             except vineyard.NotEnoughMemoryException:

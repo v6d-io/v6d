@@ -483,61 +483,71 @@ static size_t decompress_chunk(
   return decompressed_size;
 }
 
+static void read_chunk_util(asio::generic::stream_protocol::socket& socket,
+                            uint8_t* data, size_t size,
+                            callback_t<> callback_after_finish) {
+  asio::mutable_buffer buffer = asio::buffer(data, size);
+  // In our test, socket::async_receive outperforms asio::async_read.
+  socket.async_receive(buffer, [&socket, data, size, callback_after_finish](
+                                   boost::system::error_code ec,
+                                   std::size_t read_size) {
+    if (ec) {
+      if (ec != asio::error::eof || read_size != size) {
+        auto status = Status::IOError(
+            "Failed to read enough bytes from client: " + ec.message() +
+            ", expected " + std::to_string(size - read_size) + " more bytes");
+        VINEYARD_DISCARD(callback_after_finish(status));
+      } else {
+        VINEYARD_DISCARD(callback_after_finish(Status::OK()));
+      }
+    } else {
+      if (read_size < size) {
+        read_chunk_util(socket, data + read_size, size - read_size,
+                        callback_after_finish);
+      } else {
+        VINEYARD_DISCARD(callback_after_finish(Status::OK()));
+      }
+    }
+  });
+}
+
 static void read_chunk(asio::generic::stream_protocol::socket& socket,
                        std::vector<std::shared_ptr<Payload>> const& objects,
                        size_t index, size_t offset,
                        std::shared_ptr<Decompressor> decompressor,
-                       asio::mutable_buffer buffer,
+                       uint8_t* data, size_t expected_size,
                        callback_t<> callback_after_finish) {
-  asio::async_read(
-      socket, buffer,
-      [&socket, callback_after_finish, objects, index, offset, decompressor](
-          boost::system::error_code ec, std::size_t read_size) {
-        if (ec) {
-          if (ec == asio::error::eof) {
-            if (decompressor) {
-              read_size =
-                  detail::decompress_chunk(read_size, objects, index, offset,
-                                           decompressor, callback_after_finish);
-            }
-            if ((read_size + offset <
-                 static_cast<size_t>(objects[index]->data_size)) ||
-                (index < objects.size() - 1)) {
-              auto status = Status::IOError(
-                  "Failed to read buffer from client, no "
-                  "enough content from client: " +
-                  ec.message());
-              VINEYARD_DISCARD(callback_after_finish(status));
-            } else {
-              VINEYARD_DISCARD(callback_after_finish(Status::OK()));
-            }
-          } else {
-            auto status = Status::IOError(
-                "Failed to read buffer from client: " + ec.message());
-            VINEYARD_DISCARD(callback_after_finish(status));
-          }
-        } else {
-          if (decompressor) {
-            read_size =
-                detail::decompress_chunk(read_size, objects, index, offset,
-                                         decompressor, callback_after_finish);
-          }
-          ReceiveRemoteBuffers(socket, objects, index, read_size + offset,
-                               decompressor, callback_after_finish);
+  read_chunk_util(
+      socket, data, expected_size,
+      [&socket, objects, index, offset, decompressor, expected_size,
+       callback_after_finish](const Status& status) -> Status {
+        if (!status.ok()) {
+          return callback_after_finish(status);
         }
+        size_t read_size = expected_size;
+        if (decompressor) {
+          read_size =
+              detail::decompress_chunk(read_size, objects, index, offset,
+                                       decompressor, callback_after_finish);
+        }
+        ReceiveRemoteBuffers(socket, objects, index, read_size + offset,
+                             decompressor, callback_after_finish);
+        return Status::OK();
       });
 }
 
 static void read_sized_chunk(
     asio::generic::stream_protocol::socket& socket,
     std::vector<std::shared_ptr<Payload>> const& objects, size_t index,
-    size_t offset, std::shared_ptr<Decompressor> decompressor,
-    asio::mutable_buffer buffer, callback_t<> callback_after_finish) {
+    size_t offset, std::shared_ptr<Decompressor> decompressor, uint8_t* data,
+    // `expected_size` not used, as the size of compressed buffer comes from
+    // the incoming stream.
+    size_t expected_size, callback_t<> callback_after_finish) {
   // we need the `size` leave in heap to keep it alive inside callback
   std::shared_ptr<size_t> chunk_size = std::make_shared<size_t>(0);
   asio::async_read(
       socket, asio::buffer(chunk_size.get(), sizeof(size_t)),
-      [&socket, objects, index, offset, decompressor, buffer,
+      [&socket, objects, index, offset, decompressor, data,
        callback_after_finish,
        chunk_size](boost::system::error_code ec, std::size_t) {
         if (ec) {
@@ -545,9 +555,8 @@ static void read_sized_chunk(
               "Failed to read buffer size from client: " + ec.message());
           return;
         }
-        read_chunk(socket, objects, index, offset, decompressor,
-                   asio::mutable_buffer(buffer.data(), *chunk_size),
-                   callback_after_finish);
+        read_chunk(socket, objects, index, offset, decompressor, data,
+                   *chunk_size, callback_after_finish);
       });
 }
 
@@ -567,21 +576,21 @@ void ReceiveRemoteBuffers(asio::generic::stream_protocol::socket& socket,
     VINEYARD_DISCARD(callback_after_finish(Status::OK()));
     return;
   }
-  asio::mutable_buffer buffer;
   if (decompressor) {
     void* data = nullptr;
     size_t size;
     auto s = decompressor->Buffer(data, size);
     if (!s.ok()) {
       VINEYARD_DISCARD(callback_after_finish(s));
+      return;
     }
-    buffer = asio::buffer(data, size);
     detail::read_sized_chunk(socket, objects, index, offset, decompressor,
-                             buffer, callback_after_finish);
+                             reinterpret_cast<uint8_t*>(data), size,
+                             callback_after_finish);
   } else {
-    buffer = asio::buffer(objects[index]->pointer + offset,
-                          objects[index]->data_size - offset);
-    detail::read_chunk(socket, objects, index, offset, decompressor, buffer,
+    detail::read_chunk(socket, objects, index, offset, decompressor,
+                       objects[index]->pointer + offset,
+                       objects[index]->data_size - offset,
                        callback_after_finish);
   }
 }
