@@ -100,14 +100,13 @@
 typedef struct raxNode {
   uint32_t iskey : 1;     /* Does this node contain a key? */
   uint32_t isnull : 1;    /* Associated value is NULL (don't store it). */
-  uint32_t iscustomnull : 1;   /* Associated custome value is NULL */
-  uint32_t iscustomallocated : 1; /* The memory to store custom value is allocated */
   uint32_t iscompr : 1;   /* Node is compressed. */
   uint32_t issubtree : 1; /* Node is the root node of a sub tree */
   uint32_t size : 26;     /* Number of children, or compressed string len. */
   uint32_t numnodes;      /* Number of the child nodes */
   uint32_t numele;        /* Number of elements inside this node. */
   uint64_t timestamp;    /* Timestamps of the node */
+  void *custom_data;
   /* Data layout is as follows:
    *
    * If node is not compressed we have 'size' bytes, one for each children
@@ -213,9 +212,6 @@ raxNode* raxFindAndReturnDataNode(rax* rax, int* s, size_t len);
 void raxSetSubtree(raxNode *n);
 void raxSetSubtreeAllocated(raxNode *node);
 void raxSetSubtreeNotNull(raxNode *node);
-bool raxIsSubtree(raxNode *node);
-bool raxIsSubtreeAllocated(raxNode *node);
-bool raxIsSubtreeCustomDataNull(raxNode *node);
 int raxFindNodeWithParent(rax *rax, int *s, size_t len, void **node, void **parent);
 void raxFree(rax* rax);
 void raxFreeWithCallback(rax *rax, void (*free_callback)(raxNode *));
@@ -229,7 +225,6 @@ void raxStop(raxIterator* it);
 int raxEOF(raxIterator* it);
 void raxShow(rax* rax);
 uint64_t raxSize(rax* rax);
-raxNode *raxReallocForSubtreeCustomData(raxNode *n);
 void raxSetCustomData(raxNode *n, void *data);
 void *raxGetCustomData(raxNode *n);
 unsigned long raxTouch(raxNode* n);
@@ -245,5 +240,6 @@ void raxSerialize(rax* root, std::vector<std::vector<int>>& tokenList, std::vect
  * in a low level way, so this function is exported as well. */
 void raxSetData(raxNode* n, void* data);
 void* raxGetData(raxNode* n);
+int raxFindNode(rax *rax, int *s, size_t len, void **node);
 
 #endif
