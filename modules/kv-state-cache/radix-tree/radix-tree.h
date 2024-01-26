@@ -116,13 +116,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   RadixTree(int cache_capacity) {
     LOG(INFO) << "init radix tree";
     this->tree = raxNew();
-    if (!raxIsSubtreeAllocated(this->tree->head)) {
-      raxNode *new_root = raxReallocForSubtreeCustomData(this->tree->head);
-      this->tree->head = new_root;
-      raxSetSubtree(this->tree->head);
-      raxSetSubtreeAllocated(this->tree->head);
-    }
-    // this->sub_tree = this->tree;
+    this->tree->head->issubtree = true;
     lru_strategy = new LRUStrategy(cache_capacity);
   }
 
@@ -130,33 +124,32 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     LOG(INFO) << "init radix tree";
     this->tree = rax_tree;
     // this->sub_tree = this->tree;
+    this->tree->head->issubtree = true;
     lru_strategy = new LRUStrategy(cache_capacity);
   }
 
   RadixTree(void* custom_data, int custom_data_length, int cache_capacity) {
     LOG(INFO) << "init radix tree with custom data";
     this->tree = raxNew();
-    if (!raxIsSubtreeAllocated(this->tree->head)) {
-      raxNode *new_root = raxReallocForSubtreeCustomData(this->tree->head);
-      this->tree->head = new_root;
-      raxSetSubtree(this->tree->head);
-      raxSetSubtreeAllocated(this->tree->head);
-    }
-    // this->sub_tree = this->tree;
+    this->tree->head->issubtree = true;
+    customData* custom_data_struct = new customData();
+    custom_data_struct->data = custom_data;
+    custom_data_struct->data_length = custom_data_length;
+    raxSetCustomData(this->tree->head, custom_data_struct);
     this->lru_strategy = new LRUStrategy(cache_capacity);
   }
 
   ~RadixTree() {
-    raxFreeWithCallback(this->tree, [](raxNode *n) {
-      if (n->iskey && !n->isnull) {
-        nodeData* nodedata = (nodeData*) raxGetData(n);
-        delete nodedata;
-      }
-      if (n->issubtree && n->iscustomallocated && !n->iscustomnull) {
-        customData* customdata = (customData*) raxGetCustomData(n);
-        delete customdata;
-      }
-    });
+    // raxFreeWithCallback(this->tree, [](raxNode *n) {
+    //   if (n->iskey && !n->isnull) {
+    //     nodeData* nodedata = (nodeData*) raxGetData(n);
+    //     delete nodedata;
+    //   }
+    //   if (n->issubtree && n->iscustomallocated && !n->iscustomnull) {
+    //     customData* customdata = (customData*) raxGetCustomData(n);
+    //     delete customdata;
+    //   }
+    // });
   }
 
   std::shared_ptr<NodeWithTreeAttri> Insert(
@@ -257,6 +250,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
 
   std::string Serialize() {
     LOG(INFO) << "Serialize......";
+    raxShow(this->tree);
     std::vector<std::vector<int>> token_list;
     std::vector<void*> data_list;
     std::vector<uint64_t> timestamp_list;
@@ -350,6 +344,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
 
     serialized_str += "\t\n";
 
+    LOG(INFO) << "sub tree token list size:" << sub_tree_token_list.size();
     for (size_t index = 0; index < sub_tree_token_list.size(); index++) {
       for (size_t j = 0; j < sub_tree_token_list[index].size(); j++) {
         serialized_str += std::to_string(sub_tree_token_list[index][j]);
@@ -362,11 +357,15 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       char* bytes = (char*) ((customData*) sub_tree_data_list[index])->data;
       std::ostringstream data_oss;
 
+      LOG(INFO) << "data length:" << ((customData*)sub_tree_data_list[index])->data_length;
       for (size_t i = 0; i < ((customData*)sub_tree_data_list[index])->data_length; ++i) {
           data_oss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(bytes[i]));
       }
+      LOG(INFO) << "data:" << ((customData*)sub_tree_data_list[index])->data;
+      LOG(INFO) << "data oss:" << data_oss.str();
       serialized_str += data_oss.str() + "\n";
     }
+    LOG(INFO) << "serialized_str:" << serialized_str;
 
     // use LZ4 to compress the serialized string
     const char* const src = serialized_str.c_str();
@@ -492,6 +491,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       // is created by upper layer. Here just recover it from serialized
       // string.
       char* data = new char[dataSize];
+      LOG(INFO) << "data size:" << dataSize;
       std::istringstream dataStream(dataPart);
       for (size_t i = 0; i < dataSize; ++i) {
            // Temporary buffer to store two hexadecimal chars + null
@@ -571,33 +571,20 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       for (int j = 0; j < sub_tree_token_list[i].size(); j++) {
         LOG(INFO) << sub_tree_token_list[i][j];
       }
-      raxNode *parentlink = NULL;
-      raxNode *node = NULL;
-      raxNode *newNode = NULL;
-      raxFindNodeWithParent(radix_tree->tree, sub_tree_token_list[i].data(),
-                            sub_tree_token_list[i].size(), (void **)&node,(void **)&parentlink);
-      if (node == NULL) {
-        throw std::runtime_error("Unable to find the root node of the sub tree");
-        return NULL;
-      }
-      if (parentlink == NULL) {
-        parentlink = radix_tree->tree->head;
-      }
-      if (!raxIsSubtree(node) || !raxIsSubtreeAllocated(node)) {
-        newNode = raxReallocForSubtreeCustomData(node);
-        raxSetSubtree(node);
-        raxSetSubtreeAllocated(node);
-      } else {
-        newNode = node;
-      }
-      memcpy(parentlink,&newNode,sizeof(newNode));
+
+      raxNode* node = nullptr;
+      LOG(INFO) << "stage 1";
+      VINEYARD_ASSERT(radix_tree->tree != nullptr);
+      raxFindNode(radix_tree->tree, sub_tree_token_list[i].data(),
+                            sub_tree_token_list[i].size(), (void **)&node);
+      VINEYARD_ASSERT(node != nullptr);
+      LOG(INFO) << "stage 2";
       customData* data = new customData();
       data->data = sub_tree_data_list[i];
       data->data_length = sub_tree_data_size_list[i];
-      if (raxIsSubtreeAllocated(newNode)) {
-        raxSetCustomData(newNode, data);
-        raxSetSubtreeNotNull(newNode);
-      }
+
+      LOG(INFO) << "stage 3";
+      raxSetCustomData(node, data);
     }
     LOG(INFO) << "Deserialize success";
     return radix_tree;
@@ -638,28 +625,20 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
 
   rax* GetTree() {return this->tree;}
   void* GetCustomData() {
-    if (!raxIsSubtreeAllocated(this->tree->head) || raxIsSubtreeCustomDataNull(this->tree->head)) {
-      throw std::runtime_error("Subtree is not allocated or custom data is null");
-      return NULL;
-    }
-    customData *custome_data = (customData *)raxGetCustomData(this->tree->head);
-    if (custome_data == NULL) {
-      throw std::runtime_error("Custom data is null");
-      return NULL;
-    }
-    return (void *)custome_data->data; 
+    LOG(INFO) << "tree:" << this->tree << " tree node:" << this->tree->head;
+    VINEYARD_ASSERT(tree->head->custom_data != nullptr);
+    LOG(INFO) << "custom data:" << ((customData *)tree->head->custom_data)->data;
+    return ((customData *)tree->head->custom_data)->data; 
   }
 
   void SetCustomData(void* custom_data, int custom_data_length) {
     customData* data = new customData();
     data->data = custom_data;
+    LOG(INFO) << "custom data:" << data->data;
     data->data_length = custom_data_length;
-    if (raxIsSubtreeAllocated(this->tree->head)) {
-      raxSetCustomData(this->tree->head, data);
-      raxSetSubtreeNotNull(this->tree->head);
-      return;
-    }
-    throw std::runtime_error("The custome data of subtree is not allocated");
+    LOG(INFO) << "custom data length:" << data->data_length;
+    LOG(INFO) << "tree:" << this->tree << " tree node:" << this->tree->head;
+    raxSetCustomData(this->tree->head, data);
   }
 };
 

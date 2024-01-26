@@ -64,7 +64,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
 
   this->root_tree = std::make_shared<RadixTree>(cache_capacity);
   this->root_tree->SetCustomData(this->kv_state_cache_block_builder.get(),
-                                 sizeof(KVStateCacheBlockBuilder));
+                                 sizeof(this->kv_state_cache_block_builder.get()));
 }
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
@@ -78,7 +78,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
 
   this->root_tree = cache->GetRootTree();
   this->root_tree->SetCustomData(this->kv_state_cache_block_builder.get(),
-                                 sizeof(KVStateCacheBlockBuilder));
+                                 sizeof(this->kv_state_cache_block_builder.get()));
 }
 
 KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
@@ -181,7 +181,7 @@ void KVStateCacheBuilder::Update(Client& client,
     KVStateCacheBlockBuilder* new_kv_state_cache_block_builder =
         Split(client, kv_state_cache_block_builder, node_with_tree_attri_list);
     new_tree->SetCustomData(new_kv_state_cache_block_builder,
-                            sizeof(KVStateCacheBlockBuilder));
+                            sizeof(new_kv_state_cache_block_builder));
     LOG(INFO) << "block split success";
 
     // kv_state_cache_builder->UnLock();
