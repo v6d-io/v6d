@@ -212,8 +212,7 @@ raxNode *raxNewNode(size_t children, int datafield) {
     node->isnull = 0;
     node->iscompr = 0;
     node->issubtree = 0;
-    node->iscustomnull = 1;
-    node->iscustomallocated = 0;
+    node->custom_data = nullptr;
     node->timestamp = 0;
     node->numnodes = 1;
     node->size = children;
@@ -266,43 +265,19 @@ void *raxGetData(raxNode *n) {
     return data;
 }
 
-/*
-* Reallocate the node to make room for custom data
-*/
-raxNode *raxReallocForSubtreeCustomData(raxNode *n) {
-    size_t curlen = raxNodeCurrentLength(n);
-    raxNode *newNode = (raxNode *)rax_realloc(n,curlen+sizeof(void*));
-    if (newNode == NULL) {
-        printf("can't realloc new memory\n");
-        return NULL;
-    }
-    newNode->iscustomallocated = 1;
-    return newNode;
-}
 
 /*
 * Set the custom data for the root of sub-tree
 */
 void raxSetCustomData(raxNode *n, void *data) {
-    // wait for the custom data to be allocated
-    if (n->iscustomallocated==0) {
-        return;
-    }
-    void **ndata = (void**)
-        ((char*)n+raxNodeCurrentLength(n));
-    memcpy(ndata,&data,sizeof(data));
-    n->iscustomnull = 0;
+    n->custom_data = data;
 }
 
 /*
 * Get the custom data for the root of sub-tree
 */
 void *raxGetCustomData(raxNode *n) {
-    if (n->iscustomallocated==0 || n->iscustomnull==1) return NULL;
-    void **ndata =(void**)((char*)n+raxNodeCurrentLength(n));
-    void *data;
-    memcpy(&data,ndata,sizeof(data));
-    return data;
+    return n->custom_data;
 }
 
 /* Add a new child to the node 'n' representing the token 'c' and return
@@ -449,18 +424,6 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
     n->data[pos] = c;
     n->numnodes = parent_numnodes + 1;
     n->size++;
-    n->issubtree = 0;
-    n->iscustomnull = 1;
-    n->iscustomallocated = 0;
-    if (isSubtree) {
-        n->issubtree = 1;
-        size_t curlen = raxNodeCurrentLength(n);
-        raxNode *newNode = (raxNode *)rax_realloc(n,curlen+sizeof(void*));
-        n = newNode;
-        n->iscustomnull = 1;
-        n->iscustomallocated = 1;
-        raxSetCustomData(n, customData);
-    }
     src = (char*) raxNodeFirstChildPtr(n);
     raxNode **childfield = (raxNode**)(src+sizeof(raxNode*)*pos);
     memcpy(childfield,&child,sizeof(child));
@@ -984,6 +947,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
         return 1; /* Key inserted. */
     }
 
+    LOG(INFO) << "custom2:" << h->custom_data;
     raxNode *prev_node = NULL;
     int insert_new_node = 0;
     /* We walked the radix tree as far as we could, but still there are left
@@ -1034,24 +998,12 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
     raxStackAddNumNodes(&splitStack, insert_new_node);
     raxStackFree(&lowWalkStack);
     raxStackFree(&splitStack);
-    void *customData;
-    bool isSubtree = false;
-    if (h->issubtree && h->iscustomallocated && !h->iscustomnull) {
-        isSubtree = true;
-        customData = raxGetCustomData(h);
-    }
     raxNode *newh = raxReallocForData(h,data);
     printf("#############raxReallocForData2 ############\n");
     if (newh == NULL) {
         return handleOutOfMemory(rax, h, (int *)s, i, old);
     }
     h = newh;
-    if (isSubtree) {
-        raxNode *newNode = raxReallocForSubtreeCustomData(h);
-        newNode->issubtree = 1;
-        raxSetCustomData(newNode, customData);
-        h = newNode;
-    }
     if (!h->iskey) rax->numele++;
     raxSetData(h,data);
     memcpy(parentlink,&h,sizeof(h));
@@ -1123,6 +1075,20 @@ raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len) {
     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey)
         return NULL;
     return h;
+}
+
+int raxFindNode(rax *rax, int *s, size_t len, void **node) {
+    raxNode *h;
+    raxStack ts;
+    raxStackInit(&ts);
+
+    int splitpos = 0;
+    size_t i = raxLowWalk(rax,s,len, &h, nullptr, nullptr, &ts);
+    if (i != len || (h->iscompr && splitpos != 0) || !h->iskey)
+        return 0;
+    *node = raxStackPeek(&ts);
+
+    return 1;
 }
 
 /*
@@ -1236,18 +1202,7 @@ raxNode *raxRemoveChild(raxNode *parent, raxNode *child) {
     /* realloc the node according to the theoretical memory usage, to free
      * data if we are over-allocating right now. */
     raxNode *newnode;
-    if (isSubtree) {
-        newnode = (raxNode *)rax_realloc(parent,raxNodeCurrentLength(parent)+sizeof(void*));
-        newnode->iscustomnull = 1;
-        newnode->iscustomallocated = 1;
-        newnode->issubtree = 1;
-        raxSetCustomData(newnode, customData);
-    } else {
-        newnode = (raxNode *)rax_realloc(parent,raxNodeCurrentLength(parent));
-        newnode->iscustomnull = 1;
-        newnode->iscustomallocated = 0;
-        newnode->issubtree = 0;
-    }
+    newnode = (raxNode *)rax_realloc(parent,raxNodeCurrentLength(parent));
     if (newnode) {
         debugnode("raxRemoveChild after", newnode);
     }
@@ -1484,7 +1439,7 @@ void raxRecursiveFree(rax *rax, raxNode *n, void (*free_callback)(raxNode *)) {
     debugnode("free depth-first",n);
     // if n is a key node, we need to free the data
     // if n is a subtree, we need to free the custom data
-    if (free_callback && ((n->iskey && !n->isnull) || (n->issubtree && n->iscustomallocated && !n->iscustomnull)))
+    if (free_callback && ((n->iskey && !n->isnull)))
         free_callback(n);
     rax_free(n);
     rax->numnodes--;
@@ -2155,6 +2110,7 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
     if (n->iskey) {
         numchars += printf("=%p",raxGetData(n));
     }
+    numchars += printf(" time:%ld, data:%p, is_sub_tree:%d", n->timestamp, n->custom_data, n->issubtree);
 
     int numchildren = n->iscompr ? 1 : n->size;
     /* Note that 7 and 4 magic constants are the string length
@@ -2276,44 +2232,10 @@ void raxSetSubtree(raxNode *node) {
 }
 
 /*
-* Set the subtree root node as allocated custom data
-*/
-void raxSetSubtreeAllocated(raxNode *node) {
-    node->iscustomallocated = 1;
-}
-
-/*
-* Set the subtree root node as null custom data
-*/
-void raxSetSubtreeNotNull(raxNode *node) {
-    node->iscustomnull = 0;
-}
-
-/*
 * Check if a node is a subtree root node
 */
 bool raxIsSubtree(raxNode *node) {
     if (node->issubtree) {
-        return true;
-    }
-    return false;
-}
-
-/*
-* Check if the subtree has been allocated custom data
-*/
-bool raxIsSubtreeAllocated(raxNode *node) {
-    if (node->iscustomallocated) {
-        return true;
-    }
-    return false;
-}
-
-/*
-* Check if the custom data of the subtree is null
-*/
-bool raxIsSubtreeCustomDataNull(raxNode *node) {
-    if (node->iscustomnull) {
         return true;
     }
     return false;
@@ -2369,14 +2291,12 @@ raxNode *raxSplit(rax *rax, int *s, size_t len, void *data) {
     } else {
         parentlink = raxFindParentLink(parent,splitNode);
     }
-    raxNode *newNode = raxReallocForSubtreeCustomData(splitNode);
-    raxSetSubtree(newNode);
-    memcpy(parentlink,&newNode,sizeof(newNode));
+    raxSetSubtree(splitNode);
 
-    raxStackAddNumNodes(&stack, -(int)(newNode->numnodes)); 
+    raxStackAddNumNodes(&stack, -(int)(splitNode->numnodes)); 
     raxStackFree(&stack);
 
-    return newNode;
+    return splitNode;
 }
 
 /*
