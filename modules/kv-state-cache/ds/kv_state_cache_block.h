@@ -44,7 +44,7 @@ struct offset_data {
 
 namespace vineyard {
 
-#define LIST_SIZE 64
+#define LIST_SIZE 5
 
 /**
  * @brief KVStateCacheBlock is a cache for kv-cache of LLM. When a new prompt
