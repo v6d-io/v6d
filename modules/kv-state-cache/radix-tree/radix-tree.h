@@ -584,7 +584,6 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       data->data_length = sub_tree_data_size_list[i];
 
       LOG(INFO) << "stage 3";
-      node->issubtree = true;
       raxSetCustomData(node, data);
     }
     LOG(INFO) << "Deserialize success";
