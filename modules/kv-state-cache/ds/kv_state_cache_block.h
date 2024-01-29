@@ -24,6 +24,7 @@ limitations under the License.
 #include "basic/ds/tensor.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
+#include "kv-state-cache/radix-tree/radix-tree.h"
 
 typedef std::map<int, std::pair<std::vector<double>, std::vector<double>>>
     KV_STATE_WITH_LAYER;
@@ -40,6 +41,14 @@ typedef std::vector<
 
 struct offset_data {
   short offset;
+};
+
+struct TreeData {
+  union {
+    void *kv_state_cache_block_builder;
+    uint64_t builder_object_id;
+  };
+  bool is_ptr = true;
 };
 
 namespace vineyard {
@@ -65,6 +74,8 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
   std::shared_ptr<Tensor<double>> v_tensor;
   std::vector<std::shared_ptr<KVStateCacheBlock>>
       child_kv_state_cache_block_list;
+  std::map<std::shared_ptr<KVStateCacheBlock>, uint64_t>
+      child_kv_state_cache_block_map;
   uint64_t bitmap;
   ObjectID id;
   int dimension;
@@ -95,6 +106,8 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
   std::shared_ptr<TensorBuilder<double>> k_builder;
   std::shared_ptr<TensorBuilder<double>> v_builder;
   std::vector<KVStateCacheBlockBuilder*> child_kv_state_cache_builder_list;
+  std::map<KVStateCacheBlockBuilder*, std::shared_ptr<RadixTree>> radix_tree_map;
+  // std::map<uint64_t, KVStateCacheBlockBuilder*> child_id_to_builder_map;
   // TBD
   // support more than 64 kv-state cache slots
   uint64_t bitmap;
@@ -152,7 +165,7 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
   void DeleteKVCache(int bit) { FREE_BIT_RESOURCE(this->bitmap, bit); }
 
   void SetChildKVStateCacheBlockBuilder(
-      KVStateCacheBlockBuilder* child_kv_state_cache_builder);
+      KVStateCacheBlockBuilder* child_kv_state_cache_builder, std::shared_ptr<RadixTree> radix_tree);
 
   std::string GetBitmapStr();
 

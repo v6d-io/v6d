@@ -1574,7 +1574,9 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
 
     while(1) {
         int children = it->node->iscompr ? 1 : it->node->size;
+        LOG(INFO) << "node is:" << it->node;
         if (!noup && children) {
+            LOG(INFO) << "stage 1";
             debugf("GO DEEPER\n");
             /* Seek the lexicographically smaller key in this subtree, which
              * is the first one found always going torwards the first child
@@ -1587,9 +1589,12 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
                                 it->subtree_data_list != NULL) {
                 std::cout << "first find subtree list is:" << std::endl;
                 std::vector<int> token;
+                std::string token_str;
                 for (size_t i = 0; i < it->key_len; i++) {
                     token.push_back(it->key[i]);
+                    token_str += std::to_string(it->key[i]) + " ";
                 }
+                LOG(INFO) << "list is:" << token_str;
                 (*it->subtree_list).push_back(token);
                 void *data = raxGetCustomData(it->node);
                 if (data == NULL) {
@@ -1610,6 +1615,7 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
                 return 1;
             }
         } else {
+            LOG(INFO) << "stage 2";
             /* If we finished exporing the previous sub-tree, switch to the
              * new one: go upper until a node is found where there are
              * children representing keys lexicographically greater than the
@@ -1624,6 +1630,23 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
                     it->key_len = orig_key_len;
                     it->node = orig_node;
                     return 1;
+                }
+                if (it->node->iskey && it->node->size == 0 && it->node->issubtree && it->add_to_subtree_list && it->subtree_list != NULL &&
+                                it->subtree_data_list != NULL) {
+                    // data node is sub tree
+                    std::vector<int> token;
+                    std::string token_str;
+                    for (size_t i = 0; i < it->key_len; i++) {
+                        token.push_back(it->key[i]);
+                        token_str += std::to_string(it->key[i]) + " ";
+                    }
+                    LOG(INFO) << "sub tree is:" << token_str;
+                    (*it->subtree_list).push_back(token);
+                    void *data = raxGetCustomData(it->node);
+                    if (data == NULL) {
+                        throw std::runtime_error("custom data is null");
+                    }
+                    (*it->subtree_data_list).push_back(data);
                 }
                 /* If there are no children at the current node, try parent's
                  * next child. */
@@ -2125,13 +2148,7 @@ uint64_t raxSize(rax *rax) {
  *
  *  [1,2] -> [1,2,3,4] -> []
  */
-struct TreeData1 {
-  union {
-    void *kv_state_cache_block_builder;
-    uint64_t builder_object_id;
-  };
-  bool is_ptr = true;
-};
+
 /* The actual implementation of raxShow(). */
 void raxRecursiveShow(int level, int lpad, raxNode *n) {
     char s = n->iscompr ? '"' : '[';

@@ -61,6 +61,8 @@ void KVStateCacheBlock::Construct(const ObjectMeta& meta) {
             "child_kv_state_cache_block_" + std::to_string(i)));
     this->child_kv_state_cache_block_list.push_back(
         child_kv_state_cache_block_builder);
+    // this->child_kv_state_cache_block_map.insert(
+    //     std::make_pair(child_kv_state_cache_block_builder, this->meta_.GetMember("child_kv_state_cache_block_" + std::to_string(i))->id()));
   }
   // 3. construct the member field
   this->bitmap = this->meta_.GetKeyValue<unsigned long long>("bitmap");
@@ -96,6 +98,9 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
     this->child_kv_state_cache_builder_list.push_back(
         new KVStateCacheBlockBuilder(
             client, kv_state_cache_block->child_kv_state_cache_block_list[i]));
+    // uint64_t objectID = kv_state_cache_block->child_kv_state_cache_block_map[kv_state_cache_block->child_kv_state_cache_block_list[i]];
+    // this->child_id_to_builder_map.insert(
+    //     std::make_pair(objectID, this->child_kv_state_cache_builder_list[i]));
   }
 }
 
@@ -169,9 +174,12 @@ void KVStateCacheBlockBuilder::Update(double* k_data, double* v_data,
 }
 
 void KVStateCacheBlockBuilder::SetChildKVStateCacheBlockBuilder(
-    KVStateCacheBlockBuilder* child_kv_state_cache_builder) {
+    KVStateCacheBlockBuilder* child_kv_state_cache_builder,
+    std::shared_ptr<RadixTree> radix_tree) {
   this->child_kv_state_cache_builder_list.push_back(
       child_kv_state_cache_builder);
+  this->radix_tree_map.insert(
+      std::make_pair(child_kv_state_cache_builder, radix_tree));
 }
 
 Status KVStateCacheBlockBuilder::Build(Client& client) {
@@ -204,9 +212,15 @@ std::shared_ptr<Object> KVStateCacheBlockBuilder::_Seal(Client& client) {
   kv_state_cache_block->meta_.AddMember("v_builder", v_builder->Seal(client));
   // 2. seal child kv_state_cache_block_builder
   for (size_t i = 0; i < this->child_kv_state_cache_builder_list.size(); ++i) {
+    std::shared_ptr<Object> child_kv_state_cache_block = this->child_kv_state_cache_builder_list[i]->_Seal(client);
     kv_state_cache_block->meta_.AddMember(
         "child_kv_state_cache_block_" + std::to_string(i),
-        this->child_kv_state_cache_builder_list[i]->_Seal(client));
+        child_kv_state_cache_block);
+    // 2.5 change builder ptr to object id
+    TreeData *data = (TreeData *)this->radix_tree_map[this->child_kv_state_cache_builder_list[i]]->GetCustomData();
+    data->builder_object_id = child_kv_state_cache_block->id();
+    LOG(INFO) << "id is" << child_kv_state_cache_block->id();
+    data->is_ptr = true;
   }
   kv_state_cache_block->meta_.AddKeyValue(
       "child_num", this->child_kv_state_cache_builder_list.size());

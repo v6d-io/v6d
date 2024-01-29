@@ -25,14 +25,6 @@ limitations under the License.
 
 namespace vineyard {
 
-struct TreeData {
-  union {
-    KVStateCacheBlockBuilder *kv_state_cache_block_builder;
-    uint64_t builder_object_id;
-  };
-  bool is_ptr = true;
-};
-
 void KVStateCache::Construct(const ObjectMeta& meta) {
   Object::Construct(meta);
   Resolve();
@@ -129,7 +121,8 @@ KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
   LOG(INFO) << "builder:" << kv_state_cache_block_builder << " bitmap:" << kv_state_cache_block_builder->GetBitmapStr();
   LOG(INFO) << "child_builder:" << child_kv_state_cache_block_builder << " bitmap:" << child_kv_state_cache_block_builder->GetBitmapStr();
   kv_state_cache_block_builder->SetChildKVStateCacheBlockBuilder(
-      child_kv_state_cache_block_builder);
+      child_kv_state_cache_block_builder,
+      node_with_tree_attri_list[0]->get_tree());
   return child_kv_state_cache_block_builder;
 }
 
@@ -150,7 +143,7 @@ void KVStateCacheBuilder::Update(Client& client,
     return;
   }
   std::shared_ptr<RadixTree> tree = node_with_tree_attri->get_tree();
-  KVStateCacheBlockBuilder* kv_state_cache_block_builder =
+  KVStateCacheBlockBuilder* kv_state_cache_block_builder = (KVStateCacheBlockBuilder* )
       ((TreeData*) tree->GetCustomData())->kv_state_cache_block_builder;
   if (evicted_node != nullptr) {
     Delete(evicted_node);
@@ -215,7 +208,7 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
         (offset_data*) node_with_tree_attri->get_node()->get_data();
     int offset = data->offset;
 
-    KVStateCacheBlockBuilder* kv_state_cache_block_builder =
+    KVStateCacheBlockBuilder* kv_state_cache_block_builder = (KVStateCacheBlockBuilder* )
         ((TreeData*) node_with_tree_attri->get_tree()
             ->GetCustomData())->kv_state_cache_block_builder;
     // kv_state_cache_builder->Lock();
@@ -231,7 +224,7 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
 
 void KVStateCacheBuilder::Delete(std::shared_ptr<NodeWithTreeAttri> evicted_node) {
   LOG(INFO) << "stage1";
-  KVStateCacheBlockBuilder* kv_state_cache_block_builder =
+  KVStateCacheBlockBuilder* kv_state_cache_block_builder = (KVStateCacheBlockBuilder* )
       ((TreeData*) evicted_node->get_tree()->GetCustomData())->kv_state_cache_block_builder;
   LOG(INFO) << "stage2, builder:" << kv_state_cache_block_builder;
   offset_data* data = (offset_data*) evicted_node->get_node()->get_data();
@@ -292,9 +285,16 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
 
   // 2. seal all the kv_state_cache_block
   // 3. put cache_block_object_id to cache object meta
+  std::shared_ptr<Object> root_kv_state_cache_block = this->kv_state_cache_block_builder->_Seal(client);
   kv_state_cache->meta_.AddMember(
       "root_kv_state_cache_block",
-      this->kv_state_cache_block_builder->_Seal(client));
+      root_kv_state_cache_block);
+  
+  // set root block id
+  TreeData *data = (TreeData *)this->root_tree->GetCustomData();
+  data->builder_object_id = root_kv_state_cache_block->id();
+  LOG(INFO) << "root id is" << root_kv_state_cache_block->id();
+  data->is_ptr = true;
 
   // 4. put the serialized sequence radix tree to cache object meta
   kv_state_cache->meta_.AddKeyValue(
