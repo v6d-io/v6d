@@ -195,10 +195,14 @@ class ShareableList(shm.ShareableList):
 
             sequence = sequence or ()
             _formats = [
-                self._types_mapping[type(item)]
-                if not isinstance(item, (str, bytes))  # noqa: E131
-                else self._types_mapping[type(item)]
-                % (self._alignment * (len(item) // self._alignment + 1),)  # noqa: E131
+                (
+                    self._types_mapping[type(item)]
+                    if not isinstance(item, (str, bytes))  # noqa: E131
+                    else self._types_mapping[type(item)]
+                    % (
+                        self._alignment * (len(item) // self._alignment + 1),
+                    )  # noqa: E131
+                )
                 for item in sequence
             ]
             self._list_len = len(_formats)

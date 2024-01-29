@@ -83,9 +83,14 @@ def _parse_configuration(config) -> Tuple[Optional[str], Optional[str]]:
     ipc_socket = vineyard_config.get('IPCSocket', None)
     rpc_endpoint = vineyard_config.get('RPCEndpoint', None)
 
-    if ipc_socket and not os.path.isabs(ipc_socket):
-        base_dir = os.path.dirname(config) if os.path.isfile(config) else config
-        ipc_socket = os.path.join(base_dir, ipc_socket)
+    if ipc_socket:
+        if not os.path.isabs(ipc_socket):
+            base_dir = os.path.dirname(config) if os.path.isfile(config) else config
+            ipc_socket = os.path.join(base_dir, ipc_socket)
+
+        if not os.path.exists(ipc_socket):
+            ipc_socket = None
+
     return ipc_socket, rpc_endpoint
 
 
