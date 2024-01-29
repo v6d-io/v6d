@@ -36,6 +36,8 @@
 #include <stdio.h>
 #include <errno.h>
 #include <math.h>
+#include <chrono>
+
 #include "radix.h"
 
 #ifndef RAX_MALLOC_INCLUDE
@@ -47,11 +49,6 @@
 #include <iostream>
 #include "common/util/logging.h"
 using namespace vineyard;
-typedef struct nodeData1 {
-  int data_length;
-  void* data;
-  void* cache_node;
-} nodeData1;
 
 /* This is a special pointer that is guaranteed to never have the same value
  * of a radix tree node. It's used in order to report "not found" error without
@@ -216,6 +213,7 @@ raxNode *raxNewNode(size_t children, int datafield) {
     node->timestamp = 0;
     node->numnodes = 1;
     node->size = children;
+    node->timestamp = 0;
     return node;
 }
 
@@ -299,8 +297,8 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
                   success at the end. */
 
     // store the extra data pointer of subtree
-    void *customData;
     bool isSubtree = false;
+    void *customData = nullptr;
     if (n->issubtree) {
         isSubtree = true;
         customData = raxGetCustomData(n);
@@ -308,6 +306,7 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
 
     /* Alloc the new child we will link to 'n'. */
     raxNode *child = raxNewNode(0,0);
+    child->timestamp = n->timestamp;
     if (child == NULL) return NULL;
 
     int parent_numnodes = n->numnodes;
@@ -449,6 +448,7 @@ raxNode *raxCompressNode(raxNode *n, int *s, size_t len, raxNode **child) {
 
     /* Allocate the child to link to this node. */
     *child = raxNewNode(0,0);
+    (*child)->timestamp = n->timestamp;
     if (*child == NULL) return NULL;
 
     /* Make space in the parent node. */
@@ -504,12 +504,17 @@ raxNode *raxCompressNode(raxNode *n, int *s, size_t len, raxNode **child) {
  * means that the current node represents the key (that is, none of the
  * compressed node tokens list are needed to represent the key, just all
  * its parents nodes). */
-static inline size_t raxLowWalk(rax *rax, const int *s, size_t len, raxNode **stopnode, raxNode ***plink, int *splitpos, raxStack *ts) {
+static inline size_t raxLowWalk(rax *rax, const int *s, size_t len, raxNode **stopnode, raxNode ***plink, int *splitpos, raxStack *ts, bool set_timestamp = true) {
     raxNode *h = rax->head;
     raxNode **parentlink = &rax->head;
 
     size_t i = 0; /* Position in the string. */
     size_t j = 0; /* Position in the node children (or bytes if compressed).*/
+
+    std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+        std::chrono::system_clock::now().time_since_epoch());
+    int64_t timestamp = ms.count();
+
     while(h->size && i < len) {
         debugnode("Lookup current node",h);
         int *v = h->data;
@@ -538,6 +543,9 @@ static inline size_t raxLowWalk(rax *rax, const int *s, size_t len, raxNode **st
             i++;
         }
 
+        /* Save timestamp. */
+        h->timestamp = timestamp;
+
         if (ts) raxStackPush(ts,h); /* Save stack of parent nodes. */
         raxNode **children = raxNodeFirstChildPtr(h);
         if (h->iscompr) j = 0; /* Compressed node only child is at index 0. */
@@ -547,6 +555,9 @@ static inline size_t raxLowWalk(rax *rax, const int *s, size_t len, raxNode **st
                   iterate again (since i == l) set the split
                   position to 0 to signal this node represents
                   the searched key. */
+    }
+    if (set_timestamp) {
+        h->timestamp = timestamp;
     }
     debugnode("Lookup stop node is",h);
     if (stopnode) *stopnode = h;
@@ -578,7 +589,7 @@ int handleOutOfMemory(rax *rax, raxNode *h, int *s, size_t len, void **old){
  * function returns 0 as well but sets errno to ENOMEM, otherwise errno will
  * be set to 0.
  */
-int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int overwrite, void **dataNode) {
+int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int overwrite, void **dataNode, bool set_timestamp = true) {
     size_t i;
     int j = 0; /* Split position. If raxLowWalk() stops in a compressed
                   node, the index 'j' represents the char we stopped within the
@@ -591,7 +602,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
     raxStackInit(&splitStack);
     int all_added_node = 0;
 
-    i = raxLowWalk(rax,s,len,&h,&parentlink,&j,&lowWalkStack);
+    i = raxLowWalk(rax,s,len,&h,&parentlink,&j,&lowWalkStack, set_timestamp);
     debugf("######## after raxLowWalk##########");
     /* If i == len we walked following the whole string. If we are not
      * in the middle of a compressed node, the string is either already
@@ -779,6 +790,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
         /* 2: Create the split node. Also allocate the other nodes we'll need
          *    ASAP, so that it will be simpler to handle OOM. */
         raxNode *splitnode = raxNewNode(1, split_node_is_key);
+        splitnode->timestamp = h->timestamp;
         raxNode *trimmed = NULL;
         raxNode *postfix = NULL;
 
@@ -825,6 +837,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
             trimmed->numnodes = h->numnodes;
             trimmed->iskey = h->iskey;
             trimmed->isnull = h->isnull;
+            trimmed->timestamp = h->timestamp;
             if (h->iskey && !h->isnull) {
                 void *ndata = raxGetData(h);
                 raxSetData(trimmed,ndata);
@@ -912,6 +925,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
         postfix->numnodes = h->numnodes;
         postfix->iskey = 1;
         postfix->isnull = 0;
+        postfix->timestamp = h->timestamp;
         memcpy(postfix->data,h->data+j,postfixlen*sizeof(int));
         raxSetData(postfix,data);
         *dataNode = postfix;
@@ -926,6 +940,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
         trimmed->numnodes = h->numnodes+1;
         trimmed->iskey = 0;
         trimmed->isnull = 0;
+        trimmed->timestamp = h->timestamp;
         memcpy(trimmed->data,h->data,j*sizeof(int));
         memcpy(parentlink,&trimmed,sizeof(trimmed));
         if (h->iskey) {
@@ -1013,9 +1028,9 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
 
 /* Overwriting insert. Just a wrapper for raxGenericInsert() that will
  * update the element if there is already one for the same key. */
-int raxInsert(rax *rax, int *s, size_t len, void *data, void **old) {
+int raxInsert(rax *rax, int *s, size_t len, void *data, void **old, bool set_timestamp) {
     void *dataNode = NULL;
-    return raxGenericInsert(rax,s,len,data,old,1,&dataNode);
+    return raxGenericInsert(rax,s,len,data,old,1,&dataNode, set_timestamp);
 }
 
 /* Non overwriting insert function: this if an element with the same key
@@ -1066,12 +1081,12 @@ raxStack raxFindWithStack(rax *rax, int *s, size_t len) {
 /*
 ** Find a key in the rax, returns the raxNode that contains the key.
 */
-raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len) {
+raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len, bool set_timestamp) {
     raxNode *h;
 
     //debugf("### Lookup: %.*s\n", (int)len, s);
     int splitpos = 0;
-    size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,NULL);
+    size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,NULL,set_timestamp);
     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey)
         return NULL;
     return h;
@@ -1149,8 +1164,8 @@ raxNode *raxRemoveChild(raxNode *parent, raxNode *child) {
     *    data if the current node is the root node of subtree
     *
     */
-    void *customData;
-    bool isSubtree = false;
+   bool isSubtree = false;
+   void *customData = NULL;
     if (parent->issubtree) {
         isSubtree = true;
         customData = raxGetCustomData(parent);
@@ -1213,7 +1228,7 @@ raxNode *raxRemoveChild(raxNode *parent, raxNode *child) {
 
 /* Remove the specified item. Returns 1 if the item was found and
  * deleted, 0 otherwise. */
-int raxRemove(rax *rax, int *s, size_t len, void **old) {
+int raxRemove(rax *rax, int *s, size_t len, void **old, bool set_timestamp) {
     raxNode *h;
     raxStack ts;
 
@@ -1221,7 +1236,7 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
     raxStackInit(&ts);
     int splitpos = 0;
     int all_added_node = 0;
-    size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,&ts);
+    size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,&ts, set_timestamp);
     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey) {
         raxStackFree(&ts);
         return 0;
@@ -1380,6 +1395,7 @@ int raxRemove(rax *rax, int *s, size_t len, void **old) {
             newNode->iscompr = 1;
             newNode->size = comprsize;
             newNode->numnodes = h->numnodes+1;
+            newNode->timestamp = h->timestamp;
             all_added_node++;
             rax->numnodes++;
 
@@ -1553,7 +1569,7 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
                                 it->subtree_data_list != NULL) {
                 std::cout << "first find subtree list is:" << std::endl;
                 std::vector<int> token;
-                for (int i = 0; i < it->key_len; i++) {
+                for (size_t i = 0; i < it->key_len; i++) {
                     token.push_back(it->key[i]);
                 }
                 (*it->subtree_list).push_back(token);
@@ -1623,7 +1639,7 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
                                 it->subtree_data_list != NULL) {
                             std::cout << "second find subtree list is:" << std::endl;
                             std::vector<int> token;
-                            for (int i = 0; i < it->key_len; i++) {
+                            for (size_t i = 0; i < it->key_len; i++) {
                                 token.push_back(it->key[i]);
                             }
                             (*it->subtree_list).push_back(token);
@@ -2112,6 +2128,8 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
     }
     numchars += printf(" time:%ld, data:%p, is_sub_tree:%d", n->timestamp, n->custom_data, n->issubtree);
 
+    numchars += printf(" timestamp:%ld ", n->timestamp);
+
     int numchildren = n->iscompr ? 1 : n->size;
     /* Note that 7 and 4 magic constants are the string length
      * of " `-(x) " and " -> " respectively. */
@@ -2121,7 +2139,7 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
     }
     raxNode **cp = raxNodeFirstChildPtr(n);
     for (int i = 0; i < numchildren; i++) {
-        char *branch = " `-(%d) ";
+        const char *branch = " `-(%d) ";
         if (numchildren > 1) {
             printf("\n");
             for (int j = 0; j < lpad; j++) putchar(' ');
@@ -2331,12 +2349,470 @@ void raxSerialize(rax *root, std::vector<std::vector<int>> &tokenList, std::vect
     raxSeek(&iter, "^", NULL, 0);
     while (raxNext(&iter)) {
         std::vector<int> token;
-        for (int i = 0; i < iter.key_len; i++) {
+        for (size_t i = 0; i < iter.key_len; i++) {
             token.push_back(iter.key[i]);
         }
         tokenList.push_back(token);
         dataList.push_back(iter.data);
         timestampList.push_back(iter.node->timestamp);
+    }
+    raxStop(&iter);
+}
+
+void raxFindLastRecentNode(raxNode *node, std::vector<int>& key) {
+    raxNode** childList = raxNodeFirstChildPtr(node);
+
+    // node must have a key.
+    // assert(node->iskey == 1);
+    int numChildren = node->iscompr ? 1 : node->size;
+    if (numChildren == 0) {
+        // has no children, return
+        return;
+    }
+
+    raxNode *chossenChild = childList[0];
+    int choosenChildIndex = 0;
+    for (int i = 1; i < numChildren; i++) {
+        if (childList[i]->timestamp != 0 && childList[i]->timestamp <= chossenChild->timestamp) {
+            if (childList[i]->timestamp == chossenChild->timestamp && childList[i]->numnodes > chossenChild->numnodes) {
+                chossenChild = childList[i];
+                choosenChildIndex = i;
+            }
+            // chossenChild = childList[i];
+            // choosenChildIndex = i;
+        }
+    }
+
+    if (node->iscompr) {
+        for (int i = 0; i < node->size; i++) {
+            key.push_back(node->data[i]);
+        }
+    } else {
+        key.push_back(node->data[choosenChildIndex]);
+    }
+
+    raxFindLastRecentNode(chossenChild, key);
+}
+
+bool compareKey(int *first_key, int *second_key, int first_key_len, int second_key_len) {
+    if (first_key_len != second_key_len) {
+        printf("length not equal, %d : %d\n", first_key_len, second_key_len);
+        return false;
+    }
+    for (int i = 0; i < first_key_len; i++) {
+        if (first_key[i] != second_key[i]) {
+            printf("key not equal, %d : %d\n", first_key[i], second_key[i]);
+            return false;
+        }
+    }
+    return true;
+}
+
+// bool compare(raxNode *a, raxNode *b) {
+//     return a->timestamp > b->timestamp;
+// }
+
+// void sortNode(raxNode **node, int size) {
+//     std::sort(node, node + size, compare);
+// }
+
+// void mergeTree(rax* first_tree, rax* second_tree, std::vector<std::vector<int>>& evicted_tokens, std::map<std::vector<int>, void*>& insert_tokens, int max_node) {
+//     raxNode* first_tree_node = first_tree->head;
+//     raxNode* second_tree_node = second_tree->head;
+
+//     std::queue<raxNode *> first_tree_queue;
+//     std::queue<raxNode *> second_tree_queue;
+
+//     first_tree_queue.push(first_tree_node);
+//     second_tree_queue.push(second_tree_node);
+
+//     rax* tree = raxNew();
+
+//     int node_count = 0;
+
+//     while((!first_tree_queue.empty()) && (!second_tree_queue.empty())) {
+//         int first_tree_rax_node_list_size = first_tree_queue.size();
+//         int second_tree_rax_node_list_size = second_tree_queue.size();
+//         raxNode** first_tree_rax_node_list = (raxNode**)malloc(sizeof(raxNode*) * first_tree_rax_node_list_size);
+//         raxNode** second_tree_rax_node_list = (raxNode**)malloc(sizeof(raxNode*) * second_tree_rax_node_list_size);
+
+//         for (int i = 0; i < first_tree_queue.size(); i++) {
+//             first_tree_rax_node_list[i] = first_tree_queue.front();
+//             first_tree_queue.pop();
+//         }
+
+//         for (int i = 0; i < second_tree_queue.size(); i++) {
+//             second_tree_rax_node_list[i] = second_tree_queue.front();
+//             second_tree_queue.pop();
+//         }
+
+//         sortNode(first_tree_rax_node_list, first_tree_queue.size());
+//         sortNode(second_tree_rax_node_list, second_tree_queue.size());
+
+//         int first_tree_index = 0;
+//         int second_tree_index = 0;
+
+//         while(first_tree_index < first_tree_rax_node_list_size && second_tree_index < second_tree_rax_node_list_size && node_count < max_node) {
+//             if (first_tree_rax_node_list[first_tree_index]->timestamp > second_tree_rax_node_list[second_tree_index]->timestamp) {
+//                 // choose first_tree_rax_node_list[first_tree_index]
+//                 if (raxFind(tree, first_tree_rax_node_list[first_tree_index]->data, first_tree_rax_node_list[first_tree_index]->size) == NULL) {
+//                     raxInsert(tree, first_tree_rax_node_list[first_tree_index]->data, first_tree_rax_node_list[first_tree_index]->size, first_tree_rax_node_list[first_tree_index]->data, NULL);
+//                     node_count++;
+//                 } else {
+//                     std::vector<int> token = std::vector<int>(first_tree_rax_node_list[first_tree_index]->data, first_tree_rax_node_list[first_tree_index]->data + first_tree_rax_node_list[first_tree_index]->size);
+//                     insert_tokens.erase(token);
+//                 }
+//                 first_tree_index++;
+//             }
+//         }
+//     }
+// }
+
+bool compare(raxIterator a, raxIterator b) {
+    if (a.key_len == b.key_len) {
+        return a.node->timestamp > b.node->timestamp;
+    }
+    return a.key_len < b.key_len;
+}
+
+void sortNode(std::vector<raxIterator> &ite_list) {
+    std::sort(ite_list.begin(), ite_list.end(), compare);
+}
+
+void printVector(int* v, int size) {
+    printf("token:\n");
+    for (int i = 0; i < size; i++) {
+        printf("%d " , v[i]);
+    }
+    printf("\n");
+}
+
+void freeVector(std::vector<raxIterator> &ite_list) {
+    for (size_t i = 0; i < ite_list.size(); i++) {
+        free(ite_list[i].key);
+    }
+}
+
+void mergeTree(rax* first_tree, rax* second_tree,
+               std::vector<std::vector<int>>& evicted_tokens,
+               std::set<std::vector<int>>& insert_tokens, int max_node) {
+    printf("merge tree!\n");
+    raxIterator first_tree_iter;
+    raxIterator second_tree_iter;
+    rax* tmp = raxNew();
+
+    raxStart(&first_tree_iter, first_tree);
+    raxStart(&second_tree_iter, second_tree);
+    raxSeek(&first_tree_iter, "^", NULL, 0);
+    raxSeek(&second_tree_iter, "^", NULL, 0);
+
+    std::vector<raxIterator> first_tree_iter_list;
+    std::vector<raxIterator> second_tree_iter_list;
+    while (raxNext(&first_tree_iter)) {
+        raxIterator tmp_iter = first_tree_iter;
+        tmp_iter.key = (int*) malloc(sizeof(int) * first_tree_iter.key_len);
+        memcpy(tmp_iter.key, first_tree_iter.key,
+               sizeof(int) * first_tree_iter.key_len);
+        first_tree_iter_list.push_back(tmp_iter);
+    }
+
+    while (raxNext(&second_tree_iter)) {
+        raxIterator tmp_iter = second_tree_iter;
+        tmp_iter.key = (int*) malloc(sizeof(int) * second_tree_iter.key_len);
+        memcpy(tmp_iter.key, second_tree_iter.key,
+               sizeof(int) * second_tree_iter.key_len);
+        second_tree_iter_list.push_back(tmp_iter);
+    }
+
+    for (size_t i = 0; i < first_tree_iter_list.size(); i++) {
+        printVector(first_tree_iter_list[i].key, first_tree_iter_list[i].key_len);
+    }
+
+    for (size_t i = 0; i < second_tree_iter_list.size(); i++) {
+        printVector(second_tree_iter_list[i].key, second_tree_iter_list[i].key_len);
+    }
+
+    // Sort by the length of the key, or timestamp if the keys have the same length.
+    sortNode(first_tree_iter_list);
+    sortNode(second_tree_iter_list);
+
+    size_t first_tree_index = 0;
+    size_t second_tree_index = 0;
+    int node_count = 0;
+
+    /**
+     * We use two structures to store the nodes choosen from the second tree
+     * and the nodes evicted from the first tree.
+     */
+    while (node_count < max_node) {
+        if (first_tree_index == first_tree_iter_list.size() ||
+            second_tree_index == second_tree_iter_list.size()) {
+            break;
+        }
+        printf("node_count: %d\n", node_count);
+
+        /**
+         * If the key is the same, use the larger timestamp to refresh
+         * the timestamp of the key in the first tree. If the key is not
+         * the same, choose the key with the larger timestamp.
+         */
+        if (compareKey(first_tree_iter_list[first_tree_index].key,
+                    second_tree_iter_list[second_tree_index].key,
+                    first_tree_iter_list[first_tree_index].key_len,
+                    second_tree_iter_list[second_tree_index].key_len)) {
+            // same key
+            printf("same key\n");
+            first_tree_iter_list[first_tree_index].node->timestamp =
+                    std::max(first_tree_iter_list[first_tree_index].node->timestamp,
+                    second_tree_iter_list[second_tree_index].node->timestamp);
+
+            raxInsert(tmp, first_tree_iter_list[first_tree_index].key,
+                        first_tree_iter_list[first_tree_index].key_len,
+                        first_tree_iter_list[first_tree_index].data, NULL);
+            first_tree_iter_list[first_tree_index].node->timestamp =
+                    std::max(first_tree_iter_list[first_tree_index].node->timestamp,
+                    second_tree_iter_list[second_tree_index].node->timestamp);
+            first_tree_index++;
+            second_tree_index++;
+            node_count++;
+        } else if (first_tree_iter_list[first_tree_index].node->timestamp >
+                   second_tree_iter_list[second_tree_index].node->timestamp) {
+            /**
+             * Choose first tree node.
+             * If the key is in the record tree, it means that there exist a same key in
+             * the second tree and has been choosen in the past. So we just need to remove
+             * the key from the insert_tokens and update the timestamp of the key in the
+             * first tree.
+             * If the key is not in the record tree, it means that the key has not been
+             * choosen in the past. So we need to insert the key into the record tree.
+             */
+            printf("chosse first key %ld : %ld\n",
+                    first_tree_iter_list[first_tree_index].node->timestamp,
+                    second_tree_iter_list[second_tree_index].node->timestamp);
+            if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
+                        first_tree_iter_list[first_tree_index].key_len) == raxNotFound) {
+                raxInsert(tmp, first_tree_iter_list[first_tree_index].key,
+                        first_tree_iter_list[first_tree_index].key_len,
+                        first_tree_iter_list[first_tree_index].data, NULL);
+                node_count++;
+            } else {
+                std::vector<int> token = std::vector<int>(first_tree_iter_list[first_tree_index].key,
+                                                first_tree_iter_list[first_tree_index].key +
+                                                first_tree_iter_list[first_tree_index].key_len);
+                insert_tokens.erase(token);
+                raxNode* node = raxFindAndReturnDataNode(second_tree, first_tree_iter_list[first_tree_index].key,
+                                                         first_tree_iter_list[first_tree_index].key_len, false);
+                first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
+            }
+            first_tree_index++;
+        } else if (first_tree_iter_list[first_tree_index].node->timestamp <
+                   second_tree_iter_list[second_tree_index].node->timestamp) {
+            /**
+             * Choose second tree node.
+             * If the key is in the record tree, it means that there exist a same key in
+             * the first tree and has been choosen in the past. So we need do nothing.
+             * If the key is not in the record tree, it means that the key has not been
+             * choosen in the past. So we need to insert the key into the record tree.
+             * and insert the key into the insert_tokens.
+             */
+            printf("chosse second key %ld : %ld\n",
+                    first_tree_iter_list[first_tree_index].node->timestamp,
+            second_tree_iter_list[second_tree_index].node->timestamp);
+            // choose second key
+            if (raxFind(tmp, second_tree_iter_list[second_tree_index].key,
+                        second_tree_iter_list[second_tree_index].key_len) == raxNotFound) {
+                std::vector<int> insert_token(
+                    second_tree_iter_list[second_tree_index].key,
+                    second_tree_iter_list[second_tree_index].key +
+                    second_tree_iter_list[second_tree_index].key_len);
+                insert_tokens.insert(insert_token);
+
+                raxInsert(tmp, second_tree_iter_list[second_tree_index].key,
+                    second_tree_iter_list[second_tree_index].key_len,
+                    second_tree_iter_list[second_tree_index].data, NULL);
+                node_count++;
+            }
+            second_tree_index++;
+        } else {
+            /**
+             * If the key is not same and the timestamp is the same, we choose the key
+             * with the smaller children number.
+            */
+            if (first_tree_iter_list[first_tree_index].node->numnodes <=
+                second_tree_iter_list[second_tree_index].node->numnodes) {
+                printf("chosse first key %ld : %ld\n",
+                    first_tree_iter_list[first_tree_index].node->timestamp,
+                    second_tree_iter_list[second_tree_index].node->timestamp);
+                // choose first key
+                if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
+                            first_tree_iter_list[first_tree_index].key_len) == raxNotFound) {
+                    raxInsert(tmp, first_tree_iter_list[first_tree_index].key,
+                            first_tree_iter_list[first_tree_index].key_len,
+                            first_tree_iter_list[first_tree_index].data, NULL);
+                    node_count++;
+                } else {
+                    std::vector<int> token = std::vector<int>(first_tree_iter_list[first_tree_index].key,
+                                                              first_tree_iter_list[first_tree_index].key +
+                                                              first_tree_iter_list[first_tree_index].key_len);
+                    insert_tokens.erase(token);
+                    raxNode* node = raxFindAndReturnDataNode(second_tree,
+                                                             first_tree_iter_list[first_tree_index].key,
+                                                             first_tree_iter_list[first_tree_index].key_len,
+                                                             false);
+                    first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
+                }
+                first_tree_index++;
+            } else {
+                printf("chosse second key %ld : %ld\n",
+                    first_tree_iter_list[first_tree_index].node->timestamp,
+                    second_tree_iter_list[second_tree_index].node->timestamp);
+                // choose second key
+                if (raxFind(tmp, second_tree_iter_list[second_tree_index].key,
+                            second_tree_iter_list[second_tree_index].key_len) == raxNotFound) {
+                    std::vector<int> insert_token(
+                        second_tree_iter_list[second_tree_index].key,
+                        second_tree_iter_list[second_tree_index].key +
+                            second_tree_iter_list[second_tree_index].key_len);
+                    insert_tokens.insert(insert_token);
+
+                    raxInsert(tmp, second_tree_iter_list[second_tree_index].key,
+                            second_tree_iter_list[second_tree_index].key_len,
+                            second_tree_iter_list[second_tree_index].data, NULL);
+                    node_count++;
+                }
+                second_tree_index++;
+            }
+        }
+    }
+
+    if (node_count == max_node) {
+        printf("insert evicted tokens\n");
+        int evicted_node_count = 0;
+        while (first_tree_index < first_tree_iter_list.size()) {
+            if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
+                        first_tree_iter_list[first_tree_index].key_len) ==
+                raxNotFound) {
+                std::vector<int> evicted_token(
+                    first_tree_iter_list[first_tree_index].key,
+                    first_tree_iter_list[first_tree_index].key +
+                        first_tree_iter_list[first_tree_index].key_len);
+                evicted_tokens.push_back(evicted_token);
+            } else {
+                std::vector<int> token(
+                    first_tree_iter_list[first_tree_index].key,
+                    first_tree_iter_list[first_tree_index].key +
+                        first_tree_iter_list[first_tree_index].key_len);
+                insert_tokens.erase(token);
+                raxNode* node = raxFindAndReturnDataNode(second_tree,
+                                                         first_tree_iter_list[first_tree_index].key,
+                                                         first_tree_iter_list[first_tree_index].key_len,
+                                                         false);
+                first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
+            }
+            evicted_node_count++;
+            first_tree_index++;
+        }
+        printf("evicted_node_count: %d\n", evicted_node_count);
+        freeVector(first_tree_iter_list);
+        freeVector(second_tree_iter_list);
+        raxFree(tmp);
+        return;
+    }
+
+    // first_ret and second_ret both are not 0 is the case that node_count ==
+    // max_node
+    if (first_tree_index >= first_tree_iter_list.size() &&
+        second_tree_index >= second_tree_iter_list.size()) {
+        // both tree are empty
+        freeVector(first_tree_iter_list);
+        freeVector(second_tree_iter_list);
+        raxFree(tmp);
+        return;
+    } else if (first_tree_index >= first_tree_iter_list.size()) {
+        // first tree is empty
+        while (second_tree_index < second_tree_iter_list.size() &&
+            node_count < max_node) {
+            if (raxFind(tmp, second_tree_iter_list[second_tree_index].key,
+                        second_tree_iter_list[second_tree_index].key_len) == raxNotFound) {
+                std::vector<int> insert_token(
+                    second_tree_iter_list[second_tree_index].key,
+                    second_tree_iter_list[second_tree_index].key +
+                        second_tree_iter_list[second_tree_index].key_len);
+                insert_tokens.insert(insert_token);
+
+                raxInsert(tmp, second_tree_iter_list[second_tree_index].key,
+                        second_tree_iter_list[second_tree_index].key_len,
+                        second_tree_iter_list[second_tree_index].data, NULL);
+
+                node_count++;
+            }
+            second_tree_index++;
+        }
+    } else if (second_tree_index >= second_tree_iter_list.size()) {
+        // second tree is empty
+        raxShow(tmp);
+        printf("node_count:%d\n", node_count);
+        printf("first_tree_index:%ld\n", first_tree_index);
+        while (first_tree_index < first_tree_iter_list.size() &&
+            node_count < max_node) {
+            if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
+                        first_tree_iter_list[first_tree_index].key_len) ==
+                raxNotFound) {
+                node_count++;
+            } else {
+                std::vector<int> token(
+                    first_tree_iter_list[first_tree_index].key,
+                    first_tree_iter_list[first_tree_index].key +
+                        first_tree_iter_list[first_tree_index].key_len);
+                insert_tokens.erase(token);
+                raxNode* node = raxFindAndReturnDataNode(second_tree,
+                                                         first_tree_iter_list[first_tree_index].key,
+                                                         first_tree_iter_list[first_tree_index].key_len,
+                                                         false);
+                first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
+            }
+            first_tree_index++;
+        }
+        while (first_tree_index < first_tree_iter_list.size()) {
+            if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
+                        first_tree_iter_list[first_tree_index].key_len) ==
+                raxNotFound) {
+                std::vector<int> evicted_token(
+                    first_tree_iter_list[first_tree_index].key,
+                    first_tree_iter_list[first_tree_index].key +
+                        first_tree_iter_list[first_tree_index].key_len);
+                evicted_tokens.push_back(evicted_token);
+            } else {
+                std::vector<int> token(
+                    first_tree_iter_list[first_tree_index].key,
+                    first_tree_iter_list[first_tree_index].key +
+                        first_tree_iter_list[first_tree_index].key_len);
+                insert_tokens.erase(token);
+                raxNode* node = raxFindAndReturnDataNode(second_tree,
+                                                         first_tree_iter_list[first_tree_index].key,
+                                                         first_tree_iter_list[first_tree_index].key_len,
+                                                         false);
+                first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
+            }
+            first_tree_index++;
+        }
+    }
+    freeVector(first_tree_iter_list);
+    freeVector(second_tree_iter_list);
+    raxFree(tmp);
+}
+
+void testIteRax(rax *tree) {
+    raxIterator iter;
+    raxStart(&iter, tree);
+    raxSeek(&iter, "^", NULL, 0);
+    while (raxNext(&iter)) {
+        printf("key: ");
+        for (size_t i = 0; i < iter.key_len; i++) {
+            printf("%d ", iter.key[i]);
+        }
+        printf("\n");
+        // printf("data: %p\n", iter.data);
     }
     raxStop(&iter);
 }

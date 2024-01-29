@@ -148,16 +148,13 @@ void KVStateCacheBuilder::Update(Client& client,
       (KVStateCacheBlockBuilder*) tree->GetCustomData();
   LOG(INFO) << "stage 3";
   if (evicted_node != nullptr) {
-    LOG(INFO) << "stage 4";
-    offset_data* data = (offset_data*) evicted_node->get_node()->get_data();
-    LOG(INFO) << "stage 5";
-    KVStateCacheBlockBuilder* builder =
-        (KVStateCacheBlockBuilder*) evicted_node->get_tree()->GetCustomData();
-    LOG(INFO) << "stage 6";
-    builder->DeleteKVCache(data->offset);
+    Delete(evicted_node);
+    // offset_data* data = (offset_data*) evicted_node->get_node()->get_data();
+    // KVStateCacheBlockBuilder* builder =
+    //     (KVStateCacheBlockBuilder*) evicted_node->get_tree()->GetCustomData();
+    // builder->DeleteKVCache(data->offset);
 
-    if ((offset_data*) evicted_node->get_node()->get_data() != nullptr)
-      delete (offset_data*) evicted_node->get_node()->get_data();
+    // delete (offset_data*) evicted_node->get_node()->get_data();
   }
 
   // TBD
@@ -231,14 +228,47 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
   return kv_state;
 }
 
-std::shared_ptr<KVStateCacheBuilder> KVStateCacheBuilder::Merge(
+void KVStateCacheBuilder::Delete(std::shared_ptr<NodeWithTreeAttri> evicted_node) {
+  KVStateCacheBlockBuilder* kv_state_cache_block_builder =
+      (KVStateCacheBlockBuilder*) evicted_node->get_tree()->GetCustomData();
+  offset_data* data = (offset_data*) evicted_node->get_node()->get_data();
+  kv_state_cache_block_builder->DeleteKVCache(data->offset);
+  delete data;
+}
+
+void KVStateCacheBuilder::Merge(
     Client& client, std::shared_ptr<KVStateCache> kv_state_cache) {
   // TBD
   if (kv_state_cache == nullptr) {
-    return nullptr;
+    return;
   }
-  // VINEYARD_ASSERT(false);
-  return nullptr;
+  std::shared_ptr<KVStateCacheBuilder> global_cache_builder =
+      std::make_shared<KVStateCacheBuilder>(client, kv_state_cache);
+  std::shared_ptr<RadixTree> global_cache_tree = kv_state_cache->GetRootTree();
+
+  std::set<std::vector<int>> insert_token_list;
+  std::vector<std::vector<int>> evicted_token_list;
+  mergeTree(this->root_tree->GetRootTree(),
+            global_cache_tree->GetRootTree(),
+            evicted_token_list, insert_token_list,
+            this->root_tree->GetCacheCapacity());
+
+  for (size_t i = 0; i < evicted_token_list.size(); i++) {
+    std::vector<int> token_list = evicted_token_list[i];
+    std::shared_ptr<NodeWithTreeAttri> evicted_node;
+    this->root_tree->Delete(token_list, evicted_node);
+    Delete(evicted_node);
+  }
+
+  for (auto it = insert_token_list.begin(); it != insert_token_list.end();
+       ++it) {
+    std::vector<int> token_list = *it;
+    KV_STATE_WITH_LAYER kv_state =
+        global_cache_builder->Query(client, std::vector<int>(token_list.begin(), token_list.end() - 1), token_list.back());
+    this->Update(client, token_list, token_list[token_list.size() - 1],
+                 kv_state);
+  }
+  return;
 }
 
 Status KVStateCacheBuilder::Build(Client& client) {

@@ -28,6 +28,14 @@ limitations under the License.
 
 namespace vineyard {
 
+struct BlockStruct {
+  union {
+    void* kv_state_cache_block;
+    uint64_t objectID;
+  };
+  bool is_pointer;
+};
+
 class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
   std::shared_ptr<KVStateCacheBlock> kv_state_cache_block;
@@ -86,8 +94,9 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   KV_STATE_WITH_LAYER Query(Client& client, const std::vector<int>& token_list,
                             int token);
 
-  std::shared_ptr<KVStateCacheBuilder> Merge(
-      Client& client, std::shared_ptr<KVStateCache> kv_state_cache);
+  void Delete(std::shared_ptr<NodeWithTreeAttri> evicted_node);
+
+  void Merge(Client& client, std::shared_ptr<KVStateCache> kv_state_cache);
 
   uint64_t GetVersion() { return this->version; }
 
