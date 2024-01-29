@@ -12,7 +12,7 @@ linkify-it-py
 myst-parser>=0.13.0
 nbsphinx
 pygments>=2.4.1
-pytest
+pytest<8.0.0
 pytest-benchmark
 pytest-cases
 pytest-datafiles
