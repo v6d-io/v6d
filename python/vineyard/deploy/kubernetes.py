@@ -108,9 +108,9 @@ def start_vineyardd(
             'Port': rpc_socket_port,
             'Image': vineyard_image,
             'ImagePullPolicy': vineyard_image_pull_policy,
-            'ImagePullSecrets': vineyard_image_pull_secrets
-            if vineyard_image_pull_secrets
-            else 'none',
+            'ImagePullSecrets': (
+                vineyard_image_pull_secrets if vineyard_image_pull_secrets else 'none',
+            ),
         }
         definitions = fp.read().format(**formatter)
 
