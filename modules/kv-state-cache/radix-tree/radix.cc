@@ -962,7 +962,6 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
         return 1; /* Key inserted. */
     }
 
-    LOG(INFO) << "custom2:" << h->custom_data;
     raxNode *prev_node = NULL;
     int insert_new_node = 0;
     /* We walked the radix tree as far as we could, but still there are left
@@ -1014,7 +1013,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
     raxStackFree(&lowWalkStack);
     raxStackFree(&splitStack);
     raxNode *newh = raxReallocForData(h,data);
-    printf("#############raxReallocForData2 ############\n");
+    // printf("#############raxReallocForData2 ############\n");
     if (newh == NULL) {
         return handleOutOfMemory(rax, h, (int *)s, i, old);
     }
@@ -1081,14 +1080,23 @@ raxStack raxFindWithStack(rax *rax, int *s, size_t len) {
 /*
 ** Find a key in the rax, returns the raxNode that contains the key.
 */
-raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len, bool set_timestamp) {
+raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len, raxNode** sub_tree_node, bool set_timestamp) {
     raxNode *h;
 
+    raxStack ts;
+    raxStackInit(&ts);
     //debugf("### Lookup: %.*s\n", (int)len, s);
     int splitpos = 0;
-    size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,NULL,set_timestamp);
+    size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,&ts,set_timestamp);
     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey)
         return NULL;
+    raxNode *tmp = h;
+    while(tmp != nullptr && tmp->issubtree == false) {
+        tmp = (raxNode *)raxStackPop(&ts);
+    }
+    if (tmp != nullptr && sub_tree_node != nullptr) {
+        *sub_tree_node = tmp;
+    }
     return h;
 }
 
@@ -1228,7 +1236,7 @@ raxNode *raxRemoveChild(raxNode *parent, raxNode *child) {
 
 /* Remove the specified item. Returns 1 if the item was found and
  * deleted, 0 otherwise. */
-int raxRemove(rax *rax, int *s, size_t len, void **old, bool set_timestamp) {
+int raxRemove(rax *rax, int *s, size_t len, void **old, raxNode** sub_tree_node, bool set_timestamp) {
     raxNode *h;
     raxStack ts;
 
@@ -1241,6 +1249,16 @@ int raxRemove(rax *rax, int *s, size_t len, void **old, bool set_timestamp) {
         raxStackFree(&ts);
         return 0;
     }
+    if (sub_tree_node != NULL) {
+        for (int i = ts.items - 1; i >= 0; i--) {
+            if (((raxNode *)ts.stack[i])->issubtree == true) {
+                *sub_tree_node = (raxNode *)ts.stack[i];
+                break;
+            }
+        }
+    }
+
+
     if (old) *old = raxGetData(h);
     h->iskey = 0;
     rax->numele--;
@@ -2107,7 +2125,13 @@ uint64_t raxSize(rax *rax) {
  *
  *  [1,2] -> [1,2,3,4] -> []
  */
-
+struct TreeData1 {
+  union {
+    void *kv_state_cache_block_builder;
+    uint64_t builder_object_id;
+  };
+  bool is_ptr = true;
+};
 /* The actual implementation of raxShow(). */
 void raxRecursiveShow(int level, int lpad, raxNode *n) {
     char s = n->iscompr ? '"' : '[';
@@ -2126,9 +2150,11 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
     if (n->iskey) {
         numchars += printf("=%p",raxGetData(n));
     }
-    numchars += printf(" time:%ld, data:%p, is_sub_tree:%d", n->timestamp, n->custom_data, n->issubtree);
-
-    numchars += printf(" timestamp:%ld ", n->timestamp);
+    if (n->custom_data != nullptr) {
+        numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, ((TreeData1 *)n->custom_data)->kv_state_cache_block_builder, n->issubtree);
+    } else {
+        numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, nullptr, n->issubtree);
+    }
 
     int numchildren = n->iscompr ? 1 : n->size;
     /* Note that 7 and 4 magic constants are the string length
@@ -2289,14 +2315,15 @@ raxNode *raxSplit(rax *rax, int *s, size_t len, void *data) {
     // find the node that has N/2 children
     while (items > 0) {
         raxNode *node = (raxNode *)raxStackPop(&stack);
-        if (node->numnodes >= (uint32_t)subtreeNumNodes/2 || node->issubtree) {
+        if (node->numnodes > (uint32_t)subtreeNumNodes/2 || node->issubtree) {
             splitNode = childNode;
             raxStackPush(&stack, node);
             break;
         }
-        childNode = node; 
+        childNode = node;
         items--;
     }
+
     // if the splitNode is NULL, it means that the tree only has one node
     if (splitNode == NULL) {
         return rax->head;
@@ -2601,7 +2628,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                                                 first_tree_iter_list[first_tree_index].key_len);
                 insert_tokens.erase(token);
                 raxNode* node = raxFindAndReturnDataNode(second_tree, first_tree_iter_list[first_tree_index].key,
-                                                         first_tree_iter_list[first_tree_index].key_len, false);
+                                                         first_tree_iter_list[first_tree_index].key_len, NULL, false);
                 first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
             }
             first_tree_index++;
@@ -2658,6 +2685,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                     raxNode* node = raxFindAndReturnDataNode(second_tree,
                                                              first_tree_iter_list[first_tree_index].key,
                                                              first_tree_iter_list[first_tree_index].key_len,
+                                                             NULL,
                                                              false);
                     first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
                 }
@@ -2706,6 +2734,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                 raxNode* node = raxFindAndReturnDataNode(second_tree,
                                                          first_tree_iter_list[first_tree_index].key,
                                                          first_tree_iter_list[first_tree_index].key_len,
+                                                         NULL,
                                                          false);
                 first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
             }
@@ -2768,6 +2797,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                 raxNode* node = raxFindAndReturnDataNode(second_tree,
                                                          first_tree_iter_list[first_tree_index].key,
                                                          first_tree_iter_list[first_tree_index].key_len,
+                                                         NULL,
                                                          false);
                 first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
             }
@@ -2791,6 +2821,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                 raxNode* node = raxFindAndReturnDataNode(second_tree,
                                                          first_tree_iter_list[first_tree_index].key,
                                                          first_tree_iter_list[first_tree_index].key_len,
+                                                         NULL,
                                                          false);
                 first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
             }
@@ -2816,3 +2847,8 @@ void testIteRax(rax *tree) {
     }
     raxStop(&iter);
 }
+
+// 1 2 3
+// query subtree node:0x55f87076f760
+// I0129 16:44:25.626318 280948 kv_state_cache.cc:223] offset:0
+// I0129 16:44:25.626322 280948 kv_state_cache.cc:224] kv_state_cache_block_builder:0x55f870767bc0

@@ -25,6 +25,14 @@ limitations under the License.
 
 namespace vineyard {
 
+struct TreeData {
+  union {
+    KVStateCacheBlockBuilder *kv_state_cache_block_builder;
+    uint64_t builder_object_id;
+  };
+  bool is_ptr = true;
+};
+
 void KVStateCache::Construct(const ObjectMeta& meta) {
   Object::Construct(meta);
   Resolve();
@@ -63,8 +71,12 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
       std::make_shared<KVStateCacheBlockBuilder>(client, this->dimension);
 
   this->root_tree = std::make_shared<RadixTree>(cache_capacity);
-  this->root_tree->SetCustomData(this->kv_state_cache_block_builder.get(),
-                                 sizeof(this->kv_state_cache_block_builder.get()));
+
+  TreeData  *tree_data = new TreeData();
+  tree_data->kv_state_cache_block_builder = this->kv_state_cache_block_builder.get();
+  tree_data->is_ptr = true;
+
+  this->root_tree->SetCustomData(tree_data, sizeof(TreeData));
 }
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
@@ -77,51 +89,47 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
                                                  cache->GetKVStateCacheBlock());
 
   this->root_tree = cache->GetRootTree();
-  this->root_tree->SetCustomData(this->kv_state_cache_block_builder.get(),
-                                 sizeof(this->kv_state_cache_block_builder.get()));
+
+  TreeData *tree_data = new TreeData();
+  tree_data->kv_state_cache_block_builder = this->kv_state_cache_block_builder.get();
+
+  this->root_tree->SetCustomData(tree_data, sizeof(TreeData));
 }
 
 KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
     Client& client, KVStateCacheBlockBuilder* kv_state_cache_block_builder,
     std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list) {
+  LOG(INFO) << "split";
   // Split the tree if the list of kv_state is full.
   VINEYARD_ASSERT(node_with_tree_attri_list.size() > 0);
   KVStateCacheBlockBuilder* child_kv_state_cache_block_builder =
       new KVStateCacheBlockBuilder(client, this->dimension);
   for (size_t i = 0; i < node_with_tree_attri_list.size(); i++) {
-    LOG(INFO) << "transfer node:" << i;
-    LOG(INFO) << "node:" << node_with_tree_attri_list[i]->get_node();
-    LOG(INFO) << "data:" << node_with_tree_attri_list[i]->get_node()->get_data();
     offset_data* data =
         (offset_data*) node_with_tree_attri_list[i]->get_node()->get_data();
     if (data == nullptr)
       continue;
     int index = data->offset;
 
-    LOG(INFO) << "stage 0";
     // Transfer the data from this builder to the child builder.
     const std::shared_ptr<TensorBuilder<double>> k_builder =
         kv_state_cache_block_builder->getKBuilder();
     const std::shared_ptr<TensorBuilder<double>> v_builder =
         kv_state_cache_block_builder->getVBuilder();
-    LOG(INFO) << "stage 0.5";
     offset_data* new_offset_data = new offset_data();
     child_kv_state_cache_block_builder->Update(
         k_builder->data() + index * this->dimension,
         v_builder->data() + index * this->dimension,
         this->dimension, new_offset_data);
-    LOG(INFO) << "stage 1";
     node_with_tree_attri_list[i]->get_node()->set_data(new_offset_data,
                                                        sizeof(offset_data));
     // Clear the bitmap.
-    LOG(INFO) << "stage 2, index:" << index;
     kv_state_cache_block_builder->DeleteKVCache(index);
-    LOG(INFO) << "bitmap:" << kv_state_cache_block_builder->GetBitmapStr();
   }
-  LOG(INFO) << "stage 3";
+  LOG(INFO) << "builder:" << kv_state_cache_block_builder << " bitmap:" << kv_state_cache_block_builder->GetBitmapStr();
+  LOG(INFO) << "child_builder:" << child_kv_state_cache_block_builder << " bitmap:" << child_kv_state_cache_block_builder->GetBitmapStr();
   kv_state_cache_block_builder->SetChildKVStateCacheBlockBuilder(
       child_kv_state_cache_block_builder);
-  LOG(INFO) << "stage 4";
   return child_kv_state_cache_block_builder;
 }
 
@@ -141,20 +149,11 @@ void KVStateCacheBuilder::Update(Client& client,
     LOG(INFO) << "insert failed";
     return;
   }
-  LOG(INFO) << "stage 1";
   std::shared_ptr<RadixTree> tree = node_with_tree_attri->get_tree();
-  LOG(INFO) << "stage 2";
   KVStateCacheBlockBuilder* kv_state_cache_block_builder =
-      (KVStateCacheBlockBuilder*) tree->GetCustomData();
-  LOG(INFO) << "stage 3";
+      ((TreeData*) tree->GetCustomData())->kv_state_cache_block_builder;
   if (evicted_node != nullptr) {
     Delete(evicted_node);
-    // offset_data* data = (offset_data*) evicted_node->get_node()->get_data();
-    // KVStateCacheBlockBuilder* builder =
-    //     (KVStateCacheBlockBuilder*) evicted_node->get_tree()->GetCustomData();
-    // builder->DeleteKVCache(data->offset);
-
-    // delete (offset_data*) evicted_node->get_node()->get_data();
   }
 
   // TBD
@@ -168,35 +167,36 @@ void KVStateCacheBuilder::Update(Client& client,
      * split according to the new tree.
      */
     LOG(INFO) << "triggle splits";
+    LOG(INFO) << "split tree:" << tree->GetTree();
     std::shared_ptr<NodeWithTreeAttri> evicted_node = nullptr;
     this->root_tree->Delete(token_list_copy, evicted_node);
-    std::shared_ptr<RadixTree> new_tree = tree->Split(token_list_copy);
+    std::shared_ptr<RadixTree> new_tree = root_tree->Split(token_list_copy);
+    LOG(INFO) << "root tree:" << root_tree << " new tree:" << new_tree;
 
-    LOG(INFO) << "tree split success";
     std::vector<std::shared_ptr<NodeWithTreeAttri>> node_with_tree_attri_list =
         RadixTree::TraverseTreeWithoutSubTree(new_tree);
     KVStateCacheBlockBuilder* new_kv_state_cache_block_builder =
         Split(client, kv_state_cache_block_builder, node_with_tree_attri_list);
-    new_tree->SetCustomData(new_kv_state_cache_block_builder,
-                            sizeof(new_kv_state_cache_block_builder));
+
+    TreeData* new_tree_data = new TreeData();
+    new_tree_data->kv_state_cache_block_builder =
+        new_kv_state_cache_block_builder;
+    new_tree_data->is_ptr = true;
+
+    new_tree->SetCustomData(new_tree_data, sizeof(TreeData));
     LOG(INFO) << "block split success";
 
     // kv_state_cache_builder->UnLock();
     Update(client, token_list, next_token, kv_state);
   } else {
     // Update the kv-state cache.
-    LOG(INFO) << "update kv-state cache";
     offset_data* data = new offset_data();
-    LOG(INFO) << "stage 7";
     kv_state_cache_block_builder->Update(kv_state, data);
-    LOG(INFO) << "stage 8";
     std::shared_ptr<Node> node = node_with_tree_attri->get_node();
-    LOG(INFO) << "stage 9";
     node->set_data(data, sizeof(offset_data));
-    LOG(INFO) << "stage 10";
   }
 
-  LOG(INFO) << "bitmap:" << kv_state_cache_block_builder->GetBitmapStr();
+  LOG(INFO) << "builder:" << kv_state_cache_block_builder << " bitmap:" << kv_state_cache_block_builder->GetBitmapStr();
 }
 
 static std::shared_ptr<Node> node;
@@ -216,23 +216,28 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
     int offset = data->offset;
 
     KVStateCacheBlockBuilder* kv_state_cache_block_builder =
-        (KVStateCacheBlockBuilder*) node_with_tree_attri->get_tree()
-            ->GetCustomData();
+        ((TreeData*) node_with_tree_attri->get_tree()
+            ->GetCustomData())->kv_state_cache_block_builder;
     // kv_state_cache_builder->Lock();
 
+    LOG(INFO) << "offset:" << offset;
+    LOG(INFO) << "kv_state_cache_block_builder:" << kv_state_cache_block_builder;
     kv_state_cache_block_builder->Query(client, offset, kv_state);
     // kv_state_cache_builder->UnLock();
     node = node_with_tree_attri->get_node();
   }
-  LOG(INFO) << "query success";
   return kv_state;
 }
 
 void KVStateCacheBuilder::Delete(std::shared_ptr<NodeWithTreeAttri> evicted_node) {
+  LOG(INFO) << "stage1";
   KVStateCacheBlockBuilder* kv_state_cache_block_builder =
-      (KVStateCacheBlockBuilder*) evicted_node->get_tree()->GetCustomData();
+      ((TreeData*) evicted_node->get_tree()->GetCustomData())->kv_state_cache_block_builder;
+  LOG(INFO) << "stage2, builder:" << kv_state_cache_block_builder;
   offset_data* data = (offset_data*) evicted_node->get_node()->get_data();
+  LOG(INFO) << "stage3";
   kv_state_cache_block_builder->DeleteKVCache(data->offset);
+  LOG(INFO) << "stage4";
   delete data;
 }
 

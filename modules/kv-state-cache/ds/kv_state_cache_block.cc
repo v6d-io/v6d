@@ -147,9 +147,7 @@ void KVStateCacheBlockBuilder::Update(const KV_STATE_WITH_LAYER& kv_state,
   }
   data->offset = index;
 
-  LOG(INFO) << "before:" << this->bitmap;
   ACQUIRE_BIT_RESOURCE(this->bitmap, index);
-  LOG(INFO) << "after:" << this->bitmap;
 }
 
 void KVStateCacheBlockBuilder::Update(double* k_data, double* v_data,
@@ -168,7 +166,6 @@ void KVStateCacheBlockBuilder::Update(double* k_data, double* v_data,
   data->offset = index;
 
   ACQUIRE_BIT_RESOURCE(this->bitmap, index);
-  LOG(INFO) << "bitmap:" << this->GetBitmapStr();
 }
 
 void KVStateCacheBlockBuilder::SetChildKVStateCacheBlockBuilder(

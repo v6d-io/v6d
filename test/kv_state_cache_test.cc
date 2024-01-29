@@ -36,7 +36,6 @@ void print_current_tokens(const std::vector<int>& prefix, int next_token) {
   }
   tokens_str += std::to_string(next_token);
   LOG(INFO) << "Current tokens: " + tokens_str;
-  LOG(INFO) << tokens_str;
 }
 
 void print_kv_state(
@@ -85,7 +84,6 @@ void inference(std::vector<int> tokens, bool block = false) {
       kv_state = generate_kv_state(tokens[i]);
       print_kv_state(kv_state);
       update(inference_tokens, tokens[i], kv_state);
-      print_kv_state(kv_state);
       LOG(INFO) << "======================================";
     } else {
       LOG(INFO) << "--------------------------------------";
@@ -111,7 +109,7 @@ int main() {
   inference(round_1_tokens);
   // inference(round_1_tokens);
   inference(round_2_tokens);
-  sleep(5);
+  // sleep(5);
   inference(round_2_tokens);
   // inference(round_3_tokens);
   // inference(round_4_tokens);

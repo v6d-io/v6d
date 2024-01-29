@@ -237,7 +237,7 @@ void threadFunc() {
     }
     LOG(INFO) << "Try sync";
     pthread_mutex_lock(&sync_mutex);
-    sync();
+    // sync();
     pthread_mutex_unlock(&sync_mutex);
     // break;
   }

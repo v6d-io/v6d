@@ -77,7 +77,8 @@ int main(int argc, char** argv) {
     printf("\n");
   }
   for (size_t i = 0; i < evicted_tokens.size(); i++) {
-    raxRemove(rt_1, evicted_tokens[i].data(), evicted_tokens[i].size(), NULL, false);
+    void* tree_data;
+    raxRemove(rt_1, evicted_tokens[i].data(), evicted_tokens[i].size(), NULL, NULL, false);
   }
 
   for (auto it = insert_tokens.begin(); it != insert_tokens.end(); it++) {

@@ -211,9 +211,9 @@ int raxInsert(rax *rax, int *s, size_t len, void *data, void **old, bool set_tim
 int raxTryInsert(rax* rax, int* s, size_t len, void* data, void** old);
 int raxInsertAndReturnDataNode(rax* rax, int* s, size_t len, void* data,
                                void** node, void** old);
-int raxRemove(rax* rax, int* s, size_t len, void** old, bool set_timestamp = true);
+int raxRemove(rax* rax, int* s, size_t len, void** old, raxNode** sub_tree_node = NULL, bool set_timestamp = true);
 void* raxFind(rax* rax, int* s, size_t len);
-raxNode* raxFindAndReturnDataNode(rax* rax, int* s, size_t len, bool set_timestamp = true);
+raxNode* raxFindAndReturnDataNode(rax* rax, int* s, size_t len, raxNode** sub_tree_node = NULL, bool set_timestamp = true);
 void raxSetSubtree(raxNode *n);
 void raxSetSubtreeAllocated(raxNode *node);
 void raxSetSubtreeNotNull(raxNode *node);
