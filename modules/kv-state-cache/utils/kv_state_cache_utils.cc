@@ -239,7 +239,6 @@ void threadFunc() {
     pthread_mutex_lock(&sync_mutex);
     sync();
     pthread_mutex_unlock(&sync_mutex);
-    // break;
   }
 }
 

@@ -28,17 +28,18 @@ limitations under the License.
 
 namespace vineyard {
 
-struct BlockStruct {
+struct TreeData {
   union {
-    void* kv_state_cache_block;
-    uint64_t objectID;
+    void *kv_state_cache_block_builder;
+    uint64_t builder_object_id;
   };
-  bool is_pointer;
+  bool is_ptr = true;
 };
 
 class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
-  std::shared_ptr<KVStateCacheBlock> kv_state_cache_block;
+  std::vector<std::shared_ptr<KVStateCacheBlock>> kv_state_cache_block_list;
+  std::map<uint64_t, std::shared_ptr<KVStateCacheBlock>> kv_state_cache_block_map;
   std::shared_ptr<RadixTree> root_tree;
   int dimension;
   int cache_capacity;
@@ -55,8 +56,8 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
   void Resolve();
 
   // for test
-  std::shared_ptr<KVStateCacheBlock> GetKVStateCacheBlock() {
-    return this->kv_state_cache_block;
+  std::vector<std::shared_ptr<KVStateCacheBlock>> GetKVStateCacheBlockList() {
+    return this->kv_state_cache_block_list;
   }
 
   int GetDemension() { return this->dimension; }
@@ -73,7 +74,8 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 };
 
 class KVStateCacheBuilder : public vineyard::ObjectBuilder {
-  std::shared_ptr<KVStateCacheBlockBuilder> kv_state_cache_block_builder;
+  // std::shared_ptr<KVStateCacheBlockBuilder> kv_state_cache_block_builder;
+  // std::vector<KVStateCacheBlockBuilder*> kv_state_cache_block_builder_list;
   std::shared_ptr<RadixTree> root_tree;
   int dimension;
   uint64_t version;
@@ -104,13 +106,18 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   std::shared_ptr<Object> _Seal(Client& client) override;
 
-  std::shared_ptr<KVStateCacheBlockBuilder> GetKVStateCacheBlockBuilder() {
-    return this->kv_state_cache_block_builder;
-  }
-
   uint64_t GetDemension() { return this->dimension; }
 
   std::shared_ptr<RadixTree> GetRootTree() { return this->root_tree; }
+
+  // void AddKVStateCacheBlockBuilder(
+  //     KVStateCacheBlockBuilder* kv_state_cache_block_builder) {
+  //   this->kv_state_cache_block_builder_list.push_back(kv_state_cache_block_builder);
+  // }
+
+  // std::vector<KVStateCacheBlockBuilder*> GetKVStateCacheBlockBuilderList() {
+  //   return this->kv_state_cache_block_builder_list;
+  // }
 
   ~KVStateCacheBuilder();
 };

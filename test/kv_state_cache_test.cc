@@ -25,7 +25,7 @@ limitations under the License.
 using namespace vineyard;
 
 #define DEMENSION 10
-#define CAPACITY 10
+#define CAPACITY 100
 
 void init() { initKVStateCache(DEMENSION, CAPACITY); }
 
@@ -101,6 +101,7 @@ int main() {
   std::vector<int> round_1_tokens = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<int> round_2_tokens = {1, 2,  3,  4,  5,  7, 8,
                                      9, 10, 11, 12, 13, 14};
+  std::vector<int> round_3_tokens = {1, 2,  3, 9, 10, 11, 12, 13, 14};
   // std::vector<int> round_3_tokens = {1, 2, 3, 4, 5, 6, 7};
   // std::vector<int> round_1_tokens = {1, 2};
   // std::vector<int> round_2_tokens = {1, 3};
@@ -110,7 +111,8 @@ int main() {
   inference(round_1_tokens);
   // inference(round_1_tokens);
   inference(round_2_tokens);
-  // sleep(5);
+  sleep(5);
+  inference(round_3_tokens);
   // inference(round_3_tokens);
   // inference(round_3_tokens);
   // inference(round_4_tokens);

@@ -1574,9 +1574,7 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
 
     while(1) {
         int children = it->node->iscompr ? 1 : it->node->size;
-        LOG(INFO) << "node is:" << it->node;
         if (!noup && children) {
-            LOG(INFO) << "stage 1";
             debugf("GO DEEPER\n");
             /* Seek the lexicographically smaller key in this subtree, which
              * is the first one found always going torwards the first child
@@ -1615,7 +1613,6 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
                 return 1;
             }
         } else {
-            LOG(INFO) << "stage 2";
             /* If we finished exporing the previous sub-tree, switch to the
              * new one: go upper until a node is found where there are
              * children representing keys lexicographically greater than the
@@ -2168,7 +2165,7 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
         numchars += printf("=%p",raxGetData(n));
     }
     if (n->custom_data != nullptr) {
-        numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, ((TreeData1 *)n->custom_data)->kv_state_cache_block_builder, n->issubtree);
+        numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, ((TreeData1 *)n->custom_data), n->issubtree);
     } else {
         numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, nullptr, n->issubtree);
     }
@@ -2541,6 +2538,10 @@ void mergeTree(rax* first_tree, rax* second_tree,
                std::vector<std::vector<int>>& evicted_tokens,
                std::set<std::vector<int>>& insert_tokens, int max_node) {
     printf("merge tree!\n");
+    LOG(INFO) << "==============tree 1====================";
+    raxShow(first_tree);
+    LOG(INFO) << "==============tree 2====================";
+    raxShow(second_tree);
     raxIterator first_tree_iter;
     raxIterator second_tree_iter;
     rax* tmp = raxNew();

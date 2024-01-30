@@ -53,18 +53,7 @@ void KVStateCacheBlock::Construct(const ObjectMeta& meta) {
       this->meta_.GetMember("k_builder"));
   this->v_tensor = std::dynamic_pointer_cast<Tensor<double>>(
       this->meta_.GetMember("v_builder"));
-  // 2. construct the child kv_state_cache_block_builder
-  int child_num = this->meta_.GetKeyValue<int>("child_num");
-  for (int i = 0; i < child_num; ++i) {
-    std::shared_ptr<KVStateCacheBlock> child_kv_state_cache_block_builder =
-        std::dynamic_pointer_cast<KVStateCacheBlock>(this->meta_.GetMember(
-            "child_kv_state_cache_block_" + std::to_string(i)));
-    this->child_kv_state_cache_block_list.push_back(
-        child_kv_state_cache_block_builder);
-    // this->child_kv_state_cache_block_map.insert(
-    //     std::make_pair(child_kv_state_cache_block_builder, this->meta_.GetMember("child_kv_state_cache_block_" + std::to_string(i))->id()));
-  }
-  // 3. construct the member field
+  // 2. construct the member field
   this->bitmap = this->meta_.GetKeyValue<unsigned long long>("bitmap");
   this->dimension = this->meta_.GetKeyValue<int>("dimension");
 }
@@ -93,15 +82,6 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
          LIST_SIZE * this->dimension * sizeof(double));
   memcpy(this->v_builder->data(), kv_state_cache_block->v_tensor->data(),
          LIST_SIZE * this->dimension * sizeof(double));
-  for (size_t i = 0;
-       i < kv_state_cache_block->child_kv_state_cache_block_list.size(); ++i) {
-    this->child_kv_state_cache_builder_list.push_back(
-        new KVStateCacheBlockBuilder(
-            client, kv_state_cache_block->child_kv_state_cache_block_list[i]));
-    // uint64_t objectID = kv_state_cache_block->child_kv_state_cache_block_map[kv_state_cache_block->child_kv_state_cache_block_list[i]];
-    // this->child_id_to_builder_map.insert(
-    //     std::make_pair(objectID, this->child_kv_state_cache_builder_list[i]));
-  }
 }
 
 // current we do not consider the layer.
@@ -173,61 +153,25 @@ void KVStateCacheBlockBuilder::Update(double* k_data, double* v_data,
   ACQUIRE_BIT_RESOURCE(this->bitmap, index);
 }
 
-void KVStateCacheBlockBuilder::SetChildKVStateCacheBlockBuilder(
-    KVStateCacheBlockBuilder* child_kv_state_cache_builder,
-    std::shared_ptr<RadixTree> radix_tree) {
-  this->child_kv_state_cache_builder_list.push_back(
-      child_kv_state_cache_builder);
-  this->radix_tree_map.insert(
-      std::make_pair(child_kv_state_cache_builder, radix_tree));
-}
-
 Status KVStateCacheBlockBuilder::Build(Client& client) {
-  // TBD craete vineyard object
-  // pthread_spin_lock(&(this->spin_lock));
-  // ObjectMeta meta;
-  // meta.SetTypeName(type_name<KVStateCacheBlock>());
-  // meta.AddKeyValue("bitmap", this->bitmap);
-  // for (int i = 0; i < LIST_SIZE; ++i) {
-  //   // TBD
-  //   // create tensor meta
-  // }
-  // // TBD check the status
-  // client.CreateMetaData(meta, id);
-  // pthread_spin_unlock(&(this->spin_lock));
   return Status::OK();
 }
 
 std::shared_ptr<Object> KVStateCacheBlockBuilder::_Seal(Client& client) {
+  LOG(INFO) << "block seal:" << this;
   this->Build(client);
-  // pthread_spin_lock(&(this->spin_lock));
-  // pthread_spin_unlock(&(this->spin_lock));
 
   std::shared_ptr<KVStateCacheBlock> kv_state_cache_block =
       std::make_shared<KVStateCacheBlock>();
 
-  // TBD
   // 1. seal k_builder and v_builder
   kv_state_cache_block->meta_.AddMember("k_builder", k_builder->Seal(client));
   kv_state_cache_block->meta_.AddMember("v_builder", v_builder->Seal(client));
-  // 2. seal child kv_state_cache_block_builder
-  for (size_t i = 0; i < this->child_kv_state_cache_builder_list.size(); ++i) {
-    std::shared_ptr<Object> child_kv_state_cache_block = this->child_kv_state_cache_builder_list[i]->_Seal(client);
-    kv_state_cache_block->meta_.AddMember(
-        "child_kv_state_cache_block_" + std::to_string(i),
-        child_kv_state_cache_block);
-    // 2.5 change builder ptr to object id
-    TreeData *data = (TreeData *)this->radix_tree_map[this->child_kv_state_cache_builder_list[i]]->GetCustomData();
-    data->builder_object_id = child_kv_state_cache_block->id();
-    LOG(INFO) << "id is" << child_kv_state_cache_block->id();
-    data->is_ptr = true;
-  }
-  kv_state_cache_block->meta_.AddKeyValue(
-      "child_num", this->child_kv_state_cache_builder_list.size());
-  // 3. store the member field to meta
+
+  // 2. store the member field to meta
   kv_state_cache_block->meta_.AddKeyValue("bitmap", this->bitmap);
   kv_state_cache_block->meta_.AddKeyValue("dimension", this->dimension);
-  // 4. set the object type to meta
+  // 3. set the object type to meta
   kv_state_cache_block->meta_.SetTypeName(type_name<KVStateCacheBlock>());
 
   VINEYARD_CHECK_OK(client.CreateMetaData(kv_state_cache_block->meta_,

@@ -266,16 +266,6 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   }
 
   std::string Serialize() {
-    std::vector<int> test_token = {1, 2, 3, 4, 5, 6, 7};
-    Delete(test_token, *(new std::shared_ptr<NodeWithTreeAttri>()));
-    std::vector<int> test_token1 = {1, 2, 3, 4, 5, 7, 8, 9, 10, 11};
-    Delete(test_token1, *(new std::shared_ptr<NodeWithTreeAttri>()));
-    std::vector<int> test_token2 = {1, 2, 3, 4, 5, 7, 8, 9, 10};
-    Delete(test_token2, *(new std::shared_ptr<NodeWithTreeAttri>()));
-    std::vector<int> test_token3 = {1, 2, 3, 4, 5, 7, 8, 9};
-    Delete(test_token3, *(new std::shared_ptr<NodeWithTreeAttri>()));
-    std::vector<int> test_token4 = {1, 2, 3, 4, 5, 7, 8};
-    Delete(test_token4, *(new std::shared_ptr<NodeWithTreeAttri>()));
     LOG(INFO) << "Serialize......";
     raxShow(this->tree);
     std::vector<std::vector<int>> token_list;
@@ -348,17 +338,6 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       serialized_str += data_oss.str() + "\n";
     }
     LOG(INFO) << "serialized_str:" << serialized_str;
-
-      {
-        // for test
-        raxNode* test_node;
-        std::vector<int> test = {1, 2, 3, 4, 5, 6};
-        test_node = raxFindAndReturnDataNode(tree, test.data(), test.size());
-        LOG(INFO) << "test node is:" << test_node << " data:" << raxGetData(test_node);
-        std::vector<int> test1 = {1, 2, 3, 4, 5, 7};
-        test_node = raxFindAndReturnDataNode(tree, test1.data(), test1.size());
-        LOG(INFO) << "test node is:" << test_node << " data:" << raxGetData(test_node);
-      }
 
     // use LZ4 to compress the serialized string
     const char* const src = serialized_str.c_str();
@@ -520,7 +499,8 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     // string.
     // TBD
     // set the right cache capacity.
-    std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(10);
+    std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(100);
+    radix_tree->node_count = token_list.size();
 
     for (size_t i = 0; i < token_list.size(); i++) {
       int* insert_tokens_array = token_list[i].data();
@@ -547,10 +527,15 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       raxNode* node = nullptr;
       LOG(INFO) << "stage 1";
       VINEYARD_ASSERT(radix_tree->tree != nullptr);
-      // raxFindNode(radix_tree->tree, sub_tree_token_list[i].data(),
-      //                       sub_tree_token_list[i].size(), (void **)&node);
-      node = raxFindAndReturnDataNode(radix_tree->tree, sub_tree_token_list[i].data(),
-                            sub_tree_token_list[i].size());
+
+      // TBD refator this code.
+      raxFindNode(radix_tree->tree, sub_tree_token_list[i].data(),
+                            sub_tree_token_list[i].size(), (void **)&node);
+      // if (node->size > 1) {
+      // node = raxFindAndReturnDataNode(radix_tree->tree, sub_tree_token_list[i].data(),
+                            // sub_tree_token_list[i].size());
+      // }
+
       VINEYARD_ASSERT(node != nullptr);
       LOG(INFO) << "stage 2";
       customData* data = new customData();
@@ -607,8 +592,10 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   }
 
   rax* GetTree() {return this->tree;}
+
   void* GetCustomData() {
     VINEYARD_ASSERT(tree->head->custom_data != nullptr);
+    LOG(INFO) << "get custom data with node:" << tree->head;
     return ((customData *)tree->head->custom_data)->data; 
   }
 
@@ -622,6 +609,8 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   rax* GetRootTree() { return tree; }
 
   int GetCacheCapacity() { return cache_capacity; }
+
+  std::set<std::shared_ptr<RadixTree>> GetSubTreeSet() { return sub_tree; }
 };
 
 #endif
