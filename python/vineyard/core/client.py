@@ -147,7 +147,9 @@ class Client:
                       is enabled.
             config: Optional, can either be a path to a YAML configuration file or
                     a path to a directory containing the default config file
-                    `vineyard.yaml`.
+                    `vineyard.yaml`. Also, the environment variable
+                    `VINEYARD_CONFIG` can be used to specify the
+                    path to the configuration file.
 
         The content of the configuration file should has the following content:
 
@@ -175,6 +177,8 @@ class Client:
             socket = os.getenv('VINEYARD_IPC_SOCKET', None)
         if not endpoint and not (host and port):
             endpoint = os.getenv('VINEYARD_RPC_ENDPOINT', None)
+        if not config:
+            config = os.getenv('VINEYARD_CONFIG', None)
         if endpoint:
             if not isinstance(endpoint, (tuple, list)):
                 endpoint = endpoint.split(':')
