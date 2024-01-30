@@ -80,6 +80,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
 
   this->root_tree->SetCustomData(tree_data, sizeof(TreeData));
   LOG(INFO) << "set builder:" << builder << " to tree:" << this->root_tree->GetTree()->head;
+  this->root_tree->sub_tree.insert(this->root_tree->shared_from_this());
   // this->AddKVStateCacheBlockBuilder(builder, this->root_tree);
 }
 
@@ -88,16 +89,25 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
   // TBD
   this->dimension = cache->GetDemension();
   this->version = cache->GetVersion();
+  LOG(INFO) << "stage 1";
   // 1. create block builder from block
   std::map<uint64_t, std::shared_ptr<KVStateCacheBlock>> kv_state_cache_block_map =
       cache->kv_state_cache_block_map;
+  LOG(INFO) << "stage 2";
   this->root_tree = cache->GetRootTree();
+  LOG(INFO) << "stage 3";
   std::set<std::shared_ptr<RadixTree>> radix_tree_list = cache->root_tree->GetSubTreeSet();
 
+  LOG(INFO) << "stage 4";
   for (auto iter = radix_tree_list.begin(); iter != radix_tree_list.end(); ++iter) {
+    LOG(INFO) << "stage 6";
     std::shared_ptr<RadixTree> radix_tree = *iter;
+    LOG(INFO) << "stage 7";
     TreeData *tree_data = (TreeData *)radix_tree->GetCustomData();
+    LOG(INFO) << "stage 8";
+    LOG(INFO) << "tree data:" << tree_data;
     VINEYARD_ASSERT(tree_data->is_ptr == false);
+    LOG(INFO) << "id:" << tree_data->builder_object_id;
     std::shared_ptr<KVStateCacheBlock> kv_state_cache_block =
         kv_state_cache_block_map[tree_data->builder_object_id];
     KVStateCacheBlockBuilder* kv_state_cache_block_builder =
@@ -317,23 +327,24 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   // }
 
   // refactor related code.
-  TreeData* tree_data = (TreeData*)((customData*)this->root_tree->GetTree()->head->custom_data)->data;
-  KVStateCacheBlockBuilder* kv_state_cache_block_builder = (KVStateCacheBlockBuilder*)
-      tree_data->kv_state_cache_block_builder;
-  LOG(INFO) << "builder:" << kv_state_cache_block_builder;
-  std::shared_ptr<Object> kv_state_cache_block =
-      kv_state_cache_block_builder->_Seal(client);
-  LOG(INFO) << "block:" << kv_state_cache_block;
-  kv_state_cache->meta_.AddMember("kv_state_cache_block_builder_0",
-                                  kv_state_cache_block);
-  tree_data->builder_object_id = kv_state_cache_block->id();
-  tree_data->is_ptr = false;
+  // TreeData* tree_data = (TreeData*)((customData*)this->root_tree->GetTree()->head->custom_data)->data;
+  // TreeData* tree_data = (TreeData*)this->root_tree->GetCustomData();
+  // KVStateCacheBlockBuilder* kv_state_cache_block_builder = (KVStateCacheBlockBuilder*)
+  //     tree_data->kv_state_cache_block_builder;
+  // LOG(INFO) << "builder:" << kv_state_cache_block_builder;
+  // std::shared_ptr<Object> kv_state_cache_block =
+  //     kv_state_cache_block_builder->_Seal(client);
+  // LOG(INFO) << "block:" << kv_state_cache_block;
+  // kv_state_cache->meta_.AddMember("kv_state_cache_block_builder_0",
+  //                                 kv_state_cache_block);
+  // tree_data->builder_object_id = kv_state_cache_block->id();
+  // tree_data->is_ptr = false;
 
   raxIterator iter;
   raxStart(&iter, this->root_tree->GetTree());
   raxSeek(&iter, "^", nullptr, 0);
   raxShow(this->root_tree->GetTree());
-  int count = 1;
+  int count = 0;
   while (raxNext(&iter)) {
     std::string str = "";
     for (int i = 0; i < iter.key_len; i++) {

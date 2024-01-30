@@ -113,6 +113,10 @@ int main() {
   inference(round_2_tokens);
   sleep(5);
   inference(round_3_tokens);
+
+  inference(round_1_tokens);
+  inference(round_2_tokens);
+  inference(round_3_tokens);
   // inference(round_3_tokens);
   // inference(round_3_tokens);
   // inference(round_4_tokens);

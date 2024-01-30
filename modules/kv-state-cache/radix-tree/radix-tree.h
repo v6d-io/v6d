@@ -92,23 +92,29 @@ class NodeWithTreeAttri {
 };
 
 class RadixTree : public std::enable_shared_from_this<RadixTree> {
- private:
+ public:
   // the whole radix tree for prefix match
   rax* tree;
   int cache_capacity;
   int node_count;
   std::set<std::shared_ptr<RadixTree>> sub_tree;
+  std::vector<int> prefix;
 
  public:
   RadixTree(int cache_capacity) {
     this->tree = raxNew();
-    this->tree->head->issubtree = true;
     this->cache_capacity = cache_capacity;
+
+    std::vector<int> root_token = {INT32_MAX};
+    std::shared_ptr<NodeWithTreeAttri> evicted_node;
+    this->InsertInternal(root_token, evicted_node);
+    this->prefix = root_token;
   }
 
-  RadixTree(rax* rax_tree, int cache_capacity) {
+  RadixTree(rax* rax_tree, int cache_capacity, std::vector<int> prefix) {
     this->tree = rax_tree;
     this->cache_capacity = cache_capacity;
+    this->prefix = prefix;
   }
 
   RadixTree(void* custom_data, int custom_data_length, int cache_capacity) {
@@ -137,12 +143,35 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   std::shared_ptr<NodeWithTreeAttri> Insert(
       std::vector<int> tokens,
       std::shared_ptr<NodeWithTreeAttri>& evicted_node) {
+    tokens.insert(tokens.begin(), INT32_MAX);
+    return InsertInternal(tokens, evicted_node);
+  }
+
+  void Delete(std::vector<int> tokens,
+              std::shared_ptr<NodeWithTreeAttri>& evicted_node) {
+    tokens.insert(tokens.begin(), INT32_MAX);
+    DeleteInternal(tokens, evicted_node);
+  }
+
+  std::shared_ptr<NodeWithTreeAttri> Query(std::vector<int> key) {
+    key.insert(key.begin(), INT32_MAX);
+    return QueryInternal(key);
+  }
+
+  std::shared_ptr<RadixTree> Split(std::vector<int> tokens) {
+    tokens.insert(tokens.begin(), INT32_MAX);
+    return SplitInternal(tokens);
+  }
+
+  std::shared_ptr<NodeWithTreeAttri> InsertInternal(
+      std::vector<int> tokens,
+      std::shared_ptr<NodeWithTreeAttri>& evicted_node) {
     // get the sub vector of the tokens
     // TBD
     // change the api to Insert(prefix, tokens, evicted_node);
     std::vector<int> prefix =
         std::vector<int>(tokens.begin(), tokens.end() - 1);
-    if (prefix.size() > 0 && Query(prefix) == nullptr) {
+    if (prefix.size() > 0 && QueryInternal(prefix) == nullptr) {
       return nullptr;
     }
 
@@ -174,12 +203,18 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       for (size_t i = 0; i < evicted_tokens.size(); i++) {
         evicted_str += std::to_string(evicted_tokens[i]);
       }
-      this->Delete(evicted_tokens, evicted_node);
+      this->DeleteInternal(evicted_tokens, evicted_node);
     }
 
     raxNode *subTreeNode;
+    std::vector<int> sub_tree_prefix;
     dataNode = raxFindAndReturnDataNode(this->tree, insert_tokens_array,
-                                        insert_tokens_array_len, &subTreeNode);
+                                        insert_tokens_array_len, sub_tree_prefix, &subTreeNode);
+    std::string sub_tree_prefix_str = "";
+    for (int i = 0; i < sub_tree_prefix.size(); i++) {
+      sub_tree_prefix_str += std::to_string(sub_tree_prefix[i]);
+    }
+    LOG(INFO) << "sub tree prefix:" << sub_tree_prefix_str;
     /**
      * if the data node is null, it means the evicted node is the same node as
      * the inserted node.
@@ -192,19 +227,19 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     // TBD
     // cache subtree on root radixTree
     // recycle the memory of the rax(e.g. add delete function for make_shared)
-    rax* sub_tree = raxNew();
-    sub_tree->head = subTreeNode;
+    // rax* sub_tree = raxNew();
+    // sub_tree->head = subTreeNode;
 
     // No need to fill prefix length because the prefix length is not used in
     // this case.
     // TBD
     // refactor this code.
-    std::shared_ptr<RadixTree> tree = std::make_shared<RadixTree>(sub_tree, this->cache_capacity);
+    std::shared_ptr<RadixTree> tree = std::make_shared<RadixTree>(this->tree, this->cache_capacity, sub_tree_prefix);
     return std::make_shared<NodeWithTreeAttri>(std::make_shared<Node>(dataNode),
                                                tree);
   }
 
-  void Delete(std::vector<int> tokens,
+  void DeleteInternal(std::vector<int> tokens,
               std::shared_ptr<NodeWithTreeAttri>& evicted_node) {
     // remove the token vector from the radix tree
     // TBD
@@ -214,17 +249,19 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
 
     nodeData* old_data;
     raxNode* subTreeNode;
+    std::vector<int> pre;
+    raxFindAndReturnDataNode(this->tree, delete_tokens_array, delete_tokens_array_len, pre, &subTreeNode);
     int retval = raxRemove(this->tree, delete_tokens_array,
                            delete_tokens_array_len, (void**) &old_data, &subTreeNode);
     if (retval == 1) {
       std::shared_ptr<Node> node = std::make_shared<Node>(old_data);
-      rax* sub_tree = raxNew();
-      sub_tree->head = subTreeNode;
+      // rax* sub_tree = raxNew();
+      // sub_tree->head = subTreeNode;
       // No need to fill prefix length because the prefix length is not used in
       // this case.
       // TBD
       // refactor this code.
-      std::shared_ptr<RadixTree> tree = std::make_shared<RadixTree>(sub_tree, this->cache_capacity);
+      std::shared_ptr<RadixTree> tree = std::make_shared<RadixTree>(this->tree, this->cache_capacity, pre);
       evicted_node =
           std::make_shared<NodeWithTreeAttri>(node, tree);
       node_count--;
@@ -234,7 +271,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   
   }
 
-  std::shared_ptr<NodeWithTreeAttri> Query(std::vector<int> key) {
+  std::shared_ptr<NodeWithTreeAttri> QueryInternal(std::vector<int> key) {
     LOG(INFO) << "Query";
     int* tokens = key.data();
     size_t tokens_len = key.size();
@@ -244,8 +281,9 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     }
 
     raxNode* subTreeNode;
+    std::vector<int> prefix;
     raxNode* dataNode =
-        raxFindAndReturnDataNode(this->tree, tokens, tokens_len, &subTreeNode);
+        raxFindAndReturnDataNode(this->tree, tokens, tokens_len, prefix, &subTreeNode);
     LOG(INFO) << "query subtree node:" << subTreeNode;
     if (dataNode == NULL) {
       LOG(INFO) << "get failed";
@@ -255,13 +293,13 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     std::shared_ptr<Node> node = std::make_shared<Node>(dataNode);
     // TBD
     // exists memory leak here.
-    rax* sub_tree = raxNew();
-    sub_tree->head = subTreeNode;
+    // rax* sub_tree = raxNew();
+    // sub_tree->head = subTreeNode;
     // No need to fill prefix length because the prefix length is not used in
     // this case.
     // TBD
     // refactor this code.
-    std::shared_ptr<RadixTree> tree = std::make_shared<RadixTree>(sub_tree, this->cache_capacity);
+    std::shared_ptr<RadixTree> tree = std::make_shared<RadixTree>(this->tree, this->cache_capacity, prefix);
     return std::make_shared<NodeWithTreeAttri>(node, tree);
   }
 
@@ -321,9 +359,9 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       serialized_str += "|";
 
       // for test
-      TreeData1 *data = (TreeData1*)((customData*) sub_tree_data_list[index])->data;
-      LOG(INFO) << "Does the data is object id?" << ((data->is_ptr == true) ? "true" : "false");
-      LOG(INFO) << "object id is:" << data->builder_object_id;
+      // TreeData1 *data = (TreeData1*)((customData*) sub_tree_data_list[index])->data;
+      // LOG(INFO) << "Does the data is object id?" << ((data->is_ptr == true) ? "true" : "false");
+      // LOG(INFO) << "object id is:" << data->builder_object_id;
 
       // convert custom data to hex string
       char* bytes = (char*) ((customData*) sub_tree_data_list[index])->data;
@@ -431,8 +469,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
         }
       }
       if (!std::getline(lineStream, dataPart)) {
-        throw std::runtime_error(
-            "Invalid serialized string format in data part.");
+        LOG(INFO) << "data length is 0";
       }
 
       std::istringstream keyStream(tokenListPart);
@@ -451,7 +488,6 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
         }
       }
 
-
       size_t dataSize = dataPart.length() / 2; // Each byte is represented by two hex characters
       if (isMainTree) {
         data_size_list.push_back(dataSize);
@@ -461,28 +497,31 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       // This pointer will be freed by upper layer. Because this data
       // is created by upper layer. Here just recover it from serialized
       // string.
-      char* data = new char[dataSize];
+      char* data = nullptr;
       LOG(INFO) << "data size:" << dataSize;
-      std::istringstream dataStream(dataPart);
-      for (size_t i = 0; i < dataSize; ++i) {
-           // Temporary buffer to store two hexadecimal chars + null
-           char hex[3] = {};
-           // Read two characters for one byte
-           if (!dataStream.read(hex, 2)) {
-               delete[] data;
-               LOG(INFO) << "Invalid data format.";
-               throw std::runtime_error("Invalid data format.");
-           }
-           // Convert the two hex characters to one byte
-           unsigned int byte;
-           std::istringstream hexStream(hex);
-           if (!(hexStream >> std::hex >> byte)) {
-               delete[] data;
-               LOG(INFO) << "Invalid data format.";
-               throw std::runtime_error("Invalid data format.");
-           }
-           reinterpret_cast<unsigned char*>(data)[i] = static_cast<unsigned
-           char>(byte);
+      if (dataSize != 0) {
+        data = new char[dataSize];
+        std::istringstream dataStream(dataPart);
+        for (size_t i = 0; i < dataSize; ++i) {
+          // Temporary buffer to store two hexadecimal chars + null
+          char hex[3] = {};
+          // Read two characters for one byte
+          if (!dataStream.read(hex, 2)) {
+            delete[] data;
+            LOG(INFO) << "Invalid data format.";
+            throw std::runtime_error("Invalid data format.");
+          }
+          // Convert the two hex characters to one byte
+          unsigned int byte;
+          std::istringstream hexStream(hex);
+          if (!(hexStream >> std::hex >> byte)) {
+            delete[] data;
+            LOG(INFO) << "Invalid data format.";
+            throw std::runtime_error("Invalid data format.");
+          }
+          reinterpret_cast<unsigned char*>(data)[i] = static_cast<unsigned
+          char>(byte);
+        }
       }
       if (isMainTree) {
         token_list.push_back(keys);
@@ -502,7 +541,13 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(100);
     radix_tree->node_count = token_list.size();
 
+    raxShow(radix_tree->tree);
     for (size_t i = 0; i < token_list.size(); i++) {
+      std::string token_str = "";
+      for (size_t j = 0; j < token_list[i].size(); j++) {
+        token_str += std::to_string(token_list[i][j]);
+      }
+      LOG(INFO) << "token:" << token_str;
       int* insert_tokens_array = token_list[i].data();
       size_t insert_tokens_array_len = token_list[i].size();
       nodeData* data = new nodeData();
@@ -512,7 +557,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       int retval = raxInsertAndReturnDataNode(
           radix_tree->tree, insert_tokens_array, insert_tokens_array_len, data,
           (void**) &dataNode, NULL);
-      VINEYARD_ASSERT(retval == 1);
+      // VINEYARD_ASSERT(retval == 1);
       if (dataNode == NULL) {
         throw std::runtime_error("Insert token list failed");
       }
@@ -529,43 +574,48 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       VINEYARD_ASSERT(radix_tree->tree != nullptr);
 
       // TBD refator this code.
-      raxFindNode(radix_tree->tree, sub_tree_token_list[i].data(),
-                            sub_tree_token_list[i].size(), (void **)&node);
+      // raxFindNode(radix_tree->tree, sub_tree_token_list[i].data(),
+      //                       sub_tree_token_list[i].size(), (void **)&node);
       // if (node->size > 1) {
-      // node = raxFindAndReturnDataNode(radix_tree->tree, sub_tree_token_list[i].data(),
-                            // sub_tree_token_list[i].size());
+      std::vector<int> prefix;
+      node = raxFindAndReturnDataNode(radix_tree->tree, sub_tree_token_list[i].data(),
+                            sub_tree_token_list[i].size(), prefix);
       // }
-
       VINEYARD_ASSERT(node != nullptr);
       LOG(INFO) << "stage 2";
       customData* data = new customData();
       data->data = sub_tree_data_list[i];
+      LOG(INFO) << sub_tree_data_list[i];
       data->data_length = sub_tree_data_size_list[i];
 
       LOG(INFO) << "stage 3";
       node->issubtree = true;
       raxSetCustomData(node, data);
 
-      rax* rax_tree = raxNew();
-      rax_tree->head = node;
-      std::shared_ptr<RadixTree> sub_tree = std::make_shared<RadixTree>(rax_tree, radix_tree->cache_capacity);
+      // rax* rax_tree = raxNew();
+      // rax_tree->head = node;
+      std::shared_ptr<RadixTree> sub_tree = std::make_shared<RadixTree>(radix_tree->tree, radix_tree->cache_capacity, sub_tree_token_list[i]);
+      // TBD
+      // refactor this code.
       radix_tree->sub_tree.insert(sub_tree);
     }
     LOG(INFO) << "Deserialize success";
+    LOG(INFO) << "set size:" << radix_tree->sub_tree.size();
     return radix_tree;
   }
 
-  std::shared_ptr<RadixTree> Split(std::vector<int> tokens) {
+  std::shared_ptr<RadixTree> SplitInternal(std::vector<int> tokens) {
+    std::vector<int> prefix;
     nodeData* dummy_data = new nodeData();
     raxNode* sub_tree_root_node =
-        raxSplit(this->tree, tokens.data(), tokens.size(), dummy_data);
+        raxSplit(this->tree, tokens.data(), tokens.size(), dummy_data, prefix);
 
     // TBD
     // if the sub_tree is null, delete this pointer.
-    rax* sub_rax = raxNew();
-    sub_rax->head = sub_tree_root_node;
+    // rax* sub_rax = raxNew();
+    // sub_rax->head = sub_tree_root_node;
     std::shared_ptr<RadixTree> sub_tree =
-        std::make_shared<RadixTree>(sub_rax, this->cache_capacity);
+        std::make_shared<RadixTree>(this->tree, this->cache_capacity, prefix);
     LOG(INFO) << "split end";
     raxShow(this->tree);
     return sub_tree;
@@ -580,10 +630,21 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       return nodes;
     }
 
+
     LOG(INFO) << "travel:" << radix_tree << " headnode:" << radix_tree->tree->head;
     std::vector<raxNode*> dataNodeList;
-    raxNode* headNode = radix_tree->tree->head;
+    // raxNode* headNode = radix_tree->tree->head;
+    raxShow(radix_tree->tree);
+    std::string prefix_str;
+    for (size_t i = 0; i < radix_tree->prefix.size(); i++) {
+      prefix_str += std::to_string(radix_tree->prefix[i]) + " ";
+    }
+    LOG(INFO) << "prefix:" << prefix_str;
+    std::vector<int> pre_tmp;
+    raxNode* headNode = (raxNode*)raxFindAndReturnDataNode(radix_tree->tree, radix_tree->prefix.data(), radix_tree->prefix.size(), pre_tmp, NULL);
+    LOG(INFO) << "head node:" << headNode;
     raxTraverseSubTree(headNode, dataNodeList);
+    LOG(INFO) << "data node list:" << dataNodeList.size();
     for (size_t i = 0; i < dataNodeList.size(); i++) {
       nodes.push_back(std::make_shared<NodeWithTreeAttri>(
           std::make_shared<Node>(dataNodeList[i]), radix_tree));
@@ -594,16 +655,39 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   rax* GetTree() {return this->tree;}
 
   void* GetCustomData() {
-    VINEYARD_ASSERT(tree->head->custom_data != nullptr);
-    LOG(INFO) << "get custom data with node:" << tree->head;
-    return ((customData *)tree->head->custom_data)->data; 
+    // VINEYARD_ASSERT(tree->head->custom_data != nullptr);
+    // LOG(INFO) << "get custom data with node:" << tree->head;
+    // return ((customData *)tree->head->custom_data)->data;
+    std::vector<int> pre;
+    raxNode* node = raxFindAndReturnDataNode(this->tree, prefix.data(), prefix.size(), pre, NULL);
+    LOG(INFO) << "node:" << node;
+    std::string prefix_str = "";
+    for (size_t i = 0; i < prefix.size(); i++) {
+      prefix_str += std::to_string(prefix[i]) + " ";
+    }
+    LOG(INFO) << "prefix:" << prefix_str;
+    raxShow(this->tree);
+    VINEYARD_ASSERT(node->custom_data != nullptr);
+    return ((customData *)node->custom_data)->data;
   }
 
   void SetCustomData(void* custom_data, int custom_data_length) {
+    LOG(INFO) << "set custom data";
     customData* data = new customData();
     data->data = custom_data;
     data->data_length = custom_data_length;
-    raxSetCustomData(this->tree->head, data);
+    std::vector<int> pre;
+    std::string prefix_str = "";
+    for (size_t i = 0; i < prefix.size(); i++) {
+      prefix_str += std::to_string(prefix[i]) + " ";
+    }
+    LOG(INFO) << "prefix:" << prefix_str;
+    raxNode* node = raxFindAndReturnDataNode(this->tree, prefix.data(), prefix.size(), pre, NULL);
+    LOG(INFO) << "node:" << node;
+    node->issubtree = true;
+    raxShow(this->tree);
+    raxSetCustomData(node, data);
+
   }
 
   rax* GetRootTree() { return tree; }
