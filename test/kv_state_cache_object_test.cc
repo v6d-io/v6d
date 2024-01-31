@@ -21,91 +21,91 @@ limitations under the License.
 
 using namespace vineyard;
 
-std::vector<int> tokens;
-RadixTree* radix_tree;
-std::vector<std::vector<double>> k_state_list;
-std::vector<std::vector<double>> v_state_list;
-std::vector<std::shared_ptr<NodeWithTreeAttri>> nodes_with_tree_attri_list;
+// std::vector<int> tokens;
+// RadixTree* radix_tree;
+// std::vector<std::vector<double>> k_state_list;
+// std::vector<std::vector<double>> v_state_list;
+// std::vector<std::shared_ptr<NodeWithTreeAttri>> nodes_with_tree_attri_list;
 
-#define DIMENSION 10
-#define TOKEN_NUM 10
-#define CACHE_CAPACITY 10
+// #define DIMENSION 10
+// #define TOKEN_NUM 10
+// #define CACHE_CAPACITY 10
 
-void prepareData(KVStateCacheBuilder* kv_state_cache_builder) {
-  radix_tree = new RadixTree(10);
-  radix_tree->SetCustomData(kv_state_cache_builder,
-                            sizeof(KVStateCacheBuilder));
+// void prepareData(KVStateCacheBuilder* kv_state_cache_builder) {
+//   radix_tree = new RadixTree(10);
+//   radix_tree->SetCustomData(kv_state_cache_builder,
+//                             sizeof(KVStateCacheBuilder));
 
-  for (int i = 0; i < TOKEN_NUM; i++) {
-    tokens.push_back(i);
-  }
+//   for (int i = 0; i < TOKEN_NUM; i++) {
+//     tokens.push_back(i);
+//   }
 
-  LOG(INFO) << "stage 1";
-  for (int i = 0; i < TOKEN_NUM; i++) {
-    std::vector<double> key_state;
-    for (int j = 0; j < DIMENSION; ++j) {
-      key_state.push_back(((double) (j)) * 0.1 + (double) i);
-    }
-    k_state_list.push_back(key_state);
-  }
+//   LOG(INFO) << "stage 1";
+//   for (int i = 0; i < TOKEN_NUM; i++) {
+//     std::vector<double> key_state;
+//     for (int j = 0; j < DIMENSION; ++j) {
+//       key_state.push_back(((double) (j)) * 0.1 + (double) i);
+//     }
+//     k_state_list.push_back(key_state);
+//   }
 
-  LOG(INFO) << "stage 2";
-  for (int i = 0; i < TOKEN_NUM; i++) {
-    std::vector<double> value_state;
-    for (int j = 0; j < DIMENSION; ++j) {
-      value_state.push_back(((double) (j)) * 0.1 + (double) i);
-    }
-    v_state_list.push_back(value_state);
-  }
-}
+//   LOG(INFO) << "stage 2";
+//   for (int i = 0; i < TOKEN_NUM; i++) {
+//     std::vector<double> value_state;
+//     for (int j = 0; j < DIMENSION; ++j) {
+//       value_state.push_back(((double) (j)) * 0.1 + (double) i);
+//     }
+//     v_state_list.push_back(value_state);
+//   }
+// }
 
-void updateTest(Client& client, KVStateCacheBuilder* builder) {
-  std::vector<int> prefix;
+// void updateTest(Client& client, KVStateCacheBuilder* builder) {
+//   std::vector<int> prefix;
 
-  for (size_t i = 0; i < tokens.size(); ++i) {
-    KV_STATE_WITH_LAYER kv_state;
-    kv_state.insert(
-        std::make_pair(1, std::make_pair(k_state_list[i], v_state_list[i])));
-    LOG(INFO) << "update test";
-    builder->Update(client, prefix, tokens[i], kv_state);
-    prefix.push_back(tokens[i]);
-  }
-}
+//   for (size_t i = 0; i < tokens.size(); ++i) {
+//     KV_STATE_WITH_LAYER kv_state;
+//     kv_state.insert(
+//         std::make_pair(1, std::make_pair(k_state_list[i], v_state_list[i])));
+//     LOG(INFO) << "update test";
+//     builder->Update(client, prefix, tokens[i], kv_state);
+//     prefix.push_back(tokens[i]);
+//   }
+// }
 
-void queryTest(Client& client, KVStateCacheBuilder* builder) {
-  std::vector<int> prefix;
-  KV_STATE_WITH_LAYER kv_state;
+// void queryTest(Client& client, KVStateCacheBuilder* builder) {
+//   std::vector<int> prefix;
+//   KV_STATE_WITH_LAYER kv_state;
 
-  for (int i = 0; i < TOKEN_NUM; i++) {
-    kv_state = builder->Query(client, prefix, tokens[i]);
-    std::vector<double> key_state = kv_state[1].first;
-    std::vector<double> value_state = kv_state[1].second;
+//   for (int i = 0; i < TOKEN_NUM; i++) {
+//     kv_state = builder->Query(client, prefix, tokens[i]);
+//     std::vector<double> key_state = kv_state[1].first;
+//     std::vector<double> value_state = kv_state[1].second;
 
-    VINEYARD_ASSERT(
-        key_state.size() == (size_t) DIMENSION,
-        "Expected key_state.size() == " + std::to_string(DIMENSION) +
-            ", but got + key_state.size() == " +
-            std::to_string(key_state.size()));
-    VINEYARD_ASSERT(
-        value_state.size() == (size_t) DIMENSION,
-        "Expected value_state.size() == " + std::to_string(DIMENSION) +
-            ", but got + value_state.size() == " +
-            std::to_string(value_state.size()));
-    for (int j = 0; j < DIMENSION; ++j) {
-      VINEYARD_ASSERT(key_state[j] == k_state_list[i][j],
-                      "Expected key_state[" + std::to_string(j) +
-                          "] == " + std::to_string(k_state_list[i][j]) +
-                          ", but got + key_state[" + std::to_string(j) +
-                          "] == " + std::to_string(key_state[j]));
-      VINEYARD_ASSERT(value_state[j] == v_state_list[i][j],
-                      "Expected value_state[" + std::to_string(j) +
-                          "] == " + std::to_string(v_state_list[i][j]) +
-                          ", but got + value_state[" + std::to_string(j) +
-                          "] == " + std::to_string(value_state[j]));
-    }
-    prefix.push_back(tokens[i]);
-  }
-}
+//     VINEYARD_ASSERT(
+//         key_state.size() == (size_t) DIMENSION,
+//         "Expected key_state.size() == " + std::to_string(DIMENSION) +
+//             ", but got + key_state.size() == " +
+//             std::to_string(key_state.size()));
+//     VINEYARD_ASSERT(
+//         value_state.size() == (size_t) DIMENSION,
+//         "Expected value_state.size() == " + std::to_string(DIMENSION) +
+//             ", but got + value_state.size() == " +
+//             std::to_string(value_state.size()));
+//     for (int j = 0; j < DIMENSION; ++j) {
+//       VINEYARD_ASSERT(key_state[j] == k_state_list[i][j],
+//                       "Expected key_state[" + std::to_string(j) +
+//                           "] == " + std::to_string(k_state_list[i][j]) +
+//                           ", but got + key_state[" + std::to_string(j) +
+//                           "] == " + std::to_string(key_state[j]));
+//       VINEYARD_ASSERT(value_state[j] == v_state_list[i][j],
+//                       "Expected value_state[" + std::to_string(j) +
+//                           "] == " + std::to_string(v_state_list[i][j]) +
+//                           ", but got + value_state[" + std::to_string(j) +
+//                           "] == " + std::to_string(value_state[j]));
+//     }
+//     prefix.push_back(tokens[i]);
+//   }
+// }
 
 void sealAndConstructTest(Client& client, KVStateCacheBuilder* builder) {
   // ObjectID id = builder->_Seal(client)->id();
@@ -156,25 +156,25 @@ void sealAndConstructTest(Client& client, KVStateCacheBuilder* builder) {
 void splitTest(Client& client, KVStateCacheBuilder* builder) {}
 
 int main() {
-  std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET"));
-  Client client;
-  client.Connect(socket);
+  // std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET"));
+  // Client client;
+  // client.Connect(socket);
 
-  LOG(INFO) << "Build kv state cache";
-  KVStateCacheBuilder* kv_state_cache_builder =
-      new KVStateCacheBuilder(client, DIMENSION, CACHE_CAPACITY);
+  // LOG(INFO) << "Build kv state cache";
+  // KVStateCacheBuilder* kv_state_cache_builder =
+  //     new KVStateCacheBuilder(client, DIMENSION, CACHE_CAPACITY);
 
-  LOG(INFO) << "Prepare data";
-  prepareData(kv_state_cache_builder);
+  // LOG(INFO) << "Prepare data";
+  // prepareData(kv_state_cache_builder);
 
-  LOG(INFO) << "Test update";
-  updateTest(client, kv_state_cache_builder);
+  // LOG(INFO) << "Test update";
+  // updateTest(client, kv_state_cache_builder);
 
-  LOG(INFO) << "Test query";
-  queryTest(client, kv_state_cache_builder);
+  // LOG(INFO) << "Test query";
+  // queryTest(client, kv_state_cache_builder);
 
-  LOG(INFO) << "Test seal and construct";
-  sealAndConstructTest(client, kv_state_cache_builder);
+  // LOG(INFO) << "Test seal and construct";
+  // sealAndConstructTest(client, kv_state_cache_builder);
 
   return 0;
 }

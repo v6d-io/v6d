@@ -1084,7 +1084,7 @@ raxStack raxFindWithStack(rax *rax, int *s, size_t len) {
 /*
 ** Find a key in the rax, returns the raxNode that contains the key.
 */
-raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len, std::vector<int>& prefix, raxNode** sub_tree_node, bool set_timestamp) {
+raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len, raxNode** sub_tree_node, bool set_timestamp) {
     raxNode *h;
 
     raxStack ts;
@@ -1102,19 +1102,6 @@ raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len, std::vector<int>
         *sub_tree_node = tmp;
     }
 
-    LOG(INFO) << "tmp:" << tmp;
-    raxIterator iter;
-    raxStart(&iter, rax);
-    raxSeek(&iter, "^", NULL, 0);
-    while(raxNext(&iter)) {
-        if (iter.node == tmp) {
-            // prefix.insert(iter.key, iter.key + iter.key_len);
-            for (int i = 0; i < iter.key_len; i++) {
-                prefix.push_back(iter.key[i]);
-            }
-            break;
-        }
-    }
     return h;
 }
 
@@ -2680,9 +2667,8 @@ void mergeTree(rax* first_tree, rax* second_tree,
                                                 first_tree_iter_list[first_tree_index].key +
                                                 first_tree_iter_list[first_tree_index].key_len);
                 insert_tokens.erase(token);
-                std::vector<int> prefix;
                 raxNode* node = raxFindAndReturnDataNode(second_tree, first_tree_iter_list[first_tree_index].key,
-                                                         first_tree_iter_list[first_tree_index].key_len, prefix, NULL, false);
+                                                         first_tree_iter_list[first_tree_index].key_len, NULL, false);
                 first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
             }
             first_tree_index++;
@@ -2736,11 +2722,9 @@ void mergeTree(rax* first_tree, rax* second_tree,
                                                               first_tree_iter_list[first_tree_index].key +
                                                               first_tree_iter_list[first_tree_index].key_len);
                     insert_tokens.erase(token);
-                    std::vector<int> prefix;
                     raxNode* node = raxFindAndReturnDataNode(second_tree,
                                                              first_tree_iter_list[first_tree_index].key,
                                                              first_tree_iter_list[first_tree_index].key_len,
-                                                             prefix,
                                                              NULL,
                                                              false);
                     first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
@@ -2787,11 +2771,9 @@ void mergeTree(rax* first_tree, rax* second_tree,
                     first_tree_iter_list[first_tree_index].key +
                         first_tree_iter_list[first_tree_index].key_len);
                 insert_tokens.erase(token);
-                std::vector<int> prefix;
                 raxNode* node = raxFindAndReturnDataNode(second_tree,
                                                          first_tree_iter_list[first_tree_index].key,
                                                          first_tree_iter_list[first_tree_index].key_len,
-                                                         prefix,
                                                          NULL,
                                                          false);
                 first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
@@ -2852,11 +2834,9 @@ void mergeTree(rax* first_tree, rax* second_tree,
                     first_tree_iter_list[first_tree_index].key +
                         first_tree_iter_list[first_tree_index].key_len);
                 insert_tokens.erase(token);
-                std::vector<int> prefix;
                 raxNode* node = raxFindAndReturnDataNode(second_tree,
                                                          first_tree_iter_list[first_tree_index].key,
                                                          first_tree_iter_list[first_tree_index].key_len,
-                                                         prefix,
                                                          NULL,
                                                          false);
                 first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;
@@ -2878,11 +2858,9 @@ void mergeTree(rax* first_tree, rax* second_tree,
                     first_tree_iter_list[first_tree_index].key +
                         first_tree_iter_list[first_tree_index].key_len);
                 insert_tokens.erase(token);
-                std::vector<int> prefix;
                 raxNode* node = raxFindAndReturnDataNode(second_tree,
                                                          first_tree_iter_list[first_tree_index].key,
                                                          first_tree_iter_list[first_tree_index].key_len,
-                                                         prefix,
                                                          NULL,
                                                          false);
                 first_tree_iter_list[first_tree_index].node->timestamp = node->timestamp;

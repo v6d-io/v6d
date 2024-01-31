@@ -87,7 +87,7 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   KVStateCacheBlockBuilder* Split(
       Client& client, KVStateCacheBlockBuilder* kv_state_cache_block_builder,
-      std::vector<std::shared_ptr<NodeWithTreeAttri>>
+      std::vector<std::shared_ptr<Node>>
           node_with_tree_attri_list);
 
   void Update(Client& client, const std::vector<int>& token_list,
@@ -96,7 +96,7 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   KV_STATE_WITH_LAYER Query(Client& client, const std::vector<int>& token_list,
                             int token);
 
-  void Delete(std::shared_ptr<NodeWithTreeAttri> evicted_node);
+  void Delete(std::shared_ptr<Node> evicted_node);
 
   void Merge(Client& client, std::shared_ptr<KVStateCache> kv_state_cache);
 
