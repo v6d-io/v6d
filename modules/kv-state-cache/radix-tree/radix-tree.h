@@ -209,7 +209,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     raxNode *subTreeNode;
     std::vector<int> sub_tree_prefix;
     dataNode = raxFindAndReturnDataNode(this->tree, insert_tokens_array,
-                                        insert_tokens_array_len, sub_tree_prefix, &subTreeNode);
+                                        insert_tokens_array_len, sub_tree_prefix, &subTreeNode, false);
     std::string sub_tree_prefix_str = "";
     for (int i = 0; i < sub_tree_prefix.size(); i++) {
       sub_tree_prefix_str += std::to_string(sub_tree_prefix[i]);
@@ -250,7 +250,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     nodeData* old_data;
     raxNode* subTreeNode;
     std::vector<int> pre;
-    raxFindAndReturnDataNode(this->tree, delete_tokens_array, delete_tokens_array_len, pre, &subTreeNode);
+    raxFindAndReturnDataNode(this->tree, delete_tokens_array, delete_tokens_array_len, pre, &subTreeNode, false);
     int retval = raxRemove(this->tree, delete_tokens_array,
                            delete_tokens_array_len, (void**) &old_data, &subTreeNode);
     if (retval == 1) {
@@ -579,7 +579,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       // if (node->size > 1) {
       std::vector<int> prefix;
       node = raxFindAndReturnDataNode(radix_tree->tree, sub_tree_token_list[i].data(),
-                            sub_tree_token_list[i].size(), prefix);
+                            sub_tree_token_list[i].size(), prefix, NULL, false);
       // }
       VINEYARD_ASSERT(node != nullptr);
       LOG(INFO) << "stage 2";

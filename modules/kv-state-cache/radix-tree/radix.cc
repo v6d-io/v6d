@@ -511,9 +511,13 @@ static inline size_t raxLowWalk(rax *rax, const int *s, size_t len, raxNode **st
     size_t i = 0; /* Position in the string. */
     size_t j = 0; /* Position in the node children (or bytes if compressed).*/
 
-    std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
-        std::chrono::system_clock::now().time_since_epoch());
-    int64_t timestamp = ms.count();
+    // std::chrono::milliseconds ms = std::chrono::duration_cast< std::chrono::milliseconds >(
+    //     std::chrono::system_clock::now().time_since_epoch());
+    // int64_t timestamp = ms.count();
+    auto now = std::chrono::high_resolution_clock::now();
+
+    auto micros = std::chrono::time_point_cast<std::chrono::microseconds>(now).time_since_epoch().count();
+    int64_t timestamp = micros;
 
     while(h->size && i < len) {
         debugnode("Lookup current node",h);
