@@ -193,6 +193,8 @@ from .core import default_driver_context
 from .core import default_resolver_context
 from .core import driver_context
 from .core import resolver_context
+from .core.builder import BuilderContext
+from .core.resolver import ResolverContext
 from .data import register_builtin_types
 from .data.graph import Graph
 from .deploy.local import get_current_socket
@@ -293,9 +295,9 @@ def connect(*args, **kwargs):
     Connect to vineyard by specified UNIX-domain socket or TCP endpoint.
 
     If no arguments are provided and failed to resolve both the environment
-    variables :code:`VINEYARD_IPC_SOCKET` and :code:`VINEYARD_RPC_ENDPOINT`,
-    it will launch a standalone vineyardd server in the background and then
-    connect to it.
+    variables :code:`VINEYARD_IPC_SOCKET`, :code:`VINEYARD_RPC_ENDPOINT`, and
+    :code:`VINEYARD_CONFIG`, it will launch a standalone vineyardd
+    server in the background and then connect to it.
 
     The `connect()` method has various overloading:
 
@@ -370,9 +372,13 @@ def connect(*args, **kwargs):
         usually no arguments, and will first tries to resolve IPC socket from the
         environment variable `VINEYARD_IPC_SOCKET` and connect to it. If it fails to
         establish a connection with vineyard server, the method will tries to resolve
-        RPC endpoint from the environment variable `VINEYARD_RPC_ENDPOINT`.
+        RPC endpoint from the environment variable `VINEYARD_RPC_ENDPOINT`. If both
+        tries are failed, this method will try to resolve the configuration file that
+        contains IPC socket and RPC endpoint from the environment variable
+        `VINEYARD_CONFIG`, and then connect to the vineyard server with the
+        resolved configuration.
 
-        If both tries are failed, this method will raise a :class:`ConnectionFailed`
+        If above all are failed, this method will raise a :class:`ConnectionFailed`
         exception.
 
         In rare cases, user may be not sure about if the IPC socket or RPC endpoint
@@ -393,6 +399,7 @@ def connect(*args, **kwargs):
         and not kwargs
         and 'VINEYARD_IPC_SOCKET' not in os.environ
         and 'VINEYARD_RPC_ENDPOINT' not in os.environ
+        and 'VINEYARD_CONFIG' not in os.environ
     ):
         logger.info(
             'No vineyard socket or endpoint is specified, '
@@ -400,3 +407,129 @@ def connect(*args, **kwargs):
         )
         try_init()
     return Client(*args, **kwargs)
+
+
+def put(
+    value: Any,
+    builder: Optional[BuilderContext] = None,
+    persist: bool = False,
+    name: Optional[str] = None,
+    **kwargs,
+):
+    """
+    Connect the vineyard server by the following Environment Variables:
+
+    VINEYARD_IPC_SOCKET:
+        UNIX domain socket path to setup an IPC connection.
+        E.g. /var/run/vineyard.sock
+    VINEYARD_RPC_ENDPOINT:
+        TCP endpoint to setup an RPC connection.
+        E.g. 127.0.0.1:9600
+    VINEYARD_CONFIG:
+        Either be a path to a YAML configuration file or a path to a
+        directory containing the default config file `vineyard.yaml`.
+
+        The configuration file should be like:
+
+        .. code:: yaml
+
+            Vineyard:
+                IPCSocket: '/path/to/vineyard.sock'
+                RPCEndpoint: 'hostname1:port1,hostname2:port2,...'
+
+    Then put python value to vineyard.
+
+    .. code:: python
+
+        >>> os.environ['VINEYARD_IPC_SOCKET'] = '/var/run/vineyard.sock'
+        >>> arr = np.arange(8)
+        >>> arr_id = vineyard.put(arr)
+        >>> arr_id
+        00002ec13bc81226
+
+    Parameters:
+        value:
+            The python value that will be put to vineyard. Supported python value
+            types are decided by modules that registered to vineyard. By default,
+            python value can be put to vineyard after serialized as a bytes buffer
+            using pickle.
+        builder: optional
+            When putting python value to vineyard, an optional *builder* can be
+            specified to tell vineyard how to construct the corresponding vineyard
+            :class:`Object`. If not specified, the default builder context will be
+            used to select a proper builder.
+        persist: bool, optional
+            If true, persist the object after creation.
+        name: str, optional
+            If given, the name will be automatically associated with the resulted
+            object. Note that only take effect when the object is persisted.
+        kw:
+            User-specific argument that will be passed to the builder.
+
+    Returns:
+        ObjectID: The result object id will be returned.
+    """
+
+    client = connect()
+    return client.put(value, builder, persist, name, **kwargs)
+
+
+def get(
+    object_id: Optional[ObjectID] = None,
+    name: Optional[str] = None,
+    resolver: Optional[ResolverContext] = None,
+    fetch: bool = False,
+    **kwargs,
+):
+    """
+    Connect the vineyard server by the following Environment Variables:
+
+    VINEYARD_IPC_SOCKET:
+        UNIX domain socket path to setup an IPC connection.
+        E.g. /var/run/vineyard.sock
+    VINEYARD_RPC_ENDPOINT:
+        TCP endpoint to setup an RPC connection.
+        E.g. 127.0.0.1:9600
+    VINEYARD_CONFIG:
+        Either be a path to a YAML configuration file or a path to a
+        directory containing the default config file `vineyard.yaml`.
+
+        The configuration file should be like:
+
+        .. code:: yaml
+
+            Vineyard:
+                IPCSocket: '/path/to/vineyard.sock'
+                RPCEndpoint: 'hostname1:port1,hostname2:port2,...'
+
+    Then get vineyard object as python value.
+
+    .. code:: python
+
+        >>> os.environ['VINEYARD_IPC_SOCKET'] = '/var/run/vineyard.sock'
+        >>> arr_id = vineyard.ObjectID('00002ec13bc81226')
+        >>> arr = vineyard.get(arr_id)
+        >>> arr
+        array([0, 1, 2, 3, 4, 5, 6, 7])
+
+    Parameters:
+        object_id: ObjectID
+            The object id that will be obtained from vineyard.
+        name: ObjectID
+            The object name that will be obtained from vineyard, ignored if
+            ``object_id`` is not None.
+        resolver:
+            When retrieving vineyard object, an optional *resolver* can be specified.
+            If no resolver given, the default resolver context will be used.
+        fetch:
+            Whether to trigger a migration when the target object is located on
+            remote instances.
+        kw:
+            User-specific argument that will be passed to the builder.
+
+    Returns:
+        A python object that return by the resolver, by resolving an vineyard object.
+    """
+
+    client = connect()
+    return client.get(object_id, name, resolver, fetch, **kwargs)
