@@ -39,22 +39,22 @@ void KVStateCache::Resolve() {
                       this->meta_.GetTypeName() + "'");
 
   // 1. construct the radix tree
-  this->root_tree = RadixTree::Deserialize(
+  this->rootTree = RadixTree::Deserialize(
       base64_decode(this->meta_.GetKeyValue<std::string>("radix_tree")));
   LOG(INFO) << "Resolve RadixTree success" << std::endl;
-  raxShow(this->root_tree->GetTree());
+  raxShow(this->rootTree->GetRootTree());
 
-  // 2. construct the kv_state_cache_block_builder list
-  size_t num_blocks = this->meta_.GetKeyValue<size_t>("num_blocks");
-  LOG(INFO) << "num blocks:" << num_blocks;
-  for (size_t i = 0; i < num_blocks; i++) {
-    std::shared_ptr<Object> kv_state_cache_block_object =
-        this->meta_.GetMember("kv_state_cache_block_builder_" + std::to_string(i));
-    this->kv_state_cache_block_list.push_back(
-        std::dynamic_pointer_cast<KVStateCacheBlock>(kv_state_cache_block_object));
-    this->kv_state_cache_block_map[kv_state_cache_block_object->id()] =
-        std::dynamic_pointer_cast<KVStateCacheBlock>(kv_state_cache_block_object);
-    LOG(INFO) << "kv_state_cache_block_object:" << kv_state_cache_block_object->id();
+  // 2. construct the kvStateCacheBlockBuilder list
+  size_t numBlocks = this->meta_.GetKeyValue<size_t>("numBlocks");
+  LOG(INFO) << "num blocks:" << numBlocks;
+  for (size_t i = 0; i < numBlocks; i++) {
+    std::shared_ptr<Object> kvStateCacheBlockObject = this->meta_.GetMember(
+        "kv_state_cache_block_builder_" + std::to_string(i));
+    this->kvStateCacheBlockList.push_back(
+        std::dynamic_pointer_cast<KVStateCacheBlock>(kvStateCacheBlockObject));
+    this->kvStateCacheBlockMap[kvStateCacheBlockObject->id()] =
+        std::dynamic_pointer_cast<KVStateCacheBlock>(kvStateCacheBlockObject);
+    LOG(INFO) << "kvStateCacheBlockObject:" << kvStateCacheBlockObject->id();
   }
 
   // 3. construct the member field
@@ -67,26 +67,26 @@ KVStateCache::~KVStateCache() {
 }
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
-                                         int cache_capacity) {
+                                         int cacheCapacity) {
   this->dimension = dimension;
   this->version = 0;
-  KVStateCacheBlockBuilder* builder = new KVStateCacheBlockBuilder(client, this->dimension);
+  KVStateCacheBlockBuilder* builder =
+      new KVStateCacheBlockBuilder(client, this->dimension);
 
-  this->root_tree = std::make_shared<RadixTree>(cache_capacity);
+  this->rootTree = std::make_shared<RadixTree>(cacheCapacity);
 
-  TreeData  *tree_data = new TreeData();
-  tree_data->kv_state_cache_block_builder = builder;
-  tree_data->is_ptr = true;
+  TreeData* treeData = new TreeData();
+  treeData->kvStateCacheBlockBuilder = builder;
+  treeData->isPtr = true;
 
-  // this->root_tree->SetCustomData(tree_data, sizeof(TreeData));
-  std::shared_ptr<Node> rootTreeHeader = this->root_tree->GetRootNode();
-  rootTreeHeader->treeData->data = tree_data;
-  rootTreeHeader->treeData->data_length = sizeof(TreeData);
-  this->root_tree->SetSubtreeData(tree_data, sizeof(TreeData));
-  LOG(INFO) << "set builder:" << builder << " to tree:" << this->root_tree->GetTree()->head;
-  LOG(INFO) << "data:" << tree_data << " custom data:" << rootTreeHeader->treeData;
-  // this->root_tree->sub_tree.insert(this->root_tree->shared_from_this());
-  // this->AddKVStateCacheBlockBuilder(builder, this->root_tree);
+  std::shared_ptr<NodeData> rootTreeHeader = this->rootTree->GetRootNode();
+  rootTreeHeader->treeData->data = treeData;
+  rootTreeHeader->treeData->dataLength = sizeof(TreeData);
+  this->rootTree->SetSubtreeData(treeData, sizeof(TreeData));
+  LOG(INFO) << "set builder:" << builder
+            << " to tree:" << this->rootTree->GetRootTree()->head;
+  LOG(INFO) << "data:" << treeData
+            << " custom data:" << rootTreeHeader->treeData;
 }
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
@@ -94,212 +94,199 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
   // TBD
   this->dimension = cache->GetDemension();
   this->version = cache->GetVersion();
-  LOG(INFO) << "stage 1";
   // 1. create block builder from block
-  std::map<uint64_t, std::shared_ptr<KVStateCacheBlock>> kv_state_cache_block_map =
-      cache->kv_state_cache_block_map;
-  LOG(INFO) << "stage 2";
-  this->root_tree = cache->GetRootTree();
-  LOG(INFO) << "stage 3";
-  // std::set<std::shared_ptr<RadixTree>> radix_tree_list = cache->root_tree->GetSubTreeSet();
-  std::set<void*> sub_tree_data = cache->root_tree->GetSubTreeDataSet();
+  std::map<uint64_t, std::shared_ptr<KVStateCacheBlock>> kvStateCacheBlockMap =
+      cache->kvStateCacheBlockMap;
+  this->rootTree = cache->GetRootTree();
+  std::set<void*> subTreeData = cache->rootTree->GetSubTreeDataSet();
 
-  LOG(INFO) << "stage 4";
-  for (auto iter = sub_tree_data.begin(); iter != sub_tree_data.end(); ++iter) {
-    LOG(INFO) << "stage 6";
-    // std::shared_ptr<RadixTree> radix_tree = *iter;
-    LOG(INFO) << "stage 7";
-    // TreeData *tree_data = (TreeData *)radix_tree->GetCustomData();
-    TreeData *tree_data = (TreeData *)((DataWrapper *)*iter)->data;
-    LOG(INFO) << "stage 8";
-    LOG(INFO) << "tree data:" << tree_data;
-    VINEYARD_ASSERT(tree_data->is_ptr == false);
-    LOG(INFO) << "id:" << tree_data->builder_object_id;
-    std::shared_ptr<KVStateCacheBlock> kv_state_cache_block =
-        kv_state_cache_block_map[tree_data->builder_object_id];
-    KVStateCacheBlockBuilder* kv_state_cache_block_builder =
-        new KVStateCacheBlockBuilder(client, kv_state_cache_block);
+  for (auto iter = subTreeData.begin(); iter != subTreeData.end(); ++iter) {
+    TreeData* treeData = (TreeData*) ((DataWrapper*) *iter)->data;
+    LOG(INFO) << "tree data:" << treeData;
+    VINEYARD_ASSERT(treeData->isPtr == false);
+    LOG(INFO) << "id:" << treeData->builderObjectID;
+    std::shared_ptr<KVStateCacheBlock> kvStateCacheBlock =
+        kvStateCacheBlockMap[treeData->builderObjectID];
+    KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
+        new KVStateCacheBlockBuilder(client, kvStateCacheBlock);
 
-    tree_data->kv_state_cache_block_builder = kv_state_cache_block_builder;
-    tree_data->is_ptr = true;
-
-    // this->AddKVStateCacheBlockBuilder(kv_state_cache_block_builder, radix_tree);
+    treeData->kvStateCacheBlockBuilder = kvStateCacheBlockBuilder;
+    treeData->isPtr = true;
   }
 }
 
 KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
-    Client& client, KVStateCacheBlockBuilder* kv_state_cache_block_builder,
-    std::vector<std::shared_ptr<Node>> node_with_tree_attri_list) {
+    Client& client, KVStateCacheBlockBuilder* kvStateCacheBlockBuilder,
+    std::vector<std::shared_ptr<NodeData>> nodeDataList) {
   LOG(INFO) << "split";
-  // Split the tree if the list of kv_state is full.
-  VINEYARD_ASSERT(node_with_tree_attri_list.size() > 0);
-  KVStateCacheBlockBuilder* child_kv_state_cache_block_builder =
+  // Split the tree if the list of kvState is full.
+  VINEYARD_ASSERT(nodeDataList.size() > 0);
+  KVStateCacheBlockBuilder* childKVStateCacheBlockBuilder =
       new KVStateCacheBlockBuilder(client, this->dimension);
-  for (size_t i = 0; i < node_with_tree_attri_list.size(); i++) {
-    offset_data* data =
-        (offset_data*) node_with_tree_attri_list[i]->nodeData->data;
+  for (size_t i = 0; i < nodeDataList.size(); i++) {
+    OffsetData* data = (OffsetData*) nodeDataList[i]->nodeData->data;
     if (data == nullptr)
       continue;
     int index = data->offset;
 
     // Transfer the data from this builder to the child builder.
-    const std::shared_ptr<TensorBuilder<double>> k_builder =
-        kv_state_cache_block_builder->getKBuilder();
-    const std::shared_ptr<TensorBuilder<double>> v_builder =
-        kv_state_cache_block_builder->getVBuilder();
-    offset_data* new_offset_data = new offset_data();
-    child_kv_state_cache_block_builder->Update(
-        k_builder->data() + index * this->dimension,
-        v_builder->data() + index * this->dimension,
+    const std::shared_ptr<TensorBuilder<double>> keyStateTensorBuilder =
+        kvStateCacheBlockBuilder->GetKeyStateBuilder();
+    const std::shared_ptr<TensorBuilder<double>> valueStateTensorBuilder =
+        kvStateCacheBlockBuilder->GetValueStateBuilder();
+    OffsetData* new_offset_data = new OffsetData();
+    childKVStateCacheBlockBuilder->Update(
+        keyStateTensorBuilder->data() + index * this->dimension,
+        valueStateTensorBuilder->data() + index * this->dimension,
         this->dimension, new_offset_data);
-    node_with_tree_attri_list[i]->nodeData->data = new_offset_data;
-    node_with_tree_attri_list[i]->nodeData->data_length = sizeof(offset_data);
+    nodeDataList[i]->nodeData->data = new_offset_data;
+    nodeDataList[i]->nodeData->dataLength = sizeof(OffsetData);
     // Clear the bitmap.
-    kv_state_cache_block_builder->DeleteKVCache(index);
+    kvStateCacheBlockBuilder->DeleteKVCache(index);
   }
-  LOG(INFO) << "builder:" << kv_state_cache_block_builder << " bitmap:" << kv_state_cache_block_builder->GetBitmapStr();
-  LOG(INFO) << "child_builder:" << child_kv_state_cache_block_builder << " bitmap:" << child_kv_state_cache_block_builder->GetBitmapStr();
-  return child_kv_state_cache_block_builder;
+  LOG(INFO) << "builder:" << kvStateCacheBlockBuilder
+            << " bitmap:" << kvStateCacheBlockBuilder->GetBitmapStr();
+  LOG(INFO) << "child_builder:" << childKVStateCacheBlockBuilder
+            << " bitmap:" << childKVStateCacheBlockBuilder->GetBitmapStr();
+  return childKVStateCacheBlockBuilder;
 }
 
 void KVStateCacheBuilder::Update(Client& client,
-                                 const std::vector<int>& token_list,
-                                 int next_token,
-                                 const KV_STATE_WITH_LAYER& kv_state) {
+                                 const std::vector<int>& tokenList,
+                                 int nextToken,
+                                 const KV_STATE_WITH_LAYER& kvState) {
   LOG(INFO) << "update";
-  std::vector<int> token_list_copy = token_list;
-  token_list_copy.push_back(next_token);
+  std::vector<int> tokenListCopy = tokenList;
+  tokenListCopy.push_back(nextToken);
 
   // Create a empty node of tokens from radix tree.
-  std::shared_ptr<Node> evicted_node = nullptr;
-  std::shared_ptr<Node> node_with_tree_attri =
-      this->root_tree->Insert(token_list_copy, evicted_node);
-  if (node_with_tree_attri == nullptr) {
+  std::shared_ptr<NodeData> evictedNodeData = nullptr;
+  std::shared_ptr<NodeData> nodeData =
+      this->rootTree->Insert(tokenListCopy, evictedNodeData);
+  if (nodeData == nullptr) {
     LOG(INFO) << "insert failed";
     return;
   }
   LOG(INFO) << "insert end";
-  KVStateCacheBlockBuilder* kv_state_cache_block_builder = (KVStateCacheBlockBuilder* )
-      ((TreeData*)node_with_tree_attri->treeData->data)->kv_state_cache_block_builder;
+  KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
+      (KVStateCacheBlockBuilder*) ((TreeData*) nodeData->treeData->data)
+          ->kvStateCacheBlockBuilder;
   LOG(INFO) << "try to delete";
-  if (evicted_node != nullptr) {
-    Delete(evicted_node);
+  if (evictedNodeData != nullptr) {
+    Delete(evictedNodeData);
   }
 
   // TBD
   // Use lock to protect the kv_state_cache_builder
-  // kv_state_cache_builder->Lock();
-  LOG(INFO) << "data:" << node_with_tree_attri->treeData->data << " custom data:" << node_with_tree_attri->treeData;
-  LOG(INFO) << "kv_state_cache_block_builder:" << kv_state_cache_block_builder;
-  if (kv_state_cache_block_builder->IsFull()) {
+  LOG(INFO) << "data:" << nodeData->treeData->data
+            << " custom data:" << nodeData->treeData;
+  LOG(INFO) << "kvStateCacheBlockBuilder:" << kvStateCacheBlockBuilder;
+  if (kvStateCacheBlockBuilder->IsFull()) {
     /**
      * If the kv-state cache of the tree is full, triggle split. Delete the
      * empty node from the radix tree and split the tree. Then, kv-state cache
      * split according to the new tree.
      */
     LOG(INFO) << "triggle splits";
-    std::shared_ptr<Node> evicted_node = nullptr;
-    this->root_tree->Delete(token_list_copy, evicted_node);
+    std::shared_ptr<NodeData> evictedNodeData = nullptr;
+    this->rootTree->Delete(tokenListCopy, evictedNodeData);
 
-    std::shared_ptr<Node> subTreeHeader;
-    std::vector<std::shared_ptr<Node>> node_with_tree_attri_list = root_tree->Split(token_list_copy, subTreeHeader);
-    KVStateCacheBlockBuilder* new_kv_state_cache_block_builder =
-        Split(client, kv_state_cache_block_builder, node_with_tree_attri_list);
+    std::shared_ptr<NodeData> subTreeHeader;
+    std::vector<std::shared_ptr<NodeData>> nodeDataList =
+        rootTree->Split(tokenListCopy, subTreeHeader);
+    KVStateCacheBlockBuilder* newKVStateCacheBlockBuilder =
+        Split(client, kvStateCacheBlockBuilder, nodeDataList);
 
-    TreeData* new_tree_data = new TreeData();
-    new_tree_data->kv_state_cache_block_builder =
-        new_kv_state_cache_block_builder;
-    new_tree_data->is_ptr = true;
+    TreeData* newTreeData = new TreeData();
+    newTreeData->kvStateCacheBlockBuilder = newKVStateCacheBlockBuilder;
+    newTreeData->isPtr = true;
 
-    // new_tree->SetCustomData(new_tree_data, sizeof(TreeData));
-    subTreeHeader->treeData->data = new_tree_data;
-    subTreeHeader->treeData->data_length = sizeof(TreeData);
-    root_tree->SetSubtreeData(new_tree_data, sizeof(TreeData));
+    subTreeHeader->treeData->data = newTreeData;
+    subTreeHeader->treeData->dataLength = sizeof(TreeData);
+    rootTree->SetSubtreeData(newTreeData, sizeof(TreeData));
     LOG(INFO) << "block split success";
 
     // kv_state_cache_builder->UnLock();
-    Update(client, token_list, next_token, kv_state);
+    Update(client, tokenList, nextToken, kvState);
   } else {
     // Update the kv-state cache.
-    offset_data* data = new offset_data();
-    kv_state_cache_block_builder->Update(kv_state, data);
-    node_with_tree_attri->nodeData->data = data;
-    node_with_tree_attri->nodeData->data_length = sizeof(offset_data);
+    OffsetData* data = new OffsetData();
+    kvStateCacheBlockBuilder->Update(kvState, data);
+    nodeData->nodeData->data = data;
+    nodeData->nodeData->dataLength = sizeof(OffsetData);
   }
 
-  LOG(INFO) << "builder:" << kv_state_cache_block_builder << " bitmap:" << kv_state_cache_block_builder->GetBitmapStr();
+  LOG(INFO) << "builder:" << kvStateCacheBlockBuilder
+            << " bitmap:" << kvStateCacheBlockBuilder->GetBitmapStr();
 }
 
-static std::shared_ptr<Node> node;
+static std::shared_ptr<NodeData> node;
 
 KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
-    Client& client, const std::vector<int>& token_list, int token) {
-  std::vector<int> token_list_copy = token_list;
-  token_list_copy.push_back(token);
+    Client& client, const std::vector<int>& tokenList, int token) {
+  std::vector<int> tokenListCopy = tokenList;
+  tokenListCopy.push_back(token);
 
-  KV_STATE_WITH_LAYER kv_state;
-  std::shared_ptr<Node> node_with_tree_attri =
-      this->root_tree->Query(token_list_copy);
-  /**/
-  if (node_with_tree_attri != nullptr) {
-    offset_data* data =
-        (offset_data*) node_with_tree_attri->nodeData->data;
+  KV_STATE_WITH_LAYER kvState;
+  std::shared_ptr<NodeData> nodeData = this->rootTree->Query(tokenListCopy);
+
+  if (nodeData != nullptr) {
+    OffsetData* data = (OffsetData*) nodeData->nodeData->data;
     int offset = data->offset;
 
-    KVStateCacheBlockBuilder* kv_state_cache_block_builder = (KVStateCacheBlockBuilder* )
-        ((TreeData *)node_with_tree_attri->treeData->data)->kv_state_cache_block_builder;
-    // kv_state_cache_builder->Lock();
+    KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
+        (KVStateCacheBlockBuilder*) ((TreeData*) nodeData->treeData->data)
+            ->kvStateCacheBlockBuilder;
 
     LOG(INFO) << "offset:" << offset;
-    LOG(INFO) << "kv_state_cache_block_builder:" << kv_state_cache_block_builder;
-    kv_state_cache_block_builder->Query(client, offset, kv_state);
+    LOG(INFO) << "kvStateCacheBlockBuilder:" << kvStateCacheBlockBuilder;
+    kvStateCacheBlockBuilder->Query(client, offset, kvState);
   }
-  return kv_state;
+  return kvState;
 }
 
-void KVStateCacheBuilder::Delete(std::shared_ptr<Node> evicted_node) {
+void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
   LOG(INFO) << "stage1";
-  KVStateCacheBlockBuilder* kv_state_cache_block_builder = (KVStateCacheBlockBuilder* )
-      ((TreeData *)evicted_node->treeData->data)->kv_state_cache_block_builder;
-  LOG(INFO) << "stage2, builder:" << kv_state_cache_block_builder;
-  offset_data* data = (offset_data*) evicted_node->nodeData->data;
+  KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
+      (KVStateCacheBlockBuilder*) ((TreeData*) evictedNodeData->treeData->data)
+          ->kvStateCacheBlockBuilder;
+  LOG(INFO) << "stage2, builder:" << kvStateCacheBlockBuilder;
+  OffsetData* data = (OffsetData*) evictedNodeData->nodeData->data;
   LOG(INFO) << "stage3";
-  kv_state_cache_block_builder->DeleteKVCache(data->offset);
+  kvStateCacheBlockBuilder->DeleteKVCache(data->offset);
   LOG(INFO) << "stage4";
   delete data;
 }
 
-void KVStateCacheBuilder::Merge(
-    Client& client, std::shared_ptr<KVStateCache> kv_state_cache) {
+void KVStateCacheBuilder::Merge(Client& client,
+                                std::shared_ptr<KVStateCache> kvStateCache) {
   // TBD
-  if (kv_state_cache == nullptr) {
+  if (kvStateCache == nullptr) {
     return;
   }
-  std::shared_ptr<KVStateCacheBuilder> global_cache_builder =
-      std::make_shared<KVStateCacheBuilder>(client, kv_state_cache);
-  std::shared_ptr<RadixTree> global_cache_tree = kv_state_cache->GetRootTree();
+  std::shared_ptr<KVStateCacheBuilder> globalCacheBuilder =
+      std::make_shared<KVStateCacheBuilder>(client, kvStateCache);
+  std::shared_ptr<RadixTree> globalCacheTree = kvStateCache->GetRootTree();
 
-  std::set<std::vector<int>> insert_token_list;
+  std::set<std::vector<int>> insertTokenList;
   std::vector<std::vector<int>> evicted_token_list;
-  mergeTree(this->root_tree->GetRootTree(),
-            global_cache_tree->GetRootTree(),
-            evicted_token_list, insert_token_list,
-            this->root_tree->GetCacheCapacity());
+  mergeTree(this->rootTree->GetRootTree(), globalCacheTree->GetRootTree(),
+            evicted_token_list, insertTokenList,
+            this->rootTree->GetCacheCapacity());
 
   for (size_t i = 0; i < evicted_token_list.size(); i++) {
-    std::vector<int> token_list = evicted_token_list[i];
-    std::shared_ptr<Node> evicted_node;
-    this->root_tree->Delete(token_list, evicted_node);
-    Delete(evicted_node);
+    std::vector<int> tokenList = evicted_token_list[i];
+    std::shared_ptr<NodeData> evictedNodeData;
+    this->rootTree->Delete(tokenList, evictedNodeData);
+    Delete(evictedNodeData);
   }
 
-  for (auto it = insert_token_list.begin(); it != insert_token_list.end();
-       ++it) {
-    std::vector<int> token_list = *it;
-    KV_STATE_WITH_LAYER kv_state =
-        global_cache_builder->Query(client, std::vector<int>(token_list.begin(), token_list.end() - 1), token_list.back());
-    this->Update(client, token_list, token_list[token_list.size() - 1],
-                 kv_state);
+  for (auto it = insertTokenList.begin(); it != insertTokenList.end(); ++it) {
+    std::vector<int> tokenList = *it;
+    KV_STATE_WITH_LAYER kvState = globalCacheBuilder->Query(
+        client, std::vector<int>(tokenList.begin(), tokenList.end() - 1),
+        tokenList.back());
+    this->Update(client, tokenList, tokenList[tokenList.size() - 1], kvState);
   }
   return;
 }
@@ -313,58 +300,57 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   LOG(INFO) << "cache seal";
   this->Build(client);
 
-  std::shared_ptr<KVStateCache> kv_state_cache =
-      std::make_shared<KVStateCache>();
+  std::shared_ptr<KVStateCache> kvStateCache = std::make_shared<KVStateCache>();
 
   // 1. store the member variables to cache object meta
-  kv_state_cache->meta_.AddKeyValue("dimension", this->dimension);
+  kvStateCache->meta_.AddKeyValue("dimension", this->dimension);
 
   // 2. seal all the block and put object id to cache object and
   // change the tree data from pointer to object id
 
   int count = 0;
   LOG(INFO) << "count:" << count;
-  std::set<void*> sub_tree_set = root_tree->GetSubTreeDataSet();
-  for (auto iter = sub_tree_set.begin(); iter != sub_tree_set.end(); ++iter) {
-    TreeData* tree_data = (TreeData*)((DataWrapper*) *iter)->data;
-    VINEYARD_ASSERT(tree_data != nullptr);
-    VINEYARD_ASSERT(tree_data->is_ptr == true);
+  std::set<void*> subTreeDataSet = rootTree->GetSubTreeDataSet();
+  for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
+       ++iter) {
+    TreeData* treeData = (TreeData*) ((DataWrapper*) *iter)->data;
+    VINEYARD_ASSERT(treeData != nullptr);
+    VINEYARD_ASSERT(treeData->isPtr == true);
 
-    KVStateCacheBlockBuilder* kv_state_cache_block_builder = (KVStateCacheBlockBuilder*)
-        tree_data->kv_state_cache_block_builder;
-    LOG(INFO) << "builder:" << kv_state_cache_block_builder;
-    std::shared_ptr<Object> kv_state_cache_block =
-        kv_state_cache_block_builder->_Seal(client);
-    kv_state_cache->meta_.AddMember(
+    KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
+        (KVStateCacheBlockBuilder*) treeData->kvStateCacheBlockBuilder;
+    LOG(INFO) << "builder:" << kvStateCacheBlockBuilder;
+    std::shared_ptr<Object> kvStateCacheBlock =
+        kvStateCacheBlockBuilder->_Seal(client);
+    kvStateCache->meta_.AddMember(
         "kv_state_cache_block_builder_" + std::to_string(count),
-        kv_state_cache_block);
-    tree_data->builder_object_id = kv_state_cache_block->id();
-    tree_data->is_ptr = false;
+        kvStateCacheBlock);
+    treeData->builderObjectID = kvStateCacheBlock->id();
+    treeData->isPtr = false;
     count++;
   }
 
-  kv_state_cache->meta_.AddKeyValue("num_blocks",
-                                    count);
+  kvStateCache->meta_.AddKeyValue("numBlocks", count);
 
   // 3. put the serialized sequence radix tree to cache object meta
-  kv_state_cache->meta_.AddKeyValue(
-      "radix_tree", base64_encode(this->root_tree->Serialize()));
+  kvStateCache->meta_.AddKeyValue("radix_tree",
+                                  base64_encode(this->rootTree->Serialize()));
 
   // 4. put the object type to the meta
-  kv_state_cache->meta_.SetTypeName(type_name<KVStateCache>());
+  kvStateCache->meta_.SetTypeName(type_name<KVStateCache>());
 
   VINEYARD_CHECK_OK(
-      client.CreateMetaData(kv_state_cache->meta_, kv_state_cache->id_));
-  LOG(INFO) << "KVStateCacheBuilder::_Seal: " << kv_state_cache->id_;
-  return kv_state_cache;
+      client.CreateMetaData(kvStateCache->meta_, kvStateCache->id_));
+  LOG(INFO) << "KVStateCacheBuilder::_Seal: " << kvStateCache->id_;
+  return kvStateCache;
 }
 
 KVStateCacheBuilder::~KVStateCacheBuilder() {
   // TBD
-  // std::vector<std::shared_ptr<Node>> node_with_tree_attri_list =
-  //     RadixTree::TraverseTreeWithoutSubTree(this->root_tree);
-  // for (size_t i = 0; i < node_with_tree_attri_list.size(); i++) {
-  //   delete (offset_data*) node_with_tree_attri_list[i]->get_node()->get_data();
+  // std::vector<std::shared_ptr<NodeData>> nodeDataList =
+  //     RadixTree::TraverseTreeWithoutSubTree(this->rootTree);
+  // for (size_t i = 0; i < nodeDataList.size(); i++) {
+  //   delete (OffsetData*) nodeDataList[i]->get_node()->get_data();
   // }
 }
 

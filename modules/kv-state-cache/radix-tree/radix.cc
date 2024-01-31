@@ -154,7 +154,7 @@ static inline void raxStackFree(raxStack *ts) {
 
 /* Add the number of nodes in the stack to each node. */
 void raxStackAddNumNodes(raxStack *stack, int num) {
-    for (int i=0; i<stack->items; i++) {
+    for (size_t i=0; i<stack->items; i++) {
         raxNode *node = (raxNode *)stack->stack[i];
         node->numnodes+=(num);
     }
@@ -295,14 +295,6 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
     size_t newlen = raxNodeCurrentLength(n);
     n->size--; /* For now restore the orignal size. We'll update it only on
                   success at the end. */
-
-    // store the extra data pointer of subtree
-    bool isSubtree = false;
-    void *customData = nullptr;
-    if (n->issubtree) {
-        isSubtree = true;
-        customData = raxGetCustomData(n);
-    }
 
     /* Alloc the new child we will link to 'n'. */
     raxNode *child = raxNewNode(0,0);
@@ -1177,12 +1169,6 @@ raxNode *raxRemoveChild(raxNode *parent, raxNode *child) {
     *    data if the current node is the root node of subtree
     *
     */
-   bool isSubtree = false;
-   void *customData = NULL;
-    if (parent->issubtree) {
-        isSubtree = true;
-        customData = raxGetCustomData(parent);
-    }
 
     /* Otherwise we need to scan for the child pointer and memmove()
      * accordingly.
@@ -2169,11 +2155,7 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
     if (n->iskey) {
         numchars += printf("=%p",raxGetData(n));
     }
-    if (n->custom_data != nullptr) {
-        numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, ((TreeData1 *)n->custom_data), n->issubtree);
-    } else {
-        numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, nullptr, n->issubtree);
-    }
+    numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, n->custom_data, n->issubtree);
 
     int numchildren = n->iscompr ? 1 : n->size;
     /* Note that 7 and 4 magic constants are the string length
@@ -2365,13 +2347,6 @@ raxNode *raxSplit(rax *rax, int *s, size_t len, void *data, std::vector<int>& to
         return rax->head;
     }
 
-    raxNode *parent = (raxNode *)raxStackPeek(&stack);
-    raxNode **parentlink;
-    if (parent == NULL) {
-        parentlink = &rax->head;
-    } else {
-        parentlink = raxFindParentLink(parent,splitNode);
-    }
     raxSetSubtree(splitNode);
 
     raxStackAddNumNodes(&stack, -(int)(splitNode->numnodes)); 
@@ -2491,7 +2466,7 @@ bool compareKey(int *first_key, int *second_key, int first_key_len, int second_k
 
 //     rax* tree = raxNew();
 
-//     int node_count = 0;
+//     int nodeCount = 0;
 
 //     while((!first_tree_queue.empty()) && (!second_tree_queue.empty())) {
 //         int first_tree_rax_node_list_size = first_tree_queue.size();
@@ -2515,12 +2490,12 @@ bool compareKey(int *first_key, int *second_key, int first_key_len, int second_k
 //         int first_tree_index = 0;
 //         int second_tree_index = 0;
 
-//         while(first_tree_index < first_tree_rax_node_list_size && second_tree_index < second_tree_rax_node_list_size && node_count < max_node) {
+//         while(first_tree_index < first_tree_rax_node_list_size && second_tree_index < second_tree_rax_node_list_size && nodeCount < max_node) {
 //             if (first_tree_rax_node_list[first_tree_index]->timestamp > second_tree_rax_node_list[second_tree_index]->timestamp) {
 //                 // choose first_tree_rax_node_list[first_tree_index]
 //                 if (raxFind(tree, first_tree_rax_node_list[first_tree_index]->data, first_tree_rax_node_list[first_tree_index]->size) == NULL) {
 //                     raxInsert(tree, first_tree_rax_node_list[first_tree_index]->data, first_tree_rax_node_list[first_tree_index]->size, first_tree_rax_node_list[first_tree_index]->data, NULL);
-//                     node_count++;
+//                     nodeCount++;
 //                 } else {
 //                     std::vector<int> token = std::vector<int>(first_tree_rax_node_list[first_tree_index]->data, first_tree_rax_node_list[first_tree_index]->data + first_tree_rax_node_list[first_tree_index]->size);
 //                     insert_tokens.erase(token);
@@ -2605,18 +2580,18 @@ void mergeTree(rax* first_tree, rax* second_tree,
 
     size_t first_tree_index = 0;
     size_t second_tree_index = 0;
-    int node_count = 0;
+    int nodeCount = 0;
 
     /**
      * We use two structures to store the nodes choosen from the second tree
      * and the nodes evicted from the first tree.
      */
-    while (node_count < max_node) {
+    while (nodeCount < max_node) {
         if (first_tree_index == first_tree_iter_list.size() ||
             second_tree_index == second_tree_iter_list.size()) {
             break;
         }
-        printf("node_count: %d\n", node_count);
+        printf("nodeCount: %d\n", nodeCount);
 
         /**
          * If the key is the same, use the larger timestamp to refresh
@@ -2641,7 +2616,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                     second_tree_iter_list[second_tree_index].node->timestamp);
             first_tree_index++;
             second_tree_index++;
-            node_count++;
+            nodeCount++;
         } else if (first_tree_iter_list[first_tree_index].node->timestamp >
                    second_tree_iter_list[second_tree_index].node->timestamp) {
             /**
@@ -2661,7 +2636,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                 raxInsert(tmp, first_tree_iter_list[first_tree_index].key,
                         first_tree_iter_list[first_tree_index].key_len,
                         first_tree_iter_list[first_tree_index].data, NULL);
-                node_count++;
+                nodeCount++;
             } else {
                 std::vector<int> token = std::vector<int>(first_tree_iter_list[first_tree_index].key,
                                                 first_tree_iter_list[first_tree_index].key +
@@ -2697,7 +2672,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                 raxInsert(tmp, second_tree_iter_list[second_tree_index].key,
                     second_tree_iter_list[second_tree_index].key_len,
                     second_tree_iter_list[second_tree_index].data, NULL);
-                node_count++;
+                nodeCount++;
             }
             second_tree_index++;
         } else {
@@ -2716,7 +2691,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                     raxInsert(tmp, first_tree_iter_list[first_tree_index].key,
                             first_tree_iter_list[first_tree_index].key_len,
                             first_tree_iter_list[first_tree_index].data, NULL);
-                    node_count++;
+                    nodeCount++;
                 } else {
                     std::vector<int> token = std::vector<int>(first_tree_iter_list[first_tree_index].key,
                                                               first_tree_iter_list[first_tree_index].key +
@@ -2746,14 +2721,14 @@ void mergeTree(rax* first_tree, rax* second_tree,
                     raxInsert(tmp, second_tree_iter_list[second_tree_index].key,
                             second_tree_iter_list[second_tree_index].key_len,
                             second_tree_iter_list[second_tree_index].data, NULL);
-                    node_count++;
+                    nodeCount++;
                 }
                 second_tree_index++;
             }
         }
     }
 
-    if (node_count == max_node) {
+    if (nodeCount == max_node) {
         printf("insert evicted tokens\n");
         int evicted_node_count = 0;
         while (first_tree_index < first_tree_iter_list.size()) {
@@ -2788,7 +2763,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
         return;
     }
 
-    // first_ret and second_ret both are not 0 is the case that node_count ==
+    // first_ret and second_ret both are not 0 is the case that nodeCount ==
     // max_node
     if (first_tree_index >= first_tree_iter_list.size() &&
         second_tree_index >= second_tree_iter_list.size()) {
@@ -2800,7 +2775,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
     } else if (first_tree_index >= first_tree_iter_list.size()) {
         // first tree is empty
         while (second_tree_index < second_tree_iter_list.size() &&
-            node_count < max_node) {
+            nodeCount < max_node) {
             if (raxFind(tmp, second_tree_iter_list[second_tree_index].key,
                         second_tree_iter_list[second_tree_index].key_len) == raxNotFound) {
                 std::vector<int> insert_token(
@@ -2813,21 +2788,21 @@ void mergeTree(rax* first_tree, rax* second_tree,
                         second_tree_iter_list[second_tree_index].key_len,
                         second_tree_iter_list[second_tree_index].data, NULL);
 
-                node_count++;
+                nodeCount++;
             }
             second_tree_index++;
         }
     } else if (second_tree_index >= second_tree_iter_list.size()) {
         // second tree is empty
         raxShow(tmp);
-        printf("node_count:%d\n", node_count);
+        printf("nodeCount:%d\n", nodeCount);
         printf("first_tree_index:%ld\n", first_tree_index);
         while (first_tree_index < first_tree_iter_list.size() &&
-            node_count < max_node) {
+            nodeCount < max_node) {
             if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
                         first_tree_iter_list[first_tree_index].key_len) ==
                 raxNotFound) {
-                node_count++;
+                nodeCount++;
             } else {
                 std::vector<int> token(
                     first_tree_iter_list[first_tree_index].key,
@@ -2895,4 +2870,4 @@ raxNode* raxGetFirstChildPtr(raxNode* node) {
 // 1 2 3
 // query subtree node:0x55f87076f760
 // I0129 16:44:25.626318 280948 kv_state_cache.cc:223] offset:0
-// I0129 16:44:25.626322 280948 kv_state_cache.cc:224] kv_state_cache_block_builder:0x55f870767bc0
+// I0129 16:44:25.626322 280948 kv_state_cache.cc:224] kvStateCacheBlockBuilder:0x55f870767bc0

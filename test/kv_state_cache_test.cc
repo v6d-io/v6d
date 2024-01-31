@@ -13,10 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <unistd.h>
 #include <iostream>
 #include <random>
 #include <vector>
-#include <unistd.h>
 #include "kv-state-cache/radix-tree/radix.h"
 
 #include "common/util/logging.h"
@@ -27,7 +27,7 @@ using namespace vineyard;
 #define DEMENSION 10
 #define CAPACITY 100
 
-void init() { initKVStateCache(DEMENSION, CAPACITY); }
+void init() { InitKVStateCache(DEMENSION, CAPACITY); }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
   std::string tokens_str = "";
@@ -75,7 +75,7 @@ void inference(std::vector<int> tokens, bool block = false) {
   std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
 
   for (size_t i = 0; i < tokens.size(); ++i) {
-    kv_state = query(inference_tokens, tokens[i]);
+    kv_state = Query(inference_tokens, tokens[i]);
     if (kv_state.size() == 0) {
       LOG(INFO) << "======================================";
       LOG(INFO) << "Can not find the kv_state from cache:";
@@ -83,7 +83,7 @@ void inference(std::vector<int> tokens, bool block = false) {
       LOG(INFO) << "Generate the kv_state and update the cache.";
       kv_state = generate_kv_state(tokens[i]);
       print_kv_state(kv_state);
-      update(inference_tokens, tokens[i], kv_state);
+      Update(inference_tokens, tokens[i], kv_state);
       LOG(INFO) << "======================================";
     } else {
       LOG(INFO) << "--------------------------------------";
@@ -101,7 +101,7 @@ int main() {
   std::vector<int> round_1_tokens = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   std::vector<int> round_2_tokens = {1, 2,  3,  4,  5,  7, 8,
                                      9, 10, 11, 12, 13, 14};
-  std::vector<int> round_3_tokens = {1, 2,  3, 9, 10, 11, 12, 13, 14};
+  std::vector<int> round_3_tokens = {1, 2, 3, 9, 10, 11, 12, 13, 14};
   // std::vector<int> round_3_tokens = {1, 2, 3, 4, 5, 6, 7};
   // std::vector<int> round_1_tokens = {1, 2};
   // std::vector<int> round_2_tokens = {1, 3};

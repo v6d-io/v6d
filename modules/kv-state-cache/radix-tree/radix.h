@@ -101,14 +101,6 @@
  *
  */
 
-struct TreeData1 {
-  union {
-    void *kv_state_cache_block_builder;
-    uint64_t builder_object_id;
-  };
-  bool is_ptr = true;
-};
-
 #define RAX_NODE_MAX_SIZE 1024
 typedef struct raxNode {
   uint32_t iskey : 1;     /* Does this node contain a key? */

@@ -47,7 +47,7 @@ void signalHandler(int signum) {
   exit(signum);
 }
 
-void initKVStateCache(int dimension = 10, int cache_capacity = 10) {
+void InitKVStateCache(int dimension = 10, int cacheCapacity = 10) {
   if (kv_state_cache_builder == nullptr) {
     std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET"));
     LOG(INFO) << "socket:" << socket;
@@ -86,7 +86,7 @@ void initKVStateCache(int dimension = 10, int cache_capacity = 10) {
       // if failed, create a new cache object
       LOG(INFO) << "failed to get the cache object, create a new one";
       kv_state_cache_builder = std::make_shared<KVStateCacheBuilder>(
-          client, dimension, cache_capacity);
+          client, dimension, cacheCapacity);
     }
 
     // // release the lock
@@ -101,66 +101,65 @@ void initKVStateCache(int dimension = 10, int cache_capacity = 10) {
   }
 }
 
-void updateInternal(const std::vector<int>& token_list, int next_token,
-                    const KV_STATE_WITH_LAYER& kv_state) {
-  kv_state_cache_builder->Update(client, token_list, next_token, kv_state);
+void updateInternal(const std::vector<int>& tokenList, int nextToken,
+                    const KV_STATE_WITH_LAYER& kvState) {
+  kv_state_cache_builder->Update(client, tokenList, nextToken, kvState);
 }
 
-void update(const std::vector<int>& token_list, int next_token,
-            const KV_STATE_WITH_LAYER& kv_state) {
-  LOG(INFO) << "update";
+void Update(const std::vector<int>& tokenList, int nextToken,
+            const KV_STATE_WITH_LAYER& kvState) {
+  LOG(INFO) << "Update";
   if (pthread_mutex_trylock(&sync_mutex)) {
     return;
   }
 
-  updateInternal(token_list, next_token, kv_state);
+  updateInternal(tokenList, nextToken, kvState);
 
   pthread_mutex_unlock(&sync_mutex);
 }
 
-void update(const std::vector<int>& token_list,
-            const LIST_KV_STATE_WITH_LAYER& kv_state) {
+void Update(const std::vector<int>& tokenList,
+            const LIST_KV_STATE_WITH_LAYER& kvState) {
   if (pthread_mutex_trylock(&sync_mutex)) {
     return;
   }
   std::vector<int> token_list_copy;
-  for (size_t i = 0; i < token_list.size(); i++) {
-    updateInternal(token_list_copy, token_list[i], kv_state[i]);
-    token_list_copy.push_back(token_list[i]);
+  for (size_t i = 0; i < tokenList.size(); i++) {
+    updateInternal(token_list_copy, tokenList[i], kvState[i]);
+    token_list_copy.push_back(tokenList[i]);
   }
   pthread_mutex_unlock(&sync_mutex);
 }
 
-KV_STATE_WITH_LAYER queryInternal(const std::vector<int>& token_list,
+KV_STATE_WITH_LAYER queryInternal(const std::vector<int>& tokenList,
                                   int token) {
-  return kv_state_cache_builder->Query(client, token_list, token);
+  return kv_state_cache_builder->Query(client, tokenList, token);
 }
 
-KV_STATE_WITH_LAYER query(const std::vector<int>& token_list, int token) {
-  LOG(INFO) << "query";
+KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList, int token) {
+  LOG(INFO) << "Query";
   KV_STATE_WITH_LAYER result;
   if (pthread_mutex_trylock(&sync_mutex)) {
     return result;
   }
 
-  result = queryInternal(token_list, token);
+  result = queryInternal(tokenList, token);
   pthread_mutex_unlock(&sync_mutex);
 
   return result;
 }
 
-LIST_KV_STATE_WITH_LAYER query(const std::vector<int>& token_list) {
+LIST_KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList) {
   LIST_KV_STATE_WITH_LAYER list_kv_state;
   if (pthread_mutex_trylock(&sync_mutex)) {
     return list_kv_state;
   }
 
   std::vector<int> token_list_copy;
-  for (size_t i = 0; i < token_list.size(); i++) {
-    KV_STATE_WITH_LAYER kv_state =
-        queryInternal(token_list_copy, token_list[i]);
-    list_kv_state.push_back(kv_state);
-    token_list_copy.push_back(token_list[i]);
+  for (size_t i = 0; i < tokenList.size(); i++) {
+    KV_STATE_WITH_LAYER kvState = queryInternal(token_list_copy, tokenList[i]);
+    list_kv_state.push_back(kvState);
+    token_list_copy.push_back(tokenList[i]);
   }
 
   pthread_mutex_unlock(&sync_mutex);
@@ -245,7 +244,7 @@ void threadFunc() {
 /*
   a. vineyardd with global cache object | sealed
   b. client get the object replica
-  c. client update replica
+  c. client Update replica
   d. client seal the local object and try to push object to server (modified
   sealed object and global cache version) ⅰ. if success
       1. vineyardd modify global object meta

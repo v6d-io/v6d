@@ -30,19 +30,19 @@ namespace vineyard {
 
 struct TreeData {
   union {
-    void *kv_state_cache_block_builder;
-    uint64_t builder_object_id;
+    void* kvStateCacheBlockBuilder;
+    uint64_t builderObjectID;
   };
-  bool is_ptr = true;
+  bool isPtr = true;
 };
 
 class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
-  std::vector<std::shared_ptr<KVStateCacheBlock>> kv_state_cache_block_list;
-  std::map<uint64_t, std::shared_ptr<KVStateCacheBlock>> kv_state_cache_block_map;
-  std::shared_ptr<RadixTree> root_tree;
+  std::vector<std::shared_ptr<KVStateCacheBlock>> kvStateCacheBlockList;
+  std::map<uint64_t, std::shared_ptr<KVStateCacheBlock>> kvStateCacheBlockMap;
+  std::shared_ptr<RadixTree> rootTree;
   int dimension;
-  int cache_capacity;
+  int cacheCapacity;
   uint64_t version;
 
  public:
@@ -57,16 +57,16 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 
   // for test
   std::vector<std::shared_ptr<KVStateCacheBlock>> GetKVStateCacheBlockList() {
-    return this->kv_state_cache_block_list;
+    return this->kvStateCacheBlockList;
   }
 
   int GetDemension() { return this->dimension; }
 
-  int GetCacheCapacity() { return this->cache_capacity; }
+  int GetCacheCapacity() { return this->cacheCapacity; }
 
   uint64_t GetVersion() { return this->version; }
 
-  std::shared_ptr<RadixTree> GetRootTree() { return this->root_tree; }
+  std::shared_ptr<RadixTree> GetRootTree() { return this->rootTree; }
 
   ~KVStateCache();
 
@@ -74,21 +74,18 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 };
 
 class KVStateCacheBuilder : public vineyard::ObjectBuilder {
-  // std::shared_ptr<KVStateCacheBlockBuilder> kv_state_cache_block_builder;
-  // std::vector<KVStateCacheBlockBuilder*> kv_state_cache_block_builder_list;
-  std::shared_ptr<RadixTree> root_tree;
+  std::shared_ptr<RadixTree> rootTree;
   int dimension;
   uint64_t version;
 
  public:
-  KVStateCacheBuilder(Client& client, int dimension, int cache_capacity);
+  KVStateCacheBuilder(Client& client, int dimension, int cacheCapacity);
 
   KVStateCacheBuilder(Client& client, std::shared_ptr<KVStateCache> cache);
 
   KVStateCacheBlockBuilder* Split(
-      Client& client, KVStateCacheBlockBuilder* kv_state_cache_block_builder,
-      std::vector<std::shared_ptr<Node>>
-          node_with_tree_attri_list);
+      Client& client, KVStateCacheBlockBuilder* kvStateCacheBlockBuilder,
+      std::vector<std::shared_ptr<NodeData>> nodeDataList);
 
   void Update(Client& client, const std::vector<int>& token_list,
               int next_token, const KV_STATE_WITH_LAYER& kv_state);
@@ -96,7 +93,7 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   KV_STATE_WITH_LAYER Query(Client& client, const std::vector<int>& token_list,
                             int token);
 
-  void Delete(std::shared_ptr<Node> evicted_node);
+  void Delete(std::shared_ptr<NodeData> evicted_node);
 
   void Merge(Client& client, std::shared_ptr<KVStateCache> kv_state_cache);
 
@@ -108,16 +105,7 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   uint64_t GetDemension() { return this->dimension; }
 
-  std::shared_ptr<RadixTree> GetRootTree() { return this->root_tree; }
-
-  // void AddKVStateCacheBlockBuilder(
-  //     KVStateCacheBlockBuilder* kv_state_cache_block_builder) {
-  //   this->kv_state_cache_block_builder_list.push_back(kv_state_cache_block_builder);
-  // }
-
-  // std::vector<KVStateCacheBlockBuilder*> GetKVStateCacheBlockBuilderList() {
-  //   return this->kv_state_cache_block_builder_list;
-  // }
+  std::shared_ptr<RadixTree> GetRootTree() { return this->rootTree; }
 
   ~KVStateCacheBuilder();
 };
