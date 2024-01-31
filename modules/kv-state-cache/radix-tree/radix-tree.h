@@ -104,6 +104,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   RadixTree(int cache_capacity) {
     this->tree = raxNew();
     this->cache_capacity = cache_capacity;
+    this->node_count = 0;
 
     std::vector<int> root_token = {INT32_MAX};
     std::shared_ptr<NodeWithTreeAttri> evicted_node;
@@ -115,6 +116,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     this->tree = rax_tree;
     this->cache_capacity = cache_capacity;
     this->prefix = prefix;
+    this->node_count = rax_tree->numele;
   }
 
   RadixTree(void* custom_data, int custom_data_length, int cache_capacity) {
@@ -189,6 +191,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       return NULL;
     }
     if (retval == 1) {
+      LOG(INFO) << "node count++:" << this->node_count;
       node_count++;
     }
 
@@ -405,7 +408,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     std::string compressed_str =
         std::string(compressed_data, compressed_data_size);
     std::string result =
-        std::string((char*) &src_size, sizeof(int)) + compressed_str;
+        std::string((char*) &src_size, sizeof(int)) + std::string((char*) &cache_capacity, sizeof(int)) +compressed_str;
     delete[] compressed_data;
     return result;
   }
@@ -415,6 +418,8 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     LOG(INFO) << "Deserialize......";
     // use LZ4 to decompress the serialized string
     int src_size = *(int*) data.c_str();
+    data.erase(0, sizeof(int));
+    int cache_capacity = *(int*) data.c_str();
     data.erase(0, sizeof(int));
     char* const decompress_buffer = new char[src_size];
     if (decompress_buffer == NULL) {
@@ -538,7 +543,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
     // string.
     // TBD
     // set the right cache capacity.
-    std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(100);
+    std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(cache_capacity);
     radix_tree->node_count = token_list.size();
 
     raxShow(radix_tree->tree);
