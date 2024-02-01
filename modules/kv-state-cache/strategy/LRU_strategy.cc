@@ -26,6 +26,16 @@ void PrintTokenList(std::vector<int>& vector) {
   LOG(INFO) << tokens_str;
 }
 
+void LRUStrategy::PrintLRUList() {
+  LOG(INFO) << "List:";
+  std::shared_ptr<LRUCacheNode> node = header;
+  while (node != nullptr) {
+    PrintTokenList(node->tokens);
+    LOG(INFO) << "->";
+    node = node->next;
+  }
+}
+
 LRUStrategy::LRUStrategy(int capacity) {
   this->capacity = capacity;
   this->header = this->tail = nullptr;
@@ -40,7 +50,7 @@ LRUStrategy::LRUStrategy(const std::vector<std::vector<int>>& cache_list,
 std::shared_ptr<LRUCacheNode> LRUStrategy::InsertToHeader(
     const std::vector<int>& tokens, std::vector<int>& evicted_tokens) {
   if (current_size == capacity) {
-    std::shared_ptr<LRUCacheNode> remove_node = Remove();
+    std::shared_ptr<LRUCacheNode> remove_node = tail;  // Remove();
     evicted_tokens = remove_node->tokens;
   }
 
@@ -110,34 +120,5 @@ void LRUStrategy::Remove(std::shared_ptr<LRUCacheNode> cache_node) {
 }
 
 std::shared_ptr<LRUCacheNode> LRUStrategy::GetHeader() { return header; }
-
-// void LRUStrategy::Remove(const std::vector<int>& prefix, int token) {
-//   std::vector<int> tokens = prefix;
-//   tokens.push_back(token);
-
-//   std::shared_ptr<NodeWithTreeAttri> node_with_tree_attri =
-//       radix_tree->Query(tokens);
-//   if (node_with_tree_attri == nullptr) {
-//     return;
-//   }
-
-//   std::shared_ptr<LRUCacheNode> cache_node =
-//       std::static_pointer_cast<LRUCacheNode>(
-//           node_with_tree_attri->get_node()->get_data());
-//   if (cache_node == header) {
-//     header = header->next;
-//     header->prev = nullptr;
-//   } else if (cache_node == tail) {
-//     tail = tail->prev;
-//     tail->next = nullptr;
-//   } else {
-//     cache_node->prev->next = cache_node->next;
-//     cache_node->next->prev = cache_node->prev;
-//   }
-//   current_size--;
-//   radix_tree->Delete(tokens);
-// }
-
-// LRUStrategy::~LRUStrategy() { delete radix_tree; }
 
 }  // namespace vineyard

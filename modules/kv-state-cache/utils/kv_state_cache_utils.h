@@ -18,16 +18,16 @@ limitations under the License.
 #ifndef MODULES_KV_STATE_CACHE_UTILS_H_
 #define MODULES_KV_STATE_CACHE_UTILS_H_
 
-void initKVStateCache(int dimension = 10, int cache_capacity = 10);
+void InitKVStateCache(int dimension = 10, int cacheCapacity = 10);
 
-void update(const std::vector<int>& token_list, int next_token,
-            const KV_STATE_WITH_LAYER& kv_state);
+void Update(const std::vector<int>& tokenList, int nextToken,
+            const KV_STATE_WITH_LAYER& kvState);
 
-void update(const std::vector<int>& token_list,
-            const LIST_KV_STATE_WITH_LAYER& kv_state);
+void Update(const std::vector<int>& tokenList,
+            const LIST_KV_STATE_WITH_LAYER& kvState);
 
-KV_STATE_WITH_LAYER query(const std::vector<int>& token_list, int token);
+KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList, int token);
 
-LIST_KV_STATE_WITH_LAYER query(const std::vector<int>& token_list);
+LIST_KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList);
 
 #endif
