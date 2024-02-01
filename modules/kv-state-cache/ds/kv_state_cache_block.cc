@@ -48,72 +48,64 @@ void KVStateCacheBlock::Construct(const ObjectMeta& meta) {
                       meta.GetTypeName() + "'");
 
   // TBD
-  // 1. construct the k_builder and v_builder
-  this->k_tensor = std::dynamic_pointer_cast<Tensor<double>>(
-      this->meta_.GetMember("k_builder"));
-  this->v_tensor = std::dynamic_pointer_cast<Tensor<double>>(
-      this->meta_.GetMember("v_builder"));
-  // 2. construct the child kv_state_cache_block_builder
-  int child_num = this->meta_.GetKeyValue<int>("child_num");
-  for (int i = 0; i < child_num; ++i) {
-    std::shared_ptr<KVStateCacheBlock> child_kv_state_cache_block_builder =
-        std::dynamic_pointer_cast<KVStateCacheBlock>(this->meta_.GetMember(
-            "child_kv_state_cache_block_" + std::to_string(i)));
-    this->child_kv_state_cache_block_list.push_back(
-        child_kv_state_cache_block_builder);
-  }
-  // 3. construct the member field
+  // 1. construct the keyStateTensorBuilder and valueStateTensorBuilder
+  this->keyStateTensor = std::dynamic_pointer_cast<Tensor<double>>(
+      this->meta_.GetMember("keyStateTensorBuilder"));
+  this->valueStateTensor = std::dynamic_pointer_cast<Tensor<double>>(
+      this->meta_.GetMember("valueStateTensorBuilder"));
+  // 2. construct the member field
   this->bitmap = this->meta_.GetKeyValue<unsigned long long>("bitmap");
   this->dimension = this->meta_.GetKeyValue<int>("dimension");
 }
 
 KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(Client& client,
                                                    int dimension) {
-  pthread_spin_init(&(this->spin_lock), 0);
   this->bitmap = UINT64_MAX;
   std::vector<int64_t> shape = {LIST_SIZE, dimension};
-  this->k_builder = std::make_shared<TensorBuilder<double>>(client, shape);
-  this->v_builder = std::make_shared<TensorBuilder<double>>(client, shape);
+  this->keyStateTensorBuilder =
+      std::make_shared<TensorBuilder<double>>(client, shape);
+  this->valueStateTensorBuilder =
+      std::make_shared<TensorBuilder<double>>(client, shape);
   this->dimension = dimension;
 }
 
 KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
-    Client& client, std::shared_ptr<KVStateCacheBlock> kv_state_cache_block) {
-  pthread_spin_init(&(this->spin_lock), 0);
-  this->bitmap = kv_state_cache_block->bitmap;
-  this->dimension = kv_state_cache_block->dimension;
+    Client& client, std::shared_ptr<KVStateCacheBlock> kvStateCacheBlock) {
+  this->bitmap = kvStateCacheBlock->bitmap;
+  this->dimension = kvStateCacheBlock->dimension;
   std::vector<int64_t> shape = {LIST_SIZE, dimension};
-  this->k_builder = std::make_shared<TensorBuilder<double>>(client, shape);
-  this->v_builder = std::make_shared<TensorBuilder<double>>(client, shape);
+  this->keyStateTensorBuilder =
+      std::make_shared<TensorBuilder<double>>(client, shape);
+  this->valueStateTensorBuilder =
+      std::make_shared<TensorBuilder<double>>(client, shape);
 
   // transfer the data from kv_state_cache to this builder
-  memcpy(this->k_builder->data(), kv_state_cache_block->k_tensor->data(),
+  memcpy(this->keyStateTensorBuilder->data(),
+         kvStateCacheBlock->keyStateTensor->data(),
          LIST_SIZE * this->dimension * sizeof(double));
-  memcpy(this->v_builder->data(), kv_state_cache_block->v_tensor->data(),
+  memcpy(this->valueStateTensorBuilder->data(),
+         kvStateCacheBlock->valueStateTensor->data(),
          LIST_SIZE * this->dimension * sizeof(double));
-  for (size_t i = 0;
-       i < kv_state_cache_block->child_kv_state_cache_block_list.size(); ++i) {
-    this->child_kv_state_cache_builder_list.push_back(
-        new KVStateCacheBlockBuilder(
-            client, kv_state_cache_block->child_kv_state_cache_block_list[i]));
-  }
 }
 
 // current we do not consider the layer.
 Status KVStateCacheBlockBuilder::Query(Client& client, int index,
-                                       KV_STATE_WITH_LAYER& kv_state) {
-  std::vector<double> k_state;
-  std::vector<double> v_state;
+                                       KV_STATE_WITH_LAYER& kvState) {
+  std::vector<double> keyStateVector;
+  std::vector<double> valueStateVector;
 
   for (int i = 0; i < this->dimension; ++i) {
-    k_state.push_back(((double*) k_builder->data())[index * dimension + i]);
+    keyStateVector.push_back(
+        ((double*) keyStateTensorBuilder->data())[index * dimension + i]);
   }
 
   for (int i = 0; i < this->dimension; ++i) {
-    v_state.push_back(((double*) v_builder->data())[index * dimension + i]);
+    valueStateVector.push_back(
+        ((double*) valueStateTensorBuilder->data())[index * dimension + i]);
   }
 
-  kv_state.insert(std::make_pair(1, std::make_pair(k_state, v_state)));
+  kvState.insert(
+      std::make_pair(1, std::make_pair(keyStateVector, valueStateVector)));
   return Status::OK();
 }
 
@@ -128,100 +120,70 @@ bool KVStateCacheBlockBuilder::IsFull() {
   return index < 0 || index >= LIST_SIZE;
 }
 
-void KVStateCacheBlockBuilder::Update(const KV_STATE_WITH_LAYER& kv_state,
-                                      offset_data* data) {
+void KVStateCacheBlockBuilder::Update(const KV_STATE_WITH_LAYER& kvState,
+                                      OffsetData* data) {
   int index = this->FindEmptySlot();
   LOG(INFO) << "index:" << index;
-  std::vector<double> k_state = (kv_state.find(1)->second).first;
-  std::vector<double> v_state = (kv_state.find(1)->second).second;
-  VINEYARD_ASSERT(k_state.size() == (size_t) this->dimension);
-  VINEYARD_ASSERT(v_state.size() == (size_t) this->dimension);
+  std::vector<double> keyStateVector = (kvState.find(1)->second).first;
+  std::vector<double> valueStateVector = (kvState.find(1)->second).second;
+  VINEYARD_ASSERT(keyStateVector.size() == (size_t) this->dimension);
+  VINEYARD_ASSERT(valueStateVector.size() == (size_t) this->dimension);
 
-  double* key_data = (double*) k_builder->data();
-  double* value_data = (double*) v_builder->data();
+  double* keyData = (double*) keyStateTensorBuilder->data();
+  double* valueData = (double*) valueStateTensorBuilder->data();
   for (int i = 0; i < this->dimension; ++i) {
-    key_data[index * this->dimension + i] = k_state[i];
+    keyData[index * this->dimension + i] = keyStateVector[i];
   }
   for (int i = 0; i < this->dimension; ++i) {
-    value_data[index * this->dimension + i] = v_state[i];
+    valueData[index * this->dimension + i] = valueStateVector[i];
   }
   data->offset = index;
 
-  LOG(INFO) << "before:" << this->bitmap;
   ACQUIRE_BIT_RESOURCE(this->bitmap, index);
-  LOG(INFO) << "after:" << this->bitmap;
 }
 
-void KVStateCacheBlockBuilder::Update(double* k_data, double* v_data,
-                                      unsigned long data_length,
-                                      offset_data* data) {
+void KVStateCacheBlockBuilder::Update(double* keyState, double* valueState,
+                                      unsigned long dataLength,
+                                      OffsetData* data) {
   int index = FindEmptySlot();
-  double* key_data = (double*) k_builder->data();
-  double* value_data = (double*) v_builder->data();
-  VINEYARD_ASSERT((unsigned long) this->dimension == data_length);
-  for (unsigned long i = 0; i < data_length; ++i) {
-    key_data[index * this->dimension + i] = k_data[i];
+  double* keyData = (double*) keyStateTensorBuilder->data();
+  double* valueData = (double*) valueStateTensorBuilder->data();
+  VINEYARD_ASSERT((unsigned long) this->dimension == dataLength);
+  for (unsigned long i = 0; i < dataLength; ++i) {
+    keyData[index * this->dimension + i] = keyState[i];
   }
-  for (unsigned long i = 0; i < data_length; ++i) {
-    value_data[index * this->dimension + i] = v_data[i];
+  for (unsigned long i = 0; i < dataLength; ++i) {
+    valueData[index * this->dimension + i] = valueState[i];
   }
   data->offset = index;
 
   ACQUIRE_BIT_RESOURCE(this->bitmap, index);
-  LOG(INFO) << "bitmap:" << this->GetBitmapStr();
 }
 
-void KVStateCacheBlockBuilder::SetChildKVStateCacheBlockBuilder(
-    KVStateCacheBlockBuilder* child_kv_state_cache_builder) {
-  this->child_kv_state_cache_builder_list.push_back(
-      child_kv_state_cache_builder);
-}
-
-Status KVStateCacheBlockBuilder::Build(Client& client) {
-  // TBD craete vineyard object
-  // pthread_spin_lock(&(this->spin_lock));
-  // ObjectMeta meta;
-  // meta.SetTypeName(type_name<KVStateCacheBlock>());
-  // meta.AddKeyValue("bitmap", this->bitmap);
-  // for (int i = 0; i < LIST_SIZE; ++i) {
-  //   // TBD
-  //   // create tensor meta
-  // }
-  // // TBD check the status
-  // client.CreateMetaData(meta, id);
-  // pthread_spin_unlock(&(this->spin_lock));
-  return Status::OK();
-}
+Status KVStateCacheBlockBuilder::Build(Client& client) { return Status::OK(); }
 
 std::shared_ptr<Object> KVStateCacheBlockBuilder::_Seal(Client& client) {
+  LOG(INFO) << "block seal:" << this;
   this->Build(client);
-  // pthread_spin_lock(&(this->spin_lock));
-  // pthread_spin_unlock(&(this->spin_lock));
 
-  std::shared_ptr<KVStateCacheBlock> kv_state_cache_block =
+  std::shared_ptr<KVStateCacheBlock> kvStateCacheBlock =
       std::make_shared<KVStateCacheBlock>();
 
-  // TBD
-  // 1. seal k_builder and v_builder
-  kv_state_cache_block->meta_.AddMember("k_builder", k_builder->Seal(client));
-  kv_state_cache_block->meta_.AddMember("v_builder", v_builder->Seal(client));
-  // 2. seal child kv_state_cache_block_builder
-  for (size_t i = 0; i < this->child_kv_state_cache_builder_list.size(); ++i) {
-    kv_state_cache_block->meta_.AddMember(
-        "child_kv_state_cache_block_" + std::to_string(i),
-        this->child_kv_state_cache_builder_list[i]->_Seal(client));
-  }
-  kv_state_cache_block->meta_.AddKeyValue(
-      "child_num", this->child_kv_state_cache_builder_list.size());
-  // 3. store the member field to meta
-  kv_state_cache_block->meta_.AddKeyValue("bitmap", this->bitmap);
-  kv_state_cache_block->meta_.AddKeyValue("dimension", this->dimension);
-  // 4. set the object type to meta
-  kv_state_cache_block->meta_.SetTypeName(type_name<KVStateCacheBlock>());
+  // 1. seal keyStateTensorBuilder and valueStateTensorBuilder
+  kvStateCacheBlock->meta_.AddMember("keyStateTensorBuilder",
+                                     keyStateTensorBuilder->Seal(client));
+  kvStateCacheBlock->meta_.AddMember("valueStateTensorBuilder",
+                                     valueStateTensorBuilder->Seal(client));
 
-  VINEYARD_CHECK_OK(client.CreateMetaData(kv_state_cache_block->meta_,
-                                          kv_state_cache_block->id_));
-  return kv_state_cache_block;
+  // 2. store the member field to meta
+  kvStateCacheBlock->meta_.AddKeyValue("bitmap", this->bitmap);
+  kvStateCacheBlock->meta_.AddKeyValue("dimension", this->dimension);
+  // 3. set the object type to meta
+  kvStateCacheBlock->meta_.SetTypeName(type_name<KVStateCacheBlock>());
+
+  VINEYARD_CHECK_OK(
+      client.CreateMetaData(kvStateCacheBlock->meta_, kvStateCacheBlock->id_));
+  return kvStateCacheBlock;
 }
 
 }  // namespace vineyard

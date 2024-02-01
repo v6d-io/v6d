@@ -58,8 +58,8 @@ class LRUStrategy : public CacheStrategy {
   std::shared_ptr<LRUCacheNode> GetHeader();
 
   int GetCapacity() { return capacity; }
-  // for distributed sync
-  // void Remove(const std::vector<int>& prefix, int token);
+
+  void PrintLRUList();
 };
 
 }  // namespace vineyard
