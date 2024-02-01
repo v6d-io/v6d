@@ -34,6 +34,14 @@ static pthread_mutex_t syncMutex;
 #define SYNC_INTERVAL 3
 #endif
 
+// for test
+void Delete(std::vector<int> token) {
+  std::shared_ptr<NodeData> evictedNode;
+  kvStateCacheBuilder->GetRootTree()->Delete(token, evictedNode);
+  kvStateCacheBuilder->Delete(evictedNode);
+  raxShow(kvStateCacheBuilder->GetRootTree()->tree);
+}
+
 void threadFunc();
 
 void signalHandler(int signum) {

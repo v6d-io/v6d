@@ -25,7 +25,7 @@ limitations under the License.
 using namespace vineyard;
 
 #define DEMENSION 10
-#define CAPACITY 100
+#define CAPACITY 20
 
 void init() { InitKVStateCache(DEMENSION, CAPACITY); }
 
@@ -114,7 +114,7 @@ int main() {
   sleep(5);
   inference(round_1_tokens);
   inference(round_3_tokens);
-  inference(round_2_tokens);
+  // inference(round_2_tokens);
 
   // inference(round_3_tokens);
   // inference(round_3_tokens);

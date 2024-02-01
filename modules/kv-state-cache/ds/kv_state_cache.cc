@@ -277,7 +277,8 @@ void KVStateCacheBuilder::Merge(Client& client,
   LOG(INFO) << "insert token list size:" << insertTokenList.size()
             << " evicted token list size:" << evicted_token_list.size();
   for (size_t i = 0; i < evicted_token_list.size(); i++) {
-    std::vector<int> tokenList = evicted_token_list[i];
+    std::vector<int> tokenList =
+        evicted_token_list[evicted_token_list.size() - i - 1];
     std::shared_ptr<NodeData> evictedNodeData;
     this->rootTree->Delete(tokenList, evictedNodeData);
     Delete(evictedNodeData);
