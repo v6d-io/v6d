@@ -24,6 +24,7 @@ limitations under the License.
 #include "basic/ds/tensor.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
+#include "kv-state-cache/radix-tree/radix-tree.h"
 
 typedef std::map<int, std::pair<std::vector<double>, std::vector<double>>>
     KV_STATE_WITH_LAYER;
@@ -38,10 +39,9 @@ typedef std::vector<
 #define ACQUIRE_BIT_RESOURCE(value, bit) \
   ((value) &= (~(((uint64_t) 1) << (bit))))
 
-struct offset_data {
+struct OffsetData {
   short offset;
 };
-
 namespace vineyard {
 
 #define LIST_SIZE 5
@@ -61,10 +61,8 @@ namespace vineyard {
 
 class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
  private:
-  std::shared_ptr<Tensor<double>> k_tensor;
-  std::shared_ptr<Tensor<double>> v_tensor;
-  std::vector<std::shared_ptr<KVStateCacheBlock>>
-      child_kv_state_cache_block_list;
+  std::shared_ptr<Tensor<double>> keyStateTensor;
+  std::shared_ptr<Tensor<double>> valueStateTensor;
   uint64_t bitmap;
   ObjectID id;
   int dimension;
@@ -83,22 +81,24 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
 
   uint64_t GetBitmap() { return this->bitmap; }
 
-  std::shared_ptr<const Tensor<double>> GetKTensor() { return this->k_tensor; }
+  std::shared_ptr<const Tensor<double>> GetKeyTensor() {
+    return this->keyStateTensor;
+  }
 
-  std::shared_ptr<const Tensor<double>> GetVTensor() { return this->v_tensor; }
+  std::shared_ptr<const Tensor<double>> GetValueTensor() {
+    return this->valueStateTensor;
+  }
 
   friend class KVStateCacheBlockBuilder;
 };
 
 class KVStateCacheBlockBuilder : public ObjectBuilder {
  private:
-  std::shared_ptr<TensorBuilder<double>> k_builder;
-  std::shared_ptr<TensorBuilder<double>> v_builder;
-  std::vector<KVStateCacheBlockBuilder*> child_kv_state_cache_builder_list;
+  std::shared_ptr<TensorBuilder<double>> keyStateTensorBuilder;
+  std::shared_ptr<TensorBuilder<double>> valueStateTensorBuilder;
   // TBD
   // support more than 64 kv-state cache slots
   uint64_t bitmap;
-  pthread_spinlock_t spin_lock;
   int dimension;
 
   int FindEmptySlot();
@@ -116,10 +116,10 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
    * @param kv_state The kv-state of the prompt. A LLM inference can contain
    * multiple kv-states for each layer.
    */
-  void Update(const KV_STATE_WITH_LAYER& kv_state, offset_data* data);
+  void Update(const KV_STATE_WITH_LAYER& kv_state, OffsetData* data);
 
-  void Update(double* k_data, double* v_data, unsigned long data_length,
-              offset_data* data);
+  void Update(double* keyState, double* valueState, unsigned long dataLength,
+              OffsetData* data);
 
   /**
    * @brief Query the kv-state using the whole token list.
@@ -137,22 +137,15 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   std::shared_ptr<Object> _Seal(Client& client) override;
 
-  void Lock() { pthread_spin_lock(&(this->spin_lock)); }
-
-  void UnLock() { pthread_spin_unlock(&(this->spin_lock)); }
-
-  const std::shared_ptr<TensorBuilder<double>> getKBuilder() {
-    return k_builder;
+  const std::shared_ptr<TensorBuilder<double>> GetKeyStateBuilder() {
+    return keyStateTensorBuilder;
   }
 
-  const std::shared_ptr<TensorBuilder<double>> getVBuilder() {
-    return v_builder;
+  const std::shared_ptr<TensorBuilder<double>> GetValueStateBuilder() {
+    return valueStateTensorBuilder;
   }
 
   void DeleteKVCache(int bit) { FREE_BIT_RESOURCE(this->bitmap, bit); }
-
-  void SetChildKVStateCacheBlockBuilder(
-      KVStateCacheBlockBuilder* child_kv_state_cache_builder);
 
   std::string GetBitmapStr();
 
