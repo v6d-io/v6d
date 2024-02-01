@@ -18,16 +18,17 @@ limitations under the License.
 #include "client/client.h"
 #include "common/util/logging.h"
 #include "kv-state-cache/ds/kv_state_cache.h"
+#include "kv_state_cache_utils.h"
 
 using namespace vineyard;
 
 static Client client;
-static std::shared_ptr<KVStateCacheBuilder> kv_state_cache_builder = nullptr;
-static std::string llm_cache_sync_lock = "llm_cache_sync_lock";
-static std::string llm_cache_object_name = "llm_cache_object";
-static std::thread* sync_thread;
-static bool exit_flag = false;
-static pthread_mutex_t sync_mutex;
+static std::shared_ptr<KVStateCacheBuilder> kvStateCacheBuilder = nullptr;
+static std::string llmCacheSyncLock = "llmCacheSyncLock";
+static std::string llmCacheObjectName = "llm_cache_object";
+static std::thread* syncThread;
+static bool exitFlag = false;
+static pthread_mutex_t syncMutex;
 
 #ifndef SYNC_INTERVAL
 #define SYNC_INTERVAL 3
@@ -42,25 +43,25 @@ void signalHandler(int signum) {
    * Use lease to prevent dead lock in the future.
    */
   std::cout << "Interrupt signal (" << signum << ") received.\n";
-  exit_flag = true;
-  sync_thread->join();
+  exitFlag = true;
+  syncThread->join();
   exit(signum);
 }
 
-void InitKVStateCache(int dimension = 10, int cacheCapacity = 10) {
-  if (kv_state_cache_builder == nullptr) {
+void InitKVStateCache(int dimension, int cacheCapacity) {
+  if (kvStateCacheBuilder == nullptr) {
     std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET"));
     LOG(INFO) << "socket:" << socket;
     client.Connect(socket);
     LOG(INFO) << "conneted";
 
-    pthread_mutex_init(&sync_mutex, NULL);
+    pthread_mutex_init(&syncMutex, NULL);
     // TBD
     // try to get cache object
-    std::string actural_key;
+    std::string acturalKey;
     bool result;
     while (1) {
-      client.TryAcquireLock(llm_cache_sync_lock, result, actural_key);
+      client.TryAcquireLock(llmCacheSyncLock, result, acturalKey);
       if (!result) {
         LOG(INFO) << "failed to gain the lock, wait for next time";
         sleep(1);
@@ -71,29 +72,29 @@ void InitKVStateCache(int dimension = 10, int cacheCapacity = 10) {
     }
 
     // // sync global cache object with vineyard
-    ObjectID global_kv_state_cache_id;
+    ObjectID globalKVStateCacheID;
     Status status =
-        client.GetName(llm_cache_object_name, global_kv_state_cache_id);
+        client.GetName(llmCacheObjectName, globalKVStateCacheID);
     if (status.ok()) {
       // if success, pull the cache object
-      std::shared_ptr<KVStateCache> global_kv_state_cache =
+      std::shared_ptr<KVStateCache> globalKVStateCache =
           std::dynamic_pointer_cast<KVStateCache>(
-              client.GetObject(global_kv_state_cache_id));
+              client.GetObject(globalKVStateCacheID));
       // TBD cache stragety
-      kv_state_cache_builder =
-          std::make_shared<KVStateCacheBuilder>(client, global_kv_state_cache);
+      kvStateCacheBuilder =
+          std::make_shared<KVStateCacheBuilder>(client, globalKVStateCache);
     } else {
       // if failed, create a new cache object
       LOG(INFO) << "failed to get the cache object, create a new one";
-      kv_state_cache_builder = std::make_shared<KVStateCacheBuilder>(
+      kvStateCacheBuilder = std::make_shared<KVStateCacheBuilder>(
           client, dimension, cacheCapacity);
     }
 
     // // release the lock
-    client.TryReleaseLock(actural_key, result);
+    client.TryReleaseLock(acturalKey, result);
     VINEYARD_ASSERT(result == true);
 
-    sync_thread = new std::thread(threadFunc);
+    syncThread = new std::thread(threadFunc);
 
     signal(SIGINT, signalHandler);
     // TBD
@@ -103,105 +104,111 @@ void InitKVStateCache(int dimension = 10, int cacheCapacity = 10) {
 
 void updateInternal(const std::vector<int>& tokenList, int nextToken,
                     const KV_STATE_WITH_LAYER& kvState) {
-  kv_state_cache_builder->Update(client, tokenList, nextToken, kvState);
+  kvStateCacheBuilder->Update(client, tokenList, nextToken, kvState);
 }
 
 void Update(const std::vector<int>& tokenList, int nextToken,
             const KV_STATE_WITH_LAYER& kvState) {
   LOG(INFO) << "Update";
-  if (pthread_mutex_trylock(&sync_mutex)) {
+  if (pthread_mutex_trylock(&syncMutex)) {
     return;
   }
 
   updateInternal(tokenList, nextToken, kvState);
 
-  pthread_mutex_unlock(&sync_mutex);
+  pthread_mutex_unlock(&syncMutex);
 }
 
 void Update(const std::vector<int>& tokenList,
             const LIST_KV_STATE_WITH_LAYER& kvState) {
-  if (pthread_mutex_trylock(&sync_mutex)) {
+  if (pthread_mutex_trylock(&syncMutex)) {
     return;
   }
-  std::vector<int> token_list_copy;
+  std::vector<int> tokenListCopy;
   for (size_t i = 0; i < tokenList.size(); i++) {
-    updateInternal(token_list_copy, tokenList[i], kvState[i]);
-    token_list_copy.push_back(tokenList[i]);
+    updateInternal(tokenListCopy, tokenList[i], kvState[i]);
+    tokenListCopy.push_back(tokenList[i]);
   }
-  pthread_mutex_unlock(&sync_mutex);
+  pthread_mutex_unlock(&syncMutex);
 }
 
 KV_STATE_WITH_LAYER queryInternal(const std::vector<int>& tokenList,
                                   int token) {
-  return kv_state_cache_builder->Query(client, tokenList, token);
+  return kvStateCacheBuilder->Query(client, tokenList, token);
 }
 
 KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList, int token) {
   LOG(INFO) << "Query";
   KV_STATE_WITH_LAYER result;
-  if (pthread_mutex_trylock(&sync_mutex)) {
+  if (pthread_mutex_trylock(&syncMutex)) {
     return result;
   }
 
   result = queryInternal(tokenList, token);
-  pthread_mutex_unlock(&sync_mutex);
+  pthread_mutex_unlock(&syncMutex);
 
   return result;
 }
 
 LIST_KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList) {
-  LIST_KV_STATE_WITH_LAYER list_kv_state;
-  if (pthread_mutex_trylock(&sync_mutex)) {
-    return list_kv_state;
+  LIST_KV_STATE_WITH_LAYER listKVState;
+  if (pthread_mutex_trylock(&syncMutex)) {
+    return listKVState;
   }
 
-  std::vector<int> token_list_copy;
+  std::vector<int> tokenListCopy;
   for (size_t i = 0; i < tokenList.size(); i++) {
-    KV_STATE_WITH_LAYER kvState = queryInternal(token_list_copy, tokenList[i]);
-    list_kv_state.push_back(kvState);
-    token_list_copy.push_back(tokenList[i]);
+    KV_STATE_WITH_LAYER kvState = queryInternal(tokenListCopy, tokenList[i]);
+    listKVState.push_back(kvState);
+    tokenListCopy.push_back(tokenList[i]);
   }
 
-  pthread_mutex_unlock(&sync_mutex);
-  return list_kv_state;
+  pthread_mutex_unlock(&syncMutex);
+  return listKVState;
 }
 
 void sync() {
   LOG(INFO) << "sync";
 
   // 1. gain the lock
-  std::string actural_key;
+  std::string acturalKey;
   bool result;
-  client.TryAcquireLock(llm_cache_sync_lock, result, actural_key);
+  client.TryAcquireLock(llmCacheSyncLock, result, acturalKey);
   if (!result) {
     LOG(INFO) << "failed to gain the lock, wait for next time";
     return;
   }
   // 2. pull the cache object
-  ObjectID global_kv_state_cache_id;
-  std::vector<ObjectID> delete_list;
+  ObjectID globalKVStateCacheID;
+  std::vector<ObjectID> deleteList;
 
-  std::shared_ptr<KVStateCache> global_kv_state_cache = nullptr;
+  std::shared_ptr<KVStateCache> globalKVStateCache = nullptr;
   Status status =
-      client.GetName(llm_cache_object_name, global_kv_state_cache_id);
+      client.GetName(llmCacheObjectName, globalKVStateCacheID);
   if (status.ok()) {
-    delete_list.push_back(global_kv_state_cache_id);
-    global_kv_state_cache = std::dynamic_pointer_cast<KVStateCache>(
-        client.GetObject(global_kv_state_cache_id));
+    deleteList.push_back(globalKVStateCacheID);
+    globalKVStateCache = std::dynamic_pointer_cast<KVStateCache>(
+        client.GetObject(globalKVStateCacheID));
   }
 
   // 3. merge the cache object
-  kv_state_cache_builder->Merge(client, global_kv_state_cache);
+  // only the global cache object with higher version will be merged
+  LOG(INFO) << "Current builder version:" << kvStateCacheBuilder->GetVersion()
+            << " global version:" << (globalKVStateCache == nullptr ? "null" : std::to_string(globalKVStateCache->GetVersion()));
+  if (globalKVStateCache != nullptr && kvStateCacheBuilder->GetVersion() < globalKVStateCache->GetVersion()) {
+    kvStateCacheBuilder->Merge(client, globalKVStateCache);
+  }
+  kvStateCacheBuilder->UpdateVersion();
 
   // 4. push the cache object
-  std::shared_ptr<Object> kv_state_cache =
-      kv_state_cache_builder->_Seal(client);
-  client.Persist(kv_state_cache->id());
+  std::shared_ptr<Object> kvStateCache =
+      kvStateCacheBuilder->_Seal(client);
+  client.Persist(kvStateCache->id());
 
   // 5. put the name of the new cache object to the meta server
   LOG(INFO) << "stage 5";
-  client.DropName(llm_cache_object_name);
-  status = client.PutName(kv_state_cache->id(), llm_cache_object_name);
+  client.DropName(llmCacheObjectName);
+  status = client.PutName(kvStateCache->id(), llmCacheObjectName);
   if (status.ok()) {
     LOG(INFO) << "put name success";
   } else {
@@ -210,18 +217,17 @@ void sync() {
 
   LOG(INFO) << "stage 6";
   // 6. delete old cache object
-  client.DelData(delete_list);
+  client.DelData(deleteList);
 
   LOG(INFO) << "stage 7";
   // 7. create a global cache object replica
-  // TBD cache stragety
-  std::dynamic_pointer_cast<KVStateCache>(kv_state_cache)->Resolve();
-  kv_state_cache_builder = std::make_shared<KVStateCacheBuilder>(
-      client, std::dynamic_pointer_cast<KVStateCache>(kv_state_cache));
+  std::dynamic_pointer_cast<KVStateCache>(kvStateCache)->Resolve();
+  kvStateCacheBuilder = std::make_shared<KVStateCacheBuilder>(
+      client, std::dynamic_pointer_cast<KVStateCache>(kvStateCache));
 
   LOG(INFO) << "stage 8";
   // 8. release the lock
-  client.TryReleaseLock(actural_key, result);
+  client.TryReleaseLock(acturalKey, result);
   VINEYARD_ASSERT(result == true);
 
   // TBD
@@ -231,28 +237,12 @@ void sync() {
 void threadFunc() {
   while (1) {
     sleep(SYNC_INTERVAL);
-    if (exit_flag) {
+    if (exitFlag) {
       break;
     }
     LOG(INFO) << "Try sync";
-    pthread_mutex_lock(&sync_mutex);
+    pthread_mutex_lock(&syncMutex);
     sync();
-    pthread_mutex_unlock(&sync_mutex);
+    pthread_mutex_unlock(&syncMutex);
   }
 }
-
-/*
-  a. vineyardd with global cache object | sealed
-  b. client get the object replica
-  c. client Update replica
-  d. client seal the local object and try to push object to server (modified
-  sealed object and global cache version) ⅰ. if success
-      1. vineyardd modify global object meta
-      2. client reconstruct the local object replica
-      3. goto c
-    ⅱ. if failed
-      1. client pull the global object
-      2. merge the object with local cache (e.g. create a new child_cache_object
-  and merge)
-      3. goto d
-*/

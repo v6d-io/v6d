@@ -59,6 +59,7 @@ void KVStateCache::Resolve() {
 
   // 3. construct the member field
   this->dimension = this->meta_.GetKeyValue<int>("dimension");
+  this->version = this->meta_.GetKeyValue<uint64_t>("version");
   LOG(INFO) << "construct the member field success" << std::endl;
 }
 
@@ -260,10 +261,10 @@ void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
 
 void KVStateCacheBuilder::Merge(Client& client,
                                 std::shared_ptr<KVStateCache> kvStateCache) {
-  // TBD
   if (kvStateCache == nullptr) {
     return;
   }
+
   std::shared_ptr<KVStateCacheBuilder> globalCacheBuilder =
       std::make_shared<KVStateCacheBuilder>(client, kvStateCache);
   std::shared_ptr<RadixTree> globalCacheTree = kvStateCache->GetRootTree();
@@ -304,6 +305,7 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
 
   // 1. store the member variables to cache object meta
   kvStateCache->meta_.AddKeyValue("dimension", this->dimension);
+  kvStateCache->meta_.AddKeyValue("version", this->version);
 
   // 2. seal all the block and put object id to cache object and
   // change the tree data from pointer to object id
