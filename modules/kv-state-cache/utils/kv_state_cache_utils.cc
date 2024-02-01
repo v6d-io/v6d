@@ -73,8 +73,7 @@ void InitKVStateCache(int dimension, int cacheCapacity) {
 
     // // sync global cache object with vineyard
     ObjectID globalKVStateCacheID;
-    Status status =
-        client.GetName(llmCacheObjectName, globalKVStateCacheID);
+    Status status = client.GetName(llmCacheObjectName, globalKVStateCacheID);
     if (status.ok()) {
       // if success, pull the cache object
       std::shared_ptr<KVStateCache> globalKVStateCache =
@@ -183,8 +182,7 @@ void sync() {
   std::vector<ObjectID> deleteList;
 
   std::shared_ptr<KVStateCache> globalKVStateCache = nullptr;
-  Status status =
-      client.GetName(llmCacheObjectName, globalKVStateCacheID);
+  Status status = client.GetName(llmCacheObjectName, globalKVStateCacheID);
   if (status.ok()) {
     deleteList.push_back(globalKVStateCacheID);
     globalKVStateCache = std::dynamic_pointer_cast<KVStateCache>(
@@ -194,15 +192,18 @@ void sync() {
   // 3. merge the cache object
   // only the global cache object with higher version will be merged
   LOG(INFO) << "Current builder version:" << kvStateCacheBuilder->GetVersion()
-            << " global version:" << (globalKVStateCache == nullptr ? "null" : std::to_string(globalKVStateCache->GetVersion()));
-  if (globalKVStateCache != nullptr && kvStateCacheBuilder->GetVersion() < globalKVStateCache->GetVersion()) {
+            << " global version:"
+            << (globalKVStateCache == nullptr
+                    ? "null"
+                    : std::to_string(globalKVStateCache->GetVersion()));
+  if (globalKVStateCache != nullptr &&
+      kvStateCacheBuilder->GetVersion() < globalKVStateCache->GetVersion()) {
     kvStateCacheBuilder->Merge(client, globalKVStateCache);
   }
   kvStateCacheBuilder->UpdateVersion();
 
   // 4. push the cache object
-  std::shared_ptr<Object> kvStateCache =
-      kvStateCacheBuilder->_Seal(client);
+  std::shared_ptr<Object> kvStateCache = kvStateCacheBuilder->_Seal(client);
   client.Persist(kvStateCache->id());
 
   // 5. put the name of the new cache object to the meta server

@@ -271,10 +271,11 @@ void KVStateCacheBuilder::Merge(Client& client,
 
   std::set<std::vector<int>> insertTokenList;
   std::vector<std::vector<int>> evicted_token_list;
-  mergeTree(this->rootTree->GetRootTree(), globalCacheTree->GetRootTree(),
-            evicted_token_list, insertTokenList,
-            this->rootTree->GetCacheCapacity());
+  RadixTree::MergeTree(this->rootTree, globalCacheTree, evicted_token_list,
+                       insertTokenList);
 
+  LOG(INFO) << "insert token list size:" << insertTokenList.size()
+            << " evicted token list size:" << evicted_token_list.size();
   for (size_t i = 0; i < evicted_token_list.size(); i++) {
     std::vector<int> tokenList = evicted_token_list[i];
     std::shared_ptr<NodeData> evictedNodeData;
@@ -282,13 +283,20 @@ void KVStateCacheBuilder::Merge(Client& client,
     Delete(evictedNodeData);
   }
 
+  /**
+   * Set use lexicographical order to insert the token list, so the insert token
+   * list is sorted and will not cause insert failed.(Radix tree will reject a
+   * insert operation if the prefix of the insert token list is not in the
+   * tree.)
+   */
   for (auto it = insertTokenList.begin(); it != insertTokenList.end(); ++it) {
-    std::vector<int> tokenList = *it;
-    KV_STATE_WITH_LAYER kvState = globalCacheBuilder->Query(
-        client, std::vector<int>(tokenList.begin(), tokenList.end() - 1),
-        tokenList.back());
-    this->Update(client, tokenList, tokenList[tokenList.size() - 1], kvState);
+    std::vector<int> tokenList =
+        std::vector<int>((*it).begin(), (*it).end() - 1);
+    KV_STATE_WITH_LAYER kvState =
+        globalCacheBuilder->Query(client, tokenList, (*it).back());
+    this->Update(client, tokenList, (*it).back(), kvState);
   }
+  this->version = globalCacheBuilder->GetVersion();
   return;
 }
 

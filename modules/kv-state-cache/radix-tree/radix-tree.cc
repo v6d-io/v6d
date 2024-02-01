@@ -534,3 +534,25 @@ std::shared_ptr<NodeData> RadixTree::GetRootNode() {
   return std::make_shared<NodeData>((DataWrapper*) raxGetData(node),
                                     (DataWrapper*) node->custom_data);
 }
+
+void RadixTree::MergeTree(std::shared_ptr<RadixTree> tree_1,
+                          std::shared_ptr<RadixTree> tree_2,
+                          std::vector<std::vector<int>>& evicted_tokens,
+                          std::set<std::vector<int>>& insert_tokens) {
+  std::set<std::vector<int>> insert_tokens_set;
+  std::vector<std::vector<int>> evicted_tokens_vec;
+  mergeTree(tree_1->tree, tree_2->tree, evicted_tokens_vec, insert_tokens_set,
+            tree_1->cacheCapacity);
+  for (size_t i = 0; i < evicted_tokens_vec.size(); i++) {
+    VINEYARD_ASSERT(evicted_tokens_vec[i][0] == INT32_MAX);
+    std::vector<int> tmp(evicted_tokens_vec[i].begin() + 1,
+                         evicted_tokens_vec[i].end());
+    evicted_tokens_vec.push_back(tmp);
+  }
+
+  for (auto& vec : insert_tokens_set) {
+    VINEYARD_ASSERT(vec[0] == INT32_MAX);
+    std::vector<int> tmp(vec.begin() + 1, vec.end());
+    insert_tokens.insert(tmp);
+  }
+}
