@@ -99,6 +99,8 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   uint64_t GetVersion() { return this->version; }
 
+  void UpdateVersion() { this->version++; }
+
   Status Build(Client& client) override;
 
   std::shared_ptr<Object> _Seal(Client& client) override;

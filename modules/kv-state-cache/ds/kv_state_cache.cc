@@ -59,6 +59,7 @@ void KVStateCache::Resolve() {
 
   // 3. construct the member field
   this->dimension = this->meta_.GetKeyValue<int>("dimension");
+  this->version = this->meta_.GetKeyValue<uint64_t>("version");
   LOG(INFO) << "construct the member field success" << std::endl;
 }
 
@@ -260,34 +261,43 @@ void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
 
 void KVStateCacheBuilder::Merge(Client& client,
                                 std::shared_ptr<KVStateCache> kvStateCache) {
-  // TBD
   if (kvStateCache == nullptr) {
     return;
   }
+
   std::shared_ptr<KVStateCacheBuilder> globalCacheBuilder =
       std::make_shared<KVStateCacheBuilder>(client, kvStateCache);
   std::shared_ptr<RadixTree> globalCacheTree = kvStateCache->GetRootTree();
 
   std::set<std::vector<int>> insertTokenList;
   std::vector<std::vector<int>> evicted_token_list;
-  mergeTree(this->rootTree->GetRootTree(), globalCacheTree->GetRootTree(),
-            evicted_token_list, insertTokenList,
-            this->rootTree->GetCacheCapacity());
+  RadixTree::MergeTree(this->rootTree, globalCacheTree, evicted_token_list,
+                       insertTokenList);
 
+  LOG(INFO) << "insert token list size:" << insertTokenList.size()
+            << " evicted token list size:" << evicted_token_list.size();
   for (size_t i = 0; i < evicted_token_list.size(); i++) {
-    std::vector<int> tokenList = evicted_token_list[i];
+    std::vector<int> tokenList =
+        evicted_token_list[evicted_token_list.size() - i - 1];
     std::shared_ptr<NodeData> evictedNodeData;
     this->rootTree->Delete(tokenList, evictedNodeData);
     Delete(evictedNodeData);
   }
 
+  /**
+   * Set use lexicographical order to insert the token list, so the insert token
+   * list is sorted and will not cause insert failed.(Radix tree will reject a
+   * insert operation if the prefix of the insert token list is not in the
+   * tree.)
+   */
   for (auto it = insertTokenList.begin(); it != insertTokenList.end(); ++it) {
-    std::vector<int> tokenList = *it;
-    KV_STATE_WITH_LAYER kvState = globalCacheBuilder->Query(
-        client, std::vector<int>(tokenList.begin(), tokenList.end() - 1),
-        tokenList.back());
-    this->Update(client, tokenList, tokenList[tokenList.size() - 1], kvState);
+    std::vector<int> tokenList =
+        std::vector<int>((*it).begin(), (*it).end() - 1);
+    KV_STATE_WITH_LAYER kvState =
+        globalCacheBuilder->Query(client, tokenList, (*it).back());
+    this->Update(client, tokenList, (*it).back(), kvState);
   }
+  this->version = globalCacheBuilder->GetVersion();
   return;
 }
 
@@ -304,6 +314,7 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
 
   // 1. store the member variables to cache object meta
   kvStateCache->meta_.AddKeyValue("dimension", this->dimension);
+  kvStateCache->meta_.AddKeyValue("version", this->version);
 
   // 2. seal all the block and put object id to cache object and
   // change the tree data from pointer to object id

@@ -2446,66 +2446,6 @@ bool compareKey(int *first_key, int *second_key, int first_key_len, int second_k
     return true;
 }
 
-// bool compare(raxNode *a, raxNode *b) {
-//     return a->timestamp > b->timestamp;
-// }
-
-// void sortNode(raxNode **node, int size) {
-//     std::sort(node, node + size, compare);
-// }
-
-// void mergeTree(rax* first_tree, rax* second_tree, std::vector<std::vector<int>>& evicted_tokens, std::map<std::vector<int>, void*>& insert_tokens, int max_node) {
-//     raxNode* first_tree_node = first_tree->head;
-//     raxNode* second_tree_node = second_tree->head;
-
-//     std::queue<raxNode *> first_tree_queue;
-//     std::queue<raxNode *> second_tree_queue;
-
-//     first_tree_queue.push(first_tree_node);
-//     second_tree_queue.push(second_tree_node);
-
-//     rax* tree = raxNew();
-
-//     int nodeCount = 0;
-
-//     while((!first_tree_queue.empty()) && (!second_tree_queue.empty())) {
-//         int first_tree_rax_node_list_size = first_tree_queue.size();
-//         int second_tree_rax_node_list_size = second_tree_queue.size();
-//         raxNode** first_tree_rax_node_list = (raxNode**)malloc(sizeof(raxNode*) * first_tree_rax_node_list_size);
-//         raxNode** second_tree_rax_node_list = (raxNode**)malloc(sizeof(raxNode*) * second_tree_rax_node_list_size);
-
-//         for (int i = 0; i < first_tree_queue.size(); i++) {
-//             first_tree_rax_node_list[i] = first_tree_queue.front();
-//             first_tree_queue.pop();
-//         }
-
-//         for (int i = 0; i < second_tree_queue.size(); i++) {
-//             second_tree_rax_node_list[i] = second_tree_queue.front();
-//             second_tree_queue.pop();
-//         }
-
-//         sortNode(first_tree_rax_node_list, first_tree_queue.size());
-//         sortNode(second_tree_rax_node_list, second_tree_queue.size());
-
-//         int first_tree_index = 0;
-//         int second_tree_index = 0;
-
-//         while(first_tree_index < first_tree_rax_node_list_size && second_tree_index < second_tree_rax_node_list_size && nodeCount < max_node) {
-//             if (first_tree_rax_node_list[first_tree_index]->timestamp > second_tree_rax_node_list[second_tree_index]->timestamp) {
-//                 // choose first_tree_rax_node_list[first_tree_index]
-//                 if (raxFind(tree, first_tree_rax_node_list[first_tree_index]->data, first_tree_rax_node_list[first_tree_index]->size) == NULL) {
-//                     raxInsert(tree, first_tree_rax_node_list[first_tree_index]->data, first_tree_rax_node_list[first_tree_index]->size, first_tree_rax_node_list[first_tree_index]->data, NULL);
-//                     nodeCount++;
-//                 } else {
-//                     std::vector<int> token = std::vector<int>(first_tree_rax_node_list[first_tree_index]->data, first_tree_rax_node_list[first_tree_index]->data + first_tree_rax_node_list[first_tree_index]->size);
-//                     insert_tokens.erase(token);
-//                 }
-//                 first_tree_index++;
-//             }
-//         }
-//     }
-// }
-
 bool compare(raxIterator a, raxIterator b) {
     if (a.key_len == b.key_len) {
         return a.node->timestamp > b.node->timestamp;
