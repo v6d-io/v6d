@@ -14,9 +14,12 @@ limitations under the License.
 */
 
 #include "radix-tree.h"
+
 #include "common/util/base64.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
+
+#include "zstd/lib/zstd.h"
 
 using namespace vineyard;
 
@@ -261,37 +264,20 @@ std::string RadixTree::Serialize() {
   }
   LOG(INFO) << "serializedStr:" << serializedStr;
 
-  // use LZ4 to compress the serialized string
-  const char* const src = serializedStr.c_str();
-  const int srcSize = serializedStr.size();
-  const int maxDstSize = LZ4_compressBound(srcSize);
-  char* compressedData = new char[maxDstSize];
-  if (compressedData == NULL) {
-    LOG(INFO) << "Failed to allocate memory for *compressedData.";
+  // use ZSTD to compress the serialized string
+  size_t srcSize = serializedStr.size();
+  std::string compressedStr(srcSize, '\0');
+  int compressedSize = ZSTD_compress((void *)(compressedStr.c_str()), compressedStr.length(), 
+    serializedStr.c_str(), srcSize, 3);
+  if (ZSTD_isError(compressedSize)) {
+    LOG(ERROR) << "ZSTD compression failed: " << ZSTD_getErrorName(compressedSize);
   }
-
-  const int compressedDataSize =
-      LZ4_compress_default(src, compressedData, srcSize, maxDstSize);
-  if (compressedDataSize <= 0) {
-    LOG(INFO) << "A 0 or negative result from LZ4_compress_default() "
-                 "indicates a failure trying to compress the data. ";
-  }
-
-  if (compressedDataSize > 0) {
-    LOG(INFO) << "We successfully compressed some data! Ratio: "
-              << ((float) compressedDataSize / srcSize);
-  }
-
-  if (compressedData == NULL) {
-    LOG(INFO) << "Failed to re-alloc memory for compressedData.  Sad :(";
-  }
-
-  std::string compressedStr = std::string(compressedData, compressedDataSize);
   int cacheCapacity = this->cacheCapacity - 1;
+
   std::string result = std::string((char*) &srcSize, sizeof(int)) +
                        std::string((char*) &cacheCapacity, sizeof(int)) +
                        compressedStr;
-  delete[] compressedData;
+  
   return result;
 }
 
@@ -302,26 +288,13 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
   data.erase(0, sizeof(int));
   int cacheCapacity = *(int*) data.c_str();
   data.erase(0, sizeof(int));
-  char* const decompressBuffer = new char[srcSize];
-  if (decompressBuffer == NULL) {
-    LOG(INFO) << "Failed to allocate memory for *decompressBuffer.";
+  std::string decompressedStr(srcSize, '\0');
+  int decompressedSize = ZSTD_decompress((void *)(decompressedStr.c_str()), decompressedStr.size(),
+   data.c_str(), srcSize);
+  if (ZSTD_isError(decompressedSize)) {
+    LOG(ERROR) << "ZSTD decompression failed: " << ZSTD_getErrorName(decompressedSize);
   }
-
-  const int decompressedSize =
-      LZ4_decompress_safe(data.c_str(), decompressBuffer, data.size(), srcSize);
-  if (decompressedSize < 0) {
-    LOG(INFO) << "A negative result from LZ4_decompress_safe indicates a "
-                 "failure trying to decompress the data.  See exit code "
-                 "(echo $?) for value returned.";
-  }
-  if (decompressedSize >= 0) {
-    LOG(INFO) << "We successfully decompressed some data!";
-  }
-  // if (decompressedSize != data.size()) {
-  //     LOG(INFO) << "Decompressed data is different from original! \n";
-  // }
-  data = std::string(decompressBuffer, decompressedSize);
-  delete[] decompressBuffer;
+  data = decompressedStr.substr(0, decompressedSize);
 
   std::vector<std::vector<int>> tokenList;
   std::vector<void*> dataList;
