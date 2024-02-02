@@ -92,11 +92,16 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
 
   rax* GetRootTree() { return this->tree; }
 
-  int GetCacheCapacity() { return cacheCapacity; }
+  int GetCacheCapacity() { return cacheCapacity - 1; }
 
   std::set<void*> GetSubTreeDataSet() { return subTreeDataSet; }
 
   std::shared_ptr<NodeData> GetRootNode();
+
+  static void MergeTree(std::shared_ptr<RadixTree> tree_1,
+                        std::shared_ptr<RadixTree> tree_2,
+                        std::vector<std::vector<int>>& evicted_tokens,
+                        std::set<std::vector<int>>& insert_tokens);
 };
 
 #endif
