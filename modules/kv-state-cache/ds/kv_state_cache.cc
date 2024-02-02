@@ -135,13 +135,12 @@ KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
         kvStateCacheBlockBuilder->GetKeyStateBuilder();
     const std::shared_ptr<TensorBuilder<double>> valueStateTensorBuilder =
         kvStateCacheBlockBuilder->GetValueStateBuilder();
-    OffsetData* new_offset_data = new OffsetData();
+    OffsetData new_offset_data;
     childKVStateCacheBlockBuilder->Update(
         keyStateTensorBuilder->data() + index * this->dimension,
         valueStateTensorBuilder->data() + index * this->dimension,
-        this->dimension, new_offset_data);
-    nodeDataList[i]->nodeData->data = new_offset_data;
-    nodeDataList[i]->nodeData->dataLength = sizeof(OffsetData);
+        this->dimension, &new_offset_data);
+    data->offset = new_offset_data.offset;
     // Clear the bitmap.
     kvStateCacheBlockBuilder->DeleteKVCache(index);
   }
@@ -357,12 +356,25 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
 }
 
 KVStateCacheBuilder::~KVStateCacheBuilder() {
-  // TBD
-  // std::vector<std::shared_ptr<NodeData>> nodeDataList =
-  //     RadixTree::TraverseTreeWithoutSubTree(this->rootTree);
-  // for (size_t i = 0; i < nodeDataList.size(); i++) {
-  //   delete (OffsetData*) nodeDataList[i]->get_node()->get_data();
-  // }
+  LOG(INFO) << "KVStateCacheBuilder::~KVStateCacheBuilder";
+  // get all subtree data and node data
+  std::set<void*> subTreeDataSet = rootTree->GetSubTreeDataSet();
+  std::set<void*> nodeDataSet = rootTree->GetAllNodeData();
+  // 2. delete all subtree data and node data
+  for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
+       ++iter) {
+    TreeData* treeData = (TreeData*) ((DataWrapper*) *iter)->data;
+    if (treeData->isPtr == true) {
+      delete treeData->kvStateCacheBlockBuilder;
+      delete treeData;
+    }
+  }
+  for (auto iter = nodeDataSet.begin(); iter != nodeDataSet.end(); ++iter) {
+    OffsetData* data = (OffsetData*) (*iter);
+    if (data != nullptr) {
+      delete data;
+    }
+  }
 }
 
 }  // namespace vineyard

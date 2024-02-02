@@ -102,6 +102,8 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
                         std::shared_ptr<RadixTree> tree_2,
                         std::vector<std::vector<int>>& evicted_tokens,
                         std::set<std::vector<int>>& insert_tokens);
+
+  std::set<void*> GetAllNodeData();
 };
 
 #endif
