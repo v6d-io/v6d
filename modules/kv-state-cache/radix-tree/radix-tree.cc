@@ -532,3 +532,18 @@ void RadixTree::MergeTree(std::shared_ptr<RadixTree> tree_1,
     insert_tokens.insert(tmp);
   }
 }
+
+std::set<void*> RadixTree::GetAllNodeData() {
+  raxIterator iter;
+  raxStart(&iter, this->tree);
+  raxSeek(&iter, "^", NULL, 0);
+  std::set<void*> nodeDataSet;
+  while (raxNext(&iter)) {
+    raxNode* node = iter.node;
+    if (node->isnull) {
+      continue;
+    }
+    nodeDataSet.insert(raxGetData(node));
+  }
+  return nodeDataSet;
+}
