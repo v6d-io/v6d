@@ -83,7 +83,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
   std::shared_ptr<NodeData> rootTreeHeader = this->rootTree->GetRootNode();
   rootTreeHeader->treeData->data = treeData;
   rootTreeHeader->treeData->dataLength = sizeof(TreeData);
-  this->rootTree->SetSubtreeData(treeData, sizeof(TreeData));
+  this->rootTree->SetSubtreeData(treeData);
   LOG(INFO) << "set builder:" << builder
             << " to tree:" << this->rootTree->GetRootTree()->head;
   LOG(INFO) << "data:" << treeData
@@ -102,7 +102,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
   std::set<void*> subTreeData = cache->rootTree->GetSubTreeDataSet();
 
   for (auto iter = subTreeData.begin(); iter != subTreeData.end(); ++iter) {
-    TreeData* treeData = (TreeData*) ((DataWrapper*) *iter)->data;
+    TreeData* treeData = (TreeData*) (*iter);
     LOG(INFO) << "tree data:" << treeData;
     VINEYARD_ASSERT(treeData->isPtr == false);
     LOG(INFO) << "id:" << treeData->builderObjectID;
@@ -176,6 +176,13 @@ void KVStateCacheBuilder::Update(Client& client,
     Delete(evictedNodeData);
   }
 
+  // if (evictedNodeData->treeData != nullptr && evictedNodeData->nodeData !=
+  // nullptr) {
+  //   if (evictedNodeData->nodeData->data != nullptr) {
+  //     delete (TreeData*) evictedNodeData->nodeData->data;
+  //   }
+  // }
+
   // TBD
   // Use lock to protect the kv_state_cache_builder
   LOG(INFO) << "data:" << nodeData->treeData->data
@@ -203,7 +210,7 @@ void KVStateCacheBuilder::Update(Client& client,
 
     subTreeHeader->treeData->data = newTreeData;
     subTreeHeader->treeData->dataLength = sizeof(TreeData);
-    rootTree->SetSubtreeData(newTreeData, sizeof(TreeData));
+    rootTree->SetSubtreeData(newTreeData);
     LOG(INFO) << "block split success";
 
     // kv_state_cache_builder->UnLock();
@@ -256,6 +263,15 @@ void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
   kvStateCacheBlockBuilder->DeleteKVCache(data->offset);
   LOG(INFO) << "stage4";
   delete data;
+  // TBD
+  // Refactor this code. The data should be deleted by the RadixTree
+  // delete (DataWrapper*) evictedNodeData->nodeData;
+  LOG(INFO) << "tree data:" << evictedNodeData->treeData->data;
+  if (evictedNodeData->cleanTreeData) {
+    LOG(INFO) << "erase";
+    this->rootTree->GetSubTreeDataSet().erase(evictedNodeData->treeData->data);
+  }
+  evictedNodeData->RecycleSource();
 }
 
 void KVStateCacheBuilder::Merge(Client& client,
@@ -319,11 +335,10 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   // change the tree data from pointer to object id
 
   int count = 0;
-  LOG(INFO) << "count:" << count;
   std::set<void*> subTreeDataSet = rootTree->GetSubTreeDataSet();
   for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
        ++iter) {
-    TreeData* treeData = (TreeData*) ((DataWrapper*) *iter)->data;
+    TreeData* treeData = (TreeData*) (*iter);
     VINEYARD_ASSERT(treeData != nullptr);
     VINEYARD_ASSERT(treeData->isPtr == true);
 
@@ -363,9 +378,9 @@ KVStateCacheBuilder::~KVStateCacheBuilder() {
   // 2. delete all subtree data and node data
   for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
        ++iter) {
-    TreeData* treeData = (TreeData*) ((DataWrapper*) *iter)->data;
+    TreeData* treeData = (TreeData*) (*iter);
     if (treeData->isPtr == true) {
-      delete treeData->kvStateCacheBlockBuilder;
+      delete (KVStateCacheBlockBuilder*) treeData->kvStateCacheBlockBuilder;
       delete treeData;
     }
   }
