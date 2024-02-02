@@ -30,4 +30,6 @@ KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList, int token);
 
 LIST_KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList);
 
+void Delete(std::vector<int> token);
+
 #endif
