@@ -1097,6 +1097,25 @@ raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len, raxNode** sub_tr
     return h;
 }
 
+// raxNode *raxSetSubTreeAndReturnDataNode(rax *rax, int *s, size_t len) {
+//     raxNode *h;
+
+//     raxStack ts;
+//     raxStackInit(&ts);
+//     //debugf("### Lookup: %.*s\n", (int)len, s);
+//     int splitpos = 0;
+//     size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,&ts,false);
+//     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey)
+//         return NULL;
+
+//     if (h!= nullptr) {
+//         h->issubtree = true;
+//         raxStackAddNumNodes(&ts, -h->numnodes);
+//     }
+
+//     return h;
+// }
+
 int raxFindNode(rax *rax, int *s, size_t len, void **node) {
     raxNode *h;
     raxStack ts;
@@ -1227,7 +1246,7 @@ raxNode *raxRemoveChild(raxNode *parent, raxNode *child) {
 
 /* Remove the specified item. Returns 1 if the item was found and
  * deleted, 0 otherwise. */
-int raxRemove(rax *rax, int *s, size_t len, void **old, raxNode** sub_tree_node, bool set_timestamp) {
+int raxRemove(rax *rax, int *s, size_t len, void **old, bool set_timestamp) {
     raxNode *h;
     raxStack ts;
 
@@ -1239,14 +1258,6 @@ int raxRemove(rax *rax, int *s, size_t len, void **old, raxNode** sub_tree_node,
     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey) {
         raxStackFree(&ts);
         return 0;
-    }
-    if (sub_tree_node != NULL) {
-        for (int i = ts.items - 1; i >= 0; i--) {
-            if (((raxNode *)ts.stack[i])->issubtree == true) {
-                *sub_tree_node = (raxNode *)ts.stack[i];
-                break;
-            }
-        }
     }
 
 
@@ -2137,6 +2148,11 @@ uint64_t raxSize(rax *rax) {
  *  [1,2] -> [1,2,3,4] -> []
  */
 
+struct datawrapper {
+    void *data;
+    int length;
+};
+
 /* The actual implementation of raxShow(). */
 void raxRecursiveShow(int level, int lpad, raxNode *n) {
     char s = n->iscompr ? '"' : '[';
@@ -2156,6 +2172,9 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
         numchars += printf("=%p",raxGetData(n));
     }
     numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, n->custom_data, n->issubtree);
+    if (n->issubtree && n->custom_data != NULL) {
+        numchars += printf(" cus data:%p" , ((datawrapper *)(n->custom_data))->data);
+    }
 
     int numchildren = n->iscompr ? 1 : n->size;
     /* Note that 7 and 4 magic constants are the string length
@@ -2295,7 +2314,7 @@ bool raxIsSubtree(raxNode *node) {
 * tree from the root node.
 * 
 */
-raxNode *raxSplit(rax *rax, int *s, size_t len, void *data, std::vector<int>& token) {
+raxNode *raxSplit(rax *rax, int *s, size_t len, std::vector<int>& token) {
     raxNode *childNode = NULL;
     raxNode *splitNode = NULL;
     raxStack stack = raxFindWithStack(rax, s, len);
@@ -2349,7 +2368,7 @@ raxNode *raxSplit(rax *rax, int *s, size_t len, void *data, std::vector<int>& to
 
     raxSetSubtree(splitNode);
 
-    raxStackAddNumNodes(&stack, -(int)(splitNode->numnodes)); 
+    raxStackAddNumNodes(&stack, -(int)(splitNode->numnodes));
     raxStackFree(&stack);
 
     return splitNode;

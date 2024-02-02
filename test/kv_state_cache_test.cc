@@ -102,30 +102,21 @@ int main() {
   std::vector<int> round_2_tokens = {1, 2,  3,  4,  5,  7, 8,
                                      9, 10, 11, 12, 13, 14};
   std::vector<int> round_3_tokens = {1, 2, 3, 9, 10, 11, 12, 13, 14};
-  // total 24 node
-  // tree 1 : 18 node
-  // tree 2 : 16 node
-  // std::vector<int> round_3_tokens = {1, 2, 3, 4, 5, 6, 7};
-  // std::vector<int> round_1_tokens = {1, 2};
-  // std::vector<int> round_2_tokens = {1, 3};
-  // std::vector<int> round_3_tokens = {1, 3, 4};
-  // std::vector<int> round_4_tokens = {1, 3, 5};
-  // std::vector<int> round_5_tokens = {1, 1};
+  std::vector<int> round_4_tokens = {1, 2, 3, 4, 5, 6};
+
   inference(round_1_tokens);
   inference(round_2_tokens);
   sleep(5);
 
   inference(round_1_tokens);
   inference(round_2_tokens);
-  // sleep(5);
   inference(round_3_tokens);
-  // inference(round_3_tokens);
-  // inference(round_3_tokens);
   // inference(round_4_tokens);
-  // inference(round_5_tokens);
   // sleep(5);
-  // inference(round_2_tokens);
-  // inference(round_1_tokens, true);
+  // Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin() + 6));
+  // Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin() + 5));
+  // Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin() + 4));
+  // Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin() + 3));
   while (1)
     ;
   return 0;

@@ -37,10 +37,20 @@ struct DataWrapper {
 struct NodeData {
   DataWrapper* nodeData;
   DataWrapper* treeData;
+  bool cleanTreeData = false;
 
   NodeData(DataWrapper* nodeData, DataWrapper* treeData) {
     this->nodeData = nodeData;
     this->treeData = treeData;
+  }
+
+  void RecycleSource() {
+    if (this->nodeData != nullptr) {
+      delete this->nodeData;
+    }
+    if (cleanTreeData && this->treeData != nullptr) {
+      delete this->treeData;
+    }
   }
 };
 
@@ -87,7 +97,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   static std::vector<std::shared_ptr<NodeData>> TraverseTreeWithoutSubTree(
       raxNode* headNode);
 
-  void SetSubtreeData(void* data, int dataLength);
+  void SetSubtreeData(void* data);
 
   rax* GetRootTree() { return this->tree; }
 

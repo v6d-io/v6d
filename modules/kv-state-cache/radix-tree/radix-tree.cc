@@ -40,22 +40,26 @@ RadixTree::RadixTree(int cacheCapacity) {
   data->data = nullptr;
   data->dataLength = 0;
   dataNode->custom_data = data;
+  LOG(INFO) << "root data wrapper:" << data;
   dataNode->issubtree = true;
   this->rootToken = rootToken;
 }
 
 RadixTree::~RadixTree() {
+  LOG(INFO) << "~RadixTree";
+  raxShow(this->tree);
+
+  raxNode* dataNode = raxFindAndReturnDataNode(this->tree, rootToken.data(),
+                                               rootToken.size(), NULL, false);
+  if (dataNode != nullptr) {
+    delete (DataWrapper*) dataNode->custom_data;
+    delete (DataWrapper*) raxGetData(dataNode);
+  }
+
   // TBD
-  // raxFreeWithCallback(this->tree, [](raxNode *n) {
-  //   if (n->iskey && !n->isnull) {
-  //     nodeData* nodedata = (nodeData*) raxGetData(n);
-  //     delete nodedata;
-  //   }
-  //   if (n->issubtree && n->iscustomallocated && !n->iscustomnull) {
-  //     customData* customdata = (customData*) raxGetCustomData(n);
-  //     delete customdata;
-  //   }
-  // });
+  // raxFree(this->tree);
+  // This function will triggle a bug. Because the rax numele and numnode is not
+  // setted correctly.
 }
 
 std::shared_ptr<NodeData> RadixTree::Insert(
@@ -154,15 +158,22 @@ void RadixTree::DeleteInternal(std::vector<int> tokens,
   DataWrapper* oldData;
   raxNode* subTreeNode;
   std::vector<int> pre;
-  // raxFindAndReturnDataNode(this->tree, deleteTokensArray,
-  // deleteTokensArrayLen,
-  //                          &subTreeNode, false);
+  raxNode* dataNode = raxFindAndReturnDataNode(
+      this->tree, deleteTokensArray, deleteTokensArrayLen, &subTreeNode, false);
+  bool nodeIsSubTree = false;
+  if (dataNode != nullptr && dataNode->issubtree) {
+    nodeIsSubTree = true;
+  }
   int retval = raxRemove(this->tree, deleteTokensArray, deleteTokensArrayLen,
-                         (void**) &oldData, &subTreeNode);
+                         (void**) &oldData);
   if (retval == 1) {
     evictedNode = std::make_shared<NodeData>(
         oldData, (DataWrapper*) subTreeNode->custom_data);
     nodeCount--;
+    if (nodeIsSubTree) {
+      // subTreeDataSet.erase(subTreeNode->custom_data);
+      evictedNode->cleanTreeData = true;
+    }
   } else {
     LOG(INFO) << "remove failed";
   }
@@ -251,7 +262,7 @@ std::string RadixTree::Serialize() {
     char* bytes = (char*) ((DataWrapper*) subTreeDataList[index])->data;
     std::ostringstream dataOSS;
 
-    LOG(INFO) << "data lengtπh:"
+    LOG(INFO) << "data length:"
               << ((DataWrapper*) subTreeDataList[index])->dataLength;
     for (int i = 0; i < ((DataWrapper*) subTreeDataList[index])->dataLength;
          ++i) {
@@ -449,9 +460,7 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
     node->issubtree = true;
     raxSetCustomData(node, data);
 
-    // TBD
-    // refactor this code.
-    radixTree->subTreeDataSet.insert(data);
+    radixTree->subTreeDataSet.insert(subTreeDataList[i]);
   }
   LOG(INFO) << "Deserialize success";
   return radixTree;
@@ -460,9 +469,8 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
 std::vector<std::shared_ptr<NodeData>> RadixTree::SplitInternal(
     std::vector<int> tokens, std::shared_ptr<NodeData>& header) {
   std::vector<int> rootToken;
-  DataWrapper* dummyData = new DataWrapper();
   raxNode* subTreeRootNode =
-      raxSplit(this->tree, tokens.data(), tokens.size(), dummyData, rootToken);
+      raxSplit(this->tree, tokens.data(), tokens.size(), rootToken);
 
   raxShow(this->tree);
   subTreeRootNode->issubtree = true;
@@ -496,12 +504,9 @@ std::vector<std::shared_ptr<NodeData>> RadixTree::TraverseTreeWithoutSubTree(
   return nodes;
 }
 
-void RadixTree::SetSubtreeData(void* data, int dataLength) {
-  LOG(INFO) << "set subtree data";
-  DataWrapper* dataWrapper = new DataWrapper();
-  dataWrapper->data = data;
-  dataWrapper->dataLength = dataLength;
-  subTreeDataSet.insert(dataWrapper);
+void RadixTree::SetSubtreeData(void* data) {
+  LOG(INFO) << "set subtree data:" << data;
+  subTreeDataSet.insert(data);
 }
 
 std::shared_ptr<NodeData> RadixTree::GetRootNode() {
@@ -543,7 +548,7 @@ std::set<void*> RadixTree::GetAllNodeData() {
     if (node->isnull) {
       continue;
     }
-    nodeDataSet.insert(raxGetData(node));
+    nodeDataSet.insert(((DataWrapper*) raxGetData(node))->data);
   }
   return nodeDataSet;
 }
