@@ -111,6 +111,7 @@ typedef struct raxNode {
   uint32_t numnodes;      /* Number of the child nodes */
   uint32_t numele;        /* Number of elements inside this node. */
   uint64_t timestamp;    /* Timestamps of the node */
+  uint32_t sub_tree_size; /* Number of nodes in the sub tree */
   void *custom_data;
   /* Data layout is as follows:
    *

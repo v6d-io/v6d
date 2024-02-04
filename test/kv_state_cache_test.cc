@@ -113,10 +113,12 @@ int main() {
   inference(round_3_tokens);
   // inference(round_4_tokens);
   // sleep(5);
-  // Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin() + 6));
-  // Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin() + 5));
-  // Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin() + 4));
-  // Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin() + 3));
+  // Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin() +
+  // 6)); Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin()
+  // + 5)); Delete(std::vector<int>(round_4_tokens.begin(),
+  // round_4_tokens.begin() + 4));
+  // Delete(std::vector<int>(round_4_tokens.begin(), round_4_tokens.begin() +
+  // 3));
   while (1)
     ;
   return 0;

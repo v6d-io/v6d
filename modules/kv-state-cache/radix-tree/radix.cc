@@ -155,10 +155,14 @@ static inline void raxStackFree(raxStack *ts) {
 /* Add the number of nodes in the stack to each node. */
 void raxStackAddNumNodes(raxStack *stack, int num) {
     for (size_t i=0; i<stack->items; i++) {
-        raxNode *node = (raxNode *)stack->stack[i];
+        raxNode *node = (raxNode *)stack->stack[stack->items - i - 1];
         node->numnodes+=(num);
+        if (node->issubtree) {
+            break;
+        }
     }
 }
+
 /* ----------------------------------------------------------------------------
  * Radix tree implementation
  * --------------------------------------------------------------------------*/
@@ -2203,6 +2207,7 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
 
 /* Show a tree, as outlined in the comment above. */
 void raxShow(rax *rax) {
+    printf("rax numnode:%lu\n", rax->numele);
     raxRecursiveShow(0,0,rax->head);
     putchar('\n');
 }
