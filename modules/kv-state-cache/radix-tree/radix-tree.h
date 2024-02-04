@@ -20,7 +20,6 @@ limitations under the License.
 
 #include "common/util/base64.h"
 #include "common/util/logging.h"
-#include "lz4.h"
 
 #include <iomanip>
 #include <map>
