@@ -83,7 +83,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
   std::shared_ptr<NodeData> rootTreeHeader = this->rootTree->GetRootNode();
   rootTreeHeader->treeData->data = treeData;
   rootTreeHeader->treeData->dataLength = sizeof(TreeData);
-  this->rootTree->SetSubtreeData(treeData, sizeof(TreeData));
+  this->rootTree->SetSubtreeData(treeData);
   LOG(INFO) << "set builder:" << builder
             << " to tree:" << this->rootTree->GetRootTree()->head;
   LOG(INFO) << "data:" << treeData
@@ -102,7 +102,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
   std::set<void*> subTreeData = cache->rootTree->GetSubTreeDataSet();
 
   for (auto iter = subTreeData.begin(); iter != subTreeData.end(); ++iter) {
-    TreeData* treeData = (TreeData*) ((DataWrapper*) *iter)->data;
+    TreeData* treeData = (TreeData*) (*iter);
     LOG(INFO) << "tree data:" << treeData;
     VINEYARD_ASSERT(treeData->isPtr == false);
     LOG(INFO) << "id:" << treeData->builderObjectID;
@@ -135,13 +135,12 @@ KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
         kvStateCacheBlockBuilder->GetKeyStateBuilder();
     const std::shared_ptr<TensorBuilder<double>> valueStateTensorBuilder =
         kvStateCacheBlockBuilder->GetValueStateBuilder();
-    OffsetData* new_offset_data = new OffsetData();
+    OffsetData new_offset_data;
     childKVStateCacheBlockBuilder->Update(
         keyStateTensorBuilder->data() + index * this->dimension,
         valueStateTensorBuilder->data() + index * this->dimension,
-        this->dimension, new_offset_data);
-    nodeDataList[i]->nodeData->data = new_offset_data;
-    nodeDataList[i]->nodeData->dataLength = sizeof(OffsetData);
+        this->dimension, &new_offset_data);
+    data->offset = new_offset_data.offset;
     // Clear the bitmap.
     kvStateCacheBlockBuilder->DeleteKVCache(index);
   }
@@ -177,6 +176,13 @@ void KVStateCacheBuilder::Update(Client& client,
     Delete(evictedNodeData);
   }
 
+  // if (evictedNodeData->treeData != nullptr && evictedNodeData->nodeData !=
+  // nullptr) {
+  //   if (evictedNodeData->nodeData->data != nullptr) {
+  //     delete (TreeData*) evictedNodeData->nodeData->data;
+  //   }
+  // }
+
   // TBD
   // Use lock to protect the kv_state_cache_builder
   LOG(INFO) << "data:" << nodeData->treeData->data
@@ -204,7 +210,7 @@ void KVStateCacheBuilder::Update(Client& client,
 
     subTreeHeader->treeData->data = newTreeData;
     subTreeHeader->treeData->dataLength = sizeof(TreeData);
-    rootTree->SetSubtreeData(newTreeData, sizeof(TreeData));
+    rootTree->SetSubtreeData(newTreeData);
     LOG(INFO) << "block split success";
 
     // kv_state_cache_builder->UnLock();
@@ -257,6 +263,15 @@ void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
   kvStateCacheBlockBuilder->DeleteKVCache(data->offset);
   LOG(INFO) << "stage4";
   delete data;
+  // TBD
+  // Refactor this code. The data should be deleted by the RadixTree
+  // delete (DataWrapper*) evictedNodeData->nodeData;
+  LOG(INFO) << "tree data:" << evictedNodeData->treeData->data;
+  if (evictedNodeData->cleanTreeData) {
+    LOG(INFO) << "erase";
+    this->rootTree->GetSubTreeDataSet().erase(evictedNodeData->treeData->data);
+  }
+  evictedNodeData->RecycleSource();
 }
 
 void KVStateCacheBuilder::Merge(Client& client,
@@ -320,11 +335,10 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   // change the tree data from pointer to object id
 
   int count = 0;
-  LOG(INFO) << "count:" << count;
   std::set<void*> subTreeDataSet = rootTree->GetSubTreeDataSet();
   for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
        ++iter) {
-    TreeData* treeData = (TreeData*) ((DataWrapper*) *iter)->data;
+    TreeData* treeData = (TreeData*) (*iter);
     VINEYARD_ASSERT(treeData != nullptr);
     VINEYARD_ASSERT(treeData->isPtr == true);
 
@@ -357,12 +371,25 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
 }
 
 KVStateCacheBuilder::~KVStateCacheBuilder() {
-  // TBD
-  // std::vector<std::shared_ptr<NodeData>> nodeDataList =
-  //     RadixTree::TraverseTreeWithoutSubTree(this->rootTree);
-  // for (size_t i = 0; i < nodeDataList.size(); i++) {
-  //   delete (OffsetData*) nodeDataList[i]->get_node()->get_data();
-  // }
+  LOG(INFO) << "KVStateCacheBuilder::~KVStateCacheBuilder";
+  // get all subtree data and node data
+  std::set<void*> subTreeDataSet = rootTree->GetSubTreeDataSet();
+  std::set<void*> nodeDataSet = rootTree->GetAllNodeData();
+  // 2. delete all subtree data and node data
+  for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
+       ++iter) {
+    TreeData* treeData = (TreeData*) (*iter);
+    if (treeData->isPtr == true) {
+      delete (KVStateCacheBlockBuilder*) treeData->kvStateCacheBlockBuilder;
+      delete treeData;
+    }
+  }
+  for (auto iter = nodeDataSet.begin(); iter != nodeDataSet.end(); ++iter) {
+    OffsetData* data = (OffsetData*) (*iter);
+    if (data != nullptr) {
+      delete data;
+    }
+  }
 }
 
 }  // namespace vineyard
