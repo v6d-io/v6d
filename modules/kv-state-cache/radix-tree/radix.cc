@@ -2337,7 +2337,6 @@ raxNode *raxSplit(rax *rax, int *s, size_t len, std::vector<int>& token) {
     }
 
     // find the node that has N/2 children
-    childNode = (raxNode *)stack.stack[stack.items - 1];
     while (items > 0) {
         raxNode *node = (raxNode *)raxStackPop(&stack);
         if (node->numnodes > (uint32_t)subtreeNumNodes/2 || node->issubtree) {
@@ -2368,7 +2367,12 @@ raxNode *raxSplit(rax *rax, int *s, size_t len, std::vector<int>& token) {
 
     // if the splitNode is NULL, it means that the tree only has one node
     if (splitNode == NULL) {
-        return rax->head;
+        // if the stack is not empty, it means that top of the stack is the target node
+        if (stack.items > 0) {
+            return (raxNode *)raxStackPop(&stack);
+        } else {
+            return rax->head;
+        }
     }
 
     raxSetSubtree(splitNode);
