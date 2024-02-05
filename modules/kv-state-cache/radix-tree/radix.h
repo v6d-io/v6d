@@ -111,6 +111,7 @@ typedef struct raxNode {
   uint32_t numnodes;      /* Number of the child nodes */
   uint32_t numele;        /* Number of elements inside this node. */
   uint64_t timestamp;    /* Timestamps of the node */
+  uint32_t sub_tree_size; /* Number of nodes in the sub tree */
   void *custom_data;
   /* Data layout is as follows:
    *
@@ -212,7 +213,7 @@ int raxInsert(rax *rax, int *s, size_t len, void *data, void **old, bool set_tim
 int raxTryInsert(rax* rax, int* s, size_t len, void* data, void** old);
 int raxInsertAndReturnDataNode(rax* rax, int* s, size_t len, void* data,
                                void** node, void** old);
-int raxRemove(rax* rax, int* s, size_t len, void** old, raxNode** sub_tree_node = NULL, bool set_timestamp = true);
+int raxRemove(rax* rax, int* s, size_t len, void** old, bool set_timestamp = true);
 void* raxFind(rax* rax, int* s, size_t len);
 raxNode* raxFindAndReturnDataNode(rax* rax, int* s, size_t len, raxNode** sub_tree_node = NULL, bool set_timestamp = true);
 void raxSetSubtree(raxNode *n);
@@ -238,7 +239,7 @@ void raxSetDebugMsg(int onoff);
 void raxTraverse(raxNode* rax,
                  std::vector<std::shared_ptr<raxNode>>& dataNodeList);
 void raxTraverseSubTree(raxNode* n, std::vector<raxNode*> &dataNodeList);
-raxNode *raxSplit(rax *rax, int *s, size_t len, void *data, std::vector<int>& key);
+raxNode *raxSplit(rax *rax, int *s, size_t len, std::vector<int>& key);
 void raxSerialize(rax* root, std::vector<std::vector<int>>& tokenList, std::vector<void*>& dataList, std::vector<uint64_t> &timestampsList,
                   std::vector<std::vector<int>> *subtreeList, std::vector<void*> *subtreeNodeList);
 
@@ -251,4 +252,5 @@ void raxFindLastRecentNode(raxNode *node, std::vector<int>& key);
 void mergeTree(rax* first_tree, rax* second_tree, std::vector<std::vector<int>>& evicted_tokens, std::set<std::vector<int>>& insert_tokens, int max_node);
 void testIteRax(rax *tree);
 raxNode* raxGetFirstChildPtr(raxNode* node);
+// raxNode *raxSetSubTreeAndReturnDataNode(rax *rax, int *s, size_t len);
 #endif

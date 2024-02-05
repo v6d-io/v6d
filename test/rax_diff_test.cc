@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
   for (size_t i = 0; i < evicted_tokens.size(); i++) {
     // void* tree_data;
     raxRemove(rt_1, evicted_tokens[i].data(), evicted_tokens[i].size(), NULL,
-              NULL, false);
+              false);
   }
 
   for (auto it = insert_tokens.begin(); it != insert_tokens.end(); it++) {
