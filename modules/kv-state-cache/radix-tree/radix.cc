@@ -2336,8 +2336,8 @@ raxNode *raxSplit(rax *rax, int *s, size_t len, std::vector<int>& token) {
         index--;
     }
 
-
     // find the node that has N/2 children
+    childNode = (raxNode *)stack.stack[stack.items - 1];
     while (items > 0) {
         raxNode *node = (raxNode *)raxStackPop(&stack);
         if (node->numnodes > (uint32_t)subtreeNumNodes/2 || node->issubtree) {
