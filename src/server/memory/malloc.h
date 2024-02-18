@@ -42,7 +42,7 @@ namespace memory {
 constexpr int64_t kBlockSize = 64;
 constexpr int64_t kCUDABlockSize = 64;
 
-void GetMallocMapinfo(void* addr, int* fd, int64_t* map_length,
+void GetMallocMapInfo(void* addr, int* fd, int64_t* map_length,
                       ptrdiff_t* offset);
 
 struct MmapRecord {

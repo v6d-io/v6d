@@ -21,14 +21,11 @@ ENV PLATFORM $PLATFORM
 
 # target: ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20240218_$PLATFORM
 
-ENV PATH=$PATH:/opt/python/cp310-cp310/bin
-
+# Not sure why bundled cmake(3.28.0) in pipx doesn't work
+#
+# error message: Could NOT find Python (missing: Python_LIBRARIES Development Development.Embed) (found suitable version "3.12.2", minimum required is "3.6")
 RUN echo "Installing cmake ..." && \
-    mkdir -p /deps && \
-    cd /deps && \
-    curl -L https://cmake.org/files/v3.19/cmake-3.19.5-Linux-$PLATFORM.sh --output cmake-3.19.5-Linux-$PLATFORM.sh && \
-    bash ./cmake-3.19.5-Linux-$PLATFORM.sh --skip-license --prefix=/usr && \
-    rm -rf /deps
+    pipx install cmake==3.25.0 --force
 
 RUN echo "Installing glog ..." && \
     mkdir -p /deps && \

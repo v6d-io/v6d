@@ -299,9 +299,9 @@ int munmap_buffer(void* addr, int64_t size) {
   return r;
 }
 
-void GetMallocMapinfo(void* addr, int* fd, int64_t* map_size,
+void GetMallocMapInfo(void* addr, int* fd, int64_t* map_size,
                       ptrdiff_t* offset) {
-  // About the efficiences: the records size usually small, thus linear search
+  // About the efficiency: the records size usually small, thus linear search
   // is enough.
   for (const auto& entry : mmap_records) {
     if (addr >= entry.first &&
