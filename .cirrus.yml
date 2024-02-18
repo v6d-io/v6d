@@ -17,10 +17,11 @@ macosx_arm64_wheel_task:
     - brew install coreutils golang pyenv python
 
   install_various_python_script:
-    - pyenv install 3.8.16
-    - pyenv install 3.9.16
-    - pyenv install 3.10.10
-    - pyenv install 3.11.2
+    - pyenv install 3.8.18
+    - pyenv install 3.9.18
+    - pyenv install 3.10.13
+    - pyenv install 3.11.8
+    - pyenv install 3.12.2
 
   install_apache_arrow_script: |
     echo "Installing apache-arrow ..."
@@ -162,7 +163,7 @@ macosx_arm64_wheel_task:
     - mkdir -p build
     - cd build
     - |
-      pyenv global 3.11.2
+      pyenv global 3.11.8
       cmake .. -DCMAKE_BUILD_TYPE=Release \
                -DCMAKE_CXX_STANDARD=17 \
                -DCMAKE_CXX_STANDARD_REQUIRED=TRUE \
@@ -184,7 +185,7 @@ macosx_arm64_wheel_task:
     path: build/bin/vineyardd
 
   build_vineyard_bdist_script:
-    - pyenv global 3.11.2
+    - pyenv global 3.11.8
     - cp k8s/vineyardctl ./python/vineyard/bdist/vineyardctl
     - cp build/bin/vineyardd ./python/vineyard/bdist/vineyardd
     - strip ./python/vineyard/bdist/vineyardctl
@@ -193,7 +194,7 @@ macosx_arm64_wheel_task:
 
   build_vineyard_python_script:
     - |
-      for py in 3.8.16 3.9.16 3.10.10 3.11.2; do
+      for py in 3.8.18 3.9.18 3.10.13 3.11.8 3.12.2; do
         current_python=$(pyenv root)/versions/$py/bin/python
         echo "Python is: $current_python, $($current_python --version)"
         $current_python -m pip install delocate wheel

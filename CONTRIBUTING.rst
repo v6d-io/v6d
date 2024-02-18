@@ -230,13 +230,13 @@ using the following commands:
 Creating a Release
 ------------------
 
-The Vineyard Python package is built using the `manylinux1`_ environment. To create
+The Vineyard Python package is built using the `manylinux2014`_ environment. To create
 a release version, we utilize Docker for a consistent and reliable build process.
 The base image's details can be found in the `docker/pypa/Dockerfile.manylinux1`_ file.
 
 .. _pre-commit: https://pre-commit.com/
 .. _file an issue: https://github.com/v6d-io/v6d/issues/new/new
-.. _manylinux1: https://github.com/pypa/manylinux
+.. _manylinux2014: https://github.com/pypa/manylinux
 .. _search: https://github.com/v6d-io/v6d/pulls
 .. _CLA: https://cla-assistant.io/v6d-io/v6d
 .. _DCO: https://github.com/apps/dco
