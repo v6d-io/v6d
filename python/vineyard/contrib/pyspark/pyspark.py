@@ -73,9 +73,7 @@ def pyspark_table_resolver(obj, resolver, **kw):  # pylint: disable=unused-argum
         _jvineyardRDD = jvm.io.v6d.spark.rdd.VineyardRDD(
             sc._jsc.sc(), _jmeta, "partitions_", socket, _jclient.getClusterStatus()
         )
-        _jTableRDD = jvm.io.v6d.spark.rdd.TableRDD.fromVineyard(
-            _jvineyardRDD
-        )
+        _jTableRDD = jvm.io.v6d.spark.rdd.TableRDD.fromVineyard(_jvineyardRDD)
         _jdf = _jTableRDD.makeDataFrame(_jclient, sparkSession._jsparkSession, _jmeta)
         df = _java2py(sc, _jdf)
         return df
