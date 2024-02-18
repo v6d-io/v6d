@@ -308,7 +308,7 @@ jobs:
           WHEEL_VERSION: "${{ github.sha }}"
         run: |
           mkdir -p fixed_wheels
-          for py in cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311; do
+          for py in cp36-cp36m cp37-cp37m cp38-cp38 cp39-cp39 cp310-cp310 cp311-cp311 cp312-cp312; do
             make -C docker/ python-wheel WHEEL_PYTHON=$py WHEEL_VERSION=$WHEEL_VERSION PLATFORM=${{ matrix.platform }}
             docker run --rm \
               -v `pwd`/fixed_wheels:/target \

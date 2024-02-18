@@ -13,13 +13,13 @@
 # limitations under the License.
 
 ARG PLATFORM=x86_64
-FROM quay.io/pypa/manylinux2014_$PLATFORM:2023-01-14-103cb93
+FROM quay.io/pypa/manylinux2014_$PLATFORM:2024-02-16-b3cad8f
 
 # re-declare after FROM, reusing the default value
 ARG PLATFORM
 ENV PLATFORM $PLATFORM
 
-# target: ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20230316_$PLATFORM
+# target: ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20240218_$PLATFORM
 
 ENV PATH=$PATH:/opt/python/cp310-cp310/bin
 
