@@ -14,7 +14,8 @@ macosx_arm64_wheel_task:
 
   install_deps_script:
     - brew update
-    - brew install coreutils golang pyenv python
+    # go 1.22 doesn't work, see also: https://github.com/golang/go/issues/37602
+    - brew install coreutils go@1.21 pyenv python
 
   install_various_python_script:
     - pyenv install 3.8.18
@@ -154,7 +155,9 @@ macosx_arm64_wheel_task:
     sudo rm -rf /tmp/install
 
   build_vineyardctl_script:
-    - make -C k8s vineyardctl
+    - |
+      export PATH=$(brew --prefix go@1.21)/bin:$PATH
+      make -C k8s vineyardctl
 
   vineyardctl_artifacts:
     path: k8s/vineyardctl
@@ -197,7 +200,7 @@ macosx_arm64_wheel_task:
       for py in 3.8.18 3.9.18 3.10.13 3.11.8 3.12.2; do
         current_python=$(pyenv root)/versions/$py/bin/python
         echo "Python is: $current_python, $($current_python --version)"
-        $current_python -m pip install delocate wheel
+        $current_python -m pip install delocate setuptools wheel
         rm -rf build/lib* build/bdist.* python/vineyard/*.dylib python/vineyard/*.so
         mkdir -p build
         cd build
