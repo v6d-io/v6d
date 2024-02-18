@@ -62,12 +62,34 @@ def pyspark_dataframe_resolver(obj, resolver, **kw):  # pylint: disable=unused-a
     return py4j_wrapper(obj.meta.id, kw["spark_conf"], kw["socket"])
 
 
+def pyspark_table_resolver(obj, resolver, **kw):  # pylint: disable=unused-argument
+    def py4j_wrapper(obj_id, spark_conf, socket):
+        sparkSession = SparkSession.builder.config(conf=spark_conf).getOrCreate()
+        sc = sparkSession.sparkContext
+        jvm = sc._jvm
+        _jclient = jvm.io.v6d.core.client.IPCClient(socket)
+        _jobjectId = jvm.io.v6d.core.common.util.ObjectID.fromString(obj_id.__repr__())
+        _jmeta = _jclient.getMetaData(_jobjectId)
+        _jvineyardRDD = jvm.io.v6d.spark.rdd.VineyardRDD(
+            sc._jsc.sc(), _jmeta, "partitions_", socket, _jclient.getClusterStatus()
+        )
+        _jTableRDD = jvm.io.v6d.spark.rdd.TableRDD.fromVineyard(
+            _jvineyardRDD
+        )
+        _jdf = _jTableRDD.makeDataFrame(_jclient, sparkSession._jsparkSession, _jmeta)
+        df = _java2py(sc, _jdf)
+        return df
+
+    return py4j_wrapper(obj.meta.id, kw["spark_conf"], kw["socket"])
+
+
 def register_pyspark_types(builder_ctx=None, resolver_ctx=None):
     if builder_ctx is not None:
         builder_ctx.register(pyspark.sql.dataframe.DataFrame, pyspark_dataframe_builder)
 
     if resolver_ctx is not None:
         resolver_ctx.register('vineyard::GlobalDataFrame', pyspark_dataframe_resolver)
+        resolver_ctx.register('vineyard::Table', pyspark_table_resolver)
 
 
 @contextlib.contextmanager
