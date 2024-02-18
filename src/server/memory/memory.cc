@@ -37,6 +37,7 @@
 #include <memory>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "common/util/logging.h"  // IWYU pragma: keep
@@ -47,7 +48,7 @@
 
 namespace vineyard {
 
-using memory::GetMallocMapinfo;
+using memory::GetMallocMapInfo;
 using memory::kBlockSize;
 using memory::kCUDABlockSize;
 
@@ -111,7 +112,7 @@ static inline size_t recycle_resident_memory(const uintptr_t base, size_t left,
             << reinterpret_cast<void*>(aligned_left) << ") to "
             << reinterpret_cast<void*>(base + right) << "("
             << reinterpret_cast<void*>(aligned_right)
-            << "), sizes: " << (right - left);
+            << "), size: " << (right - left);
   return recycle_resident_memory(aligned_left, aligned_right,
                                  release_immediately);
 }
@@ -122,26 +123,42 @@ static inline size_t recycle_resident_memory(const uintptr_t base, size_t left,
  * n.b.: the intervals may overlap.
  */
 size_t recycle_arena(const uintptr_t base, const size_t size,
-                     std::vector<size_t> const& offsets,
-                     std::vector<size_t> const& sizes,
+                     std::vector<std::pair<size_t, size_t>> const& spans,
                      const bool release_immediately = false) {
   std::map<size_t, int32_t> pointers;
-  pointers[0] = 0;
-  pointers[size] = 0;
-  for (size_t idx = 0; idx < offsets.size(); ++idx) {
-    pointers[offsets[idx]] += 1;
-    pointers[offsets[idx] + sizes[idx]] -= 1;
+
+  size_t min_address = size, max_address = 0;
+  for (size_t idx = 0; idx < spans.size(); ++idx) {
+    auto& span = spans[idx];
+    pointers[span.first] += 1;
+    pointers[span.first + span.second] -= 1;
+    min_address = std::min(min_address, span.first);
+    max_address = std::max(max_address, span.first + span.second);
   }
-  auto head = pointers.begin();
-  int markersum = 0;
+
+  // skip the header/footer for mallocinfo
+  pointers[std::min<size_t>(4 * (1 << 20), min_address - 1)] = 0;
+  pointers[std::max<size_t>(size - (4 * (1 << 20)), max_address + 1)] = 0;
+
+  auto begin = std::next(pointers.begin()), end = std::prev(pointers.end());
+  while (begin != end) {
+    if (begin->second == 0) {
+      begin = pointers.erase(begin);
+    } else {
+      begin = std::next(begin);
+    }
+  }
+
+  auto head = pointers.begin(), tail = pointers.end();
+  int marker_count = 0;
   size_t released = 0;
-  while (true) {
-    markersum += head->second;
+  while (head != tail) {
+    marker_count += head->second;
     auto next = std::next(head);
-    if (next == pointers.end()) {
+    if (next == tail) {
       break;
     }
-    if (markersum == 0) {
+    if (marker_count == 0) {
       // release memory in the untouched interval.
       released += recycle_resident_memory(base, head->first, next->first,
                                           release_immediately);
@@ -181,7 +198,7 @@ uint8_t* BulkStoreBase<ID, P>::AllocateMemory(size_t size, int* fd,
   pointer =
       reinterpret_cast<uint8_t*>(BulkAllocator::Memalign(size, kBlockSize));
   if (pointer) {
-    GetMallocMapinfo(pointer, fd, map_size, offset);
+    GetMallocMapInfo(pointer, fd, map_size, offset);
   }
   return pointer;
 }
@@ -404,17 +421,17 @@ template <typename ID, typename P>
 bool BulkStoreBase<ID, P>::MemoryTrim() {
   auto locked = objects_.lock_table();
   std::map<int /* fd */,
-           std::tuple<const uintptr_t /* base */, const size_t /* size */,
-                      std::vector<size_t> /*offsets*/,
-                      std::vector<size_t> /* sizes */>>
+           std::tuple<
+               const uintptr_t /* base */, const size_t /* size */,
+               std::vector<std::pair<size_t /* offset */, size_t /* size */>>>>
       kepts;
 
   for (auto const& record : memory::mmap_records) {
     if (record.second.kind == memory::MmapRecord::Kind::kMalloc) {
       kepts.emplace(record.second.fd,
                     std::make_tuple(reinterpret_cast<uintptr_t>(record.first),
-                                    record.second.size, std::vector<size_t>(),
-                                    std::vector<size_t>()));
+                                    record.second.size,
+                                    std::vector<std::pair<size_t, size_t>>()));
     }
   }
   for (auto iter = locked.begin(); iter != locked.end(); iter++) {
@@ -429,18 +446,15 @@ bool BulkStoreBase<ID, P>::MemoryTrim() {
       continue;
     }
     auto& kept = kepts[object->store_fd];
-    auto& offsets = std::get<2>(kept);
-    auto& sizes = std::get<3>(kept);
-    offsets.emplace_back(object->data_offset);
-    sizes.emplace_back(object->data_size);
+    auto& spans = std::get<2>(kept);
+    spans.emplace_back(object->data_offset, object->data_size);
   }
   size_t released = 0;
   for (auto& kept : kepts) {
     auto& base = std::get<0>(kept.second);
     auto& size = std::get<1>(kept.second);
-    auto& offsets = std::get<2>(kept.second);
-    auto& sizes = std::get<3>(kept.second);
-    released += memory::recycle_arena(base, size, offsets, sizes, true);
+    auto& spans = std::get<2>(kept.second);
+    released += memory::recycle_arena(base, size, spans, true);
   }
   return released > 0;
 }
@@ -496,7 +510,7 @@ Status BulkStoreBase<ID, P>::PreAllocate(const size_t size,
   int fd = -1;
   int64_t map_size = 0;
   ptrdiff_t offset = 0;
-  GetMallocMapinfo(pointer, &fd, &map_size, &offset);
+  GetMallocMapInfo(pointer, &fd, &map_size, &offset);
   auto payload = std::make_shared<P>(
       object_id, size, static_cast<uint8_t*>(pointer), fd, map_size, offset);
   payload->is_sealed = true;
@@ -535,7 +549,13 @@ Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
     Arena::spans.emplace(object_id);
   }
   // recycle memory
-  { memory::recycle_arena(mmap_base, mmap_size, offsets, sizes); }
+  {
+    std::vector<std::pair<size_t, size_t>> spans;
+    for (size_t idx = 0; idx < offsets.size(); ++idx) {
+      spans.emplace_back(offsets[idx], sizes[idx]);
+    }
+    memory::recycle_arena(mmap_base, mmap_size, spans);
+  }
   // make it available for mmap record
   {
     memory::MmapRecord& record =

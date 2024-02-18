@@ -24,6 +24,7 @@ FROM ghcr.io/v6d-io/v6d/vineyard-manylinux2014:$BASE_VERSION as builder
 #   - cp39-cp39
 #   - cp310-cp310
 #   - cp311-cp311
+#   - cp312-cp312
 ARG python
 
 ADD . /work/v6d
@@ -31,7 +32,7 @@ ADD . /work/v6d
 RUN cd /work/v6d && \
     mkdir build && \
     cd build && \
-    export PATH=$PATH:/opt/python/$python/bin && \
+    export PATH=/opt/python/$python/bin:$PATH && \
     pip install -U pip setuptools wheel libclang parsec && \
     cmake .. -DCMAKE_CXX_STANDARD=17 \
              -DBUILD_SHARED_LIBS=OFF \
