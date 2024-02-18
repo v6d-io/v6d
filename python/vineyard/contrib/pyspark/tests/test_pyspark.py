@@ -86,7 +86,7 @@ def test_pyspark_dataframe_builder(pyspark_cluster):
         .toDF()
         .repartition(4)
     )
-    obj_id = client.put(df)
+    obj_id = client.put(df, spark_conf=conf, socket=sock)
     meta = client.get_meta(obj_id)
     assert meta['partitions_-size'] == 4
 
@@ -103,3 +103,19 @@ def test_pyspark_dataframe_resolver(pyspark_cluster):
     gdf = make_global_dataframe(client, chunks)
     pdf = client.get(gdf.id, spark_conf=conf, socket=sock)
     assert pdf.select(F.sum('x'), F.sum('y')).rdd.map(sum).collect()[0] == 60
+
+
+def test_pyspark_dataframe_roundtrip(pyspark_cluster):
+    conf, sock = pyspark_cluster
+    client = vineyard.connect(sock)
+    sparkSession = SparkSession.builder.config(conf=conf).getOrCreate()
+    sc = sparkSession.sparkContext
+    df1 = (
+        RandomRDDs.uniformVectorRDD(sc, 1024, 1024)
+        .map(lambda a: a.tolist())
+        .toDF()
+        .repartition(4)
+    )
+    obj_id = client.put(df1, spark_conf=conf, socket=sock)
+    df2 = client.get(obj_id, spark_conf=conf, socket=sock)
+    assert (df1.schema == df2.schema) and (df1.collect() == df2.collect())
