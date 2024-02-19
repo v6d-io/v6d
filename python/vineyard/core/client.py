@@ -149,7 +149,8 @@ class Client:
                     a path to a directory containing the default config file
                     `vineyard.yaml`. Also, the environment variable
                     `VINEYARD_CONFIG` can be used to specify the
-                    path to the configuration file.
+                    path to the configuration file. If not defined, the default
+                    config file `/var/run/vineyard/config.yaml` will be used.
 
         The content of the configuration file should has the following content:
 
@@ -178,7 +179,7 @@ class Client:
         if not endpoint and not (host and port):
             endpoint = os.getenv('VINEYARD_RPC_ENDPOINT', None)
         if not config:
-            config = os.getenv('VINEYARD_CONFIG', None)
+            config = os.getenv('VINEYARD_CONFIG', '/var/run/vineyard/config.yaml')
         if endpoint:
             if not isinstance(endpoint, (tuple, list)):
                 endpoint = endpoint.split(':')
