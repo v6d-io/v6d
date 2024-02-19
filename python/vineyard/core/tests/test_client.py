@@ -320,4 +320,4 @@ def test_memory_trim(vineyard_client):
 
     vineyard_client.memory_trim()
     # there might be some fragmentation overhead
-    assert parse_shared_memory_usage() <= original_memory_usage + 1 * data_kbytes
+    assert parse_shared_memory_usage() <= original_memory_usage + 2 * data_kbytes

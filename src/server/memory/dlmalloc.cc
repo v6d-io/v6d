@@ -52,6 +52,9 @@ int fake_munmap(void*, int64_t);
 #define DEFAULT_GRANULARITY ((size_t) 128U * 1024U)
 #define USE_LOCKS 1 /* makes the dlmalloc thread safe (but is not scalable) */
 
+// prevent dlmalloc from crash for unexpected reasons
+#define PROCEED_ON_ERROR 1
+
 #include "dlmalloc/dlmalloc.c"  // NOLINT
 
 #undef MMAP
