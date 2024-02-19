@@ -29,6 +29,25 @@ from vineyard.io.utils import report_exception
 from vineyard.io.utils import report_success
 
 
+def record_batch_from_dataframe(df):
+    schema = pa.Schema.from_pandas(df)
+    fields = []
+    for field in schema:
+        if field.type == pa.string():
+            dtype = pa.large_string()
+        elif field.type == pa.binary():
+            dtype = pa.large_binary()
+        elif field.type == pa.utf8():
+            dtype = pa.large_utf8()
+        elif pa.types.is_list(field.type):
+            dtype = pa.large_list(field.type.value_type)
+        else:
+            dtype = field.type
+        fields.append(pa.field(field.name, dtype))
+    schema = pa.schema(fields, metadata=schema.metadata)
+    return pa.RecordBatch.from_pandas(df, schema)
+
+
 def read_vineyard_dataframe(
     vineyard_socket, path, storage_options, read_options, _proc_num, _proc_index
 ):
@@ -60,7 +79,7 @@ def read_vineyard_dataframe(
     try:
         for batch in dataframes:
             if not isinstance(batch, pa.RecordBatch):
-                batch = pa.RecordBatch.from_pandas(batch)
+                batch = record_batch_from_dataframe(batch)
             writer.write(batch)
         writer.finish()
     except Exception:  # pylint: disable=broad-except
