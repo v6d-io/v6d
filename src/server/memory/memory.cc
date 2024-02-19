@@ -125,20 +125,26 @@ static inline size_t recycle_resident_memory(const uintptr_t base, size_t left,
 size_t recycle_arena(const uintptr_t base, const size_t size,
                      std::vector<std::pair<size_t, size_t>> const& spans,
                      const bool release_immediately = false) {
+  const size_t overhead_bytes = 8;  // 2 words
+  const size_t malloc_info_bytes = 128 * (1 << 20);
+
   std::map<size_t, int32_t> pointers;
 
   size_t min_address = size, max_address = 0;
   for (size_t idx = 0; idx < spans.size(); ++idx) {
     auto& span = spans[idx];
-    pointers[span.first] += 1;
-    pointers[span.first + span.second] -= 1;
-    min_address = std::min(min_address, span.first);
-    max_address = std::max(max_address, span.first + span.second);
+    size_t begin = span.first - overhead_bytes;
+    size_t end = span.first + span.second + overhead_bytes;
+    pointers[begin] += 1;
+    pointers[end] -= 1;
+    min_address = std::min(min_address, begin);
+    max_address = std::max(max_address, end);
   }
 
-  // skip the header/footer for mallocinfo
-  pointers[std::min<size_t>(4 * (1 << 20), min_address - 1)] = 0;
-  pointers[std::max<size_t>(size - (4 * (1 << 20)), max_address + 1)] = 0;
+  // skip the header/footer for mallocinfo: 128M
+  pointers[std::min<size_t>(malloc_info_bytes, min_address - 1)] = 0;
+  pointers[std::max<size_t>(size - std::min(size, malloc_info_bytes),
+                            max_address + 1)] = 0;
 
   auto begin = std::next(pointers.begin()), end = std::prev(pointers.end());
   while (begin != end) {
