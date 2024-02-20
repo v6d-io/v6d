@@ -427,7 +427,7 @@ def put(
         E.g. 127.0.0.1:9600
     VINEYARD_CONFIG:
         Either be a path to a YAML configuration file or a path to a
-        directory containing the default config file `vineyard.yaml`.
+        directory containing the default config file `vineyard-config.yaml`.
 
         The configuration file should be like:
 
@@ -492,7 +492,7 @@ def get(
         E.g. 127.0.0.1:9600
     VINEYARD_CONFIG:
         Either be a path to a YAML configuration file or a path to a
-        directory containing the default config file `vineyard.yaml`.
+        directory containing the default config file `vineyard-config.yaml`.
 
         The configuration file should be like:
 

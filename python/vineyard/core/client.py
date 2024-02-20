@@ -56,7 +56,7 @@ def _parse_configuration(config) -> Tuple[Optional[str], Optional[str]]:
 
     Parameters:
         config: Path to a YAML configuration file or a directory containing
-                the default config file `vineyard.yaml`.
+                the default config file `vineyard-config.yaml`.
 
     Returns:
         (socket, endpoints): IPC socket path and RPC endpoints.
@@ -70,7 +70,7 @@ def _parse_configuration(config) -> Tuple[Optional[str], Optional[str]]:
         return None, None
 
     if os.path.isdir(config):
-        config = os.path.join(config, 'vineyard.yaml')
+        config = os.path.join(config, 'vineyard-config.yaml')
     if not os.path.isfile(config):
         return None, None
 
@@ -131,8 +131,8 @@ class Client:
         - `connect('hostname', port)`, which will try to establish an RPC connection.
         - `connect(endpoint=('hostname', port))`, which will try to establish an RPC
           connection.
-        - `connect(config='/path/to/vineyard.yaml')`, which will try to resolve the IPC
-          socket and RPC endpoints from the configuration file.
+        - `connect(config='/path/to/vineyard-config.yaml')`, which will try to
+          resolve the IPC socket and RPC endpoints from the configuration file.
 
         Parameters:
             socket: Optional, the path to the IPC socket, or RPC endpoints of format
@@ -147,10 +147,10 @@ class Client:
                       is enabled.
             config: Optional, can either be a path to a YAML configuration file or
                     a path to a directory containing the default config file
-                    `vineyard.yaml`. Also, the environment variable
+                    `vineyard-config.yaml`. Also, the environment variable
                     `VINEYARD_CONFIG` can be used to specify the
                     path to the configuration file. If not defined, the default
-                    config file `/var/run/vineyard/config.yaml` will be used.
+                    config file `/var/run/vineyard-config.yaml` will be used.
 
         The content of the configuration file should has the following content:
 
@@ -179,7 +179,7 @@ class Client:
         if not endpoint and not (host and port):
             endpoint = os.getenv('VINEYARD_RPC_ENDPOINT', None)
         if not config:
-            config = os.getenv('VINEYARD_CONFIG', '/var/run/vineyard/config.yaml')
+            config = os.getenv('VINEYARD_CONFIG', '/var/run/vineyard-config.yaml')
         if endpoint:
             if not isinstance(endpoint, (tuple, list)):
                 endpoint = endpoint.split(':')
