@@ -296,7 +296,7 @@ def connect(*args, **kwargs):
 
     If no arguments are provided and failed to resolve both the environment
     variables :code:`VINEYARD_IPC_SOCKET`, :code:`VINEYARD_RPC_ENDPOINT`,
-    :code:`VINEYARD_CONFIG`, and the default configuration file 
+    :code:`VINEYARD_CONFIG`, and the default configuration file
     :code:`/var/run/vineyard-config.yaml`, it will launch a standalone
     vineyardd server in the background and then connect to it.
 
