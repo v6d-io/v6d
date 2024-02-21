@@ -25,3 +25,9 @@ for tag in ${version} latest; do
     regctl image copy -v info ghcr.io/v6d-io/v6d/vineyard-operator:${version} \
                               vineyardcloudnative/vineyard-operator:${tag}
 done
+
+# vineyard-fluid-fuse
+for tag in ${version} latest; do
+    regctl image copy -v info ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:${version} \
+                              vineyardcloudnative/vineyard-fluid-fuse:${tag}
+done
