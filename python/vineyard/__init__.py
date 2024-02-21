@@ -295,9 +295,10 @@ def connect(*args, **kwargs):
     Connect to vineyard by specified UNIX-domain socket or TCP endpoint.
 
     If no arguments are provided and failed to resolve both the environment
-    variables :code:`VINEYARD_IPC_SOCKET`, :code:`VINEYARD_RPC_ENDPOINT`, and
-    :code:`VINEYARD_CONFIG`, it will launch a standalone vineyardd
-    server in the background and then connect to it.
+    variables :code:`VINEYARD_IPC_SOCKET`, :code:`VINEYARD_RPC_ENDPOINT`,
+    :code:`VINEYARD_CONFIG`, and the default configuration file
+    :code:`/var/run/vineyard-config.yaml`, it will launch a standalone
+    vineyardd server in the background and then connect to it.
 
     The `connect()` method has various overloading:
 
@@ -400,6 +401,7 @@ def connect(*args, **kwargs):
         and 'VINEYARD_IPC_SOCKET' not in os.environ
         and 'VINEYARD_RPC_ENDPOINT' not in os.environ
         and 'VINEYARD_CONFIG' not in os.environ
+        and not os.path.exists("/var/run/vineyard-config.yaml")
     ):
         logger.info(
             'No vineyard socket or endpoint is specified, '
@@ -427,7 +429,7 @@ def put(
         E.g. 127.0.0.1:9600
     VINEYARD_CONFIG:
         Either be a path to a YAML configuration file or a path to a
-        directory containing the default config file `vineyard.yaml`.
+        directory containing the default config file `vineyard-config.yaml`.
 
         The configuration file should be like:
 
@@ -492,7 +494,7 @@ def get(
         E.g. 127.0.0.1:9600
     VINEYARD_CONFIG:
         Either be a path to a YAML configuration file or a path to a
-        directory containing the default config file `vineyard.yaml`.
+        directory containing the default config file `vineyard-config.yaml`.
 
         The configuration file should be like:
 
