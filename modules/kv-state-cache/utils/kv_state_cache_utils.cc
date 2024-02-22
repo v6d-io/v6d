@@ -56,7 +56,7 @@ void signalHandler(int signum) {
   exit(signum);
 }
 
-void InitKVStateCache(int dimension, int cacheCapacity) {
+void InitKVStateCache(int dimension, int cacheCapacity, int layer) {
   if (kvStateCacheBuilder == nullptr) {
     std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET"));
     LOG(INFO) << "socket:" << socket;
@@ -94,7 +94,7 @@ void InitKVStateCache(int dimension, int cacheCapacity) {
       // if failed, create a new cache object
       LOG(INFO) << "failed to get the cache object, create a new one";
       kvStateCacheBuilder = std::make_shared<KVStateCacheBuilder>(
-          client, dimension, cacheCapacity);
+          client, dimension, cacheCapacity, layer);
     }
 
     // // release the lock

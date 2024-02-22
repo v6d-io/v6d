@@ -114,12 +114,12 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
   // support more than 64 kv-state cache slots
   uint64_t bitmap;
   int dimension;
-  int layer = 1;
+  int layer;
 
   int FindEmptySlot();
 
  public:
-  KVStateCacheBlockBuilder(Client& client, int dimension, int layer = 1);
+  KVStateCacheBlockBuilder(Client& client, int dimension, int layer);
 
   KVStateCacheBlockBuilder(
       Client& client, std::shared_ptr<KVStateCacheBlock> kv_state_cache_block);

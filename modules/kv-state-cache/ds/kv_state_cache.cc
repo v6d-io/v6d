@@ -69,11 +69,12 @@ KVStateCache::~KVStateCache() {
 }
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
-                                         int cacheCapacity) {
+                                         int cacheCapacity, int layer) {
   this->dimension = dimension;
   this->version = 0;
+  this->layer = layer;
   KVStateCacheBlockBuilder* builder =
-      new KVStateCacheBlockBuilder(client, this->dimension);
+      new KVStateCacheBlockBuilder(client, this->dimension, layer);
 
   this->rootTree = std::make_shared<RadixTree>(cacheCapacity);
 
@@ -125,7 +126,7 @@ KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
   // Split the tree if the list of kvState is full.
   VINEYARD_ASSERT(nodeDataList.size() > 0);
   KVStateCacheBlockBuilder* childKVStateCacheBlockBuilder =
-      new KVStateCacheBlockBuilder(client, this->dimension);
+      new KVStateCacheBlockBuilder(client, this->dimension, this->layer);
   for (size_t i = 0; i < nodeDataList.size(); i++) {
     OffsetData* data = (OffsetData*) nodeDataList[i]->nodeData->data;
     if (data == nullptr)

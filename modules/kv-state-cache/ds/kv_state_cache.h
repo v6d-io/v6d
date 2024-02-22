@@ -83,7 +83,8 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   uint64_t version;
 
  public:
-  KVStateCacheBuilder(Client& client, int dimension, int cacheCapacity);
+  KVStateCacheBuilder(Client& client, int dimension, int cacheCapacity,
+                      int layer);
 
   KVStateCacheBuilder(Client& client, std::shared_ptr<KVStateCache> cache);
 
