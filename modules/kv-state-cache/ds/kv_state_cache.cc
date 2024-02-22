@@ -133,7 +133,8 @@ KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
     int index = data->offset;
 
     // Transfer the data from this builder to the child builder.
-    data->offset = kvStateCacheBlockBuilder->Split(childKVStateCacheBlockBuilder, index);
+    data->offset =
+        kvStateCacheBlockBuilder->Split(childKVStateCacheBlockBuilder, index);
   }
   LOG(INFO) << "builder:" << kvStateCacheBlockBuilder
             << " bitmap:" << kvStateCacheBlockBuilder->GetBitmapStr();

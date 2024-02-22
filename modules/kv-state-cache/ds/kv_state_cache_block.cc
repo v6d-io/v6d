@@ -52,11 +52,11 @@ void KVStateCacheBlock::Construct(const ObjectMeta& meta) {
   this->layer = this->meta_.GetKeyValue<int>("layer");
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
     this->keyStateTensorList.push_back(
-        std::dynamic_pointer_cast<Tensor<double>>(
-            this->meta_.GetMember("keyStateTensorBuilder_" + std::to_string(currentLayer))));
+        std::dynamic_pointer_cast<Tensor<double>>(this->meta_.GetMember(
+            "keyStateTensorBuilder_" + std::to_string(currentLayer))));
     this->valueStateTensorList.push_back(
-        std::dynamic_pointer_cast<Tensor<double>>(
-            this->meta_.GetMember("valueStateTensorBuilder_" + std::to_string(currentLayer))));
+        std::dynamic_pointer_cast<Tensor<double>>(this->meta_.GetMember(
+            "valueStateTensorBuilder_" + std::to_string(currentLayer))));
   }
   // 2. construct the member field
   this->bitmap = this->meta_.GetKeyValue<unsigned long long>("bitmap");
@@ -109,16 +109,18 @@ Status KVStateCacheBlockBuilder::Query(Client& client, int index,
 
     for (int i = 0; i < this->dimension; ++i) {
       keyStateVector.push_back(
-          ((double*) keyStateTensorBuilderList[currentLayer]->data())[index * dimension + i]);
+          ((double*) keyStateTensorBuilderList[currentLayer]
+               ->data())[index * dimension + i]);
     }
 
     for (int i = 0; i < this->dimension; ++i) {
       valueStateVector.push_back(
-          ((double*) valueStateTensorBuilderList[currentLayer]->data())[index * dimension + i]);
+          ((double*) valueStateTensorBuilderList[currentLayer]
+               ->data())[index * dimension + i]);
     }
 
-    kvState.insert(
-        std::make_pair(currentLayer, std::make_pair(keyStateVector, valueStateVector)));
+    kvState.insert(std::make_pair(
+        currentLayer, std::make_pair(keyStateVector, valueStateVector)));
   }
   return Status::OK();
 }
@@ -140,14 +142,18 @@ void KVStateCacheBlockBuilder::Update(const KV_STATE_WITH_LAYER& kvState,
   LOG(INFO) << "index:" << index;
   LOG(INFO) << "layer:" << layer;
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    std::vector<double> keyStateVector = (kvState.find(currentLayer)->second).first;
-    std::vector<double> valueStateVector = (kvState.find(currentLayer)->second).second;
-    LOG(INFO) << "vector size:" << keyStateVector.size() << " " << valueStateVector.size() << " demension" << this->dimension;
+    std::vector<double> keyStateVector =
+        (kvState.find(currentLayer)->second).first;
+    std::vector<double> valueStateVector =
+        (kvState.find(currentLayer)->second).second;
+    LOG(INFO) << "vector size:" << keyStateVector.size() << " "
+              << valueStateVector.size() << " demension" << this->dimension;
     VINEYARD_ASSERT(keyStateVector.size() == (size_t) this->dimension);
     VINEYARD_ASSERT(valueStateVector.size() == (size_t) this->dimension);
 
     double* keyData = (double*) keyStateTensorBuilderList[currentLayer]->data();
-    double* valueData = (double*) valueStateTensorBuilderList[currentLayer]->data();
+    double* valueData =
+        (double*) valueStateTensorBuilderList[currentLayer]->data();
     memcpy(keyData + index * this->dimension, keyStateVector.data(),
            this->dimension * sizeof(double));
     memcpy(valueData + index * this->dimension, valueStateVector.data(),
@@ -158,20 +164,29 @@ void KVStateCacheBlockBuilder::Update(const KV_STATE_WITH_LAYER& kvState,
   ACQUIRE_BIT_RESOURCE(this->bitmap, index);
 }
 
-short KVStateCacheBlockBuilder::Split(KVStateCacheBlockBuilder* child, int index) {
-  //TBD
+short KVStateCacheBlockBuilder::Split(KVStateCacheBlockBuilder* child,
+                                      int index) {
+  // TBD
   VINEYARD_ASSERT(this->layer == child->layer);
   int childIndex = child->FindEmptySlot();
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    std::shared_ptr<TensorBuilder<double>> keyStateTensorBuilder = keyStateTensorBuilderList[currentLayer];
-    std::shared_ptr<TensorBuilder<double>> valueStateTensorBuilder = valueStateTensorBuilderList[currentLayer];
-    std::shared_ptr<TensorBuilder<double>> childKeyStateTensorBuilder = child->keyStateTensorBuilderList[currentLayer];
-    std::shared_ptr<TensorBuilder<double>> childValueStateTensorBuilder = child->valueStateTensorBuilderList[currentLayer];
+    std::shared_ptr<TensorBuilder<double>> keyStateTensorBuilder =
+        keyStateTensorBuilderList[currentLayer];
+    std::shared_ptr<TensorBuilder<double>> valueStateTensorBuilder =
+        valueStateTensorBuilderList[currentLayer];
+    std::shared_ptr<TensorBuilder<double>> childKeyStateTensorBuilder =
+        child->keyStateTensorBuilderList[currentLayer];
+    std::shared_ptr<TensorBuilder<double>> childValueStateTensorBuilder =
+        child->valueStateTensorBuilderList[currentLayer];
 
-    double* keyState = (double*) keyStateTensorBuilder->data() + index * this->dimension;
-    double* valueState = (double*) valueStateTensorBuilder->data() + index * this->dimension;
-    double* childKeyState = (double*) childKeyStateTensorBuilder->data() + childIndex * this->dimension;
-    double* childValueState = (double*) childValueStateTensorBuilder->data() + childIndex * this->dimension;
+    double* keyState =
+        (double*) keyStateTensorBuilder->data() + index * this->dimension;
+    double* valueState =
+        (double*) valueStateTensorBuilder->data() + index * this->dimension;
+    double* childKeyState = (double*) childKeyStateTensorBuilder->data() +
+                            childIndex * this->dimension;
+    double* childValueState = (double*) childValueStateTensorBuilder->data() +
+                              childIndex * this->dimension;
 
     memcpy(childKeyState, keyState, this->dimension * sizeof(double));
     memcpy(childValueState, valueState, this->dimension * sizeof(double));
@@ -192,10 +207,12 @@ std::shared_ptr<Object> KVStateCacheBlockBuilder::_Seal(Client& client) {
 
   // 1. seal keyStateTensorBuilder and valueStateTensorBuilder
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    kvStateCacheBlock->meta_.AddMember("keyStateTensorBuilder_" + std::to_string(currentLayer),
-                                      keyStateTensorBuilderList[currentLayer]->Seal(client));
-    kvStateCacheBlock->meta_.AddMember("valueStateTensorBuilder_" + std::to_string(currentLayer),
-                                      valueStateTensorBuilderList[currentLayer]->Seal(client));
+    kvStateCacheBlock->meta_.AddMember(
+        "keyStateTensorBuilder_" + std::to_string(currentLayer),
+        keyStateTensorBuilderList[currentLayer]->Seal(client));
+    kvStateCacheBlock->meta_.AddMember(
+        "valueStateTensorBuilder_" + std::to_string(currentLayer),
+        valueStateTensorBuilderList[currentLayer]->Seal(client));
   }
 
   // 2. store the member field to meta
