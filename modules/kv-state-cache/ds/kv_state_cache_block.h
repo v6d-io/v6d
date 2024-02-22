@@ -31,6 +31,12 @@ typedef std::map<int, std::pair<std::vector<double>, std::vector<double>>>
 typedef std::vector<
     std::map<int, std::pair<std::vector<double>, std::vector<double>>>>
     LIST_KV_STATE_WITH_LAYER;
+typedef std::vector<
+    std::pair<std::vector<double>, std::vector<double>>>
+    KV_STATE;
+typedef std::vector<
+    std::pair<std::vector<double>, std::vector<double>>>
+    LIST_KV_STATE;
 
 // Set the bit to 1, which means the resource is not being used
 #define FREE_BIT_RESOURCE(value, bit) ((value) |= (((uint64_t) 1) << (bit)))
@@ -61,10 +67,11 @@ namespace vineyard {
 
 class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
  private:
-  std::shared_ptr<Tensor<double>> keyStateTensor;
-  std::shared_ptr<Tensor<double>> valueStateTensor;
+  std::vector<std::shared_ptr<Tensor<double>>> keyStateTensorList;
+  std::vector<std::shared_ptr<Tensor<double>>> valueStateTensorList;
   uint64_t bitmap;
   ObjectID id;
+  int layer;
   int dimension;
 
  public:
@@ -81,12 +88,20 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
 
   uint64_t GetBitmap() { return this->bitmap; }
 
-  std::shared_ptr<const Tensor<double>> GetKeyTensor() {
-    return this->keyStateTensor;
+  std::shared_ptr<const Tensor<double>> GetKeyTensor(int layer) {
+    return this->keyStateTensorList[layer];
   }
 
-  std::shared_ptr<const Tensor<double>> GetValueTensor() {
-    return this->valueStateTensor;
+  std::shared_ptr<const Tensor<double>> GetValueTensor(int layer) {
+    return this->valueStateTensorList[layer];
+  }
+
+  std::vector<std::shared_ptr<Tensor<double>>> GetKeyTensorList() {
+    return this->keyStateTensorList;
+  }
+
+  std::vector<std::shared_ptr<Tensor<double>>> GetValueTensorList() {
+    return this->valueStateTensorList;
   }
 
   friend class KVStateCacheBlockBuilder;
@@ -94,17 +109,18 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
 
 class KVStateCacheBlockBuilder : public ObjectBuilder {
  private:
-  std::shared_ptr<TensorBuilder<double>> keyStateTensorBuilder;
-  std::shared_ptr<TensorBuilder<double>> valueStateTensorBuilder;
+  std::vector<std::shared_ptr<TensorBuilder<double>>> keyStateTensorBuilderList;
+  std::vector<std::shared_ptr<TensorBuilder<double>>> valueStateTensorBuilderList;
   // TBD
   // support more than 64 kv-state cache slots
   uint64_t bitmap;
   int dimension;
+  int layer = 1;
 
   int FindEmptySlot();
 
  public:
-  KVStateCacheBlockBuilder(Client& client, int dimension);
+  KVStateCacheBlockBuilder(Client& client, int dimension, int layer = 1);
 
   KVStateCacheBlockBuilder(
       Client& client, std::shared_ptr<KVStateCacheBlock> kv_state_cache_block);
@@ -137,12 +153,22 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   std::shared_ptr<Object> _Seal(Client& client) override;
 
-  const std::shared_ptr<TensorBuilder<double>> GetKeyStateBuilder() {
-    return keyStateTensorBuilder;
+  short Split(KVStateCacheBlockBuilder* child, int index);
+
+  const std::shared_ptr<TensorBuilder<double>> GetKeyStateBuilder(int layer) {
+    return keyStateTensorBuilderList[layer];
   }
 
-  const std::shared_ptr<TensorBuilder<double>> GetValueStateBuilder() {
-    return valueStateTensorBuilder;
+  const std::shared_ptr<TensorBuilder<double>> GetValueStateBuilder(int layer) {
+    return valueStateTensorBuilderList[layer];
+  }
+
+  const std::vector<std::shared_ptr<TensorBuilder<double>>> GetKeyStateBuilderList() {
+    return keyStateTensorBuilderList;
+  }
+
+  const std::vector<std::shared_ptr<TensorBuilder<double>>> GetValueStateBuilderList() {
+    return valueStateTensorBuilderList;
   }
 
   void DeleteKVCache(int bit) { FREE_BIT_RESOURCE(this->bitmap, bit); }

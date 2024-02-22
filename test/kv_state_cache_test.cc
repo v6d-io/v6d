@@ -65,7 +65,7 @@ generate_kv_state(int token) {
   }
 
   std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
-  kv_state.insert(std::make_pair(1, std::make_pair(key_state, value_state)));
+  kv_state.insert(std::make_pair(0, std::make_pair(key_state, value_state)));
   return kv_state;
 }
 

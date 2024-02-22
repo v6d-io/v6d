@@ -60,6 +60,7 @@ void KVStateCache::Resolve() {
   // 3. construct the member field
   this->dimension = this->meta_.GetKeyValue<int>("dimension");
   this->version = this->meta_.GetKeyValue<uint64_t>("version");
+  this->layer = this->meta_.GetKeyValue<int>("layer");
   LOG(INFO) << "construct the member field success" << std::endl;
 }
 
@@ -95,6 +96,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
   // TBD
   this->dimension = cache->GetDemension();
   this->version = cache->GetVersion();
+  this->layer = cache->GetLayer();
   // 1. create block builder from block
   std::map<uint64_t, std::shared_ptr<KVStateCacheBlock>> kvStateCacheBlockMap =
       cache->kvStateCacheBlockMap;
@@ -131,18 +133,7 @@ KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
     int index = data->offset;
 
     // Transfer the data from this builder to the child builder.
-    const std::shared_ptr<TensorBuilder<double>> keyStateTensorBuilder =
-        kvStateCacheBlockBuilder->GetKeyStateBuilder();
-    const std::shared_ptr<TensorBuilder<double>> valueStateTensorBuilder =
-        kvStateCacheBlockBuilder->GetValueStateBuilder();
-    OffsetData new_offset_data;
-    childKVStateCacheBlockBuilder->Update(
-        keyStateTensorBuilder->data() + index * this->dimension,
-        valueStateTensorBuilder->data() + index * this->dimension,
-        this->dimension, &new_offset_data);
-    data->offset = new_offset_data.offset;
-    // Clear the bitmap.
-    kvStateCacheBlockBuilder->DeleteKVCache(index);
+    data->offset = kvStateCacheBlockBuilder->Split(childKVStateCacheBlockBuilder, index);
   }
   LOG(INFO) << "builder:" << kvStateCacheBlockBuilder
             << " bitmap:" << kvStateCacheBlockBuilder->GetBitmapStr();
@@ -330,6 +321,7 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   // 1. store the member variables to cache object meta
   kvStateCache->meta_.AddKeyValue("dimension", this->dimension);
   kvStateCache->meta_.AddKeyValue("version", this->version);
+  kvStateCache->meta_.AddKeyValue("layer", this->layer);
 
   // 2. seal all the block and put object id to cache object and
   // change the tree data from pointer to object id
