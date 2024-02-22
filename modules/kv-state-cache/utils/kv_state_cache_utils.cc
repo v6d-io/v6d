@@ -56,7 +56,7 @@ void signalHandler(int signum) {
   exit(signum);
 }
 
-void InitKVStateCache(int dimension, int cacheCapacity) {
+void InitKVStateCache(int dimension, int cacheCapacity, int layer) {
   if (kvStateCacheBuilder == nullptr) {
     std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET"));
     LOG(INFO) << "socket:" << socket;
@@ -94,7 +94,7 @@ void InitKVStateCache(int dimension, int cacheCapacity) {
       // if failed, create a new cache object
       LOG(INFO) << "failed to get the cache object, create a new one";
       kvStateCacheBuilder = std::make_shared<KVStateCacheBuilder>(
-          client, dimension, cacheCapacity);
+          client, dimension, cacheCapacity, layer);
     }
 
     // // release the lock
@@ -109,7 +109,7 @@ void InitKVStateCache(int dimension, int cacheCapacity) {
   }
 }
 
-void updateInternal(const std::vector<int>& tokenList, int nextToken,
+void UpdateInternal(const std::vector<int>& tokenList, int nextToken,
                     const KV_STATE_WITH_LAYER& kvState) {
   kvStateCacheBuilder->Update(client, tokenList, nextToken, kvState);
 }
@@ -121,7 +121,7 @@ void Update(const std::vector<int>& tokenList, int nextToken,
     return;
   }
 
-  updateInternal(tokenList, nextToken, kvState);
+  UpdateInternal(tokenList, nextToken, kvState);
 
   pthread_mutex_unlock(&syncMutex);
 }
@@ -133,13 +133,13 @@ void Update(const std::vector<int>& tokenList,
   }
   std::vector<int> tokenListCopy;
   for (size_t i = 0; i < tokenList.size(); i++) {
-    updateInternal(tokenListCopy, tokenList[i], kvState[i]);
+    UpdateInternal(tokenListCopy, tokenList[i], kvState[i]);
     tokenListCopy.push_back(tokenList[i]);
   }
   pthread_mutex_unlock(&syncMutex);
 }
 
-KV_STATE_WITH_LAYER queryInternal(const std::vector<int>& tokenList,
+KV_STATE_WITH_LAYER QueryInternal(const std::vector<int>& tokenList,
                                   int token) {
   return kvStateCacheBuilder->Query(client, tokenList, token);
 }
@@ -151,7 +151,7 @@ KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList, int token) {
     return result;
   }
 
-  result = queryInternal(tokenList, token);
+  result = QueryInternal(tokenList, token);
   pthread_mutex_unlock(&syncMutex);
 
   return result;
@@ -165,7 +165,7 @@ LIST_KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList) {
 
   std::vector<int> tokenListCopy;
   for (size_t i = 0; i < tokenList.size(); i++) {
-    KV_STATE_WITH_LAYER kvState = queryInternal(tokenListCopy, tokenList[i]);
+    KV_STATE_WITH_LAYER kvState = QueryInternal(tokenListCopy, tokenList[i]);
     listKVState.push_back(kvState);
     tokenListCopy.push_back(tokenList[i]);
   }
