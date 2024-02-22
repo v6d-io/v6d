@@ -26,8 +26,9 @@ using namespace vineyard;
 
 #define DEMENSION 10
 #define CAPACITY 20
+#define LAYER 3
 
-void init() { InitKVStateCache(DEMENSION, CAPACITY); }
+void init() { InitKVStateCache(DEMENSION, CAPACITY, LAYER); }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
   std::string tokens_str = "";
@@ -49,23 +50,30 @@ void print_kv_state(
       key_state_str += std::to_string(iter->second.first[i]) + " ";
       value_state_str += std::to_string(iter->second.second[i]) + " ";
     }
+    LOG(INFO) << "layer " << iter->first << ":";
     LOG(INFO) << "key_state: " << key_state_str;
     LOG(INFO) << "value_state: " << value_state_str;
+    LOG(INFO) << "---------------------";
   }
 }
 
 // we do not consider the layer.
 std::map<int, std::pair<std::vector<double>, std::vector<double>>>
 generate_kv_state(int token) {
-  std::vector<double> key_state;
-  std::vector<double> value_state;
-  for (int i = 0; i < DEMENSION; ++i) {
-    key_state.push_back(((double) token) / DEMENSION * (i + 1));
-    value_state.push_back(((double) token) / DEMENSION * (i + 1) * 2);
-  }
-
   std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
-  kv_state.insert(std::make_pair(1, std::make_pair(key_state, value_state)));
+  for (int currentLayer = 0; currentLayer < LAYER; currentLayer++) {
+    std::vector<double> key_state;
+    std::vector<double> value_state;
+    for (int i = 0; i < DEMENSION; ++i) {
+      key_state.push_back(((double) token) / DEMENSION * (i + 1) +
+                          currentLayer * 10);
+      value_state.push_back(((double) token) / DEMENSION * (i + 1) * 2 +
+                            currentLayer * 10);
+    }
+
+    kv_state.insert(
+        std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
+  }
   return kv_state;
 }
 

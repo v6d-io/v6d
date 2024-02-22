@@ -33,157 +33,159 @@ void print_tokens(const std::vector<int>& tokens) {
 }
 
 void radix_tree_insert_test() {
-    std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(10);
+  std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(10);
 
-    /* insert a token list*/
-    std::vector<int> tokens;
-    std::shared_ptr<NodeData> node_data;
-    for (int i = 0; i < 10; i++) {
-        tokens.push_back(i);
-        VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
-        VINEYARD_ASSERT(node_data == NULL);
-    }
+  /* insert a token list*/
+  std::vector<int> tokens;
+  std::shared_ptr<NodeData> node_data;
+  for (int i = 0; i < 10; i++) {
+    tokens.push_back(i);
+    VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
+    VINEYARD_ASSERT(node_data == NULL);
+  }
 
-    /* insert new token and check whether the old token is evicted */ 
-    tokens.clear();
-    for (int i = 1; i < 10; i++) {
-        tokens.push_back(i);
-        VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
-        VINEYARD_ASSERT(node_data != NULL);
-    }
+  /* insert new token and check whether the old token is evicted */
+  tokens.clear();
+  for (int i = 1; i < 10; i++) {
+    tokens.push_back(i);
+    VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
+    VINEYARD_ASSERT(node_data != NULL);
+  }
 
-    /* insert a token that prefix is not in the radix tree */
-    tokens.clear();
-    for (int i = 10; i > 0; i--) {
-        tokens.push_back(i);
-    }
-    VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) == NULL);
+  /* insert a token that prefix is not in the radix tree */
+  tokens.clear();
+  for (int i = 10; i > 0; i--) {
+    tokens.push_back(i);
+  }
+  VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) == NULL);
 }
 
-void radix_tree_delete_test(){
-    std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(10);
+void radix_tree_delete_test() {
+  std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(10);
 
-    /* insert a token list*/
-    std::vector<int> tokens;
-    std::shared_ptr<NodeData> node_data;
-    for (int i = 0; i < 10; i++) {
-        tokens.push_back(i);
-        VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
-        VINEYARD_ASSERT(node_data == NULL);
-    }
-
-    /* delete a token list*/
-
-    tokens.clear();
-    node_data = NULL;
-    for (int i = 0; i < 5; i++) {
-        tokens.push_back(i);
-    }
-    radix_tree->Delete(tokens, node_data);
-    VINEYARD_ASSERT(node_data != NULL);
-
-    /* delete a token list that is not in the radix tree */
-    tokens.clear();
-    node_data = NULL;
-    for (int i = 10; i > 0; i--) {
-        tokens.push_back(i);
-    }
-    radix_tree->Delete(tokens, node_data);
+  /* insert a token list*/
+  std::vector<int> tokens;
+  std::shared_ptr<NodeData> node_data;
+  for (int i = 0; i < 10; i++) {
+    tokens.push_back(i);
+    VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
     VINEYARD_ASSERT(node_data == NULL);
+  }
+
+  /* delete a token list*/
+
+  tokens.clear();
+  node_data = NULL;
+  for (int i = 0; i < 5; i++) {
+    tokens.push_back(i);
+  }
+  radix_tree->Delete(tokens, node_data);
+  VINEYARD_ASSERT(node_data != NULL);
+
+  /* delete a token list that is not in the radix tree */
+  tokens.clear();
+  node_data = NULL;
+  for (int i = 10; i > 0; i--) {
+    tokens.push_back(i);
+  }
+  radix_tree->Delete(tokens, node_data);
+  VINEYARD_ASSERT(node_data == NULL);
 }
 
 void radix_tree_query_test() {
-    std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(10);
+  std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(10);
 
-    /* insert a token list*/
-    std::vector<int> tokens;
-    std::shared_ptr<NodeData> node_data;
-    for (int i = 0; i < 10; i++) {
-        tokens.push_back(i);
-        VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
-        VINEYARD_ASSERT(node_data == NULL);
-    }
+  /* insert a token list*/
+  std::vector<int> tokens;
+  std::shared_ptr<NodeData> node_data;
+  for (int i = 0; i < 10; i++) {
+    tokens.push_back(i);
+    VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
+    VINEYARD_ASSERT(node_data == NULL);
+  }
 
-    /* query a token list*/
-    tokens.clear();
-    for (int i = 0; i < 5; i++) {
-        tokens.push_back(i);
-    }
-    VINEYARD_ASSERT(radix_tree->Query(tokens) != NULL);
+  /* query a token list*/
+  tokens.clear();
+  for (int i = 0; i < 5; i++) {
+    tokens.push_back(i);
+  }
+  VINEYARD_ASSERT(radix_tree->Query(tokens) != NULL);
 
-    /* query a token list that is not in the radix tree */
-    tokens.clear();
-    for (int i = 10; i > 0; i--) {
-        tokens.push_back(i);
-    }
-    VINEYARD_ASSERT(radix_tree->Query(tokens) == NULL);
+  /* query a token list that is not in the radix tree */
+  tokens.clear();
+  for (int i = 10; i > 0; i--) {
+    tokens.push_back(i);
+  }
+  VINEYARD_ASSERT(radix_tree->Query(tokens) == NULL);
 }
 
 void radix_tree_serialize_and_deserailize() {
-    std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(10);
+  std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(10);
 
-    /* insert a token list*/
-    std::vector<int> tokens;
-    std::shared_ptr<NodeData> node_data;
-    for (int i = 0; i < 10; i++) {
-        tokens.push_back(i);
-        VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
-        VINEYARD_ASSERT(node_data == NULL);
-    }
+  /* insert a token list*/
+  std::vector<int> tokens;
+  std::shared_ptr<NodeData> node_data;
+  for (int i = 0; i < 10; i++) {
+    tokens.push_back(i);
+    VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
+    VINEYARD_ASSERT(node_data == NULL);
+  }
 
-    /* serialize radix tree */
-    std::string serialized_radix_tree = radix_tree->Serialize();
+  /* serialize radix tree */
+  std::string serialized_radix_tree = radix_tree->Serialize();
 
-    /* deserialize radix tree */
-    std::shared_ptr<RadixTree> deserialized_radix_tree = radix_tree->Deserialize(serialized_radix_tree);
+  /* deserialize radix tree */
+  std::shared_ptr<RadixTree> deserialized_radix_tree =
+      radix_tree->Deserialize(serialized_radix_tree);
 
-    /* query to check whether all token list exist */
-    tokens.clear();
-    for (int i = 0; i < 10; i++) {
-        tokens.push_back(i);
-        print_tokens(tokens);
-        VINEYARD_ASSERT(deserialized_radix_tree->Query(tokens) != NULL);
-    }
+  /* query to check whether all token list exist */
+  tokens.clear();
+  for (int i = 0; i < 10; i++) {
+    tokens.push_back(i);
+    print_tokens(tokens);
+    VINEYARD_ASSERT(deserialized_radix_tree->Query(tokens) != NULL);
+  }
 }
 
 void radix_tree_split() {
-    std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(20);
+  std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(20);
 
-    raxShow(radix_tree->tree);
-    /* insert a token list*/
-    std::vector<int> tokens;
-    std::shared_ptr<NodeData> node_data;
-    for (int i = 0; i < 10; i++) {
-        tokens.push_back(i);
-        VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
-        VINEYARD_ASSERT(node_data == NULL);
-    }
+  raxShow(radix_tree->tree);
+  /* insert a token list*/
+  std::vector<int> tokens;
+  std::shared_ptr<NodeData> node_data;
+  for (int i = 0; i < 10; i++) {
+    tokens.push_back(i);
+    VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
+    VINEYARD_ASSERT(node_data == NULL);
+  }
 
-    /* split a token list*/
-    tokens.clear();
-    for (int i = 0; i < 5; i++) {
-        tokens.push_back(i);
-    }
-    print_tokens(tokens);
-    std::shared_ptr<NodeData> subTreeHeader;
-    std::vector<std::shared_ptr<NodeData>> node_data_list = radix_tree->Split(tokens, subTreeHeader);
-    VINEYARD_ASSERT(node_data_list.size() == 7);
+  /* split a token list*/
+  tokens.clear();
+  for (int i = 0; i < 5; i++) {
+    tokens.push_back(i);
+  }
+  print_tokens(tokens);
+  std::shared_ptr<NodeData> subTreeHeader;
+  std::vector<std::shared_ptr<NodeData>> node_data_list =
+      radix_tree->Split(tokens, subTreeHeader);
+  VINEYARD_ASSERT(node_data_list.size() == 7);
 }
 
 int main() {
-    LOG(INFO) << "Start to test radix tree insert...";
-    radix_tree_insert_test();
-    LOG(INFO) << "Finish radix tree insert test!";
-    LOG(INFO) << "Start to test radix tree delete...";
-    radix_tree_delete_test();
-    LOG(INFO) << "Finish radix tree delete test!";
-    LOG(INFO) << "Start to test radix tree query...";
-    radix_tree_query_test();
-    LOG(INFO) << "Finish radix tree query test!";
-    LOG(INFO) << "Start to test radix tree serialize and deserialize...";
-    radix_tree_serialize_and_deserailize();
-    LOG(INFO) << "Finish radix tree serialize and deserialize test!";
-    LOG(INFO) << "Start to test radix tree split...";
-    radix_tree_split();
-    LOG(INFO) << "Finish radix tree split test!";
+  LOG(INFO) << "Start to test radix tree insert...";
+  radix_tree_insert_test();
+  LOG(INFO) << "Finish radix tree insert test!";
+  LOG(INFO) << "Start to test radix tree delete...";
+  radix_tree_delete_test();
+  LOG(INFO) << "Finish radix tree delete test!";
+  LOG(INFO) << "Start to test radix tree query...";
+  radix_tree_query_test();
+  LOG(INFO) << "Finish radix tree query test!";
+  LOG(INFO) << "Start to test radix tree serialize and deserialize...";
+  radix_tree_serialize_and_deserailize();
+  LOG(INFO) << "Finish radix tree serialize and deserialize test!";
+  LOG(INFO) << "Start to test radix tree split...";
+  radix_tree_split();
+  LOG(INFO) << "Finish radix tree split test!";
 }
