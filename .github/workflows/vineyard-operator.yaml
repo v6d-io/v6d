@@ -148,7 +148,7 @@ jobs:
         if: ${{ matrix.job == 'release' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         uses: docker/setup-buildx-action@v2
 
-      - name: Upload latest docker image
+      - name: Upload latest docker image of vineyard-operator
         if: ${{ matrix.job == 'release' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
         run: |
           # pre-publish to ghcr.io to avoid the "no basic auth credentials" error
@@ -156,6 +156,15 @@ jobs:
           make -C k8s docker-build-push-multi-arch REGISTRY=${{ env.REGISTRY }} VERSION=${{ steps.tag.outputs.TAG }}
           export IMG=ghcr.io/v6d-io/v6d/vineyard-operator:latest
           make -C k8s docker-build-push-multi-arch REGISTRY=${{ env.REGISTRY }} VERSION=latest
+
+      - name: Upload latest docker image of vineyard-fluid-fuse
+        if: ${{ matrix.job == 'release' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        run: |
+          make -C docker vineyard-fluid-fuse
+          docker tag ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:latest \
+                     ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:${{ steps.tag.outputs.TAG }}
+          docker push ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:${{ steps.tag.outputs.TAG }}
+          docker push ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:latest
 
       - name: Generate the python and vineyardd image for tests
         run: |
