@@ -85,12 +85,45 @@ class ArrowFragmentWriter {
 
   using fragment_t = FRAG_T;
 
+ protected:
+  static constexpr const char* MARKER = "PROGRESS--GRAPH-LOADING-";
+
  public:
+  /**
+   * @brief Initialize ArrowFragmentWriter with graph info
+   *
+   * @param frag The fragment to write
+   * @param comm_spec The communicator specification
+   * @param graph_info_yaml The graph info yaml path
+   */
   ArrowFragmentWriter(const std::shared_ptr<fragment_t>& frag,
                       const grape::CommSpec& comm_spec,
                       const std::string& graph_info_yaml);
 
+  /**
+   * @brief Initialize ArrowFragmentWriter with base graph info information
+   *    The graph info will be generated from the fragment schema and the given
+   *    information.
+   *
+   * @param frag The fragment to write
+   * @param comm_spec The communicator specification
+   * @param graph_name The graph name
+   * @param path The path to store the fragment
+   * @param vertex_block_size The vertex chunk size
+   * @param edge_block_size The edge chunk size
+   * @param file_type The file type to store the fragment
+   * @param store_in_local Whether write the fragment to local
+   */
+  ArrowFragmentWriter(const std::shared_ptr<fragment_t>& frag,
+                      const grape::CommSpec& comm_spec,
+                      const std::string& graph_name,
+                      const std::string& out_path, int64_t vertex_block_size,
+                      int64_t edge_block_size, const std::string& file_type,
+                      bool store_in_local = false);
+
   ~ArrowFragmentWriter() = default;
+
+  boost::leaf::result<void> WriteGraphInfo(const std::string& output_path);
 
   boost::leaf::result<void> WriteFragment();
 
@@ -106,8 +139,9 @@ class ArrowFragmentWriter {
 
  private:
   boost::leaf::result<void> writeEdgeImpl(
-      const GraphArchive::EdgeInfo& edge_info, label_id_t src_label_id,
-      label_id_t edge_label_id, label_id_t dst_label_id,
+      const std::shared_ptr<GraphArchive::EdgeInfo>& edge_info,
+      label_id_t src_label_id, label_id_t edge_label_id,
+      label_id_t dst_label_id,
       const std::vector<int64_t>& main_start_chunk_indices,
       const std::vector<int64_t>& another_start_chunk_indices,
       const vertex_range_t& vertices, GraphArchive::AdjListType adj_list_type);
@@ -122,6 +156,8 @@ class ArrowFragmentWriter {
   grape::CommSpec comm_spec_;
   std::shared_ptr<GraphArchive::GraphInfo> graph_info_;
   std::map<label_id_t, int64_t> label_id_to_vnum_;
+
+  bool store_in_local_;
 };
 
 }  // namespace vineyard

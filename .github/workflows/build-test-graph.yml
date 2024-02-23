@@ -222,7 +222,6 @@ jobs:
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
 
           export VINEYARD_DATA_DIR=`pwd`/gstest
-          export GAR_DATA_DIR=`pwd`/gar-test
           export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
 
           rm -rf default.etcd
