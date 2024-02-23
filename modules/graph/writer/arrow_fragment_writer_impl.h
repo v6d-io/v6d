@@ -177,47 +177,11 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertex(
     RETURN_GS_ERROR(ErrorCode::kGraphArError, st.message());
   }
   if (store_in_local_) {
-    // write local store meta data
     int64_t vertex_chunk_num =
         std::ceil(vertex_table->num_rows() /
                   static_cast<double>(vertex_info->GetChunkSize()));
-    const auto& extra_info = graph_info_->GetExtraInfo();
-    std::string local_metadata_prefix = extra_info.at(LOCAL_METADATA_KEY);
-    std::string path = graph_info_->GetPrefix() + vertex_info->GetPrefix() +
-                       local_metadata_prefix + std::to_string(frag_->fid());
-
-    std::shared_ptr<arrow::fs::FileSystem> fs;
-    auto fs_result = arrow::fs::FileSystemFromUriOrPath(path);
-    if (!fs_result.ok()) {
-      RETURN_GS_ERROR(ErrorCode::kArrowError, fs_result.status().message());
-    }
-    fs = fs_result.ValueOrDie();
-    std::shared_ptr<arrow::io::OutputStream> output_stream;
-    auto output_stream_result = fs->OpenOutputStream(path);
-    if (!output_stream_result.ok()) {
-      RETURN_GS_ERROR(ErrorCode::kArrowError,
-                      output_stream_result.status().message());
-    }
-    output_stream = output_stream_result.ValueOrDie();
-
-    // write vertex chunk index begin and vertex chunk number to local
-    auto st = output_stream->Write(
-        reinterpret_cast<const uint8_t*>(&chunk_index_begin),
-        sizeof(chunk_index_begin));
-    if (!st.ok()) {
-      RETURN_GS_ERROR(ErrorCode::kArrowError, st.message());
-    }
-    st = output_stream->Write(
-        reinterpret_cast<const uint8_t*>(&vertex_chunk_num),
-        sizeof(vertex_chunk_num));
-    if (!st.ok()) {
-      RETURN_GS_ERROR(ErrorCode::kArrowError, st.message());
-    }
-
-    st = output_stream->Close();
-    if (!st.ok()) {
-      RETURN_GS_ERROR(ErrorCode::kArrowError, st.message());
-    }
+    BOOST_LEAF_CHECK(writeLocalVertexChunkBeginAndNum(
+        vertex_info, chunk_index_begin, vertex_chunk_num));
   }
 
   if (store_in_local_ || frag_->fid() == frag_->fnum() - 1) {
@@ -598,6 +562,51 @@ ArrowFragmentWriter<FRAG_T>::appendPropertiesToArrowArrayBuilders(
                       "Unsupported property type: " + prop_type->ToString());
     }
     ++col_id;
+  }
+  return {};
+}
+
+template <typename FRAG_T>
+boost::leaf::result<void>
+ArrowFragmentWriter<FRAG_T>::writeLocalVertexChunkBeginAndNum(
+    const std::shared_ptr<GraphArchive::VertexInfo>& vertex_info,
+    int64_t vertex_chunk_begin, int64_t vertex_chunk_num) {
+  // write local store meta data
+  const auto& extra_info = graph_info_->GetExtraInfo();
+  std::string local_metadata_prefix = extra_info.at(LOCAL_METADATA_KEY);
+  std::string path = graph_info_->GetPrefix() + vertex_info->GetPrefix() +
+                     local_metadata_prefix + std::to_string(frag_->fid());
+
+  std::shared_ptr<arrow::fs::FileSystem> fs;
+  auto fs_result = arrow::fs::FileSystemFromUriOrPath(path);
+  if (!fs_result.ok()) {
+    RETURN_GS_ERROR(ErrorCode::kArrowError, fs_result.status().message());
+  }
+  fs = fs_result.ValueOrDie();
+  std::shared_ptr<arrow::io::OutputStream> output_stream;
+  auto output_stream_result = fs->OpenOutputStream(path);
+  if (!output_stream_result.ok()) {
+    RETURN_GS_ERROR(ErrorCode::kArrowError,
+                    output_stream_result.status().message());
+  }
+  output_stream = output_stream_result.ValueOrDie();
+
+  // write vertex chunk index begin and vertex chunk number to local
+  auto st = output_stream->Write(
+      reinterpret_cast<const uint8_t*>(&vertex_chunk_begin),
+      sizeof(vertex_chunk_begin));
+  if (!st.ok()) {
+    RETURN_GS_ERROR(ErrorCode::kArrowError, st.message());
+  }
+  st = output_stream->Write(reinterpret_cast<const uint8_t*>(&vertex_chunk_num),
+                            sizeof(vertex_chunk_num));
+  if (!st.ok()) {
+    RETURN_GS_ERROR(ErrorCode::kArrowError, st.message());
+  }
+
+  st = output_stream->Close();
+  if (!st.ok()) {
+    RETURN_GS_ERROR(ErrorCode::kArrowError, st.message());
   }
   return {};
 }

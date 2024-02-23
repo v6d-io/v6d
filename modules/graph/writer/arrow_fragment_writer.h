@@ -46,6 +46,7 @@ limitations under the License.
 namespace GraphArchive {
 class GraphInfo;
 class EdgeInfo;
+class VertexInfo;
 enum class AdjListType : std::uint8_t;
 }  // namespace GraphArchive
 
@@ -150,6 +151,10 @@ class ArrowFragmentWriter {
       const nbr_t& edge, const std::set<label_id_t>& property_ids,
       const label_id_t edge_label, const PropertyGraphSchema& graph_schema,
       std::vector<std::shared_ptr<arrow::ArrayBuilder>>& builders);
+
+  boost::leaf::result<void> writeLocalVertexChunkBeginAndNum(
+      const std::shared_ptr<GraphArchive::VertexInfo>& vertex_info,
+      int64_t vertex_chunk_begin, int64_t vertex_chunk_num);
 
  private:
   std::shared_ptr<ArrowFragment<oid_t, vid_t>> frag_;

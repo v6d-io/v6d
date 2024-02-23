@@ -43,6 +43,7 @@ limitations under the License.
 
 namespace GraphArchive {
 class GraphInfo;
+class VertexInfo;
 class EdgeInfo;
 class PropertyGroup;
 enum class AdjListType : std::uint8_t;
@@ -141,6 +142,10 @@ class GARFragmentLoader {
   Status parseIdChunkedArrayChunk(
       label_id_t label_id, const std::shared_ptr<arrow::Array> id_array_in,
       bool all_be_local_vertex, std::shared_ptr<arrow::Array>& out);
+
+  boost::leaf::result<void> initializeVertexChunkBeginAndNum(
+      int vertex_label_index,
+      const std::shared_ptr<GraphArchive::VertexInfo>& vertex_info);
 
  private:
   Client& client_;

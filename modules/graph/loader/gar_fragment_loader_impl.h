@@ -231,73 +231,7 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::distributeVertices() {
     const auto& label = vertex_info->GetLabel();
     vertex_labels_.push_back(label);
     vertex_chunk_sizes_.push_back(vertex_info->GetChunkSize());
-    if (store_in_local_) {
-      // distribute the vertex chunks base on the local metadata
-      const auto& extra_info = graph_info_->GetExtraInfo();
-      if (extra_info.find(LOCAL_METADATA_KEY) == extra_info.end()) {
-        RETURN_GS_ERROR(
-            ErrorCode::kInvalidValueError,
-            "The local metadata key-value is not found in graph info");
-      }
-      std::string local_metadata_prefix = extra_info.at(LOCAL_METADATA_KEY);
-      std::string path = graph_info_->GetPrefix() + vertex_info->GetPrefix() +
-                         local_metadata_prefix +
-                         std::to_string(comm_spec_.fid());
-
-      std::shared_ptr<arrow::io::ReadableFile> file;
-      std::shared_ptr<arrow::fs::FileSystem> fs;
-
-      auto fs_result = arrow::fs::FileSystemFromUriOrPath(path);
-      if (!fs_result.ok()) {
-        RETURN_GS_ERROR(ErrorCode::kArrowError, fs_result.status().message());
-      }
-      fs = fs_result.ValueOrDie();
-      auto input_stream_result = fs->OpenInputStream(path);
-      if (!input_stream_result.status().ok()) {
-        RETURN_GS_ERROR(ErrorCode::kArrowError,
-                        input_stream_result.status().message());
-      }
-      auto input_stream = input_stream_result.ValueOrDie();
-      // read the vertex chunk begin of vertex label i
-      auto read_result =
-          input_stream->Read(sizeof(int64_t), &vertex_chunk_begins_[i]);
-      if (!read_result.ok()) {
-        RETURN_GS_ERROR(ErrorCode::kArrowError, read_result.status().message());
-      }
-      assert(read_result.ValueOrDie() == sizeof(int64_t));
-      // read the vertex chunk num of vertex label i
-      read_result = input_stream->Read(sizeof(int64_t), &vertex_chunk_nums_[i]);
-      if (!read_result.ok()) {
-        RETURN_GS_ERROR(ErrorCode::kArrowError, read_result.status().message());
-      }
-      assert(read_result.ValueOrDie() == sizeof(int64_t));
-    } else {
-      // distribute the vertex chunks for fragments
-      auto chunk_num_result = GraphArchive::util::GetVertexChunkNum(
-          graph_info_->GetPrefix(), vertex_info);
-      RETURN_GS_ERROR_IF_NOT_OK(chunk_num_result.status());
-      auto chunk_num = chunk_num_result.value();
-
-      if (chunk_num <= static_cast<int64_t>(comm_spec_.fnum())) {
-        if (chunk_num < comm_spec_.fid() + 1) {
-          // no vertex chunk can be assigned to this fragment
-          vertex_chunk_begins_[i] = 0;
-          vertex_chunk_nums_[i] = 0;
-        } else {
-          vertex_chunk_begins_[i] = static_cast<int64_t>(comm_spec_.fid());
-          vertex_chunk_nums_[i] = 1;
-        }
-      } else {
-        int64_t bsize = chunk_num / static_cast<int64_t>(comm_spec_.fnum());
-        vertex_chunk_begins_[i] =
-            static_cast<int64_t>(comm_spec_.fid()) * bsize;
-        if (comm_spec_.fid() == comm_spec_.fnum() - 1) {
-          vertex_chunk_nums_[i] = chunk_num - vertex_chunk_begins_[i];
-        } else {
-          vertex_chunk_nums_[i] = bsize;
-        }
-      }
-    }
+    BOOST_LEAF_CHECK(initializeVertexChunkBeginAndNum(i, vertex_info));
   }
   vertex_label_num_ = vertex_labels_.size();
   for (size_t i = 0; i < vertex_labels_.size(); ++i) {
@@ -321,6 +255,84 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::distributeVertices() {
   edge_label_num_ = edge_labels_.size();
 
   vid_parser_.Init(comm_spec_.fnum(), this->vertex_label_num_);
+  return {};
+}
+
+template <typename OID_T, typename VID_T,
+          template <typename, typename> class VERTEX_MAP_T>
+boost::leaf::result<void>
+GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::initializeVertexChunkBeginAndNum(
+    int vertex_label_index,
+    const std::shared_ptr<GraphArchive::VertexInfo>& vertex_info) {
+  if (store_in_local_) {
+    // distribute the vertex chunks base on the local metadata
+    const auto& extra_info = graph_info_->GetExtraInfo();
+    if (extra_info.find(LOCAL_METADATA_KEY) == extra_info.end()) {
+      RETURN_GS_ERROR(
+          ErrorCode::kInvalidValueError,
+          "The local metadata key-value is not found in graph info");
+    }
+    std::string local_metadata_prefix = extra_info.at(LOCAL_METADATA_KEY);
+    std::string path = graph_info_->GetPrefix() + vertex_info->GetPrefix() +
+                       local_metadata_prefix + std::to_string(comm_spec_.fid());
+
+    std::shared_ptr<arrow::io::ReadableFile> file;
+    std::shared_ptr<arrow::fs::FileSystem> fs;
+
+    auto fs_result = arrow::fs::FileSystemFromUriOrPath(path);
+    if (!fs_result.ok()) {
+      RETURN_GS_ERROR(ErrorCode::kArrowError, fs_result.status().message());
+    }
+    fs = fs_result.ValueOrDie();
+    auto input_stream_result = fs->OpenInputStream(path);
+    if (!input_stream_result.status().ok()) {
+      RETURN_GS_ERROR(ErrorCode::kArrowError,
+                      input_stream_result.status().message());
+    }
+    auto input_stream = input_stream_result.ValueOrDie();
+    // read the vertex chunk begin of vertex label i
+    auto read_result = input_stream->Read(
+        sizeof(int64_t), &vertex_chunk_begins_[vertex_label_index]);
+    if (!read_result.ok()) {
+      RETURN_GS_ERROR(ErrorCode::kArrowError, read_result.status().message());
+    }
+    assert(read_result.ValueOrDie() == sizeof(int64_t));
+    // read the vertex chunk num of vertex label i
+    read_result = input_stream->Read(sizeof(int64_t),
+                                     &vertex_chunk_nums_[vertex_label_index]);
+    if (!read_result.ok()) {
+      RETURN_GS_ERROR(ErrorCode::kArrowError, read_result.status().message());
+    }
+    assert(read_result.ValueOrDie() == sizeof(int64_t));
+  } else {
+    // distribute the vertex chunks for fragments
+    auto chunk_num_result = GraphArchive::util::GetVertexChunkNum(
+        graph_info_->GetPrefix(), vertex_info);
+    RETURN_GS_ERROR_IF_NOT_OK(chunk_num_result.status());
+    auto chunk_num = chunk_num_result.value();
+
+    if (chunk_num <= static_cast<int64_t>(comm_spec_.fnum())) {
+      if (chunk_num < comm_spec_.fid() + 1) {
+        // no vertex chunk can be assigned to this fragment
+        vertex_chunk_begins_[vertex_label_index] = 0;
+        vertex_chunk_nums_[vertex_label_index] = 0;
+      } else {
+        vertex_chunk_begins_[vertex_label_index] =
+            static_cast<int64_t>(comm_spec_.fid());
+        vertex_chunk_nums_[vertex_label_index] = 1;
+      }
+    } else {
+      int64_t bsize = chunk_num / static_cast<int64_t>(comm_spec_.fnum());
+      vertex_chunk_begins_[vertex_label_index] =
+          static_cast<int64_t>(comm_spec_.fid()) * bsize;
+      if (comm_spec_.fid() == comm_spec_.fnum() - 1) {
+        vertex_chunk_nums_[vertex_label_index] =
+            chunk_num - vertex_chunk_begins_[vertex_label_index];
+      } else {
+        vertex_chunk_nums_[vertex_label_index] = bsize;
+      }
+    }
+  }
   return {};
 }
 
