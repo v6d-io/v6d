@@ -166,7 +166,7 @@ void KVStateCacheBuilder::Update(Client& client,
           ->kvStateCacheBlockBuilder;
   LOG(INFO) << "try to delete";
   if (evictedNodeData != nullptr) {
-    Delete(evictedNodeData);
+    Delete(client, evictedNodeData);
   }
 
   // if (evictedNodeData->treeData != nullptr && evictedNodeData->nodeData !=
@@ -245,7 +245,8 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
   return kvState;
 }
 
-void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
+void KVStateCacheBuilder::Delete(Client& client, 
+                                  std::shared_ptr<NodeData> evictedNodeData) {
   LOG(INFO) << "stage1";
   KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
       (KVStateCacheBlockBuilder*) ((TreeData*) evictedNodeData->treeData->data)
@@ -260,9 +261,24 @@ void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
   // Refactor this code. The data should be deleted by the RadixTree
   // delete (DataWrapper*) evictedNodeData->nodeData;
   LOG(INFO) << "tree data:" << evictedNodeData->treeData->data;
+  TreeData *treeData = (TreeData *) evictedNodeData->treeData->data;
   if (evictedNodeData->cleanTreeData) {
-    LOG(INFO) << "erase";
-    this->rootTree->GetSubTreeDataSet().erase(evictedNodeData->treeData->data);
+    if (!treeData->isPtr) {
+      LOG(INFO) << "treeData is:" << treeData;
+      LOG(INFO) << "recycle vineyard objects...";
+      ObjectID id = (ObjectID)treeData->builderObjectID;
+      Status status = client.DelData(id);
+      if (status.ok()) {
+        LOG(INFO) << "recycle the vineyard object ID " << id <<
+                      "of evicted subtree success";
+      } else {
+        LOG(INFO) << "recycle the vineyard object ID " << id <<
+                      "of evicted subtree failed with status:" + status.ToString();
+      }
+    } else {
+      LOG(INFO) << "erase";
+      this->rootTree->GetSubTreeDataSet().erase(evictedNodeData->treeData->data);
+    }
   }
   evictedNodeData->RecycleSource();
 }
@@ -289,7 +305,7 @@ void KVStateCacheBuilder::Merge(Client& client,
         evicted_token_list[evicted_token_list.size() - i - 1];
     std::shared_ptr<NodeData> evictedNodeData;
     this->rootTree->Delete(tokenList, evictedNodeData);
-    Delete(evictedNodeData);
+    Delete(client, evictedNodeData);
   }
 
   /**

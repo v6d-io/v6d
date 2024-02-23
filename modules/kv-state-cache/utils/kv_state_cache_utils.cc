@@ -38,7 +38,7 @@ static pthread_mutex_t syncMutex;
 void Delete(std::vector<int> token) {
   std::shared_ptr<NodeData> evictedNode;
   kvStateCacheBuilder->GetRootTree()->Delete(token, evictedNode);
-  kvStateCacheBuilder->Delete(evictedNode);
+  //kvStateCacheBuilder->Delete(evictedNode);
   raxShow(kvStateCacheBuilder->GetRootTree()->tree);
 }
 
@@ -206,6 +206,7 @@ void sync() {
                     : std::to_string(globalKVStateCache->GetVersion()));
   if (globalKVStateCache != nullptr &&
       kvStateCacheBuilder->GetVersion() < globalKVStateCache->GetVersion()) {
+    LOG(INFO) << "kvStateCacheBuilder Merging...";
     kvStateCacheBuilder->Merge(client, globalKVStateCache);
   }
   kvStateCacheBuilder->UpdateVersion();
@@ -213,9 +214,9 @@ void sync() {
   // 4. push the cache object
   std::shared_ptr<Object> kvStateCache = kvStateCacheBuilder->_Seal(client);
   client.Persist(kvStateCache->id());
-
+  LOG(INFO) << "before seal builderObjectID is" << kvStateCache->id();
   // 5. put the name of the new cache object to the meta server
-  LOG(INFO) << "stage 5";
+  LOG(INFO) << "stage 5" << llmCacheObjectName;
   client.DropName(llmCacheObjectName);
   status = client.PutName(kvStateCache->id(), llmCacheObjectName);
   if (status.ok()) {

@@ -25,7 +25,7 @@ limitations under the License.
 using namespace vineyard;
 
 #define DEMENSION 10
-#define CAPACITY 20
+#define CAPACITY 10
 #define LAYER 3
 
 void init() { InitKVStateCache(DEMENSION, CAPACITY, LAYER); }
