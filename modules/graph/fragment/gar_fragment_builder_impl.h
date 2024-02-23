@@ -140,27 +140,31 @@ boost::leaf::result<void> generate_csr(
     auto tvnum = tvnums[v_label];
     // build the arrow's offset array
     std::shared_ptr<arrow::Buffer> offsets_buffer;
+    int64_t buffer_length = static_cast<int64_t>(tvnum + 1);
     ARROW_OK_ASSIGN_OR_RAISE(
-        offsets_buffer, arrow::AllocateBuffer((tvnum + 1) * sizeof(int64_t)));
+        offsets_buffer, arrow::AllocateBuffer(buffer_length * sizeof(int64_t)));
     if (v_label == vertex_label) {
+      int64_t array_length = offset_array->length();
+      VINEYARD_ASSERT(array_length <= buffer_length,
+                      "Invalid offset array: the offset array length is larger "
+                      "than the tvnum + 1.");
       memcpy(offsets_buffer->mutable_data(),
              reinterpret_cast<const uint8_t*>(offset_array->raw_values()),
-             offset_array->length() * sizeof(int64_t));
+             array_length * sizeof(int64_t));
       // we do not store the edge offset of outer vertices, so fill edge_num
       // to the outer vertices offset
-      std::fill_n(
-          reinterpret_cast<int64_t*>(offsets_buffer->mutable_data() +
-                                     offset_array->length() * sizeof(int64_t)),
-          (tvnum + 1) - offset_array->length(), edge_num);
+      std::fill_n(reinterpret_cast<int64_t*>(offsets_buffer->mutable_data() +
+                                             array_length * sizeof(int64_t)),
+                  buffer_length - array_length, edge_num);
       edges[v_label] =
           std::make_shared<PodArrayBuilder<nbr_unit_t>>(client, edge_num);
     } else {
       std::fill_n(reinterpret_cast<int64_t*>(offsets_buffer->mutable_data()),
-                  tvnum + 1, 0);
+                  buffer_length, 0);
       edges[v_label] = std::make_shared<PodArrayBuilder<nbr_unit_t>>(client, 0);
     }
     edge_offsets[v_label] = std::make_shared<arrow::Int64Array>(
-        arrow::int64(), tvnum + 1, offsets_buffer, nullptr, 0, 0);
+        arrow::int64(), buffer_length, offsets_buffer, nullptr, 0, 0);
   }
 
   std::vector<int64_t> chunk_offsets(num_chunks + 1, 0);

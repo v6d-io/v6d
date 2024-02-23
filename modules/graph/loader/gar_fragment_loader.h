@@ -43,6 +43,7 @@ limitations under the License.
 
 namespace GraphArchive {
 class GraphInfo;
+class VertexInfo;
 class EdgeInfo;
 class PropertyGroup;
 enum class AdjListType : std::uint8_t;
@@ -51,7 +52,7 @@ enum class AdjListType : std::uint8_t;
 namespace vineyard {
 
 std::shared_ptr<arrow::Schema> ConstructSchemaFromPropertyGroup(
-    const GraphArchive::PropertyGroup& property_group);
+    const std::shared_ptr<GraphArchive::PropertyGroup>& property_group);
 
 template <typename OID_T = property_graph_types::OID_TYPE,
           typename VID_T = property_graph_types::VID_TYPE,
@@ -80,15 +81,26 @@ class GARFragmentLoader {
 
  public:
   /**
+   * @brief Initialize the GARFragmentLoader.
+   *    Notes that if vertex_labels or edge_labels are empty, the loader will
+   *    load all vertices and edges.
    *
-   * @param client
-   * @param comm_spec
-   * @param graph_info The graph info of the GAR.
-   * @param directed
+   * @param client vineyard client.
+   * @param comm_spec communication spec.
+   * @param graph_info_yaml graph info yaml path.
+   * @param vertex_labels vertex labels to project subgraph.
+   * @param edge_labels edge labels to project subgraph.
+   * @param directed whether the graph is directed.
+   * @param generate_eid whether to generate edge id.
+   * @param store_in_local whether the gar data files are stored in local.
    */
-  GARFragmentLoader(Client& client, const grape::CommSpec& comm_spec,
-                    const std::string& graph_info_yaml, bool directed = true,
-                    bool generate_eid = false);
+  GARFragmentLoader(
+      Client& client, const grape::CommSpec& comm_spec,
+      const std::string& graph_info_yaml,
+      const std::vector<std::string>& vertex_labels = {},
+      const std::vector<std::vector<std::string>>& edge_labels = {},
+      bool directed = true, bool generate_eid = false,
+      bool store_in_local = false);
 
   ~GARFragmentLoader() = default;
 
@@ -111,7 +123,7 @@ class GARFragmentLoader {
       const std::string& vertex_label);
 
   boost::leaf::result<void> loadEdgeTableOfLabel(
-      const GraphArchive::EdgeInfo& edge_info,
+      const std::shared_ptr<GraphArchive::EdgeInfo>& edge_info,
       GraphArchive::AdjListType adj_list_type);
 
   boost::leaf::result<void> initSchema(PropertyGraphSchema& schema);
@@ -131,33 +143,15 @@ class GARFragmentLoader {
       label_id_t label_id, const std::shared_ptr<arrow::Array> id_array_in,
       bool all_be_local_vertex, std::shared_ptr<arrow::Array>& out);
 
-  fid_t getPartitionId(gar_id_t oid, label_id_t label_id) {
-    auto chunk_index = oid / vertex_chunk_sizes_[label_id];
-    auto& vertex_chunk_begins =
-        vertex_chunk_begin_of_frag_[vertex_labels_[label_id]];
-    // binary search
-    fid_t low = 0, high = comm_spec_.fnum();
-    while (low <= high) {
-      fid_t mid = (low + high) / 2;
-      if (vertex_chunk_begins[mid] <= chunk_index &&
-          vertex_chunk_begins[mid + 1] > chunk_index) {
-        return mid;
-      } else if (vertex_chunk_begins[mid] > chunk_index) {
-        high = mid - 1;
-      } else {
-        low = mid + 1;
-      }
-    }
-    return low;
-  }
+  boost::leaf::result<void> initializeVertexChunkBeginAndNum(
+      int vertex_label_index,
+      const std::shared_ptr<GraphArchive::VertexInfo>& vertex_info);
 
  private:
   Client& client_;
   grape::CommSpec comm_spec_;
   std::shared_ptr<vertex_map_t> vm_ptr_;
   std::shared_ptr<GraphArchive::GraphInfo> graph_info_;
-
-  std::map<std::string, std::vector<int64_t>> vertex_chunk_begin_of_frag_;
 
   bool directed_;
 
@@ -177,6 +171,10 @@ class GARFragmentLoader {
 
   bool generate_eid_;
   IdParser<vid_t> vid_parser_;
+
+  bool store_in_local_;
+  std::vector<int64_t> vertex_chunk_begins_;
+  std::vector<int64_t> vertex_chunk_nums_;
 };
 
 namespace detail {

@@ -25,6 +25,7 @@ limitations under the License.
 
 #include "graph/fragment/arrow_fragment.h"
 #include "graph/fragment/graph_schema.h"
+#include "graph/loader/arrow_fragment_loader.h"
 #include "graph/loader/gar_fragment_loader.h"
 #include "graph/writer/arrow_fragment_writer.h"
 
@@ -32,6 +33,8 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 using GraphType = ArrowFragment<property_graph_types::OID_TYPE,
                                 property_graph_types::VID_TYPE>;
+using StringGraphType =
+    ArrowFragment<std::string, property_graph_types::VID_TYPE>;
 using LabelType = typename GraphType::label_id_t;
 
 void traverse_graph(std::shared_ptr<GraphType> graph, const std::string& path) {
@@ -67,11 +70,14 @@ void traverse_graph(std::shared_ptr<GraphType> graph, const std::string& path) {
   }
 }
 
-boost::leaf::result<int> write_out_to_gar(const grape::CommSpec& comm_spec,
-                                          std::shared_ptr<GraphType> graph,
-                                          const std::string& graph_yaml_path) {
-  auto writer = std::make_unique<ArrowFragmentWriter<GraphType>>(
-      graph, comm_spec, graph_yaml_path);
+boost::leaf::result<int> write_out_to_gar(
+    const grape::CommSpec& comm_spec, std::shared_ptr<StringGraphType> graph,
+    const std::string& output_path, const std::string& file_type) {
+  auto writer = std::make_unique<ArrowFragmentWriter<StringGraphType>>(
+      graph, comm_spec, /* graph_name */ "graph", output_path,
+      /* vertex_chunk_size */ 512,
+      /* edge_chunk_size */ 1024, file_type);
+  BOOST_LEAF_CHECK(writer->WriteGraphInfo(output_path));
   BOOST_LEAF_CHECK(writer->WriteFragment());
   LOG(INFO) << "[worker-" << comm_spec.worker_id() << "] generate GAR files...";
   return 0;
@@ -80,19 +86,21 @@ boost::leaf::result<int> write_out_to_gar(const grape::CommSpec& comm_spec,
 int main(int argc, char** argv) {
   if (argc < 3) {
     printf(
-        "usage: ./arrow_fragment_test <ipc_socket> <graph_yaml_path>"
-        "[directed]\n");
+        "usage: ./arrow_fragment_gar_test <ipc_socket> vdata_path edata_path "
+        "output_path file_type\n");
     return 1;
   }
   int index = 1;
   std::string ipc_socket = std::string(argv[index++]);
 
-  std::string graph_yaml_path =
-      vineyard::ExpandEnvironmentVariables(argv[index++]);
-  int directed = 1;
-  if (argc > index) {
-    directed = atoi(argv[index]);
-  }
+  std::string v_file_path = vineyard::ExpandEnvironmentVariables(argv[index++]);
+  std::string e_file_path = vineyard::ExpandEnvironmentVariables(argv[index++]);
+  std::string output_path = vineyard::ExpandEnvironmentVariables(argv[index++]);
+  std::string file_type = std::string(argv[index++]);
+
+  std::string v_file_suffix = ".csv#header_row=true&label=person";
+  std::string e_file_suffix =
+      ".csv#header_row=true&label=knows&src_label=person&dst_label=person";
 
   vineyard::Client client;
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
@@ -105,12 +113,38 @@ int main(int argc, char** argv) {
     grape::CommSpec comm_spec;
     comm_spec.Init(MPI_COMM_WORLD);
 
+    // Load graph from csv
+    vineyard::ObjectID frag_group;
+    {
+      std::string vfile = v_file_path + v_file_suffix;
+      std::string efile = e_file_path + e_file_suffix;
+      auto loader = std::make_unique<
+          ArrowFragmentLoader<std::string, property_graph_types::VID_TYPE>>(
+          client, comm_spec, std::vector<std::string>{efile},
+          std::vector<std::string>{vfile}, /*directed*/ true,
+          /*generate_eid*/ false, /*retain_oid*/ true);
+      frag_group = loader->LoadFragmentAsFragmentGroup().value();
+      LOG(INFO) << "Loaded fragment group: " << ObjectIDToString(frag_group);
+    }
+
+    // Write out to GAR files
+    {
+      auto fg = std::dynamic_pointer_cast<ArrowFragmentGroup>(
+          client.GetObject(frag_group));
+      auto fid = comm_spec.WorkerToFrag(comm_spec.worker_id());
+      auto frag_id = fg->Fragments().at(fid);
+      auto arrow_frag =
+          std::static_pointer_cast<StringGraphType>(client.GetObject(frag_id));
+      write_out_to_gar(comm_spec, arrow_frag, output_path, file_type);
+    }
+
     // Load from GAR files
     {
+      std::string graph_yaml_path = output_path + "graph.graph.yaml";
       auto loader =
           std::make_unique<GARFragmentLoader<property_graph_types::OID_TYPE,
                                              property_graph_types::VID_TYPE>>(
-              client, comm_spec, graph_yaml_path, directed != 0);
+              client, comm_spec, graph_yaml_path);
       vineyard::ObjectID fragment_id = loader->LoadFragment().value();
 
       std::shared_ptr<GraphType> graph =
@@ -119,7 +153,6 @@ int main(int argc, char** argv) {
                 << "]: " << ObjectIDToString(fragment_id);
       traverse_graph(graph,
                      "./xx/output_graph_" + std::to_string(graph->fid()));
-      write_out_to_gar(comm_spec, graph, graph_yaml_path);
     }
   }
   grape::FinalizeMPIComm();

@@ -17,15 +17,17 @@ limitations under the License.
 
 #include "graph/loader/gar_fragment_loader.h"
 
+#include "gar/util/data_type.h"
+
 #include "arrow/api.h"
 #include "gar/graph_info.h"
 
 namespace vineyard {
 
 std::shared_ptr<arrow::Schema> ConstructSchemaFromPropertyGroup(
-    const GraphArchive::PropertyGroup& property_group) {
+    const std::shared_ptr<GraphArchive::PropertyGroup>& property_group) {
   std::vector<std::shared_ptr<arrow::Field>> fields;
-  for (const auto& prop : property_group.GetProperties()) {
+  for (const auto& prop : property_group->GetProperties()) {
     fields.emplace_back(arrow::field(
         prop.name, GraphArchive::DataType::DataTypeToArrowDataType(prop.type)));
   }

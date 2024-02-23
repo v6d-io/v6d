@@ -527,17 +527,26 @@ def run_graph_tests(meta, allocator, endpoints, tests):
         run_test(
             tests,
             'arrow_fragment_gar_test',
-            '$GAR_DATA_DIR/ldbc_sample/csv/ldbc_sample.graph.yml',
+            '$VINEYARD_DATA_DIR/p2p_v',
+            '$VINEYARD_DATA_DIR/p2p_e',
+            '$TMPDIR/',
+            'csv',
         )
         run_test(
             tests,
             'arrow_fragment_gar_test',
-            '$GAR_DATA_DIR/ldbc_sample/orc/ldbc_sample.graph.yml',
+            '$VINEYARD_DATA_DIR/p2p_v',
+            '$VINEYARD_DATA_DIR/p2p_e',
+            '$TMPDIR/',
+            'parquet',
         )
         run_test(
             tests,
             'arrow_fragment_gar_test',
-            '$GAR_DATA_DIR/ldbc_sample/parquet/ldbc_sample.graph.yml',
+            '$VINEYARD_DATA_DIR/p2p_v',
+            '$VINEYARD_DATA_DIR/p2p_e',
+            '$TMPDIR/',
+            'orc',
         )
 
 
