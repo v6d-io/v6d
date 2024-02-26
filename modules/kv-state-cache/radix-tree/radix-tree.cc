@@ -282,9 +282,11 @@ std::string RadixTree::Serialize() {
 
   // use ZSTD to compress the serialized string
   size_t srcSize = serializedStr.size();
-  std::string compressedStr(srcSize, '\0');
+  size_t dstSize = ZSTD_compressBound(srcSize);
+  std::string compressedStr(dstSize + 1, '\0');
+  LOG(INFO) << "src size:" << srcSize << " dst size:" << dstSize;
   int compressedSize =
-      ZSTD_compress((void*) (compressedStr.c_str()), compressedStr.length(),
+      ZSTD_compress((void*) (compressedStr.c_str()), compressedStr.size(),
                     serializedStr.c_str(), srcSize, 3);
   if (ZSTD_isError(compressedSize)) {
     LOG(ERROR) << "ZSTD compression failed: "
@@ -293,7 +295,7 @@ std::string RadixTree::Serialize() {
   int cacheCapacity = this->cacheCapacity - 1;
 
   std::string result =
-      std::string((char*) &srcSize, sizeof(int)) +
+      std::string((char*) &compressedSize, sizeof(int)) +
       std::string((char*) &cacheCapacity, sizeof(int)) +
       std::string((char*) &(this->tree->head->numnodes), sizeof(uint32_t)) +
       compressedStr;
@@ -304,16 +306,23 @@ std::string RadixTree::Serialize() {
 std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
   LOG(INFO) << "Deserialize......";
   // use LZ4 to decompress the serialized string
-  int srcSize = *(int*) data.c_str();
+  int compressedSize = *(int*) data.c_str();
   data.erase(0, sizeof(int));
   int cacheCapacity = *(int*) data.c_str();
   data.erase(0, sizeof(int));
   int rootNumNodes = *(uint32_t*) data.c_str();
   data.erase(0, sizeof(uint32_t));
-  std::string decompressedStr(srcSize, '\0');
-  int decompressedSize =
-      ZSTD_decompress((void*) (decompressedStr.c_str()), decompressedStr.size(),
-                      data.c_str(), srcSize);
+  int ds = ZSTD_getFrameContentSize(data.c_str(), data.size());
+  if (ds == ZSTD_CONTENTSIZE_ERROR) {
+    LOG(ERROR) << "Error: not a valid compressed frame";
+  } else if (ds == ZSTD_CONTENTSIZE_UNKNOWN) {
+    LOG(ERROR)
+        << "Error: original size unknown. Use streaming decompression instead.";
+  }
+
+  std::string decompressedStr(ds + 1, '\0');
+  int decompressedSize = ZSTD_decompress((void*) (decompressedStr.data()), ds,
+                                         data.c_str(), compressedSize);
   if (ZSTD_isError(decompressedSize)) {
     LOG(ERROR) << "ZSTD decompression failed: "
                << ZSTD_getErrorName(decompressedSize);
@@ -338,7 +347,6 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
       line.pop_back();
       continue;
     }
-    LOG(INFO) << "data line:" << line << std::endl;
     std::istringstream lineStream(line);
     std::string tokenListPart, timestampPart, dataPart, subTreeSizePart;
 
@@ -357,7 +365,7 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
       }
     }
     if (!std::getline(lineStream, dataPart)) {
-      LOG(INFO) << "data length is 0";
+      LOG(ERROR) << "data length is 0";
     }
 
     std::istringstream keyStream(tokenListPart);
@@ -371,17 +379,14 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
     if (isMainTree) {
       std::istringstream timestampStream(timestampPart);
       if (!(timestampStream >> std::hex >> timestamp)) {
-        LOG(INFO) << "Invalid timestamp format.";
-        throw std::runtime_error("Invalid timestamp format.");
+        LOG(ERROR) << "Invalid timestamp format.";
       }
 
       std::istringstream subTreeSizeStream(subTreeSizePart);
       uint32_t subTreeSize;
       if (!(subTreeSizeStream >> std::hex >> subTreeSize)) {
-        LOG(INFO) << "Invalid sub tree size format.";
-        throw std::runtime_error("Invalid sub tree size format.");
+        LOG(ERROR) << "Invalid sub tree size format.";
       }
-      LOG(INFO) << "Deserialize sub tree size:" << subTreeSize;
       subTreeSizeList.push_back(subTreeSize);
     }
 

@@ -981,7 +981,7 @@ endfunction()
 
 file_glob_recurse(FILES_NEED_FORMAT DIRECTORIES      "src" "modules" "python" "test" "benchmark"
                                     PATTERNS         ".*\\.(cc|cpp|h|hpp|vineyard-mod)$"
-                                    EXCLUDE_PATTERNS "(.*\\.vineyard.h$)|(modules/kv-state-cache/radix-tree/ra.*)"
+                                    EXCLUDE_PATTERNS "(.*\\.vineyard.h$)|(modules/kv-state-cache/radix-tree/radix\.*)"
 )
 
 # the `memcpy.h` is borrowed from external project
