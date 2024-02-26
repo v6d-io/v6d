@@ -18,8 +18,10 @@ limitations under the License.
 #ifndef MODULES_KV_STATE_CACHE_UTILS_H_
 #define MODULES_KV_STATE_CACHE_UTILS_H_
 
-void InitKVStateCache(int dimension = 10, int cacheCapacity = 10, int layer = 1,
-                      int blockSize = 5);
+void InitKVStateCache(
+    int dimension = 10, int cacheCapacity = 10, int layer = 1,
+    int blockSize = 5,
+    std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET")));
 
 void Update(const std::vector<int>& tokenList, int nextToken,
             const KV_STATE_WITH_LAYER& kvState);

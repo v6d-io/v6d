@@ -40,8 +40,9 @@ std::vector<int> round_4_tokens = {1, 2, 3, 4, 5, 6};
 
 std::vector<std::vector<int>> tokens_list;
 
-void init(int dimension, int capacity, int layer, int block_size) {
-  InitKVStateCache(dimension, capacity, layer, block_size);
+void init(int dimension, int capacity, int layer, int block_size,
+          std::string socket) {
+  InitKVStateCache(dimension, capacity, layer, block_size, socket);
 }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
@@ -147,7 +148,13 @@ void inference(std::vector<int> tokens, bool block = false) {
 }
 
 int main(int argc, char** argv) {
-  for (int i = 1; i < argc; i++) {
+  if (argc < 2) {
+    printf("usage ./kv_state_cache_test <ipc_socket_name>");
+    return 1;
+  }
+  std::string ipc_socket = std::string(argv[1]);
+
+  for (int i = 2; i < argc; i++) {
     if (strcmp(argv[i], "-d") == 0) {
       dimension = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-c") == 0) {
@@ -178,7 +185,7 @@ int main(int argc, char** argv) {
             << ", capacity: " << capacity << ", layer: " << layer
             << ", block_size: " << block_size << ".";
 
-  init(dimension, capacity, layer, block_size);
+  init(dimension, capacity, layer, block_size, ipc_socket);
 
   for (size_t i = 0; i < tokens_list.size(); i++) {
     inference(tokens_list[i]);

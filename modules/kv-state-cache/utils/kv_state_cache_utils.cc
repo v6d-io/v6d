@@ -61,9 +61,8 @@ void CloseKVStateCache() {
 }
 
 void InitKVStateCache(int dimension, int cacheCapacity, int layer,
-                      int blockSize) {
+                      int blockSize, std::string socket) {
   if (kvStateCacheBuilder == nullptr) {
-    std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET"));
     VLOG(100) << "socket:" << socket;
     client.Connect(socket);
 
