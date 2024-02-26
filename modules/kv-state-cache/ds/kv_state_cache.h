@@ -61,7 +61,7 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
     return this->kvStateCacheBlockList;
   }
 
-  int GetDemension() { return this->dimension; }
+  int GetDimension() { return this->dimension; }
 
   int GetCacheCapacity() { return this->cacheCapacity; }
 
@@ -79,12 +79,12 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   std::shared_ptr<RadixTree> rootTree;
   int dimension;
-  int layer = 1;
+  int layer;
   uint64_t version;
 
  public:
   KVStateCacheBuilder(Client& client, int dimension, int cacheCapacity,
-                      int layer);
+                      int layer, int blockSize = DEFAULT_BLOCK_SIZE);
 
   KVStateCacheBuilder(Client& client, std::shared_ptr<KVStateCache> cache);
 
@@ -110,7 +110,7 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   std::shared_ptr<Object> _Seal(Client& client) override;
 
-  uint64_t GetDemension() { return this->dimension; }
+  uint64_t GetDimension() { return this->dimension; }
 
   std::shared_ptr<RadixTree> GetRootTree() { return this->rootTree; }
 
