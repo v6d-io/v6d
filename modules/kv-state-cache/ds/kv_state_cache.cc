@@ -96,7 +96,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
                                          std::shared_ptr<KVStateCache> cache) {
   // TBD
-  this->dimension = cache->GetDemension();
+  this->dimension = cache->GetDimension();
   this->version = cache->GetVersion();
   this->layer = cache->GetLayer();
   // 1. create block builder from block
@@ -185,11 +185,11 @@ void KVStateCacheBuilder::Update(Client& client,
   LOG(INFO) << "kvStateCacheBlockBuilder:" << kvStateCacheBlockBuilder;
   if (kvStateCacheBlockBuilder->IsFull()) {
     /**
-     * If the kv-state cache of the tree is full, triggle split. Delete the
+     * If the kv-state cache of the tree is full, trigger split. Delete the
      * empty node from the radix tree and split the tree. Then, kv-state cache
      * split according to the new tree.
      */
-    LOG(INFO) << "triggle splits";
+    LOG(INFO) << "trigger splits";
     std::shared_ptr<NodeData> evictedNodeData = nullptr;
     this->rootTree->Delete(tokenListCopy, evictedNodeData);
 

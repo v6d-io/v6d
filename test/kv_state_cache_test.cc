@@ -24,12 +24,12 @@ limitations under the License.
 
 using namespace vineyard;
 
-#define DEMENSION 10
+#define DIMENSION 10
 #define CAPACITY 20
 #define LAYER 3
 #define BLOCK_SIZE 5
 
-void init() { InitKVStateCache(DEMENSION, CAPACITY, LAYER, BLOCK_SIZE); }
+void init() { InitKVStateCache(DIMENSION, CAPACITY, LAYER, BLOCK_SIZE); }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
   std::string tokens_str = "";
@@ -47,7 +47,7 @@ void print_kv_state(
   for (auto iter = kv_state.begin(); iter != kv_state.end(); ++iter) {
     std::string key_state_str = "";
     std::string value_state_str = "";
-    for (int i = 0; i < DEMENSION; ++i) {
+    for (int i = 0; i < DIMENSION; ++i) {
       key_state_str += std::to_string(iter->second.first[i]) + " ";
       value_state_str += std::to_string(iter->second.second[i]) + " ";
     }
@@ -65,10 +65,10 @@ generate_kv_state(int token) {
   for (int currentLayer = 0; currentLayer < LAYER; currentLayer++) {
     std::vector<double> key_state;
     std::vector<double> value_state;
-    for (int i = 0; i < DEMENSION; ++i) {
-      key_state.push_back(((double) token) / DEMENSION * (i + 1) +
+    for (int i = 0; i < DIMENSION; ++i) {
+      key_state.push_back(((double) token) / DIMENSION * (i + 1) +
                           currentLayer * 10);
-      value_state.push_back(((double) token) / DEMENSION * (i + 1) * 2 +
+      value_state.push_back(((double) token) / DIMENSION * (i + 1) * 2 +
                             currentLayer * 10);
     }
 

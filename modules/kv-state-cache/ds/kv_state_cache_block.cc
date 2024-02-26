@@ -181,7 +181,7 @@ void KVStateCacheBlockBuilder::Update(const KV_STATE_WITH_LAYER& kvState,
     std::vector<double> valueStateVector =
         (kvState.find(currentLayer)->second).second;
     LOG(INFO) << "vector size:" << keyStateVector.size() << " "
-              << valueStateVector.size() << " demension" << this->dimension;
+              << valueStateVector.size() << " dimension" << this->dimension;
     VINEYARD_ASSERT(keyStateVector.size() == (size_t) this->dimension);
     VINEYARD_ASSERT(valueStateVector.size() == (size_t) this->dimension);
 

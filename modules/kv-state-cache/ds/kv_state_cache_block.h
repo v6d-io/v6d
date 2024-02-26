@@ -53,7 +53,7 @@ namespace vineyard {
 /**
  * @brief KVStateCacheBlock is a cache for kv-cache of LLM. When a new prompt
  * comes, LLM can query KVStateCacheBlock to get the state of the kv-cache to
- * avoid caclulating the kv-cache again if the new prompt is similar to the
+ * avoid calculate the kv-cache again if the new prompt is similar to the
  * previous one.
  *
  * KVStateCacheBlock is stored in vineyard as a vineyard object which contains a
