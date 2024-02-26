@@ -50,6 +50,7 @@
 #include "common/util/logging.h"
 using namespace vineyard;
 
+/* clang-format off */
 /* This is a special pointer that is guaranteed to never have the same value
  * of a radix tree node. It's used in order to report "not found" error without
  * requiring the function to have multiple return values. */
@@ -2860,7 +2861,4 @@ raxNode* raxGetFirstChildPtr(raxNode* node) {
     return raxGetFirstChildPtr(node);
 }
 
-// 1 2 3
-// query subtree node:0x55f87076f760
-// I0129 16:44:25.626318 280948 kv_state_cache.cc:223] offset:0
-// I0129 16:44:25.626322 280948 kv_state_cache.cc:224] kvStateCacheBlockBuilder:0x55f870767bc0
+/* clang-format off */
