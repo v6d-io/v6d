@@ -193,6 +193,8 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   int GetBlockSize() { return this->blockSize; }
 
+  void PrintKVStateCacheBlock();
+
   ~KVStateCacheBlockBuilder();
 };
 
