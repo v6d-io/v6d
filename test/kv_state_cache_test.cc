@@ -24,11 +24,12 @@ limitations under the License.
 
 using namespace vineyard;
 
-#define DEMENSION 10
+#define DIMENSION 10
 #define CAPACITY 20
 #define LAYER 3
+#define BLOCK_SIZE 5
 
-void init() { InitKVStateCache(DEMENSION, CAPACITY, LAYER); }
+void init() { InitKVStateCache(DIMENSION, CAPACITY, LAYER, BLOCK_SIZE); }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
   std::string tokens_str = "";
@@ -46,7 +47,7 @@ void print_kv_state(
   for (auto iter = kv_state.begin(); iter != kv_state.end(); ++iter) {
     std::string key_state_str = "";
     std::string value_state_str = "";
-    for (int i = 0; i < DEMENSION; ++i) {
+    for (int i = 0; i < DIMENSION; ++i) {
       key_state_str += std::to_string(iter->second.first[i]) + " ";
       value_state_str += std::to_string(iter->second.second[i]) + " ";
     }
@@ -64,10 +65,10 @@ generate_kv_state(int token) {
   for (int currentLayer = 0; currentLayer < LAYER; currentLayer++) {
     std::vector<double> key_state;
     std::vector<double> value_state;
-    for (int i = 0; i < DEMENSION; ++i) {
-      key_state.push_back(((double) token) / DEMENSION * (i + 1) +
+    for (int i = 0; i < DIMENSION; ++i) {
+      key_state.push_back(((double) token) / DIMENSION * (i + 1) +
                           currentLayer * 10);
-      value_state.push_back(((double) token) / DEMENSION * (i + 1) * 2 +
+      value_state.push_back(((double) token) / DIMENSION * (i + 1) * 2 +
                             currentLayer * 10);
     }
 
@@ -106,7 +107,11 @@ void inference(std::vector<int> tokens, bool block = false) {
 
 int main() {
   init();
-  std::vector<int> round_1_tokens = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  std::vector<int> round_1_tokens = {
+      1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18,
+      19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+      37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+      55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69};
   std::vector<int> round_2_tokens = {1, 2,  3,  4,  5,  7, 8,
                                      9, 10, 11, 12, 13, 14};
   std::vector<int> round_3_tokens = {1, 2, 3, 9, 10, 11, 12, 13, 14};
@@ -118,6 +123,8 @@ int main() {
 
   inference(round_1_tokens);
   inference(round_2_tokens);
+  inference(round_3_tokens);
+  sleep(5);
   inference(round_3_tokens);
   // inference(round_4_tokens);
   // sleep(5);

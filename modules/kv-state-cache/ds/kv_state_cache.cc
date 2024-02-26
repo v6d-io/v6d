@@ -69,12 +69,13 @@ KVStateCache::~KVStateCache() {
 }
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
-                                         int cacheCapacity, int layer) {
+                                         int cacheCapacity, int layer,
+                                         int blockSize) {
   this->dimension = dimension;
   this->version = 0;
   this->layer = layer;
   KVStateCacheBlockBuilder* builder =
-      new KVStateCacheBlockBuilder(client, this->dimension, layer);
+      new KVStateCacheBlockBuilder(client, this->dimension, layer, blockSize);
 
   this->rootTree = std::make_shared<RadixTree>(cacheCapacity);
 
@@ -95,7 +96,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
                                          std::shared_ptr<KVStateCache> cache) {
   // TBD
-  this->dimension = cache->GetDemension();
+  this->dimension = cache->GetDimension();
   this->version = cache->GetVersion();
   this->layer = cache->GetLayer();
   // 1. create block builder from block
@@ -126,7 +127,8 @@ KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
   // Split the tree if the list of kvState is full.
   VINEYARD_ASSERT(nodeDataList.size() > 0);
   KVStateCacheBlockBuilder* childKVStateCacheBlockBuilder =
-      new KVStateCacheBlockBuilder(client, this->dimension, this->layer);
+      new KVStateCacheBlockBuilder(client, this->dimension, this->layer,
+                                   kvStateCacheBlockBuilder->GetBlockSize());
   for (size_t i = 0; i < nodeDataList.size(); i++) {
     OffsetData* data = (OffsetData*) nodeDataList[i]->nodeData->data;
     if (data == nullptr)
@@ -183,11 +185,11 @@ void KVStateCacheBuilder::Update(Client& client,
   LOG(INFO) << "kvStateCacheBlockBuilder:" << kvStateCacheBlockBuilder;
   if (kvStateCacheBlockBuilder->IsFull()) {
     /**
-     * If the kv-state cache of the tree is full, triggle split. Delete the
+     * If the kv-state cache of the tree is full, trigger split. Delete the
      * empty node from the radix tree and split the tree. Then, kv-state cache
      * split according to the new tree.
      */
-    LOG(INFO) << "triggle splits";
+    LOG(INFO) << "trigger splits";
     std::shared_ptr<NodeData> evictedNodeData = nullptr;
     this->rootTree->Delete(tokenListCopy, evictedNodeData);
 
