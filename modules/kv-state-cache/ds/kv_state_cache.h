@@ -79,12 +79,12 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   std::shared_ptr<RadixTree> rootTree;
   int dimension;
-  int layer = 1;
+  int layer;
   uint64_t version;
 
  public:
   KVStateCacheBuilder(Client& client, int dimension, int cacheCapacity,
-                      int layer);
+                      int layer, int blockSize = DEFAULT_BLOCK_SIZE);
 
   KVStateCacheBuilder(Client& client, std::shared_ptr<KVStateCache> cache);
 

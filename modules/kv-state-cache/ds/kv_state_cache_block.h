@@ -48,7 +48,7 @@ struct OffsetData {
 };
 namespace vineyard {
 
-#define LIST_SIZE 5
+#define DEFAULT_BLOCK_SIZE 64
 
 /**
  * @brief KVStateCacheBlock is a cache for kv-cache of LLM. When a new prompt
@@ -67,7 +67,9 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
  private:
   std::vector<std::shared_ptr<Tensor<double>>> keyStateTensorList;
   std::vector<std::shared_ptr<Tensor<double>>> valueStateTensorList;
-  uint64_t bitmap;
+  uint64_t* bitmap;
+  int blockSize;
+  int bitmapSize;
   ObjectID id;
   int layer;
   int dimension;
@@ -84,7 +86,9 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
 
   uint64_t GetDimension() { return this->dimension; }
 
-  uint64_t GetBitmap() { return this->bitmap; }
+  uint64_t* GetBitmap() { return this->bitmap; }
+
+  int GetBlockSize() { return this->blockSize; }
 
   std::shared_ptr<const Tensor<double>> GetKeyTensor(int layer) {
     return this->keyStateTensorList[layer];
@@ -102,6 +106,8 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
     return this->valueStateTensorList;
   }
 
+  ~KVStateCacheBlock();
+
   friend class KVStateCacheBlockBuilder;
 };
 
@@ -112,14 +118,17 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
       valueStateTensorBuilderList;
   // TBD
   // support more than 64 kv-state cache slots
-  uint64_t bitmap;
+  uint64_t* bitmap;
+  int blockSize;
+  int bitmapSize;
   int dimension;
   int layer;
 
   int FindEmptySlot();
 
  public:
-  KVStateCacheBlockBuilder(Client& client, int dimension, int layer);
+  KVStateCacheBlockBuilder(Client& client, int dimension, int layer,
+                           int blockSize);
 
   KVStateCacheBlockBuilder(
       Client& client, std::shared_ptr<KVStateCacheBlock> kv_state_cache_block);
@@ -172,13 +181,19 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
     return valueStateTensorBuilderList;
   }
 
-  void DeleteKVCache(int bit) { FREE_BIT_RESOURCE(this->bitmap, bit); }
+  void DeleteKVCache(int bit) {
+    FREE_BIT_RESOURCE(this->bitmap[bit / 64], bit % 64);
+  }
 
   std::string GetBitmapStr();
 
-  uint64_t GetBitmap() { return this->bitmap; }
+  uint64_t* GetBitmap() { return this->bitmap; }
 
   uint64_t GetDimension() { return this->dimension; }
+
+  int GetBlockSize() { return this->blockSize; }
+
+  ~KVStateCacheBlockBuilder();
 };
 
 }  // namespace vineyard

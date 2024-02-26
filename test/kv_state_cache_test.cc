@@ -27,8 +27,9 @@ using namespace vineyard;
 #define DEMENSION 10
 #define CAPACITY 20
 #define LAYER 3
+#define BLOCK_SIZE 5
 
-void init() { InitKVStateCache(DEMENSION, CAPACITY, LAYER); }
+void init() { InitKVStateCache(DEMENSION, CAPACITY, LAYER, BLOCK_SIZE); }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
   std::string tokens_str = "";
@@ -106,7 +107,11 @@ void inference(std::vector<int> tokens, bool block = false) {
 
 int main() {
   init();
-  std::vector<int> round_1_tokens = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+  std::vector<int> round_1_tokens = {
+      1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18,
+      19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+      37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+      55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69};
   std::vector<int> round_2_tokens = {1, 2,  3,  4,  5,  7, 8,
                                      9, 10, 11, 12, 13, 14};
   std::vector<int> round_3_tokens = {1, 2, 3, 9, 10, 11, 12, 13, 14};
@@ -118,6 +123,8 @@ int main() {
 
   inference(round_1_tokens);
   inference(round_2_tokens);
+  inference(round_3_tokens);
+  sleep(5);
   inference(round_3_tokens);
   // inference(round_4_tokens);
   // sleep(5);
