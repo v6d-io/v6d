@@ -1686,7 +1686,6 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
                         if (!raxStackPush(&it->stack,it->node)) return 0;
                         // if (it->node->issubtree && it->add_to_subtree_list && it->subtree_list != NULL &&
                         //         it->subtree_data_list != NULL) {
-                        //     std::cout << "second find subtree list is:" << std::endl;
                         //     std::vector<int> token;
                         //     for (size_t i = 0; i < it->key_len; i++) {
                         //         token.push_back(it->key[i]);
@@ -2383,7 +2382,7 @@ raxNode *raxSplit(rax *rax, int *s, size_t len, std::vector<int>& token) {
         token_str += std::to_string(token[i]);
         token_str += " ";
     }
-    LOG(INFO) << "split token: " << token_str;
+    VLOG(100) << "split token: " << token_str;
 
     // if the splitNode is NULL, it means that the tree only has one node
     if (splitNode == NULL) {
@@ -2528,10 +2527,10 @@ void mergeTree(rax* first_tree, rax* second_tree,
                std::vector<std::vector<int>>& evicted_tokens,
                std::set<std::vector<int>>& insert_tokens, int max_node) {
     printf("merge tree!\n");
-    LOG(INFO) << "==============tree 1====================";
-    raxShow(first_tree);
-    LOG(INFO) << "==============tree 2====================";
-    raxShow(second_tree);
+    VLOG(100) << "==============tree 1====================";
+    //raxShow(first_tree);
+    VLOG(100) << "==============tree 2====================";
+    //raxShow(second_tree);
     raxIterator first_tree_iter;
     raxIterator second_tree_iter;
     rax* tmp = raxNew();
@@ -2787,7 +2786,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
         }
     } else if (second_tree_index >= second_tree_iter_list.size()) {
         // second tree is empty
-        raxShow(tmp);
+        //raxShow(tmp);
         printf("nodeCount:%d\n", nodeCount);
         printf("first_tree_index:%ld\n", first_tree_index);
         while (first_tree_index < first_tree_iter_list.size() &&

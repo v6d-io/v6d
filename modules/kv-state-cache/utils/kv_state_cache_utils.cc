@@ -234,7 +234,6 @@ void sync() {
 
   // 8. release the lock
   while (1) {
-    LOG(INFO) << "stage 7";
     client.TryReleaseLock(actualKey, result);
     if (result == true) {
       break;

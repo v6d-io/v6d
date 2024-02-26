@@ -150,7 +150,7 @@ void KVStateCacheBuilder::Update(Client& client,
   std::shared_ptr<NodeData> nodeData =
       this->rootTree->Insert(tokenListCopy, evictedNodeData);
   if (nodeData == nullptr) {
-    LOG(INFO) << "insert failed";
+    LOG(ERROR) << "insert failed";
     return;
   }
   KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
