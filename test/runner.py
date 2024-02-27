@@ -682,7 +682,7 @@ def run_scale_in_out_tests(meta, allocator, endpoints, instance_size=4):
         time.sleep(5)
 
 
-def run_cpp_deploy_tests(meta, allocator, endpoints):
+def run_llm_tests(meta, allocator, endpoints):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
 
@@ -698,10 +698,6 @@ def run_cpp_deploy_tests(meta, allocator, endpoints):
         vineyard_ipc_socket_2 = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 1)
 
         rpc_socket_port = instances[0][1]
-        print(rpc_socket_port)
-        print(vineyard_ipc_socket_1)
-        print(vineyard_ipc_socket_2)
-        print("===========")
         subprocess.check_call(
             [
                 './build/bin/kv_state_cache_multi_test',
@@ -888,6 +884,12 @@ def parse_sys_args():
         help='Whether to run deployment and scaling in/out tests',
     )
     arg_parser.add_argument(
+        '--with-llm',
+        action='store_true',
+        default=False,
+        help='Whether to run llm tests',
+    )
+    arg_parser.add_argument(
         '--with-migration',
         action='store_true',
         default=False,
@@ -976,13 +978,6 @@ def execute_tests(args):
 
     if args.with_deployment:
         with start_metadata_engine(args.meta) as (_, endpoints):
-            run_cpp_deploy_tests(
-                args.meta,
-                args.allocator,
-                endpoints,
-            )
-
-        with start_metadata_engine(args.meta) as (_, endpoints):
             run_scale_in_out_tests(
                 args.meta, args.allocator, endpoints, instance_size=4
             )
@@ -1004,6 +999,14 @@ def execute_tests(args):
         with start_metadata_engine(args.meta) as (_, endpoints):
             run_fuse_test(args.meta, args.allocator, endpoints, python_test_args)
 
+    if args.with_llm:
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_llm_tests(
+                args.meta,
+                args.allocator,
+                endpoints,
+            )
+
 
 def main():
     parser, args = parse_sys_args()
@@ -1019,6 +1022,7 @@ def main():
         or args.with_deployment
         or args.with_io
         or args.with_fuse
+        or args.with_llm
     ):
         print(
             'Error: \n\tat least one of of --with-{cpp,graph,python,io,fuse} needs '

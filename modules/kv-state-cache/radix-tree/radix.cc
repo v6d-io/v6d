@@ -2157,12 +2157,12 @@ uint64_t raxSize(rax *rax) {
  *  [1,2] -> [1,2,3,4] -> []
  */
 
-struct datawrapper {
+struct DebugDatawrapper {
     void *data;
     int length;
 };
 
-struct TreeData1 {
+struct DebugTreeData {
   union {
     void* kvStateCacheBlockBuilder;
     uint64_t builderObjectID;
@@ -2189,8 +2189,8 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
     }
     numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, n->custom_data, n->issubtree);
     if (n->issubtree && n->custom_data != NULL) {
-        numchars += printf(" cus data:%p" , ((datawrapper *)(n->custom_data))->data);
-        TreeData1 *data = (TreeData1 *)((datawrapper *)(n->custom_data))->data;
+        numchars += printf(" cus data:%p" , ((DebugDatawrapper *)(n->custom_data))->data);
+        DebugTreeData *data = (DebugTreeData *)((DebugDatawrapper *)(n->custom_data))->data;
         if (data) {
             if (data->isPtr) {
                 numchars += printf(" builder ptr:%p", data->kvStateCacheBlockBuilder);
