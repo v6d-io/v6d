@@ -681,6 +681,7 @@ def run_scale_in_out_tests(meta, allocator, endpoints, instance_size=4):
     ) as instances:  # pylint: disable=unused-variable
         time.sleep(5)
 
+
 def run_cpp_deploy_tests(meta, allocator, endpoints):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
@@ -695,7 +696,7 @@ def run_cpp_deploy_tests(meta, allocator, endpoints):
     ) as instances:  # noqa: F841, pylint: disable=unused-variable
         vineyard_ipc_socket_1 = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 0)
         vineyard_ipc_socket_2 = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 1)
-        
+
         rpc_socket_port = instances[0][1]
         print(rpc_socket_port)
         print(vineyard_ipc_socket_1)
@@ -712,6 +713,7 @@ def run_cpp_deploy_tests(meta, allocator, endpoints):
             ],
             cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
         )
+
 
 def run_python_deploy_tests(meta, allocator, endpoints, test_args, with_migration):
     meta_prefix = 'vineyard_test_%s' % time.time()
