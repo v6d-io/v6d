@@ -70,15 +70,15 @@ jobs:
               for assignee in $assignees; do
                 message="$message @$assignee"
               done
-              message="$message, this issus/pr has had no activity for for a long time, could you folks help to review the status ?\n"
+              message="$message, this issus/pr has had no activity for for a long time, could you folks help to review the status ? \n"
               message="$message To suppress further notifications,\n"
               message="$message - for issues, \n"
-              message="$message   - if it is waiting for further response from the reporter/author, please help to add the label \`requires-further-info\`,\n"
-              message="$message   - if you have already started working on it, please add the label \`work-in-progress\` to the issue,\n"
-              message="$message   - if this issue requires further designing discussion and not in current plan, or won't be fixed, please add the label \`requires-further-discussion\` or \`wontfix\` to the issue,\n"
-              message="$message - for pull requests,
-              message="$message   - if you are still working on it and it is not ready for reviewing, please convert this pull request as draft PR,\n"
-              message="$message   - if you have decided to hold this development on, please add the \`requires-further-discussion\` label to the pull request.\n"
+              message="$message   - if it is waiting for further response from the reporter/author, please help to add the label \`requires-further-info\`, \n"
+              message="$message   - if you have already started working on it, please add the label \`work-in-progress\` to the issue, \n"
+              message="$message   - if this issue requires further designing discussion and not in current plan, or won't be fixed, please add the label \`requires-further-discussion\` or \`wontfix\` to the issue, \n"
+              message="$message - for pull requests, \n"
+              message="$message   - if you are still working on it and it is not ready for reviewing, please convert this pull request as draft PR, \n"
+              message="$message   - if you have decided to hold this development on, please add the \`requires-further-discussion\` label to the pull request. \n"
               message="$message Thanks!"
             fi
 
