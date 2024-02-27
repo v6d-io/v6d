@@ -1,6 +1,5 @@
-name: Spell Check with Typos
+name: Spell Check with CSpell
 on:
-  - push
   - pull_request
 
 jobs:
@@ -8,8 +7,26 @@ jobs:
     name: Spell Check with Typos
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout Actions Repository
-      uses: actions/checkout@v4
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
 
-    - name: Check spelling
-      uses: crate-ci/typos@master
+    - name: Get changed files
+      id: changed-files
+      uses: tj-actions/changed-files@v42
+      with:
+        since_last_remote_commit: true
+
+    - name: List all changed files
+      env:
+        ALL_CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+      run: |
+        for file in ${ALL_CHANGED_FILES}; do
+          echo "File $file was changed"
+        done
+
+    - name: Spell checking
+      uses: streetsidesoftware/cspell-action@v5
+      with:
+        files: ${{ steps.changed-files.outputs.all_changed_files }}
+        verbose: true
