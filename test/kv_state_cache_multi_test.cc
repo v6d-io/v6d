@@ -64,8 +64,8 @@ int main(int argc, char** argv) {
       (char*) malloc(sockets[1].length() + 1);  // NOLINT(readability/casting)
   memset(socket_str[0], 0, sockets[0].length() + 1);
   memset(socket_str[1], 0, sockets[1].length() + 1);
-  strcpy(socket_str[0], sockets[0].c_str());  // NOLINT(readability/casting)
-  strcpy(socket_str[1], sockets[1].c_str());  // NOLINT(readability/casting)
+  strcpy(socket_str[0], sockets[0].c_str());  // NOLINT(runtime/printf)
+  strcpy(socket_str[1], sockets[1].c_str());  // NOLINT(runtime/printf)
 
   char* args_1[] = {process_name,     socket_str[0],    arg_0,
                     token_sequence_1, token_sequence_2, token_sequence_3,
