@@ -1,0 +1,74 @@
+name: 'Check stale issues and pull requests'
+
+on:
+  schedule:
+    - cron: '0 0 12 * *'
+  workflow_dispatch:
+
+env:
+  DEFAULT_ASSIGNEE: sighingnow
+
+jobs:
+  stale:
+    permissions:
+      issues: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          # install jq
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+          # install gh cli
+          type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
+          curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+          && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+          && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+          && sudo apt update \
+          && sudo apt install gh -y
+
+      - uses: actions/stale@v9
+        id: stale
+        with:
+          days-before-issue-close: 30
+          days-before-pr-close: 60
+          days-before-issue-stale: 7
+          days-before-pr-stale: 14
+          stale-issue-label: stale
+          stale-pr-label: stale
+          exempt-pr-labels: work-in-progress,requires-further-info
+          exempt-issue-labels: requires-further-info,wontfix,newcomers
+          labels-to-remove-when-unstale: stale,requires-further-info
+          exempt-draft-pr: true
+
+      - name: Notify assignees
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          for N in $(echo ${{ steps.stale.outputs.staled-issues-prs }} | jq -r ".[].number");
+          do
+            assignees=$(echo $(gh issue view $N -R $REPO --json assignees) | jq -r ".assignees[].login")
+            echo "Processing stable issue/pr $N, assignees: $assignees"
+
+            message=""
+            if [ -z "$assignees" ]; then
+              message="/cc"
+              for assignee in $DEFAULT_ASSIGNEE; do
+                message="$message @$assignee"
+              done
+              message="$message, this issus/pr is stable for a long time, please help to assign people to it"
+            else
+              message="/cc"
+              for assignee in $assignees; do
+                message="$message @$assignee"
+              done
+              message="$message, this issus/pr is stable for a long time, could you folks help to review the status?"
+              message="$message </br>"
+              message="$message If the issue/pr is waiting for further response from the reporter/author, please help to add the label \`requires-further-info\` to suppress further notification."
+            fi
+
+            echo "Commenting stable issue/pr $N, assignees: $assignees, message: $message"
+            gh issue comment $N -R $REPO -b "$message"
+          done
