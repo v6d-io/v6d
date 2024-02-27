@@ -680,6 +680,37 @@ def run_scale_in_out_tests(meta, allocator, endpoints, instance_size=4):
     ) as instances:  # pylint: disable=unused-variable
         time.sleep(5)
 
+def run_cpp_deploy_tests(meta, allocator, endpoints):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+
+    instance_size = 2
+    with start_multiple_vineyardd(
+        metadata_settings,
+        ['--allocator', allocator],
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+        instance_size=instance_size,
+        nowait=False,
+    ) as instances:  # noqa: F841, pylint: disable=unused-variable
+        vineyard_ipc_socket_1 = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 0)
+        vineyard_ipc_socket_2 = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 1)
+        
+        rpc_socket_port = instances[0][1]
+        print(rpc_socket_port)
+        print(vineyard_ipc_socket_1)
+        print(vineyard_ipc_socket_2)
+        print("===========")
+        subprocess.check_call(
+            [
+                './build/bin/kv_state_cache_multi_test',
+                '--vineyard-endpoint',
+                'localhost:%s' % rpc_socket_port,
+                '--vineyard-ipc-sockets',
+                vineyard_ipc_socket_1,
+                vineyard_ipc_socket_2,
+            ],
+            cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
+        )
 
 def run_python_deploy_tests(meta, allocator, endpoints, test_args, with_migration):
     meta_prefix = 'vineyard_test_%s' % time.time()
@@ -941,6 +972,13 @@ def execute_tests(args):
             )
 
     if args.with_deployment:
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_cpp_deploy_tests(
+                args.meta,
+                args.allocator,
+                endpoints,
+            )
+
         with start_metadata_engine(args.meta) as (_, endpoints):
             run_scale_in_out_tests(
                 args.meta, args.allocator, endpoints, instance_size=4
