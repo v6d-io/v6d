@@ -49,8 +49,6 @@ void KVStateCache::Resolve() {
         "kv_state_cache_block_builder_" + std::to_string(i));
     this->kvStateCacheBlockList.push_back(
         std::dynamic_pointer_cast<KVStateCacheBlock>(kvStateCacheBlockObject));
-    this->kvStateCacheBlockMap[kvStateCacheBlockObject->id()] =
-        std::dynamic_pointer_cast<KVStateCacheBlock>(kvStateCacheBlockObject);
   }
 
   // 3. construct the member field
@@ -89,13 +87,12 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
                                          std::shared_ptr<KVStateCache> cache) {
-  // TBD
   this->dimension = cache->GetDimension();
   this->version = cache->GetVersion();
   this->layer = cache->GetLayer();
   // 1. create block builder from block
-  std::map<uint64_t, std::shared_ptr<KVStateCacheBlock>> kvStateCacheBlockMap =
-      cache->kvStateCacheBlockMap;
+  std::vector<std::shared_ptr<KVStateCacheBlock>> kvStateCacheBlockList =
+      cache->GetKVStateCacheBlockList();
   this->rootTree = cache->GetRootTree();
   std::set<void*> subTreeData = cache->rootTree->GetSubTreeDataSet();
 
@@ -103,7 +100,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
     TreeData* treeData = (TreeData*) (*iter);
     VINEYARD_ASSERT(treeData->isPtr == false);
     std::shared_ptr<KVStateCacheBlock> kvStateCacheBlock =
-        kvStateCacheBlockMap[treeData->builderObjectID];
+        kvStateCacheBlockList[treeData->builderObjectID];
     KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
         new KVStateCacheBlockBuilder(client, kvStateCacheBlock);
 
@@ -312,7 +309,7 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
     kvStateCache->meta_.AddMember(
         "kv_state_cache_block_builder_" + std::to_string(count),
         kvStateCacheBlock);
-    treeData->builderObjectID = kvStateCacheBlock->id();
+    treeData->builderObjectID = count;
     treeData->isPtr = false;
     count++;
   }

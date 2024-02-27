@@ -39,7 +39,6 @@ struct TreeData {
 class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
   std::vector<std::shared_ptr<KVStateCacheBlock>> kvStateCacheBlockList;
-  std::map<uint64_t, std::shared_ptr<KVStateCacheBlock>> kvStateCacheBlockMap;
   std::shared_ptr<RadixTree> rootTree;
   int dimension;
   int cacheCapacity;

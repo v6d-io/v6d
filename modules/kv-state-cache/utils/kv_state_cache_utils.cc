@@ -89,7 +89,7 @@ void InitKVStateCache(int dimension, int cacheCapacity, int layer,
       // if success, pull the cache object
       std::shared_ptr<KVStateCache> globalKVStateCache =
           std::dynamic_pointer_cast<KVStateCache>(
-              client.GetObject(globalKVStateCacheID));
+              client.FetchAndGetObject(globalKVStateCacheID));
       kvStateCacheBuilder =
           std::make_shared<KVStateCacheBuilder>(client, globalKVStateCache);
     } else {
@@ -182,7 +182,7 @@ void sync() {
   bool result;
   client.TryAcquireLock(llmCacheSyncLock, result, actualKey);
   if (!result) {
-    VLOG(100) << "failed to gain the lock, wait for next time";
+    LOG(INFO) << "failed to gain the lock, wait for next time";
     return;
   }
   // 2. pull the cache object
@@ -194,7 +194,7 @@ void sync() {
   if (status.ok()) {
     deleteList.push_back(globalKVStateCacheID);
     globalKVStateCache = std::dynamic_pointer_cast<KVStateCache>(
-        client.GetObject(globalKVStateCacheID));
+        client.FetchAndGetObject(globalKVStateCacheID));
   }
 
   // 3. merge the cache object
@@ -230,8 +230,14 @@ void sync() {
       client, std::dynamic_pointer_cast<KVStateCache>(kvStateCache));
 
   // 8. release the lock
-  client.TryReleaseLock(actualKey, result);
-  VINEYARD_ASSERT(result == true);
+  while (1) {
+    LOG(INFO) << "stage 7";
+    client.TryReleaseLock(actualKey, result);
+    if (result == true) {
+      break;
+    }
+    sleep(1);
+  }
 
   // TBD
   // use lease to prevent the deadlock if the client is down

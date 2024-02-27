@@ -166,7 +166,7 @@ void EtcdMetaService::TryAcquireLock(
               boost::bind(callback_after_try_lock, Status::OK(), true,
                           resp.lock_key().substr(self->prefix_.size())));
         } else {
-          LOG(INFO) << "lock falied!";
+          LOG(INFO) << "lock failed!";
           self->server_ptr_->GetMetaContext().post(
               boost::bind(callback_after_try_lock, Status::OK(), false, ""));
         }

@@ -1060,12 +1060,12 @@ Status VineyardServer::TryAcquireLock(std::string& key,
   auto self(shared_from_this());
   meta_service_ptr_->TryAcquireLock(
       key, [self, callback](const Status& status, bool result,
-                            std::string actural_key) {
+                            std::string actual_key) {
         if (status.ok()) {
           LOG(INFO) << "No error occurred. Gain lock:" << result;
-          return callback(status, result, actural_key);
+          return callback(status, result, actual_key);
         } else {
-          return callback(status, result, actural_key);
+          return callback(status, result, actual_key);
         }
       });
 
