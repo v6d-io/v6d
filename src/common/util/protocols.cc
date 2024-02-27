@@ -2139,8 +2139,7 @@ void WriteInstanceStatusReply(const json& meta, std::string& msg) {
 
 Status ReadInstanceStatusReply(const json& root, json& meta) {
   CHECK_IPC_ERROR(root, command_t::INSTANCE_STATUS_REPLY);
-  meta = root["meta"].get<bool>();
-  ;
+  meta = root["meta"];
   return Status::OK();
 }
 
@@ -2305,7 +2304,6 @@ void WriteTryReleaseLockRequest(const std::string& key, std::string& msg) {
 Status ReadTryReleaseLockRequest(const json& root, std::string& key) {
   CHECK_IPC_ERROR(root, command_t::RELEASE_LOCK_REQUEST);
   key = root["key"].get<std::string>();
-  ;
   return Status::OK();
 }
 
@@ -2319,7 +2317,6 @@ void WriteTryReleaseLockReply(const bool result, std::string& msg) {
 Status ReadTryReleaseLockReply(const json& root, bool& result) {
   CHECK_IPC_ERROR(root, command_t::RELEASE_LOCK_REPLY);
   result = root["result"].get<bool>();
-  ;
   return Status::OK();
 }
 

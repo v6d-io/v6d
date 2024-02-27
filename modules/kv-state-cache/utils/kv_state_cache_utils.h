@@ -13,13 +13,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <string>
+#include <vector>
+
 #include "kv-state-cache/ds/kv_state_cache.h"
 
-#ifndef MODULES_KV_STATE_CACHE_UTILS_H_
-#define MODULES_KV_STATE_CACHE_UTILS_H_
+#ifndef MODULES_KV_STATE_CACHE_UTILS_KV_STATE_CACHE_UTILS_H_
+#define MODULES_KV_STATE_CACHE_UTILS_KV_STATE_CACHE_UTILS_H_
 
-void InitKVStateCache(int dimension = 10, int cacheCapacity = 10, int layer = 1,
-                      int blockSize = 5);
+namespace vineyard {
+
+void InitKVStateCache(
+    int dimension = 10, int cacheCapacity = 10, int layer = 1,
+    int blockSize = 5,
+    std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET")));
 
 void Update(const std::vector<int>& tokenList, int nextToken,
             const KV_STATE_WITH_LAYER& kvState);
@@ -33,4 +40,8 @@ LIST_KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList);
 
 void Delete(std::vector<int> token);
 
-#endif
+void CloseKVStateCache();
+
+}  // namespace vineyard
+
+#endif  // MODULES_KV_STATE_CACHE_UTILS_KV_STATE_CACHE_UTILS_H_

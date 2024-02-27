@@ -1589,23 +1589,25 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
             raxNode **cp = raxNodeFirstChildPtr(it->node);
             if (!raxIteratorAddToken(it,it->node->data,
                 it->node->iscompr ? it->node->size : 1)) return 0;
-            if (it->node->issubtree && it->add_to_subtree_list && it->subtree_list != NULL &&
-                                it->subtree_data_list != NULL) {
-                std::cout << "first find subtree list is:" << std::endl;
-                std::vector<int> token;
-                std::string token_str;
-                for (size_t i = 0; i < it->key_len - 1; i++) {
-                    token.push_back(it->key[i]);
-                    token_str += std::to_string(it->key[i]) + " ";
-                }
-                LOG(INFO) << "list is:" << token_str;
-                (*it->subtree_list).push_back(token);
-                void *data = raxGetCustomData(it->node);
-                if (data == NULL) {
-                    throw std::runtime_error("custom data is null");
-                }
-                (*it->subtree_data_list).push_back(data);
-            }
+            // TBD
+            // refactor this code with raxSerial()
+            // if (it->node->issubtree && it->add_to_subtree_list && it->subtree_list != NULL &&
+            //                     it->subtree_data_list != NULL) {
+            //     std::cout << "first find subtree list is:" << std::endl;
+            //     std::vector<int> token;
+            //     std::string token_str;
+            //     for (size_t i = 0; i < it->key_len - 1; i++) {
+            //         token.push_back(it->key[i]);
+            //         token_str += std::to_string(it->key[i]) + " ";
+            //     }
+            //     LOG(INFO) << "list is:" << token_str;
+            //     (*it->subtree_list).push_back(token);
+            //     void *data = raxGetCustomData(it->node);
+            //     if (data == NULL) {
+            //         throw std::runtime_error("custom data is null");
+            //     }
+            //     (*it->subtree_data_list).push_back(data);
+            // }
             memcpy(&it->node,cp,sizeof(it->node));
             /* Call the node callback if any, and replace the node pointer
              * if the callback returns true. */
@@ -1634,23 +1636,26 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
                     it->node = orig_node;
                     return 1;
                 }
-                if (it->node->iskey && it->node->size == 0 && it->node->issubtree && it->add_to_subtree_list && it->subtree_list != NULL &&
-                                it->subtree_data_list != NULL) {
-                    // data node is sub tree
-                    std::vector<int> token;
-                    std::string token_str;
-                    for (size_t i = 0; i < it->key_len - 1; i++) {
-                        token.push_back(it->key[i]);
-                        token_str += std::to_string(it->key[i]) + " ";
-                    }
-                    LOG(INFO) << "sub tree is:" << token_str;
-                    (*it->subtree_list).push_back(token);
-                    void *data = raxGetCustomData(it->node);
-                    if (data == NULL) {
-                        throw std::runtime_error("custom data is null");
-                    }
-                    (*it->subtree_data_list).push_back(data);
-                }
+                // TBD
+                // refactor this code with raxSerial()
+                // if (it->node->iskey && it->node->size == 0 && it->node->issubtree && it->add_to_subtree_list && it->subtree_list != NULL &&
+                //                 it->subtree_data_list != NULL) {
+                //     // data node is sub tree
+                //     std::vector<int> token;
+                //     std::string token_str;
+                //     for (size_t i = 0; i < it->key_len - 1; i++) {
+                //         token.push_back(it->key[i]);
+                //         token_str += std::to_string(it->key[i]) + " ";
+                //     }
+                //     LOG(INFO) << "sub tree is:" << token_str;
+                //     (*it->subtree_list).push_back(token);
+                //     void *data = raxGetCustomData(it->node);
+                //     if (data == NULL) {
+                //         throw std::runtime_error("custom data is null");
+                //     }
+                //     (*it->subtree_data_list).push_back(data);
+                // }
+
                 /* If there are no children at the current node, try parent's
                  * next child. */
                 int prevchild = it->key[it->key_len-1];
@@ -2152,11 +2157,18 @@ uint64_t raxSize(rax *rax) {
  *  [1,2] -> [1,2,3,4] -> []
  */
 
-struct datawrapper {
+struct DebugDatawrapper {
     void *data;
     int length;
 };
 
+struct DebugTreeData {
+  union {
+    void* kvStateCacheBlockBuilder;
+    uint64_t builderObjectID;
+  };
+  bool isPtr = true;
+};
 /* The actual implementation of raxShow(). */
 void raxRecursiveShow(int level, int lpad, raxNode *n) {
     char s = n->iscompr ? '"' : '[';
@@ -2177,7 +2189,15 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
     }
     numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, n->custom_data, n->issubtree);
     if (n->issubtree && n->custom_data != NULL) {
-        numchars += printf(" cus data:%p" , ((datawrapper *)(n->custom_data))->data);
+        numchars += printf(" cus data:%p" , ((DebugDatawrapper *)(n->custom_data))->data);
+        DebugTreeData *data = (DebugTreeData *)((DebugDatawrapper *)(n->custom_data))->data;
+        if (data) {
+            if (data->isPtr) {
+                numchars += printf(" builder ptr:%p", data->kvStateCacheBlockBuilder);
+            } else {
+                numchars += printf(" builder id:%lu", data->builderObjectID);
+            }
+        }
     }
 
     int numchildren = n->iscompr ? 1 : n->size;
@@ -2421,6 +2441,11 @@ void raxSerialize(rax *root, std::vector<std::vector<int>> &tokenList, std::vect
         tokenList.push_back(token);
         dataList.push_back(iter.data);
         timestampList.push_back(iter.node->timestamp);
+        raxNode *data = raxFindAndReturnDataNode(root, iter.key, iter.key_len, nullptr, false);
+        if (data->issubtree && subtreeList != nullptr) {
+            subtreeList->push_back(token);
+            subtreeDataList->push_back(data->custom_data);
+        }
     }
     raxStop(&iter);
 }

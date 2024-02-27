@@ -22,7 +22,7 @@ limitations under the License.
 #include "common/util/logging.h"
 #include "kv-state-cache/utils/kv_state_cache_utils.h"
 
-using namespace vineyard;
+using namespace vineyard;  // NOLINT(build/namespaces)
 
 void print_tokens(const std::vector<int>& tokens) {
   std::string tokens_str = "";

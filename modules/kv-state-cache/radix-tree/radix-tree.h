@@ -99,6 +99,8 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
 
   void SetSubtreeData(void* data);
 
+  void ClearSubtreeData(void* data);
+
   rax* GetRootTree() { return this->tree; }
 
   int GetCacheCapacity() { return cacheCapacity - 1; }

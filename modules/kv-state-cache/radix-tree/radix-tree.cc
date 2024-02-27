@@ -168,7 +168,6 @@ void RadixTree::DeleteInternal(std::vector<int> tokens,
         oldData, (DataWrapper*) subTreeNode->custom_data);
     nodeCount--;
     if (nodeIsSubTree) {
-      // subTreeDataSet.erase(subTreeNode->custom_data);
       evictedNode->cleanTreeData = true;
     }
   } else {
@@ -498,7 +497,7 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
     node->issubtree = true;
     raxSetCustomData(node, data);
 
-    radixTree->subTreeDataSet.insert(subTreeDataList[i]);
+    radixTree->SetSubtreeData(subTreeDataList[i]);
   }
   LOG(INFO) << "Deserialize success";
   raxShow(radixTree->tree);
@@ -544,8 +543,13 @@ std::vector<std::shared_ptr<NodeData>> RadixTree::TraverseTreeWithoutSubTree(
 }
 
 void RadixTree::SetSubtreeData(void* data) {
-  LOG(INFO) << "set subtree data:" << data;
+  VLOG(100) << "set subtree data:" << data;
   subTreeDataSet.insert(data);
+}
+
+void RadixTree::ClearSubtreeData(void* data) {
+  VLOG(100) << "clear subtree data:" << data;
+  subTreeDataSet.erase(data);
 }
 
 std::shared_ptr<NodeData> RadixTree::GetRootNode() {
