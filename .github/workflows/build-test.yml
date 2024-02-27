@@ -329,6 +329,16 @@ jobs:
         if: false
         uses: mxschmitt/action-tmate@v3
 
+      - name: Run llm tests
+        run: |
+          export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
+          export VINEYARD_DATA_DIR=`pwd`/gstest
+          export TMPDIR="${TMPDIR:-$(dirname $(mktemp))}"
+
+          rm -rf default.etcd
+          rm -rf /dev/shm/etcd*
+          python3 test/runner.py $RUNNER_ARGS --with-llm
+
       - name: Run cpp tests
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
