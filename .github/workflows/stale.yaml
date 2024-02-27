@@ -7,6 +7,10 @@ on:
 
 env:
   DEFAULT_ASSIGNEE: sighingnow
+  DAYS_BEFORE_ISSUE_CLOSE: 30
+  DAYS_BEFORE_PR_CLOSE: 60
+  DAYS_BEFORE_ISSUE_STALE: 7
+  DAYS_BEFORE_PR_STALE: 14
 
 jobs:
   stale:
@@ -32,10 +36,10 @@ jobs:
       - uses: actions/stale@v9
         id: stale
         with:
-          days-before-issue-close: 30
-          days-before-pr-close: 60
-          days-before-issue-stale: 7
-          days-before-pr-stale: 14
+          days-before-issue-close: ${{ env.DAYS_BEFORE_ISSUE_CLOSE }}
+          days-before-pr-close: ${{ env.DAYS_BEFORE_PR_CLOSE }}
+          days-before-issue-stale: ${{ env.DAYS_BEFORE_ISSUE_STALE }}
+          days-before-pr-stale: ${{ env.DAYS_BEFORE_PR_STALE }}
           stale-issue-label: stale
           stale-pr-label: stale
           exempt-pr-labels: work-in-progress,requires-further-info
@@ -47,11 +51,12 @@ jobs:
         env:
           REPO: ${{ github.repository }}
           STALED: ${{ steps.stale.outputs.staled-issues-prs }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           for N in $(echo "$STALED" | jq -r ".[].number");
           do
             assignees=$(echo $(gh issue view $N -R $REPO --json assignees) | jq -r ".assignees[].login")
-            echo "Processing stable issue/pr $N, assignees: $assignees"
+            echo "Processing stale issue/pr $N, assignees: $assignees"
 
             message=""
             if [ -z "$assignees" ]; then
@@ -59,17 +64,17 @@ jobs:
               for assignee in $DEFAULT_ASSIGNEE; do
                 message="$message @$assignee"
               done
-              message="$message, this issus/pr is stable for a long time, please help to assign people to it"
+              message="$message, this issus/pr has had no activity for a long time, please help to review the status and assign people to work on it."
             else
               message="/cc"
               for assignee in $assignees; do
                 message="$message @$assignee"
               done
-              message="$message, this issus/pr is stable for a long time, could you folks help to review the status?"
+              message="$message, this issus/pr has had no activity for for a long time, could you folks help to review the status ?"
               message="$message </br>"
               message="$message If the issue/pr is waiting for further response from the reporter/author, please help to add the label \`requires-further-info\` to suppress further notification."
             fi
 
-            echo "Commenting stable issue/pr $N, assignees: $assignees, message: $message"
+            echo "Commenting on stale issue/pr $N, assignees: $assignees, message: $message"
             gh issue comment $N -R $REPO -b "$message"
           done
