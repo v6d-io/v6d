@@ -5,4 +5,7 @@ repos:
       - id: gitleaks
         args:
         - '--verbose'
-
+  - repo: https://github.com/crate-ci/typos
+    rev: v1.18.2
+    hooks:
+      - id: typos
