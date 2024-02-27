@@ -46,8 +46,9 @@ jobs:
       - name: Notify assignees
         env:
           REPO: ${{ github.repository }}
+          STALED: ${{ steps.stale.outputs.staled-issues-prs }}
         run: |
-          for N in $(echo ${{ steps.stale.outputs.staled-issues-prs }} | jq -r ".[].number");
+          for N in $(echo "$STALED" | jq -r ".[].number");
           do
             assignees=$(echo $(gh issue view $N -R $REPO --json assignees) | jq -r ".assignees[].login")
             echo "Processing stable issue/pr $N, assignees: $assignees"
