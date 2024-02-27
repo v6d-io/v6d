@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_KV_STATE_CACHE_BLOCK_H_
-#define MODULES_KV_STATE_CACHE_BLOCK_H_
+#ifndef MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
+#define MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
 
 #include <array>
 #include <iostream>
@@ -44,7 +44,7 @@ typedef std::vector<std::pair<std::vector<double>, std::vector<double>>>
   ((value) &= (~(((uint64_t) 1) << (bit))))
 
 struct OffsetData {
-  short offset;
+  int16_t offset;
 };
 namespace vineyard {
 
@@ -142,7 +142,7 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
    */
   void Update(const KV_STATE_WITH_LAYER& kv_state, OffsetData* data);
 
-  void Update(double* keyState, double* valueState, unsigned long dataLength,
+  void Update(double* keyState, double* valueState, uint64_t dataLength,
               OffsetData* data);
 
   /**
@@ -161,7 +161,7 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   std::shared_ptr<Object> _Seal(Client& client) override;
 
-  short Split(KVStateCacheBlockBuilder* child, int index);
+  int16_t Split(KVStateCacheBlockBuilder* child, int index);
 
   const std::shared_ptr<TensorBuilder<double>> GetKeyStateBuilder(int layer) {
     return keyStateTensorBuilderList[layer];
@@ -200,4 +200,4 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
 }  // namespace vineyard
 
-#endif
+#endif  // MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_BLOCK_H_

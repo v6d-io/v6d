@@ -14,14 +14,17 @@ limitations under the License.
 */
 
 #include <cstdlib>
+#include <memory>
+#include <set>
+#include <string>
 
 #include "client/client.h"
 #include "common/util/base64.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
+#include "kv-state-cache/ds/kv_state_cache.h"
 #include "kv-state-cache/radix-tree/radix-tree.h"
 #include "kv-state-cache/radix-tree/radix.h"
-#include "kv_state_cache.h"
 
 namespace vineyard {
 
@@ -97,7 +100,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
   std::set<void*> subTreeData = cache->rootTree->GetSubTreeDataSet();
 
   for (auto iter = subTreeData.begin(); iter != subTreeData.end(); ++iter) {
-    TreeData* treeData = (TreeData*) (*iter);
+    TreeData* treeData = reinterpret_cast<TreeData*>(*iter);
     VINEYARD_ASSERT(treeData->isPtr == false);
     std::shared_ptr<KVStateCacheBlock> kvStateCacheBlock =
         kvStateCacheBlockList[treeData->builderObjectID];
@@ -118,7 +121,8 @@ KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
       new KVStateCacheBlockBuilder(client, this->dimension, this->layer,
                                    kvStateCacheBlockBuilder->GetBlockSize());
   for (size_t i = 0; i < nodeDataList.size(); i++) {
-    OffsetData* data = (OffsetData*) nodeDataList[i]->nodeData->data;
+    OffsetData* data =
+        reinterpret_cast<OffsetData*>(nodeDataList[i]->nodeData->data);
     if (data == nullptr)
       continue;
     int index = data->offset;
@@ -150,8 +154,9 @@ void KVStateCacheBuilder::Update(Client& client,
     return;
   }
   KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
-      (KVStateCacheBlockBuilder*) ((TreeData*) nodeData->treeData->data)
-          ->kvStateCacheBlockBuilder;
+      reinterpret_cast<KVStateCacheBlockBuilder*>(
+          (reinterpret_cast<TreeData*>(nodeData->treeData->data))
+              ->kvStateCacheBlockBuilder);
   if (evictedNodeData != nullptr) {
     Delete(evictedNodeData);
   }
@@ -206,12 +211,13 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
   std::shared_ptr<NodeData> nodeData = this->rootTree->Query(tokenListCopy);
 
   if (nodeData != nullptr) {
-    OffsetData* data = (OffsetData*) nodeData->nodeData->data;
+    OffsetData* data = reinterpret_cast<OffsetData*>(nodeData->nodeData->data);
     int offset = data->offset;
 
     KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
-        (KVStateCacheBlockBuilder*) ((TreeData*) nodeData->treeData->data)
-            ->kvStateCacheBlockBuilder;
+        reinterpret_cast<KVStateCacheBlockBuilder*>(
+            (reinterpret_cast<TreeData*>(nodeData->treeData->data))
+                ->kvStateCacheBlockBuilder);
 
     kvStateCacheBlockBuilder->Query(client, offset, kvState);
   }
@@ -219,10 +225,13 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
 }
 
 void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
-  TreeData* treeData = (TreeData*) evictedNodeData->treeData->data;
+  TreeData* treeData =
+      reinterpret_cast<TreeData*>(evictedNodeData->treeData->data);
   KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
-      (KVStateCacheBlockBuilder*) treeData->kvStateCacheBlockBuilder;
-  OffsetData* data = (OffsetData*) evictedNodeData->nodeData->data;
+      reinterpret_cast<KVStateCacheBlockBuilder*>(
+          treeData->kvStateCacheBlockBuilder);
+  OffsetData* data =
+      reinterpret_cast<OffsetData*>(evictedNodeData->nodeData->data);
   kvStateCacheBlockBuilder->DeleteKVCache(data->offset);
   delete data;
   // TBD
@@ -298,12 +307,13 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   std::set<void*> subTreeDataSet = rootTree->GetSubTreeDataSet();
   for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
        ++iter) {
-    TreeData* treeData = (TreeData*) (*iter);
+    TreeData* treeData = reinterpret_cast<TreeData*>(*iter);
     VINEYARD_ASSERT(treeData != nullptr);
     VINEYARD_ASSERT(treeData->isPtr == true);
 
     KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
-        (KVStateCacheBlockBuilder*) treeData->kvStateCacheBlockBuilder;
+        reinterpret_cast<KVStateCacheBlockBuilder*>(
+            treeData->kvStateCacheBlockBuilder);
     std::shared_ptr<Object> kvStateCacheBlock =
         kvStateCacheBlockBuilder->_Seal(client);
     kvStateCache->meta_.AddMember(
@@ -336,14 +346,15 @@ KVStateCacheBuilder::~KVStateCacheBuilder() {
   // 2. delete all subtree data and node data
   for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
        ++iter) {
-    TreeData* treeData = (TreeData*) (*iter);
+    TreeData* treeData = reinterpret_cast<TreeData*>(*iter);
     if (treeData->isPtr == true) {
-      delete (KVStateCacheBlockBuilder*) treeData->kvStateCacheBlockBuilder;
+      delete reinterpret_cast<KVStateCacheBlockBuilder*>(
+          treeData->kvStateCacheBlockBuilder);
       delete treeData;
     }
   }
   for (auto iter = nodeDataSet.begin(); iter != nodeDataSet.end(); ++iter) {
-    OffsetData* data = (OffsetData*) (*iter);
+    OffsetData* data = reinterpret_cast<OffsetData*>(*iter);
     if (data != nullptr) {
       delete data;
     }
