@@ -474,6 +474,7 @@ def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
         run_test(tests, 'tensor_test')
         run_test(tests, 'typename_test')
         run_test(tests, 'version_test')
+        run_test(tests, 'kv_state_cache_radix_tree_test')
 
 
 def run_vineyard_spill_tests(meta, allocator, endpoints, tests):
