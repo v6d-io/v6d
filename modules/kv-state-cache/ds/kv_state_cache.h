@@ -22,7 +22,6 @@ limitations under the License.
 #include "common/util/status.h"
 #include "kv-state-cache/ds/kv_state_cache_block.h"
 #include "kv-state-cache/radix-tree/radix-tree.h"
-#include "kv-state-cache/strategy/LRU_strategy.h"
 
 #ifndef MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_H_
 #define MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_H_

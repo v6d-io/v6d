@@ -19,6 +19,9 @@ limitations under the License.
 #include <array>
 #include <iostream>
 #include <map>
+#include <memory>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include "basic/ds/tensor.h"

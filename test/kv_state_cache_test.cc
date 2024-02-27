@@ -22,7 +22,7 @@ limitations under the License.
 #include "common/util/logging.h"
 #include "kv-state-cache/utils/kv_state_cache_utils.h"
 
-using namespace vineyard;
+using namespace vineyard;  // NOLINT(build/namespaces)
 
 int dimension = 10;
 int capacity = 20;
@@ -80,9 +80,10 @@ generate_kv_state(int token) {
     std::vector<double> key_state;
     std::vector<double> value_state;
     for (int i = 0; i < dimension; ++i) {
-      key_state.push_back(((double) token) / dimension * (i + 1) +
+      key_state.push_back((static_cast<double>(token)) / dimension * (i + 1) +
                           currentLayer * 10);
-      value_state.push_back(((double) token) / dimension * (i + 1) * 2 +
+      value_state.push_back((static_cast<double>(token)) / dimension * (i + 1) *
+                                2 +
                             currentLayer * 10);
     }
 
@@ -102,21 +103,24 @@ void check_kv_state(
     VINEYARD_ASSERT(iter->second.second.size() == (size_t) dimension);
     for (int i = 0; i < dimension; ++i) {
       if (iter->second.first[i] !=
-          ((double) token) / dimension * (i + 1) + iter->first * 10) {
+          (static_cast<double>(token)) / dimension * (i + 1) +
+              iter->first * 10) {
         LOG(INFO) << "token:" << token << " dimension" << dimension
                   << " layer:" << iter->first;
         LOG(INFO) << "key_state[" << i << "]: " << iter->second.first[i]
                   << ". But is should be "
-                  << ((double) token) / dimension * (i + 1) + iter->first * 10;
+                  << (static_cast<double>(token)) / dimension * (i + 1) +
+                         iter->first * 10;
         throw std::runtime_error("key_state error!");
       }
       if (iter->second.second[i] !=
-          ((double) token) / dimension * (i + 1) * 2 + iter->first * 10) {
+          (static_cast<double>(token)) / dimension * (i + 1) * 2 +
+              iter->first * 10) {
         LOG(INFO) << "token:" << token << " dimension" << dimension
                   << " layer:" << iter->first;
         LOG(INFO) << "value_state[" << i << "]: " << iter->second.second[i]
                   << ". But is should be "
-                  << ((double) token) / dimension * (i + 1) * 2 +
+                  << (static_cast<double>(token)) / dimension * (i + 1) * 2 +
                          iter->first * 10;
         throw std::runtime_error("value_state error!");
       }

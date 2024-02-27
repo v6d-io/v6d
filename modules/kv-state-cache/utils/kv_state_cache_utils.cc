@@ -14,13 +14,16 @@ limitations under the License.
 */
 
 #include <cstdlib>
+#include <memory>
+#include <string>
+#include <vector>
 
 #include "client/client.h"
 #include "common/util/logging.h"
 #include "kv-state-cache/ds/kv_state_cache.h"
-#include "kv_state_cache_utils.h"
+#include "kv-state-cache/utils/kv_state_cache_utils.h"
 
-using namespace vineyard;
+namespace vineyard {
 
 static Client client;
 static std::shared_ptr<KVStateCacheBuilder> kvStateCacheBuilder = nullptr;
@@ -254,3 +257,5 @@ void threadFunc() {
     pthread_mutex_unlock(&syncMutex);
   }
 }
+
+}  // namespace vineyard

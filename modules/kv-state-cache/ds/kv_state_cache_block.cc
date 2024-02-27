@@ -195,8 +195,8 @@ void KVStateCacheBlockBuilder::Update(const KV_STATE_WITH_LAYER& kvState,
   ACQUIRE_BIT_RESOURCE(this->bitmap[index / 64], index % 64);
 }
 
-short KVStateCacheBlockBuilder::Split(KVStateCacheBlockBuilder* child,
-                                      int index) {
+int16_t KVStateCacheBlockBuilder::Split(KVStateCacheBlockBuilder* child,
+                                        int index) {
   // TBD
   VINEYARD_ASSERT(this->layer == child->layer);
   int childIndex = child->FindEmptySlot();

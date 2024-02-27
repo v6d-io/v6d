@@ -58,12 +58,14 @@ int main(int argc, char** argv) {
   }
 
   char* socket_str[2];
-  socket_str[0] = (char*) malloc(sockets[0].length() + 1);
-  socket_str[1] = (char*) malloc(sockets[1].length() + 1);
+  socket_str[0] =
+      (char*) malloc(sockets[0].length() + 1);  // NOLINT(readability/casting)
+  socket_str[1] =
+      (char*) malloc(sockets[1].length() + 1);  // NOLINT(readability/casting)
   memset(socket_str[0], 0, sockets[0].length() + 1);
   memset(socket_str[1], 0, sockets[1].length() + 1);
-  strcpy(socket_str[0], sockets[0].c_str());
-  strcpy(socket_str[1], sockets[1].c_str());
+  strcpy(socket_str[0], sockets[0].c_str());  // NOLINT(readability/casting)
+  strcpy(socket_str[1], sockets[1].c_str());  // NOLINT(readability/casting)
 
   char* args_1[] = {process_name,     socket_str[0],    arg_0,
                     token_sequence_1, token_sequence_2, token_sequence_3,
@@ -79,9 +81,14 @@ int main(int argc, char** argv) {
     int status;
     waitpid(pids[i], &status, 0);
     if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+      free(socket_str[0]);
+      free(socket_str[1]);
       return 1;
     }
   }
+
+  free(socket_str[0]);
+  free(socket_str[1]);
 
   return 0;
 }
