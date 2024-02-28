@@ -280,13 +280,14 @@ void IMetaService::RequestToGetData(const bool sync_remote,
 
 void IMetaService::RequestToDelete(
     const std::vector<ObjectID>& object_ids, const bool force, const bool deep,
+    const bool memory_trim,
     callback_t<const json&, std::vector<ObjectID> const&, std::vector<op_t>&,
                bool&>
         callback_after_ready,
     callback_t<std::vector<ObjectID> const&> callback_after_finish) {
   auto self(shared_from_this());
   server_ptr_->GetMetaContext().post([self, object_ids, force, deep,
-                                      callback_after_ready,
+                                      memory_trim, callback_after_ready,
                                       callback_after_finish]() {
     if (self->stopped_.load()) {
       VINEYARD_DISCARD(callback_after_finish(
@@ -316,7 +317,7 @@ void IMetaService::RequestToDelete(
     }
 
     // apply changes locally (before committing to etcd)
-    self->metaUpdate(ops, false);
+    self->metaUpdate(ops, false, memory_trim);
 
     if (!sync_remote) {
       VINEYARD_DISCARD(callback_after_finish(s, processed_delete_set));
@@ -373,7 +374,8 @@ void IMetaService::RequestToShallowCopy(
       auto status = callback_after_ready(Status::OK(), meta, ops, transient);
       if (status.ok()) {
         if (transient) {
-          self->metaUpdate(ops, false);
+          // Already trim physical memory for remote deletion events
+          self->metaUpdate(ops, false, true);
           return callback_after_finish(Status::OK());
         } else {
           self->RequestToPersist(
@@ -1015,7 +1017,8 @@ void IMetaService::delVal(ObjectID const& target, std::set<ObjectID>& blobs) {
 }
 
 template <class RangeT>
-void IMetaService::metaUpdate(const RangeT& ops, bool const from_remote) {
+void IMetaService::metaUpdate(const RangeT& ops, const bool from_remote,
+                              const bool memory_trim) {
   std::set<ObjectID> blobs_to_delete;
 
   std::vector<op_t> add_sigs, drop_sigs;
@@ -1157,7 +1160,7 @@ void IMetaService::metaUpdate(const RangeT& ops, bool const from_remote) {
   }
 #endif
 
-  VINEYARD_SUPPRESS(server_ptr_->DeleteBlobBatch(blobs_to_delete));
+  VINEYARD_SUPPRESS(server_ptr_->DeleteBlobBatch(blobs_to_delete, memory_trim));
   VINEYARD_SUPPRESS(server_ptr_->ProcessDeferred(meta_));
 }
 

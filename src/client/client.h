@@ -781,6 +781,10 @@ class Client final : public BasicIPCClient,
    */
   Status DelData(const ObjectID id, const bool force = false,
                  const bool deep = true);
+
+  Status DelData(const ObjectID id, const bool force, const bool deep,
+                 const bool memory_trim);
+
   /**
    * @brief Delete multiple metadatas in vineyard.
    *
@@ -796,6 +800,9 @@ class Client final : public BasicIPCClient,
    */
   Status DelData(const std::vector<ObjectID>& ids, const bool force = false,
                  const bool deep = true);
+
+  Status DelData(const std::vector<ObjectID>& ids, const bool force,
+                 const bool deep, const bool memory_trim);
 
   /**
    * @brief Create a GPU buffer on vineyard server. See also `CreateBuffer`.

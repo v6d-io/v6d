@@ -150,13 +150,15 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
                      callback_t<const ObjectID> callback);
 
   Status DelData(const std::vector<ObjectID>& id, const bool force,
-                 const bool deep, const bool fastpath, callback_t<> callback);
+                 const bool deep, const bool memory_trim, const bool fastpath,
+                 callback_t<> callback);
 
   Status DelData(const std::vector<ObjectID>& id, const bool force,
-                 const bool deep, const bool fastpath,
+                 const bool deep, const bool memory_trim, const bool fastpath,
                  callback_t<std::vector<ObjectID> const&> callback);
 
-  Status DeleteBlobBatch(const std::set<ObjectID>& blobs);
+  Status DeleteBlobBatch(const std::set<ObjectID>& blobs,
+                         const bool memory_trim = false);
 
   Status DeleteAllAt(const json& meta, InstanceID const instance_id);
 

@@ -257,36 +257,42 @@ void bind_client(py::module& mod) {
       .def(
           "delete",
           [](ClientBase* self, const ObjectIDWrapper object_id,
-             const bool force, const bool deep) {
-            throw_on_error(self->DelData(object_id, force, deep));
+             const bool force, const bool deep, const bool memory_trim) {
+            throw_on_error(self->DelData(object_id, force, deep, memory_trim));
           },
           "object_id"_a, py::arg("force") = false, py::arg("deep") = true,
-          doc::ClientBase_delete)
+          py::arg("memory_trim") = false, doc::ClientBase_delete)
       .def(
           "delete",
           [](ClientBase* self, const std::vector<ObjectIDWrapper>& object_ids,
-             const bool force, const bool deep) {
+             const bool force, const bool deep, const bool memory_trim) {
             std::vector<ObjectID> unwrapped_object_ids(object_ids.size());
             for (size_t idx = 0; idx < object_ids.size(); ++idx) {
               unwrapped_object_ids[idx] = object_ids[idx];
             }
-            throw_on_error(self->DelData(unwrapped_object_ids, force, deep));
+            throw_on_error(
+                self->DelData(unwrapped_object_ids, force, deep, memory_trim));
           },
-          "object_ids"_a, py::arg("force") = false, py::arg("deep") = true)
+          "object_ids"_a, py::arg("force") = false, py::arg("deep") = true,
+          py::arg("memory_trim") = false, doc::ClientBase_delete)
       .def(
           "delete",
           [](ClientBase* self, const ObjectMeta& meta, const bool force,
-             const bool deep) {
-            throw_on_error(self->DelData(meta.GetId(), force, deep));
+             const bool deep, const bool memory_trim) {
+            throw_on_error(
+                self->DelData(meta.GetId(), force, deep, memory_trim));
           },
-          "object_meta"_a, py::arg("force") = false, py::arg("deep") = true)
+          "object_meta"_a, py::arg("force") = false, py::arg("deep") = true,
+          py::arg("memory_trim") = false, doc::ClientBase_delete)
       .def(
           "delete",
           [](ClientBase* self, const Object* object, const bool force,
-             const bool deep) {
-            throw_on_error(self->DelData(object->id(), force, deep));
+             const bool deep, const bool memory_trim) {
+            throw_on_error(
+                self->DelData(object->id(), force, deep, memory_trim));
           },
-          "object"_a, py::arg("force") = false, py::arg("deep") = true)
+          "object"_a, py::arg("force") = false, py::arg("deep") = true,
+          py::arg("memory_trim") = false, doc::ClientBase_delete)
       .def(
           "create_stream",
           [](ClientBase* self, ObjectID const id) {

@@ -125,7 +125,7 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
 
   void RequestToDelete(
       const std::vector<ObjectID>& object_ids, const bool force,
-      const bool deep,
+      const bool deep, const bool memory_trim,
       callback_t<const json&, std::vector<ObjectID> const&, std::vector<op_t>&,
                  bool&>
           callback_after_ready,
@@ -226,7 +226,8 @@ class IMetaService : public std::enable_shared_from_this<IMetaService> {
   void delVal(ObjectID const& target, std::set<ObjectID>& blobs);
 
   template <class RangeT>
-  void metaUpdate(const RangeT& ops, bool const from_remote);
+  void metaUpdate(const RangeT& ops, bool const from_remote,
+                  const bool memory_trim = false);
 
   void instanceUpdate(const op_t& op, const bool from_remote = true);
 

@@ -747,8 +747,9 @@ Status VineyardServer::ShallowCopy(const ObjectID id,
 
 Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
                                const bool force, const bool deep,
-                               const bool fastpath, callback_t<> callback) {
-  return DelData(ids, force, deep, fastpath,
+                               const bool memory_trim, const bool fastpath,
+                               callback_t<> callback) {
+  return DelData(ids, force, deep, memory_trim, fastpath,
                  [callback](Status const& status,
                             std::vector<ObjectID> const& deleted_ids) {
                    return callback(status);
@@ -757,7 +758,8 @@ Status VineyardServer::DelData(const std::vector<ObjectID>& ids,
 
 Status VineyardServer::DelData(
     const std::vector<ObjectID>& ids, const bool force, const bool deep,
-    const bool fastpath, callback_t<std::vector<ObjectID> const&> callback) {
+    const bool memory_trim, const bool fastpath,
+    callback_t<std::vector<ObjectID> const&> callback) {
   ENSURE_VINEYARDD_READY();
   auto self(shared_from_this());
   if (fastpath) {
@@ -766,16 +768,16 @@ Status VineyardServer::DelData(
       RETURN_ON_ASSERT(IsBlob(id),
                        "Fastpath deletion can only be applied to blobs");
     }
-    context_.post([this, ids, callback] {
+    context_.post([this, memory_trim, ids, callback] {
       for (auto const id : ids) {
-        VINEYARD_DISCARD(bulk_store_->OnDelete(id));
+        VINEYARD_DISCARD(bulk_store_->OnDelete(id, memory_trim));
       }
       VINEYARD_DISCARD(callback(Status::OK(), ids));
     });
     return Status::OK();
   }
   meta_service_ptr_->RequestToDelete(
-      ids, force, deep,
+      ids, force, deep, memory_trim,
       [self](const Status& status, const json& meta,
              std::vector<ObjectID> const& ids_to_delete,
              std::vector<meta_tree::op_t>& ops, bool& sync_remote) {
@@ -817,9 +819,10 @@ Status VineyardServer::DelData(
   return Status::OK();
 }
 
-Status VineyardServer::DeleteBlobBatch(const std::set<ObjectID>& ids) {
+Status VineyardServer::DeleteBlobBatch(const std::set<ObjectID>& ids,
+                                       const bool memory_trim) {
   for (auto object_id : ids) {
-    VINEYARD_SUPPRESS(this->bulk_store_->OnDelete(object_id));
+    VINEYARD_SUPPRESS(this->bulk_store_->OnDelete(object_id, memory_trim));
   }
   return Status::OK();
 }
@@ -832,7 +835,7 @@ Status VineyardServer::DeleteAllAt(const json& meta,
       meta, status,
       meta_tree::FilterAtInstance(meta, instance_id, objects_to_cleanup));
   RETURN_ON_ERROR(status);
-  return DelData(objects_to_cleanup, true, true, false /* fastpath */,
+  return DelData(objects_to_cleanup, true, true, true, false /* fastpath */,
                  [](Status const& status) -> Status {
                    if (!status.ok()) {
                      VLOG(100) << "Error: failed during cleanup: "

@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
+#include "graph/writer/util.h"
+
+#ifdef ENABLE_GAR
+
 #include <unordered_map>
 #include <vector>
 
 #include "gar/util/adj_list_type.h"
 #include "gar/util/data_type.h"
 #include "gar/util/file_type.h"
-
-#include "graph/writer/util.h"
 
 namespace GAR = GraphArchive;
 
@@ -71,3 +73,5 @@ std::shared_ptr<GraphArchive::GraphInfo> generate_graph_info_with_schema(
                               nullptr, extra_info);
 }
 }  // namespace vineyard
+
+#endif

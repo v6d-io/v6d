@@ -918,19 +918,29 @@ Status Client::Release(ObjectID const& id) {
 }
 
 Status Client::DelData(const ObjectID id, const bool force, const bool deep) {
-  return this->DelData(std::vector<ObjectID>{id}, force, deep);
+  return this->DelData(id, force, deep, false);
+}
+
+Status Client::DelData(const ObjectID id, const bool force, const bool deep,
+                       const bool memory_trim) {
+  return this->DelData(std::vector<ObjectID>{id}, force, deep, memory_trim);
 }
 
 Status Client::DelData(const std::vector<ObjectID>& ids, const bool force,
                        const bool deep) {
+  return this->DelData(ids, force, deep, false);
+}
+
+Status Client::DelData(const std::vector<ObjectID>& ids, const bool force,
+                       const bool deep, const bool memory_trim) {
   ENSURE_CONNECTED(this);
   for (auto id : ids) {
     // May contain duplicated blob ids.
     VINEYARD_DISCARD(Release(id));
   }
   std::string message_out;
-  WriteDelDataWithFeedbacksRequest(ids, force, deep, /*fastpath=*/false,
-                                   message_out);
+  WriteDelDataWithFeedbacksRequest(ids, force, deep, memory_trim,
+                                   /*fastpath=*/false, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   std::vector<ObjectID> deleted_bids;

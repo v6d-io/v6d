@@ -16,6 +16,8 @@
 #ifndef MODULES_GRAPH_WRITER_UTIL_H_
 #define MODULES_GRAPH_WRITER_UTIL_H_
 
+#ifdef ENABLE_GAR
+
 #include <memory>
 #include <string>
 
@@ -36,5 +38,7 @@ std::shared_ptr<GraphArchive::GraphInfo> generate_graph_info_with_schema(
     GAR::FileType file_type, bool store_in_local);
 
 }  // namespace vineyard
+
+#endif
 
 #endif  // MODULES_GRAPH_WRITER_UTIL_H_
