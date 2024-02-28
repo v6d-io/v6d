@@ -30,12 +30,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <assert.h>
-#include <errno.h>
-#include <math.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
+#include <stdio.h>
+#include <errno.h>
+#include <math.h>
 #include <chrono>
 
 #include "radix.h"
@@ -2859,3 +2859,8 @@ void testIteRax(rax *tree) {
 raxNode* raxGetFirstChildPtr(raxNode* node) {
     return raxGetFirstChildPtr(node);
 }
+
+// 1 2 3
+// query subtree node:0x55f87076f760
+// I0129 16:44:25.626318 280948 kv_state_cache.cc:223] offset:0
+// I0129 16:44:25.626322 280948 kv_state_cache.cc:224] kvStateCacheBlockBuilder:0x55f870767bc0

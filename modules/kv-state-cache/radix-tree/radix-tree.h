@@ -13,21 +13,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef RADIX_TREE_H
-#define RADIX_TREE_H
+#ifndef MODULES_KV_STATE_CACHE_RADIX_TREE_RADIX_TREE_H_
+#define MODULES_KV_STATE_CACHE_RADIX_TREE_RADIX_TREE_H_
 
-#include "radix.h"
-
-#include "common/util/base64.h"
-#include "common/util/logging.h"
+#include "kv-state-cache/radix-tree/radix.h"
 
 #include <iomanip>
 #include <map>
 #include <memory>
 #include <set>
+#include <string>
 #include <vector>
 
-using namespace vineyard;
+#include "common/util/base64.h"
+#include "common/util/logging.h"
+
+using namespace vineyard;  // NOLINT(build/namespaces)
 
 struct DataWrapper {
   void* data;
@@ -75,7 +76,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       std::vector<int> tokens, std::shared_ptr<NodeData>& header);
 
  public:
-  RadixTree(int cacheCapacity);
+  RadixTree(int cacheCapacity);  //  NOLINT(runtime/explicit)
 
   ~RadixTree();
 
@@ -117,4 +118,4 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   std::set<void*> GetAllNodeData();
 };
 
-#endif
+#endif  //  MODULES_KV_STATE_CACHE_RADIX_TREE_RADIX_TREE_H_"
