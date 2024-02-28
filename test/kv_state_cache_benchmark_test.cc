@@ -28,7 +28,7 @@ limitations under the License.
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
 
-#include "kv-state-cache/utils/kv_state_cache_utils.h"
+#include "llm-cache/utils/kv_state_cache_utils.h"
 
 using namespace vineyard;  //  NOLINT(build/namespaces)
 

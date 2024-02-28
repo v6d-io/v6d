@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "kv-state-cache/radix-tree/radix-tree.h"
+#include "llm-cache/radix-tree/radix-tree.h"
 
 #include "common/util/base64.h"
 #include "common/util/logging.h"
@@ -319,7 +319,7 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
   data.erase(0, sizeof(int));
   int rootNumNodes = *reinterpret_cast<uint32_t*>(data.data());
   data.erase(0, sizeof(uint32_t));
-  unsigned long long ds = ZSTD_getFrameContentSize(data.c_str(), data.size());
+  uint64_t ds = ZSTD_getFrameContentSize(data.c_str(), data.size());
   if (ds == ZSTD_CONTENTSIZE_ERROR) {
     LOG(ERROR) << "Error: not a valid compressed frame";
   } else if (ds == ZSTD_CONTENTSIZE_UNKNOWN) {

@@ -20,11 +20,11 @@ limitations under the License.
 #include "client/client.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
-#include "kv-state-cache/ds/kv_state_cache_block.h"
-#include "kv-state-cache/radix-tree/radix-tree.h"
+#include "llm-cache/ds/kv_state_cache_block.h"
+#include "llm-cache/radix-tree/radix-tree.h"
 
-#ifndef MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_H_
-#define MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_H_
+#ifndef MODULES_LLM_CACHE_DS_KV_STATE_CACHE_H_
+#define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_H_
 
 namespace vineyard {
 
@@ -120,4 +120,4 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
 }  // namespace vineyard
 
-#endif  // MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_H_
+#endif  // MODULES_LLM_CACHE_DS_KV_STATE_CACHE_H_

@@ -16,10 +16,10 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "kv-state-cache/ds/kv_state_cache.h"
+#include "llm-cache/ds/kv_state_cache.h"
 
-#ifndef MODULES_KV_STATE_CACHE_UTILS_KV_STATE_CACHE_UTILS_H_
-#define MODULES_KV_STATE_CACHE_UTILS_KV_STATE_CACHE_UTILS_H_
+#ifndef MODULES_LLM_CACHE_UTILS_KV_STATE_CACHE_UTILS_H_
+#define MODULES_LLM_CACHE_UTILS_KV_STATE_CACHE_UTILS_H_
 
 namespace vineyard {
 
@@ -44,4 +44,4 @@ void CloseKVStateCache();
 
 }  // namespace vineyard
 
-#endif  // MODULES_KV_STATE_CACHE_UTILS_KV_STATE_CACHE_UTILS_H_
+#endif  // MODULES_LLM_CACHE_UTILS_KV_STATE_CACHE_UTILS_H_

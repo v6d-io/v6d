@@ -13,10 +13,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_KV_STATE_CACHE_RADIX_TREE_RADIX_TREE_H_
-#define MODULES_KV_STATE_CACHE_RADIX_TREE_RADIX_TREE_H_
+#ifndef MODULES_LLM_CACHE_RADIX_TREE_RADIX_TREE_H_
+#define MODULES_LLM_CACHE_RADIX_TREE_RADIX_TREE_H_
 
-#include "kv-state-cache/radix-tree/radix.h"
+#include "llm-cache/radix-tree/radix.h"
 
 #include <iomanip>
 #include <map>
@@ -118,4 +118,4 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
   std::set<void*> GetAllNodeData();
 };
 
-#endif  //  MODULES_KV_STATE_CACHE_RADIX_TREE_RADIX_TREE_H_"
+#endif  //  MODULES_LLM_CACHE_RADIX_TREE_RADIX_TREE_H_

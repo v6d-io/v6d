@@ -22,9 +22,9 @@ limitations under the License.
 #include "common/util/base64.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
-#include "kv-state-cache/ds/kv_state_cache.h"
-#include "kv-state-cache/radix-tree/radix-tree.h"
-#include "kv-state-cache/radix-tree/radix.h"
+#include "llm-cache/ds/kv_state_cache.h"
+#include "llm-cache/radix-tree/radix-tree.h"
+#include "llm-cache/radix-tree/radix.h"
 
 namespace vineyard {
 
@@ -63,9 +63,7 @@ void KVStateCache::Resolve() {
             << " layer:" << this->layer;
 }
 
-KVStateCache::~KVStateCache() {
-  // TBD
-}
+KVStateCache::~KVStateCache() {}
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
                                          int cacheCapacity, int layer,
@@ -200,8 +198,6 @@ void KVStateCacheBuilder::Update(Client& client,
             << " bitmap:" << kvStateCacheBlockBuilder->GetBitmapStr();
 }
 
-static std::shared_ptr<NodeData> node;
-
 KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
     Client& client, const std::vector<int>& tokenList, int token) {
   std::vector<int> tokenListCopy = tokenList;
@@ -285,10 +281,7 @@ void KVStateCacheBuilder::Merge(Client& client,
   return;
 }
 
-Status KVStateCacheBuilder::Build(Client& client) {
-  // TBD
-  return Status::OK();
-}
+Status KVStateCacheBuilder::Build(Client& client) { return Status::OK(); }
 
 std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   this->Build(client);

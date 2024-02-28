@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
-#define MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
+#ifndef MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
+#define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
 
 #include <array>
 #include <iostream>
@@ -27,17 +27,16 @@ limitations under the License.
 #include "basic/ds/tensor.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
-#include "kv-state-cache/radix-tree/radix-tree.h"
+#include "llm-cache/radix-tree/radix-tree.h"
 
-typedef std::map<int, std::pair<std::vector<double>, std::vector<double>>>
-    KV_STATE_WITH_LAYER;
-typedef std::vector<
-    std::map<int, std::pair<std::vector<double>, std::vector<double>>>>
-    LIST_KV_STATE_WITH_LAYER;
-typedef std::vector<std::pair<std::vector<double>, std::vector<double>>>
-    KV_STATE;
-typedef std::vector<std::pair<std::vector<double>, std::vector<double>>>
-    LIST_KV_STATE;
+using KV_STATE_WITH_LAYER =
+    std::map<int, std::pair<std::vector<double>, std::vector<double>>>;
+using LIST_KV_STATE_WITH_LAYER = std::vector<
+    std::map<int, std::pair<std::vector<double>, std::vector<double>>>>;
+using KV_STATE =
+    std::vector<std::pair<std::vector<double>, std::vector<double>>>;
+using LIST_KV_STATE =
+    std::vector<std::pair<std::vector<double>, std::vector<double>>>;
 
 // Set the bit to 1, which means the resource is not being used
 #define FREE_BIT_RESOURCE(value, bit) ((value) |= (((uint64_t) 1) << (bit)))
@@ -203,4 +202,4 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
 }  // namespace vineyard
 
-#endif  // MODULES_KV_STATE_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
+#endif  // MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOCK_H_

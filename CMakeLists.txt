@@ -62,7 +62,7 @@ option(BUILD_VINEYARD_MALLOC_OVERRIDE "Using the client-side malloc to override 
 option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
 option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
 option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" OFF)
-option(BUILD_VINEYARD_KV_STATE_CACHE "Enable kv-state cache support" ON)
+option(BUILD_VINEYARD_LLM_CACHE "Enable kv-state cache support" ON)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)
@@ -933,9 +933,9 @@ if(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME)
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_hosseinmoein_dataframe)
 endif()
 
-if(BUILD_VINEYARD_KV_STATE_CACHE)
-    add_subdirectory(modules/kv-state-cache)
-    list(APPEND VINEYARD_INSTALL_LIBS vineyard_kv_state_cache)
+if(BUILD_VINEYARD_LLM_CACHE)
+    add_subdirectory(modules/llm-cache)
+    list(APPEND VINEYARD_INSTALL_LIBS vineyard_llm_cache)
 endif()
 
 if(BUILD_VINEYARD_TESTS)
@@ -981,7 +981,7 @@ endfunction()
 
 file_glob_recurse(FILES_NEED_FORMAT DIRECTORIES      "src" "modules" "python" "test" "benchmark"
                                     PATTERNS         ".*\\.(cc|cpp|h|hpp|vineyard-mod)$"
-                                    EXCLUDE_PATTERNS "(.*\\.vineyard.h$)|(.*modules/kv-state-cache/radix-tree/radix\.(cc|h)$)"
+                                    EXCLUDE_PATTERNS "(.*\\.vineyard.h$)|(.*modules/llm-cache/radix-tree/radix\.(cc|h)$)"
 )
 
 # the `memcpy.h` is borrowed from external project

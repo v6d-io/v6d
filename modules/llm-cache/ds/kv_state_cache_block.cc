@@ -19,7 +19,7 @@ limitations under the License.
 
 #include "client/client.h"
 #include "common/util/logging.h"
-#include "kv-state-cache/ds/kv_state_cache_block.h"
+#include "llm-cache/ds/kv_state_cache_block.h"
 
 namespace vineyard {
 

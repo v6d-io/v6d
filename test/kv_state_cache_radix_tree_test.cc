@@ -17,10 +17,10 @@ limitations under the License.
 #include <iostream>
 #include <random>
 #include <vector>
-#include "kv-state-cache/radix-tree/radix.h"
+#include "llm-cache/radix-tree/radix.h"
 
 #include "common/util/logging.h"
-#include "kv-state-cache/utils/kv_state_cache_utils.h"
+#include "llm-cache/utils/kv_state_cache_utils.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 

@@ -178,15 +178,15 @@ class RedisMetaService : public IMetaService {
   ~RedisMetaService() override {}
 
   void TryAcquireLock(std::string key,
-                      callback_t<bool, std::string> callback_after_try_locked) {
-    // TBD
-    assert(false);
+                      callback_t<bool, std::string> callback_after_try_lock) {
+    server_ptr_->GetMetaContext().post(boost::bind(
+        callback_after_try_lock, Status::NotImplemented, false, ""));
   }
 
   void TryReleaseLock(std::string key,
-                      callback_t<bool> callback_after_try_unlocked) {
-    // TBD
-    assert(false);
+                      callback_t<bool> callback_after_try_unlock) {
+    server_ptr_->GetMetaContext().post(
+        boost::bind(callback_after_try_unlock, Status::NotImplemented, false));
   }
 
  protected:
