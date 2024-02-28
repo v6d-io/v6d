@@ -55,3 +55,7 @@ This product includes software from the ClickHouse project
 This product includes software from the BBHash project
  * Copyright (c) 2015 Guillaume Rizk
  * https://github.com/rizkg/BBHash
+
+This product includes software from the rax project (BSD, 2-clause)
+ * Copyright (c) 2017-2019, Salvatore Sanfilippo <antirez at gmail dot com>
+ * https://github.com/antirez/rax

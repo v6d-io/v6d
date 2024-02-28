@@ -319,7 +319,7 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
   data.erase(0, sizeof(int));
   int rootNumNodes = *reinterpret_cast<uint32_t*>(data.data());
   data.erase(0, sizeof(uint32_t));
-  int ds = ZSTD_getFrameContentSize(data.c_str(), data.size());
+  unsigned long long ds = ZSTD_getFrameContentSize(data.c_str(), data.size());
   if (ds == ZSTD_CONTENTSIZE_ERROR) {
     LOG(ERROR) << "Error: not a valid compressed frame";
   } else if (ds == ZSTD_CONTENTSIZE_UNKNOWN) {
