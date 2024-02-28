@@ -16,7 +16,7 @@ limitations under the License.
 #ifndef MODULES_LLM_CACHE_RADIX_TREE_RADIX_TREE_H_
 #define MODULES_LLM_CACHE_RADIX_TREE_RADIX_TREE_H_
 
-#include "llm-cache/radix-tree/radix.h"
+#include "rax/radix.h"
 
 #include <iomanip>
 #include <map>

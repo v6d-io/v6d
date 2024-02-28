@@ -24,7 +24,8 @@ limitations under the License.
 #include "common/util/status.h"
 #include "llm-cache/ds/kv_state_cache.h"
 #include "llm-cache/radix-tree/radix-tree.h"
-#include "llm-cache/radix-tree/radix.h"
+
+#include "rax/radix.h"
 
 namespace vineyard {
 

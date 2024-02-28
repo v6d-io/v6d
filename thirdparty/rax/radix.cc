@@ -297,7 +297,7 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
     size_t curlen = raxNodeCurrentLength(n);
     n->size++;
     size_t newlen = raxNodeCurrentLength(n);
-    n->size--; /* For now restore the orignal size. We'll update it only on
+    n->size--; /* For now restore the original size. We'll update it only on
                   success at the end. */
 
     /* Alloc the new child we will link to 'n'. */
@@ -645,7 +645,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
      *
      * Splitting a compressed node have a few possible cases.
      * Imagine that the node 'h' we are currently at is a compressed
-     * node contaning the token list [1,2,3,4,5,6,7] (it means that it represents
+     * node containing the token list [1,2,3,4,5,6,7] (it means that it represents
      * nodes 1 -> 2 -> 3 -> 4 -> 5 -> 6 -> 7 with the only child
      * pointer of this node pointing at the 7 node, because remember that
      * we have tokens at the edges of the graph, not inside the nodes
@@ -744,7 +744,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
      * Let $SPLITPOS be the zero-based index at which, in the
      * compressed node array of token list, we stopped iterating because
      * there were no more keys character to match. So in the example of
-     * the node [1,2,3,4,5,6,7], addig the token list [1,2,3,4], the $SPLITPOS is 4.
+     * the node [1,2,3,4,5,6,7], adding the token list [1,2,3,4], the $SPLITPOS is 4.
      *
      * 1. Save the current compressed node $NEXT pointer (the pointer to the
      *    child element, that is always present in compressed nodes).
@@ -757,7 +757,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
      *
      * 3. Trim the current node to contain the first $SPLITPOS tokens.
      *    As usually if the new node length is just 1, set iscompr to 0.
-     *    Take the iskey / associated value as it was in the orignal node.
+     *    Take the iskey / associated value as it was in the original node.
      *    Fix the parent's reference.
      *
      * 4. Set the postfix node as the only child pointer of the trimmed
@@ -1341,9 +1341,9 @@ int raxRemove(rax *rax, int *s, size_t len, void **old, bool set_timestamp) {
      * We try to navigate upward till there are other nodes that can be
      * compressed, when we reach the upper node which is not a key and has
      * a single child, we scan the chain of children to collect the
-     * compressable part of the tree, and replace the current node with the
+     * compressible part of the tree, and replace the current node with the
      * new one, fixing the child pointer to reference the first non
-     * compressable node.
+     * compressible node.
      *
      * Example of case "1". A tree stores the keys [1,2,3] = 1 and
      * [1,2,3,4,5] = 2:
@@ -1505,7 +1505,7 @@ void raxFree(rax *rax) {
  * to initialize the iterator, and must be followed by a raxSeek() call,
  * otherwise the raxPrev()/raxNext() functions will just return EOF. */
 void raxStart(raxIterator *it, rax *rt) {
-    it->flags = RAX_ITER_EOF; /* No crash if the iterator is not seeked. */
+    it->flags = RAX_ITER_EOF; /* No crash if the iterator is not sought. */
     it->rt = rt;
     it->key_len = 0;
     it->key = it->key_static_tokens;
@@ -1584,7 +1584,7 @@ int raxIteratorNextStep(raxIterator *it, int noup) {
         if (!noup && children) {
             debugf("GO DEEPER\n");
             /* Seek the lexicographically smaller key in this subtree, which
-             * is the first one found always going torwards the first child
+             * is the first one found always going towards the first child
              * of every successive node. */
             if (!raxStackPush(&it->stack,it->node)) return 0;
             raxNode **cp = raxNodeFirstChildPtr(it->node);
@@ -1817,7 +1817,7 @@ int raxIteratorPrevStep(raxIterator *it, int noup) {
 int raxSeek(raxIterator *it, const char *op, int *ele, size_t len) {
     int eq = 0, lt = 0, gt = 0, first = 0, last = 0;
 
-    it->stack.items = 0; /* Just resetting. Intialized by raxStart(). */
+    it->stack.items = 0; /* Just resetting. Initialized by raxStart(). */
     it->flags |= RAX_ITER_JUST_SEEKED;
     it->flags &= ~RAX_ITER_EOF;
     it->key_len = 0;
@@ -2046,9 +2046,9 @@ int raxRandomWalk(raxIterator *it, size_t steps) {
     }
 
     if (steps == 0) {
-        size_t fle = 1+floor(log(it->rt->numele));
-        fle *= 2;
-        steps = 1 + rand() % fle;
+        size_t file = 1+floor(log(it->rt->numele));
+        file *= 2;
+        steps = 1 + rand() % file;
     }
 
     raxNode *n = it->node;
@@ -2461,21 +2461,19 @@ void raxFindLastRecentNode(raxNode *node, std::vector<int>& key) {
         return;
     }
 
-    raxNode *chossenChild = childList[0];
-    int choosenChildIndex = 0;
+    raxNode *chosenChild = childList[0];
+    int chosenChildIndex = 0;
     for (int i = 1; i < numChildren; i++) {
-        if (childList[i]->timestamp == chossenChild->timestamp) {
-            if (childList[i]->numnodes > chossenChild->numnodes) {
-                LOG(INFO) << "childList[i]->numnodes > chossenChild->numnodes";
-                LOG(INFO) << "node1:" << childList[i] << " node:2" << chossenChild;
-                chossenChild = childList[i];
-                choosenChildIndex = i;
+        if (childList[i]->timestamp == chosenChild->timestamp) {
+            if (childList[i]->numnodes > chosenChild->numnodes) {
+                VLOG(100) << "childList[i]->numnodes > chossenChild->numnodes";
+                VLOG(100) << "node1:" << childList[i] << " node:2" << chosenChild;
+                chosenChild = childList[i];
+                chosenChildIndex = i;
             }
-            // chossenChild = childList[i];
-            // choosenChildIndex = i;
-        } else if (childList[i]->timestamp < chossenChild->timestamp) {
-            chossenChild = childList[i];
-            choosenChildIndex = i;
+        } else if (childList[i]->timestamp < chosenChild->timestamp) {
+            chosenChild = childList[i];
+            chosenChildIndex = i;
         }
     }
 
@@ -2484,10 +2482,10 @@ void raxFindLastRecentNode(raxNode *node, std::vector<int>& key) {
             key.push_back(node->data[i]);
         }
     } else {
-        key.push_back(node->data[choosenChildIndex]);
+        key.push_back(node->data[chosenChildIndex]);
     }
 
-    raxFindLastRecentNode(chossenChild, key);
+    raxFindLastRecentNode(chosenChild, key);
 }
 
 bool compareKey(int *first_key, int *second_key, int first_key_len, int second_key_len) {
@@ -2581,7 +2579,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
     int nodeCount = 0;
 
     /**
-     * We use two structures to store the nodes choosen from the second tree
+     * We use two structures to store the nodes chosen from the second tree
      * and the nodes evicted from the first tree.
      */
     while (nodeCount < max_node) {
@@ -2620,13 +2618,13 @@ void mergeTree(rax* first_tree, rax* second_tree,
             /**
              * Choose first tree node.
              * If the key is in the record tree, it means that there exist a same key in
-             * the second tree and has been choosen in the past. So we just need to remove
+             * the second tree and has been chosen in the past. So we just need to remove
              * the key from the insert_tokens and update the timestamp of the key in the
              * first tree.
              * If the key is not in the record tree, it means that the key has not been
-             * choosen in the past. So we need to insert the key into the record tree.
+             * chosen in the past. So we need to insert the key into the record tree.
              */
-            printf("chosse first key %ld : %ld\n",
+            printf("choose first key %ld : %ld\n",
                     first_tree_iter_list[first_tree_index].node->timestamp,
                     second_tree_iter_list[second_tree_index].node->timestamp);
             if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
@@ -2650,12 +2648,12 @@ void mergeTree(rax* first_tree, rax* second_tree,
             /**
              * Choose second tree node.
              * If the key is in the record tree, it means that there exist a same key in
-             * the first tree and has been choosen in the past. So we need do nothing.
+             * the first tree and has been chosen in the past. So we need do nothing.
              * If the key is not in the record tree, it means that the key has not been
-             * choosen in the past. So we need to insert the key into the record tree.
+             * chosen in the past. So we need to insert the key into the record tree.
              * and insert the key into the insert_tokens.
              */
-            printf("chosse second key %ld : %ld\n",
+            printf("choose second key %ld : %ld\n",
                     first_tree_iter_list[first_tree_index].node->timestamp,
             second_tree_iter_list[second_tree_index].node->timestamp);
             // choose second key
@@ -2680,7 +2678,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
             */
             if (first_tree_iter_list[first_tree_index].node->numnodes <=
                 second_tree_iter_list[second_tree_index].node->numnodes) {
-                printf("chosse first key %ld : %ld\n",
+                printf("choose first key %ld : %ld\n",
                     first_tree_iter_list[first_tree_index].node->timestamp,
                     second_tree_iter_list[second_tree_index].node->timestamp);
                 // choose first key
@@ -2704,7 +2702,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                 }
                 first_tree_index++;
             } else {
-                printf("chosse second key %ld : %ld\n",
+                printf("choose second key %ld : %ld\n",
                     first_tree_iter_list[first_tree_index].node->timestamp,
                     second_tree_iter_list[second_tree_index].node->timestamp);
                 // choose second key

@@ -17,7 +17,7 @@ limitations under the License.
 #include <iostream>
 #include <random>
 #include <vector>
-#include "llm-cache/radix-tree/radix.h"
+#include "rax/radix.h"
 
 #include "common/util/logging.h"
 #include "llm-cache/ds/kv_state_cache_manager.h"

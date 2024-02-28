@@ -3,6 +3,10 @@ file(GLOB VINEYARD_LLM_CACHE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                   "ds/*.h"
                                   "radix-tree/*.cc"
                                   "radix-tree/*.h"
+                                  "utils/*.cc"
+                                  "utils/*.h"
+                                  "${PROJECT_SOURCE_DIR}/thirdparty/rax/*.cc"
+                                  "${PROJECT_SOURCE_DIR}/thirdparty/rax/*.h"
 )
 
 add_library(vineyard_llm_cache ${VINEYARD_LLM_CACHE_SRCS})
