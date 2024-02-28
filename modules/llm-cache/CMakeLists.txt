@@ -14,3 +14,5 @@ install_export_vineyard_target(vineyard_llm_cache)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}/utils/")
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}/ds/")
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}/radix-tree/")
+
+add_subdirectory(tests)
