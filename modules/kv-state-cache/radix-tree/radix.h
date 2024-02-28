@@ -33,13 +33,13 @@
 
 #include <stddef.h>
 #include <stdint.h>
-#include <memory>
-#include <vector>
-#include <map>
-#include <cmath>
 #include <algorithm>
+#include <cmath>
+#include <map>
+#include <memory>
 #include <queue>
 #include <set>
+#include <vector>
 
 /* Representation of a radix tree as implemented in this file, that contains
  * the token lists [1, 2, 3], [1, 2, 3, 4, 5, 6] and [1, 2, 3, 6, 7, 8] after
@@ -110,9 +110,9 @@ typedef struct raxNode {
   uint32_t size : 26;     /* Number of children, or compressed string len. */
   uint32_t numnodes;      /* Number of the child nodes */
   uint32_t numele;        /* Number of elements inside this node. */
-  uint64_t timestamp;    /* Timestamps of the node */
+  uint64_t timestamp;     /* Timestamps of the node */
   uint32_t sub_tree_size; /* Number of nodes in the sub tree */
-  void *custom_data;
+  void* custom_data;
   /* Data layout is as follows:
    *
    * If node is not compressed we have 'size' bytes, one for each children
@@ -196,9 +196,10 @@ typedef struct raxIterator {
   size_t key_len; /* Current key length. */
   size_t key_max; /* Max key len the current key buffer can hold. */
   int key_static_tokens[RAX_ITER_STATIC_LEN];
-  bool add_to_subtree_list; /* Whether to add the current node to the subtree list. */
-  std::vector<std::vector<int>> *subtree_list; /* List of subtrees. */
-  std::vector<void *> *subtree_data_list; /* List of subtrees' data. */
+  bool add_to_subtree_list; /* Whether to add the current node to the subtree
+                               list. */
+  std::vector<std::vector<int>>* subtree_list; /* List of subtrees. */
+  std::vector<void*>* subtree_data_list;       /* List of subtrees' data. */
   raxNode* node;           /* Current node. Only for unsafe iteration. */
   raxStack stack;          /* Stack used for unsafe iteration. */
   raxNodeCallback node_cb; /* Optional node callback. Normally set to NULL. */
@@ -209,19 +210,24 @@ extern void* raxNotFound;
 
 /* Exported API. */
 rax* raxNew(void);
-int raxInsert(rax *rax, int *s, size_t len, void *data, void **old, bool set_timestamp = true);
+int raxInsert(rax* rax, int* s, size_t len, void* data, void** old,
+              bool set_timestamp = true);
 int raxTryInsert(rax* rax, int* s, size_t len, void* data, void** old);
 int raxInsertAndReturnDataNode(rax* rax, int* s, size_t len, void* data,
                                void** node, void** old);
-int raxRemove(rax* rax, int* s, size_t len, void** old, bool set_timestamp = true);
+int raxRemove(rax* rax, int* s, size_t len, void** old,
+              bool set_timestamp = true);
 void* raxFind(rax* rax, int* s, size_t len);
-raxNode* raxFindAndReturnDataNode(rax* rax, int* s, size_t len, raxNode** sub_tree_node = NULL, bool set_timestamp = true);
-void raxSetSubtree(raxNode *n);
-void raxSetSubtreeAllocated(raxNode *node);
-void raxSetSubtreeNotNull(raxNode *node);
-int raxFindNodeWithParent(rax *rax, int *s, size_t len, void **node, void **parent);
+raxNode* raxFindAndReturnDataNode(rax* rax, int* s, size_t len,
+                                  raxNode** sub_tree_node = NULL,
+                                  bool set_timestamp = true);
+void raxSetSubtree(raxNode* n);
+void raxSetSubtreeAllocated(raxNode* node);
+void raxSetSubtreeNotNull(raxNode* node);
+int raxFindNodeWithParent(rax* rax, int* s, size_t len, void** node,
+                          void** parent);
 void raxFree(rax* rax);
-void raxFreeWithCallback(rax *rax, void (*free_callback)(raxNode *));
+void raxFreeWithCallback(rax* rax, void (*free_callback)(raxNode*));
 void raxStart(raxIterator* it, rax* rt);
 int raxSeek(raxIterator* it, const char* op, int* ele, size_t len);
 int raxNext(raxIterator* it);
@@ -232,25 +238,30 @@ void raxStop(raxIterator* it);
 int raxEOF(raxIterator* it);
 void raxShow(rax* rax);
 uint64_t raxSize(rax* rax);
-void raxSetCustomData(raxNode *n, void *data);
-void *raxGetCustomData(raxNode *n);
+void raxSetCustomData(raxNode* n, void* data);
+void* raxGetCustomData(raxNode* n);
 unsigned long raxTouch(raxNode* n);
 void raxSetDebugMsg(int onoff);
 void raxTraverse(raxNode* rax,
                  std::vector<std::shared_ptr<raxNode>>& dataNodeList);
-void raxTraverseSubTree(raxNode* n, std::vector<raxNode*> &dataNodeList);
-raxNode *raxSplit(rax *rax, int *s, size_t len, std::vector<int>& key);
-void raxSerialize(rax* root, std::vector<std::vector<int>>& tokenList, std::vector<void*>& dataList, std::vector<uint64_t> &timestampsList,
-                  std::vector<std::vector<int>> *subtreeList, std::vector<void*> *subtreeNodeList);
+void raxTraverseSubTree(raxNode* n, std::vector<raxNode*>& dataNodeList);
+raxNode* raxSplit(rax* rax, int* s, size_t len, std::vector<int>& key);
+void raxSerialize(rax* root, std::vector<std::vector<int>>& tokenList,
+                  std::vector<void*>& dataList,
+                  std::vector<uint64_t>& timestampsList,
+                  std::vector<std::vector<int>>* subtreeList,
+                  std::vector<void*>* subtreeNodeList);
 
 /* Internal API. May be used by the node callback in order to access rax nodes
  * in a low level way, so this function is exported as well. */
-void raxSetData(raxNode *n, void *data);
-void *raxGetData(raxNode *n);
-int raxFindNode(rax *rax, int *s, size_t len, void **node);
-void raxFindLastRecentNode(raxNode *node, std::vector<int>& key);
-void mergeTree(rax* first_tree, rax* second_tree, std::vector<std::vector<int>>& evicted_tokens, std::set<std::vector<int>>& insert_tokens, int max_node);
-void testIteRax(rax *tree);
+void raxSetData(raxNode* n, void* data);
+void* raxGetData(raxNode* n);
+int raxFindNode(rax* rax, int* s, size_t len, void** node);
+void raxFindLastRecentNode(raxNode* node, std::vector<int>& key);
+void mergeTree(rax* first_tree, rax* second_tree,
+               std::vector<std::vector<int>>& evicted_tokens,
+               std::set<std::vector<int>>& insert_tokens, int max_node);
+void testIteRax(rax* tree);
 raxNode* raxGetFirstChildPtr(raxNode* node);
 // raxNode *raxSetSubTreeAndReturnDataNode(rax *rax, int *s, size_t len);
 #endif

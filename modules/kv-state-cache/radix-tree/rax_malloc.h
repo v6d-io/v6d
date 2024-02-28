@@ -35,9 +35,10 @@
  * the include of your alternate allocator if needed (not needed in order
  * to use the default libc allocator). */
 
-#ifndef RAX_ALLOC_H
-#define RAX_ALLOC_H
+#ifndef MODULES_KV_STATE_CACHE_RADIX_TREE_RAX_MALLOC_H_
+#define MODULES_KV_STATE_CACHE_RADIX_TREE_RAX_MALLOC_H_
 #define rax_malloc malloc
 #define rax_realloc realloc
 #define rax_free free
-#endif
+
+#endif  // MODULES_KV_STATE_CACHE_RADIX_TREE_RAX_MALLOC_H_
