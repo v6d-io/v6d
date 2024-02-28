@@ -170,7 +170,7 @@ Status StreamStore::Pull(ObjectID const stream_id,
       status = store_->Delete(target);
     } else {
       status = server_->DelData(
-          {target}, false, true, false, [](Status const& status) {
+          {target}, false, true, false, false, [](Status const& status) {
             if (!status.ok()) {
               LOG(WARNING) << "failed to delete the stream chunk: "
                            << status.ToString();
@@ -308,7 +308,7 @@ Status StreamStore::Drop(ObjectID const stream_id) {
       status = store_->Delete(target);
     } else {
       status = server_->DelData(
-          {target}, false, true, false, [](Status const& status) {
+          {target}, false, false, true, false, [](Status const& status) {
             if (!status.ok()) {
               LOG(WARNING) << "failed to delete the stream chunk: "
                            << status.ToString();

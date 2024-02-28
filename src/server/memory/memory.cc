@@ -302,7 +302,8 @@ Status BulkStoreBase<ID, P>::GetUnsafe(
 }
 
 template <typename ID, typename P>
-Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
+Status BulkStoreBase<ID, P>::Delete(ID const& object_id,
+                                    const bool memory_trim) {
   if (object_id == EmptyBlobID<ID>() ||
       object_id == GenerateBlobID<ID>(std::numeric_limits<uintptr_t>::max())) {
     return Status::OK();
@@ -334,14 +335,15 @@ Status BulkStoreBase<ID, P>::Delete(ID const& object_id) {
   if (target->arena_fd == -1) {
     // release the memory
     auto buff_size = target->data_size;
-    switch (target->kind) {
-    case Payload::Kind::kMalloc: {
+    if (target->kind == Payload::Kind::kMalloc) {
       BulkAllocator::Free(target->pointer, buff_size);
       DVLOG(10) << "after free: " << IDToString(object_id) << ": "
                 << Footprint() << "(" << FootprintLimit() << ")";
     }
-    default: {
-    }
+    if (memory_trim && (target->data_size > 0)) {
+      memory::recycle_resident_memory(
+          reinterpret_cast<uintptr_t>(target->pointer), 0, target->data_size,
+          true);
     }
   } else {
     // release the span on allocator's arena to release the physical memory
@@ -663,9 +665,9 @@ Status BulkStore::FetchAndModify(const ObjectID& id, int64_t& ref_cnt,
   return Status::OK();
 }
 
-Status BulkStore::OnDelete(ObjectID const& id) {
+Status BulkStore::OnDelete(ObjectID const& id, const bool memory_trim) {
   RETURN_ON_ERROR(this->RemoveFromColdList(id, true));
-  return Delete(id);
+  return Delete(id, memory_trim);
 }
 
 Status BulkStore::Shrink(ObjectID const& id, size_t const& size) {

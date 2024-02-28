@@ -571,7 +571,7 @@ Returns:
 
 const char* ClientBase_delete = R"doc(
 .. method:: delete(object_id: ObjectID or List[ObjectID], force: bool = false,
-                   deep: bool = true) -> None
+                   deep: bool = true, memory_trim: bool = False) -> None
     :noindex:
 
 Delete the specific vineyard object.
@@ -590,9 +590,16 @@ Parameters:
 
         Note that when deleting objects which have *direct* blob members, the
         processing on those blobs yields a "deep" behavior.
+    memory_trim: bool
+        Whether to trim the memory pool inside the shared memory allocator to
+        return the unused physical memory back to the OS kernel, like the
+        `malloc_trim` API from glibc. Default value is False.
 
-.. method:: delete(object_meta: ObjectMeta, force: bool = false, deep: bool = true)
-                   -> None
+        Note that the memory trimming operation is a best-effort operation and
+        may not release any memory at all.
+
+.. method:: delete(object_meta: ObjectMeta, force: bool = false, deep: bool = true,
+                   memory_trim: bool = False) -> None
     :noindex:
 
 Delete the specific vineyard object.
@@ -600,7 +607,8 @@ Delete the specific vineyard object.
 Parameters:
     object_meta: The corresponding object meta to delete.
 
-.. method:: delete(object: Object, force: bool = false, deep: bool = true) -> None
+.. method:: delete(object: Object, force: bool = false, deep: bool = true,
+                   memory_trim: bool = False) -> None
     :noindex:
 
 Delete the specific vineyard object.

@@ -265,8 +265,9 @@ class Client:
         object: Union[ObjectID, Object, ObjectMeta, List[ObjectID]],
         force: bool = False,
         deep: bool = True,
+        memory_trim: bool = False,
     ) -> None:
-        return self.default_client().delete(object, force, deep)
+        return self.default_client().delete(object, force, deep, memory_trim)
 
     @_apply_docstring(IPCClient.create_stream)
     def create_stream(self, id: ObjectID) -> None:

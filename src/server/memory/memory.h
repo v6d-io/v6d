@@ -76,7 +76,7 @@ class BulkStoreBase {
 
   Status Seal(ID const& object_id);
 
-  Status Delete(ID const& object_id);
+  Status Delete(ID const& object_id, const bool memory_trim = false);
 
   Status DeleteGPU(ID const& object_id);
 
@@ -192,7 +192,7 @@ class BulkStore
    * @brief Required by `ColdObjectTracker`. Currently, the deletion does not
    * respect the reference count.
    */
-  Status OnDelete(ObjectID const& id);
+  Status OnDelete(ObjectID const& id, const bool memory_trim = false);
 
   /**
    * @brief Shrink the blob to the given size.

@@ -25,6 +25,9 @@ cmake-build-debug
 *.pyc
 *.bin
 *.whl
+*.tar.gz
+*.zip
+*.xz
 
 # hive sql work directory
 /java/hive/docker/dependency/mysql/conf/

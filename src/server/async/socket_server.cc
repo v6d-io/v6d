@@ -804,23 +804,23 @@ bool SocketConnection::doRelease(json const& root) {
 bool SocketConnection::doDelDataWithFeedbacks(json const& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
-  bool force, deep, fastpath;
+  bool force, deep, memory_trim, fastpath;
   double startTime = GetCurrentTime();
   TRY_READ_REQUEST(ReadDelDataWithFeedbacksRequest, root, ids, force, deep,
-                   fastpath);
+                   memory_trim, fastpath);
   RESPONSE_ON_ERROR(server_ptr_->DelData(
-      ids, force, deep, fastpath,
+      ids, force, deep, memory_trim, fastpath,
       [self, startTime](const Status& status,
                         std::vector<ObjectID> const& delete_ids) {
         std::string message_out;
         if (status.ok()) {
-          std::vector<ObjectID> deleted_bids;
+          std::vector<ObjectID> deleted_blob_ids;
           for (auto id : delete_ids) {
             if (IsBlob(id)) {
-              deleted_bids.emplace_back(id);
+              deleted_blob_ids.emplace_back(id);
             }
           }
-          WriteDelDataWithFeedbacksReply(deleted_bids, message_out);
+          WriteDelDataWithFeedbacksReply(deleted_blob_ids, message_out);
         } else {
           VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
@@ -1058,11 +1058,13 @@ bool SocketConnection::doListData(const json& root) {
 bool SocketConnection::doDelData(const json& root) {
   auto self(shared_from_this());
   std::vector<ObjectID> ids;
-  bool force, deep, fastpath;
+  bool force, deep, memory_trim, fastpath;
   double startTime = GetCurrentTime();
-  TRY_READ_REQUEST(ReadDelDataRequest, root, ids, force, deep, fastpath);
+  TRY_READ_REQUEST(ReadDelDataRequest, root, ids, force, deep, memory_trim,
+                   fastpath);
   RESPONSE_ON_ERROR(server_ptr_->DelData(
-      ids, force, deep, fastpath, [self, startTime](const Status& status) {
+      ids, force, deep, memory_trim, fastpath,
+      [self, startTime](const Status& status) {
         std::string message_out;
         if (status.ok()) {
           WriteDelDataReply(message_out);
@@ -1177,7 +1179,7 @@ bool SocketConnection::doClear(const json& root) {
       [self](const Status& status, const std::vector<ObjectID>& objects) {
         if (status.ok()) {
           auto s = self->server_ptr_->DelData(
-              objects, true, true, false, [self](const Status& status) {
+              objects, true, true, true, false, [self](const Status& status) {
                 std::string message_out;
                 if (status.ok()) {
                   WriteClearReply(message_out);
@@ -1210,7 +1212,8 @@ bool SocketConnection::doMemoryTrim(const json& root) {
   std::string message_out;
 
   TRY_READ_REQUEST(ReadMemoryTrimRequest, root);
-  bool trimmed = bulk_store_->MemoryTrim();
+  // deprecated, use `DelData(memory_trim=true)` instead.
+  bool trimmed = false;
   WriteMemoryTrimReply(trimmed, message_out);
   self->doWrite(message_out);
   return false;

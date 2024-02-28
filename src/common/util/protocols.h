@@ -376,11 +376,13 @@ Status ReadReleaseReply(json const& root);
 
 void WriteDelDataWithFeedbacksRequest(const std::vector<ObjectID>& id,
                                       const bool force, const bool deep,
+                                      const bool memory_trim,
                                       const bool fastpath, std::string& msg);
 
 Status ReadDelDataWithFeedbacksRequest(json const& root,
                                        std::vector<ObjectID>& id, bool& force,
-                                       bool& deep, bool& fastpath);
+                                       bool& deep, bool& memory_trim,
+                                       bool& fastpath);
 
 void WriteDelDataWithFeedbacksReply(const std::vector<ObjectID>& deleted_bids,
                                     std::string& msg);
@@ -494,14 +496,16 @@ Status ReadListDataRequest(const json& root, std::string& pattern, bool& regex,
                            size_t& limit);
 
 void WriteDelDataRequest(const ObjectID id, const bool force, const bool deep,
-                         const bool fastpath, std::string& msg);
-
-void WriteDelDataRequest(const std::vector<ObjectID>& id, const bool force,
-                         const bool deep, const bool fastpath,
+                         const bool memory_trim, const bool fastpath,
                          std::string& msg);
 
+void WriteDelDataRequest(const std::vector<ObjectID>& id, const bool force,
+                         const bool deep, const bool memory_trim,
+                         const bool fastpath, std::string& msg);
+
 Status ReadDelDataRequest(const json& root, std::vector<ObjectID>& id,
-                          bool& force, bool& deep, bool& fastpath);
+                          bool& force, bool& deep, bool& memory_trim,
+                          bool& fastpath);
 
 void WriteDelDataReply(std::string& msg);
 

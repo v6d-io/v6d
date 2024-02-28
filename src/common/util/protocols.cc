@@ -858,12 +858,14 @@ Status ReadReleaseReply(json const& root) {
 
 void WriteDelDataWithFeedbacksRequest(const std::vector<ObjectID>& id,
                                       const bool force, const bool deep,
+                                      const bool memory_trim,
                                       const bool fastpath, std::string& msg) {
   json root;
   root["type"] = command_t::DEL_DATA_WITH_FEEDBACKS_REQUEST;
   root["id"] = std::vector<ObjectID>{id};
   root["force"] = force;
   root["deep"] = deep;
+  root["memory_trim"] = memory_trim;
   root["fastpath"] = fastpath;
 
   encode_msg(root, msg);
@@ -871,11 +873,13 @@ void WriteDelDataWithFeedbacksRequest(const std::vector<ObjectID>& id,
 
 Status ReadDelDataWithFeedbacksRequest(json const& root,
                                        std::vector<ObjectID>& ids, bool& force,
-                                       bool& deep, bool& fastpath) {
+                                       bool& deep, bool& memory_trim,
+                                       bool& fastpath) {
   CHECK_IPC_ERROR(root, command_t::DEL_DATA_WITH_FEEDBACKS_REQUEST);
   root["id"].get_to(ids);
   force = root.value("force", false);
   deep = root.value("deep", false);
+  memory_trim = root.value("memory_trim", false);
   fastpath = root.value("fastpath", false);
   return Status::OK();
 }
@@ -1213,37 +1217,42 @@ Status ReadListDataRequest(const json& root, std::string& pattern, bool& regex,
 }
 
 void WriteDelDataRequest(const ObjectID id, const bool force, const bool deep,
-                         const bool fastpath, std::string& msg) {
+                         const bool memory_trim, const bool fastpath,
+                         std::string& msg) {
   json root;
   root["type"] = command_t::DELETE_DATA_REQUEST;
   root["id"] = std::vector<ObjectID>{id};
   root["force"] = force;
   root["deep"] = deep;
   root["fastpath"] = fastpath;
+  root["memory_trim"] = memory_trim;
 
   encode_msg(root, msg);
 }
 
 void WriteDelDataRequest(const std::vector<ObjectID>& ids, const bool force,
-                         const bool deep, const bool fastpath,
-                         std::string& msg) {
+                         const bool deep, const bool memory_trim,
+                         const bool fastpath, std::string& msg) {
   json root;
   root["type"] = command_t::DELETE_DATA_REQUEST;
   root["id"] = ids;
   root["force"] = force;
   root["deep"] = deep;
   root["fastpath"] = fastpath;
+  root["memory_trim"] = memory_trim;
 
   encode_msg(root, msg);
 }
 
 Status ReadDelDataRequest(const json& root, std::vector<ObjectID>& ids,
-                          bool& force, bool& deep, bool& fastpath) {
+                          bool& force, bool& deep, bool& memory_trim,
+                          bool& fastpath) {
   CHECK_IPC_ERROR(root, command_t::DELETE_DATA_REQUEST);
   root["id"].get_to(ids);
   force = root.value("force", false);
   deep = root.value("deep", false);
   fastpath = root.value("fastpath", false);
+  memory_trim = root.value("memory_trim", false);
   return Status::OK();
 }
 

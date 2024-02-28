@@ -313,11 +313,7 @@ def test_memory_trim(vineyard_client):
         assert current_memory_usage >= original_memory_usage + i * data_kbytes
 
     for r in rs:
-        vineyard_client.delete(r)
+        vineyard_client.delete(r, memory_trim=True)
 
-    current_memory_usage = parse_shared_memory_usage()
-    assert current_memory_usage >= original_memory_usage + (8 - 1) * data_kbytes
-
-    vineyard_client.memory_trim()
     # there might be some fragmentation overhead
     assert parse_shared_memory_usage() <= original_memory_usage + 2 * data_kbytes

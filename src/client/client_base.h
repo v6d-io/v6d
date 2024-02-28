@@ -170,11 +170,17 @@ class ClientBase {
    * @param deep Whether to delete the member of this object. Default is true.
    *        Note that when deleting object which has *direct* blob members, the
    *        processing on those blobs yields a "deep" behavior.
+   * @param memory_trim Whether to trim the memory pool inside the shared memory
+   *        allocator to return the unused physical memory back to the OS.
    *
    * @return Status that indicates whether the delete action has succeeded.
    */
   Status DelData(const ObjectID id, const bool force = false,
                  const bool deep = true);
+
+  Status DelData(const ObjectID id, const bool force, const bool deep,
+                 const bool memory_trim);
+
   /**
    * @brief Delete multiple metadatas in vineyard.
    *
@@ -185,11 +191,16 @@ class ClientBase {
    * @param deep Whether to delete the member of this object. Default is true.
    *        Note that when deleting objects which have *direct* blob members,
    *        the processing on those blobs yields a "deep" behavior.
+   * @param memory_trim Whether to trim the memory pool inside the shared memory
+   *        allocator to return the unused physical memory back to the OS.
    *
    * @return Status that indicates whether the delete action has succeeded.
    */
   Status DelData(const std::vector<ObjectID>& ids, const bool force = false,
                  const bool deep = true);
+
+  Status DelData(const std::vector<ObjectID>& ids, const bool force,
+                 const bool deep, const bool memory_trim);
 
   /**
    * @brief List objectmetas in vineyard, using the given typename patterns.
