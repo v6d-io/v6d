@@ -129,26 +129,18 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
 }
 
 // current we do not consider the layer.
-Status KVStateCacheBlockBuilder::Query(Client& client, int index,
-                                       KV_STATE_WITH_LAYER& kvState) {
+int KVStateCacheBlockBuilder::Query(Client& client, int index,
+                                    KV_STATE_WITH_LAYER& kvState) {
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    std::vector<double> keyStateVector;
-    std::vector<double> valueStateVector;
-
-    for (int i = 0; i < this->dimension; ++i) {
-      keyStateVector.push_back((keyStateTensorBuilderList[currentLayer]
-                                    ->data())[index * dimension + i]);
-    }
-
-    for (int i = 0; i < this->dimension; ++i) {
-      valueStateVector.push_back((valueStateTensorBuilderList[currentLayer]
-                                      ->data())[index * dimension + i]);
-    }
-
-    kvState.insert(std::make_pair(
-        currentLayer, std::make_pair(keyStateVector, valueStateVector)));
+    memcpy((kvState.find(currentLayer)->second).first.data,
+           keyStateTensorBuilderList[currentLayer]->data() + index * dimension,
+           dimension * sizeof(double));
+    memcpy(
+        (kvState.find(currentLayer)->second).second.data,
+        valueStateTensorBuilderList[currentLayer]->data() + index * dimension,
+        dimension * sizeof(double));
   }
-  return Status::OK();
+  return 0;
 }
 
 int KVStateCacheBlockBuilder::FindEmptySlot() {
@@ -176,18 +168,18 @@ void KVStateCacheBlockBuilder::Update(const KV_STATE_WITH_LAYER& kvState,
                                       OffsetData* data) {
   int index = this->FindEmptySlot();
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    std::vector<double> keyStateVector =
-        (kvState.find(currentLayer)->second).first;
-    std::vector<double> valueStateVector =
-        (kvState.find(currentLayer)->second).second;
-    VINEYARD_ASSERT(keyStateVector.size() == (size_t) this->dimension);
-    VINEYARD_ASSERT(valueStateVector.size() == (size_t) this->dimension);
+    K_STATE keyState = (kvState.find(currentLayer)->second).first;
+    V_STATE valueState = (kvState.find(currentLayer)->second).second;
+    VINEYARD_ASSERT(keyState.length ==
+                    (size_t) this->dimension * sizeof(double));
+    VINEYARD_ASSERT(valueState.length ==
+                    (size_t) this->dimension * sizeof(double));
 
     double* keyData = keyStateTensorBuilderList[currentLayer]->data();
     double* valueData = valueStateTensorBuilderList[currentLayer]->data();
-    memcpy(keyData + index * this->dimension, keyStateVector.data(),
+    memcpy(keyData + index * this->dimension, keyState.data,
            this->dimension * sizeof(double));
-    memcpy(valueData + index * this->dimension, valueStateVector.data(),
+    memcpy(valueData + index * this->dimension, valueState.data,
            this->dimension * sizeof(double));
   }
   data->offset = index;

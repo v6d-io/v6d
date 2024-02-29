@@ -17,7 +17,7 @@ limitations under the License.
 #include <iostream>
 #include <random>
 #include <vector>
-#include "llm-cache/radix-tree/radix.h"
+#include "rax/radix.h"
 
 #include "common/util/logging.h"
 #include "llm-cache/ds/kv_state_cache_manager.h"
@@ -58,15 +58,20 @@ void print_current_tokens(const std::vector<int>& prefix, int next_token) {
 }
 
 void print_kv_state(
-    const std::map<int, std::pair<std::vector<double>, std::vector<double>>>&
-        kv_state) {
+    const std::map<int, std::pair<K_STATE, V_STATE>>& kv_state) {
   LOG(INFO) << "kv_state: ";
   for (auto iter = kv_state.begin(); iter != kv_state.end(); ++iter) {
     std::string key_state_str = "";
     std::string value_state_str = "";
     for (int i = 0; i < dimension; ++i) {
-      key_state_str += std::to_string(iter->second.first[i]) + " ";
-      value_state_str += std::to_string(iter->second.second[i]) + " ";
+      key_state_str +=
+          std::to_string(
+              (reinterpret_cast<double*>(iter->second.first.data))[i]) +
+          " ";
+      value_state_str +=
+          std::to_string(
+              (reinterpret_cast<double*>(iter->second.second.data))[i]) +
+          " ";
     }
     LOG(INFO) << "layer " << iter->first << ":";
     LOG(INFO) << "key_state: " << key_state_str;
@@ -76,19 +81,16 @@ void print_kv_state(
 }
 
 // we do not consider the layer.
-std::map<int, std::pair<std::vector<double>, std::vector<double>>>
-generate_kv_state(int token) {
-  std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
+std::map<int, std::pair<K_STATE, V_STATE>> generate_kv_state() {
+  std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
   for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-    std::vector<double> key_state;
-    std::vector<double> value_state;
-    for (int i = 0; i < dimension; ++i) {
-      key_state.push_back((static_cast<double>(token)) / dimension * (i + 1) +
-                          currentLayer * 10);
-      value_state.push_back((static_cast<double>(token)) / dimension * (i + 1) *
-                                2 +
-                            currentLayer * 10);
-    }
+    K_STATE key_state;
+    V_STATE value_state;
+    key_state.data = malloc(dimension * sizeof(double));
+    value_state.data = malloc(dimension * sizeof(double));
+
+    key_state.length = dimension * sizeof(double);
+    value_state.length = dimension * sizeof(double);
 
     kv_state.insert(
         std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
@@ -96,32 +98,50 @@ generate_kv_state(int token) {
   return kv_state;
 }
 
-void check_kv_state(
-    const std::map<int, std::pair<std::vector<double>, std::vector<double>>>&
-        kv_state,
-    int& token) {
+void update_kv_state(std::map<int, std::pair<K_STATE, V_STATE>>& kvState,
+                     int token) {
+  for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+    K_STATE key_state = kvState[currentLayer].first;
+    V_STATE value_state = kvState[currentLayer].second;
+    for (int i = 0; i < dimension; ++i) {
+      (reinterpret_cast<double*>(key_state.data))[i] =
+          (static_cast<double>(token)) / dimension * (i + 1) +
+          currentLayer * 10;
+      (reinterpret_cast<double*>(value_state.data))[i] =
+          (static_cast<double>(token)) / dimension * (i + 1) * 2 +
+          currentLayer * 10;
+    }
+  }
+}
+
+void check_kv_state(const std::map<int, std::pair<K_STATE, V_STATE>>& kv_state,
+                    int& token) {
   VINEYARD_ASSERT(kv_state.size() == (size_t) layer);
   for (auto iter = kv_state.begin(); iter != kv_state.end(); ++iter) {
-    VINEYARD_ASSERT(iter->second.first.size() == (size_t) dimension);
-    VINEYARD_ASSERT(iter->second.second.size() == (size_t) dimension);
+    VINEYARD_ASSERT(iter->second.first.length ==
+                    (size_t) dimension * sizeof(double));
+    VINEYARD_ASSERT(iter->second.second.length ==
+                    (size_t) dimension * sizeof(double));
     for (int i = 0; i < dimension; ++i) {
-      if (iter->second.first[i] !=
+      if ((reinterpret_cast<double*>(iter->second.first.data))[i] !=
           (static_cast<double>(token)) / dimension * (i + 1) +
               iter->first * 10) {
         LOG(INFO) << "token:" << token << " dimension" << dimension
                   << " layer:" << iter->first;
-        LOG(INFO) << "key_state[" << i << "]: " << iter->second.first[i]
+        LOG(INFO) << "key_state[" << i << "]: "
+                  << (reinterpret_cast<double*>(iter->second.first.data))[i]
                   << ". But is should be "
                   << (static_cast<double>(token)) / dimension * (i + 1) +
                          iter->first * 10;
         throw std::runtime_error("key_state error!");
       }
-      if (iter->second.second[i] !=
+      if ((reinterpret_cast<double*>(iter->second.second.data))[i] !=
           (static_cast<double>(token)) / dimension * (i + 1) * 2 +
               iter->first * 10) {
         LOG(INFO) << "token:" << token << " dimension" << dimension
                   << " layer:" << iter->first;
-        LOG(INFO) << "value_state[" << i << "]: " << iter->second.second[i]
+        LOG(INFO) << "value_state[" << i << "]: "
+                  << (reinterpret_cast<double*>(iter->second.second.data))[i]
                   << ". But is should be "
                   << (static_cast<double>(token)) / dimension * (i + 1) * 2 +
                          iter->first * 10;
@@ -133,15 +153,16 @@ void check_kv_state(
 
 void inference(std::vector<int> tokens, bool block = false) {
   std::vector<int> inference_tokens;
-  std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
-
+  std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
+  kv_state = generate_kv_state();
   for (size_t i = 0; i < tokens.size(); ++i) {
-    kv_state = kv_state_cache_manager->Query(inference_tokens, tokens[i]);
-    if (kv_state.size() == 0) {
+    int result =
+        kv_state_cache_manager->Query(inference_tokens, tokens[i], kv_state);
+    if (result != 0) {
       LOG(INFO) << "Can not find the kv_state from cache:";
       print_current_tokens(inference_tokens, tokens[i]);
       LOG(INFO) << "Generate the kv_state and update the cache.";
-      kv_state = generate_kv_state(tokens[i]);
+      update_kv_state(kv_state, tokens[i]);
       print_kv_state(kv_state);
       kv_state_cache_manager->Update(inference_tokens, tokens[i], kv_state);
     } else {

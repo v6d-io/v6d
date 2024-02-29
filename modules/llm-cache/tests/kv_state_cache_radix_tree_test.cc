@@ -17,7 +17,7 @@ limitations under the License.
 #include <iostream>
 #include <random>
 #include <vector>
-#include "llm-cache/radix-tree/radix.h"
+#include "rax/radix.h"
 
 #include "common/util/logging.h"
 #include "llm-cache/ds/kv_state_cache_manager.h"
@@ -119,7 +119,7 @@ void radix_tree_query_test() {
   VINEYARD_ASSERT(radix_tree->Query(tokens) == NULL);
 }
 
-void radix_tree_serialize_and_deserailize() {
+void radix_tree_serialize_and_deserialize() {
   std::shared_ptr<RadixTree> radix_tree = std::make_shared<RadixTree>(10);
 
   /* insert a token list*/
@@ -183,7 +183,7 @@ int main() {
   radix_tree_query_test();
   LOG(INFO) << "Finish radix tree query test!";
   LOG(INFO) << "Start to test radix tree serialize and deserialize...";
-  radix_tree_serialize_and_deserailize();
+  radix_tree_serialize_and_deserialize();
   LOG(INFO) << "Finish radix tree serialize and deserialize test!";
   LOG(INFO) << "Start to test radix tree split...";
   radix_tree_split();

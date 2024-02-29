@@ -51,9 +51,11 @@ class KVStateCacheManager {
   void Update(const std::vector<int>& tokenList,
               const LIST_KV_STATE_WITH_LAYER& kvState);
 
-  KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList, int token);
+  int Query(const std::vector<int>& tokenList, int token,
+            KV_STATE_WITH_LAYER& kvState);
 
-  LIST_KV_STATE_WITH_LAYER Query(const std::vector<int>& tokenList);
+  int Query(const std::vector<int>& tokenList,
+            LIST_KV_STATE_WITH_LAYER& listKVState);
 
   ~KVStateCacheManager();
 
@@ -61,8 +63,8 @@ class KVStateCacheManager {
   void UpdateInternal(const std::vector<int>& tokenList, int nextToken,
                       const KV_STATE_WITH_LAYER& kvState);
 
-  KV_STATE_WITH_LAYER QueryInternal(const std::vector<int>& tokenList,
-                                    int token);
+  int QueryInternal(const std::vector<int>& tokenList, int token,
+                    KV_STATE_WITH_LAYER& kvState);
 
   void Delete(std::vector<int> token);
 

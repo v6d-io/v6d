@@ -81,9 +81,10 @@ void KVStateCacheManager::UpdateInternal(const std::vector<int>& tokenList,
   kvStateCacheBuilder->Update(client, tokenList, nextToken, kvState);
 }
 
-KV_STATE_WITH_LAYER KVStateCacheManager::QueryInternal(
-    const std::vector<int>& tokenList, int token) {
-  return kvStateCacheBuilder->Query(client, tokenList, token);
+int KVStateCacheManager::QueryInternal(const std::vector<int>& tokenList,
+                                       int token,
+                                       KV_STATE_WITH_LAYER& kvState) {
+  return kvStateCacheBuilder->Query(client, tokenList, token, kvState);
 }
 
 void KVStateCacheManager::Update(const std::vector<int>& tokenList,
@@ -113,36 +114,35 @@ void KVStateCacheManager::Update(const std::vector<int>& tokenList,
   syncMutex.unlock();
 }
 
-KV_STATE_WITH_LAYER KVStateCacheManager::Query(
-    const std::vector<int>& tokenList, int token) {
-  KV_STATE_WITH_LAYER result;
+int KVStateCacheManager::Query(const std::vector<int>& tokenList, int token,
+                               KV_STATE_WITH_LAYER& kvState) {
+  int result = -1;
 
   if (!syncMutex.try_lock()) {
     return result;
   }
 
-  result = QueryInternal(tokenList, token);
+  result = QueryInternal(tokenList, token, kvState);
   syncMutex.unlock();
 
   return result;
 }
 
-LIST_KV_STATE_WITH_LAYER KVStateCacheManager::Query(
-    const std::vector<int>& tokenList) {
-  LIST_KV_STATE_WITH_LAYER listKVState;
+int KVStateCacheManager::Query(const std::vector<int>& tokenList,
+                               LIST_KV_STATE_WITH_LAYER& listKVState) {
+  int result = -1;
   if (!syncMutex.try_lock()) {
-    return listKVState;
+    return result;
   }
 
   std::vector<int> tokenListCopy;
   for (size_t i = 0; i < tokenList.size(); i++) {
-    KV_STATE_WITH_LAYER kvState = QueryInternal(tokenListCopy, tokenList[i]);
-    listKVState.push_back(kvState);
+    result = QueryInternal(tokenListCopy, tokenList[i], listKVState[i]);
     tokenListCopy.push_back(tokenList[i]);
   }
 
   syncMutex.unlock();
-  return listKVState;
+  return result;
 }
 
 KVStateCacheManager::~KVStateCacheManager() {

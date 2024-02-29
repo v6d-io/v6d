@@ -94,8 +94,8 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   void Update(Client& client, const std::vector<int>& token_list,
               int next_token, const KV_STATE_WITH_LAYER& kv_state);
 
-  KV_STATE_WITH_LAYER Query(Client& client, const std::vector<int>& token_list,
-                            int token);
+  int Query(Client& client, const std::vector<int>& token_list, int token,
+            KV_STATE_WITH_LAYER& kv_state);
 
   void Delete(std::shared_ptr<NodeData> evicted_node);
 

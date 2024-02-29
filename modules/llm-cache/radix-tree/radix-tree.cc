@@ -359,17 +359,14 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
     std::string tokenListPart, timestampPart, dataPart, subTreeSizePart;
 
     if (!std::getline(lineStream, tokenListPart, '|')) {
-      throw std::runtime_error(
-          "Invalid serialized string format in token list part.");
+      LOG(ERROR) << "Invalid serialized string format in token list part.";
     }
     if (isMainTree) {
       if (!std::getline(lineStream, timestampPart, '|')) {
-        throw std::runtime_error(
-            "Invalid serialized string format in timestamp part.");
+        LOG(ERROR) << "Invalid serialized string format in timestamp part.";
       }
       if (!std::getline(lineStream, subTreeSizePart, '|')) {
-        throw std::runtime_error(
-            "Invalid serialized string format in sub tree size part.");
+        LOG(ERROR) << "Invalid serialized string format in sub tree size part.";
       }
     }
     if (!std::getline(lineStream, dataPart)) {
@@ -471,7 +468,7 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
                                reinterpret_cast<void**>(&dataNode), NULL);
 
     if (dataNode == NULL) {
-      throw std::runtime_error("Insert token list failed");
+      LOG(ERROR) << "Insert token list failed";
     }
     dataNode->timestamp = timestampList[i];
   }
