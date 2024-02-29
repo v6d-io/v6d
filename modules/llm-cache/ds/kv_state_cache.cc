@@ -17,6 +17,7 @@ limitations under the License.
 #include <memory>
 #include <set>
 #include <string>
+#include <utility>
 
 #include "client/client.h"
 #include "common/util/base64.h"
@@ -198,12 +199,12 @@ void KVStateCacheBuilder::Update(Client& client,
             << " bitmap:" << kvStateCacheBlockBuilder->GetBitmapStr();
 }
 
-KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
-    Client& client, const std::vector<int>& tokenList, int token) {
+int KVStateCacheBuilder::Query(Client& client,
+                               const std::vector<int>& tokenList, int token,
+                               KV_STATE_WITH_LAYER& kvState) {
   std::vector<int> tokenListCopy = tokenList;
   tokenListCopy.push_back(token);
 
-  KV_STATE_WITH_LAYER kvState;
   std::shared_ptr<NodeData> nodeData = this->rootTree->Query(tokenListCopy);
 
   if (nodeData != nullptr) {
@@ -215,9 +216,9 @@ KV_STATE_WITH_LAYER KVStateCacheBuilder::Query(
             (reinterpret_cast<TreeData*>(nodeData->treeData->data))
                 ->kvStateCacheBlockBuilder);
 
-    kvStateCacheBlockBuilder->Query(client, offset, kvState);
+    return kvStateCacheBlockBuilder->Query(client, offset, kvState);
   }
-  return kvState;
+  return -1;
 }
 
 void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
@@ -274,10 +275,28 @@ void KVStateCacheBuilder::Merge(Client& client,
   for (auto it = insertTokenList.begin(); it != insertTokenList.end(); ++it) {
     std::vector<int> tokenList =
         std::vector<int>((*it).begin(), (*it).end() - 1);
-    KV_STATE_WITH_LAYER kvState =
-        globalCacheBuilder->Query(client, tokenList, (*it).back());
+    KV_STATE_WITH_LAYER kvState;
+    for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
+      K_STATE key_state;
+      V_STATE value_state;
+      key_state.data = malloc(this->dimension * sizeof(double));
+      key_state.length = this->dimension * sizeof(double);
+      value_state.data = malloc(this->dimension * sizeof(double));
+      value_state.length = this->dimension * sizeof(double);
+
+      kvState.insert(
+          std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
+    }
+    globalCacheBuilder->Query(client, tokenList, (*it).back(), kvState);
     this->Update(client, tokenList, (*it).back(), kvState);
+    for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
+      K_STATE key_state = kvState[currentLayer].first;
+      V_STATE value_state = kvState[currentLayer].second;
+      free(key_state.data);
+      free(value_state.data);
+    }
   }
+
   this->version = globalCacheBuilder->GetVersion();
   return;
 }

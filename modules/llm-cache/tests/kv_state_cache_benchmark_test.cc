@@ -55,8 +55,8 @@ std::vector<int> generate_random_tokens(size_t max_length) {
 std::map<int, std::pair<K_STATE, V_STATE>> generate_kv_state(int token) {
   std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
   for (int currentLayer = 0; currentLayer < LAYER; currentLayer++) {
-    STATE key_state;
-    STATE value_state;
+    K_STATE key_state;
+    V_STATE value_state;
     key_state.data = malloc(DIMENSION * sizeof(double));
     key_state.length = DIMENSION * sizeof(double);
     value_state.data = malloc(DIMENSION * sizeof(double));
@@ -84,13 +84,12 @@ void benchmark_inference(std::vector<std::vector<int>>& tokens) {
     std::vector<int> inference_tokens;
     for (size_t j = 0; j < tokens[i].size(); ++j) {
       start = std::chrono::steady_clock::now();
-      kv_state = manager->Query(inference_tokens, tokens[i][j]);
+      kv_state = generate_kv_state(tokens[i][j]);
+      manager->Query(inference_tokens, tokens[i][j], kv_state);
       end = std::chrono::steady_clock::now();
       query_duration += end - start;
 
       if (kv_state.size() == 0) {
-        kv_state = generate_kv_state(tokens[i][j]);
-
         start = std::chrono::steady_clock::now();
         manager->Update(inference_tokens, tokens[i][j], kv_state);
         end = std::chrono::steady_clock::now();

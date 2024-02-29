@@ -29,13 +29,13 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "llm-cache/radix-tree/radix-tree.h"
 
-typedef struct STATE {
+struct State {
   void* data;
   size_t length;
-} STATE;
+};
 
-using K_STATE = STATE;
-using V_STATE = STATE;
+using K_STATE = State;
+using V_STATE = State;
 
 using KV_STATE_WITH_LAYER = std::map<int, std::pair<K_STATE, V_STATE>>;
 using LIST_KV_STATE_WITH_LAYER =
@@ -160,7 +160,7 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
    * @param kv_state The kv-state of the prompt returned by radix-tree. If the
    * kv-state is not found, the data of kv-state is invalid.
    */
-  Status Query(Client& client, int index, KV_STATE_WITH_LAYER& kv_state);
+  int Query(Client& client, int index, KV_STATE_WITH_LAYER& kv_state);
 
   bool IsFull();
 

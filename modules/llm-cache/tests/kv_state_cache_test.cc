@@ -81,13 +81,28 @@ void print_kv_state(
 }
 
 // we do not consider the layer.
-std::map<int, std::pair<K_STATE, V_STATE>> generate_kv_state(int token) {
+std::map<int, std::pair<K_STATE, V_STATE>> generate_kv_state() {
   std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
   for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
     K_STATE key_state;
     V_STATE value_state;
     key_state.data = malloc(dimension * sizeof(double));
     value_state.data = malloc(dimension * sizeof(double));
+
+    key_state.length = dimension * sizeof(double);
+    value_state.length = dimension * sizeof(double);
+
+    kv_state.insert(
+        std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
+  }
+  return kv_state;
+}
+
+void update_kv_state(std::map<int, std::pair<K_STATE, V_STATE>>& kvState,
+                     int token) {
+  for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+    K_STATE key_state = kvState[currentLayer].first;
+    V_STATE value_state = kvState[currentLayer].second;
     for (int i = 0; i < dimension; ++i) {
       (reinterpret_cast<double*>(key_state.data))[i] =
           (static_cast<double>(token)) / dimension * (i + 1) +
@@ -96,11 +111,7 @@ std::map<int, std::pair<K_STATE, V_STATE>> generate_kv_state(int token) {
           (static_cast<double>(token)) / dimension * (i + 1) * 2 +
           currentLayer * 10;
     }
-
-    kv_state.insert(
-        std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
   }
-  return kv_state;
 }
 
 void check_kv_state(const std::map<int, std::pair<K_STATE, V_STATE>>& kv_state,
@@ -143,14 +154,15 @@ void check_kv_state(const std::map<int, std::pair<K_STATE, V_STATE>>& kv_state,
 void inference(std::vector<int> tokens, bool block = false) {
   std::vector<int> inference_tokens;
   std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
-
+  kv_state = generate_kv_state();
   for (size_t i = 0; i < tokens.size(); ++i) {
-    kv_state = kv_state_cache_manager->Query(inference_tokens, tokens[i]);
-    if (kv_state.size() == 0) {
+    int result =
+        kv_state_cache_manager->Query(inference_tokens, tokens[i], kv_state);
+    if (result != 0) {
       LOG(INFO) << "Can not find the kv_state from cache:";
       print_current_tokens(inference_tokens, tokens[i]);
       LOG(INFO) << "Generate the kv_state and update the cache.";
-      kv_state = generate_kv_state(tokens[i]);
+      update_kv_state(kv_state, tokens[i]);
       print_kv_state(kv_state);
       kv_state_cache_manager->Update(inference_tokens, tokens[i], kv_state);
     } else {
