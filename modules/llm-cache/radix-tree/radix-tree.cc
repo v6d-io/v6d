@@ -161,7 +161,7 @@ void RadixTree::DeleteInternal(std::vector<int> tokens,
     nodeIsSubTree = true;
   }
   int retval = raxRemove(this->tree, deleteTokensArray, deleteTokensArrayLen,
-                         reinterpret_cast<void**>(&oldData));
+                         reinterpret_cast<void**>(&oldData), false);
   if (retval == 1) {
     evictedNode = std::make_shared<NodeData>(
         oldData, reinterpret_cast<DataWrapper*>(subTreeNode->custom_data));

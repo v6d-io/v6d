@@ -512,8 +512,9 @@ static inline size_t raxLowWalk(rax *rax, const int *s, size_t len, raxNode **st
     // int64_t timestamp = ms.count();
     auto now = std::chrono::high_resolution_clock::now();
 
-    auto micros = std::chrono::time_point_cast<std::chrono::microseconds>(now).time_since_epoch().count();
-    int64_t timestamp = micros;
+    // auto micros = std::chrono::time_point_cast<std::chrono::microseconds>(now).time_since_epoch().count();
+    auto nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+    int64_t timestamp = nanos;
 
     while(h->size && i < len) {
         debugnode("Lookup current node",h);
@@ -2186,7 +2187,7 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
     if (n->iskey) {
         numchars += printf("=%p",raxGetData(n));
     }
-    numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d", n, n->timestamp, n->custom_data, n->issubtree);
+    numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d is_compr:%d", n, n->timestamp, n->custom_data, n->issubtree, n->iscompr);
     if (n->issubtree && n->custom_data != NULL) {
         numchars += printf(" cus data:%p" , ((DebugDatawrapper *)(n->custom_data))->data);
         DebugTreeData *data = (DebugTreeData *)((DebugDatawrapper *)(n->custom_data))->data;
@@ -2463,13 +2464,18 @@ void raxFindLastRecentNode(raxNode *node, std::vector<int>& key) {
     raxNode *chossenChild = childList[0];
     int choosenChildIndex = 0;
     for (int i = 1; i < numChildren; i++) {
-        if (childList[i]->timestamp != 0 && childList[i]->timestamp <= chossenChild->timestamp) {
-            if (childList[i]->timestamp == chossenChild->timestamp && childList[i]->numnodes > chossenChild->numnodes) {
+        if (childList[i]->timestamp == chossenChild->timestamp) {
+            if (childList[i]->numnodes > chossenChild->numnodes) {
+                LOG(INFO) << "childList[i]->numnodes > chossenChild->numnodes";
+                LOG(INFO) << "node1:" << childList[i] << " node:2" << chossenChild;
                 chossenChild = childList[i];
                 choosenChildIndex = i;
             }
             // chossenChild = childList[i];
             // choosenChildIndex = i;
+        } else if (childList[i]->timestamp < chossenChild->timestamp) {
+            chossenChild = childList[i];
+            choosenChildIndex = i;
         }
     }
 
