@@ -29,14 +29,19 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "llm-cache/radix-tree/radix-tree.h"
 
-using KV_STATE_WITH_LAYER =
-    std::map<int, std::pair<std::vector<double>, std::vector<double>>>;
-using LIST_KV_STATE_WITH_LAYER = std::vector<
-    std::map<int, std::pair<std::vector<double>, std::vector<double>>>>;
-using KV_STATE =
-    std::vector<std::pair<std::vector<double>, std::vector<double>>>;
-using LIST_KV_STATE =
-    std::vector<std::pair<std::vector<double>, std::vector<double>>>;
+typedef struct STATE {
+  void* data;
+  size_t length;
+} STATE;
+
+using K_STATE = STATE;
+using V_STATE = STATE;
+
+using KV_STATE_WITH_LAYER = std::map<int, std::pair<K_STATE, V_STATE>>;
+using LIST_KV_STATE_WITH_LAYER =
+    std::vector<std::map<int, std::pair<K_STATE, V_STATE>>>;
+using KV_STATE = std::vector<std::pair<K_STATE, V_STATE>>;
+using LIST_KV_STATE = std::vector<std::pair<K_STATE, V_STATE>>;
 
 // Set the bit to 1, which means the resource is not being used
 #define FREE_BIT_RESOURCE(value, bit) ((value) |= (((uint64_t) 1) << (bit)))

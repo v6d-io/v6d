@@ -58,15 +58,20 @@ void print_current_tokens(const std::vector<int>& prefix, int next_token) {
 }
 
 void print_kv_state(
-    const std::map<int, std::pair<std::vector<double>, std::vector<double>>>&
-        kv_state) {
+    const std::map<int, std::pair<K_STATE, V_STATE>>& kv_state) {
   LOG(INFO) << "kv_state: ";
   for (auto iter = kv_state.begin(); iter != kv_state.end(); ++iter) {
     std::string key_state_str = "";
     std::string value_state_str = "";
     for (int i = 0; i < dimension; ++i) {
-      key_state_str += std::to_string(iter->second.first[i]) + " ";
-      value_state_str += std::to_string(iter->second.second[i]) + " ";
+      key_state_str +=
+          std::to_string(
+              (reinterpret_cast<double*>(iter->second.first.data))[i]) +
+          " ";
+      value_state_str +=
+          std::to_string(
+              (reinterpret_cast<double*>(iter->second.second.data))[i]) +
+          " ";
     }
     LOG(INFO) << "layer " << iter->first << ":";
     LOG(INFO) << "key_state: " << key_state_str;
@@ -76,18 +81,20 @@ void print_kv_state(
 }
 
 // we do not consider the layer.
-std::map<int, std::pair<std::vector<double>, std::vector<double>>>
-generate_kv_state(int token) {
-  std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
+std::map<int, std::pair<K_STATE, V_STATE>> generate_kv_state(int token) {
+  std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
   for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-    std::vector<double> key_state;
-    std::vector<double> value_state;
+    K_STATE key_state;
+    V_STATE value_state;
+    key_state.data = malloc(dimension * sizeof(double));
+    value_state.data = malloc(dimension * sizeof(double));
     for (int i = 0; i < dimension; ++i) {
-      key_state.push_back((static_cast<double>(token)) / dimension * (i + 1) +
-                          currentLayer * 10);
-      value_state.push_back((static_cast<double>(token)) / dimension * (i + 1) *
-                                2 +
-                            currentLayer * 10);
+      (reinterpret_cast<double*>(key_state.data))[i] =
+          (static_cast<double>(token)) / dimension * (i + 1) +
+          currentLayer * 10;
+      (reinterpret_cast<double*>(value_state.data))[i] =
+          (static_cast<double>(token)) / dimension * (i + 1) * 2 +
+          currentLayer * 10;
     }
 
     kv_state.insert(
@@ -96,32 +103,34 @@ generate_kv_state(int token) {
   return kv_state;
 }
 
-void check_kv_state(
-    const std::map<int, std::pair<std::vector<double>, std::vector<double>>>&
-        kv_state,
-    int& token) {
+void check_kv_state(const std::map<int, std::pair<K_STATE, V_STATE>>& kv_state,
+                    int& token) {
   VINEYARD_ASSERT(kv_state.size() == (size_t) layer);
   for (auto iter = kv_state.begin(); iter != kv_state.end(); ++iter) {
-    VINEYARD_ASSERT(iter->second.first.size() == (size_t) dimension);
-    VINEYARD_ASSERT(iter->second.second.size() == (size_t) dimension);
+    VINEYARD_ASSERT(iter->second.first.length ==
+                    (size_t) dimension * sizeof(double));
+    VINEYARD_ASSERT(iter->second.second.length ==
+                    (size_t) dimension * sizeof(double));
     for (int i = 0; i < dimension; ++i) {
-      if (iter->second.first[i] !=
+      if ((reinterpret_cast<double*>(iter->second.first.data))[i] !=
           (static_cast<double>(token)) / dimension * (i + 1) +
               iter->first * 10) {
         LOG(INFO) << "token:" << token << " dimension" << dimension
                   << " layer:" << iter->first;
-        LOG(INFO) << "key_state[" << i << "]: " << iter->second.first[i]
+        LOG(INFO) << "key_state[" << i << "]: "
+                  << (reinterpret_cast<double*>(iter->second.first.data))[i]
                   << ". But is should be "
                   << (static_cast<double>(token)) / dimension * (i + 1) +
                          iter->first * 10;
         throw std::runtime_error("key_state error!");
       }
-      if (iter->second.second[i] !=
+      if ((reinterpret_cast<double*>(iter->second.second.data))[i] !=
           (static_cast<double>(token)) / dimension * (i + 1) * 2 +
               iter->first * 10) {
         LOG(INFO) << "token:" << token << " dimension" << dimension
                   << " layer:" << iter->first;
-        LOG(INFO) << "value_state[" << i << "]: " << iter->second.second[i]
+        LOG(INFO) << "value_state[" << i << "]: "
+                  << (reinterpret_cast<double*>(iter->second.second.data))[i]
                   << ". But is should be "
                   << (static_cast<double>(token)) / dimension * (i + 1) * 2 +
                          iter->first * 10;
@@ -133,7 +142,7 @@ void check_kv_state(
 
 void inference(std::vector<int> tokens, bool block = false) {
   std::vector<int> inference_tokens;
-  std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
+  std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
 
   for (size_t i = 0; i < tokens.size(); ++i) {
     kv_state = kv_state_cache_manager->Query(inference_tokens, tokens[i]);

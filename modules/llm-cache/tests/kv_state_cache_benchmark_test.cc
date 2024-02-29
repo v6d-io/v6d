@@ -18,12 +18,7 @@ limitations under the License.
 #include <random>
 #include <thread>
 #include <vector>
-#include "arrow/api.h"
-#include "arrow/io/api.h"
 
-#include "basic/stream/byte_stream.h"
-#include "basic/stream/dataframe_stream.h"
-#include "basic/stream/recordbatch_stream.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
@@ -57,19 +52,15 @@ std::vector<int> generate_random_tokens(size_t max_length) {
   return tokens;
 }
 
-std::map<int, std::pair<std::vector<double>, std::vector<double>>>
-generate_kv_state(int token) {
-  std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
+std::map<int, std::pair<K_STATE, V_STATE>> generate_kv_state(int token) {
+  std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
   for (int currentLayer = 0; currentLayer < LAYER; currentLayer++) {
-    std::vector<double> key_state;
-    std::vector<double> value_state;
-    for (int i = 0; i < DIMENSION; ++i) {
-      key_state.push_back((static_cast<double>(token)) / DIMENSION * (i + 1) +
-                          currentLayer * 10);
-      value_state.push_back((static_cast<double>(token)) / DIMENSION * (i + 1) *
-                                2 +
-                            currentLayer * 10);
-    }
+    STATE key_state;
+    STATE value_state;
+    key_state.data = malloc(DIMENSION * sizeof(double));
+    key_state.length = DIMENSION * sizeof(double);
+    value_state.data = malloc(DIMENSION * sizeof(double));
+    value_state.length = DIMENSION * sizeof(double);
 
     kv_state.insert(
         std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
@@ -80,7 +71,7 @@ generate_kv_state(int token) {
 // test the performance of Query and Update function
 void benchmark_inference(std::vector<std::vector<int>>& tokens) {
   LOG(INFO) << "inference for benchmark";
-  std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
+  std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
 
   std::chrono::steady_clock::time_point start, end;
   double token_list_size = 0;
