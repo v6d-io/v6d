@@ -43,7 +43,7 @@ void KVStateCache::Resolve() {
   // 1. construct the radix tree
   this->rootTree = RadixTree::Deserialize(
       base64_decode(this->meta_.GetKeyValue<std::string>("radix_tree")));
-  raxShow(this->rootTree->GetRootTree());
+  // raxShow(this->rootTree->GetRootTree());
 
   // 2. construct the kvStateCacheBlockBuilder list
   size_t numBlocks = this->meta_.GetKeyValue<size_t>("numBlocks");
@@ -148,7 +148,6 @@ void KVStateCacheBuilder::Update(Client& client,
   std::shared_ptr<NodeData> nodeData =
       this->rootTree->Insert(tokenListCopy, evictedNodeData);
   if (nodeData == nullptr) {
-    LOG(ERROR) << "insert failed";
     return;
   }
   KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
@@ -235,6 +234,7 @@ void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
   // delete (DataWrapper*) evictedNodeData->nodeData;
   if (evictedNodeData->cleanTreeData) {
     this->rootTree->ClearSubtreeData(treeData);
+    delete kvStateCacheBlockBuilder;
   }
   evictedNodeData->RecycleSource();
 }

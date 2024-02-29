@@ -1062,7 +1062,6 @@ Status VineyardServer::TryAcquireLock(std::string& key,
       key, [self, callback](const Status& status, bool result,
                             std::string actual_key) {
         if (status.ok()) {
-          LOG(INFO) << "No error occurred. Gain lock:" << result;
           return callback(status, result, actual_key);
         } else {
           return callback(status, result, actual_key);
@@ -1079,7 +1078,6 @@ Status VineyardServer::TryReleaseLock(std::string& key,
   meta_service_ptr_->TryReleaseLock(
       key, [self, callback](const Status& status, bool result) {
         if (status.ok()) {
-          LOG(INFO) << "No error occurred. Release lock:" << result;
           return callback(status, result);
         } else {
           return status;

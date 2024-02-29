@@ -28,7 +28,7 @@ limitations under the License.
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
 
-#include "llm-cache/utils/kv_state_cache_utils.h"
+#include "llm-cache/ds/kv_state_cache_manager.h"
 
 using namespace vineyard;  //  NOLINT(build/namespaces)
 
@@ -37,7 +37,12 @@ using namespace vineyard;  //  NOLINT(build/namespaces)
 #define LAYER 64
 #define BLOCK_SIZE 100
 
-void init() { InitKVStateCache(DIMENSION, CAPACITY, LAYER, BLOCK_SIZE); }
+KVStateCacheManager* manager;
+
+void init() {
+  manager =
+      new KVStateCacheManager(DIMENSION, CAPACITY, LAYER, DEFAULT_BLOCK_SIZE);
+}
 
 std::vector<int> generate_random_tokens(size_t max_length) {
   std::random_device rd;
@@ -88,7 +93,7 @@ void benchmark_inference(std::vector<std::vector<int>>& tokens) {
     std::vector<int> inference_tokens;
     for (size_t j = 0; j < tokens[i].size(); ++j) {
       start = std::chrono::steady_clock::now();
-      kv_state = Query(inference_tokens, tokens[i][j]);
+      kv_state = manager->Query(inference_tokens, tokens[i][j]);
       end = std::chrono::steady_clock::now();
       query_duration += end - start;
 
@@ -96,7 +101,7 @@ void benchmark_inference(std::vector<std::vector<int>>& tokens) {
         kv_state = generate_kv_state(tokens[i][j]);
 
         start = std::chrono::steady_clock::now();
-        Update(inference_tokens, tokens[i][j], kv_state);
+        manager->Update(inference_tokens, tokens[i][j], kv_state);
         end = std::chrono::steady_clock::now();
         update_duration += end - start;
       }
@@ -156,5 +161,6 @@ int main(int argc, char** argv) {
 
   memory_monitor.join();
   inference.join();
+  delete manager;
   return 0;
 }

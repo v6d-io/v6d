@@ -291,7 +291,7 @@ std::string RadixTree::Serialize() {
   size_t srcSize = serializedStr.size();
   size_t dstSize = ZSTD_compressBound(srcSize);
   std::string compressedStr(dstSize + 1, '\0');
-  LOG(INFO) << "src size:" << srcSize << " dst size:" << dstSize;
+  VLOG(100) << "src size:" << srcSize << " dst size:" << dstSize;
   int compressedSize = ZSTD_compress(compressedStr.data(), compressedStr.size(),
                                      serializedStr.c_str(), srcSize, 3);
   if (ZSTD_isError(compressedSize)) {
@@ -373,7 +373,7 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
       }
     }
     if (!std::getline(lineStream, dataPart)) {
-      LOG(ERROR) << "data length is 0";
+      VLOG(100) << "data length is 0";
     }
 
     std::istringstream keyStream(tokenListPart);

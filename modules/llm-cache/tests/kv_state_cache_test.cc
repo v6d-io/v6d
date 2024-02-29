@@ -20,7 +20,7 @@ limitations under the License.
 #include "llm-cache/radix-tree/radix.h"
 
 #include "common/util/logging.h"
-#include "llm-cache/utils/kv_state_cache_utils.h"
+#include "llm-cache/ds/kv_state_cache_manager.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
@@ -40,9 +40,12 @@ std::vector<int> round_4_tokens = {1, 2, 3, 4, 5, 6};
 
 std::vector<std::vector<int>> tokens_list;
 
+KVStateCacheManager* kv_state_cache_manager;
+
 void init(int dimension, int capacity, int layer, int block_size,
           std::string socket) {
-  InitKVStateCache(dimension, capacity, layer, block_size, socket);
+  kv_state_cache_manager = new KVStateCacheManager(dimension, capacity, layer,
+                                                   block_size, 3, socket);
 }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
@@ -133,14 +136,14 @@ void inference(std::vector<int> tokens, bool block = false) {
   std::map<int, std::pair<std::vector<double>, std::vector<double>>> kv_state;
 
   for (size_t i = 0; i < tokens.size(); ++i) {
-    kv_state = Query(inference_tokens, tokens[i]);
+    kv_state = kv_state_cache_manager->Query(inference_tokens, tokens[i]);
     if (kv_state.size() == 0) {
       LOG(INFO) << "Can not find the kv_state from cache:";
       print_current_tokens(inference_tokens, tokens[i]);
       LOG(INFO) << "Generate the kv_state and update the cache.";
       kv_state = generate_kv_state(tokens[i]);
       print_kv_state(kv_state);
-      Update(inference_tokens, tokens[i], kv_state);
+      kv_state_cache_manager->Update(inference_tokens, tokens[i], kv_state);
     } else {
       LOG(INFO) << "Find the kv_state from cache:";
       print_current_tokens(inference_tokens, tokens[i]);
@@ -202,7 +205,7 @@ int main(int argc, char** argv) {
   }
 
   LOG(INFO) << "inference end";
-  CloseKVStateCache();
+  delete kv_state_cache_manager;
   LOG(INFO) << "Passed KVStateCache tests...";
   return 0;
 }
