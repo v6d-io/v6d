@@ -15,13 +15,11 @@ limitations under the License.
 
 #include "llm-cache/radix-tree/radix-tree.h"
 
-#include "common/util/base64.h"
-#include "common/util/logging.h"
 #include "common/util/status.h"
 
 #include "zstd/lib/zstd.h"
 
-using namespace vineyard;  //  NOLINT(build/namespaces)
+namespace vineyard {
 
 RadixTree::RadixTree(int cacheCapacity) {
   this->tree = raxNew();
@@ -612,3 +610,5 @@ std::set<void*> RadixTree::GetAllNodeData() {
   }
   return nodeDataSet;
 }
+
+}  // namespace vineyard

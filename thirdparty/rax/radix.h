@@ -261,5 +261,5 @@ void raxFindLastRecentNode(raxNode* node, std::vector<int>& key);
 void mergeTree(rax* first_tree, rax* second_tree,
                std::vector<std::vector<int>>& evicted_tokens,
                std::set<std::vector<int>>& insert_tokens, int max_node);
-raxNode* raxGetFirstChildPtr(raxNode* node);
+void testIteRax(rax* tree);
 #endif

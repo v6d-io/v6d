@@ -29,11 +29,6 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "llm-cache/radix-tree/radix-tree.h"
 
-struct LLMKV {
-  void* data;
-  size_t length;
-};
-
 // Set the bit to 1, which means the resource is not being used
 #define FREE_BIT_RESOURCE(value, bit) ((value) |= (((uint64_t) 1) << (bit)))
 
@@ -41,12 +36,18 @@ struct LLMKV {
 #define ACQUIRE_BIT_RESOURCE(value, bit) \
   ((value) &= (~(((uint64_t) 1) << (bit))))
 
+constexpr uint64_t DEFAULT_BLOCK_SIZE = 64;
+
+namespace vineyard {
+
+struct LLMKV {
+  void* data;
+  size_t length;
+};
+
 struct OffsetData {
   int16_t offset;
 };
-namespace vineyard {
-
-#define DEFAULT_BLOCK_SIZE 64
 
 /**
  * @brief KVStateCacheBlock is a cache for kv-cache of LLM. When a new prompt
