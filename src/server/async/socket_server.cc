@@ -359,6 +359,10 @@ bool SocketConnection::processMessage(const std::string& message_in) {
     return doShallowCopy(root);
   } else if (cmd == command_t::DEBUG_REQUEST) {
     return doDebug(root);
+  } else if (cmd == command_t::ACQUIRE_LOCK_REQUEST) {
+    return doAcquireLock(root);
+  } else if (cmd == command_t::RELEASE_LOCK_REQUEST) {
+    return doReleaseLock(root);
   } else {
     RESPONSE_ON_ERROR(Status::Invalid("Got unexpected command: " + cmd));
     return false;
@@ -1105,24 +1109,25 @@ bool SocketConnection::doPersist(const json& root) {
   auto self(shared_from_this());
   ObjectID id;
   TRY_READ_REQUEST(ReadPersistRequest, root, id);
-  RESPONSE_ON_ERROR(server_ptr_->Persist(id, [self, id](const Status& status) {
-    std::string message_out;
-    if (status.ok()) {
-      WritePersistReply(message_out);
-      self->doWrite(message_out);
-    } else if (status.IsEtcdError()) {
-      // retry on etcd error: reprocess the message
-      VLOG(100) << "Warning: "
-                << "Retry persist on etcd error: " << status.ToString();
-      self->server_ptr_->GetIOContext().post(
-          [self, id]() { self->doPersist(id); });
-    } else {
-      VLOG(100) << "Error: " << status.ToString();
-      WriteErrorReply(status, message_out);
-      self->doWrite(message_out);
-    }
-    return Status::OK();
-  }));
+  RESPONSE_ON_ERROR(
+      server_ptr_->Persist(id, [self, id, root](const Status& status) {
+        std::string message_out;
+        if (status.ok()) {
+          WritePersistReply(message_out);
+          self->doWrite(message_out);
+        } else if (status.IsEtcdError()) {
+          // retry on etcd error: reprocess the message
+          VLOG(100) << "Warning: "
+                    << "Retry persist on etcd error: " << status.ToString();
+          self->server_ptr_->GetIOContext().post(
+              [self, id, root]() { self->doPersist(root); });
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+          self->doWrite(message_out);
+        }
+        return Status::OK();
+      }));
   return false;
 }
 
@@ -1760,6 +1765,46 @@ bool SocketConnection::doDebug(const json& root) {
   json result;
   WriteDebugReply(result, message_out);
   this->doWrite(message_out);
+  return false;
+}
+
+bool SocketConnection::doAcquireLock(const json& root) {
+  auto self(shared_from_this());
+  std::string key;
+  TRY_READ_REQUEST(ReadTryAcquireLockRequest, root, key);
+
+  RESPONSE_ON_ERROR(server_ptr_->TryAcquireLock(
+      key, [self](const Status& status, bool result, std::string actual_key) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteTryAcquireLockReply(result, actual_key, message_out);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
+  return false;
+}
+
+bool SocketConnection::doReleaseLock(const json& root) {
+  auto self(shared_from_this());
+  std::string key;
+  TRY_READ_REQUEST(ReadTryReleaseLockRequest, root, key);
+
+  RESPONSE_ON_ERROR(server_ptr_->TryReleaseLock(
+      key, [self](const Status& status, bool result) {
+        std::string message_out;
+        if (status.ok()) {
+          WriteTryReleaseLockReply(result, message_out);
+        } else {
+          VLOG(100) << "Error: " << status.ToString();
+          WriteErrorReply(status, message_out);
+        }
+        self->doWrite(message_out);
+        return Status::OK();
+      }));
   return false;
 }
 

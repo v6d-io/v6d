@@ -1057,6 +1057,38 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
   return Status::OK();
 }
 
+Status VineyardServer::TryAcquireLock(std::string& key,
+                                      callback_t<bool, std::string> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+  meta_service_ptr_->TryAcquireLock(
+      key, [self, callback](const Status& status, bool result,
+                            std::string actual_key) {
+        if (status.ok()) {
+          return callback(status, result, actual_key);
+        } else {
+          return callback(status, result, actual_key);
+        }
+      });
+
+  return Status::OK();
+}
+
+Status VineyardServer::TryReleaseLock(std::string& key,
+                                      callback_t<bool> callback) {
+  ENSURE_VINEYARDD_READY();
+  auto self(shared_from_this());
+  meta_service_ptr_->TryReleaseLock(
+      key, [self, callback](const Status& status, bool result) {
+        if (status.ok()) {
+          return callback(status, result);
+        } else {
+          return status;
+        }
+      });
+  return Status::OK();
+}
+
 Status VineyardServer::LabelObjects(const ObjectID object_id,
                                     const std::vector<std::string>& keys,
                                     const std::vector<std::string>& values,

@@ -474,6 +474,7 @@ def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
         run_test(tests, 'tensor_test')
         run_test(tests, 'typename_test')
         run_test(tests, 'version_test')
+        run_test(tests, 'kv_state_cache_radix_tree_test')
 
 
 def run_vineyard_spill_tests(meta, allocator, endpoints, tests):
@@ -690,6 +691,35 @@ def run_scale_in_out_tests(meta, allocator, endpoints, instance_size=4):
         time.sleep(5)
 
 
+def run_llm_tests(meta, allocator, endpoints):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+
+    instance_size = 2
+    with start_multiple_vineyardd(
+        metadata_settings,
+        ['--allocator', allocator],
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+        instance_size=instance_size,
+        nowait=False,
+    ) as instances:  # noqa: F841, pylint: disable=unused-variable
+        vineyard_ipc_socket_1 = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 0)
+        vineyard_ipc_socket_2 = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 1)
+
+        rpc_socket_port = instances[0][1]
+        subprocess.check_call(
+            [
+                './build/bin/kv_state_cache_multi_test',
+                '--vineyard-endpoint',
+                'localhost:%s' % rpc_socket_port,
+                '--vineyard-ipc-sockets',
+                vineyard_ipc_socket_1,
+                vineyard_ipc_socket_2,
+            ],
+            cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
+        )
+
+
 def run_python_deploy_tests(meta, allocator, endpoints, test_args, with_migration):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
@@ -863,6 +893,12 @@ def parse_sys_args():
         help='Whether to run deployment and scaling in/out tests',
     )
     arg_parser.add_argument(
+        '--with-llm',
+        action='store_true',
+        default=False,
+        help='Whether to run llm tests',
+    )
+    arg_parser.add_argument(
         '--with-migration',
         action='store_true',
         default=False,
@@ -972,6 +1008,14 @@ def execute_tests(args):
         with start_metadata_engine(args.meta) as (_, endpoints):
             run_fuse_test(args.meta, args.allocator, endpoints, python_test_args)
 
+    if args.with_llm:
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_llm_tests(
+                args.meta,
+                args.allocator,
+                endpoints,
+            )
+
 
 def main():
     parser, args = parse_sys_args()
@@ -987,6 +1031,7 @@ def main():
         or args.with_deployment
         or args.with_io
         or args.with_fuse
+        or args.with_llm
     ):
         print(
             'Error: \n\tat least one of of --with-{cpp,graph,python,io,fuse} needs '
