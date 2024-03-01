@@ -11,7 +11,6 @@ add_library(vineyard_llm_cache ${VINEYARD_LLM_CACHE_SRCS})
 target_link_libraries(vineyard_llm_cache PUBLIC vineyard_client vineyard_basic)
 
 install_export_vineyard_target(vineyard_llm_cache)
-install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}/ds/")
-install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}/radix-tree/")
+install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
 
 add_subdirectory(tests)
