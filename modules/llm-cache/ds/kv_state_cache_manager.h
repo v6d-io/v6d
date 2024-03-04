@@ -30,11 +30,12 @@ namespace vineyard {
 
 class KVStateCacheManager {
  private:
-  Client client;
+  Client& client;
   std::shared_ptr<KVStateCacheBuilder> kvStateCacheBuilder = nullptr;
-  std::string llmCacheSyncLock = "llmCacheSyncLock";
-  std::string llmCacheObjectName = "llm_cache_object";
-  std::thread* syncThread;
+  std::shared_ptr<KVStateCache> kvStateCache = nullptr;
+  std::string llmCacheSyncLock;
+  std::string llmCacheObjectName;
+  std::thread syncThread;
   std::mutex syncMutex;
   int syncInterval;
   bool exitFlag = false;
@@ -42,38 +43,51 @@ class KVStateCacheManager {
   std::mutex exitMutex;
 
  public:
-  KVStateCacheManager(
-      int tensorBytes = 80, int cacheCapacity = 10, int layer = 1,
-      int blockSize = 5, int syncInterval = 3,
-      std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET")));
+  KVStateCacheManager(Client& client,
+                      std::shared_ptr<KVStateCacheBuilder>& cache,
+                      int syncInterval, std::string& llmCacheSyncLock,
+                      std::string& llmCacheObjectName);
 
-  void Update(const std::vector<int>& tokenList, int nextToken,
+  static Status Make(Client& client,
+                     std::shared_ptr<KVStateCacheManager>& manager,
+                     int dimension = 10, int cacheCapacity = 10, int layer = 1,
+                     int blockSize = 5, int syncInterval = 3,
+                     std::string llmCacheSyncLock = "llmCacheSyncLock",
+                     std::string llmCacheObjectName = "llm_cache_object");
+
+  Status Update(const std::vector<int>& tokenList, int nextToken,
               const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
-  void Update(
-      const std::vector<int>& tokenList,
+  Status Update(      const std::vector<int>& tokenList,
       const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvState);
 
-  int Query(const std::vector<int>& tokenList, int token,
-            std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
+  Status Query(const std::vector<int>& tokenList, int token,
+               std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
-  int Query(const std::vector<int>& tokenList,
-            std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState);
+  Status Query(const std::vector<int>& tokenList,
+               std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState);
 
   ~KVStateCacheManager();
 
  private:
-  void UpdateInternal(const std::vector<int>& tokenList, int nextToken,
-                      const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
+  Status UpdateInternal(const std::vector<int>& tokenList, int nextToken,
+                        const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
-  int QueryInternal(const std::vector<int>& tokenList, int token,
-                    std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
+  Status QueryInternal(const std::vector<int>& tokenList, int token,
+                       std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
   void Delete(std::vector<int>& token);
 
   static void SyncThreadFunc(KVStateCacheManager* manager);
 
-  void Sync();
+  Status Sync();
+
+  Status AfterSyncFailed();
+
+  static void AcquireServerLock(Client& client, std::string& lockKey,
+                                std::string& actualKey);
+
+  static void ReleaseServerLock(Client& client, std::string& actualKey);
 };
 
 }  // namespace vineyard

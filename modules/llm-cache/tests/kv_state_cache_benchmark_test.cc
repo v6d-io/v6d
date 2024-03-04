@@ -32,10 +32,13 @@ constexpr int CAPACITY = 1000;
 constexpr int LAYER = 64;
 constexpr int BLOCK_SIZE = 100;
 
-KVStateCacheManager* manager;
+std::shared_ptr<KVStateCacheManager> manager;
+Client client;
 
-void init() {
-  manager = new KVStateCacheManager(TENSORBYTES, CAPACITY, LAYER, BLOCK_SIZE);
+void init(std::string socket) {
+  VINEYARD_CHECK_OK(client.Connect(socket));
+  VINEYARD_CHECK_OK(KVStateCacheManager::Make(client, manager, TENSORBYTES,
+                                              CAPACITY, LAYER, BLOCK_SIZE, 3));
 }
 
 std::vector<int> generate_random_tokens(size_t max_length) {
@@ -117,7 +120,7 @@ int main(int argc, char** argv) {
   }
   std::string ipc_socket = std::string(argv[1]);
 
-  init();
+  init(ipc_socket);
 
   std::atomic<bool> inference_done(false);
 
@@ -150,6 +153,5 @@ int main(int argc, char** argv) {
 
   memory_monitor.join();
   inference.join();
-  delete manager;
   return 0;
 }

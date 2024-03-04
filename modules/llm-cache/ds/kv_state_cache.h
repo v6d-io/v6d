@@ -81,31 +81,42 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   int tensorBytes;
   int layer;
   uint64_t version;
+  int blockSize;
+  int cacheCapacity;
 
  public:
-  KVStateCacheBuilder(Client& client, int tensorBytes, int cacheCapacity,
-                      int layer, int blockSize = DEFAULT_BLOCK_SIZE);
+  KVStateCacheBuilder(Client& client, int tensorBytes, int layer,
+                      std::shared_ptr<RadixTree>& rootTree);
 
-  KVStateCacheBuilder(Client& client, std::shared_ptr<KVStateCache> cache);
+  static Status Make(Client& client,
+                     std::shared_ptr<KVStateCacheBuilder>& kvStateCacheBuilder,
+                     int dimension = 10, int cacheCapacity = 10, int layer = 1,
+                     int blockSize = DEFAULT_BLOCK_SIZE);
 
-  KVStateCacheBlockBuilder* Split(
-      Client& client, KVStateCacheBlockBuilder* kvStateCacheBlockBuilder,
-      std::vector<std::shared_ptr<NodeData>>& nodeDataList);
+  static Status Make(Client& client,
+                     std::shared_ptr<KVStateCacheBuilder>& kvStateCacheBuilder,
+                     std::shared_ptr<KVStateCache>& cache);
 
-  void Update(Client& client, const std::vector<int>& token_list,
-              int next_token,
-              const std::map<int, std::pair<LLMKV, LLMKV>>& kv_state);
+  Status Split(Client& client,
+               KVStateCacheBlockBuilder* kvStateCacheBlockBuilder,
+               std::vector<std::shared_ptr<NodeData>> nodeDataList,
+               KVStateCacheBlockBuilder*& childKVStateCacheBlockBuilder);
 
-  int Query(Client& client, const std::vector<int>& token_list, int token,
-            std::map<int, std::pair<LLMKV, LLMKV>>& kv_state);
+  Status Update(Client& client, const std::vector<int>& token_list,
+                int next_token, const std::map<int, std::pair<LLMKV, LLMKV>>& kv_state);
+
+  Status Query(Client& client, const std::vector<int>& token_list, int token,
+               std::map<int, std::pair<LLMKV, LLMKV>>& kv_state);
 
   void Delete(std::shared_ptr<NodeData> evicted_node);
 
-  void Merge(Client& client, std::shared_ptr<KVStateCache> kv_state_cache);
+  Status Merge(Client& client, std::shared_ptr<KVStateCache> kv_state_cache);
 
   uint64_t GetVersion() { return this->version; }
 
   void UpdateVersion() { this->version++; }
+
+  void RollbackVersion() { this->version--; }
 
   Status Build(Client& client) override;
 
