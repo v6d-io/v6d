@@ -77,6 +77,7 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 };
 
 class KVStateCacheBuilder : public vineyard::ObjectBuilder {
+  Client& client;
   std::shared_ptr<RadixTree> rootTree;
   int tensorBytes;
   int layer;
@@ -97,21 +98,19 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
                      std::shared_ptr<KVStateCacheBuilder>& kvStateCacheBuilder,
                      std::shared_ptr<KVStateCache>& cache);
 
-  Status Split(Client& client,
-               KVStateCacheBlockBuilder* kvStateCacheBlockBuilder,
+  Status Split(KVStateCacheBlockBuilder* kvStateCacheBlockBuilder,
                std::vector<std::shared_ptr<NodeData>> nodeDataList,
                KVStateCacheBlockBuilder*& childKVStateCacheBlockBuilder);
 
-  Status Update(Client& client, const std::vector<int>& token_list,
-                int next_token,
+  Status Update(const std::vector<int>& token_list, int next_token,
                 const std::map<int, std::pair<LLMKV, LLMKV>>& kv_state);
 
-  Status Query(Client& client, const std::vector<int>& token_list, int token,
+  Status Query(const std::vector<int>& token_list, int token,
                std::map<int, std::pair<LLMKV, LLMKV>>& kv_state);
 
   void Delete(std::shared_ptr<NodeData> evicted_node);
 
-  Status Merge(Client& client, std::shared_ptr<KVStateCache> kv_state_cache);
+  Status Merge(std::shared_ptr<KVStateCache> kv_state_cache);
 
   uint64_t GetVersion() { return this->version; }
 

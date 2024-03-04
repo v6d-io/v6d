@@ -71,7 +71,8 @@ KVStateCache::~KVStateCache() {}
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int tensorBytes,
                                          int layer,
-                                         std::shared_ptr<RadixTree>& rootTree) {
+                                         std::shared_ptr<RadixTree>& rootTree)
+    : client(client) {
   this->tensorBytes = tensorBytes;
   this->version = 0;
   this->layer = layer;
@@ -126,7 +127,7 @@ Status KVStateCacheBuilder::Make(
 }
 
 Status KVStateCacheBuilder::Split(
-    Client& client, KVStateCacheBlockBuilder* kvStateCacheBlockBuilder,
+    KVStateCacheBlockBuilder* kvStateCacheBlockBuilder,
     std::vector<std::shared_ptr<NodeData>> nodeDataList,
     KVStateCacheBlockBuilder*& childKVStateCacheBlockBuilder) {
   // Split the tree if the list of kvState is full.
@@ -155,7 +156,7 @@ Status KVStateCacheBuilder::Split(
 }
 
 Status KVStateCacheBuilder::Update(
-    Client& client, const std::vector<int>& tokenList, int nextToken,
+    const std::vector<int>& tokenList, int nextToken,
     const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   std::vector<int> tokenListCopy = tokenList;
   tokenListCopy.push_back(nextToken);
@@ -189,7 +190,7 @@ Status KVStateCacheBuilder::Update(
         rootTree->Split(tokenListCopy, subTreeHeader);
     RETURN_ON_ASSERT(nodeDataList.size() != 0, "Split llm cache failed.");
     KVStateCacheBlockBuilder* newKVStateCacheBlockBuilder;
-    Status status = Split(client, kvStateCacheBlockBuilder, nodeDataList,
+    Status status = Split(kvStateCacheBlockBuilder, nodeDataList,
                           newKVStateCacheBlockBuilder);
     RETURN_ON_ERROR(status);
 
@@ -204,7 +205,7 @@ Status KVStateCacheBuilder::Update(
     VLOG(100) << "block split success";
 
     // kv_state_cache_builder->UnLock();
-    status = Update(client, tokenList, nextToken, kvState);
+    status = Update(tokenList, nextToken, kvState);
     RETURN_ON_ERROR(status);
   } else {
     // Update the kv-state cache.
@@ -223,7 +224,7 @@ Status KVStateCacheBuilder::Update(
 }
 
 Status KVStateCacheBuilder::Query(
-    Client& client, const std::vector<int>& tokenList, int token,
+    const std::vector<int>& tokenList, int token,
     std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   std::vector<int> tokenListCopy = tokenList;
   tokenListCopy.push_back(token);
@@ -240,7 +241,7 @@ Status KVStateCacheBuilder::Query(
           (reinterpret_cast<TreeData*>(nodeData->treeData->data))
               ->kvStateCacheBlockBuilder);
 
-  return kvStateCacheBlockBuilder->Query(client, offset, kvState);
+  return kvStateCacheBlockBuilder->Query(offset, kvState);
 }
 
 void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
@@ -263,8 +264,7 @@ void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
   evictedNodeData->RecycleSource();
 }
 
-Status KVStateCacheBuilder::Merge(Client& client,
-                                  std::shared_ptr<KVStateCache> kvStateCache) {
+Status KVStateCacheBuilder::Merge(std::shared_ptr<KVStateCache> kvStateCache) {
   if (kvStateCache == nullptr) {
     return Status::OK();
   }
@@ -312,8 +312,8 @@ Status KVStateCacheBuilder::Merge(Client& client,
       kvState.insert(
           std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
     }
-    globalCacheBuilder->Query(client, tokenList, (*it).back(), kvState);
-    this->Update(client, tokenList, (*it).back(), kvState);
+    globalCacheBuilder->Query(tokenList, (*it).back(), kvState);
+    this->Update(tokenList, (*it).back(), kvState);
     for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
       LLMKV key_state = kvState[currentLayer].first;
       LLMKV value_state = kvState[currentLayer].second;
