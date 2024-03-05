@@ -197,9 +197,13 @@ class Client:
                     hosts.append(h)
                     ports.append(p)
             else:
-                host, port = endpoint
-                hosts = [host]
-                ports = [port]
+                h, p = endpoint
+                hosts = [h]
+                ports = [p]
+
+        if host and port:
+            hosts.append(host)
+            ports.append(port)
 
         if config and ((not socket) or (not (hosts and ports))):
             ipc_socket, rpc_endpoint = _parse_configuration(config)
