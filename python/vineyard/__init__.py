@@ -297,7 +297,8 @@ def connect(*args, **kwargs):
     If no arguments are provided and failed to resolve both the environment
     variables :code:`VINEYARD_IPC_SOCKET`, :code:`VINEYARD_RPC_ENDPOINT`,
     :code:`VINEYARD_CONFIG`, and the default configuration file
-    :code:`/var/run/vineyard-config.yaml`, it will launch a standalone
+    :code:`/var/run/vineyard-config.yaml` and
+    :code:`/var/run/vineyard/vineyard-config.yaml`, it will launch a standalone
     vineyardd server in the background and then connect to it.
 
     The `connect()` method has various overloading:
@@ -401,7 +402,13 @@ def connect(*args, **kwargs):
         and 'VINEYARD_IPC_SOCKET' not in os.environ
         and 'VINEYARD_RPC_ENDPOINT' not in os.environ
         and 'VINEYARD_CONFIG' not in os.environ
-        and not os.path.exists("/var/run/vineyard-config.yaml")
+        and not any(
+            os.path.exists(path)
+            for path in [
+                "/var/run/vineyard-config.yaml",
+                "/var/run/vineyard/vineyard-config.yaml",
+            ]
+        )
     ):
         logger.info(
             'No vineyard socket or endpoint is specified, '
