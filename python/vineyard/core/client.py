@@ -57,7 +57,9 @@ def _parse_configuration(config) -> Tuple[Optional[str], Optional[str]]:
     Parameters:
         config: Path to a YAML configuration file or a directory containing
                 the default config file `vineyard-config.yaml`. If you define
-                the directory of config and
+                the directory of vineyard config, the
+                `/directory/vineyard-config.yaml` and
+                `/directory/vineyard/vineyard-config.yaml` will be parsed.
 
     Returns:
         (socket, endpoints): IPC socket path and RPC endpoints.
