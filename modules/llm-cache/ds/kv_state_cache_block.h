@@ -29,19 +29,10 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "llm-cache/radix-tree/radix-tree.h"
 
-struct State {
+struct LLMKV {
   void* data;
   size_t length;
 };
-
-using K_STATE = State;
-using V_STATE = State;
-
-using KV_STATE_WITH_LAYER = std::map<int, std::pair<K_STATE, V_STATE>>;
-using LIST_KV_STATE_WITH_LAYER =
-    std::vector<std::map<int, std::pair<K_STATE, V_STATE>>>;
-using KV_STATE = std::vector<std::pair<K_STATE, V_STATE>>;
-using LIST_KV_STATE = std::vector<std::pair<K_STATE, V_STATE>>;
 
 // Set the bit to 1, which means the resource is not being used
 #define FREE_BIT_RESOURCE(value, bit) ((value) |= (((uint64_t) 1) << (bit)))
@@ -72,14 +63,14 @@ namespace vineyard {
 
 class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
  private:
-  std::vector<std::shared_ptr<Tensor<double>>> keyStateTensorList;
-  std::vector<std::shared_ptr<Tensor<double>>> valueStateTensorList;
+  std::vector<std::shared_ptr<Tensor<uint8_t>>> keyStateTensorList;
+  std::vector<std::shared_ptr<Tensor<uint8_t>>> valueStateTensorList;
   uint64_t* bitmap;
   int blockSize;
   int bitmapSize;
   ObjectID id;
   int layer;
-  int dimension;
+  int tensorBytes;
 
  public:
   static std::unique_ptr<Object> Create() __attribute__((used)) {
@@ -91,25 +82,25 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
 
   std::string GetBitmapStr();
 
-  uint64_t GetDimension() { return this->dimension; }
+  uint64_t GetTensorBytes() { return this->tensorBytes; }
 
   uint64_t* GetBitmap() { return this->bitmap; }
 
   int GetBlockSize() { return this->blockSize; }
 
-  std::shared_ptr<const Tensor<double>> GetKeyTensor(int layer) {
+  std::shared_ptr<const Tensor<uint8_t>> GetKeyTensor(int layer) {
     return this->keyStateTensorList[layer];
   }
 
-  std::shared_ptr<const Tensor<double>> GetValueTensor(int layer) {
+  std::shared_ptr<const Tensor<uint8_t>> GetValueTensor(int layer) {
     return this->valueStateTensorList[layer];
   }
 
-  std::vector<std::shared_ptr<Tensor<double>>> GetKeyTensorList() {
+  std::vector<std::shared_ptr<Tensor<uint8_t>>>& GetKeyTensorList() {
     return this->keyStateTensorList;
   }
 
-  std::vector<std::shared_ptr<Tensor<double>>> GetValueTensorList() {
+  std::vector<std::shared_ptr<Tensor<uint8_t>>>& GetValueTensorList() {
     return this->valueStateTensorList;
   }
 
@@ -120,21 +111,22 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
 
 class KVStateCacheBlockBuilder : public ObjectBuilder {
  private:
-  std::vector<std::shared_ptr<TensorBuilder<double>>> keyStateTensorBuilderList;
-  std::vector<std::shared_ptr<TensorBuilder<double>>>
+  std::vector<std::shared_ptr<TensorBuilder<uint8_t>>>
+      keyStateTensorBuilderList;
+  std::vector<std::shared_ptr<TensorBuilder<uint8_t>>>
       valueStateTensorBuilderList;
   // TBD
   // support more than 64 kv-state cache slots
   uint64_t* bitmap;
   int blockSize;
   int bitmapSize;
-  int dimension;
+  int tensorBytes;
   int layer;
 
   int FindEmptySlot();
 
  public:
-  KVStateCacheBlockBuilder(Client& client, int dimension, int layer,
+  KVStateCacheBlockBuilder(Client& client, int tensorBytes, int layer,
                            int blockSize);
 
   KVStateCacheBlockBuilder(
@@ -147,9 +139,10 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
    * @param kv_state The kv-state of the prompt. A LLM inference can contain
    * multiple kv-states for each layer.
    */
-  void Update(const KV_STATE_WITH_LAYER& kv_state, OffsetData* data);
+  void Update(const std::map<int, std::pair<LLMKV, LLMKV>>& kv_state,
+              OffsetData* data);
 
-  void Update(double* keyState, double* valueState, uint64_t dataLength,
+  void Update(char* keyState, char* valueState, uint64_t dataLength,
               OffsetData* data);
 
   /**
@@ -160,7 +153,8 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
    * @param kv_state The kv-state of the prompt returned by radix-tree. If the
    * kv-state is not found, the data of kv-state is invalid.
    */
-  int Query(Client& client, int index, KV_STATE_WITH_LAYER& kv_state);
+  int Query(Client& client, int index,
+            std::map<int, std::pair<LLMKV, LLMKV>>& kv_state);
 
   bool IsFull();
 
@@ -170,20 +164,21 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   int16_t Split(KVStateCacheBlockBuilder* child, int index);
 
-  const std::shared_ptr<TensorBuilder<double>> GetKeyStateBuilder(int layer) {
+  const std::shared_ptr<TensorBuilder<uint8_t>>& GetKeyStateBuilder(int layer) {
     return keyStateTensorBuilderList[layer];
   }
 
-  const std::shared_ptr<TensorBuilder<double>> GetValueStateBuilder(int layer) {
+  const std::shared_ptr<TensorBuilder<uint8_t>>& GetValueStateBuilder(
+      int layer) {
     return valueStateTensorBuilderList[layer];
   }
 
-  const std::vector<std::shared_ptr<TensorBuilder<double>>>
+  const std::vector<std::shared_ptr<TensorBuilder<uint8_t>>>&
   GetKeyStateBuilderList() {
     return keyStateTensorBuilderList;
   }
 
-  const std::vector<std::shared_ptr<TensorBuilder<double>>>
+  const std::vector<std::shared_ptr<TensorBuilder<uint8_t>>>&
   GetValueStateBuilderList() {
     return valueStateTensorBuilderList;
   }
@@ -196,7 +191,7 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   uint64_t* GetBitmap() { return this->bitmap; }
 
-  uint64_t GetDimension() { return this->dimension; }
+  uint64_t GetTensorBytes() { return this->tensorBytes; }
 
   int GetBlockSize() { return this->blockSize; }
 

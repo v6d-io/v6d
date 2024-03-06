@@ -65,30 +65,30 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
 
  private:
   std::shared_ptr<NodeData> InsertInternal(
-      std::vector<int> tokens, std::shared_ptr<NodeData>& evictedNode);
+      const std::vector<int>& tokens, std::shared_ptr<NodeData>& evictedNode);
 
-  void DeleteInternal(std::vector<int> tokens,
+  void DeleteInternal(const std::vector<int>& tokens,
                       std::shared_ptr<NodeData>& evictedNode);
 
-  std::shared_ptr<NodeData> QueryInternal(std::vector<int> key);
+  std::shared_ptr<NodeData> QueryInternal(const std::vector<int>& key);
 
   std::vector<std::shared_ptr<NodeData>> SplitInternal(
-      std::vector<int> tokens, std::shared_ptr<NodeData>& header);
+      const std::vector<int>& tokens, std::shared_ptr<NodeData>& header);
 
  public:
   RadixTree(int cacheCapacity);  //  NOLINT(runtime/explicit)
 
   ~RadixTree();
 
-  std::shared_ptr<NodeData> Insert(std::vector<int> tokens,
+  std::shared_ptr<NodeData> Insert(std::vector<int>& tokens,
                                    std::shared_ptr<NodeData>& evictedNode);
 
-  void Delete(std::vector<int> tokens, std::shared_ptr<NodeData>& evictedNode);
+  void Delete(std::vector<int>& tokens, std::shared_ptr<NodeData>& evictedNode);
 
-  std::shared_ptr<NodeData> Query(std::vector<int> key);
+  std::shared_ptr<NodeData> Query(std::vector<int>& key);
 
   std::vector<std::shared_ptr<NodeData>> Split(
-      std::vector<int> tokens, std::shared_ptr<NodeData>& header);
+      std::vector<int>& tokens, std::shared_ptr<NodeData>& header);
 
   std::string Serialize();
 

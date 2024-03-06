@@ -22,14 +22,7 @@ limitations under the License.
 
 #include "common/util/logging.h"
 
-char process_name[] = "kv_state_cache_test";
-char arg_0[] = "-s";
-char token_sequence_1[] = "1";
-char token_sequence_2[] = "2";
-char token_sequence_3[] = "3";
-char token_sequence_4[] = "4";
-
-const char* program = "./build/bin/kv_state_cache_test";
+constexpr char* program = "./build/bin/kv_state_cache_test";
 
 pid_t create_subprocess(char* argv[]) {
   pid_t pid = fork();
@@ -46,6 +39,13 @@ pid_t create_subprocess(char* argv[]) {
 }
 
 int main(int argc, char** argv) {
+  char process_name[] = "kv_state_cache_test";
+  char arg_0[] = "-s";
+  char token_sequence_1[] = "1";
+  char token_sequence_2[] = "2";
+  char token_sequence_3[] = "3";
+  char token_sequence_4[] = "4";
+
   std::string sockets[2];
   std::string rpc_endpoint;
   for (int i = 1; i < argc; i++) {

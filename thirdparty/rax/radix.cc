@@ -435,7 +435,7 @@ raxNode *raxAddChild(raxNode *n, int c, raxNode **childptr, raxNode ***parentlin
  * The function also returns a child node, since the last node of the
  * compressed chain cannot be part of the chain: it has zero children while
  * we can only compress inner nodes with exactly one child each. */
-raxNode *raxCompressNode(raxNode *n, int *s, size_t len, raxNode **child) {
+raxNode *raxCompressNode(raxNode *n, const int *s, size_t len, raxNode **child) {
     assert(n->size == 0 && n->iscompr == 0);
     void *data = NULL; /* Initialized only to avoid warnings. */
     size_t newsize;
@@ -590,7 +590,7 @@ int handleOutOfMemory(rax *rax, raxNode *h, int *s, size_t len, void **old){
  * function returns 0 as well but sets errno to ENOMEM, otherwise errno will
  * be set to 0.
  */
-int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int overwrite, void **dataNode, bool set_timestamp = true) {
+int raxGenericInsert(rax *rax, const int *s, size_t len, void *data, void **old, int overwrite, void **dataNode, bool set_timestamp = true) {
     size_t i;
     int j = 0; /* Split position. If raxLowWalk() stops in a compressed
                   node, the index 'j' represents the char we stopped within the
@@ -614,7 +614,6 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
         debugf("### Insert: node representing key exists\n");
         /* Make space for the value pointer if needed. */
         if (!h->iskey || (h->isnull && overwrite)) {
-            printf("#############raxReallocForData1 ############\n");
             h = raxReallocForData(h,data);
             if (h) memcpy(parentlink,&h,sizeof(h));
         }
@@ -1014,7 +1013,6 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
     raxStackFree(&lowWalkStack);
     raxStackFree(&splitStack);
     raxNode *newh = raxReallocForData(h,data);
-    // printf("#############raxReallocForData2 ############\n");
     if (newh == NULL) {
         return handleOutOfMemory(rax, h, (int *)s, i, old);
     }
@@ -1028,7 +1026,7 @@ int raxGenericInsert(rax *rax, int *s, size_t len, void *data, void **old, int o
 
 /* Overwriting insert. Just a wrapper for raxGenericInsert() that will
  * update the element if there is already one for the same key. */
-int raxInsert(rax *rax, int *s, size_t len, void *data, void **old, bool set_timestamp) {
+int raxInsert(rax *rax, const int *s, size_t len, void *data, void **old, bool set_timestamp) {
     void *dataNode = NULL;
     return raxGenericInsert(rax,s,len,data,old,1,&dataNode, set_timestamp);
 }
@@ -1044,7 +1042,7 @@ int raxTryInsert(rax *rax, int *s, size_t len, void *data, void **old) {
 /*
 Overwriting insert. Return the raxNode that contains the key.
 */
-int raxInsertAndReturnDataNode(rax *rax, int *s, size_t len, void *data, void **node, void **old) {
+int raxInsertAndReturnDataNode(rax *rax, const int *s, size_t len, void *data, void **node, void **old) {
     return raxGenericInsert(rax,s,len,data,old,1, node);
 }
 
@@ -1065,7 +1063,7 @@ void *raxFind(rax *rax, int *s, size_t len) {
 /*
 ** Find a key in the rax, returns the stack
 */
-raxStack raxFindWithStack(rax *rax, int *s, size_t len) {
+raxStack raxFindWithStack(rax *rax, const int *s, size_t len) {
     raxNode *h;
 
     raxStack ts;
@@ -1081,12 +1079,11 @@ raxStack raxFindWithStack(rax *rax, int *s, size_t len) {
 /*
 ** Find a key in the rax, returns the raxNode that contains the key.
 */
-raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len, raxNode** sub_tree_node, bool set_timestamp) {
+raxNode *raxFindAndReturnDataNode(rax *rax, const int *s, size_t len, raxNode** sub_tree_node, bool set_timestamp) {
     raxNode *h;
 
     raxStack ts;
     raxStackInit(&ts);
-    //debugf("### Lookup: %.*s\n", (int)len, s);
     int splitpos = 0;
     size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,&ts,set_timestamp);
     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey)
@@ -1101,25 +1098,6 @@ raxNode *raxFindAndReturnDataNode(rax *rax, int *s, size_t len, raxNode** sub_tr
 
     return h;
 }
-
-// raxNode *raxSetSubTreeAndReturnDataNode(rax *rax, int *s, size_t len) {
-//     raxNode *h;
-
-//     raxStack ts;
-//     raxStackInit(&ts);
-//     //debugf("### Lookup: %.*s\n", (int)len, s);
-//     int splitpos = 0;
-//     size_t i = raxLowWalk(rax,s,len,&h,NULL,&splitpos,&ts,false);
-//     if (i != len || (h->iscompr && splitpos != 0) || !h->iskey)
-//         return NULL;
-
-//     if (h!= nullptr) {
-//         h->issubtree = true;
-//         raxStackAddNumNodes(&ts, -h->numnodes);
-//     }
-
-//     return h;
-// }
 
 int raxFindNode(rax *rax, int *s, size_t len, void **node) {
     raxNode *h;
@@ -1251,7 +1229,7 @@ raxNode *raxRemoveChild(raxNode *parent, raxNode *child) {
 
 /* Remove the specified item. Returns 1 if the item was found and
  * deleted, 0 otherwise. */
-int raxRemove(rax *rax, int *s, size_t len, void **old, bool set_timestamp) {
+int raxRemove(rax *rax, const int *s, size_t len, void **old, bool set_timestamp) {
     raxNode *h;
     raxStack ts;
 
@@ -2169,33 +2147,36 @@ struct DebugTreeData {
   };
   bool isPtr = true;
 };
+
 /* The actual implementation of raxShow(). */
-void raxRecursiveShow(int level, int lpad, raxNode *n) {
+std::string raxRecursiveShow(int level, int lpad, raxNode *n) {
+    std::ostringstream raxStrStream;
     char s = n->iscompr ? '"' : '[';
     char e = n->iscompr ? '"' : ']';
 
-    int numchars = printf("%c", s);
+    raxStrStream << s;
     for (int i = 0; i < n->size; i++) {
-        numchars += printf("%d ", n->data[i]);
+        raxStrStream << n->data[i] << " ";
     }
-    numchars += printf("%c %d ", e, n->numnodes);
+    
+    raxStrStream << e << " " << std::to_string(n->size) << " ";
 
     if (n->issubtree) {
-        numchars += printf("# ");
-        printf(" %p ", n);
+        raxStrStream << "# ";
+        raxStrStream << " " << n << " ";
     }
     if (n->iskey) {
-        numchars += printf("=%p",raxGetData(n));
+        raxStrStream << "=" << raxGetData(n);
     }
-    numchars += printf(" node:%p time:%ld, data:%p, is_sub_tree:%d is_compr:%d", n, n->timestamp, n->custom_data, n->issubtree, n->iscompr);
+    raxStrStream << " node:" << n << " time:" << n->timestamp << " data:" << n->custom_data << " is_sub_tree:" << n->issubtree << " is_compr:" << n->iscompr;
     if (n->issubtree && n->custom_data != NULL) {
-        numchars += printf(" cus data:%p" , ((DebugDatawrapper *)(n->custom_data))->data);
+        raxStrStream << " cus data:" << ((DebugDatawrapper *)(n->custom_data))->data;
         DebugTreeData *data = (DebugTreeData *)((DebugDatawrapper *)(n->custom_data))->data;
         if (data) {
             if (data->isPtr) {
-                numchars += printf(" builder ptr:%p", data->kvStateCacheBlockBuilder);
+                raxStrStream << " builder ptr:" << data->kvStateCacheBlockBuilder;
             } else {
-                numchars += printf(" builder id:%lu", data->builderObjectID);
+                raxStrStream << " builder id:" << data->builderObjectID;
             }
         }
     }
@@ -2205,31 +2186,33 @@ void raxRecursiveShow(int level, int lpad, raxNode *n) {
      * of " `-(x) " and " -> " respectively. */
     if (level) {
         lpad += (numchildren > 1) ? 7 : 4;
-        if (numchildren == 1) lpad += numchars;
+        if (numchildren == 1) lpad += raxStrStream.str().size();
     }
     raxNode **cp = raxNodeFirstChildPtr(n);
     for (int i = 0; i < numchildren; i++) {
-        const char *branch = " `-(%d) ";
         if (numchildren > 1) {
-            printf("\n");
-            for (int j = 0; j < lpad; j++) putchar(' ');
-            printf(branch,n->data[i]);
+            raxStrStream << "\n";
+            for (int j = 0; j < lpad; j++) raxStrStream << " ";
+            raxStrStream << " `-(" << n->data[i] << ") ";
         } else {
-            printf(" -> ");
+            raxStrStream << " -> ";
         }
         raxNode *child;
         memcpy(&child,cp,sizeof(child));
-        raxRecursiveShow(level+1,lpad,child);
+        raxStrStream << raxRecursiveShow(level+1,lpad,child);
         cp++;
     }
+    return raxStrStream.str();
 }
 
 
 /* Show a tree, as outlined in the comment above. */
-void raxShow(rax *rax) {
-    printf("rax numnode:%lu\n", rax->numele);
-    raxRecursiveShow(0,0,rax->head);
-    putchar('\n');
+std::string raxShow(rax *rax) {
+    std::string raxStr;
+    raxStr += "rax numnode:" + std::to_string(rax->numele) + "\n";
+    raxStr += raxRecursiveShow(0,0,rax->head);
+    raxStr += "\n";
+    return raxStr;
 }
 
 /* Used by debugnode() macro to show info about a given node. */
@@ -2339,7 +2322,7 @@ bool raxIsSubtree(raxNode *node) {
 * tree from the root node.
 * 
 */
-raxNode *raxSplit(rax *rax, int *s, size_t len, std::vector<int>& token) {
+raxNode *raxSplit(rax *rax, const int *s, size_t len, std::vector<int>& token) {
     raxNode *childNode = NULL;
     raxNode *splitNode = NULL;
     raxStack stack = raxFindWithStack(rax, s, len);
@@ -2490,12 +2473,12 @@ void raxFindLastRecentNode(raxNode *node, std::vector<int>& key) {
 
 bool compareKey(int *first_key, int *second_key, int first_key_len, int second_key_len) {
     if (first_key_len != second_key_len) {
-        printf("length not equal, %d : %d\n", first_key_len, second_key_len);
+        VLOG(100) << "length not equal, " <<  first_key_len << " : " << second_key_len;
         return false;
     }
     for (int i = 0; i < first_key_len; i++) {
         if (first_key[i] != second_key[i]) {
-            printf("key not equal, %d : %d\n", first_key[i], second_key[i]);
+            VLOG(100) << "key not equal, " << first_key[i] << " : " << second_key[i];
             return false;
         }
     }
@@ -2513,12 +2496,16 @@ void sortNode(std::vector<raxIterator> &ite_list) {
     std::sort(ite_list.begin(), ite_list.end(), compare);
 }
 
-void printVector(int* v, int size) {
-    printf("token:\n");
-    for (int i = 0; i < size; i++) {
-        printf("%d " , v[i]);
+std::string printVector(std::vector<raxIterator>& tree_iter_list) {
+    std::string token_str;
+    for (size_t i = 0; i < tree_iter_list.size(); i++) {
+        for (size_t j = 0; j < tree_iter_list[i].key_len; j++) {
+            token_str += std::to_string(tree_iter_list[i].key[j]);
+            token_str += " ";
+        }
+        token_str += "\n";
     }
-    printf("\n");
+    return token_str;
 }
 
 void freeVector(std::vector<raxIterator> &ite_list) {
@@ -2530,11 +2517,14 @@ void freeVector(std::vector<raxIterator> &ite_list) {
 void mergeTree(rax* first_tree, rax* second_tree,
                std::vector<std::vector<int>>& evicted_tokens,
                std::set<std::vector<int>>& insert_tokens, int max_node) {
-    printf("merge tree!\n");
     VLOG(100) << "==============tree 1====================";
-    //raxShow(first_tree);
+    if (VLOG_IS_ON(100)) {
+        VLOG(100) << raxShow(first_tree);
+    }
     VLOG(100) << "==============tree 2====================";
-    //raxShow(second_tree);
+    if (VLOG_IS_ON(100)) {
+        VLOG(100) << (second_tree);
+    }
     raxIterator first_tree_iter;
     raxIterator second_tree_iter;
     rax* tmp = raxNew();
@@ -2562,14 +2552,12 @@ void mergeTree(rax* first_tree, rax* second_tree,
         second_tree_iter_list.push_back(tmp_iter);
     }
 
-    for (size_t i = 0; i < first_tree_iter_list.size(); i++) {
-        printVector(first_tree_iter_list[i].key, first_tree_iter_list[i].key_len);
+    if (VLOG_IS_ON(100)) {
+        VLOG(100) << "==============first tree iter list===================="
+                    << printVector(first_tree_iter_list);
+        VLOG(100) << "==============second tree iter list===================="
+                    << printVector(second_tree_iter_list);
     }
-
-    for (size_t i = 0; i < second_tree_iter_list.size(); i++) {
-        printVector(second_tree_iter_list[i].key, second_tree_iter_list[i].key_len);
-    }
-
     // Sort by the length of the key, or timestamp if the keys have the same length.
     sortNode(first_tree_iter_list);
     sortNode(second_tree_iter_list);
@@ -2587,7 +2575,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
             second_tree_index == second_tree_iter_list.size()) {
             break;
         }
-        printf("nodeCount: %d\n", nodeCount);
+        VLOG(100) << "nodeCount: " << nodeCount;
 
         /**
          * If the key is the same, use the larger timestamp to refresh
@@ -2598,8 +2586,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
                     second_tree_iter_list[second_tree_index].key,
                     first_tree_iter_list[first_tree_index].key_len,
                     second_tree_iter_list[second_tree_index].key_len)) {
-            // same key
-            printf("same key\n");
+            VLOG(100) << "same key";
             first_tree_iter_list[first_tree_index].node->timestamp =
                     std::max(first_tree_iter_list[first_tree_index].node->timestamp,
                     second_tree_iter_list[second_tree_index].node->timestamp);
@@ -2624,9 +2611,9 @@ void mergeTree(rax* first_tree, rax* second_tree,
              * If the key is not in the record tree, it means that the key has not been
              * chosen in the past. So we need to insert the key into the record tree.
              */
-            printf("choose first key %ld : %ld\n",
-                    first_tree_iter_list[first_tree_index].node->timestamp,
-                    second_tree_iter_list[second_tree_index].node->timestamp);
+            VLOG(100) << "choose first key, "
+                        << "first tree iter timestamp: " << first_tree_iter_list[first_tree_index].node->timestamp
+                        << "second tree iter timestamp: " << second_tree_iter_list[second_tree_index].node->timestamp;
             if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
                         first_tree_iter_list[first_tree_index].key_len) == raxNotFound) {
                 raxInsert(tmp, first_tree_iter_list[first_tree_index].key,
@@ -2653,9 +2640,9 @@ void mergeTree(rax* first_tree, rax* second_tree,
              * chosen in the past. So we need to insert the key into the record tree.
              * and insert the key into the insert_tokens.
              */
-            printf("choose second key %ld : %ld\n",
-                    first_tree_iter_list[first_tree_index].node->timestamp,
-            second_tree_iter_list[second_tree_index].node->timestamp);
+            VLOG(100) << "choose second key, "
+                        << "first tree iter timestamp: " << first_tree_iter_list[first_tree_index].node->timestamp
+                        << "second tree iter timestamp: " << second_tree_iter_list[second_tree_index].node->timestamp;
             // choose second key
             if (raxFind(tmp, second_tree_iter_list[second_tree_index].key,
                         second_tree_iter_list[second_tree_index].key_len) == raxNotFound) {
@@ -2678,9 +2665,9 @@ void mergeTree(rax* first_tree, rax* second_tree,
             */
             if (first_tree_iter_list[first_tree_index].node->numnodes <=
                 second_tree_iter_list[second_tree_index].node->numnodes) {
-                printf("choose first key %ld : %ld\n",
-                    first_tree_iter_list[first_tree_index].node->timestamp,
-                    second_tree_iter_list[second_tree_index].node->timestamp);
+                VLOG(100) << "choose first key, "
+                            << "first tree iter timestamp: " << first_tree_iter_list[first_tree_index].node->timestamp
+                            << "second tree iter timestamp: " << second_tree_iter_list[second_tree_index].node->timestamp;
                 // choose first key
                 if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
                             first_tree_iter_list[first_tree_index].key_len) == raxNotFound) {
@@ -2702,9 +2689,9 @@ void mergeTree(rax* first_tree, rax* second_tree,
                 }
                 first_tree_index++;
             } else {
-                printf("choose second key %ld : %ld\n",
-                    first_tree_iter_list[first_tree_index].node->timestamp,
-                    second_tree_iter_list[second_tree_index].node->timestamp);
+                VLOG(100) << "choose second key, "
+                            << "first tree iter timestamp: " << first_tree_iter_list[first_tree_index].node->timestamp
+                            << "second tree iter timestamp: " << second_tree_iter_list[second_tree_index].node->timestamp;
                 // choose second key
                 if (raxFind(tmp, second_tree_iter_list[second_tree_index].key,
                             second_tree_iter_list[second_tree_index].key_len) == raxNotFound) {
@@ -2725,7 +2712,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
     }
 
     if (nodeCount == max_node) {
-        printf("insert evicted tokens\n");
+        VLOG(100) << "insert evicted tokens";
         int evicted_node_count = 0;
         while (first_tree_index < first_tree_iter_list.size()) {
             if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
@@ -2752,7 +2739,7 @@ void mergeTree(rax* first_tree, rax* second_tree,
             evicted_node_count++;
             first_tree_index++;
         }
-        printf("evicted_node_count: %d\n", evicted_node_count);
+        VLOG(100) << "evicted_node_count: " << evicted_node_count;
         freeVector(first_tree_iter_list);
         freeVector(second_tree_iter_list);
         raxFree(tmp);
@@ -2790,9 +2777,8 @@ void mergeTree(rax* first_tree, rax* second_tree,
         }
     } else if (second_tree_index >= second_tree_iter_list.size()) {
         // second tree is empty
-        //raxShow(tmp);
-        printf("nodeCount:%d\n", nodeCount);
-        printf("first_tree_index:%ld\n", first_tree_index);
+        VLOG(100) << "nodeCount:" << nodeCount;
+        VLOG(100) << "first_tree_index:" << first_tree_index;
         while (first_tree_index < first_tree_iter_list.size() &&
             nodeCount < max_node) {
             if (raxFind(tmp, first_tree_iter_list[first_tree_index].key,
@@ -2844,26 +2830,6 @@ void mergeTree(rax* first_tree, rax* second_tree,
     raxFree(tmp);
 }
 
-void testIteRax(rax *tree) {
-    raxIterator iter;
-    raxStart(&iter, tree);
-    raxSeek(&iter, "^", NULL, 0);
-    while (raxNext(&iter)) {
-        printf("key: ");
-        for (size_t i = 0; i < iter.key_len; i++) {
-            printf("%d ", iter.key[i]);
-        }
-        printf("\n");
-        // printf("data: %p\n", iter.data);
-    }
-    raxStop(&iter);
-}
-
 raxNode* raxGetFirstChildPtr(raxNode* node) {
     return raxGetFirstChildPtr(node);
 }
-
-// 1 2 3
-// query subtree node:0x55f87076f760
-// I0129 16:44:25.626318 280948 kv_state_cache.cc:223] offset:0
-// I0129 16:44:25.626322 280948 kv_state_cache.cc:224] kvStateCacheBlockBuilder:0x55f870767bc0

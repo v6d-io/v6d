@@ -33,7 +33,9 @@ RadixTree::RadixTree(int cacheCapacity) {
   std::vector<int> rootToken = {INT32_MAX};
   std::shared_ptr<NodeData> evictedNode;
   this->InsertInternal(rootToken, evictedNode);
-  // raxShow(this->tree);
+  if (VLOG_IS_ON(100)) {
+    VLOG(100) << raxShow(this->tree);
+  }
   raxNode* dataNode = raxFindAndReturnDataNode(this->tree, rootToken.data(),
                                                rootToken.size(), NULL, false);
   DataWrapper* data = new DataWrapper();
@@ -47,7 +49,9 @@ RadixTree::RadixTree(int cacheCapacity) {
 
 RadixTree::~RadixTree() {
   VLOG(100) << "~RadixTree";
-  // raxShow(this->tree);
+  if (VLOG_IS_ON(100)) {
+    VLOG(100) << raxShow(this->tree);
+  }
 
   raxNode* dataNode = raxFindAndReturnDataNode(this->tree, rootToken.data(),
                                                rootToken.size(), NULL, false);
@@ -60,30 +64,30 @@ RadixTree::~RadixTree() {
 }
 
 std::shared_ptr<NodeData> RadixTree::Insert(
-    std::vector<int> tokens, std::shared_ptr<NodeData>& evictedNode) {
+    std::vector<int>& tokens, std::shared_ptr<NodeData>& evictedNode) {
   tokens.insert(tokens.begin(), INT32_MAX);
   return InsertInternal(tokens, evictedNode);
 }
 
-void RadixTree::Delete(std::vector<int> tokens,
+void RadixTree::Delete(std::vector<int>& tokens,
                        std::shared_ptr<NodeData>& evictedNode) {
   tokens.insert(tokens.begin(), INT32_MAX);
   DeleteInternal(tokens, evictedNode);
 }
 
-std::shared_ptr<NodeData> RadixTree::Query(std::vector<int> key) {
+std::shared_ptr<NodeData> RadixTree::Query(std::vector<int>& key) {
   key.insert(key.begin(), INT32_MAX);
   return QueryInternal(key);
 }
 
 std::vector<std::shared_ptr<NodeData>> RadixTree::Split(
-    std::vector<int> tokens, std::shared_ptr<NodeData>& header) {
+    std::vector<int>& tokens, std::shared_ptr<NodeData>& header) {
   tokens.insert(tokens.begin(), INT32_MAX);
   return SplitInternal(tokens, header);
 }
 
 std::shared_ptr<NodeData> RadixTree::InsertInternal(
-    std::vector<int> tokens, std::shared_ptr<NodeData>& evictedNode) {
+    const std::vector<int>& tokens, std::shared_ptr<NodeData>& evictedNode) {
   // get the sub vector of the tokens
   std::vector<int> rootToken =
       std::vector<int>(tokens.begin(), tokens.end() - 1);
@@ -92,7 +96,7 @@ std::shared_ptr<NodeData> RadixTree::InsertInternal(
   }
 
   // insert the token vector to the radix tree
-  int* insertTokensArray = tokens.data();
+  const int* insertTokensArray = tokens.data();
   size_t insertTokensArrayLen = tokens.size();
   DataWrapper* dummyData = new DataWrapper();
   DataWrapper* oldData;
@@ -101,15 +105,16 @@ std::shared_ptr<NodeData> RadixTree::InsertInternal(
       this->tree, insertTokensArray, insertTokensArrayLen, dummyData,
       reinterpret_cast<void**>(&dataNode), reinterpret_cast<void**>(&oldData));
   if (dataNode == NULL) {
-    throw std::runtime_error("Insert token list failed");
+    LOG(ERROR) << "Insert token list failed";
     return NULL;
   }
   if (retval == 1) {
     VLOG(100) << "node count++:" << this->nodeCount;
     nodeCount++;
   }
-
-  // raxShow(this->tree);
+  if (VLOG_IS_ON(100)) {
+    VLOG(100) << raxShow(this->tree);
+  }
   if (this->nodeCount > this->cacheCapacity) {
     VLOG(100) << "cache capacity is full, evict the last recent node";
     VLOG(100) << "cache capacity:" << this->cacheCapacity
@@ -143,12 +148,12 @@ std::shared_ptr<NodeData> RadixTree::InsertInternal(
       dummyData, reinterpret_cast<DataWrapper*>(subTreeNode->custom_data));
 }
 
-void RadixTree::DeleteInternal(std::vector<int> tokens,
+void RadixTree::DeleteInternal(const std::vector<int>& tokens,
                                std::shared_ptr<NodeData>& evictedNode) {
   // remove the token vector from the radix tree
   // TBD
   // If the evicted node is the root node of sub tree, recycle the tree.
-  int* deleteTokensArray = tokens.data();
+  const int* deleteTokensArray = tokens.data();
   size_t deleteTokensArrayLen = tokens.size();
 
   DataWrapper* oldData;
@@ -174,9 +179,10 @@ void RadixTree::DeleteInternal(std::vector<int> tokens,
   }
 }
 
-std::shared_ptr<NodeData> RadixTree::QueryInternal(std::vector<int> key) {
+std::shared_ptr<NodeData> RadixTree::QueryInternal(
+    const std::vector<int>& key) {
   VLOG(100) << "Query";
-  int* tokens = key.data();
+  const int* tokens = key.data();
   size_t tokensLen = key.size();
 
   if (this->tree == nullptr) {
@@ -198,7 +204,9 @@ std::shared_ptr<NodeData> RadixTree::QueryInternal(std::vector<int> key) {
 
 std::string RadixTree::Serialize() {
   VLOG(100) << "Serialize......";
-  // raxShow(this->tree);
+  if (VLOG_IS_ON(100)) {
+    VLOG(100) << raxShow(this->tree);
+  }
   std::vector<std::vector<int>> tokenList;
   std::vector<void*> dataList;
   std::vector<uint64_t> timestampList;
@@ -207,7 +215,9 @@ std::string RadixTree::Serialize() {
   raxSerialize(this->tree, tokenList, dataList, timestampList,
                &subTreeTokenList, &subTreeDataList);
 
-  // raxShow(this->tree);
+  if (VLOG_IS_ON(100)) {
+    VLOG(100) << raxShow(this->tree);
+  }
   std::string serializedStr;
 
   if (tokenList.size() != dataList.size()) {
@@ -447,7 +457,9 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
       std::make_shared<RadixTree>(cacheCapacity);
   radixTree->nodeCount = tokenList.size();
 
-  // raxShow(radixTree->tree);
+  if (VLOG_IS_ON(100)) {
+    VLOG(100) << raxShow(radixTree->tree);
+  }
   for (size_t i = 0; i < tokenList.size(); i++) {
     std::string token_str = "";
     for (size_t j = 0; j < tokenList[i].size(); j++) {
@@ -480,7 +492,9 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
     node->numnodes = subTreeSizeList[i];
   }
   radixTree->tree->head->numnodes = rootNumNodes;
-  // raxShow(radixTree->tree);
+  if (VLOG_IS_ON(100)) {
+    VLOG(100) << raxShow(radixTree->tree);
+  }
 
   VLOG(100) << "start to insert sub tree token list" << std::endl;
   for (size_t i = 0; i < subTreeTokenList.size(); i++) {
@@ -509,17 +523,18 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
     radixTree->SetSubtreeData(subTreeDataList[i]);
   }
   VLOG(100) << "Deserialize success";
-  // raxShow(radixTree->tree);
+  if (VLOG_IS_ON(100)) {
+    VLOG(100) << raxShow(radixTree->tree);
+  }
   return radixTree;
 }
 
 std::vector<std::shared_ptr<NodeData>> RadixTree::SplitInternal(
-    std::vector<int> tokens, std::shared_ptr<NodeData>& header) {
+    const std::vector<int>& tokens, std::shared_ptr<NodeData>& header) {
   std::vector<int> rootToken;
   raxNode* subTreeRootNode =
       raxSplit(this->tree, tokens.data(), tokens.size(), rootToken);
 
-  // raxShow(this->tree);
   subTreeRootNode->issubtree = true;
   DataWrapper* treeData = new DataWrapper();
   treeData->data = nullptr;

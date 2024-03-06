@@ -27,16 +27,15 @@ limitations under the License.
 
 using namespace vineyard;  //  NOLINT(build/namespaces)
 
-#define DIMENSION 100
-#define CAPACITY 1000
-#define LAYER 64
-#define BLOCK_SIZE 100
+constexpr int TENSORBYTES = 800;
+constexpr int CAPACITY = 1000;
+constexpr int LAYER = 64;
+constexpr int BLOCK_SIZE = 100;
 
 KVStateCacheManager* manager;
 
 void init() {
-  manager =
-      new KVStateCacheManager(DIMENSION, CAPACITY, LAYER, DEFAULT_BLOCK_SIZE);
+  manager = new KVStateCacheManager(TENSORBYTES, CAPACITY, LAYER, BLOCK_SIZE);
 }
 
 std::vector<int> generate_random_tokens(size_t max_length) {
@@ -52,15 +51,15 @@ std::vector<int> generate_random_tokens(size_t max_length) {
   return tokens;
 }
 
-std::map<int, std::pair<K_STATE, V_STATE>> generate_kv_state(int token) {
-  std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
+std::map<int, std::pair<LLMKV, LLMKV>> generate_kv_state(int token) {
+  std::map<int, std::pair<LLMKV, LLMKV>> kv_state;
   for (int currentLayer = 0; currentLayer < LAYER; currentLayer++) {
-    K_STATE key_state;
-    V_STATE value_state;
-    key_state.data = malloc(DIMENSION * sizeof(double));
-    key_state.length = DIMENSION * sizeof(double);
-    value_state.data = malloc(DIMENSION * sizeof(double));
-    value_state.length = DIMENSION * sizeof(double);
+    LLMKV key_state;
+    LLMKV value_state;
+    key_state.data = malloc(TENSORBYTES);
+    key_state.length = TENSORBYTES;
+    value_state.data = malloc(TENSORBYTES);
+    value_state.length = TENSORBYTES;
 
     kv_state.insert(
         std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
@@ -71,7 +70,7 @@ std::map<int, std::pair<K_STATE, V_STATE>> generate_kv_state(int token) {
 // test the performance of Query and Update function
 void benchmark_inference(std::vector<std::vector<int>>& tokens) {
   LOG(INFO) << "inference for benchmark";
-  std::map<int, std::pair<K_STATE, V_STATE>> kv_state;
+  std::map<int, std::pair<LLMKV, LLMKV>> kv_state;
 
   std::chrono::steady_clock::time_point start, end;
   double token_list_size = 0;
