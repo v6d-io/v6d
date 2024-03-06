@@ -14,9 +14,11 @@ limitations under the License.
 */
 
 #include <condition_variable>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "llm-cache/ds/kv_state_cache.h"
@@ -41,32 +43,33 @@ class KVStateCacheManager {
 
  public:
   KVStateCacheManager(
-      int dimension = 10, int cacheCapacity = 10, int layer = 1,
+      int tensorBytes = 80, int cacheCapacity = 10, int layer = 1,
       int blockSize = 5, int syncInterval = 3,
       std::string socket = std::string(getenv("VINEYARD_IPC_SOCKET")));
 
   void Update(const std::vector<int>& tokenList, int nextToken,
-              const KV_STATE_WITH_LAYER& kvState);
+              const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
-  void Update(const std::vector<int>& tokenList,
-              const LIST_KV_STATE_WITH_LAYER& kvState);
+  void Update(
+      const std::vector<int>& tokenList,
+      const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvState);
 
   int Query(const std::vector<int>& tokenList, int token,
-            KV_STATE_WITH_LAYER& kvState);
+            std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
   int Query(const std::vector<int>& tokenList,
-            LIST_KV_STATE_WITH_LAYER& listKVState);
+            std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState);
 
   ~KVStateCacheManager();
 
  private:
   void UpdateInternal(const std::vector<int>& tokenList, int nextToken,
-                      const KV_STATE_WITH_LAYER& kvState);
+                      const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
   int QueryInternal(const std::vector<int>& tokenList, int token,
-                    KV_STATE_WITH_LAYER& kvState);
+                    std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
-  void Delete(std::vector<int> token);
+  void Delete(std::vector<int>& token);
 
   static void SyncThreadFunc(KVStateCacheManager* manager);
 

@@ -25,7 +25,7 @@ limitations under the License.
 
 namespace vineyard {
 
-KVStateCacheManager::KVStateCacheManager(int dimension, int cacheCapacity,
+KVStateCacheManager::KVStateCacheManager(int tensorBytes, int cacheCapacity,
                                          int layer, int blockSize,
                                          int syncInterval, std::string socket) {
   this->syncInterval = syncInterval;
@@ -61,7 +61,7 @@ KVStateCacheManager::KVStateCacheManager(int dimension, int cacheCapacity,
     // if failed, create a new cache object
     VLOG(100) << "failed to get the cache object, create a new one.";
     kvStateCacheBuilder = std::make_shared<KVStateCacheBuilder>(
-        client, dimension, cacheCapacity, layer, blockSize);
+        client, tensorBytes, cacheCapacity, layer, blockSize);
   }
 
   // release the lock
@@ -75,21 +75,21 @@ KVStateCacheManager::KVStateCacheManager(int dimension, int cacheCapacity,
   // use lease to prevent the deadlock if the client is down
 }
 
-void KVStateCacheManager::UpdateInternal(const std::vector<int>& tokenList,
-                                         int nextToken,
-                                         const KV_STATE_WITH_LAYER& kvState) {
+void KVStateCacheManager::UpdateInternal(
+    const std::vector<int>& tokenList, int nextToken,
+    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   kvStateCacheBuilder->Update(client, tokenList, nextToken, kvState);
 }
 
-int KVStateCacheManager::QueryInternal(const std::vector<int>& tokenList,
-                                       int token,
-                                       KV_STATE_WITH_LAYER& kvState) {
+int KVStateCacheManager::QueryInternal(
+    const std::vector<int>& tokenList, int token,
+    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   return kvStateCacheBuilder->Query(client, tokenList, token, kvState);
 }
 
-void KVStateCacheManager::Update(const std::vector<int>& tokenList,
-                                 int nextToken,
-                                 const KV_STATE_WITH_LAYER& kvState) {
+void KVStateCacheManager::Update(
+    const std::vector<int>& tokenList, int nextToken,
+    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   if (!syncMutex.try_lock()) {
     return;
   }
@@ -99,8 +99,9 @@ void KVStateCacheManager::Update(const std::vector<int>& tokenList,
   syncMutex.unlock();
 }
 
-void KVStateCacheManager::Update(const std::vector<int>& tokenList,
-                                 const LIST_KV_STATE_WITH_LAYER& kvState) {
+void KVStateCacheManager::Update(
+    const std::vector<int>& tokenList,
+    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvState) {
   if (!syncMutex.try_lock()) {
     return;
   }
@@ -114,8 +115,9 @@ void KVStateCacheManager::Update(const std::vector<int>& tokenList,
   syncMutex.unlock();
 }
 
-int KVStateCacheManager::Query(const std::vector<int>& tokenList, int token,
-                               KV_STATE_WITH_LAYER& kvState) {
+int KVStateCacheManager::Query(
+    const std::vector<int>& tokenList, int token,
+    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   int result = -1;
 
   if (!syncMutex.try_lock()) {
@@ -128,17 +130,25 @@ int KVStateCacheManager::Query(const std::vector<int>& tokenList, int token,
   return result;
 }
 
-int KVStateCacheManager::Query(const std::vector<int>& tokenList,
-                               LIST_KV_STATE_WITH_LAYER& listKVState) {
+int KVStateCacheManager::Query(
+    const std::vector<int>& tokenList,
+    std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState) {
   int result = -1;
   if (!syncMutex.try_lock()) {
     return result;
   }
 
   std::vector<int> tokenListCopy;
+  std::map<int, std::pair<LLMKV, LLMKV>> kvState;
   for (size_t i = 0; i < tokenList.size(); i++) {
-    result = QueryInternal(tokenListCopy, tokenList[i], listKVState[i]);
+    result = QueryInternal(tokenListCopy, tokenList[i], kvState);
+    // if the result is -1, it means the token is not in the cache
+    if (result == -1) {
+      break;
+    }
     tokenListCopy.push_back(tokenList[i]);
+    listKVState.push_back(kvState);
+    kvState.clear();
   }
 
   syncMutex.unlock();
@@ -158,11 +168,13 @@ KVStateCacheManager::~KVStateCacheManager() {
 }
 
 // This function is used for testing
-void KVStateCacheManager::Delete(std::vector<int> token) {
+void KVStateCacheManager::Delete(std::vector<int>& token) {
   std::shared_ptr<NodeData> evictedNode;
   kvStateCacheBuilder->GetRootTree()->Delete(token, evictedNode);
   kvStateCacheBuilder->Delete(evictedNode);
-  raxShow(kvStateCacheBuilder->GetRootTree()->tree);
+  if (VLOG_IS_ON(100)) {
+    VLOG(100) << raxShow(kvStateCacheBuilder->GetRootTree()->tree);
+  }
 }
 
 void KVStateCacheManager::Sync() {

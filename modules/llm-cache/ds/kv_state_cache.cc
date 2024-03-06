@@ -45,7 +45,9 @@ void KVStateCache::Resolve() {
   // 1. construct the radix tree
   this->rootTree = RadixTree::Deserialize(
       base64_decode(this->meta_.GetKeyValue<std::string>("radix_tree")));
-  // raxShow(this->rootTree->GetRootTree());
+  if (VLOG_IS_ON(100)) {
+    VLOG(100) << raxShow(this->rootTree->GetRootTree());
+  }
 
   // 2. construct the kvStateCacheBlockBuilder list
   size_t numBlocks = this->meta_.GetKeyValue<size_t>("numBlocks");
@@ -57,24 +59,24 @@ void KVStateCache::Resolve() {
   }
 
   // 3. construct the member field
-  this->dimension = this->meta_.GetKeyValue<int>("dimension");
+  this->tensorBytes = this->meta_.GetKeyValue<int>("tensorBytes");
   this->version = this->meta_.GetKeyValue<uint64_t>("version");
   this->layer = this->meta_.GetKeyValue<int>("layer");
-  VLOG(100) << "construct the member field success, with dimension:"
-            << this->dimension << " version:" << this->version
+  VLOG(100) << "construct the member field success, with tensorBytes:"
+            << this->tensorBytes << " version:" << this->version
             << " layer:" << this->layer;
 }
 
 KVStateCache::~KVStateCache() {}
 
-KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
+KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int tensorBytes,
                                          int cacheCapacity, int layer,
                                          int blockSize) {
-  this->dimension = dimension;
+  this->tensorBytes = tensorBytes;
   this->version = 0;
   this->layer = layer;
   KVStateCacheBlockBuilder* builder =
-      new KVStateCacheBlockBuilder(client, this->dimension, layer, blockSize);
+      new KVStateCacheBlockBuilder(client, this->tensorBytes, layer, blockSize);
 
   this->rootTree = std::make_shared<RadixTree>(cacheCapacity);
 
@@ -90,7 +92,7 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int dimension,
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
                                          std::shared_ptr<KVStateCache> cache) {
-  this->dimension = cache->GetDimension();
+  this->tensorBytes = cache->GetTensorBytes();
   this->version = cache->GetVersion();
   this->layer = cache->GetLayer();
   // 1. create block builder from block
@@ -114,11 +116,11 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client,
 
 KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
     Client& client, KVStateCacheBlockBuilder* kvStateCacheBlockBuilder,
-    std::vector<std::shared_ptr<NodeData>> nodeDataList) {
+    std::vector<std::shared_ptr<NodeData>>& nodeDataList) {
   // Split the tree if the list of kvState is full.
   VINEYARD_ASSERT(nodeDataList.size() > 0);
   KVStateCacheBlockBuilder* childKVStateCacheBlockBuilder =
-      new KVStateCacheBlockBuilder(client, this->dimension, this->layer,
+      new KVStateCacheBlockBuilder(client, this->tensorBytes, this->layer,
                                    kvStateCacheBlockBuilder->GetBlockSize());
   for (size_t i = 0; i < nodeDataList.size(); i++) {
     OffsetData* data =
@@ -138,10 +140,9 @@ KVStateCacheBlockBuilder* KVStateCacheBuilder::Split(
   return childKVStateCacheBlockBuilder;
 }
 
-void KVStateCacheBuilder::Update(Client& client,
-                                 const std::vector<int>& tokenList,
-                                 int nextToken,
-                                 const KV_STATE_WITH_LAYER& kvState) {
+void KVStateCacheBuilder::Update(
+    Client& client, const std::vector<int>& tokenList, int nextToken,
+    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   std::vector<int> tokenListCopy = tokenList;
   tokenListCopy.push_back(nextToken);
 
@@ -199,9 +200,9 @@ void KVStateCacheBuilder::Update(Client& client,
             << " bitmap:" << kvStateCacheBlockBuilder->GetBitmapStr();
 }
 
-int KVStateCacheBuilder::Query(Client& client,
-                               const std::vector<int>& tokenList, int token,
-                               KV_STATE_WITH_LAYER& kvState) {
+int KVStateCacheBuilder::Query(
+    Client& client, const std::vector<int>& tokenList, int token,
+    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   std::vector<int> tokenListCopy = tokenList;
   tokenListCopy.push_back(token);
 
@@ -275,14 +276,14 @@ void KVStateCacheBuilder::Merge(Client& client,
   for (auto it = insertTokenList.begin(); it != insertTokenList.end(); ++it) {
     std::vector<int> tokenList =
         std::vector<int>((*it).begin(), (*it).end() - 1);
-    KV_STATE_WITH_LAYER kvState;
+    std::map<int, std::pair<LLMKV, LLMKV>> kvState;
     for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-      K_STATE key_state;
-      V_STATE value_state;
-      key_state.data = malloc(this->dimension * sizeof(double));
-      key_state.length = this->dimension * sizeof(double);
-      value_state.data = malloc(this->dimension * sizeof(double));
-      value_state.length = this->dimension * sizeof(double);
+      LLMKV key_state;
+      LLMKV value_state;
+      key_state.data = malloc(this->tensorBytes);
+      key_state.length = this->tensorBytes;
+      value_state.data = malloc(this->tensorBytes);
+      value_state.length = this->tensorBytes;
 
       kvState.insert(
           std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
@@ -290,8 +291,8 @@ void KVStateCacheBuilder::Merge(Client& client,
     globalCacheBuilder->Query(client, tokenList, (*it).back(), kvState);
     this->Update(client, tokenList, (*it).back(), kvState);
     for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-      K_STATE key_state = kvState[currentLayer].first;
-      V_STATE value_state = kvState[currentLayer].second;
+      LLMKV key_state = kvState[currentLayer].first;
+      LLMKV value_state = kvState[currentLayer].second;
       free(key_state.data);
       free(value_state.data);
     }
@@ -309,7 +310,7 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   std::shared_ptr<KVStateCache> kvStateCache = std::make_shared<KVStateCache>();
 
   // 1. store the member variables to cache object meta
-  kvStateCache->meta_.AddKeyValue("dimension", this->dimension);
+  kvStateCache->meta_.AddKeyValue("tensorBytes", this->tensorBytes);
   kvStateCache->meta_.AddKeyValue("version", this->version);
   kvStateCache->meta_.AddKeyValue("layer", this->layer);
 

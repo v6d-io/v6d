@@ -85,6 +85,12 @@ const std::shared_ptr<arrow::RecordBatch> DataFrame::AsBatch(bool copy) const {
     } else if (auto tensor =
                    std::dynamic_pointer_cast<Tensor<std::string>>(df_col)) {
       num_rows = tensor->shape()[0];
+    } else if (auto tensor =
+                   std::dynamic_pointer_cast<Tensor<uint8_t>>(df_col)) {
+      num_rows = tensor->shape()[0];
+    } else if (auto tensor =
+                   std::dynamic_pointer_cast<Tensor<int8_t>>(df_col)) {
+      num_rows = tensor->shape()[0];
     }
 
     std::vector<std::shared_ptr<arrow::Buffer>> buffer{
