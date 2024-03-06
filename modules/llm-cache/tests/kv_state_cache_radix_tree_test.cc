@@ -41,8 +41,7 @@ void radix_tree_insert_test() {
   std::shared_ptr<NodeData> node_data;
   for (int i = 0; i < 10; i++) {
     tokens.push_back(i);
-    std::vector<int> tokens_copy = tokens;
-    VINEYARD_ASSERT(radix_tree->Insert(tokens_copy, node_data) != NULL);
+    VINEYARD_ASSERT(radix_tree->Insert(tokens, node_data) != NULL);
     VINEYARD_ASSERT(node_data == NULL);
   }
   if (VLOG_IS_ON(100)) {
