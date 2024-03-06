@@ -16,14 +16,14 @@ limitations under the License.
 #ifndef MODULES_LLM_CACHE_RADIX_TREE_RADIX_TREE_H_
 #define MODULES_LLM_CACHE_RADIX_TREE_RADIX_TREE_H_
 
-#include "rax/radix.h"
-
 #include <iomanip>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
 #include <vector>
+
+#include "rax/radix.h"
 
 #include "common/util/base64.h"
 #include "common/util/logging.h"

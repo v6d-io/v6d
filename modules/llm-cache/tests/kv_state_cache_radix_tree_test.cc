@@ -17,6 +17,7 @@ limitations under the License.
 #include <iostream>
 #include <random>
 #include <vector>
+
 #include "rax/radix.h"
 
 #include "common/util/logging.h"
