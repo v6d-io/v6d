@@ -10,6 +10,14 @@ file(GLOB VINEYARD_LLM_CACHE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
 add_library(vineyard_llm_cache ${VINEYARD_LLM_CACHE_SRCS})
 target_link_libraries(vineyard_llm_cache PUBLIC vineyard_client vineyard_basic)
 
+# install bundled thirdparty: rax
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/rax
+        DESTINATION include/vineyard/contrib    # target directory
+        FILES_MATCHING                          # install only matched files
+        PATTERN "*.h"                           # select header files
+        PATTERN "*.hpp"                         # select C++ template header files
+)
+
 install_export_vineyard_target(vineyard_llm_cache)
 install_vineyard_headers("${CMAKE_CURRENT_SOURCE_DIR}")
 

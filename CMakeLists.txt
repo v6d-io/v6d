@@ -950,7 +950,6 @@ endif()
 
 if(BUILD_VINEYARD_LLM_CACHE)
     add_subdirectory(modules/llm-cache)
-    install_vineyard_headers("${PROJECT_SOURCE_DIR}/thirdparty/rax")
     list(APPEND VINEYARD_INSTALL_LIBS vineyard_llm_cache)
 endif()
 
