@@ -64,24 +64,24 @@ RadixTree::~RadixTree() {
 }
 
 std::shared_ptr<NodeData> RadixTree::Insert(
-    std::vector<int>& tokens, std::shared_ptr<NodeData>& evictedNode) {
+    std::vector<int> tokens, std::shared_ptr<NodeData>& evictedNode) {
   tokens.insert(tokens.begin(), INT32_MAX);
   return InsertInternal(tokens, evictedNode);
 }
 
-void RadixTree::Delete(std::vector<int>& tokens,
+void RadixTree::Delete(std::vector<int> tokens,
                        std::shared_ptr<NodeData>& evictedNode) {
   tokens.insert(tokens.begin(), INT32_MAX);
   DeleteInternal(tokens, evictedNode);
 }
 
-std::shared_ptr<NodeData> RadixTree::Query(std::vector<int>& key) {
+std::shared_ptr<NodeData> RadixTree::Query(std::vector<int> key) {
   key.insert(key.begin(), INT32_MAX);
   return QueryInternal(key);
 }
 
 std::vector<std::shared_ptr<NodeData>> RadixTree::Split(
-    std::vector<int>& tokens, std::shared_ptr<NodeData>& header) {
+    std::vector<int> tokens, std::shared_ptr<NodeData>& header) {
   tokens.insert(tokens.begin(), INT32_MAX);
   return SplitInternal(tokens, header);
 }

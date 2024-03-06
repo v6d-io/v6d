@@ -86,11 +86,9 @@ std::map<int, std::pair<LLMKV, LLMKV>> generate_kv_state(int token) {
 
     for (int i = 0; i < tensorBytes; ++i) {
       (reinterpret_cast<uint8_t*>(key_state.data))[i] =
-          (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) +
-          currentLayer * 10;
+          (static_cast<uint8_t>(token)) + i + currentLayer;
       (reinterpret_cast<uint8_t*>(value_state.data))[i] =
-          (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) * 2 +
-          currentLayer * 10;
+          (static_cast<uint8_t>(token)) + i + currentLayer;
     }
     kv_state.insert(
         std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
@@ -106,27 +104,23 @@ void check_kv_state(const std::map<int, std::pair<LLMKV, LLMKV>>& kv_state,
     VINEYARD_ASSERT(iter->second.second.length == (size_t) tensorBytes);
     for (int i = 0; i < tensorBytes; ++i) {
       if ((reinterpret_cast<uint8_t*>(iter->second.first.data))[i] !=
-          (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) +
-              iter->first * 10) {
+          (static_cast<uint8_t>(token)) + i + iter->first) {
         LOG(INFO) << "token:" << token << " tensorBytes" << tensorBytes
                   << " layer:" << iter->first;
         LOG(INFO) << "key_state[" << i << "]: "
                   << (reinterpret_cast<uint8_t*>(iter->second.first.data))[i]
                   << ". But is should be "
-                  << (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) +
-                         iter->first * 10;
+                  << (static_cast<uint8_t>(token)) + i + iter->first;
         throw std::runtime_error("key_state error!");
       }
       if (reinterpret_cast<uint8_t*>(iter->second.second.data)[i] !=
-          (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) * 2 +
-              iter->first * 10) {
+          (static_cast<uint8_t>(token)) + i + iter->first) {
         LOG(INFO) << "token:" << token << " tensorBytes" << tensorBytes
                   << " layer:" << iter->first;
         LOG(INFO) << "value_state[" << i << "]: "
                   << (reinterpret_cast<uint8_t*>(iter->second.second.data))[i]
                   << ". But is should be "
-                  << (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) * 2 +
-                         iter->first * 10;
+                  << (static_cast<uint8_t>(token)) + i + iter->first * 10;
         throw std::runtime_error("value_state error!");
       }
     }

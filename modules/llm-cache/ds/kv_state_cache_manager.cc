@@ -83,21 +83,21 @@ Status KVStateCacheManager::Make(Client& client,
   return Status::OK();
 }
 
-Status KVStateCacheManager::UpdateInternal(const std::vector<int>& tokenList,
-                                           int nextToken,
-                                           const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+Status KVStateCacheManager::UpdateInternal(
+    const std::vector<int>& tokenList, int nextToken,
+    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   return kvStateCacheBuilder->Update(client, tokenList, nextToken, kvState);
 }
 
-Status KVStateCacheManager::QueryInternal(const std::vector<int>& tokenList,
-                                          int token,
-                                          std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+Status KVStateCacheManager::QueryInternal(
+    const std::vector<int>& tokenList, int token,
+    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   return kvStateCacheBuilder->Query(client, tokenList, token, kvState);
 }
 
-Status KVStateCacheManager::Update(const std::vector<int>& tokenList,
-                                   int nextToken,
-                                   const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+Status KVStateCacheManager::Update(
+    const std::vector<int>& tokenList, int nextToken,
+    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   Status result =
       Status::Invalid("Query cache failed: can not gain the cache lock.");
 
@@ -111,8 +111,9 @@ Status KVStateCacheManager::Update(const std::vector<int>& tokenList,
   return result;
 }
 
-Status KVStateCacheManager::Update(const std::vector<int>& tokenList,
-                                   const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvState) {
+Status KVStateCacheManager::Update(
+    const std::vector<int>& tokenList,
+    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvState) {
   Status result =
       Status::Invalid("Update cache failed: can not gain the cache lock.");
   if (!syncMutex.try_lock()) {
@@ -132,8 +133,9 @@ Status KVStateCacheManager::Update(const std::vector<int>& tokenList,
   return result;
 }
 
-Status KVStateCacheManager::Query(const std::vector<int>& tokenList, int token,
-                                  std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+Status KVStateCacheManager::Query(
+    const std::vector<int>& tokenList, int token,
+    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   Status result =
       Status::Invalid("Query cache failed: can not gain the cache lock.");
 
@@ -147,8 +149,9 @@ Status KVStateCacheManager::Query(const std::vector<int>& tokenList, int token,
   return result;
 }
 
-Status KVStateCacheManager::Query(const std::vector<int>& tokenList,
-                                  std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState) {
+Status KVStateCacheManager::Query(
+    const std::vector<int>& tokenList,
+    std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState) {
   Status result =
       Status::Invalid("Query cache failed: can not gain the cache lock.");
   if (!syncMutex.try_lock()) {

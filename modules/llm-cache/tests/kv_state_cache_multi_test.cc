@@ -22,7 +22,7 @@ limitations under the License.
 
 #include "common/util/logging.h"
 
-constexpr char* program = "./build/bin/kv_state_cache_test";
+constexpr const char* program = "./build/bin/kv_state_cache_test";
 
 pid_t create_subprocess(char* argv[]) {
   pid_t pid = fork();
@@ -80,9 +80,10 @@ int main(int argc, char** argv) {
   for (size_t i = 0; i < pids.size(); i++) {
     int status;
     waitpid(pids[i], &status, 0);
-    if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+    if ((!WIFEXITED(status)) || WEXITSTATUS(status) != 0) {
       free(socket_str[0]);
       free(socket_str[1]);
+      LOG(INFO) << "child error!";
       return 1;
     }
   }

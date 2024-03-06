@@ -133,8 +133,8 @@ Status KVStateCacheBuilder::Split(
   childKVStateCacheBlockBuilder =
       new KVStateCacheBlockBuilder(client, this->tensorBytes, this->layer,
                                    kvStateCacheBlockBuilder->GetBlockSize());
-  RETURN_ON_ASSERT(childKVStateCacheBlockBuilder != nullptr,
-                   "Not enough memory for new block builder.");
+  VINEYARD_ASSERT(childKVStateCacheBlockBuilder != nullptr,
+                  "Not enough memory for new block builder.");
 
   for (size_t i = 0; i < nodeDataList.size(); i++) {
     OffsetData* data =
@@ -154,10 +154,9 @@ Status KVStateCacheBuilder::Split(
   return Status::OK();
 }
 
-Status KVStateCacheBuilder::Update(Client& client,
-                                   const std::vector<int>& tokenList,
-                                   int nextToken,
-                                   const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+Status KVStateCacheBuilder::Update(
+    Client& client, const std::vector<int>& tokenList, int nextToken,
+    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   std::vector<int> tokenListCopy = tokenList;
   tokenListCopy.push_back(nextToken);
 
@@ -223,9 +222,9 @@ Status KVStateCacheBuilder::Update(Client& client,
   return Status::OK();
 }
 
-Status KVStateCacheBuilder::Query(Client& client,
-                                  const std::vector<int>& tokenList, int token,
-                                  std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+Status KVStateCacheBuilder::Query(
+    Client& client, const std::vector<int>& tokenList, int token,
+    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   std::vector<int> tokenListCopy = tokenList;
   tokenListCopy.push_back(token);
 

@@ -80,15 +80,15 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
 
   ~RadixTree();
 
-  std::shared_ptr<NodeData> Insert(std::vector<int>& tokens,
+  std::shared_ptr<NodeData> Insert(std::vector<int> tokens,
                                    std::shared_ptr<NodeData>& evictedNode);
 
-  void Delete(std::vector<int>& tokens, std::shared_ptr<NodeData>& evictedNode);
+  void Delete(std::vector<int> tokens, std::shared_ptr<NodeData>& evictedNode);
 
-  std::shared_ptr<NodeData> Query(std::vector<int>& key);
+  std::shared_ptr<NodeData> Query(std::vector<int> key);
 
   std::vector<std::shared_ptr<NodeData>> Split(
-      std::vector<int>& tokens, std::shared_ptr<NodeData>& header);
+      std::vector<int> tokens, std::shared_ptr<NodeData>& header);
 
   std::string Serialize();
 

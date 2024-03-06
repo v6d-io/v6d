@@ -128,8 +128,9 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
   }
 }
 
-Status KVStateCacheBlockBuilder::Query(Client& client, int index,
-                                       std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+Status KVStateCacheBlockBuilder::Query(
+    Client& client, int index,
+    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),
                    "Index out of range: " + std::to_string(index));
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
@@ -167,8 +168,8 @@ bool KVStateCacheBlockBuilder::IsFull() {
   return true;
 }
 
-Status KVStateCacheBlockBuilder::Update(const std::map<int, std::pair<LLMKV, LLMKV>>& kvState,
-                                        OffsetData* data) {
+Status KVStateCacheBlockBuilder::Update(
+    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState, OffsetData* data) {
   int index = this->FindEmptySlot();
   RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),
                    "Index out of range: " + std::to_string(index));
@@ -176,9 +177,8 @@ Status KVStateCacheBlockBuilder::Update(const std::map<int, std::pair<LLMKV, LLM
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
     LLMKV keyState = (kvState.find(currentLayer)->second).first;
     LLMKV valueState = (kvState.find(currentLayer)->second).second;
-    RETURN_ON_ASSERT(
-        (keyState.length == (size_t) this->tensorBytes &&
-         valueState.length == (size_t) this->tensorBytes));
+    RETURN_ON_ASSERT((keyState.length == (size_t) this->tensorBytes &&
+                      valueState.length == (size_t) this->tensorBytes));
 
     uint8_t* keyData = keyStateTensorBuilderList[currentLayer]->data();
     uint8_t* valueData = valueStateTensorBuilderList[currentLayer]->data();

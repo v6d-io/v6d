@@ -56,16 +56,18 @@ class KVStateCacheManager {
                      std::string llmCacheObjectName = "llm_cache_object");
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
-              const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
+                const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
-  Status Update(      const std::vector<int>& tokenList,
+  Status Update(
+      const std::vector<int>& tokenList,
       const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvState);
 
   Status Query(const std::vector<int>& tokenList, int token,
                std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
-  Status Query(const std::vector<int>& tokenList,
-               std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState);
+  Status Query(
+      const std::vector<int>& tokenList,
+      std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState);
 
   ~KVStateCacheManager();
 
