@@ -19,14 +19,14 @@ limitations under the License.
 #include <string>
 #include <utility>
 
+#include "rax/radix.h"
+
 #include "client/client.h"
 #include "common/util/base64.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
 #include "llm-cache/ds/kv_state_cache.h"
 #include "llm-cache/radix-tree/radix-tree.h"
-
-#include "rax/radix.h"
 
 namespace vineyard {
 
