@@ -32,12 +32,15 @@ int block_size = 5;
 
 std::vector<std::vector<int>> tokens_list;
 
-KVStateCacheManager* kv_state_cache_manager;
+std::shared_ptr<KVStateCacheManager> kv_state_cache_manager;
+Client client;
 
 void init(int tensorBytes, int capacity, int layer, int block_size,
           std::string socket) {
-  kv_state_cache_manager = new KVStateCacheManager(tensorBytes, capacity, layer,
-                                                   block_size, 3, socket);
+  VINEYARD_CHECK_OK(client.Connect(socket));
+  VINEYARD_CHECK_OK(KVStateCacheManager::Make(client, kv_state_cache_manager,
+                                              tensorBytes, capacity, layer,
+                                              block_size, 3));
 }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
@@ -84,11 +87,9 @@ std::map<int, std::pair<LLMKV, LLMKV>> generate_kv_state(int token) {
 
     for (int i = 0; i < tensorBytes; ++i) {
       (reinterpret_cast<uint8_t*>(key_state.data))[i] =
-          (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) +
-          currentLayer * 10;
+          (static_cast<uint8_t>(token)) + i + currentLayer;
       (reinterpret_cast<uint8_t*>(value_state.data))[i] =
-          (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) * 2 +
-          currentLayer * 10;
+          (static_cast<uint8_t>(token)) + i + currentLayer;
     }
     kv_state.insert(
         std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
@@ -104,27 +105,23 @@ void check_kv_state(const std::map<int, std::pair<LLMKV, LLMKV>>& kv_state,
     VINEYARD_ASSERT(iter->second.second.length == (size_t) tensorBytes);
     for (int i = 0; i < tensorBytes; ++i) {
       if ((reinterpret_cast<uint8_t*>(iter->second.first.data))[i] !=
-          (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) +
-              iter->first * 10) {
+          (static_cast<uint8_t>(token)) + i + iter->first) {
         LOG(INFO) << "token:" << token << " tensorBytes" << tensorBytes
                   << " layer:" << iter->first;
         LOG(INFO) << "key_state[" << i << "]: "
                   << (reinterpret_cast<uint8_t*>(iter->second.first.data))[i]
                   << ". But is should be "
-                  << (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) +
-                         iter->first * 10;
+                  << (static_cast<uint8_t>(token)) + i + iter->first;
         throw std::runtime_error("key_state error!");
       }
       if (reinterpret_cast<uint8_t*>(iter->second.second.data)[i] !=
-          (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) * 2 +
-              iter->first * 10) {
+          (static_cast<uint8_t>(token)) + i + iter->first) {
         LOG(INFO) << "token:" << token << " tensorBytes" << tensorBytes
                   << " layer:" << iter->first;
         LOG(INFO) << "value_state[" << i << "]: "
                   << (reinterpret_cast<uint8_t*>(iter->second.second.data))[i]
                   << ". But is should be "
-                  << (static_cast<uint8_t>(token)) / tensorBytes * (i + 1) * 2 +
-                         iter->first * 10;
+                  << (static_cast<uint8_t>(token)) + i + iter->first * 10;
         throw std::runtime_error("value_state error!");
       }
     }
@@ -136,9 +133,9 @@ void inference(std::vector<int> tokens, bool block = false) {
   std::map<int, std::pair<LLMKV, LLMKV>> kv_state;
   for (size_t i = 0; i < tokens.size(); ++i) {
     kv_state.clear();
-    int result =
+    Status result =
         kv_state_cache_manager->Query(inference_tokens, tokens[i], kv_state);
-    if (result != 0) {
+    if (!result.ok()) {
       LOG(INFO) << "Can not find the kv_state from cache:";
       print_current_tokens(inference_tokens, tokens[i]);
       LOG(INFO) << "Generate the kv_state and update the cache.";
@@ -215,7 +212,6 @@ int main(int argc, char** argv) {
   }
 
   LOG(INFO) << "inference end";
-  delete kv_state_cache_manager;
   LOG(INFO) << "Passed KVStateCache tests...";
   return 0;
 }

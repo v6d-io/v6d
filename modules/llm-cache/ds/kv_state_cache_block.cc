@@ -128,10 +128,11 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
   }
 }
 
-// current we do not consider the layer.
-int KVStateCacheBlockBuilder::Query(
+Status KVStateCacheBlockBuilder::Query(
     Client& client, int index,
     std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+  RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),
+                   "Index out of range: " + std::to_string(index));
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
     LLMKV keyState = (kvState.find(currentLayer)->second).first;
     LLMKV valueState = (kvState.find(currentLayer)->second).second;
@@ -143,7 +144,7 @@ int KVStateCacheBlockBuilder::Query(
     valueState.length = tensorBytes;
     kvState.emplace(currentLayer, std::make_pair(keyState, valueState));
   }
-  return 0;
+  return Status::OK();
 }
 
 int KVStateCacheBlockBuilder::FindEmptySlot() {
@@ -167,14 +168,17 @@ bool KVStateCacheBlockBuilder::IsFull() {
   return true;
 }
 
-void KVStateCacheBlockBuilder::Update(
+Status KVStateCacheBlockBuilder::Update(
     const std::map<int, std::pair<LLMKV, LLMKV>>& kvState, OffsetData* data) {
   int index = this->FindEmptySlot();
+  RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),
+                   "Index out of range: " + std::to_string(index));
+
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
     LLMKV keyState = (kvState.find(currentLayer)->second).first;
     LLMKV valueState = (kvState.find(currentLayer)->second).second;
-    VINEYARD_ASSERT(keyState.length == (size_t) this->tensorBytes);
-    VINEYARD_ASSERT(valueState.length == (size_t) this->tensorBytes);
+    RETURN_ON_ASSERT((keyState.length == (size_t) this->tensorBytes &&
+                      valueState.length == (size_t) this->tensorBytes));
 
     uint8_t* keyData = keyStateTensorBuilderList[currentLayer]->data();
     uint8_t* valueData = valueStateTensorBuilderList[currentLayer]->data();
@@ -186,12 +190,12 @@ void KVStateCacheBlockBuilder::Update(
   data->offset = index;
 
   ACQUIRE_BIT_RESOURCE(this->bitmap[index / 64], index % 64);
+  return Status::OK();
 }
 
 int16_t KVStateCacheBlockBuilder::Split(KVStateCacheBlockBuilder* child,
                                         int index) {
-  // TBD
-  VINEYARD_ASSERT(this->layer == child->layer);
+  // Child builder must be empty.
   int childIndex = child->FindEmptySlot();
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
     std::shared_ptr<TensorBuilder<uint8_t>> keyStateTensorBuilder =

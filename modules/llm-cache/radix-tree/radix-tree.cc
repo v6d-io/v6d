@@ -64,24 +64,24 @@ RadixTree::~RadixTree() {
 }
 
 std::shared_ptr<NodeData> RadixTree::Insert(
-    std::vector<int>& tokens, std::shared_ptr<NodeData>& evictedNode) {
+    std::vector<int> tokens, std::shared_ptr<NodeData>& evictedNode) {
   tokens.insert(tokens.begin(), INT32_MAX);
   return InsertInternal(tokens, evictedNode);
 }
 
-void RadixTree::Delete(std::vector<int>& tokens,
+void RadixTree::Delete(std::vector<int> tokens,
                        std::shared_ptr<NodeData>& evictedNode) {
   tokens.insert(tokens.begin(), INT32_MAX);
   DeleteInternal(tokens, evictedNode);
 }
 
-std::shared_ptr<NodeData> RadixTree::Query(std::vector<int>& key) {
+std::shared_ptr<NodeData> RadixTree::Query(std::vector<int> key) {
   key.insert(key.begin(), INT32_MAX);
   return QueryInternal(key);
 }
 
 std::vector<std::shared_ptr<NodeData>> RadixTree::Split(
-    std::vector<int>& tokens, std::shared_ptr<NodeData>& header) {
+    std::vector<int> tokens, std::shared_ptr<NodeData>& header) {
   tokens.insert(tokens.begin(), INT32_MAX);
   return SplitInternal(tokens, header);
 }
@@ -105,7 +105,6 @@ std::shared_ptr<NodeData> RadixTree::InsertInternal(
       this->tree, insertTokensArray, insertTokensArrayLen, dummyData,
       reinterpret_cast<void**>(&dataNode), reinterpret_cast<void**>(&oldData));
   if (dataNode == NULL) {
-    LOG(ERROR) << "Insert token list failed";
     return NULL;
   }
   if (retval == 1) {
@@ -220,10 +219,6 @@ std::string RadixTree::Serialize() {
   }
   std::string serializedStr;
 
-  if (tokenList.size() != dataList.size()) {
-    throw std::runtime_error(
-        "The size of token list and data list is not equal");
-  }
   for (size_t index = 0; index < tokenList.size(); index++) {
     for (size_t j = 0; j < tokenList[index].size(); j++) {
       serializedStr += std::to_string(tokenList[index][j]);
@@ -504,12 +499,10 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
 
     raxNode* node = nullptr;
     VLOG(100) << "stage 1";
-    VINEYARD_ASSERT(radixTree->tree != nullptr);
 
-    // TBD refator this code.
+    // TBD refactor this code.
     node = raxFindAndReturnDataNode(radixTree->tree, subTreeTokenList[i].data(),
                                     subTreeTokenList[i].size(), NULL, false);
-    VINEYARD_ASSERT(node != nullptr);
     VLOG(100) << "stage 2";
     DataWrapper* data = new DataWrapper();
     data->data = subTreeDataList[i];
@@ -593,14 +586,12 @@ void RadixTree::MergeTree(std::shared_ptr<RadixTree> tree_1,
   mergeTree(tree_1->tree, tree_2->tree, evicted_tokens_vec, insert_tokens_set,
             tree_1->cacheCapacity);
   for (size_t i = 0; i < evicted_tokens_vec.size(); i++) {
-    VINEYARD_ASSERT(evicted_tokens_vec[i][0] == INT32_MAX);
     std::vector<int> tmp(evicted_tokens_vec[i].begin() + 1,
                          evicted_tokens_vec[i].end());
     evicted_tokens.push_back(tmp);
   }
 
   for (auto& vec : insert_tokens_set) {
-    VINEYARD_ASSERT(vec[0] == INT32_MAX);
     std::vector<int> tmp(vec.begin() + 1, vec.end());
     insert_tokens.insert(tmp);
   }
