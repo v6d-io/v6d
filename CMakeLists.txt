@@ -612,17 +612,6 @@ macro(install_vineyard_headers header_path)
             PATTERN "*.vineyard-mod"                            # select vineyard template files
             PATTERN "*/thirdparty/*" EXCLUDE                    # exclude thirdparty
     )
-
-    # install the rax headers separately
-    # as cmake does not support the negative lookaheads currently
-    # refer to https://cmake.org/cmake/help/latest/command/string.html#regex-specification
-    if (${header_path} MATCHES ".*rax.*")
-        install(DIRECTORY ${header_path}
-                DESTINATION ${install_headers_destination}          # target directory
-                FILES_MATCHING                                      # install only matched files
-                PATTERN "*/thirdparty/rax/*.h"                      # only install the rax headers 
-        )
-    endif()
 endmacro()
 
 install_vineyard_headers("${PROJECT_SOURCE_DIR}/src/common")
