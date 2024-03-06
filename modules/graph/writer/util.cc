@@ -29,16 +29,40 @@ namespace GAR = GraphArchive;
 
 namespace vineyard {
 
-std::shared_ptr<GraphArchive::GraphInfo> generate_graph_info_with_schema(
+boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_info_with_schema(
     const PropertyGraphSchema& schema, const std::string& graph_name,
     const std::string& path, int64_t vertex_block_size, int64_t edge_block_size,
-    GAR::FileType file_type, bool store_in_local) {
+    GAR::FileType file_type,
+    const std::vector<std::string>& selected_vertex_labels,
+    const std::vector<std::vector<std::string>>& selected_edge_relations,
+    const std::unordered_map<std::string, std::vector<std::string>>& selected_vertex_properties,
+    const std::unordered_map<std::string, std::vector<std::string>>& selected_edge_properties,
+    bool store_in_local) {
   GraphArchive::VertexInfoVector vertex_infos;
   GraphArchive::EdgeInfoVector edge_infos;
 
   for (const auto& entry : schema.vertex_entries()) {
+    if (!selected_vertex_labels.empty() &&
+        std::find(selected_vertex_labels.begin(), selected_vertex_labels.end(),
+                  entry.label) == selected_vertex_labels.end()) {
+      // Skip the vertex type that is not selected.
+      continue;
+    }
+    bool selected_property = false;
+    if (selected_vertex_properties.find(entry.label) !=
+        selected_vertex_properties.end()) {
+      selected_property = true;
+    }
     std::vector<GraphArchive::Property> properties;
     for (const auto& prop : entry.props_) {
+      if (selected_property &&
+          std::find(selected_vertex_properties.at(entry.label).begin(),
+                    selected_vertex_properties.at(entry.label).end(),
+                    prop.name) == selected_vertex_properties.at(entry.label)
+                                        .end()) {
+        // Skip the property that is not selected.
+        continue;
+      }
       properties.emplace_back(GAR::Property(
           prop.name, GAR::DataType::ArrowDataTypeToDataType(prop.type), false));
     }
@@ -51,13 +75,35 @@ std::shared_ptr<GraphArchive::GraphInfo> generate_graph_info_with_schema(
       GAR::CreateAdjacentList(GAR::AdjListType::ordered_by_source, file_type),
       GAR::CreateAdjacentList(GAR::AdjListType::ordered_by_dest, file_type)};
   for (const auto& entry : schema.edge_entries()) {
+    bool selected_property = false;
+    if (selected_edge_properties.find(entry.label) !=
+        selected_edge_properties.end()) {
+      selected_property = true;
+    }
     std::vector<GraphArchive::Property> properties;
     for (const auto& prop : entry.props_) {
+      if (selected_property &&
+          std::find(selected_edge_properties.at(entry.label).begin(),
+                    selected_edge_properties.at(entry.label).end(),
+                    prop.name) == selected_edge_properties.at(entry.label)
+                                        .end()) {
+        // Skip the property that is not selected.
+        continue;
+      }
       properties.emplace_back(GAR::Property(
           prop.name, GAR::DataType::ArrowDataTypeToDataType(prop.type), false));
     }
     auto pg = GAR::CreatePropertyGroup(properties, file_type);
     for (const auto& relation : entry.relations) {
+      if (!selected_edge_relations.empty() &&
+          std::find(selected_edge_relations.begin(),
+                    selected_edge_relations.end(),
+                    std::vector<std::string>{relation.first, entry.label,
+                                             relation.second}) ==
+              selected_edge_relations.end()) {
+        // Skip the edge type that is not selected.
+        continue;
+      }
       auto edge_info = GAR::CreateEdgeInfo(
           relation.first, entry.label, relation.second, edge_block_size,
           vertex_block_size, vertex_block_size, true /* directed */,

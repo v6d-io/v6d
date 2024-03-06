@@ -73,10 +73,14 @@ void traverse_graph(std::shared_ptr<GraphType> graph, const std::string& path) {
 boost::leaf::result<int> write_out_to_gar(
     const grape::CommSpec& comm_spec, std::shared_ptr<StringGraphType> graph,
     const std::string& output_path, const std::string& file_type) {
-  auto writer = std::make_unique<ArrowFragmentWriter<StringGraphType>>(
-      graph, comm_spec, /* graph_name */ "graph", output_path,
-      /* vertex_chunk_size */ 512,
-      /* edge_chunk_size */ 1024, file_type);
+  auto writer = std::make_unique<ArrowFragmentWriter<StringGraphType>>();
+  BOOST_LEAF_CHECK(writer->Init(graph, comm_spec, /* graph_name */ "graph", output_path,
+               /* vertex_chunk_size */ 512,
+               /* edge_chunk_size */ 1024, file_type,
+               /* selected_vertex_labels */ std::vector<std::string>{},
+               /* selected_edge_relations */ std::vector<std::vector<std::string>>{},
+               /* selected_vertex_properties */ std::unordered_map<std::string, std::vector<std::string>>{},
+               /* selected_edge_properties */ std::unordered_map<std::string, std::vector<std::string>>{}));
   BOOST_LEAF_CHECK(writer->WriteGraphInfo(output_path));
   BOOST_LEAF_CHECK(writer->WriteFragment());
   LOG(INFO) << "[worker-" << comm_spec.worker_id() << "] generate GAR files...";

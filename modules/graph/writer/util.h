@@ -32,10 +32,15 @@ namespace vineyard {
 #define LOCAL_METADATA_KEY "local_meta_prefix"
 #define LOCAL_METADATA_VALUE "__local_metadata__"
 
-std::shared_ptr<GraphArchive::GraphInfo> generate_graph_info_with_schema(
+boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_info_with_schema(
     const PropertyGraphSchema& schema, const std::string& graph_name,
     const std::string& path, int64_t vertex_block_size, int64_t edge_block_size,
-    GAR::FileType file_type, bool store_in_local);
+    GAR::FileType file_type,
+    const std::vector<std::string>& selected_vertex_labels,
+    const std::vector<std::vector<std::string>>& selected_edge_relations,
+    const std::unordered_map<std::string, std::vector<std::string>>& selected_vertex_properties,
+    const std::unordered_map<std::string, std::vector<std::string>>& selected_edge_properties,
+    bool store_in_local);
 
 }  // namespace vineyard
 
