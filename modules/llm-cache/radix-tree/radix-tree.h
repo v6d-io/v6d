@@ -76,7 +76,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       const std::vector<int>& tokens, std::shared_ptr<NodeData>& header);
 
  public:
-  RadixTree(int cacheCapacity);
+  explicit RadixTree(int cacheCapacity);
 
   ~RadixTree();
 

@@ -96,7 +96,8 @@ void benchmark_inference(std::vector<std::vector<int>>& tokens) {
 
       if (kv_state.size() == 0) {
         start = std::chrono::steady_clock::now();
-        Status status = manager->Update(inference_tokens, tokens[i][j], kv_state);
+        Status status =
+            manager->Update(inference_tokens, tokens[i][j], kv_state);
         if (!status.ok()) {
           // Not a error. May be the cache is full.
           VLOG(100) << "Put kv state into cache failed.";
