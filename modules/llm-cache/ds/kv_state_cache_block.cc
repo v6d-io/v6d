@@ -130,6 +130,18 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
   }
 }
 
+Status KVStateCacheBlockBuilder::Make(
+    Client& client, TreeData* treeData,
+    KVStateCacheBlockBuilder*& kvStateCacheBlockBuilder) {
+  RETURN_ON_ASSERT(treeData != nullptr && treeData->isPtr == false);
+  ObjectID blockObjectID = treeData->builderObjectID;
+
+  std::shared_ptr<KVStateCacheBlock> blockObject;
+  RETURN_ON_ERROR(client.FetchAndGetObject(blockObjectID, blockObject));
+  kvStateCacheBlockBuilder = new KVStateCacheBlockBuilder(client, blockObject);
+  return Status::OK();
+}
+
 Status KVStateCacheBlockBuilder::Query(
     int index, std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),

@@ -49,6 +49,14 @@ struct OffsetData {
   int16_t offset;
 };
 
+struct TreeData {
+  union {
+    void* kvStateCacheBlockBuilder;
+    uint64_t builderObjectID;
+  };
+  bool isPtr = true;
+};
+
 /**
  * @brief KVStateCacheBlock is a cache for kv-cache of LLM. When a new prompt
  * comes, LLM can query KVStateCacheBlock to get the state of the kv-cache to
@@ -133,6 +141,9 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   KVStateCacheBlockBuilder(
       Client& client, std::shared_ptr<KVStateCacheBlock> kv_state_cache_block);
+
+  static Status Make(Client& client, TreeData* treeData,
+                     KVStateCacheBlockBuilder*& kvStateCacheBlockBuilder);
 
   /**
    * @brief Update the kv-state using next token.

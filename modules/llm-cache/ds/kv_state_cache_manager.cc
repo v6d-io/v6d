@@ -15,6 +15,7 @@ limitations under the License.
 
 #include <cstdlib>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -51,6 +52,8 @@ Status KVStateCacheManager::Make(Client& client,
 
   // sync global cache object with vineyard
   ObjectID globalKVStateCacheID;
+  std::set<ObjectID> blockIDSetToAdd;
+  std::set<ObjectID> blockIDSetToDelete;
   Status status = client.GetName(llmCacheObjectName, globalKVStateCacheID);
   std::shared_ptr<KVStateCacheBuilder> kvStateCacheBuilder;
   if (status.ok()) {
@@ -63,6 +66,9 @@ Status KVStateCacheManager::Make(Client& client,
     RETURN_ON_ASSERT(
         status.ok(),
         "Failed to make the cache object from global cache object.");
+
+    blockIDSetToAdd = kvStateCacheBuilder->GetBlockIDSetToAdd();
+    blockIDSetToDelete = kvStateCacheBuilder->GetBlockIDSetToDelete();
   } else {
     // if failed, create a new cache object
     VLOG(100) << "failed to get the cache object, create a new one.";
@@ -80,6 +86,7 @@ Status KVStateCacheManager::Make(Client& client,
   manager = std::make_shared<KVStateCacheManager>(
       client, kvStateCacheBuilder, syncInterval, llmCacheSyncLock,
       llmCacheObjectName);
+  manager->SetRefcntMap(blockIDSetToDelete, blockIDSetToAdd);
   return Status::OK();
 }
 
@@ -200,6 +207,8 @@ void KVStateCacheManager::Delete(std::vector<int>& token) {
 
 Status KVStateCacheManager::Sync() {
   Status status;
+  std::set<ObjectID> blockIDSetToAdd;
+  std::set<ObjectID> blockIDSetToDelete;
   // 1. pull the cache object
   ObjectID globalKVStateCacheID;
   std::vector<ObjectID> deleteList;
@@ -232,6 +241,9 @@ Status KVStateCacheManager::Sync() {
   // 3. push the cache object
   kvStateCache = std::dynamic_pointer_cast<KVStateCache>(
       kvStateCacheBuilder->_Seal(client));
+
+  blockIDSetToDelete = kvStateCacheBuilder->GetBlockIDSetToDelete();
+
   status = client.Persist(kvStateCache->id());
   RETURN_ON_ERROR(status);
 
@@ -250,8 +262,11 @@ Status KVStateCacheManager::Sync() {
 
   // 6. create a global cache object replica
   kvStateCache->Resolve();
-  status = KVStateCacheBuilder::Make(client, kvStateCacheBuilder, kvStateCache);
-  RETURN_ON_ERROR(status);
+  RETURN_ON_ERROR(
+      KVStateCacheBuilder::Make(client, kvStateCacheBuilder, kvStateCache));
+
+  blockIDSetToAdd = kvStateCacheBuilder->GetBlockIDSetToAdd();
+  RETURN_ON_ERROR(SetRefcntMap(blockIDSetToDelete, blockIDSetToAdd));
 
   return Status::OK();
 
@@ -368,6 +383,56 @@ void KVStateCacheManager::Close() {
   std::lock_guard<std::mutex> cacheLock(cacheAccessMutex);
   this->kvStateCacheBuilder->Close();
   this->isClosed = true;
+}
+
+Status KVStateCacheManager::SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
+                                         std::set<ObjectID>& blockIDSetToAdd) {
+  LOG(INFO) << "SetRefcntMap:"
+            << " add size:" << blockIDSetToAdd.size()
+            << " delete size:" << blockIDSetToDelete.size();
+  ObjectID globalRefcntMapObjectID;
+  Status status = client.GetName(llmRefcntObjectName, globalRefcntMapObjectID);
+  if (status.ok()) {
+    LOG(INFO) << "stage 1";
+    std::shared_ptr<RefcntMapObject> globalRefcntMapObject =
+        std::dynamic_pointer_cast<RefcntMapObject>(
+            client.FetchAndGetObject(globalRefcntMapObjectID));
+    LOG(INFO) << "stage 2";
+    std::shared_ptr<RefcntMapObjectBuilder> refcntMapObjectBuilder =
+        std::make_shared<RefcntMapObjectBuilder>(client, globalRefcntMapObject);
+
+    LOG(INFO) << "stage 3";
+    refcntMapObjectBuilder->IncSetRefcnt(blockIDSetToAdd);
+    refcntMapObjectBuilder->DecSetRefcnt(blockIDSetToDelete);
+    LOG(INFO) << "stage 4";
+    refcntMapObjectBuilder->PrintRefcntMap();
+
+    LOG(INFO) << "stage 5";
+    std::shared_ptr<Object> newRefcntMapObject =
+        refcntMapObjectBuilder->_Seal(client);
+    LOG(INFO) << "stage 6";
+    RETURN_ON_ERROR(client.Persist(newRefcntMapObject->id()));
+    LOG(INFO) << "stage 7";
+    RETURN_ON_ERROR(client.DropName(llmRefcntObjectName));
+    LOG(INFO) << "stage 8";
+    RETURN_ON_ERROR(
+        client.PutName(newRefcntMapObject->id(), llmRefcntObjectName));
+  } else {
+    VLOG(100) << "There is no refcnt map object in the meta server.";
+    std::shared_ptr<RefcntMapObjectBuilder> refcntMapObjectBuilder =
+        std::make_shared<RefcntMapObjectBuilder>(client);
+    refcntMapObjectBuilder->IncSetRefcnt(blockIDSetToAdd);
+    refcntMapObjectBuilder->DecSetRefcnt(blockIDSetToDelete);
+    refcntMapObjectBuilder->PrintRefcntMap();
+
+    std::shared_ptr<Object> newRefcntMapObject =
+        refcntMapObjectBuilder->_Seal(client);
+    RETURN_ON_ERROR(client.Persist(newRefcntMapObject->id()));
+    RETURN_ON_ERROR(
+        client.PutName(newRefcntMapObject->id(), llmRefcntObjectName));
+  }
+  LOG(INFO) << "stage end";
+  return Status::OK();
 }
 
 }  // namespace vineyard

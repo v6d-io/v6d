@@ -17,11 +17,13 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "llm-cache/ds/kv_state_cache.h"
+#include "llm-cache/ds/refcnt_map.h"
 
 #ifndef MODULES_LLM_CACHE_DS_KV_STATE_CACHE_MANAGER_H_
 #define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_MANAGER_H_
@@ -33,8 +35,10 @@ class KVStateCacheManager {
   Client& client;
   std::shared_ptr<KVStateCacheBuilder> kvStateCacheBuilder = nullptr;
   std::shared_ptr<KVStateCache> kvStateCache = nullptr;
+  std::shared_ptr<RefcntMapObjectBuilder> refcntMapObjectBuilder = nullptr;
   std::string llmCacheSyncLock;
   std::string llmCacheObjectName;
+  std::string llmRefcntObjectName = "test";
   std::thread syncThread;
   std::mutex cacheAccessMutex;
   int syncInterval;
@@ -72,6 +76,14 @@ class KVStateCacheManager {
 
   void Close();
 
+  std::shared_ptr<KVStateCacheBuilder> GetKVStateCacheBuilder() {
+    return this->kvStateCacheBuilder;
+  }
+
+  std::shared_ptr<RefcntMapObjectBuilder> GetRefcntMapObjectBuilder() {
+    return this->refcntMapObjectBuilder;
+  }
+
   ~KVStateCacheManager();
 
  private:
@@ -93,6 +105,9 @@ class KVStateCacheManager {
                                 std::string& actualKey);
 
   static void ReleaseServerLock(Client& client, std::string& actualKey);
+
+  Status SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
+                      std::set<ObjectID>& blockIDSetToAdd);
 };
 
 }  // namespace vineyard
