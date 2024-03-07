@@ -87,13 +87,20 @@ void benchmark_inference(std::vector<std::vector<int>>& tokens) {
     for (size_t j = 0; j < tokens[i].size(); ++j) {
       start = std::chrono::steady_clock::now();
       kv_state = generate_kv_state(tokens[i][j]);
-      manager->Query(inference_tokens, tokens[i][j], kv_state);
+      Status status = manager->Query(inference_tokens, tokens[i][j], kv_state);
+      if (!status.ok()) {
+        VLOG(100) << "KV state is not in the cache.";
+      }
       end = std::chrono::steady_clock::now();
       query_duration += end - start;
 
       if (kv_state.size() == 0) {
         start = std::chrono::steady_clock::now();
-        manager->Update(inference_tokens, tokens[i][j], kv_state);
+        Status status = manager->Update(inference_tokens, tokens[i][j], kv_state);
+        if (!status.ok()) {
+          // Not a error. May be the cache is full.
+          VLOG(100) << "Put kv state into cache failed.";
+        }
         end = std::chrono::steady_clock::now();
         update_duration += end - start;
       }

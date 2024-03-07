@@ -141,7 +141,11 @@ void inference(std::vector<int> tokens, bool block = false) {
       LOG(INFO) << "Generate the kv_state and update the cache.";
       kv_state = generate_kv_state(tokens[i]);
       print_kv_state(kv_state);
-      kv_state_cache_manager->Update(inference_tokens, tokens[i], kv_state);
+      Status status = kv_state_cache_manager->Update(inference_tokens, tokens[i], kv_state);
+      if (!status.ok()) {
+        // Not a error. May be the cache is full.
+        VLOG(100) << "Put kv state into cache failed.";
+      }
     } else {
       LOG(INFO) << "Find the kv_state from cache:";
       print_current_tokens(inference_tokens, tokens[i]);
