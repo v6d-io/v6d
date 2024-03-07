@@ -158,13 +158,15 @@ Status KVStateCacheManager::Query(
     return result;
   }
 
+  // support partial match of the token list
+  // copy the token list and query the cache one token by one token
   std::vector<int> tokenListCopy;
   std::map<int, std::pair<LLMKV, LLMKV>> kvState;
   for (size_t i = 0; i < tokenList.size(); i++) {
     result = QueryInternal(tokenListCopy, tokenList[i], kvState);
     if (!result.ok()) {
       syncMutex.unlock();
-      return result;
+      return Status::OK();
     }
     tokenListCopy.push_back(tokenList[i]);
     listKVState.push_back(kvState);

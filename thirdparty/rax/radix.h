@@ -205,26 +205,34 @@ typedef struct raxIterator {
   raxNodeCallback node_cb; /* Optional node callback. Normally set to NULL. */
 } raxIterator;
 
+// Wrapper for raxIterator to store the token list and its data node
+// to reduce the memory usage.
+typedef struct raxIteratorWrapper {
+  std::vector<int> token_list; /* The current token list. */
+  void* data;                  /* Data associated to this key. */
+  raxNode* node;               /* Current node. Only for unsafe iteration. */
+} raxIteratorWrapper;
+
 /* A special pointer returned for not found items. */
 extern void* raxNotFound;
 
 /* Exported API. */
 rax* raxNew(void);
-int raxInsert(rax* rax, const int* s, size_t len, void* data, void** old,
+int raxInsert(rax* rax, const std::vector<int>& token_list, void* data, void** old,
               bool set_timestamp = true);
-int raxTryInsert(rax* rax, int* s, size_t len, void* data, void** old);
-int raxInsertAndReturnDataNode(rax* rax, const int* s, size_t len, void* data,
+int raxTryInsert(rax* rax, const std::vector<int>& token_list, void* data, void** old);
+int raxInsertAndReturnDataNode(rax* rax, const std::vector<int>& token_list, void* data,
                                void** node, void** old);
-int raxRemove(rax* rax, const int* s, size_t len, void** old,
+int raxRemove(rax* rax, const std::vector<int>& token_list, void** old,
               bool set_timestamp = true);
-void* raxFind(rax* rax, int* s, size_t len);
-raxNode* raxFindAndReturnDataNode(rax* rax, const int* s, size_t len,
+void* raxFind(rax* rax, const std::vector<int>& token_list);
+raxNode* raxFindAndReturnDataNode(rax* rax, const std::vector<int>& token_list,
                                   raxNode** sub_tree_node = NULL,
                                   bool set_timestamp = true);
 void raxSetSubtree(raxNode* n);
 void raxSetSubtreeAllocated(raxNode* node);
 void raxSetSubtreeNotNull(raxNode* node);
-int raxFindNodeWithParent(rax* rax, int* s, size_t len, void** node,
+int raxFindNodeWithParent(rax* rax, const std::vector<int>& token_list, void** node,
                           void** parent);
 void raxFree(rax* rax);
 void raxFreeWithCallback(rax* rax, void (*free_callback)(raxNode*));
@@ -245,7 +253,7 @@ void raxSetDebugMsg(int onoff);
 void raxTraverse(raxNode* rax,
                  std::vector<std::shared_ptr<raxNode>>& dataNodeList);
 void raxTraverseSubTree(raxNode* n, std::vector<raxNode*>& dataNodeList);
-raxNode* raxSplit(rax* rax, const int* s, size_t len, std::vector<int>& key);
+raxNode* raxSplit(rax* rax, const std::vector<int>& token_list, std::vector<int>& split_token_list);
 void raxSerialize(rax* root, std::vector<std::vector<int>>& tokenList,
                   std::vector<void*>& dataList,
                   std::vector<uint64_t>& timestampsList,
@@ -256,7 +264,7 @@ void raxSerialize(rax* root, std::vector<std::vector<int>>& tokenList,
  * in a low level way, so this function is exported as well. */
 void raxSetData(raxNode* n, void* data);
 void* raxGetData(raxNode* n);
-int raxFindNode(rax* rax, int* s, size_t len, void** node);
+int raxFindNode(rax* rax, const std::vector<int>& token_list, void** node);
 void raxFindLastRecentNode(raxNode* node, std::vector<int>& key);
 void mergeTree(rax* first_tree, rax* second_tree,
                std::vector<std::vector<int>>& evicted_tokens,
