@@ -846,7 +846,7 @@ class Client final : public BasicIPCClient,
    * @return Status that indicates whether the lock process succeeds.
    */
   Status TryAcquireLock(std::string key, bool& result,
-                        std::string& actural_key);
+                        std::string& actual_key) override;
 
   /**
    * @brief Try to release a distributed lock.
@@ -855,7 +855,7 @@ class Client final : public BasicIPCClient,
    *
    * @return Status that indicates whether the unlock process succeeds.
    */
-  Status TryReleaseLock(std::string key, bool& result);
+  Status TryReleaseLock(std::string key, bool& result) override;
 
  protected:
   /**
@@ -1049,11 +1049,11 @@ class PlasmaClient final
   Status Delete(PlasmaID const& id);
 
   Status TryAcquireLock(std::string key, bool& result,
-                        std::string& actural_key) {
+                        std::string& actual_key) override {
     return Status::NotImplemented();
   }
 
-  Status TryReleaseLock(std::string key, bool& result) {
+  Status TryReleaseLock(std::string key, bool& result) override {
     return Status::NotImplemented();
   }
 

@@ -228,7 +228,7 @@ int16_t KVStateCacheBlockBuilder::Split(KVStateCacheBlockBuilder* child,
 Status KVStateCacheBlockBuilder::Build(Client& client) { return Status::OK(); }
 
 std::shared_ptr<Object> KVStateCacheBlockBuilder::_Seal(Client& client) {
-  this->Build(client);
+  VINEYARD_CHECK_OK(this->Build(client));
 
   std::shared_ptr<KVStateCacheBlock> kvStateCacheBlock =
       std::make_shared<KVStateCacheBlock>();

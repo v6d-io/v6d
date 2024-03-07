@@ -2830,6 +2830,17 @@ void mergeTree(rax* first_tree, rax* second_tree,
     raxFree(tmp);
 }
 
-raxNode* raxGetFirstChildPtr(raxNode* node) {
-    return raxGetFirstChildPtr(node);
+void testIteRax(rax *tree) {
+    raxIterator iter;
+    raxStart(&iter, tree);
+    raxSeek(&iter, "^", NULL, 0);
+    while (raxNext(&iter)) {
+        printf("key: ");
+        for (size_t i = 0; i < iter.key_len; i++) {
+            printf("%d ", iter.key[i]);
+        }
+        printf("\n");
+        // printf("data: %p\n", iter.data);
+    }
+    raxStop(&iter);
 }

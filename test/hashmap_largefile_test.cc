@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
   {
     int64_t n;
     std::FILE* fp = fopen(datafile.c_str(), "r");
-    while (fscanf(fp, "%ld", &n) != EOF) {
+    while (fscanf(fp, "%" SCNd64, &n) != EOF) {
       ns.emplace_back(n);
     }
     fclose(fp);

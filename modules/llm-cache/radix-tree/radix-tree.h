@@ -28,7 +28,7 @@ limitations under the License.
 #include "common/util/base64.h"
 #include "common/util/logging.h"
 
-using namespace vineyard;  // NOLINT(build/namespaces)
+namespace vineyard {
 
 struct DataWrapper {
   void* data;
@@ -76,7 +76,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
       const std::vector<int>& tokens, std::shared_ptr<NodeData>& header);
 
  public:
-  RadixTree(int cacheCapacity);  //  NOLINT(runtime/explicit)
+  explicit RadixTree(int cacheCapacity);
 
   ~RadixTree();
 
@@ -117,5 +117,7 @@ class RadixTree : public std::enable_shared_from_this<RadixTree> {
 
   std::set<void*> GetAllNodeData();
 };
+
+}  // namespace vineyard
 
 #endif  //  MODULES_LLM_CACHE_RADIX_TREE_RADIX_TREE_H_

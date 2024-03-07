@@ -312,14 +312,17 @@ Status KVStateCacheBuilder::Merge(std::shared_ptr<KVStateCache> kvStateCache) {
       kvState.insert(
           std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
     }
-    globalCacheBuilder->Query(tokenList, (*it).back(), kvState);
-    this->Update(tokenList, (*it).back(), kvState);
+    Status status = globalCacheBuilder->Query(tokenList, (*it).back(), kvState);
+    if (status.ok()) {
+      status = this->Update(tokenList, (*it).back(), kvState);
+    }
     for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
       LLMKV key_state = kvState[currentLayer].first;
       LLMKV value_state = kvState[currentLayer].second;
       free(key_state.data);
       free(value_state.data);
     }
+    RETURN_ON_ERROR(status);
   }
 
   this->version = globalCacheBuilder->GetVersion();
@@ -329,7 +332,7 @@ Status KVStateCacheBuilder::Merge(std::shared_ptr<KVStateCache> kvStateCache) {
 Status KVStateCacheBuilder::Build(Client& client) { return Status::OK(); }
 
 std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
-  this->Build(client);
+  VINEYARD_CHECK_OK(this->Build(client));
 
   std::shared_ptr<KVStateCache> kvStateCache = std::make_shared<KVStateCache>();
 

@@ -367,7 +367,7 @@ class RPCClient final : public ClientBase {
    * @return Status that indicates whether the lock process succeeds.
    */
   Status TryAcquireLock(std::string key, bool& result,
-                        std::string& actural_key) {
+                        std::string& actual_key) override {
     // TBD
     return Status::NotImplemented("TryAcquireLock is not implemented yet.");
   }
@@ -379,7 +379,7 @@ class RPCClient final : public ClientBase {
    *
    * @return Status that indicates whether the unlock process succeeds.
    */
-  Status TryReleaseLock(std::string key, bool& result) {
+  Status TryReleaseLock(std::string key, bool& result) override {
     // TBD
     return Status::NotImplemented("TryAcquireLock is not implemented yet.");
   }

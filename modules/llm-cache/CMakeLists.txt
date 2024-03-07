@@ -8,6 +8,7 @@ file(GLOB VINEYARD_LLM_CACHE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 add_library(vineyard_llm_cache ${VINEYARD_LLM_CACHE_SRCS})
+target_link_libraries(vineyard_llm_cache PRIVATE libzstd_static)
 target_link_libraries(vineyard_llm_cache PUBLIC vineyard_client vineyard_basic)
 
 # install bundled thirdparty: rax
@@ -37,6 +38,8 @@ if(BUILD_VINEYARD_TESTS)
             add_executable(${T_NAME} EXCLUDE_FROM_ALL tests/${T_NAME}.cc)
         endif()
         target_link_libraries(${T_NAME} PRIVATE
+                              libzstd_static
+                              vineyard_basic
                               vineyard_llm_cache)
         if(${LIBUNWIND_FOUND})
             target_link_libraries(${T_NAME} PRIVATE ${LIBUNWIND_LIBRARIES})

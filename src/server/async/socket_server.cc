@@ -1110,7 +1110,7 @@ bool SocketConnection::doPersist(const json& root) {
   ObjectID id;
   TRY_READ_REQUEST(ReadPersistRequest, root, id);
   RESPONSE_ON_ERROR(
-      server_ptr_->Persist(id, [self, id, root](const Status& status) {
+      server_ptr_->Persist(id, [self, root](const Status& status) {
         std::string message_out;
         if (status.ok()) {
           WritePersistReply(message_out);
@@ -1120,7 +1120,7 @@ bool SocketConnection::doPersist(const json& root) {
           VLOG(100) << "Warning: "
                     << "Retry persist on etcd error: " << status.ToString();
           self->server_ptr_->GetIOContext().post(
-              [self, id, root]() { self->doPersist(root); });
+              [self, root]() { self->doPersist(root); });
         } else {
           VLOG(100) << "Error: " << status.ToString();
           WriteErrorReply(status, message_out);
