@@ -30,17 +30,26 @@ int capacity = 20;
 int layer = 3;
 int block_size = 5;
 
-std::vector<std::vector<int>> tokens_list;
+std::vector<int> round_1_tokens = {
+    1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18,
+    19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
+    37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
+    55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69};
+std::vector<int> round_2_tokens = {1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14};
+std::vector<int> round_3_tokens = {1, 2, 3, 9, 10, 11, 12, 13, 14};
+std::vector<int> round_4_tokens = {1, 2, 3, 4, 5, 6};
 
-std::shared_ptr<KVStateCacheManager> kv_state_cache_manager;
-Client client;
+std::vector<std::vector<int>> tokens_list = {round_1_tokens, round_2_tokens,
+                                             round_3_tokens, round_4_tokens};
 
-void init(int tensorBytes, int capacity, int layer, int block_size,
-          std::string socket) {
-  VINEYARD_CHECK_OK(client.Connect(socket));
+std::shared_ptr<KVStateCacheManager> init(Client& client, int tensorBytes,
+                                          int capacity, int layer,
+                                          int block_size) {
+  std::shared_ptr<KVStateCacheManager> kv_state_cache_manager;
   VINEYARD_CHECK_OK(KVStateCacheManager::Make(client, kv_state_cache_manager,
                                               tensorBytes, capacity, layer,
                                               block_size, 3));
+  return kv_state_cache_manager;
 }
 
 void print_current_tokens(const std::vector<int>& prefix, int next_token) {
@@ -128,7 +137,8 @@ void check_kv_state(const std::map<int, std::pair<LLMKV, LLMKV>>& kv_state,
   }
 }
 
-void inference(std::vector<int> tokens, bool block = false) {
+void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
+               std::vector<int> tokens, bool block = false) {
   std::vector<int> inference_tokens;
   std::map<int, std::pair<LLMKV, LLMKV>> kv_state;
   for (size_t i = 0; i < tokens.size(); ++i) {
@@ -157,23 +167,43 @@ void inference(std::vector<int> tokens, bool block = false) {
   }
 }
 
+void threadFunc(std::string socket) {
+  Client client;
+  VINEYARD_CHECK_OK(client.Connect(socket));
+  std::shared_ptr<KVStateCacheManager> manager =
+      init(client, tensorBytes, capacity, layer, block_size);
+
+  for (size_t i = 0; i < tokens_list.size(); i++) {
+    inference(manager, tokens_list[i]);
+  }
+
+  sleep(5);
+
+  for (size_t i = 0; i < tokens_list.size(); i++) {
+    inference(manager, tokens_list[i]);
+  }
+
+  LOG(INFO) << "inference end";
+  client.Disconnect();
+}
+
 int main(int argc, char** argv) {
-  std::vector<int> round_1_tokens = {
-      1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18,
-      19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
-      37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54,
-      55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69};
-  std::vector<int> round_2_tokens = {1, 2,  3,  4,  5,  7, 8,
-                                     9, 10, 11, 12, 13, 14};
-  std::vector<int> round_3_tokens = {1, 2, 3, 9, 10, 11, 12, 13, 14};
-  std::vector<int> round_4_tokens = {1, 2, 3, 4, 5, 6};
+  std::string sockets[2];
   if (argc < 2) {
-    printf("usage ./kv_state_cache_test <ipc_socket_name>");
+    printf(
+        "usage ./kv_state_cache_test --client-num <client_num> "
+        "--vineyard-ipc-sockets <ipc_socket_1> ... <ipc_socket_n> -d "
+        "<tensorBytes> -c <capacity> -l <layer> -b <blockSize>\n");
     return 1;
   }
-  std::string ipc_socket = std::string(argv[1]);
 
-  for (int i = 2; i < argc; i++) {
+  if (strcmp(argv[1], "--client-num") != 0) {
+    return 1;
+  }
+
+  int client_num = std::stoi(argv[2]);
+
+  for (int i = 3; i < argc; i++) {
     if (strcmp(argv[i], "-d") == 0) {
       tensorBytes = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-c") == 0) {
@@ -182,8 +212,7 @@ int main(int argc, char** argv) {
       layer = atoi(argv[i + 1]);
     } else if (strcmp(argv[i], "-b") == 0) {
       block_size = atoi(argv[i + 1]);
-    }
-    if (strcmp(argv[i], "-s") == 0) {
+    } else if (strcmp(argv[i], "-s") == 0) {
       for (int j = i + 1; j < argc; j++) {
         if (strcmp(argv[j], "1") == 0) {
           tokens_list.push_back(round_1_tokens);
@@ -197,26 +226,28 @@ int main(int argc, char** argv) {
           break;
         }
       }
+    } else if (strcmp(argv[i], "--vineyard-ipc-sockets") == 0) {
+      for (int j = 0; j < client_num; j++) {
+        sockets[j] = std::string(argv[i + j + 1]);
+      }
     }
   }
 
   LOG(INFO) << "Test KVStateCache with tensorBytes: " << tensorBytes
             << ", capacity: " << capacity << ", layer: " << layer
-            << ", block_size: " << block_size << ".";
+            << ", block_size: " << block_size << " and use " << client_num
+            << " client.";
 
-  init(tensorBytes, capacity, layer, block_size, ipc_socket);
-
-  for (size_t i = 0; i < tokens_list.size(); i++) {
-    inference(tokens_list[i]);
+  std::vector<std::thread> threads;
+  for (int i = 0; i < client_num; i++) {
+    threads.push_back(std::thread(threadFunc, sockets[i]));
   }
 
-  sleep(5);
-
-  for (size_t i = 0; i < tokens_list.size(); i++) {
-    inference(tokens_list[i]);
+  for (int i = 0; i < client_num; i++) {
+    threads[i].join();
+    LOG(INFO) << "Thread:" << i << " exit.";
   }
 
-  LOG(INFO) << "inference end";
   LOG(INFO) << "Passed KVStateCache tests...";
   return 0;
 }
