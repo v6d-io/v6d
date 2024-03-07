@@ -2238,10 +2238,12 @@ std::string raxShow(rax *rax) {
     raxStr += "rax numnode:" + std::to_string(rax->numele) + "\n";
     raxStr += raxRecursiveShow(0,0,rax->head);
     raxStr += "\n";
+#ifndef NDEBUG
     // also show the backtrace info
     std::stringstream ss;
     backtrace_info::backtrace(ss, true);
     raxStr += ss.str();
+#endif
     return raxStr;
 }
 
