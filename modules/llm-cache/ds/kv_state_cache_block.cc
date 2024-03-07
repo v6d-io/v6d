@@ -82,7 +82,8 @@ KVStateCacheBlock::~KVStateCacheBlock() { delete this->bitmap; }
 
 KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(Client& client,
                                                    int tensorBytes, int layer,
-                                                   int blockSize) {
+                                                   int blockSize)
+    : client(client) {
   this->blockSize = blockSize;
   this->bitmapSize = (blockSize + 63) / 64;
   this->bitmap = new uint64_t[this->bitmapSize];
@@ -99,7 +100,8 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(Client& client,
 }
 
 KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
-    Client& client, std::shared_ptr<KVStateCacheBlock> kvStateCacheBlock) {
+    Client& client, std::shared_ptr<KVStateCacheBlock> kvStateCacheBlock)
+    : client(client) {
   this->bitmapSize = kvStateCacheBlock->bitmapSize;
   this->blockSize = kvStateCacheBlock->blockSize;
   VLOG(100) << "create builder from block object, bitmap size:"
@@ -129,8 +131,7 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
 }
 
 Status KVStateCacheBlockBuilder::Query(
-    Client& client, int index,
-    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    int index, std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),
                    "Index out of range: " + std::to_string(index));
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {

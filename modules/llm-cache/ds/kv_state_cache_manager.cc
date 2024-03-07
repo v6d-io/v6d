@@ -86,13 +86,13 @@ Status KVStateCacheManager::Make(Client& client,
 Status KVStateCacheManager::UpdateInternal(
     const std::vector<int>& tokenList, int nextToken,
     const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
-  return kvStateCacheBuilder->Update(client, tokenList, nextToken, kvState);
+  return kvStateCacheBuilder->Update(tokenList, nextToken, kvState);
 }
 
 Status KVStateCacheManager::QueryInternal(
     const std::vector<int>& tokenList, int token,
     std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
-  return kvStateCacheBuilder->Query(client, tokenList, token, kvState);
+  return kvStateCacheBuilder->Query(tokenList, token, kvState);
 }
 
 Status KVStateCacheManager::Update(
@@ -222,7 +222,7 @@ Status KVStateCacheManager::Sync() {
                     : std::to_string(globalKVStateCache->GetVersion()));
   if (globalKVStateCache != nullptr &&
       kvStateCacheBuilder->GetVersion() < globalKVStateCache->GetVersion()) {
-    status = kvStateCacheBuilder->Merge(client, globalKVStateCache);
+    status = kvStateCacheBuilder->Merge(globalKVStateCache);
     RETURN_ON_ERROR(status);
   }
   kvStateCacheBuilder->UpdateVersion();

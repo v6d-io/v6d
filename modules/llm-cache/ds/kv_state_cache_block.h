@@ -111,6 +111,7 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
 
 class KVStateCacheBlockBuilder : public ObjectBuilder {
  private:
+  Client& client;
   std::vector<std::shared_ptr<TensorBuilder<uint8_t>>>
       keyStateTensorBuilderList;
   std::vector<std::shared_ptr<TensorBuilder<uint8_t>>>
@@ -150,8 +151,7 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
    * @param kv_state The kv-state of the prompt returned by radix-tree. If the
    * kv-state is not found, the data of kv-state is invalid.
    */
-  Status Query(Client& client, int index,
-               std::map<int, std::pair<LLMKV, LLMKV>>& kv_state);
+  Status Query(int index, std::map<int, std::pair<LLMKV, LLMKV>>& kv_state);
 
   bool IsFull();
 
