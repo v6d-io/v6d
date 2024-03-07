@@ -706,12 +706,11 @@ def run_llm_tests(meta, allocator, endpoints):
         vineyard_ipc_socket_1 = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 0)
         vineyard_ipc_socket_2 = '%s.%d' % (VINEYARD_CI_IPC_SOCKET, 1)
 
-        rpc_socket_port = instances[0][1]
         subprocess.check_call(
             [
-                './build/bin/kv_state_cache_multi_test',
-                '--vineyard-endpoint',
-                'localhost:%s' % rpc_socket_port,
+                './build/bin/kv_state_cache_test',
+                '--client-num',
+                '2',
                 '--vineyard-ipc-sockets',
                 vineyard_ipc_socket_1,
                 vineyard_ipc_socket_2,
