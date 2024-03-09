@@ -256,6 +256,8 @@ def test_migration_large_object(
     client1 = vineyard.connect(vineyard_ipc_sockets[0])
     client2 = vineyard.connect(vineyard_ipc_sockets[1])
 
+    client1.clear()
+    client2.clear()
     data1 = np.ones((1024, 102400))
     o1 = client1.put(data1)
     client1.persist(o1)
