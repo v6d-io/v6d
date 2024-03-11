@@ -21,28 +21,30 @@ limitations under the License.
 
 namespace vineyard {
 
-RadixTree::RadixTree(int cacheCapacity) {
+RadixTree::RadixTree(int cacheCapacity, bool withRoot) {
   this->tree = raxNew();
   // add one to the cache capacity because we insert a root node to the tree.
   this->cacheCapacity = cacheCapacity + 1;
   this->nodeCount = 0;
 
   // prepare root node
-  std::vector<int> rootToken = {INT32_MAX};
-  std::shared_ptr<NodeData> evictedNode;
-  this->InsertInternal(rootToken, evictedNode);
-  if (VLOG_IS_ON(100)) {
-    VLOG(100) << raxShow(this->tree);
+  if (withRoot) {
+    std::vector<int> rootToken = {INT32_MAX};
+    std::shared_ptr<NodeData> evictedNode;
+    this->InsertInternal(rootToken, evictedNode);
+    if (VLOG_IS_ON(100)) {
+      VLOG(100) << raxShow(this->tree);
+    }
+    raxNode* dataNode =
+        raxFindAndReturnDataNode(this->tree, rootToken, NULL, false);
+    DataWrapper* data = new DataWrapper();
+    data->data = nullptr;
+    data->dataLength = 0;
+    dataNode->custom_data = data;
+    VLOG(100) << "root data wrapper:" << data;
+    dataNode->issubtree = true;
+    this->rootToken = rootToken;
   }
-  raxNode* dataNode =
-      raxFindAndReturnDataNode(this->tree, rootToken, NULL, false);
-  DataWrapper* data = new DataWrapper();
-  data->data = nullptr;
-  data->dataLength = 0;
-  dataNode->custom_data = data;
-  VLOG(100) << "root data wrapper:" << data;
-  dataNode->issubtree = true;
-  this->rootToken = rootToken;
 }
 
 RadixTree::~RadixTree() {
@@ -430,7 +432,7 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
   // is created by upper layer. Here just recover it from serialized
   // string.
   std::shared_ptr<RadixTree> radixTree =
-      std::make_shared<RadixTree>(cacheCapacity);
+      std::make_shared<RadixTree>(cacheCapacity, false);
   radixTree->nodeCount = tokenList.size();
 
   if (VLOG_IS_ON(100)) {
@@ -450,8 +452,8 @@ std::shared_ptr<RadixTree> RadixTree::Deserialize(std::string data) {
     int retval =
         raxInsertAndReturnDataNode(radixTree->tree, tokenList[i], data,
                                    reinterpret_cast<void**>(&dataNode), NULL);
-    if (retval == 0 || dataNode == NULL) {
-      LOG(ERROR) << "Insert token list failed";
+    if (retval == 0) {
+      LOG(WARNING) << "Overwrite the data of the node";
     }
     dataNode->timestamp = timestampList[i];
     dataNode->numnodes = subTreeSizeList[i];
