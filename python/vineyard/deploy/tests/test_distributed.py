@@ -644,3 +644,23 @@ def test_get_and_put_with_different_vineyard_instances(
             pd.testing.assert_series_equal(value, v)
         else:
             assert value == v
+
+
+def test_connected_vineyardd_out_of_memory(vineyard_ipc_sockets):
+    client = vineyard.connect(vineyard_ipc_sockets[0])
+
+    # generate 10 * 1024 * 1024 * 8 bytes = 80 MB data
+    data = np.ones((10, 1024, 1024))
+
+    # put data until the connected vineyardd's memory is full
+    while (
+        client.status.memory_limit - client.status.memory_usage > 10 * 1024 * 1024 * 8
+    ):
+        o1 = client.put(data)
+
+    # test whether the client can put data to other vineyardd instances
+    o2 = client.put(data)
+
+    if o1:
+        client.delete(o1)
+    client.delete(o2)
