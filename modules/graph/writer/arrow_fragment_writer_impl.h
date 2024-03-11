@@ -113,10 +113,8 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteGraphInfo(
     // otherwise, only the last fragment writes graph info
     for (const auto& vertex_info : graph_info_->GetVertexInfos()) {
       const auto& label = vertex_info->GetLabel();
-      LOG(INFO) << "Vertex info path: " << output_path + label + ".vertex.yaml";
       auto st = vertex_info->Save(output_path + label + ".vertex.yaml");
       if (!st.ok()) {
-        LOG(INFO) << "Failed to save vertex info: " << st.message();
         RETURN_GS_ERROR(ErrorCode::kGraphArError, st.message());
       }
     }
@@ -124,8 +122,6 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteGraphInfo(
       const auto& src_label = edge_info->GetSrcLabel();
       const auto& edge_label = edge_info->GetEdgeLabel();
       const auto& dst_label = edge_info->GetDstLabel();
-      LOG(INFO) << "Edge info path: " << output_path + src_label + "_" + edge_label +
-                    "_" + dst_label + ".edge.yaml";  
       auto st = edge_info->Save(output_path + src_label + "_" + edge_label +
                                 "_" + dst_label + ".edge.yaml");
       if (!st.ok()) {
@@ -133,7 +129,6 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteGraphInfo(
       }
     }
     const auto& graph_name = graph_info_->GetName();
-    LOG(INFO) << "Graph info path: " << output_path + graph_name + ".graph.yaml";
     auto st = graph_info_->Save(output_path + graph_name + ".graph.yaml");
     if (!st.ok()) {
       RETURN_GS_ERROR(ErrorCode::kGraphArError, st.message());
@@ -203,7 +198,6 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertex(
         vertex_table,
         vertex_info->GetChunkSize() - num_rows % vertex_info->GetChunkSize());
   }
-  LOG(INFO) << "vertex: " << label << " table schema: " << vertex_table->schema()->ToString();
   auto st = writer->WriteTable(vertex_table, chunk_index_begin);
   if (!st.ok()) {
     RETURN_GS_ERROR(ErrorCode::kGraphArError, st.message());
@@ -473,8 +467,6 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::writeEdgeImpl(
     // write the adj list chunks
     FinishArrowArrayBuilders(builders, column_arrays);
     auto table = arrow::Table::Make(table_schema, column_arrays);
-    LOG(INFO) << "edge: " << edge_info->GetSrcLabel() << "_" << edge_info->GetEdgeLabel() << "_" << edge_info->GetDstLabel()
-              << " table schema: " << table->schema()->ToString();
     auto s = writer->WriteTable(table, vertex_chunk_index);
     if (!s.ok()) {
       return Status::IOError(

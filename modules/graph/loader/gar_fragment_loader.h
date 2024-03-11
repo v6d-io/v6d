@@ -81,7 +81,6 @@ class GARFragmentLoader {
   static constexpr const char* MARKER = "PROGRESS--GRAPH-LOADING-";
 
  public:
-
   explicit GARFragmentLoader(Client& client, const grape::CommSpec& comm_spec);
 
   /**

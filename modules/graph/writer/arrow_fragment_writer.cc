@@ -51,7 +51,6 @@ void InitializeArrayArrayBuilders(
   int col_id = 2;
   for (auto& pid : property_ids) {
     auto prop_type = graph_schema.GetEdgePropertyType(edge_label, pid);
-    LOG(INFO) << "property type: " << prop_type->ToString();
     if (arrow::boolean()->Equals(prop_type)) {
       builders[col_id] = std::make_shared<arrow::BooleanBuilder>();
     } else if (arrow::int32()->Equals(prop_type)) {

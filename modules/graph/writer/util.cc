@@ -38,8 +38,8 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
     const std::unordered_map<std::string, std::vector<std::string>>& selected_vertex_properties,
     const std::unordered_map<std::string, std::vector<std::string>>& selected_edge_properties,
     bool store_in_local) {
-  GraphArchive::VertexInfoVector vertex_infos;
-  GraphArchive::EdgeInfoVector edge_infos;
+  GAR::VertexInfoVector vertex_infos;
+  GAR::EdgeInfoVector edge_infos;
 
   for (const auto& entry : schema.vertex_entries()) {
     if (!selected_vertices.empty() &&
@@ -53,7 +53,6 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
         selected_vertex_properties.end()) {
       selected_property = true;
     }
-    LOG(INFO) << "vertex " << entry.label << " selected_property " << selected_property;
     std::vector<GAR::Property> properties;
     for (const auto& prop : entry.props_) {
       if (selected_property &&
@@ -64,7 +63,6 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
         // Skip the property that is not selected.
         continue;
       }
-      LOG(INFO) << "vertex " << entry.label << " prop " << prop.name;
       properties.emplace_back(GAR::Property(
           prop.name, GAR::DataType::ArrowDataTypeToDataType(prop.type), false));
     }

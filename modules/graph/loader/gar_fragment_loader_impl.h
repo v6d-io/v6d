@@ -77,7 +77,9 @@ boost::leaf::result<void> GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::Init(
     for (const auto& label : selected_vertices) {
       auto vertex_info = graph_info_->GetVertexInfo(label);
       if (vertex_info == nullptr) {
-        LOG(ERROR) << "Vertex label " << label << " is not found in graph info";
+        RETURN_GS_ERROR(ErrorCode::kGraphArError,
+                        "The selected vertex label " + label +
+                            " is not found in the graph info");
       }
       project_vertex_infos.push_back(vertex_info);
     }
@@ -486,8 +488,6 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadVertexTableOfLabel(
   metadata->Append("type", PropertyGraphSchema::VERTEX_TYPE_NAME);
   metadata->Append("retain_oid", std::to_string(false));
   vertex_tables_[label_id] = table_out->ReplaceSchemaMetadata(metadata);
-  LOG(INFO) << "vertex: " << vertex_label << " table schema: "
-            << vertex_tables_[label_id]->schema()->ToString();
   return {};
 }
 
@@ -664,8 +664,6 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::loadEdgeTableOfLabel(
         arrow::ConcatenateTables(edge_property_chunk_tables[i]);
     RETURN_GS_ERROR_IF_NOT_OK(property_chunk_table.status());
     property_table_of_groups[i] = std::move(property_chunk_table).ValueOrDie();
-    LOG(INFO) << "edge: " << edge_label << " property table schema: "
-              << property_table_of_groups[i]->schema()->ToString();
   }
 
   label_id_t label_id = edge_label_to_index_[edge_label];
