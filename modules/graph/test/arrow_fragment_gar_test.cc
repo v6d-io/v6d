@@ -78,7 +78,7 @@ boost::leaf::result<int> write_out_to_gar(
                /* vertex_chunk_size */ 512,
                /* edge_chunk_size */ 1024, file_type,
                /* selected_vertex_labels */ std::vector<std::string>{},
-               /* selected_edge_relations */ std::vector<std::vector<std::string>>{},
+               /* selected_edge_relations */ std::vector<std::string>{},
                /* selected_vertex_properties */ std::unordered_map<std::string, std::vector<std::string>>{},
                /* selected_edge_properties */ std::unordered_map<std::string, std::vector<std::string>>{}));
   BOOST_LEAF_CHECK(writer->WriteGraphInfo(output_path));
@@ -148,7 +148,10 @@ int main(int argc, char** argv) {
       auto loader =
           std::make_unique<GARFragmentLoader<property_graph_types::OID_TYPE,
                                              property_graph_types::VID_TYPE>>(
-              client, comm_spec, graph_yaml_path);
+              client, comm_spec);
+      loader->Init(graph_yaml_path, /*selected_vertices*/ {},
+                   /*selected_edges*/ {}, /*directed*/ true, /*generate_eid*/ false,
+                   /*store_in_local*/ false); 
       vineyard::ObjectID fragment_id = loader->LoadFragment().value();
 
       std::shared_ptr<GraphType> graph =

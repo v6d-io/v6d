@@ -40,6 +40,7 @@ limitations under the License.
 #include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
+#include "graph/writer/util.h"
 
 namespace GraphArchive {
 class GraphInfo;
@@ -80,6 +81,9 @@ class GARFragmentLoader {
   static constexpr const char* MARKER = "PROGRESS--GRAPH-LOADING-";
 
  public:
+
+  explicit GARFragmentLoader(Client& client, const grape::CommSpec& comm_spec);
+
   /**
    * @brief Initialize the GARFragmentLoader.
    *    Notes that if vertex_labels or edge_labels are empty, the loader will
@@ -94,11 +98,10 @@ class GARFragmentLoader {
    * @param generate_eid whether to generate edge id.
    * @param store_in_local whether the gar data files are stored in local.
    */
-  GARFragmentLoader(
-      Client& client, const grape::CommSpec& comm_spec,
+  boost::leaf::result<void> Init(
       const std::string& graph_info_yaml,
-      const std::vector<std::string>& vertex_labels = {},
-      const std::vector<std::vector<std::string>>& edge_labels = {},
+      const std::vector<std::string>& selected_vertices = {},
+      const std::vector<std::string>& selected_edges = {},
       bool directed = true, bool generate_eid = false,
       bool store_in_local = false);
 
@@ -146,6 +149,8 @@ class GARFragmentLoader {
   boost::leaf::result<void> initializeVertexChunkBeginAndNum(
       int vertex_label_index,
       const std::shared_ptr<GraphArchive::VertexInfo>& vertex_info);
+
+  boost::leaf::result<void> checkInitialization();
 
  private:
   Client& client_;

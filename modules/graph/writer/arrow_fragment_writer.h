@@ -42,6 +42,7 @@ limitations under the License.
 
 #include "graph/loader/fragment_loader_utils.h"
 #include "graph/utils/partitioner.h"
+#include "graph/writer/util.h"
 
 namespace GraphArchive {
 class GraphInfo;
@@ -90,6 +91,8 @@ class ArrowFragmentWriter {
   static constexpr const char* MARKER = "PROGRESS--GRAPH-LOADING-";
 
  public:
+  ArrowFragmentWriter();
+
   /**
    * @brief Initialize ArrowFragmentWriter with graph info
    *
@@ -97,8 +100,6 @@ class ArrowFragmentWriter {
    * @param comm_spec The communicator specification
    * @param graph_info_yaml The graph info yaml path
    */
-  ArrowFragmentWriter();
-
   boost::leaf::result<void> Init(const std::shared_ptr<fragment_t>& frag,
                                  const grape::CommSpec& comm_spec,
                                  const std::string& graph_info_yaml);
@@ -122,8 +123,8 @@ class ArrowFragmentWriter {
                                  const std::string& graph_name,
                       const std::string& out_path, int64_t vertex_block_size,
                       int64_t edge_block_size, const std::string& file_type,
-                      const std::vector<std::string>& selected_vertex_labels,
-                      const std::vector<std::vector<std::string>>& selected_edge_relations,
+                      const std::vector<std::string>& selected_vertices,
+                      const std::vector<std::string>& selected_edges,
                       const std::unordered_map<std::string, std::vector<std::string>>& selected_vertex_properties,
                       const std::unordered_map<std::string, std::vector<std::string>>& selected_edge_properties,
                       bool store_in_local = false);
