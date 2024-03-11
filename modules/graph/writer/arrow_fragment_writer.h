@@ -42,7 +42,6 @@ limitations under the License.
 
 #include "graph/loader/fragment_loader_utils.h"
 #include "graph/utils/partitioner.h"
-#include "graph/writer/util.h"
 
 namespace GraphArchive {
 class GraphInfo;

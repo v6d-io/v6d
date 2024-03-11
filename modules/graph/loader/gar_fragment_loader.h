@@ -40,7 +40,6 @@ limitations under the License.
 #include "graph/fragment/graph_schema.h"
 #include "graph/fragment/property_graph_types.h"
 #include "graph/vertex_map/arrow_vertex_map.h"
-#include "graph/writer/util.h"
 
 namespace GraphArchive {
 class GraphInfo;

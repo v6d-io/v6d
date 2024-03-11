@@ -32,31 +32,6 @@ namespace vineyard {
 #define LOCAL_METADATA_KEY "local_meta_prefix"
 #define LOCAL_METADATA_VALUE "__local_metadata__"
 
-// A simple struct to store the edge triple, which is used to express the edge
-// triple and used as the key of the map.
-class EdgeRelation{
- public:
-  explicit EdgeRelation(const std::string& src_label, const std::string& edge_label,
-                      const std::string& dst_label)
-      : src_label(src_label),
-        edge_label(edge_label),
-        dst_label(dst_label) {}
-  explicit EdgeRelation(std::string&& src_label, std::string&& edge_label,
-                      std::string&& dst_label)
-      : src_label(std::move(src_label)),
-        edge_label(std::move(edge_label)),
-        dst_label(std::move(dst_label)) {}
-
-  bool operator==(const EdgeRelation& rhs) const {
-    return src_label == rhs.src_label && edge_label == rhs.edge_label &&
-           dst_label == rhs.dst_label;
-  }
-
-  std::string src_label;
-  std::string edge_label;
-  std::string dst_label;
-};
-
 boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_info_with_schema(
     const PropertyGraphSchema& schema, const std::string& graph_name,
     const std::string& path, int64_t vertex_block_size, int64_t edge_block_size,
@@ -68,18 +43,6 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
     bool store_in_local);
 
 }  // namespace vineyard
-
-namespace std {
-  template <>
-  struct hash<vineyard::EdgeRelation> {
-    std::size_t operator()(const vineyard::EdgeRelation& k) const {
-      std::size_t h1 = std::hash<std::string>{}(k.src_label);
-      std::size_t h2 = std::hash<std::string>{}(k.edge_label);
-      std::size_t h3 = std::hash<std::string>{}(k.dst_label);
-      return h1 ^ (h2 << 1) ^ (h3 << 2);
-    }
-  };
-}  // namespace std
 
 #endif
 
