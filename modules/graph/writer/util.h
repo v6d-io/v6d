@@ -20,6 +20,8 @@
 
 #include <memory>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "gar/graph_info.h"
 #include "gar/util/file_type.h"
