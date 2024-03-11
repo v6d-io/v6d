@@ -29,14 +29,16 @@ namespace GAR = GraphArchive;
 
 namespace vineyard {
 
-boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_info_with_schema(
+boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>>
+generate_graph_info_with_schema(
     const PropertyGraphSchema& schema, const std::string& graph_name,
     const std::string& path, int64_t vertex_block_size, int64_t edge_block_size,
-    GAR::FileType file_type,
-    const std::vector<std::string>& selected_vertices,
+    GAR::FileType file_type, const std::vector<std::string>& selected_vertices,
     const std::vector<std::string>& selected_edges,
-    const std::unordered_map<std::string, std::vector<std::string>>& selected_vertex_properties,
-    const std::unordered_map<std::string, std::vector<std::string>>& selected_edge_properties,
+    const std::unordered_map<std::string, std::vector<std::string>>&
+        selected_vertex_properties,
+    const std::unordered_map<std::string, std::vector<std::string>>&
+        selected_edge_properties,
     bool store_in_local) {
   GAR::VertexInfoVector vertex_infos;
   GAR::EdgeInfoVector edge_infos;
@@ -58,8 +60,8 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
       if (selected_property &&
           std::find(selected_vertex_properties.at(entry.label).begin(),
                     selected_vertex_properties.at(entry.label).end(),
-                    prop.name) == selected_vertex_properties.at(entry.label)
-                                        .end()) {
+                    prop.name) ==
+              selected_vertex_properties.at(entry.label).end()) {
         // Skip the property that is not selected.
         continue;
       }
@@ -70,14 +72,17 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
     if (!properties.empty()) {
       auto pg = GAR::CreatePropertyGroup(properties, file_type);
       if (pg == nullptr) {
-        RETURN_GS_ERROR(ErrorCode::kGraphArError, "Failed to create property group for vertex " + entry.label);
+        RETURN_GS_ERROR(
+            ErrorCode::kGraphArError,
+            "Failed to create property group for vertex " + entry.label);
       }
       property_groups.push_back(pg);
     }
-    auto vertex_info = 
+    auto vertex_info =
         GAR::CreateVertexInfo(entry.label, vertex_block_size, property_groups);
     if (vertex_info == nullptr) {
-      RETURN_GS_ERROR(ErrorCode::kGraphArError, "Failed to create vertex info for " + entry.label);
+      RETURN_GS_ERROR(ErrorCode::kGraphArError,
+                      "Failed to create vertex info for " + entry.label);
     }
     vertex_infos.emplace_back(vertex_info);
   }
@@ -85,8 +90,9 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
       GAR::CreateAdjacentList(GAR::AdjListType::ordered_by_source, file_type),
       GAR::CreateAdjacentList(GAR::AdjListType::ordered_by_dest, file_type)};
   for (const auto& entry : schema.edge_entries()) {
-    if (!selected_edges.empty() && 
-        std::find(selected_edges.begin(), selected_edges.end(), entry.label) == selected_edges.end()) {
+    if (!selected_edges.empty() &&
+        std::find(selected_edges.begin(), selected_edges.end(), entry.label) ==
+            selected_edges.end()) {
       // Skip the edge type that is not selected.
       continue;
     }
@@ -100,8 +106,8 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
       if (selected_property &&
           std::find(selected_edge_properties.at(entry.label).begin(),
                     selected_edge_properties.at(entry.label).end(),
-                    prop.name) == selected_edge_properties.at(entry.label)
-                                      .end()) {
+                    prop.name) ==
+              selected_edge_properties.at(entry.label).end()) {
         // Skip the property that is not selected.
         continue;
       }
@@ -112,7 +118,9 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
     if (!properties.empty()) {
       auto pg = GAR::CreatePropertyGroup(properties, file_type);
       if (pg == nullptr) {
-        RETURN_GS_ERROR(ErrorCode::kGraphArError, "Failed to create property group for edge " + entry.label);
+        RETURN_GS_ERROR(
+            ErrorCode::kGraphArError,
+            "Failed to create property group for edge " + entry.label);
       }
       property_groups.push_back(pg);
     }
@@ -123,7 +131,8 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
                      relation.first) == selected_vertices.end() ||
            std::find(selected_vertices.begin(), selected_vertices.end(),
                      relation.second) == selected_vertices.end())) {
-        // Skip the relation that source or destination vertex type is not selected.
+        // Skip the relation that source or destination vertex type is not
+        // selected.
         continue;
       }
       auto edge_info = GAR::CreateEdgeInfo(
@@ -131,7 +140,10 @@ boost::leaf::result<std::shared_ptr<GraphArchive::GraphInfo>> generate_graph_inf
           vertex_block_size, vertex_block_size, true /* directed */,
           default_adjacent_lists, property_groups);
       if (edge_info == nullptr) {
-        RETURN_GS_ERROR(ErrorCode::kGraphArError, "Failed to create edge info for relation " + relation.first + " " + entry.label + " " + relation.second);
+        RETURN_GS_ERROR(ErrorCode::kGraphArError,
+                        "Failed to create edge info for relation " +
+                            relation.first + " " + entry.label + " " +
+                            relation.second);
       }
       edge_infos.emplace_back(edge_info);
     }

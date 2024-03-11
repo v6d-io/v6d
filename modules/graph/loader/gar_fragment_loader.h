@@ -99,9 +99,8 @@ class GARFragmentLoader {
   boost::leaf::result<void> Init(
       const std::string& graph_info_yaml,
       const std::vector<std::string>& selected_vertices = {},
-      const std::vector<std::string>& selected_edges = {},
-      bool directed = true, bool generate_eid = false,
-      bool store_in_local = false);
+      const std::vector<std::string>& selected_edges = {}, bool directed = true,
+      bool generate_eid = false, bool store_in_local = false);
 
   ~GARFragmentLoader() = default;
 

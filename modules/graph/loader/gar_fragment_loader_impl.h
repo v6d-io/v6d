@@ -49,7 +49,12 @@ namespace vineyard {
 
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
-GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::GARFragmentLoader(Client& client, const grape::CommSpec& comm_spec) : client_(client), comm_spec_(comm_spec), graph_info_(nullptr), store_in_local_(false) {}
+GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::GARFragmentLoader(
+    Client& client, const grape::CommSpec& comm_spec)
+    : client_(client),
+      comm_spec_(comm_spec),
+      graph_info_(nullptr),
+      store_in_local_(false) {}
 
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
@@ -67,7 +72,7 @@ boost::leaf::result<void> GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::Init(
   if (!maybe_graph_info.status().ok()) {
     RETURN_GS_ERROR(ErrorCode::kGraphArError,
                     "Failed to load graph info from " + graph_info_yaml +
-                        ", error: " + maybe_graph_info.status().message()); 
+                        ", error: " + maybe_graph_info.status().message());
   }
   graph_info_ = maybe_graph_info.value();
   if (!selected_vertices.empty() && !selected_edges.empty()) {
@@ -383,8 +388,9 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::constructVertexMap() {
     // so we can remove it from the vertex table
     int index_col_index = vertex_tables_[label_id]->schema()->GetFieldIndex(
         GraphArchive::GeneralParams::kVertexIndexCol);
-    CHECK_ARROW_ERROR_AND_ASSIGN(vertex_tables_[label_id], vertex_tables_[label_id]->RemoveColumn(
-        index_col_index));
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        vertex_tables_[label_id],
+        vertex_tables_[label_id]->RemoveColumn(index_col_index));
     VY_OK_OR_RAISE(FragmentAllGatherArray(comm_spec_, local_oid_array,
                                           shuffled_oid_array));
     for (auto const& array : shuffled_oid_array) {

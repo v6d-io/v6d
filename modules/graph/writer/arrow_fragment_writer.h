@@ -117,16 +117,18 @@ class ArrowFragmentWriter {
    * @param file_type The file type to store the fragment
    * @param store_in_local Whether write the fragment to local
    */
-  boost::leaf::result<void> Init(const std::shared_ptr<fragment_t>& frag,
-                                 const grape::CommSpec& comm_spec,
-                                 const std::string& graph_name,
-                      const std::string& out_path, int64_t vertex_block_size,
-                      int64_t edge_block_size, const std::string& file_type,
-                      const std::vector<std::string>& selected_vertices,
-                      const std::vector<std::string>& selected_edges,
-                      const std::unordered_map<std::string, std::vector<std::string>>& selected_vertex_properties,
-                      const std::unordered_map<std::string, std::vector<std::string>>& selected_edge_properties,
-                      bool store_in_local = false);
+  boost::leaf::result<void> Init(
+      const std::shared_ptr<fragment_t>& frag, const grape::CommSpec& comm_spec,
+      const std::string& graph_name, const std::string& out_path,
+      int64_t vertex_block_size, int64_t edge_block_size,
+      const std::string& file_type,
+      const std::vector<std::string>& selected_vertices,
+      const std::vector<std::string>& selected_edges,
+      const std::unordered_map<std::string, std::vector<std::string>>&
+          selected_vertex_properties,
+      const std::unordered_map<std::string, std::vector<std::string>>&
+          selected_edge_properties,
+      bool store_in_local = false);
 
   ~ArrowFragmentWriter() = default;
 

@@ -56,7 +56,8 @@ namespace GAR = GraphArchive;
 namespace vineyard {
 
 template <typename FRAG_T>
-ArrowFragmentWriter<FRAG_T>::ArrowFragmentWriter() : frag_(nullptr), graph_info_(nullptr), store_in_local_(false) {}
+ArrowFragmentWriter<FRAG_T>::ArrowFragmentWriter()
+    : frag_(nullptr), graph_info_(nullptr), store_in_local_(false) {}
 
 template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::Init(
@@ -67,7 +68,8 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::Init(
   // Load graph info.
   auto maybe_graph_info = GAR::GraphInfo::Load(graph_info_yaml);
   if (!maybe_graph_info.status().ok()) {
-    RETURN_GS_ERROR(ErrorCode::kGraphArError, maybe_graph_info.status().message());
+    RETURN_GS_ERROR(ErrorCode::kGraphArError,
+                    maybe_graph_info.status().message());
   }
   graph_info_ = maybe_graph_info.value();
   return {};
@@ -81,21 +83,22 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::Init(
     const std::string& file_type,
     const std::vector<std::string>& selected_vertices,
     const std::vector<std::string>& selected_edges,
-    const std::unordered_map<std::string, std::vector<std::string>>& selected_vertex_properties,
-    const std::unordered_map<std::string, std::vector<std::string>>& selected_edge_properties,
+    const std::unordered_map<std::string, std::vector<std::string>>&
+        selected_vertex_properties,
+    const std::unordered_map<std::string, std::vector<std::string>>&
+        selected_edge_properties,
     bool store_in_local) {
   frag_ = std::move(frag);
   comm_spec_ = std::move(comm_spec);
   store_in_local_ = store_in_local;
   auto& schema = frag_->schema();
-  BOOST_LEAF_ASSIGN(graph_info_, generate_graph_info_with_schema(
-  schema, graph_name, out_path, vertex_block_size, edge_block_size,
-  GAR::StringToFileType(file_type),
-  selected_vertices,
-  selected_edges,
-  selected_vertex_properties,
-  selected_edge_properties,
-  store_in_local));
+  BOOST_LEAF_ASSIGN(
+      graph_info_,
+      generate_graph_info_with_schema(
+          schema, graph_name, out_path, vertex_block_size, edge_block_size,
+          GAR::StringToFileType(file_type), selected_vertices, selected_edges,
+          selected_vertex_properties, selected_edge_properties,
+          store_in_local));
   if (graph_info_ == nullptr || !graph_info_->IsValidated()) {
     RETURN_GS_ERROR(ErrorCode::kGraphArError, "Failed to generate graph info.");
   }
