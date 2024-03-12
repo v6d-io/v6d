@@ -128,6 +128,8 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   int GetLayer() { return this->layer; }
 
+  void Close();
+
   ~KVStateCacheBuilder();
 };
 

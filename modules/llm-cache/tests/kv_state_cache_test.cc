@@ -145,7 +145,7 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
     kv_state.clear();
     Status result =
         kv_state_cache_manager->Query(inference_tokens, tokens[i], kv_state);
-    if (!result.ok()) {
+    if (!result.ok() || kv_state.empty()) {
       LOG(INFO) << "Can not find the kv_state from cache:";
       print_current_tokens(inference_tokens, tokens[i]);
       LOG(INFO) << "Generate the kv_state and update the cache.";
@@ -184,6 +184,11 @@ void threadFunc(std::string socket) {
   }
 
   LOG(INFO) << "inference end";
+
+  manager->Close();
+  std::shared_ptr<InstanceStatus> status;
+  VINEYARD_CHECK_OK(client.InstanceStatus(status));
+  LOG(INFO) << "memory usage:" << status->memory_usage;
   client.Disconnect();
 }
 
