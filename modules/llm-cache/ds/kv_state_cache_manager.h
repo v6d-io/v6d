@@ -36,7 +36,7 @@ class KVStateCacheManager {
   std::string llmCacheSyncLock;
   std::string llmCacheObjectName;
   std::thread syncThread;
-  std::mutex syncMutex;
+  std::mutex cacheAccessMutex;
   int syncInterval;
   bool exitFlag = false;
   std::condition_variable cv;
