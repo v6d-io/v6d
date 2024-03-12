@@ -78,8 +78,8 @@ boost::leaf::result<int> write_out_to_gar(
       graph, comm_spec, /* graph_name */ "graph", output_path,
       /* vertex_chunk_size */ 512,
       /* edge_chunk_size */ 1024, file_type,
-      /* selected_vertex_labels */ std::vector<std::string>{},
-      /* selected_edge_relations */ std::vector<std::string>{},
+      /* selected_vertices */ std::vector<std::string>{},
+      /* selected_edges */ std::vector<std::string>{},
       /* selected_vertex_properties */
       std::unordered_map<std::string, std::vector<std::string>>{},
       /* selected_edge_properties */
