@@ -50,6 +50,7 @@ option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
 option(BUILD_VINEYARD_CLIENT_VERBOSE "Build vineyard's client with the most verbose logs" OFF)
 option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
 option(BUILD_VINEYARD_PYPI_PACKAGES "Build vineyard's python bindings" OFF)
+option(BUILD_VINEYARD_LLM_KV_CACHE_PYTHON_BINDINGS "Build vineyard llm kv cache's python bindings" ON)
 
 option(BUILD_VINEYARD_JAVA "Build vineyard's java SDK" OFF)
 
@@ -905,6 +906,55 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
         COMMAND cp "$<TARGET_FILE:vineyard_internal_registry>" "${PROJECT_SOURCE_DIR}/python/vineyard/"
         DEPENDS _C vineyard_internal_registry
         COMMENT "Copying python extensions."
+        VERBATIM)
+endif()
+
+if(BUILD_VINEYARD_LLM_KV_CACHE_PYTHON_BINDINGS)
+    set(PYBIND11_PYTHON_VERSION 3)
+    if(NOT (CMAKE_VERSION VERSION_LESS "3.27"))
+        set(PYBIND11_FINDPYTHON ON)
+    endif()
+    file(GLOB PYTHON_BIND_FILES "python/vineyard/llm/kv_state_cache.cc"
+                                "modules/llm-cache/ds/*.h"
+    )
+    pybind11_add_module(llm_C MODULE ${PYTHON_BIND_FILES})
+    # make sure `vineyard_llm_cache` been built.
+    add_dependencies(llm_C vineyard_llm_cache)
+    target_link_libraries(llm_C PRIVATE vineyard_client vineyard_llm_cache)
+    target_include_directories(llm_C PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/pybind11/include"
+                                                   "modules/llm-cache/ds/*.h")
+    target_compile_options(llm_C PRIVATE -Wno-unused-value)
+    set_target_properties(llm_C PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/shared-lib")
+    if(UNIX AND NOT APPLE)
+        target_add_link_options(llm_C PRIVATE OPTIONS -Wl,--exclude-libs=ALL)
+    endif()
+    if(BUILD_VINEYARD_PYPI_PACKAGES AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+        target_compile_options(llm_C PRIVATE -static)
+        target_add_link_options(llm_C PRIVATE OPTIONS -static)
+    else()
+        target_compile_options(llm_C PRIVATE -Os)
+        target_add_link_options(llm_C PRIVATE OPTIONS -Os)
+    endif()
+
+    file(RELATIVE_PATH RELATIVE_BUILD_PATH "${PROJECT_SOURCE_DIR}/python/vineyard" "${CMAKE_BINARY_DIR}/shared-lib")
+    if(UNIX AND NOT APPLE)
+        set_target_properties(llm_C PROPERTIES
+                            BUILD_WITH_INSTALL_RPATH TRUE
+                            INSTALL_RPATH_USE_LINK_PATH TRUE
+                            INSTALL_RPATH ".:\$ORIGIN:\$ORIGIN/${RELATIVE_BUILD_PATH}/:${CMAKE_INSTALL_PREFIX}/lib:${CMAKE_INSTALL_PREFIX}/lib64:${INSTALL_RPATH}")
+    endif()
+    if(APPLE)
+        set_target_properties(llm_C PROPERTIES
+                            BUILD_WITH_INSTALL_RPATH TRUE
+                            INSTALL_RPATH_USE_LINK_PATH TRUE
+                            INSTALL_RPATH ".;@loader_path;@loader_path/${RELATIVE_BUILD_PATH}/;${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib64;${INSTALL_RPATH}")
+    endif()
+
+    add_custom_target(vineyard_with_llm_python
+        ALL
+        COMMAND cp "$<TARGET_FILE:llm_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/llm/"
+        DEPENDS llm_C
+        COMMENT "Copying llm kv cache python extensions."
         VERBATIM)
 endif()
 

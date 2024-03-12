@@ -173,6 +173,8 @@ def find_core_packages(root):
             continue
         if 'drivers' in pkg and not pkg.endswith('.drivers'):
             continue
+        if 'llm' in pkg:
+            continue
         pkgs.append(pkg)
     return pkgs
 

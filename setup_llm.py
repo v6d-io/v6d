@@ -17,9 +17,13 @@
 #
 
 import os
+import textwrap
+import shutil
 
+from setuptools import Extension
 from setuptools import find_packages
 from setuptools import setup
+from setuptools.command.build_ext import build_ext
 from setuptools.command.install import install
 from wheel.bdist_wheel import bdist_wheel
 
@@ -35,6 +39,21 @@ class bdist_wheel_plat(bdist_wheel):
         self.root_is_pure = False
         return tag
 
+class CopyCMakeExtension(Extension):
+    def __init__(self, name):
+        super().__init__(name, sources=[])
+
+class build_ext_with_precompiled(build_ext):
+    def run(self):
+        for ext in self.extensions:
+            self.build_extension(ext)
+
+    def build_extension(self, ext):
+        build_py = self.get_finalized_command('build_py')
+        package_dir = os.path.abspath(build_py.get_package_dir('python'))
+        bin_path = os.path.join(package_dir, self.get_ext_filename(ext.name))
+        target_path = self.get_ext_fullpath(ext.name)
+        self.copy_file(bin_path, target_path)
 
 class install_plat(install):
     def finalize_options(self):
@@ -42,56 +61,67 @@ class install_plat(install):
         install.finalize_options(self)
 
 
-def find_kedro_packages(root):
+def find_llm_packages(root):
     pkgs = []
     for pkg in find_packages(root):
-        if 'contrib.kedro' in pkg:
+        if 'llm' in pkg:
             pkgs.append(pkg)
     return pkgs
 
 
 with open(
-    os.path.join(
-        os.path.abspath(os.path.dirname(__file__)),
-        'python',
-        'vineyard',
-        'contrib',
-        'kedro',
-        'README.md',
-    ),
+    os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.rst'),
     encoding='utf-8',
     mode='r',
 ) as fp:
     long_description = fp.read()
 
+    # Github doesn't respect "align: center", and pypi disables `.. raw`.
+    replacement = textwrap.dedent(
+        '''
+        .. image:: https://v6d.io/_static/vineyard_logo.png
+           :target: https://v6d.io
+           :align: center
+           :alt: vineyard
+           :width: 397px
+
+        vineyard: an in-memory immutable data manager
+        ---------------------------------------------
+        '''
+    )
+    long_description = replacement + '\n'.join(long_description.split('\n')[8:])
+
+def package_data():
+    artifacts = [
+        '*.pyi',
+    ]
+    return artifacts
+
 setup(
-    name='vineyard-kedro',
+    name='vineyard-llm',
     author='The vineyard team',
     author_email='developers@v6d.io',
-    description='Vineyard provider for kedro',
+    description='Vineyard llm kv cache',
     long_description=long_description,
     long_description_content_type='text/markdown',
     url='https://v6d.io',
-    package_dir={'vineyard.contrib.kedro': 'python/vineyard/contrib/kedro'},
+    package_dir={'vineyard.llm': 'python/vineyard/llm'},
+    packages=find_llm_packages('python'),
     package_data={
-        'vineyard.contrib.kedro': [
-            'plugins/templates/*',
-            '*.README'
+        'vineyard.llm': [
+          '*.pyi',  
         ],
     },
-    packages=find_kedro_packages('python'),
-    entry_points={
-        "kedro.global_commands": ["vineyard = vineyard.contrib.kedro.plugins.cli:cli"],
-        # don't auto- register the hook
-        # "kedro.hooks": ["vineyard = vineyard.contrib.kedro.plugins.hook:hooks"],
-        # "kedro.starters": ["starter = vineyard.contrib.kedro.plugins.starter:starters"],
-    },
-    cmdclass={'bdist_wheel': bdist_wheel_plat, "install": install_plat},
-    zip_safe=False,
-    install_requires=[
-        'kedro',
-        'vineyard',
+    ext_modules=[
+        CopyCMakeExtension('vineyard.llm.llm_C'),
     ],
+    cmdclass={
+        'build_ext': build_ext_with_precompiled,
+        'bdist_wheel': bdist_wheel_plat,
+        "install": install_plat
+    },
+    zip_safe=False,
+    install_requires=['vineyard'],
     platforms=['POSIX', 'MacOS'],
     license="Apache License 2.0",
     classifiers=[
