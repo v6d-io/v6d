@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOB_H_
-#define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOB_H_
+#ifndef MODULES_LLM_CACHE_DS_KV_TENSOR_H_
+#define MODULES_LLM_CACHE_DS_KV_TENSOR_H_
 
 #include <functional>
 #include <memory>
@@ -227,4 +227,4 @@ class KVTensorBuilder : public vineyard::ObjectBuilder {
 
 }  // namespace vineyard
 
-#endif  // MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOB_H_
+#endif  // MODULES_LLM_CACHE_DS_KV_TENSOR_H_

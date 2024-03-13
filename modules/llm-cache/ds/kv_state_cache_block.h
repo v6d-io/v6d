@@ -24,7 +24,7 @@ limitations under the License.
 
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
-#include "llm-cache/ds/kv_state_cache_blob.h"
+#include "llm-cache/ds/kv_tensor.h"
 
 // Set the bit to 1, which means the resource is not being used
 #define FREE_BIT_RESOURCE(value, bit) ((value) |= (((uint64_t) 1) << (bit)))
