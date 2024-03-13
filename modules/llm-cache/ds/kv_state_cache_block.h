@@ -16,18 +16,15 @@ limitations under the License.
 #ifndef MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
 #define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_BLOCK_H_
 
-#include <array>
-#include <iostream>
 #include <map>
 #include <memory>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "basic/ds/tensor.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
-#include "llm-cache/radix-tree/radix-tree.h"
+#include "llm-cache/ds/kv_state_cache_blob.h"
 
 // Set the bit to 1, which means the resource is not being used
 #define FREE_BIT_RESOURCE(value, bit) ((value) |= (((uint64_t) 1) << (bit)))
@@ -64,8 +61,8 @@ struct OffsetData {
 
 class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
  private:
-  std::vector<std::shared_ptr<Tensor<uint8_t>>> keyStateTensorList;
-  std::vector<std::shared_ptr<Tensor<uint8_t>>> valueStateTensorList;
+  std::vector<std::shared_ptr<KVTensor>> keyStateTensorList;
+  std::vector<std::shared_ptr<KVTensor>> valueStateTensorList;
   uint64_t* bitmap;
   int blockSize;
   int bitmapSize;
@@ -89,19 +86,19 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
 
   int GetBlockSize() { return this->blockSize; }
 
-  std::shared_ptr<const Tensor<uint8_t>> GetKeyTensor(int layer) {
+  std::shared_ptr<const KVTensor> GetKeyTensor(int layer) {
     return this->keyStateTensorList[layer];
   }
 
-  std::shared_ptr<const Tensor<uint8_t>> GetValueTensor(int layer) {
+  std::shared_ptr<const KVTensor> GetValueTensor(int layer) {
     return this->valueStateTensorList[layer];
   }
 
-  std::vector<std::shared_ptr<Tensor<uint8_t>>>& GetKeyTensorList() {
+  std::vector<std::shared_ptr<KVTensor>>& GetKeyTensorList() {
     return this->keyStateTensorList;
   }
 
-  std::vector<std::shared_ptr<Tensor<uint8_t>>>& GetValueTensorList() {
+  std::vector<std::shared_ptr<KVTensor>>& GetValueTensorList() {
     return this->valueStateTensorList;
   }
 
@@ -113,10 +110,8 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
 class KVStateCacheBlockBuilder : public ObjectBuilder {
  private:
   Client& client;
-  std::vector<std::shared_ptr<TensorBuilder<uint8_t>>>
-      keyStateTensorBuilderList;
-  std::vector<std::shared_ptr<TensorBuilder<uint8_t>>>
-      valueStateTensorBuilderList;
+  std::vector<std::shared_ptr<KVTensorBuilder>> keyStateTensorBuilderList;
+  std::vector<std::shared_ptr<KVTensorBuilder>> valueStateTensorBuilderList;
   // TBD
   // support more than 64 kv-state cache slots
   uint64_t* bitmap;
@@ -162,21 +157,20 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
 
   int16_t Split(KVStateCacheBlockBuilder* child, int index);
 
-  const std::shared_ptr<TensorBuilder<uint8_t>>& GetKeyStateBuilder(int layer) {
+  const std::shared_ptr<KVTensorBuilder>& GetKeyStateBuilder(int layer) {
     return keyStateTensorBuilderList[layer];
   }
 
-  const std::shared_ptr<TensorBuilder<uint8_t>>& GetValueStateBuilder(
-      int layer) {
+  const std::shared_ptr<KVTensorBuilder>& GetValueStateBuilder(int layer) {
     return valueStateTensorBuilderList[layer];
   }
 
-  const std::vector<std::shared_ptr<TensorBuilder<uint8_t>>>&
+  const std::vector<std::shared_ptr<KVTensorBuilder>>&
   GetKeyStateBuilderList() {
     return keyStateTensorBuilderList;
   }
 
-  const std::vector<std::shared_ptr<TensorBuilder<uint8_t>>>&
+  const std::vector<std::shared_ptr<KVTensorBuilder>>&
   GetValueStateBuilderList() {
     return valueStateTensorBuilderList;
   }
