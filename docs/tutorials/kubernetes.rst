@@ -10,6 +10,7 @@ Vineyard on Kubernetes
    ./kubernetes/ml-pipeline-mars-pytorch.rst
    ./kubernetes/data-sharing-with-vineyard-on-kubernetes.rst
    ./kubernetes/efficient-data-sharing-in-kubeflow-with-vineyard-csi-driver.rst
+   ./kubernetes/vineyard-on-fluid.rst
 
 Vineyard can be seamlessly deployed on Kubernetes, managed by the :ref:`vineyard-operator`,
 to enhance big-data workflows through its data-aware scheduling policy. This policy
