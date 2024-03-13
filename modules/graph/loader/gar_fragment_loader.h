@@ -80,6 +80,8 @@ class GARFragmentLoader {
   static constexpr const char* MARKER = "PROGRESS--GRAPH-LOADING-";
 
  public:
+  explicit GARFragmentLoader(Client& client, const grape::CommSpec& comm_spec);
+
   /**
    * @brief Initialize the GARFragmentLoader.
    *    Notes that if vertex_labels or edge_labels are empty, the loader will
@@ -94,13 +96,11 @@ class GARFragmentLoader {
    * @param generate_eid whether to generate edge id.
    * @param store_in_local whether the gar data files are stored in local.
    */
-  GARFragmentLoader(
-      Client& client, const grape::CommSpec& comm_spec,
+  boost::leaf::result<void> Init(
       const std::string& graph_info_yaml,
-      const std::vector<std::string>& vertex_labels = {},
-      const std::vector<std::vector<std::string>>& edge_labels = {},
-      bool directed = true, bool generate_eid = false,
-      bool store_in_local = false);
+      const std::vector<std::string>& selected_vertices = {},
+      const std::vector<std::string>& selected_edges = {}, bool directed = true,
+      bool generate_eid = false, bool store_in_local = false);
 
   ~GARFragmentLoader() = default;
 
@@ -146,6 +146,8 @@ class GARFragmentLoader {
   boost::leaf::result<void> initializeVertexChunkBeginAndNum(
       int vertex_label_index,
       const std::shared_ptr<GraphArchive::VertexInfo>& vertex_info);
+
+  boost::leaf::result<void> checkInitialization();
 
  private:
   Client& client_;

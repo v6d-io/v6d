@@ -56,34 +56,60 @@ namespace GAR = GraphArchive;
 namespace vineyard {
 
 template <typename FRAG_T>
-ArrowFragmentWriter<FRAG_T>::ArrowFragmentWriter(
+ArrowFragmentWriter<FRAG_T>::ArrowFragmentWriter()
+    : frag_(nullptr), graph_info_(nullptr), store_in_local_(false) {}
+
+template <typename FRAG_T>
+boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::Init(
     const std::shared_ptr<fragment_t>& frag, const grape::CommSpec& comm_spec,
-    const std::string& graph_info_yaml)
-    : frag_(frag), comm_spec_(comm_spec), store_in_local_(false) {
+    const std::string& graph_info_yaml) {
+  frag_ = std::move(frag);
+  comm_spec_ = std::move(comm_spec);
   // Load graph info.
   auto maybe_graph_info = GAR::GraphInfo::Load(graph_info_yaml);
   if (!maybe_graph_info.status().ok()) {
-    LOG(ERROR) << "Failed to load graph info from " << graph_info_yaml;
+    RETURN_GS_ERROR(ErrorCode::kGraphArError,
+                    maybe_graph_info.status().message());
   }
   graph_info_ = maybe_graph_info.value();
+  return {};
 }
 
 template <typename FRAG_T>
-ArrowFragmentWriter<FRAG_T>::ArrowFragmentWriter(
+boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::Init(
     const std::shared_ptr<fragment_t>& frag, const grape::CommSpec& comm_spec,
     const std::string& graph_name, const std::string& out_path,
     int64_t vertex_block_size, int64_t edge_block_size,
-    const std::string& file_type, bool store_in_local)
-    : frag_(frag), comm_spec_(comm_spec), store_in_local_(store_in_local) {
+    const std::string& file_type,
+    const std::vector<std::string>& selected_vertices,
+    const std::vector<std::string>& selected_edges,
+    const std::unordered_map<std::string, std::vector<std::string>>&
+        selected_vertex_properties,
+    const std::unordered_map<std::string, std::vector<std::string>>&
+        selected_edge_properties,
+    bool store_in_local) {
+  frag_ = std::move(frag);
+  comm_spec_ = std::move(comm_spec);
+  store_in_local_ = store_in_local;
   auto& schema = frag_->schema();
-  graph_info_ = generate_graph_info_with_schema(
-      schema, graph_name, out_path, vertex_block_size, edge_block_size,
-      GAR::StringToFileType(file_type), store_in_local);
+  BOOST_LEAF_ASSIGN(
+      graph_info_,
+      generate_graph_info_with_schema(
+          schema, graph_name, out_path, vertex_block_size, edge_block_size,
+          GAR::StringToFileType(file_type), selected_vertices, selected_edges,
+          selected_vertex_properties, selected_edge_properties,
+          store_in_local));
+  if (graph_info_ == nullptr || !graph_info_->IsValidated()) {
+    RETURN_GS_ERROR(ErrorCode::kGraphArError, "Failed to generate graph info.");
+  }
+  return {};
 }
 
 template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteGraphInfo(
     const std::string& output_path) {
+  BOOST_LEAF_CHECK(checkInitialization());
+
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "WRITING-GRAPH-INFO-0";
   if (store_in_local_ || frag_->fid() == frag_->fnum() - 1) {
     // store in local: all fragments write graph info
@@ -118,6 +144,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteGraphInfo(
 
 template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteFragment() {
+  BOOST_LEAF_CHECK(checkInitialization());
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "WRITING-VERTICES-0";
   BOOST_LEAF_CHECK(WriteVertices());
   LOG_IF(INFO, !comm_spec_.worker_id()) << MARKER << "WRITING-VERTICES-100";
@@ -130,6 +157,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteFragment() {
 
 template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertices() {
+  BOOST_LEAF_CHECK(checkInitialization());
   for (const auto& vertex_info : graph_info_->GetVertexInfos()) {
     const auto& label = vertex_info->GetLabel();
     LOG_IF(INFO, !comm_spec_.worker_id())
@@ -142,6 +170,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertices() {
 template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertex(
     const std::string& label) {
+  BOOST_LEAF_CHECK(checkInitialization());
   auto vertex_info = graph_info_->GetVertexInfo(label);
 
   auto& schema = frag_->schema();
@@ -207,6 +236,7 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteVertex(
 
 template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteEdges() {
+  BOOST_LEAF_CHECK(checkInitialization());
   for (const auto& edge_info : graph_info_->GetEdgeInfos()) {
     const auto& src_label = edge_info->GetSrcLabel();
     const auto& edge_label = edge_info->GetEdgeLabel();
@@ -223,6 +253,7 @@ template <typename FRAG_T>
 boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteEdge(
     const std::string& src_label, const std::string& edge_label,
     const std::string& dst_label) {
+  BOOST_LEAF_CHECK(checkInitialization());
   auto edge_info = graph_info_->GetEdgeInfo(src_label, edge_label, dst_label);
 
   // check if the edge information is valid in fragment
@@ -301,6 +332,15 @@ boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::WriteEdge(
                   GraphArchive::AdjListType::unordered_by_dest);
   }
 
+  return {};
+}
+
+template <typename FRAG_T>
+boost::leaf::result<void> ArrowFragmentWriter<FRAG_T>::checkInitialization() {
+  if (frag_ == nullptr || graph_info_ == nullptr) {
+    RETURN_GS_ERROR(ErrorCode::kInvalidOperationError,
+                    "The writer is not initialized yet.");
+  }
   return {};
 }
 
@@ -549,9 +589,9 @@ ArrowFragmentWriter<FRAG_T>::appendPropertiesToArrowArrayBuilders(
           edge.template get_data<arrow::Time32Type::c_type>(pid)));
     } else if (prop_type->id() == arrow::Type::TIME64) {
       auto builder =
-          std::dynamic_pointer_cast<arrow::Date64Builder>(builders[col_id]);
+          std::dynamic_pointer_cast<arrow::Time64Builder>(builders[col_id]);
       ARROW_OK_OR_RAISE(builder->Append(
-          edge.template get_data<arrow::Date64Type::c_type>(pid)));
+          edge.template get_data<arrow::Time64Type::c_type>(pid)));
     } else if (prop_type->id() == arrow::Type::TIMESTAMP) {
       auto builder =
           std::dynamic_pointer_cast<arrow::TimestampBuilder>(builders[col_id]);

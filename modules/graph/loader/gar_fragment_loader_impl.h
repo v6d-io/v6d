@@ -50,54 +50,79 @@ namespace vineyard {
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::GARFragmentLoader(
-    Client& client, const grape::CommSpec& comm_spec,
-    const std::string& graph_info_yaml,
-    const std::vector<std::string>& vertex_labels,
-    const std::vector<std::vector<std::string>>& edge_labels, bool directed,
-    bool generate_eid, bool store_in_local)
+    Client& client, const grape::CommSpec& comm_spec)
     : client_(client),
       comm_spec_(comm_spec),
-      directed_(directed),
-      generate_eid_(generate_eid),
-      store_in_local_(store_in_local) {
+      graph_info_(nullptr),
+      store_in_local_(false) {}
+
+template <typename OID_T, typename VID_T,
+          template <typename, typename> class VERTEX_MAP_T>
+boost::leaf::result<void> GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::Init(
+    const std::string& graph_info_yaml,
+    const std::vector<std::string>& selected_vertices,
+    const std::vector<std::string>& selected_edges, bool directed,
+    bool generate_eid, bool store_in_local) {
+  directed_ = directed;
+  generate_eid_ = generate_eid;
+  store_in_local_ = store_in_local;
+
   // Load graph info.
   auto maybe_graph_info = GraphArchive::GraphInfo::Load(graph_info_yaml);
   if (!maybe_graph_info.status().ok()) {
-    LOG(ERROR) << "Failed to load graph info from " << graph_info_yaml
-               << ", error: " << maybe_graph_info.status().message();
+    RETURN_GS_ERROR(ErrorCode::kGraphArError,
+                    "Failed to load graph info from " + graph_info_yaml +
+                        ", error: " + maybe_graph_info.status().message());
   }
   graph_info_ = maybe_graph_info.value();
-  if (!vertex_labels.empty() && !edge_labels.empty()) {
+  if (!selected_vertices.empty() && !selected_edges.empty()) {
     // project a subgraph from the original graph.
     GraphArchive::VertexInfoVector project_vertex_infos;
     GraphArchive::EdgeInfoVector project_edge_infos;
-    for (const auto& label : vertex_labels) {
+    for (const auto& label : selected_vertices) {
       auto vertex_info = graph_info_->GetVertexInfo(label);
       if (vertex_info == nullptr) {
-        LOG(ERROR) << "Vertex label " << label << " is not found in graph info";
+        RETURN_GS_ERROR(ErrorCode::kGraphArError,
+                        "The selected vertex label " + label +
+                            " is not found in the graph info");
       }
       project_vertex_infos.push_back(vertex_info);
     }
-    for (const auto& triple : edge_labels) {
-      auto edge_info =
-          graph_info_->GetEdgeInfo(triple[0], triple[1], triple[2]);
-      if (edge_info == nullptr) {
-        LOG(ERROR) << "Edge label " << triple[0] << " -> " << triple[1]
-                   << " -> " << triple[2] << " is not found in graph info";
+    for (int i = 0; i < graph_info_->EdgeInfoNum(); ++i) {
+      const auto& edge_info = graph_info_->GetEdgeInfoByIndex(i);
+      const std::string& edge_label = edge_info->GetEdgeLabel();
+      const std::string& src_label = edge_info->GetSrcLabel();
+      const std::string& dst_label = edge_info->GetDstLabel();
+      if (std::find(selected_edges.begin(), selected_edges.end(), edge_label) !=
+              selected_edges.end() &&
+          std::find(selected_vertices.begin(), selected_vertices.end(),
+                    src_label) != selected_vertices.end() &&
+          std::find(selected_vertices.begin(), selected_vertices.end(),
+                    dst_label) != selected_vertices.end()) {
+        // the edge is in the selected edge labels and the src and dst vertex
+        // labels are in the selected vertex labels.
+        project_edge_infos.push_back(edge_info);
       }
-      project_edge_infos.push_back(edge_info);
     }
+
     graph_info_ = GraphArchive::CreateGraphInfo(
         graph_info_->GetName(), project_vertex_infos, project_edge_infos,
         graph_info_->GetPrefix(), graph_info_->version(),
         graph_info_->GetExtraInfo());
+    if (graph_info_ == nullptr) {
+      RETURN_GS_ERROR(ErrorCode::kGraphArError,
+                      "Failed to create graph info for the subgraph");
+    }
   }
+  return {};
 }
 
 template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 boost::leaf::result<ObjectID>
 GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadFragment() {
+  BOOST_LEAF_CHECK(checkInitialization());
+
   // distribute the vertices for fragments.
   BOOST_LEAF_CHECK(distributeVertices());
   // Load vertex tables.
@@ -131,6 +156,8 @@ template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 boost::leaf::result<ObjectID>
 GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadFragmentAsFragmentGroup() {
+  BOOST_LEAF_CHECK(checkInitialization());
+
   BOOST_LEAF_AUTO(frag_id, LoadFragment());
   auto frag =
       std::dynamic_pointer_cast<ArrowFragment<OID_T, VID_T, vertex_map_t>>(
@@ -149,6 +176,7 @@ template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 boost::leaf::result<void>
 GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadVertexTables() {
+  BOOST_LEAF_CHECK(checkInitialization());
   vertex_tables_.resize(vertex_label_num_);
   for (const auto& vertex_label : vertex_labels_) {
     BOOST_LEAF_CHECK(loadVertexTableOfLabel(vertex_label));
@@ -160,6 +188,7 @@ template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 boost::leaf::result<void>
 GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::LoadEdgeTables() {
+  BOOST_LEAF_CHECK(checkInitialization());
   csr_edge_tables_with_label_.resize(edge_label_num_);
   csc_edge_tables_with_label_.resize(edge_label_num_);
   // read the adj list chunk tables
@@ -197,6 +226,7 @@ template <typename OID_T, typename VID_T,
           template <typename, typename> class VERTEX_MAP_T>
 boost::leaf::result<ObjectID>
 GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::ConstructFragment() {
+  BOOST_LEAF_CHECK(checkInitialization());
   GARFragmentBuilder<oid_t, vid_t, vertex_map_t> frag_builder(client_, vm_ptr_);
 
   PropertyGraphSchema schema;
@@ -354,6 +384,13 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::constructVertexMap() {
                         vertex_labels_[label_id] + " table";
       RETURN_GS_ERROR(ErrorCode::kInvalidValueError, msg);
     }
+    // index column has been used to construct vertex map
+    // so we can remove it from the vertex table
+    int index_col_index = vertex_tables_[label_id]->schema()->GetFieldIndex(
+        GraphArchive::GeneralParams::kVertexIndexCol);
+    CHECK_ARROW_ERROR_AND_ASSIGN(
+        vertex_tables_[label_id],
+        vertex_tables_[label_id]->RemoveColumn(index_col_index));
     VY_OK_OR_RAISE(FragmentAllGatherArray(comm_spec_, local_oid_array,
                                           shuffled_oid_array));
     for (auto const& array : shuffled_oid_array) {
@@ -826,6 +863,17 @@ GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::parseIdChunkedArrayChunk(
       id_array->length(), std::shared_ptr<arrow::Buffer>(std::move(buffer)),
       nullptr, 0);
   return Status::OK();
+}
+
+template <typename OID_T, typename VID_T,
+          template <typename, typename> class VERTEX_MAP_T>
+boost::leaf::result<void>
+GARFragmentLoader<OID_T, VID_T, VERTEX_MAP_T>::checkInitialization() {
+  if (graph_info_ == nullptr) {
+    RETURN_GS_ERROR(ErrorCode::kInvalidOperationError,
+                    "The loader is not initialized yet.");
+  }
+  return {};
 }
 
 }  // namespace vineyard

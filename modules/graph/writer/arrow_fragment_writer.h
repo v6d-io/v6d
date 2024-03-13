@@ -90,6 +90,8 @@ class ArrowFragmentWriter {
   static constexpr const char* MARKER = "PROGRESS--GRAPH-LOADING-";
 
  public:
+  ArrowFragmentWriter();
+
   /**
    * @brief Initialize ArrowFragmentWriter with graph info
    *
@@ -97,9 +99,9 @@ class ArrowFragmentWriter {
    * @param comm_spec The communicator specification
    * @param graph_info_yaml The graph info yaml path
    */
-  ArrowFragmentWriter(const std::shared_ptr<fragment_t>& frag,
-                      const grape::CommSpec& comm_spec,
-                      const std::string& graph_info_yaml);
+  boost::leaf::result<void> Init(const std::shared_ptr<fragment_t>& frag,
+                                 const grape::CommSpec& comm_spec,
+                                 const std::string& graph_info_yaml);
 
   /**
    * @brief Initialize ArrowFragmentWriter with base graph info information
@@ -115,12 +117,18 @@ class ArrowFragmentWriter {
    * @param file_type The file type to store the fragment
    * @param store_in_local Whether write the fragment to local
    */
-  ArrowFragmentWriter(const std::shared_ptr<fragment_t>& frag,
-                      const grape::CommSpec& comm_spec,
-                      const std::string& graph_name,
-                      const std::string& out_path, int64_t vertex_block_size,
-                      int64_t edge_block_size, const std::string& file_type,
-                      bool store_in_local = false);
+  boost::leaf::result<void> Init(
+      const std::shared_ptr<fragment_t>& frag, const grape::CommSpec& comm_spec,
+      const std::string& graph_name, const std::string& out_path,
+      int64_t vertex_block_size, int64_t edge_block_size,
+      const std::string& file_type,
+      const std::vector<std::string>& selected_vertices,
+      const std::vector<std::string>& selected_edges,
+      const std::unordered_map<std::string, std::vector<std::string>>&
+          selected_vertex_properties,
+      const std::unordered_map<std::string, std::vector<std::string>>&
+          selected_edge_properties,
+      bool store_in_local = false);
 
   ~ArrowFragmentWriter() = default;
 
@@ -139,6 +147,8 @@ class ArrowFragmentWriter {
                                       const std::string& dst_label);
 
  private:
+  boost::leaf::result<void> checkInitialization();
+
   boost::leaf::result<void> writeEdgeImpl(
       const std::shared_ptr<GraphArchive::EdgeInfo>& edge_info,
       label_id_t src_label_id, label_id_t edge_label_id,
