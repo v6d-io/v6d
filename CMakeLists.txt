@@ -333,6 +333,9 @@ macro(find_boost)
     add_compile_options(-DBOOST_SYSTEM_NO_DEPRECATED)
     # eliminate a lot of warnings for newer version of boost library.
     add_compile_options(-DBOOST_BIND_GLOBAL_PLACEHOLDERS)
+    # fixes the std::unary_function error
+    add_compile_options(-DBOOST_NO_CXX98_FUNCTION_BASE)
+    add_compile_options(-D_LIBCPP_ENABLE_CXX17_REMOVED_UNARY_BINARY_FUNCTION)
 endmacro()
 
 macro(find_etcd_cpp_apiv3)
