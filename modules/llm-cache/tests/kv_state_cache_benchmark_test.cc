@@ -156,7 +156,9 @@ int main(int argc, char** argv) {
     }
 
     benchmark_inference(all_token_lists);
+    sleep(5);
     inference_done = true;
+    manager->Close();
   });
 
   memory_monitor.join();

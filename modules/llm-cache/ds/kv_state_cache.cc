@@ -259,6 +259,9 @@ void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
   // delete (DataWrapper*) evictedNodeData->nodeData;
   if (evictedNodeData->cleanTreeData) {
     this->rootTree->ClearSubtreeData(treeData);
+    std::shared_ptr<Object> blockObject =
+        kvStateCacheBlockBuilder->_Seal(client);
+    client.DelData(blockObject->id());
     delete kvStateCacheBlockBuilder;
   }
   evictedNodeData->RecycleSource();
@@ -326,6 +329,7 @@ Status KVStateCacheBuilder::Merge(std::shared_ptr<KVStateCache> kvStateCache) {
   }
 
   this->version = globalCacheBuilder->GetVersion();
+  globalCacheBuilder->Close();
   return Status::OK();
 }
 
@@ -399,6 +403,22 @@ KVStateCacheBuilder::~KVStateCacheBuilder() {
     OffsetData* data = reinterpret_cast<OffsetData*>(*iter);
     if (data != nullptr) {
       delete data;
+    }
+  }
+}
+
+void KVStateCacheBuilder::Close() {
+  std::set<void*> subTreeDataSet = rootTree->GetSubTreeDataSet();
+  for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
+       ++iter) {
+    TreeData* treeData = reinterpret_cast<TreeData*>(*iter);
+    if (treeData->isPtr == true &&
+        treeData->kvStateCacheBlockBuilder != nullptr) {
+      std::shared_ptr<Object> object =
+          reinterpret_cast<KVStateCacheBlockBuilder*>(
+              treeData->kvStateCacheBlockBuilder)
+              ->_Seal(client);
+      client.DelData(object->id());
     }
   }
 }

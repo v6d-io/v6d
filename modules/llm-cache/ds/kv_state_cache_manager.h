@@ -36,11 +36,12 @@ class KVStateCacheManager {
   std::string llmCacheSyncLock;
   std::string llmCacheObjectName;
   std::thread syncThread;
-  std::mutex syncMutex;
+  std::mutex cacheAccessMutex;
   int syncInterval;
   bool exitFlag = false;
   std::condition_variable cv;
   std::mutex exitMutex;
+  bool isClosed = false;
 
  public:
   KVStateCacheManager(Client& client,
@@ -68,6 +69,8 @@ class KVStateCacheManager {
   Status Query(
       const std::vector<int>& tokenList,
       std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState);
+
+  void Close();
 
   ~KVStateCacheManager();
 

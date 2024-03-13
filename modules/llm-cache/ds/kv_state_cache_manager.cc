@@ -98,64 +98,65 @@ Status KVStateCacheManager::QueryInternal(
 Status KVStateCacheManager::Update(
     const std::vector<int>& tokenList, int nextToken,
     const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
-  Status result =
-      Status::Invalid("Query cache failed: can not gain the cache lock.");
-
-  if (!syncMutex.try_lock()) {
-    return result;
+  std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
+  if (!lock.try_lock()) {
+    // If failed to gain the lock, return OK and wait for next time
+    return Status::OK();
   }
 
-  result = UpdateInternal(tokenList, nextToken, kvState);
+  if (isClosed) {
+    return Status::Invalid("The cache manager is closed.");
+  }
 
-  syncMutex.unlock();
-  return result;
+  return UpdateInternal(tokenList, nextToken, kvState);
 }
 
 Status KVStateCacheManager::Update(
     const std::vector<int>& tokenList,
     const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvState) {
-  Status result =
-      Status::Invalid("Update cache failed: can not gain the cache lock.");
-  if (!syncMutex.try_lock()) {
-    return result;
+  std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
+  if (!lock.try_lock()) {
+    return Status::OK();
   }
-
+  if (isClosed) {
+    return Status::Invalid("The cache manager is closed.");
+  }
   std::vector<int> tokenListCopy;
   for (size_t i = 0; i < tokenList.size(); i++) {
-    result = UpdateInternal(tokenListCopy, tokenList[i], kvState[i]);
+    Status result = UpdateInternal(tokenListCopy, tokenList[i], kvState[i]);
     if (!result.ok()) {
       break;
     }
     tokenListCopy.push_back(tokenList[i]);
   }
 
-  syncMutex.unlock();
-  return result;
+  return Status::OK();
 }
 
 Status KVStateCacheManager::Query(
     const std::vector<int>& tokenList, int token,
     std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
-  Status result =
-      Status::Invalid("Query cache failed: can not gain the cache lock.");
-
-  if (!syncMutex.try_lock()) {
-    return result;
+  std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
+  if (!lock.try_lock()) {
+    // If failed to gain the lock, return OK and wait for next time
+    return Status::OK();
+  }
+  if (isClosed) {
+    return Status::Invalid("The cache manager is closed.");
   }
 
-  result = QueryInternal(tokenList, token, kvState);
-  syncMutex.unlock();
-
-  return result;
+  return QueryInternal(tokenList, token, kvState);
 }
 
 Status KVStateCacheManager::Query(
     const std::vector<int>& tokenList,
     std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState) {
-  Status result =
-      Status::Invalid("Query cache failed: can not gain the cache lock.");
-  if (!syncMutex.try_lock()) {
-    return result;
+  std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
+  if (!lock.try_lock()) {
+    return Status::Invalid("Query cache failed: can not gain the cache lock.");
+  }
+  if (isClosed) {
+    return Status::Invalid("The cache manager is closed.");
   }
 
   // support partial match of the token list
@@ -163,9 +164,8 @@ Status KVStateCacheManager::Query(
   std::vector<int> tokenListCopy;
   std::map<int, std::pair<LLMKV, LLMKV>> kvState;
   for (size_t i = 0; i < tokenList.size(); i++) {
-    result = QueryInternal(tokenListCopy, tokenList[i], kvState);
+    Status result = QueryInternal(tokenListCopy, tokenList[i], kvState);
     if (!result.ok()) {
-      syncMutex.unlock();
       return Status::OK();
     }
     tokenListCopy.push_back(tokenList[i]);
@@ -173,18 +173,18 @@ Status KVStateCacheManager::Query(
     kvState.clear();
   }
 
-  syncMutex.unlock();
-  return result;
+  return Status::OK();
 }
 
 KVStateCacheManager::~KVStateCacheManager() {
   LOG(INFO) << "Wait for sync thread to exit.";
-  {
-    std::lock_guard<std::mutex> lock(exitMutex);
+  std::lock_guard<std::mutex> lock(exitMutex);
+  if (!exitFlag) {
     exitFlag = true;
+    exitMutex.unlock();
+    cv.notify_one();
+    syncThread.join();
   }
-  cv.notify_one();
-  syncThread.join();
   LOG(INFO) << "KVStateCacheManager exit.";
 }
 
@@ -279,7 +279,7 @@ void KVStateCacheManager::SyncThreadFunc(KVStateCacheManager* manager) {
       if (manager->exitFlag) {
         break;
       }
-      manager->syncMutex.lock();
+      std::lock_guard<std::mutex> lock(manager->cacheAccessMutex);
       std::string actualKey;
 
       AcquireServerLock(manager->client, manager->llmCacheSyncLock, actualKey);
@@ -292,7 +292,6 @@ void KVStateCacheManager::SyncThreadFunc(KVStateCacheManager* manager) {
       }
 
       ReleaseServerLock(manager->client, actualKey);
-      manager->syncMutex.unlock();
 
       last_time = std::chrono::duration_cast<std::chrono::seconds>(
                       std::chrono::system_clock::now().time_since_epoch())
@@ -352,6 +351,23 @@ void KVStateCacheManager::ReleaseServerLock(Client& client,
     VLOG(100) << "Failed to release the lock, wait for next time.";
     sleep(1);
   }
+}
+
+void KVStateCacheManager::Close() {
+  // recycle blob
+  LOG(INFO) << "Wait for sync thread to exit.";
+  std::lock_guard<std::mutex> exitLock(exitMutex);
+  if (!exitFlag) {
+    exitFlag = true;
+    exitMutex.unlock();
+    cv.notify_one();
+    syncThread.join();
+  }
+
+  LOG(INFO) << "Recycle blob.";
+  std::lock_guard<std::mutex> cacheLock(cacheAccessMutex);
+  this->kvStateCacheBuilder->Close();
+  this->isClosed = true;
 }
 
 }  // namespace vineyard
