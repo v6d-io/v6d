@@ -97,10 +97,10 @@ upload the current file to the OSS service.
 Step 2: Install the Fluid control plane and Fluid Python SDK in the ACK cluster.
 --------------------------------------------------------------------------------
 
-Option 1: Install ack-fluid. Reference document: Installing the `cloud native AI suite`_
+Option 1: Install ack-fluid. Refer to the document: `Install the cloud native AI suite`_
 
-Option 2: Using the open source version, we will use Kubectl to create a 
-namespace named ``fluid-system`` , and then use Helm to install Fluid.
+Option 2: Using the open-source version, we will use `Kubectl`_ to create a 
+namespace named ``fluid-system``, and then use `Helm`_ to install Fluid.
 This process only needs to be completed through the following simple Shell commands.
 
 .. code:: bash
@@ -221,7 +221,7 @@ The whole process of model training and model testing.
         vineyard.put(y_train, name="y_train", persist=True)
         vineyard.put(y_test, name="y_test", persist=True)
 
-
+    # define the model training task
     def train():
         from sklearn.linear_model import LinearRegression
 
@@ -237,6 +237,7 @@ The whole process of model training and model testing.
 
         joblib.dump(model, '/data/model.pkl')
 
+    # define the model testing task
     def test():
         from sklearn.linear_model import LinearRegression
         from sklearn.metrics import mean_squared_error
@@ -280,22 +281,22 @@ a connection with the Fluid control platform using the default kubeconfig file a
 creating a Fluid client instance.
 
 2. **Create and configure the vineyard dataset and runtime environment**: Next, the code
-creates a dataset named Vineyard, then obtains the dataset instance, initializes the vineyard
+creates a dataset named ``Vineyard``, then obtains the dataset instance, initializes the vineyard
 runtime configuration, and sets up a copy number and memory size to bind the dataset to the
 runtime environment.
 
-3. **Define the data preprocessing script**: This part defines a bash script for data
+3. **Define the data preprocessing function**: This part defines a python function for data
 preprocessing, which includes splitting the training set and the test set, as well as
 data filtering and other operations.
 
-4. **Define model training script**: As the name suggests, this code defines another
-bash script for training a linear regression model.
+4. **Define model training function**: As the name suggests, this code defines another
+python function for training a linear regression model.
 
-5. **Define the model testing script**: This section contains the model testing logic
+5. **Define the model testing function**: This section contains the model testing logic
 for evaluating the trained model.
 
 6. **Create a task template and define task workflow**: The code encapsulates a task
-template function named create_processor, which uses the previously defined bash script
+template function named create_processor, which uses the previously defined python functions
 to build data preprocessing, model training and model testing steps respectively.
 These steps are designed to be executed sequentially, forming a complete workflow in which
 data preprocessing is the first step, followed by model training, and finally model testing.
@@ -304,12 +305,14 @@ of the next stage, thereby achieving a coherent and orderly machine learning pro
 
 7. **[Optional] Enable data affinity scheduling**: After enabling fuse affinity scheduling,
 add the tag ``"fuse.serverful.fluid.io/inject": "true"`` to ensure that related tasks run on the
-same physical node first through scheduling. to achieve the best performance in data processing.
+same node first through scheduling. to achieve the best performance in data processing.
 
 8. **Submit and execute the task workflow**: Submit the entire linear regression model task
 workflow to the Fluid platform for execution through the run command.
 
 9. **Resource Cleanup**: Finally, clean up all resources created on the Fluid platform.
 
-.. _cloud native AI suite: https://help.aliyun.com/zh/ack/cloud-native-ai-suite/user-guide/deploy-the-cloud-native-ai-suite?spm=a2c4g.11186623.0.i14#task-2038811
+.. _Install the cloud native AI suite: https://help.aliyun.com/zh/ack/cloud-native-ai-suite/user-guide/deploy-the-cloud-native-ai-suite?spm=a2c4g.11186623.0.i14#task-2038811
 .. _ossutil: https://help.aliyun.com/zh/oss/developer-reference/ossutil
+.. _Kubectl: https://github.com/kubernetes/kubectl
+.. _Helm: https://github.com/helm/helm
