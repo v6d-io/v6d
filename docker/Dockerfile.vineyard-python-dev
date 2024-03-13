@@ -53,6 +53,7 @@ RUN cd /work/v6d && \
              -DBUILD_VINEYARD_CLIENT=ON \
              -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
              -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
+             -DBUILD_VINEYARD_LLM_CACHE=OFF \
              -DBUILD_VINEYARD_BASIC=OFF \
              -DBUILD_VINEYARD_IO=OFF \
              -DBUILD_VINEYARD_GRAPH=OFF \
