@@ -71,6 +71,10 @@ class RefcntMapObjectBuilder : public vineyard::ObjectBuilder {
 
   void PrintRefcntMap();
 
+  bool Equals(std::shared_ptr<RefcntMapObjectBuilder>& refcntMapBuilder);
+
+  std::map<ObjectID, uint64_t> GetRefcntMap();
+
   Status Build(Client& client) override;
 
   std::shared_ptr<Object> _Seal(Client& Client) override;

@@ -38,7 +38,7 @@ class KVStateCacheManager {
   std::shared_ptr<RefcntMapObjectBuilder> refcntMapObjectBuilder = nullptr;
   std::string llmCacheSyncLock;
   std::string llmCacheObjectName;
-  std::string llmRefcntObjectName = "test";
+  std::string llmRefcntObjectName;
   std::thread syncThread;
   std::mutex cacheAccessMutex;
   int syncInterval;
@@ -51,14 +51,16 @@ class KVStateCacheManager {
   KVStateCacheManager(Client& client,
                       std::shared_ptr<KVStateCacheBuilder>& cache,
                       int syncInterval, std::string& llmCacheSyncLock,
-                      std::string& llmCacheObjectName);
+                      std::string& llmCacheObjectName,
+                      std::string& llmRefcntObjectName);
 
   static Status Make(Client& client,
                      std::shared_ptr<KVStateCacheManager>& manager,
                      int dimension = 10, int cacheCapacity = 10, int layer = 1,
                      int blockSize = 5, int syncInterval = 3,
                      std::string llmCacheSyncLock = "llmCacheSyncLock",
-                     std::string llmCacheObjectName = "llm_cache_object");
+                     std::string llmCacheObjectName = "llm_cache_object",
+                     std::string llmRefcntObjectName = "llm_refcnt_object");
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
                 const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
@@ -76,13 +78,15 @@ class KVStateCacheManager {
 
   void Close();
 
-  std::shared_ptr<KVStateCacheBuilder> GetKVStateCacheBuilder() {
+  std::shared_ptr<KVStateCacheBuilder>& GetKVStateCacheBuilder() {
     return this->kvStateCacheBuilder;
   }
 
-  std::shared_ptr<RefcntMapObjectBuilder> GetRefcntMapObjectBuilder() {
+  std::shared_ptr<RefcntMapObjectBuilder>& GetRefcntMapObjectBuilder() {
     return this->refcntMapObjectBuilder;
   }
+
+  void StopSync();
 
   ~KVStateCacheManager();
 
@@ -108,6 +112,8 @@ class KVStateCacheManager {
 
   Status SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
                       std::set<ObjectID>& blockIDSetToAdd);
+
+  void RefreshRefcnt();
 };
 
 }  // namespace vineyard

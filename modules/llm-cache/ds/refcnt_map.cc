@@ -16,6 +16,7 @@ limitations under the License.
 #include <set>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include "client/client.h"
 #include "common/util/logging.h"
@@ -50,6 +51,7 @@ RefcntMapObjectBuilder::RefcntMapObjectBuilder(
 }
 
 void RefcntMapObjectBuilder::IncRefcnt(ObjectID objectID) {
+  VLOG(100) << "inc refcnt of :" << objectID;
   if (refcntMap.find(objectID) == refcntMap.end()) {
     refcntMap[objectID] = 1;
   } else {
@@ -59,6 +61,7 @@ void RefcntMapObjectBuilder::IncRefcnt(ObjectID objectID) {
 
 void RefcntMapObjectBuilder::IncSetRefcnt(std::set<ObjectID>& objectIDs) {
   for (auto objectID : objectIDs) {
+    VLOG(100) << "inc refcnt of :" << objectID;
     if (refcntMap.find(objectID) == refcntMap.end()) {
       refcntMap[objectID] = 1;
     } else {
@@ -68,25 +71,52 @@ void RefcntMapObjectBuilder::IncSetRefcnt(std::set<ObjectID>& objectIDs) {
 }
 
 void RefcntMapObjectBuilder::DecRefcnt(ObjectID objectID) {
+  VLOG(100) << "dec refcnt of :" << objectID;
   if (refcntMap.find(objectID) != refcntMap.end()) {
     refcntMap[objectID]--;
     if (refcntMap[objectID] == 0) {
       // TODO: delete object
       refcntMap.erase(objectID);
+      client.DelData(objectID);
     }
   }
 }
 
 void RefcntMapObjectBuilder::DecSetRefcnt(std::set<ObjectID>& objectIDs) {
+  std::vector<ObjectID> objectIDToDelete;
   for (auto objectID : objectIDs) {
+    VLOG(100) << "dec refcnt of :" << objectID;
     if (refcntMap.find(objectID) != refcntMap.end()) {
       refcntMap[objectID]--;
       if (refcntMap[objectID] == 0) {
         // TODO: delete object
         refcntMap.erase(objectID);
+        objectIDToDelete.push_back(objectID);
       }
     }
   }
+  if (objectIDToDelete.size() > 0) {
+    client.DelData(objectIDToDelete);
+  }
+}
+
+bool RefcntMapObjectBuilder::Equals(
+    std::shared_ptr<RefcntMapObjectBuilder>& refcntMapBuilder) {
+  std::map<ObjectID, uint64_t> refcntMapCompare = refcntMapBuilder->refcntMap;
+  if (refcntMap.size() != refcntMapCompare.size()) {
+    return false;
+  }
+
+  for (auto& entry : refcntMap) {
+    if (refcntMapCompare.find(entry.first) == refcntMapCompare.end()) {
+      return false;
+    }
+    if (refcntMapCompare[entry.first] != entry.second) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 void RefcntMapObjectBuilder::PrintRefcntMap() {
@@ -94,6 +124,10 @@ void RefcntMapObjectBuilder::PrintRefcntMap() {
   for (auto& entry : refcntMap) {
     LOG(INFO) << "objectID : " << entry.first << " refcnt : " << entry.second;
   }
+}
+
+std::map<ObjectID, uint64_t> RefcntMapObjectBuilder::GetRefcntMap() {
+  return refcntMap;
 }
 
 Status RefcntMapObjectBuilder::Build(Client& client) { return Status::OK(); }

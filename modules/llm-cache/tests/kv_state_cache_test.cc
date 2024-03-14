@@ -30,6 +30,10 @@ int capacity = 20;
 int layer = 3;
 int block_size = 5;
 
+std::string llmCacheObjectName = "cache_test_cache_object";
+std::string llmCacheSyncLock = "cache_test_cache_lock";
+std::string llmRefcntObjectName = "cache_test_refcnt_object";
+
 std::vector<int> round_1_tokens = {
     1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 12, 13, 14, 15, 16, 17, 18,
     19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36,
@@ -46,9 +50,9 @@ std::shared_ptr<KVStateCacheManager> init(Client& client, int tensorBytes,
                                           int capacity, int layer,
                                           int block_size) {
   std::shared_ptr<KVStateCacheManager> kv_state_cache_manager;
-  VINEYARD_CHECK_OK(KVStateCacheManager::Make(client, kv_state_cache_manager,
-                                              tensorBytes, capacity, layer,
-                                              block_size, 3));
+  VINEYARD_CHECK_OK(KVStateCacheManager::Make(
+      client, kv_state_cache_manager, tensorBytes, capacity, layer, block_size,
+      3, llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
   return kv_state_cache_manager;
 }
 
@@ -186,14 +190,47 @@ void threadFunc(std::string socket) {
   LOG(INFO) << "inference end";
 
   manager->Close();
-  std::shared_ptr<InstanceStatus> status;
-  VINEYARD_CHECK_OK(client.InstanceStatus(status));
-  LOG(INFO) << "memory usage:" << status->memory_usage;
   client.Disconnect();
 }
 
+void clearGlobalObject(std::vector<std::string>& sockets) {
+  Client client;
+  VINEYARD_CHECK_OK(client.Connect(sockets[0]));
+
+  ObjectID globalCacheObjectID;
+  VINEYARD_CHECK_OK(client.GetName(llmCacheObjectName, globalCacheObjectID));
+  VINEYARD_CHECK_OK(client.DropName(llmCacheObjectName));
+  VINEYARD_CHECK_OK(client.DelData(globalCacheObjectID));
+
+  ObjectID globalRefcntMapId;
+  VINEYARD_CHECK_OK(client.GetName(llmRefcntObjectName, globalRefcntMapId));
+  VINEYARD_CHECK_OK(client.DropName(llmRefcntObjectName));
+  VINEYARD_CHECK_OK(client.DelData(globalRefcntMapId));
+  client.Disconnect();
+
+  for (size_t i = 0; i < sockets.size(); i++) {
+    Client client;
+    VINEYARD_CHECK_OK(client.Connect(sockets[i]));
+    std::shared_ptr<InstanceStatus> status;
+    VINEYARD_CHECK_OK(client.InstanceStatus(status));
+    LOG(INFO) << "After clear global object:";
+    LOG(INFO) << "Client " << client.instance_id()
+              << " memory usage:" << status->memory_usage;
+
+    if (status->memory_usage != 0) {
+      std::vector<ObjectMeta> objects;
+      std::vector<ObjectMeta> metas = client.ListObjectMeta(".*", true);
+      LOG(INFO) << "Object:";
+      for (size_t i = 0; i < metas.size(); i++) {
+        LOG(INFO) << metas[i].ToString();
+      }
+      VINEYARD_ASSERT(false);
+    }
+  }
+}
+
 int main(int argc, char** argv) {
-  std::string sockets[2];
+  std::vector<std::string> sockets;
   if (argc < 2) {
     printf(
         "usage ./kv_state_cache_test --client-num <client_num> "
@@ -233,7 +270,7 @@ int main(int argc, char** argv) {
       }
     } else if (strcmp(argv[i], "--vineyard-ipc-sockets") == 0) {
       for (int j = 0; j < client_num; j++) {
-        sockets[j] = std::string(argv[i + j + 1]);
+        sockets.push_back(std::string(argv[i + j + 1]));
       }
     }
   }
@@ -252,6 +289,8 @@ int main(int argc, char** argv) {
     threads[i].join();
     LOG(INFO) << "Thread:" << i << " exit.";
   }
+
+  clearGlobalObject(sockets);
 
   LOG(INFO) << "Passed KVStateCache tests...";
   return 0;

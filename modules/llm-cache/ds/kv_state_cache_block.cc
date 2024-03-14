@@ -139,6 +139,10 @@ Status KVStateCacheBlockBuilder::Make(
   std::shared_ptr<KVStateCacheBlock> blockObject;
   RETURN_ON_ERROR(client.FetchAndGetObject(blockObjectID, blockObject));
   kvStateCacheBlockBuilder = new KVStateCacheBlockBuilder(client, blockObject);
+  if (blockObjectID != blockObject->id()) {
+    // If the object is migrated, we should delete the copied object.
+    client.DelData(blockObject->id());
+  }
   return Status::OK();
 }
 

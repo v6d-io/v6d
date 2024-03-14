@@ -131,6 +131,8 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   std::set<ObjectID>& GetBlockIDSetToAdd() { return this->blockIDSetToAdd; }
 
+  void GetCurrentBlockIDSet(std::set<ObjectID>& objectIDSet);
+
   void ClearBlockIDSetToDelete() { this->blockIDSetToDelete.clear(); }
 
   void ClearBlockIDSetToAdd() { this->blockIDSetToAdd.clear(); }

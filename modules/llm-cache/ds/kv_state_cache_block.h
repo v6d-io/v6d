@@ -77,7 +77,6 @@ class KVStateCacheBlock : public vineyard::Registered<KVStateCacheBlock> {
   uint64_t* bitmap;
   int blockSize;
   int bitmapSize;
-  ObjectID id;
   int layer;
   int tensorBytes;
 
