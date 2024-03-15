@@ -87,8 +87,8 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
 
   static Status Make(Client& client,
                      std::shared_ptr<KVStateCacheBuilder>& kvStateCacheBuilder,
-                     int dimension = 10, int cacheCapacity = 10, int layer = 1,
-                     int blockSize = DEFAULT_BLOCK_SIZE);
+                     int tensorBytes = 10, int cacheCapacity = 10,
+                     int layer = 1, int blockSize = DEFAULT_BLOCK_SIZE);
 
   static Status Make(Client& client,
                      std::shared_ptr<KVStateCacheBuilder>& kvStateCacheBuilder,

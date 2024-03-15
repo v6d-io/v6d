@@ -38,7 +38,7 @@ BlobStorage::BlobStorage(Client& client,
 }
 
 Status BlobStorage::Make(Client& client, std::shared_ptr<BlobStorage>& storage,
-                         int dimension, int cacheCapacity, int layer,
+                         int tensorBytes, int cacheCapacity, int layer,
                          int blockSize, int syncInterval,
                          std::string llmCacheSyncLock,
                          std::string llmCacheObjectName,
@@ -82,7 +82,7 @@ Status BlobStorage::Make(Client& client, std::shared_ptr<BlobStorage>& storage,
     // if failed, create a new cache object
     LOG(INFO) << "failed to get the cache object, create a new one.";
     Status status =
-        KVStateCacheBuilder::Make(client, kvStateCacheBuilder, dimension,
+        KVStateCacheBuilder::Make(client, kvStateCacheBuilder, tensorBytes,
                                   cacheCapacity, layer, blockSize);
     if (!status.ok()) {
       ReleaseServerLock(client, actualKey);
@@ -495,7 +495,9 @@ Status BlobStorage::SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
 
     refcntMapObjectBuilder->IncSetRefcnt(blockIDSetToAdd);
     refcntMapObjectBuilder->DecSetRefcnt(blockIDSetToDelete);
-    refcntMapObjectBuilder->PrintRefcntMap();
+    if (VLOG_IS_ON(100)) {
+      refcntMapObjectBuilder->PrintRefcntMap();
+    }
 
     std::shared_ptr<Object> newRefcntMapObject =
         refcntMapObjectBuilder->_Seal(client);
@@ -514,7 +516,9 @@ Status BlobStorage::SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
         std::make_shared<RefcntMapObjectBuilder>(client);
     refcntMapObjectBuilder->IncSetRefcnt(blockIDSetToAdd);
     refcntMapObjectBuilder->DecSetRefcnt(blockIDSetToDelete);
-    refcntMapObjectBuilder->PrintRefcntMap();
+    if (VLOG_IS_ON(100)) {
+      refcntMapObjectBuilder->PrintRefcntMap();
+    }
 
     std::shared_ptr<Object> newRefcntMapObject =
         refcntMapObjectBuilder->_Seal(client);

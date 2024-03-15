@@ -728,6 +728,38 @@ def run_llm_tests(meta, allocator, endpoints):
         )
 
 
+def run_llm_python_tests(meta, allocator, endpoints, test_args):
+    meta_prefix = 'vineyard_test_%s' % time.time()
+    metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
+
+    with start_vineyardd(
+        metadata_settings,
+        ['--allocator', allocator],
+        default_ipc_socket=VINEYARD_CI_IPC_SOCKET,
+    ) as (_, rpc_socket_port):
+        start_time = time.time()
+        subprocess.check_call(
+            [
+                'pytest',
+                '-s',
+                '-vvv',
+                '--exitfirst',
+                '--durations=0',
+                '--log-cli-level',
+                'DEBUG',
+                'python/vineyard/llm',
+                *test_args,
+                '--vineyard-ipc-socket=%s' % VINEYARD_CI_IPC_SOCKET,
+                '--vineyard-endpoint=localhost:%s' % rpc_socket_port,
+            ],
+            cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
+        )
+        print(
+            'running llm python tests use %s seconds' % (time.time() - start_time),
+            flush=True,
+        )
+
+
 def run_python_deploy_tests(meta, allocator, endpoints, test_args, with_migration):
     meta_prefix = 'vineyard_test_%s' % time.time()
     metadata_settings = make_metadata_settings(meta, endpoints, meta_prefix)
@@ -907,6 +939,12 @@ def parse_sys_args():
         help='Whether to run llm tests',
     )
     arg_parser.add_argument(
+        '--with-llm-python',
+        action='store_true',
+        default=False,
+        help='Whether to run llm python tests',
+    )
+    arg_parser.add_argument(
         '--with-migration',
         action='store_true',
         default=False,
@@ -1024,6 +1062,10 @@ def execute_tests(args):
                 endpoints,
             )
 
+    if args.with_llm_python:
+        with start_metadata_engine(args.meta) as (_, endpoints):
+            run_llm_python_tests(args.meta, args.allocator, endpoints, python_test_args)
+
 
 def main():
     parser, args = parse_sys_args()
@@ -1040,6 +1082,7 @@ def main():
         or args.with_io
         or args.with_fuse
         or args.with_llm
+        or args.with_llm_python
     ):
         print(
             'Error: \n\tat least one of of --with-{cpp,graph,python,io,fuse} needs '

@@ -36,14 +36,14 @@ KVStateCacheManager::KVStateCacheManager(
 // use the memory storage for manager
 Status KVStateCacheManager::Make(Client& client,
                                  std::shared_ptr<KVStateCacheManager>& manager,
-                                 int dimension, int cacheCapacity, int layer,
+                                 int tensorBytes, int cacheCapacity, int layer,
                                  int blockSize, int syncInterval,
                                  std::string llmCacheSyncLock,
                                  std::string llmCacheObjectName,
                                  std::string llmRefcntObjectName) {
   std::shared_ptr<BlobStorage> blob_storage;
   VINEYARD_CHECK_OK(blob_storage->Make(
-      client, blob_storage, dimension, cacheCapacity, layer, blockSize,
+      client, blob_storage, tensorBytes, cacheCapacity, layer, blockSize,
       syncInterval, llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
   manager = std::make_shared<KVStateCacheManager>(blob_storage);
   return Status::OK();

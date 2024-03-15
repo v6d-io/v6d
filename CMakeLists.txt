@@ -50,7 +50,6 @@ option(BUILD_VINEYARD_CLIENT "Build vineyard's client" ON)
 option(BUILD_VINEYARD_CLIENT_VERBOSE "Build vineyard's client with the most verbose logs" OFF)
 option(BUILD_VINEYARD_PYTHON_BINDINGS "Build vineyard's python bindings" ON)
 option(BUILD_VINEYARD_PYPI_PACKAGES "Build vineyard's python bindings" OFF)
-option(BUILD_VINEYARD_LLM_KV_CACHE_PYTHON_BINDINGS "Build vineyard llm kv cache's python bindings" ON)
 
 option(BUILD_VINEYARD_JAVA "Build vineyard's java SDK" OFF)
 
@@ -909,7 +908,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS)
         VERBATIM)
 endif()
 
-if(BUILD_VINEYARD_LLM_KV_CACHE_PYTHON_BINDINGS)
+if(BUILD_VINEYARD_PYTHON_BINDINGS AND BUILD_VINEYARD_LLM_CACHE)
     set(PYBIND11_PYTHON_VERSION 3)
     if(NOT (CMAKE_VERSION VERSION_LESS "3.27"))
         set(PYBIND11_FINDPYTHON ON)

@@ -18,7 +18,6 @@
 
 import os
 import textwrap
-import shutil
 
 from setuptools import Extension
 from setuptools import find_packages
@@ -91,12 +90,6 @@ with open(
     )
     long_description = replacement + '\n'.join(long_description.split('\n')[8:])
 
-def package_data():
-    artifacts = [
-        '*.pyi',
-    ]
-    return artifacts
-
 setup(
     name='vineyard-llm',
     author='The vineyard team',
@@ -107,11 +100,6 @@ setup(
     url='https://v6d.io',
     package_dir={'vineyard.llm': 'python/vineyard/llm'},
     packages=find_llm_packages('python'),
-    package_data={
-        'vineyard.llm': [
-          '*.pyi',  
-        ],
-    },
     ext_modules=[
         CopyCMakeExtension('vineyard.llm.llm_C'),
     ],
