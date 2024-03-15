@@ -130,6 +130,26 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
   }
 }
 
+Status KVStateCacheBlockBuilder::Make(
+    Client& client, TreeData* treeData,
+    KVStateCacheBlockBuilder*& kvStateCacheBlockBuilder) {
+  RETURN_ON_ASSERT(treeData != nullptr && treeData->isPtr == false);
+  ObjectID blockObjectID = treeData->builderObjectID;
+
+  std::shared_ptr<KVStateCacheBlock> blockObject;
+  RETURN_ON_ERROR(client.FetchAndGetObject(blockObjectID, blockObject));
+  kvStateCacheBlockBuilder = new KVStateCacheBlockBuilder(client, blockObject);
+  if (blockObjectID != blockObject->id()) {
+    // If the object is migrated, we should delete the copied object.
+    Status status = client.DelData(blockObject->id());
+    if (!status.ok()) {
+      LOG(ERROR) << "Delete object failed: " << status.ToString()
+                 << " It may cause memory leak.";
+    }
+  }
+  return Status::OK();
+}
+
 Status KVStateCacheBlockBuilder::Query(
     int index, std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),
@@ -258,6 +278,7 @@ std::shared_ptr<Object> KVStateCacheBlockBuilder::_Seal(Client& client) {
 
   VINEYARD_CHECK_OK(
       client.CreateMetaData(kvStateCacheBlock->meta_, kvStateCacheBlock->id_));
+  this->set_sealed(true);
   return kvStateCacheBlock;
 }
 

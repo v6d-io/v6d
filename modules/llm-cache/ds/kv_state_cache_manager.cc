@@ -15,6 +15,7 @@ limitations under the License.
 
 #include <cstdlib>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -28,12 +29,13 @@ namespace vineyard {
 KVStateCacheManager::KVStateCacheManager(
     Client& client, std::shared_ptr<KVStateCacheBuilder>& cache,
     int syncInterval, std::string& llmCacheSyncLock,
-    std::string& llmCacheObjectName)
+    std::string& llmCacheObjectName, std::string& llmRefcntObjectName)
     : client(client) {
   this->syncInterval = syncInterval;
   this->kvStateCacheBuilder = cache;
   this->llmCacheSyncLock = llmCacheSyncLock;
   this->llmCacheObjectName = llmCacheObjectName;
+  this->llmRefcntObjectName = llmRefcntObjectName;
   this->syncThread = std::thread(SyncThreadFunc, this);
 }
 
@@ -42,7 +44,8 @@ Status KVStateCacheManager::Make(Client& client,
                                  int dimension, int cacheCapacity, int layer,
                                  int blockSize, int syncInterval,
                                  std::string llmCacheSyncLock,
-                                 std::string llmCacheObjectName) {
+                                 std::string llmCacheObjectName,
+                                 std::string llmRefcntObjectName) {
   RETURN_ON_ASSERT(client.Connected(), "The client is not connected.");
   // TBD
   // try to get cache object
@@ -51,6 +54,8 @@ Status KVStateCacheManager::Make(Client& client,
 
   // sync global cache object with vineyard
   ObjectID globalKVStateCacheID;
+  std::set<ObjectID> blockIDSetToAdd;
+  std::set<ObjectID> blockIDSetToDelete;
   Status status = client.GetName(llmCacheObjectName, globalKVStateCacheID);
   std::shared_ptr<KVStateCacheBuilder> kvStateCacheBuilder;
   if (status.ok()) {
@@ -60,26 +65,42 @@ Status KVStateCacheManager::Make(Client& client,
             client.FetchAndGetObject(globalKVStateCacheID));
     Status status = KVStateCacheBuilder::Make(client, kvStateCacheBuilder,
                                               globalKVStateCache);
-    RETURN_ON_ASSERT(
-        status.ok(),
-        "Failed to make the cache object from global cache object.");
+    if (!status.ok()) {
+      ReleaseServerLock(client, actualKey);
+      return Status::Invalid(
+          "Failed to make the cache object from global cache object.");
+    }
+    if (globalKVStateCache->id() != globalKVStateCacheID) {
+      VLOG(100) << "Del migrate object";
+      Status status = client.DelData(globalKVStateCache->id());
+      if (!status.ok()) {
+        LOG(ERROR) << "Delete object failed: " << status.ToString()
+                   << " It may cause memory leak.";
+      }
+    }
+
+    blockIDSetToAdd = kvStateCacheBuilder->GetBlockIDSetToAdd();
+    blockIDSetToDelete = kvStateCacheBuilder->GetBlockIDSetToDelete();
   } else {
     // if failed, create a new cache object
-    VLOG(100) << "failed to get the cache object, create a new one.";
+    LOG(INFO) << "failed to get the cache object, create a new one.";
     Status status =
         KVStateCacheBuilder::Make(client, kvStateCacheBuilder, dimension,
                                   cacheCapacity, layer, blockSize);
-    RETURN_ON_ASSERT(status.ok(), "Failed to make new cache object.");
+    if (!status.ok()) {
+      ReleaseServerLock(client, actualKey);
+      return Status::Invalid("Failed to make new cache object.");
+    }
   }
-
-  // release the lock
-  ReleaseServerLock(client, actualKey);
 
   // TBD
   // use lease to prevent the deadlock if the client is down
   manager = std::make_shared<KVStateCacheManager>(
       client, kvStateCacheBuilder, syncInterval, llmCacheSyncLock,
-      llmCacheObjectName);
+      llmCacheObjectName, llmRefcntObjectName);
+  VINEYARD_CHECK_OK(manager->SetRefcntMap(blockIDSetToDelete, blockIDSetToAdd));
+  // release the lock
+  ReleaseServerLock(client, actualKey);
   return Status::OK();
 }
 
@@ -177,14 +198,7 @@ Status KVStateCacheManager::Query(
 }
 
 KVStateCacheManager::~KVStateCacheManager() {
-  LOG(INFO) << "Wait for sync thread to exit.";
-  std::lock_guard<std::mutex> lock(exitMutex);
-  if (!exitFlag) {
-    exitFlag = true;
-    exitMutex.unlock();
-    cv.notify_one();
-    syncThread.join();
-  }
+  StopSync();
   LOG(INFO) << "KVStateCacheManager exit.";
 }
 
@@ -200,6 +214,8 @@ void KVStateCacheManager::Delete(std::vector<int>& token) {
 
 Status KVStateCacheManager::Sync() {
   Status status;
+  std::set<ObjectID> blockIDSetToAdd;
+  std::set<ObjectID> blockIDSetToDelete;
   // 1. pull the cache object
   ObjectID globalKVStateCacheID;
   std::vector<ObjectID> deleteList;
@@ -226,32 +242,65 @@ Status KVStateCacheManager::Sync() {
       kvStateCacheBuilder->GetVersion() < globalKVStateCache->GetVersion()) {
     status = kvStateCacheBuilder->Merge(globalKVStateCache);
     RETURN_ON_ERROR(status);
+    if (globalKVStateCache->id() != globalKVStateCacheID) {
+      VLOG(100) << "Del migrate object";
+      Status status = client.DelData(globalKVStateCache->id());
+      if (!status.ok()) {
+        LOG(ERROR) << "Delete object failed: " << status.ToString()
+                   << " It may cause memory leak.";
+      }
+    }
   }
   kvStateCacheBuilder->UpdateVersion();
 
-  // 3. push the cache object
+  /**
+   * 3. get the current block id set, which stores the block id(instead of block
+   * ptr) and the block id set to delete.
+   */
+  std::set<ObjectID> currentObjectIDSet;
+  kvStateCacheBuilder->GetCurrentBlockIDSet(currentObjectIDSet);
+  blockIDSetToDelete = kvStateCacheBuilder->GetBlockIDSetToDelete();
+
+  // 4. push the cache object to the vineyardd
   kvStateCache = std::dynamic_pointer_cast<KVStateCache>(
       kvStateCacheBuilder->_Seal(client));
+
   status = client.Persist(kvStateCache->id());
   RETURN_ON_ERROR(status);
 
-  // 4. put the name of the new cache object to the meta server
+  // 5. put the name of the new cache object to the meta server
   status = client.DropName(llmCacheObjectName);
   RETURN_ON_ERROR(status);
   status = client.PutName(kvStateCache->id(), llmCacheObjectName);
   RETURN_ON_ERROR(status);
 
-  // 5. delete old cache object
+  // 6. delete old cache object
   status = client.DelData(deleteList, false, true);
   if (!status.ok()) {
     LOG(ERROR) << "Delete old cache object failed: " << status.ToString()
                << " It may cause memory leak.";
   }
 
-  // 6. create a global cache object replica
+  // 7. create a global cache object replica
   kvStateCache->Resolve();
-  status = KVStateCacheBuilder::Make(client, kvStateCacheBuilder, kvStateCache);
-  RETURN_ON_ERROR(status);
+  RETURN_ON_ERROR(
+      KVStateCacheBuilder::Make(client, kvStateCacheBuilder, kvStateCache));
+
+  blockIDSetToAdd = kvStateCacheBuilder->GetBlockIDSetToAdd();
+
+  /**
+   * 8. get the add set, which contains the block id in the new cache object
+   * but not in the current cache object.
+   * CurrentObjectIDSet must be the subset of blockIDSetToAdd.
+   */
+
+  std::set<ObjectID> differenceSet;
+  std::set_difference(blockIDSetToAdd.begin(), blockIDSetToAdd.end(),
+                      currentObjectIDSet.begin(), currentObjectIDSet.end(),
+                      std::inserter(differenceSet, differenceSet.begin()));
+
+  // 9. update the global refcnt map
+  RETURN_ON_ERROR(SetRefcntMap(blockIDSetToDelete, differenceSet));
 
   return Status::OK();
 
@@ -324,10 +373,15 @@ Status KVStateCacheManager::AfterSyncFailed() {
                                      globalKVStateCache);
   RETURN_ON_ERROR(status);
   if (kvStateCache != nullptr && kvStateCache->id() != globalKVStateCacheID) {
+    // It means the builder is sealed but not pushed to the vineyardd
     deleteList.push_back(kvStateCache->id());
+    deleteList.push_back(globalKVStateCache->id());
   }
   status = client.DelData(deleteList, false, true);
-  RETURN_ON_ERROR(status);
+  if (!status.ok()) {
+    LOG(ERROR) << "Delete object failed: " << status.ToString()
+               << " It may cause memory leak.";
+  }
   kvStateCache = nullptr;
 
   return Status::OK();
@@ -353,8 +407,7 @@ void KVStateCacheManager::ReleaseServerLock(Client& client,
   }
 }
 
-void KVStateCacheManager::Close() {
-  // recycle blob
+void KVStateCacheManager::StopSync() {
   LOG(INFO) << "Wait for sync thread to exit.";
   std::lock_guard<std::mutex> exitLock(exitMutex);
   if (!exitFlag) {
@@ -363,11 +416,86 @@ void KVStateCacheManager::Close() {
     cv.notify_one();
     syncThread.join();
   }
+}
 
-  LOG(INFO) << "Recycle blob.";
+void KVStateCacheManager::Close() {
+  // recycle blob
+  StopSync();
+
+  LOG(INFO) << "Clear block set and recycle blob.";
   std::lock_guard<std::mutex> cacheLock(cacheAccessMutex);
   this->kvStateCacheBuilder->Close();
   this->isClosed = true;
+  RefreshRefcnt();
+}
+
+Status KVStateCacheManager::SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
+                                         std::set<ObjectID>& blockIDSetToAdd) {
+  VLOG(100) << "SetRefcntMap:"
+            << " add size:" << blockIDSetToAdd.size()
+            << " delete size:" << blockIDSetToDelete.size();
+  ObjectID globalRefcntMapObjectID;
+  Status status = client.GetName(llmRefcntObjectName, globalRefcntMapObjectID);
+  if (status.ok()) {
+    std::shared_ptr<RefcntMapObject> globalRefcntMapObject =
+        std::dynamic_pointer_cast<RefcntMapObject>(
+            client.FetchAndGetObject(globalRefcntMapObjectID));
+    std::shared_ptr<RefcntMapObjectBuilder> refcntMapObjectBuilder =
+        std::make_shared<RefcntMapObjectBuilder>(client, globalRefcntMapObject);
+    if (globalRefcntMapObject->id() != globalRefcntMapObjectID) {
+      // if the global object is migrated, delete the old object
+      VLOG(100) << "Del migrate object";
+      Status status = client.DelData(globalRefcntMapObject->id());
+      if (!status.ok()) {
+        LOG(ERROR) << "Delete object failed: " << status.ToString()
+                   << " It may cause memory leak.";
+      }
+    }
+
+    refcntMapObjectBuilder->IncSetRefcnt(blockIDSetToAdd);
+    refcntMapObjectBuilder->DecSetRefcnt(blockIDSetToDelete);
+    refcntMapObjectBuilder->PrintRefcntMap();
+
+    std::shared_ptr<Object> newRefcntMapObject =
+        refcntMapObjectBuilder->_Seal(client);
+    RETURN_ON_ERROR(client.Persist(newRefcntMapObject->id()));
+    RETURN_ON_ERROR(client.DropName(llmRefcntObjectName));
+    RETURN_ON_ERROR(
+        client.PutName(newRefcntMapObject->id(), llmRefcntObjectName));
+    // Delete old refcnt map object.
+    Status status = client.DelData(globalRefcntMapObjectID);
+    if (!status.ok()) {
+      LOG(ERROR) << "Delete object failed: " << status.ToString()
+                 << " It may cause memory leak.";
+    }
+  } else {
+    std::shared_ptr<RefcntMapObjectBuilder> refcntMapObjectBuilder =
+        std::make_shared<RefcntMapObjectBuilder>(client);
+    refcntMapObjectBuilder->IncSetRefcnt(blockIDSetToAdd);
+    refcntMapObjectBuilder->DecSetRefcnt(blockIDSetToDelete);
+    refcntMapObjectBuilder->PrintRefcntMap();
+
+    std::shared_ptr<Object> newRefcntMapObject =
+        refcntMapObjectBuilder->_Seal(client);
+    RETURN_ON_ERROR(client.Persist(newRefcntMapObject->id()));
+    RETURN_ON_ERROR(
+        client.PutName(newRefcntMapObject->id(), llmRefcntObjectName));
+  }
+  return Status::OK();
+}
+
+void KVStateCacheManager::RefreshRefcnt() {
+  std::set<ObjectID> blockIDSetToDelete =
+      this->kvStateCacheBuilder->GetBlockIDSetToDelete();
+  std::set<ObjectID> blockIDSetToAdd;
+  std::string actualKey;
+  AcquireServerLock(client, llmCacheSyncLock, actualKey);
+  Status status = SetRefcntMap(blockIDSetToDelete, blockIDSetToAdd);
+  if (!status.ok()) {
+    LOG(ERROR) << "Update refcnt failed: " << status.ToString()
+               << " It may cause memory leak.";
+  }
+  ReleaseServerLock(client, actualKey);
 }
 
 }  // namespace vineyard

@@ -17,11 +17,13 @@ limitations under the License.
 #include <map>
 #include <memory>
 #include <mutex>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "llm-cache/ds/kv_state_cache.h"
+#include "llm-cache/ds/refcnt_map.h"
 
 #ifndef MODULES_LLM_CACHE_DS_KV_STATE_CACHE_MANAGER_H_
 #define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_MANAGER_H_
@@ -33,8 +35,10 @@ class KVStateCacheManager {
   Client& client;
   std::shared_ptr<KVStateCacheBuilder> kvStateCacheBuilder = nullptr;
   std::shared_ptr<KVStateCache> kvStateCache = nullptr;
+  std::shared_ptr<RefcntMapObjectBuilder> refcntMapObjectBuilder = nullptr;
   std::string llmCacheSyncLock;
   std::string llmCacheObjectName;
+  std::string llmRefcntObjectName;
   std::thread syncThread;
   std::mutex cacheAccessMutex;
   int syncInterval;
@@ -47,14 +51,16 @@ class KVStateCacheManager {
   KVStateCacheManager(Client& client,
                       std::shared_ptr<KVStateCacheBuilder>& cache,
                       int syncInterval, std::string& llmCacheSyncLock,
-                      std::string& llmCacheObjectName);
+                      std::string& llmCacheObjectName,
+                      std::string& llmRefcntObjectName);
 
   static Status Make(Client& client,
                      std::shared_ptr<KVStateCacheManager>& manager,
                      int dimension = 10, int cacheCapacity = 10, int layer = 1,
                      int blockSize = 5, int syncInterval = 3,
                      std::string llmCacheSyncLock = "llmCacheSyncLock",
-                     std::string llmCacheObjectName = "llm_cache_object");
+                     std::string llmCacheObjectName = "llm_cache_object",
+                     std::string llmRefcntObjectName = "llm_refcnt_object");
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
                 const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
@@ -71,6 +77,16 @@ class KVStateCacheManager {
       std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState);
 
   void Close();
+
+  std::shared_ptr<KVStateCacheBuilder>& GetKVStateCacheBuilder() {
+    return this->kvStateCacheBuilder;
+  }
+
+  std::shared_ptr<RefcntMapObjectBuilder>& GetRefcntMapObjectBuilder() {
+    return this->refcntMapObjectBuilder;
+  }
+
+  void StopSync();
 
   ~KVStateCacheManager();
 
@@ -93,6 +109,11 @@ class KVStateCacheManager {
                                 std::string& actualKey);
 
   static void ReleaseServerLock(Client& client, std::string& actualKey);
+
+  Status SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
+                      std::set<ObjectID>& blockIDSetToAdd);
+
+  void RefreshRefcnt();
 };
 
 }  // namespace vineyard

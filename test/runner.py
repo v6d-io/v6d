@@ -718,6 +718,15 @@ def run_llm_tests(meta, allocator, endpoints):
             cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
         )
 
+        subprocess.check_call(
+            [
+                './build/bin/refcnt_map_test',
+                vineyard_ipc_socket_1,
+                vineyard_ipc_socket_2,
+            ],
+            cwd=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'),
+        )
+
 
 def run_python_deploy_tests(meta, allocator, endpoints, test_args, with_migration):
     meta_prefix = 'vineyard_test_%s' % time.time()

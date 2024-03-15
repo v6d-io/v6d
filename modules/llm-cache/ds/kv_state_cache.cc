@@ -49,16 +49,7 @@ void KVStateCache::Resolve() {
     VLOG(100) << raxShow(this->rootTree->GetRootTree());
   }
 
-  // 2. construct the kvStateCacheBlockBuilder list
-  size_t numBlocks = this->meta_.GetKeyValue<size_t>("numBlocks");
-  for (size_t i = 0; i < numBlocks; i++) {
-    std::shared_ptr<Object> kvStateCacheBlockObject = this->meta_.GetMember(
-        "kv_state_cache_block_builder_" + std::to_string(i));
-    this->kvStateCacheBlockList.push_back(
-        std::dynamic_pointer_cast<KVStateCacheBlock>(kvStateCacheBlockObject));
-  }
-
-  // 3. construct the member field
+  // 2. construct the member field
   this->tensorBytes = this->meta_.GetKeyValue<int>("tensorBytes");
   this->version = this->meta_.GetKeyValue<uint64_t>("version");
   this->layer = this->meta_.GetKeyValue<int>("layer");
@@ -105,24 +96,15 @@ Status KVStateCacheBuilder::Make(
 Status KVStateCacheBuilder::Make(
     Client& client, std::shared_ptr<KVStateCacheBuilder>& kvStateCacheBuilder,
     std::shared_ptr<KVStateCache>& cache) {
-  // 1. create block builder from block
-  std::vector<std::shared_ptr<KVStateCacheBlock>> kvStateCacheBlockList =
-      cache->GetKVStateCacheBlockList();
-  std::set<void*> subTreeData = cache->rootTree->GetSubTreeDataSet();
-
-  for (auto iter = subTreeData.begin(); iter != subTreeData.end(); ++iter) {
-    TreeData* treeData = reinterpret_cast<TreeData*>(*iter);
-    std::shared_ptr<KVStateCacheBlock> kvStateCacheBlock =
-        kvStateCacheBlockList[treeData->builderObjectID];
-    KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
-        new KVStateCacheBlockBuilder(client, kvStateCacheBlock);
-
-    treeData->kvStateCacheBlockBuilder = kvStateCacheBlockBuilder;
-    treeData->isPtr = true;
-  }
-
   kvStateCacheBuilder = std::make_shared<KVStateCacheBuilder>(
       client, cache->GetTensorBytes(), cache->GetLayer(), cache->rootTree);
+  std::set<void*> subTreeData = cache->rootTree->GetSubTreeDataSet();
+  for (void* treeData : subTreeData) {
+    TreeData* treeDataPtr = reinterpret_cast<TreeData*>(treeData);
+    if (!treeDataPtr->isPtr) {
+      kvStateCacheBuilder->blockIDSetToAdd.insert(treeDataPtr->builderObjectID);
+    }
+  }
   return Status::OK();
 }
 
@@ -167,10 +149,20 @@ Status KVStateCacheBuilder::Update(
       this->rootTree->Insert(tokenListCopy, evictedNodeData);
   RETURN_ON_ASSERT(nodeData != nullptr, "Update llm cache failed.");
 
-  KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
-      reinterpret_cast<KVStateCacheBlockBuilder*>(
-          (reinterpret_cast<TreeData*>(nodeData->treeData->data))
-              ->kvStateCacheBlockBuilder);
+  KVStateCacheBlockBuilder* kvStateCacheBlockBuilder;
+  TreeData* treeData = reinterpret_cast<TreeData*>(nodeData->treeData->data);
+  if (treeData->isPtr) {
+    kvStateCacheBlockBuilder = reinterpret_cast<KVStateCacheBlockBuilder*>(
+        treeData->kvStateCacheBlockBuilder);
+  } else {
+    ObjectID blockObjectID = treeData->builderObjectID;
+    RETURN_ON_ERROR(KVStateCacheBlockBuilder::Make(client, treeData,
+                                                   kvStateCacheBlockBuilder));
+    treeData->kvStateCacheBlockBuilder = kvStateCacheBlockBuilder;
+    treeData->isPtr = true;
+    blockIDSetToDelete.insert(blockObjectID);
+  }
+
   if (evictedNodeData != nullptr) {
     Delete(evictedNodeData);
   }
@@ -212,8 +204,7 @@ Status KVStateCacheBuilder::Update(
     OffsetData* data = new OffsetData();
     RETURN_ON_ASSERT(data != nullptr, "Not enough memory for new offset data.");
 
-    Status status = kvStateCacheBlockBuilder->Update(kvState, data);
-    RETURN_ON_ERROR(status);
+    RETURN_ON_ERROR(kvStateCacheBlockBuilder->Update(kvState, data));
     nodeData->nodeData->data = data;
     nodeData->nodeData->dataLength = sizeof(OffsetData);
   }
@@ -236,10 +227,19 @@ Status KVStateCacheBuilder::Query(
   OffsetData* data = reinterpret_cast<OffsetData*>(nodeData->nodeData->data);
   int offset = data->offset;
 
-  KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
-      reinterpret_cast<KVStateCacheBlockBuilder*>(
-          (reinterpret_cast<TreeData*>(nodeData->treeData->data))
-              ->kvStateCacheBlockBuilder);
+  TreeData* treeData = reinterpret_cast<TreeData*>(nodeData->treeData->data);
+  KVStateCacheBlockBuilder* kvStateCacheBlockBuilder;
+  if (treeData->isPtr) {
+    kvStateCacheBlockBuilder = reinterpret_cast<KVStateCacheBlockBuilder*>(
+        treeData->kvStateCacheBlockBuilder);
+  } else {
+    ObjectID blockObjectID = treeData->builderObjectID;
+    RETURN_ON_ERROR(KVStateCacheBlockBuilder::Make(client, treeData,
+                                                   kvStateCacheBlockBuilder));
+    treeData->kvStateCacheBlockBuilder = kvStateCacheBlockBuilder;
+    treeData->isPtr = true;
+    blockIDSetToDelete.insert(blockObjectID);
+  }
 
   return kvStateCacheBlockBuilder->Query(offset, kvState);
 }
@@ -247,9 +247,26 @@ Status KVStateCacheBuilder::Query(
 void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
   TreeData* treeData =
       reinterpret_cast<TreeData*>(evictedNodeData->treeData->data);
-  KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
-      reinterpret_cast<KVStateCacheBlockBuilder*>(
-          treeData->kvStateCacheBlockBuilder);
+  KVStateCacheBlockBuilder* kvStateCacheBlockBuilder;
+  if (treeData->isPtr) {
+    kvStateCacheBlockBuilder = reinterpret_cast<KVStateCacheBlockBuilder*>(
+        treeData->kvStateCacheBlockBuilder);
+  } else {
+    ObjectID blockObjectID = treeData->builderObjectID;
+    Status status = KVStateCacheBlockBuilder::Make(client, treeData,
+                                                   kvStateCacheBlockBuilder);
+    if (!status.ok()) {
+      // Not a deadly error, just log it and return.
+      LOG(FATAL) << "Failed to make kvStateCacheBlockBuilder. It may cause "
+                    "memory leak.";
+      return;
+    }
+    treeData->kvStateCacheBlockBuilder = kvStateCacheBlockBuilder;
+    treeData->isPtr = true;
+
+    blockIDSetToDelete.insert(blockObjectID);
+  }
+
   OffsetData* data =
       reinterpret_cast<OffsetData*>(evictedNodeData->nodeData->data);
   kvStateCacheBlockBuilder->DeleteKVCache(data->offset);
@@ -261,7 +278,11 @@ void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
     this->rootTree->ClearSubtreeData(treeData);
     std::shared_ptr<Object> blockObject =
         kvStateCacheBlockBuilder->_Seal(client);
-    client.DelData(blockObject->id());
+    Status status = client.DelData(blockObject->id());
+    if (!status.ok()) {
+      LOG(ERROR) << "Delete object failed: " << status.ToString()
+                 << " It may cause memory leak.";
+    }
     delete kvStateCacheBlockBuilder;
   }
   evictedNodeData->RecycleSource();
@@ -333,6 +354,17 @@ Status KVStateCacheBuilder::Merge(std::shared_ptr<KVStateCache> kvStateCache) {
   return Status::OK();
 }
 
+void KVStateCacheBuilder::GetCurrentBlockIDSet(
+    std::set<ObjectID>& objectIDSet) {
+  std::set<void*> subTreeData = rootTree->GetSubTreeDataSet();
+  for (auto iter = subTreeData.begin(); iter != subTreeData.end(); ++iter) {
+    TreeData* treeData = reinterpret_cast<TreeData*>(*iter);
+    if (!treeData->isPtr) {
+      objectIDSet.insert(treeData->builderObjectID);
+    }
+  }
+}
+
 Status KVStateCacheBuilder::Build(Client& client) { return Status::OK(); }
 
 std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
@@ -348,28 +380,23 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   // 2. seal all the block and put object id to cache object and
   // change the tree data from pointer to object id
 
-  int count = 0;
   std::set<void*> subTreeDataSet = rootTree->GetSubTreeDataSet();
   for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
        ++iter) {
     TreeData* treeData = reinterpret_cast<TreeData*>(*iter);
-    VINEYARD_ASSERT(treeData != nullptr);
-    VINEYARD_ASSERT(treeData->isPtr == true);
+    if (!treeData->isPtr) {
+      continue;
+    }
 
     KVStateCacheBlockBuilder* kvStateCacheBlockBuilder =
         reinterpret_cast<KVStateCacheBlockBuilder*>(
             treeData->kvStateCacheBlockBuilder);
     std::shared_ptr<Object> kvStateCacheBlock =
         kvStateCacheBlockBuilder->_Seal(client);
-    kvStateCache->meta_.AddMember(
-        "kv_state_cache_block_builder_" + std::to_string(count),
-        kvStateCacheBlock);
-    treeData->builderObjectID = count;
+    client.Persist(kvStateCacheBlock->id());
+    treeData->builderObjectID = kvStateCacheBlock->id();
     treeData->isPtr = false;
-    count++;
   }
-
-  kvStateCache->meta_.AddKeyValue("numBlocks", count);
 
   // 3. put the serialized sequence radix tree to cache object meta
   kvStateCache->meta_.AddKeyValue("radix_tree",
@@ -381,6 +408,7 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   VINEYARD_CHECK_OK(
       client.CreateMetaData(kvStateCache->meta_, kvStateCache->id_));
   VLOG(100) << "KVStateCacheBuilder::_Seal: " << kvStateCache->id_;
+  this->set_sealed(true);
   return kvStateCache;
 }
 
@@ -388,7 +416,7 @@ KVStateCacheBuilder::~KVStateCacheBuilder() {
   // get all subtree data and node data
   std::set<void*> subTreeDataSet = rootTree->GetSubTreeDataSet();
   std::set<void*> nodeDataSet = rootTree->GetAllNodeData();
-  // 2. delete all subtree data and node data
+  // delete all subtree data and node data
   for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
        ++iter) {
     TreeData* treeData = reinterpret_cast<TreeData*>(*iter);
@@ -412,13 +440,18 @@ void KVStateCacheBuilder::Close() {
   for (auto iter = subTreeDataSet.begin(); iter != subTreeDataSet.end();
        ++iter) {
     TreeData* treeData = reinterpret_cast<TreeData*>(*iter);
-    if (treeData->isPtr == true &&
-        treeData->kvStateCacheBlockBuilder != nullptr) {
+    if (treeData->isPtr && treeData->kvStateCacheBlockBuilder != nullptr) {
       std::shared_ptr<Object> object =
           reinterpret_cast<KVStateCacheBlockBuilder*>(
               treeData->kvStateCacheBlockBuilder)
               ->_Seal(client);
-      client.DelData(object->id());
+      Status status = client.DelData(object->id());
+      if (!status.ok()) {
+        LOG(ERROR) << "Delete object failed: " << status.ToString()
+                   << " It may cause memory leak.";
+      }
+    } else if (!treeData->isPtr) {
+      blockIDSetToDelete.insert(treeData->builderObjectID);
     }
   }
 }

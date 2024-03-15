@@ -15,6 +15,7 @@ limitations under the License.
 
 #include <map>
 #include <memory>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -28,14 +29,6 @@ limitations under the License.
 #define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_H_
 
 namespace vineyard {
-
-struct TreeData {
-  union {
-    void* kvStateCacheBlockBuilder;
-    uint64_t builderObjectID;
-  };
-  bool isPtr = true;
-};
 
 class KVStateCache : public vineyard::Registered<KVStateCache> {
  private:
@@ -79,6 +72,8 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   Client& client;
   std::shared_ptr<RadixTree> rootTree;
+  std::set<ObjectID> blockIDSetToDelete;
+  std::set<ObjectID> blockIDSetToAdd;
   int tensorBytes;
   int layer;
   uint64_t version;
@@ -129,6 +124,18 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   int GetLayer() { return this->layer; }
 
   void Close();
+
+  std::set<ObjectID>& GetBlockIDSetToDelete() {
+    return this->blockIDSetToDelete;
+  }
+
+  std::set<ObjectID>& GetBlockIDSetToAdd() { return this->blockIDSetToAdd; }
+
+  void GetCurrentBlockIDSet(std::set<ObjectID>& objectIDSet);
+
+  void ClearBlockIDSetToDelete() { this->blockIDSetToDelete.clear(); }
+
+  void ClearBlockIDSetToAdd() { this->blockIDSetToAdd.clear(); }
 
   ~KVStateCacheBuilder();
 };
