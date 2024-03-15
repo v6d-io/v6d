@@ -274,6 +274,7 @@ std::shared_ptr<Object> KVStateCacheBlockBuilder::_Seal(Client& client) {
 
   VINEYARD_CHECK_OK(
       client.CreateMetaData(kvStateCacheBlock->meta_, kvStateCacheBlock->id_));
+  this->set_sealed(true);
   return kvStateCacheBlock;
 }
 

@@ -157,6 +157,7 @@ std::shared_ptr<Object> RefcntMapObjectBuilder::_Seal(Client& client) {
 
   VINEYARD_CHECK_OK(
       client.CreateMetaData(refcntMapObject->meta_, refcntMapObject->id_));
+  this->set_sealed(true);
   return refcntMapObject;
 }
 

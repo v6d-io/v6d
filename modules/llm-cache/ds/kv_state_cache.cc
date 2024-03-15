@@ -404,6 +404,7 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
   VINEYARD_CHECK_OK(
       client.CreateMetaData(kvStateCache->meta_, kvStateCache->id_));
   VLOG(100) << "KVStateCacheBuilder::_Seal: " << kvStateCache->id_;
+  this->set_sealed(true);
   return kvStateCache;
 }
 
