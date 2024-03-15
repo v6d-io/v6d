@@ -60,10 +60,10 @@ void KVStateCacheBlock::Construct(const ObjectMeta& meta) {
   this->layer = this->meta_.GetKeyValue<int>("layer");
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
     this->keyStateTensorList.push_back(
-        std::dynamic_pointer_cast<Tensor<uint8_t>>(this->meta_.GetMember(
+        std::dynamic_pointer_cast<KVTensor>(this->meta_.GetMember(
             "keyStateTensorBuilder_" + std::to_string(currentLayer))));
     this->valueStateTensorList.push_back(
-        std::dynamic_pointer_cast<Tensor<uint8_t>>(this->meta_.GetMember(
+        std::dynamic_pointer_cast<KVTensor>(this->meta_.GetMember(
             "valueStateTensorBuilder_" + std::to_string(currentLayer))));
   }
   // 2. construct the member field
@@ -91,9 +91,9 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(Client& client,
   std::vector<int64_t> shape = {(int64_t)(blockSize), tensorBytes};
   for (int i = 0; i < layer; i++) {
     this->keyStateTensorBuilderList.push_back(
-        std::make_shared<TensorBuilder<uint8_t>>(client, shape));
+        std::make_shared<KVTensorBuilder>(client, shape));
     this->valueStateTensorBuilderList.push_back(
-        std::make_shared<TensorBuilder<uint8_t>>(client, shape));
+        std::make_shared<KVTensorBuilder>(client, shape));
   }
   this->tensorBytes = tensorBytes;
   this->layer = layer;
@@ -115,9 +115,9 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
   std::vector<int64_t> shape = {(int64_t)(blockSize), this->tensorBytes};
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
     this->keyStateTensorBuilderList.push_back(
-        std::make_shared<TensorBuilder<uint8_t>>(client, shape));
+        std::make_shared<KVTensorBuilder>(client, shape));
     this->valueStateTensorBuilderList.push_back(
-        std::make_shared<TensorBuilder<uint8_t>>(client, shape));
+        std::make_shared<KVTensorBuilder>(client, shape));
   }
 
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
@@ -199,13 +199,13 @@ int16_t KVStateCacheBlockBuilder::Split(KVStateCacheBlockBuilder* child,
   // Child builder must be empty.
   int childIndex = child->FindEmptySlot();
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    std::shared_ptr<TensorBuilder<uint8_t>> keyStateTensorBuilder =
+    std::shared_ptr<KVTensorBuilder> keyStateTensorBuilder =
         keyStateTensorBuilderList[currentLayer];
-    std::shared_ptr<TensorBuilder<uint8_t>> valueStateTensorBuilder =
+    std::shared_ptr<KVTensorBuilder> valueStateTensorBuilder =
         valueStateTensorBuilderList[currentLayer];
-    std::shared_ptr<TensorBuilder<uint8_t>> childKeyStateTensorBuilder =
+    std::shared_ptr<KVTensorBuilder> childKeyStateTensorBuilder =
         child->keyStateTensorBuilderList[currentLayer];
-    std::shared_ptr<TensorBuilder<uint8_t>> childValueStateTensorBuilder =
+    std::shared_ptr<KVTensorBuilder> childValueStateTensorBuilder =
         child->valueStateTensorBuilderList[currentLayer];
 
     uint8_t* keyState =
