@@ -58,6 +58,16 @@ void KVStateCache::Resolve() {
             << " layer:" << this->layer;
 }
 
+void KVStateCache::GetCurrentBlockIDSet(std::set<ObjectID>& objectIDSet) {
+  std::set<void*> subTreeData = rootTree->GetSubTreeDataSet();
+  for (auto iter = subTreeData.begin(); iter != subTreeData.end(); ++iter) {
+    TreeData* treeData = reinterpret_cast<TreeData*>(*iter);
+    if (!treeData->isPtr) {
+      objectIDSet.insert(treeData->builderObjectID);
+    }
+  }
+}
+
 KVStateCache::~KVStateCache() {}
 
 KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int tensorBytes,
@@ -98,13 +108,6 @@ Status KVStateCacheBuilder::Make(
     std::shared_ptr<KVStateCache>& cache) {
   kvStateCacheBuilder = std::make_shared<KVStateCacheBuilder>(
       client, cache->GetTensorBytes(), cache->GetLayer(), cache->rootTree);
-  std::set<void*> subTreeData = cache->rootTree->GetSubTreeDataSet();
-  for (void* treeData : subTreeData) {
-    TreeData* treeDataPtr = reinterpret_cast<TreeData*>(treeData);
-    if (!treeDataPtr->isPtr) {
-      kvStateCacheBuilder->blockIDSetToAdd.insert(treeDataPtr->builderObjectID);
-    }
-  }
   return Status::OK();
 }
 
@@ -393,7 +396,7 @@ std::shared_ptr<Object> KVStateCacheBuilder::_Seal(Client& client) {
             treeData->kvStateCacheBlockBuilder);
     std::shared_ptr<Object> kvStateCacheBlock =
         kvStateCacheBlockBuilder->_Seal(client);
-    client.Persist(kvStateCacheBlock->id());
+    VINEYARD_CHECK_OK(client.Persist(kvStateCacheBlock->id()));
     treeData->builderObjectID = kvStateCacheBlock->id();
     treeData->isPtr = false;
   }

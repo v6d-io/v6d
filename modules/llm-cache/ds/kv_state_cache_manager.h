@@ -88,6 +88,10 @@ class KVStateCacheManager {
 
   void StopSync();
 
+  static Status ClearGlobalCache(Client& client, std::string& llmCacheSyncLock,
+                                 std::string& llmCacheObjectName,
+                                 std::string& llmRefcntObjectName);
+
   ~KVStateCacheManager();
 
  private:

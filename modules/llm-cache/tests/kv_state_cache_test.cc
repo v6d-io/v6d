@@ -197,15 +197,8 @@ void clearGlobalObject(std::vector<std::string>& sockets) {
   Client client;
   VINEYARD_CHECK_OK(client.Connect(sockets[0]));
 
-  ObjectID globalCacheObjectID;
-  VINEYARD_CHECK_OK(client.GetName(llmCacheObjectName, globalCacheObjectID));
-  VINEYARD_CHECK_OK(client.DropName(llmCacheObjectName));
-  VINEYARD_CHECK_OK(client.DelData(globalCacheObjectID));
-
-  ObjectID globalRefcntMapId;
-  VINEYARD_CHECK_OK(client.GetName(llmRefcntObjectName, globalRefcntMapId));
-  VINEYARD_CHECK_OK(client.DropName(llmRefcntObjectName));
-  VINEYARD_CHECK_OK(client.DelData(globalRefcntMapId));
+  VINEYARD_CHECK_OK(KVStateCacheManager::ClearGlobalCache(
+      client, llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
   client.Disconnect();
 
   for (size_t i = 0; i < sockets.size(); i++) {
@@ -213,9 +206,6 @@ void clearGlobalObject(std::vector<std::string>& sockets) {
     VINEYARD_CHECK_OK(client.Connect(sockets[i]));
     std::shared_ptr<InstanceStatus> status;
     VINEYARD_CHECK_OK(client.InstanceStatus(status));
-    LOG(INFO) << "After clear global object:";
-    LOG(INFO) << "Client " << client.instance_id()
-              << " memory usage:" << status->memory_usage;
 
     if (status->memory_usage != 0) {
       std::vector<ObjectMeta> objects;
@@ -226,6 +216,7 @@ void clearGlobalObject(std::vector<std::string>& sockets) {
       }
       VINEYARD_ASSERT(false);
     }
+    client.Disconnect();
   }
 }
 
@@ -291,6 +282,19 @@ int main(int argc, char** argv) {
   }
 
   clearGlobalObject(sockets);
+
+  size_t total_memory_usage = 0;
+  for (size_t i = 0; i < sockets.size(); i++) {
+    Client client;
+    VINEYARD_CHECK_OK(client.Connect(sockets[i]));
+    std::shared_ptr<InstanceStatus> status;
+    VINEYARD_CHECK_OK(client.InstanceStatus(status));
+    LOG(INFO) << "Client " << client.instance_id()
+              << " memory usage:" << status->memory_usage;
+    total_memory_usage += status->memory_usage;
+    client.Disconnect();
+  }
+  LOG(INFO) << "Total memory usage:" << total_memory_usage;
 
   LOG(INFO) << "Passed KVStateCache tests...";
   return 0;
