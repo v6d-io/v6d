@@ -77,7 +77,10 @@ void RefcntMapObjectBuilder::DecRefcnt(ObjectID objectID) {
     if (refcntMap[objectID] == 0) {
       // TODO: delete object
       refcntMap.erase(objectID);
-      client.DelData(objectID);
+      Status status = client.DelData(objectID);
+      if (!status.ok()) {
+        LOG(ERROR) << "Delete object failed. It may cause memory leak.";
+      }
     }
   }
 }
@@ -96,7 +99,10 @@ void RefcntMapObjectBuilder::DecSetRefcnt(std::set<ObjectID>& objectIDs) {
     }
   }
   if (objectIDToDelete.size() > 0) {
-    client.DelData(objectIDToDelete);
+    Status status = client.DelData(objectIDToDelete);
+    if (!status.ok()) {
+      LOG(ERROR) << "Delete object failed. It may cause memory leak.";
+    }
   }
 }
 
@@ -130,16 +136,9 @@ std::map<ObjectID, uint64_t> RefcntMapObjectBuilder::GetRefcntMap() {
   return refcntMap;
 }
 
-Status RefcntMapObjectBuilder::Build(Client& client) { return Status::OK(); }
-
-std::shared_ptr<Object> RefcntMapObjectBuilder::_Seal(Client& client) {
-  VINEYARD_CHECK_OK(Build(client));
-
-  std::shared_ptr<RefcntMapObject> refcntMapObject =
-      std::make_shared<RefcntMapObject>();
-
+Status RefcntMapObjectBuilder::Build(Client& client) {
   size_t size = refcntMap.size();
-  client.CreateBlob(size * sizeof(MapEntry), mapWriter);
+  RETURN_ON_ERROR(client.CreateBlob(size * sizeof(MapEntry), mapWriter));
   MapEntry* mapEntries = reinterpret_cast<MapEntry*>(mapWriter->data());
 
   int i = 0;
@@ -148,11 +147,19 @@ std::shared_ptr<Object> RefcntMapObjectBuilder::_Seal(Client& client) {
     mapEntries[i].refcnt = entry.second;
     i++;
   }
+  return Status::OK();
+}
+
+std::shared_ptr<Object> RefcntMapObjectBuilder::_Seal(Client& client) {
+  VINEYARD_CHECK_OK(Build(client));
+
+  std::shared_ptr<RefcntMapObject> refcntMapObject =
+      std::make_shared<RefcntMapObject>();
 
   std::shared_ptr<ObjectBase> buffer_ =
       std::shared_ptr<BlobWriter>(std::move(mapWriter));
   refcntMapObject->meta_.AddMember("buffer_", buffer_->_Seal(client));
-  refcntMapObject->meta_.AddKeyValue("size", size);
+  refcntMapObject->meta_.AddKeyValue("size", refcntMap.size());
   refcntMapObject->meta_.SetTypeName(type_name<RefcntMapObject>());
 
   VINEYARD_CHECK_OK(

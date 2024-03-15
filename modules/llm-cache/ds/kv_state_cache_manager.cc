@@ -72,7 +72,11 @@ Status KVStateCacheManager::Make(Client& client,
     }
     if (globalKVStateCache->id() != globalKVStateCacheID) {
       VLOG(100) << "Del migrate object";
-      client.DelData(globalKVStateCache->id());
+      Status status = client.DelData(globalKVStateCache->id());
+      if (!status.ok()) {
+        LOG(ERROR) << "Delete object failed: " << status.ToString()
+                   << " It may cause memory leak.";
+      }
     }
 
     blockIDSetToAdd = kvStateCacheBuilder->GetBlockIDSetToAdd();
@@ -240,7 +244,11 @@ Status KVStateCacheManager::Sync() {
     RETURN_ON_ERROR(status);
     if (globalKVStateCache->id() != globalKVStateCacheID) {
       VLOG(100) << "Del migrate object";
-      client.DelData(globalKVStateCache->id());
+      Status status = client.DelData(globalKVStateCache->id());
+      if (!status.ok()) {
+        LOG(ERROR) << "Delete object failed: " << status.ToString()
+                   << " It may cause memory leak.";
+      }
     }
   }
   kvStateCacheBuilder->UpdateVersion();
@@ -370,7 +378,10 @@ Status KVStateCacheManager::AfterSyncFailed() {
     deleteList.push_back(globalKVStateCache->id());
   }
   status = client.DelData(deleteList, false, true);
-  RETURN_ON_ERROR(status);
+  if (!status.ok()) {
+    LOG(ERROR) << "Delete object failed: " << status.ToString()
+               << " It may cause memory leak.";
+  }
   kvStateCache = nullptr;
 
   return Status::OK();
@@ -434,7 +445,11 @@ Status KVStateCacheManager::SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
     if (globalRefcntMapObject->id() != globalRefcntMapObjectID) {
       // if the global object is migrated, delete the old object
       VLOG(100) << "Del migrate object";
-      client.DelData(globalRefcntMapObject->id());
+      Status status = client.DelData(globalRefcntMapObject->id());
+      if (!status.ok()) {
+        LOG(ERROR) << "Delete object failed: " << status.ToString()
+                   << " It may cause memory leak.";
+      }
     }
 
     refcntMapObjectBuilder->IncSetRefcnt(blockIDSetToAdd);
@@ -448,7 +463,11 @@ Status KVStateCacheManager::SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
     RETURN_ON_ERROR(
         client.PutName(newRefcntMapObject->id(), llmRefcntObjectName));
     // Delete old refcnt map object.
-    RETURN_ON_ERROR(client.DelData(globalRefcntMapObjectID));
+    Status status = client.DelData(globalRefcntMapObjectID);
+    if (!status.ok()) {
+      LOG(ERROR) << "Delete object failed: " << status.ToString()
+                 << " It may cause memory leak.";
+    }
   } else {
     std::shared_ptr<RefcntMapObjectBuilder> refcntMapObjectBuilder =
         std::make_shared<RefcntMapObjectBuilder>(client);
@@ -471,7 +490,11 @@ void KVStateCacheManager::RefreshRefcnt() {
   std::set<ObjectID> blockIDSetToAdd;
   std::string actualKey;
   AcquireServerLock(client, llmCacheSyncLock, actualKey);
-  SetRefcntMap(blockIDSetToDelete, blockIDSetToAdd);
+  Status status = SetRefcntMap(blockIDSetToDelete, blockIDSetToAdd);
+  if (!status.ok()) {
+    LOG(ERROR) << "Update refcnt failed: " << status.ToString()
+               << " It may cause memory leak.";
+  }
   ReleaseServerLock(client, actualKey);
 }
 

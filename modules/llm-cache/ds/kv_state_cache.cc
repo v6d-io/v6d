@@ -278,7 +278,11 @@ void KVStateCacheBuilder::Delete(std::shared_ptr<NodeData> evictedNodeData) {
     this->rootTree->ClearSubtreeData(treeData);
     std::shared_ptr<Object> blockObject =
         kvStateCacheBlockBuilder->_Seal(client);
-    client.DelData(blockObject->id());
+    Status status = client.DelData(blockObject->id());
+    if (!status.ok()) {
+      LOG(ERROR) << "Delete object failed: " << status.ToString()
+                 << " It may cause memory leak.";
+    }
     delete kvStateCacheBlockBuilder;
   }
   evictedNodeData->RecycleSource();
@@ -441,7 +445,11 @@ void KVStateCacheBuilder::Close() {
           reinterpret_cast<KVStateCacheBlockBuilder*>(
               treeData->kvStateCacheBlockBuilder)
               ->_Seal(client);
-      client.DelData(object->id());
+      Status status = client.DelData(object->id());
+      if (!status.ok()) {
+        LOG(ERROR) << "Delete object failed: " << status.ToString()
+                   << " It may cause memory leak.";
+      }
     } else if (!treeData->isPtr) {
       blockIDSetToDelete.insert(treeData->builderObjectID);
     }

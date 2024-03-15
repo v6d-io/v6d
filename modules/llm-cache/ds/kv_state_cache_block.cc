@@ -141,7 +141,11 @@ Status KVStateCacheBlockBuilder::Make(
   kvStateCacheBlockBuilder = new KVStateCacheBlockBuilder(client, blockObject);
   if (blockObjectID != blockObject->id()) {
     // If the object is migrated, we should delete the copied object.
-    client.DelData(blockObject->id());
+    Status status = client.DelData(blockObject->id());
+    if (!status.ok()) {
+      LOG(ERROR) << "Delete object failed: " << status.ToString()
+                 << " It may cause memory leak.";
+    }
   }
   return Status::OK();
 }
