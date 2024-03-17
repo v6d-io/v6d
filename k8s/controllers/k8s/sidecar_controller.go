@@ -18,9 +18,10 @@ package k8s
 
 import (
 	"context"
-	"github.com/pkg/errors"
 	"strings"
 	"time"
+	
+	"github.com/pkg/errors"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
