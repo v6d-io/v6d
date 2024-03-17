@@ -18,10 +18,9 @@ package k8s
 
 import (
 	"context"
+	"github.com/pkg/errors"
 	"strings"
 	"time"
-
-	"github.com/pkg/errors"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -117,8 +116,7 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// reconcile every minute
-	duration, _ := time.ParseDuration("1m")
-	return ctrl.Result{RequeueAfter: duration}, nil
+	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
 // UpdateStatus updates the status of the Sidecar.

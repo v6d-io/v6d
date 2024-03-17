@@ -18,14 +18,13 @@ package k8s
 import (
 	"context"
 	"fmt"
-	"time"
-
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"time"
 
 	"github.com/apache/skywalking-swck/operator/pkg/kubernetes"
 	"github.com/pkg/errors"
@@ -158,8 +157,7 @@ func (r *CSIDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		logger.Error(err, "Failed to update the status", "CSIDriver", csiDriver)
 	}
 	// reconcile every minute
-	duration, _ := time.ParseDuration("1m")
-	return ctrl.Result{RequeueAfter: duration}, nil
+	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
 func (r *CSIDriverReconciler) UpdateStatus(ctx context.Context, csiDriver *k8sv1alpha1.CSIDriver) error {
