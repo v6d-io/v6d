@@ -117,8 +117,7 @@ func (r *SidecarReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// reconcile every minute
-	duration, _ := time.ParseDuration("1m")
-	return ctrl.Result{RequeueAfter: duration}, nil
+	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
 // UpdateStatus updates the status of the Sidecar.

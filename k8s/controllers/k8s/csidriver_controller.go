@@ -158,8 +158,7 @@ func (r *CSIDriverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		logger.Error(err, "Failed to update the status", "CSIDriver", csiDriver)
 	}
 	// reconcile every minute
-	duration, _ := time.ParseDuration("1m")
-	return ctrl.Result{RequeueAfter: duration}, nil
+	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
 func (r *CSIDriverReconciler) UpdateStatus(ctx context.Context, csiDriver *k8sv1alpha1.CSIDriver) error {

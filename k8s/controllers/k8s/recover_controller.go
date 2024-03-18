@@ -135,8 +135,7 @@ func (r *RecoverReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	// reconcile every minute
-	duration, _ := time.ParseDuration("1m")
-	return ctrl.Result{RequeueAfter: duration}, nil
+	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
 // UpdateStateStatus updates the state status of the Recover.

@@ -135,8 +135,7 @@ func (r *BackupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctr
 	}
 
 	// reconcile every minute
-	duration, _ := time.ParseDuration("1m")
-	return ctrl.Result{RequeueAfter: duration}, nil
+	return ctrl.Result{RequeueAfter: time.Minute}, nil
 }
 
 // UpdateStatus updates the status of the Backup.Running
