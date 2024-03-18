@@ -79,7 +79,7 @@ Status KVStateCacheManager::Make(Client& client,
       }
     }
 
-    blockIDSetToAdd = kvStateCacheBuilder->GetBlockIDSetToAdd();
+    kvStateCacheBuilder->GetCurrentBlockIDSet(blockIDSetToAdd);
     blockIDSetToDelete = kvStateCacheBuilder->GetBlockIDSetToDelete();
   } else {
     // if failed, create a new cache object
@@ -216,6 +216,7 @@ Status KVStateCacheManager::Sync() {
   Status status;
   std::set<ObjectID> blockIDSetToAdd;
   std::set<ObjectID> blockIDSetToDelete;
+  std::set<ObjectID> globalBlockIDSet;
   // 1. pull the cache object
   ObjectID globalKVStateCacheID;
   std::vector<ObjectID> deleteList;
@@ -226,6 +227,7 @@ Status KVStateCacheManager::Sync() {
     deleteList.push_back(globalKVStateCacheID);
     globalKVStateCache = std::dynamic_pointer_cast<KVStateCache>(
         client.FetchAndGetObject(globalKVStateCacheID));
+    globalKVStateCache->GetCurrentBlockIDSet(globalBlockIDSet);
   } else {
     // Not an error.
     VLOG(100) << "There is no cache object in the meta server.";
@@ -265,6 +267,9 @@ Status KVStateCacheManager::Sync() {
   kvStateCache = std::dynamic_pointer_cast<KVStateCache>(
       kvStateCacheBuilder->_Seal(client));
 
+  std::set<ObjectID> currentGlobalBlockIDSet;
+  kvStateCacheBuilder->GetCurrentBlockIDSet(currentGlobalBlockIDSet);
+
   status = client.Persist(kvStateCache->id());
   RETURN_ON_ERROR(status);
 
@@ -286,7 +291,7 @@ Status KVStateCacheManager::Sync() {
   RETURN_ON_ERROR(
       KVStateCacheBuilder::Make(client, kvStateCacheBuilder, kvStateCache));
 
-  blockIDSetToAdd = kvStateCacheBuilder->GetBlockIDSetToAdd();
+  kvStateCacheBuilder->GetCurrentBlockIDSet(blockIDSetToAdd);
 
   /**
    * 8. get the add set, which contains the block id in the new cache object
@@ -299,8 +304,20 @@ Status KVStateCacheManager::Sync() {
                       currentObjectIDSet.begin(), currentObjectIDSet.end(),
                       std::inserter(differenceSet, differenceSet.begin()));
 
+  std::set<ObjectID> globalBlockIDToDelete;
+  std::set<ObjectID> globalBlockIDToAdd;
+  std::set_difference(
+      globalBlockIDSet.begin(), globalBlockIDSet.end(),
+      currentGlobalBlockIDSet.begin(), currentGlobalBlockIDSet.end(),
+      std::inserter(globalBlockIDToDelete, globalBlockIDToDelete.begin()));
+  std::set_difference(
+      currentGlobalBlockIDSet.begin(), currentGlobalBlockIDSet.end(),
+      globalBlockIDSet.begin(), globalBlockIDSet.end(),
+      std::inserter(globalBlockIDToAdd, globalBlockIDToAdd.begin()));
+
   // 9. update the global refcnt map
   RETURN_ON_ERROR(SetRefcntMap(blockIDSetToDelete, differenceSet));
+  RETURN_ON_ERROR(SetRefcntMap(globalBlockIDToDelete, globalBlockIDToAdd));
 
   return Status::OK();
 
@@ -416,6 +433,36 @@ void KVStateCacheManager::StopSync() {
     cv.notify_one();
     syncThread.join();
   }
+}
+
+Status KVStateCacheManager::ClearGlobalCache(Client& client,
+                                             std::string& llmCacheSyncLock,
+                                             std::string& llmCacheObjectName,
+                                             std::string& llmRefcntObjectName) {
+  RETURN_ON_ASSERT(client.Connected(), "The client is not connected.");
+
+  ObjectID globalCacheObjectID;
+  ObjectID globalRefcntMapId;
+  RETURN_ON_ERROR(client.GetName(llmCacheObjectName, globalCacheObjectID));
+  RETURN_ON_ERROR(client.DropName(llmCacheObjectName));
+  RETURN_ON_ERROR(client.GetName(llmRefcntObjectName, globalRefcntMapId));
+  RETURN_ON_ERROR(client.DropName(llmRefcntObjectName));
+
+  std::shared_ptr<KVStateCache> globalCacheObject =
+      std::dynamic_pointer_cast<KVStateCache>(
+          client.FetchAndGetObject(globalCacheObjectID));
+  std::set<ObjectID> blockIDSetToDelete;
+  globalCacheObject->GetCurrentBlockIDSet(blockIDSetToDelete);
+  std::vector<ObjectID> deleteList(blockIDSetToDelete.begin(),
+                                   blockIDSetToDelete.end());
+  if (globalCacheObjectID != globalCacheObject->id()) {
+    deleteList.push_back(globalCacheObject->id());
+  }
+  deleteList.push_back(globalCacheObjectID);
+  deleteList.push_back(globalRefcntMapId);
+
+  RETURN_ON_ERROR(client.DelData(deleteList));
+  return Status::OK();
 }
 
 void KVStateCacheManager::Close() {

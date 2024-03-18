@@ -64,6 +64,8 @@ class KVStateCache : public vineyard::Registered<KVStateCache> {
 
   int GetLayer() { return this->layer; }
 
+  void GetCurrentBlockIDSet(std::set<ObjectID>& objectIDSet);
+
   ~KVStateCache();
 
   friend class KVStateCacheBuilder;
@@ -73,7 +75,6 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
   Client& client;
   std::shared_ptr<RadixTree> rootTree;
   std::set<ObjectID> blockIDSetToDelete;
-  std::set<ObjectID> blockIDSetToAdd;
   int tensorBytes;
   int layer;
   uint64_t version;
@@ -129,13 +130,9 @@ class KVStateCacheBuilder : public vineyard::ObjectBuilder {
     return this->blockIDSetToDelete;
   }
 
-  std::set<ObjectID>& GetBlockIDSetToAdd() { return this->blockIDSetToAdd; }
-
   void GetCurrentBlockIDSet(std::set<ObjectID>& objectIDSet);
 
   void ClearBlockIDSetToDelete() { this->blockIDSetToDelete.clear(); }
-
-  void ClearBlockIDSetToAdd() { this->blockIDSetToAdd.clear(); }
 
   ~KVStateCacheBuilder();
 };

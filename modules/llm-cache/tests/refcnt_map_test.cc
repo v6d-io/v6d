@@ -203,6 +203,19 @@ Status checkRefCnt(std::string ipc_socket) {
     }
     refcnt_map->IncSetRefcnt(blockIDSetToAdd);
   }
+
+  ObjectID globalCacheObjectID;
+  blockIDSetToAdd.clear();
+  VINEYARD_CHECK_OK(client[0].GetName(llmCacheObjectName, globalCacheObjectID));
+  std::shared_ptr<KVStateCache> kvStateCache =
+      std::dynamic_pointer_cast<KVStateCache>(
+          client[0].FetchAndGetObject(globalCacheObjectID));
+  kvStateCache->GetCurrentBlockIDSet(blockIDSetToAdd);
+  refcnt_map->IncSetRefcnt(blockIDSetToAdd);
+  if (kvStateCache->id() != globalCacheObjectID) {
+    client[0].DelData(kvStateCache->id());
+  }
+
   LOG(INFO) << "Prepare refcnt done";
 
   ObjectID globalRefcntMapId;
@@ -247,15 +260,8 @@ void threadFunc(std::string socket, int threadId) {
 }
 
 void clearGlobalObject() {
-  ObjectID globalCacheObjectID;
-  VINEYARD_CHECK_OK(client[0].GetName(llmCacheObjectName, globalCacheObjectID));
-  VINEYARD_CHECK_OK(client[0].DropName(llmCacheObjectName));
-  VINEYARD_CHECK_OK(client[0].DelData(globalCacheObjectID));
-
-  ObjectID globalRefcntMapId;
-  VINEYARD_CHECK_OK(client[0].GetName(llmRefcntObjectName, globalRefcntMapId));
-  VINEYARD_CHECK_OK(client[0].DropName(llmRefcntObjectName));
-  VINEYARD_CHECK_OK(client[0].DelData(globalRefcntMapId));
+  VINEYARD_CHECK_OK(KVStateCacheManager::ClearGlobalCache(
+      client[0], llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
 
   LOG(INFO) << "After clear global object:";
   for (int i = 0; i < 2; i++) {
