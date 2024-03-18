@@ -212,6 +212,9 @@ Status checkRefCnt(std::string ipc_socket) {
           client[0].FetchAndGetObject(globalCacheObjectID));
   kvStateCache->GetCurrentBlockIDSet(blockIDSetToAdd);
   refcnt_map->IncSetRefcnt(blockIDSetToAdd);
+  if (kvStateCache->id() != globalCacheObjectID) {
+    client[0].DelData(kvStateCache->id());
+  }
 
   LOG(INFO) << "Prepare refcnt done";
 
