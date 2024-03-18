@@ -7,6 +7,8 @@ file(GLOB VINEYARD_LLM_CACHE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                   "storage/*.h"
                                   "${PROJECT_SOURCE_DIR}/thirdparty/rax/*.cc"
                                   "${PROJECT_SOURCE_DIR}/thirdparty/rax/*.h"
+                                  "${PROJECT_SOURCE_DIR}/thirdparty/MurmurHash3/*.cc"
+                                  "${PROJECT_SOURCE_DIR}/thirdparty/MurmurHash3/*.h"
 )
 
 add_library(vineyard_llm_cache ${VINEYARD_LLM_CACHE_SRCS})

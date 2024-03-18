@@ -51,8 +51,14 @@ Status KVStateCacheManager::Make(Client& client,
 
 // use the file storage for manager
 Status KVStateCacheManager::Make(
-    std::shared_ptr<KVStateCacheManager>& manager) {
-  // TBD
+    std::shared_ptr<KVStateCacheManager>& manager,
+    int chunkSize, int splitNumber, int layer,
+    int tensorBytes, int storedTokens, std::string path) {
+  std::shared_ptr<FileStorage> file_storage;
+  VINEYARD_CHECK_OK(FileStorage::Make(
+      file_storage, chunkSize, splitNumber, layer, tensorBytes, storedTokens,
+      path));
+  manager = std::make_shared<KVStateCacheManager>(file_storage);
   return Status::OK();
 }
 

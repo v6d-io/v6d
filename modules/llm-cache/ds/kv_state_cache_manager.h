@@ -42,7 +42,9 @@ class KVStateCacheManager {
                      std::string llmCacheObjectName = "llm_cache_object",
                      std::string llmRefcntObjectName = "llm_refcnt_object");
 
-  static Status Make(std::shared_ptr<KVStateCacheManager>& manager);
+  static Status Make(std::shared_ptr<KVStateCacheManager>& manager,
+                    int chunkSize, int splitNumber, int layer,
+                    int tensorBytes, int storedTokens, std::string path = "/vineyard/llm");
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
                 const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
