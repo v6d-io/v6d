@@ -299,6 +299,7 @@ We thank the following excellent open-source projects:
 - `wyhash <https://github.com/alainesp/wy>`_, C++ wrapper around wyhash and wyrand.
 - `BBHash <https://github.com/rizkg/BBHash>`_, a fast, minimal-memory perfect hash function.
 - `rax <https://github.com/antirez/rax>`_, an ANSI C radix tree implementation.
+- `MurmurHash3 <https://github.com/aappleby/smhasher>`_, a fast non-cryptographic hash function.
 
 License
 -------

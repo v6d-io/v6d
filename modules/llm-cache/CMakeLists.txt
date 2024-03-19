@@ -1,20 +1,27 @@
 file(GLOB VINEYARD_LLM_CACHE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                   "ds/*.cc"
                                   "ds/*.h"
+                                  "hash/*.h"
                                   "radix-tree/*.cc"
                                   "radix-tree/*.h"
                                   "storage/*.cc"
                                   "storage/*.h"
                                   "${PROJECT_SOURCE_DIR}/thirdparty/rax/*.cc"
                                   "${PROJECT_SOURCE_DIR}/thirdparty/rax/*.h"
+                                  "${PROJECT_SOURCE_DIR}/thirdparty/MurmurHash3/*.cc"
+                                  "${PROJECT_SOURCE_DIR}/thirdparty/MurmurHash3/*.h"
+                                  "${PROJECT_SOURCE_DIR}/thirdparty/cityhash/*.hpp"
 )
 
 add_library(vineyard_llm_cache ${VINEYARD_LLM_CACHE_SRCS})
 target_link_libraries(vineyard_llm_cache PRIVATE libzstd_static ${GLOG_LIBRARIES})
 target_link_libraries(vineyard_llm_cache PUBLIC vineyard_client)
 
-# install bundled thirdparty: rax
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/rax
+# install bundled thirdparty: rax and MurmurHash3
+install(DIRECTORY
+            ${PROJECT_SOURCE_DIR}/thirdparty/rax
+            ${PROJECT_SOURCE_DIR}/thirdparty/MurmurHash3
+            ${PROJECT_SOURCE_DIR}/thirdparty/cityhash
         DESTINATION include/vineyard/contrib    # target directory
         FILES_MATCHING                          # install only matched files
         PATTERN "*.h"                           # select header files
