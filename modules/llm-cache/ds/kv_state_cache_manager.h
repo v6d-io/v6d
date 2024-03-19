@@ -13,17 +13,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include <condition_variable>
 #include <map>
 #include <memory>
-#include <mutex>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "llm-cache/ds/kv_state_cache.h"
-#include "llm-cache/ds/refcnt_map.h"
+#include "llm-cache/storage/blob_storage.h"
+#include "llm-cache/storage/file_storage.h"
 
 #ifndef MODULES_LLM_CACHE_DS_KV_STATE_CACHE_MANAGER_H_
 #define MODULES_LLM_CACHE_DS_KV_STATE_CACHE_MANAGER_H_
@@ -31,28 +29,10 @@ limitations under the License.
 namespace vineyard {
 
 class KVStateCacheManager {
- private:
-  Client& client;
-  std::shared_ptr<KVStateCacheBuilder> kvStateCacheBuilder = nullptr;
-  std::shared_ptr<KVStateCache> kvStateCache = nullptr;
-  std::shared_ptr<RefcntMapObjectBuilder> refcntMapObjectBuilder = nullptr;
-  std::string llmCacheSyncLock;
-  std::string llmCacheObjectName;
-  std::string llmRefcntObjectName;
-  std::thread syncThread;
-  std::mutex cacheAccessMutex;
-  int syncInterval;
-  bool exitFlag = false;
-  std::condition_variable cv;
-  std::mutex exitMutex;
-  bool isClosed = false;
-
  public:
-  KVStateCacheManager(Client& client,
-                      std::shared_ptr<KVStateCacheBuilder>& cache,
-                      int syncInterval, std::string& llmCacheSyncLock,
-                      std::string& llmCacheObjectName,
-                      std::string& llmRefcntObjectName);
+  explicit KVStateCacheManager(std::shared_ptr<IStorage> storageImpl);
+
+  ~KVStateCacheManager();
 
   static Status Make(Client& client,
                      std::shared_ptr<KVStateCacheManager>& manager,
@@ -62,62 +42,26 @@ class KVStateCacheManager {
                      std::string llmCacheObjectName = "llm_cache_object",
                      std::string llmRefcntObjectName = "llm_refcnt_object");
 
+  static Status Make(std::shared_ptr<KVStateCacheManager>& manager);
+
   Status Update(const std::vector<int>& tokenList, int nextToken,
                 const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
   Status Update(
       const std::vector<int>& tokenList,
-      const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvState);
+      const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList);
 
   Status Query(const std::vector<int>& tokenList, int token,
                std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
 
   Status Query(
       const std::vector<int>& tokenList,
-      std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& listKVState);
+      std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList);
 
   void Close();
 
-  std::shared_ptr<KVStateCacheBuilder>& GetKVStateCacheBuilder() {
-    return this->kvStateCacheBuilder;
-  }
-
-  std::shared_ptr<RefcntMapObjectBuilder>& GetRefcntMapObjectBuilder() {
-    return this->refcntMapObjectBuilder;
-  }
-
-  void StopSync();
-
-  static Status ClearGlobalCache(Client& client, std::string& llmCacheSyncLock,
-                                 std::string& llmCacheObjectName,
-                                 std::string& llmRefcntObjectName);
-
-  ~KVStateCacheManager();
-
  private:
-  Status UpdateInternal(const std::vector<int>& tokenList, int nextToken,
-                        const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
-
-  Status QueryInternal(const std::vector<int>& tokenList, int token,
-                       std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
-
-  void Delete(std::vector<int>& token);
-
-  static void SyncThreadFunc(KVStateCacheManager* manager);
-
-  Status Sync();
-
-  Status AfterSyncFailed();
-
-  static void AcquireServerLock(Client& client, std::string& lockKey,
-                                std::string& actualKey);
-
-  static void ReleaseServerLock(Client& client, std::string& actualKey);
-
-  Status SetRefcntMap(std::set<ObjectID>& blockIDSetToDelete,
-                      std::set<ObjectID>& blockIDSetToAdd);
-
-  void RefreshRefcnt();
+  std::shared_ptr<IStorage> storage;
 };
 
 }  // namespace vineyard

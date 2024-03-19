@@ -3,6 +3,8 @@ file(GLOB VINEYARD_LLM_CACHE_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
                                   "ds/*.h"
                                   "radix-tree/*.cc"
                                   "radix-tree/*.h"
+                                  "storage/*.cc"
+                                  "storage/*.h"
                                   "${PROJECT_SOURCE_DIR}/thirdparty/rax/*.cc"
                                   "${PROJECT_SOURCE_DIR}/thirdparty/rax/*.h"
 )

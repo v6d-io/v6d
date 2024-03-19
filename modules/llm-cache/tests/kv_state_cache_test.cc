@@ -197,7 +197,7 @@ void clearGlobalObject(std::vector<std::string>& sockets) {
   Client client;
   VINEYARD_CHECK_OK(client.Connect(sockets[0]));
 
-  VINEYARD_CHECK_OK(KVStateCacheManager::ClearGlobalCache(
+  VINEYARD_CHECK_OK(BlobStorage::ClearGlobalCache(
       client, llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
   client.Disconnect();
 
@@ -281,6 +281,8 @@ int main(int argc, char** argv) {
     LOG(INFO) << "Thread:" << i << " exit.";
   }
 
+  // workaround here.
+  sleep(10);
   clearGlobalObject(sockets);
 
   size_t total_memory_usage = 0;

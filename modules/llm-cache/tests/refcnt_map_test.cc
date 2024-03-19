@@ -35,6 +35,7 @@ std::vector<std::vector<int>> round_token_list = {round_1_tokens,
                                                   round_2_tokens};
 
 std::vector<std::shared_ptr<KVStateCacheManager>> kv_state_cache_managers;
+std::vector<std::shared_ptr<BlobStorage>> blob_storages;
 std::string llmCacheObjectName = "refcnt_map_test_cache_object";
 std::string llmCacheSyncLock = "refcnt_map_test_cache_lock";
 std::string llmRefcntObjectName = "refcnt_map_test_refcnt_object";
@@ -171,23 +172,19 @@ Status checkRefCnt(std::string ipc_socket) {
   LOG(INFO) << "------------ check ref cnt ---------------";
 
   std::vector<std::set<void*>> treeDataSets;
-  treeDataSets.push_back(kv_state_cache_managers[0]
+  treeDataSets.push_back(blob_storages[0]
                              ->GetKVStateCacheBuilder()
                              ->GetRootTree()
                              ->GetSubTreeDataSet());
-  treeDataSets.push_back(kv_state_cache_managers[1]
+  treeDataSets.push_back(blob_storages[1]
                              ->GetKVStateCacheBuilder()
                              ->GetRootTree()
                              ->GetSubTreeDataSet());
-  LOG(INFO) << raxShow(kv_state_cache_managers[0]
-                           ->GetKVStateCacheBuilder()
-                           ->GetRootTree()
-                           ->GetRootTree());
+  LOG(INFO) << raxShow(
+      blob_storages[0]->GetKVStateCacheBuilder()->GetRootTree()->GetRootTree());
   LOG(INFO) << "------------------------------------------";
-  LOG(INFO) << raxShow(kv_state_cache_managers[1]
-                           ->GetKVStateCacheBuilder()
-                           ->GetRootTree()
-                           ->GetRootTree());
+  LOG(INFO) << raxShow(
+      blob_storages[1]->GetKVStateCacheBuilder()->GetRootTree()->GetRootTree());
 
   std::shared_ptr<RefcntMapObjectBuilder> refcnt_map =
       std::make_shared<RefcntMapObjectBuilder>(client[0]);
@@ -241,10 +238,12 @@ void threadFunc(std::string socket, int threadId) {
   }
 
   std::shared_ptr<KVStateCacheManager> kv_state_cache_manager;
-  VINEYARD_CHECK_OK(KVStateCacheManager::Make(
-      client[threadId], kv_state_cache_manager, tensorBytes, capacity, layer,
-      block_size, 3, llmCacheSyncLock, llmCacheObjectName,
-      llmRefcntObjectName));
+  std::shared_ptr<BlobStorage> blob_storage;
+  VINEYARD_CHECK_OK(BlobStorage::Make(
+      client[threadId], blob_storage, tensorBytes, capacity, layer, block_size,
+      3, llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
+  blob_storages.push_back(blob_storage);
+  kv_state_cache_manager = std::make_shared<KVStateCacheManager>(blob_storage);
   kv_state_cache_managers.push_back(kv_state_cache_manager);
 
   std::vector<int> tokenList = round_token_list[threadId];
@@ -256,11 +255,11 @@ void threadFunc(std::string socket, int threadId) {
 
   sleep(5);
 
-  kv_state_cache_manager->StopSync();
+  blob_storage->StopSync();
 }
 
 void clearGlobalObject() {
-  VINEYARD_CHECK_OK(KVStateCacheManager::ClearGlobalCache(
+  VINEYARD_CHECK_OK(BlobStorage::ClearGlobalCache(
       client[0], llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
 
   LOG(INFO) << "After clear global object:";
