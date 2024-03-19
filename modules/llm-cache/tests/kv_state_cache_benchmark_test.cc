@@ -33,12 +33,12 @@ constexpr int LAYER = 64;
 constexpr int BLOCK_SIZE = 100;
 
 std::shared_ptr<KVStateCacheManager> manager;
+VineyardCacheConfig config(TENSORBYTES, CAPACITY, LAYER, BLOCK_SIZE, 3);
 Client client;
 
 void init(std::string socket) {
   VINEYARD_CHECK_OK(client.Connect(socket));
-  VINEYARD_CHECK_OK(KVStateCacheManager::Make(client, manager, TENSORBYTES,
-                                              CAPACITY, LAYER, BLOCK_SIZE, 3));
+  VINEYARD_CHECK_OK(KVStateCacheManager::Make(client, manager, config));
 }
 
 std::vector<int> generate_random_tokens(size_t max_length) {

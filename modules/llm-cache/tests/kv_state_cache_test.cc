@@ -21,6 +21,7 @@ limitations under the License.
 #include "rax/radix.h"
 
 #include "common/util/logging.h"
+#include "llm-cache/ds/config.h"
 #include "llm-cache/ds/kv_state_cache_manager.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
@@ -30,6 +31,7 @@ int capacity = 20;
 int layer = 3;
 int block_size = 5;
 
+VineyardCacheConfig config;
 std::string llmCacheObjectName = "cache_test_cache_object";
 std::string llmCacheSyncLock = "cache_test_cache_lock";
 std::string llmRefcntObjectName = "cache_test_refcnt_object";
@@ -46,13 +48,10 @@ std::vector<int> round_4_tokens = {1, 2, 3, 4, 5, 6};
 std::vector<std::vector<int>> tokens_list = {round_1_tokens, round_2_tokens,
                                              round_3_tokens, round_4_tokens};
 
-std::shared_ptr<KVStateCacheManager> init(Client& client, int tensorBytes,
-                                          int capacity, int layer,
-                                          int block_size) {
+std::shared_ptr<KVStateCacheManager> init(Client& client) {
   std::shared_ptr<KVStateCacheManager> kv_state_cache_manager;
-  VINEYARD_CHECK_OK(KVStateCacheManager::Make(
-      client, kv_state_cache_manager, tensorBytes, capacity, layer, block_size,
-      3, llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
+  VINEYARD_CHECK_OK(
+      KVStateCacheManager::Make(client, kv_state_cache_manager, config));
   return kv_state_cache_manager;
 }
 
@@ -174,8 +173,7 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
 void threadFunc(std::string socket) {
   Client client;
   VINEYARD_CHECK_OK(client.Connect(socket));
-  std::shared_ptr<KVStateCacheManager> manager =
-      init(client, tensorBytes, capacity, layer, block_size);
+  std::shared_ptr<KVStateCacheManager> manager = init(client);
 
   for (size_t i = 0; i < tokens_list.size(); i++) {
     inference(manager, tokens_list[i]);
@@ -270,6 +268,10 @@ int main(int argc, char** argv) {
             << ", capacity: " << capacity << ", layer: " << layer
             << ", block_size: " << block_size << " and use " << client_num
             << " client.";
+
+  config = VineyardCacheConfig(tensorBytes, capacity, layer, block_size, 3,
+                               llmCacheSyncLock, llmCacheObjectName,
+                               llmRefcntObjectName);
 
   std::vector<std::thread> threads;
   for (int i = 0; i < client_num; i++) {
