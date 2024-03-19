@@ -115,7 +115,7 @@ void test_hash_conflict() {
 
   std::map<std::vector<int>, int> tokens_map;
   for (int i = 0; i < TOKENLISTSIZE; i++) {
-    std::vector<int> tokens = generate_random_tokens(10);
+    std::vector<int> tokens = generate_random_tokens(16);
     tokens_map[tokens]++;
     token_size += tokens.size();
     VINEYARD_CHECK_OK(murmur_hasher.computePathForTokens(
