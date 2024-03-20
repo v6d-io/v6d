@@ -36,8 +36,8 @@ class KVStateCacheManager {
 
   static Status Make(Client& client,
                      std::shared_ptr<KVStateCacheManager>& manager,
-                     int dimension = 10, int cacheCapacity = 10, int layer = 1,
-                     int blockSize = 5, int syncInterval = 3,
+                     int tensorBytes = 10, int cacheCapacity = 10,
+                     int layer = 1, int blockSize = 5, int syncInterval = 3,
                      std::string llmCacheSyncLock = "llmCacheSyncLock",
                      std::string llmCacheObjectName = "llm_cache_object",
                      std::string llmRefcntObjectName = "llm_refcnt_object");

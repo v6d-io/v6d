@@ -82,9 +82,9 @@ KVStateCacheBuilder::KVStateCacheBuilder(Client& client, int tensorBytes,
 
 Status KVStateCacheBuilder::Make(
     Client& client, std::shared_ptr<KVStateCacheBuilder>& kvStateCacheBuilder,
-    int dimension, int cacheCapacity, int layer, int blockSize) {
+    int tensorBytes, int cacheCapacity, int layer, int blockSize) {
   KVStateCacheBlockBuilder* builder =
-      new KVStateCacheBlockBuilder(client, dimension, layer, blockSize);
+      new KVStateCacheBlockBuilder(client, tensorBytes, layer, blockSize);
 
   std::shared_ptr<RadixTree> rootTree =
       std::make_shared<RadixTree>(cacheCapacity);
@@ -99,7 +99,7 @@ Status KVStateCacheBuilder::Make(
   rootTree->SetSubtreeData(treeData);
 
   kvStateCacheBuilder = std::shared_ptr<KVStateCacheBuilder>(
-      new KVStateCacheBuilder(client, dimension, layer, rootTree));
+      new KVStateCacheBuilder(client, tensorBytes, layer, rootTree));
   return Status::OK();
 }
 

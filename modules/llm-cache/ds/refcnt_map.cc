@@ -126,9 +126,9 @@ bool RefcntMapObjectBuilder::Equals(
 }
 
 void RefcntMapObjectBuilder::PrintRefcntMap() {
-  LOG(INFO) << "refcntMap size:" << refcntMap.size();
+  VLOG(100) << "refcntMap size:" << refcntMap.size();
   for (auto& entry : refcntMap) {
-    LOG(INFO) << "objectID : " << entry.first << " refcnt : " << entry.second;
+    VLOG(100) << "objectID : " << entry.first << " refcnt : " << entry.second;
   }
 }
 
