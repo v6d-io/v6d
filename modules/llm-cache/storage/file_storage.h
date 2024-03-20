@@ -23,6 +23,7 @@ limitations under the License.
 #include <vector>
 
 #include "common/util/status.h"
+#include "llm-cache/hash/hasher.h"
 #include "llm-cache/storage/storage.h"
 
 namespace vineyard {
@@ -46,10 +47,6 @@ enum FileOperationType {
 
 class FileStorage : public IStorage {
  private:
-  Status DefaultGetPathFromPrefix(const std::vector<int>& tokenList,
-                                  int batchSize,
-                                  std::vector<std::string>& path);
-
   bool CompareTokenList(const std::vector<int>& tokenList,
                         const std::vector<int>& tokenList2, size_t length);
 
@@ -66,6 +63,8 @@ class FileStorage : public IStorage {
   virtual Status Write(std::shared_ptr<FileDescriptor>& fd, const void* data,
                        size_t size) = 0;
 
+  virtual Status Mkdir(std::string path) = 0;
+
   virtual Status GetFileSize(std::shared_ptr<FileDescriptor>& fd,
                              size_t& size) = 0;
 
@@ -78,9 +77,6 @@ class FileStorage : public IStorage {
 
  public:
   FileStorage() = default;
-
-  FileStorage(size_t batchSize, std::string rootPath)
-      : batchSize(batchSize), rootPath(rootPath) {}
 
   ~FileStorage() = default;
 
@@ -99,8 +95,14 @@ class FileStorage : public IStorage {
                std::map<int, std::pair<LLMKV, LLMKV>>& kvState) override;
 
  protected:
-  size_t batchSize;
+  int tensorBytes;
+  int cacheCapacity;
+  int layer;
+  int batchSize;
+  int splitNumber;
   std::string rootPath;
+  std::shared_ptr<IHashAlgorithm> hashAlgorithm;
+  std::shared_ptr<Hasher> hasher;
 };
 
 }  // namespace vineyard

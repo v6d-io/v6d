@@ -50,14 +50,18 @@ struct VineyardCacheConfig : public KVCacheConfig {
 
 struct FileCacheConfig : public KVCacheConfig {
   int batchSize;
+  int splitNumber;
   std::string root;
   FilesystemType filesystemType;
 
   FileCacheConfig(int tensorByte = 10, int cacheCapacity = 10, int layer = 1,
-                  int batchSize = 4, std::string root = "/tmp",
+                  int batchSize = 4, int splitNumber = 2,
+                  std::string root = "/tmp/llm_cache/",
                   FilesystemType filesystemType = LOCAL)
       : KVCacheConfig{tensorByte, cacheCapacity, layer} {
     this->root = root;
+    this->batchSize = batchSize;
+    this->splitNumber = splitNumber;
     this->filesystemType = filesystemType;
   }
 };

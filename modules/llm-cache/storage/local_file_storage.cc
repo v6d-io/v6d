@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <string>
@@ -80,6 +81,16 @@ Status LocalFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
     lfd->fstream.clear();
     LOG(INFO) << "Failed to write file: ";
     return Status::IOError("Failed to write file");
+  }
+  return Status::OK();
+}
+
+Status LocalFileStorage::Mkdir(std::string path) {
+  // create the directory if it does not exist
+  if (!std::filesystem::exists(path)) {
+    if (!std::filesystem::create_directories(path)) {
+      return Status::IOError("Failed to create directory");
+    }
   }
   return Status::OK();
 }
