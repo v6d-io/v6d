@@ -31,6 +31,8 @@ from .llm_C import _generate
 
 
 class KV_Cache:  # pylint: disable=too-many-instance-attributes
+    """KV_Cache is a class that manages the llm kv cache in vineyard."""
+
     def __init__(
         self,
         socket: str,
@@ -46,6 +48,37 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
         llm_ref_cnt_object_name: str = "llm_refcnt_object",
         **kwargs
     ):
+        """Create a llm kv cache manager based on vineyard blob.
+
+        Args:
+            socket (str):
+                The vineyard socket path.
+            tensor_bytes (int, optional):
+                The size of the kv cache tensor.
+                Defaults to 10.
+            cache_capacity (int, optional):
+                The capacity of the KV cache refers to the maximum number of
+                tokens it can hold. Defaults to 10.
+            layer (int, optional):
+                The number of layers of the kv cache. Defaults to 1.
+            torch_size (torch.Size, optional):
+                The size of kv tensor. Defaults to None.
+                e,g, the size of torch.rand(2, 2) is torch.Size([2, 2]).
+            dtype (dtype, optional):
+                The dtype of the tensor. Defaults to None.
+                e.g., torch.float32, torch.float64.
+            block_size (int, optional):
+                The block size of the kv cache. Defaults to 5.
+            sync_interval (int, optional):
+                The sync interval of the kv cache. Defaults to 3.
+            llm_cache_sync_lock (str, optional):
+                The name of the kv cache sync lock. Defaults to "llmCacheSyncLock".
+            llm_cache_object_name (str, optional):
+                The name of the kv cache object. Defaults to "llm_cache_object".
+            llm_ref_cnt_object_name (str, optional):
+                The name of the kv cache ref cnt object.
+                Defaults to "llm_refcnt_object".
+        """
         self.client = vineyard.connect(socket)
         self.tensor_bytes = tensor_bytes
         self.cache_capacity = cache_capacity
@@ -78,6 +111,23 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
         tokens: list,
         kv_cache_list: List[Tuple[torch.Tensor, torch.Tensor]],
     ):
+        """Update the kv cache stored in vineyard.
+
+        Args:
+            tokens (list): the tokens of the kv cache
+                e,g, [1 2 3 4]
+            kv_cache_list (List[Tuple[torch.Tensor, torch.Tensor]]):
+                the kv tensors list of the related tokens including all layers.
+                if the layer is 2, the kv_cache_list should be like:
+
+        .. code:: bash
+
+            [(k1, v1)[layer0], (k1, v1)[layer1],
+             (k2, v2)[layer0], (k2, v2)[layer1],
+             (k3, v3)[layer0], (k3, v3)[layer1],
+             (k4, v4)[layer0], (k4, v4)[layer1]]
+
+        """
         kv_state_list = []
         kv_state_entry = {}
         j = 0
@@ -100,6 +150,25 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
         self,
         tokens: list,
     ):
+        """Query the kv cache stored in vineyard.
+
+        Args:
+            tokens (list): the tokens of the kv cache
+                e,g, [1 2 3 4]
+
+        Returns:
+            (List[Tuple[torch.Tensor, torch.Tensor]]):
+                the kv tensors list of the related tokens including all layers.
+                if the layer is 2, the kv_cache_list should be like:
+
+            .. code:: bash
+
+                [(k1, v1)[layer0], (k1, v1)[layer1],
+                 (k2, v2)[layer0], (k2, v2)[layer1],
+                 (k3, v3)[layer0], (k3, v3)[layer1],
+                 (k4, v4)[layer0], (k4, v4)[layer1]]
+
+        """
         kv_state_list = []
         kv_cache_list = []
         self.kv_cache_manager.query(tokens, kv_state_list)

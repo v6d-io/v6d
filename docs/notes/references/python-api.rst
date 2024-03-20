@@ -143,4 +143,13 @@ You can also use the Python API to interact with internal
 
     $ python -m vineyard.cli <command> [options]
 
+Vineyard LLM KV Cache
+---------------------
+
+Before using the KV Cache, you need to install the ``vineyard-llm`` package.
+
+.. autoclass:: vineyard.llm.KV_Cache
+    :special-members:
+    :members:
+
 .. _Vineyard Cli Tool: https://v6d.io/notes/cloud-native/vineyardctl.html
