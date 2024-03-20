@@ -459,7 +459,7 @@ Status BlobStorage::ClearGlobalCache(Client& client,
   return Status::OK();
 }
 
-void BlobStorage::Close() {
+void BlobStorage::CloseCache() {
   // recycle blob
   StopSync();
 

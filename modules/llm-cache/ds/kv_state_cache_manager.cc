@@ -25,6 +25,7 @@ limitations under the License.
 #include "llm-cache/ds/kv_state_cache.h"
 #include "llm-cache/ds/kv_state_cache_manager.h"
 #include "llm-cache/storage/blob_storage.h"
+#include "llm-cache/storage/local_file_storage.h"
 
 namespace vineyard {
 
@@ -50,7 +51,14 @@ Status KVStateCacheManager::Make(Client& client,
 // use the file storage for manager
 Status KVStateCacheManager::Make(std::shared_ptr<KVStateCacheManager>& manager,
                                  FileCacheConfig& config) {
-  // TBD
+  std::shared_ptr<FileStorage> file_storage;
+  if (config.filesystemType == FilesystemType::LOCAL) {
+    file_storage =
+        std::make_shared<LocalFileStorage>(config.batchSize, config.root);
+  } else {
+    return Status::Invalid("Unsupported filesystem type");
+  }
+  manager = std::make_shared<KVStateCacheManager>(file_storage);
   return Status::OK();
 }
 
@@ -92,7 +100,7 @@ Status ClearGlobalCache(Client& client, FileCacheConfig& config) {
   return Status::OK();
 }
 
-void KVStateCacheManager::Close() { return storage->Close(); }
+void KVStateCacheManager::Close() { storage->CloseCache(); }
 
 KVStateCacheManager::~KVStateCacheManager() {}
 
