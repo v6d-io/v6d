@@ -18,6 +18,7 @@ limitations under the License.
 
 #include "client/client.h"
 
+#include "llm-cache/ds/config.h"
 #include "llm-cache/ds/kv_state_cache_block.h"
 #include "llm-cache/ds/kv_state_cache_manager.h"
 
@@ -86,11 +87,13 @@ PYBIND11_MODULE(llm_C, m) {
          std::string llm_cache_object_name,
          std::string llm_ref_cnt_object_name) -> py::object {
         std::shared_ptr<KVStateCacheManager> manager;
+        VineyardCacheConfig config(tensor_bytes, cache_capacity, layer,
+                                   block_size, sync_interval,
+                                   llm_cache_sync_lock, llm_cache_object_name,
+                                   llm_ref_cnt_object_name);
         Client& client = ipc_client.cast<Client&>();
-        vineyard::Status status = vineyard::KVStateCacheManager::Make(
-            client, manager, tensor_bytes, cache_capacity, layer, block_size,
-            sync_interval, llm_cache_sync_lock, llm_cache_object_name,
-            llm_ref_cnt_object_name);
+        vineyard::Status status =
+            vineyard::KVStateCacheManager::Make(client, manager, config);
         if (!status.ok()) {
           throw std::runtime_error(status.ToString());
         }

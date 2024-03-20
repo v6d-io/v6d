@@ -45,7 +45,7 @@ class IStorage {
   virtual Status Query(const std::vector<int>& tokenList, int nextToken,
                        std::map<int, std::pair<LLMKV, LLMKV>>& kvState) = 0;
 
-  virtual void Close() = 0;
+  virtual void CloseCache() = 0;
 };
 
 }  // namespace vineyard

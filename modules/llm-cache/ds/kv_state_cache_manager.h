@@ -19,6 +19,7 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
+#include "llm-cache/ds/config.h"
 #include "llm-cache/ds/kv_state_cache.h"
 #include "llm-cache/storage/blob_storage.h"
 #include "llm-cache/storage/file_storage.h"
@@ -36,13 +37,10 @@ class KVStateCacheManager {
 
   static Status Make(Client& client,
                      std::shared_ptr<KVStateCacheManager>& manager,
-                     int tensorBytes = 10, int cacheCapacity = 10,
-                     int layer = 1, int blockSize = 5, int syncInterval = 3,
-                     std::string llmCacheSyncLock = "llmCacheSyncLock",
-                     std::string llmCacheObjectName = "llm_cache_object",
-                     std::string llmRefcntObjectName = "llm_refcnt_object");
+                     VineyardCacheConfig& config);
 
-  static Status Make(std::shared_ptr<KVStateCacheManager>& manager);
+  static Status Make(std::shared_ptr<KVStateCacheManager>& manager,
+                     FileCacheConfig& config);
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
                 const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
@@ -59,6 +57,10 @@ class KVStateCacheManager {
       std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList);
 
   void Close();
+
+  Status ClearGlobalCache(Client& client, VineyardCacheConfig& config);
+
+  Status ClearGlobalCache(Client& client, FileCacheConfig& config);
 
  private:
   std::shared_ptr<IStorage> storage;

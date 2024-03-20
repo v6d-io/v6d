@@ -25,6 +25,7 @@ limitations under the License.
 #include "llm-cache/ds/kv_state_cache.h"
 #include "llm-cache/ds/kv_state_cache_manager.h"
 #include "llm-cache/storage/blob_storage.h"
+#include "llm-cache/storage/local_file_storage.h"
 
 namespace vineyard {
 
@@ -36,23 +37,28 @@ KVStateCacheManager::KVStateCacheManager(
 // use the memory storage for manager
 Status KVStateCacheManager::Make(Client& client,
                                  std::shared_ptr<KVStateCacheManager>& manager,
-                                 int tensorBytes, int cacheCapacity, int layer,
-                                 int blockSize, int syncInterval,
-                                 std::string llmCacheSyncLock,
-                                 std::string llmCacheObjectName,
-                                 std::string llmRefcntObjectName) {
+                                 VineyardCacheConfig& config) {
   std::shared_ptr<BlobStorage> blob_storage;
   VINEYARD_CHECK_OK(blob_storage->Make(
-      client, blob_storage, tensorBytes, cacheCapacity, layer, blockSize,
-      syncInterval, llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
+      client, blob_storage, config.tensorByte, config.cacheCapacity,
+      config.layer, config.blockSize, config.syncInterval,
+      config.llmCacheSyncLock, config.llmCacheObjectName,
+      config.llmRefcntObjectName));
   manager = std::make_shared<KVStateCacheManager>(blob_storage);
   return Status::OK();
 }
 
 // use the file storage for manager
-Status KVStateCacheManager::Make(
-    std::shared_ptr<KVStateCacheManager>& manager) {
-  // TBD
+Status KVStateCacheManager::Make(std::shared_ptr<KVStateCacheManager>& manager,
+                                 FileCacheConfig& config) {
+  std::shared_ptr<FileStorage> file_storage;
+  if (config.filesystemType == FilesystemType::LOCAL) {
+    file_storage =
+        std::make_shared<LocalFileStorage>(config.batchSize, config.root);
+  } else {
+    return Status::Invalid("Unsupported filesystem type");
+  }
+  manager = std::make_shared<KVStateCacheManager>(file_storage);
   return Status::OK();
 }
 
@@ -80,7 +86,21 @@ Status KVStateCacheManager::Query(
   return storage->Query(tokenList, kvStateList);
 }
 
-void KVStateCacheManager::Close() { return storage->Close(); }
+Status KVStateCacheManager::ClearGlobalCache(Client& client,
+                                             VineyardCacheConfig& config) {
+  std::shared_ptr<BlobStorage> blob_storage =
+      std::dynamic_pointer_cast<BlobStorage>(storage);
+  return blob_storage->ClearGlobalCache(client, config.llmCacheSyncLock,
+                                        config.llmCacheObjectName,
+                                        config.llmRefcntObjectName);
+}
+
+Status ClearGlobalCache(Client& client, FileCacheConfig& config) {
+  // TBD
+  return Status::OK();
+}
+
+void KVStateCacheManager::Close() { storage->CloseCache(); }
 
 KVStateCacheManager::~KVStateCacheManager() {}
 
