@@ -54,7 +54,7 @@ class Hasher {
    *      hashValue3(4c90a490) -> 4c/90/a4/90
    *
    */
-  Status computePathForTokens(std::vector<int>& tokenList, int batchSize,
+  Status computePathForTokens(const std::vector<int>& tokenList, int batchSize,
                               int splitNumber,
                               std::vector<std::string>& pathList) {
     int hashValue;

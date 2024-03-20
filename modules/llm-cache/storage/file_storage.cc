@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
@@ -20,6 +21,7 @@ limitations under the License.
 #include <vector>
 
 #include "common/util/logging.h"
+#include "common/util/status.h"
 #include "llm-cache/storage/file_storage.h"
 
 namespace vineyard {
@@ -39,78 +41,47 @@ namespace vineyard {
 Status FileStorage::Update(
     const std::vector<int>& tokenList,
     const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
-  LOG(INFO) << "Update";
-  // TBD: change batchSize to a fixed value
-  batchSize = tokenList.size();
-  int layer = kvStateList[0].size();
-  int kvStateSize = kvStateList[0].begin()->second.first.length;
+  std::vector<std::string> pathList;
+  std::string dir = rootPath;
+  std::string path;
+  int tokenSize;
 
-  std::vector<std::string> paths;
-  RETURN_ON_ERROR(DefaultGetPathFromPrefix(tokenList, batchSize, paths));
-  for (size_t i = 0; i < tokenList.size() / batchSize; i++) {
+  VINEYARD_ASSERT(batchSize > 0);
+  // check if the root path ends with '/'
+  if (dir.size() != 0 && dir.back() != '/') {
+    dir += "/";
+  }
+
+  RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, batchSize,
+                                               splitNumber, pathList));
+  if (pathList.size() == 0) {
+    return Status::OK();
+  }
+  tokenSize = pathList.size() * batchSize;
+  for (size_t i = 0; i < pathList.size(); i++) {
     std::shared_ptr<FileDescriptor> fd;
-
-    // TODO: check if the kv state is already in the cache
-    // TODO: hash conflict
-    RETURN_ON_ERROR(Open(rootPath + paths[i], fd, FileOperationType::WRITE));
-    FileHeader header;
-    size_t fileSize;
-    RETURN_ON_ERROR(GetFileSize(fd, fileSize));
-    LOG(INFO) << "fileSize:" << fileSize;
-    if (fileSize != 0) {
-      Read(fd, &header, sizeof(FileHeader));
-      if (header.layer != layer || header.kvStateSize != kvStateSize) {
-        Close(fd);
-        return Status::Invalid("Layer/KV state size mismatch!");
-      }
-      header.prefixNum += tokenList.size();
-      Seek(fd, 0);
-      Write(fd, &header, sizeof(FileHeader));
-    }
-    {
-      header.prefixNum = tokenList.size();
-      header.layer = layer;
-      header.kvStateSize = kvStateSize;
-      Write(fd, &header, sizeof(FileHeader));
-    }
-    LOG(INFO) << "Header: " << header.prefixNum << " " << header.layer << " "
-              << header.kvStateSize;
-
-    for (size_t j = 0; j < batchSize; j++) {
-      // write
-      int prefixSize = (i * batchSize + j + 1) * sizeof(int);
-      LOG(INFO) << "Write prefix length:" << prefixSize / 4;
-      LOG(INFO) << "write token list:";
-      std::string token_str = "";
-      for (size_t k = 0; k <= j + i * batchSize; k++) {
-        token_str += std::to_string(tokenList[k]) + " ";
-      }
-      LOG(INFO) << token_str;
-      Write(fd, &prefixSize, sizeof(int));
-      Write(fd, tokenList.data(), prefixSize);
-      for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-        LOG(INFO) << "write:";
-        std::string data;
-        for (int k = 0; k < kvStateSize; k++) {
-          data += std::to_string((
-                      reinterpret_cast<uint8_t*>(kvStateList[i * batchSize + j]
-                                                     .find(currentLayer)
-                                                     ->second.first.data))[k]) +
-                  " ";
+    std::filesystem::path filePath(dir + pathList[i]);
+    RETURN_ON_ERROR(Mkdir(filePath.parent_path().string()));
+    RETURN_ON_ERROR(Open(filePath.string(), fd, FileOperationType::WRITE));
+    RETURN_ON_ERROR(Write(fd, &tokenSize, sizeof(int)));
+    RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenSize * sizeof(int)));
+    for (size_t currentToken = i * batchSize;
+         currentToken < (i + 1) * batchSize; currentToken++) {
+      for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
+        for (auto iter = kvStateList[currentToken].begin();
+             iter != kvStateList[currentToken].end(); ++iter) {
+          RETURN_ON_ERROR(
+              Write(fd, reinterpret_cast<const char*>(&iter->second.first.data),
+                    iter->second.first.length));
+          RETURN_ON_ERROR(Write(
+              fd, reinterpret_cast<const char*>(&iter->second.second.data),
+              iter->second.second.length));
         }
-        LOG(INFO) << "layer " << currentLayer << ":";
-        LOG(INFO) << "key_state: " << data;
-        Write(fd, (kvStateList[j].find(currentLayer))->second.first.data,
-              kvStateSize);
-        Write(fd, (kvStateList[j].find(currentLayer))->second.second.data,
-              kvStateSize);
       }
     }
-
     RETURN_ON_ERROR(Close(fd));
   }
 
-  LOG(INFO) << "update end";
   return Status::OK();
 }
 
@@ -124,6 +95,7 @@ Status FileStorage::Update(
 Status FileStorage::Query(
     const std::vector<int>& tokenList,
     std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+  /*
   LOG(INFO) << "Query";
   std::string token_str = " ";
   for (size_t i = 0; i < tokenList.size(); i++) {
@@ -233,7 +205,7 @@ Status FileStorage::Query(
     // } while (currentToken < batchSize);
     RETURN_ON_ERROR(Close(fd));
   }
-
+*/
   return Status::OK();
 }
 
@@ -241,23 +213,6 @@ Status FileStorage::Query(const std::vector<int>& tokenList, int nextToken,
                           std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   // TBD
   return Status::NotImplemented();
-}
-
-Status FileStorage::DefaultGetPathFromPrefix(const std::vector<int>& tokenList,
-                                             int batchSize,
-                                             std::vector<std::string>& path) {
-  std::string prefix;
-  prefix += "/";
-  for (size_t i = 0; i < tokenList.size(); i += batchSize) {
-    for (int j = 0; j < batchSize; j++) {
-      prefix += std::to_string(tokenList[i + j]);
-    }
-    LOG(INFO) << "path " << i << " : " << prefix;
-    path.push_back(prefix);
-  }
-
-  // return the prefix size used to create the path
-  return Status::OK();
 }
 
 bool FileStorage::CompareTokenList(const std::vector<int>& tokenList,

@@ -30,8 +30,15 @@ struct LocalFileDescriptor : public FileDescriptor {
 
 class LocalFileStorage : public FileStorage {
  public:
-  LocalFileStorage(size_t batchSize, std::string rootPath) {
+  LocalFileStorage(int tensorBytes, int cacheCapacity, int layer, int batchSize,
+                   int splitNumber, std::string rootPath) {
+    this->hashAlgorithm = std::make_shared<MurmurHash3Algorithm>();
+    this->hasher = std::make_shared<Hasher>(hashAlgorithm.get());
+    this->tensorBytes = tensorBytes;
+    this->cacheCapacity = cacheCapacity;
+    this->layer = layer;
     this->batchSize = batchSize;
+    this->splitNumber = splitNumber;
     this->rootPath = rootPath;
   }
 
@@ -47,6 +54,8 @@ class LocalFileStorage : public FileStorage {
 
   Status Write(std::shared_ptr<FileDescriptor>& fd, const void* data,
                size_t size) override;
+
+  Status Mkdir(std::string path) override;
 
   Status GetFileSize(std::shared_ptr<FileDescriptor>& fd,
                      size_t& size) override;
