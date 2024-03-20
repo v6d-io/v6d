@@ -40,7 +40,7 @@ Status KVStateCacheManager::Make(Client& client,
                                  VineyardCacheConfig& config) {
   std::shared_ptr<BlobStorage> blob_storage;
   VINEYARD_CHECK_OK(blob_storage->Make(
-      client, blob_storage, config.dimension, config.cacheCapacity,
+      client, blob_storage, config.tensorByte, config.cacheCapacity,
       config.layer, config.blockSize, config.syncInterval,
       config.llmCacheSyncLock, config.llmCacheObjectName,
       config.llmRefcntObjectName));

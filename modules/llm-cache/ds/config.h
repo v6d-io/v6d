@@ -23,7 +23,7 @@ limitations under the License.
 namespace vineyard {
 
 struct KVCacheConfig {
-  int dimension;
+  int tensorByte;
   int cacheCapacity;
   int layer;
 };
@@ -35,12 +35,12 @@ struct VineyardCacheConfig : public KVCacheConfig {
   std::string llmCacheObjectName;
   std::string llmRefcntObjectName;
 
-  VineyardCacheConfig(int dimension = 10, int cacheCapacity = 10, int layer = 1,
+  VineyardCacheConfig(int tensorByte = 10, int cacheCapacity = 10, int layer = 1,
                       int blockSize = 5, int syncInterval = 3,
                       std::string llmCacheSyncLock = "llmCacheSyncLock",
                       std::string llmCacheObjectName = "llm_cache_object",
                       std::string llmRefcntObjectName = "llm_refcnt_object")
-      : KVCacheConfig{dimension, cacheCapacity, layer},
+      : KVCacheConfig{tensorByte, cacheCapacity, layer},
         blockSize(blockSize),
         syncInterval(syncInterval),
         llmCacheSyncLock(llmCacheSyncLock),
@@ -53,10 +53,10 @@ struct FileCacheConfig : public KVCacheConfig {
   std::string root;
   FilesystemType filesystemType;
 
-  FileCacheConfig(int dimension = 10, int cacheCapacity = 10, int layer = 1,
+  FileCacheConfig(int tensorByte = 10, int cacheCapacity = 10, int layer = 1,
                   int batchSize = 4, std::string root = "/tmp",
                   FilesystemType filesystemType = LOCAL)
-      : KVCacheConfig{dimension, cacheCapacity, layer} {
+      : KVCacheConfig{tensorByte, cacheCapacity, layer} {
     this->root = root;
     this->filesystemType = filesystemType;
   }
