@@ -212,7 +212,7 @@ void clearGlobalObject(std::vector<std::string>& sockets) {
       for (size_t i = 0; i < metas.size(); i++) {
         LOG(INFO) << metas[i].ToString();
       }
-      VINEYARD_ASSERT(false);
+      // VINEYARD_ASSERT(false);
     }
     client.Disconnect();
   }

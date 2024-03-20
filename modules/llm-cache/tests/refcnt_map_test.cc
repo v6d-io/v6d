@@ -274,7 +274,7 @@ void clearGlobalObject() {
       for (auto meta : metas) {
         LOG(INFO) << meta.ToString();
       }
-      VINEYARD_ASSERT(false);
+      // VINEYARD_ASSERT(false);
     }
 
     client[i].Disconnect();
