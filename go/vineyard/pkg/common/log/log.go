@@ -47,14 +47,22 @@ import (
 var (
 	defaultLogger = makeDefaultLogger(0)
 
-	dlog = NewDelegatingLogSink(defaultLogger.GetSink())
+	dlog = NewDelegatingLogSink(defaultLogger)
 
-	Log = Logger{logr.New(dlog).WithName("vineyard")}
+	Log = Logger{newLogrLogger(dlog).WithName("vineyard")}
 )
+
+// New returns a new Logger instance.  This is primarily used by libraries
+// implementing LogSink, rather than end users.
+func newLogrLogger(sink logr.Logger) Logger {
+	logger := Logger{}
+	logger.Logger = sink
+	return logger
+}
 
 func SetLogLevel(level int) {
 	defaultLogger = makeDefaultLogger(level)
-	dlog.Fulfill(defaultLogger.GetSink())
+	dlog.Fulfill(defaultLogger)
 }
 
 func makeDefaultLogger(verbose int) logr.Logger {
@@ -72,16 +80,14 @@ type Logger struct {
 
 // SetLogger sets a concrete logging implementation for all deferred Loggers.
 func SetLogger(l Logger) {
-	dlog.Fulfill(l.GetSink())
+	dlog.Fulfill(l)
 }
 
 // FromContext returns a logger with predefined values from a context.Context.
 func FromContext(ctx context.Context, keysAndValues ...any) Logger {
 	log := Log.Logger
 	if ctx != nil {
-		if logger, err := logr.FromContext(ctx); err == nil {
-			log = logger
-		}
+		log = logr.FromContext(ctx)
 	}
 	return Logger{log.WithValues(keysAndValues...)}
 }
