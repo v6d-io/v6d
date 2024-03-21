@@ -54,7 +54,11 @@ Status FileStorage::Update(
       // reject to update the existed file
       return Status::OK();
     }
-    RETURN_ON_ERROR(Open(filePath.string(), fd, FileOperationType::WRITE));
+
+    if (!Open(filePath.string(), fd, FileOperationType::WRITE).ok()) {
+      // Insert into cache failed.
+      return Status::OK();
+    }
     RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
     RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenLength * sizeof(int)));
     for (size_t currentTokenIndex = i * batchSize;

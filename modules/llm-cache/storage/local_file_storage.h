@@ -26,6 +26,8 @@ namespace vineyard {
 
 struct LocalFileDescriptor : public FileDescriptor {
   std::fstream fstream;
+  std::string path;
+  int lockFD;
 };
 
 class LocalFileStorage : public FileStorage {
@@ -64,6 +66,10 @@ class LocalFileStorage : public FileStorage {
                        size_t& pos) override;
 
   bool IsFileExist(const std::string& path) override;
+
+  bool LockFile(std::shared_ptr<FileDescriptor>& fd) override;
+
+  void UnlockFile(std::shared_ptr<FileDescriptor>& fd) override;
 
   Status Flush(std::shared_ptr<FileDescriptor>& fd) override;
 

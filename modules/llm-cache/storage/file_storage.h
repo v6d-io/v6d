@@ -77,6 +77,10 @@ class FileStorage : public IStorage {
 
   virtual bool IsFileExist(const std::string& path) = 0;
 
+  virtual bool LockFile(std::shared_ptr<FileDescriptor>& fd) = 0;
+
+  virtual void UnlockFile(std::shared_ptr<FileDescriptor>& fd) = 0;
+
  public:
   FileStorage() = default;
 

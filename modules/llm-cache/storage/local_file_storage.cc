@@ -13,6 +13,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
 #include <filesystem>
 #include <fstream>
 #include <memory>
@@ -28,10 +31,13 @@ Status LocalFileStorage::Open(std::string path,
   fd = std::make_shared<LocalFileDescriptor>();
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
-  std::ios_base::openmode mode = std::ios_base::binary;
-  if (fileOperationType & FileOperationType::READ) {
-    mode |= std::ios_base::in;
+
+  lfd->path = path;
+  if (!LockFile(fd)) {
+    return Status::IOError("Failed to lock file");
   }
+
+  std::ios_base::openmode mode = std::ios_base::binary | std::ios::in;
   if (fileOperationType & FileOperationType::WRITE) {
     mode |= std::ios_base::out;
   }
@@ -40,6 +46,7 @@ Status LocalFileStorage::Open(std::string path,
   if (!lfd->fstream.is_open()) {
     VLOG(100) << "Failed to open file: " << path << " "
               << lfd->fstream.rdstate();
+    UnlockFile(fd);
     return Status::IOError("Failed to open file: " + path);
   }
   return Status::OK();
@@ -122,6 +129,7 @@ Status LocalFileStorage::Close(std::shared_ptr<FileDescriptor>& fd) {
     VLOG(100) << "Failed to close";
     return Status::IOError("Failed to close file");
   }
+  UnlockFile(fd);
   return Status::OK();
 }
 
@@ -142,6 +150,41 @@ Status LocalFileStorage::GetFileSize(std::shared_ptr<FileDescriptor>& fd,
 
 bool LocalFileStorage::IsFileExist(const std::string& path) {
   return std::filesystem::exists(path);
+}
+
+bool LocalFileStorage::LockFile(std::shared_ptr<FileDescriptor>& fd) {
+  std::shared_ptr<LocalFileDescriptor> lfd =
+      std::static_pointer_cast<LocalFileDescriptor>(fd);
+  std::string lockPath = lfd->path + ".lock";
+  VLOG(100) << "lock:" << lockPath;
+  int lockFD = open(lockPath.c_str(), O_CREAT | O_RDWR, 0666);
+  if (lockFD < 0) {
+    VLOG(100) << "Failed to lock file";
+    return false;
+  }
+  struct flock fl;
+  fl.l_type = F_WRLCK;
+  fl.l_whence = SEEK_SET;
+  fl.l_start = 0;
+  fl.l_len = 0;
+  if (fcntl(lockFD, F_SETLK, &fl) == -1) {
+    VLOG(100) << "Failed to lock file";
+    return false;
+  }
+  lfd->lockFD = lockFD;
+  return true;
+}
+
+void LocalFileStorage::UnlockFile(std::shared_ptr<FileDescriptor>& fd) {
+  std::shared_ptr<LocalFileDescriptor> lfd =
+      std::static_pointer_cast<LocalFileDescriptor>(fd);
+  VLOG(100) << "unlock:" << lfd->path + ".lock";
+  struct flock fl;
+  fl.l_type = F_UNLCK;
+  fl.l_whence = SEEK_SET;
+  fl.l_start = 0;
+  fl.l_len = 0;
+  fcntl(lfd->lockFD, F_SETLK, &fl);
 }
 
 }  // namespace vineyard
