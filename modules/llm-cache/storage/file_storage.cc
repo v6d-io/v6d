@@ -32,7 +32,7 @@ Status FileStorage::Update(
   std::vector<std::string> pathList;
   std::string dir = rootPath;
   std::string path;
-  int tokenSize;
+  int tokenLength;
 
   VINEYARD_ASSERT(batchSize > 0);
   // check if the root path ends with '/'
@@ -45,26 +45,32 @@ Status FileStorage::Update(
   if (pathList.size() == 0) {
     return Status::OK();
   }
-  tokenSize = pathList.size() * batchSize;
   for (size_t i = 0; i < pathList.size(); i++) {
+    tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd;
     std::filesystem::path filePath(dir + pathList[i]);
     RETURN_ON_ERROR(Mkdir(filePath.parent_path().string()));
+    if (IsFileExist(filePath.string())) {
+      // reject to update the existed file
+      return Status::OK();
+    }
     RETURN_ON_ERROR(Open(filePath.string(), fd, FileOperationType::WRITE));
-    RETURN_ON_ERROR(Write(fd, &tokenSize, sizeof(int)));
-    RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenSize * sizeof(int)));
-    for (size_t currentToken = i * batchSize;
-         currentToken < (i + 1) * batchSize; currentToken++) {
-      for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-        for (auto iter = kvStateList[currentToken].begin();
-             iter != kvStateList[currentToken].end(); ++iter) {
-          RETURN_ON_ERROR(
-              Write(fd, reinterpret_cast<const char*>(&iter->second.first.data),
-                    iter->second.first.length));
-          RETURN_ON_ERROR(Write(
-              fd, reinterpret_cast<const char*>(&iter->second.second.data),
-              iter->second.second.length));
-        }
+    RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
+    RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenLength * sizeof(int)));
+    for (size_t currentTokenIndex = i * batchSize;
+         currentTokenIndex < (i + 1) * batchSize; currentTokenIndex++) {
+      for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+        const void* k = kvStateList[currentTokenIndex]
+                            .find(currentLayer)
+                            ->second.first.data;
+        const void* v = kvStateList[currentTokenIndex]
+                            .find(currentLayer)
+                            ->second.second.data;
+        size_t length = kvStateList[currentTokenIndex]
+                            .find(currentLayer)
+                            ->second.first.length;
+        RETURN_ON_ERROR(Write(fd, k, length));
+        RETURN_ON_ERROR(Write(fd, v, length));
       }
     }
     RETURN_ON_ERROR(Close(fd));
@@ -96,12 +102,12 @@ Status FileStorage::Query(
       return Status::OK();
     }
 
-    int prefixSize;
-    Read(fd, &prefixSize, sizeof(int));
-    LOG(INFO) << "prefix length:" << prefixSize / sizeof(int);
+    int tokenLength;
+    Read(fd, &tokenLength, sizeof(int));
+    LOG(INFO) << "prefix length:" << tokenLength;
     std::vector<int> prefix;
-    prefix.resize(prefixSize / sizeof(int));
-    Read(fd, prefix.data(), prefixSize);
+    prefix.resize(tokenLength);
+    Read(fd, prefix.data(), tokenLength * sizeof(int));
     LOG(INFO) << "read token list:";
     std::string token_str = "";
     for (size_t j = 0; j < prefix.size(); j++) {

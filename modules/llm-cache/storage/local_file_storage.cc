@@ -32,7 +32,8 @@ Status LocalFileStorage::Open(std::string path,
   std::ios_base::openmode mode = std::ios_base::binary;
   if (fileOperationType & FileOperationType::READ) {
     mode |= std::ios_base::in;
-  } else if (fileOperationType & FileOperationType::WRITE) {
+  }
+  if (fileOperationType & FileOperationType::WRITE) {
     mode |= std::ios_base::out;
   }
   lfd->fstream.open(path, mode);
@@ -138,6 +139,10 @@ Status LocalFileStorage::GetFileSize(std::shared_ptr<FileDescriptor>& fd,
     return Status::IOError("Failed to get file size");
   }
   return Status::OK();
+}
+
+bool LocalFileStorage::IsFileExist(const std::string& path) {
+  return std::filesystem::exists(path);
 }
 
 }  // namespace vineyard

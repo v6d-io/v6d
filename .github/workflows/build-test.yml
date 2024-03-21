@@ -330,8 +330,6 @@ jobs:
         uses: mxschmitt/action-tmate@v3
 
       - name: Run llm tests
-        # disable temporarily
-        if: false
         run: |
           export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/lib:/usr/local/lib64:/usr/local/lib/x86_64-linux-gnu
           export VINEYARD_DATA_DIR=`pwd`/gstest

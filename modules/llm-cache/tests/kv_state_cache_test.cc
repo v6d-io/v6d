@@ -283,8 +283,7 @@ int main(int argc, char** argv) {
     LOG(INFO) << "Thread:" << i << " exit.";
   }
 
-  // workaround here.
-  sleep(10);
+  sleep(5);
   clearGlobalObject(sockets);
 
   size_t total_memory_usage = 0;

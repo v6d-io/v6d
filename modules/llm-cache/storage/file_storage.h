@@ -75,6 +75,8 @@ class FileStorage : public IStorage {
 
   virtual Status Close(std::shared_ptr<FileDescriptor>& fd) = 0;
 
+  virtual bool IsFileExist(const std::string& path) = 0;
+
  public:
   FileStorage() = default;
 

@@ -45,7 +45,8 @@ std::vector<int> round_2_tokens = {1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14};
 std::vector<int> round_3_tokens = {1, 2, 3, 9, 10, 11, 12, 13, 14};
 std::vector<int> round_4_tokens = {1, 2, 3, 4, 5, 6};
 
-std::vector<std::vector<int>> tokens_list = {round_4_tokens};
+std::vector<std::vector<int>> tokens_list = {round_1_tokens, round_2_tokens,
+                                             round_3_tokens, round_4_tokens};
 
 std::shared_ptr<KVStateCacheManager> init() {
   std::shared_ptr<KVStateCacheManager> kv_state_cache_manager;
@@ -109,7 +110,6 @@ std::map<int, std::pair<LLMKV, LLMKV>> generate_kv_state(int token) {
 
 void check_kv_state(const std::map<int, std::pair<LLMKV, LLMKV>>& kv_state,
                     int& token) {
-  LOG(INFO) << "kv_state size:" << kv_state.size() << " layer:" << layer;
   VINEYARD_ASSERT(kv_state.size() == (size_t) layer);
   for (auto iter = kv_state.begin(); iter != kv_state.end(); ++iter) {
     VINEYARD_ASSERT(iter->second.first.length == (size_t) tensorBytes);
@@ -159,7 +159,9 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
     LOG(INFO) << "Query failed!";
   }
 
-  for (size_t i = 0; i < tokens.size(); ++i) {
+  LOG(INFO) << "Match tokens:" << kv_state.size()
+            << ". Total tokens:" << tokens.size();
+  for (size_t i = 0; i < kv_state.size(); ++i) {
     check_kv_state(kv_state[i], tokens[i]);
   }
 }
@@ -168,6 +170,7 @@ void threadFunc() {
   std::shared_ptr<KVStateCacheManager> manager = init();
 
   for (size_t i = 0; i < tokens_list.size(); i++) {
+    LOG(INFO) << "Round " << i << " :";
     inference(manager, tokens_list[i]);
   }
 
