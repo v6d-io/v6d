@@ -58,9 +58,9 @@ class KVStateCacheManager {
 
   void Close();
 
-  Status ClearGlobalCache(Client& client, VineyardCacheConfig& config);
+  static Status ClearGlobalCache(Client& client, VineyardCacheConfig& config);
 
-  Status ClearGlobalCache(Client& client, FileCacheConfig& config);
+  static Status ClearGlobalCache(Client& client, FileCacheConfig& config);
 
  private:
   std::shared_ptr<IStorage> storage;

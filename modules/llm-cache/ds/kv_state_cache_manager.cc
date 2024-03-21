@@ -89,11 +89,9 @@ Status KVStateCacheManager::Query(
 
 Status KVStateCacheManager::ClearGlobalCache(Client& client,
                                              VineyardCacheConfig& config) {
-  std::shared_ptr<BlobStorage> blob_storage =
-      std::dynamic_pointer_cast<BlobStorage>(storage);
-  return blob_storage->ClearGlobalCache(client, config.llmCacheSyncLock,
-                                        config.llmCacheObjectName,
-                                        config.llmRefcntObjectName);
+  return BlobStorage::ClearGlobalCache(client, config.llmCacheSyncLock,
+                                       config.llmCacheObjectName,
+                                       config.llmRefcntObjectName);
 }
 
 Status ClearGlobalCache(Client& client, FileCacheConfig& config) {

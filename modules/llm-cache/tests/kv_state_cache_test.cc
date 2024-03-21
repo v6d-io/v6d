@@ -195,8 +195,7 @@ void clearGlobalObject(std::vector<std::string>& sockets) {
   Client client;
   VINEYARD_CHECK_OK(client.Connect(sockets[0]));
 
-  VINEYARD_CHECK_OK(BlobStorage::ClearGlobalCache(
-      client, llmCacheSyncLock, llmCacheObjectName, llmRefcntObjectName));
+  VINEYARD_CHECK_OK(KVStateCacheManager::ClearGlobalCache(client, config));
   client.Disconnect();
 
   for (size_t i = 0; i < sockets.size(); i++) {

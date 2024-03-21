@@ -89,7 +89,6 @@ Status FileStorage::Update(
 Status FileStorage::Query(
     const std::vector<int>& tokenList,
     std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
-  LOG(INFO) << "Query";
   std::vector<std::string> paths;
   RETURN_ON_ERROR(
       hasher->computePathForTokens(tokenList, batchSize, splitNumber, paths));
@@ -98,29 +97,22 @@ Status FileStorage::Query(
     std::shared_ptr<FileDescriptor> fd;
     // If open failed, it means the kv state is not in the cache(file not exist)
     if (!Open(rootPath + paths[i], fd, FileOperationType::READ).ok()) {
-      LOG(INFO) << "file not exist";
+      VLOG(100) << "file not exist";
       return Status::OK();
     }
 
     int tokenLength;
     Read(fd, &tokenLength, sizeof(int));
-    LOG(INFO) << "prefix length:" << tokenLength;
     std::vector<int> prefix;
     prefix.resize(tokenLength);
     Read(fd, prefix.data(), tokenLength * sizeof(int));
-    LOG(INFO) << "read token list:";
-    std::string token_str = "";
-    for (size_t j = 0; j < prefix.size(); j++) {
-      token_str += std::to_string(prefix[j]) + " ";
-    }
-    LOG(INFO) << token_str;
 
     if (!CompareTokenList(tokenList, prefix, prefix.size())) {
-      LOG(INFO) << "token list not match";
+      VLOG(100) << "token list not match";
       RETURN_ON_ERROR(Close(fd));
       return Status::OK();
     } else {
-      LOG(INFO) << "token list match";
+      VLOG(100) << "token list match";
       for (int j = 0; j < batchSize; j++) {
         std::map<int, std::pair<LLMKV, LLMKV>> kvState;
         for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
@@ -131,15 +123,6 @@ Status FileStorage::Query(
           Read(fd, k.data, k.length);
           Read(fd, v.data, v.length);
           kvState.insert(std::make_pair(currentLayer, std::make_pair(k, v)));
-
-          std::string data;
-          for (int index = 0; index < tensorBytes; index++) {
-            data +=
-                std::to_string((reinterpret_cast<uint8_t*>(k.data))[index]) +
-                " ";
-          }
-          LOG(INFO) << "layer " << currentLayer << ":";
-          LOG(INFO) << "key_state: " << data;
         }
         kvStateList.push_back(kvState);
       }
