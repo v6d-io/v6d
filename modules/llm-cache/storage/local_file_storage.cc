@@ -25,20 +25,20 @@ namespace vineyard {
 Status LocalFileStorage::Open(std::string path,
                               std::shared_ptr<FileDescriptor>& fd,
                               FileOperationType fileOperationType) {
-  LOG(INFO) << "open:" << path;
   fd = std::make_shared<LocalFileDescriptor>();
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
   std::ios_base::openmode mode = std::ios_base::binary;
   if (fileOperationType & FileOperationType::READ) {
     mode |= std::ios_base::in;
-  } else if (fileOperationType & FileOperationType::WRITE) {
+  }
+  if (fileOperationType & FileOperationType::WRITE) {
     mode |= std::ios_base::out;
   }
   lfd->fstream.open(path, mode);
 
   if (!lfd->fstream.is_open()) {
-    LOG(INFO) << "Failed to open file: " << path << " "
+    VLOG(100) << "Failed to open file: " << path << " "
               << lfd->fstream.rdstate();
     return Status::IOError("Failed to open file: " + path);
   }
@@ -53,7 +53,7 @@ Status LocalFileStorage::Seek(std::shared_ptr<FileDescriptor>& fd,
   lfd->fstream.seekg(offset);
   if (!lfd->fstream.good()) {
     lfd->fstream.clear();
-    LOG(INFO) << "Failed to seek file: ";
+    VLOG(100) << "Failed to seek file: ";
     return Status::IOError("Failed to seek file");
   }
   return Status::OK();
@@ -66,7 +66,7 @@ Status LocalFileStorage::Read(std::shared_ptr<FileDescriptor>& fd, void* data,
   lfd->fstream.read(reinterpret_cast<char*>(data), size);
   if (!lfd->fstream.good()) {
     lfd->fstream.clear();
-    LOG(INFO) << "Failed to read file: ";
+    VLOG(100) << "Failed to read file: ";
     return Status::IOError("Failed to read file");
   }
   return Status::OK();
@@ -79,7 +79,7 @@ Status LocalFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
   lfd->fstream.write(reinterpret_cast<const char*>(data), size);
   if (!lfd->fstream.good()) {
     lfd->fstream.clear();
-    LOG(INFO) << "Failed to write file: ";
+    VLOG(100) << "Failed to write file: ";
     return Status::IOError("Failed to write file");
   }
   return Status::OK();
@@ -119,7 +119,7 @@ Status LocalFileStorage::Close(std::shared_ptr<FileDescriptor>& fd) {
       std::static_pointer_cast<LocalFileDescriptor>(fd);
   lfd->fstream.close();
   if (lfd->fstream.is_open()) {
-    LOG(INFO) << "Failed to close";
+    VLOG(100) << "Failed to close";
     return Status::IOError("Failed to close file");
   }
   return Status::OK();
@@ -132,12 +132,16 @@ Status LocalFileStorage::GetFileSize(std::shared_ptr<FileDescriptor>& fd,
   size_t current_pos = lfd->fstream.tellp();
   lfd->fstream.seekp(0, std::ios_base::end);
   size = lfd->fstream.tellp();
-  LOG(INFO) << "read size:" << size;
+  VLOG(100) << "read size:" << size;
   lfd->fstream.seekp(current_pos);
   if (size < 0) {
     return Status::IOError("Failed to get file size");
   }
   return Status::OK();
+}
+
+bool LocalFileStorage::IsFileExist(const std::string& path) {
+  return std::filesystem::exists(path);
 }
 
 }  // namespace vineyard

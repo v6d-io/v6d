@@ -26,25 +26,13 @@ limitations under the License.
 
 namespace vineyard {
 
-/**
- * prefix_size | layer | kv state len
- * prefix_len | prefix
- * kv state layer 1 | kv state layer 2 | kv state layer n
- * prefix_len | prefix
- * kv state layer 1 | kv state layer 2 | kv state layer n
- * prefix_len | prefix
- * kv state layer 1 | kv state layer 2 | kv state layer n
- * prefix_len | prefix
- * kv state layer 1 | kv state layer 2 | kv state layer n
- */
-
 Status FileStorage::Update(
     const std::vector<int>& tokenList,
     const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
   std::vector<std::string> pathList;
   std::string dir = rootPath;
   std::string path;
-  int tokenSize;
+  int tokenLength;
 
   VINEYARD_ASSERT(batchSize > 0);
   // check if the root path ends with '/'
@@ -57,26 +45,32 @@ Status FileStorage::Update(
   if (pathList.size() == 0) {
     return Status::OK();
   }
-  tokenSize = pathList.size() * batchSize;
   for (size_t i = 0; i < pathList.size(); i++) {
+    tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd;
     std::filesystem::path filePath(dir + pathList[i]);
     RETURN_ON_ERROR(Mkdir(filePath.parent_path().string()));
+    if (IsFileExist(filePath.string())) {
+      // reject to update the existed file
+      return Status::OK();
+    }
     RETURN_ON_ERROR(Open(filePath.string(), fd, FileOperationType::WRITE));
-    RETURN_ON_ERROR(Write(fd, &tokenSize, sizeof(int)));
-    RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenSize * sizeof(int)));
-    for (size_t currentToken = i * batchSize;
-         currentToken < (i + 1) * batchSize; currentToken++) {
-      for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-        for (auto iter = kvStateList[currentToken].begin();
-             iter != kvStateList[currentToken].end(); ++iter) {
-          RETURN_ON_ERROR(
-              Write(fd, reinterpret_cast<const char*>(&iter->second.first.data),
-                    iter->second.first.length));
-          RETURN_ON_ERROR(Write(
-              fd, reinterpret_cast<const char*>(&iter->second.second.data),
-              iter->second.second.length));
-        }
+    RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
+    RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenLength * sizeof(int)));
+    for (size_t currentTokenIndex = i * batchSize;
+         currentTokenIndex < (i + 1) * batchSize; currentTokenIndex++) {
+      for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+        const void* k = kvStateList[currentTokenIndex]
+                            .find(currentLayer)
+                            ->second.first.data;
+        const void* v = kvStateList[currentTokenIndex]
+                            .find(currentLayer)
+                            ->second.second.data;
+        size_t length = kvStateList[currentTokenIndex]
+                            .find(currentLayer)
+                            ->second.first.length;
+        RETURN_ON_ERROR(Write(fd, k, length));
+        RETURN_ON_ERROR(Write(fd, v, length));
       }
     }
     RETURN_ON_ERROR(Close(fd));
@@ -95,117 +89,48 @@ Status FileStorage::Update(
 Status FileStorage::Query(
     const std::vector<int>& tokenList,
     std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
-  /*
-  LOG(INFO) << "Query";
-  std::string token_str = " ";
-  for (size_t i = 0; i < tokenList.size(); i++) {
-    token_str += std::to_string(tokenList[i]) + " ";
-  }
-  LOG(INFO) << "Query token list: " << token_str;
-  // TBD: change batchSize to a fixed value
-  batchSize = tokenList.size();
-  int layer = kvStateList[0].size();
-  int kvStateSize = kvStateList[0].begin()->second.first.length;
-
   std::vector<std::string> paths;
-  RETURN_ON_ERROR(DefaultGetPathFromPrefix(tokenList, batchSize, paths));
-  for (size_t i = 0; i < tokenList.size() / batchSize; i++) {
-    // per file
-    std::shared_ptr<FileDescriptor> fd;
+  RETURN_ON_ERROR(
+      hasher->computePathForTokens(tokenList, batchSize, splitNumber, paths));
 
-    // TODO: check if the kv state is already in the cache
-    // TODO: hash conflict
-    RETURN_ON_ERROR(Open(rootPath + paths[i], fd, FileOperationType::READ));
-    FileHeader header;
-    size_t fileSize;
-    RETURN_ON_ERROR(GetFileSize(fd, fileSize));
-    if (fileSize != 0) {
-      Read(fd, &header, sizeof(FileHeader));
-      if (header.layer != layer || header.kvStateSize != kvStateSize) {
-        Close(fd);
-        return Status::Invalid("Layer/KV state size mismatch!");
-      }
-    } else {
-      RETURN_ON_ERROR(Close(fd));
+  for (size_t i = 0; i < paths.size(); i++) {
+    std::shared_ptr<FileDescriptor> fd;
+    // If open failed, it means the kv state is not in the cache(file not exist)
+    if (!Open(rootPath + paths[i], fd, FileOperationType::READ).ok()) {
+      VLOG(100) << "file not exist";
       return Status::OK();
     }
-    LOG(INFO) << "Header: " << header.prefixNum << " " << header.layer << " "
-              << header.kvStateSize;
 
-    // get the batchSize kv state
-    // read
-    std::vector<int> prefix(tokenList.begin(),
-                            tokenList.begin() + (i + 1) * batchSize);
-    std::vector<int> prefix_from_file;
-    for (int k = 0; k < header.prefixNum; k++) {
-      int prefixSize;
-      Read(fd, &prefixSize, sizeof(int));
-      LOG(INFO) << "Read prefix size:" << prefixSize;
-      prefix_from_file.reserve(prefixSize / sizeof(int));
-      prefix_from_file.resize(prefixSize / sizeof(int));
-      Read(fd, prefix_from_file.data(), prefixSize);
-      LOG(INFO) << "read token list:";
-      std::string token_str = "";
-      for (size_t k = 0; k < prefix_from_file.size(); k++) {
-        token_str += std::to_string(prefix_from_file[k]) + " ";
-      }
-      LOG(INFO) << token_str;
-      if (!CompareTokenList(prefix, prefix_from_file,
-                            prefix_from_file.size())) {
-        // Skip this batch in the file
-        // It means that there exist hash conflict
-        LOG(INFO) << "Do not match";
-        return Status::OK();
-        // prefix_from_file.clear();
-        // size_t pos;
-        // GetCurrentPos(fd, pos);
-        // Seek(fd, pos + header.kvStateSize * 2 * header.layer);
-        // continue;
-      } else {
-        LOG(INFO) << "Match";
-        LOG(INFO) << "kv state size:" << kvStateSize;
+    int tokenLength;
+    Read(fd, &tokenLength, sizeof(int));
+    std::vector<int> prefix;
+    prefix.resize(tokenLength);
+    Read(fd, prefix.data(), tokenLength * sizeof(int));
+
+    if (!CompareTokenList(tokenList, prefix, prefix.size())) {
+      VLOG(100) << "token list not match";
+      RETURN_ON_ERROR(Close(fd));
+      return Status::OK();
+    } else {
+      VLOG(100) << "token list match";
+      for (int j = 0; j < batchSize; j++) {
         std::map<int, std::pair<LLMKV, LLMKV>> kvState;
         for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
           LLMKV k, v;
-          k.data = new char[kvStateSize];
-          v.data = new char[kvStateSize];
-          Read(fd, k.data, kvStateSize);
-          Read(fd, v.data, kvStateSize);
-          std::string data;
-          LOG(INFO) << "k state:";
-          LOG(INFO) << "layer " << currentLayer << ":";
-          for (int p = 0; p < kvStateSize; p++) {
-            data +=
-                std::to_string((reinterpret_cast<uint8_t*>(k.data))[p]) + " ";
-          }
-          LOG(INFO) << data;
-          k.length = kvStateSize;
-          v.length = kvStateSize;
+          k.length = v.length = tensorBytes;
+          k.data = new uint8_t[k.length];
+          v.data = new uint8_t[v.length];
+          Read(fd, k.data, k.length);
+          Read(fd, v.data, v.length);
           kvState.insert(std::make_pair(currentLayer, std::make_pair(k, v)));
         }
         kvStateList.push_back(kvState);
       }
     }
 
-    // int currentToken = 0;
-    // do {
-    //   std::map<int, std::pair<LLMKV, LLMKV>> kvState;
-    //   for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-    //     LLMKV k, v;
-    //     k.data = new char[kvStateSize];
-    //     v.data = new char[kvStateSize];
-    //     Read(fd, k.data, kvStateSize);
-    //     Read(fd, v.data, kvStateSize);
-    //     k.length = kvStateSize;
-    //     v.length = kvStateSize;
-    //     kvState.insert(std::make_pair(currentLayer, std::make_pair(k, v)));
-    //   }
-    //   kvStateList.push_back(kvState);
-    //   currentToken++;
-    // } while (currentToken < batchSize);
     RETURN_ON_ERROR(Close(fd));
   }
-*/
+
   return Status::OK();
 }
 

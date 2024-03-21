@@ -476,6 +476,7 @@ def run_vineyard_cpp_tests(meta, allocator, endpoints, tests):
         run_test(tests, 'version_test')
         run_test(tests, 'kv_state_cache_radix_tree_test')
         run_test(tests, 'kv_state_cache_hash_test')
+        run_test(tests, 'kv_state_cache_local_file_test')
 
 
 def run_vineyard_spill_tests(meta, allocator, endpoints, tests):

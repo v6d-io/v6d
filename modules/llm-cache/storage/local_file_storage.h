@@ -63,6 +63,8 @@ class LocalFileStorage : public FileStorage {
   Status GetCurrentPos(std::shared_ptr<FileDescriptor>& fd,
                        size_t& pos) override;
 
+  bool IsFileExist(const std::string& path) override;
+
   Status Flush(std::shared_ptr<FileDescriptor>& fd) override;
 
   Status Close(std::shared_ptr<FileDescriptor>& fd) override;
