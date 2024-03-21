@@ -76,6 +76,8 @@ class LocalFileStorage : public FileStorage {
   Status Flush(std::shared_ptr<FileDescriptor>& fd) override;
 
   Status Close(std::shared_ptr<FileDescriptor>& fd) override;
+
+  Status Delete(std::string path) override;
 };
 
 }  // namespace vineyard

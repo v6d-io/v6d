@@ -194,4 +194,11 @@ void LocalFileStorage::UnlockFile(std::shared_ptr<FileDescriptor>& fd) {
   fcntl(lfd->lockFD, F_SETLK, &fl);
 }
 
+Status LocalFileStorage::Delete(std::string path) {
+  if (std::filesystem::exists(path)) {
+    std::filesystem::remove_all(path);
+  }
+  return Status::OK();
+}
+
 }  // namespace vineyard

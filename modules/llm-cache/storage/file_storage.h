@@ -100,6 +100,8 @@ class FileStorage : public IStorage {
 
   virtual Status Close(std::shared_ptr<FileDescriptor>& fd) = 0;
 
+  virtual Status Delete(std::string path) = 0;
+
   virtual bool IsFileExist(const std::string& path) = 0;
 
   virtual bool LockFile(std::shared_ptr<FileDescriptor>& fd,

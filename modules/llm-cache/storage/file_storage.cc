@@ -84,6 +84,15 @@ Status FileStorage::Update(
       return Status::OK();
     }
 
+    if (tokenList.size() - i * batchSize > kvStateList.size()) {
+      // current file is deleted by other client, we need to reject this update.
+      RETURN_ON_ERROR(Close(fd));
+      Delete(filePath.string());
+      UnlockFile(fd);
+      RemoveFromAccessSet(filePath.string());
+      return Status::OK();
+    }
+
     RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
     RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenLength * sizeof(int)));
     for (size_t currentTokenIndex = i * batchSize;
