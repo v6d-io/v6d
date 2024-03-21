@@ -33,19 +33,18 @@ import (
 
 var (
 	defaultLogger = makeDefaultLogger(0)
-	dlog          = log.NewDelegatingLogSink(defaultLogger.GetSink())
-	Log           = Logger{logr.New(dlog).WithName("vineyard")}
+	dlog          = log.NewDelegatingLogger(defaultLogger)
+	Log           = Logger{dlog.WithName("vineyard")}
 )
 
 func SetLogLevel(level int) {
 	defaultLogger = makeDefaultLogger(level)
-	dlog.Fulfill(defaultLogger.GetSink())
+	dlog.Fulfill(defaultLogger)
 }
 
 func makeDefaultLogger(verbose int) logr.Logger {
 	zapOpts := &zap.Options{
 		Development: true,
-		TimeEncoder: zapcore.ISO8601TimeEncoder,
 		Level:       zapcore.Level(verbose),
 	}
 	zapOpts.Encoder = &EscapeSeqJSONEncoder{
@@ -86,15 +85,16 @@ type Logger struct {
 
 // SetLogger sets a concrete logging implementation for all deferred Loggers.
 func SetLogger(l Logger) {
-	dlog.Fulfill(l.GetSink())
+	dlog.Fulfill(l.Logger)
 }
 
 // FromContext returns a logger with predefined values from a context.Context.
 func FromContext(ctx context.Context, keysAndValues ...any) Logger {
 	log := Log.Logger
 	if ctx != nil {
-		if logger, err := logr.FromContext(ctx); err == nil {
-			log = logger
+		logWithCtx := logr.FromContext(ctx)
+		if logWithCtx != nil {
+			log = logWithCtx
 		}
 	}
 	return Logger{log.WithValues(keysAndValues...)}
