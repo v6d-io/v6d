@@ -772,9 +772,15 @@ std::shared_ptr<arrow::DataType> type_name_to_arrow_type(
     arrow::TimeUnit::type unit = DefaultTimeUnit;
     if (unit_content.length() >= 3) {
       unit = detail::type_name_to_arrow_date_unit(unit_content.c_str());
+      size_t timezone_start =
+          std::string("timestamp").length() +
+          detail::type_name_from_arrow_date_unit(unit).length() + 1;
+      size_t timezone_end = name.length() - 1;
+      if (timezone_end <= timezone_start) {
+        return arrow::timestamp(unit);
+      }
       std::string timezone =
-          name.substr(std::string("timestamp").length() +
-                      detail::type_name_from_arrow_date_unit(unit).length());
+          name.substr(timezone_start, timezone_end - timezone_start);
       return arrow::timestamp(unit, timezone);
     }
     return arrow::timestamp(unit);
