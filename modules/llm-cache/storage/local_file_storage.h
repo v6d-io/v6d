@@ -46,6 +46,8 @@ class LocalFileStorage : public FileStorage {
 
   ~LocalFileStorage() = default;
 
+  std::shared_ptr<FileDescriptor> CreateFileDescriptor() override;
+
   Status Open(std::string path, std::shared_ptr<FileDescriptor>& fd,
               FileOperationType fileOperationType) override;
 
@@ -67,7 +69,7 @@ class LocalFileStorage : public FileStorage {
 
   bool IsFileExist(const std::string& path) override;
 
-  bool LockFile(std::shared_ptr<FileDescriptor>& fd) override;
+  bool LockFile(std::shared_ptr<FileDescriptor>& fd, std::string path) override;
 
   void UnlockFile(std::shared_ptr<FileDescriptor>& fd) override;
 

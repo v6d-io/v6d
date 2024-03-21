@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -45,12 +46,36 @@ enum FileOperationType {
   WRITE = 1 << 1,
 };
 
+static std::mutex setLock;
+static std::set<std::string> accessSet;
+
 class FileStorage : public IStorage {
  private:
   bool CompareTokenList(const std::vector<int>& tokenList,
                         const std::vector<int>& tokenList2, size_t length);
 
   void CloseCache() override {}
+
+  // file lock for threads
+  void InsertToAccessSet(std::string path) {
+    do {
+      setLock.lock();
+      if (accessSet.find(path) == accessSet.end()) {
+        accessSet.insert(path);
+        setLock.unlock();
+        break;
+      }
+      setLock.unlock();
+    } while (1);
+  }
+
+  void RemoveFromAccessSet(std::string path) {
+    setLock.lock();
+    accessSet.erase(path);
+    setLock.unlock();
+  }
+
+  virtual std::shared_ptr<FileDescriptor> CreateFileDescriptor() = 0;
 
   virtual Status Open(std::string path, std::shared_ptr<FileDescriptor>& fd,
                       FileOperationType fileOperationType) = 0;
@@ -77,7 +102,8 @@ class FileStorage : public IStorage {
 
   virtual bool IsFileExist(const std::string& path) = 0;
 
-  virtual bool LockFile(std::shared_ptr<FileDescriptor>& fd) = 0;
+  virtual bool LockFile(std::shared_ptr<FileDescriptor>& fd,
+                        std::string path) = 0;
 
   virtual void UnlockFile(std::shared_ptr<FileDescriptor>& fd) = 0;
 

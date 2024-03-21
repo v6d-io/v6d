@@ -47,37 +47,66 @@ Status FileStorage::Update(
   }
   for (size_t i = 0; i < pathList.size(); i++) {
     tokenLength = (i + 1) * batchSize;
-    std::shared_ptr<FileDescriptor> fd;
+    std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::filesystem::path filePath(dir + pathList[i]);
     RETURN_ON_ERROR(Mkdir(filePath.parent_path().string()));
+    InsertToAccessSet(filePath.string());
+    LockFile(fd, filePath.string());
+
     if (IsFileExist(filePath.string())) {
-      // reject to update the existed file
-      return Status::OK();
+      if (!Open(filePath.string(), fd, FileOperationType::READ).ok()) {
+        // Insert into cache failed.
+        UnlockFile(fd);
+        RemoveFromAccessSet(filePath.string());
+        return Status::OK();
+      }
+      int tokenLength;
+      Read(fd, &tokenLength, sizeof(int));
+      std::vector<int> tokens;
+      tokens.resize(tokenLength);
+      Read(fd, tokens.data(), tokenLength * sizeof(int));
+      if (!CompareTokenList(tokenList, tokens, tokenLength)) {
+        RETURN_ON_ERROR(Close(fd));
+        UnlockFile(fd);
+        RemoveFromAccessSet(filePath.string());
+        return Status::OK();
+      }
+      RETURN_ON_ERROR(Close(fd));
+      UnlockFile(fd);
+      RemoveFromAccessSet(filePath.string());
+      continue;
     }
 
     if (!Open(filePath.string(), fd, FileOperationType::WRITE).ok()) {
       // Insert into cache failed.
+      UnlockFile(fd);
+      RemoveFromAccessSet(filePath.string());
       return Status::OK();
     }
+
     RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
     RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenLength * sizeof(int)));
     for (size_t currentTokenIndex = i * batchSize;
          currentTokenIndex < (i + 1) * batchSize; currentTokenIndex++) {
       for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-        const void* k = kvStateList[currentTokenIndex]
+        size_t offset = tokenList.size() - kvStateList.size();
+        const void* k = kvStateList[currentTokenIndex - offset]
                             .find(currentLayer)
                             ->second.first.data;
-        const void* v = kvStateList[currentTokenIndex]
+        const void* v = kvStateList[currentTokenIndex - offset]
                             .find(currentLayer)
                             ->second.second.data;
-        size_t length = kvStateList[currentTokenIndex]
+        size_t length = kvStateList[currentTokenIndex - offset]
                             .find(currentLayer)
                             ->second.first.length;
         RETURN_ON_ERROR(Write(fd, k, length));
         RETURN_ON_ERROR(Write(fd, v, length));
       }
     }
+
     RETURN_ON_ERROR(Close(fd));
+    UnlockFile(fd);
+    RemoveFromAccessSet(filePath.string());
   }
 
   return Status::OK();
@@ -94,14 +123,24 @@ Status FileStorage::Query(
     const std::vector<int>& tokenList,
     std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
   std::vector<std::string> paths;
+  std::string dir = rootPath;
   RETURN_ON_ERROR(
       hasher->computePathForTokens(tokenList, batchSize, splitNumber, paths));
 
+  if (dir.size() != 0 && dir.back() != '/') {
+    dir += "/";
+  }
+
   for (size_t i = 0; i < paths.size(); i++) {
-    std::shared_ptr<FileDescriptor> fd;
+    std::filesystem::path filePath(dir + paths[i]);
+    std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
+    // InsertToSet(filePath.string());
+    InsertToAccessSet(filePath.string());
+    LockFile(fd, filePath.string());
     // If open failed, it means the kv state is not in the cache(file not exist)
-    if (!Open(rootPath + paths[i], fd, FileOperationType::READ).ok()) {
-      VLOG(100) << "file not exist";
+    if (!Open(filePath.string(), fd, FileOperationType::READ).ok()) {
+      UnlockFile(fd);
+      RemoveFromAccessSet(filePath.string());
       return Status::OK();
     }
 
@@ -114,6 +153,8 @@ Status FileStorage::Query(
     if (!CompareTokenList(tokenList, prefix, prefix.size())) {
       VLOG(100) << "token list not match";
       RETURN_ON_ERROR(Close(fd));
+      UnlockFile(fd);
+      RemoveFromAccessSet(filePath.string());
       return Status::OK();
     } else {
       VLOG(100) << "token list match";
@@ -133,6 +174,8 @@ Status FileStorage::Query(
     }
 
     RETURN_ON_ERROR(Close(fd));
+    UnlockFile(fd);
+    RemoveFromAccessSet(filePath.string());
   }
 
   return Status::OK();

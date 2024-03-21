@@ -19,25 +19,27 @@ limitations under the License.
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include "common/util/logging.h"
 #include "llm-cache/storage/local_file_storage.h"
 
 namespace vineyard {
+std::shared_ptr<FileDescriptor> LocalFileStorage::CreateFileDescriptor() {
+  return std::make_shared<LocalFileDescriptor>();
+}
+
 Status LocalFileStorage::Open(std::string path,
                               std::shared_ptr<FileDescriptor>& fd,
                               FileOperationType fileOperationType) {
-  fd = std::make_shared<LocalFileDescriptor>();
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
 
-  lfd->path = path;
-  if (!LockFile(fd)) {
-    return Status::IOError("Failed to lock file");
+  std::ios_base::openmode mode = std::ios_base::binary;
+  if (fileOperationType & FileOperationType::READ) {
+    mode |= std::ios_base::in;
   }
-
-  std::ios_base::openmode mode = std::ios_base::binary | std::ios::in;
   if (fileOperationType & FileOperationType::WRITE) {
     mode |= std::ios_base::out;
   }
@@ -46,7 +48,6 @@ Status LocalFileStorage::Open(std::string path,
   if (!lfd->fstream.is_open()) {
     VLOG(100) << "Failed to open file: " << path << " "
               << lfd->fstream.rdstate();
-    UnlockFile(fd);
     return Status::IOError("Failed to open file: " + path);
   }
   return Status::OK();
@@ -72,8 +73,9 @@ Status LocalFileStorage::Read(std::shared_ptr<FileDescriptor>& fd, void* data,
       std::static_pointer_cast<LocalFileDescriptor>(fd);
   lfd->fstream.read(reinterpret_cast<char*>(data), size);
   if (!lfd->fstream.good()) {
-    lfd->fstream.clear();
     VLOG(100) << "Failed to read file: ";
+    VLOG(100) << "error code:" << lfd->fstream.rdstate();
+    lfd->fstream.clear();
     return Status::IOError("Failed to read file");
   }
   return Status::OK();
@@ -87,6 +89,7 @@ Status LocalFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
   if (!lfd->fstream.good()) {
     lfd->fstream.clear();
     VLOG(100) << "Failed to write file: ";
+    VLOG(100) << "error code:" << lfd->fstream.rdstate();
     return Status::IOError("Failed to write file");
   }
   return Status::OK();
@@ -94,8 +97,10 @@ Status LocalFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
 
 Status LocalFileStorage::Mkdir(std::string path) {
   // create the directory if it does not exist
+  VLOG(100) << "Create directory:" << path;
   if (!std::filesystem::exists(path)) {
     if (!std::filesystem::create_directories(path)) {
+      VLOG(100) << "Failed to create directory:" << path;
       return Status::IOError("Failed to create directory");
     }
   }
@@ -129,7 +134,6 @@ Status LocalFileStorage::Close(std::shared_ptr<FileDescriptor>& fd) {
     VLOG(100) << "Failed to close";
     return Status::IOError("Failed to close file");
   }
-  UnlockFile(fd);
   return Status::OK();
 }
 
@@ -152,9 +156,12 @@ bool LocalFileStorage::IsFileExist(const std::string& path) {
   return std::filesystem::exists(path);
 }
 
-bool LocalFileStorage::LockFile(std::shared_ptr<FileDescriptor>& fd) {
+bool LocalFileStorage::LockFile(std::shared_ptr<FileDescriptor>& fd,
+                                std::string path) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
+  lfd->path = path;
+
   std::string lockPath = lfd->path + ".lock";
   VLOG(100) << "lock:" << lockPath;
   int lockFD = open(lockPath.c_str(), O_CREAT | O_RDWR, 0666);
