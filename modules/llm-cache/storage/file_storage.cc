@@ -79,14 +79,13 @@ Status FileStorage::Update(
     for (size_t currentTokenIndex = i * batchSize;
          currentTokenIndex < (i + 1) * batchSize; currentTokenIndex++) {
       for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-        size_t offset = tokenList.size() - kvStateList.size();
-        const void* k = kvStateList[currentTokenIndex - offset]
+        const void* k = kvStateList[currentTokenIndex]
                             .find(currentLayer)
                             ->second.first.data;
-        const void* v = kvStateList[currentTokenIndex - offset]
+        const void* v = kvStateList[currentTokenIndex]
                             .find(currentLayer)
                             ->second.second.data;
-        size_t length = kvStateList[currentTokenIndex - offset]
+        size_t length = kvStateList[currentTokenIndex]
                             .find(currentLayer)
                             ->second.first.length;
         RETURN_ON_ERROR(Write(fd, k, length));
@@ -100,7 +99,94 @@ Status FileStorage::Update(
       Delete(tmpPathStr);
       return Status::OK();
     }
-    LOG(INFO) << "Move success";
+  }
+
+  return Status::OK();
+}
+
+Status FileStorage::Update(
+    const std::vector<int>& prefix, const std::vector<int>& tokenList,
+    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+  std::vector<std::string> pathList;
+  std::string path;
+  int tokenLength;
+  std::vector<int> totalTokenList(prefix.begin(), prefix.end());
+  totalTokenList.insert(totalTokenList.end(), tokenList.begin(),
+                        tokenList.end());
+
+  VINEYARD_ASSERT(batchSize > 0);
+
+  RETURN_ON_ERROR(hasher->computePathForTokens(totalTokenList, batchSize,
+                                               splitNumber, pathList));
+  if (pathList.size() == 0) {
+    return Status::OK();
+  }
+  size_t kvStateIndex = 0;
+  for (size_t i = 0; i < pathList.size(); i++) {
+    tokenLength = (i + 1) * batchSize;
+    std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
+    std::string tmpPathStr = GetTmpFileDir(pathList[i]);
+    std::filesystem::path tmpPath(tmpPathStr);
+    std::string pathStr = this->rootPath + pathList[i];
+    std::filesystem::path path(pathStr);
+
+    RETURN_ON_ERROR(Mkdir(path.parent_path().string()));
+    std::lock_guard<std::mutex> lock(fileStorageLock);
+
+    if (Open(pathStr, fd, FileOperationType::READ).ok()) {
+      int tokenLength;
+      Read(fd, &tokenLength, sizeof(int));
+      std::vector<int> tokens;
+      tokens.resize(tokenLength);
+      Read(fd, tokens.data(), tokenLength * sizeof(int));
+      if (!CompareTokenList(totalTokenList, tokens, tokenLength)) {
+        // Token list not match
+        RETURN_ON_ERROR(Close(fd));
+        return Status::OK();
+      }
+      // Skip this kv state
+      RETURN_ON_ERROR(Close(fd));
+      continue;
+    }
+
+    RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
+    if (!Open(tmpPathStr, fd, FileOperationType::WRITE).ok()) {
+      return Status::OK();
+    }
+    if (i * batchSize != kvStateIndex + prefix.size()) {
+      /**
+       * This can happen if someone else deletes a file that matches
+       * the token halfway.
+       */
+      return Status::OK();
+    }
+
+    // Currently we do not consider delete.
+
+    RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
+    RETURN_ON_ERROR(
+        Write(fd, totalTokenList.data(), tokenLength * sizeof(int)));
+    for (size_t currentTokenIndex = i * batchSize;
+         currentTokenIndex < (i + 1) * batchSize; currentTokenIndex++) {
+      for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+        const void* k =
+            kvStateList[kvStateIndex].find(currentLayer)->second.first.data;
+        const void* v =
+            kvStateList[kvStateIndex].find(currentLayer)->second.second.data;
+        size_t length =
+            kvStateList[kvStateIndex].find(currentLayer)->second.first.length;
+        RETURN_ON_ERROR(Write(fd, k, length));
+        RETURN_ON_ERROR(Write(fd, v, length));
+      }
+    }
+    kvStateIndex += batchSize;
+
+    RETURN_ON_ERROR(Close(fd));
+    if (!MoveFileAtomic(tmpPathStr, pathStr).ok()) {
+      // Move failed. There exists a file with the same name.
+      Delete(tmpPathStr);
+      return Status::OK();
+    }
   }
 
   return Status::OK();
