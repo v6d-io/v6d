@@ -48,6 +48,7 @@ enum FileOperationType {
 
 static std::mutex setLock;
 static std::set<std::string> accessSet;
+static std::mutex fileStorageLock;
 
 class FileStorage : public IStorage {
  private:
@@ -96,6 +97,8 @@ class FileStorage : public IStorage {
   virtual Status GetCurrentPos(std::shared_ptr<FileDescriptor>& fd,
                                size_t& pos) = 0;
 
+  virtual Status MoveFileAtomic(std::string src, std::string dst) = 0;
+
   virtual Status Flush(std::shared_ptr<FileDescriptor>& fd) = 0;
 
   virtual Status Close(std::shared_ptr<FileDescriptor>& fd) = 0;
@@ -108,6 +111,8 @@ class FileStorage : public IStorage {
                         std::string path) = 0;
 
   virtual void UnlockFile(std::shared_ptr<FileDescriptor>& fd) = 0;
+
+  virtual std::string GetTmpFileDir(std::string filePath) = 0;
 
  public:
   FileStorage() = default;
@@ -135,6 +140,7 @@ class FileStorage : public IStorage {
   int batchSize;
   int splitNumber;
   std::string rootPath;
+  std::string tempFileDir;
   std::shared_ptr<IHashAlgorithm> hashAlgorithm;
   std::shared_ptr<Hasher> hasher;
 };

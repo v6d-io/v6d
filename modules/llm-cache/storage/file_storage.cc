@@ -30,15 +30,10 @@ Status FileStorage::Update(
     const std::vector<int>& tokenList,
     const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
   std::vector<std::string> pathList;
-  std::string dir = rootPath;
   std::string path;
   int tokenLength;
 
   VINEYARD_ASSERT(batchSize > 0);
-  // check if the root path ends with '/'
-  if (dir.size() != 0 && dir.back() != '/') {
-    dir += "/";
-  }
 
   RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, batchSize,
                                                splitNumber, pathList));
@@ -48,50 +43,36 @@ Status FileStorage::Update(
   for (size_t i = 0; i < pathList.size(); i++) {
     tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
-    std::filesystem::path filePath(dir + pathList[i]);
-    RETURN_ON_ERROR(Mkdir(filePath.parent_path().string()));
-    InsertToAccessSet(filePath.string());
-    LockFile(fd, filePath.string());
+    std::string tmpPathStr = GetTmpFileDir(pathList[i]);
+    std::filesystem::path tmpPath(tmpPathStr);
+    std::string pathStr = this->rootPath + pathList[i];
+    std::filesystem::path path(pathStr);
 
-    if (IsFileExist(filePath.string())) {
-      if (!Open(filePath.string(), fd, FileOperationType::READ).ok()) {
-        // Insert into cache failed.
-        UnlockFile(fd);
-        RemoveFromAccessSet(filePath.string());
-        return Status::OK();
-      }
+    RETURN_ON_ERROR(Mkdir(path.parent_path().string()));
+    std::lock_guard<std::mutex> lock(fileStorageLock);
+
+    if (Open(pathStr, fd, FileOperationType::READ).ok()) {
       int tokenLength;
       Read(fd, &tokenLength, sizeof(int));
       std::vector<int> tokens;
       tokens.resize(tokenLength);
       Read(fd, tokens.data(), tokenLength * sizeof(int));
       if (!CompareTokenList(tokenList, tokens, tokenLength)) {
+        // Token list not match
         RETURN_ON_ERROR(Close(fd));
-        UnlockFile(fd);
-        RemoveFromAccessSet(filePath.string());
         return Status::OK();
       }
+      // Skip this kv state
       RETURN_ON_ERROR(Close(fd));
-      UnlockFile(fd);
-      RemoveFromAccessSet(filePath.string());
       continue;
     }
 
-    if (!Open(filePath.string(), fd, FileOperationType::WRITE).ok()) {
-      // Insert into cache failed.
-      UnlockFile(fd);
-      RemoveFromAccessSet(filePath.string());
+    RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
+    if (!Open(tmpPathStr, fd, FileOperationType::WRITE).ok()) {
       return Status::OK();
     }
 
-    if (tokenList.size() - i * batchSize > kvStateList.size()) {
-      // current file is deleted by other client, we need to reject this update.
-      RETURN_ON_ERROR(Close(fd));
-      Delete(filePath.string());
-      UnlockFile(fd);
-      RemoveFromAccessSet(filePath.string());
-      return Status::OK();
-    }
+    // Currently we do not consider delete.
 
     RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
     RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenLength * sizeof(int)));
@@ -114,8 +95,12 @@ Status FileStorage::Update(
     }
 
     RETURN_ON_ERROR(Close(fd));
-    UnlockFile(fd);
-    RemoveFromAccessSet(filePath.string());
+    if (!MoveFileAtomic(tmpPathStr, pathStr).ok()) {
+      // Move failed. There exists a file with the same name.
+      Delete(tmpPathStr);
+      return Status::OK();
+    }
+    LOG(INFO) << "Move success";
   }
 
   return Status::OK();
@@ -136,20 +121,13 @@ Status FileStorage::Query(
   RETURN_ON_ERROR(
       hasher->computePathForTokens(tokenList, batchSize, splitNumber, paths));
 
-  if (dir.size() != 0 && dir.back() != '/') {
-    dir += "/";
-  }
-
   for (size_t i = 0; i < paths.size(); i++) {
     std::filesystem::path filePath(dir + paths[i]);
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
-    // InsertToSet(filePath.string());
-    InsertToAccessSet(filePath.string());
-    LockFile(fd, filePath.string());
+
+    std::lock_guard<std::mutex> lock(fileStorageLock);
     // If open failed, it means the kv state is not in the cache(file not exist)
     if (!Open(filePath.string(), fd, FileOperationType::READ).ok()) {
-      UnlockFile(fd);
-      RemoveFromAccessSet(filePath.string());
       return Status::OK();
     }
 
@@ -162,8 +140,6 @@ Status FileStorage::Query(
     if (!CompareTokenList(tokenList, prefix, prefix.size())) {
       VLOG(100) << "token list not match";
       RETURN_ON_ERROR(Close(fd));
-      UnlockFile(fd);
-      RemoveFromAccessSet(filePath.string());
       return Status::OK();
     } else {
       VLOG(100) << "token list match";
@@ -183,8 +159,6 @@ Status FileStorage::Query(
     }
 
     RETURN_ON_ERROR(Close(fd));
-    UnlockFile(fd);
-    RemoveFromAccessSet(filePath.string());
   }
 
   return Status::OK();

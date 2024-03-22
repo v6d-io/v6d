@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <fstream>
 #include <memory>
+#include <regex>
 #include <string>
 
 #include "llm-cache/storage/file_storage.h"
@@ -41,7 +42,9 @@ class LocalFileStorage : public FileStorage {
     this->layer = layer;
     this->batchSize = batchSize;
     this->splitNumber = splitNumber;
-    this->rootPath = rootPath;
+    this->rootPath = std::regex_replace(rootPath + "/", std::regex("/+"), "/");
+    this->tempFileDir =
+        std::regex_replace(rootPath + "/__temp/", std::regex("/+"), "/");
   }
 
   ~LocalFileStorage() = default;
@@ -67,6 +70,8 @@ class LocalFileStorage : public FileStorage {
   Status GetCurrentPos(std::shared_ptr<FileDescriptor>& fd,
                        size_t& pos) override;
 
+  Status MoveFileAtomic(std::string src, std::string dst) override;
+
   bool IsFileExist(const std::string& path) override;
 
   bool LockFile(std::shared_ptr<FileDescriptor>& fd, std::string path) override;
@@ -78,6 +83,8 @@ class LocalFileStorage : public FileStorage {
   Status Close(std::shared_ptr<FileDescriptor>& fd) override;
 
   Status Delete(std::string path) override;
+
+  std::string GetTmpFileDir(std::string filePath) override;
 };
 
 }  // namespace vineyard

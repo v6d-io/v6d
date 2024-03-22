@@ -201,4 +201,17 @@ Status LocalFileStorage::Delete(std::string path) {
   return Status::OK();
 }
 
+std::string LocalFileStorage::GetTmpFileDir(std::string filePath) {
+  pid_t pid = getpid();
+  return this->tempFileDir + std::to_string(pid);
+}
+
+Status LocalFileStorage::MoveFileAtomic(std::string src, std::string dst) {
+  if (renameat2(AT_FDCWD, src.c_str(), AT_FDCWD, dst.c_str(),
+                RENAME_NOREPLACE)) {
+    return Status::IOError("Failed to move file");
+  }
+  return Status::OK();
+}
+
 }  // namespace vineyard
