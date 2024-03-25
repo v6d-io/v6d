@@ -156,44 +156,6 @@ bool LocalFileStorage::IsFileExist(const std::string& path) {
   return std::filesystem::exists(path);
 }
 
-bool LocalFileStorage::LockFile(std::shared_ptr<FileDescriptor>& fd,
-                                std::string path) {
-  std::shared_ptr<LocalFileDescriptor> lfd =
-      std::static_pointer_cast<LocalFileDescriptor>(fd);
-  lfd->path = path;
-
-  std::string lockPath = lfd->path + ".lock";
-  VLOG(100) << "lock:" << lockPath;
-  int lockFD = open(lockPath.c_str(), O_CREAT | O_RDWR, 0666);
-  if (lockFD < 0) {
-    VLOG(100) << "Failed to lock file";
-    return false;
-  }
-  struct flock fl;
-  fl.l_type = F_WRLCK;
-  fl.l_whence = SEEK_SET;
-  fl.l_start = 0;
-  fl.l_len = 0;
-  if (fcntl(lockFD, F_SETLK, &fl) == -1) {
-    VLOG(100) << "Failed to lock file";
-    return false;
-  }
-  lfd->lockFD = lockFD;
-  return true;
-}
-
-void LocalFileStorage::UnlockFile(std::shared_ptr<FileDescriptor>& fd) {
-  std::shared_ptr<LocalFileDescriptor> lfd =
-      std::static_pointer_cast<LocalFileDescriptor>(fd);
-  VLOG(100) << "unlock:" << lfd->path + ".lock";
-  struct flock fl;
-  fl.l_type = F_UNLCK;
-  fl.l_whence = SEEK_SET;
-  fl.l_start = 0;
-  fl.l_len = 0;
-  fcntl(lfd->lockFD, F_SETLK, &fl);
-}
-
 Status LocalFileStorage::Delete(std::string path) {
   if (std::filesystem::exists(path)) {
     std::filesystem::remove_all(path);

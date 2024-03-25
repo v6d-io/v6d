@@ -74,10 +74,6 @@ class LocalFileStorage : public FileStorage {
 
   bool IsFileExist(const std::string& path) override;
 
-  bool LockFile(std::shared_ptr<FileDescriptor>& fd, std::string path) override;
-
-  void UnlockFile(std::shared_ptr<FileDescriptor>& fd) override;
-
   Status Flush(std::shared_ptr<FileDescriptor>& fd) override;
 
   Status Close(std::shared_ptr<FileDescriptor>& fd) override;
