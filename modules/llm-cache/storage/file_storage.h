@@ -46,8 +46,6 @@ enum FileOperationType {
   WRITE = 1 << 1,
 };
 
-static std::mutex setLock;
-static std::set<std::string> accessSet;
 static std::mutex fileStorageLock;
 
 class FileStorage : public IStorage {
@@ -56,25 +54,6 @@ class FileStorage : public IStorage {
                         const std::vector<int>& tokenList2, size_t length);
 
   void CloseCache() override {}
-
-  // file lock for threads
-  void InsertToAccessSet(std::string path) {
-    do {
-      setLock.lock();
-      if (accessSet.find(path) == accessSet.end()) {
-        accessSet.insert(path);
-        setLock.unlock();
-        break;
-      }
-      setLock.unlock();
-    } while (1);
-  }
-
-  void RemoveFromAccessSet(std::string path) {
-    setLock.lock();
-    accessSet.erase(path);
-    setLock.unlock();
-  }
 
   virtual std::shared_ptr<FileDescriptor> CreateFileDescriptor() = 0;
 
