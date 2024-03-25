@@ -107,6 +107,10 @@ Status FileStorage::Update(
 Status FileStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
     const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+  if (prefix.size() % batchSize != 0) {
+    return Status::Invalid("Prefix size should be multiple of batch size!");
+  }
+
   std::vector<std::string> pathList;
   std::string path;
   int tokenLength;
