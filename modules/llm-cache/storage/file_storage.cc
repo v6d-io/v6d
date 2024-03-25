@@ -33,8 +33,6 @@ Status FileStorage::Update(
   std::string path;
   int tokenLength;
 
-  VINEYARD_ASSERT(batchSize > 0);
-
   RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, batchSize,
                                                splitNumber, pathList));
   if (pathList.size() == 0) {
@@ -117,8 +115,6 @@ Status FileStorage::Update(
   std::vector<int> totalTokenList(prefix.begin(), prefix.end());
   totalTokenList.insert(totalTokenList.end(), tokenList.begin(),
                         tokenList.end());
-
-  VINEYARD_ASSERT(batchSize > 0);
 
   RETURN_ON_ERROR(hasher->computePathForTokens(totalTokenList, batchSize,
                                                splitNumber, pathList));

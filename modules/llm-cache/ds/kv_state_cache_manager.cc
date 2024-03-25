@@ -38,6 +38,20 @@ KVStateCacheManager::KVStateCacheManager(
 Status KVStateCacheManager::Make(Client& client,
                                  std::shared_ptr<KVStateCacheManager>& manager,
                                  VineyardCacheConfig& config) {
+  if (config.tensorByte <= 0 || config.cacheCapacity <= 0 ||
+      config.layer <= 0) {
+    return Status::Invalid("Invalid tensor byte, cache capacity or layer.");
+  }
+  if (config.blockSize <= 0 || config.syncInterval <= 0) {
+    return Status::Invalid("Invalid block size or sync interval.");
+  }
+  if (config.llmCacheObjectName.size() == 0 ||
+      config.llmRefcntObjectName.size() == 0 ||
+      config.llmCacheSyncLock.size() == 0) {
+    return Status::Invalid(
+        "Invalid object name, refcnt object name or sync lock name.");
+  }
+
   std::shared_ptr<BlobStorage> blob_storage;
   VINEYARD_CHECK_OK(blob_storage->Make(
       client, blob_storage, config.tensorByte, config.cacheCapacity,
@@ -51,6 +65,14 @@ Status KVStateCacheManager::Make(Client& client,
 // use the file storage for manager
 Status KVStateCacheManager::Make(std::shared_ptr<KVStateCacheManager>& manager,
                                  FileCacheConfig& config) {
+  if (config.batchSize <= 0 || config.splitNumber <= 0) {
+    return Status::Invalid("Invalid batch size or split number.");
+  }
+  if (config.tensorByte <= 0 || config.cacheCapacity <= 0 ||
+      config.layer <= 0) {
+    return Status::Invalid("Invalid tensor byte, cache capacity or layer.");
+  }
+
   std::shared_ptr<FileStorage> file_storage;
   if (config.filesystemType == FilesystemType::LOCAL) {
     file_storage = std::make_shared<LocalFileStorage>(
