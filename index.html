@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./_static/css/index.css" />
+    <link rel="stylesheet" href="./_static/css/termynal.css">
+    <link rel="icon" type="image/x-icon" href="_static/vineyard.ico" />
+    <link
+      rel="stylesheet"
+      href="https://use.fontawesome.com/releases/v5.0.7/css/all.css"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&family=Roboto&display=swap"
+      rel="stylesheet"
+    />
+    <title>Vineyard: an In-Memory Data Manager for Data-Intensive Analytics</title>
+  </head>
+  <body>
+    <nav class="navigator background-gradient-color">
+      <div class="main-content flex navbar justify-content-space-between align-items-center">
+        <div class="logo">
+          <a href="#">
+            <img
+              src="_static/vineyard-logo-h.png"
+              alt="vineyard logo"
+            />
+          </a>
+        </div>
+        <div class="menu-toggle" id="mobile-menu" onClick="handleToggle()">
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </div>
+        <ul class="flex vertical-align-center list-style-none" id="nav-link-wrapper">
+          <li class="padding-left-right-20">
+            <a href="#"
+               class="nav-link">
+               Home
+            </a>
+          </li>
+          <li class="padding-left-right-20">
+            <a href="notes/developers/build-from-source.html"
+               class="nav-link">
+               Installation
+            </a>
+          </li>
+          <li class="padding-left-right-20">
+            <a href="docs.html"
+               class="nav-link">
+               Docs
+            </a>
+          </li>
+          <li class="padding-left-right-20">
+            <a href="https://medium.com/cncf-vineyard"
+               class="nav-link">
+               Blog
+            </a>
+          </li>
+          <li class="padding-left-right-20">
+            <a href="notes/developers.html"
+               class="nav-link">
+               Community
+            </a>
+          </li>
+        </ul>
+        <div class="flex media-section">
+          <a href="https://slack.cncf.io/" class="text-black" target="_blank"><i class="fab fa-slack"></i></a>
+          <a href="https://github.com/v6d-io/v6d" class="text-black" target="_blank"><i class="fab fa-github"></i></a>
+        </div>
+      </div>
+    </nav>
+    <section class="background-gradient-color flex justify-content-center hero-section">
+      <div class="main-content text-center hero-container flex flex-column align-items-center">
+        <h2 class="hero-text">
+          Vineyard: an In-Memory Data Manager for Data-Intensive Analytics
+        </h2>
+        <p class="hero-text-secondary">
+          An innovative cloud-native in-memory immutable data manager that offers
+          out-of-the-box high-level abstractions and zero-copy in-memory sharing
+          for distributed data in various big data tasks.
+        </p>
+        <div class="btn-container">
+          <a href="notes/getting-started.html">
+            <button class="button btn-primary">Get Started</button>
+          </a>
+          <a href="notes/references.html">
+            <button class="button btn-secondary">API Reference</button>
+          </a>
+        </div>
+        <div id="termynal" class="termynal" data-termynal>
+          <span data-ty="input">pip install vineyard</span>
+          <span data-ty="progress" class="breaking-word-all"></span>
+          <span data-ty>Successfully installed vineyard</span>
+          <span data-ty="input">python</span>
+          <span data-ty="input" data-ty-prompt=">>>">client = vineyard.connect()</span>
+          <span data-ty="input" data-ty-prompt=">>>">object_id = client.put('Hello, vineyard!')</span>
+          <span data-ty="input" data-ty-prompt=">>>">client.get(object_id)</span>
+          <span data-ty>'Hello, vineyard!'</span>
+        </div>
+      </div>
+    </section>
+    <section class="feature-section feature-section-mobile text-wrapping">
+      <div class="main-content flex justify-content-space-around feature-container">
+        <div class="feature-item">
+          <h4><i class="fa fa-exchange"></i>Efficient data sharing</h4>
+          <p>
+            Vineyard shares immutable data across different systems using shared
+            memory without extra overheads, eliminating the overhead of
+            serialization and deserialization.
+          </p>
+          <p><a href="notes/architecture.html">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
+        </div>
+        <div class="feature-item">
+          <h4>
+            <i class="fa-solid fa-box-open"></i>Out-of-the-box data abstraction
+          </h4>
+          <p>
+            Vineyard defines a metadata-payload separated data model to capture
+            the payload commonalities and method commonalities between sharable
+            objects.
+          </p>
+          <p><a href="notes/architecture.html">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
+        </div>
+      </div>
+      <div class="main-content flex justify-content-space-around feature-container">
+        <div class="feature-item">
+          <h4>
+            <i class="fa-solid fa-plug fa-lg"></i>Pluggable I/O
+            routines
+          </h4>
+          <p>
+            Vineyard provides common manipulation routines for immutable data as
+            drivers, which extend the capabilities of data structures by
+            registering appropriate drivers.
+          </p>
+          <p><a href="notes/architecture.html">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
+        </div>
+        <div class="feature-item">
+          <h4>
+            <i class="fa-solid fa-vector-square fa-lg"></i>Data orchestration on
+            Kubernetes
+          </h4>
+          <p>
+            Vineyard provides efficient distributed data sharing in cloud-native
+            environments by embracing cloud-native big data processing.
+          </p>
+          <p><a href="notes/architecture.html">Learn More <i class="fa-solid fa-arrow-right"></i></a></p>
+        </div>
+      </div>
+    </section>
+    <section class="feature-section use-case-section text-wrapping">
+      <h2 class="text-center">Use Cases</h2>
+      <div class="main-content flex justify-content-space-around gap-sm feature-container">
+        <div class="feature-item-sm">
+          <h4>Object store for all</h4>
+          <p>
+            Putting and getting arbitrary objects using Vineyard, in a zero-copy way!
+          </p>
+          <span><a href="tutorials/data-processing/using-objects-python.html" class="font-weight-300">Learn More <i class="fa-solid fa-arrow-right"></i></a></span>
+        </div>
+        <div class="feature-item-sm">
+          <h4>Data sharing in Kedro pipelines</h4>
+          <p>Sharing intermediate data between tasks in Kedro pipelines.</p>
+          <span><a href="tutorials/data-processing/accelerate-data-sharing-in-kedro.html" class="font-weight-300">Learn More <i class="fa-solid fa-arrow-right"></i></a></span>
+        </div>
+        <div class="feature-item-sm">
+          <h4>Data processing for machine learning</h4>
+          <p>
+            Sharing large objects between different systems in data preprocessing pipelines in machine learning applications.
+          </p>
+          <span><a href="tutorials/kubernetes/ml-pipeline-mars-pytorch.html" class="font-weight-300">Learn More <i class="fa-solid fa-arrow-right"></i></a></span>
+        </div>
+        <div class="feature-item-sm">
+          <h4>Data sharing on Kubernetes</h4>
+          <p>
+            Coordinating the flow of objects and jobs on Kubernetes
+            with the data-aware scheduler plugin.
+          </p>
+          <span class="font-weight-300"><a href="tutorials/kubernetes/using-vineyard-operator.html">Learn More <i class="fa-solid fa-arrow-right"></i></a></span>
+        </div>
+      </div>
+    </section>
+    <div class="banner text-center">
+      <p>
+        Vineyard is a
+        <a href="https://www.cncf.io/sandbox-projects/" class="banner-link" target="_blank">
+          Cloud Native Computing Foundation sandbox project
+        </a>
+      </p>
+      <div class="img-container">
+        <img src="_static/cncf-sandbox-color.svg" alt="cncf logo" />
+      </div>
+    </div>
+    <footer class="footer">
+      <div class="flex justify-content-space-between footer-container">
+        <ul class="list-style-none">
+          <li class="text-bold padding-bottom-20">Docs</li>
+          <li class="padding-bottom-10">
+            <a href="notes/getting-started.html" class="nav-link"
+              >Getting Started</a
+            >
+          </li>
+          <li class="padding-bottom-10">
+            <a href="notes/key-concepts.html" class="nav-link"
+              >Key Concepts</a
+            >
+          </li>
+          <li>
+            <a href="notes/architecture.html" class="nav-link"
+              >Architecture</a
+            >
+          </li>
+        </ul>
+        <ul class="list-style-none">
+          <li class="text-bold padding-bottom-20">Community</li>
+          <li class="padding-bottom-10">
+            <a href="https://github.com/v6d-io/v6d" class="nav-link" target="_blank">GitHub</a>
+          </li>
+          <li class="padding-bottom-10">
+            <a href="https://slack.cncf.io/" class="nav-link" target="_blank">Slack</a>
+          </li>
+        </ul>
+        <ul class="list-style-none">
+          <li class="text-bold padding-bottom-20">More</li>
+          <li>
+            <a href="notes/developers/faq.html" class="nav-link"
+              >Faq</a
+            >
+          </li>
+        </ul>
+        <ul class="list-style-none">
+          <li class="text-bold padding-bottom-20">Legal</li>
+          <li>
+            <a href="https://www.linuxfoundation.org/legal/terms" class="nav-link" target="_blank">
+              Terms
+            </a>
+          </li>
+          <li>
+            <a href="https://www.linuxfoundation.org/legal/privacy-policy" class="nav-link" target="_blank">
+              Privacy
+            </a>
+          </li>
+          <li>
+            <a href="https://www.linuxfoundation.org/legal/trademark-usage" class="nav-link" target="_blank">
+              Trademarks
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="text-center footer-info-text">
+        <p>
+          Copyright &copy; 2020-
+          <span id="copyright">
+            <script>
+              document
+                .getElementById("copyright")
+                .appendChild(document.createTextNode(new Date().getFullYear()));
+            </script>
+          </span>
+          , The Vineyard Authors
+        </p>
+        <p>
+          The Linux Foundation has registered trademarks and uses trademarks.
+          For a list of trademarks of The Linux Foundation, please see our
+          <a href="https://www.linuxfoundation.org/legal/trademark-usage" class="footer-link-text" target="_blank">
+            Trademark Usage page.
+          </a>
+        </p>
+      </div>
+    </footer>
+  </body>
+  <script
+    src="https://kit.fontawesome.com/91dde3bebe.js"
+    crossorigin="anonymous">
+  </script>
+  <script src="./_static/js/termynal.js" data-termynal-container="#termynal"></script>
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-6CYXWKLJB8"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+
+    gtag('config', 'G-6CYXWKLJB8');
+  </script>
+  <script>
+    // mobile menu toggle handler
+    const handleToggle = () => {
+      const menuToggleNode = document.getElementById("mobile-menu");
+      let navBarLinkContainer = document.getElementById("nav-link-wrapper");
+
+      if (menuToggleNode.className === "menu-toggle") {
+        menuToggleNode.className = "menu-toggle is-active";
+        navBarLinkContainer.style.display = "flex";
+        navBarLinkContainer.className = "nav-link-container list-style-none";
+      } else {
+        menuToggleNode.className = "menu-toggle";
+        navBarLinkContainer.style.display = "none";
+      }
+    };
+  </script>
+</html>

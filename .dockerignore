@@ -1,0 +1,59 @@
+.git
+**/.git
+
+# contents from .gitignore
+build/
+build-mac/
+install/
+build-static/
+build-static-mac/
+install-static/
+build-docker/
+install-docker/
+build-docker-gsa/
+install-docker-gsa/
+*.code-workspace
+.vscode
+.idea
+.DS_store
+cmake-build-debug/
+modules/graph/thirdparty/**/build/
+
+# for python packaging
+dist/
+**/*.egg-info/
+**/*.so
+**/*.dylib
+**/*.a
+**/*.pyc
+**/*.bin
+**/*.egg
+
+# generated files
+*.vineyard.h
+
+# etcd data directory during testing
+default.etcd/
+
+# tmp data directory during building image
+docker/dist/
+
+# docs
+docs/_build/
+
+# go vendor
+/**/vendor/
+
+# Rust build
+/**/target/
+
+# k8s
+k8s/bin/
+k8s/vendor/
+k8s/examples/
+k8s/test/
+k8s/hack/
+!k8s/config/scheduler/config.yaml
+
+# artifacts
+wheels/

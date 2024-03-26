@@ -1,0 +1,55 @@
+.fa.fa-2x {
+    font-size: 36px;
+}
+
+/* Decrease the padding of button block in panels */
+div.card-body.card-body-less-padding {
+    padding: 0.25em;
+}
+
+/* Disable theme toggle */
+div.theme-toggle-container.theme-toggle-content {
+    display: none;
+}
+
+/* Proper distance at the bottom of TOC tree */
+.sidebar-container > .sidebar-sticky > .sidebar-scroll > .sidebar-tree {
+    padding-bottom: 1em;
+}
+
+/* Admonition for drop-down like details component */
+
+.admonition.admonition-details {
+    padding: 0 0 0 0;
+    margin: 0 auto;
+}
+
+.admonition.admonition-details.active > :not(.admonition-title) {
+    display: inherit;
+}
+
+.admonition.admonition-details > :not(.admonition-title) {
+    display: none;
+}
+
+.admonition.admonition-details > p.admonition-title, p.topic-title {
+    margin: 0 0 0 0;
+}
+
+.admonition.admonition-details > blockquote {
+    padding: 0;
+}
+
+.admonition.admonition-details > blockquote > div > div[class^=highlight-] {
+    margin: 0;
+}
+
+.admonition.admonition-details > blockquote > div > div[class^=table-wrapper] {
+    margin-top: 0;
+    margin-bottom: 0;
+    padding: 0 0 0 0;
+}
+
+.admonition.admonition-details > blockquote > div > div[class^=table-wrapper] > table {
+    min-width: 100%;
+}
