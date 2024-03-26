@@ -56,16 +56,18 @@ Status FileStorage::Update(
       RETURN_ON_ERROR(Read(fd, tokens.data(), tokenLength * sizeof(int)));
       if (!CompareTokenList(tokenList, tokens, tokenLength)) {
         // Token list not match
-        RETURN_ON_ERROR(Close(fd));
+        VINEYARD_DISCARD(Close(fd));
         return Status::OK();
       }
       // Skip this kv state
-      RETURN_ON_ERROR(Close(fd));
+      VINEYARD_DISCARD(Close(fd));
       continue;
     }
 
     RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
-    if (!Open(tmpPathStr, fd, FileOperationType::WRITE).ok()) {
+    auto status = Open(tmpPathStr, fd, FileOperationType::WRITE);
+    if (!status.ok()) {
+      LOG(WARNING) << "Failed to create temporary cache entry: " << status.ToString();
       return Status::OK();
     }
 
@@ -90,9 +92,11 @@ Status FileStorage::Update(
       }
     }
 
-    RETURN_ON_ERROR(Close(fd));
-    if (!MoveFileAtomic(tmpPathStr, pathStr).ok()) {
+    VINEYARD_DISCARD(Close(fd));
+    status = MoveFileAtomic(tmpPathStr, pathStr);
+    if (!status.ok()) {
       // Move failed. There exists a file with the same name.
+      LOG(WARNING) << "Failed to move cache entry: " << status.ToString();
       VINEYARD_SUPPRESS(Delete(tmpPathStr));
       return Status::OK();
     }
@@ -140,11 +144,11 @@ Status FileStorage::Update(
       RETURN_ON_ERROR(Read(fd, tokens.data(), tokenLength * sizeof(int)));
       if (!CompareTokenList(totalTokenList, tokens, tokenLength)) {
         // Token list not match
-        RETURN_ON_ERROR(Close(fd));
+        VINEYARD_DISCARD(Close(fd));
         return Status::OK();
       }
       // Skip this kv state
-      RETURN_ON_ERROR(Close(fd));
+      VINEYARD_DISCARD(Close(fd));
       continue;
     }
 
@@ -157,6 +161,7 @@ Status FileStorage::Update(
        * This can happen if someone else deletes a file that matches
        * the token halfway.
        */
+      VINEYARD_DISCARD(Close(fd));
       return Status::OK();
     }
 
@@ -180,7 +185,7 @@ Status FileStorage::Update(
     }
     kvStateIndex += batchSize;
 
-    RETURN_ON_ERROR(Close(fd));
+    VINEYARD_DISCARD(Close(fd));
     if (!MoveFileAtomic(tmpPathStr, pathStr).ok()) {
       // Move failed. There exists a file with the same name.
       VINEYARD_SUPPRESS(Delete(tmpPathStr));
@@ -215,6 +220,17 @@ Status FileStorage::Query(
     if (!Open(filePath.string(), fd, FileOperationType::READ).ok()) {
       return Status::OK();
     }
+    size_t file_size = 0;
+    auto s = GetFileSize(fd, file_size);
+    if (!s.ok()) {
+      VINEYARD_DISCARD(Close(fd));
+      return Status::OK();
+    }
+    if (file_size == 0) {
+      VINEYARD_DISCARD(Close(fd));
+      VINEYARD_DISCARD(Delete(filePath.string()));
+      return Status::OK();
+    }
 
     int tokenLength;
     RETURN_ON_ERROR(Read(fd, &tokenLength, sizeof(int)));
@@ -223,7 +239,7 @@ Status FileStorage::Query(
     RETURN_ON_ERROR(Read(fd, prefix.data(), tokenLength * sizeof(int)));
 
     if (!CompareTokenList(tokenList, prefix, prefix.size())) {
-      RETURN_ON_ERROR(Close(fd));
+      VINEYARD_DISCARD(Close(fd));
       return Status::OK();
     } else {
       for (int j = 0; j < batchSize; j++) {
@@ -241,7 +257,7 @@ Status FileStorage::Query(
       }
     }
 
-    RETURN_ON_ERROR(Close(fd));
+    VINEYARD_DISCARD(Close(fd));
   }
 
   return Status::OK();

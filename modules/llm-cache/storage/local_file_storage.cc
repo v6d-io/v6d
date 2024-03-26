@@ -159,9 +159,21 @@ std::string LocalFileStorage::GetTmpFileDir(std::string filePath) {
 }
 
 Status LocalFileStorage::MoveFileAtomic(std::string src, std::string dst) {
-  if (renameat2(AT_FDCWD, src.c_str(), AT_FDCWD, dst.c_str(),
-                  RENAME_NOREPLACE)) {
-    return Status::IOError("Failed to move file");
+  // if (renameat2(AT_FDCWD, src.c_str(), AT_FDCWD, dst.c_str(),
+  //                 RENAME_NOREPLACE)) {
+  //   return Status::IOError("Failed to move file: " + formatIOError(src));
+  // }
+
+  // Use open and then rename to avoid the unsupported issue on NFS.
+  int dst_fd = open(dst.c_str(), O_CREAT | O_RDWR, 0666);
+  LOG(INFO) << "dst fd = " << dst_fd;
+  if (dst_fd == -1) {
+    return Status::IOError("Failed to create file: " + formatIOError(dst));
+  } else {
+    close(dst_fd);
+    if (rename(src.c_str(), dst.c_str())) {
+      return Status::IOError("Failed to move file: " + formatIOError(src));
+    }
   }
   return Status::OK();
 }
