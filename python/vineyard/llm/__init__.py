@@ -18,14 +18,15 @@
 
 from typing import List
 from typing import Tuple
+from typing import Union
 
 import numpy as np
 
 import torch
 from torch import dtype
 
-import vineyard
-
+from .config import FileCacheConfig
+from .config import VineyardCacheConfig
 from .llm_C import KVTensor
 from .llm_C import _generate
 
@@ -35,24 +36,19 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
-        socket: str,
+        cache_config: Union[VineyardCacheConfig, FileCacheConfig],
         tensor_bytes: int = 10,
         cache_capacity: int = 10,
         layer: int = 1,
         torch_size: torch.Size = None,
         dtype: dtype = None,
-        block_size: int = 5,
-        sync_interval: int = 3,
-        llm_cache_sync_lock: str = "llmCacheSyncLock",
-        llm_cache_object_name: str = "llm_cache_object",
-        llm_ref_cnt_object_name: str = "llm_refcnt_object",
         **kwargs
     ):
         """Create a llm kv cache manager based on vineyard blob.
 
         Args:
-            socket (str):
-                The vineyard socket path.
+            cache_config (Union[VineyardCacheConfig, FileCacheConfig]):
+                The config of the kv cache, including vineyard cache and file cache.
             tensor_bytes (int, optional):
                 The size of the kv cache tensor.
                 Defaults to 10.
@@ -67,19 +63,13 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
             dtype (dtype, optional):
                 The dtype of the tensor. Defaults to None.
                 e.g., torch.float32, torch.float64.
-            block_size (int, optional):
-                The block size of the kv cache. Defaults to 5.
-            sync_interval (int, optional):
-                The sync interval of the kv cache. Defaults to 3.
-            llm_cache_sync_lock (str, optional):
-                The name of the kv cache sync lock. Defaults to "llmCacheSyncLock".
-            llm_cache_object_name (str, optional):
-                The name of the kv cache object. Defaults to "llm_cache_object".
-            llm_ref_cnt_object_name (str, optional):
-                The name of the kv cache ref cnt object.
-                Defaults to "llm_refcnt_object".
         """
-        self.client = vineyard.connect(socket)
+        if not isinstance(cache_config, VineyardCacheConfig) and not isinstance(
+            cache_config, FileCacheConfig
+        ):
+            raise ValueError(
+                "The cache_config should be VineyardCacheConfig or FileCacheConfig."
+            )
         self.tensor_bytes = tensor_bytes
         self.cache_capacity = cache_capacity
         self.layer = layer
@@ -88,21 +78,12 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
         self.tensor_dtype = dtype
         # the dtype of the numpy array of the tensor
         self.numpy_dtype = None
-        self.block_size = block_size
-        self.sync_interval = sync_interval
-        self.llm_cache_sync_lock = llm_cache_sync_lock
-        self.llm_cache_object_name = llm_cache_object_name
-        self.llm_ref_cnt_object_name = llm_ref_cnt_object_name
+
         self.kv_cache_manager = _generate(
-            ipc_client=self.client.ipc_client,
             tensor_bytes=tensor_bytes,
             cache_capacity=cache_capacity,
             layer=layer,
-            block_size=block_size,
-            sync_interval=sync_interval,
-            llm_cache_sync_lock=llm_cache_sync_lock,
-            llm_cache_object_name=llm_cache_object_name,
-            llm_ref_cnt_object_name=llm_ref_cnt_object_name,
+            **cache_config.__dict__,
             **kwargs
         )
 
