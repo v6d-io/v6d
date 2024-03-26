@@ -20,7 +20,6 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "common/util/logging.h"
 #include "common/util/status.h"
 #include "llm-cache/storage/file_storage.h"
 
@@ -32,7 +31,6 @@ Status FileStorage::Update(
   std::vector<std::string> pathList;
   std::string path;
   int tokenLength;
-
   RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, batchSize,
                                                splitNumber, pathList));
   if (pathList.size() == 0) {
@@ -224,11 +222,9 @@ Status FileStorage::Query(
     Read(fd, prefix.data(), tokenLength * sizeof(int));
 
     if (!CompareTokenList(tokenList, prefix, prefix.size())) {
-      VLOG(100) << "token list not match";
       RETURN_ON_ERROR(Close(fd));
       return Status::OK();
     } else {
-      VLOG(100) << "token list match";
       for (int j = 0; j < batchSize; j++) {
         std::map<int, std::pair<LLMKV, LLMKV>> kvState;
         for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
