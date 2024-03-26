@@ -68,6 +68,15 @@ PYBIND11_MODULE(llm_C, m) {
           },
           py::arg("tokenList"), py::arg("kv_state_list"))
       .def(
+          "update",
+          [](KVStateCacheManager* self, std::vector<int>& prefix,
+             std::vector<int>& tokenList,
+             const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>&
+                 kv_state_list) {
+            VINEYARD_CHECK_OK(self->Update(prefix, tokenList, kv_state_list));
+          },
+          py::arg("prefix"), py::arg("tokenList"), py::arg("kv_state_list"))
+      .def(
           "query",
           [](KVStateCacheManager* self, std::vector<int>& tokenList,
              int& nextToken, std::map<int, std::pair<LLMKV, LLMKV>>& kv_state) {

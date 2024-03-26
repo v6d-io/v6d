@@ -89,12 +89,14 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
 
     def update(
         self,
+        prefix: list,
         tokens: list,
         kv_cache_list: List[Tuple[torch.Tensor, torch.Tensor]],
     ):
         """Update the kv cache stored in vineyard.
 
         Args:
+            prefix (list): the prefix of the tokens
             tokens (list): the tokens of the kv cache
                 e,g, [1 2 3 4]
             kv_cache_list (List[Tuple[torch.Tensor, torch.Tensor]]):
@@ -125,7 +127,10 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
                 j = 0
                 kv_state_list.append(kv_state_entry)
                 kv_state_entry = {}
-        self.kv_cache_manager.update(tokens, kv_state_list)
+        if prefix is not None:
+            self.kv_cache_manager.update(prefix, tokens, kv_state_list)
+        else:
+            self.kv_cache_manager.update(tokens, kv_state_list)
 
     def query(
         self,
@@ -165,5 +170,5 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
             kv_cache_list.append((k_tensor, v_tensor))
         return kv_cache_list
 
-    def __del__(self):
-        self.kv_cache_manager.close()
+    #def __del__(self):
+    #    self.kv_cache_manager.close()

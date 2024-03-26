@@ -17,8 +17,10 @@ limitations under the License.
 #include <sys/file.h>
 #include <unistd.h>
 #include <filesystem>
+#include <sys/stat.h> // For stat
 #include <fstream>
 #include <memory>
+#include <stdio.h>
 #include <mutex>
 #include <string>
 
@@ -46,9 +48,13 @@ Status LocalFileStorage::Open(std::string path,
   lfd->fstream.open(path, mode);
 
   if (!lfd->fstream.is_open()) {
-    VLOG(100) << "Failed to open file: " << path << " "
+    // if the file has been opened by another process, we should return
+    // OK status
+    if (errno != EINTR) {
+        VLOG(100) << "Failed to open file: " << path << " "
               << lfd->fstream.rdstate();
-    return Status::IOError("Failed to open file: " + path);
+      return Status::IOError("Failed to open file: " + path);
+    }
   }
   return Status::OK();
 }
@@ -100,8 +106,12 @@ Status LocalFileStorage::Mkdir(std::string path) {
   VLOG(100) << "Create directory:" << path;
   if (!std::filesystem::exists(path)) {
     if (!std::filesystem::create_directories(path)) {
-      VLOG(100) << "Failed to create directory:" << path;
-      return Status::IOError("Failed to create directory");
+      if (!std::filesystem::exists(path)) {
+        VLOG(100) << "directory exists" << path;
+      } else {
+        VLOG(100) << "Failed to create directory:" << path;
+        return Status::IOError("Failed to create directory");
+      }
     }
   }
   return Status::OK();
@@ -164,16 +174,32 @@ Status LocalFileStorage::Delete(std::string path) {
 }
 
 std::string LocalFileStorage::GetTmpFileDir(std::string filePath) {
-  pid_t pid = getpid();
-  return this->tempFileDir + std::to_string(pid);
+  //pid_t pid = getpid();
+  char* pod_name_str = getenv("POD_NAME");
+  if (pod_name_str == nullptr) {
+    return this->tempFileDir;
+  }
+  std::string pod_name = pod_name_str;
+  return this->tempFileDir + pod_name;
 }
 
 Status LocalFileStorage::MoveFileAtomic(std::string src, std::string dst) {
   if (renameat2(AT_FDCWD, src.c_str(), AT_FDCWD, dst.c_str(),
-                RENAME_NOREPLACE)) {
+                  RENAME_NOREPLACE)) {
     return Status::IOError("Failed to move file");
   }
   return Status::OK();
 }
+/*
+  struct stat buffer;
+  if (stat(dst.c_str(), &buffer) == 0) {
+    return Status::IOError("Destination file exists");
+  }
+
+  if (renameat(AT_FDCWD, src.c_str(), AT_FDCWD, dst.c_str())) {
+    return Status::IOError("Failed to move file");
+  }
+  return Status::OK();
+}*/
 
 }  // namespace vineyard

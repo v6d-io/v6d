@@ -65,7 +65,7 @@ Status FileStorage::Update(
       continue;
     }
 
-    RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
+    Mkdir(tmpPath.parent_path().string());
     if (!Open(tmpPathStr, fd, FileOperationType::WRITE).ok()) {
       return Status::OK();
     }

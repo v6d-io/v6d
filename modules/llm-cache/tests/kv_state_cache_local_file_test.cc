@@ -20,7 +20,6 @@ limitations under the License.
 
 #include "rax/radix.h"
 
-#include "common/util/logging.h"
 #include "llm-cache/ds/config.h"
 #include "llm-cache/ds/kv_state_cache_manager.h"
 

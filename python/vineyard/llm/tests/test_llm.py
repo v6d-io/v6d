@@ -49,8 +49,9 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
     ]
 
     tokens = [1, 2, 3, 4]
+    prefix = None
     # insert the token list and the related kv cache list
-    cache.update(tokens, kv_cache_list)
+    cache.update(prefix, tokens, kv_cache_list)
 
     queried_kv_cache_list = cache.query(tokens)
 
@@ -89,8 +90,12 @@ def test_kv_cache_update_and_query_on_fs():
     ]
 
     tokens = [1, 2, 3, 4]
+    # update by batch
+    for i in range(int(len(tokens)/2)):
+        prefix = tokens[i*2-2:i*2]
+        current = tokens[i*2:i*2+2]
+        cache.update(prefix, current, kv_cache_list[i*4:i*4+4])
     # insert the token list and the related kv cache list
-    cache.update(tokens, kv_cache_list)
 
     queried_kv_cache_list = cache.query(tokens)
 
