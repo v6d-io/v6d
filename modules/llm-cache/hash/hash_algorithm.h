@@ -26,24 +26,25 @@ namespace vineyard {
 class IHashAlgorithm {
  public:
   virtual ~IHashAlgorithm() {}
-  virtual uint32_t hash(const std::string& input) = 0;
+  virtual uint32_t hash(const std::string& input) {
+    return hash(input.c_str(), input.size());
+  }
+  virtual uint32_t hash(const char *data, size_t length) = 0;
 };
 
 class MurmurHash3Algorithm : public IHashAlgorithm {
  public:
-  uint32_t hash(const std::string& input) override {
-    uint32_t value;
-    MurmurHash3_x86_32(input.c_str(), input.size(), 0, &value);
+  uint32_t hash(const char *data, size_t length) override {
+    uint32_t value = -1;
+    MurmurHash3_x86_32(data, length, 0, &value);
     return value;
   }
 };
 
 class CityHashAlgorithm : public IHashAlgorithm {
  public:
-  uint32_t hash(const std::string& input) override {
-    uint32_t value;
-    value = city::detail::CityHash32(input.c_str(), input.size());
-    return value;
+  uint32_t hash(const char *data, size_t length) override {
+    return city::detail::CityHash32(data, length);
   }
 };
 

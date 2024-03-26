@@ -26,11 +26,6 @@ namespace py = pybind11;
 
 namespace vineyard {
 
-LLMKV create_llmkv_from_buffer(py::buffer buffer, size_t size) {
-  py::buffer_info info = buffer.request();
-  return LLMKV{info.ptr, size};
-}
-
 PYBIND11_MODULE(llm_C, m) {
   m.doc() = "vineyard llm kv cache manager module";
 
@@ -38,11 +33,13 @@ PYBIND11_MODULE(llm_C, m) {
       .value("LOCAL", FilesystemType::LOCAL)
       .export_values();
 
-  py::class_<LLMKV>(m, "KVTensor")
-      .def(py::init(&create_llmkv_from_buffer), py::arg("buffer"),
-           py::arg("size"))
+  py::class_<LLMKV>(m, "KVTensor", py::buffer_protocol())
+      .def(py::init([](uintptr_t data, size_t length) {
+             return LLMKV{reinterpret_cast<void *>(data), length};
+           }),
+           py::arg("data"), py::arg("length"))
       .def_readwrite("length", &LLMKV::length)
-      .def("data", [](LLMKV& self) -> py::buffer_info {
+      .def_buffer([](LLMKV& self) -> py::buffer_info {
         return py::buffer_info(self.data, sizeof(char),
                                py::format_descriptor<char>::value, 1,
                                {self.length}, {sizeof(char)});
@@ -53,44 +50,47 @@ PYBIND11_MODULE(llm_C, m) {
       .def(
           "update",
           [](KVStateCacheManager* self, std::vector<int>& tokenList,
-             int& nextToken,
+             int& next_token,
              const std::map<int, std::pair<vineyard::LLMKV, vineyard::LLMKV>>&
                  kv_state) {
-            VINEYARD_CHECK_OK(self->Update(tokenList, nextToken, kv_state));
+            VINEYARD_CHECK_OK(self->Update(tokenList, next_token, kv_state));
           },
-          py::arg("tokenList"), py::arg("nextToken"), py::arg("kv_state"))
+          py::arg("tokens"), py::arg("next_token"), py::arg("kv_state"))
       .def(
           "update",
-          [](KVStateCacheManager* self, std::vector<int>& tokenList,
+          [](KVStateCacheManager* self, std::vector<int>& tokens,
              const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>&
-                 kv_state_list) {
-            VINEYARD_CHECK_OK(self->Update(tokenList, kv_state_list));
+                 kv_states) {
+            VINEYARD_CHECK_OK(self->Update(tokens, kv_states));
           },
-          py::arg("tokenList"), py::arg("kv_state_list"))
+          py::arg("tokens"), py::arg("kv_states"))
       .def(
           "update",
           [](KVStateCacheManager* self, std::vector<int>& prefix,
-             std::vector<int>& tokenList,
+             std::vector<int>& tokens,
              const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>&
-                 kv_state_list) {
-            VINEYARD_CHECK_OK(self->Update(prefix, tokenList, kv_state_list));
+                 kv_states) {
+            VINEYARD_CHECK_OK(self->Update(prefix, tokens, kv_states));
           },
-          py::arg("prefix"), py::arg("tokenList"), py::arg("kv_state_list"))
+          py::arg("prefix"), py::arg("tokens"), py::arg("kv_states"))
       .def(
           "query",
-          [](KVStateCacheManager* self, std::vector<int>& tokenList,
-             int& nextToken, std::map<int, std::pair<LLMKV, LLMKV>>& kv_state) {
-            VINEYARD_CHECK_OK(self->Query(tokenList, nextToken, kv_state));
+          [](KVStateCacheManager* self, std::vector<int>& tokens,
+             int& next_token) -> std::map<int, std::pair<LLMKV, LLMKV>> {
+            std::map<int, std::pair<LLMKV, LLMKV>> kv_state;
+            VINEYARD_CHECK_OK(self->Query(tokens, next_token, kv_state));
+            return kv_state;
           },
-          py::arg("tokenList"), py::arg("nextToken"), py::arg("kv_state"))
+          py::arg("tokens"), py::arg("next_token"))
       .def(
           "query",
-          [](KVStateCacheManager* self, std::vector<int>& tokenList,
-             std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>&
-                 kv_state_list) {
-            VINEYARD_CHECK_OK(self->Query(tokenList, kv_state_list));
+          [](KVStateCacheManager* self, std::vector<int>& tokens)  -> std::vector<std::map<int, std::pair<LLMKV, LLMKV>>> {
+            std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>
+                 kv_state_list;
+            VINEYARD_CHECK_OK(self->Query(tokens, kv_state_list));
+            return kv_state_list;
           },
-          py::arg("tokenList"), py::arg("kv_state_list"))
+          py::arg("tokens"))
       .def("close", [](KVStateCacheManager* self) { self->Close(); });
 
   m.def(
@@ -98,7 +98,7 @@ PYBIND11_MODULE(llm_C, m) {
        [](py::object ipc_client, int tensor_bytes, int cache_capacity,
           int layer, int block_size, int sync_interval,
           std::string llm_cache_sync_lock, std::string llm_cache_object_name,
-          std::string llm_ref_cnt_object_name) -> py::object {
+          std::string llm_ref_cnt_object_name) -> std::shared_ptr<KVStateCacheManager> {
          std::shared_ptr<KVStateCacheManager> manager;
          VineyardCacheConfig config(tensor_bytes, cache_capacity, layer,
                                     block_size, sync_interval,
@@ -110,7 +110,7 @@ PYBIND11_MODULE(llm_C, m) {
          if (!status.ok()) {
            throw std::runtime_error(status.ToString());
          }
-         return py::cast(manager);
+         return manager;
        },
        py::arg("ipc_client"), py::arg("tensor_bytes") = 10,
        py::arg("cache_capacity") = 10, py::arg("layer") = 1,
@@ -120,22 +120,18 @@ PYBIND11_MODULE(llm_C, m) {
        py::arg("llm_ref_cnt_object_name") = "llm_refcnt_object")
       .def(
           "_generate",
-          [](int tensor_bytes, int cache_capacity, int layer, int batch_size,
+          [](int tensor_bytes, int cache_capacity, int layer, int chunk_size,
              int split_number, std::string root,
-             FilesystemType filesystemType) -> py::object {
+             FilesystemType filesystemType) -> std::shared_ptr<KVStateCacheManager> {
             std::shared_ptr<KVStateCacheManager> manager;
             FileCacheConfig config(tensor_bytes, cache_capacity, layer,
-                                   batch_size, split_number, root,
+                                   chunk_size, split_number, root,
                                    filesystemType);
-            vineyard::Status status =
-                vineyard::KVStateCacheManager::Make(manager, config);
-            if (!status.ok()) {
-              throw std::runtime_error(status.ToString());
-            }
-            return py::cast(manager);
+            VINEYARD_CHECK_OK(vineyard::KVStateCacheManager::Make(manager, config));
+            return manager;
           },
           py::arg("tensor_bytes") = 10, py::arg("cache_capacity") = 10,
-          py::arg("layer") = 1, py::arg("batch_size") = 5,
+          py::arg("layer") = 1, py::arg("chunk_size") = 5,
           py::arg("split_number") = 3, py::arg("root") = "root",
           py::arg("filesystem_type") = FilesystemType::LOCAL);
 }
