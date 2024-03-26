@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -45,12 +46,16 @@ enum FileOperationType {
   WRITE = 1 << 1,
 };
 
+static std::mutex fileStorageLock;
+
 class FileStorage : public IStorage {
  private:
   bool CompareTokenList(const std::vector<int>& tokenList,
                         const std::vector<int>& tokenList2, size_t length);
 
   void CloseCache() override {}
+
+  virtual std::shared_ptr<FileDescriptor> CreateFileDescriptor() = 0;
 
   virtual Status Open(std::string path, std::shared_ptr<FileDescriptor>& fd,
                       FileOperationType fileOperationType) = 0;
@@ -71,11 +76,17 @@ class FileStorage : public IStorage {
   virtual Status GetCurrentPos(std::shared_ptr<FileDescriptor>& fd,
                                size_t& pos) = 0;
 
+  virtual Status MoveFileAtomic(std::string src, std::string dst) = 0;
+
   virtual Status Flush(std::shared_ptr<FileDescriptor>& fd) = 0;
 
   virtual Status Close(std::shared_ptr<FileDescriptor>& fd) = 0;
 
+  virtual Status Delete(std::string path) = 0;
+
   virtual bool IsFileExist(const std::string& path) = 0;
+
+  virtual std::string GetTmpFileDir(std::string filePath) = 0;
 
  public:
   FileStorage() = default;
@@ -88,6 +99,10 @@ class FileStorage : public IStorage {
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
                 const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) override;
+
+  Status Update(
+      const std::vector<int>& prefix, const std::vector<int>& tokenList,
+      const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList);
 
   Status Query(const std::vector<int>& tokenList,
                std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList)
@@ -103,6 +118,7 @@ class FileStorage : public IStorage {
   int batchSize;
   int splitNumber;
   std::string rootPath;
+  std::string tempFileDir;
   std::shared_ptr<IHashAlgorithm> hashAlgorithm;
   std::shared_ptr<Hasher> hasher;
 };

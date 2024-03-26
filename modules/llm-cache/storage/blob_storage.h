@@ -71,6 +71,10 @@ class BlobStorage : public IStorage {
                 const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>&
                     kvStateList) override;
 
+  Status Update(
+      const std::vector<int>& prefix, const std::vector<int>& tokenList,
+      const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList);
+
   Status Query(const std::vector<int>& tokenList, int token,
                std::map<int, std::pair<LLMKV, LLMKV>>& kvState) override;
 

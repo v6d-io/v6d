@@ -151,6 +151,28 @@ Status BlobStorage::Update(
   return Status::OK();
 }
 
+Status BlobStorage::Update(
+    const std::vector<int>& prefix, const std::vector<int>& tokenList,
+    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+  std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
+  if (!lock.try_lock()) {
+    return Status::OK();
+  }
+  if (isClosed) {
+    return Status::Invalid("The memory storage is closed.");
+  }
+  std::vector<int> tokenListCopy(prefix.begin(), prefix.end());
+  for (size_t i = 0; i < tokenList.size(); i++) {
+    Status result = UpdateInternal(tokenListCopy, tokenList[i], kvStateList[i]);
+    if (!result.ok()) {
+      break;
+    }
+    tokenListCopy.push_back(tokenList[i]);
+  }
+
+  return Status::OK();
+}
+
 Status BlobStorage::Query(const std::vector<int>& tokenList, int token,
                           std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);

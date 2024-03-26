@@ -13,21 +13,29 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <mutex>
 #include <string>
 
 #include "common/util/logging.h"
 #include "llm-cache/storage/local_file_storage.h"
 
 namespace vineyard {
+std::shared_ptr<FileDescriptor> LocalFileStorage::CreateFileDescriptor() {
+  return std::make_shared<LocalFileDescriptor>();
+}
+
 Status LocalFileStorage::Open(std::string path,
                               std::shared_ptr<FileDescriptor>& fd,
                               FileOperationType fileOperationType) {
-  fd = std::make_shared<LocalFileDescriptor>();
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
+
   std::ios_base::openmode mode = std::ios_base::binary;
   if (fileOperationType & FileOperationType::READ) {
     mode |= std::ios_base::in;
@@ -65,8 +73,9 @@ Status LocalFileStorage::Read(std::shared_ptr<FileDescriptor>& fd, void* data,
       std::static_pointer_cast<LocalFileDescriptor>(fd);
   lfd->fstream.read(reinterpret_cast<char*>(data), size);
   if (!lfd->fstream.good()) {
-    lfd->fstream.clear();
     VLOG(100) << "Failed to read file: ";
+    VLOG(100) << "error code:" << lfd->fstream.rdstate();
+    lfd->fstream.clear();
     return Status::IOError("Failed to read file");
   }
   return Status::OK();
@@ -80,6 +89,7 @@ Status LocalFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
   if (!lfd->fstream.good()) {
     lfd->fstream.clear();
     VLOG(100) << "Failed to write file: ";
+    VLOG(100) << "error code:" << lfd->fstream.rdstate();
     return Status::IOError("Failed to write file");
   }
   return Status::OK();
@@ -87,8 +97,10 @@ Status LocalFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
 
 Status LocalFileStorage::Mkdir(std::string path) {
   // create the directory if it does not exist
+  VLOG(100) << "Create directory:" << path;
   if (!std::filesystem::exists(path)) {
     if (!std::filesystem::create_directories(path)) {
+      VLOG(100) << "Failed to create directory:" << path;
       return Status::IOError("Failed to create directory");
     }
   }
@@ -142,6 +154,26 @@ Status LocalFileStorage::GetFileSize(std::shared_ptr<FileDescriptor>& fd,
 
 bool LocalFileStorage::IsFileExist(const std::string& path) {
   return std::filesystem::exists(path);
+}
+
+Status LocalFileStorage::Delete(std::string path) {
+  if (std::filesystem::exists(path)) {
+    std::filesystem::remove_all(path);
+  }
+  return Status::OK();
+}
+
+std::string LocalFileStorage::GetTmpFileDir(std::string filePath) {
+  pid_t pid = getpid();
+  return this->tempFileDir + std::to_string(pid);
+}
+
+Status LocalFileStorage::MoveFileAtomic(std::string src, std::string dst) {
+  if (renameat2(AT_FDCWD, src.c_str(), AT_FDCWD, dst.c_str(),
+                RENAME_NOREPLACE)) {
+    return Status::IOError("Failed to move file");
+  }
+  return Status::OK();
 }
 
 }  // namespace vineyard

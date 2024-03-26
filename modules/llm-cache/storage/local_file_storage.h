@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <fstream>
 #include <memory>
+#include <regex>
 #include <string>
 
 #include "llm-cache/storage/file_storage.h"
@@ -26,6 +27,8 @@ namespace vineyard {
 
 struct LocalFileDescriptor : public FileDescriptor {
   std::fstream fstream;
+  std::string path;
+  int lockFD;
 };
 
 class LocalFileStorage : public FileStorage {
@@ -39,10 +42,14 @@ class LocalFileStorage : public FileStorage {
     this->layer = layer;
     this->batchSize = batchSize;
     this->splitNumber = splitNumber;
-    this->rootPath = rootPath;
+    this->rootPath = std::regex_replace(rootPath + "/", std::regex("/+"), "/");
+    this->tempFileDir =
+        std::regex_replace(rootPath + "/__temp/", std::regex("/+"), "/");
   }
 
   ~LocalFileStorage() = default;
+
+  std::shared_ptr<FileDescriptor> CreateFileDescriptor() override;
 
   Status Open(std::string path, std::shared_ptr<FileDescriptor>& fd,
               FileOperationType fileOperationType) override;
@@ -63,11 +70,17 @@ class LocalFileStorage : public FileStorage {
   Status GetCurrentPos(std::shared_ptr<FileDescriptor>& fd,
                        size_t& pos) override;
 
+  Status MoveFileAtomic(std::string src, std::string dst) override;
+
   bool IsFileExist(const std::string& path) override;
 
   Status Flush(std::shared_ptr<FileDescriptor>& fd) override;
 
   Status Close(std::shared_ptr<FileDescriptor>& fd) override;
+
+  Status Delete(std::string path) override;
+
+  std::string GetTmpFileDir(std::string filePath) override;
 };
 
 }  // namespace vineyard

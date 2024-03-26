@@ -30,15 +30,8 @@ Status FileStorage::Update(
     const std::vector<int>& tokenList,
     const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
   std::vector<std::string> pathList;
-  std::string dir = rootPath;
   std::string path;
   int tokenLength;
-
-  VINEYARD_ASSERT(batchSize > 0);
-  // check if the root path ends with '/'
-  if (dir.size() != 0 && dir.back() != '/') {
-    dir += "/";
-  }
 
   RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, batchSize,
                                                splitNumber, pathList));
@@ -47,14 +40,38 @@ Status FileStorage::Update(
   }
   for (size_t i = 0; i < pathList.size(); i++) {
     tokenLength = (i + 1) * batchSize;
-    std::shared_ptr<FileDescriptor> fd;
-    std::filesystem::path filePath(dir + pathList[i]);
-    RETURN_ON_ERROR(Mkdir(filePath.parent_path().string()));
-    if (IsFileExist(filePath.string())) {
-      // reject to update the existed file
+    std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
+    std::string tmpPathStr = GetTmpFileDir(pathList[i]);
+    std::filesystem::path tmpPath(tmpPathStr);
+    std::string pathStr = this->rootPath + pathList[i];
+    std::filesystem::path path(pathStr);
+
+    RETURN_ON_ERROR(Mkdir(path.parent_path().string()));
+    std::lock_guard<std::mutex> lock(fileStorageLock);
+
+    if (Open(pathStr, fd, FileOperationType::READ).ok()) {
+      int tokenLength;
+      Read(fd, &tokenLength, sizeof(int));
+      std::vector<int> tokens;
+      tokens.resize(tokenLength);
+      Read(fd, tokens.data(), tokenLength * sizeof(int));
+      if (!CompareTokenList(tokenList, tokens, tokenLength)) {
+        // Token list not match
+        RETURN_ON_ERROR(Close(fd));
+        return Status::OK();
+      }
+      // Skip this kv state
+      RETURN_ON_ERROR(Close(fd));
+      continue;
+    }
+
+    RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
+    if (!Open(tmpPathStr, fd, FileOperationType::WRITE).ok()) {
       return Status::OK();
     }
-    RETURN_ON_ERROR(Open(filePath.string(), fd, FileOperationType::WRITE));
+
+    // Currently we do not consider delete.
+
     RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
     RETURN_ON_ERROR(Write(fd, tokenList.data(), tokenLength * sizeof(int)));
     for (size_t currentTokenIndex = i * batchSize;
@@ -73,7 +90,103 @@ Status FileStorage::Update(
         RETURN_ON_ERROR(Write(fd, v, length));
       }
     }
+
     RETURN_ON_ERROR(Close(fd));
+    if (!MoveFileAtomic(tmpPathStr, pathStr).ok()) {
+      // Move failed. There exists a file with the same name.
+      Delete(tmpPathStr);
+      return Status::OK();
+    }
+  }
+
+  return Status::OK();
+}
+
+Status FileStorage::Update(
+    const std::vector<int>& prefix, const std::vector<int>& tokenList,
+    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+  if (prefix.size() % batchSize != 0) {
+    return Status::Invalid("Prefix size should be multiple of batch size!");
+  }
+
+  std::vector<std::string> pathList;
+  std::string path;
+  int tokenLength;
+  std::vector<int> totalTokenList(prefix.begin(), prefix.end());
+  totalTokenList.insert(totalTokenList.end(), tokenList.begin(),
+                        tokenList.end());
+
+  RETURN_ON_ERROR(hasher->computePathForTokens(totalTokenList, batchSize,
+                                               splitNumber, pathList));
+  if (pathList.size() == 0) {
+    return Status::OK();
+  }
+  size_t kvStateIndex = 0;
+  for (size_t i = 0; i < pathList.size(); i++) {
+    tokenLength = (i + 1) * batchSize;
+    std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
+    std::string tmpPathStr = GetTmpFileDir(pathList[i]);
+    std::filesystem::path tmpPath(tmpPathStr);
+    std::string pathStr = this->rootPath + pathList[i];
+    std::filesystem::path path(pathStr);
+
+    RETURN_ON_ERROR(Mkdir(path.parent_path().string()));
+    std::lock_guard<std::mutex> lock(fileStorageLock);
+
+    if (Open(pathStr, fd, FileOperationType::READ).ok()) {
+      int tokenLength;
+      Read(fd, &tokenLength, sizeof(int));
+      std::vector<int> tokens;
+      tokens.resize(tokenLength);
+      Read(fd, tokens.data(), tokenLength * sizeof(int));
+      if (!CompareTokenList(totalTokenList, tokens, tokenLength)) {
+        // Token list not match
+        RETURN_ON_ERROR(Close(fd));
+        return Status::OK();
+      }
+      // Skip this kv state
+      RETURN_ON_ERROR(Close(fd));
+      continue;
+    }
+
+    RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
+    if (!Open(tmpPathStr, fd, FileOperationType::WRITE).ok()) {
+      return Status::OK();
+    }
+    if (i * batchSize != kvStateIndex + prefix.size()) {
+      /**
+       * This can happen if someone else deletes a file that matches
+       * the token halfway.
+       */
+      return Status::OK();
+    }
+
+    // Currently we do not consider delete.
+
+    RETURN_ON_ERROR(Write(fd, &tokenLength, sizeof(int)));
+    RETURN_ON_ERROR(
+        Write(fd, totalTokenList.data(), tokenLength * sizeof(int)));
+    for (size_t currentTokenIndex = i * batchSize;
+         currentTokenIndex < (i + 1) * batchSize; currentTokenIndex++) {
+      for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+        const void* k =
+            kvStateList[kvStateIndex].find(currentLayer)->second.first.data;
+        const void* v =
+            kvStateList[kvStateIndex].find(currentLayer)->second.second.data;
+        size_t length =
+            kvStateList[kvStateIndex].find(currentLayer)->second.first.length;
+        RETURN_ON_ERROR(Write(fd, k, length));
+        RETURN_ON_ERROR(Write(fd, v, length));
+      }
+    }
+    kvStateIndex += batchSize;
+
+    RETURN_ON_ERROR(Close(fd));
+    if (!MoveFileAtomic(tmpPathStr, pathStr).ok()) {
+      // Move failed. There exists a file with the same name.
+      Delete(tmpPathStr);
+      return Status::OK();
+    }
   }
 
   return Status::OK();
@@ -90,14 +203,17 @@ Status FileStorage::Query(
     const std::vector<int>& tokenList,
     std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
   std::vector<std::string> paths;
+  std::string dir = rootPath;
   RETURN_ON_ERROR(
       hasher->computePathForTokens(tokenList, batchSize, splitNumber, paths));
 
   for (size_t i = 0; i < paths.size(); i++) {
-    std::shared_ptr<FileDescriptor> fd;
+    std::filesystem::path filePath(dir + paths[i]);
+    std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
+
+    std::lock_guard<std::mutex> lock(fileStorageLock);
     // If open failed, it means the kv state is not in the cache(file not exist)
-    if (!Open(rootPath + paths[i], fd, FileOperationType::READ).ok()) {
-      VLOG(100) << "file not exist";
+    if (!Open(filePath.string(), fd, FileOperationType::READ).ok()) {
       return Status::OK();
     }
 
