@@ -174,13 +174,13 @@ Status LocalFileStorage::Delete(std::string path) {
 }
 
 std::string LocalFileStorage::GetTmpFileDir(std::string filePath) {
-  //pid_t pid = getpid();
+  pid_t pid = getpid();
   char* pod_name_str = getenv("POD_NAME");
   if (pod_name_str == nullptr) {
-    return this->tempFileDir;
+    return this->tempFileDir + std::to_string(pid);
   }
   std::string pod_name = pod_name_str;
-  return this->tempFileDir + pod_name;
+  return this->tempFileDir + pod_name + "/" + std::to_string(pid);
 }
 
 Status LocalFileStorage::MoveFileAtomic(std::string src, std::string dst) {

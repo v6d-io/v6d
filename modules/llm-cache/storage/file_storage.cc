@@ -21,6 +21,7 @@ limitations under the License.
 #include <vector>
 
 #include "common/util/status.h"
+#include "common/util/logging.h"
 #include "llm-cache/storage/file_storage.h"
 
 namespace vineyard {
