@@ -32,29 +32,27 @@ std::shared_ptr<FileDescriptor> LocalFileStorage::CreateFileDescriptor() {
   return std::make_shared<LocalFileDescriptor>();
 }
 
+static std::string formatIOError(std::string const &path) {
+  std::stringstream ss;
+  ss << " at " << path << ", errno: " << errno << ", error: " << strerror(errno);
+  return ss.str();
+}
+
 Status LocalFileStorage::Open(std::string path,
                               std::shared_ptr<FileDescriptor>& fd,
                               FileOperationType fileOperationType) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
 
-  std::ios_base::openmode mode = std::ios_base::binary;
+  int flag = 0;
   if (fileOperationType & FileOperationType::READ) {
-    mode |= std::ios_base::in;
+    flag |= O_RDONLY;
+  } else {
+    flag |= O_RDWR | O_CREAT;
   }
-  if (fileOperationType & FileOperationType::WRITE) {
-    mode |= std::ios_base::out;
-  }
-  lfd->fstream.open(path, mode);
-
-  if (!lfd->fstream.is_open()) {
-    // if the file has been opened by another process, we should return
-    // OK status
-    if (errno != EINTR) {
-        VLOG(100) << "Failed to open file: " << path << " "
-              << lfd->fstream.rdstate();
-      return Status::IOError("Failed to open file: " + path);
-    }
+  lfd->fd = open(path.c_str(), flag, 0666);
+  if (lfd->fd == -1) {
+    return Status::IOError("Failed to open file: " + formatIOError(path));
   }
   return Status::OK();
 }
@@ -63,12 +61,8 @@ Status LocalFileStorage::Seek(std::shared_ptr<FileDescriptor>& fd,
                               size_t offset) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
-  lfd->fstream.seekp(offset);
-  lfd->fstream.seekg(offset);
-  if (!lfd->fstream.good()) {
-    lfd->fstream.clear();
-    VLOG(100) << "Failed to seek file: ";
-    return Status::IOError("Failed to seek file");
+  if (lseek(lfd->fd, offset, SEEK_SET) == -1) {
+    return Status::IOError("Failed to seek file: " + formatIOError(lfd->path));
   }
   return Status::OK();
 }
@@ -77,12 +71,8 @@ Status LocalFileStorage::Read(std::shared_ptr<FileDescriptor>& fd, void* data,
                               size_t size) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
-  lfd->fstream.read(reinterpret_cast<char*>(data), size);
-  if (!lfd->fstream.good()) {
-    VLOG(100) << "Failed to read file: ";
-    VLOG(100) << "error code:" << lfd->fstream.rdstate();
-    lfd->fstream.clear();
-    return Status::IOError("Failed to read file");
+  if (read(lfd->fd, data, size) == -1) {
+    return Status::IOError("Failed to read file: " + formatIOError(lfd->path));
   }
   return Status::OK();
 }
@@ -91,12 +81,8 @@ Status LocalFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
                                const void* data, size_t size) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
-  lfd->fstream.write(reinterpret_cast<const char*>(data), size);
-  if (!lfd->fstream.good()) {
-    lfd->fstream.clear();
-    VLOG(100) << "Failed to write file: ";
-    VLOG(100) << "error code:" << lfd->fstream.rdstate();
-    return Status::IOError("Failed to write file");
+  if (write(lfd->fd, data, size) == -1) {
+    return Status::IOError("Failed to write file: " + formatIOError(lfd->path));
   }
   return Status::OK();
 }
@@ -120,11 +106,7 @@ Status LocalFileStorage::Mkdir(std::string path) {
 Status LocalFileStorage::Flush(std::shared_ptr<FileDescriptor>& fd) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
-  lfd->fstream.flush();
-  if (!lfd->fstream.good()) {
-    lfd->fstream.clear();
-    return Status::IOError("Failed to flush file");
-  }
+  fdatasync(lfd->fd);
   return Status::OK();
 }
 
@@ -132,17 +114,15 @@ Status LocalFileStorage::GetCurrentPos(std::shared_ptr<FileDescriptor>& fd,
                                        size_t& pos) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
-  pos = lfd->fstream.tellp();
+  pos = lseek(lfd->fd, 0, SEEK_CUR);
   return Status::OK();
 }
 
 Status LocalFileStorage::Close(std::shared_ptr<FileDescriptor>& fd) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
-  lfd->fstream.close();
-  if (lfd->fstream.is_open()) {
-    VLOG(100) << "Failed to close";
-    return Status::IOError("Failed to close file");
+  if (close(lfd->fd) == -1) {
+    return Status::IOError("Failed to close file: " + formatIOError(lfd->path));
   }
   return Status::OK();
 }
@@ -151,14 +131,9 @@ Status LocalFileStorage::GetFileSize(std::shared_ptr<FileDescriptor>& fd,
                                      size_t& size) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
-  size_t current_pos = lfd->fstream.tellp();
-  lfd->fstream.seekp(0, std::ios_base::end);
-  size = lfd->fstream.tellp();
-  VLOG(100) << "read size:" << size;
-  lfd->fstream.seekp(current_pos);
-  if (size < 0) {
-    return Status::IOError("Failed to get file size");
-  }
+  size_t current = lseek(lfd->fd, 0, SEEK_CUR);
+  size = lseek(lfd->fd, 0, SEEK_END);
+  lseek(lfd->fd, current, SEEK_SET);
   return Status::OK();
 }
 
@@ -176,7 +151,7 @@ Status LocalFileStorage::Delete(std::string path) {
 std::string LocalFileStorage::GetTmpFileDir(std::string filePath) {
   pid_t pid = getpid();
   char* pod_name_str = getenv("POD_NAME");
-  if (pod_name_str == nullptr) {
+  if (pod_name_str == nullptr or strlen(pod_name_str) == 0) {
     return this->tempFileDir + std::to_string(pid);
   }
   std::string pod_name = pod_name_str;

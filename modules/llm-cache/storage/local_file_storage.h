@@ -26,7 +26,7 @@ limitations under the License.
 namespace vineyard {
 
 struct LocalFileDescriptor : public FileDescriptor {
-  std::fstream fstream;
+  int fd;
   std::string path;
   int lockFD;
 };

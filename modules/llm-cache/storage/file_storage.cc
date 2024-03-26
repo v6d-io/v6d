@@ -50,10 +50,10 @@ Status FileStorage::Update(
 
     if (Open(pathStr, fd, FileOperationType::READ).ok()) {
       int tokenLength;
-      Read(fd, &tokenLength, sizeof(int));
+      RETURN_ON_ERROR(Read(fd, &tokenLength, sizeof(int)));
       std::vector<int> tokens;
       tokens.resize(tokenLength);
-      Read(fd, tokens.data(), tokenLength * sizeof(int));
+      RETURN_ON_ERROR(Read(fd, tokens.data(), tokenLength * sizeof(int)));
       if (!CompareTokenList(tokenList, tokens, tokenLength)) {
         // Token list not match
         RETURN_ON_ERROR(Close(fd));
@@ -64,7 +64,7 @@ Status FileStorage::Update(
       continue;
     }
 
-    Mkdir(tmpPath.parent_path().string());
+    RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
     if (!Open(tmpPathStr, fd, FileOperationType::WRITE).ok()) {
       return Status::OK();
     }
@@ -93,7 +93,7 @@ Status FileStorage::Update(
     RETURN_ON_ERROR(Close(fd));
     if (!MoveFileAtomic(tmpPathStr, pathStr).ok()) {
       // Move failed. There exists a file with the same name.
-      Delete(tmpPathStr);
+      VINEYARD_SUPPRESS(Delete(tmpPathStr));
       return Status::OK();
     }
   }
@@ -134,10 +134,10 @@ Status FileStorage::Update(
 
     if (Open(pathStr, fd, FileOperationType::READ).ok()) {
       int tokenLength;
-      Read(fd, &tokenLength, sizeof(int));
+      RETURN_ON_ERROR(Read(fd, &tokenLength, sizeof(int)));
       std::vector<int> tokens;
       tokens.resize(tokenLength);
-      Read(fd, tokens.data(), tokenLength * sizeof(int));
+      RETURN_ON_ERROR(Read(fd, tokens.data(), tokenLength * sizeof(int)));
       if (!CompareTokenList(totalTokenList, tokens, tokenLength)) {
         // Token list not match
         RETURN_ON_ERROR(Close(fd));
@@ -183,7 +183,7 @@ Status FileStorage::Update(
     RETURN_ON_ERROR(Close(fd));
     if (!MoveFileAtomic(tmpPathStr, pathStr).ok()) {
       // Move failed. There exists a file with the same name.
-      Delete(tmpPathStr);
+      VINEYARD_SUPPRESS(Delete(tmpPathStr));
       return Status::OK();
     }
   }
@@ -217,10 +217,10 @@ Status FileStorage::Query(
     }
 
     int tokenLength;
-    Read(fd, &tokenLength, sizeof(int));
+    RETURN_ON_ERROR(Read(fd, &tokenLength, sizeof(int)));
     std::vector<int> prefix;
     prefix.resize(tokenLength);
-    Read(fd, prefix.data(), tokenLength * sizeof(int));
+    RETURN_ON_ERROR(Read(fd, prefix.data(), tokenLength * sizeof(int)));
 
     if (!CompareTokenList(tokenList, prefix, prefix.size())) {
       RETURN_ON_ERROR(Close(fd));
@@ -233,8 +233,8 @@ Status FileStorage::Query(
           k.length = v.length = tensorBytes;
           k.data = new uint8_t[k.length];
           v.data = new uint8_t[v.length];
-          Read(fd, k.data, k.length);
-          Read(fd, v.data, v.length);
+          RETURN_ON_ERROR(Read(fd, k.data, k.length));
+          RETURN_ON_ERROR(Read(fd, v.data, v.length));
           kvState.insert(std::make_pair(currentLayer, std::make_pair(k, v)));
         }
         kvStateList.push_back(kvState);
