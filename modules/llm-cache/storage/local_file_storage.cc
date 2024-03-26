@@ -166,7 +166,6 @@ Status LocalFileStorage::MoveFileAtomic(std::string src, std::string dst) {
 
   // Use open and then rename to avoid the unsupported issue on NFS.
   int dst_fd = open(dst.c_str(), O_CREAT | O_RDWR, 0666);
-  LOG(INFO) << "dst fd = " << dst_fd;
   if (dst_fd == -1) {
     return Status::IOError("Failed to create file: " + formatIOError(dst));
   } else {
