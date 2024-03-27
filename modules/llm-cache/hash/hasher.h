@@ -57,7 +57,6 @@ class Hasher {
   Status computePathForTokens(const std::vector<int>& tokenList, int batchSize,
                               int splitNumber,
                               std::vector<std::string>& pathList) {
-    int hashValue;
     char hashBuffer[9];
     int tokenSize = tokenList.size() - tokenList.size() % batchSize;
     // if the token list (upper_bound) is less than the batch size, then return
@@ -66,20 +65,11 @@ class Hasher {
       return Status::OK();
     }
 
-    // reserve the chunk size for the buffer and split by ' '
-    std::vector<char> buffer(batchSize * (sizeof(int) + 1), '\0');
-
     // split the token list into batches
     for (int i = 0; i < tokenSize; i += batchSize) {
-      char* buffer_ptr = buffer.data();
-      for (int j = i; j < i + batchSize && j < tokenSize; j++) {
-        size_t renaming_space = buffer.size() - (buffer_ptr - buffer.data());
-        buffer_ptr +=
-            std::snprintf(buffer_ptr, renaming_space, "%d ", tokenList[j]);
-      }
-      hashValue =
-          hashAlgorithm->hash(std::string(buffer.data(), buffer.size()));
-
+      int hashValue =
+          hashAlgorithm->hash(reinterpret_cast<const char*>(tokenList.data()),
+                              (i + batchSize) * sizeof(int));
       // split the hash value into paths
       std::snprintf(hashBuffer, sizeof(hashBuffer), "%08x", hashValue);
       int index = 0;

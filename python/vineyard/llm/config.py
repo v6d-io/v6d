@@ -63,7 +63,7 @@ class FileCacheConfig:
 
     def __init__(
         self,
-        batch_size: int = 16,
+        chunk_size: int = 16,
         split_number: int = 2,
         root: str = "/tmp/vineyard/llm_cache",
         filesystem_type: FilesystemType = FilesystemType.LOCAL,
@@ -71,7 +71,7 @@ class FileCacheConfig:
         """Create a file cache config.
 
         Args:
-            batch_size (int):
+            chunk_size (int):
                 Divide the token list into batches, each batch
                 contains batchSize tokens. Defaults to 16.
             split_number (int):
@@ -83,7 +83,7 @@ class FileCacheConfig:
             filesystem_type (str):
                 The type of the filesystem. Defaults to "local".
         """
-        self.batch_size = batch_size
+        self.chunk_size = chunk_size
         self.split_number = split_number
         self.root = root
         self.filesystem_type = filesystem_type
