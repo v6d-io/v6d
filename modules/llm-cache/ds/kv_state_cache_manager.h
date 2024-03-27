@@ -43,22 +43,22 @@ class KVStateCacheManager {
                      FileCacheConfig& config);
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
-                const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
+                const std::vector<std::pair<LLMKV, LLMKV>>& kvState);
 
   Status Update(
       const std::vector<int>& tokenList,
-      const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList);
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList);
 
   Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
-      const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList);
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList);
 
   Status Query(const std::vector<int>& tokenList, int token,
-               std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
+               std::vector<std::pair<LLMKV, LLMKV>>& kvState);
 
-  Status Query(
-      const std::vector<int>& tokenList,
-      std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList);
+  Status Query(const std::vector<int>& tokenList,
+               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+               size_t& matched);
 
   void Close();
 
@@ -66,7 +66,10 @@ class KVStateCacheManager {
 
   static Status ClearGlobalCache(Client& client, FileCacheConfig& config);
 
+  std::shared_ptr<KVCacheConfig> Config() { return config; }
+
  private:
+  std::shared_ptr<KVCacheConfig> config;
   std::shared_ptr<IStorage> storage;
 };
 

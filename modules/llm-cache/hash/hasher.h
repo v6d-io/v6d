@@ -67,8 +67,9 @@ class Hasher {
 
     // split the token list into batches
     for (int i = 0; i < tokenSize; i += batchSize) {
-      int hashValue = hashAlgorithm->hash(reinterpret_cast<const char *>(tokenList.data()),
-                                          (i + batchSize) * sizeof(int));
+      int hashValue =
+          hashAlgorithm->hash(reinterpret_cast<const char*>(tokenList.data()),
+                              (i + batchSize) * sizeof(int));
       // split the hash value into paths
       std::snprintf(hashBuffer, sizeof(hashBuffer), "%08x", hashValue);
       int index = 0;

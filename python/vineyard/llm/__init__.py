@@ -63,6 +63,7 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
                 The dtype of the tensor. Defaults to None.
                 e.g., numpy.float32, numpy.float64.
         """
+        self.kv_cache_manager = None
         if not isinstance(cache_config, VineyardCacheConfig) and not isinstance(
             cache_config, FileCacheConfig
         ):
@@ -88,7 +89,7 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
         self,
         prefix: Optional[List[int]],
         tokens: List[int],
-        kv_state_list: List[Dict[int, Tuple[KVTensor, KVTensor]]],
+        kv_state_list: List[List[Tuple[KVTensor, KVTensor]]],
     ):
         """Update the kv cache stored in vineyard.
 
@@ -109,20 +110,23 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
     def query(
         self,
         tokens: List[int],
-    ) -> List[Dict[int, Tuple[KVTensor, KVTensor]]]:
+        kv_state_list: List[List[Tuple[KVTensor, KVTensor]]],
+    ) -> int:
         """Query the kv cache stored in vineyard.
 
         Args:
             tokens (list): the tokens of the kv cache
                 e,g, [1 2 3 4]
-
-        Returns:
-            (List[Tuple[KVTensor, KVTensor]]):
+            kv_state_list: (List[Tuple[KVTensor, KVTensor]]):
                 the kv tensors list of the related tokens including all layers.
 
                 The k, v tensor for i-th token at the j-th layer is: kv_state_list[i][j]
+
+        Returns:
+            int: The number of matched tokens.
         """
-        return self.kv_cache_manager.query(tokens)
+        return self.kv_cache_manager.query(tokens, kv_state_list)
 
     def __del__(self):
-        self.kv_cache_manager.close()
+        if self.kv_cache_manager:
+            self.kv_cache_manager.close()

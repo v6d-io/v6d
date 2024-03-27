@@ -103,19 +103,19 @@ Status BlobStorage::Make(Client& client, std::shared_ptr<BlobStorage>& storage,
 
 Status BlobStorage::UpdateInternal(
     const std::vector<int>& tokenList, int nextToken,
-    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    const std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   return kvStateCacheBuilder->Update(tokenList, nextToken, kvState);
 }
 
 Status BlobStorage::QueryInternal(
     const std::vector<int>& tokenList, int token,
-    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   return kvStateCacheBuilder->Query(tokenList, token, kvState);
 }
 
 Status BlobStorage::Update(
     const std::vector<int>& tokenList, int nextToken,
-    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    const std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
     // If failed to gain the lock, return OK and wait for next time
@@ -131,7 +131,7 @@ Status BlobStorage::Update(
 
 Status BlobStorage::Update(
     const std::vector<int>& tokenList,
-    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
     return Status::OK();
@@ -153,7 +153,7 @@ Status BlobStorage::Update(
 
 Status BlobStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
-    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
     return Status::OK();
@@ -174,7 +174,7 @@ Status BlobStorage::Update(
 }
 
 Status BlobStorage::Query(const std::vector<int>& tokenList, int token,
-                          std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+                          std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
     // If failed to gain the lock, return OK and wait for next time
@@ -189,7 +189,8 @@ Status BlobStorage::Query(const std::vector<int>& tokenList, int token,
 
 Status BlobStorage::Query(
     const std::vector<int>& tokenList,
-    std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    size_t& matched) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
     return Status::Invalid("Query cache failed: can not gain the cache lock.");
@@ -200,16 +201,16 @@ Status BlobStorage::Query(
 
   // support partial match of the token list
   // copy the token list and query the cache one token by one token
-  std::vector<int> tokenListCopy;
-  std::map<int, std::pair<LLMKV, LLMKV>> kvState;
-  for (size_t i = 0; i < tokenList.size(); i++) {
-    Status result = QueryInternal(tokenListCopy, tokenList[i], kvState);
+  matched = 0;
+  std::vector<int> tokenListPrefix;
+  for (size_t i = 0; i < tokenList.size() && i < kvStateList.size(); i++) {
+    Status result =
+        QueryInternal(tokenListPrefix, tokenList[i], kvStateList[i]);
     if (!result.ok()) {
       return Status::OK();
     }
-    tokenListCopy.push_back(tokenList[i]);
-    kvStateList.push_back(kvState);
-    kvState.clear();
+    matched += 1;
+    tokenListPrefix.push_back(tokenList[i]);
   }
 
   return Status::OK();

@@ -20,15 +20,15 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "common/util/status.h"
 #include "common/util/logging.h"
+#include "common/util/status.h"
 #include "llm-cache/storage/file_storage.h"
 
 namespace vineyard {
 
 Status FileStorage::Update(
     const std::vector<int>& tokenList,
-    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList) {
   std::vector<std::string> pathList;
   std::string path;
   int tokenLength;
@@ -67,7 +67,8 @@ Status FileStorage::Update(
     RETURN_ON_ERROR(Mkdir(tmpPath.parent_path().string()));
     auto status = Open(tmpPathStr, fd, FileOperationType::WRITE);
     if (!status.ok()) {
-      LOG(WARNING) << "Failed to create temporary cache entry: " << status.ToString();
+      LOG(WARNING) << "Failed to create temporary cache entry: "
+                   << status.ToString();
       return Status::OK();
     }
 
@@ -78,17 +79,10 @@ Status FileStorage::Update(
     for (size_t currentTokenIndex = i * batchSize;
          currentTokenIndex < (i + 1) * batchSize; currentTokenIndex++) {
       for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-        const void* k = kvStateList[currentTokenIndex]
-                            .find(currentLayer)
-                            ->second.first.data;
-        const void* v = kvStateList[currentTokenIndex]
-                            .find(currentLayer)
-                            ->second.second.data;
-        size_t length = kvStateList[currentTokenIndex]
-                            .find(currentLayer)
-                            ->second.first.length;
-        RETURN_ON_ERROR(Write(fd, k, length));
-        RETURN_ON_ERROR(Write(fd, v, length));
+        const LLMKV& k = kvStateList[currentTokenIndex][currentLayer].first;
+        const LLMKV& v = kvStateList[currentTokenIndex][currentLayer].second;
+        RETURN_ON_ERROR(Write(fd, k.data, k.length));
+        RETURN_ON_ERROR(Write(fd, v.data, k.length));
       }
     }
 
@@ -107,7 +101,7 @@ Status FileStorage::Update(
 
 Status FileStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
-    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList) {
   if (prefix.size() % batchSize != 0) {
     return Status::Invalid("Prefix size should be multiple of batch size!");
   }
@@ -173,14 +167,10 @@ Status FileStorage::Update(
     for (size_t currentTokenIndex = i * batchSize;
          currentTokenIndex < (i + 1) * batchSize; currentTokenIndex++) {
       for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-        const void* k =
-            kvStateList[kvStateIndex].find(currentLayer)->second.first.data;
-        const void* v =
-            kvStateList[kvStateIndex].find(currentLayer)->second.second.data;
-        size_t length =
-            kvStateList[kvStateIndex].find(currentLayer)->second.first.length;
-        RETURN_ON_ERROR(Write(fd, k, length));
-        RETURN_ON_ERROR(Write(fd, v, length));
+        const LLMKV& k = kvStateList[currentTokenIndex][currentLayer].first;
+        const LLMKV& v = kvStateList[currentTokenIndex][currentLayer].second;
+        RETURN_ON_ERROR(Write(fd, k.data, k.length));
+        RETURN_ON_ERROR(Write(fd, v.data, k.length));
       }
     }
     kvStateIndex += batchSize;
@@ -198,19 +188,21 @@ Status FileStorage::Update(
 
 Status FileStorage::Update(
     const std::vector<int>& tokenList, int nextToken,
-    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    const std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   // TBD
   return Status::NotImplemented();
 }
 
 Status FileStorage::Query(
     const std::vector<int>& tokenList,
-    std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    size_t& matched) {
   std::vector<std::string> paths;
   std::string dir = rootPath;
   RETURN_ON_ERROR(
       hasher->computePathForTokens(tokenList, batchSize, splitNumber, paths));
 
+  matched = 0;
   for (size_t i = 0; i < paths.size(); i++) {
     std::filesystem::path filePath(dir + paths[i]);
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
@@ -243,17 +235,21 @@ Status FileStorage::Query(
       return Status::OK();
     } else {
       for (int j = 0; j < batchSize; j++) {
-        std::map<int, std::pair<LLMKV, LLMKV>> kvState;
+        if (matched >= tokenList.size()) {
+          break;
+        }
+        auto& kvState = kvStateList[matched++];
         for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
-          LLMKV k, v;
-          k.length = v.length = tensorBytes;
-          k.data = new uint8_t[k.length];
-          v.data = new uint8_t[v.length];
+          RETURN_ON_ASSERT(static_cast<int>(kvState.size()) == layer,
+                           "The size of kvState is not equal to layer");
+          LLMKV& k = kvState[currentLayer].first;
+          LLMKV& v = kvState[currentLayer].second;
+          RETURN_ON_ASSERT(
+              k.length == tensorBytes && v.length == tensorBytes,
+              "The size of kv tensor doesn't match with the tensorBytes");
           RETURN_ON_ERROR(Read(fd, k.data, k.length));
           RETURN_ON_ERROR(Read(fd, v.data, v.length));
-          kvState.insert(std::make_pair(currentLayer, std::make_pair(k, v)));
         }
-        kvStateList.push_back(kvState);
       }
     }
 
@@ -264,7 +260,7 @@ Status FileStorage::Query(
 }
 
 Status FileStorage::Query(const std::vector<int>& tokenList, int nextToken,
-                          std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+                          std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   // TBD
   return Status::NotImplemented();
 }

@@ -151,19 +151,20 @@ Status KVStateCacheBlockBuilder::Make(
 }
 
 Status KVStateCacheBlockBuilder::Query(
-    int index, std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    int index, std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),
                    "Index out of range: " + std::to_string(index));
+  RETURN_ON_ASSERT(static_cast<int>(kvState.size()) == this->layer,
+                   "The size of kvState is not equal to layer");
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    LLMKV keyState = (kvState.find(currentLayer)->second).first;
-    LLMKV valueState = (kvState.find(currentLayer)->second).second;
+    LLMKV& keyState = kvState[currentLayer].first;
+    LLMKV& valueState = kvState[currentLayer].second;
     keyState.data =
         keyStateTensorBuilderList[currentLayer]->data() + index * tensorBytes;
     keyState.length = tensorBytes;
     valueState.data =
         valueStateTensorBuilderList[currentLayer]->data() + index * tensorBytes;
     valueState.length = tensorBytes;
-    kvState.emplace(currentLayer, std::make_pair(keyState, valueState));
   }
   return Status::OK();
 }
@@ -190,14 +191,16 @@ bool KVStateCacheBlockBuilder::IsFull() {
 }
 
 Status KVStateCacheBlockBuilder::Update(
-    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState, OffsetData* data) {
+    const std::vector<std::pair<LLMKV, LLMKV>>& kvState, OffsetData* data) {
   int index = this->FindEmptySlot();
   RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),
                    "Index out of range: " + std::to_string(index));
+  RETURN_ON_ASSERT(kvState.size() == static_cast<size_t>(this->layer),
+                   "The size of kvState is not equal to layer");
 
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    LLMKV keyState = (kvState.find(currentLayer)->second).first;
-    LLMKV valueState = (kvState.find(currentLayer)->second).second;
+    LLMKV keyState = kvState[currentLayer].first;
+    LLMKV valueState = kvState[currentLayer].second;
     RETURN_ON_ASSERT((keyState.length == (size_t) this->tensorBytes &&
                       valueState.length == (size_t) this->tensorBytes));
 

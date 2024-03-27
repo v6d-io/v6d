@@ -146,7 +146,7 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
    * @param kv_state The kv-state of the prompt. A LLM inference can contain
    * multiple kv-states for each layer.
    */
-  Status Update(const std::map<int, std::pair<LLMKV, LLMKV>>& kv_state,
+  Status Update(const std::vector<std::pair<LLMKV, LLMKV>>& kv_state,
                 OffsetData* data);
 
   /**
@@ -157,7 +157,7 @@ class KVStateCacheBlockBuilder : public ObjectBuilder {
    * @param kv_state The kv-state of the prompt returned by radix-tree. If the
    * kv-state is not found, the data of kv-state is invalid.
    */
-  Status Query(int index, std::map<int, std::pair<LLMKV, LLMKV>>& kv_state);
+  Status Query(int index, std::vector<std::pair<LLMKV, LLMKV>>& kv_state);
 
   bool IsFull();
 

@@ -14,13 +14,13 @@ limitations under the License.
 */
 
 #include <fcntl.h>
+#include <stdio.h>
 #include <sys/file.h>
+#include <sys/stat.h>  // For stat
 #include <unistd.h>
 #include <filesystem>
-#include <sys/stat.h> // For stat
 #include <fstream>
 #include <memory>
-#include <stdio.h>
 #include <mutex>
 #include <string>
 
@@ -32,9 +32,10 @@ std::shared_ptr<FileDescriptor> LocalFileStorage::CreateFileDescriptor() {
   return std::make_shared<LocalFileDescriptor>();
 }
 
-static std::string formatIOError(std::string const &path) {
+static std::string formatIOError(std::string const& path) {
   std::stringstream ss;
-  ss << " at " << path << ", errno: " << errno << ", error: " << strerror(errno);
+  ss << " at " << path << ", errno: " << errno
+     << ", error: " << strerror(errno);
   return ss.str();
 }
 

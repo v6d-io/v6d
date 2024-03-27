@@ -59,6 +59,7 @@ Status KVStateCacheManager::Make(Client& client,
       config.llmCacheSyncLock, config.llmCacheObjectName,
       config.llmRefcntObjectName));
   manager = std::make_shared<KVStateCacheManager>(blob_storage);
+  manager->config = std::make_shared<VineyardCacheConfig>(config);
   return Status::OK();
 }
 
@@ -82,12 +83,13 @@ Status KVStateCacheManager::Make(std::shared_ptr<KVStateCacheManager>& manager,
     return Status::Invalid("Unsupported filesystem type");
   }
   manager = std::make_shared<KVStateCacheManager>(file_storage);
+  manager->config = std::make_shared<FileCacheConfig>(config);
   return Status::OK();
 }
 
 Status KVStateCacheManager::Update(
     const std::vector<int>& tokenList,
-    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList) {
   if (kvStateList.size() != tokenList.size()) {
     return Status::Invalid("Token list size not match kv state list size");
   }
@@ -96,7 +98,7 @@ Status KVStateCacheManager::Update(
 
 Status KVStateCacheManager::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
-    const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList) {
   if (kvStateList.size() != tokenList.size()) {
     return Status::Invalid("Token list size not match kv state list size");
   }
@@ -105,20 +107,21 @@ Status KVStateCacheManager::Update(
 
 Status KVStateCacheManager::Update(
     const std::vector<int>& tokenList, int nextToken,
-    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    const std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   return storage->Update(tokenList, nextToken, kvState);
 }
 
 Status KVStateCacheManager::Query(
     const std::vector<int>& tokenList, int nextToken,
-    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   return storage->Query(tokenList, nextToken, kvState);
 }
 
 Status KVStateCacheManager::Query(
     const std::vector<int>& tokenList,
-    std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList) {
-  return storage->Query(tokenList, kvStateList);
+    std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    size_t& matched) {
+  return storage->Query(tokenList, kvStateList, matched);
 }
 
 Status KVStateCacheManager::ClearGlobalCache(Client& client,

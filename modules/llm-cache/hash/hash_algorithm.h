@@ -29,12 +29,12 @@ class IHashAlgorithm {
   virtual uint32_t hash(const std::string& input) {
     return hash(input.c_str(), input.size());
   }
-  virtual uint32_t hash(const char *data, size_t length) = 0;
+  virtual uint32_t hash(const char* data, size_t length) = 0;
 };
 
 class MurmurHash3Algorithm : public IHashAlgorithm {
  public:
-  uint32_t hash(const char *data, size_t length) override {
+  uint32_t hash(const char* data, size_t length) override {
     uint32_t value = -1;
     MurmurHash3_x86_32(data, length, 0, &value);
     return value;
@@ -43,7 +43,7 @@ class MurmurHash3Algorithm : public IHashAlgorithm {
 
 class CityHashAlgorithm : public IHashAlgorithm {
  public:
-  uint32_t hash(const char *data, size_t length) override {
+  uint32_t hash(const char* data, size_t length) override {
     return city::detail::CityHash32(data, length);
   }
 };
