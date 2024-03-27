@@ -46,8 +46,6 @@ enum FileOperationType {
   WRITE = 1 << 1,
 };
 
-static std::mutex fileStorageLock;
-
 class FileStorage : public IStorage {
  private:
   bool CompareTokenList(const std::vector<int>& tokenList,

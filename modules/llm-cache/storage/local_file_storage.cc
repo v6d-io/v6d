@@ -25,6 +25,7 @@ limitations under the License.
 #include <string>
 
 #include "common/util/logging.h"
+#include "llm-cache/thread_group.h"
 #include "llm-cache/storage/local_file_storage.h"
 
 namespace vineyard {
@@ -90,7 +91,6 @@ Status LocalFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
 
 Status LocalFileStorage::Mkdir(std::string path) {
   // create the directory if it does not exist
-  VLOG(100) << "Create directory:" << path;
   if (!std::filesystem::exists(path)) {
     if (!std::filesystem::create_directories(path)) {
       if (!std::filesystem::exists(path)) {
