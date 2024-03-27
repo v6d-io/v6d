@@ -47,11 +47,11 @@ class KVStateCacheManager {
 
   Status Update(
       const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList);
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated);
 
   Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList);
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated);
 
   Status Query(const std::vector<int>& tokenList, int token,
                std::vector<std::pair<LLMKV, LLMKV>>& kvState);

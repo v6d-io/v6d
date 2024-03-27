@@ -93,14 +93,14 @@ class FileStorage : public IStorage {
 
   Status Update(const std::vector<int>& tokenList,
                 const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>&
-                    kvStateList) override;
+                    kvStateList, size_t &updated) override;
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
                 const std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
 
   Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList);
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated);
 
   Status Query(const std::vector<int>& tokenList,
                std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,

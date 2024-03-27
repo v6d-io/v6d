@@ -30,9 +30,8 @@ namespace vineyard {
 
 Status FileStorage::Update(
     const std::vector<int>& tokenList,
-    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated) {
   std::vector<std::string> pathList;
-  std::string path;
   RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, batchSize,
                                                splitNumber, pathList));
   if (pathList.size() == 0) {
@@ -100,8 +99,9 @@ Status FileStorage::Update(
     return Status::OK();
   };
 
-  parallel::ThreadGroup tg(std::min(pathList.size(), static_cast<size_t>(std::thread::hardware_concurrency())));
-  // parallel::ThreadGroup tg(1);
+  // parallel::ThreadGroup tg(std::min(pathList.size(), static_cast<size_t>(std::thread::hardware_concurrency())));
+  // FIXME: bug in multi-thread
+  parallel::ThreadGroup tg(1);
   for (size_t i = 0; i < pathList.size(); i++) {
     tg.AddTask(fn, i);
   }
@@ -112,6 +112,7 @@ Status FileStorage::Update(
       j += 1;
     }
   }
+  updated = j * batchSize;
   for (size_t i = j; i < pathList.size(); i++) {
     VINEYARD_SUPPRESS(Delete(pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
@@ -122,14 +123,12 @@ Status FileStorage::Update(
 
 Status FileStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
-    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated) {
   if (prefix.size() % batchSize != 0) {
     return Status::Invalid("Prefix size " + std::to_string(prefix.size()) + " should be multiple of batch size " + std::to_string(batchSize) + "!");
   }
 
   std::vector<std::string> pathList;
-  std::string path;
-  int tokenLength;
   std::vector<int> totalTokenList(prefix.begin(), prefix.end());
   totalTokenList.insert(totalTokenList.end(), tokenList.begin(),
                         tokenList.end());
@@ -142,7 +141,7 @@ Status FileStorage::Update(
   size_t kvStateIndex = 0;
   std::vector<std::string> tempFilePaths(pathList.size());
   auto fn = [&](size_t i) {
-    tokenLength = (i + 1) * batchSize;
+    int tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir(pathList[i]) + "-" + std::to_string(i);
     std::filesystem::path tmpPath(tmpPathStr);
@@ -207,8 +206,9 @@ Status FileStorage::Update(
     return Status::OK();
   };
 
-  parallel::ThreadGroup tg(std::min(pathList.size(), static_cast<size_t>(std::thread::hardware_concurrency())));
-  // parallel::ThreadGroup tg(1);
+  // parallel::ThreadGroup tg(std::min(pathList.size(), static_cast<size_t>(std::thread::hardware_concurrency())));
+  // FIXME: bug in multi-thread
+  parallel::ThreadGroup tg(1);
   for (size_t i = 0; i < pathList.size(); i++) {
     tg.AddTask(fn, i);
   }
@@ -219,6 +219,7 @@ Status FileStorage::Update(
       j += 1;
     }
   }
+  updated = j * batchSize;
   for (size_t i = j; i < pathList.size(); i++) {
     VINEYARD_SUPPRESS(Delete(pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));

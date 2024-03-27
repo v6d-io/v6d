@@ -90,7 +90,7 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
         prefix: Optional[List[int]],
         tokens: List[int],
         kv_state_list: List[List[Tuple[KVTensor, KVTensor]]],
-    ):
+    ) -> int:
         """Update the kv cache stored in vineyard.
 
         Args:
@@ -103,9 +103,9 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
                 The k, v tensor for i-th token at the j-th layer is: kv_state_list[i][j]
         """
         if prefix:
-            self.kv_cache_manager.update(prefix, tokens, kv_state_list)
+            return self.kv_cache_manager.update(prefix, tokens, kv_state_list)
         else:
-            self.kv_cache_manager.update(tokens, kv_state_list)
+            return self.kv_cache_manager.update(tokens, kv_state_list)
 
     def query(
         self,

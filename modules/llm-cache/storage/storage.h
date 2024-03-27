@@ -31,7 +31,7 @@ class IStorage {
 
   virtual Status Update(
       const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList) = 0;
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated) = 0;
 
   virtual Status Update(
       const std::vector<int>& tokenList, int nextToken,
@@ -39,7 +39,7 @@ class IStorage {
 
   virtual Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
-      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList) = 0;
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated) = 0;
 
   virtual Status Query(
       const std::vector<int>& tokenList,

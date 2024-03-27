@@ -60,8 +60,10 @@ PYBIND11_MODULE(llm_C, m) {
           "update",
           [](KVStateCacheManager* self, std::vector<int>& tokens,
              const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>&
-                 kv_states) {
-            VINEYARD_CHECK_OK(self->Update(tokens, kv_states));
+                 kv_states) -> size_t {
+            size_t updated = 0;
+            VINEYARD_CHECK_OK(self->Update(tokens, kv_states, updated));
+            return updated;
           },
           py::arg("tokens"), py::arg("kv_states"))
       .def(
@@ -69,8 +71,10 @@ PYBIND11_MODULE(llm_C, m) {
           [](KVStateCacheManager* self, std::vector<int>& prefix,
              std::vector<int>& tokens,
              const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>&
-                 kv_states) {
-            VINEYARD_CHECK_OK(self->Update(prefix, tokens, kv_states));
+                 kv_states) -> size_t {
+            size_t updated = 0;
+            VINEYARD_CHECK_OK(self->Update(prefix, tokens, kv_states, updated));
+            return updated;
           },
           py::arg("prefix"), py::arg("tokens"), py::arg("kv_states"))
       .def(
