@@ -71,8 +71,22 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/BBHash
         PATTERN "*.hpp"                         # select C++ template header files
 )
 
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/grape_perfect_hash
+        DESTINATION include/vineyard/contrib    # target directory
+        FILES_MATCHING                          # install only matched files
+        PATTERN "*.h"                           # select header files
+        PATTERN "*.hpp"                         # select C++ template header files
+)
+
 # install bundled thirdparty: cityhash
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/cityhash
+        DESTINATION include/vineyard/contrib    # target directory
+        FILES_MATCHING                          # install only matched files
+        PATTERN "*.h"                           # select header files
+        PATTERN "*.hpp"                         # select C++ template header files
+)
+
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/pthash
         DESTINATION include/vineyard/contrib    # target directory
         FILES_MATCHING                          # install only matched files
         PATTERN "*.h"                           # select header files

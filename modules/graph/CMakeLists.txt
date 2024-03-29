@@ -75,6 +75,7 @@ file(GLOB_RECURSE GRAPH_SRC_FILES "${CMAKE_CURRENT_SOURCE_DIR}" "fragment/*.cc"
 )
 
 add_library(vineyard_graph ${GRAPH_SRC_FILES} ${powturbo-target-objects})
+target_compile_options(vineyard_graph PRIVATE -msse4.2)
 target_add_debuginfo(vineyard_graph)
 if(NOT APPLE)
     target_compile_options(vineyard_graph PUBLIC "-fopenmp")
