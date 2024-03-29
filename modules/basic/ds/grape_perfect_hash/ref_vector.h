@@ -52,31 +52,6 @@ struct ref_vector {
   size_t size_;
 };
 
-template <typename T, typename ALLOC_T>
-void encode_vec(const std::vector<T, ALLOC_T>& vec, std::vector<char>& buf) {
-  size_t old_size = buf.size();
-  size_t vec_size = vec.size();
-  buf.resize(old_size + sizeof(size_t) + vec_size * sizeof(T));
-  char* ptr = buf.data() + old_size;
-  memcpy(ptr, &vec_size, sizeof(size_t));
-  ptr += sizeof(size_t);
-  memcpy(ptr, vec.data(), sizeof(T) * vec_size);
-}
-
-template <typename T>
-void encode_val(const T& val, std::vector<char>& buf) {
-  size_t old_size = buf.size();
-  buf.resize(old_size + sizeof(T));
-  char* ptr = buf.data() + old_size;
-  memcpy(ptr, &val, sizeof(T));
-}
-
-template <typename T>
-const char* decode_val(T& val, const char* buf) {
-  memcpy(&val, buf, sizeof(T));
-  return buf + sizeof(T);
-}
-
 }  // namespace grape_perfect_hash
 
 #endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_REF_VECTOR_H_

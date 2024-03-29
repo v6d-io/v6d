@@ -22,7 +22,6 @@
 
 #include "basic/ds/grape_perfect_hash/encoders_view.h"
 #include "basic/ds/grape_perfect_hash/ref_vector.h"
-#include "basic/ds/grape_perfect_hash/types.h"
 #include "pthash/pthash.hpp"
 #include "pthash/single_phf.hpp"
 
@@ -30,6 +29,25 @@
 #include "string_view/string_view.hpp"
 
 namespace grape_perfect_hash {
+
+struct murmurhasher {
+  typedef pthash::hash64 hash_type;
+
+  // specialization for std::string
+  static inline hash_type hash(std::string const& val, uint64_t seed) {
+    return pthash::MurmurHash2_64(val.data(), val.size(), seed);
+  }
+
+  // specialization for uint64_t
+  static inline hash_type hash(uint64_t val, uint64_t seed) {
+    return pthash::MurmurHash2_64(reinterpret_cast<char const*>(&val),
+                                  sizeof(val), seed);
+  }
+
+  static inline hash_type hash(const nonstd::string_view& val, uint64_t seed) {
+    return pthash::MurmurHash2_64(val.data(), val.size(), seed);
+  }
+};
 
 struct mem_dumper {
  public:

@@ -20,7 +20,6 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "basic/ds/grape_perfect_hash/config.h"
 #include "basic/ds/grape_perfect_hash/ref_vector.h"
 #include "basic/ds/grape_perfect_hash/string_view_vector.h"
 
@@ -30,21 +29,6 @@ namespace hashmap_indexer_impl {
 
 static constexpr int8_t min_lookups = 4;
 static constexpr double max_load_factor = 0.5f;
-
-inline int8_t log2(size_t value) {
-  static constexpr int8_t table[64] = {
-      63, 0,  58, 1,  59, 47, 53, 2,  60, 39, 48, 27, 54, 33, 42, 3,
-      61, 51, 37, 40, 49, 18, 28, 20, 55, 30, 34, 11, 43, 14, 22, 4,
-      62, 57, 46, 52, 38, 26, 32, 41, 50, 36, 17, 19, 29, 10, 13, 21,
-      56, 45, 25, 31, 35, 16, 9,  12, 44, 24, 15, 8,  23, 7,  6,  5};
-  value |= value >> 1;
-  value |= value >> 2;
-  value |= value >> 4;
-  value |= value >> 8;
-  value |= value >> 16;
-  value |= value >> 32;
-  return table[((value - (value >> 1)) * 0x07EDD5E59A4E28C2) >> 58];
-}
 
 template <typename T>
 struct KeyBuffer {
@@ -59,31 +43,8 @@ struct KeyBuffer {
 
   size_t size() const { return inner_.size(); }
 
-  std::vector<T, Allocator<T>>& buffer() { return inner_; }
-  const std::vector<T, Allocator<T>>& buffer() const { return inner_; }
-
-  template <typename IOADAPTOR_T>
-  void serialize(std::unique_ptr<IOADAPTOR_T>& writer) const {
-    size_t size = inner_.size();
-    CHECK(writer->Write(&size, sizeof(size_t)));
-    if (size > 0) {
-      CHECK(writer->Write(const_cast<T*>(inner_.data()), size * sizeof(T)));
-    }
-  }
-
-  void serialize_to_mem(std::vector<char>& buf) const {
-    encode_vec(inner_, buf);
-  }
-
-  template <typename IOADAPTOR_T>
-  void deserialize(std::unique_ptr<IOADAPTOR_T>& reader) {
-    size_t size;
-    CHECK(reader->Read(&size, sizeof(size_t)));
-    if (size > 0) {
-      inner_.resize(size);
-      CHECK(reader->Read(inner_.data(), size * sizeof(T)));
-    }
-  }
+  std::vector<T>& buffer() { return inner_; }
+  const std::vector<T>& buffer() const { return inner_; }
 
   void swap(KeyBuffer& rhs) { inner_.swap(rhs.inner_); }
 
@@ -100,7 +61,7 @@ struct KeyBuffer {
   }
 
  private:
-  std::vector<T, Allocator<T>> inner_;
+  std::vector<T> inner_;
 };
 
 template <>
@@ -116,20 +77,6 @@ struct KeyBuffer<nonstd::string_view> {
 
   StringViewVector& buffer() { return inner_; }
   const StringViewVector& buffer() const { return inner_; }
-
-  template <typename IOADAPTOR_T>
-  void serialize(std::unique_ptr<IOADAPTOR_T>& writer) const {
-    inner_.serialize(writer);
-  }
-
-  void serialize_to_mem(std::vector<char>& buf) const {
-    inner_.serialize_to_mem(buf);
-  }
-
-  template <typename IOADAPTOR_T>
-  void deserialize(std::unique_ptr<IOADAPTOR_T>& reader) {
-    inner_.deserialize(reader);
-  }
 
   void swap(KeyBuffer& rhs) { inner_.swap(rhs.inner_); }
 

@@ -22,7 +22,6 @@ limitations under the License.
 
 #include "basic/ds/grape_perfect_hash/hashmap_indexer_impl.h"
 #include "basic/ds/grape_perfect_hash/single_phf_view.h"
-#include "basic/ds/grape_perfect_hash/types.h"
 #include "client/ds/blob.h"
 
 namespace grape_perfect_hash {
