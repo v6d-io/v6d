@@ -1,0 +1,215 @@
+# Copyright 2020-2023 Alibaba Group Holding Limited.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+FROM python:3.10 as wheel
+
+RUN echo "Installing cmake ..." && \
+    pip install cmake==3.25.0 auditwheel --force
+
+RUN echo "Installing glog ..." && \
+    mkdir -p /deps && \
+    cd /deps && \
+    curl -L https://github.com/google/glog/archive/v0.5.0.tar.gz --output glog-v0.5.0.tar.gz && \
+    tar zxvf glog-v0.5.0.tar.gz && \
+    cd glog-0.5.0 && \
+    mkdir build-dir && \
+    cd build-dir && \
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF \
+             -DBUILD_TESTING=OFF \
+             -DWITH_GFLAGS=OFF \
+             -DCMAKE_POSITION_INDEPENDENT_CODE=ON && \
+    make install -j`nproc` && \
+    rm -rf /deps
+
+RUN echo "Installing boost ..." && \
+    mkdir -p /deps && \
+    cd /deps && \
+    wget -q https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz && \
+    tar zxf boost_1_75_0.tar.gz && \
+    cd boost_1_75_0 && \
+    ./bootstrap.sh && \
+    ./b2 install -j`nproc` link=static runtime-link=static variant=release threading=multi \
+        --with-atomic \
+        --with-chrono \
+        --with-date_time \
+        --with-filesystem \
+        --with-random \
+        --with-system \
+        --with-thread && \
+    rm -rf /deps
+
+RUN echo "Installing gflags ..." && \
+    mkdir -p /deps && \
+    cd /deps && \
+    curl -L https://github.com/gflags/gflags/archive/v2.2.2.tar.gz --output gflags-v2.2.2.tar.gz && \
+    tar zxf gflags-v2.2.2.tar.gz && \
+    cd gflags-2.2.2 && \
+    mkdir -p build-dir && \
+    cd build-dir && \
+    cmake .. -DCMAKE_BUILD_TYPE=MinSizeRel \
+             -DBUILD_SHARED_LIBS=OFF \
+             -DBUILD_TESTING=OFF && \
+    make install -j`nproc` && \
+    rm -rf /deps
+
+RUN echo "Installing apache-arrow ..." && \
+    mkdir -p /deps && \
+    cd /deps && \
+    curl -L https://github.com/apache/arrow/archive/apache-arrow-11.0.0.tar.gz --output apache-arrow-11.0.0.tar.gz && \
+    tar zxvf apache-arrow-11.0.0.tar.gz && \
+    cd arrow-apache-arrow-11.0.0 && \
+    mkdir build-dir && \
+    cd build-dir && \
+    cmake ../cpp \
+        -DCMAKE_BUILD_TYPE=MinSizeRel \
+        -DCMAKE_POSITION_INDEPENDENT_CODE=ON \
+        -DARROW_COMPUTE=ON \
+        -DARROW_SIMD_LEVEL=NONE \
+        -DARROW_RUNTIME_SIMD_LEVEL=NONE \
+        -DARROW_WITH_UTF8PROC=OFF \
+        -DARROW_CSV=ON \
+        -DARROW_CUDA=OFF \
+        -DARROW_DATASET=OFF \
+        -DARROW_FILESYSTEM=ON \
+        -DARROW_FLIGHT=OFF \
+        -DARROW_GANDIVA=OFF \
+        -DARROW_GANDIVA_JAVA=OFF \
+        -DARROW_HDFS=OFF \
+        -DARROW_HIVESERVER2=OFF \
+        -DARROW_JSON=OFF \
+        -DARROW_ORC=OFF \
+        -DARROW_PARQUET=OFF \
+        -DARROW_PLASMA=OFF \
+        -DARROW_PLASMA_JAVA_CLIENT=OFF \
+        -DARROW_PYTHON=OFF \
+        -DARROW_S3=OFF \
+        -DARROW_WITH_BROTLI=OFF \
+        -DARROW_WITH_BZ2=OFF \
+        -DARROW_WITH_GRPC=OFF \
+        -DARROW_WITH_LZ4=OFF \
+        -DARROW_WITH_RE2=OFF \
+        -DARROW_WITH_SNAPPY=OFF \
+        -DARROW_WITH_ZLIB=OFF \
+        -DARROW_WITH_ZSTD=OFF \
+        -DARROW_IPC=ON \
+        -DARROW_BUILD_BENCHMARKS=OFF \
+        -DARROW_BUILD_EXAMPLES=OFF \
+        -DARROW_BUILD_INTEGRATION=OFF \
+        -DARROW_BUILD_UTILITIES=OFF \
+        -DARROW_BUILD_TESTS=OFF \
+        -DARROW_ENABLE_TIMING_TESTS=OFF \
+        -DARROW_FUZZING=OFF \
+        -DARROW_USE_ASAN=OFF \
+        -DARROW_USE_TSAN=OFF \
+        -DARROW_USE_UBSAN=OFF \
+        -DARROW_JEMALLOC=OFF \
+        -DARROW_BUILD_SHARED=OFF \
+        -DARROW_BUILD_STATIC=ON && \
+    make install -j`nproc` && \
+    rm -rf /deps
+
+RUN for pylibs in /opt/_internal/tools/lib/*; do\
+        sed -i 's/p.error/logger.warning/g' $pylibs/site-packages/auditwheel/main_repair.py || true; \
+    done
+
+COPY thirdparty /work/v6d/thirdparty
+
+COPY cmake /work/v6d/cmake
+COPY python/vineyard/version.py.in /work/v6d/python/vineyard/version.py.in
+
+COPY CMakeLists.txt /work/v6d/CMakeLists.txt
+COPY setup.cfg.in /work/v6d/setup.cfg.in
+COPY vineyard-config-version.in.cmake /work/v6d/vineyard-config-version.in.cmake
+COPY vineyard-config.in.cmake /work/v6d/vineyard-config.in.cmake
+
+COPY src/common /work/v6d/src/common
+COPY src/client /work/v6d/src/client
+COPY modules/llm-cache /work/v6d/modules/llm-cache
+COPY thirdparty /work/v6d/thirdparty
+
+COPY python/client.cc /work/v6d/python/client.cc
+COPY python/core.cc /work/v6d/python/core.cc
+COPY python/error.cc /work/v6d/python/error.cc
+COPY python/pybind11_docs.cc /work/v6d/python/pybind11_docs.cc
+COPY python/pybind11_docs.h /work/v6d/python/pybind11_docs.h
+COPY python/pybind11_utils.cc /work/v6d/python/pybind11_utils.cc
+COPY python/pybind11_utils.h /work/v6d/python/pybind11_utils.h
+COPY python/vineyard.cc /work/v6d/python/vineyard.cc
+
+COPY python/vineyard /work/v6d/python/vineyard
+
+RUN cd /work/v6d && \
+    mkdir build && \
+    cd build && \
+    export PATH=$PATH:/usr/local/bin && \
+    pip3 install -U pip setuptools wheel && \
+    cmake .. -DBUILD_SHARED_LIBS=OFF \
+             -DBUILD_VINEYARD_SERVER=OFF \
+             -DBUILD_VINEYARD_CLIENT=ON \
+             -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
+             -DBUILD_VINEYARD_PYPI_PACKAGES=OFF \
+             -DBUILD_VINEYARD_LLM_CACHE=ON \
+             -DBUILD_VINEYARD_BASIC=OFF \
+             -DBUILD_VINEYARD_IO=OFF \
+             -DBUILD_VINEYARD_GRAPH=OFF \
+             -DBUILD_VINEYARD_MALLOC=OFF \
+             -DBUILD_VINEYARD_MIGRATION=ON \
+             -DBUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME=OFF \
+             -DBUILD_VINEYARD_TESTS=OFF \
+             -DBUILD_VINEYARD_TESTS_ALL=OFF \
+             -DBUILD_VINEYARD_BENCHMARKS=OFF \
+             -DBUILD_VINEYARD_BENCHMARKS_ALL=OFF \
+             -DBUILD_VINEYARD_COVERAGE=OFF \
+             -DBUILD_VINEYARD_PROFILING=OFF \
+             -DCMAKE_BUILD_TYPE=Release \
+             -DPYTHON_EXECUTABLE=/usr/local/bin/python && \
+    make -j$(nproc) && \
+    make vineyard_client_python -j$(nproc)
+
+COPY README.rst /work/v6d/README.rst
+COPY setup.py /work/v6d/setup.py
+COPY setup_bdist.py /work/v6d/setup_bdist.py
+COPY setup_io.py /work/v6d/setup_io.py
+COPY setup_llm.py /work/v6d/setup_llm.py
+COPY requirements.txt /work/v6d/requirements.txt
+COPY requirements-dev.txt /work/v6d/requirements-dev.txt
+COPY requirements-extra.txt /work/v6d/requirements-extra.txt
+COPY requirements-kubernetes.txt /work/v6d/requirements-kubernetes.txt
+COPY requirements-setup.txt /work/v6d/requirements-setup.txt
+COPY modules/io /work/v6d/modules/io
+
+# make sure the library been copied
+RUN cd /work/v6d/build && \
+    make vineyard_client_python -j$(nproc) && \
+    cd /work && \
+    export LD_LIBRARY_PATH=/work/v6d/build/lib:$LD_LIBRARY_PATH && \
+    mkdir -p fixed_wheels/ && \
+    cd /work/v6d && \
+    rm -rf dist build/lib* && \
+    /usr/local/bin/python setup_llm.py bdist_wheel && \
+    mv /work/v6d/dist/*.whl /work/fixed_wheels/ && \
+    rm -rf /work/v6d
+
+
+# generate final image
+FROM python:3.10-slim-buster
+
+SHELL ["/bin/bash", "-l", "-c"]
+COPY --from=wheel /work/fixed_wheels/*.whl /tmp/
+
+RUN cd /tmp &&\
+    pip3 install --no-cache-dir *.whl ipython
+
+ENTRYPOINT ["/bin/bash", "-l", "-c" ]

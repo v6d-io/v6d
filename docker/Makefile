@@ -37,9 +37,13 @@ PYTHON_DEV_REGISTRY			:= $(REGISTRY)
 PYTHON_DEV_IMAGE			:= vineyard-python-dev
 PYTHON_DEV_TAG				:= latest_$(PLATFORM)
 
+LLM_PYTHON_DEV_REGISTRY		:= $(REGISTRY)
+LLM_PYTHON_DEV_IMAGE		:= vineyard-llm-python-dev
+LLM_PYTHON_DEV_TAG			:= latest_$(PLATFORM)
+
 VINEYARD_FLUID_FUSE_REGISTRY	:= $(REGISTRY)
 VINEYARD_FLUID_FUSE_IMAGE		:= vineyard-fluid-fuse
-VINEYARD_FLUID_FUSE_TAG		:= latest
+VINEYARD_FLUID_FUSE_TAG			:= latest
 
 BUILD_PROGRESS  			?= auto
 
@@ -121,6 +125,13 @@ build-python-dev:
 		-t $(PYTHON_DEV_REGISTRY)/$(PYTHON_DEV_IMAGE):$(PYTHON_DEV_TAG)
 .PHONY: build-python-dev
 
+# build llm-python-dev image
+build-llm-python-dev:
+	docker build ../ \
+		--progress=$(BUILD_PROGRESS) \
+		-f ./Dockerfile.vineyard-llm-python-dev \
+		-t $(LLM_PYTHON_DEV_REGISTRY)/$(LLM_PYTHON_DEV_IMAGE):$(LLM_PYTHON_DEV_TAG)
+.PHONY: build-llm-python-dev
 
 # build vineyard-fluid-fuse image
 vineyard-fluid-fuse:

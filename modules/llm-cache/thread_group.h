@@ -43,7 +43,9 @@ namespace parallel {
 
 class ThreadGroup {
   using tid_t = uint32_t;
-  using return_t = Status;
+  // Returns the path index and task status for parallel execution. 
+  // The path index is used to identify and delete results of unsuccessful tasks.
+  using return_t = std::pair<int, Status>;
 
  public:
   explicit ThreadGroup(
@@ -64,7 +66,7 @@ class ThreadGroup {
       try {
         return std::move(_f(std::forward<Args>(_args)...));
       } catch (std::exception& e) {
-        return Status(StatusCode::kUnknownError, e.what());
+        return std::pair(-1, Status(StatusCode::kUnknownError, e.what()));
       }
     };
 

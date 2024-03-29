@@ -89,7 +89,8 @@ Status KVStateCacheManager::Make(std::shared_ptr<KVStateCacheManager>& manager,
 
 Status KVStateCacheManager::Update(
     const std::vector<int>& tokenList,
-    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    size_t& updated) {
   if (kvStateList.size() != tokenList.size()) {
     return Status::Invalid("Token list size not match kv state list size");
   }
@@ -98,7 +99,8 @@ Status KVStateCacheManager::Update(
 
 Status KVStateCacheManager::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
-    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    size_t& updated) {
   if (kvStateList.size() != tokenList.size()) {
     return Status::Invalid("Token list size not match kv state list size");
   }

@@ -31,7 +31,7 @@ from .llm_C import _generate
 
 
 class KVCache:  # pylint: disable=too-many-instance-attributes
-    """KV_Cache is a class that manages the llm kv cache in vineyard."""
+    """KVCache is a class that manages the llm kv cache in vineyard."""
 
     def __init__(
         self,

@@ -131,7 +131,8 @@ Status BlobStorage::Update(
 
 Status BlobStorage::Update(
     const std::vector<int>& tokenList,
-    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    size_t& updated) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
     return Status::OK();
@@ -146,6 +147,7 @@ Status BlobStorage::Update(
       break;
     }
     tokenListCopy.push_back(tokenList[i]);
+    updated++;
   }
 
   return Status::OK();
@@ -153,7 +155,8 @@ Status BlobStorage::Update(
 
 Status BlobStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
-    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList, size_t &updated) {
+    const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+    size_t& updated) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
   if (!lock.try_lock()) {
     return Status::OK();
@@ -168,6 +171,7 @@ Status BlobStorage::Update(
       break;
     }
     tokenListCopy.push_back(tokenList[i]);
+    updated++;
   }
 
   return Status::OK();
