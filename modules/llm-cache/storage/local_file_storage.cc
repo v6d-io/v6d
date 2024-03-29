@@ -160,11 +160,6 @@ std::string LocalFileStorage::GetTmpFileDir(std::string filePath) {
 }
 
 Status LocalFileStorage::MoveFileAtomic(std::string src, std::string dst) {
-  // if (renameat2(AT_FDCWD, src.c_str(), AT_FDCWD, dst.c_str(),
-  //                 RENAME_NOREPLACE)) {
-  //   return Status::IOError("Failed to move file: " + formatIOError(src));
-  // }
-
   // Use open and then rename to avoid the unsupported issue on NFS.
   int dst_fd = open(dst.c_str(), O_CREAT | O_RDWR, 0666);
   if (dst_fd == -1) {
@@ -177,16 +172,5 @@ Status LocalFileStorage::MoveFileAtomic(std::string src, std::string dst) {
   }
   return Status::OK();
 }
-/*
-  struct stat buffer;
-  if (stat(dst.c_str(), &buffer) == 0) {
-    return Status::IOError("Destination file exists");
-  }
-
-  if (renameat(AT_FDCWD, src.c_str(), AT_FDCWD, dst.c_str())) {
-    return Status::IOError("Failed to move file");
-  }
-  return Status::OK();
-}*/
 
 }  // namespace vineyard

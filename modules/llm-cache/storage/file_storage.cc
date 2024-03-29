@@ -45,6 +45,28 @@ limitations under the License.
 
 namespace vineyard {
 
+/**
+ * @brief Update the kv state with the given token list in the file storage.
+ * 
+ * @param tokenList The token list to be updated.
+ * @param kvStateList The kv state list of the token list.
+ *                    It's a 2D vector, the first dimension is the token index,
+ *                    and the second dimension is the layer index.
+ *                    The kv state is a pair of LLMKV, the first is the K tensor
+ *                    and the second is the V tensor. It contains two fields:
+ *                    data and length. The data is the pointer to the tensor data,
+ *                    and the length is the size of the tensor data. 
+ * @param updated The number of tokens that have been updated successfully. It's
+ *                a return value.
+ * 
+ * @note The length of the token list should be as same as the length of the kvStateList.
+ *
+ * 
+ * @example Suppose the token list is [1, 2, 3, 4], the layer is 2, 
+ *          then the kvStateList should be a 2D vector with size 4 * 2.
+ * 
+ * @return Status 
+ */
 Status FileStorage::Update(
     const std::vector<int>& tokenList,
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
@@ -154,6 +176,28 @@ Status FileStorage::Update(
   return Status::OK();
 }
 
+/**
+ * @brief Update the kv state with the given prefix and token list in the file storage.
+ * 
+ * @param prefix The prefix token list. It should be a multiple of the batch size.
+ * @param tokenList The token list to be updated.
+ * @param kvStateList The kv state list of the token list.
+ *                    It's a 2D vector, the first dimension is the token index,
+ *                    and the second dimension is the layer index.
+ *                    The kv state is a pair of LLMKV, the first is the K tensor
+ *                    and the second is the V tensor. It contains two fields:
+ *                    data and length. The data is the pointer to the tensor data,
+ *                    and the length is the size of the tensor data. 
+ * @param updated The number of tokens that have been updated successfully. It's
+ *                a return value.
+ * 
+ * @note The length of the token list should be as same as the length of the kvStateList.
+ * 
+ * @example Suppose the prefix is [1, 2], the token list is [3, 4], the layer is 2,
+ *         then the kvStateList should be a 2D vector with size 2 * 2.
+ * 
+ * @return Status 
+ */
 Status FileStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
@@ -281,6 +325,25 @@ Status FileStorage::Update(
   return Status::NotImplemented();
 }
 
+/**
+ * @brief Query the kv state with the given token list in the file storage.
+ * 
+ * @param tokenList The token list to be queried.
+ * @param kvStateList The kv state list of the token list to be fulfilled.
+ *                    It must be initialized(allocated) before calling this function.
+ *                    It's a 2D vector, the first dimension is the token index,
+ *                    and the second dimension is the layer index.
+ *                    The kv state is a pair of LLMKV, the first is the K tensor
+ *                    and the second is the V tensor. It contains two fields:
+ *                    data and length. The data is the pointer to the tensor data,
+ *                    and the length is the size of the tensor data.
+ * @param matched The number of tokens that have been matched successfully. It's
+ *               a return value.
+ * 
+ * @note The length of the token list should be as same as the length of the kvStateList.
+ * 
+ * @return Status 
+ */
 Status FileStorage::Query(
     const std::vector<int>& tokenList,
     std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
