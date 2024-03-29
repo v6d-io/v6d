@@ -18,7 +18,7 @@ ALPINE_TAG					:= $(ALPINE_MANIFEST_TAG)_$(PLATFORM)
 
 WHEEL_BUILDER_REGISTRY		:= $(REGISTRY)
 WHEEL_BUILDER_IMAGE			:= vineyard-manylinux2014
-WHEEL_BUILDER_MANIFEST_TAG 	:= 20240218
+WHEEL_BUILDER_MANIFEST_TAG 	:= 20240329
 WHEEL_BUILDER_TAG 			:= $(WHEEL_BUILDER_MANIFEST_TAG)_$(PLATFORM)
 
 WHEEL_PYTHON				:= cp311-cp311
@@ -36,10 +36,6 @@ DEV_TAG						:= latest_$(PLATFORM)
 PYTHON_DEV_REGISTRY			:= $(REGISTRY)
 PYTHON_DEV_IMAGE			:= vineyard-python-dev
 PYTHON_DEV_TAG				:= latest_$(PLATFORM)
-
-LLM_PYTHON_DEV_REGISTRY		:= $(REGISTRY)
-LLM_PYTHON_DEV_IMAGE		:= vineyard-llm-python-dev
-LLM_PYTHON_DEV_TAG			:= latest_$(PLATFORM)
 
 VINEYARD_FLUID_FUSE_REGISTRY	:= $(REGISTRY)
 VINEYARD_FLUID_FUSE_IMAGE		:= vineyard-fluid-fuse
@@ -124,14 +120,6 @@ build-python-dev:
 		-f ./Dockerfile.vineyard-python-dev \
 		-t $(PYTHON_DEV_REGISTRY)/$(PYTHON_DEV_IMAGE):$(PYTHON_DEV_TAG)
 .PHONY: build-python-dev
-
-# build llm-python-dev image
-build-llm-python-dev:
-	docker build ../ \
-		--progress=$(BUILD_PROGRESS) \
-		-f ./Dockerfile.vineyard-llm-python-dev \
-		-t $(LLM_PYTHON_DEV_REGISTRY)/$(LLM_PYTHON_DEV_IMAGE):$(LLM_PYTHON_DEV_TAG)
-.PHONY: build-llm-python-dev
 
 # build vineyard-fluid-fuse image
 vineyard-fluid-fuse:

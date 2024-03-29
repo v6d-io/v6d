@@ -13,7 +13,7 @@
 # limitations under the License.
 
 ARG PLATFORM=x86_64
-FROM quay.io/pypa/manylinux2014_$PLATFORM:2024-02-16-b3cad8f
+FROM quay.io/pypa/manylinux2014_$PLATFORM:2024-03-25-9206bd9
 
 # re-declare after FROM, reusing the default value
 ARG PLATFORM
@@ -111,4 +111,21 @@ RUN echo "Installing apache-arrow ..." && \
         -DARROW_BUILD_SHARED=OFF \
         -DARROW_BUILD_STATIC=ON && \
     make install -j`nproc` && \
+    rm -rf /deps
+
+RUN echo "Installing boost ..." && \
+    mkdir -p /deps && \
+    cd /deps && \
+    curl -L -O https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz && \
+    tar zxf boost_1_75_0.tar.gz && \
+    cd boost_1_75_0 && \
+    ./bootstrap.sh && \
+    ./b2 install -j`nproc` link=static runtime-link=static variant=release threading=multi \
+        --with-atomic \
+        --with-chrono \
+        --with-date_time \
+        --with-filesystem \
+        --with-random \
+        --with-system \
+        --with-thread && \
     rm -rf /deps
