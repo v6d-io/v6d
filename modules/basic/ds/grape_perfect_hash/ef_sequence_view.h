@@ -13,8 +13,8 @@
  * limitations under the License.
  */
 
-#ifndef GRAPHSCOPE_PTHASH_UTILS_EF_SEQUENCE_VIEW_VIEW_H_
-#define GRAPHSCOPE_PTHASH_UTILS_EF_SEQUENCE_VIEW_VIEW_H_
+#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_EF_SEQUENCE_VIEW_H_
+#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_EF_SEQUENCE_VIEW_H_
 
 #include <assert.h>
 #include <stddef.h>
@@ -22,10 +22,10 @@
 
 #include <type_traits>
 
-#include "ref_vector.h"
+#include "basic/ds/grape_perfect_hash/ref_vector.h"
 #include "pthash/encoders/util.hpp"
 
-namespace grape {
+namespace grape_perfect_hash {
 
 // This code is an adaptation from
 // https://github.com/jermp/pthash/blob/master/include/encoders/bit_vector.hpp
@@ -144,6 +144,6 @@ struct ef_sequence_view {
   compact_vector_view m_low_bits;
 };
 
-}  // namespace grape
+}  // namespace grape_perfect_hash
 
-#endif  // GRAPHSCOPE_PTHASH_UTILS_EF_SEQUENCE_VIEW_VIEW_H_
+#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_EF_SEQUENCE_VIEW_H_

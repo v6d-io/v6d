@@ -13,11 +13,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef GRAPE_TYPES_H_
-#define GRAPE_TYPES_H_
+#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_TYPES_H_
+#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_TYPES_H_
 
 #include <istream>
 #include <ostream>
+#include <string>
 #include <type_traits>
 #include "pthash/utils/hasher.hpp"
 
@@ -25,7 +26,7 @@ limitations under the License.
 #define nssv_CONFIG_SELECT_STRING_VIEW nssv_STRING_VIEW_NONSTD
 #include "string_view/string_view.hpp"
 
-namespace grape {
+namespace grape_perfect_hash {
 
 /**
  * @brief EmptyType is the placeholder of VDATA_T and EDATA_T for graphs without
@@ -158,6 +159,6 @@ struct murmurhasher {
   }
 };
 
-}  // namespace grape
+}  // namespace grape_perfect_hash
 
-#endif  // GRAPE_TYPES_H_
+#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_TYPES_H_

@@ -13,20 +13,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef GRAPE_UTILS_STRING_VIEW_VECTOR_H_
-#define GRAPE_UTILS_STRING_VIEW_VECTOR_H_
+#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_STRING_VIEW_VECTOR_H_
+#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_STRING_VIEW_VECTOR_H_
 
 #include <stdlib.h>
 #include <string.h>
 #include <cassert>
 #include <memory>
+#include <utility>
 #include <vector>
 
-#include "ref_vector.h"
+#include "basic/ds/grape_perfect_hash/ref_vector.h"
 #define nssv_CONFIG_SELECT_STRING_VIEW nssv_STRING_VIEW_NONSTD
 #include "string_view/string_view.hpp"
 
-namespace grape {
+namespace grape_perfect_hash {
 
 class StringViewVector {
  public:
@@ -163,6 +164,6 @@ struct ref_vector<nonstd::string_view> {
   ref_vector<size_t> offsets_;
 };
 
-}  // namespace grape
+}  // namespace grape_perfect_hash
 
-#endif  // GRAPE_UTILS_STRING_VIEW_VECTOR_H_
+#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_STRING_VIEW_VECTOR_H_

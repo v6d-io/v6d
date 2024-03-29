@@ -13,20 +13,24 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_GRAPH_VERTEX_MAP_PERFECT_HASH_INDEXER_H_
-#define MODULES_GRAPH_VERTEX_MAP_PERFECT_HASH_INDEXER_H_
+#ifndef MODULES_BASIC_DS_PERFECT_HASH_INDEXER_H_
+#define MODULES_BASIC_DS_PERFECT_HASH_INDEXER_H_
 
+#include <memory>
+#include <utility>
+#include <vector>
+
+#include "basic/ds/grape_perfect_hash/hashmap_indexer_impl.h"
+#include "basic/ds/grape_perfect_hash/single_phf_view.h"
+#include "basic/ds/grape_perfect_hash/types.h"
 #include "client/ds/blob.h"
-#include "grape_perfect_hash/single_phf_view.h"
-#include "grape_perfect_hash/types.h"
-#include "grape_perfect_hash/hashmap_indexer_impl.h"
 
-namespace grape {
+namespace grape_perfect_hash {
 
-using vineyard::Client;
-using vineyard::Object;
 using vineyard::Blob;
 using vineyard::BlobWriter;
+using vineyard::Client;
+using vineyard::Object;
 
 template <typename KEY_T, typename INDEX_T>
 class PHIdxerView {
@@ -69,7 +73,7 @@ class PHIdxerView {
 };
 
 template <typename INDEX_T>
-class PHIdxerView<nonstd::string_view, INDEX_T> {
+class PHIdxerView<std::string_view, INDEX_T> {
  public:
   PHIdxerView() {}
   ~PHIdxerView() {}
@@ -101,6 +105,11 @@ class PHIdxerView<nonstd::string_view, INDEX_T> {
     return false;
   }
 
+  bool get_index(const std::string_view& oid, INDEX_T& lid) const {
+    nonstd::string_view oid_view(oid.data(), oid.size());
+    return get_index(oid_view, lid);
+  }
+
   size_t size() const { return keys_view_.size(); }
 
  private:
@@ -111,7 +120,6 @@ class PHIdxerView<nonstd::string_view, INDEX_T> {
 template <typename KEY_T, typename INDEX_T>
 class ImmPHIdxer {
  public:
-
   void Init(std::shared_ptr<Blob> buf) {
     buffer_ = buf;
     idxer_.init(buffer_->data(), buffer_->size());
@@ -184,6 +192,58 @@ class PHIdxerViewBuilder {
   std::vector<KEY_T> keys_;
 };
 
-} // namespace grape
+template <typename INDEX_T>
+class PHIdxerViewBuilder<std::string_view, INDEX_T> {
+ public:
+  PHIdxerViewBuilder() = default;
+  ~PHIdxerViewBuilder() = default;
 
-#endif  // MODULES_GRAPH_VERTEX_MAP_PERFECT_HASH_INDEXER_H_
+  void add(const std::string_view& oid) {
+    nonstd::string_view oid_view(oid.data(), oid.size());
+    keys_.push_back(oid_view);
+  }
+
+  void add(std::string_view&& oid) {
+    nonstd::string_view oid_view(oid.data(), oid.size());
+    keys_.push_back(std::move(oid_view));
+  }
+
+  ImmPHIdxer<std::string_view, INDEX_T> finish(Client& client) {
+    mem_dumper dumper;
+    {
+      SinglePHFView<murmurhasher>::build(keys_.begin(), keys_.size(), dumper,
+                                         1);
+      mem_loader loader(dumper.buffer().data(), dumper.buffer().size());
+      SinglePHFView<murmurhasher> phf;
+      phf.load(loader);
+      hashmap_indexer_impl::KeyBuffer<nonstd::string_view> key_buffer;
+
+      std::vector<nonstd::string_view> ordered_keys(keys_.size());
+      for (auto& key : keys_) {
+        size_t idx = phf(key);
+        ordered_keys[idx] = key;
+      }
+      for (auto& key : ordered_keys) {
+        key_buffer.push_back(key);
+      }
+      key_buffer.dump(dumper);
+    }
+    ImmPHIdxer<std::string_view, INDEX_T> idxer;
+
+    std::unique_ptr<BlobWriter> writer;
+    client.CreateBlob(dumper.buffer().size() * sizeof(char), writer);
+    memcpy(writer->data(), dumper.buffer().data(), dumper.buffer().size());
+    std::shared_ptr<Object> buf;
+    writer->Seal(client, buf);
+    idxer.Init(std::dynamic_pointer_cast<Blob>(buf));
+
+    return idxer;
+  }
+
+ private:
+  std::vector<nonstd::string_view> keys_;
+};
+
+}  // namespace grape_perfect_hash
+
+#endif  // MODULES_BASIC_DS_PERFECT_HASH_INDEXER_H_

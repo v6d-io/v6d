@@ -13,21 +13,23 @@
  * limitations under the License.
  */
 
-#ifndef GRAPHSCOPE_PTHASH_UTILS_SINGLE_PHF_VIEW_H_
-#define GRAPHSCOPE_PTHASH_UTILS_SINGLE_PHF_VIEW_H_
+#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_SINGLE_PHF_VIEW_H_
+#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_SINGLE_PHF_VIEW_H_
 
 #include <cstdlib>
+#include <set>
 #include <vector>
-#include "encoders_view.h"
-#include "ref_vector.h"
+
+#include "basic/ds/grape_perfect_hash/encoders_view.h"
+#include "basic/ds/grape_perfect_hash/ref_vector.h"
+#include "basic/ds/grape_perfect_hash/types.h"
 #include "pthash/pthash.hpp"
 #include "pthash/single_phf.hpp"
-#include "types.h"
 
 #define nssv_CONFIG_SELECT_STRING_VIEW nssv_STRING_VIEW_NONSTD
 #include "string_view/string_view.hpp"
 
-namespace grape {
+namespace grape_perfect_hash {
 
 struct mem_dumper {
  public:
@@ -161,6 +163,6 @@ struct SinglePHFView {
   ef_sequence_view m_free_slots;
 };
 
-}  // namespace grape
+}  // namespace grape_perfect_hash
 
-#endif  // GRAPHSCOPE_PTHASH_UTILS_SINGLE_PHF_VIEW_H_
+#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_SINGLE_PHF_VIEW_H_

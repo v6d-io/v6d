@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef GRAPE_CONFIG_H_
-#define GRAPE_CONFIG_H_
+#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_CONFIG_H_
+#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_CONFIG_H_
 
 #ifdef USE_JEMALLOC
 #include <jemalloc/jemalloc.h>
@@ -24,11 +24,11 @@ limitations under the License.
 #include <thrust/host_vector.h>
 #endif
 
-#include "default_allocator.h"
-#include "hp_allocator.h"
+#include "basic/ds/grape_perfect_hash/default_allocator.h"
+#include "basic/ds/grape_perfect_hash/hp_allocator.h"
 
 namespace google {}
-namespace grape {
+namespace grape_perfect_hash {
 
 #ifdef GFLAGS_NAMESPACE
 namespace gflags = GFLAGS_NAMESPACE;
@@ -66,5 +66,5 @@ const int kCoordinatorRank = 0;
 const char kSerializationVertexMapFilename[] = "vertex_map.s";
 const char kSerializationFilenameFormat[] = "%s/frag_%d.s";
 
-}  // namespace grape
-#endif  // GRAPE_CONFIG_H_
+}  // namespace grape_perfect_hash
+#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_CONFIG_H_

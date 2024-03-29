@@ -13,16 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef GRAPE_GRAPH_HASHMAP_INDEXER_IMPL_H_
-#define GRAPE_GRAPH_HASHMAP_INDEXER_IMPL_H_
+#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_HASHMAP_INDEXER_IMPL_H_
+#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_HASHMAP_INDEXER_IMPL_H_
 
+#include <memory>
+#include <utility>
 #include <vector>
 
-#include "config.h"
-#include "ref_vector.h"
-#include "string_view_vector.h"
+#include "basic/ds/grape_perfect_hash/config.h"
+#include "basic/ds/grape_perfect_hash/ref_vector.h"
+#include "basic/ds/grape_perfect_hash/string_view_vector.h"
 
-namespace grape {
+namespace grape_perfect_hash {
 
 namespace hashmap_indexer_impl {
 
@@ -173,38 +175,6 @@ struct KeyBufferView {
 
 }  // namespace hashmap_indexer_impl
 
-namespace sync_comm {
+}  // namespace grape_perfect_hash
 
-// template <typename T>
-// struct CommImpl<hashmap_indexer_impl::KeyBuffer<T>> {
-//   static void send(const hashmap_indexer_impl::KeyBuffer<T>& buf,
-//                    int dst_worker_id, int tag, MPI_Comm comm) {
-//     Send(buf.buffer(), dst_worker_id, tag, comm);
-//   }
-
-//   static void recv(hashmap_indexer_impl::KeyBuffer<T>& buf, int
-//   src_worker_id,
-//                    int tag, MPI_Comm comm) {
-//     Recv(buf.buffer(), src_worker_id, tag, comm);
-//   }
-// };
-
-// template <>
-// struct CommImpl<hashmap_indexer_impl::KeyBuffer<nonstd::string_view>> {
-//   static void send(
-//       const hashmap_indexer_impl::KeyBuffer<nonstd::string_view>& buf,
-//       int dst_worker_id, int tag, MPI_Comm comm) {
-//     Send(buf.buffer(), dst_worker_id, tag, comm);
-//   }
-
-//   static void recv(hashmap_indexer_impl::KeyBuffer<nonstd::string_view>& buf,
-//                    int src_worker_id, int tag, MPI_Comm comm) {
-//     Recv(buf.buffer(), src_worker_id, tag, comm);
-//   }
-// };
-
-}  // namespace sync_comm
-
-}  // namespace grape
-
-#endif  // GRAPE_GRAPH_HASHMAP_INDEXER_IMPL_H_
+#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_HASHMAP_INDEXER_IMPL_H_

@@ -43,6 +43,8 @@ limitations under the License.
 
 namespace vineyard {
 
+using detail::grape_perfect_hash::arrow_array_iterator;
+
 /**
  * @brief HashmapBuilder is used for constructing hashmaps that supported by
  * vineyard.
@@ -230,8 +232,6 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
  public:
   static_assert(std::is_pod<V>::value, "V in perfect hashmap must be POD type");
 
-  typedef boomphf::SingleHashFunctor<K> hasher_t;
-
   explicit PerfectHashmapBuilder(Client& client)
       : PerfectHashmapBaseBuilder<K, V>(client) {}
 
@@ -249,12 +249,14 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
                      const V* values, const size_t n_elements) {
     this->set_num_elements_(n_elements);
     this->set_ph_keys_(keys);
-    RETURN_ON_ERROR(detail::boomphf::build_keys(
-        bphf_, reinterpret_cast<const K*>(keys->data()), n_elements));
+    for (size_t i = 0; i < n_elements; ++i) {
+      this->builder_.add((reinterpret_cast<const K*>(keys->data()))[i]);
+    }
+    this->idxer_ = this->builder_.finish(client);
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
-          return detail::boomphf::build_values(
-              bphf_, reinterpret_cast<const K*>(keys->data()), n_elements,
+          return detail::grape_perfect_hash::build_values(
+              idxer_, reinterpret_cast<const K*>(keys->data()), n_elements,
               values, shuffled_values);
         });
   }
@@ -267,11 +269,18 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
                      const V* values, const size_t n_elements) {
     this->set_num_elements_(n_elements);
     this->set_ph_keys_(keys);
-    RETURN_ON_ERROR(detail::boomphf::build_keys(bphf_, keys->GetArray()));
+    for (auto iter = arrow_array_iterator<K, ArrowArrayType<K>>(
+             keys->GetArray()->begin());
+         iter !=
+         arrow_array_iterator<K, ArrowArrayType<K>>(keys->GetArray()->end());
+         iter++) {
+      this->builder_.add(*iter);
+    }
+    this->idxer_ = this->builder_.finish(client);
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
-          return detail::boomphf::build_values(bphf_, keys->GetArray(), values,
-                                               shuffled_values);
+          return detail::grape_perfect_hash::build_values(
+              idxer_, keys->GetArray(), values, shuffled_values);
         });
     return Status::OK();
   }
@@ -290,12 +299,14 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
                      const V begin_value, const size_t n_elements) {
     this->set_num_elements_(n_elements);
     this->set_ph_keys_(keys);
-    RETURN_ON_ERROR(detail::boomphf::build_keys(
-        bphf_, reinterpret_cast<const K*>(keys->data()), n_elements));
+    for (size_t i = 0; i < n_elements; ++i) {
+      this->builder_.add((reinterpret_cast<const K*>(keys->data()))[i]);
+    }
+    this->idxer_ = this->builder_.finish(client);
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
-          return detail::boomphf::build_values(
-              bphf_, reinterpret_cast<const K*>(keys->data()), n_elements,
+          return detail::grape_perfect_hash::build_values(
+              idxer_, reinterpret_cast<const K*>(keys->data()), n_elements,
               begin_value, shuffled_values);
         });
   }
@@ -308,11 +319,18 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
                      const V begin_value, const size_t n_elements) {
     this->set_num_elements_(n_elements);
     this->set_ph_keys_(keys);
-    RETURN_ON_ERROR(detail::boomphf::build_keys(bphf_, keys->GetArray()));
+    for (auto iter = arrow_array_iterator<K, ArrowArrayType<K>>(
+             keys->GetArray()->begin());
+         iter !=
+         arrow_array_iterator<K, ArrowArrayType<K>>(keys->GetArray()->end());
+         iter++) {
+      this->builder_.add(*iter);
+    }
+    this->idxer_ = this->builder_.finish(client);
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
-          return detail::boomphf::build_values(bphf_, keys->GetArray(),
-                                               begin_value, shuffled_values);
+          return detail::grape_perfect_hash::build_values(
+              idxer_, keys->GetArray(), begin_value, shuffled_values);
         });
     return Status::OK();
   }
@@ -324,15 +342,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    *
    */
   Status Build(Client& client) override {
-    size_t size = detail::boomphf::bphf_serde::compute_size(bphf_);
-    std::unique_ptr<BlobWriter> blob_writer;
-    RETURN_ON_ERROR(client.CreateBlob(size, blob_writer));
-    char* dst = detail::boomphf::bphf_serde::ser(blob_writer->data(), bphf_);
-    RETURN_ON_ASSERT(dst == blob_writer->data() + size,
-                     "boomphf serialization error: buffer size mismatched");
-    std::shared_ptr<Object> blob;
-    RETURN_ON_ERROR(blob_writer->Seal(client, blob));
-    this->set_ph_(std::dynamic_pointer_cast<Blob>(blob));
+    this->set_ph_(std::dynamic_pointer_cast<Blob>(idxer_.buffer()));
     return Status::OK();
   }
 
@@ -360,435 +370,11 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     return Status::OK();
   }
 
-  boomphf::mphf<K, hasher_t> bphf_;
+  grape_perfect_hash::PHIdxerViewBuilder<K, uint64_t> builder_;
+  grape_perfect_hash::ImmPHIdxer<K, uint64_t> idxer_;
 
   const int concurrency_ = std::thread::hardware_concurrency();
-  const double gamma_ = 2.5f;
-};
-
-// GRAPE PERFECT HASH
-template <typename K, typename V>
-class GrapePerfectHashMapBuilder;
-using detail::boomphf::arrow_array_iterator;
-
-template <typename K, typename V>
-class GrapePerfectHashMapBuilder;
-using detail::boomphf::arrow_array_iterator;
-
-template <typename K, typename V>
-class GrapePerfectHashMap : public Registered<GrapePerfectHashMap<K, V>> {
- public:
-  static std::unique_ptr<Object> Create() __attribute__((used)) {
-    return std::static_pointer_cast<Object>(
-        std::unique_ptr<GrapePerfectHashMap>(new GrapePerfectHashMap<K, V>()));
-  }
-
-  void Construct(const ObjectMeta& meta) override {
-    Object::Construct(meta);
-
-    std::string typeName = type_name<GrapePerfectHashMap<K, V>>();
-
-    VINEYARD_ASSERT(typeName == meta.GetTypeName(),
-                    "Type dismatch, expect " + typeName + ", but got " +
-                        meta.GetTypeName());
-    this->v_buffer_ =
-        std::dynamic_pointer_cast<Blob>(meta.GetMember("v_buffer_"));
-    this->hash_data_ =
-        std::dynamic_pointer_cast<Blob>(meta.GetMember("hash_data_"));
-    this->n_elements = meta.GetKeyValue<size_t>("n_elements");
-
-    this->idxer_.Init(this->hash_data_);
-  }
-
-  size_t size() const { return this->n_elements; }
-
-  const V& at(const K& key) const {
-    uint64_t value_index = 0;
-    this->idxer_.get_index(key, value_index);
-    return reinterpret_cast<const V*>(this->v_buffer_->data())[value_index];
-  }
-
- private:
-  grape::ImmPHIdxer<K, uint64_t> idxer_;
-  std::shared_ptr<Blob> v_buffer_;
-  std::shared_ptr<Blob> hash_data_;
-  size_t n_elements;
-
-  friend class Client;
-  friend class GrapePerfectHashMapBuilder<K, V>;
-};
-
-template <typename V>
-class GrapePerfectHashMap<std::string_view, V>
-    : public Registered<GrapePerfectHashMap<std::string_view, V>> {
- public:
-  static std::unique_ptr<Object> Create() __attribute__((used)) {
-    return std::static_pointer_cast<Object>(
-        std::unique_ptr<GrapePerfectHashMap>(
-            new GrapePerfectHashMap<std::string_view, V>()));
-  }
-
-  void Construct(const ObjectMeta& meta) override {
-    Object::Construct(meta);
-
-    std::string typeName = type_name<GrapePerfectHashMap<std::string_view, V>>();
-
-    VINEYARD_ASSERT(typeName == meta.GetTypeName(),
-                    "Type dismatch, expect " + typeName + ", but got " +
-                        meta.GetTypeName());
-    this->v_buffer_ =
-        std::dynamic_pointer_cast<Blob>(meta.GetMember("v_buffer_"));
-    this->hash_data_ =
-        std::dynamic_pointer_cast<Blob>(meta.GetMember("hash_data_"));
-    this->n_elements = meta.GetKeyValue<size_t>("n_elements");
-
-    this->idxer_.Init(this->hash_data_);
-  }
-
-  size_t size() const { return this->n_elements; }
-
-  const V& at(const std::string_view& key) const {
-    uint64_t value_index = 0;
-    nonstd::string_view key_view(key.data(), key.size());
-    this->idxer_.get_index(key_view, value_index);
-    return reinterpret_cast<const V*>(this->v_buffer_->data())[value_index];
-  }
-
- private:
-  grape::ImmPHIdxer<nonstd::string_view, uint64_t> idxer_;
-  std::shared_ptr<Blob> v_buffer_;
-  std::shared_ptr<Blob> hash_data_;
-  size_t n_elements;
-
-  friend class Client;
-  friend class GrapePerfectHashMapBuilder<std::string_view, V>;
-};
-
-template <typename K, typename V>
-class GrapePerfectHashMapBuilder : public ObjectBuilder {
- public:
-  explicit GrapePerfectHashMapBuilder(Client& client) {}
-
-  explicit GrapePerfectHashMapBuilder(
-      GrapePerfectHashMap<K, V> const& __value) {
-    VINEYARD_ASSERT(false, "Not implemented yet");
-  }
-
-  explicit GrapePerfectHashMapBuilder(
-      std::shared_ptr<GrapePerfectHashMap<K, V>> const& __value)
-      : GrapePerfectHashMapBuilder(*__value) {}
-
-  Status _Seal(Client& client, std::shared_ptr<Object>& object) override {
-    // prepare member
-    std::shared_ptr<GrapePerfectHashMap<K, V>> value =
-        std::make_shared<GrapePerfectHashMap<K, V>>();
-    object = value;
-    this->hash_data_ = this->idxer_.buffer();
-    value->meta_.AddMember("v_buffer_", this->v_buffer_);
-    value->meta_.AddMember("hash_data_", this->hash_data_);
-    value->meta_.AddKeyValue("n_elements", this->n_elements);
-    value->meta_.SetTypeName(type_name<GrapePerfectHashMap<K, V>>());
-    value->idxer_ = this->idxer_;
-    value->n_elements = this->n_elements;
-    value->v_buffer_ = std::dynamic_pointer_cast<Blob>(this->v_buffer_);
-    value->hash_data_ = std::dynamic_pointer_cast<Blob>(this->hash_data_);
-
-    VINEYARD_CHECK_OK(client.CreateMetaData(value->meta_, value->id_));
-    this->set_sealed(true);
-
-    return Status::OK();
-  }
-
-  Status Build(Client& client) override {
-    // TBD
-    return Status::OK();
-  }
-
-  Status ComputeHash(Client& client, const K* keys, const V* values,
-                     const size_t n_elements) {
-    std::shared_ptr<Blob> blob;
-    RETURN_ON_ERROR(this->allocateKeys(client, keys, n_elements, blob));
-    return ComputeHash(client, blob, values, n_elements);
-  }
-
-  Status ComputeHash(Client& client, const std::shared_ptr<Blob> keys,
-                     const V* values, const size_t n_elements) {
-    this->n_elements = n_elements;
-
-    // do create hash(build key)
-    for (size_t i = 0; i < n_elements; ++i) {
-      this->builder_.add((reinterpret_cast<const K*>(keys->data()))[i]);
-    }
-    this->idxer_ = this->builder_.finish(client);
-
-    return this->allocateValues(
-        client, n_elements, [&](V* shuffled_values) -> Status {
-          return this->build_values(reinterpret_cast<const K*>(keys->data()),
-                                    n_elements, values, shuffled_values);
-        });
-  }
-
-  Status ComputeHash(Client& client,
-                     const std::shared_ptr<ArrowVineyardArrayType<K>>& keys,
-                     const V begin_value, const size_t n_elements) {
-    this->n_elements = n_elements;
-
-    for (auto iter = arrow_array_iterator<K, ArrowArrayType<K>>(
-             keys->GetArray()->begin());
-         iter !=
-         arrow_array_iterator<K, ArrowArrayType<K>>(keys->GetArray()->end());
-         iter++) {
-      this->builder_.add(*iter);
-    }
-    this->idxer_ = this->builder_.finish(client);
-
-    return this->allocateValues(
-        client, n_elements, [&](V* shuffled_values) -> Status {
-          return this->build_values(keys->GetArray(), begin_value,
-                                    shuffled_values);
-        });
-  }
-
-  Status ComputeHash(Client& client,
-                     const std::shared_ptr<ArrowVineyardArrayType<K>>& keys,
-                     const V* values, const size_t n_elements) {
-    this->n_elements = n_elements;
-
-    for (auto iter = arrow_array_iterator<K, ArrowArrayType<K>>(
-             keys->GetArray()->begin());
-         iter !=
-         arrow_array_iterator<K, ArrowArrayType<K>>(keys->GetArray()->end());
-         iter++) {
-      this->builder_.add(*iter);
-    }
-    this->idxer_ = this->builder_.finish(client);
-
-    return this->allocateValues(
-        client, n_elements, [&](V* shuffled_values) -> Status {
-          return this->build_values(keys->GetArray(), values,
-                                    shuffled_values);
-        });
-  }
-
-  Status build_values(
-      const K* keys, const size_t n_elements, const V* begin_value, V* values,
-      const size_t concurrency = std::thread::hardware_concurrency()) {
-    RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
-    parallel_for(
-        static_cast<size_t>(0), n_elements,
-        [&](const size_t index) {
-          uint64_t v_index_ = 0;
-          this->idxer_.get_index(keys[index], v_index_);
-          values[v_index_] = begin_value[index];
-        },
-        concurrency);
-    return Status::OK();
-  }
-
-  Status build_values(
-      const std::shared_ptr<ArrowArrayType<K>>& keys, const V begin_value,
-      V* values,
-      const size_t concurrency = std::thread::hardware_concurrency()) {
-    parallel_for(
-        static_cast<size_t>(0), static_cast<size_t>(keys->length()),
-        [&](const size_t index) {
-          uint64_t v_index_ = 0;
-          this->idxer_.get_index(keys->GetView(index), v_index_);
-          values[v_index_] = begin_value + index;
-        },
-        concurrency);
-    return Status::OK();
-  }
-
-  Status build_values(
-      const std::shared_ptr<ArrowArrayType<K>>& keys, const V* begin_value,
-      V* values,
-      const size_t concurrency = std::thread::hardware_concurrency()) {
-    parallel_for(
-        static_cast<size_t>(0), static_cast<size_t>(keys->length()),
-        [&](const size_t index) {
-          uint64_t v_index_ = 0;
-          this->idxer_.get_index(keys->GetView(index), v_index_);
-          values[v_index_] = begin_value[index];
-        },
-        concurrency);
-    return Status::OK();
-  }
-
-  size_t size() const { return this->n_elements; }
-
- private:
-  Status allocateKeys(Client& client, const K* keys, const size_t n_elements,
-                      std::shared_ptr<Blob>& out) {
-    std::unique_ptr<BlobWriter> blob_writer;
-    RETURN_ON_ERROR(client.CreateBlob(n_elements * sizeof(K), blob_writer));
-    memcpy(blob_writer->data(), keys, n_elements * sizeof(K));
-    std::shared_ptr<Object> blob;
-    RETURN_ON_ERROR(blob_writer->Seal(client, blob));
-    out = std::dynamic_pointer_cast<Blob>(blob);
-    return Status::OK();
-  }
-
-  template <typename Func>
-  Status allocateValues(Client& client, const size_t n_elements, Func func) {
-    std::unique_ptr<BlobWriter> blob_writer;
-    RETURN_ON_ERROR(client.CreateBlob(n_elements * sizeof(V), blob_writer));
-    V* values = reinterpret_cast<V*>(blob_writer->data());
-    RETURN_ON_ERROR(func(values));
-    RETURN_ON_ERROR(blob_writer->Seal(client, v_buffer_));
-    return Status::OK();
-  }
-
-  grape::PHIdxerViewBuilder<K, uint64_t> builder_;
-  grape::ImmPHIdxer<K, uint64_t> idxer_;
-  std::shared_ptr<Object> v_buffer_;
-  std::shared_ptr<Object> hash_data_;
-  size_t n_elements;
-};
-
-template <typename V>
-class GrapePerfectHashMapBuilder<std::string_view, V> : public ObjectBuilder {
- public:
-  explicit GrapePerfectHashMapBuilder(Client& client) {}
-
-  explicit GrapePerfectHashMapBuilder(
-      GrapePerfectHashMap<std::string_view, V> const& __value) {
-    VINEYARD_ASSERT(false, "Not implemented yet");
-  }
-
-  explicit GrapePerfectHashMapBuilder(
-      std::shared_ptr<GrapePerfectHashMap<std::string_view, V>> const& __value)
-      : GrapePerfectHashMapBuilder(*__value) {}
-  // auto io_adaptor = vineyard::IOFactory::CreateIOAdaptor(expanded);
-
-  Status _Seal(Client& client, std::shared_ptr<Object>& object) override {
-    // prepare member
-    std::shared_ptr<GrapePerfectHashMap<std::string_view, V>> value =
-        std::make_shared<GrapePerfectHashMap<std::string_view, V>>();
-    object = value;
-    this->hash_data_ = this->idxer_.buffer();
-    value->meta_.AddMember("v_buffer_", this->v_buffer_);
-    value->meta_.AddMember("hash_data_", this->hash_data_);
-    value->meta_.AddKeyValue("n_elements", this->n_elements);
-    value->meta_.SetTypeName(type_name<GrapePerfectHashMap<std::string_view, V>>());
-    value->idxer_ = this->idxer_;
-    value->n_elements = this->n_elements;
-    value->v_buffer_ = std::dynamic_pointer_cast<Blob>(this->v_buffer_);
-    value->hash_data_ = std::dynamic_pointer_cast<Blob>(this->hash_data_);
-
-    VINEYARD_CHECK_OK(client.CreateMetaData(value->meta_, value->id_));
-    this->set_sealed(true);
-
-    return Status::OK();
-  }
-
-  Status Build(Client& client) override {
-    // TBD
-    return Status::OK();
-  }
-
-  Status ComputeHash(
-      Client& client,
-      const std::shared_ptr<ArrowVineyardArrayType<std::string_view>>& keys,
-      const V begin_value, const size_t n_elements) {
-    this->n_elements = n_elements;
-
-    for (auto iter = arrow_array_iterator<std::string_view,
-                                          ArrowArrayType<std::string_view>>(
-             keys->GetArray()->begin());
-         iter != arrow_array_iterator<std::string_view,
-                                      ArrowArrayType<std::string_view>>(
-                     keys->GetArray()->end());
-         iter++) {
-      nonstd::string_view key_view((*iter).data(), (*iter).size());
-      this->builder_.add(key_view);
-    }
-    this->idxer_ = this->builder_.finish(client);
-
-    return this->allocateValues(
-        client, n_elements, [&](V* shuffled_values) -> Status {
-          return this->build_values(keys->GetArray(), begin_value,
-                                    shuffled_values);
-        });
-  }
-
-  Status ComputeHash(
-      Client& client,
-      const std::shared_ptr<ArrowVineyardArrayType<std::string_view>>& keys,
-      const V* begin_value, const size_t n_elements) {
-    this->n_elements = n_elements;
-
-    for (auto iter = arrow_array_iterator<std::string_view,
-                                          ArrowArrayType<std::string_view>>(
-             keys->GetArray()->begin());
-         iter != arrow_array_iterator<std::string_view,
-                                      ArrowArrayType<std::string_view>>(
-                     keys->GetArray()->end());
-         iter++) {
-      nonstd::string_view key_view((*iter).data(), (*iter).size());
-      this->builder_.add(key_view);
-    }
-    this->idxer_ = this->builder_.finish(client);
-
-    return this->allocateValues(
-        client, n_elements, [&](V* shuffled_values) -> Status {
-          return this->build_values(keys->GetArray(), begin_value,
-                                    shuffled_values);
-        });
-  }
-
-  Status build_values(
-      const std::shared_ptr<ArrowArrayType<std::string_view>>& keys,
-      const V begin_value, V* values,
-      const size_t concurrency = std::thread::hardware_concurrency()) {
-    parallel_for(
-        static_cast<size_t>(0), static_cast<size_t>(keys->length()),
-        [&](const size_t index) {
-          uint64_t v_index_ = 0;
-          nonstd::string_view key_view(keys->GetView(index).data(),
-                                       keys->GetView(index).size());
-          this->idxer_.get_index(key_view, v_index_);
-          values[v_index_] = begin_value + index;
-        },
-        concurrency);
-    return Status::OK();
-  }
-
-  Status build_values(
-      const std::shared_ptr<ArrowArrayType<std::string_view>>& keys,
-      const V* begin_value, V* values,
-      const size_t concurrency = std::thread::hardware_concurrency()) {
-    parallel_for(
-        static_cast<size_t>(0), static_cast<size_t>(keys->length()),
-        [&](const size_t index) {
-          uint64_t v_index_ = 0;
-          nonstd::string_view key_view(keys->GetView(index).data(),
-                                       keys->GetView(index).size());
-          this->idxer_.get_index(key_view, v_index_);
-          values[v_index_] = begin_value[index];
-        },
-        concurrency);
-    return Status::OK();
-  }
-
-  size_t size() const { return this->n_elements; }
-
- private:
-  template <typename Func>
-  Status allocateValues(Client& client, const size_t n_elements, Func func) {
-    std::unique_ptr<BlobWriter> blob_writer;
-    RETURN_ON_ERROR(client.CreateBlob(n_elements * sizeof(V), blob_writer));
-    V* values = reinterpret_cast<V*>(blob_writer->data());
-    RETURN_ON_ERROR(func(values));
-    RETURN_ON_ERROR(blob_writer->Seal(client, v_buffer_));
-    return Status::OK();
-  }
-
-  grape::PHIdxerViewBuilder<nonstd::string_view, uint64_t> builder_;
-  grape::ImmPHIdxer<nonstd::string_view, uint64_t> idxer_;
-  std::shared_ptr<Object> v_buffer_;
-  std::shared_ptr<Object> hash_data_;
-  size_t n_elements;
+  // const double gamma_ = 2.5f;
 };
 
 }  // namespace vineyard

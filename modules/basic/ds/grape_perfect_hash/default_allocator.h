@@ -13,13 +13,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef GRAPE_UTILS_DEFAULT_ALLOCATOR_H_
-#define GRAPE_UTILS_DEFAULT_ALLOCATOR_H_
+#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_DEFAULT_ALLOCATOR_H_
+#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_DEFAULT_ALLOCATOR_H_
 
 #include <stdlib.h>
 #define ALLOC_ALIGNMENT 64
 
-namespace grape {
+namespace grape_perfect_hash {
 
 /**
  * @brief Allocator used for grape containers, i.e., <Array>.
@@ -69,6 +69,6 @@ inline bool operator==(const DefaultAllocator<_Tp1>&,
   return true;
 }
 
-}  // namespace grape
+}  // namespace grape_perfect_hash
 
-#endif  // GRAPE_UTILS_DEFAULT_ALLOCATOR_H_
+#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_DEFAULT_ALLOCATOR_H_

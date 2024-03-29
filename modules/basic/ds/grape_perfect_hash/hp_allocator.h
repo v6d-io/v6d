@@ -13,13 +13,14 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef GRAPE_UTILS_HP_ALLOCATOR_H_
-#define GRAPE_UTILS_HP_ALLOCATOR_H_
+#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_HP_ALLOCATOR_H_
+#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_HP_ALLOCATOR_H_
 
+#include <glog/logging.h>
 #include <stdlib.h>
 #include <sys/mman.h>
 
-#include <glog/logging.h>
+#include <limits>
 
 #ifdef USE_HUGEPAGES
 
@@ -37,7 +38,7 @@ limitations under the License.
 #define HUGEPAGE_MASK (2UL * 1024 * 1024 - 1UL)
 #define ROUND_UP(size) (((size) + HUGEPAGE_MASK) & (~HUGEPAGE_MASK))
 
-namespace grape {
+namespace grape_perfect_hash {
 
 /**
  * @brief Allocator used for grape containers, i.e., <Array>.
@@ -114,7 +115,7 @@ inline bool operator==(const HpAllocator<_Tp1>&, const HpAllocator<_Tp2>&) {
   return true;
 }
 
-}  // namespace grape
+}  // namespace grape_perfect_hash
 
 #undef ADDR
 #undef FLAGS
@@ -124,4 +125,4 @@ inline bool operator==(const HpAllocator<_Tp1>&, const HpAllocator<_Tp2>&) {
 
 #endif
 
-#endif  // GRAPE_UTILS_HP_ALLOCATOR_H_
+#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_HP_ALLOCATOR_H_

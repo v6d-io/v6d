@@ -13,12 +13,12 @@
  * limitations under the License.
  */
 
-#ifndef GRAPE_UTILS_REF_VECTOR_H_
-#define GRAPE_UTILS_REF_VECTOR_H_
+#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_REF_VECTOR_H_
+#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_REF_VECTOR_H_
 
 #include <vector>
 
-namespace grape {
+namespace grape_perfect_hash {
 
 template <typename T>
 struct ref_vector {
@@ -77,6 +77,6 @@ const char* decode_val(T& val, const char* buf) {
   return buf + sizeof(T);
 }
 
-}  // namespace grape
+}  // namespace grape_perfect_hash
 
-#endif  // GRAPE_UTILS_REF_VECTOR_H_
+#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_REF_VECTOR_H_

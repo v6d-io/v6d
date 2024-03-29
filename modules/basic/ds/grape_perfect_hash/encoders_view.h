@@ -13,12 +13,12 @@
  * limitations under the License.
  */
 
-#ifndef GRAPHSCOPE_PTHASH_UTILS_ENCODERS_VIEW_VIEW_H_
-#define GRAPHSCOPE_PTHASH_UTILS_ENCODERS_VIEW_VIEW_H_
+#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_ENCODERS_VIEW_H_
+#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_ENCODERS_VIEW_H_
 
-#include "ef_sequence_view.h"
+#include "basic/ds/grape_perfect_hash/ef_sequence_view.h"
 
-namespace grape {
+namespace grape_perfect_hash {
 
 // This code is an adaptation from
 // https://github.com/jermp/pthash/blob/master/include/encoders/encoders.hpp
@@ -57,6 +57,6 @@ struct dual_dictionary_view {
   dictionary_view m_back;
 };
 
-}  // namespace grape
+}  // namespace grape_perfect_hash
 
-#endif  // GRAPHSCOPE_PTHASH_UTILS_ENCODERS_VIEW_VIEW_H_
+#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_ENCODERS_VIEW_H_
