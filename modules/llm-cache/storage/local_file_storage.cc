@@ -107,7 +107,16 @@ Status LocalFileStorage::Mkdir(std::string path) {
 Status LocalFileStorage::Flush(std::shared_ptr<FileDescriptor>& fd) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
-  fdatasync(lfd->fd);
+  int ret;
+#ifdef __linux__
+  ret = fdatasync(lfd->fd);
+#else
+  ret = fsync(lfd->fd);
+#endif
+
+  if (ret == -1) {
+    return Status::IOError("Failed to flush file: " + formatIOError(lfd->path));
+  }
   return Status::OK();
 }
 
