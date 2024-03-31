@@ -159,12 +159,14 @@ Status KVStateCacheBlockBuilder::Query(
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
     LLMKV& keyState = kvState[currentLayer].first;
     LLMKV& valueState = kvState[currentLayer].second;
-    keyState.data =
-        keyStateTensorBuilderList[currentLayer]->data() + index * tensorBytes;
-    keyState.length = tensorBytes;
-    valueState.data =
-        valueStateTensorBuilderList[currentLayer]->data() + index * tensorBytes;
-    valueState.length = tensorBytes;
+    memcpy(
+        keyState.data,
+        keyStateTensorBuilderList[currentLayer]->data() + index * tensorBytes,
+        tensorBytes);
+    memcpy(
+        valueState.data,
+        valueStateTensorBuilderList[currentLayer]->data() + index * tensorBytes,
+        tensorBytes);
   }
   return Status::OK();
 }
@@ -206,6 +208,8 @@ Status KVStateCacheBlockBuilder::Update(
 
     uint8_t* keyData = keyStateTensorBuilderList[currentLayer]->data();
     uint8_t* valueData = valueStateTensorBuilderList[currentLayer]->data();
+    LOG(INFO) << "dst:" << keyData + index * this->tensorBytes
+              << " src:" << keyState.data;
     memcpy(keyData + index * this->tensorBytes, keyState.data,
            this->tensorBytes);
     memcpy(valueData + index * this->tensorBytes, valueState.data,

@@ -152,7 +152,7 @@ Status LocalFileStorage::Delete(std::string path) {
 std::string LocalFileStorage::GetTmpFileDir(std::string filePath) {
   pid_t pid = getpid();
   char* pod_name_str = getenv("POD_NAME");
-  if (pod_name_str == nullptr or strlen(pod_name_str) == 0) {
+  if (pod_name_str == nullptr || strlen(pod_name_str) == 0) {
     return this->tempFileDir + std::to_string(pid);
   }
   std::string pod_name = pod_name_str;

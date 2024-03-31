@@ -102,7 +102,7 @@ class FileStorage : public IStorage {
   Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
       const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
-      size_t& updated);
+      size_t& updated) override;
 
   Status Query(const std::vector<int>& tokenList,
                std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,

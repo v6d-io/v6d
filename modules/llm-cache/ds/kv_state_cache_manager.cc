@@ -87,6 +87,27 @@ Status KVStateCacheManager::Make(std::shared_ptr<KVStateCacheManager>& manager,
   return Status::OK();
 }
 
+/**
+ * @brief Update the kv state with the given token list in the kv state cache
+ * manager.
+ *
+ * @param tokenList The token list to be updated.
+ * @param kvStateList The kv state list of the token list.
+ *                    It's a 2D vector, the first dimension is the token index,
+ *                    and the second dimension is the layer index.
+ *                    The kv state is a pair of LLMKV, the first is the K tensor
+ *                    and the second is the V tensor. It contains two fields:
+ *                    data and length. The data is the pointer to the tensor
+ * data, and the length is the size of the tensor data.
+ * @param updated The number of tokens that have been updated successfully. It's
+ *                a return value.
+ *
+ * @note The length of the token list should be as same as the length of the
+ * kvStateList.
+ *
+ *
+ * @return Status
+ */
 Status KVStateCacheManager::Update(
     const std::vector<int>& tokenList,
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
@@ -97,6 +118,27 @@ Status KVStateCacheManager::Update(
   return storage->Update(tokenList, kvStateList, updated);
 }
 
+/**
+ * @brief Update the kv state with the given token list and its prefix in the kv
+ * state cache manager.
+ *
+ * @param prefix The prefix of the token list.
+ * @param tokenList The token list to be updated.
+ * @param kvStateList The kv state list of the token list.
+ *                    It's a 2D vector, the first dimension is the token index,
+ *                    and the second dimension is the layer index.
+ *                    The kv state is a pair of LLMKV, the first is the K tensor
+ *                    and the second is the V tensor. It contains two fields:
+ *                    data and length. The data is the pointer to the tensor
+ * data, and the length is the size of the tensor data.
+ * @param updated It's a return value to indicate the number of tokens that have
+ * been updated successfully.
+ *
+ * @note The length of the token list should be as same as the length of the
+ * kvStateList.
+ *
+ * @return Status
+ */
 Status KVStateCacheManager::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
@@ -107,18 +149,63 @@ Status KVStateCacheManager::Update(
   return storage->Update(prefix, tokenList, kvStateList, updated);
 }
 
+/**
+ * @brief Update the kv state with the given token in the kv state cache
+ * manager.
+ *
+ * @param tokenList The token list as the prefix of the next token.
+ * @param nextToken The next token to be updated.
+ * @param kvState The kv state of the next token.
+ *
+ * @return Status
+ */
 Status KVStateCacheManager::Update(
     const std::vector<int>& tokenList, int nextToken,
     const std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   return storage->Update(tokenList, nextToken, kvState);
 }
 
+/**
+ * @brief Query the kv state with the given token and its prefix in the kv state
+ * cache manager.
+ *
+ * @param tokenList The token list as the prefix of the next token.
+ * @param nextToken The next token to be queried.
+ * @param kvState The kv state of the next token. It must be initialized before
+ *                calling this function, including the data and length of the kv
+ *                tensor. Also, the length of the kvState should be as same as
+ *                the layer of the kv state.
+ *
+ * @return Status
+ */
 Status KVStateCacheManager::Query(
     const std::vector<int>& tokenList, int nextToken,
     std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   return storage->Query(tokenList, nextToken, kvState);
 }
 
+/**
+ * @brief Query the kv state with the given token list in the kv state cache
+ * manager.
+ *
+ * @param tokenList The token list to be queried.
+ * @param kvStateList The kv state list of the token list.
+ *                    It must be initialized before calling this function,
+ * including the data and length of the kv tensor. It's a 2D vector, the first
+ * dimension is the token index, and the second dimension is the layer index.
+ *                    The kv state is a pair of LLMKV, the first is the K tensor
+ *                    and the second is the V tensor. It contains two fields:
+ *                    data and length. The data is the pointer to the tensor
+ * data, and the length is the size of the tensor data.
+ * @param matched It's a return value to indicate the number of tokens that have
+ * been matched successfully.
+ *
+ * @note The length of the token list should be as same as the length of the
+ * kvStateList. and the second dimension of the kvStateList should be as same as
+ * the layer of the kv state.
+ *
+ * @return Status
+ */
 Status KVStateCacheManager::Query(
     const std::vector<int>& tokenList,
     std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,

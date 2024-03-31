@@ -43,8 +43,9 @@ namespace parallel {
 
 class ThreadGroup {
   using tid_t = uint32_t;
-  // Returns the path index and task status for parallel execution. 
-  // The path index is used to identify and delete results of unsuccessful tasks.
+  // Returns the path index and task status for parallel execution.
+  // The path index is used to identify and delete results of unsuccessful
+  // tasks.
   using return_t = std::pair<int, Status>;
 
  public:

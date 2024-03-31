@@ -113,6 +113,17 @@ Status BlobStorage::QueryInternal(
   return kvStateCacheBuilder->Query(tokenList, token, kvState);
 }
 
+/**
+ * @brief Update the kv state with the given token and its prefix in the kv
+ * state cache manager.
+ *
+ * @param tokenList The token list as the prefix of the updated token.
+ * @param nextToken The next token to be updated.
+ * @param kvState The kv state of the token. The length of the kv state should
+ * be as same as the layer of the kv state cache manager.
+ *
+ * @return Status
+ */
 Status BlobStorage::Update(
     const std::vector<int>& tokenList, int nextToken,
     const std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
@@ -129,6 +140,27 @@ Status BlobStorage::Update(
   return UpdateInternal(tokenList, nextToken, kvState);
 }
 
+/**
+ * @brief Update the kv state with the given token list in the kv state cache
+ * manager.
+ *
+ * @param tokenList The token list to be updated.
+ * @param kvStateList The kv state list of the token list.
+ *                    It's a 2D vector, the first dimension is the token index,
+ *                    and the second dimension is the layer index.
+ *                    The kv state is a pair of LLMKV, the first is the K tensor
+ *                    and the second is the V tensor. It contains two fields:
+ *                    data and length. The data is the pointer to the tensor
+ * data, and the length is the size of the tensor data.
+ * @param updated It's a return value to indicate the number of tokens that have
+ * been updated successfully.
+ *
+ * @note The length of the token list should be as same as the length of the
+ * kvStateList. and the second dimension of the kvStateList should be as same as
+ * the layer of the kv state.
+ *
+ * @return Status
+ */
 Status BlobStorage::Update(
     const std::vector<int>& tokenList,
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
@@ -153,6 +185,24 @@ Status BlobStorage::Update(
   return Status::OK();
 }
 
+/**
+ * @brief Update the kv state with the given token list and its prefix in the kv
+ * state cache manager.
+ *
+ * @param prefix The prefix of the token list.
+ * @param tokenList The token list to be updated.
+ * @param kvStateList The kv state list of the token list.
+ *                    It's a 2D vector, the first dimension is the token index,
+ *                    and the second dimension is the layer index.
+ *                    The kv state is a pair of LLMKV, the first is the K tensor
+ *                    and the second is the V tensor. It contains two fields:
+ *                    data and length. The data is the pointer to the tensor
+ * data, and the length is the size of the tensor data.
+ * @param updated It's a return value to indicate the number of tokens that have
+ * been updated successfully.
+ *
+ * @return Status
+ */
 Status BlobStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
@@ -177,6 +227,19 @@ Status BlobStorage::Update(
   return Status::OK();
 }
 
+/**
+ * @brief Query the kv state with the given token and its prefix in the kv state
+ * cache manager.
+ *
+ * @param tokenList The token list as the prefix of the updated token.
+ * @param token The token to be queried.
+ * @param kvState The kv state of the token. It must be initialized(allocated)
+ * before calling this function, including the data and length of the kv state.
+ *                The length of the kv state should be as same as the layer of
+ * the kv state cache manager.
+ *
+ * @return Status
+ */
 Status BlobStorage::Query(const std::vector<int>& tokenList, int token,
                           std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   std::unique_lock<std::mutex> lock(cacheAccessMutex, std::defer_lock);
@@ -191,6 +254,24 @@ Status BlobStorage::Query(const std::vector<int>& tokenList, int token,
   return QueryInternal(tokenList, token, kvState);
 }
 
+/**
+ * @brief Query the kv state with the given token list and its prefix in the kv
+ * state cache manager.
+ *
+ * @param tokenList The token list as the prefix of the updated token.
+ * @param kvStateList The kv state list of the token list. It must be
+ * initialized before calling this function, including the data and length of
+ * the kv tensor. The kv state list is a 2D vector, the first dimension is the
+ * token index, and the second dimension is the layer index. The kv state is a
+ * pair of LLMKV, the first is the K tensor and the second is the V tensor. It
+ * contains two fields: data and length. The data is the pointer to the tensor
+ * data, and the length is the size of the tensor data.
+ *
+ * @param matched It's a return value to indicate the number of tokens that have
+ * been matched successfully.
+ *
+ * @return Status
+ */
 Status BlobStorage::Query(
     const std::vector<int>& tokenList,
     std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
