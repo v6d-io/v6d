@@ -33,12 +33,27 @@ PYBIND11_MODULE(llm_C, m) {
       .value("LOCAL", FilesystemType::LOCAL)
       .export_values();
 
-  py::class_<LLMKV>(m, "KVTensor", py::buffer_protocol())
+  py::class_<LLMKV, std::shared_ptr<LLMKV>>(m, "KVTensor", py::buffer_protocol())
       .def(py::init([](uintptr_t data, size_t length) {
              return LLMKV{reinterpret_cast<void*>(data), length};
            }),
            py::arg("data"), py::arg("length"))
-      .def_readwrite("length", &LLMKV::length)
+      .def_property("data",
+        [](LLMKV &self) -> uintptr_t {  // getter
+            return reinterpret_cast<uintptr_t>(self.data);
+        },
+        [](LLMKV &self, uintptr_t new_ptr) {  // setter
+            self.data = reinterpret_cast<void*>(new_ptr);
+        }
+      )
+      .def_property("length",
+        [](LLMKV &self) -> size_t {  // getter
+            return self.length;
+        },
+        [](LLMKV &self, size_t new_length) {  // setter
+            self.length = new_length;
+        }
+      )
       .def_buffer([](LLMKV& self) -> py::buffer_info {
         return py::buffer_info(self.data, sizeof(char),
                                py::format_descriptor<char>::value, 1,

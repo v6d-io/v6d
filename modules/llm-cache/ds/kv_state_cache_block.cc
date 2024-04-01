@@ -18,6 +18,7 @@ limitations under the License.
 #include <utility>
 
 #include "client/client.h"
+#include "common/memory/memcpy.h"
 #include "common/util/logging.h"
 #include "llm-cache/ds/kv_state_cache_block.h"
 
@@ -121,10 +122,10 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
   }
 
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    memcpy(this->keyStateTensorBuilderList[currentLayer]->data(),
+    vineyard::memory::concurrent_memcpy(this->keyStateTensorBuilderList[currentLayer]->data(),
            kvStateCacheBlock->keyStateTensorList[currentLayer]->data(),
            (int64_t)(blockSize) * this->tensorBytes);
-    memcpy(this->valueStateTensorBuilderList[currentLayer]->data(),
+    vineyard::memory::concurrent_memcpy(this->valueStateTensorBuilderList[currentLayer]->data(),
            kvStateCacheBlock->valueStateTensorList[currentLayer]->data(),
            (int64_t)(blockSize) * this->tensorBytes);
   }
@@ -159,14 +160,18 @@ Status KVStateCacheBlockBuilder::Query(
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
     LLMKV& keyState = kvState[currentLayer].first;
     LLMKV& valueState = kvState[currentLayer].second;
-    memcpy(
-        keyState.data,
-        keyStateTensorBuilderList[currentLayer]->data() + index * tensorBytes,
-        tensorBytes);
-    memcpy(
-        valueState.data,
-        valueStateTensorBuilderList[currentLayer]->data() + index * tensorBytes,
-        tensorBytes);
+    LOG(INFO)<< "keyState" << &keyState << " vstate:" << &valueState <<
+    "ketState data:" << keyState.data << " length:" << keyState.length 
+    << " valueState data:" << valueState.data << " length:" << valueState.length;
+    VINEYARD_ASSERT(keyState.data == nullptr && valueState.data == nullptr);
+    keyState.data =
+        keyStateTensorBuilderList[currentLayer]->data() + index * tensorBytes;
+    keyState.length = tensorBytes;
+    valueState.data =
+        valueStateTensorBuilderList[currentLayer]->data() + index * tensorBytes;
+    valueState.length = tensorBytes;
+    LOG(INFO) << "query keyState:" << keyState.data  << " length:" << keyState.length
+    << " valueState:" << valueState.data << " length:" << valueState.length;
   }
   return Status::OK();
 }
@@ -208,11 +213,9 @@ Status KVStateCacheBlockBuilder::Update(
 
     uint8_t* keyData = keyStateTensorBuilderList[currentLayer]->data();
     uint8_t* valueData = valueStateTensorBuilderList[currentLayer]->data();
-    LOG(INFO) << "dst:" << keyData + index * this->tensorBytes
-              << " src:" << keyState.data;
-    memcpy(keyData + index * this->tensorBytes, keyState.data,
+    vineyard::memory::concurrent_memcpy(keyData + index * this->tensorBytes, keyState.data,
            this->tensorBytes);
-    memcpy(valueData + index * this->tensorBytes, valueState.data,
+    vineyard::memory::concurrent_memcpy(valueData + index * this->tensorBytes, valueState.data,
            this->tensorBytes);
   }
   data->offset = index;
@@ -244,8 +247,8 @@ int16_t KVStateCacheBlockBuilder::Split(KVStateCacheBlockBuilder* child,
     uint8_t* childValueState =
         childValueStateTensorBuilder->data() + childIndex * this->tensorBytes;
 
-    memcpy(childKeyState, keyState, this->tensorBytes);
-    memcpy(childValueState, valueState, this->tensorBytes);
+    vineyard::memory::concurrent_memcpy(childKeyState, keyState, this->tensorBytes);
+    vineyard::memory::concurrent_memcpy(childValueState, valueState, this->tensorBytes);
   }
   ACQUIRE_BIT_RESOURCE(child->bitmap[childIndex / 64], childIndex % 64);
   FREE_BIT_RESOURCE(this->bitmap[index / 64], index % 64);

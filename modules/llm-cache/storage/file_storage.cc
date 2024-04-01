@@ -22,7 +22,6 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "common/util/functions.h"
 #include "common/util/logging.h"
 #include "common/util/status.h"
 #include "llm-cache/storage/file_storage.h"

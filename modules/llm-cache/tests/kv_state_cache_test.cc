@@ -145,13 +145,17 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
   std::vector<int> inference_tokens;
   std::vector<std::pair<LLMKV, LLMKV>> kv_state;
   std::vector<std::pair<LLMKV, LLMKV>> kv_state_to_query;
+
   for (size_t i = 0; i < tokens.size(); ++i) {
     kv_state.clear();
     LOG(INFO) << "before query";
 
-    kv_state_to_query = generate_kv_state(0);
     LOG(INFO) << "kv_state_to_query size: " << kv_state_to_query.size()
               << "layer" << layer << "tensorBytes" << tensorBytes;
+    kv_state_to_query.clear();
+    for (int currentLayer = 0; currentLayer < layer; currentLayer++) {
+      kv_state_to_query.emplace_back(LLMKV{nullptr, 0}, LLMKV{nullptr, 0});
+    }
     Status result = kv_state_cache_manager->Query(inference_tokens, tokens[i],
                                                   kv_state_to_query);
     if (!result.ok()) {

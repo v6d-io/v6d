@@ -112,20 +112,3 @@ RUN echo "Installing apache-arrow ..." && \
         -DARROW_BUILD_STATIC=ON && \
     make install -j`nproc` && \
     rm -rf /deps
-
-RUN echo "Installing boost ..." && \
-    mkdir -p /deps && \
-    cd /deps && \
-    curl -L -O https://boostorg.jfrog.io/artifactory/main/release/1.75.0/source/boost_1_75_0.tar.gz && \
-    tar zxf boost_1_75_0.tar.gz && \
-    cd boost_1_75_0 && \
-    ./bootstrap.sh && \
-    ./b2 install -j`nproc` link=static runtime-link=static variant=release threading=multi \
-        --with-atomic \
-        --with-chrono \
-        --with-date_time \
-        --with-filesystem \
-        --with-random \
-        --with-system \
-        --with-thread && \
-    rm -rf /deps

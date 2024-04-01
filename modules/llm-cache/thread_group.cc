@@ -14,14 +14,12 @@ limitations under the License.
 */
 
 #include <future>
-#include <memory>
 #include <queue>
 #include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#include "common/util/status.h"
 #include "llm-cache/thread_group.h"
 
 namespace vineyard {
