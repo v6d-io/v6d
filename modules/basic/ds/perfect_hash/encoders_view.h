@@ -13,12 +13,13 @@
  * limitations under the License.
  */
 
-#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_ENCODERS_VIEW_H_
-#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_ENCODERS_VIEW_H_
+#ifndef MODULES_BASIC_DS_PERFECT_HASH_ENCODERS_VIEW_H_
+#define MODULES_BASIC_DS_PERFECT_HASH_ENCODERS_VIEW_H_
 
-#include "basic/ds/grape_perfect_hash/ef_sequence_view.h"
+#include "basic/ds/perfect_hash/ef_sequence_view.h"
 
-namespace grape_perfect_hash {
+namespace vineyard {
+namespace perfect_hash {
 
 // This code is an adaptation from
 // https://github.com/jermp/pthash/blob/master/include/encoders/encoders.hpp
@@ -57,6 +58,7 @@ struct dual_dictionary_view {
   dictionary_view m_back;
 };
 
-}  // namespace grape_perfect_hash
+}  // namespace perfect_hash
+}  // namespace vineyard
 
-#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_ENCODERS_VIEW_H_
+#endif  // MODULES_BASIC_DS_PERFECT_HASH_ENCODERS_VIEW_H_

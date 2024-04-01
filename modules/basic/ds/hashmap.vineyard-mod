@@ -36,16 +36,6 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#include "BBHash/BooPHF.h"
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-
 namespace vineyard {
 
 #ifdef __GNUC__
@@ -335,59 +325,12 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
   }
 };
 
-}  // namespace vineyard
-
-namespace boomphf {
-
-// wrapper around HashFunctors to return only one value instead of 7
-template <>
-class SingleHashFunctor<std::string> {
- public:
-  uint64_t operator()(const std::string& key,
-                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
-    return hashFunctors(key);
-  }
-
- private:
-  std::hash<std::string> hashFunctors;
-};
-
-#if __cpp_lib_string_view
-template <>
-class SingleHashFunctor<std::string_view> {
- public:
-  uint64_t operator()(const std::string_view& key,
-                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
-    return hashFunctors(key);
-  }
-
- private:
-  wy::hash<std::string_view> hashFunctors;
-};
-#endif  // __cpp_lib_string_view
-
-#if !nssv_USES_STD_STRING_VIEW && \
-    ((!__cpp_lib_string_view) || ARROW_VERSION_MAJOR < 10)
-template <>
-class SingleHashFunctor<vineyard::arrow_string_view> {
- public:
-  uint64_t operator()(const std::string_view& key,
-                      uint64_t seed = 0xAAAAAAAA55555555ULL) const {
-    return hashFunctors(key);
-  }
-
- private:
-  wy::hash<vineyard::arrow_string_view> hashFunctors;
-};
-#endif
-
-}  // namespace boomphf
-
-namespace vineyard {
+using perfect_hash::ImmPHIdxer;
+using perfect_hash::PHIdxerViewBuilder;
 
 namespace detail {
+namespace perfect_hash {
 
-namespace grape_perfect_hash {
 template <typename Value, typename Array>
 struct arrow_array_iterator {
  public:
@@ -442,7 +385,7 @@ struct arrow_array_iterator {
 
 template <typename K, typename V>
 Status build_values(
-    ::grape_perfect_hash::ImmPHIdxer<K, uint64_t>& idxer_, const K* keys,
+    ImmPHIdxer<K, uint64_t>& idxer_, const K* keys,
     const size_t n_elements, const V* begin_value, V* values,
     const size_t concurrency = std::thread::hardware_concurrency()) {
   RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
@@ -459,7 +402,7 @@ Status build_values(
 
 template <typename K, typename V>
 Status build_values(
-    ::grape_perfect_hash::ImmPHIdxer<K, uint64_t>& idxer_,
+    ImmPHIdxer<K, uint64_t>& idxer_,
     const std::shared_ptr<ArrowArrayType<K>>& keys, const V* begin_value,
     V* values, const size_t concurrency = std::thread::hardware_concurrency()) {
   parallel_for(
@@ -475,7 +418,7 @@ Status build_values(
 
 template <typename K, typename V>
 Status build_values(
-    ::grape_perfect_hash::ImmPHIdxer<K, uint64_t>& idxer_, const K* keys,
+    ImmPHIdxer<K, uint64_t>& idxer_, const K* keys,
     const size_t n_elements, const V begin_value, V* values,
     const size_t concurrency = std::thread::hardware_concurrency()) {
   RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
@@ -492,7 +435,7 @@ Status build_values(
 
 template <typename K, typename V>
 Status build_values(
-    ::grape_perfect_hash::ImmPHIdxer<K, uint64_t>& idxer_,
+    ImmPHIdxer<K, uint64_t>& idxer_,
     const std::shared_ptr<ArrowArrayType<K>>& keys, const V begin_value,
     V* values, const size_t concurrency = std::thread::hardware_concurrency()) {
   parallel_for(
@@ -506,14 +449,13 @@ Status build_values(
   return Status::OK();
 }
 
-}  // namespace grape_perfect_hash
+}  // namespace perfect_hash
 }  // namespace detail
 
 template <typename K, typename V>
 class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
  public:
   using value_type = V;
-  typedef boomphf::SingleHashFunctor<K> hasher_t;
 
   const V* find(const K& key) const {
     // check if the key not exists.
@@ -546,7 +488,6 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
   void PostConstruct(const ObjectMeta& meta) override {
     ph_values_ptr_ = reinterpret_cast<const V*>(ph_values_->data());
-    // detail::boomphf::bphf_serde::deser(ph_->data(), bphf_);
     idxer_.Init(ph_);
   }
 
@@ -557,8 +498,7 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   [[shared]] std::shared_ptr<Blob> ph_;  // state
 
   const V* ph_values_ptr_ = nullptr;
-  // mutable boomphf::mphf<K, hasher_t> bphf_;
-  mutable grape_perfect_hash::ImmPHIdxer<K, uint64_t> idxer_;
+  mutable ImmPHIdxer<K, uint64_t> idxer_;
 
   friend class Client;
   friend class PerfectHashmapBaseBuilder<K, V>;

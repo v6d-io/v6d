@@ -31,19 +31,7 @@ limitations under the License.
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"  // IWYU pragma: keep
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-variable"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
-#endif
-#include "BBHash/BooPHF.h"
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-
 namespace vineyard {
-
-using detail::grape_perfect_hash::arrow_array_iterator;
 
 /**
  * @brief HashmapBuilder is used for constructing hashmaps that supported by
@@ -252,10 +240,10 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     for (size_t i = 0; i < n_elements; ++i) {
       this->builder_.add((reinterpret_cast<const K*>(keys->data()))[i]);
     }
-    this->idxer_ = this->builder_.finish(client);
+    RETURN_ON_ERROR(this->builder_.Finish(client, this->idxer_));
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
-          return detail::grape_perfect_hash::build_values(
+          return detail::perfect_hash::build_values(
               idxer_, reinterpret_cast<const K*>(keys->data()), n_elements,
               values, shuffled_values);
         });
@@ -269,17 +257,17 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
                      const V* values, const size_t n_elements) {
     this->set_num_elements_(n_elements);
     this->set_ph_keys_(keys);
-    for (auto iter = arrow_array_iterator<K, ArrowArrayType<K>>(
+    for (auto iter = detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(
              keys->GetArray()->begin());
          iter !=
-         arrow_array_iterator<K, ArrowArrayType<K>>(keys->GetArray()->end());
+         detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(keys->GetArray()->end());
          iter++) {
       this->builder_.add(*iter);
     }
-    this->idxer_ = this->builder_.finish(client);
+    RETURN_ON_ERROR(this->builder_.Finish(client, this->idxer_));
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
-          return detail::grape_perfect_hash::build_values(
+          return detail::perfect_hash::build_values(
               idxer_, keys->GetArray(), values, shuffled_values);
         });
     return Status::OK();
@@ -302,10 +290,10 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     for (size_t i = 0; i < n_elements; ++i) {
       this->builder_.add((reinterpret_cast<const K*>(keys->data()))[i]);
     }
-    this->idxer_ = this->builder_.finish(client);
+    RETURN_ON_ERROR(this->builder_.Finish(client, this->idxer_));
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
-          return detail::grape_perfect_hash::build_values(
+          return detail::perfect_hash::build_values(
               idxer_, reinterpret_cast<const K*>(keys->data()), n_elements,
               begin_value, shuffled_values);
         });
@@ -319,17 +307,17 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
                      const V begin_value, const size_t n_elements) {
     this->set_num_elements_(n_elements);
     this->set_ph_keys_(keys);
-    for (auto iter = arrow_array_iterator<K, ArrowArrayType<K>>(
+    for (auto iter = detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(
              keys->GetArray()->begin());
          iter !=
-         arrow_array_iterator<K, ArrowArrayType<K>>(keys->GetArray()->end());
+         detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(keys->GetArray()->end());
          iter++) {
       this->builder_.add(*iter);
     }
-    this->idxer_ = this->builder_.finish(client);
+    RETURN_ON_ERROR(this->builder_.Finish(client, this->idxer_));
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
-          return detail::grape_perfect_hash::build_values(
+          return detail::perfect_hash::build_values(
               idxer_, keys->GetArray(), begin_value, shuffled_values);
         });
     return Status::OK();
@@ -370,8 +358,8 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     return Status::OK();
   }
 
-  grape_perfect_hash::PHIdxerViewBuilder<K, uint64_t> builder_;
-  grape_perfect_hash::ImmPHIdxer<K, uint64_t> idxer_;
+  PHIdxerViewBuilder<K, uint64_t> builder_;
+  ImmPHIdxer<K, uint64_t> idxer_;
 
   const int concurrency_ = std::thread::hardware_concurrency();
   // const double gamma_ = 2.5f;

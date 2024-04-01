@@ -13,12 +13,13 @@
  * limitations under the License.
  */
 
-#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_REF_VECTOR_H_
-#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_REF_VECTOR_H_
+#ifndef MODULES_BASIC_DS_PERFECT_HASH_REF_VECTOR_H_
+#define MODULES_BASIC_DS_PERFECT_HASH_REF_VECTOR_H_
 
 #include <vector>
 
-namespace grape_perfect_hash {
+namespace vineyard {
+namespace perfect_hash {
 
 template <typename T>
 struct ref_vector {
@@ -52,6 +53,7 @@ struct ref_vector {
   size_t size_;
 };
 
-}  // namespace grape_perfect_hash
+}  // namespace perfect_hash
+}  // namespace vineyard
 
-#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_REF_VECTOR_H_
+#endif  // MODULES_BASIC_DS_PERFECT_HASH_REF_VECTOR_H_

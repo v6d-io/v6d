@@ -21,14 +21,14 @@
 
 #pragma once
 
+#include <cstdint>
+#include <cassert>
+
+#if defined(__x86_64__) && __SSE4_2__
 #include <immintrin.h>
+#endif
 
 namespace pthash::util {
-
-template <typename T>
-inline void prefetch(T const* ptr) {
-  _mm_prefetch(reinterpret_cast<const char*>(ptr), _MM_HINT_T0);
-}
 
 inline uint8_t msb(uint64_t x) {
   assert(x);
@@ -66,7 +66,13 @@ inline uint8_t lsb(uint64_t x) {
 }
 
 inline uint64_t popcount(uint64_t x) {
-  return static_cast<uint64_t>(_mm_popcnt_u64(x));
+#ifdef __SSE4_2__
+    return static_cast<uint64_t>(_mm_popcnt_u64(x));
+#elif __cplusplus >= 202002L
+    return std::popcount(x);
+#else
+    return static_cast<uint64_t>(__builtin_popcountll(x));
+#endif
 }
 
 inline uint64_t select64_pdep_tzcnt(uint64_t x, const uint64_t k) {

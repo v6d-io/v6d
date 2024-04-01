@@ -13,17 +13,18 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_HASHMAP_INDEXER_IMPL_H_
-#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_HASHMAP_INDEXER_IMPL_H_
+#ifndef MODULES_BASIC_DS_PERFECT_HASH_HASHMAP_INDEXER_IMPL_H_
+#define MODULES_BASIC_DS_PERFECT_HASH_HASHMAP_INDEXER_IMPL_H_
 
 #include <memory>
 #include <utility>
 #include <vector>
 
-#include "basic/ds/grape_perfect_hash/ref_vector.h"
-#include "basic/ds/grape_perfect_hash/string_view_vector.h"
+#include "basic/ds/perfect_hash/ref_vector.h"
+#include "basic/ds/perfect_hash/string_view_vector.h"
 
-namespace grape_perfect_hash {
+namespace vineyard {
+namespace perfect_hash {
 
 namespace hashmap_indexer_impl {
 
@@ -122,6 +123,7 @@ struct KeyBufferView {
 
 }  // namespace hashmap_indexer_impl
 
-}  // namespace grape_perfect_hash
+}  // namespace perfect_hash
+}  // namespace vineyard
 
-#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_HASHMAP_INDEXER_IMPL_H_
+#endif  // MODULES_BASIC_DS_PERFECT_HASH_HASHMAP_INDEXER_IMPL_H_

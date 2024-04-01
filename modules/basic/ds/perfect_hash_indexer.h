@@ -20,11 +20,14 @@ limitations under the License.
 #include <utility>
 #include <vector>
 
-#include "basic/ds/grape_perfect_hash/hashmap_indexer_impl.h"
-#include "basic/ds/grape_perfect_hash/single_phf_view.h"
+#include "basic/ds/perfect_hash/hashmap_indexer_impl.h"
+#include "basic/ds/perfect_hash/single_phf_view.h"
 #include "client/ds/blob.h"
+#include "client/client.h"
+#include "common/memory/memcpy.h"
 
-namespace grape_perfect_hash {
+namespace vineyard {
+namespace perfect_hash {
 
 using vineyard::Blob;
 using vineyard::BlobWriter;
@@ -155,7 +158,7 @@ class PHIdxerViewBuilder {
 
   void add(KEY_T&& oid) { keys_.push_back(std::move(oid)); }
 
-  ImmPHIdxer<KEY_T, INDEX_T> finish(Client& client) {
+  Status Finish(Client& client, ImmPHIdxer<KEY_T, INDEX_T>& idxer) {
     mem_dumper dumper;
     {
       SinglePHFView<murmurhasher>::build(keys_.begin(), keys_.size(), dumper,
@@ -175,16 +178,13 @@ class PHIdxerViewBuilder {
       }
       key_buffer.dump(dumper);
     }
-    ImmPHIdxer<KEY_T, INDEX_T> idxer;
-
     std::unique_ptr<BlobWriter> writer;
-    client.CreateBlob(dumper.buffer().size() * sizeof(char), writer);
-    memcpy(writer->data(), dumper.buffer().data(), dumper.buffer().size());
+    RETURN_ON_ERROR(client.CreateBlob(dumper.buffer().size() * sizeof(char), writer));
+    vineyard::memory::concurrent_memcpy(writer->data(), dumper.buffer().data(), dumper.buffer().size());
     std::shared_ptr<Object> buf;
-    writer->Seal(client, buf);
+    RETURN_ON_ERROR(writer->Seal(client, buf));
     idxer.Init(std::dynamic_pointer_cast<Blob>(buf));
-
-    return idxer;
+    return Status::OK();
   }
 
  private:
@@ -207,7 +207,7 @@ class PHIdxerViewBuilder<std::string_view, INDEX_T> {
     keys_.push_back(std::move(oid_view));
   }
 
-  ImmPHIdxer<std::string_view, INDEX_T> finish(Client& client) {
+  Status Finish(Client& client, ImmPHIdxer<std::string_view, INDEX_T>&idxer) {
     mem_dumper dumper;
     {
       SinglePHFView<murmurhasher>::build(keys_.begin(), keys_.size(), dumper,
@@ -227,22 +227,20 @@ class PHIdxerViewBuilder<std::string_view, INDEX_T> {
       }
       key_buffer.dump(dumper);
     }
-    ImmPHIdxer<std::string_view, INDEX_T> idxer;
-
     std::unique_ptr<BlobWriter> writer;
-    client.CreateBlob(dumper.buffer().size() * sizeof(char), writer);
-    memcpy(writer->data(), dumper.buffer().data(), dumper.buffer().size());
+    RETURN_ON_ERROR(client.CreateBlob(dumper.buffer().size() * sizeof(char), writer));
+    vineyard::memory::concurrent_memcpy(writer->data(), dumper.buffer().data(), dumper.buffer().size());
     std::shared_ptr<Object> buf;
-    writer->Seal(client, buf);
+    RETURN_ON_ERROR(writer->Seal(client, buf));
     idxer.Init(std::dynamic_pointer_cast<Blob>(buf));
-
-    return idxer;
+    return Status::OK();
   }
 
  private:
   std::vector<nonstd::string_view> keys_;
 };
 
-}  // namespace grape_perfect_hash
+}  // namespace perfect_hash
+}  // namespace vineyard
 
 #endif  // MODULES_BASIC_DS_PERFECT_HASH_INDEXER_H_

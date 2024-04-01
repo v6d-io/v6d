@@ -13,19 +13,19 @@
  * limitations under the License.
  */
 
-#ifndef MODULES_BASIC_DS_GRAPE_PERFECT_HASH_EF_SEQUENCE_VIEW_H_
-#define MODULES_BASIC_DS_GRAPE_PERFECT_HASH_EF_SEQUENCE_VIEW_H_
+#ifndef MODULES_BASIC_DS_PERFECT_HASH_EF_SEQUENCE_VIEW_H_
+#define MODULES_BASIC_DS_PERFECT_HASH_EF_SEQUENCE_VIEW_H_
 
-#include <assert.h>
-#include <stddef.h>
-#include <stdint.h>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 
-#include <type_traits>
-
-#include "basic/ds/grape_perfect_hash/ref_vector.h"
 #include "pthash/encoders/util.hpp"
 
-namespace grape_perfect_hash {
+#include "basic/ds/perfect_hash/ref_vector.h"
+
+namespace vineyard {
+namespace perfect_hash {
 
 // This code is an adaptation from
 // https://github.com/jermp/pthash/blob/master/include/encoders/bit_vector.hpp
@@ -144,6 +144,7 @@ struct ef_sequence_view {
   compact_vector_view m_low_bits;
 };
 
-}  // namespace grape_perfect_hash
+}  // namespace perfect_hash
+}  // namespace vineyard
 
-#endif  // MODULES_BASIC_DS_GRAPE_PERFECT_HASH_EF_SEQUENCE_VIEW_H_
+#endif  // MODULES_BASIC_DS_PERFECT_HASH_EF_SEQUENCE_VIEW_H_

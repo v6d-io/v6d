@@ -6,7 +6,7 @@ file(GLOB_RECURSE VINEYARD_MOD_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
 file(GLOB_RECURSE VINEYARD_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}"
                                    "ds/*.h"
                                    "stream/*.h"
-                                   "ds/grape_perfect_hash/*.h")
+                                   "ds/perfect_hash/*.h")
 
 if(VINEYARD_MOD_SRCS)
     vineyard_generate(
@@ -59,20 +59,6 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/flat_hash_map
 
 # install bundled thirdparty: wyhash
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/wyhash
-        DESTINATION include/vineyard/contrib    # target directory
-        FILES_MATCHING                          # install only matched files
-        PATTERN "*.h"                           # select header files
-        PATTERN "*.hpp"                         # select C++ template header files
-)
-
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/BBHash
-        DESTINATION include/vineyard/contrib    # target directory
-        FILES_MATCHING                          # install only matched files
-        PATTERN "*.h"                           # select header files
-        PATTERN "*.hpp"                         # select C++ template header files
-)
-
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/grape_perfect_hash
         DESTINATION include/vineyard/contrib    # target directory
         FILES_MATCHING                          # install only matched files
         PATTERN "*.h"                           # select header files

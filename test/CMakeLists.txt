@@ -66,10 +66,6 @@ foreach(testfile ${TEST_FILES})
         endif()
     endif()
 
-    if(${testname} STREQUAL "perfect_hashmap_test")
-        target_compile_options(${testname} PRIVATE -msse4.2)
-    endif()
-
     if(${testname} STREQUAL "hosseinmoein_dataframe_test")
         if(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME)
             target_compile_options(${testname} PRIVATE -DWITH_HOSSEINMOEIN_DATAFRAME)
