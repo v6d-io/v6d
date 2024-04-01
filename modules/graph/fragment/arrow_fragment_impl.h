@@ -55,6 +55,28 @@ limitations under the License.
 namespace vineyard {
 
 template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
+void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::PostConstruct(
+    const vineyard::ObjectMeta& meta) {
+  vid_parser_.Init(fnum_, vertex_label_num_);
+  this->schema_.FromJSON(schema_json_);
+
+  // init pointers for arrays and tables
+  initPointers();
+
+  // init edge numbers
+  oenum_ = 0;
+  ienum_ = 0;
+  for (label_id_t i = 0; i < vertex_label_num_; i++) {
+    for (auto& v : InnerVertices(i)) {
+      for (label_id_t j = 0; j < edge_label_num_; j++) {
+        oenum_ += GetLocalOutDegree(v, j);
+        ienum_ += GetLocalInDegree(v, j);
+      }
+    }
+  }
+}
+
+template <typename OID_T, typename VID_T, typename VERTEX_MAP_T, bool COMPACT>
 void ArrowFragment<OID_T, VID_T, VERTEX_MAP_T, COMPACT>::PrepareToRunApp(
     const grape::CommSpec& comm_spec, grape::PrepareConf conf) {
   if (conf.message_strategy ==

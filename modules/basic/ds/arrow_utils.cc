@@ -925,19 +925,19 @@ const void* get_arrow_array_data(std::shared_ptr<arrow::Array> const& array) {
         std::dynamic_pointer_cast<arrow::LargeStringArray>(array).get());
   } else if (array->type()->Equals(arrow::date32())) {
     return reinterpret_cast<const void*>(
-        std::dynamic_pointer_cast<arrow::Date32Array>(array).get());
+        std::dynamic_pointer_cast<arrow::Date32Array>(array)->raw_values());
   } else if (array->type()->Equals(arrow::date64())) {
     return reinterpret_cast<const void*>(
-        std::dynamic_pointer_cast<arrow::Date64Array>(array).get());
+        std::dynamic_pointer_cast<arrow::Date64Array>(array)->raw_values());
   } else if (array->type()->id() == arrow::Type::TIME32) {
     return reinterpret_cast<const void*>(
-        std::dynamic_pointer_cast<arrow::Time32Array>(array).get());
+        std::dynamic_pointer_cast<arrow::Time32Array>(array)->raw_values());
   } else if (array->type()->id() == arrow::Type::TIME64) {
     return reinterpret_cast<const void*>(
-        std::dynamic_pointer_cast<arrow::Time64Array>(array).get());
+        std::dynamic_pointer_cast<arrow::Time64Array>(array)->raw_values());
   } else if (array->type()->id() == arrow::Type::TIMESTAMP) {
     return reinterpret_cast<const void*>(
-        std::dynamic_pointer_cast<arrow::TimestampArray>(array).get());
+        std::dynamic_pointer_cast<arrow::TimestampArray>(array)->raw_values());
   } else if (array->type()->id() == arrow::Type::LIST) {
     return reinterpret_cast<const void*>(
         std::dynamic_pointer_cast<arrow::ListArray>(array).get());
