@@ -22,12 +22,12 @@ limitations under the License.
 
 #include "basic/ds/array.h"
 #include "basic/ds/arrow.h"
+#include "basic/ds/arrow.vineyard.h"
 #include "basic/ds/hashmap.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
 #include "common/util/arrow.h"
 #include "common/util/logging.h"
-#include "graph/fragment/property_graph_types.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
@@ -130,15 +130,12 @@ void test_string_id(std::string& ipc_socket) {
   CHECK_ARROW_ERROR(builder_.Finish(&array_));
   auto keys_array = std::dynamic_pointer_cast<arrow::LargeStringArray>(array_);
 
-  InternalType<arrow_string_view>::vineyard_builder_type outer_oid_builder(
-      client, keys_array);
+  vineyard::LargeStringArrayBuilder outer_oid_builder(client, keys_array);
   builder.ComputeHash(
       client,
       std::dynamic_pointer_cast<ArrowVineyardArrayType<arrow_string_view>>(
           outer_oid_builder.Seal(client)),
       values.data(), keys.size());
-
-  LOG(INFO) << "compute end";
 
   auto sealed_perfec_hashmap =
       std::dynamic_pointer_cast<PerfectHashmap<arrow_string_view, int>>(
@@ -181,6 +178,6 @@ int main(int argc, char** argv) {
   test_int_id(ipc_socket);
   test_string_id(ipc_socket);
 
-  LOG(INFO) << "Passed all tests...";
+  LOG(INFO) << "Passed all perfect hash tests...";
   return 0;
 }
