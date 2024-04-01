@@ -160,30 +160,34 @@ class PHIdxerViewBuilder {
   void add(KEY_T&& oid) { keys_.push_back(std::move(oid)); }
 
   Status Finish(Client& client, ImmPHIdxer<KEY_T, INDEX_T>& idxer) {
-    mem_dumper dumper;
-    {
-      SinglePHFView<murmurhasher>::build(keys_.begin(), keys_.size(), dumper,
-                                         1);
-      mem_loader loader(dumper.buffer().data(), dumper.buffer().size());
-      SinglePHFView<murmurhasher> phf;
-      phf.load(loader);
-      hashmap_indexer_impl::KeyBuffer<KEY_T> key_buffer;
+    pthash::single_phf<murmurhasher, pthash::dictionary_dictionary, true> phf;
+    size_t serialize_size = 0;
 
-      std::vector<KEY_T> ordered_keys(keys_.size());
-      for (auto& key : keys_) {
-        size_t idx = phf(key);
-        ordered_keys[idx] = key;
-      }
-      for (auto& key : ordered_keys) {
-        key_buffer.push_back(key);
-      }
-      key_buffer.dump(dumper);
-    }
+    SinglePHFView<murmurhasher>::build(keys_.begin(), keys_.size(), phf, 1);
     std::unique_ptr<BlobWriter> writer;
-    RETURN_ON_ERROR(
-        client.CreateBlob(dumper.buffer().size() * sizeof(char), writer));
-    vineyard::memory::concurrent_memcpy(writer->data(), dumper.buffer().data(),
-                                        dumper.buffer().size());
+
+    hashmap_indexer_impl::KeyBuffer<KEY_T> key_buffer;
+    std::vector<KEY_T> ordered_keys(keys_.size());
+    for (auto& key : keys_) {
+      size_t idx = phf(key);
+      ordered_keys[idx] = key;
+    }
+    for (auto& key : ordered_keys) {
+      key_buffer.push_back(key);
+    }
+    /**
+     * Because the num_bits function uses the essentials::vec_bytes to calculate
+     * the size of the buffer. So the returned value is the same as the size of
+     * the dumped buffer.
+     */
+    serialize_size += phf.num_bits() / 8;
+    serialize_size += key_buffer.dump_size();
+
+    RETURN_ON_ERROR(client.CreateBlob(serialize_size, writer));
+    external_mem_dumper dumper(writer->data(), serialize_size);
+    phf.dump(dumper);
+    key_buffer.dump(dumper);
+
     std::shared_ptr<Object> buf;
     RETURN_ON_ERROR(writer->Seal(client, buf));
     idxer.Init(std::dynamic_pointer_cast<Blob>(buf));
@@ -211,30 +215,31 @@ class PHIdxerViewBuilder<arrow_string_view, INDEX_T> {
   }
 
   Status Finish(Client& client, ImmPHIdxer<arrow_string_view, INDEX_T>& idxer) {
-    mem_dumper dumper;
-    {
-      SinglePHFView<murmurhasher>::build(keys_.begin(), keys_.size(), dumper,
-                                         1);
-      mem_loader loader(dumper.buffer().data(), dumper.buffer().size());
-      SinglePHFView<murmurhasher> phf;
-      phf.load(loader);
-      hashmap_indexer_impl::KeyBuffer<nonstd::string_view> key_buffer;
+    // mem_dumper dumper;
+    pthash::single_phf<murmurhasher, pthash::dictionary_dictionary, true> phf;
+    size_t serialize_size = 0;
 
-      std::vector<nonstd::string_view> ordered_keys(keys_.size());
-      for (auto& key : keys_) {
-        size_t idx = phf(key);
-        ordered_keys[idx] = key;
-      }
-      for (auto& key : ordered_keys) {
-        key_buffer.push_back(key);
-      }
-      key_buffer.dump(dumper);
-    }
+    SinglePHFView<murmurhasher>::build(keys_.begin(), keys_.size(), phf, 1);
     std::unique_ptr<BlobWriter> writer;
-    RETURN_ON_ERROR(
-        client.CreateBlob(dumper.buffer().size() * sizeof(char), writer));
-    vineyard::memory::concurrent_memcpy(writer->data(), dumper.buffer().data(),
-                                        dumper.buffer().size());
+
+    hashmap_indexer_impl::KeyBuffer<nonstd::string_view> key_buffer;
+    std::vector<nonstd::string_view> ordered_keys(keys_.size());
+    for (auto& key : keys_) {
+      size_t idx = phf(key);
+      ordered_keys[idx] = key;
+    }
+    for (auto& key : ordered_keys) {
+      key_buffer.push_back(key);
+    }
+    serialize_size += phf.num_bits() / 8;
+    serialize_size += key_buffer.dump_size();
+
+    RETURN_ON_ERROR(client.CreateBlob(serialize_size, writer));
+
+    external_mem_dumper dumper(writer->data(), serialize_size);
+    phf.dump(dumper);
+    key_buffer.dump(dumper);
+
     std::shared_ptr<Object> buf;
     RETURN_ON_ERROR(writer->Seal(client, buf));
     idxer.Init(std::dynamic_pointer_cast<Blob>(buf));

@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "basic/ds/perfect_hash/ref_vector.h"
 #include "basic/ds/perfect_hash/string_view_vector.h"
+#include "pthash/essentials/essentials.hpp"
 
 namespace vineyard {
 namespace perfect_hash {
@@ -61,6 +62,8 @@ struct KeyBuffer {
     dumper.dump_vec(inner_);
   }
 
+  size_t dump_size() { return essentials::vec_bytes(inner_); }
+
  private:
   std::vector<T> inner_;
 };
@@ -93,6 +96,11 @@ struct KeyBuffer<nonstd::string_view> {
   void dump(Dumper& dumper) const {
     dumper.dump_vec(inner_.content_buffer());
     dumper.dump_vec(inner_.offset_buffer());
+  }
+
+  size_t dump_size() {
+    return sizeof(size_t) + inner_.content_buffer().size() + sizeof(size_t) +
+           inner_.offset_buffer().size() * sizeof(size_t);
   }
 
  private:
