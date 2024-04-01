@@ -202,7 +202,6 @@ class PHIdxerViewBuilder<arrow_string_view, INDEX_T> {
   void add(const arrow_string_view& oid) { keys_.push_back(oid); }
 
   Status Finish(Client& client, ImmPHIdxer<arrow_string_view, INDEX_T>& idxer) {
-    // mem_dumper dumper;
     pthash::single_phf<murmurhasher, pthash::dictionary_dictionary, true> phf;
     size_t serialize_size = 0;
 

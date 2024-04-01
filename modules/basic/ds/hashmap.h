@@ -366,7 +366,6 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
   ImmPHIdxer<K, uint64_t> idxer_;
 
   const int concurrency_ = std::thread::hardware_concurrency();
-  // const double gamma_ = 2.5f;
 };
 
 }  // namespace vineyard

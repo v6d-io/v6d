@@ -36,7 +36,6 @@ void test_double_id(std::string& ipc_socket) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  // PerfectHashmapBuilder<int, double> builder(client);
   PerfectHashmapBuilder<int, double> builder(client);
   std::vector<int> keys = {1, 2, 3, 4, 5};
   std::vector<double> values = {100.0, 50.0, 25.0, 12.5, 6.25};
@@ -77,7 +76,6 @@ void test_int_id(std::string& ipc_socket) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  // PerfectHashmapBuilder<int, double> builder(client);
   PerfectHashmapBuilder<int64_t, double> builder(client);
   std::vector<int64_t> keys = {1, 2, 3, 4, 5};
   std::vector<double> values = {100.0, 50.0, 25.0, 12.5, 6.25};

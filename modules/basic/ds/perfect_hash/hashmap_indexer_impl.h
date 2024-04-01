@@ -100,8 +100,8 @@ struct KeyBuffer<arrow_string_view> {
   }
 
   size_t dump_size() {
-    return sizeof(size_t) + inner_.content_buffer().size() + sizeof(size_t) +
-           inner_.offset_buffer().size() * sizeof(size_t);
+    return essentials::vec_bytes(inner_.content_buffer()) +
+           essentials::vec_bytes(inner_.offset_buffer());
   }
 
  private:
