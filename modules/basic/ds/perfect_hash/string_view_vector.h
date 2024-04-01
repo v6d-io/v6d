@@ -24,8 +24,7 @@ limitations under the License.
 #include <vector>
 
 #include "basic/ds/perfect_hash/ref_vector.h"
-#define nssv_CONFIG_SELECT_STRING_VIEW nssv_STRING_VIEW_NONSTD
-#include "string_view/string_view.hpp"
+#include "common/util/arrow.h"
 
 namespace vineyard {
 namespace perfect_hash {
@@ -35,14 +34,14 @@ class StringViewVector {
   StringViewVector() { offsets_.push_back(0); }
   ~StringViewVector() {}
 
-  void push_back(const nonstd::string_view& val) {
+  void push_back(const arrow_string_view& val) {
     size_t old_size = buffer_.size();
     buffer_.resize(old_size + val.size());
     memcpy(&buffer_[old_size], val.data(), val.size());
     offsets_.push_back(buffer_.size());
   }
 
-  void emplace_back(const nonstd::string_view& val) {
+  void emplace_back(const arrow_string_view& val) {
     size_t old_size = buffer_.size();
     buffer_.resize(old_size + val.size());
     memcpy(&buffer_[old_size], val.data(), val.size());
@@ -54,10 +53,10 @@ class StringViewVector {
     return offsets_.size() - 1;
   }
 
-  nonstd::string_view operator[](size_t index) const {
+  arrow_string_view operator[](size_t index) const {
     size_t from = offsets_[index];
     size_t len = offsets_[index + 1] - from;
-    return nonstd::string_view(&buffer_[from], len);
+    return arrow_string_view(&buffer_[from], len);
   }
 
   std::vector<char>& content_buffer() { return buffer_; }
@@ -85,7 +84,7 @@ class StringViewVector {
 };
 
 template <>
-struct ref_vector<nonstd::string_view> {
+struct ref_vector<arrow_string_view> {
   ref_vector() {}
   ~ref_vector() {}
 
@@ -109,10 +108,10 @@ struct ref_vector<nonstd::string_view> {
     return offsets_.size() - 1;
   }
 
-  nonstd::string_view get(size_t idx) const {
+  arrow_string_view get(size_t idx) const {
     size_t from = offsets_.get(idx);
     size_t to = offsets_.get(idx + 1);
-    return nonstd::string_view(buffer_.data() + from, to - from);
+    return arrow_string_view(buffer_.data() + from, to - from);
   }
 
   template <typename Loader>

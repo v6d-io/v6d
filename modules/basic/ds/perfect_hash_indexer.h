@@ -91,7 +91,7 @@ class PHIdxerView<arrow_string_view, INDEX_T> {
 
   bool empty() const { return keys_view_.size() == 0; }
 
-  bool get_key(INDEX_T lid, nonstd::string_view& oid) const {
+  bool get_key(INDEX_T lid, arrow_string_view& oid) const {
     if (lid >= keys_view_.size()) {
       return false;
     }
@@ -99,7 +99,7 @@ class PHIdxerView<arrow_string_view, INDEX_T> {
     return true;
   }
 
-  bool get_index(const nonstd::string_view& oid, INDEX_T& lid) const {
+  bool get_index(const arrow_string_view& oid, INDEX_T& lid) const {
     auto idx = phf_view_(oid);
     if (idx < keys_view_.size() && keys_view_.get(idx) == oid) {
       lid = idx;
@@ -108,16 +108,11 @@ class PHIdxerView<arrow_string_view, INDEX_T> {
     return false;
   }
 
-  bool get_index(const arrow_string_view& oid, INDEX_T& lid) const {
-    nonstd::string_view oid_view(oid.data(), oid.size());
-    return get_index(oid_view, lid);
-  }
-
   size_t size() const { return keys_view_.size(); }
 
  private:
   SinglePHFView<murmurhasher> phf_view_;
-  hashmap_indexer_impl::KeyBuffer<nonstd::string_view> keys_view_;
+  hashmap_indexer_impl::KeyBuffer<arrow_string_view> keys_view_;
 };
 
 template <typename KEY_T, typename INDEX_T>
@@ -205,13 +200,7 @@ class PHIdxerViewBuilder<arrow_string_view, INDEX_T> {
   ~PHIdxerViewBuilder() = default;
 
   void add(const arrow_string_view& oid) {
-    nonstd::string_view oid_view(oid.data(), oid.size());
-    keys_.push_back(oid_view);
-  }
-
-  void add(arrow_string_view&& oid) {
-    nonstd::string_view oid_view(oid.data(), oid.size());
-    keys_.push_back(std::move(oid_view));
+    keys_.push_back(oid);
   }
 
   Status Finish(Client& client, ImmPHIdxer<arrow_string_view, INDEX_T>& idxer) {
@@ -222,8 +211,8 @@ class PHIdxerViewBuilder<arrow_string_view, INDEX_T> {
     SinglePHFView<murmurhasher>::build(keys_.begin(), keys_.size(), phf, 1);
     std::unique_ptr<BlobWriter> writer;
 
-    hashmap_indexer_impl::KeyBuffer<nonstd::string_view> key_buffer;
-    std::vector<nonstd::string_view> ordered_keys(keys_.size());
+    hashmap_indexer_impl::KeyBuffer<arrow_string_view> key_buffer;
+    std::vector<arrow_string_view> ordered_keys(keys_.size());
     for (auto& key : keys_) {
       size_t idx = phf(key);
       ordered_keys[idx] = key;
@@ -247,7 +236,7 @@ class PHIdxerViewBuilder<arrow_string_view, INDEX_T> {
   }
 
  private:
-  std::vector<nonstd::string_view> keys_;
+  std::vector<arrow_string_view> keys_;
 };
 
 }  // namespace perfect_hash

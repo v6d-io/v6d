@@ -22,6 +22,7 @@ limitations under the License.
 
 #include "basic/ds/perfect_hash/ref_vector.h"
 #include "basic/ds/perfect_hash/string_view_vector.h"
+#include "common/util/arrow.h"
 #include "pthash/essentials/essentials.hpp"
 
 namespace vineyard {
@@ -69,13 +70,13 @@ struct KeyBuffer {
 };
 
 template <>
-struct KeyBuffer<nonstd::string_view> {
+struct KeyBuffer<arrow_string_view> {
   KeyBuffer() = default;
   ~KeyBuffer() = default;
 
-  nonstd::string_view get(size_t idx) const { return inner_[idx]; }
+  arrow_string_view get(size_t idx) const { return inner_[idx]; }
 
-  void push_back(const nonstd::string_view& val) { inner_.push_back(val); }
+  void push_back(const arrow_string_view& val) { inner_.push_back(val); }
 
   size_t size() const { return inner_.size(); }
 

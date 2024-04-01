@@ -24,11 +24,9 @@
 #include "basic/ds/perfect_hash/encoders_view.h"
 #include "basic/ds/perfect_hash/ref_vector.h"
 #include "common/memory/memcpy.h"
+#include "common/util/arrow.h"
 #include "pthash/pthash.hpp"
 #include "pthash/single_phf.hpp"
-
-#define nssv_CONFIG_SELECT_STRING_VIEW nssv_STRING_VIEW_NONSTD
-#include "string_view/string_view.hpp"
 
 namespace vineyard {
 namespace perfect_hash {
@@ -47,7 +45,7 @@ struct murmurhasher {
                                   sizeof(val), seed);
   }
 
-  static inline hash_type hash(const nonstd::string_view& val, uint64_t seed) {
+  static inline hash_type hash(const arrow_string_view& val, uint64_t seed) {
     return pthash::MurmurHash2_64(val.data(), val.size(), seed);
   }
 };
