@@ -17,7 +17,8 @@
 #
 
 import ctypes
-from ctypes import c_void_p, c_size_t
+from ctypes import c_size_t
+from ctypes import c_void_p
 
 import numpy as np
 
@@ -58,8 +59,8 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
         kv_tensors_to_update.append(
             [
                 (
-                    KVTensor(k_tensor.numpy().ctypes.data,  k_tensor.nbytes),
-                    KVTensor(v_tensor.numpy().ctypes.data, v_tensor.nbytes),
+                    KVTensor(k_tensor.data_ptr(), k_tensor.nbytes),
+                    KVTensor(v_tensor.data_ptr(), v_tensor.nbytes),
                 )
                 for _ in range(cache.layer)
             ]
@@ -85,11 +86,19 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
         )
 
     matched = cache.query(tokens, kv_tensors_to_query)
+    kv_tensors_from_cache = kv_tensors_to_query[:matched]
     assert matched == len(tokens)
 
     for kv in kv_tensors_to_query:
-        for (k_tensor, v_tensor) in kv:
-            print(k_tensor, v_tensor, k_tensor.data, v_tensor.data, k_tensor.length, v_tensor.length)
+        for k_tensor, v_tensor in kv:
+            print(
+                k_tensor,
+                v_tensor,
+                k_tensor.data,
+                v_tensor.data,
+                k_tensor.length,
+                v_tensor.length,
+            )
 
     assert len(kv_tensors) == len(kv_tensors_from_cache)
     for kv, kv_from_cache in zip(kv_tensors, kv_tensors_from_cache):
@@ -97,6 +106,16 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
         for (k_tensor, v_tensor), (queried_k_tensor, queried_v_tensor) in zip(
             kv, kv_from_cache
         ):
+            queried_k_tensor = torch.frombuffer(
+                memoryview(queried_k_tensor),
+                dtype=k_tensor.dtype,
+                count=k_tensor.numel(),
+            ).reshape(k_tensor.shape)
+            queried_v_tensor = torch.frombuffer(
+                memoryview(queried_v_tensor),
+                dtype=v_tensor.dtype,
+                count=v_tensor.numel(),
+            ).reshape(v_tensor.shape)
             assert torch.equal(k_tensor, queried_k_tensor)
             assert torch.equal(v_tensor, queried_v_tensor)
 

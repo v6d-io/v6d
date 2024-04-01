@@ -946,12 +946,13 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS AND BUILD_VINEYARD_LLM_CACHE)
                             INSTALL_RPATH ".;@loader_path;@loader_path/${RELATIVE_BUILD_PATH}/;${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib64;${INSTALL_RPATH}")
     endif()
 
-    add_custom_target(vineyard_with_llm_python
+    add_custom_target(vineyard_llm_python
         ALL
         COMMAND cp "$<TARGET_FILE:llm_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/llm/"
         DEPENDS llm_C
         COMMENT "Copying llm kv cache python extensions."
         VERBATIM)
+    add_dependencies(vineyard_llm_python vineyard_client_python)
 endif()
 
 # add sub_directories

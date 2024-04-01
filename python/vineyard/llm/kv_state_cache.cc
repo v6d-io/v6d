@@ -33,27 +33,28 @@ PYBIND11_MODULE(llm_C, m) {
       .value("LOCAL", FilesystemType::LOCAL)
       .export_values();
 
-  py::class_<LLMKV, std::shared_ptr<LLMKV>>(m, "KVTensor", py::buffer_protocol())
+  py::class_<LLMKV, std::shared_ptr<LLMKV>>(m, "KVTensor",
+                                            py::buffer_protocol())
       .def(py::init([](uintptr_t data, size_t length) {
              return LLMKV{reinterpret_cast<void*>(data), length};
            }),
            py::arg("data"), py::arg("length"))
-      .def_property("data",
-        [](LLMKV &self) -> uintptr_t {  // getter
+      .def_property(
+          "data",
+          [](LLMKV& self) -> uintptr_t {  // getter
             return reinterpret_cast<uintptr_t>(self.data);
-        },
-        [](LLMKV &self, uintptr_t new_ptr) {  // setter
+          },
+          [](LLMKV& self, uintptr_t new_ptr) {  // setter
             self.data = reinterpret_cast<void*>(new_ptr);
-        }
-      )
-      .def_property("length",
-        [](LLMKV &self) -> size_t {  // getter
+          })
+      .def_property(
+          "length",
+          [](LLMKV& self) -> size_t {  // getter
             return self.length;
-        },
-        [](LLMKV &self, size_t new_length) {  // setter
+          },
+          [](LLMKV& self, size_t new_length) {  // setter
             self.length = new_length;
-        }
-      )
+          })
       .def_buffer([](LLMKV& self) -> py::buffer_info {
         return py::buffer_info(self.data, sizeof(char),
                                py::format_descriptor<char>::value, 1,
@@ -64,7 +65,7 @@ PYBIND11_MODULE(llm_C, m) {
       m, "KVStateCacheManager")
       .def(
           "update",
-          [](KVStateCacheManager* self, std::vector<int>& tokenList,
+          [](KVStateCacheManager* self, const std::vector<int>& tokenList,
              int& next_token,
              const std::vector<std::pair<vineyard::LLMKV, vineyard::LLMKV>>&
                  kv_state) {
@@ -73,7 +74,7 @@ PYBIND11_MODULE(llm_C, m) {
           py::arg("tokens"), py::arg("next_token"), py::arg("kv_state"))
       .def(
           "update",
-          [](KVStateCacheManager* self, std::vector<int>& tokens,
+          [](KVStateCacheManager* self, const std::vector<int>& tokens,
              const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kv_states)
               -> size_t {
             size_t updated = 0;
@@ -83,7 +84,7 @@ PYBIND11_MODULE(llm_C, m) {
           py::arg("tokens"), py::arg("kv_states"))
       .def(
           "update",
-          [](KVStateCacheManager* self, std::vector<int>& prefix,
+          [](KVStateCacheManager* self, const std::vector<int>& prefix,
              std::vector<int>& tokens,
              const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kv_states)
               -> size_t {
@@ -94,18 +95,31 @@ PYBIND11_MODULE(llm_C, m) {
           py::arg("prefix"), py::arg("tokens"), py::arg("kv_states"))
       .def(
           "query",
-          [](KVStateCacheManager* self, std::vector<int>& tokens,
-             int& next_token, std::vector<std::pair<LLMKV, LLMKV>>& kv_state) {
-            VINEYARD_CHECK_OK(self->Query(tokens, next_token, kv_state));
+          [](KVStateCacheManager* self, const std::vector<int>& tokens,
+             int& next_token, py::list& kv_state) {
+            std::vector<std::pair<LLMKV, LLMKV>> kv_state_vec =
+                kv_state.cast<std::vector<std::pair<LLMKV, LLMKV>>>();
+            VINEYARD_CHECK_OK(self->Query(tokens, next_token, kv_state_vec));
+            for (size_t i = 0; i < kv_state_vec.size(); ++i) {
+              kv_state[i] = py::cast(kv_state_vec[i]);
+            }
           },
           py::arg("tokens"), py::arg("next_token"), py::arg("kv_states"))
       .def(
           "query",
-          [](KVStateCacheManager* self, std::vector<int>& tokens,
-             std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kv_state_list)
-              -> size_t {
+          [](KVStateCacheManager* self, const std::vector<int>& tokens,
+             py::list& kv_state_list) -> size_t {
+            std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kv_state_vec =
+                kv_state_list
+                    .cast<std::vector<std::vector<std::pair<LLMKV, LLMKV>>>>();
             size_t matched = 0;
-            VINEYARD_CHECK_OK(self->Query(tokens, kv_state_list, matched));
+            VINEYARD_CHECK_OK(self->Query(tokens, kv_state_vec, matched));
+            for (size_t i = 0; i < kv_state_vec.size() && i < matched; ++i) {
+              for (size_t j = 0; j < kv_state_vec[i].size(); ++j) {
+                kv_state_list[i].cast<py::list>()[j] =
+                    py::cast(kv_state_vec[i][j]);
+              }
+            }
             return matched;
           },
           py::arg("tokens"), py::arg("kv_states"))

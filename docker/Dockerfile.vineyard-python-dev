@@ -72,7 +72,7 @@ RUN cd /work/v6d && \
              -DCMAKE_BUILD_TYPE=Release \
              -DPYTHON_EXECUTABLE=/opt/python/$python/bin/python && \
     make vineyard_client_python -j$(nproc) && \
-    make vineyard_with_llm_python -j$(nproc)
+    make vineyard_llm_python -j$(nproc)
 
 COPY README.rst /work/v6d/README.rst
 COPY setup.py /work/v6d/setup.py
