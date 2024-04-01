@@ -199,9 +199,7 @@ class PHIdxerViewBuilder<arrow_string_view, INDEX_T> {
   PHIdxerViewBuilder() = default;
   ~PHIdxerViewBuilder() = default;
 
-  void add(const arrow_string_view& oid) {
-    keys_.push_back(oid);
-  }
+  void add(const arrow_string_view& oid) { keys_.push_back(oid); }
 
   Status Finish(Client& client, ImmPHIdxer<arrow_string_view, INDEX_T>& idxer) {
     // mem_dumper dumper;
