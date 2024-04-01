@@ -25,6 +25,7 @@ limitations under the License.
 #include "basic/ds/hashmap.h"
 #include "client/client.h"
 #include "client/ds/object_meta.h"
+#include "common/util/arrow.h"
 #include "common/util/logging.h"
 #include "graph/fragment/property_graph_types.h"
 
@@ -117,7 +118,7 @@ void test_string_id(std::string& ipc_socket) {
   VINEYARD_CHECK_OK(client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
-  PerfectHashmapBuilder<std::string_view, int> builder(client);
+  PerfectHashmapBuilder<arrow_string_view, int> builder(client);
   std::vector<std::string> keys = {"1", "21", "313", "4", "5"};
   std::vector<int> values = {10, 22, 33, 44, 55};
 
@@ -129,18 +130,18 @@ void test_string_id(std::string& ipc_socket) {
   CHECK_ARROW_ERROR(builder_.Finish(&array_));
   auto keys_array = std::dynamic_pointer_cast<arrow::LargeStringArray>(array_);
 
-  InternalType<std::string_view>::vineyard_builder_type outer_oid_builder(
+  InternalType<arrow_string_view>::vineyard_builder_type outer_oid_builder(
       client, keys_array);
   builder.ComputeHash(
       client,
-      std::dynamic_pointer_cast<ArrowVineyardArrayType<std::string_view>>(
+      std::dynamic_pointer_cast<ArrowVineyardArrayType<arrow_string_view>>(
           outer_oid_builder.Seal(client)),
       values.data(), keys.size());
 
   LOG(INFO) << "compute end";
 
   auto sealed_perfec_hashmap =
-      std::dynamic_pointer_cast<PerfectHashmap<std::string_view, int>>(
+      std::dynamic_pointer_cast<PerfectHashmap<arrow_string_view, int>>(
           builder.Seal(client));
   CHECK(!sealed_perfec_hashmap->IsPersist());
   CHECK(sealed_perfec_hashmap->IsLocal());
@@ -152,7 +153,7 @@ void test_string_id(std::string& ipc_socket) {
   LOG(INFO) << "Perfect hashmap id: " << id;
 
   auto vy_hashmap =
-      std::dynamic_pointer_cast<PerfectHashmap<std::string_view, int>>(
+      std::dynamic_pointer_cast<PerfectHashmap<arrow_string_view, int>>(
           client.GetObject(id));
 
   CHECK_EQ(builder.size(), sealed_perfec_hashmap->size());

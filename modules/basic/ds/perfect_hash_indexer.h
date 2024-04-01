@@ -25,6 +25,7 @@ limitations under the License.
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "common/memory/memcpy.h"
+#include "common/util/arrow.h"
 
 namespace vineyard {
 namespace perfect_hash {
@@ -75,7 +76,7 @@ class PHIdxerView {
 };
 
 template <typename INDEX_T>
-class PHIdxerView<std::string_view, INDEX_T> {
+class PHIdxerView<arrow_string_view, INDEX_T> {
  public:
   PHIdxerView() {}
   ~PHIdxerView() {}
@@ -107,7 +108,7 @@ class PHIdxerView<std::string_view, INDEX_T> {
     return false;
   }
 
-  bool get_index(const std::string_view& oid, INDEX_T& lid) const {
+  bool get_index(const arrow_string_view& oid, INDEX_T& lid) const {
     nonstd::string_view oid_view(oid.data(), oid.size());
     return get_index(oid_view, lid);
   }
@@ -194,22 +195,22 @@ class PHIdxerViewBuilder {
 };
 
 template <typename INDEX_T>
-class PHIdxerViewBuilder<std::string_view, INDEX_T> {
+class PHIdxerViewBuilder<arrow_string_view, INDEX_T> {
  public:
   PHIdxerViewBuilder() = default;
   ~PHIdxerViewBuilder() = default;
 
-  void add(const std::string_view& oid) {
+  void add(const arrow_string_view& oid) {
     nonstd::string_view oid_view(oid.data(), oid.size());
     keys_.push_back(oid_view);
   }
 
-  void add(std::string_view&& oid) {
+  void add(arrow_string_view&& oid) {
     nonstd::string_view oid_view(oid.data(), oid.size());
     keys_.push_back(std::move(oid_view));
   }
 
-  Status Finish(Client& client, ImmPHIdxer<std::string_view, INDEX_T>& idxer) {
+  Status Finish(Client& client, ImmPHIdxer<arrow_string_view, INDEX_T>& idxer) {
     mem_dumper dumper;
     {
       SinglePHFView<murmurhasher>::build(keys_.begin(), keys_.size(), dumper,
