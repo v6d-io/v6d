@@ -20,7 +20,6 @@ import numpy as np
 
 import torch
 
-import vineyard
 from vineyard.llm import KVCache
 from vineyard.llm import KVTensor
 from vineyard.llm.config import FileCacheConfig
