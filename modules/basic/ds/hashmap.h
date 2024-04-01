@@ -257,18 +257,20 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
                      const V* values, const size_t n_elements) {
     this->set_num_elements_(n_elements);
     this->set_ph_keys_(keys);
-    for (auto iter = detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(
-             keys->GetArray()->begin());
+    for (auto iter =
+             detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(
+                 keys->GetArray()->begin());
          iter !=
-         detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(keys->GetArray()->end());
+         detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(
+             keys->GetArray()->end());
          iter++) {
       this->builder_.add(*iter);
     }
     RETURN_ON_ERROR(this->builder_.Finish(client, this->idxer_));
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
-          return detail::perfect_hash::build_values(
-              idxer_, keys->GetArray(), values, shuffled_values);
+          return detail::perfect_hash::build_values(idxer_, keys->GetArray(),
+                                                    values, shuffled_values);
         });
     return Status::OK();
   }
@@ -307,10 +309,12 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
                      const V begin_value, const size_t n_elements) {
     this->set_num_elements_(n_elements);
     this->set_ph_keys_(keys);
-    for (auto iter = detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(
-             keys->GetArray()->begin());
+    for (auto iter =
+             detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(
+                 keys->GetArray()->begin());
          iter !=
-         detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(keys->GetArray()->end());
+         detail::perfect_hash::arrow_array_iterator<K, ArrowArrayType<K>>(
+             keys->GetArray()->end());
          iter++) {
       this->builder_.add(*iter);
     }

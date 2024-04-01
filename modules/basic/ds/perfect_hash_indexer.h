@@ -22,8 +22,8 @@ limitations under the License.
 
 #include "basic/ds/perfect_hash/hashmap_indexer_impl.h"
 #include "basic/ds/perfect_hash/single_phf_view.h"
-#include "client/ds/blob.h"
 #include "client/client.h"
+#include "client/ds/blob.h"
 #include "common/memory/memcpy.h"
 
 namespace vineyard {
@@ -179,8 +179,10 @@ class PHIdxerViewBuilder {
       key_buffer.dump(dumper);
     }
     std::unique_ptr<BlobWriter> writer;
-    RETURN_ON_ERROR(client.CreateBlob(dumper.buffer().size() * sizeof(char), writer));
-    vineyard::memory::concurrent_memcpy(writer->data(), dumper.buffer().data(), dumper.buffer().size());
+    RETURN_ON_ERROR(
+        client.CreateBlob(dumper.buffer().size() * sizeof(char), writer));
+    vineyard::memory::concurrent_memcpy(writer->data(), dumper.buffer().data(),
+                                        dumper.buffer().size());
     std::shared_ptr<Object> buf;
     RETURN_ON_ERROR(writer->Seal(client, buf));
     idxer.Init(std::dynamic_pointer_cast<Blob>(buf));
@@ -207,7 +209,7 @@ class PHIdxerViewBuilder<std::string_view, INDEX_T> {
     keys_.push_back(std::move(oid_view));
   }
 
-  Status Finish(Client& client, ImmPHIdxer<std::string_view, INDEX_T>&idxer) {
+  Status Finish(Client& client, ImmPHIdxer<std::string_view, INDEX_T>& idxer) {
     mem_dumper dumper;
     {
       SinglePHFView<murmurhasher>::build(keys_.begin(), keys_.size(), dumper,
@@ -228,8 +230,10 @@ class PHIdxerViewBuilder<std::string_view, INDEX_T> {
       key_buffer.dump(dumper);
     }
     std::unique_ptr<BlobWriter> writer;
-    RETURN_ON_ERROR(client.CreateBlob(dumper.buffer().size() * sizeof(char), writer));
-    vineyard::memory::concurrent_memcpy(writer->data(), dumper.buffer().data(), dumper.buffer().size());
+    RETURN_ON_ERROR(
+        client.CreateBlob(dumper.buffer().size() * sizeof(char), writer));
+    vineyard::memory::concurrent_memcpy(writer->data(), dumper.buffer().data(),
+                                        dumper.buffer().size());
     std::shared_ptr<Object> buf;
     RETURN_ON_ERROR(writer->Seal(client, buf));
     idxer.Init(std::dynamic_pointer_cast<Blob>(buf));

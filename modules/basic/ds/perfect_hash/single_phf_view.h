@@ -18,6 +18,7 @@
 
 #include <cstdlib>
 #include <set>
+#include <string>
 #include <vector>
 
 #include "basic/ds/perfect_hash/encoders_view.h"

@@ -385,8 +385,8 @@ struct arrow_array_iterator {
 
 template <typename K, typename V>
 Status build_values(
-    ImmPHIdxer<K, uint64_t>& idxer_, const K* keys,
-    const size_t n_elements, const V* begin_value, V* values,
+    ImmPHIdxer<K, uint64_t>& idxer_, const K* keys, const size_t n_elements,
+    const V* begin_value, V* values,
     const size_t concurrency = std::thread::hardware_concurrency()) {
   RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
   parallel_for(
@@ -418,8 +418,8 @@ Status build_values(
 
 template <typename K, typename V>
 Status build_values(
-    ImmPHIdxer<K, uint64_t>& idxer_, const K* keys,
-    const size_t n_elements, const V begin_value, V* values,
+    ImmPHIdxer<K, uint64_t>& idxer_, const K* keys, const size_t n_elements,
+    const V begin_value, V* values,
     const size_t concurrency = std::thread::hardware_concurrency()) {
   RETURN_ON_ASSERT(std::is_integral<K>::value, "K must be integral type.");
   parallel_for(
