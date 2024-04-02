@@ -16,8 +16,6 @@
 # limitations under the License.
 #
 
-import numpy as np
-
 import torch
 
 from vineyard.llm import KVCache
@@ -40,8 +38,6 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
         tensor_bytes=16,  # should be the same as the nbytes of the tensor
         cache_capacity=10,
         layer=2,
-        shape=tuple(torch.Size([2, 2])),
-        dtype=np.float32,
     )
 
     tokens = [1, 2, 3, 4]
@@ -114,8 +110,6 @@ def test_kv_cache_update_and_query_on_fs():
         tensor_bytes=16,  # should be the same as the nbytes of the tensor
         cache_capacity=10,
         layer=2,
-        shape=tuple(torch.Size([2, 2])),
-        dtype=np.float32,
     )
 
     tokens = [1, 2, 3, 4]

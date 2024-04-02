@@ -39,8 +39,6 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
         tensor_bytes: int = 10,
         cache_capacity: int = 10,
         layer: int = 1,
-        shape: Tuple[int] = None,
-        dtype: str = None,
         **kwargs
     ):
         """Create a llm kv cache manager based on vineyard blob.
@@ -56,12 +54,6 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
                 tokens it can hold. Defaults to 10.
             layer (int, optional):
                 The number of layers of the kv cache. Defaults to 1.
-            shape (tuple, optional):
-                The shape of kv tensor. Defaults to None.
-                e,g, the shape of torch.rand(2, 2) is torch.Size([2, 2]).
-            dtype (numpy.dtype, optional):
-                The dtype of the tensor. Defaults to None.
-                e.g., numpy.float32, numpy.float64.
         """
         self.kv_cache_manager = None
         if not isinstance(cache_config, VineyardCacheConfig) and not isinstance(
@@ -73,9 +65,6 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
         self.tensor_bytes = tensor_bytes
         self.cache_capacity = cache_capacity
         self.layer = layer
-        self.shape = shape
-        # the dtype of the tensor
-        self.tensor_dtype = dtype
 
         self.kv_cache_manager = _generate(
             tensor_bytes=tensor_bytes,
