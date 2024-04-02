@@ -16,12 +16,14 @@ limitations under the License.
 #ifndef MODULES_BASIC_DS_PERFECT_HASH_INDEXER_H_
 #define MODULES_BASIC_DS_PERFECT_HASH_INDEXER_H_
 
+#include <algorithm>
 #include <memory>
 #include <utility>
 #include <vector>
 
 #include "basic/ds/perfect_hash/hashmap_indexer_impl.h"
 #include "basic/ds/perfect_hash/single_phf_view.h"
+#include "basic/utils.h"
 #include "client/client.h"
 #include "client/ds/blob.h"
 #include "common/memory/memcpy.h"
@@ -163,13 +165,14 @@ class PHIdxerViewBuilder {
 
     hashmap_indexer_impl::KeyBuffer<KEY_T> key_buffer;
     std::vector<KEY_T> ordered_keys(keys_.size());
-    for (auto& key : keys_) {
-      size_t idx = phf(key);
-      ordered_keys[idx] = key;
-    }
-    for (auto& key : ordered_keys) {
-      key_buffer.push_back(key);
-    }
+    key_buffer.resize(keys_.size());
+    parallel_for(
+        static_cast<size_t>(0), keys_.size(),
+        [&](const size_t& i) { ordered_keys[phf(keys_[i])] = keys_[i]; },
+        std::thread::hardware_concurrency());
+    vineyard::memory::concurrent_memcpy(key_buffer.buffer().data(),
+                                        ordered_keys.data(),
+                                        ordered_keys.size() * sizeof(KEY_T));
     /**
      * Because the num_bits function uses the essentials::vec_bytes to calculate
      * the size of the buffer. So the returned value is the same as the size of
@@ -210,10 +213,10 @@ class PHIdxerViewBuilder<arrow_string_view, INDEX_T> {
 
     hashmap_indexer_impl::KeyBuffer<arrow_string_view> key_buffer;
     std::vector<arrow_string_view> ordered_keys(keys_.size());
-    for (auto& key : keys_) {
-      size_t idx = phf(key);
-      ordered_keys[idx] = key;
-    }
+    parallel_for(
+        static_cast<size_t>(0), keys_.size(),
+        [&](const size_t& i) { ordered_keys[phf(keys_[i])] = keys_[i]; },
+        std::thread::hardware_concurrency());
     for (auto& key : ordered_keys) {
       key_buffer.push_back(key);
     }

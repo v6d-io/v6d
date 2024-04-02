@@ -65,6 +65,8 @@ struct KeyBuffer {
 
   size_t dump_size() { return essentials::vec_bytes(inner_); }
 
+  void resize(size_t size) { inner_.resize(size); }
+
  private:
   std::vector<T> inner_;
 };
