@@ -114,13 +114,13 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
 
                     kv_state_list = []
                     for _ in range(2): # the number of tokens
-                        k_tensor = np.empty((2,2), dtype=np.float32)
-                        v_tensor = np.empty((2,2), dtype=np.float32)
+                        k_tensor = np.random.rand(2,2).astype(np.float32)
+                        v_tensor = np.random.rand(2,2).astype(np.float32)
                         kv_state_list.append(
                             [
                                 (
-                                    KVTensor(k_array.ctypes.data, k_array.nbytes),
-                                    KVTensor(v_array.ctypes.data, v_array.nbytes),
+                                    KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                                    KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
                                 )
                                 for _ in range(2) # the number of layers
                             ]
@@ -176,8 +176,8 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
                         kv_state_list.append(
                             [
                                 (
-                                    KVTensor(k_array.ctypes.data, k_array.nbytes),
-                                    KVTensor(v_array.ctypes.data, v_array.nbytes),
+                                    KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                                    KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
                                 )
                                 for _ in range(2) # the number of layers
                             ]

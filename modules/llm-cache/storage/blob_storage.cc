@@ -177,7 +177,7 @@ Status BlobStorage::Update(
  *                    data and length. The data is the pointer to the tensor
  *                    , and the length is the size of the tensor.
  * @param updated It's a return value to indicate the number of tokens that have
- * been updated successfully.
+ *                been updated successfully.
  *
  *           *****************************************************************
  *           * Important, the kv state List must be                          *
@@ -281,7 +281,7 @@ Status BlobStorage::Update(
  *           *****************************************************************
  *
  * @param updated It's a return value to indicate the number of tokens that have
- * been updated successfully.
+ *                been updated successfully.
  *
  * @return Status
  */
@@ -371,14 +371,17 @@ Status BlobStorage::Query(const std::vector<int>& tokenList, int token,
  *
  * @param tokenList The token list as the prefix of the updated token.
  * @param kvStateList The kv state list of the token list. It must be
- * initialized before calling this function, including the data and length of
- * the kv tensor. The kv state list is a 2D vector, the first dimension is the
- * token index, and the second dimension is the layer index. The kv state is a
- * pair of LLMKV, the first is the K tensor and the second is the V tensor. It
- * contains two fields: data and length. The data is the pointer to the tensor
- * data, and the length is the size of the tensor data.
+ *                    initialized before calling this function, including the
+ *                    data and length of the kv tensor.
+ *                    The kv state list is a 2D vector, the first dimension is
+ *                    the token index, and the second dimension is the layer
+ *                    index. The kv state is a pair of LLMKV, the first is
+ *                    the K tensor and the second is the V tensor.
+ *                    It contains two fields: data and length. The data is
+ *                    the pointer to the tensor, and the length is the size
+ *                    of the tensor.
  * @param matched It's a return value to indicate the number of tokens that have
- * been matched successfully.
+ *                been matched successfully.
  *
  *           *****************************************************************
  *           * Important, the kv state is managed by the kv state cache      *

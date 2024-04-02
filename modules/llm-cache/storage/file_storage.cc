@@ -55,9 +55,9 @@ namespace vineyard {
  *                    The kv state is a pair of LLMKV, the first is the K tensor
  *                    and the second is the V tensor. It contains two fields:
  *                    data and length. The data is the pointer to the tensor
- * data, and the length is the size of the tensor data.
+ *                    , and the length is the size of the tensor.
  * @param updated It's a return value to indicate the number of tokens that have
- * been updated successfully.
+ *                been updated successfully.
  *
  *           *****************************************************************
  *           * Important, the kv state List must be                          *
@@ -218,9 +218,9 @@ Status FileStorage::Update(
  *                    The kv state is a pair of LLMKV, the first is the K tensor
  *                    and the second is the V tensor. It contains two fields:
  *                    data and length. The data is the pointer to the tensor
- * data, and the length is the size of the tensor data.
+ *                    , and the length is the size of the tensor.
  * @param updated It's a return value to indicate the number of tokens that have
- * been updated successfully.
+ *                been updated successfully.
  *
  *           *****************************************************************
  *           * Important, the kv state List must be                          *
@@ -394,11 +394,11 @@ Status FileStorage::Update(
  *                    It's a 2D vector, the first dimension is the token index,
  *                    and the second dimension is the layer index. The kv state
  *                    is a pair of LLMKV, the first is the K tensor and the
- * second is the V tensor. It contains two fields:  data and length. The data is
- * the pointer to the tensor data, and the length is the size of the tensor
- * data.
+ *                    second is the V tensor. It contains two fields: data and
+ *                    length. The data is the pointer to the tensor, and
+ *                    the length is the size of the tensor data.
  * @param matched It's a return value to indicate the number of tokens that have
- * been matched successfully.
+ *                been matched successfully.
  *
  *           *****************************************************************
  *           * Important, the kv state is managed by the caller itself, the  *

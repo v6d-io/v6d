@@ -148,7 +148,11 @@ Vineyard LLM KV Cache
 
 Before using the KV Cache, you need to install the ``vineyard-llm`` package.
 
-.. autoclass:: vineyard.llm.KV_Cache
+.. autoclass:: vineyard.llm.KVCache
+    :special-members:
+    :members:
+
+.. autoclass:: vineyard.llm.KVCacheConfig
     :special-members:
     :members:
 
