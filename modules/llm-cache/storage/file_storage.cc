@@ -280,11 +280,13 @@ Status FileStorage::Update(
   }
 
   std::vector<std::string> tempFilePaths(pathList.size());
-  auto fn = [&](size_t i) -> std::pair<int, Status> {
+  auto fn = [this, &tempFilePaths, &pathList, &prefix, &totalTokenList,
+             &kvStateList](size_t i) -> std::pair<int, Status> {
     int tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr =
         GetTmpFileDir(pathList[i]) + "-" + std::to_string(i);
+    tempFilePaths[i] = tmpPathStr;
     std::filesystem::path tmpPath(tmpPathStr);
     std::string pathStr = this->rootPath + pathList[i];
     std::filesystem::path path(pathStr);
@@ -448,18 +450,18 @@ Status FileStorage::Query(
 
     // If open failed, it means the kv state is not in the cache(file not exist)
     if (!Open(filePath.string(), fd, FileOperationType::READ).ok()) {
-      return std::pair(-1, Status::ObjectNotExists("file doesn't exist"));
+      return std::pair(i, Status::ObjectNotExists("file doesn't exist"));
     }
     size_t file_size = 0;
     auto s = GetFileSize(fd, file_size);
     if (!s.ok()) {
       VINEYARD_DISCARD(Close(fd));
-      return std::pair(-1, Status::ObjectNotExists("cannot get file size"));
+      return std::pair(i, Status::ObjectNotExists("cannot get file size"));
     }
     if (file_size == 0) {
       VINEYARD_DISCARD(Close(fd));
       VINEYARD_DISCARD(Delete(filePath.string()));
-      return std::pair(-1, Status::ObjectNotExists("file is empty"));
+      return std::pair(i, Status::ObjectNotExists("file is empty"));
     }
 
     int tokenLength;
@@ -471,7 +473,7 @@ Status FileStorage::Query(
 
     if (!CompareTokenList(tokenList, prefix, prefix.size())) {
       VINEYARD_DISCARD(Close(fd));
-      return std::pair(-1, Status::ObjectNotExists("token mismatch"));
+      return std::pair(i, Status::ObjectNotExists("token mismatch"));
     } else {
       for (int j = 0; j < batchSize; j++) {
         if (matched_start + j >= tokenList.size() ||
