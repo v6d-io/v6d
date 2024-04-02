@@ -93,7 +93,7 @@ Status LocalFileStorage::Mkdir(std::string path) {
   // create the directory if it does not exist
   if (!std::filesystem::exists(path)) {
     if (!std::filesystem::create_directories(path)) {
-      if (!std::filesystem::exists(path)) {
+      if (std::filesystem::exists(path)) {
         VLOG(100) << "directory exists" << path;
       } else {
         VLOG(100) << "Failed to create directory:" << path;
