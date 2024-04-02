@@ -162,11 +162,6 @@ Status KVStateCacheBlockBuilder::Query(
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
     LLMKV& keyState = kvState[currentLayer].first;
     LLMKV& valueState = kvState[currentLayer].second;
-    LOG(INFO) << "keyState" << &keyState << " vstate:" << &valueState
-              << "ketState data:" << keyState.data
-              << " length:" << keyState.length
-              << " valueState data:" << valueState.data
-              << " length:" << valueState.length;
     VINEYARD_ASSERT(keyState.data == nullptr && valueState.data == nullptr);
     keyState.data =
         keyStateTensorBuilderList[currentLayer]->data() + index * tensorBytes;
@@ -174,10 +169,6 @@ Status KVStateCacheBlockBuilder::Query(
     valueState.data =
         valueStateTensorBuilderList[currentLayer]->data() + index * tensorBytes;
     valueState.length = tensorBytes;
-    LOG(INFO) << "query keyState:" << keyState.data
-              << " length:" << keyState.length
-              << " valueState:" << valueState.data
-              << " length:" << valueState.length;
   }
   return Status::OK();
 }

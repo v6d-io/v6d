@@ -16,10 +16,6 @@
 # limitations under the License.
 #
 
-import ctypes
-from ctypes import c_size_t
-from ctypes import c_void_p
-
 import numpy as np
 
 import torch
@@ -73,13 +69,11 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
     kv_tensors_to_query = []
     kv_tensors_from_cache = []
     for _ in range(len(tokens)):
-        k_tensor = 0
-        v_tensor = 0
         kv_tensors_to_query.append(
             [
                 (
-                    KVTensor(k_tensor, 0),
-                    KVTensor(v_tensor, 0),
+                    KVTensor(0, 0),
+                    KVTensor(0, 0),
                 )
                 for _ in range(cache.layer)
             ]
@@ -88,17 +82,6 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
     matched = cache.query(tokens, kv_tensors_to_query)
     kv_tensors_from_cache = kv_tensors_to_query[:matched]
     assert matched == len(tokens)
-
-    for kv in kv_tensors_to_query:
-        for k_tensor, v_tensor in kv:
-            print(
-                k_tensor,
-                v_tensor,
-                k_tensor.data,
-                v_tensor.data,
-                k_tensor.length,
-                v_tensor.length,
-            )
 
     assert len(kv_tensors) == len(kv_tensors_from_cache)
     for kv, kv_from_cache in zip(kv_tensors, kv_tensors_from_cache):

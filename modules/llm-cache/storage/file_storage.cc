@@ -59,6 +59,34 @@ namespace vineyard {
  * @param updated It's a return value to indicate the number of tokens that have
  * been updated successfully.
  *
+ *           *****************************************************************
+ *           * Important, the kv state List must be                          *
+ *           * initialized(pre-allocated) and released by the caller.        *
+ *           *                                                               *
+ *           * Assume the layer is 2, and the token list is [1,2] you should *
+ *           * allocate the memory for the kv state like this:               *
+ *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvStateList;*
+ *           * for (int i = 0; i < 2; i++) {                                 *
+ *           *   std::vector<std::pair<LLMKV, LLMKV>> kvState;               *
+ *           *   for (int j = 0; j < 2; j++) {                               *
+ *           *     LLMKV key_state;                                          *
+ *           *     LLMKV value_state;                                        *
+ *           *     key_state.data = malloc(tensorBytes);                     *
+ *           *     value_state.data = malloc(tensorBytes)                    *
+ *           *     // Copy the k_state of LLM KV Cache to key_state.data     *
+ *           *     // Copy the v_state of LLM KV Cache to value_state.data   *
+ *           *     key_state.length = tensorBytes;                           *
+ *           *     value_state.length = tensorBytes;                         *
+ *           *     kvState.emplace_back(key_state, value_state);             *
+ *           *   }                                                           *
+ *           *   kvStateList.push_back(kvState);                             *
+ *           *}                                                              *
+ *           *                                                               *
+ *           * After calling this function, you must release(free) the       *
+ *           * kv buffer of the kvStateList manually                         *
+ *           *                                                               *
+ *           *****************************************************************
+ *
  * @note The length of the token list should be as same as the length of the
  * kvStateList.
  *
@@ -193,6 +221,34 @@ Status FileStorage::Update(
  * data, and the length is the size of the tensor data.
  * @param updated It's a return value to indicate the number of tokens that have
  * been updated successfully.
+ *
+ *           *****************************************************************
+ *           * Important, the kv state List must be                          *
+ *           * initialized(pre-allocated) and released by the caller.        *
+ *           *                                                               *
+ *           * Assume the layer is 2, and the token list is [1,2] you should *
+ *           * allocate the memory for the kv state like this:               *
+ *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvStateList;*
+ *           * for (int i = 0; i < 2; i++) {                                 *
+ *           *   std::vector<std::pair<LLMKV, LLMKV>> kvState;               *
+ *           *   for (int j = 0; j < 2; j++) {                               *
+ *           *     LLMKV key_state;                                          *
+ *           *     LLMKV value_state;                                        *
+ *           *     key_state.data = malloc(tensorBytes);                     *
+ *           *     value_state.data = malloc(tensorBytes)                    *
+ *           *     // Copy the k_state of LLM KV Cache to key_state.data     *
+ *           *     // Copy the v_state of LLM KV Cache to value_state.data   *
+ *           *     key_state.length = tensorBytes;                           *
+ *           *     value_state.length = tensorBytes;                         *
+ *           *     kvState.emplace_back(key_state, value_state);             *
+ *           *   }                                                           *
+ *           *   kvStateList.push_back(kvState);                             *
+ *           *}                                                              *
+ *           *                                                               *
+ *           * After calling this function, you must release(free) the       *
+ *           * kv buffer of the kvStateList manually                         *
+ *           *                                                               *
+ *           *****************************************************************
  *
  * @note The length of the token list should be as same as the length of the
  * kvStateList.
@@ -335,14 +391,42 @@ Status FileStorage::Update(
  *
  * @param tokenList The token list to be queried.
  * @param kvStateList The kv state list of the token list to be fulfilled.
- *                    It must be initialized(allocated) before calling this
- * function. It's a 2D vector, the first dimension is the token index, and the
- * second dimension is the layer index. The kv state is a pair of LLMKV, the
- * first is the K tensor and the second is the V tensor. It contains two fields:
- *                    data and length. The data is the pointer to the tensor
- * data, and the length is the size of the tensor data.
+ *                    It's a 2D vector, the first dimension is the token index,
+ *                    and the second dimension is the layer index. The kv state
+ *                    is a pair of LLMKV, the first is the K tensor and the
+ * second is the V tensor. It contains two fields:  data and length. The data is
+ * the pointer to the tensor data, and the length is the size of the tensor
+ * data.
  * @param matched It's a return value to indicate the number of tokens that have
  * been matched successfully.
+ *
+ *           *****************************************************************
+ *           * Important, the kv state is managed by the caller itself, the  *
+ *           * caller need to malloc and free the memory of the kv state.    *
+ *           *                                                               *
+ *           * Assume the layer is 2, and the token list is [1,2] you should *
+ *           * allocate the memory for the kv state like this:               *
+ *           * std::vector<std::vector<std::pair<LLMKV, LLMKV>>> kvStateList;*
+ *           * for (int i = 0; i < 2; i++) {                                 *
+ *           *   std::vector<std::pair<LLMKV, LLMKV>> kvState;               *
+ *           *   for (int j = 0; j < 2; j++) {                               *
+ *           *     LLMKV key_state;                                          *
+ *           *     LLMKV value_state;                                        *
+ *           *     key_state.data = malloc(tensorBytes);                     *
+ *           *     value_state.data = malloc(tensorBytes)                    *
+ *           *     key_state.length = tensorBytes;                           *
+ *           *     value_state.length = tensorBytes;                         *
+ *           *     kvState.emplace_back(key_state, value_state);             *
+ *           *   }                                                           *
+ *           *   kvStateList.push_back(kvState);                             *
+ *           *}                                                              *
+ *           *                                                               *
+ *           * After calling this function, the key_state and value_state    *
+ *           * will be fulfilled with the kv state of the token, then you    *
+ *           * can copy the kv state to the LLM KV Cache. At last, you       *
+ *           * must free the memory of the kv state manually.                *
+ *           *                                                               *
+ *           *****************************************************************
  *
  * @note The kvStateList must be initialized before calling this function,
  * including the data and length of the kv tensor.
@@ -416,7 +500,6 @@ Status FileStorage::Query(
 
   parallel::ThreadGroup tg(std::min(
       paths.size(), static_cast<size_t>(std::thread::hardware_concurrency())));
-  // parallel::ThreadGroup tg(1);
   for (size_t i = 0; i < paths.size(); i++) {
     tg.AddTask(fn, i, i * batchSize);
   }

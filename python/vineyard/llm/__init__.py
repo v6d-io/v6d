@@ -95,12 +95,37 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
 
         Args:
             prefix (list): the prefix of the tokens
+                For FileCacheConfig, the length of the prefix should be
+                multiple of the chunk size.
             tokens (list): the tokens of the kv cache
                 e,g, [1 2 3 4]
-            kv_cache_list (List[Dict[int, Tuple[KVTensor, KVTensor]]]):
-                the kv tensors list of the related tokens including all layers.
+            kv_cache_list (List[List[Tuple[KVTensor, KVTensor]]]):
+                the kv tensors list of the related tokens including all layers, and
+                its length should be the same as the length of tokens.
 
                 The k, v tensor for i-th token at the j-th layer is: kv_state_list[i][j]
+
+                Whether the underlying kv cache is vineyard or file, the
+                kv_state_list is managed by the caller.
+                Assume the layer is 2, the tokens is [1, 2], then you should allocate
+                the kv_state_list as follows:
+
+                .. code:: python
+
+                    kv_state_list = []
+                    for _ in range(2): # the number of tokens
+                        k_tensor = np.empty((2,2), dtype=np.float32)
+                        v_tensor = np.empty((2,2), dtype=np.float32)
+                        kv_state_list.append(
+                            [
+                                (
+                                    KVTensor(k_array.ctypes.data, k_array.nbytes),
+                                    KVTensor(v_array.ctypes.data, v_array.nbytes),
+                                )
+                                for _ in range(2) # the number of layers
+                            ]
+                        )
+
         """
         if prefix:
             return self.kv_cache_manager.update(prefix, tokens, kv_state_list)
@@ -117,10 +142,46 @@ class KVCache:  # pylint: disable=too-many-instance-attributes
         Args:
             tokens (list): the tokens of the kv cache
                 e,g, [1 2 3 4]
-            kv_state_list: (List[Tuple[KVTensor, KVTensor]]):
-                the kv tensors list of the related tokens including all layers.
+            kv_state_list: (List[List[Tuple[KVTensor, KVTensor]]]):
+                the kv tensors list of the related tokens including all layers, and its
+                length should be the same as the length of tokens.
 
                 The k, v tensor for i-th token at the j-th layer is: kv_state_list[i][j]
+
+                For VineyardConfigCache, the kv_state_list is managed by vineyard.
+                The caller does not need to malloc and free the memory of the kv state.
+                Assume the layer is 2, the tokens is [1, 2], then you should allocate
+                the kv_state_list as follows:
+
+                .. code:: python
+
+                    kv_state_list = [
+                        (
+                            KVTensor(0, 0),
+                            KVTensor(0, 0),
+                        ) for _ in range(2) # the number of layers
+                    ] * 2 # the number of tokens
+
+                For FileCacheConfig, the kv_state_list is managed by the caller.
+                The caller needs to malloc and free the memory of the kv state.
+                Assume the layer is 2, the tokens is [1, 2], then you should allocate
+                the kv_state_list as follows:
+
+                .. code:: python
+
+                    kv_state_list = []
+                    for _ in range(2): # the number of tokens
+                        k_tensor = np.empty((2,2), dtype=np.float32)
+                        v_tensor = np.empty((2,2), dtype=np.float32)
+                        kv_state_list.append(
+                            [
+                                (
+                                    KVTensor(k_array.ctypes.data, k_array.nbytes),
+                                    KVTensor(v_array.ctypes.data, v_array.nbytes),
+                                )
+                                for _ in range(2) # the number of layers
+                            ]
+                        )
 
         Returns:
             int: The number of matched tokens.

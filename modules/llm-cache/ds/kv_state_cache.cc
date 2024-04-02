@@ -331,22 +331,16 @@ Status KVStateCacheBuilder::Merge(std::shared_ptr<KVStateCache> kvStateCache) {
     for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
       LLMKV key_state;
       LLMKV value_state;
-      key_state.data = malloc(this->tensorBytes);
-      key_state.length = this->tensorBytes;
-      value_state.data = malloc(this->tensorBytes);
-      value_state.length = this->tensorBytes;
+      key_state.data = nullptr;
+      key_state.length = 0;
+      value_state.data = nullptr;
+      value_state.length = 0;
 
       kvState.emplace_back(key_state, value_state);
     }
     Status status = globalCacheBuilder->Query(tokenList, (*it).back(), kvState);
     if (status.ok()) {
       status = this->Update(tokenList, (*it).back(), kvState);
-    }
-    for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-      LLMKV key_state = kvState[currentLayer].first;
-      LLMKV value_state = kvState[currentLayer].second;
-      free(key_state.data);
-      free(value_state.data);
     }
     RETURN_ON_ERROR(status);
   }

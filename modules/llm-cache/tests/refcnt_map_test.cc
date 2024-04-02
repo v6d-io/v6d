@@ -132,11 +132,16 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
                std::vector<int> tokens, size_t begin = 0) {
   std::vector<int> inference_tokens;
   std::vector<std::pair<LLMKV, LLMKV>> kv_state;
+  std::vector<std::pair<LLMKV, LLMKV>> kv_state_to_query;
   for (size_t i = 0; i < tokens.size(); ++i) {
     if (i >= begin) {
       kv_state.clear();
-      Status result =
-          kv_state_cache_manager->Query(inference_tokens, tokens[i], kv_state);
+      kv_state_to_query.clear();
+      for (int current_layer = 0; current_layer < layer; current_layer++) {
+        kv_state_to_query.emplace_back(LLMKV{nullptr, 0}, LLMKV{nullptr, 0});
+      }
+      Status result = kv_state_cache_manager->Query(inference_tokens, tokens[i],
+                                                    kv_state_to_query);
       if (!result.ok()) {
         LOG(INFO) << "Can not find the kv_state from cache:";
         print_current_tokens(inference_tokens, tokens[i]);
@@ -152,7 +157,7 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
       } else {
         LOG(INFO) << "Find the kv_state from cache:";
         print_current_tokens(inference_tokens, tokens[i]);
-        check_kv_state(kv_state, tokens[i]);
+        check_kv_state(kv_state_to_query, tokens[i]);
       }
       LOG(INFO) << "--------------------------------------";
     }
