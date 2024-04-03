@@ -112,8 +112,7 @@ Status FileStorage::Update(
              &kvStateList](int i) -> std::pair<int, Status> {
     int tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
-    std::string tmpPathStr =
-        GetTmpFileDir(pathList[i]) + "-" + std::to_string(i);
+    std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
     tempFilePaths[i] = tmpPathStr;
     std::filesystem::path tmpPath(tmpPathStr);
     std::string pathStr = this->rootPath + pathList[i];
@@ -284,8 +283,7 @@ Status FileStorage::Update(
              &kvStateList](size_t i) -> std::pair<int, Status> {
     int tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
-    std::string tmpPathStr =
-        GetTmpFileDir(pathList[i]) + "-" + std::to_string(i);
+    std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
     tempFilePaths[i] = tmpPathStr;
     std::filesystem::path tmpPath(tmpPathStr);
     std::string pathStr = this->rootPath + pathList[i];

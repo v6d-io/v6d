@@ -84,7 +84,7 @@ class FileStorage : public IStorage {
 
   virtual bool IsFileExist(const std::string& path) = 0;
 
-  virtual std::string GetTmpFileDir(std::string filePath) = 0;
+  virtual std::string GetTmpFileDir() = 0;
 
  public:
   FileStorage() = default;

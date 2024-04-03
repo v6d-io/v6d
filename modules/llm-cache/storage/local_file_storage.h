@@ -28,7 +28,6 @@ namespace vineyard {
 struct LocalFileDescriptor : public FileDescriptor {
   int fd;
   std::string path;
-  int lockFD;
 };
 
 class LocalFileStorage : public FileStorage {
@@ -80,7 +79,7 @@ class LocalFileStorage : public FileStorage {
 
   Status Delete(std::string path) override;
 
-  std::string GetTmpFileDir(std::string filePath) override;
+  std::string GetTmpFileDir() override;
 };
 
 }  // namespace vineyard

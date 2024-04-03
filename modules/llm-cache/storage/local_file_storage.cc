@@ -45,6 +45,7 @@ Status LocalFileStorage::Open(std::string path,
                               FileOperationType fileOperationType) {
   std::shared_ptr<LocalFileDescriptor> lfd =
       std::static_pointer_cast<LocalFileDescriptor>(fd);
+  lfd->path = path;
 
   int flag = 0;
   if (fileOperationType & FileOperationType::READ) {
@@ -158,7 +159,7 @@ Status LocalFileStorage::Delete(std::string path) {
   return Status::OK();
 }
 
-std::string LocalFileStorage::GetTmpFileDir(std::string filePath) {
+std::string LocalFileStorage::GetTmpFileDir() {
   pid_t pid = getpid();
   char* pod_name_str = getenv("POD_NAME");
   if (pod_name_str == nullptr || strlen(pod_name_str) == 0) {
