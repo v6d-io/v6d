@@ -1,16 +1,38 @@
 #!/bin/sh
 set -ex
 
-SOCKET_FILE="$FUSE_DIR/vineyard.sock"
+SOCKET_NAME="vineyard-worker.sock"
+SOCKET_FILE="$FUSE_DIR/vineyard-worker.sock"
 RPC_CONFIG_FILE="$RPC_CONF_DIR/VINEYARD_RPC_ENDPOINT"
 VINEYARD_YAML_FILE="$FUSE_DIR/vineyard-config.yaml"
 
 # Write the IPCSocket and RPCEndpoints to the vineyard configurations YAML file
 write_yaml_config() {
     echo "Vineyard:" > $VINEYARD_YAML_FILE
-    echo "  IPCSocket: vineyard.sock" >> $VINEYARD_YAML_FILE
+    echo "  IPCSocket: $SOCKET_NAME" >> $VINEYARD_YAML_FILE
     echo "  RPCEndpoint: $1" >> $VINEYARD_YAML_FILE
 }
+
+# start the standalone vineyardd
+if [ "$CACHE_SIZE" != "0" ]; then
+    vineyardd --socket=$FUSE_DIR/vineyard-local.sock \
+            --size=$CACHE_SIZE \
+            --etcd_endpoint=$ETCD_ENDPOINT &
+
+    # wait for the local vineyard socket to be created
+    timeout=60
+    count=0
+    while [ ! -S $FUSE_DIR/vineyard-local.sock ]; do
+        sleep 1
+        count=$((count+1))
+        if [ $count -eq $timeout ]; then
+            echo "Timeout waiting for $FUSE_DIR/vineyard-local.sock"
+            exit 1
+        fi
+    done
+    SOCKET_NAME="vineyard-local.sock"
+    echo "Local vineyardd is started."
+fi
 
 mkdir -p $FUSE_DIR
 while true; do
