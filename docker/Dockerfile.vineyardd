@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ARG MODE=release
+
 FROM ghcr.io/v6d-io/v6d/vineyardd-alpine-builder:builder-latest as builder
 
 RUN export arch="$PLATFORM" && \
@@ -26,9 +28,9 @@ RUN export arch="$PLATFORM" && \
     curl -LO https://github.com/Yelp/dumb-init/releases/download/v1.2.2/dumb-init_1.2.2_$arch && \
     chmod +x dumb-init_1.2.2_$arch && \
     mv /tmp/dumb-init_1.2.2_$arch /usr/bin/dumb-init && \
-    curl -LO https://github.com/etcd-io/etcd/releases/download/v3.5.9/etcd-v3.5.9-linux-$arch.tar.gz && \
-    tar zxf etcd-v3.5.9-linux-$arch.tar.gz && \
-    mv /tmp/etcd-v3.5.9-linux-$arch/etcd /usr/bin/etcd && \
+    curl -LO https://github.com/etcd-io/etcd/releases/download/v3.5.13/etcd-v3.5.13-linux-$arch.tar.gz && \
+    tar zxf etcd-v3.5.13-linux-$arch.tar.gz && \
+    mv /tmp/etcd-v3.5.13-linux-$arch/etcd /usr/bin/etcd && \
     curl -LO https://dl.k8s.io/release/v1.24.0/bin/linux/$arch/kubectl && \
     chmod +x kubectl && \
     mv /tmp/kubectl /usr/bin/kubectl
@@ -73,17 +75,23 @@ RUN cd /work/v6d && \
     make -j`nproc` && \
     strip ./bin/vineyardd
 
-# debug has busybox
-FROM gcr.io/distroless/base:debug
+FROM pingcap/alpine-glibc:alpine-3.14.6 as release
 
-SHELL ["/bin/bash", "-c"]
+FROM gcr.io/distroless/base:debug as debug
+
+FROM ${MODE}
 
 COPY --from=builder /usr/bin/bash-linux /bin/bash
 COPY --from=builder /usr/bin/dumb-init /usr/bin/dumb-init
 COPY --from=builder /usr/bin/etcd /usr/bin/etcd
 COPY --from=builder /usr/bin/kubectl /usr/bin/kubectl
 COPY --from=builder /work/v6d/build/bin/vineyardd /usr/local/bin/vineyardd
-RUN ln -s /busybox/env /usr/bin/env
+
+SHELL ["/bin/bash", "-c"]
+
+RUN if [ "$MODE" = "release" ]; then apk add --no-cache sudo; \
+    elif [ "$MODE" = "debug" ]; then ln -s /busybox/env /usr/bin/env; \
+    fi
 
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["/usr/local/bin/vineyardd"]

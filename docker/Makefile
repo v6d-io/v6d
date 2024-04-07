@@ -15,6 +15,7 @@ ALPINE_IMAGE				:= vineyardd
 ALPINE_VERSION 				:= latest
 ALPINE_MANIFEST_TAG			:= alpine-$(ALPINE_VERSION)
 ALPINE_TAG					:= $(ALPINE_MANIFEST_TAG)_$(PLATFORM)
+ALPINE_DEBUG_TAG			:= $(ALPINE_MANIFEST_TAG)_$(PLATFORM)_debug
 
 WHEEL_BUILDER_REGISTRY		:= $(REGISTRY)
 WHEEL_BUILDER_IMAGE			:= vineyard-manylinux2014
@@ -61,15 +62,27 @@ builder-manifest:
 		--amend $(BUILDER_REGISTRY)/$(BUILDER_IMAGE):$(BUILDER_MANIFEST_TAG)_aarch64
 .PHONY: builder-manifest
 
-# building standalone vineyardd
+# building standalone vineyardd in release mode
 vineyardd:
 	docker buildx build ../ \
+		--build-arg MODE=release \
 		--progress=$(BUILD_PROGRESS) \
 		--file ./Dockerfile.vineyardd \
 		-t ghcr.io/v6d-io/v6d/vineyardd:$(ALPINE_TAG) \
 		--load \
 		--platform linux/$(ARCH)
 .PHONY: vineyardd
+
+# building standalone vineyardd in debug mode
+vineyardd-debug:
+	docker buildx build ../ \
+		--build-arg MODE=debug \
+		--progress=$(BUILD_PROGRESS) \
+		--file ./Dockerfile.vineyardd \
+		-t ghcr.io/v6d-io/v6d/vineyardd:$(ALPINE_DEBUG_TAG) \
+		--load \
+		--platform linux/$(ARCH)
+.PHONY: vineyardd-debug
 
 vineyardd-manifest:
 	docker manifest create $(ALPINE_REGISTRY)/$(ALPINE_IMAGE):$(ALPINE_MANIFEST_TAG) \
