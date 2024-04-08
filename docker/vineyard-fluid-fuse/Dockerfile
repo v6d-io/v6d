@@ -7,4 +7,4 @@ FROM base_$PLATFORM
 COPY ./entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-CMD ["/entrypoint.sh"]
+ENTRYPOINT ["bash", "/entrypoint.sh"]

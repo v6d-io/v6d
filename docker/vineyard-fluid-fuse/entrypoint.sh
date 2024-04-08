@@ -17,7 +17,8 @@ write_yaml_config() {
 if [ "$CACHE_SIZE" != "0" ]; then
     vineyardd --socket=$FUSE_DIR/vineyard-local.sock \
             --size=$CACHE_SIZE \
-            --etcd_endpoint=$ETCD_ENDPOINT &
+            --etcd_endpoint=$ETCD_ENDPOINT \
+            --etcd_prefix=$ETCD_PREFIX &
 
     # wait for the local vineyard socket to be created
     timeout=60
