@@ -377,8 +377,6 @@ jobs:
 
           rm -rf default.etcd
           rm -rf /dev/shm/etcd*
-          pip3 install networkx==3.1 
-          pip3 install torch --index-url https://download.pytorch.org/whl/cpu
           python3 test/runner.py $RUNNER_ARGS --with-llm-python
 
       - name: Run contrib/thirdparty tests

@@ -16,7 +16,7 @@
 # limitations under the License.
 #
 
-import torch
+import numpy as np
 
 from vineyard.llm import KVCache
 from vineyard.llm import KVTensor
@@ -45,14 +45,14 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
     kv_tensors_to_update = []
     kv_tensors = []
     for _ in range(len(tokens)):
-        k_tensor = torch.rand(2, 2, dtype=torch.float32)
-        v_tensor = torch.rand(2, 2, dtype=torch.float32)
+        k_tensor = np.random.rand(2, 2).astype(np.float32)
+        v_tensor = np.random.rand(2, 2).astype(np.float32)
         kv_tensors.append([(k_tensor, v_tensor) for _ in range(cache.layer)])
         kv_tensors_to_update.append(
             [
                 (
-                    KVTensor(k_tensor.data_ptr(), k_tensor.nbytes),
-                    KVTensor(v_tensor.data_ptr(), v_tensor.nbytes),
+                    KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                    KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
                 )
                 for _ in range(cache.layer)
             ]
@@ -85,18 +85,16 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
         for (k_tensor, v_tensor), (queried_k_tensor, queried_v_tensor) in zip(
             kv, kv_from_cache
         ):
-            queried_k_tensor = torch.frombuffer(
-                memoryview(queried_k_tensor),
+            queried_k_tensor = np.frombuffer(
+                queried_k_tensor,
                 dtype=k_tensor.dtype,
-                count=k_tensor.numel(),
             ).reshape(k_tensor.shape)
-            queried_v_tensor = torch.frombuffer(
-                memoryview(queried_v_tensor),
+            queried_v_tensor = np.frombuffer(
+                queried_v_tensor,
                 dtype=v_tensor.dtype,
-                count=v_tensor.numel(),
             ).reshape(v_tensor.shape)
-            assert torch.equal(k_tensor, queried_k_tensor)
-            assert torch.equal(v_tensor, queried_v_tensor)
+            assert np.array_equal(k_tensor, queried_k_tensor)
+            assert np.array_equal(v_tensor, queried_v_tensor)
 
 
 def test_kv_cache_update_and_query_on_fs():
@@ -116,8 +114,8 @@ def test_kv_cache_update_and_query_on_fs():
     original_kv_tensors = []
     for i in range(0, len(tokens), file_cache_config.chunk_size):
         kv_tensors_to_update = []
-        k_tensor = torch.rand(2, 2, dtype=torch.float32)
-        v_tensor = torch.rand(2, 2, dtype=torch.float32)
+        k_tensor = np.random.rand(2, 2).astype(np.float32)
+        v_tensor = np.random.rand(2, 2).astype(np.float32)
         for _ in range(file_cache_config.chunk_size):
             original_kv_tensors.append(
                 [(k_tensor, v_tensor) for _ in range(cache.layer)]
@@ -125,8 +123,8 @@ def test_kv_cache_update_and_query_on_fs():
             kv_tensors_to_update.append(
                 [
                     (
-                        KVTensor(k_tensor.numpy().ctypes.data, k_tensor.nbytes),
-                        KVTensor(v_tensor.numpy().ctypes.data, v_tensor.nbytes),
+                        KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                        KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
                     )
                     for _ in range(cache.layer)
                 ]
@@ -141,14 +139,14 @@ def test_kv_cache_update_and_query_on_fs():
     kv_tensors_from_cache = []
     kv_tensors = []
     for _ in range(len(tokens)):
-        k_tensor = torch.empty(2, 2, dtype=torch.float32)
-        v_tensor = torch.empty(2, 2, dtype=torch.float32)
+        k_tensor = np.empty((2, 2), dtype=np.float32)
+        v_tensor = np.empty((2, 2), dtype=np.float32)
         kv_tensors_from_cache.append([(k_tensor, v_tensor) for _ in range(cache.layer)])
         kv_tensors.append(
             [
                 (
-                    KVTensor(k_tensor.numpy().ctypes.data, k_tensor.nbytes),
-                    KVTensor(v_tensor.numpy().ctypes.data, v_tensor.nbytes),
+                    KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                    KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
                 )
                 for _ in range(cache.layer)
             ]
@@ -162,5 +160,5 @@ def test_kv_cache_update_and_query_on_fs():
         for (k_tensor, v_tensor), (queried_k_tensor, queried_v_tensor) in zip(
             kv, kv_from_cache
         ):
-            assert torch.equal(k_tensor, queried_k_tensor)
-            assert torch.equal(v_tensor, queried_v_tensor)
+            np.array_equal(k_tensor, queried_k_tensor)
+            np.array_equal(v_tensor, queried_v_tensor)
