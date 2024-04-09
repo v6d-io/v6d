@@ -32,6 +32,7 @@ import pyarrow as pa
 import lazy_import
 
 import vineyard
+from vineyard._C import NotEnoughMemoryException
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 from vineyard._C import RemoteBlobBuilder
@@ -191,6 +192,16 @@ def put_torch_tensors(client, tensors) -> List[Union[ObjectID, ObjectMeta]]:
         pointers.append(tensor.data_ptr())
         sizes.append(tensor.numel() * tensor.element_size())
 
+    size_sum = sum(sizes)
+    available_memory = client.status.memory_limit - client.status.memory_usage
+    if size_sum >= available_memory:
+        # Avoid incomplete tensor blobs from being stored in vineyardd
+        # as the upper put function will find another vineyardd instance
+        # with enough memory to store these tensors.
+        raise NotEnoughMemoryException(
+            "The connected vineyard instance does not have "
+            "enough memory to hold these tensors"
+        )
     if client.is_ipc:
         blobs = client.create_blob(sizes)
         for pointer, size, blob in zip(pointers, sizes, blobs):
@@ -255,6 +266,7 @@ def torch_module_builder(client, value, builder, **kw):
         else:
             return state_dict
 
+    value = value.copy()
     if isinstance(value, torch.nn.Module):
         value = value.state_dict()
 
