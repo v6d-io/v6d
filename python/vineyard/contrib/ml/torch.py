@@ -236,6 +236,7 @@ def torch_module_builder(client, value, builder, **kw):
         if isinstance(state_dict, torch.Tensor):
             tensors[key_prefix] = state_dict
         elif isinstance(state_dict, dict):
+            state_dict = state_dict.copy()
             keys = list(state_dict.keys())
             for key in keys:
                 state_dict[key] = go(state_dict[key], f'{key_prefix}.{key}', tensors)
@@ -255,10 +256,12 @@ def torch_module_builder(client, value, builder, **kw):
                 r = r.id
             return r
         elif isinstance(state_dict, dict):
-            keys = list(state_dict.keys())
-            for key in keys:
-                state_dict[key] = go(state_dict[key], f'{key_prefix}.{key}', tensors)
-            return state_dict
+            new_state_dict = {}
+            for key, value in state_dict.items():
+                new_value = assign(value, f'{key_prefix}.{key}', tensors)
+                if new_value is not None:
+                    new_state_dict[key] = new_value
+            return new_state_dict
         elif isinstance(state_dict, (tuple, list)):
             return [
                 go(element, f'{key_prefix}.{i}', tensors)
@@ -267,7 +270,6 @@ def torch_module_builder(client, value, builder, **kw):
         else:
             return state_dict
 
-    value = value.copy()
     if isinstance(value, torch.nn.Module):
         value = value.state_dict()
 
@@ -278,11 +280,11 @@ def torch_module_builder(client, value, builder, **kw):
     tensor_objects = put_torch_tensors(client, tensor_values)
 
     tensors = dict(zip(tensor_keys, tensor_objects))
-    value = assign(value, 'tensor', tensors)
+    new_value = assign(value, 'tensor', tensors)
 
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::torch::Module'
-    meta['state_dict'] = to_json(value)
+    meta['state_dict'] = to_json(new_value)
     for key, tensor in tensors.items():
         meta.add_member(key, tensor)
     return client.create_metadata(meta)
