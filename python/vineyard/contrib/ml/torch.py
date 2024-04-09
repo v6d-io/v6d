@@ -199,8 +199,9 @@ def put_torch_tensors(client, tensors) -> List[Union[ObjectID, ObjectMeta]]:
         # as the upper put function will find another vineyardd instance
         # with enough memory to store these tensors.
         raise NotEnoughMemoryException(
-            "The connected vineyard instance does not have "
-            "enough memory to hold these tensors"
+            f"The connected Vineyard instance does not have "
+            f"enough memory to store the tensors. "
+            f"Requested: {size_sum}, Available: {available_memory}"
         )
     if client.is_ipc:
         blobs = client.create_blob(sizes)
