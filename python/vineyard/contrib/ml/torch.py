@@ -32,6 +32,7 @@ import pyarrow as pa
 import lazy_import
 
 import vineyard
+from vineyard._C import NotEnoughMemoryException
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
 from vineyard._C import RemoteBlobBuilder
@@ -191,6 +192,17 @@ def put_torch_tensors(client, tensors) -> List[Union[ObjectID, ObjectMeta]]:
         pointers.append(tensor.data_ptr())
         sizes.append(tensor.numel() * tensor.element_size())
 
+    size_sum = sum(sizes)
+    available_memory = client.status.memory_limit - client.status.memory_usage
+    if size_sum >= available_memory:
+        # Avoid incomplete tensor blobs from being stored in vineyardd
+        # as the upper put function will find another vineyardd instance
+        # with enough memory to store these tensors.
+        raise NotEnoughMemoryException(
+            f"The connected Vineyard instance does not have "
+            f"enough memory to store the tensors. "
+            f"Requested: {size_sum}, Available: {available_memory}"
+        )
     if client.is_ipc:
         blobs = client.create_blob(sizes)
         for pointer, size, blob in zip(pointers, sizes, blobs):
@@ -224,6 +236,7 @@ def torch_module_builder(client, value, builder, **kw):
         if isinstance(state_dict, torch.Tensor):
             tensors[key_prefix] = state_dict
         elif isinstance(state_dict, dict):
+            state_dict = state_dict.copy()
             keys = list(state_dict.keys())
             for key in keys:
                 state_dict[key] = go(state_dict[key], f'{key_prefix}.{key}', tensors)
@@ -243,10 +256,12 @@ def torch_module_builder(client, value, builder, **kw):
                 r = r.id
             return r
         elif isinstance(state_dict, dict):
-            keys = list(state_dict.keys())
-            for key in keys:
-                state_dict[key] = go(state_dict[key], f'{key_prefix}.{key}', tensors)
-            return state_dict
+            new_state_dict = {}
+            for key, value in state_dict.items():
+                new_value = assign(value, f'{key_prefix}.{key}', tensors)
+                if new_value is not None:
+                    new_state_dict[key] = new_value
+            return new_state_dict
         elif isinstance(state_dict, (tuple, list)):
             return [
                 go(element, f'{key_prefix}.{i}', tensors)
@@ -265,11 +280,11 @@ def torch_module_builder(client, value, builder, **kw):
     tensor_objects = put_torch_tensors(client, tensor_values)
 
     tensors = dict(zip(tensor_keys, tensor_objects))
-    value = assign(value, 'tensor', tensors)
+    new_value = assign(value, 'tensor', tensors)
 
     meta = ObjectMeta()
     meta['typename'] = 'vineyard::torch::Module'
-    meta['state_dict'] = to_json(value)
+    meta['state_dict'] = to_json(new_value)
     for key, tensor in tensors.items():
         meta.add_member(key, tensor)
     return client.create_metadata(meta)
