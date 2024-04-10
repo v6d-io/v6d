@@ -52,9 +52,9 @@ while true; do
     echo "write vineyard ipc socket and rpc endpoint to vineyard configuration YAML..."
     write_yaml_config "$VINEYARD_RPC_ENDPOINT"
     echo "check whether vineyard socket symlink is created..."
-    if [ ! -S $SOCKET_FILE ] && [ -S $MOUNT_DIR/vineyard.sock ]; then
+    if [ ! -S $SOCKET_FILE ] && [ -S $MOUNT_DIR/vineyard-worker.sock ]; then
         echo "create a hard link of vineyard socket..."
-        ln $MOUNT_DIR/vineyard.sock $SOCKET_FILE
+        ln $MOUNT_DIR/vineyard-worker.sock $SOCKET_FILE
     else
         echo "$SOCKET_FILE exists."
     fi
