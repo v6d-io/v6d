@@ -16,6 +16,8 @@ limitations under the License.
 #ifndef MODULES_LLM_CACHE_STORAGE_FILE_STORAGE_H_
 #define MODULES_LLM_CACHE_STORAGE_FILE_STORAGE_H_
 
+#include <chrono>
+#include <list>
 #include <map>
 #include <memory>
 #include <set>
@@ -26,6 +28,10 @@ limitations under the License.
 #include "common/util/status.h"
 #include "llm-cache/hash/hasher.h"
 #include "llm-cache/storage/storage.h"
+
+#define SECOND_TO_MILLISECOND 1000
+#define SECOND_TO_MICROSECOND 1000000
+#define SECOND_TO_NANOSECOND  1000000000
 
 namespace vineyard {
 
@@ -84,7 +90,19 @@ class FileStorage : public IStorage {
 
   virtual bool IsFileExist(const std::string& path) = 0;
 
+  virtual Status GetFileAccessTime(const std::string& path, std::chrono::duration<int64_t, std::nano>& accessTime) = 0;
+
+  virtual Status TouchFile(const std::string& path) = 0;
+
   virtual std::string GetTmpFileDir() = 0;
+
+  Status DefaultGCFunc();
+
+ protected:
+  static void DefaultGCThread(FileStorage* fileStorage);
+
+  // for test
+  void PrintFileAccessTime(std::string path);
 
  public:
   FileStorage() = default;
@@ -121,6 +139,11 @@ class FileStorage : public IStorage {
   std::string tempFileDir;
   std::shared_ptr<IHashAlgorithm> hashAlgorithm;
   std::shared_ptr<Hasher> hasher;
+  std::chrono::duration<int64_t> gcInterval;
+  std::chrono::duration<int64_t, std::nano> fileTTL;
+  std::thread gcThread;
+  std::mutex gcMutex;
+  std::list<std::string> gcList;
 };
 
 }  // namespace vineyard

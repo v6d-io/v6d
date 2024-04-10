@@ -14,11 +14,13 @@ limitations under the License.
 */
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -189,15 +191,24 @@ Status FileStorage::Update(
     }
   }
 
+  //for test
+  sleep(2);
+
+  std::lock_guard<std::mutex> lock(gcMutex);
   int j = 0;
   for (size_t i = 0; i < pathList.size(); i++) {
     if (pathIndexMap.find(i) != pathIndexMap.end()) {
       j += 1;
+      TouchFile(this->rootPath + pathList[i]);
+      gcList.push_back(this->rootPath + pathList[i]);
+    } else {
+      lock.~lock_guard();
+      break;
     }
   }
-  updated = j * batchSize;
+  updated = ((size_t)j) * batchSize;
   for (size_t i = j; i < pathList.size(); i++) {
-    VINEYARD_SUPPRESS(Delete(pathList[i]));
+    VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
   }
 
@@ -363,16 +374,28 @@ Status FileStorage::Update(
     }
   }
 
+  //for test
+  sleep(2);
+
+  std::lock_guard<std::mutex> lock(gcMutex);
   int j = 0;
   for (size_t i = 0; i < pathList.size(); i++) {
     if (pathIndexMap.find(i) != pathIndexMap.end()) {
       j += 1;
+      if (((size_t)j) * batchSize > prefix.size()) {
+        // Only this part is created.
+        TouchFile(this->rootPath + pathList[i]);
+        gcList.push_back(this->rootPath + pathList[i]);
+      }
+    } else {
+      lock.~lock_guard();
+      break;
     }
   }
   updated =
       size_t(j * batchSize) < prefix.size() ? 0 : j * batchSize - prefix.size();
   for (size_t i = j; i < pathList.size(); i++) {
-    VINEYARD_SUPPRESS(Delete(pathList[i]));
+    VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
   }
 
@@ -541,6 +564,51 @@ bool FileStorage::CompareTokenList(const std::vector<int>& tokenList,
     }
   }
   return true;
+}
+
+Status FileStorage::DefaultGCFunc() {
+  std::lock_guard<std::mutex> lock(gcMutex);
+
+  auto now = std::chrono::high_resolution_clock::now();
+  auto nanoseconds_since_epoch = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+
+  for(std::list<std::string>::iterator iter = gcList.begin(); iter != gcList.end();) {
+    std::string path = *iter;
+    std::chrono::duration<int64_t, std::nano> accessTime(0);
+    RETURN_ON_ERROR(GetFileAccessTime(path, accessTime));
+    LOG(INFO) << "GC ttl:" << fileTTL.count();
+    PrintFileAccessTime(path);
+    if ((accessTime + fileTTL).count() < nanoseconds_since_epoch) {
+      LOG(INFO) << "Dead!";
+      RETURN_ON_ERROR(Delete(path));
+      iter = gcList.erase(iter);
+    } else {
+      LOG(INFO) << "Alive!";
+      iter++;
+    }
+  }
+  return Status::OK();
+}
+
+void FileStorage::DefaultGCThread(FileStorage* fileStorage) {
+  while(1) {
+    sleep(fileStorage->gcInterval.count());
+    LOG(INFO) << "GC thread wake";
+    Status status = fileStorage->DefaultGCFunc();
+    if (!status.ok()) {
+      // TBD: process the error
+    }
+  }
+}
+
+void FileStorage::PrintFileAccessTime(std::string path) {
+  std::chrono::duration<int64_t, std::nano> accessTime;
+  Status status = GetFileAccessTime(path, accessTime);
+  if (!status.ok()) {
+    LOG(ERROR) << "Failed to get file access time: " << status.ToString();
+  } else {
+    LOG(INFO) << "File: " << path << " access time: " << accessTime.count();
+  }
 }
 
 }  // namespace vineyard

@@ -20,6 +20,7 @@ limitations under the License.
 #include <memory>
 #include <regex>
 #include <string>
+#include <thread>
 
 #include "llm-cache/storage/file_storage.h"
 
@@ -33,7 +34,7 @@ struct LocalFileDescriptor : public FileDescriptor {
 class LocalFileStorage : public FileStorage {
  public:
   LocalFileStorage(int tensorBytes, int cacheCapacity, int layer, int batchSize,
-                   int splitNumber, std::string rootPath) {
+                   int splitNumber, std::string rootPath, int64_t clientGCInterval, int64_t ttl) {
     this->hashAlgorithm = std::make_shared<MurmurHash3Algorithm>();
     this->hasher = std::make_shared<Hasher>(hashAlgorithm.get());
     this->tensorBytes = tensorBytes;
@@ -44,6 +45,9 @@ class LocalFileStorage : public FileStorage {
     this->rootPath = std::regex_replace(rootPath + "/", std::regex("/+"), "/");
     this->tempFileDir =
         std::regex_replace(rootPath + "/__temp/", std::regex("/+"), "/");
+    this->gcInterval = std::chrono::seconds(clientGCInterval);
+    this->fileTTL = std::chrono::seconds(ttl);
+    this->gcThread = std::thread(FileStorage::DefaultGCThread, this);
   }
 
   ~LocalFileStorage() = default;
@@ -78,6 +82,10 @@ class LocalFileStorage : public FileStorage {
   Status Close(std::shared_ptr<FileDescriptor>& fd) override;
 
   Status Delete(std::string path) override;
+
+  Status GetFileAccessTime(const std::string& path, std::chrono::duration<int64_t, std::nano>& accessTime) override;
+
+  Status TouchFile(const std::string& path) override;
 
   std::string GetTmpFileDir() override;
 };

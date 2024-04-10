@@ -181,6 +181,7 @@ void threadFunc() {
   }
 
   LOG(INFO) << "inference end";
+  while(1);
 
   manager->Close();
 }

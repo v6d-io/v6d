@@ -183,4 +183,31 @@ Status LocalFileStorage::MoveFileAtomic(std::string src, std::string dst) {
   return Status::OK();
 }
 
+Status LocalFileStorage::GetFileAccessTime(const std::string& path, std::chrono::duration<int64_t, std::nano>& accessTime) {
+  struct stat statbuf;
+  if (stat(path.c_str(), &statbuf) == -1) {
+    return Status::IOError("Failed to get file access time: " + formatIOError(path));
+  }
+  accessTime = std::chrono::duration<int64_t, std::nano>(statbuf.st_atim.tv_sec * SECOND_TO_NANOSECOND + statbuf.st_atim.tv_nsec);
+  return Status::OK();
+}
+
+Status LocalFileStorage::TouchFile(const std::string& path) {
+  LOG(INFO) << "Before touch File:";
+  PrintFileAccessTime(path);
+  auto now = std::chrono::high_resolution_clock::now();
+  auto now_nano = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+  struct timespec times[2] = { 0 };
+  times[0].tv_sec = now_nano / SECOND_TO_NANOSECOND;
+  times[0].tv_nsec = now_nano % SECOND_TO_NANOSECOND;
+  times[1].tv_sec = UTIME_OMIT;
+
+  if (utimensat(AT_FDCWD, path.c_str(), times, 0) == -1) {
+    return Status::IOError("Failed to touch file: " + formatIOError(path));
+  }
+  LOG(INFO) << "After touch File:";
+  PrintFileAccessTime(path);
+  return Status::OK();
+}
+
 }  // namespace vineyard

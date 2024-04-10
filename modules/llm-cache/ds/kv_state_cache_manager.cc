@@ -78,7 +78,7 @@ Status KVStateCacheManager::Make(std::shared_ptr<KVStateCacheManager>& manager,
   if (config.filesystemType == FilesystemType::LOCAL) {
     file_storage = std::make_shared<LocalFileStorage>(
         config.tensorByte, config.cacheCapacity, config.layer, config.batchSize,
-        config.splitNumber, config.root);
+        config.splitNumber, config.root, config.clientGCInterval, config.ttl);
   } else {
     return Status::Invalid("Unsupported filesystem type");
   }

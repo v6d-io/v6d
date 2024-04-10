@@ -53,16 +53,21 @@ struct FileCacheConfig : public KVCacheConfig {
   int splitNumber;
   std::string root;
   FilesystemType filesystemType;
+  int clientGCInterval; // second
+  int ttl; // second
 
   FileCacheConfig(int tensorByte = 10, int cacheCapacity = 10, int layer = 1,
                   int batchSize = 4, int splitNumber = 2,
                   std::string root = "/tmp/llm_cache/",
-                  FilesystemType filesystemType = LOCAL)
+                  FilesystemType filesystemType = LOCAL,
+                  int clientGCInterval = 3, int ttl = 5)
       : KVCacheConfig{tensorByte, cacheCapacity, layer} {
     this->root = root;
     this->batchSize = batchSize;
     this->splitNumber = splitNumber;
     this->filesystemType = filesystemType;
+    this->clientGCInterval = clientGCInterval;
+    this->ttl = ttl;
   }
 };
 
