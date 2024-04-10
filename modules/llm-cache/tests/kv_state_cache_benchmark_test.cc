@@ -54,8 +54,8 @@ std::vector<int> generate_random_tokens(size_t max_length) {
   return tokens;
 }
 
-std::map<int, std::pair<LLMKV, LLMKV>> generate_kv_state(int token) {
-  std::map<int, std::pair<LLMKV, LLMKV>> kv_state;
+std::vector<std::pair<LLMKV, LLMKV>> generate_kv_state(int token) {
+  std::vector<std::pair<LLMKV, LLMKV>> kv_state;
   for (int currentLayer = 0; currentLayer < LAYER; currentLayer++) {
     LLMKV key_state;
     LLMKV value_state;
@@ -64,8 +64,7 @@ std::map<int, std::pair<LLMKV, LLMKV>> generate_kv_state(int token) {
     value_state.data = malloc(TENSORBYTES);
     value_state.length = TENSORBYTES;
 
-    kv_state.insert(
-        std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
+    kv_state.emplace_back(key_state, value_state);
   }
   return kv_state;
 }
@@ -73,7 +72,7 @@ std::map<int, std::pair<LLMKV, LLMKV>> generate_kv_state(int token) {
 // test the performance of Query and Update function
 void benchmark_inference(std::vector<std::vector<int>>& tokens) {
   LOG(INFO) << "inference for benchmark";
-  std::map<int, std::pair<LLMKV, LLMKV>> kv_state;
+  std::vector<std::pair<LLMKV, LLMKV>> kv_state;
 
   std::chrono::steady_clock::time_point start, end;
   double token_list_size = 0;

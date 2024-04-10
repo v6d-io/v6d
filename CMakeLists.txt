@@ -913,15 +913,12 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS AND BUILD_VINEYARD_LLM_CACHE)
     if(NOT (CMAKE_VERSION VERSION_LESS "3.27"))
         set(PYBIND11_FINDPYTHON ON)
     endif()
-    file(GLOB PYTHON_BIND_FILES "python/vineyard/llm/kv_state_cache.cc"
-                                "modules/llm-cache/ds/*.h"
-    )
+    file(GLOB PYTHON_BIND_FILES "python/vineyard/llm/kv_state_cache.cc")
     pybind11_add_module(llm_C MODULE ${PYTHON_BIND_FILES})
     # make sure `vineyard_llm_cache` been built.
     add_dependencies(llm_C vineyard_llm_cache)
     target_link_libraries(llm_C PRIVATE vineyard_client vineyard_llm_cache)
-    target_include_directories(llm_C PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/pybind11/include"
-                                                   "modules/llm-cache/ds/*.h")
+    target_include_directories(llm_C PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/thirdparty/pybind11/include")
     target_compile_options(llm_C PRIVATE -Wno-unused-value)
     set_target_properties(llm_C PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/shared-lib")
     if(UNIX AND NOT APPLE)
@@ -935,7 +932,7 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS AND BUILD_VINEYARD_LLM_CACHE)
         target_add_link_options(llm_C PRIVATE OPTIONS -Os)
     endif()
 
-    file(RELATIVE_PATH RELATIVE_BUILD_PATH "${PROJECT_SOURCE_DIR}/python/vineyard" "${CMAKE_BINARY_DIR}/shared-lib")
+    file(RELATIVE_PATH RELATIVE_BUILD_PATH "${PROJECT_SOURCE_DIR}/python/vineyard/llm" "${CMAKE_BINARY_DIR}/shared-lib")
     if(UNIX AND NOT APPLE)
         set_target_properties(llm_C PROPERTIES
                             BUILD_WITH_INSTALL_RPATH TRUE
@@ -949,12 +946,13 @@ if(BUILD_VINEYARD_PYTHON_BINDINGS AND BUILD_VINEYARD_LLM_CACHE)
                             INSTALL_RPATH ".;@loader_path;@loader_path/${RELATIVE_BUILD_PATH}/;${CMAKE_INSTALL_PREFIX}/lib;${CMAKE_INSTALL_PREFIX}/lib64;${INSTALL_RPATH}")
     endif()
 
-    add_custom_target(vineyard_with_llm_python
+    add_custom_target(vineyard_llm_python
         ALL
         COMMAND cp "$<TARGET_FILE:llm_C>" "${PROJECT_SOURCE_DIR}/python/vineyard/llm/"
         DEPENDS llm_C
         COMMENT "Copying llm kv cache python extensions."
         VERBATIM)
+    add_dependencies(vineyard_llm_python vineyard_client_python)
 endif()
 
 # add sub_directories

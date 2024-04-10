@@ -16,14 +16,13 @@
 # limitations under the License.
 #
 
+from typing import Dict
 from typing import List
+from typing import Optional
 from typing import Tuple
 from typing import Union
 
 import numpy as np
-
-import torch
-from torch import dtype
 
 from .config import FileCacheConfig
 from .config import VineyardCacheConfig
@@ -31,8 +30,8 @@ from .llm_C import KVTensor
 from .llm_C import _generate
 
 
-class KV_Cache:  # pylint: disable=too-many-instance-attributes
-    """KV_Cache is a class that manages the llm kv cache in vineyard."""
+class KVCache:  # pylint: disable=too-many-instance-attributes
+    """KVCache is a class that manages the llm kv cache in vineyard."""
 
     def __init__(
         self,
@@ -40,8 +39,6 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
         tensor_bytes: int = 10,
         cache_capacity: int = 10,
         layer: int = 1,
-        torch_size: torch.Size = None,
-        dtype: dtype = None,
         **kwargs
     ):
         """Create a llm kv cache manager based on vineyard blob.
@@ -57,13 +54,8 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
                 tokens it can hold. Defaults to 10.
             layer (int, optional):
                 The number of layers of the kv cache. Defaults to 1.
-            torch_size (torch.Size, optional):
-                The size of kv tensor. Defaults to None.
-                e,g, the size of torch.rand(2, 2) is torch.Size([2, 2]).
-            dtype (dtype, optional):
-                The dtype of the tensor. Defaults to None.
-                e.g., torch.float32, torch.float64.
         """
+        self.kv_cache_manager = None
         if not isinstance(cache_config, VineyardCacheConfig) and not isinstance(
             cache_config, FileCacheConfig
         ):
@@ -73,11 +65,6 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
         self.tensor_bytes = tensor_bytes
         self.cache_capacity = cache_capacity
         self.layer = layer
-        self.torch_size = torch_size
-        # the dtype of the tensor
-        self.tensor_dtype = dtype
-        # the dtype of the numpy array of the tensor
-        self.numpy_dtype = None
 
         self.kv_cache_manager = _generate(
             tensor_bytes=tensor_bytes,
@@ -89,81 +76,107 @@ class KV_Cache:  # pylint: disable=too-many-instance-attributes
 
     def update(
         self,
-        tokens: list,
-        kv_cache_list: List[Tuple[torch.Tensor, torch.Tensor]],
-    ):
+        prefix: Optional[List[int]],
+        tokens: List[int],
+        kv_state_list: List[List[Tuple[KVTensor, KVTensor]]],
+    ) -> int:
         """Update the kv cache stored in vineyard.
 
         Args:
+            prefix (list): the prefix of the tokens
+                For FileCacheConfig, the length of the prefix should be
+                multiple of the chunk size.
             tokens (list): the tokens of the kv cache
                 e,g, [1 2 3 4]
-            kv_cache_list (List[Tuple[torch.Tensor, torch.Tensor]]):
-                the kv tensors list of the related tokens including all layers.
-                if the layer is 2, the kv_cache_list should be like:
+            kv_cache_list (List[List[Tuple[KVTensor, KVTensor]]]):
+                the kv tensors list of the related tokens including all layers, and
+                its length should be the same as the length of tokens.
 
-        .. code:: bash
+                The k, v tensor for i-th token at the j-th layer is: kv_state_list[i][j]
 
-            [(k1, v1)[layer0], (k1, v1)[layer1],
-             (k2, v2)[layer0], (k2, v2)[layer1],
-             (k3, v3)[layer0], (k3, v3)[layer1],
-             (k4, v4)[layer0], (k4, v4)[layer1]]
+                Whether the underlying kv cache is vineyard or file, the
+                kv_state_list is managed by the caller.
+                Assume the layer is 2, the tokens is [1, 2], then you should allocate
+                the kv_state_list as follows:
+
+                .. code:: python
+
+                    kv_state_list = []
+                    for _ in range(2): # the number of tokens
+                        k_tensor = np.random.rand(2,2).astype(np.float32)
+                        v_tensor = np.random.rand(2,2).astype(np.float32)
+                        kv_state_list.append(
+                            [
+                                (
+                                    KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                                    KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
+                                )
+                                for _ in range(2) # the number of layers
+                            ]
+                        )
 
         """
-        kv_state_list = []
-        kv_state_entry = {}
-        j = 0
-        for k_tensor, v_tensor in kv_cache_list:
-            k_tensor_numpy = k_tensor.numpy()
-            v_tensor_numpy = v_tensor.numpy()
-            if self.numpy_dtype is None:
-                self.numpy_dtype = np.dtype(k_tensor_numpy.dtype)
-            k_tensor_in_vineyard = KVTensor(k_tensor_numpy.data, k_tensor_numpy.nbytes)
-            v_tensor_in_vineyard = KVTensor(v_tensor_numpy.data, v_tensor_numpy.nbytes)
-            kv_state_entry[j] = (k_tensor_in_vineyard, v_tensor_in_vineyard)
-            j += 1
-            if j == self.layer:
-                j = 0
-                kv_state_list.append(kv_state_entry)
-                kv_state_entry = {}
-        self.kv_cache_manager.update(tokens, kv_state_list)
+        if prefix:
+            return self.kv_cache_manager.update(prefix, tokens, kv_state_list)
+        else:
+            return self.kv_cache_manager.update(tokens, kv_state_list)
 
     def query(
         self,
-        tokens: list,
-    ):
+        tokens: List[int],
+        kv_state_list: List[List[Tuple[KVTensor, KVTensor]]],
+    ) -> int:
         """Query the kv cache stored in vineyard.
 
         Args:
             tokens (list): the tokens of the kv cache
                 e,g, [1 2 3 4]
+            kv_state_list: (List[List[Tuple[KVTensor, KVTensor]]]):
+                the kv tensors list of the related tokens including all layers, and its
+                length should be the same as the length of tokens.
+
+                The k, v tensor for i-th token at the j-th layer is: kv_state_list[i][j]
+
+                For VineyardConfigCache, the kv_state_list is managed by vineyard.
+                The caller does not need to malloc and free the memory of the kv state.
+                Assume the layer is 2, the tokens is [1, 2], then you should allocate
+                the kv_state_list as follows:
+
+                .. code:: python
+
+                    kv_state_list = [
+                        (
+                            KVTensor(0, 0),
+                            KVTensor(0, 0),
+                        ) for _ in range(2) # the number of layers
+                    ] * 2 # the number of tokens
+
+                For FileCacheConfig, the kv_state_list is managed by the caller.
+                The caller needs to malloc and free the memory of the kv state.
+                Assume the layer is 2, the tokens is [1, 2], then you should allocate
+                the kv_state_list as follows:
+
+                .. code:: python
+
+                    kv_state_list = []
+                    for _ in range(2): # the number of tokens
+                        k_tensor = np.empty((2,2), dtype=np.float32)
+                        v_tensor = np.empty((2,2), dtype=np.float32)
+                        kv_state_list.append(
+                            [
+                                (
+                                    KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                                    KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
+                                )
+                                for _ in range(2) # the number of layers
+                            ]
+                        )
 
         Returns:
-            (List[Tuple[torch.Tensor, torch.Tensor]]):
-                the kv tensors list of the related tokens including all layers.
-                if the layer is 2, the kv_cache_list should be like:
-
-            .. code:: bash
-
-                [(k1, v1)[layer0], (k1, v1)[layer1],
-                 (k2, v2)[layer0], (k2, v2)[layer1],
-                 (k3, v3)[layer0], (k3, v3)[layer1],
-                 (k4, v4)[layer0], (k4, v4)[layer1]]
-
+            int: The number of matched tokens.
         """
-        kv_state_list = []
-        kv_cache_list = []
-        self.kv_cache_manager.query(tokens, kv_state_list)
-        for k_state, v_state in kv_state_list:
-            k_tensor_numpy = np.frombuffer(
-                k_state.data, dtype=self.numpy_dtype
-            ).reshape(self.torch_size)
-            v_tensor_numpy = np.frombuffer(
-                v_state.data, dtype=self.numpy_dtype
-            ).reshape(self.torch_size)
-            k_tensor = torch.from_numpy(k_tensor_numpy)
-            v_tensor = torch.from_numpy(v_tensor_numpy)
-            kv_cache_list.append((k_tensor, v_tensor))
-        return kv_cache_list
+        return self.kv_cache_manager.query(tokens, kv_state_list)
 
     def __del__(self):
-        self.kv_cache_manager.close()
+        if self.kv_cache_manager:
+            self.kv_cache_manager.close()

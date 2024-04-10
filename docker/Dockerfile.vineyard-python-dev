@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # build vineyard-python-dev
-FROM ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20240218 as wheel
+FROM ghcr.io/v6d-io/v6d/vineyard-manylinux2014:20240329 as wheel
 
 ENV python=cp310-cp310
 
@@ -34,6 +34,8 @@ COPY vineyard-config.in.cmake /work/v6d/vineyard-config.in.cmake
 COPY src/common /work/v6d/src/common
 COPY src/client /work/v6d/src/client
 
+COPY modules/llm-cache /work/v6d/modules/llm-cache
+
 COPY python/client.cc /work/v6d/python/client.cc
 COPY python/core.cc /work/v6d/python/core.cc
 COPY python/error.cc /work/v6d/python/error.cc
@@ -42,6 +44,7 @@ COPY python/pybind11_docs.h /work/v6d/python/pybind11_docs.h
 COPY python/pybind11_utils.cc /work/v6d/python/pybind11_utils.cc
 COPY python/pybind11_utils.h /work/v6d/python/pybind11_utils.h
 COPY python/vineyard.cc /work/v6d/python/vineyard.cc
+COPY python/vineyard/llm /work/v6d/python/vineyard/llm
 
 RUN cd /work/v6d && \
     mkdir build && \
@@ -53,7 +56,7 @@ RUN cd /work/v6d && \
              -DBUILD_VINEYARD_CLIENT=ON \
              -DBUILD_VINEYARD_PYTHON_BINDINGS=ON \
              -DBUILD_VINEYARD_PYPI_PACKAGES=ON \
-             -DBUILD_VINEYARD_LLM_CACHE=OFF \
+             -DBUILD_VINEYARD_LLM_CACHE=ON \
              -DBUILD_VINEYARD_BASIC=OFF \
              -DBUILD_VINEYARD_IO=OFF \
              -DBUILD_VINEYARD_GRAPH=OFF \
@@ -68,12 +71,14 @@ RUN cd /work/v6d && \
              -DBUILD_VINEYARD_PROFILING=OFF \
              -DCMAKE_BUILD_TYPE=Release \
              -DPYTHON_EXECUTABLE=/opt/python/$python/bin/python && \
-    make vineyard_client_python -j$(nproc)
+    make vineyard_client_python -j$(nproc) && \
+    make vineyard_llm_python -j$(nproc)
 
 COPY README.rst /work/v6d/README.rst
 COPY setup.py /work/v6d/setup.py
 COPY setup_bdist.py /work/v6d/setup_bdist.py
 COPY setup_io.py /work/v6d/setup_io.py
+COPY setup_llm.py /work/v6d/setup_llm.py
 COPY requirements.txt /work/v6d/requirements.txt
 COPY requirements-dev.txt /work/v6d/requirements-dev.txt
 COPY requirements-extra.txt /work/v6d/requirements-extra.txt
@@ -103,6 +108,10 @@ RUN cd /work/v6d/build && \
     cd /work/v6d && \
     rm -rf dist build/lib* && \
     /opt/python/$python/bin/python setup_io.py bdist_wheel && \
+    mv /work/v6d/dist/*.whl /work/fixed_wheels/ && \
+    cd /work/v6d && \
+    rm -rf dist build/lib* && \
+    /opt/python/$python/bin/python setup_llm.py bdist_wheel && \
     mv /work/v6d/dist/*.whl /work/fixed_wheels/ && \
     rm -rf /work/v6d
 

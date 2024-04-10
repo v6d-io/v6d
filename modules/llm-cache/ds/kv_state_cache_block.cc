@@ -18,6 +18,7 @@ limitations under the License.
 #include <utility>
 
 #include "client/client.h"
+#include "common/memory/memcpy.h"
 #include "common/util/logging.h"
 #include "llm-cache/ds/kv_state_cache_block.h"
 
@@ -121,12 +122,14 @@ KVStateCacheBlockBuilder::KVStateCacheBlockBuilder(
   }
 
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    memcpy(this->keyStateTensorBuilderList[currentLayer]->data(),
-           kvStateCacheBlock->keyStateTensorList[currentLayer]->data(),
-           (int64_t)(blockSize) * this->tensorBytes);
-    memcpy(this->valueStateTensorBuilderList[currentLayer]->data(),
-           kvStateCacheBlock->valueStateTensorList[currentLayer]->data(),
-           (int64_t)(blockSize) * this->tensorBytes);
+    vineyard::memory::concurrent_memcpy(
+        this->keyStateTensorBuilderList[currentLayer]->data(),
+        kvStateCacheBlock->keyStateTensorList[currentLayer]->data(),
+        (int64_t)(blockSize) * this->tensorBytes);
+    vineyard::memory::concurrent_memcpy(
+        this->valueStateTensorBuilderList[currentLayer]->data(),
+        kvStateCacheBlock->valueStateTensorList[currentLayer]->data(),
+        (int64_t)(blockSize) * this->tensorBytes);
   }
 }
 
@@ -151,19 +154,21 @@ Status KVStateCacheBlockBuilder::Make(
 }
 
 Status KVStateCacheBlockBuilder::Query(
-    int index, std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    int index, std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),
                    "Index out of range: " + std::to_string(index));
+  RETURN_ON_ASSERT(static_cast<int>(kvState.size()) == this->layer,
+                   "The size of kvState is not equal to layer");
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    LLMKV keyState = (kvState.find(currentLayer)->second).first;
-    LLMKV valueState = (kvState.find(currentLayer)->second).second;
+    LLMKV& keyState = kvState[currentLayer].first;
+    LLMKV& valueState = kvState[currentLayer].second;
+    VINEYARD_ASSERT(keyState.data == nullptr && valueState.data == nullptr);
     keyState.data =
         keyStateTensorBuilderList[currentLayer]->data() + index * tensorBytes;
     keyState.length = tensorBytes;
     valueState.data =
         valueStateTensorBuilderList[currentLayer]->data() + index * tensorBytes;
     valueState.length = tensorBytes;
-    kvState.emplace(currentLayer, std::make_pair(keyState, valueState));
   }
   return Status::OK();
 }
@@ -190,23 +195,25 @@ bool KVStateCacheBlockBuilder::IsFull() {
 }
 
 Status KVStateCacheBlockBuilder::Update(
-    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState, OffsetData* data) {
+    const std::vector<std::pair<LLMKV, LLMKV>>& kvState, OffsetData* data) {
   int index = this->FindEmptySlot();
   RETURN_ON_ASSERT((index >= 0 && index < this->blockSize),
                    "Index out of range: " + std::to_string(index));
+  RETURN_ON_ASSERT(kvState.size() == static_cast<size_t>(this->layer),
+                   "The size of kvState is not equal to layer");
 
   for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-    LLMKV keyState = (kvState.find(currentLayer)->second).first;
-    LLMKV valueState = (kvState.find(currentLayer)->second).second;
+    LLMKV keyState = kvState[currentLayer].first;
+    LLMKV valueState = kvState[currentLayer].second;
     RETURN_ON_ASSERT((keyState.length == (size_t) this->tensorBytes &&
                       valueState.length == (size_t) this->tensorBytes));
 
     uint8_t* keyData = keyStateTensorBuilderList[currentLayer]->data();
     uint8_t* valueData = valueStateTensorBuilderList[currentLayer]->data();
-    memcpy(keyData + index * this->tensorBytes, keyState.data,
-           this->tensorBytes);
-    memcpy(valueData + index * this->tensorBytes, valueState.data,
-           this->tensorBytes);
+    vineyard::memory::concurrent_memcpy(keyData + index * this->tensorBytes,
+                                        keyState.data, this->tensorBytes);
+    vineyard::memory::concurrent_memcpy(valueData + index * this->tensorBytes,
+                                        valueState.data, this->tensorBytes);
   }
   data->offset = index;
 
@@ -237,8 +244,10 @@ int16_t KVStateCacheBlockBuilder::Split(KVStateCacheBlockBuilder* child,
     uint8_t* childValueState =
         childValueStateTensorBuilder->data() + childIndex * this->tensorBytes;
 
-    memcpy(childKeyState, keyState, this->tensorBytes);
-    memcpy(childValueState, valueState, this->tensorBytes);
+    vineyard::memory::concurrent_memcpy(childKeyState, keyState,
+                                        this->tensorBytes);
+    vineyard::memory::concurrent_memcpy(childValueState, valueState,
+                                        this->tensorBytes);
   }
   ACQUIRE_BIT_RESOURCE(child->bitmap[childIndex / 64], childIndex % 64);
   FREE_BIT_RESOURCE(this->bitmap[index / 64], index % 64);

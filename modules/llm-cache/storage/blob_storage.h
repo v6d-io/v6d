@@ -65,22 +65,24 @@ class BlobStorage : public IStorage {
                      std::string llmRefcntObjectName = "llm_refcnt_object");
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
-                const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) override;
+                const std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
 
-  Status Update(const std::vector<int>& tokenList,
-                const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>&
-                    kvStateList) override;
+  Status Update(
+      const std::vector<int>& tokenList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      size_t& updated) override;
 
   Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
-      const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList);
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      size_t& updated) override;
 
   Status Query(const std::vector<int>& tokenList, int token,
-               std::map<int, std::pair<LLMKV, LLMKV>>& kvState) override;
+               std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
 
   Status Query(const std::vector<int>& tokenList,
-               std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList)
-      override;
+               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+               size_t& matched) override;
 
   void CloseCache() override;
 
@@ -102,10 +104,10 @@ class BlobStorage : public IStorage {
 
  private:
   Status UpdateInternal(const std::vector<int>& tokenList, int nextToken,
-                        const std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
+                        const std::vector<std::pair<LLMKV, LLMKV>>& kvState);
 
   Status QueryInternal(const std::vector<int>& tokenList, int token,
-                       std::map<int, std::pair<LLMKV, LLMKV>>& kvState);
+                       std::vector<std::pair<LLMKV, LLMKV>>& kvState);
 
   void Delete(std::vector<int>& token);
 

@@ -142,7 +142,7 @@ Status KVStateCacheBuilder::Split(
 
 Status KVStateCacheBuilder::Update(
     const std::vector<int>& tokenList, int nextToken,
-    const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    const std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   std::vector<int> tokenListCopy = tokenList;
   tokenListCopy.push_back(nextToken);
 
@@ -219,7 +219,7 @@ Status KVStateCacheBuilder::Update(
 
 Status KVStateCacheBuilder::Query(
     const std::vector<int>& tokenList, int token,
-    std::map<int, std::pair<LLMKV, LLMKV>>& kvState) {
+    std::vector<std::pair<LLMKV, LLMKV>>& kvState) {
   std::vector<int> tokenListCopy = tokenList;
   tokenListCopy.push_back(token);
 
@@ -327,27 +327,20 @@ Status KVStateCacheBuilder::Merge(std::shared_ptr<KVStateCache> kvStateCache) {
   for (auto it = insertTokenList.begin(); it != insertTokenList.end(); ++it) {
     std::vector<int> tokenList =
         std::vector<int>((*it).begin(), (*it).end() - 1);
-    std::map<int, std::pair<LLMKV, LLMKV>> kvState;
+    std::vector<std::pair<LLMKV, LLMKV>> kvState;
     for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
       LLMKV key_state;
       LLMKV value_state;
-      key_state.data = malloc(this->tensorBytes);
-      key_state.length = this->tensorBytes;
-      value_state.data = malloc(this->tensorBytes);
-      value_state.length = this->tensorBytes;
+      key_state.data = nullptr;
+      key_state.length = 0;
+      value_state.data = nullptr;
+      value_state.length = 0;
 
-      kvState.insert(
-          std::make_pair(currentLayer, std::make_pair(key_state, value_state)));
+      kvState.emplace_back(key_state, value_state);
     }
     Status status = globalCacheBuilder->Query(tokenList, (*it).back(), kvState);
     if (status.ok()) {
       status = this->Update(tokenList, (*it).back(), kvState);
-    }
-    for (int currentLayer = 0; currentLayer < this->layer; currentLayer++) {
-      LLMKV key_state = kvState[currentLayer].first;
-      LLMKV value_state = kvState[currentLayer].second;
-      free(key_state.data);
-      free(value_state.data);
     }
     RETURN_ON_ERROR(status);
   }

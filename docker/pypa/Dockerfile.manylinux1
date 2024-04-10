@@ -13,7 +13,7 @@
 # limitations under the License.
 
 ARG PLATFORM=x86_64
-FROM quay.io/pypa/manylinux2014_$PLATFORM:2024-02-16-b3cad8f
+FROM quay.io/pypa/manylinux2014_$PLATFORM:2024-03-25-9206bd9
 
 # re-declare after FROM, reusing the default value
 ARG PLATFORM

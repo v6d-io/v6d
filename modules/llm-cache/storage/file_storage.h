@@ -46,8 +46,6 @@ enum FileOperationType {
   WRITE = 1 << 1,
 };
 
-static std::mutex fileStorageLock;
-
 class FileStorage : public IStorage {
  private:
   bool CompareTokenList(const std::vector<int>& tokenList,
@@ -86,34 +84,36 @@ class FileStorage : public IStorage {
 
   virtual bool IsFileExist(const std::string& path) = 0;
 
-  virtual std::string GetTmpFileDir(std::string filePath) = 0;
+  virtual std::string GetTmpFileDir() = 0;
 
  public:
   FileStorage() = default;
 
   ~FileStorage() = default;
 
-  Status Update(const std::vector<int>& tokenList,
-                const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>&
-                    kvStateList) override;
+  Status Update(
+      const std::vector<int>& tokenList,
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      size_t& updated) override;
 
   Status Update(const std::vector<int>& tokenList, int nextToken,
-                const std::map<int, std::pair<LLMKV, LLMKV>>& kvState) override;
+                const std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
 
   Status Update(
       const std::vector<int>& prefix, const std::vector<int>& tokenList,
-      const std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList);
+      const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+      size_t& updated) override;
 
   Status Query(const std::vector<int>& tokenList,
-               std::vector<std::map<int, std::pair<LLMKV, LLMKV>>>& kvStateList)
-      override;
+               std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
+               size_t& matched) override;
 
   Status Query(const std::vector<int>& tokenList, int nextToken,
-               std::map<int, std::pair<LLMKV, LLMKV>>& kvState) override;
+               std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
 
  protected:
-  int tensorBytes;
-  int cacheCapacity;
+  size_t tensorBytes;
+  size_t cacheCapacity;
   int layer;
   int batchSize;
   int splitNumber;

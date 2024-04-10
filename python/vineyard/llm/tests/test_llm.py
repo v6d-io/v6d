@@ -16,9 +16,10 @@
 # limitations under the License.
 #
 
-import torch
+import numpy as np
 
-from vineyard.llm import KV_Cache
+from vineyard.llm import KVCache
+from vineyard.llm import KVTensor
 from vineyard.llm.config import FileCacheConfig
 from vineyard.llm.config import VineyardCacheConfig
 
@@ -32,71 +33,132 @@ def test_kv_cache_update_and_query_on_blob(vineyard_ipc_sockets):
         llm_cache_object_name="llm_cache_object",
         llm_ref_cnt_object_name="llm_refcnt_object",
     )
-    cache = KV_Cache(
+    cache = KVCache(
         cache_config=vineyard_cache_config,
         tensor_bytes=16,  # should be the same as the nbytes of the tensor
         cache_capacity=10,
-        layer=1,
-        torch_size=torch.Size([2, 2]),
-        dtype=torch.float32,
+        layer=2,
     )
 
-    kv_cache_list = [
-        (torch.rand(2, 2), torch.rand(2, 2)),
-        (torch.rand(2, 2), torch.rand(2, 2)),
-        (torch.rand(2, 2), torch.rand(2, 2)),
-        (torch.rand(2, 2), torch.rand(2, 2)),
-    ]
-
     tokens = [1, 2, 3, 4]
-    # insert the token list and the related kv cache list
-    cache.update(tokens, kv_cache_list)
 
-    queried_kv_cache_list = cache.query(tokens)
-
-    for (k_tensor, v_tensor), (queried_k_tensor, queried_v_tensor) in zip(
-        kv_cache_list, queried_kv_cache_list
-    ):
-        assert torch.equal(k_tensor, queried_k_tensor) and torch.equal(
-            v_tensor, queried_v_tensor
+    kv_tensors_to_update = []
+    kv_tensors = []
+    for _ in range(len(tokens)):
+        k_tensor = np.random.rand(2, 2).astype(np.float32)
+        v_tensor = np.random.rand(2, 2).astype(np.float32)
+        kv_tensors.append([(k_tensor, v_tensor) for _ in range(cache.layer)])
+        kv_tensors_to_update.append(
+            [
+                (
+                    KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                    KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
+                )
+                for _ in range(cache.layer)
+            ]
         )
+
+    # insert the token list and the related kv cache list
+    updated = cache.update(None, tokens, kv_tensors_to_update)
+    assert updated == len(tokens)
+
+    kv_tensors_to_query = []
+    kv_tensors_from_cache = []
+    for _ in range(len(tokens)):
+        kv_tensors_to_query.append(
+            [
+                (
+                    KVTensor(0, 0),
+                    KVTensor(0, 0),
+                )
+                for _ in range(cache.layer)
+            ]
+        )
+
+    matched = cache.query(tokens, kv_tensors_to_query)
+    kv_tensors_from_cache = kv_tensors_to_query[:matched]
+    assert matched == len(tokens)
+
+    assert len(kv_tensors) == len(kv_tensors_from_cache)
+    for kv, kv_from_cache in zip(kv_tensors, kv_tensors_from_cache):
+        assert len(kv) == len(kv_from_cache)
+        for (k_tensor, v_tensor), (queried_k_tensor, queried_v_tensor) in zip(
+            kv, kv_from_cache
+        ):
+            queried_k_tensor = np.frombuffer(
+                queried_k_tensor,
+                dtype=k_tensor.dtype,
+            ).reshape(k_tensor.shape)
+            queried_v_tensor = np.frombuffer(
+                queried_v_tensor,
+                dtype=v_tensor.dtype,
+            ).reshape(v_tensor.shape)
+            assert np.array_equal(k_tensor, queried_k_tensor)
+            assert np.array_equal(v_tensor, queried_v_tensor)
 
 
 def test_kv_cache_update_and_query_on_fs():
     file_cache_config = FileCacheConfig(
-        batch_size=2,
+        chunk_size=2,
         split_number=2,
         root="/tmp/vineyard/llm_cache",
     )
-    cache = KV_Cache(
+    cache = KVCache(
         cache_config=file_cache_config,
-        tensor_bytes=10000,  # should be the same as the nbytes of the tensor
+        tensor_bytes=16,  # should be the same as the nbytes of the tensor
         cache_capacity=10,
         layer=2,
-        torch_size=torch.Size([50, 50]),
-        dtype=torch.float32,
     )
 
-    kv_cache_list = [
-        (torch.rand(50, 50), torch.rand(50, 50)),
-        (torch.rand(50, 50), torch.rand(50, 50)),
-        (torch.rand(50, 50), torch.rand(50, 50)),
-        (torch.rand(50, 50), torch.rand(50, 50)),
-        (torch.rand(50, 50), torch.rand(50, 50)),
-        (torch.rand(50, 50), torch.rand(50, 50)),
-        (torch.rand(50, 50), torch.rand(50, 50)),
-        (torch.rand(50, 50), torch.rand(50, 50)),
-    ]
-
     tokens = [1, 2, 3, 4]
-    # insert the token list and the related kv cache list
-    cache.update(tokens, kv_cache_list)
-
-    queried_kv_cache_list = cache.query(tokens)
-
-    for (k_tensor, v_tensor), (queried_k_tensor, queried_v_tensor) in zip(
-        kv_cache_list, queried_kv_cache_list
-    ):
-        assert torch.equal(k_tensor, queried_k_tensor) and torch.equal(
-            v_tensor, queried_v_tensor
+    original_kv_tensors = []
+    for i in range(0, len(tokens), file_cache_config.chunk_size):
+        kv_tensors_to_update = []
+        k_tensor = np.random.rand(2, 2).astype(np.float32)
+        v_tensor = np.random.rand(2, 2).astype(np.float32)
+        for _ in range(file_cache_config.chunk_size):
+            original_kv_tensors.append(
+                [(k_tensor, v_tensor) for _ in range(cache.layer)]
+            )
+            kv_tensors_to_update.append(
+                [
+                    (
+                        KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                        KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
+                    )
+                    for _ in range(cache.layer)
+                ]
+            )
+        updated = cache.update(
+            tokens[:i],
+            tokens[i : i + file_cache_config.chunk_size],
+            kv_tensors_to_update,
         )
+        assert updated == file_cache_config.chunk_size
+
+    kv_tensors_from_cache = []
+    kv_tensors = []
+    for _ in range(len(tokens)):
+        k_tensor = np.empty((2, 2), dtype=np.float32)
+        v_tensor = np.empty((2, 2), dtype=np.float32)
+        kv_tensors_from_cache.append([(k_tensor, v_tensor) for _ in range(cache.layer)])
+        kv_tensors.append(
+            [
+                (
+                    KVTensor(k_tensor.ctypes.data, k_tensor.nbytes),
+                    KVTensor(v_tensor.ctypes.data, v_tensor.nbytes),
+                )
+                for _ in range(cache.layer)
+            ]
+        )
+    matched = cache.query(tokens, kv_tensors)
+    assert matched == len(tokens)
+
+    assert len(kv_tensors) == len(kv_tensors_from_cache)
+    for kv, kv_from_cache in zip(original_kv_tensors, kv_tensors_from_cache):
+        assert len(kv) == len(kv_from_cache)
+        for (k_tensor, v_tensor), (queried_k_tensor, queried_v_tensor) in zip(
+            kv, kv_from_cache
+        ):
+            np.array_equal(k_tensor, queried_k_tensor)
+            np.array_equal(v_tensor, queried_v_tensor)
