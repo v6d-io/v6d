@@ -28,6 +28,7 @@ from typing import Union
 
 from vineyard._C import Blob
 from vineyard._C import BlobBuilder
+from vineyard._C import ConnectionFailedException
 from vineyard._C import IPCClient
 from vineyard._C import NotEnoughMemoryException
 from vineyard._C import Object
@@ -626,6 +627,7 @@ class Client:
         instance_id_with_most_available_memory = -1
         available_memory = float('-inf')
 
+        os.environ['VINEYARD_RPC_SKIP_RETRY'] = '1'
         for instance_id, status in cluster_info.items():
             # skip the current vineyard instance
             # check if both the ipc_socket and rpc_endpoint are the same
@@ -636,13 +638,18 @@ class Client:
             ):
                 continue
             host, port = status['rpc_endpoint'].split(':')
-            new_client = _connect(host, port)
+            # avoid the case to connect to vineyard instances that are in exiting state
+            try:
+                new_client = _connect(host, port)
+            except ConnectionFailedException:
+                continue
             current_available_memory = (
                 new_client.status.memory_limit - new_client.status.memory_usage
             )
             if current_available_memory > available_memory:
                 instance_id_with_most_available_memory = instance_id
                 available_memory = current_available_memory
+        os.environ['VINEYARD_RPC_SKIP_RETRY'] = '0'
         return instance_id_with_most_available_memory
 
     @_apply_docstring(get)
@@ -682,6 +689,9 @@ class Client:
                 self._ipc_client = None
                 if os.path.exists(meta[instance_id]['ipc_socket']):
                     self._ipc_client = _connect(meta[instance_id]['ipc_socket'])
+                    # avoid the case the vineyard instance is restarted
+                    if self._ipc_client.instance_id != instance_id:
+                        self._ipc_client = None
                 host, port = meta[instance_id]['rpc_endpoint'].split(':')
                 self._rpc_client = _connect(host, port)
                 return put(self, value, builder, persist, name, **kwargs)
