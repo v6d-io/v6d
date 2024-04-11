@@ -19,6 +19,8 @@
 import contextlib
 import os
 import warnings
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 from typing import Any
 from typing import Dict
 from typing import List
@@ -28,7 +30,6 @@ from typing import Union
 
 from vineyard._C import Blob
 from vineyard._C import BlobBuilder
-from vineyard._C import ConnectionFailedException
 from vineyard._C import IPCClient
 from vineyard._C import NotEnoughMemoryException
 from vineyard._C import Object
@@ -615,6 +616,17 @@ class Client:
         )
         return remote_client.get_object(meta.id)
 
+    def _connect_and_get_memory(self, instance_id, rpc_endpoint):
+        host, port = rpc_endpoint.split(':')
+        try:
+            new_client = _connect(host, port)
+            current_available_memory = (
+                new_client.status.memory_limit - new_client.status.memory_usage
+            )
+            return instance_id, current_available_memory
+        except Exception:
+            return instance_id, float('-inf')
+
     def _find_the_most_available_memory_instance(self) -> int:
         """
         Find the vineyard instance with the most available memory.
@@ -623,32 +635,32 @@ class Client:
             int: The instance id with the most available memory.
             if only have one instance, return -1
         """
+        os.environ['VINEYARD_RPC_SKIP_RETRY'] = '1'
+        futures = []
         cluster_info = self.default_client().meta
+        with ThreadPoolExecutor() as executor:
+            for instance_id, status in cluster_info.items():
+                if not (
+                    status['ipc_socket'] == self.ipc_socket
+                    and status['rpc_endpoint'] == self.rpc_endpoint
+                ):
+                    futures.append(
+                        executor.submit(
+                            self._connect_and_get_memory,
+                            instance_id,
+                            status['rpc_endpoint'],
+                        )
+                    )
+
         instance_id_with_most_available_memory = -1
         available_memory = float('-inf')
 
-        os.environ['VINEYARD_RPC_SKIP_RETRY'] = '1'
-        for instance_id, status in cluster_info.items():
-            # skip the current vineyard instance
-            # check if both the ipc_socket and rpc_endpoint are the same
-            # avoid the case the same ipc_socket in different machines(rpc_endpoint)
-            if (
-                status['ipc_socket'] == self.ipc_socket
-                and status['rpc_endpoint'] == self.rpc_endpoint
-            ):
-                continue
-            host, port = status['rpc_endpoint'].split(':')
-            # avoid the case to connect to vineyard instances that are in exiting state
-            try:
-                new_client = _connect(host, port)
-            except ConnectionFailedException:
-                continue
-            current_available_memory = (
-                new_client.status.memory_limit - new_client.status.memory_usage
-            )
+        for future in as_completed(futures):
+            instance_id, current_available_memory = future.result()
             if current_available_memory > available_memory:
                 instance_id_with_most_available_memory = instance_id
                 available_memory = current_available_memory
+
         os.environ['VINEYARD_RPC_SKIP_RETRY'] = '0'
         return instance_id_with_most_available_memory
 
@@ -675,7 +687,10 @@ class Client:
         try:
             return put(self, value, builder, persist, name, **kwargs)
         except NotEnoughMemoryException as exec:
+            print("called _find_the_most_available_memory_instance...")
             instance_id = self._find_the_most_available_memory_instance()
+            print("after called _find_the_most_available_memory_instance...")
+            previous_compression_state = self.compression
             if instance_id == -1:
                 warnings.warn("No other vineyard instance available")
                 raise exec
@@ -694,6 +709,7 @@ class Client:
                         self._ipc_client = None
                 host, port = meta[instance_id]['rpc_endpoint'].split(':')
                 self._rpc_client = _connect(host, port)
+                self.compression = previous_compression_state
                 return put(self, value, builder, persist, name, **kwargs)
 
     @contextlib.contextmanager
