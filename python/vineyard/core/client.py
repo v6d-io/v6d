@@ -28,6 +28,7 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
+from vineyard import envvars
 from vineyard._C import Blob
 from vineyard._C import BlobBuilder
 from vineyard._C import IPCClient
@@ -635,7 +636,6 @@ class Client:
             int: The instance id with the most available memory.
             if only have one instance, return -1
         """
-        os.environ['VINEYARD_RPC_SKIP_RETRY'] = '1'
         futures = []
         cluster_info = self.default_client().meta
         with ThreadPoolExecutor() as executor:
@@ -661,7 +661,6 @@ class Client:
                 instance_id_with_most_available_memory = instance_id
                 available_memory = current_available_memory
 
-        os.environ['VINEYARD_RPC_SKIP_RETRY'] = '0'
         return instance_id_with_most_available_memory
 
     @_apply_docstring(get)
@@ -687,30 +686,31 @@ class Client:
         try:
             return put(self, value, builder, persist, name, **kwargs)
         except NotEnoughMemoryException as exec:
-            print("called _find_the_most_available_memory_instance...")
-            instance_id = self._find_the_most_available_memory_instance()
-            print("after called _find_the_most_available_memory_instance...")
-            previous_compression_state = self.compression
-            if instance_id == -1:
-                warnings.warn("No other vineyard instance available")
-                raise exec
-            else:
-                meta = self.default_client().meta
-                warnings.warn(
-                    f"Put object to the vineyard instance {instance_id}"
-                    "with the most available memory."
-                )
-                # connect to the instance with the most available memory
-                self._ipc_client = None
-                if os.path.exists(meta[instance_id]['ipc_socket']):
-                    self._ipc_client = _connect(meta[instance_id]['ipc_socket'])
-                    # avoid the case the vineyard instance is restarted
-                    if self._ipc_client.instance_id != instance_id:
-                        self._ipc_client = None
-                host, port = meta[instance_id]['rpc_endpoint'].split(':')
-                self._rpc_client = _connect(host, port)
-                self.compression = previous_compression_state
-                return put(self, value, builder, persist, name, **kwargs)
+            with envvars(
+                {'VINEYARD_RPC_SKIP_RETRY': '1', 'VINEYARD_IPC_SKIP_RETRY': '1'}
+            ):
+                instance_id = self._find_the_most_available_memory_instance()
+                previous_compression_state = self.compression
+                if instance_id == -1:
+                    warnings.warn("No other vineyard instance available")
+                    raise exec
+                else:
+                    meta = self.default_client().meta
+                    warnings.warn(
+                        f"Put object to the vineyard instance {instance_id}"
+                        "with the most available memory."
+                    )
+                    # connect to the instance with the most available memory
+                    self._ipc_client = None
+                    if os.path.exists(meta[instance_id]['ipc_socket']):
+                        self._ipc_client = _connect(meta[instance_id]['ipc_socket'])
+                        # avoid the case the vineyard instance is restarted
+                        if self._ipc_client.instance_id != instance_id:
+                            self._ipc_client = None
+                    host, port = meta[instance_id]['rpc_endpoint'].split(':')
+                    self._rpc_client = _connect(host, port)
+                    self.compression = previous_compression_state
+            return put(self, value, builder, persist, name, **kwargs)
 
     @contextlib.contextmanager
     def with_compression(self, enabled: bool = True):
