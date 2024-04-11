@@ -1,16 +1,39 @@
 #!/bin/sh
 set -ex
 
-SOCKET_FILE="$FUSE_DIR/vineyard.sock"
+SOCKET_NAME="vineyard-worker.sock"
+SOCKET_FILE="$FUSE_DIR/vineyard-worker.sock"
 RPC_CONFIG_FILE="$RPC_CONF_DIR/VINEYARD_RPC_ENDPOINT"
 VINEYARD_YAML_FILE="$FUSE_DIR/vineyard-config.yaml"
 
 # Write the IPCSocket and RPCEndpoints to the vineyard configurations YAML file
 write_yaml_config() {
     echo "Vineyard:" > $VINEYARD_YAML_FILE
-    echo "  IPCSocket: vineyard.sock" >> $VINEYARD_YAML_FILE
+    echo "  IPCSocket: $SOCKET_NAME" >> $VINEYARD_YAML_FILE
     echo "  RPCEndpoint: $1" >> $VINEYARD_YAML_FILE
 }
+
+# start the standalone vineyardd
+if [ "$CACHE_SIZE" != "0" ]; then
+    vineyardd --socket=$FUSE_DIR/vineyard-local.sock \
+            --size=$CACHE_SIZE \
+            --etcd_endpoint=$ETCD_ENDPOINT \
+            --etcd_prefix=$ETCD_PREFIX &
+
+    # wait for the local vineyard socket to be created
+    timeout=60
+    count=0
+    while [ ! -S $FUSE_DIR/vineyard-local.sock ]; do
+        sleep 1
+        count=$((count+1))
+        if [ $count -eq $timeout ]; then
+            echo "Timeout waiting for $FUSE_DIR/vineyard-local.sock"
+            exit 1
+        fi
+    done
+    SOCKET_NAME="vineyard-local.sock"
+    echo "Local vineyardd is started."
+fi
 
 mkdir -p $FUSE_DIR
 while true; do
@@ -28,13 +51,33 @@ while true; do
 
     echo "write vineyard ipc socket and rpc endpoint to vineyard configuration YAML..."
     write_yaml_config "$VINEYARD_RPC_ENDPOINT"
+
     echo "check whether vineyard socket symlink is created..."
-    if [ ! -S $SOCKET_FILE ] && [ -S $MOUNT_DIR/vineyard.sock ]; then
+    if [ ! -S $SOCKET_FILE ] && [ -S $MOUNT_DIR/vineyard-worker.sock ]; then
         echo "create a hard link of vineyard socket..."
-        ln $MOUNT_DIR/vineyard.sock $SOCKET_FILE
+        ln $MOUNT_DIR/vineyard-worker.sock $SOCKET_FILE
     else
         echo "$SOCKET_FILE exists."
     fi
-    # wait for a minute so that the hard link of vineyard socket can be checked again
-    sleep 60
+
+    # avoid vineyardd restart
+    echo "check whether the inode number is same..."
+    if [ -S $SOCKET_FILE ] && [ -S $MOUNT_DIR/vineyard-worker.sock ]; then
+        SOCKET_INODE=$(ls -i $SOCKET_FILE | awk '{print $1}')
+        MOUNT_INODE=$(ls -i $MOUNT_DIR/vineyard-worker.sock | awk '{print $1}')
+        if [ "$SOCKET_INODE" != "$MOUNT_INODE" ]; then
+            echo "inode number is different, remove the hard link of vineyard socket"
+            rm -f $SOCKET_FILE
+        fi
+    fi
+
+    # avoid vineyard worker crash
+    echo "check whether vineyard worker socket exists..."
+    if [ ! -S $MOUNT_DIR/vineyard-worker.sock ]; then
+        echo "vineyard worker socket does not exist, remove the hard link of vineyard socket"
+        rm -f $SOCKET_FILE
+    fi
+
+    # wait for 5 seconds before checking again
+    sleep 5
 done

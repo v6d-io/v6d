@@ -141,6 +141,93 @@ jobs:
           make -C docker/ vineyardd-manifest ALPINE_MANIFEST_TAG=latest
           docker manifest push ghcr.io/v6d-io/v6d/vineyardd:latest
 
+  build-vineyard-fluid-fuse:
+    needs: [build-vineyardd]
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+        platform: [x86_64, aarch64]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Build vineyard fluid fuse image
+        env:
+          VINEYARD_FLUID_FUSE_VERSION: "${{ github.sha }}"
+        run: |
+          make -C docker/ vineyard-fluid-fuse VINEYARD_FLUID_FUSE_VERSION=$VINEYARD_FLUID_FUSE_VERSION PLATFORM=${{ matrix.platform }}
+
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Tag and upload docker for releases
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        run: |
+          docker tag ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:${{ github.sha }}_${{ matrix.platform }} \
+                     ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:${{ steps.tag.outputs.TAG }}_${{ matrix.platform }}
+          docker tag ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:${{ github.sha }}_${{ matrix.platform }} \
+                     ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:latest_${{ matrix.platform }}
+
+          docker push ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:${{ github.sha }}_${{ matrix.platform }}
+          docker push ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:${{ steps.tag.outputs.TAG }}_${{ matrix.platform }}
+          docker push ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:latest_${{ matrix.platform }}
+
+  build-vineyard-fluid-fuse-manifest:
+    needs: [build-vineyard-fluid-fuse]
+    runs-on: ${{ matrix.os }}
+    if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
+    strategy:
+      matrix:
+        os: [ubuntu-20.04]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: false
+
+      - name: Log in to GitHub Docker Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate multi-arch manifest
+        if: ${{ github.event_name == 'workflow_dispatch' && github.repository == 'v6d-io/v6d' }}
+        run: |
+          make -C docker/ vineyard-fluid-fuse-manifest VINEYARD_FLUID_FUSE_VERSION=${{ github.sha }}
+          docker manifest push ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:${{ github.sha }}
+
+      - name: Extract tag name
+        id: tag
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Tag and upload manifest for releases
+        if: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') && github.repository == 'v6d-io/v6d' }}
+        run: |
+          make -C docker/ vineyard-fluid-fuse-manifest VINEYARD_FLUID_FUSE_VERSION=${{ steps.tag.outputs.TAG }}
+          docker manifest push ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:${{ steps.tag.outputs.TAG }}
+
+          make -C docker/ vineyard-fluid-fuse-manifest VINEYARD_FLUID_FUSE_VERSION=latest
+          docker manifest push ghcr.io/v6d-io/v6d/vineyard-fluid-fuse:latest
+
   build-vineyardctl:
     runs-on: ${{ matrix.os }}
     if: ${{ github.repository == 'v6d-io/v6d' || github.event_name == 'workflow_dispatch' }}
