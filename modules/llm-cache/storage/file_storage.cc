@@ -103,6 +103,8 @@ Status FileStorage::Update(
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
     size_t& updated) {
   std::vector<std::string> pathList;
+  std::set<std::string> createFileSet;
+  std::mutex createFileSetMutex;
   RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, batchSize,
                                                splitNumber, pathList));
   if (pathList.size() == 0) {
@@ -111,7 +113,7 @@ Status FileStorage::Update(
 
   std::vector<std::string> tempFilePaths(pathList.size());
   auto fn = [this, &tempFilePaths, &pathList, &tokenList,
-             &kvStateList](int i) -> std::pair<int, Status> {
+             &kvStateList, &createFileSet, &createFileSetMutex](int i) -> std::pair<int, Status> {
     int tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
@@ -173,6 +175,8 @@ Status FileStorage::Update(
       VINEYARD_SUPPRESS(Delete(tmpPathStr));
       return std::pair(i, Status::Wrap(status, "Failed to move cache entry"));
     }
+    std::lock_guard<std::mutex> lock(createFileSetMutex);
+    createFileSet.insert(pathStr);
     return std::pair(i, Status::OK());
   };
 
@@ -199,8 +203,10 @@ Status FileStorage::Update(
   for (size_t i = 0; i < pathList.size(); i++) {
     if (pathIndexMap.find(i) != pathIndexMap.end()) {
       j += 1;
-      TouchFile(this->rootPath + pathList[i]);
-      gcList.push_back(this->rootPath + pathList[i]);
+      if (createFileSet.find(this->rootPath + pathList[i]) != createFileSet.end()) {
+        TouchFile(this->rootPath + pathList[i]);
+        gcList.push_back(this->rootPath + pathList[i]);
+      }
     } else {
       lock.~lock_guard();
       break;
@@ -279,6 +285,8 @@ Status FileStorage::Update(
   }
 
   std::vector<std::string> pathList;
+  std::set<std::string> createFileSet;
+  std::mutex createFileSetMutex;
   std::vector<int> totalTokenList(prefix.begin(), prefix.end());
   totalTokenList.insert(totalTokenList.end(), tokenList.begin(),
                         tokenList.end());
@@ -291,7 +299,7 @@ Status FileStorage::Update(
 
   std::vector<std::string> tempFilePaths(pathList.size());
   auto fn = [this, &tempFilePaths, &pathList, &prefix, &totalTokenList,
-             &kvStateList](size_t i) -> std::pair<int, Status> {
+             &kvStateList, &createFileSet, &createFileSetMutex](size_t i) -> std::pair<int, Status> {
     int tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
@@ -356,6 +364,8 @@ Status FileStorage::Update(
       VINEYARD_SUPPRESS(Delete(tmpPathStr));
       return std::pair(i, Status::Wrap(status, "Failed to move cache entry"));
     }
+    std::lock_guard<std::mutex> lock(createFileSetMutex);
+    createFileSet.insert(pathStr);
     return std::pair(i, Status::OK());
   };
 
@@ -382,7 +392,7 @@ Status FileStorage::Update(
   for (size_t i = 0; i < pathList.size(); i++) {
     if (pathIndexMap.find(i) != pathIndexMap.end()) {
       j += 1;
-      if (((size_t)j) * batchSize > prefix.size()) {
+      if (((size_t)j) * batchSize > prefix.size() && createFileSet.find(this->rootPath + pathList[i]) != createFileSet.end()) {
         // Only this part is created.
         TouchFile(this->rootPath + pathList[i]);
         gcList.push_back(this->rootPath + pathList[i]);
