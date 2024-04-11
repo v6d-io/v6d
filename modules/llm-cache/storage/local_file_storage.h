@@ -34,7 +34,8 @@ struct LocalFileDescriptor : public FileDescriptor {
 class LocalFileStorage : public FileStorage {
  public:
   LocalFileStorage(int tensorBytes, int cacheCapacity, int layer, int batchSize,
-                   int splitNumber, std::string rootPath, int64_t clientGCInterval, int64_t ttl) {
+                   int splitNumber, std::string rootPath,
+                   int64_t clientGCInterval, int64_t ttl) {
     this->hashAlgorithm = std::make_shared<MurmurHash3Algorithm>();
     this->hasher = std::make_shared<Hasher>(hashAlgorithm.get());
     this->tensorBytes = tensorBytes;
@@ -83,7 +84,9 @@ class LocalFileStorage : public FileStorage {
 
   Status Delete(std::string path) override;
 
-  Status GetFileAccessTime(const std::string& path, std::chrono::duration<int64_t, std::nano>& accessTime) override;
+  Status GetFileAccessTime(
+      const std::string& path,
+      std::chrono::duration<int64_t, std::nano>& accessTime) override;
 
   Status TouchFile(const std::string& path) override;
 

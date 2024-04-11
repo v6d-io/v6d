@@ -112,8 +112,9 @@ Status FileStorage::Update(
   }
 
   std::vector<std::string> tempFilePaths(pathList.size());
-  auto fn = [this, &tempFilePaths, &pathList, &tokenList,
-             &kvStateList, &createFileSet, &createFileSetMutex](int i) -> std::pair<int, Status> {
+  auto fn = [this, &tempFilePaths, &pathList, &tokenList, &kvStateList,
+             &createFileSet,
+             &createFileSetMutex](int i) -> std::pair<int, Status> {
     int tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
@@ -195,7 +196,7 @@ Status FileStorage::Update(
     }
   }
 
-  //for test
+  // for test
   sleep(2);
 
   std::lock_guard<std::mutex> lock(gcMutex);
@@ -203,7 +204,8 @@ Status FileStorage::Update(
   for (size_t i = 0; i < pathList.size(); i++) {
     if (pathIndexMap.find(i) != pathIndexMap.end()) {
       j += 1;
-      if (createFileSet.find(this->rootPath + pathList[i]) != createFileSet.end()) {
+      if (createFileSet.find(this->rootPath + pathList[i]) !=
+          createFileSet.end()) {
         TouchFile(this->rootPath + pathList[i]);
         gcList.push_back(this->rootPath + pathList[i]);
       }
@@ -212,7 +214,7 @@ Status FileStorage::Update(
       break;
     }
   }
-  updated = ((size_t)j) * batchSize;
+  updated = ((size_t) j) * batchSize;
   for (size_t i = j; i < pathList.size(); i++) {
     VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
@@ -299,7 +301,8 @@ Status FileStorage::Update(
 
   std::vector<std::string> tempFilePaths(pathList.size());
   auto fn = [this, &tempFilePaths, &pathList, &prefix, &totalTokenList,
-             &kvStateList, &createFileSet, &createFileSetMutex](size_t i) -> std::pair<int, Status> {
+             &kvStateList, &createFileSet,
+             &createFileSetMutex](size_t i) -> std::pair<int, Status> {
     int tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
@@ -384,7 +387,7 @@ Status FileStorage::Update(
     }
   }
 
-  //for test
+  // for test
   sleep(2);
 
   std::lock_guard<std::mutex> lock(gcMutex);
@@ -392,7 +395,9 @@ Status FileStorage::Update(
   for (size_t i = 0; i < pathList.size(); i++) {
     if (pathIndexMap.find(i) != pathIndexMap.end()) {
       j += 1;
-      if (((size_t)j) * batchSize > prefix.size() && createFileSet.find(this->rootPath + pathList[i]) != createFileSet.end()) {
+      if (((size_t) j) * batchSize > prefix.size() &&
+          createFileSet.find(this->rootPath + pathList[i]) !=
+              createFileSet.end()) {
         // Only this part is created.
         TouchFile(this->rootPath + pathList[i]);
         gcList.push_back(this->rootPath + pathList[i]);
@@ -577,12 +582,14 @@ bool FileStorage::CompareTokenList(const std::vector<int>& tokenList,
 }
 
 Status FileStorage::DefaultGCFunc() {
-  std::lock_guard<std::mutex> lock(gcMutex);
-
   auto now = std::chrono::high_resolution_clock::now();
-  auto nanoseconds_since_epoch = std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch()).count();
+  auto nanoseconds_since_epoch =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          now.time_since_epoch())
+          .count();
 
-  for(std::list<std::string>::iterator iter = gcList.begin(); iter != gcList.end();) {
+  for (std::list<std::string>::iterator iter = gcList.begin();
+       iter != gcList.end();) {
     std::string path = *iter;
     std::chrono::duration<int64_t, std::nano> accessTime(0);
     RETURN_ON_ERROR(GetFileAccessTime(path, accessTime));
@@ -601,12 +608,41 @@ Status FileStorage::DefaultGCFunc() {
 }
 
 void FileStorage::DefaultGCThread(FileStorage* fileStorage) {
-  while(1) {
-    sleep(fileStorage->gcInterval.count());
-    LOG(INFO) << "GC thread wake";
-    Status status = fileStorage->DefaultGCFunc();
-    if (!status.ok()) {
-      // TBD: process the error
+  int64_t last_time =
+      std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::high_resolution_clock::now().time_since_epoch())
+          .count();
+  while (1) {
+    // sleep(fileStorage->gcInterval.count());
+    // LOG(INFO) << "GC thread wake";
+    // Status status = fileStorage->DefaultGCFunc();
+    // if (!status.ok()) {
+    //   // TBD: process the error
+    // }
+    std::unique_lock<std::mutex> lock(fileStorage->gcMutex);
+    if (fileStorage->cv.wait_for(
+            lock, fileStorage->gcInterval, [&fileStorage, &last_time] {
+              int64_t current_time =
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      std::chrono::high_resolution_clock::now()
+                          .time_since_epoch())
+                      .count();
+              return fileStorage->gcExitFlag ||
+                     (current_time - last_time) >
+                         fileStorage->gcInterval.count();
+            })) {
+      if (fileStorage->gcExitFlag) {
+        LOG(INFO) << "GC thread exit";
+        return;
+      }
+      LOG(INFO) << "GC thread timeout";
+      Status status = fileStorage->DefaultGCFunc();
+      if (!status.ok()) {
+        // TBD: process the error
+      }
+      last_time = std::chrono::duration_cast<std::chrono::seconds>(
+                      std::chrono::system_clock::now().time_since_epoch())
+                      .count();
     }
   }
 }
@@ -619,6 +655,25 @@ void FileStorage::PrintFileAccessTime(std::string path) {
   } else {
     LOG(INFO) << "File: " << path << " access time: " << accessTime.count();
   }
+}
+
+void FileStorage::InitialGlobalGCThread(int64_t globalGCInterval) {
+  static std::thread globalGCThread(GlobalGCThread);
+  static std::chrono::duration<int64_t> globalGCIntervalDuration(
+      globalGCInterval);
+}
+
+void FileStorage::GlobalGCThread() {}
+
+void FileStorage::CloseCache() {
+  std::lock_guard<std::mutex> lock(gcMutex);
+  if (!gcExitFlag) {
+    gcExitFlag = true;
+    gcMutex.unlock();
+    cv.notify_all();
+    gcThread.join();
+  }
+  LOG(INFO) << "Close cache";
 }
 
 }  // namespace vineyard

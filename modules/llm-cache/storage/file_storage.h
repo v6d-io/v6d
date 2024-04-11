@@ -17,6 +17,7 @@ limitations under the License.
 #define MODULES_LLM_CACHE_STORAGE_FILE_STORAGE_H_
 
 #include <chrono>
+#include <condition_variable>
 #include <list>
 #include <map>
 #include <memory>
@@ -31,7 +32,7 @@ limitations under the License.
 
 #define SECOND_TO_MILLISECOND 1000
 #define SECOND_TO_MICROSECOND 1000000
-#define SECOND_TO_NANOSECOND  1000000000
+#define SECOND_TO_NANOSECOND 1000000000
 
 namespace vineyard {
 
@@ -57,7 +58,7 @@ class FileStorage : public IStorage {
   bool CompareTokenList(const std::vector<int>& tokenList,
                         const std::vector<int>& tokenList2, size_t length);
 
-  void CloseCache() override {}
+  void CloseCache() override;
 
   virtual std::shared_ptr<FileDescriptor> CreateFileDescriptor() = 0;
 
@@ -90,7 +91,9 @@ class FileStorage : public IStorage {
 
   virtual bool IsFileExist(const std::string& path) = 0;
 
-  virtual Status GetFileAccessTime(const std::string& path, std::chrono::duration<int64_t, std::nano>& accessTime) = 0;
+  virtual Status GetFileAccessTime(
+      const std::string& path,
+      std::chrono::duration<int64_t, std::nano>& accessTime) = 0;
 
   virtual Status TouchFile(const std::string& path) = 0;
 
@@ -98,8 +101,12 @@ class FileStorage : public IStorage {
 
   Status DefaultGCFunc();
 
+  Status GlobalGCFunc();
+
  protected:
   static void DefaultGCThread(FileStorage* fileStorage);
+
+  static void GlobalGCThread();
 
   // for test
   void PrintFileAccessTime(std::string path);
@@ -129,6 +136,8 @@ class FileStorage : public IStorage {
   Status Query(const std::vector<int>& tokenList, int nextToken,
                std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
 
+  static void InitialGlobalGCThread(int64_t globalGCInterval);
+
  protected:
   size_t tensorBytes;
   size_t cacheCapacity;
@@ -141,6 +150,9 @@ class FileStorage : public IStorage {
   std::shared_ptr<Hasher> hasher;
   std::chrono::duration<int64_t> gcInterval;
   std::chrono::duration<int64_t, std::nano> fileTTL;
+
+  bool gcExitFlag = false;
+  std::condition_variable cv;
   std::thread gcThread;
   std::mutex gcMutex;
   std::list<std::string> gcList;

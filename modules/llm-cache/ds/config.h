@@ -53,8 +53,8 @@ struct FileCacheConfig : public KVCacheConfig {
   int splitNumber;
   std::string root;
   FilesystemType filesystemType;
-  int clientGCInterval; // second
-  int ttl; // second
+  int clientGCInterval;  // second
+  int ttl;               // second
 
   FileCacheConfig(int tensorByte = 10, int cacheCapacity = 10, int layer = 1,
                   int batchSize = 4, int splitNumber = 2,
