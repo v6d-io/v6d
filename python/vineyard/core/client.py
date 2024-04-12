@@ -608,8 +608,17 @@ class Client:
                 f"{meta.instance_id} is not available."
             )
 
+        previous_compression_state = self.compression
         host, port = instance_status['rpc_endpoint'].split(':')
-        remote_client = _connect(host, port)
+        try:
+            with envvars('VINEYARD_RPC_SKIP_RETRY', '1'):
+                remote_client = _connect(host, port)
+                remote_client.compression = previous_compression_state
+        except Exception as exec:
+            raise RuntimeError(
+                f"Failed to connect to the vineyard instance {meta.instance_id} "
+                f"at {host}:{port}."
+            ) from exec
 
         warnings.warn(
             f"Fetching remote object {meta.id} from the remote vineyard instance "
