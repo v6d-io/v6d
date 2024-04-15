@@ -16,6 +16,7 @@ limitations under the License.
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <string>
@@ -590,22 +591,24 @@ Status FileStorage::DefaultGCFunc() {
   auto now = std::chrono::high_resolution_clock::now();
   auto nanoseconds_since_epoch =
       std::chrono::duration_cast<std::chrono::nanoseconds>(
-          now.time_since_epoch())
-          .count();
+          now.time_since_epoch());
 
   for (std::list<std::string>::iterator iter = gcList.begin();
        iter != gcList.end();) {
     std::string path = *iter;
     std::chrono::duration<int64_t, std::nano> accessTime(0);
     RETURN_ON_ERROR(GetFileAccessTime(path, accessTime));
-    LOG(INFO) << "GC ttl:" << fileTTL.count();
-    PrintFileAccessTime(path);
-    if ((accessTime + fileTTL).count() < nanoseconds_since_epoch) {
-      LOG(INFO) << "Dead!";
+    VLOG(100) << "GC ttl:" << fileTTL.count();
+    if ((accessTime + fileTTL).count() < nanoseconds_since_epoch.count()) {
+      VLOG(100) << "GC: " << path << " is dead!";
+      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
       RETURN_ON_ERROR(Delete(path));
       iter = gcList.erase(iter);
     } else {
-      LOG(INFO) << "Alive!";
+      VLOG(100) << "GC: " << path << " is alive!";
+      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
       iter++;
     }
   }
@@ -618,12 +621,6 @@ void FileStorage::DefaultGCThread(std::shared_ptr<FileStorage> fileStorage) {
           std::chrono::high_resolution_clock::now().time_since_epoch())
           .count();
   while (1) {
-    // sleep(fileStorage->gcInterval.count());
-    // LOG(INFO) << "GC thread wake";
-    // Status status = fileStorage->DefaultGCFunc();
-    // if (!status.ok()) {
-    //   // TBD: process the error
-    // }
     std::unique_lock<std::mutex> lock(fileStorage->gcMutex);
     if (fileStorage->cv.wait_for(
             lock, fileStorage->gcInterval, [&fileStorage, &last_time] {
@@ -637,13 +634,14 @@ void FileStorage::DefaultGCThread(std::shared_ptr<FileStorage> fileStorage) {
                          fileStorage->gcInterval.count();
             })) {
       if (fileStorage->exitFlag) {
-        LOG(INFO) << "GC thread exit";
+        VLOG(100) << "GC thread exit";
         return;
       }
-      LOG(INFO) << "GC thread timeout";
+      VLOG(100) << "GC thread timeout";
       Status status = fileStorage->DefaultGCFunc();
       if (!status.ok()) {
-        // TBD: process the error
+        LOG(ERROR) << "GC failed: " << status.ToString();
+        // Not a fatal error and wait for next time.
       }
       last_time = std::chrono::duration_cast<std::chrono::seconds>(
                       std::chrono::system_clock::now().time_since_epoch())
@@ -656,18 +654,31 @@ void FileStorage::PrintFileAccessTime(std::string path) {
   std::chrono::duration<int64_t, std::nano> accessTime;
   Status status = GetFileAccessTime(path, accessTime);
   if (!status.ok()) {
-    LOG(ERROR) << "Failed to get file access time: " << status.ToString();
+    VLOG(100) << "Failed to get file access time: " << status.ToString();
   } else {
-    LOG(INFO) << "File: " << path << " access time: " << accessTime.count();
+    VLOG(100) << "File: " << path
+              << " access time:" << GetTimestamp(accessTime);
   }
+}
+
+std::string FileStorage::GetTimestamp(
+    std::chrono::duration<int64_t, std::nano> time) {
+  std::chrono::time_point<std::chrono::system_clock> timestamp =
+      std::chrono::time_point<std::chrono::system_clock>(time);
+  time_t t = std::chrono::system_clock::to_time_t(timestamp);
+
+  std::tm tm;
+  localtime_r(&t, &tm);
+  std::ostringstream oss;
+  oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+  return oss.str();
 }
 
 Status FileStorage::GlobalGCFunc() {
   auto now = std::chrono::high_resolution_clock::now();
   auto nanoseconds_since_epoch =
       std::chrono::duration_cast<std::chrono::nanoseconds>(
-          now.time_since_epoch())
-          .count();
+          now.time_since_epoch());
   std::vector<std::string> fileList;
   RETURN_ON_ERROR(this->GetFileList(this->rootPath, fileList));
   for (std::vector<std::string>::iterator iter = fileList.begin();
@@ -677,15 +688,17 @@ Status FileStorage::GlobalGCFunc() {
     if (!GetFileAccessTime(path, accessTime).ok()) {
       continue;
     }
-    if ((accessTime + globalFileTTL).count() < nanoseconds_since_epoch) {
-      LOG(INFO) << "Global GC: " << path << " is dead!";
-      LOG(INFO) << "access time: " << accessTime.count()
-                << " now: " << nanoseconds_since_epoch;
+    VLOG(100) << "GC ttl:" << globalFileTTL.count();
+    if ((accessTime + globalFileTTL).count() <
+        nanoseconds_since_epoch.count()) {
+      VLOG(100) << "Global GC: " << path << " is dead!";
+      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
       Delete(path);
     } else {
-      LOG(INFO) << "Global GC: " << path << " is alive!";
-      LOG(INFO) << "access time: " << accessTime.count()
-                << " now: " << nanoseconds_since_epoch;
+      VLOG(100) << "Global GC: " << path << " is alive!";
+      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
     }
   }
   return Status::OK();
@@ -695,10 +708,11 @@ void FileStorage::GlobalGCThread(std::shared_ptr<FileStorage> fileStorage) {
   while (1) {
     sleep(fileStorage->globalGCInterval.count());
     if (fileStorage->enableGlobalGC) {
-      LOG(INFO) << "global GC thread wake";
+      VLOG(100) << "global GC thread wake";
       Status status = fileStorage->GlobalGCFunc();
       if (!status.ok()) {
-        // TBD: process the error
+        LOG(ERROR) << "GC failed: " << status.ToString();
+        // Not a fatal error and wait for next time.
       }
     }
   }
@@ -712,7 +726,6 @@ void FileStorage::CloseCache() {
     cv.notify_all();
     gcThread.join();
   }
-  LOG(INFO) << "Close cache";
 }
 
 }  // namespace vineyard

@@ -51,6 +51,7 @@ class LocalFileStorage : public FileStorage {
     this->gcInterval = std::chrono::seconds(clientGCInterval);
     this->fileTTL = std::chrono::seconds(ttl);
     this->globalGCInterval = std::chrono::seconds(globalGCInterval);
+    this->globalFileTTL = std::chrono::seconds(globalTTL);
     this->enableGlobalGC = enableGlobalGC;
   }
 

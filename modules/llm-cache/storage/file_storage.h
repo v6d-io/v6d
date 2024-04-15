@@ -109,6 +109,9 @@ class FileStorage : public IStorage,
   // for test
   void PrintFileAccessTime(std::string path);
 
+  static std::string GetTimestamp(
+      std::chrono::duration<int64_t, std::nano> time);
+
  public:
   FileStorage() = default;
 

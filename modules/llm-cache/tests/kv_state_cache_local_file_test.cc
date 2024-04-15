@@ -212,7 +212,7 @@ int main(int argc, char** argv) {
   checkFilesNotExist("/tmp/llm_cache/");
 
   config = FileCacheConfig(tensorBytes, capacity, layer, 4, 2,
-                           "/tmp/llm_cache/", LOCAL, 10, 20, true, 1, 1);
+                           "/tmp/llm_cache/", LOCAL, 10, 20, true, 1, 2);
 
   threads.clear();
   for (int i = 0; i < 1; i++) {
@@ -224,7 +224,7 @@ int main(int argc, char** argv) {
     LOG(INFO) << "Thread:" << i << " exit.";
   }
 
-  sleep(2);
+  sleep(3);
   checkFilesNotExist("/tmp/llm_cache/");
 
   LOG(INFO) << "Passed KVStateCache tests...";

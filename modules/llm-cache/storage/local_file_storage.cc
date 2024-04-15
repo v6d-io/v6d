@@ -198,7 +198,7 @@ Status LocalFileStorage::GetFileAccessTime(
 }
 
 Status LocalFileStorage::TouchFile(const std::string& path) {
-  LOG(INFO) << "Before touch File:";
+  VLOG(100) << "Before touch File:";
   PrintFileAccessTime(path);
   auto now = std::chrono::high_resolution_clock::now();
   auto now_nano = std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -212,7 +212,7 @@ Status LocalFileStorage::TouchFile(const std::string& path) {
   if (utimensat(AT_FDCWD, path.c_str(), times, 0) == -1) {
     return Status::IOError("Failed to touch file: " + formatIOError(path));
   }
-  LOG(INFO) << "After touch File:";
+  VLOG(100) << "After touch File:";
   PrintFileAccessTime(path);
   return Status::OK();
 }
