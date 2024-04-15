@@ -199,19 +199,20 @@ Status FileStorage::Update(
     }
   }
 
-  std::lock_guard<std::mutex> lock(gcMutex);
   int j = 0;
-  for (size_t i = 0; i < pathList.size(); i++) {
-    if (pathIndexMap.find(i) != pathIndexMap.end()) {
-      j += 1;
-      if (createFileSet.find(this->rootPath + pathList[i]) !=
-          createFileSet.end()) {
-        TouchFile(this->rootPath + pathList[i]);
-        gcList.push_back(this->rootPath + pathList[i]);
+  {
+    std::lock_guard<std::mutex> lock(gcMutex);
+    for (size_t i = 0; i < pathList.size(); i++) {
+      if (pathIndexMap.find(i) != pathIndexMap.end()) {
+        j += 1;
+        if (createFileSet.find(this->rootPath + pathList[i]) !=
+            createFileSet.end()) {
+          TouchFile(this->rootPath + pathList[i]);
+          gcList.push_back(this->rootPath + pathList[i]);
+        }
+      } else {
+        break;
       }
-    } else {
-      lock.~lock_guard();
-      break;
     }
   }
   updated = ((size_t) j) * batchSize;
@@ -390,21 +391,22 @@ Status FileStorage::Update(
     }
   }
 
-  std::lock_guard<std::mutex> lock(gcMutex);
   int j = 0;
-  for (size_t i = 0; i < pathList.size(); i++) {
-    if (pathIndexMap.find(i) != pathIndexMap.end()) {
-      j += 1;
-      if (((size_t) j) * batchSize > prefix.size() &&
-          createFileSet.find(this->rootPath + pathList[i]) !=
-              createFileSet.end()) {
-        // Only this part is created.
-        TouchFile(this->rootPath + pathList[i]);
-        gcList.push_back(this->rootPath + pathList[i]);
+  {
+    std::lock_guard<std::mutex> lock(gcMutex);
+    for (size_t i = 0; i < pathList.size(); i++) {
+      if (pathIndexMap.find(i) != pathIndexMap.end()) {
+        j += 1;
+        if (((size_t) j) * batchSize > prefix.size() &&
+            createFileSet.find(this->rootPath + pathList[i]) !=
+                createFileSet.end()) {
+          // Only this part is created.
+          TouchFile(this->rootPath + pathList[i]);
+          gcList.push_back(this->rootPath + pathList[i]);
+        }
+      } else {
+        break;
       }
-    } else {
-      lock.~lock_guard();
-      break;
     }
   }
   updated =
