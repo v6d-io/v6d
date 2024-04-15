@@ -16,7 +16,6 @@ limitations under the License.
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
-#include <filesystem>
 #include <map>
 #include <memory>
 #include <string>
@@ -26,6 +25,7 @@ limitations under the License.
 
 #include "common/util/logging.h"
 #include "common/util/status.h"
+#include "gulrak/filesystem.hpp"
 #include "llm-cache/storage/file_storage.h"
 #include "llm-cache/thread_group.h"
 
@@ -122,9 +122,9 @@ Status FileStorage::Update(
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
     tempFilePaths[i] = tmpPathStr;
-    std::filesystem::path tmpPath(tmpPathStr);
+    ghc::filesystem::path tmpPath(tmpPathStr);
     std::string pathStr = this->rootPath + pathList[i];
-    std::filesystem::path path(pathStr);
+    ghc::filesystem::path path(pathStr);
 
     RETURN_ON_ERROR_WITH_PATH_INDEX(i, Mkdir(path.parent_path().string()));
 
@@ -311,9 +311,9 @@ Status FileStorage::Update(
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
     tempFilePaths[i] = tmpPathStr;
-    std::filesystem::path tmpPath(tmpPathStr);
+    ghc::filesystem::path tmpPath(tmpPathStr);
     std::string pathStr = this->rootPath + pathList[i];
-    std::filesystem::path path(pathStr);
+    ghc::filesystem::path path(pathStr);
 
     RETURN_ON_ERROR_WITH_PATH_INDEX(i, Mkdir(path.parent_path().string()));
 
@@ -486,7 +486,7 @@ Status FileStorage::Query(
       hasher->computePathForTokens(tokenList, batchSize, splitNumber, paths));
 
   auto fn = [&](size_t i, size_t matched_start) -> std::pair<int, Status> {
-    std::filesystem::path filePath(dir + paths[i]);
+    ghc::filesystem::path filePath(dir + paths[i]);
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
 
     // If open failed, it means the kv state is not in the cache(file not exist)

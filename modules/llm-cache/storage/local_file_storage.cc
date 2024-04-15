@@ -18,7 +18,6 @@ limitations under the License.
 #include <sys/file.h>
 #include <sys/stat.h>  // For stat
 #include <unistd.h>
-#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <mutex>
@@ -26,6 +25,7 @@ limitations under the License.
 #include <vector>
 
 #include "common/util/logging.h"
+#include "gulrak/filesystem.hpp"
 #include "llm-cache/storage/local_file_storage.h"
 #include "llm-cache/thread_group.h"
 
@@ -93,9 +93,9 @@ Status LocalFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
 
 Status LocalFileStorage::Mkdir(std::string path) {
   // create the directory if it does not exist
-  if (!std::filesystem::exists(path)) {
-    if (!std::filesystem::create_directories(path)) {
-      if (std::filesystem::exists(path)) {
+  if (!ghc::filesystem::exists(path)) {
+    if (!ghc::filesystem::create_directories(path)) {
+      if (ghc::filesystem::exists(path)) {
         VLOG(100) << "directory exists" << path;
       } else {
         VLOG(100) << "Failed to create directory:" << path;
@@ -150,12 +150,12 @@ Status LocalFileStorage::GetFileSize(std::shared_ptr<FileDescriptor>& fd,
 }
 
 bool LocalFileStorage::IsFileExist(const std::string& path) {
-  return std::filesystem::exists(path);
+  return ghc::filesystem::exists(path);
 }
 
 Status LocalFileStorage::Delete(std::string path) {
-  if (std::filesystem::exists(path)) {
-    std::filesystem::remove_all(path);
+  if (ghc::filesystem::exists(path)) {
+    ghc::filesystem::remove_all(path);
   }
   return Status::OK();
 }
@@ -220,13 +220,13 @@ Status LocalFileStorage::TouchFile(const std::string& path) {
 Status LocalFileStorage::GetFileList(std::string dirPath,
                                      std::vector<std::string>& fileList) {
   try {
-    for (auto it = std::filesystem::recursive_directory_iterator(dirPath);
-         it != std::filesystem::recursive_directory_iterator(); ++it) {
-      if (std::filesystem::is_regular_file(*it)) {
+    for (auto it = ghc::filesystem::recursive_directory_iterator(dirPath);
+         it != ghc::filesystem::recursive_directory_iterator(); ++it) {
+      if (ghc::filesystem::is_regular_file(*it)) {
         fileList.push_back(it->path().string());
       }
     }
-  } catch (std::filesystem::filesystem_error& e) {
+  } catch (ghc::filesystem::filesystem_error& e) {
     if (e.code() == std::errc::no_such_file_or_directory) {
       return Status::OK();
     } else {

@@ -14,15 +14,14 @@ limitations under the License.
 */
 
 #include <unistd.h>
-#include <filesystem>
 #include <iostream>
 #include <random>
 #include <vector>
 
-#include "rax/radix.h"
-
+#include "gulrak/filesystem.hpp"
 #include "llm-cache/ds/config.h"
 #include "llm-cache/ds/kv_state_cache_manager.h"
+#include "rax/radix.h"
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
@@ -174,9 +173,9 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
 }
 
 void checkFilesNotExist(std::string dir) {
-  for (auto it = std::filesystem::recursive_directory_iterator(dir);
-       it != std::filesystem::recursive_directory_iterator(); ++it) {
-    VINEYARD_ASSERT(!std::filesystem::is_regular_file(*it));
+  for (auto it = ghc::filesystem::recursive_directory_iterator(dir);
+       it != ghc::filesystem::recursive_directory_iterator(); ++it) {
+    VINEYARD_ASSERT(!ghc::filesystem::is_regular_file(*it));
   }
 }
 
