@@ -60,7 +60,6 @@ Status KVStateCacheManager::Make(Client& client,
       config.llmRefcntObjectName));
   manager = std::make_shared<KVStateCacheManager>(blob_storage);
   manager->config = std::make_shared<VineyardCacheConfig>(config);
-  manager->type = CacheType::BLOB;
   return Status::OK();
 }
 
@@ -87,7 +86,6 @@ Status KVStateCacheManager::Make(std::shared_ptr<KVStateCacheManager>& manager,
   manager = std::make_shared<KVStateCacheManager>(file_storage);
   RETURN_ON_ERROR(file_storage->Init());
   manager->config = std::make_shared<FileCacheConfig>(config);
-  manager->type = CacheType::FILE;
   return Status::OK();
 }
 
@@ -406,22 +404,12 @@ Status KVStateCacheManager::ClearGlobalCache(Client& client,
 
 void KVStateCacheManager::Close() { storage->CloseCache(); }
 
-Status KVStateCacheManager::StopGlobalGCThread() {
-  if (this->type != CacheType::FILE) {
-    return Status::Invalid("Only support for file storage");
-  }
-
-  std::dynamic_pointer_cast<FileStorage>(storage)->StopGlobalGCThread();
-  return Status::OK();
+void KVStateCacheManager::StopGlobalGCThread() {
+  storage->StopGlobalGCThread();
 }
 
-Status KVStateCacheManager::StartGlobalGCThread() {
-  if (this->type != CacheType::FILE) {
-    return Status::Invalid("Only support for file storage");
-  }
-
-  std::dynamic_pointer_cast<FileStorage>(storage)->StartGlobalGCThread();
-  return Status::OK();
+void KVStateCacheManager::StartGlobalGCThread() {
+  storage->StartGlobalGCThread();
 }
 
 KVStateCacheManager::~KVStateCacheManager() {}

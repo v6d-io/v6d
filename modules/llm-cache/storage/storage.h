@@ -52,6 +52,10 @@ class IStorage {
                        std::vector<std::pair<LLMKV, LLMKV>>& kvState) = 0;
 
   virtual void CloseCache() = 0;
+
+  virtual void StartGlobalGCThread() {}
+
+  virtual void StopGlobalGCThread() {}
 };
 
 }  // namespace vineyard

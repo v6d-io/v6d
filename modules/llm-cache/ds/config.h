@@ -22,10 +22,6 @@ limitations under the License.
 
 namespace vineyard {
 
-enum CacheType {
-  BLOB,
-  FILE,
-};
 struct KVCacheConfig {
   int tensorByte;
   int cacheCapacity;

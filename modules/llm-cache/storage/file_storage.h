@@ -136,9 +136,9 @@ class FileStorage : public IStorage,
 
   virtual Status Init() = 0;
 
-  virtual void StopGlobalGCThread() { this->enableGlobalGC = false; }
+  void StopGlobalGCThread() override { this->enableGlobalGC = false; }
 
-  virtual void StartGlobalGCThread() { this->enableGlobalGC = true; }
+  void StartGlobalGCThread() override { this->enableGlobalGC = true; }
 
  protected:
   size_t tensorBytes;
