@@ -21,6 +21,7 @@ limitations under the License.
 #include <regex>
 #include <string>
 #include <thread>
+#include <vector>
 
 #include "llm-cache/storage/file_storage.h"
 
@@ -35,7 +36,8 @@ class LocalFileStorage : public FileStorage {
  public:
   LocalFileStorage(int tensorBytes, int cacheCapacity, int layer, int batchSize,
                    int splitNumber, std::string rootPath,
-                   int64_t clientGCInterval, int64_t ttl) {
+                   int64_t clientGCInterval, int64_t ttl, bool enableGlobalGC,
+                   int64_t globalGCInterval, int64_t globalTTL) {
     this->hashAlgorithm = std::make_shared<MurmurHash3Algorithm>();
     this->hasher = std::make_shared<Hasher>(hashAlgorithm.get());
     this->tensorBytes = tensorBytes;
@@ -48,10 +50,19 @@ class LocalFileStorage : public FileStorage {
         std::regex_replace(rootPath + "/__temp/", std::regex("/+"), "/");
     this->gcInterval = std::chrono::seconds(clientGCInterval);
     this->fileTTL = std::chrono::seconds(ttl);
-    this->gcThread = std::thread(FileStorage::DefaultGCThread, this);
+    this->globalGCInterval = std::chrono::seconds(globalGCInterval);
+    this->enableGlobalGC = enableGlobalGC;
   }
 
   ~LocalFileStorage() = default;
+
+  Status Init() override {
+    this->gcThread =
+        std::thread(FileStorage::DefaultGCThread, shared_from_this());
+    this->globalGCThread =
+        std::thread(FileStorage::GlobalGCThread, shared_from_this());
+    return Status::OK();
+  }
 
   std::shared_ptr<FileDescriptor> CreateFileDescriptor() override;
 
@@ -83,6 +94,9 @@ class LocalFileStorage : public FileStorage {
   Status Close(std::shared_ptr<FileDescriptor>& fd) override;
 
   Status Delete(std::string path) override;
+
+  Status GetFileList(std::string dirPath,
+                     std::vector<std::string>& fileList) override;
 
   Status GetFileAccessTime(
       const std::string& path,

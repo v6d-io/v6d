@@ -102,6 +102,9 @@ Status FileStorage::Update(
     const std::vector<int>& tokenList,
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
     size_t& updated) {
+  if (this->exitFlag) {
+    return Status::Invalid("The file storage has been closed!");
+  }
   std::vector<std::string> pathList;
   std::set<std::string> createFileSet;
   std::mutex createFileSetMutex;
@@ -196,9 +199,6 @@ Status FileStorage::Update(
     }
   }
 
-  // for test
-  sleep(2);
-
   std::lock_guard<std::mutex> lock(gcMutex);
   int j = 0;
   for (size_t i = 0; i < pathList.size(); i++) {
@@ -280,6 +280,9 @@ Status FileStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
     size_t& updated) {
+  if (this->exitFlag) {
+    return Status::Invalid("The file storage has been closed!");
+  }
   if (prefix.size() % batchSize != 0) {
     return Status::Invalid("Prefix size " + std::to_string(prefix.size()) +
                            " should be multiple of batch size " +
@@ -387,9 +390,6 @@ Status FileStorage::Update(
     }
   }
 
-  // for test
-  sleep(2);
-
   std::lock_guard<std::mutex> lock(gcMutex);
   int j = 0;
   for (size_t i = 0; i < pathList.size(); i++) {
@@ -475,6 +475,9 @@ Status FileStorage::Query(
     const std::vector<int>& tokenList,
     std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
     size_t& matched) {
+  if (this->exitFlag) {
+    return Status::Invalid("The file storage has been closed!");
+  }
   std::vector<std::string> paths;
   std::string dir = rootPath;
   RETURN_ON_ERROR(
@@ -607,7 +610,7 @@ Status FileStorage::DefaultGCFunc() {
   return Status::OK();
 }
 
-void FileStorage::DefaultGCThread(FileStorage* fileStorage) {
+void FileStorage::DefaultGCThread(std::shared_ptr<FileStorage> fileStorage) {
   int64_t last_time =
       std::chrono::duration_cast<std::chrono::seconds>(
           std::chrono::high_resolution_clock::now().time_since_epoch())
@@ -627,11 +630,11 @@ void FileStorage::DefaultGCThread(FileStorage* fileStorage) {
                       std::chrono::high_resolution_clock::now()
                           .time_since_epoch())
                       .count();
-              return fileStorage->gcExitFlag ||
+              return fileStorage->exitFlag ||
                      (current_time - last_time) >
                          fileStorage->gcInterval.count();
             })) {
-      if (fileStorage->gcExitFlag) {
+      if (fileStorage->exitFlag) {
         LOG(INFO) << "GC thread exit";
         return;
       }
@@ -657,18 +660,52 @@ void FileStorage::PrintFileAccessTime(std::string path) {
   }
 }
 
-void FileStorage::InitialGlobalGCThread(int64_t globalGCInterval) {
-  static std::thread globalGCThread(GlobalGCThread);
-  static std::chrono::duration<int64_t> globalGCIntervalDuration(
-      globalGCInterval);
+Status FileStorage::GlobalGCFunc() {
+  auto now = std::chrono::high_resolution_clock::now();
+  auto nanoseconds_since_epoch =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          now.time_since_epoch())
+          .count();
+  std::vector<std::string> fileList;
+  RETURN_ON_ERROR(this->GetFileList(this->rootPath, fileList));
+  for (std::vector<std::string>::iterator iter = fileList.begin();
+       iter != fileList.end(); iter++) {
+    std::string path = *iter;
+    std::chrono::duration<int64_t, std::nano> accessTime(0);
+    if (!GetFileAccessTime(path, accessTime).ok()) {
+      continue;
+    }
+    if ((accessTime + globalFileTTL).count() < nanoseconds_since_epoch) {
+      LOG(INFO) << "Global GC: " << path << " is dead!";
+      LOG(INFO) << "access time: " << accessTime.count()
+                << " now: " << nanoseconds_since_epoch;
+      Delete(path);
+    } else {
+      LOG(INFO) << "Global GC: " << path << " is alive!";
+      LOG(INFO) << "access time: " << accessTime.count()
+                << " now: " << nanoseconds_since_epoch;
+    }
+  }
+  return Status::OK();
 }
 
-void FileStorage::GlobalGCThread() {}
+void FileStorage::GlobalGCThread(std::shared_ptr<FileStorage> fileStorage) {
+  while (1) {
+    sleep(fileStorage->globalGCInterval.count());
+    if (fileStorage->enableGlobalGC) {
+      LOG(INFO) << "global GC thread wake";
+      Status status = fileStorage->GlobalGCFunc();
+      if (!status.ok()) {
+        // TBD: process the error
+      }
+    }
+  }
+}
 
 void FileStorage::CloseCache() {
-  std::lock_guard<std::mutex> lock(gcMutex);
-  if (!gcExitFlag) {
-    gcExitFlag = true;
+  std::lock_guard<std::mutex> gcLock(gcMutex);
+  if (!exitFlag) {
+    exitFlag = true;
     gcMutex.unlock();
     cv.notify_all();
     gcThread.join();

@@ -60,6 +60,7 @@ Status KVStateCacheManager::Make(Client& client,
       config.llmRefcntObjectName));
   manager = std::make_shared<KVStateCacheManager>(blob_storage);
   manager->config = std::make_shared<VineyardCacheConfig>(config);
+  manager->type = CacheType::BLOB;
   return Status::OK();
 }
 
@@ -78,12 +79,15 @@ Status KVStateCacheManager::Make(std::shared_ptr<KVStateCacheManager>& manager,
   if (config.filesystemType == FilesystemType::LOCAL) {
     file_storage = std::make_shared<LocalFileStorage>(
         config.tensorByte, config.cacheCapacity, config.layer, config.batchSize,
-        config.splitNumber, config.root, config.clientGCInterval, config.ttl);
+        config.splitNumber, config.root, config.clientGCInterval, config.ttl,
+        config.enbaleGlobalGC, config.globalGCInterval, config.globalTTL);
   } else {
     return Status::Invalid("Unsupported filesystem type");
   }
   manager = std::make_shared<KVStateCacheManager>(file_storage);
+  RETURN_ON_ERROR(file_storage->Init());
   manager->config = std::make_shared<FileCacheConfig>(config);
+  manager->type = CacheType::FILE;
   return Status::OK();
 }
 
@@ -400,12 +404,25 @@ Status KVStateCacheManager::ClearGlobalCache(Client& client,
                                        config.llmRefcntObjectName);
 }
 
-Status ClearGlobalCache(Client& client, FileCacheConfig& config) {
-  // TBD
+void KVStateCacheManager::Close() { storage->CloseCache(); }
+
+Status KVStateCacheManager::StopGlobalGCThread() {
+  if (this->type != CacheType::FILE) {
+    return Status::Invalid("Only support for file storage");
+  }
+
+  std::dynamic_pointer_cast<FileStorage>(storage)->StopGlobalGCThread();
   return Status::OK();
 }
 
-void KVStateCacheManager::Close() { storage->CloseCache(); }
+Status KVStateCacheManager::StartGlobalGCThread() {
+  if (this->type != CacheType::FILE) {
+    return Status::Invalid("Only support for file storage");
+  }
+
+  std::dynamic_pointer_cast<FileStorage>(storage)->StartGlobalGCThread();
+  return Status::OK();
+}
 
 KVStateCacheManager::~KVStateCacheManager() {}
 

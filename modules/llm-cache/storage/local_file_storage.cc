@@ -23,6 +23,7 @@ limitations under the License.
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "common/util/logging.h"
 #include "llm-cache/storage/local_file_storage.h"
@@ -213,6 +214,25 @@ Status LocalFileStorage::TouchFile(const std::string& path) {
   }
   LOG(INFO) << "After touch File:";
   PrintFileAccessTime(path);
+  return Status::OK();
+}
+
+Status LocalFileStorage::GetFileList(std::string dirPath,
+                                     std::vector<std::string>& fileList) {
+  try {
+    for (auto it = std::filesystem::recursive_directory_iterator(dirPath);
+         it != std::filesystem::recursive_directory_iterator(); ++it) {
+      if (std::filesystem::is_regular_file(*it)) {
+        fileList.push_back(it->path().string());
+      }
+    }
+  } catch (std::filesystem::filesystem_error& e) {
+    if (e.code() == std::errc::no_such_file_or_directory) {
+      return Status::OK();
+    } else {
+      return Status::IOError(e.what());
+    }
+  }
   return Status::OK();
 }
 

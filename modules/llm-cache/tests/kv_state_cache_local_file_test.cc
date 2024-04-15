@@ -14,6 +14,7 @@ limitations under the License.
 */
 
 #include <unistd.h>
+#include <filesystem>
 #include <iostream>
 #include <random>
 #include <vector>
@@ -172,7 +173,14 @@ void inference(std::shared_ptr<KVStateCacheManager>& kv_state_cache_manager,
   }
 }
 
-void threadFunc() {
+void checkFilesNotExist(std::string dir) {
+  for (auto it = std::filesystem::recursive_directory_iterator(dir);
+       it != std::filesystem::recursive_directory_iterator(); ++it) {
+    VINEYARD_ASSERT(!std::filesystem::is_regular_file(*it));
+  }
+}
+
+void threadFunc(int sleep_time) {
   std::shared_ptr<KVStateCacheManager> manager = init();
 
   for (size_t i = 0; i < tokens_list.size(); i++) {
@@ -181,7 +189,7 @@ void threadFunc() {
   }
 
   LOG(INFO) << "inference end";
-
+  sleep(sleep_time);
   manager->Close();
 }
 
@@ -189,17 +197,36 @@ int main(int argc, char** argv) {
   LOG(INFO) << "Test KVStateCache with tensorBytes: " << tensorBytes
             << ", capacity: " << capacity << ", layer: " << layer;
 
-  config = FileCacheConfig(tensorBytes, capacity, layer);
+  config = FileCacheConfig(tensorBytes, capacity, layer, 4, 2,
+                           "/tmp/llm_cache/", LOCAL, 1, 1, false, 3, 5);
 
   std::vector<std::thread> threads;
   for (int i = 0; i < 1; i++) {
-    threads.push_back(std::thread(threadFunc));
+    threads.push_back(std::thread(threadFunc, 3));
   }
 
   for (int i = 0; i < 1; i++) {
     threads[i].join();
     LOG(INFO) << "Thread:" << i << " exit.";
   }
+
+  checkFilesNotExist("/tmp/llm_cache/");
+
+  config = FileCacheConfig(tensorBytes, capacity, layer, 4, 2,
+                           "/tmp/llm_cache/", LOCAL, 10, 20, true, 1, 2);
+
+  threads.clear();
+  for (int i = 0; i < 1; i++) {
+    threads.push_back(std::thread(threadFunc, 0));
+  }
+
+  for (int i = 0; i < 1; i++) {
+    threads[i].join();
+    LOG(INFO) << "Thread:" << i << " exit.";
+  }
+
+  sleep(1);
+  checkFilesNotExist("/tmp/llm_cache/");
 
   LOG(INFO) << "Passed KVStateCache tests...";
   return 0;

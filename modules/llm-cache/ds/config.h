@@ -22,6 +22,10 @@ limitations under the License.
 
 namespace vineyard {
 
+enum CacheType {
+  BLOB,
+  FILE,
+};
 struct KVCacheConfig {
   int tensorByte;
   int cacheCapacity;
@@ -55,12 +59,17 @@ struct FileCacheConfig : public KVCacheConfig {
   FilesystemType filesystemType;
   int clientGCInterval;  // second
   int ttl;               // second
+  bool enbaleGlobalGC;
+  int globalGCInterval;  // second
+  int globalTTL;         // second
 
   FileCacheConfig(int tensorByte = 10, int cacheCapacity = 10, int layer = 1,
                   int batchSize = 4, int splitNumber = 2,
                   std::string root = "/tmp/llm_cache/",
                   FilesystemType filesystemType = LOCAL,
-                  int clientGCInterval = 3, int ttl = 5)
+                  int clientGCInterval = 3, int ttl = 5,
+                  bool enbaleGlobalGC = false, int globalGCInterval = 30,
+                  int globalTTL = 50)
       : KVCacheConfig{tensorByte, cacheCapacity, layer} {
     this->root = root;
     this->batchSize = batchSize;
@@ -68,6 +77,9 @@ struct FileCacheConfig : public KVCacheConfig {
     this->filesystemType = filesystemType;
     this->clientGCInterval = clientGCInterval;
     this->ttl = ttl;
+    this->enbaleGlobalGC = enbaleGlobalGC;
+    this->globalGCInterval = globalGCInterval;
+    this->globalTTL = globalTTL;
   }
 };
 

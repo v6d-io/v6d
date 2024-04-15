@@ -38,12 +38,6 @@ namespace vineyard {
 
 struct FileDescriptor {};
 
-struct FileHeader {
-  int prefixNum;
-  int layer;
-  int kvStateSize;
-};
-
 enum FilesystemType {
   LOCAL,
 };
@@ -53,7 +47,8 @@ enum FileOperationType {
   WRITE = 1 << 1,
 };
 
-class FileStorage : public IStorage {
+class FileStorage : public IStorage,
+                    public std::enable_shared_from_this<FileStorage> {
  private:
   bool CompareTokenList(const std::vector<int>& tokenList,
                         const std::vector<int>& tokenList2, size_t length);
@@ -103,10 +98,13 @@ class FileStorage : public IStorage {
 
   Status GlobalGCFunc();
 
- protected:
-  static void DefaultGCThread(FileStorage* fileStorage);
+  virtual Status GetFileList(std::string dirPath,
+                             std::vector<std::string>& fileList) = 0;
 
-  static void GlobalGCThread();
+ protected:
+  static void DefaultGCThread(std::shared_ptr<FileStorage> fileStorage);
+
+  static void GlobalGCThread(std::shared_ptr<FileStorage> fileStorage);
 
   // for test
   void PrintFileAccessTime(std::string path);
@@ -136,7 +134,11 @@ class FileStorage : public IStorage {
   Status Query(const std::vector<int>& tokenList, int nextToken,
                std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
 
-  static void InitialGlobalGCThread(int64_t globalGCInterval);
+  virtual Status Init() = 0;
+
+  virtual void StopGlobalGCThread() { this->enableGlobalGC = false; }
+
+  virtual void StartGlobalGCThread() { this->enableGlobalGC = true; }
 
  protected:
   size_t tensorBytes;
@@ -148,14 +150,19 @@ class FileStorage : public IStorage {
   std::string tempFileDir;
   std::shared_ptr<IHashAlgorithm> hashAlgorithm;
   std::shared_ptr<Hasher> hasher;
-  std::chrono::duration<int64_t> gcInterval;
-  std::chrono::duration<int64_t, std::nano> fileTTL;
 
-  bool gcExitFlag = false;
+  std::chrono::duration<int64_t> gcInterval;
+  std::chrono::duration<int64_t> globalGCInterval;
+  std::chrono::duration<int64_t> fileTTL;
+  std::chrono::duration<int64_t> globalFileTTL;
+
+  bool exitFlag = false;
+  bool enableGlobalGC = false;
   std::condition_variable cv;
-  std::thread gcThread;
-  std::mutex gcMutex;
   std::list<std::string> gcList;
+  std::mutex gcMutex;
+  std::thread gcThread;
+  std::thread globalGCThread;
 };
 
 }  // namespace vineyard

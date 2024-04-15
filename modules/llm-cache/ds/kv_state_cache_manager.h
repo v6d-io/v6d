@@ -64,15 +64,20 @@ class KVStateCacheManager {
 
   void Close();
 
-  static Status ClearGlobalCache(Client& client, VineyardCacheConfig& config);
+  // File cache API
+  Status StopGlobalGCThread();
 
-  static Status ClearGlobalCache(Client& client, FileCacheConfig& config);
+  Status StartGlobalGCThread();
+
+  // Blob cache API
+  static Status ClearGlobalCache(Client& client, VineyardCacheConfig& config);
 
   std::shared_ptr<KVCacheConfig> Config() { return config; }
 
  private:
   std::shared_ptr<KVCacheConfig> config;
   std::shared_ptr<IStorage> storage;
+  CacheType type;
 };
 
 }  // namespace vineyard
