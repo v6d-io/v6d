@@ -19,6 +19,8 @@
 import contextlib
 import os
 import warnings
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import as_completed
 from typing import Any
 from typing import Dict
 from typing import List
@@ -26,6 +28,7 @@ from typing import Optional
 from typing import Tuple
 from typing import Union
 
+from vineyard import envvars
 from vineyard._C import Blob
 from vineyard._C import BlobBuilder
 from vineyard._C import IPCClient
@@ -605,14 +608,34 @@ class Client:
                 f"{meta.instance_id} is not available."
             )
 
+        previous_compression_state = self.compression
         host, port = instance_status['rpc_endpoint'].split(':')
-        remote_client = _connect(host, port)
+        try:
+            with envvars('VINEYARD_RPC_SKIP_RETRY', '1'):
+                remote_client = _connect(host, port)
+                remote_client.compression = previous_compression_state
+        except Exception as exec:
+            raise RuntimeError(
+                f"Failed to connect to the vineyard instance {meta.instance_id} "
+                f"at {host}:{port}."
+            ) from exec
 
         warnings.warn(
             f"Fetching remote object {meta.id} from the remote vineyard instance "
             f"{meta.instance_id} at {host}:{port}."
         )
         return remote_client.get_object(meta.id)
+
+    def _connect_and_get_memory(self, instance_id, rpc_endpoint):
+        host, port = rpc_endpoint.split(':')
+        try:
+            new_client = _connect(host, port)
+            current_available_memory = (
+                new_client.status.memory_limit - new_client.status.memory_usage
+            )
+            return instance_id, current_available_memory
+        except Exception:
+            return instance_id, float('-inf')
 
     def _find_the_most_available_memory_instance(self) -> int:
         """
@@ -622,27 +645,31 @@ class Client:
             int: The instance id with the most available memory.
             if only have one instance, return -1
         """
+        futures = []
         cluster_info = self.default_client().meta
+        with ThreadPoolExecutor() as executor:
+            for instance_id, status in cluster_info.items():
+                if not (
+                    status['ipc_socket'] == self.ipc_socket
+                    and status['rpc_endpoint'] == self.rpc_endpoint
+                ):
+                    futures.append(
+                        executor.submit(
+                            self._connect_and_get_memory,
+                            instance_id,
+                            status['rpc_endpoint'],
+                        )
+                    )
+
         instance_id_with_most_available_memory = -1
         available_memory = float('-inf')
 
-        for instance_id, status in cluster_info.items():
-            # skip the current vineyard instance
-            # check if both the ipc_socket and rpc_endpoint are the same
-            # avoid the case the same ipc_socket in different machines(rpc_endpoint)
-            if (
-                status['ipc_socket'] == self.ipc_socket
-                and status['rpc_endpoint'] == self.rpc_endpoint
-            ):
-                continue
-            host, port = status['rpc_endpoint'].split(':')
-            new_client = _connect(host, port)
-            current_available_memory = (
-                new_client.status.memory_limit - new_client.status.memory_usage
-            )
+        for future in as_completed(futures):
+            instance_id, current_available_memory = future.result()
             if current_available_memory > available_memory:
                 instance_id_with_most_available_memory = instance_id
                 available_memory = current_available_memory
+
         return instance_id_with_most_available_memory
 
     @_apply_docstring(get)
@@ -668,23 +695,31 @@ class Client:
         try:
             return put(self, value, builder, persist, name, **kwargs)
         except NotEnoughMemoryException as exec:
-            instance_id = self._find_the_most_available_memory_instance()
-            if instance_id == -1:
-                warnings.warn("No other vineyard instance available")
-                raise exec
-            else:
-                meta = self.default_client().meta
-                warnings.warn(
-                    f"Put object to the vineyard instance {instance_id}"
-                    "with the most available memory."
-                )
-                # connect to the instance with the most available memory
-                self._ipc_client = None
-                if os.path.exists(meta[instance_id]['ipc_socket']):
-                    self._ipc_client = _connect(meta[instance_id]['ipc_socket'])
-                host, port = meta[instance_id]['rpc_endpoint'].split(':')
-                self._rpc_client = _connect(host, port)
-                return put(self, value, builder, persist, name, **kwargs)
+            with envvars(
+                {'VINEYARD_RPC_SKIP_RETRY': '1', 'VINEYARD_IPC_SKIP_RETRY': '1'}
+            ):
+                instance_id = self._find_the_most_available_memory_instance()
+                previous_compression_state = self.compression
+                if instance_id == -1:
+                    warnings.warn("No other vineyard instance available")
+                    raise exec
+                else:
+                    meta = self.default_client().meta
+                    warnings.warn(
+                        f"Put object to the vineyard instance {instance_id}"
+                        "with the most available memory."
+                    )
+                    # connect to the instance with the most available memory
+                    self._ipc_client = None
+                    if os.path.exists(meta[instance_id]['ipc_socket']):
+                        self._ipc_client = _connect(meta[instance_id]['ipc_socket'])
+                        # avoid the case the vineyard instance is restarted
+                        if self._ipc_client.instance_id != instance_id:
+                            self._ipc_client = None
+                    host, port = meta[instance_id]['rpc_endpoint'].split(':')
+                    self._rpc_client = _connect(host, port)
+                    self.compression = previous_compression_state
+            return put(self, value, builder, persist, name, **kwargs)
 
     @contextlib.contextmanager
     def with_compression(self, enabled: bool = True):
