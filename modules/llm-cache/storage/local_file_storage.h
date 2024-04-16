@@ -106,6 +106,8 @@ class LocalFileStorage : public FileStorage {
   Status TouchFile(const std::string& path) override;
 
   std::string GetTmpFileDir() override;
+
+  std::list<std::string>& GetGCList() { return this->gcList; }
 };
 
 }  // namespace vineyard

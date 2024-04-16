@@ -53,8 +53,6 @@ class FileStorage : public IStorage,
   bool CompareTokenList(const std::vector<int>& tokenList,
                         const std::vector<int>& tokenList2, size_t length);
 
-  void CloseCache() override;
-
   virtual std::shared_ptr<FileDescriptor> CreateFileDescriptor() = 0;
 
   virtual Status Open(std::string path, std::shared_ptr<FileDescriptor>& fd,
@@ -136,6 +134,8 @@ class FileStorage : public IStorage,
 
   Status Query(const std::vector<int>& tokenList, int nextToken,
                std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
+
+  void CloseCache() override;
 
   virtual Status Init() = 0;
 
