@@ -28,7 +28,7 @@ limitations under the License.
 using namespace vineyard;  // NOLINT(build/namespaces)
 
 std::mutex createFileMutex;
-std::string kTempDir = "/tmp/llm_cache/";
+std::string kTempDir = "/tmp/llm_cache/__gc/";
 
 void CreateFile(std::string path, std::shared_ptr<LocalFileStorage> storage) {
   std::shared_ptr<FileDescriptor> fd = storage->CreateFileDescriptor();
@@ -47,17 +47,14 @@ void CreateFile(std::string path, std::shared_ptr<LocalFileStorage> storage) {
   storage->GetGCList().push_back(path);
 }
 
-void CheckFilesExist(std::string dir, int nums) {
-  int count = 0;
-  for (auto it = ghc::filesystem::recursive_directory_iterator(dir);
-       it != ghc::filesystem::recursive_directory_iterator(); ++it) {
-    if (ghc::filesystem::is_regular_file(*it)) {
-      count++;
-    }
+void CheckFilesExist(std::vector<std::string>::iterator begin,
+                     std::vector<std::string>::iterator end) {
+  ghc::filesystem::path path;
+  for (auto it = begin; it != end; ++it) {
+    path = *it;
+    VINEYARD_ASSERT_VERBOSE(ghc::filesystem::exists(path),
+                            "File: " + path.string() + " should exist!");
   }
-  VINEYARD_ASSERT_VERBOSE(count == nums,
-                          "File count: " + std::to_string(count) +
-                              " is not equal to " + std::to_string(nums));
 }
 
 void CheckFilesNotExist(std::string dir) {
@@ -102,11 +99,11 @@ void TestLocalGC() {
   }
   storage->Init();
 
-  CheckFilesExist(kTempDir, paths.size());
+  CheckFilesExist(paths.begin(), paths.end());
   sleep(2);
-  CheckFilesExist(kTempDir, paths.size());
+  CheckFilesExist(paths.begin(), paths.end());
   sleep(2);
-  CheckFilesExist(kTempDir, paths.size());
+  CheckFilesExist(paths.begin(), paths.end());
   sleep(5);
   CheckFilesNotExist(kTempDir);
   storage->CloseCache();
@@ -139,11 +136,11 @@ void TestGlobalGC() {
   }
   storage->Init();
 
-  CheckFilesExist(kTempDir, paths.size());
+  CheckFilesExist(paths.begin(), paths.end());
   sleep(2);
-  CheckFilesExist(kTempDir, paths.size());
+  CheckFilesExist(paths.begin(), paths.end());
   sleep(2);
-  CheckFilesExist(kTempDir, paths.size());
+  CheckFilesExist(paths.begin(), paths.end());
   sleep(5);
   CheckFilesNotExist(kTempDir);
   storage->CloseCache();
@@ -187,11 +184,11 @@ void TestLocalAndGlobalGC() {
 
   storage->Init();
 
-  CheckFilesExist(kTempDir, paths.size());
+  CheckFilesExist(paths.begin(), paths.end());
   sleep(2);
-  CheckFilesExist(kTempDir, paths.size());
+  CheckFilesExist(paths.begin(), paths.end());
   sleep(4);
-  CheckFilesExist(kTempDir, paths.size() / 2);
+  CheckFilesExist(paths.begin() + paths.size() / 2, paths.end());
   sleep(4);
   CheckFilesNotExist(kTempDir);
   storage->CloseCache();
