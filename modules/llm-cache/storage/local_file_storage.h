@@ -17,9 +17,12 @@ limitations under the License.
 #define MODULES_LLM_CACHE_STORAGE_LOCAL_FILE_STORAGE_H_
 
 #include <fstream>
+#include <list>
 #include <memory>
 #include <regex>
 #include <string>
+#include <thread>
+#include <vector>
 
 #include "llm-cache/storage/file_storage.h"
 
@@ -33,7 +36,9 @@ struct LocalFileDescriptor : public FileDescriptor {
 class LocalFileStorage : public FileStorage {
  public:
   LocalFileStorage(int tensorBytes, int cacheCapacity, int layer, int batchSize,
-                   int splitNumber, std::string rootPath) {
+                   int splitNumber, std::string rootPath,
+                   int64_t clientGCInterval, int64_t ttl, bool enableGlobalGC,
+                   int64_t globalGCInterval, int64_t globalTTL) {
     this->hashAlgorithm = std::make_shared<MurmurHash3Algorithm>();
     this->hasher = std::make_shared<Hasher>(hashAlgorithm.get());
     this->tensorBytes = tensorBytes;
@@ -44,9 +49,22 @@ class LocalFileStorage : public FileStorage {
     this->rootPath = std::regex_replace(rootPath + "/", std::regex("/+"), "/");
     this->tempFileDir =
         std::regex_replace(rootPath + "/__temp/", std::regex("/+"), "/");
+    this->gcInterval = std::chrono::seconds(clientGCInterval);
+    this->fileTTL = std::chrono::seconds(ttl);
+    this->globalGCInterval = std::chrono::seconds(globalGCInterval);
+    this->globalFileTTL = std::chrono::seconds(globalTTL);
+    this->enableGlobalGC = enableGlobalGC;
   }
 
   ~LocalFileStorage() = default;
+
+  Status Init() override {
+    this->gcThread =
+        std::thread(FileStorage::DefaultGCThread, shared_from_this());
+    this->globalGCThread =
+        std::thread(FileStorage::GlobalGCThread, shared_from_this());
+    return Status::OK();
+  }
 
   std::shared_ptr<FileDescriptor> CreateFileDescriptor() override;
 
@@ -79,7 +97,18 @@ class LocalFileStorage : public FileStorage {
 
   Status Delete(std::string path) override;
 
+  Status GetFileList(std::string dirPath,
+                     std::vector<std::string>& fileList) override;
+
+  Status GetFileAccessTime(
+      const std::string& path,
+      std::chrono::duration<int64_t, std::nano>& accessTime) override;
+
+  Status TouchFile(const std::string& path) override;
+
   std::string GetTmpFileDir() override;
+
+  std::list<std::string>& GetGCList() { return this->gcList; }
 };
 
 }  // namespace vineyard

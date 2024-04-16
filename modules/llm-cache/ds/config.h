@@ -53,16 +53,32 @@ struct FileCacheConfig : public KVCacheConfig {
   int splitNumber;
   std::string root;
   FilesystemType filesystemType;
+  int clientGCInterval;  // second
+  int ttl;               // second
+  bool enbaleGlobalGC;
+  int globalGCInterval;  // second
+  int globalTTL;         // second
 
+  // Default gc interval is 30 minutes and default global gc interval is 3
+  // hours.
   FileCacheConfig(int tensorByte = 10, int cacheCapacity = 10, int layer = 1,
                   int batchSize = 4, int splitNumber = 2,
                   std::string root = "/tmp/llm_cache/",
-                  FilesystemType filesystemType = LOCAL)
+                  FilesystemType filesystemType = LOCAL,
+                  int clientGCInterval = 30 * 60, int ttl = 30 * 60,
+                  bool enbaleGlobalGC = false,
+                  int globalGCInterval = 3 * 60 * 60,
+                  int globalTTL = 3 * 60 * 60)
       : KVCacheConfig{tensorByte, cacheCapacity, layer} {
     this->root = root;
     this->batchSize = batchSize;
     this->splitNumber = splitNumber;
     this->filesystemType = filesystemType;
+    this->clientGCInterval = clientGCInterval;
+    this->ttl = ttl;
+    this->enbaleGlobalGC = enbaleGlobalGC;
+    this->globalGCInterval = globalGCInterval;
+    this->globalTTL = globalTTL;
   }
 };
 

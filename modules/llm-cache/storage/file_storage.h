@@ -16,6 +16,9 @@ limitations under the License.
 #ifndef MODULES_LLM_CACHE_STORAGE_FILE_STORAGE_H_
 #define MODULES_LLM_CACHE_STORAGE_FILE_STORAGE_H_
 
+#include <chrono>
+#include <condition_variable>
+#include <list>
 #include <map>
 #include <memory>
 #include <set>
@@ -27,15 +30,13 @@ limitations under the License.
 #include "llm-cache/hash/hasher.h"
 #include "llm-cache/storage/storage.h"
 
+#define SECOND_TO_MILLISECOND 1000
+#define SECOND_TO_MICROSECOND 1000000
+#define SECOND_TO_NANOSECOND 1000000000
+
 namespace vineyard {
 
 struct FileDescriptor {};
-
-struct FileHeader {
-  int prefixNum;
-  int layer;
-  int kvStateSize;
-};
 
 enum FilesystemType {
   LOCAL,
@@ -46,12 +47,11 @@ enum FileOperationType {
   WRITE = 1 << 1,
 };
 
-class FileStorage : public IStorage {
+class FileStorage : public IStorage,
+                    public std::enable_shared_from_this<FileStorage> {
  private:
   bool CompareTokenList(const std::vector<int>& tokenList,
                         const std::vector<int>& tokenList2, size_t length);
-
-  void CloseCache() override {}
 
   virtual std::shared_ptr<FileDescriptor> CreateFileDescriptor() = 0;
 
@@ -84,7 +84,31 @@ class FileStorage : public IStorage {
 
   virtual bool IsFileExist(const std::string& path) = 0;
 
+  virtual Status GetFileAccessTime(
+      const std::string& path,
+      std::chrono::duration<int64_t, std::nano>& accessTime) = 0;
+
+  virtual Status TouchFile(const std::string& path) = 0;
+
   virtual std::string GetTmpFileDir() = 0;
+
+  Status DefaultGCFunc();
+
+  Status GlobalGCFunc();
+
+  virtual Status GetFileList(std::string dirPath,
+                             std::vector<std::string>& fileList) = 0;
+
+ protected:
+  static void DefaultGCThread(std::shared_ptr<FileStorage> fileStorage);
+
+  static void GlobalGCThread(std::shared_ptr<FileStorage> fileStorage);
+
+  // for test
+  void PrintFileAccessTime(std::string path);
+
+  static std::string GetTimestamp(
+      std::chrono::duration<int64_t, std::nano> time);
 
  public:
   FileStorage() = default;
@@ -111,6 +135,14 @@ class FileStorage : public IStorage {
   Status Query(const std::vector<int>& tokenList, int nextToken,
                std::vector<std::pair<LLMKV, LLMKV>>& kvState) override;
 
+  void CloseCache() override;
+
+  virtual Status Init() = 0;
+
+  void StopGlobalGCThread() override { this->enableGlobalGC = false; }
+
+  void StartGlobalGCThread() override { this->enableGlobalGC = true; }
+
  protected:
   size_t tensorBytes;
   size_t cacheCapacity;
@@ -121,6 +153,19 @@ class FileStorage : public IStorage {
   std::string tempFileDir;
   std::shared_ptr<IHashAlgorithm> hashAlgorithm;
   std::shared_ptr<Hasher> hasher;
+
+  std::chrono::duration<int64_t> gcInterval;
+  std::chrono::duration<int64_t> globalGCInterval;
+  std::chrono::duration<int64_t> fileTTL;
+  std::chrono::duration<int64_t> globalFileTTL;
+
+  bool exitFlag = false;
+  bool enableGlobalGC = false;
+  std::condition_variable cv;
+  std::list<std::string> gcList;
+  std::mutex gcMutex;
+  std::thread gcThread;
+  std::thread globalGCThread;
 };
 
 }  // namespace vineyard

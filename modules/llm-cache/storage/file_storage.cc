@@ -14,16 +14,19 @@ limitations under the License.
 */
 
 #include <algorithm>
+#include <chrono>
 #include <cstdlib>
-#include <filesystem>
+#include <iomanip>
 #include <map>
 #include <memory>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
 #include "common/util/logging.h"
 #include "common/util/status.h"
+#include "gulrak/filesystem.hpp"
 #include "llm-cache/storage/file_storage.h"
 #include "llm-cache/thread_group.h"
 
@@ -100,7 +103,12 @@ Status FileStorage::Update(
     const std::vector<int>& tokenList,
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
     size_t& updated) {
+  if (this->exitFlag) {
+    return Status::Invalid("The file storage has been closed!");
+  }
   std::vector<std::string> pathList;
+  std::set<std::string> createFileSet;
+  std::mutex createFileSetMutex;
   RETURN_ON_ERROR(hasher->computePathForTokens(tokenList, batchSize,
                                                splitNumber, pathList));
   if (pathList.size() == 0) {
@@ -108,15 +116,16 @@ Status FileStorage::Update(
   }
 
   std::vector<std::string> tempFilePaths(pathList.size());
-  auto fn = [this, &tempFilePaths, &pathList, &tokenList,
-             &kvStateList](int i) -> std::pair<int, Status> {
+  auto fn = [this, &tempFilePaths, &pathList, &tokenList, &kvStateList,
+             &createFileSet,
+             &createFileSetMutex](int i) -> std::pair<int, Status> {
     int tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
     tempFilePaths[i] = tmpPathStr;
-    std::filesystem::path tmpPath(tmpPathStr);
+    ghc::filesystem::path tmpPath(tmpPathStr);
     std::string pathStr = this->rootPath + pathList[i];
-    std::filesystem::path path(pathStr);
+    ghc::filesystem::path path(pathStr);
 
     RETURN_ON_ERROR_WITH_PATH_INDEX(i, Mkdir(path.parent_path().string()));
 
@@ -171,6 +180,8 @@ Status FileStorage::Update(
       VINEYARD_SUPPRESS(Delete(tmpPathStr));
       return std::pair(i, Status::Wrap(status, "Failed to move cache entry"));
     }
+    std::lock_guard<std::mutex> lock(createFileSetMutex);
+    createFileSet.insert(pathStr);
     return std::pair(i, Status::OK());
   };
 
@@ -190,14 +201,24 @@ Status FileStorage::Update(
   }
 
   int j = 0;
-  for (size_t i = 0; i < pathList.size(); i++) {
-    if (pathIndexMap.find(i) != pathIndexMap.end()) {
-      j += 1;
+  {
+    std::lock_guard<std::mutex> lock(gcMutex);
+    for (size_t i = 0; i < pathList.size(); i++) {
+      if (pathIndexMap.find(i) != pathIndexMap.end()) {
+        j += 1;
+        if (createFileSet.find(this->rootPath + pathList[i]) !=
+            createFileSet.end()) {
+          TouchFile(this->rootPath + pathList[i]);
+          gcList.push_back(this->rootPath + pathList[i]);
+        }
+      } else {
+        break;
+      }
     }
   }
-  updated = j * batchSize;
+  updated = ((size_t) j) * batchSize;
   for (size_t i = j; i < pathList.size(); i++) {
-    VINEYARD_SUPPRESS(Delete(pathList[i]));
+    VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
   }
 
@@ -261,6 +282,9 @@ Status FileStorage::Update(
     const std::vector<int>& prefix, const std::vector<int>& tokenList,
     const std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
     size_t& updated) {
+  if (this->exitFlag) {
+    return Status::Invalid("The file storage has been closed!");
+  }
   if (prefix.size() % batchSize != 0) {
     return Status::Invalid("Prefix size " + std::to_string(prefix.size()) +
                            " should be multiple of batch size " +
@@ -268,6 +292,8 @@ Status FileStorage::Update(
   }
 
   std::vector<std::string> pathList;
+  std::set<std::string> createFileSet;
+  std::mutex createFileSetMutex;
   std::vector<int> totalTokenList(prefix.begin(), prefix.end());
   totalTokenList.insert(totalTokenList.end(), tokenList.begin(),
                         tokenList.end());
@@ -280,14 +306,15 @@ Status FileStorage::Update(
 
   std::vector<std::string> tempFilePaths(pathList.size());
   auto fn = [this, &tempFilePaths, &pathList, &prefix, &totalTokenList,
-             &kvStateList](size_t i) -> std::pair<int, Status> {
+             &kvStateList, &createFileSet,
+             &createFileSetMutex](size_t i) -> std::pair<int, Status> {
     int tokenLength = (i + 1) * batchSize;
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
     std::string tmpPathStr = GetTmpFileDir() + "-" + std::to_string(i);
     tempFilePaths[i] = tmpPathStr;
-    std::filesystem::path tmpPath(tmpPathStr);
+    ghc::filesystem::path tmpPath(tmpPathStr);
     std::string pathStr = this->rootPath + pathList[i];
-    std::filesystem::path path(pathStr);
+    ghc::filesystem::path path(pathStr);
 
     RETURN_ON_ERROR_WITH_PATH_INDEX(i, Mkdir(path.parent_path().string()));
 
@@ -345,6 +372,8 @@ Status FileStorage::Update(
       VINEYARD_SUPPRESS(Delete(tmpPathStr));
       return std::pair(i, Status::Wrap(status, "Failed to move cache entry"));
     }
+    std::lock_guard<std::mutex> lock(createFileSetMutex);
+    createFileSet.insert(pathStr);
     return std::pair(i, Status::OK());
   };
 
@@ -364,15 +393,27 @@ Status FileStorage::Update(
   }
 
   int j = 0;
-  for (size_t i = 0; i < pathList.size(); i++) {
-    if (pathIndexMap.find(i) != pathIndexMap.end()) {
-      j += 1;
+  {
+    std::lock_guard<std::mutex> lock(gcMutex);
+    for (size_t i = 0; i < pathList.size(); i++) {
+      if (pathIndexMap.find(i) != pathIndexMap.end()) {
+        j += 1;
+        if (((size_t) j) * batchSize > prefix.size() &&
+            createFileSet.find(this->rootPath + pathList[i]) !=
+                createFileSet.end()) {
+          // Only this part is created.
+          TouchFile(this->rootPath + pathList[i]);
+          gcList.push_back(this->rootPath + pathList[i]);
+        }
+      } else {
+        break;
+      }
     }
   }
   updated =
       size_t(j * batchSize) < prefix.size() ? 0 : j * batchSize - prefix.size();
   for (size_t i = j; i < pathList.size(); i++) {
-    VINEYARD_SUPPRESS(Delete(pathList[i]));
+    VINEYARD_SUPPRESS(Delete(this->rootPath + pathList[i]));
     VINEYARD_SUPPRESS(Delete(tempFilePaths[i]));
   }
 
@@ -437,13 +478,16 @@ Status FileStorage::Query(
     const std::vector<int>& tokenList,
     std::vector<std::vector<std::pair<LLMKV, LLMKV>>>& kvStateList,
     size_t& matched) {
+  if (this->exitFlag) {
+    return Status::Invalid("The file storage has been closed!");
+  }
   std::vector<std::string> paths;
   std::string dir = rootPath;
   RETURN_ON_ERROR(
       hasher->computePathForTokens(tokenList, batchSize, splitNumber, paths));
 
   auto fn = [&](size_t i, size_t matched_start) -> std::pair<int, Status> {
-    std::filesystem::path filePath(dir + paths[i]);
+    ghc::filesystem::path filePath(dir + paths[i]);
     std::shared_ptr<FileDescriptor> fd = CreateFileDescriptor();
 
     // If open failed, it means the kv state is not in the cache(file not exist)
@@ -541,6 +585,147 @@ bool FileStorage::CompareTokenList(const std::vector<int>& tokenList,
     }
   }
   return true;
+}
+
+Status FileStorage::DefaultGCFunc() {
+  auto now = std::chrono::high_resolution_clock::now();
+  auto nanoseconds_since_epoch =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          now.time_since_epoch());
+
+  for (std::list<std::string>::iterator iter = gcList.begin();
+       iter != gcList.end();) {
+    std::string path = *iter;
+    std::chrono::duration<int64_t, std::nano> accessTime(0);
+    RETURN_ON_ERROR(GetFileAccessTime(path, accessTime));
+    VLOG(100) << "GC ttl:" << fileTTL.count();
+    if ((accessTime + fileTTL).count() < nanoseconds_since_epoch.count()) {
+      VLOG(100) << "GC: " << path << " is dead!";
+      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
+      RETURN_ON_ERROR(Delete(path));
+      iter = gcList.erase(iter);
+    } else {
+      VLOG(100) << "GC: " << path << " is alive!";
+      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
+      iter++;
+    }
+  }
+  return Status::OK();
+}
+
+void FileStorage::DefaultGCThread(std::shared_ptr<FileStorage> fileStorage) {
+  int64_t last_time =
+      std::chrono::duration_cast<std::chrono::seconds>(
+          std::chrono::high_resolution_clock::now().time_since_epoch())
+          .count();
+  while (1) {
+    std::unique_lock<std::mutex> lock(fileStorage->gcMutex);
+    if (fileStorage->cv.wait_for(
+            lock, fileStorage->gcInterval, [&fileStorage, &last_time] {
+              int64_t current_time =
+                  std::chrono::duration_cast<std::chrono::seconds>(
+                      std::chrono::high_resolution_clock::now()
+                          .time_since_epoch())
+                      .count();
+              return fileStorage->exitFlag ||
+                     (current_time - last_time) >
+                         fileStorage->gcInterval.count();
+            })) {
+      if (fileStorage->exitFlag) {
+        VLOG(100) << "GC thread exit";
+        return;
+      }
+      VLOG(100) << "GC thread timeout";
+      Status status = fileStorage->DefaultGCFunc();
+      if (!status.ok()) {
+        LOG(ERROR) << "GC failed: " << status.ToString();
+        // Not a fatal error and wait for next time.
+      }
+      last_time = std::chrono::duration_cast<std::chrono::seconds>(
+                      std::chrono::system_clock::now().time_since_epoch())
+                      .count();
+    }
+  }
+}
+
+void FileStorage::PrintFileAccessTime(std::string path) {
+  std::chrono::duration<int64_t, std::nano> accessTime;
+  Status status = GetFileAccessTime(path, accessTime);
+  if (!status.ok()) {
+    VLOG(100) << "Failed to get file access time: " << status.ToString();
+  } else {
+    VLOG(100) << "File: " << path
+              << " access time:" << GetTimestamp(accessTime);
+  }
+}
+
+std::string FileStorage::GetTimestamp(
+    std::chrono::duration<int64_t, std::nano> time) {
+  std::chrono::time_point<std::chrono::system_clock> timestamp =
+      std::chrono::time_point<std::chrono::system_clock>(time);
+  time_t t = std::chrono::system_clock::to_time_t(timestamp);
+
+  std::tm tm;
+  localtime_r(&t, &tm);
+  std::ostringstream oss;
+  oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+  return oss.str();
+}
+
+Status FileStorage::GlobalGCFunc() {
+  auto now = std::chrono::high_resolution_clock::now();
+  auto nanoseconds_since_epoch =
+      std::chrono::duration_cast<std::chrono::nanoseconds>(
+          now.time_since_epoch());
+  std::vector<std::string> fileList;
+  RETURN_ON_ERROR(this->GetFileList(this->rootPath, fileList));
+  for (std::vector<std::string>::iterator iter = fileList.begin();
+       iter != fileList.end(); iter++) {
+    std::string path = *iter;
+    std::chrono::duration<int64_t, std::nano> accessTime(0);
+    if (!GetFileAccessTime(path, accessTime).ok()) {
+      continue;
+    }
+    VLOG(100) << "GC ttl:" << globalFileTTL.count();
+    if ((accessTime + globalFileTTL).count() <
+        nanoseconds_since_epoch.count()) {
+      VLOG(100) << "Global GC: " << path << " is dead!";
+      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
+      Delete(path);
+    } else {
+      VLOG(100) << "Global GC: " << path << " is alive!";
+      VLOG(100) << "Access time: " << GetTimestamp(accessTime);
+      VLOG(100) << "Now: " << GetTimestamp(nanoseconds_since_epoch);
+    }
+  }
+  return Status::OK();
+}
+
+void FileStorage::GlobalGCThread(std::shared_ptr<FileStorage> fileStorage) {
+  while (1) {
+    sleep(fileStorage->globalGCInterval.count());
+    if (fileStorage->enableGlobalGC) {
+      VLOG(100) << "global GC thread wake";
+      Status status = fileStorage->GlobalGCFunc();
+      if (!status.ok()) {
+        LOG(ERROR) << "GC failed: " << status.ToString();
+        // Not a fatal error and wait for next time.
+      }
+    }
+  }
+}
+
+void FileStorage::CloseCache() {
+  std::lock_guard<std::mutex> gcLock(gcMutex);
+  if (!exitFlag) {
+    exitFlag = true;
+    gcMutex.unlock();
+    cv.notify_all();
+    gcThread.join();
+  }
 }
 
 }  // namespace vineyard

@@ -18,13 +18,14 @@ limitations under the License.
 #include <sys/file.h>
 #include <sys/stat.h>  // For stat
 #include <unistd.h>
-#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "common/util/logging.h"
+#include "gulrak/filesystem.hpp"
 #include "llm-cache/storage/local_file_storage.h"
 #include "llm-cache/thread_group.h"
 
@@ -92,9 +93,9 @@ Status LocalFileStorage::Write(std::shared_ptr<FileDescriptor>& fd,
 
 Status LocalFileStorage::Mkdir(std::string path) {
   // create the directory if it does not exist
-  if (!std::filesystem::exists(path)) {
-    if (!std::filesystem::create_directories(path)) {
-      if (std::filesystem::exists(path)) {
+  if (!ghc::filesystem::exists(path)) {
+    if (!ghc::filesystem::create_directories(path)) {
+      if (ghc::filesystem::exists(path)) {
         VLOG(100) << "directory exists" << path;
       } else {
         VLOG(100) << "Failed to create directory:" << path;
@@ -149,12 +150,12 @@ Status LocalFileStorage::GetFileSize(std::shared_ptr<FileDescriptor>& fd,
 }
 
 bool LocalFileStorage::IsFileExist(const std::string& path) {
-  return std::filesystem::exists(path);
+  return ghc::filesystem::exists(path);
 }
 
 Status LocalFileStorage::Delete(std::string path) {
-  if (std::filesystem::exists(path)) {
-    std::filesystem::remove_all(path);
+  if (ghc::filesystem::exists(path)) {
+    ghc::filesystem::remove_all(path);
   }
   return Status::OK();
 }
@@ -178,6 +179,58 @@ Status LocalFileStorage::MoveFileAtomic(std::string src, std::string dst) {
     close(dst_fd);
     if (rename(src.c_str(), dst.c_str())) {
       return Status::IOError("Failed to move file: " + formatIOError(src));
+    }
+  }
+  return Status::OK();
+}
+
+Status LocalFileStorage::GetFileAccessTime(
+    const std::string& path,
+    std::chrono::duration<int64_t, std::nano>& accessTime) {
+  struct stat statbuf;
+  if (stat(path.c_str(), &statbuf) == -1) {
+    return Status::IOError("Failed to get file access time: " +
+                           formatIOError(path));
+  }
+  accessTime = std::chrono::duration<int64_t, std::nano>(
+      statbuf.st_atim.tv_sec * SECOND_TO_NANOSECOND + statbuf.st_atim.tv_nsec);
+  return Status::OK();
+}
+
+Status LocalFileStorage::TouchFile(const std::string& path) {
+  VLOG(100) << "Before touch File:";
+  PrintFileAccessTime(path);
+  auto now = std::chrono::high_resolution_clock::now();
+  auto now_nano = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      now.time_since_epoch())
+                      .count();
+  struct timespec times[2] = {0};
+  times[0].tv_sec = now_nano / SECOND_TO_NANOSECOND;
+  times[0].tv_nsec = now_nano % SECOND_TO_NANOSECOND;
+  times[1].tv_sec = UTIME_OMIT;
+
+  if (utimensat(AT_FDCWD, path.c_str(), times, 0) == -1) {
+    return Status::IOError("Failed to touch file: " + formatIOError(path));
+  }
+  VLOG(100) << "After touch File:";
+  PrintFileAccessTime(path);
+  return Status::OK();
+}
+
+Status LocalFileStorage::GetFileList(std::string dirPath,
+                                     std::vector<std::string>& fileList) {
+  try {
+    for (auto it = ghc::filesystem::recursive_directory_iterator(dirPath);
+         it != ghc::filesystem::recursive_directory_iterator(); ++it) {
+      if (ghc::filesystem::is_regular_file(*it)) {
+        fileList.push_back(it->path().string());
+      }
+    }
+  } catch (ghc::filesystem::filesystem_error& e) {
+    if (e.code() == std::errc::no_such_file_or_directory) {
+      return Status::OK();
+    } else {
+      return Status::IOError(e.what());
     }
   }
   return Status::OK();
