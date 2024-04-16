@@ -106,6 +106,7 @@ setup(
         'hdfs3',
         'oss2',
         'pyarrow',
+        "pyopenssl>=24",
         's3fs',
         'vineyard',
         'zstd',
