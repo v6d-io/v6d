@@ -17,6 +17,7 @@ limitations under the License.
 #define MODULES_LLM_CACHE_STORAGE_LOCAL_FILE_STORAGE_H_
 
 #include <fstream>
+#include <list>
 #include <memory>
 #include <regex>
 #include <string>
