@@ -156,14 +156,14 @@ PYBIND11_MODULE(llm_C, m) {
           "_generate",
           [](int tensor_bytes, int cache_capacity, int layer, int chunk_size,
              int split_number, std::string root, FilesystemType filesystemType,
-             int client_gc_interval, int ttl, bool enable_global_gc, int global_gc_interval,
-             int global_ttl)
-              -> std::shared_ptr<KVStateCacheManager> {
+             int client_gc_interval, int ttl, bool enable_global_gc,
+             int global_gc_interval,
+             int global_ttl) -> std::shared_ptr<KVStateCacheManager> {
             std::shared_ptr<KVStateCacheManager> manager;
-            FileCacheConfig config(tensor_bytes, cache_capacity, layer,
-                                   chunk_size, split_number, root,
-                                   filesystemType, client_gc_interval, ttl,
-                                   enable_global_gc, global_gc_interval, global_ttl);
+            FileCacheConfig config(
+                tensor_bytes, cache_capacity, layer, chunk_size, split_number,
+                root, filesystemType, client_gc_interval, ttl, enable_global_gc,
+                global_gc_interval, global_ttl);
             VINEYARD_CHECK_OK(
                 vineyard::KVStateCacheManager::Make(manager, config));
             return manager;
@@ -173,7 +173,8 @@ PYBIND11_MODULE(llm_C, m) {
           py::arg("split_number") = 3, py::arg("root") = "root",
           py::arg("filesystem_type") = FilesystemType::LOCAL,
           py::arg("client_gc_interval") = 30 * 60, py::arg("ttl") = 30 * 60,
-          py::arg("enable_global_gc") = false, py::arg("global_gc_interval") = 30 * 60,
+          py::arg("enable_global_gc") = false,
+          py::arg("global_gc_interval") = 30 * 60,
           py::arg("global_ttl") = 30 * 60);
 }
 
