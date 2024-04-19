@@ -20,7 +20,7 @@ Deploy the Vineyard Cluster
 
 .. code:: bash
 
-    $ vineyardctl deploy vineyard-cluster --create-namespace
+    $ python3 -m vineyard.ctl deploy vineyard-cluster --create-namespace
 
 This command will create a vineyard cluster in the namespace `vineyard-system`.
 You can check as follows:
@@ -57,7 +57,7 @@ Then deploy the vineyard csi driver which specifies the vineyard cluster to use:
 
 .. code:: bash
 
-    $ vineyardctl deploy csidriver --clusters vineyard-system/vineyardd-sample
+    $ python3 -m vineyard.ctl deploy csidriver --clusters vineyard-system/vineyardd-sample
 
 Then check the status of the Vineyard CSI Driver:
 
@@ -551,7 +551,7 @@ Delete the vineyard cluster:
 
 .. code:: bash
 
-    $ vineyardctl delete vineyard-cluster
+    $ python3 -m vineyard.ctl delete vineyard-cluster
 
 Delete the data volume:
 
@@ -568,5 +568,5 @@ Delete the kubeflow namespace:
 .. _Kubeflow Pipeline: https://github.com/kubeflow/kubeflow
 .. _Argo Workflow: https://github.com/argoproj/argo-workflows
 .. _Initialize Kubernetes Cluster: https://v6d.io/tutorials/kubernetes/using-vineyard-operator.html#step-0-optional-initialize-kubernetes-cluster
-.. _Vineyardctl: https://v6d.io/notes/developers/build-from-source.html#install-vineyardctl
+.. _Vineyardctl: https://v6d.io/notes/cloud-native/deploy-kubernetes.html#quick-start
 .. _Argo Workflow CLI: https://github.com/argoproj/argo-workflows/releases/
