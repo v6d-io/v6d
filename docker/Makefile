@@ -126,6 +126,7 @@ build-python-dev:
 vineyard-fluid-fuse:
 	docker build ./vineyard-fluid-fuse \
 		-t $(VINEYARD_FLUID_FUSE_REGISTRY)/$(VINEYARD_FLUID_FUSE_IMAGE):$(VINEYARD_FLUID_FUSE_TAG) \
+		--platform linux/$(ARCH) \
 		--build-arg PLATFORM=$(PLATFORM)
 .PHONY: vineyard-fluid-fuse
 
