@@ -192,13 +192,14 @@ Status LocalFileStorage::GetFileAccessTime(
     return Status::IOError("Failed to get file access time: " +
                            formatIOError(path));
   }
-  #ifdef __APPLE__
-    accessTime = std::chrono::duration<int64_t, std::nano>(
-        statbuf.st_atimespec.tv_sec * SECOND_TO_NANOSECOND + statbuf.st_atimespec.tv_nsec);
-  #else
-    accessTime = std::chrono::duration<int64_t, std::nano>(
-        statbuf.st_atim.tv_sec * SECOND_TO_NANOSECOND + statbuf.st_atim.tv_nsec);
-  #endif
+#ifdef __APPLE__
+  accessTime = std::chrono::duration<int64_t, std::nano>(
+      statbuf.st_atimespec.tv_sec * SECOND_TO_NANOSECOND +
+      statbuf.st_atimespec.tv_nsec);
+#else
+  accessTime = std::chrono::duration<int64_t, std::nano>(
+      statbuf.st_atim.tv_sec * SECOND_TO_NANOSECOND + statbuf.st_atim.tv_nsec);
+#endif
   return Status::OK();
 }
 
