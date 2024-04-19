@@ -170,9 +170,10 @@ Next, we will show how to deploy airflow with vineyard on Kubernetes using the h
 
 You are supposed to deploy the vineyard cluster on the
 kubernetes cluster first. For example, you can deploy a vineyard cluster with the [vineyardctl command](https://github.com/v6d-io/v6d/tree/main/k8s/cmd#vineyardctl).
+Before using it, please [install the vineyardctl](https://v6d.io/notes/cloud-native/deploy-kubernetes.html#quick-start) first.
 
 ```bash
-$ vineyardctl deploy vineyard-deployment --create-namespace
+$ python3 -m vineyard.ctl deploy vineyard-deployment --create-namespace
 ```
 
 The [values.yaml](./values.yaml) mainly tweak the following settings:

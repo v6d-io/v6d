@@ -100,7 +100,7 @@ as follows.
     # create the namespace
     $ kubectl create ns vineyard-test
     # get all injected resources
-    $ vineyardctl inject -f pod.yaml | kubectl apply -f -
+    $ python3 -m vineyard.ctl inject -f pod.yaml | kubectl apply -f -
     pod/vineyard-sidecar-etcd-0 created
     service/vineyard-sidecar-etcd-0 created
     service/vineyard-sidecar-etcd-service created
@@ -135,7 +135,7 @@ Deploy the vineyard deployment (default is 3 replicas) as follows.
     # create the namespace if not exists
     $ kubectl create ns vineyard-test
     # create the vineyard deployment
-    $ vineyardctl deploy vineyard-deployment --name vineyardd-sample -n vineyard-test
+    $ python3 -m vineyard.ctl deploy vineyard-deployment --name vineyardd-sample -n vineyard-test
     2023-07-21T15:42:25.981+0800    INFO    vineyard cluster deployed successfully
 
 Check the vineyard deployment status and the three vineyardd pods should run on the different nodes.
@@ -239,12 +239,12 @@ Use the `vineyardctl` to schedule the two workloads on the vineyard cluster.
 .. code:: bash
 
     # schedule the producer workload to the vineyard cluster and apply it to the kubernetes cluster
-    $ vineyardctl schedule workload -f producer.yaml --vineyardd-name vineyardd-sample \
+    $ python3 -m vineyard.ctl schedule workload -f producer.yaml --vineyardd-name vineyardd-sample \
     --vineyardd-namespace vineyard-test -o yaml | kubectl apply -f -
     deployment.apps/producer created
 
     # schedule the consumer workload to the vineyard cluster and apply it to the kubernetes cluster
-    $ vineyardctl schedule workload -f consumer.yaml --vineyardd-name vineyardd-sample \
+    $ python3 -m vineyard.ctl schedule workload -f consumer.yaml --vineyardd-name vineyardd-sample \
     --vineyardd-namespace vineyard-test -o yaml | kubectl apply -f -
     deployment.apps/consumer created
 
@@ -265,5 +265,5 @@ As the consumer may be scheduled to different node from the producer with the de
 should get the remote object id by name and then fetch it from other vineyard nodes. For more details, please refer to
 the `vineyard objects`_.
 
-.. _vineyardctl installation: https://v6d.io/notes/developers/build-from-source.html#install-vineyardctl
+.. _vineyardctl installation: https://v6d.io/notes/cloud-native/deploy-kubernetes.html#quick-start
 .. _vineyard objects: https://v6d.io/notes/key-concepts/objects.html#transient-vs-persistent
