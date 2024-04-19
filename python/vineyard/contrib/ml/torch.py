@@ -216,6 +216,8 @@ def put_torch_tensors(client, tensors) -> List[Union[ObjectID, ObjectMeta]]:
 
     metadatas = []
     for tensor, size, blob in zip(tensors, sizes, blobs):
+        if tensor.dtype == torch.bfloat16:
+            tensor = tensor.to(torch.float16)
         value = tensor.numpy()
         meta = ObjectMeta()
         meta['typename'] = 'vineyard::Tensor<%s>' % normalize_cpptype(value.dtype)
