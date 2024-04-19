@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <pybind11/cast.h>
 #include "pybind11/pybind11.h"
 #include "pybind11/stl.h"
 
@@ -154,12 +155,15 @@ PYBIND11_MODULE(llm_C, m) {
       .def(
           "_generate",
           [](int tensor_bytes, int cache_capacity, int layer, int chunk_size,
-             int split_number, std::string root, FilesystemType filesystemType)
-              -> std::shared_ptr<KVStateCacheManager> {
+             int split_number, std::string root, FilesystemType filesystemType,
+             int client_gc_interval, int ttl, bool enable_global_gc,
+             int global_gc_interval,
+             int global_ttl) -> std::shared_ptr<KVStateCacheManager> {
             std::shared_ptr<KVStateCacheManager> manager;
-            FileCacheConfig config(tensor_bytes, cache_capacity, layer,
-                                   chunk_size, split_number, root,
-                                   filesystemType);
+            FileCacheConfig config(
+                tensor_bytes, cache_capacity, layer, chunk_size, split_number,
+                root, filesystemType, client_gc_interval, ttl, enable_global_gc,
+                global_gc_interval, global_ttl);
             VINEYARD_CHECK_OK(
                 vineyard::KVStateCacheManager::Make(manager, config));
             return manager;
@@ -167,7 +171,11 @@ PYBIND11_MODULE(llm_C, m) {
           py::arg("tensor_bytes") = 10, py::arg("cache_capacity") = 10,
           py::arg("layer") = 1, py::arg("chunk_size") = 5,
           py::arg("split_number") = 3, py::arg("root") = "root",
-          py::arg("filesystem_type") = FilesystemType::LOCAL);
+          py::arg("filesystem_type") = FilesystemType::LOCAL,
+          py::arg("client_gc_interval") = 30 * 60, py::arg("ttl") = 30 * 60,
+          py::arg("enable_global_gc") = false,
+          py::arg("global_gc_interval") = 30 * 60,
+          py::arg("global_ttl") = 30 * 60);
 }
 
 }  // namespace vineyard

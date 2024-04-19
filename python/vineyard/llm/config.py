@@ -67,6 +67,11 @@ class FileCacheConfig:
         split_number: int = 2,
         root: str = "/tmp/vineyard/llm_cache",
         filesystem_type: FilesystemType = FilesystemType.LOCAL,
+        client_gc_interval: int = 30 * 60,
+        ttl: int = 30 * 60,
+        enable_global_gc: bool = False,
+        global_gc_interval: int = 3 * 60 * 60,
+        global_ttl: int = 3 * 60 * 60,
     ):
         """Create a file cache config.
 
@@ -82,8 +87,27 @@ class FileCacheConfig:
                 Defaults to "/tmp/vineyard/llm_cache".
             filesystem_type (str):
                 The type of the filesystem. Defaults to "local".
+            client_gc_interval (int):
+                The interval of the client gc (seconds).
+                Defaults to 30 * 60 seconds.
+            ttl (int):
+                The time to live of the kv state files (seconds).
+                Defaults to 30 * 60 seconds.
+            enable_global_gc (bool):
+                Enable the global gc or not. Defaults to False.
+            global_gc_interval (int):
+                The interval of the global gc (seconds).
+                Defaults to 3 * 60 * 60 seconds.
+            global_ttl (int):
+                The time to live of the global gc files (seconds).
+                Defaults to 3 * 60 * 60 seconds.
         """
         self.chunk_size = chunk_size
         self.split_number = split_number
         self.root = root
         self.filesystem_type = filesystem_type
+        self.client_gc_interval = client_gc_interval
+        self.ttl = ttl
+        self.enable_global_gc = enable_global_gc
+        self.global_gc_interval = global_gc_interval
+        self.global_ttl = global_ttl
