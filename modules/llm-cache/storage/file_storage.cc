@@ -663,8 +663,8 @@ void FileStorage::PrintFileAccessTime(std::string path) {
 
 std::string FileStorage::GetTimestamp(
     std::chrono::duration<int64_t, std::nano> time) {
-  std::chrono::time_point<std::chrono::system_clock> timestamp =
-      std::chrono::time_point<std::chrono::system_clock>(time);
+  auto duration_since_epoch = std::chrono::duration_cast<std::chrono::system_clock::duration>(time);
+  std::chrono::time_point<std::chrono::system_clock> timestamp = std::chrono::system_clock::time_point(duration_since_epoch);
   time_t t = std::chrono::system_clock::to_time_t(timestamp);
 
   std::tm tm;
