@@ -29,6 +29,7 @@ limitations under the License.
 #include "arrow/csv/api.h"
 #include "arrow/filesystem/api.h"
 #include "arrow/io/api.h"
+#include "arrow/util/config.h"
 #include "arrow/util/uri.h"
 #include "boost/algorithm/string.hpp"
 
@@ -103,11 +104,18 @@ LocalIOAdaptor::LocalIOAdaptor(const std::string& location)
       break;
     }
   }
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 16000000
+  auto encoded_location =
+      location_.substr(0, i) + arrow::util::UriEscape(location_.substr(i));
+#else
   auto encoded_location =
       location_.substr(0, i) + arrow::internal::UriEscape(location_.substr(i));
+#endif
   fs_ = arrow::fs::FileSystemFromUriOrPath(encoded_location, &location_)
             .ValueOrDie();
-#if defined(ARROW_VERSION) && ARROW_VERSION >= 3000000
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 16000000
+  location_ = arrow::util::UriUnescape(location_);
+#elif defined(ARROW_VERSION) && ARROW_VERSION >= 3000000
   location_ = arrow::internal::UriUnescape(location_);
 #else
   // Referred https://stackoverflow.com/questions/154536/encode-decode-urls-in-c

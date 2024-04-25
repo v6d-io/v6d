@@ -29,6 +29,7 @@ limitations under the License.
 
 #include "arrow/api.h"
 #include "arrow/io/api.h"
+#include "arrow/util/config.h"
 #include "arrow/util/uri.h"
 #include "boost/algorithm/string.hpp"
 
@@ -72,10 +73,16 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
   }
   // If there are non-ascii characters, we shall pre-encode the location,
   // as the arrow::internal::Uri will fail.
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 16000000
+  auto encoded_location = location_to_parse.substr(0, i) +
+                          arrow::util::UriEscape(location_to_parse.substr(i));
+  arrow::util::Uri uri;
+#else
   auto encoded_location =
       location_to_parse.substr(0, i) +
       arrow::internal::UriEscape(location_to_parse.substr(i));
   arrow::internal::Uri uri;
+#endif
   {
     auto s = uri.Parse(encoded_location);
     if (!s.ok()) {  // Assume it's a local file
@@ -100,8 +107,13 @@ std::unique_ptr<IIOAdaptor> IOFactory::CreateIOAdaptor(
       // Note we should not encode the leading '/' if there is one,
       // cause arrow::internal::Uri requires the path must be an absolute path.
       location_to_parse = std::string(resolved_path);
+#if defined(ARROW_VERSION) && ARROW_VERSION >= 16000000
+      auto s = uri.Parse("file:///" +
+                         arrow::util::UriEscape(location_to_parse.substr(1)));
+#else
       auto s = uri.Parse(
           "file:///" + arrow::internal::UriEscape(location_to_parse.substr(1)));
+#endif
       if (!s.ok()) {
         LOG(ERROR) << "Failed to detect the scheme of given location "
                    << location;

@@ -125,12 +125,12 @@ jobs:
           wget https://apache.jfrog.io/artifactory/arrow/$(lsb_release --id --short | tr 'A-Z' 'a-z')/apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt install -y -V ./apache-arrow-apt-source-latest-$(lsb_release --codename --short).deb
           sudo apt update
-          sudo apt install -y libarrow-dev=14.0.1-1 \
-                              libarrow-dataset-dev=14.0.1-1 \
-                              libarrow-acero-dev=14.0.1-1 \
-                              libarrow-flight-dev=14.0.1-1 \
-                              libgandiva-dev=14.0.1-1 \
-                              libparquet-dev=14.0.1-1
+          sudo apt install -y libarrow-dev \
+                              libarrow-dataset-dev \
+                              libarrow-acero-dev \
+                              libarrow-flight-dev \
+                              libgandiva-dev \
+                              libparquet-dev
 
           # install deps for java
           sudo apt install -y default-jdk-headless maven
