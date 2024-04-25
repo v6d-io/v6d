@@ -1,0 +1,9 @@
+FROM python:3.10
+
+WORKDIR /
+
+COPY master.py /master.py
+
+RUN pip3 install kubernetes
+
+CMD ["python3", "master.py"]

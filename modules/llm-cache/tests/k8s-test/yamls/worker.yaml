@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: fs-llm-test-worker
+spec:
+  podManagementPolicy: Parallel
+  replicas: 32
+  selector:
+    matchLabels:
+      app: fs-llm-test-worker
+  serviceName: "my-service"
+  template:
+    metadata:
+      labels:
+        app: fs-llm-test-worker
+    spec:
+      containers:
+      - name: fs-llm-test
+        image: registry.cn-wulanchabu.aliyuncs.com/vineyard/fs-llm-master:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - "/bin/bash"
+        - "-c"
+        - "python3 /worker.py"
+        env:
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: LAYER
+          value: "96"
+        - name: BATCH_SIZE
+          value: "16"
+        - name: SPLIT_NUMBER
+          value: "2"
+        resources:
+          limits:
+            cpu: "7"
+            memory: 15Gi
+          requests:
+            cpu: "7"
+            memory: 15Gi
+        ports:
+        - protocol: TCP
+          containerPort: 8888
+        volumeMounts:
+          - name: nas-pvc
+            mountPath: "/tmp/vineyard/llm_cache"
+      volumes:
+        - name: nas-pvc
+          persistentVolumeClaim:
+            claimName: nas-csi-pvc
