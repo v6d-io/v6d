@@ -2,8 +2,8 @@ import socket
 import random
 import os
 import time
-from kubernetes import client, config
 from multiprocessing import Pool
+from kubernetes import client, config
 
 def get_pod_ips(label_selector):
     config.load_incluster_config()
@@ -17,7 +17,7 @@ def get_pod_ips(label_selector):
 def distribute_prompts(args):
     file_name, server_ips = args
     token_list = []
-    with open(f'{file_name}', 'r') as f:
+    with open(f'{file_name}', 'r', encoding='utf-8') as f:
         while True:
             line = f.readline()
             if not line:

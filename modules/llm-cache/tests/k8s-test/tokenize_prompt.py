@@ -8,7 +8,7 @@ from transformers import LongformerTokenizer
 from tqdm import tqdm
 
 def map_to_small_files(prompt_file, file_nums, shuffle=False):
-    with open(prompt_file, 'r') as f:
+    with open(prompt_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
     conversation_list = []
@@ -27,7 +27,7 @@ def map_to_small_files(prompt_file, file_nums, shuffle=False):
     sub_conversation_list = [conversation_list[i:i+avg] for i in range(0, len(conversation_list), avg)]
 
     for i in range(file_nums):
-        with open(f'./small_files/prompts_{i}.txt', 'w') as f:
+        with open(f'./small_files/prompts_{i}.txt', 'w', encoding='utf-8') as f:
             prompts_list = []
             # shuffle the conversation list
             if shuffle:
@@ -50,14 +50,14 @@ def map_to_small_files(prompt_file, file_nums, shuffle=False):
 
 def process_small_files(file_name):
     tokenizer = LongformerTokenizer.from_pretrained('allenai/longformer-base-4096')
-    with open(f'./small_files/{file_name}', 'r') as f:
+    with open(f'./small_files/{file_name}', 'r', encoding='utf-8') as f:
         prompts = f.read().strip().split("\n")
 
     num_prompts = len(prompts)
 
     file_index = int(file_name.split('_')[-1].split('.')[0])
 
-    with open(f'./small_files/tokens_{file_index}', 'w') as tf:
+    with open(f'./small_files/tokens_{file_index}', 'w', encoding='utf-8') as tf:
         for prompt in tqdm(prompts, desc=f'Processing {file_name}', total=num_prompts, position=file_index, leave=True):
             index = 0
             tokens_set = []

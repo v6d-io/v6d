@@ -37,6 +37,16 @@ spec:
           value: "16"
         - name: SPLIT_NUMBER
           value: "2"
+        - name: CLIENT_GC_INTERVAL
+          value: "1800"
+        - name: TTL
+          value: "1800"
+        - name: ENABLE_GLOBAL_GC
+          value: "false"
+        - name: GLOBAL_GC_INTERVAL
+          value: "1800"
+        - name: GLOBAL_TTL
+          value: "1800"
         resources:
           limits:
             cpu: "7"

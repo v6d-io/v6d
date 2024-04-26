@@ -15,6 +15,11 @@ def start_server(port=8888):
     batch_size = int(os.environ.get('BATCH_SIZE', 16))
     split_number = int(os.environ.get('SPLIT_NUMBER', 2))
     cache_path = os.environ.get('CACHE_PATH', '/mnt/llm_cache')
+    client_gc_interval = int(os.environ.get('CLIENT_GC_INTERVAL', 30 * 60))
+    ttl = int(os.environ.get('TTL', 30 * 60))
+    enable_global_gc = os.environ.get('ENABLE_GLOBAL_GC', False).lower() in ['true', '1']
+    global_gc_interval = int(os.environ.get('GLOBAL_GC_INTERVAL', 3 * 60 * 60))
+    global_ttl = int(os.environ.get('GLOBAL_TTL', 3 * 60 * 60))
     serversocket.bind((ip, port))
     serversocket.listen(20)
 
@@ -26,6 +31,11 @@ def start_server(port=8888):
         chunk_size = int(batch_size),
         split_number = int(split_number),
         root = cache_path,
+        client_gc_interval = client_gc_interval,
+        ttl = ttl,
+        enable_global_gc = enable_global_gc,
+        global_gc_interval = global_gc_interval,
+        global_ttl = global_ttl,
     )
     cache = KVCache(
         cache_config = file_cache_config,
@@ -57,7 +67,7 @@ def start_server(port=8888):
     kv_state_list = []
 
     while True:
-        clientsocket, addr = serversocket.accept()
+        clientsocket, _ = serversocket.accept()
 
         tokens = b''
         while True:

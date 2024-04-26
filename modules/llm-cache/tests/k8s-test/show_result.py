@@ -1,7 +1,7 @@
 import re
 import os
-from kubernetes import client, config
 import argparse
+from kubernetes import client, config
 
 def get_pod_logs(api_instance, pod_name, namespace='default'):
     log = api_instance.read_namespaced_pod_log(name=pod_name, namespace=namespace)
@@ -22,7 +22,8 @@ def extract_last_metrics_from_log(log):
     total_updated_tokens = total_updated_tokens_re.findall(log)
     total_update_time = total_update_time_re.findall(log)
 
-    if len(total_matched_tokens) == 0 or len(total_query_time) == 0 or len(total_updated_tokens) == 0 or len(total_update_time) == 0:
+    if len(total_matched_tokens) == 0 or len(total_query_time) == 0 or \
+        len(total_updated_tokens) == 0 or len(total_update_time) == 0:
         return None
     print(total_matched_tokens, total_query_time, total_updated_tokens, total_update_time)
     return int(total_matched_tokens[0]), float(total_query_time[0]), int(total_updated_tokens[0]), float(total_update_time[0])
@@ -41,13 +42,11 @@ def calculate_averages(metrics_list):
 
     for matched, query_time, updated, update_time in metrics_list:
         if matched != 0:
-            if matched/query_time > max_query_speed:
-                max_query_speed = matched/query_time
+            max_query_speed = max(max_query_speed, matched / query_time)
             total_query_speed += matched/query_time
             total_query_instance += 1
         if updated != 0:
-            if updated/update_time > max_update_speed:
-                max_update_speed = update_time / updated
+            max_update_speed = max(max_update_speed, updated / update_time)
             total_update_speed += updated/update_time
             total_update_instance += 1
 
