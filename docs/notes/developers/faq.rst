@@ -92,17 +92,27 @@ concerns, please feel free to `open an issue`_ or `post it to discussions`_.
 
 9. *What's the minimal Kubernetes version requirement for vineyard operator?*
 
-  At present, we only test the vineyard operator based on Kubernetes 1.24.0. 
-  So we highly recommend using Kubernetes 1.24.0 or above.
+  At present, the vineyard scheduler (a component of vineyard operator) is compatible with
+  Kubernetes versions 1.19 to 1.24. Ensure your Kubernetes cluster is within this version
+  range for proper functionality.
 
-10. *Why the vineyard operator can't be deployed on Kubernetes?*
+10. *Can the vineyard operator be deployed in the latest kubernetes cluster?*
+
+  The answer is yes.
+
+  Actually, the k8s compatibility of vineyard operator is bound by the vineyard scheduler.
+  You can refer the `KubeSchedulerConfiguration doc`_ to bump up the 
+  `Vineyard Scheduler KubeSchedulerConfiguration`_ to V1 and then bump up the k8s version
+  in the `go.mod`_.
+  
+11. *Why the vineyard operator can't be deployed on Kubernetes?*
 
   If you use the helm to deploy the vineyard operator, you may find the vineyard operator
   can't be deployed successfully after a long time. In this case, you should check whether
   the command contains the flag `--wait`. If so, you should remove the flag `--wait` and
   try to install the operator again.
 
-11. *How to connect to the vineyard cluster deployed by the vineyard operator?*
+12. *How to connect to the vineyard cluster deployed by the vineyard operator?*
 
   There are two ways to connect to the vineyard cluster deployed by the vineyard operator:
 
@@ -112,13 +122,17 @@ concerns, please feel free to `open an issue`_ or `post it to discussions`_.
   - `Through RPC`. Connect to the vineyard cluster through the RPC service exposed by the 
     vineyard operator. You could refer to the `guide`_ for more details.
 
-12. *Is there a way to install the vineyard cluster on Kubernetes quickly?*
+13. *Is there a way to install the vineyard cluster on Kubernetes quickly?*
 
   To reduce the complexity of the installation, we provide a `command line tool`_
   to install the vineyard cluster on Kubernetes quickly.
+
 
 .. _open an issue: https://github.com/v6d-io/v6d/issues/new
 .. _post it to discussions: https://github.com/v6d-io/v6d/discussions/new
 .. _guide: ../../tutorials/kubernetes/using-vineyard-operator.rst
 .. _command line tool: ../../notes/cloud-native/vineyardctl.md
 .. _vineyard client: ../../notes/references/python-api.html#vineyard.Client
+.. _KubeSchedulerConfiguration doc: https://kubernetes.io/docs/reference/scheduling/config/
+.. _Vineyard Scheduler KubeSchedulerConfiguration: https://github.com/v6d-io/v6d/blob/main/k8s/config/scheduler/config.yaml
+.. _go.mod: https://github.com/v6d-io/v6d/blob/main/k8s/go.mod
