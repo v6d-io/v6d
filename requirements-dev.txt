@@ -22,3 +22,4 @@ sphinx-copybutton
 sphinx-panels
 sphinxemoji
 sphinxext-opengraph
+google-re2==1.1
