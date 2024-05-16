@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: fs-llm-test-master
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      instance: fs-llm-test
+      app: fs-llm-test-master
+  serviceName: "my-service"
+  template:
+    metadata:
+      labels:
+        instance: fs-llm-test
+        app: fs-llm-test-master
+    spec:
+      serviceAccountName: fs-llm-test-master-sa
+      containers:
+      - name: fs-llm-test-master
+        image: registry.cn-wulanchabu.aliyuncs.com/vineyard/fs-llm-master:latest
+        imagePullPolicy: IfNotPresent
+        command:
+        - "/bin/bash"
+        - "-c"
+        - "python /master.py"
+        env:
+        - name: TOKENS_FILE_NUM
+          value: "3"
+        volumeMounts:
+          - name: oss-pvc
+            mountPath: "/tokens"
+      volumes:
+        - name: oss-pvc
+          persistentVolumeClaim:
+            claimName: oss-pvc

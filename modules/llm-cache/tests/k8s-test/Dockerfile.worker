@@ -1,0 +1,17 @@
+FROM ghcr.io/v6d-io/v6d/vineyard-python-dev:latest_x86_64 as builder
+
+FROM python:3.10
+
+WORKDIR /
+
+COPY worker.py /worker.py
+COPY --from=builder /tmp/vineyard_llm-0.22.1-py3-none-any.whl vineyard_llm-0.22.1-py3-none-any.whl
+
+RUN apt update && \
+    apt install fio -y
+
+RUN pip3 install vineyard /vineyard_llm-0.22.1-py3-none-any.whl && \
+    pip3 install networkx==3.1 && \
+    pip3 install numpy
+
+CMD ["python3", "worker.py"]
