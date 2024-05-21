@@ -83,7 +83,7 @@ void benchmark_inference(std::vector<std::vector<int>>& tokens) {
   std::chrono::duration<double> query_duration(0);
 
   std::vector<int> inference_tokens;
-  std::map<int, std::pair<LLMKV, LLMKV>> kv_state_list;
+  std::vector<std::pair<LLMKV, LLMKV>> kv_state_list;
   void* key_state = malloc(TENSORBYTES);
   void* value_state = malloc(TENSORBYTES);
 
@@ -116,8 +116,8 @@ void benchmark_inference(std::vector<std::vector<int>>& tokens) {
       }
       for (auto& kv : kv_state_list) {
         for (int currentLayer = 0; currentLayer < LAYER; currentLayer++) {
-          memcpy(key_state, kv.second.first.data, kv.second.first.length);
-          memcpy(value_state, kv.second.second.data, kv.second.second.length);
+          memcpy(key_state, kv.first.data, kv.first.length);
+          memcpy(value_state, kv.second.data, kv.second.length);
         }
       }
       end = std::chrono::steady_clock::now();
