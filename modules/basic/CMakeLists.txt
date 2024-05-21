@@ -5,7 +5,8 @@ file(GLOB_RECURSE VINEYARD_MOD_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
 
 file(GLOB_RECURSE VINEYARD_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}"
                                    "ds/*.h"
-                                   "stream/*.h")
+                                   "stream/*.h"
+                                   "ds/perfect_hash/*.h")
 
 if(VINEYARD_MOD_SRCS)
     vineyard_generate(
@@ -64,15 +65,15 @@ install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/wyhash
         PATTERN "*.hpp"                         # select C++ template header files
 )
 
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/BBHash
+# install bundled thirdparty: cityhash
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/cityhash
         DESTINATION include/vineyard/contrib    # target directory
         FILES_MATCHING                          # install only matched files
         PATTERN "*.h"                           # select header files
         PATTERN "*.hpp"                         # select C++ template header files
 )
 
-# install bundled thirdparty: cityhash
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/cityhash
+install(DIRECTORY ${PROJECT_SOURCE_DIR}/thirdparty/pthash
         DESTINATION include/vineyard/contrib    # target directory
         FILES_MATCHING                          # install only matched files
         PATTERN "*.h"                           # select header files
