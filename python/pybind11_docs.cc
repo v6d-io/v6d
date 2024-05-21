@@ -280,6 +280,17 @@ const char* Object_nbytes = R"doc(
 The nbytes of this object.
 )doc";
 
+const char* Object_construct = R"doc(
+.. method:: construct(meta: ObjectMeta) -> Object
+    :noindex:
+Construct the object from the meta.
+Parameters:
+    meta: ObjectMeta
+        The meta of the object.
+Returns:
+    Object
+)doc";
+
 const char* Object_typename = R"doc(
 The typename of this object. :code:`typename` is the string value of the C++ type,
 e.g., :code:`vineyard::Array<int>`, :code:`vineyard::Table`.

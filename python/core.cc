@@ -425,6 +425,21 @@ void bind_core(py::module& mod) {
             return object->meta().GetTypeName();
           },
           doc::Object_typename)
+      .def_static(
+          "construct",
+          [](const ObjectMeta& meta) -> std::shared_ptr<Object> {
+            RETURN_NULL_ON_ASSERT(!meta.MetaData().empty(),
+                                  "metadata shouldn't be empty");
+            std::shared_ptr<Object> object =
+                ObjectFactory::Create(meta.GetTypeName());
+            if (object == nullptr) {
+              std::cout << "object is nullptr" << std::endl;
+              object = std::unique_ptr<Object>(new Object());
+            }
+            object->Construct(meta);
+            return object;
+          },
+          py::arg("meta"), doc::Object_construct)
       .def(
           "member",
           [](Object const* self, std::string const& name) {
