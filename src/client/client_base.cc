@@ -306,9 +306,6 @@ Status ClientBase::PullNextStreamChunk(ObjectID const id,
   RETURN_ON_ERROR(this->PullNextStreamChunk(id, meta));
   RETURN_ON_ASSERT(!meta.MetaData().empty());
   chunk = ObjectFactory::Create(meta.GetTypeName());
-  if (chunk == nullptr) {
-    chunk = std::unique_ptr<Object>(new Object());
-  }
   chunk->Construct(meta);
   return Status::OK();
 }

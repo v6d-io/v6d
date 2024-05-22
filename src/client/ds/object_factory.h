@@ -84,6 +84,13 @@ class ObjectFactory {
   }
 
   /**
+   * @brief  Create a default object.
+   *
+   * @return std::unique_ptr<Object> Return a default object.
+   */
+  static std::unique_ptr<Object> CreateDefaultObject();
+
+  /**
    * @brief Initialize an instance by looking up the `type_name` in the factory.
    *
    * @param type_name The type to be instantiated.

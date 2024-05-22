@@ -432,10 +432,6 @@ void bind_core(py::module& mod) {
                                   "metadata shouldn't be empty");
             std::shared_ptr<Object> object =
                 ObjectFactory::Create(meta.GetTypeName());
-            if (object == nullptr) {
-              std::cout << "object is nullptr" << std::endl;
-              object = std::unique_ptr<Object>(new Object());
-            }
             object->Construct(meta);
             return object;
           },
