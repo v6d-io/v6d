@@ -274,6 +274,8 @@ class Client:
             except VineyardException:
                 continue
 
+        self._dispersion = False
+        self._compression = True
         if self._ipc_client is None and self._rpc_client is None:
             raise ConnectionError(
                 "Failed to connect to vineyard via both IPC and RPC connection. "
@@ -287,12 +289,22 @@ class Client:
         '''Whether the compression is enabled for underlying RPC client.'''
         if self._rpc_client:
             return self._rpc_client.compression
-        return None
+        return self._compression
 
     @compression.setter
     def compression(self, value: bool = True):
         if self._rpc_client:
             self._rpc_client.compression = value
+        self._compression = value
+
+    @property
+    def dispersion(self) -> bool:
+        '''Whether the dispersion is enabled for underlying RPC client.'''
+        return self._dispersion
+
+    @dispersion.setter
+    def dispersion(self, value: bool = False):
+        self._dispersion = value
 
     @property
     def ipc_client(self) -> IPCClient:
@@ -788,6 +800,14 @@ class Client:
         self.compression = enabled
         yield
         self.compression = compression
+
+    @contextlib.contextmanager
+    def with_dispersion(self, enabled: bool = True):
+        """Enable dispersion for the following put operations."""
+        tmp_dispersion = self._dispersion
+        self.dispersion = enabled
+        yield
+        self.dispersion = tmp_dispersion
 
 
 __all__ = ['Client']
