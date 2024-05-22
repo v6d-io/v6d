@@ -172,6 +172,9 @@ std::shared_ptr<Object> RPCClient::GetObject(const ObjectID id) {
   RETURN_NULL_ON_ERROR(this->GetMetaData(id, meta, true));
   RETURN_NULL_ON_ASSERT(!meta.MetaData().empty());
   auto object = ObjectFactory::Create(meta.GetTypeName());
+  if (object == nullptr) {
+    object = std::unique_ptr<Object>(new Object());
+  }
   object->Construct(meta);
   return object;
 }
@@ -195,6 +198,9 @@ Status RPCClient::GetObject(const ObjectID id,
   meta.ForceLocal();
 
   object = ObjectFactory::Create(meta.GetTypeName());
+  if (object == nullptr) {
+    object = std::unique_ptr<Object>(new Object());
+  }
   object->Construct(meta);
   return Status::OK();
 }
@@ -214,6 +220,9 @@ std::vector<std::shared_ptr<Object>> RPCClient::GetObjects(
       objects[index] = nullptr;
     } else {
       auto object = ObjectFactory::Create(metas[index].GetTypeName());
+      if (object == nullptr) {
+        object = std::unique_ptr<Object>(new Object());
+      }
       object->Construct(metas[index]);
       objects[index] = std::shared_ptr<Object>(object.release());
     }
@@ -250,6 +259,9 @@ std::vector<std::shared_ptr<Object>> RPCClient::ListObjects(
     ObjectMeta meta;
     meta.SetMetaData(this, kv.second);
     auto object = ObjectFactory::Create(meta.GetTypeName());
+    if (object == nullptr) {
+      object = std::unique_ptr<Object>(new Object());
+    }
     object->Construct(meta);
     objects.emplace_back(std::shared_ptr<Object>(object.release()));
   }

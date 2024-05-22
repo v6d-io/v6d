@@ -31,7 +31,7 @@ limitations under the License.
 
 namespace vineyard {
 
-std::unique_ptr<Object> ObjectFactory::CreateDefaultObject() {
+std::unique_ptr<Object> ObjectFactory::Default() {
   return std::unique_ptr<Object>(new Object());
 }
 
@@ -47,7 +47,7 @@ std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name) {
     }
 
 #endif
-    return CreateDefaultObject();
+    return nullptr;
   } else {
     return (creator->second)();
   }
@@ -69,7 +69,7 @@ std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name,
                 << type_name << std::endl;
     }
 #endif
-    return CreateDefaultObject();
+    return nullptr;
   } else {
     auto target = (creator->second)();
     target->Construct(metadata);

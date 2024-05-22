@@ -425,17 +425,19 @@ void bind_core(py::module& mod) {
             return object->meta().GetTypeName();
           },
           doc::Object_typename)
-      .def_static(
-          "construct",
-          [](const ObjectMeta& meta) -> std::shared_ptr<Object> {
-            RETURN_NULL_ON_ASSERT(!meta.MetaData().empty(),
-                                  "metadata shouldn't be empty");
-            std::shared_ptr<Object> object =
-                ObjectFactory::Create(meta.GetTypeName());
-            object->Construct(meta);
-            return object;
-          },
-          py::arg("meta"), doc::Object_construct)
+      .def_static("from_",
+                  ([](const ObjectMeta& meta) -> std::shared_ptr<Object> {
+                    RETURN_NULL_ON_ASSERT(!meta.MetaData().empty(),
+                                          "metadata shouldn't be empty");
+                    std::shared_ptr<Object> object =
+                        ObjectFactory::Create(meta.GetTypeName());
+                    if (object == nullptr) {
+                      object = ObjectFactory::Default();
+                    }
+                    object->Construct(meta);
+                    return object;
+                  }),
+                  py::arg("meta"), doc::Object_from_)
       .def(
           "member",
           [](Object const* self, std::string const& name) {

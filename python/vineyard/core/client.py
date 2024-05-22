@@ -578,7 +578,7 @@ class Client:
 
         if self.has_ipc_client():
             if meta.instance_id == self._ipc_client.instance_id or meta.isglobal:
-                return Object.construct(meta)
+                return Object.from_(meta)
             else:
                 warnings.warn(
                     f"Migrating object {object_id} from another vineyard instance "

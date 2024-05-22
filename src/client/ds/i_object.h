@@ -80,8 +80,6 @@ class ObjectBase {
 class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
   // NB: the std::enable_shared_from_this inheritance must be public
  public:
-  Object() {}
-
   virtual ~Object();
 
   /**
@@ -169,6 +167,8 @@ class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
   bool const IsGlobal() const;
 
  protected:
+  Object() {}
+
   ObjectID id_;
   mutable ObjectMeta meta_;
 
@@ -177,6 +177,7 @@ class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
   friend class PlasmaClient;
   friend class RPCClient;
   friend class ObjectMeta;
+  friend class ObjectFactory;
 };
 
 /**

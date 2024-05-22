@@ -183,6 +183,9 @@ void ObjectMeta::AddMember(const std::string& name, const ObjectID member_id) {
 std::shared_ptr<Object> ObjectMeta::GetMember(const std::string& name) const {
   ObjectMeta meta = this->GetMemberMeta(name);
   auto object = ObjectFactory::Create(meta.GetTypeName());
+  if (object == nullptr) {
+    object = std::unique_ptr<Object>(new Object());
+  }
   object->Construct(meta);
   return object;
 }
@@ -193,6 +196,9 @@ Status ObjectMeta::GetMember(const std::string& name,
   RETURN_ON_ERROR(GetMemberMeta(name, meta));
   RETURN_ON_ASSERT(!meta.MetaData().empty(), "metadata shouldn't be empty");
   object = ObjectFactory::Create(meta.GetTypeName());
+  if (object == nullptr) {
+    object = std::unique_ptr<Object>(new Object());
+  }
   object->Construct(meta);
   return Status::OK();
 }

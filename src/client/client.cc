@@ -394,6 +394,9 @@ std::shared_ptr<Object> Client::GetObject(const ObjectID id) {
   RETURN_NULL_ON_ASSERT(!meta.MetaData().empty(),
                         "metadata shouldn't be empty");
   auto object = ObjectFactory::Create(meta.GetTypeName());
+  if (object == nullptr) {
+    object = std::unique_ptr<Object>(new Object());
+  }
   object->Construct(meta);
   return object;
 }
@@ -409,6 +412,9 @@ Status Client::GetObject(const ObjectID id, std::shared_ptr<Object>& object) {
   RETURN_ON_ERROR(this->GetMetaData(id, meta, true));
   RETURN_ON_ASSERT(!meta.MetaData().empty());
   object = ObjectFactory::Create(meta.GetTypeName());
+  if (object == nullptr) {
+    object = std::unique_ptr<Object>(new Object());
+  }
   object->Construct(meta);
   return Status::OK();
 }
@@ -435,6 +441,9 @@ std::vector<std::shared_ptr<Object>> Client::GetObjects(
       objects[index] = nullptr;
     } else {
       auto object = ObjectFactory::Create(metas[index].GetTypeName());
+      if (object == nullptr) {
+        object = std::unique_ptr<Object>(new Object());
+      }
       object->Construct(metas[index]);
       objects[index] = std::shared_ptr<Object>(object.release());
     }
@@ -516,6 +525,9 @@ std::vector<std::shared_ptr<Object>> Client::ListObjects(
     }
 
     auto object = ObjectFactory::Create(meta.GetTypeName());
+    if (object == nullptr) {
+      object = std::unique_ptr<Object>(new Object());
+    }
     object->Construct(meta);
     objects.emplace_back(std::shared_ptr<Object>(object.release()));
   }
