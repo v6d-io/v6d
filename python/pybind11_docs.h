@@ -47,6 +47,7 @@ extern const char* Object_signature;
 extern const char* Object_meta;
 extern const char* Object_nbytes;
 extern const char* Object_typename;
+extern const char* Object_from_;
 extern const char* Object_member;
 extern const char* Object_islocal;
 extern const char* Object_ispersist;

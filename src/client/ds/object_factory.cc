@@ -31,6 +31,10 @@ limitations under the License.
 
 namespace vineyard {
 
+std::unique_ptr<Object> ObjectFactory::Default() {
+  return std::unique_ptr<Object>(new Object());
+}
+
 std::unique_ptr<Object> ObjectFactory::Create(std::string const& type_name) {
   auto& known_types = getKnownTypes();
   auto creator = known_types.find(type_name);

@@ -285,6 +285,17 @@ The typename of this object. :code:`typename` is the string value of the C++ typ
 e.g., :code:`vineyard::Array<int>`, :code:`vineyard::Table`.
 )doc";
 
+const char* Object_from_ = R"doc(
+.. method:: from_(meta: ObjectMeta) -> Object
+    :noindex:
+Construct a new object from the meta.
+Parameters:
+    meta: ObjectMeta
+        The meta of the object.
+Returns:
+    Object
+)doc";
+
 const char* Object_member = R"doc(
 .. method:: member(self, name: str) -> Object
     :noindex:

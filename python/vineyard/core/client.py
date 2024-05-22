@@ -574,11 +574,11 @@ class Client:
         return self
 
     def _fetch_object(self, object_id: ObjectID) -> Object:
-        meta = self.get_meta(object_id)
+        meta = self.get_meta(object_id, sync_remote=True)
 
         if self.has_ipc_client():
             if meta.instance_id == self._ipc_client.instance_id or meta.isglobal:
-                return self._ipc_client.get_object(object_id, fetch=False)
+                return Object.from_(meta)
             else:
                 warnings.warn(
                     f"Migrating object {object_id} from another vineyard instance "

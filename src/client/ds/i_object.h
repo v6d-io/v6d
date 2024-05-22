@@ -177,6 +177,7 @@ class Object : public ObjectBase, public std::enable_shared_from_this<Object> {
   friend class PlasmaClient;
   friend class RPCClient;
   friend class ObjectMeta;
+  friend class ObjectFactory;
 };
 
 /**
