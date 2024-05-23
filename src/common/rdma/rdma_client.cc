@@ -56,40 +56,42 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient> &ptr, std::string server_add
 Status RDMAClient::Make(std::shared_ptr<RDMAClient> &ptr, fi_info *hints, std::string server_address, int port) {
   if(!hints) {
     LOG(ERROR) << "Invalid fabric hints info";
+    return Status::Invalid("Invalid fabric hints info");
   }
 
   ptr = std::make_shared<RDMAClient>();
 
   uint64_t flags = 0;
-  if(fi_getinfo(VINEYARD_FIVERSION, server_address.c_str(), std::to_string(port).c_str(), flags, hints, &(ptr->fi)))
+  CHECK_ERROR(!fi_getinfo(VINEYARD_FIVERSION, server_address.c_str(), std::to_string(port).c_str(), flags, hints, &(ptr->fi)), "fi_getinfo failed\n")
 
-  CHECK_ERROR(fi_fabric(ptr->fi->fabric_attr, &ptr->fabric, NULL), "fi_fabric failed\n");
+  CHECK_ERROR(!fi_fabric(ptr->fi->fabric_attr, &ptr->fabric, NULL), "fi_fabric failed\n");
 
   ptr->eq_attr.wait_obj = FI_WAIT_UNSPEC;
-  CHECK_ERROR(fi_eq_open(ptr->fabric, &ptr->eq_attr, &ptr->eq, NULL), "fi_eq_open failed\n");
+  CHECK_ERROR(!fi_eq_open(ptr->fabric, &ptr->eq_attr, &ptr->eq, NULL), "fi_eq_open failed\n");
 
-  CHECK_ERROR(fi_domain(ptr->fabric, ptr->fi, &ptr->domain, NULL), "fi_domain failed\n");
+  CHECK_ERROR(!fi_domain(ptr->fabric, ptr->fi, &ptr->domain, NULL), "fi_domain failed\n");
 
   memset(&ptr->cq_attr, 0, sizeof cq_attr);
   ptr->cq_attr.format = FI_CQ_FORMAT_CONTEXT;
   ptr->cq_attr.wait_obj = FI_WAIT_NONE;
   ptr->cq_attr.wait_cond = FI_CQ_COND_NONE;
   ptr->cq_attr.size = ptr->fi->rx_attr->size;
-  CHECK_ERROR(fi_cq_open(ptr->domain, &ptr->cq_attr, &ptr->rxcq, NULL), "fi_cq_open failed\n");
+  CHECK_ERROR(!fi_cq_open(ptr->domain, &ptr->cq_attr, &ptr->rxcq, NULL), "fi_cq_open failed\n");
 
   ptr->cq_attr.size = ptr->fi->tx_attr->size;
-  CHECK_ERROR(fi_cq_open(ptr->domain, &ptr->cq_attr, &ptr->txcq, NULL), "fi_cq_open failed\n");
+  CHECK_ERROR(!fi_cq_open(ptr->domain, &ptr->cq_attr, &ptr->txcq, NULL), "fi_cq_open failed\n");
 
-  CHECK_ERROR(fi_endpoint(ptr->domain, ptr->fi, &ptr->ep, NULL), "fi_endpoint failed\n");
+  CHECK_ERROR(!fi_endpoint(ptr->domain, ptr->fi, &ptr->ep, NULL), "fi_endpoint failed\n");
 
-  CHECK_ERROR(fi_ep_bind(ptr->ep, &ptr->eq->fid, 0), "fi_ep_bind failed\n");
+  CHECK_ERROR(!fi_ep_bind(ptr->ep, &ptr->eq->fid, 0), "fi_ep_bind eq failed\n");
 
-  CHECK_ERROR(fi_ep_bind(ptr->ep, &ptr->rxcq->fid, FI_RECV | FI_READ), "fi_ep_bind failed\n");
+  CHECK_ERROR(!fi_ep_bind(ptr->ep, &ptr->rxcq->fid, FI_RECV), "fi_ep_bind rxcq failed\n");
 
-  CHECK_ERROR(fi_ep_bind(ptr->ep, &ptr->txcq->fid, FI_SEND | FI_WRITE), "fi_ep_bind failed\n");
+  CHECK_ERROR(!fi_ep_bind(ptr->ep, &ptr->txcq->fid, FI_SEND), "fi_ep_bind txcq failed\n");
 
-  CHECK_ERROR(fi_enable(ptr->ep), "fi_enable failed\n");
+  CHECK_ERROR(!fi_enable(ptr->ep), "fi_enable failed\n");
 
+  LOG(INFO) << "size: " << ptr->fi->rx_attr->size << " " << ptr->fi->tx_attr->size << "\n";
   ptr->rx_msg_buffer = malloc(ptr->fi->rx_attr->size);
   if (!ptr->rx_msg_buffer) {
     return Status::Invalid("Failed to allocate rx buffer\n");
@@ -101,11 +103,14 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient> &ptr, fi_info *hints, std::s
   ptr->RegisterMemory(ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
   ptr->RegisterMemory(ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
 
+  VineyardMSGBufferContext *context = (VineyardMSGBufferContext *)malloc(sizeof(VineyardMSGBufferContext));
+  context->buffer = ptr->rx_msg_buffer;
+
   return Status::OK();
 }
 
 Status RDMAClient::Connect() {
-  CHECK_ERROR(fi_connect(ep, fi->dest_addr, NULL, 0), "fi_connect failed\n");
+  CHECK_ERROR(!fi_connect(ep, fi->dest_addr, NULL, 0), "fi_connect failed\n");
 
 	fi_eq_cm_entry entry;
 	uint32_t event;
@@ -113,9 +118,36 @@ Status RDMAClient::Connect() {
 	CHECK_ERROR(fi_eq_sread(eq, &event, &entry, sizeof(entry), -1, 0) == sizeof(entry), "fi_eq_sread failed\n");
 
 	if (event != FI_CONNECTED || entry.fid != &ep->fid) {
-    return Status::Invalid("Unexpected event\n");
+    return Status::Invalid("Unexpected event" + std::to_string(event));
 	}
 
+  return Status::OK();
+}
+
+Status RDMAClient::GetRXCompletion(int timeout, void **context) {
+  uint64_t cur = 0;
+  return this->GetCompletion(ep, remote_fi_addr, rxcq, &cur, 1, timeout, context);
+}
+
+Status RDMAClient::GetTXCompletion(int timeout, void **context) {
+  // TBD
+  return Status::OK();
+}
+
+Status RDMAClient::SendMemInfoToServer(void *buffer, uint64_t size) {
+  Send(buffer, size, NULL);
+  return Status::OK();
+}
+
+Status RDMAClient::GetTXFreeMsgBuffer(void *&buffer) {
+  // TBD
+  buffer = tx_msg_buffer;
+  return Status::OK();
+}
+
+Status RDMAClient::GetRXFreeMsgBuffer(void *&buffer) {
+  // TBD
+  buffer = rx_msg_buffer;
   return Status::OK();
 }
 
@@ -124,12 +156,12 @@ Status RDMAClient::RegisterMemory(void *address, size_t size, uint64_t &rkey, vo
   return Status::OK();
 }
 
-Status RDMAClient::Send(void *buf, size_t size, void* mr_desc, void *ctx) {
-  return IRDMA::Send(ep, remote_fi_addr, txcq, buf, size, mr_desc, ctx);
+Status RDMAClient::Send(void *buf, size_t size, void *ctx) {
+  return IRDMA::Send(ep, remote_fi_addr, txcq, buf, size, tx_msg_mr_desc, ctx);
 }
 
-Status RDMAClient::Recv(void *buf, size_t size, void* mr_desc, void *ctx) {
-  return IRDMA::Recv(ep, remote_fi_addr, rxcq, buf, size, mr_desc, ctx);
+Status RDMAClient::Recv(void *buf, size_t size, void *ctx) {
+  return IRDMA::Recv(ep, remote_fi_addr, rxcq, buf, size, rx_msg_mr_desc, ctx);
 }
 
 Status RDMAClient::Read(void *buf, size_t size, uint64_t remote_address, uint64_t key, void* mr_desc, void *ctx) {

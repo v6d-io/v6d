@@ -27,14 +27,14 @@ namespace vineyard {
 #define ALIGNMENT 64
 
 #define CHECK_ERROR(condition, message) \
-  if (condition) {                     \
+  if (!(condition)) {                     \
     return Status::Invalid(message);     \
   }
 
 #define POST(post_fn, op_str, ...)		\
 	do {									\
-		int ret, rc;							\
-		while (1) { \		
+		int ret;							\
+		while (1) { \
       LOG(INFO) << "call post fn\n";					\
 			ret = post_fn(__VA_ARGS__);				\
 			LOG(INFO) << "call post fn end\n";								\
@@ -62,11 +62,32 @@ struct VineyardBufferContext {
 	uint64_t rkey;
 };
 
-struct VineyardMsg {
-	int type;
-}
+struct VineyardMSGBufferContext {
+	void *buffer;
+};
 
-#define VINEYARD_FIVERSION FI_VERSION(1,20)
+enum VINEYARD_MSG_OPT {
+	VINEYARD_MSG_TEST = 0,
+};
+
+struct VineyardMsg {
+	union {
+		struct {
+			uint64_t remote_address;
+			uint64_t len;
+			uint64_t key;
+		} test;
+	};
+	int type;
+};
+
+struct Test {
+	uint64_t		addr;
+	size_t			len;
+	uint64_t		key;
+};
+
+#define VINEYARD_FIVERSION FI_VERSION(1,21)
 
 }
 
