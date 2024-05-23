@@ -72,4 +72,5 @@ foreach(testfile ${TEST_FILES})
             set_property(TARGET ${testname} PROPERTY CXX_STANDARD 17)
         endif()
     endif()
+
 endforeach()

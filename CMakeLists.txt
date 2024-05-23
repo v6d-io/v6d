@@ -62,7 +62,7 @@ option(BUILD_VINEYARD_MALLOC_OVERRIDE "Using the client-side malloc to override 
 option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
 option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
 option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" OFF)
-option(BUILD_VINEYARD_LLM_CACHE "Enable kv-state cache support" ON)
+option(BUILD_VINEYARD_LLM_CACHE "Enable kv-state cache support" OFF)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)
@@ -696,6 +696,7 @@ if(BUILD_VINEYARD_SERVER)
                                        "src/common/memory/*.cc"
                                        "src/common/util/*.cc"
                                        "src/common/memory/gpu/*.cc"
+                                       "src/common/rdma/*.cc"
     )
     if(BUILD_VINEYARD_SERVER_REDIS)
         list(APPEND SERVER_SRC_FILES "thirdparty/redis-plus-plus-shim/recipes/redlock.cpp")
@@ -709,6 +710,7 @@ if(BUILD_VINEYARD_SERVER)
                                             ${GLOG_LIBRARIES}
                                             libzstd_static
                                             mimalloc-static
+                                            fabric
     )
     target_include_directories(vineyardd PRIVATE ${GFLAGS_INCLUDE_DIR})
 
@@ -797,6 +799,7 @@ if(BUILD_VINEYARD_CLIENT)
                                "src/common/memory/*.cc"
                                "src/common/util/*.cc"
                                "src/common/memory/gpu/*.cc"
+                               "src/common/rdma/*.cc"
     )
     # the vineyard_client can only be a shared library, since the ObjectFactory
     # is a singleton.
@@ -804,6 +807,7 @@ if(BUILD_VINEYARD_CLIENT)
     target_add_debuginfo(vineyard_client)
     target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
                                                  Threads::Threads
+                                                 fabric
     )
     target_link_libraries(vineyard_client PRIVATE libzstd_static)
 

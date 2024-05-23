@@ -370,7 +370,7 @@ class SingleHashFunctor<std::string_view> {
 template <>
 class SingleHashFunctor<vineyard::arrow_string_view> {
  public:
-  uint64_t operator()(const std::string_view& key,
+  uint64_t operator()(const vineyard::arrow_string_view& key,
                       uint64_t seed = 0xAAAAAAAA55555555ULL) const {
     return hashFunctors(key);
   }
