@@ -87,6 +87,30 @@ with torch_context():
 model.load_state_dict(state_dict, assign=True)
 ```
 
+By default, the compression is enabled for the vineyard client. Sometimes, the compression may not be efficient for the torch modules, you can disable it as follows:
+
+```python
+from vineyard.contrib.ml.torch import torch_context
+# add the client parameter to the torch_context to disable the compression
+with torch_context(client):
+    object_id = client.put(model)
+
+# add the client parameter to the torch_context to disable the compression
+with torch_context(client):
+    state_dict = client.get(object_id)
+```
+
+Besides, if you want to put the torch modules into all vineyard workers dispersedly to gather the network bandwidth of all workers, you can enable the shuffle option as follows:
+
+```python
+from vineyard.contrib.ml.torch import torch_context
+with torch_context(client, dispersion=True):
+    object_id = client.put(model)
+
+with torch_context(client):
+    state_dict = client.get(object_id)
+```
+
 Reference and Implementation
 ----------------------------
 

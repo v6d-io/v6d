@@ -36,6 +36,7 @@ import pyarrow as pa
 import lazy_import
 
 import vineyard
+from vineyard import envvars
 from vineyard._C import NotEnoughMemoryException
 from vineyard._C import ObjectID
 from vineyard._C import ObjectMeta
@@ -271,6 +272,83 @@ def datapipe(
     return torchdata.datapipes.iter.IterableWrapper(dataset)
 
 
+def distribute_tensors(client, tensor_values):
+    cluster_info = client.meta
+    instance_ids = cluster_info.keys()
+    chunk_size = len(cluster_info)
+
+    def split_tensors_into_chunks(tensor_values, chunk_size):
+        average_size = ceil(
+            sum(t.numel() * t.element_size() for t in tensor_values) / chunk_size
+        )
+        current_size = 0
+        tensor_chunks = []
+        current_chunk = []
+        for t in tensor_values:
+            if current_size >= average_size and current_chunk:
+                tensor_chunks.append(current_chunk)
+                current_size = 0
+                current_chunk = []
+            current_chunk.append(t)
+            current_size += t.numel() * t.element_size()
+        if current_chunk:
+            tensor_chunks.append(current_chunk)
+        return tensor_chunks
+
+    tensor_chunks = split_tensors_into_chunks(tensor_values, chunk_size)
+
+    def thread_put_torch_tensors(
+        cluster_info, instance_id, tensor_chunk, client, output_objects
+    ):
+        compression = client.compression
+        connected_instance_id = (
+            client.instance_id if client.is_ipc else client.remote_instance_id
+        )
+        rpc_client = None
+        if connected_instance_id != instance_id:
+            instance_status = cluster_info.get(instance_id)
+            if instance_status is None or instance_status['rpc_endpoint'] is None:
+                raise RuntimeError(
+                    "The rpc endpoint of the vineyard instance "
+                    f"{instance_id} is not available."
+                )
+
+            host, port = cluster_info[instance_id]['rpc_endpoint'].split(':')
+            try:
+                with envvars('VINEYARD_RPC_SKIP_RETRY', '1'):
+                    rpc_client = vineyard.connect(host=host, port=int(port))
+                    rpc_client.compression = compression
+            except Exception as exec:
+                raise RuntimeError(
+                    f"Failed to connect to the vineyard instance {instance_id} "
+                    f"at {host}:{port}."
+                ) from exec
+        used_client = rpc_client if rpc_client else client
+        result = put_torch_tensors(used_client, tensor_chunk)
+        output_objects[instance_id] = result
+
+    tensor_objects_dict = {}
+    with ThreadPoolExecutor() as executor:
+        futures = []
+        for instance_id, tensor_chunk in zip(instance_ids, tensor_chunks):
+            future = executor.submit(
+                thread_put_torch_tensors,
+                cluster_info,
+                instance_id,
+                tensor_chunk,
+                client,
+                tensor_objects_dict,
+            )
+            futures.append(future)
+        for future in as_completed(futures):
+            future.result()
+
+    tensor_objects = []
+    for instance_id in instance_ids:
+        tensor_objects.extend(tensor_objects_dict[instance_id])
+    return tensor_objects
+
+
 def put_torch_tensors(client, tensors) -> List[Union[ObjectID, ObjectMeta]]:
     pointers, sizes = [], []
     tensors = [tensor.contiguous() for tensor in tensors]
@@ -362,65 +440,9 @@ def torch_module_builder(client, value, builder, **kw):
     go(value, 'tensor', tensors)
 
     tensor_keys, tensor_values = list(tensors.keys()), list(tensors.values())
+
     if client.dispersion:
-        meta = client.meta
-        chunk_size = len(meta)
-
-        def split_tensors_into_chunks(tensor_values, chunk_size):
-            average_size = ceil(
-                sum(t.numel() * t.element_size() for t in tensor_values) / chunk_size
-            )
-            current_size = 0
-            tensor_chunks = []
-            current_chunk = []
-            for t in tensor_values:
-                if current_size >= average_size and current_chunk:
-                    tensor_chunks.append(current_chunk)
-                    current_size = 0
-                    current_chunk = []
-                current_chunk.append(t)
-                current_size += t.numel() * t.element_size()
-
-            if current_chunk:
-                tensor_chunks.append(current_chunk)
-            return tensor_chunks
-
-        tensor_chunks = split_tensors_into_chunks(tensor_values, chunk_size)
-
-        def thread_put_torch_tensors(meta, tensor_chunk, client, output_list, index):
-            compression = client.compression
-            connected_instance_id = (
-                client.instance_id if client.is_ipc else client.remote_instance_id
-            )
-            rpc_client = None
-            if connected_instance_id != index:
-                host, port = meta[index]['rpc_endpoint'].split(':')
-                rpc_client = vineyard.connect(host=host, port=int(port))
-                rpc_client.compression = compression
-
-            used_client = rpc_client if rpc_client else client
-            result = put_torch_tensors(used_client, tensor_chunk)
-            output_list[index] = result
-
-        tensor_objects_list = [None] * len(tensor_chunks)
-
-        with ThreadPoolExecutor() as executor:
-            futures = []
-            for index, tensor_chunk in enumerate(tensor_chunks):
-                future = executor.submit(
-                    thread_put_torch_tensors,
-                    meta,
-                    tensor_chunk,
-                    client,
-                    tensor_objects_list,
-                    index,
-                )
-                futures.append(future)
-
-        for future in as_completed(futures):
-            future.result()
-
-        tensor_objects = [obj for chunk in tensor_objects_list for obj in chunk]
+        tensor_objects = distribute_tensors(client, tensor_values)
     else:
         tensor_objects = put_torch_tensors(client, tensor_values)
     tensors = dict(zip(tensor_keys, tensor_objects))
