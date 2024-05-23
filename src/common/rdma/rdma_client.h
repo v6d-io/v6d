@@ -12,56 +12,52 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-#ifndef MODULES_RDMA_RDMA_SERVER_H_
-#define MODULES_RDMA_RDMA_SERVER_H_
-
-#include <map>
+#ifndef MODULES_RDMA_RDMA_CLIENT_H_
+#define MODULES_RDMA_RDMA_CLIENT_H_
 
 #include <rdma/fabric.h>
 
 #include "rdma.h"
-#include "util.h"
 
 namespace vineyard {
 
-class RDMAServer : public IRDMA {
+class RDMAClient : public IRDMA {
  public:
-  RDMAServer() = delete;
+  RDMAClient() = default;
 
-  static Status Make(std::shared_ptr<RDMAServer> &ptr);
+  Status Send(void *buf, size_t size, void *ctx);
 
-  static Status Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints);
+  Status Recv(void *buf, size_t size, void *ctx);
 
-  Status Send(uint64_t clientID, void* buf, size_t size);
+  Status Read(void *buf, size_t size, uint64_t remote_address, uint64_t key, void* mr_desc, void *ctx);
 
-  Status Recv(uint64_t clientID, void* buf, size_t size);
+  Status Write(void *buf, size_t size, uint64_t remote_address, uint64_t key, void* mr_desc, void *ctx);
 
-  Status Read(uint64_t clientID, void *buf, size_t size, uint64_t remote_address);
+  static Status Make(std::shared_ptr<RDMAClient> &ptr, std::string server_address, int port);
 
-  Status Write(uint64_t clientID, void *buf, size_t size, uint64_t remote_address);
+  static Status Make(std::shared_ptr<RDMAClient> &ptr, fi_info *hints, std::string server_address, int port);
 
-  Status GetVineyardBufferContext(uint64_t key, VineyardBufferContext &ctx) {
-    auto iter = buffer_map.find(key);
-    if (iter == buffer_map.end()) {
-      return Status::Invalid("Failed to find buffer context");
-    }
-    ctx = iter->second;
-    return Status::OK();
-  }
+  Status RegisterMemory(void *address, size_t size, uint64_t &rkey, void* &mr_desc);
 
-  Status WaitConnect();
+  Status Connect();
 
   Status Close();
 
+  Status SendMemInfoToServer(void *buffer, uint64_t size);
+
+  Status GetTXFreeMsgBuffer(void *&buffer);
+
+  Status GetRXFreeMsgBuffer(void *&buffer);
+
+  Status GetRXCompletion(int timeout, void **context);
+
+  Status GetTXCompletion(int timeout, void **context);
+
  private:
-  RDMAServer() = default;
 
   bool IsClient() override {
-    return false;
+    return true;
   };
-
-  fid_pep *pep = NULL;
-  std::map<uint64_t, VineyardBufferContext> buffer_map;
 
   fi_info *fi = NULL;
   fid_fabric *fabric = NULL;
@@ -75,11 +71,10 @@ class RDMAServer : public IRDMA {
   uint64_t rx_msg_size = 1024, tx_msg_size = 1024;
   uint64_t rx_msg_key = 0, tx_msg_key = 0;
   void *rx_msg_mr_desc = NULL, *tx_msg_mr_desc = NULL;
-  void *data_mem_desc = NULL;
   fid_mr *mr = NULL;
   fi_addr_t remote_fi_addr = FI_ADDR_UNSPEC;
 };
 
 }  // namespace vineyard
 
-#endif  // MODULES_RDMA_RDMA_SERVER_H_
+#endif // MODULES_RDMA_RDMA_CLIENT_H_

@@ -29,7 +29,7 @@ limitations under the License.
 
 namespace vineyard {
 
-Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr) {
+Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, int port) {
   fi_info *hints = fi_allocinfo();
   if (!hints) {
     return Status::Invalid("Failed to allocate fabric info");
@@ -49,39 +49,42 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr) {
   memset(hints->fabric_attr, 0, sizeof *(hints->fabric_attr));
   hints->fabric_attr->prov_name = strdup("verbs");
 
-  return Make(ptr, hints);
+  return Make(ptr, hints, port);
 }
 
-Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints) {
+Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints, int port) {
   if(!hints) {
     LOG(ERROR) << "Invalid fabric hints info";
+    return Status::Invalid("Invalid fabric hints info");
   }
 
+  LOG(INFO) << "Make RDMAServer\n";
   ptr = std::make_shared<RDMAServer>();
 
   uint64_t flags = 0;
-  if(fi_getinfo(VINEYARD_FIVERSION, NULL, NULL, flags, hints, &(ptr->fi)))
+  LOG(INFO) << "fi_getinfo\n";
+  CHECK_ERROR(!fi_getinfo(VINEYARD_FIVERSION, NULL, NULL, flags, hints, &(ptr->fi)), "fi_getinfo failed\n");
 
-  CHECK_ERROR(fi_fabric(ptr->fi->fabric_attr, &ptr->fabric, NULL), "fi_fabric failed\n");
+  CHECK_ERROR(!fi_fabric(ptr->fi->fabric_attr, &ptr->fabric, NULL), "fi_fabric failed\n");
 
   ptr->eq_attr.wait_obj = FI_WAIT_UNSPEC;
-  CHECK_ERROR(fi_eq_open(ptr->fabric, &ptr->eq_attr, &ptr->eq, NULL), "fi_eq_open failed\n");
+  CHECK_ERROR(!fi_eq_open(ptr->fabric, &ptr->eq_attr, &ptr->eq, NULL), "fi_eq_open failed\n");
 
-  CHECK_ERROR(fi_passive_ep(ptr->fabric, ptr->fi, &ptr->pep, NULL), "fi_passive_ep failed\n");
+  CHECK_ERROR(!fi_passive_ep(ptr->fabric, ptr->fi, &ptr->pep, NULL), "fi_passive_ep failed\n");
 
-  CHECK_ERROR(fi_pep_bind(ptr->pep, &ptr->eq->fid, 0), "fi_pep_bind failed\n");
+  CHECK_ERROR(!fi_pep_bind(ptr->pep, &ptr->eq->fid, 0), "fi_pep_bind failed\n");
 
-  CHECK_ERROR(fi_domain(ptr->fabric, ptr->fi, &ptr->domain, NULL), "fi_domain failed\n");
+  CHECK_ERROR(!fi_domain(ptr->fabric, ptr->fi, &ptr->domain, NULL), "fi_domain failed\n");
 
   memset(&ptr->cq_attr, 0, sizeof cq_attr);
   ptr->cq_attr.format = FI_CQ_FORMAT_CONTEXT;
   ptr->cq_attr.wait_obj = FI_WAIT_NONE;
   ptr->cq_attr.wait_cond = FI_CQ_COND_NONE;
   ptr->cq_attr.size = ptr->fi->rx_attr->size;
-  CHECK_ERROR(fi_cq_open(ptr->domain, &ptr->cq_attr, &ptr->rxcq, NULL), "fi_cq_open failed\n");
+  CHECK_ERROR(!fi_cq_open(ptr->domain, &ptr->cq_attr, &ptr->rxcq, NULL), "fi_cq_open failed\n");
 
   ptr->cq_attr.size = ptr->fi->tx_attr->size;
-  CHECK_ERROR(fi_cq_open(ptr->domain, &ptr->cq_attr, &ptr->txcq, NULL), "fi_cq_open failed\n");
+  CHECK_ERROR(!fi_cq_open(ptr->domain, &ptr->cq_attr, &ptr->txcq, NULL), "fi_cq_open failed\n");
 
   ptr->rx_msg_buffer = malloc(ptr->rx_msg_size);
   if (!ptr->rx_msg_buffer) {
@@ -95,6 +98,8 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints) {
   ptr->RegisterMemory(ptr->fi, &ptr->mr, ptr->domain, ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
   ptr->RegisterMemory(ptr->fi, &ptr->mr, ptr->domain, ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
 
+  ptr->port = port;
+
   return Status::OK();
 }
 
@@ -104,7 +109,8 @@ Status RDMAServer::Close() {
 }
 
 Status RDMAServer::WaitConnect() {
-  CHECK_ERROR(fi_listen(pep), "fi_listen failed\n");
+  printf("fi_listen\n");
+  CHECK_ERROR(!fi_listen(pep), "fi_listen failed\n");
 
 	struct fi_eq_cm_entry entry;
 	uint32_t event;
@@ -125,18 +131,19 @@ Status RDMAServer::WaitConnect() {
 
   // prepare new ep
 
-  CHECK_ERROR(fi_endpoint(domain, client_fi, &ep, NULL), "fi_endpoint failed\n");
+  CHECK_ERROR(!fi_endpoint(domain, client_fi, &ep, NULL), "fi_endpoint failed\n");
 
-  CHECK_ERROR(fi_ep_bind(ep, &eq->fid, 0), "fi_ep_bind failed\n");
+  CHECK_ERROR(!fi_ep_bind(ep, &eq->fid, 0), "fi_ep_bind failed\n");
 
-  CHECK_ERROR(fi_ep_bind(ep, &rxcq->fid, FI_RECV | FI_READ), "fi_ep_bind failed\n");
+  CHECK_ERROR(!fi_ep_bind(ep, &rxcq->fid, FI_RECV | FI_READ), "fi_ep_bind failed\n");
 
-  CHECK_ERROR(fi_ep_bind(ep, &txcq->fid, FI_SEND | FI_WRITE), "fi_ep_bind failed\n");
+  CHECK_ERROR(!fi_ep_bind(ep, &txcq->fid, FI_SEND | FI_WRITE), "fi_ep_bind failed\n");
 
-  CHECK_ERROR(fi_enable(ep), "fi_enable failed\n");
+  CHECK_ERROR(!fi_enable(ep), "fi_enable failed\n");
 
-  CHECK_ERROR(fi_accept(ep, NULL, 0), "fi_accept failed\n");
+  CHECK_ERROR(!fi_accept(ep, NULL, 0), "fi_accept failed\n");
 
+  LOG(INFO) << "accept done?\n";
 	CHECK_ERROR(fi_eq_sread(eq, &event, &entry, sizeof(entry), -1, 0) == sizeof entry, "fi_eq_sread failed\n");
 
 	if (event != FI_CONNECTED || entry.fid != &ep->fid) {
@@ -165,7 +172,7 @@ Status RDMAServer::Recv(uint64_t clientID, void* buf, size_t size) {
     return Status::Invalid("Failed to find buffer context");
   }
   VineyardBufferContext bufferContext = buffer_map[clientID];
-  return IRDMA::Recv(ep, remote_fi_addr, rxcq, buf, size, rx_msg_mr_desc, NULL);
+  return IRDMA::Recv(bufferContext.ep, remote_fi_addr, rxcq, buf, size, rx_msg_mr_desc, NULL);
 }
 
 Status RDMAServer::Read(uint64_t clientID, void *buf, size_t size, uint64_t remote_address) {
