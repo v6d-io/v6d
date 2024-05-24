@@ -18,6 +18,7 @@ limitations under the License.
 #include <rdma/fabric.h>
 
 #include "rdma.h"
+#include "util.h"
 
 namespace vineyard {
 
@@ -37,6 +38,9 @@ class RDMAClient : public IRDMA {
 
   static Status Make(std::shared_ptr<RDMAClient> &ptr, fi_info *hints, std::string server_address, int port);
 
+  Status RegisterMemory(RegisterMemInfo &memInfo);
+
+  // TODO: delete in the future.
   Status RegisterMemory(void *address, size_t size, uint64_t &rkey, void* &mr_desc);
 
   Status Connect();

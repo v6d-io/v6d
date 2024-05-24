@@ -68,6 +68,7 @@ struct VineyardMSGBufferContext {
 
 enum VINEYARD_MSG_OPT {
 	VINEYARD_MSG_TEST = 0,
+	VINEYARD_MSG_INFO_FINISH = 1,
 };
 
 struct VineyardMsg {
@@ -87,7 +88,16 @@ struct Test {
 	uint64_t		key;
 };
 
+struct RegisterMemInfo {
+	void *address;
+	size_t size;
+	uint64_t rkey;
+	void *mr_desc;
+};
+
 #define VINEYARD_FIVERSION FI_VERSION(1,21)
+
+#define TEST_CLIENT_ID 0
 
 }
 
