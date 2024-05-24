@@ -832,6 +832,9 @@ void bind_client(py::module& mod) {
           [](RPCClient* self,
              const std::vector<std::shared_ptr<RemoteBlobWriter>>&
                  remote_blob_builders) -> std::vector<ObjectMeta> {
+            // Release GIL to avoid blocking the other threads
+            // See also
+            // https://pybind11.readthedocs.io/en/stable/advanced/misc.html#global-interpreter-lock-gil
             std::vector<ObjectMeta> blob_metas;
             throw_on_error(
                 self->CreateRemoteBlobs(remote_blob_builders, blob_metas));

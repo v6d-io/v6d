@@ -18,7 +18,6 @@
 
 import contextlib
 import ctypes
-import time
 import warnings
 from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
