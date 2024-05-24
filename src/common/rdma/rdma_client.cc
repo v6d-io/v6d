@@ -100,6 +100,7 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient> &ptr, fi_info *hints, std::s
   if (!ptr->tx_msg_buffer) {
     return Status::Invalid("Failed to allocate tx buffer\n");
   }
+
   ptr->RegisterMemory(ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
   ptr->RegisterMemory(ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
 
@@ -125,13 +126,15 @@ Status RDMAClient::Connect() {
 }
 
 Status RDMAClient::GetRXCompletion(int timeout, void **context) {
+  LOG(INFO) << "GetRXCompletion";
   uint64_t cur = 0;
   return this->GetCompletion(ep, remote_fi_addr, rxcq, &cur, 1, timeout, context);
 }
 
 Status RDMAClient::GetTXCompletion(int timeout, void **context) {
   // TBD
-  return Status::OK();
+  uint64_t cur = 0;
+  return this->GetCompletion(ep, remote_fi_addr, txcq, &cur, 1, timeout, context);
 }
 
 Status RDMAClient::SendMemInfoToServer(void *buffer, uint64_t size) {
@@ -151,24 +154,33 @@ Status RDMAClient::GetRXFreeMsgBuffer(void *&buffer) {
   return Status::OK();
 }
 
+Status RDMAClient::RegisterMemory(RegisterMemInfo &memInfo) {
+  VINEYARD_CHECK_OK(IRDMA::RegisterMemory(fi, &mr, domain, memInfo.address, memInfo.size, memInfo.rkey, memInfo.mr_desc));
+  return Status::OK();
+}
+
 Status RDMAClient::RegisterMemory(void *address, size_t size, uint64_t &rkey, void* &mr_desc) {
   VINEYARD_CHECK_OK(IRDMA::RegisterMemory(fi, &mr, domain, address, size, rkey, mr_desc));
   return Status::OK();
 }
 
 Status RDMAClient::Send(void *buf, size_t size, void *ctx) {
+  LOG(INFO) << "Send";
   return IRDMA::Send(ep, remote_fi_addr, txcq, buf, size, tx_msg_mr_desc, ctx);
 }
 
 Status RDMAClient::Recv(void *buf, size_t size, void *ctx) {
+  LOG(INFO) << "Recv";
   return IRDMA::Recv(ep, remote_fi_addr, rxcq, buf, size, rx_msg_mr_desc, ctx);
 }
 
 Status RDMAClient::Read(void *buf, size_t size, uint64_t remote_address, uint64_t key, void* mr_desc, void *ctx) {
+  LOG(INFO) << "Read";
   return IRDMA::Read(ep, remote_fi_addr, rxcq, buf, size, remote_address, key, mr_desc, ctx);
 }
 
 Status RDMAClient::Write(void *buf, size_t size, uint64_t remote_address, uint64_t key, void* mr_desc, void *ctx) {
+  LOG(INFO) << "Write";
   return IRDMA::Write(ep, remote_fi_addr, txcq, buf, size, remote_address, key, mr_desc, ctx);
 }
 

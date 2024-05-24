@@ -32,13 +32,26 @@ class RDMAServer : public IRDMA {
 
   static Status Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints, int port);
 
-  Status Send(uint64_t clientID, void* buf, size_t size);
+  Status Send(uint64_t clientID, void* buf, size_t size, void* ctx);
 
-  Status Recv(uint64_t clientID, void* buf, size_t size);
+  Status Recv(uint64_t clientID, void* buf, size_t size, void* ctx);
 
-  Status Read(uint64_t clientID, void *buf, size_t size, uint64_t remote_address);
+  Status Read(uint64_t clientID, void *buf, size_t size, uint64_t remote_address, uint64_t rkey, void *mr_desc, void* ctx);
 
-  Status Write(uint64_t clientID, void *buf, size_t size, uint64_t remote_address);
+  Status Write(uint64_t clientID, void *buf, size_t size, uint64_t remote_address, uint64_t rkey, void *mr_desc, void* ctx);
+
+  Status GetTXFreeMsgBuffer(void *&buffer);
+
+  Status GetRXFreeMsgBuffer(void *&buffer);
+
+  Status GetRXCompletion(int timeout, void **context);
+
+  Status GetTXCompletion(int timeout, void **context);
+
+  Status RegisterMemory(RegisterMemInfo &memInfo);
+
+  // TODO: delete in the future.
+  Status RegisterMemory(void *address, size_t size, uint64_t &rkey, void* &mr_desc);
 
   Status GetVineyardBufferContext(uint64_t key, VineyardBufferContext &ctx) {
     auto iter = buffer_map.find(key);
@@ -54,6 +67,8 @@ class RDMAServer : public IRDMA {
   Status Close();
 
  private:
+
+  Status AddClient(uint64_t clientID, fid_ep *ep);
 
   bool IsClient() override {
     return false;
@@ -71,6 +86,7 @@ class RDMAServer : public IRDMA {
   fi_cq_attr cq_attr= { 0 };
   fid_cq *rxcq = NULL, *txcq = NULL;
   fid_ep *ep = NULL;
+  uint64_t mem_key;
   void* rx_msg_buffer, *tx_msg_buffer;
   uint64_t rx_msg_size = 1024, tx_msg_size = 1024;
   uint64_t rx_msg_key = 0, tx_msg_key = 0;
