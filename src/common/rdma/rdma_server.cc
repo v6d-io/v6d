@@ -63,7 +63,7 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints, int po
 
   uint64_t flags = 0;
   LOG(INFO) << "fi_getinfo\n";
-  CHECK_ERROR(!fi_getinfo(VINEYARD_FIVERSION, NULL, NULL, flags, hints, &(ptr->fi)), "fi_getinfo failed\n");
+  CHECK_ERROR(!fi_getinfo(VINEYARD_FIVERSION, NULL, std::to_string(port).c_str(), flags, hints, &(ptr->fi)), "fi_getinfo failed\n");
 
   CHECK_ERROR(!fi_fabric(ptr->fi->fabric_attr, &ptr->fabric, NULL), "fi_fabric failed\n");
 
@@ -95,8 +95,8 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints, int po
     return Status::Invalid("Failed to allocate tx buffer\n");
   }
 
-  ptr->RegisterMemory(ptr->fi, &ptr->mr, ptr->domain, ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
-  ptr->RegisterMemory(ptr->fi, &ptr->mr, ptr->domain, ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
+  ptr->RegisterMemory(ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
+  ptr->RegisterMemory(ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
 
   ptr->port = port;
 
@@ -133,11 +133,11 @@ Status RDMAServer::WaitConnect() {
 
   CHECK_ERROR(!fi_endpoint(domain, client_fi, &ep, NULL), "fi_endpoint failed\n");
 
-  CHECK_ERROR(!fi_ep_bind(ep, &eq->fid, 0), "fi_ep_bind failed\n");
+  CHECK_ERROR(!fi_ep_bind(ep, &eq->fid, 0), "fi_ep_bind eq failed\n");
 
-  CHECK_ERROR(!fi_ep_bind(ep, &rxcq->fid, FI_RECV | FI_READ), "fi_ep_bind failed\n");
+  CHECK_ERROR(!fi_ep_bind(ep, &rxcq->fid, FI_RECV), "fi_ep_bind rxcq failed\n");
 
-  CHECK_ERROR(!fi_ep_bind(ep, &txcq->fid, FI_SEND | FI_WRITE), "fi_ep_bind failed\n");
+  CHECK_ERROR(!fi_ep_bind(ep, &txcq->fid, FI_SEND), "fi_ep_bind txcq failed\n");
 
   CHECK_ERROR(!fi_enable(ep), "fi_enable failed\n");
 
@@ -150,6 +150,8 @@ Status RDMAServer::WaitConnect() {
     return Status::Invalid("Unexpected event\n");
   }
 
+  AddClient(TEST_CLIENT_ID, ep);
+
   // VINEYARD_CHECK_OK(Recv(buf, 1024, bufferContext.mr_desc, NULL));
 
   // TODO: let worker to check complete queue
@@ -159,36 +161,81 @@ Status RDMAServer::WaitConnect() {
   return Status::OK();
 }
 
-Status RDMAServer::Send(uint64_t clientID, void* buf, size_t size) {
-  if (buffer_map.find(clientID) == buffer_map.end()) {
-    return Status::Invalid("Failed to find buffer context");
-  }
-  VineyardBufferContext bufferContext = buffer_map[clientID];
-  return IRDMA::Send(bufferContext.ep, remote_fi_addr, txcq, buf, size, tx_msg_mr_desc, NULL);
+Status RDMAServer::AddClient(uint64_t clientID, fid_ep *ep) {
+  VineyardBufferContext bufferContext;
+  bufferContext.ep = ep;
+  bufferContext.rkey = mem_key;
+  buffer_map[clientID] = bufferContext;
+  return Status::OK();
 }
 
-Status RDMAServer::Recv(uint64_t clientID, void* buf, size_t size) {
-  if (buffer_map.find(clientID) == buffer_map.end()) {
-    return Status::Invalid("Failed to find buffer context");
-  }
-  VineyardBufferContext bufferContext = buffer_map[clientID];
-  return IRDMA::Recv(bufferContext.ep, remote_fi_addr, rxcq, buf, size, rx_msg_mr_desc, NULL);
+Status RDMAServer::RegisterMemory(RegisterMemInfo &memInfo) {
+  RETURN_ON_ERROR(IRDMA::RegisterMemory(fi, &mr, domain, memInfo.address, memInfo.size , memInfo.rkey, memInfo.mr_desc));
+  mem_key = memInfo.rkey;
+  return Status::OK();
 }
 
-Status RDMAServer::Read(uint64_t clientID, void *buf, size_t size, uint64_t remote_address) {
-  if (buffer_map.find(clientID) == buffer_map.end()) {
-    return Status::Invalid("Failed to find buffer context");
-  }
-  VineyardBufferContext bufferContext = buffer_map[clientID];
-  return IRDMA::Read(bufferContext.ep, remote_fi_addr, rxcq, buf, size, remote_address, bufferContext.rkey, data_mem_desc, NULL);
+Status RDMAServer::RegisterMemory(void *address, size_t size, uint64_t &rkey, void* &mr_desc) {
+  return IRDMA::RegisterMemory(fi, &mr, domain, address, size , rkey, mr_desc);
 }
 
-Status RDMAServer::Write(uint64_t clientID, void *buf, size_t size, uint64_t remote_address) {
+Status RDMAServer::Send(uint64_t clientID, void* buf, size_t size, void* ctx) {
   if (buffer_map.find(clientID) == buffer_map.end()) {
     return Status::Invalid("Failed to find buffer context");
   }
+  LOG(INFO) << "Send";
   VineyardBufferContext bufferContext = buffer_map[clientID];
-  return IRDMA::Write(bufferContext.ep, remote_fi_addr, txcq, buf, size, remote_address, bufferContext.rkey, data_mem_desc, NULL);
+  return IRDMA::Send(bufferContext.ep, remote_fi_addr, txcq, buf, size, tx_msg_mr_desc, ctx);
+}
+
+Status RDMAServer::Recv(uint64_t clientID, void* buf, size_t size, void* ctx) {
+  if (buffer_map.find(clientID) == buffer_map.end()) {
+    return Status::Invalid("Failed to find buffer context");
+  }
+  LOG(INFO) << "Recv";
+  VineyardBufferContext bufferContext = buffer_map[clientID];
+  return IRDMA::Recv(bufferContext.ep, remote_fi_addr, rxcq, buf, size, rx_msg_mr_desc, ctx);
+}
+
+Status RDMAServer::Read(uint64_t clientID, void *buf, size_t size, uint64_t remote_address, uint64_t rkey, void *mr_desc, void* ctx) {
+  if (buffer_map.find(clientID) == buffer_map.end()) {
+    return Status::Invalid("Failed to find buffer context");
+  }
+  LOG(INFO) << "Read";
+  VineyardBufferContext bufferContext = buffer_map[clientID];
+  return IRDMA::Read(bufferContext.ep, remote_fi_addr, rxcq, buf, size, remote_address, rkey, data_mem_desc, ctx);
+}
+
+Status RDMAServer::Write(uint64_t clientID, void *buf, size_t size, uint64_t remote_address, uint64_t rkey, void *mr_desc, void* ctx) {
+  if (buffer_map.find(clientID) == buffer_map.end()) {
+    return Status::Invalid("Failed to find buffer context");
+  }
+  LOG(INFO) << "Write";
+  VineyardBufferContext bufferContext = buffer_map[clientID];
+  return IRDMA::Write(bufferContext.ep, remote_fi_addr, txcq, buf, size, remote_address, rkey, data_mem_desc, ctx);
+}
+
+Status RDMAServer::GetTXFreeMsgBuffer(void *&buffer) {
+  // TBD
+  buffer = tx_msg_buffer;
+  return Status::OK();
+}
+
+Status RDMAServer::GetRXFreeMsgBuffer(void *&buffer) {
+  // TBD
+  buffer = rx_msg_buffer;
+  return Status::OK();
+}
+
+Status RDMAServer::GetRXCompletion(int timeout, void **context) {
+  uint64_t cur = 0;
+  return this->GetCompletion(ep, remote_fi_addr, rxcq, &cur, 1, timeout, context);
+}
+
+Status RDMAServer::GetTXCompletion(int timeout, void **context) {
+  // TBD
+  uint64_t cur = 0;
+  return this->GetCompletion(ep, remote_fi_addr, txcq, &cur, 1, timeout, context);
 }
 
 }  // namespace vineyard
