@@ -33,6 +33,7 @@ limitations under the License.
 namespace vineyard {
 
 class Blob;
+class RemoteBlob;
 class Buffer;
 class BufferSet;
 class ClientBase;
@@ -589,6 +590,13 @@ class ObjectMeta {
    * @param value The result will be stored in `value`.
    */
   void GetKeyValue(const std::string& key, json& value) const;
+
+  /**
+   * @brief Add remote blob's buffer to ObjectMeta.
+   *
+   * @param blob The remote blob to be added.
+   */
+  void AddRemoteBlob(const RemoteBlob& blob);
 
   /**
    * @brief Add member to ObjectMeta.

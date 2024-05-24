@@ -247,6 +247,17 @@ Parameters:
         The reference to the member object or the object id of the member object.
 )doc";
 
+const char* ObjectMeta_add_remote_blob = R"doc(
+.. method:: add_remote_blob(self, RemoteBlob blob) -> None
+    :noindex:
+
+Add the remote blob's buffer to the metadata.
+
+Parameters:
+    blob: :class:`RemoteBlob`
+        The reference to the remote blob.
+)doc";
+
 const char* ObjectMeta_add_member = R"doc(
 .. method:: add_member(self, key: str, ObjectID, Object or ObjectMeta) -> None
     :noindex:

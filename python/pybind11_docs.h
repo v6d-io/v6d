@@ -39,6 +39,7 @@ extern const char* ObjectMeta__getitem__;
 extern const char* ObjectMeta_get;
 extern const char* ObjectMeta_get_member;
 extern const char* ObjectMeta__setitem__;
+extern const char* ObjectMeta_add_remote_blob;
 extern const char* ObjectMeta_add_member;
 
 extern const char* Object;
