@@ -660,6 +660,7 @@ class Client:
             cluster_info (Dict): The cluster information of the Vineyard cluster.
             instance_id (int): The instance id to fetch blobs from.
             blob_ids (List): The list of blob ids to fetch.
+            compression (bool): Whether to enable compression for RPC Client.
 
         Returns:
             RemoteBlob(List): The list of fetched remote blobs.
