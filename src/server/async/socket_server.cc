@@ -412,7 +412,7 @@ bool SocketConnection::doCreateBuffer(const json& root) {
 
   TRY_READ_REQUEST(ReadCreateBufferRequest, root, size);
   ObjectID object_id;
-  RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+  RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object, server_ptr_->instance_id()));
 
   int fd_to_send = -1;
   if (object->data_size > 0 &&
@@ -445,7 +445,7 @@ bool SocketConnection::doCreateBuffers(const json& root) {
   for (auto const& size : sizes) {
     ObjectID object_id;
     std::shared_ptr<Payload> object;
-    RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+    RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object, server_ptr_->instance_id()));
     object_ids.emplace_back(object_id);
     objects.emplace_back(object);
   }
@@ -673,7 +673,7 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
 
   TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size, compress);
   ObjectID object_id;
-  RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+  RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object, server_ptr_->instance_id()));
   RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
 
   auto callback = [self, this, compress,
@@ -716,7 +716,7 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
   for (auto const& size : sizes) {
     ObjectID object_id;
     std::shared_ptr<Payload> object;
-    RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object));
+    RESPONSE_ON_ERROR(bulk_store_->Create(size, object_id, object, server_ptr_->instance_id()));
     RESPONSE_ON_ERROR(bulk_store_->Seal(object_id));
     object_ids.emplace_back(object_id);
     objects.emplace_back(object);
@@ -851,7 +851,7 @@ bool SocketConnection::doCreateBufferByPlasma(json const& root) {
 
   std::string message_out;
   RESPONSE_ON_ERROR(plasma_bulk_store_->Create(size, plasma_size, plasma_id,
-                                               object_id, plasma_object));
+                                               object_id, plasma_object, server_ptr_->instance_id()));
 
   int store_fd = plasma_object->store_fd, fd_to_send = -1;
   int data_size = plasma_object->data_size;
@@ -1510,7 +1510,7 @@ bool SocketConnection::doFinalizeArena(const json& root) {
   std::string message_out;
 
   TRY_READ_REQUEST(ReadFinalizeArenaRequest, root, fd, offsets, sizes);
-  RESPONSE_ON_ERROR(bulk_store_->FinalizeArena(fd, offsets, sizes));
+  RESPONSE_ON_ERROR(bulk_store_->FinalizeArena(fd, offsets, sizes, server_ptr_->instance_id()));
   WriteFinalizeArenaReply(message_out);
 
   this->doWrite(message_out);

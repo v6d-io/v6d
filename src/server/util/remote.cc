@@ -251,7 +251,8 @@ Status RemoteClient::migrateBuffers(
       ObjectID object_id;
       std::shared_ptr<Payload> object;
       status = this->server_ptr_->GetBulkStore()->Create(payload.data_size,
-                                                         object_id, object);
+                                                         object_id, object,
+                                                         server_ptr_->instance_id());
       if (!status.ok()) {
         break;
       }
