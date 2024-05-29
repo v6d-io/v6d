@@ -16,6 +16,7 @@ limitations under the License.
 #define MODULES_RDMA_RDMA_SERVER_H_
 
 #include <map>
+#include <mutex>
 
 #include <rdma/fabric.h>
 
@@ -36,6 +37,10 @@ class RDMAServer : public IRDMA {
 
   Status Recv(uint64_t clientID, void* buf, size_t size, void* ctx);
 
+  Status Send(void *ep, void* buf, size_t size, void* ctx);
+
+  Status Recv(void *ep, void* buf, size_t size, void* ctx);
+
   Status Read(uint64_t clientID, void *buf, size_t size, uint64_t remote_address, uint64_t rkey, void *mr_desc, void* ctx);
 
   Status Write(uint64_t clientID, void *buf, size_t size, uint64_t remote_address, uint64_t rkey, void *mr_desc, void* ctx);
@@ -53,29 +58,32 @@ class RDMAServer : public IRDMA {
   // TODO: delete in the future.
   Status RegisterMemory(void *address, size_t size, uint64_t &rkey, void* &mr_desc);
 
-  Status GetVineyardBufferContext(uint64_t key, VineyardBufferContext &ctx) {
-    auto iter = buffer_map.find(key);
-    if (iter == buffer_map.end()) {
+  Status GetEp(uint64_t ep_token, fid_ep *&ep) {
+    auto iter = ep_map_.find(ep_token);
+    if (iter == ep_map_.end()) {
       return Status::Invalid("Failed to find buffer context");
     }
-    ctx = iter->second;
+    ep = iter->second;
     return Status::OK();
   }
 
-  Status WaitConnect();
+  Status WaitConnect(void *&rdma_conn_handle);
 
   Status Close();
 
- private:
+  Status AddClient(uint64_t clientID, void *ep);
 
-  Status AddClient(uint64_t clientID, fid_ep *ep);
+  Status RemoveClient(uint64_t ep_token);
+
+ private:
 
   bool IsClient() override {
     return false;
   };
 
   fid_pep *pep = NULL;
-  std::map<uint64_t, VineyardBufferContext> buffer_map;
+  std::mutex ep_map_mutex_;
+  std::map<uint64_t, fid_ep*> ep_map_;
   int port;
 
   fi_info *fi = NULL;
@@ -85,7 +93,6 @@ class RDMAServer : public IRDMA {
   fid_domain *domain = NULL;
   fi_cq_attr cq_attr= { 0 };
   fid_cq *rxcq = NULL, *txcq = NULL;
-  fid_ep *ep = NULL;
   uint64_t mem_key;
   void* rx_msg_buffer, *tx_msg_buffer;
   uint64_t rx_msg_size = 1024, tx_msg_size = 1024;
@@ -94,6 +101,7 @@ class RDMAServer : public IRDMA {
   void *data_mem_desc = NULL;
   fid_mr *mr = NULL;
   fi_addr_t remote_fi_addr = FI_ADDR_UNSPEC;
+  RegisterMemInfo info;
 };
 
 }  // namespace vineyard

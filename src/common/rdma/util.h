@@ -35,9 +35,7 @@ namespace vineyard {
 	do {									\
 		int ret;							\
 		while (1) { \
-      LOG(INFO) << "call post fn\n";					\
 			ret = post_fn(__VA_ARGS__);				\
-			LOG(INFO) << "call post fn end\n";								\
 			if (!ret) {						\
 				return Status::OK();						\
 			}							\
@@ -48,6 +46,7 @@ namespace vineyard {
 				return Status::Invalid(msg);	\
 			}							\
 			usleep(1000);						\
+			LOG(INFO) << "retry " << op_str;				\
 		}								\
 	} while (0)
 
@@ -57,9 +56,8 @@ static inline size_t GetAlignedSize(size_t size, size_t alignment)
 		size : ((size / alignment) + 1) * alignment;
 }
 
-struct VineyardBufferContext {
+struct VineyardRDMAContext {
 	fid_ep *ep;
-	uint64_t rkey;
 };
 
 struct VineyardMSGBufferContext {
@@ -68,7 +66,8 @@ struct VineyardMSGBufferContext {
 
 enum VINEYARD_MSG_OPT {
 	VINEYARD_MSG_TEST = 0,
-	VINEYARD_MSG_INFO_FINISH = 1,
+	VINEYARD_MSG_INFO_FINISH,
+	VINEYARD_MSG_EXCHANGE_KEY,
 };
 
 struct VineyardMsg {
@@ -78,18 +77,18 @@ struct VineyardMsg {
 			uint64_t len;
 			uint64_t key;
 		} test;
+		struct {
+			uint64_t remote_address;
+			uint64_t len;
+			uint64_t key;
+			uint64_t rdma_conn_id;
+		} remoteMemInfo;
 	};
 	int type;
 };
 
-struct Test {
-	uint64_t		addr;
-	size_t			len;
-	uint64_t		key;
-};
-
 struct RegisterMemInfo {
-	void *address;
+	uint64_t address;
 	size_t size;
 	uint64_t rkey;
 	void *mr_desc;

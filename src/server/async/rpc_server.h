@@ -52,9 +52,21 @@ class RPCServer : public SocketServer,
 
   void doAccept() override;
 
+  void doRDMAAccept();
+
+  Status InitRDMA();
+
+  Status RDMAExchangeMemInfo();
+
   const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
   asio::ip::tcp::socket socket_;
+
+  // connection id to rdma server
+  std::unordered_map<uint64_t, RegisterMemInfo> remote_mem_infos_;
+  std::shared_ptr<RDMAServer> rdma_server_;
+  mutable std::recursive_mutex rdma_mutex_;  // protect `rdma_servers_`
+  RegisterMemInfo local_mem_info_;
 };
 
 }  // namespace vineyard

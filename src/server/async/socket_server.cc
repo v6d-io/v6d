@@ -390,7 +390,9 @@ bool SocketConnection::doRegister(const json& root) {
                 self->server_ptr_->instance_id(),
                 self->server_ptr_->session_id(),
                 self->server_ptr_->store_matched(bulk_store_type),
-                self->server_ptr_->compression_enabled(), message_out);
+                self->server_ptr_->compression_enabled(),
+                self->conn_id_, message_out);
+            LOG(INFO) << "current instance:" << self->server_ptr_->instance_id();
           } else {
             WriteErrorReply(s, message_out);
           }

@@ -62,7 +62,7 @@ Status BasicIPCClient::Connect(const std::string& ipc_socket,
   bool store_match = false;
   RETURN_ON_ERROR(ReadRegisterReply(
       message_in, ipc_socket_value, rpc_endpoint_value, instance_id_,
-      session_id_, server_version_, store_match, support_rpc_compression_));
+      session_id_, server_version_, store_match, support_rpc_compression_, rdma_conn_id));
   rpc_endpoint_ = rpc_endpoint_value;
   connected_ = true;
   set_compression_enabled(support_rpc_compression_);
