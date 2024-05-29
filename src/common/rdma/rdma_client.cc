@@ -128,13 +128,14 @@ Status RDMAClient::Connect() {
 Status RDMAClient::GetRXCompletion(int timeout, void **context) {
   LOG(INFO) << "GetRXCompletion";
   uint64_t cur = 0;
-  return this->GetCompletion(ep, remote_fi_addr, rxcq, &cur, 1, timeout, context);
+  return this->GetCompletion(remote_fi_addr, rxcq, &cur, 1, timeout, context);
 }
 
 Status RDMAClient::GetTXCompletion(int timeout, void **context) {
   // TBD
   uint64_t cur = 0;
-  return this->GetCompletion(ep, remote_fi_addr, txcq, &cur, 1, timeout, context);
+  LOG(INFO) << "GetTXCompletion";
+  return this->GetCompletion(remote_fi_addr, txcq, &cur, 1, timeout, context);
 }
 
 Status RDMAClient::SendMemInfoToServer(void *buffer, uint64_t size) {
@@ -155,7 +156,7 @@ Status RDMAClient::GetRXFreeMsgBuffer(void *&buffer) {
 }
 
 Status RDMAClient::RegisterMemory(RegisterMemInfo &memInfo) {
-  VINEYARD_CHECK_OK(IRDMA::RegisterMemory(fi, &mr, domain, memInfo.address, memInfo.size, memInfo.rkey, memInfo.mr_desc));
+  VINEYARD_CHECK_OK(IRDMA::RegisterMemory(fi, &mr, domain, (void *)memInfo.address, memInfo.size, memInfo.rkey, memInfo.mr_desc));
   return Status::OK();
 }
 

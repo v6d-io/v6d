@@ -82,6 +82,14 @@ class BulkStoreBase {
 
   object_map_t& List() { return objects_; }
 
+  void* GetBasePointer() {
+    return objects_.find(PlaceholderBlobID<ID>())->pointer;
+  }
+
+  uint64_t GetBaseSize() {
+    return objects_.find(PlaceholderBlobID<ID>())->data_size;
+  }
+
   bool MemoryTrim();
 
   size_t Footprint() const;

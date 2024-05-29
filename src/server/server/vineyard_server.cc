@@ -117,6 +117,8 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     plasma_bulk_store_ = std::make_shared<PlasmaBulkStore>();
     std::call_once(allocator_init_flag,
                    [this, memory_limit, allocator, &allocator_init_error]() {
+                    LOG(INFO) << "plasma";
+                    LOG(INFO) << "memory limit: " << memory_limit << ", allocator: " << allocator;
                      allocator_init_error = plasma_bulk_store_->PreAllocate(
                          memory_limit, allocator);
                    });
@@ -133,7 +135,10 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
         spec_["bulkstore_spec"]["spill_upper_bound_rate"].get<double>();
     std::call_once(allocator_init_flag, [this, memory_limit, allocator,
                                          &allocator_init_error]() {
+      LOG(INFO) << "default";
+      LOG(INFO) << "memory limit: " << memory_limit << ", allocator: " << allocator;
       allocator_init_error = bulk_store_->PreAllocate(memory_limit, allocator);
+      LOG(INFO) << "try to get base addr:" << bulk_store_->GetBasePointer();
     });
     RETURN_ON_ERROR(allocator_init_error);
 
@@ -1039,8 +1044,10 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
               self->GetIOContext(),
               [self, callback, remote_endpoint, object_id, metadata]() {
                 auto remote = std::make_shared<RemoteClient>(self);
+                LOG(INFO) << "Connect...";
                 RETURN_ON_ERROR(
                     remote->Connect(remote_endpoint, self->session_id()));
+                LOG(INFO) << "Connect done";
                 return remote->MigrateObject(
                     object_id, metadata,
                     [self, remote, callback](const Status& status,
