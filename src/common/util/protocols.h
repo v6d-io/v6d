@@ -203,12 +203,14 @@ void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
                         const InstanceID instance_id,
                         const SessionID session_id, const bool store_match,
-                        const bool support_rpc_compression, std::string& msg);
+                        const bool support_rpc_compression,
+                        const uint64_t &rdma_conn_id, std::string& msg);
 
 Status ReadRegisterReply(const json& msg, std::string& ipc_socket,
                          std::string& rpc_endpoint, InstanceID& instance_id,
                          SessionID& sessionid, std::string& version,
-                         bool& store_match, bool& support_rpc_compression);
+                         bool& store_match, bool& support_rpc_compression,
+                         uint64_t &rdma_conn_id);
 
 void WriteExitRequest(std::string& msg);
 

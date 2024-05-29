@@ -117,7 +117,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
   bool store_match;
   RETURN_ON_ERROR(ReadRegisterReply(
       message_in, ipc_socket_value, rpc_endpoint_value, remote_instance_id_,
-      session_id_, server_version_, store_match, support_rpc_compression_));
+      session_id_, server_version_, store_match, support_rpc_compression_, rdma_conn_id_));
   ipc_socket_ = ipc_socket_value;
   connected_ = true;
   set_compression_enabled(support_rpc_compression_);

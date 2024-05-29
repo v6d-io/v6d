@@ -29,8 +29,14 @@ limitations under the License.
 #include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/callback.h"
 #include "common/util/uuid.h"
-
+#include "common/rdma/rdma_server.h"
+#include "common/rdma/rdma_server.h"
+#include "common/rdma/util.h"
 namespace vineyard {
+
+#ifndef DEFAULT_RDMA_PORT
+#define DEFAULT_RDMA_PORT 9228
+#endif
 
 using boost::asio::generic::stream_protocol;
 
@@ -53,6 +59,9 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
                    std::shared_ptr<VineyardServer> server_ptr,
                    std::shared_ptr<SocketServer> socket_server_ptr,
                    int conn_id);
+  ~SocketConnection() {
+    LOG(INFO) << "socket connection ends";
+  }
 
   bool Start();
 

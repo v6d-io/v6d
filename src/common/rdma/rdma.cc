@@ -67,7 +67,7 @@ Status IRDMA::Write(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *txcq, void *bu
 //   return GetCompletion(ep, remote_fi_addr, txcq, &cur, 1, -1);
 }
 
-Status IRDMA::GetCompletion(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur, uint64_t total, int timeout, void **context) {
+Status IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur, uint64_t total, int timeout, void **context) {
   fi_cq_err_entry err;
   timespec start, end;
   int ret;
@@ -95,6 +95,7 @@ Status IRDMA::GetCompletion(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *cq, ui
   if (context) {
     *context = err.op_context;
   }
+  LOG(INFO) << "opt:" << err.flags;
 
   return Status::OK();
 }

@@ -21,6 +21,7 @@ limitations under the License.
 #include "common/rdma/rdma_client.h"
 #include "common/rdma/rdma_server.h"
 #include "common/rdma/util.h"
+#include "client/ds/blob.h"
 
 using namespace vineyard; // NOLINT(build/namespaces)
 
@@ -105,7 +106,7 @@ void ClientExchangeKeys() {
   LOG(INFO) << "receive key: " << recv_msg->test.key;
   LOG(INFO) << "receive length: " << recv_msg->test.len;
 
-  serverMemInfo.address = (void *)recv_msg->test.remote_address;
+  serverMemInfo.address = recv_msg->test.remote_address;
   serverMemInfo.rkey = recv_msg->test.key;
   serverMemInfo.size = recv_msg->test.len;
 }
@@ -138,14 +139,16 @@ void ServerExchangeKeys() {
   LOG(INFO) << "receive remote address: " << (void *)recv_msg->test.remote_address;
   LOG(INFO) << "receive key: " << recv_msg->test.key;
   LOG(INFO) << "receive length: " << recv_msg->test.len;
-  clientMemInfo.address = (void *)recv_msg->test.remote_address;
+  clientMemInfo.address = recv_msg->test.remote_address;
   clientMemInfo.rkey = recv_msg->test.key;
   clientMemInfo.size = recv_msg->test.len;
 }
 
 void StartServer() {
   VINEYARD_CHECK_OK(RDMAServer::Make(server, port));
-  VINEYARD_CHECK_OK(server->WaitConnect());
+  void *handle;
+  VINEYARD_CHECK_OK(server->WaitConnect(handle));
+  server->AddClient(TEST_CLIENT_ID, handle);
 
   void *buffer = nullptr;
   VINEYARD_CHECK_OK(server->GetRXFreeMsgBuffer(buffer));
@@ -156,7 +159,7 @@ void StartServer() {
 
   void *serverMemAddr = malloc(MEM_SIZE);
   memset(serverMemAddr, 0, MEM_SIZE);
-  serverMemInfo.address = serverMemAddr;
+  serverMemInfo.address = (uint64_t)serverMemAddr;
   serverMemInfo.size = MEM_SIZE;
   
   VINEYARD_CHECK_OK(server->RegisterMemory(serverMemInfo));
@@ -181,7 +184,7 @@ void StartClient(std::string server_address) {
 
   void *clientMemAddr = malloc(MEM_SIZE);
   memset(clientMemAddr, 0, MEM_SIZE);
-  clientMemInfo.address = clientMemAddr;
+  clientMemInfo.address = (uint64_t)clientMemAddr;
   clientMemInfo.size = MEM_SIZE;
   
   VINEYARD_CHECK_OK(client->RegisterMemory(clientMemInfo));
@@ -191,11 +194,11 @@ void StartClient(std::string server_address) {
 }
 
 void WriteDataToServer(std::vector<int> dataVec) {
-
+  //TBD
 }
 
 void WriteDataToClient(std::vector<int> dataVec) {
-
+  //TBD
 }
 
 void ReadDataFromServer(std::vector<int> &dataVec) {

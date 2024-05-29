@@ -28,6 +28,8 @@ limitations under the License.
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
+#include "common/rdma/rdma_client.h"
+
 namespace vineyard {
 
 class VineyardServer;
@@ -42,6 +44,8 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   Status Connect(const std::string& host, const uint32_t port,
                  const SessionID session_id);
 
+  Status ConnectRDMAServer(const std::string& host, const uint32_t port);
+
   Status MigrateObject(const ObjectID object_id, const json& meta,
                        callback_t<const ObjectID> callback);
 
@@ -54,6 +58,8 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
 
   Status recreateMetadata(json const& metadata, json& target,
                           std::map<ObjectID, ObjectID> const& result_blobs);
+
+  Status RDMAExchangeMemInfo();
 
  private:
   Status doWrite(const std::string& message_out);
@@ -68,6 +74,12 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   asio::ip::tcp::socket remote_tcp_socket_;
   asio::generic::stream_protocol::socket socket_;
   bool connected_;
+
+  std::shared_ptr<RDMAClient> rdma_client_;
+  RegisterMemInfo remote_info_;
+  RegisterMemInfo local_info_;
+  uint64_t rdma_conn_id_;
+  bool rdma_connected_;
 };
 
 /**
