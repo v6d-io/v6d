@@ -46,6 +46,8 @@ RPCServer::~RPCServer() {
     acceptor_.close();
   }
   LOG(INFO) << "Close rpc server";
+  // TODO:
+  // release rdma server
 }
 
 Status RPCServer::InitRDMA() {
@@ -184,7 +186,10 @@ void RPCServer::doRDMAAccept() {
       memset(buffer, 0, 64);
       memset(remote_msg, 0, 64);
       void *handle;
-      VINEYARD_CHECK_OK(self->rdma_server_->WaitConnect(handle));
+      if (!self->rdma_server_->WaitConnect(handle).ok()) {
+        LOG(INFO) << "Wait rdma connect failed! Close!";
+        return;
+      }
       LOG(INFO) << "Connected!";
       self->rdma_server_->Recv(handle, remote_msg, sizeof(VineyardMsg), nullptr);
       LOG(INFO) << "Wait";
