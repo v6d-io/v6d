@@ -101,8 +101,8 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient> &ptr, fi_info *hints, std::s
     return Status::Invalid("Failed to allocate tx buffer\n");
   }
 
-  ptr->RegisterMemory(ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
-  ptr->RegisterMemory(ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
+  ptr->RegisterMemory(&(ptr->rx_mr), ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
+  ptr->RegisterMemory(&(ptr->tx_mr), ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
 
   return Status::OK();
 }
@@ -153,12 +153,14 @@ Status RDMAClient::GetRXFreeMsgBuffer(void *&buffer) {
 }
 
 Status RDMAClient::RegisterMemory(RegisterMemInfo &memInfo) {
-  VINEYARD_CHECK_OK(IRDMA::RegisterMemory(fi, &mr, domain, (void *)memInfo.address, memInfo.size, memInfo.rkey, memInfo.mr_desc));
+  fid_mr *new_mr = NULL;
+  VINEYARD_CHECK_OK(IRDMA::RegisterMemory(fi, &new_mr, domain, (void *)memInfo.address, memInfo.size, memInfo.rkey, memInfo.mr_desc));
+  mr_array.push_back(new_mr);
   return Status::OK();
 }
 
-Status RDMAClient::RegisterMemory(void *address, size_t size, uint64_t &rkey, void* &mr_desc) {
-  VINEYARD_CHECK_OK(IRDMA::RegisterMemory(fi, &mr, domain, address, size, rkey, mr_desc));
+Status RDMAClient::RegisterMemory(fid_mr **mr, void *address, size_t size, uint64_t &rkey, void* &mr_desc) {
+  VINEYARD_CHECK_OK(IRDMA::RegisterMemory(fi, mr, domain, address, size, rkey, mr_desc));
   return Status::OK();
 }
 
@@ -183,8 +185,29 @@ Status RDMAClient::Write(void *buf, size_t size, uint64_t remote_address, uint64
 }
 
 Status RDMAClient::Close() {
-  // TBD: notifiy the server to close the connection
-  return Release();
+  // close all registered memory regions
+  RETURN_ON_ERROR(CloseResource(tx_mr, "transmit memory rigion"));
+  RETURN_ON_ERROR(CloseResource(rx_mr, "receive memory region"));
+  RETURN_ON_ERROR(
+      CloseResourcesInVector(mr_array, "memory regions registered by client"));
+
+  RETURN_ON_ERROR(CloseResource(ep, "endpoint created by client"));
+  RETURN_ON_ERROR(CloseResource(txcq, "transmit comeple queue"));
+  RETURN_ON_ERROR(CloseResource(rxcq, "receive comeple queue"));
+  RETURN_ON_ERROR(CloseResource(eq, "event queue"));
+
+  // before closing domain and fabric, we need to close all the resources
+  // bound to them, otherwise, the close operation will failed with -FI_EBUSY
+  RETURN_ON_ERROR(CloseResource(domain, "domain"));
+  RETURN_ON_ERROR(CloseResource(fabric, "fabric"));
+
+  FreeBuffer(rx_msg_buffer);
+  FreeBuffer(tx_msg_buffer);
+
+  FreeInfo(fi);
+
+  LOG(INFO) << "Free sources from client successfully";
+  return Status::OK();
 }
 
 }  // namespace vineyard

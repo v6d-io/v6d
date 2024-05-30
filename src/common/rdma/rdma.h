@@ -49,6 +49,42 @@ class IRDMA {
   int Progress(fid_cq *cq, uint64_t total, uint64_t *cq_cntr);
 
   virtual bool IsClient() = 0;
+
+  void FreeBuffer(void*& buffer);
+
+  void FreeInfo(fi_info* info);
+
+  template <typename FIDType>
+  Status CloseResource(FIDType*& res, const char* resource_name) {
+    if (res) {
+      int ret = fi_close(&(res)->fid);
+      if (ret != FI_SUCCESS) {
+        return Status::Wrap(Status::IOError(),
+                            "Failed to close resource (" +
+                                std::string(resource_name) +
+                                "): " + std::string(fi_strerror(-ret)));
+      }
+    }
+    return Status::OK();
+  }
+
+  template <typename FIDType>
+  Status CloseResourcesInVector(std::vector<FIDType*>& vec,
+                                const char* resource_name) {
+    for (auto& res : vec) {
+      RETURN_ON_ERROR(CloseResource(res, resource_name));
+    }
+    return Status::OK();
+  }
+
+  template <typename K, typename FIDType>
+  Status CloseResourcesInMap(std::map<K, FIDType*>& mapping,
+                             const char* resource_name) {
+    for (auto iter = mapping.begin(); iter != mapping.end(); ++iter) {
+      RETURN_ON_ERROR(CloseResource(iter->second, resource_name));
+    }
+    return Status::OK();
+  }
 };
 
 }  // namespace vineyard
