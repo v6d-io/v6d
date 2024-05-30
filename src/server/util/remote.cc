@@ -41,6 +41,8 @@ RemoteClient::~RemoteClient() {
   boost::system::error_code ec;
   ec = socket_.close(ec);
   LOG(INFO) << "Close remote client";
+  // TODO: send msg to server and close remote ep.
+  rdma_client_->Stop();
 }
 
 Status RemoteClient::Connect(const std::string& rpc_endpoint,
@@ -128,13 +130,6 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host, const uint32_t p
 
   LOG(INFO) << "Connect successfully";
   RETURN_ON_ERROR(RDMAExchangeMemInfo());
-  // });
-  // std::string message_out;
-  // WriteRDMAConnectRequest((uint64_t)local_info_.address, local_info_.rkey, local_info_.size, message_out);
-  // RETURN_ON_ERROR(doWrite(message_out));
-  // json message_in;
-  // RETURN_ON_ERROR(doRead(message_in));
-  // RETURN_ON_ERROR(ReadRDMAConnectReply(message_in, rdma_conn_id_, remote_info_.address, remote_info_.rkey, remote_info_.size));
   this->rdma_connected_ = true;
   return Status::OK();
 }

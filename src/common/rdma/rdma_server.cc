@@ -102,6 +102,8 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints, int po
   LOG(INFO) << "RDMAServer listen....";
   CHECK_ERROR(!fi_listen(ptr->pep), "fi_listen failed.");
 
+  ptr->state = READY;
+
   return Status::OK();
 }
 
@@ -137,7 +139,21 @@ Status RDMAServer::WaitConnect(void *&rdma_conn_handle) {
 	struct fi_eq_cm_entry entry;
 	uint32_t event;
 
-  CHECK_ERROR(fi_eq_sread(eq, &event, &entry, sizeof entry, -1, 0) == sizeof entry, "fi_eq_sread failed.");
+  while (true) {
+    int rd = fi_eq_sread(eq, &event, &entry, sizeof entry, 500, 0);
+
+    if (rd < 0 && (rd != -FI_ETIMEDOUT && rd != -FI_EAGAIN)) {
+      return Status::IOError("fi_eq_sread broken. ret:" + std::to_string(rd));
+    }
+    if (rd == -FI_ETIMEDOUT || rd == -FI_EAGAIN) {
+      if (state == CLOSED) {
+        return Status::Invalid("Server is closed.");
+      }
+      continue;
+    }
+    CHECK_ERROR(rd == sizeof entry, "fi_eq_sread failed.");
+    break;
+  }
 
   fi_info *client_fi = entry.info;
   CHECK_ERROR(event == FI_CONNREQ, "Unexpected event:" + std::to_string(event));

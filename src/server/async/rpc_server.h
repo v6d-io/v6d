@@ -71,6 +71,8 @@ class RPCServer : public SocketServer,
   std::shared_ptr<RDMAServer> rdma_server_;
   mutable std::recursive_mutex rdma_mutex_;  // protect `rdma_servers_`
   RegisterMemInfo local_mem_info_;
+
+  std::thread rdma_listen_thread_;
 };
 
 }  // namespace vineyard

@@ -29,14 +29,7 @@ class RDMAServer : public IRDMA {
  public:
   RDMAServer() = default;
 
-  ~RDMAServer() {
-    if (rx_msg_buffer) {
-      free(rx_msg_buffer);
-    }
-    if (tx_msg_buffer) {
-      free(tx_msg_buffer);
-    }
-  }
+  ~RDMAServer() {}
 
   static Status Make(std::shared_ptr<RDMAServer> &ptr, int port);
 
@@ -110,6 +103,8 @@ class RDMAServer : public IRDMA {
   fid_mr *tx_mr = NULL, *rx_mr = NULL;
   std::vector<fid_mr *> mr_array;
   fi_addr_t remote_fi_addr = FI_ADDR_UNSPEC;
+
+  RDMA_STATE state = INIT;
 };
 
 }  // namespace vineyard

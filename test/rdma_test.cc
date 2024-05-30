@@ -182,7 +182,7 @@ void StartClient(std::string server_address) {
   memset(clientMemAddr, 0, MEM_SIZE);
   clientMemInfo.address = (uint64_t)clientMemAddr;
   clientMemInfo.size = MEM_SIZE;
-  
+
   VINEYARD_CHECK_OK(client->RegisterMemory(clientMemInfo));
 
   ClientExchangeKeys();

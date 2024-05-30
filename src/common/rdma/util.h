@@ -79,6 +79,12 @@ struct RegisterMemInfo {
 	void *mr_desc;
 };
 
+enum RDMA_STATE {
+	INIT,
+	READY,
+	CLOSED,
+};
+
 #define VINEYARD_FIVERSION FI_VERSION(1,21)
 
 }
