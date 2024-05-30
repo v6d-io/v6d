@@ -95,8 +95,8 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints, int po
     return Status::Invalid("Failed to allocate tx buffer\n");
   }
 
-  ptr->RegisterMemory(ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
-  ptr->RegisterMemory(ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
+  ptr->RegisterMemory(&(ptr->rx_mr), ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
+  ptr->RegisterMemory(&(ptr->tx_mr), ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
 
   ptr->port = port;
 
@@ -107,8 +107,30 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints, int po
 }
 
 Status RDMAServer::Close() {
+  // close all registered memory regions
+  RETURN_ON_ERROR(CloseResource(tx_mr, "transmit memory rigion"));
+  RETURN_ON_ERROR(CloseResource(rx_mr, "receive memory rigion"));
+  RETURN_ON_ERROR(
+      CloseResourcesInVector(mr_array, "memory regions registered by server"));
 
-  return Release();
+  RETURN_ON_ERROR(CloseResourcesInMap(ep_map_, "endpoint created by server"));
+  RETURN_ON_ERROR(CloseResource(txcq, "transmit comeple queue"));
+  RETURN_ON_ERROR(CloseResource(rxcq, "receive comeple queue"));
+  RETURN_ON_ERROR(CloseResource(pep, "passive endpoint"));
+  RETURN_ON_ERROR(CloseResource(eq, "event queue"));
+
+  // before closing domain and fabric, we need to close all the resources
+  // bound to them, otherwise, the close operation will failed with -FI_EBUSY
+  RETURN_ON_ERROR(CloseResource(domain, "domain"));
+  RETURN_ON_ERROR(CloseResource(fabric, "fabric"));
+
+  FreeBuffer(rx_msg_buffer);
+  FreeBuffer(tx_msg_buffer);
+
+  FreeInfo(fi);
+
+  LOG(INFO) << "Free sources from server successfully";
+  return Status::OK();
 }
 
 Status RDMAServer::WaitConnect(void *&rdma_conn_handle) {
@@ -169,14 +191,16 @@ Status RDMAServer::RemoveClient(uint64_t ep_token) {
 }
 
 Status RDMAServer::RegisterMemory(RegisterMemInfo &memInfo) {
-  RETURN_ON_ERROR(IRDMA::RegisterMemory(fi, &mr, domain, (void *)memInfo.address, memInfo.size , memInfo.rkey, memInfo.mr_desc));
+  fid_mr *new_mr = NULL;
+  RETURN_ON_ERROR(IRDMA::RegisterMemory(fi, &new_mr, domain, (void *)memInfo.address, memInfo.size , memInfo.rkey, memInfo.mr_desc));
+  mr_array.push_back(new_mr);
   mem_key = memInfo.rkey;
   this->info = memInfo;
   return Status::OK();
 }
 
-Status RDMAServer::RegisterMemory(void *address, size_t size, uint64_t &rkey, void* &mr_desc) {
-  return IRDMA::RegisterMemory(fi, &mr, domain, address, size , rkey, mr_desc);
+Status RDMAServer::RegisterMemory(fid_mr **mr, void *address, size_t size, uint64_t &rkey, void* &mr_desc) {
+  return IRDMA::RegisterMemory(fi, mr, domain, address, size , rkey, mr_desc);
 }
 
 Status RDMAServer::Send(uint64_t ep_token, void* buf, size_t size, void* ctx) {

@@ -41,7 +41,7 @@ class RDMAClient : public IRDMA {
   Status RegisterMemory(RegisterMemInfo &memInfo);
 
   // TODO: delete in the future.
-  Status RegisterMemory(void *address, size_t size, uint64_t &rkey, void* &mr_desc);
+  Status RegisterMemory(fid_mr **mr, void *address, size_t size, uint64_t &rkey, void* &mr_desc);
 
   Status Connect();
 
@@ -75,7 +75,8 @@ class RDMAClient : public IRDMA {
   uint64_t rx_msg_size = 1024, tx_msg_size = 1024;
   uint64_t rx_msg_key = 0, tx_msg_key = 0;
   void *rx_msg_mr_desc = NULL, *tx_msg_mr_desc = NULL;
-  fid_mr *mr = NULL;
+  fid_mr *tx_mr = NULL, *rx_mr = NULL;
+  std::vector<fid_mr *> mr_array;
   fi_addr_t remote_fi_addr = FI_ADDR_UNSPEC;
 };
 
