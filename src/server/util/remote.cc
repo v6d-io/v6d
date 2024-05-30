@@ -315,7 +315,7 @@ Status RemoteClient::migrateBuffers(
       "compression", true);  // enable compression for migration
 
   std::string message_out;
-  WriteGetRemoteBuffersRequest(blobs, false, compress, message_out);
+  WriteGetRemoteBuffersRequest(blobs, false, compress, rdma_connected_, message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));

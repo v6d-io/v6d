@@ -104,9 +104,6 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient> &ptr, fi_info *hints, std::s
   ptr->RegisterMemory(ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
   ptr->RegisterMemory(ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
 
-  VineyardMSGBufferContext *context = (VineyardMSGBufferContext *)malloc(sizeof(VineyardMSGBufferContext));
-  context->buffer = ptr->rx_msg_buffer;
-
   return Status::OK();
 }
 
