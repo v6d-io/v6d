@@ -34,10 +34,6 @@ limitations under the License.
 #include "common/rdma/util.h"
 namespace vineyard {
 
-#ifndef DEFAULT_RDMA_PORT
-#define DEFAULT_RDMA_PORT 9228
-#endif
-
 using boost::asio::generic::stream_protocol;
 
 class SocketServer;

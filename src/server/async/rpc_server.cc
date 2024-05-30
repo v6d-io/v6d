@@ -51,21 +51,27 @@ RPCServer::~RPCServer() {
 }
 
 Status RPCServer::InitRDMA() {
-  if(RDMAServer::Make(this->rdma_server_, DEFAULT_RDMA_PORT).ok()) {
+  std::string rdma_endpoint = RDMAEndpoint();
+  size_t pos = rdma_endpoint.find(':');
+  if (pos == std::string::npos) {
+    return Status::Invalid("Invalid RDMA endpoint: " + rdma_endpoint);
+  }
+  int rdma_port = std::stoi(rdma_endpoint.substr(pos + 1));
+
+  Status status = RDMAServer::Make(this->rdma_server_, rdma_port);
+  if(status.ok()) {
     LOG(INFO) << "Create rdma server successfully";
     this->local_mem_info_.address = (uint64_t)this->vs_ptr_->GetBulkStore()->GetBasePointer();
     this->local_mem_info_.size = this->vs_ptr_->GetBulkStore()->GetBaseSize();
     if(rdma_server_->RegisterMemory(this->local_mem_info_).ok()) {
-      LOG(INFO) << "Register rdma memory successfully! Wait port: " << DEFAULT_RDMA_PORT << " connect...";
+      LOG(INFO) << "Register rdma memory successfully! Wait port: " << rdma_port << " for connection...";
     } else {
-      LOG(INFO) << "Register rdma memory failed! Fall back to TCP.";
-      return Status::IOError("Register rdma memory failed");
+      return Status::IOError("Register rdma memory failed. Error:" + status.message());
     }
 
     doRDMAAccept();
   } else {
-    LOG(ERROR) << "Create rdma server failed! Fall back to TCP.";
-    return Status::Invalid("Create rdma server failed");
+    return Status::Invalid("Create rdma server failed! Error:" + status.message());
   }
   return Status::OK();
 }
@@ -75,7 +81,12 @@ void RPCServer::Start() {
   SocketServer::Start();
   LOG(INFO) << "Vineyard will listen on 0.0.0.0:"
             << rpc_spec_["port"].get<uint32_t>() << " for RPC";
-  InitRDMA();
+  Status status = InitRDMA();
+  if (status.ok()) {
+    LOG(INFO) << "Vineyard will listen on " << RDMAEndpoint() << " for RDMA";
+  } else {
+    LOG(INFO) << "Init RDMA failed!" + status.message() + " Fall back to TCP.";
+  }
 }
 
 asio::ip::tcp::endpoint RPCServer::getEndpoint(asio::io_context&) {

@@ -40,11 +40,9 @@ class IRDMA {
 
   Status RegisterMemory(fi_info *fi, fid_mr **mr, fid_domain *domain, void *address, size_t size, uint64_t &rkey, void* &mr_desc);
 
-  virtual Status Close() = 0;
+  virtual Status Stop() = 0;
 
   Status GetCompletion(fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur, uint64_t total, int timeout, void **context);
-
-  Status Release();
 
   int Progress(fid_cq *cq, uint64_t total, uint64_t *cq_cntr);
 

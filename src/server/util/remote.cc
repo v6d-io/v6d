@@ -44,7 +44,8 @@ RemoteClient::~RemoteClient() {
 }
 
 Status RemoteClient::Connect(const std::string& rpc_endpoint,
-                             const SessionID session_id) {
+                             const SessionID session_id,
+                             const std::string& rdma_endpoint) {
   size_t pos = rpc_endpoint.find(":");
   std::string host, port;
   if (pos == std::string::npos) {
@@ -55,14 +56,25 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
     port = rpc_endpoint.substr(pos + 1);
   }
 
-  Status status = Connect(host, static_cast<uint32_t>(std::stoul(port)), session_id);
-  if (ConnectRDMAServer("172.21.67.115", 9228).ok()) {
+  RETURN_ON_ERROR(Connect(host, static_cast<uint32_t>(std::stoul(port)), session_id));
+
+  std::string rdma_host, rdma_port;
+  pos = rdma_endpoint.find(":");
+  if (pos == std::string::npos) {
+    LOG(INFO) << "No RDMA endpoint provided. Fall back to TCP.";
+  } else {
+    rdma_host = rdma_endpoint.substr(0, pos);
+    rdma_port = rdma_endpoint.substr(pos + 1);
+  }
+
+  if (ConnectRDMAServer(rdma_host, std::atoi(rdma_port.c_str())).ok()) {
+    LOG(INFO) << "RDMA host:" << rdma_host << ", port:" << rdma_port;
     LOG(INFO) << "Connect to RDMA server successfully";
   } else {
     LOG(INFO) << "Failed to connect to RDMA server. Fall back to TCP.";
   }
   
-  return status;
+  return Status::OK();
 }
 
 Status RemoteClient::RDMAExchangeMemInfo() {

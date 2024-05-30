@@ -45,7 +45,7 @@ class RDMAClient : public IRDMA {
 
   Status Connect();
 
-  Status Close();
+  Status Stop() override;
 
   Status SendMemInfoToServer(void *buffer, uint64_t size);
 

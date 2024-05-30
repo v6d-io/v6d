@@ -39,7 +39,7 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   explicit RemoteClient(const std::shared_ptr<VineyardServer> vs_ptr);
   ~RemoteClient();
 
-  Status Connect(const std::string& rpc_endpoint, const SessionID session_id);
+  Status Connect(const std::string& rpc_endpoint, const SessionID session_id, const std::string& rdma_endpoint);
 
   Status Connect(const std::string& host, const uint32_t port,
                  const SessionID session_id);

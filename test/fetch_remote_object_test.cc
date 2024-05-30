@@ -43,7 +43,6 @@ void FetchBuffer(std::string &objectName, Client &client) {
   const int *data = tensor->data();
   for (int i = 0; i < 10; ++i) {
     CHECK_EQ(data[i], i + 1000);
-    LOG(INFO) << "Read tensor data:" << data[i];
   }
 }
 

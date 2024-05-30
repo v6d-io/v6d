@@ -44,6 +44,10 @@ class RPCServer : public SocketServer,
     return get_hostname() + ":" + json_to_string(rpc_spec_["port"]);
   }
 
+  std::string RDMAEndpoint() {
+    return json_to_string(rpc_spec_["rdma_endpoint"]);
+  }
+
   Status Register(std::shared_ptr<SocketConnection> conn,
                   const SessionID session_id) override;
 

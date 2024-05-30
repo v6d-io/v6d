@@ -41,30 +41,18 @@ Status IRDMA::RegisterMemory(fi_info *fi, fid_mr **mr, fid_domain *domain, void 
 
 Status IRDMA::Send(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *txcq, void *buf, size_t size, void* mr_desc, void *ctx) {
   POST(fi_send, "send", ep, buf, size, mr_desc, remote_fi_addr, ctx);
-
-  // uint64_t cur = 0;
-  // return GetCompletion(ep, remote_fi_addr, txcq, &cur, 1, -1);
 }
 
 Status IRDMA::Recv(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *rxcq, void *buf, size_t size, void* mr_desc, void *ctx) {
   POST(fi_recv, "receive", ep, buf, size, mr_desc, remote_fi_addr, ctx);
-
-  // uint64_t cur = 0;
-  // return GetCompletion(ep, remote_fi_addr, rxcq, &cur, 1, -1);
 }
 
 Status IRDMA::Read(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *rxcq, void *buf, size_t size, uint64_t remote_address, uint64_t key, void* mr_desc, void *ctx) {
   POST(fi_read, "read", ep, buf, size, mr_desc, remote_fi_addr, remote_address, key, ctx);
-
-  // uint64_t cur = 0;
-  // return GetCompletion(ep, remote_fi_addr, rxcq, &cur, 1, -1);
 }
 
 Status IRDMA::Write(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *txcq, void *buf, size_t size, uint64_t remote_address, uint64_t key, void* mr_desc, void *ctx) {
   POST(fi_write, "write", ep, buf, size, mr_desc, remote_fi_addr, remote_address, key, ctx);
-
-//   uint64_t cur = 0;
-//   return GetCompletion(ep, remote_fi_addr, txcq, &cur, 1, -1);
 }
 
 Status IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur, uint64_t total, int timeout, void **context) {
@@ -95,7 +83,6 @@ Status IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur,
   if (context) {
     *context = err.op_context;
   }
-  LOG(INFO) << "opt:" << err.flags;
 
   return Status::OK();
 }
@@ -110,10 +97,6 @@ void IRDMA::FreeInfo(fi_info* info) {
   if (info) {
     fi_freeinfo(info);
   }
-}
-
-Status IRDMA::Release() {
-  return Status::OK();
 }
 
 }  // namespace vineyard

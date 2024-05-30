@@ -29,6 +29,15 @@ class RDMAServer : public IRDMA {
  public:
   RDMAServer() = default;
 
+  ~RDMAServer() {
+    if (rx_msg_buffer) {
+      free(rx_msg_buffer);
+    }
+    if (tx_msg_buffer) {
+      free(tx_msg_buffer);
+    }
+  }
+
   static Status Make(std::shared_ptr<RDMAServer> &ptr, int port);
 
   static Status Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints, int port);
@@ -69,7 +78,7 @@ class RDMAServer : public IRDMA {
 
   Status WaitConnect(void *&rdma_conn_handle);
 
-  Status Close();
+  Status Stop() override;
 
   Status AddClient(uint64_t clientID, void *ep);
 
@@ -93,7 +102,6 @@ class RDMAServer : public IRDMA {
   fid_domain *domain = NULL;
   fi_cq_attr cq_attr= { 0 };
   fid_cq *rxcq = NULL, *txcq = NULL;
-  uint64_t mem_key;
   void* rx_msg_buffer, *tx_msg_buffer;
   uint64_t rx_msg_size = 1024, tx_msg_size = 1024;
   uint64_t rx_msg_key = 0, tx_msg_key = 0;
@@ -102,7 +110,6 @@ class RDMAServer : public IRDMA {
   fid_mr *tx_mr = NULL, *rx_mr = NULL;
   std::vector<fid_mr *> mr_array;
   fi_addr_t remote_fi_addr = FI_ADDR_UNSPEC;
-  RegisterMemInfo info;
 };
 
 }  // namespace vineyard

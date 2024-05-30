@@ -23,6 +23,9 @@ limitations under the License.
 #include "common/rdma/util.h"
 #include "client/ds/blob.h"
 
+#define MEM_SIZE 1024
+#define TEST_CLIENT_ID 0
+
 using namespace vineyard; // NOLINT(build/namespaces)
 
 constexpr int port = 9228;
@@ -31,17 +34,10 @@ std::shared_ptr<RDMAClient> client;
 
 RegisterMemInfo serverMemInfo;
 RegisterMemInfo clientMemInfo;
-#define MEM_SIZE 1024
 
 struct VineyardMSGBufferContext {
 	void *buffer;
 };
-
-void PrepareData(std::vector<int> &vec) {
-  for (int i = 0; i < 100; i++) {
-    vec.push_back(i);
-  }
-}
 
 void HelloToServer() {
   void *msg = nullptr;
@@ -102,9 +98,7 @@ void ClientExchangeKeys() {
   LOG(INFO) << "wait complete";
   client->GetRXCompletion(-1, &recv_context);
   LOG(INFO) << "complete";
-  printf("recv context: %p\n", recv_context);
   VineyardMsg *recv_msg = (VineyardMsg *)((VineyardMSGBufferContext *)recv_context)->buffer;
-  printf("msg %p\n", recv_msg);
 
   LOG(INFO) << "receive remote address: " << (void *)recv_msg->remoteMemInfo.remote_address;
   LOG(INFO) << "receive key: " << recv_msg->remoteMemInfo.key;
@@ -136,9 +130,7 @@ void ServerExchangeKeys() {
   LOG(INFO) << "wait complete";
   server->GetRXCompletion(-1, &recv_context);
   LOG(INFO) << "complete";
-  printf("recv context: %p\n", recv_context);
   VineyardMsg *recv_msg = (VineyardMsg *)((VineyardMSGBufferContext *)recv_context)->buffer;
-  printf("msg %p\n", recv_msg);
 
   LOG(INFO) << "receive remote address: " << (void *)recv_msg->remoteMemInfo.remote_address;
   LOG(INFO) << "receive key: " << recv_msg->remoteMemInfo.key;
@@ -157,7 +149,6 @@ void StartServer() {
   void *buffer = nullptr;
   VINEYARD_CHECK_OK(server->GetRXFreeMsgBuffer(buffer));
   VineyardMSGBufferContext *bufferContext = (VineyardMSGBufferContext *)malloc(sizeof(VineyardMSGBufferContext));
-  printf("recv buffer context: %p\n", bufferContext);
   bufferContext->buffer = buffer;
   server->Recv((uint64_t)TEST_CLIENT_ID, buffer, sizeof(VineyardMsg), bufferContext);
 
@@ -171,7 +162,7 @@ void StartServer() {
   ServerExchangeKeys();
 
   HelloToClient();
-  VINEYARD_CHECK_OK(server->Close());
+  VINEYARD_CHECK_OK(server->Stop());
 }
 
 void StartClient(std::string server_address) {
@@ -196,41 +187,15 @@ void StartClient(std::string server_address) {
 
   ClientExchangeKeys();
   HelloToServer();
-  VINEYARD_CHECK_OK(client->Close());
-}
-
-void WriteDataToServer(std::vector<int> dataVec) {
-  //TBD
-}
-
-void WriteDataToClient(std::vector<int> dataVec) {
-  //TBD
-}
-
-void ReadDataFromServer(std::vector<int> &dataVec) {
-  //TBD
-}
-
-void ReadDataFromClient(std::vector<int> &dataVec) {
-  //TBD
+  VINEYARD_CHECK_OK(client->Stop());
 }
 
 int main(int argc, char** argv) {
-  std::vector<int> clientDataVec;
-  std::vector<int> serverDataVec;
   if (argc >= 2) {
-    PrepareData(clientDataVec);
-
     std::string server_address = std::string(argv[1]);
     StartClient(server_address);
-
-    WriteDataToServer(clientDataVec);
-    ReadDataFromServer(serverDataVec);
   } else {
-    PrepareData(serverDataVec);
     StartServer();
-    WriteDataToClient(serverDataVec);
-    ReadDataFromClient(clientDataVec);
   }
 
   LOG(INFO) << "Pass rdma test.";

@@ -81,8 +81,6 @@ struct RegisterMemInfo {
 
 #define VINEYARD_FIVERSION FI_VERSION(1,21)
 
-#define TEST_CLIENT_ID 0
-
 }
 
 #endif
