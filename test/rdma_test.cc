@@ -171,6 +171,7 @@ void StartServer() {
   ServerExchangeKeys();
 
   HelloToClient();
+  VINEYARD_CHECK_OK(server->Close());
 }
 
 void StartClient(std::string server_address) {
@@ -195,6 +196,7 @@ void StartClient(std::string server_address) {
 
   ClientExchangeKeys();
   HelloToServer();
+  VINEYARD_CHECK_OK(client->Close());
 }
 
 void WriteDataToServer(std::vector<int> dataVec) {
