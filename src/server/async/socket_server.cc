@@ -763,24 +763,31 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
   bool compress = false;
   std::vector<std::shared_ptr<Payload>> objects;
   std::string message_out;
+  bool use_rdma = false;
 
-  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress);
+  TRY_READ_REQUEST(ReadGetRemoteBuffersRequest, root, ids, unsafe, compress, use_rdma);
   RESPONSE_ON_ERROR(bulk_store_->GetUnsafe(ids, unsafe, objects));
   RESPONSE_ON_ERROR(bulk_store_->AddDependency(
       std::unordered_set<ObjectID>(ids.begin(), ids.end()), this->getConnId()));
   WriteGetBuffersReply(objects, {}, compress, message_out);
 
-  this->doWrite(message_out, [self, objects, compress](const Status& status) {
-    SendRemoteBuffers(
-        self->socket_, objects, 0, compress, [self](const Status& status) {
-          if (!status.ok()) {
-            VLOG(100) << "Failed to send buffers to remote client: "
-                      << status.ToString();
-          }
-          return Status::OK();
-        });
-    return Status::OK();
-  });
+  if (!use_rdma) {
+    this->doWrite(message_out, [self, objects, compress](const Status& status) {
+      SendRemoteBuffers(
+          self->socket_, objects, 0, compress, [self](const Status& status) {
+            if (!status.ok()) {
+              VLOG(100) << "Failed to send buffers to remote client: "
+                        << status.ToString();
+            }
+            return Status::OK();
+          });
+      return Status::OK();
+    });
+  } else {
+    this->doWrite(message_out, [](const Status& status) {
+      return Status::OK();
+    });
+  }
   return false;
 }
 

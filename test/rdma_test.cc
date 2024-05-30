@@ -33,6 +33,10 @@ RegisterMemInfo serverMemInfo;
 RegisterMemInfo clientMemInfo;
 #define MEM_SIZE 1024
 
+struct VineyardMSGBufferContext {
+	void *buffer;
+};
+
 void PrepareData(std::vector<int> &vec) {
   for (int i = 0; i < 100; i++) {
     vec.push_back(i);
@@ -62,7 +66,7 @@ void HelloToServer() {
 void HelloToClient() {
   void *msg = nullptr;
   server->GetRXFreeMsgBuffer(msg);
-  server->Recv(TEST_CLIENT_ID, msg, sizeof(VineyardMsg), nullptr);
+  server->Recv((uint64_t)TEST_CLIENT_ID, msg, sizeof(VineyardMsg), nullptr);
 
   char buf[] = "Hello, client!";
   server->Write(TEST_CLIENT_ID, buf, 15, (uint64_t)clientMemInfo.address, (uint64_t)clientMemInfo.rkey, NULL, nullptr);
@@ -70,7 +74,7 @@ void HelloToClient() {
 
   msg = nullptr;
   server->GetTXFreeMsgBuffer(msg);
-  server->Send(TEST_CLIENT_ID, msg, sizeof(VineyardMsg), nullptr);
+  server->Send((uint64_t)TEST_CLIENT_ID, msg, sizeof(VineyardMsg), nullptr);
 
   server->GetRXCompletion(-1, nullptr);
   LOG(INFO) << "Address: " << (void *)serverMemInfo.address;
@@ -83,10 +87,10 @@ void ClientExchangeKeys() {
   VINEYARD_CHECK_OK(client->GetTXFreeMsgBuffer(buffer));
   VineyardMsg *msg = (VineyardMsg *)buffer;
   memset(msg, 0, sizeof(VineyardMsg));
-  msg->type = VINEYARD_MSG_TEST;
-  msg->test.remote_address = (uint64_t)clientMemInfo.address;
-  msg->test.key = clientMemInfo.rkey;
-  msg->test.len = MEM_SIZE;
+  msg->type = VINEYARD_MSG_EXCHANGE_KEY;
+  msg->remoteMemInfo.remote_address = (uint64_t)clientMemInfo.address;
+  msg->remoteMemInfo.key = clientMemInfo.rkey;
+  msg->remoteMemInfo.len = MEM_SIZE;
   context.buffer = buffer;
   LOG(INFO) << "client address: " << clientMemInfo.address;
   LOG(INFO) << "client key: " << clientMemInfo.rkey;
@@ -102,13 +106,13 @@ void ClientExchangeKeys() {
   VineyardMsg *recv_msg = (VineyardMsg *)((VineyardMSGBufferContext *)recv_context)->buffer;
   printf("msg %p\n", recv_msg);
 
-  LOG(INFO) << "receive remote address: " << (void *)recv_msg->test.remote_address;
-  LOG(INFO) << "receive key: " << recv_msg->test.key;
-  LOG(INFO) << "receive length: " << recv_msg->test.len;
+  LOG(INFO) << "receive remote address: " << (void *)recv_msg->remoteMemInfo.remote_address;
+  LOG(INFO) << "receive key: " << recv_msg->remoteMemInfo.key;
+  LOG(INFO) << "receive length: " << recv_msg->remoteMemInfo.len;
 
-  serverMemInfo.address = recv_msg->test.remote_address;
-  serverMemInfo.rkey = recv_msg->test.key;
-  serverMemInfo.size = recv_msg->test.len;
+  serverMemInfo.address = recv_msg->remoteMemInfo.remote_address;
+  serverMemInfo.rkey = recv_msg->remoteMemInfo.key;
+  serverMemInfo.size = recv_msg->remoteMemInfo.len;
 }
 
 void ServerExchangeKeys() {
@@ -117,16 +121,16 @@ void ServerExchangeKeys() {
   VINEYARD_CHECK_OK(server->GetTXFreeMsgBuffer(buffer));
   VineyardMsg *msg = (VineyardMsg *)buffer;
   memset(msg, 0, sizeof(VineyardMsg));
-  msg->type = VINEYARD_MSG_TEST;
-  msg->test.remote_address = (uint64_t)serverMemInfo.address;
-  msg->test.key = serverMemInfo.rkey;
-  msg->test.len = MEM_SIZE;
+  msg->type = VINEYARD_MSG_EXCHANGE_KEY;
+  msg->remoteMemInfo.remote_address = (uint64_t)serverMemInfo.address;
+  msg->remoteMemInfo.key = serverMemInfo.rkey;
+  msg->remoteMemInfo.len = MEM_SIZE;
   context.buffer = buffer;
   LOG(INFO) << "server address: " << serverMemInfo.address;
   LOG(INFO) << "server key: " << serverMemInfo.rkey;
 
   LOG(INFO) << "Send";
-  server->Send(TEST_CLIENT_ID, buffer, sizeof(VineyardMsg), &context);
+  server->Send((uint64_t)TEST_CLIENT_ID, buffer, sizeof(VineyardMsg), &context);
 
   void *recv_context = nullptr;
   LOG(INFO) << "wait complete";
@@ -136,12 +140,12 @@ void ServerExchangeKeys() {
   VineyardMsg *recv_msg = (VineyardMsg *)((VineyardMSGBufferContext *)recv_context)->buffer;
   printf("msg %p\n", recv_msg);
 
-  LOG(INFO) << "receive remote address: " << (void *)recv_msg->test.remote_address;
-  LOG(INFO) << "receive key: " << recv_msg->test.key;
-  LOG(INFO) << "receive length: " << recv_msg->test.len;
-  clientMemInfo.address = recv_msg->test.remote_address;
-  clientMemInfo.rkey = recv_msg->test.key;
-  clientMemInfo.size = recv_msg->test.len;
+  LOG(INFO) << "receive remote address: " << (void *)recv_msg->remoteMemInfo.remote_address;
+  LOG(INFO) << "receive key: " << recv_msg->remoteMemInfo.key;
+  LOG(INFO) << "receive length: " << recv_msg->remoteMemInfo.len;
+  clientMemInfo.address = recv_msg->remoteMemInfo.remote_address;
+  clientMemInfo.rkey = recv_msg->remoteMemInfo.key;
+  clientMemInfo.size = recv_msg->remoteMemInfo.len;
 }
 
 void StartServer() {
@@ -155,7 +159,7 @@ void StartServer() {
   VineyardMSGBufferContext *bufferContext = (VineyardMSGBufferContext *)malloc(sizeof(VineyardMSGBufferContext));
   printf("recv buffer context: %p\n", bufferContext);
   bufferContext->buffer = buffer;
-  server->Recv(TEST_CLIENT_ID, buffer, sizeof(VineyardMsg), bufferContext);
+  server->Recv((uint64_t)TEST_CLIENT_ID, buffer, sizeof(VineyardMsg), bufferContext);
 
   void *serverMemAddr = malloc(MEM_SIZE);
   memset(serverMemAddr, 0, MEM_SIZE);

@@ -56,27 +56,12 @@ static inline size_t GetAlignedSize(size_t size, size_t alignment)
 		size : ((size / alignment) + 1) * alignment;
 }
 
-struct VineyardRDMAContext {
-	fid_ep *ep;
-};
-
-struct VineyardMSGBufferContext {
-	void *buffer;
-};
-
 enum VINEYARD_MSG_OPT {
-	VINEYARD_MSG_TEST = 0,
-	VINEYARD_MSG_INFO_FINISH,
 	VINEYARD_MSG_EXCHANGE_KEY,
 };
 
 struct VineyardMsg {
 	union {
-		struct {
-			uint64_t remote_address;
-			uint64_t len;
-			uint64_t key;
-		} test;
 		struct {
 			uint64_t remote_address;
 			uint64_t len;
