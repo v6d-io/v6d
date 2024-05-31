@@ -58,6 +58,7 @@ static inline size_t GetAlignedSize(size_t size, size_t alignment)
 
 enum VINEYARD_MSG_OPT {
 	VINEYARD_MSG_EXCHANGE_KEY,
+	VINEYARD_MSG_CLOSE,
 };
 
 struct VineyardMsg {
@@ -66,10 +67,14 @@ struct VineyardMsg {
 			uint64_t remote_address;
 			uint64_t len;
 			uint64_t key;
-			uint64_t rdma_conn_id;
 		} remoteMemInfo;
 	};
 	int type;
+};
+
+struct VineyardRecvContext {
+	uint64_t rdma_conn_id;
+	void *attr;
 };
 
 struct RegisterMemInfo {
@@ -82,7 +87,7 @@ struct RegisterMemInfo {
 enum RDMA_STATE {
 	INIT,
 	READY,
-	CLOSED,
+	STOPED,
 };
 
 #define VINEYARD_FIVERSION FI_VERSION(1,21)

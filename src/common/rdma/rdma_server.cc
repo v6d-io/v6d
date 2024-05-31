@@ -107,14 +107,18 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints, int po
   return Status::OK();
 }
 
-Status RDMAServer::Stop() {
+Status RDMAServer::Close() {
   // close all registered memory regions
   RETURN_ON_ERROR(CloseResource(tx_mr, "transmit memory rigion"));
   RETURN_ON_ERROR(CloseResource(rx_mr, "receive memory rigion"));
   RETURN_ON_ERROR(
       CloseResourcesInVector(mr_array, "memory regions registered by server"));
 
-  RETURN_ON_ERROR(CloseResourcesInMap(ep_map_, "endpoint created by server"));
+  {
+    std::lock_guard<std::mutex> lock(ep_map_mutex_);
+    RETURN_ON_ERROR(CloseResourcesInMap(ep_map_, "endpoint created by server"));
+  }
+
   RETURN_ON_ERROR(CloseResource(txcq, "transmit comeple queue"));
   RETURN_ON_ERROR(CloseResource(rxcq, "receive comeple queue"));
   RETURN_ON_ERROR(CloseResource(pep, "passive endpoint"));
@@ -134,7 +138,7 @@ Status RDMAServer::Stop() {
   return Status::OK();
 }
 
-Status RDMAServer::WaitConnect(void *&rdma_conn_handle) {
+Status RDMAServer::WaitConnect(uint64_t &rdma_conn_id) {
 
 	struct fi_eq_cm_entry entry;
 	uint32_t event;
@@ -146,12 +150,18 @@ Status RDMAServer::WaitConnect(void *&rdma_conn_handle) {
       return Status::IOError("fi_eq_sread broken. ret:" + std::to_string(rd));
     }
     if (rd == -FI_ETIMEDOUT || rd == -FI_EAGAIN) {
-      if (state == CLOSED) {
-        return Status::Invalid("Server is closed.");
+      if (state == STOPED) {
+        return Status::Invalid("Server is stoped.");
       }
       continue;
     }
     CHECK_ERROR(rd == sizeof entry, "fi_eq_sread failed.");
+    if (event == FI_SHUTDOWN) {
+      fid_ep *closed_ep = container_of(entry.fid, fid_ep, fid);
+      LOG(INFO) << "Connection closed.";
+      RemoveClient(closed_ep);
+      continue;
+    }
     break;
   }
 
@@ -187,13 +197,15 @@ Status RDMAServer::WaitConnect(void *&rdma_conn_handle) {
     return Status::Invalid("Unexpected event:" + std::to_string(event));
   }
 
-  rdma_conn_handle = ep;
+  // rdma_conn_handle = ep;
+  AddClient(rdma_conn_id, ep);
 
   return Status::OK();
 }
 
-Status RDMAServer::AddClient(uint64_t ep_token, void *ep) {
+Status RDMAServer::AddClient(uint64_t &ep_token, void *ep) {
   std::lock_guard<std::mutex> lock(ep_map_mutex_);
+  ep_token = current_conn_id++;
   ep_map_[ep_token] = (fid_ep*)ep;
   return Status::OK();
 }
@@ -201,6 +213,17 @@ Status RDMAServer::AddClient(uint64_t ep_token, void *ep) {
 Status RDMAServer::RemoveClient(uint64_t ep_token) {
   std::lock_guard<std::mutex> lock(ep_map_mutex_);
   ep_map_.erase(ep_token);
+  return Status::OK();
+}
+
+Status RDMAServer::RemoveClient(fid_ep *ep) {
+  std::lock_guard<std::mutex> lock(ep_map_mutex_);
+  for (auto iter = ep_map_.begin(); iter != ep_map_.end(); iter++) {
+    if (iter->second == ep) {
+      ep_map_.erase(iter);
+      return Status::OK();
+    }
+  }
   return Status::OK();
 }
 
@@ -277,12 +300,59 @@ Status RDMAServer::GetRXFreeMsgBuffer(void *&buffer) {
 
 Status RDMAServer::GetRXCompletion(int timeout, void **context) {
   uint64_t cur = 0;
-  return this->GetCompletion(remote_fi_addr, rxcq, &cur, 1, timeout, context);
+  while (true) {
+    int ret = this->GetCompletion(remote_fi_addr, rxcq, &cur, 1, timeout == -1 ? 500 : timeout, context);
+    if (ret == -FI_ETIMEDOUT) {
+      if (timeout > 0) {
+        return Status::Invalid("GetRXCompletion timeout");
+      } else {
+        if (state == STOPED) {
+          return Status::Invalid("GetRXCompletion stopped");
+        }
+        continue;
+      }
+    } else if (ret < 0) {
+      return Status::Invalid("GetRXCompletion failed");
+    } else {
+      return Status::OK();
+    }
+  }
 }
 
 Status RDMAServer::GetTXCompletion(int timeout, void **context) {
   uint64_t cur = 0;
-  return this->GetCompletion(remote_fi_addr, txcq, &cur, 1, timeout, context);
+  while (true) {
+    int ret = this->GetCompletion(remote_fi_addr, txcq, &cur, 1, timeout == -1 ? 500 : timeout, context);
+    if (ret == -FI_ETIMEDOUT) {
+      if (timeout > 0) {
+        return Status::Invalid("GetTXCompletion timeout");
+      } else {
+        if (state == STOPED) {
+          return Status::Invalid("GetTXCompletion stopped");
+        }
+        continue;
+      }
+    } else if (ret < 0) {
+      return Status::Invalid("GetTXCompletion failed");
+    } else {
+      return Status::OK();
+    }
+  }
+}
+
+Status RDMAServer::CloseConnection(uint64_t rdma_conn_id) {
+  LOG(INFO) << "Close connection endpoint!";
+  std::lock_guard<std::mutex> lock(ep_map_mutex_);
+  if (ep_map_.find(rdma_conn_id) == ep_map_.end()) {
+    return Status::Invalid("Failed to find buffer context.");
+  }
+  fid_ep *ep = ep_map_[rdma_conn_id];
+  ep_map_.erase(rdma_conn_id);
+  return CloseResource(ep, "client endpoint");
+}
+
+bool RDMAServer::IsStopped() {
+  return (state == STOPED);
 }
 
 }  // namespace vineyard

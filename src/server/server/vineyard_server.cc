@@ -1040,6 +1040,7 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
           std::string remote_endpoint =
               (*instance)["rpc_endpoint"].get_ref<std::string const&>();
           std::string rdma_endpoint = (*instance)["rdma_endpoint"].get_ref<std::string const&>();
+          LOG(INFO) << "remote endpoint:" << rdma_endpoint;
           // push to the async queues
           boost::asio::post(
               self->GetIOContext(),

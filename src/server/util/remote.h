@@ -67,6 +67,9 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   Status doRead(std::string& message_in);
 
   Status doRead(json& root);
+
+  Status StopRDMA();
+
   InstanceID remote_instance_id_;
 
   std::shared_ptr<VineyardServer> server_ptr_;
@@ -78,7 +81,6 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   std::shared_ptr<RDMAClient> rdma_client_;
   RegisterMemInfo remote_info_;
   RegisterMemInfo local_info_;
-  uint64_t rdma_conn_id_;
   bool rdma_connected_;
 };
 

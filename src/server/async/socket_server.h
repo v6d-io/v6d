@@ -55,9 +55,7 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
                    std::shared_ptr<VineyardServer> server_ptr,
                    std::shared_ptr<SocketServer> socket_server_ptr,
                    int conn_id);
-  ~SocketConnection() {
-    LOG(INFO) << "socket connection ends";
-  }
+  ~SocketConnection() {}
 
   bool Start();
 

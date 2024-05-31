@@ -42,7 +42,34 @@ RemoteClient::~RemoteClient() {
   ec = socket_.close(ec);
   LOG(INFO) << "Close remote client";
   // TODO: send msg to server and close remote ep.
-  rdma_client_->Stop();
+  StopRDMA();
+}
+
+Status RemoteClient::StopRDMA() {
+  if (!rdma_connected_) {
+    return Status::OK();
+  }
+
+  void *msg;
+  RETURN_ON_ERROR(rdma_client_->GetTXFreeMsgBuffer(msg));
+  VineyardMsg *vmsg = reinterpret_cast<VineyardMsg *>(msg);
+  vmsg->type = VINEYARD_MSG_CLOSE;
+  RETURN_ON_ERROR(rdma_client_->Send(msg, sizeof(VineyardMsg), nullptr));
+  RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+
+  RETURN_ON_ERROR(rdma_client_->GetRXFreeMsgBuffer(msg));
+  vmsg = reinterpret_cast<VineyardMsg *>(msg); 
+  RETURN_ON_ERROR(rdma_client_->Recv(msg, sizeof(VineyardMsg), nullptr));
+  RETURN_ON_ERROR(rdma_client_->GetRXCompletion(-1, nullptr));
+  if (vmsg->type == VINEYARD_MSG_CLOSE) {
+    LOG(INFO) << "Close RDMA connection successfully";
+  } else {
+    LOG(ERROR) << "Failed to close RDMA connection";
+  }
+
+  RETURN_ON_ERROR(rdma_client_->Stop());
+  RETURN_ON_ERROR(rdma_client_->Close());
+  return Status::OK();
 }
 
 Status RemoteClient::Connect(const std::string& rpc_endpoint,
@@ -69,11 +96,12 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
     rdma_port = rdma_endpoint.substr(pos + 1);
   }
 
-  if (ConnectRDMAServer(rdma_host, std::atoi(rdma_port.c_str())).ok()) {
+  Status status = ConnectRDMAServer(rdma_host, std::atoi(rdma_port.c_str()));
+  if (status.ok()) {
     LOG(INFO) << "RDMA host:" << rdma_host << ", port:" << rdma_port;
     LOG(INFO) << "Connect to RDMA server successfully";
   } else {
-    LOG(INFO) << "Failed to connect to RDMA server. Fall back to TCP.";
+    LOG(INFO) << "Failed to connect to RDMA server. Fall back to TCP. Error:" << status.message();
   }
   
   return Status::OK();
@@ -87,7 +115,6 @@ Status RemoteClient::RDMAExchangeMemInfo() {
   msg->remoteMemInfo.remote_address = (uint64_t)local_info_.address;
   msg->remoteMemInfo.key = local_info_.rkey;
   msg->remoteMemInfo.len = local_info_.size;
-  msg->remoteMemInfo.rdma_conn_id = rdma_conn_id_;
   LOG(INFO) << "Send remote addr: " << (void *)msg->remoteMemInfo.remote_address << ", rkey: " << msg->remoteMemInfo.key;
   void *remoteMsg;
   this->rdma_client_->GetRXFreeMsgBuffer(remoteMsg);
@@ -96,7 +123,6 @@ Status RemoteClient::RDMAExchangeMemInfo() {
   this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr);
   this->rdma_client_->GetTXCompletion(-1, nullptr);
 
-  // boost::asio::post(context_, [self, buffer, remoteMsg]() {
   VINEYARD_CHECK_OK(rdma_client_->GetRXCompletion(-1, nullptr));
   LOG(INFO) << "Receive";
   
@@ -115,6 +141,7 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host, const uint32_t p
   if (this->rdma_connected_) {
     return Status::OK();
   }
+  LOG(INFO) << "Remote ip:" << host << ", port:" << port;
   RETURN_ON_ERROR(RDMAClient::Make(this->rdma_client_, host, port));
   local_info_.address = (uint64_t)this->server_ptr_->GetBulkStore()->GetBasePointer();
   local_info_.size = this->server_ptr_->GetBulkStore()->GetBaseSize();
@@ -178,7 +205,7 @@ Status RemoteClient::Connect(const std::string& host, const uint32_t port,
   std::string server_version_;
   RETURN_ON_ERROR(ReadRegisterReply(
       message_in, ipc_socket_value, rpc_endpoint_value, remote_instance_id_,
-      session_id_, server_version_, store_match, support_rpc_compression, rdma_conn_id_));
+      session_id_, server_version_, store_match, support_rpc_compression));
   this->connected_ = true;
   return Status::OK();
 }

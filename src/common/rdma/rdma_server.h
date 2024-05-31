@@ -69,15 +69,26 @@ class RDMAServer : public IRDMA {
     return Status::OK();
   }
 
-  Status WaitConnect(void *&rdma_conn_handle);
+  Status WaitConnect(uint64_t &rdma_conn_id);
 
-  Status Stop() override;
+  Status Close() override;
 
-  Status AddClient(uint64_t clientID, void *ep);
+  Status Stop() {
+    state = STOPED;
+    return Status::OK();
+  }
+
+  Status AddClient(uint64_t &rdma_conn_id, void *ep);
+
+  Status CloseConnection(uint64_t rdma_conn_id);
+
+  bool IsStopped();
+
+ private:
 
   Status RemoveClient(uint64_t ep_token);
 
- private:
+  Status RemoveClient(fid_ep *ep);
 
   bool IsClient() override {
     return false;
@@ -105,6 +116,7 @@ class RDMAServer : public IRDMA {
   fi_addr_t remote_fi_addr = FI_ADDR_UNSPEC;
 
   RDMA_STATE state = INIT;
+  uint64_t current_conn_id = 0;
 };
 
 }  // namespace vineyard

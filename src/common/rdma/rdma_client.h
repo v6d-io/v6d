@@ -45,7 +45,12 @@ class RDMAClient : public IRDMA {
 
   Status Connect();
 
-  Status Stop() override;
+  Status Close() override;
+
+  Status Stop() {
+    state = STOPED;
+    return Status::OK();
+  }
 
   Status SendMemInfoToServer(void *buffer, uint64_t size);
 
@@ -78,6 +83,8 @@ class RDMAClient : public IRDMA {
   fid_mr *tx_mr = NULL, *rx_mr = NULL;
   std::vector<fid_mr *> mr_array;
   fi_addr_t remote_fi_addr = FI_ADDR_UNSPEC;
+
+  RDMA_STATE state = INIT;
 };
 
 }  // namespace vineyard

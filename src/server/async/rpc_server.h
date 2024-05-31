@@ -45,7 +45,9 @@ class RPCServer : public SocketServer,
   }
 
   std::string RDMAEndpoint() {
-    return json_to_string(rpc_spec_["rdma_endpoint"]);
+    std::string rdma_endpoint = json_to_string(rpc_spec_["rdma_endpoint"]);
+    rdma_endpoint.erase(std::remove(rdma_endpoint.begin(), rdma_endpoint.end(), '\"'), rdma_endpoint.end());
+    return std::string(rdma_endpoint);
   }
 
   Status Register(std::shared_ptr<SocketConnection> conn,
@@ -58,9 +60,9 @@ class RPCServer : public SocketServer,
 
   void doRDMAAccept();
 
-  Status InitRDMA();
+  void doRDMARecv();
 
-  Status RDMAExchangeMemInfo();
+  Status InitRDMA();
 
   const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
@@ -73,6 +75,7 @@ class RPCServer : public SocketServer,
   RegisterMemInfo local_mem_info_;
 
   std::thread rdma_listen_thread_;
+  std::thread rdma_recv_thread_;
 };
 
 }  // namespace vineyard

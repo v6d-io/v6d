@@ -55,7 +55,7 @@ Status IRDMA::Write(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *txcq, void *bu
   POST(fi_write, "write", ep, buf, size, mr_desc, remote_fi_addr, remote_address, key, ctx);
 }
 
-Status IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur, uint64_t total, int timeout, void **context) {
+int IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur, uint64_t total, int timeout, void **context) {
   fi_cq_err_entry err;
   timespec start, end;
   int ret;
@@ -72,11 +72,11 @@ Status IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur,
       }
       (*cur)++;
     } else if (ret < 0 && ret != -FI_EAGAIN) {
-      return Status::Invalid("Failed to read completion queue");
+      return ret;
     } else if (timeout > 0) {
       clock_gettime(CLOCK_REALTIME, &end);
       if ((end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000 > timeout) {
-        return Status::Invalid("Timeout to read completion queue");
+        return -FI_ETIMEDOUT;
       }
     }
   } while (*cur < total);
@@ -84,7 +84,7 @@ Status IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur,
     *context = err.op_context;
   }
 
-  return Status::OK();
+  return 0;
 }
 
 void IRDMA::FreeBuffer(void*& buffer) {

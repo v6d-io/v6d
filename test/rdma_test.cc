@@ -142,9 +142,8 @@ void ServerExchangeKeys() {
 
 void StartServer() {
   VINEYARD_CHECK_OK(RDMAServer::Make(server, port));
-  void *handle;
-  VINEYARD_CHECK_OK(server->WaitConnect(handle));
-  server->AddClient(TEST_CLIENT_ID, handle);
+  uint64_t rdma_conn_id;
+  VINEYARD_CHECK_OK(server->WaitConnect(rdma_conn_id));
 
   void *buffer = nullptr;
   VINEYARD_CHECK_OK(server->GetRXFreeMsgBuffer(buffer));

@@ -101,6 +101,7 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient> &ptr, fi_info *hints, std::s
   ptr->RegisterMemory(&(ptr->rx_mr), ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
   ptr->RegisterMemory(&(ptr->tx_mr), ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
 
+  ptr->state = READY;
   return Status::OK();
 }
 
@@ -122,13 +123,45 @@ Status RDMAClient::Connect() {
 Status RDMAClient::GetRXCompletion(int timeout, void **context) {
   LOG(INFO) << "GetRXCompletion";
   uint64_t cur = 0;
-  return this->GetCompletion(remote_fi_addr, rxcq, &cur, 1, timeout, context);
+  while (true) {
+    int ret = this->GetCompletion(remote_fi_addr, rxcq, &cur, 1, timeout == -1 ? 500 : timeout, context);
+    if (ret == -FI_ETIMEDOUT) {
+      if (timeout > 0) {
+        return Status::Invalid("GetRXCompletion timeout");
+      } else {
+        if (state == STOPED) {
+          return Status::Invalid("GetRXCompletion stopped");
+        }
+        continue;
+      }
+    } else if (ret < 0) {
+      return Status::Invalid("GetRXCompletion failed");
+    } else {
+      return Status::OK();
+    }
+  }
 }
 
 Status RDMAClient::GetTXCompletion(int timeout, void **context) {
   LOG(INFO) << "GetTXCompletion";
   uint64_t cur = 0;
-  return this->GetCompletion(remote_fi_addr, txcq, &cur, 1, timeout, context);
+  while (true) {
+    int ret = this->GetCompletion(remote_fi_addr, txcq, &cur, 1, timeout == -1 ? 500 : timeout, context);
+    if (ret == -FI_ETIMEDOUT) {
+      if (timeout > 0) {
+        return Status::Invalid("GetTXCompletion timeout");
+      } else {
+        if (state == STOPED) {
+          return Status::Invalid("GetTXCompletion stopped");
+        }
+        continue;
+      }
+    } else if (ret < 0) {
+      return Status::Invalid("GetTXCompletion failed");
+    } else {
+      return Status::OK();
+    }
+  }
 }
 
 Status RDMAClient::SendMemInfoToServer(void *buffer, uint64_t size) {
@@ -179,7 +212,7 @@ Status RDMAClient::Write(void *buf, size_t size, uint64_t remote_address, uint64
   return IRDMA::Write(ep, remote_fi_addr, txcq, buf, size, remote_address, key, mr_desc, ctx);
 }
 
-Status RDMAClient::Stop() {
+Status RDMAClient::Close() {
   // close all registered memory regions
   RETURN_ON_ERROR(CloseResource(tx_mr, "transmit memory rigion"));
   RETURN_ON_ERROR(CloseResource(rx_mr, "receive memory region"));
