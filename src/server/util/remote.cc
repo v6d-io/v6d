@@ -57,16 +57,6 @@ Status RemoteClient::StopRDMA() {
   RETURN_ON_ERROR(rdma_client_->Send(msg, sizeof(VineyardMsg), nullptr));
   RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
 
-  RETURN_ON_ERROR(rdma_client_->GetRXFreeMsgBuffer(msg));
-  vmsg = reinterpret_cast<VineyardMsg *>(msg); 
-  RETURN_ON_ERROR(rdma_client_->Recv(msg, sizeof(VineyardMsg), nullptr));
-  RETURN_ON_ERROR(rdma_client_->GetRXCompletion(-1, nullptr));
-  if (vmsg->type == VINEYARD_MSG_CLOSE) {
-    LOG(INFO) << "Close RDMA connection successfully";
-  } else {
-    LOG(ERROR) << "Failed to close RDMA connection";
-  }
-
   RETURN_ON_ERROR(rdma_client_->Stop());
   RETURN_ON_ERROR(rdma_client_->Close());
   return Status::OK();
@@ -146,6 +136,7 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host, const uint32_t p
   local_info_.address = (uint64_t)this->server_ptr_->GetBulkStore()->GetBasePointer();
   local_info_.size = this->server_ptr_->GetBulkStore()->GetBaseSize();
   LOG(INFO) << "Try to connect to RDMA server " << host << ":" << port << "...";
+  LOG(INFO) << "Register:" << (void *)local_info_.address << " size:" << local_info_.size;
   if (this->rdma_client_->RegisterMemory(local_info_).ok()) {
     LOG(INFO) << "Register memory successfully";
     LOG(INFO) << "desc:" << local_info_.mr_desc;

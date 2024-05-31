@@ -30,7 +30,9 @@ Status IRDMA::RegisterMemory(fi_info *fi, fid_mr **mr, fid_domain *domain, void 
   mr_attr.iface = FI_HMEM_SYSTEM;
   mr_attr.context = NULL;
 
-  CHECK_ERROR(!fi_mr_regattr(domain, &mr_attr, FI_HMEM_DEVICE_ONLY, mr), "Failed to register memory region");
+  int ret = fi_mr_regattr(domain, &mr_attr, FI_HMEM_DEVICE_ONLY, mr);
+  LOG(INFO) << "register mem ret:" << ret;
+  CHECK_ERROR(!ret, "Failed to register memory region");
 
   mr_desc = fi_mr_desc(*mr);
 

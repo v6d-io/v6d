@@ -84,11 +84,26 @@ class RDMAServer : public IRDMA {
 
   bool IsStopped();
 
+  Status ReleaseRXBuffer(void *buffer);
+
+  Status ReleaseTXBuffer(void *buffer);
+
  private:
 
   Status RemoveClient(uint64_t ep_token);
 
   Status RemoveClient(fid_ep *ep);
+
+  int FindEmptySlot(uint64_t *bitmaps, int bitmap_num) {
+    for (int i = 0; i < bitmap_num; i++) {
+      if (bitmaps[i] != 0) {
+        int index = ffsll(bitmaps[i]) - 1;
+        bitmaps[i] &= ~(1 << index);
+        return i * 64 + index;
+      }
+    }
+    return -1;
+  }
 
   bool IsClient() override {
     return false;
@@ -106,8 +121,13 @@ class RDMAServer : public IRDMA {
   fid_domain *domain = NULL;
   fi_cq_attr cq_attr= { 0 };
   fid_cq *rxcq = NULL, *txcq = NULL;
+
+  std::mutex rx_msg_buffer_mutex_, tx_msg_buffer_mutex_;
   void* rx_msg_buffer, *tx_msg_buffer;
-  uint64_t rx_msg_size = 1024, tx_msg_size = 1024;
+  uint64_t *rx_buffer_bitmaps, *tx_buffer_bitmaps;
+  int rx_bitmap_num = 0, tx_bitmap_num = 0;
+  uint64_t rx_msg_size = 8192, tx_msg_size = 8192;
+
   uint64_t rx_msg_key = 0, tx_msg_key = 0;
   void *rx_msg_mr_desc = NULL, *tx_msg_mr_desc = NULL;
   void *data_mem_desc = NULL;

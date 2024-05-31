@@ -62,6 +62,8 @@ class RPCServer : public SocketServer,
 
   void doRDMARecv();
 
+  void doRDMASend();
+
   Status InitRDMA();
 
   const json rpc_spec_;
@@ -76,6 +78,7 @@ class RPCServer : public SocketServer,
 
   std::thread rdma_listen_thread_;
   std::thread rdma_recv_thread_;
+  std::thread rdma_send_thread_;
 };
 
 }  // namespace vineyard

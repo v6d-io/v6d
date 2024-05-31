@@ -77,7 +77,9 @@ class RDMAClient : public IRDMA {
   fid_cq *rxcq = NULL, *txcq = NULL;
   fid_ep *ep = NULL;
   void* rx_msg_buffer, *tx_msg_buffer;
-  uint64_t rx_msg_size = 1024, tx_msg_size = 1024;
+
+  // client just need one tx and rx buffer
+  uint64_t rx_msg_size = sizeof(VineyardMsg), tx_msg_size = sizeof(VineyardMsg);
   uint64_t rx_msg_key = 0, tx_msg_key = 0;
   void *rx_msg_mr_desc = NULL, *tx_msg_mr_desc = NULL;
   fid_mr *tx_mr = NULL, *rx_mr = NULL;

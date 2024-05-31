@@ -94,6 +94,19 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer> &ptr, fi_info *hints, int po
     return Status::Invalid("Failed to allocate tx buffer.");
   }
 
+  int bits = ptr->rx_msg_size / sizeof(VineyardMsg);
+  ptr->rx_bitmap_num = ptr->tx_bitmap_num = (bits + 63) / 64;
+  ptr->rx_buffer_bitmaps = (uint64_t *)malloc(ptr->rx_bitmap_num * sizeof(uint64_t));
+  if (!ptr->rx_buffer_bitmaps) {
+    return Status::Invalid("Failed to allocate rx buffer bitmap.");
+  }
+  memset(ptr->rx_buffer_bitmaps, UINT8_MAX, ptr->rx_bitmap_num * sizeof(uint64_t));
+  ptr->tx_buffer_bitmaps = (uint64_t *)malloc(ptr->tx_bitmap_num * sizeof(uint64_t));
+  if (!ptr->tx_buffer_bitmaps) {
+    return Status::Invalid("Failed to allocate tx buffer bitmap.");
+  }
+  memset(ptr->tx_buffer_bitmaps, UINT8_MAX, ptr->tx_bitmap_num * sizeof(uint64_t));
+
   ptr->RegisterMemory(&(ptr->rx_mr), ptr->rx_msg_buffer, ptr->rx_msg_size, ptr->rx_msg_key, ptr->rx_msg_mr_desc);
   ptr->RegisterMemory(&(ptr->tx_mr), ptr->tx_msg_buffer, ptr->tx_msg_size, ptr->tx_msg_key, ptr->tx_msg_mr_desc);
 
@@ -287,14 +300,70 @@ Status RDMAServer::Write(uint64_t ep_token, void *buf, size_t size, uint64_t rem
 }
 
 Status RDMAServer::GetTXFreeMsgBuffer(void *&buffer) {
-  // TBD
-  buffer = tx_msg_buffer;
-  return Status::OK();
+  if (state == STOPED) {
+    return Status::Invalid("Server is stoped.");
+  }
+  while(true) {
+    std::lock_guard<std::mutex> lock(tx_msg_buffer_mutex_);
+    int index = FindEmptySlot(tx_buffer_bitmaps, tx_bitmap_num);
+    if (index == -1) {
+      usleep(1000);
+      continue;
+    }
+    buffer = (void *)((uint64_t)tx_msg_buffer + index * sizeof(VineyardMsg));
+    LOG(INFO) << "Get TX index:" << index;
+    return Status::OK();
+  }
 }
 
 Status RDMAServer::GetRXFreeMsgBuffer(void *&buffer) {
-  // TBD
-  buffer = rx_msg_buffer;
+  if (state == STOPED) {
+    return Status::Invalid("Server is stoped.");
+  }
+  while(true) {
+    std::lock_guard<std::mutex> lock(rx_msg_buffer_mutex_);
+    int index = FindEmptySlot(rx_buffer_bitmaps, rx_bitmap_num);
+    if (index == -1) {
+      usleep(1000);
+      continue;
+    }
+    buffer = (void *)((uint64_t)rx_msg_buffer + index * sizeof(VineyardMsg));
+    LOG(INFO) << "Get RX index:" << index;
+    return Status::OK();
+  }
+}
+
+Status RDMAServer::ReleaseRXBuffer(void *buffer) {
+  if (state == STOPED) {
+    return Status::Invalid("Server is stoped.");
+  }
+  if ((uint64_t)buffer < (uint64_t)rx_msg_buffer || (uint64_t)buffer >= (uint64_t)rx_msg_buffer + (uint64_t)rx_msg_size) {
+    return Status::Invalid("Invalid buffer address.");
+  }
+  if (((uint64_t)buffer - (uint64_t)rx_msg_buffer) % sizeof(VineyardMsg) != 0) {
+    return Status::Invalid("Invalid buffer address.");
+  }
+  std::lock_guard<std::mutex> lock(rx_msg_buffer_mutex_);
+  int index = ((uint64_t)buffer - (uint64_t)rx_msg_buffer) / sizeof(VineyardMsg);
+  LOG(INFO) << "Release RX index:" << index;
+  rx_buffer_bitmaps[index / 64] |= 1 << (index % 64);
+  return Status::OK();
+}
+
+Status RDMAServer::ReleaseTXBuffer(void *buffer) {
+  if (state == STOPED) {
+    return Status::Invalid("Server is stoped.");
+  }
+  if ((uint64_t)buffer < (uint64_t)tx_msg_buffer || (uint64_t)buffer >= (uint64_t)tx_msg_buffer + (uint64_t)tx_msg_size) {
+    return Status::Invalid("Invalid buffer address.");
+  }
+  if (((uint64_t)buffer - (uint64_t)tx_msg_buffer) % sizeof(VineyardMsg) != 0) {
+    return Status::Invalid("Invalid buffer address.");
+  }
+  std::lock_guard<std::mutex> lock(tx_msg_buffer_mutex_);
+  int index = ((uint64_t)buffer - (uint64_t)tx_msg_buffer) / sizeof(VineyardMsg);
+  LOG(INFO) << "Release TX index:" << index;
+  tx_buffer_bitmaps[index / 64] |= 1 << (index % 64);
   return Status::OK();
 }
 

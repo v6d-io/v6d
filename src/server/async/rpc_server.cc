@@ -53,6 +53,9 @@ RPCServer::~RPCServer() {
   if (rdma_recv_thread_.joinable()) {
     rdma_recv_thread_.join();
   }
+  if (rdma_send_thread_.joinable()) {
+    rdma_send_thread_.join();
+  }
   VINEYARD_DISCARD(rdma_server_->Close());
 }
 
@@ -81,6 +84,9 @@ Status RPCServer::InitRDMA() {
     });
     rdma_recv_thread_ = std::thread([this]() {
       this->doRDMARecv();
+    });
+    rdma_send_thread_ = std::thread([this]() {
+      this->doRDMASend();
     });
   } else {
     return Status::Invalid("Create rdma server failed! Error:" + status.message());
@@ -151,6 +157,32 @@ void RPCServer::doAccept() {
   });
 }
 
+void RPCServer::doRDMASend() {
+  while(1) {
+    void *context = nullptr;
+    Status status = rdma_server_->GetTXCompletion(-1, &context);
+    if (!status.ok()) {
+      if (rdma_server_->IsStopped()) {
+        LOG(INFO) << "RDMA server stopped!";
+        return;
+      }
+      LOG(ERROR) << "Get TX completion failed! Error:" << status.message();
+      LOG(INFO) << "Retry...";
+    } else {
+      // handle message
+      VineyardSendContext *send_context = (VineyardSendContext *)context;
+      if (!send_context) {
+        LOG(ERROR) << "Bad send context! Discard msg!";
+        continue;
+      }
+      if (send_context->attr.msg_buffer) {
+        rdma_server_->ReleaseTXBuffer(send_context->attr.msg_buffer);
+      }
+      delete send_context;
+    }
+  }
+}
+
 void RPCServer::doRDMARecv() {
   while(1) {
     void *context = nullptr;
@@ -170,8 +202,7 @@ void RPCServer::doRDMARecv() {
         continue;
       }
 
-      VineyardMsg *recv_msg;
-      rdma_server_->GetRXFreeMsgBuffer((void *&)recv_msg);
+      VineyardMsg *recv_msg = (VineyardMsg *)recv_context->attr.msg_buffer;
       if (recv_msg->type == VINEYARD_MSG_EXCHANGE_KEY) {
           RegisterMemInfo remote_register_mem_info;
           remote_register_mem_info.address = recv_msg->remoteMemInfo.remote_address;
@@ -186,7 +217,12 @@ void RPCServer::doRDMARecv() {
           send_msg->remoteMemInfo.remote_address = (uint64_t)local_mem_info_.address;
           send_msg->remoteMemInfo.key = local_mem_info_.rkey;
           send_msg->remoteMemInfo.len = local_mem_info_.size;
-          rdma_server_->Send(recv_context->rdma_conn_id, msg, sizeof(VineyardMsg), nullptr);
+
+          VineyardSendContext *send_context = new VineyardSendContext();
+          memset(&send_context->attr, 0, sizeof(send_context->attr));
+          send_context->attr.msg_buffer = msg;
+
+          rdma_server_->Send(recv_context->rdma_conn_id, msg, sizeof(VineyardMsg), send_context);
           LOG(INFO) << "Send key:" << local_mem_info_.rkey << " send address:" << (void *)local_mem_info_.address;
 
           std::lock_guard<std::recursive_mutex> scope_lock(
@@ -200,6 +236,7 @@ void RPCServer::doRDMARecv() {
           std::lock_guard<std::recursive_mutex> scope_lock(
               this->rdma_mutex_);
           remote_mem_infos_.erase(recv_context->rdma_conn_id);
+          rdma_server_->ReleaseRXBuffer(recv_context->attr.msg_buffer);
 
           delete recv_context;
       } else {
@@ -220,10 +257,12 @@ void RPCServer::doRDMAAccept() {
       LOG(INFO) << "Connected!";
       // memory leak
       VineyardRecvContext *recv_context = new VineyardRecvContext();
+      memset(&recv_context->attr, 0, sizeof(recv_context->attr));
       recv_context->rdma_conn_id = rdma_conn_id;
       void *context = (void *)recv_context;
       void *msg = nullptr;
       rdma_server_->GetRXFreeMsgBuffer(msg);
+      recv_context->attr.msg_buffer = msg;
       rdma_server_->Recv(rdma_conn_id, msg, sizeof(VineyardMsg), context);
   }
 }

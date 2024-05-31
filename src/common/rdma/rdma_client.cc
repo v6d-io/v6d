@@ -182,7 +182,9 @@ Status RDMAClient::GetRXFreeMsgBuffer(void *&buffer) {
 
 Status RDMAClient::RegisterMemory(RegisterMemInfo &memInfo) {
   fid_mr *new_mr = NULL;
-  VINEYARD_CHECK_OK(IRDMA::RegisterMemory(fi, &new_mr, domain, (void *)memInfo.address, memInfo.size, memInfo.rkey, memInfo.mr_desc));
+  LOG(INFO) << "domain:" << domain;
+  LOG(INFO) << "fi:" << fi;
+  RETURN_ON_ERROR(IRDMA::RegisterMemory(fi, &new_mr, domain, (void *)memInfo.address, memInfo.size, memInfo.rkey, memInfo.mr_desc));
   mr_array.push_back(new_mr);
   return Status::OK();
 }
@@ -213,6 +215,7 @@ Status RDMAClient::Write(void *buf, size_t size, uint64_t remote_address, uint64
 }
 
 Status RDMAClient::Close() {
+  LOG(INFO) << "Close";
   // close all registered memory regions
   RETURN_ON_ERROR(CloseResource(tx_mr, "transmit memory rigion"));
   RETURN_ON_ERROR(CloseResource(rx_mr, "receive memory region"));

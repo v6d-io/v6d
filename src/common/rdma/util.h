@@ -74,7 +74,15 @@ struct VineyardMsg {
 
 struct VineyardRecvContext {
 	uint64_t rdma_conn_id;
-	void *attr;
+	struct {
+		void *msg_buffer;
+	} attr;
+};
+
+struct VineyardSendContext {
+	struct {
+		void *msg_buffer;
+	} attr;
 };
 
 struct RegisterMemInfo {
