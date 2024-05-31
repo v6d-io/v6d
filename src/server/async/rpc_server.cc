@@ -68,28 +68,26 @@ Status RPCServer::InitRDMA() {
   int rdma_port = std::stoi(rdma_endpoint.substr(pos + 1));
 
   Status status = RDMAServer::Make(this->rdma_server_, rdma_port);
-  if(status.ok()) {
+  if (status.ok()) {
     LOG(INFO) << "Create rdma server successfully";
-    this->local_mem_info_.address = (uint64_t)this->vs_ptr_->GetBulkStore()->GetBasePointer();
+    this->local_mem_info_.address =
+        (uint64_t) this->vs_ptr_->GetBulkStore()->GetBasePointer();
     this->local_mem_info_.size = this->vs_ptr_->GetBulkStore()->GetBaseSize();
-    if(rdma_server_->RegisterMemory(this->local_mem_info_).ok()) {
-      LOG(INFO) << "Register rdma memory successfully! Wait port: " << rdma_port << " for connection...";
+    if (rdma_server_->RegisterMemory(this->local_mem_info_).ok()) {
+      LOG(INFO) << "Register rdma memory successfully! Wait port: " << rdma_port
+                << " for connection...";
     } else {
-      return Status::IOError("Register rdma memory failed. Error:" + status.message());
+      return Status::IOError("Register rdma memory failed. Error:" +
+                             status.message());
     }
 
     // doRDMAAccept();
-    rdma_listen_thread_ = std::thread([this]() {
-      this->doRDMAAccept();
-    });
-    rdma_recv_thread_ = std::thread([this]() {
-      this->doRDMARecv();
-    });
-    rdma_send_thread_ = std::thread([this]() {
-      this->doRDMASend();
-    });
+    rdma_listen_thread_ = std::thread([this]() { this->doRDMAAccept(); });
+    rdma_recv_thread_ = std::thread([this]() { this->doRDMARecv(); });
+    rdma_send_thread_ = std::thread([this]() { this->doRDMASend(); });
   } else {
-    return Status::Invalid("Create rdma server failed! Error:" + status.message());
+    return Status::Invalid("Create rdma server failed! Error:" +
+                           status.message());
   }
   return Status::OK();
 }
@@ -158,8 +156,8 @@ void RPCServer::doAccept() {
 }
 
 void RPCServer::doRDMASend() {
-  while(1) {
-    void *context = nullptr;
+  while (1) {
+    void* context = nullptr;
     Status status = rdma_server_->GetTXCompletion(-1, &context);
     if (!status.ok()) {
       if (rdma_server_->IsStopped()) {
@@ -170,7 +168,8 @@ void RPCServer::doRDMASend() {
       LOG(INFO) << "Retry...";
     } else {
       // handle message
-      VineyardSendContext *send_context = (VineyardSendContext *)context;
+      VineyardSendContext* send_context =
+          reinterpret_cast<VineyardSendContext*>(context);
       if (!send_context) {
         LOG(ERROR) << "Bad send context! Discard msg!";
         continue;
@@ -184,8 +183,8 @@ void RPCServer::doRDMASend() {
 }
 
 void RPCServer::doRDMARecv() {
-  while(1) {
-    void *context = nullptr;
+  while (1) {
+    void* context = nullptr;
     Status status = rdma_server_->GetRXCompletion(-1, &context);
     if (!status.ok()) {
       if (rdma_server_->IsStopped()) {
@@ -196,74 +195,84 @@ void RPCServer::doRDMARecv() {
       LOG(INFO) << "Retry...";
     } else {
       // handle message
-      VineyardRecvContext *recv_context = (VineyardRecvContext *)context;
+      VineyardRecvContext* recv_context =
+          reinterpret_cast<VineyardRecvContext*>(context);
       if (!recv_context) {
         LOG(ERROR) << "Bad recv context! Discard msg!";
         continue;
       }
 
-      VineyardMsg *recv_msg = (VineyardMsg *)recv_context->attr.msg_buffer;
+      VineyardMsg* recv_msg =
+          reinterpret_cast<VineyardMsg*>(recv_context->attr.msg_buffer);
       if (recv_msg->type == VINEYARD_MSG_EXCHANGE_KEY) {
-          RegisterMemInfo remote_register_mem_info;
-          remote_register_mem_info.address = recv_msg->remoteMemInfo.remote_address;
-          remote_register_mem_info.rkey = recv_msg->remoteMemInfo.key;
-          remote_register_mem_info.size = recv_msg->remoteMemInfo.len;
-          LOG(INFO) << "Receive remote address: " << (void *)remote_register_mem_info.address << " key: " << remote_register_mem_info.rkey;
+        RegisterMemInfo remote_register_mem_info;
+        remote_register_mem_info.address =
+            recv_msg->remoteMemInfo.remote_address;
+        remote_register_mem_info.rkey = recv_msg->remoteMemInfo.key;
+        remote_register_mem_info.size = recv_msg->remoteMemInfo.len;
+        LOG(INFO) << "Receive remote address: "
+                  << reinterpret_cast<void*>(remote_register_mem_info.address)
+                  << " key: " << remote_register_mem_info.rkey;
 
-          void *msg = nullptr;
-          rdma_server_->GetTXFreeMsgBuffer(msg);
-          VineyardMsg *send_msg = (VineyardMsg *)msg;
-          send_msg->type = VINEYARD_MSG_EXCHANGE_KEY;
-          send_msg->remoteMemInfo.remote_address = (uint64_t)local_mem_info_.address;
-          send_msg->remoteMemInfo.key = local_mem_info_.rkey;
-          send_msg->remoteMemInfo.len = local_mem_info_.size;
+        void* msg = nullptr;
+        rdma_server_->GetTXFreeMsgBuffer(msg);
+        VineyardMsg* send_msg = reinterpret_cast<VineyardMsg*>(msg);
+        send_msg->type = VINEYARD_MSG_EXCHANGE_KEY;
+        send_msg->remoteMemInfo.remote_address =
+            (uint64_t) local_mem_info_.address;
+        send_msg->remoteMemInfo.key = local_mem_info_.rkey;
+        send_msg->remoteMemInfo.len = local_mem_info_.size;
 
-          VineyardSendContext *send_context = new VineyardSendContext();
-          memset(&send_context->attr, 0, sizeof(send_context->attr));
-          send_context->attr.msg_buffer = msg;
+        VineyardSendContext* send_context = new VineyardSendContext();
+        memset(&send_context->attr, 0, sizeof(send_context->attr));
+        send_context->attr.msg_buffer = msg;
 
-          rdma_server_->Send(recv_context->rdma_conn_id, msg, sizeof(VineyardMsg), send_context);
-          LOG(INFO) << "Send key:" << local_mem_info_.rkey << " send address:" << (void *)local_mem_info_.address;
+        rdma_server_->Send(recv_context->rdma_conn_id, msg, sizeof(VineyardMsg),
+                           send_context);
+        LOG(INFO) << "Send key:" << local_mem_info_.rkey << " send address:"
+                  << reinterpret_cast<void*>(local_mem_info_.address);
 
-          std::lock_guard<std::recursive_mutex> scope_lock(
-              this->rdma_mutex_);
-          remote_mem_infos_.emplace(recv_context->rdma_conn_id, remote_register_mem_info);
-          rdma_server_->Recv(recv_context->rdma_conn_id, (void *)recv_msg, sizeof(VineyardMsg), context);
-      } else if(recv_msg->type == VINEYARD_MSG_CLOSE) {
-          LOG(INFO) << "Receive close msg!";
-          rdma_server_->CloseConnection(recv_context->rdma_conn_id);
+        std::lock_guard<std::recursive_mutex> scope_lock(this->rdma_mutex_);
+        remote_mem_infos_.emplace(recv_context->rdma_conn_id,
+                                  remote_register_mem_info);
+        rdma_server_->Recv(recv_context->rdma_conn_id,
+                           reinterpret_cast<void*>(recv_msg),
+                           sizeof(VineyardMsg), context);
+      } else if (recv_msg->type == VINEYARD_MSG_CLOSE) {
+        LOG(INFO) << "Receive close msg!";
+        rdma_server_->CloseConnection(recv_context->rdma_conn_id);
 
-          std::lock_guard<std::recursive_mutex> scope_lock(
-              this->rdma_mutex_);
-          remote_mem_infos_.erase(recv_context->rdma_conn_id);
-          rdma_server_->ReleaseRXBuffer(recv_context->attr.msg_buffer);
+        std::lock_guard<std::recursive_mutex> scope_lock(this->rdma_mutex_);
+        remote_mem_infos_.erase(recv_context->rdma_conn_id);
+        rdma_server_->ReleaseRXBuffer(recv_context->attr.msg_buffer);
 
-          delete recv_context;
+        delete recv_context;
       } else {
-          LOG(ERROR) << "Unknown message type: " << recv_msg->type;
+        LOG(ERROR) << "Unknown message type: " << recv_msg->type;
       }
     }
   }
 }
 
 void RPCServer::doRDMAAccept() {
-  while(1) {
-      uint64_t rdma_conn_id;
-      Status status = rdma_server_->WaitConnect(rdma_conn_id);
-      if (!status.ok()) {
-        LOG(INFO) << "Wait rdma connect failed! Close! Error:" << status.message();
-        return;
-      }
-      LOG(INFO) << "Connected!";
-      // memory leak
-      VineyardRecvContext *recv_context = new VineyardRecvContext();
-      memset(&recv_context->attr, 0, sizeof(recv_context->attr));
-      recv_context->rdma_conn_id = rdma_conn_id;
-      void *context = (void *)recv_context;
-      void *msg = nullptr;
-      rdma_server_->GetRXFreeMsgBuffer(msg);
-      recv_context->attr.msg_buffer = msg;
-      rdma_server_->Recv(rdma_conn_id, msg, sizeof(VineyardMsg), context);
+  while (1) {
+    uint64_t rdma_conn_id;
+    Status status = rdma_server_->WaitConnect(rdma_conn_id);
+    if (!status.ok()) {
+      LOG(INFO) << "Wait rdma connect failed! Close! Error:"
+                << status.message();
+      return;
+    }
+    LOG(INFO) << "Connected!";
+    // memory leak
+    VineyardRecvContext* recv_context = new VineyardRecvContext();
+    memset(&recv_context->attr, 0, sizeof(recv_context->attr));
+    recv_context->rdma_conn_id = rdma_conn_id;
+    void* context = reinterpret_cast<void*>(recv_context);
+    void* msg = nullptr;
+    rdma_server_->GetRXFreeMsgBuffer(msg);
+    recv_context->attr.msg_buffer = msg;
+    rdma_server_->Recv(rdma_conn_id, msg, sizeof(VineyardMsg), context);
   }
 }
 

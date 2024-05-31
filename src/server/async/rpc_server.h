@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/env.h"
@@ -46,7 +47,9 @@ class RPCServer : public SocketServer,
 
   std::string RDMAEndpoint() {
     std::string rdma_endpoint = json_to_string(rpc_spec_["rdma_endpoint"]);
-    rdma_endpoint.erase(std::remove(rdma_endpoint.begin(), rdma_endpoint.end(), '\"'), rdma_endpoint.end());
+    rdma_endpoint.erase(
+        std::remove(rdma_endpoint.begin(), rdma_endpoint.end(), '\"'),
+        rdma_endpoint.end());
     return std::string(rdma_endpoint);
   }
 

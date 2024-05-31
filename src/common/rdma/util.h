@@ -13,8 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifndef MODULES_RDMA_UTIL_H_
-#define MODULES_RDMA_UTIL_H_
+#ifndef SRC_COMMON_RDMA_UTIL_H_
+#define SRC_COMMON_RDMA_UTIL_H_
 
 #include <rdma/fabric.h>
 #include <string>
@@ -27,79 +27,78 @@ namespace vineyard {
 #define ALIGNMENT 64
 
 #define CHECK_ERROR(condition, message) \
-  if (!(condition)) {                     \
-    return Status::Invalid(message);     \
+  if (!(condition)) {                   \
+    return Status::Invalid(message);    \
   }
 
-#define POST(post_fn, op_str, ...)		\
-	do {									\
-		int ret;							\
-		while (1) { \
-			ret = post_fn(__VA_ARGS__);				\
-			if (!ret) {						\
-				return Status::OK();						\
-			}							\
-										\
-			if (ret != -FI_EAGAIN) {				\
-				LOG(INFO) << op_str << " " << ret;			\
-        std::string msg = "Failed to post " + std::string(op_str);	\
-				return Status::Invalid(msg);	\
-			}							\
-			usleep(1000);						\
-			LOG(INFO) << "retry " << op_str;				\
-		}								\
-	} while (0)
+#define POST(post_fn, op_str, ...)                                 \
+  do {                                                             \
+    int ret;                                                       \
+    while (1) {                                                    \
+      ret = post_fn(__VA_ARGS__);                                  \
+      if (!ret) {                                                  \
+        return Status::OK();                                       \
+      }                                                            \
+                                                                   \
+      if (ret != -FI_EAGAIN) {                                     \
+        LOG(INFO) << op_str << " " << ret;                         \
+        std::string msg = "Failed to post " + std::string(op_str); \
+        return Status::Invalid(msg);                               \
+      }                                                            \
+      usleep(1000);                                                \
+      LOG(INFO) << "retry " << op_str;                             \
+    }                                                              \
+  } while (0)
 
-static inline size_t GetAlignedSize(size_t size, size_t alignment)
-{
-	return ((size % alignment) == 0) ?
-		size : ((size / alignment) + 1) * alignment;
+static inline size_t GetAlignedSize(size_t size, size_t alignment) {
+  return ((size % alignment) == 0) ? size
+                                   : ((size / alignment) + 1) * alignment;
 }
 
 enum VINEYARD_MSG_OPT {
-	VINEYARD_MSG_EXCHANGE_KEY,
-	VINEYARD_MSG_CLOSE,
+  VINEYARD_MSG_EXCHANGE_KEY,
+  VINEYARD_MSG_CLOSE,
 };
 
 struct VineyardMsg {
-	union {
-		struct {
-			uint64_t remote_address;
-			uint64_t len;
-			uint64_t key;
-		} remoteMemInfo;
-	};
-	int type;
+  union {
+    struct {
+      uint64_t remote_address;
+      uint64_t len;
+      uint64_t key;
+    } remoteMemInfo;
+  };
+  int type;
 };
 
 struct VineyardRecvContext {
-	uint64_t rdma_conn_id;
-	struct {
-		void *msg_buffer;
-	} attr;
+  uint64_t rdma_conn_id;
+  struct {
+    void* msg_buffer;
+  } attr;
 };
 
 struct VineyardSendContext {
-	struct {
-		void *msg_buffer;
-	} attr;
+  struct {
+    void* msg_buffer;
+  } attr;
 };
 
 struct RegisterMemInfo {
-	uint64_t address;
-	size_t size;
-	uint64_t rkey;
-	void *mr_desc;
+  uint64_t address;
+  size_t size;
+  uint64_t rkey;
+  void* mr_desc;
 };
 
 enum RDMA_STATE {
-	INIT,
-	READY,
-	STOPED,
+  INIT,
+  READY,
+  STOPED,
 };
 
-#define VINEYARD_FIVERSION FI_VERSION(1,21)
+#define VINEYARD_FIVERSION FI_VERSION(1, 21)
 
-}
+}  // namespace vineyard
 
-#endif
+#endif  // SRC_COMMON_RDMA_UTIL_H_

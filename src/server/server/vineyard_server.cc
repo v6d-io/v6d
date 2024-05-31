@@ -117,8 +117,9 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     plasma_bulk_store_ = std::make_shared<PlasmaBulkStore>();
     std::call_once(allocator_init_flag,
                    [this, memory_limit, allocator, &allocator_init_error]() {
-                    LOG(INFO) << "plasma";
-                    LOG(INFO) << "memory limit: " << memory_limit << ", allocator: " << allocator;
+                     LOG(INFO) << "plasma";
+                     LOG(INFO) << "memory limit: " << memory_limit
+                               << ", allocator: " << allocator;
                      allocator_init_error = plasma_bulk_store_->PreAllocate(
                          memory_limit, allocator);
                    });
@@ -136,7 +137,8 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     std::call_once(allocator_init_flag, [this, memory_limit, allocator,
                                          &allocator_init_error]() {
       LOG(INFO) << "default";
-      LOG(INFO) << "memory limit: " << memory_limit << ", allocator: " << allocator;
+      LOG(INFO) << "memory limit: " << memory_limit
+                << ", allocator: " << allocator;
       allocator_init_error = bulk_store_->PreAllocate(memory_limit, allocator);
       LOG(INFO) << "try to get base addr:" << bulk_store_->GetBasePointer();
     });
@@ -1039,16 +1041,17 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
 
           std::string remote_endpoint =
               (*instance)["rpc_endpoint"].get_ref<std::string const&>();
-          std::string rdma_endpoint = (*instance)["rdma_endpoint"].get_ref<std::string const&>();
+          std::string rdma_endpoint =
+              (*instance)["rdma_endpoint"].get_ref<std::string const&>();
           LOG(INFO) << "remote endpoint:" << rdma_endpoint;
           // push to the async queues
           boost::asio::post(
-              self->GetIOContext(),
-              [self, callback, remote_endpoint, rdma_endpoint, object_id, metadata]() {
+              self->GetIOContext(), [self, callback, remote_endpoint,
+                                     rdma_endpoint, object_id, metadata]() {
                 auto remote = std::make_shared<RemoteClient>(self);
                 LOG(INFO) << "Connect...";
-                RETURN_ON_ERROR(
-                    remote->Connect(remote_endpoint, self->session_id(), rdma_endpoint));
+                RETURN_ON_ERROR(remote->Connect(
+                    remote_endpoint, self->session_id(), rdma_endpoint));
                 LOG(INFO) << "Connect done";
                 return remote->MigrateObject(
                     object_id, metadata,

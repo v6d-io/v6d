@@ -15,32 +15,35 @@ limitations under the License.
 
 #include <string>
 
-#include "client/ds/blob.h"
+#include "basic/ds/tensor.h"
 #include "client/client.h"
+#include "client/ds/blob.h"
 #include "client/ds/object_meta.h"
 #include "common/util/logging.h"
-#include "basic/ds/tensor.h"
 
-using namespace vineyard;
+using namespace vineyard;  // NOLINT(build/namespaces)
 
-void CreateBuffer(std::string &objectName, Client &client) {
+void CreateBuffer(std::string& objectName, Client& client) {
   TensorBuilder<int> builder(client, {1, 10});
-  int *data = builder.data();
+  int* data = builder.data();
   for (int i = 0; i < 10; ++i) {
     data[i] = i + 1000;
   }
-  std::shared_ptr<Tensor<int>> tensor = std::dynamic_pointer_cast<Tensor<int>>(builder.Seal(client));
+  std::shared_ptr<Tensor<int>> tensor =
+      std::dynamic_pointer_cast<Tensor<int>>(builder.Seal(client));
   client.Persist(tensor->id());
-  LOG(INFO) << "Create object with id:" << (void *)tensor->id();
+  LOG(INFO) << "Create object with id:"
+            << reinterpret_cast<void*>(tensor->id());
   client.PutName(tensor->id(), objectName);
 }
 
-void FetchBuffer(std::string &objectName, Client &client) {
+void FetchBuffer(std::string& objectName, Client& client) {
   ObjectID id;
   client.GetName(objectName, id);
-  std::shared_ptr<Tensor<int>> tensor = std::dynamic_pointer_cast<Tensor<int>>(client.FetchAndGetObject(id));
-  LOG(INFO) << "Fetch object with id:" << (void *)tensor->id();
-  const int *data = tensor->data();
+  std::shared_ptr<Tensor<int>> tensor =
+      std::dynamic_pointer_cast<Tensor<int>>(client.FetchAndGetObject(id));
+  LOG(INFO) << "Fetch object with id:" << reinterpret_cast<void*>(tensor->id());
+  const int* data = tensor->data();
   for (int i = 0; i < 10; ++i) {
     CHECK_EQ(data[i], i + 1000);
   }
