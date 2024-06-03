@@ -232,7 +232,7 @@ def get(
     elif name is not None:
         object_id = client.get_name(name)
 
-    obj = client.get_object(object_id)
+    obj = client.get_object(object_id, fetch=fetch)
 
     if resolver is None:
         resolver = get_current_resolvers()

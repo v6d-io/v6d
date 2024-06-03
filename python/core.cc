@@ -307,6 +307,12 @@ void bind_core(py::module& mod) {
              self->AddKeyValue(key, detail::to_json(value));
            })
       .def(
+          "add_remote_blob",
+          [](ObjectMeta* self, RemoteBlob const& blob) {
+            self->AddRemoteBlob(blob);
+          },
+          doc::ObjectMeta_add_remote_blob)
+      .def(
           "add_member",
           [](ObjectMeta* self, std::string const& key, Object const* member) {
             self->AddMember(key, member);
@@ -331,6 +337,7 @@ void bind_core(py::module& mod) {
             return detail::from_json(usages);
           },
           py::arg("pretty") = true)
+      .def("force_local", &ObjectMeta::ForceLocal)
       .def_property_readonly("timestamp", &ObjectMeta::Timestamp)
       .def_property_readonly("labels",
                              [](const ObjectMeta* self) -> py::object {

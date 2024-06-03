@@ -106,6 +106,52 @@ def _parse_configuration(config) -> Tuple[Optional[str], Optional[str]]:
     return ipc_socket, rpc_endpoint
 
 
+def _is_blob(object_id: ObjectID):
+    """_is_blob_
+
+    Args:
+        object_id (ObjectID): ObjectID to check if it is a blob
+
+    Returns:
+        bool: True if the object_id is a blob, False otherwise
+    """
+    return int(object_id) & 0x8000000000000000
+
+
+def _traverse_blobs(meta: ObjectMeta, blobs=None):
+    """_traverse_blobs_
+
+    Recursively traverses ObjectMeta to find and accumulate blob IDs by instance_id.
+
+    Args:
+        meta (ObjectMeta): ObjectMeta to traverse for blobs.
+        blobs (dict, optional): Accumulator for blobs organized by instance_id.
+
+    Returns:
+        dict: A dictionary of blobs organized by instance_id.
+    """
+
+    if blobs is None:
+        blobs = {}
+
+    def add_blob(instance_id, blob_id):
+        if instance_id not in blobs:
+            blobs[instance_id] = []
+        blobs[instance_id].append(blob_id)
+
+    if _is_blob(meta.id):
+        add_blob(meta.instance_id, meta.id)
+    else:
+        for _, v in meta.items():
+            if isinstance(v, ObjectMeta):
+                if _is_blob(v.id):
+                    add_blob(v.instance_id, v.id)
+                else:
+                    _traverse_blobs(v, blobs)
+
+    return blobs
+
+
 class Client:
     """Client is responsible for managing IPC and RPC clients for Vineyard
     and provides a high-level interface to fetch objects from the Vineyard cluster.
@@ -490,12 +536,12 @@ class Client:
         return self.rpc_client.get_remote_blobs(object_ids, unsafe)
 
     @_apply_docstring(IPCClient.get_object)
-    def get_object(self, object_id: ObjectID) -> Object:
+    def get_object(self, object_id: ObjectID, fetch: bool = False) -> Object:
         """
         Fetches the object associated with the given object_id from Vineyard.
         The IPC client is preferred if it's available, otherwise the RPC client
         """
-        return self._fetch_object(object_id)
+        return self._fetch_object(object_id, enable_migrate=fetch)
 
     @_apply_docstring(IPCClient.get_objects)
     def get_objects(self, object_ids: List[ObjectID]) -> List[Object]:
@@ -573,58 +619,72 @@ class Client:
             self._rpc_client = self._rpc_client.fork()
         return self
 
-    def _fetch_object(self, object_id: ObjectID) -> Object:
+    def _fetch_object(self, object_id: ObjectID, enable_migrate: bool) -> Object:
         meta = self.get_meta(object_id, sync_remote=True)
 
-        if self.has_ipc_client():
-            if meta.instance_id == self._ipc_client.instance_id or meta.isglobal:
-                return Object.from_(meta)
-            else:
-                warnings.warn(
-                    f"Migrating object {object_id} from another vineyard instance "
-                    f"{meta.instance_id}"
+        if self.has_ipc_client() and enable_migrate:
+            return self._ipc_client.get_object(object_id, fetch=True)
+
+        blobs = _traverse_blobs(meta)
+
+        cluster_info = self.default_client().meta
+        meta.force_local()
+        meta._client = None
+
+        with ThreadPoolExecutor() as executor:
+            futures = {
+                executor.submit(
+                    self._fetch_blobs_from_instance,
+                    cluster_info,
+                    instance_id,
+                    blobs[instance_id],
+                    self.compression,
                 )
-                return self._ipc_client.get_object(object_id, fetch=True)
-        if self.has_rpc_client():
-            if self._rpc_client.is_fetchable(meta):
-                return self._rpc_client.get_object(object_id)
-            else:
-                return self._locate_and_fetch(meta)
+                for instance_id in blobs
+                if instance_id != self.instance_id
+            }
 
-    def _locate_and_fetch(self, meta) -> Object:
-        """
-        Fetches an object from another instance in the Vineyard cluster based on
-        the meta information.
+            for future in as_completed(futures):
+                fetched_blobs = future.result()
+                for blob in fetched_blobs:
+                    meta.add_remote_blob(blob)
 
-        It's triggered when the RPC client is not able to fetch the object from the
-        current instance.
+        return Object.from_(meta)
+
+    def _fetch_blobs_from_instance(
+        self, cluster_info, instance_id, blob_ids, compression
+    ) -> Object:
+        """Fetches all blobs from a given instance id in the Vineyard cluster.
+
+        Args:
+            cluster_info (Dict): The cluster information of the Vineyard cluster.
+            instance_id (int): The instance id to fetch blobs from.
+            blob_ids (List): The list of blob ids to fetch.
+            compression (bool): Whether to enable compression for RPC Client.
+
+        Returns:
+            RemoteBlob(List): The list of fetched remote blobs.
         """
-        cluster_info = self._rpc_client.meta
-        instance_status = cluster_info.get(meta.instance_id)
+        instance_status = cluster_info.get(instance_id)
 
         if instance_status is None or instance_status['rpc_endpoint'] is None:
             raise RuntimeError(
                 "The rpc endpoint of the vineyard instance "
-                f"{meta.instance_id} is not available."
+                f"{instance_id} is not available."
             )
 
-        previous_compression_state = self.compression
         host, port = instance_status['rpc_endpoint'].split(':')
         try:
             with envvars('VINEYARD_RPC_SKIP_RETRY', '1'):
                 remote_client = _connect(host, port)
-                remote_client.compression = previous_compression_state
+                remote_client.compression = compression
         except Exception as exec:
             raise RuntimeError(
-                f"Failed to connect to the vineyard instance {meta.instance_id} "
+                f"Failed to connect to the vineyard instance {instance_id} "
                 f"at {host}:{port}."
             ) from exec
 
-        warnings.warn(
-            f"Fetching remote object {meta.id} from the remote vineyard instance "
-            f"{meta.instance_id} at {host}:{port}."
-        )
-        return remote_client.get_object(meta.id)
+        return remote_client.get_remote_blobs(blob_ids)
 
     def _connect_and_get_memory(self, instance_id, rpc_endpoint):
         host, port = rpc_endpoint.split(':')

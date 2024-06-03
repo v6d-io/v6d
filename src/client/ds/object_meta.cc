@@ -20,6 +20,7 @@ limitations under the License.
 #include "client/client.h"
 #include "client/client_base.h"
 #include "client/ds/blob.h"
+#include "client/ds/remote_blob.h"
 #include "common/util/env.h"
 
 namespace vineyard {
@@ -150,6 +151,11 @@ void ObjectMeta::GetKeyValue(const std::string& key, json& value) const {
     throw std::out_of_range("Invalid json value at key '" + key +
                             "': " + meta_[key].get_ref<const std::string&>());
   }
+}
+
+void ObjectMeta::AddRemoteBlob(const RemoteBlob& blob) {
+  VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(blob.id()));
+  VINEYARD_CHECK_OK(buffer_set_->EmplaceBuffer(blob.id(), blob.Buffer()));
 }
 
 void ObjectMeta::AddMember(const std::string& name, const ObjectMeta& member) {
