@@ -139,7 +139,8 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host,
     return Status::OK();
   }
   LOG(INFO) << "Remote ip:" << host << ", port:" << port;
-  RETURN_ON_ERROR(RDMAClient::Make(this->rdma_client_, host, port));
+  // RETURN_ON_ERROR(RDMAClient::Make(this->rdma_client_, host, port));
+  RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, host, port));
   local_info_.address =
       (uint64_t) this->server_ptr_->GetBulkStore()->GetBasePointer();
   local_info_.size = this->server_ptr_->GetBulkStore()->GetBaseSize();
