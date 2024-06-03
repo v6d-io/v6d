@@ -104,7 +104,7 @@ Besides, if you want to put the torch modules into all vineyard workers disperse
 
 ```python
 from vineyard.contrib.ml.torch import torch_context
-with torch_context(client, dispersion=True):
+with torch_context(client, spread=True):
     object_id = client.put(model)
 
 with torch_context(client):

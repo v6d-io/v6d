@@ -835,6 +835,7 @@ void bind_client(py::module& mod) {
             // Release GIL to avoid blocking the other threads
             // See also
             // https://pybind11.readthedocs.io/en/stable/advanced/misc.html#global-interpreter-lock-gil
+            py::gil_scoped_release release;
             std::vector<ObjectMeta> blob_metas;
             throw_on_error(
                 self->CreateRemoteBlobs(remote_blob_builders, blob_metas));

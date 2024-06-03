@@ -440,7 +440,7 @@ def torch_module_builder(client, value, builder, **kw):
 
     tensor_keys, tensor_values = list(tensors.keys()), list(tensors.values())
 
-    if client.dispersion:
+    if client.spread:
         tensor_objects = distribute_tensors(client, tensor_values)
     else:
         tensor_objects = put_torch_tensors(client, tensor_values)
@@ -452,7 +452,7 @@ def torch_module_builder(client, value, builder, **kw):
     meta['state_dict'] = to_json(new_value)
     for key, tensor in tensors.items():
         meta.add_member(key, tensor)
-    if client.dispersion:
+    if client.spread:
         meta.set_global(True)
     o = client.create_metadata(meta)
     return o
@@ -506,10 +506,10 @@ def register_torch_types(builder_ctx, resolver_ctx):
 
 
 @contextlib.contextmanager
-def torch_context(client: Client = None, dispersion=False):
+def torch_context(client: Client = None, spread=False):
     if client is not None:
         with client.with_compression(False):
-            with client.with_dispersion(dispersion):
+            with client.with_spread(spread):
                 with context() as (builder_ctx, resolver_ctx):
                     with contextlib.suppress(ImportError):
                         register_torch_types(builder_ctx, resolver_ctx)
