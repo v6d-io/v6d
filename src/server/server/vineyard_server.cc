@@ -119,8 +119,9 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     plasma_bulk_store_ = std::make_shared<PlasmaBulkStore>();
     std::call_once(allocator_init_flag,
                    [this, memory_limit, allocator, &allocator_init_error]() {
-                    LOG(INFO) << "plasma";
-                    LOG(INFO) << "memory limit: " << memory_limit << ", allocator: " << allocator;
+                     LOG(INFO) << "plasma";
+                     LOG(INFO) << "memory limit: " << memory_limit
+                               << ", allocator: " << allocator;
                      allocator_init_error = plasma_bulk_store_->PreAllocate(
                          memory_limit, allocator);
                    });
@@ -138,7 +139,8 @@ Status VineyardServer::Serve(StoreType const& bulk_store_type) {
     std::call_once(allocator_init_flag, [this, memory_limit, allocator,
                                          &allocator_init_error]() {
       LOG(INFO) << "default";
-      LOG(INFO) << "memory limit: " << memory_limit << ", allocator: " << allocator;
+      LOG(INFO) << "memory limit: " << memory_limit
+                << ", allocator: " << allocator;
       allocator_init_error = bulk_store_->PreAllocate(memory_limit, allocator);
       LOG(INFO) << "try to get base addr:" << bulk_store_->GetBasePointer();
     });
@@ -1057,6 +1059,8 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
 
           std::string remote_endpoint =
               (*instance)["rpc_endpoint"].get_ref<std::string const&>();
+          std::string rdma_endpoint =
+              (*instance)["rdma_endpoint"].get_ref<std::string const&>();
 
           auto test_task = [self, object_id](const json& meta) -> bool {
             std::lock_guard<std::mutex> lock(
@@ -1072,7 +1076,7 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
             }
           };
 
-          auto eval_task = [self, callback, remote_endpoint, object_id,
+          auto eval_task = [self, callback, remote_endpoint, rdma_endpoint, object_id,
                             metadata](const json& meta) -> Status {
             std::lock_guard<std::mutex> lock(
                 self->migrations_origin_to_target_mutex_);
@@ -1083,11 +1087,13 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
             }
 
             boost::asio::post(self->GetIOContext(), [self, callback,
-                                                     remote_endpoint, object_id,
+                                                     remote_endpoint, 
+                                                     rdma_endpoint, object_id,
                                                      metadata]() {
               auto remote = std::make_shared<RemoteClient>(self);
+              
               Status status =
-                  remote->Connect(remote_endpoint, self->session_id());
+                  remote->Connect(remote_endpoint, self->session_id(), rdma_endpoint);
               if (!status.ok()) {
                 return callback(status, InvalidObjectID());
               }
@@ -1431,6 +1437,14 @@ const std::string VineyardServer::RPCEndpoint() {
     return rpc_server_ptr_->Endpoint();
   } else {
     return "0.0.0.0:0";
+  }
+}
+
+const std::string VineyardServer::RDMAEndpoint() {
+  if (this->rpc_server_ptr_) {
+    return rpc_server_ptr_->RDMAEndpoint();
+  } else {
+    return "";
   }
 }
 

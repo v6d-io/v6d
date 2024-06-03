@@ -93,6 +93,7 @@ DEFINE_string(
 // rpc
 DEFINE_bool(rpc, true, "Enable RPC service by default");
 DEFINE_int32(rpc_socket_port, 9600, "port to listen in rpc server");
+DEFINE_string(rdma_endpoint, "", "rdma server endpoint");
 
 // Kubernetes
 DEFINE_bool(sync_crds, false, "Synchronize CRDs when persisting objects");
@@ -209,6 +210,7 @@ json RpcSpecResolver::resolve() const {
   json spec;
   spec["rpc"] = FLAGS_rpc;
   spec["port"] = FLAGS_rpc_socket_port;
+  spec["rdma_endpoint"] = FLAGS_rdma_endpoint;
   return spec;
 }
 
