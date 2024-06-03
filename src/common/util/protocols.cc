@@ -275,8 +275,7 @@ void WriteRegisterReply(const std::string& ipc_socket,
                         const std::string& rpc_endpoint,
                         const InstanceID instance_id,
                         const SessionID session_id, const bool store_match,
-                        const bool support_rpc_compression,
-                        const uint64_t &rdma_conn_id, std::string& msg) {
+                        const bool support_rpc_compression, std::string& msg) {
   json root;
   root["type"] = command_t::REGISTER_REPLY;
   root["ipc_socket"] = ipc_socket;
@@ -286,21 +285,18 @@ void WriteRegisterReply(const std::string& ipc_socket,
   root["version"] = vineyard_version();
   root["store_match"] = store_match;
   root["support_rpc_compression"] = support_rpc_compression;
-  root["rdma_conn_id"] = rdma_conn_id;
   encode_msg(root, msg);
 }
 
 Status ReadRegisterReply(const json& root, std::string& ipc_socket,
                          std::string& rpc_endpoint, InstanceID& instance_id,
                          SessionID& session_id, std::string& version,
-                         bool& store_match, bool& support_rpc_compression,
-                         uint64_t &rdma_conn_id) {
+                         bool& store_match, bool& support_rpc_compression) {
   CHECK_IPC_ERROR(root, command_t::REGISTER_REPLY);
   ipc_socket = root["ipc_socket"].get_ref<std::string const&>();
   rpc_endpoint = root["rpc_endpoint"].get_ref<std::string const&>();
   instance_id = root["instance_id"].get<InstanceID>();
   session_id = root["session_id"].get<SessionID>();
-  rdma_conn_id = root["rdma_conn_id"].get<uint64_t>();
 
   // When the "version" field is missing from the server, we treat it
   // as default unknown version number: 0.0.0.
@@ -763,14 +759,14 @@ Status ReadCreateRemoteBuffersRequest(const json& root,
 }
 
 void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
-                                  const bool unsafe, bool use_rdma, std::string& msg) {
+                                  const bool unsafe, bool use_rdma,
+                                  std::string& msg) {
   WriteGetRemoteBuffersRequest(ids, unsafe, false, use_rdma, msg);
 }
 
 void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
                                   const bool unsafe, const bool compress,
-                                  bool use_rdma,
-                                  std::string& msg) {
+                                  bool use_rdma, std::string& msg) {
   json root;
   root["type"] = command_t::GET_REMOTE_BUFFERS_REQUEST;
   int idx = 0;
@@ -786,14 +782,14 @@ void WriteGetRemoteBuffersRequest(const std::set<ObjectID>& ids,
 }
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
-                                  const bool unsafe, bool use_rdma, std::string& msg) {
+                                  const bool unsafe, bool use_rdma,
+                                  std::string& msg) {
   WriteGetRemoteBuffersRequest(ids, unsafe, false, use_rdma, msg);
 }
 
 void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
                                   const bool unsafe, const bool compress,
-                                  bool use_rdma,
-                                  std::string& msg) {
+                                  bool use_rdma, std::string& msg) {
   json root;
   root["type"] = command_t::GET_REMOTE_BUFFERS_REQUEST;
   int idx = 0;
@@ -809,7 +805,8 @@ void WriteGetRemoteBuffersRequest(const std::unordered_set<ObjectID>& ids,
 }
 
 Status ReadGetRemoteBuffersRequest(const json& root, std::vector<ObjectID>& ids,
-                                   bool& unsafe, bool& compress, bool &use_rdma) {
+                                   bool& unsafe, bool& compress,
+                                   bool& use_rdma) {
   CHECK_IPC_ERROR(root, command_t::GET_REMOTE_BUFFERS_REQUEST);
   size_t num = root["num"].get<size_t>();
   for (size_t i = 0; i < num; ++i) {

@@ -13,14 +13,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#include "rdma.h"
-#include "util.h"
+#include "common/rdma/rdma.h"
+#include "common/rdma/util.h"
 
 namespace vineyard {
 
-Status IRDMA::RegisterMemory(fi_info *fi, fid_mr **mr, fid_domain *domain, void *address, size_t size, uint64_t &rkey, void* &mr_desc) {
-  struct fi_mr_attr mr_attr = { 0 };
-  struct iovec iov = { 0 };
+Status IRDMA::RegisterMemory(fi_info* fi, fid_mr** mr, fid_domain* domain,
+                             void* address, size_t size, uint64_t& rkey,
+                             void*& mr_desc) {
+  struct fi_mr_attr mr_attr = {0};
+  struct iovec iov = {0};
   iov.iov_base = address;
   iov.iov_len = size;
   mr_attr.mr_iov = &iov;
@@ -30,7 +32,9 @@ Status IRDMA::RegisterMemory(fi_info *fi, fid_mr **mr, fid_domain *domain, void 
   mr_attr.iface = FI_HMEM_SYSTEM;
   mr_attr.context = NULL;
 
-  CHECK_ERROR(!fi_mr_regattr(domain, &mr_attr, FI_HMEM_DEVICE_ONLY, mr), "Failed to register memory region");
+  int ret = fi_mr_regattr(domain, &mr_attr, FI_HMEM_DEVICE_ONLY, mr);
+  LOG(INFO) << "register mem ret:" << ret;
+  CHECK_ERROR(!ret, "Failed to register memory region");
 
   mr_desc = fi_mr_desc(*mr);
 
@@ -39,35 +43,32 @@ Status IRDMA::RegisterMemory(fi_info *fi, fid_mr **mr, fid_domain *domain, void 
   return Status::OK();
 }
 
-Status IRDMA::Send(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *txcq, void *buf, size_t size, void* mr_desc, void *ctx) {
+Status IRDMA::Send(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq,
+                   void* buf, size_t size, void* mr_desc, void* ctx) {
   POST(fi_send, "send", ep, buf, size, mr_desc, remote_fi_addr, ctx);
-
-  // uint64_t cur = 0;
-  // return GetCompletion(ep, remote_fi_addr, txcq, &cur, 1, -1);
 }
 
-Status IRDMA::Recv(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *rxcq, void *buf, size_t size, void* mr_desc, void *ctx) {
+Status IRDMA::Recv(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq,
+                   void* buf, size_t size, void* mr_desc, void* ctx) {
   POST(fi_recv, "receive", ep, buf, size, mr_desc, remote_fi_addr, ctx);
-
-  // uint64_t cur = 0;
-  // return GetCompletion(ep, remote_fi_addr, rxcq, &cur, 1, -1);
 }
 
-Status IRDMA::Read(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *rxcq, void *buf, size_t size, uint64_t remote_address, uint64_t key, void* mr_desc, void *ctx) {
-  POST(fi_read, "read", ep, buf, size, mr_desc, remote_fi_addr, remote_address, key, ctx);
-
-  // uint64_t cur = 0;
-  // return GetCompletion(ep, remote_fi_addr, rxcq, &cur, 1, -1);
+Status IRDMA::Read(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq,
+                   void* buf, size_t size, uint64_t remote_address,
+                   uint64_t key, void* mr_desc, void* ctx) {
+  POST(fi_read, "read", ep, buf, size, mr_desc, remote_fi_addr, remote_address,
+       key, ctx);
 }
 
-Status IRDMA::Write(fid_ep *ep, fi_addr_t remote_fi_addr, fid_cq *txcq, void *buf, size_t size, uint64_t remote_address, uint64_t key, void* mr_desc, void *ctx) {
-  POST(fi_write, "write", ep, buf, size, mr_desc, remote_fi_addr, remote_address, key, ctx);
-
-//   uint64_t cur = 0;
-//   return GetCompletion(ep, remote_fi_addr, txcq, &cur, 1, -1);
+Status IRDMA::Write(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq,
+                    void* buf, size_t size, uint64_t remote_address,
+                    uint64_t key, void* mr_desc, void* ctx) {
+  POST(fi_write, "write", ep, buf, size, mr_desc, remote_fi_addr,
+       remote_address, key, ctx);
 }
 
-Status IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur, uint64_t total, int timeout, void **context) {
+int IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq* cq, uint64_t* cur,
+                         uint64_t total, int timeout, void** context) {
   fi_cq_err_entry err;
   timespec start, end;
   int ret;
@@ -84,25 +85,26 @@ Status IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq *cq, uint64_t *cur,
       }
       (*cur)++;
     } else if (ret < 0 && ret != -FI_EAGAIN) {
-      return Status::Invalid("Failed to read completion queue");
+      return ret;
     } else if (timeout > 0) {
       clock_gettime(CLOCK_REALTIME, &end);
-      if ((end.tv_sec - start.tv_sec) * 1000 + (end.tv_nsec - start.tv_nsec) / 1000000 > timeout) {
-        return Status::Invalid("Timeout to read completion queue");
+      if ((end.tv_sec - start.tv_sec) * 1000 +
+              (end.tv_nsec - start.tv_nsec) / 1000000 >
+          timeout) {
+        return -FI_ETIMEDOUT;
       }
     }
   } while (*cur < total);
   if (context) {
     *context = err.op_context;
   }
-  LOG(INFO) << "opt:" << err.flags;
 
-  return Status::OK();
+  return 0;
 }
 
 void IRDMA::FreeBuffer(void*& buffer) {
   if (buffer) {
-    free(buffer);
+    delete buffer;
   }
 }
 
@@ -110,10 +112,6 @@ void IRDMA::FreeInfo(fi_info* info) {
   if (info) {
     fi_freeinfo(info);
   }
-}
-
-Status IRDMA::Release() {
-  return Status::OK();
 }
 
 }  // namespace vineyard

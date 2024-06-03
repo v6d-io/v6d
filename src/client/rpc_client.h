@@ -386,7 +386,6 @@ class RPCClient final : public ClientBase {
 
  private:
   InstanceID remote_instance_id_;
-  uint64_t rdma_conn_id_;
 
   friend class Client;
 };
