@@ -157,8 +157,7 @@ class BulkStore
    * @brief Allocate space for a new blob.
    */
   Status Create(const size_t size, ObjectID& object_id,
-                std::shared_ptr<Payload>& object,
-                uint64_t global_mask);
+                std::shared_ptr<Payload>& object, uint64_t global_mask);
 
   /*
    * @brief Decrease the reference count of a blob, when its reference count
@@ -229,8 +228,7 @@ class PlasmaBulkStore
    */
   Status Create(size_t const data_size, size_t const plasma_size,
                 PlasmaID const& plasma_id, ObjectID& object_id,
-                std::shared_ptr<PlasmaPayload>& object,
-                uint64_t global_mask);
+                std::shared_ptr<PlasmaPayload>& object, uint64_t global_mask);
 
   /*
    * @brief Decrease the reference count of a blob, when its reference count

@@ -238,7 +238,6 @@ class BasicIPCClient : public ClientBase {
 
  protected:
   std::shared_ptr<detail::SharedMemoryManager> shm_;
-  uint64_t rdma_conn_id;
 };
 
 class Client;

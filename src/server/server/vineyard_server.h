@@ -229,6 +229,8 @@ class VineyardServer : public std::enable_shared_from_this<VineyardServer> {
 
   const std::string RPCEndpoint();
 
+  const std::string RDMAEndpoint();
+
   void Stop();
 
   bool Running() const;

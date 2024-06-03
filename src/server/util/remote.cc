@@ -21,11 +21,11 @@ limitations under the License.
 #include <vector>
 
 #include "common/compression/compressor.h"
+#include "common/rdma/rdma_client.h"
 #include "common/util/asio.h"
 #include "common/util/protocols.h"
 #include "server/server/vineyard_server.h"
 #include "server/util/remote.h"
-#include "common/rdma/rdma_client.h"
 
 namespace vineyard {
 
@@ -41,10 +41,30 @@ RemoteClient::~RemoteClient() {
   boost::system::error_code ec;
   ec = socket_.close(ec);
   LOG(INFO) << "Close remote client";
+  // TODO: send msg to server and close remote ep.
+  StopRDMA();
+}
+
+Status RemoteClient::StopRDMA() {
+  if (!rdma_connected_) {
+    return Status::OK();
+  }
+
+  void* msg;
+  RETURN_ON_ERROR(rdma_client_->GetTXFreeMsgBuffer(msg));
+  VineyardMsg* vmsg = reinterpret_cast<VineyardMsg*>(msg);
+  vmsg->type = VINEYARD_MSG_CLOSE;
+  RETURN_ON_ERROR(rdma_client_->Send(msg, sizeof(VineyardMsg), nullptr));
+  RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+
+  RETURN_ON_ERROR(rdma_client_->Stop());
+  RETURN_ON_ERROR(rdma_client_->Close());
+  return Status::OK();
 }
 
 Status RemoteClient::Connect(const std::string& rpc_endpoint,
-                             const SessionID session_id) {
+                             const SessionID session_id,
+                             const std::string& rdma_endpoint) {
   size_t pos = rpc_endpoint.find(":");
   std::string host, port;
   if (pos == std::string::npos) {
@@ -55,56 +75,77 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
     port = rpc_endpoint.substr(pos + 1);
   }
 
-  Status status = Connect(host, static_cast<uint32_t>(std::stoul(port)), session_id);
-  if (ConnectRDMAServer("172.21.67.115", 9228).ok()) {
+  RETURN_ON_ERROR(
+      Connect(host, static_cast<uint32_t>(std::stoul(port)), session_id));
+
+  std::string rdma_host, rdma_port;
+  pos = rdma_endpoint.find(":");
+  if (pos == std::string::npos) {
+    LOG(INFO) << "No RDMA endpoint provided. Fall back to TCP.";
+  } else {
+    rdma_host = rdma_endpoint.substr(0, pos);
+    rdma_port = rdma_endpoint.substr(pos + 1);
+  }
+
+  Status status = ConnectRDMAServer(rdma_host, std::atoi(rdma_port.c_str()));
+  if (status.ok()) {
+    LOG(INFO) << "RDMA host:" << rdma_host << ", port:" << rdma_port;
     LOG(INFO) << "Connect to RDMA server successfully";
   } else {
-    LOG(INFO) << "Failed to connect to RDMA server. Fall back to TCP.";
+    LOG(INFO) << "Failed to connect to RDMA server. Fall back to TCP. Error:"
+              << status.message();
   }
-  
-  return status;
+
+  return Status::OK();
 }
 
 Status RemoteClient::RDMAExchangeMemInfo() {
-  void *buffer;
+  void* buffer;
   this->rdma_client_->GetTXFreeMsgBuffer(buffer);
-  VineyardMsg *msg = reinterpret_cast<VineyardMsg *>(buffer);
+  VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
   msg->type = VINEYARD_MSG_EXCHANGE_KEY;
-  msg->remoteMemInfo.remote_address = (uint64_t)local_info_.address;
+  msg->remoteMemInfo.remote_address = (uint64_t) local_info_.address;
   msg->remoteMemInfo.key = local_info_.rkey;
   msg->remoteMemInfo.len = local_info_.size;
-  msg->remoteMemInfo.rdma_conn_id = rdma_conn_id_;
-  LOG(INFO) << "Send remote addr: " << (void *)msg->remoteMemInfo.remote_address << ", rkey: " << msg->remoteMemInfo.key;
-  void *remoteMsg;
+  LOG(INFO) << "Send remote addr: "
+            << reinterpret_cast<void*>(msg->remoteMemInfo.remote_address)
+            << ", rkey: " << msg->remoteMemInfo.key;
+  void* remoteMsg;
   this->rdma_client_->GetRXFreeMsgBuffer(remoteMsg);
   memset(remoteMsg, 0, 64);
-  VINEYARD_CHECK_OK(this->rdma_client_->Recv(remoteMsg, sizeof(VineyardMsg), nullptr));
+  VINEYARD_CHECK_OK(
+      this->rdma_client_->Recv(remoteMsg, sizeof(VineyardMsg), nullptr));
   this->rdma_client_->Send(buffer, sizeof(VineyardMsg), nullptr);
   this->rdma_client_->GetTXCompletion(-1, nullptr);
 
-  // boost::asio::post(context_, [self, buffer, remoteMsg]() {
   VINEYARD_CHECK_OK(rdma_client_->GetRXCompletion(-1, nullptr));
   LOG(INFO) << "Receive";
-  
-  VineyardMsg *vmsg = reinterpret_cast<VineyardMsg *>(remoteMsg);
+
+  VineyardMsg* vmsg = reinterpret_cast<VineyardMsg*>(remoteMsg);
   if (vmsg->type == VINEYARD_MSG_EXCHANGE_KEY) {
     remote_info_.address = vmsg->remoteMemInfo.remote_address;
     remote_info_.rkey = vmsg->remoteMemInfo.key;
-    LOG(INFO) << "Get remote address: " << remote_info_.address << ", rkey: " << remote_info_.rkey;
+    LOG(INFO) << "Get remote address: " << remote_info_.address
+              << ", rkey: " << remote_info_.rkey;
   } else {
     LOG(ERROR) << "Unknown message type: " << vmsg->type;
   }
   return Status::OK();
 }
 
-Status RemoteClient::ConnectRDMAServer(const std::string& host, const uint32_t port) {
+Status RemoteClient::ConnectRDMAServer(const std::string& host,
+                                       const uint32_t port) {
   if (this->rdma_connected_) {
     return Status::OK();
   }
+  LOG(INFO) << "Remote ip:" << host << ", port:" << port;
   RETURN_ON_ERROR(RDMAClient::Make(this->rdma_client_, host, port));
-  local_info_.address = (uint64_t)this->server_ptr_->GetBulkStore()->GetBasePointer();
+  local_info_.address =
+      (uint64_t) this->server_ptr_->GetBulkStore()->GetBasePointer();
   local_info_.size = this->server_ptr_->GetBulkStore()->GetBaseSize();
   LOG(INFO) << "Try to connect to RDMA server " << host << ":" << port << "...";
+  LOG(INFO) << "Register:" << reinterpret_cast<void*>(local_info_.address)
+            << " size:" << local_info_.size;
   if (this->rdma_client_->RegisterMemory(local_info_).ok()) {
     LOG(INFO) << "Register memory successfully";
     LOG(INFO) << "desc:" << local_info_.mr_desc;
@@ -116,13 +157,6 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host, const uint32_t p
 
   LOG(INFO) << "Connect successfully";
   RETURN_ON_ERROR(RDMAExchangeMemInfo());
-  // });
-  // std::string message_out;
-  // WriteRDMAConnectRequest((uint64_t)local_info_.address, local_info_.rkey, local_info_.size, message_out);
-  // RETURN_ON_ERROR(doWrite(message_out));
-  // json message_in;
-  // RETURN_ON_ERROR(doRead(message_in));
-  // RETURN_ON_ERROR(ReadRDMAConnectReply(message_in, rdma_conn_id_, remote_info_.address, remote_info_.rkey, remote_info_.size));
   this->rdma_connected_ = true;
   return Status::OK();
 }
@@ -171,7 +205,7 @@ Status RemoteClient::Connect(const std::string& host, const uint32_t port,
   std::string server_version_;
   RETURN_ON_ERROR(ReadRegisterReply(
       message_in, ipc_socket_value, rpc_endpoint_value, remote_instance_id_,
-      session_id_, server_version_, store_match, support_rpc_compression, rdma_conn_id_));
+      session_id_, server_version_, store_match, support_rpc_compression));
   this->connected_ = true;
   return Status::OK();
 }
@@ -198,7 +232,8 @@ Status RemoteClient::MigrateObject(const ObjectID object_id, const json& meta,
         "The object is not local, and been distributed across instances");
   }
   if (remote_instance_id != this->remote_instance_id_) {
-    LOG(INFO) << "remote instance id: " << remote_instance_id << ", local instance id: " << this->remote_instance_id_;
+    LOG(INFO) << "remote instance id: " << remote_instance_id
+              << ", local instance id: " << this->remote_instance_id_;
     LOG(INFO) << "phase 4";
     return Status::Invalid(
         "The object is not local, and the remote instance id is not does't "
@@ -315,7 +350,8 @@ Status RemoteClient::migrateBuffers(
       "compression", true);  // enable compression for migration
 
   std::string message_out;
-  WriteGetRemoteBuffersRequest(blobs, false, compress, rdma_connected_, message_out);
+  WriteGetRemoteBuffersRequest(blobs, false, compress, rdma_connected_,
+                               message_out);
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
@@ -333,9 +369,8 @@ Status RemoteClient::migrateBuffers(
     } else {
       ObjectID object_id;
       std::shared_ptr<Payload> object;
-      status = this->server_ptr_->GetBulkStore()->Create(payload.data_size,
-                                                         object_id, object,
-                                                         server_ptr_->instance_id());
+      status = this->server_ptr_->GetBulkStore()->Create(
+          payload.data_size, object_id, object, server_ptr_->instance_id());
       if (!status.ok()) {
         break;
       }
@@ -359,18 +394,24 @@ Status RemoteClient::migrateBuffers(
       if (payloads[i].data_size == 0) {
         continue;
       }
-      LOG(INFO) << "Read remote buffer " << (void *)payloads[i].pointer << " from remote server";
-      LOG(INFO) << "rkey: " << remote_info_.rkey << " size:" << payloads[i].data_size;
+      LOG(INFO) << "Read remote buffer "
+                << reinterpret_cast<void*>(payloads[i].pointer)
+                << " from remote server";
+      LOG(INFO) << "rkey: " << remote_info_.rkey
+                << " size:" << payloads[i].data_size;
       LOG(INFO) << "desc:" << local_info_.mr_desc;
       int flag = 888;
-      VINEYARD_CHECK_OK(rdma_client_->Read(results[i]->pointer, payloads[i].data_size,
-                         (uint64_t)payloads[i].pointer, remote_info_.rkey, local_info_.mr_desc, &flag));
-      void *flag_pointer = nullptr;
+      VINEYARD_CHECK_OK(
+          rdma_client_->Read(results[i]->pointer, payloads[i].data_size,
+                             (uint64_t) payloads[i].pointer, remote_info_.rkey,
+                             local_info_.mr_desc, &flag));
+      void* flag_pointer = nullptr;
       VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, &flag_pointer));
       for (int j = 0; j < payloads[i].data_size; j++) {
-        LOG(INFO) << "data: " << (int)results[i]->pointer[j];
+        LOG(INFO) << "data: " << static_cast<int>(results[i]->pointer[j]);
       }
-      LOG(INFO) << "Flag addr:" << &flag << " flag_pointer value:" << flag_pointer;
+      LOG(INFO) << "Flag addr:" << &flag
+                << " flag_pointer value:" << flag_pointer;
     }
     std::map<ObjectID, ObjectID> result_blobs;
     for (size_t i = 0; i < payloads.size(); i++) {
@@ -386,9 +427,10 @@ Status RemoteClient::migrateBuffers(
           std::map<ObjectID, ObjectID> result_blobs;
           if (status.ok()) {
             for (size_t i = 0; i < payloads.size(); ++i) {
-              VINEYARD_DISCARD(
-                  self->server_ptr_->GetBulkStore()->Seal(results[i]->object_id));
-              result_blobs.emplace(payloads[i].object_id, results[i]->object_id);
+              VINEYARD_DISCARD(self->server_ptr_->GetBulkStore()->Seal(
+                  results[i]->object_id));
+              result_blobs.emplace(payloads[i].object_id,
+                                   results[i]->object_id);
             }
           }
           return callback(status, result_blobs);
@@ -719,49 +761,49 @@ void ReceiveRemoteBuffers(asio::generic::stream_protocol::socket& socket,
                        callback_after_finish);
 }
 
-void RDMAReadRemoteBuffers(std::shared_ptr<RDMAClient> &client,
-                          std::vector<std::shared_ptr<Payload>> const& objects,
-                          size_t index, size_t offset,
-                          std::shared_ptr<Decompressor> decompressor,
-                          callback_t<> callback_after_finish) {
-  //TBD
+void RDMAReadRemoteBuffers(std::shared_ptr<RDMAClient>& client,
+                           std::vector<std::shared_ptr<Payload>> const& objects,
+                           size_t index, size_t offset,
+                           std::shared_ptr<Decompressor> decompressor,
+                           callback_t<> callback_after_finish) {
+  // TBD
 }
 
-void RDMAReadRemoteBuffers(std::shared_ptr<RDMAClient> &client,
-                       std::vector<std::shared_ptr<Payload>> const& objects,
-                       size_t index, size_t offset, const bool decompress,
-                       callback_t<> callback_after_finish) {
+void RDMAReadRemoteBuffers(std::shared_ptr<RDMAClient>& client,
+                           std::vector<std::shared_ptr<Payload>> const& objects,
+                           size_t index, size_t offset, const bool decompress,
+                           callback_t<> callback_after_finish) {
   std::shared_ptr<Decompressor> decompressor;
   if (decompress) {
     decompressor = std::make_shared<Decompressor>();
   }
   RDMAReadRemoteBuffers(client, objects, index, offset, decompressor,
-                                     callback_after_finish);
+                        callback_after_finish);
 }
 
-void RDMAWriteRemoteBuffers(std::shared_ptr<RDMAClient> &server,
-                        InstanceID target_id,
-                        std::vector<std::shared_ptr<Payload>> const& objects,
-                        size_t index, std::shared_ptr<Compressor> compressor,
-                        callback_t<> callback_after_finish) {
-  //TBD
+void RDMAWriteRemoteBuffers(
+    std::shared_ptr<RDMAClient>& server, InstanceID target_id,
+    std::vector<std::shared_ptr<Payload>> const& objects, size_t index,
+    std::shared_ptr<Compressor> compressor,
+    callback_t<> callback_after_finish) {
+  // TBD
 }
 
-void RDMAWriteRemoteBuffers(std::shared_ptr<RDMAClient> &server,
-                       InstanceID target_id,
-                       std::vector<std::shared_ptr<Payload>> const& objects,
-                       size_t index, const bool compress,
-                       callback_t<> callback_after_finish) {
+void RDMAWriteRemoteBuffers(
+    std::shared_ptr<RDMAClient>& server, InstanceID target_id,
+    std::vector<std::shared_ptr<Payload>> const& objects, size_t index,
+    const bool compress, callback_t<> callback_after_finish) {
   std::shared_ptr<Compressor> compressor;
   if (compress) {
     compressor = std::make_shared<Compressor>();
   }
-  RDMAWriteRemoteBuffers(server, target_id, objects, index, compressor, callback_after_finish);
+  RDMAWriteRemoteBuffers(server, target_id, objects, index, compressor,
+                         callback_after_finish);
 }
 
-void RDMACheckCompleteQueue(std::shared_ptr<RDMAClient> &client,
-                        callback_t<> callback_after_finish) {
-  //TBD
+void RDMACheckCompleteQueue(std::shared_ptr<RDMAClient>& client,
+                            callback_t<> callback_after_finish) {
+  // TBD
 }
 
 }  // namespace vineyard

@@ -18,6 +18,7 @@ limitations under the License.
 
 #include <memory>
 #include <string>
+#include <unordered_map>
 
 #include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/env.h"
@@ -44,6 +45,14 @@ class RPCServer : public SocketServer,
     return get_hostname() + ":" + json_to_string(rpc_spec_["port"]);
   }
 
+  std::string RDMAEndpoint() {
+    std::string rdma_endpoint = json_to_string(rpc_spec_["rdma_endpoint"]);
+    rdma_endpoint.erase(
+        std::remove(rdma_endpoint.begin(), rdma_endpoint.end(), '\"'),
+        rdma_endpoint.end());
+    return std::string(rdma_endpoint);
+  }
+
   Status Register(std::shared_ptr<SocketConnection> conn,
                   const SessionID session_id) override;
 
@@ -54,9 +63,11 @@ class RPCServer : public SocketServer,
 
   void doRDMAAccept();
 
-  Status InitRDMA();
+  void doRDMARecv();
 
-  Status RDMAExchangeMemInfo();
+  void doRDMASend();
+
+  Status InitRDMA();
 
   const json rpc_spec_;
   asio::ip::tcp::acceptor acceptor_;
@@ -67,6 +78,10 @@ class RPCServer : public SocketServer,
   std::shared_ptr<RDMAServer> rdma_server_;
   mutable std::recursive_mutex rdma_mutex_;  // protect `rdma_servers_`
   RegisterMemInfo local_mem_info_;
+
+  std::thread rdma_listen_thread_;
+  std::thread rdma_recv_thread_;
+  std::thread rdma_send_thread_;
 };
 
 }  // namespace vineyard
