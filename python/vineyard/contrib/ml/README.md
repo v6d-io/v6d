@@ -100,7 +100,7 @@ with torch_context(client):
     state_dict = client.get(object_id)
 ```
 
-Besides, if you want to put the torch modules into all vineyard workers dispersedly to gather the network bandwidth of all workers, you can enable the shuffle option as follows:
+Besides, if you want to put the torch modules into all vineyard workers spreadly to gather the network bandwidth of all workers, you can enable the spread option as follows:
 
 ```python
 from vineyard.contrib.ml.torch import torch_context
