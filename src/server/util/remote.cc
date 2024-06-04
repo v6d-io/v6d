@@ -91,8 +91,7 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
 
   Status status = ConnectRDMAServer(rdma_host, std::atoi(rdma_port.c_str()));
   if (status.ok()) {
-    LOG(INFO) << "RDMA host:" << rdma_host << ", port:" << rdma_port;
-    LOG(INFO) << "Connect to RDMA server successfully";
+    LOG(INFO) << "Connect to RDMA server successfully. RDMA host:" << rdma_host << ", port:" << rdma_port;
   } else {
     LOG(INFO) << "Failed to connect to RDMA server. Fall back to TCP. Error:"
               << status.message();
@@ -148,11 +147,9 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host,
   if (this->rdma_client_->RegisterMemory(local_info_).ok()) {
     RETURN_ON_ERROR(this->rdma_client_->Connect());
   } else {
-    LOG(INFO) << "Failed to register memory. Fall back to TCP.";
     return Status::Invalid("Failed to register memory");
   }
 
-  LOG(INFO) << "Connect successfully";
   RETURN_ON_ERROR(RDMAExchangeMemInfo());
   this->rdma_connected_ = true;
   return Status::OK();
@@ -731,51 +728,6 @@ void ReceiveRemoteBuffers(asio::generic::stream_protocol::socket& socket,
   }
   ReceiveRemoteBuffers(socket, objects, index, offset, decompressor,
                        callback_after_finish);
-}
-
-void RDMAReadRemoteBuffers(std::shared_ptr<RDMAClient>& client,
-                           std::vector<std::shared_ptr<Payload>> const& objects,
-                           size_t index, size_t offset,
-                           std::shared_ptr<Decompressor> decompressor,
-                           callback_t<> callback_after_finish) {
-  // TBD
-}
-
-void RDMAReadRemoteBuffers(std::shared_ptr<RDMAClient>& client,
-                           std::vector<std::shared_ptr<Payload>> const& objects,
-                           size_t index, size_t offset, const bool decompress,
-                           callback_t<> callback_after_finish) {
-  std::shared_ptr<Decompressor> decompressor;
-  if (decompress) {
-    decompressor = std::make_shared<Decompressor>();
-  }
-  RDMAReadRemoteBuffers(client, objects, index, offset, decompressor,
-                        callback_after_finish);
-}
-
-void RDMAWriteRemoteBuffers(
-    std::shared_ptr<RDMAClient>& server, InstanceID target_id,
-    std::vector<std::shared_ptr<Payload>> const& objects, size_t index,
-    std::shared_ptr<Compressor> compressor,
-    callback_t<> callback_after_finish) {
-  // TBD
-}
-
-void RDMAWriteRemoteBuffers(
-    std::shared_ptr<RDMAClient>& server, InstanceID target_id,
-    std::vector<std::shared_ptr<Payload>> const& objects, size_t index,
-    const bool compress, callback_t<> callback_after_finish) {
-  std::shared_ptr<Compressor> compressor;
-  if (compress) {
-    compressor = std::make_shared<Compressor>();
-  }
-  RDMAWriteRemoteBuffers(server, target_id, objects, index, compressor,
-                         callback_after_finish);
-}
-
-void RDMACheckCompleteQueue(std::shared_ptr<RDMAClient>& client,
-                            callback_t<> callback_after_finish) {
-  // TBD
 }
 
 }  // namespace vineyard

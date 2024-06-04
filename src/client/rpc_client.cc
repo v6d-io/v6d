@@ -176,7 +176,7 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host, uint32_t rdma_port) 
     return Status::OK();
   }
   RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host, (int)rdma_port));
-  LOG(INFO) << "Try to connect to RDMA server " << rdma_host << ":" << rdma_port << "...";
+  VLOG(100) << "Try to connect to RDMA server " << rdma_host << ":" << rdma_port << "...";
 
   RETURN_ON_ERROR(this->rdma_client_->Connect());
   RETURN_ON_ERROR(RDMAExchangeMemInfo());
