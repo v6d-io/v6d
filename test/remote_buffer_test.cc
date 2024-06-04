@@ -135,7 +135,9 @@ void RemoteCreateAndGetTest(Client& ipc_client, RPCClient& rpc_client) {
 
 int main(int argc, char** argv) {
   if (argc < 3) {
-    printf("usage ./remote_buffer_test <ipc_socket> <rpc_endpoint> <rdma_endpoint>");
+    printf(
+        "usage ./remote_buffer_test <ipc_socket> <rpc_endpoint> "
+        "<rdma_endpoint>");
     return 1;
   }
   std::string ipc_socket(argv[1]);

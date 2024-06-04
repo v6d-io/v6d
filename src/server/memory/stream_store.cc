@@ -191,7 +191,8 @@ Status StreamStore::Pull(ObjectID const stream_id,
     if (allocatable(stream, writer.first)) {
       ObjectID chunk;
       std::shared_ptr<Payload> object;
-      auto status = store_->Create(writer.first, chunk, object, server_->instance_id());
+      auto status =
+          store_->Create(writer.first, chunk, object, server_->instance_id());
       if (!status.ok()) {
         VINEYARD_SUPPRESS(writer.second(status, InvalidObjectID()));
       } else {

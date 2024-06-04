@@ -271,8 +271,8 @@ Status RDMAServer::RemoveClient(fid_ep* ep) {
 Status RDMAServer::RegisterMemory(RegisterMemInfo& memInfo) {
   fid_mr* new_mr = NULL;
   RETURN_ON_ERROR(IRDMA::RegisterMemory(
-      &new_mr, domain, reinterpret_cast<void*>(memInfo.address),
-      memInfo.size, memInfo.rkey, memInfo.mr_desc));
+      &new_mr, domain, reinterpret_cast<void*>(memInfo.address), memInfo.size,
+      memInfo.rkey, memInfo.mr_desc));
   mr_array.push_back(new_mr);
   return Status::OK();
 }

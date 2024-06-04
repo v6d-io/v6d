@@ -20,9 +20,8 @@ limitations under the License.
 
 namespace vineyard {
 
-Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain,
-                             void* address, size_t size, uint64_t& rkey,
-                             void*& mr_desc) {
+Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
+                             size_t size, uint64_t& rkey, void*& mr_desc) {
   struct fi_mr_attr mr_attr = {0};
   struct iovec iov = {0};
   iov.iov_base = address;
@@ -77,7 +76,7 @@ int IRDMA::GetCompletion(fid_cq* cq, int timeout, void** context) {
     clock_gettime(CLOCK_REALTIME, &start);
   }
 
-  while(true) {
+  while (true) {
     ret = fi_cq_read(cq, &err, 1);
     if (ret > 0) {
       break;
