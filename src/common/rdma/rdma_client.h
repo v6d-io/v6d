@@ -42,17 +42,8 @@ class RDMAClient : public IRDMA {
   Status Write(void* buf, size_t size, uint64_t remote_address, uint64_t key,
                void* mr_desc, void* ctx);
 
-  static Status Make(std::shared_ptr<RDMAClient>& ptr,
-                     std::string server_address, int port);
-
-  static Status Make(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
-                     std::string server_address, int port);
-
-  static Status Make(std::shared_ptr<RDMAClient>& ptr, RDMARemoteNodeInfo &info);
-
   Status RegisterMemory(RegisterMemInfo& memInfo);
 
-  // TODO: delete in the future.
   Status RegisterMemory(fid_mr** mr, void* address, size_t size, uint64_t& rkey,
                         void*& mr_desc);
 
@@ -76,14 +67,18 @@ class RDMAClient : public IRDMA {
   Status GetTXCompletion(int timeout, void** context);
 
  private:
-  bool IsClient() override { return true; };
+  static Status Make(std::shared_ptr<RDMAClient>& ptr,
+                     std::string server_address, int port);
+
+  static Status Make(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
+                     std::string server_address, int port);
+
+  static Status Make(std::shared_ptr<RDMAClient>& ptr, RDMARemoteNodeInfo &info);
 
   fi_info* fi = NULL;
   fid_fabric* fabric = NULL;
-  // fi_eq_attr eq_attr = {0};
   fid_eq* eq = NULL;
   fid_domain* domain = NULL;
-  // fi_cq_attr cq_attr = {0};
   fid_cq *rxcq = NULL, *txcq = NULL;
   fid_ep* ep = NULL;
   char *rx_msg_buffer, *tx_msg_buffer;
@@ -113,9 +108,8 @@ class RDMAClientCreator {
   static Status Clear();
 
  private:
-  RDMAClientCreator() = default;
+  RDMAClientCreator() = delete;
 
-  // std::map<std::string, fid_domain*> domains_;
   static std::map<std::string, RDMARemoteNodeInfo> servers_;
   static std::mutex servers_mtx_;
 };

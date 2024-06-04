@@ -62,7 +62,7 @@ option(BUILD_VINEYARD_MALLOC_OVERRIDE "Using the client-side malloc to override 
 option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
 option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
 option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" OFF)
-option(BUILD_VINEYARD_LLM_CACHE "Enable kv-state cache support" OFF)
+option(BUILD_VINEYARD_LLM_CACHE "Enable kv-state cache support" ON)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)

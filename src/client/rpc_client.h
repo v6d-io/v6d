@@ -72,7 +72,9 @@ class RPCClient final : public ClientBase {
    *
    * @param rpc_endpoint The TPC endpoint of vineyard server, in the format of
    * `host:port`.
-   *
+   * @param rdma_endpoint The RDMA endpoint of RDMA server, in the format of
+   * `host:port`.
+   * 
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& rpc_endpoint, std::string const& username,
@@ -84,6 +86,8 @@ class RPCClient final : public ClientBase {
    * @param rpc_endpoint The TPC endpoint of vineyard server, in the format of
    * `host:port`.
    * @param session_id Connect to specified session.
+   * @param rdma_endpoint The RDMA endpoint of RDMA server, in the format of
+   * `host:port`.
    *
    * @return Status that indicates whether the connect has succeeded.
    */
@@ -98,6 +102,8 @@ class RPCClient final : public ClientBase {
    *
    * @param host The host of vineyard server.
    * @param port The TCP port of vineyard server's RPC service.
+   * @param rdma_host The host of RDMA server.
+   * @param rdma_port The RDMA port of RDMA server's RDMA service.
    *
    * @return Status that indicates whether the connect has succeeded.
    */
@@ -109,6 +115,8 @@ class RPCClient final : public ClientBase {
    *
    * @param host The host of vineyard server.
    * @param port The TCP port of vineyard server's RPC service.
+   * @param rdma_host The host of RDMA server.
+   * @param rdma_port The RDMA port of RDMA server's RDMA service.
    *
    * @return Status that indicates whether the connect has succeeded.
    */
@@ -122,6 +130,8 @@ class RPCClient final : public ClientBase {
    * @param host The host of vineyard server.
    * @param port The TCP port of vineyard server's RPC service.
    * @param session_id Connect to specified session.
+   * @param rdma_host The host of RDMA server.
+   * @param rdma_port The RDMA port of RDMA server's RDMA service.
    *
    * @return Status that indicates whether the connect has succeeded.
    */
@@ -129,10 +139,6 @@ class RPCClient final : public ClientBase {
                  const SessionID session_id, std::string const& username = "",
                  std::string const& password = "",
                  const std::string& rdma_host = "", uint32_t rdma_port = -1);
-
-  Status ConnectRDMA(const std::string& rdma_host, uint32_t rdma_port);
-
-  Status StopRDMA();
 
   /**
    * @brief Create a new client using self endpoint.
@@ -397,6 +403,10 @@ class RPCClient final : public ClientBase {
   }
 
  private:
+  Status ConnectRDMA(const std::string& rdma_host, uint32_t rdma_port);
+
+  Status StopRDMA();
+
   Status RDMAExchangeMemInfo();
 
   Status RegisterMem(RegisterMemInfo &info);

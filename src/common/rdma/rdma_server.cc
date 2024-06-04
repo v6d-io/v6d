@@ -47,8 +47,6 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer>& ptr, int port) {
                                 FI_MR_PROV_KEY | FI_MR_VIRT_ADDR | FI_MR_RAW;
   hints->tx_attr->tclass = FI_TC_BULK_DATA;
   hints->ep_attr->type = FI_EP_MSG;
-  // hints->fabric_attr = (fi_fabric_attr*) malloc(sizeof
-  // *(hints->fabric_attr));
   hints->fabric_attr = new fi_fabric_attr;
   memset(hints->fabric_attr, 0, sizeof *(hints->fabric_attr));
   hints->fabric_attr->prov_name = strdup("verbs");
@@ -63,7 +61,6 @@ Status RDMAServer::Make(std::shared_ptr<RDMAServer>& ptr, fi_info* hints,
     return Status::Invalid("Invalid fabric hints info.");
   }
 
-  LOG(INFO) << "Make RDMAServer";
   ptr = std::make_shared<RDMAServer>();
 
   uint64_t flags = 0;
@@ -174,7 +171,7 @@ Status RDMAServer::Close() {
 
   FreeInfo(fi);
 
-  LOG(INFO) << "Free sources from server successfully";
+  VLOG(100) << "Free sources from server successfully";
   return Status::OK();
 }
 
@@ -272,7 +269,7 @@ Status RDMAServer::RemoveClient(fid_ep* ep) {
 Status RDMAServer::RegisterMemory(RegisterMemInfo& memInfo) {
   fid_mr* new_mr = NULL;
   RETURN_ON_ERROR(IRDMA::RegisterMemory(
-      fi, &new_mr, domain, reinterpret_cast<void*>(memInfo.address),
+      &new_mr, domain, reinterpret_cast<void*>(memInfo.address),
       memInfo.size, memInfo.rkey, memInfo.mr_desc));
   mr_array.push_back(new_mr);
   return Status::OK();
@@ -280,11 +277,10 @@ Status RDMAServer::RegisterMemory(RegisterMemInfo& memInfo) {
 
 Status RDMAServer::RegisterMemory(fid_mr** mr, void* address, size_t size,
                                   uint64_t& rkey, void*& mr_desc) {
-  return IRDMA::RegisterMemory(fi, mr, domain, address, size, rkey, mr_desc);
+  return IRDMA::RegisterMemory(mr, domain, address, size, rkey, mr_desc);
 }
 
 Status RDMAServer::Send(uint64_t ep_token, void* buf, size_t size, void* ctx) {
-  LOG(INFO) << "Send";
   std::lock_guard<std::mutex> lock(ep_map_mutex_);
   if (ep_map_.find(ep_token) == ep_map_.end()) {
     return Status::Invalid("Failed to find buffer context.");
@@ -294,7 +290,6 @@ Status RDMAServer::Send(uint64_t ep_token, void* buf, size_t size, void* ctx) {
 }
 
 Status RDMAServer::Recv(uint64_t ep_token, void* buf, size_t size, void* ctx) {
-  LOG(INFO) << "Recv";
   std::lock_guard<std::mutex> lock(ep_map_mutex_);
   if (ep_map_.find(ep_token) == ep_map_.end()) {
     return Status::Invalid("Failed to find buffer context.");
@@ -316,7 +311,6 @@ Status RDMAServer::Recv(void* ep, void* buf, size_t size, void* ctx) {
 Status RDMAServer::Read(uint64_t ep_token, void* buf, size_t size,
                         uint64_t remote_address, uint64_t rkey, void* mr_desc,
                         void* ctx) {
-  LOG(INFO) << "Read";
   std::lock_guard<std::mutex> lock(ep_map_mutex_);
   if (ep_map_.find(ep_token) == ep_map_.end()) {
     return Status::Invalid("Failed to find buffer context.");
@@ -329,7 +323,6 @@ Status RDMAServer::Read(uint64_t ep_token, void* buf, size_t size,
 Status RDMAServer::Write(uint64_t ep_token, void* buf, size_t size,
                          uint64_t remote_address, uint64_t rkey, void* mr_desc,
                          void* ctx) {
-  LOG(INFO) << "Write";
   std::lock_guard<std::mutex> lock(ep_map_mutex_);
   if (ep_map_.find(ep_token) == ep_map_.end()) {
     return Status::Invalid("Failed to find buffer context.");
@@ -352,7 +345,7 @@ Status RDMAServer::GetTXFreeMsgBuffer(void*& buffer) {
     }
     buffer = reinterpret_cast<void*>(reinterpret_cast<uint64_t>(tx_msg_buffer) +
                                      index * sizeof(VineyardMsg));
-    LOG(INFO) << "Get TX index:" << index;
+    VLOG(100) << "Get TX buffer index:" << index;
     return Status::OK();
   }
 }
@@ -370,7 +363,6 @@ Status RDMAServer::GetRXFreeMsgBuffer(void*& buffer) {
     }
     buffer = reinterpret_cast<void*>(reinterpret_cast<uint64_t>(rx_msg_buffer) +
                                      index * sizeof(VineyardMsg));
-    LOG(INFO) << "Get RX index:" << index;
     return Status::OK();
   }
 }
@@ -390,7 +382,7 @@ Status RDMAServer::ReleaseRXBuffer(void* buffer) {
   std::lock_guard<std::mutex> lock(rx_msg_buffer_mutex_);
   int index =
       ((uint64_t) buffer - (uint64_t) rx_msg_buffer) / sizeof(VineyardMsg);
-  LOG(INFO) << "Release RX index:" << index;
+  VLOG(100) << "Release RX buffer index:" << index;
   rx_buffer_bitmaps[index / 64] |= 1 << (index % 64);
   return Status::OK();
 }
@@ -410,16 +402,14 @@ Status RDMAServer::ReleaseTXBuffer(void* buffer) {
   std::lock_guard<std::mutex> lock(tx_msg_buffer_mutex_);
   int index =
       ((uint64_t) buffer - (uint64_t) tx_msg_buffer) / sizeof(VineyardMsg);
-  LOG(INFO) << "Release TX index:" << index;
+  VLOG(100) << "Release TX buffer index:" << index;
   tx_buffer_bitmaps[index / 64] |= 1 << (index % 64);
   return Status::OK();
 }
 
 Status RDMAServer::GetRXCompletion(int timeout, void** context) {
-  uint64_t cur = 0;
   while (true) {
-    int ret = this->GetCompletion(remote_fi_addr, rxcq, &cur, 1,
-                                  timeout == -1 ? 500 : timeout, context);
+    int ret = this->GetCompletion(rxcq, timeout == -1 ? 500 : timeout, context);
     if (ret == -FI_ETIMEDOUT) {
       if (timeout > 0) {
         return Status::Invalid("GetRXCompletion timeout");
@@ -438,10 +428,8 @@ Status RDMAServer::GetRXCompletion(int timeout, void** context) {
 }
 
 Status RDMAServer::GetTXCompletion(int timeout, void** context) {
-  uint64_t cur = 0;
   while (true) {
-    int ret = this->GetCompletion(remote_fi_addr, txcq, &cur, 1,
-                                  timeout == -1 ? 500 : timeout, context);
+    int ret = this->GetCompletion(txcq, timeout == -1 ? 500 : timeout, context);
     if (ret == -FI_ETIMEDOUT) {
       if (timeout > 0) {
         return Status::Invalid("GetTXCompletion timeout");

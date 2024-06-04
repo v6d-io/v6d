@@ -38,7 +38,10 @@ limitations under the License.
 namespace vineyard {
 
 RPCClient::~RPCClient() {
-  StopRDMA();
+  Status status = StopRDMA();
+  if (!status.ok()) {
+    LOG(ERROR) << "Failed to stop RDMA client: " << status.ToString() << ". May cause resource leak.";
+  }
   Disconnect();
 }
 
@@ -127,9 +130,6 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
   if (connected_) {
     return Status::OK();
   }
-  LOG(INFO) << "host:" << host << ", port:" << port << ", session_id:" << session_id;
-  LOG(INFO) << "username:" << username << ", password:" << password;
-  LOG(INFO) << "rdma_host:" << rdma_host << ", rdma_port:" << rdma_port;
   rpc_endpoint_ = rpc_endpoint;
   RETURN_ON_ERROR(connect_rpc_socket_retry(host, port, vineyard_conn_));
   std::string message_out;
@@ -175,13 +175,10 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host, uint32_t rdma_port) 
   if (this->rdma_connected_) {
     return Status::OK();
   }
-  LOG(INFO) << "Remote ip:" << rdma_host << ", port:" << rdma_port;
   RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host, (int)rdma_port));
   LOG(INFO) << "Try to connect to RDMA server " << rdma_host << ":" << rdma_port << "...";
 
   RETURN_ON_ERROR(this->rdma_client_->Connect());
-
-  LOG(INFO) << "Connect successfully!";
   RETURN_ON_ERROR(RDMAExchangeMemInfo());
   this->rdma_connected_ = true;
   return Status::OK();
@@ -195,7 +192,7 @@ Status RPCClient::RDMAExchangeMemInfo() {
   msg->remoteMemInfo.remote_address = -1;
   msg->remoteMemInfo.key = -1;
   msg->remoteMemInfo.len = -1;
-  LOG(INFO) << "Send remote addr: "
+  VLOG(100) << "Send remote addr: "
             << reinterpret_cast<void*>(msg->remoteMemInfo.remote_address)
             << ", rkey: " << msg->remoteMemInfo.key;
   void* remoteMsg;
@@ -207,13 +204,12 @@ Status RPCClient::RDMAExchangeMemInfo() {
   this->rdma_client_->GetTXCompletion(-1, nullptr);
 
   VINEYARD_CHECK_OK(rdma_client_->GetRXCompletion(-1, nullptr));
-  LOG(INFO) << "Receive";
 
   VineyardMsg* vmsg = reinterpret_cast<VineyardMsg*>(remoteMsg);
   if (vmsg->type == VINEYARD_MSG_EXCHANGE_KEY) {
     remote_info_.address = vmsg->remoteMemInfo.remote_address;
     remote_info_.rkey = vmsg->remoteMemInfo.key;
-    LOG(INFO) << "Get remote address: " << remote_info_.address
+    VLOG(100) << "Get remote address: " << remote_info_.address
               << ", rkey: " << remote_info_.rkey;
   } else {
     LOG(ERROR) << "Unknown message type: " << vmsg->type;
@@ -475,21 +471,14 @@ Status RPCClient::CreateRemoteBlob(
 
   // send the actual payload
   if (rdma_connected_) {
-    LOG(INFO) << "Create with rdma!";
     RegisterMemInfo info;
     info.address = reinterpret_cast<uint64_t>(buffer->data());
     info.size = buffer->size();
-    int flag = 888;
     RETURN_ON_ERROR(RegisterMem(info));
-    LOG(INFO) << "Register mem done!";
     RETURN_ON_ERROR(rdma_client_->Write(buffer->data(), buffer->size(),
-                                        reinterpret_cast<uint64_t>(payload.pointer), remote_info_.rkey, info.mr_desc, &flag));
-    LOG(INFO) << "Rdma write done!";
-    void* flag_pointer = nullptr;
-    RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, &flag_pointer));
-    LOG(INFO) << "flag: " << *reinterpret_cast<int*>(flag_pointer);
+                                        reinterpret_cast<uint64_t>(payload.pointer), remote_info_.rkey, info.mr_desc, nullptr));
+    RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
   } else {
-    LOG(INFO) << "Create with tcp!";
     if (compressor && buffer->size() > 0) {
       RETURN_ON_ERROR(detail::compress_and_send(compressor, vineyard_conn_,
                                                 buffer->data(), buffer->size()));
@@ -558,13 +547,10 @@ Status RPCClient::CreateRemoteBlobs(
       RegisterMemInfo info;
       info.address = reinterpret_cast<uint64_t>(buffers[i]->data());
       info.size = buffers[i]->size();
-      int flag = 888;
       RETURN_ON_ERROR(RegisterMem(info));
       RETURN_ON_ERROR(rdma_client_->Write(buffers[i]->data(), buffers[i]->size(),
-                                          reinterpret_cast<uint64_t>(payloads[i].pointer), remote_info_.rkey, info.mr_desc, &flag));
-      void* flag_pointer = nullptr;
-      RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, &flag_pointer));
-      LOG(INFO) << "flag: " << *reinterpret_cast<int*>(flag_pointer);
+                                          reinterpret_cast<uint64_t>(payloads[i].pointer), remote_info_.rkey, info.mr_desc, nullptr));
+      RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
     }
   } else {
     for (auto const& buffer : buffers) {
@@ -658,12 +644,9 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
     info.address = reinterpret_cast<uint64_t>(buffer->mutable_data());
     info.size = buffer->size();
     RETURN_ON_ERROR(RegisterMem(info));
-    int flag = 888;
     RETURN_ON_ERROR(rdma_client_->Read(buffer->mutable_data(), payloads[0].data_size,
-                                       reinterpret_cast<uint64_t>(payloads[0].pointer), remote_info_.rkey, info.mr_desc, &flag));
-    void* flag_pointer = nullptr;
-    RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, &flag_pointer));
-    LOG(INFO) << "flag: " << *reinterpret_cast<int*>(flag_pointer);
+                                       reinterpret_cast<uint64_t>(payloads[0].pointer), remote_info_.rkey, info.mr_desc, nullptr));
+    RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
   } else {
     if (decompressor && payloads[0].data_size > 0) {
       RETURN_ON_ERROR(detail::recv_and_decompress(decompressor, vineyard_conn_,
@@ -726,12 +709,9 @@ Status RPCClient::GetRemoteBlobs(
       info.address = reinterpret_cast<uint64_t>(remote_blob->mutable_data());
       info.size = remote_blob->size();
       RETURN_ON_ERROR(RegisterMem(info));
-      int flag = 888;
       RETURN_ON_ERROR(rdma_client_->Read(remote_blob->mutable_data(), payload.data_size,
-                                        reinterpret_cast<uint64_t>(payload.pointer), remote_info_.rkey, info.mr_desc, &flag));
-      void* flag_pointer = nullptr;
-      RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, &flag_pointer));
-      LOG(INFO) << "flag: " << *reinterpret_cast<int*>(flag_pointer);
+                                        reinterpret_cast<uint64_t>(payload.pointer), remote_info_.rkey, info.mr_desc, nullptr));
+      RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
       id_payload_map[payload.object_id] = remote_blob;
     }
   } else {

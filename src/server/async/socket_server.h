@@ -31,6 +31,7 @@ limitations under the License.
 #include "common/util/asio.h"  // IWYU pragma: keep
 #include "common/util/callback.h"
 #include "common/util/uuid.h"
+
 namespace vineyard {
 
 using boost::asio::generic::stream_protocol;
@@ -54,7 +55,6 @@ class SocketConnection : public std::enable_shared_from_this<SocketConnection> {
                    std::shared_ptr<VineyardServer> server_ptr,
                    std::shared_ptr<SocketServer> socket_server_ptr,
                    int conn_id);
-  ~SocketConnection() {}
 
   bool Start();
 
