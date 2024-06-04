@@ -152,18 +152,17 @@ inline ObjectID GenerateBlobID(const uintptr_t ptr, uint64_t global_mask = 0,
       ptr == std::numeric_limits<uintptr_t>::max()) {
     return static_cast<uint64_t>(ptr) | 0x8000000000000000UL;
   }
-  // auto ts = detail::cycleclock::now() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
-  // return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(ts)) |
-  //        0x8000000000000000UL;
 
-  // If the first bit is 1, it standard for a host blob. Otherwise, it is a
+  // If the second bit is 0, it standard for a host blob. Otherwise, it is a
   // device blob(e.g. GPU).
-  if (global_mask & 0xC000000000000000UL) {
-    return std::numeric_limits<ObjectID>::max();
-  }
   if (is_host) {
+    if (global_mask & 0x4000000000000000UL) {
+      // Invalid global mask
+      return std::numeric_limits<uintptr_t>::max();
+    }
     return (global_mask | ptr) | 0x8000000000000000UL;
   } else {
+    // Make sure the second bit is 1 so that it is different from host blob ID.
     auto ts = detail::cycleclock::now() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
     return static_cast<uint64_t>(ts) | 0xC000000000000000UL;
   }

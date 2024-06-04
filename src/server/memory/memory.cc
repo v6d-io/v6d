@@ -530,7 +530,7 @@ template <typename ID, typename P>
 Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
                                            std::vector<size_t> const& offsets,
                                            std::vector<size_t> const& sizes,
-                                           uint64_t global_mask) {
+                                           uint64_t instance_id) {
   VLOG(2) << "finalizing arena (fd) " << fd << "...";
   auto arena = arenas_.find(fd);
   if (arena == arenas_.end()) {
@@ -548,7 +548,7 @@ Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
             << " of size " << sizes[idx];
     // make them available for blob pool
     uintptr_t pointer = mmap_base + offsets[idx];
-    ID object_id = GenerateBlobID<ID>(pointer, global_mask, true);
+    ID object_id = GenerateBlobID<ID>(pointer, instance_id << 47, true);
     objects_.insert(object_id,
                     std::make_shared<P>(object_id, sizes[idx],
                                         reinterpret_cast<uint8_t*>(pointer), fd,
@@ -617,7 +617,7 @@ template class BulkStoreBase<PlasmaID, PlasmaPayload>;
 // implementation for BulkStore
 Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
                          std::shared_ptr<Payload>& object,
-                         uint64_t global_mask) {
+                         uint64_t instance_id) {
   if (data_size == 0) {
     object_id = EmptyBlobID<ObjectID>();
     object = Payload::MakeEmpty();
@@ -635,7 +635,7 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
         std::to_string(FootprintLimit()) + ", and " +
         std::to_string(Footprint()) + " are already in use");
   }
-  object_id = GenerateBlobID<ObjectID>(pointer, global_mask, true);
+  object_id = GenerateBlobID<ObjectID>(pointer, instance_id << 47, true);
   object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
                                      map_size, offset);
   objects_.insert(object_id, object);
@@ -772,7 +772,7 @@ Status BulkStore::Release_GPU(ObjectID const& id, int conn) {
 Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,
                                PlasmaID const& plasma_id, ObjectID& object_id,
                                std::shared_ptr<PlasmaPayload>& object,
-                               uint64_t global_mask) {
+                               uint64_t instance_id) {
   if (data_size == 0) {
     object = PlasmaPayload::MakeEmpty();
     return Status::OK();
@@ -785,7 +785,7 @@ Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,
   if (pointer == nullptr) {
     return Status::NotEnoughMemory("size = " + std::to_string(data_size));
   }
-  object_id = GenerateBlobID<ObjectID>(pointer, global_mask, true);
+  object_id = GenerateBlobID<ObjectID>(pointer, instance_id << 47, true);
   object =
       std::make_shared<PlasmaPayload>(plasma_id, object_id, plasma_size,
                                       data_size, pointer, fd, map_size, offset);
