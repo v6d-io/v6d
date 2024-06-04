@@ -127,7 +127,7 @@ class RDMAServer : public IRDMA {
   fid_cq *rxcq = NULL, *txcq = NULL;
 
   std::mutex rx_msg_buffer_mutex_, tx_msg_buffer_mutex_;
-  void *rx_msg_buffer, *tx_msg_buffer;
+  char *rx_msg_buffer, *tx_msg_buffer;
   uint64_t *rx_buffer_bitmaps, *tx_buffer_bitmaps;
   int rx_bitmap_num = 0, tx_bitmap_num = 0;
   uint64_t rx_msg_size = 8192, tx_msg_size = 8192;

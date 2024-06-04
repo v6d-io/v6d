@@ -102,12 +102,6 @@ int IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq* cq, uint64_t* cur,
   return 0;
 }
 
-void IRDMA::FreeBuffer(void*& buffer) {
-  if (buffer) {
-    delete buffer;
-  }
-}
-
 void IRDMA::FreeInfo(fi_info* info) {
   if (info) {
     fi_freeinfo(info);

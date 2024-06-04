@@ -166,11 +166,11 @@ Status RDMAServer::Close() {
   RETURN_ON_ERROR(CloseResource(domain, "domain"));
   RETURN_ON_ERROR(CloseResource(fabric, "fabric"));
 
-  FreeBuffer(rx_msg_buffer);
-  FreeBuffer(tx_msg_buffer);
+  delete rx_msg_buffer;
+  delete tx_msg_buffer;
 
-  FreeBuffer(reinterpret_cast<void*&>(rx_buffer_bitmaps));
-  FreeBuffer(reinterpret_cast<void*&>(tx_buffer_bitmaps));
+  delete[] rx_buffer_bitmaps;
+  delete[] tx_buffer_bitmaps;
 
   FreeInfo(fi);
 

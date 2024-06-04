@@ -30,18 +30,22 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
   if (argc < 3) {
-    printf("usage ./rpc_test <ipc_socket> <rpc_endpoint>");
+    printf("usage ./rpc_test <ipc_socket> <rpc_endpoint> <rdma_endpoint>");
     return 1;
   }
   std::string ipc_socket(argv[1]);
   std::string rpc_endpoint(argv[2]);
+  std::string rdma_endpoint = "";
+  if (argc > 3) {
+    rdma_endpoint = std::string(argv[3]);
+  }
 
   Client ipc_client;
   VINEYARD_CHECK_OK(ipc_client.Connect(ipc_socket));
   LOG(INFO) << "Connected to IPCServer: " << ipc_socket;
 
   RPCClient rpc_client;
-  VINEYARD_CHECK_OK(rpc_client.Connect(rpc_endpoint));
+  VINEYARD_CHECK_OK(rpc_client.Connect(rpc_endpoint, "", "", rdma_endpoint));
   LOG(INFO) << "Connected to RPCServer: " << rpc_endpoint;
 
   std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};

@@ -59,12 +59,10 @@ class IRDMA {
 
   virtual bool IsClient() = 0;
 
-  void FreeBuffer(void*& buffer);
-
-  void FreeInfo(fi_info* info);
+  static void FreeInfo(fi_info* info);
 
   template <typename FIDType>
-  Status CloseResource(FIDType*& res, const char* resource_name) {
+  static Status CloseResource(FIDType*& res, const char* resource_name) {
     if (res) {
       int ret = fi_close(&(res)->fid);
       if (ret != FI_SUCCESS) {
@@ -78,7 +76,7 @@ class IRDMA {
   }
 
   template <typename FIDType>
-  Status CloseResourcesInVector(std::vector<FIDType*>& vec,
+  static Status CloseResourcesInVector(std::vector<FIDType*>& vec,
                                 const char* resource_name) {
     for (auto& res : vec) {
       RETURN_ON_ERROR(CloseResource(res, resource_name));
@@ -87,7 +85,7 @@ class IRDMA {
   }
 
   template <typename K, typename FIDType>
-  Status CloseResourcesInMap(std::map<K, FIDType*>& mapping,
+  static Status CloseResourcesInMap(std::map<K, FIDType*>& mapping,
                              const char* resource_name) {
     for (auto iter = mapping.begin(); iter != mapping.end(); ++iter) {
       RETURN_ON_ERROR(CloseResource(iter->second, resource_name));

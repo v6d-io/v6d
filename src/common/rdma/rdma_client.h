@@ -16,8 +16,10 @@ limitations under the License.
 #define SRC_COMMON_RDMA_RDMA_CLIENT_H_
 
 #include <rdma/fabric.h>
+#include <rdma/fi_domain.h>
 
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -45,6 +47,8 @@ class RDMAClient : public IRDMA {
 
   static Status Make(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
                      std::string server_address, int port);
+
+  static Status Make(std::shared_ptr<RDMAClient>& ptr, RDMARemoteNodeInfo &info);
 
   Status RegisterMemory(RegisterMemInfo& memInfo);
 
@@ -76,13 +80,13 @@ class RDMAClient : public IRDMA {
 
   fi_info* fi = NULL;
   fid_fabric* fabric = NULL;
-  fi_eq_attr eq_attr = {0};
+  // fi_eq_attr eq_attr = {0};
   fid_eq* eq = NULL;
   fid_domain* domain = NULL;
-  fi_cq_attr cq_attr = {0};
+  // fi_cq_attr cq_attr = {0};
   fid_cq *rxcq = NULL, *txcq = NULL;
   fid_ep* ep = NULL;
-  void *rx_msg_buffer, *tx_msg_buffer;
+  char *rx_msg_buffer, *tx_msg_buffer;
 
   // client just need one tx and rx buffer
   uint64_t rx_msg_size = sizeof(VineyardMsg), tx_msg_size = sizeof(VineyardMsg);
@@ -93,6 +97,27 @@ class RDMAClient : public IRDMA {
   fi_addr_t remote_fi_addr = FI_ADDR_UNSPEC;
 
   RDMA_STATE state = INIT;
+
+  friend class RDMAClientCreator;
+};
+
+
+class RDMAClientCreator {
+ public:
+  static Status Create(std::shared_ptr<RDMAClient>& ptr, fi_info* hints, std::string server_address, int port);
+
+  static Status Create(std::shared_ptr<RDMAClient>& ptr, std::string server_address, int port);
+
+  static Status Release(std::string rdma_endpoint);
+
+  static Status Clear();
+
+ private:
+  RDMAClientCreator() = default;
+
+  // std::map<std::string, fid_domain*> domains_;
+  static std::map<std::string, RDMARemoteNodeInfo> servers_;
+  static std::mutex servers_mtx_;
 };
 
 }  // namespace vineyard
