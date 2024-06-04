@@ -15,7 +15,7 @@ limitations under the License.
 #ifndef SRC_COMMON_RDMA_RDMA_SERVER_H_
 #define SRC_COMMON_RDMA_RDMA_SERVER_H_
 
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
 
 #include <rdma/fabric.h>
 

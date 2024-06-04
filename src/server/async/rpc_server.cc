@@ -46,7 +46,7 @@ RPCServer::~RPCServer() {
     acceptor_.close();
   }
 
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   VINEYARD_DISCARD(rdma_server_->Stop());
   if (rdma_listen_thread_.joinable()) {
     rdma_listen_thread_.join();
@@ -62,7 +62,7 @@ RPCServer::~RPCServer() {
 }
 
 Status RPCServer::InitRDMA() {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   std::string rdma_endpoint = RDMAEndpoint();
   size_t pos = rdma_endpoint.find(':');
   if (pos == std::string::npos) {
@@ -160,7 +160,7 @@ void RPCServer::doAccept() {
 }
 
 void RPCServer::doRDMASend() {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   while (1) {
     void* context = nullptr;
     Status status = rdma_server_->GetTXCompletion(-1, &context);
@@ -189,7 +189,7 @@ void RPCServer::doRDMASend() {
 }
 
 void RPCServer::doRDMARecv() {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   while (1) {
     void* context = nullptr;
     Status status = rdma_server_->GetRXCompletion(-1, &context);
@@ -263,7 +263,7 @@ void RPCServer::doRDMARecv() {
 }
 
 void RPCServer::doRDMAAccept() {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   while (1) {
     uint64_t rdma_conn_id;
     Status status = rdma_server_->WaitConnect(rdma_conn_id);

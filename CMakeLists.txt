@@ -752,9 +752,8 @@ if(BUILD_VINEYARD_SERVER)
     endif()
 
     if(BUILD_VINEYARD_RDMA)
+        target_compile_options(vineyardd PRIVATE -DVINEYARD_WITH_RDMA)
         target_link_libraries(vineyardd PRIVATE fabric)
-    else()
-        target_compile_options(vineyardd PRIVATE -DVINEYARD_WITHOUT_RDMA)
     endif()
 
     install_vineyard_target(vineyardd)
@@ -831,9 +830,8 @@ if(BUILD_VINEYARD_CLIENT)
     endif()
 
     if(BUILD_VINEYARD_RDMA)
+        target_compile_options(vineyard_client PRIVATE -DVINEYARD_WITH_RDMA)
         target_link_libraries(vineyard_client PRIVATE fabric)
-    else()
-        target_compile_options(vineyard_client PRIVATE -DVINEYARD_WITHOUT_RDMA)
     endif()
 
     if(BUILD_VINEYARD_CLIENT_VERBOSE)

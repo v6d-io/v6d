@@ -39,7 +39,7 @@ limitations under the License.
 namespace vineyard {
 
 RPCClient::~RPCClient() {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   Status status = StopRDMA();
   if (!status.ok()) {
     LOG(ERROR) << "Failed to stop RDMA client: " << status.ToString()
@@ -180,7 +180,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
 
 Status RPCClient::ConnectRDMA(const std::string& rdma_host,
                               uint32_t rdma_port) {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   if (this->rdma_connected_) {
     return Status::OK();
   }
@@ -199,7 +199,7 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host,
 }
 
 Status RPCClient::RDMAExchangeMemInfo() {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   void* buffer;
   this->rdma_client_->GetTXFreeMsgBuffer(buffer);
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
@@ -234,7 +234,7 @@ Status RPCClient::RDMAExchangeMemInfo() {
 }
 
 Status RPCClient::StopRDMA() {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   if (!rdma_connected_) {
     return Status::OK();
   }
@@ -490,7 +490,7 @@ Status RPCClient::CreateRemoteBlob(
 
   // send the actual payload
   if (rdma_connected_) {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
     RegisterMemInfo info;
     info.address = reinterpret_cast<uint64_t>(buffer->data());
     info.size = buffer->size();
@@ -567,7 +567,7 @@ Status RPCClient::CreateRemoteBlobs(
 
   // send the actual payload
   if (rdma_connected_) {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
     for (size_t i = 0; i < payloads.size(); ++i) {
       RegisterMemInfo info;
       info.address = reinterpret_cast<uint64_t>(buffers[i]->data());
@@ -628,7 +628,7 @@ Status RPCClient::CreateRemoteBlobs(
   return Status::OK();
 }
 
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
 Status RPCClient::RegisterMem(RegisterMemInfo& info) {
   RETURN_ON_ERROR(rdma_client_->RegisterMemory(info));
 
@@ -672,7 +672,7 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
       payloads[0].object_id, remote_instance_id_, payloads[0].data_size));
   // read the actual payload
   if (rdma_connected_) {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
     RegisterMemInfo info;
     info.address = reinterpret_cast<uint64_t>(buffer->mutable_data());
     info.size = buffer->size();
@@ -739,7 +739,7 @@ Status RPCClient::GetRemoteBlobs(
 
   std::unordered_map<ObjectID, std::shared_ptr<RemoteBlob>> id_payload_map;
   if (rdma_connected_) {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
     for (auto const& payload : payloads) {
       auto remote_blob = std::shared_ptr<RemoteBlob>(new RemoteBlob(
           payload.object_id, remote_instance_id_, payload.data_size));
