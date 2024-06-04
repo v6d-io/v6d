@@ -15,6 +15,8 @@ limitations under the License.
 #ifndef SRC_COMMON_RDMA_RDMA_CLIENT_H_
 #define SRC_COMMON_RDMA_RDMA_CLIENT_H_
 
+#ifndef VINEYARD_WITHOUT_RDMA
+
 #include <rdma/fabric.h>
 #include <rdma/fi_domain.h>
 
@@ -114,5 +116,7 @@ class RDMAClientCreator {
 };
 
 }  // namespace vineyard
+
+#endif
 
 #endif  // SRC_COMMON_RDMA_RDMA_CLIENT_H_

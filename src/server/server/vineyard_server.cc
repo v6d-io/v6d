@@ -1399,7 +1399,9 @@ void VineyardServer::Stop() {
   this->bulk_store_.reset();
   this->plasma_bulk_store_.reset();
 
+#ifndef VINEYARD_WITHOUT_RDMA
   RDMAClientCreator::Clear();
+#endif
 }
 
 bool VineyardServer::Running() const { return !stopped_.load(); }

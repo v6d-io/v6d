@@ -48,9 +48,11 @@ RemoteClient::~RemoteClient() {
 }
 
 Status RemoteClient::StopRDMA() {
+#ifndef VINEYARD_WITHOUT_RDMA
   if (!rdma_connected_) {
     return Status::OK();
   }
+  rdma_connected_ = false;
 
   void* msg;
   RETURN_ON_ERROR(rdma_client_->GetTXFreeMsgBuffer(msg));
@@ -61,6 +63,7 @@ Status RemoteClient::StopRDMA() {
 
   RETURN_ON_ERROR(rdma_client_->Stop());
   RETURN_ON_ERROR(rdma_client_->Close());
+#endif
   return Status::OK();
 }
 
@@ -101,6 +104,7 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
 }
 
 Status RemoteClient::RDMAExchangeMemInfo() {
+#ifndef VINEYARD_WITHOUT_RDMA
   void* buffer;
   this->rdma_client_->GetTXFreeMsgBuffer(buffer);
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
@@ -130,11 +134,13 @@ Status RemoteClient::RDMAExchangeMemInfo() {
   } else {
     LOG(ERROR) << "Unknown message type: " << vmsg->type;
   }
+#endif
   return Status::OK();
 }
 
 Status RemoteClient::ConnectRDMAServer(const std::string& host,
                                        const uint32_t port) {
+#ifndef VINEYARD_WITHOUT_RDMA
   if (this->rdma_connected_) {
     return Status::OK();
   }
@@ -153,6 +159,9 @@ Status RemoteClient::ConnectRDMAServer(const std::string& host,
   RETURN_ON_ERROR(RDMAExchangeMemInfo());
   this->rdma_connected_ = true;
   return Status::OK();
+#else
+  return Status::NotImplemented("RDMA is not supported in this build.");
+#endif
 }
 
 Status RemoteClient::Connect(const std::string& host, const uint32_t port,
@@ -373,6 +382,7 @@ Status RemoteClient::migrateBuffers(
 
   auto self(shared_from_this());
   if (rdma_connected_) {
+#ifndef VINEYARD_WITHOUT_RDMA
     for (size_t i = 0; i < payloads.size(); i++) {
       if (payloads[i].data_size == 0) {
         continue;
@@ -389,6 +399,7 @@ Status RemoteClient::migrateBuffers(
       result_blobs.emplace(payloads[i].object_id, results[i]->object_id);
     }
     return callback(Status::OK(), result_blobs);
+#endif
   } else {
     ReceiveRemoteBuffers(
         socket_, results, 0, 0, compress,

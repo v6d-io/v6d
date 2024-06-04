@@ -409,15 +409,19 @@ class RPCClient final : public ClientBase {
 
   Status RDMAExchangeMemInfo();
 
+#ifndef VINEYARD_WITHOUT_RDMA
   Status RegisterMem(RegisterMemInfo &info);
+#endif
 
   InstanceID remote_instance_id_;
 
   std::string rdma_endpoint_;
+#ifndef VINEYARD_WITHOUT_RDMA
   std::shared_ptr<RDMAClient> rdma_client_;
   RegisterMemInfo remote_info_;
   std::vector<RegisterMemInfo> local_infos_;
   std::mutex local_infos_mutex_;
+#endif
   bool rdma_connected_ = false;
 
   friend class Client;

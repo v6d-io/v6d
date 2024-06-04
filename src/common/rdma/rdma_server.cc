@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifndef VINEYARD_WITHOUT_RDMA
+
 #include <rdma/fabric.h>
 #include <rdma/fi_cm.h>
 #include <rdma/fi_domain.h>
@@ -461,3 +463,5 @@ Status RDMAServer::CloseConnection(uint64_t rdma_conn_id) {
 bool RDMAServer::IsStopped() { return (state == STOPED); }
 
 }  // namespace vineyard
+
+#endif

@@ -63,6 +63,7 @@ option(BUILD_VINEYARD_FUSE "Enable vineyard's fuse support" OFF)
 option(BUILD_VINEYARD_FUSE_PARQUET "Enable vineyard's fuse parquet support" OFF)
 option(BUILD_VINEYARD_HOSSEINMOEIN_DATAFRAME "Enable hosseinmoein dataframe support" OFF)
 option(BUILD_VINEYARD_LLM_CACHE "Enable kv-state cache support" ON)
+option(BUILD_VINEYARD_RDMA "Enable RDMA support" OFF)
 
 option(BUILD_VINEYARD_TESTS "Generate make targets for vineyard tests" ON)
 option(BUILD_VINEYARD_TESTS_ALL "Include make targets for vineyard tests to ALL" OFF)
@@ -710,7 +711,6 @@ if(BUILD_VINEYARD_SERVER)
                                             ${GLOG_LIBRARIES}
                                             libzstd_static
                                             mimalloc-static
-                                            fabric
     )
     target_include_directories(vineyardd PRIVATE ${GFLAGS_INCLUDE_DIR})
 
@@ -749,6 +749,12 @@ if(BUILD_VINEYARD_SERVER)
 
     if(${LIBUNWIND_FOUND})
         target_link_libraries(vineyardd PRIVATE ${LIBUNWIND_LIBRARIES})
+    endif()
+
+    if(BUILD_VINEYARD_RDMA)
+        target_link_libraries(vineyardd PRIVATE fabric)
+    else()
+        target_compile_options(vineyardd PRIVATE -DVINEYARD_WITHOUT_RDMA)
     endif()
 
     install_vineyard_target(vineyardd)
@@ -807,7 +813,6 @@ if(BUILD_VINEYARD_CLIENT)
     target_add_debuginfo(vineyard_client)
     target_link_libraries(vineyard_client PUBLIC ${CMAKE_DL_LIBS}
                                                  Threads::Threads
-                                                 fabric
     )
     target_link_libraries(vineyard_client PRIVATE libzstd_static)
 
@@ -823,6 +828,12 @@ if(BUILD_VINEYARD_CLIENT)
     add_dependencies(vineyard_client vineyard_internal_registry)
     if(${LIBUNWIND_FOUND})
         target_link_libraries(vineyard_client PRIVATE ${LIBUNWIND_LIBRARIES})
+    endif()
+
+    if(BUILD_VINEYARD_RDMA)
+        target_link_libraries(vineyard_client PRIVATE fabric)
+    else()
+        target_compile_options(vineyard_client PRIVATE -DVINEYARD_WITHOUT_RDMA)
     endif()
 
     if(BUILD_VINEYARD_CLIENT_VERBOSE)
