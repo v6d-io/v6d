@@ -34,101 +34,6 @@ namespace vineyard {
 std::map<std::string, RDMARemoteNodeInfo> RDMAClientCreator::servers_;
 std::mutex RDMAClientCreator::servers_mtx_;
 
-Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr,
-                        std::string server_address, int port) {
-  fi_info* hints = fi_allocinfo();
-  if (!hints) {
-    return Status::Invalid("Failed to allocate fabric info.");
-  }
-
-  hints->caps =
-      FI_MSG | FI_RMA | FI_WRITE | FI_REMOTE_WRITE | FI_READ | FI_REMOTE_READ;
-  hints->domain_attr->resource_mgmt = FI_RM_ENABLED;
-  hints->mode = FI_CONTEXT;
-  hints->domain_attr->threading = FI_THREAD_DOMAIN;
-  hints->addr_format = FI_FORMAT_UNSPEC;
-  hints->domain_attr->mr_mode = FI_MR_LOCAL | FI_MR_ENDPOINT | FI_MR_ALLOCATED |
-                                FI_MR_PROV_KEY | FI_MR_VIRT_ADDR | FI_MR_RAW;
-  hints->tx_attr->tclass = FI_TC_BULK_DATA;
-  hints->ep_attr->type = FI_EP_MSG;
-  hints->fabric_attr = new fi_fabric_attr;
-  memset(hints->fabric_attr, 0, sizeof *(hints->fabric_attr));
-  hints->fabric_attr->prov_name = strdup("verbs");
-
-  RETURN_ON_ERROR(Make(ptr, hints, server_address, port));
-  ptr->FreeInfo(hints);
-  return Status::OK();
-}
-
-Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
-                        std::string server_address, int port) {
-  if (!hints) {
-    return Status::Invalid("Invalid fabric hints info.");
-  }
-
-  ptr = std::make_shared<RDMAClient>();
-
-  CHECK_ERROR(!fi_getinfo(VINEYARD_FIVERSION, server_address.c_str(),
-                          std::to_string(port).c_str(), 0, hints, &(ptr->fi)),
-              "fi_getinfo failed")
-
-  CHECK_ERROR(!fi_fabric(ptr->fi->fabric_attr, &ptr->fabric, NULL),
-              "fi_fabric failed.");
-
-  fi_eq_attr eq_attr = {0};
-  eq_attr.wait_obj = FI_WAIT_UNSPEC;
-  CHECK_ERROR(!fi_eq_open(ptr->fabric, &eq_attr, &ptr->eq, NULL),
-              "fi_eq_open failed.");
-
-  CHECK_ERROR(!fi_domain(ptr->fabric, ptr->fi, &ptr->domain, NULL),
-              "fi_domain failed.");
-
-  fi_cq_attr cq_attr = {0};
-  memset(&cq_attr, 0, sizeof cq_attr);
-  cq_attr.format = FI_CQ_FORMAT_CONTEXT;
-  cq_attr.wait_obj = FI_WAIT_NONE;
-  cq_attr.wait_cond = FI_CQ_COND_NONE;
-  cq_attr.size = ptr->fi->rx_attr->size;
-  CHECK_ERROR(!fi_cq_open(ptr->domain, &cq_attr, &ptr->rxcq, NULL),
-              "fi_cq_open failed.");
-
-  cq_attr.size = ptr->fi->tx_attr->size;
-  CHECK_ERROR(!fi_cq_open(ptr->domain, &cq_attr, &ptr->txcq, NULL),
-              "fi_cq_open failed.");
-
-  CHECK_ERROR(!fi_endpoint(ptr->domain, ptr->fi, &ptr->ep, NULL),
-              "fi_endpoint failed.");
-
-  CHECK_ERROR(!fi_ep_bind(ptr->ep, &ptr->eq->fid, 0), "fi_ep_bind eq failed.");
-
-  CHECK_ERROR(!fi_ep_bind(ptr->ep, &ptr->rxcq->fid, FI_RECV),
-              "fi_ep_bind rxcq failed.");
-
-  CHECK_ERROR(!fi_ep_bind(ptr->ep, &ptr->txcq->fid, FI_SEND),
-              "fi_ep_bind txcq failed.");
-
-  CHECK_ERROR(!fi_enable(ptr->ep), "fi_enable failed.");
-
-  ptr->rx_msg_buffer = new char[ptr->fi->rx_attr->size];
-  if (!ptr->rx_msg_buffer) {
-    return Status::Invalid("Failed to allocate rx buffer.");
-  }
-
-  ptr->tx_msg_buffer = new char[ptr->fi->tx_attr->size];
-  if (!ptr->tx_msg_buffer) {
-    return Status::Invalid("Failed to allocate tx buffer.");
-  }
-
-  ptr->RegisterMemory(&(ptr->rx_mr), ptr->rx_msg_buffer, ptr->rx_msg_size,
-                      ptr->rx_msg_key, ptr->rx_msg_mr_desc);
-  ptr->RegisterMemory(&(ptr->tx_mr), ptr->tx_msg_buffer, ptr->tx_msg_size,
-                      ptr->tx_msg_key, ptr->tx_msg_mr_desc);
-
-  ptr->state = READY;
-
-  return Status::OK();
-}
-
 Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr, RDMARemoteNodeInfo &info) {
   ptr = std::make_shared<RDMAClient>();
 
@@ -255,7 +160,6 @@ Status RDMAClient::GetTXFreeMsgBuffer(void*& buffer) {
 }
 
 Status RDMAClient::GetRXFreeMsgBuffer(void*& buffer) {
-  // TBD
   buffer = rx_msg_buffer;
   return Status::OK();
 }
@@ -319,11 +223,9 @@ Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr, fi_info* hint
   std::string server_endpoint = server_address + ":" + std::to_string(port);
   std::lock_guard<std::mutex> lock(servers_mtx_);
   if (servers_.find(server_endpoint) == servers_.end()) {
-    RETURN_ON_ERROR(RDMAClient::Make(ptr, server_address, port));
     RDMARemoteNodeInfo node_info;
-    node_info.fi = ptr->fi;
-    node_info.fabric = ptr->fabric;
-    node_info.domain = ptr->domain;
+    RETURN_ON_ERROR(CreateRDMARemoteNodeInfo(node_info, hints, server_address, port));
+    RETURN_ON_ERROR(RDMAClient::Make(ptr, node_info));
 
     servers_[server_endpoint] = node_info;
   } else {
@@ -336,16 +238,56 @@ Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr, std::string s
   std::string server_endpoint = server_address + ":" + std::to_string(port);
   std::lock_guard<std::mutex> lock(servers_mtx_);
   if (servers_.find(server_endpoint) == servers_.end()) {
-    RETURN_ON_ERROR(RDMAClient::Make(ptr, server_address, port));
     RDMARemoteNodeInfo node_info;
-    node_info.fi = ptr->fi;
-    node_info.fabric = ptr->fabric;
-    node_info.domain = ptr->domain;
+    RETURN_ON_ERROR(CreateRDMARemoteNodeInfo(node_info, server_address, port));
+    RETURN_ON_ERROR(RDMAClient::Make(ptr, node_info));
 
     servers_[server_endpoint] = node_info;
   } else {
     RETURN_ON_ERROR(RDMAClient::Make(ptr, servers_[server_endpoint]));
   }
+  return Status::OK();
+}
+
+Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info, fi_info* hints, std::string server_address, int port) {
+  if (!hints) {
+    return Status::Invalid("Invalid fabric hints info.");
+  }
+
+  CHECK_ERROR(!fi_getinfo(VINEYARD_FIVERSION, server_address.c_str(),
+                          std::to_string(port).c_str(), 0, hints, &(info.fi)),
+              "fi_getinfo failed")
+
+  CHECK_ERROR(!fi_fabric(info.fi->fabric_attr, &info.fabric, NULL),
+              "fi_fabric failed.");
+
+  CHECK_ERROR(!fi_domain(info.fabric, info.fi, &info.domain, NULL),
+              "fi_domain failed.");
+  return Status::OK();
+}
+
+Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info, std::string server_address, int port) {
+  fi_info* hints = fi_allocinfo();
+  if (!hints) {
+    return Status::Invalid("Failed to allocate fabric info.");
+  }
+
+  hints->caps =
+      FI_MSG | FI_RMA | FI_WRITE | FI_REMOTE_WRITE | FI_READ | FI_REMOTE_READ;
+  hints->domain_attr->resource_mgmt = FI_RM_ENABLED;
+  hints->mode = FI_CONTEXT;
+  hints->domain_attr->threading = FI_THREAD_DOMAIN;
+  hints->addr_format = FI_FORMAT_UNSPEC;
+  hints->domain_attr->mr_mode = FI_MR_LOCAL | FI_MR_ENDPOINT | FI_MR_ALLOCATED |
+                                FI_MR_PROV_KEY | FI_MR_VIRT_ADDR | FI_MR_RAW;
+  hints->tx_attr->tclass = FI_TC_BULK_DATA;
+  hints->ep_attr->type = FI_EP_MSG;
+  hints->fabric_attr = new fi_fabric_attr;
+  memset(hints->fabric_attr, 0, sizeof *(hints->fabric_attr));
+  hints->fabric_attr->prov_name = strdup("verbs");
+
+  RETURN_ON_ERROR(CreateRDMARemoteNodeInfo(info, hints, server_address, port));
+  IRDMA::FreeInfo(hints);
   return Status::OK();
 }
 
