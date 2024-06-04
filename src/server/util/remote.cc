@@ -83,7 +83,7 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
   std::string rdma_host, rdma_port;
   pos = rdma_endpoint.find(":");
   if (pos == std::string::npos) {
-    LOG(INFO) << "No RDMA endpoint provided. Fall back to TCP.";
+    VLOG(100) << "No RDMA endpoint provided. Fall back to TCP.";
   } else {
     rdma_host = rdma_endpoint.substr(0, pos);
     rdma_port = rdma_endpoint.substr(pos + 1);
