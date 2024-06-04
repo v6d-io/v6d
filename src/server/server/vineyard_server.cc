@@ -1043,16 +1043,13 @@ Status VineyardServer::MigrateObject(const ObjectID object_id,
               (*instance)["rpc_endpoint"].get_ref<std::string const&>();
           std::string rdma_endpoint =
               (*instance)["rdma_endpoint"].get_ref<std::string const&>();
-          LOG(INFO) << "remote endpoint:" << rdma_endpoint;
           // push to the async queues
           boost::asio::post(
               self->GetIOContext(), [self, callback, remote_endpoint,
                                      rdma_endpoint, object_id, metadata]() {
                 auto remote = std::make_shared<RemoteClient>(self);
-                LOG(INFO) << "Connect...";
                 RETURN_ON_ERROR(remote->Connect(
                     remote_endpoint, self->session_id(), rdma_endpoint));
-                LOG(INFO) << "Connect done";
                 return remote->MigrateObject(
                     object_id, metadata,
                     [self, remote, callback](const Status& status,

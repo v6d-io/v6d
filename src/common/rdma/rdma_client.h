@@ -67,11 +67,6 @@ class RDMAClient : public IRDMA {
   Status GetTXCompletion(int timeout, void** context);
 
  private:
-  static Status Make(std::shared_ptr<RDMAClient>& ptr,
-                     std::string server_address, int port);
-
-  static Status Make(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
-                     std::string server_address, int port);
 
   static Status Make(std::shared_ptr<RDMAClient>& ptr, RDMARemoteNodeInfo &info);
 
@@ -109,6 +104,10 @@ class RDMAClientCreator {
 
  private:
   RDMAClientCreator() = delete;
+
+  static Status CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info, fi_info* hints, std::string server_address, int port);
+
+  static Status CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info, std::string server_address, int port);
 
   static std::map<std::string, RDMARemoteNodeInfo> servers_;
   static std::mutex servers_mtx_;

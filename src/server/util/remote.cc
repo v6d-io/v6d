@@ -91,9 +91,9 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
 
   Status status = ConnectRDMAServer(rdma_host, std::atoi(rdma_port.c_str()));
   if (status.ok()) {
-    LOG(INFO) << "Connect to RDMA server successfully. RDMA host:" << rdma_host << ", port:" << rdma_port;
+    VLOG(100) << "Connect to RDMA server successfully. RDMA host:" << rdma_host << ", port:" << rdma_port;
   } else {
-    LOG(INFO) << "Failed to connect to RDMA server. Fall back to TCP. Error:"
+    VLOG(100) << "Failed to connect to RDMA server. Fall back to TCP. Error:"
               << status.message();
   }
 
