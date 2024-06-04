@@ -30,7 +30,9 @@ using namespace vineyard;  // NOLINT(build/namespaces)
 
 int main(int argc, char** argv) {
   if (argc < 3) {
-    printf("usage ./rpc_get_object_test <ipc_socket> <rpc_endpoint> <rdma_endpoint>");
+    printf(
+        "usage ./rpc_get_object_test <ipc_socket> <rpc_endpoint> "
+        "<rdma_endpoint>");
     return 1;
   }
   std::string ipc_socket(argv[1]);

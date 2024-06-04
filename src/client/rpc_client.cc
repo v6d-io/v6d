@@ -42,7 +42,8 @@ RPCClient::~RPCClient() {
 #ifndef VINEYARD_WITHOUT_RDMA
   Status status = StopRDMA();
   if (!status.ok()) {
-    LOG(ERROR) << "Failed to stop RDMA client: " << status.ToString() << ". May cause resource leak.";
+    LOG(ERROR) << "Failed to stop RDMA client: " << status.ToString()
+               << ". May cause resource leak.";
   }
 #endif
   Disconnect();
@@ -78,7 +79,8 @@ Status RPCClient::Connect(const std::string& rpc_endpoint,
                           std::string const& username,
                           std::string const& password,
                           const std::string& rdma_endpoint) {
-  return this->Connect(rpc_endpoint, RootSessionID(), username, password, rdma_endpoint);
+  return this->Connect(rpc_endpoint, RootSessionID(), username, password,
+                       rdma_endpoint);
 }
 
 Status RPCClient::Connect(const std::string& rpc_endpoint,
@@ -106,20 +108,22 @@ Status RPCClient::Connect(const std::string& rpc_endpoint,
   }
 
   return this->Connect(host, static_cast<uint32_t>(std::stoul(port)),
-                       session_id, username, password,
-                       rdma_host, static_cast<uint32_t>(std::stoul(rdma_port)));
+                       session_id, username, password, rdma_host,
+                       static_cast<uint32_t>(std::stoul(rdma_port)));
 }
 
 Status RPCClient::Connect(const std::string& host, uint32_t port,
                           const std::string& rdma_host, uint32_t rdma_port) {
-  return this->Connect(host, port, RootSessionID(), "", "", rdma_host, rdma_port);
+  return this->Connect(host, port, RootSessionID(), "", "", rdma_host,
+                       rdma_port);
 }
 
 Status RPCClient::Connect(const std::string& host, uint32_t port,
                           std::string const& username,
                           std::string const& password,
                           const std::string& rdma_host, uint32_t rdma_port) {
-  return this->Connect(host, port, RootSessionID(), username, password, rdma_host, rdma_port);
+  return this->Connect(host, port, RootSessionID(), username, password,
+                       rdma_host, rdma_port);
 }
 
 Status RPCClient::Connect(const std::string& host, uint32_t port,
@@ -174,13 +178,16 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
   return Status::OK();
 }
 
-Status RPCClient::ConnectRDMA(const std::string& rdma_host, uint32_t rdma_port) {
+Status RPCClient::ConnectRDMA(const std::string& rdma_host,
+                              uint32_t rdma_port) {
 #ifndef VINEYARD_WITHOUT_RDMA
   if (this->rdma_connected_) {
     return Status::OK();
   }
-  RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host, (int)rdma_port));
-  VLOG(100) << "Try to connect to RDMA server " << rdma_host << ":" << rdma_port << "...";
+  RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host,
+                                            static_cast<int>(rdma_port)));
+  VLOG(100) << "Try to connect to RDMA server " << rdma_host << ":" << rdma_port
+            << "...";
 
   RETURN_ON_ERROR(this->rdma_client_->Connect());
   RETURN_ON_ERROR(RDMAExchangeMemInfo());
@@ -469,7 +476,8 @@ Status RPCClient::CreateRemoteBlob(
   if (rdma_connected_) {
     WriteCreateRemoteBufferRequest(buffer->size(), false, true, message_out);
   } else {
-    WriteCreateRemoteBufferRequest(buffer->size(), !!compressor, false, message_out);
+    WriteCreateRemoteBufferRequest(buffer->size(), !!compressor, false,
+                                   message_out);
   }
   RETURN_ON_ERROR(doWrite(message_out));
 
@@ -487,16 +495,19 @@ Status RPCClient::CreateRemoteBlob(
     info.address = reinterpret_cast<uint64_t>(buffer->data());
     info.size = buffer->size();
     RETURN_ON_ERROR(RegisterMem(info));
-    RETURN_ON_ERROR(rdma_client_->Write(buffer->data(), buffer->size(),
-                                        reinterpret_cast<uint64_t>(payload.pointer), remote_info_.rkey, info.mr_desc, nullptr));
+    RETURN_ON_ERROR(
+        rdma_client_->Write(buffer->data(), buffer->size(),
+                            reinterpret_cast<uint64_t>(payload.pointer),
+                            remote_info_.rkey, info.mr_desc, nullptr));
     RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
 #endif
   } else {
     if (compressor && buffer->size() > 0) {
-      RETURN_ON_ERROR(detail::compress_and_send(compressor, vineyard_conn_,
-                                                buffer->data(), buffer->size()));
+      RETURN_ON_ERROR(detail::compress_and_send(
+          compressor, vineyard_conn_, buffer->data(), buffer->size()));
     } else if (buffer->size() > 0) {
-      RETURN_ON_ERROR(send_bytes(vineyard_conn_, buffer->data(), buffer->size()));
+      RETURN_ON_ERROR(
+          send_bytes(vineyard_conn_, buffer->data(), buffer->size()));
     }
     json message_in;
     RETURN_ON_ERROR(doRead(message_in));
@@ -562,8 +573,10 @@ Status RPCClient::CreateRemoteBlobs(
       info.address = reinterpret_cast<uint64_t>(buffers[i]->data());
       info.size = buffers[i]->size();
       RETURN_ON_ERROR(RegisterMem(info));
-      RETURN_ON_ERROR(rdma_client_->Write(buffers[i]->data(), buffers[i]->size(),
-                                          reinterpret_cast<uint64_t>(payloads[i].pointer), remote_info_.rkey, info.mr_desc, nullptr));
+      RETURN_ON_ERROR(
+          rdma_client_->Write(buffers[i]->data(), buffers[i]->size(),
+                              reinterpret_cast<uint64_t>(payloads[i].pointer),
+                              remote_info_.rkey, info.mr_desc, nullptr));
       RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
     }
 #endif
@@ -583,11 +596,13 @@ Status RPCClient::CreateRemoteBlobs(
     ids.clear();
     payloads.clear();
     fds_sent.clear();
-    RETURN_ON_ERROR(ReadCreateBuffersReply(message_in, ids, payloads, fds_sent));
-    RETURN_ON_ASSERT(payloads.size() == buffers.size(),
-                    "The result size doesn't match with the requested sizes: " +
-                        std::to_string(payloads.size()) + " vs. " +
-                        std::to_string(buffers.size()));
+    RETURN_ON_ERROR(
+        ReadCreateBuffersReply(message_in, ids, payloads, fds_sent));
+    RETURN_ON_ASSERT(
+        payloads.size() == buffers.size(),
+        "The result size doesn't match with the requested sizes: " +
+            std::to_string(payloads.size()) + " vs. " +
+            std::to_string(buffers.size()));
     for (size_t i = 0; i < payloads.size(); ++i) {
       RETURN_ON_ASSERT(
           static_cast<size_t>(payloads[i].data_size) == buffers[i]->size(),
@@ -614,7 +629,7 @@ Status RPCClient::CreateRemoteBlobs(
 }
 
 #ifndef VINEYARD_WITHOUT_RDMA
-Status RPCClient::RegisterMem(RegisterMemInfo &info) {
+Status RPCClient::RegisterMem(RegisterMemInfo& info) {
   RETURN_ON_ERROR(rdma_client_->RegisterMemory(info));
 
   std::lock_guard<std::mutex> guard(local_infos_mutex_);
@@ -642,10 +657,10 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
   std::string message_out;
   if (rdma_connected_) {
     WriteGetRemoteBuffersRequest(std::set<ObjectID>{id}, unsafe, false, true,
-                                message_out);
+                                 message_out);
   } else {
-    WriteGetRemoteBuffersRequest(std::set<ObjectID>{id}, unsafe, !!decompressor, false,
-                                message_out);
+    WriteGetRemoteBuffersRequest(std::set<ObjectID>{id}, unsafe, !!decompressor,
+                                 false, message_out);
   }
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
@@ -662,8 +677,10 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
     info.address = reinterpret_cast<uint64_t>(buffer->mutable_data());
     info.size = buffer->size();
     RETURN_ON_ERROR(RegisterMem(info));
-    RETURN_ON_ERROR(rdma_client_->Read(buffer->mutable_data(), payloads[0].data_size,
-                                       reinterpret_cast<uint64_t>(payloads[0].pointer), remote_info_.rkey, info.mr_desc, nullptr));
+    RETURN_ON_ERROR(
+        rdma_client_->Read(buffer->mutable_data(), payloads[0].data_size,
+                           reinterpret_cast<uint64_t>(payloads[0].pointer),
+                           remote_info_.rkey, info.mr_desc, nullptr));
     RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
 #endif
   } else {
@@ -673,7 +690,7 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
                                                   payloads[0].data_size));
     } else if (payloads[0].data_size > 0) {
       RETURN_ON_ERROR(recv_bytes(vineyard_conn_, buffer->mutable_data(),
-                                payloads[0].data_size));
+                                 payloads[0].data_size));
     }
   }
   return Status::OK();
@@ -708,16 +725,17 @@ Status RPCClient::GetRemoteBlobs(
   if (rdma_connected_) {
     WriteGetRemoteBuffersRequest(id_set, unsafe, false, true, message_out);
   } else {
-    WriteGetRemoteBuffersRequest(id_set, unsafe, !!decompressor, false, message_out);
+    WriteGetRemoteBuffersRequest(id_set, unsafe, !!decompressor, false,
+                                 message_out);
   }
   RETURN_ON_ERROR(doWrite(message_out));
   json message_in;
   RETURN_ON_ERROR(doRead(message_in));
   RETURN_ON_ERROR(ReadGetBuffersReply(message_in, payloads, fd_sent));
   RETURN_ON_ASSERT(payloads.size() == id_set.size(),
-                  "The result size doesn't match with the requested sizes: " +
-                      std::to_string(payloads.size()) + " vs. " +
-                      std::to_string(id_set.size()));
+                   "The result size doesn't match with the requested sizes: " +
+                       std::to_string(payloads.size()) + " vs. " +
+                       std::to_string(id_set.size()));
 
   std::unordered_map<ObjectID, std::shared_ptr<RemoteBlob>> id_payload_map;
   if (rdma_connected_) {
@@ -729,8 +747,10 @@ Status RPCClient::GetRemoteBlobs(
       info.address = reinterpret_cast<uint64_t>(remote_blob->mutable_data());
       info.size = remote_blob->size();
       RETURN_ON_ERROR(RegisterMem(info));
-      RETURN_ON_ERROR(rdma_client_->Read(remote_blob->mutable_data(), payload.data_size,
-                                        reinterpret_cast<uint64_t>(payload.pointer), remote_info_.rkey, info.mr_desc, nullptr));
+      RETURN_ON_ERROR(
+          rdma_client_->Read(remote_blob->mutable_data(), payload.data_size,
+                             reinterpret_cast<uint64_t>(payload.pointer),
+                             remote_info_.rkey, info.mr_desc, nullptr));
       RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
       id_payload_map[payload.object_id] = remote_blob;
     }
@@ -740,12 +760,12 @@ Status RPCClient::GetRemoteBlobs(
       auto remote_blob = std::shared_ptr<RemoteBlob>(new RemoteBlob(
           payload.object_id, remote_instance_id_, payload.data_size));
       if (decompressor && payload.data_size > 0) {
-        RETURN_ON_ERROR(detail::recv_and_decompress(decompressor, vineyard_conn_,
-                                                    remote_blob->mutable_data(),
-                                                    payload.data_size));
+        RETURN_ON_ERROR(detail::recv_and_decompress(
+            decompressor, vineyard_conn_, remote_blob->mutable_data(),
+            payload.data_size));
       } else {
         RETURN_ON_ERROR(recv_bytes(vineyard_conn_, remote_blob->mutable_data(),
-                                  payload.data_size));
+                                   payload.data_size));
       }
       id_payload_map[payload.object_id] = remote_blob;
     }

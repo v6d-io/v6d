@@ -22,6 +22,7 @@ limitations under the License.
 #include <rdma/fi_eq.h>
 #include <rdma/fi_rma.h>
 
+#include <map>
 #include <memory>
 #include <string>
 
@@ -36,7 +37,8 @@ namespace vineyard {
 std::map<std::string, RDMARemoteNodeInfo> RDMAClientCreator::servers_;
 std::mutex RDMAClientCreator::servers_mtx_;
 
-Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr, RDMARemoteNodeInfo &info) {
+Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr,
+                        RDMARemoteNodeInfo& info) {
   ptr = std::make_shared<RDMAClient>();
 
   ptr->fi = info.fi;
@@ -169,8 +171,8 @@ Status RDMAClient::GetRXFreeMsgBuffer(void*& buffer) {
 Status RDMAClient::RegisterMemory(RegisterMemInfo& memInfo) {
   fid_mr* new_mr = NULL;
   RETURN_ON_ERROR(IRDMA::RegisterMemory(
-      &new_mr, domain, reinterpret_cast<void*>(memInfo.address),
-      memInfo.size, memInfo.rkey, memInfo.mr_desc));
+      &new_mr, domain, reinterpret_cast<void*>(memInfo.address), memInfo.size,
+      memInfo.rkey, memInfo.mr_desc));
   mr_array.push_back(new_mr);
   return Status::OK();
 }
@@ -221,12 +223,15 @@ Status RDMAClient::Close() {
   return Status::OK();
 }
 
-Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr, fi_info* hints, std::string server_address, int port) {
+Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr,
+                                 fi_info* hints, std::string server_address,
+                                 int port) {
   std::string server_endpoint = server_address + ":" + std::to_string(port);
   std::lock_guard<std::mutex> lock(servers_mtx_);
   if (servers_.find(server_endpoint) == servers_.end()) {
     RDMARemoteNodeInfo node_info;
-    RETURN_ON_ERROR(CreateRDMARemoteNodeInfo(node_info, hints, server_address, port));
+    RETURN_ON_ERROR(
+        CreateRDMARemoteNodeInfo(node_info, hints, server_address, port));
     RETURN_ON_ERROR(RDMAClient::Make(ptr, node_info));
 
     servers_[server_endpoint] = node_info;
@@ -236,7 +241,8 @@ Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr, fi_info* hint
   return Status::OK();
 }
 
-Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr, std::string server_address, int port) {
+Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr,
+                                 std::string server_address, int port) {
   std::string server_endpoint = server_address + ":" + std::to_string(port);
   std::lock_guard<std::mutex> lock(servers_mtx_);
   if (servers_.find(server_endpoint) == servers_.end()) {
@@ -251,7 +257,10 @@ Status RDMAClientCreator::Create(std::shared_ptr<RDMAClient>& ptr, std::string s
   return Status::OK();
 }
 
-Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info, fi_info* hints, std::string server_address, int port) {
+Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
+                                                   fi_info* hints,
+                                                   std::string server_address,
+                                                   int port) {
   if (!hints) {
     return Status::Invalid("Invalid fabric hints info.");
   }
@@ -268,7 +277,9 @@ Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info, fi_
   return Status::OK();
 }
 
-Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info, std::string server_address, int port) {
+Status RDMAClientCreator::CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
+                                                   std::string server_address,
+                                                   int port) {
   fi_info* hints = fi_allocinfo();
   if (!hints) {
     return Status::Invalid("Failed to allocate fabric info.");

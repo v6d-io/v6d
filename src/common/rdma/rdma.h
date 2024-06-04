@@ -28,30 +28,29 @@ limitations under the License.
 #include <string>
 #include <vector>
 
-#include "common/util/status.h"
 #include "common/rdma/util.h"
+#include "common/util/status.h"
 
 namespace vineyard {
 
 class IRDMA {
  public:
-  static Status Send(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq, void* buf,
-              size_t size, void* mr_desc, void* ctx);
+  static Status Send(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq,
+                     void* buf, size_t size, void* mr_desc, void* ctx);
 
-  static Status Recv(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq, void* buf,
-              size_t size, void* mr_desc, void* ctx);
+  static Status Recv(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq,
+                     void* buf, size_t size, void* mr_desc, void* ctx);
 
-  static Status Read(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq, void* buf,
-              size_t size, uint64_t remote_address, uint64_t key, void* mr_desc,
-              void* ctx);
+  static Status Read(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq,
+                     void* buf, size_t size, uint64_t remote_address,
+                     uint64_t key, void* mr_desc, void* ctx);
 
-  static Status Write(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq, void* buf,
-               size_t size, uint64_t remote_address, uint64_t key,
-               void* mr_desc, void* ctx);
+  static Status Write(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq,
+                      void* buf, size_t size, uint64_t remote_address,
+                      uint64_t key, void* mr_desc, void* ctx);
 
-  static Status RegisterMemory(fid_mr** mr, fid_domain* domain,
-                        void* address, size_t size, uint64_t& rkey,
-                        void*& mr_desc);
+  static Status RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
+                               size_t size, uint64_t& rkey, void*& mr_desc);
 
   virtual Status Close() = 0;
 
@@ -75,7 +74,7 @@ class IRDMA {
 
   template <typename FIDType>
   static Status CloseResourcesInVector(std::vector<FIDType*>& vec,
-                                const char* resource_name) {
+                                       const char* resource_name) {
     for (auto& res : vec) {
       RETURN_ON_ERROR(CloseResource(res, resource_name));
     }
@@ -84,7 +83,7 @@ class IRDMA {
 
   template <typename K, typename FIDType>
   static Status CloseResourcesInMap(std::map<K, FIDType*>& mapping,
-                             const char* resource_name) {
+                                    const char* resource_name) {
     for (auto iter = mapping.begin(); iter != mapping.end(); ++iter) {
       RETURN_ON_ERROR(CloseResource(iter->second, resource_name));
     }

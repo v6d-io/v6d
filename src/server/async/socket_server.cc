@@ -674,7 +674,8 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
   bool use_rdma = false;
   std::shared_ptr<Payload> object;
 
-  TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size, compress, use_rdma);
+  TRY_READ_REQUEST(ReadCreateRemoteBufferRequest, root, size, compress,
+                   use_rdma);
   ObjectID object_id;
   RESPONSE_ON_ERROR(
       bulk_store_->Create(size, object_id, object, server_ptr_->instance_id()));
@@ -686,13 +687,14 @@ bool SocketConnection::doCreateRemoteBuffer(const json& root) {
     this->doWrite(message_out);
   } else {
     auto callback = [self, this, compress,
-                    object](const Status& status) -> Status {
+                     object](const Status& status) -> Status {
       ReceiveRemoteBuffers(
           socket_, {object}, 0, 0, compress,
           [self, object](const Status& status) -> Status {
             std::string message_out;
             if (status.ok()) {
-              WriteCreateBufferReply(object->object_id, object, -1, message_out);
+              WriteCreateBufferReply(object->object_id, object, -1,
+                                     message_out);
             } else {
               // cleanup
               VINEYARD_DISCARD(self->bulk_store_->Delete(object->object_id));
@@ -723,7 +725,8 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
   std::vector<ObjectID> object_ids;
   std::vector<std::shared_ptr<Payload>> objects;
 
-  TRY_READ_REQUEST(ReadCreateRemoteBuffersRequest, root, sizes, compress, use_rdma);
+  TRY_READ_REQUEST(ReadCreateRemoteBuffersRequest, root, sizes, compress,
+                   use_rdma);
   for (auto const& size : sizes) {
     ObjectID object_id;
     std::shared_ptr<Payload> object;
@@ -736,11 +739,12 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
 
   if (use_rdma) {
     std::string message_out;
-    WriteCreateBuffersReply(object_ids, objects, std::vector<int>{}, message_out);
+    WriteCreateBuffersReply(object_ids, objects, std::vector<int>{},
+                            message_out);
     this->doWrite(message_out);
   } else {
     auto callback = [self, this, compress, object_ids,
-                    objects](const Status& status) -> Status {
+                     objects](const Status& status) -> Status {
       ReceiveRemoteBuffers(
           socket_, objects, 0, 0, compress,
           [self, object_ids, objects](const Status& status) -> Status {
@@ -766,7 +770,8 @@ bool SocketConnection::doCreateRemoteBuffers(const json& root) {
 
     // ok to continue
     std::string message_out;
-    WriteCreateBuffersReply(object_ids, objects, std::vector<int>{}, message_out);
+    WriteCreateBuffersReply(object_ids, objects, std::vector<int>{},
+                            message_out);
     self->doWrite(message_out, callback, true);
   }
   return false;

@@ -20,6 +20,7 @@ limitations under the License.
 #include <rdma/fabric.h>
 #include <rdma/fi_domain.h>
 
+#include <map>
 #include <memory>
 #include <mutex>
 #include <string>
@@ -69,8 +70,8 @@ class RDMAClient : public IRDMA {
   Status GetTXCompletion(int timeout, void** context);
 
  private:
-
-  static Status Make(std::shared_ptr<RDMAClient>& ptr, RDMARemoteNodeInfo &info);
+  static Status Make(std::shared_ptr<RDMAClient>& ptr,
+                     RDMARemoteNodeInfo& info);
 
   fi_info* fi = NULL;
   fid_fabric* fabric = NULL;
@@ -93,12 +94,13 @@ class RDMAClient : public IRDMA {
   friend class RDMAClientCreator;
 };
 
-
 class RDMAClientCreator {
  public:
-  static Status Create(std::shared_ptr<RDMAClient>& ptr, fi_info* hints, std::string server_address, int port);
+  static Status Create(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
+                       std::string server_address, int port);
 
-  static Status Create(std::shared_ptr<RDMAClient>& ptr, std::string server_address, int port);
+  static Status Create(std::shared_ptr<RDMAClient>& ptr,
+                       std::string server_address, int port);
 
   static Status Release(std::string rdma_endpoint);
 
@@ -107,9 +109,12 @@ class RDMAClientCreator {
  private:
   RDMAClientCreator() = delete;
 
-  static Status CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info, fi_info* hints, std::string server_address, int port);
+  static Status CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
+                                         fi_info* hints,
+                                         std::string server_address, int port);
 
-  static Status CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info, std::string server_address, int port);
+  static Status CreateRDMARemoteNodeInfo(RDMARemoteNodeInfo& info,
+                                         std::string server_address, int port);
 
   static std::map<std::string, RDMARemoteNodeInfo> servers_;
   static std::mutex servers_mtx_;

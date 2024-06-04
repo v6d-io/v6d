@@ -44,7 +44,7 @@ class RPCClient final : public ClientBase {
   /**
    * @brief Connect to vineyard using the TCP endpoint specified by
    *        the environment variable `VINEYARD_RPC_ENDPOINT`.
-   * 
+   *
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect();
@@ -74,11 +74,12 @@ class RPCClient final : public ClientBase {
    * `host:port`.
    * @param rdma_endpoint The RDMA endpoint of RDMA server, in the format of
    * `host:port`.
-   * 
+   *
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& rpc_endpoint, std::string const& username,
-                 std::string const& password, const std::string& rdma_endpoint = "");
+                 std::string const& password,
+                 const std::string& rdma_endpoint = "");
 
   /**
    * @brief Connect to vineyardd using the given TCP endpoint `rpc_endpoint`.
@@ -91,8 +92,7 @@ class RPCClient final : public ClientBase {
    *
    * @return Status that indicates whether the connect has succeeded.
    */
-  Status Connect(const std::string& rpc_endpoint,
-                 const SessionID session_id,
+  Status Connect(const std::string& rpc_endpoint, const SessionID session_id,
                  std::string const& username = "",
                  std::string const& password = "",
                  const std::string& rdma_endpoint = "");
@@ -410,7 +410,7 @@ class RPCClient final : public ClientBase {
   Status RDMAExchangeMemInfo();
 
 #ifndef VINEYARD_WITHOUT_RDMA
-  Status RegisterMem(RegisterMemInfo &info);
+  Status RegisterMem(RegisterMemInfo& info);
 #endif
 
   InstanceID remote_instance_id_;

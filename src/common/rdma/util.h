@@ -16,7 +16,6 @@ limitations under the License.
 #ifndef SRC_COMMON_RDMA_UTIL_H_
 #define SRC_COMMON_RDMA_UTIL_H_
 
-
 #ifndef VINEYARD_WITHOUT_RDMA
 
 #include <rdma/fabric.h>
@@ -93,9 +92,9 @@ enum RDMA_STATE {
 };
 
 struct RDMARemoteNodeInfo {
-  fi_info *fi;
-  fid_fabric *fabric;
-  fid_domain *domain;
+  fi_info* fi;
+  fid_fabric* fabric;
+  fid_domain* domain;
 };
 
 #define VINEYARD_FIVERSION FI_VERSION(1, 21)

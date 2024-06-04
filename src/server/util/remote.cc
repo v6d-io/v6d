@@ -42,8 +42,9 @@ RemoteClient::~RemoteClient() {
   ec = socket_.close(ec);
   Status status = StopRDMA();
   if (!status.ok()) {
-    LOG(ERROR) << "Failed to stop RDMA client: " << status.message() << ". May "
-                 "cause memory leak.";
+    LOG(ERROR) << "Failed to stop RDMA client: " << status.message()
+               << ". May "
+                  "cause memory leak.";
   }
 }
 
@@ -94,7 +95,8 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
 
   Status status = ConnectRDMAServer(rdma_host, std::atoi(rdma_port.c_str()));
   if (status.ok()) {
-    VLOG(100) << "Connect to RDMA server successfully. RDMA host:" << rdma_host << ", port:" << rdma_port;
+    VLOG(100) << "Connect to RDMA server successfully. RDMA host:" << rdma_host
+              << ", port:" << rdma_port;
   } else {
     VLOG(100) << "Failed to connect to RDMA server. Fall back to TCP. Error:"
               << status.message();
