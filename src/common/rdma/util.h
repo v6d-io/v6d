@@ -24,8 +24,6 @@ limitations under the License.
 
 namespace vineyard {
 
-#define ALIGNMENT 64
-
 #define CHECK_ERROR(condition, message) \
   if (!(condition)) {                   \
     return Status::Invalid(message);    \
@@ -49,11 +47,6 @@ namespace vineyard {
       LOG(INFO) << "retry " << op_str;                             \
     }                                                              \
   } while (0)
-
-static inline size_t GetAlignedSize(size_t size, size_t alignment) {
-  return ((size % alignment) == 0) ? size
-                                   : ((size / alignment) + 1) * alignment;
-}
 
 enum VINEYARD_MSG_OPT {
   VINEYARD_MSG_EXCHANGE_KEY,
@@ -95,6 +88,12 @@ enum RDMA_STATE {
   INIT,
   READY,
   STOPED,
+};
+
+struct RDMARemoteNodeInfo {
+  fi_info *fi;
+  fid_fabric *fabric;
+  fid_domain *domain;
 };
 
 #define VINEYARD_FIVERSION FI_VERSION(1, 21)

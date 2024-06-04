@@ -29,6 +29,7 @@ limitations under the License.
 #include "common/util/uuid.h"
 
 #include "common/rdma/rdma_client.h"
+#include "common/rdma/util.h"
 
 namespace vineyard {
 

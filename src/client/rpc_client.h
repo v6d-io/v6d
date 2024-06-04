@@ -29,6 +29,9 @@ limitations under the License.
 #include "common/util/status.h"
 #include "common/util/uuid.h"
 
+#include "common/rdma/rdma_client.h"
+#include "common/rdma/util.h"
+
 namespace vineyard {
 
 class Blob;
@@ -41,7 +44,7 @@ class RPCClient final : public ClientBase {
   /**
    * @brief Connect to vineyard using the TCP endpoint specified by
    *        the environment variable `VINEYARD_RPC_ENDPOINT`.
-   *
+   * 
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect();
@@ -73,7 +76,7 @@ class RPCClient final : public ClientBase {
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& rpc_endpoint, std::string const& username,
-                 std::string const& password);
+                 std::string const& password, const std::string& rdma_endpoint = "");
 
   /**
    * @brief Connect to vineyardd using the given TCP endpoint `rpc_endpoint`.
@@ -84,19 +87,11 @@ class RPCClient final : public ClientBase {
    *
    * @return Status that indicates whether the connect has succeeded.
    */
-  Status Connect(const std::string& rpc_endpoint, const SessionID session_id,
+  Status Connect(const std::string& rpc_endpoint,
+                 const SessionID session_id,
                  std::string const& username = "",
-                 std::string const& password = "");
-
-  /**
-   * @brief Connect to vineyardd using the given TCP `host` and `port`.
-   *
-   * @param host The host of vineyard server.
-   * @param port The TCP port of vineyard server's RPC service.
-   *
-   * @return Status that indicates whether the connect has succeeded.
-   */
-  Status Connect(const std::string& host, uint32_t port);
+                 std::string const& password = "",
+                 const std::string& rdma_endpoint = "");
 
   /**
    * @brief Connect to vineyardd using the given TCP `host` and `port`.
@@ -107,7 +102,19 @@ class RPCClient final : public ClientBase {
    * @return Status that indicates whether the connect has succeeded.
    */
   Status Connect(const std::string& host, uint32_t port,
-                 std::string const& username, std::string const& password);
+                 const std::string& rdma_host = "", uint32_t rdma_port = -1);
+
+  /**
+   * @brief Connect to vineyardd using the given TCP `host` and `port`.
+   *
+   * @param host The host of vineyard server.
+   * @param port The TCP port of vineyard server's RPC service.
+   *
+   * @return Status that indicates whether the connect has succeeded.
+   */
+  Status Connect(const std::string& host, uint32_t port,
+                 std::string const& username, std::string const& password,
+                 const std::string& rdma_host = "", uint32_t rdma_port = -1);
 
   /**
    * @brief Connect to vineyardd using the given TCP `host` and `port`.
@@ -120,7 +127,12 @@ class RPCClient final : public ClientBase {
    */
   Status Connect(const std::string& host, uint32_t port,
                  const SessionID session_id, std::string const& username = "",
-                 std::string const& password = "");
+                 std::string const& password = "",
+                 const std::string& rdma_host = "", uint32_t rdma_port = -1);
+
+  Status ConnectRDMA(const std::string& rdma_host, uint32_t rdma_port);
+
+  Status StopRDMA();
 
   /**
    * @brief Create a new client using self endpoint.
@@ -385,7 +397,18 @@ class RPCClient final : public ClientBase {
   }
 
  private:
+  Status RDMAExchangeMemInfo();
+
+  Status RegisterMem(RegisterMemInfo &info);
+
   InstanceID remote_instance_id_;
+
+  std::string rdma_endpoint_;
+  std::shared_ptr<RDMAClient> rdma_client_;
+  RegisterMemInfo remote_info_;
+  std::vector<RegisterMemInfo> local_infos_;
+  std::mutex local_infos_mutex_;
+  bool rdma_connected_ = false;
 
   friend class Client;
 };
