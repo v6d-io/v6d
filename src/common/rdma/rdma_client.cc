@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifndef VINEYARD_WITHOUT_RDMA
+
 #include <rdma/fabric.h>
 #include <rdma/fi_cm.h>
 #include <rdma/fi_domain.h>
@@ -317,3 +319,5 @@ Status RDMAClientCreator::Release(std::string rdma_endpoint) {
 }
 
 }  // namespace vineyard
+
+#endif

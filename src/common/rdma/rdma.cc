@@ -13,6 +13,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#ifndef VINEYARD_WITHOUT_RDMA
+
 #include "common/rdma/rdma.h"
 #include "common/rdma/util.h"
 
@@ -104,3 +106,5 @@ void IRDMA::FreeInfo(fi_info* info) {
 }
 
 }  // namespace vineyard
+
+#endif

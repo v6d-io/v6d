@@ -63,14 +63,14 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
 
   Status RDMAExchangeMemInfo();
 
+  Status StopRDMA();
+
  private:
   Status doWrite(const std::string& message_out);
 
   Status doRead(std::string& message_in);
 
   Status doRead(json& root);
-
-  Status StopRDMA();
 
   InstanceID remote_instance_id_;
 
@@ -80,9 +80,11 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   asio::generic::stream_protocol::socket socket_;
   bool connected_;
 
+#ifndef VINEYARD_WITHOUT_RDMA
   std::shared_ptr<RDMAClient> rdma_client_;
   RegisterMemInfo remote_info_;
   RegisterMemInfo local_info_;
+#endif
   bool rdma_connected_;
 };
 
