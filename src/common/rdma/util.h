@@ -39,12 +39,11 @@ namespace vineyard {
       }                                                            \
                                                                    \
       if (ret != -FI_EAGAIN) {                                     \
-        LOG(INFO) << op_str << " " << ret;                         \
+        LOG(ERROR) << op_str << " " << ret;                        \
         std::string msg = "Failed to post " + std::string(op_str); \
         return Status::Invalid(msg);                               \
       }                                                            \
       usleep(1000);                                                \
-      LOG(INFO) << "retry " << op_str;                             \
     }                                                              \
   } while (0)
 
