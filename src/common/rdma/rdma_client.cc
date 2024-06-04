@@ -34,8 +34,6 @@ namespace vineyard {
 std::map<std::string, RDMARemoteNodeInfo> RDMAClientCreator::servers_;
 std::mutex RDMAClientCreator::servers_mtx_;
 
-// old api.
-// TODO: remove in the future.
 Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr,
                         std::string server_address, int port) {
   fi_info* hints = fi_allocinfo();
@@ -53,8 +51,6 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr,
                                 FI_MR_PROV_KEY | FI_MR_VIRT_ADDR | FI_MR_RAW;
   hints->tx_attr->tclass = FI_TC_BULK_DATA;
   hints->ep_attr->type = FI_EP_MSG;
-  // hints->fabric_attr = (fi_fabric_attr*) malloc(sizeof
-  // *(hints->fabric_attr));
   hints->fabric_attr = new fi_fabric_attr;
   memset(hints->fabric_attr, 0, sizeof *(hints->fabric_attr));
   hints->fabric_attr->prov_name = strdup("verbs");
@@ -64,14 +60,11 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr,
   return Status::OK();
 }
 
-// old api.
-// TODO: remove in the future.
 Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
                         std::string server_address, int port) {
   if (!hints) {
     return Status::Invalid("Invalid fabric hints info.");
   }
-  LOG(INFO) << "========make old";
 
   ptr = std::make_shared<RDMAClient>();
 
@@ -89,8 +82,6 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
 
   CHECK_ERROR(!fi_domain(ptr->fabric, ptr->fi, &ptr->domain, NULL),
               "fi_domain failed.");
-
-  LOG(INFO) << "domain name:" << ptr->fi->domain_attr->name;
 
   fi_cq_attr cq_attr = {0};
   memset(&cq_attr, 0, sizeof cq_attr);
@@ -139,7 +130,6 @@ Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr, fi_info* hints,
 }
 
 Status RDMAClient::Make(std::shared_ptr<RDMAClient>& ptr, RDMARemoteNodeInfo &info) {
-  LOG(INFO) << "========make new";
   ptr = std::make_shared<RDMAClient>();
 
   ptr->fi = info.fi;
@@ -215,11 +205,8 @@ Status RDMAClient::Connect() {
 }
 
 Status RDMAClient::GetRXCompletion(int timeout, void** context) {
-  LOG(INFO) << "GetRXCompletion";
-  uint64_t cur = 0;
   while (true) {
-    int ret = this->GetCompletion(remote_fi_addr, rxcq, &cur, 1,
-                                  timeout == -1 ? 500 : timeout, context);
+    int ret = this->GetCompletion(rxcq, timeout == -1 ? 500 : timeout, context);
     if (ret == -FI_ETIMEDOUT) {
       if (timeout > 0) {
         return Status::Invalid("GetRXCompletion timeout");
@@ -238,11 +225,8 @@ Status RDMAClient::GetRXCompletion(int timeout, void** context) {
 }
 
 Status RDMAClient::GetTXCompletion(int timeout, void** context) {
-  LOG(INFO) << "GetTXCompletion";
-  uint64_t cur = 0;
   while (true) {
-    int ret = this->GetCompletion(remote_fi_addr, txcq, &cur, 1,
-                                  timeout == -1 ? 500 : timeout, context);
+    int ret = this->GetCompletion(txcq, timeout == -1 ? 500 : timeout, context);
     if (ret == -FI_ETIMEDOUT) {
       if (timeout > 0) {
         return Status::Invalid("GetTXCompletion timeout");
@@ -278,10 +262,8 @@ Status RDMAClient::GetRXFreeMsgBuffer(void*& buffer) {
 
 Status RDMAClient::RegisterMemory(RegisterMemInfo& memInfo) {
   fid_mr* new_mr = NULL;
-  LOG(INFO) << "domain:" << domain;
-  LOG(INFO) << "fi:" << fi;
   RETURN_ON_ERROR(IRDMA::RegisterMemory(
-      fi, &new_mr, domain, reinterpret_cast<void*>(memInfo.address),
+      &new_mr, domain, reinterpret_cast<void*>(memInfo.address),
       memInfo.size, memInfo.rkey, memInfo.mr_desc));
   mr_array.push_back(new_mr);
   return Status::OK();
@@ -290,36 +272,31 @@ Status RDMAClient::RegisterMemory(RegisterMemInfo& memInfo) {
 Status RDMAClient::RegisterMemory(fid_mr** mr, void* address, size_t size,
                                   uint64_t& rkey, void*& mr_desc) {
   VINEYARD_CHECK_OK(
-      IRDMA::RegisterMemory(fi, mr, domain, address, size, rkey, mr_desc));
+      IRDMA::RegisterMemory(mr, domain, address, size, rkey, mr_desc));
   return Status::OK();
 }
 
 Status RDMAClient::Send(void* buf, size_t size, void* ctx) {
-  LOG(INFO) << "Send";
   return IRDMA::Send(ep, remote_fi_addr, txcq, buf, size, tx_msg_mr_desc, ctx);
 }
 
 Status RDMAClient::Recv(void* buf, size_t size, void* ctx) {
-  LOG(INFO) << "Recv";
   return IRDMA::Recv(ep, remote_fi_addr, rxcq, buf, size, rx_msg_mr_desc, ctx);
 }
 
 Status RDMAClient::Read(void* buf, size_t size, uint64_t remote_address,
                         uint64_t key, void* mr_desc, void* ctx) {
-  LOG(INFO) << "Read";
   return IRDMA::Read(ep, remote_fi_addr, rxcq, buf, size, remote_address, key,
                      mr_desc, ctx);
 }
 
 Status RDMAClient::Write(void* buf, size_t size, uint64_t remote_address,
                          uint64_t key, void* mr_desc, void* ctx) {
-  LOG(INFO) << "Write";
   return IRDMA::Write(ep, remote_fi_addr, txcq, buf, size, remote_address, key,
                       mr_desc, ctx);
 }
 
 Status RDMAClient::Close() {
-  LOG(INFO) << "Close";
   // close all registered memory regions
   RETURN_ON_ERROR(CloseResource(tx_mr, "transmit memory rigion"));
   RETURN_ON_ERROR(CloseResource(rx_mr, "receive memory region"));
@@ -334,7 +311,7 @@ Status RDMAClient::Close() {
   delete rx_msg_buffer;
   delete tx_msg_buffer;
 
-  LOG(INFO) << "Free sources from client successfully";
+  VLOG(100) << "Free sources from client successfully";
   return Status::OK();
 }
 
@@ -382,7 +359,7 @@ Status RDMAClientCreator::Clear() {
 
 Status RDMAClientCreator::Release(std::string rdma_endpoint) {
   if (servers_.find(rdma_endpoint) != servers_.end()) {
-    LOG(INFO) << "Release RDMA resources for " << rdma_endpoint;
+    VLOG(100) << "Release RDMA resources for " << rdma_endpoint;
     RDMARemoteNodeInfo& info = servers_[rdma_endpoint];
     // before closing domain and fabric, we need to close all the resources
     // bound to them, otherwise, the close operation will failed with -FI_EBUSY

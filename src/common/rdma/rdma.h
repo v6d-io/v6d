@@ -32,32 +32,27 @@ namespace vineyard {
 
 class IRDMA {
  public:
-  Status Send(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq, void* buf,
+  static Status Send(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq, void* buf,
               size_t size, void* mr_desc, void* ctx);
 
-  Status Recv(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq, void* buf,
+  static Status Recv(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq, void* buf,
               size_t size, void* mr_desc, void* ctx);
 
-  Status Read(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq, void* buf,
+  static Status Read(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* rxcq, void* buf,
               size_t size, uint64_t remote_address, uint64_t key, void* mr_desc,
               void* ctx);
 
-  Status Write(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq, void* buf,
+  static Status Write(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq, void* buf,
                size_t size, uint64_t remote_address, uint64_t key,
                void* mr_desc, void* ctx);
 
-  Status RegisterMemory(fi_info* fi, fid_mr** mr, fid_domain* domain,
+  static Status RegisterMemory(fid_mr** mr, fid_domain* domain,
                         void* address, size_t size, uint64_t& rkey,
                         void*& mr_desc);
 
   virtual Status Close() = 0;
 
-  int GetCompletion(fi_addr_t remote_fi_addr, fid_cq* cq, uint64_t* cur,
-                    uint64_t total, int timeout, void** context);
-
-  int Progress(fid_cq* cq, uint64_t total, uint64_t* cq_cntr);
-
-  virtual bool IsClient() = 0;
+  static int GetCompletion(fid_cq* cq, int timeout, void** context);
 
   static void FreeInfo(fi_info* info);
 

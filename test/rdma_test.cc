@@ -176,7 +176,7 @@ void StartServer() {
 }
 
 void StartClient(std::string server_address) {
-  VINEYARD_CHECK_OK(RDMAClient::Make(client, server_address, port));
+  VINEYARD_CHECK_OK(RDMAClientCreator::Create(client, server_address, port));
 
   void* buffer = nullptr;
   VINEYARD_CHECK_OK(client->GetRXFreeMsgBuffer(buffer));

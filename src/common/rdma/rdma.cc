@@ -18,7 +18,7 @@ limitations under the License.
 
 namespace vineyard {
 
-Status IRDMA::RegisterMemory(fi_info* fi, fid_mr** mr, fid_domain* domain,
+Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain,
                              void* address, size_t size, uint64_t& rkey,
                              void*& mr_desc) {
   struct fi_mr_attr mr_attr = {0};
@@ -33,7 +33,6 @@ Status IRDMA::RegisterMemory(fi_info* fi, fid_mr** mr, fid_domain* domain,
   mr_attr.context = NULL;
 
   int ret = fi_mr_regattr(domain, &mr_attr, FI_HMEM_DEVICE_ONLY, mr);
-  LOG(INFO) << "register mem ret:" << ret;
   CHECK_ERROR(!ret, "Failed to register memory region");
 
   mr_desc = fi_mr_desc(*mr);
@@ -67,8 +66,7 @@ Status IRDMA::Write(fid_ep* ep, fi_addr_t remote_fi_addr, fid_cq* txcq,
        remote_address, key, ctx);
 }
 
-int IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq* cq, uint64_t* cur,
-                         uint64_t total, int timeout, void** context) {
+int IRDMA::GetCompletion(fid_cq* cq, int timeout, void** context) {
   fi_cq_err_entry err;
   timespec start, end;
   int ret;
@@ -77,13 +75,10 @@ int IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq* cq, uint64_t* cur,
     clock_gettime(CLOCK_REALTIME, &start);
   }
 
-  do {
+  while(true) {
     ret = fi_cq_read(cq, &err, 1);
     if (ret > 0) {
-      if (timeout >= 0) {
-        clock_gettime(CLOCK_REALTIME, &start);
-      }
-      (*cur)++;
+      break;
     } else if (ret < 0 && ret != -FI_EAGAIN) {
       return ret;
     } else if (timeout > 0) {
@@ -94,7 +89,7 @@ int IRDMA::GetCompletion(fi_addr_t remote_fi_addr, fid_cq* cq, uint64_t* cur,
         return -FI_ETIMEDOUT;
       }
     }
-  } while (*cur < total);
+  }
   if (context) {
     *context = err.op_context;
   }

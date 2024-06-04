@@ -63,7 +63,6 @@ class RDMAServer : public IRDMA {
 
   Status RegisterMemory(RegisterMemInfo& memInfo);
 
-  // TODO: delete in the future.
   Status RegisterMemory(fid_mr** mr, void* address, size_t size, uint64_t& rkey,
                         void*& mr_desc);
 
@@ -110,8 +109,6 @@ class RDMAServer : public IRDMA {
     }
     return -1;
   }
-
-  bool IsClient() override { return false; };
 
   fid_pep* pep = NULL;
   std::mutex ep_map_mutex_;

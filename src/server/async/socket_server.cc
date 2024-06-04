@@ -391,8 +391,6 @@ bool SocketConnection::doRegister(const json& root) {
                 self->server_ptr_->session_id(),
                 self->server_ptr_->store_matched(bulk_store_type),
                 self->server_ptr_->compression_enabled(), message_out);
-            LOG(INFO) << "current instance:"
-                      << self->server_ptr_->instance_id();
           } else {
             WriteErrorReply(s, message_out);
           }
@@ -803,8 +801,7 @@ bool SocketConnection::doGetRemoteBuffers(const json& root) {
       return Status::OK();
     });
   } else {
-    this->doWrite(message_out,
-                  [](const Status& status) { return Status::OK(); });
+    this->doWrite(message_out);
   }
   return false;
 }
