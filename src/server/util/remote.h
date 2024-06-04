@@ -80,7 +80,7 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   asio::generic::stream_protocol::socket socket_;
   bool connected_;
 
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   std::shared_ptr<RDMAClient> rdma_client_;
   RegisterMemInfo remote_info_;
   RegisterMemInfo local_info_;

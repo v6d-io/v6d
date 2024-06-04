@@ -50,7 +50,7 @@ RemoteClient::~RemoteClient() {
 }
 
 Status RemoteClient::StopRDMA() {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   if (!rdma_connected_) {
     return Status::OK();
   }
@@ -107,7 +107,7 @@ Status RemoteClient::Connect(const std::string& rpc_endpoint,
 }
 
 Status RemoteClient::RDMAExchangeMemInfo() {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   void* buffer;
   this->rdma_client_->GetTXFreeMsgBuffer(buffer);
   VineyardMsg* msg = reinterpret_cast<VineyardMsg*>(buffer);
@@ -143,7 +143,7 @@ Status RemoteClient::RDMAExchangeMemInfo() {
 
 Status RemoteClient::ConnectRDMAServer(const std::string& host,
                                        const uint32_t port) {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   if (this->rdma_connected_) {
     return Status::OK();
   }
@@ -385,7 +385,7 @@ Status RemoteClient::migrateBuffers(
 
   auto self(shared_from_this());
   if (rdma_connected_) {
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
     for (size_t i = 0; i < payloads.size(); i++) {
       if (payloads[i].data_size == 0) {
         continue;

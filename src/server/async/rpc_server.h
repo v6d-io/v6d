@@ -74,7 +74,7 @@ class RPCServer : public SocketServer,
   asio::ip::tcp::socket socket_;
 
   // connection id to rdma server
-#ifndef VINEYARD_WITHOUT_RDMA
+#ifdef VINEYARD_WITH_RDMA
   std::unordered_map<uint64_t, RegisterMemInfo> remote_mem_infos_;
   std::shared_ptr<RDMAServer> rdma_server_;
   mutable std::recursive_mutex rdma_mutex_;  // protect `rdma_servers_`
