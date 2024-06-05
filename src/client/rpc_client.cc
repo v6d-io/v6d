@@ -49,6 +49,25 @@ RPCClient::~RPCClient() {
   Disconnect();
 }
 
+void RPCClient::Disconnect() {
+#ifdef VINEYARD_WITH_RDMA
+  Status status = StopRDMA();
+  if (!status.ok()) {
+    LOG(ERROR) << "Failed to stop RDMA client: " << status.ToString()
+               << ". May cause resource leak.";
+  }
+#endif
+  std::lock_guard<std::recursive_mutex> __guard(this->client_mutex_);
+  if (!this->connected_) {
+    return;
+  }
+  std::string message_out;
+  WriteExitRequest(message_out);
+  VINEYARD_SUPPRESS(doWrite(message_out));
+  close(vineyard_conn_);
+  connected_ = false;
+}
+
 Status RPCClient::Connect() {
   auto ep = read_env("VINEYARD_RPC_ENDPOINT");
   auto rdma_endpoint = read_env("VINEYARD_RDMA_ENDPOINT");
@@ -167,11 +186,12 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
   instance_id_ = UnspecifiedInstanceID() - 1;
 
   if (rdma_host.length() > 0) {
-    if (ConnectRDMA(rdma_host, rdma_port).ok()) {
+    Status status = ConnectRDMA(rdma_host, rdma_port);
+    if (status.ok()) {
       LOG(INFO) << "Connected to RPC server: " << rpc_endpoint
                 << ", RDMA server: " << rdma_host << ":" << rdma_port;
     } else {
-      LOG(INFO) << "Connect RDMA server failed! Fall back to RPC mode.";
+      LOG(INFO) << "Connect RDMA server failed! Fall back to RPC mode. Error:" << status.message();
     }
   }
 

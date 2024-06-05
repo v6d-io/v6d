@@ -501,7 +501,7 @@ class ClientBase {
   /**
    * @brief Disconnect this client.
    */
-  void Disconnect();
+  virtual void Disconnect();
 
   /**
    * @brief Create a new anonymous session in vineyardd and connect to it .

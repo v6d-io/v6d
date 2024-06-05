@@ -41,6 +41,8 @@ class RPCClient final : public ClientBase {
  public:
   ~RPCClient() override;
 
+  void Disconnect() override;
+
   /**
    * @brief Connect to vineyard using the TCP endpoint specified by
    *        the environment variable `VINEYARD_RPC_ENDPOINT`.
@@ -420,9 +422,9 @@ class RPCClient final : public ClientBase {
   std::shared_ptr<RDMAClient> rdma_client_;
   RegisterMemInfo remote_info_;
   std::vector<RegisterMemInfo> local_infos_;
-  std::mutex local_infos_mutex_;
+  mutable std::mutex local_infos_mutex_;
 #endif
-  bool rdma_connected_ = false;
+  mutable bool rdma_connected_ = false;
 
   friend class Client;
 };

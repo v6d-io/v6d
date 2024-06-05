@@ -13,7 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-#ifdef WITH_RDMA
+#ifdef VINEYARD_WITH_RDMA
 #include <memory>
 #include <string>
 #include <vector>
@@ -205,7 +205,7 @@ void StartClient(std::string server_address) {
 #endif
 
 int main(int argc, char** argv) {
-#ifdef WITH_RDMA
+#ifdef VINEYARD_WITH_RDMA
   if (argc >= 2) {
     std::string server_address = std::string(argv[1]);
     StartClient(server_address);
