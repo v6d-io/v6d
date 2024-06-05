@@ -45,7 +45,9 @@ class RPCClient final : public ClientBase {
 
   /**
    * @brief Connect to vineyard using the TCP endpoint specified by
-   *        the environment variable `VINEYARD_RPC_ENDPOINT`.
+   *        the environment variable `VINEYARD_RPC_ENDPOINT`. If the
+   *        environment variable `VINEYARD_RDMA_ENDPOINT` is set, the
+   *        RDMA endpoint will also be used.
    *
    * @return Status that indicates whether the connect has succeeded.
    */
@@ -53,7 +55,9 @@ class RPCClient final : public ClientBase {
 
   /**
    * @brief Connect to vineyard using the TCP endpoint specified by
-   *        the environment variable `VINEYARD_RPC_ENDPOINT`.
+   *        the environment variable `VINEYARD_RPC_ENDPOINT`. If the
+   *        environment variable `VINEYARD_RDMA_ENDPOINT` is set, the
+   *        RDMA endpoint will also be used.
    *
    * @return Status that indicates whether the connect has succeeded.
    */
@@ -61,6 +65,8 @@ class RPCClient final : public ClientBase {
 
   /**
    * @brief Connect to vineyardd using the given TCP endpoint `rpc_endpoint`.
+   *        If the environment variable `VINEYARD_RDMA_ENDPOINT` is set, the
+   *        RDMA endpoint will also be used.
    *
    * @param rpc_endpoint The TPC endpoint of vineyard server, in the format of
    * `host:port`.
@@ -403,6 +409,13 @@ class RPCClient final : public ClientBase {
     // TBD
     return Status::NotImplemented("TryAcquireLock is not implemented yet.");
   }
+
+  /**
+   * @brief Get the RDMA endpoint of the connected vineyard server.
+   *
+   * @return The RDMA endpoint of the connected vineyard server.
+   */
+  const std::string rdma_endpoint() { return rdma_endpoint_; }
 
  private:
   Status ConnectRDMA(const std::string& rdma_host, uint32_t rdma_port);
