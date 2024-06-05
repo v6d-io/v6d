@@ -42,8 +42,8 @@ RPCClient::~RPCClient() {
 #ifdef VINEYARD_WITH_RDMA
   Status status = StopRDMA();
   if (!status.ok()) {
-    LOG(ERROR) << "Failed to stop RDMA client: " << status.ToString()
-               << ". May cause resource leak.";
+    std::cout << "Failed to stop RDMA client: " << status.ToString()
+              << ". May cause resource leak." << std::endl;
   }
 #endif
   Disconnect();
@@ -53,8 +53,8 @@ void RPCClient::Disconnect() {
 #ifdef VINEYARD_WITH_RDMA
   Status status = StopRDMA();
   if (!status.ok()) {
-    LOG(ERROR) << "Failed to stop RDMA client: " << status.ToString()
-               << ". May cause resource leak.";
+    std::cout << "Failed to stop RDMA client: " << status.ToString()
+              << ". May cause resource leak." << std::endl;
   }
 #endif
   std::lock_guard<std::recursive_mutex> __guard(this->client_mutex_);
@@ -120,7 +120,7 @@ Status RPCClient::Connect(const std::string& rpc_endpoint,
   std::string rdma_host = "", rdma_port = "-1";
   pos = rdma_endpoint.find(":");
   if (pos == std::string::npos) {
-    LOG(INFO) << "No RDMA endpoint provided. Fall back to TCP.";
+    std::cout << "No RDMA endpoint provided. Fall back to TCP." << std::endl;
   } else {
     rdma_host = rdma_endpoint.substr(0, pos);
     rdma_port = rdma_endpoint.substr(pos + 1);
@@ -188,11 +188,12 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
   if (rdma_host.length() > 0) {
     Status status = ConnectRDMA(rdma_host, rdma_port);
     if (status.ok()) {
-      LOG(INFO) << "Connected to RPC server: " << rpc_endpoint
-                << ", RDMA server: " << rdma_host << ":" << rdma_port;
+      std::cout << "Connected to RPC server: " << rpc_endpoint
+                << ", RDMA server: " << rdma_host << ":" << rdma_port
+                << std::endl;
     } else {
-      LOG(INFO) << "Connect RDMA server failed! Fall back to RPC mode. Error:"
-                << status.message();
+      std::cout << "Connect RDMA server failed! Fall back to RPC mode. Error:"
+                << status.message() << std::endl;
     }
   }
 
@@ -207,8 +208,8 @@ Status RPCClient::ConnectRDMA(const std::string& rdma_host,
   }
   RETURN_ON_ERROR(RDMAClientCreator::Create(this->rdma_client_, rdma_host,
                                             static_cast<int>(rdma_port)));
-  VLOG(100) << "Try to connect to RDMA server " << rdma_host << ":" << rdma_port
-            << "...";
+  std::cout << "Try to connect to RDMA server " << rdma_host << ":" << rdma_port
+            << "..." << std::endl;
 
   RETURN_ON_ERROR(this->rdma_client_->Connect());
   RETURN_ON_ERROR(RDMAExchangeMemInfo());
@@ -228,9 +229,9 @@ Status RPCClient::RDMAExchangeMemInfo() {
   msg->remoteMemInfo.remote_address = -1;
   msg->remoteMemInfo.key = -1;
   msg->remoteMemInfo.len = -1;
-  VLOG(100) << "Send remote addr: "
+  std::cout << "Send remote addr: "
             << reinterpret_cast<void*>(msg->remoteMemInfo.remote_address)
-            << ", rkey: " << msg->remoteMemInfo.key;
+            << ", rkey: " << msg->remoteMemInfo.key << std::endl;
   void* remoteMsg;
   this->rdma_client_->GetRXFreeMsgBuffer(remoteMsg);
   memset(remoteMsg, 0, 64);
@@ -245,10 +246,10 @@ Status RPCClient::RDMAExchangeMemInfo() {
   if (vmsg->type == VINEYARD_MSG_EXCHANGE_KEY) {
     remote_info_.address = vmsg->remoteMemInfo.remote_address;
     remote_info_.rkey = vmsg->remoteMemInfo.key;
-    VLOG(100) << "Get remote address: " << remote_info_.address
-              << ", rkey: " << remote_info_.rkey;
+    std::cout << "Get remote address: " << remote_info_.address
+              << ", rkey: " << remote_info_.rkey << std::endl;
   } else {
-    LOG(ERROR) << "Unknown message type: " << vmsg->type;
+    std::cout << "Unknown message type: " << vmsg->type << std::endl;
   }
 #endif
   return Status::OK();
