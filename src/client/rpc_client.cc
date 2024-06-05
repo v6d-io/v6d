@@ -191,7 +191,8 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
       LOG(INFO) << "Connected to RPC server: " << rpc_endpoint
                 << ", RDMA server: " << rdma_host << ":" << rdma_port;
     } else {
-      LOG(INFO) << "Connect RDMA server failed! Fall back to RPC mode. Error:" << status.message();
+      LOG(INFO) << "Connect RDMA server failed! Fall back to RPC mode. Error:"
+                << status.message();
     }
   }
 
