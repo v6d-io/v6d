@@ -85,7 +85,7 @@ class RemoteClient : public std::enable_shared_from_this<RemoteClient> {
   RegisterMemInfo remote_info_;
   RegisterMemInfo local_info_;
 #endif
-  bool rdma_connected_;
+  mutable bool rdma_connected_ = false;
 };
 
 /**
