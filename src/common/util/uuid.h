@@ -146,26 +146,14 @@ using PlasmaID = std::string;
  *         Others will be mapped randomly between
  * (0x8000000000000000UL,0xFFFFFFFFFFFFFFFFUL) exclusively.
  */
-inline ObjectID GenerateBlobID(const uintptr_t ptr, uint64_t global_mask = 0,
-                               bool is_host = true) {
+inline ObjectID GenerateBlobID(const uintptr_t ptr) {
   if (ptr == 0x8000000000000000UL ||
       ptr == std::numeric_limits<uintptr_t>::max()) {
     return static_cast<uint64_t>(ptr) | 0x8000000000000000UL;
   }
-
-  // If the second bit is 0, it standard for a host blob. Otherwise, it is a
-  // device blob(e.g. GPU).
-  if (is_host) {
-    if (global_mask & 0x4000000000000000UL) {
-      // Invalid global mask
-      return std::numeric_limits<uintptr_t>::max();
-    }
-    return (global_mask | ptr) | 0x8000000000000000UL;
-  } else {
-    // Make sure the second bit is 1 so that it is different from host blob ID.
-    auto ts = detail::cycleclock::now() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
-    return static_cast<uint64_t>(ts) | 0xC000000000000000UL;
-  }
+  auto ts = detail::cycleclock::now() % (0x7FFFFFFFFFFFFFFFUL - 2) + 1;
+  return (0x7FFFFFFFFFFFFFFFUL & static_cast<uint64_t>(ts)) |
+         0x8000000000000000UL;
 }
 
 inline SessionID GenerateSessionID() {
@@ -259,26 +247,21 @@ inline InstanceID UnspecifiedInstanceID() {
 }
 
 template <typename ID>
-inline ID GenerateBlobID(uintptr_t ptr, uint64_t high_mask = 0,
-                         bool is_host = true);
+inline ID GenerateBlobID(uintptr_t ptr);
 
 template <>
-inline ObjectID GenerateBlobID<ObjectID>(uintptr_t ptr, uint64_t high_mask,
-                                         bool is_host) {
-  return GenerateBlobID(ptr, high_mask, is_host);
+inline ObjectID GenerateBlobID<ObjectID>(uintptr_t ptr) {
+  return GenerateBlobID(ptr);
 }
 
 template <>
-inline PlasmaID GenerateBlobID<PlasmaID>(uintptr_t ptr, uint64_t high_mask,
-                                         bool is_host) {
-  return PlasmaIDFromString(
-      ObjectIDToString(ObjectID(GenerateBlobID(ptr, high_mask, is_host))));
+inline PlasmaID GenerateBlobID<PlasmaID>(uintptr_t ptr) {
+  return PlasmaIDFromString(ObjectIDToString(ObjectID(GenerateBlobID(ptr))));
 }
 
 template <typename ID>
-inline ID GenerateBlobID(const void* ptr, uint64_t high_mask = 0,
-                         bool is_host = true) {
-  return GenerateBlobID(reinterpret_cast<uintptr_t>(ptr), high_mask, is_host);
+inline ID GenerateBlobID(const void* ptr) {
+  return GenerateBlobID(reinterpret_cast<uintptr_t>(ptr));
 }
 
 template <typename ID = ObjectID>

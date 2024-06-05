@@ -548,7 +548,7 @@ Status BulkStoreBase<ID, P>::FinalizeArena(const int fd,
             << " of size " << sizes[idx];
     // make them available for blob pool
     uintptr_t pointer = mmap_base + offsets[idx];
-    ID object_id = GenerateBlobID<ID>(pointer, instance_id << 47, true);
+    ID object_id = GenerateBlobID<ID>(pointer);
     objects_.insert(object_id,
                     std::make_shared<P>(object_id, sizes[idx],
                                         reinterpret_cast<uint8_t*>(pointer), fd,
@@ -635,7 +635,7 @@ Status BulkStore::Create(const size_t data_size, ObjectID& object_id,
         std::to_string(FootprintLimit()) + ", and " +
         std::to_string(Footprint()) + " are already in use");
   }
-  object_id = GenerateBlobID<ObjectID>(pointer, instance_id << 47, true);
+  object_id = GenerateBlobID<ObjectID>(pointer);
   object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
                                      map_size, offset);
   objects_.insert(object_id, object);
@@ -721,7 +721,7 @@ Status BulkStore::CreateGPU(const size_t data_size, ObjectID& object_id,
         std::to_string(FootprintLimit()) + ", and " +
         std::to_string(Footprint()) + " are already in use");
   }
-  object_id = GenerateBlobID<ObjectID>(pointer, 0, false);
+  object_id = GenerateBlobID<ObjectID>(pointer);
   object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
                                      map_size, offset);
   object->is_gpu = 1;  // set the GPU object flag
@@ -754,7 +754,7 @@ Status BulkStore::CreateDisk(const size_t data_size, const std::string& path,
         std::string("Failed to create shared memory backed by file on disk: ") +
         strerror(errno));
   }
-  object_id = GenerateBlobID<ObjectID>(pointer, 0, false);
+  object_id = GenerateBlobID<ObjectID>(pointer);
   object = std::make_shared<Payload>(object_id, data_size, pointer, fd,
                                      data_size, 0);
   object->kind = Payload::Kind::kDiskMMap;
@@ -785,7 +785,7 @@ Status PlasmaBulkStore::Create(size_t const data_size, size_t const plasma_size,
   if (pointer == nullptr) {
     return Status::NotEnoughMemory("size = " + std::to_string(data_size));
   }
-  object_id = GenerateBlobID<ObjectID>(pointer, instance_id << 47, true);
+  object_id = GenerateBlobID<ObjectID>(pointer);
   object =
       std::make_shared<PlasmaPayload>(plasma_id, object_id, plasma_size,
                                       data_size, pointer, fd, map_size, offset);
