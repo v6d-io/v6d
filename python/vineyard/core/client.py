@@ -274,6 +274,8 @@ class Client:
             except VineyardException:
                 continue
 
+        self._spread = False
+        self._compression = True
         if self._ipc_client is None and self._rpc_client is None:
             raise ConnectionError(
                 "Failed to connect to vineyard via both IPC and RPC connection. "
@@ -287,12 +289,22 @@ class Client:
         '''Whether the compression is enabled for underlying RPC client.'''
         if self._rpc_client:
             return self._rpc_client.compression
-        return None
+        return self._compression
 
     @compression.setter
     def compression(self, value: bool = True):
         if self._rpc_client:
             self._rpc_client.compression = value
+        self._compression = value
+
+    @property
+    def spread(self) -> bool:
+        '''Whether the spread is enabled for underlying RPC client.'''
+        return self._spread
+
+    @spread.setter
+    def spread(self, value: bool = False):
+        self._spread = value
 
     @property
     def ipc_client(self) -> IPCClient:
@@ -788,6 +800,14 @@ class Client:
         self.compression = enabled
         yield
         self.compression = compression
+
+    @contextlib.contextmanager
+    def with_spread(self, enabled: bool = True):
+        """Enable spread for the following put operations."""
+        tmp_spread = self._spread
+        self.spread = enabled
+        yield
+        self.spread = tmp_spread
 
 
 __all__ = ['Client']
