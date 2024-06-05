@@ -13,12 +13,28 @@ write_yaml_config() {
     echo "  RPCEndpoint: $1" >> $VINEYARD_YAML_FILE
 }
 
+# Start with mandatory arguments
+args=(
+  "--socket=$FUSE_DIR/vineyard-local.sock"
+  "--size=$SIZE"
+  "--etcd_endpoint=$ETCD_ENDPOINT"
+)
+
+# Optional arguments
+[ -n "$RESERVE_MEMORY" ]   && args+=("--reserve_memory=$RESERVE_MEMORY")
+[ -n "$ALLOCATOR" ]        && args+=("--allocator=$ALLOCATOR")
+[ -n "$COMPRESSION" ]      && args+=("--compression=$COMPRESSION")
+[ -n "$COREDUMP" ]         && args+=("--coredump=$COREDUMP")
+[ -n "$META_TIMEOUT" ]     && args+=("--meta_timeout=$META_TIMEOUT")
+[ -n "$ETCD_PREFIX" ]      && args+=("--etcd_prefix=$ETCD_PREFIX")
+[ -n "$SPILL_PATH" ]       && args+=("--spill_path=$SPILL_PATH")
+[ -n "$SPILL_LOWER_RATE" ] && args+=("--spill_lower_rate=$SPILL_LOWER_RATE")
+[ -n "$SPILL_UPPER_RATE" ] && args+=("--spill_upper_rate=$SPILL_UPPER_RATE")
+
 # start the standalone vineyardd
-if [ "$CACHE_SIZE" != "0" ]; then
-    vineyardd --socket=$FUSE_DIR/vineyard-local.sock \
-            --size=$CACHE_SIZE \
-            --etcd_endpoint=$ETCD_ENDPOINT \
-            --etcd_prefix=$ETCD_PREFIX &
+if [ "$SIZE" != "0" ]; then
+    # Run vineyardd with constructed argument list
+    vineyardd "${args[@]}" &
 
     # wait for the local vineyard socket to be created
     timeout=60
