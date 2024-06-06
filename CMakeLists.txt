@@ -894,6 +894,11 @@ macro(setup_pybind11_module target relpath)
         target_add_link_options(${target} PRIVATE OPTIONS -Os)
     endif()
 
+    if(BUILD_VINEYARD_RDMA)
+        target_compile_options(_C PRIVATE -DVINEYARD_WITH_RDMA)
+    endif()
+
+    file(RELATIVE_PATH RELATIVE_BUILD_PATH "${PROJECT_SOURCE_DIR}/python/vineyard" "${CMAKE_BINARY_DIR}/shared-lib")
     if(UNIX AND NOT APPLE)
         set_target_properties(${target} PROPERTIES
                               BUILD_WITH_INSTALL_RPATH TRUE
