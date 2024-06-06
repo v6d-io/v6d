@@ -164,6 +164,7 @@ class Client:
         # move host after port to make sure unnamed (host, port) works
         host: str = None,
         endpoint: Tuple[str, Union[str, int]] = None,
+        rdma_endpoint: Union[str, Tuple[str, Union[str, int]]] = None,
         session: int = None,
         username: str = None,
         password: str = None,
@@ -177,7 +178,10 @@ class Client:
         - For the RPC Client, the argument `endpoint` takes precedence over the
           argument `host` and `port`, which in turn takes precedence over the
           environment variable `VINEYARD_RPC_ENDPOINT`, which further takes precedence
-          over the `RPCEndpoint` field in the config file.
+          over the `RPCEndpoint` field in the config file. Besides, if you have the
+          eRDMA or RDMA hardware, you can define the environment variable
+          `VINEYARD_RDMA_ENDPOINT` to specify the RDMA endpoint to speed up the data
+          transfer.
 
         The `connect()` API can be used in following ways:
 
@@ -189,6 +193,8 @@ class Client:
         - `connect('hostname', port)`, which will try to establish an RPC connection.
         - `connect(endpoint=('hostname', port))`, which will try to establish an RPC
           connection.
+        - `connect(endpoint=('hostname', port), rdma_endpoint=('rdma_host', port))`,
+          which will try to establish an RPC connection with RDMA enabled.
         - `connect(config='/path/to/vineyard-config.yaml')`, which will try to
           resolve the IPC socket and RPC endpoints from the configuration file.
 
@@ -198,6 +204,8 @@ class Client:
             port: Optional, the port of the RPC endpoint.
             host: Optional, the host of the RPC endpoint.
             endpoint: Optional, the RPC endpoint of format `host:port`.
+            rdma_endpoint: Optional, the RDMA endpoint of format `host:port` or
+                      ('host', port) or ('host', 'port')
             session: Optional, the session id to connect.
             username: Optional, the required username of vineyardd when authentication
                       is enabled.
@@ -255,6 +263,12 @@ class Client:
             hosts.append(host)
             ports.append(port)
 
+        if rdma_endpoint:
+            if isinstance(rdma_endpoint, (tuple)):
+                rdma_endpoint = ':'.join(map(str, rdma_endpoint))
+        else:
+            rdma_endpoint = os.getenv('VINEYARD_RDMA_ENDPOINT', '')
+
         if config and ((not socket) or (not (hosts and ports))):
             ipc_socket, rpc_endpoint = _parse_configuration(config)
             if ipc_socket and not socket:
@@ -269,7 +283,9 @@ class Client:
             self._ipc_client = _connect(socket, **kwargs)
         for host, port in zip(hosts, ports):
             try:
-                self._rpc_client = _connect(host, port, **kwargs)
+                self._rpc_client = _connect(
+                    host, port, rdma_endpoint=rdma_endpoint, **kwargs
+                )
                 break
             except VineyardException:
                 continue
@@ -484,6 +500,12 @@ class Client:
         return self.default_client().rpc_endpoint
 
     @property
+    def rdma_endpoint(self):
+        if self._rpc_client:
+            return self._rpc_client.rdma_endpoint
+        return ""
+
+    @property
     @_apply_docstring(IPCClient.is_ipc)
     def is_ipc(self):
         return self.default_client().is_ipc
@@ -639,6 +661,7 @@ class Client:
                     instance_id,
                     blobs[instance_id],
                     self.compression,
+                    self.rdma_endpoint,
                 )
                 for instance_id in blobs
                 if instance_id != self.instance_id
@@ -652,7 +675,7 @@ class Client:
         return Object.from_(meta)
 
     def _fetch_blobs_from_instance(
-        self, cluster_info, instance_id, blob_ids, compression
+        self, cluster_info, instance_id, blob_ids, compression, rdma_endpoint
     ) -> Object:
         """Fetches all blobs from a given instance id in the Vineyard cluster.
 
@@ -661,6 +684,7 @@ class Client:
             instance_id (int): The instance id to fetch blobs from.
             blob_ids (List): The list of blob ids to fetch.
             compression (bool): Whether to enable compression for RPC Client.
+            rdma_endpoint (str): The RDMA endpoint to use for the RPC Client.
 
         Returns:
             RemoteBlob(List): The list of fetched remote blobs.
@@ -676,7 +700,7 @@ class Client:
         host, port = instance_status['rpc_endpoint'].split(':')
         try:
             with envvars('VINEYARD_RPC_SKIP_RETRY', '1'):
-                remote_client = _connect(host, port)
+                remote_client = _connect(host, port, rdma_endpoint=rdma_endpoint)
                 remote_client.compression = compression
         except Exception as exec:
             raise RuntimeError(

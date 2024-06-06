@@ -188,6 +188,7 @@ Status RPCClient::Connect(const std::string& host, uint32_t port,
   if (rdma_host.length() > 0) {
     Status status = ConnectRDMA(rdma_host, rdma_port);
     if (status.ok()) {
+      rdma_endpoint_ = rdma_host + ":" + std::to_string(rdma_port);
       std::cout << "Connected to RPC server: " << rpc_endpoint
                 << ", RDMA server: " << rdma_host << ":" << rdma_port
                 << std::endl;
