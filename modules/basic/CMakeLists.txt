@@ -5,8 +5,7 @@ file(GLOB_RECURSE VINEYARD_MOD_SRCS "${CMAKE_CURRENT_SOURCE_DIR}"
 
 file(GLOB_RECURSE VINEYARD_HEADERS "${CMAKE_CURRENT_SOURCE_DIR}"
                                    "ds/*.h"
-                                   "stream/*.h"
-                                   "ds/perfect_hash/*.h")
+                                   "stream/*.h")
 
 if(VINEYARD_MOD_SRCS)
     vineyard_generate(
