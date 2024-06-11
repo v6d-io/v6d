@@ -47,6 +47,10 @@ RPCServer::~RPCServer() {
   }
 
 #ifdef VINEYARD_WITH_RDMA
+  if (rdma_stop_) {
+    return;
+  }
+
   VINEYARD_DISCARD(rdma_server_->Stop());
   if (rdma_listen_thread_.joinable()) {
     rdma_listen_thread_.join();
@@ -58,6 +62,7 @@ RPCServer::~RPCServer() {
     rdma_send_thread_.join();
   }
   VINEYARD_DISCARD(rdma_server_->Close());
+  rdma_stop_ = true;
 #endif
 }
 
@@ -91,6 +96,7 @@ Status RPCServer::InitRDMA() {
                            status.message());
   }
 
+  rdma_stop_ = false;
   return Status::OK();
 #else
   return Status::Invalid("RDMA is not supported in this build.");

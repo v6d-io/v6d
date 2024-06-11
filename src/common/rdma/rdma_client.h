@@ -50,6 +50,8 @@ class RDMAClient : public IRDMA {
   Status RegisterMemory(fid_mr** mr, void* address, size_t size, uint64_t& rkey,
                         void*& mr_desc);
 
+  Status DeregisterMemory(RegisterMemInfo& memInfo);
+
   Status Connect();
 
   Status Close() override;
@@ -68,6 +70,8 @@ class RDMAClient : public IRDMA {
   Status GetRXCompletion(int timeout, void** context);
 
   Status GetTXCompletion(int timeout, void** context);
+
+  size_t GetMaxTransferBytes() { return fi->ep_attr->max_msg_size; }
 
  private:
   static Status Make(std::shared_ptr<RDMAClient>& ptr,

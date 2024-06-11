@@ -15,6 +15,7 @@ limitations under the License.
 
 #include "client/rpc_client.h"
 
+#include <algorithm>
 #include <iostream>
 #include <map>
 #include <mutex>
@@ -247,7 +248,8 @@ Status RPCClient::RDMAExchangeMemInfo() {
   if (vmsg->type == VINEYARD_MSG_EXCHANGE_KEY) {
     remote_info_.address = vmsg->remoteMemInfo.remote_address;
     remote_info_.rkey = vmsg->remoteMemInfo.key;
-    std::cout << "Get remote address: " << remote_info_.address
+    std::cout << "Get remote address: "
+              << reinterpret_cast<void*>(remote_info_.address)
               << ", rkey: " << remote_info_.rkey << std::endl;
   } else {
     std::cout << "Unknown message type: " << vmsg->type << std::endl;
@@ -518,11 +520,19 @@ Status RPCClient::CreateRemoteBlob(
     info.address = reinterpret_cast<uint64_t>(buffer->data());
     info.size = buffer->size();
     RETURN_ON_ERROR(RegisterMem(info));
-    RETURN_ON_ERROR(
-        rdma_client_->Write(buffer->data(), buffer->size(),
-                            reinterpret_cast<uint64_t>(payload.pointer),
-                            remote_info_.rkey, info.mr_desc, nullptr));
-    RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+    size_t remain_bytes = info.size;
+    while (remain_bytes > 0) {
+      size_t read_bytes =
+          std::min(remain_bytes, rdma_client_->GetMaxTransferBytes());
+      size_t offset = info.size - remain_bytes;
+      RETURN_ON_ERROR(rdma_client_->Write(
+          buffer->data() + offset, read_bytes,
+          reinterpret_cast<uint64_t>(payload.pointer) + offset,
+          remote_info_.rkey, info.mr_desc, nullptr));
+      RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+      remain_bytes -= read_bytes;
+    }
+    RETURN_ON_ERROR(rdma_client_->DeregisterMemory(info));
 #endif
   } else {
     if (compressor && buffer->size() > 0) {
@@ -596,11 +606,19 @@ Status RPCClient::CreateRemoteBlobs(
       info.address = reinterpret_cast<uint64_t>(buffers[i]->data());
       info.size = buffers[i]->size();
       RETURN_ON_ERROR(RegisterMem(info));
-      RETURN_ON_ERROR(
-          rdma_client_->Write(buffers[i]->data(), buffers[i]->size(),
-                              reinterpret_cast<uint64_t>(payloads[i].pointer),
-                              remote_info_.rkey, info.mr_desc, nullptr));
-      RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+      size_t remain_bytes = info.size;
+      while (remain_bytes > 0) {
+        size_t read_bytes =
+            std::min(remain_bytes, rdma_client_->GetMaxTransferBytes());
+        size_t offset = info.size - remain_bytes;
+        RETURN_ON_ERROR(rdma_client_->Write(
+            buffers[i]->data() + offset, read_bytes,
+            reinterpret_cast<uint64_t>(payloads[i].pointer + offset),
+            remote_info_.rkey, info.mr_desc, nullptr));
+        RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+        remain_bytes -= read_bytes;
+      }
+      RETURN_ON_ERROR(rdma_client_->DeregisterMemory(info));
     }
 #endif
   } else {
@@ -700,11 +718,19 @@ Status RPCClient::GetRemoteBlob(const ObjectID& id, const bool unsafe,
     info.address = reinterpret_cast<uint64_t>(buffer->mutable_data());
     info.size = buffer->size();
     RETURN_ON_ERROR(RegisterMem(info));
-    RETURN_ON_ERROR(
-        rdma_client_->Read(buffer->mutable_data(), payloads[0].data_size,
-                           reinterpret_cast<uint64_t>(payloads[0].pointer),
-                           remote_info_.rkey, info.mr_desc, nullptr));
-    RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+    size_t remain_bytes = info.size;
+    while (remain_bytes > 0) {
+      size_t read_bytes =
+          std::min(remain_bytes, rdma_client_->GetMaxTransferBytes());
+      size_t offset = info.size - remain_bytes;
+      RETURN_ON_ERROR(rdma_client_->Read(
+          buffer->mutable_data() + offset, read_bytes,
+          reinterpret_cast<uint64_t>(payloads[0].pointer) + offset,
+          remote_info_.rkey, info.mr_desc, nullptr));
+      RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+      remain_bytes -= read_bytes;
+    }
+    RETURN_ON_ERROR(rdma_client_->DeregisterMemory(info));
 #endif
   } else {
     if (decompressor && payloads[0].data_size > 0) {
@@ -770,12 +796,20 @@ Status RPCClient::GetRemoteBlobs(
       info.address = reinterpret_cast<uint64_t>(remote_blob->mutable_data());
       info.size = remote_blob->size();
       RETURN_ON_ERROR(RegisterMem(info));
-      RETURN_ON_ERROR(
-          rdma_client_->Read(remote_blob->mutable_data(), payload.data_size,
-                             reinterpret_cast<uint64_t>(payload.pointer),
-                             remote_info_.rkey, info.mr_desc, nullptr));
-      RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+      size_t remain_bytes = info.size;
+      while (remain_bytes > 0) {
+        size_t read_bytes =
+            std::min(remain_bytes, rdma_client_->GetMaxTransferBytes());
+        size_t offset = info.size - remain_bytes;
+        RETURN_ON_ERROR(rdma_client_->Read(
+            remote_blob->mutable_data() + offset, read_bytes,
+            reinterpret_cast<uint64_t>(payload.pointer) + offset,
+            remote_info_.rkey, info.mr_desc, nullptr));
+        RETURN_ON_ERROR(rdma_client_->GetTXCompletion(-1, nullptr));
+        remain_bytes -= read_bytes;
+      }
       id_payload_map[payload.object_id] = remote_blob;
+      RETURN_ON_ERROR(rdma_client_->DeregisterMemory(info));
     }
 #endif
   } else {

@@ -13,6 +13,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+#include <algorithm>
 #include <chrono>
 #include <limits>
 #include <string>
@@ -131,7 +132,8 @@ Status RemoteClient::RDMAExchangeMemInfo() {
   if (vmsg->type == VINEYARD_MSG_EXCHANGE_KEY) {
     remote_info_.address = vmsg->remoteMemInfo.remote_address;
     remote_info_.rkey = vmsg->remoteMemInfo.key;
-    VLOG(100) << "Get remote address: " << remote_info_.address
+    VLOG(100) << "Get remote address: "
+              << reinterpret_cast<void*>(remote_info_.address)
               << ", rkey: " << remote_info_.rkey;
   } else {
     LOG(ERROR) << "Unknown message type: " << vmsg->type;
@@ -389,11 +391,18 @@ Status RemoteClient::migrateBuffers(
       if (payloads[i].data_size == 0) {
         continue;
       }
-      VINEYARD_CHECK_OK(
-          rdma_client_->Read(results[i]->pointer, payloads[i].data_size,
-                             (uint64_t) payloads[i].pointer, remote_info_.rkey,
-                             local_info_.mr_desc, nullptr));
-      VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
+      size_t remain_bytes = payloads[i].data_size;
+      do {
+        size_t read_bytes =
+            std::min(remain_bytes, rdma_client_->GetMaxTransferBytes());
+        size_t offset = payloads[i].data_size - remain_bytes;
+        VINEYARD_CHECK_OK(rdma_client_->Read(
+            results[i]->pointer + offset, read_bytes,
+            ((uint64_t) payloads[i].pointer) + offset, remote_info_.rkey,
+            local_info_.mr_desc, nullptr));
+        VINEYARD_CHECK_OK(rdma_client_->GetTXCompletion(-1, nullptr));
+        remain_bytes -= read_bytes;
+      } while (remain_bytes > 0);
     }
     std::map<ObjectID, ObjectID> result_blobs;
     for (size_t i = 0; i < payloads.size(); i++) {

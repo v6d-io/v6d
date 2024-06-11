@@ -83,6 +83,9 @@ struct RegisterMemInfo {
   size_t size;
   uint64_t rkey;
   void* mr_desc;
+  // TODO:
+  // Work around for rpc client. Remove this field in the future
+  fid_mr* mr;
 };
 
 enum RDMA_STATE {

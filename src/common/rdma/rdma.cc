@@ -34,7 +34,7 @@ Status IRDMA::RegisterMemory(fid_mr** mr, fid_domain* domain, void* address,
   mr_attr.context = NULL;
 
   int ret = fi_mr_regattr(domain, &mr_attr, FI_HMEM_DEVICE_ONLY, mr);
-  CHECK_ERROR(!ret, "Failed to register memory region");
+  CHECK_ERROR(!ret, "Failed to register memory region:" + std::to_string(ret));
 
   mr_desc = fi_mr_desc(*mr);
 

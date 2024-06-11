@@ -442,7 +442,7 @@ Status RDMAServer::GetTXCompletion(int timeout, void** context) {
         continue;
       }
     } else if (ret < 0) {
-      return Status::Invalid("GetTXCompletion failed");
+      return Status::Invalid("GetTXCompletion failed:" + std::to_string(ret));
     } else {
       return Status::OK();
     }
