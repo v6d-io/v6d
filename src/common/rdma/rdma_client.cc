@@ -146,7 +146,7 @@ Status RDMAClient::GetTXCompletion(int timeout, void** context) {
         continue;
       }
     } else if (ret < 0) {
-      return Status::Invalid("GetTXCompletion failed");
+      return Status::Invalid("GetTXCompletion failed:" + std::to_string(ret));
     } else {
       return Status::OK();
     }
@@ -174,6 +174,7 @@ Status RDMAClient::RegisterMemory(RegisterMemInfo& memInfo) {
       &new_mr, domain, reinterpret_cast<void*>(memInfo.address), memInfo.size,
       memInfo.rkey, memInfo.mr_desc));
   mr_array.push_back(new_mr);
+  memInfo.mr = new_mr;
   return Status::OK();
 }
 
@@ -181,6 +182,13 @@ Status RDMAClient::RegisterMemory(fid_mr** mr, void* address, size_t size,
                                   uint64_t& rkey, void*& mr_desc) {
   VINEYARD_CHECK_OK(
       IRDMA::RegisterMemory(mr, domain, address, size, rkey, mr_desc));
+  return Status::OK();
+}
+
+Status RDMAClient::DeregisterMemory(RegisterMemInfo& memInfo) {
+  VINEYARD_CHECK_OK(IRDMA::CloseResource(memInfo.mr, "memory region"));
+  mr_array.erase(std::remove(mr_array.begin(), mr_array.end(), memInfo.mr),
+                 mr_array.end());
   return Status::OK();
 }
 

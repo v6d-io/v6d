@@ -23,14 +23,17 @@ limitations under the License.
 
 using namespace vineyard;  // NOLINT(build/namespaces)
 
+constexpr uint64_t element_num =
+    (uint64_t) 1024 * 1024 * 1024 * 5 / sizeof(uint64_t);
+
 void CreateBuffer(std::string& objectName, Client& client) {
-  TensorBuilder<int> builder(client, {1, 10});
-  int* data = builder.data();
-  for (int i = 0; i < 10; ++i) {
+  TensorBuilder<uint64_t> builder(client, {1, element_num});
+  uint64_t* data = builder.data();
+  for (size_t i = 0; i < element_num; ++i) {
     data[i] = i + 1000;
   }
-  std::shared_ptr<Tensor<int>> tensor =
-      std::dynamic_pointer_cast<Tensor<int>>(builder.Seal(client));
+  std::shared_ptr<Tensor<uint64_t>> tensor =
+      std::dynamic_pointer_cast<Tensor<uint64_t>>(builder.Seal(client));
   client.Persist(tensor->id());
   LOG(INFO) << "Create object with id:"
             << reinterpret_cast<void*>(tensor->id());
@@ -40,11 +43,15 @@ void CreateBuffer(std::string& objectName, Client& client) {
 void FetchBuffer(std::string& objectName, Client& client) {
   ObjectID id;
   client.GetName(objectName, id);
-  std::shared_ptr<Tensor<int>> tensor =
-      std::dynamic_pointer_cast<Tensor<int>>(client.FetchAndGetObject(id));
+  std::shared_ptr<Tensor<uint64_t>> tensor =
+      std::dynamic_pointer_cast<Tensor<uint64_t>>(client.FetchAndGetObject(id));
   LOG(INFO) << "Fetch object with id:" << reinterpret_cast<void*>(tensor->id());
-  const int* data = tensor->data();
-  for (int i = 0; i < 10; ++i) {
+  const uint64_t* data = tensor->data();
+  for (size_t i = 0; i < element_num; ++i) {
+    if (data[i] != i + 1000) {
+      LOG(ERROR) << "Data error at index " << i << ", expect " << i + 1000
+                 << ", got " << data[i];
+    }
     CHECK_EQ(data[i], i + 1000);
   }
 }

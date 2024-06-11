@@ -83,6 +83,7 @@ class RPCServer : public SocketServer,
   std::thread rdma_listen_thread_;
   std::thread rdma_recv_thread_;
   std::thread rdma_send_thread_;
+  bool rdma_stop_ = true;
 #endif
 };
 
