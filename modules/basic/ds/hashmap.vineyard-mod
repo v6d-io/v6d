@@ -30,7 +30,7 @@ limitations under the License.
 #include "basic/ds/array.vineyard.h"
 #include "basic/ds/arrow.vineyard.h"  // IWYU pragma: keep
 #include "basic/ds/arrow_utils.h"
-#include "basic/ds/perfect_hash_indexer.h"
+#include "grape/graph/perfect_hash_indexer.h"
 #include "basic/utils.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
@@ -325,8 +325,8 @@ class [[vineyard]] Hashmap : public Registered<Hashmap<K, V, H, E>>,
   }
 };
 
-using perfect_hash::ImmPHIdxer;
-using perfect_hash::PHIdxerViewBuilder;
+using grape::ImmPHIdxer;
+using grape::PHIdxerViewBuilder;
 
 namespace detail {
 namespace perfect_hash {
@@ -458,7 +458,6 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
   using value_type = V;
 
   const V* find(const K& key) const {
-    // check if the key not exists.
     uint64_t value_index = 0;
     if (this->idxer_.get_index(key, value_index)) {
       return &ph_values_ptr_[value_index];
@@ -488,7 +487,7 @@ class [[vineyard]] PerfectHashmap : public Registered<PerfectHashmap<K, V>> {
 
   void PostConstruct(const ObjectMeta& meta) override {
     ph_values_ptr_ = reinterpret_cast<const V*>(ph_values_->data());
-    idxer_.Init(ph_);
+    idxer_.Init(ph_->data(), ph_->size());
   }
 
  private:

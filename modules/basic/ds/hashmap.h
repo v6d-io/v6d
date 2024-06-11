@@ -26,7 +26,7 @@ limitations under the License.
 
 #include "basic/ds/array.h"
 #include "basic/ds/hashmap.vineyard.h"
-#include "basic/ds/perfect_hash_indexer.h"
+#include "grape/graph/perfect_hash_indexer.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"  // IWYU pragma: keep
@@ -240,7 +240,14 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     for (size_t i = 0; i < n_elements; ++i) {
       this->builder_.add((reinterpret_cast<const K*>(keys->data()))[i]);
     }
-    RETURN_ON_ERROR(this->builder_.Finish(client, this->idxer_));
+
+    this->builder_.buildPhf();
+    std::unique_ptr<BlobWriter> writer;
+    size_t serialize_size = this->builder_.getSerializeSize();
+    RETURN_ON_ERROR(client.CreateBlob(serialize_size, writer));
+    this->builder_.finish(writer->data(), serialize_size, this->idxer_);
+    writer->Seal(client, buf);
+
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
           return detail::perfect_hash::build_values(
@@ -266,7 +273,14 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
          iter++) {
       this->builder_.add(*iter);
     }
-    RETURN_ON_ERROR(this->builder_.Finish(client, this->idxer_));
+
+    this->builder_.buildPhf();
+    std::unique_ptr<BlobWriter> writer;
+    size_t serialize_size = this->builder_.getSerializeSize();
+    RETURN_ON_ERROR(client.CreateBlob(serialize_size, writer));
+    this->builder_.finish(writer->data(), serialize_size, this->idxer_);
+    writer->Seal(client, buf);
+
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
           return detail::perfect_hash::build_values(idxer_, keys->GetArray(),
@@ -292,7 +306,14 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
     for (size_t i = 0; i < n_elements; ++i) {
       this->builder_.add((reinterpret_cast<const K*>(keys->data()))[i]);
     }
-    RETURN_ON_ERROR(this->builder_.Finish(client, this->idxer_));
+
+    this->builder_.buildPhf();
+    std::unique_ptr<BlobWriter> writer;
+    size_t serialize_size = this->builder_.getSerializeSize();
+    RETURN_ON_ERROR(client.CreateBlob(serialize_size, writer));
+    this->builder_.finish(writer->data(), serialize_size, this->idxer_);
+    writer->Seal(client, buf);
+
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
           return detail::perfect_hash::build_values(
@@ -318,7 +339,14 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
          iter++) {
       this->builder_.add(*iter);
     }
-    RETURN_ON_ERROR(this->builder_.Finish(client, this->idxer_));
+
+    this->builder_.buildPhf();
+    std::unique_ptr<BlobWriter> writer;
+    size_t serialize_size = this->builder_.getSerializeSize();
+    RETURN_ON_ERROR(client.CreateBlob(serialize_size, writer));
+    this->builder_.finish(writer->data(), serialize_size, this->idxer_);
+    writer->Seal(client, buf);
+
     return this->allocateValues(
         client, n_elements, [&](V* shuffled_values) -> Status {
           return detail::perfect_hash::build_values(
@@ -334,7 +362,8 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    *
    */
   Status Build(Client& client) override {
-    this->set_ph_(std::dynamic_pointer_cast<Blob>(idxer_.buffer()));
+
+    this->set_ph_(buf);
     return Status::OK();
   }
 
@@ -364,6 +393,7 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
 
   PHIdxerViewBuilder<K, uint64_t> builder_;
   ImmPHIdxer<K, uint64_t> idxer_;
+  std::shared_ptr<Object> buf;
 
   const int concurrency_ = std::thread::hardware_concurrency();
 };
