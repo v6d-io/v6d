@@ -26,10 +26,10 @@ limitations under the License.
 
 #include "basic/ds/array.h"
 #include "basic/ds/hashmap.vineyard.h"
-#include "grape/graph/perfect_hash_indexer.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"  // IWYU pragma: keep
+#include "grape/graph/perfect_hash_indexer.h"
 
 namespace vineyard {
 
@@ -362,7 +362,6 @@ class PerfectHashmapBuilder : public PerfectHashmapBaseBuilder<K, V> {
    *
    */
   Status Build(Client& client) override {
-
     this->set_ph_(buf);
     return Status::OK();
   }

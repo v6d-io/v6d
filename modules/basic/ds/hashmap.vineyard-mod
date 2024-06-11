@@ -30,11 +30,11 @@ limitations under the License.
 #include "basic/ds/array.vineyard.h"
 #include "basic/ds/arrow.vineyard.h"  // IWYU pragma: keep
 #include "basic/ds/arrow_utils.h"
-#include "grape/graph/perfect_hash_indexer.h"
 #include "basic/utils.h"
 #include "client/ds/blob.h"
 #include "client/ds/i_object.h"
 #include "common/util/arrow.h"
+#include "grape/graph/perfect_hash_indexer.h"
 
 namespace vineyard {
 
