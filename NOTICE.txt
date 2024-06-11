@@ -55,7 +55,3 @@ This product includes software from the ClickHouse project
 This product includes software from the rax project (BSD, 2-clause)
  * Copyright (c) 2017-2019, Salvatore Sanfilippo <antirez at gmail dot com>
  * https://github.com/antirez/rax
-
-This product includes software from the pthash project (MIT License)
- * Copyright (c) 2020-2024, Giulio Ermanno Pibiri and Roberto Trani
- * https://github.com/jermp/pthash
