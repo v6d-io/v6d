@@ -102,8 +102,8 @@ void testRDMARegisterPerf_2() {
 
   auto start = std::chrono::high_resolution_clock::now();
   for (int i = 0; i < register_round; i++) {
-    server->RegisterMemory(&mr, buffer[(i % BUFFER_NUM)], register_size / BUFFER_NUM, rkey, mr_desc);
-    server->DeregisterMemory(mr);
+    VINEYARD_CHECK_OK(server->RegisterMemory(&mr, buffer[(i % BUFFER_NUM)], register_size / BUFFER_NUM, rkey, mr_desc));
+    VINEYARD_CHECK_OK(server->DeregisterMemory(mr));
   }
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double, std::milli> diff = end - start;
