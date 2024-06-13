@@ -32,7 +32,7 @@ limitations under the License.
 
 int register_round = 1000;
 uint64_t register_size = 1024 * 1024 * 1024;
-#define BUFFER_NUM 4
+#define BUFFER_NUM 2
 
 using namespace vineyard; // NOLINT(build/namespaces)
 
@@ -76,13 +76,13 @@ void testRDMARegisterPerf() {
 void testRDMARegisterPerf_2() {
   std::shared_ptr<RDMAServer> server;
   VINEYARD_CHECK_OK(RDMAServer::Make(server, 2224));
-  void *buffer[register_round];
+  void *buffer[BUFFER_NUM];
   fid_mr* mr;
   void *mr_desc;
   uint64_t rkey;
 
   LOG(INFO) << "Map " << BUFFER_NUM << " buffers. size:" << (double)register_size / BUFFER_NUM / 1024 / 1024 / 1024 << " GB.";
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < BUFFER_NUM; i++) {
     buffer[i] = mmap(NULL, register_size / BUFFER_NUM, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS | MAP_POPULATE, -1, 0);
     if (buffer[i] == MAP_FAILED) {
       LOG(ERROR) << "mmap failed.";
