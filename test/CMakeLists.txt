@@ -75,5 +75,8 @@ foreach(testfile ${TEST_FILES})
 
     if(BUILD_VINEYARD_RDMA)
         target_compile_options(${testname} PRIVATE -DVINEYARD_WITH_RDMA)
+        if(${testname} STREQUAL "rdma_perf_test")
+            target_link_libraries(${testname} PRIVATE fabric)
+        endif()
     endif()
 endforeach()
