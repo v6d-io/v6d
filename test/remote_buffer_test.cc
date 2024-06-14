@@ -29,7 +29,7 @@ limitations under the License.
 using namespace vineyard;  // NOLINT(build/namespaces)
 
 constexpr uint64_t element_num =
-    (uint64_t) 1024 * 1024 * 1024 * 5 / sizeof(uint64_t);
+    (uint64_t) 1024 * 1024 * 1024 * 16 / sizeof(uint64_t);
 
 void RemoteCreateTest(Client& ipc_client, RPCClient& rpc_client) {
   std::vector<double> double_array = {1.0, 7.0, 3.0, 4.0, 2.0};

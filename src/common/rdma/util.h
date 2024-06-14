@@ -51,6 +51,8 @@ namespace vineyard {
 
 enum VINEYARD_MSG_OPT {
   VINEYARD_MSG_EXCHANGE_KEY,
+  VINEYARD_MSG_REQUEST_MEM,
+  VINEYARD_RELEASE_MEM,
   VINEYARD_MSG_CLOSE,
 };
 
@@ -86,6 +88,12 @@ struct RegisterMemInfo {
   // TODO:
   // Work around for rpc client. Remove this field in the future
   fid_mr* mr;
+};
+
+struct CompareRegisterMemInfo {
+  bool operator()(const RegisterMemInfo& a, const RegisterMemInfo& b) const {
+    return a.address < b.address;
+  }
 };
 
 enum RDMA_STATE {

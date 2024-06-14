@@ -17,6 +17,7 @@ limitations under the License.
 #define SRC_SERVER_ASYNC_RPC_SERVER_H_
 
 #include <memory>
+#include <set>
 #include <string>
 #include <unordered_map>
 
@@ -75,10 +76,10 @@ class RPCServer : public SocketServer,
 
   // connection id to rdma server
 #ifdef VINEYARD_WITH_RDMA
-  std::unordered_map<uint64_t, RegisterMemInfo> remote_mem_infos_;
+  std::unordered_map<uint64_t, std::set<RegisterMemInfo, CompareRegisterMemInfo>> remote_mem_infos_;
   std::shared_ptr<RDMAServer> rdma_server_;
   mutable std::recursive_mutex rdma_mutex_;  // protect `rdma_servers_`
-  RegisterMemInfo local_mem_info_;
+  uint64_t max_register_size = 1024UL * 1024 * 1024 * 6;
 
   std::thread rdma_listen_thread_;
   std::thread rdma_recv_thread_;

@@ -274,12 +274,20 @@ Status RDMAServer::RegisterMemory(RegisterMemInfo& memInfo) {
       &new_mr, domain, reinterpret_cast<void*>(memInfo.address), memInfo.size,
       memInfo.rkey, memInfo.mr_desc));
   mr_array.push_back(new_mr);
+  memInfo.mr = new_mr;
   return Status::OK();
 }
 
 Status RDMAServer::RegisterMemory(fid_mr** mr, void* address, size_t size,
                                   uint64_t& rkey, void*& mr_desc) {
   return IRDMA::RegisterMemory(mr, domain, address, size, rkey, mr_desc);
+}
+
+Status RDMAServer::DeregisterMemory(RegisterMemInfo& memInfo) {
+  VINEYARD_CHECK_OK(IRDMA::CloseResource(memInfo.mr, "memory region"));
+  mr_array.erase(std::remove(mr_array.begin(), mr_array.end(), memInfo.mr),
+                 mr_array.end());
+  return Status::OK();
 }
 
 Status RDMAServer::Send(uint64_t ep_token, void* buf, size_t size, void* ctx) {

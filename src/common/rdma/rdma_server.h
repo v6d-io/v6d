@@ -68,6 +68,8 @@ class RDMAServer : public IRDMA {
   Status RegisterMemory(fid_mr** mr, void* address, size_t size, uint64_t& rkey,
                         void*& mr_desc);
 
+  Status DeregisterMemory(RegisterMemInfo& memInfo);
+
   Status GetEp(uint64_t ep_token, fid_ep*& ep) {
     auto iter = ep_map_.find(ep_token);
     if (iter == ep_map_.end()) {

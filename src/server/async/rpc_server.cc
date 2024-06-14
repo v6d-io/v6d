@@ -12,7 +12,6 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-
 #include "server/async/rpc_server.h"
 
 #include <memory>
@@ -77,17 +76,6 @@ Status RPCServer::InitRDMA() {
 
   Status status = RDMAServer::Make(this->rdma_server_, rdma_port);
   if (status.ok()) {
-    this->local_mem_info_.address =
-        (uint64_t) this->vs_ptr_->GetBulkStore()->GetBasePointer();
-    this->local_mem_info_.size = this->vs_ptr_->GetBulkStore()->GetBaseSize();
-    if (rdma_server_->RegisterMemory(this->local_mem_info_).ok()) {
-      LOG(INFO) << "Register rdma memory successfully! Wait port: " << rdma_port
-                << " for connection...";
-    } else {
-      return Status::IOError("Register rdma memory failed. Error:" +
-                             status.message());
-    }
-
     rdma_listen_thread_ = std::thread([this]() { this->doRDMAAccept(); });
     rdma_recv_thread_ = std::thread([this]() { this->doRDMARecv(); });
     rdma_send_thread_ = std::thread([this]() { this->doRDMASend(); });
@@ -217,24 +205,34 @@ void RPCServer::doRDMARecv() {
 
       VineyardMsg* recv_msg =
           reinterpret_cast<VineyardMsg*>(recv_context->attr.msg_buffer);
-      if (recv_msg->type == VINEYARD_MSG_EXCHANGE_KEY) {
-        RegisterMemInfo remote_register_mem_info;
-        remote_register_mem_info.address =
+      if (recv_msg->type == VINEYARD_MSG_REQUEST_MEM) {
+        LOG(INFO) << "Receive vineyard request mem!";
+        RegisterMemInfo remote_reqeust_mem_info;
+        remote_reqeust_mem_info.address =
             recv_msg->remoteMemInfo.remote_address;
-        remote_register_mem_info.rkey = recv_msg->remoteMemInfo.key;
-        remote_register_mem_info.size = recv_msg->remoteMemInfo.len;
-        VLOG(100) << "Receive remote address: "
-                  << reinterpret_cast<void*>(remote_register_mem_info.address)
-                  << " key: " << remote_register_mem_info.rkey;
+        // remote_register_mem_info.rkey = recv_msg->remoteMemInfo.key;
+        remote_reqeust_mem_info.size = std::min(recv_msg->remoteMemInfo.len, max_register_size);
+        LOG(INFO) << "Receive remote request address: "
+                  << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
+                  << " size: " << remote_reqeust_mem_info.size;
+
+        // Register mem
+        VINEYARD_CHECK_OK(rdma_server_->RegisterMemory(remote_reqeust_mem_info));
+        LOG(INFO) << "Register memory" << " address: "
+                  << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
+                  << " size: " << remote_reqeust_mem_info.size
+                  << " rkey: " << remote_reqeust_mem_info.rkey
+                  << " mr_desc: " << remote_reqeust_mem_info.mr_desc
+                  << " fid_mr:" << remote_reqeust_mem_info.mr;
 
         void* msg = nullptr;
         rdma_server_->GetTXFreeMsgBuffer(msg);
         VineyardMsg* send_msg = reinterpret_cast<VineyardMsg*>(msg);
-        send_msg->type = VINEYARD_MSG_EXCHANGE_KEY;
+        send_msg->type = VINEYARD_MSG_REQUEST_MEM;
         send_msg->remoteMemInfo.remote_address =
-            (uint64_t) local_mem_info_.address;
-        send_msg->remoteMemInfo.key = local_mem_info_.rkey;
-        send_msg->remoteMemInfo.len = local_mem_info_.size;
+            (uint64_t) remote_reqeust_mem_info.address;
+        send_msg->remoteMemInfo.key = remote_reqeust_mem_info.rkey;
+        send_msg->remoteMemInfo.len = remote_reqeust_mem_info.size;
 
         VineyardSendContext* send_context = new VineyardSendContext();
         memset(&send_context->attr, 0, sizeof(send_context->attr));
@@ -242,12 +240,49 @@ void RPCServer::doRDMARecv() {
 
         rdma_server_->Send(recv_context->rdma_conn_id, msg, sizeof(VineyardMsg),
                            send_context);
-        VLOG(100) << "Send key:" << local_mem_info_.rkey << " send address:"
-                  << reinterpret_cast<void*>(local_mem_info_.address);
+        LOG(INFO) << "Send key:" << remote_reqeust_mem_info.rkey << " send address:"
+                  << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
+                  << " size: " << remote_reqeust_mem_info.size;
 
         std::lock_guard<std::recursive_mutex> scope_lock(this->rdma_mutex_);
-        remote_mem_infos_.emplace(recv_context->rdma_conn_id,
-                                  remote_register_mem_info);
+        remote_mem_infos_[recv_context->rdma_conn_id].insert(remote_reqeust_mem_info);
+        rdma_server_->Recv(recv_context->rdma_conn_id,
+                           reinterpret_cast<void*>(recv_msg),
+                           sizeof(VineyardMsg), context);
+      } else if (recv_msg->type == VINEYARD_RELEASE_MEM) {
+        LOG(INFO) << "Receive release msg!";
+        RegisterMemInfo remote_reqeust_mem_info;
+        remote_reqeust_mem_info.address =
+            recv_msg->remoteMemInfo.remote_address;
+        // remote_register_mem_info.rkey = recv_msg->remoteMemInfo.key;
+        remote_reqeust_mem_info.size = recv_msg->remoteMemInfo.len;
+        LOG(INFO) << "Receive release address: "
+                  << reinterpret_cast<void*>(remote_reqeust_mem_info.address);
+        if (remote_mem_infos_.find(recv_context->rdma_conn_id) ==
+            remote_mem_infos_.end()) {
+          LOG(ERROR) << "Receive release mem info from unknown connection!";
+          continue;
+        }
+        if (remote_mem_infos_[recv_context->rdma_conn_id].find(
+                remote_reqeust_mem_info) ==
+            remote_mem_infos_[recv_context->rdma_conn_id].end()) {
+          LOG(ERROR) << "Receive release mem info from unknown address!";
+          rdma_server_->Recv(recv_context->rdma_conn_id,
+                             reinterpret_cast<void*>(recv_msg),
+                             sizeof(VineyardMsg), context);
+          continue;
+        }
+
+        // Deregister mem
+        LOG(INFO) << "Deregister memory" << " address: "
+                  << reinterpret_cast<void*>(remote_reqeust_mem_info.address)
+                  << " size: " << remote_reqeust_mem_info.size
+                  << " rkey: " << remote_reqeust_mem_info.rkey
+                  << " mr_desc: " << remote_reqeust_mem_info.mr_desc
+                  << " fid_mr:" << remote_reqeust_mem_info.mr;
+        VINEYARD_CHECK_OK(rdma_server_->DeregisterMemory(remote_reqeust_mem_info));
+        remote_mem_infos_[recv_context->rdma_conn_id].erase(remote_reqeust_mem_info);
+        LOG(INFO) << "Wait next request.";
         rdma_server_->Recv(recv_context->rdma_conn_id,
                            reinterpret_cast<void*>(recv_msg),
                            sizeof(VineyardMsg), context);
